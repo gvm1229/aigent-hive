@@ -124,14 +124,22 @@ pub fn ensure_consumer_target(target: &Path) -> Result<(), TargetGuardError> {
 /// Returns an error for absolute paths, traversal, platform prefixes, empty
 /// paths, or forbidden first components.
 pub fn validate_project_relative(path: &Path) -> Result<(), TargetGuardError> {
-    let Some(portable) = path.to_str() else {
+    let Some(raw) = path.to_str() else {
         return Err(TargetGuardError::UnsafeRelativePath {
             path: path.to_path_buf(),
         });
     };
+    #[cfg(windows)]
+    let portable = raw.replace('\\', "/");
+    #[cfg(not(windows))]
+    let portable = raw.to_owned();
+    #[cfg(windows)]
+    let has_foreign_separator = false;
+    #[cfg(not(windows))]
+    let has_foreign_separator = raw.contains('\\');
     if portable.is_empty()
         || path.is_absolute()
-        || portable.contains('\\')
+        || has_foreign_separator
         || portable.contains(':')
         || portable.starts_with("//")
         || portable
@@ -222,9 +230,11 @@ pub fn sha256_digest(bytes: &[u8]) -> String {
 
 #[cfg(test)]
 mod tests {
+    #[cfg(unix)]
+    use super::ensure_no_symlink_ancestors;
     use super::{
-        ensure_consumer_target, ensure_no_symlink_ancestors, sha256_digest, source_marker_path,
-        validate_project_relative, TargetGuardError,
+        ensure_consumer_target, sha256_digest, source_marker_path, validate_project_relative,
+        TargetGuardError,
     };
     use std::fs;
     use std::path::PathBuf;
@@ -288,6 +298,13 @@ mod tests {
             validate_project_relative(PathBuf::from(".omx/state").as_path()),
             Err(TargetGuardError::ForbiddenNamespace { .. })
         ));
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn accepts_native_windows_separators_for_internal_relative_paths() {
+        let relative = PathBuf::from(".hive").join("knowledge").join("Raw");
+        assert!(validate_project_relative(&relative).is_ok());
     }
 
     #[cfg(unix)]
