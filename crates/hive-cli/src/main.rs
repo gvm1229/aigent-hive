@@ -693,7 +693,7 @@ fn windows_portable_path(path: &Path) -> Option<String> {
         .is_some_and(|prefix| prefix.eq_ignore_ascii_case("//?/"))
     {
         value.replace_range(..4, "");
-    };
+    }
     Some(value)
 }
 
