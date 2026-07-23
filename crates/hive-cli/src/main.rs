@@ -1178,15 +1178,27 @@ mod tests {
     #[test]
     fn hook_path_normalization_rejects_traversal_and_foreign_syntax() {
         let target = Path::new("/consumer");
-        for path in [
-            "../.hive/config/harness.toml",
-            ".hive/../outside",
-            r"C:\consumer\.hive\config\harness.toml",
-        ] {
+        for path in ["../.hive/config/harness.toml", ".hive/../outside"] {
             assert!(
                 normalize_hook_path(target, path).is_err(),
                 "{path} should be rejected"
             );
         }
+
+        #[cfg(not(windows))]
+        assert!(
+            normalize_hook_path(target, r"C:\consumer\.hive\config\harness.toml").is_err(),
+            "foreign Windows syntax should be rejected"
+        );
+
+        #[cfg(windows)]
+        assert_eq!(
+            normalize_hook_path(
+                Path::new(r"D:\consumer"),
+                r"C:\consumer\.hive\config\harness.toml"
+            )
+            .expect("outside native absolute path should be classified"),
+            None
+        );
     }
 }
