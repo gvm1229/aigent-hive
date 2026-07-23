@@ -1216,11 +1216,18 @@ fn render_roles<T: TargetRead + ?Sized>(
 fn parse_role(bytes: &[u8]) -> Result<(RoleProfile, String), RenderError> {
     let text = std::str::from_utf8(bytes)
         .map_err(|_| RenderError::Conflict("role file is not UTF-8".to_owned()))?;
-    let remainder = text
-        .strip_prefix("---\n")
-        .ok_or_else(|| RenderError::Conflict("role frontmatter start is missing".to_owned()))?;
+    let (remainder, line_ending) = if let Some(remainder) = text.strip_prefix("---\n") {
+        (remainder, "\n")
+    } else if let Some(remainder) = text.strip_prefix("---\r\n") {
+        (remainder, "\r\n")
+    } else {
+        return Err(RenderError::Conflict(
+            "role frontmatter start is missing".to_owned(),
+        ));
+    };
+    let delimiter = format!("{line_ending}---{line_ending}");
     let (frontmatter, body) = remainder
-        .split_once("\n---\n")
+        .split_once(&delimiter)
         .ok_or_else(|| RenderError::Conflict("role frontmatter end is missing".to_owned()))?;
     let value: JsonValue = serde_json::from_str(frontmatter)
         .map_err(|error| RenderError::Conflict(format!("role profile is invalid: {error}")))?;
@@ -2875,11 +2882,11 @@ mod tests {
     use super::{
         activate_staged_impl, calculate_consent_digest, derive_resolution, encode_role,
         execute_setup, hook_descriptor_bytes, installed_tree_digest, load_answers, load_resolution,
-        merge_shared_marker, open_target_capability, render_tree, replace_capability_file_impl,
-        valid_digest, valid_role_id, valid_timestamp, validate_hook_approvals,
-        validate_skill_approvals, ActivationFault, CapabilityEvidence, CapabilityResolution,
-        HookApproval, ReplacePolicy, RoleProfile, RoleSeed, SetupMode, SetupRequest, SkillApproval,
-        MARKER_END, MARKER_START,
+        merge_shared_marker, open_target_capability, parse_role, render_tree,
+        replace_capability_file_impl, valid_digest, valid_role_id, valid_timestamp,
+        validate_hook_approvals, validate_skill_approvals, ActivationFault, CapabilityEvidence,
+        CapabilityResolution, HookApproval, ReplacePolicy, RoleProfile, RoleSeed, SetupMode,
+        SetupRequest, SkillApproval, MARKER_END, MARKER_START,
     };
     use hive_core::sha256_digest;
     use serde_json::Value as JsonValue;
@@ -3165,6 +3172,17 @@ mod tests {
             rendered,
             include_bytes!("../../../tests/fixtures/expected/reviewer-role.md")
         );
+    }
+
+    #[test]
+    fn role_parser_accepts_crlf_and_preserves_body_line_endings() {
+        let bytes = include_bytes!("../../../tests/fixtures/expected/reviewer-role.md");
+        let crlf = String::from_utf8(bytes.to_vec())
+            .expect("fixture should be UTF-8")
+            .replace('\n', "\r\n");
+        let (_, body) = parse_role(crlf.as_bytes()).expect("CRLF role should parse");
+        assert!(body.contains("\r\n"));
+        assert!(body.ends_with("\r\n"));
     }
 
     #[test]

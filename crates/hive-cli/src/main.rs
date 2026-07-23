@@ -640,18 +640,37 @@ fn protect_hive_owned_state(target: &Path, input: &HookInput) -> Result<HookResu
 }
 
 fn normalize_hook_path(target: &Path, value: &str) -> Result<Option<PathBuf>, RenderError> {
-    let path = Path::new(value);
+    let path = PathBuf::from(value);
+    #[cfg(windows)]
+    let target = without_windows_verbatim_prefix(target);
+    #[cfg(not(windows))]
+    let target = target.to_path_buf();
+    #[cfg(windows)]
+    let path = without_windows_verbatim_prefix(&path);
     let relative = if path.is_absolute() {
-        match path.strip_prefix(target) {
+        match path.strip_prefix(&target) {
             Ok(relative) => relative,
             Err(_) => return Ok(None),
         }
     } else {
-        path
+        &path
     };
     validate_project_relative(relative)
         .map_err(|error| RenderError::Input(format!("unsafe hook input path {value}: {error}")))?;
     Ok(Some(relative.to_path_buf()))
+}
+
+#[cfg(windows)]
+fn without_windows_verbatim_prefix(path: &Path) -> PathBuf {
+    let Some(value) = path.to_str() else {
+        return path.to_path_buf();
+    };
+    if let Some(remainder) = value.strip_prefix(r"\\?\UNC\") {
+        return PathBuf::from(format!(r"\\{remainder}"));
+    }
+    value
+        .strip_prefix(r"\\?\")
+        .map_or_else(|| path.to_path_buf(), PathBuf::from)
 }
 
 fn is_protected_hive_path(path: &Path) -> bool {
@@ -1200,5 +1219,17 @@ mod tests {
             .expect("outside native absolute path should be classified"),
             None
         );
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn hook_path_normalization_matches_verbatim_current_directory() {
+        let normalized = normalize_hook_path(
+            Path::new(r"\\?\C:\consumer"),
+            r"C:\consumer\.hive\config\harness.toml",
+        )
+        .expect("inside absolute path should validate")
+        .expect("inside absolute path should be classified");
+        assert!(super::is_protected_hive_path(&normalized));
     }
 }
