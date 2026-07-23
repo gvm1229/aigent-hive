@@ -815,7 +815,7 @@ Optional third-party Skill은 quarantine→provenance 검증→사용자 개별 
 - [x] local 또는 CI `fmt/clippy/test` PASS
 - [x] Copier smoke test PASS
 - [x] Skill validator PASS
-- [ ] `main` initial commit과 `develop` branch push
+- [x] `main` initial commit과 `develop` branch push
 
 ### Phase 1. Deterministic setup renderer
 

@@ -3,9 +3,10 @@
 - 기준일: 2026-07-23
 - active plan: [`../plans/PLAN.md`](../plans/PLAN.md)
 - plan revision: 1.4
-- phase: Phase 0 — source bootstrap
-- Git: 초기화 전
-- remote: `https://github.com/gvm1229/aigent-hive.git` 확인, empty public repository
+- phase: Phase 0 완료 — Phase 1 진입 준비
+- Git: clean `develop`, 장기 branch는 `main`/`develop` 두 개만 사용
+- remote: [`gvm1229/aigent-hive`](https://github.com/gvm1229/aigent-hive), default branch `main`
+- initial baseline: `b69c5c3c6b3b53e6f8a2fc180d95d7176bc8134f`
 
 ## 구현된 기반
 
@@ -29,14 +30,17 @@
 - setup answer schema, TOML/YAML parse와 role/scope/consent projection parity PASS
 - invalid Codex+OMC 조합 staging 전 거부 PASS
 - 7개 JSON Schema meta-validation과 대표 action/role/run/judge/capability instance PASS
-- role materialization known-answer/idempotency와 Skill consent tamper fixture 추가
+- role materialization known-answer/idempotency와 Skill consent tamper fixture PASS
 - `setup-harness` Skill validator PASS
 - 적대적 scaffold 재검토: initial Git bootstrap APPROVE
-- Git 초기 commit/push 전
+- 적대적 v1.4 plan 재검토: APPROVE
+- `main` CI: Linux/macOS/Windows Rust와 Copier/schema conformance PASS ([run 29983709893](https://github.com/gvm1229/aigent-hive/actions/runs/29983709893))
+- SHA-pinned Node 24 action CI: Linux/macOS/Windows와 conformance PASS ([run 29983865249](https://github.com/gvm1229/aigent-hive/actions/runs/29983865249))
+- GitHub remote branch는 `main`과 `develop` 두 개, default는 `main`
 
 ## 다음 작업
 
-1. v1.4 적대적 plan 재검토 판정 확인
-2. `main` initial commit과 `develop` 생성·push
-3. GitHub CI 결과 확인
-4. Phase 0 완료 상태 기록
+1. Phase 1 `hive-render` crate와 answer validator 구현
+2. staging render·ownership·shared marker conformance
+3. Copier/Rust static parity와 role materializer parity
+4. `hive setup --dry-run|apply|validate`
