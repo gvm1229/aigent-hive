@@ -37,8 +37,8 @@
 - `setup-harness` Skill validator PASS
 - 적대적 scaffold 재검토: initial Git bootstrap APPROVE
 - 적대적 v1.4 plan 재검토: APPROVE
-- `main` CI: Linux/macOS/Windows Rust와 Copier/schema conformance PASS ([run 29983709893](https://github.com/gvm1229/aigent-hive/actions/runs/29983709893))
-- SHA-pinned Node 24 action CI: Linux/macOS/Windows와 conformance PASS ([run 29983865249](https://github.com/gvm1229/aigent-hive/actions/runs/29983865249))
+- 현재 `develop` head CI: Linux/macOS/Windows Rust와 Copier/schema conformance PASS ([run 29992480995](https://github.com/gvm1229/aigent-hive/actions/runs/29992480995))
+- 현재 `main` merge CI: Linux/macOS/Windows Rust와 Copier/schema conformance PASS ([run 29992271536](https://github.com/gvm1229/aigent-hive/actions/runs/29992271536))
 - GitHub remote branch는 `main`과 `develop` 두 개, default는 `main`
 
 ## 다음 작업
