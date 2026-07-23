@@ -1,14 +1,14 @@
 # Aigent Hive 구현 계획
 
-> Revision: 1.6
+> Revision: 1.8
 > 상태: 구현 기준본
 > 기준일: 2026-07-23
-> 현재 제품 version: `0.2.0`
+> 현재 제품 version: `0.3.0`
 > 정본 위치: `docs/plans/PLAN.md`
 
 이 문서는 Aigent Hive의 완성된 사용자 흐름과 이를 구현하는 순서를 하나의 연속된 계획으로 정의한다. 이전 `PLAN_v1*` 문서는 현재 지침으로 사용하지 않는다.
 
-현재 `0.2.0`은 Phase 1 결정적 setup renderer와 consumer harness 생성 계약을 구현한다. 아래 Skill routing, knowledge/index, host projection, durable run과 update flow는 해당 milestone의 unchecked acceptance를 통과하기 전까지 구현·지원된 것으로 간주하지 않는다.
+현재 `0.3.0`은 Phase 1 결정적 setup renderer와 Phase 2 canonical Markdown knowledge·disposable SQLite index 계약을 구현한다. 아래 Skill routing, host projection, durable run과 update flow는 해당 milestone의 unchecked acceptance를 통과하기 전까지 구현·지원된 것으로 간주하지 않는다.
 
 ## 1. 목표와 완료 정의
 
@@ -64,7 +64,7 @@ Aigent Hive는 사용자가 이미 로그인한 Codex, Claude Code, Gemini Antig
 - update backup은 최대 7일만 유지한다.
 - 비기밀 canonical file은 Git 추적이 기본이며 runtime/cache/SQLite/backup은 제외한다.
 - `X.Y.Z` version에서 같은 `X` 안의 upgrade만 non-breaking을 보장한다.
-- 현재 product version은 Phase 1 결정적 setup renderer milestone인 `0.2.0`이다.
+- 현재 product version은 Phase 2 Markdown knowledge와 disposable SQLite index milestone인 `0.3.0`이다.
 - backward-compatible feature는 원칙적으로 `Y`, 빠른 호환 bugfix는 `Z`를 증가시킨다.
 - `X` 증가는 사용자가 목표 major를 명시적으로 지시한 경우에만 준비·적용할 수 있으며 automation이 추론하거나 자동 증가하지 않는다.
 - cross-major update는 경고, dry run, 자동 migration과 사용자 data 무손실 검증 없이는 commit하지 않는다.
@@ -86,7 +86,7 @@ Aigent Hive는 사용자가 이미 로그인한 Codex, Claude Code, Gemini Antig
 
 ### 1.3 Product version 정책
 
-Plan revision과 product version은 독립이다. 이 문서는 revision `1.6`이며 현재 구현 artifact는 `0.2.0`이다.
+Plan revision과 product version은 독립이다. 이 문서는 revision `1.8`이며 현재 구현 artifact는 `0.3.0`이다.
 
 Version 정본과 projection:
 
@@ -417,7 +417,7 @@ Setup-time role lifecycle:
 - [x] consented project-local hook merge 전후 foreign semantic tree와 entry digest 동일
 - [x] generated path가 manifest 밖이면 setup 실패
 - [x] canonical non-confidential files가 Git-visible
-- [x] SQLite/WAL/SHM와 backup만 consumer Git에서 제외
+- [x] SQLite/WAL/SHM/journal, index stale/lock/temp와 backup만 consumer Git에서 제외
 - [x] role reconfigure가 current assignment·handoff·user body를 보존
 - [x] cross-major role candidate의 parse/schema 검증 실패 시 active role tree bytes 불변
 
@@ -737,7 +737,8 @@ Judge는 `PASS`, `FAIL`, `INDETERMINATE`만 반환. `FAIL`은 재현 가능한 f
 4. SQLite rebuild 또는 incremental delete
 5. stale reference lint
 
-Suppression entry는 fingerprint, source locator, reason, replacement와 timestamp만 포함. 삭제 본문을 복제하지 않음.
+Suppression entry는 fingerprint, source locator, reason, replacement와 timestamp만 포함.
+`reason`은 shipped stable reason-code enum이며 삭제 본문을 복제하지 않음.
 
 일반 삭제는 Git history에서 복원 가능. Secret/legal erase만 별도 승인된 history rewrite와 backup purge 수행.
 
@@ -767,13 +768,13 @@ Model call과 network 불필요. SQLite byte hash 동일성은 요구하지 않�
 
 #### 완료 조건
 
-- [ ] SQLite 삭제 후 같은 page ID·tag·link·content digest 재구축
-- [ ] 동일 Markdown checkout에서 query result equivalence
-- [ ] deprecated/superseded content가 active Wiki와 search 결과에 없음
-- [ ] suppression ledger에 삭제 본문 없음
-- [ ] contradiction, orphan, broken link, missing citation, stale index 탐지
-- [ ] parallel extraction + serial integration에서 lost update 없음
-- [ ] Git LFS 없이 canonical knowledge 동기화 가능
+- [x] SQLite 삭제 후 같은 page ID·tag·link·content digest 재구축
+- [x] 동일 Markdown checkout에서 query result equivalence
+- [x] deprecated/superseded content가 active Wiki와 search 결과에 없음
+- [x] suppression ledger에 삭제 본문 없음
+- [x] contradiction, orphan, broken link, missing citation, stale index 탐지
+- [x] parallel extraction + serial integration에서 lost update 없음
+- [x] Git LFS 없이 canonical knowledge 동기화 가능
 
 ### Stage 10. 완료 보고와 재개
 
@@ -916,7 +917,7 @@ consumer-project/
     └── backups/                      # ignored, maximum 7 days
 ```
 
-Consumer project는 독립 `.gitignore`를 소유한다. Hive 기본 권장은 canonical non-confidential Markdown/YAML/TOML과 Raw source object를 모두 추적하고 SQLite/WAL/SHM, generated backup과 runtime cache만 제외하는 것.
+Consumer project는 독립 `.gitignore`를 소유한다. Hive 기본 권장은 canonical non-confidential Markdown/YAML/TOML과 Raw source object를 모두 추적하고 SQLite/WAL/SHM/journal, index stale/lock/temp, generated backup과 runtime cache만 제외하는 것.
 
 Host가 발견하는 Skill과 consented fallback hook은 이 canonical config에서 thin projection한다. Host-specific project path는 ownership manifest에 별도로 열거하며, external runtime detected 상태에서는 fallback hook projection이 존재하지 않아야 한다.
 
@@ -1026,12 +1027,12 @@ Optional third-party Skill은 quarantine→provenance 검증→사용자 개별 
 
 ### Phase 2. Markdown knowledge와 SQLite — target `0.3.0`
 
-- [ ] Wiki/frontmatter schema 확정
-- [ ] ingest/query/lint
-- [ ] suppression/delete workflow
-- [ ] FTS5/tag/link index
-- [ ] deterministic rebuild와 logical digest
-- [ ] parallel extraction/serial integration fixture
+- [x] Wiki/frontmatter schema 확정
+- [x] ingest/query/lint
+- [x] suppression/delete workflow
+- [x] FTS5/tag/link index
+- [x] deterministic rebuild와 logical digest
+- [x] parallel extraction/serial integration fixture
 
 ### Phase 3. Portable Skills와 host projection — target `0.4.0`
 
@@ -1151,7 +1152,7 @@ v1 public release는 다음을 모두 충족해야 한다.
 - [ ] host-native 또는 external orchestration truthful support 표시
 - [ ] usage guard의 freshness와 fail-closed 증거
 - [ ] hostile judge context isolation과 quorum
-- [ ] Karpathy Raw/Wiki/Schema와 SQLite rebuild
+- [x] Karpathy Raw/Wiki/Schema와 SQLite rebuild
 - [ ] same-major compatibility
 - [ ] cross-major no-data-loss migration
 - [ ] GitHub Release provenance와 signing

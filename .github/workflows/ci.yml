@@ -77,6 +77,11 @@ jobs:
           python -m unittest
           tests.conformance.test_usage_guard
           -v
+      - name: Run Phase 2 knowledge conformance corpus
+        run: >-
+          python -m unittest
+          tests.conformance.test_phase2_wiki
+          -v
 
   copier:
     name: Contract and Copier conformance

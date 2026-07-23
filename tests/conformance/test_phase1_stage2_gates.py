@@ -317,10 +317,14 @@ class Phase1CanonicalGitVisibilityGate(Phase1CliTestCase):
             ".hive/index/wiki.sqlite-shm",
             ".hive/index/wiki.sqlite3-wal",
             ".hive/index/wiki.sqlite3-shm",
+            ".hive/index/wiki.sqlite-journal",
+            ".hive/index/wiki.sqlite3-journal",
+            ".hive/index/.stale",
+            ".hive/index/.knowledge.lock",
+            ".hive/index/.tmp-phase2",
             ".hive/backups/rollback/config.yml",
         )
         visible = (
-            ".hive/index/.stale",
             ".hive/index/search.db",
             ".hive/config/local-visible.toml",
             ".hive/knowledge/Wiki/local-visible.md",

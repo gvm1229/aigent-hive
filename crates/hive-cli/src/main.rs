@@ -14,6 +14,7 @@ use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 use std::time::{SystemTime, UNIX_EPOCH};
 
+mod knowledge;
 mod usage;
 
 const USAGE: &str = "\
@@ -24,6 +25,8 @@ USAGE:
     hive check-target <path>
     hive setup --help
     hive setup --target <dir> --answers <yml> --capabilities <json> (--dry-run|--apply|--validate) [--reconfigure-role <role-id>]... --output json
+    hive knowledge ingest|query|lint|delete|suppress --help
+    hive index rebuild --target <dir> --output json
     hive hook --capability <name> --event <event> [--input <json>] --output json
     hive usage check --account-digest <sha256:...> [--threshold <1..99>] --output json
 ";
@@ -112,6 +115,8 @@ fn main() -> ExitCode {
             ExitCode::SUCCESS
         }
         Some("setup") => run_setup(&arguments[1..]),
+        Some("knowledge") => knowledge::run_knowledge(&arguments[1..]),
+        Some("index") => knowledge::run_index(&arguments[1..]),
         Some("hook") => run_hook(&arguments[1..]),
         Some("usage") => run_usage(&arguments[1..]),
         _ if wants_json(&arguments) => {

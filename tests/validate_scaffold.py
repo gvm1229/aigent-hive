@@ -284,6 +284,48 @@ def validate_contract_examples() -> None:
     })
     expect_invalid("capability-matrix.schema.json", available_without_compatible)
 
+    raw_locator = f"raw:.hive/knowledge/Raw/source/{'0' * 64}.md#{digest}"
+    knowledge_page = {
+        "schema_version": 1,
+        "id": "phase-two",
+        "kind": "concept",
+        "summary": "Canonical Markdown knowledge",
+        "tags": ["knowledge"],
+        "aliases": ["wiki"],
+        "sources": [raw_locator],
+        "links": [],
+        "contradictions": [],
+        "status": "active",
+        "created_at": "2026-07-24T00:00:00Z",
+        "updated_at": "2026-07-24T00:00:00Z",
+    }
+    validate_instance("knowledge-page.schema.json", knowledge_page)
+    expect_invalid(
+        "knowledge-page.schema.json",
+        {**knowledge_page, "status": "deprecated"},
+    )
+
+    suppression = {
+        "schema_version": 1,
+        "entries": [
+            {
+                "fingerprint": digest,
+                "source_locator": "wiki:phase-two",
+                "reason": "obsolete",
+                "replacement": None,
+                "timestamp": "2026-07-24T00:00:00Z",
+            }
+        ],
+    }
+    validate_instance("knowledge-suppression.schema.json", suppression)
+    expect_invalid(
+        "knowledge-suppression.schema.json",
+        {
+            **suppression,
+            "entries": [{**suppression["entries"][0], "body": "deleted prose"}],
+        },
+    )
+
 
 def validate_license_boundary() -> None:
     if (REPOSITORY_ROOT / "LICENSE").read_bytes() != APACHE_LICENSE_PATH.read_bytes():
@@ -307,7 +349,7 @@ def validate_license_boundary() -> None:
 
     workspace = read_toml(REPOSITORY_ROOT / "Cargo.toml")
     assert workspace["workspace"]["package"]["license"] == "Apache-2.0"
-    for crate_name in ("hive-cli", "hive-core"):
+    for crate_name in ("hive-cli", "hive-core", "hive-render", "hive-wiki"):
         crate = read_toml(REPOSITORY_ROOT / f"crates/{crate_name}/Cargo.toml")
         assert crate["package"]["license"] == {"workspace": True}
 
@@ -487,6 +529,14 @@ def validate_render(render_root: Path, input_data_path: Path) -> None:
 
     with (render_root / ".hive/config/harness.toml").open("rb") as stream:
         harness_config = tomllib.load(stream)
+    workspace_version = read_toml(REPOSITORY_ROOT / "Cargo.toml")["workspace"]["package"][
+        "version"
+    ]
+    if (
+        harness_config["harness_version"] != workspace_version
+        or harness_config["source_release_version"] != workspace_version
+    ):
+        raise AssertionError("installed harness version differs from Cargo workspace")
     if harness_config["project_name"] != answers["project_name"]:
         raise AssertionError("project_name changed during TOML rendering")
     if (

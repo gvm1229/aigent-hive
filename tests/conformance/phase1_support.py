@@ -85,7 +85,7 @@ class Phase1CliTestCase(unittest.TestCase):
         self.temporary_directory = tempfile.TemporaryDirectory(
             prefix="aigent-hive-phase1-expanded-"
         )
-        self.work_root = Path(self.temporary_directory.name)
+        self.work_root = Path(self.temporary_directory.name).resolve()
 
     def tearDown(self) -> None:
         self.temporary_directory.cleanup()

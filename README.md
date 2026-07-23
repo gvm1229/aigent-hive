@@ -2,18 +2,18 @@
 
 [![Rust](https://img.shields.io/badge/Rust-stable-000000?logo=rust&logoColor=white)](rust-toolchain.toml)
 [![Cargo](https://img.shields.io/badge/Cargo-workspace-CB4B16?logo=rust&logoColor=white)](Cargo.toml)
-[![Version](https://img.shields.io/badge/version-0.2.0-4C1)](Cargo.toml)
+[![Version](https://img.shields.io/badge/version-0.3.0-4C1)](Cargo.toml)
 [![Python](https://img.shields.io/badge/Python-3.13-3776AB?logo=python&logoColor=white)](.github/workflows/ci.yml)
 [![Copier](https://img.shields.io/badge/Copier-9.17.0-5C4EE5)](copier.yml)
 [![JSON Schema](https://img.shields.io/badge/JSON%20Schema-2020--12-000000?logo=json&logoColor=white)](schemas/)
-[![SQLite](https://img.shields.io/badge/SQLite-planned-003B57?logo=sqlite&logoColor=white)](docs/plans/PLAN.md)
+[![SQLite](https://img.shields.io/badge/SQLite-FTS5-003B57?logo=sqlite&logoColor=white)](crates/hive-wiki)
 [![GitHub Actions](https://img.shields.io/badge/GitHub%20Actions-CI-2088FF?logo=githubactions&logoColor=white)](.github/workflows/ci.yml)
 [![Platforms](https://img.shields.io/badge/platform-macOS%20%7C%20Windows-lightgrey)](docs/plans/PLAN.md)
 [![License](https://img.shields.io/badge/license-Apache--2.0-green)](LICENSE)
 
 > 🐝 **Aigent Hive**는 Codex, Claude Code, Gemini Antigravity 같은 구독형 agent host 위에서 일관된 setup, Skill routing, 역할·지식·run 상태, 안전한 update와 검증 계약을 제공하는 **provider-neutral 로컬 agent harness**다.
 
-> 🚧 **현재 상태:** worktree version은 `0.2.0`이다. Phase 1 renderer는 구현되어 있으나 completion review의 safety·Windows·validation 보강 항목이 남아 있어 완료로 표시하지 않는다. Usage guard core와 fail-closed CodexBar adapter는 Phase 5 선행 slice로 구현되었다.
+> 🚧 **현재 상태:** worktree version은 `0.3.0`이다. Phase 1 결정적 renderer와 Phase 2 canonical Markdown knowledge·재생성 가능한 SQLite FTS5 index가 구현됐다. Usage guard core와 fail-closed CodexBar adapter는 Phase 5 선행 slice로 구현되었다.
 
 Hive는 모델 API나 provider SDK를 사용하지 않으며 API key를 요청하거나 저장하지 않는다. Compatible OMX·OMC가 있으면 검증된 orchestration 기능을 우선 재사용하고, 없으면 host-native capability 범위에서 동작한다.
 
@@ -26,6 +26,7 @@ Hive는 모델 API나 provider SDK를 사용하지 않으며 API key를 요청�
 - [의존성](#의존성)
 - [저장소 구조](#저장소-구조)
 - [개발과 검증](#개발과-검증)
+- [Canonical knowledge와 disposable index](#canonical-knowledge와-disposable-index)
 - [Subscription usage guard](#subscription-usage-guard)
 - [Git workflow](#git-workflow)
 - [현재 상태와 버전 정책](#현재-상태와-버전-정책)
@@ -87,7 +88,7 @@ Copier는 template authoring과 CI parity 검증에만 사용한다. 배포된 R
 | JSON Schema Draft 2020-12 | action, role, run, judge, capability 등 provider-neutral machine contract |
 | Copier 9.17.0 + Jinja templates | authoring-time template와 Rust renderer parity fixture |
 | Python 3.13 | CI의 Copier·schema conformance test 전용 |
-| SQLite | 계획된 재생성 가능 로컬 FTS index; 정본이나 Git 추적 대상이 아님 |
+| SQLite | 재생성 가능한 로컬 FTS5·tag·alias·backlink·source graph; 정본이나 Git 추적 대상이 아님 |
 | GitHub Actions | Linux·macOS·Windows Rust 검증과 Copier/schema conformance |
 | GitHub Releases | 향후 signed CLI와 release bundle 배포 대상 |
 
@@ -99,6 +100,7 @@ Rust runtime은 filesystem containment, schema·serialization, RFC 8785 canonica
 | --- | --- | --- |
 | Rust runtime | `cap-std==4.0.2` | filesystem capability boundary용으로 고정한 dependency |
 | Rust runtime | `tempfile==3.27.0` | 충돌하지 않는 임의 이름의 exclusive staging·activation temp |
+| Rust runtime | `rusqlite==0.40.1` + `bundled` | system SQLite 차이를 제거한 disposable FTS5 index; MIT |
 | Rust runtime | `jsonschema==0.48.5` | setup·capability·hook contract 검증 |
 | Rust runtime | `serde==1.0.229`, `serde_json==1.0.151`, `yaml_serde==0.10.4`, `toml==1.1.3` | typed config parse·projection |
 | Rust runtime | `serde_json_canonicalizer==0.3.2`, `sha2==0.11.0` | RFC 8785 consent/evidence와 content digest |
@@ -119,6 +121,7 @@ Rust runtime은 filesystem containment, schema·serialization, RFC 8785 canonica
 ├── crates/
 │   ├── hive-core/       # provider-neutral invariant와 target safety
 │   ├── hive-render/     # deterministic staging, ownership, consent와 role materialization
+│   ├── hive-wiki/       # Markdown parse/lint와 disposable SQLite projection
 │   └── hive-cli/        # `hive` CLI entry point
 ├── harness/             # 출하할 template, Skill, profile, projection source
 ├── schemas/             # provider-neutral JSON Schema contract
@@ -146,7 +149,10 @@ cargo clippy --workspace --all-targets -- -D warnings
 cargo test --workspace
 cargo run -p hive-cli -- doctor
 cargo run -p hive-cli -- check-target /path/to/consumer-project
+cargo run -p hive-cli -- index rebuild --target /path/to/consumer-project --output json
+cargo run -p hive-cli -- knowledge query --target /path/to/consumer-project --text "search terms" --output json
 python -m unittest discover -s tests/conformance -p 'test_phase1_*.py' -v
+python -m unittest tests.conformance.test_phase2_wiki -v
 ```
 
 Setup은 다음 JSON contract 표면을 사용한다.
@@ -162,7 +168,31 @@ cargo run -p hive-cli -- setup \
 
 `--dry-run` 대신 `--apply` 또는 `--validate` 중 정확히 하나를 선택한다. CI는 세 host의 Copier default fixture, hostile typed-answer fixture, non-absent hook 거부, Rust/Copier parity, role materialization과 consent 변조도 함께 검증한다.
 
-현재 로컬 검증 기준은 Rust workspace test 63개, Phase 1 Python conformance 184개와 usage guard conformance 26개다. Linux·macOS·Windows에서 두 Python corpus를 실행하도록 CI matrix를 구성했으며, 이 변경의 원격 matrix 결과는 `develop` push 뒤 확인한다.
+현재 로컬 검증 기준은 Rust workspace test 73개, Phase 1 Python conformance 192개,
+Phase 2 knowledge conformance 22개와 usage guard conformance 26개다.
+Linux·macOS·Windows에서 세 corpus를 실행하도록 CI matrix를 구성했으며, 이 변경의
+원격 matrix 결과는 `develop` push 뒤 확인한다.
+
+## Canonical knowledge와 disposable index
+
+`hive knowledge ingest`는 5 MiB 이하의 비기밀 source를 content-addressed immutable
+Raw revision으로 저장하고 prepared Wiki draft의 `raw:self`를 exact locator로
+치환한다. Canonical integration은 project-local lock 아래에서 직렬화된다.
+
+```bash
+hive knowledge ingest --target . --source docs/source.md --wiki prepared-page.md --output json
+hive knowledge query --target . --text "deterministic index" --output json
+hive knowledge lint --target . --output json
+hive knowledge delete --target . --page-id old-page --reason obsolete \
+  --timestamp 2026-07-24T00:00:00Z --output json
+hive index rebuild --target . --output json
+```
+
+Index는 FTS5, tag, alias, backlink, source graph와 content hash를 투영한다. Query는
+canonical logical digest와 `.stale` marker를 확인하므로 Markdown을 직접 바꾼 뒤에는
+rebuild 전 결과를 반환하지 않는다. 삭제는 active Wiki와 더 이상 참조되지 않는 Raw
+revision을 제거하고 fingerprint, locator, reason, replacement, timestamp만 suppression
+ledger에 남긴다. `reason`은 삭제 prose가 아닌 shipped stable reason-code enum이다.
 
 ## Subscription usage guard
 
@@ -191,11 +221,11 @@ Exit `0`은 그 시점의 snapshot이 core policy를 통과했다는 read-only �
 
 | 항목 | 현재 값 |
 | --- | --- |
-| Product version | `0.2.0` |
-| 현재 범위 | Phase 1 completion review 보강과 Phase 5 usage guard 선행 slice |
-| 구현 기능 | Rust/Copier renderer, automatic OMX/OMC owner resolution, ownership·rollback·marker·role·consent 표면, provider-neutral usage policy와 CodexBar adapter |
-| 다음 구현 | Phase 1 safety/Windows/validation 보강 뒤 Phase 2 Markdown knowledge와 재생성 가능한 SQLite FTS index |
-| Active plan | [`docs/plans/PLAN.md`](docs/plans/PLAN.md) revision 1.6 |
+| Product version | `0.3.0` |
+| 현재 범위 | Phase 1 renderer, Phase 2 knowledge/index와 Phase 5 usage guard 선행 slice |
+| 구현 기능 | 결정적 setup, ownership·rollback·marker·role·consent, Raw/Wiki/Schema ingest/query/lint/delete/suppress/rebuild, FTS5 graph index, usage policy와 CodexBar adapter |
+| 다음 구현 | Phase 3 portable Skill routing, `hive-prompt-refine`와 host projection |
+| Active plan | [`docs/plans/PLAN.md`](docs/plans/PLAN.md) revision 1.8 |
 | Handoff state | [`docs/state/CURRENT.md`](docs/state/CURRENT.md) |
 
 Semantic version `X.Y.Z`는 다음 원칙으로 변경한다.

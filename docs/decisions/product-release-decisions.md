@@ -1,6 +1,6 @@
 # 제품·배포 결정
 
-기준일: 2026-07-23
+기준일: 2026-07-24
 
 | 영역 | 결정 |
 | --- | --- |
@@ -23,7 +23,7 @@
 | backup | update 전 생성, 최대 7일, Git 제외 |
 | 저장소 | 비기밀 canonical source와 data는 Git 추적, runtime/cache/SQLite 제외 |
 | 배포 정본 | GitHub Releases |
-| 현재 버전 | Phase 1 결정적 setup renderer `0.2.0`; root Cargo workspace version이 정본 |
+| 현재 버전 | Phase 2 Markdown knowledge와 disposable SQLite index `0.3.0`; root Cargo workspace version이 정본 |
 | 버전 증가 | feature는 원칙적으로 `Y`, compatible quick bugfix는 `Z`; `X`는 exact target을 사용자가 명시하고 human confirmation한 경우에만 |
 | 호환성 | major `0`을 포함해 같은 major만 non-breaking upgrade 보장 |
 | cross-major | 사전 경고, 자동 migration, project/docs/preferences 보존, SQLite rebuild |

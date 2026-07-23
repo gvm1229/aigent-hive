@@ -23,7 +23,8 @@ aigent-hive/
 ├── crates/
 │   ├── hive-core/              # provider-neutral invariant와 usage permit policy
 │   ├── hive-render/            # 결정적 staging, ownership, consent와 role materialization
-│   └── hive-cli/               # doctor/check-target/setup/hook/usage sensor adapter
+│   ├── hive-wiki/              # Markdown ingest/lint와 disposable SQLite FTS5 projection
+│   └── hive-cli/               # setup/knowledge/index/hook/usage command adapter
 ├── harness/
 │   ├── template/               # Copier authoring·CI source
 │   ├── skills/                 # portable shipping Skill source
@@ -64,7 +65,7 @@ shared guidance marker 계약은 [`../guidance-schema.md`](../guidance-schema.md
 | `shared-marker` | shared file의 exact Hive marker만 교체 |
 | `rebuildable-runtime`, `ephemeral-backup` | canonical source로 취급하지 않음 |
 
-`.omx/**`, `.omc/**`, `.codex/**`, `.claude/**`, `.agents/**`와 manifest 밖 path는 setup write 대상으로 사용할 수 없다. Target-relative managed file은 symlink ancestor와 entry type을 확인한 뒤 읽으므로 외부 symlink target을 따라가지 않는다.
+`.omx/**`, `.omc/**`, `.codex/**`, `.claude/**`, `.agents/**`와 manifest 밖 path는 setup write 대상으로 사용할 수 없다. Consumer target 자체뿐 아니라 사용자가 지정한 target path의 기존 ancestor도 symlink와 entry type을 확인하고, target-relative managed file은 별도로 같은 검사를 반복하므로 외부 symlink target을 따라가지 않는다.
 
 `execute_setup`은 시작 시 ambient parent capability에서 consumer root를 no-follow로 열어 pin한다. Protected seed, shared marker, role, hook 철회 ownership과 changed-path 계산은 이 pinned handle에서 읽는다. Apply는 source tree와 consumer tree 밖의 sibling staging directory에서 전체 planned tree를 먼저 검증하고, activation snapshot·parent directory 생성·exclusive temp replacement·삭제·rollback·설치 bytes 재검증을 모두 같은 target handle 아래에서 수행한다.
 
@@ -77,6 +78,26 @@ Core `cap-std`의 stable public surface만으로는 cross-platform no-follow dir
 `hive-core::usage_guard`는 provider-neutral snapshot 검증, 10% inclusive 중지선과 one-shot dispatch permit만 소유한다. Session window가 있으면 우선하고, host가 session limit을 노출하지 않을 때 weekly를 fallback으로 선택한다. `hive-cli`의 CodexBar adapter는 optional local executable을 fixed argv로 bounded 실행해 snapshot을 정규화하며 provider SDK, API key와 model call을 소유하지 않는다.
 
 Hive는 현재 dispatch를 종료하거나 자체 loop를 실행하지 않는다. Resolved OMX/OMC 또는 host-native owner가 새 dispatch 직전에 permit을 요청하고 한 번 소비해야 하며, sensor 부재·stale·scope mismatch는 `usage_unknown`으로 fail-closed한다.
+
+## Phase 2 knowledge와 index
+
+`hive-wiki`는 `.hive/knowledge/Raw`, `Wiki`, `Schema`와 `suppression.yml`만 정본으로
+읽고 쓴다. Raw revision은 content-addressed immutable file이며 Wiki page는 typed
+YAML frontmatter와 Markdown body다. Deprecated/superseded state는 parser에서
+active tree 진입을 거부한다.
+
+`.hive/index/hive.sqlite3`은 FTS5, tag, alias, backlink, source/contradiction graph와
+content hash의 disposable projection이다. Rebuild는 canonical tree를 scan해 같은
+directory의 exclusive temp DB를 만들고 page count·logical digest를 검증한 뒤
+교체한다. Query는 매번 canonical logical digest와 stale marker를 확인한다.
+
+Canonical ingest/delete/suppress는 `.hive/index/.knowledge.lock`으로 직렬화한다.
+삭제는 active page와 참조가 끝난 Raw revision을 제거하고 suppression ledger에는
+fingerprint, source locator, reason, replacement, timestamp만 남긴다. `reason`은 삭제
+prose를 복제할 수 없는 shipped stable reason-code enum이며 source/replacement는
+`wiki:<id>`, `external:<id>` 또는 immutable Raw locator만 허용한다. Suppression
+fingerprint 또는 locator가 active Wiki/Raw와 겹치면 direct suppression과 index
+rebuild를 모두 거부해 active content와 suppression metadata가 공존하지 않게 한다.
 
 ## Crate 추가 원칙
 

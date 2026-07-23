@@ -27,6 +27,10 @@
         "VerifyWork",
         "IngestKnowledge",
         "QueryKnowledge",
+        "LintKnowledge",
+        "DeleteKnowledge",
+        "SuppressKnowledge",
+        "RebuildKnowledgeIndex",
         "UpdateHarness"
       ]
     },
@@ -76,6 +80,9 @@
     },
     "next_action": {
       "type": ["string", "null"]
+    },
+    "data": {
+      "type": ["object", "null"]
     }
   },
   "oneOf": [

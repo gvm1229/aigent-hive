@@ -83,24 +83,7 @@ pub fn source_marker_path(target: &Path) -> PathBuf {
 /// Returns [`TargetGuardError::SourceWorkspace`] when the target contains the
 /// Hive source marker.
 pub fn ensure_consumer_target(target: &Path) -> Result<(), TargetGuardError> {
-    match fs::symlink_metadata(target) {
-        Ok(metadata) if metadata.file_type().is_symlink() => {
-            return Err(TargetGuardError::SymlinkAncestor {
-                path: target.to_path_buf(),
-            });
-        }
-        Ok(metadata) if !metadata.is_dir() => {
-            return Err(TargetGuardError::PathInspectionFailed {
-                path: target.to_path_buf(),
-            });
-        }
-        Ok(_) => {}
-        Err(_) => {
-            return Err(TargetGuardError::PathInspectionFailed {
-                path: target.to_path_buf(),
-            });
-        }
-    }
+    ensure_target_ancestors_are_directories(target)?;
     let marker = source_marker_path(target);
     match fs::symlink_metadata(&marker) {
         Ok(metadata) if metadata.is_file() => {
@@ -109,6 +92,52 @@ pub fn ensure_consumer_target(target: &Path) -> Result<(), TargetGuardError> {
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
         Ok(_) | Err(_) => {
             return Err(TargetGuardError::PathInspectionFailed { path: marker });
+        }
+    }
+    Ok(())
+}
+
+fn ensure_target_ancestors_are_directories(target: &Path) -> Result<(), TargetGuardError> {
+    if target
+        .components()
+        .any(|component| matches!(component, Component::ParentDir))
+    {
+        return Err(TargetGuardError::PathInspectionFailed {
+            path: target.to_path_buf(),
+        });
+    }
+    let absolute = if target.is_absolute() {
+        target.to_path_buf()
+    } else {
+        std::env::current_dir()
+            .map_err(|_| TargetGuardError::PathInspectionFailed {
+                path: target.to_path_buf(),
+            })?
+            .join(target)
+    };
+    let mut ancestors = absolute.ancestors().collect::<Vec<_>>();
+    ancestors.reverse();
+    for ancestor in ancestors {
+        if ancestor.as_os_str().is_empty() {
+            continue;
+        }
+        match fs::symlink_metadata(ancestor) {
+            Ok(metadata) if metadata.file_type().is_symlink() => {
+                return Err(TargetGuardError::SymlinkAncestor {
+                    path: ancestor.to_path_buf(),
+                });
+            }
+            Ok(metadata) if !metadata.is_dir() => {
+                return Err(TargetGuardError::PathInspectionFailed {
+                    path: ancestor.to_path_buf(),
+                });
+            }
+            Ok(_) => {}
+            Err(_) => {
+                return Err(TargetGuardError::PathInspectionFailed {
+                    path: ancestor.to_path_buf(),
+                });
+            }
         }
     }
     Ok(())
@@ -245,7 +274,9 @@ mod tests {
             .duration_since(UNIX_EPOCH)
             .expect("system clock must be after Unix epoch")
             .as_nanos();
-        std::env::temp_dir().join(format!("aigent-hive-{name}-{}-{nonce}", std::process::id()))
+        fs::canonicalize(std::env::temp_dir())
+            .expect("temporary root should have a stable path")
+            .join(format!("aigent-hive-{name}-{}-{nonce}", std::process::id()))
     }
 
     #[test]
@@ -323,6 +354,30 @@ mod tests {
 
         fs::remove_dir_all(&target).expect("target should be removed");
         fs::remove_dir_all(&outside).expect("outside should be removed");
+        assert!(matches!(
+            result,
+            Err(TargetGuardError::SymlinkAncestor { .. })
+        ));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn rejects_a_target_below_a_symlinked_parent() {
+        use std::os::unix::fs::symlink;
+
+        let temporary = temporary_directory("target-parent-symlink");
+        fs::create_dir_all(&temporary).expect("temporary root should be created");
+        let temporary =
+            fs::canonicalize(&temporary).expect("temporary root should have a stable path");
+        let actual = temporary.join("actual");
+        let target = actual.join("consumer");
+        let alias = temporary.join("alias");
+        fs::create_dir_all(&target).expect("target should be created");
+        symlink(&actual, &alias).expect("parent alias should be created");
+
+        let result = ensure_consumer_target(&alias.join("consumer"));
+
+        fs::remove_dir_all(&temporary).expect("temporary root should be removed");
         assert!(matches!(
             result,
             Err(TargetGuardError::SymlinkAncestor { .. })

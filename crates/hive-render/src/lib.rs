@@ -24,6 +24,8 @@ const SETUP_SCHEMA: &str = include_str!("../../../schemas/setup-answers.schema.j
 const ROLE_SCHEMA: &str = include_str!("../../../schemas/role-profile.schema.json");
 const CAPABILITY_SCHEMA: &str = include_str!("../../../schemas/capability-matrix.schema.json");
 const HOOK_SCHEMA: &str = include_str!("../../../schemas/hook-consent.schema.json");
+const KNOWLEDGE_SUPPRESSION_SCHEMA: &str =
+    include_str!("../../../schemas/knowledge-suppression.schema.json");
 const OWNERSHIP_MANIFEST: &str = include_str!("../../../harness/manifest.toml");
 static ACTIVATION_TEMP_COUNTER: AtomicU64 = AtomicU64::new(0);
 
@@ -2347,6 +2349,12 @@ fn validate_protected_contract(target: &Path) -> Result<(), RenderError> {
     let value: JsonValue = serde_yaml::from_slice(&suppression).map_err(|error| {
         RenderError::Verification(format!("invalid suppression ledger: {error}"))
     })?;
+    validate_schema_instance(
+        KNOWLEDGE_SUPPRESSION_SCHEMA,
+        &value,
+        "knowledge suppression ledger",
+    )
+    .map_err(as_verification)?;
     let object = value.as_object().ok_or_else(|| {
         RenderError::Verification("suppression ledger must be an object".to_owned())
     })?;
@@ -2901,8 +2909,11 @@ mod tests {
     }
 
     fn apply_fixture(target: &Path, answers: &str, capabilities: &str) {
+        let target = target
+            .canonicalize()
+            .expect("fixture target should have a stable path");
         execute_setup(&SetupRequest {
-            target,
+            target: &target,
             answers: &fixture(answers),
             capabilities: &fixture(capabilities),
             mode: SetupMode::Apply,
@@ -3224,11 +3235,15 @@ mod tests {
         use std::os::unix::fs::symlink;
 
         let temporary = tempfile::tempdir().expect("temporary directory");
-        let outside = temporary.path().join("outside");
+        let target = temporary
+            .path()
+            .canonicalize()
+            .expect("fixture target should have a stable path");
+        let outside = target.join("outside");
         fs::write(&outside, b"foreign bytes").expect("outside fixture should exist");
-        symlink(&outside, temporary.path().join("AGENTS.md")).expect("symlink should be created");
+        symlink(&outside, target.join("AGENTS.md")).expect("symlink should be created");
         let result = execute_setup(&SetupRequest {
-            target: temporary.path(),
+            target: &target,
             answers: &fixture("answers-base.yml"),
             capabilities: &fixture("capabilities-codex-omx.json"),
             mode: SetupMode::DryRun,
@@ -3283,9 +3298,13 @@ mod tests {
         use std::os::unix::fs::symlink;
 
         let temporary = tempfile::tempdir().expect("temporary directory");
-        let target_path = temporary.path().join("consumer");
-        let pinned_path = temporary.path().join("consumer-pinned");
-        let outside_path = temporary.path().join("outside");
+        let root = temporary
+            .path()
+            .canonicalize()
+            .expect("fixture root should have a stable path");
+        let target_path = root.join("consumer");
+        let pinned_path = root.join("consumer-pinned");
+        let outside_path = root.join("outside");
         fs::create_dir(&target_path).expect("consumer target should exist");
         fs::create_dir(&outside_path).expect("outside target should exist");
         fs::write(outside_path.join("sentinel"), b"foreign bytes")
@@ -3345,8 +3364,12 @@ mod tests {
         use std::os::unix::fs::symlink;
 
         let temporary = tempfile::tempdir().expect("temporary directory");
-        let target_path = temporary.path().join("consumer");
-        let outside_path = temporary.path().join("outside");
+        let root = temporary
+            .path()
+            .canonicalize()
+            .expect("fixture root should have a stable path");
+        let target_path = root.join("consumer");
+        let outside_path = root.join("outside");
         fs::create_dir(&target_path).expect("consumer target should exist");
         fs::create_dir(&outside_path).expect("outside target should exist");
         fs::write(outside_path.join("sentinel"), b"foreign bytes")
@@ -3400,13 +3423,13 @@ mod tests {
     #[test]
     fn injected_activation_failure_rolls_back_every_applied_file() {
         let temporary = tempfile::tempdir().expect("temporary directory");
-        apply_fixture(
-            temporary.path(),
-            "answers-base.yml",
-            "capabilities-codex-omx.json",
-        );
-        let harness = temporary.path().join(".hive/config/harness.toml");
-        let agents = temporary.path().join("AGENTS.md");
+        let target = temporary
+            .path()
+            .canonicalize()
+            .expect("fixture target should have a stable path");
+        apply_fixture(&target, "answers-base.yml", "capabilities-codex-omx.json");
+        let harness = target.join(".hive/config/harness.toml");
+        let agents = target.join("AGENTS.md");
         let before_harness = fs::read(&harness).expect("harness should exist");
         let before_agents = fs::read(&agents).expect("AGENTS should exist");
         let (mut answers, _) =
@@ -3414,12 +3437,11 @@ mod tests {
         answers.project_name = "changed-project".to_owned();
         let resolution = load_resolution(&fixture("capabilities-codex-omx.json"))
             .expect("resolution should load");
-        let target_dir =
-            open_target_capability(temporary.path()).expect("target capability should open");
+        let target_dir = open_target_capability(&target).expect("target capability should open");
         let planned = render_tree(&target_dir, &answers, &resolution, &BTreeSet::new())
             .expect("changed tree should render");
         let error = activate_staged_impl(
-            temporary.path(),
+            &target,
             &target_dir,
             &planned,
             &BTreeSet::new(),
@@ -3448,22 +3470,21 @@ mod tests {
     #[test]
     fn rollback_failure_has_a_stable_diagnostic_code() {
         let temporary = tempfile::tempdir().expect("temporary directory");
-        apply_fixture(
-            temporary.path(),
-            "answers-base.yml",
-            "capabilities-codex-omx.json",
-        );
+        let target = temporary
+            .path()
+            .canonicalize()
+            .expect("fixture target should have a stable path");
+        apply_fixture(&target, "answers-base.yml", "capabilities-codex-omx.json");
         let (mut answers, _) =
             load_answers(&fixture("answers-base.yml")).expect("answers should load");
         answers.project_name = "changed-project".to_owned();
         let resolution = load_resolution(&fixture("capabilities-codex-omx.json"))
             .expect("resolution should load");
-        let target_dir =
-            open_target_capability(temporary.path()).expect("target capability should open");
+        let target_dir = open_target_capability(&target).expect("target capability should open");
         let planned = render_tree(&target_dir, &answers, &resolution, &BTreeSet::new())
             .expect("changed tree should render");
         let error = activate_staged_impl(
-            temporary.path(),
+            &target,
             &target_dir,
             &planned,
             &BTreeSet::new(),
@@ -3584,24 +3605,24 @@ mod tests {
     #[test]
     fn validate_rejects_missing_required_role_and_digest_includes_wildcards() {
         let temporary = tempfile::tempdir().expect("temporary directory");
-        apply_fixture(
-            temporary.path(),
-            "answers-base.yml",
-            "capabilities-codex-omx.json",
-        );
-        let before = installed_tree_digest(temporary.path()).expect("digest should succeed");
+        let target = temporary
+            .path()
+            .canonicalize()
+            .expect("fixture target should have a stable path");
+        apply_fixture(&target, "answers-base.yml", "capabilities-codex-omx.json");
+        let before = installed_tree_digest(&target).expect("digest should succeed");
         fs::write(
-            temporary.path().join(".hive/knowledge/Wiki/custom.md"),
+            target.join(".hive/knowledge/Wiki/custom.md"),
             b"custom canonical page\n",
         )
         .expect("custom Wiki page should be written");
-        let after = installed_tree_digest(temporary.path()).expect("digest should succeed");
+        let after = installed_tree_digest(&target).expect("digest should succeed");
         assert_ne!(before, after);
 
-        fs::remove_file(temporary.path().join(".hive/team/roles/reviewer.md"))
+        fs::remove_file(target.join(".hive/team/roles/reviewer.md"))
             .expect("role should be removable in fixture");
         let error = execute_setup(&SetupRequest {
-            target: temporary.path(),
+            target: &target,
             answers: &fixture("answers-base.yml"),
             capabilities: &fixture("capabilities-codex-omx.json"),
             mode: SetupMode::Validate,

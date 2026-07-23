@@ -35,6 +35,8 @@ __pycache__/
 *.db3
 *.sqlite-wal
 *.sqlite-shm
+*.sqlite-journal
+*.sqlite3-journal
 *.db-wal
 *.db-shm
 **/backups/

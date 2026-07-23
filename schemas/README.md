@@ -9,6 +9,10 @@
 | `judge-package.schema.json` | 독립 judge 입력 envelope |
 | `judge-verdict.schema.json` | 독립 judge 결과 |
 | `capability-matrix.schema.json` | host/version/surface qualification |
+| `knowledge-page.schema.json` | active Wiki Markdown frontmatter |
+| `knowledge-suppression.schema.json` | deleted-content minimal suppression ledger |
+| `knowledge-query-result.schema.json` | deterministic query result data |
+| `knowledge-lint-result.schema.json` | link/citation/contradiction/stale diagnostics |
 
 Markdown schema는 parser가 YAML frontmatter를 JSON object로 변환한 뒤 검증.
 모든 schema는 versioned이며 breaking 변경은 새 major에서만 허용.
@@ -20,6 +24,8 @@ JSON Schema만으로 표현하기 어려운 cross-field invariant는 Rust semant
 - run의 passed/failed criterion은 required criterion의 부분집합이고 서로 disjoint
 - `succeeded` run은 required criterion 전부가 passed이고 failed criterion이 없음
 - judge quorum에 포함되는 verdict의 `package_digest`는 입력 package와 동일
+- Wiki tag/alias/source/link array는 lexicographic sort·unique이며 active source locator는 실제 Raw revision digest와 일치
+- suppression entry는 deleted body field를 표현할 수 없음
 
 Role seed의 setup-time materialization과 reconfigure/update ownership은
 [`../docs/architecture/role-lifecycle.md`](../docs/architecture/role-lifecycle.md)를 따른다.
