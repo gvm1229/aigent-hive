@@ -666,7 +666,10 @@ fn normalize_hook_path(target: &Path, value: &str) -> Result<Option<PathBuf>, Re
 
 #[cfg(windows)]
 fn windows_target_relative(target: &Path, path: &Path) -> Option<PathBuf> {
-    let target = windows_portable_path(target)?;
+    let canonical_target = target
+        .canonicalize()
+        .unwrap_or_else(|_| target.to_path_buf());
+    let target = windows_portable_path(&canonical_target)?;
     let path = windows_portable_path(path)?;
     let target = target.trim_end_matches('/');
     let prefix = path.get(..target.len())?;
