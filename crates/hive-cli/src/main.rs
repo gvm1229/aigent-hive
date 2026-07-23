@@ -642,35 +642,59 @@ fn protect_hive_owned_state(target: &Path, input: &HookInput) -> Result<HookResu
 fn normalize_hook_path(target: &Path, value: &str) -> Result<Option<PathBuf>, RenderError> {
     let path = PathBuf::from(value);
     #[cfg(windows)]
-    let target = without_windows_verbatim_prefix(target);
-    #[cfg(not(windows))]
-    let target = target.to_path_buf();
-    #[cfg(windows)]
-    let path = without_windows_verbatim_prefix(&path);
     let relative = if path.is_absolute() {
-        match path.strip_prefix(&target) {
-            Ok(relative) => relative,
+        match windows_target_relative(target, &path) {
+            Some(relative) => relative,
+            None => return Ok(None),
+        }
+    } else {
+        path
+    };
+    #[cfg(not(windows))]
+    let relative = if path.is_absolute() {
+        match path.strip_prefix(target) {
+            Ok(relative) => relative.to_path_buf(),
             Err(_) => return Ok(None),
         }
     } else {
-        &path
+        path
     };
-    validate_project_relative(relative)
+    validate_project_relative(&relative)
         .map_err(|error| RenderError::Input(format!("unsafe hook input path {value}: {error}")))?;
-    Ok(Some(relative.to_path_buf()))
+    Ok(Some(relative))
 }
 
 #[cfg(windows)]
-fn without_windows_verbatim_prefix(path: &Path) -> PathBuf {
-    let Some(value) = path.to_str() else {
-        return path.to_path_buf();
-    };
-    if let Some(remainder) = value.strip_prefix(r"\\?\UNC\") {
-        return PathBuf::from(format!(r"\\{remainder}"));
+fn windows_target_relative(target: &Path, path: &Path) -> Option<PathBuf> {
+    let target = windows_portable_path(target)?;
+    let path = windows_portable_path(path)?;
+    let target = target.trim_end_matches('/');
+    let prefix = path.get(..target.len())?;
+    if !prefix.eq_ignore_ascii_case(target) {
+        return None;
     }
-    value
-        .strip_prefix(r"\\?\")
-        .map_or_else(|| path.to_path_buf(), PathBuf::from)
+    let relative = path.get(target.len()..)?.strip_prefix('/')?;
+    if relative.is_empty() {
+        return None;
+    }
+    Some(PathBuf::from(relative))
+}
+
+#[cfg(windows)]
+fn windows_portable_path(path: &Path) -> Option<String> {
+    let mut value = path.to_str()?.replace('\\', "/");
+    if value
+        .get(..8)
+        .is_some_and(|prefix| prefix.eq_ignore_ascii_case("//?/UNC/"))
+    {
+        value.replace_range(..8, "//");
+    } else if value
+        .get(..4)
+        .is_some_and(|prefix| prefix.eq_ignore_ascii_case("//?/"))
+    {
+        value.replace_range(..4, "");
+    };
+    Some(value)
 }
 
 fn is_protected_hive_path(path: &Path) -> bool {
@@ -1225,8 +1249,8 @@ mod tests {
     #[test]
     fn hook_path_normalization_matches_verbatim_current_directory() {
         let normalized = normalize_hook_path(
-            Path::new(r"\\?\C:\consumer"),
-            r"C:\consumer\.hive\config\harness.toml",
+            Path::new(r"\\?\C:\Users\RUNNER~1\Consumer"),
+            r"c:\users\runner~1\consumer\.hive\config\harness.toml",
         )
         .expect("inside absolute path should validate")
         .expect("inside absolute path should be classified");
