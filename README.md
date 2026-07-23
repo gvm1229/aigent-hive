@@ -107,6 +107,10 @@ Phase 0 source scaffold와 contract baseline이 완료되었다. 다음 단계�
 
 Aigent Hive는 사용자의 프로젝트 라이선스에 불필요한 제약을 주지 않도록 범위를 분리한다.
 
+> **Open source should maximize practical reuse.**
+
+Hive 자체의 공개 source를 기반으로 배포되는 개선판도 계속 공개 source로 남아야 한다는 원칙으로 CLI/source에는 Apache-2.0를 적용한다. 반면 출하 harness는 사용자의 프로젝트에 들어가는 material이므로 Apache-2.0으로 분리해 그 프로젝트의 라이선스 선택을 침범하지 않는다.
+
 - **CLI와 source — [`Apache-2.0`](LICENSES/Apache-2.0.txt):** `harness/`를 제외한 저장소 source에 적용된다. Apache-2.0-covered 수정판을 배포할 때는 대응 source와 같은 라이선스를 제공해야 하지만, 개인·사내에서만 수정해 사용하는 경우 공개 의무는 없다.
 - **출하 template — [`Apache-2.0`](LICENSES/Apache-2.0.txt):** `harness/**`와 여기에서 생성된 Aigent Hive 소유 파일·marker block에 적용된다. 상용·비공개 프로젝트에서도 사용할 수 있으며, 소비자 프로젝트의 기존 source·문서·data 라이선스는 변경하지 않는다.
 

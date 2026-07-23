@@ -5,7 +5,7 @@
 
 ## 맥락
 
-Aigent Hive CLI와 source의 비공개 파생 배포에는 permissive licensing를 적용하되, 소비자 프로젝트에 설치되는 harness가 그 프로젝트의 라이선스를 제약해서는 안 된다. 하나의 라이선스를 저장소 전체에 적용하면 두 목표를 동시에 충족하기 어렵다.
+Aigent Hive의 원칙은 **“Open source should maximize practical reuse.”**다. CLI와 source를 기반으로 배포되는 개선판에는 permissive licensing를 적용하되, 소비자 프로젝트에 설치되는 harness가 그 프로젝트의 라이선스를 제약해서는 안 된다. 하나의 라이선스를 저장소 전체에 적용하면 두 목표를 동시에 충족하기 어렵다.
 
 ## 결정
 
