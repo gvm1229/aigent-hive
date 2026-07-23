@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/gvm1229/aigent-hive/schemas/capability-matrix.schema.json",
+  "title": "Aigent Hive host capability matrix",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "host",
+    "host_version",
+    "surface",
+    "orchestration_layer",
+    "capabilities",
+    "evidence"
+  ],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "host": { "enum": ["codex", "claude", "antigravity"] },
+    "host_version": { "type": "string", "minLength": 1 },
+    "surface": { "enum": ["app", "cli", "plugin", "in-session"] },
+    "orchestration_layer": { "enum": ["host-native", "omx", "omc"] },
+    "capabilities": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "instructions",
+        "simple-question-isolation",
+        "subagents",
+        "persistent-role-binding",
+        "continuous-loop",
+        "usage-sensor",
+        "independent-judge"
+      ],
+      "properties": {
+        "instructions": {
+          "enum": ["supported", "best-effort", "unsupported", "unverified"]
+        },
+        "simple-question-isolation": {
+          "enum": ["supported", "best-effort", "unsupported", "unverified"]
+        },
+        "subagents": {
+          "enum": ["supported", "best-effort", "unsupported", "unverified"]
+        },
+        "persistent-role-binding": {
+          "enum": ["supported", "best-effort", "unsupported", "unverified"]
+        },
+        "continuous-loop": {
+          "enum": ["supported", "best-effort", "unsupported", "unverified"]
+        },
+        "usage-sensor": {
+          "enum": ["supported", "best-effort", "unsupported", "unverified"]
+        },
+        "independent-judge": {
+          "enum": ["supported", "best-effort", "unsupported", "unverified"]
+        }
+      }
+    },
+    "evidence": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["fixture", "digest", "verified_at"],
+        "properties": {
+          "fixture": { "type": "string", "minLength": 1 },
+          "digest": {
+            "type": "string",
+            "pattern": "^sha256:[0-9a-f]{64}$"
+          },
+          "verified_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
+    }
+  }
+}

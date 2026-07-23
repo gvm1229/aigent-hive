@@ -1,0 +1,117 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/gvm1229/aigent-hive/schemas/action-result.schema.json",
+  "title": "Aigent Hive action result",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "action",
+    "status",
+    "exit_code",
+    "code",
+    "message",
+    "changed_paths",
+    "evidence"
+  ],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "action": {
+      "enum": [
+        "SetupHarness",
+        "AnswerSimpleQuestion",
+        "RunWork",
+        "ResumeWork",
+        "VerifyWork",
+        "IngestKnowledge",
+        "QueryKnowledge",
+        "UpdateHarness"
+      ]
+    },
+    "status": {
+      "enum": [
+        "success",
+        "unsupported",
+        "blocked",
+        "conflict",
+        "verification-failed",
+        "error"
+      ]
+    },
+    "exit_code": {
+      "enum": [0, 2, 3, 4, 5, 10]
+    },
+    "code": {
+      "type": "string",
+      "pattern": "^hive\\.[a-z0-9][a-z0-9._-]*$"
+    },
+    "message": {
+      "type": "string",
+      "minLength": 1
+    },
+    "changed_paths": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "evidence": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["kind", "locator", "digest"],
+        "properties": {
+          "kind": {
+            "enum": ["command", "file", "test", "verdict", "report"]
+          },
+          "locator": { "type": "string", "minLength": 1 },
+          "digest": {
+            "type": "string",
+            "pattern": "^sha256:[0-9a-f]{64}$"
+          }
+        }
+      }
+    },
+    "next_action": {
+      "type": ["string", "null"]
+    }
+  },
+  "oneOf": [
+    {
+      "properties": {
+        "exit_code": { "const": 0 },
+        "status": { "const": "success" }
+      }
+    },
+    {
+      "properties": {
+        "exit_code": { "const": 2 },
+        "status": { "enum": ["blocked", "error"] }
+      }
+    },
+    {
+      "properties": {
+        "exit_code": { "const": 3 },
+        "status": { "enum": ["blocked", "conflict"] }
+      }
+    },
+    {
+      "properties": {
+        "exit_code": { "const": 4 },
+        "status": { "const": "unsupported" }
+      }
+    },
+    {
+      "properties": {
+        "exit_code": { "const": 5 },
+        "status": { "const": "verification-failed" }
+      }
+    },
+    {
+      "properties": {
+        "exit_code": { "const": 10 },
+        "status": { "const": "error" }
+      }
+    }
+  ]
+}

@@ -1,0 +1,67 @@
+schema_version = 1
+
+[[paths]]
+pattern = ".hive/setup-answers.yml"
+ownership = "hive-managed-config"
+source = "template"
+
+[[paths]]
+pattern = ".hive/config/harness.toml"
+ownership = "hive-generated-config"
+source = "template"
+
+[[paths]]
+pattern = ".hive/config/role-seeds.yml"
+ownership = "user-answer-protected"
+source = "template"
+
+[[paths]]
+pattern = ".hive/config/knowledge-scope.yml"
+ownership = "user-answer-protected"
+source = "template"
+
+[[paths]]
+pattern = ".hive/config/approved-skills.yml"
+ownership = "user-consent-protected"
+source = "template"
+
+[[paths]]
+pattern = ".hive/knowledge/**"
+ownership = "canonical-data-protected"
+source = "template-seed"
+
+[[paths]]
+pattern = ".hive/team/**"
+ownership = "canonical-data-protected"
+source = "template-seed-and-role-materializer"
+
+[[paths]]
+pattern = ".hive/runs/**"
+ownership = "canonical-data-protected"
+source = "template-seed"
+
+[[paths]]
+pattern = ".hive/index/**"
+ownership = "rebuildable-runtime"
+
+[[paths]]
+pattern = ".hive/backups/**"
+ownership = "ephemeral-backup"
+
+[[paths]]
+pattern = "AGENTS.md"
+ownership = "shared-marker"
+marker_start = "<!-- AIGENT-HIVE:START -->"
+marker_end = "<!-- AIGENT-HIVE:END -->"
+
+[[forbidden_paths]]
+pattern = ".omx/**"
+
+[[forbidden_paths]]
+pattern = ".omc/**"
+
+[[forbidden_paths]]
+pattern = ".codex/**"
+
+[[forbidden_paths]]
+pattern = ".claude/**"

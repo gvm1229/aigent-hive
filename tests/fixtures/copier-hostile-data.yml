@@ -1,0 +1,40 @@
+project_name: "fixture \"quoted\"\nsecond line"
+project_kind: custom
+primary_host: claude
+orchestration_layer: omc
+usage_stop_remaining_percent: 20
+elevated_judge_quorum: "2/3"
+critical_judge_quorum: "3/3+human"
+persistent_roles:
+  - role_id: reviewer
+    display_name: Hostile Reviewer
+    responsibilities:
+      - Verify acceptance criteria independently
+    non_responsibilities:
+      - Implement the artifact under review
+    context_paths:
+      - docs/
+    allowed_capabilities:
+      - filesystem-read
+      - shell
+    write_scope:
+      - .hive/runs/
+    verification_duties:
+      - Attach reproducible evidence to every finding
+knowledge_include_paths:
+  - docs/**
+knowledge_exclude_paths:
+  - docs/private/**
+approved_optional_skills:
+  - consent_version: 1
+    name: example-linter
+    source: https://example.invalid/example-linter
+    revision: v1.0.0
+    content_digest: sha256:0000000000000000000000000000000000000000000000000000000000000000
+    requested_capabilities:
+      - filesystem-read
+      - shell
+    approved_capabilities:
+      - filesystem-read
+    approved_at: "2026-07-23T00:00:00Z"
+    consent_digest: sha256:a68da1f30af091f3ce109a8c41eb6829ea5b00b826b14b440e6ee951179b540a

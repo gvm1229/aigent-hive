@@ -1,0 +1,47 @@
+# Rust and generated release output
+/target/
+/dist/
+/artifacts/
+/release/out/
+
+# Disposable test and render work
+/tests/work/
+/.copier-answers.yml
+__pycache__/
+*.py[cod]
+
+# Local runtime and external orchestration state
+/.hive/
+/.omx/
+/.omc/
+/.codex/
+/.claude/
+/.agents/work/
+
+# Local credentials and signing material
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.mobileprovision
+
+# Rebuildable indexes and local backups
+*.sqlite
+*.sqlite3
+*.db
+*.db3
+*.sqlite-wal
+*.sqlite-shm
+*.db-wal
+*.db-shm
+**/backups/
+
+# Editor and operating-system state
+.DS_Store
+Thumbs.db
+*.swp
+*.tmp
+*.bak

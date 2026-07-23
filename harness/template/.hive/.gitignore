@@ -1,0 +1,8 @@
+# Rebuildable local search indexes
+/index/*.sqlite
+/index/*.sqlite3
+/index/*.sqlite-wal
+/index/*.sqlite-shm
+
+# Short-lived local safety backups
+/backups/

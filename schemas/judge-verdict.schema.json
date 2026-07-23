@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/gvm1229/aigent-hive/schemas/judge-verdict.schema.json",
+  "title": "Aigent Hive independent judge verdict",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "subject_id",
+    "judge_id",
+    "package_digest",
+    "verdict",
+    "findings",
+    "missing_evidence",
+    "created_at"
+  ],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "subject_id": { "type": "string", "minLength": 1 },
+    "judge_id": { "type": "string", "minLength": 1 },
+    "package_digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "verdict": { "enum": ["PASS", "FAIL", "INDETERMINATE"] },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["criterion_id", "severity", "message", "reproduction"],
+        "properties": {
+          "criterion_id": { "type": "string", "minLength": 1 },
+          "severity": { "enum": ["critical", "high", "medium", "low"] },
+          "message": { "type": "string", "minLength": 1 },
+          "reproduction": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "missing_evidence": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "oneOf": [
+    {
+      "properties": {
+        "verdict": { "const": "PASS" },
+        "findings": { "maxItems": 0 },
+        "missing_evidence": { "maxItems": 0 }
+      }
+    },
+    {
+      "properties": {
+        "verdict": { "const": "FAIL" },
+        "findings": { "minItems": 1 }
+      }
+    },
+    {
+      "properties": {
+        "verdict": { "const": "INDETERMINATE" },
+        "missing_evidence": { "minItems": 1 }
+      }
+    }
+  ]
+}

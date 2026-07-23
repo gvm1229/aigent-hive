@@ -1,0 +1,17 @@
+<!-- AIGENT-HIVE:START -->
+# Aigent Hive
+
+Project: `{{ project_name }}`
+Profile: `{{ project_kind }}`
+Primary host: `{{ primary_host }}`
+Orchestration owner: `{{ orchestration_layer }}`
+
+- Read canonical Hive configuration from `.hive/config/harness.toml`.
+- Load only the directives and knowledge required by the current request.
+- For a simple question, do not load project memory, spawn agents, or edit files.
+- Keep durable role identity in `.hive/team/roles/`; the active host owns sessions and subagents.
+- Keep durable knowledge in Markdown. Treat `.hive/index/*.sqlite*` as disposable.
+- Do not call model-provider APIs or request provider API credentials.
+- Require explicit approval before activating optional Skills.
+- Preserve user text and third-party marker blocks outside this Hive block.
+<!-- AIGENT-HIVE:END -->

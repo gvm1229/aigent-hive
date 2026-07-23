@@ -1,0 +1,17 @@
+# Generated from setup answers. Change values through a validated Hive reconfigure action.
+schema_version: 1
+project_name: {{ project_name | to_json }}
+project_kind: {{ project_kind | to_json }}
+primary_host: {{ primary_host | to_json }}
+orchestration_layer: {{ orchestration_layer | to_json }}
+usage_stop_remaining_percent: {{ usage_stop_remaining_percent }}
+elevated_judge_quorum: {{ elevated_judge_quorum | to_json }}
+critical_judge_quorum: {{ critical_judge_quorum | to_json }}
+persistent_roles:
+{{ persistent_roles | to_nice_yaml | indent(2, true) -}}
+knowledge_include_paths:
+{{ knowledge_include_paths | to_nice_yaml | indent(2, true) -}}
+knowledge_exclude_paths:
+{{ knowledge_exclude_paths | to_nice_yaml | indent(2, true) -}}
+approved_optional_skills:
+{{ approved_optional_skills | to_nice_yaml | indent(2, true) -}}

@@ -1,0 +1,216 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/gvm1229/aigent-hive/schemas/setup-answers.schema.json",
+  "title": "Aigent Hive setup answers",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "project_name",
+    "project_kind",
+    "primary_host",
+    "orchestration_layer",
+    "usage_stop_remaining_percent",
+    "elevated_judge_quorum",
+    "critical_judge_quorum",
+    "persistent_roles",
+    "knowledge_include_paths",
+    "knowledge_exclude_paths",
+    "approved_optional_skills"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "project_name": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "\\S"
+    },
+    "project_kind": {
+      "enum": ["general", "custom"]
+    },
+    "primary_host": {
+      "enum": ["codex", "claude", "antigravity"]
+    },
+    "orchestration_layer": {
+      "enum": ["host-native", "omx", "omc"]
+    },
+    "usage_stop_remaining_percent": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 99
+    },
+    "elevated_judge_quorum": {
+      "const": "2/3"
+    },
+    "critical_judge_quorum": {
+      "const": "3/3+human"
+    },
+    "persistent_roles": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "role_id",
+          "display_name",
+          "responsibilities",
+          "non_responsibilities",
+          "context_paths",
+          "allowed_capabilities",
+          "write_scope",
+          "verification_duties"
+        ],
+        "properties": {
+          "role_id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]{1,62}$"
+          },
+          "display_name": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "^[^\\r\\n]+$"
+          },
+          "responsibilities": {
+            "type": "array",
+            "minItems": 1,
+            "items": { "type": "string", "minLength": 1 }
+          },
+          "non_responsibilities": {
+            "type": "array",
+            "items": { "type": "string", "minLength": 1 }
+          },
+          "context_paths": {
+            "type": "array",
+            "items": { "type": "string", "minLength": 1 }
+          },
+          "allowed_capabilities": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": {
+              "enum": [
+                "filesystem-read",
+                "filesystem-write",
+                "shell",
+                "network",
+                "subagents",
+                "external-app"
+              ]
+            }
+          },
+          "write_scope": {
+            "type": "array",
+            "items": { "type": "string", "minLength": 1 }
+          },
+          "verification_duties": {
+            "type": "array",
+            "minItems": 1,
+            "items": { "type": "string", "minLength": 1 }
+          }
+        }
+      }
+    },
+    "knowledge_include_paths": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "knowledge_exclude_paths": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "approved_optional_skills": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "consent_version",
+          "name",
+          "source",
+          "revision",
+          "content_digest",
+          "requested_capabilities",
+          "approved_capabilities",
+          "approved_at",
+          "consent_digest"
+        ],
+        "properties": {
+          "consent_version": { "const": 1 },
+          "name": { "type": "string", "minLength": 1 },
+          "source": { "type": "string", "minLength": 1 },
+          "revision": { "type": "string", "minLength": 1 },
+          "content_digest": {
+            "type": "string",
+            "pattern": "^sha256:[0-9a-f]{64}$"
+          },
+          "requested_capabilities": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": {
+              "enum": [
+                "filesystem-read",
+                "filesystem-write",
+                "shell",
+                "network",
+                "subagents",
+                "external-app"
+              ]
+            }
+          },
+          "approved_capabilities": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": {
+              "enum": [
+                "filesystem-read",
+                "filesystem-write",
+                "shell",
+                "network",
+                "subagents",
+                "external-app"
+              ]
+            }
+          },
+          "approved_at": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"
+          },
+          "consent_digest": {
+            "type": "string",
+            "pattern": "^sha256:[0-9a-f]{64}$"
+          }
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "orchestration_layer": { "const": "omx" }
+        },
+        "required": ["orchestration_layer"]
+      },
+      "then": {
+        "properties": {
+          "primary_host": { "const": "codex" }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "orchestration_layer": { "const": "omc" }
+        },
+        "required": ["orchestration_layer"]
+      },
+      "then": {
+        "properties": {
+          "primary_host": { "const": "claude" }
+        }
+      }
+    }
+  ]
+}

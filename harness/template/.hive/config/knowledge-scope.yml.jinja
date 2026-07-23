@@ -1,0 +1,5 @@
+schema_version: 1
+include:
+{{ knowledge_include_paths | to_nice_yaml | indent(2, true) -}}
+exclude:
+{{ knowledge_exclude_paths | to_nice_yaml | indent(2, true) -}}

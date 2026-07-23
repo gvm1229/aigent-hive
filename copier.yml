@@ -1,0 +1,81 @@
+_min_copier_version: "9.17.0"
+_subdirectory: harness/template
+_answers_file: .hive/setup-answers.yml
+_templates_suffix: .jinja
+_envops:
+  keep_trailing_newline: true
+
+project_name:
+  type: str
+  help: 소비자 프로젝트 이름
+  validator: "{% if not project_name.strip() %}프로젝트 이름을 입력해야 합니다{% endif %}"
+
+project_kind:
+  type: str
+  help: 적용할 domain profile
+  choices:
+    General: general
+    Custom: custom
+  default: general
+
+primary_host:
+  type: str
+  help: 주로 사용할 agent host
+  choices:
+    OpenAI Codex: codex
+    Claude Code: claude
+    Gemini Antigravity: antigravity
+  default: codex
+
+orchestration_layer:
+  type: str
+  help: subagent와 지속 실행을 소유할 기존 runtime
+  choices:
+    Host native: host-native
+    oh-my-codex: omx
+    oh-my-claudecode: omc
+  default: host-native
+  validator: >-
+    {% if orchestration_layer == 'omx' and primary_host != 'codex' %}
+    OMX는 Codex에서만 선택할 수 있습니다
+    {% elif orchestration_layer == 'omc' and primary_host != 'claude' %}
+    OMC는 Claude Code에서만 선택할 수 있습니다
+    {% elif primary_host == 'antigravity' and orchestration_layer != 'host-native' %}
+    Gemini Antigravity는 host-native orchestration만 지원합니다
+    {% endif %}
+
+usage_stop_remaining_percent:
+  type: int
+  help: 신뢰 가능한 subscription usage sensor가 있을 때 새 자율 작업을 중지할 잔여 비율
+  default: 20
+  validator: "{% if usage_stop_remaining_percent < 1 or usage_stop_remaining_percent > 99 %}1~99 사이 값을 입력해야 합니다{% endif %}"
+
+elevated_judge_quorum:
+  type: str
+  help: elevated-risk 결과의 기본 독립 심사 quorum
+  default: "2/3"
+
+critical_judge_quorum:
+  type: str
+  help: critical-risk 결과의 기본 독립 심사 quorum
+  default: "3/3+human"
+
+persistent_roles:
+  type: yaml
+  help: stable role identity와 초기 책임 목록
+  default: []
+
+knowledge_include_paths:
+  type: yaml
+  help: Raw/Wiki ingest를 허용할 project-relative path 또는 glob
+  default: []
+
+knowledge_exclude_paths:
+  type: yaml
+  help: ingest에서 항상 제외할 project-relative path 또는 glob
+  default: []
+
+approved_optional_skills:
+  type: yaml
+  help: 사용자가 이름과 source를 확인하고 명시 승인한 optional Skill 목록
+  default: []

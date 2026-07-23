@@ -1,0 +1,12 @@
+[package]
+name = "hive-core"
+version.workspace = true
+edition.workspace = true
+repository.workspace = true
+publish = false
+
+[lib]
+path = "src/lib.rs"
+
+[lints]
+workspace = true

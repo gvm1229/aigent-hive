@@ -1,0 +1,5 @@
+{
+  "schema_version": 1,
+  "kind": "aigent-hive-source-workspace",
+  "consumer_setup_allowed": false
+}

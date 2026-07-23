@@ -1,0 +1,342 @@
+#!/usr/bin/env python3
+"""Validate Phase 0 schemas and a rendered consumer-harness fixture."""
+
+from __future__ import annotations
+
+import argparse
+import copy
+import hashlib
+import json
+import sys
+import tomllib
+from pathlib import Path
+
+import yaml
+from jsonschema import Draft202012Validator, FormatChecker, ValidationError
+
+
+REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
+SCHEMA_DIRECTORY = REPOSITORY_ROOT / "schemas"
+CONSENT_FIELDS = (
+    "consent_version",
+    "name",
+    "source",
+    "revision",
+    "content_digest",
+    "requested_capabilities",
+    "approved_capabilities",
+    "approved_at",
+)
+
+
+def read_yaml(path: Path) -> object:
+    with path.open("r", encoding="utf-8") as stream:
+        return yaml.safe_load(stream)
+
+
+def validate_schema_documents() -> None:
+    for path in sorted(SCHEMA_DIRECTORY.glob("*.schema.json")):
+        schema = json.loads(path.read_text(encoding="utf-8"))
+        Draft202012Validator.check_schema(schema)
+
+
+def validate_instance(schema_name: str, instance: object) -> None:
+    schema_path = SCHEMA_DIRECTORY / schema_name
+    schema = json.loads(schema_path.read_text(encoding="utf-8"))
+    Draft202012Validator(
+        schema,
+        format_checker=FormatChecker(),
+    ).validate(instance)
+
+
+def expect_invalid(schema_name: str, instance: object) -> None:
+    try:
+        validate_instance(schema_name, instance)
+    except ValidationError:
+        return
+    raise AssertionError(f"invalid fixture passed {schema_name}")
+
+
+def validate_contract_examples() -> None:
+    digest = f"sha256:{'0' * 64}"
+    action_result = {
+        "schema_version": 1,
+        "action": "SetupHarness",
+        "status": "success",
+        "exit_code": 0,
+        "code": "hive.setup.success",
+        "message": "setup completed",
+        "changed_paths": [],
+        "evidence": [],
+    }
+    validate_instance("action-result.schema.json", action_result)
+    expect_invalid(
+        "action-result.schema.json",
+        {**action_result, "exit_code": 3},
+    )
+
+    role_profile = {
+        "schema_version": 1,
+        "role_id": "reviewer",
+        "display_name": "Reviewer",
+        "responsibilities": ["verify acceptance criteria"],
+        "non_responsibilities": ["implement the reviewed artifact"],
+        "context_paths": ["docs/"],
+        "allowed_capabilities": ["filesystem-read"],
+        "write_scope": [".hive/runs/"],
+        "verification_duties": ["attach reproducible evidence"],
+        "current_assignment": None,
+        "handoff_path": None,
+    }
+    validate_instance("role-profile.schema.json", role_profile)
+
+    run_status = {
+        "schema_version": 1,
+        "run_id": "phase-0",
+        "revision": 1,
+        "state": "resume-ready",
+        "required_criteria": ["C1"],
+        "passed_criteria": [],
+        "failed_criteria": [],
+        "active_roles": ["reviewer"],
+        "next_action": "verify C1",
+        "latest_evidence": [],
+        "blocker": None,
+        "updated_at": "2026-07-23T00:00:00Z",
+    }
+    validate_instance("run-status.schema.json", run_status)
+
+    judge_package = {
+        "schema_version": 1,
+        "subject_id": "phase-0",
+        "risk_tier": "elevated",
+        "goal": "verify the scaffold",
+        "acceptance_criteria": ["C1"],
+        "artifact_refs": ["docs/plans/PLAN.md"],
+        "evidence_refs": [],
+        "known_constraints": [],
+        "package_digest": digest,
+    }
+    validate_instance("judge-package.schema.json", judge_package)
+
+    judge_verdict = {
+        "schema_version": 1,
+        "subject_id": "phase-0",
+        "judge_id": "judge-1",
+        "package_digest": digest,
+        "verdict": "PASS",
+        "findings": [],
+        "missing_evidence": [],
+        "created_at": "2026-07-23T00:00:00Z",
+    }
+    validate_instance("judge-verdict.schema.json", judge_verdict)
+    expect_invalid(
+        "judge-verdict.schema.json",
+        {**judge_verdict, "missing_evidence": ["test log"]},
+    )
+
+    capability_matrix = {
+        "schema_version": 1,
+        "host": "codex",
+        "host_version": "fixture",
+        "surface": "cli",
+        "orchestration_layer": "host-native",
+        "capabilities": {
+            "instructions": "supported",
+            "simple-question-isolation": "unverified",
+            "subagents": "supported",
+            "persistent-role-binding": "best-effort",
+            "continuous-loop": "unverified",
+            "usage-sensor": "unsupported",
+            "independent-judge": "supported",
+        },
+        "evidence": [],
+    }
+    validate_instance("capability-matrix.schema.json", capability_matrix)
+
+
+def validate_skill_approvals(answers: dict[str, object]) -> None:
+    approvals = answers["approved_optional_skills"]
+    assert isinstance(approvals, list)
+    for approval in approvals:
+        assert isinstance(approval, dict)
+        requested = set(approval["requested_capabilities"])
+        approved = set(approval["approved_capabilities"])
+        if not approved <= requested:
+            raise AssertionError(
+                f"approved capabilities exceed requested capabilities: {approval['name']}"
+            )
+        if approval["requested_capabilities"] != sorted(requested):
+            raise AssertionError(f"requested capabilities are not canonical: {approval['name']}")
+        if approval["approved_capabilities"] != sorted(approved):
+            raise AssertionError(f"approved capabilities are not canonical: {approval['name']}")
+
+        consent_payload = {field: approval[field] for field in CONSENT_FIELDS}
+        canonical_bytes = json.dumps(
+            consent_payload,
+            ensure_ascii=False,
+            separators=(",", ":"),
+            sort_keys=True,
+        ).encode("utf-8")
+        expected_digest = f"sha256:{hashlib.sha256(canonical_bytes).hexdigest()}"
+        if approval["consent_digest"] != expected_digest:
+            raise AssertionError(f"consent digest mismatch: {approval['name']}")
+
+
+def validate_consent_tamper_detection(approval: dict[str, object]) -> None:
+    mutations = {
+        "name": "changed-name",
+        "source": "https://example.invalid/changed-source",
+        "revision": "v1.0.1",
+        "content_digest": f"sha256:{'f' * 64}",
+        "requested_capabilities": ["filesystem-read", "network", "shell"],
+        "approved_capabilities": [],
+        "approved_at": "2026-07-23T00:00:01Z",
+    }
+    for field, changed_value in mutations.items():
+        tampered = copy.deepcopy(approval)
+        tampered[field] = changed_value
+        try:
+            validate_skill_approvals({"approved_optional_skills": [tampered]})
+        except AssertionError:
+            continue
+        raise AssertionError(f"consent tamper was not detected: {field}")
+
+
+def materialize_role(role_seed: dict[str, object]) -> str:
+    role_profile = {
+        "schema_version": 1,
+        **role_seed,
+        "current_assignment": None,
+        "handoff_path": None,
+    }
+    validate_instance("role-profile.schema.json", role_profile)
+    frontmatter = json.dumps(
+        role_profile,
+        ensure_ascii=False,
+        separators=(",", ":"),
+        sort_keys=True,
+    )
+    return (
+        f"---\n{frontmatter}\n---\n"
+        f"# {role_profile['display_name']}\n\n"
+        "## Current assignment\n\n"
+        "_Unassigned._\n\n"
+        "## Handoff\n\n"
+        "_No handoff yet._\n"
+    )
+
+
+def validate_role_materialization(role_seeds: list[object]) -> None:
+    seen_role_ids: set[str] = set()
+    for role_seed in role_seeds:
+        assert isinstance(role_seed, dict)
+        role_id = role_seed["role_id"]
+        assert isinstance(role_id, str)
+        if role_id.casefold() in seen_role_ids:
+            raise AssertionError(f"duplicate role id: {role_id}")
+        seen_role_ids.add(role_id.casefold())
+
+        first_render = materialize_role(role_seed)
+        second_render = materialize_role(role_seed)
+        if first_render != second_render:
+            raise AssertionError(f"role materialization is not idempotent: {role_id}")
+
+        if role_id == "reviewer":
+            expected_path = (
+                REPOSITORY_ROOT / "tests/fixtures/expected/reviewer-role.md"
+            )
+            if first_render != expected_path.read_text(encoding="utf-8"):
+                raise AssertionError("reviewer role materialization changed")
+
+
+def validate_render(render_root: Path, input_data_path: Path) -> None:
+    expected_input = read_yaml(input_data_path)
+    assert isinstance(expected_input, dict)
+
+    required_paths = [
+        "AGENTS.md",
+        ".hive/.gitignore",
+        ".hive/setup-answers.yml",
+        ".hive/config/harness.toml",
+        ".hive/config/role-seeds.yml",
+        ".hive/config/knowledge-scope.yml",
+        ".hive/config/approved-skills.yml",
+        ".hive/knowledge/Wiki/index.md",
+        ".hive/knowledge/Schema/schema.md",
+        ".hive/knowledge/suppression.yml",
+        ".hive/team/roles/README.md",
+        ".hive/runs/README.md",
+    ]
+    for relative_path in required_paths:
+        path = render_root / relative_path
+        if not path.is_file():
+            raise AssertionError(f"missing rendered path: {relative_path}")
+
+    answers = read_yaml(render_root / ".hive/setup-answers.yml")
+    assert isinstance(answers, dict)
+    validate_instance("setup-answers.schema.json", answers)
+    validate_skill_approvals(answers)
+    validate_role_materialization(answers["persistent_roles"])
+
+    approvals = answers["approved_optional_skills"]
+    assert isinstance(approvals, list)
+    for approval in approvals:
+        assert isinstance(approval, dict)
+        validate_consent_tamper_detection(approval)
+
+    for key, expected_value in expected_input.items():
+        if answers[key] != expected_value:
+            raise AssertionError(f"answer mismatch for {key}")
+
+    with (render_root / ".hive/config/harness.toml").open("rb") as stream:
+        harness_config = tomllib.load(stream)
+    if harness_config["project_name"] != answers["project_name"]:
+        raise AssertionError("project_name changed during TOML rendering")
+
+    role_seeds = read_yaml(render_root / ".hive/config/role-seeds.yml")
+    knowledge_scope = read_yaml(render_root / ".hive/config/knowledge-scope.yml")
+    approved_skills = read_yaml(render_root / ".hive/config/approved-skills.yml")
+    suppression = read_yaml(render_root / ".hive/knowledge/suppression.yml")
+
+    if role_seeds["roles"] != answers["persistent_roles"]:
+        raise AssertionError("persistent role projection lost setup data")
+    if knowledge_scope["include"] != answers["knowledge_include_paths"]:
+        raise AssertionError("knowledge include projection lost setup data")
+    if knowledge_scope["exclude"] != answers["knowledge_exclude_paths"]:
+        raise AssertionError("knowledge exclude projection lost setup data")
+    if approved_skills["skills"] != answers["approved_optional_skills"]:
+        raise AssertionError("optional Skill approval projection lost setup data")
+    if suppression != {"schema_version": 1, "entries": []}:
+        raise AssertionError("unexpected suppression seed")
+
+    forbidden_outputs = [
+        ".hive/index/hive.sqlite",
+        ".omx",
+        ".omc",
+        ".codex",
+        ".claude",
+    ]
+    for relative_path in forbidden_outputs:
+        if (render_root / relative_path).exists():
+            raise AssertionError(f"forbidden rendered output: {relative_path}")
+
+
+def parse_arguments() -> argparse.Namespace:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("render_root", type=Path)
+    parser.add_argument("input_data", type=Path)
+    return parser.parse_args()
+
+
+def main() -> int:
+    arguments = parse_arguments()
+    validate_schema_documents()
+    validate_contract_examples()
+    validate_render(arguments.render_root, arguments.input_data)
+    print(f"validated scaffold: {arguments.render_root}")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

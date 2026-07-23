@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/gvm1229/aigent-hive/schemas/role-profile.schema.json",
+  "title": "Aigent Hive persistent role frontmatter",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "role_id",
+    "display_name",
+    "responsibilities",
+    "non_responsibilities",
+    "context_paths",
+    "allowed_capabilities",
+    "write_scope",
+    "verification_duties"
+  ],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "role_id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]{1,62}$"
+    },
+    "display_name": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[^\\r\\n]+$"
+    },
+    "responsibilities": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "non_responsibilities": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "context_paths": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "allowed_capabilities": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "enum": [
+          "filesystem-read",
+          "filesystem-write",
+          "shell",
+          "network",
+          "subagents",
+          "external-app"
+        ]
+      }
+    },
+    "write_scope": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "verification_duties": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "current_assignment": {
+      "type": ["string", "null"]
+    },
+    "handoff_path": {
+      "type": ["string", "null"]
+    }
+  }
+}
