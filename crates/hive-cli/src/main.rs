@@ -666,11 +666,21 @@ fn normalize_hook_path(target: &Path, value: &str) -> Result<Option<PathBuf>, Re
 
 #[cfg(windows)]
 fn windows_target_relative(target: &Path, path: &Path) -> Option<PathBuf> {
-    let canonical_target = target
-        .canonicalize()
-        .unwrap_or_else(|_| target.to_path_buf());
-    let target = windows_portable_path(&canonical_target)?;
-    let path = windows_portable_path(path)?;
+    let target_text = windows_portable_path(target)?;
+    let path_text = windows_portable_path(path)?;
+    if let Some(relative) = windows_portable_relative(&target_text, &path_text) {
+        return Some(relative);
+    }
+    let canonical_target = windows_portable_path(&target.canonicalize().ok()?)?;
+    if let Some(relative) = windows_portable_relative(&canonical_target, &path_text) {
+        return Some(relative);
+    }
+    let canonical_path = windows_portable_path(&path.canonicalize().ok()?)?;
+    windows_portable_relative(&canonical_target, &canonical_path)
+}
+
+#[cfg(windows)]
+fn windows_portable_relative(target: &str, path: &str) -> Option<PathBuf> {
     let target = target.trim_end_matches('/');
     let prefix = path.get(..target.len())?;
     if !prefix.eq_ignore_ascii_case(target) {

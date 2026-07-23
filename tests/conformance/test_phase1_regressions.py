@@ -732,7 +732,11 @@ class Phase1ProtectionHookPaths(Phase1CliTestCase):
             ),
         )
 
-        self.assertEqual(process.returncode, 3, process.stderr)
+        self.assertEqual(
+            process.returncode,
+            3,
+            f"stderr={process.stderr!r}\nresult={result!r}\ntarget={target!r}",
+        )
         self.assertIs(result.get("active"), True)
         self.assertEqual(result.get("decision"), "block")
         self.assertEqual(snapshot_tree(target), before)
