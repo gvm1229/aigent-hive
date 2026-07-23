@@ -1,5 +1,16 @@
 # Aigent Hive
 
+[![Rust](https://img.shields.io/badge/Rust-stable-000000?logo=rust&logoColor=white)](rust-toolchain.toml)
+[![Cargo](https://img.shields.io/badge/Cargo-workspace-CB4B16?logo=rust&logoColor=white)](Cargo.toml)
+[![Python](https://img.shields.io/badge/Python-3.13-3776AB?logo=python&logoColor=white)](.github/workflows/ci.yml)
+[![Copier](https://img.shields.io/badge/Copier-9.17.0-5C4EE5)](copier.yml)
+[![JSON Schema](https://img.shields.io/badge/JSON%20Schema-2020--12-000000?logo=json&logoColor=white)](schemas/)
+[![SQLite](https://img.shields.io/badge/SQLite-planned-003B57?logo=sqlite&logoColor=white)](docs/plans/PLAN.md)
+[![GitHub Actions](https://img.shields.io/badge/GitHub%20Actions-CI-2088FF?logo=githubactions&logoColor=white)](.github/workflows/ci.yml)
+[![Platforms](https://img.shields.io/badge/platform-macOS%20%7C%20Windows-lightgrey)](docs/plans/PLAN.md)
+[![Source license](https://img.shields.io/badge/source-GPL--3.0--only-blue)](LICENSES/GPL-3.0-only.txt)
+[![Harness license](https://img.shields.io/badge/harness-Apache--2.0-green)](LICENSES/Apache-2.0.txt)
+
 Aigent Hive는 Codex, Claude Code, Gemini Antigravity 같은 구독형 agent host 위에 설치할 **provider-neutral 로컬 agent harness**를 개발하는 source workspace다. 프로젝트마다 일관된 setup, 역할·지식·run 상태, 안전한 update와 검증 계약을 제공하되 모델 실행과 orchestration은 host 또는 사용자가 선택한 OMX·OMC에 맡긴다.
 
 Hive는 모델 API나 provider SDK를 사용하지 않으며 API key를 요청하거나 저장하지 않는다.
