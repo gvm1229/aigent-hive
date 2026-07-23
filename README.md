@@ -57,6 +57,8 @@ Hive는 다음 세 artifact를 분리한다.
 ├── harness/             # 출하할 template, Skill, profile, projection source
 ├── schemas/             # provider-neutral JSON Schema contract
 ├── tests/               # Copier fixture와 conformance test
+├── LICENSES/            # Apache-2.0·Apache-2.0 전문
+├── REUSE.toml           # file-scope license mapping
 ├── docs/
 │   ├── architecture/    # 현재 설계
 │   ├── decisions/       # ADR와 제품 결정
@@ -92,4 +94,9 @@ Phase 0 source scaffold와 contract baseline이 완료되었다. 다음 단계�
 
 ## 라이선스
 
-공개 배포 라이선스는 아직 확정되지 않았다. 라이선스 결정 전에는 저장소 공개가 사용·수정·재배포 허가를 의미하지 않는다.
+Aigent Hive는 사용자의 프로젝트 라이선스에 불필요한 제약을 주지 않도록 범위를 분리한다.
+
+- **CLI와 source — [`Apache-2.0`](LICENSES/Apache-2.0.txt):** `harness/`를 제외한 저장소 source에 적용된다. Apache-2.0-covered 수정판을 배포할 때는 대응 source와 같은 라이선스를 제공해야 하지만, 개인·사내에서만 수정해 사용하는 경우 공개 의무는 없다.
+- **출하 template — [`Apache-2.0`](LICENSES/Apache-2.0.txt):** `harness/**`와 여기에서 생성된 Aigent Hive 소유 파일·marker block에 적용된다. 상용·비공개 프로젝트에서도 사용할 수 있으며, 소비자 프로젝트의 기존 source·문서·data 라이선스는 변경하지 않는다.
+
+정확한 파일별 경계는 [`LICENSE.md`](LICENSE.md)와 [`REUSE.toml`](REUSE.toml)에 정의한다. 생성된 harness에는 Apache-2.0 전문이 `.hive/LICENSE-AIGENT-HIVE.txt`로 포함된다.

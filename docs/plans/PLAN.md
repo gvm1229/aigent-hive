@@ -935,7 +935,7 @@ v1 public release는 다음을 모두 충족해야 한다.
 - [ ] same-major compatibility
 - [ ] cross-major no-data-loss migration
 - [ ] GitHub Release provenance와 signing
-- [ ] public license
+- [x] public license — `Apache-2.0` source와 `Apache-2.0` harness 경계, 전문, package metadata와 render fixture
 - [ ] clean clone에서 전체 CI PASS
 
 ---
@@ -944,7 +944,6 @@ v1 public release는 다음을 모두 충족해야 한다.
 
 | 항목 | 현재 판정 | 다시 검토할 조건 |
 | --- | --- | --- |
-| 공개 라이선스 | 미확정, stable release blocker | maintainer가 사용·수정·재배포 정책 결정 |
 | OpenClaw | core와 초기 release 제외 | 세 host 기반이 안정된 뒤 별도 host adapter 수요와 conformance 증거 |
 | CodexBar | local Codex usage sensor 후보 | machine-readable output, account/window/freshness semantics와 macOS test 통과 |
 | usage-coach | dependency 제외, reference only | Hive usage guard에서 검증된 기능 결손 발생 |
@@ -976,6 +975,12 @@ v1 public release는 다음을 모두 충족해야 한다.
 - [The Update Framework](https://theupdateframework.io/)
 - [GitHub artifact attestations](https://docs.github.com/en/actions/security-for-github-actions/using-artifact-attestations)
 - [cargo-dist](https://opensource.axo.dev/cargo-dist/)
+
+### 라이선스
+
+- [GNU — Apache-2.0 적용 방법](https://www.apache.org/legal/apply-license)
+- [Apache Software Foundation — Apache-2.0 적용 방법](https://www.apache.org/legal/apply-license)
+- [REUSE Specification 3.3](https://reuse.software/spec/)
 
 ### Orchestration compatibility
 
