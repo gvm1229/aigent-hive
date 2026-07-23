@@ -1,0 +1,69 @@
+project_name: phase1-hooks
+project_kind: general
+primary_host: codex
+capability_resolution:
+  schema_version: 1
+  host: codex
+  host_version: fixture
+  surface: cli
+  detection: absent
+  external_runtime: null
+  resolved_owner: host-native
+  capabilities:
+    instructions: supported
+    simple-question-isolation: best-effort
+    subagents: best-effort
+    persistent-role-binding: best-effort
+    continuous-loop: unsupported
+    usage-sensor: unsupported
+    independent-judge: best-effort
+  evidence_digest: sha256:ff554b1b02ac93d7112f69022268466caed8d75229fc7bd0f672071f98c8376a
+  evidence:
+    - source: host-catalog
+      locator: fixture:empty-catalog
+      outcome: absent
+      digest: sha256:c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1
+    - source: public-executable
+      locator: fixture:omx-not-found
+      outcome: absent
+      digest: sha256:c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2
+usage_stop_remaining_percent: 20
+elevated_judge_quorum: "2/3"
+critical_judge_quorum: "3/3+human"
+persistent_roles: []
+knowledge_include_paths: []
+knowledge_exclude_paths: []
+approved_optional_skills: []
+approved_fallback_hooks:
+  - consent_version: 1
+    capability: protect-hive-owned-state
+    event: PreToolUse
+    path: .hive/hooks/protect-hive-owned-state
+    command: hive hook --capability protect-hive-owned-state --event PreToolUse --output json
+    content_digest: sha256:4733a945bab8d2d6d0da92df10e3b9418b65bc48416b8e8d49864e873f050c32
+    approved_at: "2026-07-23T00:00:00Z"
+    consent_digest: sha256:f669a66a8cce7bddbe1205a1947cec6731e4cbb83ca05dca5fe95558cdb4e577
+  - consent_version: 1
+    capability: update-integrity-guard
+    event: PreToolUse
+    path: .hive/hooks/update-integrity-guard
+    command: hive hook --capability update-integrity-guard --event PreToolUse --output json
+    content_digest: sha256:f7489d2567b8162c7496b11cf990f7cde4d8447e879379ccbb8f634ddec5026a
+    approved_at: "2026-07-23T00:00:00Z"
+    consent_digest: sha256:71efc10ac6365e7b9886bd94274ec659efe24e4f08669a32d9bfdfd5c216ab72
+  - consent_version: 1
+    capability: derived-state-invalidation
+    event: PostToolUse
+    path: .hive/hooks/derived-state-invalidation
+    command: hive hook --capability derived-state-invalidation --event PostToolUse --output json
+    content_digest: sha256:2ba5e8960bf3e7e04300501e1da6bf3523e7e562228df01f9f8a67da752db192
+    approved_at: "2026-07-23T00:00:00Z"
+    consent_digest: sha256:cd21325b706025866a433fc8e7c4e800ebe74c9a075497c042ebcae45b2b0a6c
+  - consent_version: 1
+    capability: checkpoint-reminder
+    event: Stop
+    path: .hive/hooks/checkpoint-reminder
+    command: hive hook --capability checkpoint-reminder --event Stop --output json
+    content_digest: sha256:c6a13cfee98ec69f220cdcfeb9e4a28d9cfdf596a0fac60feb57d12197e2ba50
+    approved_at: "2026-07-23T00:00:00Z"
+    consent_digest: sha256:c64a0456739d78bfdbc4ef14847d0733106f4ac49bda69b3b30ba553b6b72f05

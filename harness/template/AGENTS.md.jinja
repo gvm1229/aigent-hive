@@ -4,7 +4,8 @@
 Project: `{{ project_name }}`
 Profile: `{{ project_kind }}`
 Primary host: `{{ primary_host }}`
-Orchestration owner: `{{ orchestration_layer }}`
+Resolved orchestration owner: `{{ capability_resolution.resolved_owner }}`
+Resolution evidence: `{{ capability_resolution.evidence_digest }}`
 
 - Read canonical Hive configuration from `.hive/config/harness.toml`.
 - Load only the directives and knowledge required by the current request.
@@ -13,5 +14,8 @@ Orchestration owner: `{{ orchestration_layer }}`
 - Keep durable knowledge in Markdown. Treat `.hive/index/*.sqlite*` as disposable.
 - Do not call model-provider APIs or request provider API credentials.
 - Require explicit approval before activating optional Skills.
+- Resolve compatible OMX on Codex and compatible OMC on Claude before host-native capability; never ask the user to select an owner or switch owners mid-run.
+- Treat fallback hooks as optional data-integrity guards only. They require conclusive external capability absence plus exact capability, event, path, command, and digest consent.
+- Never use a fallback hook for prompt classification or rewriting, Skill activation, memory ingestion, subagent orchestration, or continuation. A `Stop` hook always returns a neutral allow result.
 - Preserve user text and third-party marker blocks outside this Hive block.
 <!-- AIGENT-HIVE:END -->

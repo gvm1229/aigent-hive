@@ -1,0 +1,25 @@
+schema_version: 1
+project_name: phase1-skill
+project_kind: general
+primary_host: codex
+usage_stop_remaining_percent: 20
+elevated_judge_quorum: 2/3
+critical_judge_quorum: 3/3+human
+persistent_roles: []
+knowledge_include_paths: []
+knowledge_exclude_paths: []
+approved_optional_skills:
+  - consent_version: 1
+    name: fixture-readonly
+    source: https://example.invalid/fixture-readonly
+    revision: v1.0.0
+    content_digest: sha256:3333333333333333333333333333333333333333333333333333333333333333
+    requested_capabilities:
+      - filesystem-read
+      - network
+    approved_capabilities:
+      - filesystem-read
+    approved_at: "2026-07-23T00:00:00Z"
+    consent_digest: sha256:efe4f3b2edf79370a6a23ac61087e7bc9a603b82b8f1e5c2fcca94ff3ad48df1
+approved_fallback_hooks: []
+

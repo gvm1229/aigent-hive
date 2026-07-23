@@ -6,7 +6,7 @@
 - `multica-ai/andrej-karpathy-skills`
 - Agent Skills specification
 - Copier configuration/update documentation
-- `steipete/CodexBar`
+- [`steipete/CodexBar` usage sensor qualification](codexbar-usage-sensor.md)
 - `netwaif/usage-coach`
 - `netwaif/multi-agent-starter`
 - `Yeachan-Heo/oh-my-codex`

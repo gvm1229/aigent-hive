@@ -31,6 +31,53 @@ jobs:
       - run: cargo clippy --workspace --all-targets -- -D warnings
       - run: cargo test --workspace
 
+  phase1-conformance:
+    name: Phase 1 conformance (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - macos-latest
+          - windows-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: dtolnay/rust-toolchain@2c7215f132e9ebf062739d9130488b56d53c060c # master 2026-07-16
+        with:
+          toolchain: stable
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+      - name: Install pinned conformance dependencies
+        run: >-
+          python -m pip install --disable-pip-version-check
+          copier==9.17.0
+          jsonschema[format]==4.25.1
+          PyYAML==6.0.2
+      - name: Build Phase 1 CLI
+        run: cargo build --bin hive
+      - name: Select platform CLI path
+        shell: bash
+        run: |
+          if [[ "$RUNNER_OS" == "Windows" ]]; then
+            echo "HIVE_BIN=$GITHUB_WORKSPACE/target/debug/hive.exe" >> "$GITHUB_ENV"
+          else
+            echo "HIVE_BIN=$GITHUB_WORKSPACE/target/debug/hive" >> "$GITHUB_ENV"
+          fi
+      - name: Run complete Phase 1 conformance corpus
+        run: >-
+          python -m unittest discover
+          -s tests/conformance
+          -t .
+          -p "test_phase1_*.py"
+          -v
+      - name: Run usage guard conformance corpus
+        run: >-
+          python -m unittest
+          tests.conformance.test_usage_guard
+          -v
+
   copier:
     name: Contract and Copier conformance
     runs-on: ubuntu-latest
@@ -45,32 +92,40 @@ jobs:
           copier==9.17.0
           jsonschema[format]==4.25.1
           PyYAML==6.0.2
-      - name: Render default fixture
-        run: >-
-          copier copy --trust --defaults
-          --data-file tests/fixtures/copier-default-data.yml
-          . tests/work/copier-default
+      - name: Render default fixture for every host
+        run: |
+          for host in codex claude antigravity; do
+            copier copy --trust --defaults \
+              --data-file tests/fixtures/copier-default-data.yml \
+              --data "primary_host=${host}" \
+              . "tests/work/copier-default-${host}"
+          done
       - name: Render hostile-string and typed-answer fixture
         run: >-
           copier copy --trust --defaults
           --data-file tests/fixtures/copier-hostile-data.yml
           . tests/work/copier-hostile
-      - name: Reject invalid host and orchestration pair
+      - name: Reject fallback hooks without conclusive absence
         run: |
-          if copier copy --trust --defaults \
-            --data project_name=invalid \
-            --data primary_host=codex \
-            --data orchestration_layer=omc \
-            . tests/work/copier-invalid >tests/work/copier-invalid.log 2>&1; then
-            exit 1
-          fi
-          grep -q "OMC는 Claude Code에서만 선택할 수 있습니다" \
-            tests/work/copier-invalid.log
+          for detection in available incompatible unknown; do
+            if copier copy --trust --defaults \
+              --data-file tests/fixtures/copier-hostile-data.yml \
+              --data "capability_resolution={\"host\":\"claude\",\"detection\":\"${detection}\"}" \
+              . "tests/work/copier-invalid-hooks-${detection}" \
+              >"tests/work/copier-invalid-hooks-${detection}.log" 2>&1; then
+              exit 1
+            fi
+            grep -q "fallback hook은 compatible OMX/OMC가 conclusively absent일 때만 승인할 수 있습니다" \
+              "tests/work/copier-invalid-hooks-${detection}.log"
+            test ! -e "tests/work/copier-invalid-hooks-${detection}/.hive/setup-answers.yml"
+          done
       - name: Validate schema and rendered fixtures
         run: |
-          python tests/validate_scaffold.py \
-            tests/work/copier-default \
-            tests/fixtures/copier-default-data.yml
+          for host in codex claude antigravity; do
+            python tests/validate_scaffold.py \
+              "tests/work/copier-default-${host}" \
+              tests/fixtures/copier-default-data.yml
+          done
           python tests/validate_scaffold.py \
             tests/work/copier-hostile \
             tests/fixtures/copier-hostile-data.yml

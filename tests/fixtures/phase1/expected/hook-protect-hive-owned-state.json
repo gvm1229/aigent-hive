@@ -1,0 +1,1 @@
+{"capability":"protect-hive-owned-state","command":"hive hook --capability protect-hive-owned-state --event PreToolUse --output json","event":"PreToolUse","path":".hive/hooks/protect-hive-owned-state","schema_version":1}

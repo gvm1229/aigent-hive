@@ -46,6 +46,8 @@ Frontmatter JSON은 UTF-8, LF와 lexicographically sorted object key를 사용�
 
 Cross-major migration은 shadow tree에서 frontmatter를 parse·validate·transform한다. Current assignment, handoff와 Markdown body는 보존한다. Parse, schema 또는 conflict 검증이 실패하면 active role tree는 바뀌지 않는다.
 
+Phase 1은 실제 update migration engine을 구현하지 않는다. 현재 conformance는 setup의 shadow render에 `schema_version: 999`인 JSON-parseable role candidate를 주입해 schema conflict 진단, changed path 0개와 active tree 전체 byte 불변을 검증한다. Source-version route, transform과 migration activation은 Phase 6 범위이며 지원된 것으로 표시하지 않는다.
+
 ## Conformance
 
 - setup answer의 모든 seed가 정확히 하나의 role file을 생성
@@ -53,4 +55,4 @@ Cross-major migration은 shadow tree에서 frontmatter를 parse·validate·trans
 - 두 번째 materialization byte-identical
 - 명시 승인 없는 definition drift 거부
 - 승인된 definition change가 assignment·handoff·body를 보존
-- cross-major fixture가 role identity와 user body를 보존
+- unsupported cross-major role candidate가 schema 검증에서 거부되고 active tree 전체 bytes를 보존

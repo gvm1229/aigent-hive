@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/gvm1229/aigent-hive/schemas/capability-matrix.schema.json",
-  "title": "Aigent Hive host capability matrix",
+  "title": "Aigent Hive host capability resolution",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -9,8 +9,11 @@
     "host",
     "host_version",
     "surface",
-    "orchestration_layer",
+    "detection",
+    "external_runtime",
+    "resolved_owner",
     "capabilities",
+    "evidence_digest",
     "evidence"
   ],
   "properties": {
@@ -18,7 +21,14 @@
     "host": { "enum": ["codex", "claude", "antigravity"] },
     "host_version": { "type": "string", "minLength": 1 },
     "surface": { "enum": ["app", "cli", "plugin", "in-session"] },
-    "orchestration_layer": { "enum": ["host-native", "omx", "omc"] },
+    "detection": {
+      "enum": ["available", "absent", "incompatible", "unknown"]
+    },
+    "external_runtime": {
+      "type": ["string", "null"],
+      "enum": ["omx", "omc", null]
+    },
+    "resolved_owner": { "enum": ["host-native", "omx", "omc"] },
     "capabilities": {
       "type": "object",
       "additionalProperties": false,
@@ -55,24 +65,216 @@
         }
       }
     },
+    "evidence_digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "description": "sha256(RFC 8785 JCS(normalized capability-resolution object excluding only evidence_digest))"
+    },
     "evidence": {
       "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["fixture", "digest", "verified_at"],
+        "required": ["source", "locator", "outcome", "digest"],
         "properties": {
-          "fixture": { "type": "string", "minLength": 1 },
+          "source": {
+            "enum": ["host-catalog", "public-executable"]
+          },
+          "locator": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "^[^\\r\\n]+$"
+          },
+          "outcome": {
+            "enum": ["compatible", "absent", "incompatible", "unavailable"]
+          },
           "digest": {
             "type": "string",
             "pattern": "^sha256:[0-9a-f]{64}$"
-          },
-          "verified_at": {
-            "type": "string",
-            "format": "date-time"
           }
         }
       }
     }
-  }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": { "external_runtime": { "const": "omx" } },
+        "required": ["external_runtime"]
+      },
+      "then": {
+        "properties": { "host": { "const": "codex" } }
+      }
+    },
+    {
+      "if": {
+        "properties": { "external_runtime": { "const": "omc" } },
+        "required": ["external_runtime"]
+      },
+      "then": {
+        "properties": { "host": { "const": "claude" } }
+      }
+    },
+    {
+      "if": {
+        "properties": { "host": { "const": "antigravity" } },
+        "required": ["host"]
+      },
+      "then": {
+        "properties": {
+          "external_runtime": { "type": "null" },
+          "resolved_owner": { "const": "host-native" }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": { "detection": { "const": "available" } },
+        "required": ["detection"]
+      },
+      "then": {
+        "oneOf": [
+          {
+            "properties": {
+              "host": { "const": "codex" },
+              "external_runtime": { "const": "omx" },
+              "resolved_owner": { "const": "omx" }
+            },
+            "required": ["host", "external_runtime", "resolved_owner"]
+          },
+          {
+            "properties": {
+              "host": { "const": "claude" },
+              "external_runtime": { "const": "omc" },
+              "resolved_owner": { "const": "omc" }
+            },
+            "required": ["host", "external_runtime", "resolved_owner"]
+          }
+        ],
+        "properties": {
+          "evidence": {
+            "contains": {
+              "properties": { "outcome": { "const": "compatible" } },
+              "required": ["outcome"]
+            },
+            "minContains": 1
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": { "detection": { "const": "absent" } },
+        "required": ["detection"]
+      },
+      "then": {
+        "properties": {
+          "external_runtime": { "type": "null" },
+          "resolved_owner": { "const": "host-native" },
+          "evidence": {
+            "allOf": [
+              {
+                "contains": {
+                  "properties": {
+                    "source": { "const": "host-catalog" },
+                    "outcome": { "const": "absent" }
+                  },
+                  "required": ["source", "outcome"]
+                },
+                "minContains": 1
+              },
+              {
+                "contains": {
+                  "properties": {
+                    "source": { "const": "public-executable" },
+                    "outcome": { "const": "absent" }
+                  },
+                  "required": ["source", "outcome"]
+                },
+                "minContains": 1
+              },
+              {
+                "not": {
+                  "contains": {
+                    "properties": {
+                      "outcome": { "const": "compatible" }
+                    },
+                    "required": ["outcome"]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": { "detection": { "const": "incompatible" } },
+        "required": ["detection"]
+      },
+      "then": {
+        "properties": {
+          "resolved_owner": { "const": "host-native" },
+          "external_runtime": { "enum": ["omx", "omc"] },
+          "evidence": {
+            "allOf": [
+              {
+                "contains": {
+                  "properties": { "outcome": { "const": "incompatible" } },
+                  "required": ["outcome"]
+                },
+                "minContains": 1
+              },
+              {
+                "not": {
+                  "contains": {
+                    "properties": {
+                      "outcome": { "const": "compatible" }
+                    },
+                    "required": ["outcome"]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": { "detection": { "const": "unknown" } },
+        "required": ["detection"]
+      },
+      "then": {
+        "properties": {
+          "external_runtime": { "type": "null" },
+          "resolved_owner": { "const": "host-native" },
+          "evidence": {
+            "allOf": [
+              {
+                "contains": {
+                  "properties": { "outcome": { "const": "unavailable" } },
+                  "required": ["outcome"]
+                },
+                "minContains": 1
+              },
+              {
+                "not": {
+                  "contains": {
+                    "properties": {
+                      "outcome": { "const": "compatible" }
+                    },
+                    "required": ["outcome"]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    }
+  ]
 }

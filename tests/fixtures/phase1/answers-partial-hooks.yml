@@ -1,0 +1,28 @@
+schema_version: 1
+project_name: phase1-hooks
+project_kind: general
+primary_host: codex
+usage_stop_remaining_percent: 20
+elevated_judge_quorum: 2/3
+critical_judge_quorum: 3/3+human
+persistent_roles: []
+knowledge_include_paths: []
+knowledge_exclude_paths: []
+approved_optional_skills: []
+approved_fallback_hooks:
+  - consent_version: 1
+    capability: protect-hive-owned-state
+    event: PreToolUse
+    path: .hive/hooks/protect-hive-owned-state
+    command: hive hook --capability protect-hive-owned-state --event PreToolUse --output json
+    content_digest: sha256:4733a945bab8d2d6d0da92df10e3b9418b65bc48416b8e8d49864e873f050c32
+    approved_at: "2026-07-23T00:00:00Z"
+    consent_digest: sha256:f669a66a8cce7bddbe1205a1947cec6731e4cbb83ca05dca5fe95558cdb4e577
+  - consent_version: 1
+    capability: checkpoint-reminder
+    event: Stop
+    path: .hive/hooks/checkpoint-reminder
+    command: hive hook --capability checkpoint-reminder --event Stop --output json
+    content_digest: sha256:c6a13cfee98ec69f220cdcfeb9e4a28d9cfdf596a0fac60feb57d12197e2ba50
+    approved_at: "2026-07-23T00:00:00Z"
+    consent_digest: sha256:c64a0456739d78bfdbc4ef14847d0733106f4ac49bda69b3b30ba553b6b72f05

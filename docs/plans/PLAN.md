@@ -1,14 +1,14 @@
 # Aigent Hive 구현 계획
 
-> Revision: 1.5
+> Revision: 1.6
 > 상태: 구현 기준본
 > 기준일: 2026-07-23
-> 현재 제품 version: `0.1.0`
+> 현재 제품 version: `0.2.0`
 > 정본 위치: `docs/plans/PLAN.md`
 
 이 문서는 Aigent Hive의 완성된 사용자 흐름과 이를 구현하는 순서를 하나의 연속된 계획으로 정의한다. 이전 `PLAN_v1*` 문서는 현재 지침으로 사용하지 않는다.
 
-현재 `0.1.0`은 source scaffold와 contract baseline만 존재한다. 아래 consumer harness, Skill, projection, hook, memory와 update flow는 해당 milestone의 unchecked acceptance를 통과하기 전까지 구현·지원된 것으로 간주하지 않는다.
+현재 `0.2.0`은 Phase 1 결정적 setup renderer와 consumer harness 생성 계약을 구현한다. 아래 Skill routing, knowledge/index, host projection, durable run과 update flow는 해당 milestone의 unchecked acceptance를 통과하기 전까지 구현·지원된 것으로 간주하지 않는다.
 
 ## 1. 목표와 완료 정의
 
@@ -64,7 +64,7 @@ Aigent Hive는 사용자가 이미 로그인한 Codex, Claude Code, Gemini Antig
 - update backup은 최대 7일만 유지한다.
 - 비기밀 canonical file은 Git 추적이 기본이며 runtime/cache/SQLite/backup은 제외한다.
 - `X.Y.Z` version에서 같은 `X` 안의 upgrade만 non-breaking을 보장한다.
-- 현재 product version은 barebone source baseline인 `0.1.0`이다.
+- 현재 product version은 Phase 1 결정적 setup renderer milestone인 `0.2.0`이다.
 - backward-compatible feature는 원칙적으로 `Y`, 빠른 호환 bugfix는 `Z`를 증가시킨다.
 - `X` 증가는 사용자가 목표 major를 명시적으로 지시한 경우에만 준비·적용할 수 있으며 automation이 추론하거나 자동 증가하지 않는다.
 - cross-major update는 경고, dry run, 자동 migration과 사용자 data 무손실 검증 없이는 commit하지 않는다.
@@ -86,7 +86,7 @@ Aigent Hive는 사용자가 이미 로그인한 Codex, Claude Code, Gemini Antig
 
 ### 1.3 Product version 정책
 
-Plan revision과 product version은 독립이다. 이 문서는 revision `1.5`지만 현재 구현 artifact는 `0.1.0`이다.
+Plan revision과 product version은 독립이다. 이 문서는 revision `1.6`이며 현재 구현 artifact는 `0.2.0`이다.
 
 Version 정본과 projection:
 
@@ -245,13 +245,13 @@ CLI process exit 의미:
 #### 완료 조건
 
 - [ ] 세 host에서 같은 logical action이 같은 contract로 resolve
-- [ ] unknown action이 project write 또는 agent spawn 없이 실패
+- [x] unknown action이 project write 또는 agent spawn 없이 실패
 - [ ] host별 alias가 core state에 저장되지 않음
 - [ ] investigate 요청에서 available OMX/OMC `analyze`가 Hive duplicate보다 우선
 - [ ] approved Hive-only Skill은 이름을 직접 말하지 않아도 matching description에서 자동 선택
 - [ ] simple-question fixture에서 Skill description 외 추가 Skill body load 0개
 - [ ] explicit `plain answer`/`no workflow` 요청이 automatic Skill invocation보다 우선
-- [ ] 모든 exit class가 schema-valid `ActionResult`와 정확히 대응
+- [x] 모든 exit class가 schema-valid `ActionResult`와 정확히 대응
 
 ### Stage 1. Read-only 조사와 setup 질문
 
@@ -315,6 +315,8 @@ Fallback hook은 Skill consent와 별도 approval object다. `absent`일 때만 
 
 OMX/OMC가 이후 감지되면 기존 Hive fallback hook은 즉시 neutral/inert 동작만 하고, 다음 `hive setup --reconfigure` 또는 `hive update` preview가 Hive-owned entry 제거를 제안한다. 제거 전후 foreign hook entry와 user byte는 보존한다.
 
+Descriptor bytes, content/consent digest와 activation-time 재검증의 normative contract는 [`../architecture/hook-consent.md`](../architecture/hook-consent.md)를 따른다.
+
 #### Copier 경계
 
 Copier 9.17.0은 template authoring, 질문 UX 검토와 CI parity test에 사용한다.
@@ -345,24 +347,24 @@ Copier 9.17.0은 template authoring, 질문 UX 검토와 CI parity test에 사�
 
 #### 완료 조건
 
-- [ ] 같은 answer로 두 번 render한 normalized digest 동일
-- [ ] Codex+compatible OMX는 자동 OMX, Claude+compatible OMC는 자동 OMC로 resolve
-- [ ] Antigravity 또는 external capability 부재 host는 host-native로 resolve
-- [ ] `incompatible|unknown`에서 Hive fallback hook install 0개
-- [ ] external capability detected 상태에서 hook 질문·artifact·command 0개
-- [ ] external capability absent + hook 거절 setup 성공, hook artifact 0개
-- [ ] external capability absent + 일부 hook 승인 시 승인 event/capability만 projection
-- [ ] hook event/path/capability/digest tamper 시 activation 0회와 재승인 요구
-- [ ] fallback `Stop` fixture가 모든 상태에서 block/continue prompt 0개와 neutral output
-- [ ] 동일 hook input replay에서 canonical file 중복 mutation 0개
-- [ ] optional Skill 0개 승인 setup 성공
-- [ ] 승인하지 않은 Skill output 0개
-- [ ] `approved_capabilities`가 `requested_capabilities`를 벗어나면 staging 전 거부
-- [ ] Skill provenance/capability/timestamp 어느 한 field tamper도 기존 consent digest로 activation 불가
-- [ ] role seed와 knowledge scope가 setup answer에서 손실 없이 render
-- [ ] 모든 role seed가 schema-valid role file 하나로 materialize되고 두 번째 setup은 byte-identical
-- [ ] `hive-source.json` target write 0개
-- [ ] Copier/Rust static tree parity와 role materialization known-answer parity
+- [x] 같은 answer로 두 번 render한 normalized digest 동일
+- [x] Codex+compatible OMX는 자동 OMX, Claude+compatible OMC는 자동 OMC로 resolve
+- [x] Antigravity 또는 external capability 부재 host는 host-native로 resolve
+- [x] `incompatible|unknown`에서 Hive fallback hook install 0개
+- [x] external capability detected 상태에서 hook 질문·artifact·command 0개
+- [x] external capability absent + hook 거절 setup 성공, hook artifact 0개
+- [x] external capability absent + 일부 hook 승인 시 승인 event/capability만 projection
+- [x] hook event/path/capability/digest tamper 시 activation 0회와 재승인 요구
+- [x] fallback `Stop` fixture가 모든 상태에서 block/continue prompt 0개와 neutral output
+- [x] 동일 hook input replay에서 canonical file 중복 mutation 0개
+- [x] optional Skill 0개 승인 setup 성공
+- [x] 승인하지 않은 Skill output 0개
+- [x] `approved_capabilities`가 `requested_capabilities`를 벗어나면 staging 전 거부
+- [x] Skill provenance/capability/timestamp 어느 한 field tamper도 기존 consent digest로 activation 불가
+- [x] role seed와 knowledge scope가 setup answer에서 손실 없이 render
+- [x] 모든 role seed가 schema-valid role file 하나로 materialize되고 두 번째 setup은 byte-identical
+- [x] `hive-source.json` target write 0개
+- [x] Copier/Rust static tree parity와 role materialization known-answer parity
 
 ### Stage 2. Harness 생성과 ownership 적용
 
@@ -409,15 +411,15 @@ Setup-time role lifecycle:
 
 #### 완료 조건
 
-- [ ] 기존 user text와 external marker byte 동일
-- [ ] `.omx/.omc`, foreign runtime state와 host-global config read/write 0회
-- [ ] consent가 없는 `.codex/.claude/.agents` project hook projection read/write 0회
-- [ ] consented project-local hook merge 전후 foreign semantic tree와 entry digest 동일
-- [ ] generated path가 manifest 밖이면 setup 실패
-- [ ] canonical non-confidential files가 Git-visible
-- [ ] SQLite/WAL/SHM와 backup만 consumer Git에서 제외
-- [ ] role reconfigure가 current assignment·handoff·user body를 보존
-- [ ] cross-major role migration 실패 시 active role bytes 불변
+- [x] 기존 user text와 external marker byte 동일
+- [x] `.omx/.omc`, foreign runtime state와 host-global config read/write 0회
+- [x] consent가 없는 `.codex/.claude/.agents` project hook projection read/write 0회
+- [x] consented project-local hook merge 전후 foreign semantic tree와 entry digest 동일
+- [x] generated path가 manifest 밖이면 setup 실패
+- [x] canonical non-confidential files가 Git-visible
+- [x] SQLite/WAL/SHM와 backup만 consumer Git에서 제외
+- [x] role reconfigure가 current assignment·handoff·user body를 보존
+- [x] cross-major role candidate의 parse/schema 검증 실패 시 active role tree bytes 불변
 
 ### Stage 3. 단순 질문 격리
 
@@ -602,7 +604,7 @@ evidence/
 
 #### 완성 후 동작
 
-기본 설정은 신뢰 가능한 sensor가 보고한 `remaining <= 20%`일 때 새 자율 delegation 또는 loop iteration을 시작하지 않는 것.
+기본 설정은 신뢰 가능한 sensor가 보고한 `remaining <= 10%`일 때 새 자율 delegation 또는 loop iteration을 시작하지 않는 것.
 
 Hive는 provider API를 호출하지 않는다. Sensor 후보는 host가 로컬로 노출하는 command/file/status 또는 CodexBar 같은 별도 local tool.
 
@@ -613,7 +615,7 @@ Snapshot freshness:
 - dispatch가 없더라도 sensor가 선언한 TTL 또는 Hive 최대 TTL 중 짧은 값 사용
 - missing, stale, account/window 불일치, 역행 값은 `usage_unknown`
 
-`usage_unknown`에서는 automatic continuation fail-closed. 사용자가 현재 interactive turn을 계속할지는 정확한 제한을 설명한 뒤 직접 결정.
+`usage_unknown`에서는 automatic continuation fail-closed. 이미 시작된 dispatch를 강제 종료한다고 주장하지 않으며, 다음 dispatch 전 새 snapshot이 필요하다.
 
 #### 구현
 
@@ -627,12 +629,14 @@ Snapshot freshness:
 - expires at
 - source confidence
 
+CodexBar adapter는 pinned-qualified CLI의 `usage` JSON에서 active account와 quota window를 검증한다. `guard` 결과만으로는 account와 freshness를 증명할 수 없으므로 정본 snapshot으로 사용하지 않는다. Session window가 있으면 이를 우선하고, host가 session limit을 제공하지 않을 때 weekly window를 fallback으로 선택한다. 둘 다 없거나 선택된 window의 `remaining <= 10%`이면 새 permit을 발급하지 않는다.
+
 Adapter는 side-effect-free local command만 실행. Hive는 model call retry를 하지 않으며 local sensor read도 bounded attempt 후 unknown 처리.
 
 #### 완료 조건
 
 - [ ] API endpoint와 provider SDK dependency 0개
-- [ ] 20% 경계에서 새 automatic dispatch 0개
+- [ ] 10% 경계에서 새 automatic dispatch 0개
 - [ ] stale/missing/mismatched sensor가 `usage_unknown`
 - [ ] sensor가 없는 host에서 enforcement 가능하다고 표시하지 않음
 - [ ] CodexBar가 없어도 core setup·memory·update 동작
@@ -1002,19 +1006,23 @@ Optional third-party Skill은 quarantine→provenance 검증→사용자 개별 
 - [x] `main` initial commit과 `develop` branch push
 - [x] workspace product version `0.1.0` barebone baseline
 
-### Phase 1. Deterministic setup renderer — target `0.2.0`
+### Phase 1. Deterministic setup renderer — `0.2.0`
 
-- [ ] `hive-render` crate 추가
-- [ ] Copier/Rust parity corpus
-- [ ] `orchestration_layer` setup preference를 schema/Copier/template/Skill에서 제거
-- [ ] host capability resolver와 `available|absent|incompatible|unknown` evidence contract
-- [ ] fallback hook capability preview·consent schema와 `.hive/config/approved-hooks.yml`
-- [ ] staging render와 ownership validator
-- [ ] shared marker three-way merge
-- [ ] setup answer migration
-- [ ] role seed materializer와 idempotent/reconfigure fixture
-- [ ] RFC 8785 Skill consent verifier와 tamper fixture
-- [ ] `hive setup --dry-run|apply|validate`
+- [x] `hive-render` crate 추가
+- [x] Copier/Rust parity corpus
+- [x] `orchestration_layer` setup preference를 schema/Copier/template/Skill에서 제거
+- [x] host capability resolver와 `available|absent|incompatible|unknown` evidence contract
+- [x] fallback hook capability preview·consent schema와 `.hive/config/approved-hooks.yml`
+- [x] staging render와 ownership validator
+- [x] ownership-class 보존과 target read 전 no-follow guard
+- [x] 충돌하지 않는 exclusive temp, transactional rollback과 rollback-failure code
+- [x] shared marker three-way merge
+- [x] setup answer migration
+- [x] role seed materializer와 idempotent/reconfigure fixture
+- [x] RFC 8785 Skill consent verifier와 tamper fixture
+- [x] fallback hook typed execution·revoke와 complete installed validation
+- [x] schema-valid `UnknownAction` JSON과 write-free failure
+- [x] `hive setup --dry-run|apply|validate`
 
 ### Phase 2. Markdown knowledge와 SQLite — target `0.3.0`
 
@@ -1050,9 +1058,9 @@ Optional third-party Skill은 quarantine→provenance 검증→사용자 개별 
 
 ### Phase 5. Usage guard와 judge quorum — target `0.6.0`
 
-- [ ] `UsageSnapshot` adapter interface
-- [ ] local sensor TTL/freshness
-- [ ] 20% threshold fail-closed
+- [x] `UsageSnapshot` adapter interface
+- [x] local sensor TTL/freshness
+- [x] 10% threshold fail-closed
 - [ ] CodexBar candidate qualification
 - [ ] judge clean-context envelope
 - [ ] 2/3, 3/3+human quorum
@@ -1132,7 +1140,7 @@ v1 public release는 다음을 모두 충족해야 한다.
 - [ ] macOS·Windows signed CLI
 - [ ] 세 host의 실제 capability matrix
 - [ ] model-provider API dependency와 credential path 0개
-- [ ] setup dry-run, ownership, conflict와 source guard
+- [x] setup dry-run, ownership, conflict와 source guard
 - [ ] action/role/run/judge/capability machine contract conformance
 - [ ] simple-question negative capability test
 - [ ] `hive-prompt-refine` automatic intent match, meaning preservation과 refine-only isolation

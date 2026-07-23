@@ -1,0 +1,6 @@
+# Generated only from explicit fallback-hook approvals after conclusive external capability absence.
+schema_version: 1
+detection: absent
+resolution_evidence_digest: {{ capability_resolution.evidence_digest | to_json }}
+hooks:
+{{ approved_fallback_hooks | to_nice_yaml | indent(2, true) -}}

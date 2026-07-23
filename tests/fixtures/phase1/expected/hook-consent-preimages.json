@@ -1,0 +1,4 @@
+{
+  ".hive/hooks/checkpoint-reminder": "{\"approved_at\":\"2026-07-23T00:00:00Z\",\"capability\":\"checkpoint-reminder\",\"command\":\"hive hook --capability checkpoint-reminder --event Stop --output json\",\"consent_version\":1,\"content_digest\":\"sha256:c6a13cfee98ec69f220cdcfeb9e4a28d9cfdf596a0fac60feb57d12197e2ba50\",\"event\":\"Stop\",\"path\":\".hive/hooks/checkpoint-reminder\"}",
+  ".hive/hooks/protect-hive-owned-state": "{\"approved_at\":\"2026-07-23T00:00:00Z\",\"capability\":\"protect-hive-owned-state\",\"command\":\"hive hook --capability protect-hive-owned-state --event PreToolUse --output json\",\"consent_version\":1,\"content_digest\":\"sha256:4733a945bab8d2d6d0da92df10e3b9418b65bc48416b8e8d49864e873f050c32\",\"event\":\"PreToolUse\",\"path\":\".hive/hooks/protect-hive-owned-state\"}"
+}

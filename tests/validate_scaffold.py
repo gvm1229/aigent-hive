@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate Phase 0 schemas and a rendered consumer-harness fixture."""
+"""Validate schemas and a rendered Phase 1 consumer-harness fixture."""
 
 from __future__ import annotations
 
@@ -26,6 +26,15 @@ CONSENT_FIELDS = (
     "content_digest",
     "requested_capabilities",
     "approved_capabilities",
+    "approved_at",
+)
+HOOK_CONSENT_FIELDS = (
+    "consent_version",
+    "capability",
+    "event",
+    "path",
+    "command",
+    "content_digest",
     "approved_at",
 )
 
@@ -61,6 +70,36 @@ def expect_invalid(schema_name: str, instance: object) -> None:
     except ValidationError:
         return
     raise AssertionError(f"invalid fixture passed {schema_name}")
+
+
+def canonical_digest(value: object) -> str:
+    """Return the RFC 8785-compatible digest for this integer/string fixture subset."""
+    canonical_bytes = json.dumps(
+        value,
+        ensure_ascii=False,
+        separators=(",", ":"),
+        sort_keys=True,
+    ).encode("utf-8")
+    return f"sha256:{hashlib.sha256(canonical_bytes).hexdigest()}"
+
+
+def with_capability_digest(value: dict[str, object]) -> dict[str, object]:
+    normalized = copy.deepcopy(value)
+    normalized.pop("evidence_digest", None)
+    normalized["evidence_digest"] = canonical_digest(normalized)
+    return normalized
+
+
+def validate_capability_resolution(value: object) -> None:
+    assert isinstance(value, dict)
+    validate_instance("capability-matrix.schema.json", value)
+    payload = copy.deepcopy(value)
+    actual_digest = payload.pop("evidence_digest")
+    expected_digest = canonical_digest(payload)
+    if actual_digest != expected_digest:
+        raise AssertionError(
+            f"capability resolution digest mismatch: {actual_digest} != {expected_digest}"
+        )
 
 
 def validate_contract_examples() -> None:
@@ -141,12 +180,14 @@ def validate_contract_examples() -> None:
         {**judge_verdict, "missing_evidence": ["test log"]},
     )
 
-    capability_matrix = {
+    capability_matrix = with_capability_digest({
         "schema_version": 1,
         "host": "codex",
         "host_version": "fixture",
         "surface": "cli",
-        "orchestration_layer": "host-native",
+        "detection": "available",
+        "external_runtime": "omx",
+        "resolved_owner": "omx",
         "capabilities": {
             "instructions": "supported",
             "simple-question-isolation": "unverified",
@@ -156,9 +197,92 @@ def validate_contract_examples() -> None:
             "usage-sensor": "unsupported",
             "independent-judge": "supported",
         },
-        "evidence": [],
-    }
-    validate_instance("capability-matrix.schema.json", capability_matrix)
+        "evidence": [
+            {
+                "source": "host-catalog",
+                "locator": "active-host-capability-metadata",
+                "outcome": "compatible",
+                "digest": digest,
+            }
+        ],
+    })
+    validate_capability_resolution(capability_matrix)
+
+    absent = with_capability_digest({
+        **capability_matrix,
+        "detection": "absent",
+        "external_runtime": None,
+        "resolved_owner": "host-native",
+        "evidence": [
+            {
+                "source": "host-catalog",
+                "locator": "active-host-capability-metadata",
+                "outcome": "absent",
+                "digest": digest,
+            },
+            {
+                "source": "public-executable",
+                "locator": "omx --version",
+                "outcome": "absent",
+                "digest": digest,
+            },
+        ],
+    })
+    validate_capability_resolution(absent)
+
+    missing_public_absence = with_capability_digest({
+        **absent,
+        "evidence": [absent["evidence"][0]],
+    })
+    expect_invalid("capability-matrix.schema.json", missing_public_absence)
+
+    for detection, external_runtime, evidence_outcome in (
+        ("absent", None, "absent"),
+        ("unknown", None, "unavailable"),
+        ("incompatible", "omx", "incompatible"),
+    ):
+        contradictory_evidence = [
+            {
+                "source": "host-catalog",
+                "locator": "active-host-capability-metadata",
+                "outcome": evidence_outcome,
+                "digest": digest,
+            }
+        ]
+        if detection == "absent":
+            contradictory_evidence.append({
+                "source": "public-executable",
+                "locator": "omx --version",
+                "outcome": "absent",
+                "digest": digest,
+            })
+        contradictory_evidence.append({
+            "source": "public-executable",
+            "locator": "compatible runtime evidence",
+            "outcome": "compatible",
+            "digest": digest,
+        })
+        contradictory = with_capability_digest({
+            **capability_matrix,
+            "detection": detection,
+            "external_runtime": external_runtime,
+            "resolved_owner": "host-native",
+            "evidence": contradictory_evidence,
+        })
+        expect_invalid("capability-matrix.schema.json", contradictory)
+
+    available_without_compatible = with_capability_digest({
+        **capability_matrix,
+        "evidence": [
+            {
+                "source": "host-catalog",
+                "locator": "active-host-capability-metadata",
+                "outcome": "unavailable",
+                "digest": digest,
+            }
+        ],
+    })
+    expect_invalid("capability-matrix.schema.json", available_without_compatible)
 
 
 def validate_license_boundary() -> None:
@@ -225,15 +349,22 @@ def validate_skill_approvals(answers: dict[str, object]) -> None:
             raise AssertionError(f"approved capabilities are not canonical: {approval['name']}")
 
         consent_payload = {field: approval[field] for field in CONSENT_FIELDS}
-        canonical_bytes = json.dumps(
-            consent_payload,
-            ensure_ascii=False,
-            separators=(",", ":"),
-            sort_keys=True,
-        ).encode("utf-8")
-        expected_digest = f"sha256:{hashlib.sha256(canonical_bytes).hexdigest()}"
+        expected_digest = canonical_digest(consent_payload)
         if approval["consent_digest"] != expected_digest:
             raise AssertionError(f"consent digest mismatch: {approval['name']}")
+
+
+def validate_hook_approvals(answers: dict[str, object]) -> None:
+    approvals = answers["approved_fallback_hooks"]
+    assert isinstance(approvals, list)
+    for approval in approvals:
+        assert isinstance(approval, dict)
+        consent_payload = {field: approval[field] for field in HOOK_CONSENT_FIELDS}
+        expected_digest = canonical_digest(consent_payload)
+        if approval["consent_digest"] != expected_digest:
+            raise AssertionError(
+                f"fallback hook consent digest mismatch: {approval['capability']}"
+            )
 
 
 def validate_consent_tamper_detection(approval: dict[str, object]) -> None:
@@ -314,6 +445,7 @@ def validate_render(render_root: Path, input_data_path: Path) -> None:
         ".hive/README.md",
         ".hive/setup-answers.yml",
         ".hive/config/harness.toml",
+        ".hive/config/capability-resolution.yml",
         ".hive/config/role-seeds.yml",
         ".hive/config/knowledge-scope.yml",
         ".hive/config/approved-skills.yml",
@@ -338,6 +470,7 @@ def validate_render(render_root: Path, input_data_path: Path) -> None:
     assert isinstance(answers, dict)
     validate_instance("setup-answers.schema.json", answers)
     validate_skill_approvals(answers)
+    validate_hook_approvals(answers)
     validate_role_materialization(answers["persistent_roles"])
 
     approvals = answers["approved_optional_skills"]
@@ -347,6 +480,8 @@ def validate_render(render_root: Path, input_data_path: Path) -> None:
         validate_consent_tamper_detection(approval)
 
     for key, expected_value in expected_input.items():
+        if key == "capability_resolution":
+            continue
         if answers[key] != expected_value:
             raise AssertionError(f"answer mismatch for {key}")
 
@@ -354,6 +489,110 @@ def validate_render(render_root: Path, input_data_path: Path) -> None:
         harness_config = tomllib.load(stream)
     if harness_config["project_name"] != answers["project_name"]:
         raise AssertionError("project_name changed during TOML rendering")
+    if (
+        harness_config["usage_stop_remaining_percent"]
+        != answers["usage_stop_remaining_percent"]
+    ):
+        raise AssertionError("usage stop threshold changed during TOML rendering")
+    if (
+        "usage_stop_remaining_percent" not in expected_input
+        and answers["usage_stop_remaining_percent"] != 10
+    ):
+        raise AssertionError("default usage stop threshold must remain 10 percent")
+
+    capability_resolution = read_yaml(
+        render_root / ".hive/config/capability-resolution.yml"
+    )
+    validate_capability_resolution(capability_resolution)
+    assert isinstance(capability_resolution, dict)
+    expected_capability_resolution = expected_input.get("capability_resolution")
+    if (
+        expected_capability_resolution is not None
+        and capability_resolution != expected_capability_resolution
+    ):
+        raise AssertionError("capability resolution projection lost input data")
+    if capability_resolution["host"] != answers["primary_host"]:
+        raise AssertionError("capability resolution host differs from primary_host")
+    if (
+        harness_config["external_capability_detection"]
+        != capability_resolution["detection"]
+    ):
+        raise AssertionError("capability detection changed during TOML rendering")
+    if harness_config["resolved_owner"] != capability_resolution["resolved_owner"]:
+        raise AssertionError("resolved owner changed during TOML rendering")
+    if (
+        harness_config["resolution_evidence_digest"]
+        != capability_resolution["evidence_digest"]
+    ):
+        raise AssertionError("resolution evidence digest changed during TOML rendering")
+
+    hook_approvals = answers["approved_fallback_hooks"]
+    assert isinstance(hook_approvals, list)
+    approved_hooks_path = render_root / ".hive/config/approved-hooks.yml"
+    hook_eligible = capability_resolution["detection"] == "absent"
+    if hook_approvals and not hook_eligible:
+        raise AssertionError("non-absent capability retained fallback hook approvals")
+    if hook_approvals:
+        if not approved_hooks_path.is_file():
+            raise AssertionError("eligible fallback hook ledger was not rendered")
+        approved_hooks = read_yaml(approved_hooks_path)
+        validate_instance("hook-consent.schema.json", approved_hooks)
+        assert isinstance(approved_hooks, dict)
+        if approved_hooks["hooks"] != hook_approvals:
+            raise AssertionError("fallback hook ledger lost setup approval data")
+        if (
+            approved_hooks["resolution_evidence_digest"]
+            != capability_resolution["evidence_digest"]
+        ):
+            raise AssertionError("fallback hook ledger lost capability evidence binding")
+        expected_hook_paths = set()
+        for approval in hook_approvals:
+            assert isinstance(approval, dict)
+            descriptor = {
+                "capability": approval["capability"],
+                "command": approval["command"],
+                "event": approval["event"],
+                "path": approval["path"],
+                "schema_version": 1,
+            }
+            descriptor_bytes = (
+                json.dumps(
+                    descriptor,
+                    ensure_ascii=False,
+                    separators=(",", ":"),
+                    sort_keys=True,
+                ).encode("utf-8")
+                + b"\n"
+            )
+            descriptor_path = render_root / str(approval["path"])
+            expected_hook_paths.add(descriptor_path)
+            if not descriptor_path.is_file():
+                raise AssertionError(
+                    f"approved hook descriptor is missing: {approval['path']}"
+                )
+            if descriptor_path.read_bytes() != descriptor_bytes:
+                raise AssertionError(
+                    f"approved hook descriptor bytes changed: {approval['path']}"
+                )
+            if (
+                f"sha256:{hashlib.sha256(descriptor_bytes).hexdigest()}"
+                != approval["content_digest"]
+            ):
+                raise AssertionError(
+                    f"approved hook content digest mismatch: {approval['path']}"
+                )
+        rendered_hook_root = render_root / ".hive/hooks"
+        actual_hook_paths = (
+            {path for path in rendered_hook_root.iterdir() if path.is_file()}
+            if rendered_hook_root.is_dir()
+            else set()
+        )
+        if actual_hook_paths != expected_hook_paths:
+            raise AssertionError("rendered hook descriptor tree exceeds approvals")
+    elif approved_hooks_path.exists():
+        raise AssertionError("fallback hook ledger exists without eligible approval")
+    elif (render_root / ".hive/hooks").exists():
+        raise AssertionError("fallback hook descriptor tree exists without approval")
 
     role_seeds = read_yaml(render_root / ".hive/config/role-seeds.yml")
     knowledge_scope = read_yaml(render_root / ".hive/config/knowledge-scope.yml")

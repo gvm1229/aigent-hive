@@ -1,0 +1,1 @@
+{"approved_at":"2026-07-23T00:00:00Z","approved_capabilities":["filesystem-read"],"consent_version":1,"content_digest":"sha256:3333333333333333333333333333333333333333333333333333333333333333","name":"fixture-readonly","requested_capabilities":["filesystem-read","network"],"revision":"v1.0.0","source":"https://example.invalid/fixture-readonly"}

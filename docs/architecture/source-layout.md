@@ -21,8 +21,9 @@ aigent-hive/
 ├── AGENTS.md
 ├── .agents/                    # Hive 개발 지침, 출하 금지
 ├── crates/
-│   ├── hive-core/              # provider-neutral invariant
-│   └── hive-cli/               # 현재 doctor/check-target
+│   ├── hive-core/              # provider-neutral invariant와 usage permit policy
+│   ├── hive-render/            # 결정적 staging, ownership, consent와 role materialization
+│   └── hive-cli/               # doctor/check-target/setup/hook/usage sensor adapter
 ├── harness/
 │   ├── template/               # Copier authoring·CI source
 │   ├── skills/                 # portable shipping Skill source
@@ -47,12 +48,41 @@ aigent-hive/
 출하용 Skill과 directive는 `harness/`에서만 관리하고 release projection 단계에서 소비자 경로를 결정한다.
 Role lifecycle과 Skill consent의 normative contract는 각각
 [`role-lifecycle.md`](role-lifecycle.md)와 [`skill-consent.md`](skill-consent.md)에 둔다.
+Fallback hook 승인·활성화 경계는 [`hook-consent.md`](hook-consent.md), consumer
+shared guidance marker 계약은 [`../guidance-schema.md`](../guidance-schema.md)에 둔다.
+
+## Phase 1 ownership와 activation
+
+`harness/manifest.toml`의 ownership class가 setup의 write/delete 권한을 제한한다.
+
+| Class | Phase 1 동작 |
+| --- | --- |
+| `hive-managed-*`, `hive-generated-config` | renderer가 재현한 exact bytes만 관리 |
+| `user-answer-protected` | 현재 setup answer에서 재현한 projection만 갱신 |
+| `user-consent-protected` | 유효한 approval에 결합된 ledger/descriptor만 생성·철회 |
+| `canonical-data-protected` | 기존 canonical bytes를 보존; role definition은 명시 reconfigure 때만 갱신하며 assignment·handoff·body는 보존 |
+| `shared-marker` | shared file의 exact Hive marker만 교체 |
+| `rebuildable-runtime`, `ephemeral-backup` | canonical source로 취급하지 않음 |
+
+`.omx/**`, `.omc/**`, `.codex/**`, `.claude/**`, `.agents/**`와 manifest 밖 path는 setup write 대상으로 사용할 수 없다. Target-relative managed file은 symlink ancestor와 entry type을 확인한 뒤 읽으므로 외부 symlink target을 따라가지 않는다.
+
+`execute_setup`은 시작 시 ambient parent capability에서 consumer root를 no-follow로 열어 pin한다. Protected seed, shared marker, role, hook 철회 ownership과 changed-path 계산은 이 pinned handle에서 읽는다. Apply는 source tree와 consumer tree 밖의 sibling staging directory에서 전체 planned tree를 먼저 검증하고, activation snapshot·parent directory 생성·exclusive temp replacement·삭제·rollback·설치 bytes 재검증을 모두 같은 target handle 아래에서 수행한다.
+
+Core `cap-std`의 stable public surface만으로는 cross-platform no-follow directory open과 Windows handle-derived identity를 함께 표현할 수 없어, 같은 Bytecode Alliance project의 exact-pinned companion `cap-fs-ext 4.0.2`를 사용한다. Root·child directory·file entry는 stable no-follow로 열고, mutation 직전과 post-validation 뒤 ambient parent에서 current target을 다시 no-follow-open해 pinned handle과 `(device, inode)`를 exact 비교한다. Windows 값은 handle-derived volume/file identity다. 따라서 ambient target retarget은 conflict와 pinned-tree rollback으로 끝나며 symlink ancestor 교체는 외부 경로 mutation 전에 차단된다. ReFS의 128-bit file identifier를 companion이 64-bit inode로 표현하는 제한은 Windows matrix에서 계속 감시할 known risk다.
+
+각 live replacement는 handle-relative `create_new`로 만든 충돌하지 않는 임의 이름의 temp를 사용한다. Windows의 기존 destination 교체는 같은 parent capability 아래 backup/복원을 거치며, operation snapshot 기준 rollback과 staged exact bytes·삭제 부재·known hook 집합의 post-validation까지 통과해야 transaction이 성공한다. Read-only `--validate`와 activation 전 render/preflight는 기존 lexical/no-follow 검사를 유지한다.
+
+## Usage guard 경계
+
+`hive-core::usage_guard`는 provider-neutral snapshot 검증, 10% inclusive 중지선과 one-shot dispatch permit만 소유한다. Session window가 있으면 우선하고, host가 session limit을 노출하지 않을 때 weekly를 fallback으로 선택한다. `hive-cli`의 CodexBar adapter는 optional local executable을 fixed argv로 bounded 실행해 snapshot을 정규화하며 provider SDK, API key와 model call을 소유하지 않는다.
+
+Hive는 현재 dispatch를 종료하거나 자체 loop를 실행하지 않는다. Resolved OMX/OMC 또는 host-native owner가 새 dispatch 직전에 permit을 요청하고 한 번 소비해야 하며, sensor 부재·stale·scope mismatch는 `usage_unknown`으로 fail-closed한다.
 
 ## Crate 추가 원칙
 
 빈 crate를 미리 만들지 않는다. 다음 acceptance를 구현할 때 owning crate 추가:
 
-- renderer 계약 확정 → `hive-render`
+- 결정적 setup renderer 구현 → `hive-render`
 - Markdown/SQLite index 구현 → `hive-wiki`
 - staged update와 migration 구현 → `hive-update`
 - host projection compile 구현 → `hive-projection`

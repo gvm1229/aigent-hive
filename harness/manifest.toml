@@ -2,6 +2,11 @@ schema_version = 1
 license = "Apache-2.0"
 
 [[paths]]
+pattern = ".hive/.gitignore"
+ownership = "hive-managed-config"
+source = "template"
+
+[[paths]]
 pattern = ".hive/LICENSE-AIGENT-HIVE.txt"
 ownership = "hive-managed-license"
 source = "template"
@@ -35,6 +40,21 @@ source = "template"
 pattern = ".hive/config/approved-skills.yml"
 ownership = "user-consent-protected"
 source = "template"
+
+[[paths]]
+pattern = ".hive/config/capability-resolution.yml"
+ownership = "hive-generated-config"
+source = "read-only-capability-probe"
+
+[[paths]]
+pattern = ".hive/config/approved-hooks.yml"
+ownership = "user-consent-protected"
+source = "conditional-template"
+
+[[paths]]
+pattern = ".hive/hooks/**"
+ownership = "user-consent-protected"
+source = "conditional-hook-projection"
 
 [[paths]]
 pattern = ".hive/knowledge/**"

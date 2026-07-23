@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "host": "antigravity",
+  "host_version": "fixture",
+  "surface": "cli",
+  "detection": "absent",
+  "external_runtime": null,
+  "resolved_owner": "host-native",
+  "capabilities": {
+    "instructions": "supported",
+    "simple-question-isolation": "best-effort",
+    "subagents": "best-effort",
+    "persistent-role-binding": "best-effort",
+    "continuous-loop": "unsupported",
+    "usage-sensor": "unsupported",
+    "independent-judge": "best-effort"
+  },
+  "evidence_digest": "sha256:f302144ed6a975b85a8a6c62ab39918070ad9168364ea570c1006a474664b7d8",
+  "evidence": [
+    {
+      "source": "host-catalog",
+      "locator": "fixture:antigravity-empty-catalog",
+      "outcome": "absent",
+      "digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    {
+      "source": "public-executable",
+      "locator": "fixture:external-runtime-not-found",
+      "outcome": "absent",
+      "digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+    }
+  ]
+}

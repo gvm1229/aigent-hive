@@ -1,0 +1,14 @@
+# Generated from a read-only active-host capability probe.
+# evidence_digest binds this normalized object except the evidence_digest field itself.
+schema_version: 1
+host: {{ capability_resolution.host | to_json }}
+host_version: {{ capability_resolution.host_version | to_json }}
+surface: {{ capability_resolution.surface | to_json }}
+detection: {{ capability_resolution.detection | to_json }}
+external_runtime: {{ capability_resolution.external_runtime | to_json }}
+resolved_owner: {{ capability_resolution.resolved_owner | to_json }}
+capabilities:
+{{ capability_resolution.capabilities | to_nice_yaml | indent(2, true) -}}
+evidence_digest: {{ capability_resolution.evidence_digest | to_json }}
+evidence:
+{{ capability_resolution.evidence | to_nice_yaml | indent(2, true) -}}

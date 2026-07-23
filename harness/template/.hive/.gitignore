@@ -3,6 +3,8 @@
 /index/*.sqlite3
 /index/*.sqlite-wal
 /index/*.sqlite-shm
+/index/*.sqlite3-wal
+/index/*.sqlite3-shm
 
 # Short-lived local safety backups
 /backups/

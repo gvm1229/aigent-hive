@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/gvm1229/aigent-hive/schemas/usage-snapshot.schema.json",
+  "title": "Aigent Hive usage snapshot",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "sensor_id",
+    "sensor_version",
+    "host_scope",
+    "account_scope_digest",
+    "quota_window",
+    "remaining_percent",
+    "measured_at_unix_seconds",
+    "expires_at_unix_seconds",
+    "resets_at_unix_seconds",
+    "source_confidence"
+  ],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "sensor_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "sensor_version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "host_scope": {
+      "type": "string",
+      "minLength": 1
+    },
+    "account_scope_digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "quota_window": {
+      "enum": ["session", "weekly"]
+    },
+    "remaining_percent": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 100
+    },
+    "measured_at_unix_seconds": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "expires_at_unix_seconds": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "resets_at_unix_seconds": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "source_confidence": {
+      "enum": ["high", "medium", "low"]
+    }
+  }
+}

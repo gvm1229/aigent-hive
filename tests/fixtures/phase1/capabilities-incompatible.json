@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "host": "codex",
+  "host_version": "fixture",
+  "surface": "cli",
+  "detection": "incompatible",
+  "external_runtime": "omx",
+  "resolved_owner": "host-native",
+  "capabilities": {
+    "instructions": "supported",
+    "simple-question-isolation": "best-effort",
+    "subagents": "best-effort",
+    "persistent-role-binding": "best-effort",
+    "continuous-loop": "unsupported",
+    "usage-sensor": "unsupported",
+    "independent-judge": "best-effort"
+  },
+  "evidence_digest": "sha256:0f66adcb318fe2076c75931dfdef897a4f91ca11f9a555d96b0134f7056ea7c6",
+  "evidence": [
+    {
+      "source": "public-executable",
+      "locator": "fixture:omx-unsupported-version",
+      "outcome": "incompatible",
+      "digest": "sha256:d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1"
+    }
+  ]
+}

@@ -1,0 +1,1 @@
+{"capability":"checkpoint-reminder","command":"hive hook --capability checkpoint-reminder --event Stop --output json","event":"Stop","path":".hive/hooks/checkpoint-reminder","schema_version":1}

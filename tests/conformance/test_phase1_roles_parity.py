@@ -1,0 +1,355 @@
+#!/usr/bin/env python3
+"""Copier parity, role lifecycle, and setup-answer migration conformance."""
+
+from __future__ import annotations
+
+import copy
+import json
+import os
+import shutil
+import subprocess
+from pathlib import Path
+
+from jsonschema import Draft202012Validator
+
+from tests.conformance.phase1_support import (
+    EXPECTED_ROOT,
+    FIXTURE_ROOT,
+    REPOSITORY_ROOT,
+    Phase1CliTestCase,
+    read_yaml,
+    snapshot_tree,
+    write_yaml,
+)
+
+
+def normalized_copier_tree(
+    root: Path,
+) -> dict[str, tuple[str, bytes | str]]:
+    snapshot = snapshot_tree(root)
+    for path in tuple(snapshot):
+        if path == ".copier-answers.yml":
+            snapshot.pop(path)
+    return snapshot
+
+
+class Phase1CopierParity(Phase1CliTestCase):
+    def test_copier_and_rust_no_role_no_hook_static_trees_are_byte_equal(
+        self,
+    ) -> None:
+        copier = os.environ.get("COPIER_BIN") or shutil.which("copier")
+        self.assertIsNotNone(
+            copier,
+            "Copier 9.17.0 is required for the Phase 1 parity gate",
+        )
+        rust_target = self.work_root / "rust"
+        copier_target = self.work_root / "copier"
+        rust_target.mkdir()
+
+        rust_process, _ = self.invoke_setup(
+            rust_target,
+            answers=FIXTURE_ROOT / "answers-no-role-no-hook.yml",
+            capabilities="capabilities-codex-omx.json",
+        )
+        copier_process = subprocess.run(
+            [
+                str(copier),
+                "copy",
+                "--trust",
+                "--defaults",
+                "--data-file",
+                str(FIXTURE_ROOT / "copier-parity-data.yml"),
+                str(REPOSITORY_ROOT),
+                str(copier_target),
+            ],
+            cwd=REPOSITORY_ROOT,
+            check=False,
+            text=True,
+            capture_output=True,
+        )
+
+        self.assertEqual(rust_process.returncode, 0)
+        self.assertEqual(copier_process.returncode, 0, copier_process.stderr)
+        self.assertEqual(
+            normalized_copier_tree(rust_target),
+            normalized_copier_tree(copier_target),
+        )
+
+    def test_copier_and_rust_approved_hook_conditional_trees_are_byte_equal(
+        self,
+    ) -> None:
+        copier = os.environ.get("COPIER_BIN") or shutil.which("copier")
+        self.assertIsNotNone(
+            copier,
+            "Copier 9.17.0 is required for the Phase 1 parity gate",
+        )
+        rust_target = self.work_root / "rust-hooks"
+        copier_target = self.work_root / "copier-hooks"
+        rust_target.mkdir()
+
+        rust_process, _ = self.invoke_setup(
+            rust_target,
+            answers=FIXTURE_ROOT / "answers-all-hooks.yml",
+            capabilities="capabilities-absent.json",
+        )
+        copier_process = subprocess.run(
+            [
+                str(copier),
+                "copy",
+                "--trust",
+                "--defaults",
+                "--data-file",
+                str(FIXTURE_ROOT / "copier-hooks-parity-data.yml"),
+                str(REPOSITORY_ROOT),
+                str(copier_target),
+            ],
+            cwd=REPOSITORY_ROOT,
+            check=False,
+            text=True,
+            capture_output=True,
+        )
+
+        self.assertEqual(rust_process.returncode, 0, rust_process.stderr)
+        self.assertEqual(copier_process.returncode, 0, copier_process.stderr)
+        self.assertEqual(
+            normalized_copier_tree(rust_target),
+            normalized_copier_tree(copier_target),
+        )
+
+
+class Phase1RoleConformance(Phase1CliTestCase):
+    def install_reviewer(self) -> tuple[Path, Path]:
+        target = self.work_root / "consumer"
+        target.mkdir()
+        process, _ = self.invoke_setup(target)
+        self.assertEqual(process.returncode, 0)
+        return target, target / ".hive/team/roles/reviewer.md"
+
+    def test_role_materialization_matches_exact_known_answer(self) -> None:
+        _, role_path = self.install_reviewer()
+
+        self.assertEqual(
+            role_path.read_bytes(),
+            (EXPECTED_ROOT / "reviewer-role.md").read_bytes(),
+        )
+
+    def test_role_frontmatter_satisfies_profile_schema(self) -> None:
+        _, role_path = self.install_reviewer()
+        role = role_path.read_text(encoding="utf-8")
+        frontmatter, _ = role.removeprefix("---\n").split("\n---\n", 1)
+        schema = json.loads(
+            (REPOSITORY_ROOT / "schemas/role-profile.schema.json").read_text(
+                encoding="utf-8"
+            )
+        )
+
+        Draft202012Validator(schema).validate(json.loads(frontmatter))
+
+    def test_role_frontmatter_keys_are_lexicographically_sorted(self) -> None:
+        _, role_path = self.install_reviewer()
+        role = role_path.read_text(encoding="utf-8")
+        frontmatter, _ = role.removeprefix("---\n").split("\n---\n", 1)
+
+        self.assertEqual(
+            list(json.loads(frontmatter).keys()),
+            [
+                "allowed_capabilities",
+                "context_paths",
+                "current_assignment",
+                "display_name",
+                "handoff_path",
+                "non_responsibilities",
+                "responsibilities",
+                "role_id",
+                "schema_version",
+                "verification_duties",
+                "write_scope",
+            ],
+        )
+
+    def test_role_initial_markdown_body_matches_contract(self) -> None:
+        _, role_path = self.install_reviewer()
+        role = role_path.read_text(encoding="utf-8")
+        _, body = role.removeprefix("---\n").split("\n---\n", 1)
+
+        self.assertEqual(
+            body,
+            "# Reviewer\n\n"
+            "## Current assignment\n\n"
+            "_Unassigned._\n\n"
+            "## Handoff\n\n"
+            "_No handoff yet._\n",
+        )
+
+    def assert_duplicate_role_ids_rejected(
+        self,
+        second_role_id: str,
+    ) -> None:
+        target = self.work_root / "consumer"
+        target.mkdir()
+        answer_path, answers = self.copied_answers("answers-base.yml")
+        roles = answers["persistent_roles"]
+        self.assertIsInstance(roles, list)
+        duplicate = copy.deepcopy(roles[0])
+        duplicate["role_id"] = second_role_id
+        roles.append(duplicate)
+        write_yaml(answer_path, answers)
+        before = snapshot_tree(self.work_root)
+
+        process, result = self.invoke_setup(target, answers=answer_path)
+
+        self.assertEqual(process.returncode, 2)
+        self.assertEqual(result["changed_paths"], [])
+        self.assertEqual(snapshot_tree(self.work_root), before)
+
+    def test_exact_duplicate_role_ids_are_rejected_before_write(self) -> None:
+        self.assert_duplicate_role_ids_rejected("reviewer")
+
+    def test_casefold_colliding_role_ids_are_rejected_before_write(self) -> None:
+        self.assert_duplicate_role_ids_rejected("Reviewer")
+
+    def test_removing_role_seed_preserves_materialized_role_bytes(self) -> None:
+        target, role_path = self.install_reviewer()
+        original = role_path.read_bytes()
+
+        process, _ = self.invoke_setup(
+            target,
+            answers=FIXTURE_ROOT / "answers-no-role-no-hook.yml",
+        )
+
+        self.assertEqual(process.returncode, 0)
+        self.assertEqual(role_path.read_bytes(), original)
+
+    def assert_definition_drift_conflicts_without_mutation(
+        self,
+        field: str,
+        replacement: object,
+    ) -> None:
+        target, _ = self.install_reviewer()
+        answer_path, answers = self.copied_answers("answers-base.yml")
+        roles = answers["persistent_roles"]
+        self.assertIsInstance(roles, list)
+        roles[0][field] = replacement
+        write_yaml(answer_path, answers)
+        before = snapshot_tree(target)
+
+        process, result = self.invoke_setup(target, answers=answer_path)
+
+        self.assertEqual(process.returncode, 3)
+        self.assertEqual(result["changed_paths"], [])
+        self.assertEqual(snapshot_tree(target), before)
+
+    def test_malformed_active_role_causes_full_setup_rollback(self) -> None:
+        target, role_path = self.install_reviewer()
+        role_path.write_text("---\n{not-json}\n---\nuser body\n", encoding="utf-8")
+        before = snapshot_tree(target)
+
+        process, result = self.invoke_setup(target)
+
+        self.assertEqual(process.returncode, 3)
+        self.assertEqual(result["changed_paths"], [])
+        self.assertEqual(snapshot_tree(target), before)
+
+    def test_cross_major_role_candidate_schema_failure_preserves_active_tree(
+        self,
+    ) -> None:
+        target, role_path = self.install_reviewer()
+        candidate = (FIXTURE_ROOT / "cross-major-role-malformed.md").read_bytes()
+        candidate_text = candidate.decode("utf-8")
+        frontmatter, _ = candidate_text.removeprefix("---\n").split("\n---\n", 1)
+        candidate_profile = json.loads(frontmatter)
+        self.assertEqual(candidate_profile["schema_version"], 999)
+        role_path.write_bytes(candidate)
+        before = snapshot_tree(target)
+
+        process, result = self.invoke_setup(
+            target,
+            reconfigure_roles=("reviewer",),
+        )
+
+        self.assertEqual(process.returncode, 3)
+        self.assertEqual(result["code"], "hive.setup-conflict")
+        self.assertEqual(result["status"], "conflict")
+        self.assertIn(
+            "role profile violate the JSON Schema contract",
+            result["message"],
+        )
+        self.assertNotIn("installed harness version parity failed", result["message"])
+        self.assertEqual(result["changed_paths"], [])
+        self.assertEqual(snapshot_tree(target), before)
+
+
+ROLE_DEFINITION_DRIFT_CASES = {
+    "display_name": "Changed Reviewer",
+    "responsibilities": ["changed responsibility"],
+    "non_responsibilities": ["changed non-responsibility"],
+    "context_paths": ["src/**"],
+    "allowed_capabilities": ["filesystem-read", "shell"],
+    "write_scope": [".hive/knowledge/"],
+    "verification_duties": ["changed verification duty"],
+}
+
+
+def make_definition_drift_test(field: str, replacement: object):
+    def test(self: Phase1RoleConformance) -> None:
+        self.assert_definition_drift_conflicts_without_mutation(
+            field,
+            replacement,
+        )
+
+    test.__name__ = f"test_{field}_definition_drift_conflicts_without_mutation"
+    return test
+
+
+for drift_field, drift_replacement in ROLE_DEFINITION_DRIFT_CASES.items():
+    setattr(
+        Phase1RoleConformance,
+        f"test_{drift_field}_definition_drift_conflicts_without_mutation",
+        make_definition_drift_test(drift_field, drift_replacement),
+    )
+
+
+class Phase1AnswerMigrationConformance(Phase1CliTestCase):
+    def test_legacy_answers_migrate_losslessly_except_removed_owner_preference(
+        self,
+    ) -> None:
+        target = self.work_root / "consumer"
+        target.mkdir()
+        legacy = read_yaml(FIXTURE_ROOT / "answers-legacy-lossless.yml")
+        expected = {
+            key: value
+            for key, value in legacy.items()
+            if key != "orchestration_layer"
+        }
+        expected["approved_fallback_hooks"] = []
+
+        process, _ = self.invoke_setup(
+            target,
+            answers=FIXTURE_ROOT / "answers-legacy-lossless.yml",
+            capabilities="capabilities-codex-omx.json",
+        )
+
+        self.assertEqual(process.returncode, 0)
+        installed = read_yaml(target / ".hive/setup-answers.yml")
+        self.assertEqual(installed, expected)
+
+    def test_legacy_owner_preference_cannot_override_capability_resolution(
+        self,
+    ) -> None:
+        target = self.work_root / "consumer"
+        target.mkdir()
+
+        process, result = self.invoke_setup(
+            target,
+            answers=FIXTURE_ROOT / "answers-legacy-lossless.yml",
+            capabilities="capabilities-codex-omx.json",
+        )
+
+        self.assertEqual(process.returncode, 0)
+        locators = {
+            item["locator"]
+            for item in result["evidence"]
+            if isinstance(item, dict)
+        }
+        self.assertIn("orchestration-owner:omx", locators)
+        self.assertNotIn("orchestration-owner:omc", locators)

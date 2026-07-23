@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "host": "claude",
+  "host_version": "fixture",
+  "surface": "cli",
+  "detection": "available",
+  "external_runtime": "omc",
+  "resolved_owner": "omc",
+  "capabilities": {
+    "instructions": "supported",
+    "simple-question-isolation": "supported",
+    "subagents": "supported",
+    "persistent-role-binding": "supported",
+    "continuous-loop": "supported",
+    "usage-sensor": "unverified",
+    "independent-judge": "supported"
+  },
+  "evidence_digest": "sha256:b9a73552fe6b7eb91663b965d123ac71765e42309553f22352009f2df5de4ed8",
+  "evidence": [
+    {
+      "source": "public-executable",
+      "locator": "fixture:omc-version",
+      "outcome": "compatible",
+      "digest": "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+    }
+  ]
+}

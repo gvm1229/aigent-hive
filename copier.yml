@@ -4,6 +4,13 @@ _answers_file: .hive/setup-answers.yml
 _templates_suffix: .jinja
 _envops:
   keep_trailing_newline: true
+_exclude:
+  - "{% if capability_resolution.detection != 'absent' or approved_fallback_hooks | length == 0 %}.hive/config/approved-hooks.yml{% endif %}"
+  - "{% if capability_resolution.detection != 'absent' or approved_fallback_hooks | length == 0 %}.hive/hooks{% endif %}"
+  - "{% if capability_resolution.detection != 'absent' or approved_fallback_hooks | selectattr('capability', 'equalto', 'protect-hive-owned-state') | list | length == 0 %}.hive/hooks/protect-hive-owned-state{% endif %}"
+  - "{% if capability_resolution.detection != 'absent' or approved_fallback_hooks | selectattr('capability', 'equalto', 'update-integrity-guard') | list | length == 0 %}.hive/hooks/update-integrity-guard{% endif %}"
+  - "{% if capability_resolution.detection != 'absent' or approved_fallback_hooks | selectattr('capability', 'equalto', 'derived-state-invalidation') | list | length == 0 %}.hive/hooks/derived-state-invalidation{% endif %}"
+  - "{% if capability_resolution.detection != 'absent' or approved_fallback_hooks | selectattr('capability', 'equalto', 'checkpoint-reminder') | list | length == 0 %}.hive/hooks/checkpoint-reminder{% endif %}"
 
 project_name:
   type: str
@@ -27,27 +34,50 @@ primary_host:
     Gemini Antigravity: antigravity
   default: codex
 
-orchestration_layer:
-  type: str
-  help: subagent와 지속 실행을 소유할 기존 runtime
-  choices:
-    Host native: host-native
-    oh-my-codex: omx
-    oh-my-claudecode: omc
-  default: host-native
-  validator: >-
-    {% if orchestration_layer == 'omx' and primary_host != 'codex' %}
-    OMX는 Codex에서만 선택할 수 있습니다
-    {% elif orchestration_layer == 'omc' and primary_host != 'claude' %}
-    OMC는 Claude Code에서만 선택할 수 있습니다
-    {% elif primary_host == 'antigravity' and orchestration_layer != 'host-native' %}
-    Gemini Antigravity는 host-native orchestration만 지원합니다
-    {% endif %}
+capability_resolution:
+  type: yaml
+  help: Hive CLI가 read-only host probe에서 생성한 automatic owner resolution evidence
+  when: false
+  default: >-
+    {
+      "schema_version": 1,
+      "host": {{ primary_host | to_json }},
+      "host_version": "unknown",
+      "surface": "in-session",
+      "detection": "unknown",
+      "external_runtime": null,
+      "resolved_owner": "host-native",
+      "capabilities": {
+        "instructions": "unverified",
+        "simple-question-isolation": "unverified",
+        "subagents": "unverified",
+        "persistent-role-binding": "unverified",
+        "continuous-loop": "unverified",
+        "usage-sensor": "unverified",
+        "independent-judge": "unverified"
+      },
+      "evidence_digest":
+        {% if primary_host == 'codex' -%}
+        "sha256:41084c75f42cb503c8a8b289e0dbef7cf6afa0ba4edadda71bfa8335228c256f"
+        {%- elif primary_host == 'claude' -%}
+        "sha256:3297d9f72cbe201be6276112d0ce6e5801443a51f640feac56773b244f021d0e"
+        {%- else -%}
+        "sha256:9532c73c299922a832779fe211d79dad126cd778f4ea1aaf399e52ee5e601289"
+        {%- endif %},
+      "evidence": [
+        {
+          "source": "host-catalog",
+          "locator": "active-host-capability-metadata",
+          "outcome": "unavailable",
+          "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+        }
+      ]
+    }
 
 usage_stop_remaining_percent:
   type: int
   help: 신뢰 가능한 subscription usage sensor가 있을 때 새 자율 작업을 중지할 잔여 비율
-  default: 20
+  default: 10
   validator: "{% if usage_stop_remaining_percent < 1 or usage_stop_remaining_percent > 99 %}1~99 사이 값을 입력해야 합니다{% endif %}"
 
 elevated_judge_quorum:
@@ -78,4 +108,17 @@ knowledge_exclude_paths:
 approved_optional_skills:
   type: yaml
   help: 사용자가 이름과 source를 확인하고 명시 승인한 optional Skill 목록
+  default: []
+  validator: >-
+    {% if capability_resolution.host != primary_host %}
+    capability resolution host는 primary_host와 같아야 합니다
+    {% elif capability_resolution.detection != 'absent'
+    and approved_fallback_hooks | default([]) | length > 0 %}
+    fallback hook은 compatible OMX/OMC가 conclusively absent일 때만 승인할 수 있습니다
+    {% endif %}
+
+approved_fallback_hooks:
+  type: yaml
+  help: 표시된 capability, event, project-local path, command와 digest를 확인하고 승인한 fallback hook 목록
+  when: "{{ capability_resolution.detection == 'absent' }}"
   default: []

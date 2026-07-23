@@ -1,0 +1,206 @@
+[
+  {
+    "name": "declared-detection-owner-mismatch",
+    "matrix": {
+      "schema_version": 1,
+      "host": "codex",
+      "host_version": "fixture",
+      "surface": "cli",
+      "detection": "available",
+      "external_runtime": "omx",
+      "resolved_owner": "host-native",
+      "capabilities": {
+        "instructions": "supported",
+        "simple-question-isolation": "supported",
+        "subagents": "supported",
+        "persistent-role-binding": "supported",
+        "continuous-loop": "supported",
+        "usage-sensor": "unverified",
+        "independent-judge": "supported"
+      },
+      "evidence_digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+      "evidence": [
+        {
+          "source": "host-catalog",
+          "locator": "fixture:contradictory-owner",
+          "outcome": "compatible",
+          "digest": "sha256:1111111111111111111111111111111111111111111111111111111111111111"
+        }
+      ]
+    }
+  },
+  {
+    "name": "host-runtime-mismatch",
+    "matrix": {
+      "schema_version": 1,
+      "host": "claude",
+      "host_version": "fixture",
+      "surface": "cli",
+      "detection": "available",
+      "external_runtime": "omx",
+      "resolved_owner": "omx",
+      "capabilities": {
+        "instructions": "supported",
+        "simple-question-isolation": "supported",
+        "subagents": "supported",
+        "persistent-role-binding": "supported",
+        "continuous-loop": "supported",
+        "usage-sensor": "unverified",
+        "independent-judge": "supported"
+      },
+      "evidence_digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+      "evidence": [
+        {
+          "source": "host-catalog",
+          "locator": "fixture:wrong-host-runtime",
+          "outcome": "compatible",
+          "digest": "sha256:2222222222222222222222222222222222222222222222222222222222222222"
+        }
+      ]
+    }
+  },
+  {
+    "name": "absent-with-compatible-evidence",
+    "matrix": {
+      "schema_version": 1,
+      "host": "codex",
+      "host_version": "fixture",
+      "surface": "cli",
+      "detection": "absent",
+      "external_runtime": null,
+      "resolved_owner": "host-native",
+      "capabilities": {
+        "instructions": "supported",
+        "simple-question-isolation": "best-effort",
+        "subagents": "best-effort",
+        "persistent-role-binding": "best-effort",
+        "continuous-loop": "unsupported",
+        "usage-sensor": "unsupported",
+        "independent-judge": "best-effort"
+      },
+      "evidence_digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+      "evidence": [
+        {
+          "source": "host-catalog",
+          "locator": "fixture:catalog-absent",
+          "outcome": "absent",
+          "digest": "sha256:3333333333333333333333333333333333333333333333333333333333333333"
+        },
+        {
+          "source": "public-executable",
+          "locator": "fixture:runtime-absent",
+          "outcome": "absent",
+          "digest": "sha256:4444444444444444444444444444444444444444444444444444444444444444"
+        },
+        {
+          "source": "public-executable",
+          "locator": "fixture:runtime-compatible",
+          "outcome": "compatible",
+          "digest": "sha256:5555555555555555555555555555555555555555555555555555555555555555"
+        }
+      ]
+    }
+  },
+  {
+    "name": "unknown-with-compatible-evidence",
+    "matrix": {
+      "schema_version": 1,
+      "host": "codex",
+      "host_version": "fixture",
+      "surface": "cli",
+      "detection": "unknown",
+      "external_runtime": null,
+      "resolved_owner": "host-native",
+      "capabilities": {
+        "instructions": "supported",
+        "simple-question-isolation": "best-effort",
+        "subagents": "best-effort",
+        "persistent-role-binding": "best-effort",
+        "continuous-loop": "unverified",
+        "usage-sensor": "unverified",
+        "independent-judge": "best-effort"
+      },
+      "evidence_digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+      "evidence": [
+        {
+          "source": "host-catalog",
+          "locator": "fixture:catalog-unavailable",
+          "outcome": "unavailable",
+          "digest": "sha256:6666666666666666666666666666666666666666666666666666666666666666"
+        },
+        {
+          "source": "public-executable",
+          "locator": "fixture:runtime-compatible",
+          "outcome": "compatible",
+          "digest": "sha256:7777777777777777777777777777777777777777777777777777777777777777"
+        }
+      ]
+    }
+  },
+  {
+    "name": "incompatible-with-compatible-evidence",
+    "matrix": {
+      "schema_version": 1,
+      "host": "codex",
+      "host_version": "fixture",
+      "surface": "cli",
+      "detection": "incompatible",
+      "external_runtime": "omx",
+      "resolved_owner": "host-native",
+      "capabilities": {
+        "instructions": "supported",
+        "simple-question-isolation": "best-effort",
+        "subagents": "best-effort",
+        "persistent-role-binding": "best-effort",
+        "continuous-loop": "unsupported",
+        "usage-sensor": "unsupported",
+        "independent-judge": "best-effort"
+      },
+      "evidence_digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+      "evidence": [
+        {
+          "source": "host-catalog",
+          "locator": "fixture:runtime-incompatible",
+          "outcome": "incompatible",
+          "digest": "sha256:8888888888888888888888888888888888888888888888888888888888888888"
+        },
+        {
+          "source": "public-executable",
+          "locator": "fixture:runtime-compatible",
+          "outcome": "compatible",
+          "digest": "sha256:9999999999999999999999999999999999999999999999999999999999999999"
+        }
+      ]
+    }
+  },
+  {
+    "name": "absent-missing-public-executable-evidence",
+    "matrix": {
+      "schema_version": 1,
+      "host": "codex",
+      "host_version": "fixture",
+      "surface": "cli",
+      "detection": "absent",
+      "external_runtime": null,
+      "resolved_owner": "host-native",
+      "capabilities": {
+        "instructions": "supported",
+        "simple-question-isolation": "best-effort",
+        "subagents": "best-effort",
+        "persistent-role-binding": "best-effort",
+        "continuous-loop": "unsupported",
+        "usage-sensor": "unsupported",
+        "independent-judge": "best-effort"
+      },
+      "evidence_digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+      "evidence": [
+        {
+          "source": "host-catalog",
+          "locator": "fixture:catalog-absent-only",
+          "outcome": "absent",
+          "digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        }
+      ]
+    }
+  }
+]

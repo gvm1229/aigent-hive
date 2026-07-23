@@ -9,5 +9,9 @@ publish = false
 [lib]
 path = "src/lib.rs"
 
+[dependencies]
+serde.workspace = true
+sha2.workspace = true
+
 [lints]
 workspace = true

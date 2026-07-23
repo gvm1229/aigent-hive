@@ -2,7 +2,7 @@
 
 [![Rust](https://img.shields.io/badge/Rust-stable-000000?logo=rust&logoColor=white)](rust-toolchain.toml)
 [![Cargo](https://img.shields.io/badge/Cargo-workspace-CB4B16?logo=rust&logoColor=white)](Cargo.toml)
-[![Version](https://img.shields.io/badge/version-0.1.0-4C1)](Cargo.toml)
+[![Version](https://img.shields.io/badge/version-0.2.0-4C1)](Cargo.toml)
 [![Python](https://img.shields.io/badge/Python-3.13-3776AB?logo=python&logoColor=white)](.github/workflows/ci.yml)
 [![Copier](https://img.shields.io/badge/Copier-9.17.0-5C4EE5)](copier.yml)
 [![JSON Schema](https://img.shields.io/badge/JSON%20Schema-2020--12-000000?logo=json&logoColor=white)](schemas/)
@@ -13,7 +13,7 @@
 
 > 🐝 **Aigent Hive**는 Codex, Claude Code, Gemini Antigravity 같은 구독형 agent host 위에서 일관된 setup, Skill routing, 역할·지식·run 상태, 안전한 update와 검증 계약을 제공하는 **provider-neutral 로컬 agent harness**다.
 
-> 🚧 **현재 상태:** `0.1.0`은 source scaffold와 contract baseline이다. 설치 가능한 실제 consumer harness는 아직 구현 중이다.
+> 🚧 **현재 상태:** worktree version은 `0.2.0`이다. Phase 1 renderer는 구현되어 있으나 completion review의 safety·Windows·validation 보강 항목이 남아 있어 완료로 표시하지 않는다. Usage guard core와 fail-closed CodexBar adapter는 Phase 5 선행 slice로 구현되었다.
 
 Hive는 모델 API나 provider SDK를 사용하지 않으며 API key를 요청하거나 저장하지 않는다. Compatible OMX·OMC가 있으면 검증된 orchestration 기능을 우선 재사용하고, 없으면 host-native capability 범위에서 동작한다.
 
@@ -26,6 +26,7 @@ Hive는 모델 API나 provider SDK를 사용하지 않으며 API key를 요청�
 - [의존성](#의존성)
 - [저장소 구조](#저장소-구조)
 - [개발과 검증](#개발과-검증)
+- [Subscription usage guard](#subscription-usage-guard)
 - [Git workflow](#git-workflow)
 - [현재 상태와 버전 정책](#현재-상태와-버전-정책)
 - [라이선스](#라이선스)
@@ -80,7 +81,7 @@ Copier는 template authoring과 CI parity 검증에만 사용한다. 배포된 R
 | 기술 | 사용 방식 |
 | --- | --- |
 | Rust stable, Edition 2021 | cross-platform CLI, setup/update 안전 경계와 결정적 projection |
-| Cargo workspace | `hive-core`와 `hive-cli` 빌드·테스트·lint |
+| Cargo workspace | `hive-core`, `hive-render`, `hive-cli` 빌드·테스트·lint |
 | Markdown | 계획, 지식, 지속형 역할, run 상태와 사람이 읽는 지침의 정본 |
 | YAML·TOML | setup 답변, typed 설정, 승인 ledger와 ownership manifest |
 | JSON Schema Draft 2020-12 | action, role, run, judge, capability 등 provider-neutral machine contract |
@@ -92,10 +93,15 @@ Copier는 template authoring과 CI parity 검증에만 사용한다. 배포된 R
 
 ## 의존성
 
-현재 Rust runtime은 외부 crate를 사용하지 않는다. `hive-cli`는 workspace 내부의 `hive-core`에만 의존한다.
+Rust runtime은 filesystem containment, schema·serialization, RFC 8785 canonicalization과 digest처럼 setup 안전성에 필요한 범용 crate만 사용한다. Model provider, model API 또는 network SDK dependency는 없다.
 
 | 범위 | 고정 의존성 | 목적 |
 | --- | --- | --- |
+| Rust runtime | `cap-std==4.0.2` | filesystem capability boundary용으로 고정한 dependency |
+| Rust runtime | `tempfile==3.27.0` | 충돌하지 않는 임의 이름의 exclusive staging·activation temp |
+| Rust runtime | `jsonschema==0.48.5` | setup·capability·hook contract 검증 |
+| Rust runtime | `serde==1.0.229`, `serde_json==1.0.151`, `yaml_serde==0.10.4`, `toml==1.1.3` | typed config parse·projection |
+| Rust runtime | `serde_json_canonicalizer==0.3.2`, `sha2==0.11.0` | RFC 8785 consent/evidence와 content digest |
 | Rust toolchain | `stable`, `rustfmt`, `clippy` | build, format, lint와 unit test |
 | Template authoring·CI | `copier==9.17.0` | template render와 fixture parity |
 | Schema test | `jsonschema[format]==4.25.1` | JSON Schema meta/instance 검증 |
@@ -112,6 +118,7 @@ Copier는 template authoring과 CI parity 검증에만 사용한다. 배포된 R
 .
 ├── crates/
 │   ├── hive-core/       # provider-neutral invariant와 target safety
+│   ├── hive-render/     # deterministic staging, ownership, consent와 role materialization
 │   └── hive-cli/        # `hive` CLI entry point
 ├── harness/             # 출하할 template, Skill, profile, projection source
 ├── schemas/             # provider-neutral JSON Schema contract
@@ -139,9 +146,37 @@ cargo clippy --workspace --all-targets -- -D warnings
 cargo test --workspace
 cargo run -p hive-cli -- doctor
 cargo run -p hive-cli -- check-target /path/to/consumer-project
+python -m unittest discover -s tests/conformance -p 'test_phase1_*.py' -v
 ```
 
-CI는 Copier default·hostile fixture, schema instance, 지속형 role materialization과 optional Skill consent 변조도 함께 검증한다.
+Setup은 다음 JSON contract 표면을 사용한다.
+
+```bash
+cargo run -p hive-cli -- setup \
+  --target /path/to/consumer-project \
+  --answers /path/to/setup-answers.yml \
+  --capabilities /path/to/capability-evidence.json \
+  --dry-run \
+  --output json
+```
+
+`--dry-run` 대신 `--apply` 또는 `--validate` 중 정확히 하나를 선택한다. CI는 세 host의 Copier default fixture, hostile typed-answer fixture, non-absent hook 거부, Rust/Copier parity, role materialization과 consent 변조도 함께 검증한다.
+
+현재 로컬 검증 기준은 Rust workspace test 63개, Phase 1 Python conformance 184개와 usage guard conformance 26개다. Linux·macOS·Windows에서 두 Python corpus를 실행하도록 CI matrix를 구성했으며, 이 변경의 원격 matrix 결과는 `develop` push 뒤 확인한다.
+
+## Subscription usage guard
+
+Hive의 provider-neutral usage policy는 session window가 있으면 이를 우선하고, host가 session limit을 제공하지 않을 때 weekly window를 fallback으로 선택한다. 선택된 window가 `remaining <= 10%`이면 다음 automatic dispatch permit을 발급하지 않는다. 두 window가 모두 없거나 snapshot이 stale이거나 account/window가 일치하지 않아도 `usage_unknown`으로 fail-closed한다.
+
+현재 Codex adapter는 자동 설치하지 않은 optional CodexBar `0.45.2`를 shell 없이 고정 argv로 읽는다. Raw account 대신 호출자가 제공한 SHA-256 digest만 비교한다.
+
+```bash
+cargo run -p hive-cli -- usage check \
+  --account-digest sha256:<64-lowercase-hex> \
+  --output json
+```
+
+Exit `0`은 그 시점의 snapshot이 core policy를 통과했다는 read-only 판단이다. 실제 1회성 permit 소비는 향후 dispatch owner integration에서 수행해야 한다. Exit `3`의 `hive.usage-limited` 또는 `hive.usage-unknown`은 새 automatic dispatch를 금지한다. 이 명령은 이미 시작된 host turn을 종료하지 않으며 CodexBar가 없을 때 enforcement가 가능하다고 주장하지 않는다.
 
 ## Git workflow
 
@@ -156,11 +191,11 @@ CI는 Copier default·hostile fixture, schema instance, 지속형 role materiali
 
 | 항목 | 현재 값 |
 | --- | --- |
-| Product version | `0.1.0` |
-| 완료 범위 | Phase 0 source scaffold와 contract baseline |
-| 미구현 범위 | 설치 가능한 실제 consumer harness |
-| 다음 구현 | Rust renderer, automatic OMX/OMC capability resolution, staging·ownership 검증, `hive setup`의 `--dry-run`, `--apply`, `--validate` 경로 |
-| Active plan | [`docs/plans/PLAN.md`](docs/plans/PLAN.md) revision 1.5 |
+| Product version | `0.2.0` |
+| 현재 범위 | Phase 1 completion review 보강과 Phase 5 usage guard 선행 slice |
+| 구현 기능 | Rust/Copier renderer, automatic OMX/OMC owner resolution, ownership·rollback·marker·role·consent 표면, provider-neutral usage policy와 CodexBar adapter |
+| 다음 구현 | Phase 1 safety/Windows/validation 보강 뒤 Phase 2 Markdown knowledge와 재생성 가능한 SQLite FTS index |
+| Active plan | [`docs/plans/PLAN.md`](docs/plans/PLAN.md) revision 1.6 |
 | Handoff state | [`docs/state/CURRENT.md`](docs/state/CURRENT.md) |
 
 Semantic version `X.Y.Z`는 다음 원칙으로 변경한다.

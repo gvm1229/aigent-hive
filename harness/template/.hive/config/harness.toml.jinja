@@ -1,13 +1,21 @@
 schema_version = 1
+harness_version = "0.2.0"
+source_release_version = "0.2.0"
 project_name = {{ project_name | to_json }}
 project_kind = {{ project_kind | to_json }}
 primary_host = {{ primary_host | to_json }}
-orchestration_layer = {{ orchestration_layer | to_json }}
+external_capability_detection = {{ capability_resolution.detection | to_json }}
+resolved_owner = {{ capability_resolution.resolved_owner | to_json }}
+resolution_evidence_digest = {{ capability_resolution.evidence_digest | to_json }}
 usage_stop_remaining_percent = {{ usage_stop_remaining_percent }}
 elevated_judge_quorum = {{ elevated_judge_quorum | to_json }}
 critical_judge_quorum = {{ critical_judge_quorum | to_json }}
 
 # Optional Skills are inert until each entry is explicitly approved.
 approved_optional_skills_file = ".hive/config/approved-skills.yml"
+capability_resolution_file = ".hive/config/capability-resolution.yml"
+{% if capability_resolution.detection == 'absent' and approved_fallback_hooks | length > 0 -%}
+approved_fallback_hooks_file = ".hive/config/approved-hooks.yml"
+{% endif -%}
 role_seed_file = ".hive/config/role-seeds.yml"
 knowledge_scope_file = ".hive/config/knowledge-scope.yml"

@@ -46,6 +46,8 @@ Also read:
 - Source layout: [`docs/architecture/source-layout.md`](docs/architecture/source-layout.md)
 - Persistent role lifecycle: [`docs/architecture/role-lifecycle.md`](docs/architecture/role-lifecycle.md)
 - Optional Skill consent: [`docs/architecture/skill-consent.md`](docs/architecture/skill-consent.md)
+- Fallback hook consent: [`docs/architecture/hook-consent.md`](docs/architecture/hook-consent.md)
+- Consumer guidance marker: [`docs/guidance-schema.md`](docs/guidance-schema.md)
 - Product decisions: [`docs/decisions/product-release-decisions.md`](docs/decisions/product-release-decisions.md)
 - Product version lifecycle: [`docs/decisions/ADR-0006-version-lifecycle.md`](docs/decisions/ADR-0006-version-lifecycle.md)
 - Git workflow: [`docs/guides/branching-rules.md`](docs/guides/branching-rules.md)
