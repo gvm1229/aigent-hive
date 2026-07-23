@@ -884,7 +884,7 @@ Optional third-party Skill은 quarantine→provenance 검증→사용자 개별 
 - [ ] host-native/OMX/OMC support matrix
 - [ ] upgrade/migration fault injection
 - [ ] supply-chain provenance
-- [ ] public license 확정
+- [x] public license 확정 — 전체 source·harness `Apache-2.0`, GitHub 감지와 REUSE 검증 완료
 - [ ] stable release
 
 ## 7. 핵심 conformance와 fault injection
