@@ -6,7 +6,6 @@
 - phase: Phase 0 완료 — Phase 1 진입 준비
 - Git: clean `develop`, 장기 branch는 `main`/`develop` 두 개만 사용
 - remote: [`gvm1229/aigent-hive`](https://github.com/gvm1229/aigent-hive), default branch `main`
-- initial baseline: `b69c5c3c6b3b53e6f8a2fc180d95d7176bc8134f`
 
 ## 구현된 기반
 
@@ -20,7 +19,7 @@
 - persistent-role, knowledge-scope, optional-Skill consent projection
 - setup-time canonical role materialization과 RFC 8785 Skill consent contract
 - Markdown/SQLite, orchestration, Git workflow ADR
-- `Apache-2.0` source와 `Apache-2.0` harness의 REUSE 3.3 license boundary
+- 전체 source와 harness의 `Apache-2.0` REUSE 3.3 license contract
 - `main/develop` 전용 Git 규칙과 cross-platform Rust·Copier/schema CI
 
 ## 검증 상태
@@ -33,7 +32,7 @@
 - 7개 JSON Schema meta-validation과 대표 action/role/run/judge/capability instance PASS
 - role materialization known-answer/idempotency와 Skill consent tamper fixture PASS
 - Copier default·hostile render에서 `.hive/LICENSE-AIGENT-HIVE.txt` Apache 전문 일치와 consumer root license 불변 PASS
-- root `LICENSE`와 canonical Apache-2.0 전문, `harness/LICENSE`와 canonical Apache-2.0 전문의 byte parity PASS
+- root `LICENSE`, `harness/LICENSE`와 canonical Apache-2.0 전문의 byte parity PASS
 - REUSE 6.2.0 lint: 74/74 file copyright·license mapping, missing/unused/bad license 0건 PASS
 - `setup-harness` Skill validator PASS
 - 적대적 scaffold 재검토: initial Git bootstrap APPROVE

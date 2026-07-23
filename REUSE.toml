@@ -5,9 +5,3 @@ path = "**"
 precedence = "override"
 SPDX-FileCopyrightText = "2026 Hojin (Tom) Jeong"
 SPDX-License-Identifier = "Apache-2.0"
-
-[[annotations]]
-path = "harness/**"
-precedence = "override"
-SPDX-FileCopyrightText = "2026 Hojin (Tom) Jeong"
-SPDX-License-Identifier = "Apache-2.0"

@@ -935,7 +935,7 @@ v1 public release는 다음을 모두 충족해야 한다.
 - [ ] same-major compatibility
 - [ ] cross-major no-data-loss migration
 - [ ] GitHub Release provenance와 signing
-- [x] public license — `Apache-2.0` source와 `Apache-2.0` harness 경계, 전문, package metadata와 render fixture
+- [x] public license — 전체 source·harness `Apache-2.0`, 전문, package metadata와 render fixture
 - [ ] clean clone에서 전체 CI PASS
 
 ---
@@ -978,7 +978,6 @@ v1 public release는 다음을 모두 충족해야 한다.
 
 ### 라이선스
 
-- [GNU — Apache-2.0 적용 방법](https://www.apache.org/legal/apply-license)
 - [Apache Software Foundation — Apache-2.0 적용 방법](https://www.apache.org/legal/apply-license)
 - [REUSE Specification 3.3](https://reuse.software/spec/)
 
