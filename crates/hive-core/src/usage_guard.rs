@@ -296,32 +296,18 @@ pub fn evaluate_usage(
     previous_snapshots: &[UsageSnapshot],
     now_unix_seconds: i64,
 ) -> UsageDecision {
-    let mut current = Vec::with_capacity(2);
-    for window in [UsageWindow::Session, UsageWindow::Weekly] {
-        let mut matching = current_snapshots
-            .iter()
-            .filter(|snapshot| snapshot.quota_window == window);
-        let snapshot = matching.next();
-        if matching.next().is_some() {
-            return UsageDecision::Unknown(UsageUnknownReason::DuplicateWindow { window });
-        }
-        if let Some(snapshot) = snapshot {
-            current.push(snapshot);
-        }
-    }
-
-    let Some(snapshot) = current
-        .iter()
-        .find(|snapshot| snapshot.quota_window == UsageWindow::Session)
-        .or_else(|| {
-            current
-                .iter()
-                .find(|snapshot| snapshot.quota_window == UsageWindow::Weekly)
-        })
-    else {
-        return UsageDecision::Unknown(UsageUnknownReason::MissingWindow {
-            window: UsageWindow::Weekly,
-        });
+    let snapshot = match unique_snapshot(current_snapshots, UsageWindow::Session) {
+        Ok(Some(snapshot)) => snapshot,
+        Ok(None) => match unique_snapshot(current_snapshots, UsageWindow::Weekly) {
+            Ok(Some(snapshot)) => snapshot,
+            Ok(None) => {
+                return UsageDecision::Unknown(UsageUnknownReason::MissingWindow {
+                    window: UsageWindow::Weekly,
+                });
+            }
+            Err(reason) => return UsageDecision::Unknown(reason),
+        },
+        Err(reason) => return UsageDecision::Unknown(reason),
     };
 
     if let Some(reason) = validate_snapshot(policy, snapshot, now_unix_seconds) {
@@ -355,6 +341,20 @@ pub fn evaluate_usage(
         expires_at_unix_seconds: snapshot.expires_at_unix_seconds.min(policy_expiry),
         consumed: false,
     })
+}
+
+fn unique_snapshot(
+    snapshots: &[UsageSnapshot],
+    window: UsageWindow,
+) -> Result<Option<&UsageSnapshot>, UsageUnknownReason> {
+    let mut matching = snapshots
+        .iter()
+        .filter(|snapshot| snapshot.quota_window == window);
+    let snapshot = matching.next();
+    if matching.next().is_some() {
+        return Err(UsageUnknownReason::DuplicateWindow { window });
+    }
+    Ok(snapshot)
 }
 
 fn validate_snapshot(
@@ -558,6 +558,28 @@ mod tests {
             panic!("a low session window should block");
         };
         assert_eq!(block.window, UsageWindow::Session);
+    }
+
+    #[test]
+    fn session_decision_ignores_duplicate_or_invalid_weekly_snapshots() {
+        let duplicate_weekly = vec![
+            snapshot(UsageWindow::Session, 57.0),
+            snapshot(UsageWindow::Weekly, 9.99),
+            snapshot(UsageWindow::Weekly, 57.0),
+        ];
+        assert!(matches!(
+            evaluate_usage(&policy(), &duplicate_weekly, &[], NOW),
+            UsageDecision::Allow(_)
+        ));
+
+        let mut invalid_weekly = snapshot(UsageWindow::Weekly, 57.0);
+        invalid_weekly.schema_version = 2;
+        let current = vec![snapshot(UsageWindow::Session, 10.0), invalid_weekly];
+        let UsageDecision::Block(block) = evaluate_usage(&policy(), &current, &[], NOW) else {
+            panic!("the valid session snapshot should determine the decision");
+        };
+        assert_eq!(block.window, UsageWindow::Session);
+        assert_eq!(block.remaining_percent.to_bits(), 10.0_f64.to_bits());
     }
 
     #[test]

@@ -22,6 +22,8 @@
         "SetupHarness",
         "CheckUsage",
         "AnswerSimpleQuestion",
+        "RefinePrompt",
+        "VerifySkillProjection",
         "RunWork",
         "ResumeWork",
         "VerifyWork",
@@ -82,7 +84,7 @@
       "type": ["string", "null"]
     },
     "data": {
-      "type": ["object", "null"]
+      "type": "object"
     }
   },
   "oneOf": [

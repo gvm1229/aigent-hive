@@ -499,7 +499,7 @@ class Phase1InstalledValidation(Phase1CliTestCase):
         harness = target / ".hive/config/harness.toml"
         harness.write_text(
             harness.read_text(encoding="utf-8").replace(
-                'harness_version = "0.3.0"',
+                'harness_version = "0.4.0"',
                 'harness_version = "0.2.1"',
             ),
             encoding="utf-8",
@@ -512,7 +512,7 @@ class Phase1InstalledValidation(Phase1CliTestCase):
         harness = target / ".hive/config/harness.toml"
         harness.write_text(
             harness.read_text(encoding="utf-8").replace(
-                'source_release_version = "0.3.0"',
+                'source_release_version = "0.4.0"',
                 'source_release_version = "0.2.1"',
             ),
             encoding="utf-8",

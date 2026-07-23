@@ -28,8 +28,8 @@ jobs:
           toolchain: stable
           components: clippy,rustfmt
       - run: cargo fmt --all --check
-      - run: cargo clippy --workspace --all-targets -- -D warnings
-      - run: cargo test --workspace
+      - run: cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
+      - run: cargo test --workspace --all-targets --all-features --locked
 
   phase1-conformance:
     name: Phase 1 conformance (${{ matrix.os }})
@@ -55,8 +55,8 @@ jobs:
           copier==9.17.0
           jsonschema[format]==4.25.1
           PyYAML==6.0.2
-      - name: Build Phase 1 CLI
-        run: cargo build --bin hive
+      - name: Build conformance CLI
+        run: cargo build --bin hive --all-features --locked
       - name: Select platform CLI path
         shell: bash
         run: |
@@ -81,6 +81,13 @@ jobs:
         run: >-
           python -m unittest
           tests.conformance.test_phase2_wiki
+          -v
+      - name: Run Phase 3 Skills and projection conformance corpus
+        run: >-
+          python -m unittest discover
+          -s tests/conformance
+          -t .
+          -p "test_phase3_*.py"
           -v
 
   copier:

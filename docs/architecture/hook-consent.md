@@ -23,7 +23,7 @@ Hive fallback hook은 active host의 compatible OMX/OMC가 `absent`로 확정된
   "capability": "protect-hive-owned-state",
   "event": "PreToolUse",
   "path": ".hive/hooks/protect-hive-owned-state",
-  "command": "hive hook --capability protect-hive-owned-state --event PreToolUse --output json"
+  "command": "hive hook --capability protect-hive-owned-state --event PreToolUse --capabilities .hive/runtime/current-capability-resolution.json --output json"
 }
 ```
 
@@ -33,6 +33,14 @@ content_digest = "sha256:" + lowercase_hex(SHA-256(descriptor_bytes))
 ```
 
 `content_digest`는 승인한 preview와 실제 설치 bytes를 결합한다.
+
+모든 승인 command는 live capability evidence의 유일한 project-local 경로
+`.hive/runtime/current-capability-resolution.json`을 exact argument로 포함한다.
+Setup은 이 파일이나 `.hive/runtime/` directory를 생성하지 않는다. Host adapter가
+각 non-Stop 호출 직전에 active host catalog와 public executable probe를 다시
+정규화하여 이 경로에 기록하고, 호출 뒤 제거한다. 이 파일은 `.hive/.gitignore`의
+`/runtime/` 규칙으로 항상 제외되며 commit, release bundle, backup 또는 setup
+artifact가 아니다.
 
 ## Consent digest
 
@@ -50,13 +58,19 @@ Ledger는 `.hive/config/approved-hooks.yml`에 저장하며 `detection: absent`�
 
 `hive hook`은 실행 전마다 다음을 다시 검증한다.
 
-1. installed consumer target과 ownership 경계; target-relative file은 symlink ancestor를 먼저 검사한 뒤 읽음
-2. 현재 capability resolution object와 full-object evidence digest
-3. ledger의 `absent` detection과 resolution evidence 결합
-4. capability/event/path/command approval과 consent digest
-5. 설치 descriptor exact bytes와 content digest
+1. exact `.hive/runtime/current-capability-resolution.json` 경로, non-symlink regular file, 60초 이하 수정 시각
+2. installed consumer target과 ownership 경계; target-relative file은 symlink ancestor를 먼저 검사한 뒤 읽음
+3. 현재 capability resolution object와 full-object evidence digest
+4. ledger의 `absent` detection과 resolution evidence 결합
+5. capability/event/path/command approval과 consent digest
+6. 설치 descriptor exact bytes와 content digest
 
-미승인, 변조 또는 non-absent 상태는 hook input을 읽기 전에 `decision:allow`, `active:false`로 끝난다. Detection이 더 이상 `absent`가 아니면 기존 Hive hook은 neutral/inert이며 external runtime과 경쟁하지 않는다.
+Runtime evidence가 없거나, 60초보다 오래되었거나, 미래 timestamp이거나,
+malformed이거나, exact 경로 밖이거나, detection이 `absent`가 아니면 installed
+approval 또는 hook input을 읽기 전에 `decision:allow`, `active:false`로 끝난다.
+Installed `.hive/config/capability-resolution.yml`은 setup/validation 기록이며 live
+activation evidence를 대신하지 않는다. Detection이 더 이상 `absent`가 아니면
+기존 Hive hook은 neutral/inert이며 external runtime과 경쟁하지 않는다.
 
 ## Typed non-Stop 동작
 
@@ -71,7 +85,9 @@ Ledger는 `.hive/config/approved-hooks.yml`에 저장하며 `detection: absent`�
 
 승인된 non-Stop hook의 malformed 또는 unsafe input과 실행 오류는 diagnostic을 남기고 exit `0`, `decision:allow`, `active:false`의 neutral allow로 끝난다. 유효하게 검증된 typed input에서 보호 대상 mutation 또는 update safety gate 누락을 확인한 경우에만 `active:true`, `decision:block`을 반환한다.
 
-`Stop`은 별도 fast path다. Approval, installed state, input, tamper 또는 detection과 관계없이 authorization이나 input을 읽지 않고 exit `0`, `decision:allow`, `active:false`를 반환한다.
+`Stop`은 별도 fast path다. Runtime evidence file이 없더라도 approval, installed
+state, input, tamper 또는 detection을 읽지 않고 exit `0`, `decision:allow`,
+`active:false`를 반환한다.
 
 ## 철회와 installed validation
 

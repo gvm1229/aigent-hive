@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "host": "codex",
+  "explicit_action": null,
+  "explicit_skill": null,
+  "plain_answer": false,
+  "simple_question": false,
+  "project_context_required": false,
+  "external_candidate": null,
+  "hive_candidate": "hive-prompt-refine",
+  "active_hive_skills": [
+    {
+      "name": "hive-prompt-refine",
+      "source_type": "built-in",
+      "content_digest": "sha256:167fe625b59f020f200f167ac380875b77e79aac111dfa03163f94718834eb42",
+      "side_effect_class": "none",
+      "capabilities": [],
+      "consent_digest": null,
+      "consent": null
+    }
+  ],
+  "refine_mode": null,
+  "explicit_run_intent": false
+}

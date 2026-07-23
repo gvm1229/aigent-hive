@@ -48,6 +48,12 @@
         "simple-question-isolation": {
           "enum": ["supported", "best-effort", "unsupported", "unverified"]
         },
+        "automatic-skill-routing": {
+          "enum": ["supported", "best-effort", "unsupported", "unverified"]
+        },
+        "prompt-refine": {
+          "enum": ["supported", "best-effort", "unsupported", "unverified"]
+        },
         "subagents": {
           "enum": ["supported", "best-effort", "unsupported", "unverified"]
         },
@@ -63,6 +69,24 @@
         "independent-judge": {
           "enum": ["supported", "best-effort", "unsupported", "unverified"]
         }
+      }
+    },
+    "hook_events": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "UserPromptSubmit",
+        "PreToolUse",
+        "PostToolUse",
+        "PreCompact",
+        "Stop"
+      ],
+      "properties": {
+        "UserPromptSubmit": { "$ref": "#/$defs/supportClaim" },
+        "PreToolUse": { "$ref": "#/$defs/supportClaim" },
+        "PostToolUse": { "$ref": "#/$defs/supportClaim" },
+        "PreCompact": { "$ref": "#/$defs/supportClaim" },
+        "Stop": { "$ref": "#/$defs/supportClaim" }
       }
     },
     "evidence_digest": {
@@ -93,6 +117,46 @@
           "digest": {
             "type": "string",
             "pattern": "^sha256:[0-9a-f]{64}$"
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "supportClaim": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["support", "evidence"],
+      "properties": {
+        "support": {
+          "enum": ["supported", "best-effort", "unsupported", "unverified"]
+        },
+        "evidence": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["source", "locator", "digest"],
+            "properties": {
+              "source": {
+                "enum": [
+                  "host-doc",
+                  "host-catalog",
+                  "qualification-fixture"
+                ]
+              },
+              "locator": {
+                "type": "string",
+                "minLength": 1,
+                "pattern": "^[^\\r\\n]+$"
+              },
+              "digest": {
+                "type": "string",
+                "pattern": "^sha256:[0-9a-f]{64}$"
+              }
+            }
           }
         }
       }

@@ -1,0 +1,104 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/gvm1229/aigent-hive/schemas/prompt-refinement-result.schema.json",
+  "title": "Aigent Hive prompt refinement result",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "mode",
+    "original_prompt",
+    "intent_summary",
+    "assumptions",
+    "unresolved_items",
+    "required_question",
+    "preserved",
+    "refined_prompt",
+    "project_reads",
+    "execution_authorized",
+    "side_effects"
+  ],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "mode": { "enum": ["refine-only", "refine-and-run"] },
+    "original_prompt": { "type": "string", "minLength": 1 },
+    "intent_summary": { "type": "string", "minLength": 1 },
+    "assumptions": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "unresolved_items": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "required_question": {
+      "type": ["string", "null"],
+      "minLength": 1
+    },
+    "preserved": {
+      "$ref": "#/$defs/preservation"
+    },
+    "refined_prompt": { "type": "string", "minLength": 1 },
+    "project_reads": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "pattern": "^(?!/)(?![A-Za-z]:[\\\\/])(?!.*(?:^|/)\\.\\.(?:/|$)).+"
+      }
+    },
+    "execution_authorized": { "type": "boolean" },
+    "side_effects": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "project_write",
+        "network",
+        "subagent",
+        "memory_capture",
+        "run_creation",
+        "model_execution"
+      ],
+      "properties": {
+        "project_write": { "const": false },
+        "network": { "const": false },
+        "subagent": { "const": false },
+        "memory_capture": { "const": false },
+        "run_creation": { "const": false },
+        "model_execution": { "const": false }
+      }
+    }
+  },
+  "$defs": {
+    "textSet": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "preservation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "must",
+        "must_not",
+        "scope",
+        "target_output",
+        "user_authority",
+        "tone",
+        "tool_provider_selection"
+      ],
+      "properties": {
+        "must": { "$ref": "#/$defs/textSet" },
+        "must_not": { "$ref": "#/$defs/textSet" },
+        "scope": { "$ref": "#/$defs/textSet" },
+        "target_output": { "$ref": "#/$defs/textSet" },
+        "user_authority": { "$ref": "#/$defs/textSet" },
+        "tone": { "$ref": "#/$defs/textSet" },
+        "tool_provider_selection": { "$ref": "#/$defs/textSet" }
+      }
+    }
+  }
+}

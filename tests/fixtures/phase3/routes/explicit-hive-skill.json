@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "host": "codex",
+  "explicit_action": null,
+  "explicit_skill": "hive-knowledge-query",
+  "plain_answer": false,
+  "simple_question": true,
+  "project_context_required": true,
+  "external_candidate": {
+    "name": "analyze",
+    "provided_by": "omx",
+    "compatible": true
+  },
+  "hive_candidate": "hive-knowledge-query",
+  "active_hive_skills": [
+    {
+      "name": "hive-knowledge-query",
+      "source_type": "built-in",
+      "content_digest": "sha256:a13087365b7e91516fc45b5f699f7e4aec1b3407758accdd17df0776889d504c",
+      "side_effect_class": "read-only",
+      "capabilities": ["filesystem-read", "memory-read", "shell"],
+      "consent_digest": null,
+      "consent": null
+    }
+  ],
+  "refine_mode": null,
+  "explicit_run_intent": false
+}

@@ -2,7 +2,7 @@
 
 [![Rust](https://img.shields.io/badge/Rust-stable-000000?logo=rust&logoColor=white)](rust-toolchain.toml)
 [![Cargo](https://img.shields.io/badge/Cargo-workspace-CB4B16?logo=rust&logoColor=white)](Cargo.toml)
-[![Version](https://img.shields.io/badge/version-0.3.0-4C1)](Cargo.toml)
+[![Version](https://img.shields.io/badge/version-0.4.0-4C1)](Cargo.toml)
 [![Python](https://img.shields.io/badge/Python-3.13-3776AB?logo=python&logoColor=white)](.github/workflows/ci.yml)
 [![Copier](https://img.shields.io/badge/Copier-9.17.0-5C4EE5)](copier.yml)
 [![JSON Schema](https://img.shields.io/badge/JSON%20Schema-2020--12-000000?logo=json&logoColor=white)](schemas/)
@@ -13,7 +13,7 @@
 
 > 🐝 **Aigent Hive**는 Codex, Claude Code, Gemini Antigravity 같은 구독형 agent host 위에서 일관된 setup, Skill routing, 역할·지식·run 상태, 안전한 update와 검증 계약을 제공하는 **provider-neutral 로컬 agent harness**다.
 
-> 🚧 **현재 상태:** worktree version은 `0.3.0`이다. Phase 1 결정적 renderer와 Phase 2 canonical Markdown knowledge·재생성 가능한 SQLite FTS5 index가 구현됐다. Usage guard core와 fail-closed CodexBar adapter는 Phase 5 선행 slice로 구현되었다.
+> 🚧 **현재 상태:** worktree version은 `0.4.0`이다. Phase 1 renderer, Phase 2 canonical knowledge/index와 Phase 3 portable Skill routing·host projection이 구현됐다. Usage guard core와 fail-closed CodexBar adapter는 Phase 5 선행 slice로 유지된다.
 
 Hive는 모델 API나 provider SDK를 사용하지 않으며 API key를 요청하거나 저장하지 않는다. Compatible OMX·OMC가 있으면 검증된 orchestration 기능을 우선 재사용하고, 없으면 host-native capability 범위에서 동작한다.
 
@@ -82,7 +82,7 @@ Copier는 template authoring과 CI parity 검증에만 사용한다. 배포된 R
 | 기술 | 사용 방식 |
 | --- | --- |
 | Rust stable, Edition 2021 | cross-platform CLI, setup/update 안전 경계와 결정적 projection |
-| Cargo workspace | `hive-core`, `hive-render`, `hive-cli` 빌드·테스트·lint |
+| Cargo workspace | `hive-core`, `hive-render`, `hive-wiki`, `hive-projection`, `hive-cli` 빌드·테스트·lint |
 | Markdown | 계획, 지식, 지속형 역할, run 상태와 사람이 읽는 지침의 정본 |
 | YAML·TOML | setup 답변, typed 설정, 승인 ledger와 ownership manifest |
 | JSON Schema Draft 2020-12 | action, role, run, judge, capability 등 provider-neutral machine contract |
@@ -122,6 +122,7 @@ Rust runtime은 filesystem containment, schema·serialization, RFC 8785 canonica
 │   ├── hive-core/       # provider-neutral invariant와 target safety
 │   ├── hive-render/     # deterministic staging, ownership, consent와 role materialization
 │   ├── hive-wiki/       # Markdown parse/lint와 disposable SQLite projection
+│   ├── hive-projection/ # portable Skill routing, prompt 검증과 host별 thin projection
 │   └── hive-cli/        # `hive` CLI entry point
 ├── harness/             # 출하할 template, Skill, profile, projection source
 ├── schemas/             # provider-neutral JSON Schema contract
@@ -143,16 +144,17 @@ Rust runtime은 filesystem containment, schema·serialization, RFC 8785 canonica
 🛠️ 기본 검증 명령:
 
 ```bash
-cargo build --workspace
+cargo build --workspace --all-targets --all-features --locked
 cargo fmt --all --check
-cargo clippy --workspace --all-targets -- -D warnings
-cargo test --workspace
+cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
+cargo test --workspace --all-targets --all-features --locked
 cargo run -p hive-cli -- doctor
 cargo run -p hive-cli -- check-target /path/to/consumer-project
 cargo run -p hive-cli -- index rebuild --target /path/to/consumer-project --output json
 cargo run -p hive-cli -- knowledge query --target /path/to/consumer-project --text "search terms" --output json
 python -m unittest discover -s tests/conformance -p 'test_phase1_*.py' -v
 python -m unittest tests.conformance.test_phase2_wiki -v
+python -m unittest discover -s tests/conformance -p 'test_phase3_*.py' -v
 ```
 
 Setup은 다음 JSON contract 표면을 사용한다.
@@ -168,10 +170,10 @@ cargo run -p hive-cli -- setup \
 
 `--dry-run` 대신 `--apply` 또는 `--validate` 중 정확히 하나를 선택한다. CI는 세 host의 Copier default fixture, hostile typed-answer fixture, non-absent hook 거부, Rust/Copier parity, role materialization과 consent 변조도 함께 검증한다.
 
-현재 로컬 검증 기준은 Rust workspace test 73개, Phase 1 Python conformance 192개,
-Phase 2 knowledge conformance 22개와 usage guard conformance 26개다.
-Linux·macOS·Windows에서 세 corpus를 실행하도록 CI matrix를 구성했으며, 이 변경의
-원격 matrix 결과는 `develop` push 뒤 확인한다.
+현재 로컬 검증 기준은 Rust workspace 107개와 Python conformance 313개다. Python
+corpus는 Phase 1 196개, usage guard 26개, Phase 2 knowledge 22개, Phase 3 Skills와
+projection 69개로 구성된다. Linux·macOS·Windows CI matrix가 네 corpus를 모두
+실행하며, 이 변경의 원격 결과는 `develop` push 뒤 확인한다.
 
 ## Canonical knowledge와 disposable index
 
@@ -221,11 +223,11 @@ Exit `0`은 그 시점의 snapshot이 core policy를 통과했다는 read-only �
 
 | 항목 | 현재 값 |
 | --- | --- |
-| Product version | `0.3.0` |
-| 현재 범위 | Phase 1 renderer, Phase 2 knowledge/index와 Phase 5 usage guard 선행 slice |
-| 구현 기능 | 결정적 setup, ownership·rollback·marker·role·consent, Raw/Wiki/Schema ingest/query/lint/delete/suppress/rebuild, FTS5 graph index, usage policy와 CodexBar adapter |
-| 다음 구현 | Phase 3 portable Skill routing, `hive-prompt-refine`와 host projection |
-| Active plan | [`docs/plans/PLAN.md`](docs/plans/PLAN.md) revision 1.8 |
+| Product version | `0.4.0` |
+| 현재 범위 | Phase 1 renderer, Phase 2 knowledge/index, Phase 3 portable Skills/projection과 Phase 5 usage guard 선행 slice |
+| 구현 기능 | 결정적 setup, knowledge/index, exact 6개 implemented built-in Skill, digest-bound routing, prompt refinement 검증, Codex·Antigravity `.agents/skills`와 Claude `.claude/skills` projection |
+| 다음 구현 | Phase 4 role/run fresh-session interoperability와 실제 host capability qualification |
+| Active plan | [`docs/plans/PLAN.md`](docs/plans/PLAN.md) revision 1.9 |
 | Handoff state | [`docs/state/CURRENT.md`](docs/state/CURRENT.md) |
 
 Semantic version `X.Y.Z`는 다음 원칙으로 변경한다.

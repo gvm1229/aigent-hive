@@ -15,7 +15,7 @@
 | orchestration | Codex의 compatible OMX, Claude의 compatible OMC를 우선하고 부재 시 host native가 소유; setup 선택지 없음 |
 | runtime 관찰 | active host capability metadata, side-effect-free public `--version`, pinned-qualified usage sensor의 fixed-argv read만 허용; foreign state read 금지 |
 | 재구현 금지 | Hive plan·Ralph·team·provider session engine 없음 |
-| Skill | 이름·source·revision·content digest·권한을 보여준 뒤 개별 수동 승인; 승인 후 narrow description에 따라 자동 사용, OMX/OMC duplicate보다 external 우선 |
+| Skill | exact 6개 implemented built-in만 active projection; future run/role/judge/update entry는 catalog-only; optional은 이름·source·revision·content digest·권한의 개별 수동 승인 후에만 사용 |
 | prompt refine | `hive-prompt-refine`; 명시적인 prompt 작성·정제 intent에서만 자동 선택, `refine-only` 기본, hidden rewrite 금지 |
 | fallback hooks | OMX/OMC가 conclusively absent이고 사용자가 capability/event/path/digest를 승인한 경우에만 project-local data-integrity hook 허용 |
 | 사용량 | 기본 중지선 10% remaining, 신뢰 가능한 최신 local sensor가 있을 때만 다음 automatic dispatch를 gate |
@@ -23,7 +23,8 @@
 | backup | update 전 생성, 최대 7일, Git 제외 |
 | 저장소 | 비기밀 canonical source와 data는 Git 추적, runtime/cache/SQLite 제외 |
 | 배포 정본 | GitHub Releases |
-| 현재 버전 | Phase 2 Markdown knowledge와 disposable SQLite index `0.3.0`; root Cargo workspace version이 정본 |
+| host projection | Codex·Antigravity `.agents/skills`, Claude `.claude/skills`; exact Hive Skill file만 관리하고 foreign byte 보존 |
+| 현재 버전 | backward-compatible Phase 3 portable Skills와 host projection `0.4.0`; root Cargo workspace version이 정본 |
 | 버전 증가 | feature는 원칙적으로 `Y`, compatible quick bugfix는 `Z`; `X`는 exact target을 사용자가 명시하고 human confirmation한 경우에만 |
 | 호환성 | major `0`을 포함해 같은 major만 non-breaking upgrade 보장 |
 | cross-major | 사전 경고, 자동 migration, project/docs/preferences 보존, SQLite rebuild |

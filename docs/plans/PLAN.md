@@ -1,14 +1,17 @@
 # Aigent Hive 구현 계획
 
-> Revision: 1.8
+> Revision: 1.9
 > 상태: 구현 기준본
 > 기준일: 2026-07-23
-> 현재 제품 version: `0.3.0`
+> 현재 제품 version: `0.4.0`
 > 정본 위치: `docs/plans/PLAN.md`
 
 이 문서는 Aigent Hive의 완성된 사용자 흐름과 이를 구현하는 순서를 하나의 연속된 계획으로 정의한다. 이전 `PLAN_v1*` 문서는 현재 지침으로 사용하지 않는다.
 
-현재 `0.3.0`은 Phase 1 결정적 setup renderer와 Phase 2 canonical Markdown knowledge·disposable SQLite index 계약을 구현한다. 아래 Skill routing, host projection, durable run과 update flow는 해당 milestone의 unchecked acceptance를 통과하기 전까지 구현·지원된 것으로 간주하지 않는다.
+현재 `0.4.0`은 Phase 1 결정적 setup renderer, Phase 2 canonical Markdown
+knowledge·disposable SQLite index와 Phase 3 portable Skill routing·host projection
+계약을 구현한다. Durable run, judge와 update flow는 해당 milestone의 unchecked
+acceptance를 통과하기 전까지 구현·지원된 것으로 간주하지 않는다.
 
 ## 1. 목표와 완료 정의
 
@@ -64,7 +67,7 @@ Aigent Hive는 사용자가 이미 로그인한 Codex, Claude Code, Gemini Antig
 - update backup은 최대 7일만 유지한다.
 - 비기밀 canonical file은 Git 추적이 기본이며 runtime/cache/SQLite/backup은 제외한다.
 - `X.Y.Z` version에서 같은 `X` 안의 upgrade만 non-breaking을 보장한다.
-- 현재 product version은 Phase 2 Markdown knowledge와 disposable SQLite index milestone인 `0.3.0`이다.
+- 현재 product version은 backward-compatible Phase 3 portable Skills와 host projection milestone인 `0.4.0`이다.
 - backward-compatible feature는 원칙적으로 `Y`, 빠른 호환 bugfix는 `Z`를 증가시킨다.
 - `X` 증가는 사용자가 목표 major를 명시적으로 지시한 경우에만 준비·적용할 수 있으며 automation이 추론하거나 자동 증가하지 않는다.
 - cross-major update는 경고, dry run, 자동 migration과 사용자 data 무손실 검증 없이는 commit하지 않는다.
@@ -86,7 +89,7 @@ Aigent Hive는 사용자가 이미 로그인한 Codex, Claude Code, Gemini Antig
 
 ### 1.3 Product version 정책
 
-Plan revision과 product version은 독립이다. 이 문서는 revision `1.8`이며 현재 구현 artifact는 `0.3.0`이다.
+Plan revision과 product version은 독립이다. 이 문서는 revision `1.9`이며 현재 구현 artifact는 `0.4.0`이다.
 
 Version 정본과 projection:
 
@@ -244,13 +247,13 @@ CLI process exit 의미:
 
 #### 완료 조건
 
-- [ ] 세 host에서 같은 logical action이 같은 contract로 resolve
+- [x] 세 host에서 같은 logical action이 같은 contract로 resolve
 - [x] unknown action이 project write 또는 agent spawn 없이 실패
-- [ ] host별 alias가 core state에 저장되지 않음
-- [ ] investigate 요청에서 available OMX/OMC `analyze`가 Hive duplicate보다 우선
-- [ ] approved Hive-only Skill은 이름을 직접 말하지 않아도 matching description에서 자동 선택
-- [ ] simple-question fixture에서 Skill description 외 추가 Skill body load 0개
-- [ ] explicit `plain answer`/`no workflow` 요청이 automatic Skill invocation보다 우선
+- [x] host별 alias가 core state에 저장되지 않음
+- [x] investigate 요청에서 available OMX/OMC `analyze`가 Hive duplicate보다 우선
+- [x] approved Hive-only Skill은 이름을 직접 말하지 않아도 matching description에서 자동 선택
+- [x] simple-question fixture에서 Skill description 외 추가 Skill body load 0개
+- [x] explicit `plain answer`/`no workflow` 요청이 automatic Skill invocation보다 우선
 - [x] 모든 exit class가 schema-valid `ActionResult`와 정확히 대응
 
 ### Stage 1. Read-only 조사와 setup 질문
@@ -407,7 +410,8 @@ Setup-time role lifecycle:
 - host config는 foreign-owned가 기본이며 exact Hive hook entry만 `consented-shared-structure`로 merge
 - JSON/TOML structured merge는 unknown key와 foreign array entry의 semantic identity·ordering·value를 보존하고 Hive-owned entry 외 삭제를 금지
 - approved hook path는 project-local manifest allowlist 안에 있어야 하며 host-global path와 `.omx/.omc`는 항상 금지
-- consumer `.hive/.gitignore`에는 SQLite와 short-lived backup만 제외
+- consumer `.hive/.gitignore`에는 SQLite, short-lived backup과 ephemeral
+  `/runtime/` capability evidence만 제외
 
 #### 완료 조건
 
@@ -417,7 +421,8 @@ Setup-time role lifecycle:
 - [x] consented project-local hook merge 전후 foreign semantic tree와 entry digest 동일
 - [x] generated path가 manifest 밖이면 setup 실패
 - [x] canonical non-confidential files가 Git-visible
-- [x] SQLite/WAL/SHM/journal, index stale/lock/temp와 backup만 consumer Git에서 제외
+- [x] SQLite/WAL/SHM/journal, index stale/lock/temp, backup과 ephemeral `/runtime/`
+  capability evidence만 consumer Git에서 제외
 - [x] role reconfigure가 current assignment·handoff·user body를 보존
 - [x] cross-major role candidate의 parse/schema 검증 실패 시 active role tree bytes 불변
 
@@ -445,9 +450,9 @@ Setup-time role lifecycle:
 
 #### 완료 조건
 
-- [ ] simple fixture에서 project file read/write 0회
-- [ ] subagent와 Skill 추가 load 0회
-- [ ] project-dependent 질문은 명시 전환 전 실행 0회
+- [x] simple fixture에서 project file read/write 0회
+- [x] subagent와 Skill 추가 load 0회
+- [x] project-dependent 질문은 명시 전환 전 실행 0회
 
 ### Stage 4. `hive-prompt-refine`
 
@@ -495,14 +500,14 @@ Stop, blocker, and escalation conditions
 
 #### 완료 조건
 
-- [ ] “이 prompt를 개선해줘”, “agent에게 줄 prompt를 만들어줘” fixture에서 이름 언급 없이 `hive-prompt-refine` 선택
-- [ ] 일반 질문·일반 coding request에서 automatic prompt rewrite 0회
-- [ ] `refine-only`에서 project write, subagent, run creation과 memory capture 0회
-- [ ] 원문 must/must-not, scope, target output과 user authority가 refined prompt에 손실 없이 존재
-- [ ] 필수 ambiguity 질문은 한 번에 하나이며 답하지 않은 항목을 fabricated fact로 채우지 않음
-- [ ] provider를 지정하지 않은 fixture에 provider-specific command·path 0개
-- [ ] 이미 충분한 prompt는 normalized token/character budget을 불필요하게 확대하지 않음
-- [ ] `refine-and-run`은 명시 intent 없이 activation 불가
+- [x] “이 prompt를 개선해줘”, “agent에게 줄 prompt를 만들어줘” fixture에서 이름 언급 없이 `hive-prompt-refine` 선택
+- [x] 일반 질문·일반 coding request에서 automatic prompt rewrite 0회
+- [x] `refine-only`에서 project write, subagent, run creation과 memory capture 0회
+- [x] 원문 must/must-not, scope, target output과 user authority가 refined prompt에 손실 없이 존재
+- [x] 필수 ambiguity 질문은 한 번에 하나이며 답하지 않은 항목을 fabricated fact로 채우지 않음
+- [x] provider를 지정하지 않은 fixture에 provider-specific command·path 0개
+- [x] 이미 충분한 prompt는 exact normalized character-growth budget을 넘지 않음
+- [x] `refine-and-run`은 명시 intent 없이 activation 불가
 
 ### Stage 5. 지속형 역할과 host-owned orchestration
 
@@ -917,7 +922,11 @@ consumer-project/
     └── backups/                      # ignored, maximum 7 days
 ```
 
-Consumer project는 독립 `.gitignore`를 소유한다. Hive 기본 권장은 canonical non-confidential Markdown/YAML/TOML과 Raw source object를 모두 추적하고 SQLite/WAL/SHM/journal, index stale/lock/temp, generated backup과 runtime cache만 제외하는 것.
+Consumer project는 독립 `.gitignore`를 소유한다. Hive 기본 권장은 canonical
+non-confidential Markdown/YAML/TOML과 Raw source object를 모두 추적하고
+SQLite/WAL/SHM/journal, index stale/lock/temp, generated backup과
+`.hive/runtime/current-capability-resolution.json` 같은 ephemeral runtime evidence만
+제외하는 것.
 
 Host가 발견하는 Skill과 consented fallback hook은 이 canonical config에서 thin projection한다. Host-specific project path는 ownership manifest에 별도로 열거하며, external runtime detected 상태에서는 fallback hook projection이 존재하지 않아야 한다.
 
@@ -967,17 +976,20 @@ Projection은 model call, persistent process, team state, external orchestration
 Built-in:
 
 - `setup-harness`
-- 향후 `hive-simple-question`
-- 향후 `hive-prompt-refine`
-- 향후 `hive-knowledge-capture`
-- 향후 `hive-knowledge-query`
-- 향후 `hive-knowledge-maintenance`
-- 향후 `hive-run-checkpoint`
-- 향후 `hive-run-resume`
-- 향후 `hive-role-handoff`
-- 향후 `hive-judge-package`
-- 향후 `hive-update`
-- 향후 `hive-migrate`
+- `hive-simple-question`
+- `hive-prompt-refine`
+- `hive-knowledge-capture`
+- `hive-knowledge-query`
+- `hive-knowledge-maintenance`
+
+Catalog-only future entry:
+
+- `hive-run-checkpoint`
+- `hive-run-resume`
+- `hive-role-handoff`
+- `hive-judge-package`
+- `hive-update`
+- `hive-migrate`
 
 포함하지 않음:
 
@@ -1036,16 +1048,16 @@ Optional third-party Skill은 quarantine→provenance 검증→사용자 개별 
 
 ### Phase 3. Portable Skills와 host projection — target `0.4.0`
 
-- [ ] `hive-simple-question`
-- [ ] `hive-prompt-refine` refine-only/refine-and-run contract와 meaning-preservation corpus
-- [ ] Hive-owned knowledge/run/role/judge/update Skill catalog
-- [ ] approved-only active projection과 automatic minimal Skill routing
-- [ ] Codex projection
-- [ ] Claude Code projection
-- [ ] Antigravity projection
-- [ ] external capability absent + explicit consent 전용 fallback data-integrity hooks
-- [ ] detected external runtime과 fallback hook의 mutual exclusion
-- [ ] host/version capability matrix에 automatic-Skill-routing, prompt-refine와 hook event별 support/evidence 추가
+- [x] `hive-simple-question`
+- [x] `hive-prompt-refine` refine-only/refine-and-run contract와 meaning-preservation corpus
+- [x] Hive-owned knowledge/run/role/judge/update Skill catalog
+- [x] approved-only active projection과 automatic minimal Skill routing
+- [x] Codex projection
+- [x] Claude Code projection
+- [x] Antigravity projection
+- [x] external capability absent + explicit consent 전용 fallback data-integrity hooks
+- [x] detected external runtime과 fallback hook의 mutual exclusion
+- [x] host/version capability matrix에 automatic-Skill-routing, prompt-refine와 hook event별 support/evidence 추가
 
 ### Phase 4. Role/run contract와 interoperability — target `0.5.0`
 
@@ -1140,23 +1152,23 @@ v1 public release는 다음을 모두 충족해야 한다.
 - [ ] source, release, consumer tree 분리
 - [ ] macOS·Windows signed CLI
 - [ ] 세 host의 실제 capability matrix
-- [ ] model-provider API dependency와 credential path 0개
+- [x] model-provider API dependency와 credential path 0개
 - [x] setup dry-run, ownership, conflict와 source guard
 - [ ] action/role/run/judge/capability machine contract conformance
-- [ ] simple-question negative capability test
-- [ ] `hive-prompt-refine` automatic intent match, meaning preservation과 refine-only isolation
-- [ ] approved Skill의 automatic minimal routing과 OMX/OMC precedence
-- [ ] external absent + explicit consent에서만 fallback hook projection
-- [ ] fallback hook이 routing, prompt rewrite, orchestration과 Stop continuation을 수행하지 않음
+- [x] simple-question negative capability test
+- [x] `hive-prompt-refine` automatic intent match, meaning preservation과 refine-only isolation
+- [x] approved Skill의 automatic minimal routing과 OMX/OMC precedence
+- [x] external absent + explicit consent에서만 fallback hook projection
+- [x] fallback hook이 routing, prompt rewrite, orchestration과 Stop continuation을 수행하지 않음
 - [ ] persistent role/run fresh-session recovery
 - [ ] host-native 또는 external orchestration truthful support 표시
-- [ ] usage guard의 freshness와 fail-closed 증거
+- [x] usage guard의 freshness와 fail-closed 증거
 - [ ] hostile judge context isolation과 quorum
 - [x] Karpathy Raw/Wiki/Schema와 SQLite rebuild
 - [ ] same-major compatibility
 - [ ] cross-major no-data-loss migration
 - [ ] GitHub Release provenance와 signing
-- [ ] product version parity, compatible minor/patch bump와 explicit-only major gate
+- [x] product version parity, compatible minor/patch bump와 explicit-only major gate
 - [x] public license — 전체 source·harness `Apache-2.0`, 전문, package metadata와 render fixture
 - [ ] clean clone에서 전체 CI PASS
 

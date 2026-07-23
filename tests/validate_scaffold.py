@@ -486,6 +486,7 @@ def validate_render(render_root: Path, input_data_path: Path) -> None:
         ".hive/LICENSE-AIGENT-HIVE.txt",
         ".hive/README.md",
         ".hive/setup-answers.yml",
+        ".hive/config/active-skills.yml",
         ".hive/config/harness.toml",
         ".hive/config/capability-resolution.yml",
         ".hive/config/role-seeds.yml",
@@ -505,6 +506,10 @@ def validate_render(render_root: Path, input_data_path: Path) -> None:
     rendered_license = render_root / ".hive/LICENSE-AIGENT-HIVE.txt"
     if rendered_license.read_bytes() != APACHE_LICENSE_PATH.read_bytes():
         raise AssertionError("rendered Apache license text changed")
+    if b"/runtime/\n" not in (render_root / ".hive/.gitignore").read_bytes():
+        raise AssertionError("ephemeral runtime evidence is not ignored")
+    if (render_root / ".hive/runtime").exists():
+        raise AssertionError("setup rendered ephemeral runtime evidence")
     if (render_root / "LICENSE").exists() or (render_root / "LICENSE.md").exists():
         raise AssertionError("consumer project root license must remain untouched")
 
@@ -660,12 +665,85 @@ def validate_render(render_root: Path, input_data_path: Path) -> None:
     if suppression != {"schema_version": 1, "entries": []}:
         raise AssertionError("unexpected suppression seed")
 
+    active_skills_path = render_root / ".hive/config/active-skills.yml"
+    active_skills = read_yaml(active_skills_path)
+    validate_instance("active-skills.schema.json", active_skills)
+    assert isinstance(active_skills, dict)
+    active_entries = active_skills["skills"]
+    assert isinstance(active_entries, list)
+    expected_skill_names = [
+        "hive-knowledge-capture",
+        "hive-knowledge-maintenance",
+        "hive-knowledge-query",
+        "hive-prompt-refine",
+        "hive-simple-question",
+        "setup-harness",
+    ]
+    if [entry["name"] for entry in active_entries] != expected_skill_names:
+        raise AssertionError("Copier activated an unexpected Skill set")
+    if active_skills_path.read_bytes() != (
+        REPOSITORY_ROOT / "harness/template/.hive/config/active-skills.yml"
+    ).read_bytes():
+        raise AssertionError("Copier active Skill ledger changed from source bytes")
+
+    primary_host = answers["primary_host"]
+    projection_root = ".claude" if primary_host == "claude" else ".agents"
+    foreign_projection_root = ".agents" if primary_host == "claude" else ".claude"
+    projected_skill_root = render_root / projection_root / "skills"
+    if (
+        not projected_skill_root.is_dir()
+        or {path.name for path in projected_skill_root.iterdir()}
+        != set(expected_skill_names)
+    ):
+        raise AssertionError(
+            "Copier projected optional or unexpected local Skill sources"
+        )
+    for entry in active_entries:
+        assert isinstance(entry, dict)
+        name = entry["name"]
+        source_path = REPOSITORY_ROOT / f"harness/skills/{name}/SKILL.md"
+        projection_path = (
+            render_root / projection_root / f"skills/{name}/SKILL.md"
+        )
+        if not projection_path.is_file():
+            raise AssertionError(
+                f"missing {primary_host} built-in Skill projection: {name}"
+            )
+        if projection_path.read_bytes() != source_path.read_bytes():
+            raise AssertionError(
+                f"built-in Skill projection bytes changed: {name}"
+            )
+        if {path.name for path in projection_path.parent.iterdir()} != {
+            "SKILL.md"
+        }:
+            raise AssertionError(
+                f"built-in Skill projection contains unexpected files: {name}"
+            )
+        expected_content_digest = (
+            f"sha256:{hashlib.sha256(source_path.read_bytes()).hexdigest()}"
+        )
+        if entry["content_digest"] != expected_content_digest:
+            raise AssertionError(
+                f"built-in Skill digest differs from source bytes: {name}"
+            )
+        if (
+            entry["source_type"] != "built-in"
+            or entry["consent_digest"] is not None
+        ):
+            raise AssertionError(
+                f"Copier activated a non-built-in Skill without install flow: {name}"
+            )
+    if (render_root / foreign_projection_root).exists():
+        raise AssertionError(
+            f"foreign host projection rendered: {foreign_projection_root}"
+        )
+
     forbidden_outputs = [
         ".hive/index/hive.sqlite",
+        ".hive/runtime",
         ".omx",
         ".omc",
         ".codex",
-        ".claude",
     ]
     for relative_path in forbidden_outputs:
         if (render_root / relative_path).exists():

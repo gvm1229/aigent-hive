@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/gvm1229/aigent-hive/schemas/routing-decision.schema.json",
+  "title": "Aigent Hive normalized routing decision",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "route",
+    "logical_action",
+    "selected_skill",
+    "provided_by",
+    "mode",
+    "load_skill_bodies",
+    "next_action"
+  ],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "route": {
+      "enum": [
+        "direct",
+        "simple-question",
+        "external-skill",
+        "hive-skill",
+        "host-native",
+        "blocked"
+      ]
+    },
+    "logical_action": {
+      "enum": [
+        "AnswerSimpleQuestion",
+        "RefinePrompt",
+        "RunWork",
+        "ResumeWork",
+        "VerifyWork",
+        "IngestKnowledge",
+        "QueryKnowledge",
+        "UpdateHarness"
+      ]
+    },
+    "selected_skill": {
+      "type": ["string", "null"],
+      "pattern": "^[a-z][a-z0-9:-]{1,127}$"
+    },
+    "provided_by": {
+      "type": ["string", "null"],
+      "enum": ["hive", "omx", "omc", "host-native", null]
+    },
+    "mode": {
+      "type": ["string", "null"],
+      "enum": ["refine-only", "refine-and-run", null]
+    },
+    "load_skill_bodies": {
+      "type": "array",
+      "maxItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9:-]{1,127}$"
+      }
+    },
+    "next_action": {
+      "type": ["string", "null"],
+      "enum": [
+        "AnswerSimpleQuestion",
+        "RefinePrompt",
+        "RunWork",
+        "ResumeWork",
+        "VerifyWork",
+        "IngestKnowledge",
+        "QueryKnowledge",
+        "UpdateHarness",
+        null
+      ]
+    }
+  }
+}

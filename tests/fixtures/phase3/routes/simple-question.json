@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "host": "codex",
+  "explicit_action": null,
+  "explicit_skill": null,
+  "plain_answer": false,
+  "simple_question": true,
+  "project_context_required": false,
+  "external_candidate": null,
+  "hive_candidate": "hive-knowledge-query",
+  "active_hive_skills": [
+    {
+      "name": "hive-simple-question",
+      "source_type": "built-in",
+      "content_digest": "sha256:716be2df49d27e0cbaf28bbd428b01b0a716e1baf6ebca7fab2fd26e91b3fa9a",
+      "side_effect_class": "none",
+      "capabilities": [],
+      "consent_digest": null,
+      "consent": null
+    }
+  ],
+  "refine_mode": null,
+  "explicit_run_intent": false
+}

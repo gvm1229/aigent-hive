@@ -3,9 +3,15 @@ use hive_core::{
     ensure_consumer_target, ensure_no_symlink_ancestors, sha256_digest, source_marker_path,
     validate_project_relative,
 };
-use hive_render::{
-    authorize_hook, execute_setup, HookAuthorization, RenderError, SetupMode, SetupRequest,
+use hive_projection::{
+    resolve_route, validate_prompt_refinement, LogicalAction, PromptRefinementInput,
+    PromptRefinementResult, Route, RoutingRequest,
 };
+use hive_render::{
+    authorize_hook_with_resolution, execute_setup, HookAuthorization, RenderError, SetupMode,
+    SetupRequest,
+};
+use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeSet;
 use std::env;
@@ -27,7 +33,9 @@ USAGE:
     hive setup --target <dir> --answers <yml> --capabilities <json> (--dry-run|--apply|--validate) [--reconfigure-role <role-id>]... --output json
     hive knowledge ingest|query|lint|delete|suppress --help
     hive index rebuild --target <dir> --output json
-    hive hook --capability <name> --event <event> [--input <json>] --output json
+    hive route --request <json> --output json
+    hive prompt validate --request <input.json> --result <result.json> --output json
+    hive hook --capability <name> --event <event> [--capabilities <fresh-json>] [--input <json>] --output json
     hive usage check --account-digest <sha256:...> [--threshold <1..99>] --output json
 ";
 
@@ -44,6 +52,12 @@ MODES:
 ";
 
 const STALE_MARKER: &[u8] = b"{\"schema_version\":1,\"stale\":true}\n";
+const ROUTING_REQUEST_SCHEMA: &str = include_str!("../../../schemas/routing-request.schema.json");
+const PROMPT_REFINEMENT_INPUT_SCHEMA: &str =
+    include_str!("../../../schemas/prompt-refinement-input.schema.json");
+const PROMPT_REFINEMENT_RESULT_SCHEMA: &str =
+    include_str!("../../../schemas/prompt-refinement-result.schema.json");
+const MAX_CONTRACT_BYTES: u64 = 1024 * 1024;
 
 #[derive(Serialize)]
 struct ActionResult {
@@ -56,6 +70,8 @@ struct ActionResult {
     changed_paths: Vec<String>,
     evidence: Vec<Evidence>,
     next_action: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    data: Option<serde_json::Value>,
 }
 
 #[derive(Serialize)]
@@ -117,6 +133,8 @@ fn main() -> ExitCode {
         Some("setup") => run_setup(&arguments[1..]),
         Some("knowledge") => knowledge::run_knowledge(&arguments[1..]),
         Some("index") => knowledge::run_index(&arguments[1..]),
+        Some("route") => run_route(&arguments[1..]),
+        Some("prompt") => run_prompt(&arguments[1..]),
         Some("hook") => run_hook(&arguments[1..]),
         Some("usage") => run_usage(&arguments[1..]),
         _ if wants_json(&arguments) => {
@@ -131,6 +149,7 @@ fn main() -> ExitCode {
                 changed_paths: Vec::new(),
                 evidence: Vec::new(),
                 next_action: None,
+                data: None,
             };
             emit_json_result(&result);
             eprintln!("error: {}", result.message);
@@ -164,6 +183,7 @@ fn run_usage(arguments: &[String]) -> ExitCode {
             changed_paths: Vec::new(),
             evidence: Vec::new(),
             next_action: None,
+            data: None,
         },
     };
     emit_json_result(&result);
@@ -267,6 +287,7 @@ fn check_usage(arguments: &UsageArguments) -> ActionResult {
                 digest: evidence_digest,
             }],
             next_action: None,
+            data: None,
         },
         UsageDecision::Block(_) => ActionResult {
             schema_version: 1,
@@ -285,6 +306,7 @@ fn check_usage(arguments: &UsageArguments) -> ActionResult {
                 digest: evidence_digest,
             }],
             next_action: None,
+            data: None,
         },
         UsageDecision::Unknown(_) => usage_unknown_result(
             "subscription usage could not be verified safely",
@@ -312,6 +334,7 @@ fn usage_unknown_result(message: &str, evidence_digest: Option<String>) -> Actio
             })
             .unwrap_or_default(),
         next_action: None,
+        data: None,
     }
 }
 
@@ -366,6 +389,7 @@ fn run_setup(arguments: &[String]) -> ExitCode {
                         },
                     ],
                     next_action: None,
+                    data: None,
                 },
                 Err(error) => failure_result(&error),
             }
@@ -470,6 +494,7 @@ fn failure_result_for(
         changed_paths,
         evidence: Vec::new(),
         next_action: None,
+        data: None,
     }
 }
 
@@ -485,6 +510,347 @@ fn emit_json_result(result: &ActionResult) {
     }
 }
 
+struct RouteArguments {
+    request: PathBuf,
+}
+
+fn run_route(arguments: &[String]) -> ExitCode {
+    let result = match parse_route(arguments).and_then(|arguments| {
+        read_json_contract::<RoutingRequest>(
+            &arguments.request,
+            ROUTING_REQUEST_SCHEMA,
+            "routing request",
+        )
+        .map(|(request, bytes)| (arguments, request, bytes))
+    }) {
+        Ok((arguments, request, bytes)) => match resolve_route(&request) {
+            Ok(decision) => {
+                let blocked = decision.route == Route::Blocked;
+                let action = logical_action_name(decision.logical_action);
+                let next_action = decision
+                    .next_action
+                    .map(logical_action_name)
+                    .map(str::to_owned);
+                match serde_json::to_value(&decision) {
+                    Ok(data) => ActionResult {
+                        schema_version: 1,
+                        action,
+                        status: if blocked { "blocked" } else { "success" },
+                        exit_code: if blocked { 3 } else { 0 },
+                        code: if blocked {
+                            "hive.routing-blocked"
+                        } else {
+                            "hive.routing-resolved"
+                        },
+                        message: if blocked {
+                            "normalized routing facts require an explicit transition".to_owned()
+                        } else {
+                            "normalized routing facts resolved deterministically".to_owned()
+                        },
+                        changed_paths: Vec::new(),
+                        evidence: vec![file_evidence(&arguments.request, &bytes)],
+                        next_action,
+                        data: Some(data),
+                    },
+                    Err(error) => internal_result(
+                        action,
+                        format!("cannot serialize routing decision: {error}"),
+                    ),
+                }
+            }
+            Err(error) if error.code() == "hive.routing-proof-invalid" => ActionResult {
+                schema_version: 1,
+                action: request
+                    .explicit_action
+                    .map_or("RunWork", logical_action_name),
+                status: "verification-failed",
+                exit_code: 5,
+                code: error.code(),
+                message: error.message().to_owned(),
+                changed_paths: Vec::new(),
+                evidence: vec![file_evidence(&arguments.request, &bytes)],
+                next_action: None,
+                data: None,
+            },
+            Err(error) => invalid_input_result("RunWork", error.to_string()),
+        },
+        Err(message) => invalid_input_result("RunWork", message),
+    };
+    emit_action_result(&result)
+}
+
+fn parse_route(arguments: &[String]) -> Result<RouteArguments, String> {
+    let mut request = None;
+    let mut output = None;
+    let mut index = 0;
+    while index < arguments.len() {
+        let option = &arguments[index];
+        index += 1;
+        let value = arguments
+            .get(index)
+            .ok_or_else(|| format!("missing value for {option}"))?;
+        match option.as_str() {
+            "--request" if request.is_none() => request = Some(PathBuf::from(value)),
+            "--output" if output.is_none() => output = Some(value.clone()),
+            "--request" | "--output" => return Err(format!("duplicate route option: {option}")),
+            _ => return Err(format!("unknown route option: {option}")),
+        }
+        index += 1;
+    }
+    if output.as_deref() != Some("json") {
+        return Err("route requires --output json".to_owned());
+    }
+    Ok(RouteArguments {
+        request: request.ok_or_else(|| "missing required option --request".to_owned())?,
+    })
+}
+
+struct PromptArguments {
+    request: PathBuf,
+    result: PathBuf,
+}
+
+struct PromptContracts {
+    arguments: PromptArguments,
+    input: PromptRefinementInput,
+    output: PromptRefinementResult,
+    input_bytes: Vec<u8>,
+    output_bytes: Vec<u8>,
+}
+
+fn run_prompt(arguments: &[String]) -> ExitCode {
+    let result = match parse_prompt(arguments).and_then(read_prompt_contracts) {
+        Ok(contracts) => {
+            if contracts.input.mode == hive_projection::RefineMode::RefineAndRun
+                && !contracts.input.explicit_run_intent
+            {
+                prompt_result(
+                    "blocked",
+                    3,
+                    "hive.refine-run-not-authorized",
+                    "refine-and-run requires explicit run intent".to_owned(),
+                    &contracts.arguments,
+                    &contracts.input_bytes,
+                    &contracts.output_bytes,
+                )
+            } else {
+                match validate_prompt_refinement(&contracts.input, &contracts.output) {
+                    Ok(()) => prompt_result(
+                        "success",
+                        0,
+                        "hive.prompt-refinement-valid",
+                        "prompt refinement preserves the normalized contract".to_owned(),
+                        &contracts.arguments,
+                        &contracts.input_bytes,
+                        &contracts.output_bytes,
+                    ),
+                    Err(error) if error.code() == "hive.refine-run-not-authorized" => {
+                        prompt_result(
+                            "blocked",
+                            3,
+                            error.code(),
+                            error.message().to_owned(),
+                            &contracts.arguments,
+                            &contracts.input_bytes,
+                            &contracts.output_bytes,
+                        )
+                    }
+                    Err(error) => prompt_result(
+                        "verification-failed",
+                        5,
+                        error.code(),
+                        error.message().to_owned(),
+                        &contracts.arguments,
+                        &contracts.input_bytes,
+                        &contracts.output_bytes,
+                    ),
+                }
+            }
+        }
+        Err(message) => invalid_input_result("RefinePrompt", message),
+    };
+    emit_action_result(&result)
+}
+
+fn parse_prompt(arguments: &[String]) -> Result<PromptArguments, String> {
+    if arguments.first().map(String::as_str) != Some("validate") {
+        return Err("prompt requires the validate action".to_owned());
+    }
+    let mut request = None;
+    let mut result = None;
+    let mut output = None;
+    let mut index = 1;
+    while index < arguments.len() {
+        let option = &arguments[index];
+        index += 1;
+        let value = arguments
+            .get(index)
+            .ok_or_else(|| format!("missing value for {option}"))?;
+        match option.as_str() {
+            "--request" if request.is_none() => request = Some(PathBuf::from(value)),
+            "--result" if result.is_none() => result = Some(PathBuf::from(value)),
+            "--output" if output.is_none() => output = Some(value.clone()),
+            "--request" | "--result" | "--output" => {
+                return Err(format!("duplicate prompt option: {option}"));
+            }
+            _ => return Err(format!("unknown prompt option: {option}")),
+        }
+        index += 1;
+    }
+    if output.as_deref() != Some("json") {
+        return Err("prompt validate requires --output json".to_owned());
+    }
+    Ok(PromptArguments {
+        request: request.ok_or_else(|| "missing required option --request".to_owned())?,
+        result: result.ok_or_else(|| "missing required option --result".to_owned())?,
+    })
+}
+
+fn read_prompt_contracts(arguments: PromptArguments) -> Result<PromptContracts, String> {
+    let (input, input_bytes) = read_json_contract(
+        &arguments.request,
+        PROMPT_REFINEMENT_INPUT_SCHEMA,
+        "prompt refinement input",
+    )?;
+    let (output, output_bytes) = read_json_contract(
+        &arguments.result,
+        PROMPT_REFINEMENT_RESULT_SCHEMA,
+        "prompt refinement result",
+    )?;
+    Ok(PromptContracts {
+        arguments,
+        input,
+        output,
+        input_bytes,
+        output_bytes,
+    })
+}
+
+fn read_json_contract<T: DeserializeOwned>(
+    path: &Path,
+    schema: &str,
+    label: &str,
+) -> Result<(T, Vec<u8>), String> {
+    let metadata =
+        std::fs::metadata(path).map_err(|error| format!("cannot inspect {label}: {error}"))?;
+    if !metadata.is_file() || metadata.len() > MAX_CONTRACT_BYTES {
+        return Err(format!(
+            "{label} must be a regular JSON file no larger than {MAX_CONTRACT_BYTES} bytes"
+        ));
+    }
+    let bytes = std::fs::read(path).map_err(|error| format!("cannot read {label}: {error}"))?;
+    let instance: serde_json::Value =
+        serde_json::from_slice(&bytes).map_err(|error| format!("invalid {label} JSON: {error}"))?;
+    validate_json_schema(schema, &instance, label)?;
+    let typed = serde_json::from_value(instance)
+        .map_err(|error| format!("{label} does not match the typed contract: {error}"))?;
+    Ok((typed, bytes))
+}
+
+fn validate_json_schema(
+    schema: &str,
+    instance: &serde_json::Value,
+    label: &str,
+) -> Result<(), String> {
+    let schema: serde_json::Value = serde_json::from_str(schema)
+        .map_err(|error| format!("embedded {label} schema is invalid JSON: {error}"))?;
+    jsonschema::meta::validate(&schema)
+        .map_err(|error| format!("embedded {label} schema is invalid: {error}"))?;
+    let validator = jsonschema::options()
+        .with_draft(jsonschema::Draft::Draft202012)
+        .should_validate_formats(true)
+        .build(&schema)
+        .map_err(|error| format!("cannot compile embedded {label} schema: {error}"))?;
+    validator
+        .validate(instance)
+        .map_err(|error| format!("{label} violates the JSON Schema contract: {error}"))
+}
+
+fn prompt_result(
+    status: &'static str,
+    exit_code: u8,
+    code: &'static str,
+    message: String,
+    arguments: &PromptArguments,
+    input_bytes: &[u8],
+    output_bytes: &[u8],
+) -> ActionResult {
+    ActionResult {
+        schema_version: 1,
+        action: "RefinePrompt",
+        status,
+        exit_code,
+        code,
+        message,
+        changed_paths: Vec::new(),
+        evidence: vec![
+            file_evidence(&arguments.request, input_bytes),
+            file_evidence(&arguments.result, output_bytes),
+        ],
+        next_action: None,
+        data: None,
+    }
+}
+
+fn invalid_input_result(action: &'static str, message: String) -> ActionResult {
+    ActionResult {
+        schema_version: 1,
+        action,
+        status: "error",
+        exit_code: 2,
+        code: "hive.invalid-input",
+        message,
+        changed_paths: Vec::new(),
+        evidence: Vec::new(),
+        next_action: None,
+        data: None,
+    }
+}
+
+fn internal_result(action: &'static str, message: String) -> ActionResult {
+    ActionResult {
+        schema_version: 1,
+        action,
+        status: "error",
+        exit_code: 10,
+        code: "hive.internal-error",
+        message,
+        changed_paths: Vec::new(),
+        evidence: Vec::new(),
+        next_action: None,
+        data: None,
+    }
+}
+
+fn file_evidence(path: &Path, bytes: &[u8]) -> Evidence {
+    Evidence {
+        kind: "file",
+        locator: path.display().to_string(),
+        digest: sha256_digest(bytes),
+    }
+}
+
+fn logical_action_name(action: LogicalAction) -> &'static str {
+    match action {
+        LogicalAction::AnswerSimpleQuestion => "AnswerSimpleQuestion",
+        LogicalAction::RefinePrompt => "RefinePrompt",
+        LogicalAction::RunWork => "RunWork",
+        LogicalAction::ResumeWork => "ResumeWork",
+        LogicalAction::VerifyWork => "VerifyWork",
+        LogicalAction::IngestKnowledge => "IngestKnowledge",
+        LogicalAction::QueryKnowledge => "QueryKnowledge",
+        LogicalAction::UpdateHarness => "UpdateHarness",
+    }
+}
+
+fn emit_action_result(result: &ActionResult) -> ExitCode {
+    emit_json_result(result);
+    if result.exit_code != 0 {
+        eprintln!("error: {}", result.message);
+    }
+    ExitCode::from(result.exit_code)
+}
+
 fn run_hook(arguments: &[String]) -> ExitCode {
     let stop_requested = requested_event(arguments).as_deref() == Some("Stop");
     if stop_requested {
@@ -492,7 +858,11 @@ fn run_hook(arguments: &[String]) -> ExitCode {
         return ExitCode::SUCCESS;
     }
     match parse_hook(arguments) {
-        Ok((capability, event, input)) => {
+        Ok(arguments) => {
+            let Some(fresh_capabilities) = arguments.capabilities.as_deref() else {
+                println!("{{\"schema_version\":1,\"decision\":\"allow\",\"active\":false}}");
+                return ExitCode::SUCCESS;
+            };
             let target = match env::current_dir() {
                 Ok(target) => target,
                 Err(error) => {
@@ -501,24 +871,31 @@ fn run_hook(arguments: &[String]) -> ExitCode {
                     return ExitCode::SUCCESS;
                 }
             };
-            let authorization = authorize_hook(&target, &capability, &event);
+            let authorization = authorize_hook_with_resolution(
+                &target,
+                &arguments.capability,
+                &arguments.event,
+                fresh_capabilities,
+            );
             match authorization {
                 Ok(HookAuthorization::Authorized) => {
-                    match read_hook_input(input.as_deref(), &event) {
-                        Ok(input) => match execute_hook_capability(&target, &capability, &input) {
-                            Ok(result) => {
-                                let exit_code = if result.decision == "block" { 3 } else { 0 };
-                                emit_hook_result(&result);
-                                ExitCode::from(exit_code)
-                            }
-                            Err(error) => {
-                                eprintln!("diagnostic: inactive fallback hook: {error}");
-                                println!(
+                    match read_hook_input(arguments.input.as_deref(), &arguments.event) {
+                        Ok(input) => {
+                            match execute_hook_capability(&target, &arguments.capability, &input) {
+                                Ok(result) => {
+                                    let exit_code = if result.decision == "block" { 3 } else { 0 };
+                                    emit_hook_result(&result);
+                                    ExitCode::from(exit_code)
+                                }
+                                Err(error) => {
+                                    eprintln!("diagnostic: inactive fallback hook: {error}");
+                                    println!(
                                 "{{\"schema_version\":1,\"decision\":\"allow\",\"active\":false}}"
                             );
-                                ExitCode::SUCCESS
+                                    ExitCode::SUCCESS
+                                }
                             }
-                        },
+                        }
                         Err(error) => {
                             eprintln!("diagnostic: inactive fallback hook: {error}");
                             println!(
@@ -879,9 +1256,17 @@ fn requested_event(arguments: &[String]) -> Option<String> {
         .map(|pair| pair[1].clone())
 }
 
-fn parse_hook(arguments: &[String]) -> Result<(String, String, Option<PathBuf>), String> {
+struct HookArguments {
+    capability: String,
+    event: String,
+    capabilities: Option<PathBuf>,
+    input: Option<PathBuf>,
+}
+
+fn parse_hook(arguments: &[String]) -> Result<HookArguments, String> {
     let mut capability = None;
     let mut event = None;
+    let mut capabilities = None;
     let mut input = None;
     let mut output = None;
     let mut index = 0;
@@ -893,10 +1278,16 @@ fn parse_hook(arguments: &[String]) -> Result<(String, String, Option<PathBuf>),
             .cloned()
             .ok_or_else(|| format!("missing value for {option}"))?;
         match option {
-            "--capability" => capability = Some(value),
-            "--event" => event = Some(value),
-            "--input" => input = Some(PathBuf::from(value)),
-            "--output" => output = Some(value),
+            "--capability" if capability.is_none() => capability = Some(value),
+            "--event" if event.is_none() => event = Some(value),
+            "--capabilities" if capabilities.is_none() => {
+                capabilities = Some(PathBuf::from(value));
+            }
+            "--input" if input.is_none() => input = Some(PathBuf::from(value)),
+            "--output" if output.is_none() => output = Some(value),
+            "--capability" | "--event" | "--capabilities" | "--input" | "--output" => {
+                return Err(format!("duplicate hook option: {option}"));
+            }
             _ => return Err(format!("unknown hook option: {option}")),
         }
         index += 1;
@@ -904,11 +1295,12 @@ fn parse_hook(arguments: &[String]) -> Result<(String, String, Option<PathBuf>),
     if output.as_deref() != Some("json") {
         return Err("hook requires --output json".to_owned());
     }
-    Ok((
-        capability.ok_or_else(|| "missing --capability".to_owned())?,
-        event.ok_or_else(|| "missing --event".to_owned())?,
+    Ok(HookArguments {
+        capability: capability.ok_or_else(|| "missing --capability".to_owned())?,
+        event: event.ok_or_else(|| "missing --event".to_owned())?,
+        capabilities,
         input,
-    ))
+    })
 }
 
 fn run_human(mut arguments: impl Iterator<Item = String>) -> Result<(), String> {
@@ -970,7 +1362,7 @@ mod tests {
     use super::{
         execute_hook_capability, failure_result_for, is_help_request, mark_derived_state_stale,
         normalize_hook_path, parse_hook, parse_setup, run_human, wants_json, ActionResult,
-        HookInput, SETUP_USAGE,
+        HookInput, SETUP_USAGE, USAGE,
     };
     use hive_render::RenderError;
     use std::fs;
@@ -1004,7 +1396,7 @@ mod tests {
     }
 
     #[test]
-    fn hook_preview_command_uses_json_stdin_when_input_path_is_omitted() {
+    fn stored_hook_preview_cannot_activate_without_dynamic_fresh_evidence() {
         let arguments = [
             "--capability".to_owned(),
             "protect-hive-owned-state".to_owned(),
@@ -1013,8 +1405,10 @@ mod tests {
             "--output".to_owned(),
             "json".to_owned(),
         ];
-        let (_, _, input) = parse_hook(&arguments).expect("preview command should parse");
-        assert!(input.is_none());
+        let arguments = parse_hook(&arguments).expect("preview command should parse");
+        assert!(arguments.input.is_none());
+        assert!(arguments.capabilities.is_none());
+        assert!(USAGE.contains("[--capabilities <fresh-json>]"));
     }
 
     #[test]
@@ -1038,11 +1432,13 @@ mod tests {
             changed_paths: Vec::new(),
             evidence: Vec::new(),
             next_action: None,
+            data: None,
         };
         let json = serde_json::to_value(result).expect("result should serialize");
         assert_eq!(json["action"], "UnknownAction");
         assert_eq!(json["exit_code"], 2);
         assert_eq!(json["changed_paths"], serde_json::json!([]));
+        assert!(json.get("data").is_none());
     }
 
     #[test]

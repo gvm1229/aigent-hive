@@ -13,3 +13,6 @@
 
 # Short-lived local safety backups
 /backups/
+
+# Per-invocation host capability evidence
+/runtime/

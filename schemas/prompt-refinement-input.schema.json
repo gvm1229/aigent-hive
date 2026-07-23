@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/gvm1229/aigent-hive/schemas/prompt-refinement-input.schema.json",
+  "title": "Aigent Hive prompt refinement input",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "original_prompt",
+    "target_agent",
+    "target_host",
+    "mode",
+    "explicit_run_intent",
+    "sufficiently_specific",
+    "project_grounding",
+    "preserve"
+  ],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "original_prompt": { "type": "string", "minLength": 1 },
+    "target_agent": { "type": ["string", "null"], "minLength": 1 },
+    "target_host": {
+      "type": ["string", "null"],
+      "enum": ["codex", "claude", "antigravity", null]
+    },
+    "mode": {
+      "enum": ["refine-only", "refine-and-run"],
+      "default": "refine-only"
+    },
+    "explicit_run_intent": { "type": "boolean" },
+    "sufficiently_specific": { "type": "boolean" },
+    "project_grounding": { "type": "boolean" },
+    "preserve": { "$ref": "#/$defs/preservation" }
+  },
+  "$defs": {
+    "textSet": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "preservation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "must",
+        "must_not",
+        "scope",
+        "target_output",
+        "user_authority",
+        "tone",
+        "tool_provider_selection"
+      ],
+      "properties": {
+        "must": { "$ref": "#/$defs/textSet" },
+        "must_not": { "$ref": "#/$defs/textSet" },
+        "scope": { "$ref": "#/$defs/textSet" },
+        "target_output": { "$ref": "#/$defs/textSet" },
+        "user_authority": { "$ref": "#/$defs/textSet" },
+        "tone": { "$ref": "#/$defs/textSet" },
+        "tool_provider_selection": { "$ref": "#/$defs/textSet" }
+      }
+    }
+  }
+}

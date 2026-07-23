@@ -5,7 +5,7 @@
 
 ## 결정
 
-Aigent Hive source, release bundle과 installed harness는 `X.Y.Z` product version을 공유한다. 현재 Phase 2 Markdown knowledge와 disposable SQLite index milestone은 `0.3.0`이며 root `Cargo.toml`의 `workspace.package.version`이 source 정본이다.
+Aigent Hive source, release bundle과 installed harness는 `X.Y.Z` product version을 공유한다. 현재 backward-compatible Phase 3 portable Skills와 host projection milestone은 `0.4.0`이며 root `Cargo.toml`의 `workspace.package.version`이 source 정본이다.
 
 Plan revision은 product version과 독립이다. Plan-only 또는 current-state documentation change는 shipped behavior가 바뀌지 않으면 product version을 증가시키지 않는다.
 
@@ -37,9 +37,10 @@ Release gate는 다음 version이 모두 같지 않으면 실패한다.
 
 ## 결과
 
-- 현재 project version은 `0.3.0`
+- 현재 project version은 `0.4.0`
 - `0.1.0 → 0.2.0`은 backward-compatible Phase 1 feature milestone에 따른 minor 증가
 - `0.2.0 → 0.3.0`은 backward-compatible Phase 2 knowledge/index feature milestone에 따른 minor 증가
+- `0.3.0 → 0.4.0`은 backward-compatible Phase 3 Skill/projection feature milestone에 따른 minor 증가
 - 실제 compatible feature delivery마다 minor를, 빠른 compatible fix마다 patch를 증가
 - explicit user instruction 없는 major bump 0회
 - same-major breaking fixture는 release/update 거부

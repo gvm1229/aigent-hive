@@ -3,11 +3,18 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
+import os
+import shlex
+import subprocess
+import time
+from pathlib import Path
 
 from tests.conformance.phase1_support import (
     EXPECTED_ROOT,
     FIXTURE_ROOT,
+    FRESH_HOOK_CAPABILITIES_PATH,
     Phase1CliTestCase,
     read_yaml,
     snapshot_tree,
@@ -252,6 +259,33 @@ for hook_field, (hook_replacement, hook_exit) in HOOK_FIELD_TAMPERS.items():
 
 
 class Phase1InstalledHookConformance(Phase1CliTestCase):
+    def invoke_stored_hook_command(
+        self,
+        target: Path,
+        descriptor_path: str,
+        *,
+        input_text: str,
+    ) -> tuple[subprocess.CompletedProcess[str], dict[str, object]]:
+        descriptor = json.loads((target / descriptor_path).read_text(encoding="utf-8"))
+        arguments = shlex.split(descriptor["command"])
+        self.assertEqual(arguments[:2], ["hive", "hook"])
+        self.assertIn(
+            FRESH_HOOK_CAPABILITIES_PATH.as_posix(),
+            arguments,
+        )
+        process = subprocess.run(
+            [str(self.hive_binary), *arguments[1:]],
+            cwd=target,
+            check=False,
+            text=True,
+            input=input_text,
+            capture_output=True,
+            env={**os.environ, "PATH": ""},
+        )
+        result = json.loads(process.stdout)
+        self.assertIsInstance(result, dict)
+        return process, result
+
     def install_approved_hooks(self) -> Path:
         target = self.work_root / "consumer"
         target.mkdir()
@@ -293,6 +327,131 @@ class Phase1InstalledHookConformance(Phase1CliTestCase):
             },
             expected,
         )
+
+    def test_stored_command_uses_ephemeral_fresh_evidence_or_stays_inert(
+        self,
+    ) -> None:
+        target = self.install_approved_hooks()
+        runtime_path = target / FRESH_HOOK_CAPABILITIES_PATH
+        self.assertFalse(runtime_path.exists())
+        runtime_path.parent.mkdir(parents=True)
+        fresh_absent = (FIXTURE_ROOT / "capabilities-absent.json").read_bytes()
+        pretool_input = (FIXTURE_ROOT / "pretool-input.json").read_text(
+            encoding="utf-8"
+        )
+
+        runtime_path.write_bytes(fresh_absent)
+        active_process, active_result = self.invoke_stored_hook_command(
+            target,
+            ".hive/hooks/protect-hive-owned-state",
+            input_text=pretool_input,
+        )
+        self.assertEqual(active_process.returncode, 3, active_process.stderr)
+        self.assertIs(active_result.get("active"), True)
+        self.assertEqual(active_result.get("decision"), "block")
+
+        runtime_path.unlink()
+        missing_process, missing_result = self.invoke_stored_hook_command(
+            target,
+            ".hive/hooks/protect-hive-owned-state",
+            input_text="{must-not-be-read\n",
+        )
+        self.assertEqual(missing_process.returncode, 0, missing_process.stderr)
+        self.assertIs(missing_result.get("active"), False)
+        self.assertEqual(missing_result.get("decision"), "allow")
+        self.assertNotIn("invalid hook input", missing_process.stderr)
+
+        runtime_path.write_bytes(fresh_absent)
+        stale_time = time.time() - 61
+        os.utime(runtime_path, (stale_time, stale_time))
+        stale_process, stale_result = self.invoke_stored_hook_command(
+            target,
+            ".hive/hooks/protect-hive-owned-state",
+            input_text="{must-not-be-read\n",
+        )
+        self.assertEqual(stale_process.returncode, 0, stale_process.stderr)
+        self.assertIs(stale_result.get("active"), False)
+        self.assertEqual(stale_result.get("decision"), "allow")
+        self.assertNotIn("invalid hook input", stale_process.stderr)
+
+        runtime_path.write_text("{malformed\n", encoding="utf-8")
+        malformed_process, malformed_result = self.invoke_stored_hook_command(
+            target,
+            ".hive/hooks/protect-hive-owned-state",
+            input_text="{must-not-be-read\n",
+        )
+        self.assertEqual(
+            malformed_process.returncode,
+            0,
+            malformed_process.stderr,
+        )
+        self.assertIs(malformed_result.get("active"), False)
+        self.assertEqual(malformed_result.get("decision"), "allow")
+        self.assertNotIn("invalid hook input", malformed_process.stderr)
+
+        runtime_path.unlink()
+        stop_process, stop_result = self.invoke_stored_hook_command(
+            target,
+            ".hive/hooks/checkpoint-reminder",
+            input_text="{must-not-be-read\n",
+        )
+        self.assert_neutral_stop(stop_process, stop_result)
+        self.assertEqual(stop_process.stderr, "")
+
+    def test_fresh_absent_matrix_must_match_the_ledger_bound_resolution(
+        self,
+    ) -> None:
+        target = self.install_approved_hooks()
+        different_absent = json.loads(
+            (FIXTURE_ROOT / "capabilities-absent.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        different_absent["host_version"] = "different-valid-absent-evidence"
+        digest_payload = {
+            key: value
+            for key, value in different_absent.items()
+            if key != "evidence_digest"
+        }
+        canonical = json.dumps(
+            digest_payload,
+            ensure_ascii=False,
+            sort_keys=True,
+            separators=(",", ":"),
+        ).encode()
+        different_absent["evidence_digest"] = (
+            f"sha256:{hashlib.sha256(canonical).hexdigest()}"
+        )
+        different_path = self.work_root / "different-absent.json"
+        different_path.write_text(
+            json.dumps(different_absent, ensure_ascii=False) + "\n",
+            encoding="utf-8",
+        )
+        malformed_input = self.work_root / "must-not-be-read.json"
+        malformed_input.write_text("{must-not-be-read\n", encoding="utf-8")
+
+        inert_process, inert_result = self.invoke_hook(
+            target,
+            capability="protect-hive-owned-state",
+            event="PreToolUse",
+            capabilities=different_path,
+            input_path=malformed_input,
+        )
+
+        self.assertEqual(inert_process.returncode, 0, inert_process.stderr)
+        self.assertIs(inert_result.get("active"), False)
+        self.assertEqual(inert_result.get("decision"), "allow")
+        self.assertNotIn("invalid hook input", inert_process.stderr)
+
+        active_process, active_result = self.invoke_hook(
+            target,
+            capability="protect-hive-owned-state",
+            event="PreToolUse",
+            input_path=FIXTURE_ROOT / "pretool-input.json",
+        )
+        self.assertEqual(active_process.returncode, 3, active_process.stderr)
+        self.assertIs(active_result.get("active"), True)
+        self.assertEqual(active_result.get("decision"), "block")
 
     def test_approved_protection_hook_blocks_protected_delete(self) -> None:
         target = self.install_approved_hooks()
@@ -438,26 +597,58 @@ class Phase1InstalledHookConformance(Phase1CliTestCase):
         self.assertEqual(result.get("decision"), "allow")
         self.assertEqual(snapshot_tree(target), before)
 
-    def test_later_available_external_runtime_makes_hook_inert(self) -> None:
+    def test_fresh_non_absent_matrix_is_inert_before_input_or_installed_state(
+        self,
+    ) -> None:
         target = self.install_approved_hooks()
-        available = json.loads(
-            (FIXTURE_ROOT / "capabilities-codex-omx.json").read_text(
-                encoding="utf-8"
-            )
+        (target / ".hive/config/approved-hooks.yml").write_text(
+            "hooks: [must-not-be-read\n",
+            encoding="utf-8",
         )
-        write_yaml(target / ".hive/config/capability-resolution.yml", available)
+        before = snapshot_tree(target)
+
+        for capabilities in (
+            "capabilities-codex-omx.json",
+            "capabilities-incompatible.json",
+            "capabilities-unknown.json",
+        ):
+            with self.subTest(capabilities=capabilities):
+                process, result = self.invoke_hook(
+                    target,
+                    capability="protect-hive-owned-state",
+                    event="PreToolUse",
+                    capabilities=capabilities,
+                    input_path=self.work_root / "must-not-be-read.json",
+                )
+
+                self.assertEqual(process.returncode, 0, process.stderr)
+                self.assertIs(result.get("active"), False)
+                self.assertEqual(result.get("decision"), "allow")
+                self.assertEqual(process.stderr, "")
+                self.assertEqual(snapshot_tree(target), before)
+
+    def test_missing_fresh_matrix_is_inert_before_input_or_installed_state(
+        self,
+    ) -> None:
+        target = self.install_approved_hooks()
+        (target / ".hive/config/approved-hooks.yml").write_text(
+            "hooks: [must-not-be-read\n",
+            encoding="utf-8",
+        )
         before = snapshot_tree(target)
 
         process, result = self.invoke_hook(
             target,
             capability="protect-hive-owned-state",
             event="PreToolUse",
-            input_path=FIXTURE_ROOT / "pretool-input.json",
+            capabilities=None,
+            input_path=self.work_root / "must-not-be-read.json",
         )
 
-        self.assertEqual(process.returncode, 0)
+        self.assertEqual(process.returncode, 0, process.stderr)
         self.assertIs(result.get("active"), False)
         self.assertEqual(result.get("decision"), "allow")
+        self.assertEqual(process.stderr, "")
         self.assertEqual(snapshot_tree(target), before)
 
     def test_approved_stop_is_recursively_neutral(self) -> None:

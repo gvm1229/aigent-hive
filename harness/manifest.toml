@@ -42,6 +42,11 @@ ownership = "user-consent-protected"
 source = "template"
 
 [[paths]]
+pattern = ".hive/config/active-skills.yml"
+ownership = "hive-generated-config"
+source = "compiled-skill-projection"
+
+[[paths]]
 pattern = ".hive/config/capability-resolution.yml"
 ownership = "hive-generated-config"
 source = "read-only-capability-probe"
@@ -85,6 +90,16 @@ ownership = "shared-marker"
 marker_start = "<!-- AIGENT-HIVE:START -->"
 marker_end = "<!-- AIGENT-HIVE:END -->"
 
+[[paths]]
+pattern = ".agents/skills/*/SKILL.md"
+ownership = "hive-skill-projection"
+source = "compiled-skill-projection"
+
+[[paths]]
+pattern = ".claude/skills/*/SKILL.md"
+ownership = "hive-skill-projection"
+source = "compiled-skill-projection"
+
 [[forbidden_paths]]
 pattern = ".omx/**"
 
@@ -96,3 +111,6 @@ pattern = ".codex/**"
 
 [[forbidden_paths]]
 pattern = ".claude/**"
+
+[[forbidden_paths]]
+pattern = ".agents/**"

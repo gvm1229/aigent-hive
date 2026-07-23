@@ -1,0 +1,53 @@
+schema_version: 1
+skills:
+- name: hive-knowledge-capture
+  source_type: built-in
+  content_digest: sha256:bff118dd34504091478c636470c4ae113e6eef0ef488eac406c1f2dd79970d91
+  side_effect_class: project-write
+  capabilities:
+  - filesystem-read
+  - filesystem-write
+  - memory-write
+  - shell
+  consent_digest: null
+- name: hive-knowledge-maintenance
+  source_type: built-in
+  content_digest: sha256:eb196fd8c66722928ba4f691543e199e09947241face5a51eb6b329c391fdd3f
+  side_effect_class: project-write
+  capabilities:
+  - filesystem-read
+  - filesystem-write
+  - memory-read
+  - memory-write
+  - shell
+  consent_digest: null
+- name: hive-knowledge-query
+  source_type: built-in
+  content_digest: sha256:a13087365b7e91516fc45b5f699f7e4aec1b3407758accdd17df0776889d504c
+  side_effect_class: read-only
+  capabilities:
+  - filesystem-read
+  - memory-read
+  - shell
+  consent_digest: null
+- name: hive-prompt-refine
+  source_type: built-in
+  content_digest: sha256:167fe625b59f020f200f167ac380875b77e79aac111dfa03163f94718834eb42
+  side_effect_class: none
+  capabilities: []
+  consent_digest: null
+- name: hive-simple-question
+  source_type: built-in
+  content_digest: sha256:716be2df49d27e0cbaf28bbd428b01b0a716e1baf6ebca7fab2fd26e91b3fa9a
+  side_effect_class: none
+  capabilities: []
+  consent_digest: null
+- name: setup-harness
+  source_type: built-in
+  content_digest: sha256:7750b8cf5b5012b1c23d363199fd01cf739c570c31f14df8436240141995158a
+  side_effect_class: project-write
+  capabilities:
+  - filesystem-read
+  - filesystem-write
+  - shell
+  consent_digest: null

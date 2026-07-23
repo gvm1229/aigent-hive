@@ -1,149 +1,175 @@
 # 현재 상태
 
 - 기준 branch: `develop`
-- product version: `0.3.0`
-- plan revision: `1.8`
-- 현재 milestone: Phase 2 완료
-- 다음 milestone: Phase 3 portable Skills와 host projection
+- product version: `0.4.0`
+- plan revision: `1.9`
+- 현재 milestone: Phase 3 완료
+- 다음 milestone: Phase 4 role/run contract와 interoperability
 
 ## 현재 truth
 
-Phase 1 결정적 setup renderer와 Phase 2 canonical Markdown knowledge·disposable
-SQLite index가 구현됐다. Usage guard core와 optional CodexBar adapter는 Phase 5
-선행 slice로 유지된다.
+Phase 1 결정적 setup renderer, Phase 2 canonical Markdown knowledge·disposable
+SQLite index와 Phase 3 portable Skills·host projection이 구현됐다. Usage guard core와
+optional CodexBar adapter는 Phase 5 선행 slice이며 실제 dispatch owner 연결과
+live sensor qualification은 아직 완료되지 않았다.
 
-아직 지원 완료로 표시하지 않는 범위:
+Hive는 model-provider API, provider SDK, provider API key, model runtime, scheduler,
+plan/Ralph/team clone을 소유하지 않는다.
 
-- automatic approved-Skill routing과 `hive-prompt-refine`
-- Codex·Claude·Antigravity host projection
-- durable run/role resume interoperability
-- dispatch owner와 usage permit 소비 연결
-- hostile judge quorum
-- signed update, migration과 release
+## Phase 3 구현
 
-## Phase 2 구현
+### Skill catalog와 active routing
 
-### Canonical knowledge
+Discoverable built-in은 exact 6개다.
 
-- `.hive/knowledge/Raw/**`: 5 MiB 이하 비기밀 source의 SHA-256 content-addressed immutable revision
-- `.hive/knowledge/Wiki/<id>.md`: typed YAML frontmatter와 Markdown body
-- `.hive/knowledge/Schema/schema.md`: kind, tag, alias, link, source와 contradiction contract
-- `.hive/knowledge/suppression.yml`: fingerprint, source locator, reason, replacement, timestamp만 저장
-- `OPENAI_API_KEY`, bearer/token prefix, private-key PEM과 password/secret assignment는 Raw write 전에 거부
-- `deprecated|superseded|archived` active page 거부
-- orphan, broken link, missing citation, invalid contradiction, alias collision과 stale index lint
-- canonical mutation 전 project-local lock 획득으로 parallel extraction 결과의 serial integration
-- 같은 Wiki page 재수집은 기존 source·tag·alias·link·contradiction을 보존·합집합하며 concurrent ingest도 source를 잃지 않음
-- Raw/Wiki write 뒤 stale/index 단계 실패가 나면 canonical tree와 derived state를 operation 이전 byte로 rollback
+- `setup-harness`
+- `hive-simple-question`
+- `hive-prompt-refine`
+- `hive-knowledge-capture`
+- `hive-knowledge-query`
+- `hive-knowledge-maintenance`
 
-### Disposable index
+`hive-run-checkpoint`, `hive-run-resume`, `hive-role-handoff`,
+`hive-judge-package`, `hive-update`, `hive-migrate`는 catalog-only future entry다.
+Skill body가 없으며 active host discovery surface에 projection되지 않는다.
 
-`crates/hive-wiki`가 `.hive/index/hive.sqlite3`에 다음 derived row를 투영한다.
+Routing request는 raw prompt가 아닌 normalized fact만 받는다. Active proof는 Skill
+name, exact content digest, side-effect class, capability와 built-in source 또는
+optional consent digest에 결합된다. Forged digest, unapproved optional Skill과
+inactive Hive candidate는 fail closed하며 한 route는 Skill body를 최대 하나만 load한다.
+Explicit Skill/direct answer, simple-question, compatible OMX/OMC, approved Hive Skill,
+host-native 순서의 precedence를 적용한다.
 
-- FTS5 summary/body/alias/tag
-- tag와 alias
-- backlink와 explicit/inline Wiki link
-- Raw source와 contradiction graph
-- canonical page·Raw content hash
-- page/raw count와 deterministic logical digest
+Simple-question의 negative capability evidence는 normalized router의 empty capability와
+추가 Skill body 0개 계약이다. OS syscall sandbox나 model behavior를 계측했다는
+주장이 아니다. Description-based semantic match는 host가 소유하는 documented
+interface이며 Hive는 raw prompt classifier나 `UserPromptSubmit` hook을 구현하지
+않는다. Broader live-host match qualification은 Phase 4·7에 남아 있다.
 
-`hive index rebuild`는 canonical source를 scan하고 같은 index directory의 exclusive
-temp DB에 전체 projection을 생성한다. Page count와 logical digest를 검증한 뒤
-active DB를 교체하며 `.stale`을 제거한다. SQLite byte hash 동일성은 요구하지 않는다.
+### Prompt refinement
 
-`hive knowledge query`는 read-only open 전 canonical logical digest와 stale marker를
-검증한다. DB 삭제 후 rebuild한 query result와 logical rows는 동일하다.
+Normalized routing fact가 명시적인 prompt 작성·개선 intent를 표시할 때만
+`hive-prompt-refine`를 선택한다.
+`refine-only`가 기본이고 같은 요청에서 실행을 명시한 경우에만 `refine-and-run`을
+허용한다. Original prompt는 immutable이며 must, must-not, scope, target output,
+named tool/provider와 user authority를 보존한다. 필수 ambiguity는 한 번에 하나만
+질문하고 나머지는 assumption 또는 placeholder로 남긴다.
 
-### CLI
+`refine-only`는 project read/write, network, subagent, memory capture, run creation과
+model execution을 허용하지 않는다. Provider를 지정하지 않은 result에는
+Codex·Claude·Antigravity·OMX·OMC 전용 path나 command가 없다.
 
-```text
-hive knowledge ingest
-hive knowledge query
-hive knowledge lint
-hive knowledge delete
-hive knowledge suppress
-hive index rebuild
-```
+No-fabrication evidence는 structured assumption/unresolved item과 한-question
+enforcement이며 model factuality를 판정하거나 보장하지 않는다. 이미 충분한 prompt는
+exact character budget `max(original + 700, ceil(original × 1.5))`를 허용하고 한
+character 초과를 거부하는 unit test로 검증했다.
 
-모든 command는 schema-valid `ActionResult` JSON, stable exit class, changed path와
-logical digest evidence를 반환한다. Provider API, model call, network SDK와 credential
-path는 없다.
+### Host projection
 
-## Dependency 결정
+- Codex: `.agents/skills/<skill>/SKILL.md`
+- Antigravity: `.agents/skills/<skill>/SKILL.md`
+- Claude Code: `.claude/skills/<skill>/SKILL.md`
 
-`rusqlite 0.40.1`을 `bundled` feature로 exact pin했다. Rust 표준 library에는 SQLite,
-FTS5와 safe prepared binding이 없고 직접 C ABI 구현은 `unsafe_code = "forbid"`와
-cross-platform 재현성을 해친다. `rusqlite` MIT와 bundled SQLite public-domain
-license는 Apache-2.0 배포와 양립한다.
+각 host는 자기 exact discovery root에 implemented built-in 6개만 받는다. Host alias는
+canonical Hive config에 저장하지 않는다. Antigravity projection byte 계약은
+구현됐지만 broader live-host capability qualification은 Phase 4·7에 남아 있다.
 
-상세 근거: [`../research/rusqlite-sqlite-index.md`](../research/rusqlite-sqlite-index.md)
+Projection은 destination을 exclusive claim한 뒤 claimed bytes를 no-follow로 검증하고
+destination-exclusive publication을 수행한다. Replace/delete로 밀려난 bytes는
+same-directory quarantine에 보존한다. Rollback은 live published bytes를 다시
+claim·검증하고 prior bytes를 exclusive republish한다. Foreign occupant는 overwrite나
+delete하지 않으며 자동 복원이 안전하지 않으면 prior-byte recovery path를 diagnostic에
+남긴다.
+
+### Optional Skill과 fallback hook consent
+
+Optional Skill은 name, immutable source, revision, content digest, 정렬된
+requested/approved capabilities와 UTC-seconds approval의 RFC 8785 consent digest가
+모두 일치해야 active proof와 projection을 얻는다. Approval metadata만 있거나 local
+exact source digest가 다르면 inert다.
+
+Fallback hook은 compatible OMX/OMC가 `absent`이고 exact capability, event,
+project-local path, command, content digest와 consent digest를 승인한 경우에만
+설치된다. 모든 non-Stop command는 fresh runtime evidence의 유일한 경로
+`.hive/runtime/current-capability-resolution.json`을 사용한다.
+
+- Setup은 runtime file과 `.hive/runtime/`를 만들거나 추적하지 않는다.
+- Exact path의 non-symlink regular file과 60초 이하 freshness가 필요하다.
+- Missing, stale, future, malformed, non-absent evidence는 approval·input을 읽기 전에
+  exit `0`, `decision:allow`, `active:false`로 끝난다.
+- Installed `.hive/config/capability-resolution.yml`은 live evidence를 대신하지 않는다.
+- `Stop`은 runtime, approval, installed state, input과 tamper를 읽지 않는 neutral
+  fast path다.
+- External runtime이 감지되면 기존 fallback hook은 inert이고 reconfigure는
+  Hive-owned hook artifact만 제거한다.
+
+## Usage guard 선행 slice
+
+Session window가 하나라도 있으면 session이 decision을 완전히 소유하며 weekly
+snapshot의 duplicate·invalid·low/high 값은 decision에 관여하지 않는다. Session이
+없을 때만 weekly를 fallback으로 선택한다. 선택된 window의
+`remaining <= 10%`는 차단하며 missing, stale, scope mismatch는 `usage_unknown`으로
+fail closed한다. 실제 automatic dispatch 직전 permit 요청·소비 연결은 Phase 5에
+남아 있다.
 
 ## Fresh verification
 
+Phase 3 milestone 동기화 후 fresh evidence:
+
 - `cargo fmt --all --check`: PASS
-- `cargo clippy --workspace --all-targets --all-features -- -D warnings`: PASS
-- `cargo build --workspace`: PASS
-- `cargo test --workspace --all-targets --all-features`: Rust 73개 PASS
-  - `hive-cli` 31
-  - `hive-core` 19
-  - `hive-render` 20
-  - `hive-wiki` 3
-- `python -m unittest discover -s tests/conformance -t . -p 'test_phase1_*.py' -v`: 192/192 PASS
-- `python -m unittest tests.conformance.test_phase2_wiki -v`: 22/22 PASS
-- Phase 2 corpus:
-  - immutable Raw revision과 credential/size gate; misleading `example` substring이 있는 실제-looking secret도 거부
-  - prepared Wiki ingest와 deprecated rejection
-  - FTS5/tag/alias/link/source/content-hash row
-  - DB 삭제/rebuild logical digest와 query equivalence
-  - direct Markdown change stale detection
-  - orphan/broken link/missing citation/contradiction lint
-  - page+unreferenced Raw delete와 deleted prose 비보존
-  - suppressed fingerprint re-ingest 거부
-  - parallel extraction + serial integration no-lost-update
-  - same-page sequential/concurrent source accumulation no-lost-update
-  - canonical write 뒤 injected failure의 exact-tree rollback
-  - 기존 empty index directory까지 보존하는 rollback
-  - Raw locator filename과 실제 content digest mismatch 거부
-  - suppression reason을 stable enum code로 제한해 deleted prose 비보존
-  - SQLite와 stale marker symlink를 no-follow로 거부하고 외부 target byte 보존
-  - decoy key-name 뒤 실제 assignment를 포함한 Raw, prepared Wiki와 수동 content-addressed Raw의 likely credential도 activation/rebuild 전 거부
-  - traversal·filename/digest mismatch Raw locator를 canonical write 전에 거부
-  - active Wiki/Raw fingerprint 또는 locator와 겹치는 direct suppression·rebuild 거부
-  - consumer target 위쪽 symlink ancestor를 entrypoint에서 거부하고 resolved 외부 tree write 0건
-  - standalone rebuild가 stale marker를 제거할 때 top-level `changed_paths`에 marker와 DB를 모두 보고
-- Phase 1 renderer/Copier static tree parity: PASS
-- Phase 2 runtime ignore + parity targeted corpus: 7/7 PASS
-- default Copier render + full schema/contract validation: PASS
-- `reuse lint`: 149/149 file licensing PASS
-- provider/model/network SDK dependency audit: 0개
-- local Markdown link resolution: PASS
+- `cargo clippy --workspace --all-targets --all-features --locked -- -D warnings`: PASS
+- `cargo build --workspace --all-targets --all-features --locked`: PASS
+- `cargo test --workspace --all-targets --all-features --locked`: Rust 107/107 PASS
+- 전체 Python conformance: 313/313 PASS
+  - Phase 1: 196/196
+  - usage guard: 26/26
+  - Phase 2: 22/22
+  - Phase 3: 69/69
+- Copier `9.17.0` default 3 host와 hostile fixture render/validation: PASS
+- `hive --version`, Cargo metadata/lock, Copier harness template와 docs `0.4.0`
+  parity: PASS
+- `reuse lint`: 204/204 PASS
 - `git diff --check`: PASS
-- live Hive usage gate: threshold `10%`, `hive.usage-allowed`, sanitized evidence
-  `sha256:82b05fbf9184a8d92ce51e9f3bc8c98904a6d4fbf1b5beea121022eb9c7fc363`
-- usage precedence conformance: 300분 session window가 있으면 weekly보다 우선하고,
-  session이 없을 때만 weekly를 fallback으로 사용하며 exact `10%`는 차단
-- isolated Phase 2 release verifier: hostile matrix와 `changed_paths` schema reproduction PASS
-- committed Phase 1·usage guard native CI run `30027682535`: Ubuntu/macOS/Windows와
-  Copier 전 job PASS; Windows `.exe`/`.cmd`/`.bat` CodexBar discovery 포함
+
+CI는 Phase 1, usage guard, Phase 2와 Phase 3 corpus를 Ubuntu, macOS, Windows에서
+실행하도록 동기화했다. 이 worktree의 remote native matrix는 push 전이므로 아직
+완료 evidence로 표시하지 않는다.
 
 ## Version parity
 
-다음 표면은 `0.3.0`으로 동기화한다.
+다음 구현 표면은 `0.4.0`으로 동기화한다.
 
 - root Cargo workspace와 Cargo.lock의 Hive package
 - compiled `hive --version`
 - Copier installed `.hive/config/harness.toml`
 - README, PLAN, CURRENT와 version lifecycle ADR
 
-## 다음 작업
+`0.3.0 → 0.4.0`은 backward-compatible Phase 3 Skill/projection feature minor다.
+Major는 변경하거나 추론하지 않았다.
 
-1. Phase 3 `hive-simple-question` isolation
-2. `hive-prompt-refine` refine-only/refine-and-run contract
-3. approved-only minimal Skill routing과 OMX/OMC precedence
-4. Codex·Claude·Antigravity thin projection
+## 남은 Phase 4–7
 
-로컬 macOS에서 `x86_64-pc-windows-msvc` check를 시도했으나 bundled SQLite C
-compile에 필요한 Windows SDK `stdlib.h`가 없어 `libsqlite3-sys` build script에서
-중지했다. Rust-only Phase 1 Windows target은 이전 gate에서 통과했으며, bundled
-SQLite와 Phase 2 native behavior는 변경을 push한 뒤 원격 `windows-latest` matrix로
-확인해야 한다.
+### Phase 4 — Role/run interoperability
+
+- RoleProfile·Run parser와 fresh-session resume
+- host-native subagent conformance
+- run별 owner evidence pin, no-mid-run-switch와 OMX/OMC coexistence qualification
+
+### Phase 5 — Usage guard와 judge
+
+- dispatch owner와 one-shot usage permit 소비 연결
+- CodexBar live account/window/freshness qualification
+- clean-context judge package와 2/3, 3/3+human quorum
+
+### Phase 6 — Update, migration와 release
+
+- `hive-update`, same-major compatibility와 cross-major migration
+- backup/restore/retention, crash recovery와 atomic update activation
+- release bundle parity, GitHub Release packaging, signing과 install path
+
+### Phase 7 — Public qualification
+
+- macOS arm64/x86_64와 Windows x86_64 release qualification
+- 세 live host base workflow와 host-native/OMX/OMC support matrix
+- migration fault injection, supply-chain provenance와 release candidate
+- 사용자가 exact `1.0.0`을 지시하기 전 stable major prepare 금지

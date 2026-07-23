@@ -24,6 +24,7 @@ aigent-hive/
 │   ├── hive-core/              # provider-neutral invariant와 usage permit policy
 │   ├── hive-render/            # 결정적 staging, ownership, consent와 role materialization
 │   ├── hive-wiki/              # Markdown ingest/lint와 disposable SQLite FTS5 projection
+│   ├── hive-projection/        # portable Skill routing, prompt 검증과 thin host projection
 │   └── hive-cli/               # setup/knowledge/index/hook/usage command adapter
 ├── harness/
 │   ├── template/               # Copier authoring·CI source
@@ -65,7 +66,12 @@ shared guidance marker 계약은 [`../guidance-schema.md`](../guidance-schema.md
 | `shared-marker` | shared file의 exact Hive marker만 교체 |
 | `rebuildable-runtime`, `ephemeral-backup` | canonical source로 취급하지 않음 |
 
-`.omx/**`, `.omc/**`, `.codex/**`, `.claude/**`, `.agents/**`와 manifest 밖 path는 setup write 대상으로 사용할 수 없다. Consumer target 자체뿐 아니라 사용자가 지정한 target path의 기존 ancestor도 symlink와 entry type을 확인하고, target-relative managed file은 별도로 같은 검사를 반복하므로 외부 symlink target을 따라가지 않는다.
+`.omx/**`, `.omc/**`, `.codex/**`와 manifest 밖 path는 setup write 대상으로 사용할 수
+없다. `.claude/**`와 `.agents/**`도 기본적으로 foreign-owned이며 Phase 3 manifest가
+열거한 exact Skill projection path만 예외다. Consumer target 자체뿐 아니라 사용자가
+지정한 target path의 기존 ancestor도 symlink와 entry type을 확인하고,
+target-relative managed file은 별도로 같은 검사를 반복하므로 외부 symlink target을
+따라가지 않는다.
 
 `execute_setup`은 시작 시 ambient parent capability에서 consumer root를 no-follow로 열어 pin한다. Protected seed, shared marker, role, hook 철회 ownership과 changed-path 계산은 이 pinned handle에서 읽는다. Apply는 source tree와 consumer tree 밖의 sibling staging directory에서 전체 planned tree를 먼저 검증하고, activation snapshot·parent directory 생성·exclusive temp replacement·삭제·rollback·설치 bytes 재검증을 모두 같은 target handle 아래에서 수행한다.
 
@@ -98,6 +104,36 @@ prose를 복제할 수 없는 shipped stable reason-code enum이며 source/repla
 `wiki:<id>`, `external:<id>` 또는 immutable Raw locator만 허용한다. Suppression
 fingerprint 또는 locator가 active Wiki/Raw와 겹치면 direct suppression과 index
 rebuild를 모두 거부해 active content와 suppression metadata가 공존하지 않게 한다.
+
+## Phase 3 Skill routing과 projection
+
+`hive-projection`은 exact 6개 implemented built-in과 6개 catalog-only future entry를
+구분한다. Implemented built-in은 `setup-harness`, `hive-simple-question`,
+`hive-prompt-refine`, `hive-knowledge-capture`, `hive-knowledge-query`,
+`hive-knowledge-maintenance`다. Future entry는 catalog metadata만 가지며 host
+discovery root에 Skill body를 만들지 않는다.
+
+Active routing proof는 normalized routing fact, exact Skill content digest와 built-in
+source 또는 optional Skill consent digest에 결합된다. 한 route는 Skill body를 최대
+하나만 load하며 explicit Skill/direct answer, simple question, compatible OMX/OMC,
+approved Hive Skill, host-native 순서의 precedence를 따른다. `hive-prompt-refine`는
+`refine-only`가 기본이고 명시된 `refine-and-run`만 허용하며 원문 intent, must,
+must-not, scope, output과 authority 보존을 검증한다.
+
+Fallback non-Stop hook activation은 exact
+`.hive/runtime/current-capability-resolution.json`의 non-symlink regular file과
+60초 이하 freshness를 요구한다. Setup은 이 ephemeral file이나 directory를 만들거나
+추적하지 않으며 `.hive/.gitignore`의 `/runtime/` 규칙이 Git에서 제외한다. Missing,
+stale, future, malformed 또는 non-absent evidence는 approval과 hook input을 읽기
+전에 inactive neutral allow로 끝난다. `Stop`은 runtime evidence도 읽지 않는 neutral
+fast path다.
+
+Codex와 Antigravity는 `.agents/skills/<skill>/SKILL.md`, Claude Code는
+`.claude/skills/<skill>/SKILL.md`만 사용한다. Projection은 destination을 exclusive
+claim해 검증한 뒤 destination-exclusive publication을 수행한다. Replace/delete
+중 밀려난 기존 bytes는 same-directory quarantine에 보존하고, rollback 때 foreign
+occupant를 overwrite하거나 삭제하지 않는다. 자동 복원이 안전하지 않으면 prior
+bytes의 recovery path를 diagnostic으로 남긴다.
 
 ## Crate 추가 원칙
 

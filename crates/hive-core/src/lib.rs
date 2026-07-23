@@ -153,6 +153,40 @@ fn ensure_target_ancestors_are_directories(target: &Path) -> Result<(), TargetGu
 /// Returns an error for absolute paths, traversal, platform prefixes, empty
 /// paths, or forbidden first components.
 pub fn validate_project_relative(path: &Path) -> Result<(), TargetGuardError> {
+    let portable = validate_relative_lexical(path)?;
+    if portable
+        .split('/')
+        .any(|part| matches!(part, ".omx" | ".omc" | ".codex" | ".claude" | ".agents"))
+    {
+        return Err(TargetGuardError::ForbiddenNamespace {
+            path: path.to_path_buf(),
+        });
+    }
+    Ok(())
+}
+
+/// Validate one exact Hive-managed host Skill projection path.
+///
+/// This is the only lexical validation surface that permits a path below a
+/// host discovery namespace. It accepts only
+/// `.agents/skills/<safe-name>/SKILL.md` or
+/// `.claude/skills/<safe-name>/SKILL.md`.
+///
+/// # Errors
+///
+/// Returns an error for any unsafe lexical form or any path that is not one
+/// exact host Skill projection file.
+pub fn validate_hive_skill_projection_relative(path: &Path) -> Result<(), TargetGuardError> {
+    let _ = validate_relative_lexical(path)?;
+    if !is_hive_skill_projection_path(path) {
+        return Err(TargetGuardError::ForbiddenNamespace {
+            path: path.to_path_buf(),
+        });
+    }
+    Ok(())
+}
+
+fn validate_relative_lexical(path: &Path) -> Result<String, TargetGuardError> {
     let Some(raw) = path.to_str() else {
         return Err(TargetGuardError::UnsafeRelativePath {
             path: path.to_path_buf(),
@@ -187,15 +221,48 @@ pub fn validate_project_relative(path: &Path) -> Result<(), TargetGuardError> {
             path: path.to_path_buf(),
         });
     }
-    if portable
-        .split('/')
-        .any(|part| matches!(part, ".omx" | ".omc" | ".codex" | ".claude" | ".agents"))
-    {
-        return Err(TargetGuardError::ForbiddenNamespace {
-            path: path.to_path_buf(),
-        });
+    Ok(portable)
+}
+
+/// Return whether a path is one exact Hive-managed host Skill projection.
+///
+/// Host discovery namespaces remain foreign by default. The only accepted
+/// exception is `<host-root>/skills/<safe-name>/SKILL.md` under `.agents` or
+/// `.claude`; this function never accepts the directory itself or another file.
+#[must_use]
+pub fn is_hive_skill_projection_path(path: &Path) -> bool {
+    let Some(raw) = path.to_str() else {
+        return false;
+    };
+    #[cfg(windows)]
+    let portable = raw.replace('\\', "/");
+    #[cfg(not(windows))]
+    let portable = raw.to_owned();
+    #[cfg(not(windows))]
+    if raw.contains('\\') {
+        return false;
     }
-    Ok(())
+    is_hive_skill_projection_portable(&portable)
+}
+
+fn is_hive_skill_projection_portable(path: &str) -> bool {
+    let parts = path.split('/').collect::<Vec<_>>();
+    parts.len() == 4
+        && matches!(parts[0], ".agents" | ".claude")
+        && parts[1] == "skills"
+        && valid_skill_projection_name(parts[2])
+        && parts[3] == "SKILL.md"
+}
+
+fn valid_skill_projection_name(name: &str) -> bool {
+    (2..=63).contains(&name.len())
+        && name
+            .bytes()
+            .next()
+            .is_some_and(|byte| byte.is_ascii_lowercase())
+        && name
+            .bytes()
+            .all(|byte| byte.is_ascii_lowercase() || byte.is_ascii_digit() || byte == b'-')
 }
 
 /// Reject a destination when an existing component below `target` is a symlink.
@@ -205,6 +272,29 @@ pub fn validate_project_relative(path: &Path) -> Result<(), TargetGuardError> {
 /// Returns [`TargetGuardError::SymlinkAncestor`] for the first symlink found.
 pub fn ensure_no_symlink_ancestors(target: &Path, relative: &Path) -> Result<(), TargetGuardError> {
     validate_project_relative(relative)?;
+    ensure_no_symlink_ancestors_validated(target, relative)
+}
+
+/// Reject a projected Skill destination when an existing component below
+/// `target` is a symlink.
+///
+/// # Errors
+///
+/// Returns a lexical validation error unless `relative` is one exact host
+/// Skill projection path, or [`TargetGuardError::SymlinkAncestor`] for the
+/// first symlink found.
+pub fn ensure_no_symlink_ancestors_for_hive_skill_projection(
+    target: &Path,
+    relative: &Path,
+) -> Result<(), TargetGuardError> {
+    validate_hive_skill_projection_relative(relative)?;
+    ensure_no_symlink_ancestors_validated(target, relative)
+}
+
+fn ensure_no_symlink_ancestors_validated(
+    target: &Path,
+    relative: &Path,
+) -> Result<(), TargetGuardError> {
     match fs::symlink_metadata(target) {
         Ok(metadata) if metadata.file_type().is_symlink() => {
             return Err(TargetGuardError::SymlinkAncestor {
@@ -262,8 +352,8 @@ mod tests {
     #[cfg(unix)]
     use super::ensure_no_symlink_ancestors;
     use super::{
-        ensure_consumer_target, sha256_digest, source_marker_path, validate_project_relative,
-        TargetGuardError,
+        ensure_consumer_target, is_hive_skill_projection_path, sha256_digest, source_marker_path,
+        validate_hive_skill_projection_relative, validate_project_relative, TargetGuardError,
     };
     use std::fs;
     use std::path::PathBuf;
@@ -329,6 +419,50 @@ mod tests {
             validate_project_relative(PathBuf::from(".omx/state").as_path()),
             Err(TargetGuardError::ForbiddenNamespace { .. })
         ));
+    }
+
+    #[test]
+    fn permits_only_exact_safe_host_skill_projection_files() {
+        for path in [
+            ".agents/skills/hive-simple-question/SKILL.md",
+            ".agents/skills/local-inspect/SKILL.md",
+            ".claude/skills/setup-harness/SKILL.md",
+        ] {
+            let path = PathBuf::from(path);
+            assert!(is_hive_skill_projection_path(&path));
+            assert!(
+                validate_project_relative(&path).is_err(),
+                "generic validation must keep host namespaces forbidden: {path:?}"
+            );
+            assert!(validate_hive_skill_projection_relative(&path).is_ok());
+        }
+
+        for path in [
+            ".agents",
+            ".agents/skills",
+            ".agents/skills/local-inspect",
+            ".agents/skills/local-inspect/README.md",
+            ".agents/skills/local-inspect/references/extra.md",
+            ".agents/skills/../outside/SKILL.md",
+            ".agents/skills/a/SKILL.md",
+            ".agents/skills/Upper/SKILL.md",
+            ".agents/skills/bad:name/SKILL.md",
+            ".agents/skills/bad\\name/SKILL.md",
+            ".claude/hooks/local-inspect/SKILL.md",
+            ".codex/skills/local-inspect/SKILL.md",
+            "nested/.agents/skills/local-inspect/SKILL.md",
+        ] {
+            let path = PathBuf::from(path);
+            assert!(!is_hive_skill_projection_path(&path), "{path:?}");
+            assert!(
+                validate_project_relative(&path).is_err(),
+                "near-miss host path was accepted: {path:?}"
+            );
+            assert!(
+                validate_hive_skill_projection_relative(&path).is_err(),
+                "near-miss projection path was accepted: {path:?}"
+            );
+        }
     }
 
     #[cfg(windows)]

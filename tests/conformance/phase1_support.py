@@ -19,6 +19,9 @@ EXPECTED_ROOT = FIXTURE_ROOT / "expected"
 ACTION_RESULT_SCHEMA = json.loads(
     (REPOSITORY_ROOT / "schemas/action-result.schema.json").read_text(encoding="utf-8")
 )
+FRESH_HOOK_CAPABILITIES_PATH = Path(
+    ".hive/runtime/current-capability-resolution.json"
+)
 
 
 def read_yaml(path: Path) -> dict[str, object]:
@@ -156,6 +159,7 @@ class Phase1CliTestCase(unittest.TestCase):
         *,
         capability: str,
         event: str,
+        capabilities: Path | str | None = "capabilities-absent.json",
         input_path: Path | None = None,
     ) -> tuple[subprocess.CompletedProcess[str], dict[str, object]]:
         command = [
@@ -165,18 +169,59 @@ class Phase1CliTestCase(unittest.TestCase):
             capability,
             "--event",
             event,
-            "--input",
-            str(input_path or FIXTURE_ROOT / "stop-input.json"),
-            "--output",
-            "json",
         ]
-        process = subprocess.run(
-            command,
-            cwd=consumer,
-            check=False,
-            text=True,
-            capture_output=True,
+        if capabilities is not None:
+            capability_source = (
+                capabilities
+                if isinstance(capabilities, Path)
+                else FIXTURE_ROOT / capabilities
+            )
+            capability_path = consumer / FRESH_HOOK_CAPABILITIES_PATH
+            runtime_directory = capability_path.parent
+            runtime_directory_preexisted = runtime_directory.exists()
+            prior_capabilities = (
+                capability_path.read_bytes()
+                if capability_path.is_file()
+                else None
+            )
+            runtime_directory.mkdir(parents=True, exist_ok=True)
+            capability_path.write_bytes(capability_source.read_bytes())
+            command.extend(
+                ["--capabilities", FRESH_HOOK_CAPABILITIES_PATH.as_posix()]
+            )
+        else:
+            capability_path = None
+            runtime_directory = None
+            runtime_directory_preexisted = False
+            prior_capabilities = None
+        command.extend(
+            [
+                "--input",
+                str(input_path or FIXTURE_ROOT / "stop-input.json"),
+                "--output",
+                "json",
+            ]
         )
+        try:
+            process = subprocess.run(
+                command,
+                cwd=consumer,
+                check=False,
+                text=True,
+                capture_output=True,
+                env={**os.environ, "PATH": ""},
+            )
+        finally:
+            if capability_path is not None:
+                if prior_capabilities is None:
+                    capability_path.unlink(missing_ok=True)
+                else:
+                    capability_path.write_bytes(prior_capabilities)
+                if (
+                    runtime_directory is not None
+                    and not runtime_directory_preexisted
+                ):
+                    runtime_directory.rmdir()
         try:
             result = json.loads(process.stdout)
         except json.JSONDecodeError as error:

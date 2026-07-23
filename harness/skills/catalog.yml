@@ -1,0 +1,157 @@
+schema_version: 1
+skills:
+  - name: setup-harness
+    description: Inspect a project and configure or reconfigure its local Aigent Hive harness through the signed Hive CLI.
+    provided_by: hive
+    superseded_by_external: []
+    invocation_intents:
+      - SetupHarness
+    side_effect_class: project-write
+    capabilities:
+      - filesystem-read
+      - filesystem-write
+      - shell
+    availability: implemented
+
+  - name: hive-simple-question
+    description: Answer a self-contained simple question without project context, tools, memory, extra Skills, subagents, orchestration, or persistent run state.
+    provided_by: hive
+    superseded_by_external: []
+    invocation_intents:
+      - AnswerSimpleQuestion
+    side_effect_class: none
+    capabilities: []
+    availability: implemented
+
+  - name: hive-prompt-refine
+    description: Create, improve, or structure a copy-ready prompt when the user explicitly asks for prompt refinement or prompt authoring; never intercept ordinary questions or ordinary work requests.
+    provided_by: hive
+    superseded_by_external: []
+    invocation_intents:
+      - RefinePrompt
+    side_effect_class: none
+    capabilities: []
+    availability: implemented
+
+  - name: hive-knowledge-capture
+    description: Integrate an explicitly selected non-confidential source and reviewed Wiki draft into canonical Hive knowledge through the signed Hive CLI.
+    provided_by: hive
+    superseded_by_external: []
+    invocation_intents:
+      - IngestKnowledge
+    side_effect_class: project-write
+    capabilities:
+      - filesystem-read
+      - filesystem-write
+      - memory-write
+      - shell
+    availability: implemented
+
+  - name: hive-knowledge-query
+    description: Query canonical Hive knowledge by text or tag without changing canonical project data.
+    provided_by: hive
+    superseded_by_external: []
+    invocation_intents:
+      - QueryKnowledge
+    side_effect_class: read-only
+    capabilities:
+      - filesystem-read
+      - memory-read
+      - shell
+    availability: implemented
+
+  - name: hive-knowledge-maintenance
+    description: Lint, rebuild, delete, or suppress canonical Hive knowledge through explicit signed CLI actions while preserving the disposable-index boundary.
+    provided_by: hive
+    superseded_by_external: []
+    invocation_intents:
+      - DeleteKnowledge
+      - LintKnowledge
+      - RebuildKnowledgeIndex
+      - SuppressKnowledge
+    side_effect_class: project-write
+    capabilities:
+      - filesystem-read
+      - filesystem-write
+      - memory-read
+      - memory-write
+      - shell
+    availability: implemented
+
+  - name: hive-run-checkpoint
+    description: Record a durable Hive run checkpoint in canonical Markdown without owning execution, retries, or continuation.
+    provided_by: hive
+    superseded_by_external: []
+    invocation_intents:
+      - CheckpointRun
+    side_effect_class: project-write
+    capabilities:
+      - filesystem-read
+      - filesystem-write
+      - run-state
+    availability: catalog-only
+
+  - name: hive-run-resume
+    description: Read and validate a durable Hive run handoff for a host-owned fresh-session resume without starting a persistence loop.
+    provided_by: hive
+    superseded_by_external: []
+    invocation_intents:
+      - ResumeWork
+    side_effect_class: read-only
+    capabilities:
+      - filesystem-read
+      - run-state
+    availability: catalog-only
+
+  - name: hive-role-handoff
+    description: Update canonical role assignment and handoff Markdown while preserving user-authored role content and leaving orchestration to the resolved host owner.
+    provided_by: hive
+    superseded_by_external: []
+    invocation_intents:
+      - HandoffRole
+    side_effect_class: project-write
+    capabilities:
+      - filesystem-read
+      - filesystem-write
+      - run-state
+    availability: catalog-only
+
+  - name: hive-judge-package
+    description: Build a minimal digest-bound clean-context judge package after deterministic verification without running a model or exposing another judge verdict.
+    provided_by: hive
+    superseded_by_external: []
+    invocation_intents:
+      - PackageJudgeEvidence
+      - VerifyWork
+    side_effect_class: project-write
+    capabilities:
+      - filesystem-read
+      - filesystem-write
+      - run-state
+    availability: catalog-only
+
+  - name: hive-update
+    description: Stage, verify, back up, and atomically activate a compatible signed Hive update without changing canonical knowledge or external plugins.
+    provided_by: hive
+    superseded_by_external: []
+    invocation_intents:
+      - UpdateHarness
+    side_effect_class: project-write
+    capabilities:
+      - filesystem-read
+      - filesystem-write
+      - shell
+    availability: catalog-only
+
+  - name: hive-migrate
+    description: Apply an explicitly supported Hive schema migration with ownership protection, backup, validation, and rollback while rebuilding disposable indexes.
+    provided_by: hive
+    superseded_by_external: []
+    invocation_intents:
+      - MigrateHarness
+    side_effect_class: project-write
+    capabilities:
+      - filesystem-read
+      - filesystem-write
+      - shell
+    availability: catalog-only

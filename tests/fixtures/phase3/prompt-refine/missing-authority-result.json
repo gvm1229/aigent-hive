@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "mode": "refine-only",
+  "original_prompt": "Update src/config.rs. Preserve the public API. Do not add dependencies. Run cargo test. Return changed files and test evidence.",
+  "intent_summary": "Update src/config.rs without adding dependencies.",
+  "assumptions": [],
+  "unresolved_items": [],
+  "required_question": null,
+  "preserved": {
+    "must": ["Run cargo test."],
+    "must_not": ["Do not add dependencies."],
+    "scope": ["src/config.rs"],
+    "target_output": ["Return changed files and test evidence."],
+    "user_authority": [],
+    "tone": [],
+    "tool_provider_selection": []
+  },
+  "refined_prompt": "Goal\nUpdate src/config.rs.\n\nConstraints and prohibited actions\nDo not add dependencies.\n\nAcceptance and verification\nRun cargo test.\n\nOutput contract\nReturn changed files and test evidence.",
+  "project_reads": [],
+  "execution_authorized": false,
+  "side_effects": {
+    "project_write": false,
+    "network": false,
+    "subagent": false,
+    "memory_capture": false,
+    "run_creation": false,
+    "model_execution": false
+  }
+}

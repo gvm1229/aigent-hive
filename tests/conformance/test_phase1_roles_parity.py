@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import copy
+import hashlib
 import json
 import os
 import shutil
@@ -34,6 +35,54 @@ def normalized_copier_tree(
 
 
 class Phase1CopierParity(Phase1CliTestCase):
+    def assert_builtin_projection(
+        self,
+        target: Path,
+        *,
+        host: str,
+    ) -> None:
+        projection_root = ".claude" if host == "claude" else ".agents"
+        other_root = ".agents" if host == "claude" else ".claude"
+        active_ledger_path = target / ".hive/config/active-skills.yml"
+        active_ledger = read_yaml(active_ledger_path)
+        skills = active_ledger["skills"]
+        self.assertIsInstance(skills, list)
+        expected_names = [
+            "hive-knowledge-capture",
+            "hive-knowledge-maintenance",
+            "hive-knowledge-query",
+            "hive-prompt-refine",
+            "hive-simple-question",
+            "setup-harness",
+        ]
+        self.assertEqual([entry["name"] for entry in skills], expected_names)
+        projected_skill_root = target / projection_root / "skills"
+        self.assertEqual(
+            {path.name for path in projected_skill_root.iterdir()},
+            set(expected_names),
+        )
+        for entry in skills:
+            self.assertIsInstance(entry, dict)
+            name = entry["name"]
+            source = REPOSITORY_ROOT / f"harness/skills/{name}/SKILL.md"
+            projected = target / projection_root / f"skills/{name}/SKILL.md"
+            with self.subTest(host=host, skill=name):
+                self.assertEqual(projected.read_bytes(), source.read_bytes())
+                self.assertEqual(
+                    entry["content_digest"],
+                    f"sha256:{hashlib.sha256(source.read_bytes()).hexdigest()}",
+                )
+                self.assertEqual(entry["source_type"], "built-in")
+                self.assertIsNone(entry["consent_digest"])
+                self.assertEqual(
+                    {path.name for path in projected.parent.iterdir()},
+                    {"SKILL.md"},
+                )
+        self.assertFalse((target / other_root).exists())
+        ledger_bytes = active_ledger_path.read_bytes()
+        self.assertNotIn(b".agents", ledger_bytes)
+        self.assertNotIn(b".claude", ledger_bytes)
+
     def test_copier_and_rust_no_role_no_hook_static_trees_are_byte_equal(
         self,
     ) -> None:
@@ -115,6 +164,84 @@ class Phase1CopierParity(Phase1CliTestCase):
             normalized_copier_tree(rust_target),
             normalized_copier_tree(copier_target),
         )
+
+    def test_copier_and_rust_builtin_skill_trees_match_for_each_host(
+        self,
+    ) -> None:
+        copier = os.environ.get("COPIER_BIN") or shutil.which("copier")
+        self.assertIsNotNone(
+            copier,
+            "Copier 9.17.0 is required for the Phase 1 parity gate",
+        )
+        capability_fixture_by_host = {
+            "codex": "capabilities-codex-omx.json",
+            "claude": "capabilities-claude-omc.json",
+            "antigravity": "capabilities-antigravity-absent.json",
+        }
+
+        for host, capability_fixture in capability_fixture_by_host.items():
+            with self.subTest(host=host):
+                answers = read_yaml(
+                    FIXTURE_ROOT / "answers-no-role-no-hook.yml"
+                )
+                answers["primary_host"] = host
+                answer_path = self.work_root / f"{host}-answers.yml"
+                write_yaml(answer_path, answers)
+                capability_resolution = json.loads(
+                    (
+                        FIXTURE_ROOT / capability_fixture
+                    ).read_text(encoding="utf-8")
+                )
+                copier_data = {
+                    key: value
+                    for key, value in answers.items()
+                    if key != "schema_version"
+                }
+                copier_data["capability_resolution"] = capability_resolution
+                copier_data_path = self.work_root / f"{host}-copier-data.yml"
+                write_yaml(copier_data_path, copier_data)
+
+                rust_target = self.work_root / f"{host}-rust"
+                copier_target = self.work_root / f"{host}-copier"
+                rust_target.mkdir()
+                rust_process, _ = self.invoke_setup(
+                    rust_target,
+                    answers=answer_path,
+                    capabilities=capability_fixture,
+                )
+                copier_process = subprocess.run(
+                    [
+                        str(copier),
+                        "copy",
+                        "--trust",
+                        "--defaults",
+                        "--data-file",
+                        str(copier_data_path),
+                        str(REPOSITORY_ROOT),
+                        str(copier_target),
+                    ],
+                    cwd=REPOSITORY_ROOT,
+                    check=False,
+                    text=True,
+                    capture_output=True,
+                )
+
+                self.assertEqual(
+                    rust_process.returncode,
+                    0,
+                    rust_process.stderr,
+                )
+                self.assertEqual(
+                    copier_process.returncode,
+                    0,
+                    copier_process.stderr,
+                )
+                self.assertEqual(
+                    normalized_copier_tree(rust_target),
+                    normalized_copier_tree(copier_target),
+                )
+                self.assert_builtin_projection(rust_target, host=host)
+                self.assert_builtin_projection(copier_target, host=host)
 
 
 class Phase1RoleConformance(Phase1CliTestCase):

@@ -13,6 +13,7 @@ path = "src/lib.rs"
 cap-fs-ext.workspace = true
 cap-std.workspace = true
 hive-core = { path = "../hive-core" }
+hive-projection = { path = "../hive-projection" }
 jsonschema.workspace = true
 serde.workspace = true
 serde_json.workspace = true

@@ -13,12 +13,14 @@ from pathlib import Path
 
 from tests.conformance.phase1_support import (
     FIXTURE_ROOT,
+    REPOSITORY_ROOT,
     Phase1CliTestCase,
-    snapshot_tree,
+    read_yaml,
 )
 
 
 CANONICAL_VISIBLE_PATHS = (
+    ".hive/config/active-skills.yml",
     ".hive/config/harness.toml",
     ".hive/config/approved-skills.yml",
     ".hive/config/capability-resolution.yml",
@@ -34,6 +36,25 @@ CANONICAL_VISIBLE_PATHS = (
     ".hive/team/roles/README.md",
     ".hive/team/roles/reviewer.md",
 )
+BUILTIN_SKILL_NAMES = (
+    "hive-knowledge-capture",
+    "hive-knowledge-maintenance",
+    "hive-knowledge-query",
+    "hive-prompt-refine",
+    "hive-simple-question",
+    "setup-harness",
+)
+CODEX_HIVE_PROJECTION_PATHS = {
+    "skills",
+    *{
+        relative
+        for name in BUILTIN_SKILL_NAMES
+        for relative in (
+            f"skills/{name}",
+            f"skills/{name}/SKILL.md",
+        )
+    },
+}
 
 
 def semantic_json_digest(raw: bytes) -> str:
@@ -72,6 +93,16 @@ def special_tree_snapshot(root: Path) -> dict[str, tuple[object, ...]]:
     return snapshot
 
 
+def without_known_projection(
+    snapshot: dict[str, tuple[object, ...]],
+) -> dict[str, tuple[object, ...]]:
+    return {
+        path: value
+        for path, value in snapshot.items()
+        if path not in CODEX_HIVE_PROJECTION_PATHS
+    }
+
+
 class Phase1ForeignNamespaceReadWriteGate(Phase1CliTestCase):
     def test_setup_does_not_read_or_write_project_or_host_global_namespaces(
         self,
@@ -106,6 +137,12 @@ class Phase1ForeignNamespaceReadWriteGate(Phase1CliTestCase):
                 (root / known_config_name).write_bytes(
                     b"foreign config bytes\x00\xff\n"
                 )
+            if root.name in {".agents", ".claude"}:
+                foreign_skill = root / "skills/foreign-skill/SKILL.md"
+                foreign_skill.parent.mkdir(parents=True)
+                foreign_skill.write_bytes(
+                    b"---\nname: foreign-skill\n---\nforeign skill bytes\x00\xff\n"
+                )
 
         before = {
             str(root): special_tree_snapshot(root)
@@ -131,13 +168,19 @@ class Phase1ForeignNamespaceReadWriteGate(Phase1CliTestCase):
             self.assertEqual(process.returncode, 0, process.stderr)
             self.assertEqual(result["status"], "success")
             self.assertEqual(result["code"], "hive.setup-complete")
-            self.assertEqual(
-                {
-                    str(root): special_tree_snapshot(root)
-                    for root, _ in guarded_roots
-                },
-                before,
-            )
+            after = {
+                str(root): special_tree_snapshot(root)
+                for root, _ in guarded_roots
+            }
+            for root, _ in guarded_roots:
+                with self.subTest(root=root):
+                    if root == target / ".agents":
+                        self.assertEqual(
+                            without_known_projection(after[str(root)]),
+                            without_known_projection(before[str(root)]),
+                        )
+                    else:
+                        self.assertEqual(after[str(root)], before[str(root)])
         finally:
             for unreadable in unreadable_files:
                 unreadable.chmod(0o600)
@@ -157,6 +200,24 @@ class Phase1ForeignNamespaceReadWriteGate(Phase1CliTestCase):
                 unreadable.read_bytes(),
                 b"unreadable foreign bytes\n",
             )
+        for namespace in (target / ".agents", target / ".claude"):
+            self.assertEqual(
+                (
+                    namespace / "skills/foreign-skill/SKILL.md"
+                ).read_bytes(),
+                b"---\nname: foreign-skill\n---\nforeign skill bytes\x00\xff\n",
+            )
+        for name in BUILTIN_SKILL_NAMES:
+            with self.subTest(skill=name):
+                self.assertEqual(
+                    (
+                        target / f".agents/skills/{name}/SKILL.md"
+                    ).read_bytes(),
+                    (
+                        REPOSITORY_ROOT
+                        / f"harness/skills/{name}/SKILL.md"
+                    ).read_bytes(),
+                )
 
 
 class Phase1HookForeignEntryGate(Phase1CliTestCase):
@@ -323,6 +384,7 @@ class Phase1CanonicalGitVisibilityGate(Phase1CliTestCase):
             ".hive/index/.knowledge.lock",
             ".hive/index/.tmp-phase2",
             ".hive/backups/rollback/config.yml",
+            ".hive/runtime/current-capability-resolution.json",
         )
         visible = (
             ".hive/index/search.db",
@@ -346,9 +408,20 @@ class Phase1CanonicalGitVisibilityGate(Phase1CliTestCase):
 
 
 class Phase1NoConsentProjectionGate(Phase1CliTestCase):
-    def test_absent_consent_creates_no_project_host_projection(self) -> None:
+    def test_no_optional_consent_projects_only_builtins_without_hooks(
+        self,
+    ) -> None:
         target = self.work_root / "consumer"
         target.mkdir()
+        foreign_bytes = b"foreign namespace bytes\x00\xff\n"
+        for namespace in (".codex", ".claude", ".agents"):
+            sentinel = target / namespace / "foreign/sentinel.bin"
+            sentinel.parent.mkdir(parents=True)
+            sentinel.write_bytes(foreign_bytes)
+        before = {
+            namespace: special_tree_snapshot(target / namespace)
+            for namespace in (".codex", ".claude", ".agents")
+        }
 
         process, result = self.invoke_setup(
             target,
@@ -359,12 +432,67 @@ class Phase1NoConsentProjectionGate(Phase1CliTestCase):
         self.assertEqual(process.returncode, 0, process.stderr)
         self.assertEqual(result["status"], "success")
         self.assertEqual(result["code"], "hive.setup-complete")
+        self.assertEqual(
+            special_tree_snapshot(target / ".codex"),
+            before[".codex"],
+        )
+        self.assertEqual(
+            special_tree_snapshot(target / ".claude"),
+            before[".claude"],
+        )
+        self.assertEqual(
+            without_known_projection(
+                special_tree_snapshot(target / ".agents")
+            ),
+            without_known_projection(before[".agents"]),
+        )
+
         for namespace in (".codex", ".claude", ".agents"):
-            with self.subTest(namespace=namespace):
-                self.assertFalse((target / namespace).exists())
-                self.assertFalse(
-                    any(
-                        path == namespace or path.startswith(namespace + "/")
-                        for path in result["changed_paths"]
-                    )
+            with self.subTest(foreign_namespace=namespace):
+                self.assertEqual(
+                    (
+                        target / namespace / "foreign/sentinel.bin"
+                    ).read_bytes(),
+                    foreign_bytes,
                 )
+
+        active_skills = read_yaml(
+            target / ".hive/config/active-skills.yml"
+        )
+        skills = active_skills["skills"]
+        self.assertIsInstance(skills, list)
+        self.assertEqual(
+            [entry["name"] for entry in skills],
+            list(BUILTIN_SKILL_NAMES),
+        )
+        for entry in skills:
+            with self.subTest(active_skill=entry["name"]):
+                self.assertEqual(entry["source_type"], "built-in")
+                self.assertIsNone(entry["consent_digest"])
+        self.assertEqual(
+            read_yaml(target / ".hive/config/approved-skills.yml")["skills"],
+            [],
+        )
+
+        for name in BUILTIN_SKILL_NAMES:
+            with self.subTest(projected_skill=name):
+                self.assertEqual(
+                    (
+                        target / f".agents/skills/{name}/SKILL.md"
+                    ).read_bytes(),
+                    (
+                        REPOSITORY_ROOT
+                        / f"harness/skills/{name}/SKILL.md"
+                    ).read_bytes(),
+                )
+        self.assertFalse((target / ".hive/config/approved-hooks.yml").exists())
+        self.assertFalse((target / ".hive/hooks").exists())
+        self.assertFalse(
+            any(
+                path == ".codex"
+                or path.startswith(".codex/")
+                or path == ".claude"
+                or path.startswith(".claude/")
+                for path in result["changed_paths"]
+            )
+        )

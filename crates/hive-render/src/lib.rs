@@ -4,7 +4,13 @@ use cap_fs_ext::{DirExt, FollowSymlinks, MetadataExt as CapFsMetadataExt, OpenOp
 use cap_std::ambient_authority;
 use cap_std::fs::{Dir, OpenOptions};
 use hive_core::{
-    ensure_consumer_target, ensure_no_symlink_ancestors, sha256_digest, validate_project_relative,
+    ensure_consumer_target, ensure_no_symlink_ancestors,
+    ensure_no_symlink_ancestors_for_hive_skill_projection, is_hive_skill_projection_path,
+    sha256_digest, validate_hive_skill_projection_relative, validate_project_relative,
+};
+use hive_projection::{
+    compile_projection, ActiveSkills, Host as ProjectionHost, OptionalSkillConsent,
+    OptionalSkillSource, SkillSourceType,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
@@ -16,7 +22,7 @@ use std::fs;
 use std::io::{self, Read, Write};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 const MARKER_START: &str = "<!-- AIGENT-HIVE:START -->";
 const MARKER_END: &str = "<!-- AIGENT-HIVE:END -->";
@@ -27,6 +33,8 @@ const HOOK_SCHEMA: &str = include_str!("../../../schemas/hook-consent.schema.jso
 const KNOWLEDGE_SUPPRESSION_SCHEMA: &str =
     include_str!("../../../schemas/knowledge-suppression.schema.json");
 const OWNERSHIP_MANIFEST: &str = include_str!("../../../harness/manifest.toml");
+const FRESH_CAPABILITY_RESOLUTION_PATH: &str = ".hive/runtime/current-capability-resolution.json";
+const FRESH_CAPABILITY_RESOLUTION_MAX_AGE: Duration = Duration::from_mins(1);
 static ACTIVATION_TEMP_COUNTER: AtomicU64 = AtomicU64::new(0);
 
 /// Setup operation selected by the CLI.
@@ -255,6 +263,8 @@ struct CapabilityResolution {
     resolved_owner: String,
     #[serde(default)]
     capabilities: BTreeMap<String, JsonValue>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    hook_events: Option<BTreeMap<String, JsonValue>>,
     evidence_digest: String,
     evidence: Vec<CapabilityEvidence>,
 }
@@ -277,27 +287,100 @@ pub enum HookAuthorization {
     Inert,
 }
 
-/// Validate an installed fallback hook against the current consumer project.
+/// Keep legacy authorization callers inert when they have no fresh evidence.
 ///
-/// The target must be the consumer root (normally the process current working
-/// directory). This function never mutates the target.
+/// Hook activation requires [`authorize_hook_with_resolution`] with the exact
+/// fresh capability path. This compatibility entrypoint never reads the target
+/// and cannot authorize a fallback hook.
 ///
 /// # Errors
 ///
-/// Returns a safety or verification error when the requested non-inert hook is
-/// not exactly approved, its descriptor changed, or installed evidence is
-/// malformed.
+/// This compatibility entrypoint does not return an error.
 pub fn authorize_hook(
+    _target: &Path,
+    _capability: &str,
+    _event: &str,
+) -> Result<HookAuthorization, RenderError> {
+    Ok(HookAuthorization::Inert)
+}
+
+/// Return the normalized detection derived from a fresh capability matrix.
+///
+/// The matrix is schema-validated and its JCS evidence digest is recomputed.
+/// No target or hook input is read.
+///
+/// # Errors
+///
+/// Returns an input error when the matrix is malformed, contradictory, or
+/// carries an invalid evidence digest.
+pub fn capability_detection(path: &Path) -> Result<String, RenderError> {
+    let resolution = load_resolution(path)?;
+    validate_resolution_host(&resolution.host, &resolution)?;
+    Ok(derive_resolution(&resolution)?.0.to_owned())
+}
+
+/// Return the external runtime associated with the installed host.
+///
+/// This performs read-only installed capability validation and never probes or
+/// starts a process.
+///
+/// # Errors
+///
+/// Returns a verification error when installed capability evidence is missing
+/// or malformed.
+pub fn expected_external_runtime(target: &Path) -> Result<Option<&'static str>, RenderError> {
+    ensure_consumer_target(target).map_err(|error| RenderError::Verification(error.to_string()))?;
+    let resolution = read_installed_resolution(target)?;
+    validate_resolution_host(&resolution.host, &resolution).map_err(as_verification)?;
+    match resolution.host.as_str() {
+        "codex" => Ok(Some("omx")),
+        "claude" => Ok(Some("omc")),
+        "antigravity" => Ok(None),
+        _ => Err(RenderError::Verification(
+            "installed capability host is unsupported".to_owned(),
+        )),
+    }
+}
+
+/// Validate an installed fallback hook with required fresh host evidence.
+///
+/// Every state other than conclusive `absent` makes the fallback hook inert
+/// before installed hook authorization proceeds. The caller can therefore
+/// perform this check before reading hook event input.
+///
+/// # Errors
+///
+/// Returns a safety or verification error when fresh evidence is malformed,
+/// addresses another host, or the requested non-inert hook is not exactly
+/// approved.
+pub fn authorize_hook_with_resolution(
     target: &Path,
     capability: &str,
     event: &str,
+    fresh_capabilities: &Path,
 ) -> Result<HookAuthorization, RenderError> {
+    let fresh_path = validate_fresh_capability_resolution_path(target, fresh_capabilities)?;
+    let fresh = load_resolution(&fresh_path)?;
+    validate_resolution_host(&fresh.host, &fresh)?;
+    if derive_resolution(&fresh)?.0 != "absent" {
+        return Ok(HookAuthorization::Inert);
+    }
     ensure_consumer_target(target).map_err(|error| RenderError::Safety(error.to_string()))?;
     validate_installed(target)?;
     let resolution = read_installed_resolution(target)?;
+    if fresh.host != resolution.host {
+        return Err(RenderError::Safety(
+            "fresh capability evidence does not address the installed host".to_owned(),
+        ));
+    }
     let (detection, _, _) = derive_resolution(&resolution)?;
     if detection != "absent" {
         return Ok(HookAuthorization::Inert);
+    }
+    if fresh.evidence_digest != resolution.evidence_digest {
+        return Err(RenderError::Safety(
+            "fresh capability evidence does not match the installed absent resolution".to_owned(),
+        ));
     }
     let bytes = read_target_required(
         target,
@@ -338,6 +421,44 @@ pub fn authorize_hook(
         ));
     }
     Ok(HookAuthorization::Authorized)
+}
+
+fn validate_fresh_capability_resolution_path(
+    target: &Path,
+    path: &Path,
+) -> Result<PathBuf, RenderError> {
+    if path != Path::new(FRESH_CAPABILITY_RESOLUTION_PATH) {
+        return Err(RenderError::Input(format!(
+            "fresh capability evidence must use {FRESH_CAPABILITY_RESOLUTION_PATH}"
+        )));
+    }
+    ensure_no_symlink_ancestors(target, path)
+        .map_err(|error| RenderError::Input(error.to_string()))?;
+    let absolute = target.join(path);
+    let metadata = fs::symlink_metadata(&absolute).map_err(|error| {
+        RenderError::Input(format!(
+            "cannot inspect fresh capability evidence at {FRESH_CAPABILITY_RESOLUTION_PATH}: {error}"
+        ))
+    })?;
+    if !metadata.is_file() || metadata.file_type().is_symlink() {
+        return Err(RenderError::Input(
+            "fresh capability evidence must be a regular non-symlink file".to_owned(),
+        ));
+    }
+    let modified = metadata.modified().map_err(|error| {
+        RenderError::Input(format!(
+            "cannot inspect fresh capability evidence timestamp: {error}"
+        ))
+    })?;
+    let age = SystemTime::now().duration_since(modified).map_err(|_| {
+        RenderError::Input("fresh capability evidence timestamp is in the future".to_owned())
+    })?;
+    if age > FRESH_CAPABILITY_RESOLUTION_MAX_AGE {
+        return Err(RenderError::Input(
+            "fresh capability evidence is older than 60 seconds".to_owned(),
+        ));
+    }
+    Ok(absolute)
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -440,17 +561,25 @@ pub fn execute_setup(request: &SetupRequest<'_>) -> Result<SetupOutcome, RenderE
     } else {
         planned_result?
     };
-    validate_owned_paths(planned.keys())?;
+    let projection_transition = prepare_projection_transition(&target_dir, &planned, &answers)?;
+    validate_owned_paths(
+        planned.keys(),
+        &projection_transition.desired,
+        projection_transition.previous.as_ref(),
+    )?;
     for path in planned.keys() {
-        ensure_no_symlink_ancestors(request.target, path)
-            .map_err(|error| RenderError::Conflict(error.to_string()))?;
+        ensure_managed_no_symlink_ancestors(request.target, path)?;
     }
-    let deletions =
+    let mut deletions =
         stale_hook_deletions(&target_dir, &answers.approved_fallback_hooks, &resolution)?;
-    validate_owned_paths(deletions.iter())?;
+    deletions.extend(projection_transition.deletions.iter().cloned());
+    validate_owned_paths(
+        deletions.iter(),
+        &projection_transition.desired,
+        projection_transition.previous.as_ref(),
+    )?;
     for path in &deletions {
-        ensure_no_symlink_ancestors(request.target, path)
-            .map_err(|error| RenderError::Conflict(error.to_string()))?;
+        ensure_managed_no_symlink_ancestors(request.target, path)?;
     }
 
     if request.mode == SetupMode::Validate {
@@ -483,6 +612,7 @@ pub fn execute_setup(request: &SetupRequest<'_>) -> Result<SetupOutcome, RenderE
                 &deletions,
                 &answers,
                 &resolution,
+                &projection_transition.expected_before,
             )?;
         }
         SetupMode::Apply | SetupMode::Validate => {}
@@ -508,8 +638,7 @@ trait TargetRead {
 
 impl TargetRead for Path {
     fn read_optional(&self, relative: &Path) -> Result<Option<Vec<u8>>, RenderError> {
-        ensure_no_symlink_ancestors(self, relative)
-            .map_err(|error| RenderError::Conflict(error.to_string()))?;
+        ensure_managed_no_symlink_ancestors(self, relative)?;
         let absolute = self.join(relative);
         match fs::symlink_metadata(&absolute) {
             Ok(metadata) if metadata.is_file() => {
@@ -683,8 +812,15 @@ fn validate_resolution(
     answers: &SetupAnswers,
     resolution: &CapabilityResolution,
 ) -> Result<(), RenderError> {
+    validate_resolution_host(&answers.primary_host, resolution)
+}
+
+fn validate_resolution_host(
+    expected_host: &str,
+    resolution: &CapabilityResolution,
+) -> Result<(), RenderError> {
     if resolution.schema_version != 1
-        || resolution.host != answers.primary_host
+        || resolution.host != expected_host
         || resolution.host_version.is_empty()
         || !matches!(
             resolution.surface.as_str(),
@@ -912,8 +1048,9 @@ fn validate_hook_approvals(
         };
         let expected_path = format!(".hive/hooks/{}", hook.capability);
         let expected_command = format!(
-            "hive hook --capability {} --event {expected_event} --output json",
-            hook.capability
+            "hive hook --capability {} --event {expected_event} \
+             --capabilities {FRESH_CAPABILITY_RESOLUTION_PATH} --output json",
+            hook.capability,
         );
         if hook.event != expected_event
             || hook.path != expected_path
@@ -990,6 +1127,14 @@ fn render_tree<T: TargetRead + ?Sized>(
     let mut files = BTreeMap::new();
     insert_static_files(&mut files);
     preserve_protected_seeds(target, &mut files)?;
+    let projection = compile_projection(
+        projection_host(&answers.primary_host)?,
+        &load_optional_skill_sources(target, &answers.approved_optional_skills)?,
+    )
+    .map_err(|error| map_projection_error(&error))?;
+    for (path, bytes) in projection.files {
+        files.insert(PathBuf::from(path), bytes);
+    }
     files.insert(
         PathBuf::from(".hive/setup-answers.yml"),
         render_setup_answers(answers)?,
@@ -1036,6 +1181,58 @@ fn render_tree<T: TargetRead + ?Sized>(
     files.insert(PathBuf::from("AGENTS.md"), merged);
     render_roles(target, answers, reconfigure_roles, &mut files)?;
     Ok(files)
+}
+
+fn projection_host(host: &str) -> Result<ProjectionHost, RenderError> {
+    match host {
+        "codex" => Ok(ProjectionHost::Codex),
+        "claude" => Ok(ProjectionHost::Claude),
+        "antigravity" => Ok(ProjectionHost::Antigravity),
+        _ => Err(RenderError::Input(format!(
+            "unsupported Skill projection host: {host}"
+        ))),
+    }
+}
+
+fn load_optional_skill_sources<T: TargetRead + ?Sized>(
+    target: &T,
+    approvals: &[SkillApproval],
+) -> Result<Vec<OptionalSkillSource>, RenderError> {
+    let mut sources = Vec::new();
+    for approval in approvals {
+        let Some(relative) = approval.source.strip_prefix("path:") else {
+            continue;
+        };
+        if approval.approved_capabilities != approval.requested_capabilities {
+            continue;
+        }
+        let relative = PathBuf::from(relative);
+        validate_project_relative(&relative)
+            .map_err(|error| RenderError::Safety(error.to_string()))?;
+        let skill_md = read_target_optional(target, &relative)?.ok_or_else(|| {
+            RenderError::Safety(format!(
+                "approved optional Skill source is missing: {}",
+                relative.display()
+            ))
+        })?;
+        sources.push(
+            optional_source_from_approval(approval, skill_md).map_err(|error| {
+                RenderError::Input(format!(
+                    "optional Skill approval cannot be projected: {error}"
+                ))
+            })?,
+        );
+    }
+    Ok(sources)
+}
+
+fn map_projection_error(error: &hive_projection::ProjectionError) -> RenderError {
+    match error.code() {
+        "hive.optional-skill-inert" => RenderError::Safety(error.to_string()),
+        "hive.skill-projection-conflict" => RenderError::Conflict(error.to_string()),
+        "hive.skill-catalog-invalid" => RenderError::Internal(error.to_string()),
+        _ => RenderError::Input(error.to_string()),
+    }
 }
 
 fn preserve_protected_seeds<T: TargetRead + ?Sized>(
@@ -1249,10 +1446,13 @@ fn encode_role(profile: &RoleProfile, body: &str) -> Result<Vec<u8>, RenderError
     Ok(format!("---\n{canonical}\n---\n{body}").into_bytes())
 }
 
-fn validate_owned_paths<'a>(paths: impl Iterator<Item = &'a PathBuf>) -> Result<(), RenderError> {
+fn validate_owned_paths<'a>(
+    paths: impl Iterator<Item = &'a PathBuf>,
+    desired_projection: &ValidatedProjectionOwnership,
+    previous_projection: Option<&ValidatedProjectionOwnership>,
+) -> Result<(), RenderError> {
     let manifest = ownership_manifest()?;
     for path in paths {
-        validate_project_relative(path).map_err(|error| RenderError::Input(error.to_string()))?;
         let entry = ownership_entry(&manifest, path)?;
         if !matches!(
             entry.ownership.as_str(),
@@ -1265,12 +1465,29 @@ fn validate_owned_paths<'a>(paths: impl Iterator<Item = &'a PathBuf>) -> Result<
                 | "rebuildable-runtime"
                 | "ephemeral-backup"
                 | "shared-marker"
+                | "hive-skill-projection"
         ) {
             return Err(RenderError::Internal(format!(
                 "unknown ownership class for {}: {}",
                 path.display(),
                 entry.ownership
             )));
+        }
+        if entry.ownership == "hive-skill-projection" {
+            validate_hive_skill_projection_relative(path)
+                .map_err(|error| RenderError::Input(error.to_string()))?;
+            let is_desired = desired_projection.files.contains_key(path);
+            let was_previously_proven =
+                previous_projection.is_some_and(|ownership| ownership.files.contains_key(path));
+            if !is_desired && !was_previously_proven {
+                return Err(RenderError::Safety(format!(
+                    "host Skill path matches the manifest shape but lacks exact Hive ownership proof: {}",
+                    path.display()
+                )));
+            }
+        } else {
+            validate_project_relative(path)
+                .map_err(|error| RenderError::Input(error.to_string()))?;
         }
         if entry.ownership == "shared-marker"
             && (entry.marker_start.as_deref() != Some(MARKER_START)
@@ -1282,6 +1499,24 @@ fn validate_owned_paths<'a>(paths: impl Iterator<Item = &'a PathBuf>) -> Result<
         }
     }
     Ok(())
+}
+
+fn validate_managed_relative(path: &Path) -> Result<(), RenderError> {
+    if is_hive_skill_projection_path(path) {
+        validate_hive_skill_projection_relative(path)
+            .map_err(|error| RenderError::Internal(error.to_string()))
+    } else {
+        validate_project_relative(path).map_err(|error| RenderError::Internal(error.to_string()))
+    }
+}
+
+fn ensure_managed_no_symlink_ancestors(target: &Path, relative: &Path) -> Result<(), RenderError> {
+    let result = if is_hive_skill_projection_path(relative) {
+        ensure_no_symlink_ancestors_for_hive_skill_projection(target, relative)
+    } else {
+        ensure_no_symlink_ancestors(target, relative)
+    };
+    result.map_err(|error| RenderError::Conflict(error.to_string()))
 }
 
 fn ownership_manifest() -> Result<OwnershipManifest, RenderError> {
@@ -1308,10 +1543,20 @@ fn ownership_entry<'a>(
 }
 
 fn manifest_pattern_matches(pattern: &str, path: &str) -> bool {
-    pattern
+    if pattern
         .strip_suffix("/**")
         .is_some_and(|prefix| path == prefix || path.starts_with(&format!("{prefix}/")))
         || pattern == path
+    {
+        return true;
+    }
+    let pattern_parts = pattern.split('/').collect::<Vec<_>>();
+    let path_parts = path.split('/').collect::<Vec<_>>();
+    pattern_parts.len() == path_parts.len()
+        && pattern_parts
+            .iter()
+            .zip(path_parts)
+            .all(|(expected, actual)| *expected == "*" || *expected == actual)
 }
 
 fn differing_paths<T: TargetRead + ?Sized>(
@@ -1334,6 +1579,259 @@ fn differing_paths<T: TargetRead + ?Sized>(
     changed.sort();
     changed.dedup();
     Ok(changed)
+}
+
+#[derive(Debug, Clone, Default)]
+struct ValidatedProjectionOwnership {
+    files: BTreeMap<PathBuf, Vec<u8>>,
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+enum ProjectionExpectedBefore {
+    Absent,
+    Exact(Vec<u8>),
+}
+
+#[derive(Clone, Copy)]
+enum ExactProjectionMutation<'a> {
+    Replace(&'a [u8]),
+    Delete,
+}
+
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
+enum ProjectionCleanupFault {
+    Replacement,
+    Deletion,
+}
+
+#[derive(Debug)]
+enum MutationOutcome {
+    Unchanged,
+    Applied,
+    AppliedWithCleanupError(RenderError),
+}
+
+struct ProjectionTransition {
+    desired: ValidatedProjectionOwnership,
+    previous: Option<ValidatedProjectionOwnership>,
+    expected_before: BTreeMap<PathBuf, ProjectionExpectedBefore>,
+    deletions: BTreeSet<PathBuf>,
+}
+
+fn prepare_projection_transition<T: TargetRead + ?Sized>(
+    target: &T,
+    desired_files: &BTreeMap<PathBuf, Vec<u8>>,
+    answers: &SetupAnswers,
+) -> Result<ProjectionTransition, RenderError> {
+    let desired = validate_desired_projection_ownership(desired_files, answers)?;
+    let active_path = Path::new(".hive/config/active-skills.yml");
+    if read_target_optional(target, active_path)?.is_none() {
+        let mut expected_before = BTreeMap::new();
+        for path in desired.files.keys() {
+            if read_target_optional(target, path)?.is_some() {
+                return Err(RenderError::Conflict(format!(
+                    "host Skill projection path is occupied without Hive ownership proof: {}",
+                    path.display()
+                )));
+            }
+            expected_before.insert(path.clone(), ProjectionExpectedBefore::Absent);
+        }
+        return Ok(ProjectionTransition {
+            desired,
+            previous: None,
+            expected_before,
+            deletions: BTreeSet::new(),
+        });
+    }
+
+    let installed_answers = read_installed_answers(target).map_err(|error| {
+        RenderError::Conflict(format!(
+            "existing Skill projection ownership cannot be verified: {error}"
+        ))
+    })?;
+    let previous = validate_projection_ownership(target, &installed_answers).map_err(|error| {
+        RenderError::Conflict(format!(
+            "existing Skill projection ownership cannot be verified: {error}"
+        ))
+    })?;
+
+    let mut expected_before = BTreeMap::new();
+    for path in desired.files.keys() {
+        if let Some(bytes) = previous.files.get(path) {
+            expected_before.insert(path.clone(), ProjectionExpectedBefore::Exact(bytes.clone()));
+        } else {
+            if read_target_optional(target, path)?.is_some() {
+                return Err(RenderError::Conflict(format!(
+                    "new host Skill projection collides with a foreign file: {}",
+                    path.display()
+                )));
+            }
+            expected_before.insert(path.clone(), ProjectionExpectedBefore::Absent);
+        }
+    }
+
+    let deletions = previous
+        .files
+        .keys()
+        .filter(|path| !desired.files.contains_key(*path))
+        .cloned()
+        .collect::<BTreeSet<_>>();
+    for path in &deletions {
+        let bytes = previous
+            .files
+            .get(path)
+            .expect("stale projection path comes from validated previous ownership");
+        expected_before.insert(path.clone(), ProjectionExpectedBefore::Exact(bytes.clone()));
+    }
+
+    Ok(ProjectionTransition {
+        desired,
+        previous: Some(previous),
+        expected_before,
+        deletions,
+    })
+}
+
+fn validate_desired_projection_ownership(
+    desired_files: &BTreeMap<PathBuf, Vec<u8>>,
+    answers: &SetupAnswers,
+) -> Result<ValidatedProjectionOwnership, RenderError> {
+    let active_path = Path::new(".hive/config/active-skills.yml");
+    let active_bytes = desired_files.get(active_path).cloned().ok_or_else(|| {
+        RenderError::Internal("compiled tree omitted its active Skill projection ledger".to_owned())
+    })?;
+    reproduce_projection_ownership(&active_bytes, answers, |relative, label| {
+        desired_files.get(relative).cloned().ok_or_else(|| {
+            RenderError::Internal(format!(
+                "compiled tree omitted required {label}: {}",
+                relative.display()
+            ))
+        })
+    })
+}
+
+fn validate_projection_ownership<T: TargetRead + ?Sized>(
+    target: &T,
+    answers: &SetupAnswers,
+) -> Result<ValidatedProjectionOwnership, RenderError> {
+    let active_path = Path::new(".hive/config/active-skills.yml");
+    let active_bytes = read_target_required(target, active_path, "active Skill projection ledger")?;
+    reproduce_projection_ownership(&active_bytes, answers, |relative, label| {
+        read_target_required(target, relative, label)
+    })
+}
+
+fn reproduce_projection_ownership(
+    active_bytes: &[u8],
+    answers: &SetupAnswers,
+    mut read_projected: impl FnMut(&Path, &str) -> Result<Vec<u8>, RenderError>,
+) -> Result<ValidatedProjectionOwnership, RenderError> {
+    let active: ActiveSkills = serde_yaml::from_slice(active_bytes).map_err(|error| {
+        RenderError::Verification(format!("invalid active Skill projection ledger: {error}"))
+    })?;
+    if active.schema_version != 1 {
+        return Err(RenderError::Verification(
+            "active Skill projection ledger schema_version must be 1".to_owned(),
+        ));
+    }
+
+    let host = projection_host(&answers.primary_host).map_err(as_verification)?;
+    let mut optional_sources = Vec::new();
+    let mut optional_names = BTreeSet::new();
+    for skill in active
+        .skills
+        .iter()
+        .filter(|skill| skill.source_type == SkillSourceType::ApprovedOptional)
+    {
+        if !optional_names.insert(skill.name.as_str()) {
+            return Err(RenderError::Verification(format!(
+                "active Skill projection ledger has duplicate name: {}",
+                skill.name
+            )));
+        }
+        let approvals = answers
+            .approved_optional_skills
+            .iter()
+            .filter(|approval| approval.name == skill.name)
+            .collect::<Vec<_>>();
+        if approvals.len() != 1 {
+            return Err(RenderError::Verification(format!(
+                "active optional Skill does not have one exact installed approval: {}",
+                skill.name
+            )));
+        }
+        let relative = projected_skill_path(host, &skill.name)?;
+        let skill_md = read_projected(&relative, "projected optional Skill")?;
+        optional_sources.push(optional_source_from_approval(approvals[0], skill_md)?);
+    }
+
+    let expected = compile_projection(host, &optional_sources).map_err(|error| {
+        RenderError::Verification(format!(
+            "active Skill projection cannot be reproduced: {error}"
+        ))
+    })?;
+    if expected.active_skills != active {
+        return Err(RenderError::Verification(
+            "active Skill projection ledger does not match installed approvals and built-ins"
+                .to_owned(),
+        ));
+    }
+    let expected_active = expected
+        .files
+        .get(".hive/config/active-skills.yml")
+        .ok_or_else(|| {
+            RenderError::Internal("compiled projection omitted its active ledger".to_owned())
+        })?;
+    if active_bytes != *expected_active {
+        return Err(RenderError::Verification(
+            "active Skill projection ledger bytes are not canonical".to_owned(),
+        ));
+    }
+
+    let mut files = BTreeMap::new();
+    for (path, expected_bytes) in expected.files {
+        let relative = PathBuf::from(path);
+        if !is_hive_skill_projection_path(&relative) {
+            continue;
+        }
+        validate_hive_skill_projection_relative(&relative)
+            .map_err(|error| RenderError::Verification(error.to_string()))?;
+        let installed = read_projected(&relative, "projected Skill")?;
+        if installed != expected_bytes {
+            return Err(RenderError::Verification(format!(
+                "projected Skill bytes changed: {}",
+                relative.display()
+            )));
+        }
+        files.insert(relative, installed);
+    }
+    Ok(ValidatedProjectionOwnership { files })
+}
+
+fn projected_skill_path(host: ProjectionHost, name: &str) -> Result<PathBuf, RenderError> {
+    let relative = PathBuf::from(format!("{}/{name}/SKILL.md", host.skill_root()));
+    validate_hive_skill_projection_relative(&relative)
+        .map_err(|error| RenderError::Verification(error.to_string()))?;
+    Ok(relative)
+}
+
+fn optional_source_from_approval(
+    approval: &SkillApproval,
+    skill_md: Vec<u8>,
+) -> Result<OptionalSkillSource, RenderError> {
+    let value = serde_json::to_value(approval).map_err(|error| {
+        RenderError::Internal(format!("cannot encode optional Skill approval: {error}"))
+    })?;
+    let consent: OptionalSkillConsent = serde_json::from_value(value).map_err(|error| {
+        RenderError::Verification(format!(
+            "invalid projected optional Skill approval: {error}"
+        ))
+    })?;
+    Ok(OptionalSkillSource {
+        consent,
+        source_locator: approval.source.clone(),
+        skill_md,
+    })
 }
 
 fn stale_hook_deletions<T: TargetRead + ?Sized>(
@@ -1439,6 +1937,7 @@ fn activate_staged(
     deletions: &BTreeSet<PathBuf>,
     answers: &SetupAnswers,
     resolution: &CapabilityResolution,
+    projection_expected_before: &BTreeMap<PathBuf, ProjectionExpectedBefore>,
 ) -> Result<(), RenderError> {
     activate_staged_impl(
         target,
@@ -1447,7 +1946,10 @@ fn activate_staged(
         deletions,
         answers,
         resolution,
+        projection_expected_before,
         activation_fault_from_environment(),
+        None,
+        None,
         None,
     )
 }
@@ -1456,6 +1958,7 @@ fn activate_staged(
 struct ActivationFault {
     fail_after_operations: usize,
     fail_rollback: bool,
+    projection_cleanup: Option<ProjectionCleanupFault>,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -1472,8 +1975,11 @@ fn activate_staged_impl(
     deletions: &BTreeSet<PathBuf>,
     answers: &SetupAnswers,
     resolution: &CapabilityResolution,
+    projection_expected_before: &BTreeMap<PathBuf, ProjectionExpectedBefore>,
     fault: Option<ActivationFault>,
     after_target_open: Option<&dyn Fn()>,
+    before_projection_claim: Option<&dyn Fn(&Path)>,
+    before_rollback: Option<&dyn Fn()>,
 ) -> Result<(), RenderError> {
     stage_and_validate(
         target,
@@ -1504,8 +2010,11 @@ fn activate_staged_impl(
                 &error,
                 target_dir,
                 &previous,
+                files,
                 &[],
                 &created_directories,
+                projection_expected_before,
+                before_rollback,
                 fault,
             );
         }
@@ -1519,21 +2028,75 @@ fn activate_staged_impl(
                 &RenderError::Internal("injected activation I/O failure".to_owned()),
                 target_dir,
                 &previous,
+                files,
                 &applied,
                 &created_directories,
+                projection_expected_before,
+                before_rollback,
                 fault,
             );
         }
-        applied.push(relative.clone());
-        if let Err(error) = replace_capability_file(target_dir, relative, bytes) {
-            return activation_failed(
-                &RenderError::Internal(format!("activation file replacement failed: {error}")),
+        let result = match projection_expected_before.get(relative) {
+            Some(ProjectionExpectedBefore::Absent) => verify_projection_expected_before(
                 target_dir,
-                &previous,
-                &applied,
-                &created_directories,
-                fault,
-            );
+                relative,
+                &ProjectionExpectedBefore::Absent,
+            )
+            .and_then(|()| {
+                create_capability_file_exclusive(target_dir, relative, bytes)
+                    .map_err(|error| RenderError::Conflict(error.to_string()))
+            })
+            .map(|()| MutationOutcome::Applied),
+            Some(ProjectionExpectedBefore::Exact(expected)) if expected == bytes => {
+                verify_projection_expected_before(
+                    target_dir,
+                    relative,
+                    &ProjectionExpectedBefore::Exact(expected.clone()),
+                )
+                .map(|()| MutationOutcome::Unchanged)
+            }
+            Some(ProjectionExpectedBefore::Exact(expected)) => mutate_exact_projection_claimed(
+                target_dir,
+                relative,
+                expected,
+                ExactProjectionMutation::Replace(bytes),
+                before_projection_claim,
+                fault.and_then(|value| value.projection_cleanup),
+            ),
+            None => replace_capability_file(target_dir, relative, bytes)
+                .map_err(|error| RenderError::Internal(error.to_string()))
+                .map(|()| MutationOutcome::Applied),
+        };
+        match result {
+            Ok(MutationOutcome::Applied) => applied.push(relative.clone()),
+            Ok(MutationOutcome::Unchanged) => {}
+            Ok(MutationOutcome::AppliedWithCleanupError(error)) => {
+                applied.push(relative.clone());
+                return activation_failed(
+                    &error,
+                    target_dir,
+                    &previous,
+                    files,
+                    &applied,
+                    &created_directories,
+                    projection_expected_before,
+                    before_rollback,
+                    fault,
+                );
+            }
+            Err(error) => {
+                return activation_failed(
+                    &error,
+                    target_dir,
+                    &previous,
+                    files,
+                    &applied,
+                    &created_directories,
+                    projection_expected_before,
+                    before_rollback,
+                    fault,
+                );
+            }
         }
         operation_count += 1;
     }
@@ -1543,19 +2106,80 @@ fn activate_staged_impl(
                 &RenderError::Internal("injected activation I/O failure".to_owned()),
                 target_dir,
                 &previous,
+                files,
                 &applied,
                 &created_directories,
+                projection_expected_before,
+                before_rollback,
                 fault,
             );
         }
-        if previous.get(relative).is_some_and(Option::is_some) {
+        if let Some(ProjectionExpectedBefore::Exact(expected)) =
+            projection_expected_before.get(relative)
+        {
+            match mutate_exact_projection_claimed(
+                target_dir,
+                relative,
+                expected,
+                ExactProjectionMutation::Delete,
+                before_projection_claim,
+                fault.and_then(|value| value.projection_cleanup),
+            ) {
+                Ok(MutationOutcome::Applied) => applied.push(relative.clone()),
+                Ok(MutationOutcome::AppliedWithCleanupError(error)) => {
+                    applied.push(relative.clone());
+                    return activation_failed(
+                        &error,
+                        target_dir,
+                        &previous,
+                        files,
+                        &applied,
+                        &created_directories,
+                        projection_expected_before,
+                        before_rollback,
+                        fault,
+                    );
+                }
+                Ok(MutationOutcome::Unchanged) => {
+                    return activation_failed(
+                        &RenderError::Internal(
+                            "projection deletion unexpectedly reported no live change".to_owned(),
+                        ),
+                        target_dir,
+                        &previous,
+                        files,
+                        &applied,
+                        &created_directories,
+                        projection_expected_before,
+                        before_rollback,
+                        fault,
+                    );
+                }
+                Err(error) => {
+                    return activation_failed(
+                        &error,
+                        target_dir,
+                        &previous,
+                        files,
+                        &applied,
+                        &created_directories,
+                        projection_expected_before,
+                        before_rollback,
+                        fault,
+                    );
+                }
+            }
+        } else if previous.get(relative).is_some_and(Option::is_some) {
             if let Err(error) = remove_capability_file(target_dir, relative) {
                 return activation_failed(
                     &RenderError::Internal(format!("activation deletion failed: {error}")),
                     target_dir,
                     &previous,
+                    files,
                     &applied,
                     &created_directories,
+                    projection_expected_before,
+                    before_rollback,
                     fault,
                 );
             }
@@ -1570,8 +2194,11 @@ fn activate_staged_impl(
             &error,
             target_dir,
             &previous,
+            files,
             &applied,
             &created_directories,
+            projection_expected_before,
+            before_rollback,
             fault,
         );
     }
@@ -1679,8 +2306,16 @@ fn capability_parent(
     create_missing: bool,
     created_directories: &mut Vec<PathBuf>,
 ) -> Result<Option<(Dir, OsString)>, RenderError> {
-    validate_project_relative(relative)
-        .map_err(|error| RenderError::Internal(error.to_string()))?;
+    validate_managed_relative(relative)?;
+    capability_parent_validated(target, relative, create_missing, created_directories)
+}
+
+fn capability_parent_validated(
+    target: &Dir,
+    relative: &Path,
+    create_missing: bool,
+    created_directories: &mut Vec<PathBuf>,
+) -> Result<Option<(Dir, OsString)>, RenderError> {
     let file_name = relative
         .file_name()
         .ok_or_else(|| RenderError::Internal("managed file has no name".to_owned()))?
@@ -1756,6 +2391,361 @@ fn read_capability_optional(target: &Dir, relative: &Path) -> Result<Option<Vec<
             "managed file path is occupied by a non-file: {}",
             relative.display()
         ))),
+    }
+}
+
+fn verify_projection_expected_before(
+    target: &Dir,
+    relative: &Path,
+    expected: &ProjectionExpectedBefore,
+) -> Result<(), RenderError> {
+    validate_hive_skill_projection_relative(relative)
+        .map_err(|error| RenderError::Conflict(error.to_string()))?;
+    let current = read_capability_optional(target, relative)?;
+    let matches = match (expected, current.as_deref()) {
+        (ProjectionExpectedBefore::Absent, None) => true,
+        (ProjectionExpectedBefore::Exact(expected), Some(current)) => current == expected,
+        (ProjectionExpectedBefore::Absent, Some(_))
+        | (ProjectionExpectedBefore::Exact(_), None) => false,
+    };
+    if matches {
+        Ok(())
+    } else {
+        Err(RenderError::Conflict(format!(
+            "host Skill projection changed after ownership preflight: {}",
+            relative.display()
+        )))
+    }
+}
+
+struct ProjectionClaim {
+    parent: Dir,
+    quarantine: Option<Dir>,
+    quarantine_name: OsString,
+    destination_name: OsString,
+    recovery_path: PathBuf,
+}
+
+fn mutate_exact_projection_claimed(
+    target: &Dir,
+    relative: &Path,
+    expected: &[u8],
+    mutation: ExactProjectionMutation<'_>,
+    before_claim: Option<&dyn Fn(&Path)>,
+    cleanup_fault: Option<ProjectionCleanupFault>,
+) -> Result<MutationOutcome, RenderError> {
+    verify_projection_expected_before(
+        target,
+        relative,
+        &ProjectionExpectedBefore::Exact(expected.to_vec()),
+    )?;
+    if let Some(barrier) = before_claim {
+        barrier(relative);
+    }
+    let claim = claim_projection_destination(target, relative)?;
+    let claimed = read_claimed_projection(&claim)?;
+    if claimed != expected {
+        return Err(projection_claim_conflict(
+            claim,
+            relative,
+            "claimed bytes differ from the exact ownership proof",
+        ));
+    }
+
+    match mutation {
+        ExactProjectionMutation::Replace(bytes) => publish_claimed_projection_replacement(
+            claim,
+            relative,
+            bytes,
+            cleanup_fault == Some(ProjectionCleanupFault::Replacement),
+        ),
+        ExactProjectionMutation::Delete => Ok(finish_claimed_projection_deletion(
+            claim,
+            relative,
+            cleanup_fault == Some(ProjectionCleanupFault::Deletion),
+        )),
+    }
+}
+
+fn claim_projection_destination(
+    target: &Dir,
+    relative: &Path,
+) -> Result<ProjectionClaim, RenderError> {
+    validate_hive_skill_projection_relative(relative)
+        .map_err(|error| RenderError::Conflict(error.to_string()))?;
+    let mut created = Vec::new();
+    let (parent, destination_name) = capability_parent(target, relative, false, &mut created)?
+        .ok_or_else(|| {
+            RenderError::Conflict(format!(
+                "host Skill projection disappeared before it could be claimed: {}",
+                relative.display()
+            ))
+        })?;
+    let (quarantine, quarantine_name) = create_projection_quarantine(&parent).map_err(|error| {
+        RenderError::Conflict(format!(
+            "cannot allocate a private projection quarantine for {}: {error}",
+            relative.display()
+        ))
+    })?;
+    if let Err(error) = parent.rename(
+        &destination_name,
+        &quarantine,
+        OsStr::new("claimed-SKILL.md"),
+    ) {
+        drop(quarantine);
+        let _ = parent.remove_dir(&quarantine_name);
+        return Err(RenderError::Conflict(format!(
+            "host Skill projection changed before atomic claim at {}: {error}",
+            relative.display()
+        )));
+    }
+    let recovery_path = relative
+        .parent()
+        .unwrap_or_else(|| Path::new(""))
+        .join(&quarantine_name)
+        .join("claimed-SKILL.md");
+    Ok(ProjectionClaim {
+        parent,
+        quarantine: Some(quarantine),
+        quarantine_name,
+        destination_name,
+        recovery_path,
+    })
+}
+
+fn create_projection_quarantine(parent: &Dir) -> io::Result<(Dir, OsString)> {
+    for _ in 0..128 {
+        let counter = ACTIVATION_TEMP_COUNTER.fetch_add(1, Ordering::Relaxed);
+        let epoch_nanos = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map_or(0, |duration| duration.as_nanos());
+        let name = OsString::from(format!(
+            ".aigent-hive-claim-{}-{epoch_nanos:x}-{counter:x}",
+            std::process::id()
+        ));
+        match parent.create_dir(&name) {
+            Ok(()) => match parent.open_dir_nofollow(&name) {
+                Ok(directory) => return Ok((directory, name)),
+                Err(error) => {
+                    let _ = parent.remove_dir(&name);
+                    return Err(error);
+                }
+            },
+            Err(error) if error.kind() == io::ErrorKind::AlreadyExists => {}
+            Err(error) => return Err(error),
+        }
+    }
+    Err(io::Error::new(
+        io::ErrorKind::AlreadyExists,
+        "cannot allocate an exclusive projection quarantine",
+    ))
+}
+
+fn read_claimed_projection(claim: &ProjectionClaim) -> Result<Vec<u8>, RenderError> {
+    let quarantine = claim
+        .quarantine
+        .as_ref()
+        .expect("live projection claim retains its quarantine handle");
+    let mut file = open_capability_file_nofollow(quarantine, OsStr::new("claimed-SKILL.md"))
+        .map_err(|error| {
+            RenderError::Conflict(format!(
+                "claimed projection cannot be opened no-follow at {}: {error}",
+                claim.recovery_path.display()
+            ))
+        })?;
+    let mut bytes = Vec::new();
+    file.read_to_end(&mut bytes).map_err(|error| {
+        RenderError::Conflict(format!(
+            "claimed projection cannot be read at {}: {error}",
+            claim.recovery_path.display()
+        ))
+    })?;
+    Ok(bytes)
+}
+
+fn projection_claim_conflict(claim: ProjectionClaim, relative: &Path, reason: &str) -> RenderError {
+    let recovery_path = claim.recovery_path.clone();
+    match restore_projection_claim(claim) {
+        Ok(()) => RenderError::Conflict(format!(
+            "{reason} at {}; racing bytes were restored without overwrite",
+            relative.display()
+        )),
+        Err(error) => RenderError::Conflict(format!(
+            "{reason} at {}; every claimed byte remains recoverable at {} because non-overwriting restore failed: {error}",
+            relative.display(),
+            recovery_path.display()
+        )),
+    }
+}
+
+fn restore_projection_claim(mut claim: ProjectionClaim) -> io::Result<()> {
+    let quarantine = claim
+        .quarantine
+        .as_ref()
+        .expect("live projection claim retains its quarantine handle");
+    quarantine.hard_link(
+        OsStr::new("claimed-SKILL.md"),
+        &claim.parent,
+        &claim.destination_name,
+    )?;
+    quarantine.remove_file(OsStr::new("claimed-SKILL.md"))?;
+    drop(claim.quarantine.take());
+    claim.parent.remove_dir(&claim.quarantine_name)
+}
+
+fn publish_claimed_projection_replacement(
+    mut claim: ProjectionClaim,
+    relative: &Path,
+    bytes: &[u8],
+    inject_cleanup_failure: bool,
+) -> Result<MutationOutcome, RenderError> {
+    let temporary_name = match create_capability_temporary(
+        &claim.parent,
+        ".aigent-hive-projection-publish",
+        bytes,
+    ) {
+        Ok(name) => name,
+        Err(error) => {
+            return Err(projection_claim_conflict(
+                claim,
+                relative,
+                &format!("cannot stage exact projection replacement: {error}"),
+            ));
+        }
+    };
+    if let Err(error) =
+        claim
+            .parent
+            .hard_link(&temporary_name, &claim.parent, &claim.destination_name)
+    {
+        let _ = claim.parent.remove_file(&temporary_name);
+        return Err(projection_claim_conflict(
+            claim,
+            relative,
+            &format!("exclusive projection publication was blocked: {error}"),
+        ));
+    }
+    if inject_cleanup_failure {
+        return Ok(MutationOutcome::AppliedWithCleanupError(
+            RenderError::Rollback(format!(
+                "injected projection replacement cleanup failure after publication at {}; prior exact bytes remain recoverable at {}",
+                relative.display(),
+                claim.recovery_path.display()
+            )),
+        ));
+    }
+    if let Err(error) = claim.parent.remove_file(&temporary_name) {
+        return Ok(MutationOutcome::AppliedWithCleanupError(
+            RenderError::Rollback(format!(
+                "projection replacement published at {}, but private temporary cleanup failed; prior exact bytes remain recoverable at {}: {error}",
+                relative.display(),
+                claim.recovery_path.display()
+            )),
+        ));
+    }
+    if let Err(error) = claim
+        .quarantine
+        .as_ref()
+        .expect("live projection claim retains its quarantine handle")
+        .remove_file(OsStr::new("claimed-SKILL.md"))
+    {
+        return Ok(MutationOutcome::AppliedWithCleanupError(
+            RenderError::Rollback(format!(
+                "projection replacement published at {}, while prior exact bytes remain recoverable at {} because quarantine cleanup failed: {error}",
+                relative.display(),
+                claim.recovery_path.display()
+            )),
+        ));
+    }
+    drop(claim.quarantine.take());
+    if let Err(error) = claim.parent.remove_dir(&claim.quarantine_name) {
+        return Ok(MutationOutcome::AppliedWithCleanupError(
+            RenderError::Rollback(format!(
+                "projection replacement published at {}, but its empty private quarantine could not be removed: {error}",
+                relative.display()
+            )),
+        ));
+    }
+    Ok(MutationOutcome::Applied)
+}
+
+fn finish_claimed_projection_deletion(
+    mut claim: ProjectionClaim,
+    relative: &Path,
+    inject_cleanup_failure: bool,
+) -> MutationOutcome {
+    if inject_cleanup_failure {
+        return MutationOutcome::AppliedWithCleanupError(RenderError::Rollback(format!(
+                "injected projection deletion cleanup failure after atomic claim at {}; prior exact bytes remain recoverable at {}",
+                relative.display(),
+                claim.recovery_path.display()
+            )));
+    }
+    match claim.parent.symlink_metadata(&claim.destination_name) {
+        Err(error) if error.kind() == io::ErrorKind::NotFound => {}
+        Ok(_) => {
+            return MutationOutcome::AppliedWithCleanupError(RenderError::Rollback(format!(
+                    "concurrent destination appeared while deleting {}; prior exact bytes remain recoverable at {}",
+                    relative.display(),
+                    claim.recovery_path.display()
+                )));
+        }
+        Err(error) => {
+            return MutationOutcome::AppliedWithCleanupError(RenderError::Rollback(format!(
+                    "cannot verify exclusive deletion destination at {}; prior exact bytes remain recoverable at {}: {error}",
+                    relative.display(),
+                    claim.recovery_path.display()
+                )));
+        }
+    }
+    if let Err(error) = claim
+        .quarantine
+        .as_ref()
+        .expect("live projection claim retains its quarantine handle")
+        .remove_file(OsStr::new("claimed-SKILL.md"))
+    {
+        return MutationOutcome::AppliedWithCleanupError(RenderError::Rollback(format!(
+                "projection deletion could not finalize at {}; exact bytes remain recoverable at {}: {error}",
+                relative.display(),
+                claim.recovery_path.display()
+            )));
+    }
+    drop(claim.quarantine.take());
+    if let Err(error) = claim.parent.remove_dir(&claim.quarantine_name) {
+        return MutationOutcome::AppliedWithCleanupError(RenderError::Rollback(format!(
+                "projection deletion completed at {}, but its empty private quarantine could not be removed: {error}",
+                relative.display()
+            )));
+    }
+    MutationOutcome::Applied
+}
+
+fn create_capability_file_exclusive(
+    target: &Dir,
+    destination: &Path,
+    bytes: &[u8],
+) -> io::Result<()> {
+    let mut created = Vec::new();
+    let (parent, file_name) = capability_parent(target, destination, false, &mut created)
+        .map_err(|error| render_error_to_io(&error))?
+        .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "managed parent is missing"))?;
+    let mut options = OpenOptions::new();
+    options.write(true).create_new(true);
+    options.follow(FollowSymlinks::No);
+    match parent.open_with(&file_name, &options) {
+        Ok(mut file) => {
+            if let Err(error) = file
+                .write_all(bytes)
+                .and_then(|()| file.flush())
+                .and_then(|()| file.sync_all())
+            {
+                drop(file);
+                let _ = parent.remove_file(&file_name);
+                return Err(error);
+            }
+            Ok(())
+        }
+        Err(error) => Err(error),
     }
 }
 
@@ -1917,6 +2907,31 @@ fn remove_capability_directory(target: &Dir, relative: &Path) -> io::Result<()> 
     }
 }
 
+fn remove_created_capability_directory(
+    target: &Dir,
+    relative: &Path,
+    projection_expected_before: &BTreeMap<PathBuf, ProjectionExpectedBefore>,
+) -> io::Result<()> {
+    let is_proven_projection_ancestor = projection_expected_before
+        .keys()
+        .any(|path| path.starts_with(relative) && path != relative);
+    if !is_proven_projection_ancestor {
+        return remove_capability_directory(target, relative);
+    }
+    let mut created = Vec::new();
+    let Some((parent, directory_name)) =
+        capability_parent_validated(target, relative, false, &mut created)
+            .map_err(|error| render_error_to_io(&error))?
+    else {
+        return Ok(());
+    };
+    match parent.remove_dir(directory_name) {
+        Ok(()) => Ok(()),
+        Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(()),
+        Err(error) => Err(error),
+    }
+}
+
 fn validate_capability_activation(
     target: &Dir,
     planned: &BTreeMap<PathBuf, Vec<u8>>,
@@ -1970,12 +2985,16 @@ fn capability_tree_digest(target: &Dir) -> Result<String, RenderError> {
     for entry in manifest.paths {
         if let Some(prefix) = entry.pattern.strip_suffix("/**") {
             collect_capability_owned_files(target, Path::new(prefix), &mut entries)?;
-        } else {
+        } else if !entry.pattern.contains('*') {
             let relative = PathBuf::from(entry.pattern);
             if let Some(bytes) = read_capability_optional(target, &relative)? {
                 entries.insert(relative, bytes);
             }
         }
+    }
+    if read_target_optional(target, Path::new(".hive/config/active-skills.yml"))?.is_some() {
+        let answers = read_installed_answers(target)?;
+        entries.extend(validate_projection_ownership(target, &answers)?.files);
     }
     Ok(digest_tree(&entries))
 }
@@ -2063,14 +3082,252 @@ fn open_capability_child_directory(
     })
 }
 
+struct ProjectionRecovery {
+    parent: Dir,
+    quarantine: Option<Dir>,
+    quarantine_name: OsString,
+    destination_name: OsString,
+    recovery_path: PathBuf,
+}
+
+fn stage_projection_recovery(
+    target: &Dir,
+    relative: &Path,
+    bytes: &[u8],
+) -> Result<ProjectionRecovery, RenderError> {
+    validate_hive_skill_projection_relative(relative)
+        .map_err(|error| RenderError::Rollback(error.to_string()))?;
+    let mut created = Vec::new();
+    let (parent, destination_name) = capability_parent(target, relative, false, &mut created)?
+        .ok_or_else(|| {
+            RenderError::Rollback(format!(
+                "projection rollback parent is missing: {}",
+                relative.display()
+            ))
+        })?;
+    let (quarantine, quarantine_name) = create_projection_quarantine(&parent).map_err(|error| {
+        RenderError::Rollback(format!(
+            "cannot allocate projection rollback recovery for {}: {error}",
+            relative.display()
+        ))
+    })?;
+    let recovery_name = OsStr::new("prior-SKILL.md");
+    let mut options = OpenOptions::new();
+    options.write(true).create_new(true);
+    options.follow(FollowSymlinks::No);
+    let mut file = match quarantine.open_with(recovery_name, &options) {
+        Ok(file) => file,
+        Err(error) => {
+            drop(quarantine);
+            let _ = parent.remove_dir(&quarantine_name);
+            return Err(RenderError::Rollback(format!(
+                "cannot create projection rollback recovery for {}: {error}",
+                relative.display()
+            )));
+        }
+    };
+    if let Err(error) = file
+        .write_all(bytes)
+        .and_then(|()| file.flush())
+        .and_then(|()| file.sync_all())
+    {
+        drop(file);
+        let _ = quarantine.remove_file(recovery_name);
+        drop(quarantine);
+        let _ = parent.remove_dir(&quarantine_name);
+        return Err(RenderError::Rollback(format!(
+            "cannot persist projection rollback recovery for {}: {error}",
+            relative.display()
+        )));
+    }
+    drop(file);
+    let recovery_path = relative
+        .parent()
+        .unwrap_or_else(|| Path::new(""))
+        .join(&quarantine_name)
+        .join(recovery_name);
+    Ok(ProjectionRecovery {
+        parent,
+        quarantine: Some(quarantine),
+        quarantine_name,
+        destination_name,
+        recovery_path,
+    })
+}
+
+fn cleanup_projection_recovery(mut recovery: ProjectionRecovery) -> io::Result<()> {
+    recovery
+        .quarantine
+        .as_ref()
+        .expect("live projection recovery retains its quarantine handle")
+        .remove_file(OsStr::new("prior-SKILL.md"))?;
+    drop(recovery.quarantine.take());
+    recovery.parent.remove_dir(&recovery.quarantine_name)
+}
+
+fn rollback_projection(
+    target: &Dir,
+    relative: &Path,
+    prior: Option<&[u8]>,
+    published: Option<&[u8]>,
+) -> Result<(), RenderError> {
+    match (prior, published) {
+        (Some(prior), Some(published)) => {
+            rollback_replaced_projection(target, relative, prior, published)
+        }
+        (None, Some(published)) => rollback_created_projection(target, relative, published),
+        (Some(prior), None) => rollback_deleted_projection(target, relative, prior),
+        (None, None) => Err(RenderError::Rollback(format!(
+            "{}: projection rollback has neither prior nor published bytes",
+            relative.display()
+        ))),
+    }
+}
+
+fn rollback_replaced_projection(
+    target: &Dir,
+    relative: &Path,
+    prior: &[u8],
+    published: &[u8],
+) -> Result<(), RenderError> {
+    let recovery = stage_projection_recovery(target, relative, prior)?;
+    let recovery_path = recovery.recovery_path.clone();
+    match mutate_exact_projection_claimed(
+        target,
+        relative,
+        published,
+        ExactProjectionMutation::Replace(prior),
+        None,
+        None,
+    ) {
+        Ok(MutationOutcome::Applied) => {
+            cleanup_projection_recovery(recovery).map_err(|error| {
+                RenderError::Rollback(format!(
+                    "{}: prior bytes were restored, but private rollback recovery cleanup failed at {}: {error}",
+                    relative.display(),
+                    recovery_path.display()
+                ))
+            })
+        }
+        Ok(MutationOutcome::AppliedWithCleanupError(error)) => {
+            let recovery_cleanup = cleanup_projection_recovery(recovery)
+                .err()
+                .map(|cleanup| format!("; rollback recovery cleanup also failed: {cleanup}"))
+                .unwrap_or_default();
+            Err(RenderError::Rollback(format!(
+                "{}: prior bytes were restored, but reverse projection cleanup remains incomplete: {error}{recovery_cleanup}",
+                relative.display()
+            )))
+        }
+        Ok(MutationOutcome::Unchanged) => Err(RenderError::Rollback(format!(
+            "{}: projection rollback unexpectedly reported no live change",
+            relative.display()
+        ))),
+        Err(error) => {
+            drop(recovery);
+            Err(RenderError::Rollback(format!(
+                "{}: live post-activation bytes changed before rollback; live/claimed bytes were preserved and prior bytes remain recoverable at {}: {error}",
+                relative.display(),
+                recovery_path.display()
+            )))
+        }
+    }
+}
+
+fn rollback_created_projection(
+    target: &Dir,
+    relative: &Path,
+    published: &[u8],
+) -> Result<(), RenderError> {
+    mutate_exact_projection_claimed(
+        target,
+        relative,
+        published,
+        ExactProjectionMutation::Delete,
+        None,
+        None,
+    )
+    .and_then(|outcome| match outcome {
+        MutationOutcome::Applied => Ok(()),
+        MutationOutcome::AppliedWithCleanupError(error) => Err(RenderError::Rollback(format!(
+            "{}: newly created projection was removed, but reverse cleanup remains incomplete: {error}",
+            relative.display()
+        ))),
+        MutationOutcome::Unchanged => Err(RenderError::Rollback(format!(
+            "{}: new projection rollback unexpectedly reported no live change",
+            relative.display()
+        ))),
+    })
+    .map_err(|error| match error {
+        RenderError::Rollback(message) => RenderError::Rollback(message),
+        other => RenderError::Rollback(format!(
+            "{}: newly created projection changed before rollback and was preserved: {other}",
+            relative.display()
+        )),
+    })
+}
+
+fn rollback_deleted_projection(
+    target: &Dir,
+    relative: &Path,
+    prior: &[u8],
+) -> Result<(), RenderError> {
+    let recovery = stage_projection_recovery(target, relative, prior)?;
+    let recovery_path = recovery.recovery_path.clone();
+    let quarantine = recovery
+        .quarantine
+        .as_ref()
+        .expect("live projection recovery retains its quarantine handle");
+    match quarantine.hard_link(
+        OsStr::new("prior-SKILL.md"),
+        &recovery.parent,
+        &recovery.destination_name,
+    ) {
+        Ok(()) => cleanup_projection_recovery(recovery).map_err(|error| {
+            RenderError::Rollback(format!(
+                "{}: deleted projection bytes were restored, but private rollback recovery cleanup failed at {}: {error}",
+                relative.display(),
+                recovery_path.display()
+            ))
+        }),
+        Err(error) => {
+            drop(recovery);
+            Err(RenderError::Rollback(format!(
+                "{}: rollback refused to overwrite a newly occupied projection path; live bytes remain and prior bytes are recoverable at {}: {error}",
+                relative.display(),
+                recovery_path.display()
+            )))
+        }
+    }
+}
+
 fn rollback(
     target: &Dir,
     previous: &BTreeMap<PathBuf, Option<Vec<u8>>>,
+    planned: &BTreeMap<PathBuf, Vec<u8>>,
     applied: &[PathBuf],
     created_directories: &[PathBuf],
+    projection_expected_before: &BTreeMap<PathBuf, ProjectionExpectedBefore>,
 ) -> Result<(), RenderError> {
     let mut errors = Vec::new();
     for relative in applied.iter().rev() {
+        if is_hive_skill_projection_path(relative) {
+            let prior = previous.get(relative).ok_or_else(|| {
+                RenderError::Rollback(format!(
+                    "hive.activation-rollback-failed: {}: missing projection activation snapshot",
+                    relative.display()
+                ))
+            })?;
+            if let Err(error) = rollback_projection(
+                target,
+                relative,
+                prior.as_deref(),
+                planned.get(relative).map(Vec::as_slice),
+            ) {
+                errors.push(error.to_string());
+            }
+            continue;
+        }
         match previous.get(relative) {
             Some(Some(content)) => {
                 if let Err(error) = replace_capability_file(target, relative, content) {
@@ -2091,7 +3348,9 @@ fn rollback(
         }
     }
     for directory in created_directories.iter().rev() {
-        if let Err(error) = remove_capability_directory(target, directory) {
+        if let Err(error) =
+            remove_created_capability_directory(target, directory, projection_expected_before)
+        {
             errors.push(format!("{}: {error}", directory.display()));
         }
     }
@@ -2105,12 +3364,16 @@ fn rollback(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn activation_failed(
     original: &RenderError,
     target: &Dir,
     previous: &BTreeMap<PathBuf, Option<Vec<u8>>>,
+    planned: &BTreeMap<PathBuf, Vec<u8>>,
     applied: &[PathBuf],
     created_directories: &[PathBuf],
+    projection_expected_before: &BTreeMap<PathBuf, ProjectionExpectedBefore>,
+    before_rollback: Option<&dyn Fn()>,
     fault: Option<ActivationFault>,
 ) -> Result<(), RenderError> {
     #[cfg(debug_assertions)]
@@ -2119,10 +3382,26 @@ fn activation_failed(
             "hive.activation-rollback-failed: injected rollback failure".to_owned(),
         ));
     }
-    rollback(target, previous, applied, created_directories)?;
-    Err(RenderError::Internal(format!(
-        "activation failed and was rolled back to the prior generation: {original}"
-    )))
+    if let Some(barrier) = before_rollback {
+        barrier();
+    }
+    rollback(
+        target,
+        previous,
+        planned,
+        applied,
+        created_directories,
+        projection_expected_before,
+    )?;
+    let message =
+        format!("activation failed and was rolled back to the prior generation: {original}");
+    match original {
+        RenderError::Rollback(_) => Err(RenderError::Rollback(format!(
+            "{original}; live paths were rolled back but projection cleanup evidence remains"
+        ))),
+        RenderError::Conflict(_) => Err(RenderError::Conflict(message)),
+        _ => Err(RenderError::Internal(message)),
+    }
 }
 
 fn render_error_to_io(error: &RenderError) -> io::Error {
@@ -2151,6 +3430,7 @@ fn activation_fault_from_environment() -> Option<ActivationFault> {
         Some(ActivationFault {
             fail_after_operations,
             fail_rollback,
+            projection_cleanup: None,
         })
     }
     #[cfg(not(debug_assertions))]
@@ -2208,6 +3488,7 @@ fn validate_installed(target: &Path) -> Result<(), RenderError> {
             "installed Skill ledger does not match setup approvals".to_owned(),
         ));
     }
+    validate_projection_ownership(target, &installed_answers).map_err(as_verification)?;
 
     let hooks_relative = Path::new(".hive/config/approved-hooks.yml");
     let installed_hook_bytes =
@@ -2488,12 +3769,16 @@ fn installed_tree_digest(target: &Path) -> Result<String, RenderError> {
     for entry in manifest.paths {
         if let Some(prefix) = entry.pattern.strip_suffix("/**") {
             collect_owned_files(target, Path::new(prefix), &mut entries)?;
-        } else {
+        } else if !entry.pattern.contains('*') {
             let relative = PathBuf::from(entry.pattern);
             if let Some(bytes) = read_target_optional(target, &relative)? {
                 entries.insert(relative, bytes);
             }
         }
+    }
+    if read_target_optional(target, Path::new(".hive/config/active-skills.yml"))?.is_some() {
+        let answers = read_installed_answers(target)?;
+        entries.extend(validate_projection_ownership(target, &answers)?.files);
     }
     Ok(digest_tree(&entries))
 }
@@ -2716,6 +4001,12 @@ capabilities:\n",
     let capabilities = serde_yaml::to_string(&resolution.capabilities)
         .map_err(|error| RenderError::Internal(format!("cannot render YAML: {error}")))?;
     output.push_str(&indent_yaml(&capabilities, 2));
+    if let Some(hook_events) = &resolution.hook_events {
+        output.push_str("hook_events:\n");
+        let hook_events = serde_yaml::to_string(hook_events)
+            .map_err(|error| RenderError::Internal(format!("cannot render YAML: {error}")))?;
+        output.push_str(&indent_yaml(&hook_events, 2));
+    }
     output.push_str("evidence_digest: ");
     output.push_str(&quote(&resolution.evidence_digest));
     output.push_str("\nevidence:\n");
@@ -2888,15 +4179,19 @@ fn io_internal(error: io::Error) -> RenderError {
 #[cfg(test)]
 mod tests {
     use super::{
-        activate_staged_impl, calculate_consent_digest, derive_resolution, encode_role,
-        execute_setup, hook_descriptor_bytes, installed_tree_digest, load_answers, load_resolution,
-        merge_shared_marker, open_target_capability, parse_role, render_tree,
+        activate_staged_impl, authorize_hook, authorize_hook_with_resolution,
+        calculate_consent_digest, capability_detection, derive_resolution, encode_role,
+        execute_setup, expected_external_runtime, hook_descriptor_bytes, installed_tree_digest,
+        load_answers, load_resolution, merge_shared_marker, mutate_exact_projection_claimed,
+        open_target_capability, parse_role, prepare_projection_transition, render_tree,
         replace_capability_file_impl, valid_digest, valid_role_id, valid_timestamp,
-        validate_hook_approvals, validate_skill_approvals, ActivationFault, CapabilityEvidence,
-        CapabilityResolution, HookApproval, ReplacePolicy, RoleProfile, RoleSeed, SetupMode,
-        SetupRequest, SkillApproval, MARKER_END, MARKER_START,
+        validate_hook_approvals, validate_owned_paths, validate_skill_approvals, ActivationFault,
+        CapabilityEvidence, CapabilityResolution, ExactProjectionMutation, HookApproval,
+        HookAuthorization, ProjectionCleanupFault, ReplacePolicy, RoleProfile, RoleSeed,
+        SetupAnswers, SetupMode, SetupRequest, SkillApproval, ValidatedProjectionOwnership,
+        FRESH_CAPABILITY_RESOLUTION_PATH, MARKER_END, MARKER_START,
     };
-    use hive_core::sha256_digest;
+    use hive_core::{sha256_digest, validate_project_relative};
     use serde_json::Value as JsonValue;
     use std::collections::{BTreeMap, BTreeSet};
     use std::path::{Path, PathBuf};
@@ -2905,6 +4200,12 @@ mod tests {
     fn fixture(name: &str) -> PathBuf {
         Path::new(env!("CARGO_MANIFEST_DIR"))
             .join("../../tests/fixtures/phase1")
+            .join(name)
+    }
+
+    fn phase3_fixture(name: &str) -> PathBuf {
+        Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../tests/fixtures/phase3")
             .join(name)
     }
 
@@ -3015,6 +4316,81 @@ mod tests {
         approval
     }
 
+    fn optional_skill_bytes(version: &str) -> Vec<u8> {
+        format!(
+            "---\nname: local-inspect\ndescription: Inspect local fixture state without network access.\n---\n\n# Local Inspect\n\nVersion {version}.\n"
+        )
+        .into_bytes()
+    }
+
+    fn signed_local_skill(bytes: &[u8]) -> SkillApproval {
+        let digest = sha256_digest(bytes);
+        let mut approval = SkillApproval {
+            consent_version: 1,
+            name: "local-inspect".to_owned(),
+            source: "path:vendor-skills/local-inspect/SKILL.md".to_owned(),
+            revision: digest.clone(),
+            content_digest: digest,
+            requested_capabilities: vec!["filesystem-read".to_owned()],
+            approved_capabilities: vec!["filesystem-read".to_owned()],
+            approved_at: "2026-07-23T00:00:00Z".to_owned(),
+            consent_digest: String::new(),
+        };
+        approval.consent_digest =
+            calculate_consent_digest(&approval).expect("local Skill consent should canonicalize");
+        approval
+    }
+
+    fn apply_optional_skill_fixture(
+        target: &Path,
+        answers: &SetupAnswers,
+        resolution: &CapabilityResolution,
+    ) {
+        let target_dir = open_target_capability(target).expect("target capability should open");
+        let planned = render_tree(&target_dir, answers, resolution, &BTreeSet::new())
+            .expect("optional Skill tree should render");
+        let transition = prepare_projection_transition(&target_dir, &planned, answers)
+            .expect("optional Skill projection preflight should succeed");
+        activate_staged_impl(
+            target,
+            &target_dir,
+            &planned,
+            &transition.deletions,
+            answers,
+            resolution,
+            &transition.expected_before,
+            None,
+            None,
+            None,
+            None,
+        )
+        .expect("optional Skill fixture should activate");
+    }
+
+    fn projection_recovery_bytes(parent: &Path) -> Vec<Vec<u8>> {
+        let mut recovered = Vec::new();
+        for entry in fs::read_dir(parent).expect("projection parent should be readable") {
+            let entry = entry.expect("projection recovery entry should be readable");
+            let name = entry.file_name().to_string_lossy().into_owned();
+            if entry.path().is_dir() && name.starts_with(".aigent-hive-claim-") {
+                for recovery_name in ["claimed-SKILL.md", "prior-SKILL.md"] {
+                    let recovery = entry.path().join(recovery_name);
+                    if recovery.is_file() {
+                        recovered.push(
+                            fs::read(recovery).expect("projection recovery should be readable"),
+                        );
+                    }
+                }
+            } else if entry.path().is_file() && name.starts_with(".aigent-hive-projection-publish")
+            {
+                recovered.push(
+                    fs::read(entry.path()).expect("projection publish temp should be readable"),
+                );
+            }
+        }
+        recovered
+    }
+
     fn absent_resolution() -> CapabilityResolution {
         CapabilityResolution {
             schema_version: 1,
@@ -3025,6 +4401,7 @@ mod tests {
             external_runtime: None,
             resolved_owner: "host-native".to_owned(),
             capabilities: BTreeMap::new(),
+            hook_events: None,
             evidence_digest: format!("sha256:{}", "4".repeat(64)),
             evidence: Vec::new(),
         }
@@ -3036,8 +4413,10 @@ mod tests {
             capability: "checkpoint-reminder".to_owned(),
             event: "Stop".to_owned(),
             path: ".hive/hooks/checkpoint-reminder".to_owned(),
-            command: "hive hook --capability checkpoint-reminder --event Stop --output json"
-                .to_owned(),
+            command: format!(
+                "hive hook --capability checkpoint-reminder --event Stop \
+                 --capabilities {FRESH_CAPABILITY_RESOLUTION_PATH} --output json"
+            ),
             content_digest: String::new(),
             approved_at: "2026-07-23T00:00:00Z".to_owned(),
             consent_digest: String::new(),
@@ -3229,6 +4608,783 @@ mod tests {
         );
     }
 
+    #[test]
+    fn projected_skill_tamper_blocks_reconfigure_without_overwrite() {
+        let temporary = tempfile::tempdir().expect("temporary directory");
+        let target = temporary
+            .path()
+            .canonicalize()
+            .expect("fixture target should have a stable path");
+        apply_fixture(&target, "answers-base.yml", "capabilities-codex-omx.json");
+        let projected = target.join(".agents/skills/hive-simple-question/SKILL.md");
+        fs::write(&projected, b"user collision bytes\x00\xff\n")
+            .expect("projected fixture should be tampered");
+
+        let error = execute_setup(&SetupRequest {
+            target: &target,
+            answers: &fixture("answers-base.yml"),
+            capabilities: &fixture("capabilities-codex-omx.json"),
+            mode: SetupMode::Apply,
+            reconfigure_roles: BTreeSet::new(),
+        })
+        .expect_err("tampered projection must block reconfigure");
+
+        assert_eq!(error.code(), "hive.setup-conflict");
+        assert_eq!(
+            fs::read(projected).expect("tampered file should remain"),
+            b"user collision bytes\x00\xff\n"
+        );
+    }
+
+    #[test]
+    fn wildcard_projection_shape_is_not_ownership_proof() {
+        let desired = ValidatedProjectionOwnership::default();
+        for path in [
+            ".agents/skills/arbitrary-safe-name/SKILL.md",
+            ".claude/skills/arbitrary-safe-name/SKILL.md",
+        ] {
+            let path = PathBuf::from(path);
+            assert!(
+                validate_project_relative(&path).is_err(),
+                "generic validation must reject host discovery paths"
+            );
+            let paths = [path.clone()];
+            let error = validate_owned_paths(paths.iter(), &desired, None)
+                .expect_err("manifest wildcard shape alone must not prove Hive ownership");
+            assert_eq!(error.code(), "hive.setup-safety-blocked");
+            assert!(error
+                .to_string()
+                .contains("lacks exact Hive ownership proof"));
+        }
+    }
+
+    #[test]
+    fn activation_rejects_foreign_projection_created_after_preflight() {
+        let temporary = tempfile::tempdir().expect("temporary directory");
+        let target = temporary
+            .path()
+            .canonicalize()
+            .expect("fixture target should have a stable path");
+        let (answers, _) = load_answers(&fixture("answers-base.yml")).expect("answers should load");
+        let resolution = load_resolution(&fixture("capabilities-codex-omx.json"))
+            .expect("resolution should load");
+        let target_dir = open_target_capability(&target).expect("target capability should open");
+        let planned = render_tree(&target_dir, &answers, &resolution, &BTreeSet::new())
+            .expect("tree should render");
+        let transition = prepare_projection_transition(&target_dir, &planned, &answers)
+            .expect("first-install projection preflight should prove absence");
+        let projected = target.join(".agents/skills/hive-simple-question/SKILL.md");
+        let create_foreign = || {
+            fs::create_dir_all(projected.parent().expect("projection should have a parent"))
+                .expect("foreign projection parent should be created");
+            fs::write(&projected, b"foreign race bytes\x00\xff\n")
+                .expect("foreign projection should win the race");
+        };
+
+        let error = activate_staged_impl(
+            &target,
+            &target_dir,
+            &planned,
+            &BTreeSet::new(),
+            &answers,
+            &resolution,
+            &transition.expected_before,
+            None,
+            Some(&create_foreign),
+            None,
+            None,
+        )
+        .expect_err("post-preflight foreign projection must block activation");
+
+        assert_eq!(error.code(), "hive.setup-conflict");
+        assert_eq!(
+            fs::read(projected).expect("foreign race bytes should remain"),
+            b"foreign race bytes\x00\xff\n"
+        );
+    }
+
+    #[test]
+    fn activation_rejects_projection_tampered_after_preflight() {
+        let temporary = tempfile::tempdir().expect("temporary directory");
+        let target = temporary
+            .path()
+            .canonicalize()
+            .expect("fixture target should have a stable path");
+        apply_fixture(&target, "answers-base.yml", "capabilities-codex-omx.json");
+        let (mut answers, _) =
+            load_answers(&fixture("answers-base.yml")).expect("answers should load");
+        answers.project_name = "projection-race-project".to_owned();
+        let resolution = load_resolution(&fixture("capabilities-codex-omx.json"))
+            .expect("resolution should load");
+        let target_dir = open_target_capability(&target).expect("target capability should open");
+        let planned = render_tree(&target_dir, &answers, &resolution, &BTreeSet::new())
+            .expect("changed tree should render");
+        let transition = prepare_projection_transition(&target_dir, &planned, &answers)
+            .expect("installed projection ownership should verify");
+        let projected = target.join(".agents/skills/hive-simple-question/SKILL.md");
+        let tamper_projection = || {
+            fs::write(&projected, b"tampered race bytes\x00\xff\n")
+                .expect("projected Skill should be tampered after preflight");
+        };
+
+        let error = activate_staged_impl(
+            &target,
+            &target_dir,
+            &planned,
+            &BTreeSet::new(),
+            &answers,
+            &resolution,
+            &transition.expected_before,
+            None,
+            Some(&tamper_projection),
+            None,
+            None,
+        )
+        .expect_err("post-preflight projection tamper must block activation");
+
+        assert_eq!(error.code(), "hive.setup-conflict");
+        assert_eq!(
+            fs::read(projected).expect("tampered race bytes should remain"),
+            b"tampered race bytes\x00\xff\n"
+        );
+    }
+
+    #[test]
+    fn exact_projection_replace_claim_preserves_a_racing_foreign_replacement() {
+        let temporary = tempfile::tempdir().expect("temporary directory");
+        let target = temporary
+            .path()
+            .canonicalize()
+            .expect("fixture target should have a stable path");
+        let relative = Path::new(".agents/skills/hive-claim-race/SKILL.md");
+        let projected = target.join(relative);
+        let raced_original = projected
+            .parent()
+            .expect("projection should have a parent")
+            .join("raced-original");
+        fs::create_dir_all(projected.parent().expect("projection should have a parent"))
+            .expect("projection parent should exist");
+        fs::write(&projected, b"prior exact bytes\n").expect("prior projection should exist");
+        let target_dir = open_target_capability(&target).expect("target capability should open");
+        let race = |claimed: &Path| {
+            assert_eq!(claimed, relative);
+            fs::rename(&projected, &raced_original)
+                .expect("racer should atomically retain the original bytes");
+            fs::write(&projected, b"foreign replacement bytes\x00\xff\n")
+                .expect("racer should publish foreign bytes");
+        };
+
+        let error = mutate_exact_projection_claimed(
+            &target_dir,
+            relative,
+            b"prior exact bytes\n",
+            ExactProjectionMutation::Replace(b"desired Hive bytes\n"),
+            Some(&race),
+            None,
+        )
+        .expect_err("racing replacement must fail the claimed-byte check");
+
+        assert_eq!(error.code(), "hive.setup-conflict");
+        assert!(error.to_string().contains("without overwrite"));
+        assert_eq!(
+            fs::read(projected).expect("foreign replacement should remain"),
+            b"foreign replacement bytes\x00\xff\n"
+        );
+        assert_eq!(
+            fs::read(raced_original).expect("prior exact bytes should remain recoverable"),
+            b"prior exact bytes\n"
+        );
+    }
+
+    #[test]
+    fn exact_projection_delete_claim_preserves_a_racing_foreign_replacement() {
+        let temporary = tempfile::tempdir().expect("temporary directory");
+        let target = temporary
+            .path()
+            .canonicalize()
+            .expect("fixture target should have a stable path");
+        let relative = Path::new(".claude/skills/hive-claim-race/SKILL.md");
+        let projected = target.join(relative);
+        let raced_original = projected
+            .parent()
+            .expect("projection should have a parent")
+            .join("raced-original");
+        fs::create_dir_all(projected.parent().expect("projection should have a parent"))
+            .expect("projection parent should exist");
+        fs::write(&projected, b"prior exact bytes\n").expect("prior projection should exist");
+        let target_dir = open_target_capability(&target).expect("target capability should open");
+        let race = |claimed: &Path| {
+            assert_eq!(claimed, relative);
+            fs::rename(&projected, &raced_original)
+                .expect("racer should atomically retain the original bytes");
+            fs::write(&projected, b"foreign deletion-race bytes\x00\xff\n")
+                .expect("racer should publish foreign bytes");
+        };
+
+        let error = mutate_exact_projection_claimed(
+            &target_dir,
+            relative,
+            b"prior exact bytes\n",
+            ExactProjectionMutation::Delete,
+            Some(&race),
+            None,
+        )
+        .expect_err("racing replacement must not be deleted");
+
+        assert_eq!(error.code(), "hive.setup-conflict");
+        assert!(error.to_string().contains("without overwrite"));
+        assert_eq!(
+            fs::read(projected).expect("foreign deletion-race bytes should remain"),
+            b"foreign deletion-race bytes\x00\xff\n"
+        );
+        assert_eq!(
+            fs::read(raced_original).expect("prior exact bytes should remain recoverable"),
+            b"prior exact bytes\n"
+        );
+    }
+
+    #[test]
+    fn exact_projection_claim_publishes_replacement_exclusively() {
+        let temporary = tempfile::tempdir().expect("temporary directory");
+        let target = temporary
+            .path()
+            .canonicalize()
+            .expect("fixture target should have a stable path");
+        let relative = Path::new(".agents/skills/hive-claim-success/SKILL.md");
+        let projected = target.join(relative);
+        fs::create_dir_all(projected.parent().expect("projection should have a parent"))
+            .expect("projection parent should exist");
+        fs::write(&projected, b"prior exact bytes\n").expect("prior projection should exist");
+        let target_dir = open_target_capability(&target).expect("target capability should open");
+
+        mutate_exact_projection_claimed(
+            &target_dir,
+            relative,
+            b"prior exact bytes\n",
+            ExactProjectionMutation::Replace(b"desired Hive bytes\n"),
+            None,
+            None,
+        )
+        .expect("exact claimed replacement should publish");
+
+        assert_eq!(
+            fs::read(&projected).expect("replacement should exist"),
+            b"desired Hive bytes\n"
+        );
+        let children = fs::read_dir(projected.parent().expect("projection should have a parent"))
+            .expect("projection parent should be readable")
+            .map(|entry| {
+                entry
+                    .expect("projection child should be readable")
+                    .file_name()
+            })
+            .collect::<Vec<_>>();
+        assert!(
+            children
+                .iter()
+                .all(|name| !name.to_string_lossy().starts_with(".aigent-hive-")),
+            "successful claim must leave no private recovery artifact"
+        );
+    }
+
+    #[test]
+    fn replacement_cleanup_failure_rolls_back_live_projection_without_racer() {
+        let temporary = tempfile::tempdir().expect("temporary directory");
+        let target = temporary
+            .path()
+            .canonicalize()
+            .expect("fixture target should have a stable path");
+        let source = target.join("vendor-skills/local-inspect/SKILL.md");
+        fs::create_dir_all(
+            source
+                .parent()
+                .expect("optional source should have a parent"),
+        )
+        .expect("optional source parent should exist");
+        let v1 = optional_skill_bytes("v1");
+        fs::write(&source, &v1).expect("v1 optional source should exist");
+        let (mut answers, _) =
+            load_answers(&fixture("answers-base.yml")).expect("answers should load");
+        answers.approved_optional_skills = vec![signed_local_skill(&v1)];
+        let resolution = load_resolution(&fixture("capabilities-codex-omx.json"))
+            .expect("resolution should load");
+        apply_optional_skill_fixture(&target, &answers, &resolution);
+
+        let v2 = optional_skill_bytes("v2");
+        fs::write(&source, &v2).expect("v2 optional source should replace v1");
+        answers.approved_optional_skills = vec![signed_local_skill(&v2)];
+        let target_dir = open_target_capability(&target).expect("target capability should open");
+        let planned = render_tree(&target_dir, &answers, &resolution, &BTreeSet::new())
+            .expect("v2 optional Skill tree should render");
+        let transition = prepare_projection_transition(&target_dir, &planned, &answers)
+            .expect("v1 projection ownership should verify");
+        let relative = Path::new(".agents/skills/local-inspect/SKILL.md");
+        let projected = target.join(relative);
+
+        let error = activate_staged_impl(
+            &target,
+            &target_dir,
+            &planned,
+            &transition.deletions,
+            &answers,
+            &resolution,
+            &transition.expected_before,
+            Some(ActivationFault {
+                fail_after_operations: usize::MAX,
+                fail_rollback: false,
+                projection_cleanup: Some(ProjectionCleanupFault::Replacement),
+            }),
+            None,
+            None,
+            None,
+        )
+        .expect_err("post-publication cleanup failure must trigger rollback");
+
+        assert_eq!(error.code(), "hive.activation-rollback-failed");
+        assert!(error
+            .to_string()
+            .contains("live paths were rolled back but projection cleanup evidence remains"));
+        assert_eq!(
+            fs::read(&projected).expect("rollback should restore the live v1 projection"),
+            v1,
+            "the applied replacement must be tracked before cleanup failure is reported"
+        );
+    }
+
+    #[test]
+    fn deletion_cleanup_failure_rolls_back_live_projection_without_racer() {
+        let temporary = tempfile::tempdir().expect("temporary directory");
+        let target = temporary
+            .path()
+            .canonicalize()
+            .expect("fixture target should have a stable path");
+        let source = target.join("vendor-skills/local-inspect/SKILL.md");
+        fs::create_dir_all(
+            source
+                .parent()
+                .expect("optional source should have a parent"),
+        )
+        .expect("optional source parent should exist");
+        let v1 = optional_skill_bytes("v1");
+        fs::write(&source, &v1).expect("v1 optional source should exist");
+        let (mut answers, _) =
+            load_answers(&fixture("answers-base.yml")).expect("answers should load");
+        answers.approved_optional_skills = vec![signed_local_skill(&v1)];
+        let resolution = load_resolution(&fixture("capabilities-codex-omx.json"))
+            .expect("resolution should load");
+        apply_optional_skill_fixture(&target, &answers, &resolution);
+
+        answers.approved_optional_skills.clear();
+        let target_dir = open_target_capability(&target).expect("target capability should open");
+        let planned = render_tree(&target_dir, &answers, &resolution, &BTreeSet::new())
+            .expect("optional Skill removal tree should render");
+        let transition = prepare_projection_transition(&target_dir, &planned, &answers)
+            .expect("v1 projection ownership should verify");
+        let relative = Path::new(".agents/skills/local-inspect/SKILL.md");
+        assert!(transition.deletions.contains(relative));
+        let projected = target.join(relative);
+
+        let error = activate_staged_impl(
+            &target,
+            &target_dir,
+            &planned,
+            &transition.deletions,
+            &answers,
+            &resolution,
+            &transition.expected_before,
+            Some(ActivationFault {
+                fail_after_operations: usize::MAX,
+                fail_rollback: false,
+                projection_cleanup: Some(ProjectionCleanupFault::Deletion),
+            }),
+            None,
+            None,
+            None,
+        )
+        .expect_err("post-claim deletion cleanup failure must trigger rollback");
+
+        assert_eq!(error.code(), "hive.activation-rollback-failed");
+        assert!(error
+            .to_string()
+            .contains("live paths were rolled back but projection cleanup evidence remains"));
+        assert_eq!(
+            fs::read(&projected).expect("rollback should restore the live v1 projection"),
+            v1,
+            "the applied deletion must be tracked before cleanup failure is reported"
+        );
+    }
+
+    #[test]
+    fn replacement_cleanup_failure_records_applied_before_safe_rollback() {
+        let temporary = tempfile::tempdir().expect("temporary directory");
+        let target = temporary
+            .path()
+            .canonicalize()
+            .expect("fixture target should have a stable path");
+        let source = target.join("vendor-skills/local-inspect/SKILL.md");
+        fs::create_dir_all(
+            source
+                .parent()
+                .expect("optional source should have a parent"),
+        )
+        .expect("optional source parent should exist");
+        let v1 = optional_skill_bytes("v1");
+        fs::write(&source, &v1).expect("v1 optional source should exist");
+        let (mut answers, _) =
+            load_answers(&fixture("answers-base.yml")).expect("answers should load");
+        answers.approved_optional_skills = vec![signed_local_skill(&v1)];
+        let resolution = load_resolution(&fixture("capabilities-codex-omx.json"))
+            .expect("resolution should load");
+        apply_optional_skill_fixture(&target, &answers, &resolution);
+
+        let v2 = optional_skill_bytes("v2");
+        fs::write(&source, &v2).expect("v2 optional source should replace v1");
+        answers.approved_optional_skills = vec![signed_local_skill(&v2)];
+        let target_dir = open_target_capability(&target).expect("target capability should open");
+        let planned = render_tree(&target_dir, &answers, &resolution, &BTreeSet::new())
+            .expect("v2 optional Skill tree should render");
+        let transition = prepare_projection_transition(&target_dir, &planned, &answers)
+            .expect("v1 projection ownership should verify");
+        let relative = Path::new(".agents/skills/local-inspect/SKILL.md");
+        let projected = target.join(relative);
+        let raced_v2 = projected
+            .parent()
+            .expect("projection should have a parent")
+            .join("raced-v2");
+        let inject_foreign_before_rollback = || {
+            assert_eq!(
+                fs::read(&projected).expect("v2 should be live before rollback"),
+                v2
+            );
+            fs::rename(&projected, &raced_v2).expect("racer should retain the published v2 bytes");
+            fs::write(&projected, b"foreign replacement-cleanup bytes\x00\xff\n")
+                .expect("foreign bytes should occupy the live path");
+        };
+
+        let error = activate_staged_impl(
+            &target,
+            &target_dir,
+            &planned,
+            &transition.deletions,
+            &answers,
+            &resolution,
+            &transition.expected_before,
+            Some(ActivationFault {
+                fail_after_operations: usize::MAX,
+                fail_rollback: false,
+                projection_cleanup: Some(ProjectionCleanupFault::Replacement),
+            }),
+            None,
+            None,
+            Some(&inject_foreign_before_rollback),
+        )
+        .expect_err("post-publication cleanup failure must not report rollback success");
+
+        assert_eq!(error.code(), "hive.activation-rollback-failed");
+        assert!(error.to_string().contains("recoverable at"));
+        assert_eq!(
+            fs::read(&projected).expect("foreign bytes should remain live"),
+            b"foreign replacement-cleanup bytes\x00\xff\n"
+        );
+        assert_eq!(
+            fs::read(raced_v2).expect("published v2 bytes should remain recoverable"),
+            v2
+        );
+        assert!(
+            projection_recovery_bytes(projected.parent().expect("projection should have a parent"))
+                .contains(&v1),
+            "prior v1 bytes must remain in an explicit recovery artifact"
+        );
+    }
+
+    #[test]
+    fn deletion_cleanup_failure_records_applied_before_safe_rollback() {
+        let temporary = tempfile::tempdir().expect("temporary directory");
+        let target = temporary
+            .path()
+            .canonicalize()
+            .expect("fixture target should have a stable path");
+        let source = target.join("vendor-skills/local-inspect/SKILL.md");
+        fs::create_dir_all(
+            source
+                .parent()
+                .expect("optional source should have a parent"),
+        )
+        .expect("optional source parent should exist");
+        let v1 = optional_skill_bytes("v1");
+        fs::write(&source, &v1).expect("v1 optional source should exist");
+        let (mut answers, _) =
+            load_answers(&fixture("answers-base.yml")).expect("answers should load");
+        answers.approved_optional_skills = vec![signed_local_skill(&v1)];
+        let resolution = load_resolution(&fixture("capabilities-codex-omx.json"))
+            .expect("resolution should load");
+        apply_optional_skill_fixture(&target, &answers, &resolution);
+
+        answers.approved_optional_skills.clear();
+        let target_dir = open_target_capability(&target).expect("target capability should open");
+        let planned = render_tree(&target_dir, &answers, &resolution, &BTreeSet::new())
+            .expect("optional Skill removal tree should render");
+        let transition = prepare_projection_transition(&target_dir, &planned, &answers)
+            .expect("v1 projection ownership should verify");
+        let relative = Path::new(".agents/skills/local-inspect/SKILL.md");
+        assert!(transition.deletions.contains(relative));
+        let projected = target.join(relative);
+        let inject_foreign_before_rollback = || {
+            assert!(
+                !projected.exists(),
+                "atomic claim should remove the live path before cleanup fails"
+            );
+            fs::write(&projected, b"foreign deletion-cleanup bytes\x00\xff\n")
+                .expect("foreign bytes should occupy the deleted path");
+        };
+
+        let error = activate_staged_impl(
+            &target,
+            &target_dir,
+            &planned,
+            &transition.deletions,
+            &answers,
+            &resolution,
+            &transition.expected_before,
+            Some(ActivationFault {
+                fail_after_operations: usize::MAX,
+                fail_rollback: false,
+                projection_cleanup: Some(ProjectionCleanupFault::Deletion),
+            }),
+            None,
+            None,
+            Some(&inject_foreign_before_rollback),
+        )
+        .expect_err("post-claim deletion cleanup failure must not report rollback success");
+
+        assert_eq!(error.code(), "hive.activation-rollback-failed");
+        assert!(error.to_string().contains("recoverable at"));
+        assert_eq!(
+            fs::read(&projected).expect("foreign bytes should remain live"),
+            b"foreign deletion-cleanup bytes\x00\xff\n"
+        );
+        assert!(
+            projection_recovery_bytes(projected.parent().expect("projection should have a parent"))
+                .contains(&v1),
+            "prior v1 bytes must remain in an explicit recovery artifact"
+        );
+    }
+
+    #[test]
+    fn host_reconfigure_removes_only_exact_proven_projection_files() {
+        let temporary = tempfile::tempdir().expect("temporary directory");
+        let target = temporary
+            .path()
+            .canonicalize()
+            .expect("fixture target should have a stable path");
+        apply_fixture(&target, "answers-base.yml", "capabilities-codex-omx.json");
+        let foreign = target.join(".agents/skills/foreign-skill/SKILL.md");
+        fs::create_dir_all(foreign.parent().expect("foreign file should have a parent"))
+            .expect("foreign directory should be created");
+        fs::write(&foreign, b"foreign discovery bytes\x00\xff\n")
+            .expect("foreign fixture should exist");
+
+        let (mut answers, _) =
+            load_answers(&fixture("answers-base.yml")).expect("answers should load");
+        answers.primary_host = "claude".to_owned();
+        let resolution = load_resolution(&fixture("capabilities-claude-omc.json"))
+            .expect("Claude resolution should load");
+        let target_dir = open_target_capability(&target).expect("target capability should open");
+        let planned = render_tree(&target_dir, &answers, &resolution, &BTreeSet::new())
+            .expect("Claude projection should render");
+        let transition = prepare_projection_transition(&target_dir, &planned, &answers)
+            .expect("old Codex projection ownership should verify");
+        let deletions = &transition.deletions;
+
+        assert_eq!(deletions.len(), 6);
+        assert!(deletions
+            .iter()
+            .all(|path| path.starts_with(".agents/skills")));
+        assert!(!deletions.contains(Path::new(".agents/skills/foreign-skill/SKILL.md")));
+
+        activate_staged_impl(
+            &target,
+            &target_dir,
+            &planned,
+            deletions,
+            &answers,
+            &resolution,
+            &transition.expected_before,
+            None,
+            None,
+            None,
+            None,
+        )
+        .expect("host reconfigure should activate");
+
+        assert_eq!(
+            fs::read(foreign).expect("foreign file should remain"),
+            b"foreign discovery bytes\x00\xff\n"
+        );
+        assert!(!target
+            .join(".agents/skills/hive-simple-question/SKILL.md")
+            .exists());
+        assert!(target
+            .join(".claude/skills/hive-simple-question/SKILL.md")
+            .is_file());
+    }
+
+    #[test]
+    fn rollback_preserves_foreign_projection_after_successful_deletion() {
+        let temporary = tempfile::tempdir().expect("temporary directory");
+        let target = temporary
+            .path()
+            .canonicalize()
+            .expect("fixture target should have a stable path");
+        apply_fixture(&target, "answers-base.yml", "capabilities-codex-omx.json");
+        let (mut answers, _) =
+            load_answers(&fixture("answers-base.yml")).expect("answers should load");
+        answers.primary_host = "claude".to_owned();
+        let resolution = load_resolution(&fixture("capabilities-claude-omc.json"))
+            .expect("Claude resolution should load");
+        let target_dir = open_target_capability(&target).expect("target capability should open");
+        let planned = render_tree(&target_dir, &answers, &resolution, &BTreeSet::new())
+            .expect("Claude projection should render");
+        let transition = prepare_projection_transition(&target_dir, &planned, &answers)
+            .expect("old Codex projection ownership should verify");
+        let raced_relative = transition
+            .deletions
+            .iter()
+            .next()
+            .cloned()
+            .expect("host change should delete prior projections");
+        let raced_path = target.join(&raced_relative);
+        let prior_bytes =
+            fs::read(&raced_path).expect("prior projected bytes should exist before activation");
+        let inject_foreign_before_rollback = || {
+            assert!(
+                !raced_path.exists(),
+                "the selected projection deletion must succeed before rollback"
+            );
+            fs::write(&raced_path, b"foreign rollback-race bytes\x00\xff\n")
+                .expect("foreign bytes should occupy the deleted path before rollback");
+        };
+
+        let error = activate_staged_impl(
+            &target,
+            &target_dir,
+            &planned,
+            &transition.deletions,
+            &answers,
+            &resolution,
+            &transition.expected_before,
+            Some(ActivationFault {
+                fail_after_operations: planned.len() + 1,
+                fail_rollback: false,
+                projection_cleanup: None,
+            }),
+            None,
+            None,
+            Some(&inject_foreign_before_rollback),
+        )
+        .expect_err("later injected failure must exercise projection-safe rollback");
+
+        assert_eq!(error.code(), "hive.activation-rollback-failed");
+        assert!(error.to_string().contains("refused to overwrite"));
+        assert!(error.to_string().contains("recoverable at"));
+        assert_eq!(
+            fs::read(&raced_path).expect("foreign rollback-race bytes should remain"),
+            b"foreign rollback-race bytes\x00\xff\n"
+        );
+        let recovery_files = fs::read_dir(
+            raced_path
+                .parent()
+                .expect("projection should have a parent directory"),
+        )
+        .expect("projection parent should remain readable")
+        .filter_map(|entry| {
+            let entry = entry.ok()?;
+            entry
+                .file_name()
+                .to_string_lossy()
+                .starts_with(".aigent-hive-claim-")
+                .then(|| entry.path().join("prior-SKILL.md"))
+        })
+        .filter(|path| path.is_file())
+        .collect::<Vec<_>>();
+        assert_eq!(
+            recovery_files.len(),
+            1,
+            "one exact prior-byte recovery artifact must remain"
+        );
+        assert_eq!(
+            fs::read(&recovery_files[0]).expect("prior recovery should remain readable"),
+            prior_bytes
+        );
+    }
+
+    #[test]
+    fn fresh_non_absent_capability_makes_hook_inert_before_target_read() {
+        let temporary = tempfile::tempdir().expect("temporary directory");
+        let target = temporary
+            .path()
+            .canonicalize()
+            .expect("fixture target should have a stable path");
+        let fresh = target.join(FRESH_CAPABILITY_RESOLUTION_PATH);
+        fs::create_dir_all(fresh.parent().expect("fresh evidence should have a parent"))
+            .expect("fresh evidence parent should exist");
+        fs::write(
+            &fresh,
+            fs::read(fixture("capabilities-codex-omx.json"))
+                .expect("fresh evidence fixture should be readable"),
+        )
+        .expect("fresh evidence should be written with a current timestamp");
+        let authorization = authorize_hook_with_resolution(
+            &target,
+            "protect-hive-owned-state",
+            "PreToolUse",
+            Path::new(FRESH_CAPABILITY_RESOLUTION_PATH),
+        )
+        .expect("fresh external runtime should make the fallback inert");
+        assert_eq!(authorization, HookAuthorization::Inert);
+        assert_eq!(
+            capability_detection(&fixture("capabilities-codex-omx.json"))
+                .expect("legacy capability matrix should remain valid"),
+            "available"
+        );
+        assert_eq!(
+            capability_detection(&phase3_fixture("capabilities-codex-enriched.json"))
+                .expect("enriched capability matrix should validate"),
+            "available"
+        );
+    }
+
+    #[test]
+    fn public_fresh_authorization_signature_requires_a_path() {
+        let _: fn(&Path, &str, &str, &Path) -> Result<HookAuthorization, super::RenderError> =
+            authorize_hook_with_resolution;
+    }
+
+    #[test]
+    fn legacy_authorization_without_fresh_evidence_is_always_inert() {
+        let authorization = authorize_hook(
+            Path::new("missing-consumer-target"),
+            "protect-hive-owned-state",
+            "PreToolUse",
+        )
+        .expect("missing fresh evidence should be neutral, not an error");
+        assert_eq!(authorization, HookAuthorization::Inert);
+    }
+
+    #[test]
+    fn installed_host_reports_only_its_expected_external_runtime() {
+        let temporary = tempfile::tempdir().expect("temporary directory");
+        let target = temporary
+            .path()
+            .canonicalize()
+            .expect("fixture target should have a stable path");
+        apply_fixture(&target, "answers-base.yml", "capabilities-codex-omx.json");
+        assert_eq!(
+            expected_external_runtime(&target).expect("installed host should validate"),
+            Some("omx")
+        );
+    }
+
     #[cfg(unix)]
     #[test]
     fn setup_rejects_a_shared_file_symlink_before_reading_its_target() {
@@ -3326,6 +5482,8 @@ mod tests {
             fs::read(target_path.join(".hive/config/harness.toml")).expect("harness should exist");
         let planned = render_tree(&target_dir, &answers, &resolution, &BTreeSet::new())
             .expect("changed tree should render");
+        let transition = prepare_projection_transition(&target_dir, &planned, &answers)
+            .expect("installed projection ownership should verify");
         let retarget = || {
             fs::rename(&target_path, &pinned_path).expect("target should move after handle open");
             symlink(&outside_path, &target_path).expect("ambient target should be retargeted");
@@ -3338,8 +5496,11 @@ mod tests {
             &BTreeSet::new(),
             &answers,
             &resolution,
+            &transition.expected_before,
             None,
             Some(&retarget),
+            None,
+            None,
         )
         .expect_err("retargeted ambient path must fail post-activation identity");
 
@@ -3389,6 +5550,8 @@ mod tests {
             open_target_capability(&target_path).expect("target capability should open");
         let planned = render_tree(&target_dir, &answers, &resolution, &BTreeSet::new())
             .expect("changed tree should render");
+        let transition = prepare_projection_transition(&target_dir, &planned, &answers)
+            .expect("installed projection ownership should verify");
         let pinned_hive = target_path.join(".hive-pinned");
         let swap_ancestor = || {
             fs::rename(target_path.join(".hive"), &pinned_hive)
@@ -3404,8 +5567,11 @@ mod tests {
             &BTreeSet::new(),
             &answers,
             &resolution,
+            &transition.expected_before,
             None,
             Some(&swap_ancestor),
+            None,
+            None,
         )
         .expect_err("ancestor symlink swap must be rejected");
 
@@ -3440,6 +5606,8 @@ mod tests {
         let target_dir = open_target_capability(&target).expect("target capability should open");
         let planned = render_tree(&target_dir, &answers, &resolution, &BTreeSet::new())
             .expect("changed tree should render");
+        let transition = prepare_projection_transition(&target_dir, &planned, &answers)
+            .expect("installed projection ownership should verify");
         let error = activate_staged_impl(
             &target,
             &target_dir,
@@ -3447,10 +5615,14 @@ mod tests {
             &BTreeSet::new(),
             &answers,
             &resolution,
+            &transition.expected_before,
             Some(ActivationFault {
                 fail_after_operations: 2,
                 fail_rollback: false,
+                projection_cleanup: None,
             }),
+            None,
+            None,
             None,
         )
         .expect_err("injected activation should fail");
@@ -3483,6 +5655,8 @@ mod tests {
         let target_dir = open_target_capability(&target).expect("target capability should open");
         let planned = render_tree(&target_dir, &answers, &resolution, &BTreeSet::new())
             .expect("changed tree should render");
+        let transition = prepare_projection_transition(&target_dir, &planned, &answers)
+            .expect("installed projection ownership should verify");
         let error = activate_staged_impl(
             &target,
             &target_dir,
@@ -3490,10 +5664,14 @@ mod tests {
             &BTreeSet::new(),
             &answers,
             &resolution,
+            &transition.expected_before,
             Some(ActivationFault {
                 fail_after_operations: 2,
                 fail_rollback: true,
+                projection_cleanup: None,
             }),
+            None,
+            None,
             None,
         )
         .expect_err("injected rollback should fail");

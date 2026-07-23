@@ -39,31 +39,31 @@ approved_fallback_hooks:
     capability: protect-hive-owned-state
     event: PreToolUse
     path: .hive/hooks/protect-hive-owned-state
-    command: hive hook --capability protect-hive-owned-state --event PreToolUse --output json
-    content_digest: sha256:4733a945bab8d2d6d0da92df10e3b9418b65bc48416b8e8d49864e873f050c32
+    command: hive hook --capability protect-hive-owned-state --event PreToolUse --capabilities .hive/runtime/current-capability-resolution.json --output json
+    content_digest: sha256:1d17c439cf4ae17d2a3ea6a58e3fb51942e5330dbdbe0bb4b1e9d516c01987fa
     approved_at: "2026-07-23T00:00:00Z"
-    consent_digest: sha256:f669a66a8cce7bddbe1205a1947cec6731e4cbb83ca05dca5fe95558cdb4e577
+    consent_digest: sha256:6fc7d959f7d6e6b78b29a8224da3f57cc9ccba938aa67898c7fb549daefa6819
   - consent_version: 1
     capability: update-integrity-guard
     event: PreToolUse
     path: .hive/hooks/update-integrity-guard
-    command: hive hook --capability update-integrity-guard --event PreToolUse --output json
-    content_digest: sha256:f7489d2567b8162c7496b11cf990f7cde4d8447e879379ccbb8f634ddec5026a
+    command: hive hook --capability update-integrity-guard --event PreToolUse --capabilities .hive/runtime/current-capability-resolution.json --output json
+    content_digest: sha256:0258324deee2c1e24d056088ad070a11321148f43f25edfdd5e3399ab2908ed6
     approved_at: "2026-07-23T00:00:00Z"
-    consent_digest: sha256:71efc10ac6365e7b9886bd94274ec659efe24e4f08669a32d9bfdfd5c216ab72
+    consent_digest: sha256:c015a813de09bc85d142e2fa8eacae966981d47d1dab13d6c60a58ab429a09e0
   - consent_version: 1
     capability: derived-state-invalidation
     event: PostToolUse
     path: .hive/hooks/derived-state-invalidation
-    command: hive hook --capability derived-state-invalidation --event PostToolUse --output json
-    content_digest: sha256:2ba5e8960bf3e7e04300501e1da6bf3523e7e562228df01f9f8a67da752db192
+    command: hive hook --capability derived-state-invalidation --event PostToolUse --capabilities .hive/runtime/current-capability-resolution.json --output json
+    content_digest: sha256:22b0b230621504cc77e5183cd57b1409412d50761d8d635dfd18c51c3ff06007
     approved_at: "2026-07-23T00:00:00Z"
-    consent_digest: sha256:cd21325b706025866a433fc8e7c4e800ebe74c9a075497c042ebcae45b2b0a6c
+    consent_digest: sha256:03c0e2382d95de855223877fe326e1d145575fc8fda7d8fa02f49f8ac1d99c61
   - consent_version: 1
     capability: checkpoint-reminder
     event: Stop
     path: .hive/hooks/checkpoint-reminder
-    command: hive hook --capability checkpoint-reminder --event Stop --output json
-    content_digest: sha256:c6a13cfee98ec69f220cdcfeb9e4a28d9cfdf596a0fac60feb57d12197e2ba50
+    command: hive hook --capability checkpoint-reminder --event Stop --capabilities .hive/runtime/current-capability-resolution.json --output json
+    content_digest: sha256:75cf0e81e070db78b87ba9b8d34569022158dc8d1ffc4b462fbf73a59ba5738a
     approved_at: "2026-07-23T00:00:00Z"
-    consent_digest: sha256:c64a0456739d78bfdbc4ef14847d0733106f4ac49bda69b3b30ba553b6b72f05
+    consent_digest: sha256:9a57158227c4e79c59081b678b5d568d95f04a3711359bad49d7746b0f9b7231

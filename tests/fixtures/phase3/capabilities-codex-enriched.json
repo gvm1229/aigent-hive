@@ -1,0 +1,81 @@
+{
+  "schema_version": 1,
+  "host": "codex",
+  "host_version": "fixture-phase3",
+  "surface": "cli",
+  "detection": "available",
+  "external_runtime": "omx",
+  "resolved_owner": "omx",
+  "capabilities": {
+    "instructions": "supported",
+    "simple-question-isolation": "supported",
+    "automatic-skill-routing": "supported",
+    "prompt-refine": "supported",
+    "subagents": "supported",
+    "persistent-role-binding": "supported",
+    "continuous-loop": "supported",
+    "usage-sensor": "unverified",
+    "independent-judge": "supported"
+  },
+  "hook_events": {
+    "UserPromptSubmit": {
+      "support": "supported",
+      "evidence": [
+        {
+          "source": "qualification-fixture",
+          "locator": "fixture:codex-user-prompt-submit",
+          "digest": "sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1"
+        }
+      ]
+    },
+    "PreToolUse": {
+      "support": "supported",
+      "evidence": [
+        {
+          "source": "qualification-fixture",
+          "locator": "fixture:codex-pre-tool-use",
+          "digest": "sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1"
+        }
+      ]
+    },
+    "PostToolUse": {
+      "support": "supported",
+      "evidence": [
+        {
+          "source": "qualification-fixture",
+          "locator": "fixture:codex-post-tool-use",
+          "digest": "sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1"
+        }
+      ]
+    },
+    "PreCompact": {
+      "support": "supported",
+      "evidence": [
+        {
+          "source": "qualification-fixture",
+          "locator": "fixture:codex-pre-compact",
+          "digest": "sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1"
+        }
+      ]
+    },
+    "Stop": {
+      "support": "supported",
+      "evidence": [
+        {
+          "source": "qualification-fixture",
+          "locator": "fixture:codex-stop",
+          "digest": "sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1"
+        }
+      ]
+    }
+  },
+  "evidence_digest": "sha256:2a5bccb40b4001ba7d10487b10fe6a55b05b33b29fb3fbd2c020ee4e1521cdaa",
+  "evidence": [
+    {
+      "source": "host-catalog",
+      "locator": "fixture:codex-catalog-phase3",
+      "outcome": "compatible",
+      "digest": "sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1"
+    }
+  ]
+}

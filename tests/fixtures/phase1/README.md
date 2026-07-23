@@ -54,7 +54,7 @@ host-native best effort를 사용하지만 fallback hook을 설치하지 않는�
 Fallback hook의 exact command는 다음 runtime 표면을 사용한다.
 
 ```text
-hive hook --capability <capability> --event <event> --input <json> --output json
+hive hook --capability <capability> --event <event> --capabilities .hive/runtime/current-capability-resolution.json --input <json> --output json
 ```
 
 `Stop` event는 항상 exit `0`과 neutral allow 결과를 반환하며 block, continue,

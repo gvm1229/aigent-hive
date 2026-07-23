@@ -1,0 +1,97 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/gvm1229/aigent-hive/schemas/active-skills.schema.json",
+  "title": "Aigent Hive active portable Skills",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "skills"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "skills": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "source_type",
+          "content_digest",
+          "side_effect_class",
+          "capabilities",
+          "consent_digest"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]{1,62}$"
+          },
+          "source_type": {
+            "enum": ["built-in", "approved-optional"]
+          },
+          "content_digest": {
+            "type": "string",
+            "pattern": "^sha256:[0-9a-f]{64}$"
+          },
+          "side_effect_class": {
+            "enum": [
+              "none",
+              "read-only",
+              "project-write",
+              "external-write",
+              "orchestration"
+            ]
+          },
+          "capabilities": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": {
+              "enum": [
+                "filesystem-read",
+                "filesystem-write",
+                "shell",
+                "network",
+                "subagents",
+                "external-app",
+                "memory-read",
+                "memory-write",
+                "run-state"
+              ]
+            }
+          },
+          "consent_digest": {
+            "type": ["string", "null"],
+            "pattern": "^sha256:[0-9a-f]{64}$"
+          }
+        },
+        "allOf": [
+          {
+            "if": {
+              "properties": { "source_type": { "const": "built-in" } },
+              "required": ["source_type"]
+            },
+            "then": {
+              "properties": { "consent_digest": { "type": "null" } }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "source_type": { "const": "approved-optional" }
+              },
+              "required": ["source_type"]
+            },
+            "then": {
+              "properties": {
+                "consent_digest": {
+                  "type": "string",
+                  "pattern": "^sha256:[0-9a-f]{64}$"
+                }
+              }
+            }
+          }
+        ]
+      }
+    }
+  }
+}

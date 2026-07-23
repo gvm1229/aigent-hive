@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "mode": "refine-only",
+  "original_prompt": "Make an agent prompt.",
+  "intent_summary": "Create an agent prompt.",
+  "assumptions": [],
+  "unresolved_items": [
+    "Question: What outcome should the agent produce?",
+    "Question: What output format is required?"
+  ],
+  "required_question": "What outcome should the agent produce? What output format is required?",
+  "preserved": {
+    "must": [],
+    "must_not": [],
+    "scope": [],
+    "target_output": [],
+    "user_authority": [],
+    "tone": [],
+    "tool_provider_selection": []
+  },
+  "refined_prompt": "Goal\n{{TARGET_OUTCOME}}\n\nOutput contract\n{{REQUIRED_OUTPUT}}",
+  "project_reads": [],
+  "execution_authorized": false,
+  "side_effects": {
+    "project_write": false,
+    "network": false,
+    "subagent": false,
+    "memory_capture": false,
+    "run_creation": false,
+    "model_execution": false
+  }
+}
