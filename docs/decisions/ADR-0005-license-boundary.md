@@ -13,6 +13,8 @@ Aigent Hive의 원칙은 **“Open source must stay open source.”**다. CLI와
 - `harness/**`와 여기에서 생성된 Aigent Hive 소유 파일·exact marker block은 `Apache-2.0`으로 배포한다.
 - 소비자 프로젝트의 기존 source, 문서, 설정과 data는 Aigent Hive가 재라이선스하지 않는다.
 - `LICENSES/`에 두 라이선스 전문을 보관하고 `REUSE.toml`을 file-scope 정본으로 사용한다.
+- GitHub primary license 감지를 위해 root `LICENSE`는 수정하지 않은 GPLv3 전문만 포함하고 scope 설명은 `docs/licensing.md`로 분리한다.
+- `harness/LICENSE`는 출하 source의 Apache-2.0 전문을 제공한다.
 - Rust package metadata는 `GPL-3.0-only`를 선언한다.
 - 생성된 harness는 프로젝트 root가 아닌 `.hive/LICENSE-AIGENT-HIVE.txt`에 Apache-2.0 전문을 포함한다.
 - release bundle은 두 라이선스 전문과 scope mapping을 모두 포함해야 한다.

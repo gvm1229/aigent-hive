@@ -33,7 +33,8 @@
 - 7개 JSON Schema meta-validation과 대표 action/role/run/judge/capability instance PASS
 - role materialization known-answer/idempotency와 Skill consent tamper fixture PASS
 - Copier default·hostile render에서 `.hive/LICENSE-AIGENT-HIVE.txt` Apache 전문 일치와 consumer root license 불변 PASS
-- REUSE 6.2.0 lint: 73/73 file copyright·license mapping, missing/unused/bad license 0건 PASS
+- root `LICENSE`와 canonical GPL-3.0-only 전문, `harness/LICENSE`와 canonical Apache-2.0 전문의 byte parity PASS
+- REUSE 6.2.0 lint: 74/74 file copyright·license mapping, missing/unused/bad license 0건 PASS
 - `setup-harness` Skill validator PASS
 - 적대적 scaffold 재검토: initial Git bootstrap APPROVE
 - 적대적 v1.4 plan 재검토: APPROVE

@@ -17,6 +17,7 @@ from jsonschema import Draft202012Validator, FormatChecker, ValidationError
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 SCHEMA_DIRECTORY = REPOSITORY_ROOT / "schemas"
+GPL_LICENSE_PATH = REPOSITORY_ROOT / "LICENSES/GPL-3.0-only.txt"
 APACHE_LICENSE_PATH = REPOSITORY_ROOT / "LICENSES/Apache-2.0.txt"
 CONSENT_FIELDS = (
     "consent_version",
@@ -162,6 +163,13 @@ def validate_contract_examples() -> None:
 
 
 def validate_license_boundary() -> None:
+    if (REPOSITORY_ROOT / "LICENSE").read_bytes() != GPL_LICENSE_PATH.read_bytes():
+        raise AssertionError("root GPL license diverged from canonical text")
+    if (
+        REPOSITORY_ROOT / "harness/LICENSE"
+    ).read_bytes() != APACHE_LICENSE_PATH.read_bytes():
+        raise AssertionError("harness Apache license diverged from canonical text")
+
     reuse = read_toml(REPOSITORY_ROOT / "REUSE.toml")
     annotations = reuse["annotations"]
     assert isinstance(annotations, list)
