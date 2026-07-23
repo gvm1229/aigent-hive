@@ -9,6 +9,7 @@ resolver = "2"
 version = "0.1.0"
 edition = "2021"
 repository = "https://github.com/gvm1229/aigent-hive"
+license = "GPL-3.0-only"
 
 [workspace.lints.rust]
 unsafe_code = "forbid"

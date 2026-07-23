@@ -20,6 +20,7 @@
 - persistent-role, knowledge-scope, optional-Skill consent projection
 - setup-time canonical role materialization과 RFC 8785 Skill consent contract
 - Markdown/SQLite, orchestration, Git workflow ADR
+- `GPL-3.0-only` source와 `Apache-2.0` harness의 REUSE 3.3 license boundary
 - `main/develop` 전용 Git 규칙과 cross-platform Rust·Copier/schema CI
 
 ## 검증 상태
@@ -31,6 +32,8 @@
 - invalid Codex+OMC 조합 staging 전 거부 PASS
 - 7개 JSON Schema meta-validation과 대표 action/role/run/judge/capability instance PASS
 - role materialization known-answer/idempotency와 Skill consent tamper fixture PASS
+- Copier default·hostile render에서 `.hive/LICENSE-AIGENT-HIVE.txt` Apache 전문 일치와 consumer root license 불변 PASS
+- REUSE 6.2.0 lint: 73/73 file copyright·license mapping, missing/unused/bad license 0건 PASS
 - `setup-harness` Skill validator PASS
 - 적대적 scaffold 재검토: initial Git bootstrap APPROVE
 - 적대적 v1.4 plan 재검토: APPROVE

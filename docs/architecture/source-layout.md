@@ -12,6 +12,8 @@ Hive source ──build/test──> release bundle ──setup/update──> con
 
 세 tree는 서로를 runtime path로 역참조하지 않는다.
 
+라이선스 경계도 같은 분리를 따른다. Hive source의 기본 라이선스는 `GPL-3.0-only`지만 `harness/**`와 그로부터 생성된 Aigent Hive 소유 material은 `Apache-2.0`이다. 생성된 harness는 `.hive/` 안에 자체 라이선스 전문을 두며 소비자 프로젝트 root의 license를 변경하지 않는다.
+
 ## 현재 구조
 
 ```text
@@ -30,6 +32,8 @@ aigent-hive/
 ├── schemas/
 ├── tests/                     # schema/render/materializer conformance
 ├── docs/
+├── LICENSES/                  # GPL-3.0-only·Apache-2.0 전문
+├── REUSE.toml                 # file-scope license mapping
 ├── copier.yml
 └── hive-source.json            # consumer setup 거부 marker
 ```
