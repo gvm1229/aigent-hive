@@ -24,7 +24,7 @@
 | 버전 | `X.Y.Z`; 같은 major만 non-breaking upgrade 보장 |
 | cross-major | 사전 경고, 자동 migration, project/docs/preferences 보존, SQLite rebuild |
 | Git | `main` 안정, `develop` 일반 개발; `develop → main` PR |
-| 라이선스 | CLI/source는 `Apache-2.0`, `harness/**`와 생성된 Hive 소유 material은 `Apache-2.0` |
+| 라이선스 | CLI/source, `harness/**`와 생성된 Hive 소유 material 모두 `Apache-2.0` |
 
 ## 미확정이지만 구현을 막지 않는 항목
 

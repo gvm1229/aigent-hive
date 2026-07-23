@@ -17,7 +17,6 @@ from jsonschema import Draft202012Validator, FormatChecker, ValidationError
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 SCHEMA_DIRECTORY = REPOSITORY_ROOT / "schemas"
-Apache-2.0_LICENSE_PATH = REPOSITORY_ROOT / "LICENSES/Apache-2.0.txt"
 APACHE_LICENSE_PATH = REPOSITORY_ROOT / "LICENSES/Apache-2.0.txt"
 CONSENT_FIELDS = (
     "consent_version",
@@ -163,8 +162,8 @@ def validate_contract_examples() -> None:
 
 
 def validate_license_boundary() -> None:
-    if (REPOSITORY_ROOT / "LICENSE").read_bytes() != Apache-2.0_LICENSE_PATH.read_bytes():
-        raise AssertionError("root Apache-2.0 license diverged from canonical text")
+    if (REPOSITORY_ROOT / "LICENSE").read_bytes() != APACHE_LICENSE_PATH.read_bytes():
+        raise AssertionError("root Apache license diverged from canonical text")
     if (
         REPOSITORY_ROOT / "harness/LICENSE"
     ).read_bytes() != APACHE_LICENSE_PATH.read_bytes():
@@ -176,12 +175,6 @@ def validate_license_boundary() -> None:
     assert annotations == [
         {
             "path": "**",
-            "precedence": "override",
-            "SPDX-FileCopyrightText": "2026 Hojin (Tom) Jeong",
-            "SPDX-License-Identifier": "Apache-2.0",
-        },
-        {
-            "path": "harness/**",
             "precedence": "override",
             "SPDX-FileCopyrightText": "2026 Hojin (Tom) Jeong",
             "SPDX-License-Identifier": "Apache-2.0",
