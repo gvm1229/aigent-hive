@@ -147,9 +147,11 @@ fn resolve_program_in_path(program: &str, search_path: &OsStr) -> Option<PathBuf
         }
         #[cfg(windows)]
         {
-            let executable = directory.join(format!("{program}.exe"));
-            if let Some(executable) = resolve_executable(&executable) {
-                return Some(executable);
+            for extension in ["exe", "cmd", "bat"] {
+                let executable = directory.join(format!("{program}.{extension}"));
+                if let Some(executable) = resolve_executable(&executable) {
+                    return Some(executable);
+                }
             }
         }
         None
@@ -621,6 +623,24 @@ mod tests {
                 executable
                     .canonicalize()
                     .expect("fixture executable should resolve")
+            )
+        );
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn resolves_a_windows_command_wrapper_from_path() {
+        let directory = tempfile::tempdir().expect("temporary directory should exist");
+        let wrapper = directory.path().join("codexbar.cmd");
+        fs::write(&wrapper, b"@exit /b 0\r\n").expect("fixture wrapper should be created");
+        let search_path = OsString::from(directory.path());
+
+        assert_eq!(
+            resolve_program_in_path("codexbar", &search_path),
+            Some(
+                wrapper
+                    .canonicalize()
+                    .expect("fixture wrapper should resolve")
             )
         );
     }
