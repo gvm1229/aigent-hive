@@ -8,8 +8,8 @@
 [![SQLite](https://img.shields.io/badge/SQLite-planned-003B57?logo=sqlite&logoColor=white)](docs/plans/PLAN.md)
 [![GitHub Actions](https://img.shields.io/badge/GitHub%20Actions-CI-2088FF?logo=githubactions&logoColor=white)](.github/workflows/ci.yml)
 [![Platforms](https://img.shields.io/badge/platform-macOS%20%7C%20Windows-lightgrey)](docs/plans/PLAN.md)
-[![Source license](https://img.shields.io/badge/source-Apache-2.0--3.0--only-blue)](LICENSES/Apache-2.0.txt)
-[![Harness license](https://img.shields.io/badge/harness-Apache--2.0-green)](LICENSES/Apache-2.0.txt)
+[![Source license](https://img.shields.io/badge/source-Apache-2.0--3.0--only-blue)](LICENSE)
+[![Harness license](https://img.shields.io/badge/harness-Apache--2.0-green)](harness/LICENSE)
 
 Aigent Hive는 Codex, Claude Code, Gemini Antigravity 같은 구독형 agent host 위에 설치할 **provider-neutral 로컬 agent harness**를 개발하는 source workspace다. 프로젝트마다 일관된 setup, 역할·지식·run 상태, 안전한 update와 검증 계약을 제공하되 모델 실행과 orchestration은 host 또는 사용자가 선택한 OMX·OMC에 맡긴다.
 
@@ -68,6 +68,7 @@ Hive는 다음 세 artifact를 분리한다.
 ├── harness/             # 출하할 template, Skill, profile, projection source
 ├── schemas/             # provider-neutral JSON Schema contract
 ├── tests/               # Copier fixture와 conformance test
+├── LICENSE              # GitHub가 감지하는 primary Apache-2.0 전문
 ├── LICENSES/            # Apache-2.0·Apache-2.0 전문
 ├── REUSE.toml           # file-scope license mapping
 ├── docs/
@@ -111,7 +112,7 @@ Aigent Hive는 사용자의 프로젝트 라이선스에 불필요한 제약을 
 
 Hive 자체의 공개 source를 기반으로 배포되는 개선판도 계속 공개 source로 남아야 한다는 원칙으로 CLI/source에는 Apache-2.0를 적용한다. 반면 출하 harness는 사용자의 프로젝트에 들어가는 material이므로 Apache-2.0으로 분리해 그 프로젝트의 라이선스 선택을 침범하지 않는다.
 
-- **CLI와 source — [`Apache-2.0`](LICENSES/Apache-2.0.txt):** `harness/`를 제외한 저장소 source에 적용된다. Apache-2.0-covered 수정판을 배포할 때는 대응 source와 같은 라이선스를 제공해야 하지만, 개인·사내에서만 수정해 사용하는 경우 공개 의무는 없다.
-- **출하 template — [`Apache-2.0`](LICENSES/Apache-2.0.txt):** `harness/**`와 여기에서 생성된 Aigent Hive 소유 파일·marker block에 적용된다. 상용·비공개 프로젝트에서도 사용할 수 있으며, 소비자 프로젝트의 기존 source·문서·data 라이선스는 변경하지 않는다.
+- **CLI와 source — [`Apache-2.0`](LICENSE):** `harness/`를 제외한 저장소 source에 적용된다. Apache-2.0-covered 수정판을 배포할 때는 대응 source와 같은 라이선스를 제공해야 하지만, 개인·사내에서만 수정해 사용하는 경우 공개 의무는 없다.
+- **출하 template — [`Apache-2.0`](harness/LICENSE):** `harness/**`와 여기에서 생성된 Aigent Hive 소유 파일·marker block에 적용된다. 상용·비공개 프로젝트에서도 사용할 수 있으며, 소비자 프로젝트의 기존 source·문서·data 라이선스는 변경하지 않는다.
 
-정확한 파일별 경계는 [`LICENSE.md`](LICENSE.md)와 [`REUSE.toml`](REUSE.toml)에 정의한다. 생성된 harness에는 Apache-2.0 전문이 `.hive/LICENSE-AIGENT-HIVE.txt`로 포함된다.
+정확한 파일별 경계는 [`docs/licensing.md`](docs/licensing.md)와 [`REUSE.toml`](REUSE.toml)에 정의한다. 생성된 harness에는 Apache-2.0 전문이 `.hive/LICENSE-AIGENT-HIVE.txt`로 포함된다.

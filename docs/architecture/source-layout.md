@@ -28,10 +28,12 @@ aigent-hive/
 │   ├── skills/                 # portable shipping Skill source
 │   ├── projections/            # host별 얇은 projection 확장점
 │   ├── profiles/               # domain profile 확장점
+│   ├── LICENSE                 # Apache-2.0 전문
 │   └── manifest.toml           # ownership·금지 경로
 ├── schemas/
 ├── tests/                     # schema/render/materializer conformance
 ├── docs/
+├── LICENSE                    # primary Apache-2.0 전문
 ├── LICENSES/                  # Apache-2.0·Apache-2.0 전문
 ├── REUSE.toml                 # file-scope license mapping
 ├── copier.yml
