@@ -1,4 +1,15 @@
 schema_version = 1
+license = "Apache-2.0"
+
+[[paths]]
+pattern = ".hive/LICENSE-AIGENT-HIVE.txt"
+ownership = "hive-managed-license"
+source = "template"
+
+[[paths]]
+pattern = ".hive/README.md"
+ownership = "hive-managed-license"
+source = "template"
 
 [[paths]]
 pattern = ".hive/setup-answers.yml"

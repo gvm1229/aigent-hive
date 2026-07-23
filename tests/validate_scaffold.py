@@ -17,6 +17,7 @@ from jsonschema import Draft202012Validator, FormatChecker, ValidationError
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 SCHEMA_DIRECTORY = REPOSITORY_ROOT / "schemas"
+APACHE_LICENSE_PATH = REPOSITORY_ROOT / "LICENSES/Apache-2.0.txt"
 CONSENT_FIELDS = (
     "consent_version",
     "name",
@@ -27,6 +28,11 @@ CONSENT_FIELDS = (
     "approved_capabilities",
     "approved_at",
 )
+
+
+def read_toml(path: Path) -> dict[str, object]:
+    with path.open("rb") as stream:
+        return tomllib.load(stream)
 
 
 def read_yaml(path: Path) -> object:
@@ -155,6 +161,52 @@ def validate_contract_examples() -> None:
     validate_instance("capability-matrix.schema.json", capability_matrix)
 
 
+def validate_license_boundary() -> None:
+    reuse = read_toml(REPOSITORY_ROOT / "REUSE.toml")
+    annotations = reuse["annotations"]
+    assert isinstance(annotations, list)
+    assert annotations == [
+        {
+            "path": "**",
+            "precedence": "override",
+            "SPDX-FileCopyrightText": "2026 Hojin (Tom) Jeong",
+            "SPDX-License-Identifier": "Apache-2.0",
+        },
+        {
+            "path": "harness/**",
+            "precedence": "override",
+            "SPDX-FileCopyrightText": "2026 Hojin (Tom) Jeong",
+            "SPDX-License-Identifier": "Apache-2.0",
+        },
+    ]
+
+    workspace = read_toml(REPOSITORY_ROOT / "Cargo.toml")
+    assert workspace["workspace"]["package"]["license"] == "Apache-2.0"
+    for crate_name in ("hive-cli", "hive-core"):
+        crate = read_toml(REPOSITORY_ROOT / f"crates/{crate_name}/Cargo.toml")
+        assert crate["package"]["license"] == {"workspace": True}
+
+    harness_manifest = read_toml(REPOSITORY_ROOT / "harness/manifest.toml")
+    assert harness_manifest["license"] == "Apache-2.0"
+    licensed_paths = {
+        path["pattern"]
+        for path in harness_manifest["paths"]
+        if path.get("ownership") == "hive-managed-license"
+    }
+    assert licensed_paths == {
+        ".hive/LICENSE-AIGENT-HIVE.txt",
+        ".hive/README.md",
+    }
+
+    apache_license = APACHE_LICENSE_PATH.read_bytes()
+    template_license = (
+        REPOSITORY_ROOT
+        / "harness/template/.hive/LICENSE-AIGENT-HIVE.txt.jinja"
+    ).read_bytes()
+    if template_license != apache_license:
+        raise AssertionError("rendered Apache license source diverged from canonical text")
+
+
 def validate_skill_approvals(answers: dict[str, object]) -> None:
     approvals = answers["approved_optional_skills"]
     assert isinstance(approvals, list)
@@ -257,6 +309,8 @@ def validate_render(render_root: Path, input_data_path: Path) -> None:
     required_paths = [
         "AGENTS.md",
         ".hive/.gitignore",
+        ".hive/LICENSE-AIGENT-HIVE.txt",
+        ".hive/README.md",
         ".hive/setup-answers.yml",
         ".hive/config/harness.toml",
         ".hive/config/role-seeds.yml",
@@ -272,6 +326,12 @@ def validate_render(render_root: Path, input_data_path: Path) -> None:
         path = render_root / relative_path
         if not path.is_file():
             raise AssertionError(f"missing rendered path: {relative_path}")
+
+    rendered_license = render_root / ".hive/LICENSE-AIGENT-HIVE.txt"
+    if rendered_license.read_bytes() != APACHE_LICENSE_PATH.read_bytes():
+        raise AssertionError("rendered Apache license text changed")
+    if (render_root / "LICENSE").exists() or (render_root / "LICENSE.md").exists():
+        raise AssertionError("consumer project root license must remain untouched")
 
     answers = read_yaml(render_root / ".hive/setup-answers.yml")
     assert isinstance(answers, dict)
@@ -333,6 +393,7 @@ def main() -> int:
     arguments = parse_arguments()
     validate_schema_documents()
     validate_contract_examples()
+    validate_license_boundary()
     validate_render(arguments.render_root, arguments.input_data)
     print(f"validated scaffold: {arguments.render_root}")
     return 0
