@@ -16,11 +16,12 @@ Hive development directives live under `.agents/`; files under `harness/` are so
 
 - Treat this repository as Hive source, never as a consumer project with an installed Hive harness.
 - Keep source, release artifacts, and installed consumer harnesses physically and logically separate.
-- Do not implement a model runtime, scheduler, Ralph/plan/team clone, or provider API client. Use host-native orchestration or an explicitly selected external layer such as OMX or OMC.
+- Do not implement a model runtime, scheduler, Ralph/plan/team clone, or provider API client. Prefer compatible OMX on Codex and OMC on Claude when their capabilities are available; otherwise use only what the host natively supports.
 - Keep knowledge, role, and run state canonical in Markdown; keep setup/config authority in tracked typed YAML/TOML. Treat SQLite as a disposable, reproducible local index over those sources.
 - Keep `AGENTS.md` short. Put detailed rules in the narrowest matching directive and load them only when relevant.
 - Preserve user-authored and third-party bytes. Hive may mutate only paths and marker blocks declared in its ownership manifest.
 - Require explicit user approval before activating any optional third-party or generated Skill.
+- Resolve relevant approved Skills automatically from narrow descriptions and routing directives. Prefer an OMX/OMC capability over a duplicate Hive workflow, and keep the simple-question path free of unrelated Skill loading.
 - Prefer existing, maintained solutions over new infrastructure. Record a concrete deficiency before adding a dependency or custom subsystem.
 - Verify claims with fresh evidence before reporting completion.
 
@@ -46,6 +47,7 @@ Also read:
 - Persistent role lifecycle: [`docs/architecture/role-lifecycle.md`](docs/architecture/role-lifecycle.md)
 - Optional Skill consent: [`docs/architecture/skill-consent.md`](docs/architecture/skill-consent.md)
 - Product decisions: [`docs/decisions/product-release-decisions.md`](docs/decisions/product-release-decisions.md)
+- Product version lifecycle: [`docs/decisions/ADR-0006-version-lifecycle.md`](docs/decisions/ADR-0006-version-lifecycle.md)
 - Git workflow: [`docs/guides/branching-rules.md`](docs/guides/branching-rules.md)
 - Commit rules: [`docs/guides/commit-rules.md`](docs/guides/commit-rules.md)
 

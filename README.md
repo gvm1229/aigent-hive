@@ -2,6 +2,7 @@
 
 [![Rust](https://img.shields.io/badge/Rust-stable-000000?logo=rust&logoColor=white)](rust-toolchain.toml)
 [![Cargo](https://img.shields.io/badge/Cargo-workspace-CB4B16?logo=rust&logoColor=white)](Cargo.toml)
+[![Version](https://img.shields.io/badge/version-0.1.0-4C1)](Cargo.toml)
 [![Python](https://img.shields.io/badge/Python-3.13-3776AB?logo=python&logoColor=white)](.github/workflows/ci.yml)
 [![Copier](https://img.shields.io/badge/Copier-9.17.0-5C4EE5)](copier.yml)
 [![JSON Schema](https://img.shields.io/badge/JSON%20Schema-2020--12-000000?logo=json&logoColor=white)](schemas/)
@@ -10,7 +11,7 @@
 [![Platforms](https://img.shields.io/badge/platform-macOS%20%7C%20Windows-lightgrey)](docs/plans/PLAN.md)
 [![License](https://img.shields.io/badge/license-Apache--2.0-green)](LICENSE)
 
-Aigent Hive는 Codex, Claude Code, Gemini Antigravity 같은 구독형 agent host 위에 설치할 **provider-neutral 로컬 agent harness**를 개발하는 source workspace다. 프로젝트마다 일관된 setup, 역할·지식·run 상태, 안전한 update와 검증 계약을 제공하되 모델 실행과 orchestration은 host 또는 사용자가 선택한 OMX·OMC에 맡긴다.
+Aigent Hive는 Codex, Claude Code, Gemini Antigravity 같은 구독형 agent host 위에 설치할 **provider-neutral 로컬 agent harness**를 개발하는 source workspace다. 프로젝트마다 일관된 setup, Skill routing, 역할·지식·run 상태, 안전한 update와 검증 계약을 제공하되 모델 실행과 orchestration은 compatible OMX·OMC를 우선하고, 없을 때 host native capability에 맡긴다.
 
 Hive는 모델 API나 provider SDK를 사용하지 않으며 API key를 요청하거나 저장하지 않는다.
 
@@ -39,7 +40,7 @@ Hive는 다음 세 artifact를 분리한다.
 | GitHub Actions | Linux·macOS·Windows Rust 검증과 Copier/schema conformance |
 | GitHub Releases | 향후 signed CLI와 release bundle 배포 대상 |
 
-지원 대상은 macOS와 Windows CLI다. Codex·Claude Code·Gemini Antigravity는 host adapter 대상이며, OMX와 OMC는 선택적 orchestration layer다. 어느 host나 orchestration plugin도 Hive의 필수 build dependency가 아니다.
+지원 대상은 macOS와 Windows CLI다. Codex·Claude Code·Gemini Antigravity는 host adapter 대상이다. Compatible OMX/OMC가 active host에 있으면 해당 기능을 우선 사용하고, 없으면 host-native 범위만 제공한다. 어느 host나 orchestration plugin도 Hive의 build dependency가 아니다.
 
 ## 의존성
 
@@ -90,7 +91,7 @@ cargo run -p hive-cli -- doctor
 cargo run -p hive-cli -- check-target /path/to/consumer-project
 ```
 
-CI는 Copier default·hostile fixture, 잘못된 host/orchestrator 조합, schema instance, 지속형 role materialization, optional Skill consent 변조도 함께 검증한다.
+CI는 Copier default·hostile fixture, schema instance, 지속형 role materialization과 optional Skill consent 변조도 함께 검증한다.
 
 ## Git workflow
 
@@ -101,7 +102,9 @@ CI는 Copier default·hostile fixture, 잘못된 host/orchestrator 조합, schem
 
 ## 현재 상태
 
-Phase 0 source scaffold와 contract baseline이 완료되었다. 다음 단계는 Rust renderer, staging·ownership 검증과 `hive setup --dry-run|apply|validate` 구현이다. 자세한 내용은 [`docs/plans/PLAN.md`](docs/plans/PLAN.md)와 [`docs/state/CURRENT.md`](docs/state/CURRENT.md)를 참고한다.
+현재 product version은 barebone source baseline `0.1.0`이다. Phase 0 source scaffold와 contract baseline만 완료되었으며, 설치 가능한 실제 consumer harness는 아직 구현되지 않았다. 다음 단계는 Rust renderer, automatic OMX/OMC capability resolution, staging·ownership 검증과 `hive setup --dry-run|apply|validate` 구현이다. 자세한 내용은 [`docs/plans/PLAN.md`](docs/plans/PLAN.md)와 [`docs/state/CURRENT.md`](docs/state/CURRENT.md)를 참고한다.
+
+Backward-compatible feature는 원칙적으로 minor `Y`, 빠른 compatible bugfix는 patch `Z`를 증가시킨다. Major `X`는 사용자가 exact target을 명시적으로 지시하지 않는 한 자동 증가하지 않는다.
 
 ## 라이선스
 
