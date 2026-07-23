@@ -10,6 +10,7 @@ import sqlite3
 import subprocess
 import tempfile
 import unittest
+from contextlib import closing
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
@@ -137,14 +138,21 @@ class Phase2WikiConformance(unittest.TestCase):
             ["beta"],
         )
 
-        database = sqlite3.connect(self.target / ".hive/index/hive.sqlite3")
-        self.addCleanup(database.close)
-        self.assertEqual(database.execute("select count(*) from pages").fetchone()[0], 2)
-        self.assertEqual(database.execute("select count(*) from tags").fetchone()[0], 4)
-        self.assertEqual(database.execute("select count(*) from aliases").fetchone()[0], 2)
-        self.assertEqual(database.execute("select count(*) from links").fetchone()[0], 2)
-        self.assertEqual(database.execute("select count(*) from sources").fetchone()[0], 2)
-        self.assertEqual(database.execute("select count(*) from raw_objects").fetchone()[0], 2)
+        with closing(
+            sqlite3.connect(self.target / ".hive/index/hive.sqlite3")
+        ) as database:
+            self.assertEqual(database.execute("select count(*) from pages").fetchone()[0], 2)
+            self.assertEqual(database.execute("select count(*) from tags").fetchone()[0], 4)
+            self.assertEqual(
+                database.execute("select count(*) from aliases").fetchone()[0], 2
+            )
+            self.assertEqual(database.execute("select count(*) from links").fetchone()[0], 2)
+            self.assertEqual(
+                database.execute("select count(*) from sources").fetchone()[0], 2
+            )
+            self.assertEqual(
+                database.execute("select count(*) from raw_objects").fetchone()[0], 2
+            )
 
     def test_deleted_database_rebuild_has_same_digest_and_query(self) -> None:
         self.ingest("alpha")
@@ -699,10 +707,11 @@ Deleted body sentinel SECRET-DELETED-PROSE.
             [hit["id"] for hit in self.query("knowledge")["data"]["hits"]],
             ["alpha", "beta"],
         )
-        database = sqlite3.connect(self.target / ".hive/index/hive.sqlite3")
-        self.addCleanup(database.close)
-        self.assertEqual(database.execute("select count(*) from pages").fetchone()[0], 2)
-        self.assertEqual(database.execute("select count(*) from links").fetchone()[0], 2)
+        with closing(
+            sqlite3.connect(self.target / ".hive/index/hive.sqlite3")
+        ) as database:
+            self.assertEqual(database.execute("select count(*) from pages").fetchone()[0], 2)
+            self.assertEqual(database.execute("select count(*) from links").fetchone()[0], 2)
 
     def test_raw_revision_is_content_addressed_and_immutable(self) -> None:
         first = self.ingest("alpha")
