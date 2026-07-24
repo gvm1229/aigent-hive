@@ -22,7 +22,7 @@ Source guard는 이 경계를 다음 두 계층으로 보완.
 Watcher의 Codex App process signal 전송과 `.omx/` state 수정 금지.
 따라서 한 번의 model inference 중간 강제 중단 주장은 제외. 독립 polling은
 중지선을 빠르게 감지하고, mandatory pre-action check는 감지 뒤 추가 작업이 시작되는
-것을 막음.
+요청을 차단.
 
 ## Quota 선택
 

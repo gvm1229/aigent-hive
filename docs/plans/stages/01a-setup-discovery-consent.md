@@ -41,7 +41,7 @@ Detection 결과:
 
 Optional Skill은 자동 추천 가능. 각 항목은 개별 승인 대상. 승인 화면은 name, source, immutable revision, content digest와 `requested_capabilities`를 모두 표시. 사용자는 capability별로 승인하며 `approved_capabilities ⊆ requested_capabilities` 필수. 승인 시각과 전체 consent payload digest를 함께 기록. 승인하지 않은 Skill 또는 capability는 download, render, discovery root 배치, hook 등록과 실행을 금지.
 
-Consent v1은 `consent_version`, name, source, revision, `content_digest`, 정렬된 requested/approved capability와 UTC-seconds `approved_at`을 RFC 8785 JCS로 canonicalize한 UTF-8 bytes의 SHA-256. 정확한 계약은 `docs/architecture/skill-consent.md`를 따름. Hive는 staging, projection, activation과 migration activation 전에 digest를 재계산. Field가 하나라도 바뀌거나 digest가 다르면 자동 재서명하지 않고 Skill을 inert로 두며 재승인을 요구.
+Consent v1: `consent_version`, name, source, revision, `content_digest`, 정렬된 requested/approved capability와 UTC-seconds `approved_at`을 RFC 8785 JCS로 canonicalize한 UTF-8 bytes의 SHA-256. 정확한 계약은 `docs/architecture/skill-consent.md` 참조. Hive는 staging, projection, activation과 migration activation 전에 digest를 재계산. Field 변경 또는 digest 불일치 시 자동 재서명 금지, Skill inert 유지와 재승인 요구.
 
 Fallback hook: Skill consent와 분리된 approval object. `absent`일 때만 다음 capability preview 표시.
 
@@ -62,4 +62,4 @@ Fallback hook: Skill consent와 분리된 approval object. `absent`일 때만 �
 
 OMX/OMC가 이후 감지되면 기존 Hive fallback hook은 즉시 neutral/inert 동작만 하고, 다음 `hive setup --reconfigure` 또는 `hive update` preview가 Hive-owned entry 제거를 제안. 제거 전후 foreign hook entry와 user byte는 보존.
 
-Descriptor bytes, content/consent digest와 activation-time 재검증의 normative contract는 [`../../architecture/hook-consent.md`](../../architecture/hook-consent.md)를 따름.
+Descriptor bytes, content/consent digest와 activation-time 재검증의 normative contract: [`../../architecture/hook-consent.md`](../../architecture/hook-consent.md).

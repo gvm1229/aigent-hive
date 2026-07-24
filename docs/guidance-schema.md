@@ -20,7 +20,7 @@ Marker 이름은 `AIGENT-HIVE`로 고정. Hive가 소유하는 범위는 start m
 - Hive marker가 중복, 중첩 또는 한쪽만 있으면 추정 복구하지 않고 conflict로 중지.
 - Hive의 external marker 의미 parse와 external namespace 소유권 manifest 편입 금지.
 
-Renderer는 `AGENTS.md`를 읽기 전에 target-relative path와 모든 ancestor가 symlink가 아닌지 확인. Symlink, FIFO, directory 또는 다른 non-file이 shared path를 차지하면 외부 target bytes를 읽지 않고 conflict로 끝남.
+Renderer는 `AGENTS.md` 조회 전에 target-relative path와 모든 ancestor의 non-symlink 상태를 확인. Symlink, FIFO, directory 또는 다른 non-file이 shared path를 차지하면 외부 target bytes 조회 없이 conflict 종료.
 
 Apply는 충돌하지 않는 임의 이름의 exclusive temp file에서 새 bytes를 flush·sync한 뒤 교체. 중간 operation이나 설치 후 검증이 실패하면 transaction 시작 전의 managed bytes와 생성 directory를 복원. Rollback 자체가 실패하면 성공으로 축소하지 않고 `hive.activation-rollback-failed`를 반환.
 
@@ -61,7 +61,10 @@ Consumer marker의 사람용 문서 작성 기본값:
 - `추가`, `정리`, `검증`, `확인`, `적용` 같은 명사형·동작 명사형 우선
 - 설명문을 끝내는 `~다`, `~한다`, `~된다`, `~이다`, `~있다`, `~없다`, `~않는다`,
   `~했다`, `~됐다`, `~합니다`, `~됩니다`, `~해요` 금지. 예시는 제한 목록 아님
-- 단순 suffix 교체로 만든 `~했음`, `~됐음`, `~않음`보다 의미 중심 명사구 우선
+- 단순 suffix 교체로 만든 `~음`·attached `~ㅁ` 금지. Korean stem, mixed
+  English-Korean form, state+copula와 possibility clause 포함
+- authored 설명의 conversational imperative `~줘`, attached `~해` 금지. 예시는
+  제한 목록 아님
 - authored callout·blockquote도 같은 규칙 적용. Blockquote 표시는 exact quote 증거 아님
 - exact 외부 인용·UI prompt·protocol·fixture만 path·line·reason·line digest 예외 허용
 - code identifier, schema key, path, command, product name, exact UI label 원형 유지
@@ -81,6 +84,17 @@ Consumer marker의 사람용 문서 작성 기본값:
 | `업데이트가 완료되었습니다.` | `업데이트 완료` |
 | `Release 계약이 구현됐음.` | `Release 계약 구현 완료` |
 | `API key를 요청하거나 저장하지 않음.` | `API key 요청·저장 없음` |
+| `Status는 INDETERMINATE다.` | `Status: INDETERMINATE` |
+| `문서를 읽음.` | `문서 확인` |
+| `작업이 끝남.` | `작업 완료` |
+| `연결이 닫힘.` | `연결 종료` |
+| `설정 값을 가짐.` | `설정 값 보유` |
+| `정책을 따름.` | `정책 준수` |
+| `compile됨.` | `compile 완료` |
+| `검증할 수 있음.` | `검증 가능` |
+| `검증할 수 없음.` | `검증 불가` |
+| `문서를 보여 줘.` | `문서 확인 요청` |
+| `기능을 사용해.` | `기능 사용 요청` |
 
 Authored blockquote 대조:
 

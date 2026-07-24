@@ -5,7 +5,7 @@
 
 ## 결정
 
-Hive는 사용자가 이미 인증한 Codex·Claude Code·Gemini Antigravity host 위에서만 실행. Model API를 직접 호출하지 않음.
+Hive는 사용자가 이미 인증한 Codex·Claude Code·Gemini Antigravity host 위에서만 실행. Model API 직접 호출 금지.
 
 ## 이유
 

@@ -19,4 +19,4 @@ Hive source, immutable release bundle, consumer installed harness를 별도 arti
 - source root의 `hive-source.json` 발견 시 consumer setup 거부
 - root `.agents/` 출하 금지
 - consumer artifact test는 `tests/work/`에서만 수행
-- release는 source 경로를 runtime에 참조하지 않음
+- release의 source 경로 runtime 참조 금지

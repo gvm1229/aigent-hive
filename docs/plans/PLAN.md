@@ -1,6 +1,6 @@
 # Aigent Hive active plan index
 
-> Revision: 1.28
+> Revision: 1.30
 > 기준일: 2026-07-24
 > Product version: `0.7.0`
 > 현재 milestone: Phase 7 public qualification `0.8.0`
@@ -22,8 +22,9 @@
 | --- | ---: | ---: | ---: |
 | Phase 0–6 | 70 | 0 | 100% |
 | Phase 7 | 32 | 8 | 80% |
-| Documentation style | 3 | 2 | 60% |
-| **Canonical total** | **105** | **10** | **91.3%** |
+| Documentation style | 4 | 1 | 80% |
+| Security review | 0 | 4 | 0% |
+| **Canonical total** | **106** | **13** | **89.1%** |
 
 External production boundary 항목도 미완료 합계에 포함. Protected authority 없이 완료 처리 금지.
 
@@ -43,6 +44,7 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
 | --- | --- | --- |
 | [`phases/07-public-qualification.md`](phases/07-public-qualification.md) | `P7-*` | Phase 7 local·external qualification과 completion gate |
 | [`active/documentation-style.md`](active/documentation-style.md) | `DOC-*` | 사람용 문서 style completion gate |
+| [`active/security-review.md`](active/security-review.md) | `SEC-*` | 독립 code·security review finding completion gate |
 
 ## Reconciliation gate
 
@@ -64,7 +66,7 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
 ## Current execution order
 
 1. Active checklist reconciliation
-2. 로컬 qualification·문서 completion gate
+2. 로컬 qualification·문서·security review completion gate
 3. 전체 Rust·Python·Copier·schema·security·link 검증
 4. 독립 semantic·code·security review
 5. `PLAN` fragment·`CURRENT`·`README` 최종 동기화

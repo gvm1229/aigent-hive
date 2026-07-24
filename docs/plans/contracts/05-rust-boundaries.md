@@ -64,4 +64,4 @@ Implemented built-in:
 - team/swarm clone
 - OMX/OMC alias
 
-Optional third-party Skill은 quarantine→provenance 검증→사용자 개별 승인→namespaced projection 순서. Catalog 등록이나 추천은 activation이 아니며, 승인되지 않은 Skill은 host discovery surface에 추가 금지. 승인된 model-invocable Skill은 description이 task와 명확히 일치할 때 자동 선택할 수 있지만 side effect는 capability policy와 별도 runtime approval을 따름.
+Optional third-party Skill 순서: quarantine→provenance 검증→사용자 개별 승인→namespaced projection. Catalog 등록이나 추천은 activation이 아니며, 승인되지 않은 Skill은 host discovery surface에 추가 금지. 승인된 model-invocable Skill은 description과 task가 명확히 일치할 때 자동 선택 가능; side effect는 capability policy와 별도 runtime approval 적용.

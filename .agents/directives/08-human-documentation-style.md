@@ -71,6 +71,16 @@ as `마음`, `걸음`, `이름`, `여름`, and `구름` are not mechanical nouni
 | `검증할 수 있음.` | `검증 가능` |
 | `검증할 수 없음.` | `검증 불가` |
 
+Conversational imperative endings are also prohibited in authored explanation. Forms such as
+standalone `~줘` and attached `~해` are examples, not a finite phrase list. Exact user-prompt or
+UI-prompt samples may retain them only through the same path, line, reason, and exact-digest
+literal exception.
+
+| Avoid | Use |
+| --- | --- |
+| `문서를 보여 줘.` | `문서 확인 요청` |
+| `기능을 사용해.` | `기능 사용 요청` |
+
 ## Reader-first explanation
 
 - State the decision, result, or prerequisite concept first.

@@ -46,6 +46,20 @@ class HumanDocumentationStyleTest(unittest.TestCase):
             [1, 2, 3, 4, 5, 6],
         )
 
+    def test_conversational_imperatives_are_checked_without_lexical_collisions(self) -> None:
+        prohibited = (
+            "문서를 보여 줘.\n"
+            "이 기능을 사용해.\n"
+            "우회를 계속해.\n"
+            "`이 session에서 사용량 가드를 우회하고 계속해.`처럼 명시 필요.\n"
+        )
+        self.assertEqual(
+            [finding.line for finding in MODULE.prose_findings("README.md", prohibited)],
+            [1, 2, 3, 4],
+        )
+        allowed = "동해\n사용자 오해\n기능 사용 요청\n설명을 통해 결과 확인\nanswers로 전달해 migration 수행\n"
+        self.assertEqual(MODULE.prose_findings("README.md", allowed), [])
+
     def test_mechanical_nominalized_endings_are_checked(self) -> None:
         text = """기능 사용함
 업데이트 완료했음.

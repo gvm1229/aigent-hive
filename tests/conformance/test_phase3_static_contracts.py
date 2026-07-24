@@ -133,6 +133,7 @@ class Phase3SkillSourceContract(unittest.TestCase):
         }
         expected_fragments = {
             "active/documentation-style.md",
+            "active/security-review.md",
             "contracts/README.md",
             "phases/07-public-qualification.md",
             "phases/README.md",
@@ -146,12 +147,14 @@ class Phase3SkillSourceContract(unittest.TestCase):
 
         active_fragments = [
             plan_root / "active/documentation-style.md",
+            plan_root / "active/security-review.md",
             plan_root / "phases/07-public-qualification.md",
         ]
         self.assertEqual(
             {path.relative_to(plan_root).as_posix() for path in active_fragments},
             {
                 "active/documentation-style.md",
+                "active/security-review.md",
                 "phases/07-public-qualification.md",
             },
         )
@@ -220,10 +223,12 @@ class Phase3SkillSourceContract(unittest.TestCase):
         )
         phase_7_path = plan_root / "phases/07-public-qualification.md"
         documentation_path = plan_root / "active/documentation-style.md"
+        security_review_path = plan_root / "active/security-review.md"
         progress_rows = (
             ("Phase 0–6", *checklist_counts(completed_phase_paths)),
             ("Phase 7", *checklist_counts([phase_7_path])),
             ("Documentation style", *checklist_counts([documentation_path])),
+            ("Security review", *checklist_counts([security_review_path])),
         )
         total_done = sum(row[1] for row in progress_rows)
         total_open = sum(row[2] for row in progress_rows)
@@ -382,6 +387,17 @@ class Phase3SkillSourceContract(unittest.TestCase):
                 "API key를 요청하거나 저장하지 않음.",
                 "API key 요청·저장 없음",
             ),
+            ("Status는 INDETERMINATE다.", "Status: INDETERMINATE"),
+            ("문서를 읽음.", "문서 확인"),
+            ("작업이 끝남.", "작업 완료"),
+            ("연결이 닫힘.", "연결 종료"),
+            ("설정 값을 가짐.", "설정 값 보유"),
+            ("정책을 따름.", "정책 준수"),
+            ("compile됨.", "compile 완료"),
+            ("검증할 수 있음.", "검증 가능"),
+            ("검증할 수 없음.", "검증 불가"),
+            ("문서를 보여 줘.", "문서 확인 요청"),
+            ("기능을 사용해.", "기능 사용 요청"),
         )
         for exact_example in {
             example for pair in exact_pairs for example in pair
@@ -394,6 +410,9 @@ class Phase3SkillSourceContract(unittest.TestCase):
         self.assertIn("예시는 제한 목록 아님", guidance)
         self.assertIn("Blockquote 표시는 exact quote 증거 아님", guidance)
         self.assertIn("`Release 계약이 구현됐음.`", guidance)
+        self.assertIn("possibility clauses", template)
+        self.assertIn("conversational imperative endings", template)
+        self.assertIn("Conversational imperative", source_directive)
 
     def test_consumer_turn_gate_uses_enforcement_and_semantic_intent(self) -> None:
         template = (

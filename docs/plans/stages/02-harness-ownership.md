@@ -27,7 +27,7 @@ Setup-time role lifecycle:
 6. 사용자가 reconfigure preview에서 명시 승인한 경우 definition field만 변경하고 assignment·handoff·body 보존
 7. seed 제거만으로 role file을 삭제하지 않으며 명시 retire operation 필요
 
-정확한 frontmatter/body, migration과 fixture 계약은 `docs/architecture/role-lifecycle.md`를 따름.
+정확한 frontmatter/body, migration과 fixture 계약: `docs/architecture/role-lifecycle.md`.
 
 #### 구현
 

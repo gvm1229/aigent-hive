@@ -32,8 +32,16 @@ SHA256 = re.compile(r"[0-9a-f]{64}")
 
 # A boundary can be an ordinary sentence mark, a quote, a Markdown table cell, or a
 # label-like colon. It intentionally also admits whitespace so an authored sentence
-# followed by another sentence on the same line cannot hide the first ending.
-BOUNDARY = r"(?=[.!?。！？:：;；,，]*[)\]}>〉》」』’”'\"`]*[*_~]*(?:\s|\||$))"
+# followed by another sentence on the same line cannot hide the first ending. An
+# exact inline prompt followed by an explanatory postposition remains a literal
+# boundary and therefore still requires an explicit allowlist entry.
+BOUNDARY = (
+    r"(?=(?:"
+    r"[.!?。！？:：;；,，]*[)\]}>〉》」』’”'\"`]*[*_~]*(?:\s|\||$)"
+    r"|[.!?。！？]+[)\]}>〉》」』’”'\"`]+[*_~]*(?:처럼|라고|이라는|라는|이라고)"
+    r"(?:\s|[.!?。！？:：;；,，]|\||$)"
+    r"))"
+)
 ENDING_TOKEN = re.compile(rf"[가-힣A-Za-z0-9_+-]+{BOUNDARY}")
 INLINE_LINK_DESTINATION = re.compile(r"\]\((?:[^()]|\([^)]*\))*\)")
 AUTOLINK = re.compile(r"<https?://[^>]+>")
@@ -154,6 +162,13 @@ def _is_mechanical_nominalization(token: str, line: str, start: int) -> bool:
     return False
 
 
+def _is_terminal_token(token: str, line: str, start: int) -> bool:
+    remainder = line[start + len(token):]
+    remainder = re.sub(r"^[)\]}>〉》」』’”'\"`*_~]+", "", remainder)
+    stripped = remainder.lstrip()
+    return not stripped or stripped[0] in ".!?。！？:：;；,，|"
+
+
 def _is_narrative_token(token: str, line: str, start: int) -> bool:
     if token == "보다":
         return True
@@ -167,6 +182,14 @@ def _is_narrative_token(token: str, line: str, start: int) -> bool:
         return _hangul_syllable_count(token[:-1]) >= 2
     if token.endswith("죠"):
         return True
+    if token == "줘" and _is_terminal_token(token, line, start):
+        return True
+    if (
+        token.endswith("해")
+        and _hangul_syllable_count(token[:-1]) >= 2
+        and _is_terminal_token(token, line, start)
+    ):
+        return PARTICLE_CONTEXT.search(line) is not None
     if re.search(r"(?:합니|됩니|입니|했어|됐어|해|돼|세|어|아|나|군|지)요$", token):
         return True
     if not token.endswith("다"):

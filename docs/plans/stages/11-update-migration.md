@@ -26,7 +26,7 @@
 - additive projection과 index rebuild 허용
 - breaking change 발견 시 release 자체를 거부
 
-이 규칙은 major `0`에도 동일하게 적용. `0.1.0 → 0.2.0`은 feature addition일 수 있지만 existing supported contract를 깨뜨릴 수 없음.
+이 규칙은 major `0`에도 동일하게 적용. `0.1.0 → 0.2.0`은 feature addition일 수 있으나 existing supported contract 파괴 금지.
 
 #### Cross-major
 

@@ -6,12 +6,12 @@
 ## 결정
 
 Aigent Hive source, release bundle과 installed harness는 `X.Y.Z` product version을
-공유한다. 마지막 완료 milestone은 Phase 5 usage guard와 authenticated judge quorum
-`0.6.0`이며 root `Cargo.toml`의 `workspace.package.version`이 source 정본이다.
+공유. 마지막 완료 milestone은 Phase 6 verifier-only signed release와 safe update
+`0.7.0`이며 root `Cargo.toml`의 `workspace.package.version`이 source 정본.
 Independent judge identity와 critical human approval은 protected external public-key
-trust root와 detached Ed25519 attestation으로 검증한다.
+trust root와 detached Ed25519 attestation으로 검증.
 
-Plan revision은 product version과 독립이다. Plan-only 또는 current-state documentation change는 shipped behavior가 바뀌지 않으면 product version을 증가시키지 않는다.
+Plan revision은 product version과 독립. Shipped behavior 변화가 없는 plan-only 또는 current-state documentation change는 product version 증가 대상에서 제외.
 
 ## 증가 규칙
 
@@ -19,17 +19,17 @@ Plan revision은 product version과 독립이다. Plan-only 또는 current-state
 - `Z`: 같은 feature contract 안의 compatible quick bugfix, security fix, packaging·documentation correction
 - `X`: breaking contract 또는 compatibility baseline 변경
 
-Automation은 `X`를 추론하거나 자동 증가할 수 없다. 사용자가 exact next-major target을 명시하고 별도 human confirmation을 제공한 경우에만 release tooling이 major prepare를 허용한다.
+Automation의 `X` 추론·자동 증가 금지. Exact next-major target 명시와 별도 human confirmation이 있을 때만 release tooling의 major prepare 허용.
 
 ## 호환성
 
-Hive는 pre-1.0에도 같은-major non-breaking 정책을 적용한다. 따라서 `0.1.0 → 0.n.z` upgrade도 기존 supported contract를 깨뜨릴 수 없다. Breaking change를 `0.y.0` minor로 숨기지 않는다.
+Hive는 pre-1.0에도 같은-major non-breaking 정책을 적용. 따라서 `0.1.0 → 0.n.z` upgrade의 기존 supported contract 파괴 금지. Breaking change의 `0.y.0` minor 은폐 금지.
 
-Cross-major migration은 project source, docs, canonical knowledge, role/run state와 가능한 harness preference를 보존해야 한다. SQLite와 backup은 compatibility 정본이 아니다.
+Cross-major migration의 project source, docs, canonical knowledge, role/run state, 가능한 harness preference 보존 필수. SQLite와 backup은 compatibility 정본에서 제외.
 
 ## Version parity
 
-Release gate는 다음 version이 모두 같지 않으면 실패한다.
+Release gate는 다음 version이 모두 같지 않으면 실패.
 
 - root Cargo workspace package
 - Cargo lock의 Hive workspace package
@@ -41,12 +41,13 @@ Release gate는 다음 version이 모두 같지 않으면 실패한다.
 
 ## 결과
 
-- 현재 project version은 `0.6.0`
+- 현재 project version은 `0.7.0`
 - `0.1.0 → 0.2.0`은 backward-compatible Phase 1 feature milestone에 따른 minor 증가
 - `0.2.0 → 0.3.0`은 backward-compatible Phase 2 knowledge/index feature milestone에 따른 minor 증가
 - `0.3.0 → 0.4.0`은 backward-compatible Phase 3 Skill/projection feature milestone에 따른 minor 증가
 - `0.4.0 → 0.5.0`은 backward-compatible Phase 4 role/run interoperability feature milestone에 따른 minor 증가
 - `0.5.0 → 0.6.0`은 Phase 5 usage guard와 authenticated judge quorum completion gate를 충족한 backward-compatible minor 증가
+- `0.6.0 → 0.7.0`은 Phase 6 verifier-only signed release, update/migration과 crash-safe recovery completion gate를 충족한 backward-compatible minor 증가
 - 실제 compatible feature delivery마다 minor를, 빠른 compatible fix마다 patch를 증가
 - explicit user instruction 없는 major bump 0회
 - same-major breaking fixture는 release/update 거부

@@ -2,7 +2,7 @@
 
 원본 또는 정규화한 source material 보관 위치.
 
-- 기존 source를 조용히 수정하지 않음
+- 기존 source bytes 수정 금지
 - source bytes의 SHA-256을 revision filename과 locator에 결합
 - 변경된 source는 새 immutable revision으로 수집
 - 폐기된 source는 active tree에서 삭제
