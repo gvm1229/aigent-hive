@@ -103,6 +103,20 @@ skills:
       - run-state
     availability: implemented
 
+  - name: hive-usage-guard
+    description: Inspect or change the installed usage threshold and current-session safeguard through the signed Hive CLI without owning continuation or orchestration.
+    provided_by: hive
+    superseded_by_external: []
+    invocation_intents:
+      - RunWork
+    side_effect_class: project-write
+    capabilities:
+      - filesystem-read
+      - filesystem-write
+      - run-state
+      - shell
+    availability: implemented
+
   - name: hive-role-handoff
     description: Update canonical role assignment and handoff Markdown while preserving user-authored role content and leaving orchestration to the resolved host owner.
     provided_by: hive
@@ -140,7 +154,7 @@ skills:
       - filesystem-read
       - filesystem-write
       - shell
-    availability: catalog-only
+    availability: implemented
 
   - name: hive-migrate
     description: Apply an explicitly supported Hive schema migration with ownership protection, backup, validation, and rollback while rebuilding disposable indexes.
@@ -153,4 +167,4 @@ skills:
       - filesystem-read
       - filesystem-write
       - shell
-    availability: catalog-only
+    availability: implemented

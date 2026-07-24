@@ -26,6 +26,7 @@ CANONICAL_VISIBLE_PATHS = (
     ".hive/config/capability-resolution.yml",
     ".hive/config/knowledge-scope.yml",
     ".hive/config/role-seeds.yml",
+    ".hive/directives/00-editing-discipline.md",
     ".hive/knowledge/Raw/README.md",
     ".hive/knowledge/Schema/schema.md",
     ".hive/knowledge/Wiki/index.md",
@@ -41,11 +42,14 @@ BUILTIN_SKILL_NAMES = (
     "hive-knowledge-capture",
     "hive-knowledge-maintenance",
     "hive-knowledge-query",
+    "hive-migrate",
     "hive-prompt-refine",
     "hive-role-handoff",
     "hive-run-checkpoint",
     "hive-run-resume",
     "hive-simple-question",
+    "hive-update",
+    "hive-usage-guard",
     "setup-harness",
 )
 CODEX_HIVE_PROJECTION_PATHS = {

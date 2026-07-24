@@ -4,12 +4,13 @@ members = [
   "crates/hive-core",
   "crates/hive-projection",
   "crates/hive-render",
+  "crates/hive-update",
   "crates/hive-wiki",
 ]
 resolver = "2"
 
 [workspace.package]
-version = "0.6.0"
+version = "0.7.0"
 edition = "2021"
 repository = "https://github.com/gvm1229/aigent-hive"
 license = "Apache-2.0"

@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aigent-hive.local/schemas/historical-surfaces.schema.json",
+  "title": "Aigent Hive compiled historical release surfaces",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "releases"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "releases": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/release" }
+    }
+  },
+  "$defs": {
+    "version": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"
+    },
+    "strings": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "release": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "product_version",
+        "schema_version",
+        "schemas",
+        "skills",
+        "capabilities",
+        "migrations",
+        "templates",
+        "ownership",
+        "projections"
+      ],
+      "properties": {
+        "product_version": { "$ref": "#/$defs/version" },
+        "schema_version": { "const": 1 },
+        "schemas": { "$ref": "#/$defs/strings" },
+        "skills": { "$ref": "#/$defs/strings" },
+        "capabilities": { "$ref": "#/$defs/strings" },
+        "migrations": { "$ref": "#/$defs/strings" },
+        "templates": { "$ref": "#/$defs/strings" },
+        "ownership": { "$ref": "#/$defs/strings" },
+        "projections": { "$ref": "#/$defs/strings" }
+      }
+    }
+  }
+}

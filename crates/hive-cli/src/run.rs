@@ -208,8 +208,16 @@ impl PinnedTarget {
     }
 
     pub(crate) fn snapshot(&self, relative: &Path) -> Result<FileSnapshot, AdapterError> {
+        self.snapshot_bounded(relative, MAX_EXPLICIT_FILE_BYTES)
+    }
+
+    pub(crate) fn snapshot_bounded(
+        &self,
+        relative: &Path,
+        max_bytes: usize,
+    ) -> Result<FileSnapshot, AdapterError> {
         Ok(self
-            .read_optional(relative, MAX_EXPLICIT_FILE_BYTES)?
+            .read_optional(relative, max_bytes)?
             .map_or(FileSnapshot::Missing, FileSnapshot::File))
     }
 
@@ -302,7 +310,7 @@ impl PinnedTarget {
         Ok(())
     }
 
-    fn publish_runtime(
+    pub(crate) fn publish_runtime(
         &self,
         relative: &Path,
         expected: &FileSnapshot,

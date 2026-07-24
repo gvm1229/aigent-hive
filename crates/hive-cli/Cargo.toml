@@ -17,6 +17,7 @@ cap-std.workspace = true
 hive-core = { path = "../hive-core" }
 hive-projection = { path = "../hive-projection" }
 hive-render = { path = "../hive-render" }
+hive-update = { path = "../hive-update" }
 hive-wiki = { path = "../hive-wiki" }
 jsonschema.workspace = true
 serde.workspace = true

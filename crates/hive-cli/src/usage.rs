@@ -486,6 +486,21 @@ pub(crate) fn check_with_runner(
     now: SystemTime,
 ) -> Result<NormalizedSnapshot, SensorError> {
     validate_account_digest(account_digest)?;
+    check_with_runner_for_account(runner, Some(account_digest), now)
+}
+
+pub(crate) fn check_unique_with_runner(
+    runner: &impl CommandRunner,
+    now: SystemTime,
+) -> Result<NormalizedSnapshot, SensorError> {
+    check_with_runner_for_account(runner, None, now)
+}
+
+fn check_with_runner_for_account(
+    runner: &impl CommandRunner,
+    account_digest: Option<&str>,
+    now: SystemTime,
+) -> Result<NormalizedSnapshot, SensorError> {
     let executable = runner.qualify("codexbar")?;
     let version = runner.run(
         &executable,
@@ -506,7 +521,7 @@ pub(crate) fn check_with_runner(
     if !output.success {
         return Err(SensorError::Failed);
     }
-    normalize_output(&output.stdout, account_digest, unix_seconds(now)?)
+    normalize_output_for_account(&output.stdout, account_digest, unix_seconds(now)?)
 }
 
 #[derive(Debug)]
@@ -640,9 +655,18 @@ fn validate_version(stdout: &[u8]) -> Result<(), SensorError> {
     }
 }
 
+#[cfg(test)]
 fn normalize_output(
     stdout: &[u8],
     account_digest: &str,
+    now: u64,
+) -> Result<NormalizedSnapshot, SensorError> {
+    normalize_output_for_account(stdout, Some(account_digest), now)
+}
+
+fn normalize_output_for_account(
+    stdout: &[u8],
+    requested_account_digest: Option<&str>,
     now: u64,
 ) -> Result<NormalizedSnapshot, SensorError> {
     let rows: Vec<CodexBarRow> =
@@ -653,14 +677,26 @@ fn normalize_output(
     for row in &rows {
         validate_row_identity(row)?;
     }
-    let mut matches = rows
-        .iter()
-        .filter_map(|row| row.account.as_deref().map(|account| (row, account)))
-        .filter(|(_, account)| sha256_digest(account.as_bytes()) == account_digest);
-    let (row, _account) = matches.next().ok_or(SensorError::AccountNotFound)?;
-    if matches.next().is_some() {
-        return Err(SensorError::DuplicateAccount);
-    }
+    let (row, account_digest) = if let Some(account_digest) = requested_account_digest {
+        let mut matches = rows
+            .iter()
+            .filter_map(|row| row.account.as_deref().map(|account| (row, account)))
+            .filter(|(_, account)| sha256_digest(account.as_bytes()) == account_digest);
+        let (row, _account) = matches.next().ok_or(SensorError::AccountNotFound)?;
+        if matches.next().is_some() {
+            return Err(SensorError::DuplicateAccount);
+        }
+        (row, account_digest.to_owned())
+    } else {
+        let mut accounts = rows
+            .iter()
+            .filter_map(|row| row.account.as_deref().map(|account| (row, account)));
+        let (row, account) = accounts.next().ok_or(SensorError::AccountNotFound)?;
+        if accounts.next().is_some() {
+            return Err(SensorError::DuplicateAccount);
+        }
+        (row, sha256_digest(account.as_bytes()))
+    };
     let usage = row.usage.as_ref().ok_or(SensorError::Malformed)?;
     let measured_at = parse_iso8601_z(&usage.updated_at)?;
     let expires_at = measured_at.saturating_add(60);
@@ -689,7 +725,7 @@ fn normalize_output(
         sensor_id: "codexbar",
         sensor_version: CODEXBAR_VERSION,
         provider: "codex",
-        account_digest: account_digest.to_owned(),
+        account_digest,
         measured_at,
         expires_at,
         source_confidence: "local",
@@ -824,10 +860,11 @@ fn days_from_civil(year: i32, month: i32, day: i32) -> i64 {
 #[cfg(test)]
 mod tests {
     use super::{
-        check_with_runner, consume_for_automatic_dispatch, normalize_output, parse_iso8601_z,
-        qualify_and_dispatch_with_runner, qualify_program, resolve_program_in_path,
-        AutomaticDispatchError, CommandOutput, CommandRunner, QualifiedExecutable, SensorError,
-        SystemCommandRunner, USAGE_ARGUMENTS, USAGE_TIMEOUT, VERSION_TIMEOUT,
+        check_unique_with_runner, check_with_runner, consume_for_automatic_dispatch,
+        normalize_output, parse_iso8601_z, qualify_and_dispatch_with_runner, qualify_program,
+        resolve_program_in_path, AutomaticDispatchError, CommandOutput, CommandRunner,
+        QualifiedExecutable, SensorError, SystemCommandRunner, USAGE_ARGUMENTS, USAGE_TIMEOUT,
+        VERSION_TIMEOUT,
     };
     use hive_core::sha256_digest;
     use hive_core::usage_guard::{evaluate_usage, UsageDecision, UsagePermitError, UsagePolicy};
@@ -1060,6 +1097,52 @@ mod tests {
                 .collect::<Vec<_>>()
         );
         assert_eq!(invocations[1].timeout, USAGE_TIMEOUT);
+    }
+
+    #[test]
+    fn unique_account_selection_derives_only_the_account_digest() {
+        let runner = FakeRunner::new([
+            Ok(success("CodexBar 0.45.2\n")),
+            Ok(success(row(
+                "codex-cli",
+                "2026-07-23T12:00:00Z",
+                300,
+                10_080,
+                20,
+                30,
+            ))),
+        ]);
+
+        let snapshot = check_unique_with_runner(&runner, now("2026-07-23T12:00:30Z"))
+            .expect("one qualified local account should be selected");
+
+        assert_eq!(snapshot.account_digest, account_digest());
+    }
+
+    #[test]
+    fn unique_account_selection_rejects_multiple_rows() {
+        let one_row: serde_json::Value = serde_json::from_slice(&row(
+            "codex-cli",
+            "2026-07-23T12:00:00Z",
+            300,
+            10_080,
+            20,
+            30,
+        ))
+        .expect("fixture row should parse");
+        let row = one_row
+            .as_array()
+            .and_then(|rows| rows.first())
+            .expect("fixture should contain one row")
+            .clone();
+        let duplicate = serde_json::to_vec(&serde_json::json!([row, row]))
+            .expect("duplicate fixture should encode");
+        let runner = FakeRunner::new([Ok(success("CodexBar 0.45.2\n")), Ok(success(duplicate))]);
+
+        assert_eq!(
+            check_unique_with_runner(&runner, now("2026-07-23T12:00:30Z")),
+            Err(SensorError::DuplicateAccount)
+        );
     }
 
     #[cfg(unix)]

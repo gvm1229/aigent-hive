@@ -442,6 +442,18 @@ def validate_license_boundary() -> None:
         ".hive/LICENSE-AIGENT-HIVE.txt",
         ".hive/README.md",
     }
+    editing_entries = [
+        path
+        for path in harness_manifest["paths"]
+        if path["pattern"] == ".hive/directives/00-editing-discipline.md"
+    ]
+    assert editing_entries == [
+        {
+            "pattern": ".hive/directives/00-editing-discipline.md",
+            "ownership": "hive-managed-config",
+            "source": "template",
+        }
+    ]
 
     apache_license = APACHE_LICENSE_PATH.read_bytes()
     template_license = (
@@ -570,6 +582,7 @@ def validate_render(render_root: Path, input_data_path: Path) -> None:
         ".hive/config/role-seeds.yml",
         ".hive/config/knowledge-scope.yml",
         ".hive/config/approved-skills.yml",
+        ".hive/directives/00-editing-discipline.md",
         ".hive/knowledge/Wiki/index.md",
         ".hive/knowledge/Schema/schema.md",
         ".hive/knowledge/suppression.yml",
@@ -580,6 +593,18 @@ def validate_render(render_root: Path, input_data_path: Path) -> None:
         path = render_root / relative_path
         if not path.is_file():
             raise AssertionError(f"missing rendered path: {relative_path}")
+
+    editing_discipline = render_root / ".hive/directives/00-editing-discipline.md"
+    canonical_editing_discipline = (
+        REPOSITORY_ROOT
+        / "harness/template/.hive/directives/00-editing-discipline.md"
+    ).read_bytes()
+    if editing_discipline.read_bytes() != canonical_editing_discipline:
+        raise AssertionError("rendered editing discipline bytes changed")
+    if hashlib.sha256(canonical_editing_discipline).hexdigest() != (
+        "6ff1639897049dea7ccf710c88fe3bcb369d7edf7e62bcd62137ec70a7c7cc24"
+    ):
+        raise AssertionError("canonical editing discipline digest changed")
 
     rendered_license = render_root / ".hive/LICENSE-AIGENT-HIVE.txt"
     if rendered_license.read_bytes() != APACHE_LICENSE_PATH.read_bytes():
@@ -754,11 +779,14 @@ def validate_render(render_root: Path, input_data_path: Path) -> None:
         "hive-knowledge-capture",
         "hive-knowledge-maintenance",
         "hive-knowledge-query",
+        "hive-migrate",
         "hive-prompt-refine",
         "hive-role-handoff",
         "hive-run-checkpoint",
         "hive-run-resume",
         "hive-simple-question",
+        "hive-update",
+        "hive-usage-guard",
         "setup-harness",
     ]
     if [entry["name"] for entry in active_entries] != expected_skill_names:

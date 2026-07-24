@@ -9,8 +9,8 @@ use hive_core::{
     sha256_digest, validate_hive_skill_projection_relative, validate_project_relative,
 };
 use hive_projection::{
-    compile_projection, ActiveSkills, Host as ProjectionHost, OptionalSkillConsent,
-    OptionalSkillSource, SkillSourceType,
+    compile_projection, historical_builtin_skills, ActiveSkills, Host as ProjectionHost,
+    OptionalSkillConsent, OptionalSkillSource, Projection, SkillSourceType,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
@@ -132,6 +132,26 @@ pub struct SetupOutcome {
     pub resolved_owner: String,
     /// Digest of the complete normalized planned tree.
     pub tree_digest: String,
+    /// Exact before/after digest plan for durable update journaling.
+    pub changes: Vec<SetupChange>,
+}
+
+/// One exact setup mutation plan entry.
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct SetupChange {
+    /// Project-relative manifest-owned path.
+    pub path: String,
+    /// Existing digest, or `None` when the path is absent.
+    pub before_digest: Option<String>,
+    /// Planned digest, or `None` for a deletion.
+    pub after_digest: Option<String>,
+    /// Digest of bytes outside the Hive marker before the change.
+    ///
+    /// This is populated only for shared-marker paths so cross-major update
+    /// verification can prove that user and third-party bytes remain exact.
+    pub foreign_before_digest: Option<String>,
+    /// Digest of bytes outside the Hive marker after the planned change.
+    pub foreign_after_digest: Option<String>,
 }
 
 /// Setup request assembled by the CLI.
@@ -561,6 +581,21 @@ pub fn execute_setup(request: &SetupRequest<'_>) -> Result<SetupOutcome, RenderE
     } else {
         planned_result?
     };
+    if request.mode == SetupMode::Validate {
+        verify_target_capability_current(request.target, &target_dir).map_err(as_verification)?;
+        for path in planned.keys() {
+            ensure_managed_no_symlink_ancestors(request.target, path)?;
+        }
+        validate_installed_against(request.target, &answers, &resolution, &planned)?;
+        let tree_digest = installed_tree_digest(request.target)?;
+        verify_target_capability_current(request.target, &target_dir).map_err(as_verification)?;
+        return Ok(SetupOutcome {
+            changed_paths: Vec::new(),
+            resolved_owner: derived_owner(&resolution)?.to_owned(),
+            tree_digest,
+            changes: Vec::new(),
+        });
+    }
     let projection_transition = prepare_projection_transition(&target_dir, &planned, &answers)?;
     validate_owned_paths(
         planned.keys(),
@@ -582,19 +617,8 @@ pub fn execute_setup(request: &SetupRequest<'_>) -> Result<SetupOutcome, RenderE
         ensure_managed_no_symlink_ancestors(request.target, path)?;
     }
 
-    if request.mode == SetupMode::Validate {
-        verify_target_capability_current(request.target, &target_dir).map_err(as_verification)?;
-        validate_installed_against(request.target, &answers, &resolution, &planned)?;
-        let tree_digest = installed_tree_digest(request.target)?;
-        verify_target_capability_current(request.target, &target_dir).map_err(as_verification)?;
-        return Ok(SetupOutcome {
-            changed_paths: Vec::new(),
-            resolved_owner: derived_owner(&resolution)?.to_owned(),
-            tree_digest,
-        });
-    }
-
     let changed_paths = differing_paths(&target_dir, &planned, &deletions)?;
+    let changes = setup_changes(&target_dir, &changed_paths, &planned)?;
     let tree_digest = digest_tree(&planned);
     match request.mode {
         SetupMode::DryRun => stage_and_validate(
@@ -623,6 +647,7 @@ pub fn execute_setup(request: &SetupRequest<'_>) -> Result<SetupOutcome, RenderE
         changed_paths,
         resolved_owner: derived_owner(&resolution)?.to_owned(),
         tree_digest,
+        changes,
     })
 }
 
@@ -1266,6 +1291,10 @@ fn insert_static_files(files: &mut BTreeMap<PathBuf, Vec<u8>>) {
             include_bytes!("../../../harness/template/.hive/README.md"),
         ),
         (
+            ".hive/directives/00-editing-discipline.md",
+            include_bytes!("../../../harness/template/.hive/directives/00-editing-discipline.md"),
+        ),
+        (
             ".hive/knowledge/Raw/README.md",
             include_bytes!("../../../harness/template/.hive/knowledge/Raw/README.md"),
         ),
@@ -1327,7 +1356,7 @@ fn render_harness_toml(answers: &SetupAnswers, resolution: &CapabilityResolution
 
 fn render_agents_marker(answers: &SetupAnswers, resolution: &CapabilityResolution) -> String {
     format!(
-        "{MARKER_START}\n# Aigent Hive\n\nProject: `{}`\nProfile: `{}`\nPrimary host: `{}`\nResolved orchestration owner: `{}`\nResolution evidence: `{}`\n\n- Read canonical Hive configuration from `.hive/config/harness.toml`.\n- Load only the directives and knowledge required by the current request.\n- For a simple question, do not load project memory, spawn agents, or edit files.\n- Keep durable role identity in `.hive/team/roles/`; the active host owns sessions and subagents.\n- Keep durable knowledge in Markdown. Treat `.hive/index/*.sqlite*` as disposable.\n- Do not call model-provider APIs or request provider API credentials.\n- Require explicit approval before activating optional Skills.\n- Resolve compatible OMX on Codex and compatible OMC on Claude before host-native capability; never ask the user to select an owner or switch owners mid-run.\n- Treat fallback hooks as optional data-integrity guards only. They require conclusive external capability absence plus exact capability, event, path, command, and digest consent.\n- Never use a fallback hook for prompt classification or rewriting, Skill activation, memory ingestion, subagent orchestration, or continuation. A `Stop` hook always returns a neutral allow result.\n- Preserve user text and third-party marker blocks outside this Hive block.\n{MARKER_END}\n",
+        "{MARKER_START}\n# Aigent Hive\n\nProject: `{}`\nProfile: `{}`\nPrimary host: `{}`\nResolved orchestration owner: `{}`\nResolution evidence: `{}`\n\n- Read canonical Hive configuration from `.hive/config/harness.toml`.\n- At every turn boundary, before simple-question detection or ordinary task routing, resolve only clear semantic intent to inspect or change the usage threshold/current-session guard, then run `hive usage enforce --target <project-root> --session-id <exact-current-host-session-id> --process-id <exact-current-host-process-id> [--account-digest <active-account-digest>] --output json`. The account digest may be omitted only when the qualified local sensor exposes exactly one unambiguous account. Exit `3` blocks every non-guard action in that binding until an explicit confirmed current-session disable; never transfer an override or halt marker to another host, session, or process. Recognize obvious threshold/off/on intent by meaning rather than a finite phrase list. A bare continue, resume, finish, urgency, or active run never authorizes bypass.\n- After the usage gate allows the turn and before editing anything, read `.hive/directives/00-editing-discipline.md` in full. Apply all four sections as the highest-priority editing discipline within the Hive contract; never compact, summarize, omit, or substitute any part. Its literal `# CLAUDE.md` heading is original text, not Claude-only scope: the directive applies identically on Codex, Claude, and Gemini Antigravity. Higher-priority instructions and Hive security, ownership, credential, and production boundaries still control.\n- Load only the directives and knowledge required by the current request.\n- For a simple question, do not load project memory, spawn agents, or edit files.\n- Keep durable role identity in `.hive/team/roles/`; the active host owns sessions and subagents.\n- Keep durable knowledge in Markdown. Treat `.hive/index/*.sqlite*` as disposable.\n- Write human-readable project documents in concise Korean unless the user explicitly requests another language. Prefer short headings, bullets, tables, checklists, and semantic noun phrases.\n- Do not end authored explanatory Korean prose with declarative or conversational forms. `~다`, `~한다`, `~된다`, `~이다`, `~있다`, `~없다`, `~않는다`, `~했다`, `~됐다`, `~합니다`, `~됩니다`, and `~해요` are non-exhaustive prohibited examples.\n- Do not mechanically change those endings to `~함`, `~됐음`, `~했음`, or `~않음`. Rewrite the full clause: avoid `Release 계약이 구현됐다.` and `Release 계약이 구현됐음.`; use `Release 계약 구현 완료`. Avoid `API key를 요청하거나 저장하지 않는다.` and `API key를 요청하거나 저장하지 않음.`; use `API key 요청·저장 없음`.\n- Exact bad → good examples (not exhaustive): `Aigent Hive는 provider-neutral 로컬 agent harness다.` → `Aigent Hive: provider-neutral 로컬 agent harness`; `Product version은 0.7.0이다.` → `Product version: 0.7.0`; `Release 계약이 구현됐다.` → `Release 계약 구현 완료`; `API key를 요청하거나 저장하지 않는다.` → `API key 요청·저장 없음`; `이 기능을 사용합니다.` → `기능 사용`; `다음 단계에서 검증해요.` → `다음 단계: 검증`; `검증이 필요합니다.` → `검증 필요`; `업데이트가 완료되었습니다.` → `업데이트 완료`; `Release 계약이 구현됐음.` → `Release 계약 구현 완료`; `API key를 요청하거나 저장하지 않음.` → `API key 요청·저장 없음`.\n- Apply the same rule to authored callouts and blockquotes. Blockquote syntax is not proof of an exact quotation. Preserve narrative-form text only for an exact external quote, UI prompt, protocol sample, fixture payload, or another byte-sensitive literal with an explicit path, line, reason, and exact line digest.\n- Do not call model-provider APIs or request provider API credentials.\n- Require explicit approval before activating optional Skills.\n- Resolve compatible OMX on Codex and compatible OMC on Claude before host-native capability; never ask the user to select an owner or switch owners mid-run.\n- Treat OMX/OMC cancellation output as auxiliary evidence only; it never substitutes for the bound usage halt marker or durable goal/task state.\n- Treat fallback hooks as optional data-integrity guards only. They require conclusive external capability absence plus exact capability, event, path, command, and digest consent.\n- Never use a fallback hook for prompt classification or rewriting, Skill activation, memory ingestion, subagent orchestration, or continuation. A `Stop` hook always returns a neutral allow result.\n- Preserve user text and third-party marker blocks outside this Hive block.\n{MARKER_END}\n",
         answers.project_name,
         answers.project_kind,
         answers.primary_host,
@@ -1370,6 +1399,35 @@ fn merge_shared_marker<T: TargetRead + ?Sized>(
     merged.extend_from_slice(marker.strip_suffix(b"\n").unwrap_or(marker));
     merged.extend_from_slice(&existing[end_offset..]);
     Ok(merged)
+}
+
+/// Return a digest of the bytes outside the single Hive-owned marker block.
+///
+/// A marker-free file is entirely foreign. A missing file is represented by
+/// the SHA-256 digest of an empty byte string by callers. Malformed or nested
+/// markers are rejected with the same conflict semantics as marker merging.
+///
+/// # Errors
+///
+/// Returns a conflict when the byte stream contains unmatched, duplicated, or
+/// nested Hive marker delimiters.
+pub fn shared_marker_foreign_digest(bytes: &[u8]) -> Result<String, RenderError> {
+    let start = MARKER_START.as_bytes();
+    let end = MARKER_END.as_bytes();
+    let starts = find_all(bytes, start);
+    let ends = find_all(bytes, end);
+    if starts.is_empty() && ends.is_empty() {
+        return Ok(sha256_digest(bytes));
+    }
+    if starts.len() != 1 || ends.len() != 1 || starts[0] >= ends[0] {
+        return Err(RenderError::Conflict(
+            "shared AGENTS.md contains malformed or nested Hive markers".to_owned(),
+        ));
+    }
+    let mut foreign = Vec::with_capacity(bytes.len());
+    foreign.extend_from_slice(&bytes[..starts[0]]);
+    foreign.extend_from_slice(&bytes[ends[0] + end.len()..]);
+    Ok(sha256_digest(&foreign))
 }
 
 fn render_roles<T: TargetRead + ?Sized>(
@@ -1464,6 +1522,7 @@ fn validate_owned_paths<'a>(
                 | "canonical-data-protected"
                 | "rebuildable-runtime"
                 | "ephemeral-backup"
+                | "ephemeral-runtime"
                 | "shared-marker"
                 | "hive-skill-projection"
         ) {
@@ -1542,6 +1601,41 @@ fn ownership_entry<'a>(
         })
 }
 
+/// Return whether a path belongs to a renderer-owned update surface.
+///
+/// Canonical role/run/knowledge data, rebuildable runtime, backups, and foreign
+/// namespaces are deliberately excluded. Durable update recovery uses this
+/// check before accepting any journal-directed mutation.
+///
+/// # Errors
+///
+/// Returns an error when the compiled ownership manifest is invalid or the
+/// candidate is not a normalized project-relative path.
+pub fn update_path_is_owned(path: &Path) -> Result<bool, RenderError> {
+    if is_hive_skill_projection_path(path) {
+        validate_hive_skill_projection_relative(path)
+            .map_err(|error| RenderError::Input(error.to_string()))?;
+    } else {
+        validate_project_relative(path).map_err(|error| RenderError::Input(error.to_string()))?;
+    }
+    let manifest = ownership_manifest()?;
+    let entry = match ownership_entry(&manifest, path) {
+        Ok(entry) => entry,
+        Err(RenderError::Safety(_)) => return Ok(false),
+        Err(error) => return Err(error),
+    };
+    Ok(matches!(
+        entry.ownership.as_str(),
+        "hive-managed-config"
+            | "hive-managed-license"
+            | "hive-generated-config"
+            | "user-answer-protected"
+            | "user-consent-protected"
+            | "shared-marker"
+            | "hive-skill-projection"
+    ))
+}
+
 fn manifest_pattern_matches(pattern: &str, path: &str) -> bool {
     if pattern
         .strip_suffix("/**")
@@ -1579,6 +1673,44 @@ fn differing_paths<T: TargetRead + ?Sized>(
     changed.sort();
     changed.dedup();
     Ok(changed)
+}
+
+fn setup_changes<T: TargetRead + ?Sized>(
+    target: &T,
+    changed_paths: &[String],
+    files: &BTreeMap<PathBuf, Vec<u8>>,
+) -> Result<Vec<SetupChange>, RenderError> {
+    changed_paths
+        .iter()
+        .map(|path| {
+            let relative = Path::new(path);
+            let before = read_target_optional(target, relative)?;
+            let before_digest = before.as_ref().map(|bytes| sha256_digest(bytes));
+            let after_digest = files.get(relative).map(|bytes| sha256_digest(bytes));
+            let (foreign_before_digest, foreign_after_digest) = if path == "AGENTS.md" {
+                let empty_digest = sha256_digest(&[]);
+                (
+                    Some(match before.as_deref() {
+                        Some(bytes) => shared_marker_foreign_digest(bytes)?,
+                        None => empty_digest.clone(),
+                    }),
+                    Some(match files.get(relative) {
+                        Some(bytes) => shared_marker_foreign_digest(bytes)?,
+                        None => empty_digest,
+                    }),
+                )
+            } else {
+                (None, None)
+            };
+            Ok(SetupChange {
+                path: path.clone(),
+                before_digest,
+                after_digest,
+                foreign_before_digest,
+                foreign_after_digest,
+            })
+        })
+        .collect()
 }
 
 #[derive(Debug, Clone, Default)]
@@ -1700,14 +1832,19 @@ fn validate_desired_projection_ownership(
     let active_bytes = desired_files.get(active_path).cloned().ok_or_else(|| {
         RenderError::Internal("compiled tree omitted its active Skill projection ledger".to_owned())
     })?;
-    reproduce_projection_ownership(&active_bytes, answers, |relative, label| {
-        desired_files.get(relative).cloned().ok_or_else(|| {
-            RenderError::Internal(format!(
-                "compiled tree omitted required {label}: {}",
-                relative.display()
-            ))
-        })
-    })
+    reproduce_projection_ownership(
+        &active_bytes,
+        answers,
+        env!("CARGO_PKG_VERSION"),
+        |relative, label| {
+            desired_files.get(relative).cloned().ok_or_else(|| {
+                RenderError::Internal(format!(
+                    "compiled tree omitted required {label}: {}",
+                    relative.display()
+                ))
+            })
+        },
+    )
 }
 
 fn validate_projection_ownership<T: TargetRead + ?Sized>(
@@ -1716,14 +1853,19 @@ fn validate_projection_ownership<T: TargetRead + ?Sized>(
 ) -> Result<ValidatedProjectionOwnership, RenderError> {
     let active_path = Path::new(".hive/config/active-skills.yml");
     let active_bytes = read_target_required(target, active_path, "active Skill projection ledger")?;
-    reproduce_projection_ownership(&active_bytes, answers, |relative, label| {
-        read_target_required(target, relative, label)
-    })
+    let harness = read_installed_harness(target)?;
+    reproduce_projection_ownership(
+        &active_bytes,
+        answers,
+        &harness.harness_version,
+        |relative, label| read_target_required(target, relative, label),
+    )
 }
 
 fn reproduce_projection_ownership(
     active_bytes: &[u8],
     answers: &SetupAnswers,
+    source_version: &str,
     mut read_projected: impl FnMut(&Path, &str) -> Result<Vec<u8>, RenderError>,
 ) -> Result<ValidatedProjectionOwnership, RenderError> {
     let active: ActiveSkills = serde_yaml::from_slice(active_bytes).map_err(|error| {
@@ -1765,39 +1907,102 @@ fn reproduce_projection_ownership(
         optional_sources.push(optional_source_from_approval(approvals[0], skill_md)?);
     }
 
-    let expected = compile_projection(host, &optional_sources).map_err(|error| {
+    let current_projection = compile_projection(host, &optional_sources).map_err(|error| {
         RenderError::Verification(format!(
             "active Skill projection cannot be reproduced: {error}"
         ))
     })?;
-    if expected.active_skills != active {
+    let expected_active = expected_active_skills(source_version, &current_projection)?;
+    if expected_active != active {
         return Err(RenderError::Verification(
-            "active Skill projection ledger does not match installed approvals and built-ins"
+            "active Skill projection ledger does not match installed approvals and the authenticated release history"
                 .to_owned(),
         ));
     }
-    let expected_active = expected
-        .files
-        .get(".hive/config/active-skills.yml")
-        .ok_or_else(|| {
-            RenderError::Internal("compiled projection omitted its active ledger".to_owned())
-        })?;
-    if active_bytes != *expected_active {
+    let expected_active_bytes = serde_yaml::to_string(&expected_active)
+        .map_err(|error| {
+            RenderError::Internal(format!(
+                "active Skill projection ledger serialization failed: {error}"
+            ))
+        })?
+        .into_bytes();
+    if active_bytes != expected_active_bytes {
         return Err(RenderError::Verification(
             "active Skill projection ledger bytes are not canonical".to_owned(),
         ));
     }
 
+    let files = authenticate_projected_skill_files(
+        host,
+        source_version,
+        &expected_active,
+        &current_projection,
+        &mut read_projected,
+    )?;
+    Ok(ValidatedProjectionOwnership { files })
+}
+
+fn expected_active_skills(
+    source_version: &str,
+    current_projection: &Projection,
+) -> Result<ActiveSkills, RenderError> {
+    let mut skills = if source_version == env!("CARGO_PKG_VERSION") {
+        current_projection
+            .active_skills
+            .skills
+            .iter()
+            .filter(|skill| skill.source_type == SkillSourceType::BuiltIn)
+            .cloned()
+            .collect::<Vec<_>>()
+    } else {
+        historical_builtin_skills(source_version).map_err(|error| {
+            RenderError::Verification(format!(
+                "historical active Skill projection cannot be authenticated: {error}"
+            ))
+        })?
+    };
+    skills.extend(
+        current_projection
+            .active_skills
+            .skills
+            .iter()
+            .filter(|skill| skill.source_type == SkillSourceType::ApprovedOptional)
+            .cloned(),
+    );
+    skills.sort_by(|left, right| left.name.cmp(&right.name));
+    Ok(ActiveSkills {
+        schema_version: 1,
+        skills,
+    })
+}
+
+fn authenticate_projected_skill_files(
+    host: ProjectionHost,
+    source_version: &str,
+    expected_active: &ActiveSkills,
+    current_projection: &Projection,
+    read_projected: &mut impl FnMut(&Path, &str) -> Result<Vec<u8>, RenderError>,
+) -> Result<BTreeMap<PathBuf, Vec<u8>>, RenderError> {
     let mut files = BTreeMap::new();
-    for (path, expected_bytes) in expected.files {
-        let relative = PathBuf::from(path);
-        if !is_hive_skill_projection_path(&relative) {
-            continue;
-        }
+    for skill in &expected_active.skills {
+        let relative = projected_skill_path(host, &skill.name)?;
         validate_hive_skill_projection_relative(&relative)
             .map_err(|error| RenderError::Verification(error.to_string()))?;
         let installed = read_projected(&relative, "projected Skill")?;
-        if installed != expected_bytes {
+        let authenticated = match skill.source_type {
+            SkillSourceType::BuiltIn if source_version != env!("CARGO_PKG_VERSION") => {
+                sha256_digest(&installed) == skill.content_digest
+            }
+            SkillSourceType::BuiltIn | SkillSourceType::ApprovedOptional => current_projection
+                .files
+                .get(relative.to_str().ok_or_else(|| {
+                    RenderError::Verification(
+                        "projected Skill path is not portable UTF-8".to_owned(),
+                    )
+                })?)
+                .is_some_and(|expected| *expected == installed),
+        };
+        if !authenticated {
             return Err(RenderError::Verification(format!(
                 "projected Skill bytes changed: {}",
                 relative.display()
@@ -1805,7 +2010,7 @@ fn reproduce_projection_ownership(
         }
         files.insert(relative, installed);
     }
-    Ok(ValidatedProjectionOwnership { files })
+    Ok(files)
 }
 
 fn projected_skill_path(host: ProjectionHost, name: &str) -> Result<PathBuf, RenderError> {
@@ -3540,8 +3745,31 @@ fn validate_installed(target: &Path) -> Result<(), RenderError> {
     validate_hook_tree(target, &installed_answers.approved_fallback_hooks)?;
     validate_roles(target, &installed_answers.persistent_roles)?;
     validate_protected_contract(target)?;
+    validate_editing_discipline(target)?;
     validate_installed_marker(target, &installed_answers, &resolution)?;
     Ok(())
+}
+
+fn read_installed_harness<T: TargetRead + ?Sized>(
+    target: &T,
+) -> Result<InstalledHarness, RenderError> {
+    let relative = Path::new(".hive/config/harness.toml");
+    let bytes =
+        read_target_required(target, relative, "harness config").map_err(as_verification)?;
+    let text = std::str::from_utf8(&bytes)
+        .map_err(|_| RenderError::Verification("installed harness is not UTF-8".to_owned()))?;
+    let harness: InstalledHarness = toml::from_str(text).map_err(|error| {
+        RenderError::Verification(format!("invalid installed harness: {error}"))
+    })?;
+    if harness.schema_version != 1
+        || harness.harness_version != harness.source_release_version
+        || harness.harness_version.is_empty()
+    {
+        return Err(RenderError::Verification(
+            "installed harness release identity is invalid".to_owned(),
+        ));
+    }
+    Ok(harness)
 }
 
 fn read_installed_answers<T: TargetRead + ?Sized>(target: &T) -> Result<SetupAnswers, RenderError> {
@@ -3598,6 +3826,20 @@ fn validate_roles(target: &Path, seeds: &[RoleSeed]) -> Result<(), RenderError> 
                 seed.role_id
             )));
         }
+    }
+    Ok(())
+}
+
+fn validate_editing_discipline(target: &Path) -> Result<(), RenderError> {
+    const EXPECTED: &[u8] =
+        include_bytes!("../../../harness/template/.hive/directives/00-editing-discipline.md");
+    let relative = Path::new(".hive/directives/00-editing-discipline.md");
+    let current = read_target_required(target, relative, "editing discipline directive")
+        .map_err(as_verification)?;
+    if current != EXPECTED {
+        return Err(RenderError::Verification(
+            "installed editing discipline directive differs from the shipped contract".to_owned(),
+        ));
     }
     Ok(())
 }
@@ -4183,8 +4425,9 @@ mod tests {
         calculate_consent_digest, capability_detection, derive_resolution, encode_role,
         execute_setup, expected_external_runtime, hook_descriptor_bytes, installed_tree_digest,
         load_answers, load_resolution, merge_shared_marker, mutate_exact_projection_claimed,
-        open_target_capability, parse_role, prepare_projection_transition, render_tree,
-        replace_capability_file_impl, valid_digest, valid_role_id, valid_timestamp,
+        open_target_capability, parse_role, prepare_projection_transition, render_agents_marker,
+        render_tree, replace_capability_file_impl, shared_marker_foreign_digest,
+        update_path_is_owned, valid_digest, valid_role_id, valid_timestamp,
         validate_hook_approvals, validate_owned_paths, validate_skill_approvals, ActivationFault,
         CapabilityEvidence, CapabilityResolution, ExactProjectionMutation, HookApproval,
         HookAuthorization, ProjectionCleanupFault, ReplacePolicy, RoleProfile, RoleSeed,
@@ -4201,6 +4444,34 @@ mod tests {
         Path::new(env!("CARGO_MANIFEST_DIR"))
             .join("../../tests/fixtures/phase1")
             .join(name)
+    }
+
+    #[test]
+    fn update_recovery_ownership_excludes_canonical_runtime_and_foreign_paths() {
+        for owned in [
+            ".hive/config/harness.toml",
+            ".hive/setup-answers.yml",
+            ".agents/skills/hive-update/SKILL.md",
+            "AGENTS.md",
+        ] {
+            assert!(
+                update_path_is_owned(Path::new(owned)).expect("ownership"),
+                "{owned}"
+            );
+        }
+        for excluded in [
+            ".hive/knowledge/Wiki/page.md",
+            ".hive/team/roles/reviewer.md",
+            ".hive/runtime/update-journal.json",
+            ".hive/backups/txn-a/file",
+            "README.md",
+        ] {
+            assert!(
+                !update_path_is_owned(Path::new(excluded)).expect("ownership"),
+                "{excluded}"
+            );
+        }
+        assert!(update_path_is_owned(Path::new(".omx/state.json")).is_err());
     }
 
     fn phase3_fixture(name: &str) -> PathBuf {
@@ -4250,6 +4521,42 @@ mod tests {
         assert!(merged.starts_with(b"prefix\r\n"));
         assert!(merged.ends_with(b"\r\nsuffix"));
         assert!(merged.windows(3).any(|window| window == b"new"));
+    }
+
+    #[test]
+    fn compiled_marker_exactly_matches_the_product_template() {
+        let (answers, _) = load_answers(&fixture("answers-base.yml")).expect("answers should load");
+        let resolution = load_resolution(&fixture("capabilities-codex-omx.json"))
+            .expect("resolution should load");
+        let expected = include_str!("../../../harness/template/AGENTS.md.jinja")
+            .replace("{{ project_name }}", &answers.project_name)
+            .replace("{{ project_kind }}", &answers.project_kind)
+            .replace("{{ primary_host }}", &answers.primary_host)
+            .replace(
+                "{{ capability_resolution.resolved_owner }}",
+                &resolution.resolved_owner,
+            )
+            .replace(
+                "{{ capability_resolution.evidence_digest }}",
+                &resolution.evidence_digest,
+            );
+
+        assert_eq!(render_agents_marker(&answers, &resolution), expected);
+    }
+
+    #[test]
+    fn shared_marker_foreign_digest_ignores_only_the_exact_hive_block() {
+        let first = format!("prefix\r\n{MARKER_START}\nold\n{MARKER_END}\r\nsuffix");
+        let second = format!("prefix\r\n{MARKER_START}\nnew\n{MARKER_END}\r\nsuffix");
+        assert_eq!(
+            shared_marker_foreign_digest(first.as_bytes()).expect("first"),
+            shared_marker_foreign_digest(second.as_bytes()).expect("second")
+        );
+        let changed = format!("different\r\n{MARKER_START}\nnew\n{MARKER_END}\r\nsuffix");
+        assert_ne!(
+            shared_marker_foreign_digest(first.as_bytes()).expect("first"),
+            shared_marker_foreign_digest(changed.as_bytes()).expect("changed")
+        );
     }
 
     #[test]
@@ -5196,7 +5503,7 @@ mod tests {
             .expect("old Codex projection ownership should verify");
         let deletions = &transition.deletions;
 
-        assert_eq!(deletions.len(), 10);
+        assert_eq!(deletions.len(), 13);
         assert!(deletions
             .iter()
             .all(|path| path.starts_with(".agents/skills")));
@@ -5808,5 +6115,67 @@ mod tests {
         })
         .expect_err("missing role must fail validation");
         assert_eq!(error.exit_code(), 5);
+    }
+
+    #[test]
+    fn validate_rejects_missing_or_tampered_editing_discipline() {
+        for mutation in ["missing", "tampered"] {
+            let temporary = tempfile::tempdir().expect("temporary directory");
+            let target = temporary
+                .path()
+                .canonicalize()
+                .expect("fixture target should have a stable path");
+            apply_fixture(&target, "answers-base.yml", "capabilities-codex-omx.json");
+            let directive = target.join(".hive/directives/00-editing-discipline.md");
+            match mutation {
+                "missing" => fs::remove_file(&directive).expect("directive should be removable"),
+                "tampered" => {
+                    fs::write(&directive, b"tampered\n").expect("directive should be writable");
+                }
+                _ => unreachable!(),
+            }
+
+            let error = execute_setup(&SetupRequest {
+                target: &target,
+                answers: &fixture("answers-base.yml"),
+                capabilities: &fixture("capabilities-codex-omx.json"),
+                mode: SetupMode::Validate,
+                reconfigure_roles: BTreeSet::new(),
+            })
+            .expect_err("invalid editing discipline must fail validation");
+            assert_eq!(error.exit_code(), 5, "mutation: {mutation}");
+        }
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn validate_rejects_symlinked_editing_discipline_without_reading_target() {
+        use std::os::unix::fs::symlink;
+
+        let temporary = tempfile::tempdir().expect("temporary directory");
+        let target = temporary
+            .path()
+            .canonicalize()
+            .expect("fixture target should have a stable path");
+        apply_fixture(&target, "answers-base.yml", "capabilities-codex-omx.json");
+        let directive = target.join(".hive/directives/00-editing-discipline.md");
+        fs::remove_file(&directive).expect("directive should be removable");
+        let outside = target.join("outside-editing-discipline");
+        fs::write(&outside, b"foreign bytes\n").expect("outside fixture should exist");
+        symlink(&outside, &directive).expect("directive symlink should be created");
+
+        let error = execute_setup(&SetupRequest {
+            target: &target,
+            answers: &fixture("answers-base.yml"),
+            capabilities: &fixture("capabilities-codex-omx.json"),
+            mode: SetupMode::Validate,
+            reconfigure_roles: BTreeSet::new(),
+        })
+        .expect_err("symlinked editing discipline must fail validation");
+        assert_eq!(error.exit_code(), 3);
+        assert_eq!(
+            fs::read(&outside).expect("outside bytes should remain readable"),
+            b"foreign bytes\n"
+        );
     }
 }

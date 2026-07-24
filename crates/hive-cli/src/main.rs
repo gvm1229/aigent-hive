@@ -24,7 +24,9 @@ mod judge;
 mod knowledge;
 mod role;
 mod run;
+mod update;
 mod usage;
+mod usage_control;
 
 const USAGE: &str = "\
 Aigent Hive
@@ -40,12 +42,18 @@ USAGE:
     hive prompt validate --request <input.json> --result <result.json> --output json
     hive hook --capability <name> --event <event> [--capabilities <fresh-json>] [--input <json>] --output json
     hive usage check --account-digest <sha256:...> [--threshold <1..99>] --output json
+    hive usage enforce --target <dir> --session-id <id> --process-id <positive-u32> [--account-digest <sha256:...>] --output json
+    hive usage status --target <dir> --session-id <id> --process-id <positive-u32> --output json
+    hive usage threshold --target <dir> --remaining-percent <1..99> --output json
+    hive usage session --target <dir> --session-id <id> --process-id <positive-u32> --action enable|disable|toggle [--confirm-session-disable] --output json
     hive role validate --target <dir> --role <role-id> --output json
     hive role handoff --target <dir> --request <request.json> --output json
     hive run checkpoint --target <dir> --request <request.json> --capabilities <fresh-json> --output json
     hive run resume --target <dir> --run <run-id> --capabilities <fresh-json> [--dispatch-intent manual|automatic] [--account-digest <sha256:...> --role <role-id> [--threshold <1..99>]] --output json
     hive judge package --target <dir> --request <json> --output json
     hive judge quorum --target <dir> --request <json> --output json
+    hive release verify --bundle <release-dir> --trust-root <external-protected-root.json> --output json
+    hive update --help
 ";
 
 const SETUP_USAGE: &str = "\
@@ -149,6 +157,8 @@ fn main() -> ExitCode {
         Some("role") => role::run_role(&arguments[1..]),
         Some("run") => run::run_run(&arguments[1..]),
         Some("judge") => judge::run_judge(&arguments[1..]),
+        Some("release") => update::run_release(&arguments[1..]),
+        Some("update") => update::run_update(&arguments[1..]),
         _ if wants_json(&arguments) => {
             let command = arguments.first().map_or("<missing>", String::as_str);
             let result = ActionResult {
@@ -183,6 +193,12 @@ struct UsageArguments {
 }
 
 fn run_usage(arguments: &[String]) -> ExitCode {
+    if matches!(
+        arguments.first().map(String::as_str),
+        Some("enforce" | "status" | "threshold" | "session")
+    ) {
+        return usage_control::run_usage_control(arguments);
+    }
     let result = match parse_usage(arguments) {
         Ok(arguments) => check_usage(&arguments),
         Err(message) => ActionResult {

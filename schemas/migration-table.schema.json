@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aigent-hive.local/schemas/migration-table.schema.json",
+  "title": "Aigent Hive compiled migration route table",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "target_version", "routes"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "target_version": { "$ref": "#/$defs/version" },
+    "routes": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["route_id", "from_min", "from_max", "to_version", "kind", "migration_id", "inputs", "forbidden_inputs", "preserves"],
+        "properties": {
+          "route_id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,63}$" },
+          "from_min": { "$ref": "#/$defs/version" },
+          "from_max": { "$ref": "#/$defs/version" },
+          "to_version": { "$ref": "#/$defs/version" },
+          "kind": { "enum": ["same-major", "cross-major"] },
+          "migration_id": { "enum": ["same-major-render-v1", "cross-major-system-representation-v1"] },
+          "inputs": { "type": "array", "uniqueItems": true, "items": { "enum": ["canonical-markdown", "typed-yaml", "typed-toml"] } },
+          "forbidden_inputs": { "type": "array", "uniqueItems": true, "minItems": 3, "maxItems": 3, "items": { "enum": ["sqlite", "runtime", "backup"] } },
+          "preserves": { "type": "array", "uniqueItems": true, "minItems": 4, "maxItems": 4, "items": { "enum": ["project-files", "docs", "user-markdown-body", "foreign-bytes"] } }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "version": { "type": "string", "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$" }
+  }
+}

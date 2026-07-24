@@ -52,11 +52,14 @@ class Phase1CopierParity(Phase1CliTestCase):
             "hive-knowledge-capture",
             "hive-knowledge-maintenance",
             "hive-knowledge-query",
+            "hive-migrate",
             "hive-prompt-refine",
             "hive-role-handoff",
             "hive-run-checkpoint",
             "hive-run-resume",
             "hive-simple-question",
+            "hive-update",
+            "hive-usage-guard",
             "setup-harness",
         ]
         self.assertEqual([entry["name"] for entry in skills], expected_names)

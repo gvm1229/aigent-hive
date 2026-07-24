@@ -17,6 +17,11 @@ ownership = "hive-managed-license"
 source = "template"
 
 [[paths]]
+pattern = ".hive/directives/00-editing-discipline.md"
+ownership = "hive-managed-config"
+source = "template"
+
+[[paths]]
 pattern = ".hive/setup-answers.yml"
 ownership = "hive-managed-config"
 source = "template"
@@ -52,6 +57,11 @@ ownership = "hive-generated-config"
 source = "read-only-capability-probe"
 
 [[paths]]
+pattern = ".hive/config/update-state.json"
+ownership = "hive-generated-config"
+source = "signed-release-activation"
+
+[[paths]]
 pattern = ".hive/config/approved-hooks.yml"
 ownership = "user-consent-protected"
 source = "conditional-template"
@@ -83,6 +93,10 @@ ownership = "rebuildable-runtime"
 [[paths]]
 pattern = ".hive/backups/**"
 ownership = "ephemeral-backup"
+
+[[paths]]
+pattern = ".hive/runtime/**"
+ownership = "ephemeral-runtime"
 
 [[paths]]
 pattern = "AGENTS.md"

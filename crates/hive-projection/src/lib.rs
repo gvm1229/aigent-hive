@@ -12,6 +12,8 @@ use hive_core::sha256_digest;
 use serde::{Deserialize, Serialize};
 
 const CATALOG_YAML: &str = include_str!("../../../harness/skills/catalog.yml");
+const HISTORICAL_BUILTINS_YAML: &str =
+    include_str!("../../../harness/skills/historical-builtins.yml");
 const SETUP_HARNESS: &[u8] = include_bytes!("../../../harness/skills/setup-harness/SKILL.md");
 const SIMPLE_QUESTION: &[u8] =
     include_bytes!("../../../harness/skills/hive-simple-question/SKILL.md");
@@ -25,8 +27,11 @@ const KNOWLEDGE_MAINTENANCE: &[u8] =
 const RUN_CHECKPOINT: &[u8] =
     include_bytes!("../../../harness/skills/hive-run-checkpoint/SKILL.md");
 const RUN_RESUME: &[u8] = include_bytes!("../../../harness/skills/hive-run-resume/SKILL.md");
+const USAGE_GUARD: &[u8] = include_bytes!("../../../harness/skills/hive-usage-guard/SKILL.md");
 const ROLE_HANDOFF: &[u8] = include_bytes!("../../../harness/skills/hive-role-handoff/SKILL.md");
 const JUDGE_PACKAGE: &[u8] = include_bytes!("../../../harness/skills/hive-judge-package/SKILL.md");
+const UPDATE_HARNESS: &[u8] = include_bytes!("../../../harness/skills/hive-update/SKILL.md");
+const MIGRATE_HARNESS: &[u8] = include_bytes!("../../../harness/skills/hive-migrate/SKILL.md");
 
 /// A stable validation or compilation failure.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -287,12 +292,107 @@ pub struct ActiveSkill {
     pub consent_digest: Option<String>,
 }
 
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct HistoricalBuiltInCatalog {
+    schema_version: u32,
+    releases: Vec<HistoricalBuiltInRelease>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct HistoricalBuiltInRelease {
+    version: String,
+    skills: Vec<HistoricalBuiltInSkill>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct HistoricalBuiltInSkill {
+    name: String,
+    content_digest: String,
+    side_effect_class: SideEffectClass,
+    capabilities: Vec<Capability>,
+}
+
 /// Origin of active Skill bytes.
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum SkillSourceType {
     BuiltIn,
     ApprovedOptional,
+}
+
+/// Returns the exact built-in Skill metadata shipped by a supported historical
+/// Hive release.
+///
+/// This registry lets an updater authenticate an older projection from known
+/// release bytes without trusting the consumer-writable active-Skill ledger.
+/// The registry intentionally contains digests and public metadata only.
+///
+/// # Errors
+///
+/// Returns an error when the embedded registry is malformed or `version` is
+/// not one of the supported historical releases.
+pub fn historical_builtin_skills(version: &str) -> Result<Vec<ActiveSkill>, ProjectionError> {
+    const SUPPORTED: [&str; 6] = ["0.1.0", "0.2.0", "0.3.0", "0.4.0", "0.5.0", "0.6.0"];
+    let catalog: HistoricalBuiltInCatalog = serde_yaml::from_str(HISTORICAL_BUILTINS_YAML)
+        .map_err(|error| {
+            ProjectionError::new(
+                "hive.skill-history-invalid",
+                format!("embedded historical built-in registry is not valid YAML: {error}"),
+            )
+        })?;
+    if catalog.schema_version != 1
+        || catalog.releases.len() != SUPPORTED.len()
+        || catalog
+            .releases
+            .iter()
+            .zip(SUPPORTED)
+            .any(|(release, expected)| release.version != expected)
+    {
+        return Err(ProjectionError::new(
+            "hive.skill-history-invalid",
+            "historical built-in registry release coverage is not exact",
+        ));
+    }
+
+    let release = catalog
+        .releases
+        .into_iter()
+        .find(|release| release.version == version)
+        .ok_or_else(|| {
+            ProjectionError::new(
+                "hive.skill-history-unsupported",
+                format!("unsupported historical Skill projection release: {version}"),
+            )
+        })?;
+    let mut names = BTreeSet::new();
+    let mut skills = Vec::with_capacity(release.skills.len());
+    for skill in release.skills {
+        validate_skill_name(&skill.name)?;
+        validate_history_digest(&skill.content_digest)?;
+        validate_sorted_unique(&skill.capabilities, "historical built-in capabilities")?;
+        if !names.insert(skill.name.clone()) {
+            return Err(ProjectionError::new(
+                "hive.skill-history-invalid",
+                format!(
+                    "duplicate historical built-in Skill {} in release {version}",
+                    skill.name
+                ),
+            ));
+        }
+        skills.push(ActiveSkill {
+            name: skill.name,
+            source_type: SkillSourceType::BuiltIn,
+            content_digest: skill.content_digest,
+            side_effect_class: skill.side_effect_class,
+            capabilities: skill.capabilities,
+            consent_digest: None,
+        });
+    }
+    skills.sort_by(|left, right| left.name.cmp(&right.name));
+    Ok(skills)
 }
 
 /// Compiles all implemented built-ins plus verified optional source proofs.
@@ -532,7 +632,7 @@ fn embedded_skill_source(name: &str) -> Option<&'static [u8]> {
         .find_map(|(candidate, bytes)| (candidate == name).then_some(bytes))
 }
 
-fn embedded_skill_sources() -> [(&'static str, &'static [u8]); 10] {
+fn embedded_skill_sources() -> [(&'static str, &'static [u8]); 13] {
     [
         ("setup-harness", SETUP_HARNESS),
         ("hive-simple-question", SIMPLE_QUESTION),
@@ -542,8 +642,11 @@ fn embedded_skill_sources() -> [(&'static str, &'static [u8]); 10] {
         ("hive-knowledge-maintenance", KNOWLEDGE_MAINTENANCE),
         ("hive-run-checkpoint", RUN_CHECKPOINT),
         ("hive-run-resume", RUN_RESUME),
+        ("hive-usage-guard", USAGE_GUARD),
         ("hive-role-handoff", ROLE_HANDOFF),
         ("hive-judge-package", JUDGE_PACKAGE),
+        ("hive-update", UPDATE_HARNESS),
+        ("hive-migrate", MIGRATE_HARNESS),
     ]
 }
 
@@ -998,9 +1101,11 @@ fn action_for_skill(skill: &str) -> Option<LogicalAction> {
         "hive-prompt-refine" => Some(LogicalAction::RefinePrompt),
         "hive-knowledge-capture" => Some(LogicalAction::IngestKnowledge),
         "hive-knowledge-query" => Some(LogicalAction::QueryKnowledge),
-        "hive-run-checkpoint" | "hive-role-handoff" => Some(LogicalAction::RunWork),
+        "hive-run-checkpoint" | "hive-role-handoff" | "hive-usage-guard" => {
+            Some(LogicalAction::RunWork)
+        }
         "hive-run-resume" => Some(LogicalAction::ResumeWork),
-        "hive-update" => Some(LogicalAction::UpdateHarness),
+        "hive-update" | "hive-migrate" => Some(LogicalAction::UpdateHarness),
         _ => None,
     }
 }
@@ -1342,6 +1447,21 @@ fn validate_sha256(value: &str, field: &str) -> Result<(), ProjectionError> {
     Ok(())
 }
 
+fn validate_history_digest(value: &str) -> Result<(), ProjectionError> {
+    let valid = value.len() == 71
+        && value.starts_with("sha256:")
+        && value[7..]
+            .bytes()
+            .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte));
+    if !valid {
+        return Err(ProjectionError::new(
+            "hive.skill-history-invalid",
+            "historical built-in content_digest is not a SHA-256 digest",
+        ));
+    }
+    Ok(())
+}
+
 fn validate_utc_seconds(value: &str) -> Result<(), ProjectionError> {
     let bytes = value.as_bytes();
     let separators = [
@@ -1550,20 +1670,51 @@ description: Inspect one local file without changing it.
             let first = compile_projection(host, &[]).expect("projection");
             let second = compile_projection(host, &[]).expect("projection");
             assert_eq!(first, second);
-            assert_eq!(first.active_skills.skills.len(), 10);
-            assert_eq!(first.files.len(), 11);
+            assert_eq!(first.active_skills.skills.len(), 13);
+            assert_eq!(first.files.len(), 14);
             for skill in [
                 "hive-judge-package",
                 "hive-prompt-refine",
                 "hive-run-checkpoint",
                 "hive-run-resume",
                 "hive-role-handoff",
+                "hive-update",
+                "hive-usage-guard",
+                "hive-migrate",
             ] {
                 assert!(first
                     .files
                     .contains_key(&format!("{}/{skill}/SKILL.md", host.skill_root())));
             }
         }
+    }
+
+    #[test]
+    fn historical_builtin_registry_covers_every_supported_release_exactly() {
+        let expected_counts = [
+            ("0.1.0", 0),
+            ("0.2.0", 0),
+            ("0.3.0", 0),
+            ("0.4.0", 6),
+            ("0.5.0", 9),
+            ("0.6.0", 10),
+        ];
+        for (version, count) in expected_counts {
+            let skills = historical_builtin_skills(version).expect("historical release");
+            assert_eq!(skills.len(), count);
+            assert!(skills.windows(2).all(|pair| pair[0].name < pair[1].name));
+            assert!(skills.iter().all(|skill| {
+                skill.source_type == SkillSourceType::BuiltIn
+                    && skill.consent_digest.is_none()
+                    && skill.content_digest.starts_with("sha256:")
+            }));
+        }
+    }
+
+    #[test]
+    fn historical_builtin_registry_rejects_unshipped_versions() {
+        let error = historical_builtin_skills("0.6.1").expect_err("patch release is not shipped");
+        assert_eq!(error.code(), "hive.skill-history-unsupported");
     }
 
     #[test]
@@ -1598,6 +1749,30 @@ description: Inspect one local file without changing it.
                 ROLE_HANDOFF,
                 include_bytes!(
                     "../../../harness/template/{{ '.claude' if primary_host == 'claude' else '.agents' }}/skills/hive-role-handoff/SKILL.md"
+                )
+                .as_slice(),
+            ),
+            (
+                "hive-update",
+                UPDATE_HARNESS,
+                include_bytes!(
+                    "../../../harness/template/{{ '.claude' if primary_host == 'claude' else '.agents' }}/skills/hive-update/SKILL.md"
+                )
+                .as_slice(),
+            ),
+            (
+                "hive-migrate",
+                MIGRATE_HARNESS,
+                include_bytes!(
+                    "../../../harness/template/{{ '.claude' if primary_host == 'claude' else '.agents' }}/skills/hive-migrate/SKILL.md"
+                )
+                .as_slice(),
+            ),
+            (
+                "hive-usage-guard",
+                USAGE_GUARD,
+                include_bytes!(
+                    "../../../harness/template/{{ '.claude' if primary_host == 'claude' else '.agents' }}/skills/hive-usage-guard/SKILL.md"
                 )
                 .as_slice(),
             ),

@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aigent-hive.local/schemas/update-state.schema.json",
+  "title": "Aigent Hive installed update rollback state",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "product_version", "release_manifest_digest", "rollback"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "product_version": { "$ref": "#/$defs/version" },
+    "release_manifest_digest": { "$ref": "#/$defs/digest" },
+    "rollback": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["root_version", "timestamp_version", "snapshot_version", "targets_version", "release_sequence", "manifest_digest"],
+      "properties": {
+        "root_version": { "type": "integer", "minimum": 1 },
+        "timestamp_version": { "type": "integer", "minimum": 1 },
+        "snapshot_version": { "type": "integer", "minimum": 1 },
+        "targets_version": { "type": "integer", "minimum": 1 },
+        "release_sequence": { "type": "integer", "minimum": 1 },
+        "manifest_digest": { "$ref": "#/$defs/digest" }
+      }
+    }
+  },
+  "$defs": {
+    "version": { "type": "string", "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$" },
+    "digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" }
+  }
+}

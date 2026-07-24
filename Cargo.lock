@@ -407,7 +407,7 @@ checksum = "2304e00983f87ffb38b55b444b5e3b60a884b5d30c0fca7d82fe33449bbe55ea"
 
 [[package]]
 name = "hive-cli"
-version = "0.6.0"
+version = "0.7.0"
 dependencies = [
  "cap-fs-ext",
  "cap-primitives",
@@ -415,6 +415,7 @@ dependencies = [
  "hive-core",
  "hive-projection",
  "hive-render",
+ "hive-update",
  "hive-wiki",
  "jsonschema",
  "serde",
@@ -426,7 +427,7 @@ dependencies = [
 
 [[package]]
 name = "hive-core"
-version = "0.6.0"
+version = "0.7.0"
 dependencies = [
  "ed25519-dalek",
  "jsonschema",
@@ -439,7 +440,7 @@ dependencies = [
 
 [[package]]
 name = "hive-projection"
-version = "0.6.0"
+version = "0.7.0"
 dependencies = [
  "hive-core",
  "serde",
@@ -450,7 +451,7 @@ dependencies = [
 
 [[package]]
 name = "hive-render"
-version = "0.6.0"
+version = "0.7.0"
 dependencies = [
  "cap-fs-ext",
  "cap-std",
@@ -467,8 +468,27 @@ dependencies = [
 ]
 
 [[package]]
+name = "hive-update"
+version = "0.7.0"
+dependencies = [
+ "cap-fs-ext",
+ "cap-std",
+ "ed25519-dalek",
+ "hive-core",
+ "hive-render",
+ "hive-wiki",
+ "serde",
+ "serde_json",
+ "serde_json_canonicalizer",
+ "sha2",
+ "tempfile",
+ "toml",
+ "yaml_serde",
+]
+
+[[package]]
 name = "hive-wiki"
-version = "0.6.0"
+version = "0.7.0"
 dependencies = [
  "hive-core",
  "rusqlite",

@@ -400,48 +400,8 @@ fn load_protected_trust_root(
     target: &PinnedTarget,
     path: &Path,
 ) -> Result<JudgeTrustRoot, AdapterError> {
-    if !path.is_absolute() {
-        return Err(AdapterError::Safety(
-            "judge trust root path must be absolute".to_owned(),
-        ));
-    }
-    if path.starts_with(target.requested_path()) {
-        return Err(AdapterError::Safety(
-            "judge trust root must be outside the consumer target".to_owned(),
-        ));
-    }
-    let parent_path = path.parent().ok_or_else(|| {
-        AdapterError::Safety("judge trust root has no external parent".to_owned())
-    })?;
-    let file_name = path
-        .file_name()
-        .ok_or_else(|| AdapterError::Safety("judge trust root has no file name".to_owned()))?;
-    validate_platform_trust_root_protection(path)?;
-    let parent = open_directory_nofollow_path(parent_path)?;
-    let before = parent
-        .symlink_metadata(file_name)
-        .map_err(|error| trust_root_safety_error("inspect", &error))?;
-    if !before.is_file()
-        || usize::try_from(before.len()).unwrap_or(usize::MAX) > MAX_TRUST_ROOT_BYTES
-    {
-        return Err(AdapterError::Safety(
-            "judge trust root must be a bounded no-follow regular file".to_owned(),
-        ));
-    }
-    let bytes = read_parent_file(&parent, file_name, MAX_TRUST_ROOT_BYTES)
-        .map_err(|error| trust_root_safety_error("read", &error))?;
-    let after = parent
-        .symlink_metadata(file_name)
-        .map_err(|error| trust_root_safety_error("reinspect", &error))?;
-    if CapMetadataExt::dev(&before) != CapMetadataExt::dev(&after)
-        || CapMetadataExt::ino(&before) != CapMetadataExt::ino(&after)
-        || before.len() != after.len()
-    {
-        return Err(AdapterError::Safety(
-            "judge trust root changed during verification".to_owned(),
-        ));
-    }
-    validate_platform_trust_root_protection(path)?;
+    let bytes =
+        read_protected_external_file(target, path, MAX_TRUST_ROOT_BYTES, "judge trust root")?;
     let text = std::str::from_utf8(&bytes)
         .map_err(|_| AdapterError::Input("judge trust root is not UTF-8 TOML".to_owned()))?;
     let trust_root: JudgeTrustRoot = toml::from_str(text)
@@ -452,37 +412,92 @@ fn load_protected_trust_root(
     Ok(trust_root)
 }
 
-fn trust_root_safety_error(action: &str, error: &io::Error) -> AdapterError {
-    AdapterError::Safety(format!(
-        "cannot {action} external judge trust root safely: {error}"
-    ))
+pub(crate) fn read_protected_external_file(
+    target: &PinnedTarget,
+    path: &Path,
+    maximum_bytes: usize,
+    label: &str,
+) -> Result<Vec<u8>, AdapterError> {
+    read_protected_file(path, maximum_bytes, Some(target.requested_path()), label)
+}
+
+pub(crate) fn read_protected_file(
+    path: &Path,
+    maximum_bytes: usize,
+    forbidden_root: Option<&Path>,
+    label: &str,
+) -> Result<Vec<u8>, AdapterError> {
+    if !path.is_absolute() {
+        return Err(AdapterError::Safety(format!(
+            "{label} path must be absolute"
+        )));
+    }
+    if forbidden_root.is_some_and(|root| path.starts_with(root)) {
+        return Err(AdapterError::Safety(format!(
+            "{label} must be outside the protected target"
+        )));
+    }
+    let parent_path = path
+        .parent()
+        .ok_or_else(|| AdapterError::Safety(format!("{label} has no external parent")))?;
+    let file_name = path
+        .file_name()
+        .ok_or_else(|| AdapterError::Safety(format!("{label} has no file name")))?;
+    validate_platform_trust_root_protection(path, label)?;
+    let parent = open_directory_nofollow_path(parent_path)?;
+    let before = parent
+        .symlink_metadata(file_name)
+        .map_err(|error| trust_root_safety_error("inspect", &error, label))?;
+    if !before.is_file() || usize::try_from(before.len()).unwrap_or(usize::MAX) > maximum_bytes {
+        return Err(AdapterError::Safety(format!(
+            "{label} must be a bounded no-follow regular file"
+        )));
+    }
+    let bytes = read_parent_file(&parent, file_name, maximum_bytes)
+        .map_err(|error| trust_root_safety_error("read", &error, label))?;
+    let after = parent
+        .symlink_metadata(file_name)
+        .map_err(|error| trust_root_safety_error("reinspect", &error, label))?;
+    if CapMetadataExt::dev(&before) != CapMetadataExt::dev(&after)
+        || CapMetadataExt::ino(&before) != CapMetadataExt::ino(&after)
+        || before.len() != after.len()
+    {
+        return Err(AdapterError::Safety(format!(
+            "{label} changed during verification"
+        )));
+    }
+    validate_platform_trust_root_protection(path, label)?;
+    Ok(bytes)
+}
+
+fn trust_root_safety_error(action: &str, error: &io::Error, label: &str) -> AdapterError {
+    AdapterError::Safety(format!("cannot {action} external {label} safely: {error}"))
 }
 
 #[cfg(unix)]
-fn validate_platform_trust_root_protection(path: &Path) -> Result<(), AdapterError> {
+fn validate_platform_trust_root_protection(path: &Path, label: &str) -> Result<(), AdapterError> {
     use cap_fs_ext::{AccessType, DirExt};
     use cap_primitives::fs::AccessModes;
     use std::os::unix::fs::MetadataExt;
 
     let metadata = std::fs::symlink_metadata(path)
-        .map_err(|error| trust_root_safety_error("inspect", &error))?;
+        .map_err(|error| trust_root_safety_error("inspect", &error, label))?;
     if !metadata.file_type().is_file()
         || metadata.uid() != 0
         || metadata.mode() & 0o222 != 0
         || std::os::unix::fs::MetadataExt::nlink(&metadata) != 1
     {
-        return Err(AdapterError::Safety(
-            "judge trust root must be a root-owned, non-writable, single-link regular file"
-                .to_owned(),
-        ));
+        return Err(AdapterError::Safety(format!(
+            "{label} must be a root-owned, non-writable, single-link regular file"
+        )));
     }
     for ancestor in path.parent().into_iter().flat_map(Path::ancestors) {
         let metadata = std::fs::symlink_metadata(ancestor)
-            .map_err(|error| trust_root_safety_error("inspect ancestor", &error))?;
+            .map_err(|error| trust_root_safety_error("inspect ancestor", &error, label))?;
         if !metadata.file_type().is_dir() || metadata.uid() != 0 || metadata.mode() & 0o022 != 0 {
-            return Err(AdapterError::Safety(
-                "judge trust root ancestor is not admin-owned and replacement-safe".to_owned(),
-            ));
+            return Err(AdapterError::Safety(format!(
+                "{label} ancestor is not admin-owned and replacement-safe"
+            )));
         }
         let directory = open_directory_nofollow_path(ancestor)?;
         let mutation_access = AccessType::Access(AccessModes {
@@ -492,10 +507,9 @@ fn validate_platform_trust_root_protection(path: &Path) -> Result<(), AdapterErr
         });
         match directory.access(".", mutation_access) {
             Ok(()) => {
-                return Err(AdapterError::Safety(
-                    "current process can replace the judge trust root through an ancestor"
-                        .to_owned(),
-                ))
+                return Err(AdapterError::Safety(format!(
+                    "current process can replace the {label} through an ancestor"
+                )))
             }
             Err(error)
                 if matches!(
@@ -504,17 +518,18 @@ fn validate_platform_trust_root_protection(path: &Path) -> Result<(), AdapterErr
                 ) => {}
             Err(error) => {
                 return Err(trust_root_safety_error(
-                    "prove judge trust root ancestor mutation denial for",
+                    "prove trust-root ancestor mutation denial for",
                     &error,
+                    label,
                 ))
             }
         }
     }
     match StdOpenOptions::new().write(true).open(path) {
         Ok(_) => {
-            return Err(AdapterError::Safety(
-                "current process can write the judge trust root".to_owned(),
-            ))
+            return Err(AdapterError::Safety(format!(
+                "current process can write the {label}"
+            )))
         }
         Err(error)
             if matches!(
@@ -523,8 +538,9 @@ fn validate_platform_trust_root_protection(path: &Path) -> Result<(), AdapterErr
             ) => {}
         Err(error) => {
             return Err(trust_root_safety_error(
-                "prove judge trust root write denial for",
+                "prove trust-root write denial for",
                 &error,
+                label,
             ))
         }
     }
@@ -532,7 +548,7 @@ fn validate_platform_trust_root_protection(path: &Path) -> Result<(), AdapterErr
 }
 
 #[cfg(windows)]
-fn validate_platform_trust_root_protection(path: &Path) -> Result<(), AdapterError> {
+fn validate_platform_trust_root_protection(path: &Path, label: &str) -> Result<(), AdapterError> {
     use std::os::windows::fs::{MetadataExt, OpenOptionsExt};
 
     const FILE_ATTRIBUTE_REPARSE_POINT: u32 = 0x0000_0400;
@@ -569,16 +585,15 @@ fn validate_platform_trust_root_protection(path: &Path) -> Result<(), AdapterErr
 
     for (index, component) in path.ancestors().enumerate() {
         let metadata = std::fs::symlink_metadata(component)
-            .map_err(|error| trust_root_safety_error("inspect path component", &error))?;
+            .map_err(|error| trust_root_safety_error("inspect path component", &error, label))?;
         let is_file = index == 0;
         if metadata.file_attributes() & FILE_ATTRIBUTE_REPARSE_POINT != 0
             || (is_file && !metadata.file_type().is_file())
             || (!is_file && !metadata.file_type().is_dir())
         {
-            return Err(AdapterError::Safety(
-                "Windows judge trust root contains a reparse or nonregular path component"
-                    .to_owned(),
-            ));
+            return Err(AdapterError::Safety(format!(
+                "Windows {label} contains a reparse or nonregular path component"
+            )));
         }
         let rights = if is_file {
             FILE_MUTATION_RIGHTS
@@ -599,16 +614,16 @@ fn validate_platform_trust_root_protection(path: &Path) -> Result<(), AdapterErr
                 .open(component);
             match result {
                 Ok(_) => {
-                    return Err(AdapterError::Safety(
-                        "current process can mutate the Windows judge trust root or an ancestor"
-                            .to_owned(),
-                    ))
+                    return Err(AdapterError::Safety(format!(
+                        "current process can mutate the Windows {label} or an ancestor"
+                    )))
                 }
                 Err(error) if error.raw_os_error() == Some(5) => {}
                 Err(error) => {
                     return Err(trust_root_safety_error(
                         "prove Windows mutation denial for",
                         &error,
+                        label,
                     ))
                 }
             }
@@ -618,10 +633,10 @@ fn validate_platform_trust_root_protection(path: &Path) -> Result<(), AdapterErr
 }
 
 #[cfg(not(any(unix, windows)))]
-fn validate_platform_trust_root_protection(_path: &Path) -> Result<(), AdapterError> {
-    Err(AdapterError::Unsupported(
-        "protected judge trust roots are unsupported on this platform".to_owned(),
-    ))
+fn validate_platform_trust_root_protection(_path: &Path, label: &str) -> Result<(), AdapterError> {
+    Err(AdapterError::Unsupported(format!(
+        "protected {label} files are unsupported on this platform"
+    )))
 }
 
 fn add_quorum_bytes(total_bytes: &mut usize, additional: usize) -> Result<(), AdapterError> {

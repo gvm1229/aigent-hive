@@ -37,11 +37,11 @@ PROJECTED_BUILTINS = (
     "hive-run-checkpoint",
     "hive-run-resume",
     "hive-judge-package",
-)
-CATALOG_ONLY = (
     "hive-update",
+    "hive-usage-guard",
     "hive-migrate",
 )
+CATALOG_ONLY = ()
 
 
 def digest_bytes(value: bytes) -> str:
@@ -125,6 +125,25 @@ class Phase3HostProjection(Phase3ProjectionTestCase):
                 root = self.discovery_root(target, host)
                 for skill in PROJECTED_BUILTINS:
                     self.assertTrue((root / skill / "SKILL.md").is_file())
+
+    def test_each_host_projects_the_real_usage_turn_gate(self) -> None:
+        for host in ("codex", "claude", "antigravity"):
+            with self.subTest(host=host):
+                target = self.install_host(host)
+                agents = (target / "AGENTS.md").read_text(encoding="utf-8")
+                skill = (
+                    self.discovery_root(target, host)
+                    / "hive-usage-guard/SKILL.md"
+                ).read_text(encoding="utf-8")
+                for surface in (agents, skill):
+                    self.assertIn("hive usage enforce", surface)
+                    self.assertIn("bare continue", surface.lower())
+                    self.assertNotIn("start a watcher", agents)
+                self.assertIn("finite phrase list", agents)
+                self.assertIn(
+                    "illustrative rather than a finite phrase",
+                    skill,
+                )
 
     def test_catalog_only_skills_are_not_discoverable(self) -> None:
         target = self.install_host("codex")
