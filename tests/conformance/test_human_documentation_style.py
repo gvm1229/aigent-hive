@@ -47,14 +47,60 @@ class HumanDocumentationStyleTest(unittest.TestCase):
         )
 
     def test_mechanical_nominalized_endings_are_checked(self) -> None:
-        text = "기능 사용함\n업데이트 완료했음.\n계약 구현됐음!\nAPI key를 저장하지 않음\n현재 상태임\n"
+        text = """기능 사용함
+업데이트 완료했음.
+계약 구현됐음!
+API key를 저장하지 않음
+현재 상태임
+Status는 INDETERMINATE다.
+문서를 읽음.
+작업이 끝남.
+연결이 닫힘.
+설정 값을 가짐.
+정책을 따름.
+compile됨.
+검증할 수 있음.
+검증할 수 없음.
+"""
         self.assertEqual(
             [finding.line for finding in MODULE.prose_findings("README.md", text)],
-            [1, 2, 3, 4, 5],
+            list(range(1, 15)),
         )
 
     def test_semantic_noun_phrases_and_morphological_collisions_are_allowed(self) -> None:
-        text = "검증 필요\nAPI key 없음\n업데이트 완료\n푸른 바다.\n회의 아젠다.\n업무 책임\n정기 모임\n범위 포함\n구성 개요\n"
+        text = """검증 필요
+API key 없음
+상태 있음
+업데이트 완료
+푸른 바다.
+회의 아젠다.
+업무 책임
+정기 모임
+범위 포함
+구성 개요
+사용자 마음
+첫걸음
+얼음
+처음
+다음
+이름
+도움
+웃음
+강남
+여름
+구름
+힘
+짐
+"""
+        self.assertEqual(MODULE.prose_findings("README.md", text), [])
+
+    def test_code_identifiers_and_structural_literals_do_not_create_findings(self) -> None:
+        text = """`README.md`
+`compile()`
+status=INDETERMINATE
+{"state":"done"}
+docs/plans/PLAN.md
+"""
         self.assertEqual(MODULE.prose_findings("README.md", text), [])
 
     def test_attached_comparative_boda_is_not_a_da_ending(self) -> None:

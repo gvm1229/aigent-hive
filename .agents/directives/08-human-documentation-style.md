@@ -54,6 +54,23 @@ only when it is an exact external quotation, exact UI prompt, protocol sample, f
 or another byte-sensitive literal. Automated checks must bind each literal exception to its
 path, line, reason, and exact line digest. Surrounding explanation still follows this directive.
 
+Mechanical clause nounization is also prohibited. Do not disguise a sentence by replacing its
+ending with `~음` or the attached `~ㅁ` form. This includes Korean stems, mixed English-Korean
+forms, state labels followed by a copula, and possibility clauses. Ordinary lexical nouns such
+as `마음`, `걸음`, `이름`, `여름`, and `구름` are not mechanical nounizations.
+
+| Avoid | Use |
+| --- | --- |
+| `Status는 INDETERMINATE다.` | `Status: INDETERMINATE` |
+| `문서를 읽음.` | `문서 확인` |
+| `작업이 끝남.` | `작업 완료` |
+| `연결이 닫힘.` | `연결 종료` |
+| `설정 값을 가짐.` | `설정 값 보유` |
+| `정책을 따름.` | `정책 준수` |
+| `compile됨.` | `compile 완료` |
+| `검증할 수 있음.` | `검증 가능` |
+| `검증할 수 없음.` | `검증 불가` |
+
 ## Reader-first explanation
 
 - State the decision, result, or prerequisite concept first.

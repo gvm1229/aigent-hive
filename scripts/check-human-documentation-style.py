@@ -51,6 +51,28 @@ UNAMBIGUOUS_DA_SHAPE = re.compile(
     r"|[가-힣]*ㄴ다"
     r")$"
 )
+MECHANICAL_M_NOMINALIZATION_SUFFIXES = ("남", "됨", "힘", "짐", "름")
+NOMINALIZATION_NOUN_COLLISION_SUFFIXES = (
+    "강남",
+    "경남",
+    "걸음",
+    "구름",
+    "기름",
+    "다음",
+    "다짐",
+    "도움",
+    "마음",
+    "베트남",
+    "여름",
+    "얼음",
+    "웃음",
+    "이름",
+    "전남",
+    "처음",
+    "충남",
+    "하남",
+    "흐름",
+)
 
 
 @dataclass(frozen=True)
@@ -107,8 +129,35 @@ def _is_attached_comparative(match: re.Match[str], line: str) -> bool:
     return bool(prefix) and prefix[-1] in "\"'’”)]}〉》」』`"
 
 
-def _is_narrative_token(token: str, line: str) -> bool:
+def _is_mechanical_nominalization(token: str, line: str, start: int) -> bool:
+    """Identify clause-like `~음/~ㅁ` rewrites without treating nouns as endings."""
+
+    if token.endswith(NOMINALIZATION_NOUN_COLLISION_SUFFIXES):
+        return False
+    if token in {"있음", "없음"}:
+        # Bare semantic nouns such as `API key 없음` remain concise. The productive
+        # `verb + 수 있음/없음` construction is a mechanically nominalized clause.
+        return re.search(r"[가-힣]+\s+수\s*$", line[:start]) is not None
+    if token.endswith("음"):
+        stem = token[:-1]
+        return (
+            bool(stem)
+            and _hangul_syllable_count(stem) == len(stem)
+            and _final_consonant_index(stem[-1]) not in {None, 0}
+        )
+    if token.endswith(MECHANICAL_M_NOMINALIZATION_SUFFIXES):
+        stem = token[:-1]
+        return bool(stem) and (
+            _hangul_syllable_count(stem) == len(stem)
+            or re.fullmatch(r"[A-Za-z][A-Za-z0-9_.+-]*", stem) is not None
+        )
+    return False
+
+
+def _is_narrative_token(token: str, line: str, start: int) -> bool:
     if token == "보다":
+        return True
+    if _is_mechanical_nominalization(token, line, start):
         return True
     if token.endswith(("했음", "됐음", "되었음", "않음", "이었음", "였음", "었음", "았음")):
         return True
@@ -152,7 +201,7 @@ def prose_findings(relative: str, text: str) -> list[Finding]:
         prose = AUTOLINK.sub("", prose)
         if any(
             not _is_attached_comparative(match, prose)
-            and _is_narrative_token(match.group(0), prose)
+            and _is_narrative_token(match.group(0), prose, match.start())
             for match in ENDING_TOKEN.finditer(prose)
         ):
             findings.append(

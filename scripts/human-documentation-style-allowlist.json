@@ -78,6 +78,60 @@
     "text_sha256": "c14738ac48f513c3603b768a6621ff256bd61735c1026adb0aa8be49f40f37c6"
   },
   {
+    "path": ".agents/directives/08-human-documentation-style.md",
+    "line": 64,
+    "reason": "Directive negative example required to teach mechanical clause nounization.",
+    "text_sha256": "1b5209e8e1b49c7fb062cebfed786d53e3051951086e6b92cc2643bb4e5e795b"
+  },
+  {
+    "path": ".agents/directives/08-human-documentation-style.md",
+    "line": 65,
+    "reason": "Directive negative example required to teach mechanical clause nounization.",
+    "text_sha256": "2c71988c247ed46fb978bdf6b20439696130b49a094c0cceb3e810e0d51168bd"
+  },
+  {
+    "path": ".agents/directives/08-human-documentation-style.md",
+    "line": 66,
+    "reason": "Directive negative example required to teach mechanical clause nounization.",
+    "text_sha256": "e38ac0ce200de75c3a2b844a94af9a1c3ffe3d5c669ca54f810fb014e3dd2b47"
+  },
+  {
+    "path": ".agents/directives/08-human-documentation-style.md",
+    "line": 67,
+    "reason": "Directive negative example required to teach mechanical clause nounization.",
+    "text_sha256": "33c6ea7d9a1e13ab662c70ce5d8e25c2b91f48802bc77fc83d477347cd559c9f"
+  },
+  {
+    "path": ".agents/directives/08-human-documentation-style.md",
+    "line": 68,
+    "reason": "Directive negative example required to teach mechanical clause nounization.",
+    "text_sha256": "ac799bf64937159431bb662c0930d3ddb155d6a420309ba0b9456b3a0db83414"
+  },
+  {
+    "path": ".agents/directives/08-human-documentation-style.md",
+    "line": 69,
+    "reason": "Directive negative example required to teach mechanical clause nounization.",
+    "text_sha256": "949953514a273ec705cc000f5507e32cbcecc610391a41110fe7c09d49080b0c"
+  },
+  {
+    "path": ".agents/directives/08-human-documentation-style.md",
+    "line": 70,
+    "reason": "Directive negative example required to teach mechanical clause nounization.",
+    "text_sha256": "dad8bdb58a87162b240d785788ccf82ec295868530b00c21f26b94b06924caa4"
+  },
+  {
+    "path": ".agents/directives/08-human-documentation-style.md",
+    "line": 71,
+    "reason": "Directive negative example required to teach mechanical clause nounization.",
+    "text_sha256": "cdee807262f99515d8298930b486fa054481198fe21cccdff758312fc62defb0"
+  },
+  {
+    "path": ".agents/directives/08-human-documentation-style.md",
+    "line": 72,
+    "reason": "Directive negative example required to teach mechanical clause nounization.",
+    "text_sha256": "5a6013680922f4c2636104f3b04f804855163779f2f7bc46041df0f9a407b01a"
+  },
+  {
     "path": "docs/guidance-schema.md",
     "line": 63,
     "reason": "Consumer guidance negative example required for source and projection parity.",
