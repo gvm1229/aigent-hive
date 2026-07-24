@@ -1596,10 +1596,11 @@ fn as_set(values: &[String]) -> BTreeSet<String> {
 mod tests {
     use super::{
         checkpoint, publish_parent_file, publish_parent_file_with_hook,
-        publish_parent_file_with_hooks, read_explicit_file,
-        read_explicit_file_with_metadata_and_hooks, resume, run_run, CheckpointArguments,
-        FileSnapshot, PinnedTarget, ResumeArguments,
+        publish_parent_file_with_hooks, read_explicit_file_with_metadata_and_hooks, resume,
+        run_run, CheckpointArguments, FileSnapshot, ResumeArguments,
     };
+    #[cfg(unix)]
+    use super::{read_explicit_file, PinnedTarget};
     use cap_std::ambient_authority;
     use cap_std::fs::Dir;
     use hive_core::sha256_digest;
