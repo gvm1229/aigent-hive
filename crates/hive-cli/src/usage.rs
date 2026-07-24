@@ -861,11 +861,12 @@ fn days_from_civil(year: i32, month: i32, day: i32) -> i64 {
 mod tests {
     use super::{
         check_unique_with_runner, check_with_runner, consume_for_automatic_dispatch,
-        normalize_output, parse_iso8601_z, qualify_and_dispatch_with_runner, qualify_program,
+        normalize_output, parse_iso8601_z, qualify_and_dispatch_with_runner,
         resolve_program_in_path, AutomaticDispatchError, CommandOutput, CommandRunner,
-        QualifiedExecutable, SensorError, SystemCommandRunner, USAGE_ARGUMENTS, USAGE_TIMEOUT,
-        VERSION_TIMEOUT,
+        QualifiedExecutable, SensorError, USAGE_ARGUMENTS, USAGE_TIMEOUT, VERSION_TIMEOUT,
     };
+    #[cfg(unix)]
+    use super::{qualify_program, SystemCommandRunner};
     use hive_core::sha256_digest;
     use hive_core::usage_guard::{evaluate_usage, UsageDecision, UsagePermitError, UsagePolicy};
     use std::cell::RefCell;
@@ -922,10 +923,12 @@ mod tests {
         }
     }
 
+    #[cfg(unix)]
     struct PathSystemRunner<'a> {
         executable: &'a Path,
     }
 
+    #[cfg(unix)]
     impl CommandRunner for PathSystemRunner<'_> {
         fn qualify(&self, _program: &str) -> Result<QualifiedExecutable, SensorError> {
             qualify_program(
