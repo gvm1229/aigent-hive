@@ -1,0 +1,176 @@
+[
+  {
+    "path": ".agents/directives/08-human-documentation-style.md",
+    "line": 18,
+    "reason": "Directive negative example required to teach the prohibited Korean ending.",
+    "text_sha256": "dc53794e93689c98d2c7af98ecf6f6c08a58fee9ce3e23eba52dc032ebb9b43e"
+  },
+  {
+    "path": ".agents/directives/08-human-documentation-style.md",
+    "line": 19,
+    "reason": "Directive negative example required to teach the prohibited Korean ending.",
+    "text_sha256": "c218ae2e133304f9fa85f1fa5175ac5356dff16336c05c1c549eb345fda51c74"
+  },
+  {
+    "path": ".agents/directives/08-human-documentation-style.md",
+    "line": 34,
+    "reason": "Directive negative example required to teach the prohibited Korean ending.",
+    "text_sha256": "5664dfad77bc09d859fbdc41f81521dc6b240410053fd057223b41f24201e93f"
+  },
+  {
+    "path": ".agents/directives/08-human-documentation-style.md",
+    "line": 35,
+    "reason": "Directive negative example required to teach the prohibited Korean ending.",
+    "text_sha256": "0ed8fe606af2ba41e6e134b65debcc92edf31274cc85e33de934feb19d93d037"
+  },
+  {
+    "path": ".agents/directives/08-human-documentation-style.md",
+    "line": 36,
+    "reason": "Directive negative example required to teach the prohibited Korean ending.",
+    "text_sha256": "9302426f20249d65d94efc68faa4577b550a0fe430c98c9198800bb20be36788"
+  },
+  {
+    "path": ".agents/directives/08-human-documentation-style.md",
+    "line": 37,
+    "reason": "Directive negative example required to teach the prohibited Korean ending.",
+    "text_sha256": "5246fb807eee37c5a0a34ab58b2b7ae12ec314eb6a9755418f2d641c00e60969"
+  },
+  {
+    "path": ".agents/directives/08-human-documentation-style.md",
+    "line": 38,
+    "reason": "Directive negative example required to teach the prohibited Korean ending.",
+    "text_sha256": "05e7133ff3cd6bb9137ed7ef783fe735be723d53dd794e4e0042fa76a516f647"
+  },
+  {
+    "path": ".agents/directives/08-human-documentation-style.md",
+    "line": 39,
+    "reason": "Directive negative example required to teach the prohibited Korean ending.",
+    "text_sha256": "d64066349f79692c31067588f890630d9468cc641b2bd4718f457e590e0545e2"
+  },
+  {
+    "path": ".agents/directives/08-human-documentation-style.md",
+    "line": 40,
+    "reason": "Directive negative example required to teach the prohibited Korean ending.",
+    "text_sha256": "79b832f230dde9b0582e848f144ad5e4e6230440080a6b8f65a1ee921e8aa6e4"
+  },
+  {
+    "path": ".agents/directives/08-human-documentation-style.md",
+    "line": 41,
+    "reason": "Directive negative example required to teach the prohibited Korean ending.",
+    "text_sha256": "a62d8c8c32afc1594c07702e01d410d31f9cc4a7f352f7510061f76a5523d166"
+  },
+  {
+    "path": ".agents/directives/08-human-documentation-style.md",
+    "line": 42,
+    "reason": "Directive negative example required to teach the prohibited Korean ending.",
+    "text_sha256": "253e2435c997eb7e9f186d582895a0732c5e10cb86211b23d32ba4f798adc997"
+  },
+  {
+    "path": ".agents/directives/08-human-documentation-style.md",
+    "line": 43,
+    "reason": "Directive negative example required to teach the prohibited Korean ending.",
+    "text_sha256": "0d8dae54babf14d0b50dacec56655c524bf065520e9f15d8c6cab885477f9768"
+  },
+  {
+    "path": ".agents/directives/08-human-documentation-style.md",
+    "line": 48,
+    "reason": "Directive negative example required to teach the prohibited Korean ending.",
+    "text_sha256": "c14738ac48f513c3603b768a6621ff256bd61735c1026adb0aa8be49f40f37c6"
+  },
+  {
+    "path": "docs/guidance-schema.md",
+    "line": 63,
+    "reason": "Consumer guidance negative example required for source and projection parity.",
+    "text_sha256": "45ea701800caffd8a24b29ed26757ea374cb3d751c4325832d37cd1858c24cb9"
+  },
+  {
+    "path": "docs/guidance-schema.md",
+    "line": 74,
+    "reason": "Consumer guidance negative example required for source and projection parity.",
+    "text_sha256": "5664dfad77bc09d859fbdc41f81521dc6b240410053fd057223b41f24201e93f"
+  },
+  {
+    "path": "docs/guidance-schema.md",
+    "line": 75,
+    "reason": "Consumer guidance negative example required for source and projection parity.",
+    "text_sha256": "0ed8fe606af2ba41e6e134b65debcc92edf31274cc85e33de934feb19d93d037"
+  },
+  {
+    "path": "docs/guidance-schema.md",
+    "line": 76,
+    "reason": "Consumer guidance negative example required for source and projection parity.",
+    "text_sha256": "9302426f20249d65d94efc68faa4577b550a0fe430c98c9198800bb20be36788"
+  },
+  {
+    "path": "docs/guidance-schema.md",
+    "line": 77,
+    "reason": "Consumer guidance negative example required for source and projection parity.",
+    "text_sha256": "5246fb807eee37c5a0a34ab58b2b7ae12ec314eb6a9755418f2d641c00e60969"
+  },
+  {
+    "path": "docs/guidance-schema.md",
+    "line": 78,
+    "reason": "Consumer guidance negative example required for source and projection parity.",
+    "text_sha256": "05e7133ff3cd6bb9137ed7ef783fe735be723d53dd794e4e0042fa76a516f647"
+  },
+  {
+    "path": "docs/guidance-schema.md",
+    "line": 79,
+    "reason": "Consumer guidance negative example required for source and projection parity.",
+    "text_sha256": "d64066349f79692c31067588f890630d9468cc641b2bd4718f457e590e0545e2"
+  },
+  {
+    "path": "docs/guidance-schema.md",
+    "line": 80,
+    "reason": "Consumer guidance negative example required for source and projection parity.",
+    "text_sha256": "79b832f230dde9b0582e848f144ad5e4e6230440080a6b8f65a1ee921e8aa6e4"
+  },
+  {
+    "path": "docs/guidance-schema.md",
+    "line": 81,
+    "reason": "Consumer guidance negative example required for source and projection parity.",
+    "text_sha256": "a62d8c8c32afc1594c07702e01d410d31f9cc4a7f352f7510061f76a5523d166"
+  },
+  {
+    "path": "docs/guidance-schema.md",
+    "line": 82,
+    "reason": "Consumer guidance negative example required for source and projection parity.",
+    "text_sha256": "253e2435c997eb7e9f186d582895a0732c5e10cb86211b23d32ba4f798adc997"
+  },
+  {
+    "path": "docs/guidance-schema.md",
+    "line": 83,
+    "reason": "Consumer guidance negative example required for source and projection parity.",
+    "text_sha256": "0d8dae54babf14d0b50dacec56655c524bf065520e9f15d8c6cab885477f9768"
+  },
+  {
+    "path": "docs/guidance-schema.md",
+    "line": 88,
+    "reason": "Consumer guidance negative example required for source and projection parity.",
+    "text_sha256": "67b3e5dd7ebdb2ab4a748917047a280145d6ea927421246fce2408f4ac525267"
+  },
+  {
+    "path": "docs/plans/stages/01a-setup-discovery-consent.md",
+    "line": 48,
+    "reason": "Exact fallback-hook consent prompt preserves approved user-facing UI bytes.",
+    "text_sha256": "63c9fd2f3d096052ab9151dbd2cffd51f00b061d9ea1afbbc0724ee2da84b61a"
+  },
+  {
+    "path": "harness/template/AGENTS.md.jinja",
+    "line": 18,
+    "reason": "Consumer marker negative example required for projected agent guidance.",
+    "text_sha256": "852b68fa9714876863a3de5c85007bd0a3ecd5a6b2b559a2b1ccbbdc4889f292"
+  },
+  {
+    "path": "harness/template/AGENTS.md.jinja",
+    "line": 19,
+    "reason": "Consumer marker negative example required for projected agent guidance.",
+    "text_sha256": "21f32ee9b06dab181546ec3dde4ed4753cddee2ca94a0b057bfb168813824b56"
+  },
+  {
+    "path": "harness/template/AGENTS.md.jinja",
+    "line": 20,
+    "reason": "Consumer marker negative example required for source and projection parity.",
+    "text_sha256": "b4fa698cf99467dd74432d464d0eb9e71e27ffa5eea3d6f518c679bce10688c2"
+  }
+]

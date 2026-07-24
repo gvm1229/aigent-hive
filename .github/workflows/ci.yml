@@ -99,6 +99,16 @@ jobs:
           python -m unittest
           tests.conformance.test_phase5_judge
           -v
+      - name: Run Phase 6 signed update conformance corpus
+        run: >-
+          python -m unittest
+          tests.conformance.test_phase6_update
+          -v
+      - name: Run Phase 7 shipping usage-control conformance corpus
+        run: >-
+          python -m unittest
+          tests.conformance.test_phase7_usage_control
+          -v
 
   copier:
     name: Contract and Copier conformance
@@ -151,3 +161,10 @@ jobs:
           python tests/validate_scaffold.py \
             tests/work/copier-hostile \
             tests/fixtures/copier-hostile-data.yml
+      - name: Enforce human documentation style contract
+        run: |
+          python -m unittest tests.conformance.test_source_usage_guard -v
+          python -m unittest tests.conformance.test_human_documentation_style -v
+          python -m unittest tests.conformance.test_markdown_links -v
+          python scripts/check-human-documentation-style.py --all --output json
+          python scripts/check-markdown-links.py --output json
