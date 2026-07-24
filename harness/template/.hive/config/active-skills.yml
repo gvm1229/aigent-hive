@@ -106,7 +106,7 @@ skills:
   consent_digest: null
 - name: setup-harness
   source_type: built-in
-  content_digest: sha256:7750b8cf5b5012b1c23d363199fd01cf739c570c31f14df8436240141995158a
+  content_digest: sha256:d209164c56beb8dbb4148745729b62e716c617d17a373c4f4e2a03d6c4c77655
   side_effect_class: project-write
   capabilities:
   - filesystem-read
