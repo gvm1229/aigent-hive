@@ -1,0 +1,10 @@
+PackageIdentifier: Gvm1229.AigentHive
+PackageVersion: @VERSION@
+PackageLocale: en-US
+Publisher: gvm1229
+PackageName: Aigent Hive
+License: Apache-2.0
+ShortDescription: Provider-neutral local agent harness for subscription-authenticated hosts
+PackageUrl: https://github.com/gvm1229/aigent-hive
+ManifestType: defaultLocale
+ManifestVersion: 1.10.0

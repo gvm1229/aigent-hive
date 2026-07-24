@@ -1,0 +1,24 @@
+class AigentHive < Formula
+  desc "Provider-neutral local agent harness for subscription-authenticated hosts"
+  homepage "https://github.com/gvm1229/aigent-hive"
+  version "@VERSION@"
+  license "Apache-2.0"
+
+  on_arm do
+    url "https://github.com/gvm1229/aigent-hive/releases/download/v@VERSION@/aigent-hive-@VERSION@-aarch64-apple-darwin.tar.gz"
+    sha256 "@MACOS_ARM64_SHA256@"
+  end
+
+  on_intel do
+    url "https://github.com/gvm1229/aigent-hive/releases/download/v@VERSION@/aigent-hive-@VERSION@-x86_64-apple-darwin.tar.gz"
+    sha256 "@MACOS_X86_64_SHA256@"
+  end
+
+  def install
+    bin.install "hive"
+  end
+
+  test do
+    assert_match "hive #{version}", shell_output("#{bin}/hive --version")
+  end
+end

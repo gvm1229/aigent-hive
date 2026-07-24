@@ -1,0 +1,13 @@
+PackageIdentifier: Gvm1229.AigentHive
+PackageVersion: @VERSION@
+InstallerType: zip
+NestedInstallerType: portable
+NestedInstallerFiles:
+  - RelativeFilePath: hive.exe
+    PortableCommandAlias: hive
+Installers:
+  - Architecture: x64
+    InstallerUrl: https://github.com/gvm1229/aigent-hive/releases/download/v@VERSION@/aigent-hive-@VERSION@-x86_64-pc-windows-msvc.zip
+    InstallerSha256: @WINDOWS_X86_64_SHA256@
+ManifestType: installer
+ManifestVersion: 1.10.0

@@ -272,8 +272,9 @@ class Phase6StaticContracts(unittest.TestCase):
         self.assertIn('owner":"direct"', shell)
         self.assertIn('owner = "direct"', powershell)
         self.assertNotIn("grep -q", shell)
-        self.assertIn('prior_digest=$(shasum -a 256 "$prefix/bin/hive"', shell)
-        self.assertIn('"$prior_version" "$prior_digest"', shell)
+        self.assertIn('owned_digest=$(shasum -a 256 "$owned_binary"', shell)
+        self.assertIn('[ "$parsed_digest" = "$owned_digest" ]', shell)
+        self.assertIn('verify_owned_pair "$prefix/bin/hive" "$receipt"', shell)
         self.assertIn("Compare-Object $expectedProperties $actualProperties", powershell)
         self.assertIn("Get-FileHash -LiteralPath $destination", powershell)
         self.assertIn(

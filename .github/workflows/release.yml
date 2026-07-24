@@ -1,0 +1,218 @@
+name: Signed release candidate
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Exact product version already present in source
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  macos:
+    name: macOS ${{ matrix.target }}
+    environment: release-signing
+    runs-on: ${{ matrix.runner }}
+    env:
+      VERSION: ${{ inputs.version }}
+      TARGET: ${{ matrix.target }}
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-15
+            target: aarch64-apple-darwin
+          - runner: macos-15-intel
+            target: x86_64-apple-darwin
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Enforce exact protected main candidate source
+        env:
+          CANDIDATE_REF: ${{ github.ref }}
+          CANDIDATE_REF_NAME: ${{ github.ref_name }}
+          CANDIDATE_REF_TYPE: ${{ github.ref_type }}
+          CANDIDATE_SHA: ${{ github.sha }}
+          WORKFLOW_SHA: ${{ github.workflow_sha }}
+        run: |
+          test "$GITHUB_EVENT_NAME" = "workflow_dispatch"
+          test "$CANDIDATE_REF" = "refs/heads/main"
+          test "$CANDIDATE_REF_NAME" = "main"
+          test "$CANDIDATE_REF_TYPE" = "branch"
+          test "$CANDIDATE_SHA" = "$WORKFLOW_SHA"
+          test "$CANDIDATE_SHA" = "$(git rev-parse refs/remotes/origin/main)"
+      - uses: dtolnay/rust-toolchain@2c7215f132e9ebf062739d9130488b56d53c060c # master 2026-07-16
+        with:
+          toolchain: stable
+          targets: ${{ matrix.target }}
+      - name: Enforce source and compiled version parity
+        run: scripts/check-release-version.sh "$VERSION"
+      - name: Build locked release binary
+        run: cargo build --release --locked --target "$TARGET" --bin hive
+      - name: Import protected Developer ID identity
+        env:
+          APPLE_CERTIFICATE_P12_BASE64: ${{ secrets.APPLE_CERTIFICATE_P12_BASE64 }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+        run: |
+          test -n "$APPLE_CERTIFICATE_P12_BASE64"
+          test -n "$APPLE_CERTIFICATE_PASSWORD"
+          test -n "$APPLE_SIGNING_IDENTITY"
+          keychain="$RUNNER_TEMP/aigent-hive-signing.keychain-db"
+          security create-keychain -p "$RUNNER_TEMP" "$keychain"
+          security unlock-keychain -p "$RUNNER_TEMP" "$keychain"
+          security set-keychain-settings -lut 900 "$keychain"
+          printf '%s' "$APPLE_CERTIFICATE_P12_BASE64" | base64 --decode >"$RUNNER_TEMP/signing.p12"
+          security import "$RUNNER_TEMP/signing.p12" -k "$keychain" \
+            -P "$APPLE_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple: -s \
+            -k "$RUNNER_TEMP" "$keychain"
+          security list-keychains -d user -s "$keychain"
+          codesign --force --options runtime --timestamp \
+            --sign "$APPLE_SIGNING_IDENTITY" \
+            "target/$TARGET/release/hive"
+          codesign --verify --strict --verbose=2 \
+            "target/$TARGET/release/hive"
+          rm -f "$RUNNER_TEMP/signing.p12"
+      - name: Package and notarize direct-distribution archive
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
+        run: |
+          package="aigent-hive-$VERSION-$TARGET"
+          mkdir "$package"
+          cp "target/$TARGET/release/hive" "$package/hive"
+          cp LICENSE "$package/LICENSE"
+          touch -t 198001010000 "$package" "$package/hive" "$package/LICENSE"
+          ditto -c -k --keepParent "$package" "$RUNNER_TEMP/$package-notarization.zip"
+          xcrun notarytool submit "$RUNNER_TEMP/$package-notarization.zip" --wait \
+            --apple-id "$APPLE_ID" --team-id "$APPLE_TEAM_ID" \
+            --password "$APPLE_APP_PASSWORD"
+          COPYFILE_DISABLE=1 tar --format ustar --uid 0 --gid 0 \
+            -cf - "$package/hive" "$package/LICENSE" | gzip -n >"$package.tar.gz"
+          digest=$(shasum -a 256 "$package.tar.gz" | cut -d' ' -f1)
+          printf '%s  %s\n' "$digest" "$package.tar.gz" >"$package.tar.gz.sha256"
+          jq -n --arg artifact_path "targets/$package.tar.gz" \
+            --arg artifact_digest "sha256:$digest" \
+            '{platform:"macos",artifact_path:$artifact_path,artifact_digest:$artifact_digest,scheme:"developer-id",status:"verified"}' \
+            >"$package.tar.gz.platform-evidence.json"
+      - name: Generate GitHub artifact attestation
+        id: attestation
+        uses: actions/attest@f7c74d28b9d84cb8768d0b8ca14a4bac6ef463e6 # v4.1.0
+        with:
+          subject-path: aigent-hive-${{ env.VERSION }}-${{ matrix.target }}.tar.gz
+      - name: Preserve the offline Sigstore bundle
+        run: >-
+          cp "${{ steps.attestation.outputs.bundle-path }}"
+          "aigent-hive-$VERSION-$TARGET.tar.gz.sigstore.json"
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: release-${{ matrix.target }}
+          path: |
+            aigent-hive-${{ env.VERSION }}-${{ matrix.target }}.tar.gz
+            aigent-hive-${{ env.VERSION }}-${{ matrix.target }}.tar.gz.sha256
+            aigent-hive-${{ env.VERSION }}-${{ matrix.target }}.tar.gz.sigstore.json
+            aigent-hive-${{ env.VERSION }}-${{ matrix.target }}.tar.gz.platform-evidence.json
+          if-no-files-found: error
+
+  windows:
+    name: Windows x86_64
+    environment: release-signing
+    runs-on: windows-2025
+    env:
+      VERSION: ${{ inputs.version }}
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Enforce exact protected main candidate source
+        shell: bash
+        env:
+          CANDIDATE_REF: ${{ github.ref }}
+          CANDIDATE_REF_NAME: ${{ github.ref_name }}
+          CANDIDATE_REF_TYPE: ${{ github.ref_type }}
+          CANDIDATE_SHA: ${{ github.sha }}
+          WORKFLOW_SHA: ${{ github.workflow_sha }}
+        run: |
+          test "$GITHUB_EVENT_NAME" = "workflow_dispatch"
+          test "$CANDIDATE_REF" = "refs/heads/main"
+          test "$CANDIDATE_REF_NAME" = "main"
+          test "$CANDIDATE_REF_TYPE" = "branch"
+          test "$CANDIDATE_SHA" = "$WORKFLOW_SHA"
+          test "$CANDIDATE_SHA" = "$(git rev-parse refs/remotes/origin/main)"
+      - uses: dtolnay/rust-toolchain@2c7215f132e9ebf062739d9130488b56d53c060c # master 2026-07-16
+        with:
+          toolchain: stable
+          targets: x86_64-pc-windows-msvc
+      - name: Enforce source and compiled version parity
+        shell: bash
+        run: scripts/check-release-version.sh "$VERSION"
+      - run: cargo build --release --locked --target x86_64-pc-windows-msvc --bin hive
+      - name: Authenticate to Azure with OIDC
+        uses: azure/login@532459ea530d8321f2fb9bb10d1e0bcf23869a43 # v3
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      - name: Sign with Azure Artifact Signing
+        uses: azure/artifact-signing-action@c7ab2a863ab5f9a846ddb8265964877ef296ee82 # v2
+        with:
+          endpoint: ${{ vars.ARTIFACT_SIGNING_ENDPOINT }}
+          signing-account-name: ${{ vars.ARTIFACT_SIGNING_ACCOUNT }}
+          certificate-profile-name: ${{ vars.ARTIFACT_SIGNING_PROFILE }}
+          files: ${{ github.workspace }}\target\x86_64-pc-windows-msvc\release\hive.exe
+          file-digest: SHA256
+          timestamp-rfc3161: http://timestamp.acs.microsoft.com
+          timestamp-digest: SHA256
+      - name: Verify and package Authenticode binary
+        shell: pwsh
+        run: |
+          $version = $env:VERSION
+          $triple = "x86_64-pc-windows-msvc"
+          $package = "aigent-hive-$version-$triple"
+          $binary = "target\$triple\release\hive.exe"
+          if ((Get-AuthenticodeSignature $binary).Status -ne "Valid") {
+            throw "Authenticode verification failed"
+          }
+          New-Item -ItemType Directory -Path $package | Out-Null
+          Copy-Item $binary "$package\hive.exe"
+          Copy-Item LICENSE "$package\LICENSE"
+          Compress-Archive -Path "$package\*" -DestinationPath "$package.zip"
+          $hash = (Get-FileHash "$package.zip" -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$hash  $package.zip" | Set-Content "$package.zip.sha256" -Encoding ascii
+          [ordered]@{
+            platform = "windows"
+            artifact_path = "targets/$package.zip"
+            artifact_digest = "sha256:$hash"
+            scheme = "authenticode"
+            status = "verified"
+          } | ConvertTo-Json -Compress | Set-Content `
+            "$package.zip.platform-evidence.json" -Encoding utf8NoBOM
+      - name: Generate GitHub artifact attestation
+        id: attestation
+        uses: actions/attest@f7c74d28b9d84cb8768d0b8ca14a4bac6ef463e6 # v4.1.0
+        with:
+          subject-path: aigent-hive-${{ env.VERSION }}-x86_64-pc-windows-msvc.zip
+      - name: Preserve the offline Sigstore bundle
+        shell: pwsh
+        run: >-
+          Copy-Item "${{ steps.attestation.outputs.bundle-path }}"
+          "aigent-hive-$env:VERSION-x86_64-pc-windows-msvc.zip.sigstore.json"
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: release-x86_64-pc-windows-msvc
+          path: |
+            aigent-hive-${{ env.VERSION }}-x86_64-pc-windows-msvc.zip
+            aigent-hive-${{ env.VERSION }}-x86_64-pc-windows-msvc.zip.sha256
+            aigent-hive-${{ env.VERSION }}-x86_64-pc-windows-msvc.zip.sigstore.json
+            aigent-hive-${{ env.VERSION }}-x86_64-pc-windows-msvc.zip.platform-evidence.json
+          if-no-files-found: error
