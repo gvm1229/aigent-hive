@@ -429,6 +429,8 @@ fn enforce(arguments: &EnforceArguments) -> Result<ActionResult, AdapterError> {
                 "session_id_digest": binding.session_digest,
                 "process_id": binding.process_id,
                 "threshold_remaining_percent": config.threshold,
+                "scope": "automatic-dispatch-preflight",
+                "authorizes_dispatch": false,
             })),
         });
     }
@@ -534,7 +536,7 @@ fn allowed_result(
         status: "success",
         exit_code: 0,
         code: "hive.usage-allowed",
-        message: "subscription usage permits the current host turn".to_owned(),
+        message: "subscription usage preflight permits automatic dispatch evaluation".to_owned(),
         changed_paths: Vec::new(),
         evidence: vec![
             Evidence {
@@ -557,6 +559,8 @@ fn allowed_result(
             "selected_window": observation.selected_window,
             "threshold_remaining_percent": config.threshold,
             "measured_at": observation.measured_at,
+            "scope": "automatic-dispatch-preflight",
+            "authorizes_dispatch": false,
         })),
     }
 }

@@ -11,7 +11,7 @@ use cap_std::fs::{Dir, OpenOptions};
 use hive_core::role::RoleDocument;
 use hive_core::run::{
     prepare_dispatch_brief, validate_transition, verify_owner_continuity, CapabilityResolution,
-    DispatchBrief, DispatchContractError, OwnerBinding, OwnerContinuity, RunPlan, RunState,
+    DispatchBrief, DispatchContractError, Host, OwnerBinding, OwnerContinuity, RunPlan, RunState,
     RunStatus, RunStatusDocument, SupportLevel,
 };
 use hive_core::usage_guard::UsageSnapshot;
@@ -1496,7 +1496,12 @@ struct DispatchAuthorizationRecord {
     record_digest: String,
 }
 
-fn installed_usage_threshold(target: &PinnedTarget) -> Result<u8, AdapterError> {
+struct InstalledUsageConfig {
+    threshold: u8,
+    primary_host: Host,
+}
+
+fn installed_usage_config(target: &PinnedTarget) -> Result<InstalledUsageConfig, AdapterError> {
     let relative = Path::new(".hive/config/harness.toml");
     let bytes = target
         .read_optional(relative, MAX_HARNESS_CONFIG_BYTES)?
@@ -1509,6 +1514,7 @@ fn installed_usage_threshold(target: &PinnedTarget) -> Result<u8, AdapterError> 
         AdapterError::Safety("installed harness.toml must be valid UTF-8".to_owned())
     })?;
     let mut threshold = None;
+    let mut primary_host = None;
     let mut entered_table = false;
     for line in text.lines() {
         let line = line.trim();
@@ -1524,34 +1530,62 @@ fn installed_usage_threshold(target: &PinnedTarget) -> Result<u8, AdapterError> 
                 "installed harness.toml contains a malformed assignment".to_owned(),
             ));
         };
-        if key.trim() != "usage_stop_remaining_percent" {
-            continue;
+        match key.trim() {
+            "usage_stop_remaining_percent" => {
+                if entered_table {
+                    return Err(AdapterError::Safety(
+                        "installed usage threshold must be a root harness.toml key".to_owned(),
+                    ));
+                }
+                if threshold.is_some() {
+                    return Err(AdapterError::Safety(
+                        "installed harness.toml contains duplicate usage threshold".to_owned(),
+                    ));
+                }
+                let raw_value = value.trim();
+                let parsed = raw_value
+                    .parse::<u8>()
+                    .ok()
+                    .filter(|parsed| (1..=99).contains(parsed) && parsed.to_string() == raw_value);
+                threshold = Some(parsed.ok_or_else(|| {
+                    AdapterError::Safety(
+                        "installed harness.toml usage threshold must be an integer from 1 to 99"
+                            .to_owned(),
+                    )
+                })?);
+            }
+            "primary_host" => {
+                if entered_table || primary_host.is_some() {
+                    return Err(AdapterError::Safety(
+                        "installed primary_host must be one unique root harness.toml key"
+                            .to_owned(),
+                    ));
+                }
+                primary_host = Some(match value.trim() {
+                    "\"codex\"" => Host::Codex,
+                    "\"claude\"" => Host::Claude,
+                    "\"antigravity\"" => Host::Antigravity,
+                    _ => {
+                        return Err(AdapterError::Safety(
+                            "installed primary_host is unsupported".to_owned(),
+                        ));
+                    }
+                });
+            }
+            _ => {}
         }
-        if entered_table {
-            return Err(AdapterError::Safety(
-                "installed usage threshold must be a root harness.toml key".to_owned(),
-            ));
-        }
-        if threshold.is_some() {
-            return Err(AdapterError::Safety(
-                "installed harness.toml contains duplicate usage threshold".to_owned(),
-            ));
-        }
-        let raw_value = value.trim();
-        let parsed = raw_value
-            .parse::<u8>()
-            .ok()
-            .filter(|parsed| (1..=99).contains(parsed) && parsed.to_string() == raw_value);
-        threshold = Some(parsed.ok_or_else(|| {
-            AdapterError::Safety(
-                "installed harness.toml usage threshold must be an integer from 1 to 99".to_owned(),
-            )
-        })?);
     }
-    threshold.ok_or_else(|| {
+    let threshold = threshold.ok_or_else(|| {
         AdapterError::Safety(
             "installed harness.toml is missing usage_stop_remaining_percent".to_owned(),
         )
+    })?;
+    let primary_host = primary_host.ok_or_else(|| {
+        AdapterError::Safety("installed harness.toml is missing primary_host".to_owned())
+    })?;
+    Ok(InstalledUsageConfig {
+        threshold,
+        primary_host,
     })
 }
 
@@ -1763,29 +1797,31 @@ fn resume(arguments: &ResumeArguments) -> Result<ActionResult, AdapterError> {
     let mut usage_failure = None;
     let mut usage_evidence = None;
     let mut runtime_changed_paths = Vec::new();
-    let (briefs, usage_guard) = if !dispatchable {
-        (
-            Vec::new(),
-            json!({
-                "dispatch_intent": arguments.dispatch_intent.as_str(),
-                "enforced": false,
-                "outcome": "not_applicable",
-                "evidence_digest": null,
-                "window": null,
-            }),
-        )
-    } else if arguments.dispatch_intent == DispatchIntent::Manual {
-        (
-            prepare_role_dispatch_briefs(&plan, &status, &roles, &capability)?,
-            json!({
-                "dispatch_intent": "manual",
-                "enforced": false,
-                "outcome": "not_requested",
-                "evidence_digest": null,
-                "window": null,
-            }),
-        )
-    } else {
+    let (briefs, usage_guard) = 'dispatch: {
+        if !dispatchable {
+            break 'dispatch (
+                Vec::new(),
+                json!({
+                    "dispatch_intent": arguments.dispatch_intent.as_str(),
+                    "enforced": false,
+                    "outcome": "not_applicable",
+                    "evidence_digest": null,
+                    "window": null,
+                }),
+            );
+        }
+        if arguments.dispatch_intent == DispatchIntent::Manual {
+            break 'dispatch (
+                prepare_role_dispatch_briefs(&plan, &status, &roles, &capability)?,
+                json!({
+                    "dispatch_intent": "manual",
+                    "enforced": false,
+                    "outcome": "not_requested",
+                    "evidence_digest": null,
+                    "window": null,
+                }),
+            );
+        }
         let account_digest = arguments.account_digest.as_deref().ok_or_else(|| {
             AdapterError::Internal("automatic account digest was not parsed".to_owned())
         })?;
@@ -1793,7 +1829,13 @@ fn resume(arguments: &ResumeArguments) -> Result<ActionResult, AdapterError> {
             .role_id
             .as_deref()
             .ok_or_else(|| AdapterError::Internal("automatic role was not parsed".to_owned()))?;
-        let configured_threshold = installed_usage_threshold(&target)?;
+        let installed = installed_usage_config(&target)?;
+        if installed.primary_host != capability.host {
+            return Err(AdapterError::OwnerBlocked(
+                "installed primary_host does not match the pinned run host".to_owned(),
+            ));
+        }
+        let configured_threshold = installed.threshold;
         if arguments
             .threshold
             .is_some_and(|requested| requested != configured_threshold)
@@ -1801,6 +1843,28 @@ fn resume(arguments: &ResumeArguments) -> Result<ActionResult, AdapterError> {
             return Err(AdapterError::Input(format!(
                 "--threshold must equal installed usage_stop_remaining_percent ({configured_threshold})"
             )));
+        }
+        if installed.primary_host != Host::Codex {
+            usage_failure = Some((
+                "hive.usage-unknown",
+                "automatic dispatch has no qualified usage sensor for the installed host"
+                    .to_owned(),
+            ));
+            break 'dispatch (
+                Vec::new(),
+                json!({
+                    "dispatch_intent": "automatic",
+                    "enforced": false,
+                    "outcome": "unknown",
+                    "evidence_digest": null,
+                    "window": null,
+                    "configured_threshold_percent": configured_threshold,
+                    "history": "not_sampled",
+                    "authorization_id": null,
+                    "role_id": role_id,
+                    "host_scope": installed.primary_host,
+                }),
+            );
         }
         let selected_role = roles
             .iter()
@@ -1842,6 +1906,7 @@ fn resume(arguments: &ResumeArguments) -> Result<ActionResult, AdapterError> {
                     "history": "not_sampled",
                     "authorization_id": authorization_id,
                     "role_id": role_id,
+                    "host_scope": installed.primary_host,
                 }),
             )
         } else {
@@ -1903,6 +1968,7 @@ fn resume(arguments: &ResumeArguments) -> Result<ActionResult, AdapterError> {
                         "history": history_state,
                         "authorization_id": authorization_id,
                         "role_id": role_id,
+                        "host_scope": installed.primary_host,
                     });
                     usage_evidence = Some(evidence);
                     (briefs, data)
@@ -1929,6 +1995,7 @@ fn resume(arguments: &ResumeArguments) -> Result<ActionResult, AdapterError> {
                         "history": history_state,
                         "authorization_id": null,
                         "role_id": role_id,
+                        "host_scope": installed.primary_host,
                     });
                     usage_evidence = failure.evidence;
                     usage_failure = Some((failure.code, failure.message));

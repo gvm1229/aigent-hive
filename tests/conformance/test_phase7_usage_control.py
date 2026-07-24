@@ -157,6 +157,13 @@ class ShippingUsageControlConformance(Phase1CliTestCase):
         self.assertEqual(result.get("status"), status)
         self.assertEqual(result.get("code"), code)
 
+    def assert_preflight_only(self, result: dict[str, object]) -> None:
+        data = result.get("data")
+        self.assertIsInstance(data, dict)
+        assert isinstance(data, dict)
+        self.assertEqual(data.get("scope"), "automatic-dispatch-preflight")
+        self.assertIs(data.get("authorizes_dispatch"), False)
+
     def test_status_defaults_to_enabled_without_creating_runtime_state(self) -> None:
         before = snapshot_tree(self.consumer)
 
@@ -652,6 +659,7 @@ class ShippingUsageControlConformance(Phase1CliTestCase):
         )
         self.assertEqual(result["data"]["selected_window"], "session")
         self.assertEqual(result["data"]["host_scope"], "codex")
+        self.assert_preflight_only(result)
         self.assertFalse(
             (self.consumer / ".hive/runtime/usage-guard").exists()
         )
@@ -751,6 +759,7 @@ class ShippingUsageControlConformance(Phase1CliTestCase):
             status="success",
             code="hive.usage-session-bypassed",
         )
+        self.assert_preflight_only(bypassed_result)
 
         enabled, _ = self.invoke(
             "usage",
@@ -796,6 +805,7 @@ class ShippingUsageControlConformance(Phase1CliTestCase):
         self.assertEqual(process.returncode, 0, process.stderr)
         self.assertEqual(result["code"], "hive.usage-allowed")
         self.assertEqual(result["data"]["selected_window"], "weekly")
+        self.assert_preflight_only(result)
 
         duplicate, duplicate_result = self.invoke(
             "usage",

@@ -284,11 +284,11 @@ cargo run -p hive-cli -- usage check \
   --output json
 ```
 
-출하 `hive-usage-guard` Skill은 명백한 status·threshold·current-session 제어 intent에서
-자동 선택. 설치 threshold는 Hive-owned root key만 원자적으로 변경하고, session
-override는 raw ID 없이 current session digest·PID에만 결합. 새 session과 stale PID는
-기본 활성화 상태. Signed same-major update는 설치 threshold를 temporary typed
-answers로 전달해 migration 뒤에도 같은 값을 보존.
+출하 `hive-usage-guard` Skill 자동 선택 범위: 새 automatic dispatch 직전 preflight와
+명백한 status·threshold·current-session 제어 intent. 설치 threshold는 Hive-owned root
+key만 원자적으로 변경하고, session override는 raw ID 없이 current session digest·PID에만
+결합. 새 session과 stale PID는 기본 활성화 상태. Signed same-major update는 설치
+threshold를 temporary typed answers로 전달해 migration 뒤에도 같은 값 보존.
 
 ```bash
 hive usage enforce --target . \
@@ -308,16 +308,22 @@ hive usage session --target . \
 Skill 이름 없는 명백한 bypass·restore 요청도 지원하되 bare `continue`·`resume`은
 disable 승인 제외. Skill은 fallback hook, prompt rewrite, watcher, 다른 Skill activation,
 orchestration과 중지된 task continuation은 설치·수행 범위에서 제외. `status`는 조회
-전용이며 매 turn 경계의 `enforce` 대체 불가. 외부 OMX/OMC cancellation 결과는 보조
+전용이며 automatic-dispatch preflight 대체 불가. 일반 응답, manual 작업과
+non-dispatch action에는 `enforce` 호출 없음. 외부 OMX/OMC cancellation 결과는 보조
 evidence일 뿐 halt marker나 durable goal/task 상태 대체 불가.
 
-Exit `0`은 그 시점의 snapshot이 core policy를 통과했다는 read-only 판단.
+`hive usage enforce` exit `0`: 해당 session binding의 preflight 통과만 의미,
+dispatch authorization 아님. Current halt marker 우선이며 exit `3`은 해당 automatic
+dispatch 차단. Confirmed session disable은 preflight 우회일 뿐 dispatch authorization
+효과 없음. Installed `primary_host`와 pinned run·capability host 불일치도 차단하며,
+Non-Codex automatic dispatch는 qualified local sensor 전까지 fail-closed.
 `hive run resume --dispatch-intent automatic`은 durable run과 owner continuity를 먼저
 검증한 뒤 명시한 active role 하나에 대해서만 fresh snapshot을 평가. 이전
 snapshot은 Git에서 제외된 `.hive/runtime/usage-history/`에만 bounded하게 저장하고,
 같은 reset의 remaining 증가나 measurement/reset 역행은 fail-closed. 허용되면
 permit을 brief 준비 closure 직전에 소비하고 exact run revision·role·brief에 결합된
-authorization ID 하나와 brief 하나만 반환. 같은 authorization의 재발급,
+`data.usage_guard.enforced=true`, `outcome=authorized`, authorization ID 하나와
+dispatch brief 정확히 하나만 반환. 같은 authorization의 재발급,
 limited, unknown 또는 expired 결과는 brief 0개와 recovery data만 반환.
 
 Hive 외부의 captured JSON replay 방지: 실제 host/orchestration owner 책임.

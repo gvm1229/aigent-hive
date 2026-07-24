@@ -30,6 +30,7 @@ CAPABILITIES = {
     "incompatible": PHASE1 / "capabilities-incompatible.json",
     "unknown": PHASE1 / "capabilities-unknown.json",
 }
+ANTIGRAVITY_CAPABILITY = PHASE1 / "capabilities-antigravity-absent.json"
 SCHEMA_FILES = {
     "action": "action-result.schema.json",
     "role": "role-profile.schema.json",
@@ -170,10 +171,19 @@ class Phase4Contracts(unittest.TestCase):
         config = target / ".hive/config"
         config.mkdir()
         (config / "harness.toml").write_text(
-            "schema_version = 1\nusage_stop_remaining_percent = 10\n",
+            'schema_version = 1\nprimary_host = "codex"\n'
+            "usage_stop_remaining_percent = 10\n",
             encoding="utf-8",
         )
         return target
+
+    def set_installed_host(self, target: Path, host: str) -> None:
+        config = target / ".hive/config/harness.toml"
+        config.write_text(
+            f'schema_version = 1\nprimary_host = "{host}"\n'
+            "usage_stop_remaining_percent = 10\n",
+            encoding="utf-8",
+        )
 
     def write_json(self, name: str, value: dict[str, Any]) -> Path:
         path = self.input_root / name
@@ -1182,6 +1192,102 @@ class Phase4Contracts(unittest.TestCase):
             ],
         )
 
+    def test_non_codex_manual_resume_stays_usable_but_automatic_fails_before_sensor(
+        self,
+    ) -> None:
+        for host, capability in (
+            ("claude", CAPABILITIES["claude-omc"]),
+            ("antigravity", ANTIGRAVITY_CAPABILITY),
+        ):
+            with self.subTest(host=host):
+                target = self.fresh_target(f"{host}-resume")
+                self.set_installed_host(target, host)
+                self.ensure_handoff(target)
+                process, payload = self.checkpoint(
+                    target,
+                    self.checkpoint_request(state="executing"),
+                    capability,
+                    f"{host}-resume",
+                )
+                self.assert_success(process, payload)
+                before = snapshot_tree(target)
+                empty_path = self.work / f"{host}-manual-no-sensor"
+                empty_path.mkdir()
+
+                manual, manual_payload = self.resume(
+                    target,
+                    capability,
+                    dispatch_intent="manual",
+                    extra_environment={"PATH": str(empty_path)},
+                )
+                self.assert_success(manual, manual_payload)
+                self.assert_resume_payload(
+                    manual_payload,
+                    state="executing",
+                    brief_count=1,
+                    recovery_only=False,
+                )
+                self.assertEqual(snapshot_tree(target), before)
+
+                sensor_log = self.work / f"{host}-automatic.log"
+                automatic, automatic_payload = self.resume(
+                    target,
+                    capability,
+                    dispatch_intent="automatic",
+                    account_digest=USAGE_ACCOUNT_DIGEST,
+                    extra_environment=self.fake_codexbar_environment(
+                        "allow",
+                        log=sensor_log,
+                    ),
+                )
+                self.assertEqual(automatic.returncode, 3, automatic_payload)
+                self.assertEqual(automatic_payload["code"], "hive.usage-unknown")
+                self.assert_resume_payload(
+                    automatic_payload,
+                    state="executing",
+                    brief_count=0,
+                    recovery_only=True,
+                )
+                usage_guard = automatic_payload["data"]["usage_guard"]
+                self.assertIs(usage_guard["enforced"], False)
+                self.assertEqual(usage_guard["outcome"], "unknown")
+                self.assertEqual(usage_guard["host_scope"], host)
+                self.assertFalse(sensor_log.exists())
+                self.assertEqual(snapshot_tree(target), before)
+
+    def test_automatic_resume_rejects_installed_and_pinned_host_mismatch_before_sensor(
+        self,
+    ) -> None:
+        target = self.fresh_target("automatic-host-mismatch")
+        self.set_installed_host(target, "claude")
+        self.ensure_handoff(target)
+        process, payload = self.checkpoint(
+            target,
+            self.checkpoint_request(state="executing"),
+            CAPABILITIES["codex-omx"],
+            "automatic-host-mismatch",
+        )
+        self.assert_success(process, payload)
+        before = snapshot_tree(target)
+        sensor_log = self.work / "automatic-host-mismatch.log"
+
+        resumed, resume_payload = self.resume(
+            target,
+            CAPABILITIES["codex-omx"],
+            dispatch_intent="automatic",
+            account_digest=USAGE_ACCOUNT_DIGEST,
+            extra_environment=self.fake_codexbar_environment(
+                "allow",
+                log=sensor_log,
+            ),
+        )
+
+        self.assertEqual(resumed.returncode, 3, resume_payload)
+        self.assertEqual(resume_payload["code"], "hive.run-owner-drift")
+        self.assertEqual(resume_payload["changed_paths"], [])
+        self.assertFalse(sensor_log.exists())
+        self.assertEqual(snapshot_tree(target), before)
+
     def test_automatic_resume_blocks_at_ten_percent_or_unknown_sensor(self) -> None:
         for case, sensor_case, threshold, expected_code, expected_outcome in (
             ("default-threshold", "threshold", None, "hive.usage-limited", "limited"),
@@ -1193,6 +1299,7 @@ class Phase4Contracts(unittest.TestCase):
                 if threshold is not None:
                     (target / ".hive/config/harness.toml").write_text(
                         "schema_version = 1\n"
+                        'primary_host = "codex"\n'
                         f"usage_stop_remaining_percent = {threshold}\n",
                         encoding="utf-8",
                     )
@@ -1283,7 +1390,8 @@ class Phase4Contracts(unittest.TestCase):
     def test_automatic_threshold_is_bound_to_installed_config(self) -> None:
         target = self.fresh_target("automatic-threshold-binding")
         (target / ".hive/config/harness.toml").write_text(
-            "schema_version = 1\nusage_stop_remaining_percent = 20\n",
+            'schema_version = 1\nprimary_host = "codex"\n'
+            "usage_stop_remaining_percent = 20\n",
             encoding="utf-8",
         )
         self.ensure_handoff(target)

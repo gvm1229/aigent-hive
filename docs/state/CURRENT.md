@@ -43,7 +43,10 @@
 - Built-in `hive-usage-guard` source, template mirror, 세 host projection과 active Skill
   ledger
 - Typed CLI: `hive usage enforce|status|threshold|session`
-- 매 turn 경계의 one-shot `enforce`; background watcher 시작 금지
+- 새 automatic dispatch 직전 one-shot `enforce`; 일반 응답·manual·non-dispatch 호출 없음
+- Exit `0`은 session-bound preflight-only; 별도 automatic resume의
+  `enforced=true`, `outcome=authorized`, authorization ID 1개·brief 1개만 dispatch 허용
+- Current halt 우선, exit `3`은 해당 dispatch 차단, session disable은 authorization 아님
 - Host-scoped session digest:
   `SHA-256(primary_host || NUL || exact_session_id)`
 - Current process ID 결합, 다른 host·session·process의 override·marker replay 거부
@@ -56,7 +59,7 @@
 - Marker 내용: host scope, session digest, PID, decision, window, threshold, measured time,
   evidence digest, revision
 - Raw account, raw session ID, CodexBar payload 저장·출력 없음
-- Non-Codex installed host: sensor 호출 없이 `usage-unknown` fail-closed
+- Installed `primary_host`와 pinned run·capability host 불일치 차단; Non-Codex host는 sensor 호출 없이 `usage-unknown` fail-closed
 - Fallback hook, prompt rewrite, Skill activation, watcher, subagent, orchestration,
   Stop continuation 설치·실행 없음
 - OMX/OMC cancellation 결과: 보조 evidence only; halt marker나 durable goal/task 상태

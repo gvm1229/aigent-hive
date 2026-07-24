@@ -126,7 +126,7 @@ class Phase3HostProjection(Phase3ProjectionTestCase):
                 for skill in PROJECTED_BUILTINS:
                     self.assertTrue((root / skill / "SKILL.md").is_file())
 
-    def test_each_host_projects_the_real_usage_turn_gate(self) -> None:
+    def test_each_host_projects_the_automatic_dispatch_usage_gate(self) -> None:
         for host in ("codex", "claude", "antigravity"):
             with self.subTest(host=host):
                 target = self.install_host(host)
@@ -137,7 +137,25 @@ class Phase3HostProjection(Phase3ProjectionTestCase):
                 ).read_text(encoding="utf-8")
                 for surface in (agents, skill):
                     self.assertIn("hive usage enforce", surface)
+                    self.assertIn(
+                        "Immediately before each new automatic dispatch",
+                        surface,
+                    )
+                    self.assertIn(
+                        "hive run resume --dispatch-intent automatic",
+                        surface,
+                    )
+                    self.assertIn("enforced=true", surface)
+                    self.assertIn("outcome=authorized", surface)
+                    self.assertIn("exactly one dispatch brief", surface)
+                    self.assertIn("never authorizes dispatch", surface)
+                    self.assertIn("ordinary", surface)
+                    self.assertIn("manual", surface)
+                    self.assertIn("non-dispatch", surface)
+                    self.assertIn("non-codex", surface.lower())
+                    self.assertIn("fails closed", surface.lower())
                     self.assertIn("bare continue", surface.lower())
+                    self.assertNotIn("At every turn boundary", surface)
                     self.assertNotIn("start a watcher", agents)
                 self.assertIn("finite phrase list", agents)
                 self.assertIn(

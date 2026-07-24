@@ -8,7 +8,7 @@
 - [x] [P7-001] Shipping `hive-usage-guard` Skill과 typed `hive usage enforce|status|threshold|session` command 구현
 - [x] [P7-002] Installed threshold 변경의 ownership·atomic update·same-major migration conformance
 - [x] [P7-003] Explicit current-session disable/enable/toggle, 새 session default-enable와 stale override hostile test
-- [x] [P7-004] 중지 뒤 같은 session의 모든 후속 task를 explicit bypass 전까지 차단하는 turn gate conformance
+- [x] [P7-004] Installed·pinned host binding, current halt 우선, exit `3` automatic dispatch 차단, exit `0` preflight-only와 별도 one-brief authorization conformance
 - [x] [P7-005] Skill 이름 없는 명백한 threshold·disable·enable semantic intent routing contract
 - [x] [P7-006] Source directive와 consumer guidance marker에 사람용 문서 명사형·간결한 한국어 style projection
 - [x] [P7-007] Ignored session-bound marker와 one-shot pre-dispatch `enforce`의 세 host projection parity

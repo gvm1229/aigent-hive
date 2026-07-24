@@ -26,27 +26,27 @@ Apply는 충돌하지 않는 임의 이름의 exclusive temp file에서 새 byte
 
 Consumer guidance에는 project/profile, primary host, resolved owner와 resolution evidence digest처럼 installed harness에서 재현 가능한 최소 정보만 배치. Canonical setup/config/consent는 `.hive/`의 tracked YAML/TOML이며 marker prose의 machine authority 대체는 불가.
 
-## Usage turn gate
+## Usage automatic-dispatch gate
 
-- 매 turn 경계의 simple-question 판별과 일반 task routing 전에 exact current host
-  session ID·process ID로 one-shot `hive usage enforce` 실행
-- 명백한 threshold·disable·enable intent는 Skill 이름이나 고정 문구 목록이 아니라
-  의미로 판별하고, 제어 적용 뒤 `enforce` 재실행
-- Exit `3`이면 guard status·threshold·session 제어 외 action 전부 차단
-- 명시적인 current-session disable과 confirmation flag 뒤에만 우회
-- Enable 뒤 current halt marker가 남아 있으면 즉시 재차단
-- 다른 host·session·PID의 override·halt marker는 stale 또는 absent로 처리
-- `status`는 조회 전용이며 turn-boundary enforcement 대체 불가
-- OMX/OMC cancellation 결과는 보조 evidence일 뿐 halt marker나 durable goal/task
-  상태 대체 불가
-- Fallback hook, prompt rewrite, Skill activation, watcher, orchestration과 Stop
-  continuation 없음
+- 일반 응답, manual 작업과 non-dispatch action: `hive usage enforce` 호출 없음
+- 새 automatic dispatch 직전 exact current host session ID·process ID로 one-shot
+  `hive usage enforce` 실행
+- Current halt marker 우선; exit `3`이면 해당 automatic dispatch 차단
+- Exit `0`: session-bound preflight 통과만 의미, dispatch authorization 아님
+- 실제 authorization: 별도 `hive run resume --dispatch-intent automatic` 결과의 `data.usage_guard.enforced=true`, `outcome=authorized`, authorization ID 1개와 dispatch brief 정확히 1개
+- 명시적인 current-session disable과 confirmation flag: preflight 우회만 허용, dispatch authorization 효과 없음
+- Installed `primary_host`와 pinned run·capability host 일치 필수; Non-Codex automatic dispatch는 qualified local sensor 전까지 fail-closed
+- 명백한 threshold·disable·enable intent: Skill 이름이나 고정 문구 목록이 아닌 의미 기반 판별
+- Enable 뒤 current halt marker가 남은 경우 즉시 재차단; 다른 host·session·PID marker는 stale 또는 absent
+- `status`는 조회 전용이며 automatic-dispatch preflight 대체 불가
+- OMX/OMC cancellation 결과는 보조 evidence일 뿐 halt marker나 durable goal/task 상태 대체 불가
+- Fallback hook, prompt rewrite, Skill activation, watcher, orchestration과 Stop continuation 없음
 
 `hive setup --validate`는 현재 marker block이 supplied setup answer와 capability evidence에서 재현한 exact block인지 확인. Missing, stale, malformed marker는 marker 밖 bytes를 바꾸지 않은 채 verification failure.
 
 ## 편집 규율
 
-- Usage turn gate 통과 뒤, 모든 편집 전 `.hive/directives/00-editing-discipline.md` 전문 확인
+- 모든 편집 전 `.hive/directives/00-editing-discipline.md` 전문 확인
 - 네 section 전부 Hive contract 안의 최우선 편집 규율로 적용
 - 축약·요약·누락·대체 금지
 - 원문의 `# CLAUDE.md` heading은 Claude 전용 범위가 아니며 Codex·Claude·Gemini Antigravity에 동일 적용

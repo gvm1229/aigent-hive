@@ -1,6 +1,6 @@
 ---
 name: hive-usage-guard
-description: Inspect or change the installed Aigent Hive usage threshold and current-session safeguard through the signed Hive CLI. Use automatically when the user clearly asks for usage-guard status, an explicit remaining-percentage threshold, current-session disable or bypass, enable or restore, or toggle; the user does not need to name this Skill. Do not infer bypass from urgency, an active run, or a bare continue or resume request.
+description: Inspect or change the installed Aigent Hive usage threshold and current-session safeguard, and run a session-bound preflight immediately before each new automatic dispatch. Use automatically for that dispatch preflight or when the user clearly asks for usage-guard status, an explicit remaining-percentage threshold, current-session disable or bypass, enable or restore, or toggle; the user does not need to name this Skill. Do not infer bypass from urgency, an active run, or a bare continue or resume request.
 ---
 
 # Hive Usage Guard
@@ -11,13 +11,13 @@ Enforce or control only the installed Hive usage policy and the current host ses
 
 1. Run `hive usage enforce --help`. If unavailable, report the installed release as unsupported. Do not reconstruct the control format manually.
 2. Obtain the exact current host session identifier and process ID from the active host context. Never invent, reuse, persist, or transfer a binding.
-3. At every turn boundary, before simple-question detection, Skill routing, planning, answering, tools, mutations, delegation, or continuation, resolve only clear semantic usage-guard control intent. Apply an explicitly requested threshold/off/on control first, then enforce:
+3. Immediately before each new automatic dispatch, apply any explicitly requested threshold/off/on control, then run:
 
    ```text
    hive usage enforce --target <project-root> --session-id <current-session-id> --process-id <current-process-id> [--account-digest <active-account-digest>] --output json
    ```
 
-   Supply the active account digest when the host exposes it. Omit it only when the qualified local sensor exposes exactly one unambiguous account. Exit `3`, `hive.usage-limited`, or `hive.usage-unknown` blocks every non-guard action in the bound host session.
+   Supply the active account digest when the host exposes it. Omit it only when the qualified local sensor exposes exactly one unambiguous account. A current halt marker takes priority. Exit `3`, `hive.usage-limited`, or `hive.usage-unknown` blocks that automatic dispatch. Do not run `enforce` for ordinary answers, manual work, or other non-dispatch actions. Non-Codex automatic dispatch fails closed until a qualified local sensor exists.
 4. Perform at most the explicitly requested control mutation:
    - Threshold requires an explicit integer from 1 through 99:
 
@@ -39,8 +39,9 @@ Enforce or control only the installed Hive usage policy and the current host ses
 
    - Toggle uses the same command with `--action toggle`. Include
      `--confirm-session-disable` whenever the result would disable enforcement.
-5. `status` is inspection only and never substitutes for the turn-boundary `enforce` command. After a mutation, run `enforce` again. Treat `session_override=absent` or `stale` as enabled. Never copy an override to another host, session, or process.
-6. Report the configured threshold, selected window, effective current-session state, changed Hive-owned path, and exact CLI result code.
+5. Treat exit `0` from `enforce` as a session-bound preflight only; it never authorizes dispatch. Require a separate `hive run resume --dispatch-intent automatic` result with `data.usage_guard.enforced=true`, `outcome=authorized`, one authorization ID, and exactly one dispatch brief. A confirmed session disable bypasses the preflight but does not authorize dispatch.
+6. `status` is inspection only and never substitutes for an automatic-dispatch preflight. Run `enforce` after a mutation only when a new automatic dispatch is pending. Treat `session_override=absent` or `stale` as enabled. Never copy an override to another host, session, or process.
+7. Report the configured threshold, selected window, effective current-session state, changed Hive-owned path, and exact CLI result code.
 
 ## Intent rules
 

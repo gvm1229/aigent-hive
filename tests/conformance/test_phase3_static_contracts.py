@@ -316,11 +316,11 @@ class Phase3SkillSourceContract(unittest.TestCase):
         )
         self.assertLess(source_gate, source_discipline)
         self.assertLess(source_discipline, source_loading)
-        product_gate = product_marker.index("At every turn boundary")
-        product_discipline = product_marker.index(
-            "After the usage gate allows the turn and before editing anything"
+        product_discipline = product_marker.index("Before editing anything")
+        product_gate = product_marker.index(
+            "Immediately before each new automatic dispatch"
         )
-        self.assertLess(product_gate, product_discipline)
+        self.assertLess(product_discipline, product_gate)
         for surface in (source_manifest, product_marker):
             self.assertIn("highest-priority editing discipline", surface)
             self.assertIn("never compact, summarize, omit, or substitute", surface)
@@ -437,8 +437,29 @@ class Phase3SkillSourceContract(unittest.TestCase):
         self.assertEqual(canonical_skill, projected_skill)
         for surface in (template, renderer, canonical_skill, guidance, readme):
             self.assertIn("hive usage enforce", surface)
+            self.assertIn("hive run resume --dispatch-intent automatic", surface)
         for surface in (template, renderer, canonical_skill):
+            normalized_surface = surface.lower().replace(
+                "current-session", "session"
+            )
             self.assertIn("bare continue", surface.lower())
+            self.assertIn("Immediately before each new automatic dispatch", surface)
+            self.assertIn("ordinary", surface)
+            self.assertIn("manual", surface)
+            self.assertIn("non-dispatch", surface)
+            self.assertIn("exit `0`", normalized_surface)
+            self.assertIn("preflight", surface)
+            self.assertIn("never authorizes dispatch", surface)
+            self.assertIn("enforced=true", surface)
+            self.assertIn("outcome=authorized", surface)
+            self.assertIn("authorization ID", surface)
+            self.assertIn("exactly one dispatch brief", surface)
+            self.assertIn("current halt marker takes priority", normalized_surface)
+            self.assertIn("session disable", normalized_surface)
+            self.assertIn("does not authorize dispatch", surface)
+            self.assertIn("non-codex", normalized_surface)
+            self.assertIn("fails closed", normalized_surface)
+            self.assertNotIn("At every turn boundary", surface)
         self.assertIn("finite phrase list", template)
         self.assertIn("finite phrase list", renderer)
         self.assertIn("illustrative rather than a finite phrase", canonical_skill)
@@ -450,6 +471,11 @@ class Phase3SkillSourceContract(unittest.TestCase):
             self.assertIn("durable goal/task 상태 대체 불가", normalized)
         self.assertIn("start a watcher", canonical_skill)
         self.assertIn("Never install a fallback hook", canonical_skill)
+        usage_control = (
+            REPOSITORY_ROOT / "crates/hive-cli/src/usage_control.rs"
+        ).read_text(encoding="utf-8")
+        self.assertIn('"authorizes_dispatch": false', usage_control)
+        self.assertIn('"scope": "automatic-dispatch-preflight"', usage_control)
 
     def test_catalog_contains_every_phase_three_builtin_name(self) -> None:
         catalog = read_yaml(CATALOG_PATH)

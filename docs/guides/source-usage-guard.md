@@ -133,4 +133,5 @@ session-first·weekly-fallback sensor 선택.
 
 남은 qualification: 실제 Codex·Claude Code·Gemini Antigravity host E2E와
 macOS·Windows의 로컬 CodexBar sensor evidence. 제품 watcher는 금지하며 각 host가
-turn boundary에서 one-shot `enforce`를 호출.
+새 automatic dispatch 직전 one-shot `enforce`를 호출. 일반 응답, manual 작업과
+non-dispatch action은 제품 `enforce` 호출 범위에서 제외.
