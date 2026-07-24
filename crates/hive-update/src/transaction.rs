@@ -9,7 +9,7 @@ use cap_std::ambient_authority;
 use cap_std::fs::{Dir, OpenOptions as CapOpenOptions};
 use hive_core::{
     is_hive_skill_projection_path, sha256_digest, validate_hive_skill_projection_relative,
-    validate_project_relative,
+    validate_project_relative, SOURCE_MARKER_FILE,
 };
 #[cfg(test)]
 use hive_render::execute_setup;
@@ -41,7 +41,8 @@ static TEMP_COUNTER: AtomicU64 = AtomicU64::new(0);
 
 #[cfg(all(test, unix))]
 std::thread_local! {
-    static DIRECTORY_SYNC_COUNT: std::cell::Cell<u64> = const { std::cell::Cell::new(0) };
+    static DIRECTORY_SYNC_EVENTS: std::cell::RefCell<Vec<PathBuf>> =
+        const { std::cell::RefCell::new(Vec::new()) };
 }
 const CANONICAL_BACKUP_ROOTS: &[&str] = &[
     ".hive/setup-answers.yml",
@@ -220,8 +221,6 @@ struct CompatibilityReportPayload<'a> {
 /// Returns an error when release verification, compatibility, staging,
 /// activation, or durable recovery cannot complete safely.
 pub fn execute_update(request: &UpdateRequest<'_>) -> Result<UpdateOutcome, UpdateError> {
-    hive_core::ensure_consumer_target(request.target)
-        .map_err(|error| UpdateError::Input(error.to_string()))?;
     let target_dir = open_target_capability(request.target)?;
     execute_update_in(&target_dir, request)
 }
@@ -237,6 +236,7 @@ pub fn execute_update_in(
     request: &UpdateRequest<'_>,
 ) -> Result<UpdateOutcome, UpdateError> {
     let target = TargetRoot { dir: target_dir };
+    ensure_pinned_consumer_target(&target)?;
     if journal_exists(&target)? {
         return Err(UpdateError::RecoveryRequired(
             "update recovery required before another dry-run or apply; run hive update --recover"
@@ -912,6 +912,7 @@ pub fn recover_update(target: &Path) -> Result<(), UpdateError> {
 /// recorded transaction, or rollback/forward recovery cannot complete.
 pub fn recover_update_in(target_dir: &Dir) -> Result<(), UpdateError> {
     let target = TargetRoot { dir: target_dir };
+    ensure_pinned_consumer_target(&target)?;
     let Some(bytes) = read_optional_bounded(&target, Path::new(JOURNAL_PATH), MAX_CONFIG_BYTES)?
     else {
         return Ok(());
@@ -1651,7 +1652,8 @@ fn write_new_target_file(
         .map_err(|error| UpdateError::Conflict(format!("cannot create backup file: {error}")))?;
     file.write_all(bytes)
         .and_then(|()| file.sync_all())
-        .map_err(|error| UpdateError::Internal(format!("cannot persist backup file: {error}")))
+        .map_err(|error| UpdateError::Internal(format!("cannot persist backup file: {error}")))?;
+    sync_capability_directory(&parent, relative)
 }
 
 #[cfg(test)]
@@ -1751,7 +1753,7 @@ fn sync_capability_directory(parent: &Dir, relative: &Path) -> Result<(), Update
             ))
         })?;
     #[cfg(test)]
-    DIRECTORY_SYNC_COUNT.with(|count| count.set(count.get() + 1));
+    DIRECTORY_SYNC_EVENTS.with(|events| events.borrow_mut().push(relative.to_path_buf()));
     Ok(())
 }
 
@@ -1769,7 +1771,8 @@ fn remove_exact_regular_file(target: &TargetRoot<'_>, relative: &Path) -> Result
         Ok(metadata) if metadata.is_file() && !metadata.file_type().is_symlink() => {
             parent.remove_file(&file_name).map_err(|error| {
                 UpdateError::Rollback(format!("cannot remove {}: {error}", relative.display()))
-            })
+            })?;
+            sync_capability_directory(&parent, relative)
         }
         Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(()),
         Ok(_) => Err(UpdateError::Conflict(format!(
@@ -1795,7 +1798,8 @@ fn remove_exact_directory(target: &TargetRoot<'_>, relative: &Path) -> Result<()
                     "cannot remove backup directory {}: {error}",
                     relative.display()
                 ))
-            })
+            })?;
+            sync_capability_directory(&parent, relative)
         }
         Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(()),
         Ok(_) => Err(UpdateError::Conflict(format!(
@@ -1816,6 +1820,15 @@ fn validate_update_relative(relative: &Path) -> Result<(), UpdateError> {
     } else {
         validate_project_relative(relative).map_err(|error| UpdateError::Input(error.to_string()))
     }
+}
+
+fn ensure_pinned_consumer_target(target: &TargetRoot<'_>) -> Result<(), UpdateError> {
+    if read_optional_bounded(target, Path::new(SOURCE_MARKER_FILE), MAX_CONFIG_BYTES)?.is_some() {
+        return Err(UpdateError::Input(
+            "consumer update commands are forbidden in the Hive source workspace".to_owned(),
+        ));
+    }
+    Ok(())
 }
 
 fn open_target_capability(target: &Path) -> Result<Dir, UpdateError> {
@@ -1874,6 +1887,7 @@ fn capability_parent(
                         relative.display()
                     ))
                 })?;
+                sync_capability_directory(&current, relative)?;
             }
             Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(None),
             Err(error) => {
@@ -2600,7 +2614,7 @@ mod tests {
         fs::create_dir_all(target.path().join(".hive/runtime")).expect("runtime directory");
         let target_dir = open_target_capability(target.path()).expect("target capability");
         let target_root = TargetRoot { dir: &target_dir };
-        DIRECTORY_SYNC_COUNT.with(|count| count.set(0));
+        DIRECTORY_SYNC_EVENTS.with(|events| events.borrow_mut().clear());
 
         write_atomic_relative(
             &target_root,
@@ -2613,7 +2627,74 @@ mod tests {
             fs::read(target.path().join(".hive/runtime/state.json")).expect("state bytes"),
             b"{\"state\":\"ready\"}\n"
         );
-        DIRECTORY_SYNC_COUNT.with(|count| assert_eq!(count.get(), 1));
+        DIRECTORY_SYNC_EVENTS.with(|events| {
+            assert_eq!(
+                events.borrow().as_slice(),
+                [PathBuf::from(".hive/runtime/state.json")]
+            );
+        });
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn new_backup_syncs_every_created_ancestor_and_the_file_entry() {
+        let target = tempfile::tempdir().expect("target");
+        let target_dir = open_target_capability(target.path()).expect("target capability");
+        let target_root = TargetRoot { dir: &target_dir };
+        let relative = Path::new(".hive/backups/txn-test/files/config.toml");
+        DIRECTORY_SYNC_EVENTS.with(|events| events.borrow_mut().clear());
+
+        write_new_target_file(&target_root, relative, b"backup").expect("backup write");
+
+        DIRECTORY_SYNC_EVENTS.with(|events| {
+            assert_eq!(events.borrow().as_slice(), [relative; 5]);
+        });
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn recovery_syncs_restored_bytes_before_the_journal_deletion() {
+        let target = tempfile::tempdir().expect("target");
+        prepared_recovery_fixture(target.path(), b"after");
+        let target_dir = open_target_capability(target.path()).expect("target capability");
+        DIRECTORY_SYNC_EVENTS.with(|events| events.borrow_mut().clear());
+
+        recover_update_in(&target_dir).expect("recover");
+
+        DIRECTORY_SYNC_EVENTS.with(|events| {
+            let events = events.borrow();
+            let restored = events
+                .iter()
+                .position(|event| event == Path::new(HARNESS_PATH))
+                .expect("restored file sync");
+            let journal = events
+                .iter()
+                .position(|event| event == Path::new(JOURNAL_PATH))
+                .expect("journal deletion sync");
+            assert!(restored < journal);
+            assert_eq!(journal, events.len() - 1);
+        });
+    }
+
+    #[test]
+    fn public_update_and_recovery_apis_reject_a_pinned_source_workspace() {
+        let target = tempfile::tempdir().expect("target");
+        fs::write(target.path().join("hive-source.json"), b"{}\n").expect("source marker");
+        let target_dir = open_target_capability(target.path()).expect("target capability");
+        let fixture = release_fixture();
+        let root = fs::read(fixture.join("metadata/root.json")).expect("root");
+        let request = update_request(target.path(), &fixture, &root, UpdateMode::DryRun);
+
+        let update_error =
+            execute_update_in(&target_dir, &request).expect_err("pinned source update");
+        let recovery_error = recover_update_in(&target_dir).expect_err("pinned source recovery");
+        let wrapper_recovery_error =
+            recover_update(target.path()).expect_err("source recovery wrapper");
+
+        for error in [update_error, recovery_error, wrapper_recovery_error] {
+            assert!(matches!(error, UpdateError::Input(_)));
+            assert!(error.to_string().contains("source workspace"));
+        }
     }
 
     #[test]
