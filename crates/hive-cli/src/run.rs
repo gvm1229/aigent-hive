@@ -1199,12 +1199,12 @@ fn checkpoint(arguments: &CheckpointArguments) -> Result<ActionResult, AdapterEr
         },
         Evidence {
             kind: "file",
-            locator: plan_path.display().to_string(),
+            locator: portable_relative_path(&plan_path),
             digest: sha256_digest(&plan_bytes),
         },
         Evidence {
             kind: "file",
-            locator: status_path.display().to_string(),
+            locator: portable_relative_path(&status_path),
             digest: status_digest,
         },
     ];
@@ -1228,7 +1228,7 @@ fn checkpoint(arguments: &CheckpointArguments) -> Result<ActionResult, AdapterEr
             "identical durable run checkpoint already exists".to_owned()
         },
         changed_paths: changed
-            .then(|| status_path.display().to_string())
+            .then(|| portable_relative_path(&status_path))
             .into_iter()
             .collect(),
         evidence,
@@ -1399,12 +1399,12 @@ fn resume(arguments: &ResumeArguments) -> Result<ActionResult, AdapterError> {
             },
             Evidence {
                 kind: "file",
-                locator: plan_path.display().to_string(),
+                locator: portable_relative_path(&plan_path),
                 digest: sha256_digest(&plan_bytes),
             },
             Evidence {
                 kind: "file",
-                locator: status_path.display().to_string(),
+                locator: portable_relative_path(&status_path),
                 digest: sha256_digest(&status_bytes),
             },
         ],
@@ -1462,6 +1462,13 @@ pub(crate) fn role_path(role_id: &str) -> Result<PathBuf, AdapterError> {
     Ok(relative)
 }
 
+pub(crate) fn portable_relative_path(path: &Path) -> String {
+    path.iter()
+        .map(OsStr::to_string_lossy)
+        .collect::<Vec<_>>()
+        .join("/")
+}
+
 struct LoadedRole {
     role_id: String,
     relative: PathBuf,
@@ -1476,12 +1483,12 @@ impl LoadedRole {
         vec![
             Evidence {
                 kind: "file",
-                locator: self.relative.display().to_string(),
+                locator: portable_relative_path(&self.relative),
                 digest: sha256_digest(&self.bytes),
             },
             Evidence {
                 kind: "file",
-                locator: self.handoff_relative.display().to_string(),
+                locator: portable_relative_path(&self.handoff_relative),
                 digest: sha256_digest(&self.handoff_bytes),
             },
         ]
@@ -1517,7 +1524,7 @@ fn load_active_roles(
     run_id: &str,
 ) -> Result<Vec<LoadedRole>, AdapterError> {
     let expected_handoff = run_path(run_id, "HANDOFF.md")?;
-    let expected_handoff_text = expected_handoff.display().to_string();
+    let expected_handoff_text = portable_relative_path(&expected_handoff);
     let mut loaded = Vec::with_capacity(role_ids.len());
     for role_id in role_ids {
         let relative = role_path(role_id)?;

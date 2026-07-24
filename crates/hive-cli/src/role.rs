@@ -1,7 +1,7 @@
 use super::{emit_action_result, ActionResult, Evidence};
 use crate::run::{
-    parse_options, read_json_request, required, role_path, run_path, AdapterError, FileSnapshot,
-    PinnedTarget,
+    parse_options, portable_relative_path, read_json_request, required, role_path, run_path,
+    AdapterError, FileSnapshot, PinnedTarget,
 };
 use hive_core::role::{RoleDocument, RoleProfile};
 use hive_core::sha256_digest;
@@ -164,7 +164,7 @@ fn validate(arguments: &ValidateArguments) -> Result<ActionResult, AdapterError>
         changed_paths: Vec::new(),
         evidence: vec![Evidence {
             kind: "file",
-            locator: relative.display().to_string(),
+            locator: portable_relative_path(&relative),
             digest: sha256_digest(&bytes),
         }],
         next_action: None,
@@ -202,7 +202,7 @@ fn handoff_with_fault(
     let role_relative = role_path(&request.role_id)?;
     let plan_relative = run_path(&request.run_id, "PLAN.md")?;
     let handoff_relative = run_path(&request.run_id, "HANDOFF.md")?;
-    let handoff_path = handoff_relative.display().to_string();
+    let handoff_path = portable_relative_path(&handoff_relative);
 
     let _ = target.read_required(&plan_relative, MAX_HANDOFF_BYTES)?;
     let role_snapshot = target.snapshot(&role_relative)?;
@@ -376,10 +376,10 @@ fn handoff_result(
     let changed = handoff_changed || role_changed;
     let mut changed_paths = Vec::with_capacity(2);
     if handoff_changed {
-        changed_paths.push(handoff_relative.display().to_string());
+        changed_paths.push(portable_relative_path(handoff_relative));
     }
     if role_changed {
-        changed_paths.push(role_relative.display().to_string());
+        changed_paths.push(portable_relative_path(role_relative));
     }
     ActionResult {
         schema_version: 1,
@@ -405,12 +405,12 @@ fn handoff_result(
             },
             Evidence {
                 kind: "file",
-                locator: role_relative.display().to_string(),
+                locator: portable_relative_path(role_relative),
                 digest: sha256_digest(role_bytes),
             },
             Evidence {
                 kind: "file",
-                locator: handoff_relative.display().to_string(),
+                locator: portable_relative_path(handoff_relative),
                 digest: sha256_digest(handoff_bytes),
             },
         ],
@@ -421,7 +421,7 @@ fn handoff_result(
         data: Some(json!({
             "role_id": request.role_id,
             "run_id": request.run_id,
-            "handoff_path": handoff_relative.display().to_string(),
+            "handoff_path": portable_relative_path(handoff_relative),
             "handoff_digest": sha256_digest(handoff_bytes),
             "updated_at": request.updated_at
         })),
