@@ -13,7 +13,7 @@
 
 > 🐝 **Aigent Hive:** Codex, Claude Code, Gemini Antigravity 같은 구독형 agent host 위에서 일관된 setup, Skill routing, 역할·지식·run 상태, 안전한 update와 검증 계약을 제공하는 **provider-neutral 로컬 agent harness**
 
-> 🚧 **현재 상태:** product version `0.7.0`; Phase 1–6 완료, Phase 7 local qualification `32/40`. Verifier-only Ed25519/TUF release authorization, safe update·migration·backup·crash recovery, shipping one-shot usage gate와 배포 계약 구현·검증 완료. macOS·Windows public runtime qualification, 세 host actual session E2E, protected signing·publication은 외부 authority 대기.
+> 🚧 **현재 상태:** product version `0.7.0`; Phase 1–6 완료, Phase 7 local qualification `33/40`. Verifier-only Ed25519/TUF release authorization, safe update·migration·backup·crash recovery, shipping one-shot usage gate와 배포 계약 구현·검증 완료. macOS·Windows public runtime qualification, 세 host actual session E2E, protected signing·publication은 외부 authority 대기.
 
 모델 API·provider SDK 미사용. API key 요청·저장 없음. Compatible OMX·OMC가 있으면
 검증된 orchestration 기능 우선 재사용. Detection이 `absent|incompatible|unknown`이면
@@ -486,8 +486,8 @@ consumer update, rotation, candidate와 publication 절차는
 | Product version | `0.7.0` |
 | 현재 범위 | Phase 1–6와 Phase 7 local qualification: verifier-only signed release, update/migration, backup/recovery, shipping one-shot usage gate, candidate/publication, direct/Homebrew/WinGet contract |
 | 검증된 Phase 6 | Ed25519/TUF threshold·rotation·rollback, semantic provenance/platform evidence, exact version classification, compiled migration, 7-day backup, journal recovery와 package ownership |
-| 남은 qualification | Phase 7 public qualification과 `0.8.x` release candidate evidence |
-| Active plan | [`docs/plans/PLAN.md`](docs/plans/PLAN.md) revision 1.33; canonical checklist `111/119` 완료, numbered fragment lazy load |
+| 남은 qualification | P7-011·012·013·018·020·021·037 protected qualification |
+| Active plan | [`docs/plans/PLAN.md`](docs/plans/PLAN.md) revision 1.34; canonical checklist `112/119` 완료, numbered fragment lazy load |
 | Handoff state | [`docs/state/CURRENT.md`](docs/state/CURRENT.md) |
 
 Semantic version `X.Y.Z`는 다음 원칙으로 변경.

@@ -106,6 +106,6 @@ v1 public release의 필수 조건:
 - [ ] [P7-037] GitHub Release provenance와 signing
 - [x] [P7-038] product version parity, compatible minor/patch bump와 explicit-only major gate
 - [x] [P7-039] public license — 전체 source·harness `Apache-2.0`, 전문, package metadata와 render fixture
-- [ ] [P7-040] clean clone에서 전체 CI PASS
+- [x] [P7-040] clean clone에서 전체 CI PASS
 
 ---
