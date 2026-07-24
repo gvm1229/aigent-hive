@@ -42,6 +42,45 @@ Frontmatter JSON은 UTF-8, LF와 lexicographically sorted object key를 사용�
 - seed 제거는 role file을 자동 삭제하지 않는다. 명시적인 retire operation과 preview가 있어야 active role을 제거할 수 있다.
 - update는 role file을 일반 generated file로 취급하지 않는다.
 
+## Runtime validation
+
+`hive role validate --target <project> --role <role-id> --output json`은 exact
+`.hive/team/roles/<role-id>.md`를 no-follow로 읽고 frontmatter를
+`schemas/role-profile.schema.json`으로 검증한다. Filename의 role ID와 frontmatter의
+`role_id`가 같아야 하며 Markdown body는 읽은 exact bytes로 digest를 계산한다.
+Validation은 role file, project tree와 host-global namespace를 수정하지 않는다.
+
+Role identity는 document가 소유한다. Session ID나 permanent process는 role identity가
+아니며 valid role document, current assignment와 handoff 없이 지속형 team member라고
+표시할 수 없다.
+
+## Shared handoff transaction
+
+한 run의 역할별 handoff는 각 role file에 복제하지 않고 exact
+`.hive/runs/<run-id>/HANDOFF.md` 하나를 공유한다.
+
+```markdown
+---
+{"handoffs":{"reviewer":{"markdown":"...","updated_at":"...Z"}},"run_id":"run-id","schema_version":1,"updated_at":"...Z"}
+---
+# Role handoffs
+```
+
+Frontmatter는 RFC 8785 canonical JSON이며 `handoffs` map의 key는 role ID다. Entry는
+bounded Markdown와 RFC 3339 `updated_at`만 가진다. Body는 exact
+`# Role handoffs\n`이다. 한 role handoff를 갱신할 때 다른 role entry와 body는
+byte/semantic identity를 보존한다.
+
+`hive role handoff` request는 caller가 읽은 `expected_current_assignment`,
+`expected_handoff_path`, shared HANDOFF exact digest를 포함한다. Assignment, path 또는
+digest가 stale이면 write 0건 conflict다. 성공 transaction은 shared HANDOFF entry와
+role frontmatter의 assignment/handoff path를 함께 commit하며 role Markdown body를
+byte-identical하게 보존한다. 중간 실패는 먼저 published한 HANDOFF를 rollback한다.
+동일 desired entry와 role assignment retry는 byte-identical no-op다.
+
+이 action은 사용자가 명시한 existing role/run handoff만 기록한다. Role을 자동
+선택하거나 plan/team/subagent/continuation을 시작하지 않는다.
+
 ## Migration
 
 Cross-major migration은 shadow tree에서 frontmatter를 parse·validate·transform한다. Current assignment, handoff와 Markdown body는 보존한다. Parse, schema 또는 conflict 검증이 실패하면 active role tree는 바뀌지 않는다.
@@ -56,3 +95,8 @@ Phase 1은 실제 update migration engine을 구현하지 않는다. 현재 conf
 - 명시 승인 없는 definition drift 거부
 - 승인된 definition change가 assignment·handoff·body를 보존
 - unsupported cross-major role candidate가 schema 검증에서 거부되고 active tree 전체 bytes를 보존
+- runtime validation이 malformed, ID mismatch, traversal, symlink와 nonregular role을
+  write 없이 거부
+- handoff의 stale assignment/path/digest가 role과 shared HANDOFF를 모두 보존
+- 여러 role entry를 shared envelope에 기록해도 기존 entry와 각 role body가 불변
+- fresh-session resume가 role profile, exact body와 해당 shared handoff entry를 복구

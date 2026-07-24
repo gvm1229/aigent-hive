@@ -5196,7 +5196,7 @@ mod tests {
             .expect("old Codex projection ownership should verify");
         let deletions = &transition.deletions;
 
-        assert_eq!(deletions.len(), 6);
+        assert_eq!(deletions.len(), 9);
         assert!(deletions
             .iter()
             .all(|path| path.starts_with(".agents/skills")));

@@ -89,6 +89,11 @@ jobs:
           -t .
           -p "test_phase3_*.py"
           -v
+      - name: Run Phase 4 role and run conformance corpus
+        run: >-
+          python -m unittest
+          tests.conformance.test_phase4_contracts
+          -v
 
   copier:
     name: Contract and Copier conformance

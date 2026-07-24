@@ -52,6 +52,9 @@ IMPLEMENTED_SKILLS = {
     "hive-knowledge-capture",
     "hive-knowledge-query",
     "hive-knowledge-maintenance",
+    "hive-run-checkpoint",
+    "hive-run-resume",
+    "hive-role-handoff",
 }
 CATALOG_ONLY_SKILLS = BUILTIN_SKILLS - IMPLEMENTED_SKILLS
 
@@ -129,6 +132,47 @@ class Phase3SkillSourceContract(unittest.TestCase):
         for name in sorted(CATALOG_ONLY_SKILLS):
             with self.subTest(name=name):
                 self.assertFalse((SKILL_ROOT / name / "SKILL.md").exists())
+
+    def test_phase_four_data_contract_skills_use_only_exact_cli_surfaces(
+        self,
+    ) -> None:
+        expected = {
+            "hive-run-checkpoint": "hive run checkpoint",
+            "hive-run-resume": "hive run resume",
+            "hive-role-handoff": "hive role handoff",
+        }
+        for name, command in expected.items():
+            with self.subTest(name=name):
+                source = SKILL_ROOT / name / "SKILL.md"
+                _, body = skill_frontmatter(source)
+                normalized = body.casefold()
+                self.assertIn(command, normalized)
+                self.assertIn("--output json", normalized)
+                self.assertIn("never", normalized)
+                self.assertNotIn("provider api key", normalized)
+                for forbidden_command in (
+                    "\n   omx ",
+                    "\n   omc ",
+                    "\n   hive plan ",
+                    "\n   hive team ",
+                ):
+                    self.assertNotIn(forbidden_command, normalized)
+
+    def test_phase_four_template_skill_bytes_match_canonical_sources(self) -> None:
+        template_root = (
+            REPOSITORY_ROOT
+            / "harness/template/{{ '.claude' if primary_host == 'claude' else '.agents' }}/skills"
+        )
+        for name in (
+            "hive-run-checkpoint",
+            "hive-run-resume",
+            "hive-role-handoff",
+        ):
+            with self.subTest(name=name):
+                self.assertEqual(
+                    (template_root / name / "SKILL.md").read_bytes(),
+                    (SKILL_ROOT / name / "SKILL.md").read_bytes(),
+                )
 
     def test_forbidden_prompt_aliases_are_absent_from_shipped_sources(self) -> None:
         shipped_roots = (

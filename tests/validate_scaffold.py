@@ -676,6 +676,9 @@ def validate_render(render_root: Path, input_data_path: Path) -> None:
         "hive-knowledge-maintenance",
         "hive-knowledge-query",
         "hive-prompt-refine",
+        "hive-role-handoff",
+        "hive-run-checkpoint",
+        "hive-run-resume",
         "hive-simple-question",
         "setup-harness",
     ]

@@ -7,8 +7,8 @@
 
 Hive는 plan, Ralph, team, swarm, model session scheduler를 구현하지 않음.
 
-- Codex: compatible OMX capability를 우선, 없을 때 host native
-- Claude Code: compatible OMC capability를 우선, 없을 때 host native
+- Codex: compatible OMX capability를 우선, `absent|incompatible|unknown`일 때 host native
+- Claude Code: compatible OMC capability를 우선, `absent|incompatible|unknown`일 때 host native
 - Gemini Antigravity: host native
 
 사용자에게 pure Hive와 OMX/OMC 중 하나를 고르게 하지 않는다. 새 run의 owner는 active host capability evidence에서 자동 resolve하고 해당 run의 `STATUS.md`에 evidence digest와 함께 고정한다.
@@ -32,7 +32,17 @@ Hive는 plan, Ralph, team, swarm, model session scheduler를 구현하지 않음
 
 Resolved runtime에 capability가 없거나 run 도중 실패하면 `unsupported` 또는 `blocked`. Hive가 다른 runtime으로 자동 fallback하거나 유사 기능을 생성하지 않음.
 
+첫 checkpoint는 host, host version, surface, external runtime, resolved owner, full
+resolution evidence digest와 subagent support를 `STATUS.md`에 함께 pin한다. 이후
+missing, incompatible, version 또는 evidence drift는 exit `3|4|5`로 중지하며 기존
+run owner와 canonical artifact를 바꾸지 않는다. Fresh-session resume는 host가 실행할
+provider-neutral brief만 `prepared_only: true`, `spawned: false`로 준비한다.
+
 OMX/OMC가 감지된 host에는 Hive lifecycle hook과 duplicate orchestration Skill을 설치하지 않는다. External capability가 conclusively absent일 때만 Hive-owned data-integrity fallback hook의 exact capability, event, project-local path, command와 content digest를 설명하고 사용자 승인을 받을 수 있다. 거절은 정상 지원 상태다.
+
+`hive-role-handoff`, `hive-run-checkpoint`, `hive-run-resume`는 role/run Markdown
+정본을 기록·검증·복구하는 data Skills이다. Compatible OMX/OMC와 함께 projection할
+수 있지만 plan, Ralph, team, retry 또는 persistent loop를 실행하거나 복제하지 않는다.
 
 Hook descriptor는 `{schema_version, capability, event, path, command}`만 포함한 RFC 8785 JCS object의 UTF-8 bytes와 trailing LF다. Content digest는 이 설치 bytes를, consent digest는 content digest와 승인 시각을 포함한 approval payload 전체를 결합한다. Activation은 ledger, 현재 resolution, descriptor bytes와 두 digest를 다시 검증한다.
 

@@ -25,7 +25,7 @@ aigent-hive/
 │   ├── hive-render/            # 결정적 staging, ownership, consent와 role materialization
 │   ├── hive-wiki/              # Markdown ingest/lint와 disposable SQLite FTS5 projection
 │   ├── hive-projection/        # portable Skill routing, prompt 검증과 thin host projection
-│   └── hive-cli/               # setup/knowledge/index/hook/usage command adapter
+│   └── hive-cli/               # setup/knowledge/index/hook/usage/role/run adapter
 ├── harness/
 │   ├── template/               # Copier authoring·CI source
 │   ├── skills/                 # portable shipping Skill source
@@ -48,8 +48,9 @@ aigent-hive/
 루트 `.agents/`는 Hive 자체를 개발하는 에이전트 전용이다. 일부 external runtime이 `.agents/skills`를 자동 탐색할 수 있으므로 출하용 Skill을 루트 `.agents/skills`에 두지 않는다.
 
 출하용 Skill과 directive는 `harness/`에서만 관리하고 release projection 단계에서 소비자 경로를 결정한다.
-Role lifecycle과 Skill consent의 normative contract는 각각
-[`role-lifecycle.md`](role-lifecycle.md)와 [`skill-consent.md`](skill-consent.md)에 둔다.
+Role/run lifecycle과 Skill consent의 normative contract는 각각
+[`role-lifecycle.md`](role-lifecycle.md), [`run-lifecycle.md`](run-lifecycle.md)와
+[`skill-consent.md`](skill-consent.md)에 둔다.
 Fallback hook 승인·활성화 경계는 [`hook-consent.md`](hook-consent.md), consumer
 shared guidance marker 계약은 [`../guidance-schema.md`](../guidance-schema.md)에 둔다.
 
@@ -107,11 +108,12 @@ rebuild를 모두 거부해 active content와 suppression metadata가 공존하�
 
 ## Phase 3 Skill routing과 projection
 
-`hive-projection`은 exact 6개 implemented built-in과 6개 catalog-only future entry를
+`hive-projection`은 exact 9개 implemented built-in과 3개 catalog-only future entry를
 구분한다. Implemented built-in은 `setup-harness`, `hive-simple-question`,
 `hive-prompt-refine`, `hive-knowledge-capture`, `hive-knowledge-query`,
-`hive-knowledge-maintenance`다. Future entry는 catalog metadata만 가지며 host
-discovery root에 Skill body를 만들지 않는다.
+`hive-knowledge-maintenance`, `hive-role-handoff`, `hive-run-checkpoint`,
+`hive-run-resume`다. `hive-judge-package`, `hive-update`, `hive-migrate`는 catalog
+metadata만 가지며 host discovery root에 Skill body를 만들지 않는다.
 
 Active routing proof는 normalized routing fact, exact Skill content digest와 built-in
 source 또는 optional Skill consent digest에 결합된다. 한 route는 Skill body를 최대
@@ -134,6 +136,26 @@ claim해 검증한 뒤 destination-exclusive publication을 수행한다. Replac
 중 밀려난 기존 bytes는 same-directory quarantine에 보존하고, rollback 때 foreign
 occupant를 overwrite하거나 삭제하지 않는다. 자동 복원이 안전하지 않으면 prior
 bytes의 recovery path를 diagnostic으로 남긴다.
+
+## Phase 4 role/run과 recovery
+
+`hive-core::role`은 persistent role frontmatter/body를, `hive-core::run`은 PLAN
+criterion, STATUS state, capability owner pin과 prepare-only `DispatchBrief`를
+provider-neutral하게 검증한다. `hive-cli`의 role/run adapter는 consumer root를
+no-follow로 pin하고 explicit request, canonical artifact와 evidence를 bounded하게
+읽는다.
+
+`hive role handoff`는 shared `HANDOFF.md`와 selected role assignment를 optimistic
+two-file transaction으로 기록한다. `hive run checkpoint`는 PLAN에서 criterion을
+파생하고 첫 capability resolution의 full-object JCS digest를 owner pin으로 저장한다.
+`hive run resume`는 canonical PLAN/STATUS/role/handoff/evidence만 읽어 recovery data와
+`prepared_only: true`, `spawned: false` brief를 반환한다.
+
+Available OMX/OMC는 새 run owner로 자동 선택되며 absent, incompatible 또는 unknown은
+truthful support 수준의 host-native owner로 resolve한다. Fallback hook은 이 셋 중
+conclusive `absent`에만 별도 consent로 허용한다. Existing run은 missing,
+incompatible, version 또는 evidence drift에서 owner를 바꾸지 않는다. 자세한 state와
+exit contract는 [`run-lifecycle.md`](run-lifecycle.md)에 둔다.
 
 ## Crate 추가 원칙
 

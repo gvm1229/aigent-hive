@@ -20,6 +20,10 @@
       "enum": [
         "UnknownAction",
         "SetupHarness",
+        "ValidateRole",
+        "RecordRoleHandoff",
+        "RoleWork",
+        "CheckpointRun",
         "CheckUsage",
         "AnswerSimpleQuestion",
         "RefinePrompt",

@@ -7,7 +7,28 @@ use std::path::{Component, Path, PathBuf};
 
 use sha2::{Digest, Sha256};
 
+pub mod role;
+pub mod run;
 pub mod usage_guard;
+
+pub(crate) fn validate_json_schema(
+    schema: &str,
+    instance: &serde_json::Value,
+    label: &str,
+) -> Result<(), String> {
+    let schema: serde_json::Value = serde_json::from_str(schema)
+        .map_err(|error| format!("embedded {label} schema is invalid JSON: {error}"))?;
+    jsonschema::meta::validate(&schema)
+        .map_err(|error| format!("embedded {label} schema is invalid: {error}"))?;
+    let validator = jsonschema::options()
+        .with_draft(jsonschema::Draft::Draft202012)
+        .should_validate_formats(true)
+        .build(&schema)
+        .map_err(|error| format!("cannot compile embedded {label} schema: {error}"))?;
+    validator
+        .validate(instance)
+        .map_err(|error| format!("{label} violates the JSON Schema contract: {error}"))
+}
 
 /// Marker that distinguishes the Hive source workspace from a consumer project.
 pub const SOURCE_MARKER_FILE: &str = "hive-source.json";

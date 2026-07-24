@@ -1,0 +1,1 @@
+{"schema_version":1,"role_id":"reviewer","run_id":"demo","expected_current_assignment":"demo","expected_handoff_path":".hive/runs/demo/HANDOFF.md","expected_handoff_digest":null,"handoff_markdown":"Next: verify build.\n","updated_at":"2026-07-24T00:00:00Z"}

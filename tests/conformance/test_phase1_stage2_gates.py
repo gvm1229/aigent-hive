@@ -41,6 +41,9 @@ BUILTIN_SKILL_NAMES = (
     "hive-knowledge-maintenance",
     "hive-knowledge-query",
     "hive-prompt-refine",
+    "hive-role-handoff",
+    "hive-run-checkpoint",
+    "hive-run-resume",
     "hive-simple-question",
     "setup-harness",
 )

@@ -89,7 +89,7 @@ skills:
       - filesystem-read
       - filesystem-write
       - run-state
-    availability: catalog-only
+    availability: implemented
 
   - name: hive-run-resume
     description: Read and validate a durable Hive run handoff for a host-owned fresh-session resume without starting a persistence loop.
@@ -101,20 +101,20 @@ skills:
     capabilities:
       - filesystem-read
       - run-state
-    availability: catalog-only
+    availability: implemented
 
   - name: hive-role-handoff
     description: Update canonical role assignment and handoff Markdown while preserving user-authored role content and leaving orchestration to the resolved host owner.
     provided_by: hive
     superseded_by_external: []
     invocation_intents:
-      - HandoffRole
+      - RecordRoleHandoff
     side_effect_class: project-write
     capabilities:
       - filesystem-read
       - filesystem-write
       - run-state
-    availability: catalog-only
+    availability: implemented
 
   - name: hive-judge-package
     description: Build a minimal digest-bound clean-context judge package after deterministic verification without running a model or exposing another judge verdict.

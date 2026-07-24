@@ -21,6 +21,8 @@ use std::process::ExitCode;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 mod knowledge;
+mod role;
+mod run;
 mod usage;
 
 const USAGE: &str = "\
@@ -37,6 +39,10 @@ USAGE:
     hive prompt validate --request <input.json> --result <result.json> --output json
     hive hook --capability <name> --event <event> [--capabilities <fresh-json>] [--input <json>] --output json
     hive usage check --account-digest <sha256:...> [--threshold <1..99>] --output json
+    hive role validate --target <dir> --role <role-id> --output json
+    hive role handoff --target <dir> --request <request.json> --output json
+    hive run checkpoint --target <dir> --request <request.json> --capabilities <fresh-json> --output json
+    hive run resume --target <dir> --run <run-id> --capabilities <fresh-json> --output json
 ";
 
 const SETUP_USAGE: &str = "\
@@ -137,6 +143,8 @@ fn main() -> ExitCode {
         Some("prompt") => run_prompt(&arguments[1..]),
         Some("hook") => run_hook(&arguments[1..]),
         Some("usage") => run_usage(&arguments[1..]),
+        Some("role") => role::run_role(&arguments[1..]),
+        Some("run") => run::run_run(&arguments[1..]),
         _ if wants_json(&arguments) => {
             let command = arguments.first().map_or("<missing>", String::as_str);
             let result = ActionResult {

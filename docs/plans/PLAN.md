@@ -1,17 +1,18 @@
 # Aigent Hive 구현 계획
 
-> Revision: 1.9
+> Revision: 1.10
 > 상태: 구현 기준본
-> 기준일: 2026-07-23
-> 현재 제품 version: `0.4.0`
+> 기준일: 2026-07-24
+> 현재 제품 version: `0.5.0`
 > 정본 위치: `docs/plans/PLAN.md`
 
 이 문서는 Aigent Hive의 완성된 사용자 흐름과 이를 구현하는 순서를 하나의 연속된 계획으로 정의한다. 이전 `PLAN_v1*` 문서는 현재 지침으로 사용하지 않는다.
 
-현재 `0.4.0`은 Phase 1 결정적 setup renderer, Phase 2 canonical Markdown
-knowledge·disposable SQLite index와 Phase 3 portable Skill routing·host projection
-계약을 구현한다. Durable run, judge와 update flow는 해당 milestone의 unchecked
-acceptance를 통과하기 전까지 구현·지원된 것으로 간주하지 않는다.
+현재 `0.5.0`은 Phase 1 결정적 setup renderer, Phase 2 canonical Markdown
+knowledge·disposable SQLite index, Phase 3 portable Skill routing·host projection과
+Phase 4 persistent role·durable run recovery 계약을 구현한다. Judge와 update flow는
+해당 milestone의 unchecked acceptance를 통과하기 전까지 구현·지원된 것으로
+간주하지 않는다.
 
 ## 1. 목표와 완료 정의
 
@@ -22,7 +23,7 @@ Aigent Hive는 사용자가 이미 로그인한 Codex, Claude Code, Gemini Antig
 1. 사용자가 release 또는 host의 얇은 integration을 통해 Hive CLI 설치
 2. 프로젝트에서 `setup-harness` 또는 `hive setup` 실행
 3. Hive가 프로젝트를 read-only 조사하고 미확정 항목을 한 번에 하나씩 질문
-4. Hive가 현재 host에서 OMX/OMC capability를 우선 resolve하고, 없을 때만 host-native 경로와 선택적 fallback hook을 검토
+4. Hive가 현재 host에서 OMX/OMC capability를 우선 resolve하고, `absent|incompatible|unknown`이면 truthful host-native 경로를 사용하며 conclusive `absent`에서만 선택적 fallback hook을 검토
 5. 사용자가 지속형 역할, memory 범위, usage threshold, judge 정책, optional Skill과 조건부 fallback hook을 capability 단위로 승인
 6. Hive가 staging render와 conflict 검사를 거쳐 local harness 생성
 7. 단순 질문은 harness를 로드하지 않는 격리 경로로 즉시 응답
@@ -67,7 +68,7 @@ Aigent Hive는 사용자가 이미 로그인한 Codex, Claude Code, Gemini Antig
 - update backup은 최대 7일만 유지한다.
 - 비기밀 canonical file은 Git 추적이 기본이며 runtime/cache/SQLite/backup은 제외한다.
 - `X.Y.Z` version에서 같은 `X` 안의 upgrade만 non-breaking을 보장한다.
-- 현재 product version은 backward-compatible Phase 3 portable Skills와 host projection milestone인 `0.4.0`이다.
+- 현재 product version은 backward-compatible Phase 4 persistent role, durable run과 fresh-session recovery milestone인 `0.5.0`이다.
 - backward-compatible feature는 원칙적으로 `Y`, 빠른 호환 bugfix는 `Z`를 증가시킨다.
 - `X` 증가는 사용자가 목표 major를 명시적으로 지시한 경우에만 준비·적용할 수 있으며 automation이 추론하거나 자동 증가하지 않는다.
 - cross-major update는 경고, dry run, 자동 migration과 사용자 data 무손실 검증 없이는 commit하지 않는다.
@@ -89,7 +90,7 @@ Aigent Hive는 사용자가 이미 로그인한 Codex, Claude Code, Gemini Antig
 
 ### 1.3 Product version 정책
 
-Plan revision과 product version은 독립이다. 이 문서는 revision `1.9`이며 현재 구현 artifact는 `0.4.0`이다.
+Plan revision과 product version은 독립이다. 이 문서는 revision `1.10`이며 현재 구현 artifact는 `0.5.0`이다.
 
 Version 정본과 projection:
 
@@ -352,7 +353,7 @@ Copier 9.17.0은 template authoring, 질문 UX 검토와 CI parity test에 사�
 
 - [x] 같은 answer로 두 번 render한 normalized digest 동일
 - [x] Codex+compatible OMX는 자동 OMX, Claude+compatible OMC는 자동 OMC로 resolve
-- [x] Antigravity 또는 external capability 부재 host는 host-native로 resolve
+- [x] Antigravity 또는 `absent|incompatible|unknown` detection은 truthful host-native로 resolve
 - [x] `incompatible|unknown`에서 Hive fallback hook install 0개
 - [x] external capability detected 상태에서 hook 질문·artifact·command 0개
 - [x] external capability absent + hook 거절 setup 성공, hook artifact 0개
@@ -529,7 +530,7 @@ Role identity는 session이 종료되어도 유지. 새 host session 또는 suba
 | --- | --- | --- | --- |
 | Codex + compatible OMX available | OMX | canonical project context와 coexistence contract | plan/Ralph/team 복제, OMX state 조작 |
 | Claude + compatible OMC available | OMC | canonical project context와 coexistence contract | plan/Ralph/team 복제, OMC state 조작 |
-| 그 외 | Codex/Claude/Antigravity native capability | role/run document, bounded brief, result schema | scheduler, model process |
+| Codex/Claude `absent|incompatible|unknown`, 또는 Antigravity | host-native capability | role/run document, bounded brief, result schema | scheduler, model process |
 
 Host-native capability가 부족하면 해당 기능은 `unsupported`. Hive가 hidden fallback을 만들지 않음.
 
@@ -542,18 +543,18 @@ Host-native capability가 부족하면 해당 기능은 `unsupported`. Hive가 h
 - host/version/surface qualification은 `schemas/capability-matrix.schema.json`으로 기록
 - owner resolution은 active host capability metadata와 public executable path/`--version` evidence로 결정하고 run status에 digest와 함께 pin
 - Hive가 `omx setup/update`, `omc setup/update`, team lifecycle 또는 foreign state를 호출하지 않음
-- resolved owner가 OMX/OMC이면 Hive hook과 duplicate Skill projection 0개
+- resolved owner가 OMX/OMC이면 Hive hook과 duplicate orchestration Skill projection 0개; canonical role/run data Skill은 공존 가능
 - resolved owner가 host-native여도 fallback hook은 Hive data integrity guard만 제공하고 orchestration 기능을 추가하지 않음
 - non-clobber conformance fixture가 외부 namespace의 before/after checksum을 계산하며 Hive 제품 자체는 그 namespace를 읽지 않음
 
 #### 완료 조건
 
-- [ ] session 교체 후 role 책임·assignment·handoff 복구
-- [ ] role document 없이 permanent team member claim 불가
-- [ ] compatible external layer detected 시 Hive orchestration command/hook와 duplicate Skill 0개
-- [ ] resolved external runtime이 run 도중 실패하면 host-native로 자동 전환하지 않음
-- [ ] 새 run에서 external capability absent가 확인될 때만 host-native로 resolve
-- [ ] fixture-side external namespace checksum 불변이고 Hive process의 foreign namespace read/write 0회
+- [x] session 교체 후 role 책임·assignment·handoff 복구
+- [x] role document 없이 permanent team member claim 불가
+- [x] compatible external layer detected 시 Hive orchestration command/hook와 duplicate orchestration Skill 0개
+- [x] resolved external runtime이 run 도중 실패하면 host-native로 자동 전환하지 않음
+- [x] 새 run은 `absent|incompatible|unknown`에서 truthful host-native로 resolve하고 fallback hook은 conclusive `absent`에서만 허용
+- [x] fixture-side external namespace checksum 불변이고 Hive process의 foreign namespace read/write 0회
 
 ### Stage 6. Durable run과 100% completion
 
@@ -564,6 +565,7 @@ Host-native capability가 부족하면 해당 기능은 `unsupported`. Hive가 h
 ```text
 PLAN.md
 STATUS.md
+HANDOFF.md
 evidence/
 ```
 
@@ -585,6 +587,9 @@ evidence/
 - latest evidence locator
 - resume note
 
+`HANDOFF.md`는 한 run의 active role별 bounded Markdown entry를 canonical shared
+envelope로 저장하며 다른 role entry를 덮어쓰지 않는다.
+
 사용자가 “100% 완료까지 계속”을 요청하면 resolved runtime이 plan의 미통과 criterion을 기준으로 execute→verify→repair를 지속. Harness는 durable run contract를 제공하고 runtime loop 자체는 구현하지 않음.
 
 #### 구현
@@ -592,18 +597,21 @@ evidence/
 - checkbox와 criterion ID를 parser로 검증
 - `STATUS.md` YAML frontmatter를 `schemas/run-status.schema.json`으로 검증
 - 완료율은 필수 criterion PASS 수만 계산
+- passed criterion마다
+  `.hive/runs/<run-id>/evidence/<safe-file>#sha256:<digest>` exact locator 검증
 - transcript 대신 bounded status/handoff 저장
 - compaction, session 종료, handoff 전 `STATUS.md` 갱신
 - 같은 artifact/evidence hash의 중복 result 멱등 처리
 - runtime이 지속 loop를 지원하지 않으면 `resume-ready`까지만 제공하고 unattended completion을 지원했다고 표시하지 않음
+- resume는 provider-neutral `prepared_only` brief만 만들고 process/subagent를 spawn하지 않음
 
 #### 완료 조건
 
-- [ ] criterion 하나가 unchecked/failed/unverified면 성공 불가
-- [ ] fresh session이 PLAN+STATUS+evidence만으로 next action 복구
-- [ ] transcript 없이 재개 가능
-- [ ] 안전·승인·usage blocker에서 무한 반복하지 않음
-- [ ] resolved runtime capability와 실제 제품 표시 일치
+- [x] criterion 하나가 unchecked/failed/unverified면 성공 불가
+- [x] fresh session이 PLAN+STATUS+evidence만으로 next action 복구
+- [x] transcript 없이 재개 가능
+- [x] 안전·승인·usage blocker에서 무한 반복하지 않음
+- [x] resolved runtime capability와 실제 제품 표시 일치
 
 ### Stage 7. Subscription usage guard
 
@@ -973,7 +981,7 @@ Projection은 model call, persistent process, team state, external orchestration
 
 ### 5.3 Skill catalog
 
-Built-in:
+Implemented built-in:
 
 - `setup-harness`
 - `hive-simple-question`
@@ -981,12 +989,12 @@ Built-in:
 - `hive-knowledge-capture`
 - `hive-knowledge-query`
 - `hive-knowledge-maintenance`
+- `hive-role-handoff`
+- `hive-run-checkpoint`
+- `hive-run-resume`
 
 Catalog-only future entry:
 
-- `hive-run-checkpoint`
-- `hive-run-resume`
-- `hive-role-handoff`
 - `hive-judge-package`
 - `hive-update`
 - `hive-migrate`
@@ -1061,13 +1069,13 @@ Optional third-party Skill은 quarantine→provenance 검증→사용자 개별 
 
 ### Phase 4. Role/run contract와 interoperability — target `0.5.0`
 
-- [ ] RoleProfile와 Run schema parser·fixture·conformance 확정
-- [ ] fresh-session resume fixture
-- [ ] host-native subagent conformance
-- [ ] run별 owner resolution evidence pin과 no-mid-run-switch
-- [ ] OMX non-clobber/coexistence
-- [ ] OMC non-clobber/coexistence
-- [ ] external runtime missing/version drift negative test
+- [x] RoleProfile와 Run schema parser·fixture·conformance 확정
+- [x] fresh-session resume fixture
+- [x] host-native subagent conformance
+- [x] run별 owner resolution evidence pin과 no-mid-run-switch
+- [x] OMX non-clobber/coexistence
+- [x] OMC non-clobber/coexistence
+- [x] external runtime missing/version drift negative test
 
 ### Phase 5. Usage guard와 judge quorum — target `0.6.0`
 
@@ -1160,8 +1168,8 @@ v1 public release는 다음을 모두 충족해야 한다.
 - [x] approved Skill의 automatic minimal routing과 OMX/OMC precedence
 - [x] external absent + explicit consent에서만 fallback hook projection
 - [x] fallback hook이 routing, prompt rewrite, orchestration과 Stop continuation을 수행하지 않음
-- [ ] persistent role/run fresh-session recovery
-- [ ] host-native 또는 external orchestration truthful support 표시
+- [x] persistent role/run fresh-session recovery
+- [x] host-native 또는 external orchestration truthful support 표시
 - [x] usage guard의 freshness와 fail-closed 증거
 - [ ] hostile judge context isolation과 quorum
 - [x] Karpathy Raw/Wiki/Schema와 SQLite rebuild

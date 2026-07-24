@@ -36,6 +36,32 @@ skills:
   side_effect_class: none
   capabilities: []
   consent_digest: null
+- name: hive-role-handoff
+  source_type: built-in
+  content_digest: sha256:d59b0866ed27c85bd16f8a8cb9fb8a278df0d4cd5f9ca9262b676f4b513b2eaa
+  side_effect_class: project-write
+  capabilities:
+  - filesystem-read
+  - filesystem-write
+  - run-state
+  consent_digest: null
+- name: hive-run-checkpoint
+  source_type: built-in
+  content_digest: sha256:e44b6b4456bc02996c44cdab64c25fd4335f360509685f592248e2c342401383
+  side_effect_class: project-write
+  capabilities:
+  - filesystem-read
+  - filesystem-write
+  - run-state
+  consent_digest: null
+- name: hive-run-resume
+  source_type: built-in
+  content_digest: sha256:edfbee35142b8a228d4cdb36d2674b719548fea9884d4a2b6a31353adcebb7c5
+  side_effect_class: read-only
+  capabilities:
+  - filesystem-read
+  - run-state
+  consent_digest: null
 - name: hive-simple-question
   source_type: built-in
   content_digest: sha256:716be2df49d27e0cbaf28bbd428b01b0a716e1baf6ebca7fab2fd26e91b3fa9a

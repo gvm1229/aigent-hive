@@ -22,6 +22,10 @@ const KNOWLEDGE_QUERY: &[u8] =
     include_bytes!("../../../harness/skills/hive-knowledge-query/SKILL.md");
 const KNOWLEDGE_MAINTENANCE: &[u8] =
     include_bytes!("../../../harness/skills/hive-knowledge-maintenance/SKILL.md");
+const RUN_CHECKPOINT: &[u8] =
+    include_bytes!("../../../harness/skills/hive-run-checkpoint/SKILL.md");
+const RUN_RESUME: &[u8] = include_bytes!("../../../harness/skills/hive-run-resume/SKILL.md");
+const ROLE_HANDOFF: &[u8] = include_bytes!("../../../harness/skills/hive-role-handoff/SKILL.md");
 
 /// A stable validation or compilation failure.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -527,7 +531,7 @@ fn embedded_skill_source(name: &str) -> Option<&'static [u8]> {
         .find_map(|(candidate, bytes)| (candidate == name).then_some(bytes))
 }
 
-fn embedded_skill_sources() -> [(&'static str, &'static [u8]); 6] {
+fn embedded_skill_sources() -> [(&'static str, &'static [u8]); 9] {
     [
         ("setup-harness", SETUP_HARNESS),
         ("hive-simple-question", SIMPLE_QUESTION),
@@ -535,6 +539,9 @@ fn embedded_skill_sources() -> [(&'static str, &'static [u8]); 6] {
         ("hive-knowledge-capture", KNOWLEDGE_CAPTURE),
         ("hive-knowledge-query", KNOWLEDGE_QUERY),
         ("hive-knowledge-maintenance", KNOWLEDGE_MAINTENANCE),
+        ("hive-run-checkpoint", RUN_CHECKPOINT),
+        ("hive-run-resume", RUN_RESUME),
+        ("hive-role-handoff", ROLE_HANDOFF),
     ]
 }
 
@@ -722,6 +729,16 @@ fn resolve_non_plain_route(
             LogicalAction::AnswerSimpleQuestion,
             Route::SimpleQuestion,
         );
+    }
+
+    if let Some(skill) = request
+        .hive_candidate
+        .as_deref()
+        .filter(|skill| is_phase_four_data_contract_skill(skill))
+    {
+        validate_skill_name(skill)?;
+        let action = action_for_skill(skill).unwrap_or(fallback_action);
+        return resolve_hive_skill(request, skill, action, Route::HiveSkill);
     }
 
     if let Some(external) = request
@@ -979,10 +996,18 @@ fn action_for_skill(skill: &str) -> Option<LogicalAction> {
         "hive-prompt-refine" => Some(LogicalAction::RefinePrompt),
         "hive-knowledge-capture" => Some(LogicalAction::IngestKnowledge),
         "hive-knowledge-query" => Some(LogicalAction::QueryKnowledge),
+        "hive-run-checkpoint" | "hive-role-handoff" => Some(LogicalAction::RunWork),
         "hive-run-resume" => Some(LogicalAction::ResumeWork),
         "hive-update" => Some(LogicalAction::UpdateHarness),
         _ => None,
     }
+}
+
+fn is_phase_four_data_contract_skill(skill: &str) -> bool {
+    matches!(
+        skill,
+        "hive-run-checkpoint" | "hive-run-resume" | "hive-role-handoff"
+    )
 }
 
 fn explicit_skill_provider(skill: &str, host: Host) -> Result<RouteProvider, ProjectionError> {
@@ -1523,16 +1548,66 @@ description: Inspect one local file without changing it.
             let first = compile_projection(host, &[]).expect("projection");
             let second = compile_projection(host, &[]).expect("projection");
             assert_eq!(first, second);
-            assert_eq!(first.active_skills.skills.len(), 6);
-            assert_eq!(first.files.len(), 7);
-            assert!(first.files.contains_key(&format!(
-                "{}/hive-prompt-refine/SKILL.md",
-                host.skill_root()
-            )));
-            assert!(!first
-                .files
-                .keys()
-                .any(|path| path.contains("hive-run-checkpoint")));
+            assert_eq!(first.active_skills.skills.len(), 9);
+            assert_eq!(first.files.len(), 10);
+            for skill in [
+                "hive-prompt-refine",
+                "hive-run-checkpoint",
+                "hive-run-resume",
+                "hive-role-handoff",
+            ] {
+                assert!(first
+                    .files
+                    .contains_key(&format!("{}/{skill}/SKILL.md", host.skill_root())));
+            }
+        }
+    }
+
+    #[test]
+    fn phase_four_skill_sources_templates_embeddings_and_digests_match() {
+        let expected = [
+            (
+                "hive-run-checkpoint",
+                RUN_CHECKPOINT,
+                include_bytes!(
+                    "../../../harness/template/{{ '.claude' if primary_host == 'claude' else '.agents' }}/skills/hive-run-checkpoint/SKILL.md"
+                )
+                .as_slice(),
+            ),
+            (
+                "hive-run-resume",
+                RUN_RESUME,
+                include_bytes!(
+                    "../../../harness/template/{{ '.claude' if primary_host == 'claude' else '.agents' }}/skills/hive-run-resume/SKILL.md"
+                )
+                .as_slice(),
+            ),
+            (
+                "hive-role-handoff",
+                ROLE_HANDOFF,
+                include_bytes!(
+                    "../../../harness/template/{{ '.claude' if primary_host == 'claude' else '.agents' }}/skills/hive-role-handoff/SKILL.md"
+                )
+                .as_slice(),
+            ),
+        ];
+        let projection = compile_projection(Host::Codex, &[]).expect("projection");
+        for (name, embedded, template) in expected {
+            assert_eq!(embedded, template);
+            assert_eq!(
+                projection
+                    .files
+                    .get(&format!(".agents/skills/{name}/SKILL.md"))
+                    .map(Vec::as_slice),
+                Some(embedded)
+            );
+            let active = projection
+                .active_skills
+                .skills
+                .iter()
+                .find(|skill| skill.name == name)
+                .expect("active built-in");
+            assert_eq!(active.content_digest, sha256_digest(embedded));
         }
     }
 
@@ -1693,7 +1768,56 @@ description: Inspect one local file without changing it.
     }
 
     #[test]
-    fn compatible_external_candidate_precedes_hive_candidate() {
+    fn simple_question_gate_precedes_phase_four_automatic_candidates() {
+        let mut request = routing_request();
+        request.explicit_action = None;
+        request.simple_question = true;
+        request.hive_candidate = Some("hive-run-resume".to_owned());
+        request.active_hive_skills = vec![
+            builtin_proof("hive-simple-question"),
+            builtin_proof("hive-run-resume"),
+        ];
+
+        let result = resolve_route(&request).expect("simple route");
+
+        assert_eq!(result.route, Route::SimpleQuestion);
+        assert_eq!(
+            result.selected_skill.as_deref(),
+            Some("hive-simple-question")
+        );
+        assert_eq!(
+            result.load_skill_bodies,
+            vec!["hive-simple-question".to_owned()]
+        );
+    }
+
+    #[test]
+    fn phase_four_data_contract_skills_precede_unrelated_external_workflows() {
+        for (skill, action) in [
+            ("hive-run-checkpoint", LogicalAction::RunWork),
+            ("hive-run-resume", LogicalAction::ResumeWork),
+            ("hive-role-handoff", LogicalAction::RunWork),
+        ] {
+            let mut request = routing_request();
+            request.external_candidate = Some(ExternalCandidate {
+                name: "analyze".to_owned(),
+                provided_by: ExternalProvider::Omx,
+                compatible: true,
+            });
+            request.hive_candidate = Some(skill.to_owned());
+            request.active_hive_skills = vec![builtin_proof(skill)];
+
+            let result = resolve_route(&request).expect("route");
+
+            assert_eq!(result.route, Route::HiveSkill);
+            assert_eq!(result.logical_action, action);
+            assert_eq!(result.selected_skill.as_deref(), Some(skill));
+            assert_eq!(result.load_skill_bodies, vec![skill.to_owned()]);
+        }
+    }
+
+    #[test]
+    fn compatible_external_candidate_still_precedes_other_hive_candidates() {
         let mut request = routing_request();
         request.external_candidate = Some(ExternalCandidate {
             name: "analyze".to_owned(),
@@ -1701,6 +1825,7 @@ description: Inspect one local file without changing it.
             compatible: true,
         });
         request.hive_candidate = Some("hive-knowledge-query".to_owned());
+        request.active_hive_skills = vec![builtin_proof("hive-knowledge-query")];
 
         let result = resolve_route(&request).expect("route");
 

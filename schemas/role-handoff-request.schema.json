@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/gvm1229/aigent-hive/schemas/role-handoff-request.schema.json",
+  "title": "Aigent Hive persistent role handoff request",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "role_id",
+    "run_id",
+    "expected_current_assignment",
+    "expected_handoff_path",
+    "expected_handoff_digest",
+    "handoff_markdown",
+    "updated_at"
+  ],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "role_id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]{1,62}$"
+    },
+    "run_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]{1,126}$"
+    },
+    "expected_current_assignment": {
+      "type": ["string", "null"],
+      "maxLength": 8192,
+      "pattern": "^[^\\u0000]+$"
+    },
+    "expected_handoff_path": {
+      "type": ["string", "null"],
+      "maxLength": 1024,
+      "pattern": "^[^\\u0000\\r\\n]+$"
+    },
+    "expected_handoff_digest": {
+      "type": ["string", "null"],
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "handoff_markdown": {
+      "type": "string",
+      "maxLength": 262144,
+      "pattern": "^[^\\u0000]*$"
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  }
+}

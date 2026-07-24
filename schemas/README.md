@@ -6,6 +6,9 @@
 | `action-result.schema.json` | CLI·host projection의 normalized action result |
 | `role-profile.schema.json` | persistent role Markdown frontmatter |
 | `run-status.schema.json` | run `STATUS.md` frontmatter |
+| `run-checkpoint-request.schema.json` | optimistic durable run checkpoint 입력 |
+| `dispatch-brief.schema.json` | host-owned 실행 전 prepare-only dispatch data |
+| `role-handoff-request.schema.json` | optimistic persistent role handoff 입력 |
 | `judge-package.schema.json` | 독립 judge 입력 envelope |
 | `judge-verdict.schema.json` | 독립 judge 결과 |
 | `capability-matrix.schema.json` | host/version/surface qualification |
@@ -23,6 +26,9 @@ JSON Schema만으로 표현하기 어려운 cross-field invariant는 Rust semant
 - role·knowledge path는 project-relative이며 traversal, absolute path와 symlink escape 금지
 - run의 passed/failed criterion은 required criterion의 부분집합이고 서로 disjoint
 - `succeeded` run은 required criterion 전부가 passed이고 failed criterion이 없음
+- schema v1 legacy run status는 진단용 parse만 허용하고, checkpoint·resume에는
+  host/owner/runtime/evidence digest/subagent support 전체 pin과 criterion별 evidence가 필요
+- dispatch brief는 provider-neutral data만 준비하며 runtime 호출이나 subagent spawn을 수행하지 않음
 - judge quorum에 포함되는 verdict의 `package_digest`는 입력 package와 동일
 - Wiki tag/alias/source/link array는 lexicographic sort·unique이며 active source locator는 실제 Raw revision digest와 일치
 - suppression entry는 deleted body field를 표현할 수 없음

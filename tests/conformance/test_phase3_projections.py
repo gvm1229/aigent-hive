@@ -33,11 +33,11 @@ PROJECTED_BUILTINS = (
     "hive-knowledge-capture",
     "hive-knowledge-query",
     "hive-knowledge-maintenance",
-)
-CATALOG_ONLY = (
+    "hive-role-handoff",
     "hive-run-checkpoint",
     "hive-run-resume",
-    "hive-role-handoff",
+)
+CATALOG_ONLY = (
     "hive-judge-package",
     "hive-update",
     "hive-migrate",
@@ -194,6 +194,25 @@ class Phase3HostProjection(Phase3ProjectionTestCase):
                     if path.is_file()
                 )
                 self.assertNotIn(b"UserPromptSubmit", discovery_bytes)
+                for skill in (
+                    "hive-run-checkpoint",
+                    "hive-run-resume",
+                    "hive-role-handoff",
+                ):
+                    self.assertTrue(
+                        (
+                            self.discovery_root(target, host)
+                            / skill
+                            / "SKILL.md"
+                        ).is_file()
+                    )
+                for forbidden_command in (
+                    b"\nomx ",
+                    b"\nomc ",
+                    b"\nhive plan ",
+                    b"\nhive team ",
+                ):
+                    self.assertNotIn(forbidden_command, discovery_bytes)
 
 
 class Phase3OptionalSkillProjection(Phase3ProjectionTestCase):
