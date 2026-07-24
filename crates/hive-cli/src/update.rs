@@ -3,7 +3,7 @@ use crate::judge::{read_protected_external_file, read_protected_file};
 use crate::run::{AdapterError, PinnedTarget};
 use hive_core::{sha256_digest, validate_project_relative};
 use hive_update::{
-    execute_update, recover_update, verify_release_repository_for_publication, MajorApproval,
+    execute_update_in, recover_update_in, verify_release_repository_for_publication, MajorApproval,
     SemVersion, UpdateError, UpdateMode, UpdateRequest,
 };
 use serde::{Deserialize, Serialize};
@@ -260,8 +260,9 @@ fn parse_arguments(arguments: &[String]) -> Result<UpdateArguments, AdapterError
 }
 
 fn update(arguments: &UpdateArguments) -> Result<ActionResult, AdapterError> {
+    let target = PinnedTarget::open(&arguments.target)?;
     if arguments.recover {
-        recover_update(&arguments.target).map_err(map_update_error)?;
+        recover_update_in(target.target_dir()).map_err(map_update_error)?;
         return Ok(ActionResult {
             schema_version: 1,
             action: "UpdateHarness",
@@ -275,7 +276,6 @@ fn update(arguments: &UpdateArguments) -> Result<ActionResult, AdapterError> {
             data: None,
         });
     }
-    let target = PinnedTarget::open(&arguments.target)?;
     let trust_root_path = arguments
         .trust_root
         .as_deref()
@@ -299,15 +299,18 @@ fn update(arguments: &UpdateArguments) -> Result<ActionResult, AdapterError> {
         .as_deref()
         .ok_or_else(|| AdapterError::Input("missing release bundle".to_owned()))?;
     let now_unix = current_unix_time()?;
-    let outcome = execute_update(&UpdateRequest {
-        target: target.requested_path(),
-        repository: bundle,
-        trusted_root_bytes: &trust_root,
-        now_unix,
-        mode,
-        exact_major_target,
-        major_approval: major_approval.as_ref(),
-    })
+    let outcome = execute_update_in(
+        target.target_dir(),
+        &UpdateRequest {
+            target: target.requested_path(),
+            repository: bundle,
+            trusted_root_bytes: &trust_root,
+            now_unix,
+            mode,
+            exact_major_target,
+            major_approval: major_approval.as_ref(),
+        },
+    )
     .map_err(map_update_error)?;
     let (code, message, changed_paths) = match mode {
         UpdateMode::DryRun => (
@@ -442,6 +445,7 @@ fn map_update_error(error: UpdateError) -> AdapterError {
         UpdateError::Compatibility(message) => AdapterError::Safety(message),
         UpdateError::Unsupported(message) => AdapterError::Unsupported(message),
         UpdateError::Conflict(message) => AdapterError::Conflict(message),
+        UpdateError::RecoveryRequired(message) => AdapterError::UpdateRecoveryRequired(message),
         UpdateError::Internal(message) => AdapterError::Internal(message),
         UpdateError::Rollback(message) => AdapterError::Rollback(message),
     }
@@ -453,6 +457,7 @@ fn failure_result(error: &AdapterError) -> ActionResult {
         AdapterError::Safety(_) | AdapterError::OwnerBlocked(_) => {
             ("blocked", 3, "hive.update-compatibility-blocked")
         }
+        AdapterError::UpdateRecoveryRequired(_) => ("blocked", 3, "hive.update-recovery-required"),
         AdapterError::Conflict(_) => ("conflict", 3, "hive.update-conflict"),
         AdapterError::Unsupported(_) | AdapterError::OwnerUnsupported(_) => {
             ("unsupported", 4, "hive.update-migration-unsupported")
@@ -487,7 +492,9 @@ fn release_failure_result(error: &AdapterError) -> ActionResult {
         AdapterError::Safety(_) | AdapterError::OwnerBlocked(_) => {
             "hive.release-trust-root-blocked"
         }
-        AdapterError::Conflict(_) => "hive.release-conflict",
+        AdapterError::Conflict(_) | AdapterError::UpdateRecoveryRequired(_) => {
+            "hive.release-conflict"
+        }
         AdapterError::Unsupported(_) | AdapterError::OwnerUnsupported(_) => {
             "hive.release-unsupported"
         }
@@ -526,6 +533,17 @@ mod tests {
         ] {
             assert!(parse_arguments(&invalid).is_err());
         }
+    }
+
+    #[test]
+    fn incomplete_journal_has_a_stable_recovery_required_result() {
+        let failure = failure_result(&AdapterError::UpdateRecoveryRequired(
+            "arbitrary recovery diagnostic".to_owned(),
+        ));
+        assert_eq!(failure.status, "blocked");
+        assert_eq!(failure.exit_code, 3);
+        assert_eq!(failure.code, "hive.update-recovery-required");
+        assert!(failure.changed_paths.is_empty());
     }
 
     #[test]

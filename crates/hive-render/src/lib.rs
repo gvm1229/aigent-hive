@@ -563,6 +563,36 @@ pub fn execute_setup(request: &SetupRequest<'_>) -> Result<SetupOutcome, RenderE
     ensure_consumer_target(request.target)
         .map_err(|error| RenderError::Input(error.to_string()))?;
     let target_dir = open_target_capability(request.target)?;
+    execute_setup_with_target(request, &target_dir, true)
+}
+
+/// Execute setup against a caller-pinned consumer target capability.
+///
+/// This entrypoint never reopens `request.target`; callers that authorize
+/// target selection must retain the opened directory capability and pass it
+/// through the complete operation.
+///
+/// # Errors
+///
+/// Returns a stable [`RenderError`] before changing the pinned target whenever
+/// validation, consent, ownership, marker, or role safety checks fail.
+pub fn execute_setup_in(
+    request: &SetupRequest<'_>,
+    target_dir: &Dir,
+) -> Result<SetupOutcome, RenderError> {
+    if request.mode == SetupMode::Validate {
+        return Err(RenderError::Unsupported(
+            "pinned setup entrypoint supports only dry-run and apply".to_owned(),
+        ));
+    }
+    execute_setup_with_target(request, target_dir, false)
+}
+
+fn execute_setup_with_target(
+    request: &SetupRequest<'_>,
+    target_dir: &Dir,
+    verify_ambient_target: bool,
+) -> Result<SetupOutcome, RenderError> {
     let (answers, migrated_answers) = load_answers(request.answers)?;
     let resolution = load_resolution(request.capabilities)?;
     validate_answers(&answers)?;
@@ -571,7 +601,7 @@ pub fn execute_setup(request: &SetupRequest<'_>) -> Result<SetupOutcome, RenderE
     validate_hook_approvals(&answers.approved_fallback_hooks, &resolution)?;
     validate_schema_instance(SETUP_SCHEMA, &migrated_answers, "setup answers")?;
     let planned_result = render_tree(
-        &target_dir,
+        target_dir,
         &answers,
         &resolution,
         &request.reconfigure_roles,
@@ -582,13 +612,21 @@ pub fn execute_setup(request: &SetupRequest<'_>) -> Result<SetupOutcome, RenderE
         planned_result?
     };
     if request.mode == SetupMode::Validate {
-        verify_target_capability_current(request.target, &target_dir).map_err(as_verification)?;
+        if verify_ambient_target {
+            verify_target_capability_current(request.target, target_dir)
+                .map_err(as_verification)?;
+        }
         for path in planned.keys() {
-            ensure_managed_no_symlink_ancestors(request.target, path)?;
+            if verify_ambient_target {
+                ensure_managed_no_symlink_ancestors(request.target, path)?;
+            }
         }
         validate_installed_against(request.target, &answers, &resolution, &planned)?;
         let tree_digest = installed_tree_digest(request.target)?;
-        verify_target_capability_current(request.target, &target_dir).map_err(as_verification)?;
+        if verify_ambient_target {
+            verify_target_capability_current(request.target, target_dir)
+                .map_err(as_verification)?;
+        }
         return Ok(SetupOutcome {
             changed_paths: Vec::new(),
             resolved_owner: derived_owner(&resolution)?.to_owned(),
@@ -596,17 +634,19 @@ pub fn execute_setup(request: &SetupRequest<'_>) -> Result<SetupOutcome, RenderE
             changes: Vec::new(),
         });
     }
-    let projection_transition = prepare_projection_transition(&target_dir, &planned, &answers)?;
+    let projection_transition = prepare_projection_transition(target_dir, &planned, &answers)?;
     validate_owned_paths(
         planned.keys(),
         &projection_transition.desired,
         projection_transition.previous.as_ref(),
     )?;
     for path in planned.keys() {
-        ensure_managed_no_symlink_ancestors(request.target, path)?;
+        if verify_ambient_target {
+            ensure_managed_no_symlink_ancestors(request.target, path)?;
+        }
     }
     let mut deletions =
-        stale_hook_deletions(&target_dir, &answers.approved_fallback_hooks, &resolution)?;
+        stale_hook_deletions(target_dir, &answers.approved_fallback_hooks, &resolution)?;
     deletions.extend(projection_transition.deletions.iter().cloned());
     validate_owned_paths(
         deletions.iter(),
@@ -614,15 +654,17 @@ pub fn execute_setup(request: &SetupRequest<'_>) -> Result<SetupOutcome, RenderE
         projection_transition.previous.as_ref(),
     )?;
     for path in &deletions {
-        ensure_managed_no_symlink_ancestors(request.target, path)?;
+        if verify_ambient_target {
+            ensure_managed_no_symlink_ancestors(request.target, path)?;
+        }
     }
 
-    let changed_paths = differing_paths(&target_dir, &planned, &deletions)?;
-    let changes = setup_changes(&target_dir, &changed_paths, &planned)?;
+    let changed_paths = differing_paths(target_dir, &planned, &deletions)?;
+    let changes = setup_changes(target_dir, &changed_paths, &planned)?;
     let tree_digest = digest_tree(&planned);
     match request.mode {
         SetupMode::DryRun => stage_and_validate(
-            request.target,
+            verify_ambient_target.then_some(request.target),
             &planned,
             &answers,
             &resolution,
@@ -631,17 +673,20 @@ pub fn execute_setup(request: &SetupRequest<'_>) -> Result<SetupOutcome, RenderE
         SetupMode::Apply if !changed_paths.is_empty() => {
             activate_staged(
                 request.target,
-                &target_dir,
+                target_dir,
                 &planned,
                 &deletions,
                 &answers,
                 &resolution,
                 &projection_transition.expected_before,
+                verify_ambient_target,
             )?;
         }
         SetupMode::Apply | SetupMode::Validate => {}
     }
-    verify_target_capability_current(request.target, &target_dir)?;
+    if verify_ambient_target {
+        verify_target_capability_current(request.target, target_dir)?;
+    }
 
     Ok(SetupOutcome {
         changed_paths,
@@ -2135,6 +2180,7 @@ fn validate_revoked_hook_ownership<T: TargetRead + ?Sized>(
     Ok(())
 }
 
+#[allow(clippy::too_many_arguments)]
 fn activate_staged(
     target: &Path,
     target_dir: &Dir,
@@ -2143,8 +2189,9 @@ fn activate_staged(
     answers: &SetupAnswers,
     resolution: &CapabilityResolution,
     projection_expected_before: &BTreeMap<PathBuf, ProjectionExpectedBefore>,
+    verify_ambient_target: bool,
 ) -> Result<(), RenderError> {
-    activate_staged_impl(
+    activate_staged_impl_with_pin(
         target,
         target_dir,
         files,
@@ -2156,6 +2203,7 @@ fn activate_staged(
         None,
         None,
         None,
+        verify_ambient_target,
     )
 }
 
@@ -2173,7 +2221,7 @@ struct ReplacePolicy {
 }
 
 #[allow(clippy::too_many_arguments, clippy::too_many_lines)]
-fn activate_staged_impl(
+fn activate_staged_impl_with_pin(
     target: &Path,
     target_dir: &Dir,
     files: &BTreeMap<PathBuf, Vec<u8>>,
@@ -2185,16 +2233,19 @@ fn activate_staged_impl(
     after_target_open: Option<&dyn Fn()>,
     before_projection_claim: Option<&dyn Fn(&Path)>,
     before_rollback: Option<&dyn Fn()>,
+    verify_ambient_target: bool,
 ) -> Result<(), RenderError> {
     stage_and_validate(
-        target,
+        verify_ambient_target.then_some(target),
         files,
         answers,
         resolution,
         staging_corruption_from_environment(),
     )?;
 
-    verify_target_capability_current(target, target_dir)?;
+    if verify_ambient_target {
+        verify_target_capability_current(target, target_dir)?;
+    }
     if let Some(barrier) = after_target_open {
         barrier();
     }
@@ -2392,9 +2443,15 @@ fn activate_staged_impl(
         }
         operation_count += 1;
     }
-    if let Err(error) = validate_capability_activation(target_dir, files, deletions, answers)
-        .and_then(|()| verify_target_capability_current(target, target_dir))
-    {
+    let validation = validate_capability_activation(target_dir, files, deletions, answers)
+        .and_then(|()| {
+            if verify_ambient_target {
+                verify_target_capability_current(target, target_dir)
+            } else {
+                Ok(())
+            }
+        });
+    if let Err(error) = validation {
         return activation_failed(
             &error,
             target_dir,
@@ -2410,22 +2467,58 @@ fn activate_staged_impl(
     Ok(())
 }
 
-fn stage_and_validate(
+#[cfg(test)]
+#[allow(clippy::too_many_arguments)]
+fn activate_staged_impl(
     target: &Path,
+    target_dir: &Dir,
+    files: &BTreeMap<PathBuf, Vec<u8>>,
+    deletions: &BTreeSet<PathBuf>,
+    answers: &SetupAnswers,
+    resolution: &CapabilityResolution,
+    projection_expected_before: &BTreeMap<PathBuf, ProjectionExpectedBefore>,
+    fault: Option<ActivationFault>,
+    after_target_open: Option<&dyn Fn()>,
+    before_projection_claim: Option<&dyn Fn(&Path)>,
+    before_rollback: Option<&dyn Fn()>,
+) -> Result<(), RenderError> {
+    activate_staged_impl_with_pin(
+        target,
+        target_dir,
+        files,
+        deletions,
+        answers,
+        resolution,
+        projection_expected_before,
+        fault,
+        after_target_open,
+        before_projection_claim,
+        before_rollback,
+        true,
+    )
+}
+
+fn stage_and_validate(
+    target: Option<&Path>,
     files: &BTreeMap<PathBuf, Vec<u8>>,
     answers: &SetupAnswers,
     resolution: &CapabilityResolution,
     corrupt_after_render: bool,
 ) -> Result<(), RenderError> {
-    let parent = target
-        .parent()
-        .ok_or_else(|| RenderError::Input("target has no parent directory".to_owned()))?;
-    let staging = tempfile::Builder::new()
-        .prefix(".aigent-hive-stage-")
-        .tempdir_in(parent)
-        .map_err(io_internal)?;
+    let mut builder = tempfile::Builder::new();
+    builder.prefix(".aigent-hive-stage-");
+    let staging = match target {
+        Some(target) => {
+            let parent = target
+                .parent()
+                .ok_or_else(|| RenderError::Input("target has no parent directory".to_owned()))?;
+            builder.tempdir_in(parent).map_err(io_internal)?
+        }
+        None => builder.tempdir().map_err(io_internal)?,
+    };
+    let staging_root = staging.path().canonicalize().map_err(io_internal)?;
     for (relative, bytes) in files {
-        let staged = staging.path().join(relative);
+        let staged = staging_root.join(relative);
         if let Some(directory) = staged.parent() {
             fs::create_dir_all(directory).map_err(io_internal)?;
         }
@@ -2433,12 +2526,12 @@ fn stage_and_validate(
     }
     if corrupt_after_render {
         fs::write(
-            staging.path().join(".hive/config/harness.toml"),
+            staging_root.join(".hive/config/harness.toml"),
             b"injected invalid staged bytes\n",
         )
         .map_err(io_internal)?;
     }
-    validate_staged(staging.path(), files, answers, resolution)
+    validate_staged(&staging_root, files, answers, resolution)
 }
 
 fn validate_staged(
@@ -4423,15 +4516,16 @@ mod tests {
     use super::{
         activate_staged_impl, authorize_hook, authorize_hook_with_resolution,
         calculate_consent_digest, capability_detection, derive_resolution, encode_role,
-        execute_setup, expected_external_runtime, hook_descriptor_bytes, installed_tree_digest,
-        load_answers, load_resolution, merge_shared_marker, mutate_exact_projection_claimed,
-        open_target_capability, parse_role, prepare_projection_transition, render_agents_marker,
-        render_tree, replace_capability_file_impl, shared_marker_foreign_digest,
-        update_path_is_owned, valid_digest, valid_role_id, valid_timestamp,
-        validate_hook_approvals, validate_owned_paths, validate_skill_approvals, ActivationFault,
-        CapabilityEvidence, CapabilityResolution, ExactProjectionMutation, HookApproval,
-        HookAuthorization, ProjectionCleanupFault, ReplacePolicy, RoleProfile, RoleSeed,
-        SetupAnswers, SetupMode, SetupRequest, SkillApproval, ValidatedProjectionOwnership,
+        execute_setup, execute_setup_in, expected_external_runtime, hook_descriptor_bytes,
+        installed_tree_digest, load_answers, load_resolution, merge_shared_marker,
+        mutate_exact_projection_claimed, open_target_capability, parse_role,
+        prepare_projection_transition, render_agents_marker, render_tree,
+        replace_capability_file_impl, shared_marker_foreign_digest, update_path_is_owned,
+        valid_digest, valid_role_id, valid_timestamp, validate_hook_approvals,
+        validate_owned_paths, validate_skill_approvals, ActivationFault, CapabilityEvidence,
+        CapabilityResolution, ExactProjectionMutation, HookApproval, HookAuthorization,
+        ProjectionCleanupFault, ReplacePolicy, RoleProfile, RoleSeed, SetupAnswers, SetupMode,
+        SetupRequest, SkillApproval, ValidatedProjectionOwnership,
         FRESH_CAPABILITY_RESOLUTION_PATH, MARKER_END, MARKER_START,
     };
     use hive_core::{sha256_digest, validate_project_relative};
@@ -4492,6 +4586,77 @@ mod tests {
             reconfigure_roles: BTreeSet::new(),
         })
         .expect("fixture setup should apply");
+    }
+
+    #[test]
+    fn pinned_setup_entrypoint_does_not_reopen_replaced_ambient_target() {
+        let temporary = tempfile::tempdir().expect("temporary directory");
+        let parent = temporary.path().canonicalize().expect("canonical parent");
+        let target = parent.join("consumer");
+        let displaced = parent.join("consumer-displaced");
+        fs::create_dir(&target).expect("target");
+        let target_dir = open_target_capability(&target).expect("target capability");
+        fs::rename(&target, &displaced).expect("displace target");
+        fs::create_dir(&target).expect("replacement target");
+        fs::write(target.join("sentinel"), b"replacement").expect("replacement sentinel");
+
+        let outcome = execute_setup_in(
+            &SetupRequest {
+                target: &target,
+                answers: &fixture("answers-base.yml"),
+                capabilities: &fixture("capabilities-codex-omx.json"),
+                mode: SetupMode::DryRun,
+                reconfigure_roles: BTreeSet::new(),
+            },
+            &target_dir,
+        )
+        .expect("pinned dry-run");
+
+        assert!(!outcome.changed_paths.is_empty());
+        assert_eq!(
+            fs::read(target.join("sentinel")).expect("replacement sentinel"),
+            b"replacement"
+        );
+        assert!(fs::read_dir(&displaced)
+            .expect("displaced target")
+            .next()
+            .is_none());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn pinned_setup_entrypoint_does_not_use_the_ambient_parent_for_staging() {
+        let temporary = tempfile::tempdir().expect("temporary directory");
+        let root = temporary.path().canonicalize().expect("canonical root");
+        let ambient_parent = root.join("ambient");
+        let displaced_parent = root.join("ambient-displaced");
+        let target = ambient_parent.join("consumer");
+        fs::create_dir_all(&target).expect("target");
+        let target_dir = open_target_capability(&target).expect("target capability");
+        fs::rename(&ambient_parent, &displaced_parent).expect("displace ambient parent");
+        fs::write(&ambient_parent, b"replacement-parent").expect("replacement parent");
+
+        let outcome = execute_setup_in(
+            &SetupRequest {
+                target: &target,
+                answers: &fixture("answers-base.yml"),
+                capabilities: &fixture("capabilities-codex-omx.json"),
+                mode: SetupMode::DryRun,
+                reconfigure_roles: BTreeSet::new(),
+            },
+            &target_dir,
+        )
+        .expect("pinned dry-run");
+
+        assert!(!outcome.changed_paths.is_empty());
+        assert_eq!(
+            fs::read(&ambient_parent).expect("replacement parent"),
+            b"replacement-parent"
+        );
+        assert!(fs::read_dir(displaced_parent.join("consumer"))
+            .expect("displaced target")
+            .next()
+            .is_none());
     }
 
     #[test]

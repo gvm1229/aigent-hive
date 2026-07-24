@@ -1020,7 +1020,9 @@ const fn override_name(state: OverrideState) -> &'static str {
 fn failure_result(action: &'static str, error: &AdapterError) -> ActionResult {
     let code = match error {
         AdapterError::Input(_) => "hive.invalid-input",
-        AdapterError::Safety(_) | AdapterError::OwnerBlocked(_) => "hive.usage-control-blocked",
+        AdapterError::Safety(_)
+        | AdapterError::UpdateRecoveryRequired(_)
+        | AdapterError::OwnerBlocked(_) => "hive.usage-control-blocked",
         AdapterError::Conflict(_) => "hive.usage-control-conflict",
         AdapterError::Unsupported(_) | AdapterError::OwnerUnsupported(_) => {
             "hive.usage-control-unsupported"

@@ -2,15 +2,15 @@
 
 - 기준 branch: `develop`
 - product version: `0.7.0`
-- plan revision: `1.31`
+- plan revision: `1.32`
 - 현재 milestone: Phase 7 public qualification `0.8.0`
-- 현재 작업: 독립 security review finding 교정, 문서 semantic review, 전체 재검증,
-  `develop` commit·push
+- 현재 작업: direct installer 안내 교정, 전체 재검증, 최종 독립 review,
+  `develop` push
 - 외부 중지 경계: protected signing/publication credential, 실제 production publication,
   exact `1.0.0` 사용자 authority
 - Plan load: compact `docs/plans/PLAN.md` + `docs/plans/phases/07-public-qualification.md`
   + `docs/plans/active/documentation-style.md` + `docs/plans/active/security-review.md`
-- Plan completion: canonical checklist `108/119` 완료, `11`개 미완료, `90.8%`
+- Plan completion: canonical checklist `110/119` 완료, `9`개 미완료, `92.4%`
 - Native Goal routing: legacy `PLAN.md` checkbox 문구를 `phases/07-public-qualification.md`,
   `active/documentation-style.md`, `active/security-review.md`로 해석
 
@@ -144,7 +144,9 @@ Source guard는 개발 workspace 전용. Shipping 제품은 watcher 없이 one-s
 
 ### Local evidence
 
-- `hive-update --all-features`: 35/35
+- SEC-001·SEC-003 staged snapshot: `hive-cli` 68/68, `hive-render` 44/44,
+  `hive-update` 42/42
+- SEC-001·SEC-003 strict Clippy와 독립 재review: PASS
 - Phase 6 static·CLI conformance: 8/8
 - Phase 4 run lifecycle: Rust 10/10, Python 29/29
 - Upgrade/migration fault injection: activation failure, concurrent user edit, forged recovery,
@@ -168,9 +170,10 @@ packaging을 추가한 backward-compatible feature minor. Major 변경·추론 �
 Fresh targeted PASS:
 
 - `cargo fmt --all -- --check`
-- `cargo test -p hive-cli --locked`: 67/67
-- `cargo test -p hive-render --locked`: 39/39
-- `cargo test -p hive-update --all-features --locked`: 35/35
+- `cargo test -p hive-cli --all-targets`: 68/68
+- `cargo test -p hive-render --all-targets`: 44/44
+- `cargo test -p hive-update --all-targets`: 42/42
+- `cargo clippy -p hive-cli -p hive-render -p hive-update --all-targets -- -D warnings`
 - Phase 3 static·projection: 45/45
 - Phase 6 update: 8/8
 - Phase 7 usage control: 16/16
@@ -179,7 +182,7 @@ Fresh targeted PASS:
 
 진행 중:
 
-- 전면 문서 semantic correction과 exact literal allowlist 재생성
+- Direct installer publication asset 안내 교정
 - Workspace build·strict Clippy·full Rust test
 - Full Python conformance·Copier/hostile scaffold validation
 - Workflow YAML·shell·secret·diff 검증
@@ -197,10 +200,9 @@ Fresh targeted PASS:
 
 ## 다음 action
 
-1. Semantic review finding 전부 교정
-2. Human-document checker finding·stale allowlist 0건 확인
-3. 전체 local qualification 실행
-4. 독립 review finding 교정
-5. PLAN·CURRENT 최종 evidence 반영
-6. `develop` commit·push
-7. Exact pushed SHA의 GitHub Actions 확인
+1. Direct installer publication asset 안내 교정
+2. 전체 local qualification 실행
+3. 독립 최종 review finding 교정
+4. PLAN·CURRENT 최종 evidence 반영
+5. `develop` commit·push
+6. Exact pushed SHA의 GitHub Actions 확인

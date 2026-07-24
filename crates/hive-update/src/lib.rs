@@ -24,7 +24,8 @@ pub use release::{
     TufRoot, VerifiedTarget,
 };
 pub use transaction::{
-    execute_update, recover_update, UpdateMode, UpdateOutcome, UpdateRequest, UpdateState,
+    execute_update, execute_update_in, recover_update, recover_update_in, UpdateMode,
+    UpdateOutcome, UpdateRequest, UpdateState,
 };
 pub use version::{
     classify_release, MajorApproval, ReleaseClass, ReleasePolicyError, SemVersion, SurfaceDelta,
@@ -47,6 +48,8 @@ pub enum UpdateError {
     Unsupported(String),
     /// Live bytes changed after planning.
     Conflict(String),
+    /// An incomplete durable journal requires an explicit recovery command.
+    RecoveryRequired(String),
     /// A local updater operation failed unexpectedly.
     Internal(String),
     /// Recovery could not restore or safely complete a transaction.
@@ -59,7 +62,7 @@ impl UpdateError {
     pub const fn exit_code(&self) -> u8 {
         match self {
             Self::Input(_) => 2,
-            Self::Compatibility(_) | Self::Conflict(_) => 3,
+            Self::Compatibility(_) | Self::Conflict(_) | Self::RecoveryRequired(_) => 3,
             Self::Unsupported(_) => 4,
             Self::Verification(_) => 5,
             Self::Internal(_) | Self::Rollback(_) => 10,
@@ -75,6 +78,7 @@ impl UpdateError {
             Self::Compatibility(_) => "hive.update-compatibility-blocked",
             Self::Unsupported(_) => "hive.update-migration-unsupported",
             Self::Conflict(_) => "hive.update-conflict",
+            Self::RecoveryRequired(_) => "hive.update-recovery-required",
             Self::Internal(_) => "hive.internal-error",
             Self::Rollback(_) => "hive.update-rollback-failed",
         }
@@ -86,7 +90,7 @@ impl UpdateError {
         match self {
             Self::Input(_) | Self::Internal(_) | Self::Rollback(_) => "error",
             Self::Verification(_) => "verification-failed",
-            Self::Compatibility(_) => "blocked",
+            Self::Compatibility(_) | Self::RecoveryRequired(_) => "blocked",
             Self::Unsupported(_) => "unsupported",
             Self::Conflict(_) => "conflict",
         }
@@ -101,6 +105,7 @@ impl Display for UpdateError {
             | Self::Compatibility(message)
             | Self::Unsupported(message)
             | Self::Conflict(message)
+            | Self::RecoveryRequired(message)
             | Self::Internal(message)
             | Self::Rollback(message) => formatter.write_str(message),
         }

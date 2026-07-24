@@ -4,22 +4,28 @@ use crate::{
     MajorApproval, MigrationKind, PreservationDigest, ReleaseVerification, RollbackState,
     SemVersion, SurfaceDelta, UpdateError,
 };
+use cap_fs_ext::{DirExt, FollowSymlinks, OpenOptionsFollowExt};
+use cap_std::ambient_authority;
+use cap_std::fs::{Dir, OpenOptions as CapOpenOptions};
 use hive_core::{
-    ensure_no_symlink_ancestors, ensure_no_symlink_ancestors_for_hive_skill_projection,
     is_hive_skill_projection_path, sha256_digest, validate_hive_skill_projection_relative,
     validate_project_relative,
 };
+#[cfg(test)]
+use hive_render::execute_setup;
 use hive_render::{
-    execute_setup, shared_marker_foreign_digest, update_path_is_owned, RenderError, SetupChange,
+    execute_setup_in, shared_marker_foreign_digest, update_path_is_owned, RenderError, SetupChange,
     SetupMode, SetupOutcome, SetupRequest,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
 use sha2::{Digest, Sha256};
 use std::collections::{BTreeMap, BTreeSet};
-use std::fs::{self, OpenOptions};
-use std::io::{Read, Write};
+use std::ffi::{OsStr, OsString};
+use std::fs;
+use std::io::{self, Read, Write};
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicU64, Ordering};
 use tempfile::NamedTempFile;
 
 const ANSWERS_PATH: &str = ".hive/setup-answers.yml";
@@ -31,6 +37,12 @@ const MAX_CONFIG_BYTES: u64 = 1024 * 1024;
 const MAX_BACKUP_FILE_BYTES: u64 = 16 * 1024 * 1024;
 const MAX_BACKUP_TOTAL_BYTES: u64 = 128 * 1024 * 1024;
 const HEX: &[u8; 16] = b"0123456789abcdef";
+static TEMP_COUNTER: AtomicU64 = AtomicU64::new(0);
+
+#[cfg(all(test, unix))]
+std::thread_local! {
+    static DIRECTORY_SYNC_COUNT: std::cell::Cell<u64> = const { std::cell::Cell::new(0) };
+}
 const CANONICAL_BACKUP_ROOTS: &[&str] = &[
     ".hive/setup-answers.yml",
     ".hive/config",
@@ -176,6 +188,10 @@ struct PreparedUpdate {
     migration_id: String,
 }
 
+struct TargetRoot<'a> {
+    dir: &'a Dir,
+}
+
 struct ValidatedTransition {
     migration_kind: MigrationKind,
     migration_id: String,
@@ -206,10 +222,28 @@ struct CompatibilityReportPayload<'a> {
 pub fn execute_update(request: &UpdateRequest<'_>) -> Result<UpdateOutcome, UpdateError> {
     hive_core::ensure_consumer_target(request.target)
         .map_err(|error| UpdateError::Input(error.to_string()))?;
-    if journal_exists(request.target)? {
-        recover_update(request.target)?;
+    let target_dir = open_target_capability(request.target)?;
+    execute_update_in(&target_dir, request)
+}
+
+/// Verify and optionally activate an offline release through an already-pinned target.
+///
+/// # Errors
+///
+/// Returns an error when release verification, compatibility, staging,
+/// activation, or durable recovery cannot complete safely.
+pub fn execute_update_in(
+    target_dir: &Dir,
+    request: &UpdateRequest<'_>,
+) -> Result<UpdateOutcome, UpdateError> {
+    let target = TargetRoot { dir: target_dir };
+    if journal_exists(&target)? {
+        return Err(UpdateError::RecoveryRequired(
+            "update recovery required before another dry-run or apply; run hive update --recover"
+                .to_owned(),
+        ));
     }
-    let prepared = prepare_update(request)?;
+    let prepared = prepare_update(&target, request)?;
     if request.mode == UpdateMode::DryRun {
         return Ok(UpdateOutcome {
             changed_paths: prepared.dry_run.changed_paths,
@@ -223,18 +257,21 @@ pub fn execute_update(request: &UpdateRequest<'_>) -> Result<UpdateOutcome, Upda
             index_digest: None,
         });
     }
-    activate_update(request, prepared)
+    activate_update(&target, request, prepared)
 }
 
-fn prepare_update(request: &UpdateRequest<'_>) -> Result<PreparedUpdate, UpdateError> {
-    let previous_state = read_update_state(request.target)?;
+fn prepare_update(
+    target: &TargetRoot<'_>,
+    request: &UpdateRequest<'_>,
+) -> Result<PreparedUpdate, UpdateError> {
+    let previous_state = read_update_state(target)?;
     let verified = verify_release_repository(
         request.trusted_root_bytes,
         request.repository,
         request.now_unix,
         previous_state.as_ref().map(|state| &state.rollback),
     )?;
-    let installed = read_installed_harness(request.target)?;
+    let installed = read_installed_harness(target)?;
     if installed.harness_version != installed.source_release_version {
         return Err(UpdateError::Verification(
             "installed harness and source release versions differ".to_owned(),
@@ -247,14 +284,13 @@ fn prepare_update(request: &UpdateRequest<'_>) -> Result<PreparedUpdate, UpdateE
     }
     let transition = validate_update_transition(&installed, &verified, request.exact_major_target)?;
     let preservation_before = if transition.migration_kind == MigrationKind::CrossMajor {
-        Some(snapshot_protected_tree(request.target)?)
+        Some(snapshot_protected_tree(target)?)
     } else {
         None
     };
 
-    let capabilities_json = installed_capabilities_json(request.target)?;
-    let answers_yaml =
-        installed_answers_yaml(request.target, installed.usage_stop_remaining_percent)?;
+    let capabilities_json = installed_capabilities_json(target)?;
+    let answers_yaml = installed_answers_yaml(target, installed.usage_stop_remaining_percent)?;
     let mut answers = NamedTempFile::new()
         .map_err(|error| UpdateError::Internal(format!("cannot stage setup answers: {error}")))?;
     answers
@@ -267,13 +303,16 @@ fn prepare_update(request: &UpdateRequest<'_>) -> Result<PreparedUpdate, UpdateE
         .write_all(&capabilities_json)
         .and_then(|()| capabilities.as_file().sync_all())
         .map_err(|error| UpdateError::Internal(format!("cannot persist capabilities: {error}")))?;
-    let dry_run = execute_setup(&SetupRequest {
-        target: request.target,
-        answers: answers.path(),
-        capabilities: capabilities.path(),
-        mode: SetupMode::DryRun,
-        reconfigure_roles: BTreeSet::new(),
-    })
+    let dry_run = execute_setup_in(
+        &SetupRequest {
+            target: request.target,
+            answers: answers.path(),
+            capabilities: capabilities.path(),
+            mode: SetupMode::DryRun,
+            reconfigure_roles: BTreeSet::new(),
+        },
+        target.dir,
+    )
     .map_err(map_render_error)?;
     let plan_digest = plan_digest(
         &installed.harness_version,
@@ -564,48 +603,54 @@ fn is_cross_major_system_path(path: &str) -> bool {
     ) || is_hive_skill_projection_path(Path::new(path))
 }
 
-fn snapshot_protected_tree(target: &Path) -> Result<Vec<PreservationDigest>, UpdateError> {
+fn snapshot_protected_tree(
+    target: &TargetRoot<'_>,
+) -> Result<Vec<PreservationDigest>, UpdateError> {
     let mut result = Vec::new();
-    snapshot_directory(target, target, &mut result)?;
+    snapshot_directory(target.dir, Path::new(""), &mut result)?;
     result.sort_by(|left, right| left.path.cmp(&right.path));
     Ok(result)
 }
 
 fn snapshot_directory(
-    target: &Path,
-    directory: &Path,
+    directory: &Dir,
+    relative_parent: &Path,
     result: &mut Vec<PreservationDigest>,
 ) -> Result<(), UpdateError> {
-    let mut entries = fs::read_dir(directory)
+    let mut entries = directory
+        .entries()
         .map_err(|error| UpdateError::Internal(format!("cannot scan preservation tree: {error}")))?
         .collect::<Result<Vec<_>, _>>()
         .map_err(|error| {
             UpdateError::Internal(format!("cannot scan preservation tree: {error}"))
         })?;
-    entries.sort_by_key(std::fs::DirEntry::file_name);
+    entries.sort_by_key(cap_std::fs::DirEntry::file_name);
     for entry in entries {
-        let path = entry.path();
-        let relative = path.strip_prefix(target).map_err(|_| {
-            UpdateError::Internal("preservation path escaped the consumer target".to_owned())
-        })?;
+        let file_name = entry.file_name();
+        let relative = relative_parent.join(&file_name);
         let relative_string = relative.to_string_lossy().replace('\\', "/");
         if preservation_path_is_excluded(&relative_string) {
             continue;
         }
-        let metadata = fs::symlink_metadata(&path).map_err(|error| {
+        let metadata = directory.symlink_metadata(&file_name).map_err(|error| {
             UpdateError::Internal(format!(
                 "cannot inspect preservation path {relative_string}: {error}"
             ))
         })?;
         if metadata.is_dir() {
-            snapshot_directory(target, &path, result)?;
+            let child = directory.open_dir_nofollow(&file_name).map_err(|error| {
+                UpdateError::Conflict(format!(
+                    "cannot open preservation directory {relative_string} no-follow: {error}"
+                ))
+            })?;
+            snapshot_directory(&child, &relative, result)?;
             continue;
         }
         if is_cross_major_system_path(&relative_string) {
             continue;
         }
         let digest = if metadata.file_type().is_symlink() {
-            let destination = fs::read_link(&path).map_err(|error| {
+            let destination = directory.read_link(&file_name).map_err(|error| {
                 UpdateError::Internal(format!(
                     "cannot read preservation symlink {relative_string}: {error}"
                 ))
@@ -613,14 +658,10 @@ fn snapshot_directory(
             sha256_digest(format!("symlink\0{}", destination.to_string_lossy()).as_bytes())
         } else if metadata.is_file() {
             if relative_string == "AGENTS.md" {
-                let bytes = fs::read(&path).map_err(|error| {
-                    UpdateError::Internal(format!(
-                        "cannot read shared marker for preservation: {error}"
-                    ))
-                })?;
+                let bytes = read_parent_file(directory, &file_name, MAX_BACKUP_FILE_BYTES)?;
                 shared_marker_foreign_digest(&bytes).map_err(map_render_error)?
             } else {
-                hash_regular_file(&path)?
+                hash_regular_file(directory, &file_name)?
             }
         } else {
             return Err(UpdateError::Compatibility(format!(
@@ -672,8 +713,11 @@ fn preservation_kind(path: &str) -> &'static str {
     }
 }
 
-fn hash_regular_file(path: &Path) -> Result<String, UpdateError> {
-    let mut file = fs::File::open(path)
+fn hash_regular_file(parent: &Dir, file_name: &OsStr) -> Result<String, UpdateError> {
+    let mut options = CapOpenOptions::new();
+    options.read(true).follow(FollowSymlinks::No);
+    let mut file = parent
+        .open_with(file_name, &options)
         .map_err(|error| UpdateError::Internal(format!("cannot hash preserved file: {error}")))?;
     let mut hasher = Sha256::new();
     let mut buffer = vec![0_u8; 64 * 1024].into_boxed_slice();
@@ -697,6 +741,7 @@ fn hash_regular_file(path: &Path) -> Result<String, UpdateError> {
 }
 
 fn activate_update(
+    target: &TargetRoot<'_>,
     request: &UpdateRequest<'_>,
     prepared: PreparedUpdate,
 ) -> Result<UpdateOutcome, UpdateError> {
@@ -714,7 +759,7 @@ fn activate_update(
     } = prepared;
     let transaction_id = transaction_id(&plan_digest, request.now_unix);
     let backup = create_backup(
-        request.target,
+        target,
         &transaction_id,
         &installed.harness_version,
         &verified.manifest.release_version,
@@ -736,49 +781,52 @@ fn activate_update(
         &dry_run.changes,
         next_state,
     )?;
-    persist_journal(request.target, &journal)?;
+    persist_journal(target, &journal)?;
 
-    let applied = execute_setup(&SetupRequest {
-        target: request.target,
-        answers: answers.path(),
-        capabilities: capabilities.path(),
-        mode: SetupMode::Apply,
-        reconfigure_roles: BTreeSet::new(),
-    })
+    let applied = execute_setup_in(
+        &SetupRequest {
+            target: request.target,
+            answers: answers.path(),
+            capabilities: capabilities.path(),
+            mode: SetupMode::Apply,
+            reconfigure_roles: BTreeSet::new(),
+        },
+        target.dir,
+    )
     .map_err(|error| {
         let mapped = map_render_error(error);
-        let _ = mark_needs_recovery(request.target, &mut journal);
+        let _ = mark_needs_recovery(target, &mut journal);
         mapped
     })?;
     if applied.changes != dry_run.changes || applied.tree_digest != dry_run.tree_digest {
-        mark_needs_recovery(request.target, &mut journal)?;
+        mark_needs_recovery(target, &mut journal)?;
         return Err(UpdateError::Conflict(
             "setup plan changed between dry-run and activation".to_owned(),
         ));
     }
-    verify_after_digests(request.target, &journal.changes)?;
+    verify_after_digests(target, &journal.changes)?;
     if migration_kind == MigrationKind::CrossMajor {
         let before = preservation_before.as_deref().ok_or_else(|| {
             UpdateError::Internal("cross-major preservation baseline is missing".to_owned())
         })?;
-        let after = snapshot_protected_tree(request.target)?;
+        let after = snapshot_protected_tree(target)?;
         let mutable = cross_major_mutable_paths(&applied.changes)?;
         if let Err(error) = validate_cross_major_preservation(before, &after, &mutable) {
-            mark_needs_recovery(request.target, &mut journal)?;
+            mark_needs_recovery(target, &mut journal)?;
             return Err(error);
         }
     }
     journal.state = JournalState::Committed;
     journal.journal_digest = journal_digest(&journal)?;
-    persist_journal(request.target, &journal)?;
-    write_update_state(request.target, &journal.next_state)?;
-    let index = hive_wiki::rebuild_index(request.target).map_err(|error| {
+    persist_journal(target, &journal)?;
+    write_update_state(target, &journal.next_state)?;
+    let index = rebuild_index_in(target).map_err(|error| {
         UpdateError::Verification(format!(
             "successor committed but disposable index rebuild failed: {error}"
         ))
     })?;
-    remove_exact_regular_file(request.target, Path::new(JOURNAL_PATH))?;
-    let _pruned_backup_count = prune_expired_backups(request.target, request.now_unix);
+    remove_exact_regular_file(target, Path::new(JOURNAL_PATH))?;
+    let _pruned_backup_count = prune_expired_backups_in(target, request.now_unix);
     Ok(UpdateOutcome {
         changed_paths: applied.changed_paths,
         plan_digest,
@@ -833,11 +881,10 @@ fn create_journal(
     Ok(journal)
 }
 
-fn persist_journal(target: &Path, journal: &UpdateJournal) -> Result<(), UpdateError> {
-    ensure_no_symlink_ancestors(target, Path::new(JOURNAL_PATH))
-        .map_err(|error| UpdateError::Conflict(error.to_string()))?;
-    write_atomic(
-        &target.join(JOURNAL_PATH),
+fn persist_journal(target: &TargetRoot<'_>, journal: &UpdateJournal) -> Result<(), UpdateError> {
+    write_atomic_relative(
+        target,
+        Path::new(JOURNAL_PATH),
         &json_line(journal, "update journal")?,
     )
 }
@@ -853,32 +900,44 @@ fn persist_journal(target: &Path, journal: &UpdateJournal) -> Result<(), UpdateE
 /// Returns an error when the journal is invalid, live bytes conflict with the
 /// recorded transaction, or rollback/forward recovery cannot complete.
 pub fn recover_update(target: &Path) -> Result<(), UpdateError> {
-    let Some(bytes) = read_optional_bounded(target, Path::new(JOURNAL_PATH), MAX_CONFIG_BYTES)?
+    let target_dir = open_target_capability(target)?;
+    recover_update_in(&target_dir)
+}
+
+/// Recover an incomplete update through an already-pinned target capability.
+///
+/// # Errors
+///
+/// Returns an error when the journal is invalid, live bytes conflict with the
+/// recorded transaction, or rollback/forward recovery cannot complete.
+pub fn recover_update_in(target_dir: &Dir) -> Result<(), UpdateError> {
+    let target = TargetRoot { dir: target_dir };
+    let Some(bytes) = read_optional_bounded(&target, Path::new(JOURNAL_PATH), MAX_CONFIG_BYTES)?
     else {
         return Ok(());
     };
     let journal: UpdateJournal = serde_json::from_slice(&bytes)
         .map_err(|error| UpdateError::Conflict(format!("update journal is invalid: {error}")))?;
-    validate_recovery_journal(target, &journal)?;
+    validate_recovery_journal(&target, &journal)?;
     match journal.state {
         JournalState::Committed => {
-            verify_after_digests(target, &journal.changes)?;
-            write_update_state(target, &journal.next_state)?;
-            hive_wiki::rebuild_index(target).map_err(|error| {
+            verify_after_digests(&target, &journal.changes)?;
+            write_update_state(&target, &journal.next_state)?;
+            rebuild_index_in(&target).map_err(|error| {
                 UpdateError::Verification(format!(
                     "cannot rebuild disposable index during forward recovery: {error}"
                 ))
             })?;
         }
         JournalState::Prepared | JournalState::NeedsRecovery => {
-            rollback_changes(target, &journal)?;
+            rollback_changes(&target, &journal)?;
         }
     }
-    remove_exact_regular_file(target, Path::new(JOURNAL_PATH))
+    remove_exact_regular_file(&target, Path::new(JOURNAL_PATH))
 }
 
 fn validate_recovery_journal(
-    target: &Path,
+    target: &TargetRoot<'_>,
     journal: &UpdateJournal,
 ) -> Result<BackupManifest, UpdateError> {
     if journal.schema_version != 1
@@ -975,7 +1034,7 @@ fn validate_recovery_journal(
 }
 
 fn create_backup(
-    target: &Path,
+    target: &TargetRoot<'_>,
     transaction_id: &str,
     source_version: &str,
     target_version: &str,
@@ -984,11 +1043,6 @@ fn create_backup(
     changes: &[SetupChange],
 ) -> Result<BackupManifest, UpdateError> {
     let root_relative = PathBuf::from(format!(".hive/backups/{transaction_id}"));
-    ensure_no_symlink_ancestors(target, &root_relative)
-        .map_err(|error| UpdateError::Conflict(error.to_string()))?;
-    let root = target.join(&root_relative);
-    fs::create_dir_all(root.join("files"))
-        .map_err(|error| UpdateError::Internal(format!("cannot create update backup: {error}")))?;
     let mut snapshot_paths = collect_canonical_snapshot_paths(target)?;
     for change in changes {
         snapshot_paths
@@ -1031,7 +1085,7 @@ fn create_backup(
                         "canonical backup exceeds the bounded size limit".to_owned(),
                     ));
                 }
-                write_new_file(&root.join(&backup_path), &bytes)?;
+                write_new_target_file(target, &root_relative.join(&backup_path), &bytes)?;
                 entries.push(BackupEntry {
                     path,
                     ownership,
@@ -1069,15 +1123,16 @@ fn create_backup(
         manifest_digest: String::new(),
     };
     manifest.manifest_digest = backup_manifest_digest(&manifest)?;
-    write_new_file(
-        &root.join("backup-manifest.json"),
+    write_new_target_file(
+        target,
+        &root_relative.join("backup-manifest.json"),
         &json_line(&manifest, "backup manifest")?,
     )?;
     Ok(manifest)
 }
 
 fn collect_canonical_snapshot_paths(
-    target: &Path,
+    target: &TargetRoot<'_>,
 ) -> Result<BTreeMap<String, String>, UpdateError> {
     let mut paths = BTreeMap::new();
     for root in CANONICAL_BACKUP_ROOTS {
@@ -1087,19 +1142,19 @@ fn collect_canonical_snapshot_paths(
 }
 
 fn collect_canonical_path(
-    target: &Path,
+    target: &TargetRoot<'_>,
     relative: &Path,
     paths: &mut BTreeMap<String, String>,
 ) -> Result<(), UpdateError> {
     if !crate::backup_path_is_allowed(&relative.to_string_lossy()) {
         return Ok(());
     }
-    ensure_no_symlink_ancestors(target, relative)
-        .map_err(|error| UpdateError::Conflict(error.to_string()))?;
-    let absolute = target.join(relative);
-    let metadata = match fs::symlink_metadata(&absolute) {
+    let Some((parent, file_name)) = capability_parent(target.dir, relative, false)? else {
+        return Ok(());
+    };
+    let metadata = match parent.symlink_metadata(&file_name) {
         Ok(metadata) => metadata,
-        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(()),
+        Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(()),
         Err(error) => {
             return Err(UpdateError::Internal(format!(
                 "cannot inspect canonical backup path {}: {error}",
@@ -1126,7 +1181,14 @@ fn collect_canonical_path(
             relative.display()
         )));
     }
-    let mut children = fs::read_dir(&absolute)
+    let directory = parent.open_dir_nofollow(&file_name).map_err(|error| {
+        UpdateError::Conflict(format!(
+            "cannot open canonical backup path {} no-follow: {error}",
+            relative.display()
+        ))
+    })?;
+    let mut children = directory
+        .entries()
         .map_err(|error| {
             UpdateError::Internal(format!(
                 "cannot enumerate canonical backup path {}: {error}",
@@ -1135,37 +1197,11 @@ fn collect_canonical_path(
         })?
         .collect::<Result<Vec<_>, _>>()
         .map_err(|error| UpdateError::Internal(format!("cannot read backup entry: {error}")))?;
-    children.sort_by_key(std::fs::DirEntry::file_name);
+    children.sort_by_key(cap_std::fs::DirEntry::file_name);
     for child in children {
         collect_canonical_path(target, &relative.join(child.file_name()), paths)?;
     }
     Ok(())
-}
-
-fn prune_expired_backups(target: &Path, now_unix: i64) -> usize {
-    let backups_relative = Path::new(".hive/backups");
-    if ensure_no_symlink_ancestors(target, backups_relative).is_err() {
-        return 0;
-    }
-    let backups = target.join(backups_relative);
-    let Ok(entries) = fs::read_dir(&backups) else {
-        return 0;
-    };
-    let mut pruned = 0;
-    for entry in entries.flatten() {
-        let name = entry.file_name().to_string_lossy().into_owned();
-        if !valid_transaction_directory_name(&name) {
-            continue;
-        }
-        let root = entry.path();
-        let Some(manifest) = validated_expired_backup(&root, &name, now_unix) else {
-            continue;
-        };
-        if remove_validated_backup(&root, &manifest).is_ok() {
-            pruned += 1;
-        }
-    }
-    pruned
 }
 
 fn valid_transaction_directory_name(name: &str) -> bool {
@@ -1177,19 +1213,56 @@ fn valid_transaction_directory_name(name: &str) -> bool {
     })
 }
 
-fn validated_expired_backup(
-    root: &Path,
+fn prune_expired_backups_in(target: &TargetRoot<'_>, now_unix: i64) -> usize {
+    let Some((hive, backups_name)) =
+        capability_parent(target.dir, Path::new(".hive/backups"), false)
+            .ok()
+            .flatten()
+    else {
+        return 0;
+    };
+    let Ok(backups) = hive.open_dir_nofollow(&backups_name) else {
+        return 0;
+    };
+    let Ok(entries) = backups.entries() else {
+        return 0;
+    };
+    let mut pruned = 0;
+    for entry in entries.flatten() {
+        let name = entry.file_name().to_string_lossy().into_owned();
+        if !valid_transaction_directory_name(&name) {
+            continue;
+        }
+        let Some(manifest) = validated_expired_backup_in(target, &name, now_unix) else {
+            continue;
+        };
+        if remove_validated_backup_in(target, &manifest).is_ok() {
+            pruned += 1;
+        }
+    }
+    pruned
+}
+
+fn validated_expired_backup_in(
+    target: &TargetRoot<'_>,
     transaction_id: &str,
     now_unix: i64,
 ) -> Option<BackupManifest> {
-    let metadata = fs::symlink_metadata(root).ok()?;
+    let relative = PathBuf::from(format!(".hive/backups/{transaction_id}"));
+    let (parent, name) = capability_parent(target.dir, &relative, false)
+        .ok()
+        .flatten()?;
+    let metadata = parent.symlink_metadata(&name).ok()?;
     if !metadata.is_dir() || metadata.file_type().is_symlink() {
         return None;
     }
-    let bytes = fs::read(root.join("backup-manifest.json")).ok()?;
-    if bytes.len() as u64 > MAX_CONFIG_BYTES {
-        return None;
-    }
+    parent.open_dir_nofollow(&name).ok()?;
+    let bytes = read_optional_bounded(
+        target,
+        &relative.join("backup-manifest.json"),
+        MAX_CONFIG_BYTES,
+    )
+    .ok()??;
     let manifest: BackupManifest = serde_json::from_slice(&bytes).ok()?;
     if manifest.transaction_id != transaction_id
         || backup_manifest_digest(&manifest).ok()? != manifest.manifest_digest
@@ -1202,15 +1275,25 @@ fn validated_expired_backup(
     Some(manifest)
 }
 
-fn remove_validated_backup(root: &Path, manifest: &BackupManifest) -> Result<(), UpdateError> {
+fn remove_validated_backup_in(
+    target: &TargetRoot<'_>,
+    manifest: &BackupManifest,
+) -> Result<(), UpdateError> {
+    let root_relative = PathBuf::from(format!(".hive/backups/{}", manifest.transaction_id));
+    let Some((parent, name)) = capability_parent(target.dir, &root_relative, false)? else {
+        return Err(UpdateError::Conflict(
+            "expired backup disappeared before cleanup".to_owned(),
+        ));
+    };
+    let root = parent.open_dir_nofollow(&name).map_err(|error| {
+        UpdateError::Conflict(format!("cannot open expired backup no-follow: {error}"))
+    })?;
     let mut expected_files = BTreeSet::from(["backup-manifest.json".to_owned()]);
     for entry in &manifest.entries {
-        let backup = root.join(&entry.backup_path);
+        let relative = root_relative.join(&entry.backup_path);
         match entry.prior_digest.as_deref() {
             Some(expected) => {
-                let bytes = fs::read(&backup).map_err(|error| {
-                    UpdateError::Rollback(format!("cannot verify expired backup: {error}"))
-                })?;
+                let bytes = read_required_bounded(target, &relative, MAX_BACKUP_FILE_BYTES)?;
                 if bytes.len() as u64 != entry.prior_length || sha256_digest(&bytes) != expected {
                     return Err(UpdateError::Rollback(
                         "expired backup bytes differ from the manifest".to_owned(),
@@ -1218,74 +1301,61 @@ fn remove_validated_backup(root: &Path, manifest: &BackupManifest) -> Result<(),
                 }
                 expected_files.insert(entry.backup_path.clone());
             }
-            None if backup.exists() => {
+            None if read_optional_bounded(target, &relative, MAX_BACKUP_FILE_BYTES)?.is_some() => {
                 return Err(UpdateError::Conflict(
                     "expired backup contains an unexpected file".to_owned(),
-                ));
+                ))
             }
             None => {}
         }
     }
-    let (actual_files, mut directories) = enumerate_backup_tree(root)?;
+    let mut actual_files = BTreeSet::new();
+    let mut directories = Vec::new();
+    enumerate_backup_capability(&root, Path::new(""), &mut actual_files, &mut directories)?;
     if actual_files != expected_files {
         return Err(UpdateError::Conflict(
             "expired backup contains foreign or missing files".to_owned(),
         ));
     }
     for relative in actual_files {
-        let absolute = root.join(relative);
-        let metadata = fs::symlink_metadata(&absolute)
-            .map_err(|error| UpdateError::Rollback(format!("cannot recheck backup: {error}")))?;
-        if !metadata.is_file() || metadata.file_type().is_symlink() {
-            return Err(UpdateError::Conflict(
-                "expired backup changed before cleanup".to_owned(),
-            ));
-        }
-        fs::remove_file(absolute)
-            .map_err(|error| UpdateError::Rollback(format!("cannot prune backup file: {error}")))?;
+        remove_exact_regular_file(target, &root_relative.join(relative))?;
     }
     directories.sort_by_key(|path| std::cmp::Reverse(path.components().count()));
-    for directory in directories {
-        fs::remove_dir(root.join(directory)).map_err(|error| {
-            UpdateError::Rollback(format!("cannot prune backup directory: {error}"))
-        })?;
+    for relative in directories {
+        remove_exact_directory(target, &root_relative.join(relative))?;
     }
-    fs::remove_dir(root)
-        .map_err(|error| UpdateError::Rollback(format!("cannot prune backup root: {error}")))
+    remove_exact_directory(target, &root_relative)
 }
 
-fn enumerate_backup_tree(root: &Path) -> Result<(BTreeSet<String>, Vec<PathBuf>), UpdateError> {
-    let mut files = BTreeSet::new();
-    let mut directories = Vec::new();
-    enumerate_backup_directory(root, Path::new(""), &mut files, &mut directories)?;
-    Ok((files, directories))
-}
-
-fn enumerate_backup_directory(
-    root: &Path,
+fn enumerate_backup_capability(
+    directory: &Dir,
     relative: &Path,
     files: &mut BTreeSet<String>,
     directories: &mut Vec<PathBuf>,
 ) -> Result<(), UpdateError> {
-    let directory = root.join(relative);
-    for entry in fs::read_dir(&directory)
-        .map_err(|error| UpdateError::Rollback(format!("cannot enumerate backup: {error}")))?
-    {
+    let entries = directory
+        .entries()
+        .map_err(|error| UpdateError::Rollback(format!("cannot enumerate backup: {error}")))?;
+    for entry in entries {
         let entry = entry
             .map_err(|error| UpdateError::Rollback(format!("cannot read backup entry: {error}")))?;
-        let child = relative.join(entry.file_name());
-        let file_type = entry
-            .file_type()
+        let name = entry.file_name();
+        let child = relative.join(&name);
+        let metadata = directory
+            .symlink_metadata(&name)
             .map_err(|error| UpdateError::Rollback(format!("cannot inspect backup: {error}")))?;
-        if file_type.is_symlink() {
+        if metadata.file_type().is_symlink() {
             return Err(UpdateError::Conflict(
                 "expired backup contains a symlink".to_owned(),
             ));
         }
-        if file_type.is_dir() {
+        if metadata.is_dir() {
             directories.push(child.clone());
-            enumerate_backup_directory(root, &child, files, directories)?;
-        } else if file_type.is_file() {
+            let nested = directory.open_dir_nofollow(&name).map_err(|error| {
+                UpdateError::Conflict(format!("cannot open backup directory no-follow: {error}"))
+            })?;
+            enumerate_backup_capability(&nested, &child, files, directories)?;
+        } else if metadata.is_file() {
             files.insert(child.to_string_lossy().replace('\\', "/"));
         } else {
             return Err(UpdateError::Conflict(
@@ -1296,8 +1366,8 @@ fn enumerate_backup_directory(
     Ok(())
 }
 
-fn rollback_changes(target: &Path, journal: &UpdateJournal) -> Result<(), UpdateError> {
-    let backup_root = target.join(format!(".hive/backups/{}", journal.transaction_id));
+fn rollback_changes(target: &TargetRoot<'_>, journal: &UpdateJournal) -> Result<(), UpdateError> {
+    let backup_root = PathBuf::from(format!(".hive/backups/{}", journal.transaction_id));
     for change in &journal.changes {
         let current = digest_optional(target, Path::new(&change.path))?;
         if current != change.before_digest && current != change.after_digest {
@@ -1311,12 +1381,11 @@ fn rollback_changes(target: &Path, journal: &UpdateJournal) -> Result<(), Update
         let current = digest_optional(target, Path::new(&change.path))?;
         match change.before_digest.as_deref() {
             Some(expected) => {
-                let bytes = fs::read(backup_root.join(&change.backup_path)).map_err(|error| {
-                    UpdateError::Rollback(format!(
-                        "cannot read recovery backup for {}: {error}",
-                        change.path
-                    ))
-                })?;
+                let bytes = read_required_bounded(
+                    target,
+                    &backup_root.join(&change.backup_path),
+                    MAX_BACKUP_FILE_BYTES,
+                )?;
                 if sha256_digest(&bytes) != expected {
                     return Err(UpdateError::Rollback(format!(
                         "recovery backup digest mismatch for {}",
@@ -1334,7 +1403,10 @@ fn rollback_changes(target: &Path, journal: &UpdateJournal) -> Result<(), Update
     Ok(())
 }
 
-fn verify_after_digests(target: &Path, changes: &[JournalChange]) -> Result<(), UpdateError> {
+fn verify_after_digests(
+    target: &TargetRoot<'_>,
+    changes: &[JournalChange],
+) -> Result<(), UpdateError> {
     for change in changes {
         if digest_optional(target, Path::new(&change.path))? != change.after_digest {
             return Err(UpdateError::Conflict(format!(
@@ -1346,7 +1418,7 @@ fn verify_after_digests(target: &Path, changes: &[JournalChange]) -> Result<(), 
     Ok(())
 }
 
-fn read_installed_harness(target: &Path) -> Result<InstalledHarness, UpdateError> {
+fn read_installed_harness(target: &TargetRoot<'_>) -> Result<InstalledHarness, UpdateError> {
     let bytes = read_required_bounded(target, Path::new(HARNESS_PATH), MAX_CONFIG_BYTES)?;
     let text = std::str::from_utf8(&bytes)
         .map_err(|_| UpdateError::Input("installed harness TOML is not UTF-8".to_owned()))?;
@@ -1354,7 +1426,7 @@ fn read_installed_harness(target: &Path) -> Result<InstalledHarness, UpdateError
         .map_err(|error| UpdateError::Input(format!("invalid installed harness TOML: {error}")))
 }
 
-fn installed_capabilities_json(target: &Path) -> Result<Vec<u8>, UpdateError> {
+fn installed_capabilities_json(target: &TargetRoot<'_>) -> Result<Vec<u8>, UpdateError> {
     let bytes = read_required_bounded(target, Path::new(CAPABILITIES_PATH), MAX_CONFIG_BYTES)?;
     let value: JsonValue = serde_yaml::from_slice(&bytes).map_err(|error| {
         UpdateError::Input(format!("invalid installed capability YAML: {error}"))
@@ -1364,7 +1436,7 @@ fn installed_capabilities_json(target: &Path) -> Result<Vec<u8>, UpdateError> {
     })
 }
 
-fn installed_answers_yaml(target: &Path, threshold: u8) -> Result<Vec<u8>, UpdateError> {
+fn installed_answers_yaml(target: &TargetRoot<'_>, threshold: u8) -> Result<Vec<u8>, UpdateError> {
     let bytes = read_required_bounded(target, Path::new(ANSWERS_PATH), MAX_CONFIG_BYTES)?;
     let mut value: serde_yaml::Value = serde_yaml::from_slice(&bytes)
         .map_err(|error| UpdateError::Input(format!("invalid installed setup answers: {error}")))?;
@@ -1383,7 +1455,7 @@ fn installed_answers_yaml(target: &Path, threshold: u8) -> Result<Vec<u8>, Updat
         .map_err(|error| UpdateError::Internal(format!("cannot stage setup answers: {error}")))
 }
 
-fn read_update_state(target: &Path) -> Result<Option<UpdateState>, UpdateError> {
+fn read_update_state(target: &TargetRoot<'_>) -> Result<Option<UpdateState>, UpdateError> {
     read_optional_bounded(target, Path::new(UPDATE_STATE_PATH), MAX_CONFIG_BYTES)?
         .map(|bytes| {
             serde_json::from_slice(&bytes).map_err(|error| {
@@ -1393,11 +1465,10 @@ fn read_update_state(target: &Path) -> Result<Option<UpdateState>, UpdateError> 
         .transpose()
 }
 
-fn write_update_state(target: &Path, state: &UpdateState) -> Result<(), UpdateError> {
-    ensure_no_symlink_ancestors(target, Path::new(UPDATE_STATE_PATH))
-        .map_err(|error| UpdateError::Conflict(error.to_string()))?;
-    write_atomic(
-        &target.join(UPDATE_STATE_PATH),
+fn write_update_state(target: &TargetRoot<'_>, state: &UpdateState) -> Result<(), UpdateError> {
+    write_atomic_relative(
+        target,
+        Path::new(UPDATE_STATE_PATH),
         &json_line(state, "update state")?,
     )
 }
@@ -1463,22 +1534,27 @@ fn backup_manifest_digest(manifest: &BackupManifest) -> Result<String, UpdateErr
     Ok(sha256_digest(&bytes))
 }
 
-fn mark_needs_recovery(target: &Path, journal: &mut UpdateJournal) -> Result<(), UpdateError> {
+fn mark_needs_recovery(
+    target: &TargetRoot<'_>,
+    journal: &mut UpdateJournal,
+) -> Result<(), UpdateError> {
     journal.state = JournalState::NeedsRecovery;
     journal.journal_digest = journal_digest(journal)?;
-    ensure_no_symlink_ancestors(target, Path::new(JOURNAL_PATH))
-        .map_err(|error| UpdateError::Conflict(error.to_string()))?;
-    write_atomic(
-        &target.join(JOURNAL_PATH),
+    write_atomic_relative(
+        target,
+        Path::new(JOURNAL_PATH),
         &json_line(journal, "update journal")?,
     )
 }
 
-fn journal_exists(target: &Path) -> Result<bool, UpdateError> {
+fn journal_exists(target: &TargetRoot<'_>) -> Result<bool, UpdateError> {
     Ok(read_optional_bounded(target, Path::new(JOURNAL_PATH), MAX_CONFIG_BYTES)?.is_some())
 }
 
-fn digest_optional(target: &Path, relative: &Path) -> Result<Option<String>, UpdateError> {
+fn digest_optional(
+    target: &TargetRoot<'_>,
+    relative: &Path,
+) -> Result<Option<String>, UpdateError> {
     read_optional_bounded(target, relative, MAX_CONFIG_BYTES * 16)
         .map(|bytes| bytes.map(|bytes| sha256_digest(&bytes)))
 }
@@ -1493,7 +1569,7 @@ fn is_sha256_digest(value: &str) -> bool {
 }
 
 fn read_required_bounded(
-    target: &Path,
+    target: &TargetRoot<'_>,
     relative: &Path,
     maximum: u64,
 ) -> Result<Vec<u8>, UpdateError> {
@@ -1506,16 +1582,17 @@ fn read_required_bounded(
 }
 
 fn read_optional_bounded(
-    target: &Path,
+    target: &TargetRoot<'_>,
     relative: &Path,
     maximum: u64,
 ) -> Result<Option<Vec<u8>>, UpdateError> {
     validate_update_relative(relative)?;
-    ensure_update_no_symlink_ancestors(target, relative)?;
-    let absolute = target.join(relative);
-    let metadata = match fs::symlink_metadata(&absolute) {
+    let Some((parent, file_name)) = capability_parent(target.dir, relative, false)? else {
+        return Ok(None);
+    };
+    let metadata = match parent.symlink_metadata(&file_name) {
         Ok(metadata) => metadata,
-        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+        Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(None),
         Err(error) => {
             return Err(UpdateError::Internal(format!(
                 "cannot inspect {}: {error}",
@@ -1529,8 +1606,13 @@ fn read_optional_bounded(
             relative.display()
         )));
     }
-    let mut file = fs::File::open(&absolute).map_err(|error| {
-        UpdateError::Internal(format!("cannot open {}: {error}", relative.display()))
+    let mut options = CapOpenOptions::new();
+    options.read(true).follow(FollowSymlinks::No);
+    let mut file = parent.open_with(&file_name, &options).map_err(|error| {
+        UpdateError::Conflict(format!(
+            "cannot open {} no-follow: {error}",
+            relative.display()
+        ))
     })?;
     let mut bytes = Vec::with_capacity(
         usize::try_from(metadata.len())
@@ -1551,91 +1633,177 @@ fn read_optional_bounded(
     Ok(Some(bytes))
 }
 
-fn write_new_file(path: &Path, bytes: &[u8]) -> Result<(), UpdateError> {
-    let parent = path
-        .parent()
-        .ok_or_else(|| UpdateError::Internal("backup file has no parent".to_owned()))?;
-    fs::create_dir_all(parent)
-        .map_err(|error| UpdateError::Internal(format!("cannot create backup parent: {error}")))?;
-    let mut file = OpenOptions::new()
+fn write_new_target_file(
+    target: &TargetRoot<'_>,
+    relative: &Path,
+    bytes: &[u8],
+) -> Result<(), UpdateError> {
+    let (parent, file_name) = capability_parent(target.dir, relative, true)?.ok_or_else(|| {
+        UpdateError::Internal("backup parent disappeared during creation".to_owned())
+    })?;
+    let mut options = CapOpenOptions::new();
+    options
         .write(true)
         .create_new(true)
-        .open(path)
+        .follow(FollowSymlinks::No);
+    let mut file = parent
+        .open_with(&file_name, &options)
         .map_err(|error| UpdateError::Conflict(format!("cannot create backup file: {error}")))?;
     file.write_all(bytes)
         .and_then(|()| file.sync_all())
         .map_err(|error| UpdateError::Internal(format!("cannot persist backup file: {error}")))
 }
 
+#[cfg(test)]
+fn write_new_file(path: &Path, bytes: &[u8]) -> Result<(), UpdateError> {
+    let parent = path
+        .parent()
+        .ok_or_else(|| UpdateError::Internal("test file has no parent".to_owned()))?;
+    fs::create_dir_all(parent)
+        .map_err(|error| UpdateError::Internal(format!("cannot create test parent: {error}")))?;
+    let mut file = fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(path)
+        .map_err(|error| UpdateError::Conflict(format!("cannot create test file: {error}")))?;
+    file.write_all(bytes)
+        .and_then(|()| file.sync_all())
+        .map_err(|error| UpdateError::Internal(format!("cannot persist test file: {error}")))
+}
+
+#[cfg(test)]
 fn write_atomic(path: &Path, bytes: &[u8]) -> Result<(), UpdateError> {
     let parent = path
         .parent()
-        .ok_or_else(|| UpdateError::Internal("atomic file has no parent".to_owned()))?;
+        .ok_or_else(|| UpdateError::Internal("test file has no parent".to_owned()))?;
     fs::create_dir_all(parent)
-        .map_err(|error| UpdateError::Internal(format!("cannot create atomic parent: {error}")))?;
+        .map_err(|error| UpdateError::Internal(format!("cannot create test parent: {error}")))?;
     let mut temporary = NamedTempFile::new_in(parent)
-        .map_err(|error| UpdateError::Internal(format!("cannot create atomic temp: {error}")))?;
+        .map_err(|error| UpdateError::Internal(format!("cannot create test temp: {error}")))?;
     temporary
         .write_all(bytes)
         .and_then(|()| temporary.as_file().sync_all())
-        .map_err(|error| UpdateError::Internal(format!("cannot persist atomic temp: {error}")))?;
-    let persisted = temporary.persist(path).map_err(|error| {
-        UpdateError::Internal(format!(
-            "cannot atomically replace {}: {}",
-            path.display(),
-            error.error
-        ))
-    })?;
-    persisted.sync_all().map_err(|error| {
-        UpdateError::Internal(format!(
-            "cannot sync atomic replacement {}: {error}",
-            path.display()
-        ))
-    })?;
-    sync_parent_directory(parent)?;
-    Ok(())
+        .map_err(|error| UpdateError::Internal(format!("cannot persist test temp: {error}")))?;
+    temporary
+        .persist(path)
+        .map(|_| ())
+        .map_err(|error| UpdateError::Internal(format!("cannot replace test file: {error}")))
 }
 
-fn write_atomic_relative(target: &Path, relative: &Path, bytes: &[u8]) -> Result<(), UpdateError> {
+fn write_atomic_relative(
+    target: &TargetRoot<'_>,
+    relative: &Path,
+    bytes: &[u8],
+) -> Result<(), UpdateError> {
     validate_update_relative(relative)?;
-    ensure_update_no_symlink_ancestors(target, relative)?;
-    write_atomic(&target.join(relative), bytes)
+    let (parent, file_name) = capability_parent(target.dir, relative, true)?.ok_or_else(|| {
+        UpdateError::Internal("atomic parent disappeared during creation".to_owned())
+    })?;
+    let temporary_name = OsString::from(format!(
+        ".hive-update-tmp-{}-{}",
+        std::process::id(),
+        TEMP_COUNTER.fetch_add(1, Ordering::Relaxed)
+    ));
+    let mut options = CapOpenOptions::new();
+    options
+        .write(true)
+        .create_new(true)
+        .follow(FollowSymlinks::No);
+    let mut temporary = parent
+        .open_with(&temporary_name, &options)
+        .map_err(|error| UpdateError::Internal(format!("cannot create atomic temp: {error}")))?;
+    temporary
+        .write_all(bytes)
+        .and_then(|()| temporary.sync_all())
+        .map_err(|error| UpdateError::Internal(format!("cannot persist atomic temp: {error}")))?;
+    drop(temporary);
+    if let Err(error) = parent.rename(&temporary_name, &parent, &file_name) {
+        let _ = parent.remove_file(&temporary_name);
+        return Err(UpdateError::Internal(format!(
+            "cannot atomically replace {}: {error}",
+            relative.display()
+        )));
+    }
+    let mut read_options = CapOpenOptions::new();
+    read_options.read(true).follow(FollowSymlinks::No);
+    parent
+        .open_with(&file_name, &read_options)
+        .and_then(|file| file.sync_all())
+        .map_err(|error| {
+            UpdateError::Internal(format!(
+                "cannot sync atomic replacement {}: {error}",
+                relative.display()
+            ))
+        })?;
+    sync_capability_directory(&parent, relative)?;
+    Ok(())
 }
 
 #[cfg(unix)]
-fn sync_parent_directory(parent: &Path) -> Result<(), UpdateError> {
-    fs::File::open(parent)
-        .and_then(|directory| directory.sync_all())
+fn sync_capability_directory(parent: &Dir, relative: &Path) -> Result<(), UpdateError> {
+    parent
+        .try_clone()
+        .and_then(|directory| directory.into_std_file().sync_all())
         .map_err(|error| {
             UpdateError::Internal(format!(
-                "cannot sync atomic parent {}: {error}",
-                parent.display()
+                "cannot sync atomic parent for {}: {error}",
+                relative.display()
             ))
-        })
-}
-
-#[cfg(not(unix))]
-fn sync_parent_directory(_parent: &Path) -> Result<(), UpdateError> {
+        })?;
+    #[cfg(test)]
+    DIRECTORY_SYNC_COUNT.with(|count| count.set(count.get() + 1));
     Ok(())
 }
 
-fn remove_exact_regular_file(target: &Path, relative: &Path) -> Result<(), UpdateError> {
+#[cfg(not(unix))]
+fn sync_capability_directory(_parent: &Dir, _relative: &Path) -> Result<(), UpdateError> {
+    Ok(())
+}
+
+fn remove_exact_regular_file(target: &TargetRoot<'_>, relative: &Path) -> Result<(), UpdateError> {
     validate_update_relative(relative)?;
-    ensure_update_no_symlink_ancestors(target, relative)?;
-    let absolute = target.join(relative);
-    match fs::symlink_metadata(&absolute) {
+    let Some((parent, file_name)) = capability_parent(target.dir, relative, false)? else {
+        return Ok(());
+    };
+    match parent.symlink_metadata(&file_name) {
         Ok(metadata) if metadata.is_file() && !metadata.file_type().is_symlink() => {
-            fs::remove_file(&absolute).map_err(|error| {
+            parent.remove_file(&file_name).map_err(|error| {
                 UpdateError::Rollback(format!("cannot remove {}: {error}", relative.display()))
             })
         }
-        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(()),
+        Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(()),
         Ok(_) => Err(UpdateError::Conflict(format!(
             "recovery path is not a regular file: {}",
             relative.display()
         ))),
         Err(error) => Err(UpdateError::Internal(format!(
             "cannot inspect recovery path {}: {error}",
+            relative.display()
+        ))),
+    }
+}
+
+fn remove_exact_directory(target: &TargetRoot<'_>, relative: &Path) -> Result<(), UpdateError> {
+    validate_update_relative(relative)?;
+    let Some((parent, file_name)) = capability_parent(target.dir, relative, false)? else {
+        return Ok(());
+    };
+    match parent.symlink_metadata(&file_name) {
+        Ok(metadata) if metadata.is_dir() && !metadata.file_type().is_symlink() => {
+            parent.remove_dir(&file_name).map_err(|error| {
+                UpdateError::Rollback(format!(
+                    "cannot remove backup directory {}: {error}",
+                    relative.display()
+                ))
+            })
+        }
+        Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(()),
+        Ok(_) => Err(UpdateError::Conflict(format!(
+            "backup cleanup path is not a directory: {}",
+            relative.display()
+        ))),
+        Err(error) => Err(UpdateError::Internal(format!(
+            "cannot inspect backup directory {}: {error}",
             relative.display()
         ))),
     }
@@ -1650,14 +1818,215 @@ fn validate_update_relative(relative: &Path) -> Result<(), UpdateError> {
     }
 }
 
-fn ensure_update_no_symlink_ancestors(target: &Path, relative: &Path) -> Result<(), UpdateError> {
-    if is_hive_skill_projection_path(relative) {
-        ensure_no_symlink_ancestors_for_hive_skill_projection(target, relative)
-            .map_err(|error| UpdateError::Conflict(error.to_string()))
+fn open_target_capability(target: &Path) -> Result<Dir, UpdateError> {
+    let parent = target
+        .parent()
+        .ok_or_else(|| UpdateError::Input("update target has no parent directory".to_owned()))?;
+    let parent = if parent.as_os_str().is_empty() {
+        Path::new(".")
     } else {
-        ensure_no_symlink_ancestors(target, relative)
-            .map_err(|error| UpdateError::Conflict(error.to_string()))
+        parent
+    };
+    let name = target
+        .file_name()
+        .ok_or_else(|| UpdateError::Input("update target has no directory name".to_owned()))?;
+    let parent_dir = Dir::open_ambient_dir(parent, ambient_authority()).map_err(|error| {
+        UpdateError::Conflict(format!("cannot open update target parent: {error}"))
+    })?;
+    parent_dir.open_dir_nofollow(name).map_err(|error| {
+        UpdateError::Conflict(format!(
+            "update target cannot be opened as a no-follow directory {}: {error}",
+            target.display()
+        ))
+    })
+}
+
+fn capability_parent(
+    target: &Dir,
+    relative: &Path,
+    create_missing: bool,
+) -> Result<Option<(Dir, OsString)>, UpdateError> {
+    validate_update_relative(relative)?;
+    let file_name = relative
+        .file_name()
+        .ok_or_else(|| UpdateError::Input("update path has no file name".to_owned()))?
+        .to_os_string();
+    let parent = relative
+        .parent()
+        .ok_or_else(|| UpdateError::Input("update path has no parent".to_owned()))?;
+    let mut current = target.try_clone().map_err(|error| {
+        UpdateError::Internal(format!("cannot clone target capability: {error}"))
+    })?;
+    for component in parent.components() {
+        let name = component.as_os_str();
+        match current.symlink_metadata(name) {
+            Ok(metadata) if metadata.is_dir() && !metadata.file_type().is_symlink() => {}
+            Ok(_) => {
+                return Err(UpdateError::Conflict(format!(
+                    "update ancestor is not a no-follow directory: {}",
+                    relative.display()
+                )))
+            }
+            Err(error) if error.kind() == io::ErrorKind::NotFound && create_missing => {
+                current.create_dir(name).map_err(|error| {
+                    UpdateError::Conflict(format!(
+                        "cannot create update ancestor {}: {error}",
+                        relative.display()
+                    ))
+                })?;
+            }
+            Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(None),
+            Err(error) => {
+                return Err(UpdateError::Conflict(format!(
+                    "cannot inspect update ancestor {}: {error}",
+                    relative.display()
+                )))
+            }
+        }
+        current = current.open_dir_nofollow(name).map_err(|error| {
+            UpdateError::Conflict(format!(
+                "cannot open update ancestor {} no-follow: {error}",
+                relative.display()
+            ))
+        })?;
     }
+    Ok(Some((current, file_name)))
+}
+
+fn read_parent_file(parent: &Dir, file_name: &OsStr, maximum: u64) -> Result<Vec<u8>, UpdateError> {
+    let mut options = CapOpenOptions::new();
+    options.read(true).follow(FollowSymlinks::No);
+    let file = parent.open_with(file_name, &options).map_err(|error| {
+        UpdateError::Conflict(format!("cannot open target file no-follow: {error}"))
+    })?;
+    let metadata = file
+        .metadata()
+        .map_err(|error| UpdateError::Internal(format!("cannot inspect target file: {error}")))?;
+    if !metadata.is_file() || metadata.len() > maximum {
+        return Err(UpdateError::Conflict(
+            "target file is not a bounded regular file".to_owned(),
+        ));
+    }
+    let mut bytes = Vec::with_capacity(
+        usize::try_from(metadata.len())
+            .map_err(|_| UpdateError::Internal("target file is too large".to_owned()))?,
+    );
+    file.take(maximum.saturating_add(1))
+        .read_to_end(&mut bytes)
+        .map_err(|error| UpdateError::Internal(format!("cannot read target file: {error}")))?;
+    if bytes.len() as u64 != metadata.len() || bytes.len() as u64 > maximum {
+        return Err(UpdateError::Conflict(
+            "target file changed during read".to_owned(),
+        ));
+    }
+    Ok(bytes)
+}
+
+fn rebuild_index_in(target: &TargetRoot<'_>) -> Result<hive_wiki::IndexOutcome, UpdateError> {
+    let lock = Path::new(".hive/index/.knowledge.lock");
+    write_new_target_file(target, lock, b"update-index-rebuild\n")?;
+    let result = rebuild_index_while_locked(target);
+    let cleanup = remove_exact_regular_file(target, lock);
+    match (result, cleanup) {
+        (Ok(outcome), Ok(())) => Ok(outcome),
+        (Err(error), _) | (Ok(_), Err(error)) => Err(error),
+    }
+}
+
+fn rebuild_index_while_locked(
+    target: &TargetRoot<'_>,
+) -> Result<hive_wiki::IndexOutcome, UpdateError> {
+    let staging = tempfile::tempdir()
+        .map_err(|error| UpdateError::Internal(format!("cannot stage index rebuild: {error}")))?;
+    let staging_path = staging
+        .path()
+        .canonicalize()
+        .map_err(|error| UpdateError::Internal(format!("cannot pin staged index root: {error}")))?;
+    let staged_knowledge = staging_path.join(".hive/knowledge");
+    fs::create_dir_all(&staged_knowledge)
+        .map_err(|error| UpdateError::Internal(format!("cannot stage knowledge tree: {error}")))?;
+    if let Some((hive, knowledge_name)) =
+        capability_parent(target.dir, Path::new(".hive/knowledge"), false)?
+    {
+        match hive.symlink_metadata(&knowledge_name) {
+            Ok(metadata) if metadata.is_dir() && !metadata.file_type().is_symlink() => {
+                let knowledge = hive.open_dir_nofollow(&knowledge_name).map_err(|error| {
+                    UpdateError::Conflict(format!("cannot open knowledge tree no-follow: {error}"))
+                })?;
+                copy_capability_tree(&knowledge, &staged_knowledge, 0)?;
+            }
+            Ok(_) => {
+                return Err(UpdateError::Conflict(
+                    "knowledge root is not a no-follow directory".to_owned(),
+                ))
+            }
+            Err(error) if error.kind() == io::ErrorKind::NotFound => {}
+            Err(error) => {
+                return Err(UpdateError::Internal(format!(
+                    "cannot inspect knowledge root: {error}"
+                )))
+            }
+        }
+    }
+    let outcome = hive_wiki::rebuild_index(&staging_path).map_err(|error| {
+        UpdateError::Verification(format!("cannot rebuild disposable index: {error}"))
+    })?;
+    let bytes = fs::read(staging_path.join(".hive/index/hive.sqlite3"))
+        .map_err(|error| UpdateError::Internal(format!("cannot read staged index: {error}")))?;
+    write_atomic_relative(target, Path::new(".hive/index/hive.sqlite3"), &bytes)?;
+    for relative in [
+        ".hive/index/hive.sqlite3-wal",
+        ".hive/index/hive.sqlite3-shm",
+        ".hive/index/hive.sqlite3-journal",
+        ".hive/index/.stale",
+    ] {
+        remove_exact_regular_file(target, Path::new(relative))?;
+    }
+    Ok(outcome)
+}
+
+fn copy_capability_tree(source: &Dir, destination: &Path, depth: usize) -> Result<(), UpdateError> {
+    if depth > 32 {
+        return Err(UpdateError::Compatibility(
+            "knowledge tree exceeds the maximum directory depth".to_owned(),
+        ));
+    }
+    let mut entries = source
+        .entries()
+        .map_err(|error| {
+            UpdateError::Internal(format!("cannot enumerate knowledge tree: {error}"))
+        })?
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|error| UpdateError::Internal(format!("cannot read knowledge entry: {error}")))?;
+    entries.sort_by_key(cap_std::fs::DirEntry::file_name);
+    for entry in entries {
+        let name = entry.file_name();
+        let metadata = source.symlink_metadata(&name).map_err(|error| {
+            UpdateError::Internal(format!("cannot inspect knowledge entry: {error}"))
+        })?;
+        let staged = destination.join(&name);
+        if metadata.is_dir() && !metadata.file_type().is_symlink() {
+            fs::create_dir(&staged).map_err(|error| {
+                UpdateError::Internal(format!("cannot stage knowledge directory: {error}"))
+            })?;
+            let child = source.open_dir_nofollow(&name).map_err(|error| {
+                UpdateError::Conflict(format!(
+                    "cannot open knowledge directory no-follow: {error}"
+                ))
+            })?;
+            copy_capability_tree(&child, &staged, depth + 1)?;
+        } else if metadata.is_file() && !metadata.file_type().is_symlink() {
+            let bytes = read_parent_file(source, &name, MAX_BACKUP_FILE_BYTES)?;
+            fs::write(staged, bytes).map_err(|error| {
+                UpdateError::Internal(format!("cannot stage knowledge file: {error}"))
+            })?;
+        } else {
+            return Err(UpdateError::Conflict(
+                "knowledge tree contains a symlink or special entry".to_owned(),
+            ));
+        }
+    }
+    Ok(())
 }
 
 fn json_line(value: &impl Serialize, label: &str) -> Result<Vec<u8>, UpdateError> {
@@ -1936,6 +2305,31 @@ mod tests {
         journal
     }
 
+    fn snapshot_regular_files(root: &Path) -> BTreeMap<String, Vec<u8>> {
+        fn visit(root: &Path, relative: &Path, files: &mut BTreeMap<String, Vec<u8>>) {
+            let mut entries = fs::read_dir(root.join(relative))
+                .expect("snapshot directory")
+                .collect::<Result<Vec<_>, _>>()
+                .expect("snapshot entries");
+            entries.sort_by_key(std::fs::DirEntry::file_name);
+            for entry in entries {
+                let child = relative.join(entry.file_name());
+                let metadata = fs::symlink_metadata(entry.path()).expect("snapshot metadata");
+                if metadata.is_dir() {
+                    visit(root, &child, files);
+                } else if metadata.is_file() {
+                    files.insert(
+                        child.to_string_lossy().replace('\\', "/"),
+                        fs::read(entry.path()).expect("snapshot bytes"),
+                    );
+                }
+            }
+        }
+        let mut files = BTreeMap::new();
+        visit(root, Path::new(""), &mut files);
+        files
+    }
+
     #[test]
     fn transaction_id_is_deterministic_and_contains_no_path_data() {
         let digest = format!("sha256:{}", "a".repeat(64));
@@ -2139,6 +2533,164 @@ mod tests {
     }
 
     #[test]
+    fn pinned_recovery_uses_displaced_root_and_preserves_replacement() {
+        let temporary = tempfile::tempdir().expect("temporary");
+        let target = temporary.path().join("consumer");
+        let displaced = temporary.path().join("consumer-displaced");
+        fs::create_dir(&target).expect("target");
+        prepared_recovery_fixture(&target, b"after");
+        let target_dir = open_target_capability(&target).expect("target capability");
+        fs::rename(&target, &displaced).expect("displace target");
+        fs::create_dir(&target).expect("replacement target");
+        fs::write(target.join("sentinel"), b"replacement").expect("replacement sentinel");
+
+        recover_update_in(&target_dir).expect("pinned recovery");
+
+        assert_eq!(
+            fs::read(displaced.join(HARNESS_PATH)).expect("restored harness"),
+            b"before"
+        );
+        assert!(!displaced.join(JOURNAL_PATH).exists());
+        assert_eq!(
+            fs::read(target.join("sentinel")).expect("replacement sentinel"),
+            b"replacement"
+        );
+        assert_eq!(
+            fs::read_dir(&target).expect("replacement entries").count(),
+            1
+        );
+    }
+
+    #[test]
+    fn dry_run_requires_explicit_recovery_without_mutating_any_durable_bytes() {
+        let target = tempfile::tempdir().expect("target");
+        let target_path = target.path().canonicalize().expect("canonical target");
+        prepared_recovery_fixture(&target_path, b"after");
+        write_new_file(
+            &target_path.join(UPDATE_STATE_PATH),
+            b"{\"existing\":\"state\"}\n",
+        )
+        .expect("state");
+        write_new_file(
+            &target_path.join(".hive/index/hive.sqlite3"),
+            b"existing-index",
+        )
+        .expect("index");
+        let before = snapshot_regular_files(&target_path);
+        let fixture = release_fixture();
+        let root = fs::read(fixture.join("metadata/root.json")).expect("root");
+
+        let error = execute_update(&update_request(
+            &target_path,
+            &fixture,
+            &root,
+            UpdateMode::DryRun,
+        ))
+        .expect_err("dry-run must not recover");
+
+        assert!(matches!(error, UpdateError::RecoveryRequired(_)));
+        assert!(error.to_string().contains("recovery required"));
+        assert_eq!(snapshot_regular_files(&target_path), before);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn atomic_replace_syncs_the_containing_directory() {
+        let target = tempfile::tempdir().expect("target");
+        fs::create_dir_all(target.path().join(".hive/runtime")).expect("runtime directory");
+        let target_dir = open_target_capability(target.path()).expect("target capability");
+        let target_root = TargetRoot { dir: &target_dir };
+        DIRECTORY_SYNC_COUNT.with(|count| count.set(0));
+
+        write_atomic_relative(
+            &target_root,
+            Path::new(".hive/runtime/state.json"),
+            b"{\"state\":\"ready\"}\n",
+        )
+        .expect("atomic write");
+
+        assert_eq!(
+            fs::read(target.path().join(".hive/runtime/state.json")).expect("state bytes"),
+            b"{\"state\":\"ready\"}\n"
+        );
+        DIRECTORY_SYNC_COUNT.with(|count| assert_eq!(count.get(), 1));
+    }
+
+    #[test]
+    fn pinned_update_applies_to_displaced_root_without_touching_replacement() {
+        let temporary = tempfile::tempdir().expect("temporary");
+        let parent = temporary.path().canonicalize().expect("canonical parent");
+        let target = parent.join("consumer");
+        let displaced = parent.join("consumer-displaced");
+        fs::create_dir(&target).expect("target");
+        install_legacy_consumer(&target, "0.6.0");
+        let target_dir = open_target_capability(&target).expect("target capability");
+        fs::rename(&target, &displaced).expect("displace target");
+        fs::create_dir(&target).expect("replacement target");
+        fs::write(target.join("sentinel"), b"replacement").expect("replacement sentinel");
+        let fixture = release_fixture();
+        let root = fs::read(fixture.join("metadata/root.json")).expect("root");
+
+        execute_update_in(
+            &target_dir,
+            &update_request(&target, &fixture, &root, UpdateMode::Apply),
+        )
+        .expect("pinned apply");
+
+        assert_eq!(
+            fs::read(target.join("sentinel")).expect("replacement sentinel"),
+            b"replacement"
+        );
+        assert_eq!(
+            fs::read_dir(&target).expect("replacement entries").count(),
+            1
+        );
+        assert!(fs::read_to_string(displaced.join(HARNESS_PATH))
+            .expect("updated harness")
+            .contains("0.7.0"));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn pinned_update_rejects_replaced_ancestor_and_file_symlinks() {
+        use std::os::unix::fs::symlink;
+
+        for replace_file in [false, true] {
+            let temporary = tempfile::tempdir().expect("temporary");
+            let target = temporary.path().join("consumer");
+            fs::create_dir(&target).expect("target");
+            install_legacy_consumer(&target, "0.6.0");
+            let target_dir = open_target_capability(&target).expect("target capability");
+            let outside = temporary.path().join("outside");
+            fs::create_dir(&outside).expect("outside");
+            fs::write(outside.join("sentinel"), b"outside").expect("outside sentinel");
+            if replace_file {
+                let harness = target.join(HARNESS_PATH);
+                fs::rename(&harness, target.join(".hive/config/harness-real.toml"))
+                    .expect("displace harness");
+                symlink(outside.join("sentinel"), &harness).expect("replace harness");
+            } else {
+                let config = target.join(".hive/config");
+                fs::rename(&config, target.join(".hive/config-real")).expect("displace config");
+                symlink(&outside, &config).expect("replace config");
+            }
+            let fixture = release_fixture();
+            let root = fs::read(fixture.join("metadata/root.json")).expect("root");
+
+            let result = execute_update_in(
+                &target_dir,
+                &update_request(&target, &fixture, &root, UpdateMode::DryRun),
+            );
+
+            assert!(matches!(result, Err(UpdateError::Conflict(_))));
+            assert_eq!(
+                fs::read(outside.join("sentinel")).expect("outside sentinel"),
+                b"outside"
+            );
+        }
+    }
+
+    #[test]
     fn forged_recovery_path_is_rejected_without_touching_foreign_bytes() {
         let target = tempfile::tempdir().expect("target");
         let mut journal = prepared_recovery_fixture(target.path(), b"after");
@@ -2179,8 +2731,10 @@ mod tests {
         .expect("knowledge");
         write_new_file(&target.path().join(".hive/index/hive.sqlite3"), b"derived").expect("index");
         let transaction_id = format!("txn-{}", "a".repeat(24));
+        let target_dir = open_target_capability(target.path()).expect("target capability");
+        let target_root = TargetRoot { dir: &target_dir };
         let manifest = create_backup(
-            target.path(),
+            &target_root,
             &transaction_id,
             "0.6.0",
             "0.7.0",
@@ -2195,11 +2749,11 @@ mod tests {
             .iter()
             .all(|entry| !entry.path.starts_with(".hive/index/")));
         assert_eq!(
-            prune_expired_backups(target.path(), 1_000 + crate::BACKUP_RETENTION_SECONDS,),
+            prune_expired_backups_in(&target_root, 1_000 + crate::BACKUP_RETENTION_SECONDS,),
             0
         );
         assert_eq!(
-            prune_expired_backups(target.path(), 1_001 + crate::BACKUP_RETENTION_SECONDS,),
+            prune_expired_backups_in(&target_root, 1_001 + crate::BACKUP_RETENTION_SECONDS,),
             1
         );
         assert!(!target

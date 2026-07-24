@@ -1,6 +1,6 @@
 # Aigent Hive active plan index
 
-> Revision: 1.31
+> Revision: 1.32
 > 기준일: 2026-07-24
 > Product version: `0.7.0`
 > 현재 milestone: Phase 7 public qualification `0.8.0`
@@ -23,8 +23,8 @@
 | Phase 0–6 | 70 | 0 | 100% |
 | Phase 7 | 32 | 8 | 80% |
 | Documentation style | 4 | 1 | 80% |
-| Security review | 2 | 2 | 50% |
-| **Canonical total** | **108** | **11** | **90.8%** |
+| Security review | 4 | 0 | 100% |
+| **Canonical total** | **110** | **9** | **92.4%** |
 
 External production boundary 항목도 미완료 합계에 포함. Protected authority 없이 완료 처리 금지.
 

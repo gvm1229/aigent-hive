@@ -55,6 +55,7 @@ pub(crate) enum AdapterError {
     Input(String),
     Safety(String),
     Conflict(String),
+    UpdateRecoveryRequired(String),
     OwnerBlocked(String),
     Unsupported(String),
     OwnerUnsupported(String),
@@ -67,7 +68,7 @@ impl AdapterError {
     pub(crate) const fn status(&self) -> &'static str {
         match self {
             Self::Input(_) | Self::Internal(_) | Self::Rollback(_) => "error",
-            Self::Safety(_) | Self::OwnerBlocked(_) => "blocked",
+            Self::Safety(_) | Self::UpdateRecoveryRequired(_) | Self::OwnerBlocked(_) => "blocked",
             Self::Conflict(_) => "conflict",
             Self::Unsupported(_) | Self::OwnerUnsupported(_) => "unsupported",
             Self::Verification(_) => "verification-failed",
@@ -77,7 +78,10 @@ impl AdapterError {
     pub(crate) const fn exit_code(&self) -> u8 {
         match self {
             Self::Input(_) => 2,
-            Self::Safety(_) | Self::Conflict(_) | Self::OwnerBlocked(_) => 3,
+            Self::Safety(_)
+            | Self::Conflict(_)
+            | Self::UpdateRecoveryRequired(_)
+            | Self::OwnerBlocked(_) => 3,
             Self::Unsupported(_) | Self::OwnerUnsupported(_) => 4,
             Self::Verification(_) => 5,
             Self::Internal(_) | Self::Rollback(_) => 10,
@@ -89,6 +93,7 @@ impl AdapterError {
             Self::Input(_) => "hive.invalid-input",
             Self::Safety(_) => "hive.run-blocked",
             Self::Conflict(_) => "hive.run-conflict",
+            Self::UpdateRecoveryRequired(_) => "hive.update-recovery-required",
             Self::OwnerBlocked(_) => "hive.run-owner-drift",
             Self::Unsupported(_) => "hive.run-unsupported",
             Self::OwnerUnsupported(_) => "hive.run-owner-unsupported",
@@ -103,6 +108,7 @@ impl AdapterError {
             Self::Input(message)
             | Self::Safety(message)
             | Self::Conflict(message)
+            | Self::UpdateRecoveryRequired(message)
             | Self::OwnerBlocked(message)
             | Self::Unsupported(message)
             | Self::OwnerUnsupported(message)
@@ -168,6 +174,10 @@ impl PinnedTarget {
 
     pub(crate) fn requested_path(&self) -> &Path {
         &self.requested
+    }
+
+    pub(crate) fn target_dir(&self) -> &Dir {
+        &self.dir
     }
 
     pub(crate) fn read_optional(
