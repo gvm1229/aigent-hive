@@ -1325,6 +1325,7 @@ fn remove_validated_backup_in(
     for relative in directories {
         remove_exact_directory(target, &root_relative.join(relative))?;
     }
+    drop(root);
     remove_exact_directory(target, &root_relative)
 }
 
@@ -1726,17 +1727,20 @@ fn write_atomic_relative(
             relative.display()
         )));
     }
-    let mut read_options = CapOpenOptions::new();
-    read_options.read(true).follow(FollowSymlinks::No);
-    parent
-        .open_with(&file_name, &read_options)
-        .and_then(|file| file.sync_all())
-        .map_err(|error| {
-            UpdateError::Internal(format!(
-                "cannot sync atomic replacement {}: {error}",
-                relative.display()
-            ))
-        })?;
+    #[cfg(unix)]
+    {
+        let mut read_options = CapOpenOptions::new();
+        read_options.read(true).follow(FollowSymlinks::No);
+        parent
+            .open_with(&file_name, &read_options)
+            .and_then(|file| file.sync_all())
+            .map_err(|error| {
+                UpdateError::Internal(format!(
+                    "cannot sync atomic replacement {}: {error}",
+                    relative.display()
+                ))
+            })?;
+    }
     sync_capability_directory(&parent, relative)?;
     Ok(())
 }
@@ -2547,6 +2551,7 @@ mod tests {
         assert!(target.path().join(JOURNAL_PATH).exists());
     }
 
+    #[cfg(unix)]
     #[test]
     fn pinned_recovery_uses_displaced_root_and_preserves_replacement() {
         let temporary = tempfile::tempdir().expect("temporary");
@@ -2574,6 +2579,24 @@ mod tests {
             fs::read_dir(&target).expect("replacement entries").count(),
             1
         );
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn pinned_target_capability_blocks_ambient_replacement_while_open() {
+        let temporary = tempfile::tempdir().expect("temporary");
+        let target = temporary.path().join("consumer");
+        let displaced = temporary.path().join("consumer-displaced");
+        fs::create_dir(&target).expect("target");
+        let target_dir = open_target_capability(&target).expect("target capability");
+
+        fs::rename(&target, &displaced)
+            .expect_err("open Windows target capability should block replacement");
+        assert!(target.is_dir());
+        assert!(!displaced.exists());
+
+        drop(target_dir);
+        fs::rename(&target, &displaced).expect("rename after target capability release");
     }
 
     #[test]
@@ -2698,6 +2721,7 @@ mod tests {
         }
     }
 
+    #[cfg(unix)]
     #[test]
     fn pinned_update_applies_to_displaced_root_without_touching_replacement() {
         let temporary = tempfile::tempdir().expect("temporary");
