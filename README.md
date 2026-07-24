@@ -487,7 +487,7 @@ consumer update, rotation, candidate와 publication 절차는
 | 현재 범위 | Phase 1–6와 Phase 7 local qualification: verifier-only signed release, update/migration, backup/recovery, shipping one-shot usage gate, candidate/publication, direct/Homebrew/WinGet contract |
 | 검증된 Phase 6 | Ed25519/TUF threshold·rotation·rollback, semantic provenance/platform evidence, exact version classification, compiled migration, 7-day backup, journal recovery와 package ownership |
 | 남은 qualification | Phase 7 public qualification과 `0.8.x` release candidate evidence |
-| Active plan | [`docs/plans/PLAN.md`](docs/plans/PLAN.md) revision 1.32; canonical checklist `110/119` 완료, numbered fragment lazy load |
+| Active plan | [`docs/plans/PLAN.md`](docs/plans/PLAN.md) revision 1.33; canonical checklist `111/119` 완료, numbered fragment lazy load |
 | Handoff state | [`docs/state/CURRENT.md`](docs/state/CURRENT.md) |
 
 Semantic version `X.Y.Z`는 다음 원칙으로 변경.

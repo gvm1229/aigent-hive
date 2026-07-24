@@ -1,7 +1,7 @@
 # Aigent Hive active plan index
 
-> Revision: 1.32
-> 기준일: 2026-07-24
+> Revision: 1.33
+> 기준일: 2026-07-25
 > Product version: `0.7.0`
 > 현재 milestone: Phase 7 public qualification `0.8.0`
 > Entrypoint: `docs/plans/PLAN.md`
@@ -10,7 +10,7 @@
 
 - Objective: 로컬 실행 가능한 미완료 checklist 전부 완료, 전체 검증·독립 review, current-state 문서 동기화, `develop` commit·push
 - Success: active fragment의 로컬 항목 완료와 검증 증거, 외부 production 항목의 정확한 protected boundary 분류, clean remote CI
-- Stop boundary: protected credential, irreversible production publication, exact `1.0.0` authority, source usage guard remaining `20%`
+- Stop boundary: protected credential, irreversible production publication, exact `1.0.0` authority, source usage guard remaining `60%`
 - Invariants: provider-neutral, ownership·consent 보존, provider API·credential 경로 없음, force-push 없음, explicit-only major
 - Native Goal compatibility: 변경 불가 objective의 “unchecked item in `docs/plans/PLAN.md`”는 `PLAN.md` 내부 checkbox가 아니라 아래 `Active fragments`의 unchecked item을 뜻함
 
@@ -22,9 +22,9 @@
 | --- | ---: | ---: | ---: |
 | Phase 0–6 | 70 | 0 | 100% |
 | Phase 7 | 32 | 8 | 80% |
-| Documentation style | 4 | 1 | 80% |
+| Documentation style | 5 | 0 | 100% |
 | Security review | 4 | 0 | 100% |
-| **Canonical total** | **110** | **9** | **92.4%** |
+| **Canonical total** | **111** | **8** | **93.3%** |
 
 External production boundary 항목도 미완료 합계에 포함. Protected authority 없이 완료 처리 금지.
 

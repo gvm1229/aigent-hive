@@ -2,15 +2,14 @@
 
 - 기준 branch: `develop`
 - product version: `0.7.0`
-- plan revision: `1.32`
+- plan revision: `1.33`
 - 현재 milestone: Phase 7 public qualification `0.8.0`
-- 현재 작업: direct installer 안내 교정, 전체 재검증, 최종 독립 review,
-  `develop` push
+- 현재 작업: 검증 evidence 동기화, `develop` push, exact SHA remote CI
 - 외부 중지 경계: protected signing/publication credential, 실제 production publication,
   exact `1.0.0` 사용자 authority
 - Plan load: compact `docs/plans/PLAN.md` + `docs/plans/phases/07-public-qualification.md`
   + `docs/plans/active/documentation-style.md` + `docs/plans/active/security-review.md`
-- Plan completion: canonical checklist `110/119` 완료, `9`개 미완료, `92.4%`
+- Plan completion: canonical checklist `111/119` 완료, `8`개 미완료, `93.3%`
 - Native Goal routing: legacy `PLAN.md` checkbox 문구를 `phases/07-public-qualification.md`,
   `active/documentation-style.md`, `active/security-review.md`로 해석
 
@@ -67,8 +66,8 @@
 
 ### Local qualification evidence
 
-- `hive-cli`: 67/67
-- `hive-render`: 39/39
+- `hive-cli`: 68/68
+- `hive-render`: 44/44
 - Phase 7 usage-control conformance: 16/16
 - Phase 3 static·projection conformance: 45/45
 - Source usage guard: 17/17
@@ -83,7 +82,7 @@
 ## Source 개발 usage safeguard
 
 - Source-only `hive-usage-guard` Skill과 15초 CodexBar watcher
-- 현재 session threshold: remaining `20%` inclusive
+- 현재 session threshold: remaining `60%` inclusive
 - Session window 우선, session 부재 시 weekly fallback
 - 매 user turn과 tool·mutation·delegation·external write·push·final-answer 경계의 fresh
   `gate`
@@ -148,7 +147,7 @@ Source guard는 개발 workspace 전용. Shipping 제품은 watcher 없이 one-s
 ### Local evidence
 
 - SEC-001·SEC-003 staged snapshot: `hive-cli` 68/68, `hive-render` 44/44,
-  `hive-update` 42/42
+  `hive-update` 45/45
 - SEC-001·SEC-003 strict Clippy와 독립 재review: PASS
 - Phase 6 static·CLI conformance: 8/8
 - Phase 4 run lifecycle: Rust 10/10, Python 29/29
@@ -170,27 +169,30 @@ packaging을 추가한 backward-compatible feature minor. Major 변경·추론 �
 
 ## 현재 검증 상태
 
-Fresh targeted PASS:
+Exact clean HEAD local qualification PASS:
 
-- `cargo fmt --all -- --check`
-- `cargo test -p hive-cli --all-targets`: 68/68
-- `cargo test -p hive-render --all-targets`: 44/44
-- `cargo test -p hive-update --all-targets`: 42/42
-- `cargo clippy -p hive-cli -p hive-render -p hive-update --all-targets -- -D warnings`
-- Phase 3 static·projection: 45/45
-- Phase 6 update: 8/8
-- Phase 7 usage control: 16/16
-- Source usage guard·human style regression: 35/35
-- `scripts/check-release-version.sh 0.7.0`
+- Locked workspace build, `cargo fmt`, strict Clippy
+- Rust workspace test 236/236
+- Python conformance 480개 실행, 479 PASS, Windows `pwsh` 전용 1개 expected skip
+- Copier default host 3개, hostile 1개, invalid-hook 거부 3개, scaffold 4개
+- 사람용 문서 전수 disposition, allowlist 62/62, finding 0건
+- Markdown 133 files·125 links, 오류 0건
+- JSON 130개, YAML 28개, TOML 11개, shell 2개, workflow 3개 syntax
+- Product version `0.7.0`
+- Provider SDK·endpoint·credential access·live token finding 0건
+- Skill·template·compiled projection parity
+- 독립 architecture·code·completion verification PASS, actionable finding 0건
 
-진행 중:
+남은 local gate:
 
-- Direct installer publication asset 안내 교정
-- Workspace build·strict Clippy·full Rust test
-- Full Python conformance·Copier/hostile scaffold validation
-- Workflow YAML·shell·secret·diff 검증
-- 독립 code review·architecture review·completion verification
-- Commit·push 뒤 exact SHA의 clean-clone remote CI
+- PLAN·CURRENT·README evidence commit
+- `develop` push
+- Exact pushed SHA의 clean-clone remote CI
+
+검증 경계:
+
+- 로컬 Windows `pwsh` 부재에 따른 runtime test 1개 expected skip
+- Direct installer의 같은 owner parent handle-pinning race
 
 ## 남은 external production gate
 
@@ -203,9 +205,7 @@ Fresh targeted PASS:
 
 ## 다음 action
 
-1. Direct installer publication asset 안내 교정
-2. 전체 local qualification 실행
-3. 독립 최종 review finding 교정
-4. PLAN·CURRENT 최종 evidence 반영
-5. `develop` commit·push
-6. Exact pushed SHA의 GitHub Actions 확인
+1. PLAN·CURRENT·README evidence commit
+2. `develop` push
+3. Exact pushed SHA의 GitHub Actions 확인
+4. P7-040 completion evidence와 최종 plan state 반영
