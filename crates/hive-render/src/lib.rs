@@ -4513,19 +4513,20 @@ fn io_internal(error: io::Error) -> RenderError {
 
 #[cfg(test)]
 mod tests {
+    #[cfg(unix)]
+    use super::execute_setup_in;
     use super::{
         activate_staged_impl, authorize_hook, authorize_hook_with_resolution,
         calculate_consent_digest, capability_detection, derive_resolution, encode_role,
-        execute_setup, execute_setup_in, expected_external_runtime, hook_descriptor_bytes,
-        installed_tree_digest, load_answers, load_resolution, merge_shared_marker,
-        mutate_exact_projection_claimed, open_target_capability, parse_role,
-        prepare_projection_transition, render_agents_marker, render_tree,
-        replace_capability_file_impl, shared_marker_foreign_digest, update_path_is_owned,
-        valid_digest, valid_role_id, valid_timestamp, validate_hook_approvals,
-        validate_owned_paths, validate_skill_approvals, ActivationFault, CapabilityEvidence,
-        CapabilityResolution, ExactProjectionMutation, HookApproval, HookAuthorization,
-        ProjectionCleanupFault, ReplacePolicy, RoleProfile, RoleSeed, SetupAnswers, SetupMode,
-        SetupRequest, SkillApproval, ValidatedProjectionOwnership,
+        execute_setup, expected_external_runtime, hook_descriptor_bytes, installed_tree_digest,
+        load_answers, load_resolution, merge_shared_marker, mutate_exact_projection_claimed,
+        open_target_capability, parse_role, prepare_projection_transition, render_agents_marker,
+        render_tree, replace_capability_file_impl, shared_marker_foreign_digest,
+        update_path_is_owned, valid_digest, valid_role_id, valid_timestamp,
+        validate_hook_approvals, validate_owned_paths, validate_skill_approvals, ActivationFault,
+        CapabilityEvidence, CapabilityResolution, ExactProjectionMutation, HookApproval,
+        HookAuthorization, ProjectionCleanupFault, ReplacePolicy, RoleProfile, RoleSeed,
+        SetupAnswers, SetupMode, SetupRequest, SkillApproval, ValidatedProjectionOwnership,
         FRESH_CAPABILITY_RESOLUTION_PATH, MARKER_END, MARKER_START,
     };
     use hive_core::{sha256_digest, validate_project_relative};
