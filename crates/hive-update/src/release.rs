@@ -545,8 +545,20 @@ pub struct PlatformSigningEvidenceEntry {
     pub artifact_digest: String,
     /// `developer-id` or `authenticode`.
     pub scheme: String,
+    /// Public signer identity authorized by the release metadata.
+    pub signer: PlatformSignerIdentity,
     /// Protected verifier result.
     pub status: String,
+}
+
+/// Platform-specific public signer identity.
+#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct PlatformSignerIdentity {
+    /// `apple-team-id` or `authenticode-certificate-thumbprint`.
+    pub kind: String,
+    /// Exact public identity emitted by the protected platform verifier.
+    pub value: String,
 }
 
 /// Closed in-toto statement subset accepted by Hive.
@@ -1300,6 +1312,7 @@ fn validate_platform_signing_evidence(
 ) -> Result<(), UpdateError> {
     let mut platforms = BTreeSet::new();
     let mut paths = BTreeSet::new();
+    let mut signers = BTreeMap::new();
     let entries_valid = evidence.schema_version == 1
         && evidence.evidence.len() >= 2
         && evidence.evidence.iter().all(|entry| {
@@ -1322,9 +1335,35 @@ fn validate_platform_signing_evidence(
                 }
                 EvidenceRequirement::Production => entry.status == "verified",
             };
+            let signer_valid = match entry.platform.as_str() {
+                "macos" => {
+                    entry.signer.kind == "apple-team-id"
+                        && entry.signer.value.len() == 10
+                        && entry
+                            .signer
+                            .value
+                            .bytes()
+                            .all(|byte| byte.is_ascii_uppercase() || byte.is_ascii_digit())
+                }
+                "windows" => {
+                    entry.signer.kind == "authenticode-certificate-thumbprint"
+                        && entry.signer.value.len() == 40
+                        && entry
+                            .signer
+                            .value
+                            .bytes()
+                            .all(|byte| byte.is_ascii_digit() || (b'A'..=b'F').contains(&byte))
+                }
+                _ => false,
+            };
+            let signer_consistent = signers
+                .insert(entry.platform.as_str(), entry.signer.value.as_str())
+                .is_none_or(|prior| prior == entry.signer.value);
             expected_scheme == entry.scheme
                 && path_valid
                 && is_sha256_digest(&entry.artifact_digest)
+                && signer_valid
+                && signer_consistent
                 && status_valid
         });
     let production_artifacts_valid = requirement != EvidenceRequirement::Production
@@ -2088,7 +2127,7 @@ mod tests {
     }
 
     #[test]
-    fn platform_evidence_requires_correct_scheme_unique_paths_and_production_status() {
+    fn platform_evidence_requires_authorized_signer_scheme_paths_and_production_status() {
         let fixture = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join(
             "../../tests/fixtures/phase6/releases/valid-0.7.0/targets/platform-signing-evidence.json",
         );
@@ -2102,11 +2141,56 @@ mod tests {
             EvidenceRequirement::Production
         )
         .is_err());
+        let mut wrong_signer = evidence.evidence[0].clone();
+        wrong_signer.artifact_path = "bin/hive-intel".to_owned();
+        wrong_signer.signer.value = "OTHER12345".to_owned();
+        evidence.evidence.push(wrong_signer);
+        assert!(
+            validate_platform_signing_evidence(&evidence, &[], EvidenceRequirement::Integrity)
+                .is_err()
+        );
+        evidence.evidence.pop();
         evidence.evidence[0].scheme = "authenticode".to_owned();
         assert!(
             validate_platform_signing_evidence(&evidence, &[], EvidenceRequirement::Integrity)
                 .is_err()
         );
+        evidence.evidence[0].scheme = "developer-id".to_owned();
+        evidence.evidence[0].signer.kind = "authenticode-certificate-thumbprint".to_owned();
+        assert!(
+            validate_platform_signing_evidence(&evidence, &[], EvidenceRequirement::Integrity)
+                .is_err()
+        );
+    }
+
+    #[test]
+    fn tuf_rejects_a_well_formed_but_unauthorized_platform_signer() {
+        let fixture = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../../tests/fixtures/phase6/releases/valid-0.7.0");
+        let temporary = tempfile::tempdir().expect("temporary release");
+        copy_tree(&fixture, temporary.path());
+        let root = fs::read(temporary.path().join("metadata/root.json")).expect("trusted root");
+        let target = temporary
+            .path()
+            .join("targets/platform-signing-evidence.json");
+        let mut evidence: serde_json::Value =
+            serde_json::from_slice(&fs::read(&target).expect("evidence")).expect("JSON");
+        evidence["evidence"][0]["signer"]["value"] =
+            serde_json::Value::String("OTHER12345".to_owned());
+        fs::write(
+            target,
+            serde_json::to_vec(&evidence).expect("serialize evidence"),
+        )
+        .expect("write tampered evidence");
+        assert!(matches!(
+            verify_release_repository(
+                &root,
+                temporary.path(),
+                parse_iso8601_z("2026-07-24T00:00:00Z").expect("clock"),
+                None,
+            ),
+            Err(UpdateError::Verification(_))
+        ));
     }
 
     #[test]

@@ -60,10 +60,12 @@ jobs:
           APPLE_CERTIFICATE_P12_BASE64: ${{ secrets.APPLE_CERTIFICATE_P12_BASE64 }}
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
           APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
           test -n "$APPLE_CERTIFICATE_P12_BASE64"
           test -n "$APPLE_CERTIFICATE_PASSWORD"
           test -n "$APPLE_SIGNING_IDENTITY"
+          test -n "$APPLE_TEAM_ID"
           keychain="$RUNNER_TEMP/aigent-hive-signing.keychain-db"
           security create-keychain -p "$RUNNER_TEMP" "$keychain"
           security unlock-keychain -p "$RUNNER_TEMP" "$keychain"
@@ -79,6 +81,10 @@ jobs:
             "target/$TARGET/release/hive"
           codesign --verify --strict --verbose=2 \
             "target/$TARGET/release/hive"
+          actual_team_id=$(codesign -dv --verbose=4 \
+            "target/$TARGET/release/hive" 2>&1 \
+            | awk -F= '$1 == "TeamIdentifier" { print $2 }')
+          test "$actual_team_id" = "$APPLE_TEAM_ID"
           rm -f "$RUNNER_TEMP/signing.p12"
       - name: Package and notarize direct-distribution archive
         env:
@@ -101,7 +107,8 @@ jobs:
           printf '%s  %s\n' "$digest" "$package.tar.gz" >"$package.tar.gz.sha256"
           jq -n --arg artifact_path "targets/$package.tar.gz" \
             --arg artifact_digest "sha256:$digest" \
-            '{platform:"macos",artifact_path:$artifact_path,artifact_digest:$artifact_digest,scheme:"developer-id",status:"verified"}' \
+            --arg signer "$APPLE_TEAM_ID" \
+            '{platform:"macos",artifact_path:$artifact_path,artifact_digest:$artifact_digest,scheme:"developer-id",signer:{kind:"apple-team-id",value:$signer},status:"verified"}' \
             >"$package.tar.gz.platform-evidence.json"
       - name: Generate GitHub artifact attestation
         id: attestation
@@ -175,13 +182,24 @@ jobs:
           timestamp-digest: SHA256
       - name: Verify and package Authenticode binary
         shell: pwsh
+        env:
+          AUTHORIZED_SIGNER_THUMBPRINT: ${{ vars.ARTIFACT_SIGNING_CERTIFICATE_THUMBPRINT }}
         run: |
           $version = $env:VERSION
           $triple = "x86_64-pc-windows-msvc"
           $package = "aigent-hive-$version-$triple"
           $binary = "target\$triple\release\hive.exe"
-          if ((Get-AuthenticodeSignature $binary).Status -ne "Valid") {
+          $signature = Get-AuthenticodeSignature $binary
+          if ($signature.Status -ne "Valid") {
             throw "Authenticode verification failed"
+          }
+          $authorizedThumbprint = $env:AUTHORIZED_SIGNER_THUMBPRINT.ToUpperInvariant()
+          $thumbprint = $signature.SignerCertificate.Thumbprint.ToUpperInvariant()
+          if (
+            $authorizedThumbprint -notmatch '^[0-9A-F]{40}$' -or
+            $thumbprint -ne $authorizedThumbprint
+          ) {
+            throw "Authenticode signer differs from the authorized release identity"
           }
           New-Item -ItemType Directory -Path $package | Out-Null
           Copy-Item $binary "$package\hive.exe"
@@ -194,6 +212,10 @@ jobs:
             artifact_path = "targets/$package.zip"
             artifact_digest = "sha256:$hash"
             scheme = "authenticode"
+            signer = [ordered]@{
+              kind = "authenticode-certificate-thumbprint"
+              value = $thumbprint
+            }
             status = "verified"
           } | ConvertTo-Json -Compress | Set-Content `
             "$package.zip.platform-evidence.json" -Encoding utf8NoBOM

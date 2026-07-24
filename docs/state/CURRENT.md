@@ -2,7 +2,7 @@
 
 - 기준 branch: `develop`
 - product version: `0.7.0`
-- plan revision: `1.30`
+- plan revision: `1.31`
 - 현재 milestone: Phase 7 public qualification `0.8.0`
 - 현재 작업: 독립 security review finding 교정, 문서 semantic review, 전체 재검증,
   `develop` commit·push
@@ -10,7 +10,7 @@
   exact `1.0.0` 사용자 authority
 - Plan load: compact `docs/plans/PLAN.md` + `docs/plans/phases/07-public-qualification.md`
   + `docs/plans/active/documentation-style.md` + `docs/plans/active/security-review.md`
-- Plan completion: canonical checklist `106/119` 완료, `13`개 미완료, `89.1%`
+- Plan completion: canonical checklist `108/119` 완료, `11`개 미완료, `90.8%`
 - Native Goal routing: legacy `PLAN.md` checkbox 문구를 `phases/07-public-qualification.md`,
   `active/documentation-style.md`, `active/security-review.md`로 해석
 

@@ -6,7 +6,10 @@ from __future__ import annotations
 import json
 import os
 import re
+import shutil
 import subprocess
+import sys
+import tempfile
 import tomllib
 import unittest
 from pathlib import Path
@@ -14,11 +17,13 @@ from typing import Any
 
 import yaml
 from jsonschema import Draft202012Validator, FormatChecker
+from jsonschema.exceptions import ValidationError
 
 
 ROOT = Path(__file__).resolve().parents[2]
 SCHEMAS = ROOT / "schemas"
 RELEASE_FIXTURE = ROOT / "tests/fixtures/phase6/releases/valid-0.7.0"
+WRONG_SIGNERS = ROOT / "tests/fixtures/phase6/platform-signers/wrong-valid-signers.json"
 DIGEST = "sha256:" + "0" * 64
 
 
@@ -91,6 +96,15 @@ class Phase6StaticContracts(unittest.TestCase):
                 RELEASE_FIXTURE / "targets/platform-signing-evidence.json"
             ),
         )
+        wrong_signer = read_json(
+            RELEASE_FIXTURE / "targets/platform-signing-evidence.json"
+        )
+        wrong_signer["evidence"][0]["signer"] = {
+            "kind": "authenticode-certificate-thumbprint",
+            "value": "A" * 40,
+        }
+        with self.assertRaises(ValidationError):
+            validate("platform-signing-evidence.schema.json", wrong_signer)
         validate(
             "backup-manifest.schema.json",
             {
@@ -168,14 +182,21 @@ class Phase6StaticContracts(unittest.TestCase):
         )
 
     def test_release_fixture_contains_public_material_only(self) -> None:
-        for path in RELEASE_FIXTURE.rglob("*"):
-            if not path.is_file():
-                continue
-            text = path.read_text(encoding="utf-8").casefold()
-            self.assertNotIn("private_key", text, path)
-            self.assertNotIn("secret_key", text, path)
-            self.assertNotIn("signing_seed", text, path)
-            self.assertNotIn("begin private key", text, path)
+        for fixture_root in (RELEASE_FIXTURE, WRONG_SIGNERS.parent):
+            for path in fixture_root.rglob("*"):
+                if not path.is_file():
+                    continue
+                text = path.read_text(encoding="utf-8").casefold()
+                self.assertNotIn("private_key", text, path)
+                self.assertNotIn("secret_key", text, path)
+                self.assertNotIn("signing_seed", text, path)
+                self.assertNotIn("begin private key", text, path)
+        wrong_signers = read_json(WRONG_SIGNERS)
+        self.assertRegex(wrong_signers["macos"]["team_id"], r"^[A-Z0-9]{10}$")
+        self.assertRegex(
+            wrong_signers["windows"]["certificate_thumbprint"],
+            r"^[0-9A-F]{40}$",
+        )
         cargo = (ROOT / "Cargo.toml").read_text(encoding="utf-8")
         self.assertIn('ed25519-dalek = { version = "=3.0.0", default-features = false }', cargo)
         update_source = "\n".join(
@@ -200,6 +221,9 @@ class Phase6StaticContracts(unittest.TestCase):
             "codesign --verify --strict",
             "notarytool submit",
             "azure/artifact-signing-action@",
+            "ARTIFACT_SIGNING_CERTIFICATE_THUMBPRINT",
+            "apple-team-id",
+            "authenticode-certificate-thumbprint",
             "actions/attest@",
             "release-signing",
         ):
@@ -213,6 +237,10 @@ class Phase6StaticContracts(unittest.TestCase):
             'test "$authorized_sha" = "$CANDIDATE_SHA"',
             "gh attestation verify",
             "platform-signing-evidence.canonical.json",
+            "__AIGENT_HIVE_APPLE_TEAM_ID__",
+            "__AIGENT_HIVE_WINDOWS_CERTIFICATE_THUMBPRINT__",
+            "dist/install.sh",
+            "dist/install.ps1",
             'cmp "$artifact"',
             "release-publication",
             "gh release create",
@@ -264,6 +292,20 @@ class Phase6StaticContracts(unittest.TestCase):
         self.assertIn("release archive contains an unexpected path", shell)
         self.assertIn("existing hive binary is not owned by the direct installer", shell)
         self.assertIn("Get-AuthenticodeSignature", powershell)
+        self.assertIn(
+            '__AIGENT_HIVE_WINDOWS_CERTIFICATE_THUMBPRINT__',
+            powershell,
+        )
+        self.assertIn("__AIGENT_HIVE_APPLE_TEAM_ID__", shell)
+        self.assertNotIn("AIGENT_HIVE_MACOS_TEAM_ID", shell)
+        self.assertIn("TeamIdentifier", shell)
+        self.assertIn("SignerCertificate.Thumbprint", powershell)
+        parameter_block = re.search(
+            r"(?s)^param\((.*?)\)\n\n\$ErrorActionPreference",
+            powershell,
+        )
+        self.assertIsNotNone(parameter_block)
+        self.assertNotIn("AuthorizedSigner", parameter_block.group(1))
         self.assertIn("[IO.Compression.ZipFile]::OpenRead", powershell)
         self.assertIn(
             "existing hive binary is not owned by the direct installer",
@@ -276,7 +318,14 @@ class Phase6StaticContracts(unittest.TestCase):
         self.assertIn('[ "$parsed_digest" = "$owned_digest" ]', shell)
         self.assertIn('verify_owned_pair "$prefix/bin/hive" "$receipt"', shell)
         self.assertIn("Compare-Object $expectedProperties $actualProperties", powershell)
-        self.assertIn("Get-FileHash -LiteralPath $destination", powershell)
+        self.assertIn(
+            "if ($null -eq $destinationItem -or $null -eq $receiptItem)",
+            powershell,
+        )
+        self.assertIn("$destinationItem.PSIsContainer", powershell)
+        self.assertIn("$receiptItem.PSIsContainer", powershell)
+        self.assertIn("[IO.FileAttributes]::ReparsePoint", powershell)
+        self.assertIn("Get-FileHash -LiteralPath $Destination", powershell)
         self.assertIn(
             '$priorReceipt.artifact_sha256 -ne "sha256:$priorDigest"',
             powershell,
@@ -293,6 +342,248 @@ class Phase6StaticContracts(unittest.TestCase):
             self.assertIn("Homebrew", text)
             self.assertIn("WinGet", text)
             self.assertNotIn("curl ", text)
+
+    def test_macos_installer_rejects_valid_signature_from_wrong_team(self) -> None:
+        wrong_team = read_json(WRONG_SIGNERS)["macos"]["team_id"]
+        self.assertRegex(wrong_team, r"^[A-Z0-9]{10}$")
+        source = (ROOT / "scripts/install.sh").read_text(encoding="utf-8")
+        rendered = source.replace(
+            "__AIGENT_HIVE_APPLE_TEAM_ID__",
+            "FIXTURE123",
+        )
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            installer = root / "install.sh"
+            installer.write_text(rendered, encoding="utf-8")
+            installer.chmod(0o755)
+            commands = root / "commands"
+            commands.mkdir()
+            mocks = {
+                "uname": """#!/bin/sh
+if [ "$1" = "-s" ]; then printf 'Darwin\\n'; else printf 'arm64\\n'; fi
+""",
+                "curl": """#!/bin/sh
+while [ "$#" -gt 0 ]; do
+  if [ "$1" = "--output" ]; then shift; output=$1; fi
+  shift
+done
+case "$output" in
+  *.sha256) printf '%064d  archive\\n' 0 >"$output" ;;
+  *) : >"$output" ;;
+esac
+""",
+                "shasum": """#!/bin/sh
+printf '%064d  artifact\\n' 0
+""",
+                "tar": """#!/bin/sh
+case "$1" in
+  -tzf) printf 'aigent-hive-0.7.0-aarch64-apple-darwin/hive\\naigent-hive-0.7.0-aarch64-apple-darwin/LICENSE\\n' ;;
+  -tvzf) printf '%s\\n%s\\n' '-rwxr-xr-x 0/0 1 1980-01-01 00:00 aigent-hive-0.7.0-aarch64-apple-darwin/hive' '-rw-r--r-- 0/0 1 1980-01-01 00:00 aigent-hive-0.7.0-aarch64-apple-darwin/LICENSE' ;;
+  -xzf)
+    while [ "$#" -gt 0 ]; do
+      if [ "$1" = "-C" ]; then shift; destination=$1; fi
+      shift
+    done
+    package="$destination/aigent-hive-0.7.0-aarch64-apple-darwin"
+    mkdir -p "$package"
+    printf '%s\\n' '#!/bin/sh' 'printf \"hive 0.7.0\\\\n\"' >"$package/hive"
+    chmod 0755 "$package/hive"
+    : >"$package/LICENSE"
+    ;;
+esac
+""",
+                "codesign": f"""#!/bin/sh
+case "$1" in
+  -dv) printf 'TeamIdentifier={wrong_team}\\n' >&2 ;;
+esac
+""",
+                "spctl": "#!/bin/sh\nexit 0\n",
+            }
+            for name, contents in mocks.items():
+                path = commands / name
+                path.write_text(contents, encoding="utf-8")
+                path.chmod(0o755)
+            environment = os.environ.copy()
+            environment.update(
+                {
+                    "AIGENT_HIVE_VERSION": "0.7.0",
+                    "AIGENT_HIVE_PREFIX": str(root / "prefix"),
+                    "PATH": f"{commands}{os.pathsep}{environment['PATH']}",
+                }
+            )
+            result = subprocess.run(
+                [str(installer)],
+                cwd=ROOT,
+                env=environment,
+                check=False,
+                text=True,
+                capture_output=True,
+            )
+        self.assertEqual(result.returncode, 5, result)
+        self.assertIn(
+            "signed binary signer differs from the authorized release identity",
+            result.stderr,
+        )
+
+    def test_windows_ownership_function_executes_when_pwsh_is_available(self) -> None:
+        pwsh = shutil.which("pwsh")
+        if pwsh is None or sys.platform != "win32":
+            self.skipTest("Windows pwsh is unavailable on this host")
+        command = r"""
+$errors = $null
+$tokens = $null
+$ast = [Management.Automation.Language.Parser]::ParseFile(
+    $env:HIVE_INSTALLER_PATH,
+    [ref]$tokens,
+    [ref]$errors
+)
+if ($errors.Count -ne 0) { throw ($errors | Out-String) }
+foreach ($name in @(
+    "Assert-ExistingDirectInstall",
+    "Assert-AuthorizedAuthenticodeSignature"
+)) {
+    $function = $ast.Find(
+        {
+            param($node)
+            $node -is [Management.Automation.Language.FunctionDefinitionAst] -and
+            $node.Name -eq $name
+        },
+        $true
+    )
+    if ($null -eq $function) { throw "installer validation function missing: $name" }
+    Invoke-Expression $function.Extent.Text
+}
+$wrongSignature = [pscustomobject]@{
+    Status = "Valid"
+    SignerCertificate = [pscustomobject]@{
+        Thumbprint = $env:HIVE_WRONG_WINDOWS_THUMBPRINT
+    }
+}
+try {
+    Assert-AuthorizedAuthenticodeSignature `
+        -Signature $wrongSignature `
+        -AuthorizedThumbprint "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+    throw "wrong Authenticode signer was accepted"
+} catch {
+    if ($_.Exception.Message -eq "wrong Authenticode signer was accepted") { throw }
+}
+$root = Join-Path ([IO.Path]::GetTempPath()) ("hive-owner-" + [Guid]::NewGuid())
+New-Item -ItemType Directory -Path $root | Out-Null
+function Assert-Rejected {
+    param(
+        [Parameter(Mandatory = $true)]
+        [scriptblock]$Operation,
+        [Parameter(Mandatory = $true)]
+        [string]$Label
+    )
+    try {
+        & $Operation
+        throw "$Label was accepted"
+    } catch {
+        if ($_.Exception.Message -eq "$Label was accepted") { throw }
+    }
+}
+try {
+    $binary = Join-Path $root "hive.exe"
+    $receipt = Join-Path $root "install-receipt.json"
+    Assert-ExistingDirectInstall -Destination $binary -ReceiptPath $receipt
+    Set-Content -LiteralPath $receipt -Value "{}" -Encoding utf8NoBOM
+    Assert-Rejected -Label "receipt-only state" -Operation {
+        Assert-ExistingDirectInstall -Destination $binary -ReceiptPath $receipt
+    }
+    Remove-Item -LiteralPath $receipt
+    Set-Content -LiteralPath $binary -Value "not an executable" -Encoding utf8NoBOM
+    Assert-Rejected -Label "binary-only state" -Operation {
+        Assert-ExistingDirectInstall -Destination $binary -ReceiptPath $receipt
+    }
+    Remove-Item -LiteralPath $binary
+    New-Item -ItemType Directory -Path $binary, $receipt | Out-Null
+    Assert-Rejected -Label "nonregular state" -Operation {
+        Assert-ExistingDirectInstall -Destination $binary -ReceiptPath $receipt
+    }
+    Remove-Item -LiteralPath $binary, $receipt -Recurse -Force
+    $executionMarker = Join-Path $root "ownership-probe-executed"
+    $env:HIVE_EXECUTION_MARKER = $executionMarker
+    Add-Type -TypeDefinition @"
+using System;
+using System.IO;
+public static class HiveOwnershipProbe {
+    public static int Main(string[] args) {
+        File.WriteAllText(
+            Environment.GetEnvironmentVariable("HIVE_EXECUTION_MARKER"),
+            "executed"
+        );
+        Console.WriteLine("hive 0.7.0");
+        return 0;
+    }
+}
+"@ -OutputAssembly $binary -OutputType ConsoleApplication
+    Set-Content -LiteralPath $receipt -Value "{}" -Encoding utf8NoBOM
+    Assert-Rejected -Label "malformed receipt" -Operation {
+        Assert-ExistingDirectInstall -Destination $binary -ReceiptPath $receipt
+    }
+    if (Test-Path -LiteralPath $executionMarker) {
+        throw "malformed receipt executed the unowned binary"
+    }
+    @{
+        schema_version = 1
+        owner = "direct"
+        product = "aigent-hive"
+        version = "0.7.0"
+        artifact_sha256 = "sha256:" + ("0" * 64)
+    } | ConvertTo-Json -Compress | Set-Content -LiteralPath $receipt -Encoding utf8NoBOM
+    Assert-Rejected -Label "mismatched receipt" -Operation {
+        Assert-ExistingDirectInstall -Destination $binary -ReceiptPath $receipt
+    }
+    if (Test-Path -LiteralPath $executionMarker) {
+        throw "mismatched receipt executed the unowned binary"
+    }
+    Remove-Item -LiteralPath $binary, $receipt
+    $targetDirectory = Join-Path $root "reparse-target"
+    New-Item -ItemType Directory -Path $targetDirectory | Out-Null
+    $binaryLink = New-Item `
+        -ItemType Junction `
+        -Path $binary `
+        -Target $targetDirectory `
+        -ErrorAction Stop
+    if (-not ($binaryLink.Attributes -band [IO.FileAttributes]::ReparsePoint)) {
+        throw "binary junction is not a reparse point"
+    }
+    Set-Content -LiteralPath $receipt -Value "{}" -Encoding utf8NoBOM
+    Assert-Rejected -Label "binary reparse-point state" -Operation {
+        Assert-ExistingDirectInstall -Destination $binary -ReceiptPath $receipt
+    }
+    Remove-Item -LiteralPath $binary, $receipt -Force
+    Set-Content -LiteralPath $binary -Value "not an executable" -Encoding utf8NoBOM
+    $receiptLink = New-Item `
+        -ItemType Junction `
+        -Path $receipt `
+        -Target $targetDirectory `
+        -ErrorAction Stop
+    if (-not ($receiptLink.Attributes -band [IO.FileAttributes]::ReparsePoint)) {
+        throw "receipt junction is not a reparse point"
+    }
+    Assert-Rejected -Label "receipt reparse-point state" -Operation {
+        Assert-ExistingDirectInstall -Destination $binary -ReceiptPath $receipt
+    }
+} finally {
+    Remove-Item -LiteralPath $root -Recurse -Force
+}
+"""
+        environment = os.environ.copy()
+        environment["HIVE_INSTALLER_PATH"] = str(ROOT / "scripts/install.ps1")
+        environment["HIVE_WRONG_WINDOWS_THUMBPRINT"] = read_json(
+            WRONG_SIGNERS
+        )["windows"]["certificate_thumbprint"]
+        result = subprocess.run(
+            [pwsh, "-NoProfile", "-NonInteractive", "-Command", command],
+            cwd=ROOT,
+            env=environment,
+            check=False,
+            text=True,
+            capture_output=True,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
 
     def test_release_shell_entrypoints_are_executable_and_reject_bad_versions(self) -> None:
         for relative in ("scripts/check-release-version.sh", "scripts/install.sh"):

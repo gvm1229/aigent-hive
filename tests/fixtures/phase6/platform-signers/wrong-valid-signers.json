@@ -1,0 +1,10 @@
+{
+  "macos": {
+    "status": "valid",
+    "team_id": "OTHER12345"
+  },
+  "windows": {
+    "status": "Valid",
+    "certificate_thumbprint": "BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB"
+  }
+}

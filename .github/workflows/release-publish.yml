@@ -193,6 +193,48 @@ jobs:
             >signed-repository/platform-signing-evidence.canonical.json
           cmp dist/platform-signing-evidence.canonical.json \
             signed-repository/platform-signing-evidence.canonical.json
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          evidence = json.loads(
+              Path("signed-repository/targets/platform-signing-evidence.json").read_text()
+          )["evidence"]
+          mac = {
+              entry["signer"]["value"]
+              for entry in evidence
+              if entry["platform"] == "macos"
+              and entry["signer"]["kind"] == "apple-team-id"
+          }
+          windows = {
+              entry["signer"]["value"]
+              for entry in evidence
+              if entry["platform"] == "windows"
+              and entry["signer"]["kind"] == "authenticode-certificate-thumbprint"
+          }
+          if len(mac) != 1 or len(windows) != 1:
+              raise SystemExit("signed release does not authorize one identity per platform")
+          replacements = (
+              (
+                  Path("scripts/install.sh"),
+                  Path("dist/install.sh"),
+                  "__AIGENT_HIVE_APPLE_TEAM_ID__",
+                  next(iter(mac)),
+              ),
+              (
+                  Path("scripts/install.ps1"),
+                  Path("dist/install.ps1"),
+                  "__AIGENT_HIVE_WINDOWS_CERTIFICATE_THUMBPRINT__",
+                  next(iter(windows)),
+              ),
+          )
+          for source, destination, marker, value in replacements:
+              rendered = source.read_text()
+              if rendered.count(marker) != 1:
+                  raise SystemExit(f"installer signer marker is invalid: {source}")
+              destination.write_text(rendered.replace(marker, value))
+          PY
+          chmod 0755 dist/install.sh
       - name: Refuse an existing tag or release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -215,6 +257,8 @@ jobs:
           git tag --annotate "v$version" --message "Aigent Hive v$version" "$sha"
           git push origin "refs/tags/v$version"
           gh release create "v$version" \
+            dist/install.sh \
+            dist/install.ps1 \
             dist/aigent-hive-*.tar.gz \
             dist/aigent-hive-*.tar.gz.sha256 \
             dist/aigent-hive-*.tar.gz.sigstore.json \

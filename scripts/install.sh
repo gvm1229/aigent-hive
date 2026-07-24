@@ -3,6 +3,7 @@ set -eu
 
 version=${AIGENT_HIVE_VERSION:-}
 prefix=${AIGENT_HIVE_PREFIX:-/usr/local}
+authorized_team_id='__AIGENT_HIVE_APPLE_TEAM_ID__'
 
 if [ -z "$version" ]; then
   echo "set AIGENT_HIVE_VERSION to an exact released X.Y.Z" >&2
@@ -24,6 +25,16 @@ fi
 if [ "$(uname -s)" != "Darwin" ]; then
   echo "this bootstrap supports macOS only; use install.ps1 on Windows" >&2
   exit 4
+fi
+case "$authorized_team_id" in
+  __AIGENT_HIVE_*|*[!A-Z0-9]*|'')
+    echo "installer does not contain an authorized macOS signer identity" >&2
+    exit 5
+    ;;
+esac
+if [ "${#authorized_team_id}" -ne 10 ]; then
+  echo "installer does not contain an authorized macOS signer identity" >&2
+  exit 5
 fi
 case "$(uname -m)" in
   arm64) triple=aarch64-apple-darwin ;;
@@ -109,6 +120,12 @@ tar -xzf "$work/$archive" -C "$work"
 binary="$work/$package/hive"
 codesign --verify --strict --verbose=2 "$binary"
 spctl --assess --type execute --verbose=4 "$binary"
+actual_team_id=$(codesign -dv --verbose=4 "$binary" 2>&1 \
+  | awk -F= '$1 == "TeamIdentifier" { print $2 }')
+if [ "$actual_team_id" != "$authorized_team_id" ]; then
+  echo "signed binary signer differs from the authorized release identity" >&2
+  exit 5
+fi
 if [ "$("$binary" --version)" != "hive $version" ]; then
   echo "signed binary version differs from requested release" >&2
   exit 5
