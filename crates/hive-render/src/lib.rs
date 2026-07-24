@@ -4588,6 +4588,7 @@ mod tests {
         .expect("fixture setup should apply");
     }
 
+    #[cfg(unix)]
     #[test]
     fn pinned_setup_entrypoint_does_not_reopen_replaced_ambient_target() {
         let temporary = tempfile::tempdir().expect("temporary directory");
@@ -4621,6 +4622,25 @@ mod tests {
             .expect("displaced target")
             .next()
             .is_none());
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn pinned_target_capability_blocks_ambient_replacement_while_open() {
+        let temporary = tempfile::tempdir().expect("temporary directory");
+        let parent = temporary.path().canonicalize().expect("canonical parent");
+        let target = parent.join("consumer");
+        let displaced = parent.join("consumer-displaced");
+        fs::create_dir(&target).expect("target");
+        let target_dir = open_target_capability(&target).expect("target capability");
+
+        fs::rename(&target, &displaced)
+            .expect_err("open Windows target capability should block replacement");
+        assert!(target.is_dir());
+        assert!(!displaced.exists());
+
+        drop(target_dir);
+        fs::rename(&target, &displaced).expect("rename after target capability release");
     }
 
     #[cfg(unix)]
