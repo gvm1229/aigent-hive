@@ -44,6 +44,8 @@ def validate(schema_name: str, value: object) -> None:
 
 
 def macos_installer_fixture(root: Path, actual_team_id: str) -> tuple[Path, Path]:
+    if sys.platform == "win32":
+        raise unittest.SkipTest("macOS installer fixture is unavailable on Windows")
     source = (ROOT / "scripts/install.sh").read_text(encoding="utf-8")
     installer = root / "install.sh"
     installer.write_text(
@@ -103,6 +105,12 @@ if [ -n "${HIVE_STAGE_RECEIPT_ATTACK:-}" ]; then
   ln -s "$HIVE_STAGE_RECEIPT_OUTSIDE" "$staged_receipt"
 fi
 """,
+        "chmod": """#!/bin/sh
+if [ "$1" != "-h" ]; then exec /bin/chmod "$@"; fi
+if [ "$#" -ne 3 ]; then exit 64; fi
+if [ -L "$3" ]; then exit 0; fi
+exec /bin/chmod "$2" "$3"
+""",
         "mktemp": """#!/bin/sh
 created=$(/usr/bin/mktemp "$@") || exit
 case "$created" in
@@ -133,9 +141,23 @@ if [ -n "${HIVE_MV_ATTACK_CALL:-}" ]; then
     ln -s "$HIVE_MV_OUTSIDE" "$destination"
   fi
 fi
-exec /bin/mv "$@"
+if [ "$#" -ne 3 ] || [ "$1" != "-fh" ]; then exit 64; fi
+source=$2
+destination=$3
+if [ -L "$destination" ]; then rm -f "$destination" || exit; fi
+exec /bin/mv -f "$source" "$destination"
 """,
         "spctl": "#!/bin/sh\nexit 0\n",
+        "stat": """#!/bin/sh
+if [ "$#" -ne 3 ] || [ "$1" != "-f" ] || [ "$2" != "%Lp" ]; then exit 64; fi
+python - "$3" <<'PY'
+import os
+import stat
+import sys
+
+print(format(stat.S_IMODE(os.lstat(sys.argv[1]).st_mode), "o"))
+PY
+""",
     }
     for name, contents in mocks.items():
         path = commands / name
@@ -789,7 +811,7 @@ function Assert-Rejected {
     }
 }
 try {
-    $binary = Join-Path $root "hive.exe"
+    $binary = Join-Path $root "hive.cmd"
     $receipt = Join-Path $root "install-receipt.json"
     Assert-ExistingDirectInstall -Destination $binary -ReceiptPath $receipt
     Set-Content -LiteralPath $receipt -Value "{}" -Encoding utf8NoBOM
@@ -809,20 +831,11 @@ try {
     Remove-Item -LiteralPath $binary, $receipt -Recurse -Force
     $executionMarker = Join-Path $root "ownership-probe-executed"
     $env:HIVE_EXECUTION_MARKER = $executionMarker
-    Add-Type -TypeDefinition @"
-using System;
-using System.IO;
-public static class HiveOwnershipProbe {
-    public static int Main(string[] args) {
-        File.WriteAllText(
-            Environment.GetEnvironmentVariable("HIVE_EXECUTION_MARKER"),
-            "executed"
-        );
-        Console.WriteLine("hive 0.7.0");
-        return 0;
-    }
-}
-"@ -OutputAssembly $binary -OutputType ConsoleApplication
+    Set-Content -LiteralPath $binary -Value @(
+        '@echo off',
+        '> "%HIVE_EXECUTION_MARKER%" echo executed',
+        'echo hive 0.7.0'
+    ) -Encoding ascii
     Set-Content -LiteralPath $receipt -Value "{}" -Encoding utf8NoBOM
     Assert-Rejected -Label "malformed receipt" -Operation {
         Assert-ExistingDirectInstall -Destination $binary -ReceiptPath $receipt
@@ -1047,6 +1060,8 @@ public static class HiveOwnershipProbe {
         self.assertEqual(result.returncode, 0, result.stderr)
 
     def test_release_shell_entrypoints_are_executable_and_reject_bad_versions(self) -> None:
+        if sys.platform == "win32":
+            self.skipTest("POSIX shell entrypoint checks are unavailable on Windows")
         for relative in ("scripts/check-release-version.sh", "scripts/install.sh"):
             path = ROOT / relative
             self.assertTrue(os.access(path, os.X_OK), relative)
