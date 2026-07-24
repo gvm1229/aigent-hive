@@ -62,7 +62,8 @@ parse_receipt() {
   parsed_version=${receipt_json#"$receipt_prefix"}
   parsed_version=${parsed_version%%"$receipt_digest_marker"*}
   parsed_digest=${receipt_json#*"$receipt_digest_marker"}
-  parsed_digest=${parsed_digest%\"}}
+  parsed_digest=${parsed_digest%\}}
+  parsed_digest=${parsed_digest%\"}
   if ! printf '%s\n' "$parsed_version" | awk -F. '
     NF != 3 { exit 1 }
     {
@@ -94,6 +95,61 @@ verify_owned_pair() {
   owned_digest=$(shasum -a 256 "$owned_binary" | awk '{ print $1 }')
   [ "$parsed_digest" = "$owned_digest" ]
 }
+
+ensure_safe_directory_chain() {
+  target_path=$1
+  case "$target_path" in
+    /*)
+      current_path=/
+      remaining_path=${target_path#/}
+      ;;
+    *)
+      current_path=.
+      remaining_path=$target_path
+      ;;
+  esac
+  while [ -n "$remaining_path" ]; do
+    path_component=${remaining_path%%/*}
+    if [ "$remaining_path" = "$path_component" ]; then
+      remaining_path=
+    else
+      remaining_path=${remaining_path#*/}
+    fi
+    case "$path_component" in
+      ''|.) continue ;;
+      ..)
+        echo "install path contains a symlink or non-directory" >&2
+        exit 3
+        ;;
+    esac
+    if [ "$current_path" = / ]; then
+      next_path="/$path_component"
+    else
+      next_path="$current_path/$path_component"
+    fi
+    if [ -L "$next_path" ]; then
+      echo "install path contains a symlink or non-directory" >&2
+      exit 3
+    elif [ -e "$next_path" ]; then
+      if [ ! -d "$next_path" ]; then
+        echo "install path contains a symlink or non-directory" >&2
+        exit 3
+      fi
+    else
+      mkdir -m 0755 "$next_path"
+      if [ "$(stat -f '%Lp' "$next_path")" != 755 ]; then
+        echo "install path contains a symlink or non-directory" >&2
+        exit 3
+      fi
+    fi
+    if [ ! -d "$next_path" ] || [ -L "$next_path" ]; then
+      echo "install path contains a symlink or non-directory" >&2
+      exit 3
+    fi
+    current_path=$next_path
+  done
+}
+
 archive="aigent-hive-${version}-${triple}.tar.gz"
 package="aigent-hive-${version}-${triple}"
 base="https://github.com/gvm1229/aigent-hive/releases/download/v${version}"
@@ -132,7 +188,9 @@ if [ "$("$binary" --version)" != "hive $version" ]; then
 fi
 binary_digest=$(shasum -a 256 "$binary" | awk '{ print $1 }')
 
-install -d "$prefix/bin" "$prefix/share/aigent-hive"
+ensure_safe_directory_chain "$prefix"
+ensure_safe_directory_chain "$prefix/bin"
+ensure_safe_directory_chain "$prefix/share/aigent-hive"
 receipt="$prefix/share/aigent-hive/install-receipt.json"
 pending_receipt="$prefix/share/aigent-hive/install-receipt.pending.json"
 if [ -e "$pending_receipt" ] || [ -L "$pending_receipt" ]; then
@@ -150,11 +208,21 @@ if [ -e "$pending_receipt" ] || [ -L "$pending_receipt" ]; then
         exit 3
       }
     fi
-    mv -f "$pending_receipt" "$receipt"
+    ensure_safe_directory_chain "$prefix/bin"
+    ensure_safe_directory_chain "$prefix/share/aigent-hive"
+    mv -fh "$pending_receipt" "$receipt"
+    if [ ! -f "$receipt" ] || [ -L "$receipt" ]; then
+      echo "existing hive install transaction is not recoverable" >&2
+      exit 3
+    fi
   elif verify_owned_pair "$prefix/bin/hive" "$receipt"; then
+    ensure_safe_directory_chain "$prefix/bin"
+    ensure_safe_directory_chain "$prefix/share/aigent-hive"
     rm -f "$pending_receipt"
   elif [ ! -e "$prefix/bin/hive" ] && [ ! -L "$prefix/bin/hive" ] \
     && [ ! -e "$receipt" ] && [ ! -L "$receipt" ]; then
+    ensure_safe_directory_chain "$prefix/bin"
+    ensure_safe_directory_chain "$prefix/share/aigent-hive"
     rm -f "$pending_receipt"
   else
     echo "existing hive binary is not owned by the direct installer" >&2
@@ -175,18 +243,60 @@ if [ -e "$prefix/bin/hive" ] || [ -L "$prefix/bin/hive" ] \
   fi
 fi
 
-staged_binary="$prefix/bin/.hive-install-$$"
-staged_receipt="$prefix/share/aigent-hive/.install-receipt-$$"
-install -m 0755 "$binary" "$staged_binary"
+ensure_safe_directory_chain "$prefix/bin"
+ensure_safe_directory_chain "$prefix/share/aigent-hive"
+staged_binary=$(mktemp "$prefix/bin/.hive-install.XXXXXX")
+staged_receipt=$(mktemp "$prefix/share/aigent-hive/.install-receipt.XXXXXX")
+mv -fh "$binary" "$staged_binary"
+chmod -h 0755 "$staged_binary"
+if [ ! -f "$staged_binary" ] || [ -L "$staged_binary" ]; then
+  echo "existing hive install transaction is not recoverable" >&2
+  exit 3
+fi
+rm -f "$staged_receipt"
+prior_umask=$(umask)
+umask 077
+set -C
+exec 3>"$staged_receipt"
+set +C
+umask "$prior_umask"
 printf '{"schema_version":1,"owner":"direct","product":"aigent-hive","version":"%s","artifact_sha256":"sha256:%s"}\n' \
-  "$version" "$binary_digest" >"$staged_receipt"
+  "$version" "$binary_digest" >&3
+exec 3>&-
+chmod -h 0644 "$staged_receipt"
+if [ ! -f "$staged_receipt" ] || [ -L "$staged_receipt" ]; then
+  echo "existing hive install transaction is not recoverable" >&2
+  exit 3
+fi
+if [ "$(stat -f '%Lp' "$staged_receipt")" != 644 ]; then
+  echo "existing hive install transaction is not recoverable" >&2
+  exit 3
+fi
 if [ -e "$pending_receipt" ] || [ -L "$pending_receipt" ]; then
   echo "existing hive install transaction is not recoverable" >&2
   exit 3
 fi
-mv "$staged_receipt" "$pending_receipt"
+ensure_safe_directory_chain "$prefix/bin"
+ensure_safe_directory_chain "$prefix/share/aigent-hive"
+mv -fh "$staged_receipt" "$pending_receipt"
 staged_receipt=
-mv -f "$staged_binary" "$prefix/bin/hive"
+if [ ! -f "$pending_receipt" ] || [ -L "$pending_receipt" ]; then
+  echo "existing hive install transaction is not recoverable" >&2
+  exit 3
+fi
+ensure_safe_directory_chain "$prefix/bin"
+ensure_safe_directory_chain "$prefix/share/aigent-hive"
+mv -fh "$staged_binary" "$prefix/bin/hive"
 staged_binary=
-mv -f "$pending_receipt" "$receipt"
+if [ ! -f "$prefix/bin/hive" ] || [ -L "$prefix/bin/hive" ]; then
+  echo "existing hive install transaction is not recoverable" >&2
+  exit 3
+fi
+ensure_safe_directory_chain "$prefix/bin"
+ensure_safe_directory_chain "$prefix/share/aigent-hive"
+mv -fh "$pending_receipt" "$receipt"
+if [ ! -f "$receipt" ] || [ -L "$receipt" ]; then
+  echo "existing hive install transaction is not recoverable" >&2
+  exit 3
+fi
 echo "installed hive $version to $prefix/bin/hive"

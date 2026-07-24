@@ -7,6 +7,7 @@ import json
 import os
 import re
 import shutil
+import stat
 import subprocess
 import sys
 import tempfile
@@ -40,6 +41,107 @@ def validate(schema_name: str, value: object) -> None:
         schema,
         format_checker=FormatChecker(),
     ).validate(value)
+
+
+def macos_installer_fixture(root: Path, actual_team_id: str) -> tuple[Path, Path]:
+    source = (ROOT / "scripts/install.sh").read_text(encoding="utf-8")
+    installer = root / "install.sh"
+    installer.write_text(
+        source.replace("__AIGENT_HIVE_APPLE_TEAM_ID__", "FIXTURE123"),
+        encoding="utf-8",
+    )
+    installer.chmod(0o755)
+    commands = root / "commands"
+    commands.mkdir()
+    mocks = {
+        "uname": """#!/bin/sh
+if [ "$1" = "-s" ]; then printf 'Darwin\\n'; else printf 'arm64\\n'; fi
+""",
+        "curl": """#!/bin/sh
+while [ "$#" -gt 0 ]; do
+  if [ "$1" = "--output" ]; then shift; output=$1; fi
+  shift
+done
+case "$output" in
+  *.sha256) printf '%064d  archive\\n' 0 >"$output" ;;
+  *) : >"$output" ;;
+esac
+""",
+        "shasum": "#!/bin/sh\nprintf '%064d  artifact\\n' 0\n",
+        "tar": """#!/bin/sh
+case "$1" in
+  -tzf) printf 'aigent-hive-0.7.0-aarch64-apple-darwin/hive\\naigent-hive-0.7.0-aarch64-apple-darwin/LICENSE\\n' ;;
+  -tvzf) printf '%s\\n%s\\n' '-rwxr-xr-x 0/0 1 1980-01-01 00:00 aigent-hive-0.7.0-aarch64-apple-darwin/hive' '-rw-r--r-- 0/0 1 1980-01-01 00:00 aigent-hive-0.7.0-aarch64-apple-darwin/LICENSE' ;;
+  -xzf)
+    while [ "$#" -gt 0 ]; do
+      if [ "$1" = "-C" ]; then shift; destination=$1; fi
+      shift
+    done
+    package="$destination/aigent-hive-0.7.0-aarch64-apple-darwin"
+    mkdir -p "$package"
+    printf '%s\\n' '#!/bin/sh' 'printf "hive 0.7.0\\\\n"' >"$package/hive"
+    chmod 0755 "$package/hive"
+    : >"$package/LICENSE"
+    ;;
+esac
+""",
+        "codesign": f"""#!/bin/sh
+case "$1" in
+  -dv) printf 'TeamIdentifier={actual_team_id}\\n' >&2 ;;
+esac
+""",
+        "install": """#!/bin/sh
+for destination do :; done
+if [ -n "${HIVE_STAGE_BINARY_ATTACK:-}" ]; then
+  rm -f "$destination"
+  ln -s "$HIVE_STAGE_BINARY_OUTSIDE" "$destination"
+fi
+/usr/bin/install "$@"
+if [ -n "${HIVE_STAGE_RECEIPT_ATTACK:-}" ]; then
+  staged_receipt="$AIGENT_HIVE_PREFIX/share/aigent-hive/.install-receipt-$PPID"
+  rm -f "$staged_receipt"
+  ln -s "$HIVE_STAGE_RECEIPT_OUTSIDE" "$staged_receipt"
+fi
+""",
+        "mktemp": """#!/bin/sh
+created=$(/usr/bin/mktemp "$@") || exit
+case "$created" in
+  */.hive-install.*)
+    if [ -n "${HIVE_STAGE_BINARY_ATTACK:-}" ]; then
+      rm -f "$created"
+      ln -s "$HIVE_STAGE_BINARY_OUTSIDE" "$created"
+    fi
+    ;;
+  */.install-receipt.*)
+    if [ -n "${HIVE_STAGE_RECEIPT_ATTACK:-}" ]; then
+      rm -f "$created"
+      ln -s "$HIVE_STAGE_RECEIPT_OUTSIDE" "$created"
+    fi
+    ;;
+esac
+printf '%s\\n' "$created"
+""",
+        "mv": """#!/bin/sh
+if [ -n "${HIVE_MV_ATTACK_CALL:-}" ]; then
+  count=0
+  if [ -f "$HIVE_MV_COUNT_FILE" ]; then count=$(cat "$HIVE_MV_COUNT_FILE"); fi
+  count=$((count + 1))
+  printf '%s\\n' "$count" >"$HIVE_MV_COUNT_FILE"
+  if [ "$count" -eq "$HIVE_MV_ATTACK_CALL" ]; then
+    for destination do :; done
+    rm -f "$destination"
+    ln -s "$HIVE_MV_OUTSIDE" "$destination"
+  fi
+fi
+exec /bin/mv "$@"
+""",
+        "spctl": "#!/bin/sh\nexit 0\n",
+    }
+    for name, contents in mocks.items():
+        path = commands / name
+        path.write_text(contents, encoding="utf-8")
+        path.chmod(0o755)
+    return installer, commands
 
 
 class Phase6StaticContracts(unittest.TestCase):
@@ -317,6 +419,8 @@ class Phase6StaticContracts(unittest.TestCase):
         self.assertIn('owned_digest=$(shasum -a 256 "$owned_binary"', shell)
         self.assertIn('[ "$parsed_digest" = "$owned_digest" ]', shell)
         self.assertIn('verify_owned_pair "$prefix/bin/hive" "$receipt"', shell)
+        self.assertIn("ensure_safe_directory_chain", shell)
+        self.assertIn('ensure_safe_directory_chain "$prefix"', shell)
         self.assertIn("Compare-Object $expectedProperties $actualProperties", powershell)
         self.assertIn(
             "if ($null -eq $destinationItem -or $null -eq $receiptItem)",
@@ -325,6 +429,12 @@ class Phase6StaticContracts(unittest.TestCase):
         self.assertIn("$destinationItem.PSIsContainer", powershell)
         self.assertIn("$receiptItem.PSIsContainer", powershell)
         self.assertIn("[IO.FileAttributes]::ReparsePoint", powershell)
+        self.assertIn("Assert-SafeDirectoryChain", powershell)
+        self.assertIn("Repair-PendingDirectInstall", powershell)
+        self.assertIn("[IO.File]::Move", powershell)
+        self.assertNotIn("Move-Item", powershell)
+        self.assertNotRegex(powershell, r"catch\s*\{\s*\}")
+        self.assertIn("install-receipt.pending.json", powershell)
         self.assertIn("Get-FileHash -LiteralPath $Destination", powershell)
         self.assertIn(
             '$priorReceipt.artifact_sha256 -ne "sha256:$priorDigest"',
@@ -346,63 +456,9 @@ class Phase6StaticContracts(unittest.TestCase):
     def test_macos_installer_rejects_valid_signature_from_wrong_team(self) -> None:
         wrong_team = read_json(WRONG_SIGNERS)["macos"]["team_id"]
         self.assertRegex(wrong_team, r"^[A-Z0-9]{10}$")
-        source = (ROOT / "scripts/install.sh").read_text(encoding="utf-8")
-        rendered = source.replace(
-            "__AIGENT_HIVE_APPLE_TEAM_ID__",
-            "FIXTURE123",
-        )
         with tempfile.TemporaryDirectory() as temporary:
-            root = Path(temporary)
-            installer = root / "install.sh"
-            installer.write_text(rendered, encoding="utf-8")
-            installer.chmod(0o755)
-            commands = root / "commands"
-            commands.mkdir()
-            mocks = {
-                "uname": """#!/bin/sh
-if [ "$1" = "-s" ]; then printf 'Darwin\\n'; else printf 'arm64\\n'; fi
-""",
-                "curl": """#!/bin/sh
-while [ "$#" -gt 0 ]; do
-  if [ "$1" = "--output" ]; then shift; output=$1; fi
-  shift
-done
-case "$output" in
-  *.sha256) printf '%064d  archive\\n' 0 >"$output" ;;
-  *) : >"$output" ;;
-esac
-""",
-                "shasum": """#!/bin/sh
-printf '%064d  artifact\\n' 0
-""",
-                "tar": """#!/bin/sh
-case "$1" in
-  -tzf) printf 'aigent-hive-0.7.0-aarch64-apple-darwin/hive\\naigent-hive-0.7.0-aarch64-apple-darwin/LICENSE\\n' ;;
-  -tvzf) printf '%s\\n%s\\n' '-rwxr-xr-x 0/0 1 1980-01-01 00:00 aigent-hive-0.7.0-aarch64-apple-darwin/hive' '-rw-r--r-- 0/0 1 1980-01-01 00:00 aigent-hive-0.7.0-aarch64-apple-darwin/LICENSE' ;;
-  -xzf)
-    while [ "$#" -gt 0 ]; do
-      if [ "$1" = "-C" ]; then shift; destination=$1; fi
-      shift
-    done
-    package="$destination/aigent-hive-0.7.0-aarch64-apple-darwin"
-    mkdir -p "$package"
-    printf '%s\\n' '#!/bin/sh' 'printf \"hive 0.7.0\\\\n\"' >"$package/hive"
-    chmod 0755 "$package/hive"
-    : >"$package/LICENSE"
-    ;;
-esac
-""",
-                "codesign": f"""#!/bin/sh
-case "$1" in
-  -dv) printf 'TeamIdentifier={wrong_team}\\n' >&2 ;;
-esac
-""",
-                "spctl": "#!/bin/sh\nexit 0\n",
-            }
-            for name, contents in mocks.items():
-                path = commands / name
-                path.write_text(contents, encoding="utf-8")
-                path.chmod(0o755)
+            root = Path(temporary).resolve()
+            installer, commands = macos_installer_fixture(root, wrong_team)
             environment = os.environ.copy()
             environment.update(
                 {
@@ -425,6 +481,251 @@ esac
             result.stderr,
         )
 
+    def test_macos_installer_rejects_symlinked_install_ancestors_without_external_writes(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary).resolve()
+            installer, commands = macos_installer_fixture(root, "FIXTURE123")
+
+            for scenario in ("ancestor", "prefix", "bin", "share"):
+                with self.subTest(scenario=scenario):
+                    case_root = root / scenario
+                    case_root.mkdir()
+                    outside = case_root / "outside"
+                    outside.mkdir()
+                    sentinel = outside / "sentinel"
+                    sentinel.write_text("preserve", encoding="utf-8")
+                    prefix = case_root / "prefix"
+                    if scenario == "ancestor":
+                        ancestor = case_root / "ancestor"
+                        ancestor.symlink_to(outside, target_is_directory=True)
+                        prefix = ancestor / "prefix"
+                    elif scenario == "prefix":
+                        prefix.symlink_to(outside, target_is_directory=True)
+                    else:
+                        prefix.mkdir()
+                        if scenario == "bin":
+                            (prefix / "bin").symlink_to(
+                                outside,
+                                target_is_directory=True,
+                            )
+                        else:
+                            (prefix / "share").symlink_to(
+                                outside,
+                                target_is_directory=True,
+                            )
+                    environment = os.environ.copy()
+                    environment.update(
+                        {
+                            "AIGENT_HIVE_VERSION": "0.7.0",
+                            "AIGENT_HIVE_PREFIX": str(prefix),
+                            "PATH": (
+                                f"{commands}{os.pathsep}{environment['PATH']}"
+                            ),
+                        }
+                    )
+                    result = subprocess.run(
+                        [str(installer)],
+                        cwd=ROOT,
+                        env=environment,
+                        check=False,
+                        text=True,
+                        capture_output=True,
+                    )
+                    self.assertEqual(result.returncode, 3, result)
+                    self.assertIn(
+                        "install path contains a symlink or non-directory",
+                        result.stderr,
+                    )
+                    self.assertEqual(
+                        sentinel.read_text(encoding="utf-8"),
+                        "preserve",
+                    )
+                    self.assertEqual(
+                        sorted(path.name for path in outside.iterdir()),
+                        ["sentinel"],
+                    )
+
+    def test_macos_installer_creates_owned_directories_with_mode_0755(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary).resolve()
+            installer, commands = macos_installer_fixture(root, "FIXTURE123")
+            prefix = root / "prefix"
+            environment = os.environ.copy()
+            environment.update(
+                {
+                    "AIGENT_HIVE_VERSION": "0.7.0",
+                    "AIGENT_HIVE_PREFIX": str(prefix),
+                    "PATH": f"{commands}{os.pathsep}{environment['PATH']}",
+                }
+            )
+            result = subprocess.run(
+                ["sh", "-c", 'umask 000; exec "$1"', "sh", str(installer)],
+                cwd=ROOT,
+                env=environment,
+                check=False,
+                text=True,
+                capture_output=True,
+            )
+            self.assertEqual(result.returncode, 0, result)
+            for directory in (
+                prefix,
+                prefix / "bin",
+                prefix / "share",
+                prefix / "share/aigent-hive",
+            ):
+                self.assertEqual(
+                    stat.S_IMODE(directory.stat().st_mode),
+                    0o755,
+                    directory,
+                )
+            receipt = prefix / "share/aigent-hive/install-receipt.json"
+            self.assertEqual(stat.S_IMODE(receipt.stat().st_mode), 0o644)
+            self.assertEqual(stat.S_IMODE(receipt.stat().st_mode) & 0o022, 0)
+
+    def test_macos_installer_leaf_renames_do_not_follow_injected_symlinks(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary).resolve()
+            installer, commands = macos_installer_fixture(root, "FIXTURE123")
+            attack_calls = {
+                "staged receipt to pending": 2,
+                "staged binary to destination": 3,
+                "pending receipt to final receipt": 4,
+            }
+            for label, attack_call in attack_calls.items():
+                with self.subTest(label=label):
+                    case_root = root / f"leaf-{attack_call}"
+                    case_root.mkdir()
+                    prefix = case_root / "prefix"
+                    outside = case_root / "outside"
+                    outside.mkdir()
+                    sentinel = outside / "sentinel"
+                    sentinel.write_bytes(b"preserve")
+                    environment = os.environ.copy()
+                    environment.update(
+                        {
+                            "AIGENT_HIVE_VERSION": "0.7.0",
+                            "AIGENT_HIVE_PREFIX": str(prefix),
+                            "HIVE_MV_ATTACK_CALL": str(attack_call),
+                            "HIVE_MV_COUNT_FILE": str(case_root / "mv-count"),
+                            "HIVE_MV_OUTSIDE": str(outside),
+                            "PATH": (
+                                f"{commands}{os.pathsep}{environment['PATH']}"
+                            ),
+                        }
+                    )
+                    result = subprocess.run(
+                        [str(installer)],
+                        cwd=ROOT,
+                        env=environment,
+                        check=False,
+                        text=True,
+                        capture_output=True,
+                    )
+                    self.assertEqual(result.returncode, 0, result)
+                    self.assertEqual(sentinel.read_bytes(), b"preserve")
+                    self.assertEqual(
+                        sorted(path.name for path in outside.iterdir()),
+                        ["sentinel"],
+                    )
+                    self.assertTrue((prefix / "bin/hive").is_file())
+                    self.assertFalse((prefix / "bin/hive").is_symlink())
+                    receipt = prefix / "share/aigent-hive/install-receipt.json"
+                    self.assertTrue(receipt.is_file())
+                    self.assertFalse(receipt.is_symlink())
+
+    def test_macos_recovery_promotion_does_not_follow_injected_receipt_symlink(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary).resolve()
+            installer, commands = macos_installer_fixture(root, "FIXTURE123")
+            prefix = root / "prefix"
+            base_environment = os.environ.copy()
+            base_environment.update(
+                {
+                    "AIGENT_HIVE_VERSION": "0.7.0",
+                    "AIGENT_HIVE_PREFIX": str(prefix),
+                    "PATH": f"{commands}{os.pathsep}{base_environment['PATH']}",
+                }
+            )
+            first = subprocess.run(
+                [str(installer)],
+                cwd=ROOT,
+                env=base_environment,
+                check=False,
+                text=True,
+                capture_output=True,
+            )
+            self.assertEqual(first.returncode, 0, first)
+            receipt = prefix / "share/aigent-hive/install-receipt.json"
+            pending = prefix / "share/aigent-hive/install-receipt.pending.json"
+            receipt.replace(pending)
+            outside = root / "outside"
+            outside.mkdir()
+            sentinel = outside / "sentinel"
+            sentinel.write_bytes(b"preserve")
+            recovery_environment = base_environment.copy()
+            recovery_environment.update(
+                {
+                    "HIVE_MV_ATTACK_CALL": "1",
+                    "HIVE_MV_COUNT_FILE": str(root / "recovery-mv-count"),
+                    "HIVE_MV_OUTSIDE": str(outside),
+                }
+            )
+            second = subprocess.run(
+                [str(installer)],
+                cwd=ROOT,
+                env=recovery_environment,
+                check=False,
+                text=True,
+                capture_output=True,
+            )
+            self.assertEqual(second.returncode, 0, second)
+            self.assertEqual(sentinel.read_bytes(), b"preserve")
+            self.assertEqual(
+                sorted(path.name for path in outside.iterdir()),
+                ["sentinel"],
+            )
+            self.assertTrue(receipt.is_file())
+            self.assertFalse(receipt.is_symlink())
+
+    def test_macos_installer_does_not_follow_precreated_staged_leaf_symlinks(
+        self,
+    ) -> None:
+        for leaf in ("binary", "receipt"):
+            with self.subTest(leaf=leaf), tempfile.TemporaryDirectory() as temporary:
+                root = Path(temporary).resolve()
+                installer, commands = macos_installer_fixture(root, "FIXTURE123")
+                prefix = root / "prefix"
+                outside = root / "outside"
+                outside.mkdir()
+                external_leaf = outside / leaf
+                external_leaf.write_bytes(b"preserve")
+                environment = os.environ.copy()
+                environment.update(
+                    {
+                        "AIGENT_HIVE_VERSION": "0.7.0",
+                        "AIGENT_HIVE_PREFIX": str(prefix),
+                        f"HIVE_STAGE_{leaf.upper()}_ATTACK": "1",
+                        f"HIVE_STAGE_{leaf.upper()}_OUTSIDE": str(external_leaf),
+                        "PATH": f"{commands}{os.pathsep}{environment['PATH']}",
+                    }
+                )
+                result = subprocess.run(
+                    [str(installer)],
+                    cwd=ROOT,
+                    env=environment,
+                    check=False,
+                    text=True,
+                    capture_output=True,
+                )
+                self.assertEqual(result.returncode, 0, result)
+                self.assertEqual(external_leaf.read_bytes(), b"preserve")
+
     def test_windows_ownership_function_executes_when_pwsh_is_available(self) -> None:
         pwsh = shutil.which("pwsh")
         if pwsh is None or sys.platform != "win32":
@@ -439,8 +740,12 @@ $ast = [Management.Automation.Language.Parser]::ParseFile(
 )
 if ($errors.Count -ne 0) { throw ($errors | Out-String) }
 foreach ($name in @(
+    "Get-ValidatedDirectReceipt",
     "Assert-ExistingDirectInstall",
-    "Assert-AuthorizedAuthenticodeSignature"
+    "Assert-AuthorizedAuthenticodeSignature",
+    "Assert-SafeDirectoryChain",
+    "Repair-PendingDirectInstall",
+    "Move-InstallFile"
 )) {
     $function = $ast.Find(
         {
@@ -565,6 +870,162 @@ public static class HiveOwnershipProbe {
     }
     Assert-Rejected -Label "receipt reparse-point state" -Operation {
         Assert-ExistingDirectInstall -Destination $binary -ReceiptPath $receipt
+    }
+    Remove-Item -LiteralPath $binary, $receipt -Force
+
+    $outside = Join-Path $root "outside"
+    New-Item -ItemType Directory -Path $outside | Out-Null
+    $sentinel = Join-Path $outside "sentinel"
+    Set-Content -LiteralPath $sentinel -Value "preserve" -Encoding utf8NoBOM
+    $linkedPrefix = Join-Path $root "linked-prefix"
+    New-Item -ItemType Junction -Path $linkedPrefix -Target $outside | Out-Null
+    Assert-Rejected -Label "prefix reparse-point ancestor" -Operation {
+        Assert-SafeDirectoryChain -Path (Join-Path $linkedPrefix "bin")
+    }
+    if (
+        (Get-Content -LiteralPath $sentinel -Raw).Trim() -ne "preserve" -or
+        (@(Get-ChildItem -LiteralPath $outside -Force).Count -ne 1) -or
+        ((Get-ChildItem -LiteralPath $outside -Force).Name -ne "sentinel")
+    ) {
+        throw "prefix reparse-point ancestor changed external state"
+    }
+    Remove-Item -LiteralPath $linkedPrefix -Force
+
+    $linkedAncestor = Join-Path $root "linked-ancestor"
+    New-Item -ItemType Junction -Path $linkedAncestor -Target $outside | Out-Null
+    Assert-Rejected -Label "reparse point above prefix" -Operation {
+        Assert-SafeDirectoryChain -Path (Join-Path $linkedAncestor "prefix\bin")
+    }
+    if (
+        (@(Get-ChildItem -LiteralPath $outside -Force).Count -ne 1) -or
+        ((Get-ChildItem -LiteralPath $outside -Force).Name -ne "sentinel")
+    ) {
+        throw "reparse point above prefix changed external state"
+    }
+    Remove-Item -LiteralPath $linkedAncestor -Force
+
+    $safePrefix = Join-Path $root "safe-prefix"
+    New-Item -ItemType Directory -Path $safePrefix | Out-Null
+    $linkedBin = Join-Path $safePrefix "bin"
+    New-Item -ItemType Junction -Path $linkedBin -Target $outside | Out-Null
+    Assert-Rejected -Label "bin reparse-point ancestor" -Operation {
+        Assert-SafeDirectoryChain -Path $linkedBin
+    }
+    if ((Test-Path -LiteralPath (Join-Path $outside "hive.exe"))) {
+        throw "bin reparse-point ancestor changed external state"
+    }
+    Remove-Item -LiteralPath $linkedBin -Force
+
+    $linkedShare = Join-Path $safePrefix "share"
+    New-Item -ItemType Junction -Path $linkedShare -Target $outside | Out-Null
+    Assert-Rejected -Label "share reparse-point ancestor" -Operation {
+        Assert-SafeDirectoryChain -Path (Join-Path $linkedShare "aigent-hive")
+    }
+    if ((Test-Path -LiteralPath (Join-Path $outside "aigent-hive"))) {
+        throw "share reparse-point ancestor changed external state"
+    }
+    Remove-Item -LiteralPath $linkedShare -Force
+
+    foreach ($leafCase in @(
+        [pscustomobject]@{ Label = "staged receipt to pending"; Replace = $false },
+        [pscustomobject]@{ Label = "staged binary to destination"; Replace = $true },
+        [pscustomobject]@{ Label = "pending receipt to receipt"; Replace = $true }
+    )) {
+        $sourceLeaf = Join-Path $safePrefix ([Guid]::NewGuid().ToString())
+        Set-Content -LiteralPath $sourceLeaf -Value "owned" -Encoding utf8NoBOM
+        $destinationLeaf = Join-Path $safePrefix ([Guid]::NewGuid().ToString())
+        New-Item -ItemType Junction -Path $destinationLeaf -Target $outside | Out-Null
+        Assert-Rejected -Label $leafCase.Label -Operation {
+            Move-InstallFile `
+                -Source $sourceLeaf `
+                -Destination $destinationLeaf `
+                -Replace $leafCase.Replace
+        }
+        if (
+            -not (Test-Path -LiteralPath $sourceLeaf) -or
+            (@(Get-ChildItem -LiteralPath $outside -Force).Count -ne 1) -or
+            ((Get-ChildItem -LiteralPath $outside -Force).Name -ne "sentinel")
+        ) {
+            throw "$($leafCase.Label) changed external state"
+        }
+        Remove-Item -LiteralPath $sourceLeaf, $destinationLeaf -Force
+    }
+
+    $transactionRoot = Join-Path $root "transaction"
+    New-Item -ItemType Directory -Path $transactionRoot | Out-Null
+    $transactionBinary = Join-Path $transactionRoot "hive.exe"
+    $transactionReceipt = Join-Path $transactionRoot "install-receipt.json"
+    $pendingReceipt = Join-Path $transactionRoot "install-receipt.pending.json"
+    Set-Content -LiteralPath $transactionBinary -Value "new binary" -Encoding utf8NoBOM
+    $transactionDigest = (
+        Get-FileHash -LiteralPath $transactionBinary -Algorithm SHA256
+    ).Hash.ToLowerInvariant()
+    @{
+        schema_version = 1
+        owner = "direct"
+        product = "aigent-hive"
+        version = "0.7.0"
+        artifact_sha256 = "sha256:$transactionDigest"
+    } | ConvertTo-Json -Compress | Set-Content -LiteralPath $pendingReceipt -Encoding utf8NoBOM
+    Repair-PendingDirectInstall `
+        -Destination $transactionBinary `
+        -ReceiptPath $transactionReceipt `
+        -PendingReceiptPath $pendingReceipt
+    if (
+        (Test-Path -LiteralPath $pendingReceipt) -or
+        -not (Test-Path -LiteralPath $transactionReceipt)
+    ) {
+        throw "matching pending receipt was not promoted"
+    }
+
+    $retainedReceipt = Get-Content -LiteralPath $transactionReceipt -Raw
+    @{
+        schema_version = 1
+        owner = "direct"
+        product = "aigent-hive"
+        version = "0.7.1"
+        artifact_sha256 = "sha256:" + ("0" * 64)
+    } | ConvertTo-Json -Compress | Set-Content -LiteralPath $pendingReceipt -Encoding utf8NoBOM
+    Repair-PendingDirectInstall `
+        -Destination $transactionBinary `
+        -ReceiptPath $transactionReceipt `
+        -PendingReceiptPath $pendingReceipt
+    if (
+        (Test-Path -LiteralPath $pendingReceipt) -or
+        (Get-Content -LiteralPath $transactionReceipt -Raw) -ne $retainedReceipt
+    ) {
+        throw "valid old pair was not retained"
+    }
+
+    Set-Content -LiteralPath $pendingReceipt -Value "{}" -Encoding utf8NoBOM
+    Assert-Rejected -Label "malformed pending receipt" -Operation {
+        Repair-PendingDirectInstall `
+            -Destination $transactionBinary `
+            -ReceiptPath $transactionReceipt `
+            -PendingReceiptPath $pendingReceipt
+    }
+    Remove-Item -LiteralPath $pendingReceipt
+    New-Item -ItemType Junction -Path $pendingReceipt -Target $outside | Out-Null
+    Assert-Rejected -Label "pending receipt reparse point" -Operation {
+        Repair-PendingDirectInstall `
+            -Destination $transactionBinary `
+            -ReceiptPath $transactionReceipt `
+            -PendingReceiptPath $pendingReceipt
+    }
+    Remove-Item -LiteralPath $pendingReceipt -Force
+    Remove-Item -LiteralPath $transactionReceipt
+    @{
+        schema_version = 1
+        owner = "direct"
+        product = "aigent-hive"
+        version = "0.7.0"
+        artifact_sha256 = "sha256:" + ("0" * 64)
+    } | ConvertTo-Json -Compress | Set-Content -LiteralPath $pendingReceipt -Encoding utf8NoBOM
+    Assert-Rejected -Label "mismatched pending receipt" -Operation {
+        Repair-PendingDirectInstall `
+            -Destination $transactionBinary `
+            -ReceiptPath $transactionReceipt `
+            -PendingReceiptPath $pendingReceipt
     }
 } finally {
     Remove-Item -LiteralPath $root -Recurse -Force
