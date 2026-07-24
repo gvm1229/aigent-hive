@@ -3,7 +3,9 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
+import re
 import unittest
 from pathlib import Path
 
@@ -43,6 +45,7 @@ BUILTIN_SKILLS = {
     "hive-role-handoff",
     "hive-judge-package",
     "hive-update",
+    "hive-usage-guard",
     "hive-migrate",
 }
 IMPLEMENTED_SKILLS = {
@@ -56,6 +59,9 @@ IMPLEMENTED_SKILLS = {
     "hive-run-resume",
     "hive-role-handoff",
     "hive-judge-package",
+    "hive-update",
+    "hive-usage-guard",
+    "hive-migrate",
 }
 CATALOG_ONLY_SKILLS = BUILTIN_SKILLS - IMPLEMENTED_SKILLS
 
@@ -81,6 +87,351 @@ def skill_frontmatter(path: Path) -> tuple[dict[str, object], str]:
 
 
 class Phase3SkillSourceContract(unittest.TestCase):
+    def test_plan_backed_goal_reconciles_every_checklist_before_execution(
+        self,
+    ) -> None:
+        directive = (
+            REPOSITORY_ROOT / ".agents/directives/04-documentation-state.md"
+        ).read_text(encoding="utf-8")
+        source_manifest = (REPOSITORY_ROOT / "AGENTS.md").read_text(
+            encoding="utf-8"
+        )
+
+        for requirement in (
+            "Before starting or resuming any goal backed by `docs/plans/PLAN.md`",
+            "Load every fragment listed under the index's `Active fragments` section",
+            "Inspect every active checklist item, not only the unchecked subset.",
+            "Mark every already-proven unchecked item complete in its single owning active fragment",
+            "Only after this reconciliation, derive the remaining execution queue",
+            "mandatory on every PLAN-backed goal start or resume",
+            "An unchecked box is not proof that work remains",
+            "Derive the `PLAN.md` completion index only from Phase milestone checklists",
+            "Update the completion index in the same edit as any counted checklist state change",
+            "Legacy native goal wording that refers to unchecked items in `docs/plans/PLAN.md` must resolve to the documents listed under `Active fragments`",
+            "the intentional absence of checkboxes in the compact index is not completion evidence",
+        ):
+            self.assertIn(requirement, directive)
+        self.assertIn(
+            "before starting or resuming any `docs/plans/PLAN.md`-backed goal",
+            source_manifest,
+        )
+
+    def test_plan_index_is_compact_and_active_checklist_ids_are_unique(self) -> None:
+        plan_root = REPOSITORY_ROOT / "docs/plans"
+        index = (plan_root / "PLAN.md").read_text(encoding="utf-8")
+        self.assertLess(len(index.encode("utf-8")), 8_192)
+        self.assertNotRegex(index, r"(?m)^- \[[ x]\] ")
+        self.assertIn(
+            "“unchecked item in `docs/plans/PLAN.md`”는 `PLAN.md` 내부 checkbox가 아니라 아래 `Active fragments`의 unchecked item을 뜻함",
+            index,
+        )
+
+        linked_fragments = {
+            match
+            for match in re.findall(r"\]\(([^)]+\.md)\)", index)
+            if not match.startswith("../")
+        }
+        expected_fragments = {
+            "active/documentation-style.md",
+            "contracts/README.md",
+            "phases/07-public-qualification.md",
+            "phases/README.md",
+            "references.md",
+            "stages/README.md",
+        }
+        self.assertEqual(linked_fragments, expected_fragments)
+        for relative in linked_fragments:
+            with self.subTest(fragment=relative):
+                self.assertTrue((plan_root / relative).is_file())
+
+        active_fragments = [
+            plan_root / "active/documentation-style.md",
+            plan_root / "phases/07-public-qualification.md",
+        ]
+        self.assertEqual(
+            {path.relative_to(plan_root).as_posix() for path in active_fragments},
+            {
+                "active/documentation-style.md",
+                "phases/07-public-qualification.md",
+            },
+        )
+        seen_ids: set[str] = set()
+        for fragment in active_fragments:
+            for line in fragment.read_text(encoding="utf-8").splitlines():
+                if not re.match(r"^- \[[ x]\] ", line):
+                    continue
+                match = re.match(r"^- \[[ x]\] \[([A-Z0-9-]+)\] ", line)
+                self.assertIsNotNone(match, f"missing checklist ID: {fragment}:{line}")
+                assert match is not None
+                checklist_id = match.group(1)
+                self.assertNotIn(checklist_id, seen_ids)
+                seen_ids.add(checklist_id)
+        self.assertTrue(seen_ids)
+
+        phase_fragments = {
+            path.name for path in (plan_root / "phases").glob("[0-9][0-9]-*.md")
+        }
+        self.assertEqual(
+            phase_fragments,
+            {
+                "00-source-bootstrap.md",
+                "01-setup-renderer.md",
+                "02-knowledge-index.md",
+                "03-skills-projection.md",
+                "04-role-run-interoperability.md",
+                "05-usage-judge.md",
+                "06-update-migration-release.md",
+                "07-public-qualification.md",
+            },
+        )
+        stage_fragments = {
+            path.name for path in (plan_root / "stages").glob("[0-9][0-9]*-*.md")
+        }
+        self.assertEqual(
+            stage_fragments,
+            {
+                "00-entry-routing.md",
+                "01a-setup-discovery-consent.md",
+                "01b-setup-rendering-contract.md",
+                "02-harness-ownership.md",
+                "03-simple-question-isolation.md",
+                "04-prompt-refine.md",
+                "05-roles-orchestration.md",
+                "06-durable-run-completion.md",
+                "07-usage-guard.md",
+                "08-verification-judge.md",
+                "09-knowledge-memory.md",
+                "10-completion-resume.md",
+                "11-update-migration.md",
+            },
+        )
+        self.assertFalse((plan_root / "stages/workflows.md").exists())
+        self.assertFalse((plan_root / "history/milestones.md").exists())
+
+        def checklist_counts(paths: list[Path]) -> tuple[int, int]:
+            text = "\n".join(path.read_text(encoding="utf-8") for path in paths)
+            return (
+                len(re.findall(r"(?m)^- \[x\] ", text)),
+                len(re.findall(r"(?m)^- \[ \] ", text)),
+            )
+
+        completed_phase_paths = sorted(
+            (plan_root / "phases").glob("0[0-6]-*.md")
+        )
+        phase_7_path = plan_root / "phases/07-public-qualification.md"
+        documentation_path = plan_root / "active/documentation-style.md"
+        progress_rows = (
+            ("Phase 0–6", *checklist_counts(completed_phase_paths)),
+            ("Phase 7", *checklist_counts([phase_7_path])),
+            ("Documentation style", *checklist_counts([documentation_path])),
+        )
+        total_done = sum(row[1] for row in progress_rows)
+        total_open = sum(row[2] for row in progress_rows)
+        for label, done, open_items in progress_rows:
+            percentage = 100 * done / (done + open_items)
+            rendered_percentage = f"{percentage:.1f}".rstrip("0").rstrip(".")
+            self.assertIn(
+                f"| {label} | {done} | {open_items} | {rendered_percentage}% |",
+                index,
+            )
+        total_percentage = 100 * total_done / (total_done + total_open)
+        self.assertIn(
+            f"| **Canonical total** | **{total_done}** | **{total_open}** | "
+            f"**{total_percentage:.1f}%** |",
+            index,
+        )
+
+        for fragment in plan_root.rglob("*.md"):
+            text = fragment.read_text(encoding="utf-8")
+            self.assertLess(
+                len(text.encode("utf-8")),
+                8_192,
+                f"plan fragment exceeds 8 KiB: {fragment.relative_to(plan_root)}",
+            )
+            if fragment not in active_fragments:
+                self.assertNotRegex(text, r"(?m)^- \[ \] ")
+            for target in re.findall(r"\]\(([^)]+)\)", text):
+                path = target.split("#", 1)[0]
+                if not path or "://" in path:
+                    continue
+                self.assertTrue(
+                    (fragment.parent / path).exists(),
+                    f"broken plan link: {fragment.relative_to(plan_root)} -> {target}",
+                )
+
+    def test_full_editing_discipline_is_exact_and_highest_priority(self) -> None:
+        expected_digest = (
+            "6ff1639897049dea7ccf710c88fe3bcb369d7edf7e62bcd62137ec70a7c7cc24"
+        )
+        source_path = (
+            REPOSITORY_ROOT / ".agents/directives/00-editing-discipline.md"
+        )
+        product_path = (
+            REPOSITORY_ROOT
+            / "harness/template/.hive/directives/00-editing-discipline.md"
+        )
+        source_bytes = source_path.read_bytes()
+        product_bytes = product_path.read_bytes()
+        self.assertEqual(source_bytes, product_bytes)
+        self.assertEqual(hashlib.sha256(source_bytes).hexdigest(), expected_digest)
+        manifest = (REPOSITORY_ROOT / "harness/manifest.toml").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn(
+            'pattern = ".hive/directives/00-editing-discipline.md"\n'
+            'ownership = "hive-managed-config"\n'
+            'source = "template"',
+            manifest,
+        )
+        source_text = source_bytes.decode("utf-8")
+        for sentinel in (
+            "# CLAUDE.md",
+            "## 1. Think Before Coding",
+            "## 2. Simplicity First",
+            "## 3. Surgical Changes",
+            "## 4. Goal-Driven Execution",
+            "Every changed line should trace directly to the user's request.",
+            "Strong success criteria let you loop independently.",
+        ):
+            self.assertIn(sentinel, source_text)
+
+        source_manifest = (REPOSITORY_ROOT / "AGENTS.md").read_text(
+            encoding="utf-8"
+        )
+        product_marker = (
+            REPOSITORY_ROOT / "harness/template/AGENTS.md.jinja"
+        ).read_text(encoding="utf-8")
+        source_gate = source_manifest.index("Run the source `hive-usage-guard`")
+        source_discipline = source_manifest.index(
+            "After that gate allows work and before editing anything"
+        )
+        source_loading = source_manifest.index(
+            ".agents/directives/00-editing-discipline.md",
+            source_manifest.index("## Mandatory Directive Loading"),
+        )
+        self.assertLess(source_gate, source_discipline)
+        self.assertLess(source_discipline, source_loading)
+        product_gate = product_marker.index("At every turn boundary")
+        product_discipline = product_marker.index(
+            "After the usage gate allows the turn and before editing anything"
+        )
+        self.assertLess(product_gate, product_discipline)
+        for surface in (source_manifest, product_marker):
+            self.assertIn("highest-priority editing discipline", surface)
+            self.assertIn("never compact, summarize, omit, or substitute", surface)
+        self.assertIn("literal `# CLAUDE.md` heading is original text", product_marker)
+        self.assertIn("Codex, Claude, and Gemini Antigravity", product_marker)
+
+    def test_source_and_consumer_human_documentation_style_contract(self) -> None:
+        source_directive = (
+            REPOSITORY_ROOT
+            / ".agents/directives/08-human-documentation-style.md"
+        ).read_text(encoding="utf-8")
+        source_manifest = (REPOSITORY_ROOT / "AGENTS.md").read_text(
+            encoding="utf-8"
+        )
+        template = (
+            REPOSITORY_ROOT / "harness/template/AGENTS.md.jinja"
+        ).read_text(encoding="utf-8")
+        renderer = (
+            REPOSITORY_ROOT / "crates/hive-render/src/lib.rs"
+        ).read_text(encoding="utf-8")
+        guidance = (
+            REPOSITORY_ROOT / "docs/guidance-schema.md"
+        ).read_text(encoding="utf-8")
+        shipped_rule = (
+            "Write human-readable project documents in concise Korean unless "
+            "the user explicitly requests another language."
+        )
+
+        self.assertIn("examples, not an exhaustive allowlist", source_directive)
+        self.assertIn("`~한다`", source_directive)
+        self.assertIn(
+            "`Aigent Hive는 provider-neutral 로컬 agent harness다.`",
+            source_directive,
+        )
+        self.assertIn(
+            "`Aigent Hive: provider-neutral 로컬 agent harness`",
+            source_directive,
+        )
+        self.assertIn("Do not mechanically replace", source_directive)
+        self.assertIn("Blockquote syntax alone never", source_directive)
+        self.assertIn(
+            ".agents/directives/08-human-documentation-style.md",
+            source_manifest,
+        )
+        self.assertIn(shipped_rule, template)
+        self.assertIn(shipped_rule, renderer)
+        exact_pairs = (
+            (
+                "Aigent Hive는 provider-neutral 로컬 agent harness다.",
+                "Aigent Hive: provider-neutral 로컬 agent harness",
+            ),
+            ("Product version은 0.7.0이다.", "Product version: 0.7.0"),
+            ("Release 계약이 구현됐다.", "Release 계약 구현 완료"),
+            (
+                "API key를 요청하거나 저장하지 않는다.",
+                "API key 요청·저장 없음",
+            ),
+            ("이 기능을 사용합니다.", "기능 사용"),
+            ("다음 단계에서 검증해요.", "다음 단계: 검증"),
+            ("검증이 필요합니다.", "검증 필요"),
+            ("업데이트가 완료되었습니다.", "업데이트 완료"),
+            ("Release 계약이 구현됐음.", "Release 계약 구현 완료"),
+            (
+                "API key를 요청하거나 저장하지 않음.",
+                "API key 요청·저장 없음",
+            ),
+        )
+        for exact_example in {
+            example for pair in exact_pairs for example in pair
+        }:
+            self.assertIn(exact_example, source_directive)
+            self.assertIn(exact_example, template)
+            self.assertIn(exact_example, renderer)
+            self.assertIn(exact_example, guidance)
+        self.assertIn("## 사람용 문서 스타일", guidance)
+        self.assertIn("예시는 제한 목록 아님", guidance)
+        self.assertIn("Blockquote 표시는 exact quote 증거 아님", guidance)
+        self.assertIn("`Release 계약이 구현됐음.`", guidance)
+
+    def test_consumer_turn_gate_uses_enforcement_and_semantic_intent(self) -> None:
+        template = (
+            REPOSITORY_ROOT / "harness/template/AGENTS.md.jinja"
+        ).read_text(encoding="utf-8")
+        renderer = (
+            REPOSITORY_ROOT / "crates/hive-render/src/lib.rs"
+        ).read_text(encoding="utf-8")
+        canonical_skill = (
+            REPOSITORY_ROOT / "harness/skills/hive-usage-guard/SKILL.md"
+        ).read_text(encoding="utf-8")
+        projected_skill = (
+            REPOSITORY_ROOT
+            / "harness/template/{{ '.claude' if primary_host == 'claude' else '.agents' }}"
+            / "skills/hive-usage-guard/SKILL.md"
+        ).read_text(encoding="utf-8")
+        guidance = (
+            REPOSITORY_ROOT / "docs/guidance-schema.md"
+        ).read_text(encoding="utf-8")
+        readme = (REPOSITORY_ROOT / "README.md").read_text(encoding="utf-8")
+
+        self.assertEqual(canonical_skill, projected_skill)
+        for surface in (template, renderer, canonical_skill, guidance, readme):
+            self.assertIn("hive usage enforce", surface)
+        for surface in (template, renderer, canonical_skill):
+            self.assertIn("bare continue", surface.lower())
+        self.assertIn("finite phrase list", template)
+        self.assertIn("finite phrase list", renderer)
+        self.assertIn("illustrative rather than a finite phrase", canonical_skill)
+        for surface in (template, renderer, canonical_skill):
+            self.assertIn("auxiliary evidence", surface)
+        for surface in (guidance, readme):
+            normalized = " ".join(surface.split())
+            self.assertIn("cancellation 결과는 보조 evidence", normalized)
+            self.assertIn("durable goal/task 상태 대체 불가", normalized)
+        self.assertIn("start a watcher", canonical_skill)
+        self.assertIn("Never install a fallback hook", canonical_skill)
+
     def test_catalog_contains_every_phase_three_builtin_name(self) -> None:
         catalog = read_yaml(CATALOG_PATH)
         skills = catalog.get("skills")
