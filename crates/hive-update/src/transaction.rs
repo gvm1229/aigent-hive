@@ -1744,8 +1744,8 @@ fn write_atomic_relative(
 #[cfg(unix)]
 fn sync_capability_directory(parent: &Dir, relative: &Path) -> Result<(), UpdateError> {
     parent
-        .try_clone()
-        .and_then(|directory| directory.into_std_file().sync_all())
+        .open(Path::new("."))
+        .and_then(|directory| directory.sync_all())
         .map_err(|error| {
             UpdateError::Internal(format!(
                 "cannot sync atomic parent for {}: {error}",
@@ -1758,6 +1758,7 @@ fn sync_capability_directory(parent: &Dir, relative: &Path) -> Result<(), Update
 }
 
 #[cfg(not(unix))]
+#[allow(clippy::unnecessary_wraps)]
 fn sync_capability_directory(_parent: &Dir, _relative: &Path) -> Result<(), UpdateError> {
     Ok(())
 }
