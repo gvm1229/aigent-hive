@@ -96,7 +96,7 @@ skills:
   consent_digest: null
 - name: hive-usage-guard
   source_type: built-in
-  content_digest: sha256:c7f42aaa6fee3303b16a2f825b3b860815fa8c65417a431c7ecded75b382f3a6
+  content_digest: sha256:a6f0ca413925b882b8cb30324a2f4495c2f67eaefaa2e357ba84ba2bc60556d7
   side_effect_class: project-write
   capabilities:
   - filesystem-read
