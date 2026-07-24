@@ -1,18 +1,21 @@
 # Aigent Hive 구현 계획
 
-> Revision: 1.10
+> Revision: 1.13
 > 상태: 구현 기준본
 > 기준일: 2026-07-24
-> 현재 제품 version: `0.5.0`
+> 현재 제품 version: `0.6.0`
 > 정본 위치: `docs/plans/PLAN.md`
 
 이 문서는 Aigent Hive의 완성된 사용자 흐름과 이를 구현하는 순서를 하나의 연속된 계획으로 정의한다. 이전 `PLAN_v1*` 문서는 현재 지침으로 사용하지 않는다.
 
-현재 `0.5.0`은 Phase 1 결정적 setup renderer, Phase 2 canonical Markdown
+현재 `0.6.0`은 Phase 1 결정적 setup renderer, Phase 2 canonical Markdown
 knowledge·disposable SQLite index, Phase 3 portable Skill routing·host projection과
-Phase 4 persistent role·durable run recovery 계약을 구현한다. Judge와 update flow는
-해당 milestone의 unchecked acceptance를 통과하기 전까지 구현·지원된 것으로
-간주하지 않는다.
+Phase 4 persistent role·durable run recovery 계약, Phase 5 subscription usage
+guard·one-shot automatic resume authorization·authenticated judge quorum을 구현한다.
+Judge authentication authority는 external agent-write-denied public-key trust root와
+detached Ed25519 attestation으로 확정됐고 completion gate와 isolated adversarial
+verification을 통과했다. Update flow는 해당 milestone의 unchecked acceptance를
+통과하기 전까지 구현·지원된 것으로 간주하지 않는다.
 
 ## 1. 목표와 완료 정의
 
@@ -68,7 +71,7 @@ Aigent Hive는 사용자가 이미 로그인한 Codex, Claude Code, Gemini Antig
 - update backup은 최대 7일만 유지한다.
 - 비기밀 canonical file은 Git 추적이 기본이며 runtime/cache/SQLite/backup은 제외한다.
 - `X.Y.Z` version에서 같은 `X` 안의 upgrade만 non-breaking을 보장한다.
-- 현재 product version은 backward-compatible Phase 4 persistent role, durable run과 fresh-session recovery milestone인 `0.5.0`이다.
+- 현재 product version은 마지막 완료 milestone인 Phase 5 usage guard와 authenticated judge quorum `0.6.0`이다.
 - backward-compatible feature는 원칙적으로 `Y`, 빠른 호환 bugfix는 `Z`를 증가시킨다.
 - `X` 증가는 사용자가 목표 major를 명시적으로 지시한 경우에만 준비·적용할 수 있으며 automation이 추론하거나 자동 증가하지 않는다.
 - cross-major update는 경고, dry run, 자동 migration과 사용자 data 무손실 검증 없이는 commit하지 않는다.
@@ -90,7 +93,7 @@ Aigent Hive는 사용자가 이미 로그인한 Codex, Claude Code, Gemini Antig
 
 ### 1.3 Product version 정책
 
-Plan revision과 product version은 독립이다. 이 문서는 revision `1.10`이며 현재 구현 artifact는 `0.5.0`이다.
+Plan revision과 product version은 독립이다. 이 문서는 revision `1.13`이며 현재 완료 artifact는 `0.6.0`이다.
 
 Version 정본과 projection:
 
@@ -603,7 +606,9 @@ envelope로 저장하며 다른 role entry를 덮어쓰지 않는다.
 - compaction, session 종료, handoff 전 `STATUS.md` 갱신
 - 같은 artifact/evidence hash의 중복 result 멱등 처리
 - runtime이 지속 loop를 지원하지 않으면 `resume-ready`까지만 제공하고 unattended completion을 지원했다고 표시하지 않음
-- resume는 provider-neutral `prepared_only` brief만 만들고 process/subagent를 spawn하지 않음
+- manual resume는 unenforced provider-neutral brief를 만들고, automatic resume는 fresh
+  usage permit을 brief 준비 closure 직전에 한 번 소비한 경우에만 brief를 반환함
+- 어느 resume 경로도 process/subagent를 spawn하지 않음
 
 #### 완료 조건
 
@@ -642,17 +647,42 @@ Snapshot freshness:
 - expires at
 - source confidence
 
-CodexBar adapter는 pinned-qualified CLI의 `usage` JSON에서 active account와 quota window를 검증한다. `guard` 결과만으로는 account와 freshness를 증명할 수 없으므로 정본 snapshot으로 사용하지 않는다. Session window가 있으면 이를 우선하고, host가 session limit을 제공하지 않을 때 weekly window를 fallback으로 선택한다. 둘 다 없거나 선택된 window의 `remaining <= 10%`이면 새 permit을 발급하지 않는다.
+CodexBar adapter는 pinned-qualified CLI의 `usage` JSON에서 active account와 quota
+window를 검증한다. `guard` 결과만으로는 account와 freshness를 증명할 수 없으므로
+정본 snapshot으로 사용하지 않는다. Session window가 있으면 weekly가 low, malformed
+또는 duplicate여도 session만 선택한다. Session이 없을 때만 단일 weekly window를
+fallback으로 선택한다. 선택 가능한 window가 없거나 선택된 window의
+`remaining <= installed threshold`이면 새 permit을 발급하지 않는다. Default
+installed threshold는 `10%`다.
 
 Adapter는 side-effect-free local command만 실행. Hive는 model call retry를 하지 않으며 local sensor read도 bounded attempt 후 unknown 처리.
 
+`hive run resume`은 기본 manual intent에서 sensor를 읽지 않고 기존 prepare-only
+recovery를 유지한다. Explicit automatic intent는 account digest와 selected active
+role 하나를 요구하고 installed `.hive/config/harness.toml`의
+`usage_stop_remaining_percent`를 권위값으로 사용한다. Optional threshold override는
+설치값과 exact하게 같을 때만 허용한다. Durable run, owner, role과 evidence 검증 뒤
+fresh CodexBar snapshot을 평가한다.
+
+Selected prior snapshot은 Git에서 제외된 Hive-owned
+`.hive/runtime/usage-history/`에만 bounded·integrity-bound record로 저장한다. 이후
+measurement/reset 역행과 같은 reset의 remaining 증가는 `usage_unknown`이다.
+Permit은 dispatch brief 준비 closure 직전에 한 번 소비하며 exact run
+revision·role·brief당 deterministic authorization 하나와 brief 하나만 발급한다.
+같은 binding의 재발급, limited, unknown 또는 expired 결과는 brief 없이 recovery
+data만 반환한다. 이 integration은 model이나 subagent를 spawn하지 않는다.
+
+Hive는 같은 authorization의 재발급을 거부하지만 caller가 이미 capture한 JSON을 Hive
+밖에서 replay하는 것까지 막지 못한다. 실제 host/orchestration owner가
+authorization ID를 dispatch boundary에서 exactly once로 소비해야 한다.
+
 #### 완료 조건
 
-- [ ] API endpoint와 provider SDK dependency 0개
-- [ ] 10% 경계에서 새 automatic dispatch 0개
-- [ ] stale/missing/mismatched sensor가 `usage_unknown`
-- [ ] sensor가 없는 host에서 enforcement 가능하다고 표시하지 않음
-- [ ] CodexBar가 없어도 core setup·memory·update 동작
+- [x] API endpoint와 provider SDK dependency 0개
+- [x] installed threshold와 결합된 10% 경계에서 새 automatic dispatch 0개
+- [x] stale/missing/mismatched/regressing sensor가 product path에서 `usage_unknown`
+- [x] sensor가 없는 host에서 enforcement 가능하다고 표시하지 않음
+- [x] CodexBar가 없어도 core setup·memory·update 동작
 
 ### Stage 8. Deterministic verification과 hostile judge
 
@@ -686,21 +716,43 @@ Judge는 `PASS`, `FAIL`, `INDETERMINATE`만 반환. `FAIL`은 재현 가능한 f
 
 #### 구현
 
-- host 또는 external runtime의 clean independent agent 사용
+- host 또는 external runtime의 clean independent agent 사용; Hive CLI는 judge를
+  실행하거나 spawn하지 않음
 - 각 judge에 `schemas/judge-package.schema.json`을 따르는 동일 digest의 최소 context envelope 개별 전달
+- verdict 전 exact package·criteria, requester, task agent, resolved owner와
+  authenticated owner provenance, distinct slot/instance/eligibility tuple을
+  `judge-assignment` JCS digest로 고정
 - 각 결과는 `schemas/judge-verdict.schema.json`으로 검증
+- verdict는 assignment digest, exact assigned tuple과 assignment 뒤 timestamp에 결합
+- critical human approval은 모든 eligible verdict 뒤 별도 `judge-approval` JCS
+  artifact로 고정하고 requester/task agent approval을 거부
 - verdict 전에 다른 judge 결과 공개 금지
 - quorum 계산은 deterministic code
 - FAIL finding은 affected criterion/task에 연결
+- `hive-judge-package`는 deterministic verification 뒤 read-only package 생성만
+  수행하며 simple-question gate와 compatible OMX/OMC precedence를 보존
+- package, assignment, verdict와 approval은 target-contained target-relative path만
+  bounded no-follow read하며 aggregate output에서 identity, slot, finding, digest와
+  개별 verdict를 숨김
+- owner, judge instance와 critical human approver는 consumer target 밖의
+  agent-write-denied TOML trust root에 등록한 purpose-bound public key로 각각
+  detached Ed25519 attestation을 검증
+- Hive는 strict verification만 수행하고 private-key 생성·읽기·보관·signing은 외부
+  authority가 소유. Target 내부 self-certified key, caller-supplied identity digest와
+  공개 입력만으로 재계산 가능한 digest는 authentication evidence가 아님
+- unsigned v1 quorum은 diagnostic compatibility만 제공하고 completion-authorizing
+  PASS를 반환하지 않음
 
 #### 완료 조건
 
-- [ ] task agent가 자신의 결과를 최종 승인하지 않음
-- [ ] judge 간 verdict leakage 0회
-- [ ] 2/3와 3/3+human gate unit test
-- [ ] missing evidence는 PASS가 아닌 INDETERMINATE
-- [ ] verdict의 `package_digest`가 원본 judge package와 다르면 quorum 제외
-- [ ] critical human approval 없이 completion 불가
+- [x] task agent가 자신의 결과를 최종 승인하지 않음
+- [x] judge 간 verdict leakage 0회
+- [x] 2/3와 3/3+human gate unit test
+- [x] missing evidence는 PASS가 아닌 INDETERMINATE
+- [x] verdict의 `package_digest`가 원본 judge package와 다르면 quorum 제외
+- [x] provenance-bound critical human approval 없이 completion 불가
+- [x] trusted owner/judge/human signature 또는 host attestation을 user/host-controlled
+  trust root에 대해 검증
 
 ### Stage 9. Karpathy Raw/Wiki/Schema memory
 
@@ -992,10 +1044,10 @@ Implemented built-in:
 - `hive-role-handoff`
 - `hive-run-checkpoint`
 - `hive-run-resume`
+- `hive-judge-package`
 
 Catalog-only future entry:
 
-- `hive-judge-package`
 - `hive-update`
 - `hive-migrate`
 
@@ -1082,9 +1134,10 @@ Optional third-party Skill은 quarantine→provenance 검증→사용자 개별 
 - [x] `UsageSnapshot` adapter interface
 - [x] local sensor TTL/freshness
 - [x] 10% threshold fail-closed
-- [ ] CodexBar candidate qualification
-- [ ] judge clean-context envelope
-- [ ] 2/3, 3/3+human quorum
+- [x] CodexBar candidate qualification과 installed policy/history 결합
+- [x] run-resume single-brief automatic dispatch authorization
+- [x] judge clean-context envelope와 `hive-judge-package`
+- [x] authenticated provenance-bound 2/3, 3/3+human quorum
 
 ### Phase 6. Update, migration과 release — target `0.7.0`
 
@@ -1139,7 +1192,17 @@ Optional third-party Skill은 quarantine→provenance 검증→사용자 개별 
 | deprecated Wiki 삭제 | active query 0건, suppression metadata만 유지 |
 | stale usage sensor | automatic continuation 0회 |
 | sensor 없음 | 20% enforcement claim 없음 |
+| installed threshold override mismatch | automatic brief 0개, 입력 거부 |
+| same-reset remaining 증가 또는 timestamp 역행 | `usage_unknown`, automatic brief 0개 |
+| exact authorization 재요청 | sensor 재호출 없이 `already_issued`, brief 0개 |
+| capture된 authorization JSON 외부 replay | host/orchestration owner가 authorization ID 중복 소비 거부 |
 | task-agent self review | final approval 거부 |
+| requester/task agent가 judge roster 또는 approver | assignment/approval 거부 |
+| owner provenance missing/invalid | `INDETERMINATE` |
+| unsigned legacy judge request | `authenticated:false`, `INDETERMINATE` |
+| target-contained 또는 caller-writable trust root | command blocked, PASS 0개 |
+| judge signature/key purpose/principal/artifact mismatch | 해당 verdict 제외, PASS 승격 금지 |
+| revoked/out-of-window/duplicate judge key | trust root 또는 attestation 거부 |
 | judge disagreement | tier quorum에 따라 FAIL/INDETERMINATE |
 | session 종료 | PLAN/STATUS/evidence로 재개 |
 | resolved OMX/OMC가 run 중 실패 | hidden fallback·owner switch 0회 |
@@ -1162,7 +1225,7 @@ v1 public release는 다음을 모두 충족해야 한다.
 - [ ] 세 host의 실제 capability matrix
 - [x] model-provider API dependency와 credential path 0개
 - [x] setup dry-run, ownership, conflict와 source guard
-- [ ] action/role/run/judge/capability machine contract conformance
+- [x] action/role/run/judge/capability machine contract conformance
 - [x] simple-question negative capability test
 - [x] `hive-prompt-refine` automatic intent match, meaning preservation과 refine-only isolation
 - [x] approved Skill의 automatic minimal routing과 OMX/OMC precedence
@@ -1171,7 +1234,7 @@ v1 public release는 다음을 모두 충족해야 한다.
 - [x] persistent role/run fresh-session recovery
 - [x] host-native 또는 external orchestration truthful support 표시
 - [x] usage guard의 freshness와 fail-closed 증거
-- [ ] hostile judge context isolation과 quorum
+- [x] hostile judge context isolation과 authenticated provenance-bound quorum
 - [x] Karpathy Raw/Wiki/Schema와 SQLite rebuild
 - [ ] same-major compatibility
 - [ ] cross-major no-data-loss migration

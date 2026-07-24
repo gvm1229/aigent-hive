@@ -53,6 +53,13 @@ DATA_SKILLS = {
     "hive-run-checkpoint",
     "hive-run-resume",
 }
+RAW_USAGE_ACCOUNT = "usage-guard@example.invalid"
+USAGE_ACCOUNT_DIGEST = (
+    "sha256:" + hashlib.sha256(RAW_USAGE_ACCOUNT.encode()).hexdigest()
+)
+CODEXBAR_FIXTURE = (
+    ROOT / "tests/fixtures/phase5/usage/codexbar_fixture.py"
+).read_text(encoding="utf-8")
 
 
 def digest_bytes(value: bytes) -> str:
@@ -160,6 +167,12 @@ class Phase4Contracts(unittest.TestCase):
     def fresh_target(self, name: str) -> Path:
         target = self.work / name
         shutil.copytree(FIXTURES / "valid-consumer", target)
+        config = target / ".hive/config"
+        config.mkdir()
+        (config / "harness.toml").write_text(
+            "schema_version = 1\nusage_stop_remaining_percent = 10\n",
+            encoding="utf-8",
+        )
         return target
 
     def write_json(self, name: str, value: dict[str, Any]) -> Path:
@@ -316,9 +329,15 @@ class Phase4Contracts(unittest.TestCase):
         self,
         target: Path,
         capability: Path,
+        *,
+        dispatch_intent: str | None = None,
+        account_digest: str | None = None,
+        role_id: str | None = None,
+        threshold: int | None = None,
+        extra_environment: dict[str, str] | None = None,
     ) -> tuple[subprocess.CompletedProcess[str], dict[str, Any]]:
         fresh_capability = self.fresh_capability_input(capability, "resume")
-        return self.run_cli(
+        arguments: list[str | Path] = [
             "run",
             "resume",
             "--target",
@@ -329,7 +348,56 @@ class Phase4Contracts(unittest.TestCase):
             fresh_capability,
             "--output",
             "json",
+        ]
+        if dispatch_intent is not None:
+            arguments.extend(["--dispatch-intent", dispatch_intent])
+        if account_digest is not None:
+            arguments.extend(["--account-digest", account_digest])
+        if role_id is not None:
+            arguments.extend(["--role", role_id])
+        elif dispatch_intent == "automatic":
+            arguments.extend(["--role", "reviewer"])
+        if threshold is not None:
+            arguments.extend(["--threshold", str(threshold)])
+        return self.run_cli(
+            *arguments,
+            extra_environment=extra_environment,
         )
+
+    def fake_codexbar_environment(
+        self,
+        case: str,
+        *,
+        empty: bool = False,
+        log: Path | None = None,
+    ) -> dict[str, str]:
+        fake_bin = self.work / f"fake-codexbar-{case}"
+        fake_bin.mkdir(exist_ok=True)
+        if not empty:
+            if os.name == "nt":
+                python = subprocess.list2cmdline([os.sys.executable])
+                (fake_bin / "codexbar.cmd").write_text(
+                    f"@{python} \"%~dp0\\codexbar.py\" %*\r\n",
+                    encoding="utf-8",
+                )
+                (fake_bin / "codexbar.py").write_text(
+                    CODEXBAR_FIXTURE,
+                    encoding="utf-8",
+                )
+            else:
+                executable = fake_bin / "codexbar"
+                executable.write_text(
+                    f"#!{os.sys.executable}\n{CODEXBAR_FIXTURE}",
+                    encoding="utf-8",
+                )
+                executable.chmod(executable.stat().st_mode | stat.S_IXUSR)
+        environment = {
+            "PATH": str(fake_bin),
+            "FAKE_CODEXBAR_CASE": case,
+        }
+        if log is not None:
+            environment["FAKE_CODEXBAR_LOG"] = str(log)
+        return environment
 
     def read_status(self, target: Path) -> tuple[dict[str, Any], bytes]:
         status, body = parse_document(target / ".hive/runs/demo/STATUS.md")
@@ -433,6 +501,9 @@ class Phase4Contracts(unittest.TestCase):
         self.assertIs(data["spawned"], False)
         self.assertIs(data["recovery_only"], recovery_only)
         self.assertEqual(len(data["dispatch_briefs"]), brief_count)
+        self.assertIn("usage_guard", data)
+        self.assertNotIn("account", data["usage_guard"])
+        self.assertNotIn("account_digest", data["usage_guard"])
         self.validators["status"].validate(data["status"])
         for role in data["roles"]:
             self.validators["role"].validate(role["profile"])
@@ -1008,9 +1079,12 @@ class Phase4Contracts(unittest.TestCase):
                 )
                 self.assert_success(process, payload)
                 before = snapshot_tree(target)
+                empty_path = self.work / f"manual-no-sensor-{state}"
+                empty_path.mkdir()
                 resumed, resume_payload = self.resume(
                     target,
                     CAPABILITIES["codex-omx"],
+                    extra_environment={"PATH": str(empty_path)},
                 )
                 self.assert_success(resumed, resume_payload)
                 self.assertEqual(resume_payload["code"], "hive.run-resume-prepared")
@@ -1020,8 +1094,469 @@ class Phase4Contracts(unittest.TestCase):
                     brief_count=1,
                     recovery_only=False,
                 )
+                self.assertEqual(
+                    resume_payload["data"]["usage_guard"],
+                    {
+                        "dispatch_intent": "manual",
+                        "enforced": False,
+                        "outcome": "not_requested",
+                        "evidence_digest": None,
+                        "window": None,
+                    },
+                )
+                self.assertNotIn("usage-snapshots:", resumed.stdout)
                 self.assertEqual(snapshot_tree(target), before)
                 self.assert_project_sentinels(target)
+
+    def test_automatic_resume_allows_once_with_sanitized_usage_evidence(self) -> None:
+        target = self.fresh_target("automatic-allow")
+        self.ensure_handoff(target)
+        process, payload = self.checkpoint(
+            target,
+            self.checkpoint_request(state="executing"),
+            CAPABILITIES["codex-omx"],
+            "automatic-allow",
+        )
+        self.assert_success(process, payload)
+        sensor_log = self.work / "automatic-allow.log"
+        before = snapshot_tree(target)
+
+        resumed, resume_payload = self.resume(
+            target,
+            CAPABILITIES["codex-omx"],
+            dispatch_intent="automatic",
+            account_digest=USAGE_ACCOUNT_DIGEST,
+            extra_environment=self.fake_codexbar_environment(
+                "allow",
+                log=sensor_log,
+            ),
+        )
+
+        self.assert_success(resumed, resume_payload)
+        self.assertEqual(resume_payload["code"], "hive.run-resume-prepared")
+        self.assert_resume_payload(
+            resume_payload,
+            state="executing",
+            brief_count=1,
+            recovery_only=False,
+        )
+        usage_guard = resume_payload["data"]["usage_guard"]
+        self.assertEqual(usage_guard["dispatch_intent"], "automatic")
+        self.assertIs(usage_guard["enforced"], True)
+        self.assertEqual(usage_guard["outcome"], "authorized")
+        self.assertEqual(usage_guard["window"], "session")
+        self.assertRegex(usage_guard["evidence_digest"], r"^sha256:[0-9a-f]{64}$")
+        self.assertRegex(usage_guard["authorization_id"], r"^sha256:[0-9a-f]{64}$")
+        self.assertEqual(usage_guard["role_id"], "reviewer")
+        self.assertEqual(usage_guard["history"], "absent")
+        self.assertNotIn(RAW_USAGE_ACCOUNT, resumed.stdout)
+        self.assertEqual(len(resume_payload["changed_paths"]), 2)
+        for changed in resume_payload["changed_paths"]:
+            self.assertTrue(changed.startswith(".hive/runtime/"), changed)
+            self.assertNotIn(
+                RAW_USAGE_ACCOUNT,
+                (target / changed).read_text(encoding="utf-8"),
+            )
+        after = snapshot_tree(target)
+        for path, value in before.items():
+            self.assertEqual(after[path], value)
+        invocations = [
+            json.loads(line)
+            for line in sensor_log.read_text(encoding="utf-8").splitlines()
+        ]
+        self.assertEqual(
+            invocations,
+            [
+                ["--version"],
+                [
+                    "usage",
+                    "--provider",
+                    "codex",
+                    "--all-accounts",
+                    "--source",
+                    "cli",
+                    "--format",
+                    "json",
+                    "--json-only",
+                ],
+            ],
+        )
+
+    def test_automatic_resume_blocks_at_ten_percent_or_unknown_sensor(self) -> None:
+        for case, sensor_case, threshold, expected_code, expected_outcome in (
+            ("default-threshold", "threshold", None, "hive.usage-limited", "limited"),
+            ("configured-threshold", "allow", 60, "hive.usage-limited", "limited"),
+            ("missing", "missing", None, "hive.usage-unknown", "unknown"),
+        ):
+            with self.subTest(case=case):
+                target = self.fresh_target(f"automatic-{case}")
+                if threshold is not None:
+                    (target / ".hive/config/harness.toml").write_text(
+                        "schema_version = 1\n"
+                        f"usage_stop_remaining_percent = {threshold}\n",
+                        encoding="utf-8",
+                    )
+                self.ensure_handoff(target)
+                process, payload = self.checkpoint(
+                    target,
+                    self.checkpoint_request(state="executing"),
+                    CAPABILITIES["codex-omx"],
+                    f"automatic-{case}",
+                )
+                self.assert_success(process, payload)
+                before = snapshot_tree(target)
+
+                resumed, resume_payload = self.resume(
+                    target,
+                    CAPABILITIES["codex-omx"],
+                    dispatch_intent="automatic",
+                    account_digest=USAGE_ACCOUNT_DIGEST,
+                    threshold=threshold,
+                    extra_environment=self.fake_codexbar_environment(
+                        sensor_case,
+                        empty=case == "missing",
+                    ),
+                )
+
+                self.assertEqual(resumed.returncode, 3, resume_payload)
+                self.assertEqual(resume_payload["code"], expected_code)
+                self.assert_resume_payload(
+                    resume_payload,
+                    state="executing",
+                    brief_count=0,
+                    recovery_only=True,
+                )
+                usage_guard = resume_payload["data"]["usage_guard"]
+                self.assertIs(usage_guard["enforced"], False)
+                self.assertEqual(usage_guard["outcome"], expected_outcome)
+                self.assertNotIn(RAW_USAGE_ACCOUNT, resumed.stdout)
+                after = snapshot_tree(target)
+                if case == "missing":
+                    self.assertEqual(after, before)
+                else:
+                    self.assertEqual(
+                        resume_payload["changed_paths"],
+                        [
+                            next(
+                                path
+                                for path in after
+                                if path.startswith(".hive/runtime/usage-history/")
+                            )
+                        ],
+                    )
+                    for path, value in before.items():
+                        self.assertEqual(after[path], value)
+
+    def test_automatic_resume_session_precedes_low_weekly(self) -> None:
+        target = self.fresh_target("automatic-session-precedence")
+        self.ensure_handoff(target)
+        process, payload = self.checkpoint(
+            target,
+            self.checkpoint_request(state="executing"),
+            CAPABILITIES["codex-omx"],
+            "automatic-session-precedence",
+        )
+        self.assert_success(process, payload)
+
+        resumed, resume_payload = self.resume(
+            target,
+            CAPABILITIES["codex-omx"],
+            dispatch_intent="automatic",
+            account_digest=USAGE_ACCOUNT_DIGEST,
+            extra_environment=self.fake_codexbar_environment(
+                "weekly-low-session-high"
+            ),
+        )
+
+        self.assert_success(resumed, resume_payload)
+        self.assert_resume_payload(
+            resume_payload,
+            state="executing",
+            brief_count=1,
+            recovery_only=False,
+        )
+        self.assertEqual(
+            resume_payload["data"]["usage_guard"]["window"],
+            "session",
+        )
+
+    def test_automatic_threshold_is_bound_to_installed_config(self) -> None:
+        target = self.fresh_target("automatic-threshold-binding")
+        (target / ".hive/config/harness.toml").write_text(
+            "schema_version = 1\nusage_stop_remaining_percent = 20\n",
+            encoding="utf-8",
+        )
+        self.ensure_handoff(target)
+        process, payload = self.checkpoint(
+            target,
+            self.checkpoint_request(state="executing"),
+            CAPABILITIES["codex-omx"],
+            "automatic-threshold-binding",
+        )
+        self.assert_success(process, payload)
+        sensor_log = self.work / "threshold-binding.log"
+        before = snapshot_tree(target)
+
+        resumed, resume_payload = self.resume(
+            target,
+            CAPABILITIES["codex-omx"],
+            dispatch_intent="automatic",
+            account_digest=USAGE_ACCOUNT_DIGEST,
+            threshold=10,
+            extra_environment=self.fake_codexbar_environment(
+                "allow",
+                log=sensor_log,
+            ),
+        )
+
+        self.assertEqual(resumed.returncode, 2, resume_payload)
+        self.assertEqual(resume_payload["code"], "hive.invalid-input")
+        self.assertIn("installed usage_stop_remaining_percent (20)", resumed.stdout)
+        self.assertFalse(sensor_log.exists())
+        self.assertEqual(snapshot_tree(target), before)
+
+    def test_automatic_config_missing_malformed_or_symlink_fails_closed(self) -> None:
+        cases = ("missing", "malformed", "symlink")
+        for case in cases:
+            if case == "symlink" and os.name == "nt":
+                continue
+            with self.subTest(case=case):
+                target = self.fresh_target(f"automatic-config-{case}")
+                config = target / ".hive/config/harness.toml"
+                if case == "missing":
+                    config.unlink()
+                elif case == "malformed":
+                    config.write_text(
+                        "usage_stop_remaining_percent = 10\n"
+                        "usage_stop_remaining_percent = 9\n",
+                        encoding="utf-8",
+                    )
+                else:
+                    external = self.work / "foreign-harness.toml"
+                    external.write_text(
+                        "usage_stop_remaining_percent = 10\n",
+                        encoding="utf-8",
+                    )
+                    config.unlink()
+                    config.symlink_to(external)
+                self.ensure_handoff(target)
+                process, payload = self.checkpoint(
+                    target,
+                    self.checkpoint_request(state="executing"),
+                    CAPABILITIES["codex-omx"],
+                    f"automatic-config-{case}",
+                )
+                self.assert_success(process, payload)
+                before = snapshot_tree(target)
+                resumed, resume_payload = self.resume(
+                    target,
+                    CAPABILITIES["codex-omx"],
+                    dispatch_intent="automatic",
+                    account_digest=USAGE_ACCOUNT_DIGEST,
+                    extra_environment=self.fake_codexbar_environment("allow"),
+                )
+                self.assertEqual(resumed.returncode, 3, resume_payload)
+                self.assertEqual(resume_payload["code"], "hive.run-blocked")
+                self.assertEqual(resume_payload["changed_paths"], [])
+                self.assertEqual(snapshot_tree(target), before)
+
+    def test_automatic_history_rejects_regressions_and_tampering(self) -> None:
+        reset_at = "2026-07-25T00:00:00Z"
+        for case in ("remaining-increase", "measurement-regression"):
+            with self.subTest(case=case):
+                target = self.fresh_target(f"automatic-history-{case}")
+                self.ensure_handoff(target)
+                process, payload = self.checkpoint(
+                    target,
+                    self.checkpoint_request(state="executing"),
+                    CAPABILITIES["codex-omx"],
+                    f"automatic-history-first-{case}",
+                )
+                self.assert_success(process, payload)
+                first, first_payload = self.resume(
+                    target,
+                    CAPABILITIES["codex-omx"],
+                    dispatch_intent="automatic",
+                    account_digest=USAGE_ACCOUNT_DIGEST,
+                    extra_environment={
+                        **self.fake_codexbar_environment("allow"),
+                        "FAKE_CODEXBAR_RESET_AT": reset_at,
+                    },
+                )
+                self.assert_success(first, first_payload)
+                process, payload = self.checkpoint(
+                    target,
+                    self.checkpoint_request(
+                        state="executing",
+                        expected_revision=1,
+                        updated_at="2026-07-24T00:01:00Z",
+                    ),
+                    CAPABILITIES["codex-omx"],
+                    f"automatic-history-second-{case}",
+                )
+                self.assert_success(process, payload)
+                second, second_payload = self.resume(
+                    target,
+                    CAPABILITIES["codex-omx"],
+                    dispatch_intent="automatic",
+                    account_digest=USAGE_ACCOUNT_DIGEST,
+                    extra_environment={
+                        **self.fake_codexbar_environment(case),
+                        "FAKE_CODEXBAR_RESET_AT": reset_at,
+                    },
+                )
+                self.assertEqual(second.returncode, 3, second_payload)
+                self.assertEqual(second_payload["code"], "hive.usage-unknown")
+                self.assertEqual(
+                    second_payload["data"]["usage_guard"]["history"],
+                    "available",
+                )
+                self.assertEqual(second_payload["data"]["dispatch_briefs"], [])
+
+        for corruption in ("tampered", "symlink"):
+            if corruption == "symlink" and os.name == "nt":
+                continue
+            with self.subTest(corruption=corruption):
+                target = self.fresh_target(f"automatic-history-{corruption}")
+                self.ensure_handoff(target)
+                process, payload = self.checkpoint(
+                    target,
+                    self.checkpoint_request(state="executing"),
+                    CAPABILITIES["codex-omx"],
+                    f"automatic-history-{corruption}",
+                )
+                self.assert_success(process, payload)
+                history = target / ".hive/runtime/usage-history"
+                history.mkdir(parents=True)
+                key = hashlib.sha256(USAGE_ACCOUNT_DIGEST.encode()).hexdigest()
+                record = history / f"{key}.json"
+                if corruption == "tampered":
+                    record.write_text('{"schema_version":1}\n', encoding="utf-8")
+                else:
+                    external = self.work / "foreign-usage-history.json"
+                    external.write_text('{"schema_version":1}\n', encoding="utf-8")
+                    record.symlink_to(external)
+                before = snapshot_tree(target)
+                resumed, resume_payload = self.resume(
+                    target,
+                    CAPABILITIES["codex-omx"],
+                    dispatch_intent="automatic",
+                    account_digest=USAGE_ACCOUNT_DIGEST,
+                    extra_environment=self.fake_codexbar_environment("allow"),
+                )
+                self.assertEqual(resumed.returncode, 3, resume_payload)
+                self.assertEqual(resume_payload["code"], "hive.run-blocked")
+                self.assertEqual(snapshot_tree(target), before)
+
+    def test_automatic_authorization_is_one_role_one_brief_and_not_reissued(self) -> None:
+        target = self.fresh_target("automatic-one-brief")
+        self.ensure_handoff(target)
+        writer_request = {
+            "schema_version": 1,
+            "role_id": "writer",
+            "run_id": "demo",
+            "expected_current_assignment": None,
+            "expected_handoff_path": None,
+            "expected_handoff_digest": digest_bytes(
+                (target / ".hive/runs/demo/HANDOFF.md").read_bytes()
+            ),
+            "handoff_markdown": "Next: write docs.\n",
+            "updated_at": "2026-07-24T00:00:01Z",
+        }
+        writer_request_path = self.write_json(
+            "automatic-one-brief-writer.json",
+            writer_request,
+        )
+        writer_process, writer_payload = self.run_cli(
+            "role",
+            "handoff",
+            "--target",
+            target,
+            "--request",
+            writer_request_path,
+            "--output",
+            "json",
+        )
+        self.assert_success(writer_process, writer_payload)
+        process, payload = self.checkpoint(
+            target,
+            self.checkpoint_request(
+                state="executing",
+                active_roles=["reviewer", "writer"],
+            ),
+            CAPABILITIES["codex-omx"],
+            "automatic-one-brief",
+        )
+        self.assert_success(process, payload)
+        sensor_log = self.work / "automatic-one-brief.log"
+        first, first_payload = self.resume(
+            target,
+            CAPABILITIES["codex-omx"],
+            dispatch_intent="automatic",
+            account_digest=USAGE_ACCOUNT_DIGEST,
+            role_id="writer",
+            extra_environment=self.fake_codexbar_environment(
+                "allow",
+                log=sensor_log,
+            ),
+        )
+        self.assert_success(first, first_payload)
+        briefs = first_payload["data"]["dispatch_briefs"]
+        self.assertEqual(len(briefs), 1)
+        self.assertEqual(briefs[0]["role_id"], "writer")
+        authorization_id = first_payload["data"]["usage_guard"]["authorization_id"]
+        invocation_count = len(sensor_log.read_text(encoding="utf-8").splitlines())
+
+        replay, replay_payload = self.resume(
+            target,
+            CAPABILITIES["codex-omx"],
+            dispatch_intent="automatic",
+            account_digest=USAGE_ACCOUNT_DIGEST,
+            role_id="writer",
+            extra_environment=self.fake_codexbar_environment(
+                "allow",
+                log=sensor_log,
+            ),
+        )
+        self.assertEqual(replay.returncode, 3, replay_payload)
+        self.assertEqual(replay_payload["code"], "hive.usage-unknown")
+        self.assertEqual(replay_payload["data"]["dispatch_briefs"], [])
+        self.assertEqual(
+            replay_payload["data"]["usage_guard"]["outcome"],
+            "already_issued",
+        )
+        self.assertEqual(
+            replay_payload["data"]["usage_guard"]["authorization_id"],
+            authorization_id,
+        )
+        self.assertEqual(
+            len(sensor_log.read_text(encoding="utf-8").splitlines()),
+            invocation_count,
+        )
+        authorization_file = next(
+            (target / ".hive/runtime/dispatch-authorizations").glob("*.json")
+        )
+        authorization_file.write_text('{"schema_version":1}\n', encoding="utf-8")
+        before_tampered_retry = snapshot_tree(target)
+        tampered, tampered_payload = self.resume(
+            target,
+            CAPABILITIES["codex-omx"],
+            dispatch_intent="automatic",
+            account_digest=USAGE_ACCOUNT_DIGEST,
+            role_id="writer",
+            extra_environment=self.fake_codexbar_environment(
+                "allow",
+                log=sensor_log,
+            ),
+        )
+        self.assertEqual(tampered.returncode, 3, tampered_payload)
+        self.assertEqual(tampered_payload["code"], "hive.run-blocked")
+        self.assertEqual(tampered_payload["changed_paths"], [])
+        self.assertEqual(snapshot_tree(target), before_tampered_retry)
+        self.assertEqual(
+            len(sensor_log.read_text(encoding="utf-8").splitlines()),
+            invocation_count,
+        )
 
     def test_resume_ready_is_recovery_only_and_makes_no_hidden_transition(self) -> None:
         self.ensure_handoff(self.target)

@@ -9,8 +9,14 @@
 | `run-checkpoint-request.schema.json` | optimistic durable run checkpoint 입력 |
 | `dispatch-brief.schema.json` | host-owned 실행 전 prepare-only dispatch data |
 | `role-handoff-request.schema.json` | optimistic persistent role handoff 입력 |
+| `judge-package-request.schema.json` | clean-context judge package 생성 요청 |
+| `judge-quorum-request.schema.json` | package와 독립 verdict quorum 집계 요청 |
 | `judge-package.schema.json` | 독립 judge 입력 envelope |
+| `judge-assignment.schema.json` | verdict 이전에 owner provenance와 exact slot roster를 고정하는 JCS digest artifact |
 | `judge-verdict.schema.json` | 독립 judge 결과 |
+| `judge-approval.schema.json` | critical quorum 이후 별도로 고정하는 JCS digest human approval artifact |
+| `judge-attestation.schema.json` | assignment·verdict·approval의 detached Ed25519 signature sidecar |
+| `judge-trust-root.schema.json` | consumer target 밖에서 보호하는 purpose-bound public-key trust root |
 | `capability-matrix.schema.json` | host/version/surface qualification |
 | `knowledge-page.schema.json` | active Wiki Markdown frontmatter |
 | `knowledge-suppression.schema.json` | deleted-content minimal suppression ledger |
@@ -30,6 +36,11 @@ JSON Schema만으로 표현하기 어려운 cross-field invariant는 Rust semant
   host/owner/runtime/evidence digest/subagent support 전체 pin과 criterion별 evidence가 필요
 - dispatch brief는 provider-neutral data만 준비하며 runtime 호출이나 subagent spawn을 수행하지 않음
 - judge quorum에 포함되는 verdict의 `package_digest`는 입력 package와 동일
+- authenticated quorum의 attestation은 artifact 전체의 JCS digest, trust-root ID,
+  principal, key ID와 artifact kind를 exact domain-separated Ed25519 signature로 결합
+- trust-root public key는 전역 unique이며 assignment/verdict/approval purpose를
+  교차 사용할 수 없음
+- unsigned quorum schema v1은 diagnostic compatibility만 제공하고 PASS 권한이 없음
 - Wiki tag/alias/source/link array는 lexicographic sort·unique이며 active source locator는 실제 Raw revision digest와 일치
 - suppression entry는 deleted body field를 표현할 수 없음
 

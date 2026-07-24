@@ -7,6 +7,8 @@ use std::path::{Component, Path, PathBuf};
 
 use sha2::{Digest, Sha256};
 
+pub mod judge;
+pub mod judge_auth;
 pub mod role;
 pub mod run;
 pub mod usage_guard;

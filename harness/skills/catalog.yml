@@ -117,18 +117,17 @@ skills:
     availability: implemented
 
   - name: hive-judge-package
-    description: Build a minimal digest-bound clean-context judge package after deterministic verification without running a model or exposing another judge verdict.
+    description: Validate a digest-bound clean-context package and authenticated Ed25519 owner, judge, and human attestations without signing, running a model, or exposing judge identities or findings.
     provided_by: hive
     superseded_by_external: []
     invocation_intents:
       - PackageJudgeEvidence
       - VerifyWork
-    side_effect_class: project-write
+    side_effect_class: read-only
     capabilities:
       - filesystem-read
-      - filesystem-write
       - run-state
-    availability: catalog-only
+    availability: implemented
 
   - name: hive-update
     description: Stage, verify, back up, and atomically activate a compatible signed Hive update without changing canonical knowledge or external plugins.

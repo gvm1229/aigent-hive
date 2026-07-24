@@ -1,8 +1,13 @@
 use hive_core::sha256_digest;
-use hive_core::usage_guard::{SourceConfidence, UsageSnapshot, UsageWindow};
-use serde::{Deserialize, Serialize};
+use hive_core::usage_guard::{
+    evaluate_usage, SourceConfidence, UsageDecision, UsagePermit, UsagePermitError, UsagePolicy,
+    UsageSnapshot, UsageWindow,
+};
+use serde::de::{self, MapAccess, Visitor};
+use serde::{Deserialize, Deserializer, Serialize};
 use std::ffi::OsStr;
 use std::fmt::{self, Display, Formatter};
+use std::fs::{self, Metadata};
 use std::io::{self, Read};
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
@@ -42,6 +47,7 @@ pub(crate) enum SensorError {
     NonLocalSource,
     WrongWindows,
     Stale,
+    ExecutableChanged,
 }
 
 impl Display for SensorError {
@@ -61,8 +67,41 @@ impl Display for SensorError {
             Self::NonLocalSource => "CodexBar usage sensor returned a non-local source",
             Self::WrongWindows => "CodexBar usage sensor returned unexpected quota windows",
             Self::Stale => "CodexBar usage sensor returned a stale snapshot",
+            Self::ExecutableChanged => {
+                "CodexBar usage sensor executable changed during qualification"
+            }
         })
     }
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub(crate) struct QualifiedExecutable {
+    path: PathBuf,
+    identity: Option<ExecutableIdentity>,
+}
+
+impl QualifiedExecutable {
+    #[cfg(test)]
+    fn synthetic(program: &str) -> Self {
+        Self {
+            path: PathBuf::from(program),
+            identity: None,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+struct ExecutableIdentity {
+    len: u64,
+    modified: Option<(u64, u32)>,
+    #[cfg(unix)]
+    device: u64,
+    #[cfg(unix)]
+    inode: u64,
+    #[cfg(unix)]
+    mode: u32,
+    #[cfg(unix)]
+    change_time: (i64, i64),
 }
 
 #[derive(Debug)]
@@ -72,9 +111,11 @@ pub(crate) struct CommandOutput {
 }
 
 pub(crate) trait CommandRunner {
+    fn qualify(&self, program: &str) -> Result<QualifiedExecutable, SensorError>;
+
     fn run(
         &self,
-        program: &str,
+        program: &QualifiedExecutable,
         arguments: &[&str],
         timeout: Duration,
         output_limit: usize,
@@ -84,15 +125,19 @@ pub(crate) trait CommandRunner {
 pub(crate) struct SystemCommandRunner;
 
 impl CommandRunner for SystemCommandRunner {
+    fn qualify(&self, program: &str) -> Result<QualifiedExecutable, SensorError> {
+        qualify_program(program)
+    }
+
     fn run(
         &self,
-        program: &str,
+        program: &QualifiedExecutable,
         arguments: &[&str],
         timeout: Duration,
         output_limit: usize,
     ) -> Result<CommandOutput, SensorError> {
-        let resolved_program = resolve_program(program)?;
-        let mut child = Command::new(resolved_program)
+        verify_executable_identity(program)?;
+        let mut child = Command::new(&program.path)
             .args(arguments)
             .stdin(Stdio::null())
             .stdout(Stdio::piped())
@@ -116,13 +161,17 @@ impl CommandRunner for SystemCommandRunner {
                 None if started.elapsed() >= timeout => {
                     let _ = child.kill();
                     let _ = child.wait();
+                    verify_executable_identity(program)?;
                     return Err(SensorError::Timeout);
                 }
                 None => thread::sleep(Duration::from_millis(10)),
             }
         };
-        let stdout = receive_output(&stdout_reader, started, timeout)?;
-        let _stderr = receive_output(&stderr_reader, started, timeout)?;
+        let stdout = receive_output(&stdout_reader, started, timeout);
+        let stderr = receive_output(&stderr_reader, started, timeout);
+        verify_executable_identity(program)?;
+        let stdout = stdout?;
+        let _stderr = stderr?;
         Ok(CommandOutput {
             success: status.success(),
             stdout,
@@ -130,13 +179,20 @@ impl CommandRunner for SystemCommandRunner {
     }
 }
 
-fn resolve_program(program: &str) -> Result<PathBuf, SensorError> {
+fn qualify_program(program: &str) -> Result<QualifiedExecutable, SensorError> {
     let path = Path::new(program);
-    if path.components().count() > 1 {
-        return resolve_executable(path).ok_or(SensorError::Unavailable);
+    let resolved = if path.components().count() > 1 {
+        resolve_executable(path)
+    } else {
+        let search_path = std::env::var_os("PATH").ok_or(SensorError::Unavailable)?;
+        resolve_program_in_path(program, &search_path)
     }
-    let search_path = std::env::var_os("PATH").ok_or(SensorError::Unavailable)?;
-    resolve_program_in_path(program, &search_path).ok_or(SensorError::Unavailable)
+    .ok_or(SensorError::Unavailable)?;
+    let identity = executable_identity(&resolved)?;
+    Ok(QualifiedExecutable {
+        path: resolved,
+        identity: Some(identity),
+    })
 }
 
 fn resolve_program_in_path(program: &str, search_path: &OsStr) -> Option<PathBuf> {
@@ -159,11 +215,69 @@ fn resolve_program_in_path(program: &str, search_path: &OsStr) -> Option<PathBuf
 }
 
 fn resolve_executable(candidate: &Path) -> Option<PathBuf> {
-    candidate.is_file().then(|| {
-        candidate
-            .canonicalize()
-            .unwrap_or_else(|_| candidate.to_path_buf())
-    })
+    let resolved = candidate.canonicalize().ok()?;
+    let metadata = fs::metadata(&resolved).ok()?;
+    if !metadata.is_file() || !is_executable(&metadata) {
+        return None;
+    }
+    Some(resolved)
+}
+
+#[cfg(unix)]
+fn is_executable(metadata: &Metadata) -> bool {
+    use std::os::unix::fs::PermissionsExt;
+
+    metadata.permissions().mode() & 0o111 != 0
+}
+
+#[cfg(not(unix))]
+fn is_executable(_metadata: &Metadata) -> bool {
+    true
+}
+
+fn executable_identity(path: &Path) -> Result<ExecutableIdentity, SensorError> {
+    let metadata = fs::metadata(path).map_err(|_| SensorError::ExecutableChanged)?;
+    if !metadata.is_file() || !is_executable(&metadata) {
+        return Err(SensorError::ExecutableChanged);
+    }
+    let modified = metadata.modified().ok().and_then(|time| {
+        time.duration_since(UNIX_EPOCH)
+            .ok()
+            .map(|duration| (duration.as_secs(), duration.subsec_nanos()))
+    });
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::MetadataExt;
+
+        Ok(ExecutableIdentity {
+            len: metadata.len(),
+            modified,
+            device: metadata.dev(),
+            inode: metadata.ino(),
+            mode: metadata.mode(),
+            change_time: (metadata.ctime(), metadata.ctime_nsec()),
+        })
+    }
+    #[cfg(not(unix))]
+    {
+        Ok(ExecutableIdentity {
+            len: metadata.len(),
+            modified,
+        })
+    }
+}
+
+fn verify_executable_identity(program: &QualifiedExecutable) -> Result<(), SensorError> {
+    let expected = program
+        .identity
+        .as_ref()
+        .ok_or(SensorError::ExecutableChanged)?;
+    let current = executable_identity(&program.path)?;
+    if current == *expected {
+        Ok(())
+    } else {
+        Err(SensorError::ExecutableChanged)
+    }
 }
 
 fn spawn_bounded_reader(
@@ -273,13 +387,81 @@ struct CodexBarRow {
     error: Option<serde_json::Value>,
 }
 
-#[derive(Deserialize)]
 struct CodexBarUsage {
-    primary: Option<CodexBarWindow>,
-    secondary: Option<CodexBarWindow>,
-    #[serde(rename = "updatedAt")]
+    primary: Option<serde_json::Value>,
+    secondary: Vec<serde_json::Value>,
     updated_at: String,
     identity: Option<CodexBarIdentity>,
+}
+
+impl<'de> Deserialize<'de> for CodexBarUsage {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        struct UsageVisitor;
+
+        impl<'de> Visitor<'de> for UsageVisitor {
+            type Value = CodexBarUsage;
+
+            fn expecting(&self, formatter: &mut Formatter<'_>) -> fmt::Result {
+                formatter.write_str("a CodexBar usage object")
+            }
+
+            fn visit_map<A>(self, mut map: A) -> Result<Self::Value, A::Error>
+            where
+                A: MapAccess<'de>,
+            {
+                let mut primary = None;
+                let mut primary_seen = false;
+                let mut secondary = Vec::new();
+                let mut updated_at = None;
+                let mut identity = None;
+                let mut identity_seen = false;
+                while let Some(key) = map.next_key::<String>()? {
+                    match key.as_str() {
+                        "primary" => {
+                            if primary_seen {
+                                return Err(de::Error::duplicate_field("primary"));
+                            }
+                            primary_seen = true;
+                            let value = map.next_value::<serde_json::Value>()?;
+                            if !value.is_null() {
+                                primary = Some(value);
+                            }
+                        }
+                        "secondary" => {
+                            secondary.push(map.next_value::<serde_json::Value>()?);
+                        }
+                        "updatedAt" => {
+                            if updated_at.is_some() {
+                                return Err(de::Error::duplicate_field("updatedAt"));
+                            }
+                            updated_at = Some(map.next_value()?);
+                        }
+                        "identity" => {
+                            if identity_seen {
+                                return Err(de::Error::duplicate_field("identity"));
+                            }
+                            identity_seen = true;
+                            identity = map.next_value()?;
+                        }
+                        _ => {
+                            let _: de::IgnoredAny = map.next_value()?;
+                        }
+                    }
+                }
+                Ok(CodexBarUsage {
+                    primary,
+                    secondary,
+                    updated_at: updated_at.ok_or_else(|| de::Error::missing_field("updatedAt"))?,
+                    identity,
+                })
+            }
+        }
+
+        deserializer.deserialize_map(UsageVisitor)
+    }
 }
 
 #[derive(Deserialize)]
@@ -304,8 +486,9 @@ pub(crate) fn check_with_runner(
     now: SystemTime,
 ) -> Result<NormalizedSnapshot, SensorError> {
     validate_account_digest(account_digest)?;
+    let executable = runner.qualify("codexbar")?;
     let version = runner.run(
-        "codexbar",
+        &executable,
         &["--version"],
         command_timeout(VERSION_TIMEOUT),
         OUTPUT_LIMIT,
@@ -315,7 +498,7 @@ pub(crate) fn check_with_runner(
     }
     validate_version(&version.stdout)?;
     let output = runner.run(
-        "codexbar",
+        &executable,
         USAGE_ARGUMENTS,
         command_timeout(USAGE_TIMEOUT),
         OUTPUT_LIMIT,
@@ -324,6 +507,92 @@ pub(crate) fn check_with_runner(
         return Err(SensorError::Failed);
     }
     normalize_output(&output.stdout, account_digest, unix_seconds(now)?)
+}
+
+#[derive(Debug)]
+pub(crate) enum AutomaticDispatchError {
+    Sensor(SensorError),
+    InvalidPolicy,
+    Blocked(UsageObservation),
+    Unknown(UsageObservation),
+    Permit(UsagePermitError, UsageObservation),
+}
+
+#[derive(Debug)]
+pub(crate) struct UsageGuardEvidence {
+    pub(crate) digest: String,
+    pub(crate) window: &'static str,
+}
+
+#[derive(Debug)]
+pub(crate) struct UsageObservation {
+    pub(crate) evidence: UsageGuardEvidence,
+    pub(crate) snapshots: Vec<UsageSnapshot>,
+}
+
+#[derive(Debug)]
+pub(crate) struct AuthorizedDispatch<T> {
+    pub(crate) value: T,
+    pub(crate) observation: UsageObservation,
+}
+
+pub(crate) fn qualify_and_dispatch_with_runner<T, C>(
+    runner: &impl CommandRunner,
+    account_digest: &str,
+    threshold_percent: u8,
+    previous_snapshots: &[UsageSnapshot],
+    sampled_at: SystemTime,
+    dispatch_clock: C,
+    dispatch: impl FnOnce() -> T,
+) -> Result<AuthorizedDispatch<T>, AutomaticDispatchError>
+where
+    C: FnOnce() -> Result<i64, SensorError>,
+{
+    let snapshot = check_with_runner(runner, account_digest, sampled_at)
+        .map_err(AutomaticDispatchError::Sensor)?;
+    let evidence = UsageGuardEvidence {
+        digest: snapshot.evidence_digest(),
+        window: snapshot
+            .windows
+            .first()
+            .map_or("unknown", |window| window.name),
+    };
+    let observation = UsageObservation {
+        evidence,
+        snapshots: snapshot.core_snapshots(),
+    };
+    let policy = UsagePolicy::new("codexbar", CODEXBAR_VERSION, "codex", account_digest)
+        .with_stop_remaining_percent(threshold_percent)
+        .map_err(|_| AutomaticDispatchError::InvalidPolicy)?;
+    let evaluated_at_unix_seconds =
+        i64::try_from(unix_seconds(sampled_at).map_err(AutomaticDispatchError::Sensor)?)
+            .map_err(|_| AutomaticDispatchError::Sensor(SensorError::Malformed))?;
+    match evaluate_usage(
+        &policy,
+        &observation.snapshots,
+        previous_snapshots,
+        evaluated_at_unix_seconds,
+    ) {
+        UsageDecision::Allow(mut permit) => {
+            let dispatch_at_unix_seconds =
+                dispatch_clock().map_err(AutomaticDispatchError::Sensor)?;
+            match consume_for_automatic_dispatch(&mut permit, dispatch_at_unix_seconds, dispatch) {
+                Ok(value) => Ok(AuthorizedDispatch { value, observation }),
+                Err(error) => Err(AutomaticDispatchError::Permit(error, observation)),
+            }
+        }
+        UsageDecision::Block(_) => Err(AutomaticDispatchError::Blocked(observation)),
+        UsageDecision::Unknown(_) => Err(AutomaticDispatchError::Unknown(observation)),
+    }
+}
+
+fn consume_for_automatic_dispatch<T>(
+    permit: &mut UsagePermit,
+    dispatch_at_unix_seconds: i64,
+    dispatch: impl FnOnce() -> T,
+) -> Result<T, UsagePermitError> {
+    permit.consume(dispatch_at_unix_seconds)?;
+    Ok(dispatch())
 }
 
 fn command_timeout(default: Duration) -> Duration {
@@ -402,13 +671,19 @@ fn normalize_output(
         return Err(SensorError::Malformed);
     }
     let windows = if let Some(primary) = usage.primary.as_ref() {
-        vec![normalize_window(primary, "session", 300)?]
+        let primary: CodexBarWindow =
+            serde_json::from_value(primary.clone()).map_err(|_| SensorError::Malformed)?;
+        vec![normalize_window(&primary, "session", 300)?]
     } else {
-        vec![normalize_window(
-            usage.secondary.as_ref().ok_or(SensorError::WrongWindows)?,
-            "weekly",
-            10_080,
-        )?]
+        let [secondary] = usage.secondary.as_slice() else {
+            return Err(SensorError::WrongWindows);
+        };
+        if secondary.is_null() {
+            return Err(SensorError::WrongWindows);
+        }
+        let secondary: CodexBarWindow =
+            serde_json::from_value(secondary.clone()).map_err(|_| SensorError::Malformed)?;
+        vec![normalize_window(&secondary, "weekly", 10_080)?]
     };
     Ok(NormalizedSnapshot {
         sensor_id: "codexbar",
@@ -549,15 +824,18 @@ fn days_from_civil(year: i32, month: i32, day: i32) -> i64 {
 #[cfg(test)]
 mod tests {
     use super::{
-        check_with_runner, normalize_output, parse_iso8601_z, resolve_program_in_path,
-        CommandOutput, CommandRunner, SensorError, USAGE_ARGUMENTS, USAGE_TIMEOUT, VERSION_TIMEOUT,
+        check_with_runner, consume_for_automatic_dispatch, normalize_output, parse_iso8601_z,
+        qualify_and_dispatch_with_runner, qualify_program, resolve_program_in_path,
+        AutomaticDispatchError, CommandOutput, CommandRunner, QualifiedExecutable, SensorError,
+        SystemCommandRunner, USAGE_ARGUMENTS, USAGE_TIMEOUT, VERSION_TIMEOUT,
     };
     use hive_core::sha256_digest;
-    use hive_core::usage_guard::{evaluate_usage, UsageDecision, UsagePolicy};
+    use hive_core::usage_guard::{evaluate_usage, UsageDecision, UsagePermitError, UsagePolicy};
     use std::cell::RefCell;
     use std::collections::VecDeque;
     use std::ffi::OsString;
     use std::fs;
+    use std::path::Path;
     use std::time::{Duration, UNIX_EPOCH};
 
     #[derive(Debug, Clone, PartialEq)]
@@ -583,15 +861,19 @@ mod tests {
     }
 
     impl CommandRunner for FakeRunner {
+        fn qualify(&self, program: &str) -> Result<QualifiedExecutable, SensorError> {
+            Ok(QualifiedExecutable::synthetic(program))
+        }
+
         fn run(
             &self,
-            program: &str,
+            program: &QualifiedExecutable,
             arguments: &[&str],
             timeout: Duration,
             output_limit: usize,
         ) -> Result<CommandOutput, SensorError> {
             self.invocations.borrow_mut().push(Invocation {
-                program: program.to_owned(),
+                program: program.path.to_string_lossy().into_owned(),
                 arguments: arguments.iter().map(|value| (*value).to_owned()).collect(),
                 timeout,
                 output_limit,
@@ -602,6 +884,44 @@ mod tests {
                 .expect("fake runner response should exist")
         }
     }
+
+    struct PathSystemRunner<'a> {
+        executable: &'a Path,
+    }
+
+    impl CommandRunner for PathSystemRunner<'_> {
+        fn qualify(&self, _program: &str) -> Result<QualifiedExecutable, SensorError> {
+            qualify_program(
+                self.executable
+                    .to_str()
+                    .expect("fixture path should be UTF-8"),
+            )
+        }
+
+        fn run(
+            &self,
+            program: &QualifiedExecutable,
+            arguments: &[&str],
+            timeout: Duration,
+            output_limit: usize,
+        ) -> Result<CommandOutput, SensorError> {
+            SystemCommandRunner.run(program, arguments, timeout, output_limit)
+        }
+    }
+
+    #[cfg(unix)]
+    fn make_executable(path: &Path) {
+        use std::os::unix::fs::PermissionsExt;
+
+        let mut permissions = fs::metadata(path)
+            .expect("fixture metadata should exist")
+            .permissions();
+        permissions.set_mode(0o700);
+        fs::set_permissions(path, permissions).expect("fixture should become executable");
+    }
+
+    #[cfg(not(unix))]
+    fn make_executable(_path: &Path) {}
 
     fn success(stdout: impl Into<Vec<u8>>) -> CommandOutput {
         CommandOutput {
@@ -615,6 +935,7 @@ mod tests {
         let directory = tempfile::tempdir().expect("temporary directory should exist");
         let executable = directory.path().join("codexbar");
         fs::write(&executable, b"fixture").expect("fixture executable should be created");
+        make_executable(&executable);
         let search_path = OsString::from(directory.path());
 
         assert_eq!(
@@ -654,6 +975,7 @@ mod tests {
         let installed = directory.path().join("CodexBarCLI");
         let linked = directory.path().join("codexbar");
         fs::write(&installed, b"fixture").expect("fixture executable should be created");
+        make_executable(&installed);
         symlink(&installed, &linked).expect("fixture symlink should be created");
         let search_path = OsString::from(directory.path());
 
@@ -738,6 +1060,26 @@ mod tests {
                 .collect::<Vec<_>>()
         );
         assert_eq!(invocations[1].timeout, USAGE_TIMEOUT);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn executable_mutation_between_qualification_commands_fails_closed() {
+        let directory = tempfile::tempdir().expect("temporary directory should exist");
+        let executable = directory.path().join("codexbar");
+        let script = format!(
+            "#!/bin/sh\nif [ \"$1\" = \"--version\" ]; then\n  printf '#!/bin/sh\\nexit 9\\n' > '{}'\n  chmod 700 '{}'\n  printf 'CodexBar 0.45.2\\n'\n  exit 0\nfi\nexit 9\n",
+            executable.display(),
+            executable.display()
+        );
+        fs::write(&executable, script).expect("fixture executable should be created");
+        make_executable(&executable);
+        let runner = PathSystemRunner {
+            executable: &executable,
+        };
+        let result = check_with_runner(&runner, &account_digest(), UNIX_EPOCH);
+
+        assert_eq!(result, Err(SensorError::ExecutableChanged));
     }
 
     #[test]
@@ -853,6 +1195,63 @@ mod tests {
     }
 
     #[test]
+    fn session_window_ignores_malformed_duplicate_and_low_weekly_data() {
+        let valid = String::from_utf8(row(
+            "codex-cli",
+            "2026-07-23T12:00:00Z",
+            300,
+            10_080,
+            20,
+            99,
+        ))
+        .expect("fixture should be UTF-8");
+        let hostile = valid.replacen(
+            "\"secondary\":{\"resetsAt\"",
+            "\"secondary\":\"malformed\",\"secondary\":{\"resetsAt\"",
+            1,
+        );
+        let snapshot = normalize_output(
+            hostile.as_bytes(),
+            &account_digest(),
+            parse_iso8601_z("2026-07-23T12:00:30Z").expect("fixture should parse"),
+        )
+        .expect("session must take absolute precedence");
+
+        assert_eq!(snapshot.windows.len(), 1);
+        assert_eq!(snapshot.windows[0].name, "session");
+        assert!((snapshot.windows[0].remaining_percent - 80.0).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn duplicate_weekly_window_is_unknown_when_session_is_absent() {
+        let mut value: serde_json::Value = serde_json::from_slice(&row(
+            "codex-cli",
+            "2026-07-23T12:00:00Z",
+            300,
+            10_080,
+            20,
+            30,
+        ))
+        .expect("fixture should parse");
+        value[0]["usage"]["primary"] = serde_json::Value::Null;
+        let valid = serde_json::to_string(&value).expect("fixture should serialize");
+        let hostile = valid.replacen(
+            "\"secondary\":",
+            "\"secondary\":\"duplicate\",\"secondary\":",
+            1,
+        );
+
+        assert_eq!(
+            normalize_output(
+                hostile.as_bytes(),
+                &account_digest(),
+                parse_iso8601_z("2026-07-23T12:00:30Z").expect("fixture should parse")
+            ),
+            Err(SensorError::WrongWindows)
+        );
+    }
+
+    #[test]
     fn normalized_windows_drive_allow_and_threshold_block_decisions() {
         let allowed = normalize_output(
             &row("codex-cli", "2026-07-23T12:00:00Z", 300, 10_080, 20, 30),
@@ -931,6 +1330,216 @@ mod tests {
             ),
             UsageDecision::Allow(_)
         ));
+    }
+
+    #[test]
+    fn dispatch_adapter_consumes_immediately_before_exactly_one_dispatch() {
+        let runner = FakeRunner::new([
+            Ok(success("CodexBar 0.45.2\n")),
+            Ok(success(row(
+                "codex-cli",
+                "2026-07-23T12:00:00Z",
+                300,
+                10_080,
+                20,
+                99,
+            ))),
+        ]);
+        let dispatch_at =
+            i64::try_from(parse_iso8601_z("2026-07-23T12:00:30Z").expect("fixture should parse"))
+                .expect("fixture should fit i64");
+        let dispatches = RefCell::new(0_u8);
+        let result = qualify_and_dispatch_with_runner(
+            &runner,
+            &account_digest(),
+            10,
+            &[],
+            now("2026-07-23T12:00:30Z"),
+            || Ok(dispatch_at),
+            || {
+                *dispatches.borrow_mut() += 1;
+                "represented-dispatch"
+            },
+        );
+
+        let authorized = result.expect("dispatch should be authorized");
+        assert_eq!(authorized.value, "represented-dispatch");
+        assert_eq!(authorized.observation.evidence.window, "session");
+        assert!(authorized
+            .observation
+            .evidence
+            .digest
+            .starts_with("sha256:"));
+        assert_eq!(*dispatches.borrow(), 1);
+    }
+
+    #[test]
+    fn dispatch_adapter_never_invokes_the_dispatch_when_usage_is_blocked() {
+        let runner = FakeRunner::new([
+            Ok(success("CodexBar 0.45.2\n")),
+            Ok(success(row(
+                "codex-cli",
+                "2026-07-23T12:00:00Z",
+                300,
+                10_080,
+                90,
+                20,
+            ))),
+        ]);
+        let dispatches = RefCell::new(0_u8);
+        let result = qualify_and_dispatch_with_runner(
+            &runner,
+            &account_digest(),
+            10,
+            &[],
+            now("2026-07-23T12:00:30Z"),
+            || {
+                Ok(i64::try_from(
+                    parse_iso8601_z("2026-07-23T12:00:30Z").expect("fixture should parse"),
+                )
+                .expect("fixture should fit i64"))
+            },
+            || *dispatches.borrow_mut() += 1,
+        );
+
+        assert!(matches!(result, Err(AutomaticDispatchError::Blocked(_))));
+        assert_eq!(*dispatches.borrow(), 0);
+    }
+
+    #[test]
+    fn dispatch_adapter_uses_trustworthy_history_to_reject_same_reset_increase() {
+        let previous = normalize_output(
+            &row("codex-cli", "2026-07-23T12:00:10Z", 300, 10_080, 43, 43),
+            &account_digest(),
+            parse_iso8601_z("2026-07-23T12:00:20Z").expect("fixture should parse"),
+        )
+        .expect("previous snapshot")
+        .core_snapshots();
+        let runner = FakeRunner::new([
+            Ok(success("CodexBar 0.45.2\n")),
+            Ok(success(row(
+                "codex-cli",
+                "2026-07-23T12:00:20Z",
+                300,
+                10_080,
+                30,
+                43,
+            ))),
+        ]);
+        let dispatches = RefCell::new(0_u8);
+        let result = qualify_and_dispatch_with_runner(
+            &runner,
+            &account_digest(),
+            10,
+            &previous,
+            now("2026-07-23T12:00:30Z"),
+            || Ok(1_753_275_630),
+            || *dispatches.borrow_mut() += 1,
+        );
+
+        assert!(matches!(result, Err(AutomaticDispatchError::Unknown(_))));
+        assert_eq!(*dispatches.borrow(), 0);
+    }
+
+    #[test]
+    fn dispatch_adapter_never_claims_enforcement_or_dispatches_when_sensor_is_unknown() {
+        let runner = FakeRunner::new([Err(SensorError::Unavailable)]);
+        let dispatches = RefCell::new(0_u8);
+        let result = qualify_and_dispatch_with_runner(
+            &runner,
+            &account_digest(),
+            10,
+            &[],
+            now("2026-07-23T12:00:30Z"),
+            || {
+                Ok(i64::try_from(
+                    parse_iso8601_z("2026-07-23T12:00:30Z").expect("fixture should parse"),
+                )
+                .expect("fixture should fit i64"))
+            },
+            || *dispatches.borrow_mut() += 1,
+        );
+
+        assert!(matches!(
+            result,
+            Err(AutomaticDispatchError::Sensor(SensorError::Unavailable))
+        ));
+        assert_eq!(*dispatches.borrow(), 0);
+    }
+
+    #[test]
+    fn dispatch_adapter_rejects_expiry_without_invoking_the_dispatch() {
+        let runner = FakeRunner::new([
+            Ok(success("CodexBar 0.45.2\n")),
+            Ok(success(row(
+                "codex-cli",
+                "2026-07-23T12:00:00Z",
+                300,
+                10_080,
+                20,
+                30,
+            ))),
+        ]);
+        let dispatches = RefCell::new(0_u8);
+        let result = qualify_and_dispatch_with_runner(
+            &runner,
+            &account_digest(),
+            10,
+            &[],
+            now("2026-07-23T12:00:30Z"),
+            || {
+                Ok(i64::try_from(
+                    parse_iso8601_z("2026-07-23T12:01:00Z").expect("fixture should parse"),
+                )
+                .expect("fixture should fit i64"))
+            },
+            || *dispatches.borrow_mut() += 1,
+        );
+
+        assert!(matches!(
+            result,
+            Err(AutomaticDispatchError::Permit(
+                UsagePermitError::Expired {
+                    expires_at_unix_seconds: _,
+                    attempted_at_unix_seconds: _
+                },
+                _
+            ))
+        ));
+        assert_eq!(*dispatches.borrow(), 0);
+    }
+
+    #[test]
+    fn consumed_permit_cannot_represent_a_second_dispatch() {
+        let snapshot = normalize_output(
+            &row("codex-cli", "2026-07-23T12:00:00Z", 300, 10_080, 20, 30),
+            &account_digest(),
+            parse_iso8601_z("2026-07-23T12:00:30Z").expect("fixture should parse"),
+        )
+        .expect("fixture should normalize");
+        let policy = UsagePolicy::new("codexbar", "0.45.2", "codex", account_digest());
+        let dispatch_at =
+            i64::try_from(parse_iso8601_z("2026-07-23T12:00:30Z").expect("fixture should parse"))
+                .expect("fixture should fit i64");
+        let UsageDecision::Allow(mut permit) =
+            evaluate_usage(&policy, &snapshot.core_snapshots(), &[], dispatch_at)
+        else {
+            panic!("fixture should issue a permit");
+        };
+        let dispatches = RefCell::new(0_u8);
+        assert_eq!(
+            consume_for_automatic_dispatch(&mut permit, dispatch_at, || {
+                *dispatches.borrow_mut() += 1;
+            }),
+            Ok(())
+        );
+        assert_eq!(
+            consume_for_automatic_dispatch(&mut permit, dispatch_at, || {
+                *dispatches.borrow_mut() += 1;
+            }),
+            Err(UsagePermitError::AlreadyConsumed)
+        );
+        assert_eq!(*dispatches.borrow(), 1);
     }
 
     #[test]

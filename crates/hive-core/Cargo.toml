@@ -10,6 +10,7 @@ publish = false
 path = "src/lib.rs"
 
 [dependencies]
+ed25519-dalek.workspace = true
 jsonschema.workspace = true
 serde.workspace = true
 serde_json.workspace = true

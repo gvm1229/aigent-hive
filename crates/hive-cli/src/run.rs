@@ -1,4 +1,8 @@
 use super::{emit_action_result, ActionResult, Evidence};
+use crate::usage::{
+    qualify_and_dispatch_with_runner, AutomaticDispatchError, SensorError, SystemCommandRunner,
+    UsageGuardEvidence, UsageObservation,
+};
 use cap_fs_ext::{
     DirExt, FollowSymlinks, MetadataExt as CapMetadataExt, OpenOptionsFollowExt, OpenOptionsSyncExt,
 };
@@ -7,12 +11,13 @@ use cap_std::fs::{Dir, OpenOptions};
 use hive_core::role::RoleDocument;
 use hive_core::run::{
     prepare_dispatch_brief, validate_transition, verify_owner_continuity, CapabilityResolution,
-    DispatchContractError, OwnerBinding, OwnerContinuity, RunPlan, RunState, RunStatus,
-    RunStatusDocument, SupportLevel,
+    DispatchBrief, DispatchContractError, OwnerBinding, OwnerContinuity, RunPlan, RunState,
+    RunStatus, RunStatusDocument, SupportLevel,
 };
+use hive_core::usage_guard::UsageSnapshot;
 use hive_core::{ensure_consumer_target, sha256_digest, validate_project_relative};
 use serde::de::DeserializeOwned;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::collections::{BTreeMap, BTreeSet};
 use std::ffi::{OsStr, OsString};
@@ -27,6 +32,8 @@ const CHECKPOINT_REQUEST_SCHEMA: &str =
 const MAX_EXPLICIT_FILE_BYTES: usize = 1024 * 1024;
 const MAX_EVIDENCE_FILE_BYTES: usize = 256 * 1024;
 const MAX_TOTAL_EVIDENCE_BYTES: usize = 1024 * 1024;
+const MAX_HARNESS_CONFIG_BYTES: usize = 64 * 1024;
+const MAX_RUNTIME_RECORD_BYTES: usize = 64 * 1024;
 const FRESH_CAPABILITY_MAX_AGE: Duration = Duration::from_mins(1);
 const NEW_STATUS_BODY: &[u8] = b"# Run status\n";
 const CHECKPOINT_USAGE: &str = "\
@@ -39,7 +46,7 @@ const RESUME_USAGE: &str = "\
 Read and validate one durable run without mutation or spawning.
 
 USAGE:
-    hive run resume --target <dir> --run <run-id> --capabilities <fresh-json> --output json
+    hive run resume --target <dir> --run <run-id> --capabilities <fresh-json> [--dispatch-intent manual|automatic] [--account-digest <sha256:...> --role <role-id> [--threshold <1..99>]] --output json
 ";
 static TEMP_COUNTER: AtomicU64 = AtomicU64::new(0);
 
@@ -159,6 +166,10 @@ impl PinnedTarget {
         })
     }
 
+    pub(crate) fn requested_path(&self) -> &Path {
+        &self.requested
+    }
+
     pub(crate) fn read_optional(
         &self,
         relative: &Path,
@@ -237,6 +248,68 @@ impl PinnedTarget {
             }
         })?;
         Ok(true)
+    }
+
+    fn ensure_runtime_parent(&self, relative: &Path) -> Result<(), AdapterError> {
+        validate_project_relative(relative)
+            .map_err(|error| AdapterError::Safety(error.to_string()))?;
+        if !relative.starts_with(".hive/runtime") {
+            return Err(AdapterError::Safety(
+                "runtime publication escaped .hive/runtime".to_owned(),
+            ));
+        }
+        let parent = relative
+            .parent()
+            .ok_or_else(|| AdapterError::Safety("runtime path has no parent".to_owned()))?;
+        let mut current = self
+            .dir
+            .try_clone()
+            .map_err(|error| AdapterError::Internal(error.to_string()))?;
+        let mut walked = PathBuf::new();
+        for component in parent.components() {
+            let name = component.as_os_str();
+            walked.push(name);
+            match current.symlink_metadata(name) {
+                Ok(metadata) if metadata.is_dir() => {}
+                Ok(_) => {
+                    return Err(AdapterError::Safety(format!(
+                        "runtime ancestor is not a no-follow directory: {}",
+                        walked.display()
+                    )));
+                }
+                Err(error) if error.kind() == io::ErrorKind::NotFound => {
+                    current.create_dir(name).map_err(|create_error| {
+                        AdapterError::Safety(format!(
+                            "cannot create Hive runtime directory {}: {create_error}",
+                            walked.display()
+                        ))
+                    })?;
+                }
+                Err(error) => {
+                    return Err(AdapterError::Safety(format!(
+                        "cannot inspect runtime ancestor {}: {error}",
+                        walked.display()
+                    )));
+                }
+            }
+            current = current.open_dir_nofollow(name).map_err(|error| {
+                AdapterError::Safety(format!(
+                    "cannot open runtime ancestor no-follow {}: {error}",
+                    walked.display()
+                ))
+            })?;
+        }
+        Ok(())
+    }
+
+    fn publish_runtime(
+        &self,
+        relative: &Path,
+        expected: &FileSnapshot,
+        desired: &[u8],
+    ) -> Result<bool, AdapterError> {
+        self.ensure_runtime_parent(relative)?;
+        self.publish(relative, expected, desired)
     }
 
     pub(crate) fn restore(
@@ -343,7 +416,11 @@ impl PinnedTarget {
     }
 }
 
-fn read_parent_file(parent: &Dir, name: &OsStr, max_bytes: usize) -> io::Result<Vec<u8>> {
+pub(crate) fn read_parent_file(
+    parent: &Dir,
+    name: &OsStr,
+    max_bytes: usize,
+) -> io::Result<Vec<u8>> {
     let mut options = OpenOptions::new();
     options.read(true);
     options.follow(FollowSymlinks::No);
@@ -867,7 +944,7 @@ fn absolute_lexical(path: &Path) -> Result<PathBuf, AdapterError> {
     }
 }
 
-fn open_directory_nofollow_path(path: &Path) -> Result<Dir, AdapterError> {
+pub(crate) fn open_directory_nofollow_path(path: &Path) -> Result<Dir, AdapterError> {
     let mut root = PathBuf::new();
     let mut names = Vec::new();
     for component in path.components() {
@@ -981,6 +1058,25 @@ struct ResumeArguments {
     target: PathBuf,
     run_id: String,
     capabilities: PathBuf,
+    dispatch_intent: DispatchIntent,
+    account_digest: Option<String>,
+    role_id: Option<String>,
+    threshold: Option<u8>,
+}
+
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
+enum DispatchIntent {
+    Manual,
+    Automatic,
+}
+
+impl DispatchIntent {
+    const fn as_str(self) -> &'static str {
+        match self {
+            Self::Manual => "manual",
+            Self::Automatic => "automatic",
+        }
+    }
 }
 
 pub(crate) fn run_run(arguments: &[String]) -> ExitCode {
@@ -1024,11 +1120,93 @@ fn parse_checkpoint_arguments(arguments: &[String]) -> Result<CheckpointArgument
 }
 
 fn parse_resume_arguments(arguments: &[String]) -> Result<ResumeArguments, AdapterError> {
-    let options = parse_options(arguments, &["--target", "--run", "--capabilities"])?;
+    let options = parse_options(
+        arguments,
+        &[
+            "--target",
+            "--run",
+            "--capabilities",
+            "--dispatch-intent",
+            "--account-digest",
+            "--role",
+            "--threshold",
+        ],
+    )?;
+    let dispatch_intent = match optional(&options, "--dispatch-intent").unwrap_or("manual") {
+        "manual" => DispatchIntent::Manual,
+        "automatic" => DispatchIntent::Automatic,
+        other => {
+            return Err(AdapterError::Input(format!(
+                "unsupported dispatch intent: {other}"
+            )));
+        }
+    };
+    let account_digest = optional(&options, "--account-digest").map(str::to_owned);
+    let role_id = optional(&options, "--role").map(str::to_owned);
+    let threshold = optional(&options, "--threshold")
+        .map(|value| {
+            value
+                .parse::<u8>()
+                .ok()
+                .filter(|value| (1..=99).contains(value))
+                .ok_or_else(|| {
+                    AdapterError::Input(
+                        "usage threshold must be an integer from 1 to 99".to_owned(),
+                    )
+                })
+        })
+        .transpose()?;
+    match dispatch_intent {
+        DispatchIntent::Manual
+            if account_digest.is_some() || role_id.is_some() || threshold.is_some() =>
+        {
+            return Err(AdapterError::Input(
+                "--account-digest, --role, and --threshold require --dispatch-intent automatic"
+                    .to_owned(),
+            ));
+        }
+        DispatchIntent::Automatic => {
+            let digest = account_digest.as_deref().ok_or_else(|| {
+                AdapterError::Input(
+                    "--dispatch-intent automatic requires --account-digest".to_owned(),
+                )
+            })?;
+            if !is_sha256_digest(digest) {
+                return Err(AdapterError::Input(
+                    "account digest must be sha256 followed by 64 lowercase hex digits".to_owned(),
+                ));
+            }
+            let role_id = role_id.as_deref().ok_or_else(|| {
+                AdapterError::Input("--dispatch-intent automatic requires --role".to_owned())
+            })?;
+            validate_project_relative(Path::new(role_id)).map_err(|_| {
+                AdapterError::Input("automatic role must be one safe role identifier".to_owned())
+            })?;
+            if role_id.contains('/') || role_id.contains('\\') {
+                return Err(AdapterError::Input(
+                    "automatic role must be one safe role identifier".to_owned(),
+                ));
+            }
+        }
+        DispatchIntent::Manual => {}
+    }
     Ok(ResumeArguments {
         target: PathBuf::from(required(&options, "--target")?),
         run_id: required(&options, "--run")?.to_owned(),
         capabilities: PathBuf::from(required(&options, "--capabilities")?),
+        dispatch_intent,
+        account_digest,
+        role_id,
+        threshold,
+    })
+}
+
+fn is_sha256_digest(value: &str) -> bool {
+    value.strip_prefix("sha256:").is_some_and(|hex| {
+        hex.len() == 64
+            && hex
+                .bytes()
+                .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
     })
 }
 
@@ -1278,6 +1456,244 @@ fn checkpoint_document(
     .map_err(core_verification)
 }
 
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+struct UsageHistoryRecord {
+    schema_version: u32,
+    snapshot: UsageSnapshot,
+    evidence_digest: String,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+struct DispatchAuthorizationRecord {
+    schema_version: u32,
+    authorization_id: String,
+    run_id: String,
+    status_revision: u64,
+    role_id: String,
+    brief_digest: String,
+    usage_evidence_digest: String,
+    state: String,
+    record_digest: String,
+}
+
+fn installed_usage_threshold(target: &PinnedTarget) -> Result<u8, AdapterError> {
+    let relative = Path::new(".hive/config/harness.toml");
+    let bytes = target
+        .read_optional(relative, MAX_HARNESS_CONFIG_BYTES)?
+        .ok_or_else(|| {
+            AdapterError::Safety(
+                "automatic resume requires installed .hive/config/harness.toml".to_owned(),
+            )
+        })?;
+    let text = std::str::from_utf8(&bytes).map_err(|_| {
+        AdapterError::Safety("installed harness.toml must be valid UTF-8".to_owned())
+    })?;
+    let mut threshold = None;
+    let mut entered_table = false;
+    for line in text.lines() {
+        let line = line.trim();
+        if line.is_empty() || line.starts_with('#') {
+            continue;
+        }
+        if line.starts_with('[') {
+            entered_table = true;
+            continue;
+        }
+        let Some((key, value)) = line.split_once('=') else {
+            return Err(AdapterError::Safety(
+                "installed harness.toml contains a malformed assignment".to_owned(),
+            ));
+        };
+        if key.trim() != "usage_stop_remaining_percent" {
+            continue;
+        }
+        if entered_table {
+            return Err(AdapterError::Safety(
+                "installed usage threshold must be a root harness.toml key".to_owned(),
+            ));
+        }
+        if threshold.is_some() {
+            return Err(AdapterError::Safety(
+                "installed harness.toml contains duplicate usage threshold".to_owned(),
+            ));
+        }
+        let raw_value = value.trim();
+        let parsed = raw_value
+            .parse::<u8>()
+            .ok()
+            .filter(|parsed| (1..=99).contains(parsed) && parsed.to_string() == raw_value);
+        threshold = Some(parsed.ok_or_else(|| {
+            AdapterError::Safety(
+                "installed harness.toml usage threshold must be an integer from 1 to 99".to_owned(),
+            )
+        })?);
+    }
+    threshold.ok_or_else(|| {
+        AdapterError::Safety(
+            "installed harness.toml is missing usage_stop_remaining_percent".to_owned(),
+        )
+    })
+}
+
+fn usage_history_path(account_digest: &str) -> PathBuf {
+    let key = sha256_digest(account_digest.as_bytes());
+    Path::new(".hive/runtime/usage-history").join(format!(
+        "{}.json",
+        key.strip_prefix("sha256:").unwrap_or(&key)
+    ))
+}
+
+fn read_usage_history(
+    target: &PinnedTarget,
+    account_digest: &str,
+) -> Result<(PathBuf, FileSnapshot, Vec<UsageSnapshot>, &'static str), AdapterError> {
+    let path = usage_history_path(account_digest);
+    let snapshot = target.snapshot(&path)?;
+    let Some(bytes) = snapshot.bytes() else {
+        return Ok((path, snapshot, Vec::new(), "absent"));
+    };
+    if bytes.len() > MAX_RUNTIME_RECORD_BYTES {
+        return Err(AdapterError::Safety(
+            "usage history exceeds the bounded runtime record size".to_owned(),
+        ));
+    }
+    let record: UsageHistoryRecord = serde_json::from_slice(bytes)
+        .map_err(|_| AdapterError::Safety("usage history is malformed".to_owned()))?;
+    if record.schema_version != 1
+        || record.snapshot.account_scope_digest != account_digest
+        || record.evidence_digest
+            != sha256_digest(
+                &serde_json_canonicalizer::to_vec(&record.snapshot)
+                    .map_err(|error| AdapterError::Internal(error.to_string()))?,
+            )
+    {
+        return Err(AdapterError::Safety(
+            "usage history failed its account or integrity binding".to_owned(),
+        ));
+    }
+    Ok((path, snapshot, vec![record.snapshot], "available"))
+}
+
+fn publish_usage_history(
+    target: &PinnedTarget,
+    path: &Path,
+    expected: &FileSnapshot,
+    snapshots: &[UsageSnapshot],
+) -> Result<bool, AdapterError> {
+    let [snapshot] = snapshots else {
+        return Err(AdapterError::Internal(
+            "normalized usage observation must contain one selected window".to_owned(),
+        ));
+    };
+    let record = UsageHistoryRecord {
+        schema_version: 1,
+        snapshot: snapshot.clone(),
+        evidence_digest: sha256_digest(
+            &serde_json_canonicalizer::to_vec(snapshot)
+                .map_err(|error| AdapterError::Internal(error.to_string()))?,
+        ),
+    };
+    let bytes = serde_json_canonicalizer::to_vec(&record)
+        .map_err(|error| AdapterError::Internal(error.to_string()))?;
+    target.publish_runtime(path, expected, &bytes)
+}
+
+fn authorization_binding(
+    run_id: &str,
+    status_revision: u64,
+    role_id: &str,
+    brief: &DispatchBrief,
+) -> Result<(String, String, PathBuf), AdapterError> {
+    let brief_digest = sha256_digest(
+        &serde_json_canonicalizer::to_vec(brief)
+            .map_err(|error| AdapterError::Internal(error.to_string()))?,
+    );
+    let binding = json!({
+        "run_id": run_id,
+        "status_revision": status_revision,
+        "role_id": role_id,
+        "brief_digest": brief_digest,
+    });
+    let authorization_id = sha256_digest(
+        &serde_json_canonicalizer::to_vec(&binding)
+            .map_err(|error| AdapterError::Internal(error.to_string()))?,
+    );
+    let file_name = authorization_id
+        .strip_prefix("sha256:")
+        .unwrap_or(&authorization_id);
+    let path = Path::new(".hive/runtime/dispatch-authorizations").join(format!("{file_name}.json"));
+    Ok((authorization_id, brief_digest, path))
+}
+
+fn existing_authorization(
+    target: &PinnedTarget,
+    path: &Path,
+    authorization_id: &str,
+    run_id: &str,
+    status_revision: u64,
+    role_id: &str,
+    brief_digest: &str,
+) -> Result<Option<FileSnapshot>, AdapterError> {
+    let snapshot = target.snapshot(path)?;
+    let Some(bytes) = snapshot.bytes() else {
+        return Ok(Some(snapshot));
+    };
+    if bytes.len() > MAX_RUNTIME_RECORD_BYTES {
+        return Err(AdapterError::Safety(
+            "dispatch authorization exceeds the bounded runtime record size".to_owned(),
+        ));
+    }
+    let record: DispatchAuthorizationRecord = serde_json::from_slice(bytes)
+        .map_err(|_| AdapterError::Safety("dispatch authorization is malformed".to_owned()))?;
+    if record.schema_version != 1
+        || record.authorization_id != authorization_id
+        || record.run_id != run_id
+        || record.status_revision != status_revision
+        || record.role_id != role_id
+        || record.brief_digest != brief_digest
+        || record.state != "issued"
+        || !is_sha256_digest(&record.usage_evidence_digest)
+        || record.record_digest != authorization_record_digest(&record)?
+    {
+        return Err(AdapterError::Safety(
+            "dispatch authorization failed its immutable binding".to_owned(),
+        ));
+    }
+    Ok(None)
+}
+
+fn authorization_record_digest(
+    record: &DispatchAuthorizationRecord,
+) -> Result<String, AdapterError> {
+    let payload = json!({
+        "schema_version": record.schema_version,
+        "authorization_id": record.authorization_id,
+        "run_id": record.run_id,
+        "status_revision": record.status_revision,
+        "role_id": record.role_id,
+        "brief_digest": record.brief_digest,
+        "usage_evidence_digest": record.usage_evidence_digest,
+        "state": record.state,
+    });
+    Ok(sha256_digest(
+        &serde_json_canonicalizer::to_vec(&payload)
+            .map_err(|error| AdapterError::Internal(error.to_string()))?,
+    ))
+}
+
+fn publish_authorization(
+    target: &PinnedTarget,
+    path: &Path,
+    expected: &FileSnapshot,
+    record: &DispatchAuthorizationRecord,
+) -> Result<bool, AdapterError> {
+    let bytes = serde_json_canonicalizer::to_vec(record)
+        .map_err(|error| AdapterError::Internal(error.to_string()))?;
+    target.publish_runtime(path, expected, &bytes)
+}
+
 #[allow(clippy::too_many_lines)]
 fn resume(arguments: &ResumeArguments) -> Result<ActionResult, AdapterError> {
     let capability_bytes =
@@ -1326,15 +1742,183 @@ fn resume(arguments: &ResumeArguments) -> Result<ActionResult, AdapterError> {
             "pinned subagent support is {support:?}; no dispatch brief was prepared"
         )));
     }
-    let mut briefs = Vec::new();
-    if dispatchable {
-        for loaded in &roles {
-            briefs.push(
-                prepare_dispatch_brief(&plan, &status, &loaded.document, Some(&capability))
-                    .map_err(map_dispatch_error)?,
-            );
+    let mut usage_failure = None;
+    let mut usage_evidence = None;
+    let mut runtime_changed_paths = Vec::new();
+    let (briefs, usage_guard) = if !dispatchable {
+        (
+            Vec::new(),
+            json!({
+                "dispatch_intent": arguments.dispatch_intent.as_str(),
+                "enforced": false,
+                "outcome": "not_applicable",
+                "evidence_digest": null,
+                "window": null,
+            }),
+        )
+    } else if arguments.dispatch_intent == DispatchIntent::Manual {
+        (
+            prepare_role_dispatch_briefs(&plan, &status, &roles, &capability)?,
+            json!({
+                "dispatch_intent": "manual",
+                "enforced": false,
+                "outcome": "not_requested",
+                "evidence_digest": null,
+                "window": null,
+            }),
+        )
+    } else {
+        let account_digest = arguments.account_digest.as_deref().ok_or_else(|| {
+            AdapterError::Internal("automatic account digest was not parsed".to_owned())
+        })?;
+        let role_id = arguments
+            .role_id
+            .as_deref()
+            .ok_or_else(|| AdapterError::Internal("automatic role was not parsed".to_owned()))?;
+        let configured_threshold = installed_usage_threshold(&target)?;
+        if arguments
+            .threshold
+            .is_some_and(|requested| requested != configured_threshold)
+        {
+            return Err(AdapterError::Input(format!(
+                "--threshold must equal installed usage_stop_remaining_percent ({configured_threshold})"
+            )));
         }
-    }
+        let selected_role = roles
+            .iter()
+            .find(|loaded| loaded.role_id == role_id)
+            .ok_or_else(|| {
+                AdapterError::Input(format!(
+                    "automatic role is not active for this run: {role_id}"
+                ))
+            })?;
+        let brief =
+            prepare_dispatch_brief(&plan, &status, &selected_role.document, Some(&capability))
+                .map_err(map_dispatch_error)?;
+        let (authorization_id, brief_digest, authorization_path) =
+            authorization_binding(&arguments.run_id, status.status().revision, role_id, &brief)?;
+        let authorization_snapshot = existing_authorization(
+            &target,
+            &authorization_path,
+            &authorization_id,
+            &arguments.run_id,
+            status.status().revision,
+            role_id,
+            &brief_digest,
+        )?;
+        if authorization_snapshot.is_none() {
+            usage_failure = Some((
+                "hive.usage-unknown",
+                "automatic dispatch authorization was already issued for this exact brief"
+                    .to_owned(),
+            ));
+            (
+                Vec::new(),
+                json!({
+                    "dispatch_intent": "automatic",
+                    "enforced": false,
+                    "outcome": "already_issued",
+                    "evidence_digest": null,
+                    "window": null,
+                    "configured_threshold_percent": configured_threshold,
+                    "history": "not_sampled",
+                    "authorization_id": authorization_id,
+                    "role_id": role_id,
+                }),
+            )
+        } else {
+            let Some(authorization_snapshot) = authorization_snapshot else {
+                unreachable!("existing authorization is handled by the replay branch")
+            };
+            let (history_path, history_snapshot, previous_snapshots, history_state) =
+                read_usage_history(&target, account_digest)?;
+            match qualify_and_dispatch_with_runner(
+                &SystemCommandRunner,
+                account_digest,
+                configured_threshold,
+                &previous_snapshots,
+                SystemTime::now(),
+                current_usage_unix_seconds,
+                || Ok::<DispatchBrief, AdapterError>(brief),
+            ) {
+                Ok(authorized) => {
+                    let observation = authorized.observation;
+                    let evidence = observation.evidence;
+                    let brief = authorized.value?;
+                    if publish_usage_history(
+                        &target,
+                        &history_path,
+                        &history_snapshot,
+                        &observation.snapshots,
+                    )? {
+                        runtime_changed_paths.push(portable_relative_path(&history_path));
+                    }
+                    let mut authorization_record = DispatchAuthorizationRecord {
+                        schema_version: 1,
+                        authorization_id: authorization_id.clone(),
+                        run_id: arguments.run_id.clone(),
+                        status_revision: status.status().revision,
+                        role_id: role_id.to_owned(),
+                        brief_digest,
+                        usage_evidence_digest: evidence.digest.clone(),
+                        state: "issued".to_owned(),
+                        record_digest: String::new(),
+                    };
+                    authorization_record.record_digest =
+                        authorization_record_digest(&authorization_record)?;
+                    if publish_authorization(
+                        &target,
+                        &authorization_path,
+                        &authorization_snapshot,
+                        &authorization_record,
+                    )? {
+                        runtime_changed_paths.push(portable_relative_path(&authorization_path));
+                    }
+                    let briefs = vec![brief];
+                    let data = json!({
+                        "dispatch_intent": "automatic",
+                        "enforced": true,
+                        "outcome": "authorized",
+                        "evidence_digest": evidence.digest,
+                        "window": evidence.window,
+                        "configured_threshold_percent": configured_threshold,
+                        "history": history_state,
+                        "authorization_id": authorization_id,
+                        "role_id": role_id,
+                    });
+                    usage_evidence = Some(evidence);
+                    (briefs, data)
+                }
+                Err(error) => {
+                    if let Some(observation) = automatic_observation(&error) {
+                        if publish_usage_history(
+                            &target,
+                            &history_path,
+                            &history_snapshot,
+                            &observation.snapshots,
+                        )? {
+                            runtime_changed_paths.push(portable_relative_path(&history_path));
+                        }
+                    }
+                    let failure = resume_usage_failure(error);
+                    let data = json!({
+                        "dispatch_intent": "automatic",
+                        "enforced": false,
+                        "outcome": failure.outcome,
+                        "evidence_digest": failure.evidence.as_ref().map(|item| item.digest.as_str()),
+                        "window": failure.evidence.as_ref().map(|item| item.window),
+                        "configured_threshold_percent": configured_threshold,
+                        "history": history_state,
+                        "authorization_id": null,
+                        "role_id": role_id,
+                    });
+                    usage_evidence = failure.evidence;
+                    usage_failure = Some((failure.code, failure.message));
+                    (Vec::new(), data)
+                }
+            }
+        }
+    };
     let recovery_roles = roles
         .iter()
         .map(LoadedRole::recovery_data)
@@ -1364,53 +1948,149 @@ fn resume(arguments: &ResumeArguments) -> Result<ActionResult, AdapterError> {
         "roles": recovery_roles,
         "evidence": evidence_data,
         "dispatch_briefs": briefs,
-        "recovery_only": !dispatchable,
+        "recovery_only": !dispatchable || usage_failure.is_some(),
+        "usage_guard": usage_guard,
         "spawned": false
     });
-    let blocked = matches!(
+    let state_blocked = matches!(
         status.status().state,
         RunState::Blocked | RunState::UsageLimited
     );
+    let blocked = state_blocked || usage_failure.is_some();
+    let (code, message) = if let Some((code, message)) = usage_failure.as_ref() {
+        (*code, message.clone())
+    } else if state_blocked {
+        (
+            "hive.run-resume-blocked",
+            "run is blocked; recovery data was loaded without dispatch".to_owned(),
+        )
+    } else if dispatchable {
+        (
+            "hive.run-resume-prepared",
+            if arguments.dispatch_intent == DispatchIntent::Automatic {
+                "usage-guard-authorized dispatch data prepared without spawning".to_owned()
+            } else {
+                "manual unenforced dispatch data prepared without spawning".to_owned()
+            },
+        )
+    } else {
+        (
+            "hive.run-recovery-loaded",
+            "durable recovery data loaded without a hidden transition".to_owned(),
+        )
+    };
+    let mut result_evidence = vec![
+        Evidence {
+            kind: "file",
+            locator: arguments.capabilities.display().to_string(),
+            digest: sha256_digest(&capability_bytes),
+        },
+        Evidence {
+            kind: "file",
+            locator: portable_relative_path(&plan_path),
+            digest: sha256_digest(&plan_bytes),
+        },
+        Evidence {
+            kind: "file",
+            locator: portable_relative_path(&status_path),
+            digest: sha256_digest(&status_bytes),
+        },
+    ];
+    if let Some(evidence) = usage_evidence {
+        result_evidence.push(Evidence {
+            kind: "report",
+            locator: format!("usage-snapshots:normalized:{}", evidence.window),
+            digest: evidence.digest,
+        });
+    }
     Ok(ActionResult {
         schema_version: 1,
         action: "ResumeWork",
         status: if blocked { "blocked" } else { "success" },
         exit_code: if blocked { 3 } else { 0 },
-        code: if blocked {
-            "hive.run-resume-blocked"
-        } else if dispatchable {
-            "hive.run-resume-prepared"
-        } else {
-            "hive.run-recovery-loaded"
-        },
-        message: if blocked {
-            "run is blocked; recovery data was loaded without dispatch".to_owned()
-        } else if dispatchable {
-            "provider-neutral dispatch data prepared without spawning".to_owned()
-        } else {
-            "durable recovery data loaded without a hidden transition".to_owned()
-        },
-        changed_paths: Vec::new(),
-        evidence: vec![
-            Evidence {
-                kind: "file",
-                locator: arguments.capabilities.display().to_string(),
-                digest: sha256_digest(&capability_bytes),
-            },
-            Evidence {
-                kind: "file",
-                locator: portable_relative_path(&plan_path),
-                digest: sha256_digest(&plan_bytes),
-            },
-            Evidence {
-                kind: "file",
-                locator: portable_relative_path(&status_path),
-                digest: sha256_digest(&status_bytes),
-            },
-        ],
+        code,
+        message,
+        changed_paths: runtime_changed_paths,
+        evidence: result_evidence,
         next_action: status.status().next_action.clone(),
         data: Some(data),
     })
+}
+
+fn prepare_role_dispatch_briefs(
+    plan: &RunPlan,
+    status: &RunStatusDocument,
+    roles: &[LoadedRole],
+    capability: &CapabilityResolution,
+) -> Result<Vec<DispatchBrief>, AdapterError> {
+    roles
+        .iter()
+        .map(|loaded| {
+            prepare_dispatch_brief(plan, status, &loaded.document, Some(capability))
+                .map_err(map_dispatch_error)
+        })
+        .collect()
+}
+
+struct ResumeUsageFailure {
+    code: &'static str,
+    message: String,
+    outcome: &'static str,
+    evidence: Option<UsageGuardEvidence>,
+}
+
+fn automatic_observation(error: &AutomaticDispatchError) -> Option<&UsageObservation> {
+    match error {
+        AutomaticDispatchError::Blocked(observation)
+        | AutomaticDispatchError::Permit(_, observation) => Some(observation),
+        AutomaticDispatchError::Sensor(_)
+        | AutomaticDispatchError::InvalidPolicy
+        | AutomaticDispatchError::Unknown(_) => None,
+    }
+}
+
+fn resume_usage_failure(error: AutomaticDispatchError) -> ResumeUsageFailure {
+    match error {
+        AutomaticDispatchError::Blocked(observation) => ResumeUsageFailure {
+            code: "hive.usage-limited",
+            message: "subscription usage is at or below the automatic dispatch threshold"
+                .to_owned(),
+            outcome: "limited",
+            evidence: Some(observation.evidence),
+        },
+        AutomaticDispatchError::Sensor(error) => ResumeUsageFailure {
+            code: "hive.usage-unknown",
+            message: error.to_string(),
+            outcome: "unknown",
+            evidence: None,
+        },
+        AutomaticDispatchError::InvalidPolicy => ResumeUsageFailure {
+            code: "hive.usage-unknown",
+            message: "automatic dispatch usage policy is invalid".to_owned(),
+            outcome: "unknown",
+            evidence: None,
+        },
+        AutomaticDispatchError::Unknown(observation) => ResumeUsageFailure {
+            code: "hive.usage-unknown",
+            message: "subscription usage could not authorize automatic dispatch".to_owned(),
+            outcome: "unknown",
+            evidence: Some(observation.evidence),
+        },
+        AutomaticDispatchError::Permit(error, observation) => ResumeUsageFailure {
+            code: "hive.usage-unknown",
+            message: format!("automatic dispatch usage permit was rejected: {error:?}"),
+            outcome: "unknown",
+            evidence: Some(observation.evidence),
+        },
+    }
+}
+
+fn current_usage_unix_seconds() -> Result<i64, SensorError> {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .ok()
+        .and_then(|duration| i64::try_from(duration.as_secs()).ok())
+        .ok_or(SensorError::Malformed)
 }
 
 fn enforce_owner_continuity(
@@ -1602,9 +2282,9 @@ fn as_set(values: &[String]) -> BTreeSet<String> {
 #[cfg(test)]
 mod tests {
     use super::{
-        checkpoint, publish_parent_file, publish_parent_file_with_hook,
+        checkpoint, parse_resume_arguments, publish_parent_file, publish_parent_file_with_hook,
         publish_parent_file_with_hooks, read_explicit_file_with_metadata_and_hooks, resume,
-        run_run, CheckpointArguments, FileSnapshot, ResumeArguments,
+        run_run, CheckpointArguments, DispatchIntent, FileSnapshot, ResumeArguments,
     };
     #[cfg(unix)]
     use super::{read_explicit_file, PinnedTarget};
@@ -1919,6 +2599,53 @@ mod tests {
     }
 
     #[test]
+    fn resume_dispatch_intent_options_are_additive_and_automatic_only() {
+        let base = [
+            "--target",
+            "/consumer",
+            "--run",
+            "run-1",
+            "--capabilities",
+            "/capabilities.json",
+            "--output",
+            "json",
+        ]
+        .map(str::to_owned);
+        let manual = parse_resume_arguments(&base).expect("default manual intent");
+        assert_eq!(manual.dispatch_intent, DispatchIntent::Manual);
+        assert_eq!(manual.account_digest, None);
+        assert_eq!(manual.role_id, None);
+        assert_eq!(manual.threshold, None);
+
+        let mut automatic = base.to_vec();
+        automatic.extend(
+            [
+                "--dispatch-intent",
+                "automatic",
+                "--account-digest",
+                "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                "--role",
+                "reviewer",
+                "--threshold",
+                "17",
+            ]
+            .map(str::to_owned),
+        );
+        let automatic = parse_resume_arguments(&automatic).expect("automatic intent");
+        assert_eq!(automatic.dispatch_intent, DispatchIntent::Automatic);
+        assert_eq!(automatic.role_id.as_deref(), Some("reviewer"));
+        assert_eq!(automatic.threshold, Some(17));
+
+        let mut missing_account = base.to_vec();
+        missing_account.extend(["--dispatch-intent", "automatic"].map(str::to_owned));
+        assert!(parse_resume_arguments(&missing_account).is_err());
+
+        let mut manual_threshold = base.to_vec();
+        manual_threshold.extend(["--threshold", "17"].map(str::to_owned));
+        assert!(parse_resume_arguments(&manual_threshold).is_err());
+    }
+
+    #[test]
     fn checkpoint_is_idempotent_and_lost_revision_is_rejected() {
         let (_temp, target, capability) = setup_run();
         let request = write_checkpoint_request(&target, 0, "2026-07-24T00:00:00Z", &[], None);
@@ -1974,6 +2701,10 @@ mod tests {
             target: target.clone(),
             run_id: "run-1".to_owned(),
             capabilities: capability.clone(),
+            dispatch_intent: DispatchIntent::Manual,
+            account_digest: None,
+            role_id: None,
+            threshold: None,
         })
         .expect("resume prepares briefs");
         assert_eq!(resumed.code, "hive.run-resume-prepared");
@@ -1991,6 +2722,10 @@ mod tests {
             target,
             run_id: "run-1".to_owned(),
             capabilities: capability,
+            dispatch_intent: DispatchIntent::Manual,
+            account_digest: None,
+            role_id: None,
+            threshold: None,
         })
         .err()
         .expect("tamper rejected");
@@ -2013,6 +2748,10 @@ mod tests {
             target: target.clone(),
             run_id: "run-1".to_owned(),
             capabilities: absent_path,
+            dispatch_intent: DispatchIntent::Manual,
+            account_digest: None,
+            role_id: None,
+            threshold: None,
         })
         .err()
         .expect("owner drift blocks");
@@ -2034,6 +2773,10 @@ mod tests {
             target,
             run_id: "run-1".to_owned(),
             capabilities: unsupported,
+            dispatch_intent: DispatchIntent::Manual,
+            account_digest: None,
+            role_id: None,
+            threshold: None,
         })
         .err()
         .expect("unsupported dispatch rejected");
@@ -2055,6 +2798,10 @@ mod tests {
             target,
             run_id: "run-1".to_owned(),
             capabilities: capability,
+            dispatch_intent: DispatchIntent::Manual,
+            account_digest: None,
+            role_id: None,
+            threshold: None,
         })
         .expect("blocked recovery");
         assert_eq!(result.status, "blocked");

@@ -20,6 +20,7 @@ use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 use std::time::{SystemTime, UNIX_EPOCH};
 
+mod judge;
 mod knowledge;
 mod role;
 mod run;
@@ -42,7 +43,9 @@ USAGE:
     hive role validate --target <dir> --role <role-id> --output json
     hive role handoff --target <dir> --request <request.json> --output json
     hive run checkpoint --target <dir> --request <request.json> --capabilities <fresh-json> --output json
-    hive run resume --target <dir> --run <run-id> --capabilities <fresh-json> --output json
+    hive run resume --target <dir> --run <run-id> --capabilities <fresh-json> [--dispatch-intent manual|automatic] [--account-digest <sha256:...> --role <role-id> [--threshold <1..99>]] --output json
+    hive judge package --target <dir> --request <json> --output json
+    hive judge quorum --target <dir> --request <json> --output json
 ";
 
 const SETUP_USAGE: &str = "\
@@ -145,6 +148,7 @@ fn main() -> ExitCode {
         Some("usage") => run_usage(&arguments[1..]),
         Some("role") => role::run_role(&arguments[1..]),
         Some("run") => run::run_run(&arguments[1..]),
+        Some("judge") => judge::run_judge(&arguments[1..]),
         _ if wants_json(&arguments) => {
             let command = arguments.first().map_or("<missing>", String::as_str);
             let result = ActionResult {

@@ -96,10 +96,12 @@ Run 도중 fresh evidence가 pin과 다르면 owner를 교체하지 않는다.
 이 실패는 `changed_paths: []`이며 `STATUS.md`, role, handoff, evidence와
 `.omx/.omc` namespace를 바꾸지 않는다. 새 owner resolution은 새 run에서만 한다.
 
-## Resume와 prepare-only dispatch
+## Resume와 usage-guarded dispatch preparation
 
-`hive run resume`는 read-only다. `PLAN.md`, `STATUS.md`, active role body, shared
-handoff entry와 evidence를 검증하고 provider-neutral recovery data를 반환한다.
+`hive run resume`는 canonical run artifact에 대해 read-only다. `PLAN.md`,
+`STATUS.md`, active role body, shared handoff entry와 evidence를 검증하고
+provider-neutral recovery data를 반환한다. Automatic intent만 아래 두 Git-ignored
+Hive runtime record를 갱신할 수 있다.
 
 | Durable state 또는 support | 결과 |
 | --- | --- |
@@ -109,9 +111,39 @@ handoff entry와 evidence를 검증하고 provider-neutral recovery data를 반�
 | `resume-ready` | recovery data만 반환; hidden transition 없음 |
 | `succeeded`, `cancelled` | terminal recovery data만 반환; continuation 없음 |
 
+기본값인 manual intent는 CodexBar와 usage runtime record를 읽거나 쓰지 않고 기존
+prepare-only brief를 반환하며 usage enforcement를 주장하지 않는다. Explicit
+automatic intent는 SHA-256 account digest와 active role ID 하나를 요구한다.
+`.hive/config/harness.toml`의 root `usage_stop_remaining_percent`가 권위값이며
+missing, malformed, duplicate, symlink config는 fail-closed한다. Optional
+`--threshold 1..99`는 설치값과 exact하게 같을 때만 허용하고 policy를 override하지
+않는다. Durable run, owner continuity, selected active role과 evidence 검증 뒤
+exact-qualified CodexBar snapshot을 읽고 provider-neutral permit을 평가한다.
+
+Session window가 있으면 weekly 값이 low, malformed 또는 duplicate여도 session만
+선택한다. Session이 없을 때만 단일 weekly window를 fallback으로 사용한다. 선택된
+snapshot은 account digest별로 Git에서 제외된
+`.hive/runtime/usage-history/<digest>.json`에 bounded·integrity-bound record로만
+저장한다. 첫 sample은 prior comparison 없이 truthful하게 처리하고, 이후 measurement
+또는 reset timestamp 역행과 같은 reset의 remaining 증가는 `usage_unknown`이다.
+Malformed, tampered, symlink history도 fail-closed한다.
+
+Permit은 dispatch brief 준비 closure 직전에 현재 시각으로 한 번 소비한다. Authorized
+결과는 exact run revision·selected role·brief digest로 결정되는 authorization ID와
+brief 하나만 반환하고
+`.hive/runtime/dispatch-authorizations/<authorization-id>.json`에 issued claim을
+기록한다. 같은 binding은 sensor 재호출 없이 `already_issued`, exit `3`, brief 0개로
+끝난다. Limited, unknown 또는 expired permit도 exit `3`, brief 0개와 recovery
+data만 반환한다.
+
+Issued claim은 Hive가 같은 command 결과를 다시 발급하지 않게 할 뿐, caller가 이미
+capture한 JSON을 Hive 밖에서 replay하는 것을 막는 cryptographic capability가 아니다.
+실제 host/orchestration owner는 authorization ID를 dispatch boundary에서 한 번만
+소비하고 중복을 거부해야 한다.
+
 Dispatch brief는 role 책임·비책임·verification duty, exact context/write scope,
 acceptance criterion, evidence, handoff, next action과 immutable owner pin을 포함한다.
-Hive는 brief를 준비할 뿐 owner를 실행하거나 subagent를 spawn하지 않는다.
+Hive는 brief를 준비할 뿐 owner를 실행하거나 model/subagent를 spawn하지 않는다.
 
 ## Compatible external orchestration과 공존
 
@@ -134,3 +166,6 @@ OMX/OMC command나 foreign state를 호출하지 않는다.
 - Project와 fake HOME의 `.omx/.omc` foreign sentinel은 성공·실패 모두 불변이다.
 - Fresh-session resume는 transcript나 SQLite 없이 canonical tracked artifact만으로
   next action과 role context를 복구한다.
+- Automatic resume의 유일한 project write는 Git에서 제외된 Hive-owned
+  `.hive/runtime/usage-history/`와 `.hive/runtime/dispatch-authorizations/`의 bounded
+  record다. Manual resume는 project write 0건이다.

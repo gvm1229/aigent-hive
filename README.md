@@ -2,7 +2,7 @@
 
 [![Rust](https://img.shields.io/badge/Rust-stable-000000?logo=rust&logoColor=white)](rust-toolchain.toml)
 [![Cargo](https://img.shields.io/badge/Cargo-workspace-CB4B16?logo=rust&logoColor=white)](Cargo.toml)
-[![Version](https://img.shields.io/badge/version-0.5.0-4C1)](Cargo.toml)
+[![Version](https://img.shields.io/badge/version-0.6.0-4C1)](Cargo.toml)
 [![Python](https://img.shields.io/badge/Python-3.13-3776AB?logo=python&logoColor=white)](.github/workflows/ci.yml)
 [![Copier](https://img.shields.io/badge/Copier-9.17.0-5C4EE5)](copier.yml)
 [![JSON Schema](https://img.shields.io/badge/JSON%20Schema-2020--12-000000?logo=json&logoColor=white)](schemas/)
@@ -13,7 +13,7 @@
 
 > 🐝 **Aigent Hive**는 Codex, Claude Code, Gemini Antigravity 같은 구독형 agent host 위에서 일관된 setup, Skill routing, 역할·지식·run 상태, 안전한 update와 검증 계약을 제공하는 **provider-neutral 로컬 agent harness**다.
 
-> 🚧 **현재 상태:** worktree version은 `0.5.0`이다. Phase 1 renderer, Phase 2 canonical knowledge/index, Phase 3 portable Skill routing·host projection과 Phase 4 persistent role·durable run recovery가 구현됐다. Usage guard core와 fail-closed CodexBar adapter는 Phase 5 선행 slice로 유지된다.
+> 🚧 **현재 상태:** 마지막 완료 product version은 `0.6.0`이다. Phase 1–4의 renderer, knowledge/index, portable Skill routing·host projection, persistent role·durable run recovery에 더해 Phase 5 subscription usage guard, one-shot automatic resume authorization, clean-context judge와 protected external trust root 기반 detached Ed25519 quorum이 구현·검증됐다.
 
 Hive는 모델 API나 provider SDK를 사용하지 않으며 API key를 요청하거나 저장하지 않는다. Compatible OMX·OMC가 있으면 검증된 orchestration 기능을 우선 재사용하고, detection이 `absent|incompatible|unknown`이면 표시된 host-native support 범위에서 동작한다. Fallback hook은 그중 conclusive `absent`와 explicit consent에서만 허용한다.
 
@@ -21,6 +21,7 @@ Hive는 모델 API나 provider SDK를 사용하지 않으며 API key를 요청�
 
 - [지원 범위](#지원-범위)
 - [핵심 원칙](#핵심-원칙)
+- [제품 기능](#제품-기능)
 - [아키텍처](#아키텍처)
 - [기술 스택](#기술-스택)
 - [의존성](#의존성)
@@ -28,6 +29,7 @@ Hive는 모델 API나 provider SDK를 사용하지 않으며 API key를 요청�
 - [개발과 검증](#개발과-검증)
 - [Canonical knowledge와 disposable index](#canonical-knowledge와-disposable-index)
 - [Subscription usage guard](#subscription-usage-guard)
+- [Clean-context judge](#clean-context-judge)
 - [Git workflow](#git-workflow)
 - [현재 상태와 버전 정책](#현재-상태와-버전-정책)
 - [라이선스](#라이선스)
@@ -53,6 +55,25 @@ OMX·OMC는 Hive와 함께 사용할 수 있는 우선 orchestration layer지만
 - 🛡️ **사용자 데이터 보호:** setup과 update는 ownership, staging, diff, backup, rollback 검증을 거친다.
 - 🙋 **명시적 동의:** 외부 orchestration이 없을 때 제안되는 project-local fallback hook도 사용자가 내용을 확인하고 승인해야 설치한다.
 - 📦 **Source와 출하물 분리:** 이 저장소의 개발 지침은 소비자 프로젝트에 그대로 복사하지 않는다.
+
+## 제품 기능
+
+| 기능 | 제공하는 보장 | 경계 |
+| --- | --- | --- |
+| 결정적 setup | typed answer와 capability evidence를 staging에서 검증하고 ownership manifest 범위만 적용한다. Conflict, target retarget, symlink escape와 activation 실패는 user·foreign byte를 보존한 채 중단하거나 rollback한다. | Source workspace에서는 consumer harness를 생성하지 않는다. |
+| Portable Skill routing | simple-question gate 뒤 narrow description이 맞는 approved Skill만 자동 선택한다. Codex의 compatible OMX와 Claude의 compatible OMC 기능이 있으면 Hive duplicate보다 우선한다. | Hive는 plan, Ralph, team, persistent loop와 model runtime을 재구현하지 않는다. |
+| Prompt refinement | exact 이름 `hive-prompt-refine`으로 명시적인 prompt 작성·개선 intent만 처리한다. 기본은 `refine-only`이며 `refine-and-run`은 사용자의 실행 의도가 명시된 경우에만 허용한다. | 일반 prompt hidden rewrite와 의미 변경을 금지한다. |
+| Persistent role·run | Markdown 정본에 role identity, handoff, PLAN-derived criterion, evidence와 immutable orchestration owner를 고정해 fresh session에서 복구한다. | CLI는 dispatch brief data만 준비하며 model이나 subagent를 spawn하지 않는다. |
+| Subscription usage guard | 설치된 threshold를 권위값으로 사용하고 session limit이 존재하면 weekly보다 항상 우선한다. Session이 없을 때만 weekly를 사용하며 stale, 역행, scope mismatch와 sensor 불확실성은 automatic continuation을 fail-closed한다. | Optional CodexBar는 local read-only sensor이며 provider API나 credential을 사용하지 않는다. |
+| Ed25519 authenticated judge quorum | Clean-context package, owner-sealed assignment, 독립 verdict와 critical human approval 각각을 detached Ed25519 signature로 인증한다. Public key는 consumer target 밖의 agent-write-denied trust root에서만 읽고 owner·judge·approver key purpose와 identity를 분리한다. Elevated는 authenticated 2/3, critical은 distinct judge 3/3와 별도 authenticated human approval이 필요하다. | Hive는 verification만 수행한다. Private key 생성·보관·signing, judge/model 실행과 판단의 진실성은 외부 authority가 소유한다. Unsigned v1은 진단 호환만 제공하고 PASS 권한이 없다. |
+| Canonical knowledge와 disposable index | Markdown·YAML·TOML 정본에서 FTS5, tag, alias, backlink와 source graph를 재생성한다. | SQLite는 Git에서 제외된 cache이며 durable fact의 유일한 저장소가 될 수 없다. |
+
+Ed25519 judge의 exact wire format, key separation, trust-root protection과 hostile
+failure mode는
+[`docs/architecture/judge-trust-boundary.md`](docs/architecture/judge-trust-boundary.md)에,
+운영 절차는
+[`docs/guides/ed25519-judge-attestations.md`](docs/guides/ed25519-judge-attestations.md)에
+정의한다.
 
 ## 아키텍처
 
@@ -101,11 +122,13 @@ Rust runtime은 filesystem containment, schema·serialization, RFC 8785 canonica
 | 범위 | 고정 의존성 | 목적 |
 | --- | --- | --- |
 | Rust runtime | `cap-std==4.0.2` | filesystem capability boundary용으로 고정한 dependency |
+| Rust runtime | `cap-primitives==4.0.2`, `cap-fs-ext==4.0.2` | no-follow identity와 ACL-aware effective-access 검증을 보완하는 동일 Bytecode Alliance companion |
 | Rust runtime | `tempfile==3.27.0` | 충돌하지 않는 임의 이름의 exclusive staging·activation temp |
 | Rust runtime | `rusqlite==0.40.1` + `bundled` | system SQLite 차이를 제거한 disposable FTS5 index; MIT |
 | Rust runtime | `jsonschema==0.48.5` | setup·capability·hook contract 검증 |
 | Rust runtime | `serde==1.0.229`, `serde_json==1.0.151`, `yaml_serde==0.10.4`, `toml==1.1.3` | typed config parse·projection |
 | Rust runtime | `serde_json_canonicalizer==0.3.2`, `sha2==0.11.0` | RFC 8785 consent/evidence와 content digest |
+| Rust runtime | `ed25519-dalek==3.0.0` (`default-features=false`) | 외부 trust root에 대한 strict detached Ed25519 verification; signing 기능은 사용하지 않음 |
 | Rust toolchain | `stable`, `rustfmt`, `clippy` | build, format, lint와 unit test |
 | Template authoring·CI | `copier==9.17.0` | template render와 fixture parity |
 | Schema test | `jsonschema[format]==4.25.1` | JSON Schema meta/instance 검증 |
@@ -158,6 +181,7 @@ python -m unittest discover -s tests/conformance -p 'test_phase1_*.py' -v
 python -m unittest tests.conformance.test_phase2_wiki -v
 python -m unittest discover -s tests/conformance -p 'test_phase3_*.py' -v
 python -m unittest tests.conformance.test_phase4_contracts -v
+python -m unittest tests.conformance.test_phase5_judge -v
 ```
 
 Setup은 다음 JSON contract 표면을 사용한다.
@@ -173,11 +197,9 @@ cargo run -p hive-cli -- setup \
 
 `--dry-run` 대신 `--apply` 또는 `--validate` 중 정확히 하나를 선택한다. CI는 세 host의 Copier default fixture, hostile typed-answer fixture, non-absent hook 거부, Rust/Copier parity, role materialization과 consent 변조도 함께 검증한다.
 
-현재 로컬 검증 기준은 Rust workspace 147개와 Python conformance 337개다.
-`hive-cli` 단독 corpus는 52개다. Python corpus는 Phase 1 196개, usage guard 26개,
-Phase 2 knowledge 22개, Phase 3 Skills와 projection 71개, Phase 4 role/run 22개로
-구성된다. Linux·macOS·Windows CI matrix가 다섯 corpus를 모두 실행하며, 이 변경의
-원격 결과는 `develop` push 뒤 확인한다.
+Fresh exact 검증 결과는 [`docs/state/CURRENT.md`](docs/state/CURRENT.md)에 기록한다.
+Linux·macOS·Windows CI matrix는 Phase 1, usage guard, Phase 2 knowledge, Phase 3
+Skills/projection, Phase 4 role/run과 Phase 5 judge corpus를 실행한다.
 
 ## Canonical knowledge와 disposable index
 
@@ -202,7 +224,14 @@ ledger에 남긴다. `reason`은 삭제 prose가 아닌 shipped stable reason-co
 
 ## Subscription usage guard
 
-Hive의 provider-neutral usage policy는 session window가 있으면 이를 우선하고, host가 session limit을 제공하지 않을 때 weekly window를 fallback으로 선택한다. 선택된 window가 `remaining <= 10%`이면 다음 automatic dispatch permit을 발급하지 않는다. 두 window가 모두 없거나 snapshot이 stale이거나 account/window가 일치하지 않아도 `usage_unknown`으로 fail-closed한다.
+Hive의 provider-neutral usage policy는 session window가 있으면 weekly 값이 더 낮거나
+malformed 또는 duplicate여도 session만 선택한다. Session이 없을 때만 단일 weekly
+window를 fallback으로 사용한다. Automatic resume는 설치된
+`.hive/config/harness.toml`의 `usage_stop_remaining_percent`를 권위값으로 읽으며,
+`--threshold`를 주면 설치값과 exact하게 같아야 한다. 선택된 window가
+`remaining <= threshold`이면 다음 automatic dispatch permit을 발급하지 않는다.
+선택 가능한 window가 없거나 snapshot이 stale이거나 account/window가 일치하지 않아도
+`usage_unknown`으로 fail-closed한다.
 
 현재 Codex adapter는 자동 설치하지 않은 optional CodexBar `0.45.2`를 shell 없이 고정 argv로 읽는다. Raw account 대신 호출자가 제공한 SHA-256 digest만 비교한다.
 
@@ -212,7 +241,64 @@ cargo run -p hive-cli -- usage check \
   --output json
 ```
 
-Exit `0`은 그 시점의 snapshot이 core policy를 통과했다는 read-only 판단이다. 실제 1회성 permit 소비는 향후 dispatch owner integration에서 수행해야 한다. Exit `3`의 `hive.usage-limited` 또는 `hive.usage-unknown`은 새 automatic dispatch를 금지한다. 이 명령은 이미 시작된 host turn을 종료하지 않으며 CodexBar가 없을 때 enforcement가 가능하다고 주장하지 않는다.
+Exit `0`은 그 시점의 snapshot이 core policy를 통과했다는 read-only 판단이다.
+`hive run resume --dispatch-intent automatic`은 durable run과 owner continuity를 먼저
+검증한 뒤 명시한 active role 하나에 대해서만 fresh snapshot을 평가한다. 이전
+snapshot은 Git에서 제외된 `.hive/runtime/usage-history/`에만 bounded하게 저장하고,
+같은 reset의 remaining 증가나 measurement/reset 역행은 fail-closed한다. 허용되면
+permit을 brief 준비 closure 직전에 소비하고 exact run revision·role·brief에 결합된
+authorization ID 하나와 brief 하나만 반환한다. 같은 authorization의 재발급,
+limited, unknown 또는 expired 결과는 brief 0개와 recovery data만 반환한다.
+
+Hive는 이미 반환된 JSON이 Hive 밖에서 복사·재생되는 것까지 막을 수 없다. 실제
+host/orchestration owner가 authorization ID를 dispatch 시 한 번만 소비해야 한다.
+Manual resume는 CodexBar와 runtime history를 읽거나 쓰지 않으며 enforcement를
+주장하지 않는다. 어느 경로도 model이나 subagent를 spawn하지 않는다.
+
+## Clean-context judge
+
+`hive judge package`는 결정론적 검증 뒤 goal, acceptance, artifact/evidence digest
+reference와 known constraint만 포함한 최소 package를 만든다. Task-agent reasoning,
+self-score, 원하는 verdict와 다른 judge 결과는 거부하며 package는
+`package_digest`를 제외한 RFC 8785 JCS bytes의 SHA-256에 결합된다.
+
+```bash
+hive judge package --target . --request judge-package-request.json --output json
+hive judge quorum --target . --request judge-quorum-request.json \
+  --trust-root /absolute/admin-protected/judge-trust-root.toml --output json
+```
+
+Verdict 전 `judge-assignment`는 exact package·criteria, requester, task agent,
+resolved owner와 owner provenance, 고유 slot·judge instance·eligibility evidence를
+JCS digest로 고정한다. Requester와 task agent는 roster에 들어갈 수 없다. Verdict는
+assignment 뒤의 exact tuple과 timestamp에 결합돼야 하며, critical human approval은
+모든 eligible verdict 뒤 별도 digest-bound artifact로 제출해야 한다.
+
+`hive judge quorum`은 target 안의 target-relative artifact와 detached attestation만
+bounded no-follow로 읽는다. Public key는 target과 release bundle 밖의 별도
+agent-write-denied TOML trust root에서 읽으며 caller가 artifact와 함께 self-certify한
+key는 신뢰하지 않는다. Assignment는 `judge-assignment`, verdict는 `judge-verdict`,
+critical human approval은 `judge-approval` purpose key로 strict Ed25519 검증한다.
+Trust root 전체에서 public-key bytes는 unique여야 하며 owner key, judge key와 human
+key 재사용을 거부한다.
+
+Elevated는 authenticated judge 3명 중 2명 PASS, critical은 서로 다른 authenticated
+judge 3명 전원 PASS와 owner·judge가 아닌 별도 authenticated human approval을
+요구한다. Missing, revoked, out-of-window, wrong-purpose, tampered 또는 duplicate
+signature는 PASS로 승격되지 않는다. Unsigned schema v1 request는 기존 artifact
+진단을 위해 읽을 수 있지만 항상 `authenticated:false`, `INDETERMINATE`다.
+
+Aggregate output은 count/status, `authenticated`, algorithm과 approval 유효성만
+반환하고 identity, key, signature, slot, finding과 개별 verdict를 노출하지 않는다.
+Signature는 trusted private-key possession과 exact artifact binding을 증명하지만
+judge 판단의 진실성, 실제 사람의 생체 presence 또는 전역 replay를 증명하지 않는다.
+Hive는 private key를 생성·읽기·저장·migration하지 않으며 외부 signer가 key custody와
+user-presence policy를 소유한다. 자세한 계약은
+[`docs/architecture/judge-trust-boundary.md`](docs/architecture/judge-trust-boundary.md)에
+정의하고 설치·rotation 절차는
+[`docs/guides/ed25519-judge-attestations.md`](docs/guides/ed25519-judge-attestations.md)를
+따른다. CLI와 `hive-judge-package` Skill은 read-only이며 model, judge, subagent 또는
+external runtime을 직접 실행하지 않는다.
 
 ## Git workflow
 
@@ -227,11 +313,11 @@ Exit `0`은 그 시점의 snapshot이 core policy를 통과했다는 read-only �
 
 | 항목 | 현재 값 |
 | --- | --- |
-| Product version | `0.5.0` |
-| 현재 범위 | Phase 1 renderer, Phase 2 knowledge/index, Phase 3 portable Skills/projection, Phase 4 role/run recovery와 Phase 5 usage guard 선행 slice |
-| 구현 기능 | 결정적 setup, knowledge/index, exact 9개 implemented built-in Skill, persistent role/shared handoff, PLAN-derived checkpoint, immutable owner pin, prepare-only/no-spawn resume |
-| 다음 구현 | Phase 5 dispatch permit integration, CodexBar qualification과 judge quorum |
-| Active plan | [`docs/plans/PLAN.md`](docs/plans/PLAN.md) revision 1.10 |
+| Product version | `0.6.0` |
+| 현재 범위 | Phase 1–4와 Phase 5 usage guard, one-shot automatic resume, clean-context judge package, authenticated detached Ed25519 quorum |
+| 검증된 Phase 5 | session 우선·weekly fallback, 10% inclusive stop, protected external trust root, owner/judge/human purpose 분리, elevated 2/3와 critical 3/3+human |
+| 다음 구현 | Phase 6 update·migration·release |
+| Active plan | [`docs/plans/PLAN.md`](docs/plans/PLAN.md) revision 1.13 |
 | Handoff state | [`docs/state/CURRENT.md`](docs/state/CURRENT.md) |
 
 Semantic version `X.Y.Z`는 다음 원칙으로 변경한다.

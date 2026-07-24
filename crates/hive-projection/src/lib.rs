@@ -26,6 +26,7 @@ const RUN_CHECKPOINT: &[u8] =
     include_bytes!("../../../harness/skills/hive-run-checkpoint/SKILL.md");
 const RUN_RESUME: &[u8] = include_bytes!("../../../harness/skills/hive-run-resume/SKILL.md");
 const ROLE_HANDOFF: &[u8] = include_bytes!("../../../harness/skills/hive-role-handoff/SKILL.md");
+const JUDGE_PACKAGE: &[u8] = include_bytes!("../../../harness/skills/hive-judge-package/SKILL.md");
 
 /// A stable validation or compilation failure.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -531,7 +532,7 @@ fn embedded_skill_source(name: &str) -> Option<&'static [u8]> {
         .find_map(|(candidate, bytes)| (candidate == name).then_some(bytes))
 }
 
-fn embedded_skill_sources() -> [(&'static str, &'static [u8]); 9] {
+fn embedded_skill_sources() -> [(&'static str, &'static [u8]); 10] {
     [
         ("setup-harness", SETUP_HARNESS),
         ("hive-simple-question", SIMPLE_QUESTION),
@@ -542,6 +543,7 @@ fn embedded_skill_sources() -> [(&'static str, &'static [u8]); 9] {
         ("hive-run-checkpoint", RUN_CHECKPOINT),
         ("hive-run-resume", RUN_RESUME),
         ("hive-role-handoff", ROLE_HANDOFF),
+        ("hive-judge-package", JUDGE_PACKAGE),
     ]
 }
 
@@ -1548,9 +1550,10 @@ description: Inspect one local file without changing it.
             let first = compile_projection(host, &[]).expect("projection");
             let second = compile_projection(host, &[]).expect("projection");
             assert_eq!(first, second);
-            assert_eq!(first.active_skills.skills.len(), 9);
-            assert_eq!(first.files.len(), 10);
+            assert_eq!(first.active_skills.skills.len(), 10);
+            assert_eq!(first.files.len(), 11);
             for skill in [
+                "hive-judge-package",
                 "hive-prompt-refine",
                 "hive-run-checkpoint",
                 "hive-run-resume",
@@ -1564,8 +1567,16 @@ description: Inspect one local file without changing it.
     }
 
     #[test]
-    fn phase_four_skill_sources_templates_embeddings_and_digests_match() {
+    fn data_skill_sources_templates_embeddings_and_digests_match() {
         let expected = [
+            (
+                "hive-judge-package",
+                JUDGE_PACKAGE,
+                include_bytes!(
+                    "../../../harness/template/{{ '.claude' if primary_host == 'claude' else '.agents' }}/skills/hive-judge-package/SKILL.md"
+                )
+                .as_slice(),
+            ),
             (
                 "hive-run-checkpoint",
                 RUN_CHECKPOINT,
@@ -1768,27 +1779,27 @@ description: Inspect one local file without changing it.
     }
 
     #[test]
-    fn simple_question_gate_precedes_phase_four_automatic_candidates() {
-        let mut request = routing_request();
-        request.explicit_action = None;
-        request.simple_question = true;
-        request.hive_candidate = Some("hive-run-resume".to_owned());
-        request.active_hive_skills = vec![
-            builtin_proof("hive-simple-question"),
-            builtin_proof("hive-run-resume"),
-        ];
+    fn simple_question_gate_precedes_automatic_data_candidates() {
+        for skill in ["hive-run-resume", "hive-judge-package"] {
+            let mut request = routing_request();
+            request.explicit_action = None;
+            request.simple_question = true;
+            request.hive_candidate = Some(skill.to_owned());
+            request.active_hive_skills =
+                vec![builtin_proof("hive-simple-question"), builtin_proof(skill)];
 
-        let result = resolve_route(&request).expect("simple route");
+            let result = resolve_route(&request).expect("simple route");
 
-        assert_eq!(result.route, Route::SimpleQuestion);
-        assert_eq!(
-            result.selected_skill.as_deref(),
-            Some("hive-simple-question")
-        );
-        assert_eq!(
-            result.load_skill_bodies,
-            vec!["hive-simple-question".to_owned()]
-        );
+            assert_eq!(result.route, Route::SimpleQuestion);
+            assert_eq!(
+                result.selected_skill.as_deref(),
+                Some("hive-simple-question")
+            );
+            assert_eq!(
+                result.load_skill_bodies,
+                vec!["hive-simple-question".to_owned()]
+            );
+        }
     }
 
     #[test]
@@ -1818,20 +1829,28 @@ description: Inspect one local file without changing it.
 
     #[test]
     fn compatible_external_candidate_still_precedes_other_hive_candidates() {
-        let mut request = routing_request();
-        request.external_candidate = Some(ExternalCandidate {
-            name: "analyze".to_owned(),
-            provided_by: ExternalProvider::Omx,
-            compatible: true,
-        });
-        request.hive_candidate = Some("hive-knowledge-query".to_owned());
-        request.active_hive_skills = vec![builtin_proof("hive-knowledge-query")];
+        for (host, provider) in [
+            (Host::Codex, ExternalProvider::Omx),
+            (Host::Claude, ExternalProvider::Omc),
+        ] {
+            for skill in ["hive-knowledge-query", "hive-judge-package"] {
+                let mut request = routing_request();
+                request.host = host;
+                request.external_candidate = Some(ExternalCandidate {
+                    name: "analyze".to_owned(),
+                    provided_by: provider,
+                    compatible: true,
+                });
+                request.hive_candidate = Some(skill.to_owned());
+                request.active_hive_skills = vec![builtin_proof(skill)];
 
-        let result = resolve_route(&request).expect("route");
+                let result = resolve_route(&request).expect("route");
 
-        assert_eq!(result.route, Route::ExternalSkill);
-        assert_eq!(result.selected_skill.as_deref(), Some("analyze"));
-        assert_eq!(result.load_skill_bodies.len(), 1);
+                assert_eq!(result.route, Route::ExternalSkill);
+                assert_eq!(result.selected_skill.as_deref(), Some("analyze"));
+                assert_eq!(result.load_skill_bodies.len(), 1);
+            }
+        }
     }
 
     #[test]

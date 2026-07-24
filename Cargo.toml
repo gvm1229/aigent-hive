@@ -9,14 +9,16 @@ members = [
 resolver = "2"
 
 [workspace.package]
-version = "0.5.0"
+version = "0.6.0"
 edition = "2021"
 repository = "https://github.com/gvm1229/aigent-hive"
 license = "Apache-2.0"
 
 [workspace.dependencies]
 cap-fs-ext = "=4.0.2"
+cap-primitives = "=4.0.2"
 cap-std = "=4.0.2"
+ed25519-dalek = { version = "=3.0.0", default-features = false }
 jsonschema = { version = "=0.48.5", default-features = false }
 rusqlite = { version = "=0.40.1", features = ["bundled"] }
 serde = { version = "=1.0.229", features = ["derive"] }

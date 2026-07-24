@@ -37,6 +37,7 @@ CANONICAL_VISIBLE_PATHS = (
     ".hive/team/roles/reviewer.md",
 )
 BUILTIN_SKILL_NAMES = (
+    "hive-judge-package",
     "hive-knowledge-capture",
     "hive-knowledge-maintenance",
     "hive-knowledge-query",

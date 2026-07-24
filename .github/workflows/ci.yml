@@ -94,6 +94,11 @@ jobs:
           python -m unittest
           tests.conformance.test_phase4_contracts
           -v
+      - name: Run Phase 5 judge conformance corpus
+        run: >-
+          python -m unittest
+          tests.conformance.test_phase5_judge
+          -v
 
   copier:
     name: Contract and Copier conformance

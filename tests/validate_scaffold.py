@@ -157,18 +157,59 @@ def validate_contract_examples() -> None:
         "risk_tier": "elevated",
         "goal": "verify the scaffold",
         "acceptance_criteria": ["C1"],
-        "artifact_refs": ["docs/plans/PLAN.md"],
+        "artifact_refs": [f"artifact/patch.diff#{digest}"],
         "evidence_refs": [],
         "known_constraints": [],
         "package_digest": digest,
     }
+    judge_package_request = {
+        key: value
+        for key, value in judge_package.items()
+        if key != "package_digest"
+    }
+    validate_instance(
+        "judge-package-request.schema.json",
+        judge_package_request,
+    )
+    expect_invalid(
+        "judge-package-request.schema.json",
+        {**judge_package_request, "reasoning": "private transcript"},
+    )
     validate_instance("judge-package.schema.json", judge_package)
+
+    judge_assignment = {
+        "schema_version": 1,
+        "subject_id": "phase-0",
+        "package_digest": digest,
+        "acceptance_criteria": ["C1"],
+        "requester_id": "requester",
+        "task_agent_id": "task-agent",
+        "resolved_owner_id": "omx-run",
+        "owner_provenance": {
+            "authority": "external-orchestrator",
+            "authentication_evidence_digest": digest,
+        },
+        "slots": [
+            {
+                "slot_id": f"slot-{index}",
+                "judge_instance_id": f"judge-{index}",
+                "eligibility_evidence_digest": digest,
+            }
+            for index in range(1, 4)
+        ],
+        "created_at": "2026-07-23T00:00:00Z",
+        "assignment_digest": digest,
+    }
+    validate_instance("judge-assignment.schema.json", judge_assignment)
 
     judge_verdict = {
         "schema_version": 1,
         "subject_id": "phase-0",
-        "judge_id": "judge-1",
         "package_digest": digest,
+        "assignment_digest": digest,
+        "slot_id": "slot-1",
+        "judge_instance_id": "judge-1",
+        "eligibility_evidence_digest": digest,
         "verdict": "PASS",
         "findings": [],
         "missing_evidence": [],
@@ -178,6 +219,43 @@ def validate_contract_examples() -> None:
     expect_invalid(
         "judge-verdict.schema.json",
         {**judge_verdict, "missing_evidence": ["test log"]},
+    )
+    judge_quorum_request = {
+        "schema_version": 1,
+        "package": "package.json",
+        "assignment": "assignment.json",
+        "verdicts": ["verdict-a.json", "verdict-b.json", "verdict-c.json"],
+        "approval": "approval.json",
+    }
+    validate_instance(
+        "judge-quorum-request.schema.json",
+        judge_quorum_request,
+    )
+    expect_invalid(
+        "judge-quorum-request.schema.json",
+        {**judge_quorum_request, "package": "../package.json"},
+    )
+    validate_instance(
+        "judge-approval.schema.json",
+        {
+            "schema_version": 1,
+            "subject_id": "phase-0",
+            "package_digest": digest,
+            "assignment_digest": digest,
+            "acceptance_criteria": ["C1"],
+            "approver_id": "human-reviewer",
+            "decision": "APPROVE",
+            "created_at": "2026-07-23T00:01:00Z",
+            "approval_digest": digest,
+        },
+    )
+    validate_instance(
+        "action-result.schema.json",
+        {
+            **action_result,
+            "action": "VerifyWork",
+            "code": "hive.judge-package-ready",
+        },
     )
 
     capability_matrix = with_capability_digest({
@@ -672,6 +750,7 @@ def validate_render(render_root: Path, input_data_path: Path) -> None:
     active_entries = active_skills["skills"]
     assert isinstance(active_entries, list)
     expected_skill_names = [
+        "hive-judge-package",
         "hive-knowledge-capture",
         "hive-knowledge-maintenance",
         "hive-knowledge-query",

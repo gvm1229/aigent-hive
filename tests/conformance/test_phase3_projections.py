@@ -36,9 +36,9 @@ PROJECTED_BUILTINS = (
     "hive-role-handoff",
     "hive-run-checkpoint",
     "hive-run-resume",
+    "hive-judge-package",
 )
 CATALOG_ONLY = (
-    "hive-judge-package",
     "hive-update",
     "hive-migrate",
 )

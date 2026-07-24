@@ -9,7 +9,6 @@ import os
 import stat
 import subprocess
 import tempfile
-import textwrap
 import unittest
 from pathlib import Path
 
@@ -31,6 +30,9 @@ USAGE_SNAPSHOT_SCHEMA = json.loads(
 RAW_ACCOUNT = "usage-guard@example.invalid"
 ACCOUNT_DIGEST = "sha256:" + hashlib.sha256(RAW_ACCOUNT.encode()).hexdigest()
 OTHER_ACCOUNT_DIGEST = "sha256:" + hashlib.sha256(b"other-account").hexdigest()
+CODEXBAR_FIXTURE = (
+    REPOSITORY_ROOT / "tests/fixtures/phase5/usage/codexbar_fixture.py"
+).read_text(encoding="utf-8")
 
 
 def valid_snapshot() -> dict[str, object]:
@@ -109,92 +111,6 @@ class UsageSnapshotSchemaConformance(unittest.TestCase):
             Draft202012Validator(USAGE_SNAPSHOT_SCHEMA).validate(instance)
 
 
-FAKE_CODEXBAR = r"""
-from __future__ import annotations
-
-import json
-import os
-import sys
-import time
-from datetime import datetime, timedelta, timezone
-
-case = os.environ.get("FAKE_CODEXBAR_CASE", "allow")
-now = datetime.now(timezone.utc)
-
-if sys.argv[1:] == ["--version"]:
-    if case == "timeout":
-        time.sleep(1)
-        raise SystemExit(0)
-    version = "999.0.0" if case == "unsupported-version" else "0.45.2"
-    sys.stdout.write(f"CodexBar {version}\n")
-    raise SystemExit(0)
-
-if case == "timeout":
-    time.sleep(1)
-    raise SystemExit(0)
-if case == "malformed":
-    sys.stdout.write("{not-json")
-    raise SystemExit(0)
-if case == "process-error":
-    sys.stderr.write("fixture sensor failure\n")
-    raise SystemExit(7)
-
-account = "usage-guard@example.invalid"
-updated_at = now
-primary_used = 43
-secondary_used = 43
-error = None
-
-if case == "threshold":
-    primary_used = secondary_used = 90
-elif case == "one-window-low":
-    primary_used = 92
-elif case == "weekly-only":
-    pass
-elif case == "weekly-only-threshold":
-    secondary_used = 90
-elif case == "weekly-low-session-high":
-    secondary_used = 92
-elif case == "wrong-account":
-    account = "wrong-account@example.invalid"
-elif case == "stale":
-    updated_at = now - timedelta(hours=1)
-elif case == "sensor-error":
-    error = "usage unavailable"
-
-usage = {
-    "primary": {
-        "usedPercent": primary_used,
-        "windowMinutes": 300,
-        "resetsAt": (now + timedelta(hours=2)).isoformat().replace("+00:00", "Z"),
-    },
-    "secondary": {
-        "usedPercent": secondary_used,
-        "windowMinutes": 10080,
-        "resetsAt": (now + timedelta(days=4)).isoformat().replace("+00:00", "Z"),
-    },
-    "updatedAt": updated_at.isoformat().replace("+00:00", "Z"),
-    "identity": {"providerID": "codex"},
-}
-if case in ("weekly-only", "weekly-only-threshold"):
-    usage["primary"] = None
-if case == "missing-window":
-    del usage["primary"]
-    del usage["secondary"]
-
-row = {
-    "provider": "codex",
-    "account": account,
-    "version": "0.45.2",
-    "source": "codex-cli",
-    "error": error,
-    "usage": usage,
-}
-json.dump([row], sys.stdout, separators=(",", ":"))
-sys.stdout.write("\n")
-"""
-
-
 class UsageGuardCliConformance(Phase1CliTestCase):
     def setUp(self) -> None:
         super().setUp()
@@ -214,13 +130,13 @@ class UsageGuardCliConformance(Phase1CliTestCase):
                 encoding="utf-8",
             )
             (self.fake_bin / "codexbar.py").write_text(
-                textwrap.dedent(FAKE_CODEXBAR),
+                CODEXBAR_FIXTURE,
                 encoding="utf-8",
             )
             return
         script = self.fake_bin / "codexbar"
         script.write_text(
-            f"#!{os.sys.executable}\n{textwrap.dedent(FAKE_CODEXBAR)}",
+            f"#!{os.sys.executable}\n{CODEXBAR_FIXTURE}",
             encoding="utf-8",
         )
         script.chmod(script.stat().st_mode | stat.S_IXUSR)
@@ -360,6 +276,44 @@ class UsageGuardCliConformance(Phase1CliTestCase):
             code="hive.usage-allowed",
         )
 
+    def test_session_takes_precedence_over_malformed_or_duplicate_weekly(self) -> None:
+        for case in (
+            "weekly-malformed-session-high",
+            "weekly-duplicate-session-high",
+        ):
+            with self.subTest(case=case):
+                process, result = self.invoke_usage(case)
+
+                self.assert_usage_result(
+                    process,
+                    result,
+                    exit_code=0,
+                    status="success",
+                    code="hive.usage-allowed",
+                )
+
+    def test_session_threshold_blocks_even_when_weekly_is_malformed(self) -> None:
+        process, result = self.invoke_usage("session-low-weekly-malformed")
+
+        self.assert_usage_result(
+            process,
+            result,
+            exit_code=3,
+            status="blocked",
+            code="hive.usage-limited",
+        )
+
+    def test_duplicate_weekly_is_unknown_only_when_weekly_is_the_fallback(self) -> None:
+        process, result = self.invoke_usage("weekly-duplicate")
+
+        self.assert_usage_result(
+            process,
+            result,
+            exit_code=3,
+            status="blocked",
+            code="hive.usage-unknown",
+        )
+
     def test_default_threshold_is_ten_percent(self) -> None:
         process, result = self.invoke_usage("threshold", threshold=None)
 
@@ -414,6 +368,19 @@ class UsageGuardCliConformance(Phase1CliTestCase):
             code="hive.usage-unknown",
         )
 
+    def test_bounded_output_limits_fail_closed(self) -> None:
+        for case in ("oversized-version", "oversized-usage", "oversized-stderr"):
+            with self.subTest(case=case):
+                process, result = self.invoke_usage(case)
+
+                self.assert_usage_result(
+                    process,
+                    result,
+                    exit_code=3,
+                    status="blocked",
+                    code="hive.usage-unknown",
+                )
+
     def test_malformed_codexbar_json_is_usage_unknown(self) -> None:
         process, result = self.invoke_usage("malformed")
 
@@ -461,6 +428,30 @@ class UsageGuardCliConformance(Phase1CliTestCase):
             code="hive.usage-unknown",
         )
 
+    def test_duplicate_account_is_usage_unknown(self) -> None:
+        process, result = self.invoke_usage("duplicate-account")
+
+        self.assert_usage_result(
+            process,
+            result,
+            exit_code=3,
+            status="blocked",
+            code="hive.usage-unknown",
+        )
+
+    def test_provider_source_and_identity_mismatch_are_usage_unknown(self) -> None:
+        for case in ("wrong-provider", "wrong-source", "missing-identity"):
+            with self.subTest(case=case):
+                process, result = self.invoke_usage(case)
+
+                self.assert_usage_result(
+                    process,
+                    result,
+                    exit_code=3,
+                    status="blocked",
+                    code="hive.usage-unknown",
+                )
+
     def test_missing_quota_window_is_usage_unknown(self) -> None:
         process, result = self.invoke_usage("missing-window")
 
@@ -481,6 +472,62 @@ class UsageGuardCliConformance(Phase1CliTestCase):
             exit_code=3,
             status="blocked",
             code="hive.usage-unknown",
+        )
+
+    def test_future_sample_is_usage_unknown(self) -> None:
+        process, result = self.invoke_usage("future")
+
+        self.assert_usage_result(
+            process,
+            result,
+            exit_code=3,
+            status="blocked",
+            code="hive.usage-unknown",
+        )
+
+    @unittest.skipIf(os.name == "nt", "Unix executable identity fixture")
+    def test_executable_change_after_version_fails_closed(self) -> None:
+        process, result = self.invoke_usage("executable-change")
+
+        self.assert_usage_result(
+            process,
+            result,
+            exit_code=3,
+            status="blocked",
+            code="hive.usage-unknown",
+        )
+
+    @unittest.skipIf(os.name == "nt", "Unix symlink identity fixture")
+    def test_symlink_swap_cannot_change_the_qualified_executable(self) -> None:
+        linked_bin = self.work_root / "linked-bin"
+        linked_bin.mkdir()
+        installed = linked_bin / "CodexBarCLI"
+        installed.write_text(
+            f"#!{os.sys.executable}\n{CODEXBAR_FIXTURE}",
+            encoding="utf-8",
+        )
+        installed.chmod(installed.stat().st_mode | stat.S_IXUSR)
+        malicious = linked_bin / "malicious"
+        malicious.write_text("#!/bin/sh\nexit 97\n", encoding="utf-8")
+        malicious.chmod(malicious.stat().st_mode | stat.S_IXUSR)
+        linked = linked_bin / "codexbar"
+        linked.symlink_to(installed)
+
+        process, result = self.invoke_usage(
+            "symlink-swap",
+            sensor_path=linked_bin,
+            extra_environment={
+                "FAKE_CODEXBAR_LINK": str(linked),
+                "FAKE_CODEXBAR_MALICIOUS": str(malicious),
+            },
+        )
+
+        self.assert_usage_result(
+            process,
+            result,
+            exit_code=0,
+            status="success",
+            code="hive.usage-allowed",
         )
 
     def test_usage_check_performs_no_project_writes(self) -> None:

@@ -25,7 +25,7 @@ aigent-hive/
 │   ├── hive-render/            # 결정적 staging, ownership, consent와 role materialization
 │   ├── hive-wiki/              # Markdown ingest/lint와 disposable SQLite FTS5 projection
 │   ├── hive-projection/        # portable Skill routing, prompt 검증과 thin host projection
-│   └── hive-cli/               # setup/knowledge/index/hook/usage/role/run adapter
+│   └── hive-cli/               # setup/knowledge/index/hook/usage/role/run/judge adapter
 ├── harness/
 │   ├── template/               # Copier authoring·CI source
 │   ├── skills/                 # portable shipping Skill source
@@ -80,11 +80,44 @@ Core `cap-std`의 stable public surface만으로는 cross-platform no-follow dir
 
 각 live replacement는 handle-relative `create_new`로 만든 충돌하지 않는 임의 이름의 temp를 사용한다. Windows의 기존 destination 교체는 같은 parent capability 아래 backup/복원을 거치며, operation snapshot 기준 rollback과 staged exact bytes·삭제 부재·known hook 집합의 post-validation까지 통과해야 transaction이 성공한다. Read-only `--validate`와 activation 전 render/preflight는 기존 lexical/no-follow 검사를 유지한다.
 
-## Usage guard 경계
+## Phase 5 usage guard와 judge
 
-`hive-core::usage_guard`는 provider-neutral snapshot 검증, 10% inclusive 중지선과 one-shot dispatch permit만 소유한다. Session window가 있으면 우선하고, host가 session limit을 노출하지 않을 때 weekly를 fallback으로 선택한다. `hive-cli`의 CodexBar adapter는 optional local executable을 fixed argv로 bounded 실행해 snapshot을 정규화하며 provider SDK, API key와 model call을 소유하지 않는다.
+`hive-core::usage_guard`는 provider-neutral snapshot 검증, configured inclusive 중지선과 one-shot dispatch permit만 소유한다. Session window가 있으면 우선하고, host가 session limit을 노출하지 않을 때 weekly를 fallback으로 선택한다. `hive-cli`의 CodexBar adapter는 optional local executable을 fixed argv로 bounded 실행해 snapshot을 정규화하며 provider SDK, API key와 model call을 소유하지 않는다.
 
-Hive는 현재 dispatch를 종료하거나 자체 loop를 실행하지 않는다. Resolved OMX/OMC 또는 host-native owner가 새 dispatch 직전에 permit을 요청하고 한 번 소비해야 하며, sensor 부재·stale·scope mismatch는 `usage_unknown`으로 fail-closed한다.
+Session은 weekly의 low, malformed 또는 duplicate 상태보다 절대 우선하며, session이
+없을 때만 exact 단일 weekly를 fallback으로 선택한다. `hive run resume`의 automatic
+intent는 installed harness threshold를 권위값으로 사용하고 mismatch override를
+거부한다. 이전 selected snapshot과 issued authorization은 Git에서 제외된 Hive-owned
+`.hive/runtime/usage-history/`와 `.hive/runtime/dispatch-authorizations/`에만
+bounded하게 저장한다. Measurement/reset 역행과 같은 reset의 remaining 증가는
+fail-closed한다. Exact run revision·selected active role·brief 하나에 authorization
+하나만 발급하며 permit을 brief 준비 closure 직전에 한 번 소비한다. Manual intent는
+sensor와 runtime record를 읽거나 쓰지 않는다. Sensor 부재·stale·scope mismatch,
+limited·expired·reused authorization은 brief 없이 `usage_unknown|usage-limited`
+recovery로 끝난다. Hive 밖에서 capture된 JSON replay는 막을 수 없으므로 실제
+host/orchestration owner가 authorization ID를 한 번만 소비해야 한다.
+
+`hive-core::judge`는 clean-context `JudgePackage`, verdict 전 digest-bound
+`JudgeAssignment`, assignment-bound final verdict와 verdict 후 별도
+`HumanApproval`을 검증한다. `hive-core::judge_auth`는 consumer target 밖의
+agent-write-denied TOML trust root를 기준으로 assignment, verdict와 approval의
+detached Ed25519 signature를 strict 검증한다. Owner·judge·human key purpose와
+principal을 분리하고 public-key bytes 재사용을 거부한 뒤 normal 1명, elevated 2/3,
+critical 3/3+human quorum을 결정론적으로 계산한다.
+
+`hive judge package|quorum`은 target 안의 explicit target-relative file만 bounded
+no-follow read하고 project를 수정하지 않는다. Task-agent reasoning, self-evaluation,
+verdict-leading instruction과 prior judge verdict는 package에서 거부한다. Quorum
+출력은 identity·slot·finding·개별 verdict를 숨긴 aggregate count/status,
+authentication algorithm과 approval 유효성만 포함한다. Unsigned v1은 diagnostic
+compatibility만 제공하고 PASS를 반환하지 않는다. Ed25519는 trusted-key possession과
+exact artifact binding을 증명하지만 judge 판단의 진실성, 실제 사람의 생체 presence와
+전역 replay를 증명하지 않는다. 이 trust boundary와 fail-closed 조건은
+[`judge-trust-boundary.md`](judge-trust-boundary.md)에 둔다.
+
+`hive-judge-package`는 exact 10개 implemented built-in 중 read-only data Skill이다.
+Package 준비 뒤 independent judge invocation은 resolved host/OMX/OMC owner가 맡는다.
+Hive CLI와 Skill은 model, judge, subagent 또는 provider process를 실행하지 않는다.
 
 ## Phase 2 knowledge와 index
 
@@ -108,11 +141,11 @@ rebuild를 모두 거부해 active content와 suppression metadata가 공존하�
 
 ## Phase 3 Skill routing과 projection
 
-`hive-projection`은 exact 9개 implemented built-in과 3개 catalog-only future entry를
+`hive-projection`은 exact 10개 implemented built-in과 2개 catalog-only future entry를
 구분한다. Implemented built-in은 `setup-harness`, `hive-simple-question`,
 `hive-prompt-refine`, `hive-knowledge-capture`, `hive-knowledge-query`,
 `hive-knowledge-maintenance`, `hive-role-handoff`, `hive-run-checkpoint`,
-`hive-run-resume`다. `hive-judge-package`, `hive-update`, `hive-migrate`는 catalog
+`hive-run-resume`, `hive-judge-package`다. `hive-update`, `hive-migrate`는 catalog
 metadata만 가지며 host discovery root에 Skill body를 만들지 않는다.
 
 Active routing proof는 normalized routing fact, exact Skill content digest와 built-in

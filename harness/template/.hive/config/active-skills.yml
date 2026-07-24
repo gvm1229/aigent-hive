@@ -1,5 +1,13 @@
 schema_version: 1
 skills:
+- name: hive-judge-package
+  source_type: built-in
+  content_digest: sha256:a87f46c6a21f94944fc465d85b74bf5e8aef308bfbc1b7a08df56e6078f3890c
+  side_effect_class: read-only
+  capabilities:
+  - filesystem-read
+  - run-state
+  consent_digest: null
 - name: hive-knowledge-capture
   source_type: built-in
   content_digest: sha256:bff118dd34504091478c636470c4ae113e6eef0ef488eac406c1f2dd79970d91
@@ -56,7 +64,7 @@ skills:
   consent_digest: null
 - name: hive-run-resume
   source_type: built-in
-  content_digest: sha256:edfbee35142b8a228d4cdb36d2674b719548fea9884d4a2b6a31353adcebb7c5
+  content_digest: sha256:fbec4961baef77e9e33a73f2f6caa47d46f093133fe142005067dde8143389b7
   side_effect_class: read-only
   capabilities:
   - filesystem-read

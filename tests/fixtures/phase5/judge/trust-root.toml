@@ -1,0 +1,55 @@
+schema_version = 1
+trust_root_id = "phase5-fixture-root"
+revision = 1
+issued_at = "2026-07-24T00:00:00Z"
+root_digest = "sha256:2c6fbb5e32a1eab35126a835ab61aaf40e6b773c2654a012e9941e5d47fa66ee"
+
+[[keys]]
+key_id = "owner-key"
+principal_id = "omx-run-42"
+purpose = "judge-assignment"
+algorithm = "ed25519"
+public_key = "ed25519:4abd35193ca765d97d6e11b0d562279150d22e425aaee3c5c2a61d6b512ba9bf"
+status = "active"
+valid_from = "2026-01-01T00:00:00Z"
+valid_until = "2026-12-31T23:59:59Z"
+
+[[keys]]
+key_id = "judge-key-1"
+principal_id = "c-judge-instance-1"
+purpose = "judge-verdict"
+algorithm = "ed25519"
+public_key = "ed25519:822666efcece28d20d6dc5d290de9f78ffd69296d24fc0078f702bdc525834cb"
+status = "active"
+valid_from = "2026-01-01T00:00:00Z"
+valid_until = "2026-12-31T23:59:59Z"
+
+[[keys]]
+key_id = "judge-key-2"
+principal_id = "c-judge-instance-2"
+purpose = "judge-verdict"
+algorithm = "ed25519"
+public_key = "ed25519:4398543232d5bda0e2d7a83600ccd65627f347bdb33973f5b209e1d74938735a"
+status = "active"
+valid_from = "2026-01-01T00:00:00Z"
+valid_until = "2026-12-31T23:59:59Z"
+
+[[keys]]
+key_id = "judge-key-3"
+principal_id = "c-judge-instance-3"
+purpose = "judge-verdict"
+algorithm = "ed25519"
+public_key = "ed25519:74c9b7e060468861274e48879b629508230a805773ca99b4b93278b595799fb9"
+status = "active"
+valid_from = "2026-01-01T00:00:00Z"
+valid_until = "2026-12-31T23:59:59Z"
+
+[[keys]]
+key_id = "human-key"
+principal_id = "human-security-reviewer"
+purpose = "judge-approval"
+algorithm = "ed25519"
+public_key = "ed25519:67b94d4b0475e09950a67be97ac3375abb5a301ac500d01b9fa58fc2dea4f9cb"
+status = "active"
+valid_from = "2026-01-01T00:00:00Z"
+valid_until = "2026-12-31T23:59:59Z"

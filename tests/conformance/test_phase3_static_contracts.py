@@ -55,6 +55,7 @@ IMPLEMENTED_SKILLS = {
     "hive-run-checkpoint",
     "hive-run-resume",
     "hive-role-handoff",
+    "hive-judge-package",
 }
 CATALOG_ONLY_SKILLS = BUILTIN_SKILLS - IMPLEMENTED_SKILLS
 
