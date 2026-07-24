@@ -179,12 +179,23 @@ production action 실행 불가. Local fixture PASS의 production signing 성공
 
 ## Install path
 
+Repository의 `scripts/install.sh`와 `scripts/install.ps1`: signer marker 미치환
+publication source template. Checkout에서 직접 실행 금지. 설치 입력은 versioned official
+GitHub Release의 rendered installer asset으로 제한.
+
 ### macOS direct
 
 ```bash
-AIGENT_HIVE_VERSION=0.7.0 \
+version=0.7.0
+repository=https://github.com/gvm1229/aigent-hive
+installer=$(mktemp "${TMPDIR:-/tmp}/aigent-hive-install.XXXXXX")
+trap 'rm -f "$installer"' EXIT HUP INT TERM
+curl --fail --location --proto '=https' --tlsv1.2 \
+  --output "$installer" \
+  "$repository/releases/download/v${version}/install.sh"
+AIGENT_HIVE_VERSION="$version" \
 AIGENT_HIVE_PREFIX="$HOME/.local" \
-sh scripts/install.sh
+sh "$installer"
 ```
 
 Bootstrap은 fixed official GitHub Release URL에서 archive와 checksum을 받고 exact
@@ -197,7 +208,19 @@ package-manager replacement 또는 foreign binary는 중단.
 ### Windows direct
 
 ```powershell
-.\scripts\install.ps1 -Version 0.7.0 -Prefix "$env:LOCALAPPDATA\AigentHive"
+$Version = "0.7.0"
+$Repository = "https://github.com/gvm1229/aigent-hive"
+$Installer = Join-Path ([IO.Path]::GetTempPath()) (
+    "aigent-hive-install-{0}.ps1" -f [Guid]::NewGuid().ToString("N")
+)
+try {
+    Invoke-WebRequest -UseBasicParsing `
+        -Uri "$Repository/releases/download/v$Version/install.ps1" `
+        -OutFile $Installer
+    & $Installer -Version $Version -Prefix "$env:LOCALAPPDATA\AigentHive"
+} finally {
+    Remove-Item -LiteralPath $Installer -Force -ErrorAction SilentlyContinue
+}
 ```
 
 PowerShell bootstrap은 zip entry allowlist/traversal, SHA-256, Authenticode `Valid`
