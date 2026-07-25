@@ -184,7 +184,7 @@ Exact clean HEAD local qualification PASS:
 - Skill·template·compiled projection parity
 - 독립 architecture·code·completion verification PASS, actionable finding 0건
 
-macOS Apple Silicon local release qualification CLEAR:
+### macOS Apple Silicon local release qualification CLEAR
 
 - Host: Apple M2, macOS 26.5.2, native `arm64`
 - Tested source: `ba798d8`
