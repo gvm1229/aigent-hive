@@ -2,17 +2,19 @@
 
 - 기준 branch: `develop`
 - product version: `0.7.0`
-- plan revision: `1.35`
-- 현재 milestone: Phase 7 public qualification `0.8.0`
-- 현재 작업: macOS Apple Silicon local release qualification CLEAR; protected external
-  qualification 대기
+- plan revision: `1.37`
+- 현재 milestone: Phase 7 public qualification + user plugin/project lifecycle `0.8.0`
+- 현재 작업: user plugin·project harness·root knowledge·upgrade와 source
+  `hive-prompt-refine` integration plan 수립 완료; implementation 미착수
 - 외부 중지 경계: protected signing/publication credential, 실제 production publication,
   exact `1.0.0` 사용자 authority
 - Plan load: compact `docs/plans/PLAN.md` + `docs/plans/phases/07-public-qualification.md`
+  + `docs/plans/active/plugin-project-lifecycle.md`
   + `docs/plans/active/documentation-style.md` + `docs/plans/active/security-review.md`
-- Plan completion: canonical checklist `112/119` 완료, `7`개 미완료, `94.1%`
+- Plan completion: canonical checklist `113/157` 완료, `44`개 미완료, `72.0%`
 - Native Goal routing: legacy `PLAN.md` checkbox 문구를 `phases/07-public-qualification.md`,
-  `active/documentation-style.md`, `active/security-review.md`로 해석
+  `active/plugin-project-lifecycle.md`, `active/documentation-style.md`,
+  `active/security-review.md`로 해석
 
 ## 구현 완료 범위
 
@@ -35,6 +37,38 @@
 - Canonical state: tracked Markdown·YAML·TOML
 - SQLite: 삭제·재생성 가능한 local index
 - OMX/OMC namespace와 host-global configuration의 Hive 소유권 없음
+
+## User plugin·project lifecycle review
+
+현재 구현:
+
+- Project target의 `AGENTS.md` Hive marker append·own-block replace
+- Codex·Antigravity `.agents/skills`, Claude `.claude/skills` project projection
+- `setup-harness` 질문 sequence와 project `.hive/knowledge`·SQLite
+- Signed consumer `hive update`의 dry-run·backup·atomic activation·recovery
+
+확인된 gap:
+
+- Codex·Claude Code plugin manifest와 Antigravity user-scope install adapter
+- User global guidance의 Hive marker install·update
+- Project `.agents/directives`와 host-neutral `.agents/skills` lifecycle
+- Source `.agents/skills`의 `hive-prompt-refine` projection·automatic routing·parity
+- User canonical knowledge·root SQLite·project-to-root promotion
+- Signed base 기반 unmodified replace와 modified local-priority three-way merge
+
+결정:
+
+- [`ADR-0009`](../decisions/ADR-0009-user-plugin-project-knowledge-boundary.md)
+- Active implementation fragment:
+  [`plugin-project-lifecycle.md`](../plans/active/plugin-project-lifecycle.md)
+
+계획 evidence:
+
+- Active fragment `7,488` bytes, 8 KiB 제한 충족
+- Canonical checklist `113/157`, active checklist ID 중복 0건
+- Plan static contract 27/27, documentation style regression 18/18 PASS
+- Human documentation inventory 1,579/1,579 review, finding 0건
+- Markdown 135 files·130 links, 오류 0건
 
 ## Phase 7 shipping usage gate
 
@@ -225,8 +259,9 @@ Remote qualification evidence:
 
 ## 다음 action
 
-1. P7-011 macOS Intel·P7-012 Windows release build·install·runtime qualification
-2. P7-013·021 실제 host session E2E·capability matrix
-3. P7-018 `0.8.x` signed release candidate qualification
-4. P7-020 signed CLI qualification
-5. P7-037 protected GitHub Release provenance·signing
+1. RPH-037–038 source `hive-prompt-refine` integration과 routing parity
+2. RPH-002–003 세 host capability matrix와 user-scope ownership manifest
+3. RPH-004–011 plugin adapter·user install·root update
+4. RPH-012–026 project bootstrap·root knowledge promotion
+5. RPH-027–036 local-priority update merge·hostile qualification
+6. P7-011–037 protected public qualification

@@ -133,6 +133,7 @@ class Phase3SkillSourceContract(unittest.TestCase):
         }
         expected_fragments = {
             "active/documentation-style.md",
+            "active/plugin-project-lifecycle.md",
             "active/security-review.md",
             "contracts/README.md",
             "phases/07-public-qualification.md",
@@ -147,6 +148,7 @@ class Phase3SkillSourceContract(unittest.TestCase):
 
         active_fragments = [
             plan_root / "active/documentation-style.md",
+            plan_root / "active/plugin-project-lifecycle.md",
             plan_root / "active/security-review.md",
             plan_root / "phases/07-public-qualification.md",
         ]
@@ -154,6 +156,7 @@ class Phase3SkillSourceContract(unittest.TestCase):
             {path.relative_to(plan_root).as_posix() for path in active_fragments},
             {
                 "active/documentation-style.md",
+                "active/plugin-project-lifecycle.md",
                 "active/security-review.md",
                 "phases/07-public-qualification.md",
             },
@@ -223,10 +226,15 @@ class Phase3SkillSourceContract(unittest.TestCase):
         )
         phase_7_path = plan_root / "phases/07-public-qualification.md"
         documentation_path = plan_root / "active/documentation-style.md"
+        plugin_project_path = plan_root / "active/plugin-project-lifecycle.md"
         security_review_path = plan_root / "active/security-review.md"
         progress_rows = (
             ("Phase 0–6", *checklist_counts(completed_phase_paths)),
             ("Phase 7", *checklist_counts([phase_7_path])),
+            (
+                "User plugin/project lifecycle",
+                *checklist_counts([plugin_project_path]),
+            ),
             ("Documentation style", *checklist_counts([documentation_path])),
             ("Security review", *checklist_counts([security_review_path])),
         )
