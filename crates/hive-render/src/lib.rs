@@ -2209,7 +2209,9 @@ fn activate_staged(
 
 #[derive(Debug, Clone, Copy)]
 struct ActivationFault {
+    #[cfg(debug_assertions)]
     fail_after_operations: usize,
+    #[cfg(debug_assertions)]
     fail_rollback: bool,
     projection_cleanup: Option<ProjectionCleanupFault>,
 }
@@ -3674,6 +3676,8 @@ fn activation_failed(
     before_rollback: Option<&dyn Fn()>,
     fault: Option<ActivationFault>,
 ) -> Result<(), RenderError> {
+    #[cfg(not(debug_assertions))]
+    let _ = fault;
     #[cfg(debug_assertions)]
     if fault.is_some_and(|value| value.fail_rollback) {
         return Err(RenderError::Rollback(
