@@ -24,6 +24,13 @@
 - [x] [P7-017] public license 확정 — 전체 source·harness `Apache-2.0`, GitHub 감지와 REUSE 검증 완료
 - [ ] [P7-018] `0.8.x` release candidate qualification
 
+#### P7-011 target 상태
+
+| Target | 상태·evidence | 남은 경계 |
+| --- | --- | --- |
+| `aarch64-apple-darwin` | **CLEAR — local build·package·install·runtime**; [Apple M2 evidence](../../state/CURRENT.md#macos-apple-silicon-local-release-qualification-clear) | P7-020·037 Developer ID·notarization·attestation |
+| `x86_64-apple-darwin` | PENDING; native Intel evidence 없음 | Intel build·install·runtime |
+
 External authority gate: exact `1.0.0` 사용자 지시 전 stable major preparation 금지.
 
 ## 7. 핵심 conformance와 fault injection

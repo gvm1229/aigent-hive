@@ -2,9 +2,10 @@
 
 - 기준 branch: `develop`
 - product version: `0.7.0`
-- plan revision: `1.34`
+- plan revision: `1.35`
 - 현재 milestone: Phase 7 public qualification `0.8.0`
-- 현재 작업: protected external qualification 대기
+- 현재 작업: macOS Apple Silicon local release qualification CLEAR; protected external
+  qualification 대기
 - 외부 중지 경계: protected signing/publication credential, 실제 production publication,
   exact `1.0.0` 사용자 authority
 - Plan load: compact `docs/plans/PLAN.md` + `docs/plans/phases/07-public-qualification.md`
@@ -183,10 +184,29 @@ Exact clean HEAD local qualification PASS:
 - Skill·template·compiled projection parity
 - 독립 architecture·code·completion verification PASS, actionable finding 0건
 
+macOS Apple Silicon local release qualification CLEAR:
+
+- Host: Apple M2, macOS 26.5.2, native `arm64`
+- Tested source: `ba798d8`
+- Locked `aarch64-apple-darwin` release build·version·Mach-O architecture PASS
+- Release strict Clippy·workspace strict Clippy·format PASS
+- Rust workspace 236/236
+- Deterministic release archive 2회 byte-identical
+- Binary SHA-256:
+  `914b684da0c28da1914121ffc43a7331828a11ef13ef7b1159adc05fe445eda3`
+- Archive SHA-256:
+  `bde2c886c6d475b4a1a564ba0df33eaa9b6fb4a1b49ca49a7f2a896aa586a54b`
+- Actual archive direct-install fixture, ownership receipt, repeat install PASS
+- Installed binary setup dry-run·apply·validate PASS
+- Phase 6 release/update 15 PASS, Windows-only `pwsh` 1 skip
+- Phase 1 setup 31/31
+- Protected 경계: Developer ID signing·notarization·GitHub attestation 미실행
+- Local signature observation: linker ad-hoc, `TeamIdentifier` 없음, Gatekeeper 거부
+
 Remote qualification evidence:
 
-- Commit: `d9a4d1f156ed2a975f7e2210c089a5ec3d57c1ae`
-- GitHub Actions CI: [run `30115170368`](https://github.com/gvm1229/aigent-hive/actions/runs/30115170368), 7/7 job PASS
+- Commit: `2520d1c21fdd9459efe71423f4e886ab8f1be976`
+- GitHub Actions CI: [run `30115774347`](https://github.com/gvm1229/aigent-hive/actions/runs/30115774347), 7/7 job PASS
 - P7-040: clean-clone full CI PASS
 
 검증 경계:
@@ -205,7 +225,7 @@ Remote qualification evidence:
 
 ## 다음 action
 
-1. P7-011·012 multi-platform release build·install·runtime qualification
+1. P7-011 macOS Intel·P7-012 Windows release build·install·runtime qualification
 2. P7-013·021 실제 host session E2E·capability matrix
 3. P7-018 `0.8.x` signed release candidate qualification
 4. P7-020 signed CLI qualification

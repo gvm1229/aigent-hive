@@ -1,6 +1,6 @@
 # Aigent Hive active plan index
 
-> Revision: 1.34
+> Revision: 1.35
 > 기준일: 2026-07-25
 > Product version: `0.7.0`
 > 현재 milestone: Phase 7 public qualification `0.8.0`
@@ -67,7 +67,7 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
 
 1. Active checklist reconciliation
 2. Protected authority·credential availability 확인
-3. P7-011·012 multi-platform release build·install·runtime qualification
+3. P7-011 macOS Intel·P7-012 Windows release build·install·runtime qualification
 4. P7-013·021 실제 host session E2E·capability matrix
 5. P7-018·020·037 signed release candidate·CLI·GitHub Release qualification
 6. Exact `1.0.0` 사용자 authority 확인

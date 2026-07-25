@@ -8,12 +8,12 @@
 [![JSON Schema](https://img.shields.io/badge/JSON%20Schema-2020--12-000000?logo=json&logoColor=white)](schemas/)
 [![SQLite](https://img.shields.io/badge/SQLite-FTS5-003B57?logo=sqlite&logoColor=white)](crates/hive-wiki)
 [![GitHub Actions](https://img.shields.io/badge/GitHub%20Actions-CI-2088FF?logo=githubactions&logoColor=white)](.github/workflows/ci.yml)
-[![Platform qualification](https://img.shields.io/badge/targets-macOS%20%7C%20Windows-qualification%20pending-orange)](docs/plans/PLAN.md)
+[![Platform qualification](https://img.shields.io/badge/macOS%20Apple%20Silicon-local%20clear-2ea44f)](docs/plans/phases/07-public-qualification.md)
 [![License](https://img.shields.io/badge/license-Apache--2.0-green)](LICENSE)
 
 > 🐝 **Aigent Hive:** Codex, Claude Code, Gemini Antigravity 같은 구독형 agent host 위에서 일관된 setup, Skill routing, 역할·지식·run 상태, 안전한 update와 검증 계약을 제공하는 **provider-neutral 로컬 agent harness**
 
-> 🚧 **현재 상태:** product version `0.7.0`; Phase 1–6 완료, Phase 7 local qualification `33/40`. Verifier-only Ed25519/TUF release authorization, safe update·migration·backup·crash recovery, shipping one-shot usage gate와 배포 계약 구현·검증 완료. macOS·Windows public runtime qualification, 세 host actual session E2E, protected signing·publication은 외부 authority 대기.
+> 🚧 **현재 상태:** product version `0.7.0`; Phase 1–6 완료, Phase 7 local qualification `33/40`. macOS Apple Silicon local release build·package·install·runtime CLEAR. macOS Intel·Windows runtime, 세 host actual session E2E, protected signing·notarization·publication은 외부 authority 대기.
 
 모델 API·provider SDK 미사용. API key 요청·저장 없음. Compatible OMX·OMC가 있으면
 검증된 orchestration 기능 우선 재사용. Detection이 `absent|incompatible|unknown`이면
@@ -43,7 +43,7 @@ explicit consent에서만 허용.
 
 | 구분 | 지원·동작 방식 | Hive의 필수 build dependency |
 | --- | --- | --- |
-| 🖥️ 운영체제 | macOS·Windows CLI target; 구현 완료, public runtime qualification 대기 | 해당 없음 |
+| 🖥️ 운영체제 | macOS Apple Silicon local release qualification CLEAR; macOS Intel·Windows와 public signing qualification 대기 | 해당 없음 |
 | 🤖 Agent host | Codex·Claude Code·Gemini Antigravity adapter 구현; 실제 session E2E 대기 | 아니요 |
 | 🧭 Orchestration | Compatible OMX·OMC가 감지되면 해당 기능을 우선 사용 | 아니요 |
 | 🪶 Native fallback | OMX·OMC가 unavailable이면 truthful host-native capability 범위에서 동작 | 해당 없음 |
