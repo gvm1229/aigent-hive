@@ -1,0 +1,7 @@
+{
+  "schema_version": 1,
+  "event": "PreToolUse",
+  "tool": "filesystem-write",
+  "operation": "delete",
+  "path": ".hive/config/harness.toml"
+}

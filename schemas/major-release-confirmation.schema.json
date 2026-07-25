@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aigent-hive.local/schemas/major-release-confirmation.schema.json",
+  "title": "Aigent Hive explicit breaking release confirmation",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "source_version", "exact_target", "release_plan_digest", "compatibility_report_digest", "migration_table_digest", "confirmed"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "source_version": { "$ref": "#/$defs/version" },
+    "exact_target": { "$ref": "#/$defs/version" },
+    "release_plan_digest": { "$ref": "#/$defs/digest" },
+    "compatibility_report_digest": { "$ref": "#/$defs/digest" },
+    "migration_table_digest": { "$ref": "#/$defs/digest" },
+    "confirmed": { "const": true }
+  },
+  "$defs": {
+    "version": { "type": "string", "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$" },
+    "digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" }
+  }
+}

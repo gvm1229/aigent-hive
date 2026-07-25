@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/gvm1229/aigent-hive/schemas/knowledge-suppression.schema.json",
+  "title": "Aigent Hive deleted-content suppression ledger",
+  "type": "object",
+  "additionalProperties": false,
+  "$defs": {
+    "locator": {
+      "oneOf": [
+        {
+          "type": "string",
+          "pattern": "^(?:wiki|external):[a-z0-9](?:[a-z0-9-]{0,78}[a-z0-9])?$"
+        },
+        {
+          "type": "string",
+          "pattern": "^raw:\\.hive/knowledge/Raw/[a-z0-9](?:[a-z0-9-]*[a-z0-9])?/[0-9a-f]{64}\\.[A-Za-z0-9]+#sha256:[0-9a-f]{64}$"
+        }
+      ]
+    }
+  },
+  "required": ["schema_version", "entries"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "entries": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "fingerprint",
+          "source_locator",
+          "reason",
+          "replacement",
+          "timestamp"
+        ],
+        "properties": {
+          "fingerprint": {
+            "type": "string",
+            "pattern": "^sha256:[0-9a-f]{64}$"
+          },
+          "source_locator": { "$ref": "#/$defs/locator" },
+          "reason": {
+            "enum": [
+              "credential-erasure",
+              "duplicate",
+              "invalid",
+              "legal-erasure",
+              "obsolete",
+              "out-of-scope",
+              "retention-expired",
+              "superseded",
+              "user-request"
+            ]
+          },
+          "replacement": {
+            "anyOf": [
+              { "type": "null" },
+              { "$ref": "#/$defs/locator" }
+            ]
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
+    }
+  }
+}

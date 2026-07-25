@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "original_prompt": "Improve and run this prompt: summarize the report.",
+  "target_agent": null,
+  "target_host": null,
+  "mode": "refine-and-run",
+  "explicit_run_intent": true,
+  "sufficiently_specific": true,
+  "project_grounding": false,
+  "preserve": {
+    "must": [],
+    "must_not": [],
+    "scope": ["the supplied report"],
+    "target_output": ["a concise summary"],
+    "user_authority": ["Do not access sources beyond the supplied report."],
+    "tone": [],
+    "tool_provider_selection": []
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "subject_id": "phase5-critical",
+  "risk_tier": "critical",
+  "goal": "Verify the security-sensitive activation candidate.",
+  "acceptance_criteria": [
+    "criterion-atomic-activation"
+  ],
+  "artifact_refs": [
+    "artifact/activation.diff#sha256:09b1b54662abe67ce8f8a5ea9e705a102072c907e6d9558fa1307ebed2a1ae23"
+  ],
+  "evidence_refs": [
+    "evidence/hostile-tests.json#sha256:6ef50173b0051825c9f942fd1586e672332d8bca264d3a4c02b8c5105e7de024"
+  ],
+  "known_constraints": [
+    "A separate human approval is required."
+  ],
+  "package_digest": "sha256:4ff198845e832732eb5813d25bb349a6d3052535ef93a97d070f616e86da59ad"
+}

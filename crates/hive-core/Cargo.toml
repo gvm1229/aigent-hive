@@ -9,5 +9,14 @@ publish = false
 [lib]
 path = "src/lib.rs"
 
+[dependencies]
+ed25519-dalek.workspace = true
+jsonschema.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+serde_json_canonicalizer.workspace = true
+serde_yaml.workspace = true
+sha2.workspace = true
+
 [lints]
 workspace = true

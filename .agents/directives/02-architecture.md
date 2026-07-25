@@ -23,9 +23,18 @@ Never import installed consumer state back into source, copy source-development 
 ## Orchestration Boundary
 
 - Do not implement Hive equivalents of plan, Ralph, team, swarm, or provider session runtimes.
-- Use host-native capabilities when available.
-- If the user selects OMX or OMC, preserve their namespaces and let that layer own orchestration.
+- Prefer a compatible OMX capability on Codex and OMC capability on Claude whenever it is available in the active host. Otherwise use only what the host natively supports.
+- Do not ask the user to choose a pure-Hive orchestration mode. Resolve one owner per run from the active host capability surface and pin it for that run.
+- Preserve OMX/OMC namespaces and let the resolved layer own orchestration. Do not install Hive lifecycle hooks when OMX or OMC is detected.
+- If neither OMX nor OMC is detected, any Hive fallback hook requires an explicit capability preview and user approval before installation.
 - If a required capability is unavailable, report it as unsupported. Do not silently emulate it or switch backends.
+
+## Skill Routing Boundary
+
+- Use Skill descriptions and compact routing directives for semantic task-to-Skill selection; do not build a duplicate prompt-classifier hook.
+- Prefer an existing OMX/OMC Skill over a Hive duplicate.
+- Keep Hive Skills focused on Hive-owned setup, prompt refinement, canonical knowledge, role/run handoff, judge packaging, migration, and update contracts.
+- Load only the smallest approved Skill set needed for the task. The simple-question path loads no unrelated project Skill or memory.
 
 ## Canonical Data
 

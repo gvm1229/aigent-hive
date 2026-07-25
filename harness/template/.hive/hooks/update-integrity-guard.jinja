@@ -1,0 +1,2 @@
+{% set hook = approved_fallback_hooks | selectattr('capability', 'equalto', 'update-integrity-guard') | first -%}
+{"capability":{{ hook.capability | to_json }},"command":{{ hook.command | to_json }},"event":{{ hook.event | to_json }},"path":{{ hook.path | to_json }},"schema_version":1}

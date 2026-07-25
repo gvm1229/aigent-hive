@@ -5,8 +5,8 @@
 - `main`: 안정적이고 공개 가능한 기준
 - `develop`: 일반 개발과 통합
 
-named developer branch는 유지하지 않는다.
-기본 정책에서 다른 purpose, feature, snapshot branch도 만들지 않는다.
+named developer branch 유지 없음.
+기본 정책에서 다른 purpose, feature, snapshot branch 생성 금지.
 
 ## 초기화
 

@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/gvm1229/aigent-hive/schemas/judge-attestation.schema.json",
+  "title": "Aigent Hive Ed25519 judge attestation",
+  "description": "Detached Ed25519 signature over a domain-separated JCS payload. The public key is resolved only from the external trust root.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "trust_root_id",
+    "artifact_kind",
+    "artifact_digest",
+    "principal_id",
+    "key_id",
+    "signature"
+  ],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "trust_root_id": { "type": "string", "minLength": 1, "maxLength": 128 },
+    "artifact_kind": { "enum": ["assignment", "verdict", "approval"] },
+    "artifact_digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "principal_id": { "type": "string", "minLength": 1, "maxLength": 128 },
+    "key_id": { "type": "string", "minLength": 1, "maxLength": 128 },
+    "signature": {
+      "type": "string",
+      "pattern": "^ed25519:[0-9a-f]{128}$"
+    }
+  }
+}

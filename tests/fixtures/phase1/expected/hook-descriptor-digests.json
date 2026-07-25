@@ -1,0 +1,4 @@
+{
+  ".hive/hooks/checkpoint-reminder": "sha256:75cf0e81e070db78b87ba9b8d34569022158dc8d1ffc4b462fbf73a59ba5738a",
+  ".hive/hooks/protect-hive-owned-state": "sha256:1d17c439cf4ae17d2a3ea6a58e3fb51942e5330dbdbe0bb4b1e9d516c01987fa"
+}

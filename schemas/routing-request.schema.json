@@ -1,0 +1,196 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/gvm1229/aigent-hive/schemas/routing-request.schema.json",
+  "title": "Aigent Hive normalized host routing request",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "host",
+    "explicit_action",
+    "explicit_skill",
+    "plain_answer",
+    "simple_question",
+    "project_context_required",
+    "external_candidate",
+    "hive_candidate",
+    "active_hive_skills",
+    "refine_mode",
+    "explicit_run_intent"
+  ],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "host": { "enum": ["codex", "claude", "antigravity"] },
+    "explicit_action": {
+      "type": ["string", "null"],
+      "enum": [
+        "AnswerSimpleQuestion",
+        "RefinePrompt",
+        "RunWork",
+        "ResumeWork",
+        "VerifyWork",
+        "IngestKnowledge",
+        "QueryKnowledge",
+        "UpdateHarness",
+        null
+      ]
+    },
+    "explicit_skill": {
+      "type": ["string", "null"],
+      "pattern": "^[a-z][a-z0-9:-]{1,127}$"
+    },
+    "plain_answer": { "type": "boolean" },
+    "simple_question": { "type": "boolean" },
+    "project_context_required": { "type": "boolean" },
+    "external_candidate": {
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["name", "provided_by", "compatible"],
+          "properties": {
+            "name": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9-]{1,62}$"
+            },
+            "provided_by": { "enum": ["omx", "omc"] },
+            "compatible": { "type": "boolean" }
+          }
+        }
+      ]
+    },
+    "hive_candidate": {
+      "type": ["string", "null"],
+      "pattern": "^[a-z][a-z0-9-]{1,62}$"
+    },
+    "active_hive_skills": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/activeHiveSkillProof" }
+    },
+    "refine_mode": {
+      "type": ["string", "null"],
+      "enum": ["refine-only", "refine-and-run", null]
+    },
+    "explicit_run_intent": { "type": "boolean" }
+  },
+  "$defs": {
+    "capability": {
+      "enum": [
+        "external-app",
+        "filesystem-read",
+        "filesystem-write",
+        "memory-read",
+        "memory-write",
+        "network",
+        "run-state",
+        "shell",
+        "subagents"
+      ]
+    },
+    "consent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "consent_version",
+        "name",
+        "source",
+        "revision",
+        "content_digest",
+        "requested_capabilities",
+        "approved_capabilities",
+        "approved_at",
+        "consent_digest"
+      ],
+      "properties": {
+        "consent_version": { "const": 1 },
+        "name": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]{1,62}$"
+        },
+        "source": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^[^\\r\\n]+$"
+        },
+        "revision": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "content_digest": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "requested_capabilities": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/capability" }
+        },
+        "approved_capabilities": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/capability" }
+        },
+        "approved_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "consent_digest": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        }
+      }
+    },
+    "activeHiveSkillProof": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "source_type",
+        "content_digest",
+        "side_effect_class",
+        "capabilities",
+        "consent_digest",
+        "consent"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]{1,62}$"
+        },
+        "source_type": {
+          "enum": ["built-in", "approved-optional"]
+        },
+        "content_digest": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "side_effect_class": {
+          "enum": [
+            "none",
+            "read-only",
+            "project-write",
+            "external-write",
+            "orchestration"
+          ]
+        },
+        "capabilities": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/capability" }
+        },
+        "consent_digest": {
+          "type": ["string", "null"],
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "consent": {
+          "oneOf": [
+            { "type": "null" },
+            { "$ref": "#/$defs/consent" }
+          ]
+        }
+      }
+    }
+  }
+}

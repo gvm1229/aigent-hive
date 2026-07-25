@@ -1,0 +1,42 @@
+schema_version: 1
+project_name: "legacy 한글 fixture"
+project_kind: custom
+primary_host: codex
+orchestration_layer: omc
+usage_stop_remaining_percent: 37
+elevated_judge_quorum: 2/3
+critical_judge_quorum: 3/3+human
+persistent_roles:
+  - role_id: reviewer
+    display_name: Legacy Reviewer
+    responsibilities:
+      - preserve legacy responsibilities
+    non_responsibilities:
+      - overwrite runtime state
+    context_paths:
+      - docs/legacy/**
+    allowed_capabilities:
+      - filesystem-read
+    write_scope:
+      - .hive/runs/
+    verification_duties:
+      - verify lossless migration
+knowledge_include_paths:
+  - docs/**
+  - src/**
+knowledge_exclude_paths:
+  - docs/private/**
+  - "**/*.secret"
+approved_optional_skills:
+  - consent_version: 1
+    name: fixture-readonly
+    source: https://example.invalid/fixture-readonly
+    revision: v1.0.0
+    content_digest: sha256:3333333333333333333333333333333333333333333333333333333333333333
+    requested_capabilities:
+      - filesystem-read
+      - network
+    approved_capabilities:
+      - filesystem-read
+    approved_at: "2026-07-23T00:00:00Z"
+    consent_digest: sha256:efe4f3b2edf79370a6a23ac61087e7bc9a603b82b8f1e5c2fcca94ff3ad48df1

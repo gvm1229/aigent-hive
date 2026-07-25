@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aigent-hive.local/schemas/platform-signing-evidence.schema.json",
+  "title": "Aigent Hive platform signing evidence",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "evidence"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "evidence": {
+      "type": "array",
+      "minItems": 2,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["platform", "artifact_path", "artifact_digest", "scheme", "signer", "status"],
+        "properties": {
+          "platform": { "enum": ["macos", "windows"] },
+          "artifact_path": { "type": "string", "minLength": 1, "not": { "pattern": "(^/|(^|/)\\.\\.(/|$)|\\\\)" } },
+          "artifact_digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+          "scheme": { "enum": ["developer-id", "authenticode"] },
+          "signer": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["kind", "value"],
+            "properties": {
+              "kind": { "enum": ["apple-team-id", "authenticode-certificate-thumbprint"] },
+              "value": { "type": "string" }
+            }
+          },
+          "status": { "enum": ["verified", "fixture-public-evidence", "external-production-required"] }
+        },
+        "allOf": [
+          {
+            "if": { "properties": { "platform": { "const": "macos" } }, "required": ["platform"] },
+            "then": {
+              "properties": {
+                "scheme": { "const": "developer-id" },
+                "signer": {
+                  "properties": {
+                    "kind": { "const": "apple-team-id" },
+                    "value": { "pattern": "^[A-Z0-9]{10}$" }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "if": { "properties": { "platform": { "const": "windows" } }, "required": ["platform"] },
+            "then": {
+              "properties": {
+                "scheme": { "const": "authenticode" },
+                "signer": {
+                  "properties": {
+                    "kind": { "const": "authenticode-certificate-thumbprint" },
+                    "value": { "pattern": "^[0-9A-F]{40}$" }
+                  }
+                }
+              }
+            }
+          }
+        ]
+      }
+    }
+  }
+}

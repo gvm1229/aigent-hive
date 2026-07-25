@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "mode": "refine-only",
+  "original_prompt": "Update every Rust file and add any dependencies you need.",
+  "intent_summary": "Update the Rust project.",
+  "assumptions": [],
+  "unresolved_items": [],
+  "required_question": null,
+  "preserved": {
+    "must": ["Run cargo test."],
+    "must_not": ["Do not add dependencies."],
+    "scope": ["src/config.rs"],
+    "target_output": ["Return changed files and test evidence."],
+    "user_authority": ["Preserve the public API."],
+    "tone": [],
+    "tool_provider_selection": []
+  },
+  "refined_prompt": "Goal\nUpdate the Rust project.",
+  "project_reads": [],
+  "execution_authorized": false,
+  "side_effects": {
+    "project_write": false,
+    "network": false,
+    "subagent": false,
+    "memory_capture": false,
+    "run_creation": false,
+    "model_execution": false
+  }
+}

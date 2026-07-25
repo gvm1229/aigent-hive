@@ -1,0 +1,269 @@
+name: Publish authorized release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Exact product version
+        required: true
+        type: string
+      candidate_run_id:
+        description: Successful Signed release candidate workflow run id
+        required: true
+        type: string
+      signed_tuf_repository_url:
+        description: Protected HTTPS URL for externally signed TUF repository archive
+        required: true
+        type: string
+      signed_tuf_repository_sha256:
+        description: Exact lowercase SHA-256 of the signed TUF repository archive
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    name: Verify external authorization and publish
+    environment: release-publication
+    runs-on: ubuntu-latest
+    env:
+      VERSION: ${{ inputs.version }}
+      RUN_ID: ${{ inputs.candidate_run_id }}
+      SIGNED_URL: ${{ inputs.signed_tuf_repository_url }}
+      EXPECTED_SHA256: ${{ inputs.signed_tuf_repository_sha256 }}
+    permissions:
+      actions: read
+      contents: write
+    steps:
+      - name: Validate untrusted dispatch inputs
+        shell: bash
+        run: |
+          if [[ ! "$VERSION" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+            exit 2
+          fi
+          if [[ ! "$RUN_ID" =~ ^[1-9][0-9]*$ ]]; then
+            exit 2
+          fi
+          if [[ ! "$EXPECTED_SHA256" =~ ^[0-9a-f]{64}$ ]]; then
+            exit 2
+          fi
+          case "$SIGNED_URL" in
+            https://*) ;;
+            *) exit 2 ;;
+          esac
+      - name: Resolve the exact successful candidate commit
+        id: candidate
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          metadata=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RUN_ID")
+          test "$(jq -r .name <<<"$metadata")" = "Signed release candidate"
+          test "$(jq -r .event <<<"$metadata")" = "workflow_dispatch"
+          test "$(jq -r .head_branch <<<"$metadata")" = "main"
+          test "$(jq -r .conclusion <<<"$metadata")" = "success"
+          echo "sha=$(jq -r .head_sha <<<"$metadata")" >>"$GITHUB_OUTPUT"
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ steps.candidate.outputs.sha }}
+      - uses: dtolnay/rust-toolchain@2c7215f132e9ebf062739d9130488b56d53c060c # master 2026-07-16
+        with:
+          toolchain: stable
+      - name: Enforce product version parity
+        run: scripts/check-release-version.sh "$VERSION"
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
+        with:
+          github-token: ${{ github.token }}
+          run-id: ${{ env.RUN_ID }}
+          pattern: release-*
+          path: dist
+          merge-multiple: true
+      - name: Fetch exact externally authorized TUF repository
+        run: |
+          test "$(printf '%s' "$EXPECTED_SHA256" | wc -c)" -eq 64
+          case "$EXPECTED_SHA256" in *[!0-9a-f]*) exit 2 ;; esac
+          curl --fail --location --proto '=https' --tlsv1.2 \
+            --max-filesize 67108864 \
+            --output dist/tuf-repository.tar.gz "$SIGNED_URL"
+          test "$(sha256sum dist/tuf-repository.tar.gz | cut -d' ' -f1)" = "$EXPECTED_SHA256"
+          python3 - <<'PY'
+          import os
+          import shutil
+          import tarfile
+          from pathlib import Path, PurePosixPath
+
+          archive = Path("dist/tuf-repository.tar.gz")
+          destination = Path("signed-repository")
+          max_archive_bytes = 64 * 1024 * 1024
+          max_member_bytes = 64 * 1024 * 1024
+          max_expanded_bytes = 256 * 1024 * 1024
+          max_members = 4096
+
+          if archive.stat().st_size > max_archive_bytes:
+              raise SystemExit("signed TUF archive exceeds the compressed size limit")
+
+          with tarfile.open(archive, mode="r:gz") as repository:
+              members = repository.getmembers()
+              if len(members) > max_members:
+                  raise SystemExit("signed TUF archive contains too many entries")
+
+              normalized = set()
+              expanded_bytes = 0
+              for member in members:
+                  path = PurePosixPath(member.name)
+                  if (
+                      not member.name
+                      or "\\" in member.name
+                      or path.is_absolute()
+                      or any(part in ("", ".", "..") for part in path.parts)
+                  ):
+                      raise SystemExit("signed TUF archive contains an unsafe path")
+                  if member.issym() or member.islnk() or member.isdev() or member.isfifo():
+                      raise SystemExit("signed TUF archive contains a link or special file")
+                  if not (member.isfile() or member.isdir()):
+                      raise SystemExit("signed TUF archive contains an unsupported entry")
+                  if getattr(member, "sparse", None):
+                      raise SystemExit("signed TUF archive contains a sparse file")
+                  if member.name in normalized:
+                      raise SystemExit("signed TUF archive contains a duplicate path")
+                  normalized.add(member.name)
+                  if member.size < 0 or member.size > max_member_bytes:
+                      raise SystemExit("signed TUF archive member exceeds the size limit")
+                  expanded_bytes += member.size
+                  if expanded_bytes > max_expanded_bytes:
+                      raise SystemExit("signed TUF archive exceeds the expanded size limit")
+
+              destination.mkdir(mode=0o755)
+              for member in members:
+                  target = destination.joinpath(*PurePosixPath(member.name).parts)
+                  if member.isdir():
+                      target.mkdir(mode=0o755, parents=True, exist_ok=True)
+                      continue
+                  target.parent.mkdir(mode=0o755, parents=True, exist_ok=True)
+                  source = repository.extractfile(member)
+                  if source is None:
+                      raise SystemExit("signed TUF archive file could not be read")
+                  flags = os.O_CREAT | os.O_EXCL | os.O_WRONLY
+                  if hasattr(os, "O_NOFOLLOW"):
+                      flags |= os.O_NOFOLLOW
+                  descriptor = os.open(target, flags, 0o644)
+                  with source, os.fdopen(descriptor, "wb") as output:
+                      shutil.copyfileobj(source, output, length=1024 * 1024)
+          PY
+      - name: Install the public release root as agent-write-denied input
+        env:
+          RELEASE_ROOT_BASE64: ${{ secrets.HIVE_RELEASE_ROOT_JSON_BASE64 }}
+        run: |
+          test -n "$RELEASE_ROOT_BASE64"
+          printf '%s' "$RELEASE_ROOT_BASE64" | base64 --decode >release-root.json
+          sudo install -d -m 0755 -o root -g root /usr/local/share/aigent-hive
+          sudo install -m 0444 -o root -g root release-root.json \
+            /usr/local/share/aigent-hive/release-root.json
+          rm -f release-root.json
+      - name: Verify TUF authorization and exact candidate artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CANDIDATE_SHA: ${{ steps.candidate.outputs.sha }}
+        run: |
+          cargo build --locked --bin hive
+          target/debug/hive release verify \
+            --bundle signed-repository \
+            --trust-root /usr/local/share/aigent-hive/release-root.json \
+            --output json
+          authorized_sha=$(jq -er '.source.commit' \
+            signed-repository/targets/bundle-manifest.json)
+          test "$authorized_sha" = "$CANDIDATE_SHA"
+          for artifact in dist/aigent-hive-*; do
+            case "$artifact" in
+              *.sha256|*.sigstore.json|*.platform-evidence.json|*/tuf-repository.tar.gz)
+                continue
+                ;;
+            esac
+            name=$(basename "$artifact")
+            gh attestation verify "$artifact" \
+              --repo "$GITHUB_REPOSITORY" \
+              --bundle "$artifact.sigstore.json"
+            cmp "$artifact" "signed-repository/targets/$name"
+          done
+          jq -s '{schema_version:1,evidence:sort_by(.artifact_path)}' \
+            dist/*.platform-evidence.json >dist/platform-signing-evidence.json
+          jq -S . dist/platform-signing-evidence.json >dist/platform-signing-evidence.canonical.json
+          jq -S . signed-repository/targets/platform-signing-evidence.json \
+            >signed-repository/platform-signing-evidence.canonical.json
+          cmp dist/platform-signing-evidence.canonical.json \
+            signed-repository/platform-signing-evidence.canonical.json
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          evidence = json.loads(
+              Path("signed-repository/targets/platform-signing-evidence.json").read_text()
+          )["evidence"]
+          mac = {
+              entry["signer"]["value"]
+              for entry in evidence
+              if entry["platform"] == "macos"
+              and entry["signer"]["kind"] == "apple-team-id"
+          }
+          windows = {
+              entry["signer"]["value"]
+              for entry in evidence
+              if entry["platform"] == "windows"
+              and entry["signer"]["kind"] == "authenticode-certificate-thumbprint"
+          }
+          if len(mac) != 1 or len(windows) != 1:
+              raise SystemExit("signed release does not authorize one identity per platform")
+          replacements = (
+              (
+                  Path("scripts/install.sh"),
+                  Path("dist/install.sh"),
+                  "__AIGENT_HIVE_APPLE_TEAM_ID__",
+                  next(iter(mac)),
+              ),
+              (
+                  Path("scripts/install.ps1"),
+                  Path("dist/install.ps1"),
+                  "__AIGENT_HIVE_WINDOWS_CERTIFICATE_THUMBPRINT__",
+                  next(iter(windows)),
+              ),
+          )
+          for source, destination, marker, value in replacements:
+              rendered = source.read_text()
+              if rendered.count(marker) != 1:
+                  raise SystemExit(f"installer signer marker is invalid: {source}")
+              destination.write_text(rendered.replace(marker, value))
+          PY
+          chmod 0755 dist/install.sh
+      - name: Refuse an existing tag or release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version="$VERSION"
+          if git ls-remote --exit-code --tags origin "refs/tags/v$version"; then
+            echo "tag v$version already exists" >&2
+            exit 3
+          fi
+          if gh release view "v$version" >/dev/null 2>&1; then
+            echo "release v$version already exists" >&2
+            exit 3
+          fi
+      - name: Publish exact authorized commit and immutable assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version="$VERSION"
+          sha="${{ steps.candidate.outputs.sha }}"
+          git tag --annotate "v$version" --message "Aigent Hive v$version" "$sha"
+          git push origin "refs/tags/v$version"
+          gh release create "v$version" \
+            dist/install.sh \
+            dist/install.ps1 \
+            dist/aigent-hive-*.tar.gz \
+            dist/aigent-hive-*.tar.gz.sha256 \
+            dist/aigent-hive-*.tar.gz.sigstore.json \
+            dist/aigent-hive-*.zip \
+            dist/aigent-hive-*.zip.sha256 \
+            dist/aigent-hive-*.zip.sigstore.json \
+            --verify-tag --title "Aigent Hive v$version" \
+            --generate-notes --latest=false

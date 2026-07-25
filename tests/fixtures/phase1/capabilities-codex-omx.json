@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "host": "codex",
+  "host_version": "fixture",
+  "surface": "cli",
+  "detection": "available",
+  "external_runtime": "omx",
+  "resolved_owner": "omx",
+  "capabilities": {
+    "instructions": "supported",
+    "simple-question-isolation": "supported",
+    "subagents": "supported",
+    "persistent-role-binding": "supported",
+    "continuous-loop": "supported",
+    "usage-sensor": "unverified",
+    "independent-judge": "supported"
+  },
+  "evidence_digest": "sha256:a4f187054f8152eabb31990e470fee0ec849bd3ddeac2dbd071a1c6e0eaf3d81",
+  "evidence": [
+    {
+      "source": "host-catalog",
+      "locator": "fixture:codex-catalog",
+      "outcome": "compatible",
+      "digest": "sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1"
+    }
+  ]
+}

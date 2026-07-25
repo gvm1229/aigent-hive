@@ -1,0 +1,182 @@
+schema_version: 1
+releases:
+  - version: 0.1.0
+    skills: []
+
+  - version: 0.2.0
+    skills: []
+
+  - version: 0.3.0
+    skills: []
+
+  - version: 0.4.0
+    skills:
+      - name: setup-harness
+        content_digest: sha256:7750b8cf5b5012b1c23d363199fd01cf739c570c31f14df8436240141995158a
+        side_effect_class: project-write
+        capabilities:
+          - filesystem-read
+          - filesystem-write
+          - shell
+      - name: hive-simple-question
+        content_digest: sha256:716be2df49d27e0cbaf28bbd428b01b0a716e1baf6ebca7fab2fd26e91b3fa9a
+        side_effect_class: none
+        capabilities: []
+      - name: hive-prompt-refine
+        content_digest: sha256:167fe625b59f020f200f167ac380875b77e79aac111dfa03163f94718834eb42
+        side_effect_class: none
+        capabilities: []
+      - name: hive-knowledge-capture
+        content_digest: sha256:bff118dd34504091478c636470c4ae113e6eef0ef488eac406c1f2dd79970d91
+        side_effect_class: project-write
+        capabilities:
+          - filesystem-read
+          - filesystem-write
+          - memory-write
+          - shell
+      - name: hive-knowledge-query
+        content_digest: sha256:a13087365b7e91516fc45b5f699f7e4aec1b3407758accdd17df0776889d504c
+        side_effect_class: read-only
+        capabilities:
+          - filesystem-read
+          - memory-read
+          - shell
+      - name: hive-knowledge-maintenance
+        content_digest: sha256:eb196fd8c66722928ba4f691543e199e09947241face5a51eb6b329c391fdd3f
+        side_effect_class: project-write
+        capabilities:
+          - filesystem-read
+          - filesystem-write
+          - memory-read
+          - memory-write
+          - shell
+
+  - version: 0.5.0
+    skills:
+      - name: setup-harness
+        content_digest: sha256:7750b8cf5b5012b1c23d363199fd01cf739c570c31f14df8436240141995158a
+        side_effect_class: project-write
+        capabilities:
+          - filesystem-read
+          - filesystem-write
+          - shell
+      - name: hive-simple-question
+        content_digest: sha256:716be2df49d27e0cbaf28bbd428b01b0a716e1baf6ebca7fab2fd26e91b3fa9a
+        side_effect_class: none
+        capabilities: []
+      - name: hive-prompt-refine
+        content_digest: sha256:167fe625b59f020f200f167ac380875b77e79aac111dfa03163f94718834eb42
+        side_effect_class: none
+        capabilities: []
+      - name: hive-knowledge-capture
+        content_digest: sha256:bff118dd34504091478c636470c4ae113e6eef0ef488eac406c1f2dd79970d91
+        side_effect_class: project-write
+        capabilities:
+          - filesystem-read
+          - filesystem-write
+          - memory-write
+          - shell
+      - name: hive-knowledge-query
+        content_digest: sha256:a13087365b7e91516fc45b5f699f7e4aec1b3407758accdd17df0776889d504c
+        side_effect_class: read-only
+        capabilities:
+          - filesystem-read
+          - memory-read
+          - shell
+      - name: hive-knowledge-maintenance
+        content_digest: sha256:eb196fd8c66722928ba4f691543e199e09947241face5a51eb6b329c391fdd3f
+        side_effect_class: project-write
+        capabilities:
+          - filesystem-read
+          - filesystem-write
+          - memory-read
+          - memory-write
+          - shell
+      - name: hive-run-checkpoint
+        content_digest: sha256:e44b6b4456bc02996c44cdab64c25fd4335f360509685f592248e2c342401383
+        side_effect_class: project-write
+        capabilities:
+          - filesystem-read
+          - filesystem-write
+          - run-state
+      - name: hive-run-resume
+        content_digest: sha256:edfbee35142b8a228d4cdb36d2674b719548fea9884d4a2b6a31353adcebb7c5
+        side_effect_class: read-only
+        capabilities:
+          - filesystem-read
+          - run-state
+      - name: hive-role-handoff
+        content_digest: sha256:d59b0866ed27c85bd16f8a8cb9fb8a278df0d4cd5f9ca9262b676f4b513b2eaa
+        side_effect_class: project-write
+        capabilities:
+          - filesystem-read
+          - filesystem-write
+          - run-state
+
+  - version: 0.6.0
+    skills:
+      - name: setup-harness
+        content_digest: sha256:7750b8cf5b5012b1c23d363199fd01cf739c570c31f14df8436240141995158a
+        side_effect_class: project-write
+        capabilities:
+          - filesystem-read
+          - filesystem-write
+          - shell
+      - name: hive-simple-question
+        content_digest: sha256:716be2df49d27e0cbaf28bbd428b01b0a716e1baf6ebca7fab2fd26e91b3fa9a
+        side_effect_class: none
+        capabilities: []
+      - name: hive-prompt-refine
+        content_digest: sha256:167fe625b59f020f200f167ac380875b77e79aac111dfa03163f94718834eb42
+        side_effect_class: none
+        capabilities: []
+      - name: hive-knowledge-capture
+        content_digest: sha256:bff118dd34504091478c636470c4ae113e6eef0ef488eac406c1f2dd79970d91
+        side_effect_class: project-write
+        capabilities:
+          - filesystem-read
+          - filesystem-write
+          - memory-write
+          - shell
+      - name: hive-knowledge-query
+        content_digest: sha256:a13087365b7e91516fc45b5f699f7e4aec1b3407758accdd17df0776889d504c
+        side_effect_class: read-only
+        capabilities:
+          - filesystem-read
+          - memory-read
+          - shell
+      - name: hive-knowledge-maintenance
+        content_digest: sha256:eb196fd8c66722928ba4f691543e199e09947241face5a51eb6b329c391fdd3f
+        side_effect_class: project-write
+        capabilities:
+          - filesystem-read
+          - filesystem-write
+          - memory-read
+          - memory-write
+          - shell
+      - name: hive-run-checkpoint
+        content_digest: sha256:e44b6b4456bc02996c44cdab64c25fd4335f360509685f592248e2c342401383
+        side_effect_class: project-write
+        capabilities:
+          - filesystem-read
+          - filesystem-write
+          - run-state
+      - name: hive-run-resume
+        content_digest: sha256:fbec4961baef77e9e33a73f2f6caa47d46f093133fe142005067dde8143389b7
+        side_effect_class: read-only
+        capabilities:
+          - filesystem-read
+          - run-state
+      - name: hive-role-handoff
+        content_digest: sha256:d59b0866ed27c85bd16f8a8cb9fb8a278df0d4cd5f9ca9262b676f4b513b2eaa
+        side_effect_class: project-write
+        capabilities:
+          - filesystem-read
+          - filesystem-write
+          - run-state
+      - name: hive-judge-package
+        content_digest: sha256:a87f46c6a21f94944fc465d85b74bf5e8aef308bfbc1b7a08df56e6078f3890c
+        side_effect_class: read-only
+        capabilities:
+          - filesystem-read
+          - run-state

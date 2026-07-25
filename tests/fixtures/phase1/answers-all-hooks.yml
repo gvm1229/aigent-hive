@@ -1,0 +1,44 @@
+schema_version: 1
+project_name: phase1-hooks
+project_kind: general
+primary_host: codex
+usage_stop_remaining_percent: 20
+elevated_judge_quorum: 2/3
+critical_judge_quorum: 3/3+human
+persistent_roles: []
+knowledge_include_paths: []
+knowledge_exclude_paths: []
+approved_optional_skills: []
+approved_fallback_hooks:
+  - consent_version: 1
+    capability: protect-hive-owned-state
+    event: PreToolUse
+    path: .hive/hooks/protect-hive-owned-state
+    command: hive hook --capability protect-hive-owned-state --event PreToolUse --capabilities .hive/runtime/current-capability-resolution.json --output json
+    content_digest: sha256:1d17c439cf4ae17d2a3ea6a58e3fb51942e5330dbdbe0bb4b1e9d516c01987fa
+    approved_at: "2026-07-23T00:00:00Z"
+    consent_digest: sha256:6fc7d959f7d6e6b78b29a8224da3f57cc9ccba938aa67898c7fb549daefa6819
+  - consent_version: 1
+    capability: update-integrity-guard
+    event: PreToolUse
+    path: .hive/hooks/update-integrity-guard
+    command: hive hook --capability update-integrity-guard --event PreToolUse --capabilities .hive/runtime/current-capability-resolution.json --output json
+    content_digest: sha256:0258324deee2c1e24d056088ad070a11321148f43f25edfdd5e3399ab2908ed6
+    approved_at: "2026-07-23T00:00:00Z"
+    consent_digest: sha256:c015a813de09bc85d142e2fa8eacae966981d47d1dab13d6c60a58ab429a09e0
+  - consent_version: 1
+    capability: derived-state-invalidation
+    event: PostToolUse
+    path: .hive/hooks/derived-state-invalidation
+    command: hive hook --capability derived-state-invalidation --event PostToolUse --capabilities .hive/runtime/current-capability-resolution.json --output json
+    content_digest: sha256:22b0b230621504cc77e5183cd57b1409412d50761d8d635dfd18c51c3ff06007
+    approved_at: "2026-07-23T00:00:00Z"
+    consent_digest: sha256:03c0e2382d95de855223877fe326e1d145575fc8fda7d8fa02f49f8ac1d99c61
+  - consent_version: 1
+    capability: checkpoint-reminder
+    event: Stop
+    path: .hive/hooks/checkpoint-reminder
+    command: hive hook --capability checkpoint-reminder --event Stop --capabilities .hive/runtime/current-capability-resolution.json --output json
+    content_digest: sha256:75cf0e81e070db78b87ba9b8d34569022158dc8d1ffc4b462fbf73a59ba5738a
+    approved_at: "2026-07-23T00:00:00Z"
+    consent_digest: sha256:9a57158227c4e79c59081b678b5d568d95f04a3711359bad49d7746b0f9b7231

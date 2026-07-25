@@ -1,0 +1,13 @@
+schema_version: 1
+project_name: phase1-legacy
+project_kind: general
+primary_host: codex
+orchestration_layer: omx
+usage_stop_remaining_percent: 20
+elevated_judge_quorum: 2/3
+critical_judge_quorum: 3/3+human
+persistent_roles: []
+knowledge_include_paths: []
+knowledge_exclude_paths: []
+approved_optional_skills: []
+

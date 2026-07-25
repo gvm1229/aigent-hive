@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aigent-hive.local/schemas/backup-manifest.schema.json",
+  "title": "Aigent Hive seven-day update backup manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "transaction_id", "source_version", "target_version", "created_at_unix", "expires_at_unix", "tree_digest", "entries", "manifest_digest"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "transaction_id": { "type": "string", "pattern": "^txn-[0-9a-f]{24}$" },
+    "source_version": { "$ref": "#/$defs/version" },
+    "target_version": { "$ref": "#/$defs/version" },
+    "created_at_unix": { "type": "integer", "minimum": 0 },
+    "expires_at_unix": { "type": "integer", "minimum": 0 },
+    "tree_digest": { "$ref": "#/$defs/digest" },
+    "entries": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "ownership", "prior_digest", "prior_length", "backup_path"],
+        "properties": {
+          "path": { "$ref": "#/$defs/path" },
+          "ownership": { "enum": ["manifest-owned", "canonical-protected"] },
+          "prior_digest": { "oneOf": [{ "$ref": "#/$defs/digest" }, { "type": "null" }] },
+          "prior_length": { "type": "integer", "minimum": 0 },
+          "backup_path": { "$ref": "#/$defs/path" }
+        }
+      }
+    },
+    "manifest_digest": { "$ref": "#/$defs/digest" }
+  },
+  "$defs": {
+    "version": { "type": "string", "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$" },
+    "digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "path": { "type": "string", "minLength": 1, "not": { "pattern": "(^/|(^|/)\\.\\.(/|$)|\\\\)" } }
+  }
+}

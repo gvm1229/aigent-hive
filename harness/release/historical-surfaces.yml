@@ -1,0 +1,17 @@
+schema_version: 1
+releases:
+  - product_version: 0.6.0
+    schema_version: 1
+    schemas:
+      - action-result.schema.json
+    skills:
+      - hive-judge-package
+    capabilities:
+      - authenticated-judge-quorum
+    migrations: []
+    templates:
+      - .hive/config/harness.toml
+    ownership:
+      - hive-generated-config
+    projections:
+      - .agents/skills/hive-judge-package/SKILL.md

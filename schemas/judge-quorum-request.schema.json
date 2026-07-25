@@ -1,0 +1,85 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/gvm1229/aigent-hive/schemas/judge-quorum-request.schema.json",
+  "title": "Aigent Hive judge quorum request",
+  "$defs": {
+    "path": {
+      "type": "string",
+      "pattern": "^(?:\\.[^./\\\\]|[^./\\\\])[^/\\\\]*(?:/(?:\\.[^./\\\\]|[^./\\\\])[^/\\\\]*)*$"
+    },
+    "common": {
+      "type": "object",
+      "properties": {
+        "package": { "$ref": "#/$defs/path" },
+        "assignment": { "$ref": "#/$defs/path" },
+        "verdicts": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 3,
+          "items": { "$ref": "#/$defs/path" }
+        },
+        "approval": { "$ref": "#/$defs/path" }
+      }
+    }
+  },
+  "oneOf": [
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "package",
+        "assignment",
+        "verdicts"
+      ],
+      "properties": {
+        "schema_version": { "const": 1 },
+        "package": { "$ref": "#/$defs/path" },
+        "assignment": { "$ref": "#/$defs/path" },
+        "verdicts": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 3,
+          "items": { "$ref": "#/$defs/path" }
+        },
+        "approval": { "$ref": "#/$defs/path" }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "package",
+        "assignment",
+        "assignment_attestation",
+        "verdicts",
+        "verdict_attestations"
+      ],
+      "properties": {
+        "schema_version": { "const": 2 },
+        "package": { "$ref": "#/$defs/path" },
+        "assignment": { "$ref": "#/$defs/path" },
+        "assignment_attestation": { "$ref": "#/$defs/path" },
+        "verdicts": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 3,
+          "items": { "$ref": "#/$defs/path" }
+        },
+        "verdict_attestations": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 3,
+          "items": { "$ref": "#/$defs/path" }
+        },
+        "approval": { "$ref": "#/$defs/path" },
+        "approval_attestation": { "$ref": "#/$defs/path" }
+      },
+      "dependentRequired": {
+        "approval": ["approval_attestation"],
+        "approval_attestation": ["approval"]
+      }
+    }
+  ]
+}

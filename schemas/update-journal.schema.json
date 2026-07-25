@@ -1,0 +1,119 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aigent-hive.local/schemas/update-journal.schema.json",
+  "title": "Aigent Hive durable update journal",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "transaction_id",
+    "state",
+    "source_version",
+    "target_version",
+    "release_manifest_digest",
+    "plan_digest",
+    "backup_manifest_path",
+    "changes",
+    "next_state",
+    "journal_digest"
+  ],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "transaction_id": { "$ref": "#/$defs/transaction" },
+    "state": { "enum": ["prepared", "committed", "needs-recovery"] },
+    "source_version": { "$ref": "#/$defs/version" },
+    "target_version": { "$ref": "#/$defs/version" },
+    "release_manifest_digest": { "$ref": "#/$defs/digest" },
+    "plan_digest": { "$ref": "#/$defs/digest" },
+    "backup_manifest_path": {
+      "type": "string",
+      "pattern": "^\\.hive/backups/txn-[0-9a-f]{24}/backup-manifest\\.json$"
+    },
+    "changes": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "before_digest", "after_digest", "backup_path"],
+        "properties": {
+          "path": { "$ref": "#/$defs/path" },
+          "before_digest": {
+            "oneOf": [
+              { "$ref": "#/$defs/digest" },
+              { "type": "null" }
+            ]
+          },
+          "after_digest": {
+            "oneOf": [
+              { "$ref": "#/$defs/digest" },
+              { "type": "null" }
+            ]
+          },
+          "backup_path": {
+            "type": "string",
+            "pattern": "^files/[^/\\\\][^\\\\]*$"
+          }
+        }
+      }
+    },
+    "next_state": { "$ref": "#/$defs/updateState" },
+    "journal_digest": { "$ref": "#/$defs/digest" }
+  },
+  "$defs": {
+    "transaction": {
+      "type": "string",
+      "pattern": "^txn-[0-9a-f]{24}$"
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"
+    },
+    "digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "path": {
+      "type": "string",
+      "minLength": 1,
+      "not": {
+        "pattern": "(^/|(^|/)\\.\\.(/|$)|\\\\)"
+      }
+    },
+    "updateState": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "product_version",
+        "release_manifest_digest",
+        "rollback"
+      ],
+      "properties": {
+        "schema_version": { "const": 1 },
+        "product_version": { "$ref": "#/$defs/version" },
+        "release_manifest_digest": { "$ref": "#/$defs/digest" },
+        "rollback": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "root_version",
+            "timestamp_version",
+            "snapshot_version",
+            "targets_version",
+            "release_sequence",
+            "manifest_digest"
+          ],
+          "properties": {
+            "root_version": { "type": "integer", "minimum": 1 },
+            "timestamp_version": { "type": "integer", "minimum": 1 },
+            "snapshot_version": { "type": "integer", "minimum": 1 },
+            "targets_version": { "type": "integer", "minimum": 1 },
+            "release_sequence": { "type": "integer", "minimum": 1 },
+            "manifest_digest": { "$ref": "#/$defs/digest" }
+          }
+        }
+      }
+    }
+  }
+}

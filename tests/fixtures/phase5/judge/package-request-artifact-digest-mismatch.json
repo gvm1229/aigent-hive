@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "subject_id": "phase5-elevated",
+  "risk_tier": "elevated",
+  "goal": "Verify the release candidate against the frozen acceptance criteria.",
+  "acceptance_criteria": [
+    "criterion-clean-context",
+    "criterion-tests-pass"
+  ],
+  "artifact_refs": [
+    "artifact/patch.diff#sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+  ],
+  "evidence_refs": [
+    "evidence/tests.json#sha256:06f9ab54361509e04fdee2fd8f43b97dbcc69861ba07c44762b7eb1e5e94cd62"
+  ],
+  "known_constraints": [
+    "Network verification is out of scope."
+  ]
+}

@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "mode": "refine-only",
+  "original_prompt": "Update src/config.rs. Preserve the public API. Do not add dependencies. Run cargo test. Return changed files and test evidence.",
+  "intent_summary": "Update src/config.rs without changing the public API or dependency graph.",
+  "assumptions": [],
+  "unresolved_items": [],
+  "required_question": null,
+  "preserved": {
+    "must": ["Run cargo test."],
+    "must_not": ["Do not add dependencies."],
+    "scope": ["src/config.rs"],
+    "target_output": ["Return changed files and test evidence."],
+    "user_authority": ["Preserve the public API."],
+    "tone": [],
+    "tool_provider_selection": []
+  },
+  "refined_prompt": "Goal\nUpdate src/config.rs.\n\nContext and grounded inputs\nUse the existing repository implementation.\n\nRequired workflow\nInspect the current code, make the smallest coherent change, and run cargo test.\n\nConstraints and prohibited actions\nPreserve the public API. Do not add dependencies.\n\nAcceptance and verification\ncargo test passes.\n\nOutput contract\nReturn changed files and test evidence.\n\nStop, blocker, and escalation conditions\nStop if preserving the public API is impossible without user direction.",
+  "project_reads": [],
+  "execution_authorized": false,
+  "side_effects": {
+    "project_write": false,
+    "network": false,
+    "subagent": false,
+    "memory_capture": false,
+    "run_creation": false,
+    "model_execution": false
+  }
+}

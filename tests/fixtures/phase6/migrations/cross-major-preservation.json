@@ -1,0 +1,60 @@
+{
+  "before": [
+    {
+      "path": ".hive/config/deprecated-system-representation.toml",
+      "kind": "hive-system-representation",
+      "digest": "sha256:1111111111111111111111111111111111111111111111111111111111111111"
+    },
+    {
+      "path": ".hive/setup-answers.yml",
+      "kind": "preference",
+      "digest": "sha256:2222222222222222222222222222222222222222222222222222222222222222"
+    },
+    {
+      "path": "README.md",
+      "kind": "document",
+      "digest": "sha256:3333333333333333333333333333333333333333333333333333333333333333"
+    },
+    {
+      "path": "src/main.rs",
+      "kind": "project-file",
+      "digest": "sha256:4444444444444444444444444444444444444444444444444444444444444444"
+    },
+    {
+      "path": ".hive/knowledge/Wiki/user-page.md",
+      "kind": "user-markdown-body",
+      "digest": "sha256:5555555555555555555555555555555555555555555555555555555555555555"
+    }
+  ],
+  "after": [
+    {
+      "path": ".hive/config/system-representation-v2.toml",
+      "kind": "hive-system-representation",
+      "digest": "sha256:6666666666666666666666666666666666666666666666666666666666666666"
+    },
+    {
+      "path": ".hive/setup-answers.yml",
+      "kind": "preference",
+      "digest": "sha256:2222222222222222222222222222222222222222222222222222222222222222"
+    },
+    {
+      "path": "README.md",
+      "kind": "document",
+      "digest": "sha256:3333333333333333333333333333333333333333333333333333333333333333"
+    },
+    {
+      "path": "src/main.rs",
+      "kind": "project-file",
+      "digest": "sha256:4444444444444444444444444444444444444444444444444444444444444444"
+    },
+    {
+      "path": ".hive/knowledge/Wiki/user-page.md",
+      "kind": "user-markdown-body",
+      "digest": "sha256:5555555555555555555555555555555555555555555555555555555555555555"
+    }
+  ],
+  "mutable_system_paths": [
+    ".hive/config/deprecated-system-representation.toml",
+    ".hive/config/system-representation-v2.toml"
+  ]
+}

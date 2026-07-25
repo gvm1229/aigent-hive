@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "host": "codex",
+  "explicit_action": null,
+  "explicit_skill": null,
+  "plain_answer": false,
+  "simple_question": false,
+  "project_context_required": false,
+  "external_candidate": null,
+  "hive_candidate": "local-inspect",
+  "active_hive_skills": [
+    {
+      "name": "local-inspect",
+      "source_type": "approved-optional",
+      "content_digest": "sha256:2322e82e3b67bb235a56cca0da737aeb813a7004861de5e4045a579ce12c1500",
+      "side_effect_class": "read-only",
+      "capabilities": ["filesystem-read"],
+      "consent_digest": "sha256:90463bbb97266a2ecc7c7289070630feea777b25dfba1c3c5a50f939e7a78a59",
+      "consent": {
+        "consent_version": 1,
+        "name": "local-inspect",
+        "source": "path:vendor-skills/local-inspect/SKILL.md",
+        "revision": "sha256:2322e82e3b67bb235a56cca0da737aeb813a7004861de5e4045a579ce12c1500",
+        "content_digest": "sha256:2322e82e3b67bb235a56cca0da737aeb813a7004861de5e4045a579ce12c1500",
+        "requested_capabilities": ["filesystem-read"],
+        "approved_capabilities": ["filesystem-read"],
+        "approved_at": "2026-07-24T00:00:00Z",
+        "consent_digest": "sha256:90463bbb97266a2ecc7c7289070630feea777b25dfba1c3c5a50f939e7a78a59"
+      }
+    }
+  ],
+  "refine_mode": null,
+  "explicit_run_intent": false
+}

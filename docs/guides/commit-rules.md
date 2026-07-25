@@ -52,7 +52,7 @@ build: Hive source workspace 기반 구성
   개발 지침과 Git 계약 추가
 ```
 
-긴 배경 문단과 `Constraint:`, `Rejected:`, `Tested:` 같은 일반 trailer는 사용하지 않는다.
+긴 배경 문단과 `Constraint:`, `Rejected:`, `Tested:` 같은 일반 trailer 사용 금지.
 
 ## 커밋 전후 확인
 
@@ -64,4 +64,4 @@ git commit
 git log -1 --format=%B
 ```
 
-의도한 파일만 포함되었는지, 메시지에 co-author trailer가 없는지 확인한다.
+의도한 파일만 포함되었는지, 메시지에 co-author trailer가 없는지 확인.

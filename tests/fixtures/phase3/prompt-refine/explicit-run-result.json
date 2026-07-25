@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "mode": "refine-and-run",
+  "original_prompt": "Improve and run this prompt: summarize the report.",
+  "intent_summary": "Create and run a copy-ready report summarization prompt.",
+  "assumptions": [],
+  "unresolved_items": [],
+  "required_question": null,
+  "preserved": {
+    "must": [],
+    "must_not": [],
+    "scope": ["the supplied report"],
+    "target_output": ["a concise summary"],
+    "user_authority": ["Do not access sources beyond the supplied report."],
+    "tone": [],
+    "tool_provider_selection": []
+  },
+  "refined_prompt": "Goal\nSummarize the supplied report.\n\nAuthority boundary\nDo not access sources beyond the supplied report.\n\nOutput contract\nReturn a concise summary.",
+  "project_reads": [],
+  "execution_authorized": true,
+  "side_effects": {
+    "project_write": false,
+    "network": false,
+    "subagent": false,
+    "memory_capture": false,
+    "run_creation": false,
+    "model_execution": false
+  }
+}

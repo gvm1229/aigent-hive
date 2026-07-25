@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "host": "antigravity",
+  "explicit_action": null,
+  "explicit_skill": null,
+  "plain_answer": false,
+  "simple_question": false,
+  "project_context_required": true,
+  "external_candidate": null,
+  "hive_candidate": null,
+  "active_hive_skills": [],
+  "refine_mode": null,
+  "explicit_run_intent": false
+}

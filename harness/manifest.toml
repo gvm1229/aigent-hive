@@ -2,6 +2,11 @@ schema_version = 1
 license = "Apache-2.0"
 
 [[paths]]
+pattern = ".hive/.gitignore"
+ownership = "hive-managed-config"
+source = "template"
+
+[[paths]]
 pattern = ".hive/LICENSE-AIGENT-HIVE.txt"
 ownership = "hive-managed-license"
 source = "template"
@@ -9,6 +14,11 @@ source = "template"
 [[paths]]
 pattern = ".hive/README.md"
 ownership = "hive-managed-license"
+source = "template"
+
+[[paths]]
+pattern = ".hive/directives/00-editing-discipline.md"
+ownership = "hive-managed-config"
 source = "template"
 
 [[paths]]
@@ -37,6 +47,31 @@ ownership = "user-consent-protected"
 source = "template"
 
 [[paths]]
+pattern = ".hive/config/active-skills.yml"
+ownership = "hive-generated-config"
+source = "compiled-skill-projection"
+
+[[paths]]
+pattern = ".hive/config/capability-resolution.yml"
+ownership = "hive-generated-config"
+source = "read-only-capability-probe"
+
+[[paths]]
+pattern = ".hive/config/update-state.json"
+ownership = "hive-generated-config"
+source = "signed-release-activation"
+
+[[paths]]
+pattern = ".hive/config/approved-hooks.yml"
+ownership = "user-consent-protected"
+source = "conditional-template"
+
+[[paths]]
+pattern = ".hive/hooks/**"
+ownership = "user-consent-protected"
+source = "conditional-hook-projection"
+
+[[paths]]
 pattern = ".hive/knowledge/**"
 ownership = "canonical-data-protected"
 source = "template-seed"
@@ -60,10 +95,24 @@ pattern = ".hive/backups/**"
 ownership = "ephemeral-backup"
 
 [[paths]]
+pattern = ".hive/runtime/**"
+ownership = "ephemeral-runtime"
+
+[[paths]]
 pattern = "AGENTS.md"
 ownership = "shared-marker"
 marker_start = "<!-- AIGENT-HIVE:START -->"
 marker_end = "<!-- AIGENT-HIVE:END -->"
+
+[[paths]]
+pattern = ".agents/skills/*/SKILL.md"
+ownership = "hive-skill-projection"
+source = "compiled-skill-projection"
+
+[[paths]]
+pattern = ".claude/skills/*/SKILL.md"
+ownership = "hive-skill-projection"
+source = "compiled-skill-projection"
 
 [[forbidden_paths]]
 pattern = ".omx/**"
@@ -76,3 +125,6 @@ pattern = ".codex/**"
 
 [[forbidden_paths]]
 pattern = ".claude/**"
+
+[[forbidden_paths]]
+pattern = ".agents/**"

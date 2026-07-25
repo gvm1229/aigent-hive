@@ -11,4 +11,4 @@ runs/<run-id>/
   evidence/
 ```
 
-Transcript 전체를 정본으로 사용하지 않음. 현재 목표, 완료 기준, 남은 작업, artifact hash와 검증 결과만 유지.
+Transcript 전체의 정본 사용 금지. 현재 목표, 완료 기준, 남은 작업, artifact hash와 검증 결과만 유지.

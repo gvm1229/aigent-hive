@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "host": "codex",
+  "host_version": "fixture",
+  "surface": "cli",
+  "detection": "unknown",
+  "external_runtime": null,
+  "resolved_owner": "host-native",
+  "capabilities": {
+    "instructions": "supported",
+    "simple-question-isolation": "best-effort",
+    "subagents": "best-effort",
+    "persistent-role-binding": "best-effort",
+    "continuous-loop": "unverified",
+    "usage-sensor": "unverified",
+    "independent-judge": "best-effort"
+  },
+  "evidence_digest": "sha256:4c5cb33a3f3e73ba3bc3b210e4be5a0c9ed8001e7a4caee69135f17e156d9eb4",
+  "evidence": [
+    {
+      "source": "host-catalog",
+      "locator": "fixture:catalog-unavailable",
+      "outcome": "unavailable",
+      "digest": "sha256:e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1"
+    }
+  ]
+}

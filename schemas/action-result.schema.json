@@ -18,13 +18,28 @@
     "schema_version": { "const": 1 },
     "action": {
       "enum": [
+        "UnknownAction",
         "SetupHarness",
+        "ValidateRole",
+        "RecordRoleHandoff",
+        "RoleWork",
+        "CheckpointRun",
+        "CheckUsage",
+        "ShowUsageStatus",
+        "SetUsageThreshold",
+        "ControlUsageSession",
         "AnswerSimpleQuestion",
+        "RefinePrompt",
+        "VerifySkillProjection",
         "RunWork",
         "ResumeWork",
         "VerifyWork",
         "IngestKnowledge",
         "QueryKnowledge",
+        "LintKnowledge",
+        "DeleteKnowledge",
+        "SuppressKnowledge",
+        "RebuildKnowledgeIndex",
         "UpdateHarness"
       ]
     },
@@ -62,7 +77,7 @@
         "required": ["kind", "locator", "digest"],
         "properties": {
           "kind": {
-            "enum": ["command", "file", "test", "verdict", "report"]
+            "enum": ["command", "file", "test", "verdict", "report", "release"]
           },
           "locator": { "type": "string", "minLength": 1 },
           "digest": {
@@ -74,6 +89,9 @@
     },
     "next_action": {
       "type": ["string", "null"]
+    },
+    "data": {
+      "type": "object"
     }
   },
   "oneOf": [

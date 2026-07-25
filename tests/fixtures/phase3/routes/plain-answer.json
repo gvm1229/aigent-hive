@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "host": "codex",
+  "explicit_action": null,
+  "explicit_skill": null,
+  "plain_answer": true,
+  "simple_question": false,
+  "project_context_required": false,
+  "external_candidate": null,
+  "hive_candidate": "hive-prompt-refine",
+  "active_hive_skills": [],
+  "refine_mode": "refine-only",
+  "explicit_run_intent": false
+}

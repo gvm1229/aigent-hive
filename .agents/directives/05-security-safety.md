@@ -17,7 +17,9 @@ This directive governs filesystem mutation, setup, update, releases, and externa
 - Validate every output path against an ownership manifest.
 - Reject path traversal, absolute template paths, symlink escapes, and writes into external namespaces.
 - Preserve non-Hive bytes in shared files; only mutate an exact Hive marker block.
-- Never read, write, delete, or migrate `.omx/`, `.omc/`, `.codex/`, `.claude/`, or host-global configuration as part of Hive setup/update.
+- Never read, write, delete, or migrate `.omx/`, `.omc/`, foreign runtime state, or host-global configuration as part of Hive setup/update.
+- Project-local host configuration remains foreign-owned by default. The only exception is an exact Hive-namespaced hook projection when OMX/OMC is conclusively absent, the user has approved the displayed events/capabilities/paths/digest, and the ownership manifest authorizes a non-clobbering structured merge.
+- If external orchestration later becomes available, Hive-owned fallback hooks must remain inert until a consented reconfigure removes only Hive-owned entries; foreign entries and bytes stay untouched.
 
 ## Update Safety
 

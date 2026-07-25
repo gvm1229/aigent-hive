@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/gvm1229/aigent-hive/schemas/judge-approval.schema.json",
+  "title": "Aigent Hive human judge approval",
+  "description": "Separate critical-tier approval sealed after all eligible verdicts. approval_digest is SHA-256 over the RFC 8785/JCS encoding with approval_digest excluded.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "subject_id",
+    "package_digest",
+    "assignment_digest",
+    "acceptance_criteria",
+    "approver_id",
+    "decision",
+    "created_at",
+    "approval_digest"
+  ],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "subject_id": { "type": "string", "minLength": 1 },
+    "package_digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "assignment_digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "acceptance_criteria": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "approver_id": { "type": "string", "minLength": 1 },
+    "decision": { "const": "APPROVE" },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+    },
+    "approval_digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    }
+  }
+}

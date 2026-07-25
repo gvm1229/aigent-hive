@@ -1,0 +1,8 @@
+{
+  "schema_version": 1,
+  "event": "Stop",
+  "run_id": "fixture-run",
+  "status_path": ".hive/runs/fixture-run/STATUS.md",
+  "checkpoint_present": false
+}
+

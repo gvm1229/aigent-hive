@@ -1,7 +1,32 @@
 project_name: "fixture \"quoted\"\nsecond line"
 project_kind: custom
 primary_host: claude
-orchestration_layer: omc
+capability_resolution:
+  schema_version: 1
+  host: claude
+  host_version: fixture
+  surface: cli
+  detection: absent
+  external_runtime: null
+  resolved_owner: host-native
+  capabilities:
+    instructions: supported
+    simple-question-isolation: supported
+    subagents: supported
+    persistent-role-binding: best-effort
+    continuous-loop: unsupported
+    usage-sensor: unsupported
+    independent-judge: supported
+  evidence_digest: sha256:22977b96a46b9649ce62cc8a90b1ffd7576524be598568ad186b72b7795f6c65
+  evidence:
+    - source: host-catalog
+      locator: active-host-capability-metadata
+      outcome: absent
+      digest: sha256:1111111111111111111111111111111111111111111111111111111111111111
+    - source: public-executable
+      locator: omc --version
+      outcome: absent
+      digest: sha256:2222222222222222222222222222222222222222222222222222222222222222
 usage_stop_remaining_percent: 20
 elevated_judge_quorum: "2/3"
 critical_judge_quorum: "3/3+human"
@@ -38,3 +63,12 @@ approved_optional_skills:
       - filesystem-read
     approved_at: "2026-07-23T00:00:00Z"
     consent_digest: sha256:a68da1f30af091f3ce109a8c41eb6829ea5b00b826b14b440e6ee951179b540a
+approved_fallback_hooks:
+  - consent_version: 1
+    capability: checkpoint-reminder
+    event: Stop
+    path: .hive/hooks/checkpoint-reminder
+    command: hive hook --capability checkpoint-reminder --event Stop --capabilities .hive/runtime/current-capability-resolution.json --output json
+    content_digest: sha256:75cf0e81e070db78b87ba9b8d34569022158dc8d1ffc4b462fbf73a59ba5738a
+    approved_at: "2026-07-23T00:00:00Z"
+    consent_digest: sha256:9a57158227c4e79c59081b678b5d568d95f04a3711359bad49d7746b0f9b7231

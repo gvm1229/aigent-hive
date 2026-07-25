@@ -9,14 +9,14 @@
     "project_name",
     "project_kind",
     "primary_host",
-    "orchestration_layer",
     "usage_stop_remaining_percent",
     "elevated_judge_quorum",
     "critical_judge_quorum",
     "persistent_roles",
     "knowledge_include_paths",
     "knowledge_exclude_paths",
-    "approved_optional_skills"
+    "approved_optional_skills",
+    "approved_fallback_hooks"
   ],
   "properties": {
     "schema_version": {
@@ -32,9 +32,6 @@
     },
     "primary_host": {
       "enum": ["codex", "claude", "antigravity"]
-    },
-    "orchestration_layer": {
-      "enum": ["host-native", "omx", "omc"]
     },
     "usage_stop_remaining_percent": {
       "type": "integer",
@@ -183,34 +180,152 @@
           }
         }
       }
-    }
-  },
-  "allOf": [
-    {
-      "if": {
-        "properties": {
-          "orchestration_layer": { "const": "omx" }
-        },
-        "required": ["orchestration_layer"]
-      },
-      "then": {
-        "properties": {
-          "primary_host": { "const": "codex" }
-        }
-      }
     },
-    {
-      "if": {
+    "approved_fallback_hooks": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "consent_version",
+          "capability",
+          "event",
+          "path",
+          "command",
+          "content_digest",
+          "approved_at",
+          "consent_digest"
+        ],
         "properties": {
-          "orchestration_layer": { "const": "omc" }
+          "consent_version": { "const": 1 },
+          "capability": {
+            "enum": [
+              "protect-hive-owned-state",
+              "update-integrity-guard",
+              "derived-state-invalidation",
+              "checkpoint-reminder"
+            ]
+          },
+          "event": {
+            "enum": ["PreToolUse", "PostToolUse", "PreCompact", "Stop"]
+          },
+          "path": {
+            "type": "string",
+            "pattern": "^(?!/)(?![A-Za-z]:[\\\\/])(?!.*(?:^|/)\\.\\.(?:/|$))(?!\\.om[xc](?:/|$)).+"
+          },
+          "command": {
+            "type": "string",
+            "pattern": "^hive hook --capability (protect-hive-owned-state|update-integrity-guard|derived-state-invalidation|checkpoint-reminder) --event (PreToolUse|PostToolUse|PreCompact|Stop) --capabilities \\.hive/runtime/current-capability-resolution\\.json --output json$"
+          },
+          "content_digest": {
+            "type": "string",
+            "pattern": "^sha256:[0-9a-f]{64}$"
+          },
+          "approved_at": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"
+          },
+          "consent_digest": {
+            "type": "string",
+            "pattern": "^sha256:[0-9a-f]{64}$"
+          }
         },
-        "required": ["orchestration_layer"]
-      },
-      "then": {
-        "properties": {
-          "primary_host": { "const": "claude" }
-        }
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "capability": { "const": "protect-hive-owned-state" }
+              },
+              "required": ["capability"]
+            },
+            "then": {
+              "properties": {
+                "event": { "const": "PreToolUse" },
+                "path": {
+                  "const": ".hive/hooks/protect-hive-owned-state"
+                },
+                "command": {
+                  "const": "hive hook --capability protect-hive-owned-state --event PreToolUse --capabilities .hive/runtime/current-capability-resolution.json --output json"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "capability": { "const": "update-integrity-guard" }
+              },
+              "required": ["capability"]
+            },
+            "then": {
+              "properties": {
+                "event": { "const": "PreToolUse" },
+                "path": {
+                  "const": ".hive/hooks/update-integrity-guard"
+                },
+                "command": {
+                  "const": "hive hook --capability update-integrity-guard --event PreToolUse --capabilities .hive/runtime/current-capability-resolution.json --output json"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "capability": { "const": "derived-state-invalidation" }
+              },
+              "required": ["capability"]
+            },
+            "then": {
+              "properties": {
+                "event": { "const": "PostToolUse" },
+                "path": {
+                  "const": ".hive/hooks/derived-state-invalidation"
+                },
+                "command": {
+                  "const": "hive hook --capability derived-state-invalidation --event PostToolUse --capabilities .hive/runtime/current-capability-resolution.json --output json"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "capability": { "const": "checkpoint-reminder" }
+              },
+              "required": ["capability"]
+            },
+            "then": {
+              "properties": {
+                "event": { "enum": ["PreCompact", "Stop"] },
+                "path": {
+                  "const": ".hive/hooks/checkpoint-reminder"
+                }
+              },
+              "oneOf": [
+                {
+                  "properties": {
+                    "event": { "const": "PreCompact" },
+                    "command": {
+                      "const": "hive hook --capability checkpoint-reminder --event PreCompact --capabilities .hive/runtime/current-capability-resolution.json --output json"
+                    }
+                  }
+                },
+                {
+                  "properties": {
+                    "event": { "const": "Stop" },
+                    "command": {
+                      "const": "hive hook --capability checkpoint-reminder --event Stop --capabilities .hive/runtime/current-capability-resolution.json --output json"
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        ]
       }
     }
-  ]
+  }
 }

@@ -6,11 +6,12 @@
 - `multica-ai/andrej-karpathy-skills`
 - Agent Skills specification
 - Copier configuration/update documentation
-- `steipete/CodexBar`
+- [`steipete/CodexBar` usage sensor qualification](codexbar-usage-sensor.md)
+- [`rusqlite 0.40.1` disposable SQLite index 검토](rusqlite-sqlite-index.md)
 - `netwaif/usage-coach`
 - `netwaif/multi-agent-starter`
 - `Yeachan-Heo/oh-my-codex`
 - `Yeachan-Heo/oh-my-claudecode`
 - GitHub Releases·artifact attestation·signing 문서
 
-Version-sensitive compatibility는 release 구현 직전에 pinned tag와 날짜를 별도 문서로 기록. Reference 이름만으로 dependency를 추가하지 않음.
+Version-sensitive compatibility는 release 구현 직전에 pinned tag와 날짜를 별도 문서로 기록. Reference 이름만을 근거로 한 dependency 추가 금지.

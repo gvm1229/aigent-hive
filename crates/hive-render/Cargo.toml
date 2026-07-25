@@ -1,0 +1,27 @@
+[package]
+name = "hive-render"
+version.workspace = true
+edition.workspace = true
+repository.workspace = true
+license.workspace = true
+publish = false
+
+[lib]
+path = "src/lib.rs"
+
+[dependencies]
+cap-fs-ext.workspace = true
+cap-std.workspace = true
+hive-core = { path = "../hive-core" }
+hive-projection = { path = "../hive-projection" }
+jsonschema.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+serde_json_canonicalizer.workspace = true
+serde_yaml.workspace = true
+sha2.workspace = true
+tempfile.workspace = true
+toml.workspace = true
+
+[lints]
+workspace = true
