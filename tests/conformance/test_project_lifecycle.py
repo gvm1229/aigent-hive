@@ -304,6 +304,24 @@ else:
                             / "skills/hive-prompt-refine/SKILL.md"
                         ).is_file()
                     )
+                    if host == "codex":
+                        marketplace = (
+                            user_root
+                            / ".hive/marketplaces/codex"
+                            / ".agents/plugins/marketplace.json"
+                        )
+                        self.assertEqual(
+                            json.loads(marketplace.read_text(encoding="utf-8"))[
+                                "plugins"
+                            ][0]["source"]["path"],
+                            "./plugins/aigent-hive",
+                        )
+                        self.assertFalse(
+                            (
+                                user_root
+                                / ".hive/marketplaces/codex/marketplace.json"
+                            ).exists()
+                        )
 
                 valid, valid_result = self.invoke(
                     "install",

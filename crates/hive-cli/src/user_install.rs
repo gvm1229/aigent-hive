@@ -714,7 +714,7 @@ fn build_plan(arguments: &UserArguments) -> Result<UserPlan, InstallError> {
                 UserHost::Antigravity => unreachable!(),
             };
             let marketplace_relative = match arguments.host {
-                UserHost::Codex => relative.join("marketplace.json"),
+                UserHost::Codex => relative.join(".agents/plugins/marketplace.json"),
                 UserHost::Claude => relative.join(".claude-plugin/marketplace.json"),
                 UserHost::Antigravity => unreachable!(),
             };
@@ -4834,6 +4834,29 @@ mod tests {
             merge_user_marker(malformed, &render_user_guidance(UserHost::Codex)),
             Err(InstallError::Conflict(_))
         ));
+    }
+
+    #[test]
+    fn codex_plan_uses_supported_marketplace_manifest_location() {
+        let temporary = tempdir().expect("tempdir");
+        let plan =
+            build_plan(&args(temporary.path(), UserHost::Codex, UserMode::DryRun)).expect("plan");
+        let marketplace = Path::new(".hive/marketplaces/codex/.agents/plugins/marketplace.json");
+        let bytes = &plan
+            .files
+            .get(marketplace)
+            .expect("Codex marketplace manifest")
+            .bytes;
+        let value: serde_json::Value =
+            serde_json::from_slice(bytes).expect("Codex marketplace JSON");
+        assert_eq!(value["name"], "aigent-hive");
+        assert_eq!(
+            value["plugins"][0]["source"]["path"],
+            "./plugins/aigent-hive"
+        );
+        assert!(!plan
+            .files
+            .contains_key(Path::new(".hive/marketplaces/codex/marketplace.json")));
     }
 
     #[test]

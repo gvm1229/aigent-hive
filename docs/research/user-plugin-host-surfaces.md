@@ -18,7 +18,7 @@
 ### Codex
 
 - Package: `~/.hive/marketplaces/codex/plugins/aigent-hive/`
-- Marketplace: `~/.hive/marketplaces/codex/marketplace.json`
+- Marketplace: `~/.hive/marketplaces/codex/.agents/plugins/marketplace.json`
 - Activation:
   `codex plugin marketplace add <marketplace-root> --json` →
   `codex plugin add aigent-hive@aigent-hive --json`
