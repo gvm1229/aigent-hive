@@ -2,11 +2,11 @@
 
 - 기준 branch: `develop`
 - product version: `0.7.0`
-- plan revision: `1.44`
+- plan revision: `1.45`
 - 현재 milestone: Phase 7 public qualification + user plugin/project lifecycle `0.8.0`
 - 현재 작업: user plugin·project harness·root knowledge·local-priority upgrade와
   native-first usage sensor의 local implementation·fixture qualification 완료;
-  실제 Codex·Antigravity user E2E와 unsigned native multi-platform qualification 완료,
+  실제 Codex·Antigravity user·usage E2E와 unsigned native multi-platform qualification 완료,
   Claude·Antigravity app UI·signed publication qualification 잔여
 - 외부 중지 경계: protected signing/publication credential, 실제 production publication,
   exact `1.0.0` 사용자 authority
@@ -14,7 +14,7 @@
   + `docs/plans/active/plugin-project-lifecycle.md`
   + `docs/plans/active/native-usage-sensor.md`
   + `docs/plans/active/documentation-style.md` + `docs/plans/active/security-review.md`
-- Plan completion: canonical checklist `173/182` 완료, `9`개 미완료, `95.1%`
+- Plan completion: canonical checklist `174/182` 완료, `8`개 미완료, `95.6%`
 - Native Goal routing: legacy `PLAN.md` checkbox 문구를 `phases/07-public-qualification.md`,
   `active/plugin-project-lifecycle.md`, `active/documentation-style.md`,
   `active/native-usage-sensor.md`, `active/security-review.md`로 해석
@@ -27,11 +27,12 @@
   `~/.claude/settings.json` mutation 0회, 실제 Pro/Max qualification 잔여
 - Antigravity CLI `1.1.7`: native machine sensor `unsupported`, qualified CodexBar
   fallback 구현
-- 실제 Antigravity fallback: CodexBar `0.45.2` provider error,
-  sanitized `usage_unknown`·exit `3`, raw payload persistence 0건
+- 실제 Antigravity fallback: CodexBar `0.45.2`, `default`·
+  `antigravity-claude-gpt` provider-defined pool, threshold `10%`, selected window
+  `multiple`, exit `0`, raw payload persistence 0건
 - 세 provider 공통 CodexBar fallback-only, native limited 뒤 fallback 우회 0회
 - CodexBar 미설치 notification·fixed command preview·explicit current-action consent 구현
-- 잔여: 실제 세 host parity와 future Antigravity native fixture
+- 잔여: 실제 Claude Pro/Max parity와 future Antigravity native fixture
 - Active implementation fragment:
   [`native-usage-sensor.md`](../plans/active/native-usage-sensor.md)
 - Decision:
@@ -75,7 +76,7 @@
 확인된 gap:
 
 - 실제 Claude Code install/update와 Antigravity app UI discovery E2E
-- 실제 Claude Pro/Max·Antigravity 성공 quota usage parity
+- 실제 Claude Pro/Max quota usage parity
 - macOS·Windows signing·notarization·publication
 
 실제 current-host evidence:
@@ -98,7 +99,7 @@
 계획 evidence:
 
 - Active fragment 8 KiB 제한 충족
-- Canonical checklist `173/182`, active checklist ID 중복 0건
+- Canonical checklist `174/182`, active checklist ID 중복 0건
 - Plan static contract 29/29, documentation style regression 18/18 PASS
 - Human documentation inventory 1,698/1,698 review, finding 0건
 - Markdown link conformance PASS
@@ -120,7 +121,8 @@
 - Explicit current-session disable 확인 필수; enable·toggle과 새 session default-enable
 - Current valid halt marker를 sensor보다 먼저 확인하고 반복 호출에서 sensor 재사용 금지
 - Account digest 생략 시 qualified sensor의 unique account만 허용; 0개·복수 fail-closed
-- Session window 우선, session 부재 시에만 weekly fallback
+- Quota pool별 provider-defined window 단독 적용; cadence window는 session 우선,
+  session 부재 시 weekly fallback; 모든 pool 통과 필수
 - Allowed: exit `0`, halt marker 없음
 - Limited·unknown: sanitized marker의 optimistic atomic publication, exit `3`
 - Marker 내용: host scope, session digest, PID, decision, window, threshold, measured time,
@@ -136,17 +138,17 @@
 
 ### Local qualification evidence
 
-- Rust workspace 365/365:
-  `hive-cli` 166, `hive-core` 56, `hive-projection` 22, `hive-render` 51,
+- Rust workspace 379/379:
+  `hive-cli` 174, `hive-core` 62, `hive-projection` 22, `hive-render` 51,
   `hive-update` 63, `hive-wiki` 7
-- Python conformance 517개 실행, 516 PASS, Windows `pwsh` 전용 1개 expected skip
+- Python conformance 524개 실행, 523 PASS, Windows `pwsh` 전용 1개 expected skip
 - Native hostile sensor·fallback, Phase 3 projection과 source usage guard regression PASS
-- 독립 shipping gate verifier: PASS, actionable finding 0건
+- 독립 Antigravity code·test review: PASS, actionable finding 0건
 
 남은 외부 범위:
 
 - 실제 Claude·Gemini Antigravity app session E2E
-- Codex 외 successful qualified subscription usage sensor
+- 실제 Claude Pro/Max qualified subscription usage sensor
 - Public signed multi-platform release candidate
 
 ## Source 개발 usage safeguard
@@ -265,7 +267,7 @@ Current worktree local qualification PASS:
 - Host: Apple M2, macOS 26.5.2, native `arm64`
 - Tested source: `ba798d8`
 - 상태: historical evidence. Current candidate
-  `b786a344dd9659ae4c734177618a77283e03ffaa` 재검증 필요
+  `28f1c366aa06a609b443724decc474cb7718ea8a` 재검증 필요
 - Locked `aarch64-apple-darwin` release build·version·Mach-O architecture PASS
 - Release strict Clippy·workspace strict Clippy·format PASS
 - Rust workspace 236/236
@@ -283,12 +285,12 @@ Current worktree local qualification PASS:
 
 Remote qualification evidence:
 
-- Current commit: `ec274584e481eaf17953f9788be4d57a90ad34c2`
+- Current commit: `28f1c366aa06a609b443724decc474cb7718ea8a`
 - Native release runtime:
-  [run `30201803879`](https://github.com/gvm1229/aigent-hive/actions/runs/30201803879),
+  [run `30205737619`](https://github.com/gvm1229/aigent-hive/actions/runs/30205737619),
   macOS arm64·Intel과 Windows x86_64 3/3 job PASS
 - GitHub Actions CI:
-  [run `30201803881`](https://github.com/gvm1229/aigent-hive/actions/runs/30201803881),
+  [run `30205737631`](https://github.com/gvm1229/aigent-hive/actions/runs/30205737631),
   7/7 job PASS
 - P7-040: clean-clone full CI PASS
 
@@ -309,6 +311,6 @@ Remote qualification evidence:
 ## 다음 action
 
 1. RPH-036 실제 Claude install/update와 Antigravity app discovery E2E
-2. NUS-020·025 실제 Claude·Antigravity qualification
+2. NUS-020 실제 Claude Pro/Max qualification
 3. NUS-014·P7-013·P7-021 실제 세 host matrix
 4. P7-018·020·037 signed release qualification

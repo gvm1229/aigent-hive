@@ -30,12 +30,13 @@ Snapshot freshness:
 - source confidence
 
 CodexBar adapter는 pinned-qualified CLI의 `usage` JSON에서 active account와 quota
-window를 검증. `guard` 결과만으로는 account와 freshness를 증명할 수 없으므로
-정본 snapshot으로 사용 금지. Session window가 있으면 weekly가 low, malformed
-또는 duplicate여도 session만 선택. Session이 없을 때만 단일 weekly window를
-fallback으로 선택. 선택 가능한 window가 없거나 선택된 window의
+pool·window를 검증. `guard` 결과만으로는 account와 freshness를 증명할 수 없으므로
+정본 snapshot으로 사용 금지. Cadence pool은 session window 우선, session 부재
+시에만 weekly fallback. Provider-defined window는 같은 pool의 cadence window와
+공존 금지. 모든 pool의 선택 window가 유효하고 threshold를 통과해야 permit 발급.
+선택 가능한 window가 없거나 어느 pool이든
 `remaining <= installed threshold`이면 새 permit을 발급 금지. Default
-installed threshold는 `10%`다.
+installed threshold는 `10%`.
 
 Adapter는 side-effect-free local command만 실행. Hive는 model call retry를 하지 않으며 local sensor read도 bounded attempt 후 unknown 처리.
 
@@ -46,7 +47,7 @@ role 하나를 요구하고 installed `.hive/config/harness.toml`의
 설치값과 exact하게 같을 때만 허용. Durable run, owner, role과 evidence 검증 뒤
 fresh CodexBar snapshot을 평가.
 
-Selected prior snapshot은 Git에서 제외된 Hive-owned
+Selected prior snapshot vector는 Git에서 제외된 Hive-owned
 `.hive/runtime/usage-history/`에만 bounded·integrity-bound record로 저장. 이후
 measurement/reset 역행과 같은 reset의 remaining 증가는 `usage_unknown`.
 Permit은 dispatch brief 준비 closure 직전에 한 번 소비하며 exact run

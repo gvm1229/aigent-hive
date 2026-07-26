@@ -66,7 +66,7 @@
   adapter 활성화; TUI text·screen·private LSP/HTTP·credential·browser state parsing 금지
 - [x] [NUS-024] Structured surface 부재 시 `native=unsupported`를 명시하고
   qualified CodexBar Antigravity adapter만 fallback으로 허용
-- [ ] [NUS-025] 실제 Antigravity host의 truthful unsupported·CodexBar fallback
+- [x] [NUS-025] 실제 Antigravity host의 truthful unsupported·CodexBar fallback
   parity qualification
 
 ## 4. Source·shipping integration
@@ -104,11 +104,14 @@
 - Codex·Claude Code·Antigravity CLI 재설치 제안 없음
 - CodexBar 분류: 모든 provider에서 fallback-only
 - Antigravity의 현재 상태: native machine sensor `unsupported`, CodexBar fallback 허용
+- Antigravity fallback command:
+  `codexbar usage --provider antigravity --source cli --format json --json-only`
+- Antigravity quota pool: `default`와 `antigravity-claude-gpt`의 provider-defined
+  window, 모든 pool 통과 필수
+- Antigravity live gate: CodexBar `0.45.2`, threshold `10%`, selected window
+  `multiple`, exit `0`, raw payload persistence 0건
 
 ## 잔여 evidence
 
-- `NUS-014`: 실제 세 host opt-in parity 잔여
+- `NUS-014`: 실제 Claude opt-in을 포함한 세 host aggregate matrix 잔여
 - `NUS-020`: 실제 Claude Pro/Max qualification 잔여
-- `NUS-025`: 실제 Antigravity native `unsupported`→CodexBar `0.45.2` fallback 호출,
-  provider error의 sanitized `usage_unknown`·exit `3`·raw persistence 0건 확인
-- `NUS-025`: CodexBar 성공 또는 limited snapshot의 normalized quota parity 잔여
