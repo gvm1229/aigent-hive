@@ -1,6 +1,6 @@
 # Aigent Hive active plan index
 
-> Revision: 1.42
+> Revision: 1.43
 > 기준일: 2026-07-26
 > Product version: `0.7.0`
 > 현재 milestone: Phase 7 public qualification + user plugin/project lifecycle `0.8.0`
@@ -13,7 +13,7 @@
 - Success: 세 host user install·project bootstrap·root knowledge promotion·local-priority
   update, 세 host native-first·CodexBar fallback-only usage guard와 signed
   multi-platform public qualification
-- Stop boundary: protected credential, irreversible production publication, exact `1.0.0` authority, source usage guard remaining `60%`
+- Stop boundary: protected credential, irreversible production publication, exact `1.0.0` authority, source usage guard remaining `10%`
 - Invariants: provider-neutral, canonical Markdown 우선, ownership·consent·foreign byte 보존, provider API·credential 경로 없음, force-push 없음, explicit-only major
 - Native Goal compatibility: 변경 불가 objective의 “unchecked item in `docs/plans/PLAN.md`”는 `PLAN.md` 내부 checkbox가 아니라 아래 `Active fragments`의 unchecked item을 뜻함
 

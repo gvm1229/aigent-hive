@@ -2,7 +2,7 @@
 
 - 기준 branch: `develop`
 - product version: `0.7.0`
-- plan revision: `1.42`
+- plan revision: `1.43`
 - 현재 milestone: Phase 7 public qualification + user plugin/project lifecycle `0.8.0`
 - 현재 작업: user plugin·project harness·root knowledge·local-priority upgrade와
   native-first usage sensor의 local implementation·fixture qualification 완료;
@@ -139,7 +139,7 @@
 
 - Source-only `hive-usage-guard` Skill과 15초 native Codex app-server primary·CodexBar
   fallback-only watcher
-- 현재 session threshold: remaining `60%` inclusive
+- 현재 session threshold: remaining `10%` inclusive
 - Session window 우선, session 부재 시 weekly fallback
 - 매 user turn과 tool·mutation·delegation·external write·push·final-answer 경계의 fresh
   `gate`
@@ -246,10 +246,12 @@ Current worktree local qualification PASS:
 - Skill·template·compiled projection parity
 - 독립 architecture·code·completion verification PASS, actionable finding 0건
 
-### macOS Apple Silicon local release qualification CLEAR
+### macOS Apple Silicon local release qualification historical CLEAR
 
 - Host: Apple M2, macOS 26.5.2, native `arm64`
 - Tested source: `ba798d8`
+- 상태: historical evidence. Current candidate
+  `b786a344dd9659ae4c734177618a77283e03ffaa` 재검증 필요
 - Locked `aarch64-apple-darwin` release build·version·Mach-O architecture PASS
 - Release strict Clippy·workspace strict Clippy·format PASS
 - Rust workspace 236/236
@@ -267,8 +269,8 @@ Current worktree local qualification PASS:
 
 Remote qualification evidence:
 
-- Commit: `2520d1c21fdd9459efe71423f4e886ab8f1be976`
-- GitHub Actions CI: [run `30115774347`](https://github.com/gvm1229/aigent-hive/actions/runs/30115774347), 7/7 job PASS
+- Commit: `b786a344dd9659ae4c734177618a77283e03ffaa`
+- GitHub Actions CI: [run `30199332042`](https://github.com/gvm1229/aigent-hive/actions/runs/30199332042), 7/7 job PASS
 - P7-040: clean-clone full CI PASS
 
 검증 경계:

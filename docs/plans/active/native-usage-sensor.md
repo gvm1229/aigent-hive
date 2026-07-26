@@ -53,8 +53,8 @@
   callback receipt time 기반 freshness와 sanitized ignored snapshot 구현
 - [x] [NUS-019] Existing status line non-clobbering integration snippet·preview 제공,
   미설정·trust 거절·first response 이전·stale capture를 native unavailable로 분류
-- [ ] [NUS-020] Mock stdin JSON, missing independent window, null·stale·wrong-session,
-  cancellation·concurrent write와 actual Claude Pro/Max host qualification
+- [ ] [NUS-020] 실제 Claude Pro/Max host에서 5-hour·7-day parity, 독립 window
+  omission, existing status line non-clobber qualification
 
 ## 3. Antigravity native sensor
 
@@ -66,8 +66,8 @@
   adapter 활성화; TUI text·screen·private LSP/HTTP·credential·browser state parsing 금지
 - [x] [NUS-024] Structured surface 부재 시 `native=unsupported`를 명시하고
   qualified CodexBar Antigravity adapter만 fallback으로 허용
-- [ ] [NUS-025] Future native fixture와 실제 Antigravity host parity, unsupported
-  state·CodexBar fallback·native limited no-fallback conformance
+- [ ] [NUS-025] 실제 Antigravity host의 truthful unsupported·CodexBar fallback
+  parity qualification
 
 ## 4. Source·shipping integration
 
@@ -109,4 +109,4 @@
 
 - `NUS-014`: 실제 세 host opt-in parity 잔여
 - `NUS-020`: 실제 Claude Pro/Max qualification 잔여
-- `NUS-025`: 실제 Antigravity parity·future native fixture 잔여
+- `NUS-025`: 실제 Antigravity truthful unsupported·CodexBar fallback parity 잔여

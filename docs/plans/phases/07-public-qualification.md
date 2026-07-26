@@ -28,7 +28,7 @@
 
 | Target | 상태·evidence | 남은 경계 |
 | --- | --- | --- |
-| `aarch64-apple-darwin` | **CLEAR — local build·package·install·runtime**; [Apple M2 evidence](../../state/CURRENT.md#macos-apple-silicon-local-release-qualification-clear) | P7-020·037 Developer ID·notarization·attestation |
+| `aarch64-apple-darwin` | Historical CLEAR — `ba798d8` local build·package·install·runtime; [Apple M2 evidence](../../state/CURRENT.md#macos-apple-silicon-local-release-qualification-historical-clear) | Current candidate 재검증, P7-020·037 Developer ID·notarization·attestation |
 | `x86_64-apple-darwin` | PENDING; native Intel evidence 없음 | Intel build·install·runtime |
 
 External authority gate: exact `1.0.0` 사용자 지시 전 stable major preparation 금지.

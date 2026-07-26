@@ -115,8 +115,7 @@
   override precedence와 source-root refusal hostile conformance
 - [x] [RPH-035] Cross-project leakage, secret candidate, duplicate preference,
   contradiction, concurrent promotion와 root index rebuild hostile conformance
-- [ ] [RPH-036] Unmodified replace, user-modified local priority, disjoint upstream add,
-  missing base, interrupted root·project update와 세 host install/update E2E
+- [ ] [RPH-036] 실제 Codex·Claude Code·Antigravity user install·update E2E
 
 잔여 evidence:
 
