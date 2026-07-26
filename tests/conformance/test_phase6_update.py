@@ -394,13 +394,87 @@ class Phase6StaticContracts(unittest.TestCase):
                 ]
             return []
 
-        for name in ("release.yml", "release-publish.yml"):
+        for name in ("release.yml", "release-publish.yml", "release-runtime.yml"):
             text = (ROOT / ".github/workflows" / name).read_text(encoding="utf-8")
             workflow = yaml.safe_load(text)
             scripts = run_scripts(workflow)
             self.assertTrue(scripts)
             for script in scripts:
                 self.assertNotIn("${{ inputs.", script, name)
+
+    def test_unsigned_native_release_runtime_qualification_contract(self) -> None:
+        path = ROOT / ".github/workflows/release-runtime.yml"
+        text = path.read_text(encoding="utf-8")
+        workflow = yaml.safe_load(text)
+        self.assertIsInstance(workflow, dict)
+        triggers = workflow.get("on", workflow.get(True))
+        self.assertIsInstance(triggers, dict)
+        self.assertIn("workflow_dispatch", triggers)
+        self.assertEqual(triggers["push"]["branches"], ["develop", "main"])
+        self.assertIn(
+            ".github/workflows/release-runtime.yml",
+            triggers["push"]["paths"],
+        )
+        self.assertEqual(workflow["permissions"], {"contents": "read"})
+        self.assertEqual(set(workflow["jobs"]), {"macos", "windows"})
+        macos_matrix = workflow["jobs"]["macos"]["strategy"]["matrix"]["include"]
+        self.assertEqual(
+            {(entry["runner"], entry["target"]) for entry in macos_matrix},
+            {
+                ("macos-15", "aarch64-apple-darwin"),
+                ("macos-15-intel", "x86_64-apple-darwin"),
+            },
+        )
+        self.assertEqual(workflow["jobs"]["windows"]["runs-on"], "windows-2025")
+        for required in (
+            "push:",
+            "workflow_dispatch:",
+            "develop",
+            "main",
+            "permissions:",
+            "contents: read",
+            "macos-15",
+            "macos-15-intel",
+            "windows-2025",
+            "aarch64-apple-darwin",
+            "x86_64-apple-darwin",
+            "x86_64-pc-windows-msvc",
+            "cargo build --release --locked",
+            "GITHUB_WORKFLOW_SHA",
+            "git rev-parse HEAD",
+            "lipo -archs",
+            "0x8664",
+            "expected-entries.txt",
+            "Compare-Object $expected $entries",
+            'Compress-Archive -Path "$package\\*"',
+            '$expected = @("LICENSE", "hive.exe")',
+            "if ($LASTEXITCODE -ne 0)",
+            "BINARY_DIGEST",
+            "ARCHIVE_DIGEST",
+            "hive.user-install-dry-run-complete",
+            "hive.user-install-complete",
+            "hive.user-install-valid",
+            "GITHUB_STEP_SUMMARY",
+        ):
+            self.assertIn(required, text)
+        self.assertEqual(text.count("--host antigravity"), 6)
+        self.assertEqual(text.count("--dry-run --output json"), 2)
+        self.assertEqual(text.count("--apply --output json"), 2)
+        self.assertEqual(text.count("--validate --output json"), 2)
+        for forbidden in (
+            "actions/upload-artifact",
+            "actions/attest",
+            "id-token: write",
+            "release-signing",
+            "release-publication",
+            "codesign",
+            "notarytool",
+            "artifact-signing",
+            "gh release",
+            "scripts/install.sh",
+            "scripts/install.ps1",
+        ):
+            self.assertNotIn(forbidden, text)
 
     def test_direct_homebrew_and_winget_paths_preserve_binary_ownership(self) -> None:
         shell = (ROOT / "scripts/install.sh").read_text(encoding="utf-8")
