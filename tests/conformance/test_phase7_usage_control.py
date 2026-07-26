@@ -8,6 +8,7 @@ import json
 import os
 import stat
 import subprocess
+import time
 import unittest
 from pathlib import Path
 
@@ -24,6 +25,9 @@ RAW_ACCOUNT = "usage-guard@example.invalid"
 ACCOUNT_DIGEST = "sha256:" + hashlib.sha256(RAW_ACCOUNT.encode()).hexdigest()
 CODEXBAR_FIXTURE = (
     REPOSITORY_ROOT / "tests/fixtures/phase5/usage/codexbar_fixture.py"
+).read_text(encoding="utf-8")
+CODEX_UNSUPPORTED_FIXTURE = (
+    REPOSITORY_ROOT / "tests/fixtures/phase5/usage/codex_unsupported_fixture.py"
 ).read_text(encoding="utf-8")
 
 HARNESS_CONFIG = """\
@@ -47,7 +51,28 @@ class ShippingUsageControlConformance(Phase1CliTestCase):
         (self.consumer / "sentinel.bin").write_bytes(b"user-owned\n")
         self.fake_bin = self.work_root / "fake-bin"
         self.fake_bin.mkdir()
+        self._write_fake_codex_unsupported()
         self._write_fake_codexbar()
+
+    def _write_fake_codex_unsupported(self) -> None:
+        if os.name == "nt":
+            script = self.fake_bin / "codex.cmd"
+            python = subprocess.list2cmdline([os.sys.executable])
+            script.write_text(
+                f'@{python} "%~dp0\\codex.py" %*\r\n',
+                encoding="utf-8",
+            )
+            (self.fake_bin / "codex.py").write_text(
+                CODEX_UNSUPPORTED_FIXTURE,
+                encoding="utf-8",
+            )
+            return
+        script = self.fake_bin / "codex"
+        script.write_text(
+            f"#!{os.sys.executable}\n{CODEX_UNSUPPORTED_FIXTURE}",
+            encoding="utf-8",
+        )
+        script.chmod(script.stat().st_mode | stat.S_IXUSR)
 
     def _write_fake_codexbar(self) -> None:
         if os.name == "nt":
@@ -74,6 +99,7 @@ class ShippingUsageControlConformance(Phase1CliTestCase):
         *arguments: str,
         sensor_case: str | None = None,
         extra_environment: dict[str, str] | None = None,
+        stdin: str | None = None,
     ) -> tuple[object, dict[str, object]]:
         environment = {
             **os.environ,
@@ -88,6 +114,7 @@ class ShippingUsageControlConformance(Phase1CliTestCase):
             check=False,
             text=True,
             capture_output=True,
+            input=stdin,
             timeout=5,
             env=environment,
         )
@@ -665,6 +692,124 @@ class ShippingUsageControlConformance(Phase1CliTestCase):
         )
         self.assertNotIn(RAW_ACCOUNT, process.stdout)
 
+    def test_claude_capture_is_sanitized_session_bound_and_native_limited(self) -> None:
+        config = self.consumer / ".hive/config/harness.toml"
+        config.write_text(
+            config.read_text(encoding="utf-8").replace(
+                'primary_host = "codex"',
+                'primary_host = "claude"',
+            ),
+            encoding="utf-8",
+        )
+        raw_session = "claude-private-session"
+        reset = int(time.time()) + 3600
+        capture, capture_result = self.invoke(
+            "usage",
+            "capture",
+            "--host",
+            "claude",
+            "--target",
+            str(self.consumer),
+            "--stdin-json",
+            stdin=json.dumps(
+                {
+                    "session_id": raw_session,
+                    "version": "2.1.90",
+                    "cwd": "/private/repository",
+                    "transcript_path": "/private/transcript.jsonl",
+                    "rate_limits": {
+                        "five_hour": {
+                            "used_percentage": 90,
+                            "resets_at": reset,
+                        },
+                        "seven_day": {
+                            "used_percentage": 1,
+                            "resets_at": reset + 3600,
+                        },
+                    },
+                }
+            ),
+        )
+        self.assert_result(
+            capture,
+            capture_result,
+            action="CaptureUsage",
+            exit_code=0,
+            status="success",
+            code="hive.usage-capture-recorded",
+        )
+        capture_path = self.consumer / capture_result["changed_paths"][0]
+        persisted = capture_path.read_text(encoding="utf-8")
+        self.assertNotIn(raw_session, persisted)
+        self.assertNotIn("/private/", persisted)
+
+        sensor_log = self.work_root / "claude-sensor.log"
+        enforced, enforced_result = self.invoke(
+            "usage",
+            "enforce",
+            "--target",
+            str(self.consumer),
+            "--session-id",
+            raw_session,
+            "--process-id",
+            "990",
+            sensor_case="allow",
+            extra_environment={
+                "FAKE_CODEXBAR_LOG": str(sensor_log),
+                "FAKE_CODEXBAR_PROVIDER": "claude",
+            },
+        )
+        self.assert_result(
+            enforced,
+            enforced_result,
+            action="CheckUsage",
+            exit_code=3,
+            status="blocked",
+            code="hive.usage-limited",
+        )
+        self.assertEqual(enforced_result["data"]["selected_window"], "session")
+        self.assertFalse(sensor_log.exists(), "native limited must not call CodexBar")
+
+    def test_antigravity_native_unsupported_uses_codexbar_fallback(self) -> None:
+        config = self.consumer / ".hive/config/harness.toml"
+        config.write_text(
+            config.read_text(encoding="utf-8").replace(
+                'primary_host = "codex"',
+                'primary_host = "antigravity"',
+            ),
+            encoding="utf-8",
+        )
+        sensor_log = self.work_root / "antigravity-sensor.log"
+
+        process, result = self.invoke(
+            "usage",
+            "enforce",
+            "--target",
+            str(self.consumer),
+            "--session-id",
+            "antigravity-session",
+            "--process-id",
+            "991",
+            "--account-digest",
+            ACCOUNT_DIGEST,
+            sensor_case="allow",
+            extra_environment={
+                "FAKE_CODEXBAR_LOG": str(sensor_log),
+                "FAKE_CODEXBAR_PROVIDER": "antigravity",
+            },
+        )
+
+        self.assert_result(
+            process,
+            result,
+            action="CheckUsage",
+            exit_code=0,
+            status="success",
+            code="hive.usage-allowed",
+        )
+        self.assertEqual(result["data"]["host_scope"], "antigravity")
+        self.assertEqual(len(sensor_log.read_text(encoding="utf-8").splitlines()), 2)
+
     def test_enforce_creates_a_latched_marker_and_repeat_skips_the_sensor(
         self,
     ) -> None:
@@ -918,7 +1063,7 @@ class ShippingUsageControlConformance(Phase1CliTestCase):
             self.assertEqual(result["code"], "hive.usage-control-blocked")
             self.assertEqual(outside.read_bytes(), b"user-owned\n")
 
-    def test_host_scope_changes_the_session_digest_and_non_codex_fails_closed(
+    def test_host_scope_changes_session_digest_and_wrong_fallback_provider_fails_closed(
         self,
     ) -> None:
         config = self.consumer / ".hive/config/harness.toml"
@@ -946,7 +1091,45 @@ class ShippingUsageControlConformance(Phase1CliTestCase):
             b"claude\0same-session"
         ).hexdigest()
         self.assertEqual(result["data"]["session_id_digest"], expected)
-        self.assertFalse(sensor_log.exists())
+        self.assertEqual(
+            len(sensor_log.read_text(encoding="utf-8").splitlines()),
+            2,
+            "missing Claude capture must try the qualified fallback once",
+        )
+
+    def test_missing_claude_capture_and_fallback_offer_exact_install_preview(
+        self,
+    ) -> None:
+        config = self.consumer / ".hive/config/harness.toml"
+        config.write_text(
+            HARNESS_CONFIG.replace(
+                'primary_host = "codex"',
+                'primary_host = "claude"',
+            ),
+            encoding="utf-8",
+        )
+        empty_path = self.work_root / "empty-fallback-path"
+        empty_path.mkdir()
+
+        process, result = self.invoke(
+            "usage",
+            "enforce",
+            "--target",
+            str(self.consumer),
+            "--session-id",
+            "missing-fallback",
+            "--process-id",
+            "909",
+            extra_environment={"PATH": str(empty_path)},
+        )
+
+        self.assertEqual(process.returncode, 3, process.stderr)
+        self.assertEqual(result["code"], "hive.usage-unknown")
+        self.assertIn(
+            "hive usage fallback-install --host claude --dry-run --output json",
+            result["next_action"],
+        )
+        self.assertNotIn("<host>", result["next_action"])
 
     @unittest.skipIf(os.name == "nt", "symlink fixture is POSIX-specific")
     def test_threshold_rejects_a_symlinked_owned_config(self) -> None:

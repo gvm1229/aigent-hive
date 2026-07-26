@@ -5,12 +5,15 @@ use hive_core::sha256_digest;
 use hive_core::usage_guard::{evaluate_usage, UsageDecision, UsagePolicy};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
+use std::io::{self, Read};
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 const MAX_CONFIG_BYTES: usize = 64 * 1024;
 const MAX_CONTROL_BYTES: usize = 16 * 1024;
+const MAX_CAPTURE_BYTES: usize = 1024 * 1024;
+const CLAUDE_CAPTURE_MAX_AGE_SECONDS: u64 = 120;
 const CONFIG_PATH: &str = ".hive/config/harness.toml";
 const USAGE_CONTROL: &str = "\
 Inspect or change the installed usage safeguard.
@@ -20,6 +23,7 @@ USAGE:
     hive usage status --target <dir> --session-id <id> --process-id <positive-u32> --output json
     hive usage threshold --target <dir> --remaining-percent <1..99> --output json
     hive usage session --target <dir> --session-id <id> --process-id <positive-u32> --action enable|disable|toggle [--confirm-session-disable] --output json
+    hive usage capture --host claude (--target <dir>|--target-from-stdin) --stdin-json --output json
 ";
 
 #[derive(Debug)]
@@ -49,6 +53,12 @@ struct SessionArguments {
     confirm_disable: bool,
 }
 
+#[derive(Debug)]
+struct CaptureArguments {
+    target: Option<PathBuf>,
+    target_from_stdin: bool,
+}
+
 #[derive(Clone, Debug)]
 struct SessionBinding {
     host_scope: String,
@@ -73,6 +83,61 @@ struct TurnObservation {
     selected_window: &'static str,
     measured_at: u64,
     evidence_digest: String,
+    next_action: Option<String>,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+struct ClaudeStatusInput {
+    session_id: String,
+    version: String,
+    #[serde(default)]
+    workspace: Option<ClaudeWorkspace>,
+    rate_limits: ClaudeRateLimits,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+struct ClaudeWorkspace {
+    #[serde(default)]
+    project_dir: Option<String>,
+    #[serde(default)]
+    current_dir: Option<String>,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+struct ClaudeRateLimits {
+    #[serde(default)]
+    five_hour: Option<ClaudeStatusWindow>,
+    #[serde(default)]
+    seven_day: Option<ClaudeStatusWindow>,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+struct ClaudeStatusWindow {
+    used_percentage: f64,
+    resets_at: u64,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+struct ClaudeCapture {
+    schema_version: u32,
+    sensor_id: String,
+    sensor_version: String,
+    host_scope: String,
+    session_id_digest: String,
+    received_at_unix_seconds: u64,
+    received_at_unix_millis: u128,
+    expires_at_unix_seconds: u64,
+    windows: Vec<ClaudeCaptureWindow>,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+struct ClaudeCaptureWindow {
+    name: String,
+    window_minutes: u32,
+    remaining_percent: f64,
+    resets_at_unix_seconds: u64,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -135,6 +200,7 @@ pub(crate) fn run_usage_control(arguments: &[String]) -> ExitCode {
         || arguments == ["status", "--help"]
         || arguments == ["threshold", "--help"]
         || arguments == ["session", "--help"]
+        || arguments == ["capture", "--help"]
     {
         print!("{USAGE_CONTROL}");
         return ExitCode::SUCCESS;
@@ -156,6 +222,10 @@ pub(crate) fn run_usage_control(arguments: &[String]) -> ExitCode {
             "ControlUsageSession",
             parse_session(&arguments[1..]).and_then(|parsed| control_session(&parsed)),
         ),
+        Some("capture") => (
+            "CaptureUsage",
+            parse_capture(&arguments[1..]).and_then(|parsed| capture_claude(&parsed)),
+        ),
         Some(other) => (
             "CheckUsage",
             Err(AdapterError::Input(format!(
@@ -169,6 +239,292 @@ pub(crate) fn run_usage_control(arguments: &[String]) -> ExitCode {
     };
     let result = result.unwrap_or_else(|error| failure_result(action, &error));
     emit_action_result(&result)
+}
+
+fn parse_capture(arguments: &[String]) -> Result<CaptureArguments, AdapterError> {
+    let mut target = None;
+    let mut host = None;
+    let mut output = None;
+    let mut stdin_json = false;
+    let mut target_from_stdin = false;
+    let mut index = 0;
+    while index < arguments.len() {
+        match arguments[index].as_str() {
+            "--stdin-json" if !stdin_json => {
+                stdin_json = true;
+                index += 1;
+            }
+            "--stdin-json" => {
+                return Err(AdapterError::Input(
+                    "duplicate option: --stdin-json".to_owned(),
+                ));
+            }
+            "--target-from-stdin" if !target_from_stdin => {
+                target_from_stdin = true;
+                index += 1;
+            }
+            "--target-from-stdin" => {
+                return Err(AdapterError::Input(
+                    "duplicate option: --target-from-stdin".to_owned(),
+                ));
+            }
+            option @ ("--target" | "--host" | "--output") => {
+                let value = arguments
+                    .get(index + 1)
+                    .ok_or_else(|| AdapterError::Input(format!("missing value for {option}")))?;
+                let slot = match option {
+                    "--target" => &mut target,
+                    "--host" => &mut host,
+                    "--output" => &mut output,
+                    _ => unreachable!(),
+                };
+                if slot.replace(value.clone()).is_some() {
+                    return Err(AdapterError::Input(format!("duplicate option: {option}")));
+                }
+                index += 2;
+            }
+            option => {
+                return Err(AdapterError::Input(format!("unknown option: {option}")));
+            }
+        }
+    }
+    if host.as_deref() != Some("claude") {
+        return Err(AdapterError::Input(
+            "usage capture currently requires --host claude".to_owned(),
+        ));
+    }
+    if output.as_deref() != Some("json") {
+        return Err(AdapterError::Input(
+            "usage capture requires --output json".to_owned(),
+        ));
+    }
+    if !stdin_json {
+        return Err(AdapterError::Input(
+            "usage capture requires --stdin-json".to_owned(),
+        ));
+    }
+    if target.is_some() == target_from_stdin {
+        return Err(AdapterError::Input(
+            "usage capture requires exactly one of --target or --target-from-stdin".to_owned(),
+        ));
+    }
+    Ok(CaptureArguments {
+        target: target.map(PathBuf::from),
+        target_from_stdin,
+    })
+}
+
+fn capture_claude(arguments: &CaptureArguments) -> Result<ActionResult, AdapterError> {
+    let mut input = Vec::new();
+    io::stdin()
+        .take(u64::try_from(MAX_CAPTURE_BYTES + 1).expect("capture limit fits u64"))
+        .read_to_end(&mut input)
+        .map_err(|error| AdapterError::Input(format!("cannot read status-line stdin: {error}")))?;
+    if input.len() > MAX_CAPTURE_BYTES {
+        return Err(AdapterError::Input(
+            "Claude status-line JSON exceeds 1 MiB".to_owned(),
+        ));
+    }
+    let parsed = serde_json::from_slice::<ClaudeStatusInput>(&input)
+        .map_err(|_| AdapterError::Input("Claude status-line JSON is malformed".to_owned()))?;
+    let target_path = if arguments.target_from_stdin {
+        claude_workspace_target(&parsed)?
+    } else {
+        arguments
+            .target
+            .clone()
+            .ok_or_else(|| AdapterError::Input("capture target is missing".to_owned()))?
+    };
+    let target = PinnedTarget::open(&target_path)?;
+    let config = read_installed_config(&target)?;
+    if config.primary_host != "claude" {
+        return Err(AdapterError::Safety(
+            "Claude usage capture requires a Claude-primary installed harness".to_owned(),
+        ));
+    }
+    let now = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map_err(|_| AdapterError::Internal("system clock is before Unix epoch".to_owned()))?;
+    let capture = normalize_claude_capture(&parsed, now.as_secs(), now.as_millis())?;
+    let relative = claude_capture_path(&capture.session_id_digest)?;
+    let desired = serde_json::to_vec(&capture)
+        .map_err(|error| AdapterError::Internal(format!("cannot encode capture: {error}")))?
+        .into_iter()
+        .chain(std::iter::once(b'\n'))
+        .collect::<Vec<_>>();
+    let mut changed = false;
+    for attempt in 0..3 {
+        let snapshot = target.snapshot_bounded(&relative, MAX_CONTROL_BYTES)?;
+        if let Some(existing) = snapshot.bytes() {
+            let existing = serde_json::from_slice::<ClaudeCapture>(existing).map_err(|_| {
+                AdapterError::Safety("existing Claude capture is malformed".to_owned())
+            })?;
+            if existing.received_at_unix_millis > capture.received_at_unix_millis {
+                break;
+            }
+        }
+        match target.publish_runtime(&relative, &snapshot, &desired) {
+            Ok(value) => {
+                changed = value;
+                break;
+            }
+            Err(AdapterError::Conflict(_)) if attempt < 2 => {}
+            Err(error) => return Err(error),
+        }
+    }
+    Ok(ActionResult {
+        schema_version: 1,
+        action: "CaptureUsage",
+        status: "success",
+        exit_code: 0,
+        code: if changed {
+            "hive.usage-capture-recorded"
+        } else {
+            "hive.usage-capture-current"
+        },
+        message: "sanitized Claude subscription usage capture is current".to_owned(),
+        changed_paths: changed
+            .then(|| portable_relative_path(&relative))
+            .into_iter()
+            .collect(),
+        evidence: vec![Evidence {
+            kind: "report",
+            locator: "claude-statusline-capture:sanitized".to_owned(),
+            digest: sha256_digest(&desired),
+        }],
+        next_action: None,
+        data: Some(json!({
+            "host_scope": "claude",
+            "session_id_digest": capture.session_id_digest,
+            "received_at_unix_seconds": capture.received_at_unix_seconds,
+            "windows": capture.windows.iter().map(|window| window.name.as_str()).collect::<Vec<_>>(),
+            "raw_input_persisted": false,
+        })),
+    })
+}
+
+fn claude_workspace_target(input: &ClaudeStatusInput) -> Result<PathBuf, AdapterError> {
+    let workspace = input.workspace.as_ref().ok_or_else(|| {
+        AdapterError::Unsupported(
+            "Claude status-line workspace path is unavailable; configure an explicit --target wrapper"
+                .to_owned(),
+        )
+    })?;
+    let path = workspace
+        .project_dir
+        .as_deref()
+        .or(workspace.current_dir.as_deref())
+        .ok_or_else(|| {
+            AdapterError::Unsupported(
+                "Claude status-line workspace path is unavailable; configure an explicit --target wrapper"
+                    .to_owned(),
+            )
+        })?;
+    if path.is_empty() || path.len() > 4096 || path.chars().any(char::is_control) {
+        return Err(AdapterError::Input(
+            "Claude status-line workspace path is invalid".to_owned(),
+        ));
+    }
+    let target = PathBuf::from(path);
+    if !target.is_absolute() {
+        return Err(AdapterError::Input(
+            "Claude status-line workspace path must be absolute".to_owned(),
+        ));
+    }
+    Ok(target)
+}
+
+fn normalize_claude_capture(
+    input: &ClaudeStatusInput,
+    received_at: u64,
+    received_at_millis: u128,
+) -> Result<ClaudeCapture, AdapterError> {
+    if input.session_id.is_empty()
+        || input.session_id.len() > 256
+        || input.session_id.chars().any(char::is_control)
+    {
+        return Err(AdapterError::Input(
+            "Claude status-line session_id is invalid".to_owned(),
+        ));
+    }
+    if input.version.is_empty()
+        || input.version.len() > 64
+        || input.version.chars().any(char::is_control)
+    {
+        return Err(AdapterError::Input(
+            "Claude status-line version is invalid".to_owned(),
+        ));
+    }
+    let mut windows = Vec::new();
+    if let Some(window) = input.rate_limits.five_hour.as_ref() {
+        windows.push(normalize_claude_window(
+            window,
+            "session",
+            300,
+            received_at,
+        )?);
+    }
+    if let Some(window) = input.rate_limits.seven_day.as_ref() {
+        windows.push(normalize_claude_window(
+            window,
+            "weekly",
+            10_080,
+            received_at,
+        )?);
+    }
+    if windows.is_empty() {
+        return Err(AdapterError::Unsupported(
+            "Claude rate_limits are unavailable before the first subscriber response".to_owned(),
+        ));
+    }
+    let binding = ParsedBinding {
+        session_id: input.session_id.clone(),
+        process_id: 1,
+    };
+    Ok(ClaudeCapture {
+        schema_version: 1,
+        sensor_id: "claude-statusline".to_owned(),
+        sensor_version: input.version.clone(),
+        host_scope: "claude".to_owned(),
+        session_id_digest: bind_session(&binding, "claude").session_digest,
+        received_at_unix_seconds: received_at,
+        received_at_unix_millis: received_at_millis,
+        expires_at_unix_seconds: received_at.saturating_add(CLAUDE_CAPTURE_MAX_AGE_SECONDS),
+        windows,
+    })
+}
+
+fn normalize_claude_window(
+    window: &ClaudeStatusWindow,
+    name: &str,
+    window_minutes: u32,
+    received_at: u64,
+) -> Result<ClaudeCaptureWindow, AdapterError> {
+    if !window.used_percentage.is_finite() || !(0.0..=100.0).contains(&window.used_percentage) {
+        return Err(AdapterError::Input(
+            "Claude rate-limit percentage is invalid".to_owned(),
+        ));
+    }
+    if window.resets_at <= received_at {
+        return Err(AdapterError::Input(
+            "Claude rate-limit window is stale".to_owned(),
+        ));
+    }
+    Ok(ClaudeCaptureWindow {
+        name: name.to_owned(),
+        window_minutes,
+        remaining_percent: 100.0 - window.used_percentage,
+        resets_at_unix_seconds: window.resets_at,
+    })
+}
+
+fn claude_capture_path(session_digest: &str) -> Result<PathBuf, AdapterError> {
+    let digest = session_digest
+        .strip_prefix("sha256:")
+        .ok_or_else(|| AdapterError::Internal("Claude session digest is malformed".to_owned()))?;
+    Ok(PathBuf::from(format!(
+        ".hive/runtime/usage-guard/claude/{digest}.json"
+    )))
 }
 
 fn parse_status(arguments: &[String]) -> Result<StatusArguments, AdapterError> {
@@ -445,11 +801,17 @@ fn enforce(arguments: &EnforceArguments) -> Result<ActionResult, AdapterError> {
         ));
     }
 
-    let observation = observe_usage(&config, arguments.account_digest.as_deref());
+    let observation = observe_usage(
+        &target,
+        &config,
+        &binding,
+        arguments.account_digest.as_deref(),
+    );
     let Some(decision) = observation.decision else {
         return Ok(allowed_result(&binding, &config, &observation));
     };
 
+    let next_action = observation.next_action.clone();
     let marker = HaltMarker {
         schema_version: 1,
         host_scope: binding.host_scope.clone(),
@@ -474,41 +836,102 @@ fn enforce(arguments: &EnforceArguments) -> Result<ActionResult, AdapterError> {
             "published halt marker did not bind to the current session".to_owned(),
         ));
     }
-    Ok(halted_result(&binding, &published, changed))
+    let mut result = halted_result(&binding, &published, changed);
+    result.next_action = next_action;
+    Ok(result)
 }
 
-fn observe_usage(config: &InstalledUsageConfig, account_digest: Option<&str>) -> TurnObservation {
+fn observe_usage(
+    target: &PinnedTarget,
+    config: &InstalledUsageConfig,
+    binding: &SessionBinding,
+    account_digest: Option<&str>,
+) -> TurnObservation {
     let sampled_at = SystemTime::now();
     let sampled_at_unix = sampled_at
         .duration_since(UNIX_EPOCH)
         .ok()
         .and_then(|duration| i64::try_from(duration.as_secs()).ok());
-    let snapshot = if config.primary_host == "codex" {
-        match account_digest {
-            Some(account_digest) => {
-                usage::check_with_runner(&usage::SystemCommandRunner, account_digest, sampled_at)
-            }
-            None => usage::check_unique_with_runner(&usage::SystemCommandRunner, sampled_at),
-        }
-    } else {
-        Err(usage::SensorError::WrongProvider)
+    let snapshot = match config.primary_host.as_str() {
+        "codex" => match account_digest {
+            Some(account_digest) => usage::check_preferred_with_runners(
+                &usage::SystemCommandRunner,
+                &usage::SystemCommandRunner,
+                account_digest,
+                sampled_at,
+            ),
+            None => usage::check_preferred_unique_with_runners(
+                &usage::SystemCommandRunner,
+                &usage::SystemCommandRunner,
+                sampled_at,
+            ),
+        },
+        "claude" => usage::native_then_fallback(
+            usage::UsageHost::Claude,
+            read_claude_capture_snapshot(target, binding, sampled_at),
+            || match account_digest {
+                Some(account_digest) => usage::check_codexbar_provider_with_runner(
+                    &usage::SystemCommandRunner,
+                    usage::UsageHost::Claude,
+                    account_digest,
+                    sampled_at,
+                ),
+                None => usage::check_codexbar_provider_unique_with_runner(
+                    &usage::SystemCommandRunner,
+                    usage::UsageHost::Claude,
+                    sampled_at,
+                ),
+            },
+        ),
+        "antigravity" => usage::native_then_fallback(
+            usage::UsageHost::Antigravity,
+            Err(usage::SensorError::Unsupported),
+            || match account_digest {
+                Some(account_digest) => usage::check_codexbar_provider_with_runner(
+                    &usage::SystemCommandRunner,
+                    usage::UsageHost::Antigravity,
+                    account_digest,
+                    sampled_at,
+                ),
+                None => usage::check_codexbar_provider_unique_with_runner(
+                    &usage::SystemCommandRunner,
+                    usage::UsageHost::Antigravity,
+                    sampled_at,
+                ),
+            },
+        ),
+        _ => Err(usage::SensorError::WrongProvider),
     };
     let Ok(snapshot) = snapshot else {
         let error = snapshot.expect_err("the failed sensor result was matched");
+        let next_action = match error {
+            usage::SensorError::FallbackRequired(host) => {
+                Some(usage::fallback_install_next_action(host))
+            }
+            _ => None,
+        };
         return TurnObservation {
             decision: Some("usage-unknown"),
             selected_window: "unknown",
             measured_at: sampled_at_unix
                 .and_then(|value| u64::try_from(value).ok())
                 .unwrap_or(0),
-            evidence_digest: sha256_digest(format!("codexbar-error:{error}").as_bytes()),
+            evidence_digest: sha256_digest(
+                format!("usage-sensor-error:{}:{error}", config.primary_host).as_bytes(),
+            ),
+            next_action,
         };
     };
     let decision = match sampled_at_unix.and_then(|now| {
-        UsagePolicy::new("codexbar", "0.45.2", "codex", &snapshot.account_digest)
-            .with_stop_remaining_percent(config.threshold)
-            .ok()
-            .map(|policy| evaluate_usage(&policy, &snapshot.core_snapshots(), &[], now))
+        UsagePolicy::new(
+            &snapshot.sensor_id,
+            &snapshot.sensor_version,
+            &snapshot.provider,
+            &snapshot.account_digest,
+        )
+        .with_stop_remaining_percent(config.threshold)
+        .ok()
+        .map(|policy| evaluate_usage(&policy, &snapshot.core_snapshots(), &[], now))
     }) {
         Some(UsageDecision::Allow(_)) => None,
         Some(UsageDecision::Block(_)) => Some("halted"),
@@ -522,7 +945,107 @@ fn observe_usage(config: &InstalledUsageConfig, account_digest: Option<&str>) ->
             .map_or("unknown", |window| window.name),
         measured_at: snapshot.measured_at,
         evidence_digest: snapshot.evidence_digest(),
+        next_action: None,
     }
+}
+
+fn read_claude_capture_snapshot(
+    target: &PinnedTarget,
+    binding: &SessionBinding,
+    sampled_at: SystemTime,
+) -> Result<usage::NormalizedSnapshot, usage::SensorError> {
+    let relative = claude_capture_path(&binding.session_digest)
+        .map_err(|_| usage::SensorError::FilesystemSafety)?;
+    let bytes = target
+        .read_optional(&relative, MAX_CONTROL_BYTES)
+        .map_err(|error| match error {
+            AdapterError::Input(_) => usage::SensorError::OutputTooLarge,
+            _ => usage::SensorError::FilesystemSafety,
+        })?
+        .ok_or(usage::SensorError::Unavailable)?;
+    let capture = serde_json::from_value::<ClaudeCapture>(usage::parse_strict_native_json(&bytes)?)
+        .map_err(|_| usage::SensorError::Malformed)?;
+    let now = sampled_at
+        .duration_since(UNIX_EPOCH)
+        .map_err(|_| usage::SensorError::ClockInvalid)?
+        .as_secs();
+    if capture.schema_version != 1 {
+        return Err(usage::SensorError::UnsupportedVersion);
+    }
+    if capture.sensor_id != "claude-statusline" || capture.host_scope != "claude" {
+        return Err(usage::SensorError::WrongProvider);
+    }
+    if capture.session_id_digest != binding.session_digest {
+        return Err(usage::SensorError::WrongSession);
+    }
+    if capture.received_at_unix_millis / 1_000 != u128::from(capture.received_at_unix_seconds) {
+        return Err(usage::SensorError::AmbiguousData);
+    }
+    if capture.received_at_unix_seconds > now.saturating_add(5)
+        || capture.expires_at_unix_seconds
+            != capture
+                .received_at_unix_seconds
+                .saturating_add(CLAUDE_CAPTURE_MAX_AGE_SECONDS)
+        || now > capture.expires_at_unix_seconds
+    {
+        return Err(usage::SensorError::Stale);
+    }
+    let mut session = None;
+    let mut weekly = None;
+    for window in &capture.windows {
+        if !window.remaining_percent.is_finite()
+            || !(0.0..=100.0).contains(&window.remaining_percent)
+        {
+            return Err(usage::SensorError::Malformed);
+        }
+        if window.resets_at_unix_seconds <= now {
+            return Err(usage::SensorError::Stale);
+        }
+        let normalized = usage::NormalizedWindow {
+            name: match (window.name.as_str(), window.window_minutes) {
+                ("session", 300) => "session",
+                ("weekly", 10_080) => "weekly",
+                _ => return Err(usage::SensorError::WrongWindows),
+            },
+            window_minutes: window.window_minutes,
+            remaining_percent: window.remaining_percent,
+            resets_at: window.resets_at_unix_seconds,
+        };
+        match normalized.name {
+            "session" if session.is_none() => session = Some(normalized),
+            "weekly" if weekly.is_none() => weekly = Some(normalized),
+            _ => return Err(usage::SensorError::WrongWindows),
+        }
+    }
+    let selected = session.or(weekly).ok_or(usage::SensorError::WrongWindows)?;
+    Ok(usage::NormalizedSnapshot {
+        sensor_id: capture.sensor_id,
+        sensor_version: capture.sensor_version,
+        provider: "claude".to_owned(),
+        account_digest: binding.session_digest.clone(),
+        measured_at: capture.received_at_unix_seconds,
+        expires_at: capture.expires_at_unix_seconds,
+        source_confidence: "local".to_owned(),
+        windows: vec![selected],
+    })
+}
+
+pub(crate) fn read_claude_capture_for_session(
+    target: &PinnedTarget,
+    session_id: &str,
+    sampled_at: SystemTime,
+) -> Result<usage::NormalizedSnapshot, usage::SensorError> {
+    if session_id.is_empty() || session_id.len() > 256 || session_id.chars().any(char::is_control) {
+        return Err(usage::SensorError::WrongSession);
+    }
+    let binding = bind_session(
+        &ParsedBinding {
+            session_id: session_id.to_owned(),
+            process_id: 1,
+        },
+        "claude",
+    );
+    read_claude_capture_snapshot(target, &binding, sampled_at)
 }
 
 fn allowed_result(
@@ -1045,5 +1568,213 @@ fn failure_result(action: &'static str, error: &AdapterError) -> ActionResult {
         evidence: Vec::new(),
         next_action: None,
         data: None,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{
+        bind_session, claude_capture_path, read_claude_capture_snapshot, ParsedBinding,
+        SessionBinding, MAX_CONTROL_BYTES,
+    };
+    use crate::run::PinnedTarget;
+    use crate::usage::{native_then_fallback, NormalizedSnapshot, SensorError, UsageHost};
+    use serde_json::{json, Value};
+    use std::cell::Cell;
+    use std::fs;
+    use std::time::{Duration, UNIX_EPOCH};
+
+    const NOW: u64 = 1_000;
+
+    fn binding(session_id: &str) -> SessionBinding {
+        bind_session(
+            &ParsedBinding {
+                session_id: session_id.to_owned(),
+                process_id: 1,
+            },
+            "claude",
+        )
+    }
+
+    fn valid_capture(binding: &SessionBinding) -> Value {
+        json!({
+            "schema_version": 1,
+            "sensor_id": "claude-statusline",
+            "sensor_version": "2.1.0",
+            "host_scope": "claude",
+            "session_id_digest": binding.session_digest,
+            "received_at_unix_seconds": 900,
+            "received_at_unix_millis": 900_000,
+            "expires_at_unix_seconds": 1_020,
+            "windows": [{
+                "name": "session",
+                "window_minutes": 300,
+                "remaining_percent": 75.0,
+                "resets_at_unix_seconds": 2_000,
+            }],
+        })
+    }
+
+    fn temporary_target() -> tempfile::TempDir {
+        tempfile::Builder::new()
+            .prefix("hive-usage-control-")
+            .tempdir_in(std::env::current_dir().expect("current directory should resolve"))
+            .expect("temporary target should exist")
+    }
+
+    fn read_capture_bytes(
+        session_id: &str,
+        bytes: Option<&[u8]>,
+    ) -> Result<NormalizedSnapshot, SensorError> {
+        let directory = temporary_target();
+        let binding = binding(session_id);
+        if let Some(bytes) = bytes {
+            let relative =
+                claude_capture_path(&binding.session_digest).expect("capture path should resolve");
+            let path = directory.path().join(relative);
+            fs::create_dir_all(path.parent().expect("capture parent should exist"))
+                .expect("capture parent should be created");
+            fs::write(path, bytes).expect("capture fixture should be written");
+        }
+        let target = PinnedTarget::open(directory.path()).expect("target should pin");
+        read_claude_capture_snapshot(&target, &binding, UNIX_EPOCH + Duration::from_secs(NOW))
+    }
+
+    fn assert_no_fallback(native: Result<NormalizedSnapshot, SensorError>, expected: SensorError) {
+        let calls = Cell::new(0);
+        let result = native_then_fallback(UsageHost::Claude, native, || {
+            calls.set(calls.get() + 1);
+            Err(SensorError::Unavailable)
+        });
+        assert_eq!(result, Err(expected));
+        assert_eq!(calls.get(), 0);
+    }
+
+    #[test]
+    fn claude_capture_integrity_errors_preserve_class_and_never_fallback() {
+        let session_id = "claude-session";
+        let current = binding(session_id);
+
+        let mut wrong_provider = valid_capture(&current);
+        wrong_provider["host_scope"] = json!("codex");
+        let mut wrong_session = valid_capture(&current);
+        wrong_session["session_id_digest"] =
+            json!("sha256:0000000000000000000000000000000000000000000000000000000000000000");
+        let mut stale = valid_capture(&current);
+        stale["received_at_unix_seconds"] = json!(800);
+        stale["received_at_unix_millis"] = json!(800_000);
+        stale["expires_at_unix_seconds"] = json!(920);
+        let mut regressed_clock = valid_capture(&current);
+        regressed_clock["received_at_unix_millis"] = json!(800_000);
+        let mut wrong_windows = valid_capture(&current);
+        wrong_windows["windows"][0]["name"] = json!("daily");
+        let mut duplicate_windows = valid_capture(&current);
+        duplicate_windows["windows"] = json!([
+            {
+                "name": "session",
+                "window_minutes": 300,
+                "remaining_percent": 75.0,
+                "resets_at_unix_seconds": 2_000,
+            },
+            {
+                "name": "session",
+                "window_minutes": 300,
+                "remaining_percent": 74.0,
+                "resets_at_unix_seconds": 2_000,
+            }
+        ]);
+        let valid_bytes =
+            serde_json::to_string(&valid_capture(&current)).expect("capture should encode");
+        let duplicate_json = valid_bytes.replacen(
+            "\"schema_version\":1",
+            "\"schema_version\":1,\"schema_version\":1",
+            1,
+        );
+
+        for (bytes, expected) in [
+            (
+                serde_json::to_vec(&wrong_provider).expect("fixture should encode"),
+                SensorError::WrongProvider,
+            ),
+            (
+                serde_json::to_vec(&wrong_session).expect("fixture should encode"),
+                SensorError::WrongSession,
+            ),
+            (
+                serde_json::to_vec(&stale).expect("fixture should encode"),
+                SensorError::Stale,
+            ),
+            (
+                serde_json::to_vec(&regressed_clock).expect("fixture should encode"),
+                SensorError::AmbiguousData,
+            ),
+            (
+                serde_json::to_vec(&wrong_windows).expect("fixture should encode"),
+                SensorError::WrongWindows,
+            ),
+            (
+                serde_json::to_vec(&duplicate_windows).expect("fixture should encode"),
+                SensorError::WrongWindows,
+            ),
+            (duplicate_json.into_bytes(), SensorError::DuplicateData),
+            (
+                vec![b' '; MAX_CONTROL_BYTES + 1],
+                SensorError::OutputTooLarge,
+            ),
+        ] {
+            assert_no_fallback(read_capture_bytes(session_id, Some(&bytes)), expected);
+        }
+    }
+
+    #[test]
+    fn claude_allowlisted_native_errors_fallback_once() {
+        let session_id = "claude-session";
+        let current = binding(session_id);
+        let mut unsupported = valid_capture(&current);
+        unsupported["schema_version"] = json!(2);
+        let cases = [
+            read_capture_bytes(session_id, None),
+            read_capture_bytes(session_id, Some(b"{")),
+            read_capture_bytes(
+                session_id,
+                Some(&serde_json::to_vec(&unsupported).expect("unsupported fixture should encode")),
+            ),
+        ];
+
+        for native in cases {
+            let calls = Cell::new(0);
+            let result = native_then_fallback(UsageHost::Claude, native, || {
+                calls.set(calls.get() + 1);
+                Err::<NormalizedSnapshot, _>(SensorError::Unavailable)
+            });
+            assert_eq!(
+                result,
+                Err(SensorError::FallbackRequired(UsageHost::Claude))
+            );
+            assert_eq!(calls.get(), 1);
+        }
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn symlinked_claude_capture_fails_closed_without_fallback() {
+        use std::os::unix::fs::symlink;
+
+        let directory = temporary_target();
+        let binding = binding("claude-session");
+        let relative =
+            claude_capture_path(&binding.session_digest).expect("capture path should resolve");
+        let path = directory.path().join(&relative);
+        fs::create_dir_all(path.parent().expect("capture parent should exist"))
+            .expect("capture parent should be created");
+        let external = directory.path().join("external-capture.json");
+        fs::write(&external, b"{}").expect("external fixture should be written");
+        symlink(&external, &path).expect("capture symlink should be created");
+        let target = PinnedTarget::open(directory.path()).expect("target should pin");
+        let native =
+            read_claude_capture_snapshot(&target, &binding, UNIX_EPOCH + Duration::from_secs(NOW));
+
+        assert_no_fallback(native, SensorError::FilesystemSafety);
+        assert!(external.exists());
     }
 }

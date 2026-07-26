@@ -30,7 +30,8 @@ the prompt also clearly refers to the guard, quota, usage limit, threshold, or r
   task in the same session, including simple answers, plans, Skills, tools, delegations, writes,
   pushes, and final task answers.
 - While blocked, permit only guard status, threshold, enable, disable, or toggle control and the
-  minimal response explaining how to bypass or restore the guard.
+  consented CodexBar fallback install control plus the minimal response explaining how to bypass,
+  restore, or recover the fallback.
 - A watcher marker is authoritative for the guarded session until a fresh `check` clears it.
 - `omx cancel` success is not halt evidence for Codex goal mode or durable Ultragoal artifacts.
 - The watcher does not signal or kill the Codex App process.
@@ -54,3 +55,15 @@ it prevents the next observable execution boundary and all later tasks until byp
 
 All source-guard state is Hive-owned scratch data under ignored
 `.agents/work/usage-guard/`. Never store credentials, account identifiers, or raw CodexBar output.
+
+## Fallback installation
+
+- Missing CodexBar after native sensor failure returns `usage_unknown`, a sanitized
+  provider-specific notification, and the exact source `fallback-install --dry-run` command.
+- Dry run qualifies only the supported package-manager adapter and returns the fixed command
+  preview without executing it.
+- Apply requires explicit current-action consent through `--apply --confirm-install`, uses bounded
+  non-interactive execution, and requalifies CodexBar before success.
+- Decline preserves core guard controls and leaves automatic dispatch `usage_unknown`.
+- Never install silently, request credentials, reinstall a provider CLI, suggest API-key or
+  manual-cookie setup, or modify package-manager ownership.

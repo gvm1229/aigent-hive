@@ -10,6 +10,8 @@ publish = false
 path = "src/lib.rs"
 
 [dependencies]
+cap-fs-ext.workspace = true
+cap-std.workspace = true
 hive-core = { path = "../hive-core" }
 rusqlite.workspace = true
 serde.workspace = true

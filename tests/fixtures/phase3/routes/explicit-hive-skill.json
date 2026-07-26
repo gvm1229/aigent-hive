@@ -16,7 +16,7 @@
     {
       "name": "hive-knowledge-query",
       "source_type": "built-in",
-      "content_digest": "sha256:a13087365b7e91516fc45b5f699f7e4aec1b3407758accdd17df0776889d504c",
+      "content_digest": "sha256:57544a98a992cab44cf81b5a2badf1efd6bba68f6a1785e678b44bf099a4353e",
       "side_effect_class": "read-only",
       "capabilities": ["filesystem-read", "memory-read", "shell"],
       "consent_digest": null,

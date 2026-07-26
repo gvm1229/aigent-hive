@@ -1,0 +1,4 @@
+interface:
+  display_name: "Hive Migrate"
+  short_description: "Apply an explicit signed Hive migration"
+  default_prompt: "Use $hive-migrate to validate and apply this explicitly authorized Hive migration."

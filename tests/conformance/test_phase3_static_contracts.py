@@ -38,6 +38,7 @@ BUILTIN_SKILLS = {
     "hive-simple-question",
     "hive-prompt-refine",
     "hive-knowledge-capture",
+    "hive-knowledge-promote",
     "hive-knowledge-query",
     "hive-knowledge-maintenance",
     "hive-run-checkpoint",
@@ -47,12 +48,14 @@ BUILTIN_SKILLS = {
     "hive-update",
     "hive-usage-guard",
     "hive-migrate",
+    "hive-project-upgrade",
 }
 IMPLEMENTED_SKILLS = {
     "setup-harness",
     "hive-simple-question",
     "hive-prompt-refine",
     "hive-knowledge-capture",
+    "hive-knowledge-promote",
     "hive-knowledge-query",
     "hive-knowledge-maintenance",
     "hive-run-checkpoint",
@@ -62,6 +65,7 @@ IMPLEMENTED_SKILLS = {
     "hive-update",
     "hive-usage-guard",
     "hive-migrate",
+    "hive-project-upgrade",
 }
 CATALOG_ONLY_SKILLS = BUILTIN_SKILLS - IMPLEMENTED_SKILLS
 
@@ -87,6 +91,34 @@ def skill_frontmatter(path: Path) -> tuple[dict[str, object], str]:
 
 
 class Phase3SkillSourceContract(unittest.TestCase):
+    def test_source_prompt_refine_projection_matches_harness_canonical_bytes(self) -> None:
+        canonical = (
+            SKILL_ROOT / "hive-prompt-refine/SKILL.md"
+        ).read_bytes()
+        source_projection = (
+            REPOSITORY_ROOT
+            / ".agents/skills/hive-prompt-refine/SKILL.md"
+        ).read_bytes()
+        self.assertEqual(source_projection, canonical)
+
+    def test_source_prompt_quality_gate_is_suggestion_only(self) -> None:
+        directive = (
+            REPOSITORY_ROOT / ".agents/directives/01-behavior.md"
+        ).read_text(encoding="utf-8")
+        source_manifest = (REPOSITORY_ROOT / "AGENTS.md").read_text(
+            encoding="utf-8"
+        )
+        for required in (
+            "one concise optional refinement suggestion",
+            "must not rewrite the prompt",
+            "load `hive-prompt-refine`",
+            "sufficiently clear ordinary task or simple question",
+        ):
+            with self.subTest(required=required):
+                self.assertIn(required, directive)
+        self.assertIn("prompt quality gate", source_manifest)
+        self.assertIn("no automatic rewrite, Skill load, or execution", source_manifest)
+
     def test_plan_backed_goal_reconciles_every_checklist_before_execution(
         self,
     ) -> None:
@@ -133,6 +165,7 @@ class Phase3SkillSourceContract(unittest.TestCase):
         }
         expected_fragments = {
             "active/documentation-style.md",
+            "active/native-usage-sensor.md",
             "active/plugin-project-lifecycle.md",
             "active/security-review.md",
             "contracts/README.md",
@@ -148,6 +181,7 @@ class Phase3SkillSourceContract(unittest.TestCase):
 
         active_fragments = [
             plan_root / "active/documentation-style.md",
+            plan_root / "active/native-usage-sensor.md",
             plan_root / "active/plugin-project-lifecycle.md",
             plan_root / "active/security-review.md",
             plan_root / "phases/07-public-qualification.md",
@@ -156,6 +190,7 @@ class Phase3SkillSourceContract(unittest.TestCase):
             {path.relative_to(plan_root).as_posix() for path in active_fragments},
             {
                 "active/documentation-style.md",
+                "active/native-usage-sensor.md",
                 "active/plugin-project-lifecycle.md",
                 "active/security-review.md",
                 "phases/07-public-qualification.md",
@@ -226,6 +261,7 @@ class Phase3SkillSourceContract(unittest.TestCase):
         )
         phase_7_path = plan_root / "phases/07-public-qualification.md"
         documentation_path = plan_root / "active/documentation-style.md"
+        native_usage_path = plan_root / "active/native-usage-sensor.md"
         plugin_project_path = plan_root / "active/plugin-project-lifecycle.md"
         security_review_path = plan_root / "active/security-review.md"
         progress_rows = (
@@ -234,6 +270,10 @@ class Phase3SkillSourceContract(unittest.TestCase):
             (
                 "User plugin/project lifecycle",
                 *checklist_counts([plugin_project_path]),
+            ),
+            (
+                "Host-native usage sensors",
+                *checklist_counts([native_usage_path]),
             ),
             ("Documentation style", *checklist_counts([documentation_path])),
             ("Security review", *checklist_counts([security_review_path])),
@@ -271,6 +311,81 @@ class Phase3SkillSourceContract(unittest.TestCase):
                     (fragment.parent / path).exists(),
                     f"broken plan link: {fragment.relative_to(plan_root)} -> {target}",
                 )
+
+    def test_source_prompt_refine_plan_requires_optional_quality_suggestion(
+        self,
+    ) -> None:
+        plan_root = REPOSITORY_ROOT / "docs/plans"
+        fragment = (
+            plan_root / "active/plugin-project-lifecycle.md"
+        ).read_text(encoding="utf-8")
+        adr = (
+            REPOSITORY_ROOT
+            / "docs/decisions/ADR-0009-user-plugin-project-knowledge-boundary.md"
+        ).read_text(encoding="utf-8")
+        current = (
+            REPOSITORY_ROOT / "docs/state/CURRENT.md"
+        ).read_text(encoding="utf-8")
+
+        for required in (
+            "모호하거나 핵심 세부가 부족한 prompt",
+            "한 줄 optional refine 제안",
+            "rewrite·Skill load·execution 0회",
+            "충분히 명확한 ordinary work·simple question",
+        ):
+            with self.subTest(required=required):
+                self.assertIn(required, fragment)
+        self.assertIn("Prompt quality gate", adr)
+        self.assertIn("모호성·핵심 세부 부족 prompt", current)
+
+    def test_native_usage_sensor_plan_demotes_codexbar_for_all_hosts(
+        self,
+    ) -> None:
+        fragment = (
+            REPOSITORY_ROOT / "docs/plans/active/native-usage-sensor.md"
+        ).read_text(encoding="utf-8")
+        research = (
+            REPOSITORY_ROOT
+            / "docs/research/codex-app-server-usage-sensor.md"
+        ).read_text(encoding="utf-8")
+        decisions = (
+            REPOSITORY_ROOT / "docs/decisions/product-release-decisions.md"
+        ).read_text(encoding="utf-8")
+        claude_research = (
+            REPOSITORY_ROOT
+            / "docs/research/claude-code-native-usage-sensor.md"
+        ).read_text(encoding="utf-8")
+        antigravity_research = (
+            REPOSITORY_ROOT
+            / "docs/research/antigravity-native-usage-sensor.md"
+        ).read_text(encoding="utf-8")
+        adr = (
+            REPOSITORY_ROOT
+            / "docs/decisions/ADR-0010-native-first-usage-sensors.md"
+        ).read_text(encoding="utf-8")
+
+        for requirement in (
+            "`active-host native → CodexBar`",
+            "Native unavailable·unsupported·malformed일 때만 CodexBar fallback",
+            "autonomous CodexBar 설치 동의 요청",
+            "거절 시 core 기능 유지와 automatic dispatch `usage_unknown`",
+            "Qualified native provider의 success·limited에서 CodexBar 0회",
+            "CodexBar 분류: 모든 provider에서 fallback-only",
+            "`~/.claude/settings.json` mutation 0회",
+            "`native=unsupported`",
+        ):
+            with self.subTest(requirement=requirement):
+                self.assertIn(requirement, fragment)
+        self.assertIn("account/rateLimits/read", research)
+        self.assertIn("Native normalized usage", research)
+        self.assertIn("Claude Code status-line JSON capture", decisions)
+        self.assertIn("CodexBar는 세 provider 모두", decisions)
+        self.assertIn("rate_limits.five_hour.used_percentage", claude_research)
+        self.assertIn("Existing status line 자동 교체", claude_research)
+        self.assertIn("Interactive TUI panel", antigravity_research)
+        self.assertIn("Undocumented local LSP/HTTP", antigravity_research)
+        self.assertIn("CodexBar: 세 provider 모두 fallback-only", adr)
+        self.assertIn("Native limited 판정 뒤 CodexBar 호출 0회", adr)
 
     def test_full_editing_discipline_is_exact_and_highest_priority(self) -> None:
         expected_digest = (
@@ -434,7 +549,7 @@ class Phase3SkillSourceContract(unittest.TestCase):
         ).read_text(encoding="utf-8")
         projected_skill = (
             REPOSITORY_ROOT
-            / "harness/template/{{ '.claude' if primary_host == 'claude' else '.agents' }}"
+            / "harness/template/.agents"
             / "skills/hive-usage-guard/SKILL.md"
         ).read_text(encoding="utf-8")
         guidance = (
@@ -566,7 +681,7 @@ class Phase3SkillSourceContract(unittest.TestCase):
     def test_phase_four_template_skill_bytes_match_canonical_sources(self) -> None:
         template_root = (
             REPOSITORY_ROOT
-            / "harness/template/{{ '.claude' if primary_host == 'claude' else '.agents' }}/skills"
+            / "harness/template/.agents/skills"
         )
         for name in (
             "hive-run-checkpoint",

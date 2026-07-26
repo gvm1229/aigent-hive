@@ -33,6 +33,9 @@ OTHER_ACCOUNT_DIGEST = "sha256:" + hashlib.sha256(b"other-account").hexdigest()
 CODEXBAR_FIXTURE = (
     REPOSITORY_ROOT / "tests/fixtures/phase5/usage/codexbar_fixture.py"
 ).read_text(encoding="utf-8")
+CODEX_UNSUPPORTED_FIXTURE = (
+    REPOSITORY_ROOT / "tests/fixtures/phase5/usage/codex_unsupported_fixture.py"
+).read_text(encoding="utf-8")
 
 
 def valid_snapshot() -> dict[str, object]:
@@ -119,7 +122,28 @@ class UsageGuardCliConformance(Phase1CliTestCase):
         (self.consumer / "sentinel.bin").write_bytes(b"user-owned\n")
         self.fake_bin = self.work_root / "fake-bin"
         self.fake_bin.mkdir()
+        self._write_fake_codex_unsupported()
         self._write_fake_codexbar()
+
+    def _write_fake_codex_unsupported(self) -> None:
+        if os.name == "nt":
+            script = self.fake_bin / "codex.cmd"
+            python = subprocess.list2cmdline([os.sys.executable])
+            script.write_text(
+                f"@{python} \"%~dp0\\codex.py\" %*\r\n",
+                encoding="utf-8",
+            )
+            (self.fake_bin / "codex.py").write_text(
+                CODEX_UNSUPPORTED_FIXTURE,
+                encoding="utf-8",
+            )
+            return
+        script = self.fake_bin / "codex"
+        script.write_text(
+            f"#!{os.sys.executable}\n{CODEX_UNSUPPORTED_FIXTURE}",
+            encoding="utf-8",
+        )
+        script.chmod(script.stat().st_mode | stat.S_IXUSR)
 
     def _write_fake_codexbar(self) -> None:
         if os.name == "nt":
@@ -501,6 +525,12 @@ class UsageGuardCliConformance(Phase1CliTestCase):
     def test_symlink_swap_cannot_change_the_qualified_executable(self) -> None:
         linked_bin = self.work_root / "linked-bin"
         linked_bin.mkdir()
+        codex = linked_bin / "codex"
+        codex.write_text(
+            f"#!{os.sys.executable}\n{CODEX_UNSUPPORTED_FIXTURE}",
+            encoding="utf-8",
+        )
+        codex.chmod(codex.stat().st_mode | stat.S_IXUSR)
         installed = linked_bin / "CodexBarCLI"
         installed.write_text(
             f"#!{os.sys.executable}\n{CODEXBAR_FIXTURE}",

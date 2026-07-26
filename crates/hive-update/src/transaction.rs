@@ -8,14 +8,15 @@ use cap_fs_ext::{DirExt, FollowSymlinks, OpenOptionsFollowExt};
 use cap_std::ambient_authority;
 use cap_std::fs::{Dir, OpenOptions as CapOpenOptions};
 use hive_core::{
-    is_hive_skill_projection_path, sha256_digest, validate_hive_skill_projection_relative,
+    is_hive_directive_projection_path, is_hive_skill_projection_path, sha256_digest,
+    validate_hive_directive_projection_relative, validate_hive_skill_projection_relative,
     validate_project_relative, SOURCE_MARKER_FILE,
 };
 #[cfg(test)]
 use hive_render::execute_setup;
 use hive_render::{
-    execute_setup_in, shared_marker_foreign_digest, update_path_is_owned, RenderError, SetupChange,
-    SetupMode, SetupOutcome, SetupRequest,
+    execute_release_update_in, shared_marker_foreign_digest, update_path_is_owned, RenderError,
+    SetupChange, SetupMode, SetupOutcome, SetupRequest,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
@@ -303,7 +304,7 @@ fn prepare_update(
         .write_all(&capabilities_json)
         .and_then(|()| capabilities.as_file().sync_all())
         .map_err(|error| UpdateError::Internal(format!("cannot persist capabilities: {error}")))?;
-    let dry_run = execute_setup_in(
+    let dry_run = execute_release_update_in(
         &SetupRequest {
             target: request.target,
             answers: answers.path(),
@@ -312,6 +313,7 @@ fn prepare_update(
             reconfigure_roles: BTreeSet::new(),
         },
         target.dir,
+        &installed.harness_version,
     )
     .map_err(map_render_error)?;
     let plan_digest = plan_digest(
@@ -783,7 +785,7 @@ fn activate_update(
     )?;
     persist_journal(target, &journal)?;
 
-    let applied = execute_setup_in(
+    let applied = execute_release_update_in(
         &SetupRequest {
             target: request.target,
             answers: answers.path(),
@@ -792,6 +794,7 @@ fn activate_update(
             reconfigure_roles: BTreeSet::new(),
         },
         target.dir,
+        &installed.harness_version,
     )
     .map_err(|error| {
         let mapped = map_render_error(error);
@@ -1822,6 +1825,9 @@ fn validate_update_relative(relative: &Path) -> Result<(), UpdateError> {
     if is_hive_skill_projection_path(relative) {
         validate_hive_skill_projection_relative(relative)
             .map_err(|error| UpdateError::Input(error.to_string()))
+    } else if is_hive_directive_projection_path(relative) {
+        validate_hive_directive_projection_relative(relative)
+            .map_err(|error| UpdateError::Input(error.to_string()))
     } else {
         validate_project_relative(relative).map_err(|error| UpdateError::Input(error.to_string()))
     }
@@ -2143,6 +2149,10 @@ mod tests {
             .expect("harness")
             .replace("0.7.0", version);
         fs::write(harness_path, harness).expect("legacy harness");
+        fs::remove_dir_all(target.join(".agents/directives"))
+            .expect("remove post-legacy directive projections");
+        fs::remove_file(target.join(".hive/config/project-base.json"))
+            .expect("remove post-legacy full project-base ledger");
 
         let active_path = target.join(".hive/config/active-skills.yml");
         let expected = legacy_builtin_names(version);
@@ -2157,77 +2167,92 @@ mod tests {
         if expected.is_empty() {
             fs::remove_file(active_path).expect("remove future active ledger");
         } else {
-            let historical_setup = include_bytes!(
-                "../../../tests/fixtures/phase6/migrations/0.4.0-0.6.0-setup-harness.SKILL.md"
-            );
-            fs::write(skill_root.join("setup-harness/SKILL.md"), historical_setup)
-                .expect("historical setup projection");
-            if version == "0.5.0" {
-                let historical = include_bytes!(
-                    "../../../tests/fixtures/phase6/migrations/0.5.0-hive-run-resume.SKILL.md"
-                );
-                fs::write(skill_root.join("hive-run-resume/SKILL.md"), historical)
-                    .expect("historical resume projection");
-            }
-            let mut active: serde_yaml::Value =
-                serde_yaml::from_slice(&fs::read(&active_path).expect("active skills"))
-                    .expect("active skills");
-            let skills = active
-                .as_mapping_mut()
-                .and_then(|mapping| mapping.get_mut(serde_yaml::Value::from("skills")))
-                .and_then(serde_yaml::Value::as_sequence_mut)
-                .expect("skills");
-            skills.retain(|entry| {
-                entry
-                    .as_mapping()
-                    .and_then(|mapping| mapping.get(serde_yaml::Value::from("name")))
-                    .and_then(serde_yaml::Value::as_str)
-                    .is_some_and(|name| expected.contains(&name))
-            });
-            let setup = skills
-                .iter_mut()
-                .find(|entry| {
-                    entry
-                        .as_mapping()
-                        .and_then(|mapping| mapping.get(serde_yaml::Value::from("name")))
-                        .and_then(serde_yaml::Value::as_str)
-                        == Some("setup-harness")
-                })
-                .and_then(serde_yaml::Value::as_mapping_mut)
-                .expect("setup entry");
-            setup.insert(
-                serde_yaml::Value::from("content_digest"),
-                serde_yaml::Value::from(sha256_digest(historical_setup)),
-            );
-            if version == "0.5.0" {
-                let resume = skills
-                    .iter_mut()
-                    .find(|entry| {
-                        entry
-                            .as_mapping()
-                            .and_then(|mapping| mapping.get(serde_yaml::Value::from("name")))
-                            .and_then(serde_yaml::Value::as_str)
-                            == Some("hive-run-resume")
-                    })
-                    .and_then(serde_yaml::Value::as_mapping_mut)
-                    .expect("resume entry");
-                resume.insert(
-                    serde_yaml::Value::from("content_digest"),
-                    serde_yaml::Value::from(
-                        "sha256:edfbee35142b8a228d4cdb36d2674b719548fea9884d4a2b6a31353adcebb7c5",
-                    ),
-                );
-            }
-            fs::write(
-                active_path,
-                serde_yaml::to_string(&active).expect("active skills"),
-            )
-            .expect("legacy active skills");
+            install_historical_skill_projection(&skill_root, &active_path, version, expected);
         }
         fs::write(target.join("README.md"), b"foreign project bytes\n").expect("foreign readme");
         fs::create_dir_all(target.join(".omx")).expect("omx");
         fs::write(target.join(".omx/state.json"), b"{\"foreign\":true}\n")
             .expect("foreign orchestration");
+    }
+
+    fn install_historical_skill_projection(
+        skill_root: &Path,
+        active_path: &Path,
+        version: &str,
+        expected: &[&str],
+    ) {
+        let historical_setup = include_bytes!(
+            "../../../tests/fixtures/phase6/migrations/0.4.0-0.6.0-setup-harness.SKILL.md"
+        );
+        let historical_query = include_bytes!(
+            "../../../tests/fixtures/phase6/migrations/0.4.0-0.6.0-hive-knowledge-query.SKILL.md"
+        );
+        fs::write(skill_root.join("setup-harness/SKILL.md"), historical_setup)
+            .expect("historical setup projection");
+        fs::write(
+            skill_root.join("hive-knowledge-query/SKILL.md"),
+            historical_query,
+        )
+        .expect("historical knowledge query projection");
+        if version == "0.5.0" {
+            let historical = include_bytes!(
+                "../../../tests/fixtures/phase6/migrations/0.5.0-hive-run-resume.SKILL.md"
+            );
+            fs::write(skill_root.join("hive-run-resume/SKILL.md"), historical)
+                .expect("historical resume projection");
+        }
+
+        let mut active: serde_yaml::Value =
+            serde_yaml::from_slice(&fs::read(active_path).expect("active skills"))
+                .expect("active skills");
+        let skills = active
+            .as_mapping_mut()
+            .and_then(|mapping| mapping.get_mut(serde_yaml::Value::from("skills")))
+            .and_then(serde_yaml::Value::as_sequence_mut)
+            .expect("skills");
+        skills.retain(|entry| {
+            entry
+                .as_mapping()
+                .and_then(|mapping| mapping.get(serde_yaml::Value::from("name")))
+                .and_then(serde_yaml::Value::as_str)
+                .is_some_and(|name| expected.contains(&name))
+        });
+        set_active_skill_digest(skills, "setup-harness", &sha256_digest(historical_setup));
+        set_active_skill_digest(
+            skills,
+            "hive-knowledge-query",
+            &sha256_digest(historical_query),
+        );
+        if version == "0.5.0" {
+            set_active_skill_digest(
+                skills,
+                "hive-run-resume",
+                "sha256:edfbee35142b8a228d4cdb36d2674b719548fea9884d4a2b6a31353adcebb7c5",
+            );
+        }
+        fs::write(
+            active_path,
+            serde_yaml::to_string(&active).expect("active skills"),
+        )
+        .expect("legacy active skills");
+    }
+
+    fn set_active_skill_digest(skills: &mut [serde_yaml::Value], name: &str, digest: &str) {
+        let entry = skills
+            .iter_mut()
+            .find(|entry| {
+                entry
+                    .as_mapping()
+                    .and_then(|mapping| mapping.get(serde_yaml::Value::from("name")))
+                    .and_then(serde_yaml::Value::as_str)
+                    == Some(name)
+            })
+            .and_then(serde_yaml::Value::as_mapping_mut)
+            .expect("historical active Skill entry");
+        entry.insert(
+            serde_yaml::Value::from("content_digest"),
+            serde_yaml::Value::from(digest),
+        );
     }
 
     fn update_request<'a>(
@@ -3034,6 +3059,34 @@ mod tests {
             fs::read(skill_path).expect("forged bytes preserved"),
             forged
         );
+        assert!(!consumer.join(UPDATE_STATE_PATH).exists());
+        assert!(!consumer.join(JOURNAL_PATH).exists());
+    }
+
+    #[test]
+    fn signed_update_rejects_a_foreign_file_at_a_legacy_directive_path() {
+        let target = tempfile::tempdir().expect("target");
+        let consumer = target.path().canonicalize().expect("consumer");
+        install_legacy_consumer(&consumer, "0.6.0");
+        let directive = consumer.join(".agents/directives/00-project-harness.md");
+        fs::create_dir_all(directive.parent().expect("directive parent"))
+            .expect("directive parent");
+        let foreign = b"foreign directive bytes\x00\xff\n";
+        fs::write(&directive, foreign).expect("foreign directive");
+        let fixture = release_fixture();
+        let root = fs::read(fixture.join("metadata/root.json")).expect("root");
+
+        let error = execute_update(&update_request(
+            &consumer,
+            &fixture,
+            &root,
+            UpdateMode::DryRun,
+        ))
+        .expect_err("legacy absence proof must not authorize an occupied directive path");
+
+        assert!(matches!(error, UpdateError::Conflict(_)));
+        assert!(error.to_string().contains("collides with a foreign file"));
+        assert_eq!(fs::read(directive).expect("foreign directive"), foreign);
         assert!(!consumer.join(UPDATE_STATE_PATH).exists());
         assert!(!consumer.join(JOURNAL_PATH).exists());
     }

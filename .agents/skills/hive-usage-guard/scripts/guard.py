@@ -1,24 +1,47 @@
 #!/usr/bin/env python3
-"""Session-bound source-development usage guard backed by local CodexBar data."""
+"""Session-bound source-development usage guard with native-first quota sensing."""
 
 from __future__ import annotations
 
 import argparse
 import datetime as dt
+import hashlib
 import json
+import math
 import os
+import queue
+import re
 import shutil
 import signal
 import stat
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 from pathlib import Path
 from typing import Any
 
 SCHEMA_VERSION = 1
 CODEXBAR_VERSION = "0.45.2"
+CODEX_MINIMUM_VERSION = (0, 145, 0)
+CODEX_NATIVE_SENSOR = "codex-app-server"
+CODEX_APP_SERVER_TIMEOUT_SECONDS = 15
+FALLBACK_INSTALL_TIMEOUT_SECONDS = 300
+FALLBACK_HOSTS = ("codex", "claude", "antigravity")
+SUPPORTED_CODEX_PLANS = {
+    "free",
+    "go",
+    "plus",
+    "pro",
+    "prolite",
+    "team",
+    "self_serve_business_usage_based",
+    "business",
+    "enterprise_cbp_usage_based",
+    "enterprise",
+    "edu",
+}
 DEFAULT_THRESHOLD = 10
 DEFAULT_POLL_SECONDS = 15
 MAX_OUTPUT_BYTES = 1024 * 1024
@@ -48,8 +71,40 @@ class SessionExpired(GuardError):
     """The requested session is no longer the current source session."""
 
 
+class CodexBarUnavailable(GuardError):
+    """The optional fallback executable is not installed."""
+
+
+class FallbackInstallUnsupported(GuardError):
+    """No qualified package-manager adapter is available."""
+
+
+class FallbackInstallInvalid(GuardError):
+    """The fallback install action lacks valid current-action consent."""
+
+
+class NativeSensorError(GuardError):
+    """A classified Codex native sensor error."""
+
+
+class NativeSensorUnavailable(NativeSensorError):
+    """The qualified native sensor is not available."""
+
+
+class NativeSensorUnsupported(NativeSensorError):
+    """The native sensor version or account type is unsupported."""
+
+
+class NativeSensorMalformed(NativeSensorError):
+    """The native sensor returned malformed or inconsistent data."""
+
+
+class NativeSensorIntegrity(NativeSensorError):
+    """The native executable identity changed after qualification."""
+
+
 class DuplicateJsonKey(ValueError):
-    """CodexBar JSON contained an ambiguous duplicate object key."""
+    """Sensor JSON contained an ambiguous duplicate object key."""
 
 
 def utc_now() -> dt.datetime:
@@ -321,7 +376,14 @@ def set_session_enabled(
     return value
 
 
-def run_bounded(executable: Path, arguments: tuple[str, ...], timeout: int) -> str:
+def run_bounded(
+    executable: Path,
+    arguments: tuple[str, ...],
+    timeout: int,
+    *,
+    sensor_name: str,
+    environment: dict[str, str] | None = None,
+) -> str:
     try:
         completed = subprocess.run(
             [str(executable), *arguments],
@@ -330,17 +392,18 @@ def run_bounded(executable: Path, arguments: tuple[str, ...], timeout: int) -> s
             stderr=subprocess.PIPE,
             check=False,
             timeout=timeout,
+            env=environment,
         )
     except (OSError, subprocess.TimeoutExpired) as error:
-        raise GuardError("CodexBar command failed or timed out") from error
+        raise GuardError(f"{sensor_name} command failed or timed out") from error
     if len(completed.stdout) > MAX_OUTPUT_BYTES or len(completed.stderr) > MAX_OUTPUT_BYTES:
-        raise GuardError("CodexBar output exceeded the source guard limit")
+        raise GuardError(f"{sensor_name} output exceeded the source guard limit")
     if completed.returncode != 0:
-        raise GuardError("CodexBar returned a non-zero status")
+        raise GuardError(f"{sensor_name} returned a non-zero status")
     try:
         return completed.stdout.decode("utf-8")
     except UnicodeDecodeError as error:
-        raise GuardError("CodexBar output was not UTF-8") from error
+        raise GuardError(f"{sensor_name} output was not UTF-8") from error
 
 
 def executable_identity(executable: Path) -> tuple[int, int, int, int, int]:
@@ -357,12 +420,17 @@ def executable_identity(executable: Path) -> tuple[int, int, int, int, int]:
 def qualify_codexbar() -> tuple[Path, tuple[int, int, int, int, int]]:
     candidate = shutil.which("codexbar")
     if candidate is None:
-        raise GuardError("CodexBar is unavailable")
+        raise CodexBarUnavailable("CodexBar is unavailable")
     executable = Path(candidate).resolve()
     if not executable.is_file() or not os.access(executable, os.X_OK):
         raise GuardError("CodexBar executable is invalid")
     identity = executable_identity(executable)
-    version = run_bounded(executable, ("--version",), 5).strip()
+    version = run_bounded(
+        executable,
+        ("--version",),
+        5,
+        sensor_name="CodexBar",
+    ).strip()
     if executable_identity(executable) != identity:
         raise GuardError("CodexBar executable changed during qualification")
     if version != f"CodexBar {CODEXBAR_VERSION}":
@@ -370,11 +438,545 @@ def qualify_codexbar() -> tuple[Path, tuple[int, int, int, int, int]]:
     return executable, identity
 
 
-def read_quota() -> dict[str, Any]:
+def fallback_install_command() -> tuple[str, tuple[str, ...]]:
+    if sys.platform == "darwin":
+        return "brew", ("install", "--cask", "codexbar")
+    if sys.platform.startswith("linux"):
+        return "brew", ("install", "steipete/tap/codexbar")
+    raise FallbackInstallUnsupported(
+        "CodexBar fallback installation is unsupported on this platform"
+    )
+
+
+def qualify_package_manager(
+    manager: str,
+) -> tuple[Path, tuple[int, int, int, int, int]]:
+    if manager != "brew":
+        raise FallbackInstallUnsupported(
+            "CodexBar fallback installation has no qualified package-manager adapter"
+        )
+    candidate = shutil.which(manager)
+    if candidate is None:
+        raise FallbackInstallUnsupported(
+            "supported package manager brew is unavailable"
+        )
+    executable = Path(candidate).resolve()
+    if not executable.is_file() or not os.access(executable, os.X_OK):
+        raise FallbackInstallUnsupported(
+            "supported package manager brew is unavailable"
+        )
+    identity = executable_identity(executable)
+    try:
+        version = run_bounded(
+            executable,
+            ("--version",),
+            5,
+            sensor_name="Homebrew",
+        ).splitlines()
+    except GuardError as error:
+        raise FallbackInstallUnsupported(
+            "supported package manager brew could not be qualified"
+        ) from error
+    if (
+        not version
+        or re.fullmatch(r"Homebrew \d+\.\d+\.\d+", version[0].strip()) is None
+        or executable_identity(executable) != identity
+    ):
+        raise FallbackInstallUnsupported(
+            "supported package manager brew could not be qualified"
+        )
+    return executable, identity
+
+
+def source_guard_command(host: str, *, apply: bool) -> str:
+    mode = "--apply --confirm-install" if apply else "--dry-run"
+    return (
+        "python3 .agents/skills/hive-usage-guard/scripts/guard.py "
+        f"fallback-install --host {host} {mode} --json"
+    )
+
+
+def fallback_install(
+    host: str,
+    *,
+    apply: bool,
+    confirmed: bool,
+) -> dict[str, Any]:
+    if host not in FALLBACK_HOSTS:
+        raise FallbackInstallInvalid(
+            "fallback install host must be codex, claude, or antigravity"
+        )
+    if apply and not confirmed:
+        raise FallbackInstallInvalid(
+            "CodexBar installation requires explicit current-action consent "
+            "via --confirm-install"
+        )
+    if not apply and confirmed:
+        raise FallbackInstallInvalid(
+            "--confirm-install is valid only with --apply"
+        )
+    manager, install_arguments = fallback_install_command()
+    executable, identity = qualify_package_manager(manager)
+    preview = " ".join((manager, *install_arguments))
+    result: dict[str, Any] = {
+        "schema_version": SCHEMA_VERSION,
+        "action": "InstallUsageFallback",
+        "status": "success",
+        "code": (
+            "hive.usage-fallback-installed"
+            if apply
+            else "hive.usage-fallback-install-preview"
+        ),
+        "provider": host,
+        "fallback": "codexbar",
+        "package_manager": manager,
+        "consent_scope": "current-action",
+        "credentials_requested": False,
+        "provider_cli_reinstall": False,
+        "manual_cookie_requested": False,
+        "changed_paths": [],
+        "command_preview": preview,
+        "command_digest": "sha256:"
+        + hashlib.sha256(preview.encode("utf-8")).hexdigest(),
+    }
+    if not apply:
+        result["message"] = (
+            f"CodexBar fallback installation preview prepared for {host}"
+        )
+        result["next_action"] = source_guard_command(host, apply=True)
+        return result
+    if executable_identity(executable) != identity:
+        raise FallbackInstallUnsupported(
+            "supported package manager brew changed before installation"
+        )
+    environment = os.environ.copy()
+    environment.update(
+        {
+            "CI": "1",
+            "HOMEBREW_NO_AUTO_UPDATE": "1",
+            "HOMEBREW_NO_ENV_HINTS": "1",
+        }
+    )
+    run_bounded(
+        executable,
+        install_arguments,
+        FALLBACK_INSTALL_TIMEOUT_SECONDS,
+        sensor_name="Homebrew",
+        environment=environment,
+    )
+    if executable_identity(executable) != identity:
+        raise FallbackInstallUnsupported(
+            "supported package manager brew changed during installation"
+        )
+    try:
+        qualify_codexbar()
+    except GuardError as error:
+        raise GuardError(
+            "CodexBar executable was not available after installation"
+        ) from error
+    result["message"] = (
+        "CodexBar fallback installed after explicit one-action consent"
+    )
+    result["next_action"] = None
+    return result
+
+
+def verify_native_identity(
+    executable: Path,
+    expected: tuple[int, int, int, int, int],
+    phase: str,
+) -> None:
+    try:
+        current = executable_identity(executable)
+    except OSError as error:
+        raise NativeSensorIntegrity(
+            f"Codex executable changed {phase}"
+        ) from error
+    if current != expected:
+        raise NativeSensorIntegrity(f"Codex executable changed {phase}")
+
+
+def qualify_codex() -> tuple[Path, tuple[int, int, int, int, int], str]:
+    candidate = shutil.which("codex")
+    if candidate is None:
+        raise NativeSensorUnavailable("Codex native sensor is unavailable")
+    executable = Path(candidate).resolve()
+    if not executable.is_file() or not os.access(executable, os.X_OK):
+        raise NativeSensorIntegrity("Codex native sensor executable is invalid")
+    try:
+        identity = executable_identity(executable)
+    except OSError as error:
+        raise NativeSensorIntegrity(
+            "Codex executable changed during qualification"
+        ) from error
+    try:
+        version_output = run_bounded(
+            executable,
+            ("--version",),
+            5,
+            sensor_name="Codex",
+        ).strip()
+    except GuardError as error:
+        raise NativeSensorError(
+            "Codex native sensor version qualification failed"
+        ) from error
+    match = re.fullmatch(r"codex-cli (\d+)\.(\d+)\.(\d+)", version_output)
+    if match is None:
+        raise NativeSensorUnsupported(
+            "Codex native sensor version is unsupported"
+        )
+    version = tuple(int(part) for part in match.groups())
+    if version < CODEX_MINIMUM_VERSION:
+        raise NativeSensorUnsupported(
+            "Codex native sensor version is unsupported"
+        )
+    verify_native_identity(executable, identity, "during qualification")
+    return executable, identity, ".".join(str(part) for part in version)
+
+
+def _jsonl_reader(
+    stream: Any,
+    messages: queue.Queue[tuple[str, Any]],
+) -> None:
+    retained = 0
+    try:
+        while True:
+            line = stream.readline(MAX_OUTPUT_BYTES + 1)
+            if not line:
+                messages.put(("eof", None))
+                return
+            retained += len(line)
+            if retained > MAX_OUTPUT_BYTES:
+                messages.put(
+                    (
+                        "error",
+                        GuardError("Codex app-server output exceeded the source guard limit"),
+                    )
+                )
+                return
+            try:
+                value = json.loads(
+                    line.decode("utf-8"),
+                    object_pairs_hook=reject_duplicate_keys,
+                )
+            except (UnicodeDecodeError, json.JSONDecodeError, DuplicateJsonKey) as error:
+                messages.put(
+                    (
+                        "error",
+                        NativeSensorMalformed(
+                            "Codex app-server returned malformed or ambiguous JSONL"
+                        ),
+                    )
+                )
+                return
+            messages.put(("value", value))
+    except OSError:
+        messages.put(("error", GuardError("Codex app-server output read failed")))
+
+
+def _stderr_reader(stream: Any, messages: queue.Queue[tuple[str, Any]]) -> None:
+    retained = 0
+    try:
+        while True:
+            chunk = stream.read(8192)
+            if not chunk:
+                return
+            retained += len(chunk)
+            if retained > MAX_OUTPUT_BYTES:
+                messages.put(
+                    (
+                        "error",
+                        GuardError("Codex app-server stderr exceeded the source guard limit"),
+                    )
+                )
+                return
+    except OSError:
+        messages.put(("error", GuardError("Codex app-server stderr read failed")))
+
+
+def _send_jsonl(process: subprocess.Popen[bytes], value: dict[str, Any]) -> None:
+    if process.stdin is None:
+        raise GuardError("Codex app-server stdin is unavailable")
+    payload = (
+        json.dumps(value, separators=(",", ":"), ensure_ascii=True) + "\n"
+    ).encode("utf-8")
+    try:
+        process.stdin.write(payload)
+        process.stdin.flush()
+    except (BrokenPipeError, OSError) as error:
+        raise GuardError("Codex app-server request write failed") from error
+
+
+def _await_response(
+    process: subprocess.Popen[bytes],
+    messages: queue.Queue[tuple[str, Any]],
+    request_id: int,
+    deadline: float,
+) -> dict[str, Any]:
+    while True:
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            raise GuardError("Codex app-server request timed out")
+        try:
+            kind, payload = messages.get(timeout=remaining)
+        except queue.Empty as error:
+            raise GuardError("Codex app-server request timed out") from error
+        if kind == "error":
+            raise payload
+        if kind == "eof":
+            raise GuardError(
+                f"Codex app-server exited before response {request_id} "
+                f"(status {process.poll()})"
+            )
+        if not isinstance(payload, dict):
+            raise NativeSensorMalformed(
+                "Codex app-server emitted a non-object JSONL message"
+            )
+        response_id = payload.get("id")
+        if response_id is None:
+            continue
+        if isinstance(response_id, bool) or response_id != request_id:
+            raise NativeSensorMalformed(
+                "Codex app-server returned an unexpected response id"
+            )
+        if "error" in payload:
+            raise NativeSensorMalformed(
+                "Codex app-server returned a protocol error"
+            )
+        result = payload.get("result")
+        if not isinstance(result, dict):
+            raise NativeSensorMalformed(
+                "Codex app-server response omitted an object result"
+            )
+        return result
+
+
+def read_codex_native_payload() -> tuple[dict[str, Any], dict[str, Any], str]:
+    executable, identity, version = qualify_codex()
+    verify_native_identity(executable, identity, "before app-server launch")
+    try:
+        process = subprocess.Popen(
+            [str(executable), "app-server", "--stdio"],
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            close_fds=True,
+        )
+    except OSError as error:
+        if isinstance(error, FileNotFoundError):
+            raise NativeSensorUnavailable(
+                "Codex app-server is unavailable"
+            ) from error
+        raise NativeSensorError("Codex app-server launch failed") from error
+    if process.stdout is None or process.stderr is None:
+        process.kill()
+        process.wait()
+        raise GuardError("Codex app-server pipes are unavailable")
+    messages: queue.Queue[tuple[str, Any]] = queue.Queue()
+    stdout_thread = threading.Thread(
+        target=_jsonl_reader,
+        args=(process.stdout, messages),
+        daemon=True,
+    )
+    stderr_thread = threading.Thread(
+        target=_stderr_reader,
+        args=(process.stderr, messages),
+        daemon=True,
+    )
+    stdout_thread.start()
+    stderr_thread.start()
+    deadline = time.monotonic() + CODEX_APP_SERVER_TIMEOUT_SECONDS
+    error: BaseException | None = None
+    result: tuple[dict[str, Any], dict[str, Any], str] | None = None
+    try:
+        _send_jsonl(
+            process,
+            {
+                "method": "initialize",
+                "id": 1,
+                "params": {
+                    "clientInfo": {
+                        "name": "aigent-hive",
+                        "title": "Aigent Hive",
+                        "version": "0.7.0",
+                    }
+                },
+            },
+        )
+        _await_response(process, messages, 1, deadline)
+        _send_jsonl(process, {"method": "initialized", "params": {}})
+        _send_jsonl(
+            process,
+            {
+                "method": "account/read",
+                "id": 2,
+                "params": {"refreshToken": False},
+            },
+        )
+        account = _await_response(process, messages, 2, deadline)
+        _send_jsonl(
+            process,
+            {
+                "method": "account/rateLimits/read",
+                "id": 3,
+                "params": None,
+            },
+        )
+        rate_limits = _await_response(process, messages, 3, deadline)
+        result = (account, rate_limits, version)
+    except BaseException as caught:
+        error = caught
+    finally:
+        if process.stdin is not None:
+            try:
+                process.stdin.close()
+            except OSError:
+                pass
+        try:
+            process.wait(timeout=2)
+        except subprocess.TimeoutExpired:
+            process.terminate()
+            try:
+                process.wait(timeout=2)
+            except subprocess.TimeoutExpired:
+                process.kill()
+                process.wait()
+        stdout_thread.join(timeout=1)
+        stderr_thread.join(timeout=1)
+    verify_native_identity(executable, identity, "during app-server exchange")
+    if error is not None:
+        if isinstance(error, GuardError):
+            raise error
+        raise GuardError("Codex app-server exchange failed") from error
+    assert result is not None
+    return result
+
+
+def _codex_window(
+    value: Any,
+    *,
+    measured_at: dt.datetime,
+) -> tuple[str, float, int]:
+    if not isinstance(value, dict):
+        raise NativeSensorMalformed(
+            "Codex native sensor returned a malformed quota window"
+        )
+    used = value.get("usedPercent")
+    if (
+        isinstance(used, bool)
+        or not isinstance(used, (int, float))
+        or not math.isfinite(float(used))
+        or not 0 <= float(used) <= 100
+    ):
+        raise NativeSensorMalformed(
+            "Codex native sensor returned an invalid usedPercent"
+        )
+    minutes = value.get("windowDurationMins")
+    if isinstance(minutes, bool) or not isinstance(minutes, int):
+        raise NativeSensorMalformed(
+            "Codex native sensor returned an invalid quota duration"
+        )
+    if minutes == 300:
+        name = "session"
+    elif minutes == 10080:
+        name = "weekly"
+    else:
+        raise NativeSensorMalformed(
+            "Codex native sensor returned an unexpected quota duration"
+        )
+    resets_at = value.get("resetsAt")
+    if (
+        isinstance(resets_at, bool)
+        or not isinstance(resets_at, int)
+        or resets_at <= int(measured_at.timestamp())
+    ):
+        raise NativeSensorMalformed(
+            "Codex native sensor returned a stale quota window"
+        )
+    return name, float(used), resets_at
+
+
+def read_codex_native_quota() -> dict[str, Any]:
+    account_result, response, version = read_codex_native_payload()
+    account = account_result.get("account")
+    if not isinstance(account, dict) or account.get("type") != "chatgpt":
+        raise NativeSensorUnavailable(
+            "Codex native sensor has no subscription account"
+        )
+    email = account.get("email")
+    account_plan = account.get("planType")
+    if not isinstance(email, str) or not email.strip():
+        raise NativeSensorMalformed(
+            "Codex native sensor omitted account identity"
+        )
+    if account_plan not in SUPPORTED_CODEX_PLANS:
+        raise NativeSensorUnsupported(
+            "Codex native sensor returned an unsupported account plan"
+        )
+    rate_limits_by_id = response.get("rateLimitsByLimitId")
+    selected = None
+    if isinstance(rate_limits_by_id, dict):
+        selected = rate_limits_by_id.get("codex")
+    legacy = response.get("rateLimits")
+    if selected is None:
+        selected = legacy
+    elif legacy is not None and legacy != selected:
+        raise NativeSensorMalformed(
+            "Codex native sensor returned conflicting quota payloads"
+        )
+    if not isinstance(selected, dict) or selected.get("limitId") != "codex":
+        raise NativeSensorMalformed(
+            "Codex native sensor returned an unexpected limitId"
+        )
+    if selected.get("planType") != account_plan:
+        raise NativeSensorMalformed(
+            "Codex native sensor returned a conflicting quota plan"
+        )
+    measured_at = utc_now()
+    windows: dict[str, tuple[float, int]] = {}
+    for field in ("primary", "secondary"):
+        raw = selected.get(field)
+        if raw is None:
+            continue
+        name, used, resets_at = _codex_window(raw, measured_at=measured_at)
+        if name in windows:
+            raise NativeSensorMalformed(
+                "Codex native sensor returned duplicate quota windows"
+            )
+        windows[name] = (used, resets_at)
+    if "session" in windows:
+        window_name = "session"
+    elif "weekly" in windows:
+        window_name = "weekly"
+    else:
+        raise NativeSensorMalformed(
+            "Codex native sensor omitted supported quota windows"
+        )
+    used, resets_at = windows[window_name]
+    return {
+        "sensor": CODEX_NATIVE_SENSOR,
+        "sensor_version": version,
+        "window": window_name,
+        "used_percent": used,
+        "remaining_percent": round(100.0 - used, 6),
+        "measured_at": measured_at.isoformat().replace("+00:00", "Z"),
+        "resets_at": resets_at,
+        "account_digest": "sha256:"
+        + hashlib.sha256(email.strip().encode("utf-8")).hexdigest(),
+        "fallback_used": False,
+    }
+
+
+def read_codexbar_quota() -> dict[str, Any]:
     executable, identity = qualify_codexbar()
     if executable_identity(executable) != identity:
         raise GuardError("CodexBar executable changed before usage read")
-    payload = run_bounded(executable, USAGE_ARGUMENTS, 60)
+    payload = run_bounded(
+        executable,
+        USAGE_ARGUMENTS,
+        60,
+        sensor_name="CodexBar",
+    )
     if executable_identity(executable) != identity:
         raise GuardError("CodexBar executable changed during usage read")
     try:
@@ -424,7 +1026,33 @@ def read_quota() -> dict[str, Any]:
         "used_percent": float(used),
         "remaining_percent": remaining,
         "measured_at": measured_at.isoformat().replace("+00:00", "Z"),
+        "fallback_used": True,
     }
+
+
+def read_quota() -> dict[str, Any]:
+    try:
+        return read_codex_native_quota()
+    except (
+        NativeSensorUnavailable,
+        NativeSensorUnsupported,
+        NativeSensorMalformed,
+    ) as native_error:
+        try:
+            quota = read_codexbar_quota()
+        except CodexBarUnavailable as fallback_error:
+            raise CodexBarUnavailable(
+                "Codex native sensor is unavailable and the optional "
+                "CodexBar fallback is not installed"
+            ) from fallback_error
+        except GuardError as fallback_error:
+            raise GuardError(
+                "Codex native sensor is unavailable and the optional CodexBar "
+                f"fallback failed ({fallback_error})"
+            ) from native_error
+        quota["native_sensor"] = "unavailable"
+        quota["fallback_reason"] = "native-unavailable"
+        return quota
 
 
 def evaluate(root: Path, expected_session_id: str | None = None) -> tuple[dict[str, Any], int]:
@@ -447,6 +1075,22 @@ def evaluate(root: Path, expected_session_id: str | None = None) -> tuple[dict[s
             quota_exit = EXIT_HALTED
         else:
             decision["quota_decision"] = "allowed"
+    except CodexBarUnavailable as error:
+        decision["quota_decision"] = "usage_unknown"
+        decision["reason"] = str(error)
+        decision["notification"] = (
+            "CodexBar fallback is not installed for codex; installation is "
+            "optional and requires explicit current-action consent."
+        )
+        decision["fallback_install"] = {
+            "provider": "codex",
+            "fallback": "codexbar",
+            "availability": "missing",
+            "command_preview": source_guard_command("codex", apply=False),
+            "decline_effect": "core-usable-automatic-dispatch-usage-unknown",
+        }
+        decision["next_action"] = source_guard_command("codex", apply=False)
+        quota_exit = EXIT_UNKNOWN
     except GuardError as error:
         decision["quota_decision"] = "usage_unknown"
         decision["reason"] = str(error)
@@ -639,6 +1283,12 @@ def build_parser() -> argparse.ArgumentParser:
     command("watch-start")
     command("watch-status")
     command("watch-stop")
+    install = command("fallback-install")
+    install.add_argument("--host", choices=FALLBACK_HOSTS, required=True)
+    mode = install.add_mutually_exclusive_group(required=True)
+    mode.add_argument("--dry-run", action="store_true")
+    mode.add_argument("--apply", action="store_true")
+    install.add_argument("--confirm-install", action="store_true")
     watcher = command("watch", help=argparse.SUPPRESS)
     watcher.add_argument("--once", action="store_true", help=argparse.SUPPRESS)
     return parser
@@ -653,6 +1303,14 @@ def main() -> int:
             if session_id is None:
                 session_id = load_current_session(root)["session_id"]
             return watch(root, session_id, arguments.once)
+        if arguments.command == "fallback-install":
+            result = fallback_install(
+                arguments.host,
+                apply=arguments.apply,
+                confirmed=arguments.confirm_install,
+            )
+            emit(result, arguments.json)
+            return EXIT_ALLOWED
         session = load_current_session(root, arguments.session_id)
         if arguments.command == "gate":
             watcher = start_watcher(root, session)
@@ -698,6 +1356,30 @@ def main() -> int:
     except SessionExpired as error:
         emit({"status": "session_expired", "reason": str(error)}, arguments.json)
         return EXIT_UNKNOWN
+    except FallbackInstallUnsupported as error:
+        emit(
+            {
+                "schema_version": SCHEMA_VERSION,
+                "action": "InstallUsageFallback",
+                "status": "unsupported",
+                "code": "hive.usage-fallback-install-unsupported",
+                "reason": str(error),
+            },
+            arguments.json,
+        )
+        return EXIT_USAGE
+    except FallbackInstallInvalid as error:
+        emit(
+            {
+                "schema_version": SCHEMA_VERSION,
+                "action": "InstallUsageFallback",
+                "status": "error",
+                "code": "hive.invalid-input",
+                "reason": str(error),
+            },
+            arguments.json,
+        )
+        return EXIT_USAGE
     except GuardError as error:
         emit({"status": "usage_unknown", "reason": str(error)}, arguments.json)
         if arguments.command in {
@@ -707,6 +1389,7 @@ def main() -> int:
             "session-toggle",
             "watch-start",
             "watch-stop",
+            "fallback-install",
         }:
             return EXIT_USAGE
         return EXIT_UNKNOWN

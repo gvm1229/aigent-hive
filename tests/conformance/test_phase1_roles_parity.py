@@ -29,7 +29,9 @@ def normalized_copier_tree(
 ) -> dict[str, tuple[str, bytes | str]]:
     snapshot = snapshot_tree(root)
     for path in tuple(snapshot):
-        if path == ".copier-answers.yml":
+        if path == ".copier-answers.yml" or path == ".hive/config/project-base.json":
+            snapshot.pop(path)
+        elif path == ".hive/index" or path.startswith(".hive/index/"):
             snapshot.pop(path)
     return snapshot
 
@@ -41,8 +43,9 @@ class Phase1CopierParity(Phase1CliTestCase):
         *,
         host: str,
     ) -> None:
-        projection_root = ".claude" if host == "claude" else ".agents"
-        other_root = ".agents" if host == "claude" else ".claude"
+        projection_roots = [".agents"]
+        if host == "claude":
+            projection_roots.append(".claude")
         active_ledger_path = target / ".hive/config/active-skills.yml"
         active_ledger = read_yaml(active_ledger_path)
         skills = active_ledger["skills"]
@@ -51,8 +54,10 @@ class Phase1CopierParity(Phase1CliTestCase):
             "hive-judge-package",
             "hive-knowledge-capture",
             "hive-knowledge-maintenance",
+            "hive-knowledge-promote",
             "hive-knowledge-query",
             "hive-migrate",
+            "hive-project-upgrade",
             "hive-prompt-refine",
             "hive-role-handoff",
             "hive-run-checkpoint",
@@ -63,29 +68,38 @@ class Phase1CopierParity(Phase1CliTestCase):
             "setup-harness",
         ]
         self.assertEqual([entry["name"] for entry in skills], expected_names)
-        projected_skill_root = target / projection_root / "skills"
-        self.assertEqual(
-            {path.name for path in projected_skill_root.iterdir()},
-            set(expected_names),
-        )
+        for projection_root in projection_roots:
+            projected_skill_root = target / projection_root / "skills"
+            self.assertEqual(
+                {path.name for path in projected_skill_root.iterdir()},
+                set(expected_names),
+            )
         for entry in skills:
             self.assertIsInstance(entry, dict)
             name = entry["name"]
             source = REPOSITORY_ROOT / f"harness/skills/{name}/SKILL.md"
-            projected = target / projection_root / f"skills/{name}/SKILL.md"
             with self.subTest(host=host, skill=name):
-                self.assertEqual(projected.read_bytes(), source.read_bytes())
                 self.assertEqual(
                     entry["content_digest"],
                     f"sha256:{hashlib.sha256(source.read_bytes()).hexdigest()}",
                 )
                 self.assertEqual(entry["source_type"], "built-in")
                 self.assertIsNone(entry["consent_digest"])
-                self.assertEqual(
-                    {path.name for path in projected.parent.iterdir()},
-                    {"SKILL.md"},
-                )
-        self.assertFalse((target / other_root).exists())
+                for projection_root in projection_roots:
+                    projected = (
+                        target
+                        / projection_root
+                        / f"skills/{name}/SKILL.md"
+                    )
+                    self.assertEqual(
+                        projected.read_bytes(),
+                        source.read_bytes(),
+                    )
+                    self.assertEqual(
+                        {path.name for path in projected.parent.iterdir()},
+                        {"SKILL.md"},
+                    )
+        self.assertEqual((target / ".claude").exists(), host == "claude")
         ledger_bytes = active_ledger_path.read_bytes()
         self.assertNotIn(b".agents", ledger_bytes)
         self.assertNotIn(b".claude", ledger_bytes)
@@ -456,6 +470,10 @@ class Phase1AnswerMigrationConformance(Phase1CliTestCase):
             if key != "orchestration_layer"
         }
         expected["approved_fallback_hooks"] = []
+        expected["project_identity"] = legacy["project_name"]
+        expected["root_knowledge_promotion_categories"] = []
+        expected["confidential_knowledge_categories"] = []
+        expected["user_store_binding"] = ""
 
         process, _ = self.invoke_setup(
             target,

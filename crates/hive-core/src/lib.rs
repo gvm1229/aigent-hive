@@ -209,6 +209,24 @@ pub fn validate_hive_skill_projection_relative(path: &Path) -> Result<(), Target
     Ok(())
 }
 
+/// Validate one exact provider-neutral project directive projection path.
+///
+/// This is the only non-Skill surface that permits Hive writes below
+/// `.agents/`. Accepted paths are `.agents/directives/<safe-name>.md`.
+///
+/// # Errors
+///
+/// Returns a lexical or forbidden-namespace error for every other path.
+pub fn validate_hive_directive_projection_relative(path: &Path) -> Result<(), TargetGuardError> {
+    let _ = validate_relative_lexical(path)?;
+    if !is_hive_directive_projection_path(path) {
+        return Err(TargetGuardError::ForbiddenNamespace {
+            path: path.to_path_buf(),
+        });
+    }
+    Ok(())
+}
+
 fn validate_relative_lexical(path: &Path) -> Result<String, TargetGuardError> {
     let Some(raw) = path.to_str() else {
         return Err(TargetGuardError::UnsafeRelativePath {
@@ -268,6 +286,31 @@ pub fn is_hive_skill_projection_path(path: &Path) -> bool {
     is_hive_skill_projection_portable(&portable)
 }
 
+/// Return whether a path is one exact Hive-managed project directive.
+#[must_use]
+pub fn is_hive_directive_projection_path(path: &Path) -> bool {
+    let Some(raw) = path.to_str() else {
+        return false;
+    };
+    #[cfg(windows)]
+    let portable = raw.replace('\\', "/");
+    #[cfg(not(windows))]
+    let portable = raw.to_owned();
+    let mut components = portable.split('/');
+    let (Some(".agents"), Some("directives"), Some(name), None) = (
+        components.next(),
+        components.next(),
+        components.next(),
+        components.next(),
+    ) else {
+        return false;
+    };
+    let Some(stem) = name.strip_suffix(".md") else {
+        return false;
+    };
+    valid_directive_projection_name(stem)
+}
+
 fn is_hive_skill_projection_portable(path: &str) -> bool {
     let parts = path.split('/').collect::<Vec<_>>();
     parts.len() == 4
@@ -283,6 +326,17 @@ fn valid_skill_projection_name(name: &str) -> bool {
             .bytes()
             .next()
             .is_some_and(|byte| byte.is_ascii_lowercase())
+        && name
+            .bytes()
+            .all(|byte| byte.is_ascii_lowercase() || byte.is_ascii_digit() || byte == b'-')
+}
+
+fn valid_directive_projection_name(name: &str) -> bool {
+    (2..=63).contains(&name.len())
+        && name
+            .bytes()
+            .next()
+            .is_some_and(|byte| byte.is_ascii_lowercase() || byte.is_ascii_digit())
         && name
             .bytes()
             .all(|byte| byte.is_ascii_lowercase() || byte.is_ascii_digit() || byte == b'-')
@@ -311,6 +365,21 @@ pub fn ensure_no_symlink_ancestors_for_hive_skill_projection(
     relative: &Path,
 ) -> Result<(), TargetGuardError> {
     validate_hive_skill_projection_relative(relative)?;
+    ensure_no_symlink_ancestors_validated(target, relative)
+}
+
+/// Reject a projected directive destination when an existing component below
+/// `target` is a symlink.
+///
+/// # Errors
+///
+/// Returns a lexical error unless the path is an exact Hive directive
+/// projection, or a symlink error for the first unsafe component.
+pub fn ensure_no_symlink_ancestors_for_hive_directive_projection(
+    target: &Path,
+    relative: &Path,
+) -> Result<(), TargetGuardError> {
+    validate_hive_directive_projection_relative(relative)?;
     ensure_no_symlink_ancestors_validated(target, relative)
 }
 

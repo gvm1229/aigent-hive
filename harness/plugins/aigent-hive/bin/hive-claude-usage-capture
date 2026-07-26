@@ -1,0 +1,9 @@
+#!/bin/sh
+#
+# Capture-only Claude status-line command. To preserve an existing status line,
+# use the copy-ready composition snippet in the plugin README.
+#
+# The wrapper never changes ~/.claude/settings.json and emits no replacement
+# status text. It forwards the host-owned JSON only to the local Hive CLI.
+hive usage capture --host claude --target-from-stdin --stdin-json --output json >/dev/null 2>&1 || :
+exit 0

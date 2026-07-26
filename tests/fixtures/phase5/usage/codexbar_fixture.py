@@ -10,11 +10,12 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 case = os.environ.get("FAKE_CODEXBAR_CASE", "allow")
+requested_provider = os.environ.get("FAKE_CODEXBAR_PROVIDER", "codex")
 now = datetime.now(timezone.utc)
 expected_usage_argv = [
     "usage",
     "--provider",
-    "codex",
+    requested_provider,
     "--all-accounts",
     "--source",
     "cli",
@@ -72,9 +73,9 @@ updated_at = now
 primary_used = 43
 secondary_used = 43
 error = None
-provider = "codex"
-source = "codex-cli"
-identity: dict[str, str] | None = {"providerID": "codex"}
+provider = requested_provider
+source = f"{requested_provider}-cli"
+identity: dict[str, str] | None = {"providerID": requested_provider}
 
 if case == "threshold":
     primary_used = secondary_used = 90

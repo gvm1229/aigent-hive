@@ -16,7 +16,7 @@
 | cloud DB/VPS | 제외 | multi-machine concurrent writer 요구가 확정 |
 | dashboard/desktop app | 유보 | CLI public release와 recovery gate 완료 |
 | Rust TUF/signing library | `ed25519-dalek` verifier-only 채택, signing은 external | Private-key custody를 product에 넣지 않고 verifier audit 결손이 확인될 때만 재검토 |
-| Antigravity projection surface | qualification 필요 | version-pinned public documentation과 L2/L3 fixture 확보 |
+| Antigravity projection surface | native global plugin·Skill path qualified | host major 또는 plugin manifest contract 변경 |
 | web/unreal profile source | 아직 미이식 | 각 reference의 generic 부분을 별도 검토하고 domain fixture·precedence test 작성 |
 
 ## References
@@ -54,9 +54,13 @@
 ### Host Skills와 hooks
 
 - [OpenAI Codex — Hooks](https://learn.chatgpt.com/docs/hooks)
-- [Anthropic Claude Code — Skills](https://code.claude.com/docs/en/slash-commands)
+- [OpenAI Codex — Skills](https://developers.openai.com/codex/skills)
+- [OpenAI Codex — AGENTS.md](https://developers.openai.com/codex/guides/agents-md)
+- [Anthropic Claude Code — Skills](https://code.claude.com/docs/en/skills)
+- [Anthropic Claude Code — Plugins](https://code.claude.com/docs/en/plugins-reference)
 - [Anthropic Claude Code — Hooks](https://code.claude.com/docs/en/hooks)
 - [Google Antigravity — Skills](https://antigravity.google/docs/skills?app=antigravity-ide)
+- [Google Antigravity — Plugins](https://www.antigravity.google/docs/plugins)
 - [Google Antigravity — Hooks](https://antigravity.google/docs/hooks?app=antigravity)
 
 ### Usage

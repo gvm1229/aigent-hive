@@ -5,6 +5,7 @@ _templates_suffix: .jinja
 _envops:
   keep_trailing_newline: true
 _exclude:
+  - "{% if primary_host != 'claude' %}.claude{% endif %}"
   - "{% if capability_resolution.detection != 'absent' or approved_fallback_hooks | length == 0 %}.hive/config/approved-hooks.yml{% endif %}"
   - "{% if capability_resolution.detection != 'absent' or approved_fallback_hooks | length == 0 %}.hive/hooks{% endif %}"
   - "{% if capability_resolution.detection != 'absent' or approved_fallback_hooks | selectattr('capability', 'equalto', 'protect-hive-owned-state') | list | length == 0 %}.hive/hooks/protect-hive-owned-state{% endif %}"
@@ -16,6 +17,11 @@ project_name:
   type: str
   help: 소비자 프로젝트 이름
   validator: "{% if not project_name.strip() %}프로젝트 이름을 입력해야 합니다{% endif %}"
+
+project_identity:
+  type: str
+  help: Root knowledge provenance용 project identity
+  default: "{{ project_name }}"
 
 project_kind:
   type: str
@@ -104,6 +110,21 @@ knowledge_exclude_paths:
   type: yaml
   help: ingest에서 항상 제외할 project-relative path 또는 glob
   default: []
+
+root_knowledge_promotion_categories:
+  type: yaml
+  help: User root knowledge로 승격 가능한 category 목록
+  default: []
+
+confidential_knowledge_categories:
+  type: yaml
+  help: User root knowledge 승격 금지 category 목록
+  default: []
+
+user_store_binding:
+  type: str
+  help: User root store canonical path의 sha256 binding
+  default: ""
 
 approved_optional_skills:
   type: yaml

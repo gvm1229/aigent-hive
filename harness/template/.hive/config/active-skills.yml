@@ -29,9 +29,20 @@ skills:
   - memory-write
   - shell
   consent_digest: null
+- name: hive-knowledge-promote
+  source_type: built-in
+  content_digest: sha256:3239382ad2461e31b99a89d32ee69b6bb6fd26faf1a91e50f52aaa9ed21b5159
+  side_effect_class: external-write
+  capabilities:
+  - filesystem-read
+  - filesystem-write
+  - memory-read
+  - memory-write
+  - shell
+  consent_digest: null
 - name: hive-knowledge-query
   source_type: built-in
-  content_digest: sha256:a13087365b7e91516fc45b5f699f7e4aec1b3407758accdd17df0776889d504c
+  content_digest: sha256:57544a98a992cab44cf81b5a2badf1efd6bba68f6a1785e678b44bf099a4353e
   side_effect_class: read-only
   capabilities:
   - filesystem-read
@@ -41,6 +52,15 @@ skills:
 - name: hive-migrate
   source_type: built-in
   content_digest: sha256:a48df71fcc1d5eb901487f86e807f6acdebf62e0250a564d99fa734f9512ea32
+  side_effect_class: project-write
+  capabilities:
+  - filesystem-read
+  - filesystem-write
+  - shell
+  consent_digest: null
+- name: hive-project-upgrade
+  source_type: built-in
+  content_digest: sha256:c673f3fca88085c25d044944bd17e692eafa0105d0eaf31ac53f14737a15ace4
   side_effect_class: project-write
   capabilities:
   - filesystem-read
@@ -96,7 +116,7 @@ skills:
   consent_digest: null
 - name: hive-usage-guard
   source_type: built-in
-  content_digest: sha256:a6f0ca413925b882b8cb30324a2f4495c2f67eaefaa2e357ba84ba2bc60556d7
+  content_digest: sha256:7e18146d1bb6becce19c1bed6d86d6ece488cffc7793d3bfb4a591d5a3ce7a3c
   side_effect_class: project-write
   capabilities:
   - filesystem-read
@@ -106,7 +126,7 @@ skills:
   consent_digest: null
 - name: setup-harness
   source_type: built-in
-  content_digest: sha256:d209164c56beb8dbb4148745729b62e716c617d17a373c4f4e2a03d6c4c77655
+  content_digest: sha256:11316ba100022cbf18713712eaf6d50325ea489dc410a6a4c1a9b8fa2e1a7f0e
   side_effect_class: project-write
   capabilities:
   - filesystem-read
