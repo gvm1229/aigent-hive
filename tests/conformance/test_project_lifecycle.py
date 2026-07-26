@@ -34,16 +34,16 @@ class ProjectLifecycleConformance(Phase1CliTestCase):
         program = f"""\
 import json
 import os
+import shutil
 import sys
+from pathlib import Path
 
 with open(os.environ["HIVE_TEST_HOST_LOG"], "a", encoding="utf-8") as stream:
     stream.write(json.dumps({{"program": os.path.basename(sys.argv[0]), "argv": sys.argv[1:]}}) + "\\n")
 host = {host!r}
 arguments = sys.argv[1:]
-if host == "antigravity":
-    raise SystemExit(91)
 if arguments == ["--version"]:
-    print({{"codex": "codex-cli 0.145.0", "claude": "2.1.0 (Claude Code)"}}[host])
+    print({{"codex": "codex-cli 0.145.0", "claude": "2.1.0 (Claude Code)", "antigravity": "1.1.7"}}[host])
     raise SystemExit(0)
 
 state_path = os.environ["HIVE_TEST_HOST_LOG"] + "." + host + ".state"
@@ -54,7 +54,21 @@ except FileNotFoundError:
     state = {{"marketplace": False, "plugin": False}}
 
 command = " ".join(arguments)
-if command.startswith("plugin marketplace add "):
+if host == "antigravity" and command.startswith("plugin install "):
+    source = Path(arguments[2])
+    hive_root = next(parent for parent in source.parents if parent.name == ".hive")
+    stage = hive_root.parent / ".gemini/config/plugins/aigent-hive"
+    if stage.exists():
+        shutil.rmtree(stage)
+    shutil.copytree(source, stage)
+    state["plugin"] = True
+    state["stage"] = str(stage)
+elif host == "antigravity" and command == "plugin uninstall aigent-hive":
+    stage = Path(state.get("stage", ""))
+    if state.get("stage") and stage.exists():
+        shutil.rmtree(stage)
+    state["plugin"] = False
+elif command.startswith("plugin marketplace add "):
     state["marketplace"] = True
 elif command in ("plugin add aigent-hive@aigent-hive --json", "plugin install aigent-hive@aigent-hive --scope user"):
     state["plugin"] = True
@@ -74,6 +88,16 @@ if command == "plugin marketplace list --json":
     else:
         entries = [{{"name": "aigent-hive", "source": "directory", "path": os.path.join(root, "user-claude/.hive/marketplaces/claude")}}] if state["marketplace"] else []
         print(json.dumps(entries))
+elif host == "antigravity" and command == "plugin list":
+    if state["plugin"]:
+        print(json.dumps({{"imports": [{{
+            "name": "aigent-hive",
+            "source": "antigravity",
+            "importedAt": "2026-07-27T00:00:00Z",
+            "components": ["skills"],
+        }}]}}))
+    else:
+        print("No imported plugins.")
 elif command == "plugin list --json":
     if host == "codex":
         entries = [{{
@@ -91,15 +115,17 @@ else:
     print("{{}}")
 """
         if os.name == "nt":
-            python_path = self.fake_bin / f"{host}.py"
+            executable_name = "agy" if host == "antigravity" else host
+            python_path = self.fake_bin / f"{executable_name}.py"
             python_path.write_text(program, encoding="utf-8")
-            command_path = self.fake_bin / f"{host}.cmd"
+            command_path = self.fake_bin / f"{executable_name}.cmd"
             command_path.write_text(
-                f'@"{os.sys.executable}" "%~dp0\\{host}.py" %*\r\n',
+                f'@"{os.sys.executable}" "%~dp0\\{executable_name}.py" %*\r\n',
                 encoding="utf-8",
             )
             return
-        command_path = self.fake_bin / host
+        executable_name = "agy" if host == "antigravity" else host
+        command_path = self.fake_bin / executable_name
         command_path.write_text(
             f"#!{os.sys.executable}\n{program}",
             encoding="utf-8",
@@ -233,12 +259,13 @@ else:
                     applied_result["code"], "hive.user-install-complete"
                 )
                 if host == "antigravity":
-                    self.assertIsNone(
-                        applied_result["data"]["qualified_host_version"]
+                    self.assertEqual(
+                        applied_result["data"]["qualified_host_version"],
+                        "1.1.7",
                     )
                     self.assertEqual(
                         applied_result["data"]["host_version_range"],
-                        ">=2.3.1 <3.0.0",
+                        ">=1.1.7 <1.2.0",
                     )
                     host_calls = [
                         json.loads(line)
@@ -246,11 +273,8 @@ else:
                             encoding="utf-8"
                         ).splitlines()
                     ]
-                    self.assertFalse(
-                        any(
-                            call["program"].startswith("antigravity")
-                            for call in host_calls
-                        )
+                    self.assertTrue(
+                        any(call["program"] == "agy" for call in host_calls)
                     )
                 installed = guidance.read_text(encoding="utf-8")
                 self.assertTrue(installed.startswith(foreign))

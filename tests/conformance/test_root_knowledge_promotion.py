@@ -60,22 +60,47 @@ class RootKnowledgePromotionConformance(Phase1CliTestCase):
 
     def _write_fake_antigravity(self) -> None:
         program = """\
+import json
+import os
+import shutil
 import sys
+from pathlib import Path
 
-if sys.argv[1:] == ["--version"]:
-    print("antigravity 2.3.1")
+arguments = sys.argv[1:]
+stage = Path(os.environ["HIVE_TEST_USER_ROOT"]) / ".gemini/config/plugins/aigent-hive"
+if arguments == ["--version"]:
+    print("1.1.7")
+elif arguments == ["plugin", "list"]:
+    if stage.exists():
+        print(json.dumps({"imports": [{
+            "name": "aigent-hive",
+            "source": "antigravity",
+            "importedAt": "2026-07-27T00:00:00Z",
+            "components": ["skills"],
+        }]}))
+    else:
+        print("No imported plugins.")
+elif len(arguments) == 3 and arguments[:2] == ["plugin", "install"]:
+    if stage.exists():
+        shutil.rmtree(stage)
+    shutil.copytree(arguments[2], stage)
+    print("{}")
+elif arguments == ["plugin", "uninstall", "aigent-hive"]:
+    if stage.exists():
+        shutil.rmtree(stage)
+    print("{}")
 else:
     print("{}")
 """
         if os.name == "nt":
-            python_path = self.fake_bin / "antigravity.py"
+            python_path = self.fake_bin / "agy.py"
             python_path.write_text(program, encoding="utf-8")
-            (self.fake_bin / "antigravity.cmd").write_text(
-                f'@"{os.sys.executable}" "%~dp0\\antigravity.py" %*\r\n',
+            (self.fake_bin / "agy.cmd").write_text(
+                f'@"{os.sys.executable}" "%~dp0\\agy.py" %*\r\n',
                 encoding="utf-8",
             )
             return
-        executable = self.fake_bin / "antigravity"
+        executable = self.fake_bin / "agy"
         executable.write_text(
             f"#!{os.sys.executable}\n{program}",
             encoding="utf-8",
@@ -99,6 +124,7 @@ else:
                     "PATH": str(self.fake_bin)
                     + os.pathsep
                     + os.environ.get("PATH", ""),
+                    "HIVE_TEST_USER_ROOT": str(self.user_root),
                     **(environment or {}),
                 }
             ),

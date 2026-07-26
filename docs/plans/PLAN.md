@@ -1,7 +1,7 @@
 # Aigent Hive active plan index
 
-> Revision: 1.45
-> 기준일: 2026-07-26
+> Revision: 1.46
+> 기준일: 2026-07-27
 > Product version: `0.7.0`
 > 현재 milestone: Phase 7 public qualification + user plugin/project lifecycle `0.8.0`
 > Entrypoint: `docs/plans/PLAN.md`
@@ -72,7 +72,7 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
 
 ## Current execution order
 
-1. RPH-036 실제 Claude install/update와 Antigravity app discovery E2E
+1. RPH-036 실제 Claude install/update E2E
 2. NUS-020 실제 Claude Pro/Max qualification
 3. NUS-014·P7-013·P7-021 실제 세 host matrix
 4. P7-018·020·037 signed release qualification
@@ -82,6 +82,6 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
 
 - macOS Developer ID signing·notarization
 - Windows Authenticode signing
-- 실제 Claude·Gemini Antigravity protected session E2E
+- 실제 Claude protected session E2E
 - Externally signed TUF authorization과 GitHub Release publication
 - Exact `1.0.0` 사용자 authority

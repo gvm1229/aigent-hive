@@ -2,12 +2,12 @@
 
 - 기준 branch: `develop`
 - product version: `0.7.0`
-- plan revision: `1.45`
+- plan revision: `1.46`
 - 현재 milestone: Phase 7 public qualification + user plugin/project lifecycle `0.8.0`
 - 현재 작업: user plugin·project harness·root knowledge·local-priority upgrade와
   native-first usage sensor의 local implementation·fixture qualification 완료;
   실제 Codex·Antigravity user·usage E2E와 unsigned native multi-platform qualification 완료,
-  Claude·Antigravity app UI·signed publication qualification 잔여
+  Claude·signed publication qualification 잔여
 - 외부 중지 경계: protected signing/publication credential, 실제 production publication,
   exact `1.0.0` 사용자 authority
 - Plan load: compact `docs/plans/PLAN.md` + `docs/plans/phases/07-public-qualification.md`
@@ -64,7 +64,8 @@
 
 현재 구현:
 
-- Codex·Claude Code·Antigravity native plugin package와 user-scope install/update
+- Codex·Claude Code·Antigravity native plugin package와 user-scope install/update.
+  Antigravity는 Hive-owned source package와 `agy`-owned staging·registry를 분리
 - User guidance marker append·own-block replace·foreign byte 보존
 - Project `.agents/directives`, portable `.agents/skills`, Claude `.claude/skills` adapter
 - `setup-harness` 질문 sequence, project/root canonical knowledge·SQLite와 explicit promotion
@@ -75,7 +76,7 @@
 
 확인된 gap:
 
-- 실제 Claude Code install/update와 Antigravity app UI discovery E2E
+- 실제 Claude Code install/update E2E
 - 실제 Claude Pro/Max quota usage parity
 - macOS·Windows signing·notarization·publication
 
@@ -85,9 +86,11 @@
   `aigent-hive@aigent-hive` `0.7.0` enabled와 exact local source 확인
 - Codex fresh ephemeral session: detail-poor ordinary request의 optional refine 제안,
   automatic rewrite 0회, safe read-only discovery 후 empty-workspace 중단
-- Antigravity: install→validate→update→validate PASS, 38-path initial activation과
-  zero-diff update
-- Antigravity app UI: ChatGPT Computer Use Accessibility·Screen Recording 권한 대기
+- Antigravity `agy 1.1.7`: support range `>=1.1.7 <1.2.0`, 기존
+  directory-scan `0.7.0` migration dry-run→install→validate→repeat update→validate PASS
+- Antigravity native discovery: `agy plugin list` import 등록 PASS, Hive source와
+  host staging 16/16 exact path·byte parity, full-tree validation PASS,
+  host staging의 Hive ledger ownership 0건
 - Claude Code: executable·authenticated Pro/Max session 부재
 
 결정:
@@ -138,8 +141,8 @@
 
 ### Local qualification evidence
 
-- Rust workspace 379/379:
-  `hive-cli` 174, `hive-core` 62, `hive-projection` 22, `hive-render` 51,
+- Rust workspace 390/390:
+  `hive-cli` 185, `hive-core` 62, `hive-projection` 22, `hive-render` 51,
   `hive-update` 63, `hive-wiki` 7
 - Python conformance 524개 실행, 523 PASS, Windows `pwsh` 전용 1개 expected skip
 - Native hostile sensor·fallback, Phase 3 projection과 source usage guard regression PASS
@@ -147,7 +150,7 @@
 
 남은 외부 범위:
 
-- 실제 Claude·Gemini Antigravity app session E2E
+- 실제 Claude app session E2E
 - 실제 Claude Pro/Max qualified subscription usage sensor
 - Public signed multi-platform release candidate
 
@@ -310,7 +313,7 @@ Remote qualification evidence:
 
 ## 다음 action
 
-1. RPH-036 실제 Claude install/update와 Antigravity app discovery E2E
+1. RPH-036 실제 Claude install/update E2E
 2. NUS-020 실제 Claude Pro/Max qualification
 3. NUS-014·P7-013·P7-021 실제 세 host matrix
 4. P7-018·020·037 signed release qualification

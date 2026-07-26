@@ -1,8 +1,7 @@
 # 사용자 plugin과 project harness lifecycle 계획
 
 > Checklist owner: `RPH-*`
-> Load condition: user-scope 설치·update, project bootstrap, root knowledge promotion,
-> project upgrade 구현·검증
+> Load condition: user 설치·update, project bootstrap, knowledge promotion·upgrade
 > Decision: [`ADR-0009`](../../decisions/ADR-0009-user-plugin-project-knowledge-boundary.md)
 
 ## 목표
@@ -121,18 +120,21 @@
 
 - `RPH-036`: Codex `0.145.0` 실제 install→validate→update→validate와
   `aigent-hive@aigent-hive` enabled state PASS
-- `RPH-036`: Antigravity 실제 install→validate→update→validate와 global
-  directory-scan projection PASS
-- `RPH-036`: Claude executable·Pro/Max session 부재, Antigravity app UI discovery의
-  macOS Computer Use 권한 대기
+- `RPH-036`: authenticated Antigravity `agy 1.1.7` 실제 legacy migration
+  dry-run→install→validate→repeat update→validate, native `plugin list` discovery와
+  source/staging 16/16 byte parity PASS
+- `RPH-036`: Claude executable·Pro/Max session 부재로 실제 Claude install/update만
+  미검증
 
-## Current host evidence — 2026-07-26
+## Host evidence — 2026-07-27
 
 - Codex: `.codex-plugin/plugin.json`, bundled `skills/`,
   `.agents/plugins/marketplace.json` marketplace install과
   nonempty `~/.codex/AGENTS.override.md` 우선, 그 외 `~/.codex/AGENTS.md`
 - Claude Code: `.claude-plugin/plugin.json`, bundled `skills/`, marketplace install,
   `~/.claude/CLAUDE.md`
-- Antigravity: `~/.gemini/config/plugins/aigent-hive/plugin.json`, bundled `skills/`,
-  compatibility global `~/.gemini/config/skills/`
+- Antigravity: Hive-owned
+  `~/.hive/marketplaces/antigravity/plugins/aigent-hive`, `agy plugin install`,
+  host-owned `~/.gemini/config/plugins/aigent-hive`, compatibility global
+  `~/.gemini/config/skills/`
 - 공통 결론: 동일 product contract와 host별 native packaging adapter
