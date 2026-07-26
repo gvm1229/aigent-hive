@@ -67,7 +67,7 @@ jobs:
           COPYFILE_DISABLE=1 tar --format ustar --uid 0 --gid 0 \
             -czf "$RUNNER_TEMP/$package.tar.gz" \
             "$package/hive" "$package/LICENSE"
-          printf '%s\n%s\n' "$package/LICENSE" "$package/hive" \
+          printf '%s\n%s\n' "$package/LICENSE" "$package/hive" | sort \
             >"$RUNNER_TEMP/expected-entries.txt"
           tar -tzf "$RUNNER_TEMP/$package.tar.gz" | sort \
             >"$RUNNER_TEMP/actual-entries.txt"

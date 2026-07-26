@@ -445,6 +445,7 @@ class Phase6StaticContracts(unittest.TestCase):
             "lipo -archs",
             "0x8664",
             "expected-entries.txt",
+            '"$package/LICENSE" "$package/hive" | sort',
             "Compare-Object $expected $entries",
             'Compress-Archive -Path "$package\\*"',
             '$expected = @("LICENSE", "hive.exe")',
