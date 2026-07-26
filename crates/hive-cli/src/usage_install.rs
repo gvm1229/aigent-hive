@@ -360,16 +360,15 @@ mod tests {
     #[test]
     fn unsupported_platform_never_qualifies_a_package_manager() {
         let runner = FakeRunner::new();
-        let error = match install(
+        let Err(error) = install(
             &InstallArguments {
                 host: UsageHost::Claude,
                 mode: InstallMode::DryRun,
                 confirmed: false,
             },
             &runner,
-        ) {
-            Err(error) => error,
-            Ok(_) => panic!("unsupported platform must fail"),
+        ) else {
+            panic!("unsupported platform must fail");
         };
         assert_eq!(
             error,
