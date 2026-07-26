@@ -549,9 +549,12 @@ fn execute_apply(
     plan: &mut UserPlan,
 ) -> Result<ActionResult, InstallError> {
     let host_executable = qualify_host(arguments, plan, runner)?;
-    if let Some(executable) = host_executable.as_ref() {
-        let host_version = probe_supported_host_version(arguments.host, executable, runner)?;
-        bind_host_version(plan, &host_version);
+    let host_version = host_executable
+        .as_ref()
+        .map(|executable| probe_supported_host_version(arguments.host, executable, runner))
+        .transpose()?;
+    if let Some(host_version) = host_version.as_deref() {
+        bind_host_version(plan, host_version);
     }
     let codex_before = probe_codex_state_if_required(arguments, host_executable.as_ref(), runner)?;
     let claude_before =
@@ -595,7 +598,9 @@ fn execute_apply(
             primary,
         )
     })?;
-    bind_host_version(&mut refreshed, &host_version);
+    if let Some(host_version) = host_version.as_deref() {
+        bind_host_version(&mut refreshed, host_version);
+    }
     remove_transaction_journal(arguments, &transaction.journal_relative).map_err(|primary| {
         rollback_after_failure(
             arguments,
