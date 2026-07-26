@@ -1536,19 +1536,19 @@ fn days_from_civil(year: i32, month: i32, day: i32) -> i64 {
 
 #[cfg(test)]
 mod tests {
-    #[cfg(target_os = "macos")]
-    use super::validate_version_for_executable;
     use super::{
         check_codexbar_provider_with_runner, check_preferred_with_runners,
         check_unique_with_runner, check_with_runner, consume_for_automatic_dispatch,
         native_then_fallback, normalize_output, normalize_output_for_account, parse_iso8601_z,
         qualify_and_dispatch_with_runner, resolve_program_in_path, AutomaticDispatchError,
         CommandOutput, CommandRunner, NativeUsageRunner, NormalizedSnapshot, QualifiedExecutable,
-        SensorError, UsageHost, ANTIGRAVITY_USAGE_ARGUMENTS, CODEX_USAGE_ARGUMENTS, OUTPUT_LIMIT,
-        USAGE_TIMEOUT, VERSION_TIMEOUT,
+        SensorError, UsageHost, ANTIGRAVITY_USAGE_ARGUMENTS, CODEX_USAGE_ARGUMENTS, USAGE_TIMEOUT,
+        VERSION_TIMEOUT,
     };
     #[cfg(unix)]
     use super::{qualify_program, SystemCommandRunner};
+    #[cfg(target_os = "macos")]
+    use super::{validate_version_for_executable, OUTPUT_LIMIT};
     use hive_core::sha256_digest;
     use hive_core::usage_guard::{
         evaluate_usage, UsageDecision, UsagePermitError, UsagePolicy, UsageWindow,
