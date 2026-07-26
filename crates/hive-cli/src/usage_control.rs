@@ -939,10 +939,7 @@ fn observe_usage(
     };
     TurnObservation {
         decision,
-        selected_window: snapshot
-            .windows
-            .first()
-            .map_or("unknown", |window| window.name),
+        selected_window: snapshot.selected_window_label(),
         measured_at: snapshot.measured_at,
         evidence_digest: snapshot.evidence_digest(),
         next_action: None,
@@ -1007,7 +1004,8 @@ fn read_claude_capture_snapshot(
                 ("weekly", 10_080) => "weekly",
                 _ => return Err(usage::SensorError::WrongWindows),
             },
-            window_minutes: window.window_minutes,
+            quota_pool: None,
+            window_minutes: Some(window.window_minutes),
             remaining_percent: window.remaining_percent,
             resets_at: window.resets_at_unix_seconds,
         };
@@ -1494,7 +1492,7 @@ fn load_halt(target: &PinnedTarget, binding: &SessionBinding) -> Result<LoadedHa
         || !matches!(marker.decision.as_str(), "halted" | "usage-unknown")
         || !matches!(
             marker.selected_window.as_str(),
-            "session" | "weekly" | "unknown"
+            "session" | "weekly" | "multiple" | "unknown"
         )
         || !(1..=99).contains(&marker.threshold_remaining_percent)
         || marker.revision == 0

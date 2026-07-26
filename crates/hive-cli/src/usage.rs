@@ -22,12 +22,32 @@ const CODEXBAR_VERSION: &str = "0.45.2";
 const VERSION_TIMEOUT: Duration = Duration::from_secs(5);
 const USAGE_TIMEOUT: Duration = Duration::from_mins(1);
 const OUTPUT_LIMIT: usize = 1024 * 1024;
-#[cfg(test)]
-const USAGE_ARGUMENTS: &[&str] = &[
+const CODEX_USAGE_ARGUMENTS: &[&str] = &[
     "usage",
     "--provider",
     "codex",
     "--all-accounts",
+    "--source",
+    "cli",
+    "--format",
+    "json",
+    "--json-only",
+];
+const CLAUDE_USAGE_ARGUMENTS: &[&str] = &[
+    "usage",
+    "--provider",
+    "claude",
+    "--all-accounts",
+    "--source",
+    "cli",
+    "--format",
+    "json",
+    "--json-only",
+];
+const ANTIGRAVITY_USAGE_ARGUMENTS: &[&str] = &[
+    "usage",
+    "--provider",
+    "antigravity",
     "--source",
     "cli",
     "--format",
@@ -425,6 +445,10 @@ fn executable_identity(path: &Path) -> Result<ExecutableIdentity, SensorError> {
     if !metadata.is_file() || !is_executable(&metadata) {
         return Err(SensorError::ExecutableChanged);
     }
+    Ok(metadata_identity(&metadata))
+}
+
+fn metadata_identity(metadata: &Metadata) -> ExecutableIdentity {
     let modified = metadata.modified().ok().and_then(|time| {
         time.duration_since(UNIX_EPOCH)
             .ok()
@@ -434,21 +458,21 @@ fn executable_identity(path: &Path) -> Result<ExecutableIdentity, SensorError> {
     {
         use std::os::unix::fs::MetadataExt;
 
-        Ok(ExecutableIdentity {
+        ExecutableIdentity {
             len: metadata.len(),
             modified,
             device: metadata.dev(),
             inode: metadata.ino(),
             mode: metadata.mode(),
             change_time: (metadata.ctime(), metadata.ctime_nsec()),
-        })
+        }
     }
     #[cfg(not(unix))]
     {
-        Ok(ExecutableIdentity {
+        ExecutableIdentity {
             len: metadata.len(),
             modified,
-        })
+        }
     }
 }
 
@@ -512,7 +536,8 @@ fn read_bounded(mut reader: impl Read, limit: usize) -> Result<Vec<u8>, SensorEr
 #[derive(Debug, Clone, Serialize, PartialEq)]
 pub(crate) struct NormalizedWindow {
     pub(crate) name: &'static str,
-    pub(crate) window_minutes: u32,
+    pub(crate) quota_pool: Option<&'static str>,
+    pub(crate) window_minutes: Option<u32>,
     pub(crate) remaining_percent: f64,
     pub(crate) resets_at: u64,
 }
@@ -540,14 +565,16 @@ impl NormalizedSnapshot {
         self.windows
             .iter()
             .map(|window| UsageSnapshot {
-                schema_version: 1,
+                schema_version: if window.quota_pool.is_some() { 2 } else { 1 },
                 sensor_id: self.sensor_id.clone(),
                 sensor_version: self.sensor_version.clone(),
                 host_scope: self.provider.clone(),
                 account_scope_digest: self.account_digest.clone(),
+                quota_pool: window.quota_pool.map(str::to_owned),
                 quota_window: match window.name {
                     "session" => UsageWindow::Session,
                     "weekly" => UsageWindow::Weekly,
+                    "provider" => UsageWindow::Provider,
                     _ => unreachable!("normalization emits only required windows"),
                 },
                 remaining_percent: window.remaining_percent,
@@ -560,6 +587,17 @@ impl NormalizedSnapshot {
                 source_confidence: SourceConfidence::High,
             })
             .collect()
+    }
+
+    pub(crate) fn selected_window_label(&self) -> &'static str {
+        let Some(first) = self.windows.first().map(|window| window.name) else {
+            return "unknown";
+        };
+        if self.windows.len() == 1 {
+            first
+        } else {
+            "multiple"
+        }
     }
 }
 
@@ -577,6 +615,7 @@ struct CodexBarUsage {
     secondary: Vec<serde_json::Value>,
     updated_at: String,
     identity: Option<CodexBarIdentity>,
+    account_email: Option<String>,
 }
 
 impl<'de> Deserialize<'de> for CodexBarUsage {
@@ -603,6 +642,8 @@ impl<'de> Deserialize<'de> for CodexBarUsage {
                 let mut updated_at = None;
                 let mut identity = None;
                 let mut identity_seen = false;
+                let mut account_email = None;
+                let mut account_email_seen = false;
                 while let Some(key) = map.next_key::<String>()? {
                     match key.as_str() {
                         "primary" => {
@@ -631,6 +672,13 @@ impl<'de> Deserialize<'de> for CodexBarUsage {
                             identity_seen = true;
                             identity = map.next_value()?;
                         }
+                        "accountEmail" => {
+                            if account_email_seen {
+                                return Err(de::Error::duplicate_field("accountEmail"));
+                            }
+                            account_email_seen = true;
+                            account_email = map.next_value()?;
+                        }
                         _ => {
                             let _: de::IgnoredAny = map.next_value()?;
                         }
@@ -641,6 +689,7 @@ impl<'de> Deserialize<'de> for CodexBarUsage {
                     secondary,
                     updated_at: updated_at.ok_or_else(|| de::Error::missing_field("updatedAt"))?,
                     identity,
+                    account_email,
                 })
             }
         }
@@ -649,12 +698,41 @@ impl<'de> Deserialize<'de> for CodexBarUsage {
     }
 }
 
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+enum CodexBarWindowMinutes {
+    #[default]
+    Missing,
+    Null,
+    Value(u32),
+}
+
+impl<'de> Deserialize<'de> for CodexBarWindowMinutes {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        match Value::deserialize(deserializer)? {
+            Value::Null => Ok(Self::Null),
+            Value::Number(value) => value
+                .as_u64()
+                .and_then(|value| u32::try_from(value).ok())
+                .map(Self::Value)
+                .ok_or_else(|| {
+                    de::Error::custom("windowMinutes must be an unsigned 32-bit integer")
+                }),
+            _ => Err(de::Error::custom(
+                "windowMinutes must be an unsigned 32-bit integer",
+            )),
+        }
+    }
+}
+
 #[derive(Deserialize)]
 struct CodexBarWindow {
     #[serde(rename = "usedPercent")]
     used_percent: f64,
-    #[serde(rename = "windowMinutes")]
-    window_minutes: Option<u32>,
+    #[serde(default, rename = "windowMinutes")]
+    window_minutes: CodexBarWindowMinutes,
     #[serde(rename = "resetsAt")]
     resets_at: Option<String>,
 }
@@ -663,6 +741,8 @@ struct CodexBarWindow {
 struct CodexBarIdentity {
     #[serde(rename = "providerID")]
     provider_id: String,
+    #[serde(rename = "accountEmail")]
+    account_email: Option<String>,
 }
 
 #[cfg(test)]
@@ -780,21 +860,11 @@ fn check_codexbar_with_runner_for_account(
     if !version.success {
         return Err(SensorError::Failed);
     }
-    validate_version(&version.stdout)?;
-    let arguments = [
-        "usage",
-        "--provider",
-        host.as_str(),
-        "--all-accounts",
-        "--source",
-        "cli",
-        "--format",
-        "json",
-        "--json-only",
-    ];
+    validate_version_for_executable(&executable, &version.stdout)?;
+    let arguments = usage_arguments(host);
     let output = runner.run(
         &executable,
-        &arguments,
+        arguments,
         command_timeout(USAGE_TIMEOUT),
         OUTPUT_LIMIT,
     )?;
@@ -898,10 +968,7 @@ where
 {
     let evidence = UsageGuardEvidence {
         digest: snapshot.evidence_digest(),
-        window: snapshot
-            .windows
-            .first()
-            .map_or("unknown", |window| window.name),
+        window: snapshot.selected_window_label(),
     };
     let observation = UsageObservation {
         evidence,
@@ -991,6 +1058,198 @@ fn validate_version(stdout: &[u8]) -> Result<(), SensorError> {
     }
 }
 
+fn validate_version_for_executable(
+    executable: &QualifiedExecutable,
+    stdout: &[u8],
+) -> Result<(), SensorError> {
+    if validate_version(stdout).is_ok() {
+        return Ok(());
+    }
+    if !matches!(stdout, b"CodexBar" | b"CodexBar\n" | b"CodexBar\r\n") {
+        return Err(SensorError::UnsupportedVersion);
+    }
+    validate_macos_bundle_version(executable)
+}
+
+#[cfg(target_os = "macos")]
+fn validate_macos_bundle_version(executable: &QualifiedExecutable) -> Result<(), SensorError> {
+    use std::os::unix::fs::OpenOptionsExt;
+
+    const O_NOFOLLOW: i32 = 0x100;
+
+    if executable.identity.is_none() {
+        return Err(SensorError::UnsupportedVersion);
+    }
+    verify_executable_identity(executable)?;
+    let helpers = executable
+        .path
+        .parent()
+        .filter(|parent| parent.file_name() == Some(OsStr::new("Helpers")))
+        .ok_or(SensorError::UnsupportedVersion)?;
+    if executable.path.file_name() != Some(OsStr::new("CodexBarCLI")) {
+        return Err(SensorError::UnsupportedVersion);
+    }
+    let contents = helpers
+        .parent()
+        .filter(|parent| parent.file_name() == Some(OsStr::new("Contents")))
+        .ok_or(SensorError::UnsupportedVersion)?;
+    contents
+        .parent()
+        .filter(|parent| parent.file_name() == Some(OsStr::new("CodexBar.app")))
+        .ok_or(SensorError::UnsupportedVersion)?;
+    let info_plist = contents.join("Info.plist");
+    let mut file = fs::OpenOptions::new()
+        .read(true)
+        .custom_flags(O_NOFOLLOW)
+        .open(&info_plist)
+        .map_err(|_| SensorError::FilesystemSafety)?;
+    let before = file.metadata().map_err(|_| SensorError::FilesystemSafety)?;
+    if !before.is_file() || before.len() > OUTPUT_LIMIT as u64 {
+        return Err(SensorError::UnsupportedVersion);
+    }
+    let before_identity = metadata_identity(&before);
+    let bytes = read_bounded(&mut file, OUTPUT_LIMIT).map_err(|error| match error {
+        SensorError::OutputTooLarge => SensorError::UnsupportedVersion,
+        _ => SensorError::FilesystemSafety,
+    })?;
+    let after = file.metadata().map_err(|_| SensorError::FilesystemSafety)?;
+    if metadata_identity(&after) != before_identity {
+        return Err(SensorError::FilesystemSafety);
+    }
+    verify_executable_identity(executable)?;
+    validate_bundle_identity_and_version(&bytes)
+}
+
+#[cfg(not(target_os = "macos"))]
+fn validate_macos_bundle_version(_executable: &QualifiedExecutable) -> Result<(), SensorError> {
+    Err(SensorError::UnsupportedVersion)
+}
+
+#[cfg(target_os = "macos")]
+fn validate_bundle_identity_and_version(bytes: &[u8]) -> Result<(), SensorError> {
+    let prepared = prepare_plist_bytes(bytes)?;
+    let value = plutil_json(&prepared)?;
+    let object = value.as_object().ok_or(SensorError::UnsupportedVersion)?;
+    if object.get("CFBundleIdentifier").and_then(Value::as_str) != Some("com.steipete.codexbar")
+        || object
+            .get("CFBundleShortVersionString")
+            .and_then(Value::as_str)
+            != Some(CODEXBAR_VERSION)
+    {
+        return Err(SensorError::UnsupportedVersion);
+    }
+    Ok(())
+}
+
+#[cfg(target_os = "macos")]
+fn prepare_plist_bytes(bytes: &[u8]) -> Result<std::borrow::Cow<'_, [u8]>, SensorError> {
+    const APPLE_DTD: &str = r#"<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">"#;
+
+    if bytes.starts_with(b"bplist00") {
+        return Ok(std::borrow::Cow::Borrowed(bytes));
+    }
+    let plist = std::str::from_utf8(bytes).map_err(|_| SensorError::UnsupportedVersion)?;
+    let trimmed = plist.trim_start_matches(['\u{feff}', ' ', '\t', '\r', '\n']);
+    if !(trimmed.starts_with("<?xml") || trimmed.starts_with("<plist"))
+        || ["<!--", "<![CDATA[", "<!ENTITY"]
+            .iter()
+            .any(|marker| plist.contains(marker))
+    {
+        return Err(SensorError::UnsupportedVersion);
+    }
+    for key in ["CFBundleIdentifier", "CFBundleShortVersionString"] {
+        let target = format!("<key>{key}</key>");
+        if plist.match_indices(&target).count() != 1 {
+            return Err(SensorError::UnsupportedVersion);
+        }
+    }
+    let mut cursor = 0;
+    while let Some(relative) = plist[cursor..].find("<key>") {
+        let start = cursor + relative + "<key>".len();
+        let end = plist[start..]
+            .find("</key>")
+            .map(|relative| start + relative)
+            .ok_or(SensorError::UnsupportedVersion)?;
+        if plist[start..end].contains('&') {
+            return Err(SensorError::UnsupportedVersion);
+        }
+        cursor = end + "</key>".len();
+    }
+    let dtd_count = plist.match_indices("<!DOCTYPE").count();
+    if dtd_count > 1 || (dtd_count == 1 && !plist.contains(APPLE_DTD)) {
+        return Err(SensorError::UnsupportedVersion);
+    }
+    if dtd_count == 1 {
+        Ok(std::borrow::Cow::Owned(
+            plist.replacen(APPLE_DTD, "", 1).into_bytes(),
+        ))
+    } else {
+        Ok(std::borrow::Cow::Borrowed(bytes))
+    }
+}
+
+#[cfg(target_os = "macos")]
+fn plutil_json(bytes: &[u8]) -> Result<Value, SensorError> {
+    use std::io::Write as _;
+
+    const PLUTIL_OUTPUT_LIMIT: usize = 64 * 1024;
+
+    let plutil = qualify_program("/usr/bin/plutil").map_err(|_| SensorError::UnsupportedVersion)?;
+    verify_executable_identity(&plutil)?;
+    let mut child = Command::new(&plutil.path)
+        .args(["-convert", "json", "-o", "-", "--", "-"])
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .map_err(|_| SensorError::UnsupportedVersion)?;
+    let mut stdin = child.stdin.take().ok_or(SensorError::UnsupportedVersion)?;
+    let input = bytes.to_vec();
+    let writer = thread::spawn(move || stdin.write_all(&input));
+    let stdout = child.stdout.take().ok_or(SensorError::UnsupportedVersion)?;
+    let stderr = child.stderr.take().ok_or(SensorError::UnsupportedVersion)?;
+    let stdout_reader = spawn_bounded_reader(stdout, PLUTIL_OUTPUT_LIMIT);
+    let stderr_reader = spawn_bounded_reader(stderr, PLUTIL_OUTPUT_LIMIT);
+    let started = Instant::now();
+    let status = loop {
+        match child
+            .try_wait()
+            .map_err(|_| SensorError::UnsupportedVersion)?
+        {
+            Some(status) => break status,
+            None if started.elapsed() >= VERSION_TIMEOUT => {
+                let _ = child.kill();
+                let _ = child.wait();
+                let _ = writer.join();
+                verify_executable_identity(&plutil)?;
+                return Err(SensorError::UnsupportedVersion);
+            }
+            None => thread::sleep(Duration::from_millis(10)),
+        }
+    };
+    let wrote_all = writer
+        .join()
+        .map_err(|_| SensorError::UnsupportedVersion)?
+        .is_ok();
+    let stdout = receive_output(&stdout_reader, started, VERSION_TIMEOUT)
+        .map_err(|_| SensorError::UnsupportedVersion)?;
+    let stderr = receive_output(&stderr_reader, started, VERSION_TIMEOUT)
+        .map_err(|_| SensorError::UnsupportedVersion)?;
+    verify_executable_identity(&plutil)?;
+    if !status.success() || !wrote_all || !stderr.is_empty() {
+        return Err(SensorError::UnsupportedVersion);
+    }
+    parse_strict_native_json(&stdout).map_err(|_| SensorError::UnsupportedVersion)
+}
+
+const fn usage_arguments(host: UsageHost) -> &'static [&'static str] {
+    match host {
+        UsageHost::Codex => CODEX_USAGE_ARGUMENTS,
+        UsageHost::Claude => CLAUDE_USAGE_ARGUMENTS,
+        UsageHost::Antigravity => ANTIGRAVITY_USAGE_ARGUMENTS,
+    }
+}
+
 #[cfg(test)]
 fn normalize_output(
     stdout: &[u8],
@@ -1014,10 +1273,14 @@ fn normalize_output_for_account(
     for row in &rows {
         validate_row_identity(row, host)?;
     }
+    let accounts = rows
+        .iter()
+        .map(|row| row_account_identity(row, host).map(|account| (row, account)))
+        .collect::<Result<Vec<_>, _>>()?;
     let (row, account_digest) = if let Some(account_digest) = requested_account_digest {
-        let mut matches = rows
+        let mut matches = accounts
             .iter()
-            .filter_map(|row| row.account.as_deref().map(|account| (row, account)))
+            .copied()
             .filter(|(_, account)| sha256_digest(account.as_bytes()) == account_digest);
         let (row, _account) = matches.next().ok_or(SensorError::AccountNotFound)?;
         if matches.next().is_some() {
@@ -1025,9 +1288,7 @@ fn normalize_output_for_account(
         }
         (row, account_digest.to_owned())
     } else {
-        let mut accounts = rows
-            .iter()
-            .filter_map(|row| row.account.as_deref().map(|account| (row, account)));
+        let mut accounts = accounts.into_iter();
         let (row, account) = accounts.next().ok_or(SensorError::AccountNotFound)?;
         if accounts.next().is_some() {
             return Err(SensorError::DuplicateAccount);
@@ -1043,10 +1304,31 @@ fn normalize_output_for_account(
     if measured_at > now.saturating_add(60) {
         return Err(SensorError::Malformed);
     }
-    let windows = if let Some(primary) = usage.primary.as_ref() {
+    let windows = if host == UsageHost::Antigravity {
+        let primary: CodexBarWindow = serde_json::from_value(
+            usage
+                .primary
+                .as_ref()
+                .ok_or(SensorError::WrongWindows)?
+                .clone(),
+        )
+        .map_err(|_| SensorError::Malformed)?;
+        let [secondary] = usage.secondary.as_slice() else {
+            return Err(SensorError::WrongWindows);
+        };
+        if secondary.is_null() {
+            return Err(SensorError::WrongWindows);
+        }
+        let secondary: CodexBarWindow =
+            serde_json::from_value(secondary.clone()).map_err(|_| SensorError::Malformed)?;
+        vec![
+            normalize_antigravity_window(&primary, "default")?,
+            normalize_antigravity_window(&secondary, "antigravity-claude-gpt")?,
+        ]
+    } else if let Some(primary) = usage.primary.as_ref() {
         let primary: CodexBarWindow =
             serde_json::from_value(primary.clone()).map_err(|_| SensorError::Malformed)?;
-        vec![normalize_window(&primary, "session", 300)?]
+        vec![normalize_window(&primary, "session", None, 300)?]
     } else {
         let [secondary] = usage.secondary.as_slice() else {
             return Err(SensorError::WrongWindows);
@@ -1056,7 +1338,7 @@ fn normalize_output_for_account(
         }
         let secondary: CodexBarWindow =
             serde_json::from_value(secondary.clone()).map_err(|_| SensorError::Malformed)?;
-        vec![normalize_window(&secondary, "weekly", 10_080)?]
+        vec![normalize_window(&secondary, "weekly", None, 10_080)?]
     };
     Ok(NormalizedSnapshot {
         sensor_id: "codexbar".to_owned(),
@@ -1071,13 +1353,7 @@ fn normalize_output_for_account(
 }
 
 fn validate_row_identity(row: &CodexBarRow, host: UsageHost) -> Result<(), SensorError> {
-    if row
-        .account
-        .as_deref()
-        .is_none_or(|account| account.trim().is_empty())
-    {
-        return Err(SensorError::MissingIdentity);
-    }
+    row_account_identity(row, host)?;
     if row.provider != host.as_str() {
         return Err(SensorError::WrongProvider);
     }
@@ -1095,12 +1371,52 @@ fn validate_row_identity(row: &CodexBarRow, host: UsageHost) -> Result<(), Senso
     Ok(())
 }
 
+fn row_account_identity(row: &CodexBarRow, host: UsageHost) -> Result<&str, SensorError> {
+    let row_account = row.account.as_deref();
+    let direct_usage_account = row
+        .usage
+        .as_ref()
+        .and_then(|usage| usage.account_email.as_deref());
+    let identity_usage_account = row
+        .usage
+        .as_ref()
+        .and_then(|usage| usage.identity.as_ref())
+        .and_then(|identity| identity.account_email.as_deref());
+    let usage_account = unambiguous_account_identity(direct_usage_account, identity_usage_account)?;
+    if host == UsageHost::Antigravity {
+        return usage_account.ok_or(SensorError::MissingIdentity);
+    }
+    unambiguous_account_identity(row_account, usage_account)?.ok_or(SensorError::MissingIdentity)
+}
+
+fn unambiguous_account_identity<'a>(
+    first: Option<&'a str>,
+    second: Option<&'a str>,
+) -> Result<Option<&'a str>, SensorError> {
+    if first.is_some_and(|account| account.trim().is_empty())
+        || second.is_some_and(|account| account.trim().is_empty())
+    {
+        return Err(SensorError::MissingIdentity);
+    }
+    match (first, second) {
+        (Some(account), Some(email)) if account == email => Ok(Some(account)),
+        (Some(_), Some(_)) => Err(SensorError::AmbiguousData),
+        (Some(account), None) => Ok(Some(account)),
+        (None, Some(email)) => Ok(Some(email)),
+        (None, None) => Ok(None),
+    }
+}
+
 fn normalize_window(
     window: &CodexBarWindow,
     name: &'static str,
+    quota_pool: Option<&'static str>,
     expected_minutes: u32,
 ) -> Result<NormalizedWindow, SensorError> {
-    if window.window_minutes != Some(expected_minutes) {
+    if !matches!(
+        window.window_minutes,
+        CodexBarWindowMinutes::Value(actual) if actual == expected_minutes
+    ) {
         return Err(SensorError::WrongWindows);
     }
     if !window.used_percent.is_finite() || !(0.0..=100.0).contains(&window.used_percent) {
@@ -1108,7 +1424,31 @@ fn normalize_window(
     }
     Ok(NormalizedWindow {
         name,
-        window_minutes: expected_minutes,
+        quota_pool,
+        window_minutes: Some(expected_minutes),
+        remaining_percent: 100.0 - window.used_percent,
+        resets_at: parse_iso8601_z(window.resets_at.as_deref().ok_or(SensorError::Malformed)?)?,
+    })
+}
+
+fn normalize_antigravity_window(
+    window: &CodexBarWindow,
+    quota_pool: &'static str,
+) -> Result<NormalizedWindow, SensorError> {
+    let window_minutes = match window.window_minutes {
+        CodexBarWindowMinutes::Missing => None,
+        CodexBarWindowMinutes::Value(10_080) => Some(10_080),
+        CodexBarWindowMinutes::Null | CodexBarWindowMinutes::Value(_) => {
+            return Err(SensorError::WrongWindows);
+        }
+    };
+    if !window.used_percent.is_finite() || !(0.0..=100.0).contains(&window.used_percent) {
+        return Err(SensorError::Malformed);
+    }
+    Ok(NormalizedWindow {
+        name: "provider",
+        quota_pool: Some(quota_pool),
+        window_minutes,
         remaining_percent: 100.0 - window.used_percent,
         resets_at: parse_iso8601_z(window.resets_at.as_deref().ok_or(SensorError::Malformed)?)?,
     })
@@ -1196,22 +1536,31 @@ fn days_from_civil(year: i32, month: i32, day: i32) -> i64 {
 
 #[cfg(test)]
 mod tests {
+    #[cfg(target_os = "macos")]
+    use super::validate_version_for_executable;
     use super::{
-        check_preferred_with_runners, check_unique_with_runner, check_with_runner,
-        consume_for_automatic_dispatch, native_then_fallback, normalize_output, parse_iso8601_z,
+        check_codexbar_provider_with_runner, check_preferred_with_runners,
+        check_unique_with_runner, check_with_runner, consume_for_automatic_dispatch,
+        native_then_fallback, normalize_output, normalize_output_for_account, parse_iso8601_z,
         qualify_and_dispatch_with_runner, resolve_program_in_path, AutomaticDispatchError,
         CommandOutput, CommandRunner, NativeUsageRunner, NormalizedSnapshot, QualifiedExecutable,
-        SensorError, UsageHost, USAGE_ARGUMENTS, USAGE_TIMEOUT, VERSION_TIMEOUT,
+        SensorError, UsageHost, ANTIGRAVITY_USAGE_ARGUMENTS, CODEX_USAGE_ARGUMENTS, OUTPUT_LIMIT,
+        USAGE_TIMEOUT, VERSION_TIMEOUT,
     };
     #[cfg(unix)]
     use super::{qualify_program, SystemCommandRunner};
     use hive_core::sha256_digest;
-    use hive_core::usage_guard::{evaluate_usage, UsageDecision, UsagePermitError, UsagePolicy};
+    use hive_core::usage_guard::{
+        evaluate_usage, UsageDecision, UsagePermitError, UsagePolicy, UsageWindow,
+    };
+    use serde_json::Value;
     use std::cell::{Cell, RefCell};
     use std::collections::VecDeque;
     use std::ffi::OsString;
     use std::fs;
     use std::path::Path;
+    #[cfg(target_os = "macos")]
+    use std::process::Command;
     use std::time::{Duration, UNIX_EPOCH};
 
     #[derive(Debug, Clone, PartialEq)]
@@ -1422,6 +1771,43 @@ mod tests {
         .expect("fixture should serialize")
     }
 
+    fn antigravity_row(
+        primary_minutes: Option<Value>,
+        secondary_minutes: Option<Value>,
+        primary_used: u8,
+        secondary_used: u8,
+    ) -> Vec<u8> {
+        let mut value = serde_json::json!([{
+            "provider": "antigravity",
+            "account": "Antigravity account label",
+            "source": "cli",
+            "usage": {
+                "primary": {
+                    "usedPercent": primary_used,
+                    "resetsAt": "2026-07-30T00:00:00Z"
+                },
+                "secondary": {
+                    "usedPercent": secondary_used,
+                    "resetsAt": "2026-08-06T00:00:00Z"
+                },
+                "updatedAt": "2026-07-23T12:00:00Z",
+                "identity": {
+                    "providerID": "antigravity",
+                    "accountEmail": account()
+                },
+                "extraRateWindows": [{}, {}]
+            },
+            "error": null
+        }]);
+        if let Some(minutes) = primary_minutes {
+            value[0]["usage"]["primary"]["windowMinutes"] = minutes;
+        }
+        if let Some(minutes) = secondary_minutes {
+            value[0]["usage"]["secondary"]["windowMinutes"] = minutes;
+        }
+        serde_json::to_vec(&value).expect("fixture should serialize")
+    }
+
     fn now(value: &str) -> std::time::SystemTime {
         UNIX_EPOCH + Duration::from_secs(parse_iso8601_z(value).expect("fixture time should parse"))
     }
@@ -1439,7 +1825,7 @@ mod tests {
                 30,
             ))),
         ]);
-        check_with_runner(&runner, &account_digest(), now("2026-07-23T12:00:30Z"))
+        let snapshot = check_with_runner(&runner, &account_digest(), now("2026-07-23T12:00:30Z"))
             .expect("valid sensor response should normalize");
         let invocations = runner.invocations.borrow();
         assert_eq!(invocations.len(), 2);
@@ -1448,12 +1834,250 @@ mod tests {
         assert_eq!(invocations[0].timeout, VERSION_TIMEOUT);
         assert_eq!(
             invocations[1].arguments,
-            USAGE_ARGUMENTS
+            CODEX_USAGE_ARGUMENTS
                 .iter()
                 .map(|value| (*value).to_owned())
                 .collect::<Vec<_>>()
         );
         assert_eq!(invocations[1].timeout, USAGE_TIMEOUT);
+        let core = snapshot.core_snapshots();
+        assert_eq!(core[0].schema_version, 1);
+        assert_eq!(core[0].quota_pool, None);
+    }
+
+    #[test]
+    fn antigravity_omits_all_accounts_and_enforces_both_quota_pools() {
+        let output = antigravity_row(None, Some(serde_json::json!(10_080)), 44, 95);
+        let runner = FakeRunner::new([Ok(success("CodexBar 0.45.2\n")), Ok(success(output))]);
+
+        let snapshot = check_codexbar_provider_with_runner(
+            &runner,
+            UsageHost::Antigravity,
+            &account_digest(),
+            now("2026-07-23T12:00:30Z"),
+        )
+        .expect("both Antigravity quota pools should normalize");
+
+        let invocations = runner.invocations.borrow();
+        assert_eq!(invocations[1].arguments, ANTIGRAVITY_USAGE_ARGUMENTS);
+        assert!(!invocations[1]
+            .arguments
+            .iter()
+            .any(|argument| argument == "--all-accounts"));
+        assert_eq!(snapshot.provider, "antigravity");
+        assert_eq!(snapshot.windows.len(), 2);
+        assert_eq!(snapshot.windows[0].name, "provider");
+        assert_eq!(snapshot.windows[0].quota_pool, Some("default"));
+        assert_eq!(snapshot.windows[0].window_minutes, None);
+        assert_eq!(snapshot.windows[1].name, "provider");
+        assert_eq!(
+            snapshot.windows[1].quota_pool,
+            Some("antigravity-claude-gpt")
+        );
+        assert_eq!(snapshot.windows[1].window_minutes, Some(10_080));
+        assert_eq!(snapshot.selected_window_label(), "multiple");
+        let core = snapshot.core_snapshots();
+        assert!(core.iter().all(|snapshot| snapshot.schema_version == 2));
+        assert!(core
+            .iter()
+            .all(|snapshot| snapshot.quota_window == UsageWindow::Provider));
+        assert_eq!(core[0].quota_pool.as_deref(), Some("default"));
+        assert_eq!(
+            core[1].quota_pool.as_deref(),
+            Some("antigravity-claude-gpt")
+        );
+        let policy = UsagePolicy::new("codexbar", "0.45.2", "antigravity", account_digest())
+            .with_stop_remaining_percent(10)
+            .expect("threshold should be valid");
+        assert!(matches!(
+            evaluate_usage(
+                &policy,
+                &core,
+                &[],
+                i64::try_from(
+                    parse_iso8601_z("2026-07-23T12:00:30Z").expect("fixture should parse")
+                )
+                .expect("fixture should fit i64")
+            ),
+            UsageDecision::Block(_)
+        ));
+    }
+
+    #[test]
+    fn antigravity_optional_weekly_metadata_has_one_canonical_identity() {
+        let missing = normalize_output_for_account(
+            &antigravity_row(None, None, 44, 43),
+            UsageHost::Antigravity,
+            Some(&account_digest()),
+            parse_iso8601_z("2026-07-23T12:00:30Z").expect("fixture should parse"),
+        )
+        .expect("upstream nil-duration pools should normalize");
+        let enriched = normalize_output_for_account(
+            &antigravity_row(
+                Some(serde_json::json!(10_080)),
+                Some(serde_json::json!(10_080)),
+                44,
+                43,
+            ),
+            UsageHost::Antigravity,
+            Some(&account_digest()),
+            parse_iso8601_z("2026-07-23T12:00:30Z").expect("fixture should parse"),
+        )
+        .expect("weekly-enriched pools should normalize");
+
+        assert_eq!(missing.core_snapshots(), enriched.core_snapshots());
+        assert_eq!(missing.evidence_digest(), enriched.evidence_digest());
+        assert_eq!(missing.selected_window_label(), "multiple");
+        assert_eq!(enriched.selected_window_label(), "multiple");
+
+        for (minutes, expected) in [
+            (serde_json::Value::Null, SensorError::WrongWindows),
+            (serde_json::json!(300), SensorError::WrongWindows),
+            (serde_json::json!(10_079), SensorError::WrongWindows),
+            (serde_json::json!(10_081), SensorError::WrongWindows),
+            (serde_json::json!(-1), SensorError::Malformed),
+            (serde_json::json!(10_080.5), SensorError::Malformed),
+            (serde_json::json!("10080"), SensorError::Malformed),
+            (serde_json::json!([]), SensorError::Malformed),
+            (serde_json::json!({}), SensorError::Malformed),
+        ] {
+            assert_eq!(
+                normalize_output_for_account(
+                    &antigravity_row(Some(minutes), None, 44, 43),
+                    UsageHost::Antigravity,
+                    Some(&account_digest()),
+                    parse_iso8601_z("2026-07-23T12:00:30Z").expect("fixture should parse"),
+                ),
+                Err(expected)
+            );
+        }
+    }
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn app_bundle_fallback_requires_exact_stdout_path_identity_and_version() {
+        use std::os::unix::fs::symlink;
+
+        let directory = tempfile::tempdir().expect("temporary directory should exist");
+        let contents = directory.path().join("CodexBar.app/Contents");
+        let helpers = contents.join("Helpers");
+        fs::create_dir_all(&helpers).expect("bundle directories should exist");
+        let executable = helpers.join("CodexBarCLI");
+        fs::write(&executable, b"fixture").expect("fixture executable should be created");
+        make_executable(&executable);
+        fs::write(
+            contents.join("Info.plist"),
+            b"<?xml version=\"1.0\"?><plist><dict><key>CFBundleIdentifier</key><string>com.steipete.codexbar</string><key>CFBundleShortVersionString</key><string>0.45.2</string></dict></plist>",
+        )
+        .expect("Info.plist should be created");
+        let qualified = qualify_program(
+            executable
+                .to_str()
+                .expect("fixture path should be valid UTF-8"),
+        )
+        .expect("fixture executable should qualify");
+
+        assert_eq!(
+            validate_version_for_executable(&qualified, b"CodexBar\n"),
+            Ok(())
+        );
+        assert_eq!(
+            validate_version_for_executable(&qualified, b"CodexBar 0.45.3\n"),
+            Err(SensorError::UnsupportedVersion)
+        );
+        assert_eq!(
+            validate_version_for_executable(&qualified, b" CodexBar\n"),
+            Err(SensorError::UnsupportedVersion)
+        );
+
+        fs::write(
+            contents.join("Info.plist"),
+            b"<plist><dict><key>CFBundleIdentifier</key><string>com.steipete.codexbar</string><key>CFBundleShortVersionString</key><string>0.45.2</string><key>CFBundleShortVersionString</key><string>0.45.2</string></dict></plist>",
+        )
+        .expect("duplicate-key Info.plist should be written");
+        assert_eq!(
+            validate_version_for_executable(&qualified, b"CodexBar\n"),
+            Err(SensorError::UnsupportedVersion)
+        );
+
+        fs::write(
+            contents.join("Info.plist"),
+            b"<plist><dict><key>CFBundleIdentifier</key><string>example.invalid</string><key>CFBundleShortVersionString</key><string>0.45.2</string></dict></plist>",
+        )
+        .expect("wrong-identifier Info.plist should be written");
+        assert_eq!(
+            validate_version_for_executable(&qualified, b"CodexBar\n"),
+            Err(SensorError::UnsupportedVersion)
+        );
+
+        let info_plist = contents.join("Info.plist");
+        let linked_plist = directory.path().join("linked-Info.plist");
+        fs::write(
+            &linked_plist,
+            b"<plist><dict><key>CFBundleIdentifier</key><string>com.steipete.codexbar</string><key>CFBundleShortVersionString</key><string>0.45.2</string></dict></plist>",
+        )
+        .expect("linked plist target should be written");
+        fs::remove_file(&info_plist).expect("regular Info.plist should be removed");
+        symlink(&linked_plist, &info_plist).expect("Info.plist symlink should be created");
+        assert_eq!(
+            validate_version_for_executable(&qualified, b"CodexBar\n"),
+            Err(SensorError::FilesystemSafety)
+        );
+
+        fs::remove_file(&info_plist).expect("Info.plist symlink should be removed");
+        fs::write(&info_plist, vec![b'x'; OUTPUT_LIMIT + 1])
+            .expect("oversized Info.plist should be written");
+        assert_eq!(
+            validate_version_for_executable(&qualified, b"CodexBar\n"),
+            Err(SensorError::UnsupportedVersion)
+        );
+    }
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn app_bundle_parser_accepts_binary_and_rejects_non_dictionary_xml() {
+        let directory = tempfile::tempdir().expect("temporary directory should exist");
+        let contents = directory.path().join("CodexBar.app/Contents");
+        let helpers = contents.join("Helpers");
+        fs::create_dir_all(&helpers).expect("bundle directories should exist");
+        let executable = helpers.join("CodexBarCLI");
+        fs::write(&executable, b"fixture").expect("fixture executable should be created");
+        make_executable(&executable);
+        let info_plist = contents.join("Info.plist");
+        fs::write(
+            &info_plist,
+            b"<?xml version=\"1.0\"?><plist><dict><key>CFBundleIdentifier</key><string>com.steipete.codexbar</string><key>CFBundleShortVersionString</key><string>0.45.2</string></dict></plist>",
+        )
+        .expect("Info.plist should be created");
+        let qualified = qualify_program(
+            executable
+                .to_str()
+                .expect("fixture path should be valid UTF-8"),
+        )
+        .expect("fixture executable should qualify");
+
+        let binary_status = Command::new("/usr/bin/plutil")
+            .args(["-convert", "binary1", "--"])
+            .arg(&info_plist)
+            .status()
+            .expect("system plutil should execute");
+        assert!(binary_status.success());
+        assert_eq!(
+            validate_version_for_executable(&qualified, b"CodexBar\n"),
+            Ok(())
+        );
+
+        for hostile in [
+            b"<junk><key>CFBundleIdentifier</key><string>com.steipete.codexbar</string><key>CFBundleShortVersionString</key><string>0.45.2</string></junk>".as_slice(),
+            b"<plist><array><dict><key>CFBundleIdentifier</key><string>com.steipete.codexbar</string><key>CFBundleShortVersionString</key><string>0.45.2</string></dict></array></plist>".as_slice(),
+            b"<?xml version=\"1.0\"?><!DOCTYPE plist [<!ENTITY bundle \"CFBundleIdentifier\">]><plist><dict><key>&bundle;</key><string>com.steipete.codexbar</string><key>CFBundleShortVersionString</key><string>0.45.2</string></dict></plist>".as_slice(),
+        ] {
+            fs::write(&info_plist, hostile).expect("hostile Info.plist should be written");
+            assert_eq!(
+                validate_version_for_executable(&qualified, b"CodexBar\n"),
+                Err(SensorError::UnsupportedVersion)
+            );
+        }
     }
 
     #[test]
@@ -1725,6 +2349,58 @@ mod tests {
         assert_eq!(
             normalize_output(&valid, &sha256_digest(b"another-account"), 0),
             Err(SensorError::AccountNotFound)
+        );
+    }
+
+    #[test]
+    fn usage_account_email_is_an_equivalent_digest_identity() {
+        let mut value: serde_json::Value = serde_json::from_slice(&row(
+            "codex-cli",
+            "2026-07-23T12:00:00Z",
+            300,
+            10_080,
+            20,
+            30,
+        ))
+        .expect("fixture should parse");
+        value[0]
+            .as_object_mut()
+            .expect("row should be an object")
+            .remove("account");
+        value[0]["usage"]["accountEmail"] = serde_json::json!(account());
+        let bytes = serde_json::to_vec(&value).expect("fixture should serialize");
+
+        let snapshot = normalize_output(
+            &bytes,
+            &account_digest(),
+            parse_iso8601_z("2026-07-23T12:00:30Z").expect("fixture should parse"),
+        )
+        .expect("usage.accountEmail should identify the account");
+
+        assert_eq!(snapshot.account_digest, account_digest());
+    }
+
+    #[test]
+    fn conflicting_account_identity_locations_are_rejected() {
+        let mut value: serde_json::Value = serde_json::from_slice(&row(
+            "codex-cli",
+            "2026-07-23T12:00:00Z",
+            300,
+            10_080,
+            20,
+            30,
+        ))
+        .expect("fixture should parse");
+        value[0]["usage"]["accountEmail"] = serde_json::json!("different-account");
+        let bytes = serde_json::to_vec(&value).expect("fixture should serialize");
+
+        assert_eq!(
+            normalize_output(
+                &bytes,
+                &account_digest(),
+                parse_iso8601_z("2026-07-23T12:00:30Z").expect("fixture should parse")
+            ),
+            Err(SensorError::AmbiguousData)
         );
     }
 

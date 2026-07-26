@@ -17,7 +17,7 @@ use hive_core::run::{
     DispatchBrief, DispatchContractError, Host, OwnerBinding, OwnerContinuity, RunPlan, RunState,
     RunStatus, RunStatusDocument, SupportLevel,
 };
-use hive_core::usage_guard::UsageSnapshot;
+use hive_core::usage_guard::{UsageSnapshot, UsageWindow, DEFAULT_QUOTA_POOL};
 use hive_core::{ensure_consumer_target, sha256_digest, validate_project_relative};
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
@@ -1494,11 +1494,26 @@ fn checkpoint_document(
     .map_err(core_verification)
 }
 
+#[derive(Debug, Deserialize)]
+#[serde(untagged)]
+enum UsageHistoryRecord {
+    V1(UsageHistoryRecordV1),
+    V2(UsageHistoryRecordV2),
+}
+
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
-struct UsageHistoryRecord {
+struct UsageHistoryRecordV1 {
     schema_version: u32,
     snapshot: UsageSnapshot,
+    evidence_digest: String,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+struct UsageHistoryRecordV2 {
+    schema_version: u32,
+    snapshots: Vec<UsageSnapshot>,
     evidence_digest: String,
 }
 
@@ -1617,6 +1632,54 @@ fn usage_history_path(account_digest: &str) -> PathBuf {
     ))
 }
 
+fn valid_quota_pool(value: &str) -> bool {
+    !value.is_empty()
+        && value.len() <= 64
+        && value.bytes().enumerate().all(|(index, byte)| match byte {
+            b'a'..=b'z' | b'0'..=b'9' => true,
+            b'-' => index > 0 && index + 1 < value.len(),
+            _ => false,
+        })
+}
+
+fn usage_window_rank(window: UsageWindow) -> u8 {
+    match window {
+        UsageWindow::Session => 0,
+        UsageWindow::Weekly => 1,
+        UsageWindow::Provider => 2,
+    }
+}
+
+fn canonical_usage_snapshots(snapshots: &[UsageSnapshot]) -> Vec<UsageSnapshot> {
+    let mut canonical = snapshots.to_vec();
+    canonical.sort_by(|left, right| {
+        left.quota_pool
+            .as_deref()
+            .unwrap_or("default")
+            .cmp(right.quota_pool.as_deref().unwrap_or("default"))
+            .then_with(|| {
+                usage_window_rank(left.quota_window).cmp(&usage_window_rank(right.quota_window))
+            })
+    });
+    canonical
+}
+
+fn valid_pooled_history(snapshots: &[UsageSnapshot]) -> bool {
+    let mut keys = BTreeSet::new();
+    !snapshots.is_empty()
+        && snapshots.iter().all(|snapshot| {
+            snapshot.schema_version == 2
+                && snapshot.quota_pool.as_deref().is_some_and(valid_quota_pool)
+                && keys.insert((
+                    snapshot
+                        .quota_pool
+                        .clone()
+                        .expect("validated pooled snapshot"),
+                    usage_window_rank(snapshot.quota_window),
+                ))
+        })
+}
+
 fn read_usage_history(
     target: &PinnedTarget,
     account_digest: &str,
@@ -1633,19 +1696,54 @@ fn read_usage_history(
     }
     let record: UsageHistoryRecord = serde_json::from_slice(bytes)
         .map_err(|_| AdapterError::Safety("usage history is malformed".to_owned()))?;
-    if record.schema_version != 1
-        || record.snapshot.account_scope_digest != account_digest
-        || record.evidence_digest
-            != sha256_digest(
-                &serde_json_canonicalizer::to_vec(&record.snapshot)
-                    .map_err(|error| AdapterError::Internal(error.to_string()))?,
-            )
-    {
-        return Err(AdapterError::Safety(
-            "usage history failed its account or integrity binding".to_owned(),
-        ));
-    }
-    Ok((path, snapshot, vec![record.snapshot], "available"))
+    let snapshots = match record {
+        UsageHistoryRecord::V1(record) => {
+            if record.schema_version != 1
+                || record.snapshot.schema_version != 1
+                || record.snapshot.quota_pool.is_some()
+                || record.snapshot.account_scope_digest != account_digest
+                || record.evidence_digest
+                    != sha256_digest(
+                        &serde_json_canonicalizer::to_vec(&record.snapshot)
+                            .map_err(|error| AdapterError::Internal(error.to_string()))?,
+                    )
+            {
+                return Err(AdapterError::Safety(
+                    "usage history failed its account or integrity binding".to_owned(),
+                ));
+            }
+            let mut snapshot = record.snapshot;
+            if snapshot.host_scope == "antigravity" && snapshot.quota_window == UsageWindow::Weekly
+            {
+                snapshot.schema_version = 2;
+                snapshot.quota_pool = Some(DEFAULT_QUOTA_POOL.to_owned());
+                snapshot.quota_window = UsageWindow::Provider;
+            }
+            vec![snapshot]
+        }
+        UsageHistoryRecord::V2(record) => {
+            let canonical = canonical_usage_snapshots(&record.snapshots);
+            if record.schema_version != 2
+                || !valid_pooled_history(&record.snapshots)
+                || record.snapshots != canonical
+                || record
+                    .snapshots
+                    .iter()
+                    .any(|snapshot| snapshot.account_scope_digest != account_digest)
+                || record.evidence_digest
+                    != sha256_digest(
+                        &serde_json_canonicalizer::to_vec(&record.snapshots)
+                            .map_err(|error| AdapterError::Internal(error.to_string()))?,
+                    )
+            {
+                return Err(AdapterError::Safety(
+                    "usage history failed its account or integrity binding".to_owned(),
+                ));
+            }
+            record.snapshots
+        }
+    };
+    Ok((path, snapshot, snapshots, "available"))
 }
 
 fn publish_usage_history(
@@ -1654,21 +1752,56 @@ fn publish_usage_history(
     expected: &FileSnapshot,
     snapshots: &[UsageSnapshot],
 ) -> Result<bool, AdapterError> {
-    let [snapshot] = snapshots else {
+    if snapshots.is_empty() {
         return Err(AdapterError::Internal(
-            "normalized usage observation must contain one selected window".to_owned(),
+            "normalized usage observation must contain at least one selected window".to_owned(),
         ));
-    };
-    let record = UsageHistoryRecord {
-        schema_version: 1,
-        snapshot: snapshot.clone(),
-        evidence_digest: sha256_digest(
-            &serde_json_canonicalizer::to_vec(snapshot)
-                .map_err(|error| AdapterError::Internal(error.to_string()))?,
-        ),
-    };
-    let bytes = serde_json_canonicalizer::to_vec(&record)
-        .map_err(|error| AdapterError::Internal(error.to_string()))?;
+    }
+    let canonical = canonical_usage_snapshots(snapshots);
+    let account_digest = &canonical[0].account_scope_digest;
+    if canonical
+        .iter()
+        .any(|snapshot| snapshot.account_scope_digest != *account_digest)
+    {
+        return Err(AdapterError::Internal(
+            "normalized usage observation spans multiple accounts".to_owned(),
+        ));
+    }
+    let bytes = match canonical.as_slice() {
+        [snapshot] if snapshot.schema_version == 1 && snapshot.quota_pool.is_none() => {
+            let record = UsageHistoryRecordV1 {
+                schema_version: 1,
+                snapshot: snapshot.clone(),
+                evidence_digest: sha256_digest(
+                    &serde_json_canonicalizer::to_vec(snapshot)
+                        .map_err(|error| AdapterError::Internal(error.to_string()))?,
+                ),
+            };
+            serde_json_canonicalizer::to_vec(&record)
+        }
+        _ => {
+            if !valid_pooled_history(&canonical) {
+                return Err(AdapterError::Internal(
+                    "pooled usage observation failed its schema or key contract".to_owned(),
+                ));
+            }
+            let record = UsageHistoryRecordV2 {
+                schema_version: 2,
+                snapshots: canonical.clone(),
+                evidence_digest: sha256_digest(
+                    &serde_json_canonicalizer::to_vec(&canonical)
+                        .map_err(|error| AdapterError::Internal(error.to_string()))?,
+                ),
+            };
+            serde_json_canonicalizer::to_vec(&record)
+        }
+    }
+    .map_err(|error| AdapterError::Internal(error.to_string()))?;
+    if bytes.len() > MAX_RUNTIME_RECORD_BYTES {
+        return Err(AdapterError::Internal(
+            "canonical usage history exceeds the runtime record bound".to_owned(),
+        ));
+    }
     target.publish_runtime(path, expected, &bytes)
 }
 
