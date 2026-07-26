@@ -302,6 +302,7 @@ mod tests {
         }
     }
 
+    #[cfg(any(target_os = "macos", target_os = "linux"))]
     #[test]
     fn dry_run_never_executes_package_manager() {
         let runner = FakeRunner::new();
@@ -335,6 +336,7 @@ mod tests {
         assert!(error.contains("--confirm-install"));
     }
 
+    #[cfg(any(target_os = "macos", target_os = "linux"))]
     #[test]
     fn confirmed_apply_executes_fixed_command_and_requalifies_codexbar() {
         let runner = FakeRunner::new();
@@ -352,5 +354,25 @@ mod tests {
         assert_eq!(calls.first().map(String::as_str), Some("qualify:brew"));
         assert!(calls.iter().any(|call| call.starts_with("run:install ")));
         assert_eq!(calls.last().map(String::as_str), Some("qualify:codexbar"));
+    }
+
+    #[cfg(not(any(target_os = "macos", target_os = "linux")))]
+    #[test]
+    fn unsupported_platform_never_qualifies_a_package_manager() {
+        let runner = FakeRunner::new();
+        let error = install(
+            &InstallArguments {
+                host: UsageHost::Claude,
+                mode: InstallMode::DryRun,
+                confirmed: false,
+            },
+            &runner,
+        )
+        .expect_err("unsupported platform");
+        assert_eq!(
+            error,
+            "CodexBar fallback installation is unsupported on this platform"
+        );
+        assert!(runner.calls.lock().expect("calls").is_empty());
     }
 }

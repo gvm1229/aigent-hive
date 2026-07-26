@@ -2560,6 +2560,17 @@ fn expected_codex_marketplace_root(arguments: &UserArguments) -> Result<String, 
         })
 }
 
+fn expected_codex_plugin_source_path(arguments: &UserArguments) -> Result<String, InstallError> {
+    arguments
+        .user_root
+        .join(".hive/marketplaces/codex/plugins/aigent-hive")
+        .to_str()
+        .map(str::to_owned)
+        .ok_or_else(|| {
+            InstallError::Unsupported("Codex plugin source path is not valid UTF-8".to_owned())
+        })
+}
+
 fn expected_claude_marketplace_path(arguments: &UserArguments) -> Result<String, InstallError> {
     arguments
         .user_root
@@ -3484,7 +3495,7 @@ fn expected_host_state_after(
             state.plugin = Some(CodexPluginState {
                 version: env!("CARGO_PKG_VERSION").to_owned(),
                 enabled: true,
-                source_path: format!("{root}/plugins/aigent-hive"),
+                source_path: expected_codex_plugin_source_path(arguments)?,
                 marketplace_source: root,
             });
             Ok(HostStateSnapshot::Codex(state))
@@ -5450,13 +5461,9 @@ mod tests {
         let temporary = tempdir().expect("tempdir");
         let root = open_user_root(temporary.path()).expect("root capability");
         let relative = Path::new(".gemini/config/plugins/aigent-hive/plugin.json");
-        create_new_exclusive(
-            &root,
-            relative,
-            b"prior owned bytes\n",
-            FilePermissions::default(),
-        )
-        .expect("seed prior");
+        let permissions = installed_file_permissions(false);
+        create_new_exclusive(&root, relative, b"prior owned bytes\n", permissions)
+            .expect("seed prior");
         let (parent, destination) = capability_parent(&root, relative, false)
             .expect("parent")
             .expect("existing parent");
@@ -5470,7 +5477,7 @@ mod tests {
             &claim,
             "replacement.bin",
             b"installed bytes\n",
-            FilePermissions::default(),
+            permissions,
             relative,
         )
         .expect("replacement");
@@ -5483,10 +5490,10 @@ mod tests {
             existed: true,
             digest: Some(sha256_digest(b"prior owned bytes\n")),
             installed_digest: Some(sha256_digest(b"installed bytes\n")),
-            installed_executable: Some(false),
-            installed_unix_mode: installed_unix_mode(false),
-            executable: false,
-            unix_mode: Some(0o644),
+            installed_executable: Some(permissions.executable),
+            installed_unix_mode: permissions.unix_mode,
+            executable: permissions.executable,
+            unix_mode: permissions.unix_mode,
         };
         reconcile_retained_claim(&root, relative, &entry).expect("reconcile");
         assert_eq!(
