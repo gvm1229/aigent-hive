@@ -379,11 +379,14 @@ fn normalize_window(value: &Value, now: u64) -> Result<NormalizedWindow, SensorE
 
 #[cfg(test)]
 mod tests {
-    use super::{await_response, finish_child, normalize, parse_version, read_bounded_line};
+    #[cfg(unix)]
+    use super::finish_child;
+    use super::{await_response, normalize, parse_version, read_bounded_line};
     use crate::usage::{parse_strict_native_json, SensorError};
     use hive_core::sha256_digest;
     use serde_json::json;
     use std::io::Cursor;
+    #[cfg(unix)]
     use std::process::Command;
     use std::sync::mpsc;
     use std::time::{Duration, Instant};

@@ -162,6 +162,7 @@ struct UserPlan {
 #[derive(Clone)]
 struct RetiredFile {
     bytes: Vec<u8>,
+    #[cfg(unix)]
     permissions: FilePermissions,
 }
 
@@ -935,6 +936,7 @@ fn validate_prior_ownership(
                 relative,
                 RetiredFile {
                     bytes,
+                    #[cfg(unix)]
                     permissions: FilePermissions {
                         executable: entry.executable,
                         unix_mode: entry.unix_mode,
@@ -1382,7 +1384,10 @@ fn snapshot_operation_permissions(
     paths: &BTreeMap<PathBuf, Option<Vec<u8>>>,
     retired_files: &BTreeMap<PathBuf, RetiredFile>,
 ) -> Result<BTreeMap<PathBuf, Option<FilePermissions>>, InstallError> {
+    #[cfg(unix)]
     let mut permissions = snapshot_permissions(root, paths)?;
+    #[cfg(not(unix))]
+    let permissions = snapshot_permissions(root, paths)?;
     #[cfg(unix)]
     permissions.extend(
         retired_files
@@ -2131,6 +2136,7 @@ fn current_installed_state(
     )))
 }
 
+#[cfg_attr(not(unix), allow(clippy::unnecessary_wraps))]
 fn prior_backup_permissions(
     entry: &UserBackupEntry,
 ) -> Result<Option<FilePermissions>, InstallError> {
@@ -4161,6 +4167,7 @@ fn set_file_permissions(
 }
 
 #[cfg(not(unix))]
+#[allow(clippy::unnecessary_wraps)]
 fn set_file_permissions(
     _file: &cap_std::fs::File,
     _permissions: FilePermissions,
