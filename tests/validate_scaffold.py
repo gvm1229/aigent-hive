@@ -778,8 +778,10 @@ def validate_render(render_root: Path, input_data_path: Path) -> None:
         "hive-judge-package",
         "hive-knowledge-capture",
         "hive-knowledge-maintenance",
+        "hive-knowledge-promote",
         "hive-knowledge-query",
         "hive-migrate",
+        "hive-project-upgrade",
         "hive-prompt-refine",
         "hive-role-handoff",
         "hive-run-checkpoint",
@@ -797,38 +799,41 @@ def validate_render(render_root: Path, input_data_path: Path) -> None:
         raise AssertionError("Copier active Skill ledger changed from source bytes")
 
     primary_host = answers["primary_host"]
-    projection_root = ".claude" if primary_host == "claude" else ".agents"
-    foreign_projection_root = ".agents" if primary_host == "claude" else ".claude"
-    projected_skill_root = render_root / projection_root / "skills"
-    if (
-        not projected_skill_root.is_dir()
-        or {path.name for path in projected_skill_root.iterdir()}
-        != set(expected_skill_names)
-    ):
-        raise AssertionError(
-            "Copier projected optional or unexpected local Skill sources"
-        )
+    projection_roots = [".agents"]
+    if primary_host == "claude":
+        projection_roots.append(".claude")
+    for projection_root in projection_roots:
+        projected_skill_root = render_root / projection_root / "skills"
+        if (
+            not projected_skill_root.is_dir()
+            or {path.name for path in projected_skill_root.iterdir()}
+            != set(expected_skill_names)
+        ):
+            raise AssertionError(
+                "Copier projected optional or unexpected local Skill sources"
+            )
     for entry in active_entries:
         assert isinstance(entry, dict)
         name = entry["name"]
         source_path = REPOSITORY_ROOT / f"harness/skills/{name}/SKILL.md"
-        projection_path = (
-            render_root / projection_root / f"skills/{name}/SKILL.md"
-        )
-        if not projection_path.is_file():
-            raise AssertionError(
-                f"missing {primary_host} built-in Skill projection: {name}"
+        for projection_root in projection_roots:
+            projection_path = (
+                render_root / projection_root / f"skills/{name}/SKILL.md"
             )
-        if projection_path.read_bytes() != source_path.read_bytes():
-            raise AssertionError(
-                f"built-in Skill projection bytes changed: {name}"
-            )
-        if {path.name for path in projection_path.parent.iterdir()} != {
-            "SKILL.md"
-        }:
-            raise AssertionError(
-                f"built-in Skill projection contains unexpected files: {name}"
-            )
+            if not projection_path.is_file():
+                raise AssertionError(
+                    f"missing {primary_host} built-in Skill projection: {name}"
+                )
+            if projection_path.read_bytes() != source_path.read_bytes():
+                raise AssertionError(
+                    f"built-in Skill projection bytes changed: {name}"
+                )
+            if {path.name for path in projection_path.parent.iterdir()} != {
+                "SKILL.md"
+            }:
+                raise AssertionError(
+                    f"built-in Skill projection contains unexpected files: {name}"
+                )
         expected_content_digest = (
             f"sha256:{hashlib.sha256(source_path.read_bytes()).hexdigest()}"
         )
@@ -843,9 +848,9 @@ def validate_render(render_root: Path, input_data_path: Path) -> None:
             raise AssertionError(
                 f"Copier activated a non-built-in Skill without install flow: {name}"
             )
-    if (render_root / foreign_projection_root).exists():
+    if primary_host != "claude" and (render_root / ".claude").exists():
         raise AssertionError(
-            f"foreign host projection rendered: {foreign_projection_root}"
+            "foreign host projection rendered: .claude"
         )
 
     forbidden_outputs = [
