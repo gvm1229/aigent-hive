@@ -2389,12 +2389,6 @@ impl PinnedRoot {
                 path.display()
             ))
         })?;
-        let expected = fs::metadata(&canonical_path).map_err(|error| {
-            WikiError::Io(format!(
-                "cannot inspect knowledge root {}: {error}",
-                canonical_path.display()
-            ))
-        })?;
         let parent = canonical_path
             .parent()
             .ok_or_else(|| WikiError::InvalidInput("knowledge root has no parent".to_owned()))?;
@@ -2403,6 +2397,12 @@ impl PinnedRoot {
         })?;
         let parent_dir = Dir::open_ambient_dir(parent, ambient_authority())
             .map_err(|error| WikiError::Io(format!("cannot pin knowledge root parent: {error}")))?;
+        let expected = parent_dir.symlink_metadata(name).map_err(|error| {
+            WikiError::Io(format!(
+                "cannot inspect knowledge root {}: {error}",
+                canonical_path.display()
+            ))
+        })?;
         let dir = parent_dir.open_dir_nofollow(name).map_err(|error| {
             WikiError::Conflict(format!(
                 "knowledge root cannot be pinned no-follow {}: {error}",
