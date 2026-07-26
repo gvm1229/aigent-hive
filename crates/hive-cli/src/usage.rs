@@ -3,8 +3,9 @@ use hive_core::usage_guard::{
     evaluate_usage, SourceConfidence, UsageDecision, UsagePermit, UsagePermitError, UsagePolicy,
     UsageSnapshot, UsageWindow,
 };
-use serde::de::{self, MapAccess, Visitor};
+use serde::de::{self, MapAccess, SeqAccess, Visitor};
 use serde::{Deserialize, Deserializer, Serialize};
+use serde_json::{Map, Number, Value};
 use std::ffi::OsStr;
 use std::fmt::{self, Display, Formatter};
 use std::fs::{self, Metadata};
@@ -15,10 +16,13 @@ use std::sync::mpsc::{self, Receiver};
 use std::thread;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
+mod codex_native;
+
 const CODEXBAR_VERSION: &str = "0.45.2";
 const VERSION_TIMEOUT: Duration = Duration::from_secs(5);
 const USAGE_TIMEOUT: Duration = Duration::from_mins(1);
 const OUTPUT_LIMIT: usize = 1024 * 1024;
+#[cfg(test)]
 const USAGE_ARGUMENTS: &[&str] = &[
     "usage",
     "--provider",
@@ -34,11 +38,17 @@ const USAGE_ARGUMENTS: &[&str] = &[
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub(crate) enum SensorError {
     Unavailable,
+    Unsupported,
     Timeout,
     OutputTooLarge,
     Failed,
     UnsupportedVersion,
     Malformed,
+    ClockInvalid,
+    FilesystemSafety,
+    WrongSession,
+    DuplicateData,
+    AmbiguousData,
     RowError,
     MissingIdentity,
     AccountNotFound,
@@ -48,30 +58,155 @@ pub(crate) enum SensorError {
     WrongWindows,
     Stale,
     ExecutableChanged,
+    FallbackRequired(UsageHost),
 }
 
 impl Display for SensorError {
     fn fmt(&self, formatter: &mut Formatter<'_>) -> fmt::Result {
         formatter.write_str(match self {
-            Self::Unavailable => "CodexBar usage sensor is unavailable",
-            Self::Timeout => "CodexBar usage sensor timed out",
-            Self::OutputTooLarge => "CodexBar usage sensor exceeded its output limit",
-            Self::Failed => "CodexBar usage sensor failed",
-            Self::UnsupportedVersion => "CodexBar usage sensor version is unsupported",
-            Self::Malformed => "CodexBar usage sensor returned malformed data",
-            Self::RowError => "CodexBar usage sensor returned an account error",
-            Self::MissingIdentity => "CodexBar usage sensor omitted account identity",
+            Self::Unavailable => "native usage sensor is unavailable",
+            Self::Unsupported => "native usage sensor is unsupported",
+            Self::Timeout => "usage sensor timed out",
+            Self::OutputTooLarge => "usage sensor exceeded its output limit",
+            Self::Failed => "usage sensor process failed",
+            Self::UnsupportedVersion => "usage sensor version is unsupported",
+            Self::Malformed => "usage sensor returned malformed protocol data",
+            Self::ClockInvalid => "usage sensor clock is invalid",
+            Self::FilesystemSafety => "usage sensor filesystem safety check failed",
+            Self::WrongSession => "usage sensor returned the wrong session",
+            Self::DuplicateData => "usage sensor returned duplicate data",
+            Self::AmbiguousData => "usage sensor returned ambiguous data",
+            Self::RowError => "usage sensor returned an account error",
+            Self::MissingIdentity => "usage sensor omitted account identity",
             Self::AccountNotFound => "requested account digest was not found",
             Self::DuplicateAccount => "requested account digest matched more than one account",
-            Self::WrongProvider => "CodexBar usage sensor returned the wrong provider",
-            Self::NonLocalSource => "CodexBar usage sensor returned a non-local source",
-            Self::WrongWindows => "CodexBar usage sensor returned unexpected quota windows",
-            Self::Stale => "CodexBar usage sensor returned a stale snapshot",
-            Self::ExecutableChanged => {
-                "CodexBar usage sensor executable changed during qualification"
+            Self::WrongProvider => "usage sensor returned the wrong provider",
+            Self::NonLocalSource => "usage sensor returned a non-local source",
+            Self::WrongWindows => "usage sensor returned unexpected quota windows",
+            Self::Stale => "usage sensor returned a stale snapshot",
+            Self::ExecutableChanged => "usage sensor executable changed during qualification",
+            Self::FallbackRequired(host) => {
+                return write!(
+                    formatter,
+                    "native {} usage is unavailable and the optional CodexBar fallback is not installed",
+                    host.as_str()
+                );
             }
         })
     }
+}
+
+impl SensorError {
+    const fn allows_native_fallback(&self) -> bool {
+        matches!(
+            self,
+            Self::Unavailable | Self::Unsupported | Self::UnsupportedVersion | Self::Malformed
+        )
+    }
+}
+
+struct StrictJsonValue(Value);
+
+impl<'de> Deserialize<'de> for StrictJsonValue {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        deserializer.deserialize_any(StrictJsonValueVisitor)
+    }
+}
+
+struct StrictJsonValueVisitor;
+
+impl<'de> Visitor<'de> for StrictJsonValueVisitor {
+    type Value = StrictJsonValue;
+
+    fn expecting(&self, formatter: &mut Formatter<'_>) -> fmt::Result {
+        formatter.write_str("a JSON value without duplicate object keys")
+    }
+
+    fn visit_bool<E>(self, value: bool) -> Result<Self::Value, E> {
+        Ok(StrictJsonValue(Value::Bool(value)))
+    }
+
+    fn visit_i64<E>(self, value: i64) -> Result<Self::Value, E> {
+        Ok(StrictJsonValue(Value::Number(Number::from(value))))
+    }
+
+    fn visit_u64<E>(self, value: u64) -> Result<Self::Value, E> {
+        Ok(StrictJsonValue(Value::Number(Number::from(value))))
+    }
+
+    fn visit_f64<E>(self, value: f64) -> Result<Self::Value, E>
+    where
+        E: de::Error,
+    {
+        Number::from_f64(value)
+            .map(Value::Number)
+            .map(StrictJsonValue)
+            .ok_or_else(|| E::custom("non-finite JSON number"))
+    }
+
+    fn visit_str<E>(self, value: &str) -> Result<Self::Value, E> {
+        Ok(StrictJsonValue(Value::String(value.to_owned())))
+    }
+
+    fn visit_string<E>(self, value: String) -> Result<Self::Value, E> {
+        Ok(StrictJsonValue(Value::String(value)))
+    }
+
+    fn visit_none<E>(self) -> Result<Self::Value, E> {
+        Ok(StrictJsonValue(Value::Null))
+    }
+
+    fn visit_unit<E>(self) -> Result<Self::Value, E> {
+        Ok(StrictJsonValue(Value::Null))
+    }
+
+    fn visit_some<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        StrictJsonValue::deserialize(deserializer)
+    }
+
+    fn visit_seq<A>(self, mut sequence: A) -> Result<Self::Value, A::Error>
+    where
+        A: SeqAccess<'de>,
+    {
+        let mut values = Vec::new();
+        while let Some(value) = sequence.next_element::<StrictJsonValue>()? {
+            values.push(value.0);
+        }
+        Ok(StrictJsonValue(Value::Array(values)))
+    }
+
+    fn visit_map<A>(self, mut map: A) -> Result<Self::Value, A::Error>
+    where
+        A: MapAccess<'de>,
+    {
+        let mut values = Map::new();
+        while let Some((key, value)) = map.next_entry::<String, StrictJsonValue>()? {
+            if values.insert(key.clone(), value.0).is_some() {
+                return Err(de::Error::custom(format_args!(
+                    "duplicate JSON object key: {key}"
+                )));
+            }
+        }
+        Ok(StrictJsonValue(Value::Object(values)))
+    }
+}
+
+pub(crate) fn parse_strict_native_json(bytes: &[u8]) -> Result<Value, SensorError> {
+    serde_json::from_slice::<StrictJsonValue>(bytes)
+        .map(|strict| strict.0)
+        .map_err(|error| {
+            if error.to_string().starts_with("duplicate JSON object key:") {
+                SensorError::DuplicateData
+            } else {
+                SensorError::Malformed
+            }
+        })
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -82,7 +217,7 @@ pub(crate) struct QualifiedExecutable {
 
 impl QualifiedExecutable {
     #[cfg(test)]
-    fn synthetic(program: &str) -> Self {
+    pub(crate) fn synthetic(program: &str) -> Self {
         Self {
             path: PathBuf::from(program),
             identity: None,
@@ -106,8 +241,8 @@ struct ExecutableIdentity {
 
 #[derive(Debug)]
 pub(crate) struct CommandOutput {
-    success: bool,
-    stdout: Vec<u8>,
+    pub(crate) success: bool,
+    pub(crate) stdout: Vec<u8>,
 }
 
 pub(crate) trait CommandRunner {
@@ -122,7 +257,57 @@ pub(crate) trait CommandRunner {
     ) -> Result<CommandOutput, SensorError>;
 }
 
+pub(crate) trait NativeUsageRunner {
+    fn read_codex_native(
+        &self,
+        account_digest: Option<&str>,
+        now: SystemTime,
+    ) -> Result<NormalizedSnapshot, SensorError>;
+}
+
 pub(crate) struct SystemCommandRunner;
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) enum UsageHost {
+    Codex,
+    Claude,
+    Antigravity,
+}
+
+impl UsageHost {
+    pub(crate) const fn as_str(self) -> &'static str {
+        match self {
+            Self::Codex => "codex",
+            Self::Claude => "claude",
+            Self::Antigravity => "antigravity",
+        }
+    }
+
+    const fn local_source(self) -> &'static str {
+        match self {
+            Self::Codex => "codex-cli",
+            Self::Claude => "claude-cli",
+            Self::Antigravity => "antigravity-cli",
+        }
+    }
+}
+
+pub(crate) fn fallback_install_next_action(host: UsageHost) -> String {
+    format!(
+        "review `hive usage fallback-install --host {} --dry-run --output json`; install only with explicit `--apply --confirm-install` consent",
+        host.as_str()
+    )
+}
+
+impl NativeUsageRunner for SystemCommandRunner {
+    fn read_codex_native(
+        &self,
+        account_digest: Option<&str>,
+        now: SystemTime,
+    ) -> Result<NormalizedSnapshot, SensorError> {
+        codex_native::read(account_digest, now)
+    }
+}
 
 impl CommandRunner for SystemCommandRunner {
     fn qualify(&self, program: &str) -> Result<QualifiedExecutable, SensorError> {
@@ -334,13 +519,13 @@ pub(crate) struct NormalizedWindow {
 
 #[derive(Debug, Clone, Serialize, PartialEq)]
 pub(crate) struct NormalizedSnapshot {
-    pub(crate) sensor_id: &'static str,
-    pub(crate) sensor_version: &'static str,
-    pub(crate) provider: &'static str,
+    pub(crate) sensor_id: String,
+    pub(crate) sensor_version: String,
+    pub(crate) provider: String,
     pub(crate) account_digest: String,
     pub(crate) measured_at: u64,
     pub(crate) expires_at: u64,
-    pub(crate) source_confidence: &'static str,
+    pub(crate) source_confidence: String,
     pub(crate) windows: Vec<NormalizedWindow>,
 }
 
@@ -356,9 +541,9 @@ impl NormalizedSnapshot {
             .iter()
             .map(|window| UsageSnapshot {
                 schema_version: 1,
-                sensor_id: self.sensor_id.to_owned(),
-                sensor_version: self.sensor_version.to_owned(),
-                host_scope: self.provider.to_owned(),
+                sensor_id: self.sensor_id.clone(),
+                sensor_version: self.sensor_version.clone(),
+                host_scope: self.provider.clone(),
                 account_scope_digest: self.account_digest.clone(),
                 quota_window: match window.name {
                     "session" => UsageWindow::Session,
@@ -480,6 +665,7 @@ struct CodexBarIdentity {
     provider_id: String,
 }
 
+#[cfg(test)]
 pub(crate) fn check_with_runner(
     runner: &impl CommandRunner,
     account_digest: &str,
@@ -489,6 +675,7 @@ pub(crate) fn check_with_runner(
     check_with_runner_for_account(runner, Some(account_digest), now)
 }
 
+#[cfg(test)]
 pub(crate) fn check_unique_with_runner(
     runner: &impl CommandRunner,
     now: SystemTime,
@@ -496,12 +683,94 @@ pub(crate) fn check_unique_with_runner(
     check_with_runner_for_account(runner, None, now)
 }
 
+pub(crate) fn check_preferred_with_runners(
+    native: &impl NativeUsageRunner,
+    fallback: &impl CommandRunner,
+    account_digest: &str,
+    now: SystemTime,
+) -> Result<NormalizedSnapshot, SensorError> {
+    validate_account_digest(account_digest)?;
+    check_preferred_for_account(native, fallback, Some(account_digest), now)
+}
+
+pub(crate) fn check_preferred_unique_with_runners(
+    native: &impl NativeUsageRunner,
+    fallback: &impl CommandRunner,
+    now: SystemTime,
+) -> Result<NormalizedSnapshot, SensorError> {
+    check_preferred_for_account(native, fallback, None, now)
+}
+
+fn check_preferred_for_account(
+    native: &impl NativeUsageRunner,
+    fallback: &impl CommandRunner,
+    account_digest: Option<&str>,
+    now: SystemTime,
+) -> Result<NormalizedSnapshot, SensorError> {
+    native_then_fallback(
+        UsageHost::Codex,
+        native.read_codex_native(account_digest, now),
+        || check_with_runner_for_account(fallback, account_digest, now),
+    )
+}
+
+pub(crate) fn native_then_fallback<T>(
+    host: UsageHost,
+    native: Result<T, SensorError>,
+    fallback: impl FnOnce() -> Result<T, SensorError>,
+) -> Result<T, SensorError> {
+    match native {
+        Ok(value) => Ok(value),
+        Err(error) if error.allows_native_fallback() => fallback().map_err(|fallback_error| {
+            if fallback_error == SensorError::Unavailable {
+                SensorError::FallbackRequired(host)
+            } else {
+                fallback_error
+            }
+        }),
+        Err(error) => Err(error),
+    }
+}
+
 fn check_with_runner_for_account(
     runner: &impl CommandRunner,
     account_digest: Option<&str>,
     now: SystemTime,
 ) -> Result<NormalizedSnapshot, SensorError> {
-    let executable = runner.qualify("codexbar")?;
+    check_codexbar_with_runner_for_account(runner, UsageHost::Codex, account_digest, now)
+}
+
+pub(crate) fn check_codexbar_provider_with_runner(
+    runner: &impl CommandRunner,
+    host: UsageHost,
+    account_digest: &str,
+    now: SystemTime,
+) -> Result<NormalizedSnapshot, SensorError> {
+    validate_account_digest(account_digest)?;
+    check_codexbar_with_runner_for_account(runner, host, Some(account_digest), now)
+}
+
+pub(crate) fn check_codexbar_provider_unique_with_runner(
+    runner: &impl CommandRunner,
+    host: UsageHost,
+    now: SystemTime,
+) -> Result<NormalizedSnapshot, SensorError> {
+    check_codexbar_with_runner_for_account(runner, host, None, now)
+}
+
+fn check_codexbar_with_runner_for_account(
+    runner: &impl CommandRunner,
+    host: UsageHost,
+    account_digest: Option<&str>,
+    now: SystemTime,
+) -> Result<NormalizedSnapshot, SensorError> {
+    let executable = runner.qualify("codexbar").map_err(|error| {
+        if error == SensorError::Unavailable {
+            SensorError::FallbackRequired(host)
+        } else {
+            error
+        }
+    })?;
     let version = runner.run(
         &executable,
         &["--version"],
@@ -512,16 +781,27 @@ fn check_with_runner_for_account(
         return Err(SensorError::Failed);
     }
     validate_version(&version.stdout)?;
+    let arguments = [
+        "usage",
+        "--provider",
+        host.as_str(),
+        "--all-accounts",
+        "--source",
+        "cli",
+        "--format",
+        "json",
+        "--json-only",
+    ];
     let output = runner.run(
         &executable,
-        USAGE_ARGUMENTS,
+        &arguments,
         command_timeout(USAGE_TIMEOUT),
         OUTPUT_LIMIT,
     )?;
     if !output.success {
         return Err(SensorError::Failed);
     }
-    normalize_output_for_account(&output.stdout, account_digest, unix_seconds(now)?)
+    normalize_output_for_account(&output.stdout, host, account_digest, unix_seconds(now)?)
 }
 
 #[derive(Debug)]
@@ -551,6 +831,7 @@ pub(crate) struct AuthorizedDispatch<T> {
     pub(crate) observation: UsageObservation,
 }
 
+#[cfg(test)]
 pub(crate) fn qualify_and_dispatch_with_runner<T, C>(
     runner: &impl CommandRunner,
     account_digest: &str,
@@ -565,6 +846,56 @@ where
 {
     let snapshot = check_with_runner(runner, account_digest, sampled_at)
         .map_err(AutomaticDispatchError::Sensor)?;
+    qualify_and_dispatch_snapshot(
+        &snapshot,
+        account_digest,
+        threshold_percent,
+        previous_snapshots,
+        sampled_at,
+        dispatch_clock,
+        dispatch,
+    )
+}
+
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn qualify_and_dispatch_preferred_with_runners<T, C>(
+    native: &impl NativeUsageRunner,
+    fallback: &impl CommandRunner,
+    account_digest: &str,
+    threshold_percent: u8,
+    previous_snapshots: &[UsageSnapshot],
+    sampled_at: SystemTime,
+    dispatch_clock: C,
+    dispatch: impl FnOnce() -> T,
+) -> Result<AuthorizedDispatch<T>, AutomaticDispatchError>
+where
+    C: FnOnce() -> Result<i64, SensorError>,
+{
+    let snapshot = check_preferred_with_runners(native, fallback, account_digest, sampled_at)
+        .map_err(AutomaticDispatchError::Sensor)?;
+    qualify_and_dispatch_snapshot(
+        &snapshot,
+        account_digest,
+        threshold_percent,
+        previous_snapshots,
+        sampled_at,
+        dispatch_clock,
+        dispatch,
+    )
+}
+
+pub(crate) fn qualify_and_dispatch_snapshot<T, C>(
+    snapshot: &NormalizedSnapshot,
+    account_digest: &str,
+    threshold_percent: u8,
+    previous_snapshots: &[UsageSnapshot],
+    sampled_at: SystemTime,
+    dispatch_clock: C,
+    dispatch: impl FnOnce() -> T,
+) -> Result<AuthorizedDispatch<T>, AutomaticDispatchError>
+where
+    C: FnOnce() -> Result<i64, SensorError>,
+{
     let evidence = UsageGuardEvidence {
         digest: snapshot.evidence_digest(),
         window: snapshot
@@ -576,12 +907,17 @@ where
         evidence,
         snapshots: snapshot.core_snapshots(),
     };
-    let policy = UsagePolicy::new("codexbar", CODEXBAR_VERSION, "codex", account_digest)
-        .with_stop_remaining_percent(threshold_percent)
-        .map_err(|_| AutomaticDispatchError::InvalidPolicy)?;
+    let policy = UsagePolicy::new(
+        &snapshot.sensor_id,
+        &snapshot.sensor_version,
+        &snapshot.provider,
+        account_digest,
+    )
+    .with_stop_remaining_percent(threshold_percent)
+    .map_err(|_| AutomaticDispatchError::InvalidPolicy)?;
     let evaluated_at_unix_seconds =
         i64::try_from(unix_seconds(sampled_at).map_err(AutomaticDispatchError::Sensor)?)
-            .map_err(|_| AutomaticDispatchError::Sensor(SensorError::Malformed))?;
+            .map_err(|_| AutomaticDispatchError::Sensor(SensorError::ClockInvalid))?;
     match evaluate_usage(
         &policy,
         &observation.snapshots,
@@ -661,11 +997,12 @@ fn normalize_output(
     account_digest: &str,
     now: u64,
 ) -> Result<NormalizedSnapshot, SensorError> {
-    normalize_output_for_account(stdout, Some(account_digest), now)
+    normalize_output_for_account(stdout, UsageHost::Codex, Some(account_digest), now)
 }
 
 fn normalize_output_for_account(
     stdout: &[u8],
+    host: UsageHost,
     requested_account_digest: Option<&str>,
     now: u64,
 ) -> Result<NormalizedSnapshot, SensorError> {
@@ -675,7 +1012,7 @@ fn normalize_output_for_account(
         return Err(SensorError::RowError);
     }
     for row in &rows {
-        validate_row_identity(row)?;
+        validate_row_identity(row, host)?;
     }
     let (row, account_digest) = if let Some(account_digest) = requested_account_digest {
         let mut matches = rows
@@ -722,18 +1059,18 @@ fn normalize_output_for_account(
         vec![normalize_window(&secondary, "weekly", 10_080)?]
     };
     Ok(NormalizedSnapshot {
-        sensor_id: "codexbar",
-        sensor_version: CODEXBAR_VERSION,
-        provider: "codex",
+        sensor_id: "codexbar".to_owned(),
+        sensor_version: CODEXBAR_VERSION.to_owned(),
+        provider: host.as_str().to_owned(),
         account_digest,
         measured_at,
         expires_at,
-        source_confidence: "local",
+        source_confidence: "local".to_owned(),
         windows,
     })
 }
 
-fn validate_row_identity(row: &CodexBarRow) -> Result<(), SensorError> {
+fn validate_row_identity(row: &CodexBarRow, host: UsageHost) -> Result<(), SensorError> {
     if row
         .account
         .as_deref()
@@ -741,10 +1078,10 @@ fn validate_row_identity(row: &CodexBarRow) -> Result<(), SensorError> {
     {
         return Err(SensorError::MissingIdentity);
     }
-    if row.provider != "codex" {
+    if row.provider != host.as_str() {
         return Err(SensorError::WrongProvider);
     }
-    if row.source != "codex-cli" {
+    if row.source != "cli" && row.source != host.local_source() {
         return Err(SensorError::NonLocalSource);
     }
     let usage = row.usage.as_ref().ok_or(SensorError::Malformed)?;
@@ -752,7 +1089,7 @@ fn validate_row_identity(row: &CodexBarRow) -> Result<(), SensorError> {
         .identity
         .as_ref()
         .ok_or(SensorError::MissingIdentity)?;
-    if identity.provider_id != "codex" {
+    if identity.provider_id != host.as_str() {
         return Err(SensorError::WrongProvider);
     }
     Ok(())
@@ -780,7 +1117,7 @@ fn normalize_window(
 fn unix_seconds(time: SystemTime) -> Result<u64, SensorError> {
     time.duration_since(UNIX_EPOCH)
         .map(|duration| duration.as_secs())
-        .map_err(|_| SensorError::Malformed)
+        .map_err(|_| SensorError::ClockInvalid)
 }
 
 fn parse_iso8601_z(value: &str) -> Result<u64, SensorError> {
@@ -860,16 +1197,17 @@ fn days_from_civil(year: i32, month: i32, day: i32) -> i64 {
 #[cfg(test)]
 mod tests {
     use super::{
-        check_unique_with_runner, check_with_runner, consume_for_automatic_dispatch,
-        normalize_output, parse_iso8601_z, qualify_and_dispatch_with_runner,
-        resolve_program_in_path, AutomaticDispatchError, CommandOutput, CommandRunner,
-        QualifiedExecutable, SensorError, USAGE_ARGUMENTS, USAGE_TIMEOUT, VERSION_TIMEOUT,
+        check_preferred_with_runners, check_unique_with_runner, check_with_runner,
+        consume_for_automatic_dispatch, native_then_fallback, normalize_output, parse_iso8601_z,
+        qualify_and_dispatch_with_runner, resolve_program_in_path, AutomaticDispatchError,
+        CommandOutput, CommandRunner, NativeUsageRunner, NormalizedSnapshot, QualifiedExecutable,
+        SensorError, UsageHost, USAGE_ARGUMENTS, USAGE_TIMEOUT, VERSION_TIMEOUT,
     };
     #[cfg(unix)]
     use super::{qualify_program, SystemCommandRunner};
     use hive_core::sha256_digest;
     use hive_core::usage_guard::{evaluate_usage, UsageDecision, UsagePermitError, UsagePolicy};
-    use std::cell::RefCell;
+    use std::cell::{Cell, RefCell};
     use std::collections::VecDeque;
     use std::ffi::OsString;
     use std::fs;
@@ -887,6 +1225,22 @@ mod tests {
     struct FakeRunner {
         responses: RefCell<VecDeque<Result<CommandOutput, SensorError>>>,
         invocations: RefCell<Vec<Invocation>>,
+    }
+
+    struct FakeNativeRunner {
+        error: SensorError,
+        invocations: RefCell<usize>,
+    }
+
+    impl NativeUsageRunner for FakeNativeRunner {
+        fn read_codex_native(
+            &self,
+            _account_digest: Option<&str>,
+            _now: std::time::SystemTime,
+        ) -> Result<NormalizedSnapshot, SensorError> {
+            *self.invocations.borrow_mut() += 1;
+            Err(self.error.clone())
+        }
     }
 
     impl FakeRunner {
@@ -1186,6 +1540,136 @@ mod tests {
             Err(SensorError::UnsupportedVersion)
         );
         assert_eq!(runner.invocations.borrow().len(), 1);
+    }
+
+    #[test]
+    fn native_executable_change_fails_closed_without_fallback() {
+        let native = FakeNativeRunner {
+            error: SensorError::ExecutableChanged,
+            invocations: RefCell::new(0),
+        };
+        let fallback = FakeRunner::new([
+            Ok(success("CodexBar 0.45.2\n")),
+            Ok(success(row(
+                "codex-cli",
+                "2026-07-23T12:00:00Z",
+                300,
+                10_080,
+                20,
+                30,
+            ))),
+        ]);
+
+        assert_eq!(
+            check_preferred_with_runners(
+                &native,
+                &fallback,
+                &account_digest(),
+                now("2026-07-23T12:00:30Z"),
+            ),
+            Err(SensorError::ExecutableChanged)
+        );
+        assert_eq!(*native.invocations.borrow(), 1);
+        assert!(fallback.invocations.borrow().is_empty());
+    }
+
+    #[test]
+    fn native_timeout_fails_closed_without_fallback() {
+        let native = FakeNativeRunner {
+            error: SensorError::Timeout,
+            invocations: RefCell::new(0),
+        };
+        let fallback = FakeRunner::new([]);
+
+        assert_eq!(
+            check_preferred_with_runners(
+                &native,
+                &fallback,
+                &account_digest(),
+                now("2026-07-23T12:00:30Z"),
+            ),
+            Err(SensorError::Timeout)
+        );
+        assert_eq!(*native.invocations.borrow(), 1);
+        assert!(fallback.invocations.borrow().is_empty());
+    }
+
+    #[test]
+    fn every_native_integrity_error_fails_closed_without_codexbar() {
+        for error in [
+            SensorError::Timeout,
+            SensorError::OutputTooLarge,
+            SensorError::Failed,
+            SensorError::ClockInvalid,
+            SensorError::FilesystemSafety,
+            SensorError::WrongSession,
+            SensorError::DuplicateData,
+            SensorError::AmbiguousData,
+            SensorError::RowError,
+            SensorError::MissingIdentity,
+            SensorError::AccountNotFound,
+            SensorError::DuplicateAccount,
+            SensorError::WrongProvider,
+            SensorError::NonLocalSource,
+            SensorError::WrongWindows,
+            SensorError::Stale,
+            SensorError::ExecutableChanged,
+        ] {
+            let native = FakeNativeRunner {
+                error: error.clone(),
+                invocations: RefCell::new(0),
+            };
+            let fallback = FakeRunner::new([]);
+
+            assert_eq!(
+                check_preferred_with_runners(
+                    &native,
+                    &fallback,
+                    &account_digest(),
+                    now("2026-07-23T12:00:30Z"),
+                ),
+                Err(error)
+            );
+            assert_eq!(*native.invocations.borrow(), 1);
+            assert!(fallback.invocations.borrow().is_empty());
+        }
+    }
+
+    #[test]
+    fn allowlisted_native_errors_fallback_at_most_once_for_every_provider() {
+        for host in [UsageHost::Codex, UsageHost::Claude, UsageHost::Antigravity] {
+            for error in [
+                SensorError::Unavailable,
+                SensorError::Unsupported,
+                SensorError::UnsupportedVersion,
+                SensorError::Malformed,
+            ] {
+                let calls = Cell::new(0);
+                assert_eq!(
+                    native_then_fallback(host, Err::<u8, _>(error), || {
+                        calls.set(calls.get() + 1);
+                        Ok(7)
+                    }),
+                    Ok(7)
+                );
+                assert_eq!(calls.get(), 1);
+            }
+        }
+    }
+
+    #[test]
+    fn unavailable_fallback_is_reported_once_for_the_exact_provider() {
+        for host in [UsageHost::Codex, UsageHost::Claude, UsageHost::Antigravity] {
+            let calls = Cell::new(0);
+            assert_eq!(
+                native_then_fallback(host, Err::<u8, _>(SensorError::Unavailable), || {
+                    calls.set(calls.get() + 1);
+                    Err(SensorError::Unavailable)
+                }),
+                Err(SensorError::FallbackRequired(host))
+            );
+            assert_eq!(calls.get(), 1);
+        }
     }
 
     #[test]

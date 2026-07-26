@@ -1,0 +1,13 @@
+{
+  "name": "aigent-hive",
+  "version": "0.7.0",
+  "description": "Install and maintain project-local Aigent Hive harnesses without provider API credentials.",
+  "author": {
+    "name": "Aigent Hive maintainers",
+    "url": "https://github.com/gvm1229/aigent-hive"
+  },
+  "homepage": "https://github.com/gvm1229/aigent-hive",
+  "repository": "https://github.com/gvm1229/aigent-hive",
+  "license": "Apache-2.0",
+  "keywords": ["agent-harness", "claude-code", "knowledge", "skills"]
+}

@@ -4,8 +4,16 @@
   "title": "Aigent Hive knowledge query data",
   "type": "object",
   "additionalProperties": false,
-  "required": ["hits"],
+  "required": [
+    "hits",
+    "project_hit_count",
+    "root_hit_count",
+    "precedence"
+  ],
   "properties": {
+    "project_hit_count": { "type": "integer", "minimum": 0 },
+    "root_hit_count": { "type": "integer", "minimum": 0 },
+    "precedence": { "const": "project-first" },
     "hits": {
       "type": "array",
       "items": {
@@ -18,7 +26,10 @@
           "path",
           "content_digest",
           "tags",
-          "aliases"
+          "aliases",
+          "sources",
+          "scope",
+          "provenance"
         ],
         "properties": {
           "id": { "type": "string", "minLength": 1 },
@@ -38,6 +49,19 @@
             "type": "array",
             "uniqueItems": true,
             "items": { "type": "string", "minLength": 1 }
+          },
+          "sources": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "pattern": "^raw:\\.hive/knowledge/Raw/[A-Za-z0-9._/-]+#sha256:[0-9a-f]{64}$"
+            }
+          },
+          "scope": { "enum": ["project", "user-root"] },
+          "provenance": {
+            "enum": ["project-local", "explicit-promotion"]
           }
         }
       }

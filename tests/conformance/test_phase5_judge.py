@@ -24,7 +24,7 @@ SCHEMAS = ROOT / "schemas"
 SKILL = ROOT / "harness/skills/hive-judge-package/SKILL.md"
 PROJECTED_SKILL = (
     ROOT
-    / "harness/template/{{ '.claude' if primary_host == 'claude' else '.agents' }}/skills/hive-judge-package/SKILL.md"
+    / "harness/template/.agents/skills/hive-judge-package/SKILL.md"
 )
 CATALOG = ROOT / "harness/skills/catalog.yml"
 ACTIVE_SKILLS = ROOT / "harness/template/.hive/config/active-skills.yml"

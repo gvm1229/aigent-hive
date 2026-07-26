@@ -1,4 +1,5 @@
 project_name: "fixture \"quoted\"\nsecond line"
+project_identity: fixture-hostile
 project_kind: custom
 primary_host: claude
 capability_resolution:

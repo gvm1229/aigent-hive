@@ -490,6 +490,8 @@ dependencies = [
 name = "hive-wiki"
 version = "0.7.0"
 dependencies = [
+ "cap-fs-ext",
+ "cap-std",
  "hive-core",
  "rusqlite",
  "serde",

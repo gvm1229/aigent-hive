@@ -1,0 +1,6558 @@
+use super::{emit_action_result, ActionResult, Evidence};
+use crate::usage::{CommandRunner, QualifiedExecutable, SystemCommandRunner};
+use cap_fs_ext::{DirExt, OpenOptionsFollowExt};
+use cap_primitives::fs::FollowSymlinks;
+#[cfg(unix)]
+use cap_primitives::fs::PermissionsExt as CapPermissionsExt;
+use cap_std::ambient_authority;
+use cap_std::fs::{Dir, OpenOptions};
+use hive_core::sha256_digest;
+use hive_projection::{compile_projection, Host as ProjectionHost};
+use serde::{Deserialize, Serialize};
+use serde_json::json;
+use std::collections::BTreeMap;
+use std::env;
+use std::ffi::{OsStr, OsString};
+#[cfg(test)]
+use std::fs;
+use std::io::{self, Read, Write};
+use std::path::{Component, Path, PathBuf};
+use std::process::ExitCode;
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
+
+const USER_MARKER_START: &[u8] = b"<!-- AIGENT-HIVE:USER:START -->";
+const USER_MARKER_END: &[u8] = b"<!-- AIGENT-HIVE:USER:END -->";
+const MAX_USER_FILE_BYTES: u64 = 16 * 1024 * 1024;
+const COMMAND_TIMEOUT: Duration = Duration::from_mins(2);
+const COMMAND_OUTPUT_LIMIT: usize = 1024 * 1024;
+const ROOT_INDEX_RELATIVE: &str = ".hive/index/hive.sqlite3";
+const CODEX_PLUGIN_MANIFEST: &[u8] =
+    include_bytes!("../../../harness/plugins/aigent-hive/.codex-plugin/plugin.json");
+const CLAUDE_PLUGIN_MANIFEST: &[u8] =
+    include_bytes!("../../../harness/plugins/aigent-hive/.claude-plugin/plugin.json");
+const ANTIGRAVITY_PLUGIN_MANIFEST: &[u8] =
+    include_bytes!("../../../harness/plugins/aigent-hive/plugin.json");
+const CLAUDE_USAGE_CAPTURE: &[u8] =
+    include_bytes!("../../../harness/plugins/aigent-hive/bin/hive-claude-usage-capture");
+const ROOT_RAW_README: &[u8] =
+    include_bytes!("../../../harness/template/.hive/knowledge/Raw/README.md");
+const ROOT_SCHEMA: &[u8] =
+    include_bytes!("../../../harness/template/.hive/knowledge/Schema/schema.md");
+const ROOT_WIKI_INDEX: &[u8] =
+    include_bytes!("../../../harness/template/.hive/knowledge/Wiki/index.md");
+const ROOT_WIKI_LOG: &[u8] =
+    include_bytes!("../../../harness/template/.hive/knowledge/Wiki/log.md");
+const ROOT_SUPPRESSION: &[u8] =
+    include_bytes!("../../../harness/template/.hive/knowledge/suppression.yml");
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "lowercase")]
+enum UserHost {
+    Codex,
+    Claude,
+    Antigravity,
+}
+
+impl UserHost {
+    const fn as_str(self) -> &'static str {
+        match self {
+            Self::Codex => "codex",
+            Self::Claude => "claude",
+            Self::Antigravity => "antigravity",
+        }
+    }
+
+    const fn projection_host(self) -> ProjectionHost {
+        match self {
+            Self::Codex => ProjectionHost::Codex,
+            Self::Claude => ProjectionHost::Claude,
+            Self::Antigravity => ProjectionHost::Antigravity,
+        }
+    }
+
+    const fn version_range(self) -> &'static str {
+        match self {
+            Self::Codex => ">=0.145.0 <1.0.0",
+            Self::Claude => ">=2.1.0 <3.0.0",
+            Self::Antigravity => ">=2.3.1 <3.0.0",
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum UserMode {
+    DryRun,
+    Apply,
+    Validate,
+    Recover,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum UserOperation {
+    Install,
+    Update,
+}
+
+struct UserArguments {
+    host: UserHost,
+    mode: UserMode,
+    user_root: PathBuf,
+    root_cap: Dir,
+}
+
+#[derive(Debug)]
+enum InstallError {
+    Input(String),
+    Conflict(String),
+    Unsupported(String),
+    Verification(String),
+    Internal(String),
+}
+
+impl InstallError {
+    const fn status(&self) -> &'static str {
+        match self {
+            Self::Input(_) | Self::Internal(_) => "error",
+            Self::Conflict(_) => "conflict",
+            Self::Unsupported(_) => "unsupported",
+            Self::Verification(_) => "verification-failed",
+        }
+    }
+
+    const fn exit_code(&self) -> u8 {
+        match self {
+            Self::Input(_) => 2,
+            Self::Conflict(_) => 3,
+            Self::Unsupported(_) => 4,
+            Self::Verification(_) => 5,
+            Self::Internal(_) => 10,
+        }
+    }
+
+    fn message(&self) -> &str {
+        match self {
+            Self::Input(message)
+            | Self::Conflict(message)
+            | Self::Unsupported(message)
+            | Self::Verification(message)
+            | Self::Internal(message) => message,
+        }
+    }
+}
+
+#[derive(Clone)]
+struct PlannedFile {
+    bytes: Vec<u8>,
+    executable: bool,
+    ownership: &'static str,
+}
+
+struct UserPlan {
+    files: BTreeMap<PathBuf, PlannedFile>,
+    retired_files: BTreeMap<PathBuf, RetiredFile>,
+    changed_paths: Vec<String>,
+    plan_digest: String,
+    manifest_relative: PathBuf,
+    marketplace_root: Option<PathBuf>,
+    expected_before: BTreeMap<PathBuf, Option<Vec<u8>>>,
+    expected_permissions: BTreeMap<PathBuf, Option<FilePermissions>>,
+    qualified_host_version: Option<String>,
+}
+
+#[derive(Clone)]
+struct RetiredFile {
+    bytes: Vec<u8>,
+    #[cfg(unix)]
+    permissions: FilePermissions,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+struct UserOwnershipManifest {
+    schema_version: u32,
+    product_version: String,
+    host: UserHost,
+    host_version_range: String,
+    source_release_digest: String,
+    plan_digest: String,
+    last_backup: Option<String>,
+    guidance_path: String,
+    entries: Vec<UserOwnershipEntry>,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+struct UserOwnershipEntry {
+    path: String,
+    digest: String,
+    executable: bool,
+    #[serde(default)]
+    unix_mode: Option<u32>,
+    ownership: String,
+}
+
+struct AuthenticatedUserInventory {
+    product_version: String,
+    host: UserHost,
+    host_version_range: String,
+    source_release_digest: String,
+    guidance_path: String,
+    entries: Vec<UserOwnershipEntry>,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+struct UserBackupManifest {
+    schema_version: u32,
+    host: UserHost,
+    plan_digest: String,
+    #[serde(default)]
+    host_mutations: Vec<HostMutation>,
+    #[serde(default)]
+    index_existed: bool,
+    #[serde(default)]
+    codex_state_before: Option<CodexHostState>,
+    #[serde(default)]
+    claude_state_before: Option<ClaudeHostState>,
+    #[serde(default)]
+    host_owned_state: Option<HostStateSnapshot>,
+    #[serde(default)]
+    pending_host_transition: Option<PendingHostTransition>,
+    entries: Vec<UserBackupEntry>,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+struct UserBackupEntry {
+    path: String,
+    existed: bool,
+    digest: Option<String>,
+    #[serde(default)]
+    installed_digest: Option<String>,
+    #[serde(default)]
+    installed_executable: Option<bool>,
+    #[serde(default)]
+    installed_unix_mode: Option<u32>,
+    #[serde(default)]
+    executable: bool,
+    #[serde(default)]
+    unix_mode: Option<u32>,
+}
+
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+struct FilePermissions {
+    executable: bool,
+    unix_mode: Option<u32>,
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "kebab-case")]
+enum HostMutation {
+    CodexMarketplaceAdded,
+    CodexPluginAdded,
+    CodexPluginRefreshed,
+    ClaudeMarketplaceAdded,
+    ClaudePluginInstalled,
+    ClaudeMarketplaceRefreshed,
+    ClaudePluginRefreshed,
+}
+
+type ActivationCommand<'a> = (Vec<&'a str>, Option<HostMutation>);
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(tag = "host", content = "state", rename_all = "lowercase")]
+enum HostStateSnapshot {
+    Codex(CodexHostState),
+    Claude(ClaudeHostState),
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "kebab-case")]
+enum HostTransitionPhase {
+    Forward,
+    Compensation,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
+struct PendingHostTransition {
+    mutation: HostMutation,
+    phase: HostTransitionPhase,
+    before: HostStateSnapshot,
+    after: HostStateSnapshot,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
+struct CodexHostState {
+    marketplace: Option<CodexMarketplaceState>,
+    plugin: Option<CodexPluginState>,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
+struct CodexMarketplaceState {
+    root: String,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
+struct CodexPluginState {
+    version: String,
+    enabled: bool,
+    source_path: String,
+    marketplace_source: String,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
+struct ClaudeHostState {
+    marketplace: Option<ClaudeMarketplaceState>,
+    plugin: Option<ClaudePluginState>,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
+struct ClaudeMarketplaceState {
+    source: String,
+    path: String,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
+struct ClaudePluginState {
+    version: String,
+    enabled: bool,
+    scope: String,
+}
+
+#[cfg(test)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum HostCompensationSurface {
+    CodexStructuredJson,
+    ClaudeStructuredJson,
+}
+
+#[cfg(test)]
+fn compensation_surface(mutation: HostMutation) -> HostCompensationSurface {
+    match mutation {
+        HostMutation::CodexMarketplaceAdded
+        | HostMutation::CodexPluginAdded
+        | HostMutation::CodexPluginRefreshed => HostCompensationSurface::CodexStructuredJson,
+        HostMutation::ClaudeMarketplaceAdded
+        | HostMutation::ClaudePluginInstalled
+        | HostMutation::ClaudeMarketplaceRefreshed
+        | HostMutation::ClaudePluginRefreshed => HostCompensationSurface::ClaudeStructuredJson,
+    }
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+struct UserTransactionJournal {
+    schema_version: u32,
+    host: UserHost,
+    plan_digest: String,
+    backup: String,
+}
+
+struct UserTransaction {
+    backup_relative: PathBuf,
+    journal_relative: PathBuf,
+    backup: UserBackupManifest,
+}
+
+type PlannedSnapshot = (PathBuf, Option<Vec<u8>>, FilePermissions);
+
+pub(crate) fn run_install(arguments: &[String]) -> ExitCode {
+    run(UserOperation::Install, arguments)
+}
+
+pub(crate) fn run_update(arguments: &[String]) -> ExitCode {
+    run(UserOperation::Update, arguments)
+}
+
+fn run(operation: UserOperation, arguments: &[String]) -> ExitCode {
+    let action = match operation {
+        UserOperation::Install => "InstallHiveUser",
+        UserOperation::Update => "UpdateHiveUser",
+    };
+    let result = parse(arguments)
+        .and_then(|arguments| execute(operation, &arguments, &SystemCommandRunner))
+        .unwrap_or_else(|error| failure(action, &error));
+    emit_action_result(&result)
+}
+
+fn parse(arguments: &[String]) -> Result<UserArguments, InstallError> {
+    let mut scope = None;
+    let mut host = None;
+    let mut mode = None;
+    let mut output = None;
+    let mut user_root = None;
+    let mut index = 0;
+    while index < arguments.len() {
+        match arguments[index].as_str() {
+            "--dry-run" if mode.is_none() => {
+                mode = Some(UserMode::DryRun);
+                index += 1;
+            }
+            "--apply" if mode.is_none() => {
+                mode = Some(UserMode::Apply);
+                index += 1;
+            }
+            "--validate" if mode.is_none() => {
+                mode = Some(UserMode::Validate);
+                index += 1;
+            }
+            "--recover" if mode.is_none() => {
+                mode = Some(UserMode::Recover);
+                index += 1;
+            }
+            "--dry-run" | "--apply" | "--validate" | "--recover" => {
+                return Err(InstallError::Input(
+                    "exactly one install/update mode is required".to_owned(),
+                ));
+            }
+            option @ ("--scope" | "--host" | "--output" | "--user-root") => {
+                let value = arguments
+                    .get(index + 1)
+                    .ok_or_else(|| InstallError::Input(format!("missing value for {option}")))?;
+                let slot = match option {
+                    "--scope" => &mut scope,
+                    "--host" => &mut host,
+                    "--output" => &mut output,
+                    "--user-root" => &mut user_root,
+                    _ => unreachable!(),
+                };
+                if slot.replace(value.clone()).is_some() {
+                    return Err(InstallError::Input(format!("duplicate option: {option}")));
+                }
+                index += 2;
+            }
+            option => return Err(InstallError::Input(format!("unknown option: {option}"))),
+        }
+    }
+    if scope.as_deref() != Some("user") {
+        return Err(InstallError::Input(
+            "user installation requires --scope user".to_owned(),
+        ));
+    }
+    if output.as_deref() != Some("json") {
+        return Err(InstallError::Input(
+            "user installation requires --output json".to_owned(),
+        ));
+    }
+    let host = match host.as_deref() {
+        Some("codex") => UserHost::Codex,
+        Some("claude") => UserHost::Claude,
+        Some("antigravity") => UserHost::Antigravity,
+        Some(_) => {
+            return Err(InstallError::Input(
+                "--host must be codex, claude, or antigravity".to_owned(),
+            ));
+        }
+        None => {
+            return Err(InstallError::Input(
+                "missing required option --host".to_owned(),
+            ))
+        }
+    };
+    let mode = mode.ok_or_else(|| InstallError::Input("missing install/update mode".to_owned()))?;
+    let user_root = user_root.map_or_else(resolve_user_root, |value| Ok(PathBuf::from(value)))?;
+    let root_cap = open_user_root(&user_root)?;
+    Ok(UserArguments {
+        host,
+        mode,
+        user_root,
+        root_cap,
+    })
+}
+
+fn resolve_user_root() -> Result<PathBuf, InstallError> {
+    let value = if cfg!(windows) {
+        env::var_os("USERPROFILE")
+    } else {
+        env::var_os("HOME")
+    }
+    .ok_or_else(|| InstallError::Input("cannot resolve the user home directory".to_owned()))?;
+    Ok(PathBuf::from(value))
+}
+
+fn open_user_root(root: &Path) -> Result<Dir, InstallError> {
+    if !root.is_absolute() {
+        return Err(InstallError::Input(
+            "--user-root must be an absolute directory".to_owned(),
+        ));
+    }
+    let parent = root
+        .parent()
+        .ok_or_else(|| InstallError::Input("user root has no parent directory".to_owned()))?;
+    let name = root
+        .file_name()
+        .ok_or_else(|| InstallError::Input("user root has no directory name".to_owned()))?;
+    let parent_cap = Dir::open_ambient_dir(parent, ambient_authority()).map_err(|error| {
+        InstallError::Input(format!(
+            "cannot open user root parent {}: {error}",
+            parent.display()
+        ))
+    })?;
+    parent_cap.open_dir_nofollow(name).map_err(|error| {
+        InstallError::Conflict(format!(
+            "user root must be a no-follow directory {}: {error}",
+            root.display()
+        ))
+    })
+}
+
+fn execute(
+    operation: UserOperation,
+    arguments: &UserArguments,
+    runner: &impl CommandRunner,
+) -> Result<ActionResult, InstallError> {
+    if arguments.mode == UserMode::Recover {
+        return recover(arguments, runner);
+    }
+    let mut plan = build_plan(arguments)?;
+    match arguments.mode {
+        UserMode::DryRun => Ok(success_result(
+            operation,
+            arguments,
+            &plan,
+            "hive.user-install-dry-run-complete",
+            "user installation dry run completed",
+            None,
+        )),
+        UserMode::Validate => {
+            if !plan.changed_paths.is_empty() {
+                return Err(InstallError::Verification(format!(
+                    "user installation drift detected at {} path(s)",
+                    plan.changed_paths.len()
+                )));
+            }
+            Ok(success_result(
+                operation,
+                arguments,
+                &plan,
+                "hive.user-install-valid",
+                "user installation is valid",
+                None,
+            ))
+        }
+        UserMode::Apply => execute_apply(operation, arguments, runner, &mut plan),
+        UserMode::Recover => unreachable!("recovery returns before plan construction"),
+    }
+}
+
+fn execute_apply(
+    operation: UserOperation,
+    arguments: &UserArguments,
+    runner: &impl CommandRunner,
+    plan: &mut UserPlan,
+) -> Result<ActionResult, InstallError> {
+    let host_executable = qualify_host(arguments, plan, runner)?;
+    let host_version = probe_supported_host_version(
+        arguments.host,
+        host_executable.as_ref().ok_or_else(|| {
+            InstallError::Internal("qualified host executable is missing".to_owned())
+        })?,
+        runner,
+    )?;
+    bind_host_version(plan, &host_version);
+    let codex_before = probe_codex_state_if_required(arguments, host_executable.as_ref(), runner)?;
+    let claude_before =
+        probe_claude_state_if_required(arguments, host_executable.as_ref(), runner)?;
+    validate_codex_prestate(arguments, codex_before.as_ref())?;
+    validate_claude_prestate(arguments, claude_before.as_ref())?;
+    let applied_changed_paths = plan.changed_paths.clone();
+    let mut transaction = apply_plan(arguments, plan, codex_before, claude_before)?;
+    let activated = activate_host(
+        arguments,
+        plan,
+        &mut transaction,
+        host_executable.as_ref(),
+        runner,
+    )
+    .and_then(|()| {
+        validate_codex_activation(
+            arguments,
+            &transaction.backup,
+            host_executable.as_ref(),
+            runner,
+        )
+    })
+    .and_then(|()| {
+        validate_claude_activation(
+            arguments,
+            &transaction.backup,
+            host_executable.as_ref(),
+            runner,
+        )
+    })
+    .and_then(|()| validate_plugin_package(arguments, plan))
+    .and_then(|()| rebuild_root_index(arguments))
+    .and_then(|()| validate_applied_bytes(arguments));
+    let mut refreshed = activated.map_err(|primary| {
+        rollback_after_failure(
+            arguments,
+            &mut transaction,
+            host_executable.as_ref(),
+            runner,
+            primary,
+        )
+    })?;
+    bind_host_version(&mut refreshed, &host_version);
+    remove_transaction_journal(arguments, &transaction.journal_relative).map_err(|primary| {
+        rollback_after_failure(
+            arguments,
+            &mut transaction,
+            host_executable.as_ref(),
+            runner,
+            primary,
+        )
+    })?;
+    refreshed.changed_paths = applied_changed_paths;
+    Ok(success_result(
+        operation,
+        arguments,
+        &refreshed,
+        match operation {
+            UserOperation::Install => "hive.user-install-complete",
+            UserOperation::Update => "hive.user-update-complete",
+        },
+        match operation {
+            UserOperation::Install => "user-scope Hive installation completed",
+            UserOperation::Update => "user-scope Hive update completed",
+        },
+        Some(&portable(&transaction.backup_relative)),
+    ))
+}
+
+fn rebuild_root_index(arguments: &UserArguments) -> Result<(), InstallError> {
+    hive_wiki::rebuild_index(&arguments.user_root)
+        .map(|_| ())
+        .map_err(|error| {
+            InstallError::Verification(format!(
+                "root knowledge index rebuild failed after installation: {error}"
+            ))
+        })
+}
+
+fn validate_applied_bytes(arguments: &UserArguments) -> Result<UserPlan, InstallError> {
+    let refreshed = build_plan(arguments)?;
+    if refreshed.changed_paths.is_empty() {
+        Ok(refreshed)
+    } else {
+        Err(InstallError::Verification(
+            "user installation failed post-activation byte validation".to_owned(),
+        ))
+    }
+}
+
+#[allow(clippy::too_many_lines)]
+fn build_plan(arguments: &UserArguments) -> Result<UserPlan, InstallError> {
+    let mut files = BTreeMap::new();
+    let guidance_relative = guidance_path(arguments.host, &arguments.root_cap)?;
+    let guidance_existing =
+        read_optional_regular(&arguments.root_cap, &guidance_relative, MAX_USER_FILE_BYTES)?
+            .unwrap_or_default();
+    files.insert(
+        guidance_relative.clone(),
+        PlannedFile {
+            bytes: merge_user_marker(&guidance_existing, &render_user_guidance(arguments.host))?,
+            executable: false,
+            ownership: "shared-marker",
+        },
+    );
+    seed_root_knowledge(&arguments.root_cap, &mut files)?;
+
+    let projection = compile_projection(arguments.host.projection_host(), &[])
+        .map_err(|error| InstallError::Internal(error.to_string()))?;
+    let marketplace_root = match arguments.host {
+        UserHost::Codex | UserHost::Claude => {
+            let relative = PathBuf::from(format!(".hive/marketplaces/{}", arguments.host.as_str()));
+            let plugin_relative = relative.join("plugins/aigent-hive");
+            for (path, bytes) in projection.files {
+                let Some(skill_path) = strip_project_skill_prefix(&path) else {
+                    continue;
+                };
+                files.insert(
+                    plugin_relative.join(skill_path),
+                    PlannedFile {
+                        bytes,
+                        executable: false,
+                        ownership: "immutable-plugin-package",
+                    },
+                );
+            }
+            files.insert(
+                plugin_relative.join(".codex-plugin/plugin.json"),
+                PlannedFile {
+                    bytes: CODEX_PLUGIN_MANIFEST.to_vec(),
+                    executable: false,
+                    ownership: "immutable-plugin-package",
+                },
+            );
+            files.insert(
+                plugin_relative.join(".claude-plugin/plugin.json"),
+                PlannedFile {
+                    bytes: CLAUDE_PLUGIN_MANIFEST.to_vec(),
+                    executable: false,
+                    ownership: "immutable-plugin-package",
+                },
+            );
+            files.insert(
+                plugin_relative.join("bin/hive-claude-usage-capture"),
+                PlannedFile {
+                    bytes: CLAUDE_USAGE_CAPTURE.to_vec(),
+                    executable: true,
+                    ownership: "immutable-plugin-package",
+                },
+            );
+            let marketplace = match arguments.host {
+                UserHost::Codex => render_codex_marketplace(),
+                UserHost::Claude => render_claude_marketplace(),
+                UserHost::Antigravity => unreachable!(),
+            };
+            let marketplace_relative = match arguments.host {
+                UserHost::Codex => relative.join("marketplace.json"),
+                UserHost::Claude => relative.join(".claude-plugin/marketplace.json"),
+                UserHost::Antigravity => unreachable!(),
+            };
+            files.insert(
+                marketplace_relative,
+                PlannedFile {
+                    bytes: marketplace,
+                    executable: false,
+                    ownership: "host-adapter-metadata",
+                },
+            );
+            Some(relative)
+        }
+        UserHost::Antigravity => {
+            for (path, bytes) in projection.files {
+                let Some(skill_path) = strip_project_skill_prefix(&path) else {
+                    continue;
+                };
+                files.insert(
+                    Path::new(".gemini/config/plugins/aigent-hive").join(&skill_path),
+                    PlannedFile {
+                        bytes: bytes.clone(),
+                        executable: false,
+                        ownership: "immutable-plugin-package",
+                    },
+                );
+                files.insert(
+                    Path::new(".gemini/config").join(skill_path),
+                    PlannedFile {
+                        bytes,
+                        executable: false,
+                        ownership: "host-skill-projection",
+                    },
+                );
+            }
+            files.insert(
+                PathBuf::from(".gemini/config/plugins/aigent-hive/plugin.json"),
+                PlannedFile {
+                    bytes: ANTIGRAVITY_PLUGIN_MANIFEST.to_vec(),
+                    executable: false,
+                    ownership: "immutable-plugin-package",
+                },
+            );
+            None
+        }
+    };
+
+    let manifest_relative =
+        PathBuf::from(format!(".hive/install/{}.json", arguments.host.as_str()));
+    let source_release_digest = source_release_digest(&files);
+    let entries = ownership_entries(&files);
+    let plan_digest = inventory_digest(
+        arguments.host,
+        env!("CARGO_PKG_VERSION"),
+        arguments.host.version_range(),
+        &guidance_relative,
+        &source_release_digest,
+        &entries,
+    );
+    let prior_manifest =
+        read_installed_manifest(&arguments.root_cap, &manifest_relative, arguments.host)?;
+    let retired_files = validate_prior_ownership(
+        &arguments.root_cap,
+        &files,
+        &guidance_relative,
+        &source_release_digest,
+        &entries,
+        prior_manifest.as_ref(),
+    )?;
+    let last_backup = prior_manifest
+        .as_ref()
+        .and_then(|manifest| manifest.last_backup.clone());
+    let manifest = UserOwnershipManifest {
+        schema_version: 1,
+        product_version: env!("CARGO_PKG_VERSION").to_owned(),
+        host: arguments.host,
+        host_version_range: arguments.host.version_range().to_owned(),
+        source_release_digest,
+        plan_digest: plan_digest.clone(),
+        last_backup,
+        guidance_path: portable(&guidance_relative),
+        entries,
+    };
+    let manifest_bytes = json_line(&manifest)?;
+    files.insert(
+        manifest_relative.clone(),
+        PlannedFile {
+            bytes: manifest_bytes,
+            executable: false,
+            ownership: "user-install-manifest",
+        },
+    );
+    let expected_before = snapshot_operation_paths(&arguments.root_cap, &files, &retired_files)?;
+    let expected_permissions =
+        snapshot_operation_permissions(&arguments.root_cap, &expected_before, &retired_files)?;
+    let changed_paths = changed_paths(
+        &expected_before,
+        &arguments.root_cap,
+        &files,
+        &retired_files,
+    )?;
+    Ok(UserPlan {
+        files,
+        retired_files,
+        changed_paths,
+        plan_digest,
+        manifest_relative,
+        marketplace_root,
+        expected_before,
+        expected_permissions,
+        qualified_host_version: None,
+    })
+}
+
+fn guidance_path(host: UserHost, root: &Dir) -> Result<PathBuf, InstallError> {
+    match host {
+        UserHost::Codex => {
+            let override_path = Path::new(".codex/AGENTS.override.md");
+            let bytes = read_optional_regular(root, override_path, MAX_USER_FILE_BYTES)?;
+            if bytes.as_deref().is_some_and(|value| !value.is_empty()) {
+                Ok(override_path.to_path_buf())
+            } else {
+                Ok(PathBuf::from(".codex/AGENTS.md"))
+            }
+        }
+        UserHost::Claude => Ok(PathBuf::from(".claude/CLAUDE.md")),
+        UserHost::Antigravity => Ok(PathBuf::from(".gemini/GEMINI.md")),
+    }
+}
+
+fn validate_prior_ownership(
+    root: &Dir,
+    files: &BTreeMap<PathBuf, PlannedFile>,
+    guidance_path: &Path,
+    expected_source_release_digest: &str,
+    expected_entries: &[UserOwnershipEntry],
+    prior: Option<&UserOwnershipManifest>,
+) -> Result<BTreeMap<PathBuf, RetiredFile>, InstallError> {
+    let authenticated = if let Some(manifest) = prior {
+        let recomputed = inventory_digest(
+            manifest.host,
+            &manifest.product_version,
+            &manifest.host_version_range,
+            Path::new(&manifest.guidance_path),
+            &manifest.source_release_digest,
+            &manifest.entries,
+        );
+        if manifest.plan_digest != recomputed {
+            return Err(InstallError::Conflict(
+                "installed ownership manifest is not internally reproducible".to_owned(),
+            ));
+        }
+        let authenticated = authenticated_user_inventory(
+            manifest.host,
+            &manifest.product_version,
+            &manifest.source_release_digest,
+            guidance_path,
+            expected_source_release_digest,
+            expected_entries,
+        )
+        .ok_or_else(|| {
+            InstallError::Conflict(
+                "installed ownership manifest does not match an authenticated Hive release"
+                    .to_owned(),
+            )
+        })?;
+        validate_manifest_against_authenticated_inventory(manifest, &authenticated)?;
+        validate_authenticated_installed_bytes(root, &authenticated)?;
+        Some(authenticated)
+    } else {
+        None
+    };
+    let authenticated_entries = authenticated
+        .as_ref()
+        .map(|inventory| {
+            inventory
+                .entries
+                .iter()
+                .map(|entry| (entry.path.as_str(), entry))
+                .collect::<BTreeMap<_, _>>()
+        })
+        .unwrap_or_default();
+    for (relative, planned) in files {
+        if read_optional_regular(root, relative, MAX_USER_FILE_BYTES)?.is_none() {
+            continue;
+        }
+        let path = portable(relative);
+        if matches!(
+            planned.ownership,
+            "shared-marker" | "canonical-data-protected"
+        ) {
+            continue;
+        }
+        let Some(entry) = authenticated_entries.get(path.as_str()) else {
+            return Err(InstallError::Conflict(format!(
+                "occupied user installation path lacks exact prior Hive ownership: {path}"
+            )));
+        };
+        if entry.ownership != planned.ownership {
+            return Err(InstallError::Conflict(format!(
+                "occupied user installation path has incompatible prior Hive ownership: {path}"
+            )));
+        }
+    }
+    let mut retired = BTreeMap::new();
+    if let Some(authenticated) = authenticated {
+        for entry in authenticated.entries.iter().filter(|entry| {
+            is_managed_ownership(&entry.ownership)
+                && !files.contains_key(Path::new(entry.path.as_str()))
+        }) {
+            let relative = PathBuf::from(&entry.path);
+            let bytes =
+                read_optional_regular(root, &relative, MAX_USER_FILE_BYTES)?.ok_or_else(|| {
+                    InstallError::Conflict(format!(
+                        "authenticated prior Hive inventory names a missing managed path: {}",
+                        entry.path
+                    ))
+                })?;
+            retired.insert(
+                relative,
+                RetiredFile {
+                    bytes,
+                    #[cfg(unix)]
+                    permissions: FilePermissions {
+                        executable: entry.executable,
+                        unix_mode: entry.unix_mode,
+                    },
+                },
+            );
+        }
+    }
+    Ok(retired)
+}
+
+fn validate_manifest_against_authenticated_inventory(
+    manifest: &UserOwnershipManifest,
+    authenticated: &AuthenticatedUserInventory,
+) -> Result<(), InstallError> {
+    if manifest.product_version != authenticated.product_version
+        || manifest.host != authenticated.host
+        || manifest.host_version_range != authenticated.host_version_range
+        || manifest.source_release_digest != authenticated.source_release_digest
+        || manifest.guidance_path != authenticated.guidance_path
+        || manifest.entries.len() != authenticated.entries.len()
+    {
+        return Err(InstallError::Conflict(
+            "installed ownership manifest differs from its authenticated Hive release".to_owned(),
+        ));
+    }
+    for (entry, expected) in manifest.entries.iter().zip(&authenticated.entries) {
+        let managed = is_managed_ownership(&expected.ownership);
+        if entry.path != expected.path
+            || entry.executable != expected.executable
+            || entry.unix_mode != expected.unix_mode
+            || entry.ownership != expected.ownership
+            || (managed && entry.digest != expected.digest)
+        {
+            return Err(InstallError::Conflict(format!(
+                "installed ownership entry differs from its authenticated Hive release: {}",
+                entry.path
+            )));
+        }
+    }
+    Ok(())
+}
+
+fn validate_authenticated_installed_bytes(
+    root: &Dir,
+    authenticated: &AuthenticatedUserInventory,
+) -> Result<(), InstallError> {
+    for entry in authenticated
+        .entries
+        .iter()
+        .filter(|entry| is_managed_ownership(&entry.ownership))
+    {
+        let relative = Path::new(&entry.path);
+        let bytes =
+            read_optional_regular(root, relative, MAX_USER_FILE_BYTES)?.ok_or_else(|| {
+                InstallError::Conflict(format!(
+                    "authenticated prior Hive inventory names a missing managed path: {}",
+                    entry.path
+                ))
+            })?;
+        let permissions = file_permissions(root, relative)?;
+        if sha256_digest(&bytes) != entry.digest
+            || permissions.unix_mode != entry.unix_mode
+            || !permissions_match_managed_mode(permissions, entry.executable)
+        {
+            return Err(InstallError::Conflict(format!(
+                "installed managed path differs from its authenticated prior Hive release: {}",
+                entry.path
+            )));
+        }
+    }
+    Ok(())
+}
+
+fn is_managed_ownership(ownership: &str) -> bool {
+    !matches!(ownership, "shared-marker" | "canonical-data-protected")
+}
+
+#[cfg(unix)]
+fn permissions_match_managed_mode(permissions: FilePermissions, executable: bool) -> bool {
+    permissions.unix_mode == Some(if executable { 0o755 } else { 0o644 })
+}
+
+#[cfg(not(unix))]
+fn permissions_match_managed_mode(_permissions: FilePermissions, _executable: bool) -> bool {
+    true
+}
+
+fn render_user_guidance(host: UserHost) -> Vec<u8> {
+    format!(
+        "<!-- AIGENT-HIVE:USER:START -->\n# Aigent Hive user directives\n\n- Host: `{}`\n- Use the installed `setup-harness` Skill to initialize or reconfigure a project-specific Hive harness.\n- Use `hive-project-upgrade` to scan, preview, apply, validate, or recover project projections.\n- Use `hive-knowledge-promote` only for reviewed project-neutral facts, reusable preferences, or portable workflows.\n- Keep each project's `AGENTS.md`, `.agents/`, `.hive/knowledge/`, and disposable SQLite index isolated from other projects.\n- Keep cross-project canonical knowledge under `~/.hive/knowledge/`; treat `~/.hive/index/hive.sqlite3` as disposable.\n- For explicit prompt authoring or improvement, route to `hive-prompt-refine` in refine-only mode.\n- For an ambiguous or detail-poor ordinary request, offer one concise optional refine suggestion while continuing safe discoverable work; never rewrite automatically.\n- Never request provider API credentials or call model-provider APIs on Hive's behalf.\n<!-- AIGENT-HIVE:USER:END -->\n",
+        host.as_str()
+    )
+    .into_bytes()
+}
+
+fn merge_user_marker(existing: &[u8], marker: &[u8]) -> Result<Vec<u8>, InstallError> {
+    let starts = find_all(existing, USER_MARKER_START);
+    let ends = find_all(existing, USER_MARKER_END);
+    match (starts.as_slice(), ends.as_slice()) {
+        ([], []) => {
+            let mut output = existing.to_vec();
+            if !output.is_empty() && !output.ends_with(b"\n") {
+                output.push(b'\n');
+            }
+            output.extend_from_slice(marker);
+            Ok(output)
+        }
+        ([start], [end]) if start < end => {
+            let end = end + USER_MARKER_END.len();
+            let mut output = Vec::with_capacity(existing.len() + marker.len());
+            output.extend_from_slice(&existing[..*start]);
+            output.extend_from_slice(marker);
+            if end < existing.len() && marker.ends_with(b"\n") && existing[end] == b'\n' {
+                output.extend_from_slice(&existing[end + 1..]);
+            } else {
+                output.extend_from_slice(&existing[end..]);
+            }
+            Ok(output)
+        }
+        _ => Err(InstallError::Conflict(
+            "user guidance contains malformed, duplicate, or nested Aigent Hive user markers"
+                .to_owned(),
+        )),
+    }
+}
+
+fn find_all(haystack: &[u8], needle: &[u8]) -> Vec<usize> {
+    haystack
+        .windows(needle.len())
+        .enumerate()
+        .filter_map(|(index, value)| (value == needle).then_some(index))
+        .collect()
+}
+
+fn seed_root_knowledge(
+    root: &Dir,
+    files: &mut BTreeMap<PathBuf, PlannedFile>,
+) -> Result<(), InstallError> {
+    for (relative, seed) in [
+        (".hive/knowledge/Raw/README.md", ROOT_RAW_README),
+        (".hive/knowledge/Schema/schema.md", ROOT_SCHEMA),
+        (".hive/knowledge/Wiki/index.md", ROOT_WIKI_INDEX),
+        (".hive/knowledge/Wiki/log.md", ROOT_WIKI_LOG),
+        (".hive/knowledge/suppression.yml", ROOT_SUPPRESSION),
+    ] {
+        let relative = PathBuf::from(relative);
+        let bytes = read_optional_regular(root, &relative, MAX_USER_FILE_BYTES)?
+            .unwrap_or_else(|| seed.to_vec());
+        files.insert(
+            relative,
+            PlannedFile {
+                bytes,
+                executable: false,
+                ownership: "canonical-data-protected",
+            },
+        );
+    }
+    Ok(())
+}
+
+fn strip_project_skill_prefix(path: &str) -> Option<PathBuf> {
+    path.strip_prefix(".agents/")
+        .or_else(|| path.strip_prefix(".claude/"))
+        .map(PathBuf::from)
+}
+
+fn render_codex_marketplace() -> Vec<u8> {
+    br#"{
+  "name": "aigent-hive",
+  "interface": {
+    "displayName": "Aigent Hive"
+  },
+  "plugins": [
+    {
+      "name": "aigent-hive",
+      "source": {
+        "source": "local",
+        "path": "./plugins/aigent-hive"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}
+"#
+    .to_vec()
+}
+
+fn render_claude_marketplace() -> Vec<u8> {
+    format!(
+        "{{\n  \"name\": \"aigent-hive\",\n  \"owner\": {{\n    \"name\": \"Aigent Hive maintainers\"\n  }},\n  \"plugins\": [\n    {{\n      \"name\": \"aigent-hive\",\n      \"source\": \"./plugins/aigent-hive\",\n      \"description\": \"Initialize and maintain project-local Aigent Hive harnesses.\",\n      \"version\": \"{}\"\n    }}\n  ]\n}}\n",
+        env!("CARGO_PKG_VERSION")
+    )
+    .into_bytes()
+}
+
+fn source_release_digest(files: &BTreeMap<PathBuf, PlannedFile>) -> String {
+    source_release_digest_from_entries(&ownership_entries(files))
+}
+
+fn source_release_digest_from_entries(entries: &[UserOwnershipEntry]) -> String {
+    let mut bytes = Vec::new();
+    for entry in entries.iter().filter(|entry| {
+        matches!(
+            entry.ownership.as_str(),
+            "immutable-plugin-package" | "host-skill-projection" | "host-adapter-metadata"
+        )
+    }) {
+        bytes.extend_from_slice(entry.path.as_bytes());
+        bytes.push(0);
+        bytes.extend_from_slice(entry.digest.as_bytes());
+        bytes.push(b'\n');
+    }
+    sha256_digest(&bytes)
+}
+
+fn ownership_entries(files: &BTreeMap<PathBuf, PlannedFile>) -> Vec<UserOwnershipEntry> {
+    files
+        .iter()
+        .map(|(path, file)| UserOwnershipEntry {
+            path: portable(path),
+            digest: sha256_digest(&file.bytes),
+            executable: file.executable,
+            unix_mode: installed_unix_mode(file.executable),
+            ownership: file.ownership.to_owned(),
+        })
+        .collect()
+}
+
+fn inventory_digest(
+    host: UserHost,
+    product_version: &str,
+    host_version_range: &str,
+    guidance_path: &Path,
+    source_release_digest: &str,
+    entries: &[UserOwnershipEntry],
+) -> String {
+    let mut bytes = Vec::new();
+    bytes.extend_from_slice(host.as_str().as_bytes());
+    bytes.push(0);
+    bytes.extend_from_slice(product_version.as_bytes());
+    bytes.push(0);
+    bytes.extend_from_slice(host_version_range.as_bytes());
+    bytes.push(0);
+    bytes.extend_from_slice(portable(guidance_path).as_bytes());
+    bytes.push(0);
+    bytes.extend_from_slice(source_release_digest.as_bytes());
+    bytes.push(b'\n');
+    for entry in entries {
+        bytes.extend_from_slice(entry.path.as_bytes());
+        bytes.push(0);
+        bytes.extend_from_slice(entry.digest.as_bytes());
+        bytes.push(0);
+        bytes.extend_from_slice(if entry.executable { b"1" } else { b"0" });
+        bytes.push(0);
+        bytes.extend_from_slice(
+            entry
+                .unix_mode
+                .map_or_else(|| "-".to_owned(), |mode| format!("{mode:o}"))
+                .as_bytes(),
+        );
+        bytes.push(0);
+        bytes.extend_from_slice(entry.ownership.as_bytes());
+        bytes.push(b'\n');
+    }
+    sha256_digest(&bytes)
+}
+
+fn authenticated_user_inventory(
+    host: UserHost,
+    product_version: &str,
+    source_release_digest: &str,
+    current_guidance_path: &Path,
+    current_source_release_digest: &str,
+    current_entries: &[UserOwnershipEntry],
+) -> Option<AuthenticatedUserInventory> {
+    if product_version == env!("CARGO_PKG_VERSION")
+        && source_release_digest == current_source_release_digest
+    {
+        return Some(AuthenticatedUserInventory {
+            product_version: product_version.to_owned(),
+            host,
+            host_version_range: host.version_range().to_owned(),
+            source_release_digest: source_release_digest.to_owned(),
+            guidance_path: portable(current_guidance_path),
+            entries: current_entries.to_vec(),
+        });
+    }
+    let historical = historical_user_inventory(host);
+    (historical.product_version == product_version
+        && historical.source_release_digest == source_release_digest)
+        .then_some(historical)
+}
+
+fn historical_user_inventory(host: UserHost) -> AuthenticatedUserInventory {
+    const HISTORICAL_VERSION: &str = "0.6.0";
+    let guidance_path = match host {
+        UserHost::Codex => ".codex/AGENTS.md",
+        UserHost::Claude => ".claude/CLAUDE.md",
+        UserHost::Antigravity => ".gemini/GEMINI.md",
+    };
+    let entries = ownership_entries(&historical_user_files(host));
+    AuthenticatedUserInventory {
+        product_version: HISTORICAL_VERSION.to_owned(),
+        host,
+        host_version_range: host.version_range().to_owned(),
+        source_release_digest: source_release_digest_from_entries(&entries),
+        guidance_path: guidance_path.to_owned(),
+        entries,
+    }
+}
+
+fn historical_user_files(host: UserHost) -> BTreeMap<PathBuf, PlannedFile> {
+    const HISTORICAL_PLUGIN_MANIFEST: &[u8] = b"{\"name\":\"aigent-hive\",\"version\":\"0.6.0\"}\n";
+    const HISTORICAL_RETIRED_SKILL: &[u8] =
+        b"#!/bin/sh\nprintf '%s\\n' 'retired Hive 0.6.0 skill'\n";
+    let (plugin_path, retired_skill_path) = match host {
+        UserHost::Codex => (
+            ".hive/marketplaces/codex/plugins/aigent-hive/.codex-plugin/plugin.json",
+            ".hive/marketplaces/codex/plugins/aigent-hive/bin/hive-retired-skill",
+        ),
+        UserHost::Claude => (
+            ".hive/marketplaces/claude/plugins/aigent-hive/.claude-plugin/plugin.json",
+            ".hive/marketplaces/claude/plugins/aigent-hive/bin/hive-retired-skill",
+        ),
+        UserHost::Antigravity => (
+            ".gemini/config/plugins/aigent-hive/plugin.json",
+            ".gemini/config/plugins/aigent-hive/bin/hive-retired-skill",
+        ),
+    };
+    BTreeMap::from([
+        (
+            PathBuf::from(plugin_path),
+            PlannedFile {
+                bytes: HISTORICAL_PLUGIN_MANIFEST.to_vec(),
+                executable: false,
+                ownership: "immutable-plugin-package",
+            },
+        ),
+        (
+            PathBuf::from(retired_skill_path),
+            PlannedFile {
+                bytes: HISTORICAL_RETIRED_SKILL.to_vec(),
+                executable: true,
+                ownership: "immutable-plugin-package",
+            },
+        ),
+        (
+            PathBuf::from(".hive/historical-shared-marker.md"),
+            PlannedFile {
+                bytes: b"historical shared marker\n".to_vec(),
+                executable: false,
+                ownership: "shared-marker",
+            },
+        ),
+        (
+            PathBuf::from(".hive/knowledge/historical-protected.md"),
+            PlannedFile {
+                bytes: b"historical protected knowledge\n".to_vec(),
+                executable: false,
+                ownership: "canonical-data-protected",
+            },
+        ),
+    ])
+}
+
+#[cfg(unix)]
+#[allow(clippy::unnecessary_wraps)]
+const fn installed_unix_mode(executable: bool) -> Option<u32> {
+    Some(if executable { 0o755 } else { 0o644 })
+}
+
+#[cfg(not(unix))]
+const fn installed_unix_mode(_executable: bool) -> Option<u32> {
+    None
+}
+
+#[cfg(unix)]
+const fn installed_file_permissions(executable: bool) -> FilePermissions {
+    FilePermissions {
+        executable,
+        unix_mode: installed_unix_mode(executable),
+    }
+}
+
+#[cfg(not(unix))]
+const fn installed_file_permissions(_executable: bool) -> FilePermissions {
+    FilePermissions {
+        executable: true,
+        unix_mode: None,
+    }
+}
+
+fn changed_paths(
+    current: &BTreeMap<PathBuf, Option<Vec<u8>>>,
+    root: &Dir,
+    files: &BTreeMap<PathBuf, PlannedFile>,
+    retired_files: &BTreeMap<PathBuf, RetiredFile>,
+) -> Result<Vec<String>, InstallError> {
+    let mut changed = Vec::new();
+    for (relative, planned) in files {
+        let bytes = current.get(relative).ok_or_else(|| {
+            InstallError::Internal(format!(
+                "planned snapshot is missing: {}",
+                relative.display()
+            ))
+        })?;
+        if bytes.as_deref() != Some(planned.bytes.as_slice())
+            || (planned.executable && !is_executable(root, relative)?)
+        {
+            changed.push(portable(relative));
+        }
+    }
+    changed.extend(retired_files.keys().map(|relative| portable(relative)));
+    changed.sort();
+    Ok(changed)
+}
+
+fn snapshot_operation_paths(
+    root: &Dir,
+    files: &BTreeMap<PathBuf, PlannedFile>,
+    retired_files: &BTreeMap<PathBuf, RetiredFile>,
+) -> Result<BTreeMap<PathBuf, Option<Vec<u8>>>, InstallError> {
+    let mut paths = files
+        .keys()
+        .map(|relative| {
+            read_optional_regular(root, relative, MAX_USER_FILE_BYTES)
+                .map(|bytes| (relative.clone(), bytes))
+        })
+        .collect::<Result<BTreeMap<_, _>, _>>()?;
+    paths.extend(
+        retired_files
+            .iter()
+            .map(|(relative, retired)| (relative.clone(), Some(retired.bytes.clone()))),
+    );
+    Ok(paths)
+}
+
+fn snapshot_operation_permissions(
+    root: &Dir,
+    paths: &BTreeMap<PathBuf, Option<Vec<u8>>>,
+    retired_files: &BTreeMap<PathBuf, RetiredFile>,
+) -> Result<BTreeMap<PathBuf, Option<FilePermissions>>, InstallError> {
+    #[cfg(unix)]
+    let mut permissions = snapshot_permissions(root, paths)?;
+    #[cfg(not(unix))]
+    let permissions = snapshot_permissions(root, paths)?;
+    #[cfg(unix)]
+    permissions.extend(
+        retired_files
+            .iter()
+            .map(|(relative, retired)| (relative.clone(), Some(retired.permissions))),
+    );
+    #[cfg(not(unix))]
+    let _ = retired_files;
+    Ok(permissions)
+}
+
+fn snapshot_permissions(
+    root: &Dir,
+    paths: &BTreeMap<PathBuf, Option<Vec<u8>>>,
+) -> Result<BTreeMap<PathBuf, Option<FilePermissions>>, InstallError> {
+    paths
+        .iter()
+        .map(|(relative, bytes)| {
+            bytes
+                .as_ref()
+                .map(|_| file_permissions(root, relative))
+                .transpose()
+                .map(|permissions| (relative.clone(), permissions))
+        })
+        .collect()
+}
+
+#[allow(clippy::too_many_lines)]
+fn apply_plan(
+    arguments: &UserArguments,
+    plan: &mut UserPlan,
+    codex_state_before: Option<CodexHostState>,
+    claude_state_before: Option<ClaudeHostState>,
+) -> Result<UserTransaction, InstallError> {
+    let journal_relative = transaction_journal_relative(arguments.host);
+    ensure_no_open_transaction(arguments, &journal_relative)?;
+    let backup_relative = PathBuf::from(format!(
+        ".hive/backups/user-install/{}/{}-{}",
+        arguments.host.as_str(),
+        unix_seconds()?,
+        std::process::id()
+    ));
+    let snapshots = preflight_plan(&arguments.root_cap, plan)?;
+    let index_existed = root_index_exists(&arguments.root_cap)?;
+    let mut backup_entries = Vec::new();
+    let mut activated_snapshots = Vec::new();
+    for (relative, existing, permissions) in &snapshots {
+        if let Some(bytes) = existing.as_ref() {
+            let backup_path = backup_relative.join("files").join(relative);
+            write_atomic_with_permissions(
+                &arguments.root_cap,
+                &backup_path,
+                bytes,
+                *permissions,
+                None,
+                None,
+            )?;
+        }
+        backup_entries.push(UserBackupEntry {
+            path: portable(relative),
+            existed: existing.is_some(),
+            digest: existing.as_ref().map(|bytes| sha256_digest(bytes)),
+            installed_digest: plan
+                .files
+                .get(relative)
+                .map(|planned| sha256_digest(&planned.bytes)),
+            installed_executable: plan
+                .files
+                .get(relative)
+                .map(|planned| installed_file_permissions(planned.executable).executable),
+            installed_unix_mode: plan
+                .files
+                .get(relative)
+                .and_then(|planned| installed_file_permissions(planned.executable).unix_mode),
+            executable: permissions.executable,
+            unix_mode: permissions.unix_mode,
+        });
+    }
+    let mut backup = UserBackupManifest {
+        schema_version: 2,
+        host: arguments.host,
+        plan_digest: plan.plan_digest.clone(),
+        host_mutations: Vec::new(),
+        index_existed,
+        codex_state_before,
+        claude_state_before,
+        host_owned_state: None,
+        pending_host_transition: None,
+        entries: backup_entries,
+    };
+    persist_backup(arguments, &backup_relative, &backup)?;
+    let journal = UserTransactionJournal {
+        schema_version: 1,
+        host: arguments.host,
+        plan_digest: plan.plan_digest.clone(),
+        backup: portable(&backup_relative),
+    };
+    write_atomic(
+        &arguments.root_cap,
+        &journal_relative,
+        &json_line(&journal)?,
+        false,
+        None,
+        None,
+    )?;
+
+    let backup_text = portable(&backup_relative);
+    if let Some(manifest_file) = plan.files.get_mut(&plan.manifest_relative) {
+        let mut manifest: UserOwnershipManifest = serde_json::from_slice(&manifest_file.bytes)
+            .map_err(|error| {
+                InstallError::Internal(format!("cannot decode planned ownership manifest: {error}"))
+            })?;
+        manifest.last_backup = Some(backup_text.clone());
+        manifest_file.bytes = json_line(&manifest)?;
+        if let Some(entry) = backup
+            .entries
+            .iter_mut()
+            .find(|entry| entry.path == portable(&plan.manifest_relative))
+        {
+            entry.installed_digest = Some(sha256_digest(&manifest_file.bytes));
+        }
+        persist_backup(arguments, &backup_relative, &backup)?;
+    }
+    for (relative, existing, permissions) in &snapshots {
+        let expected = existing.as_deref();
+        let expected_permissions = existing.as_ref().map(|_| *permissions);
+        let result = if let Some(file) = plan.files.get(relative) {
+            write_atomic(
+                &arguments.root_cap,
+                relative,
+                &file.bytes,
+                file.executable,
+                expected,
+                expected_permissions,
+            )
+        } else if plan.retired_files.contains_key(relative) {
+            remove_regular_if_exists(
+                &arguments.root_cap,
+                relative,
+                expected,
+                expected_permissions,
+            )
+        } else {
+            Err(InstallError::Internal(format!(
+                "planned snapshot has no activation operation: {}",
+                relative.display()
+            )))
+        };
+        if let Err(error) = result {
+            let rollback_scope = if matches!(error, InstallError::Conflict(_)) {
+                &activated_snapshots
+            } else {
+                &snapshots
+            };
+            if let Err(rollback) =
+                rollback_snapshots(&arguments.root_cap, rollback_scope, &plan.files)
+            {
+                return Err(InstallError::Internal(format!(
+                    "{}; filesystem rollback also failed: {}",
+                    error.message(),
+                    rollback.message()
+                )));
+            }
+            if let Err(cleanup) = remove_transaction_journal(arguments, &journal_relative) {
+                return Err(InstallError::Internal(format!(
+                    "{}; rollback journal cleanup failed: {}",
+                    error.message(),
+                    cleanup.message()
+                )));
+            }
+            return Err(error);
+        }
+        activated_snapshots.push((relative.clone(), existing.clone(), *permissions));
+    }
+    Ok(UserTransaction {
+        backup_relative,
+        journal_relative,
+        backup,
+    })
+}
+
+fn preflight_plan(root: &Dir, plan: &UserPlan) -> Result<Vec<PlannedSnapshot>, InstallError> {
+    let mut snapshots = Vec::with_capacity(plan.files.len() + plan.retired_files.len());
+    for relative in plan.files.keys().chain(plan.retired_files.keys()) {
+        validate_relative(relative)?;
+        let existing = read_optional_regular(root, relative, MAX_USER_FILE_BYTES)?;
+        let permissions = existing
+            .as_ref()
+            .map(|_| file_permissions(root, relative))
+            .transpose()?;
+        if plan.expected_before.get(relative) != Some(&existing)
+            || plan.expected_permissions.get(relative) != Some(&permissions)
+        {
+            return Err(InstallError::Conflict(format!(
+                "user installation path changed after planning: {}",
+                relative.display()
+            )));
+        }
+        snapshots.push((relative.clone(), existing, permissions.unwrap_or_default()));
+    }
+    Ok(snapshots)
+}
+
+fn ensure_no_open_transaction(
+    arguments: &UserArguments,
+    journal_relative: &Path,
+) -> Result<(), InstallError> {
+    if read_optional_regular(&arguments.root_cap, journal_relative, MAX_USER_FILE_BYTES)?.is_some()
+    {
+        return Err(InstallError::Conflict(format!(
+            "unfinished {} user installation requires --recover",
+            arguments.host.as_str()
+        )));
+    }
+    Ok(())
+}
+
+fn rollback_snapshots(
+    root: &Dir,
+    snapshots: &[(PathBuf, Option<Vec<u8>>, FilePermissions)],
+    installed: &BTreeMap<PathBuf, PlannedFile>,
+) -> Result<(), InstallError> {
+    for (relative, bytes, permissions) in snapshots.iter().rev() {
+        let installed_file = installed.get(relative);
+        let installed_bytes = installed_file.map(|file| file.bytes.as_slice());
+        let installed_permissions = installed_file.map(|file| FilePermissions {
+            executable: file.executable,
+            unix_mode: installed_unix_mode(file.executable),
+        });
+        let current = read_optional_regular(root, relative, MAX_USER_FILE_BYTES)?;
+        let current_permissions = current
+            .as_ref()
+            .map(|_| file_permissions(root, relative))
+            .transpose()?;
+        let prior_permissions = bytes.as_ref().map(|_| *permissions);
+        if current == *bytes && current_permissions == prior_permissions {
+            continue;
+        }
+        if current.as_deref() != installed_bytes || current_permissions != installed_permissions {
+            return Err(InstallError::Conflict(format!(
+                "rollback preserved concurrently changed user path: {}",
+                relative.display()
+            )));
+        }
+        match bytes {
+            Some(bytes) => {
+                write_atomic_with_permissions(
+                    root,
+                    relative,
+                    bytes,
+                    *permissions,
+                    installed_bytes,
+                    installed_permissions,
+                )?;
+            }
+            None => {
+                remove_regular_if_exists(root, relative, installed_bytes, installed_permissions)?;
+            }
+        }
+    }
+    Ok(())
+}
+
+fn recover(
+    arguments: &UserArguments,
+    runner: &impl CommandRunner,
+) -> Result<ActionResult, InstallError> {
+    let manifest_relative =
+        PathBuf::from(format!(".hive/install/{}.json", arguments.host.as_str()));
+    let journal_relative = transaction_journal_relative(arguments.host);
+    let journal = read_transaction_journal(arguments, &journal_relative)?;
+    let backup_relative = if let Some(journal) = journal.as_ref() {
+        PathBuf::from(&journal.backup)
+    } else {
+        let manifest =
+            read_installed_manifest(&arguments.root_cap, &manifest_relative, arguments.host)?
+                .ok_or_else(|| {
+                    InstallError::Input("no user installation is available to recover".to_owned())
+                })?;
+        manifest
+            .last_backup
+            .as_deref()
+            .ok_or_else(|| {
+                InstallError::Input("user installation has no recoverable backup".to_owned())
+            })
+            .map(PathBuf::from)?
+    };
+    validate_relative(&backup_relative)?;
+    let backup_bytes = read_optional_regular(
+        &arguments.root_cap,
+        &backup_relative.join("manifest.json"),
+        MAX_USER_FILE_BYTES,
+    )?
+    .ok_or_else(|| InstallError::Verification("user backup manifest is missing".to_owned()))?;
+    let mut backup: UserBackupManifest = serde_json::from_slice(&backup_bytes)
+        .map_err(|_| InstallError::Verification("user backup manifest is malformed".to_owned()))?;
+    if !(1..=2).contains(&backup.schema_version) || backup.host != arguments.host {
+        return Err(InstallError::Verification(
+            "user backup manifest binding is invalid".to_owned(),
+        ));
+    }
+    if let Some(journal) = journal.as_ref() {
+        if journal.plan_digest != backup.plan_digest {
+            return Err(InstallError::Verification(
+                "user transaction journal does not match its backup".to_owned(),
+            ));
+        }
+    }
+    validate_host_recovery_preconditions(arguments, &backup)?;
+    let executable = qualify_recovery_host(arguments, &backup, runner)?;
+    if journal.is_none()
+        && (!backup.host_mutations.is_empty() || backup.pending_host_transition.is_some())
+    {
+        let recovery_journal = UserTransactionJournal {
+            schema_version: 1,
+            host: arguments.host,
+            plan_digest: backup.plan_digest.clone(),
+            backup: portable(&backup_relative),
+        };
+        write_atomic(
+            &arguments.root_cap,
+            &journal_relative,
+            &json_line(&recovery_journal)?,
+            false,
+            None,
+            None,
+        )?;
+    }
+    let changed = restore_backup_files(arguments, &backup_relative, &backup)?;
+    reconcile_root_index_after_rollback(arguments, backup.index_existed)?;
+    compensate_host_mutations(
+        arguments,
+        &backup_relative,
+        &mut backup,
+        executable.as_ref(),
+        runner,
+    )?;
+    let recovered_backup_bytes = read_optional_regular(
+        &arguments.root_cap,
+        &backup_relative.join("manifest.json"),
+        MAX_USER_FILE_BYTES,
+    )?
+    .ok_or_else(|| {
+        InstallError::Verification("user backup manifest disappeared during recovery".to_owned())
+    })?;
+    remove_transaction_journal(arguments, &journal_relative)?;
+    let digest = sha256_digest(&recovered_backup_bytes);
+    Ok(ActionResult {
+        schema_version: 1,
+        action: "RecoverHiveUser",
+        status: "success",
+        exit_code: 0,
+        code: "hive.user-install-recovered",
+        message: "user-scope Hive installation recovered from the latest backup".to_owned(),
+        changed_paths: changed,
+        evidence: vec![Evidence {
+            kind: "file",
+            locator: portable(&backup_relative.join("manifest.json")),
+            digest,
+        }],
+        next_action: Some(format!(
+            "run hive install --scope user --host {} --validate --output json",
+            arguments.host.as_str()
+        )),
+        data: Some(json!({"host": arguments.host.as_str()})),
+    })
+}
+
+fn validate_host_recovery_preconditions(
+    arguments: &UserArguments,
+    backup: &UserBackupManifest,
+) -> Result<(), InstallError> {
+    if backup.host_mutations.is_empty() && backup.pending_host_transition.is_none() {
+        return Ok(());
+    }
+    match arguments.host {
+        UserHost::Codex if backup.codex_state_before.is_some() => Ok(()),
+        UserHost::Codex => Err(InstallError::Verification(
+            "Codex transaction backup omitted the pre-mutation structured state".to_owned(),
+        )),
+        UserHost::Claude if backup.claude_state_before.is_some() => Ok(()),
+        UserHost::Claude => Err(InstallError::Verification(
+            "Claude transaction backup omitted the pre-mutation structured state".to_owned(),
+        )),
+        UserHost::Antigravity => Err(InstallError::Verification(
+            "Antigravity backup unexpectedly contains host mutations".to_owned(),
+        )),
+    }
+}
+
+fn transaction_journal_relative(host: UserHost) -> PathBuf {
+    PathBuf::from(format!(".hive/install-transactions/{}.json", host.as_str()))
+}
+
+fn persist_backup(
+    arguments: &UserArguments,
+    backup_relative: &Path,
+    backup: &UserBackupManifest,
+) -> Result<(), InstallError> {
+    let manifest_relative = backup_relative.join("manifest.json");
+    let expected =
+        read_optional_regular(&arguments.root_cap, &manifest_relative, MAX_USER_FILE_BYTES)?;
+    let expected_permissions = expected
+        .as_ref()
+        .map(|_| file_permissions(&arguments.root_cap, &manifest_relative))
+        .transpose()?;
+    write_atomic(
+        &arguments.root_cap,
+        &manifest_relative,
+        &json_line(backup)?,
+        false,
+        expected.as_deref(),
+        expected_permissions,
+    )
+}
+
+fn read_transaction_journal(
+    arguments: &UserArguments,
+    journal_relative: &Path,
+) -> Result<Option<UserTransactionJournal>, InstallError> {
+    let Some(bytes) =
+        read_optional_regular(&arguments.root_cap, journal_relative, MAX_USER_FILE_BYTES)?
+    else {
+        return Ok(None);
+    };
+    let journal: UserTransactionJournal = serde_json::from_slice(&bytes).map_err(|_| {
+        InstallError::Verification("user transaction journal is malformed".to_owned())
+    })?;
+    let backup = PathBuf::from(&journal.backup);
+    if journal.schema_version != 1 || journal.host != arguments.host {
+        return Err(InstallError::Verification(
+            "user transaction journal binding is invalid".to_owned(),
+        ));
+    }
+    validate_relative(&backup)?;
+    Ok(Some(journal))
+}
+
+fn restore_backup_files(
+    arguments: &UserArguments,
+    backup_relative: &Path,
+    backup: &UserBackupManifest,
+) -> Result<Vec<String>, InstallError> {
+    let mut changed = Vec::new();
+    for entry in backup.entries.iter().rev() {
+        let relative = PathBuf::from(&entry.path);
+        validate_relative(&relative)?;
+        reconcile_retained_claim(&arguments.root_cap, &relative, entry)?;
+        if entry.existed {
+            let bytes = read_optional_regular(
+                &arguments.root_cap,
+                &backup_relative.join("files").join(&relative),
+                MAX_USER_FILE_BYTES,
+            )?
+            .ok_or_else(|| {
+                InstallError::Verification(format!("backup bytes are missing for {}", entry.path))
+            })?;
+            if entry.digest.as_deref() != Some(sha256_digest(&bytes).as_str()) {
+                return Err(InstallError::Verification(format!(
+                    "backup digest mismatch for {}",
+                    entry.path
+                )));
+            }
+            let expected = current_installed_state(&arguments.root_cap, &relative, entry)?;
+            write_atomic_with_permissions(
+                &arguments.root_cap,
+                &relative,
+                &bytes,
+                FilePermissions {
+                    executable: entry.executable,
+                    unix_mode: entry.unix_mode,
+                },
+                expected.bytes.as_deref(),
+                expected.permissions,
+            )?;
+        } else {
+            let expected = current_installed_state(&arguments.root_cap, &relative, entry)?;
+            remove_regular_if_exists(
+                &arguments.root_cap,
+                &relative,
+                expected.bytes.as_deref(),
+                expected.permissions,
+            )?;
+        }
+        changed.push(entry.path.clone());
+    }
+    Ok(changed)
+}
+
+#[allow(clippy::too_many_lines)]
+fn reconcile_retained_claim(
+    root: &Dir,
+    relative: &Path,
+    entry: &UserBackupEntry,
+) -> Result<(), InstallError> {
+    let Some((parent, destination)) = capability_parent(root, relative, false)? else {
+        return Ok(());
+    };
+    let claim_name = claim_name(relative);
+    let claim = match parent.open_dir_nofollow(&claim_name) {
+        Ok(claim) => claim,
+        Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(()),
+        Err(error) => {
+            return Err(InstallError::Verification(format!(
+                "cannot open retained user installation claim at {}: {error}",
+                recovery_locator(relative).display()
+            )))
+        }
+    };
+    let mut names = claim
+        .entries()
+        .map_err(|error| retained_claim_error(relative, "enumerate retained claim", error))?
+        .map(|entry| {
+            entry
+                .map(|entry| entry.file_name())
+                .map_err(|error| retained_claim_error(relative, "read retained claim entry", error))
+        })
+        .collect::<Result<Vec<_>, _>>()?;
+    names.sort();
+    if names.iter().any(|name| {
+        name != OsStr::new("claimed.bin")
+            && name != OsStr::new("replacement.bin")
+            && name != OsStr::new("published.bin")
+    }) {
+        return Err(InstallError::Conflict(format!(
+            "retained user installation claim contains foreign entries at {}",
+            recovery_locator(relative).display()
+        )));
+    }
+    let prior_permissions = prior_backup_permissions(entry)?;
+    let installed_permissions = installed_backup_permissions(entry)?;
+    if names.iter().any(|name| name == OsStr::new("published.bin")) {
+        validate_retained_object(
+            &claim,
+            Path::new("published.bin"),
+            entry.installed_digest.as_deref(),
+            installed_permissions,
+            relative,
+            "published",
+        )?;
+        return Err(InstallError::Conflict(format!(
+            "retained user installation claim has an unresolved published object at {}",
+            recovery_locator(relative).display()
+        )));
+    }
+    if names
+        .iter()
+        .any(|name| name == OsStr::new("replacement.bin"))
+    {
+        validate_retained_object(
+            &claim,
+            Path::new("replacement.bin"),
+            entry.installed_digest.as_deref(),
+            installed_permissions,
+            relative,
+            "replacement",
+        )?;
+    }
+    let current = read_optional_regular(root, relative, MAX_USER_FILE_BYTES)?;
+    let current_digest = current.as_deref().map(sha256_digest);
+    let current_permissions = current
+        .as_ref()
+        .map(|_| file_permissions(root, relative))
+        .transpose()?;
+    if entry.existed {
+        let claimed = read_optional_regular(&claim, Path::new("claimed.bin"), MAX_USER_FILE_BYTES)?
+            .ok_or_else(|| {
+                InstallError::Verification(format!(
+                    "retained user installation claim omitted prior bytes at {}",
+                    recovery_locator(relative).display()
+                ))
+            })?;
+        let claimed_permissions = file_permissions(&claim, Path::new("claimed.bin"))?;
+        if entry.digest.as_deref() != Some(sha256_digest(&claimed).as_str())
+            || Some(claimed_permissions) != prior_permissions
+        {
+            return Err(InstallError::Verification(format!(
+                "retained user installation prior byte or mode mismatch at {}",
+                recovery_locator(relative).display()
+            )));
+        }
+        if current.is_none() {
+            claim
+                .hard_link("claimed.bin", &parent, &destination)
+                .map_err(|error| retained_claim_error(relative, "restore prior bytes", error))?;
+        } else if current_digest == entry.installed_digest
+            && current_permissions == installed_permissions
+        {
+            parent
+                .rename(&destination, &claim, OsStr::new("published.bin"))
+                .map_err(|error| retained_claim_error(relative, "claim published bytes", error))?;
+            let published =
+                read_optional_regular(&claim, Path::new("published.bin"), MAX_USER_FILE_BYTES)?
+                    .ok_or_else(|| {
+                        retained_claim_error(relative, "verify published bytes", "missing")
+                    })?;
+            let published_permissions = file_permissions(&claim, Path::new("published.bin"))?;
+            if Some(sha256_digest(&published)) != entry.installed_digest
+                || Some(published_permissions) != installed_permissions
+            {
+                return Err(retained_claim_error(
+                    relative,
+                    "verify published object",
+                    "bytes or permissions changed",
+                ));
+            }
+            claim
+                .hard_link("claimed.bin", &parent, &destination)
+                .map_err(|error| retained_claim_error(relative, "restore prior bytes", error))?;
+            claim
+                .remove_file("published.bin")
+                .map_err(|error| retained_claim_error(relative, "clean published bytes", error))?;
+        } else if current_digest != entry.digest || current_permissions != prior_permissions {
+            return Err(InstallError::Conflict(format!(
+                "recovery preserved a foreign destination beside retained claim: {}",
+                relative.display()
+            )));
+        }
+        claim
+            .remove_file("claimed.bin")
+            .map_err(|error| retained_claim_error(relative, "clean retained prior bytes", error))?;
+    } else {
+        if names.iter().any(|name| name == OsStr::new("claimed.bin")) {
+            return Err(InstallError::Verification(format!(
+                "creation claim unexpectedly retained prior bytes at {}",
+                recovery_locator(relative).display()
+            )));
+        }
+        if current_digest == entry.installed_digest && current_permissions == installed_permissions
+        {
+            parent
+                .rename(&destination, &claim, OsStr::new("published.bin"))
+                .map_err(|error| retained_claim_error(relative, "claim created bytes", error))?;
+            let published =
+                read_optional_regular(&claim, Path::new("published.bin"), MAX_USER_FILE_BYTES)?
+                    .ok_or_else(|| {
+                        retained_claim_error(relative, "verify created bytes", "missing")
+                    })?;
+            let published_permissions = file_permissions(&claim, Path::new("published.bin"))?;
+            if Some(sha256_digest(&published)) != entry.installed_digest
+                || Some(published_permissions) != installed_permissions
+            {
+                return Err(retained_claim_error(
+                    relative,
+                    "verify created object",
+                    "bytes or permissions changed",
+                ));
+            }
+            claim
+                .remove_file("published.bin")
+                .map_err(|error| retained_claim_error(relative, "remove created bytes", error))?;
+        } else if current.is_some() {
+            return Err(InstallError::Conflict(format!(
+                "recovery preserved a foreign destination beside creation claim: {}",
+                relative.display()
+            )));
+        }
+    }
+    if names
+        .iter()
+        .any(|name| name == OsStr::new("replacement.bin"))
+    {
+        let replacement =
+            read_optional_regular(&claim, Path::new("replacement.bin"), MAX_USER_FILE_BYTES)?
+                .ok_or_else(|| {
+                    retained_claim_error(relative, "verify staged replacement", "missing")
+                })?;
+        let replacement_permissions = file_permissions(&claim, Path::new("replacement.bin"))?;
+        if Some(sha256_digest(&replacement)) != entry.installed_digest
+            || Some(replacement_permissions) != installed_permissions
+        {
+            return Err(retained_claim_error(
+                relative,
+                "verify staged replacement",
+                "bytes or permissions changed",
+            ));
+        }
+        claim
+            .remove_file("replacement.bin")
+            .map_err(|error| retained_claim_error(relative, "clean staged replacement", error))?;
+    }
+    drop(claim);
+    parent
+        .remove_dir(&claim_name)
+        .map_err(|error| retained_claim_error(relative, "clean retained claim directory", error))
+}
+
+fn validate_retained_object(
+    claim: &Dir,
+    name: &Path,
+    expected_digest: Option<&str>,
+    expected_permissions: Option<FilePermissions>,
+    relative: &Path,
+    label: &str,
+) -> Result<(), InstallError> {
+    let bytes = read_optional_regular(claim, name, MAX_USER_FILE_BYTES)?.ok_or_else(|| {
+        retained_claim_error(
+            relative,
+            &format!("verify retained {label} object"),
+            "missing",
+        )
+    })?;
+    let permissions = file_permissions(claim, name)?;
+    if Some(sha256_digest(&bytes).as_str()) != expected_digest
+        || Some(permissions) != expected_permissions
+    {
+        return Err(retained_claim_error(
+            relative,
+            &format!("verify retained {label} object"),
+            "bytes or permissions changed",
+        ));
+    }
+    Ok(())
+}
+
+struct AuthorizedFileState {
+    bytes: Option<Vec<u8>>,
+    permissions: Option<FilePermissions>,
+}
+
+fn current_installed_state(
+    root: &Dir,
+    relative: &Path,
+    entry: &UserBackupEntry,
+) -> Result<AuthorizedFileState, InstallError> {
+    let current = read_optional_regular(root, relative, MAX_USER_FILE_BYTES)?;
+    let permissions = current
+        .as_ref()
+        .map(|_| file_permissions(root, relative))
+        .transpose()?;
+    let digest = current.as_deref().map(sha256_digest);
+    let prior_permissions = prior_backup_permissions(entry)?;
+    let installed_permissions = installed_backup_permissions(entry)?;
+    let prior_matches = digest == entry.digest && permissions == prior_permissions;
+    let installed_matches =
+        digest == entry.installed_digest && permissions == installed_permissions;
+    if prior_matches || installed_matches {
+        return Ok(AuthorizedFileState {
+            bytes: current,
+            permissions,
+        });
+    }
+    Err(InstallError::Conflict(format!(
+        "recovery preserved concurrently changed user bytes or permissions: {}",
+        relative.display()
+    )))
+}
+
+#[cfg_attr(not(unix), allow(clippy::unnecessary_wraps))]
+fn prior_backup_permissions(
+    entry: &UserBackupEntry,
+) -> Result<Option<FilePermissions>, InstallError> {
+    if !entry.existed {
+        return Ok(None);
+    }
+    #[cfg(unix)]
+    if entry.unix_mode.is_none() {
+        return Err(InstallError::Verification(format!(
+            "backup lacks prior Unix mode authority for {}",
+            entry.path
+        )));
+    }
+    Ok(Some(FilePermissions {
+        executable: entry.executable,
+        unix_mode: entry.unix_mode,
+    }))
+}
+
+fn installed_backup_permissions(
+    entry: &UserBackupEntry,
+) -> Result<Option<FilePermissions>, InstallError> {
+    if entry.installed_digest.is_none() {
+        if entry.installed_executable.is_some() || entry.installed_unix_mode.is_some() {
+            return Err(InstallError::Verification(format!(
+                "backup has permission authority without installed bytes for {}",
+                entry.path
+            )));
+        }
+        return Ok(None);
+    }
+    let executable = entry.installed_executable.ok_or_else(|| {
+        InstallError::Verification(format!(
+            "backup lacks installed permission authority for {}",
+            entry.path
+        ))
+    })?;
+    #[cfg(unix)]
+    if entry.installed_unix_mode.is_none() {
+        return Err(InstallError::Verification(format!(
+            "backup lacks installed Unix mode authority for {}",
+            entry.path
+        )));
+    }
+    Ok(Some(FilePermissions {
+        executable,
+        unix_mode: entry.installed_unix_mode,
+    }))
+}
+
+fn remove_regular_if_exists(
+    root: &Dir,
+    relative: &Path,
+    expected: Option<&[u8]>,
+    expected_permissions: Option<FilePermissions>,
+) -> Result<(), InstallError> {
+    cas_activate(
+        root,
+        relative,
+        expected.map(|bytes| ExpectedFile {
+            bytes,
+            permissions: expected_permissions.expect("existing file requires permission token"),
+        }),
+        None,
+        FilePermissions::default(),
+    )
+}
+
+fn root_index_exists(root: &Dir) -> Result<bool, InstallError> {
+    match capability_metadata(root, Path::new(ROOT_INDEX_RELATIVE))? {
+        Ok(metadata) if metadata.file_type().is_symlink() || !metadata.is_file() => {
+            Err(InstallError::Conflict(format!(
+                "root knowledge index must be a regular file: {ROOT_INDEX_RELATIVE}"
+            )))
+        }
+        Ok(_) => Ok(true),
+        Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(false),
+        Err(error) => Err(InstallError::Internal(format!(
+            "cannot inspect root knowledge index: {error}"
+        ))),
+    }
+}
+
+fn remove_disposable_root_index(root: &Dir) -> Result<(), InstallError> {
+    for relative in [
+        ROOT_INDEX_RELATIVE,
+        ".hive/index/hive.sqlite3-wal",
+        ".hive/index/hive.sqlite3-shm",
+        ".hive/index/.stale",
+    ] {
+        let expected = read_optional_regular(root, Path::new(relative), MAX_USER_FILE_BYTES)?;
+        let expected_permissions = expected
+            .as_ref()
+            .map(|_| file_permissions(root, Path::new(relative)))
+            .transpose()?;
+        remove_regular_if_exists(
+            root,
+            Path::new(relative),
+            expected.as_deref(),
+            expected_permissions,
+        )?;
+    }
+    Ok(())
+}
+
+fn reconcile_root_index_after_rollback(
+    arguments: &UserArguments,
+    index_existed: bool,
+) -> Result<(), InstallError> {
+    if !index_existed {
+        return remove_disposable_root_index(&arguments.root_cap);
+    }
+    if hive_wiki::rebuild_index(&arguments.user_root).is_ok() {
+        return Ok(());
+    }
+    remove_disposable_root_index(&arguments.root_cap)
+}
+
+fn qualify_recovery_host(
+    arguments: &UserArguments,
+    _backup: &UserBackupManifest,
+    runner: &impl CommandRunner,
+) -> Result<Option<QualifiedExecutable>, InstallError> {
+    let program = match arguments.host {
+        UserHost::Codex => "codex",
+        UserHost::Claude => "claude",
+        UserHost::Antigravity => "antigravity",
+    };
+    let executable = runner.qualify(program).map_err(|error| {
+        InstallError::Unsupported(format!(
+            "cannot compensate {} host state because {program} is unavailable: {error}",
+            arguments.host.as_str()
+        ))
+    })?;
+    probe_supported_host_version(arguments.host, &executable, runner)?;
+    Ok(Some(executable))
+}
+
+fn codex_compensation_command(mutation: HostMutation) -> &'static [&'static str] {
+    match mutation {
+        HostMutation::CodexMarketplaceAdded => {
+            &["plugin", "marketplace", "remove", "aigent-hive", "--json"]
+        }
+        HostMutation::CodexPluginAdded => {
+            &["plugin", "remove", "aigent-hive@aigent-hive", "--json"]
+        }
+        HostMutation::CodexPluginRefreshed => {
+            &["plugin", "add", "aigent-hive@aigent-hive", "--json"]
+        }
+        HostMutation::ClaudeMarketplaceAdded
+        | HostMutation::ClaudePluginInstalled
+        | HostMutation::ClaudeMarketplaceRefreshed
+        | HostMutation::ClaudePluginRefreshed => unreachable!("Codex mutation required"),
+    }
+}
+
+fn probe_codex_state_if_required(
+    arguments: &UserArguments,
+    executable: Option<&QualifiedExecutable>,
+    runner: &impl CommandRunner,
+) -> Result<Option<CodexHostState>, InstallError> {
+    if arguments.host != UserHost::Codex {
+        return Ok(None);
+    }
+    let executable = executable.ok_or_else(|| {
+        InstallError::Internal("qualified Codex executable is missing".to_owned())
+    })?;
+    probe_codex_state(executable, runner).map(Some)
+}
+
+fn probe_codex_state(
+    executable: &QualifiedExecutable,
+    runner: &impl CommandRunner,
+) -> Result<CodexHostState, InstallError> {
+    let marketplace_command = ["plugin", "marketplace", "list", "--json"];
+    let plugin_command = ["plugin", "list", "--json"];
+    let marketplaces = run_codex_probe(executable, &marketplace_command, runner)?;
+    let plugins = run_codex_probe(executable, &plugin_command, runner)?;
+    Ok(CodexHostState {
+        marketplace: parse_codex_marketplace_state(&marketplaces)?,
+        plugin: parse_codex_plugin_state(&plugins)?,
+    })
+}
+
+fn run_codex_probe(
+    executable: &QualifiedExecutable,
+    command: &[&str],
+    runner: &impl CommandRunner,
+) -> Result<Vec<u8>, InstallError> {
+    let output = runner
+        .run(executable, command, COMMAND_TIMEOUT, COMMAND_OUTPUT_LIMIT)
+        .map_err(|error| {
+            InstallError::Unsupported(format!(
+                "Codex structured state probe `{}` failed: {error}",
+                command.join(" ")
+            ))
+        })?;
+    if !output.success {
+        return Err(InstallError::Unsupported(format!(
+            "Codex structured state probe exited unsuccessfully: {}",
+            sanitized_command_diagnostic(command, &output.stdout)
+        )));
+    }
+    Ok(output.stdout)
+}
+
+fn probe_claude_state_if_required(
+    arguments: &UserArguments,
+    executable: Option<&QualifiedExecutable>,
+    runner: &impl CommandRunner,
+) -> Result<Option<ClaudeHostState>, InstallError> {
+    if arguments.host != UserHost::Claude {
+        return Ok(None);
+    }
+    let executable = executable.ok_or_else(|| {
+        InstallError::Internal("qualified Claude executable is missing".to_owned())
+    })?;
+    probe_claude_state(executable, runner).map(Some)
+}
+
+fn probe_claude_state(
+    executable: &QualifiedExecutable,
+    runner: &impl CommandRunner,
+) -> Result<ClaudeHostState, InstallError> {
+    let marketplace_command = ["plugin", "marketplace", "list", "--json"];
+    let plugin_command = ["plugin", "list", "--json"];
+    let marketplaces = run_claude_probe(executable, &marketplace_command, runner)?;
+    let plugins = run_claude_probe(executable, &plugin_command, runner)?;
+    Ok(ClaudeHostState {
+        marketplace: parse_claude_marketplace_state(&marketplaces)?,
+        plugin: parse_claude_plugin_state(&plugins)?,
+    })
+}
+
+fn run_claude_probe(
+    executable: &QualifiedExecutable,
+    command: &[&str],
+    runner: &impl CommandRunner,
+) -> Result<Vec<u8>, InstallError> {
+    let output = runner
+        .run(executable, command, COMMAND_TIMEOUT, COMMAND_OUTPUT_LIMIT)
+        .map_err(|error| {
+            InstallError::Unsupported(format!(
+                "Claude structured state probe `{}` failed: {error}",
+                command.join(" ")
+            ))
+        })?;
+    if !output.success {
+        return Err(InstallError::Unsupported(format!(
+            "Claude structured state probe exited unsuccessfully: {}",
+            sanitized_command_diagnostic(command, &output.stdout)
+        )));
+    }
+    Ok(output.stdout)
+}
+
+fn parse_claude_marketplace_state(
+    bytes: &[u8],
+) -> Result<Option<ClaudeMarketplaceState>, InstallError> {
+    let entries: Vec<serde_json::Value> = serde_json::from_slice(bytes).map_err(|_| {
+        InstallError::Verification(
+            "Claude marketplace state probe returned malformed JSON".to_owned(),
+        )
+    })?;
+    let mut matched = entries.iter().filter(|entry| {
+        entry.get("name").and_then(serde_json::Value::as_str) == Some("aigent-hive")
+    });
+    let first = matched.next();
+    if matched.next().is_some() {
+        return Err(InstallError::Verification(
+            "Claude marketplace state probe returned duplicate aigent-hive entries".to_owned(),
+        ));
+    }
+    first
+        .map(|entry| {
+            let source = entry.get("source").and_then(serde_json::Value::as_str);
+            let path = entry.get("path").and_then(serde_json::Value::as_str);
+            match (source, path) {
+                (Some(source), Some(path)) => Ok(ClaudeMarketplaceState {
+                    source: source.to_owned(),
+                    path: path.to_owned(),
+                }),
+                _ => Err(InstallError::Verification(
+                    "Claude aigent-hive marketplace state omitted source or path".to_owned(),
+                )),
+            }
+        })
+        .transpose()
+}
+
+fn parse_claude_plugin_state(bytes: &[u8]) -> Result<Option<ClaudePluginState>, InstallError> {
+    let entries: Vec<serde_json::Value> = serde_json::from_slice(bytes).map_err(|_| {
+        InstallError::Verification("Claude plugin state probe returned malformed JSON".to_owned())
+    })?;
+    let mut matched = entries.iter().filter(|entry| {
+        entry.get("id").and_then(serde_json::Value::as_str) == Some("aigent-hive@aigent-hive")
+    });
+    let first = matched.next();
+    if matched.next().is_some() {
+        return Err(InstallError::Verification(
+            "Claude plugin state probe returned duplicate aigent-hive entries".to_owned(),
+        ));
+    }
+    first
+        .map(|entry| {
+            let version = entry.get("version").and_then(serde_json::Value::as_str);
+            let enabled = entry.get("enabled").and_then(serde_json::Value::as_bool);
+            let scope = entry.get("scope").and_then(serde_json::Value::as_str);
+            match (version, enabled, scope) {
+                (Some(version), Some(enabled), Some(scope)) => Ok(ClaudePluginState {
+                    version: version.to_owned(),
+                    enabled,
+                    scope: scope.to_owned(),
+                }),
+                _ => Err(InstallError::Verification(
+                    "Claude aigent-hive plugin state omitted version, enabled, or scope".to_owned(),
+                )),
+            }
+        })
+        .transpose()
+}
+
+fn parse_codex_marketplace_state(
+    bytes: &[u8],
+) -> Result<Option<CodexMarketplaceState>, InstallError> {
+    let value: serde_json::Value = serde_json::from_slice(bytes).map_err(|_| {
+        InstallError::Verification(
+            "Codex marketplace state probe returned malformed JSON".to_owned(),
+        )
+    })?;
+    let entries = value
+        .get("marketplaces")
+        .and_then(serde_json::Value::as_array)
+        .ok_or_else(|| {
+            InstallError::Verification(
+                "Codex marketplace state probe omitted marketplaces[]".to_owned(),
+            )
+        })?;
+    let mut matched = entries.iter().filter(|entry| {
+        entry.get("name").and_then(serde_json::Value::as_str) == Some("aigent-hive")
+    });
+    let first = matched.next();
+    if matched.next().is_some() {
+        return Err(InstallError::Verification(
+            "Codex marketplace state probe returned duplicate aigent-hive entries".to_owned(),
+        ));
+    }
+    first
+        .map(|entry| {
+            entry
+                .get("root")
+                .and_then(serde_json::Value::as_str)
+                .map(|root| CodexMarketplaceState {
+                    root: root.to_owned(),
+                })
+                .ok_or_else(|| {
+                    InstallError::Verification(
+                        "Codex aigent-hive marketplace state omitted root".to_owned(),
+                    )
+                })
+        })
+        .transpose()
+}
+
+fn parse_codex_plugin_state(bytes: &[u8]) -> Result<Option<CodexPluginState>, InstallError> {
+    let value: serde_json::Value = serde_json::from_slice(bytes).map_err(|_| {
+        InstallError::Verification("Codex plugin state probe returned malformed JSON".to_owned())
+    })?;
+    let entries = value
+        .get("installed")
+        .and_then(serde_json::Value::as_array)
+        .ok_or_else(|| {
+            InstallError::Verification("Codex plugin state probe omitted installed[]".to_owned())
+        })?;
+    let mut matched = entries.iter().filter(|entry| {
+        entry.get("pluginId").and_then(serde_json::Value::as_str) == Some("aigent-hive@aigent-hive")
+    });
+    let first = matched.next();
+    if matched.next().is_some() {
+        return Err(InstallError::Verification(
+            "Codex plugin state probe returned duplicate aigent-hive entries".to_owned(),
+        ));
+    }
+    first
+        .map(|entry| {
+            let version = entry.get("version").and_then(serde_json::Value::as_str);
+            let enabled = entry.get("enabled").and_then(serde_json::Value::as_bool);
+            let source_path = entry
+                .get("source")
+                .and_then(|source| source.get("path"))
+                .and_then(serde_json::Value::as_str);
+            let marketplace_source = entry
+                .get("marketplaceSource")
+                .and_then(|source| source.get("source"))
+                .and_then(serde_json::Value::as_str);
+            match (version, enabled, source_path, marketplace_source) {
+                (Some(version), Some(enabled), Some(source_path), Some(marketplace_source)) => {
+                    Ok(CodexPluginState {
+                        version: version.to_owned(),
+                        enabled,
+                        source_path: source_path.to_owned(),
+                        marketplace_source: marketplace_source.to_owned(),
+                    })
+                }
+                _ => Err(InstallError::Verification(
+                    "Codex aigent-hive plugin state omitted required fields".to_owned(),
+                )),
+            }
+        })
+        .transpose()
+}
+
+fn expected_codex_marketplace_root(arguments: &UserArguments) -> Result<String, InstallError> {
+    arguments
+        .user_root
+        .join(".hive/marketplaces/codex")
+        .to_str()
+        .map(str::to_owned)
+        .ok_or_else(|| {
+            InstallError::Unsupported("Codex marketplace path is not valid UTF-8".to_owned())
+        })
+}
+
+fn expected_codex_plugin_source_path(arguments: &UserArguments) -> Result<String, InstallError> {
+    arguments
+        .user_root
+        .join(".hive/marketplaces/codex/plugins/aigent-hive")
+        .to_str()
+        .map(str::to_owned)
+        .ok_or_else(|| {
+            InstallError::Unsupported("Codex plugin source path is not valid UTF-8".to_owned())
+        })
+}
+
+fn expected_claude_marketplace_path(arguments: &UserArguments) -> Result<String, InstallError> {
+    arguments
+        .user_root
+        .join(".hive/marketplaces/claude")
+        .to_str()
+        .map(str::to_owned)
+        .ok_or_else(|| {
+            InstallError::Unsupported("Claude marketplace path is not valid UTF-8".to_owned())
+        })
+}
+
+fn validate_codex_prestate(
+    arguments: &UserArguments,
+    state: Option<&CodexHostState>,
+) -> Result<(), InstallError> {
+    let Some(state) = state else {
+        return Ok(());
+    };
+    let expected_marketplace = expected_codex_marketplace_root(arguments)?;
+    if state.plugin.is_some() && state.marketplace.is_none() {
+        return Err(InstallError::Conflict(
+            "Codex aigent-hive plugin exists without its structured marketplace state".to_owned(),
+        ));
+    }
+    if state
+        .marketplace
+        .as_ref()
+        .is_some_and(|marketplace| marketplace.root != expected_marketplace)
+    {
+        return Err(InstallError::Conflict(
+            "Codex aigent-hive marketplace is bound to an unexpected root".to_owned(),
+        ));
+    }
+    if state
+        .plugin
+        .as_ref()
+        .is_some_and(|plugin| plugin.marketplace_source != expected_marketplace || !plugin.enabled)
+    {
+        return Err(InstallError::Conflict(
+            "Codex aigent-hive plugin source or enabled state cannot be restored exactly"
+                .to_owned(),
+        ));
+    }
+    Ok(())
+}
+
+fn validate_codex_activation(
+    arguments: &UserArguments,
+    backup: &UserBackupManifest,
+    executable: Option<&QualifiedExecutable>,
+    runner: &impl CommandRunner,
+) -> Result<(), InstallError> {
+    if arguments.host != UserHost::Codex {
+        return Ok(());
+    }
+    let executable = executable.ok_or_else(|| {
+        InstallError::Internal("qualified Codex executable is missing".to_owned())
+    })?;
+    let state = probe_codex_state(executable, runner)?;
+    let marketplace_root = expected_codex_marketplace_root(arguments)?;
+    let marketplace_valid = state
+        .marketplace
+        .as_ref()
+        .is_some_and(|marketplace| marketplace.root == marketplace_root);
+    let plugin_valid = state.plugin.as_ref().is_some_and(|plugin| {
+        plugin.version == env!("CARGO_PKG_VERSION") && plugin.marketplace_source == marketplace_root
+    });
+    if marketplace_valid && plugin_valid && backup.codex_state_before.is_some() {
+        Ok(())
+    } else {
+        Err(InstallError::Verification(
+            "Codex structured state probe did not confirm activated aigent-hive state".to_owned(),
+        ))
+    }
+}
+
+fn validate_claude_prestate(
+    arguments: &UserArguments,
+    state: Option<&ClaudeHostState>,
+) -> Result<(), InstallError> {
+    let Some(state) = state else {
+        return Ok(());
+    };
+    let expected_path = expected_claude_marketplace_path(arguments)?;
+    if state.plugin.is_some() && state.marketplace.is_none() {
+        return Err(InstallError::Conflict(
+            "Claude aigent-hive plugin exists without its structured marketplace state".to_owned(),
+        ));
+    }
+    if state.marketplace.as_ref().is_some_and(|marketplace| {
+        marketplace.source != "directory" || marketplace.path != expected_path
+    }) {
+        return Err(InstallError::Conflict(
+            "Claude aigent-hive marketplace is bound to an unexpected source".to_owned(),
+        ));
+    }
+    if state
+        .plugin
+        .as_ref()
+        .is_some_and(|plugin| plugin.scope != "user")
+    {
+        return Err(InstallError::Conflict(
+            "Claude aigent-hive plugin is not installed at user scope".to_owned(),
+        ));
+    }
+    Ok(())
+}
+
+fn validate_claude_activation(
+    arguments: &UserArguments,
+    backup: &UserBackupManifest,
+    executable: Option<&QualifiedExecutable>,
+    runner: &impl CommandRunner,
+) -> Result<(), InstallError> {
+    if arguments.host != UserHost::Claude {
+        return Ok(());
+    }
+    let executable = executable.ok_or_else(|| {
+        InstallError::Internal("qualified Claude executable is missing".to_owned())
+    })?;
+    let state = probe_claude_state(executable, runner)?;
+    let expected_path = expected_claude_marketplace_path(arguments)?;
+    let marketplace_valid = state.marketplace.as_ref().is_some_and(|marketplace| {
+        marketplace.source == "directory" && marketplace.path == expected_path
+    });
+    let plugin_valid = state.plugin.as_ref().is_some_and(|plugin| {
+        plugin.version == env!("CARGO_PKG_VERSION") && plugin.enabled && plugin.scope == "user"
+    });
+    if marketplace_valid && plugin_valid && backup.claude_state_before.is_some() {
+        Ok(())
+    } else {
+        Err(InstallError::Verification(
+            "Claude structured state probe did not confirm activated aigent-hive state".to_owned(),
+        ))
+    }
+}
+
+fn sanitized_command_diagnostic(command: &[&str], stdout: &[u8]) -> String {
+    format!(
+        "argv=`{}`; output-bytes={}; output-digest={}",
+        command.join(" "),
+        stdout.len(),
+        sha256_digest(stdout)
+    )
+}
+
+fn compensate_host_mutations(
+    arguments: &UserArguments,
+    backup_relative: &Path,
+    backup: &mut UserBackupManifest,
+    executable: Option<&QualifiedExecutable>,
+    runner: &impl CommandRunner,
+) -> Result<(), InstallError> {
+    if backup.pending_host_transition.is_some() {
+        let executable = executable.ok_or_else(|| {
+            InstallError::Internal("qualified recovery host executable is missing".to_owned())
+        })?;
+        resolve_pending_host_transition(arguments, backup_relative, backup, executable, runner)?;
+    }
+    if backup.host_mutations.is_empty() {
+        return Ok(());
+    }
+    let executable = executable.ok_or_else(|| {
+        InstallError::Internal("qualified recovery host executable is missing".to_owned())
+    })?;
+    match arguments.host {
+        UserHost::Codex => {
+            let desired = backup.codex_state_before.clone().ok_or_else(|| {
+                InstallError::Verification(
+                    "Codex transaction backup omitted the pre-mutation structured state".to_owned(),
+                )
+            })?;
+            reconcile_codex_state(
+                arguments,
+                backup_relative,
+                backup,
+                &desired,
+                executable,
+                runner,
+            )?;
+        }
+        UserHost::Claude => {
+            let desired = backup.claude_state_before.clone().ok_or_else(|| {
+                InstallError::Verification(
+                    "Claude transaction backup omitted the pre-mutation structured state"
+                        .to_owned(),
+                )
+            })?;
+            reconcile_claude_state(
+                arguments,
+                backup_relative,
+                backup,
+                &desired,
+                executable,
+                runner,
+            )?;
+        }
+        UserHost::Antigravity => {
+            return Err(InstallError::Verification(
+                "Antigravity backup unexpectedly contains host mutations".to_owned(),
+            ));
+        }
+    }
+    backup.host_mutations.clear();
+    backup.host_owned_state = None;
+    backup.pending_host_transition = None;
+    persist_backup(arguments, backup_relative, backup)?;
+    Ok(())
+}
+
+fn resolve_pending_host_transition(
+    _arguments: &UserArguments,
+    _backup_relative: &Path,
+    backup: &mut UserBackupManifest,
+    _executable: &QualifiedExecutable,
+    _runner: &impl CommandRunner,
+) -> Result<(), InstallError> {
+    let pending = backup
+        .pending_host_transition
+        .as_ref()
+        .ok_or_else(|| InstallError::Internal("pending host transition is missing".to_owned()))?;
+    Err(InstallError::Conflict(format!(
+        "unresolved {:?} host transition {:?} cannot be attributed during recovery; external state was preserved",
+        pending.phase, pending.mutation
+    )))
+}
+
+struct CompensationContext<'a, R: CommandRunner> {
+    arguments: &'a UserArguments,
+    backup_relative: &'a Path,
+    backup: &'a mut UserBackupManifest,
+    executable: &'a QualifiedExecutable,
+    runner: &'a R,
+}
+
+fn reconcile_codex_state(
+    arguments: &UserArguments,
+    backup_relative: &Path,
+    backup: &mut UserBackupManifest,
+    desired: &CodexHostState,
+    executable: &QualifiedExecutable,
+    runner: &impl CommandRunner,
+) -> Result<(), InstallError> {
+    let owned = backup.host_owned_state.clone().ok_or_else(|| {
+        InstallError::Verification(
+            "confirmed host mutations omitted their exact owned state".to_owned(),
+        )
+    })?;
+    let observed = probe_host_snapshot(arguments.host, executable, runner)?;
+    if observed != owned {
+        return Err(InstallError::Conflict(
+            "host state drifted after Hive's confirmed transition; recovery preserved external state"
+                .to_owned(),
+        ));
+    }
+    let HostStateSnapshot::Codex(mut current) = owned else {
+        return Err(InstallError::Internal(
+            "Codex compensation received non-Codex state".to_owned(),
+        ));
+    };
+    let mut context = CompensationContext {
+        arguments,
+        backup_relative,
+        backup,
+        executable,
+        runner,
+    };
+    if current.marketplace != desired.marketplace {
+        if current.plugin.is_some() {
+            let mut after = current.clone();
+            after.plugin = None;
+            current = run_codex_reconciliation_step(
+                &mut context,
+                codex_compensation_command(HostMutation::CodexPluginAdded),
+                HostMutation::CodexPluginAdded,
+                &current,
+                &after,
+            )?;
+        }
+        if current.marketplace.is_some() {
+            let mut after = current.clone();
+            after.marketplace = None;
+            current = run_codex_reconciliation_step(
+                &mut context,
+                codex_compensation_command(HostMutation::CodexMarketplaceAdded),
+                HostMutation::CodexMarketplaceAdded,
+                &current,
+                &after,
+            )?;
+        }
+        if let Some(marketplace) = desired.marketplace.as_ref() {
+            let command = [
+                "plugin",
+                "marketplace",
+                "add",
+                marketplace.root.as_str(),
+                "--json",
+            ];
+            let mut after = current.clone();
+            after.marketplace = Some(marketplace.clone());
+            current = run_codex_reconciliation_step(
+                &mut context,
+                &command,
+                HostMutation::CodexMarketplaceAdded,
+                &current,
+                &after,
+            )?;
+        }
+    }
+    if current.plugin != desired.plugin {
+        let command = if desired.plugin.is_some() {
+            codex_compensation_command(HostMutation::CodexPluginRefreshed)
+        } else {
+            codex_compensation_command(HostMutation::CodexPluginAdded)
+        };
+        let mut after = current.clone();
+        after.plugin.clone_from(&desired.plugin);
+        current = run_codex_reconciliation_step(
+            &mut context,
+            command,
+            HostMutation::CodexPluginRefreshed,
+            &current,
+            &after,
+        )?;
+    }
+    if current == *desired {
+        Ok(())
+    } else {
+        Err(InstallError::Verification(format!(
+            "Codex compensation did not restore the pre-mutation structured state for {}",
+            arguments.host.as_str()
+        )))
+    }
+}
+
+fn reconcile_claude_state(
+    arguments: &UserArguments,
+    backup_relative: &Path,
+    backup: &mut UserBackupManifest,
+    desired: &ClaudeHostState,
+    executable: &QualifiedExecutable,
+    runner: &impl CommandRunner,
+) -> Result<(), InstallError> {
+    let owned = backup.host_owned_state.clone().ok_or_else(|| {
+        InstallError::Verification(
+            "confirmed host mutations omitted their exact owned state".to_owned(),
+        )
+    })?;
+    let observed = probe_host_snapshot(arguments.host, executable, runner)?;
+    if observed != owned {
+        return Err(InstallError::Conflict(
+            "host state drifted after Hive's confirmed transition; recovery preserved external state"
+                .to_owned(),
+        ));
+    }
+    let HostStateSnapshot::Claude(mut current) = owned else {
+        return Err(InstallError::Internal(
+            "Claude compensation received non-Claude state".to_owned(),
+        ));
+    };
+    let mut context = CompensationContext {
+        arguments,
+        backup_relative,
+        backup,
+        executable,
+        runner,
+    };
+    current = reconcile_claude_marketplace(&mut context, current, desired)?;
+    if current.plugin != desired.plugin {
+        if current.plugin.is_some() {
+            let mut after = current.clone();
+            after.plugin = None;
+            current = run_claude_reconciliation_step(
+                &mut context,
+                &[
+                    "plugin",
+                    "uninstall",
+                    "aigent-hive@aigent-hive",
+                    "--scope",
+                    "user",
+                ],
+                HostMutation::ClaudePluginInstalled,
+                &current,
+                &after,
+            )?;
+        }
+        if let Some(plugin) = desired.plugin.as_ref() {
+            let mut after = current.clone();
+            after.plugin = Some(ClaudePluginState {
+                enabled: true,
+                ..plugin.clone()
+            });
+            current = run_claude_reconciliation_step(
+                &mut context,
+                &[
+                    "plugin",
+                    "install",
+                    "aigent-hive@aigent-hive",
+                    "--scope",
+                    "user",
+                ],
+                HostMutation::ClaudePluginInstalled,
+                &current,
+                &after,
+            )?;
+            if !plugin.enabled {
+                let mut after = current.clone();
+                after.plugin = Some(plugin.clone());
+                current = run_claude_reconciliation_step(
+                    &mut context,
+                    &[
+                        "plugin",
+                        "disable",
+                        "aigent-hive@aigent-hive",
+                        "--scope",
+                        "user",
+                    ],
+                    HostMutation::ClaudePluginRefreshed,
+                    &current,
+                    &after,
+                )?;
+            }
+        }
+    }
+    if current == *desired {
+        Ok(())
+    } else {
+        Err(InstallError::Verification(format!(
+            "Claude compensation did not restore the pre-mutation structured state for {}",
+            arguments.host.as_str()
+        )))
+    }
+}
+
+fn reconcile_claude_marketplace(
+    context: &mut CompensationContext<'_, impl CommandRunner>,
+    mut current: ClaudeHostState,
+    desired: &ClaudeHostState,
+) -> Result<ClaudeHostState, InstallError> {
+    if current.marketplace == desired.marketplace {
+        return Ok(current);
+    }
+    if current.plugin.is_some() {
+        let mut after = current.clone();
+        after.plugin = None;
+        current = run_claude_reconciliation_step(
+            context,
+            &[
+                "plugin",
+                "uninstall",
+                "aigent-hive@aigent-hive",
+                "--scope",
+                "user",
+            ],
+            HostMutation::ClaudePluginInstalled,
+            &current,
+            &after,
+        )?;
+    }
+    if current.marketplace.is_some() {
+        let mut after = current.clone();
+        after.marketplace = None;
+        current = run_claude_reconciliation_step(
+            context,
+            &[
+                "plugin",
+                "marketplace",
+                "remove",
+                "aigent-hive",
+                "--scope",
+                "user",
+            ],
+            HostMutation::ClaudeMarketplaceAdded,
+            &current,
+            &after,
+        )?;
+    }
+    if let Some(marketplace) = desired.marketplace.as_ref() {
+        let command = [
+            "plugin",
+            "marketplace",
+            "add",
+            marketplace.path.as_str(),
+            "--scope",
+            "user",
+        ];
+        let mut after = current.clone();
+        after.marketplace = Some(marketplace.clone());
+        current = run_claude_reconciliation_step(
+            context,
+            &command,
+            HostMutation::ClaudeMarketplaceAdded,
+            &current,
+            &after,
+        )?;
+    }
+    Ok(current)
+}
+
+fn run_claude_reconciliation_step(
+    context: &mut CompensationContext<'_, impl CommandRunner>,
+    command: &[&str],
+    mutation: HostMutation,
+    before: &ClaudeHostState,
+    after: &ClaudeHostState,
+) -> Result<ClaudeHostState, InstallError> {
+    let before = HostStateSnapshot::Claude(before.clone());
+    let observed = run_compensation_transition(
+        context,
+        command,
+        mutation,
+        &before,
+        HostStateSnapshot::Claude(after.clone()),
+    )?;
+    match observed {
+        HostStateSnapshot::Claude(state) => Ok(state),
+        HostStateSnapshot::Codex(_) => Err(InstallError::Internal(
+            "Claude compensation observed Codex state".to_owned(),
+        )),
+    }
+}
+
+fn run_codex_reconciliation_step(
+    context: &mut CompensationContext<'_, impl CommandRunner>,
+    command: &[&str],
+    mutation: HostMutation,
+    before: &CodexHostState,
+    after: &CodexHostState,
+) -> Result<CodexHostState, InstallError> {
+    let before = HostStateSnapshot::Codex(before.clone());
+    let observed = run_compensation_transition(
+        context,
+        command,
+        mutation,
+        &before,
+        HostStateSnapshot::Codex(after.clone()),
+    )?;
+    match observed {
+        HostStateSnapshot::Codex(state) => Ok(state),
+        HostStateSnapshot::Claude(_) => Err(InstallError::Internal(
+            "Codex compensation observed Claude state".to_owned(),
+        )),
+    }
+}
+
+fn run_compensation_transition(
+    context: &mut CompensationContext<'_, impl CommandRunner>,
+    command: &[&str],
+    mutation: HostMutation,
+    before: &HostStateSnapshot,
+    after: HostStateSnapshot,
+) -> Result<HostStateSnapshot, InstallError> {
+    let observed_before =
+        probe_host_snapshot(context.arguments.host, context.executable, context.runner)?;
+    if observed_before != *before || context.backup.host_owned_state.as_ref() != Some(before) {
+        return Err(InstallError::Conflict(
+            "host state drifted immediately before Hive compensation; external state was preserved"
+                .to_owned(),
+        ));
+    }
+    context.backup.pending_host_transition = Some(PendingHostTransition {
+        mutation,
+        phase: HostTransitionPhase::Compensation,
+        before: before.clone(),
+        after: after.clone(),
+    });
+    persist_backup(context.arguments, context.backup_relative, context.backup)?;
+    let command_result = context.runner.run(
+        context.executable,
+        command,
+        COMMAND_TIMEOUT,
+        COMMAND_OUTPUT_LIMIT,
+    );
+    let observed_after =
+        probe_host_snapshot(context.arguments.host, context.executable, context.runner)?;
+    if matches!(&command_result, Ok(output) if output.success) && observed_after == after {
+        context.backup.host_owned_state = Some(after.clone());
+        context.backup.pending_host_transition = None;
+        persist_backup(context.arguments, context.backup_relative, context.backup)?;
+        return Ok(after);
+    }
+    match command_result {
+        Ok(output) if output.success => Err(InstallError::Internal(format!(
+            "{} reconciliation command did not reach its exact structured target state: {}",
+            context.arguments.host.as_str(),
+            sanitized_command_diagnostic(command, &output.stdout)
+        ))),
+        Ok(output) => Err(InstallError::Internal(format!(
+            "{} reconciliation command returned a non-success result and remains unresolved: {}",
+            context.arguments.host.as_str(),
+            sanitized_command_diagnostic(command, &output.stdout)
+        ))),
+        Err(error) => Err(InstallError::Internal(format!(
+            "{} reconciliation command `{}` failed before its exact structured target state was observed: {error}",
+            context.arguments.host.as_str(),
+            command.join(" ")
+        ))),
+    }
+}
+
+fn remove_transaction_journal(
+    arguments: &UserArguments,
+    journal_relative: &Path,
+) -> Result<(), InstallError> {
+    let expected =
+        read_optional_regular(&arguments.root_cap, journal_relative, MAX_USER_FILE_BYTES)?;
+    let expected_permissions = expected
+        .as_ref()
+        .map(|_| file_permissions(&arguments.root_cap, journal_relative))
+        .transpose()?;
+    remove_regular_if_exists(
+        &arguments.root_cap,
+        journal_relative,
+        expected.as_deref(),
+        expected_permissions,
+    )
+}
+
+fn rollback_after_failure(
+    arguments: &UserArguments,
+    transaction: &mut UserTransaction,
+    executable: Option<&QualifiedExecutable>,
+    runner: &impl CommandRunner,
+    primary: InstallError,
+) -> InstallError {
+    if let Err(error) =
+        restore_backup_files(arguments, &transaction.backup_relative, &transaction.backup)
+    {
+        return InstallError::Internal(format!(
+            "{}; filesystem rollback failed: {}",
+            primary.message(),
+            error.message()
+        ));
+    }
+    if let Err(error) =
+        reconcile_root_index_after_rollback(arguments, transaction.backup.index_existed)
+    {
+        return InstallError::Internal(format!(
+            "{}; root index rollback failed: {}",
+            primary.message(),
+            error.message()
+        ));
+    }
+    if let Err(error) = compensate_host_mutations(
+        arguments,
+        &transaction.backup_relative,
+        &mut transaction.backup,
+        executable,
+        runner,
+    ) {
+        return InstallError::Internal(format!("{}; {}", primary.message(), error.message()));
+    }
+    if let Err(cleanup) = remove_transaction_journal(arguments, &transaction.journal_relative) {
+        return InstallError::Internal(format!(
+            "{}; rollback journal cleanup failed: {}",
+            primary.message(),
+            cleanup.message()
+        ));
+    }
+    primary
+}
+
+fn qualify_host(
+    arguments: &UserArguments,
+    _plan: &UserPlan,
+    runner: &impl CommandRunner,
+) -> Result<Option<QualifiedExecutable>, InstallError> {
+    let executable_name = match arguments.host {
+        UserHost::Codex => "codex",
+        UserHost::Claude => "claude",
+        UserHost::Antigravity => "antigravity",
+    };
+    runner.qualify(executable_name).map(Some).map_err(|_| {
+        InstallError::Unsupported(format!(
+            "{executable_name} executable is unavailable; user installation was not changed"
+        ))
+    })
+}
+
+fn probe_supported_host_version(
+    host: UserHost,
+    executable: &QualifiedExecutable,
+    runner: &impl CommandRunner,
+) -> Result<String, InstallError> {
+    let output = runner
+        .run(
+            executable,
+            &["--version"],
+            COMMAND_TIMEOUT,
+            COMMAND_OUTPUT_LIMIT,
+        )
+        .map_err(|error| {
+            InstallError::Unsupported(format!(
+                "{} fixed-argv version probe failed: {error}",
+                host.as_str()
+            ))
+        })?;
+    if !output.success {
+        return Err(InstallError::Unsupported(format!(
+            "{} fixed-argv version probe exited unsuccessfully",
+            host.as_str()
+        )));
+    }
+    let raw = std::str::from_utf8(&output.stdout)
+        .map_err(|_| InstallError::Unsupported("host version output is not UTF-8".to_owned()))?
+        .trim();
+    let version = match host {
+        UserHost::Codex => raw.strip_prefix("codex-cli "),
+        UserHost::Claude => raw
+            .strip_suffix(" (Claude Code)")
+            .or_else(|| raw.strip_prefix("claude ")),
+        UserHost::Antigravity => raw.strip_prefix("antigravity "),
+    }
+    .ok_or_else(|| {
+        InstallError::Unsupported(format!(
+            "{} version output has an unsupported shape",
+            host.as_str()
+        ))
+    })?;
+    let parsed = parse_three_part_version(version)?;
+    let (minimum, maximum) = match host {
+        UserHost::Codex => ((0, 145, 0), (1, 0, 0)),
+        UserHost::Claude => ((2, 1, 0), (3, 0, 0)),
+        UserHost::Antigravity => ((2, 3, 1), (3, 0, 0)),
+    };
+    if parsed < minimum || parsed >= maximum {
+        return Err(InstallError::Unsupported(format!(
+            "{} version {version} is outside supported range {}",
+            host.as_str(),
+            host.version_range()
+        )));
+    }
+    Ok(version.to_owned())
+}
+
+fn parse_three_part_version(value: &str) -> Result<(u64, u64, u64), InstallError> {
+    let mut parts = value.split('.');
+    let parse = |part: Option<&str>| {
+        let part = part.ok_or_else(|| {
+            InstallError::Unsupported("host version must contain three numeric parts".to_owned())
+        })?;
+        if part.is_empty() || !part.bytes().all(|byte| byte.is_ascii_digit()) {
+            return Err(InstallError::Unsupported(
+                "host version must contain three numeric parts".to_owned(),
+            ));
+        }
+        part.parse::<u64>().map_err(|_| {
+            InstallError::Unsupported("host version component is out of range".to_owned())
+        })
+    };
+    let parsed = (
+        parse(parts.next())?,
+        parse(parts.next())?,
+        parse(parts.next())?,
+    );
+    if parts.next().is_some() {
+        return Err(InstallError::Unsupported(
+            "host version must contain exactly three numeric parts".to_owned(),
+        ));
+    }
+    Ok(parsed)
+}
+
+fn bind_host_version(plan: &mut UserPlan, version: &str) {
+    let prior = plan.plan_digest.clone();
+    plan.plan_digest = sha256_digest(format!("{prior}\0{version}").as_bytes());
+    plan.qualified_host_version = Some(version.to_owned());
+}
+
+fn activate_host(
+    arguments: &UserArguments,
+    plan: &UserPlan,
+    transaction: &mut UserTransaction,
+    executable: Option<&QualifiedExecutable>,
+    runner: &impl CommandRunner,
+) -> Result<(), InstallError> {
+    let Some(marketplace_relative) = plan.marketplace_root.as_ref() else {
+        return Ok(());
+    };
+    let executable = executable
+        .ok_or_else(|| InstallError::Internal("qualified host executable is missing".to_owned()))?;
+    let marketplace = arguments.user_root.join(marketplace_relative);
+    let marketplace_text = marketplace.to_str().ok_or_else(|| {
+        InstallError::Unsupported("marketplace path is not valid UTF-8".to_owned())
+    })?;
+    let command_sets = activation_commands(arguments.host, &transaction.backup, marketplace_text)?;
+    for (command, mutation) in command_sets {
+        if let Some(mutation) = mutation {
+            execute_forward_host_transition(
+                arguments,
+                transaction,
+                executable,
+                runner,
+                &command,
+                mutation,
+            )?;
+            continue;
+        }
+        let output = runner
+            .run(executable, &command, COMMAND_TIMEOUT, COMMAND_OUTPUT_LIMIT)
+            .map_err(|error| {
+                InstallError::Unsupported(format!(
+                    "{} native plugin command `{}` failed: {error}",
+                    arguments.host.as_str(),
+                    command.join(" ")
+                ))
+            })?;
+        if !output.success {
+            return Err(InstallError::Unsupported(format!(
+                "{} native plugin command exited unsuccessfully: {}",
+                arguments.host.as_str(),
+                sanitized_command_diagnostic(&command, &output.stdout)
+            )));
+        }
+    }
+    Ok(())
+}
+
+fn execute_forward_host_transition(
+    arguments: &UserArguments,
+    transaction: &mut UserTransaction,
+    executable: &QualifiedExecutable,
+    runner: &impl CommandRunner,
+    command: &[&str],
+    mutation: HostMutation,
+) -> Result<(), InstallError> {
+    let expected_before = transaction
+        .backup
+        .host_owned_state
+        .clone()
+        .or_else(|| initial_host_snapshot(&transaction.backup))
+        .ok_or_else(|| InstallError::Internal("host prestate is missing".to_owned()))?;
+    let observed_before = probe_host_snapshot(arguments.host, executable, runner)?;
+    if observed_before != expected_before {
+        return Err(InstallError::Conflict(
+            "host state drifted before Hive could issue its next native mutation".to_owned(),
+        ));
+    }
+    let expected_after = expected_host_state_after(arguments, mutation, &expected_before)?;
+    transaction.backup.pending_host_transition = Some(PendingHostTransition {
+        mutation,
+        phase: HostTransitionPhase::Forward,
+        before: expected_before.clone(),
+        after: expected_after.clone(),
+    });
+    persist_backup(arguments, &transaction.backup_relative, &transaction.backup)?;
+    let command_result = runner.run(executable, command, COMMAND_TIMEOUT, COMMAND_OUTPUT_LIMIT);
+    let observed_after = probe_host_snapshot(arguments.host, executable, runner)?;
+    if matches!(&command_result, Ok(output) if output.success) && observed_after == expected_after {
+        transaction.backup.host_mutations.push(mutation);
+        transaction.backup.host_owned_state = Some(expected_after);
+        transaction.backup.pending_host_transition = None;
+        persist_backup(arguments, &transaction.backup_relative, &transaction.backup)?;
+        return Ok(());
+    }
+    match command_result {
+        Ok(output) if output.success => Err(InstallError::Verification(format!(
+            "{} native plugin command did not produce its exact structured transition: {}",
+            arguments.host.as_str(),
+            sanitized_command_diagnostic(command, &output.stdout)
+        ))),
+        Ok(output) => Err(InstallError::Unsupported(format!(
+            "{} native plugin command returned a non-success result and remains unresolved: {}",
+            arguments.host.as_str(),
+            sanitized_command_diagnostic(command, &output.stdout)
+        ))),
+        Err(error) => Err(InstallError::Unsupported(format!(
+            "{} native plugin command `{}` failed before its exact structured transition was observed: {error}",
+            arguments.host.as_str(),
+            command.join(" ")
+        ))),
+    }
+}
+
+fn initial_host_snapshot(backup: &UserBackupManifest) -> Option<HostStateSnapshot> {
+    match backup.host {
+        UserHost::Codex => backup
+            .codex_state_before
+            .clone()
+            .map(HostStateSnapshot::Codex),
+        UserHost::Claude => backup
+            .claude_state_before
+            .clone()
+            .map(HostStateSnapshot::Claude),
+        UserHost::Antigravity => None,
+    }
+}
+
+fn probe_host_snapshot(
+    host: UserHost,
+    executable: &QualifiedExecutable,
+    runner: &impl CommandRunner,
+) -> Result<HostStateSnapshot, InstallError> {
+    match host {
+        UserHost::Codex => probe_codex_state(executable, runner).map(HostStateSnapshot::Codex),
+        UserHost::Claude => probe_claude_state(executable, runner).map(HostStateSnapshot::Claude),
+        UserHost::Antigravity => Err(InstallError::Internal(
+            "Antigravity has no mutable native host state".to_owned(),
+        )),
+    }
+}
+
+fn expected_host_state_after(
+    arguments: &UserArguments,
+    mutation: HostMutation,
+    before: &HostStateSnapshot,
+) -> Result<HostStateSnapshot, InstallError> {
+    match (mutation, before) {
+        (HostMutation::CodexMarketplaceAdded, HostStateSnapshot::Codex(state)) => {
+            let mut state = state.clone();
+            state.marketplace = Some(CodexMarketplaceState {
+                root: expected_codex_marketplace_root(arguments)?,
+            });
+            Ok(HostStateSnapshot::Codex(state))
+        }
+        (
+            HostMutation::CodexPluginAdded | HostMutation::CodexPluginRefreshed,
+            HostStateSnapshot::Codex(state),
+        ) => {
+            let root = expected_codex_marketplace_root(arguments)?;
+            let mut state = state.clone();
+            state.plugin = Some(CodexPluginState {
+                version: env!("CARGO_PKG_VERSION").to_owned(),
+                enabled: true,
+                source_path: expected_codex_plugin_source_path(arguments)?,
+                marketplace_source: root,
+            });
+            Ok(HostStateSnapshot::Codex(state))
+        }
+        (
+            HostMutation::ClaudeMarketplaceAdded | HostMutation::ClaudeMarketplaceRefreshed,
+            HostStateSnapshot::Claude(state),
+        ) => {
+            let mut state = state.clone();
+            state.marketplace = Some(ClaudeMarketplaceState {
+                source: "directory".to_owned(),
+                path: expected_claude_marketplace_path(arguments)?,
+            });
+            Ok(HostStateSnapshot::Claude(state))
+        }
+        (
+            HostMutation::ClaudePluginInstalled | HostMutation::ClaudePluginRefreshed,
+            HostStateSnapshot::Claude(state),
+        ) => {
+            let mut state = state.clone();
+            state.plugin = Some(ClaudePluginState {
+                version: env!("CARGO_PKG_VERSION").to_owned(),
+                enabled: true,
+                scope: "user".to_owned(),
+            });
+            Ok(HostStateSnapshot::Claude(state))
+        }
+        _ => Err(InstallError::Internal(
+            "host mutation does not match the structured host state".to_owned(),
+        )),
+    }
+}
+
+fn activation_commands<'a>(
+    host: UserHost,
+    backup: &UserBackupManifest,
+    marketplace_text: &'a str,
+) -> Result<Vec<ActivationCommand<'a>>, InstallError> {
+    match host {
+        UserHost::Codex => {
+            let mut commands = Vec::new();
+            let before = backup.codex_state_before.as_ref().ok_or_else(|| {
+                InstallError::Internal(
+                    "Codex transaction omitted the pre-mutation structured state".to_owned(),
+                )
+            })?;
+            if before.marketplace.is_none() {
+                commands.push((
+                    vec!["plugin", "marketplace", "add", marketplace_text, "--json"],
+                    Some(HostMutation::CodexMarketplaceAdded),
+                ));
+            }
+            commands.push((
+                vec!["plugin", "add", "aigent-hive@aigent-hive", "--json"],
+                Some(if before.plugin.is_some() {
+                    HostMutation::CodexPluginRefreshed
+                } else {
+                    HostMutation::CodexPluginAdded
+                }),
+            ));
+            Ok(commands)
+        }
+        UserHost::Claude => {
+            let mut commands = vec![(vec!["plugin", "validate", marketplace_text], None)];
+            let before = backup.claude_state_before.as_ref().ok_or_else(|| {
+                InstallError::Internal(
+                    "Claude transaction omitted the pre-mutation structured state".to_owned(),
+                )
+            })?;
+            if before.marketplace.is_some() {
+                commands.push((
+                    vec!["plugin", "marketplace", "update", "aigent-hive"],
+                    Some(HostMutation::ClaudeMarketplaceRefreshed),
+                ));
+            } else {
+                commands.push((
+                    vec![
+                        "plugin",
+                        "marketplace",
+                        "add",
+                        marketplace_text,
+                        "--scope",
+                        "user",
+                    ],
+                    Some(HostMutation::ClaudeMarketplaceAdded),
+                ));
+            }
+            if before.plugin.is_some() {
+                commands.push((
+                    vec![
+                        "plugin",
+                        "update",
+                        "aigent-hive@aigent-hive",
+                        "--scope",
+                        "user",
+                    ],
+                    Some(HostMutation::ClaudePluginRefreshed),
+                ));
+            } else {
+                commands.push((
+                    vec![
+                        "plugin",
+                        "install",
+                        "aigent-hive@aigent-hive",
+                        "--scope",
+                        "user",
+                    ],
+                    Some(HostMutation::ClaudePluginInstalled),
+                ));
+            }
+            Ok(commands)
+        }
+        UserHost::Antigravity => unreachable!(),
+    }
+}
+
+fn validate_plugin_package(arguments: &UserArguments, plan: &UserPlan) -> Result<(), InstallError> {
+    let root = match arguments.host {
+        UserHost::Codex | UserHost::Claude => plan
+            .marketplace_root
+            .as_ref()
+            .ok_or_else(|| InstallError::Internal("plugin marketplace root is missing".to_owned()))?
+            .join("plugins/aigent-hive"),
+        UserHost::Antigravity => PathBuf::from(".gemini/config/plugins/aigent-hive"),
+    };
+    let manifest = match arguments.host {
+        UserHost::Codex => ".codex-plugin/plugin.json",
+        UserHost::Claude => ".claude-plugin/plugin.json",
+        UserHost::Antigravity => "plugin.json",
+    };
+    for relative in [manifest, "skills/setup-harness/SKILL.md"] {
+        let path = root.join(relative);
+        if read_optional_regular(&arguments.root_cap, &path, MAX_USER_FILE_BYTES)?.is_none() {
+            return Err(InstallError::Verification(format!(
+                "installed plugin package is missing {relative}"
+            )));
+        }
+    }
+    Ok(())
+}
+
+fn success_result(
+    operation: UserOperation,
+    arguments: &UserArguments,
+    plan: &UserPlan,
+    code: &'static str,
+    message: &'static str,
+    backup: Option<&str>,
+) -> ActionResult {
+    let action = match arguments.mode {
+        UserMode::Validate => "ValidateHiveUser",
+        _ => match operation {
+            UserOperation::Install => "InstallHiveUser",
+            UserOperation::Update => "UpdateHiveUser",
+        },
+    };
+    ActionResult {
+        schema_version: 1,
+        action,
+        status: "success",
+        exit_code: 0,
+        code,
+        message: message.to_owned(),
+        changed_paths: plan.changed_paths.clone(),
+        evidence: vec![Evidence {
+            kind: "report",
+            locator: format!("user-install-plan:{}", arguments.host.as_str()),
+            digest: plan.plan_digest.clone(),
+        }],
+        next_action: match arguments.mode {
+            UserMode::DryRun => Some(format!(
+                "run with --host {} --apply to activate this exact user installation plan",
+                arguments.host.as_str()
+            )),
+            _ => None,
+        },
+        data: Some(json!({
+            "host": arguments.host.as_str(),
+            "scope": "user",
+            "product_version": env!("CARGO_PKG_VERSION"),
+            "host_version_range": arguments.host.version_range(),
+            "qualified_host_version": plan.qualified_host_version,
+            "backup": backup,
+            "foreign_guidance_preserved": true,
+            "provider_credentials_requested": false
+        })),
+    }
+}
+
+fn failure(action: &'static str, error: &InstallError) -> ActionResult {
+    ActionResult {
+        schema_version: 1,
+        action,
+        status: error.status(),
+        exit_code: error.exit_code(),
+        code: match error {
+            InstallError::Input(_) => "hive.user-install-invalid-input",
+            InstallError::Conflict(_) => "hive.user-install-conflict",
+            InstallError::Unsupported(_) => "hive.user-install-unsupported",
+            InstallError::Verification(_) => "hive.user-install-verification-failed",
+            InstallError::Internal(_) => "hive.internal-error",
+        },
+        message: error.message().to_owned(),
+        changed_paths: Vec::new(),
+        evidence: Vec::new(),
+        next_action: None,
+        data: None,
+    }
+}
+
+fn read_installed_manifest(
+    root: &Dir,
+    relative: &Path,
+    host: UserHost,
+) -> Result<Option<UserOwnershipManifest>, InstallError> {
+    let Some(bytes) = read_optional_regular(root, relative, MAX_USER_FILE_BYTES)? else {
+        return Ok(None);
+    };
+    let manifest = serde_json::from_slice::<UserOwnershipManifest>(&bytes).map_err(|_| {
+        InstallError::Conflict(format!(
+            "installed ownership manifest is malformed: {}",
+            relative.display()
+        ))
+    })?;
+    if manifest.schema_version != 1
+        || manifest.host != host
+        || manifest.host_version_range != host.version_range()
+        || !valid_sha256(&manifest.source_release_digest)
+        || !valid_sha256(&manifest.plan_digest)
+        || manifest.entries.is_empty()
+        || validate_relative(Path::new(&manifest.guidance_path)).is_err()
+        || !permissions_match_managed_mode(file_permissions(root, relative)?, false)
+    {
+        return Err(InstallError::Conflict(format!(
+            "installed ownership manifest binding is invalid: {}",
+            relative.display()
+        )));
+    }
+    let mut previous = None;
+    for entry in &manifest.entries {
+        let path = Path::new(&entry.path);
+        validate_relative(path)?;
+        if previous.is_some_and(|value: &str| value >= entry.path.as_str())
+            || !valid_sha256(&entry.digest)
+            || entry.unix_mode != installed_unix_mode(entry.executable)
+            || entry.ownership.is_empty()
+        {
+            return Err(InstallError::Conflict(format!(
+                "installed ownership manifest inventory is invalid: {}",
+                relative.display()
+            )));
+        }
+        previous = Some(entry.path.as_str());
+    }
+    Ok(Some(manifest))
+}
+
+fn valid_sha256(value: &str) -> bool {
+    value.strip_prefix("sha256:").is_some_and(|hex| {
+        hex.len() == 64
+            && hex
+                .bytes()
+                .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
+    })
+}
+
+fn read_optional_regular(
+    root: &Dir,
+    relative: &Path,
+    maximum: u64,
+) -> Result<Option<Vec<u8>>, InstallError> {
+    validate_relative(relative)?;
+    let Some((parent, name)) = capability_parent(root, relative, false)? else {
+        return Ok(None);
+    };
+    let metadata = match parent.symlink_metadata(&name) {
+        Ok(metadata) => metadata,
+        Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(None),
+        Err(error) => return Err(io_internal("inspect", relative, error)),
+    };
+    if metadata.file_type().is_symlink() || !metadata.is_file() || metadata.len() > maximum {
+        return Err(InstallError::Conflict(format!(
+            "user installation path must be a bounded no-follow regular file: {}",
+            relative.display()
+        )));
+    }
+    let mut options = OpenOptions::new();
+    options.read(true).follow(FollowSymlinks::No);
+    let mut file = parent
+        .open_with(&name, &options)
+        .map_err(|error| io_internal("open", relative, error))?;
+    let mut bytes = Vec::with_capacity(usize::try_from(metadata.len()).unwrap_or(0));
+    Read::by_ref(&mut file)
+        .take(maximum.saturating_add(1))
+        .read_to_end(&mut bytes)
+        .map_err(|error| io_internal("read", relative, error))?;
+    if bytes.len() as u64 != metadata.len() || bytes.len() as u64 > maximum {
+        return Err(InstallError::Conflict(format!(
+            "user installation path changed during no-follow read: {}",
+            relative.display()
+        )));
+    }
+    Ok(Some(bytes))
+}
+
+fn write_atomic(
+    root: &Dir,
+    relative: &Path,
+    bytes: &[u8],
+    executable: bool,
+    expected: Option<&[u8]>,
+    expected_permissions: Option<FilePermissions>,
+) -> Result<(), InstallError> {
+    cas_activate(
+        root,
+        relative,
+        expected.map(|bytes| ExpectedFile {
+            bytes,
+            permissions: expected_permissions.expect("existing file requires permission token"),
+        }),
+        Some(bytes),
+        FilePermissions {
+            executable,
+            unix_mode: None,
+        },
+    )
+}
+
+fn write_atomic_with_permissions(
+    root: &Dir,
+    relative: &Path,
+    bytes: &[u8],
+    permissions: FilePermissions,
+    expected: Option<&[u8]>,
+    expected_permissions: Option<FilePermissions>,
+) -> Result<(), InstallError> {
+    cas_activate(
+        root,
+        relative,
+        expected.map(|bytes| ExpectedFile {
+            bytes,
+            permissions: expected_permissions.expect("existing file requires permission token"),
+        }),
+        Some(bytes),
+        permissions,
+    )
+}
+
+fn capability_parent(
+    root: &Dir,
+    relative: &Path,
+    create: bool,
+) -> Result<Option<(Dir, OsString)>, InstallError> {
+    validate_relative(relative)?;
+    let name = relative
+        .file_name()
+        .ok_or_else(|| InstallError::Input("user path has no file name".to_owned()))?
+        .to_os_string();
+    let mut current = root
+        .try_clone()
+        .map_err(|error| InstallError::Internal(format!("cannot clone user root: {error}")))?;
+    if let Some(parent) = relative.parent() {
+        for component in parent.components() {
+            let component = component.as_os_str();
+            match current.symlink_metadata(component) {
+                Ok(metadata) if metadata.is_dir() && !metadata.file_type().is_symlink() => {}
+                Ok(_) => {
+                    return Err(InstallError::Conflict(format!(
+                        "user installation ancestor is not a no-follow directory: {}",
+                        relative.display()
+                    )))
+                }
+                Err(error) if error.kind() == io::ErrorKind::NotFound && create => {
+                    current.create_dir(component).map_err(|error| {
+                        InstallError::Conflict(format!(
+                            "cannot create user installation ancestor {}: {error}",
+                            relative.display()
+                        ))
+                    })?;
+                }
+                Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(None),
+                Err(error) => return Err(io_internal("inspect ancestor", relative, error)),
+            }
+            current = current.open_dir_nofollow(component).map_err(|error| {
+                InstallError::Conflict(format!(
+                    "cannot pin user installation ancestor {}: {error}",
+                    relative.display()
+                ))
+            })?;
+        }
+    }
+    Ok(Some((current, name)))
+}
+
+fn validate_relative(path: &Path) -> Result<(), InstallError> {
+    if path.as_os_str().is_empty()
+        || path.is_absolute()
+        || path
+            .components()
+            .any(|component| !matches!(component, Component::Normal(_)))
+    {
+        return Err(InstallError::Input(format!(
+            "unsafe user-relative path: {}",
+            path.display()
+        )));
+    }
+    Ok(())
+}
+
+fn cas_activate(
+    root: &Dir,
+    relative: &Path,
+    expected: Option<ExpectedFile<'_>>,
+    desired: Option<&[u8]>,
+    permissions: FilePermissions,
+) -> Result<(), InstallError> {
+    cas_activate_with_barrier(root, relative, expected, desired, permissions, None)
+}
+
+#[derive(Clone, Copy)]
+struct ExpectedFile<'a> {
+    bytes: &'a [u8],
+    permissions: FilePermissions,
+}
+
+type CasBarrier<'a> = Option<&'a dyn Fn(&Dir, &OsStr, &Dir)>;
+
+fn cas_activate_with_barrier(
+    root: &Dir,
+    relative: &Path,
+    expected: Option<ExpectedFile<'_>>,
+    desired: Option<&[u8]>,
+    permissions: FilePermissions,
+    after_claim: CasBarrier<'_>,
+) -> Result<(), InstallError> {
+    if expected.is_none() {
+        return match desired {
+            Some(bytes) => create_new_exclusive(root, relative, bytes, permissions),
+            None => match read_optional_regular(root, relative, MAX_USER_FILE_BYTES)? {
+                None => Ok(()),
+                Some(_) => Err(InstallError::Conflict(format!(
+                    "user installation path appeared before exclusive deletion: {}",
+                    relative.display()
+                ))),
+            },
+        };
+    }
+    let expected = expected.expect("checked");
+    let (parent, name) = capability_parent(root, relative, false)?.ok_or_else(|| {
+        InstallError::Conflict(format!(
+            "user installation path disappeared before atomic claim: {}",
+            relative.display()
+        ))
+    })?;
+    let quarantine_name = claim_name(relative);
+    parent.create_dir(&quarantine_name).map_err(|error| {
+        InstallError::Conflict(format!(
+            "prior user installation claim requires recovery at {}: {error}",
+            recovery_locator(relative).display()
+        ))
+    })?;
+    let quarantine = parent
+        .open_dir_nofollow(&quarantine_name)
+        .map_err(|error| {
+            InstallError::Internal(format!("cannot open user installation claim: {error}"))
+        })?;
+    if let Err(error) = parent.rename(&name, &quarantine, OsStr::new("claimed.bin")) {
+        drop(quarantine);
+        let _ = parent.remove_dir(&quarantine_name);
+        return Err(InstallError::Conflict(format!(
+            "user installation path changed before atomic claim at {}: {error}",
+            relative.display()
+        )));
+    }
+    if let Some(barrier) = after_claim {
+        barrier(&parent, &name, &quarantine);
+    }
+    let claimed =
+        read_optional_regular(&quarantine, Path::new("claimed.bin"), MAX_USER_FILE_BYTES)?
+            .ok_or_else(|| {
+                InstallError::Verification(format!(
+                    "claimed user installation object is missing at {}",
+                    recovery_locator(relative).display()
+                ))
+            })?;
+    let claimed_permissions = file_permissions(&quarantine, Path::new("claimed.bin"))?;
+    if claimed != expected.bytes || claimed_permissions != expected.permissions {
+        restore_claim(&parent, &name, quarantine, &quarantine_name, relative)?;
+        return Err(InstallError::Conflict(format!(
+            "user installation claimed concurrently changed bytes or permissions: {}",
+            relative.display()
+        )));
+    }
+    match desired {
+        Some(bytes) => {
+            stage_file(&quarantine, "replacement.bin", bytes, permissions, relative).map_err(
+                |error| {
+                    InstallError::Verification(format!(
+                        "{}; exact prior object retained at {}",
+                        error.message(),
+                        recovery_locator(relative).display()
+                    ))
+                },
+            )?;
+            quarantine
+                .hard_link("replacement.bin", &parent, &name)
+                .map_err(|error| retained_claim_error(relative, "publish replacement", error))?;
+            quarantine.remove_file("replacement.bin").map_err(|error| {
+                retained_claim_error(relative, "clean staged replacement", error)
+            })?;
+        }
+        None => match parent.symlink_metadata(&name) {
+            Err(error) if error.kind() == io::ErrorKind::NotFound => {}
+            Ok(_) => {
+                return Err(retained_claim_error(
+                    relative,
+                    "publish deletion because destination was reoccupied",
+                    "destination occupied",
+                ))
+            }
+            Err(error) => return Err(retained_claim_error(relative, "inspect deletion", error)),
+        },
+    }
+    quarantine
+        .remove_file("claimed.bin")
+        .map_err(|error| retained_claim_error(relative, "clean prior bytes", error))?;
+    drop(quarantine);
+    parent
+        .remove_dir(&quarantine_name)
+        .map_err(|error| retained_claim_error(relative, "clean claim directory", error))
+}
+
+fn create_new_exclusive(
+    root: &Dir,
+    relative: &Path,
+    bytes: &[u8],
+    permissions: FilePermissions,
+) -> Result<(), InstallError> {
+    let (parent, name) = capability_parent(root, relative, true)?.ok_or_else(|| {
+        InstallError::Internal("created user installation parent disappeared".to_owned())
+    })?;
+    let quarantine_name = claim_name(relative);
+    parent.create_dir(&quarantine_name).map_err(|error| {
+        InstallError::Conflict(format!(
+            "prior user installation claim requires recovery at {}: {error}",
+            recovery_locator(relative).display()
+        ))
+    })?;
+    let quarantine = parent
+        .open_dir_nofollow(&quarantine_name)
+        .map_err(|error| {
+            InstallError::Internal(format!("cannot open user installation claim: {error}"))
+        })?;
+    if let Err(error) = stage_file(&quarantine, "replacement.bin", bytes, permissions, relative) {
+        let _ = quarantine.remove_file("replacement.bin");
+        drop(quarantine);
+        if let Err(cleanup) = parent.remove_dir(&quarantine_name) {
+            return Err(InstallError::Verification(format!(
+                "{}; empty creation claim cleanup failed at {}: {cleanup}",
+                error.message(),
+                recovery_locator(relative).display()
+            )));
+        }
+        return Err(error);
+    }
+    if let Err(error) = quarantine.hard_link("replacement.bin", &parent, &name) {
+        let _ = quarantine.remove_file("replacement.bin");
+        drop(quarantine);
+        let _ = parent.remove_dir(&quarantine_name);
+        return Err(InstallError::Conflict(format!(
+            "user installation destination appeared before exclusive activation at {}: {error}",
+            relative.display()
+        )));
+    }
+    quarantine
+        .remove_file("replacement.bin")
+        .map_err(|error| retained_claim_error(relative, "clean staged creation", error))?;
+    drop(quarantine);
+    parent
+        .remove_dir(&quarantine_name)
+        .map_err(|error| retained_claim_error(relative, "clean creation claim", error))
+}
+
+fn stage_file(
+    directory: &Dir,
+    name: &str,
+    bytes: &[u8],
+    permissions: FilePermissions,
+    relative: &Path,
+) -> Result<(), InstallError> {
+    let mut options = OpenOptions::new();
+    options
+        .write(true)
+        .create_new(true)
+        .follow(FollowSymlinks::No);
+    let mut file = directory
+        .open_with(name, &options)
+        .map_err(|error| io_internal("stage", relative, error))?;
+    set_file_permissions(&file, permissions, relative)?;
+    file.write_all(bytes)
+        .and_then(|()| file.sync_all())
+        .map_err(|error| io_internal("write staged", relative, error))
+}
+
+fn restore_claim(
+    parent: &Dir,
+    name: &OsStr,
+    quarantine: Dir,
+    quarantine_name: &OsStr,
+    relative: &Path,
+) -> Result<(), InstallError> {
+    quarantine
+        .hard_link("claimed.bin", parent, name)
+        .map_err(|error| retained_claim_error(relative, "restore claimed bytes", error))?;
+    quarantine
+        .remove_file("claimed.bin")
+        .map_err(|error| retained_claim_error(relative, "clean restored claim", error))?;
+    drop(quarantine);
+    parent
+        .remove_dir(quarantine_name)
+        .map_err(|error| retained_claim_error(relative, "clean restored claim directory", error))
+}
+
+fn claim_name(relative: &Path) -> OsString {
+    let digest = sha256_digest(portable(relative).as_bytes());
+    OsString::from(format!(
+        ".hive-user-claim-{}",
+        digest.trim_start_matches("sha256:")
+    ))
+}
+
+fn recovery_locator(relative: &Path) -> PathBuf {
+    relative
+        .parent()
+        .unwrap_or_else(|| Path::new(""))
+        .join(claim_name(relative))
+        .join("claimed.bin")
+}
+
+fn retained_claim_error(
+    relative: &Path,
+    operation: &str,
+    error: impl std::fmt::Display,
+) -> InstallError {
+    InstallError::Verification(format!(
+        "cannot {operation} for {}; exact prior object retained at {}: {error}",
+        relative.display(),
+        recovery_locator(relative).display()
+    ))
+}
+
+fn capability_metadata(
+    root: &Dir,
+    relative: &Path,
+) -> Result<Result<cap_std::fs::Metadata, io::Error>, InstallError> {
+    let Some((parent, name)) = capability_parent(root, relative, false)? else {
+        return Ok(Err(io::Error::from(io::ErrorKind::NotFound)));
+    };
+    Ok(parent.symlink_metadata(name))
+}
+
+fn io_internal(operation: &str, relative: &Path, error: impl std::fmt::Display) -> InstallError {
+    InstallError::Internal(format!(
+        "cannot {operation} user installation path {}: {error}",
+        relative.display()
+    ))
+}
+
+#[cfg(unix)]
+fn set_file_permissions(
+    file: &cap_std::fs::File,
+    permissions: FilePermissions,
+    relative: &Path,
+) -> Result<(), InstallError> {
+    let mode = permissions
+        .unix_mode
+        .unwrap_or(if permissions.executable { 0o755 } else { 0o644 });
+    file.set_permissions(cap_primitives::fs::Permissions::from_mode(mode))
+        .map_err(|error| io_internal("set permissions on", relative, error))
+}
+
+#[cfg(not(unix))]
+#[allow(clippy::unnecessary_wraps)]
+fn set_file_permissions(
+    _file: &cap_std::fs::File,
+    _permissions: FilePermissions,
+    _relative: &Path,
+) -> Result<(), InstallError> {
+    Ok(())
+}
+
+#[cfg(unix)]
+fn is_executable(root: &Dir, relative: &Path) -> Result<bool, InstallError> {
+    match capability_metadata(root, relative)? {
+        Ok(metadata) => Ok(metadata.permissions().mode() & 0o111 != 0),
+        Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(false),
+        Err(error) => Err(InstallError::Internal(format!(
+            "cannot inspect permissions for {}: {error}",
+            relative.display()
+        ))),
+    }
+}
+
+#[cfg(unix)]
+fn file_permissions(root: &Dir, relative: &Path) -> Result<FilePermissions, InstallError> {
+    capability_metadata(root, relative)?
+        .map(|metadata| {
+            let mode = metadata.permissions().mode() & 0o7777;
+            FilePermissions {
+                executable: mode & 0o111 != 0,
+                unix_mode: Some(mode),
+            }
+        })
+        .map_err(|error| {
+            InstallError::Internal(format!(
+                "cannot inspect permissions for {}: {error}",
+                relative.display()
+            ))
+        })
+}
+
+#[cfg(not(unix))]
+fn is_executable(root: &Dir, relative: &Path) -> Result<bool, InstallError> {
+    Ok(capability_metadata(root, relative)?.is_ok())
+}
+
+#[cfg(not(unix))]
+fn file_permissions(root: &Dir, relative: &Path) -> Result<FilePermissions, InstallError> {
+    Ok(FilePermissions {
+        executable: is_executable(root, relative)?,
+        unix_mode: None,
+    })
+}
+
+fn portable(path: &Path) -> String {
+    path.to_string_lossy().replace('\\', "/")
+}
+
+fn json_line(value: &impl Serialize) -> Result<Vec<u8>, InstallError> {
+    let mut bytes = serde_json::to_vec_pretty(value)
+        .map_err(|error| InstallError::Internal(format!("cannot encode JSON: {error}")))?;
+    bytes.push(b'\n');
+    Ok(bytes)
+}
+
+fn unix_seconds() -> Result<u64, InstallError> {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|duration| duration.as_secs())
+        .map_err(|_| InstallError::Internal("system clock is before Unix epoch".to_owned()))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::usage::{CommandOutput, QualifiedExecutable, SensorError};
+    use std::sync::Mutex;
+    use tempfile::tempdir;
+
+    struct FakeRunner {
+        calls: Mutex<Vec<String>>,
+    }
+
+    impl FakeRunner {
+        fn new() -> Self {
+            Self {
+                calls: Mutex::new(Vec::new()),
+            }
+        }
+    }
+
+    struct UnavailableRunner;
+
+    struct VersionRunner {
+        stdout: Vec<u8>,
+        success: bool,
+    }
+
+    impl CommandRunner for VersionRunner {
+        fn qualify(&self, program: &str) -> Result<QualifiedExecutable, SensorError> {
+            Ok(QualifiedExecutable::synthetic(program))
+        }
+
+        fn run(
+            &self,
+            _program: &QualifiedExecutable,
+            arguments: &[&str],
+            _timeout: Duration,
+            _output_limit: usize,
+        ) -> Result<CommandOutput, SensorError> {
+            assert_eq!(arguments, ["--version"]);
+            Ok(CommandOutput {
+                success: self.success,
+                stdout: self.stdout.clone(),
+            })
+        }
+    }
+
+    impl CommandRunner for UnavailableRunner {
+        fn qualify(&self, _program: &str) -> Result<QualifiedExecutable, SensorError> {
+            Err(SensorError::Unavailable)
+        }
+
+        fn run(
+            &self,
+            _program: &QualifiedExecutable,
+            _arguments: &[&str],
+            _timeout: Duration,
+            _output_limit: usize,
+        ) -> Result<CommandOutput, SensorError> {
+            panic!("unavailable runner must not execute a command")
+        }
+    }
+
+    #[derive(Clone, Copy)]
+    enum HostSabotage {
+        None,
+        FailBeforeMarketplaceMutation,
+        FailAfterMarketplaceMutation,
+        FailBeforePluginMutation,
+        FailAfterPluginMutation,
+        DeleteInstalledSkill,
+        TamperGuidanceAfterActivation,
+        CrashAfterPluginInverse,
+        FailAfterPluginMutationAndCompensation,
+        DriftBeforeFirstMutation,
+        DriftBeforeSecondMutation,
+        DriftBeforeLaterCompensation,
+        ForeignAfterFailedForward,
+        ForeignAfterFailedCompensation,
+    }
+
+    struct StatefulHostRunner {
+        root: PathBuf,
+        calls: Mutex<Vec<String>>,
+        qualified_host: Mutex<String>,
+        marketplace_installed: Mutex<bool>,
+        plugin_installed: Mutex<bool>,
+        plugin_enabled: Mutex<bool>,
+        marketplace_probe_count: Mutex<usize>,
+        compensation_failures: Mutex<usize>,
+        sabotage: HostSabotage,
+    }
+
+    impl StatefulHostRunner {
+        fn new(root: &Path, sabotage: HostSabotage) -> Self {
+            Self {
+                root: root.canonicalize().expect("canonical fake host root"),
+                calls: Mutex::new(Vec::new()),
+                qualified_host: Mutex::new(String::new()),
+                marketplace_installed: Mutex::new(false),
+                plugin_installed: Mutex::new(false),
+                plugin_enabled: Mutex::new(true),
+                marketplace_probe_count: Mutex::new(0),
+                compensation_failures: Mutex::new(usize::from(matches!(
+                    sabotage,
+                    HostSabotage::FailAfterPluginMutationAndCompensation
+                ))),
+                sabotage,
+            }
+        }
+
+        fn external_state(&self) -> (bool, bool) {
+            (
+                *self.marketplace_installed.lock().expect("marketplace"),
+                *self.plugin_installed.lock().expect("plugin"),
+            )
+        }
+
+        fn seed_installed_codex_state(&self) {
+            *self.marketplace_installed.lock().expect("marketplace") = true;
+            *self.plugin_installed.lock().expect("plugin") = true;
+        }
+
+        fn clear_codex_state(&self) {
+            *self.marketplace_installed.lock().expect("marketplace") = false;
+            *self.plugin_installed.lock().expect("plugin") = false;
+        }
+
+        fn seed_marketplace_only(&self) {
+            *self.marketplace_installed.lock().expect("marketplace") = true;
+            *self.plugin_installed.lock().expect("plugin") = false;
+        }
+
+        fn inject_probe_drift(&self, command: &str) {
+            if command == "plugin marketplace list --json" {
+                let mut count = self.marketplace_probe_count.lock().expect("probe count");
+                *count += 1;
+                if matches!(self.sabotage, HostSabotage::DriftBeforeFirstMutation) && *count == 2 {
+                    *self.marketplace_installed.lock().expect("marketplace") = true;
+                }
+                if matches!(self.sabotage, HostSabotage::DriftBeforeSecondMutation) && *count == 4 {
+                    *self.plugin_installed.lock().expect("plugin") = true;
+                }
+                if matches!(self.sabotage, HostSabotage::DriftBeforeLaterCompensation)
+                    && *count == 10
+                {
+                    *self.plugin_installed.lock().expect("plugin") = true;
+                }
+            }
+        }
+
+        fn probe_output(&self, command: &str) -> Option<CommandOutput> {
+            let claude = self.qualified_host.lock().expect("host").as_str() == "claude";
+            self.inject_probe_drift(command);
+            match (command, claude) {
+                ("plugin marketplace list --json", true) => {
+                    let entries = if *self.marketplace_installed.lock().expect("marketplace") {
+                        vec![json!({
+                            "name": "aigent-hive",
+                            "source": "directory",
+                            "path": self.root.join(".hive/marketplaces/claude"),
+                            "installLocation": self.root.join(".claude/plugins/marketplaces/aigent-hive")
+                        })]
+                    } else {
+                        Vec::new()
+                    };
+                    Some(CommandOutput {
+                        success: true,
+                        stdout: serde_json::to_vec(&entries).expect("Claude marketplace JSON"),
+                    })
+                }
+                ("plugin list --json", true) => {
+                    let entries = if *self.plugin_installed.lock().expect("plugin") {
+                        vec![json!({
+                            "id": "aigent-hive@aigent-hive",
+                            "version": env!("CARGO_PKG_VERSION"),
+                            "scope": "user",
+                            "enabled": *self.plugin_enabled.lock().expect("enabled"),
+                            "status": "enabled"
+                        })]
+                    } else {
+                        Vec::new()
+                    };
+                    Some(CommandOutput {
+                        success: true,
+                        stdout: serde_json::to_vec(&entries).expect("Claude plugin JSON"),
+                    })
+                }
+                ("plugin marketplace list --json", false) => {
+                    let entries = if *self.marketplace_installed.lock().expect("marketplace") {
+                        vec![json!({
+                            "name": "aigent-hive",
+                            "root": self.root.join(".hive/marketplaces/codex"),
+                            "marketplaceSource": {
+                                "sourceType": "local",
+                                "source": self.root.join(".hive/marketplaces/codex")
+                            }
+                        })]
+                    } else {
+                        Vec::new()
+                    };
+                    Some(CommandOutput {
+                        success: true,
+                        stdout: serde_json::to_vec(&json!({"marketplaces": entries}))
+                            .expect("Codex marketplace JSON"),
+                    })
+                }
+                ("plugin list --json", false) => {
+                    let entries = if *self.plugin_installed.lock().expect("plugin") {
+                        vec![json!({
+                            "pluginId": "aigent-hive@aigent-hive",
+                            "name": "aigent-hive",
+                            "marketplaceName": "aigent-hive",
+                            "version": env!("CARGO_PKG_VERSION"),
+                            "installed": true,
+                            "enabled": true,
+                            "source": {
+                                "source": "local",
+                                "path": self.root.join(
+                                    ".hive/marketplaces/codex/plugins/aigent-hive"
+                                )
+                            },
+                            "marketplaceSource": {
+                                "sourceType": "local",
+                                "source": self.root.join(".hive/marketplaces/codex")
+                            }
+                        })]
+                    } else {
+                        Vec::new()
+                    };
+                    Some(CommandOutput {
+                        success: true,
+                        stdout: serde_json::to_vec(&json!({
+                            "installed": entries,
+                            "available": []
+                        }))
+                        .expect("Codex plugins JSON"),
+                    })
+                }
+                _ => None,
+            }
+        }
+
+        fn run_codex_plugin_add(&self) -> Result<CommandOutput, SensorError> {
+            if matches!(self.sabotage, HostSabotage::FailBeforePluginMutation) {
+                return Err(SensorError::Failed);
+            }
+            *self.plugin_installed.lock().expect("plugin") = true;
+            match self.sabotage {
+                HostSabotage::FailAfterPluginMutation => {
+                    return Err(SensorError::Failed);
+                }
+                HostSabotage::DeleteInstalledSkill
+                | HostSabotage::CrashAfterPluginInverse
+                | HostSabotage::FailAfterPluginMutationAndCompensation => {
+                    fs::remove_file(
+                        self.root.join(
+                            ".hive/marketplaces/codex/plugins/aigent-hive/skills/setup-harness/SKILL.md",
+                        ),
+                    )
+                    .expect("delete installed skill");
+                }
+                HostSabotage::TamperGuidanceAfterActivation => {
+                    fs::write(self.root.join(".codex/AGENTS.md"), b"tampered guidance\n")
+                        .expect("tamper guidance");
+                }
+                HostSabotage::None
+                | HostSabotage::FailBeforeMarketplaceMutation
+                | HostSabotage::FailAfterMarketplaceMutation
+                | HostSabotage::FailBeforePluginMutation
+                | HostSabotage::DriftBeforeFirstMutation
+                | HostSabotage::DriftBeforeSecondMutation
+                | HostSabotage::DriftBeforeLaterCompensation
+                | HostSabotage::ForeignAfterFailedForward
+                | HostSabotage::ForeignAfterFailedCompensation => {}
+            }
+            Ok(CommandOutput {
+                success: true,
+                stdout: Vec::new(),
+            })
+        }
+
+        fn remove_plugin(&self) -> Result<CommandOutput, SensorError> {
+            let mut failures = self.compensation_failures.lock().expect("failures");
+            if *failures > 0 {
+                *failures -= 1;
+                return Ok(CommandOutput {
+                    success: false,
+                    stdout: Vec::new(),
+                });
+            }
+            let mut installed = self.plugin_installed.lock().expect("plugin");
+            if !*installed {
+                return Ok(CommandOutput {
+                    success: false,
+                    stdout: Vec::new(),
+                });
+            }
+            *installed = false;
+            if matches!(
+                self.sabotage,
+                HostSabotage::CrashAfterPluginInverse
+                    | HostSabotage::ForeignAfterFailedCompensation
+            ) {
+                return Err(SensorError::Failed);
+            }
+            Ok(successful_output())
+        }
+    }
+
+    impl CommandRunner for FakeRunner {
+        fn qualify(&self, program: &str) -> Result<QualifiedExecutable, SensorError> {
+            self.calls
+                .lock()
+                .expect("calls")
+                .push(format!("qualify:{program}"));
+            Ok(QualifiedExecutable::synthetic(program))
+        }
+
+        fn run(
+            &self,
+            _program: &QualifiedExecutable,
+            arguments: &[&str],
+            _timeout: Duration,
+            _output_limit: usize,
+        ) -> Result<CommandOutput, SensorError> {
+            self.calls.lock().expect("calls").push(arguments.join(" "));
+            if arguments == ["--version"] {
+                let stdout = match self
+                    .calls
+                    .lock()
+                    .expect("calls")
+                    .iter()
+                    .find_map(|call| call.strip_prefix("qualify:"))
+                {
+                    Some("codex") => b"codex-cli 0.145.0\n".to_vec(),
+                    Some("claude") => b"2.1.0 (Claude Code)\n".to_vec(),
+                    Some("antigravity") => b"antigravity 2.3.1\n".to_vec(),
+                    _ => Vec::new(),
+                };
+                return Ok(CommandOutput {
+                    success: true,
+                    stdout,
+                });
+            }
+            Ok(CommandOutput {
+                success: true,
+                stdout: Vec::new(),
+            })
+        }
+    }
+
+    impl CommandRunner for StatefulHostRunner {
+        fn qualify(&self, program: &str) -> Result<QualifiedExecutable, SensorError> {
+            *self.qualified_host.lock().expect("host") = program.to_owned();
+            Ok(QualifiedExecutable::synthetic(program))
+        }
+
+        fn run(
+            &self,
+            _program: &QualifiedExecutable,
+            arguments: &[&str],
+            _timeout: Duration,
+            _output_limit: usize,
+        ) -> Result<CommandOutput, SensorError> {
+            let command = arguments.join(" ");
+            self.calls.lock().expect("calls").push(command.clone());
+            if command == "--version" {
+                let stdout = match self.qualified_host.lock().expect("host").as_str() {
+                    "codex" => b"codex-cli 0.145.0\n".to_vec(),
+                    "claude" => b"2.1.0 (Claude Code)\n".to_vec(),
+                    "antigravity" => b"antigravity 2.3.1\n".to_vec(),
+                    _ => Vec::new(),
+                };
+                return Ok(CommandOutput {
+                    success: true,
+                    stdout,
+                });
+            }
+            if let Some(output) = self.probe_output(&command) {
+                return Ok(output);
+            }
+            match command.as_str() {
+                command if command.starts_with("plugin marketplace add ") => {
+                    if matches!(self.sabotage, HostSabotage::ForeignAfterFailedForward) {
+                        *self.marketplace_installed.lock().expect("marketplace") = true;
+                        return Err(SensorError::Failed);
+                    }
+                    if matches!(self.sabotage, HostSabotage::FailBeforeMarketplaceMutation) {
+                        return Err(SensorError::Failed);
+                    }
+                    *self.marketplace_installed.lock().expect("marketplace") = true;
+                    if matches!(self.sabotage, HostSabotage::FailAfterMarketplaceMutation) {
+                        return Err(SensorError::Failed);
+                    }
+                }
+                "plugin marketplace update aigent-hive" => {
+                    if matches!(self.sabotage, HostSabotage::FailBeforeMarketplaceMutation) {
+                        return Err(SensorError::Failed);
+                    }
+                    if matches!(self.sabotage, HostSabotage::FailAfterMarketplaceMutation) {
+                        return Err(SensorError::Failed);
+                    }
+                }
+                "plugin install aigent-hive@aigent-hive --scope user" => {
+                    if matches!(self.sabotage, HostSabotage::FailBeforePluginMutation) {
+                        return Err(SensorError::Failed);
+                    }
+                    *self.plugin_installed.lock().expect("plugin") = true;
+                    if matches!(
+                        self.sabotage,
+                        HostSabotage::FailAfterPluginMutation
+                            | HostSabotage::CrashAfterPluginInverse
+                    ) {
+                        return Err(SensorError::Failed);
+                    }
+                }
+                "plugin update aigent-hive@aigent-hive --scope user" => {
+                    if matches!(self.sabotage, HostSabotage::FailBeforePluginMutation) {
+                        return Err(SensorError::Failed);
+                    }
+                    if matches!(self.sabotage, HostSabotage::FailAfterPluginMutation) {
+                        return Err(SensorError::Failed);
+                    }
+                }
+                "plugin add aigent-hive@aigent-hive --json" => {
+                    return self.run_codex_plugin_add();
+                }
+                "plugin remove aigent-hive@aigent-hive --json"
+                | "plugin uninstall aigent-hive@aigent-hive --scope user" => {
+                    return self.remove_plugin();
+                }
+                "plugin marketplace remove aigent-hive --json"
+                | "plugin marketplace remove aigent-hive --scope user" => {
+                    let mut installed = self.marketplace_installed.lock().expect("marketplace");
+                    if !*installed {
+                        return Ok(CommandOutput {
+                            success: false,
+                            stdout: Vec::new(),
+                        });
+                    }
+                    *installed = false;
+                }
+                "plugin disable aigent-hive@aigent-hive --scope user" => {
+                    *self.plugin_enabled.lock().expect("enabled") = false;
+                }
+                _ => {}
+            }
+            Ok(successful_output())
+        }
+    }
+
+    fn successful_output() -> CommandOutput {
+        CommandOutput {
+            success: true,
+            stdout: Vec::new(),
+        }
+    }
+
+    fn args(root: &Path, host: UserHost, mode: UserMode) -> UserArguments {
+        let user_root = root.canonicalize().expect("canonical user root");
+        UserArguments {
+            host,
+            mode,
+            root_cap: open_user_root(&user_root).expect("pinned user root"),
+            user_root,
+        }
+    }
+
+    fn seed_historical_user_install(root: &Path, host: UserHost) -> UserOwnershipManifest {
+        let historical = historical_user_inventory(host);
+        let mut manifest = UserOwnershipManifest {
+            schema_version: 1,
+            product_version: historical.product_version,
+            host,
+            host_version_range: historical.host_version_range,
+            source_release_digest: historical.source_release_digest,
+            plan_digest: String::new(),
+            last_backup: None,
+            guidance_path: historical.guidance_path,
+            entries: historical.entries,
+        };
+        manifest.plan_digest = inventory_digest(
+            host,
+            &manifest.product_version,
+            &manifest.host_version_range,
+            Path::new(&manifest.guidance_path),
+            &manifest.source_release_digest,
+            &manifest.entries,
+        );
+        for (relative, file) in historical_user_files(host) {
+            let target = root.join(relative);
+            fs::create_dir_all(target.parent().expect("historical parent"))
+                .expect("historical parent");
+            fs::write(&target, &file.bytes).expect("historical bytes");
+            #[cfg(unix)]
+            {
+                use std::os::unix::fs::PermissionsExt;
+                fs::set_permissions(
+                    &target,
+                    fs::Permissions::from_mode(if file.executable { 0o755 } else { 0o644 }),
+                )
+                .expect("historical mode");
+            }
+        }
+        let manifest_path = root.join(format!(".hive/install/{}.json", host.as_str()));
+        fs::create_dir_all(manifest_path.parent().expect("manifest parent"))
+            .expect("manifest parent");
+        fs::write(
+            &manifest_path,
+            json_line(&manifest).expect("historical manifest JSON"),
+        )
+        .expect("historical manifest");
+        manifest
+    }
+
+    fn transaction_backup(root: &Path, host: UserHost) -> UserBackupManifest {
+        let journal: UserTransactionJournal = serde_json::from_slice(
+            &fs::read(root.join(format!(".hive/install-transactions/{}.json", host.as_str())))
+                .expect("transaction journal"),
+        )
+        .expect("journal JSON");
+        serde_json::from_slice(
+            &fs::read(root.join(journal.backup).join("manifest.json")).expect("backup manifest"),
+        )
+        .expect("backup JSON")
+    }
+
+    fn snapshot_user_tree(root: &Path) -> BTreeMap<String, Vec<u8>> {
+        fn visit(root: &Path, current: &Path, output: &mut BTreeMap<String, Vec<u8>>) {
+            let mut entries = fs::read_dir(current)
+                .expect("read snapshot directory")
+                .collect::<Result<Vec<_>, _>>()
+                .expect("snapshot entries");
+            entries.sort_by_key(std::fs::DirEntry::file_name);
+            for entry in entries {
+                let path = entry.path();
+                let relative = path.strip_prefix(root).expect("relative snapshot path");
+                let metadata = fs::symlink_metadata(&path).expect("snapshot metadata");
+                if metadata.is_dir() {
+                    output.insert(format!("{}/", portable(relative)), Vec::new());
+                    visit(root, &path, output);
+                } else if metadata.is_file() {
+                    output.insert(portable(relative), fs::read(&path).expect("snapshot file"));
+                } else {
+                    output.insert(format!("{}:nonregular", portable(relative)), Vec::new());
+                }
+            }
+        }
+        let mut output = BTreeMap::new();
+        visit(root, root, &mut output);
+        output
+    }
+
+    #[test]
+    fn user_marker_append_and_replace_preserve_foreign_bytes() {
+        let foreign = b"before\r\n<!-- omx:block -->\r\nafter";
+        let first =
+            merge_user_marker(foreign, &render_user_guidance(UserHost::Codex)).expect("append");
+        assert!(first.starts_with(foreign));
+        let second =
+            merge_user_marker(&first, &render_user_guidance(UserHost::Claude)).expect("replace");
+        let outside = [&second[..foreign.len()]];
+        assert_eq!(outside[0], foreign);
+        assert_eq!(find_all(&second, USER_MARKER_START).len(), 1);
+    }
+
+    #[test]
+    fn malformed_user_markers_fail_closed() {
+        let malformed = b"<!-- AIGENT-HIVE:USER:START -->\nmissing end";
+        assert!(matches!(
+            merge_user_marker(malformed, &render_user_guidance(UserHost::Codex)),
+            Err(InstallError::Conflict(_))
+        ));
+    }
+
+    #[test]
+    fn supported_host_version_ranges_enforce_floor_ceiling_and_shape() {
+        for (host, floor, in_range, ceiling, malformed) in [
+            (
+                UserHost::Codex,
+                "codex-cli 0.145.0\n",
+                "codex-cli 0.999.9\n",
+                "codex-cli 1.0.0\n",
+                "codex-cli 0.145\n",
+            ),
+            (
+                UserHost::Claude,
+                "2.1.0 (Claude Code)\n",
+                "2.99.1 (Claude Code)\n",
+                "3.0.0 (Claude Code)\n",
+                "Claude Code 2.1.0\n",
+            ),
+            (
+                UserHost::Antigravity,
+                "antigravity 2.3.1\n",
+                "antigravity 2.99.0\n",
+                "antigravity 3.0.0\n",
+                "antigravity 2.3.1-dev\n",
+            ),
+        ] {
+            let executable = QualifiedExecutable::synthetic(host.as_str());
+            for accepted in [floor, in_range] {
+                let runner = VersionRunner {
+                    stdout: accepted.as_bytes().to_vec(),
+                    success: true,
+                };
+                assert!(
+                    probe_supported_host_version(host, &executable, &runner).is_ok(),
+                    "{host:?} should accept {accepted:?}"
+                );
+            }
+            for rejected in [ceiling, malformed] {
+                let runner = VersionRunner {
+                    stdout: rejected.as_bytes().to_vec(),
+                    success: true,
+                };
+                assert!(
+                    matches!(
+                        probe_supported_host_version(host, &executable, &runner),
+                        Err(InstallError::Unsupported(_))
+                    ),
+                    "{host:?} should reject {rejected:?}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn unsupported_host_version_stops_before_any_user_filesystem_mutation() {
+        for (host, stdout) in [
+            (UserHost::Codex, b"codex-cli 1.0.0\n".as_slice()),
+            (UserHost::Claude, b"3.0.0 (Claude Code)\n".as_slice()),
+            (UserHost::Antigravity, b"antigravity 3.0.0\n".as_slice()),
+        ] {
+            let temporary = tempdir().expect("tempdir");
+            let arguments = args(temporary.path(), host, UserMode::Apply);
+            let runner = VersionRunner {
+                stdout: stdout.to_vec(),
+                success: true,
+            };
+            let Err(error) = execute(UserOperation::Install, &arguments, &runner) else {
+                panic!("unsupported version");
+            };
+            assert!(matches!(error, InstallError::Unsupported(_)));
+            assert_eq!(
+                fs::read_dir(temporary.path()).expect("root").count(),
+                0,
+                "{host:?} changed the user root before version rejection"
+            );
+        }
+    }
+
+    #[test]
+    fn codex_uses_nonempty_override_without_touching_base_guidance() {
+        let temporary = tempdir().expect("tempdir");
+        fs::create_dir(temporary.path().join(".codex")).expect("codex dir");
+        fs::write(
+            temporary.path().join(".codex/AGENTS.override.md"),
+            b"temporary override\n",
+        )
+        .expect("override");
+        fs::write(
+            temporary.path().join(".codex/AGENTS.md"),
+            b"base guidance\n",
+        )
+        .expect("base");
+        let plan =
+            build_plan(&args(temporary.path(), UserHost::Codex, UserMode::DryRun)).expect("plan");
+        assert!(plan
+            .files
+            .contains_key(Path::new(".codex/AGENTS.override.md")));
+        assert!(!plan.files.contains_key(Path::new(".codex/AGENTS.md")));
+        assert_eq!(
+            fs::read(temporary.path().join(".codex/AGENTS.md")).expect("base"),
+            b"base guidance\n"
+        );
+    }
+
+    #[test]
+    fn first_install_refuses_foreign_managed_projection_for_every_host() {
+        for (host, relative) in [
+            (
+                UserHost::Codex,
+                ".hive/marketplaces/codex/plugins/aigent-hive/skills/setup-harness/SKILL.md",
+            ),
+            (
+                UserHost::Claude,
+                ".hive/marketplaces/claude/plugins/aigent-hive/skills/setup-harness/SKILL.md",
+            ),
+            (
+                UserHost::Antigravity,
+                ".gemini/config/plugins/aigent-hive/skills/setup-harness/SKILL.md",
+            ),
+        ] {
+            let temporary = tempdir().expect("tempdir");
+            let foreign = temporary.path().join(relative);
+            fs::create_dir_all(foreign.parent().expect("foreign parent")).expect("foreign parent");
+            fs::write(&foreign, b"foreign managed bytes\n").expect("foreign bytes");
+            let error = build_plan(&args(temporary.path(), host, UserMode::DryRun))
+                .err()
+                .expect("foreign path must conflict");
+            assert!(matches!(error, InstallError::Conflict(_)));
+            assert_eq!(
+                fs::read(foreign).expect("foreign bytes preserved"),
+                b"foreign managed bytes\n"
+            );
+        }
+    }
+
+    #[test]
+    fn occupied_manifest_without_complete_prior_ledger_is_not_ownership_proof() {
+        let temporary = tempdir().expect("tempdir");
+        let manifest = temporary.path().join(".hive/install/antigravity.json");
+        fs::create_dir_all(manifest.parent().expect("manifest parent")).expect("manifest parent");
+        fs::write(
+            &manifest,
+            br#"{
+  "schema_version": 1,
+  "product_version": "0.7.0",
+  "host": "antigravity",
+  "host_version_range": ">=2.3.1 <3.0.0",
+  "source_release_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "plan_digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "last_backup": null,
+  "guidance_path": ".gemini/GEMINI.md",
+  "entries": []
+}
+"#,
+        )
+        .expect("foreign manifest");
+        let Err(error) = build_plan(&args(
+            temporary.path(),
+            UserHost::Antigravity,
+            UserMode::DryRun,
+        )) else {
+            panic!("incomplete ledger must conflict");
+        };
+        assert!(matches!(error, InstallError::Conflict(_)));
+    }
+
+    #[test]
+    fn forged_nonempty_ledgers_matching_foreign_bytes_fail_for_every_host() {
+        for (host, relative, ownership) in [
+            (
+                UserHost::Codex,
+                ".hive/marketplaces/codex/plugins/aigent-hive/skills/setup-harness/SKILL.md",
+                "immutable-plugin-package",
+            ),
+            (
+                UserHost::Claude,
+                ".hive/marketplaces/claude/plugins/aigent-hive/skills/setup-harness/SKILL.md",
+                "immutable-plugin-package",
+            ),
+            (
+                UserHost::Antigravity,
+                ".gemini/config/plugins/aigent-hive/skills/setup-harness/SKILL.md",
+                "immutable-plugin-package",
+            ),
+        ] {
+            let temporary = tempdir().expect("tempdir");
+            let foreign = temporary.path().join(relative);
+            fs::create_dir_all(foreign.parent().expect("foreign parent")).expect("foreign parent");
+            fs::write(&foreign, b"foreign bytes with forged proof\n").expect("foreign");
+            let manifest_relative = PathBuf::from(format!(".hive/install/{}.json", host.as_str()));
+            let manifest_path = temporary.path().join(&manifest_relative);
+            fs::create_dir_all(manifest_path.parent().expect("manifest parent"))
+                .expect("manifest parent");
+            let mut forged = UserOwnershipManifest {
+                schema_version: 1,
+                product_version: env!("CARGO_PKG_VERSION").to_owned(),
+                host,
+                host_version_range: host.version_range().to_owned(),
+                source_release_digest:
+                    "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+                        .to_owned(),
+                plan_digest: String::new(),
+                last_backup: None,
+                guidance_path: portable(&match host {
+                    UserHost::Codex => PathBuf::from(".codex/AGENTS.md"),
+                    UserHost::Claude => PathBuf::from(".claude/CLAUDE.md"),
+                    UserHost::Antigravity => PathBuf::from(".gemini/GEMINI.md"),
+                }),
+                entries: vec![UserOwnershipEntry {
+                    path: relative.to_owned(),
+                    digest: sha256_digest(b"foreign bytes with forged proof\n"),
+                    executable: false,
+                    unix_mode: installed_unix_mode(false),
+                    ownership: ownership.to_owned(),
+                }],
+            };
+            forged.plan_digest = inventory_digest(
+                host,
+                &forged.product_version,
+                &forged.host_version_range,
+                Path::new(&forged.guidance_path),
+                &forged.source_release_digest,
+                &forged.entries,
+            );
+            fs::write(&manifest_path, json_line(&forged).expect("forged JSON"))
+                .expect("forged manifest");
+            let Err(error) = build_plan(&args(temporary.path(), host, UserMode::DryRun)) else {
+                panic!("forged manifest must conflict");
+            };
+            assert!(matches!(error, InstallError::Conflict(_)));
+            assert_eq!(
+                fs::read(&foreign).expect("foreign preserved"),
+                b"foreign bytes with forged proof\n"
+            );
+        }
+    }
+
+    #[test]
+    fn authenticated_historical_inventory_upgrades_to_current_release_for_every_host() {
+        for host in [UserHost::Codex, UserHost::Claude, UserHost::Antigravity] {
+            let temporary = tempdir().expect("tempdir");
+            let historical = historical_user_inventory(host);
+            let historical_files = historical_user_files(host);
+            let retired = historical_files
+                .iter()
+                .find(|(_, file)| file.executable)
+                .map(|(path, _)| path.clone())
+                .expect("retired executable");
+            let manifest_relative = PathBuf::from(format!(".hive/install/{}.json", host.as_str()));
+            seed_historical_user_install(temporary.path(), host);
+            let manifest_path = temporary.path().join(&manifest_relative);
+
+            let arguments = args(temporary.path(), host, UserMode::Apply);
+            let plan = build_plan(&arguments).expect("historical upgrade plan");
+            assert!(plan.retired_files.contains_key(&retired));
+            assert!(plan.changed_paths.contains(&portable(&retired)));
+            match host {
+                UserHost::Codex | UserHost::Claude => {
+                    let runner = StatefulHostRunner::new(temporary.path(), HostSabotage::None);
+                    execute(UserOperation::Update, &arguments, &runner)
+                        .expect("historical upgrade");
+                }
+                UserHost::Antigravity => {
+                    execute(UserOperation::Update, &arguments, &FakeRunner::new())
+                        .expect("historical upgrade");
+                }
+            }
+
+            let upgraded: UserOwnershipManifest =
+                serde_json::from_slice(&fs::read(&manifest_path).expect("upgraded manifest"))
+                    .expect("upgraded manifest JSON");
+            assert_eq!(upgraded.product_version, env!("CARGO_PKG_VERSION"));
+            assert_ne!(
+                upgraded.source_release_digest,
+                historical.source_release_digest
+            );
+            assert_ne!(upgraded.entries.len(), historical.entries.len());
+            assert!(!temporary.path().join(retired).exists());
+            assert_eq!(
+                fs::read(temporary.path().join(".hive/historical-shared-marker.md"))
+                    .expect("shared marker preserved"),
+                b"historical shared marker\n"
+            );
+            assert_eq!(
+                fs::read(
+                    temporary
+                        .path()
+                        .join(".hive/knowledge/historical-protected.md")
+                )
+                .expect("protected knowledge preserved"),
+                b"historical protected knowledge\n"
+            );
+        }
+    }
+
+    #[test]
+    fn modified_authenticated_prior_only_path_fails_closed_and_is_preserved() {
+        let temporary = tempdir().expect("tempdir");
+        seed_historical_user_install(temporary.path(), UserHost::Antigravity);
+        let retired = historical_user_files(UserHost::Antigravity)
+            .into_iter()
+            .find(|(_, file)| file.executable)
+            .map(|(path, _)| path)
+            .expect("retired executable");
+        let target = temporary.path().join(&retired);
+        fs::write(&target, b"locally modified retired skill\n").expect("local modification");
+
+        let error = build_plan(&args(
+            temporary.path(),
+            UserHost::Antigravity,
+            UserMode::DryRun,
+        ))
+        .err()
+        .expect("modified prior-only path must conflict");
+        assert!(matches!(error, InstallError::Conflict(_)));
+        assert_eq!(
+            fs::read(target).expect("modified bytes preserved"),
+            b"locally modified retired skill\n"
+        );
+    }
+
+    #[test]
+    fn reoccupied_authenticated_prior_only_path_fails_preflight_and_is_preserved() {
+        let temporary = tempdir().expect("tempdir");
+        seed_historical_user_install(temporary.path(), UserHost::Antigravity);
+        let retired = historical_user_files(UserHost::Antigravity)
+            .into_iter()
+            .find(|(_, file)| file.executable)
+            .map(|(path, _)| path)
+            .expect("retired executable");
+        let arguments = args(temporary.path(), UserHost::Antigravity, UserMode::Apply);
+        let mut plan = build_plan(&arguments).expect("historical upgrade plan");
+        let target = temporary.path().join(&retired);
+        fs::write(&target, b"foreign reoccupation after planning\n").expect("reoccupation");
+
+        let error = apply_plan(&arguments, &mut plan, None, None)
+            .err()
+            .expect("reoccupied prior-only path must conflict");
+        assert!(matches!(error, InstallError::Conflict(_)));
+        assert_eq!(
+            fs::read(target).expect("foreign bytes preserved"),
+            b"foreign reoccupation after planning\n"
+        );
+        assert!(!temporary
+            .path()
+            .join(".hive/backups/user-install/antigravity")
+            .exists());
+        assert!(!temporary
+            .path()
+            .join(".hive/install-transactions/antigravity.json")
+            .exists());
+    }
+
+    #[test]
+    fn failed_host_activation_rolls_back_authenticated_prior_only_deletion() {
+        let temporary = tempdir().expect("tempdir");
+        let historical = seed_historical_user_install(temporary.path(), UserHost::Codex);
+        let retired = historical_user_files(UserHost::Codex)
+            .into_iter()
+            .find(|(_, file)| file.executable)
+            .map(|(path, file)| (path, file.bytes))
+            .expect("retired executable");
+        let arguments = args(temporary.path(), UserHost::Codex, UserMode::Apply);
+        let runner = StatefulHostRunner::new(
+            temporary.path(),
+            HostSabotage::FailBeforeMarketplaceMutation,
+        );
+
+        let _error = execute(UserOperation::Update, &arguments, &runner)
+            .err()
+            .expect("host activation failure");
+        assert_eq!(
+            fs::read(temporary.path().join(&retired.0)).expect("retired file restored"),
+            retired.1
+        );
+        let restored: UserOwnershipManifest = serde_json::from_slice(
+            &fs::read(temporary.path().join(".hive/install/codex.json"))
+                .expect("restored manifest"),
+        )
+        .expect("restored manifest JSON");
+        assert_eq!(restored.product_version, historical.product_version);
+        assert_eq!(
+            restored.source_release_digest,
+            historical.source_release_digest
+        );
+    }
+
+    #[test]
+    fn recovery_restores_authenticated_prior_only_file_deleted_by_interrupted_upgrade() {
+        let temporary = tempdir().expect("tempdir");
+        seed_historical_user_install(temporary.path(), UserHost::Antigravity);
+        let retired = historical_user_files(UserHost::Antigravity)
+            .into_iter()
+            .find(|(_, file)| file.executable)
+            .map(|(path, file)| (path, file.bytes))
+            .expect("retired executable");
+        let arguments = args(temporary.path(), UserHost::Antigravity, UserMode::Apply);
+        let mut plan = build_plan(&arguments).expect("historical upgrade plan");
+        apply_plan(&arguments, &mut plan, None, None).expect("interrupted filesystem apply");
+        assert!(!temporary.path().join(&retired.0).exists());
+
+        recover(&arguments, &FakeRunner::new()).expect("recover interrupted upgrade");
+        assert_eq!(
+            fs::read(temporary.path().join(&retired.0)).expect("retired file restored"),
+            retired.1
+        );
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            assert_eq!(
+                fs::metadata(temporary.path().join(&retired.0))
+                    .expect("retired metadata")
+                    .permissions()
+                    .mode()
+                    & 0o777,
+                0o755
+            );
+        }
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn pinned_user_root_and_nofollow_ancestors_preserve_swap_targets() {
+        use std::os::unix::fs::symlink;
+
+        let container = tempdir().expect("container");
+        let user = container.path().join("user");
+        let moved = container.path().join("pinned-user");
+        let outside = container.path().join("outside");
+        fs::create_dir(&user).expect("user");
+        fs::create_dir(&outside).expect("outside");
+        fs::write(outside.join("sentinel"), b"outside bytes").expect("sentinel");
+        let arguments = args(&user, UserHost::Antigravity, UserMode::Apply);
+        let mut plan = build_plan(&arguments).expect("plan");
+        fs::rename(&user, &moved).expect("retarget root");
+        symlink(&outside, &user).expect("root symlink");
+        apply_plan(&arguments, &mut plan, None, None).expect("pinned apply");
+        assert!(moved
+            .join(".gemini/config/plugins/aigent-hive/plugin.json")
+            .is_file());
+        assert_eq!(
+            fs::read(outside.join("sentinel")).expect("outside"),
+            b"outside bytes"
+        );
+        assert!(!outside.join(".gemini").exists());
+
+        let second = tempdir().expect("second");
+        let outside = tempdir().expect("outside");
+        fs::create_dir_all(second.path().join(".gemini")).expect("gemini");
+        let arguments = args(second.path(), UserHost::Antigravity, UserMode::Apply);
+        let mut plan = build_plan(&arguments).expect("plan");
+        symlink(outside.path(), second.path().join(".gemini/config")).expect("ancestor symlink");
+        let error = apply_plan(&arguments, &mut plan, None, None)
+            .err()
+            .expect("ancestor swap conflict");
+        assert!(matches!(error, InstallError::Conflict(_)));
+        assert!(!outside.path().join("plugins").exists());
+    }
+
+    #[test]
+    fn late_sorted_drift_fails_before_any_backup_or_journal_write() {
+        let temporary = tempdir().expect("tempdir");
+        let arguments = args(temporary.path(), UserHost::Antigravity, UserMode::Apply);
+        let mut plan = build_plan(&arguments).expect("plan");
+        let late = plan
+            .files
+            .keys()
+            .next_back()
+            .expect("late planned path")
+            .clone();
+        let path = temporary.path().join(&late);
+        fs::create_dir_all(path.parent().expect("late parent")).expect("late parent");
+        fs::write(&path, b"late concurrent bytes\n").expect("late drift");
+        let before = snapshot_user_tree(temporary.path());
+        let error = apply_plan(&arguments, &mut plan, None, None)
+            .err()
+            .expect("late drift conflict");
+        assert!(matches!(error, InstallError::Conflict(_)));
+        assert_eq!(snapshot_user_tree(temporary.path()), before);
+        assert!(!temporary
+            .path()
+            .join(".hive/backups/user-install/antigravity")
+            .exists());
+        assert!(!temporary
+            .path()
+            .join(".hive/install-transactions/antigravity.json")
+            .exists());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn mode_only_drift_fails_before_any_backup_or_journal_write() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let temporary = tempdir().expect("tempdir");
+        let guidance = temporary.path().join(".gemini/GEMINI.md");
+        fs::create_dir_all(guidance.parent().expect("guidance parent")).expect("guidance parent");
+        fs::write(&guidance, b"foreign guidance\n").expect("guidance");
+        fs::set_permissions(&guidance, fs::Permissions::from_mode(0o644)).expect("initial mode");
+        let arguments = args(temporary.path(), UserHost::Antigravity, UserMode::Apply);
+        let mut plan = build_plan(&arguments).expect("plan");
+        fs::set_permissions(&guidance, fs::Permissions::from_mode(0o600)).expect("mode drift");
+        let error = apply_plan(&arguments, &mut plan, None, None)
+            .err()
+            .expect("mode drift conflict");
+        assert!(matches!(error, InstallError::Conflict(_)));
+        assert_eq!(
+            fs::metadata(&guidance)
+                .expect("guidance metadata")
+                .permissions()
+                .mode()
+                & 0o7777,
+            0o600
+        );
+        assert!(!temporary
+            .path()
+            .join(".hive/backups/user-install/antigravity")
+            .exists());
+        assert!(!temporary
+            .path()
+            .join(".hive/install-transactions/antigravity.json")
+            .exists());
+    }
+
+    #[test]
+    fn destination_reoccupation_preserves_foreign_and_claimed_prior_bytes() {
+        let temporary = tempdir().expect("tempdir");
+        let root = open_user_root(temporary.path()).expect("root capability");
+        let relative = Path::new(".gemini/config/plugins/aigent-hive/plugin.json");
+        create_new_exclusive(
+            &root,
+            relative,
+            b"prior owned bytes\n",
+            FilePermissions::default(),
+        )
+        .expect("seed prior");
+        let barrier = |parent: &Dir, name: &OsStr, _claim: &Dir| {
+            let mut options = OpenOptions::new();
+            options
+                .write(true)
+                .create_new(true)
+                .follow(FollowSymlinks::No);
+            let mut file = parent.open_with(name, &options).expect("foreign claim");
+            file.write_all(b"foreign concurrent bytes\n")
+                .expect("foreign bytes");
+            file.sync_all().expect("foreign sync");
+        };
+        let error = cas_activate_with_barrier(
+            &root,
+            relative,
+            Some(ExpectedFile {
+                bytes: b"prior owned bytes\n",
+                permissions: file_permissions(&root, relative).expect("prior permissions"),
+            }),
+            Some(b"incoming bytes\n"),
+            FilePermissions::default(),
+            Some(&barrier),
+        )
+        .expect_err("destination conflict");
+        assert!(matches!(error, InstallError::Verification(_)));
+        assert_eq!(
+            read_optional_regular(&root, relative, MAX_USER_FILE_BYTES)
+                .expect("read foreign")
+                .expect("foreign exists"),
+            b"foreign concurrent bytes\n"
+        );
+        assert_eq!(
+            read_optional_regular(&root, &recovery_locator(relative), MAX_USER_FILE_BYTES)
+                .expect("read recovery")
+                .expect("recovery exists"),
+            b"prior owned bytes\n"
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn permission_change_after_inode_claim_fails_closed_and_preserves_third_party_mode() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let temporary = tempdir().expect("tempdir");
+        let root = open_user_root(temporary.path()).expect("root capability");
+        let relative = Path::new(".gemini/config/plugins/aigent-hive/plugin.json");
+        let expected_permissions = FilePermissions {
+            executable: false,
+            unix_mode: Some(0o644),
+        };
+        create_new_exclusive(
+            &root,
+            relative,
+            b"prior owned bytes\n",
+            expected_permissions,
+        )
+        .expect("seed prior");
+        let barrier = |_parent: &Dir, _name: &OsStr, claim: &Dir| {
+            let file = claim.open("claimed.bin").expect("open claimed inode");
+            file.set_permissions(cap_primitives::fs::Permissions::from_mode(0o600))
+                .expect("third-party chmod");
+        };
+
+        let error = cas_activate_with_barrier(
+            &root,
+            relative,
+            Some(ExpectedFile {
+                bytes: b"prior owned bytes\n",
+                permissions: expected_permissions,
+            }),
+            Some(b"incoming bytes\n"),
+            FilePermissions {
+                executable: false,
+                unix_mode: Some(0o644),
+            },
+            Some(&barrier),
+        )
+        .expect_err("permission race must conflict");
+        assert!(matches!(error, InstallError::Conflict(_)));
+        assert_eq!(
+            fs::read(temporary.path().join(relative)).expect("preserved bytes"),
+            b"prior owned bytes\n"
+        );
+        assert_eq!(
+            fs::metadata(temporary.path().join(relative))
+                .expect("preserved metadata")
+                .permissions()
+                .mode()
+                & 0o7777,
+            0o600
+        );
+        assert!(!temporary
+            .path()
+            .join(".hive/install-transactions/antigravity.json")
+            .exists());
+        assert!(!temporary.path().join(recovery_locator(relative)).exists());
+    }
+
+    #[test]
+    fn recovery_reconciles_published_replacement_with_retained_prior_claim() {
+        let temporary = tempdir().expect("tempdir");
+        let root = open_user_root(temporary.path()).expect("root capability");
+        let relative = Path::new(".gemini/config/plugins/aigent-hive/plugin.json");
+        let permissions = installed_file_permissions(false);
+        create_new_exclusive(&root, relative, b"prior owned bytes\n", permissions)
+            .expect("seed prior");
+        let (parent, destination) = capability_parent(&root, relative, false)
+            .expect("parent")
+            .expect("existing parent");
+        let claim_name = claim_name(relative);
+        parent.create_dir(&claim_name).expect("claim");
+        let claim = parent.open_dir_nofollow(&claim_name).expect("claim dir");
+        parent
+            .rename(&destination, &claim, OsStr::new("claimed.bin"))
+            .expect("claim prior");
+        stage_file(
+            &claim,
+            "replacement.bin",
+            b"installed bytes\n",
+            permissions,
+            relative,
+        )
+        .expect("replacement");
+        claim
+            .hard_link("replacement.bin", &parent, &destination)
+            .expect("publish");
+        drop(claim);
+        let entry = UserBackupEntry {
+            path: portable(relative),
+            existed: true,
+            digest: Some(sha256_digest(b"prior owned bytes\n")),
+            installed_digest: Some(sha256_digest(b"installed bytes\n")),
+            installed_executable: Some(permissions.executable),
+            installed_unix_mode: permissions.unix_mode,
+            executable: permissions.executable,
+            unix_mode: permissions.unix_mode,
+        };
+        reconcile_retained_claim(&root, relative, &entry).expect("reconcile");
+        assert_eq!(
+            read_optional_regular(&root, relative, MAX_USER_FILE_BYTES)
+                .expect("prior read")
+                .expect("prior exists"),
+            b"prior owned bytes\n"
+        );
+        assert!(
+            read_optional_regular(&root, &recovery_locator(relative), MAX_USER_FILE_BYTES)
+                .expect("claim read")
+                .is_none()
+        );
+    }
+
+    #[test]
+    fn recovery_reconciles_retained_claim_from_interrupted_deletion() {
+        let temporary = tempdir().expect("tempdir");
+        let root = open_user_root(temporary.path()).expect("root capability");
+        let relative = Path::new(".gemini/config/plugins/aigent-hive/bin/retired");
+        create_new_exclusive(
+            &root,
+            relative,
+            b"prior executable bytes\n",
+            FilePermissions {
+                executable: true,
+                unix_mode: installed_unix_mode(true),
+            },
+        )
+        .expect("seed prior");
+        let (parent, destination) = capability_parent(&root, relative, false)
+            .expect("parent")
+            .expect("existing parent");
+        let claim_name = claim_name(relative);
+        parent.create_dir(&claim_name).expect("claim directory");
+        let claim = parent.open_dir_nofollow(&claim_name).expect("open claim");
+        parent
+            .rename(&destination, &claim, OsStr::new("claimed.bin"))
+            .expect("claim prior");
+        drop(claim);
+        let entry = UserBackupEntry {
+            path: portable(relative),
+            existed: true,
+            digest: Some(sha256_digest(b"prior executable bytes\n")),
+            installed_digest: None,
+            installed_executable: None,
+            installed_unix_mode: None,
+            executable: true,
+            unix_mode: installed_unix_mode(true),
+        };
+
+        reconcile_retained_claim(&root, relative, &entry).expect("reconcile deletion claim");
+        assert_eq!(
+            read_optional_regular(&root, relative, MAX_USER_FILE_BYTES)
+                .expect("read restored")
+                .expect("restored prior"),
+            b"prior executable bytes\n"
+        );
+        assert!(
+            read_optional_regular(&root, &recovery_locator(relative), MAX_USER_FILE_BYTES)
+                .expect("claim read")
+                .is_none()
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    #[allow(clippy::too_many_lines)]
+    fn recovery_authority_rejects_chmod_only_drift_for_every_file_state() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let temporary = tempdir().expect("tempdir");
+        let root = open_user_root(temporary.path()).expect("root capability");
+        let cases = [
+            (
+                "existing-prior",
+                true,
+                b"prior bytes\n".as_slice(),
+                Some(b"installed bytes\n".as_slice()),
+                0o644,
+                Some(0o755),
+                b"prior bytes\n".as_slice(),
+                0o600,
+            ),
+            (
+                "existing-installed",
+                true,
+                b"prior bytes\n".as_slice(),
+                Some(b"installed bytes\n".as_slice()),
+                0o644,
+                Some(0o755),
+                b"installed bytes\n".as_slice(),
+                0o644,
+            ),
+            (
+                "created-executable",
+                false,
+                b"".as_slice(),
+                Some(b"created executable\n".as_slice()),
+                0o644,
+                Some(0o755),
+                b"created executable\n".as_slice(),
+                0o644,
+            ),
+            (
+                "retired-prior",
+                true,
+                b"retired executable\n".as_slice(),
+                None,
+                0o755,
+                None,
+                b"retired executable\n".as_slice(),
+                0o644,
+            ),
+        ];
+        for (name, existed, prior, installed, prior_mode, installed_mode, live, drifted_mode) in
+            cases
+        {
+            let relative = PathBuf::from(format!(".hive/recovery-mode-cases/{name}"));
+            let target = temporary.path().join(&relative);
+            fs::create_dir_all(target.parent().expect("case parent")).expect("case parent");
+            fs::write(&target, live).expect("live bytes");
+            fs::set_permissions(&target, fs::Permissions::from_mode(drifted_mode))
+                .expect("drifted mode");
+            let entry = UserBackupEntry {
+                path: portable(&relative),
+                existed,
+                digest: existed.then(|| sha256_digest(prior)),
+                installed_digest: installed.map(sha256_digest),
+                installed_executable: installed_mode.map(|mode| mode & 0o111 != 0),
+                installed_unix_mode: installed_mode,
+                executable: prior_mode & 0o111 != 0,
+                unix_mode: existed.then_some(prior_mode),
+            };
+
+            let error = current_installed_state(&root, &relative, &entry)
+                .err()
+                .expect("chmod-only drift must conflict");
+            assert!(matches!(error, InstallError::Conflict(_)), "{name}");
+            assert_eq!(fs::read(&target).expect("preserved bytes"), live, "{name}");
+            assert_eq!(
+                fs::metadata(&target)
+                    .expect("preserved metadata")
+                    .permissions()
+                    .mode()
+                    & 0o7777,
+                drifted_mode,
+                "{name}"
+            );
+        }
+        let legacy_relative = Path::new(".hive/recovery-mode-cases/legacy-installed");
+        fs::write(
+            temporary.path().join(legacy_relative),
+            b"legacy installed bytes\n",
+        )
+        .expect("legacy bytes");
+        fs::set_permissions(
+            temporary.path().join(legacy_relative),
+            fs::Permissions::from_mode(0o644),
+        )
+        .expect("legacy mode");
+        let legacy = UserBackupEntry {
+            path: portable(legacy_relative),
+            existed: false,
+            digest: None,
+            installed_digest: Some(sha256_digest(b"legacy installed bytes\n")),
+            installed_executable: None,
+            installed_unix_mode: None,
+            executable: false,
+            unix_mode: None,
+        };
+        assert!(matches!(
+            current_installed_state(&root, legacy_relative, &legacy),
+            Err(InstallError::Verification(_))
+        ));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn recovery_preserves_chmod_drift_on_retained_claim_object() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let temporary = tempdir().expect("tempdir");
+        let root = open_user_root(temporary.path()).expect("root capability");
+        let relative = Path::new(".gemini/config/plugins/aigent-hive/bin/retired-mode-drift");
+        create_new_exclusive(
+            &root,
+            relative,
+            b"prior executable bytes\n",
+            FilePermissions {
+                executable: true,
+                unix_mode: Some(0o755),
+            },
+        )
+        .expect("seed prior");
+        let (parent, destination) = capability_parent(&root, relative, false)
+            .expect("parent")
+            .expect("existing parent");
+        let claim_name = claim_name(relative);
+        parent.create_dir(&claim_name).expect("claim directory");
+        let claim = parent.open_dir_nofollow(&claim_name).expect("open claim");
+        parent
+            .rename(&destination, &claim, OsStr::new("claimed.bin"))
+            .expect("claim prior");
+        let claimed = claim.open("claimed.bin").expect("claimed object");
+        claimed
+            .set_permissions(cap_primitives::fs::Permissions::from_mode(0o600))
+            .expect("claim chmod");
+        drop(claimed);
+        drop(claim);
+        let entry = UserBackupEntry {
+            path: portable(relative),
+            existed: true,
+            digest: Some(sha256_digest(b"prior executable bytes\n")),
+            installed_digest: None,
+            installed_executable: None,
+            installed_unix_mode: None,
+            executable: true,
+            unix_mode: Some(0o755),
+        };
+
+        let error = reconcile_retained_claim(&root, relative, &entry)
+            .expect_err("claim mode drift must conflict");
+        assert!(matches!(error, InstallError::Verification(_)));
+        assert!(!temporary.path().join(relative).exists());
+        let claim_path = temporary.path().join(recovery_locator(relative));
+        assert_eq!(
+            fs::read(&claim_path).expect("claimed bytes preserved"),
+            b"prior executable bytes\n"
+        );
+        assert_eq!(
+            fs::metadata(claim_path)
+                .expect("claimed metadata")
+                .permissions()
+                .mode()
+                & 0o7777,
+            0o600
+        );
+    }
+
+    #[test]
+    fn antigravity_apply_validates_and_recovery_restores_foreign_guidance() {
+        let temporary = tempdir().expect("tempdir");
+        fs::create_dir(temporary.path().join(".gemini")).expect("gemini");
+        fs::write(
+            temporary.path().join(".gemini/GEMINI.md"),
+            b"foreign guidance\n",
+        )
+        .expect("guidance");
+        let runner = FakeRunner::new();
+        let apply = args(temporary.path(), UserHost::Antigravity, UserMode::Apply);
+        execute(UserOperation::Install, &apply, &runner).expect("apply");
+        let manifest: UserOwnershipManifest = serde_json::from_slice(
+            &fs::read(temporary.path().join(".hive/install/antigravity.json")).expect("manifest"),
+        )
+        .expect("manifest JSON");
+        assert_ne!(
+            manifest.source_release_digest,
+            sha256_digest(&[]),
+            "Antigravity plugin and Skill projections must bind the source release"
+        );
+        assert!(temporary
+            .path()
+            .join(".gemini/config/plugins/aigent-hive/plugin.json")
+            .is_file());
+        assert!(temporary
+            .path()
+            .join(".gemini/config/plugins/aigent-hive/skills/setup-harness/SKILL.md")
+            .is_file());
+        let validate = args(temporary.path(), UserHost::Antigravity, UserMode::Validate);
+        execute(UserOperation::Install, &validate, &runner).expect("validate");
+        let recover_args = args(temporary.path(), UserHost::Antigravity, UserMode::Recover);
+        recover(&recover_args, &runner).expect("recover");
+        assert_eq!(
+            fs::read(temporary.path().join(".gemini/GEMINI.md")).expect("guidance"),
+            b"foreign guidance\n"
+        );
+    }
+
+    #[test]
+    fn codex_activation_uses_only_native_fixed_argv() {
+        let temporary = tempdir().expect("tempdir");
+        let runner = StatefulHostRunner::new(temporary.path(), HostSabotage::None);
+        let arguments = args(temporary.path(), UserHost::Codex, UserMode::Apply);
+        execute(UserOperation::Install, &arguments, &runner).expect("install");
+        let calls = runner.calls.lock().expect("calls");
+        let marketplace = arguments
+            .user_root
+            .join(".hive/marketplaces/codex")
+            .to_string_lossy()
+            .into_owned();
+        assert_eq!(
+            *calls,
+            [
+                "--version".to_owned(),
+                "plugin marketplace list --json".to_owned(),
+                "plugin list --json".to_owned(),
+                "plugin marketplace list --json".to_owned(),
+                "plugin list --json".to_owned(),
+                format!("plugin marketplace add {marketplace} --json"),
+                "plugin marketplace list --json".to_owned(),
+                "plugin list --json".to_owned(),
+                "plugin marketplace list --json".to_owned(),
+                "plugin list --json".to_owned(),
+                "plugin add aigent-hive@aigent-hive --json".to_owned(),
+                "plugin marketplace list --json".to_owned(),
+                "plugin list --json".to_owned(),
+                "plugin marketplace list --json".to_owned(),
+                "plugin list --json".to_owned(),
+            ]
+        );
+    }
+
+    #[test]
+    fn claude_activation_uses_only_native_fixed_argv() {
+        let temporary = tempdir().expect("tempdir");
+        let runner = StatefulHostRunner::new(temporary.path(), HostSabotage::None);
+        let arguments = args(temporary.path(), UserHost::Claude, UserMode::Apply);
+        execute(UserOperation::Install, &arguments, &runner).expect("Claude install");
+        let marketplace = arguments
+            .user_root
+            .join(".hive/marketplaces/claude")
+            .to_string_lossy()
+            .into_owned();
+        assert_eq!(
+            *runner.calls.lock().expect("calls"),
+            [
+                "--version".to_owned(),
+                "plugin marketplace list --json".to_owned(),
+                "plugin list --json".to_owned(),
+                format!("plugin validate {marketplace}"),
+                "plugin marketplace list --json".to_owned(),
+                "plugin list --json".to_owned(),
+                format!("plugin marketplace add {marketplace} --scope user"),
+                "plugin marketplace list --json".to_owned(),
+                "plugin list --json".to_owned(),
+                "plugin marketplace list --json".to_owned(),
+                "plugin list --json".to_owned(),
+                "plugin install aigent-hive@aigent-hive --scope user".to_owned(),
+                "plugin marketplace list --json".to_owned(),
+                "plugin list --json".to_owned(),
+                "plugin marketplace list --json".to_owned(),
+                "plugin list --json".to_owned(),
+            ]
+        );
+    }
+
+    #[test]
+    fn unavailable_host_cli_is_detected_before_user_files_change() {
+        let temporary = tempdir().expect("tempdir");
+        let arguments = args(temporary.path(), UserHost::Codex, UserMode::Apply);
+        let error = execute(UserOperation::Install, &arguments, &UnavailableRunner)
+            .err()
+            .expect("missing host CLI");
+        assert!(matches!(error, InstallError::Unsupported(_)));
+        assert!(!temporary.path().join(".codex").exists());
+        assert!(!temporary.path().join(".hive").exists());
+    }
+
+    #[test]
+    fn failed_native_activation_rolls_back_active_user_files() {
+        let temporary = tempdir().expect("tempdir");
+        let runner =
+            StatefulHostRunner::new(temporary.path(), HostSabotage::FailBeforePluginMutation);
+        let arguments = args(temporary.path(), UserHost::Codex, UserMode::Apply);
+        let error = execute(UserOperation::Install, &arguments, &runner)
+            .err()
+            .expect("activation failure");
+        assert!(matches!(error, InstallError::Internal(_)));
+        assert!(error
+            .message()
+            .contains("failed before its exact structured transition"));
+        assert!(!temporary.path().join(".codex/AGENTS.md").exists());
+        assert!(!temporary.path().join(".hive/install/codex.json").exists());
+        assert_eq!(runner.external_state(), (true, false));
+        assert!(temporary
+            .path()
+            .join(".hive/install-transactions/codex.json")
+            .is_file());
+        assert!(
+            temporary
+                .path()
+                .join(".hive/backups/user-install/codex")
+                .is_dir(),
+            "recoverable backup remains after automatic rollback"
+        );
+    }
+
+    #[test]
+    fn repeated_install_skips_duplicate_marketplace_registration() {
+        let temporary = tempdir().expect("tempdir");
+        let runner = StatefulHostRunner::new(temporary.path(), HostSabotage::None);
+        let arguments = args(temporary.path(), UserHost::Codex, UserMode::Apply);
+        execute(UserOperation::Install, &arguments, &runner).expect("first install");
+        let first_call_count = runner.calls.lock().expect("calls").len();
+        execute(UserOperation::Install, &arguments, &runner).expect("second install");
+        let calls = runner.calls.lock().expect("calls");
+        let repeated = &calls[first_call_count..];
+        assert!(!repeated
+            .iter()
+            .any(|call| call.starts_with("plugin marketplace add ")));
+        assert!(repeated
+            .iter()
+            .any(|call| call == "plugin add aigent-hive@aigent-hive --json"));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn backup_and_recovery_preserve_exact_unix_modes() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let temporary = tempdir().expect("tempdir");
+        fs::create_dir(temporary.path().join(".gemini")).expect("gemini");
+        let guidance = temporary.path().join(".gemini/GEMINI.md");
+        fs::write(&guidance, b"foreign executable guidance\n").expect("guidance");
+        fs::set_permissions(&guidance, fs::Permissions::from_mode(0o700)).expect("guidance mode");
+        let suppression = temporary.path().join(".hive/knowledge/suppression.yml");
+        fs::create_dir_all(suppression.parent().expect("suppression parent"))
+            .expect("knowledge directory");
+        fs::write(&suppression, ROOT_SUPPRESSION).expect("suppression");
+        fs::set_permissions(&suppression, fs::Permissions::from_mode(0o640))
+            .expect("suppression mode");
+        let runner = FakeRunner::new();
+        let arguments = args(temporary.path(), UserHost::Antigravity, UserMode::Apply);
+        execute(UserOperation::Install, &arguments, &runner).expect("apply");
+        let manifest: UserOwnershipManifest = serde_json::from_slice(
+            &fs::read(temporary.path().join(".hive/install/antigravity.json")).expect("manifest"),
+        )
+        .expect("manifest JSON");
+        let backup = PathBuf::from(manifest.last_backup.expect("backup"));
+        assert_eq!(
+            fs::metadata(
+                temporary
+                    .path()
+                    .join(&backup)
+                    .join("files/.gemini/GEMINI.md")
+            )
+            .expect("backup guidance")
+            .permissions()
+            .mode()
+                & 0o7777,
+            0o700
+        );
+        assert_eq!(
+            fs::metadata(
+                temporary
+                    .path()
+                    .join(&backup)
+                    .join("files/.hive/knowledge/suppression.yml")
+            )
+            .expect("backup suppression")
+            .permissions()
+            .mode()
+                & 0o7777,
+            0o640
+        );
+        recover(&arguments, &runner).expect("recover");
+        assert_eq!(
+            fs::metadata(&guidance)
+                .expect("guidance")
+                .permissions()
+                .mode()
+                & 0o7777,
+            0o700
+        );
+        assert_eq!(
+            fs::metadata(&suppression)
+                .expect("suppression")
+                .permissions()
+                .mode()
+                & 0o7777,
+            0o640
+        );
+        assert_eq!(
+            fs::read(guidance).expect("recovered guidance"),
+            b"foreign executable guidance\n"
+        );
+    }
+
+    #[test]
+    fn fresh_install_crash_recovers_from_journal_without_installed_manifest() {
+        let temporary = tempdir().expect("tempdir");
+        fs::create_dir(temporary.path().join(".gemini")).expect("gemini");
+        fs::write(
+            temporary.path().join(".gemini/GEMINI.md"),
+            b"foreign guidance\n",
+        )
+        .expect("guidance");
+        let arguments = args(temporary.path(), UserHost::Antigravity, UserMode::Apply);
+        let mut plan = build_plan(&arguments).expect("plan");
+        apply_plan(&arguments, &mut plan, None, None).expect("partial apply");
+        fs::remove_file(temporary.path().join(".hive/install/antigravity.json"))
+            .expect("simulate crash before installed manifest activation");
+        recover(&arguments, &FakeRunner::new()).expect("journal recovery");
+        assert_eq!(
+            fs::read(temporary.path().join(".gemini/GEMINI.md")).expect("guidance"),
+            b"foreign guidance\n"
+        );
+        assert!(!temporary
+            .path()
+            .join(".hive/install-transactions/antigravity.json")
+            .exists());
+    }
+
+    #[test]
+    fn ambiguous_host_mutations_are_not_compensated() {
+        let temporary = tempdir().expect("tempdir");
+        let runner =
+            StatefulHostRunner::new(temporary.path(), HostSabotage::FailBeforePluginMutation);
+        let arguments = args(temporary.path(), UserHost::Codex, UserMode::Apply);
+        let error = execute(UserOperation::Install, &arguments, &runner)
+            .err()
+            .expect("activation failure");
+        assert!(matches!(error, InstallError::Internal(_)));
+        assert_eq!(runner.external_state(), (true, false));
+        let calls = runner.calls.lock().expect("calls");
+        assert!(!calls
+            .iter()
+            .any(|call| call == "plugin marketplace remove aigent-hive --json"));
+        assert!(!calls
+            .iter()
+            .any(|call| call == "plugin remove aigent-hive@aigent-hive --json"));
+    }
+
+    #[test]
+    fn every_mutation_has_an_explicit_qualified_compensation_surface() {
+        for mutation in [
+            HostMutation::CodexMarketplaceAdded,
+            HostMutation::CodexPluginAdded,
+            HostMutation::CodexPluginRefreshed,
+        ] {
+            assert_eq!(
+                compensation_surface(mutation),
+                HostCompensationSurface::CodexStructuredJson
+            );
+        }
+        for mutation in [
+            HostMutation::ClaudeMarketplaceAdded,
+            HostMutation::ClaudePluginInstalled,
+            HostMutation::ClaudeMarketplaceRefreshed,
+            HostMutation::ClaudePluginRefreshed,
+        ] {
+            assert_eq!(
+                compensation_surface(mutation),
+                HostCompensationSurface::ClaudeStructuredJson
+            );
+        }
+    }
+
+    #[test]
+    fn codex_probe_parsers_accept_real_shapes_and_reject_ambiguous_duplicates() {
+        let marketplace = br#"{
+          "marketplaces": [{
+            "name": "aigent-hive",
+            "root": "/tmp/.hive/marketplaces/codex",
+            "marketplaceSource": {"sourceType": "local", "source": "/tmp/source"}
+          }]
+        }"#;
+        assert_eq!(
+            parse_codex_marketplace_state(marketplace).expect("marketplace state"),
+            Some(CodexMarketplaceState {
+                root: "/tmp/.hive/marketplaces/codex".to_owned()
+            })
+        );
+        let plugin = br#"{
+          "installed": [{
+            "pluginId": "aigent-hive@aigent-hive",
+            "name": "aigent-hive",
+            "marketplaceName": "aigent-hive",
+            "version": "0.7.0",
+            "installed": true,
+            "enabled": true,
+            "source": {"source": "local", "path": "/tmp/plugin"},
+            "marketplaceSource": {"sourceType": "local", "source": "/tmp/source"}
+          }],
+          "available": []
+        }"#;
+        assert_eq!(
+            parse_codex_plugin_state(plugin).expect("plugin state"),
+            Some(CodexPluginState {
+                version: "0.7.0".to_owned(),
+                enabled: true,
+                source_path: "/tmp/plugin".to_owned(),
+                marketplace_source: "/tmp/source".to_owned()
+            })
+        );
+        let duplicate = br#"{"marketplaces":[
+          {"name":"aigent-hive","root":"/tmp/a"},
+          {"name":"aigent-hive","root":"/tmp/b"}
+        ]}"#;
+        assert!(parse_codex_marketplace_state(duplicate).is_err());
+    }
+
+    #[test]
+    fn claude_probe_parsers_accept_documented_shapes_and_reject_ambiguous_duplicates() {
+        let marketplace = br#"[{
+          "name": "aigent-hive",
+          "source": "directory",
+          "path": "/tmp/.hive/marketplaces/claude",
+          "installLocation": "/tmp/.claude/plugins/marketplaces/aigent-hive"
+        }]"#;
+        assert_eq!(
+            parse_claude_marketplace_state(marketplace).expect("marketplace state"),
+            Some(ClaudeMarketplaceState {
+                source: "directory".to_owned(),
+                path: "/tmp/.hive/marketplaces/claude".to_owned()
+            })
+        );
+        let plugin = br#"[{
+          "id": "aigent-hive@aigent-hive",
+          "version": "0.7.0",
+          "scope": "user",
+          "enabled": true,
+          "status": "enabled"
+        }]"#;
+        assert_eq!(
+            parse_claude_plugin_state(plugin).expect("plugin state"),
+            Some(ClaudePluginState {
+                version: "0.7.0".to_owned(),
+                enabled: true,
+                scope: "user".to_owned()
+            })
+        );
+        let duplicate = br#"[
+          {"name":"aigent-hive","source":"directory","path":"/tmp/a"},
+          {"name":"aigent-hive","source":"directory","path":"/tmp/b"}
+        ]"#;
+        assert!(parse_claude_marketplace_state(duplicate).is_err());
+    }
+
+    #[test]
+    fn crashes_before_forward_mutation_remain_pending() {
+        for sabotage in [
+            HostSabotage::FailBeforeMarketplaceMutation,
+            HostSabotage::FailBeforePluginMutation,
+        ] {
+            let temporary = tempdir().expect("tempdir");
+            let runner = StatefulHostRunner::new(temporary.path(), sabotage);
+            let arguments = args(temporary.path(), UserHost::Codex, UserMode::Apply);
+            let error = execute(UserOperation::Install, &arguments, &runner)
+                .err()
+                .expect("forward failure");
+            assert!(matches!(error, InstallError::Internal(_)));
+            assert!(temporary
+                .path()
+                .join(".hive/install-transactions/codex.json")
+                .is_file());
+        }
+    }
+
+    #[test]
+    fn concurrent_drift_before_first_host_mutation_is_preserved_for_both_hosts() {
+        for host in [UserHost::Codex, UserHost::Claude] {
+            let temporary = tempdir().expect("tempdir");
+            let runner =
+                StatefulHostRunner::new(temporary.path(), HostSabotage::DriftBeforeFirstMutation);
+            let arguments = args(temporary.path(), host, UserMode::Apply);
+            let error = execute(UserOperation::Install, &arguments, &runner)
+                .err()
+                .expect("pre-command drift");
+            assert!(matches!(error, InstallError::Conflict(_)));
+            assert_eq!(runner.external_state(), (true, false));
+            let calls = runner.calls.lock().expect("calls");
+            assert!(!calls.iter().any(|call| {
+                call.starts_with("plugin marketplace add ")
+                    || call == "plugin add aigent-hive@aigent-hive --json"
+                    || call == "plugin install aigent-hive@aigent-hive --scope user"
+            }));
+            assert!(!temporary
+                .path()
+                .join(format!(".hive/install-transactions/{}.json", host.as_str()))
+                .exists());
+        }
+    }
+
+    #[test]
+    fn concurrent_drift_before_later_host_mutation_blocks_safe_recovery() {
+        for host in [UserHost::Codex, UserHost::Claude] {
+            let temporary = tempdir().expect("tempdir");
+            let runner =
+                StatefulHostRunner::new(temporary.path(), HostSabotage::DriftBeforeSecondMutation);
+            let arguments = args(temporary.path(), host, UserMode::Apply);
+            let error = execute(UserOperation::Install, &arguments, &runner)
+                .err()
+                .expect("later-command drift");
+            assert!(matches!(error, InstallError::Internal(_)));
+            assert_eq!(runner.external_state(), (true, true));
+            let journal = temporary
+                .path()
+                .join(format!(".hive/install-transactions/{}.json", host.as_str()));
+            assert!(journal.is_file());
+            let before_recovery = runner.calls.lock().expect("calls").len();
+            let recovery_error = recover(&arguments, &runner)
+                .err()
+                .expect("recovery must preserve drift");
+            assert!(matches!(recovery_error, InstallError::Conflict(_)));
+            assert_eq!(runner.external_state(), (true, true));
+            let calls = runner.calls.lock().expect("calls");
+            assert!(!calls[before_recovery..].iter().any(|call| {
+                call.contains(" remove ")
+                    || call.starts_with("plugin remove ")
+                    || call.starts_with("plugin uninstall ")
+            }));
+            assert!(journal.is_file());
+        }
+    }
+
+    #[test]
+    fn concurrent_drift_before_later_compensation_preserves_external_state_and_evidence() {
+        for host in [UserHost::Codex, UserHost::Claude] {
+            let temporary = tempdir().expect("tempdir");
+            let runner = StatefulHostRunner::new(
+                temporary.path(),
+                HostSabotage::DriftBeforeLaterCompensation,
+            );
+            let arguments = args(temporary.path(), host, UserMode::Apply);
+            execute(UserOperation::Install, &arguments, &runner).expect("install");
+            let ownership: UserOwnershipManifest = serde_json::from_slice(
+                &fs::read(
+                    temporary
+                        .path()
+                        .join(format!(".hive/install/{}.json", host.as_str())),
+                )
+                .expect("ownership manifest"),
+            )
+            .expect("ownership JSON");
+            let backup_relative = PathBuf::from(ownership.last_backup.expect("backup"));
+            let before_recovery = runner.calls.lock().expect("calls").len();
+            let error = recover(&arguments, &runner)
+                .err()
+                .expect("compensation drift");
+            assert!(matches!(error, InstallError::Conflict(_)));
+            assert_eq!(runner.external_state(), (true, true));
+            let calls = runner.calls.lock().expect("calls");
+            assert!(!calls[before_recovery..]
+                .iter()
+                .any(|call| call.contains("marketplace remove")));
+            let backup: UserBackupManifest = serde_json::from_slice(
+                &fs::read(temporary.path().join(backup_relative).join("manifest.json"))
+                    .expect("backup manifest"),
+            )
+            .expect("backup JSON");
+            assert!(backup.pending_host_transition.is_none());
+            match backup.host_owned_state.expect("owned state evidence") {
+                HostStateSnapshot::Codex(state) => assert!(state.plugin.is_none()),
+                HostStateSnapshot::Claude(state) => assert!(state.plugin.is_none()),
+            }
+        }
+    }
+
+    #[test]
+    fn foreign_exact_after_transport_failure_is_never_attributed() {
+        for host in [UserHost::Codex, UserHost::Claude] {
+            let temporary = tempdir().expect("tempdir");
+            let runner =
+                StatefulHostRunner::new(temporary.path(), HostSabotage::ForeignAfterFailedForward);
+            let arguments = args(temporary.path(), host, UserMode::Apply);
+            let error = execute(UserOperation::Install, &arguments, &runner)
+                .err()
+                .expect("ambiguous foreign transition");
+            assert!(matches!(error, InstallError::Internal(_)));
+            assert_eq!(runner.external_state(), (true, false));
+            let calls = runner.calls.lock().expect("calls");
+            assert!(!calls.iter().any(|call| call.contains("marketplace remove")));
+            assert!(temporary
+                .path()
+                .join(format!(".hive/install-transactions/{}.json", host.as_str()))
+                .is_file());
+            let backup = transaction_backup(temporary.path(), host);
+            assert!(backup.host_owned_state.is_none());
+            assert!(backup.pending_host_transition.is_some());
+        }
+    }
+
+    #[test]
+    fn crash_before_command_then_foreign_exact_state_stays_unresolved() {
+        for host in [UserHost::Codex, UserHost::Claude] {
+            let temporary = tempdir().expect("tempdir");
+            let runner = StatefulHostRunner::new(
+                temporary.path(),
+                HostSabotage::FailBeforeMarketplaceMutation,
+            );
+            let arguments = args(temporary.path(), host, UserMode::Apply);
+            let error = execute(UserOperation::Install, &arguments, &runner)
+                .err()
+                .expect("command crash");
+            assert!(matches!(error, InstallError::Internal(_)));
+            runner.seed_marketplace_only();
+            let before_recovery = runner.calls.lock().expect("calls").len();
+            let recovery = recover(&arguments, &runner)
+                .err()
+                .expect("pending transition cannot be inferred");
+            assert!(matches!(recovery, InstallError::Conflict(_)));
+            assert_eq!(runner.external_state(), (true, false));
+            let calls = runner.calls.lock().expect("calls");
+            assert!(!calls[before_recovery..]
+                .iter()
+                .any(|call| call.contains("marketplace remove")));
+            assert!(temporary
+                .path()
+                .join(format!(".hive/install-transactions/{}.json", host.as_str()))
+                .is_file());
+            let backup = transaction_backup(temporary.path(), host);
+            assert!(backup.host_owned_state.is_none());
+            assert!(backup.pending_host_transition.is_some());
+        }
+    }
+
+    #[test]
+    fn foreign_exact_after_ambiguous_compensation_is_never_authorized() {
+        for host in [UserHost::Codex, UserHost::Claude] {
+            let temporary = tempdir().expect("tempdir");
+            let runner = StatefulHostRunner::new(
+                temporary.path(),
+                HostSabotage::ForeignAfterFailedCompensation,
+            );
+            let arguments = args(temporary.path(), host, UserMode::Apply);
+            execute(UserOperation::Install, &arguments, &runner).expect("install");
+            let error = recover(&arguments, &runner)
+                .err()
+                .expect("ambiguous inverse");
+            assert!(matches!(error, InstallError::Internal(_)));
+            assert_eq!(runner.external_state(), (true, false));
+            let before_retry = runner.calls.lock().expect("calls").len();
+            let retry = recover(&arguments, &runner)
+                .err()
+                .expect("pending inverse remains manual");
+            assert!(matches!(retry, InstallError::Conflict(_)));
+            let calls = runner.calls.lock().expect("calls");
+            assert!(!calls[before_retry..]
+                .iter()
+                .any(|call| call.contains("marketplace remove")));
+            assert!(temporary
+                .path()
+                .join(format!(".hive/install-transactions/{}.json", host.as_str()))
+                .is_file());
+            let backup = transaction_backup(temporary.path(), host);
+            assert!(backup.pending_host_transition.is_some());
+            match backup
+                .host_owned_state
+                .expect("success-confirmed ownership")
+            {
+                HostStateSnapshot::Codex(state) => assert!(state.plugin.is_some()),
+                HostStateSnapshot::Claude(state) => assert!(state.plugin.is_some()),
+            }
+        }
+    }
+
+    #[test]
+    fn codex_refresh_ambiguity_remains_unresolved_despite_equal_probe() {
+        for sabotage in [
+            HostSabotage::FailBeforePluginMutation,
+            HostSabotage::FailAfterPluginMutation,
+        ] {
+            let temporary = tempdir().expect("tempdir");
+            let runner = StatefulHostRunner::new(temporary.path(), sabotage);
+            runner.seed_installed_codex_state();
+            let arguments = args(temporary.path(), UserHost::Codex, UserMode::Apply);
+            let error = execute(UserOperation::Update, &arguments, &runner)
+                .err()
+                .expect("ambiguous refresh remains unresolved");
+            assert!(matches!(error, InstallError::Internal(_)));
+            assert_eq!(runner.external_state(), (true, true));
+            assert!(temporary
+                .path()
+                .join(".hive/install-transactions/codex.json")
+                .is_file());
+        }
+    }
+
+    #[test]
+    fn codex_recovery_preserves_unowned_post_install_drift() {
+        let temporary = tempdir().expect("tempdir");
+        let runner = StatefulHostRunner::new(temporary.path(), HostSabotage::None);
+        runner.seed_installed_codex_state();
+        let arguments = args(temporary.path(), UserHost::Codex, UserMode::Apply);
+        execute(UserOperation::Update, &arguments, &runner).expect("update");
+        let manifest: UserOwnershipManifest = serde_json::from_slice(
+            &fs::read(temporary.path().join(".hive/install/codex.json")).expect("manifest"),
+        )
+        .expect("manifest JSON");
+        let backup = manifest.last_backup.expect("backup");
+        runner.clear_codex_state();
+        let error = recover(&arguments, &runner)
+            .err()
+            .expect("unowned drift must block recovery");
+        assert!(matches!(error, InstallError::Conflict(_)));
+        assert_eq!(runner.external_state(), (false, false));
+        assert!(temporary
+            .path()
+            .join(backup)
+            .join("manifest.json")
+            .is_file());
+    }
+
+    #[test]
+    fn claude_all_four_ambiguous_mutation_windows_remain_unresolved() {
+        for sabotage in [
+            HostSabotage::FailAfterMarketplaceMutation,
+            HostSabotage::FailAfterPluginMutation,
+        ] {
+            let temporary = tempdir().expect("tempdir");
+            let runner = StatefulHostRunner::new(temporary.path(), sabotage);
+            let arguments = args(temporary.path(), UserHost::Claude, UserMode::Apply);
+            let error = execute(UserOperation::Install, &arguments, &runner)
+                .err()
+                .expect("fresh ambiguity remains unresolved");
+            assert!(matches!(error, InstallError::Internal(_)));
+            assert!(temporary
+                .path()
+                .join(".hive/install-transactions/claude.json")
+                .is_file());
+        }
+        for sabotage in [
+            HostSabotage::FailAfterMarketplaceMutation,
+            HostSabotage::FailAfterPluginMutation,
+        ] {
+            let temporary = tempdir().expect("tempdir");
+            let runner = StatefulHostRunner::new(temporary.path(), sabotage);
+            runner.seed_installed_codex_state();
+            let arguments = args(temporary.path(), UserHost::Claude, UserMode::Apply);
+            let error = execute(UserOperation::Update, &arguments, &runner)
+                .err()
+                .expect("refresh ambiguity remains unresolved");
+            assert!(matches!(error, InstallError::Internal(_)));
+            assert_eq!(runner.external_state(), (true, true));
+            assert!(temporary
+                .path()
+                .join(".hive/install-transactions/claude.json")
+                .is_file());
+        }
+    }
+
+    #[test]
+    fn crash_after_inverse_success_remains_unresolved_without_command_success() {
+        let temporary = tempdir().expect("tempdir");
+        let runner =
+            StatefulHostRunner::new(temporary.path(), HostSabotage::CrashAfterPluginInverse);
+        let arguments = args(temporary.path(), UserHost::Codex, UserMode::Apply);
+        let error = execute(UserOperation::Install, &arguments, &runner)
+            .err()
+            .expect("inverse crash");
+        assert!(matches!(error, InstallError::Internal(_)));
+        assert_eq!(runner.external_state(), (true, false));
+        assert!(temporary
+            .path()
+            .join(".hive/install-transactions/codex.json")
+            .is_file());
+        let retry = recover(&arguments, &runner)
+            .err()
+            .expect("pending inverse remains unresolved");
+        assert!(matches!(retry, InstallError::Conflict(_)));
+    }
+
+    #[test]
+    fn post_activation_package_validation_failure_rolls_back_every_boundary() {
+        let temporary = tempdir().expect("tempdir");
+        let runner = StatefulHostRunner::new(temporary.path(), HostSabotage::DeleteInstalledSkill);
+        let arguments = args(temporary.path(), UserHost::Codex, UserMode::Apply);
+        let error = execute(UserOperation::Install, &arguments, &runner)
+            .err()
+            .expect("validation failure");
+        assert!(matches!(error, InstallError::Verification(_)));
+        assert_eq!(runner.external_state(), (false, false));
+        assert!(!temporary.path().join(".codex/AGENTS.md").exists());
+        assert!(!temporary.path().join(".hive/install/codex.json").exists());
+    }
+
+    #[test]
+    fn concurrent_guidance_tamper_is_preserved_with_recovery_evidence() {
+        let temporary = tempdir().expect("tempdir");
+        let runner = StatefulHostRunner::new(
+            temporary.path(),
+            HostSabotage::TamperGuidanceAfterActivation,
+        );
+        let arguments = args(temporary.path(), UserHost::Codex, UserMode::Apply);
+        let error = execute(UserOperation::Install, &arguments, &runner)
+            .err()
+            .expect("index failure");
+        assert!(matches!(error, InstallError::Internal(_)));
+        assert_eq!(
+            fs::read(temporary.path().join(".codex/AGENTS.md")).expect("foreign guidance"),
+            b"tampered guidance\n"
+        );
+        assert!(temporary
+            .path()
+            .join(".hive/install-transactions/codex.json")
+            .is_file());
+    }
+
+    #[test]
+    fn preexisting_index_and_foreign_tamper_remain_recoverable() {
+        let temporary = tempdir().expect("tempdir");
+        let initial = args(temporary.path(), UserHost::Antigravity, UserMode::Apply);
+        execute(UserOperation::Install, &initial, &FakeRunner::new()).expect("initial install");
+        let before = hive_wiki::rebuild_index(&initial.user_root).expect("initial index");
+        let runner = StatefulHostRunner::new(
+            temporary.path(),
+            HostSabotage::TamperGuidanceAfterActivation,
+        );
+        let arguments = args(temporary.path(), UserHost::Codex, UserMode::Apply);
+        let error = execute(UserOperation::Install, &arguments, &runner)
+            .err()
+            .expect("post-rebuild validation failure");
+        assert!(matches!(error, InstallError::Internal(_)));
+        assert_eq!(
+            fs::read(temporary.path().join(".codex/AGENTS.md")).expect("foreign guidance"),
+            b"tampered guidance\n"
+        );
+        hive_wiki::query(&arguments.user_root, Some("rollback-index-probe"), None, 10)
+            .expect("rollback left a current queryable index");
+        let after = hive_wiki::rebuild_index(&arguments.user_root).expect("rebuilt rollback index");
+        assert_eq!(before.logical_digest, after.logical_digest);
+    }
+
+    #[test]
+    fn compensation_failure_retains_primary_and_compensation_context() {
+        let temporary = tempdir().expect("tempdir");
+        let runner = StatefulHostRunner::new(
+            temporary.path(),
+            HostSabotage::FailAfterPluginMutationAndCompensation,
+        );
+        let arguments = args(temporary.path(), UserHost::Codex, UserMode::Apply);
+        let error = execute(UserOperation::Install, &arguments, &runner)
+            .err()
+            .expect("compensation failure");
+        assert!(matches!(error, InstallError::Internal(_)));
+        assert!(error.message().contains("reconciliation command"));
+        assert!(error.message().contains("remains unresolved"));
+        assert!(temporary
+            .path()
+            .join(".hive/install-transactions/codex.json")
+            .is_file());
+        let retry = recover(&arguments, &runner)
+            .err()
+            .expect("retry remains manual");
+        assert!(matches!(retry, InstallError::Conflict(_)));
+        assert_eq!(runner.external_state(), (true, true));
+        assert!(temporary
+            .path()
+            .join(".hive/install-transactions/codex.json")
+            .is_file());
+    }
+
+    #[test]
+    fn explicit_recovery_restores_external_host_state() {
+        let temporary = tempdir().expect("tempdir");
+        let runner = StatefulHostRunner::new(temporary.path(), HostSabotage::None);
+        let arguments = args(temporary.path(), UserHost::Codex, UserMode::Apply);
+        execute(UserOperation::Install, &arguments, &runner).expect("apply");
+        assert_eq!(runner.external_state(), (true, true));
+        let recovered = recover(&arguments, &runner).expect("recover");
+        assert_eq!(runner.external_state(), (false, false));
+        let evidence = recovered.evidence.first().expect("backup evidence");
+        assert_eq!(
+            evidence.digest,
+            sha256_digest(
+                &fs::read(temporary.path().join(&evidence.locator)).expect("backup manifest")
+            )
+        );
+    }
+}

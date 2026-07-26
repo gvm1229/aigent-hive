@@ -1,5 +1,8 @@
 use crate::UpdateError;
-use hive_core::{validate_hive_skill_projection_relative, validate_project_relative};
+use hive_core::{
+    validate_hive_directive_projection_relative, validate_hive_skill_projection_relative,
+    validate_project_relative,
+};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeSet;
 use std::path::Path;
@@ -65,6 +68,7 @@ pub fn backup_path_is_allowed(path: &str) -> bool {
     let target_relative = Path::new(path);
     if validate_project_relative(target_relative).is_err()
         && validate_hive_skill_projection_relative(target_relative).is_err()
+        && validate_hive_directive_projection_relative(target_relative).is_err()
     {
         return false;
     }
@@ -99,6 +103,8 @@ pub fn backup_storage_path(path: &str) -> Option<String> {
         format!("files/host-skills/agents/{suffix}")
     } else if let Some(suffix) = normalized.strip_prefix(".claude/skills/") {
         format!("files/host-skills/claude/{suffix}")
+    } else if let Some(suffix) = normalized.strip_prefix(".agents/directives/") {
+        format!("files/host-directives/agents/{suffix}")
     } else {
         format!("files/{normalized}")
     };
@@ -224,6 +230,9 @@ mod tests {
         assert!(backup_path_is_allowed(
             ".agents/skills/hive-update/SKILL.md"
         ));
+        assert!(backup_path_is_allowed(
+            ".agents/directives/00-project-harness.md"
+        ));
         assert!(!backup_path_is_allowed(
             "files/.agents/skills/hive-update/SKILL.md"
         ));
@@ -231,6 +240,10 @@ mod tests {
         assert_eq!(
             backup_storage_path(".agents/skills/hive-update/SKILL.md").as_deref(),
             Some("files/host-skills/agents/hive-update/SKILL.md")
+        );
+        assert_eq!(
+            backup_storage_path(".agents/directives/00-project-harness.md").as_deref(),
+            Some("files/host-directives/agents/00-project-harness.md")
         );
     }
 

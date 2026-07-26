@@ -115,6 +115,17 @@ class Phase3RoutingContract(Phase1CliTestCase):
         self.assertIsNone(decision["selected_skill"])
         self.assertEqual(decision["load_skill_bodies"], [])
 
+    def test_ambiguous_work_only_offers_an_optional_refine_suggestion(self) -> None:
+        process, result = self.invoke_route("ambiguous-work.json")
+        self.assertEqual(process.returncode, 0, process.stderr)
+        decision = self.decision(result)
+        self.assertEqual(decision["route"], "host-native")
+        self.assertEqual(decision["logical_action"], "RunWork")
+        self.assertTrue(decision["refine_suggestion"])
+        self.assertIsNone(decision["selected_skill"])
+        self.assertEqual(decision["load_skill_bodies"], [])
+        self.assertIsNone(decision["mode"])
+
     def test_prompt_refine_defaults_to_refine_only(self) -> None:
         process, result = self.invoke_route("prompt-refine.json")
         self.assertEqual(process.returncode, 0, process.stderr)

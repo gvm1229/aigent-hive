@@ -27,6 +27,11 @@
       "minLength": 1,
       "pattern": "\\S"
     },
+    "project_identity": {
+      "type": "string",
+      "maxLength": 160,
+      "pattern": "^(?:|\\S(?:.*\\S)?)$"
+    },
     "project_kind": {
       "enum": ["general", "custom"]
     },
@@ -115,6 +120,20 @@
     "knowledge_exclude_paths": {
       "type": "array",
       "items": { "type": "string", "minLength": 1 }
+    },
+    "root_knowledge_promotion_categories": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "enum": ["fact", "preference", "workflow"] }
+    },
+    "confidential_knowledge_categories": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "enum": ["fact", "preference", "workflow"] }
+    },
+    "user_store_binding": {
+      "type": "string",
+      "pattern": "^(?:|sha256:[0-9a-f]{64})$"
     },
     "approved_optional_skills": {
       "type": "array",

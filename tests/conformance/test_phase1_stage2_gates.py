@@ -41,8 +41,10 @@ BUILTIN_SKILL_NAMES = (
     "hive-judge-package",
     "hive-knowledge-capture",
     "hive-knowledge-maintenance",
+    "hive-knowledge-promote",
     "hive-knowledge-query",
     "hive-migrate",
+    "hive-project-upgrade",
     "hive-prompt-refine",
     "hive-role-handoff",
     "hive-run-checkpoint",
@@ -53,6 +55,10 @@ BUILTIN_SKILL_NAMES = (
     "setup-harness",
 )
 CODEX_HIVE_PROJECTION_PATHS = {
+    "directives",
+    "directives/00-project-harness.md",
+    "directives/01-project-knowledge.md",
+    "directives/02-project-upgrade.md",
     "skills",
     *{
         relative

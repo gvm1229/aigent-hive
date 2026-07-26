@@ -15,6 +15,7 @@ use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeSet;
 use std::env;
+use std::fs;
 use std::io::{self, Read};
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
@@ -22,21 +23,26 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 mod judge;
 mod knowledge;
+mod project_upgrade;
 mod role;
 mod run;
 mod update;
 mod usage;
 mod usage_control;
+mod usage_install;
+mod user_install;
 
 const USAGE: &str = "\
 Aigent Hive
 
 USAGE:
     hive doctor
+    hive install --scope user --host codex|claude|antigravity (--dry-run|--apply|--validate) [--user-root <dir>] --output json
     hive check-target <path>
     hive setup --help
     hive setup --target <dir> --answers <yml> --capabilities <json> (--dry-run|--apply|--validate) [--reconfigure-role <role-id>]... --output json
-    hive knowledge ingest|query|lint|delete|suppress --help
+    hive knowledge ingest|query|promote|lint|delete|suppress --help
+    hive project upgrade --target <dir> (--scan|--dry-run|--apply|--validate|--recover) --output json
     hive index rebuild --target <dir> --output json
     hive route --request <json> --output json
     hive prompt validate --request <input.json> --result <result.json> --output json
@@ -46,10 +52,12 @@ USAGE:
     hive usage status --target <dir> --session-id <id> --process-id <positive-u32> --output json
     hive usage threshold --target <dir> --remaining-percent <1..99> --output json
     hive usage session --target <dir> --session-id <id> --process-id <positive-u32> --action enable|disable|toggle [--confirm-session-disable] --output json
+    hive usage capture --host claude (--target <dir>|--target-from-stdin) --stdin-json --output json
+    hive usage fallback-install --host codex|claude|antigravity (--dry-run|--apply) [--confirm-install] --output json
     hive role validate --target <dir> --role <role-id> --output json
     hive role handoff --target <dir> --request <request.json> --output json
     hive run checkpoint --target <dir> --request <request.json> --capabilities <fresh-json> --output json
-    hive run resume --target <dir> --run <run-id> --capabilities <fresh-json> [--dispatch-intent manual|automatic] [--account-digest <sha256:...> --role <role-id> [--threshold <1..99>]] --output json
+    hive run resume --target <dir> --run <run-id> --capabilities <fresh-json> [--dispatch-intent manual|automatic] [--account-digest <sha256:...>] [--session-id <host-session-id>] [--role <role-id> [--threshold <1..99>]] --output json
     hive judge package --target <dir> --request <json> --output json
     hive judge quorum --target <dir> --request <json> --output json
     hive release verify --bundle <release-dir> --trust-root <external-protected-root.json> --output json
@@ -148,7 +156,9 @@ fn main() -> ExitCode {
             ExitCode::SUCCESS
         }
         Some("setup") => run_setup(&arguments[1..]),
+        Some("install") => user_install::run_install(&arguments[1..]),
         Some("knowledge") => knowledge::run_knowledge(&arguments[1..]),
+        Some("project") => project_upgrade::run(&arguments[1..]),
         Some("index") => knowledge::run_index(&arguments[1..]),
         Some("route") => run_route(&arguments[1..]),
         Some("prompt") => run_prompt(&arguments[1..]),
@@ -158,6 +168,9 @@ fn main() -> ExitCode {
         Some("run") => run::run_run(&arguments[1..]),
         Some("judge") => judge::run_judge(&arguments[1..]),
         Some("release") => update::run_release(&arguments[1..]),
+        Some("update") if arguments.iter().any(|argument| argument == "--scope") => {
+            user_install::run_update(&arguments[1..])
+        }
         Some("update") => update::run_update(&arguments[1..]),
         _ if wants_json(&arguments) => {
             let command = arguments.first().map_or("<missing>", String::as_str);
@@ -195,9 +208,12 @@ struct UsageArguments {
 fn run_usage(arguments: &[String]) -> ExitCode {
     if matches!(
         arguments.first().map(String::as_str),
-        Some("enforce" | "status" | "threshold" | "session")
+        Some("enforce" | "status" | "threshold" | "session" | "capture")
     ) {
         return usage_control::run_usage_control(arguments);
+    }
+    if arguments.first().map(String::as_str) == Some("fallback-install") {
+        return usage_install::run(arguments);
     }
     let result = match parse_usage(arguments) {
         Ok(arguments) => check_usage(&arguments),
@@ -288,16 +304,31 @@ fn check_usage(arguments: &UsageArguments) -> ActionResult {
     let Some(now_unix_seconds) = now_unix_seconds else {
         return usage_unknown_result("system clock cannot be used for usage enforcement", None);
     };
-    let snapshot =
-        match usage::check_with_runner(&usage::SystemCommandRunner, &arguments.account_digest, now)
-        {
-            Ok(snapshot) => snapshot,
-            Err(error) => return usage_unknown_result(&error.to_string(), None),
-        };
+    let snapshot = match usage::check_preferred_with_runners(
+        &usage::SystemCommandRunner,
+        &usage::SystemCommandRunner,
+        &arguments.account_digest,
+        now,
+    ) {
+        Ok(snapshot) => snapshot,
+        Err(error) => {
+            let next_action = match error {
+                usage::SensorError::FallbackRequired(host) => {
+                    Some(usage::fallback_install_next_action(host))
+                }
+                _ => None,
+            };
+            return usage_unknown_result_with_next(&error.to_string(), None, next_action);
+        }
+    };
     let evidence_digest = snapshot.evidence_digest();
-    let Ok(policy) = UsagePolicy::new("codexbar", "0.45.2", "codex", &arguments.account_digest)
-        .with_stop_remaining_percent(arguments.threshold)
-    else {
+    let Ok(policy) = UsagePolicy::new(
+        &snapshot.sensor_id,
+        &snapshot.sensor_version,
+        &snapshot.provider,
+        &arguments.account_digest,
+    )
+    .with_stop_remaining_percent(arguments.threshold) else {
         return usage_unknown_result("usage threshold policy is invalid", None);
     };
     match evaluate_usage(&policy, &snapshot.core_snapshots(), &[], now_unix_seconds) {
@@ -344,6 +375,14 @@ fn check_usage(arguments: &UsageArguments) -> ActionResult {
 }
 
 fn usage_unknown_result(message: &str, evidence_digest: Option<String>) -> ActionResult {
+    usage_unknown_result_with_next(message, evidence_digest, None)
+}
+
+fn usage_unknown_result_with_next(
+    message: &str,
+    evidence_digest: Option<String>,
+    next_action: Option<String>,
+) -> ActionResult {
     ActionResult {
         schema_version: 1,
         action: "CheckUsage",
@@ -361,7 +400,7 @@ fn usage_unknown_result(message: &str, evidence_digest: Option<String>) -> Actio
                 }]
             })
             .unwrap_or_default(),
-        next_action: None,
+        next_action,
         data: None,
     }
 }
@@ -380,6 +419,11 @@ fn run_setup(arguments: &[String]) -> ExitCode {
     let parsed = parse_setup(arguments);
     let result = match parsed {
         Ok(arguments) => {
+            let initialize_index = arguments.mode == SetupMode::Apply
+                && match fs::symlink_metadata(arguments.target.join(".hive/index/hive.sqlite3")) {
+                    Ok(metadata) => metadata.file_type().is_symlink() || !metadata.is_file(),
+                    Err(_) => true,
+                };
             let request = SetupRequest {
                 target: &arguments.target,
                 answers: &arguments.answers,
@@ -388,43 +432,71 @@ fn run_setup(arguments: &[String]) -> ExitCode {
                 reconfigure_roles: arguments.reconfigure_roles,
             };
             match execute_setup(&request) {
-                Ok(outcome) => ActionResult {
-                    schema_version: 1,
-                    action: "SetupHarness",
-                    status: "success",
-                    exit_code: 0,
-                    code: match arguments.mode {
-                        SetupMode::DryRun => "hive.setup-dry-run-complete",
-                        SetupMode::Apply => "hive.setup-complete",
-                        SetupMode::Validate => "hive.setup-valid",
-                    },
-                    message: match arguments.mode {
-                        SetupMode::DryRun => "setup dry run completed".to_owned(),
-                        SetupMode::Apply => "consumer harness setup completed".to_owned(),
-                        SetupMode::Validate => "installed consumer harness is valid".to_owned(),
-                    },
-                    changed_paths: outcome.changed_paths,
-                    evidence: vec![
-                        Evidence {
-                            kind: "report",
-                            locator: format!("orchestration-owner:{}", outcome.resolved_owner),
-                            digest: sha256_digest(outcome.resolved_owner.as_bytes()),
+                Ok(mut outcome) => {
+                    if initialize_index {
+                        match hive_wiki::rebuild_index(&arguments.target) {
+                            Ok(index) => {
+                                outcome.changed_paths.extend(index.changed_paths);
+                                outcome.changed_paths.sort();
+                                outcome.changed_paths.dedup();
+                            }
+                            Err(error) => {
+                                return emit_setup_result(&failure_result_for(
+                                    "SetupHarness",
+                                    &RenderError::Verification(format!(
+                                        "initial project knowledge index rebuild failed: {error}"
+                                    )),
+                                    outcome.changed_paths,
+                                ));
+                            }
+                        }
+                    }
+                    ActionResult {
+                        schema_version: 1,
+                        action: "SetupHarness",
+                        status: "success",
+                        exit_code: 0,
+                        code: match arguments.mode {
+                            SetupMode::DryRun => "hive.setup-dry-run-complete",
+                            SetupMode::Apply => "hive.setup-complete",
+                            SetupMode::Validate => "hive.setup-valid",
                         },
-                        Evidence {
-                            kind: "report",
-                            locator: "render-tree:normalized".to_owned(),
-                            digest: outcome.tree_digest,
+                        message: match arguments.mode {
+                            SetupMode::DryRun => "setup dry run completed".to_owned(),
+                            SetupMode::Apply => "consumer harness setup completed".to_owned(),
+                            SetupMode::Validate => "installed consumer harness is valid".to_owned(),
                         },
-                    ],
-                    next_action: None,
-                    data: None,
-                },
+                        changed_paths: outcome.changed_paths,
+                        evidence: vec![
+                            Evidence {
+                                kind: "report",
+                                locator: format!("orchestration-owner:{}", outcome.resolved_owner),
+                                digest: sha256_digest(outcome.resolved_owner.as_bytes()),
+                            },
+                            Evidence {
+                                kind: "report",
+                                locator: "render-tree:normalized".to_owned(),
+                                digest: outcome.tree_digest,
+                            },
+                        ],
+                        next_action: None,
+                        data: None,
+                    }
+                }
                 Err(error) => failure_result(&error),
             }
         }
         Err(error) => failure_result(&error),
     };
     emit_json_result(&result);
+    if result.exit_code != 0 {
+        eprintln!("error: {}", result.message);
+    }
+    ExitCode::from(result.exit_code)
+}
+
+fn emit_setup_result(result: &ActionResult) -> ExitCode {
+    emit_json_result(result);
     if result.exit_code != 0 {
         eprintln!("error: {}", result.message);
     }

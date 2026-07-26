@@ -7,6 +7,10 @@
 - Agent Skills specification
 - Copier configuration/update documentation
 - [`steipete/CodexBar` usage sensor qualification](codexbar-usage-sensor.md)
+- [Codex app-server native usage sensor qualification](codex-app-server-usage-sensor.md)
+- [Claude Code status-line native usage sensor 조사](claude-code-native-usage-sensor.md)
+- [Antigravity native usage sensor 조사](antigravity-native-usage-sensor.md)
+- [세 host user plugin surface 조사](user-plugin-host-surfaces.md)
 - [`rusqlite 0.40.1` disposable SQLite index 검토](rusqlite-sqlite-index.md)
 - `netwaif/usage-coach`
 - `netwaif/multi-agent-starter`

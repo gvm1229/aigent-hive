@@ -33,6 +33,8 @@ PROJECTED_BUILTINS = (
     "hive-knowledge-capture",
     "hive-knowledge-query",
     "hive-knowledge-maintenance",
+    "hive-knowledge-promote",
+    "hive-project-upgrade",
     "hive-role-handoff",
     "hive-run-checkpoint",
     "hive-run-resume",
@@ -104,19 +106,17 @@ class Phase3HostProjection(Phase3ProjectionTestCase):
             self.assertEqual(entry["source_type"], "built-in")
             self.assertIsNone(entry["consent_digest"])
 
-    def test_each_host_uses_only_its_exact_discovery_root(self) -> None:
+    def test_each_host_uses_portable_skills_and_only_its_required_adapter(self) -> None:
         for host in ("codex", "claude", "antigravity"):
             with self.subTest(host=host):
                 target = self.install_host(host)
                 expected = self.discovery_root(target, host)
                 self.assertTrue(expected.is_dir())
-                other_roots = {
-                    target / relative
-                    for other, relative in HOST_PATHS.items()
-                    if other != host and relative != HOST_PATHS[host]
-                }
-                for other_root in other_roots:
-                    self.assertFalse(other_root.exists())
+                self.assertTrue((target / ".agents/skills").is_dir())
+                self.assertEqual(
+                    (target / ".claude/skills").is_dir(),
+                    host == "claude",
+                )
 
     def test_each_host_projects_every_implemented_builtin_skill(self) -> None:
         for host in ("codex", "claude", "antigravity"):
@@ -125,6 +125,14 @@ class Phase3HostProjection(Phase3ProjectionTestCase):
                 root = self.discovery_root(target, host)
                 for skill in PROJECTED_BUILTINS:
                     self.assertTrue((root / skill / "SKILL.md").is_file())
+                    self.assertTrue(
+                        (
+                            target
+                            / ".agents/skills"
+                            / skill
+                            / "SKILL.md"
+                        ).is_file()
+                    )
 
     def test_each_host_projects_the_automatic_dispatch_usage_gate(self) -> None:
         for host in ("codex", "claude", "antigravity"):
@@ -199,6 +207,8 @@ class Phase3HostProjection(Phase3ProjectionTestCase):
                     path.read_bytes()
                     for path in sorted((target / ".hive/config").glob("*"))
                     if path.is_file()
+                    and path.name
+                    not in {"project-base.json", "project-overrides.json"}
                 )
                 for alias in aliases:
                     self.assertNotIn(alias.encode("utf-8"), canonical)

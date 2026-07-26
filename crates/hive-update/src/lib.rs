@@ -4,6 +4,7 @@
 //! model runtime, provider SDK, or package-manager execution.
 
 mod backup;
+mod merge;
 mod migration;
 mod release;
 mod transaction;
@@ -13,6 +14,7 @@ pub use backup::{
     backup_path_is_allowed, backup_storage_path, backups_to_prune, BackupEntry, BackupManifest,
     RetentionDecision, BACKUP_RETENTION_SECONDS,
 };
+pub use merge::{three_way_merge, MergeDisposition, MergeOutcome};
 pub use migration::{
     select_migration_route, validate_cross_major_preservation, validate_migration_table,
     MigrationKind, MigrationRoute, MigrationTable, PreservationDigest,

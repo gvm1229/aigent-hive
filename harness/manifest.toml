@@ -62,6 +62,16 @@ ownership = "hive-generated-config"
 source = "signed-release-activation"
 
 [[paths]]
+pattern = ".hive/config/project-base.json"
+ownership = "hive-generated-config"
+source = "authenticated-release-projection"
+
+[[paths]]
+pattern = ".hive/config/project-overrides.json"
+ownership = "hive-generated-config"
+source = "local-priority-upgrade"
+
+[[paths]]
 pattern = ".hive/config/approved-hooks.yml"
 ownership = "user-consent-protected"
 source = "conditional-template"
@@ -105,6 +115,23 @@ marker_start = "<!-- AIGENT-HIVE:START -->"
 marker_end = "<!-- AIGENT-HIVE:END -->"
 
 [[paths]]
+pattern = "CLAUDE.md"
+ownership = "shared-marker"
+marker_start = "<!-- AIGENT-HIVE:START -->"
+marker_end = "<!-- AIGENT-HIVE:END -->"
+
+[[paths]]
+pattern = "GEMINI.md"
+ownership = "shared-marker"
+marker_start = "<!-- AIGENT-HIVE:START -->"
+marker_end = "<!-- AIGENT-HIVE:END -->"
+
+[[paths]]
+pattern = ".agents/directives/*"
+ownership = "hive-directive-projection"
+source = "release-directive-projection"
+
+[[paths]]
 pattern = ".agents/skills/*/SKILL.md"
 ownership = "hive-skill-projection"
 source = "compiled-skill-projection"
@@ -122,9 +149,3 @@ pattern = ".omc/**"
 
 [[forbidden_paths]]
 pattern = ".codex/**"
-
-[[forbidden_paths]]
-pattern = ".claude/**"
-
-[[forbidden_paths]]
-pattern = ".agents/**"

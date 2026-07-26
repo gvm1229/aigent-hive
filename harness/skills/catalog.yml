@@ -60,6 +60,21 @@ skills:
       - shell
     availability: implemented
 
+  - name: hive-knowledge-promote
+    description: Review and promote an eligible project-neutral fact, reusable preference, or portable workflow into user-scope canonical Hive knowledge.
+    provided_by: hive
+    superseded_by_external: []
+    invocation_intents:
+      - IngestKnowledge
+    side_effect_class: external-write
+    capabilities:
+      - filesystem-read
+      - filesystem-write
+      - memory-read
+      - memory-write
+      - shell
+    availability: implemented
+
   - name: hive-knowledge-maintenance
     description: Lint, rebuild, delete, or suppress canonical Hive knowledge through explicit signed CLI actions while preserving the disposable-index boundary.
     provided_by: hive
@@ -145,6 +160,19 @@ skills:
 
   - name: hive-update
     description: Stage, verify, back up, and atomically activate a compatible signed Hive update without changing canonical knowledge or external plugins.
+    provided_by: hive
+    superseded_by_external: []
+    invocation_intents:
+      - UpdateHarness
+    side_effect_class: project-write
+    capabilities:
+      - filesystem-read
+      - filesystem-write
+      - shell
+    availability: implemented
+
+  - name: hive-project-upgrade
+    description: Scan, preview, apply, validate, or recover release-generated project directives and Skills with a local-priority three-way merge.
     provided_by: hive
     superseded_by_external: []
     invocation_intents:

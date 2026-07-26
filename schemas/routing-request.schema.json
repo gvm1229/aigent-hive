@@ -73,7 +73,10 @@
       "type": ["string", "null"],
       "enum": ["refine-only", "refine-and-run", null]
     },
-    "explicit_run_intent": { "type": "boolean" }
+    "explicit_run_intent": { "type": "boolean" },
+    "prompt_quality": {
+      "enum": ["sufficient", "ambiguous", "missing-core-details"]
+    }
   },
   "$defs": {
     "capability": {

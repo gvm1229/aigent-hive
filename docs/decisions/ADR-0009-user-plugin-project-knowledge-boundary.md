@@ -55,6 +55,10 @@ Upgrade merge:
 - Existing OMX·OMC·user guidance byte 보존
 - Source `hive-prompt-refine`: `harness/skills` canonical contract의 source-only
   `.agents/skills` projection, consumer shipping source로 사용 금지
+- Prompt quality gate: 명시적 작성·개선 intent는 automatic `refine-only`, 모호성
+  또는 핵심 세부 부족은 한 줄 optional refine 제안만 허용
+- Refine 제안에서 prompt rewrite·Skill load·execution 0회, 충분히 명확한
+  ordinary work·simple question은 제안 제외
 - Plugin uninstall과 user knowledge 삭제 lifecycle 분리
 - Project SQLite와 root SQLite의 독립 rebuild
 - Current `.hive/` compatibility 유지와 `.agents/` additive projection

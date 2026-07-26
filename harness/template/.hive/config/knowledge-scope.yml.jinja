@@ -3,3 +3,9 @@ include:
 {{ knowledge_include_paths | to_nice_yaml | indent(2, true) -}}
 exclude:
 {{ knowledge_exclude_paths | to_nice_yaml | indent(2, true) -}}
+root_promotion_categories:
+{{ root_knowledge_promotion_categories | to_nice_yaml | indent(2, true) -}}
+confidential_categories:
+{{ confidential_knowledge_categories | to_nice_yaml | indent(2, true) -}}
+project_identity: {{ (project_identity if project_identity else project_name) | to_json }}
+user_store_binding: {{ user_store_binding | to_json }}

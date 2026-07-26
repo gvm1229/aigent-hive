@@ -2,19 +2,37 @@
 
 - 기준 branch: `develop`
 - product version: `0.7.0`
-- plan revision: `1.37`
+- plan revision: `1.42`
 - 현재 milestone: Phase 7 public qualification + user plugin/project lifecycle `0.8.0`
-- 현재 작업: user plugin·project harness·root knowledge·upgrade와 source
-  `hive-prompt-refine` integration plan 수립 완료; implementation 미착수
+- 현재 작업: user plugin·project harness·root knowledge·local-priority upgrade와
+  native-first usage sensor의 local implementation·fixture qualification 완료;
+  실제 세 host·다중 플랫폼·signed publication qualification 잔여
 - 외부 중지 경계: protected signing/publication credential, 실제 production publication,
   exact `1.0.0` 사용자 authority
 - Plan load: compact `docs/plans/PLAN.md` + `docs/plans/phases/07-public-qualification.md`
   + `docs/plans/active/plugin-project-lifecycle.md`
+  + `docs/plans/active/native-usage-sensor.md`
   + `docs/plans/active/documentation-style.md` + `docs/plans/active/security-review.md`
-- Plan completion: canonical checklist `113/157` 완료, `44`개 미완료, `72.0%`
+- Plan completion: canonical checklist `171/182` 완료, `11`개 미완료, `94.0%`
 - Native Goal routing: legacy `PLAN.md` checkbox 문구를 `phases/07-public-qualification.md`,
   `active/plugin-project-lifecycle.md`, `active/documentation-style.md`,
-  `active/security-review.md`로 해석
+  `active/native-usage-sensor.md`, `active/security-review.md`로 해석
+
+## 세 host native usage sensor
+
+- Codex: `codex-cli 0.145.0` app-server native primary와 process identity·bounded JSONL
+  adapter 구현
+- Claude Code: host-owned `/statusline` opt-in용 sanitized 5-hour·7-day capture 구현,
+  `~/.claude/settings.json` mutation 0회, 실제 Pro/Max qualification 잔여
+- Antigravity CLI `1.1.7`: native machine sensor `unsupported`, qualified CodexBar
+  fallback 구현
+- 세 provider 공통 CodexBar fallback-only, native limited 뒤 fallback 우회 0회
+- CodexBar 미설치 notification·fixed command preview·explicit current-action consent 구현
+- 잔여: 실제 세 host parity와 future Antigravity native fixture
+- Active implementation fragment:
+  [`native-usage-sensor.md`](../plans/active/native-usage-sensor.md)
+- Decision:
+  [`ADR-0010`](../decisions/ADR-0010-native-first-usage-sensors.md)
 
 ## 구현 완료 범위
 
@@ -42,19 +60,20 @@
 
 현재 구현:
 
-- Project target의 `AGENTS.md` Hive marker append·own-block replace
-- Codex·Antigravity `.agents/skills`, Claude `.claude/skills` project projection
-- `setup-harness` 질문 sequence와 project `.hive/knowledge`·SQLite
-- Signed consumer `hive update`의 dry-run·backup·atomic activation·recovery
+- Codex·Claude Code·Antigravity native plugin package와 user-scope install/update
+- User guidance marker append·own-block replace·foreign byte 보존
+- Project `.agents/directives`, portable `.agents/skills`, Claude `.claude/skills` adapter
+- `setup-harness` 질문 sequence, project/root canonical knowledge·SQLite와 explicit promotion
+- Historical exact base, unmodified replace, modified local-priority three-way merge
+- Durable journal, executable-mode backup, host-state compensation과 crash recovery
+- Source `hive-prompt-refine` projection, explicit refine-only routing,
+  모호성·핵심 세부 부족 prompt의 optional refine 제안
 
 확인된 gap:
 
-- Codex·Claude Code plugin manifest와 Antigravity user-scope install adapter
-- User global guidance의 Hive marker install·update
-- Project `.agents/directives`와 host-neutral `.agents/skills` lifecycle
-- Source `.agents/skills`의 `hive-prompt-refine` projection·automatic routing·parity
-- User canonical knowledge·root SQLite·project-to-root promotion
-- Signed base 기반 unmodified replace와 modified local-priority three-way merge
+- 실제 Codex·Claude Code·Antigravity install/update 전체 E2E
+- 실제 Claude Pro/Max·Antigravity usage parity
+- Intel macOS·Windows runtime, signing·notarization·publication
 
 결정:
 
@@ -64,11 +83,11 @@
 
 계획 evidence:
 
-- Active fragment `7,488` bytes, 8 KiB 제한 충족
-- Canonical checklist `113/157`, active checklist ID 중복 0건
-- Plan static contract 27/27, documentation style regression 18/18 PASS
-- Human documentation inventory 1,579/1,579 review, finding 0건
-- Markdown 135 files·130 links, 오류 0건
+- Active fragment 8 KiB 제한 충족
+- Canonical checklist `171/182`, active checklist ID 중복 0건
+- Plan static contract 29/29, documentation style regression 18/18 PASS
+- Human documentation inventory 1,698/1,698 review, finding 0건
+- Markdown link conformance PASS
 
 ## Phase 7 shipping usage gate
 
@@ -93,7 +112,9 @@
 - Marker 내용: host scope, session digest, PID, decision, window, threshold, measured time,
   evidence digest, revision
 - Raw account, raw session ID, CodexBar payload 저장·출력 없음
-- Installed `primary_host`와 pinned run·capability host 불일치 차단; Non-Codex host는 sensor 호출 없이 `usage-unknown` fail-closed
+- Installed `primary_host`와 pinned run·capability host 불일치 차단; Codex app-server,
+  Claude opt-in status-line capture, Antigravity truthful native unsupported를 구분하고
+  allowlisted unavailable·unsupported·malformed에서만 CodexBar fallback
 - Fallback hook, prompt rewrite, Skill activation, watcher, subagent, orchestration,
   Stop continuation 설치·실행 없음
 - OMX/OMC cancellation 결과: 보조 evidence only; halt marker나 durable goal/task 상태
@@ -101,11 +122,11 @@
 
 ### Local qualification evidence
 
-- `hive-cli`: 68/68
-- `hive-render`: 44/44
-- Phase 7 usage-control conformance: 16/16
-- Phase 3 static·projection conformance: 45/45
-- Source usage guard: 17/17
+- Rust workspace 365/365:
+  `hive-cli` 166, `hive-core` 56, `hive-projection` 22, `hive-render` 51,
+  `hive-update` 63, `hive-wiki` 7
+- Python conformance 517개 실행, 516 PASS, Windows `pwsh` 전용 1개 expected skip
+- Native hostile sensor·fallback, Phase 3 projection과 source usage guard regression PASS
 - 독립 shipping gate verifier: PASS, actionable finding 0건
 
 남은 외부 범위:
@@ -116,7 +137,8 @@
 
 ## Source 개발 usage safeguard
 
-- Source-only `hive-usage-guard` Skill과 15초 CodexBar watcher
+- Source-only `hive-usage-guard` Skill과 15초 native Codex app-server primary·CodexBar
+  fallback-only watcher
 - 현재 session threshold: remaining `60%` inclusive
 - Session window 우선, session 부재 시 weekly fallback
 - 매 user turn과 tool·mutation·delegation·external write·push·final-answer 경계의 fresh
@@ -181,8 +203,8 @@ Source guard는 개발 workspace 전용. Shipping 제품은 watcher 없이 one-s
 
 ### Local evidence
 
-- SEC-001·SEC-003 staged snapshot: `hive-cli` 68/68, `hive-render` 44/44,
-  `hive-update` 45/45
+- SEC-001·SEC-003 current regression: `hive-cli` 166/166,
+  `hive-render` 51/51, `hive-update` 63/63
 - SEC-001·SEC-003 strict Clippy와 독립 재review: PASS
 - Phase 6 static·CLI conformance: 8/8
 - Phase 4 run lifecycle: Rust 10/10, Python 29/29
@@ -204,15 +226,21 @@ packaging을 추가한 backward-compatible feature minor. Major 변경·추론 �
 
 ## 현재 검증 상태
 
-Exact clean HEAD local qualification PASS:
+Current worktree local qualification PASS:
 
 - Locked workspace build, `cargo fmt`, strict Clippy
-- Rust workspace test 236/236
-- Python conformance 480개 실행, 479 PASS, Windows `pwsh` 전용 1개 expected skip
+- Rust workspace test 365/365
+- Python conformance 517개 실행, 516 PASS, Windows `pwsh` 전용 1개 expected skip
+- User install historical inventory·retirement·journal·recovery 50/50
+- Root knowledge promotion·provenance·external race 10/10
+- Project directive ownership collision·tamper·race 4/4
+- Historical project base registry·tamper 9/9
+- Codex native executable swap fallback 차단
+- Codex plugin package validator PASS
+- Canonical Skill validator 17/17 PASS
 - Copier default host 3개, hostile 1개, invalid-hook 거부 3개, scaffold 4개
-- 사람용 문서 전수 disposition, allowlist 62/62, finding 0건
-- Markdown 133 files·125 links, 오류 0건
-- JSON 130개, YAML 28개, TOML 11개, shell 2개, workflow 3개 syntax
+- 사람용 문서 1,698/1,698 review, finding 0건
+- Markdown link와 JSON·YAML·TOML·shell·workflow syntax conformance PASS
 - Product version `0.7.0`
 - Provider SDK·endpoint·credential access·live token finding 0건
 - Skill·template·compiled projection parity
@@ -259,9 +287,8 @@ Remote qualification evidence:
 
 ## 다음 action
 
-1. RPH-037–038 source `hive-prompt-refine` integration과 routing parity
-2. RPH-002–003 세 host capability matrix와 user-scope ownership manifest
-3. RPH-004–011 plugin adapter·user install·root update
-4. RPH-012–026 project bootstrap·root knowledge promotion
-5. RPH-027–036 local-priority update merge·hostile qualification
-6. P7-011–037 protected public qualification
+1. RPH-036 실제 세 host install/update E2E
+2. NUS-020·025 실제 Claude·Antigravity qualification
+3. NUS-014·P7-013·P7-021 실제 세 host matrix
+4. P7-011·012 multi-platform runtime qualification
+5. P7-018·020·037 signed release qualification

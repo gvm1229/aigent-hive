@@ -22,6 +22,8 @@ const KNOWLEDGE_CAPTURE: &[u8] =
     include_bytes!("../../../harness/skills/hive-knowledge-capture/SKILL.md");
 const KNOWLEDGE_QUERY: &[u8] =
     include_bytes!("../../../harness/skills/hive-knowledge-query/SKILL.md");
+const KNOWLEDGE_PROMOTE: &[u8] =
+    include_bytes!("../../../harness/skills/hive-knowledge-promote/SKILL.md");
 const KNOWLEDGE_MAINTENANCE: &[u8] =
     include_bytes!("../../../harness/skills/hive-knowledge-maintenance/SKILL.md");
 const RUN_CHECKPOINT: &[u8] =
@@ -32,6 +34,8 @@ const ROLE_HANDOFF: &[u8] = include_bytes!("../../../harness/skills/hive-role-ha
 const JUDGE_PACKAGE: &[u8] = include_bytes!("../../../harness/skills/hive-judge-package/SKILL.md");
 const UPDATE_HARNESS: &[u8] = include_bytes!("../../../harness/skills/hive-update/SKILL.md");
 const MIGRATE_HARNESS: &[u8] = include_bytes!("../../../harness/skills/hive-migrate/SKILL.md");
+const PROJECT_UPGRADE: &[u8] =
+    include_bytes!("../../../harness/skills/hive-project-upgrade/SKILL.md");
 
 /// A stable validation or compilation failure.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -632,13 +636,14 @@ fn embedded_skill_source(name: &str) -> Option<&'static [u8]> {
         .find_map(|(candidate, bytes)| (candidate == name).then_some(bytes))
 }
 
-fn embedded_skill_sources() -> [(&'static str, &'static [u8]); 13] {
+fn embedded_skill_sources() -> [(&'static str, &'static [u8]); 15] {
     [
         ("setup-harness", SETUP_HARNESS),
         ("hive-simple-question", SIMPLE_QUESTION),
         ("hive-prompt-refine", PROMPT_REFINE),
         ("hive-knowledge-capture", KNOWLEDGE_CAPTURE),
         ("hive-knowledge-query", KNOWLEDGE_QUERY),
+        ("hive-knowledge-promote", KNOWLEDGE_PROMOTE),
         ("hive-knowledge-maintenance", KNOWLEDGE_MAINTENANCE),
         ("hive-run-checkpoint", RUN_CHECKPOINT),
         ("hive-run-resume", RUN_RESUME),
@@ -647,6 +652,7 @@ fn embedded_skill_sources() -> [(&'static str, &'static [u8]); 13] {
         ("hive-judge-package", JUDGE_PACKAGE),
         ("hive-update", UPDATE_HARNESS),
         ("hive-migrate", MIGRATE_HARNESS),
+        ("hive-project-upgrade", PROJECT_UPGRADE),
     ]
 }
 
@@ -688,6 +694,19 @@ pub enum RefineMode {
     RefineAndRun,
 }
 
+/// Host-normalized prompt quality used only for an optional suggestion.
+#[derive(Clone, Copy, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum PromptQuality {
+    /// Goal and execution details are sufficient for the selected action.
+    #[default]
+    Sufficient,
+    /// More than one materially different interpretation remains.
+    Ambiguous,
+    /// Goal, scope, constraints, acceptance, or output details are materially absent.
+    MissingCoreDetails,
+}
+
 /// Already-normalized facts supplied by a host. This is not raw prompt text.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(deny_unknown_fields)]
@@ -705,6 +724,8 @@ pub struct RoutingRequest {
     pub active_hive_skills: Vec<ActiveHiveSkillProof>,
     pub refine_mode: Option<RefineMode>,
     pub explicit_run_intent: bool,
+    #[serde(default)]
+    pub prompt_quality: PromptQuality,
 }
 
 /// Digest-bound proof that a Hive Skill is present in the active projection.
@@ -754,6 +775,8 @@ pub struct RoutingDecision {
     pub mode: Option<RefineMode>,
     pub load_skill_bodies: Vec<String>,
     pub next_action: Option<LogicalAction>,
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub refine_suggestion: bool,
 }
 
 /// Resolves normalized routing facts without inspecting or classifying a prompt.
@@ -772,18 +795,37 @@ pub fn resolve_route(request: &RoutingRequest) -> Result<RoutingDecision, Projec
     let fallback_action = request.explicit_action.unwrap_or(LogicalAction::RunWork);
 
     // Explicit direct/plain intent is the highest-precedence no-workflow lane.
-    if request.plain_answer {
-        return Ok(decision(
+    let mut resolved = if request.plain_answer {
+        decision(
             Route::Direct,
             LogicalAction::AnswerSimpleQuestion,
             None,
             None,
             None,
             None,
-        ));
-    }
+        )
+    } else {
+        resolve_non_plain_route(request, fallback_action)?
+    };
+    resolved.refine_suggestion = should_offer_refine_suggestion(request, &resolved);
+    Ok(resolved)
+}
 
-    resolve_non_plain_route(request, fallback_action)
+fn should_offer_refine_suggestion(request: &RoutingRequest, resolved: &RoutingDecision) -> bool {
+    matches!(
+        request.prompt_quality,
+        PromptQuality::Ambiguous | PromptQuality::MissingCoreDetails
+    ) && !request.plain_answer
+        && !request.simple_question
+        && resolved.route == Route::HostNative
+        && resolved.logical_action == LogicalAction::RunWork
+        && resolved.selected_skill.is_none()
+        && resolved.load_skill_bodies.is_empty()
+}
+
+#[allow(clippy::trivially_copy_pass_by_ref)]
+const fn is_false(value: &bool) -> bool {
+    !*value
 }
 
 fn resolve_non_plain_route(
@@ -1084,6 +1126,7 @@ fn decision(
         mode,
         load_skill_bodies,
         next_action,
+        refine_suggestion: false,
     }
 }
 
@@ -1099,13 +1142,15 @@ fn action_for_skill(skill: &str) -> Option<LogicalAction> {
     match skill {
         "hive-simple-question" => Some(LogicalAction::AnswerSimpleQuestion),
         "hive-prompt-refine" => Some(LogicalAction::RefinePrompt),
-        "hive-knowledge-capture" => Some(LogicalAction::IngestKnowledge),
+        "hive-knowledge-capture" | "hive-knowledge-promote" => Some(LogicalAction::IngestKnowledge),
         "hive-knowledge-query" => Some(LogicalAction::QueryKnowledge),
         "hive-run-checkpoint" | "hive-role-handoff" | "hive-usage-guard" => {
             Some(LogicalAction::RunWork)
         }
         "hive-run-resume" => Some(LogicalAction::ResumeWork),
-        "hive-update" | "hive-migrate" => Some(LogicalAction::UpdateHarness),
+        "hive-update" | "hive-migrate" | "hive-project-upgrade" => {
+            Some(LogicalAction::UpdateHarness)
+        }
         _ => None,
     }
 }
@@ -1535,7 +1580,39 @@ mod tests {
             active_hive_skills: Vec::new(),
             refine_mode: None,
             explicit_run_intent: false,
+            prompt_quality: PromptQuality::Sufficient,
         }
+    }
+
+    #[test]
+    fn ambiguous_host_native_work_offers_only_an_optional_refine_suggestion() {
+        let mut request = routing_request();
+        request.explicit_action = None;
+        request.prompt_quality = PromptQuality::Ambiguous;
+
+        let resolved = resolve_route(&request).expect("routing succeeds");
+
+        assert_eq!(resolved.route, Route::HostNative);
+        assert_eq!(resolved.logical_action, LogicalAction::RunWork);
+        assert!(resolved.refine_suggestion);
+        assert!(resolved.selected_skill.is_none());
+        assert!(resolved.load_skill_bodies.is_empty());
+        assert_eq!(resolved.mode, None);
+    }
+
+    #[test]
+    fn clear_work_and_simple_questions_never_offer_refine_suggestions() {
+        let clear = resolve_route(&routing_request()).expect("clear work routes");
+        assert!(!clear.refine_suggestion);
+
+        let mut simple = routing_request();
+        simple.explicit_action = Some(LogicalAction::AnswerSimpleQuestion);
+        simple.simple_question = true;
+        simple.prompt_quality = PromptQuality::MissingCoreDetails;
+        simple.hive_candidate = Some("hive-simple-question".to_owned());
+        simple.active_hive_skills = vec![builtin_proof("hive-simple-question")];
+        let simple = resolve_route(&simple).expect("simple question routes");
+        assert!(!simple.refine_suggestion);
     }
 
     fn builtin_proof(name: &str) -> ActiveHiveSkillProof {
@@ -1670,8 +1747,8 @@ description: Inspect one local file without changing it.
             let first = compile_projection(host, &[]).expect("projection");
             let second = compile_projection(host, &[]).expect("projection");
             assert_eq!(first, second);
-            assert_eq!(first.active_skills.skills.len(), 13);
-            assert_eq!(first.files.len(), 14);
+            assert_eq!(first.active_skills.skills.len(), 15);
+            assert_eq!(first.files.len(), 16);
             for skill in [
                 "hive-judge-package",
                 "hive-prompt-refine",
@@ -1724,7 +1801,7 @@ description: Inspect one local file without changing it.
                 "hive-judge-package",
                 JUDGE_PACKAGE,
                 include_bytes!(
-                    "../../../harness/template/{{ '.claude' if primary_host == 'claude' else '.agents' }}/skills/hive-judge-package/SKILL.md"
+                    "../../../harness/template/.agents/skills/hive-judge-package/SKILL.md"
                 )
                 .as_slice(),
             ),
@@ -1732,47 +1809,41 @@ description: Inspect one local file without changing it.
                 "hive-run-checkpoint",
                 RUN_CHECKPOINT,
                 include_bytes!(
-                    "../../../harness/template/{{ '.claude' if primary_host == 'claude' else '.agents' }}/skills/hive-run-checkpoint/SKILL.md"
+                    "../../../harness/template/.agents/skills/hive-run-checkpoint/SKILL.md"
                 )
                 .as_slice(),
             ),
             (
                 "hive-run-resume",
                 RUN_RESUME,
-                include_bytes!(
-                    "../../../harness/template/{{ '.claude' if primary_host == 'claude' else '.agents' }}/skills/hive-run-resume/SKILL.md"
-                )
-                .as_slice(),
+                include_bytes!("../../../harness/template/.agents/skills/hive-run-resume/SKILL.md")
+                    .as_slice(),
             ),
             (
                 "hive-role-handoff",
                 ROLE_HANDOFF,
                 include_bytes!(
-                    "../../../harness/template/{{ '.claude' if primary_host == 'claude' else '.agents' }}/skills/hive-role-handoff/SKILL.md"
+                    "../../../harness/template/.agents/skills/hive-role-handoff/SKILL.md"
                 )
                 .as_slice(),
             ),
             (
                 "hive-update",
                 UPDATE_HARNESS,
-                include_bytes!(
-                    "../../../harness/template/{{ '.claude' if primary_host == 'claude' else '.agents' }}/skills/hive-update/SKILL.md"
-                )
-                .as_slice(),
+                include_bytes!("../../../harness/template/.agents/skills/hive-update/SKILL.md")
+                    .as_slice(),
             ),
             (
                 "hive-migrate",
                 MIGRATE_HARNESS,
-                include_bytes!(
-                    "../../../harness/template/{{ '.claude' if primary_host == 'claude' else '.agents' }}/skills/hive-migrate/SKILL.md"
-                )
-                .as_slice(),
+                include_bytes!("../../../harness/template/.agents/skills/hive-migrate/SKILL.md")
+                    .as_slice(),
             ),
             (
                 "hive-usage-guard",
                 USAGE_GUARD,
                 include_bytes!(
-                    "../../../harness/template/{{ '.claude' if primary_host == 'claude' else '.agents' }}/skills/hive-usage-guard/SKILL.md"
+                    "../../../harness/template/.agents/skills/hive-usage-guard/SKILL.md"
                 )
                 .as_slice(),
             ),

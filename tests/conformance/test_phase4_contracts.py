@@ -342,6 +342,7 @@ class Phase4Contracts(unittest.TestCase):
         *,
         dispatch_intent: str | None = None,
         account_digest: str | None = None,
+        session_id: str | None = None,
         role_id: str | None = None,
         threshold: int | None = None,
         extra_environment: dict[str, str] | None = None,
@@ -363,6 +364,8 @@ class Phase4Contracts(unittest.TestCase):
             arguments.extend(["--dispatch-intent", dispatch_intent])
         if account_digest is not None:
             arguments.extend(["--account-digest", account_digest])
+        if session_id is not None:
+            arguments.extend(["--session-id", session_id])
         if role_id is not None:
             arguments.extend(["--role", role_id])
         elif dispatch_intent == "automatic":
@@ -380,6 +383,7 @@ class Phase4Contracts(unittest.TestCase):
         *,
         empty: bool = False,
         log: Path | None = None,
+        provider: str = "codex",
     ) -> dict[str, str]:
         fake_bin = self.work / f"fake-codexbar-{case}"
         fake_bin.mkdir(exist_ok=True)
@@ -404,10 +408,63 @@ class Phase4Contracts(unittest.TestCase):
         environment = {
             "PATH": str(fake_bin),
             "FAKE_CODEXBAR_CASE": case,
+            "FAKE_CODEXBAR_PROVIDER": provider,
         }
         if log is not None:
             environment["FAKE_CODEXBAR_LOG"] = str(log)
         return environment
+
+    def claude_capture_path(self, target: Path, session_id: str) -> Path:
+        scoped = b"claude\0" + session_id.encode()
+        digest = hashlib.sha256(scoped).hexdigest()
+        return (
+            target
+            / ".hive/runtime/usage-guard/claude"
+            / f"{digest}.json"
+        )
+
+    def valid_claude_capture(self, session_id: str) -> dict[str, Any]:
+        now = int(time.time())
+        return {
+            "schema_version": 1,
+            "sensor_id": "claude-statusline",
+            "sensor_version": "2.1.0",
+            "host_scope": "claude",
+            "session_id_digest": digest_bytes(
+                b"claude\0" + session_id.encode()
+            ),
+            "received_at_unix_seconds": now,
+            "received_at_unix_millis": now * 1_000,
+            "expires_at_unix_seconds": now + 120,
+            "windows": [
+                {
+                    "name": "session",
+                    "window_minutes": 300,
+                    "remaining_percent": 75.0,
+                    "resets_at_unix_seconds": now + 3_600,
+                }
+            ],
+        }
+
+    def write_claude_capture(
+        self,
+        target: Path,
+        session_id: str,
+        payload: dict[str, Any],
+    ) -> Path:
+        path = self.claude_capture_path(target, session_id)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(
+            json.dumps(
+                payload,
+                ensure_ascii=False,
+                separators=(",", ":"),
+                sort_keys=True,
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+        return path
 
     def read_status(self, target: Path) -> tuple[dict[str, Any], bytes]:
         status, body = parse_document(target / ".hive/runs/demo/STATUS.md")
@@ -1192,7 +1249,7 @@ class Phase4Contracts(unittest.TestCase):
             ],
         )
 
-    def test_non_codex_manual_resume_stays_usable_but_automatic_fails_before_sensor(
+    def test_non_codex_manual_resume_stays_usable_and_automatic_uses_fallback(
         self,
     ) -> None:
         for host, capability in (
@@ -1235,25 +1292,268 @@ class Phase4Contracts(unittest.TestCase):
                     capability,
                     dispatch_intent="automatic",
                     account_digest=USAGE_ACCOUNT_DIGEST,
+                    session_id=f"{host}-session",
                     extra_environment=self.fake_codexbar_environment(
                         "allow",
                         log=sensor_log,
+                        provider=host,
                     ),
                 )
-                self.assertEqual(automatic.returncode, 3, automatic_payload)
-                self.assertEqual(automatic_payload["code"], "hive.usage-unknown")
+                self.assert_success(automatic, automatic_payload)
+                self.assertEqual(
+                    automatic_payload["code"],
+                    "hive.run-resume-prepared",
+                )
                 self.assert_resume_payload(
                     automatic_payload,
                     state="executing",
-                    brief_count=0,
-                    recovery_only=True,
+                    brief_count=1,
+                    recovery_only=False,
                 )
                 usage_guard = automatic_payload["data"]["usage_guard"]
-                self.assertIs(usage_guard["enforced"], False)
-                self.assertEqual(usage_guard["outcome"], "unknown")
+                self.assertIs(usage_guard["enforced"], True)
+                self.assertEqual(usage_guard["outcome"], "authorized")
                 self.assertEqual(usage_guard["host_scope"], host)
+                self.assertTrue(sensor_log.exists())
+                after = snapshot_tree(target)
+                for path, value in before.items():
+                    self.assertEqual(after[path], value)
+                self.assertEqual(
+                    [
+                        json.loads(line)
+                        for line in sensor_log.read_text(
+                            encoding="utf-8"
+                        ).splitlines()
+                    ],
+                    [
+                        ["--version"],
+                        [
+                            "usage",
+                            "--provider",
+                            host,
+                            "--all-accounts",
+                            "--source",
+                            "cli",
+                            "--format",
+                            "json",
+                            "--json-only",
+                        ],
+                    ],
+                )
+
+    def test_claude_automatic_resume_integrity_errors_never_invoke_codexbar(
+        self,
+    ) -> None:
+        cases = (
+            "oversized",
+            "stale",
+            "clock-regression",
+            "wrong-provider",
+            "wrong-session",
+            "wrong-windows",
+            "duplicate-json",
+            "ambiguous-windows",
+            "symlink",
+        )
+        for case in cases:
+            if case == "symlink" and os.name == "nt":
+                continue
+            with self.subTest(case=case):
+                session_id = f"claude-integrity-{case}"
+                target = self.fresh_target(f"claude-integrity-{case}")
+                self.set_installed_host(target, "claude")
+                self.ensure_handoff(target)
+                process, payload = self.checkpoint(
+                    target,
+                    self.checkpoint_request(state="executing"),
+                    CAPABILITIES["claude-omc"],
+                    f"claude-integrity-{case}",
+                )
+                self.assert_success(process, payload)
+                capture_path = self.claude_capture_path(target, session_id)
+                capture_path.parent.mkdir(parents=True, exist_ok=True)
+                capture = self.valid_claude_capture(session_id)
+
+                if case == "oversized":
+                    capture_path.write_bytes(b" " * (16 * 1024 + 1))
+                elif case == "stale":
+                    capture["received_at_unix_seconds"] -= 300
+                    capture["received_at_unix_millis"] -= 300_000
+                    capture["expires_at_unix_seconds"] -= 300
+                    self.write_claude_capture(target, session_id, capture)
+                elif case == "clock-regression":
+                    capture["received_at_unix_millis"] -= 1_000
+                    self.write_claude_capture(target, session_id, capture)
+                elif case == "wrong-provider":
+                    capture["host_scope"] = "codex"
+                    self.write_claude_capture(target, session_id, capture)
+                elif case == "wrong-session":
+                    capture["session_id_digest"] = "sha256:" + "0" * 64
+                    self.write_claude_capture(target, session_id, capture)
+                elif case == "wrong-windows":
+                    capture["windows"][0]["name"] = "daily"
+                    self.write_claude_capture(target, session_id, capture)
+                elif case == "duplicate-json":
+                    encoded = json.dumps(
+                        capture,
+                        separators=(",", ":"),
+                        sort_keys=True,
+                    )
+                    encoded = encoded.replace(
+                        '"schema_version":1',
+                        '"schema_version":1,"schema_version":1',
+                        1,
+                    )
+                    capture_path.write_text(encoded + "\n", encoding="utf-8")
+                elif case == "ambiguous-windows":
+                    capture["windows"].append(dict(capture["windows"][0]))
+                    self.write_claude_capture(target, session_id, capture)
+                else:
+                    external = self.work / f"foreign-{case}.json"
+                    external.write_text("{}\n", encoding="utf-8")
+                    capture_path.symlink_to(external)
+
+                sensor_log = self.work / f"claude-integrity-{case}.log"
+                before = snapshot_tree(target)
+                resumed, resume_payload = self.resume(
+                    target,
+                    CAPABILITIES["claude-omc"],
+                    dispatch_intent="automatic",
+                    session_id=session_id,
+                    extra_environment=self.fake_codexbar_environment(
+                        "allow",
+                        log=sensor_log,
+                        provider="claude",
+                    ),
+                )
+
+                self.assertEqual(resumed.returncode, 3, resume_payload)
+                self.assertEqual(resume_payload["code"], "hive.usage-unknown")
+                self.assertEqual(
+                    resume_payload["data"]["dispatch_briefs"],
+                    [],
+                )
+                self.assertEqual(
+                    resume_payload["data"]["usage_guard"]["outcome"],
+                    "unknown",
+                )
                 self.assertFalse(sensor_log.exists())
                 self.assertEqual(snapshot_tree(target), before)
+
+    def test_claude_automatic_resume_allowlisted_errors_fallback_once(
+        self,
+    ) -> None:
+        for case in ("unavailable", "malformed", "unsupported"):
+            with self.subTest(case=case):
+                session_id = f"claude-allowlisted-{case}"
+                target = self.fresh_target(f"claude-allowlisted-{case}")
+                self.set_installed_host(target, "claude")
+                self.ensure_handoff(target)
+                process, payload = self.checkpoint(
+                    target,
+                    self.checkpoint_request(state="executing"),
+                    CAPABILITIES["claude-omc"],
+                    f"claude-allowlisted-{case}",
+                )
+                self.assert_success(process, payload)
+                if case == "malformed":
+                    path = self.claude_capture_path(target, session_id)
+                    path.parent.mkdir(parents=True, exist_ok=True)
+                    path.write_bytes(b"{")
+                elif case == "unsupported":
+                    capture = self.valid_claude_capture(session_id)
+                    capture["schema_version"] = 2
+                    self.write_claude_capture(target, session_id, capture)
+
+                sensor_log = self.work / f"claude-allowlisted-{case}.log"
+                resumed, resume_payload = self.resume(
+                    target,
+                    CAPABILITIES["claude-omc"],
+                    dispatch_intent="automatic",
+                    session_id=session_id,
+                    extra_environment=self.fake_codexbar_environment(
+                        "allow",
+                        log=sensor_log,
+                        provider="claude",
+                    ),
+                )
+
+                self.assert_success(resumed, resume_payload)
+                self.assertEqual(
+                    resume_payload["data"]["usage_guard"]["outcome"],
+                    "authorized",
+                )
+                self.assertEqual(
+                    [
+                        json.loads(line)
+                        for line in sensor_log.read_text(
+                            encoding="utf-8"
+                        ).splitlines()
+                    ],
+                    [
+                        ["--version"],
+                        [
+                            "usage",
+                            "--provider",
+                            "claude",
+                            "--all-accounts",
+                            "--source",
+                            "cli",
+                            "--format",
+                            "json",
+                            "--json-only",
+                        ],
+                    ],
+                )
+
+    @unittest.skipIf(os.name == "nt", "Unix process fixture")
+    def test_codex_automatic_resume_process_failure_never_invokes_codexbar(
+        self,
+    ) -> None:
+        target = self.fresh_target("codex-process-failure")
+        self.ensure_handoff(target)
+        process, payload = self.checkpoint(
+            target,
+            self.checkpoint_request(state="executing"),
+            CAPABILITIES["codex-omx"],
+            "codex-process-failure",
+        )
+        self.assert_success(process, payload)
+        sensor_log = self.work / "codex-process-failure.log"
+        environment = self.fake_codexbar_environment(
+            "allow",
+            log=sensor_log,
+        )
+        fake_bin = Path(environment["PATH"])
+        codex = fake_bin / "codex"
+        codex.write_text(
+            "#!/bin/sh\n"
+            'if [ "$1" = "--version" ]; then\n'
+            "  printf 'codex-cli 0.145.0\\n'\n"
+            "  exit 0\n"
+            "fi\n"
+            'if [ "$1" = "app-server" ]; then\n'
+            "  exit 7\n"
+            "fi\n"
+            "exit 7\n",
+            encoding="utf-8",
+        )
+        codex.chmod(codex.stat().st_mode | stat.S_IXUSR)
+        before = snapshot_tree(target)
+
+        resumed, resume_payload = self.resume(
+            target,
+            CAPABILITIES["codex-omx"],
+            dispatch_intent="automatic",
+            account_digest=USAGE_ACCOUNT_DIGEST,
+            extra_environment=environment,
+        )
+
+        self.assertEqual(resumed.returncode, 3, resume_payload)
+        self.assertEqual(resume_payload["code"], "hive.usage-unknown")
+        self.assertEqual(resume_payload["data"]["dispatch_briefs"], [])
+        self.assertFalse(sensor_log.exists())
+        self.assertEqual(snapshot_tree(target), before)
 
     def test_automatic_resume_rejects_installed_and_pinned_host_mismatch_before_sensor(
         self,

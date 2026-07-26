@@ -39,11 +39,17 @@ class SourceUsageGuardTests(unittest.TestCase):
         self.fake_bin = self.root / "bin"
         self.fake_bin.mkdir()
         self.fixture = self.root / "usage.json"
+        self.native_fixture = self.root / "native-usage.json"
+        self.call_log = self.root / "sensor-calls.log"
+        self.write_fake_codex_unsupported()
         self.write_fake_codexbar()
         self.environment = {
             **os.environ,
             "PATH": f"{self.fake_bin}{os.pathsep}{os.environ.get('PATH', '')}",
             "HIVE_SOURCE_USAGE_FIXTURE": str(self.fixture),
+            "HIVE_CODEX_NATIVE_FIXTURE": str(self.native_fixture),
+            "HIVE_USAGE_SENSOR_CALL_LOG": str(self.call_log),
+            "HIVE_FAKE_CODEXBAR_TARGET": str(self.fake_bin / "codexbar"),
         }
 
     def tearDown(self) -> None:
@@ -76,6 +82,8 @@ import os
 import pathlib
 import sys
 
+with pathlib.Path(os.environ["HIVE_USAGE_SENSOR_CALL_LOG"]).open("a") as stream:
+    stream.write("codexbar " + " ".join(sys.argv[1:]) + "\\n")
 if sys.argv[1:] == ["--version"]:
     print("CodexBar 0.45.2")
     raise SystemExit(0)
@@ -90,6 +98,165 @@ raise SystemExit(64)
             encoding="utf-8",
         )
         executable.chmod(executable.stat().st_mode | stat.S_IXUSR)
+
+    def hide_codexbar(self) -> None:
+        (self.fake_bin / "codexbar").unlink(missing_ok=True)
+        python = self.fake_bin / "python3"
+        if not python.exists():
+            python.symlink_to(sys.executable)
+        self.environment["PATH"] = str(self.fake_bin)
+
+    def write_fake_brew(self, *, version: str = "Homebrew 4.4.20") -> None:
+        executable = self.fake_bin / "brew"
+        executable.write_text(
+            f"""#!{sys.executable}
+import os
+import pathlib
+import stat
+import sys
+
+with pathlib.Path(os.environ["HIVE_USAGE_SENSOR_CALL_LOG"]).open("a") as stream:
+    stream.write("brew " + " ".join(sys.argv[1:]) + "\\n")
+if sys.argv[1:] == ["--version"]:
+    print({version!r})
+    raise SystemExit(0)
+if sys.argv[1:] in (
+    ["install", "--cask", "codexbar"],
+    ["install", "steipete/tap/codexbar"],
+):
+    target = pathlib.Path(os.environ["HIVE_FAKE_CODEXBAR_TARGET"])
+    target.write_text(
+        "#!{sys.executable}\\n"
+        "import sys\\n"
+        "print('CodexBar 0.45.2') if sys.argv[1:] == ['--version'] "
+        "else sys.exit(64)\\n"
+    )
+    target.chmod(target.stat().st_mode | stat.S_IXUSR)
+    raise SystemExit(0)
+raise SystemExit(64)
+""",
+            encoding="utf-8",
+        )
+        executable.chmod(executable.stat().st_mode | stat.S_IXUSR)
+
+    def write_fake_codex_unsupported(self) -> None:
+        executable = self.fake_bin / "codex"
+        executable.write_text(
+            """#!/usr/bin/env python3
+import os
+import pathlib
+import sys
+
+with pathlib.Path(os.environ["HIVE_USAGE_SENSOR_CALL_LOG"]).open("a") as stream:
+    stream.write("codex " + " ".join(sys.argv[1:]) + "\\n")
+if sys.argv[1:] == ["--version"]:
+    print("codex-cli 0.144.5")
+    raise SystemExit(0)
+raise SystemExit(64)
+""",
+            encoding="utf-8",
+        )
+        executable.chmod(executable.stat().st_mode | stat.S_IXUSR)
+
+    def write_fake_codex_native(self) -> None:
+        executable = self.fake_bin / "codex"
+        executable.write_text(
+            """#!/usr/bin/env python3
+import json
+import os
+import pathlib
+import sys
+
+with pathlib.Path(os.environ["HIVE_USAGE_SENSOR_CALL_LOG"]).open("a") as stream:
+    stream.write("codex " + " ".join(sys.argv[1:]) + "\\n")
+if sys.argv[1:] == ["--version"]:
+    print("codex-cli 0.145.0")
+    raise SystemExit(0)
+if sys.argv[1:] != ["app-server", "--stdio"]:
+    raise SystemExit(64)
+fixture = json.loads(
+    pathlib.Path(os.environ["HIVE_CODEX_NATIVE_FIXTURE"]).read_text()
+)
+for line in sys.stdin:
+    request = json.loads(line)
+    request_id = request.get("id")
+    method = request.get("method")
+    if method == "initialize":
+        response = {"id": request_id, "result": {"userAgent": "test"}}
+    elif method == "account/read":
+        response = {"id": request_id, "result": fixture["account"]}
+    elif method == "account/rateLimits/read":
+        response = {"id": request_id, "result": fixture["rate_limits"]}
+    else:
+        continue
+    print(json.dumps(response), flush=True)
+""",
+            encoding="utf-8",
+        )
+        executable.chmod(executable.stat().st_mode | stat.S_IXUSR)
+
+    def write_fake_codex_identity_swap(self) -> None:
+        executable = self.fake_bin / "codex"
+        executable.write_text(
+            """#!/usr/bin/env python3
+import os
+import pathlib
+import sys
+
+path = pathlib.Path(__file__)
+with pathlib.Path(os.environ["HIVE_USAGE_SENSOR_CALL_LOG"]).open("a") as stream:
+    stream.write("codex " + " ".join(sys.argv[1:]) + "\\n")
+if sys.argv[1:] == ["--version"]:
+    with path.open("a") as stream:
+        stream.write("\\n# identity changed after qualification\\n")
+    print("codex-cli 0.145.0")
+    raise SystemExit(0)
+raise SystemExit(64)
+""",
+            encoding="utf-8",
+        )
+        executable.chmod(executable.stat().st_mode | stat.S_IXUSR)
+
+    def write_native_usage(
+        self,
+        *,
+        used: float,
+        minutes: int = 10080,
+        plan: str = "pro",
+        limit_id: str = "codex",
+    ) -> None:
+        resets_at = int(
+            (dt.datetime.now(dt.timezone.utc) + dt.timedelta(days=1)).timestamp()
+        )
+        rate_limit = {
+            "limitId": limit_id,
+            "planType": plan,
+            "primary": {
+                "usedPercent": used,
+                "windowDurationMins": minutes,
+                "resetsAt": resets_at,
+            },
+            "secondary": None,
+        }
+        self.native_fixture.write_text(
+            json.dumps(
+                {
+                    "account": {
+                        "account": {
+                            "type": "chatgpt",
+                            "email": "native-account@example.invalid",
+                            "planType": plan,
+                        },
+                        "requiresOpenaiAuth": True,
+                    },
+                    "rate_limits": {
+                        "rateLimits": rate_limit,
+                        "rateLimitsByLimitId": {"codex": rate_limit},
+                    },
+                }
+            ),
+            encoding="utf-8",
+        )
 
     def write_usage(
         self,
@@ -166,6 +333,280 @@ raise SystemExit(64)
             / "halt.json"
         )
         self.assertTrue(halt.is_file())
+
+    def test_native_codex_is_primary_and_limited_never_calls_codexbar(self) -> None:
+        self.write_fake_codex_native()
+        self.write_native_usage(used=90)
+        self.write_usage(primary=None, secondary_used=1)
+
+        completed = self.run_guard("check")
+
+        self.assertEqual(completed.returncode, 10, completed.stderr)
+        result = self.output(completed)
+        self.assertEqual(result["sensor"], "codex-app-server")
+        self.assertFalse(result["fallback_used"])
+        self.assertEqual(result["window"], "weekly")
+        calls = self.call_log.read_text(encoding="utf-8")
+        self.assertIn("codex app-server --stdio", calls)
+        self.assertNotIn("codexbar ", calls)
+
+    def test_malformed_native_codex_uses_codexbar_once(self) -> None:
+        self.write_fake_codex_native()
+        self.write_native_usage(used=1, minutes=301)
+        self.write_usage(primary=None, secondary_used=1)
+
+        completed = self.run_guard("check")
+
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        result = self.output(completed)
+        self.assertEqual(result["sensor"], "codexbar")
+        self.assertTrue(result["fallback_used"])
+        calls = self.call_log.read_text(encoding="utf-8")
+        self.assertEqual(calls.count("codexbar --version"), 1)
+        self.assertEqual(calls.count("codexbar usage"), 1)
+
+    def test_native_integrity_change_fails_closed_without_codexbar(
+        self,
+    ) -> None:
+        self.write_fake_codex_identity_swap()
+        self.write_usage(primary=None, secondary_used=1)
+
+        completed = self.run_guard("check")
+
+        self.assertEqual(completed.returncode, 11, completed.stderr)
+        result = self.output(completed)
+        self.assertEqual(result["quota_decision"], "usage_unknown")
+        self.assertEqual(
+            result["reason"],
+            "Codex executable changed during qualification",
+        )
+        self.assertNotIn("fallback_install", result)
+        calls = self.call_log.read_text(encoding="utf-8")
+        self.assertEqual(calls.count("codex --version"), 1)
+        self.assertNotIn("codexbar ", calls)
+
+    def test_source_and_shipping_integrity_failure_contracts_match(
+        self,
+    ) -> None:
+        source = GUARD.read_text(encoding="utf-8")
+        shipping = (
+            REPOSITORY_ROOT / "crates/hive-cli/src/usage.rs"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn("class NativeSensorIntegrity", source)
+        self.assertIn(
+            "except ("
+            "\n        NativeSensorUnavailable,"
+            "\n        NativeSensorUnsupported,"
+            "\n        NativeSensorMalformed,",
+            source,
+        )
+        self.assertIn(
+            "Self::Unavailable | Self::Unsupported | "
+            "Self::UnsupportedVersion | Self::Malformed",
+            shipping,
+        )
+        self.assertIn(
+            "every_native_integrity_error_fails_closed_without_codexbar",
+            shipping,
+        )
+
+    def test_missing_fallback_returns_sanitized_provider_install_preview(
+        self,
+    ) -> None:
+        self.hide_codexbar()
+
+        completed = self.run_guard("check")
+
+        self.assertEqual(completed.returncode, 11, completed.stderr)
+        result = self.output(completed)
+        self.assertEqual(result["quota_decision"], "usage_unknown")
+        self.assertEqual(result["fallback_install"]["provider"], "codex")
+        preview = (
+            "python3 .agents/skills/hive-usage-guard/scripts/guard.py "
+            "fallback-install --host codex --dry-run --json"
+        )
+        self.assertEqual(result["next_action"], preview)
+        self.assertEqual(
+            result["fallback_install"]["command_preview"],
+            preview,
+        )
+        self.assertNotIn(str(self.root), completed.stdout)
+        self.assertNotIn("example.invalid", completed.stdout)
+        self.assertFalse((self.fake_bin / "brew").exists())
+
+    @unittest.skipUnless(
+        sys.platform == "darwin" or sys.platform.startswith("linux"),
+        "source fallback install has no qualified adapter on this platform",
+    )
+    def test_fallback_install_dry_run_qualifies_brew_without_installing(
+        self,
+    ) -> None:
+        self.hide_codexbar()
+        self.write_fake_brew()
+
+        completed = self.run_guard(
+            "fallback-install",
+            "--host",
+            "claude",
+            "--dry-run",
+        )
+
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        result = self.output(completed)
+        self.assertEqual(
+            result["code"],
+            "hive.usage-fallback-install-preview",
+        )
+        self.assertEqual(result["provider"], "claude")
+        self.assertEqual(result["package_manager"], "brew")
+        expected_preview = (
+            "brew install --cask codexbar"
+            if sys.platform == "darwin"
+            else "brew install steipete/tap/codexbar"
+        )
+        self.assertEqual(result["command_preview"], expected_preview)
+        self.assertEqual(result["consent_scope"], "current-action")
+        self.assertFalse(result["credentials_requested"])
+        self.assertFalse(result["provider_cli_reinstall"])
+        self.assertFalse(result["manual_cookie_requested"])
+        self.assertIn("--host claude --apply --confirm-install", result["next_action"])
+        self.assertEqual(
+            self.call_log.read_text(encoding="utf-8").splitlines(),
+            ["brew --version"],
+        )
+        self.assertFalse((self.fake_bin / "codexbar").exists())
+
+    def test_fallback_install_apply_requires_current_action_confirmation(
+        self,
+    ) -> None:
+        self.hide_codexbar()
+        self.write_fake_brew()
+
+        completed = self.run_guard(
+            "fallback-install",
+            "--host",
+            "antigravity",
+            "--apply",
+        )
+
+        self.assertEqual(completed.returncode, 64, completed.stderr)
+        result = self.output(completed)
+        self.assertEqual(result["status"], "error")
+        self.assertEqual(result["code"], "hive.invalid-input")
+        self.assertIn("--confirm-install", result["reason"])
+        self.assertFalse(self.call_log.exists())
+        self.assertFalse((self.fake_bin / "codexbar").exists())
+
+    @unittest.skipUnless(
+        sys.platform == "darwin" or sys.platform.startswith("linux"),
+        "source fallback install has no qualified adapter on this platform",
+    )
+    def test_fallback_install_apply_uses_only_fake_qualified_adapter(
+        self,
+    ) -> None:
+        self.hide_codexbar()
+        self.write_fake_brew()
+
+        completed = self.run_guard(
+            "fallback-install",
+            "--host",
+            "codex",
+            "--apply",
+            "--confirm-install",
+        )
+
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        result = self.output(completed)
+        self.assertEqual(result["code"], "hive.usage-fallback-installed")
+        calls = self.call_log.read_text(encoding="utf-8").splitlines()
+        self.assertEqual(calls[0], "brew --version")
+        self.assertIn(
+            calls[1],
+            (
+                "brew install --cask codexbar",
+                "brew install steipete/tap/codexbar",
+            ),
+        )
+        self.assertTrue((self.fake_bin / "codexbar").is_file())
+
+    @unittest.skipUnless(
+        sys.platform == "darwin" or sys.platform.startswith("linux"),
+        "source fallback install has no qualified adapter on this platform",
+    )
+    def test_unqualified_package_manager_never_reaches_install(self) -> None:
+        self.hide_codexbar()
+        self.write_fake_brew(version="untrusted manager")
+
+        completed = self.run_guard(
+            "fallback-install",
+            "--host",
+            "codex",
+            "--dry-run",
+        )
+
+        self.assertEqual(completed.returncode, 64, completed.stderr)
+        result = self.output(completed)
+        self.assertEqual(
+            result["code"],
+            "hive.usage-fallback-install-unsupported",
+        )
+        self.assertEqual(
+            result["reason"],
+            "supported package manager brew could not be qualified",
+        )
+        self.assertEqual(
+            self.call_log.read_text(encoding="utf-8").splitlines(),
+            ["brew --version"],
+        )
+
+    @unittest.skipUnless(
+        sys.platform == "darwin" or sys.platform.startswith("linux"),
+        "source fallback install has no qualified adapter on this platform",
+    )
+    def test_fallback_install_package_manager_unavailable_is_stable(
+        self,
+    ) -> None:
+        self.hide_codexbar()
+
+        completed = self.run_guard(
+            "fallback-install",
+            "--host",
+            "codex",
+            "--dry-run",
+        )
+
+        self.assertEqual(completed.returncode, 64, completed.stderr)
+        result = self.output(completed)
+        self.assertEqual(
+            result,
+            {
+                "action": "InstallUsageFallback",
+                "code": "hive.usage-fallback-install-unsupported",
+                "reason": "supported package manager brew is unavailable",
+                "schema_version": 1,
+                "status": "unsupported",
+            },
+        )
+
+    def test_declining_missing_fallback_keeps_guard_controls_usable(
+        self,
+    ) -> None:
+        self.hide_codexbar()
+
+        unknown = self.run_guard("check")
+        disabled = self.run_guard(
+            "session-disable",
+            "--confirm-session-disable",
+        )
+
+        self.assertEqual(unknown.returncode, 11, unknown.stderr)
+        self.assertEqual(
+            self.output(unknown)["fallback_install"]["decline_effect"],
+            "core-usable-automatic-dispatch-usage-unknown",
+        )
+        self.assertEqual(disabled.returncode, 0, disabled.stderr)
+        self.assertFalse(self.output(disabled)["guard_enabled"])
 
     def test_session_window_takes_precedence_over_weekly(self) -> None:
         self.write_usage(primary={"usedPercent": 90}, secondary_used=1)
@@ -414,6 +855,51 @@ raise SystemExit(64)
         self.assertIn("Only after exit `0`", directive)
         self.assertIn("including simple answers", directive)
         self.assertIn("allow_implicit_invocation: true", interface)
+
+    def test_source_and_shipping_guidance_match_fallback_consent_contract(
+        self,
+    ) -> None:
+        source_skill = (
+            REPOSITORY_ROOT
+            / ".agents/skills/hive-usage-guard/SKILL.md"
+        ).read_text(encoding="utf-8")
+        source_directive = (
+            REPOSITORY_ROOT
+            / ".agents/directives/07-source-usage-guard.md"
+        ).read_text(encoding="utf-8")
+        canonical = (
+            REPOSITORY_ROOT
+            / "harness/skills/hive-usage-guard/SKILL.md"
+        ).read_bytes()
+        projections = (
+            "harness/plugins/aigent-hive/skills/hive-usage-guard/SKILL.md",
+            "harness/template/.agents/skills/hive-usage-guard/SKILL.md",
+            "harness/template/.claude/skills/hive-usage-guard/SKILL.md",
+        )
+
+        for projection in projections:
+            self.assertEqual(
+                (REPOSITORY_ROOT / projection).read_bytes(),
+                canonical,
+                projection,
+            )
+        for content in (
+            source_skill,
+            source_directive,
+            canonical.decode("utf-8"),
+        ):
+            self.assertIn("current-action", content)
+            self.assertIn("silently", content)
+            self.assertIn("provider CLI", content)
+            self.assertIn("manual-cookie", content)
+            self.assertIn("package-manager", content)
+        self.assertIn("fallback-install --host", source_skill)
+        self.assertIn("--apply --confirm-install", source_skill)
+        self.assertIn("automatic dispatch `usage_unknown`", source_directive)
+        self.assertIn(
+            "automatic dispatch `hive.usage-unknown`",
+            canonical.decode("utf-8"),
+        )
 
     def test_korean_guide_documents_actual_session_prompts_and_blocking(self) -> None:
         guide = (

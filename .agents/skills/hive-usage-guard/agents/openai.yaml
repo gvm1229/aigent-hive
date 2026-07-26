@@ -1,6 +1,6 @@
 interface:
   display_name: "Hive Usage Guard"
-  short_description: "Control the source CodexBar quota safeguard"
+  short_description: "Control the source native-first quota safeguard"
   default_prompt: "Use $hive-usage-guard to show or change this source session usage safeguard."
 policy:
   allow_implicit_invocation: true

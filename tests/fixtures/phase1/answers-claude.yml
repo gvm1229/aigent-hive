@@ -1,0 +1,28 @@
+schema_version: 1
+project_name: phase1-fixture
+project_kind: general
+primary_host: claude
+usage_stop_remaining_percent: 20
+elevated_judge_quorum: 2/3
+critical_judge_quorum: 3/3+human
+persistent_roles:
+  - role_id: reviewer
+    display_name: Reviewer
+    responsibilities:
+      - verify acceptance criteria
+    non_responsibilities:
+      - implement the reviewed artifact
+    context_paths:
+      - docs/
+    allowed_capabilities:
+      - filesystem-read
+    write_scope:
+      - .hive/runs/
+    verification_duties:
+      - attach reproducible evidence
+knowledge_include_paths:
+  - docs/**
+knowledge_exclude_paths:
+  - .env
+approved_optional_skills: []
+approved_fallback_hooks: []

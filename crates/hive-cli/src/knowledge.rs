@@ -1,10 +1,11 @@
 use hive_core::sha256_digest;
 use hive_wiki::{
-    delete_page, ingest, lint, query, rebuild_index, suppress, LintIssue, LintSeverity,
-    SuppressionEntry, WikiError,
+    delete_page, ingest, lint, promote, query, rebuild_index, suppress, LintIssue, LintSeverity,
+    PromotionCategory, PromotionMode, SuppressionEntry, WikiError,
 };
 use serde::Serialize;
 use serde_json::{json, Value};
+use std::collections::BTreeSet;
 use std::path::PathBuf;
 use std::process::ExitCode;
 
@@ -13,7 +14,8 @@ Canonical Markdown knowledge and disposable SQLite index.
 
 USAGE:
     hive knowledge ingest --target <dir> --source <file> --wiki <draft.md> --output json
-    hive knowledge query --target <dir> (--text <query>|--tag <tag>) [--limit <1..100>] --output json
+    hive knowledge query --target <dir> (--text <query>|--tag <tag>) [--limit <1..100>] [--user-root <dir>] --output json
+    hive knowledge promote --target <project> --user-root <dir> --page-id <id> --category fact|preference|workflow (--dry-run|--apply) --output json
     hive knowledge lint --target <dir> --output json
     hive knowledge delete --target <dir> --page-id <id> --reason <text> [--replacement <locator>] --timestamp <RFC3339> --output json
     hive knowledge suppress --target <dir> --fingerprint <sha256:...> --source-locator <locator> --reason <text> [--replacement <locator>] --timestamp <RFC3339> --output json
@@ -54,6 +56,8 @@ pub(crate) fn run_knowledge(arguments: &[String]) -> ExitCode {
             Some("query") => {
                 run_query(&arguments[1..]).unwrap_or_else(|error| failure("QueryKnowledge", &error))
             }
+            Some("promote") => run_promote(&arguments[1..])
+                .unwrap_or_else(|error| failure("PromoteKnowledge", &error)),
             Some("lint") => {
                 run_lint(&arguments[1..]).unwrap_or_else(|error| failure("LintKnowledge", &error))
             }
@@ -125,7 +129,10 @@ fn run_ingest(arguments: &[String]) -> Result<KnowledgeResult, WikiError> {
 }
 
 fn run_query(arguments: &[String]) -> Result<KnowledgeResult, WikiError> {
-    let options = parse_options(arguments, &["--target", "--text", "--tag", "--limit"])?;
+    let options = parse_options(
+        arguments,
+        &["--target", "--text", "--tag", "--limit", "--user-root"],
+    )?;
     let target = PathBuf::from(required(&options, "--target")?);
     let text = optional(&options, "--text");
     let tag = optional(&options, "--tag");
@@ -134,8 +141,31 @@ fn run_query(arguments: &[String]) -> Result<KnowledgeResult, WikiError> {
             .parse::<usize>()
             .map_err(|_| WikiError::InvalidInput("query limit must be an integer".to_owned()))
     })?;
-    let hits = query(&target, text, tag, limit)?;
-    let data = json!({"hits": hits});
+    let project_hits = query(&target, text, tag, limit)?;
+    let mut seen = BTreeSet::new();
+    let mut hits = Vec::new();
+    for hit in &project_hits {
+        seen.insert(hit.content_digest.clone());
+        hits.push(scoped_hit("project", "project-local", hit)?);
+    }
+    let mut root_hit_count = 0_usize;
+    if let Some(user_root) = optional(&options, "--user-root") {
+        let remaining = limit.saturating_sub(hits.len());
+        if remaining > 0 {
+            for hit in query(&PathBuf::from(user_root), text, tag, remaining)? {
+                if seen.insert(hit.content_digest.clone()) {
+                    hits.push(scoped_hit("user-root", "explicit-promotion", &hit)?);
+                    root_hit_count += 1;
+                }
+            }
+        }
+    }
+    let data = json!({
+        "hits": hits,
+        "project_hit_count": project_hits.len(),
+        "root_hit_count": root_hit_count,
+        "precedence": "project-first"
+    });
     let digest = sha256_digest(
         &serde_json::to_vec(&data).map_err(|error| WikiError::Io(error.to_string()))?,
     );
@@ -147,6 +177,119 @@ fn run_query(arguments: &[String]) -> Result<KnowledgeResult, WikiError> {
         ".hive/index/hive.sqlite3",
         &digest,
         data,
+    ))
+}
+
+fn scoped_hit(
+    scope: &str,
+    provenance: &str,
+    hit: &hive_wiki::QueryHit,
+) -> Result<Value, WikiError> {
+    let mut value = serde_json::to_value(hit).map_err(|error| WikiError::Io(error.to_string()))?;
+    let object = value
+        .as_object_mut()
+        .ok_or_else(|| WikiError::Io("query hit did not serialize as an object".to_owned()))?;
+    object.insert("scope".to_owned(), Value::String(scope.to_owned()));
+    object.insert(
+        "provenance".to_owned(),
+        Value::String(provenance.to_owned()),
+    );
+    Ok(value)
+}
+
+fn run_promote(arguments: &[String]) -> Result<KnowledgeResult, WikiError> {
+    let (options, mode) = parse_promotion_options(arguments)?;
+    let target = PathBuf::from(required(&options, "--target")?);
+    let user_root = PathBuf::from(required(&options, "--user-root")?);
+    let page_id = required(&options, "--page-id")?;
+    let category = match required(&options, "--category")? {
+        "fact" => PromotionCategory::Fact,
+        "preference" => PromotionCategory::Preference,
+        "workflow" => PromotionCategory::Workflow,
+        _ => {
+            return Err(WikiError::InvalidInput(
+                "promotion category must be fact, preference, or workflow".to_owned(),
+            ));
+        }
+    };
+    let outcome = promote(&target, &user_root, page_id, category, mode)?;
+    let changed_paths = outcome.changed_paths.clone();
+    let code = if mode == PromotionMode::Apply {
+        "hive.knowledge-promoted"
+    } else {
+        "hive.knowledge-promotion-planned"
+    };
+    let message = if mode == PromotionMode::Apply {
+        "project knowledge promoted into the canonical user-root store"
+    } else {
+        "knowledge promotion dry run completed without canonical mutation"
+    };
+    let digest = outcome.plan_digest.clone();
+    let data = serde_json::to_value(outcome).map_err(|error| WikiError::Io(error.to_string()))?;
+    Ok(success(
+        "PromoteKnowledge",
+        code,
+        message,
+        changed_paths,
+        ".hive/knowledge",
+        &digest,
+        data,
+    ))
+}
+
+type ValuedOptions<'a> = Vec<(&'a str, &'a str)>;
+
+fn parse_promotion_options(
+    arguments: &[String],
+) -> Result<(ValuedOptions<'_>, PromotionMode), WikiError> {
+    let mut valued = Vec::new();
+    let mut mode = None;
+    let mut index = 0;
+    while index < arguments.len() {
+        let option = arguments[index].as_str();
+        if matches!(option, "--dry-run" | "--apply") {
+            let candidate = if option == "--apply" {
+                PromotionMode::Apply
+            } else {
+                PromotionMode::DryRun
+            };
+            if mode.replace(candidate).is_some() {
+                return Err(WikiError::InvalidInput(
+                    "promotion requires exactly one mode".to_owned(),
+                ));
+            }
+            index += 1;
+            continue;
+        }
+        if !matches!(
+            option,
+            "--target" | "--user-root" | "--page-id" | "--category" | "--output"
+        ) {
+            return Err(WikiError::InvalidInput(format!(
+                "unknown knowledge option: {option}"
+            )));
+        }
+        let value = arguments
+            .get(index + 1)
+            .ok_or_else(|| WikiError::InvalidInput(format!("missing value for {option}")))?;
+        if valued.iter().any(|(existing, _)| *existing == option) {
+            return Err(WikiError::InvalidInput(format!(
+                "duplicate knowledge option: {option}"
+            )));
+        }
+        valued.push((option, value.as_str()));
+        index += 2;
+    }
+    if optional(&valued, "--output") != Some("json") {
+        return Err(WikiError::InvalidInput(
+            "knowledge commands require --output json".to_owned(),
+        ));
+    }
+    Ok((
+        valued,
+        mode.ok_or_else(|| {
+            WikiError::InvalidInput("promotion requires --dry-run or --apply".to_owned())
+        })?,
     ))
 }
 

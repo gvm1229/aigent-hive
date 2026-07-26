@@ -1,17 +1,24 @@
 //! Canonical Markdown knowledge operations and a disposable `SQLite` projection.
 
+use cap_fs_ext::{DirExt, FollowSymlinks, MetadataExt as CapMetadataExt, OpenOptionsFollowExt};
+use cap_std::ambient_authority;
+#[cfg(unix)]
+use cap_std::fs::PermissionsExt as CapPermissionsExt;
+use cap_std::fs::{Dir, OpenOptions as CapOpenOptions};
 use hive_core::{ensure_consumer_target, ensure_no_symlink_ancestors, sha256_digest};
 use rusqlite::{params, Connection, OpenFlags};
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
 use std::env;
 use std::error::Error;
+use std::ffi::{OsStr, OsString};
 use std::fmt::{self, Display, Formatter};
 use std::fs::{self, OpenOptions};
 use std::io::{self, Read, Write};
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::thread;
-use std::time::{Duration, Instant};
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use tempfile::NamedTempFile;
 
 const INDEX_RELATIVE: &str = ".hive/index/hive.sqlite3";
@@ -22,6 +29,7 @@ const WIKI_RELATIVE: &str = ".hive/knowledge/Wiki";
 const RAW_RELATIVE: &str = ".hive/knowledge/Raw";
 const LOCK_TIMEOUT: Duration = Duration::from_secs(5);
 const MAX_RAW_BYTES: usize = 5 * 1024 * 1024;
+static CAP_TEMP_COUNTER: AtomicU64 = AtomicU64::new(0);
 
 /// Stable failure classes for CLI exit mapping.
 #[derive(Debug)]
@@ -213,6 +221,99 @@ pub struct QueryHit {
     pub tags: Vec<String>,
     /// Aliases.
     pub aliases: Vec<String>,
+    /// Sorted canonical immutable source locators.
+    pub sources: Vec<String>,
+}
+
+/// User-root promotion category.
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, Eq, PartialEq)]
+#[serde(rename_all = "kebab-case")]
+pub enum PromotionCategory {
+    /// Project-neutral reusable fact.
+    Fact,
+    /// Reusable user preference.
+    Preference,
+    /// Portable workflow knowledge.
+    Workflow,
+}
+
+impl PromotionCategory {
+    /// Stable CLI and canonical tag value.
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Fact => "fact",
+            Self::Preference => "preference",
+            Self::Workflow => "workflow",
+        }
+    }
+}
+
+/// Promotion mutation mode.
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
+pub enum PromotionMode {
+    /// Validate and report the exact plan without canonical mutation.
+    DryRun,
+    /// Commit canonical root knowledge and rebuild its disposable index.
+    Apply,
+}
+
+/// User-root promotion plan or applied result.
+#[derive(Debug, Clone, Serialize, Eq, PartialEq)]
+pub struct PromotionOutcome {
+    /// Root-relative canonical and derived paths.
+    pub changed_paths: Vec<String>,
+    /// Content-derived root Wiki page identifier.
+    pub page_id: String,
+    /// Pseudonymous source-project provenance.
+    pub project_pseudonym: String,
+    /// Typed promotion category.
+    pub category: PromotionCategory,
+    /// Digest binding policy, source page, current root state, and incoming bytes.
+    pub plan_digest: String,
+    /// Root logical index digest after apply, or current digest for dry-run.
+    pub logical_digest: String,
+    /// Whether canonical activation occurred.
+    pub applied: bool,
+}
+
+#[derive(Debug, Deserialize)]
+struct PromotionPolicy {
+    project_name: String,
+    #[serde(default)]
+    project_identity: String,
+    #[serde(default)]
+    knowledge_exclude_paths: Vec<String>,
+    #[serde(default)]
+    root_knowledge_promotion_categories: Vec<String>,
+    #[serde(default)]
+    confidential_knowledge_categories: Vec<String>,
+    #[serde(default)]
+    user_store_binding: String,
+}
+
+#[derive(Debug, Serialize)]
+struct PromotionRaw<'a> {
+    schema_version: u32,
+    category: &'a str,
+    project_pseudonym: &'a str,
+    source_page_digest: &'a str,
+    summary: &'a str,
+    body: &'a str,
+}
+
+struct PromotionPlan {
+    outcome: PromotionOutcome,
+    raw_path: String,
+    raw_bytes: Vec<u8>,
+    wiki_path: String,
+    wiki_bytes: Vec<u8>,
+    snapshots: [CapabilityFileSnapshot; 4],
+}
+
+struct PinnedRoot {
+    dir: Dir,
+    canonical_path: PathBuf,
 }
 
 /// Lint severity.
@@ -340,6 +441,362 @@ pub fn ingest(
         page_id: Some(page.frontmatter.id),
         source_locator: Some(raw_locator),
         logical_digest: index.logical_digest,
+    })
+}
+
+/// Promote one project Wiki page into the user-root canonical knowledge store.
+///
+/// Promotion is explicit, category-gated, project-neutral, secret-scanned, and
+/// pseudonymized. Apply holds the root knowledge lock across plan validation,
+/// canonical activation, and `SQLite` rebuild.
+///
+/// # Errors
+///
+/// Returns an error for disabled/confidential categories, mismatched user-store
+/// binding, excluded or sensitive content, contradiction, unsafe paths, or
+/// failed canonical/index activation.
+pub fn promote(
+    project: &Path,
+    user_root: &Path,
+    page_id: &str,
+    category: PromotionCategory,
+    mode: PromotionMode,
+) -> Result<PromotionOutcome, WikiError> {
+    validate_target(project)?;
+    validate_target(user_root)?;
+    validate_id(page_id)?;
+    let project_root = PinnedRoot::open(project)?;
+    let user_root = PinnedRoot::open(user_root)?;
+    project_root.validate_project_root()?;
+    user_root.validate_knowledge_root()?;
+    match mode {
+        PromotionMode::DryRun => {
+            let plan = build_promotion_plan(&project_root, &user_root, page_id, category)?;
+            Ok(plan.outcome)
+        }
+        PromotionMode::Apply => {
+            let _lock = CapabilityKnowledgeLock::acquire(&user_root.dir)?;
+            let mut plan = build_promotion_plan(&project_root, &user_root, page_id, category)?;
+            capability_test_pause("after-plan-before-claim")?;
+            let (raw_changed, wiki_changed, index) = commit_promotion_mutation(
+                &user_root,
+                &mut plan.snapshots,
+                &plan.raw_bytes,
+                &plan.wiki_bytes,
+            )?;
+            let mut changed_paths = vec![INDEX_RELATIVE.to_owned()];
+            if raw_changed {
+                changed_paths.push(plan.raw_path);
+            }
+            if wiki_changed {
+                changed_paths.push(plan.wiki_path);
+            }
+            changed_paths.sort();
+            plan.outcome.changed_paths = changed_paths;
+            plan.outcome.logical_digest = index.logical_digest;
+            plan.outcome.applied = true;
+            Ok(plan.outcome)
+        }
+    }
+}
+
+#[allow(clippy::too_many_lines)]
+fn build_promotion_plan(
+    project: &PinnedRoot,
+    user_root: &PinnedRoot,
+    page_id: &str,
+    category: PromotionCategory,
+) -> Result<PromotionPlan, WikiError> {
+    let policy_relative = Path::new(".hive/setup-answers.yml");
+    let policy_bytes =
+        read_capability_required(&project.dir, policy_relative).map_err(|error| {
+            WikiError::Verification(format!(
+                "cannot read project promotion policy {}: {error}",
+                policy_relative.display()
+            ))
+        })?;
+    let policy: PromotionPolicy = serde_yaml::from_slice(&policy_bytes).map_err(|error| {
+        WikiError::Verification(format!("invalid project promotion policy: {error}"))
+    })?;
+    validate_promotion_policy(&policy, &user_root.canonical_path, category)?;
+
+    let project_page_relative = PathBuf::from(format!("{WIKI_RELATIVE}/{page_id}.md"));
+    let project_page_bytes = read_capability_required(&project.dir, &project_page_relative)
+        .map_err(|error| {
+            WikiError::InvalidInput(format!(
+                "cannot read project Wiki page {}: {error}",
+                project_page_relative.display()
+            ))
+        })?;
+    reject_promoted_credentials(&project_page_bytes)?;
+    let source_page = parse_page_bytes(
+        &project_page_bytes,
+        &format!("{WIKI_RELATIVE}/{page_id}.md"),
+    )?;
+    validate_promotable_page(&project.canonical_path, &source_page, &policy)?;
+
+    let identity = if policy.project_identity.is_empty() {
+        policy.project_name.as_str()
+    } else {
+        policy.project_identity.as_str()
+    };
+    let project_pseudonym = sha256_digest(identity.as_bytes());
+    let semantic_digest = sha256_digest(
+        format!(
+            "{}\0{}\0{}",
+            category.as_str(),
+            source_page.frontmatter.summary,
+            source_page.body.trim()
+        )
+        .as_bytes(),
+    );
+    let digest_hex = semantic_digest
+        .strip_prefix("sha256:")
+        .expect("sha256_digest always returns the product prefix");
+    let root_page_id = format!("shared-{}-{}", category.as_str(), &digest_hex[..24]);
+    let raw = PromotionRaw {
+        schema_version: 1,
+        category: category.as_str(),
+        project_pseudonym: &project_pseudonym,
+        source_page_digest: &source_page.content_digest,
+        summary: &source_page.frontmatter.summary,
+        body: source_page.body.trim(),
+    };
+    let mut raw_bytes = serde_json::to_vec(&raw)
+        .map_err(|error| WikiError::Io(format!("cannot serialize promotion source: {error}")))?;
+    raw_bytes.push(b'\n');
+    reject_promoted_credentials(&raw_bytes)?;
+    reject_private_locator_text(&raw_bytes)?;
+    let raw_fingerprint = sha256_digest(&raw_bytes);
+    let raw_path = raw_revision_path(Path::new("promoted-knowledge.json"), &raw_fingerprint)?;
+    let raw_locator = format!("raw:{raw_path}#{raw_fingerprint}");
+
+    let mut tags = vec![category.as_str().to_owned(), "promoted".to_owned()];
+    tags.sort();
+    let mut root_frontmatter = WikiFrontmatter {
+        schema_version: 1,
+        id: root_page_id.clone(),
+        kind: "concept".to_owned(),
+        summary: source_page.frontmatter.summary.clone(),
+        tags,
+        aliases: Vec::new(),
+        sources: vec![raw_locator],
+        links: Vec::new(),
+        contradictions: Vec::new(),
+        status: "active".to_owned(),
+        created_at: source_page.frontmatter.created_at.clone(),
+        updated_at: source_page.frontmatter.updated_at.clone(),
+    };
+    let wiki_path = format!("{WIKI_RELATIVE}/{root_page_id}.md");
+
+    let root_pages = scan_pages_capability(&user_root.dir)?;
+    for existing in root_pages.values() {
+        if existing.frontmatter.id == root_page_id {
+            if existing.body.trim() != source_page.body.trim()
+                || existing.frontmatter.summary != source_page.frontmatter.summary
+            {
+                return Err(WikiError::Conflict(
+                    "content-derived promotion identity collides with different root knowledge"
+                        .to_owned(),
+                ));
+            }
+            merge_sorted_unique(&mut root_frontmatter.sources, &existing.frontmatter.sources);
+            root_frontmatter
+                .created_at
+                .clone_from(&existing.frontmatter.created_at);
+            root_frontmatter
+                .updated_at
+                .clone_from(&existing.frontmatter.updated_at);
+        } else if existing.frontmatter.summary == source_page.frontmatter.summary
+            && existing
+                .frontmatter
+                .tags
+                .contains(&category.as_str().to_owned())
+            && existing.body.trim() != source_page.body.trim()
+        {
+            return Err(WikiError::Conflict(format!(
+                "root knowledge contradiction requires explicit review: {}",
+                existing.frontmatter.id
+            )));
+        }
+    }
+    validate_frontmatter(&root_frontmatter)?;
+    let wiki_bytes = render_page(&root_frontmatter, source_page.body.trim())?;
+    reject_promoted_credentials(&wiki_bytes)?;
+    reject_private_locator_text(&wiki_bytes)?;
+    let root_raw = scan_raw_capability(&user_root.dir)?;
+    let ledger = read_suppression_capability(&user_root.dir)?;
+    let logical_before = logical_digest(&root_pages, &root_raw, &ledger)?;
+    let plan_digest = sha256_digest(
+        format!(
+            "promotion-v1\0{}\0{}\0{}\0{}\0{}\0{}",
+            category.as_str(),
+            project_pseudonym,
+            source_page.content_digest,
+            logical_before,
+            sha256_digest(&raw_bytes),
+            sha256_digest(&wiki_bytes)
+        )
+        .as_bytes(),
+    );
+    let mut changed_paths = vec![INDEX_RELATIVE.to_owned()];
+    if root_raw.get(&raw_path) != Some(&raw_fingerprint) {
+        changed_paths.push(raw_path.clone());
+    }
+    if root_pages
+        .get(&root_page_id)
+        .is_none_or(|page| page.content_digest != sha256_digest(&wiki_bytes))
+    {
+        changed_paths.push(wiki_path.clone());
+    }
+    changed_paths.sort();
+    let snapshots = [
+        CapabilityFileSnapshot::capture(&user_root.dir, Path::new(&raw_path))?,
+        CapabilityFileSnapshot::capture(&user_root.dir, Path::new(&wiki_path))?,
+        CapabilityFileSnapshot::capture(&user_root.dir, Path::new(STALE_RELATIVE))?,
+        CapabilityFileSnapshot::capture(&user_root.dir, Path::new(INDEX_RELATIVE))?,
+    ];
+    Ok(PromotionPlan {
+        outcome: PromotionOutcome {
+            changed_paths,
+            page_id: root_page_id,
+            project_pseudonym,
+            category,
+            plan_digest,
+            logical_digest: logical_before,
+            applied: false,
+        },
+        raw_path,
+        raw_bytes,
+        wiki_path,
+        wiki_bytes,
+        snapshots,
+    })
+}
+
+fn validate_promotion_policy(
+    policy: &PromotionPolicy,
+    user_root: &Path,
+    category: PromotionCategory,
+) -> Result<(), WikiError> {
+    let category = category.as_str();
+    if policy
+        .confidential_knowledge_categories
+        .iter()
+        .any(|candidate| candidate == category)
+    {
+        return Err(WikiError::Conflict(format!(
+            "promotion category is confidential: {category}"
+        )));
+    }
+    if !policy
+        .root_knowledge_promotion_categories
+        .iter()
+        .any(|candidate| candidate == category)
+    {
+        return Err(WikiError::Conflict(format!(
+            "promotion category is not approved by project setup: {category}"
+        )));
+    }
+    let canonical_root = user_root.canonicalize().map_err(|error| {
+        WikiError::Verification(format!(
+            "cannot canonicalize user root {}: {error}",
+            user_root.display()
+        ))
+    })?;
+    let expected_binding = sha256_digest(canonical_root.to_string_lossy().as_bytes());
+    if policy.user_store_binding != expected_binding {
+        return Err(WikiError::Conflict(
+            "project user-store binding does not match the selected user root".to_owned(),
+        ));
+    }
+    Ok(())
+}
+
+fn validate_promotable_page(
+    project: &Path,
+    page: &WikiPage,
+    policy: &PromotionPolicy,
+) -> Result<(), WikiError> {
+    let canonical_project = project.canonicalize().map_err(|error| {
+        WikiError::Verification(format!(
+            "cannot canonicalize project root {}: {error}",
+            project.display()
+        ))
+    })?;
+    let project_text = canonical_project.to_string_lossy();
+    if page.body.contains(project_text.as_ref())
+        || page.frontmatter.summary.contains(project_text.as_ref())
+    {
+        return Err(WikiError::Conflict(
+            "project-private absolute path is not promotable".to_owned(),
+        ));
+    }
+    for source in &page.frontmatter.sources {
+        let Some((path, _)) = parse_raw_locator(source) else {
+            return Err(WikiError::Verification(
+                "project Wiki page has a non-canonical source locator".to_owned(),
+            ));
+        };
+        if policy
+            .knowledge_exclude_paths
+            .iter()
+            .any(|pattern| promotion_path_matches(pattern, path))
+            || sensitive_locator(path)
+        {
+            return Err(WikiError::Conflict(format!(
+                "project source is excluded from root promotion: {path}"
+            )));
+        }
+    }
+    reject_private_locator_text(page.body.as_bytes())
+}
+
+fn promotion_path_matches(pattern: &str, path: &str) -> bool {
+    if let Some(prefix) = pattern.strip_suffix("/**") {
+        path == prefix || path.starts_with(&format!("{prefix}/"))
+    } else {
+        pattern == path
+    }
+}
+
+fn sensitive_locator(value: &str) -> bool {
+    let lowered = value.to_ascii_lowercase();
+    [
+        ".env",
+        "credential",
+        "private",
+        "secret",
+        "token",
+        "keychain",
+    ]
+    .iter()
+    .any(|marker| lowered.contains(marker))
+}
+
+fn reject_private_locator_text(bytes: &[u8]) -> Result<(), WikiError> {
+    let text = String::from_utf8_lossy(bytes);
+    let lowered = text.to_ascii_lowercase();
+    let has_drive_path = text
+        .as_bytes()
+        .windows(3)
+        .any(|window| window[0].is_ascii_alphabetic() && window[1] == b':' && window[2] == b'\\');
+    if lowered.contains("/users/")
+        || lowered.contains("/home/")
+        || lowered.contains("file://")
+        || has_drive_path
+    {
+        return Err(WikiError::Conflict(
+            "promotion contains a private filesystem locator".to_owned(),
+        ));
+    }
+    Ok(())
+}
+
+fn reject_promoted_credentials(bytes: &[u8]) -> Result<(), WikiError> {
+    reject_likely_credentials(bytes).map_err(|error| match error {
+        WikiError::InvalidInput(message) => WikiError::Conflict(message),
+        other => other,
     })
 }
 
@@ -1306,6 +1763,7 @@ fn collect_hits(
             content_digest: row.get(4).map_err(sqlite_error)?,
             tags: select_values(connection, "tags", "tag", &id)?,
             aliases: select_values(connection, "aliases", "alias", &id)?,
+            sources: select_values(connection, "sources", "locator", &id)?,
             id,
         });
         if hits.len() == limit {
@@ -1923,6 +2381,899 @@ fn issue(code: &str, severity: LintSeverity, locator: &str, message: &str) -> Li
     }
 }
 
+impl PinnedRoot {
+    fn open(path: &Path) -> Result<Self, WikiError> {
+        let canonical_path = path.canonicalize().map_err(|error| {
+            WikiError::Verification(format!(
+                "cannot canonicalize knowledge root {}: {error}",
+                path.display()
+            ))
+        })?;
+        let parent = canonical_path
+            .parent()
+            .ok_or_else(|| WikiError::InvalidInput("knowledge root has no parent".to_owned()))?;
+        let name = canonical_path.file_name().ok_or_else(|| {
+            WikiError::InvalidInput("knowledge root has no directory name".to_owned())
+        })?;
+        let parent_dir = Dir::open_ambient_dir(parent, ambient_authority())
+            .map_err(|error| WikiError::Io(format!("cannot pin knowledge root parent: {error}")))?;
+        let expected = parent_dir.symlink_metadata(name).map_err(|error| {
+            WikiError::Io(format!(
+                "cannot inspect knowledge root {}: {error}",
+                canonical_path.display()
+            ))
+        })?;
+        let dir = parent_dir.open_dir_nofollow(name).map_err(|error| {
+            WikiError::Conflict(format!(
+                "knowledge root cannot be pinned no-follow {}: {error}",
+                canonical_path.display()
+            ))
+        })?;
+        let pinned = dir
+            .dir_metadata()
+            .map_err(|error| WikiError::Io(format!("cannot inspect pinned root: {error}")))?;
+        if (CapMetadataExt::dev(&pinned), CapMetadataExt::ino(&pinned))
+            != (
+                CapMetadataExt::dev(&expected),
+                CapMetadataExt::ino(&expected),
+            )
+        {
+            return Err(WikiError::Conflict(
+                "knowledge root changed while its capability was pinned".to_owned(),
+            ));
+        }
+        Ok(Self {
+            dir,
+            canonical_path,
+        })
+    }
+
+    fn validate_project_root(&self) -> Result<(), WikiError> {
+        self.validate_knowledge_root()?;
+        if read_capability_optional(&self.dir, Path::new(".hive/setup-answers.yml"))?.is_none() {
+            return Err(WikiError::Verification(
+                "project promotion policy is missing".to_owned(),
+            ));
+        }
+        Ok(())
+    }
+
+    fn validate_knowledge_root(&self) -> Result<(), WikiError> {
+        if read_capability_optional(&self.dir, Path::new("hive-source.json"))?.is_some() {
+            return Err(WikiError::InvalidInput(
+                "Hive source workspace cannot be used as a consumer target".to_owned(),
+            ));
+        }
+        for relative in [Path::new(WIKI_RELATIVE), Path::new(RAW_RELATIVE)] {
+            let (parent, name) =
+                capability_parent(&self.dir, relative, false)?.ok_or_else(|| {
+                    WikiError::Verification(format!(
+                        "canonical knowledge directory is missing: {}",
+                        relative.display()
+                    ))
+                })?;
+            parent.open_dir_nofollow(&name).map_err(|error| {
+                WikiError::Conflict(format!(
+                    "canonical knowledge directory is not pinned no-follow {}: {error}",
+                    relative.display()
+                ))
+            })?;
+        }
+        read_capability_required(&self.dir, Path::new(SUPPRESSION_RELATIVE))?;
+        Ok(())
+    }
+}
+
+fn validate_capability_relative(relative: &Path) -> Result<(), WikiError> {
+    if relative.as_os_str().is_empty()
+        || relative.is_absolute()
+        || relative.components().any(|component| {
+            !matches!(
+                component,
+                std::path::Component::Normal(_) | std::path::Component::CurDir
+            )
+        })
+    {
+        return Err(WikiError::Conflict(format!(
+            "managed knowledge path is not a safe relative path: {}",
+            relative.display()
+        )));
+    }
+    Ok(())
+}
+
+fn capability_parent(
+    root: &Dir,
+    relative: &Path,
+    create_missing: bool,
+) -> Result<Option<(Dir, OsString)>, WikiError> {
+    validate_capability_relative(relative)?;
+    let name = relative
+        .file_name()
+        .ok_or_else(|| WikiError::Io("managed path has no filename".to_owned()))?
+        .to_os_string();
+    let mut current = root
+        .try_clone()
+        .map_err(|error| WikiError::Io(format!("cannot clone root capability: {error}")))?;
+    if let Some(parent) = relative.parent() {
+        for component in parent.components() {
+            let component = component.as_os_str();
+            match current.symlink_metadata(component) {
+                Ok(metadata) if metadata.is_dir() => {}
+                Ok(_) => {
+                    return Err(WikiError::Conflict(format!(
+                        "managed knowledge ancestor is not a directory: {}",
+                        relative.display()
+                    )));
+                }
+                Err(error) if error.kind() == io::ErrorKind::NotFound && create_missing => {
+                    current.create_dir(component).map_err(|error| {
+                        WikiError::Io(format!(
+                            "cannot create managed knowledge directory {}: {error}",
+                            relative.display()
+                        ))
+                    })?;
+                }
+                Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(None),
+                Err(error) => {
+                    return Err(WikiError::Io(format!(
+                        "cannot inspect managed knowledge ancestor {}: {error}",
+                        relative.display()
+                    )));
+                }
+            }
+            current = current.open_dir_nofollow(component).map_err(|error| {
+                WikiError::Conflict(format!(
+                    "cannot open managed knowledge ancestor no-follow {}: {error}",
+                    relative.display()
+                ))
+            })?;
+        }
+    }
+    Ok(Some((current, name)))
+}
+
+fn open_capability_file_nofollow(parent: &Dir, name: &OsStr) -> io::Result<cap_std::fs::File> {
+    let mut options = CapOpenOptions::new();
+    options.read(true).follow(FollowSymlinks::No);
+    parent.open_with(name, &options)
+}
+
+fn read_capability_optional(root: &Dir, relative: &Path) -> Result<Option<Vec<u8>>, WikiError> {
+    let Some((parent, name)) = capability_parent(root, relative, false)? else {
+        return Ok(None);
+    };
+    match parent.symlink_metadata(&name) {
+        Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(None),
+        Err(error) => Err(WikiError::Io(format!(
+            "cannot inspect managed knowledge file {}: {error}",
+            relative.display()
+        ))),
+        Ok(metadata) if metadata.is_file() => {
+            let mut file = open_capability_file_nofollow(&parent, &name).map_err(|error| {
+                WikiError::Io(format!(
+                    "cannot open managed knowledge file no-follow {}: {error}",
+                    relative.display()
+                ))
+            })?;
+            let mut bytes = Vec::new();
+            file.read_to_end(&mut bytes).map_err(|error| {
+                WikiError::Io(format!(
+                    "cannot read managed knowledge file {}: {error}",
+                    relative.display()
+                ))
+            })?;
+            Ok(Some(bytes))
+        }
+        Ok(_) => Err(WikiError::Conflict(format!(
+            "managed knowledge path is not a regular file: {}",
+            relative.display()
+        ))),
+    }
+}
+
+fn read_capability_required(root: &Dir, relative: &Path) -> Result<Vec<u8>, WikiError> {
+    read_capability_optional(root, relative)?.ok_or_else(|| {
+        WikiError::Verification(format!(
+            "managed knowledge file is missing: {}",
+            relative.display()
+        ))
+    })
+}
+
+fn scan_pages_capability(root: &Dir) -> Result<BTreeMap<String, WikiPage>, WikiError> {
+    let (parent, name) = capability_parent(root, Path::new(WIKI_RELATIVE), false)?
+        .ok_or_else(|| WikiError::Verification("canonical Wiki directory is missing".to_owned()))?;
+    let wiki = parent.open_dir_nofollow(&name).map_err(|error| {
+        WikiError::Conflict(format!(
+            "cannot open canonical Wiki directory no-follow: {error}"
+        ))
+    })?;
+    let mut names = wiki
+        .entries()
+        .map_err(|error| WikiError::Io(format!("cannot scan Wiki directory: {error}")))?
+        .map(|entry| {
+            entry
+                .map(|entry| entry.file_name())
+                .map_err(|error| WikiError::Io(format!("cannot scan Wiki directory: {error}")))
+        })
+        .collect::<Result<Vec<_>, _>>()?;
+    names.sort();
+    let mut pages = BTreeMap::new();
+    for name in names {
+        let metadata = wiki
+            .symlink_metadata(&name)
+            .map_err(|error| WikiError::Io(format!("cannot inspect Wiki entry: {error}")))?;
+        if !metadata.is_file() {
+            if metadata.is_dir() {
+                continue;
+            }
+            return Err(WikiError::Verification(
+                "Wiki symlink or special file is forbidden".to_owned(),
+            ));
+        }
+        let path = Path::new(&name);
+        if path.extension().and_then(|value| value.to_str()) != Some("md")
+            || matches!(
+                path.file_name().and_then(|value| value.to_str()),
+                Some("index.md" | "log.md")
+            )
+        {
+            continue;
+        }
+        let mut file = open_capability_file_nofollow(&wiki, &name)
+            .map_err(|error| WikiError::Io(format!("cannot open Wiki page: {error}")))?;
+        let mut bytes = Vec::new();
+        file.read_to_end(&mut bytes)
+            .map_err(|error| WikiError::Io(format!("cannot read Wiki page: {error}")))?;
+        let relative = format!("{WIKI_RELATIVE}/{}", path.to_string_lossy());
+        reject_likely_credentials(&bytes).map_err(|error| {
+            WikiError::Verification(format!(
+                "canonical Wiki page contains likely sensitive material at {relative}: {error}"
+            ))
+        })?;
+        let mut page = parse_page_bytes(&bytes, &relative)?;
+        if page
+            .frontmatter
+            .sources
+            .iter()
+            .any(|source| source == "raw:self")
+        {
+            return Err(WikiError::Verification(format!(
+                "raw:self is allowed only in prepared drafts: {relative}"
+            )));
+        }
+        if path.file_stem().and_then(|value| value.to_str()) != Some(page.frontmatter.id.as_str()) {
+            return Err(WikiError::Verification(format!(
+                "Wiki filename must match page id: {relative}"
+            )));
+        }
+        page.relative_path = relative;
+        page.content_digest = sha256_digest(&bytes);
+        if pages.insert(page.frontmatter.id.clone(), page).is_some() {
+            return Err(WikiError::Verification("duplicate Wiki page id".to_owned()));
+        }
+    }
+    Ok(pages)
+}
+
+fn scan_raw_capability(root: &Dir) -> Result<BTreeMap<String, String>, WikiError> {
+    let (parent, name) = capability_parent(root, Path::new(RAW_RELATIVE), false)?
+        .ok_or_else(|| WikiError::Verification("canonical Raw directory is missing".to_owned()))?;
+    let raw = parent.open_dir_nofollow(&name).map_err(|error| {
+        WikiError::Conflict(format!(
+            "cannot open canonical Raw directory no-follow: {error}"
+        ))
+    })?;
+    let mut output = BTreeMap::new();
+    scan_raw_capability_directory(&raw, Path::new(RAW_RELATIVE), &mut output)?;
+    Ok(output)
+}
+
+fn scan_raw_capability_directory(
+    directory: &Dir,
+    relative: &Path,
+    output: &mut BTreeMap<String, String>,
+) -> Result<(), WikiError> {
+    let mut names = directory
+        .entries()
+        .map_err(|error| WikiError::Io(format!("cannot scan Raw directory: {error}")))?
+        .map(|entry| {
+            entry
+                .map(|entry| entry.file_name())
+                .map_err(|error| WikiError::Io(format!("cannot scan Raw directory: {error}")))
+        })
+        .collect::<Result<Vec<_>, _>>()?;
+    names.sort();
+    for name in names {
+        let child_relative = relative.join(&name);
+        let metadata = directory
+            .symlink_metadata(&name)
+            .map_err(|error| WikiError::Io(format!("cannot inspect Raw entry: {error}")))?;
+        if metadata.is_dir() {
+            let child = directory.open_dir_nofollow(&name).map_err(|error| {
+                WikiError::Conflict(format!(
+                    "cannot open Raw directory no-follow {}: {error}",
+                    child_relative.display()
+                ))
+            })?;
+            scan_raw_capability_directory(&child, &child_relative, output)?;
+        } else if metadata.is_file() {
+            let relative_text = child_relative.to_string_lossy().replace('\\', "/");
+            if relative_text == ".hive/knowledge/Raw/README.md" {
+                continue;
+            }
+            let file = open_capability_file_nofollow(directory, &name)
+                .map_err(|error| WikiError::Io(format!("cannot open Raw revision: {error}")))?;
+            let mut bytes = Vec::new();
+            file.take(u64::try_from(MAX_RAW_BYTES + 1).expect("Raw byte limit fits u64"))
+                .read_to_end(&mut bytes)
+                .map_err(|error| WikiError::Io(format!("cannot read Raw revision: {error}")))?;
+            if bytes.is_empty() || bytes.len() > MAX_RAW_BYTES {
+                return Err(WikiError::Verification(format!(
+                    "canonical Raw revision violates the bounded source contract at {relative_text}"
+                )));
+            }
+            let digest = sha256_digest(&bytes);
+            let expected = child_relative
+                .file_stem()
+                .and_then(|value| value.to_str())
+                .map(|value| format!("sha256:{value}"))
+                .ok_or_else(|| {
+                    WikiError::Verification(format!(
+                        "Raw revision filename is not UTF-8: {relative_text}"
+                    ))
+                })?;
+            if digest != expected {
+                return Err(WikiError::Verification(format!(
+                    "Raw revision content digest does not match its immutable path: {relative_text}"
+                )));
+            }
+            reject_likely_credentials(&bytes).map_err(|error| {
+                WikiError::Verification(format!(
+                    "canonical Raw revision contains likely sensitive material at {relative_text}: {error}"
+                ))
+            })?;
+            output.insert(relative_text, digest);
+        } else {
+            return Err(WikiError::Verification(format!(
+                "Raw symlink or special file is forbidden: {}",
+                child_relative.display()
+            )));
+        }
+    }
+    Ok(())
+}
+
+fn read_suppression_capability(root: &Dir) -> Result<SuppressionLedger, WikiError> {
+    let bytes = read_capability_required(root, Path::new(SUPPRESSION_RELATIVE))?;
+    let ledger: SuppressionLedger = serde_yaml::from_slice(&bytes)
+        .map_err(|error| WikiError::Verification(format!("invalid suppression ledger: {error}")))?;
+    if ledger.schema_version != 1 {
+        return Err(WikiError::Verification(
+            "suppression schema_version must be 1".to_owned(),
+        ));
+    }
+    for entry in &ledger.entries {
+        validate_suppression_entry(entry)
+            .map_err(|error| WikiError::Verification(error.to_string()))?;
+    }
+    Ok(ledger)
+}
+
+fn capability_temp_name(prefix: &str) -> OsString {
+    let counter = CAP_TEMP_COUNTER.fetch_add(1, Ordering::Relaxed);
+    let nanos = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_nanos();
+    OsString::from(format!(
+        ".{prefix}-{}-{nanos}-{counter}",
+        std::process::id()
+    ))
+}
+
+fn create_capability_file(parent: &Dir, name: &OsStr, bytes: &[u8]) -> Result<(), WikiError> {
+    let mut options = CapOpenOptions::new();
+    options
+        .write(true)
+        .create_new(true)
+        .follow(FollowSymlinks::No);
+    let mut file = parent
+        .open_with(name, &options)
+        .map_err(|error| WikiError::Io(format!("cannot create managed knowledge file: {error}")))?;
+    if let Err(error) = file.write_all(bytes).and_then(|()| file.sync_all()) {
+        drop(file);
+        let _ = parent.remove_file(name);
+        return Err(WikiError::Io(format!(
+            "cannot persist managed knowledge file: {error}"
+        )));
+    }
+    Ok(())
+}
+
+fn capability_directory_exists(root: &Dir, relative: &Path) -> Result<bool, WikiError> {
+    let Some((parent, name)) = capability_parent(root, relative, false)? else {
+        return Ok(false);
+    };
+    match parent.symlink_metadata(&name) {
+        Ok(metadata) if metadata.is_dir() => {
+            parent.open_dir_nofollow(&name).map_err(|error| {
+                WikiError::Conflict(format!(
+                    "managed knowledge directory is not no-follow {}: {error}",
+                    relative.display()
+                ))
+            })?;
+            Ok(true)
+        }
+        Ok(_) => Err(WikiError::Conflict(format!(
+            "managed knowledge path is not a directory: {}",
+            relative.display()
+        ))),
+        Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(false),
+        Err(error) => Err(WikiError::Io(format!(
+            "cannot inspect managed knowledge directory {}: {error}",
+            relative.display()
+        ))),
+    }
+}
+
+fn remove_capability_empty_directory(root: &Dir, relative: &Path) -> Result<(), WikiError> {
+    let Some((parent, name)) = capability_parent(root, relative, false)? else {
+        return Ok(());
+    };
+    match parent.remove_dir(&name) {
+        Ok(()) => Ok(()),
+        Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(()),
+        Err(error) => Err(WikiError::Io(format!(
+            "cannot remove rolled-back knowledge directory {}: {error}",
+            relative.display()
+        ))),
+    }
+}
+
+#[derive(Clone, Eq, PartialEq)]
+struct CapabilityFileMode {
+    readonly: bool,
+    #[cfg(unix)]
+    mode: u32,
+}
+
+#[derive(Clone, Eq, PartialEq)]
+enum CapabilityFileState {
+    Missing,
+    File {
+        bytes: Vec<u8>,
+        mode: CapabilityFileMode,
+    },
+}
+
+fn capability_file_state(root: &Dir, relative: &Path) -> Result<CapabilityFileState, WikiError> {
+    let Some((parent, name)) = capability_parent(root, relative, false)? else {
+        return Ok(CapabilityFileState::Missing);
+    };
+    match parent.symlink_metadata(&name) {
+        Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(CapabilityFileState::Missing),
+        Err(error) => Err(WikiError::Io(format!(
+            "cannot inspect managed knowledge file {}: {error}",
+            relative.display()
+        ))),
+        Ok(metadata) if metadata.is_file() => {
+            let mut file = open_capability_file_nofollow(&parent, &name).map_err(|error| {
+                WikiError::Io(format!(
+                    "cannot open managed knowledge file {}: {error}",
+                    relative.display()
+                ))
+            })?;
+            let mut bytes = Vec::new();
+            file.read_to_end(&mut bytes).map_err(|error| {
+                WikiError::Io(format!(
+                    "cannot read managed knowledge file {}: {error}",
+                    relative.display()
+                ))
+            })?;
+            let permissions = file
+                .metadata()
+                .map_err(|error| {
+                    WikiError::Io(format!(
+                        "cannot inspect managed knowledge mode {}: {error}",
+                        relative.display()
+                    ))
+                })?
+                .permissions();
+            Ok(CapabilityFileState::File {
+                bytes,
+                mode: CapabilityFileMode {
+                    readonly: permissions.readonly(),
+                    #[cfg(unix)]
+                    mode: CapPermissionsExt::mode(&permissions),
+                },
+            })
+        }
+        Ok(_) => Err(WikiError::Conflict(format!(
+            "managed knowledge path is not a regular file: {}",
+            relative.display()
+        ))),
+    }
+}
+
+struct CapabilityFileSnapshot {
+    relative: PathBuf,
+    original: CapabilityFileState,
+    current: CapabilityFileState,
+    original_claim: Option<PathBuf>,
+    disposable_claims: Vec<PathBuf>,
+    modified: bool,
+}
+
+impl CapabilityFileSnapshot {
+    fn capture(root: &Dir, relative: &Path) -> Result<Self, WikiError> {
+        let state = capability_file_state(root, relative)?;
+        Ok(Self {
+            relative: relative.to_path_buf(),
+            original: state.clone(),
+            current: state,
+            original_claim: None,
+            disposable_claims: Vec::new(),
+            modified: false,
+        })
+    }
+
+    fn claim_current(&mut self, root: &Dir) -> Result<PathBuf, WikiError> {
+        let (parent, name) = capability_parent(root, &self.relative, false)?.ok_or_else(|| {
+            WikiError::Conflict(format!(
+                "canonical path disappeared before claim: {}",
+                self.relative.display()
+            ))
+        })?;
+        let claim_name = capability_temp_name("hive-wiki-claim");
+        parent
+            .rename(&name, &parent, &claim_name)
+            .map_err(|error| {
+                WikiError::Conflict(format!(
+                    "canonical path changed before claim {}: {error}",
+                    self.relative.display()
+                ))
+            })?;
+        let claim_relative = self
+            .relative
+            .parent()
+            .unwrap_or_else(|| Path::new(""))
+            .join(&claim_name);
+        let claimed = capability_file_state(root, &claim_relative)?;
+        if claimed != self.current {
+            let restored = parent.hard_link(&claim_name, &parent, &name).is_ok();
+            if restored {
+                let _ = parent.remove_file(&claim_name);
+            }
+            return Err(WikiError::Conflict(format!(
+                "canonical path changed after planning {}; claimed object retained at {}",
+                self.relative.display(),
+                claim_relative.display()
+            )));
+        }
+        if self.original_claim.is_none() && self.current == self.original {
+            self.original_claim = Some(claim_relative.clone());
+        } else {
+            self.disposable_claims.push(claim_relative.clone());
+        }
+        Ok(claim_relative)
+    }
+
+    fn install_staged(&mut self, root: &Dir, bytes: &[u8]) -> Result<bool, WikiError> {
+        if let CapabilityFileState::File {
+            bytes: current_bytes,
+            ..
+        } = &self.current
+        {
+            if current_bytes == bytes {
+                let live = capability_file_state(root, &self.relative)?;
+                if live == self.current {
+                    return Ok(false);
+                }
+                return Err(WikiError::Conflict(format!(
+                    "canonical path changed after planning: {}",
+                    self.relative.display()
+                )));
+            }
+        }
+        let (parent, name) = capability_parent(root, &self.relative, true)?
+            .ok_or_else(|| WikiError::Io("canonical parent disappeared".to_owned()))?;
+        let temporary_name = capability_temp_name("hive-wiki-tmp");
+        create_capability_file(&parent, &temporary_name, bytes)?;
+        let temporary_relative = self
+            .relative
+            .parent()
+            .unwrap_or_else(|| Path::new(""))
+            .join(&temporary_name);
+        let installed = capability_file_state(root, &temporary_relative)?;
+        if !matches!(self.current, CapabilityFileState::Missing) {
+            if let Err(error) = self.claim_current(root) {
+                let _ = parent.remove_file(&temporary_name);
+                return Err(error);
+            }
+            capability_test_pause("after-claim-before-install")?;
+        }
+        if let Err(error) = parent.hard_link(&temporary_name, &parent, &name) {
+            let _ = parent.remove_file(&temporary_name);
+            return Err(WikiError::Conflict(format!(
+                "canonical destination was reoccupied before install {}; claimed prior object retained for recovery: {error}",
+                self.relative.display()
+            )));
+        }
+        parent.remove_file(&temporary_name).map_err(|error| {
+            WikiError::Io(format!(
+                "cannot remove staged canonical file {}: {error}",
+                self.relative.display()
+            ))
+        })?;
+        self.current = installed;
+        self.modified = true;
+        Ok(true)
+    }
+
+    fn write_immutable(&mut self, root: &Dir, bytes: &[u8]) -> Result<bool, WikiError> {
+        match &self.current {
+            CapabilityFileState::File {
+                bytes: current_bytes,
+                ..
+            } if current_bytes == bytes => {
+                if capability_file_state(root, &self.relative)? == self.current {
+                    Ok(false)
+                } else {
+                    Err(WikiError::Conflict(format!(
+                        "immutable Raw revision changed after planning: {}",
+                        self.relative.display()
+                    )))
+                }
+            }
+            CapabilityFileState::File { .. } => Err(WikiError::Conflict(format!(
+                "immutable Raw revision path has different bytes: {}",
+                self.relative.display()
+            ))),
+            CapabilityFileState::Missing => {
+                let (parent, name) = capability_parent(root, &self.relative, true)?
+                    .ok_or_else(|| WikiError::Io("immutable Raw parent disappeared".to_owned()))?;
+                create_capability_file(&parent, &name, bytes).map_err(|error| match error {
+                    WikiError::Io(message) => WikiError::Conflict(format!(
+                        "immutable Raw destination changed after planning {}: {message}",
+                        self.relative.display()
+                    )),
+                    other => other,
+                })?;
+                self.current = capability_file_state(root, &self.relative)?;
+                self.modified = true;
+                Ok(true)
+            }
+        }
+    }
+
+    fn remove(&mut self, root: &Dir) -> Result<bool, WikiError> {
+        if matches!(self.current, CapabilityFileState::Missing) {
+            if matches!(
+                capability_file_state(root, &self.relative)?,
+                CapabilityFileState::Missing
+            ) {
+                return Ok(false);
+            }
+            return Err(WikiError::Conflict(format!(
+                "canonical path appeared after planning: {}",
+                self.relative.display()
+            )));
+        }
+        self.claim_current(root)?;
+        self.current = CapabilityFileState::Missing;
+        self.modified = true;
+        Ok(true)
+    }
+
+    fn rollback(&mut self, root: &Dir) -> Result<(), WikiError> {
+        if !self.modified {
+            return Ok(());
+        }
+        match &self.current {
+            CapabilityFileState::Missing => {
+                if !matches!(
+                    capability_file_state(root, &self.relative)?,
+                    CapabilityFileState::Missing
+                ) {
+                    return Err(WikiError::Conflict(format!(
+                        "rollback preserved externally reoccupied path {}",
+                        self.relative.display()
+                    )));
+                }
+            }
+            CapabilityFileState::File { .. } => {
+                let rollback_claim = self.claim_current(root)?;
+                self.disposable_claims.push(rollback_claim);
+            }
+        }
+        if matches!(self.original, CapabilityFileState::File { .. }) {
+            let claim = self.original_claim.as_ref().ok_or_else(|| {
+                WikiError::Io(format!(
+                    "rollback claim is missing for {}",
+                    self.relative.display()
+                ))
+            })?;
+            let (claim_parent, claim_name) = capability_parent(root, claim, false)?
+                .ok_or_else(|| WikiError::Io("rollback claim parent disappeared".to_owned()))?;
+            let (live_parent, live_name) = capability_parent(root, &self.relative, true)?
+                .ok_or_else(|| {
+                    WikiError::Io("rollback destination parent disappeared".to_owned())
+                })?;
+            claim_parent
+                .hard_link(&claim_name, &live_parent, &live_name)
+                .map_err(|error| WikiError::Conflict(format!(
+                    "rollback preserved externally reoccupied path {}; prior object retained at {}: {error}",
+                    self.relative.display(),
+                    claim.display()
+                )))?;
+        }
+        self.cleanup_claims(root);
+        Ok(())
+    }
+
+    fn cleanup_claims(&mut self, root: &Dir) {
+        for claim in self
+            .original_claim
+            .iter()
+            .chain(self.disposable_claims.iter())
+        {
+            if let Ok(Some((parent, name))) = capability_parent(root, claim, false) {
+                let _ = parent.remove_file(name);
+            }
+        }
+    }
+}
+
+fn transactional_capability<T>(
+    root: &Dir,
+    snapshots: &mut [CapabilityFileSnapshot],
+    operation: impl FnOnce(&mut [CapabilityFileSnapshot]) -> Result<T, WikiError>,
+) -> Result<T, WikiError> {
+    match operation(snapshots) {
+        Ok(outcome) => {
+            for snapshot in snapshots {
+                snapshot.cleanup_claims(root);
+            }
+            Ok(outcome)
+        }
+        Err(operation_error) => {
+            capability_test_pause("before-rollback")?;
+            let mut rollback_error = None;
+            for snapshot in snapshots.iter_mut().rev() {
+                if let Err(error) = snapshot.rollback(root) {
+                    rollback_error.get_or_insert(error);
+                }
+            }
+            if let Some(rollback_error) = rollback_error {
+                return Err(WikiError::Io(format!(
+                    "knowledge mutation failed: {operation_error}; rollback failed: {rollback_error}"
+                )));
+            }
+            Err(operation_error)
+        }
+    }
+}
+
+fn capability_test_pause(phase: &str) -> Result<(), WikiError> {
+    if !cfg!(debug_assertions) || env::var("HIVE_WIKI_TEST_RACE_PHASE").as_deref() != Ok(phase) {
+        return Ok(());
+    }
+    let directory = env::var_os("HIVE_WIKI_TEST_RACE_DIR")
+        .ok_or_else(|| WikiError::Io("race hook directory is missing".to_owned()))?;
+    let directory = PathBuf::from(directory);
+    fs::write(directory.join("ready"), phase.as_bytes())
+        .map_err(|error| WikiError::Io(format!("cannot signal race hook: {error}")))?;
+    let deadline = Instant::now() + LOCK_TIMEOUT;
+    while !directory.join("continue").exists() {
+        if Instant::now() >= deadline {
+            return Err(WikiError::Io(format!("race hook timed out at {phase}")));
+        }
+        thread::sleep(Duration::from_millis(10));
+    }
+    Ok(())
+}
+
+fn rebuild_index_capability(
+    root: &Dir,
+    index_snapshot: &mut CapabilityFileSnapshot,
+    stale_snapshot: &mut CapabilityFileSnapshot,
+) -> Result<IndexOutcome, WikiError> {
+    let pages = scan_pages_capability(root)?;
+    let raw = scan_raw_capability(root)?;
+    let ledger = read_suppression_capability(root)?;
+    if let Some(locator) = active_suppression_locator(&pages, &raw, &ledger) {
+        return Err(WikiError::Verification(format!(
+            "suppression ledger overlaps active canonical content: {locator}"
+        )));
+    }
+    let expected_digest = logical_digest(&pages, &raw, &ledger)?;
+    let staging = tempfile::tempdir()
+        .map_err(|error| WikiError::Io(format!("cannot create private index staging: {error}")))?;
+    fs::create_dir_all(staging.path().join(WIKI_RELATIVE))
+        .and_then(|()| fs::create_dir_all(staging.path().join(RAW_RELATIVE)))
+        .map_err(|error| WikiError::Io(format!("cannot prepare private index staging: {error}")))?;
+    let ledger_bytes = serde_yaml::to_string(&ledger)
+        .map_err(|error| WikiError::Io(format!("cannot stage suppression ledger: {error}")))?;
+    fs::write(
+        staging.path().join(SUPPRESSION_RELATIVE),
+        ledger_bytes.as_bytes(),
+    )
+    .map_err(|error| WikiError::Io(format!("cannot stage suppression ledger: {error}")))?;
+    for page in pages.values() {
+        let bytes = render_page(&page.frontmatter, page.body.trim())?;
+        fs::write(staging.path().join(&page.relative_path), bytes)
+            .map_err(|error| WikiError::Io(format!("cannot stage Wiki page: {error}")))?;
+    }
+    for path in raw.keys() {
+        let relative = Path::new(path);
+        let bytes = read_capability_required(root, relative)?;
+        let destination = staging.path().join(relative);
+        fs::create_dir_all(
+            destination
+                .parent()
+                .ok_or_else(|| WikiError::Io("staged Raw path has no parent".to_owned()))?,
+        )
+        .map_err(|error| WikiError::Io(format!("cannot stage Raw directory: {error}")))?;
+        fs::write(destination, bytes)
+            .map_err(|error| WikiError::Io(format!("cannot stage Raw revision: {error}")))?;
+    }
+    let staged = rebuild_index_locked(staging.path())?;
+    if staged.logical_digest != expected_digest {
+        return Err(WikiError::Verification(
+            "private index staging changed the canonical logical digest".to_owned(),
+        ));
+    }
+    let index_bytes = fs::read(staging.path().join(INDEX_RELATIVE))
+        .map_err(|error| WikiError::Io(format!("cannot read verified staged index: {error}")))?;
+    index_snapshot.install_staged(root, &index_bytes)?;
+    let stale_removed = stale_snapshot.remove(root)?;
+    let mut changed_paths = vec![INDEX_RELATIVE.to_owned()];
+    if stale_removed {
+        changed_paths.push(STALE_RELATIVE.to_owned());
+    }
+    Ok(IndexOutcome {
+        changed_paths,
+        page_count: pages.len(),
+        raw_count: raw.len(),
+        logical_digest: expected_digest,
+    })
+}
+
+fn commit_promotion_mutation(
+    root: &PinnedRoot,
+    snapshots: &mut [CapabilityFileSnapshot; 4],
+    raw_bytes: &[u8],
+    wiki_bytes: &[u8],
+) -> Result<(bool, bool, IndexOutcome), WikiError> {
+    let raw_parent = snapshots[0]
+        .relative
+        .parent()
+        .ok_or_else(|| WikiError::Io("promotion Raw path has no parent".to_owned()))?
+        .to_path_buf();
+    let raw_parent_existed = capability_directory_exists(&root.dir, &raw_parent)?;
+    let result = transactional_capability(&root.dir, snapshots, |snapshots| {
+        let raw_changed = snapshots[0].write_immutable(&root.dir, raw_bytes)?;
+        let wiki_changed = snapshots[1].install_staged(&root.dir, wiki_bytes)?;
+        if cfg!(debug_assertions)
+            && env::var("HIVE_WIKI_TEST_FAIL_AFTER_CANONICAL_WRITES").as_deref() == Ok("1")
+        {
+            return Err(WikiError::Io(
+                "injected failure after canonical knowledge writes".to_owned(),
+            ));
+        }
+        snapshots[2].install_staged(&root.dir, b"{\"schema_version\":1,\"stale\":true}\n")?;
+        let (canonical, derived) = snapshots.split_at_mut(3);
+        let index = rebuild_index_capability(&root.dir, &mut derived[0], &mut canonical[2])?;
+        Ok((raw_changed, wiki_changed, index))
+    });
+    if result.is_err() && !raw_parent_existed {
+        remove_capability_empty_directory(&root.dir, &raw_parent)?;
+    }
+    result
+}
+
 enum FileState {
     Missing,
     File(Vec<u8>),
@@ -2107,6 +3458,58 @@ fn is_sha256(value: &str) -> bool {
     })
 }
 
+struct CapabilityKnowledgeLock {
+    index: Dir,
+    name: OsString,
+}
+
+impl CapabilityKnowledgeLock {
+    fn acquire(root: &Dir) -> Result<Self, WikiError> {
+        let (index, name) = capability_parent(root, Path::new(LOCK_RELATIVE), true)?
+            .ok_or_else(|| WikiError::Io("lock directory disappeared".to_owned()))?;
+        let started = Instant::now();
+        loop {
+            let mut options = CapOpenOptions::new();
+            options
+                .write(true)
+                .create_new(true)
+                .follow(FollowSymlinks::No);
+            match index.open_with(&name, &options) {
+                Ok(mut file) => {
+                    if let Err(error) = file
+                        .write_all(b"schema_version=1\n")
+                        .and_then(|()| file.sync_all())
+                    {
+                        drop(file);
+                        let _ = index.remove_file(&name);
+                        return Err(WikiError::Io(format!("cannot persist lock: {error}")));
+                    }
+                    return Ok(Self { index, name });
+                }
+                Err(error) if error.kind() == io::ErrorKind::AlreadyExists => {
+                    if started.elapsed() >= LOCK_TIMEOUT {
+                        return Err(WikiError::Conflict(
+                            "timed out waiting for canonical knowledge integration lock".to_owned(),
+                        ));
+                    }
+                    thread::sleep(Duration::from_millis(10));
+                }
+                Err(error) => {
+                    return Err(WikiError::Io(format!(
+                        "cannot acquire canonical knowledge integration lock: {error}"
+                    )));
+                }
+            }
+        }
+    }
+}
+
+impl Drop for CapabilityKnowledgeLock {
+    fn drop(&mut self) {
+        let _ = self.index.remove_file(&self.name);
+    }
+}
+
 struct KnowledgeLock {
     path: PathBuf,
     remove_parent_on_drop: bool,
@@ -2195,10 +3598,10 @@ mod tests {
         fs::remove_file(target.join(INDEX_RELATIVE)).unwrap();
         let second = rebuild_index(&target).unwrap();
         assert_eq!(first.logical_digest, second.logical_digest);
-        assert_eq!(
-            query(&target, Some("Searchable"), None, 10).unwrap().len(),
-            1
-        );
+        let hits = query(&target, Some("Searchable"), None, 10).unwrap();
+        assert_eq!(hits.len(), 1);
+        assert_eq!(hits[0].sources.len(), 1);
+        assert!(parse_raw_locator(&hits[0].sources[0]).is_some());
     }
 
     #[test]
@@ -2220,5 +3623,230 @@ mod tests {
         assert!(validate_timestamp("2026-02-29T00:00:00Z").is_err());
         assert!(validate_timestamp("2024-02-29T23:59:59Z").is_ok());
         assert!(validate_timestamp("2026-07-24T24:00:00Z").is_err());
+    }
+
+    fn promotion_fixture() -> (tempfile::TempDir, PathBuf, PathBuf) {
+        let temporary = tempfile::tempdir().unwrap();
+        let project = temporary.path().join("project");
+        let user_root = temporary.path().join("user");
+        fs::create_dir_all(&project).unwrap();
+        fs::create_dir_all(&user_root).unwrap();
+        let project = project.canonicalize().unwrap();
+        let user_root = user_root.canonicalize().unwrap();
+        write_seed(&user_root);
+        configure_promotion_project(&project, &user_root, "stable-example");
+        (temporary, project, user_root)
+    }
+
+    fn configure_promotion_project(project: &Path, user_root: &Path, identity: &str) {
+        write_seed(project);
+        let source = project.join("source.md");
+        let wiki = project.join("draft.md");
+        fs::write(&source, "Reusable editing preference").unwrap();
+        fs::write(
+            &wiki,
+            draft("preference-page", "Prefer narrow, reversible changes."),
+        )
+        .unwrap();
+        ingest(project, &source, &wiki).unwrap();
+        let binding = sha256_digest(user_root.to_string_lossy().as_bytes());
+        fs::write(
+            project.join(".hive/setup-answers.yml"),
+            format!(
+                "project_name: example\n\
+project_identity: {identity}\n\
+knowledge_exclude_paths: []\n\
+root_knowledge_promotion_categories: [preference]\n\
+confidential_knowledge_categories: []\n\
+user_store_binding: {binding}\n"
+            ),
+        )
+        .unwrap();
+    }
+
+    #[test]
+    fn promotion_dry_run_is_non_mutating_and_apply_rebuilds_root_index() {
+        let (_temporary, project, user_root) = promotion_fixture();
+        let before = logical_digest(
+            &scan_pages(&user_root).unwrap(),
+            &scan_raw(&user_root).unwrap(),
+            &read_suppression(&user_root).unwrap(),
+        )
+        .unwrap();
+        let planned = promote(
+            &project,
+            &user_root,
+            "preference-page",
+            PromotionCategory::Preference,
+            PromotionMode::DryRun,
+        )
+        .unwrap();
+        assert!(!planned.applied);
+        assert_eq!(planned.logical_digest, before);
+        assert!(!user_root.join(INDEX_RELATIVE).exists());
+
+        let applied = promote(
+            &project,
+            &user_root,
+            "preference-page",
+            PromotionCategory::Preference,
+            PromotionMode::Apply,
+        )
+        .unwrap();
+        assert!(applied.applied);
+        assert!(user_root.join(INDEX_RELATIVE).is_file());
+        assert_eq!(
+            query(&user_root, Some("reversible"), None, 10)
+                .unwrap()
+                .len(),
+            1
+        );
+        let page =
+            fs::read_to_string(user_root.join(format!("{WIKI_RELATIVE}/{}.md", applied.page_id)))
+                .unwrap();
+        assert!(!page.contains("stable-example"));
+        assert!(!page.contains(project.to_string_lossy().as_ref()));
+    }
+
+    #[test]
+    fn confidential_promotion_is_blocked_without_root_mutation() {
+        let (_temporary, project, user_root) = promotion_fixture();
+        let policy = fs::read_to_string(project.join(".hive/setup-answers.yml")).unwrap();
+        fs::write(
+            project.join(".hive/setup-answers.yml"),
+            policy.replace(
+                "confidential_knowledge_categories: []",
+                "confidential_knowledge_categories: [preference]",
+            ),
+        )
+        .unwrap();
+        let error = promote(
+            &project,
+            &user_root,
+            "preference-page",
+            PromotionCategory::Preference,
+            PromotionMode::Apply,
+        )
+        .unwrap_err();
+        assert!(matches!(error, WikiError::Conflict(_)));
+        assert!(!user_root.join(INDEX_RELATIVE).exists());
+        assert!(scan_pages(&user_root).unwrap().is_empty());
+    }
+
+    #[test]
+    fn semantically_identical_projects_merge_sorted_unique_provenance() {
+        let (temporary, project_a, user_root) = promotion_fixture();
+        let project_b = temporary.path().join("project-b");
+        fs::create_dir(&project_b).unwrap();
+        let project_b = project_b.canonicalize().unwrap();
+        configure_promotion_project(&project_b, &user_root, "stable-project-b");
+
+        let first = promote(
+            &project_a,
+            &user_root,
+            "preference-page",
+            PromotionCategory::Preference,
+            PromotionMode::Apply,
+        )
+        .unwrap();
+        let second = promote(
+            &project_b,
+            &user_root,
+            "preference-page",
+            PromotionCategory::Preference,
+            PromotionMode::Apply,
+        )
+        .unwrap();
+        assert_eq!(first.page_id, second.page_id);
+
+        let pages = scan_pages(&user_root).unwrap();
+        let page = pages.get(&first.page_id).unwrap();
+        assert_eq!(page.frontmatter.sources.len(), 2);
+        assert!(page
+            .frontmatter
+            .sources
+            .windows(2)
+            .all(|pair| pair[0] < pair[1]));
+        let raw = scan_raw(&user_root).unwrap();
+        assert_eq!(raw.len(), 2);
+        let pseudonyms = raw
+            .keys()
+            .map(|path| {
+                let bytes = fs::read(user_root.join(path)).unwrap();
+                serde_json::from_slice::<serde_json::Value>(&bytes).unwrap()["project_pseudonym"]
+                    .as_str()
+                    .unwrap()
+                    .to_owned()
+            })
+            .collect::<BTreeSet<_>>();
+        assert_eq!(
+            pseudonyms,
+            BTreeSet::from([
+                sha256_digest(b"stable-example"),
+                sha256_digest(b"stable-project-b")
+            ])
+        );
+
+        let before = fs::read(user_root.join(&page.relative_path)).unwrap();
+        let repeated = promote(
+            &project_b,
+            &user_root,
+            "preference-page",
+            PromotionCategory::Preference,
+            PromotionMode::Apply,
+        )
+        .unwrap();
+        assert_eq!(repeated.page_id, first.page_id);
+        assert_eq!(
+            fs::read(user_root.join(&page.relative_path)).unwrap(),
+            before
+        );
+        assert_eq!(scan_raw(&user_root).unwrap().len(), 2);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn managed_ancestor_swap_after_plan_cannot_touch_foreign_tree() {
+        use std::os::unix::fs::symlink;
+
+        let (temporary, project, user_root) = promotion_fixture();
+        let project_root = PinnedRoot::open(&project).unwrap();
+        let user_capability = PinnedRoot::open(&user_root).unwrap();
+        let mut plan = build_promotion_plan(
+            &project_root,
+            &user_capability,
+            "preference-page",
+            PromotionCategory::Preference,
+        )
+        .unwrap();
+
+        let pinned_hive = user_root.join(".hive-pinned");
+        fs::rename(user_root.join(".hive"), &pinned_hive).unwrap();
+        let foreign_hive = temporary.path().join("foreign-hive");
+        fs::create_dir_all(foreign_hive.join("knowledge/Raw/promoted-knowledge")).unwrap();
+        fs::create_dir_all(foreign_hive.join("knowledge/Wiki")).unwrap();
+        fs::create_dir_all(foreign_hive.join("index")).unwrap();
+        let sentinel = foreign_hive.join("knowledge/Wiki/sentinel.md");
+        fs::write(&sentinel, b"foreign bytes").unwrap();
+        symlink(&foreign_hive, user_root.join(".hive")).unwrap();
+
+        let result = commit_promotion_mutation(
+            &user_capability,
+            &mut plan.snapshots,
+            &plan.raw_bytes,
+            &plan.wiki_bytes,
+        );
+        assert!(matches!(result, Err(WikiError::Conflict(_))));
+        assert_eq!(fs::read(&sentinel).unwrap(), b"foreign bytes");
+        assert_eq!(
+            fs::read_dir(foreign_hive.join("knowledge/Raw/promoted-knowledge"))
+                .unwrap()
+                .count(),
+            0
+        );
+        assert!(!foreign_hive.join("index/hive.sqlite3").exists());
+        assert!(!pinned_hive
+            .join(format!("knowledge/Wiki/{}.md", plan.outcome.page_id))
+            .exists());
     }
 }
