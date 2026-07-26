@@ -119,12 +119,17 @@
 
 잔여 evidence:
 
-- `RPH-036`: fixture 기반 install/update·merge·interruption 검증 완료, 실제 세 host
-  install/update E2E 잔여
+- `RPH-036`: Codex `0.145.0` 실제 install→validate→update→validate와
+  `aigent-hive@aigent-hive` enabled state PASS
+- `RPH-036`: Antigravity 실제 install→validate→update→validate와 global
+  directory-scan projection PASS
+- `RPH-036`: Claude executable·Pro/Max session 부재, Antigravity app UI discovery의
+  macOS Computer Use 권한 대기
 
 ## Current host evidence — 2026-07-26
 
-- Codex: `.codex-plugin/plugin.json`, bundled `skills/`, marketplace install과
+- Codex: `.codex-plugin/plugin.json`, bundled `skills/`,
+  `.agents/plugins/marketplace.json` marketplace install과
   nonempty `~/.codex/AGENTS.override.md` 우선, 그 외 `~/.codex/AGENTS.md`
 - Claude Code: `.claude-plugin/plugin.json`, bundled `skills/`, marketplace install,
   `~/.claude/CLAUDE.md`

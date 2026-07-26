@@ -2,18 +2,19 @@
 
 - 기준 branch: `develop`
 - product version: `0.7.0`
-- plan revision: `1.43`
+- plan revision: `1.44`
 - 현재 milestone: Phase 7 public qualification + user plugin/project lifecycle `0.8.0`
 - 현재 작업: user plugin·project harness·root knowledge·local-priority upgrade와
   native-first usage sensor의 local implementation·fixture qualification 완료;
-  실제 세 host·다중 플랫폼·signed publication qualification 잔여
+  실제 Codex·Antigravity user E2E와 unsigned native multi-platform qualification 완료,
+  Claude·Antigravity app UI·signed publication qualification 잔여
 - 외부 중지 경계: protected signing/publication credential, 실제 production publication,
   exact `1.0.0` 사용자 authority
 - Plan load: compact `docs/plans/PLAN.md` + `docs/plans/phases/07-public-qualification.md`
   + `docs/plans/active/plugin-project-lifecycle.md`
   + `docs/plans/active/native-usage-sensor.md`
   + `docs/plans/active/documentation-style.md` + `docs/plans/active/security-review.md`
-- Plan completion: canonical checklist `171/182` 완료, `11`개 미완료, `94.0%`
+- Plan completion: canonical checklist `173/182` 완료, `9`개 미완료, `95.1%`
 - Native Goal routing: legacy `PLAN.md` checkbox 문구를 `phases/07-public-qualification.md`,
   `active/plugin-project-lifecycle.md`, `active/documentation-style.md`,
   `active/native-usage-sensor.md`, `active/security-review.md`로 해석
@@ -26,6 +27,8 @@
   `~/.claude/settings.json` mutation 0회, 실제 Pro/Max qualification 잔여
 - Antigravity CLI `1.1.7`: native machine sensor `unsupported`, qualified CodexBar
   fallback 구현
+- 실제 Antigravity fallback: CodexBar `0.45.2` provider error,
+  sanitized `usage_unknown`·exit `3`, raw payload persistence 0건
 - 세 provider 공통 CodexBar fallback-only, native limited 뒤 fallback 우회 0회
 - CodexBar 미설치 notification·fixed command preview·explicit current-action consent 구현
 - 잔여: 실제 세 host parity와 future Antigravity native fixture
@@ -71,9 +74,20 @@
 
 확인된 gap:
 
-- 실제 Codex·Claude Code·Antigravity install/update 전체 E2E
-- 실제 Claude Pro/Max·Antigravity usage parity
-- Intel macOS·Windows runtime, signing·notarization·publication
+- 실제 Claude Code install/update와 Antigravity app UI discovery E2E
+- 실제 Claude Pro/Max·Antigravity 성공 quota usage parity
+- macOS·Windows signing·notarization·publication
+
+실제 current-host evidence:
+
+- Codex `0.145.0`: install→validate→update→validate PASS,
+  `aigent-hive@aigent-hive` `0.7.0` enabled와 exact local source 확인
+- Codex fresh ephemeral session: detail-poor ordinary request의 optional refine 제안,
+  automatic rewrite 0회, safe read-only discovery 후 empty-workspace 중단
+- Antigravity: install→validate→update→validate PASS, 38-path initial activation과
+  zero-diff update
+- Antigravity app UI: ChatGPT Computer Use Accessibility·Screen Recording 권한 대기
+- Claude Code: executable·authenticated Pro/Max session 부재
 
 결정:
 
@@ -84,7 +98,7 @@
 계획 evidence:
 
 - Active fragment 8 KiB 제한 충족
-- Canonical checklist `171/182`, active checklist ID 중복 0건
+- Canonical checklist `173/182`, active checklist ID 중복 0건
 - Plan static contract 29/29, documentation style regression 18/18 PASS
 - Human documentation inventory 1,698/1,698 review, finding 0건
 - Markdown link conformance PASS
@@ -131,8 +145,8 @@
 
 남은 외부 범위:
 
-- 실제 Codex·Claude·Gemini Antigravity session E2E
-- Codex 외 qualified subscription usage sensor
+- 실제 Claude·Gemini Antigravity app session E2E
+- Codex 외 successful qualified subscription usage sensor
 - Public signed multi-platform release candidate
 
 ## Source 개발 usage safeguard
@@ -269,8 +283,13 @@ Current worktree local qualification PASS:
 
 Remote qualification evidence:
 
-- Commit: `b786a344dd9659ae4c734177618a77283e03ffaa`
-- GitHub Actions CI: [run `30199332042`](https://github.com/gvm1229/aigent-hive/actions/runs/30199332042), 7/7 job PASS
+- Current commit: `ec274584e481eaf17953f9788be4d57a90ad34c2`
+- Native release runtime:
+  [run `30201803879`](https://github.com/gvm1229/aigent-hive/actions/runs/30201803879),
+  macOS arm64·Intel과 Windows x86_64 3/3 job PASS
+- GitHub Actions CI:
+  [run `30201803881`](https://github.com/gvm1229/aigent-hive/actions/runs/30201803881),
+  7/7 job PASS
 - P7-040: clean-clone full CI PASS
 
 검증 경계:
@@ -289,8 +308,7 @@ Remote qualification evidence:
 
 ## 다음 action
 
-1. RPH-036 실제 세 host install/update E2E
+1. RPH-036 실제 Claude install/update와 Antigravity app discovery E2E
 2. NUS-020·025 실제 Claude·Antigravity qualification
 3. NUS-014·P7-013·P7-021 실제 세 host matrix
-4. P7-011·012 multi-platform runtime qualification
-5. P7-018·020·037 signed release qualification
+4. P7-018·020·037 signed release qualification

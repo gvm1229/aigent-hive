@@ -1,6 +1,6 @@
 # Aigent Hive active plan index
 
-> Revision: 1.43
+> Revision: 1.44
 > 기준일: 2026-07-26
 > Product version: `0.7.0`
 > 현재 milestone: Phase 7 public qualification + user plugin/project lifecycle `0.8.0`
@@ -9,7 +9,7 @@
 ## Goal parameters
 
 - Objective: user plugin/project lifecycle 미완료 1개, 세 host native usage sensor
-  미완료 3개와 Phase 7 protected qualification 7개 완료
+  미완료 3개와 Phase 7 protected qualification 5개 완료
 - Success: 세 host user install·project bootstrap·root knowledge promotion·local-priority
   update, 세 host native-first·CodexBar fallback-only usage guard와 signed
   multi-platform public qualification
@@ -24,12 +24,12 @@
 | 범위 | 완료 | 미완료 | 진행률 |
 | --- | ---: | ---: | ---: |
 | Phase 0–6 | 70 | 0 | 100% |
-| Phase 7 | 33 | 7 | 82.5% |
+| Phase 7 | 35 | 5 | 87.5% |
 | User plugin/project lifecycle | 37 | 1 | 97.4% |
 | Host-native usage sensors | 22 | 3 | 88% |
 | Documentation style | 5 | 0 | 100% |
 | Security review | 4 | 0 | 100% |
-| **Canonical total** | **171** | **11** | **94.0%** |
+| **Canonical total** | **173** | **9** | **95.1%** |
 
 External production boundary 항목도 미완료 합계에 포함. Protected authority 없이 완료 처리 금지.
 
@@ -72,17 +72,16 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
 
 ## Current execution order
 
-1. RPH-036 실제 세 host install/update E2E
+1. RPH-036 실제 Claude install/update와 Antigravity app discovery E2E
 2. NUS-020·025 실제 Claude·Antigravity qualification
 3. NUS-014·P7-013·P7-021 실제 세 host matrix
-4. P7-011·012 multi-platform runtime qualification
-5. P7-018·020·037 signed release qualification
-6. Exact `1.0.0` 사용자 authority 확인
+4. P7-018·020·037 signed release qualification
+5. Exact `1.0.0` 사용자 authority 확인
 
 ## External production boundary
 
 - macOS Developer ID signing·notarization
 - Windows Authenticode signing
-- 실제 Codex·Claude·Gemini Antigravity protected session E2E
+- 실제 Claude·Gemini Antigravity protected session E2E
 - Externally signed TUF authorization과 GitHub Release publication
 - Exact `1.0.0` 사용자 authority

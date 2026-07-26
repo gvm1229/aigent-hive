@@ -15,8 +15,8 @@
 - [x] [P7-008] Session window 우선·weekly-only fallback을 threshold/session-control 경로에서도 유지
 - [x] [P7-009] Compatible OMX/OMC cancellation은 보조 evidence로만 사용하고 durable goal/task halt로 오인 금지
 - [x] [P7-010] Harness guard가 fallback hook, prompt rewrite, Skill activation, watcher, orchestration 또는 Stop continuation을 설치 금지
-- [ ] [P7-011] macOS arm64/x86_64 release build·install·runtime qualification
-- [ ] [P7-012] Windows x86_64 release build·install·runtime qualification
+- [x] [P7-011] macOS arm64/x86_64 release build·install·runtime qualification
+- [x] [P7-012] Windows x86_64 release build·install·runtime qualification
 - [ ] [P7-013] Codex·Claude·Antigravity 실제 host session E2E와 qualified sensor matrix
 - [x] [P7-014] host-native/OMX/OMC support matrix schema·fixture conformance
 - [x] [P7-015] upgrade/migration fault injection
@@ -24,12 +24,18 @@
 - [x] [P7-017] public license 확정 — 전체 source·harness `Apache-2.0`, GitHub 감지와 REUSE 검증 완료
 - [ ] [P7-018] `0.8.x` release candidate qualification
 
-#### P7-011 target 상태
+#### P7-011·012 target 상태
 
-| Target | 상태·evidence | 남은 경계 |
-| --- | --- | --- |
-| `aarch64-apple-darwin` | Historical CLEAR — `ba798d8` local build·package·install·runtime; [Apple M2 evidence](../../state/CURRENT.md#macos-apple-silicon-local-release-qualification-historical-clear) | Current candidate 재검증, P7-020·037 Developer ID·notarization·attestation |
-| `x86_64-apple-darwin` | PENDING; native Intel evidence 없음 | Intel build·install·runtime |
+Evidence: [`ec27458` run](https://github.com/gvm1229/aigent-hive/actions/runs/30201803879).
+
+| Target | Unsigned qualification |
+| --- | --- |
+| `aarch64-apple-darwin` | archive·digest·runtime·Antigravity PASS |
+| `x86_64-apple-darwin` | archive·digest·runtime·Antigravity PASS |
+| `x86_64-pc-windows-msvc` | 2-entry ZIP·digest·runtime·Antigravity PASS |
+
+범위: current-candidate staged-install/runtime. Direct installer ownership·receipt와
+signing·attestation·publication은 P7-020·037 소유.
 
 External authority gate: exact `1.0.0` 사용자 지시 전 stable major preparation 금지.
 

@@ -109,4 +109,6 @@
 
 - `NUS-014`: 실제 세 host opt-in parity 잔여
 - `NUS-020`: 실제 Claude Pro/Max qualification 잔여
-- `NUS-025`: 실제 Antigravity truthful unsupported·CodexBar fallback parity 잔여
+- `NUS-025`: 실제 Antigravity native `unsupported`→CodexBar `0.45.2` fallback 호출,
+  provider error의 sanitized `usage_unknown`·exit `3`·raw persistence 0건 확인
+- `NUS-025`: CodexBar 성공 또는 limited snapshot의 normalized quota parity 잔여
