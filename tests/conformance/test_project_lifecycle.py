@@ -40,8 +40,10 @@ with open(os.environ["HIVE_TEST_HOST_LOG"], "a", encoding="utf-8") as stream:
     stream.write(json.dumps({{"program": os.path.basename(sys.argv[0]), "argv": sys.argv[1:]}}) + "\\n")
 host = {host!r}
 arguments = sys.argv[1:]
+if host == "antigravity":
+    raise SystemExit(91)
 if arguments == ["--version"]:
-    print({{"codex": "codex-cli 0.145.0", "claude": "2.1.0 (Claude Code)", "antigravity": "antigravity 2.3.1"}}[host])
+    print({{"codex": "codex-cli 0.145.0", "claude": "2.1.0 (Claude Code)"}}[host])
     raise SystemExit(0)
 
 state_path = os.environ["HIVE_TEST_HOST_LOG"] + "." + host + ".state"
@@ -230,6 +232,26 @@ else:
                 self.assertEqual(
                     applied_result["code"], "hive.user-install-complete"
                 )
+                if host == "antigravity":
+                    self.assertIsNone(
+                        applied_result["data"]["qualified_host_version"]
+                    )
+                    self.assertEqual(
+                        applied_result["data"]["host_version_range"],
+                        ">=2.3.1 <3.0.0",
+                    )
+                    host_calls = [
+                        json.loads(line)
+                        for line in self.host_log.read_text(
+                            encoding="utf-8"
+                        ).splitlines()
+                    ]
+                    self.assertFalse(
+                        any(
+                            call["program"].startswith("antigravity")
+                            for call in host_calls
+                        )
+                    )
                 installed = guidance.read_text(encoding="utf-8")
                 self.assertTrue(installed.startswith(foreign))
                 self.assertEqual(

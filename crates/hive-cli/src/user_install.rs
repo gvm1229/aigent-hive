@@ -549,14 +549,10 @@ fn execute_apply(
     plan: &mut UserPlan,
 ) -> Result<ActionResult, InstallError> {
     let host_executable = qualify_host(arguments, plan, runner)?;
-    let host_version = probe_supported_host_version(
-        arguments.host,
-        host_executable.as_ref().ok_or_else(|| {
-            InstallError::Internal("qualified host executable is missing".to_owned())
-        })?,
-        runner,
-    )?;
-    bind_host_version(plan, &host_version);
+    if let Some(executable) = host_executable.as_ref() {
+        let host_version = probe_supported_host_version(arguments.host, executable, runner)?;
+        bind_host_version(plan, &host_version);
+    }
     let codex_before = probe_codex_state_if_required(arguments, host_executable.as_ref(), runner)?;
     let claude_before =
         probe_claude_state_if_required(arguments, host_executable.as_ref(), runner)?;
@@ -2257,13 +2253,20 @@ fn reconcile_root_index_after_rollback(
 
 fn qualify_recovery_host(
     arguments: &UserArguments,
-    _backup: &UserBackupManifest,
+    backup: &UserBackupManifest,
     runner: &impl CommandRunner,
 ) -> Result<Option<QualifiedExecutable>, InstallError> {
+    if backup.host_mutations.is_empty() && backup.pending_host_transition.is_none() {
+        return Ok(None);
+    }
     let program = match arguments.host {
         UserHost::Codex => "codex",
         UserHost::Claude => "claude",
-        UserHost::Antigravity => "antigravity",
+        UserHost::Antigravity => {
+            return Err(InstallError::Verification(
+                "Antigravity backup unexpectedly contains host mutations".to_owned(),
+            ))
+        }
     };
     let executable = runner.qualify(program).map_err(|error| {
         InstallError::Unsupported(format!(
@@ -3241,7 +3244,7 @@ fn qualify_host(
     let executable_name = match arguments.host {
         UserHost::Codex => "codex",
         UserHost::Claude => "claude",
-        UserHost::Antigravity => "antigravity",
+        UserHost::Antigravity => return Ok(None),
     };
     runner.qualify(executable_name).map(Some).map_err(|_| {
         InstallError::Unsupported(format!(
@@ -3255,6 +3258,11 @@ fn probe_supported_host_version(
     executable: &QualifiedExecutable,
     runner: &impl CommandRunner,
 ) -> Result<String, InstallError> {
+    if host == UserHost::Antigravity {
+        return Err(InstallError::Internal(
+            "Antigravity directory-scan installation has no executable version probe".to_owned(),
+        ));
+    }
     let output = runner
         .run(
             executable,
@@ -3282,7 +3290,7 @@ fn probe_supported_host_version(
         UserHost::Claude => raw
             .strip_suffix(" (Claude Code)")
             .or_else(|| raw.strip_prefix("claude ")),
-        UserHost::Antigravity => raw.strip_prefix("antigravity "),
+        UserHost::Antigravity => unreachable!("handled before process execution"),
     }
     .ok_or_else(|| {
         InstallError::Unsupported(format!(
@@ -3294,7 +3302,7 @@ fn probe_supported_host_version(
     let (minimum, maximum) = match host {
         UserHost::Codex => ((0, 145, 0), (1, 0, 0)),
         UserHost::Claude => ((2, 1, 0), (3, 0, 0)),
-        UserHost::Antigravity => ((2, 3, 1), (3, 0, 0)),
+        UserHost::Antigravity => unreachable!("handled before version parsing"),
     };
     if parsed < minimum || parsed >= maximum {
         return Err(InstallError::Unsupported(format!(
@@ -4840,13 +4848,6 @@ mod tests {
                 "3.0.0 (Claude Code)\n",
                 "Claude Code 2.1.0\n",
             ),
-            (
-                UserHost::Antigravity,
-                "antigravity 2.3.1\n",
-                "antigravity 2.99.0\n",
-                "antigravity 3.0.0\n",
-                "antigravity 2.3.1-dev\n",
-            ),
         ] {
             let executable = QualifiedExecutable::synthetic(host.as_str());
             for accepted in [floor, in_range] {
@@ -4876,11 +4877,19 @@ mod tests {
     }
 
     #[test]
+    fn antigravity_has_no_executable_version_probe() {
+        let executable = QualifiedExecutable::synthetic("antigravity");
+        assert!(matches!(
+            probe_supported_host_version(UserHost::Antigravity, &executable, &UnavailableRunner),
+            Err(InstallError::Internal(_))
+        ));
+    }
+
+    #[test]
     fn unsupported_host_version_stops_before_any_user_filesystem_mutation() {
         for (host, stdout) in [
             (UserHost::Codex, b"codex-cli 1.0.0\n".as_slice()),
             (UserHost::Claude, b"3.0.0 (Claude Code)\n".as_slice()),
-            (UserHost::Antigravity, b"antigravity 3.0.0\n".as_slice()),
         ] {
             let temporary = tempdir().expect("tempdir");
             let arguments = args(temporary.path(), host, UserMode::Apply);
@@ -5735,7 +5744,7 @@ mod tests {
     }
 
     #[test]
-    fn antigravity_apply_validates_and_recovery_restores_foreign_guidance() {
+    fn antigravity_requires_no_host_executable_and_preserves_foreign_guidance() {
         let temporary = tempdir().expect("tempdir");
         fs::create_dir(temporary.path().join(".gemini")).expect("gemini");
         fs::write(
@@ -5743,9 +5752,25 @@ mod tests {
             b"foreign guidance\n",
         )
         .expect("guidance");
-        let runner = FakeRunner::new();
+        let runner = UnavailableRunner;
         let apply = args(temporary.path(), UserHost::Antigravity, UserMode::Apply);
-        execute(UserOperation::Install, &apply, &runner).expect("apply");
+        let result = execute(UserOperation::Install, &apply, &runner).expect("apply");
+        assert_eq!(
+            result
+                .data
+                .as_ref()
+                .expect("data")
+                .get("qualified_host_version"),
+            Some(&serde_json::Value::Null)
+        );
+        assert_eq!(
+            result
+                .data
+                .as_ref()
+                .expect("data")
+                .get("host_version_range"),
+            Some(&serde_json::Value::String(">=2.3.1 <3.0.0".to_owned()))
+        );
         let manifest: UserOwnershipManifest = serde_json::from_slice(
             &fs::read(temporary.path().join(".hive/install/antigravity.json")).expect("manifest"),
         )
@@ -5843,14 +5868,15 @@ mod tests {
 
     #[test]
     fn unavailable_host_cli_is_detected_before_user_files_change() {
-        let temporary = tempdir().expect("tempdir");
-        let arguments = args(temporary.path(), UserHost::Codex, UserMode::Apply);
-        let error = execute(UserOperation::Install, &arguments, &UnavailableRunner)
-            .err()
-            .expect("missing host CLI");
-        assert!(matches!(error, InstallError::Unsupported(_)));
-        assert!(!temporary.path().join(".codex").exists());
-        assert!(!temporary.path().join(".hive").exists());
+        for host in [UserHost::Codex, UserHost::Claude] {
+            let temporary = tempdir().expect("tempdir");
+            let arguments = args(temporary.path(), host, UserMode::Apply);
+            let error = execute(UserOperation::Install, &arguments, &UnavailableRunner)
+                .err()
+                .expect("missing host CLI");
+            assert!(matches!(error, InstallError::Unsupported(_)));
+            assert_eq!(fs::read_dir(temporary.path()).expect("root").count(), 0);
+        }
     }
 
     #[test]
