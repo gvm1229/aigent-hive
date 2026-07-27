@@ -2,9 +2,9 @@
 
 - 기준 branch: `develop`
 - product version: `0.7.0`
-- plan revision: `1.49`
-- 현재 milestone: Phase 7 qualification + source bilingual LLM Wiki `0.8.0`
-- 현재 작업: `0.8.0` mandatory global onboarding·selected projection·shared index 계획;
+- plan revision: `1.50`
+- 현재 milestone: Phase 7 qualification + global onboarding·shared index `0.8.0`
+- 현재 작업: `0.8.0` mandatory global onboarding·selected projection·shared index 구현 완료;
   이후 Claude·signed publication qualification
 - 외부 중지 경계: protected signing/publication credential, 실제 production publication,
   exact `1.0.0` 사용자 authority
@@ -14,7 +14,7 @@
   + `docs/plans/active/user-onboarding-shared-index.md`
   + `docs/plans/active/source-llm-wiki.md`
   + `docs/plans/active/documentation-style.md` + `docs/plans/active/security-review.md`
-- Plan completion: canonical checklist `184/208` 완료, `24`개 미완료, `88.5%`
+- Plan completion: canonical checklist `200/208` 완료, `8`개 미완료, `96.2%`
 - Native Goal routing: legacy `PLAN.md` checkbox 문구를 `phases/07-public-qualification.md`,
   `active/plugin-project-lifecycle.md`, `active/native-usage-sensor.md`,
   `active/user-onboarding-shared-index.md`, `active/source-llm-wiki.md`,
@@ -24,30 +24,31 @@
 
 Target: `0.8.0`
 
-| 요청 범위 | `0.7.0` current truth |
+| 요청 범위 | 현재 구현 |
 | --- | --- |
-| User install | 세 host direct operational install |
-| Mandatory global setup | 없음 |
-| Language·user profile·persona·multi-host | Global answer 없음 |
-| Skill suite 선택 | User plugin built-in 전체 projection |
-| Wiki opt-out | 없음; root/project Wiki seed 고정 |
-| Usage guard 선택 | Project threshold 필수, setup 문서 기본 `10%` |
-| User marker | `AIGENT-HIVE:USER:START|END` 구현 |
-| User `.agents` | Generic user projection 없음 |
-| Root knowledge | `~/.hive/knowledge` + disposable root SQLite 구현 |
-| Project setup mode | Expedited/global inherit 없음 |
-| Project type | Required project identity·domain profile 구현 |
-| Project index | Project SQLite + root SQLite 독립 |
+| User install | 세 host minimal bootstrap 뒤 mandatory global setup |
+| Mandatory global setup | `setup-hive`와 user-scope setup CLI |
+| Language·user profile·persona·multi-host | Signed catalog 기반 one-question sequence |
+| Skill suite 선택 | Recommended 또는 individual, dependency closure preview |
+| Wiki opt-out | Default-on, 언제든 disable/enable, Markdown 보존 |
+| Usage guard 선택 | Explicit opt-in, enabled 기본 `20%`, fallback 별도 consent |
+| User marker | `AIGENT-HIVE:USER:START|END` append·owned replace |
+| User `.agents` | Provider-neutral directive·selected Skill projection |
+| Root knowledge | `~/.hive/knowledge` + disposable root SQLite |
+| Project setup mode | `expedited|custom`, 양쪽 모두 project kind 필수 |
+| Project type | Required project identity·domain profile |
+| Project index | User-root 단일 SQLite, project DB 생성 없음 |
 
-Accepted target:
+완료 evidence:
 
-- Minimal bootstrap 뒤 mandatory `setup-hive`
-- Interface/Wiki language, user profile, persona, selected hosts·Skills
-- Global Wiki default-on opt-out
-- Usage guard opt-in, enabled 기본 threshold `20%`
-- `expedited|custom` project setup, mode 무관 project kind 질문
-- Project canonical Wiki + `~/.hive/index/hive.sqlite3` 단일 derived index
-- Project SQLite 제거와 `0.7.0 → 0.8.0` non-destructive migration
+- Global setup state·schema·catalog·selected projection
+- Wiki disable의 Skill·operation 차단과 canonical Markdown 보존
+- Usage consent의 runtime sensor·fallback 제어
+- Project activation + root registry/index 연결 rollback
+- Connected `0.7.0 → 0.8.0` preference 보존, unconnected setup-required fail-closed,
+  legacy project DB cleanup과 거부 시 전체 install tree 무변경
+- Codex·Antigravity expedited/custom connected matrix 4/4
+- Signed `0.8.0` release activation은 Phase 7 외부 gate
 - Decision:
   [`ADR-0012`](../decisions/ADR-0012-global-onboarding-shared-index.md)
 - Active fragment:
@@ -123,8 +124,8 @@ Accepted target:
   Antigravity는 Hive-owned source package와 `agy`-owned staging·registry를 분리
 - User guidance marker append·own-block replace·foreign byte 보존
 - Project `.agents/directives`, portable `.agents/skills`, Claude `.claude/skills` adapter
-- `setup-harness` 단일 질문 sequence, project/root canonical knowledge·독립 SQLite와
-  explicit promotion
+- `setup-harness` expedited/custom sequence, project canonical knowledge와
+  user-root 단일 SQLite·explicit promotion
 - Historical exact base, unmodified replace, modified local-priority three-way merge
 - Durable journal, executable-mode backup, host-state compensation과 crash recovery
 - Source `hive-prompt-refine` projection, explicit refine-only routing,
@@ -132,8 +133,6 @@ Accepted target:
 
 확인된 gap:
 
-- Mandatory global onboarding·selected Skill·Wiki opt-out·usage opt-in
-- Project expedited/custom mode와 user-root 단일 shared index
 - 실제 Claude Code install/update E2E
 - 실제 Claude Pro/Max quota usage parity
 - macOS·Windows signing·notarization·publication
@@ -160,7 +159,7 @@ Accepted target:
 계획 evidence:
 
 - Active fragment 8 KiB 제한 충족
-- Canonical checklist `184/192`, active checklist ID 중복 0건
+- Canonical checklist `200/208`, active checklist ID 중복 0건
 - Plan static contract 29/29, documentation style regression 18/18 PASS
 - Human documentation inventory 1,698/1,698 review, finding 0건
 - Markdown link conformance PASS
@@ -216,7 +215,7 @@ Accepted target:
 
 - Source-only `hive-usage-guard` Skill과 15초 native Codex app-server primary·CodexBar
   fallback-only watcher
-- 현재 session threshold: remaining `20%` inclusive
+- 현재 session threshold: remaining `15%` inclusive
 - Session window 우선, session 부재 시 weekly fallback
 - Quota sensor unknown: 3초 뒤 1회 재시도, 반복 unknown은 observation 보존과
   `transient_unknown_ignored` 진행, confirmed-limited marker 유지
@@ -305,6 +304,16 @@ packaging을 추가한 backward-compatible feature minor. Major 변경·추론 �
 
 ## 현재 검증 상태
 
+Global onboarding·shared index local qualification PASS:
+
+- Strict Clippy all targets·all features와 format check PASS
+- Rust workspace 477/477
+- Python conformance 576개 실행, 575 PASS,
+  Windows `pwsh` 전용 1개 expected skip
+- Shared index 동일 입력 재실행 byte-exact no-op, `changed_paths=[]`
+- Codex·Antigravity expedited/custom connected onboarding matrix 4/4
+- 독립 final blocker review의 critical·high·medium·low finding 0건
+
 Source Wiki targeted qualification PASS:
 
 - `hive-cli` 190/190, `hive-wiki` 27/27, Source Wiki Python 27/27
@@ -363,9 +372,6 @@ Remote qualification evidence:
 
 ## 다음 action
 
-1. UOS-001–004 global setup state·schema·catalog·CLI/Skill
-2. UOS-005–010 user install·selected projection·Wiki·usage preference
-3. UOS-011–015 project mode·shared index·migration
-4. UOS-016 Codex·Antigravity local onboarding E2E
-5. RPH-036·NUS-020·NUS-014·P7-013·P7-021 실제 Claude 포함 matrix
-6. P7-018·020·037 signed release qualification
+1. RPH-036·NUS-020·NUS-014·P7-013·P7-021 실제 Claude 포함 matrix
+2. P7-018·020·037 signed release qualification
+3. Exact `1.0.0` 사용자 authority 확인
