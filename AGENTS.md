@@ -16,12 +16,13 @@ Hive development directives live under `.agents/`; files under `harness/` are so
 
 - Treat this repository as Hive source, never as a consumer project with an installed Hive harness.
 - Keep source, release artifacts, and installed consumer harnesses physically and logically separate.
-- Do not implement a model runtime, scheduler, Ralph/plan/team clone, or provider API client. Prefer compatible OMX on Codex and OMC on Claude when their capabilities are available; otherwise use only what the host natively supports.
+- Do not implement a model runtime, scheduler, Ralph/plan/team clone, or provider API client. Prefer compatible OMX on Codex and OMC on Claude while those replaceable compatibility dependencies are available; otherwise use only what the host natively supports. Keep canonical data, paths, contracts, and Skills provider-neutral so OMX/OMC can be retired without knowledge or ownership migration loss.
 - Keep knowledge, role, and run state canonical in Markdown; keep setup/config authority in tracked typed YAML/TOML. Treat SQLite as a disposable, reproducible local index over those sources.
 - Keep `AGENTS.md` short. Put detailed rules in the narrowest matching directive and load them only when relevant.
 - Preserve user-authored and third-party bytes. Hive may mutate only paths and marker blocks declared in its ownership manifest.
 - Require explicit user approval before activating any optional third-party or generated Skill.
 - Resolve relevant approved Skills automatically from narrow descriptions and routing directives. Prefer an OMX/OMC capability over a duplicate Hive workflow, and keep the simple-question path free of unrelated Skill loading.
+- Reuse useful Hive-owned Skills bidirectionally between source development and the consumer product after scope, safety, consent, and conformance review. A shared Skill is canonical under `harness/skills/` and may have an exact source projection under `.agents/skills/`; a source-only Skill remains under `.agents/skills/` until explicitly promoted. Never import installed consumer state, runtime data, or user knowledge into source.
 - Apply the prompt quality gate in `.agents/directives/01-behavior.md`: explicit prompt authoring or improvement routes to source `hive-prompt-refine`; materially ambiguous or detail-poor ordinary work receives only one concise optional refinement suggestion with no automatic rewrite, Skill load, or execution.
 - Run the source `hive-usage-guard` session gate before every user task, including before the simple-question gate. When halted or unknown, only explicit guard control is allowed; obvious natural-language on/off intent does not require the user to name the Skill.
 - After that gate allows work and before editing anything, read [`.agents/directives/00-editing-discipline.md`](.agents/directives/00-editing-discipline.md) in full. Apply all four sections as the highest-priority editing discipline within this repository contract; never compact, summarize, omit, or substitute any part. Higher-priority system, developer, and user instructions plus Hive security, ownership, credential, and production boundaries still control.
@@ -64,6 +65,7 @@ Also read:
 | Surface | Purpose | Shipped to consumer projects |
 | --- | --- | --- |
 | Root `AGENTS.md` and `.agents/` | Develop Hive itself | Never |
+| `llm-wiki/` | Provider-neutral bilingual source knowledge | Never |
 | `harness/` | Canonical setup questions, templates, skills, and projections | Compiled or projected through a release |
 | `crates/` | Rust implementation | Compiled binaries/libraries only |
 | `docs/` | Maintainer knowledge and active plan | Never as consumer instructions |

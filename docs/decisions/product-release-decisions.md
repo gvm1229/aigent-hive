@@ -1,6 +1,6 @@
 # 제품·배포 결정
 
-기준일: 2026-07-26
+기준일: 2026-07-27
 
 | 영역 | 결정 |
 | --- | --- |
@@ -13,9 +13,12 @@
 | canonical data | 지식·role·run은 Markdown, setup/config/approval은 tracked YAML/TOML, Raw는 허용된 source object |
 | SQLite | 삭제 가능한 FTS·tag·link index, Git 제외, 무네트워크 재구축 |
 | orchestration | Codex의 compatible OMX, Claude의 compatible OMC를 우선하고 `absent|incompatible|unknown`이면 truthful host native가 소유; setup 선택지와 mid-run switch 없음 |
+| orchestration 독립 | OMX/OMC는 현재 replaceable compatibility dependency; 장기적으로 host-native·provider-neutral capability로 대체 후 제거, canonical data·path·schema·Skill identity 의존 없음 |
 | runtime 관찰 | active host capability metadata, side-effect-free public `--version`, pinned-qualified usage sensor의 fixed-argv·JSON-RPC read만 허용; foreign state·provider credential read 금지 |
 | 재구현 금지 | Hive plan·Ralph·team·provider session engine 없음 |
 | Skill | active projection은 구현 완료 built-in 13개; optional은 이름·source·revision·content digest·권한의 개별 수동 승인 후에만 사용 |
+| Skill 양방향 reuse | Hive-owned source↔consumer Skill reuse 허용; shared canonical은 `harness/skills/`, source는 exact `.agents/skills/` projection, scope·safety·consent·conformance review 필수 |
+| Source LLM Wiki | tracked `llm-wiki/en/`·`llm-wiki/ko/` bilingual Markdown 정본, `omx_wiki/`·`.omx/wiki/`·consumer `.hive/knowledge/` 금지, SQLite는 ignored source projection |
 | prompt refine | `hive-prompt-refine`; 명시적인 prompt 작성·정제 intent에서만 자동 선택, `refine-only` 기본. 일반 요청이 모호하거나 핵심 세부가 부족하면 작업을 막지 않는 한 줄 optional refine 제안, hidden·automatic rewrite 금지 |
 | fallback hooks | OMX/OMC가 conclusively absent이고 사용자가 capability/event/path/digest를 승인한 경우에만 project-local data-integrity hook 허용 |
 | 사용량 | Codex app-server JSON-RPC, Claude Code status-line JSON capture, 향후 qualified Antigravity structured surface를 native primary로 사용; CodexBar는 세 provider 모두 explicit-consent fallback-only; installed `usage_stop_remaining_percent`가 권위값; pool별 provider-defined window 단독 적용, cadence pool은 session 우선·session 부재 시 weekly fallback, 모든 pool 통과 필수 |

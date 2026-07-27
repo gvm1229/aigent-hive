@@ -2,22 +2,34 @@
 
 - 기준 branch: `develop`
 - product version: `0.7.0`
-- plan revision: `1.46`
-- 현재 milestone: Phase 7 public qualification + user plugin/project lifecycle `0.8.0`
-- 현재 작업: user plugin·project harness·root knowledge·local-priority upgrade와
-  native-first usage sensor의 local implementation·fixture qualification 완료;
-  실제 Codex·Antigravity user·usage E2E와 unsigned native multi-platform qualification 완료,
-  Claude·signed publication qualification 잔여
+- plan revision: `1.47`
+- 현재 milestone: Phase 7 qualification + source bilingual LLM Wiki `0.8.0`
+- 현재 작업: provider-neutral source Wiki 계획과 source↔consumer Skill reuse directive
+  완료; Wiki implementation, Claude·signed publication qualification 잔여
 - 외부 중지 경계: protected signing/publication credential, 실제 production publication,
   exact `1.0.0` 사용자 authority
 - Plan load: compact `docs/plans/PLAN.md` + `docs/plans/phases/07-public-qualification.md`
   + `docs/plans/active/plugin-project-lifecycle.md`
   + `docs/plans/active/native-usage-sensor.md`
+  + `docs/plans/active/source-llm-wiki.md`
   + `docs/plans/active/documentation-style.md` + `docs/plans/active/security-review.md`
-- Plan completion: canonical checklist `174/182` 완료, `8`개 미완료, `95.6%`
+- Plan completion: canonical checklist `178/192` 완료, `14`개 미완료, `92.7%`
 - Native Goal routing: legacy `PLAN.md` checkbox 문구를 `phases/07-public-qualification.md`,
-  `active/plugin-project-lifecycle.md`, `active/documentation-style.md`,
-  `active/native-usage-sensor.md`, `active/security-review.md`로 해석
+  `active/plugin-project-lifecycle.md`, `active/native-usage-sensor.md`,
+  `active/source-llm-wiki.md`, `active/documentation-style.md`,
+  `active/security-review.md`로 해석
+
+## Source bilingual LLM Wiki 계획
+
+- Canonical path: `llm-wiki/en/`, `llm-wiki/ko/`
+- 금지 path: `omx_wiki/`, `.omx/wiki/`, source root의 consumer `.hive/knowledge/`
+- Current OMX/OMC: replaceable compatibility dependency와 orchestration aid
+- 장기 방향: host-native·provider-neutral capability 대체 뒤 OMX/OMC 제거
+- Consumer reuse: `hive-wiki` core와 capture·maintenance·query 안전 계약
+- Skill reuse: shared canonical `harness/skills/`, exact source `.agents/skills/` projection
+- 현재 상태: plan·directive·decision 완료, Wiki content·source adapter 미구현
+- Active fragment:
+  [`source-llm-wiki.md`](../plans/active/source-llm-wiki.md)
 
 ## 세 host native usage sensor
 
@@ -313,7 +325,8 @@ Remote qualification evidence:
 
 ## 다음 action
 
-1. RPH-036 실제 Claude install/update E2E
-2. NUS-020 실제 Claude Pro/Max qualification
-3. NUS-014·P7-013·P7-021 실제 세 host matrix
-4. P7-018·020·037 signed release qualification
+1. SLW-005–010 source bilingual LLM Wiki 구현·검증
+2. RPH-036 실제 Claude install/update E2E
+3. NUS-020 실제 Claude Pro/Max qualification
+4. NUS-014·P7-013·P7-021 실제 세 host matrix
+5. P7-018·020·037 signed release qualification

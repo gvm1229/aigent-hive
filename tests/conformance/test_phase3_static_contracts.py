@@ -148,6 +148,36 @@ class Phase3SkillSourceContract(unittest.TestCase):
             source_manifest,
         )
 
+    def test_source_consumer_skill_reuse_and_orchestration_independence(self) -> None:
+        source_manifest = (REPOSITORY_ROOT / "AGENTS.md").read_text(
+            encoding="utf-8"
+        )
+        architecture = (
+            REPOSITORY_ROOT / ".agents/directives/02-architecture.md"
+        ).read_text(encoding="utf-8")
+        plan = (
+            REPOSITORY_ROOT / "docs/plans/active/source-llm-wiki.md"
+        ).read_text(encoding="utf-8")
+
+        for requirement in (
+            "Reuse useful Hive-owned Skills bidirectionally",
+            "shared Skill is canonical under `harness/skills/`",
+            "Never import installed consumer state, runtime data, or user knowledge into source.",
+        ):
+            self.assertIn(requirement, source_manifest)
+        for requirement in (
+            "replaceable compatibility dependencies with planned retirement",
+            "Permit bidirectional reuse only for Hive-owned Skill source",
+            "Do not use `omx_wiki/`, `.omx/wiki/`, or consumer `.hive/knowledge/`",
+        ):
+            self.assertIn(requirement, architecture)
+        for requirement in (
+            "`llm-wiki/en/`·`llm-wiki/ko/`",
+            "`hive-wiki` Markdown parser·lint·SQLite rebuild·query",
+            "`hive-knowledge-capture|maintenance|query`의 안전 계약",
+        ):
+            self.assertIn(requirement, plan)
+
     def test_plan_index_is_compact_and_active_checklist_ids_are_unique(self) -> None:
         plan_root = REPOSITORY_ROOT / "docs/plans"
         index = (plan_root / "PLAN.md").read_text(encoding="utf-8")
@@ -168,6 +198,7 @@ class Phase3SkillSourceContract(unittest.TestCase):
             "active/native-usage-sensor.md",
             "active/plugin-project-lifecycle.md",
             "active/security-review.md",
+            "active/source-llm-wiki.md",
             "contracts/README.md",
             "phases/07-public-qualification.md",
             "phases/README.md",
@@ -184,6 +215,7 @@ class Phase3SkillSourceContract(unittest.TestCase):
             plan_root / "active/native-usage-sensor.md",
             plan_root / "active/plugin-project-lifecycle.md",
             plan_root / "active/security-review.md",
+            plan_root / "active/source-llm-wiki.md",
             plan_root / "phases/07-public-qualification.md",
         ]
         self.assertEqual(
@@ -193,6 +225,7 @@ class Phase3SkillSourceContract(unittest.TestCase):
                 "active/native-usage-sensor.md",
                 "active/plugin-project-lifecycle.md",
                 "active/security-review.md",
+                "active/source-llm-wiki.md",
                 "phases/07-public-qualification.md",
             },
         )
@@ -264,6 +297,7 @@ class Phase3SkillSourceContract(unittest.TestCase):
         native_usage_path = plan_root / "active/native-usage-sensor.md"
         plugin_project_path = plan_root / "active/plugin-project-lifecycle.md"
         security_review_path = plan_root / "active/security-review.md"
+        source_wiki_path = plan_root / "active/source-llm-wiki.md"
         progress_rows = (
             ("Phase 0–6", *checklist_counts(completed_phase_paths)),
             ("Phase 7", *checklist_counts([phase_7_path])),
@@ -274,6 +308,10 @@ class Phase3SkillSourceContract(unittest.TestCase):
             (
                 "Host-native usage sensors",
                 *checklist_counts([native_usage_path]),
+            ),
+            (
+                "Source bilingual LLM Wiki",
+                *checklist_counts([source_wiki_path]),
             ),
             ("Documentation style", *checklist_counts([documentation_path])),
             ("Security review", *checklist_counts([security_review_path])),

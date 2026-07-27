@@ -39,6 +39,7 @@ aigent-hive/
 │   └── manifest.toml           # ownership·금지 경로
 ├── schemas/
 ├── tests/                     # schema/render/materializer conformance
+├── llm-wiki/                  # 계획된 source bilingual LLM knowledge
 ├── docs/
 ├── LICENSE                    # primary Apache-2.0 전문
 ├── LICENSES/                  # REUSE용 Apache-2.0 canonical 전문
@@ -49,14 +50,25 @@ aigent-hive/
 
 ## Source `.agents`와 출하물
 
-루트 `.agents/`는 Hive 자체를 개발하는 에이전트 전용. 일부 external runtime이
-`.agents/skills`를 자동 탐색할 수 있으므로 출하용 Skill을 루트 `.agents/skills`에
-배치 금지. 유일한 source-only Skill인 `hive-usage-guard`는 source CodexBar watcher,
-threshold와 current-session override만 관리하며 release bundle이나 consumer
-projection에 포함 없음. Runtime state는 ignored `.agents/work/usage-guard/`에
-두며 `.omx/` 수정 금지.
+루트 `.agents/`: Hive 자체 개발 전용. `.agents/skills/` 허용 class:
 
-출하용 Skill과 directive는 `harness/`에서만 관리하고 release projection 단계에서 소비자 경로를 결정.
+- Source-only Skill: source 개발 경계에서만 사용, consumer projection 없음
+- Shared Skill projection: canonical `harness/skills/<name>/`의 exact source copy
+
+현재 source-only `hive-usage-guard`: source watcher, threshold와 current-session
+override 관리. Shared `hive-prompt-refine`: harness canonical과 exact byte parity.
+Source-only Skill의 consumer 승격과 consumer Skill의 source projection은 product relevance,
+scope, safety, consent와 conformance review 뒤 허용. Installed consumer copy, `.hive/`
+state와 user knowledge의 source import 금지.
+
+출하용 canonical Skill과 directive는 `harness/`에서 관리하고 release projection
+단계에서 consumer 경로를 결정. Runtime state는 ignored `.agents/work/`에 두며
+`.omx/`·`.omc/` 수정 금지.
+
+계획된 source LLM Wiki: tracked `llm-wiki/en/`·`llm-wiki/ko/` Markdown.
+Derived SQLite: ignored `.agents/work/source-wiki/index.sqlite3`. Consumer `.hive/knowledge/`,
+`omx_wiki/`와 `.omx/wiki/` 사용 금지. 세부 계획:
+[`source-llm-wiki.md`](../plans/active/source-llm-wiki.md).
 세부 계약:
 
 - Role lifecycle: [`role-lifecycle.md`](role-lifecycle.md)

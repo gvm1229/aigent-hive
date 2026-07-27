@@ -47,8 +47,8 @@
   복구된 이전 source package 재설치
 - Compatibility projection: `~/.gemini/config/skills/`
 - Guidance target: `~/.gemini/GEMINI.md`
-- `~/.gemini/config/import_manifest.json`과 staging package는 `agy`가 소유하며
-  Hive ownership manifest에 넣지 않음
+- Ownership exclusion: `~/.gemini/config/import_manifest.json`과 staging package는
+  `agy` 소유, Hive ownership manifest 제외
 - Mutation 전 host staging 전체 경로·바이트를 authenticated prior package와 비교하고
   unknown file·directory·symlink는 conflict로 보존
 - 기존 `0.7.0` directory-scan 설치는 고정 source-release digest inventory로만
@@ -70,8 +70,8 @@
 - Source package 16개와 host staging 16개 exact path·byte parity
 - 동일 `0.7.0` repeat update와 validate 성공
 - `--validate`는 native registry와 host staging 전체 parity도 read-only 검증
-- Source package와 host staging을 같은 경로로 쓰면 첫 install이 자기 자신을
-  덮어쓰고 두 번째 install이 깨짐. 분리 경계가 필수
+- Same source/staging path: first install의 source self-overwrite와 second install
+  failure, path separation 필수
 - Claude Code는 executable·subscription 부재로 실제 install/update 미검증
 
 ## 근거

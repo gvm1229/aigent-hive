@@ -1,20 +1,23 @@
 # Aigent Hive active plan index
 
-> Revision: 1.46
+> Revision: 1.47
 > 기준일: 2026-07-27
 > Product version: `0.7.0`
-> 현재 milestone: Phase 7 public qualification + user plugin/project lifecycle `0.8.0`
+> 현재 milestone: Phase 7 qualification + source bilingual LLM Wiki `0.8.0`
 > Entrypoint: `docs/plans/PLAN.md`
 
 ## Goal parameters
 
-- Objective: user plugin/project lifecycle 미완료 1개, 세 host native usage sensor
-  미완료 2개와 Phase 7 protected qualification 5개 완료
+- Objective: source bilingual LLM Wiki 미완료 6개, user plugin/project lifecycle
+  미완료 1개, 세 host native usage sensor 미완료 2개와 Phase 7 protected qualification
+  5개 완료
 - Success: 세 host user install·project bootstrap·root knowledge promotion·local-priority
-  update, 세 host native-first·CodexBar fallback-only usage guard와 signed
-  multi-platform public qualification
+  update, provider-neutral bilingual source Wiki, source↔consumer Skill reuse,
+  세 host native-first·CodexBar fallback-only usage guard와 signed multi-platform qualification
 - Stop boundary: protected credential, irreversible production publication, exact `1.0.0` authority, source usage guard remaining `10%`
-- Invariants: provider-neutral, canonical Markdown 우선, ownership·consent·foreign byte 보존, provider API·credential 경로 없음, force-push 없음, explicit-only major
+- Invariants: provider-neutral, canonical Markdown 우선, OMX/OMC replaceable adapter,
+  ownership·consent·foreign byte 보존, provider API·credential 경로 없음, force-push 없음,
+  explicit-only major
 - Native Goal compatibility: 변경 불가 objective의 “unchecked item in `docs/plans/PLAN.md`”는 `PLAN.md` 내부 checkbox가 아니라 아래 `Active fragments`의 unchecked item을 뜻함
 
 ## Completion index
@@ -27,9 +30,10 @@
 | Phase 7 | 35 | 5 | 87.5% |
 | User plugin/project lifecycle | 37 | 1 | 97.4% |
 | Host-native usage sensors | 23 | 2 | 92% |
+| Source bilingual LLM Wiki | 4 | 6 | 40% |
 | Documentation style | 5 | 0 | 100% |
 | Security review | 4 | 0 | 100% |
-| **Canonical total** | **174** | **8** | **95.6%** |
+| **Canonical total** | **178** | **14** | **92.7%** |
 
 External production boundary 항목도 미완료 합계에 포함. Protected authority 없이 완료 처리 금지.
 
@@ -50,6 +54,7 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
 | [`phases/07-public-qualification.md`](phases/07-public-qualification.md) | `P7-*` | Phase 7 local·external qualification과 completion gate |
 | [`active/plugin-project-lifecycle.md`](active/plugin-project-lifecycle.md) | `RPH-*` | User plugin·project bootstrap·root knowledge·upgrade merge |
 | [`active/native-usage-sensor.md`](active/native-usage-sensor.md) | `NUS-*` | 세 host native-first sensor·CodexBar fallback-only |
+| [`active/source-llm-wiki.md`](active/source-llm-wiki.md) | `SLW-*` | Provider-neutral bilingual source Wiki와 Skill reuse |
 | [`active/documentation-style.md`](active/documentation-style.md) | `DOC-*` | 사람용 문서 style completion gate |
 | [`active/security-review.md`](active/security-review.md) | `SEC-*` | 독립 code·security review finding completion gate |
 
@@ -72,11 +77,12 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
 
 ## Current execution order
 
-1. RPH-036 실제 Claude install/update E2E
-2. NUS-020 실제 Claude Pro/Max qualification
-3. NUS-014·P7-013·P7-021 실제 세 host matrix
-4. P7-018·020·037 signed release qualification
-5. Exact `1.0.0` 사용자 authority 확인
+1. SLW-005–010 source bilingual LLM Wiki 구현·검증
+2. RPH-036 실제 Claude install/update E2E
+3. NUS-020 실제 Claude Pro/Max qualification
+4. NUS-014·P7-013·P7-021 실제 세 host matrix
+5. P7-018·020·037 signed release qualification
+6. Exact `1.0.0` 사용자 authority 확인
 
 ## External production boundary
 
