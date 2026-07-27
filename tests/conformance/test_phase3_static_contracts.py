@@ -199,6 +199,7 @@ class Phase3SkillSourceContract(unittest.TestCase):
             "active/plugin-project-lifecycle.md",
             "active/security-review.md",
             "active/source-llm-wiki.md",
+            "active/user-onboarding-shared-index.md",
             "contracts/README.md",
             "phases/07-public-qualification.md",
             "phases/README.md",
@@ -216,6 +217,7 @@ class Phase3SkillSourceContract(unittest.TestCase):
             plan_root / "active/plugin-project-lifecycle.md",
             plan_root / "active/security-review.md",
             plan_root / "active/source-llm-wiki.md",
+            plan_root / "active/user-onboarding-shared-index.md",
             plan_root / "phases/07-public-qualification.md",
         ]
         self.assertEqual(
@@ -226,6 +228,7 @@ class Phase3SkillSourceContract(unittest.TestCase):
                 "active/plugin-project-lifecycle.md",
                 "active/security-review.md",
                 "active/source-llm-wiki.md",
+                "active/user-onboarding-shared-index.md",
                 "phases/07-public-qualification.md",
             },
         )
@@ -298,6 +301,7 @@ class Phase3SkillSourceContract(unittest.TestCase):
         plugin_project_path = plan_root / "active/plugin-project-lifecycle.md"
         security_review_path = plan_root / "active/security-review.md"
         source_wiki_path = plan_root / "active/source-llm-wiki.md"
+        onboarding_path = plan_root / "active/user-onboarding-shared-index.md"
         progress_rows = (
             ("Phase 0–6", *checklist_counts(completed_phase_paths)),
             ("Phase 7", *checklist_counts([phase_7_path])),
@@ -308,6 +312,10 @@ class Phase3SkillSourceContract(unittest.TestCase):
             (
                 "Host-native usage sensors",
                 *checklist_counts([native_usage_path]),
+            ),
+            (
+                "Global onboarding·shared index",
+                *checklist_counts([onboarding_path]),
             ),
             (
                 "Source bilingual LLM Wiki",

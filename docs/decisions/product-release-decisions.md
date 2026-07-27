@@ -11,17 +11,18 @@
 | 소스와 출하 | Hive source, release bundle, consumer harness 분리 |
 | setup template | Copier 9.17.0을 authoring·CI에 사용, 소비자 runtime dependency 금지 |
 | canonical data | 지식·role·run은 Markdown, setup/config/approval은 tracked YAML/TOML, Raw는 허용된 source object |
-| SQLite | 삭제 가능한 FTS·tag·link index, Git 제외, 무네트워크 재구축 |
+| SQLite | `0.8.0` target은 `~/.hive/index/hive.sqlite3` 단일 projection; user Wiki + 등록 project Wiki 기반 무네트워크 rebuild, project DB 없음 |
+| Global onboarding | Minimal bootstrap 뒤 mandatory `setup-hive`; language·Wiki language·user profile·persona·host·Skill·Wiki·usage preference 정본은 `~/.hive/config/user-setup.yml` |
 | orchestration | Codex의 compatible OMX, Claude의 compatible OMC를 우선하고 `absent|incompatible|unknown`이면 truthful host native가 소유; setup 선택지와 mid-run switch 없음 |
 | orchestration 독립 | OMX/OMC는 현재 replaceable compatibility dependency; 장기적으로 host-native·provider-neutral capability로 대체 후 제거, canonical data·path·schema·Skill identity 의존 없음 |
 | runtime 관찰 | active host capability metadata, side-effect-free public `--version`, pinned-qualified usage sensor의 fixed-argv·JSON-RPC read만 허용; foreign state·provider credential read 금지 |
 | 재구현 금지 | Hive plan·Ralph·team·provider session engine 없음 |
-| Skill | active projection은 구현 완료 built-in 13개; optional은 이름·source·revision·content digest·권한의 개별 수동 승인 후에만 사용 |
+| Skill | `0.8.0` target은 setup/reconfigure core + recommended suite 또는 개별 selected built-in; optional third-party는 이름·source·revision·content digest·권한의 개별 수동 승인 |
 | Skill 양방향 reuse | Hive-owned source↔consumer Skill reuse 허용; shared canonical은 `harness/skills/`, source는 exact `.agents/skills/` projection, scope·safety·consent·conformance review 필수 |
 | Source LLM Wiki | tracked `llm-wiki/en/`·`llm-wiki/ko/` bilingual Markdown 정본, `omx_wiki/`·`.omx/wiki/`·consumer `.hive/knowledge/` 금지, SQLite는 ignored source projection, OMX/OMC retirement 시 knowledge migration 0건 |
 | prompt refine | `hive-prompt-refine`; 명시적인 prompt 작성·정제 intent에서만 자동 선택, `refine-only` 기본. 일반 요청이 모호하거나 핵심 세부가 부족하면 작업을 막지 않는 한 줄 optional refine 제안, hidden·automatic rewrite 금지 |
 | fallback hooks | OMX/OMC가 conclusively absent이고 사용자가 capability/event/path/digest를 승인한 경우에만 project-local data-integrity hook 허용 |
-| 사용량 | Codex app-server JSON-RPC, Claude Code status-line JSON capture, 향후 qualified Antigravity structured surface를 native primary로 사용; CodexBar는 세 provider 모두 explicit-consent fallback-only; installed `usage_stop_remaining_percent`가 권위값; pool별 provider-defined window 단독 적용, cadence pool은 session 우선·session 부재 시 weekly fallback, 모든 pool 통과 필수 |
+| 사용량 | Global setup explicit opt-in과 enabled 기본 remaining `20%`; Codex app-server JSON-RPC, Claude Code status-line JSON capture, 향후 qualified Antigravity structured surface를 native primary로 사용; CodexBar는 세 provider 모두 explicit-consent fallback-only |
 | Claude sensor ownership | Plugin executable만 제공; user가 Claude host의 `/statusline`으로 opt-in하며 Hive의 `~/.claude/settings.json` mutation 없음, existing status line non-clobber |
 | Antigravity sensor truth | Official structured surface 확인 전 `native=unsupported`; interactive TUI·private LSP/HTTP·credential·browser state parsing 금지 |
 | sensor fallback 설치 | Active-host native sensor 불가와 CodexBar 미설치 때만 필요성·대상·command preview 제공 후 current action explicit consent 요청; 수락 시 supported package manager 사용, 거절 시 core 유지와 automatic dispatch fail-closed |
@@ -32,7 +33,7 @@
 | backup | update 전 canonical config/team/run/knowledge와 changed path snapshot, SQLite/runtime/backup/foreign orchestration 제외, exact 7일 경계 이후 validated unreferenced backup만 정리 |
 | 저장소 | 비기밀 canonical source와 data는 Git 추적, runtime/cache/SQLite 제외 |
 | 배포 정본 | GitHub Releases |
-| host projection | Codex·Antigravity `.agents/skills`, Claude `.claude/skills`; exact Hive Skill file만 관리하고 foreign byte 보존 |
+| host projection | User `~/.agents/directives`·`~/.agents/skills` provider-neutral projection + selected host의 thin native adapter; project Codex·Antigravity `.agents/skills`, Claude `.claude/skills`; foreign byte 보존 |
 | role/run | shared role HANDOFF, PLAN-derived criterion, exact evidence locator, immutable owner pin, sensor-independent manual과 one-role usage-guarded automatic no-spawn resume |
 | 현재 버전 | Phase 6 verifier-only signed release와 safe update milestone `0.7.0`; root Cargo workspace version이 정본 |
 | 버전 증가 | feature는 원칙적으로 `Y`, compatible quick bugfix는 `Z`; `X`는 exact target을 사용자가 명시하고 human confirmation한 경우에만 |
@@ -46,6 +47,9 @@
 
 Source Wiki의 독립성, OMX Wiki Skill 제외 이유와 장기 OMX/OMC retirement 방향:
 [`ADR-0011`](ADR-0011-source-wiki-independence.md).
+
+Global onboarding, Wiki opt-out, selected Skill projection과 user-root 단일 shared index:
+[`ADR-0012`](ADR-0012-global-onboarding-shared-index.md).
 
 ## 미확정 항목
 

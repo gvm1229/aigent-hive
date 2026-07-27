@@ -2,22 +2,56 @@
 
 - 기준 branch: `develop`
 - product version: `0.7.0`
-- plan revision: `1.48`
+- plan revision: `1.49`
 - 현재 milestone: Phase 7 qualification + source bilingual LLM Wiki `0.8.0`
-- 현재 작업: provider-neutral bilingual Source Wiki 구현·검증 완료; Claude·signed
-  publication qualification 잔여
+- 현재 작업: `0.8.0` mandatory global onboarding·selected projection·shared index 계획;
+  이후 Claude·signed publication qualification
 - 외부 중지 경계: protected signing/publication credential, 실제 production publication,
   exact `1.0.0` 사용자 authority
 - Plan load: compact `docs/plans/PLAN.md` + `docs/plans/phases/07-public-qualification.md`
   + `docs/plans/active/plugin-project-lifecycle.md`
   + `docs/plans/active/native-usage-sensor.md`
+  + `docs/plans/active/user-onboarding-shared-index.md`
   + `docs/plans/active/source-llm-wiki.md`
   + `docs/plans/active/documentation-style.md` + `docs/plans/active/security-review.md`
-- Plan completion: canonical checklist `184/192` 완료, `8`개 미완료, `95.8%`
+- Plan completion: canonical checklist `184/208` 완료, `24`개 미완료, `88.5%`
 - Native Goal routing: legacy `PLAN.md` checkbox 문구를 `phases/07-public-qualification.md`,
   `active/plugin-project-lifecycle.md`, `active/native-usage-sensor.md`,
-  `active/source-llm-wiki.md`, `active/documentation-style.md`,
-  `active/security-review.md`로 해석
+  `active/user-onboarding-shared-index.md`, `active/source-llm-wiki.md`,
+  `active/documentation-style.md`, `active/security-review.md`로 해석
+
+## Global onboarding·shared index audit
+
+Target: `0.8.0`
+
+| 요청 범위 | `0.7.0` current truth |
+| --- | --- |
+| User install | 세 host direct operational install |
+| Mandatory global setup | 없음 |
+| Language·user profile·persona·multi-host | Global answer 없음 |
+| Skill suite 선택 | User plugin built-in 전체 projection |
+| Wiki opt-out | 없음; root/project Wiki seed 고정 |
+| Usage guard 선택 | Project threshold 필수, setup 문서 기본 `10%` |
+| User marker | `AIGENT-HIVE:USER:START|END` 구현 |
+| User `.agents` | Generic user projection 없음 |
+| Root knowledge | `~/.hive/knowledge` + disposable root SQLite 구현 |
+| Project setup mode | Expedited/global inherit 없음 |
+| Project type | Required project identity·domain profile 구현 |
+| Project index | Project SQLite + root SQLite 독립 |
+
+Accepted target:
+
+- Minimal bootstrap 뒤 mandatory `setup-hive`
+- Interface/Wiki language, user profile, persona, selected hosts·Skills
+- Global Wiki default-on opt-out
+- Usage guard opt-in, enabled 기본 threshold `20%`
+- `expedited|custom` project setup, mode 무관 project kind 질문
+- Project canonical Wiki + `~/.hive/index/hive.sqlite3` 단일 derived index
+- Project SQLite 제거와 `0.7.0 → 0.8.0` non-destructive migration
+- Decision:
+  [`ADR-0012`](../decisions/ADR-0012-global-onboarding-shared-index.md)
+- Active fragment:
+  [`user-onboarding-shared-index.md`](../plans/active/user-onboarding-shared-index.md)
 
 ## Source bilingual LLM Wiki
 
@@ -89,7 +123,8 @@
   Antigravity는 Hive-owned source package와 `agy`-owned staging·registry를 분리
 - User guidance marker append·own-block replace·foreign byte 보존
 - Project `.agents/directives`, portable `.agents/skills`, Claude `.claude/skills` adapter
-- `setup-harness` 질문 sequence, project/root canonical knowledge·SQLite와 explicit promotion
+- `setup-harness` 단일 질문 sequence, project/root canonical knowledge·독립 SQLite와
+  explicit promotion
 - Historical exact base, unmodified replace, modified local-priority three-way merge
 - Durable journal, executable-mode backup, host-state compensation과 crash recovery
 - Source `hive-prompt-refine` projection, explicit refine-only routing,
@@ -97,6 +132,8 @@
 
 확인된 gap:
 
+- Mandatory global onboarding·selected Skill·Wiki opt-out·usage opt-in
+- Project expedited/custom mode와 user-root 단일 shared index
 - 실제 Claude Code install/update E2E
 - 실제 Claude Pro/Max quota usage parity
 - macOS·Windows signing·notarization·publication
@@ -301,7 +338,7 @@ Source Wiki targeted qualification PASS:
 
 Remote qualification evidence:
 
-- Current commit: `28f1c366aa06a609b443724decc474cb7718ea8a`
+- Qualified candidate commit: `28f1c366aa06a609b443724decc474cb7718ea8a`
 - Native release runtime:
   [run `30205737619`](https://github.com/gvm1229/aigent-hive/actions/runs/30205737619),
   macOS arm64·Intel과 Windows x86_64 3/3 job PASS
@@ -326,7 +363,9 @@ Remote qualification evidence:
 
 ## 다음 action
 
-1. RPH-036 실제 Claude install/update E2E
-2. NUS-020 실제 Claude Pro/Max qualification
-3. NUS-014·P7-013·P7-021 실제 세 host matrix
-4. P7-018·020·037 signed release qualification
+1. UOS-001–004 global setup state·schema·catalog·CLI/Skill
+2. UOS-005–010 user install·selected projection·Wiki·usage preference
+3. UOS-011–015 project mode·shared index·migration
+4. UOS-016 Codex·Antigravity local onboarding E2E
+5. RPH-036·NUS-020·NUS-014·P7-013·P7-021 실제 Claude 포함 matrix
+6. P7-018·020·037 signed release qualification
