@@ -17,7 +17,8 @@ Source guard는 이 경계를 다음 두 계층으로 보완.
    observation과 halt marker를 갱신.
 2. source directive가 매 user turn의 simple-question 판별 전과 각 tool, mutation,
    delegation, external write, push, 최종 응답 전에 fresh `gate`를 요구.
-   `halted` 또는 `usage_unknown`이면 guard 제어 외의 다음 action 시작 금지.
+   확인된 `halted` 또는 non-transient state·path·integrity 오류면 guard 제어 외의
+   다음 action 시작 금지.
 
 Watcher의 Codex App process signal 전송과 `.omx/` state 수정 금지.
 따라서 한 번의 model inference 중간 강제 중단 주장은 제외. 독립 polling은
@@ -28,12 +29,15 @@ Watcher의 Codex App process signal 전송과 `.omx/` state 수정 금지.
 
 - CodexBar primary session window가 있으면 항상 그것을 선택.
 - Primary가 명시적으로 없을 때만 weekly secondary window를 사용.
-- Primary가 존재하지만 malformed이면 weekly fallback 없이 `usage_unknown`.
+- Primary가 존재하지만 malformed이면 weekly fallback 없이 retryable `usage_unknown`.
 - Session은 exact `300`분, weekly는 exact `10080`분 window만 허용하고 duplicate JSON
-  key를 포함한 ambiguous payload는 `usage_unknown`.
+  key를 포함한 ambiguous payload는 retryable `usage_unknown`.
 - 기본 중지선은 remaining `10%`이며 `remaining <= threshold`가 inclusive halt.
-- Snapshot stale, sensor/version mismatch, 다중 account 또는 malformed output은
-  fail-closed `usage_unknown`.
+- Quota sensor unknown은 3초 뒤 1회 재시도. 재시도도 unknown이면 observation과
+  fallback 안내는 유지하되 `transient_unknown_ignored`로 표시하고 새 halt marker 없이
+  진행. 이전 confirmed-limited marker 삭제 금지.
+- Session state, source-owned path, symlink 또는 native executable integrity 오류는
+  transient 범위 밖이며 exit `11` fail-closed.
 
 Raw account, credential과 CodexBar 원문 저장 금지. Observation에는 sensor
 version, 선택 window, used/remaining, 측정 시각과 decision만 남김.
@@ -66,6 +70,10 @@ $hive-usage-guard 가드를 다시 켜 줘.
 
 Watcher의 진행 중인 model inference 강제 종료 기능 없음. 15초 polling과
 mandatory `gate`가 다음 관측 가능한 실행 경계부터 작업을 중지.
+
+Quota sensor가 잠시 unknown이면 3초 대기 뒤 1회 재시도. 반복 unknown:
+작업 중지 사유 미승격. 이전 confirmed-limited marker와 session·path·integrity
+오류: 예외 적용 대상 제외.
 
 ## 직접 명령
 

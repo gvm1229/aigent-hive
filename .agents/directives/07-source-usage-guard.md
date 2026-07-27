@@ -25,14 +25,18 @@ the prompt also clearly refers to the guard, quota, usage limit, threshold, or r
 
 - Exit `10` means the selected session-first quota window is at or below the inclusive configured
   remaining percentage.
-- Exit `11` means current quota safety cannot be established.
-- On either exit, finish only the already-running safe boundary. Block every subsequent ordinary
-  task in the same session, including simple answers, plans, Skills, tools, delegations, writes,
-  pushes, and final task answers.
+- A quota-sensor `usage_unknown` waits three seconds and retries once. A second unknown remains
+  visible in the observation as `transient_unknown_ignored`, creates no new halt marker, and
+  permits the boundary. It cannot clear an earlier confirmed limited marker.
+- Exit `11` is reserved for non-transient session, state, path, or sensor-integrity failures.
+- On exit `10` or non-transient `11`, finish only the already-running safe boundary. Block every
+  subsequent ordinary task in the same session, including simple answers, plans, Skills, tools,
+  delegations, writes, pushes, and final task answers.
 - While blocked, permit only guard status, threshold, enable, disable, or toggle control and the
   consented CodexBar fallback install control plus the minimal response explaining how to bypass,
   restore, or recover the fallback.
-- A watcher marker is authoritative for the guarded session until a fresh `check` clears it.
+- A confirmed-limited watcher marker is authoritative for the guarded session until a fresh
+  successful `check` clears it. A transient unknown never creates or clears that marker.
 - `omx cancel` success is not halt evidence for Codex goal mode or durable Ultragoal artifacts.
 - The watcher does not signal or kill the Codex App process.
 
@@ -58,12 +62,13 @@ All source-guard state is Hive-owned scratch data under ignored
 
 ## Fallback installation
 
-- Missing CodexBar after native sensor failure returns `usage_unknown`, a sanitized
+- Missing CodexBar after native sensor failure returns retryable `usage_unknown`, a sanitized
   provider-specific notification, and the exact source `fallback-install --dry-run` command.
 - Dry run qualifies only the supported package-manager adapter and returns the fixed command
   preview without executing it.
 - Apply requires explicit current-action consent through `--apply --confirm-install`, uses bounded
   non-interactive execution, and requalifies CodexBar before success.
-- Decline preserves core guard controls and leaves automatic dispatch `usage_unknown`.
+- Decline preserves core guard controls and applies the bounded transient-unknown continuation
+  rule to source boundaries.
 - Never install silently, request credentials, reinstall a provider CLI, suggest API-key or
   manual-cookie setup, or modify package-manager ownership.

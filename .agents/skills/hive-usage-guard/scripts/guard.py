@@ -44,6 +44,8 @@ SUPPORTED_CODEX_PLANS = {
 }
 DEFAULT_THRESHOLD = 10
 DEFAULT_POLL_SECONDS = 15
+UNKNOWN_RETRY_COUNT = 1
+UNKNOWN_RETRY_DELAY_SECONDS = 3.0
 MAX_OUTPUT_BYTES = 1024 * 1024
 MAX_SNAPSHOT_AGE_SECONDS = 120
 EXIT_ALLOWED = 0
@@ -1055,6 +1057,45 @@ def read_quota() -> dict[str, Any]:
         return quota
 
 
+def unknown_retry_delay_seconds() -> float:
+    """Return the production retry delay, with a fixture-only test override."""
+
+    if "HIVE_SOURCE_USAGE_FIXTURE" not in os.environ:
+        return UNKNOWN_RETRY_DELAY_SECONDS
+    raw = os.environ.get("HIVE_USAGE_UNKNOWN_RETRY_DELAY_SECONDS")
+    if raw is None:
+        return UNKNOWN_RETRY_DELAY_SECONDS
+    try:
+        value = float(raw)
+    except ValueError:
+        return UNKNOWN_RETRY_DELAY_SECONDS
+    if not math.isfinite(value) or not 0 <= value <= UNKNOWN_RETRY_DELAY_SECONDS:
+        return UNKNOWN_RETRY_DELAY_SECONDS
+    return value
+
+
+def apply_sensor_unknown(
+    decision: dict[str, Any],
+    error: GuardError,
+) -> None:
+    decision["quota_decision"] = "usage_unknown"
+    decision["reason"] = str(error)
+    if not isinstance(error, CodexBarUnavailable):
+        return
+    decision["notification"] = (
+        "CodexBar fallback is not installed for codex; installation is "
+        "optional and requires explicit current-action consent."
+    )
+    decision["fallback_install"] = {
+        "provider": "codex",
+        "fallback": "codexbar",
+        "availability": "missing",
+        "command_preview": source_guard_command("codex", apply=False),
+        "decline_effect": "core-usable-automatic-dispatch-usage-unknown",
+    }
+    decision["next_action"] = source_guard_command("codex", apply=False)
+
+
 def evaluate(root: Path, expected_session_id: str | None = None) -> tuple[dict[str, Any], int]:
     session = load_current_session(root, expected_session_id)
     settings = load_settings(root)
@@ -1067,43 +1108,79 @@ def evaluate(root: Path, expected_session_id: str | None = None) -> tuple[dict[s
         "checked_at": iso_now(),
     }
     quota_exit = EXIT_ALLOWED
-    try:
-        quota = read_quota()
+    quota: dict[str, Any] | None = None
+    sensor_error: GuardError | None = None
+    retry_count = 0
+    retry_delay = unknown_retry_delay_seconds()
+    transient_unknown = False
+    for attempt in range(UNKNOWN_RETRY_COUNT + 1):
+        try:
+            quota = read_quota()
+            break
+        except NativeSensorIntegrity as error:
+            sensor_error = error
+            break
+        except GuardError as error:
+            sensor_error = error
+            if attempt == UNKNOWN_RETRY_COUNT:
+                transient_unknown = True
+                break
+            retry_count += 1
+            time.sleep(retry_delay)
+
+    if quota is not None:
         decision.update(quota)
         if quota["remaining_percent"] <= settings["threshold_remaining_percent"]:
             decision["quota_decision"] = "halted"
             quota_exit = EXIT_HALTED
         else:
             decision["quota_decision"] = "allowed"
-    except CodexBarUnavailable as error:
-        decision["quota_decision"] = "usage_unknown"
-        decision["reason"] = str(error)
-        decision["notification"] = (
-            "CodexBar fallback is not installed for codex; installation is "
-            "optional and requires explicit current-action consent."
+        if retry_count:
+            decision["transient_unknown_recovered"] = True
+    else:
+        if sensor_error is None:
+            raise GuardError("usage sensor failed without an error")
+        apply_sensor_unknown(decision, sensor_error)
+        if transient_unknown:
+            decision["transient_unknown_ignored"] = True
+        else:
+            quota_exit = EXIT_UNKNOWN
+    if retry_count:
+        decision["unknown_retry_count"] = retry_count
+        decision["unknown_retry_delay_seconds"] = retry_delay
+
+    halt = halt_path(root, session["session_id"])
+    preserve_confirmed_halt = False
+    if enabled and quota is None:
+        existing_halt = read_json(halt)
+        preserve_confirmed_halt = (
+            existing_halt is not None
+            and existing_halt.get("schema_version") == SCHEMA_VERSION
+            and existing_halt.get("session_id") == session["session_id"]
+            and existing_halt.get("decision") == "halted"
         )
-        decision["fallback_install"] = {
-            "provider": "codex",
-            "fallback": "codexbar",
-            "availability": "missing",
-            "command_preview": source_guard_command("codex", apply=False),
-            "decline_effect": "core-usable-automatic-dispatch-usage-unknown",
-        }
-        decision["next_action"] = source_guard_command("codex", apply=False)
-        quota_exit = EXIT_UNKNOWN
-    except GuardError as error:
-        decision["quota_decision"] = "usage_unknown"
-        decision["reason"] = str(error)
-        quota_exit = EXIT_UNKNOWN
     if enabled:
-        decision["enforcement_decision"] = decision["quota_decision"]
-        exit_code = quota_exit
+        if preserve_confirmed_halt:
+            decision["confirmed_halt_preserved"] = True
+            if transient_unknown:
+                decision["enforcement_decision"] = "halted"
+                exit_code = EXIT_HALTED
+            else:
+                decision["enforcement_decision"] = decision["quota_decision"]
+                exit_code = quota_exit
+        elif transient_unknown:
+            decision["enforcement_decision"] = "allowed"
+            exit_code = EXIT_ALLOWED
+        else:
+            decision["enforcement_decision"] = decision["quota_decision"]
+            exit_code = quota_exit
     else:
         decision["enforcement_decision"] = "session_bypass"
         exit_code = EXIT_ALLOWED
     write_json(root, observation_path(root, session["session_id"]), decision)
-    halt = halt_path(root, session["session_id"])
-    if enabled and quota_exit in (EXIT_HALTED, EXIT_UNKNOWN):
+    if preserve_confirmed_halt:
+        pass
+    elif enabled and quota_exit in (EXIT_HALTED, EXIT_UNKNOWN):
         write_json(
             root,
             halt,

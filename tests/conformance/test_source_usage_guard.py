@@ -50,6 +50,7 @@ class SourceUsageGuardTests(unittest.TestCase):
             "HIVE_CODEX_NATIVE_FIXTURE": str(self.native_fixture),
             "HIVE_USAGE_SENSOR_CALL_LOG": str(self.call_log),
             "HIVE_FAKE_CODEXBAR_TARGET": str(self.fake_bin / "codexbar"),
+            "HIVE_USAGE_UNKNOWN_RETRY_DELAY_SECONDS": "0",
         }
 
     def tearDown(self) -> None:
@@ -105,6 +106,38 @@ raise SystemExit(64)
         if not python.exists():
             python.symlink_to(sys.executable)
         self.environment["PATH"] = str(self.fake_bin)
+
+    def write_fake_codexbar_transient(self) -> None:
+        executable = self.fake_bin / "codexbar"
+        executable.write_text(
+            """#!/usr/bin/env python3
+import os
+import pathlib
+import sys
+
+log = pathlib.Path(os.environ["HIVE_USAGE_SENSOR_CALL_LOG"])
+with log.open("a") as stream:
+    stream.write("codexbar " + " ".join(sys.argv[1:]) + "\\n")
+if sys.argv[1:] == ["--version"]:
+    print("CodexBar 0.45.2")
+    raise SystemExit(0)
+if sys.argv[1:] == [
+    "usage", "--provider", "codex", "--all-accounts", "--source", "cli",
+    "--format", "json", "--json-only"
+]:
+    counter = log.with_suffix(".counter")
+    attempts = int(counter.read_text()) if counter.exists() else 0
+    counter.write_text(str(attempts + 1))
+    if attempts == 0:
+        print("{")
+    else:
+        sys.stdout.write(pathlib.Path(os.environ["HIVE_SOURCE_USAGE_FIXTURE"]).read_text())
+    raise SystemExit(0)
+raise SystemExit(64)
+""",
+            encoding="utf-8",
+        )
+        executable.chmod(executable.stat().st_mode | stat.S_IXUSR)
 
     def write_fake_brew(self, *, version: str = "Homebrew 4.4.20") -> None:
         executable = self.fake_bin / "brew"
@@ -418,9 +451,12 @@ raise SystemExit(64)
 
         completed = self.run_guard("check")
 
-        self.assertEqual(completed.returncode, 11, completed.stderr)
+        self.assertEqual(completed.returncode, 0, completed.stderr)
         result = self.output(completed)
         self.assertEqual(result["quota_decision"], "usage_unknown")
+        self.assertEqual(result["enforcement_decision"], "allowed")
+        self.assertTrue(result["transient_unknown_ignored"])
+        self.assertFalse(result["halt_marker"])
         self.assertEqual(result["fallback_install"]["provider"], "codex")
         preview = (
             "python3 .agents/skills/hive-usage-guard/scripts/guard.py "
@@ -600,7 +636,7 @@ raise SystemExit(64)
             "--confirm-session-disable",
         )
 
-        self.assertEqual(unknown.returncode, 11, unknown.stderr)
+        self.assertEqual(unknown.returncode, 0, unknown.stderr)
         self.assertEqual(
             self.output(unknown)["fallback_install"]["decline_effect"],
             "core-usable-automatic-dispatch-usage-unknown",
@@ -618,23 +654,30 @@ raise SystemExit(64)
         self.assertEqual(result["window"], "session")
         self.assertEqual(result["remaining_percent"], 10.0)
 
-    def test_malformed_present_session_window_never_falls_back_to_weekly(self) -> None:
+    def test_malformed_present_session_window_is_transient_unknown(self) -> None:
         self.write_usage(primary={"usedPercent": "bad"}, secondary_used=1)
 
         completed = self.run_guard("check")
 
-        self.assertEqual(completed.returncode, 11, completed.stderr)
-        self.assertEqual(self.output(completed)["quota_decision"], "usage_unknown")
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        result = self.output(completed)
+        self.assertEqual(result["quota_decision"], "usage_unknown")
+        self.assertTrue(result["transient_unknown_ignored"])
+        self.assertEqual(result["unknown_retry_count"], 1)
+        self.assertFalse(result["halt_marker"])
 
-    def test_missing_primary_field_is_fail_closed(self) -> None:
+    def test_missing_primary_field_is_transient_unknown(self) -> None:
         self.write_usage(include_primary=False, secondary_used=1)
 
         completed = self.run_guard("check")
 
-        self.assertEqual(completed.returncode, 11, completed.stderr)
-        self.assertEqual(self.output(completed)["quota_decision"], "usage_unknown")
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        result = self.output(completed)
+        self.assertEqual(result["quota_decision"], "usage_unknown")
+        self.assertTrue(result["transient_unknown_ignored"])
+        self.assertFalse(result["halt_marker"])
 
-    def test_duplicate_primary_key_cannot_erase_a_limited_session(self) -> None:
+    def test_duplicate_primary_key_is_transient_unknown(self) -> None:
         self.fixture.write_text(
             (
                 '[{"provider":"codex","source":"codex-cli","usage":{'
@@ -649,12 +692,13 @@ raise SystemExit(64)
 
         completed = self.run_guard("check")
 
-        self.assertEqual(completed.returncode, 11, completed.stderr)
+        self.assertEqual(completed.returncode, 0, completed.stderr)
         result = self.output(completed)
         self.assertEqual(result["quota_decision"], "usage_unknown")
-        self.assertTrue(result["halt_marker"])
+        self.assertTrue(result["transient_unknown_ignored"])
+        self.assertFalse(result["halt_marker"])
 
-    def test_wrong_session_or_weekly_window_duration_is_fail_closed(self) -> None:
+    def test_wrong_window_duration_is_transient_unknown(self) -> None:
         hostile_windows = (
             {
                 "primary": {"usedPercent": 1, "windowMinutes": 301},
@@ -682,10 +726,61 @@ raise SystemExit(64)
 
                 completed = self.run_guard("check")
 
-                self.assertEqual(completed.returncode, 11, completed.stderr)
+                self.assertEqual(completed.returncode, 0, completed.stderr)
                 self.assertEqual(
                     self.output(completed)["quota_decision"], "usage_unknown"
                 )
+
+    def test_transient_unknown_recovers_after_one_retry(self) -> None:
+        self.write_fake_codexbar_transient()
+        self.write_usage(primary=None, secondary_used=1)
+
+        completed = self.run_guard("check")
+
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        result = self.output(completed)
+        self.assertEqual(result["quota_decision"], "allowed")
+        self.assertTrue(result["transient_unknown_recovered"])
+        self.assertEqual(result["unknown_retry_count"], 1)
+        calls = self.call_log.read_text(encoding="utf-8")
+        self.assertEqual(calls.count("codexbar usage"), 2)
+
+    def test_transient_unknown_preserves_previous_confirmed_halt(self) -> None:
+        self.write_usage(primary=None, secondary_used=91)
+        limited = self.run_guard("check")
+        self.write_usage(primary={"usedPercent": "bad"}, secondary_used=1)
+
+        unknown = self.run_guard("check")
+
+        self.assertEqual(limited.returncode, 10, limited.stderr)
+        self.assertEqual(unknown.returncode, 10, unknown.stderr)
+        result = self.output(unknown)
+        self.assertTrue(result["transient_unknown_ignored"])
+        self.assertTrue(result["confirmed_halt_preserved"])
+        self.assertTrue(result["halt_marker"])
+
+    def test_integrity_then_transient_unknown_preserves_confirmed_halt(
+        self,
+    ) -> None:
+        self.write_usage(primary=None, secondary_used=91)
+        limited = self.run_guard("check")
+        self.write_fake_codex_identity_swap()
+        integrity = self.run_guard("check")
+        self.write_fake_codex_unsupported()
+        self.write_usage(primary={"usedPercent": "bad"}, secondary_used=1)
+
+        transient = self.run_guard("check")
+
+        self.assertEqual(limited.returncode, 10, limited.stderr)
+        self.assertEqual(integrity.returncode, 11, integrity.stderr)
+        integrity_result = self.output(integrity)
+        self.assertTrue(integrity_result["confirmed_halt_preserved"])
+        self.assertTrue(integrity_result["halt_marker"])
+        self.assertEqual(transient.returncode, 10, transient.stderr)
+        transient_result = self.output(transient)
+        self.assertTrue(transient_result["transient_unknown_ignored"])
+        self.assertTrue(transient_result["confirmed_halt_preserved"])
+        self.assertTrue(transient_result["halt_marker"])
 
     def test_threshold_change_is_persistent_and_range_checked(self) -> None:
         self.write_usage(primary=None, secondary_used=91)
@@ -782,6 +877,26 @@ raise SystemExit(64)
         self.assertEqual(completed.returncode, 10, completed.stderr)
         result = self.output(completed)
         self.assertEqual(result["enforcement_decision"], "halted")
+
+    def test_watch_once_ignores_transient_unknown_without_halt_marker(self) -> None:
+        self.write_usage(primary={"usedPercent": "bad"}, secondary_used=1)
+
+        completed = self.run_guard("watch", "--once")
+
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        result = self.output(completed)
+        self.assertEqual(result["enforcement_decision"], "allowed")
+        self.assertTrue(result["transient_unknown_ignored"])
+        halt = (
+            self.root
+            / ".agents"
+            / "work"
+            / "usage-guard"
+            / "sessions"
+            / self.session_id
+            / "halt.json"
+        )
+        self.assertFalse(halt.exists())
 
     def test_watcher_lifecycle_is_session_scoped(self) -> None:
         self.write_usage(primary=None, secondary_used=1)
@@ -895,7 +1010,7 @@ raise SystemExit(64)
             self.assertIn("package-manager", content)
         self.assertIn("fallback-install --host", source_skill)
         self.assertIn("--apply --confirm-install", source_skill)
-        self.assertIn("automatic dispatch `usage_unknown`", source_directive)
+        self.assertIn("bounded transient-unknown continuation", source_directive)
         self.assertIn(
             "automatic dispatch `hive.usage-unknown`",
             canonical.decode("utf-8"),

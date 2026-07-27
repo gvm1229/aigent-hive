@@ -170,8 +170,10 @@
 
 - Source-only `hive-usage-guard` Skill과 15초 native Codex app-server primary·CodexBar
   fallback-only watcher
-- 현재 session threshold: remaining `10%` inclusive
+- 현재 session threshold: remaining `20%` inclusive
 - Session window 우선, session 부재 시 weekly fallback
+- Quota sensor unknown: 3초 뒤 1회 재시도, 반복 unknown은 observation 보존과
+  `transient_unknown_ignored` 진행, confirmed-limited marker 유지
 - 매 user turn과 tool·mutation·delegation·external write·push·final-answer 경계의 fresh
   `gate`
 - Explicit current-session disable만 우회 허용; bare `continue`·`resume` 우회 해석 금지

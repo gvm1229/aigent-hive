@@ -204,7 +204,8 @@ Qualified CodexBar `0.45.2`를 별도 watcher가 기본 15초 간격으로 읽�
 simple-question 판별 전과 각 tool, mutation, delegation, external write, push, 최종
 응답 전 fresh gate가 halt marker를 강제. Session limit이 있으면 weekly보다
 우선하고, 없을 때만 weekly를 사용. 기본 중지선은 remaining `10%` inclusive이며
-sensor 불확실성도 fail-closed.
+quota sensor unknown은 3초 뒤 1회 재시도 후 일시 오류로 기록하고 진행. 이전
+confirmed-limited marker와 session·path·integrity 오류는 계속 fail-closed.
 
 Source-local threshold 변경 범위: `1..99`. Guard off는 사용자의
 명시적 의도와 confirmation flag가 필요하고 current session ID·Codex process에만

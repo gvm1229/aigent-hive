@@ -283,55 +283,55 @@
   },
   {
     "path": "docs/guides/source-usage-guard.md",
-    "line": 47,
+    "line": 51,
     "reason": "Exact source usage-guard prompt sample preserves user-facing control intent.",
     "text_sha256": "92954c1f256ec3b2fbe7c47b383dd8b0a1f2a04d5f953083ff3f0c7d4e4954e8"
   },
   {
     "path": "docs/guides/source-usage-guard.md",
-    "line": 48,
+    "line": 52,
     "reason": "Exact source usage-guard prompt sample preserves user-facing control intent.",
     "text_sha256": "fb766daf6702fa197d7c2960ed1725012bd2fb11b449dcb95b43f377d290453e"
   },
   {
     "path": "docs/guides/source-usage-guard.md",
-    "line": 49,
+    "line": 53,
     "reason": "Exact source usage-guard prompt sample preserves user-facing control intent.",
     "text_sha256": "6c26ec9c6b0046b398139cabbdaac7df8a2ce42ef5e450b90fece92158a52692"
   },
   {
     "path": "docs/guides/source-usage-guard.md",
-    "line": 50,
+    "line": 54,
     "reason": "Exact source usage-guard prompt sample preserves user-facing control intent.",
     "text_sha256": "f09e935a369983fb2414145ffc4f9ef5de3a3cf4e313123c77e952bc8ff98459"
   },
   {
     "path": "docs/guides/source-usage-guard.md",
-    "line": 51,
+    "line": 55,
     "reason": "Exact source usage-guard prompt sample preserves user-facing control intent.",
     "text_sha256": "a83a9bdc7c4d1248de305c61046750f90f33693c3dee7b133372b92a4a13b74c"
   },
   {
     "path": "docs/guides/source-usage-guard.md",
-    "line": 56,
+    "line": 60,
     "reason": "Exact source usage-guard prompt sample preserves user-facing control intent.",
     "text_sha256": "e60dfb24662aa218206888079cc6d9ae08c5af8e71aa60ede0913447765a8d23"
   },
   {
     "path": "docs/guides/source-usage-guard.md",
-    "line": 57,
+    "line": 61,
     "reason": "Exact source usage-guard prompt sample preserves user-facing control intent.",
     "text_sha256": "bf85a010ac3d07b0c26d411240537ed103fb4fbe9d03d4f80059f43a71a74e2e"
   },
   {
     "path": "docs/guides/source-usage-guard.md",
-    "line": 58,
+    "line": 62,
     "reason": "Exact source usage-guard prompt sample preserves user-facing control intent.",
     "text_sha256": "19faa7ac1dadcc90333885b2fa4cf33a134e34ca67b03ea578f56c9cdefbba02"
   },
   {
     "path": "docs/guides/source-usage-guard.md",
-    "line": 64,
+    "line": 68,
     "reason": "Exact source usage-guard prompt sample preserves user-facing control intent.",
     "text_sha256": "868e226c3fc21158b9e86b8f6901300533090ed9d3f60068cbc0b278b0c94cc1"
   },
