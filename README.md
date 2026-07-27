@@ -148,7 +148,7 @@ Rust runtime은 filesystem containment, schema·serialization, RFC 8785 canonica
 | CI | `actions/setup-python@v7.0.0` | Python 3.13 환경; commit SHA로 고정 |
 | CI | `dtolnay/rust-toolchain` | Rust stable 환경; commit SHA로 고정 |
 
-정확한 CI pin은 [`.github/workflows/ci.yml`](.github/workflows/ci.yml), template pin은 [`copier.yml`](copier.yml), Rust 구성은 [`rust-toolchain.toml`](rust-toolchain.toml)에서 관리.
+정확한 conformance pin은 [`requirements-conformance.txt`](requirements-conformance.txt), template pin은 [`copier.yml`](copier.yml), Rust 구성은 [`rust-toolchain.toml`](rust-toolchain.toml)에서 관리.
 
 ## 저장소 구조
 
@@ -182,6 +182,20 @@ Rust runtime은 filesystem containment, schema·serialization, RFC 8785 canonica
 ## 개발과 검증
 
 🛠️ 기본 검증 명령:
+
+```bash
+python scripts/dev-check.py rust
+python scripts/dev-check.py python
+python scripts/dev-check.py pre-push
+python scripts/dev-check.py rust test -p hive-core
+python scripts/dev-check.py python tests.conformance.test_phase4_contracts -v
+```
+
+`dev-check.py`: caller 환경 변경 없는 로컬 검증. Rust toolchain은 `PATH`와 rustup stable
+경로에서 탐색. Python conformance는 `uv` isolated environment와
+`requirements-conformance.txt` 사용.
+
+세부 명령:
 
 ```bash
 cargo build --workspace --all-targets --all-features --locked
