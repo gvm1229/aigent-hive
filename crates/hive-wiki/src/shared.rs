@@ -385,6 +385,18 @@ fn rebuild_shared_index_locked(
     let logical_digest = shared_logical_digest(&registry, &pages)?;
     ensure_no_symlink_ancestors(user_root, Path::new(SHARED_INDEX_RELATIVE))
         .map_err(|error| WikiError::Conflict(error.to_string()))?;
+    if existing_shared_index_is_current(root, &registry, &pages, &logical_digest)? {
+        return Ok(SharedIndexOutcome {
+            changed_paths: Vec::new(),
+            page_count: pages.len(),
+            project_count: registry
+                .projects
+                .iter()
+                .filter(|project| project.enabled)
+                .count(),
+            logical_digest,
+        });
+    }
     let connection = build_shared_projection(&registry, &pages, &logical_digest)?;
     verify_connection(&connection, &logical_digest, pages.len())?;
     let serialized = connection
@@ -1150,7 +1162,11 @@ fn open_shared_index_snapshot(user_root: &Path) -> Result<Connection, WikiError>
         .map_err(|error| WikiError::Io(format!("cannot open user root: {error}")))?;
     let (parent, name) = crate::capability_parent(&root, Path::new(SHARED_INDEX_RELATIVE), false)?
         .ok_or_else(|| WikiError::Verification("shared SQLite index is missing".to_owned()))?;
-    let file = crate::open_capability_file_nofollow(&parent, &name).map_err(|error| {
+    open_shared_index_snapshot_at(&parent, &name)
+}
+
+fn open_shared_index_snapshot_at(parent: &Dir, name: &OsStr) -> Result<Connection, WikiError> {
+    let file = crate::open_capability_file_nofollow(parent, name).map_err(|error| {
         WikiError::Verification(format!(
             "cannot open shared SQLite index no-follow: {error}"
         ))
@@ -1178,6 +1194,31 @@ fn open_shared_index_snapshot(user_root: &Path) -> Result<Connection, WikiError>
         .deserialize_read_exact(MAIN_DB, file, byte_len, false)
         .map_err(sqlite_error)?;
     Ok(connection)
+}
+
+fn existing_shared_index_is_current(
+    root: &Dir,
+    registry: &ProjectRegistry,
+    pages: &BTreeMap<String, SharedPage>,
+    logical_digest: &str,
+) -> Result<bool, WikiError> {
+    let Some((parent, name)) =
+        crate::capability_parent(root, Path::new(SHARED_INDEX_RELATIVE), false)?
+    else {
+        return Ok(false);
+    };
+    let Some(identity) = shared_index_identity(&parent, &name)? else {
+        return Ok(false);
+    };
+    let validation = open_shared_index_snapshot_at(&parent, &name).and_then(|connection| {
+        validate_shared_projection(&connection, registry, pages, logical_digest)
+    });
+    if shared_index_identity(&parent, &name)? != Some(identity) {
+        return Err(WikiError::Conflict(
+            "shared SQLite index changed during equivalence validation".to_owned(),
+        ));
+    }
+    Ok(validation.is_ok())
 }
 
 fn validate_shared_projection(
@@ -2037,11 +2078,26 @@ mod tests {
     }
 
     #[test]
-    fn replacement_failure_restores_the_exact_prior_index() {
+    fn identical_shared_rebuild_is_a_byte_exact_noop() {
         let (_temporary, user, _first, _second) = fixture();
+        let first = rebuild_shared_index(&user).unwrap();
+        let index = user.join(SHARED_INDEX_RELATIVE);
+        let before = fs::read(&index).unwrap();
+
+        let second = rebuild_shared_index(&user).unwrap();
+
+        assert_eq!(second.logical_digest, first.logical_digest);
+        assert!(second.changed_paths.is_empty());
+        assert_eq!(fs::read(index).unwrap(), before);
+    }
+
+    #[test]
+    fn replacement_failure_restores_the_exact_prior_index() {
+        let (_temporary, user, _first, second) = fixture();
         rebuild_shared_index(&user).unwrap();
         let index = user.join(SHARED_INDEX_RELATIVE);
         let before = fs::read(&index).unwrap();
+        write_page(&second, "shared-page", "replacement searchable");
         INJECT_SHARED_REPLACEMENT_FAILURE.with(|injected| injected.set(true));
         let error = rebuild_shared_index(&user).unwrap_err();
         assert!(error.to_string().contains("injected"));
@@ -2053,6 +2109,7 @@ mod tests {
                 .to_string_lossy()
                 .starts_with(".hive.sqlite3.")
         }));
+        write_page(&second, "shared-page", "shared searchable");
         validate_shared_index(&user).unwrap();
     }
 

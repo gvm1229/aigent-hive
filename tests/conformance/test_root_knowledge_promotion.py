@@ -41,8 +41,7 @@ class RootKnowledgePromotionConformance(Phase1CliTestCase):
         self.fake_bin = self.work_root / "fake-bin"
         self.fake_bin.mkdir()
         self._write_fake_antigravity()
-        self.user_root = self.work_root / "user-root"
-        self.user_root.mkdir()
+        self.user_root = self.setup_user_root
         installed, installed_result = self.invoke(
             "install",
             "--scope",
@@ -347,12 +346,18 @@ else:
             "deterministic local knowledge",
         )
         self.assertEqual(queried.returncode, 0, queried.stderr)
-        self.assertEqual(query_result["data"]["precedence"], "project-first")
-        self.assertEqual(query_result["data"]["hits"][0]["scope"], "project")
+        self.assertEqual(
+            query_result["data"]["precedence"],
+            "own-project,user-root,shared",
+        )
+        self.assertEqual(
+            query_result["data"]["hits"][0]["visibility"],
+            "project-private",
+        )
         self.assertTrue(
             any(
-                hit["scope"] == "user-root"
-                and hit["provenance"] == "explicit-promotion"
+                hit["source_project"] == "user-root"
+                and hit["visibility"] == "shared"
                 for hit in query_result["data"]["hits"]
             )
         )
@@ -362,6 +367,8 @@ else:
             "query",
             "--target",
             str(self.user_root),
+            "--user-root",
+            str(self.user_root),
             "--text",
             "deterministic local knowledge",
         )[1]["data"]
@@ -370,7 +377,7 @@ else:
         rebuilt, rebuild_result = self.invoke(
             "index",
             "rebuild",
-            "--target",
+            "--user-root",
             str(self.user_root),
         )
         self.assertEqual(rebuilt.returncode, 0, rebuilt.stderr)
@@ -379,6 +386,8 @@ else:
             "knowledge",
             "query",
             "--target",
+            str(self.user_root),
+            "--user-root",
             str(self.user_root),
             "--text",
             "deterministic local knowledge",
@@ -620,23 +629,26 @@ else:
             "--text",
             "deterministic local knowledge",
         )[1]
-        self.assertEqual(queried["data"]["precedence"], "project-first")
+        self.assertEqual(
+            queried["data"]["precedence"],
+            "own-project,user-root,shared",
+        )
         self.assertEqual(queried["data"]["project_hit_count"], 1)
         self.assertEqual(queried["data"]["root_hit_count"], 1)
         self.assertEqual(
             [
-                (hit["scope"], hit["provenance"])
+                (hit["source_project"] == "user-root", hit["visibility"])
                 for hit in queried["data"]["hits"]
             ],
             [
-                ("project", "project-local"),
-                ("user-root", "explicit-promotion"),
+                (False, "project-private"),
+                (True, "shared"),
             ],
         )
         root_hit = next(
             hit
             for hit in queried["data"]["hits"]
-            if hit["scope"] == "user-root"
+            if hit["source_project"] == "user-root"
         )
         self.assertEqual(root_hit["sources"], expected_sources)
         self.assertEqual(root_hit["sources"], sorted(set(root_hit["sources"])))
@@ -682,21 +694,24 @@ else:
             },
         )
         self.assertEqual(query.returncode, 0, query.stderr)
-        self.assertEqual(query_result["data"]["precedence"], "project-first")
+        self.assertEqual(
+            query_result["data"]["precedence"],
+            "own-project,user-root,shared",
+        )
         self.assertEqual(
             [
-                (hit["scope"], hit["provenance"])
+                (hit["source_project"] == "user-root", hit["visibility"])
                 for hit in query_result["data"]["hits"]
             ],
             [
-                ("project", "project-local"),
-                ("user-root", "explicit-promotion"),
+                (False, "project-private"),
+                (True, "shared"),
             ],
         )
         skill_root_hit = next(
             hit
             for hit in query_result["data"]["hits"]
-            if hit["scope"] == "user-root"
+            if hit["source_project"] == "user-root"
         )
         self.assertEqual(
             skill_root_hit["sources"],

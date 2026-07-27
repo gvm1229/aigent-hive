@@ -611,12 +611,14 @@ class Phase3ProjectionHostile(Phase3ProjectionTestCase):
             path: value
             for path, value in snapshot_tree(self.work_root).items()
             if not path.startswith("unsafe-name/")
+            and not path.startswith("user-root/")
             and path != "unsafe-name-answers.yml"
         }
         expected_outside = {
             path: value
             for path, value in outside_before.items()
             if not path.startswith("unsafe-name/")
+            and not path.startswith("user-root/")
             and path != "unsafe-name-answers.yml"
         }
         self.assertEqual(changed_outside_target, expected_outside)

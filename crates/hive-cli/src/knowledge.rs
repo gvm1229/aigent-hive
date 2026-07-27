@@ -710,11 +710,19 @@ fn finish_shared_mutation(
             .map(|path| format!("user-root:{path}")),
     );
     let digest = rebuilt.logical_digest.clone();
-    let data = json!({
-        "mutation": mutation,
-        "shared_index": rebuilt,
-        "removed_legacy_project_indexes": removed_legacy_project_indexes
-    });
+    let mut data = mutation;
+    let data_object = data
+        .as_object_mut()
+        .ok_or_else(|| WikiError::Io("mutation result is not an object".to_owned()))?;
+    data_object.insert(
+        "shared_index".to_owned(),
+        serde_json::to_value(&rebuilt).map_err(|error| WikiError::Io(error.to_string()))?,
+    );
+    data_object.insert(
+        "removed_legacy_project_indexes".to_owned(),
+        serde_json::to_value(removed_legacy_project_indexes)
+            .map_err(|error| WikiError::Io(error.to_string()))?,
+    );
     Ok((changed_paths, SHARED_INDEX_RELATIVE, digest, data))
 }
 
@@ -1072,6 +1080,8 @@ mod tests {
             data["shared_index"]["logical_digest"],
             Value::String(digest)
         );
+        assert_eq!(data["logical_digest"], "sha256:legacy");
+        assert!(data.get("mutation").is_none());
     }
 
     #[test]
