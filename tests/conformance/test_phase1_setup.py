@@ -14,6 +14,7 @@ from pathlib import Path
 
 import yaml
 from jsonschema import Draft202012Validator, FormatChecker
+from tests.conformance.phase1_support import write_operational_user_setup
 
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
@@ -85,6 +86,8 @@ class Phase1SetupConformance(unittest.TestCase):
             prefix="aigent-hive-phase1-"
         )
         self.work_root = Path(self.temporary_directory.name).resolve()
+        self.setup_user_root = self.work_root / "user-root"
+        write_operational_user_setup(self.setup_user_root)
 
     def tearDown(self) -> None:
         self.temporary_directory.cleanup()
@@ -107,6 +110,8 @@ class Phase1SetupConformance(unittest.TestCase):
             str(answers or FIXTURE_ROOT / "answers-base.yml"),
             "--capabilities",
             str(FIXTURE_ROOT / capabilities),
+            "--user-root",
+            str(self.setup_user_root),
             mode,
         ]
         for role_id in reconfigure_roles:
@@ -145,6 +150,38 @@ class Phase1SetupConformance(unittest.TestCase):
             if isinstance(item, dict) and item.get("kind") == "report"
         }
         self.assertIn(f"orchestration-owner:{expected_owner}", locators)
+
+    def test_project_setup_requires_operational_user_root_without_mutation(self) -> None:
+        target = self.work_root / "missing-user-root"
+        target.mkdir()
+        (target / "sentinel.bin").write_bytes(b"user bytes\n")
+        before = snapshot_tree(target)
+
+        process = subprocess.run(
+            [
+                str(self.hive_binary),
+                "setup",
+                "--target",
+                str(target),
+                "--answers",
+                str(FIXTURE_ROOT / "answers-base.yml"),
+                "--capabilities",
+                str(FIXTURE_ROOT / "capabilities-codex-omx.json"),
+                "--dry-run",
+                "--output",
+                "json",
+            ],
+            cwd=REPOSITORY_ROOT,
+            check=False,
+            text=True,
+            capture_output=True,
+        )
+        result = json.loads(process.stdout)
+
+        self.assertEqual(process.returncode, 2, result)
+        self.assertEqual(result["code"], "hive.setup-invalid-input")
+        self.assertIn("--user-root", result["message"])
+        self.assertEqual(snapshot_tree(target), before)
 
     def assert_no_hook_artifacts(self, target: Path) -> None:
         self.assertFalse((target / ".hive/config/approved-hooks.yml").exists())
@@ -602,6 +639,68 @@ class Phase1SetupConformance(unittest.TestCase):
         self.assertEqual(process.returncode, 0)
         installed_answers = read_yaml(target / ".hive/setup-answers.yml")
         self.assertNotIn("orchestration_layer", installed_answers)
+        self.assertEqual(installed_answers["setup_mode"], "expedited")
+
+    def test_expedited_setup_rejects_custom_preference_overrides(self) -> None:
+        target = self.work_root / "consumer"
+        target.mkdir()
+        answer_path, answers = self.copied_answers()
+        answers["interface_language"] = "ko"
+        write_answers(answer_path, answers)
+
+        process, result = self.invoke_setup(target, answers=answer_path)
+
+        self.assertEqual(process.returncode, 2)
+        self.assertEqual(result["changed_paths"], [])
+        self.assertEqual(snapshot_tree(target), {})
+
+    def test_custom_setup_requires_all_preference_overrides(self) -> None:
+        target = self.work_root / "consumer"
+        target.mkdir()
+        answer_path, answers = self.copied_answers()
+        answers["setup_mode"] = "custom"
+        answers["interface_language"] = "ko"
+        write_answers(answer_path, answers)
+
+        process, result = self.invoke_setup(target, answers=answer_path)
+
+        self.assertEqual(process.returncode, 2)
+        self.assertEqual(result["changed_paths"], [])
+        self.assertEqual(snapshot_tree(target), {})
+
+    def test_custom_setup_preserves_explicit_preference_overrides(self) -> None:
+        target = self.work_root / "consumer"
+        target.mkdir()
+        answer_path, answers = self.copied_answers()
+        answers["setup_mode"] = "custom"
+        answers["interface_language"] = "ko"
+        answers["wiki"] = {"enabled": True, "language": "both"}
+        answers["persona"] = {"id": "friendly"}
+        answers["skills"] = {
+            "mode": "individual",
+            "selected": ["setup-harness", "hive-prompt-refine"],
+        }
+        write_answers(answer_path, answers)
+
+        process, _ = self.invoke_setup(target, answers=answer_path)
+
+        self.assertEqual(process.returncode, 0)
+        installed_answers = read_yaml(target / ".hive/setup-answers.yml")
+        self.assertEqual(installed_answers["setup_mode"], "custom")
+        self.assertEqual(installed_answers["project_kind"], "general")
+        self.assertEqual(installed_answers["interface_language"], "ko")
+        self.assertEqual(
+            installed_answers["wiki"],
+            {"enabled": True, "language": "both"},
+        )
+        self.assertEqual(installed_answers["persona"], {"id": "friendly"})
+        self.assertEqual(
+            installed_answers["skills"],
+            {
+                "mode": "individual",
+                "selected": ["setup-harness", "hive-prompt-refine"],
+            },
+        )
 
     def test_validate_reports_verification_failure_for_tampered_skill_ledger(
         self,

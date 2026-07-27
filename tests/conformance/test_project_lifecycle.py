@@ -61,6 +61,9 @@ if host == "antigravity" and command.startswith("plugin install "):
     if stage.exists():
         shutil.rmtree(stage)
     shutil.copytree(source, stage)
+    for candidate in sorted(stage.rglob("*"), reverse=True):
+        if candidate.is_dir() and not any(candidate.iterdir()):
+            candidate.rmdir()
     state["plugin"] = True
     state["stage"] = str(stage)
 elif host == "antigravity" and command == "plugin uninstall aigent-hive":
@@ -81,12 +84,15 @@ with open(state_path, "w", encoding="utf-8") as stream:
     json.dump(state, stream)
 
 root = os.path.dirname(os.environ["HIVE_TEST_HOST_LOG"])
+user_root = os.environ.get("HIVE_TEST_USER_ROOT")
 if command == "plugin marketplace list --json":
     if host == "codex":
-        entries = [{{"name": "aigent-hive", "root": os.path.join(root, "user-codex/.hive/marketplaces/codex")}}] if state["marketplace"] else []
+        marketplace = os.path.join(user_root, ".hive/marketplaces/codex") if user_root else os.path.join(root, "user-codex/.hive/marketplaces/codex")
+        entries = [{{"name": "aigent-hive", "root": marketplace}}] if state["marketplace"] else []
         print(json.dumps({{"marketplaces": entries}}))
     else:
-        entries = [{{"name": "aigent-hive", "source": "directory", "path": os.path.join(root, "user-claude/.hive/marketplaces/claude")}}] if state["marketplace"] else []
+        marketplace = os.path.join(user_root, ".hive/marketplaces/claude") if user_root else os.path.join(root, "user-claude/.hive/marketplaces/claude")
+        entries = [{{"name": "aigent-hive", "source": "directory", "path": marketplace}}] if state["marketplace"] else []
         print(json.dumps(entries))
 elif host == "antigravity" and command == "plugin list":
     if state["plugin"]:
@@ -100,12 +106,13 @@ elif host == "antigravity" and command == "plugin list":
         print("No imported plugins.")
 elif command == "plugin list --json":
     if host == "codex":
+        plugin_root = os.path.join(user_root, ".hive/marketplaces/codex") if user_root else os.path.join(root, "user-codex/.hive/marketplaces/codex")
         entries = [{{
             "pluginId": "aigent-hive@aigent-hive",
             "version": "0.7.0",
             "enabled": True,
-            "source": {{"path": os.path.join(root, "user-codex/.hive/marketplaces/codex/plugins/aigent-hive")}},
-            "marketplaceSource": {{"source": os.path.join(root, "user-codex/.hive/marketplaces/codex")}},
+            "source": {{"path": os.path.join(plugin_root, "plugins/aigent-hive")}},
+            "marketplaceSource": {{"source": plugin_root}},
         }}] if state["plugin"] else []
         print(json.dumps({{"installed": entries, "available": []}}))
     else:
@@ -211,6 +218,48 @@ else:
         self.assertEqual(result["code"], "hive.setup-complete")
         return target
 
+    def write_user_setup_answers(
+        self,
+        name: str,
+        *,
+        hosts: list[str],
+        wiki_enabled: bool = True,
+        skills_mode: str = "recommended",
+        selected_skills: list[str] | None = None,
+        usage_enabled: bool = False,
+        threshold: int = 20,
+    ) -> Path:
+        path = self.work_root / f"{name}.yml"
+        skills: dict[str, object]
+        if skills_mode == "recommended":
+            skills = {
+                "mode": "recommended",
+                "recommended_suite": "web-developer",
+            }
+        else:
+            skills = {
+                "mode": "individual",
+                "selected": selected_skills or ["setup-hive"],
+            }
+        write_yaml(
+            path,
+            {
+                "schema_version": 1,
+                "interface_language": "ko",
+                "wiki": {"enabled": wiki_enabled, "language": "both"},
+                "profile": {"id": "web-developer"},
+                "persona": {"id": "balanced"},
+                "selected_hosts": hosts,
+                "skills": skills,
+                "usage_guard": {
+                    "enabled": usage_enabled,
+                    "stop_remaining_percent": threshold,
+                    "codexbar_fallback_enabled": False,
+                },
+            },
+        )
+        return path
+
     def test_user_install_preserves_foreign_guidance_for_all_hosts(self) -> None:
         cases = {
             "codex": (".codex/AGENTS.override.md", "OMX override bytes\n"),
@@ -291,17 +340,13 @@ else:
                 )
                 self.assertEqual(manifest["host"], host)
                 self.assertTrue(manifest["source_release_digest"].startswith("sha256:"))
-                self.assertTrue(
-                    (
-                        user_root
-                        / ".hive/knowledge/Wiki/index.md"
-                    ).is_file()
-                )
+                self.assertFalse((user_root / ".hive/knowledge").exists())
+                self.assertIn("State: `setup-required`", installed)
                 if host == "antigravity":
                     self.assertTrue(
                         (
                             user_root
-                            / ".gemini/config/skills/hive-project-upgrade/SKILL.md"
+                            / ".gemini/config/skills/setup-hive/SKILL.md"
                         ).is_file()
                     )
                     self.assertEqual(
@@ -317,7 +362,7 @@ else:
                         (
                             user_root
                             / ".gemini/config/plugins/aigent-hive"
-                            / "skills/hive-prompt-refine/SKILL.md"
+                            / "skills/setup-hive/SKILL.md"
                         ).is_file()
                     )
                 else:
@@ -325,8 +370,15 @@ else:
                         (
                             user_root
                             / f".hive/marketplaces/{host}/plugins/aigent-hive"
-                            / "skills/hive-prompt-refine/SKILL.md"
+                            / "skills/setup-hive/SKILL.md"
                         ).is_file()
+                    )
+                    self.assertFalse(
+                        (
+                            user_root
+                            / f".hive/marketplaces/{host}/plugins/aigent-hive"
+                            / "skills/hive-prompt-refine/SKILL.md"
+                        ).exists()
                     )
                     if host == "codex":
                         marketplace = (
@@ -365,6 +417,319 @@ else:
                         "Base OMX bytes\n",
                     )
 
+    def test_global_setup_projects_selected_skills_and_wiki_preferences(self) -> None:
+        user_root = self.work_root / "user-codex"
+        user_root.mkdir()
+        environment = {"HIVE_TEST_USER_ROOT": str(user_root)}
+        installed, install_result = self.invoke(
+            "install",
+            "--scope",
+            "user",
+            "--host",
+            "codex",
+            "--user-root",
+            str(user_root),
+            "--apply",
+            environment=environment,
+        )
+        self.assertEqual(installed.returncode, 0, installed.stderr)
+        self.assertEqual(install_result["code"], "hive.user-install-complete")
+
+        recommended = self.write_user_setup_answers(
+            "recommended-user-setup",
+            hosts=["codex"],
+        )
+        before_preview = snapshot_tree(user_root)
+        preview, preview_result = self.invoke(
+            "setup",
+            "--scope",
+            "user",
+            "--answers",
+            str(recommended),
+            "--user-root",
+            str(user_root),
+            "--dry-run",
+            environment=environment,
+        )
+        self.assertEqual(preview.returncode, 0, preview.stderr)
+        self.assertEqual(
+            preview_result["code"], "hive.user-setup-dry-run-complete"
+        )
+        self.assertEqual(preview_result["data"]["setup_state"], "setup-required")
+        self.assertEqual(snapshot_tree(user_root), before_preview)
+        self.assertIn(
+            "hive-knowledge-query", preview_result["data"]["resolved_skills"]
+        )
+        self.assertIn(
+            ".hive/config/user-setup.yml", preview_result["changed_paths"]
+        )
+        self.assertIn(
+            ".agents/directives/00-hive-user.md",
+            preview_result["changed_paths"],
+        )
+        self.assertIn(
+            ".agents/skills/hive-prompt-refine/SKILL.md",
+            preview_result["changed_paths"],
+        )
+        self.assertIn(
+            ".hive/marketplaces/codex/plugins/aigent-hive/skills/"
+            "hive-prompt-refine/SKILL.md",
+            preview_result["changed_paths"],
+        )
+
+        applied, applied_result = self.invoke(
+            "setup",
+            "--scope",
+            "user",
+            "--answers",
+            str(recommended),
+            "--user-root",
+            str(user_root),
+            "--apply",
+            environment=environment,
+        )
+        self.assertEqual(applied.returncode, 0, applied.stderr)
+        self.assertEqual(applied_result["code"], "hive.user-setup-complete")
+        self.assertEqual(applied_result["data"]["setup_state"], "operational")
+        self.assertTrue((user_root / ".hive/knowledge/Wiki/index.md").is_file())
+        self.assertTrue((user_root / ".hive/index/hive.sqlite3").is_file())
+        self.assertTrue(
+            (user_root / ".agents/skills/hive-prompt-refine/SKILL.md").is_file()
+        )
+        self.assertTrue(
+            (
+                user_root
+                / ".hive/marketplaces/codex/plugins/aigent-hive"
+                / "skills/hive-prompt-refine/SKILL.md"
+            ).is_file()
+        )
+        self.assertFalse(
+            (user_root / ".agents/skills/hive-usage-guard/SKILL.md").exists()
+        )
+        guidance = (user_root / ".codex/AGENTS.md").read_text(encoding="utf-8")
+        self.assertIn("State: `operational`", guidance)
+
+        reduced = self.write_user_setup_answers(
+            "reduced-user-setup",
+            hosts=["codex"],
+            wiki_enabled=False,
+            skills_mode="individual",
+            selected_skills=["setup-hive", "hive-prompt-refine"],
+            usage_enabled=True,
+            threshold=17,
+        )
+        reapplied, reapplied_result = self.invoke(
+            "setup",
+            "--scope",
+            "user",
+            "--answers",
+            str(reduced),
+            "--user-root",
+            str(user_root),
+            "--apply",
+            environment=environment,
+        )
+        self.assertEqual(reapplied.returncode, 0, reapplied.stderr)
+        self.assertEqual(reapplied_result["code"], "hive.user-setup-complete")
+        self.assertFalse((user_root / ".hive/index/hive.sqlite3").exists())
+        self.assertTrue((user_root / ".hive/knowledge/Wiki/index.md").is_file())
+        self.assertTrue(
+            (user_root / ".agents/skills/hive-usage-guard/SKILL.md").is_file()
+        )
+        self.assertFalse(
+            (user_root / ".agents/skills/hive-knowledge-query/SKILL.md").exists()
+        )
+        self.assertFalse(
+            (
+                user_root
+                / ".hive/marketplaces/codex/plugins/aigent-hive"
+                / "skills/hive-knowledge-query/SKILL.md"
+            ).exists()
+        )
+        installed_config = read_yaml(user_root / ".hive/config/user-setup.yml")
+        self.assertEqual(
+            installed_config["usage_guard"]["stop_remaining_percent"], 17
+        )
+
+        valid, valid_result = self.invoke(
+            "setup",
+            "--scope",
+            "user",
+            "--answers",
+            str(reduced),
+            "--user-root",
+            str(user_root),
+            "--validate",
+            environment=environment,
+        )
+        self.assertEqual(valid.returncode, 0, valid.stderr)
+        self.assertEqual(valid_result["code"], "hive.user-setup-valid")
+
+        generic_directive = user_root / ".agents/directives/00-hive-user.md"
+        generic_bytes = generic_directive.read_bytes()
+        generic_directive.write_bytes(generic_bytes + b"\nlocal tamper\n")
+        invalid_generic, invalid_generic_result = self.invoke(
+            "setup",
+            "--scope",
+            "user",
+            "--answers",
+            str(reduced),
+            "--user-root",
+            str(user_root),
+            "--validate",
+            environment=environment,
+        )
+        self.assertNotEqual(invalid_generic.returncode, 0)
+        self.assertEqual(
+            invalid_generic_result["code"], "hive.user-setup-conflict"
+        )
+        generic_directive.write_bytes(generic_bytes)
+
+        host_skill = (
+            user_root
+            / ".hive/marketplaces/codex/plugins/aigent-hive"
+            / "skills/hive-prompt-refine/SKILL.md"
+        )
+        host_bytes = host_skill.read_bytes()
+        host_skill.write_bytes(host_bytes + b"\nlocal tamper\n")
+        invalid_host, invalid_host_result = self.invoke(
+            "setup",
+            "--scope",
+            "user",
+            "--answers",
+            str(reduced),
+            "--user-root",
+            str(user_root),
+            "--validate",
+            environment=environment,
+        )
+        self.assertNotEqual(invalid_host.returncode, 0)
+        self.assertEqual(
+            invalid_host_result["code"],
+            "hive.user-setup-verification-failed",
+        )
+        host_skill.write_bytes(host_bytes)
+
+        final_valid, final_valid_result = self.invoke(
+            "setup",
+            "--scope",
+            "user",
+            "--answers",
+            str(reduced),
+            "--user-root",
+            str(user_root),
+            "--validate",
+            environment=environment,
+        )
+        self.assertEqual(final_valid.returncode, 0, final_valid.stderr)
+        self.assertEqual(final_valid_result["code"], "hive.user-setup-valid")
+
+    def test_global_setup_preserves_all_host_guidance_markers(self) -> None:
+        user_root = self.work_root / "user-multi-host"
+        foreign = {
+            ".codex/AGENTS.md": "Existing Codex root bytes\n",
+            ".codex/AGENTS.override.md": "Existing Codex override bytes\n",
+            ".claude/CLAUDE.md": "Existing Claude bytes\n",
+            ".gemini/GEMINI.md": "Existing Antigravity bytes\n",
+        }
+        for relative, content in foreign.items():
+            path = user_root / relative
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(content, encoding="utf-8")
+        environment = {"HIVE_TEST_USER_ROOT": str(user_root)}
+        for host in ("codex", "claude", "antigravity"):
+            installed, result = self.invoke(
+                "install",
+                "--scope",
+                "user",
+                "--host",
+                host,
+                "--user-root",
+                str(user_root),
+                "--apply",
+                environment=environment,
+            )
+            self.assertEqual(installed.returncode, 0, installed.stderr)
+            self.assertEqual(result["code"], "hive.user-install-complete")
+
+        answers = self.write_user_setup_answers(
+            "multi-host-user-setup",
+            hosts=["codex", "claude", "antigravity"],
+            skills_mode="individual",
+            selected_skills=["hive-knowledge-capture"],
+        )
+        preview_before = snapshot_tree(user_root)
+        preview, preview_result = self.invoke(
+            "setup",
+            "--scope",
+            "user",
+            "--answers",
+            str(answers),
+            "--user-root",
+            str(user_root),
+            "--dry-run",
+            environment=environment,
+        )
+        self.assertEqual(preview.returncode, 0, preview.stderr)
+        self.assertEqual(snapshot_tree(user_root), preview_before)
+        self.assertEqual(
+            preview_result["data"]["resolved_skills"],
+            ["hive-knowledge-capture", "hive-knowledge-query", "setup-hive"],
+        )
+        host_skill_paths = {
+            "codex": ".hive/marketplaces/codex/plugins/aigent-hive/skills/"
+            "hive-knowledge-query/SKILL.md",
+            "claude": ".hive/marketplaces/claude/plugins/aigent-hive/skills/"
+            "hive-knowledge-query/SKILL.md",
+            "antigravity": ".gemini/config/skills/"
+            "hive-knowledge-query/SKILL.md",
+        }
+        for path in host_skill_paths.values():
+            self.assertIn(
+                path,
+                preview_result["changed_paths"],
+            )
+
+        applied, applied_result = self.invoke(
+            "setup",
+            "--scope",
+            "user",
+            "--answers",
+            str(answers),
+            "--user-root",
+            str(user_root),
+            "--apply",
+            environment=environment,
+        )
+        self.assertEqual(applied.returncode, 0, applied.stderr)
+        self.assertEqual(applied_result["code"], "hive.user-setup-complete")
+        for relative, content in foreign.items():
+            installed = (user_root / relative).read_text(encoding="utf-8")
+            if relative == ".codex/AGENTS.md":
+                self.assertEqual(installed, content)
+            else:
+                self.assertTrue(installed.startswith(content))
+                self.assertEqual(
+                    installed.count("<!-- AIGENT-HIVE:USER:START -->"), 1
+                )
+                self.assertEqual(
+                    installed.count("<!-- AIGENT-HIVE:USER:END -->"), 1
+                )
+
+        valid, valid_result = self.invoke(
+            "setup",
+            "--scope",
+            "user",
+            "--answers",
+            str(answers),
+            "--user-root",
+            str(user_root),
+            "--validate",
+            environment=environment,
+        )
+        self.assertEqual(valid.returncode, 0, valid.stderr)
+        self.assertEqual(valid_result["code"], "hive.user-setup-valid")
+
     def test_project_setup_projects_portable_harness_for_every_host(self) -> None:
         for host in ("codex", "claude", "antigravity"):
             with self.subTest(host=host):
@@ -394,8 +759,8 @@ else:
                 self.assertTrue(
                     (target / ".hive/config/project-base.json").is_file()
                 )
-                self.assertTrue(
-                    (target / ".hive/index/hive.sqlite3").is_file()
+                self.assertFalse(
+                    (target / ".hive/index/hive.sqlite3").exists()
                 )
                 self.assertIn(
                     "@AGENTS.md",

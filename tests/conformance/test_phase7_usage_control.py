@@ -36,6 +36,8 @@ harness_version = "0.7.0"
 source_release_version = "0.7.0"
 project_name = "usage-control"
 primary_host = "codex"
+usage_guard_enabled = true
+codexbar_fallback_enabled = true
 usage_stop_remaining_percent = 10
 foreign_preserved = "exact bytes"
 """

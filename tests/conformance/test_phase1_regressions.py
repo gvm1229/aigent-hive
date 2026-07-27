@@ -35,10 +35,19 @@ class Phase1ProtectedCanonicalData(Phase1CliTestCase):
         first_process, _ = self.invoke_setup(target)
         self.assertEqual(first_process.returncode, 0, first_process.stderr)
         protected = target / relative
-        user_bytes = (
-            f"user-maintained canonical bytes for {relative}\n".encode("utf-8")
-            + b"\x00\xff"
-        )
+        if relative == ".hive/knowledge/suppression.yml":
+            user_bytes = (
+                f"# user-maintained canonical bytes for {relative}\n"
+                "schema_version: 1\n"
+                "entries: []\n"
+            ).encode("utf-8")
+        else:
+            user_bytes = (
+                f"user-maintained canonical bytes for {relative}\n".encode(
+                    "utf-8"
+                )
+                + b"\x00\xff"
+            )
         protected.write_bytes(user_bytes)
 
         second_process, result = self.invoke_setup(target)
@@ -219,6 +228,8 @@ class Phase1ActivationRollback(Phase1CliTestCase):
             str(answers),
             "--capabilities",
             str(FIXTURE_ROOT / "capabilities-codex-omx.json"),
+            "--user-root",
+            str(self.setup_user_root),
             "--apply",
             "--output",
             "json",

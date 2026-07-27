@@ -14,11 +14,11 @@ Capture only user-selected, Git-suitable project knowledge.
 3. Run:
 
    ```text
-   hive knowledge ingest --target <project-root> --source <source-file> --wiki <reviewed-wiki-draft> --output json
+   hive knowledge ingest --target <project-root> --user-root <user-root> --source <source-file> --wiki <reviewed-wiki-draft> --output json
    ```
 
 4. Require a schema-valid success result and report its changed paths and evidence digest.
-5. Run `hive knowledge lint --target <project-root> --output json`.
+5. Run `hive knowledge lint --target <project-root> --user-root <user-root> --output json`.
 
 ## Safety
 

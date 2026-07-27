@@ -38,6 +38,48 @@ def write_yaml(path: Path, value: object) -> None:
     )
 
 
+def write_operational_user_setup(root: Path) -> None:
+    config = root / ".hive/config"
+    config.mkdir(parents=True, exist_ok=True)
+    write_yaml(
+        config / "user-setup.yml",
+        {
+            "schema_version": 1,
+            "interface_language": "en",
+            "wiki": {"enabled": True, "language": "both"},
+            "profile": {"id": "web-developer"},
+            "persona": {"id": "balanced"},
+            "selected_hosts": ["codex", "claude", "antigravity"],
+            "skills": {
+                "mode": "individual",
+                "selected": [
+                    "hive-judge-package",
+                    "hive-knowledge-capture",
+                    "hive-knowledge-maintenance",
+                    "hive-knowledge-promote",
+                    "hive-knowledge-query",
+                    "hive-migrate",
+                    "hive-project-upgrade",
+                    "hive-prompt-refine",
+                    "hive-role-handoff",
+                    "hive-run-checkpoint",
+                    "hive-run-resume",
+                    "hive-simple-question",
+                    "hive-update",
+                    "hive-usage-guard",
+                    "setup-harness",
+                    "setup-hive",
+                ],
+            },
+            "usage_guard": {
+                "enabled": True,
+                "stop_remaining_percent": 20,
+                "codexbar_fallback_enabled": True,
+            },
+        },
+    )
+
+
 def snapshot_tree(root: Path) -> dict[str, tuple[str, bytes | str]]:
     snapshot: dict[str, tuple[str, bytes | str]] = {}
     if not root.exists():
@@ -89,6 +131,8 @@ class Phase1CliTestCase(unittest.TestCase):
             prefix="aigent-hive-phase1-expanded-"
         )
         self.work_root = Path(self.temporary_directory.name).resolve()
+        self.setup_user_root = self.work_root / "user-root"
+        write_operational_user_setup(self.setup_user_root)
 
     def tearDown(self) -> None:
         self.temporary_directory.cleanup()
@@ -119,6 +163,8 @@ class Phase1CliTestCase(unittest.TestCase):
             str(answers or FIXTURE_ROOT / "answers-base.yml"),
             "--capabilities",
             str(capability_path),
+            "--user-root",
+            str(self.setup_user_root),
             mode,
         ]
         for role_id in reconfigure_roles:

@@ -17,6 +17,7 @@ from typing import Any
 
 import yaml
 from jsonschema import Draft202012Validator, FormatChecker
+from tests.conformance.phase1_support import write_operational_user_setup
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -177,6 +178,8 @@ class Phase4Contracts(unittest.TestCase):
         self.input_root.mkdir()
         self.capability_copy_index = 0
         self.target = self.fresh_target("consumer")
+        self.setup_user_root = self.work / "user-root"
+        write_operational_user_setup(self.setup_user_root)
         self.fake_home = self.work / "home"
         for runtime in (".omx", ".omc"):
             sentinel = self.fake_home / runtime / "foreign.txt"
@@ -193,8 +196,12 @@ class Phase4Contracts(unittest.TestCase):
         config = target / ".hive/config"
         config.mkdir()
         (config / "harness.toml").write_text(
-            'schema_version = 1\nprimary_host = "codex"\n'
-            "usage_stop_remaining_percent = 10\n",
+            'schema_version = 1\nharness_version = "0.7.0"\n'
+            'source_release_version = "0.7.0"\n'
+            'primary_host = "codex"\n'
+            "usage_stop_remaining_percent = 10\n"
+            "usage_guard_enabled = true\n"
+            "codexbar_fallback_enabled = true\n",
             encoding="utf-8",
         )
         return target
@@ -202,8 +209,12 @@ class Phase4Contracts(unittest.TestCase):
     def set_installed_host(self, target: Path, host: str) -> None:
         config = target / ".hive/config/harness.toml"
         config.write_text(
-            f'schema_version = 1\nprimary_host = "{host}"\n'
-            "usage_stop_remaining_percent = 10\n",
+            'schema_version = 1\nharness_version = "0.7.0"\n'
+            'source_release_version = "0.7.0"\n'
+            f'primary_host = "{host}"\n'
+            "usage_stop_remaining_percent = 10\n"
+            "usage_guard_enabled = true\n"
+            "codexbar_fallback_enabled = true\n",
             encoding="utf-8",
         )
 
@@ -1654,8 +1665,12 @@ class Phase4Contracts(unittest.TestCase):
                 if threshold is not None:
                     (target / ".hive/config/harness.toml").write_text(
                         "schema_version = 1\n"
+                        'harness_version = "0.7.0"\n'
+                        'source_release_version = "0.7.0"\n'
                         'primary_host = "codex"\n'
-                        f"usage_stop_remaining_percent = {threshold}\n",
+                        f"usage_stop_remaining_percent = {threshold}\n"
+                        "usage_guard_enabled = true\n"
+                        "codexbar_fallback_enabled = true\n",
                         encoding="utf-8",
                     )
                 self.ensure_handoff(target)
@@ -1745,8 +1760,12 @@ class Phase4Contracts(unittest.TestCase):
     def test_automatic_threshold_is_bound_to_installed_config(self) -> None:
         target = self.fresh_target("automatic-threshold-binding")
         (target / ".hive/config/harness.toml").write_text(
-            'schema_version = 1\nprimary_host = "codex"\n'
-            "usage_stop_remaining_percent = 20\n",
+            'schema_version = 1\nharness_version = "0.7.0"\n'
+            'source_release_version = "0.7.0"\n'
+            'primary_host = "codex"\n'
+            "usage_stop_remaining_percent = 20\n"
+            "usage_guard_enabled = true\n"
+            "codexbar_fallback_enabled = true\n",
             encoding="utf-8",
         )
         self.ensure_handoff(target)
@@ -2483,6 +2502,8 @@ class Phase4Contracts(unittest.TestCase):
                     answers_path,
                     "--capabilities",
                     capability,
+                    "--user-root",
+                    self.setup_user_root,
                     "--apply",
                     "--output",
                     "json",

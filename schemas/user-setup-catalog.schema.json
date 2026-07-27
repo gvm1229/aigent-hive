@@ -1,0 +1,203 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/gvm1229/aigent-hive/schemas/user-setup-catalog.schema.json",
+  "title": "Aigent Hive signed user setup catalog",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "profiles",
+    "personas",
+    "recommended_skill_suites",
+    "mandatory_skills",
+    "skill_dependencies",
+    "optional_third_party_skills"
+  ],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "profiles": {
+      "type": "array",
+      "minItems": 4,
+      "maxItems": 4,
+      "prefixItems": [
+        { "$ref": "#/$defs/web_profile" },
+        { "$ref": "#/$defs/game_profile" },
+        { "$ref": "#/$defs/non_developer_profile" },
+        { "$ref": "#/$defs/custom_profile" }
+      ],
+      "items": false
+    },
+    "personas": {
+      "type": "array",
+      "minItems": 4,
+      "maxItems": 4,
+      "prefixItems": [
+        { "$ref": "#/$defs/strict_persona" },
+        { "$ref": "#/$defs/balanced_persona" },
+        { "$ref": "#/$defs/friendly_persona" },
+        { "$ref": "#/$defs/custom_persona" }
+      ],
+      "items": false
+    },
+    "recommended_skill_suites": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "prefixItems": [
+        { "$ref": "#/$defs/web_suite" },
+        { "$ref": "#/$defs/game_suite" },
+        { "$ref": "#/$defs/non_developer_suite" }
+      ],
+      "items": false
+    },
+    "mandatory_skills": { "const": ["setup-hive"] },
+    "skill_dependencies": {
+      "type": "array",
+      "minItems": 16,
+      "maxItems": 16,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/skill_dependency" }
+    },
+    "optional_third_party_skills": {
+      "description": "Reserved signed-consent boundary. Empty means this release cannot activate third-party Skills.",
+      "const": []
+    }
+  },
+  "$defs": {
+    "localized_text": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["en", "ko"],
+      "properties": {
+        "en": { "type": "string", "minLength": 1, "maxLength": 300, "pattern": "^[^\\r\\n]+$" },
+        "ko": { "type": "string", "minLength": 1, "maxLength": 300, "pattern": "^[^\\r\\n]+$" }
+      }
+    },
+    "catalog_entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "display_name", "description"],
+      "properties": {
+        "id": { "type": "string" },
+        "display_name": { "$ref": "#/$defs/localized_text" },
+        "description": { "$ref": "#/$defs/localized_text" }
+      }
+    },
+    "web_profile": {
+      "allOf": [
+        { "$ref": "#/$defs/catalog_entry" },
+        { "properties": { "id": { "const": "web-developer" } } }
+      ]
+    },
+    "game_profile": {
+      "allOf": [
+        { "$ref": "#/$defs/catalog_entry" },
+        { "properties": { "id": { "const": "game-developer" } } }
+      ]
+    },
+    "non_developer_profile": {
+      "allOf": [
+        { "$ref": "#/$defs/catalog_entry" },
+        { "properties": { "id": { "const": "non-developer" } } }
+      ]
+    },
+    "custom_profile": {
+      "allOf": [
+        { "$ref": "#/$defs/catalog_entry" },
+        { "properties": { "id": { "const": "custom" } } }
+      ]
+    },
+    "strict_persona": {
+      "allOf": [
+        { "$ref": "#/$defs/catalog_entry" },
+        { "properties": { "id": { "const": "strict" } } }
+      ]
+    },
+    "balanced_persona": {
+      "allOf": [
+        { "$ref": "#/$defs/catalog_entry" },
+        { "properties": { "id": { "const": "balanced" } } }
+      ]
+    },
+    "friendly_persona": {
+      "allOf": [
+        { "$ref": "#/$defs/catalog_entry" },
+        { "properties": { "id": { "const": "friendly" } } }
+      ]
+    },
+    "custom_persona": {
+      "allOf": [
+        { "$ref": "#/$defs/catalog_entry" },
+        { "properties": { "id": { "const": "custom" } } }
+      ]
+    },
+    "skill_name": {
+      "enum": [
+        "setup-hive",
+        "setup-harness",
+        "hive-simple-question",
+        "hive-prompt-refine",
+        "hive-knowledge-capture",
+        "hive-knowledge-query",
+        "hive-knowledge-promote",
+        "hive-knowledge-maintenance",
+        "hive-run-checkpoint",
+        "hive-run-resume",
+        "hive-usage-guard",
+        "hive-role-handoff",
+        "hive-judge-package",
+        "hive-update",
+        "hive-project-upgrade",
+        "hive-migrate"
+      ]
+    },
+    "suite": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "display_name", "description", "skills"],
+      "properties": {
+        "id": { "type": "string" },
+        "display_name": { "$ref": "#/$defs/localized_text" },
+        "description": { "$ref": "#/$defs/localized_text" },
+        "skills": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "contains": { "const": "setup-hive" },
+          "items": { "$ref": "#/$defs/skill_name" }
+        }
+      }
+    },
+    "web_suite": {
+      "allOf": [
+        { "$ref": "#/$defs/suite" },
+        { "properties": { "id": { "const": "web-developer" } } }
+      ]
+    },
+    "game_suite": {
+      "allOf": [
+        { "$ref": "#/$defs/suite" },
+        { "properties": { "id": { "const": "game-developer" } } }
+      ]
+    },
+    "non_developer_suite": {
+      "allOf": [
+        { "$ref": "#/$defs/suite" },
+        { "properties": { "id": { "const": "non-developer" } } }
+      ]
+    },
+    "skill_dependency": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["skill", "requires"],
+      "properties": {
+        "skill": { "$ref": "#/$defs/skill_name" },
+        "requires": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/skill_name" }
+        }
+      }
+    }
+  }
+}

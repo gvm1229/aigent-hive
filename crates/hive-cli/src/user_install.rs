@@ -7,7 +7,9 @@ use cap_primitives::fs::PermissionsExt as CapPermissionsExt;
 use cap_std::ambient_authority;
 use cap_std::fs::{Dir, OpenOptions};
 use hive_core::sha256_digest;
-use hive_projection::{compile_projection, Host as ProjectionHost};
+#[cfg(test)]
+use hive_projection::compile_projection;
+use hive_projection::{compile_user_projection, Host as ProjectionHost};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::collections::{BTreeMap, BTreeSet};
@@ -36,6 +38,16 @@ const LEGACY_ANTIGRAVITY_070_SOURCE_DIGEST: &str =
     "sha256:0f39dbdccd2a50e49ea3a123a9ca2cd99823485b8c8e5eada8becf8495b7238c";
 const LEGACY_ANTIGRAVITY_070_MANIFEST_DIGEST: &str =
     "sha256:2eeb1a2cb0d4f2c616443e1b5844b1e10551457f78f1cb96ff76afb223495e86";
+const USER_070_CODEX_PLUGIN_DIGEST: &str =
+    "sha256:4ecb63663a94ffd939aacb9e5179660c46cb72ee9ee379d7bea04279eae35e9e";
+const USER_070_CLAUDE_PLUGIN_DIGEST: &str =
+    "sha256:5590976481b90ab7c11c4109f2abca3282f641d9e86aa4155ce40ad140c38242";
+const USER_070_CLAUDE_CAPTURE_DIGEST: &str =
+    "sha256:d347a2eff52a7908b16d048e50f69abc0696699ad7b02b0d4a1bedb425a5c93b";
+const USER_070_CODEX_MARKETPLACE_DIGEST: &str =
+    "sha256:5fc994474640b82960f5c015c6fdcb50a01df010441b065c991a114e96f84620";
+const USER_070_CLAUDE_MARKETPLACE_DIGEST: &str =
+    "sha256:52681102bb7c8c9c0bb2ce332602e8b4cb418ebfbe0fe1fd0d0cc34ee3aa5af9";
 const LEGACY_ANTIGRAVITY_070_SKILLS: &[(&str, &str)] = &[
     (
         "hive-judge-package",
@@ -116,6 +128,7 @@ const ROOT_WIKI_LOG: &[u8] =
     include_bytes!("../../../harness/template/.hive/knowledge/Wiki/log.md");
 const ROOT_SUPPRESSION: &[u8] =
     include_bytes!("../../../harness/template/.hive/knowledge/suppression.yml");
+const USER_070_SETUP_REVIEW: &[u8] = b"schema_version: 1\nsource_version: 0.7.0\nsetup_required: true\nwiki_markdown_preserved: true\nlegacy_skill_projection: all-built-ins\n";
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "lowercase")]
@@ -170,6 +183,7 @@ struct UserArguments {
     mode: UserMode,
     user_root: PathBuf,
     root_cap: Dir,
+    setup_override: Option<(crate::user_setup::UserSetupConfig, Vec<String>)>,
 }
 
 #[derive(Debug)]
@@ -271,6 +285,7 @@ struct UserOwnershipEntry {
     ownership: String,
 }
 
+#[derive(Clone)]
 struct AuthenticatedUserInventory {
     product_version: String,
     host: UserHost,
@@ -473,6 +488,96 @@ pub(crate) fn run_update(arguments: &[String]) -> ExitCode {
     run(UserOperation::Update, arguments)
 }
 
+pub(crate) fn apply_configured_host(
+    user_root: &Path,
+    selected_host: crate::user_setup::SelectedHost,
+    config: &crate::user_setup::UserSetupConfig,
+    resolved_skills: &[String],
+) -> Result<ActionResult, String> {
+    configured_host(
+        user_root,
+        selected_host,
+        config,
+        resolved_skills,
+        UserMode::Apply,
+    )
+}
+
+pub(crate) fn preview_configured_host(
+    user_root: &Path,
+    selected_host: crate::user_setup::SelectedHost,
+    config: &crate::user_setup::UserSetupConfig,
+    resolved_skills: &[String],
+) -> Result<ActionResult, String> {
+    configured_host(
+        user_root,
+        selected_host,
+        config,
+        resolved_skills,
+        UserMode::DryRun,
+    )
+}
+
+pub(crate) fn validate_configured_host(
+    user_root: &Path,
+    selected_host: crate::user_setup::SelectedHost,
+    config: &crate::user_setup::UserSetupConfig,
+    resolved_skills: &[String],
+) -> Result<ActionResult, String> {
+    configured_host(
+        user_root,
+        selected_host,
+        config,
+        resolved_skills,
+        UserMode::Validate,
+    )
+}
+
+fn configured_host(
+    user_root: &Path,
+    selected_host: crate::user_setup::SelectedHost,
+    config: &crate::user_setup::UserSetupConfig,
+    resolved_skills: &[String],
+    mode: UserMode,
+) -> Result<ActionResult, String> {
+    let host = match selected_host {
+        crate::user_setup::SelectedHost::Codex => UserHost::Codex,
+        crate::user_setup::SelectedHost::Claude => UserHost::Claude,
+        crate::user_setup::SelectedHost::Antigravity => UserHost::Antigravity,
+    };
+    let root_cap = open_user_root(user_root).map_err(|error| error.message().to_owned())?;
+    let arguments = UserArguments {
+        host,
+        mode,
+        user_root: user_root.to_path_buf(),
+        root_cap,
+        setup_override: Some((config.clone(), resolved_skills.to_vec())),
+    };
+    execute(UserOperation::Install, &arguments, &SystemCommandRunner)
+        .map_err(|error| error.message().to_owned())
+}
+
+pub(crate) fn recover_configured_host(
+    user_root: &Path,
+    selected_host: crate::user_setup::SelectedHost,
+) -> Result<ActionResult, String> {
+    let host = match selected_host {
+        crate::user_setup::SelectedHost::Codex => UserHost::Codex,
+        crate::user_setup::SelectedHost::Claude => UserHost::Claude,
+        crate::user_setup::SelectedHost::Antigravity => UserHost::Antigravity,
+    };
+    let root_cap = open_user_root(user_root).map_err(|error| error.message().to_owned())?;
+    let arguments = UserArguments {
+        host,
+        mode: UserMode::Recover,
+        user_root: user_root.to_path_buf(),
+        root_cap,
+        setup_override: None,
+    };
+    execute(UserOperation::Install, &arguments, &SystemCommandRunner)
+        .map_err(|error| error.message().to_owned())
+}
+
 fn run(operation: UserOperation, arguments: &[String]) -> ExitCode {
     let action = match operation {
         UserOperation::Install => "InstallHiveUser",
@@ -566,6 +671,7 @@ fn parse(arguments: &[String]) -> Result<UserArguments, InstallError> {
         mode,
         user_root,
         root_cap,
+        setup_override: None,
     })
 }
 
@@ -605,6 +711,45 @@ fn open_user_root(root: &Path) -> Result<Dir, InstallError> {
     })
 }
 
+pub(crate) fn open_user_root_for_setup(root: &Path) -> Result<Dir, String> {
+    open_user_root(root).map_err(|error| error.message().to_owned())
+}
+
+pub(crate) fn read_user_setup_file(
+    root: &Dir,
+    relative: &Path,
+    maximum: u64,
+) -> Result<Option<Vec<u8>>, String> {
+    read_optional_regular(root, relative, maximum).map_err(|error| error.message().to_owned())
+}
+
+pub(crate) fn replace_user_setup_file(
+    root: &Dir,
+    relative: &Path,
+    expected: Option<&[u8]>,
+    desired: Option<&[u8]>,
+) -> Result<(), String> {
+    let expected_permissions = expected
+        .map(|_| file_permissions(root, relative))
+        .transpose()
+        .map_err(|error| error.message().to_owned())?;
+    cas_activate(
+        root,
+        relative,
+        expected.map(|bytes| ExpectedFile {
+            bytes,
+            permissions: expected_permissions
+                .expect("existing setup file requires a permission token"),
+        }),
+        desired,
+        FilePermissions {
+            executable: false,
+            unix_mode: None,
+        },
+    )
+    .map_err(|error| error.message().to_owned())
+}
+
 fn execute(
     operation: UserOperation,
     arguments: &UserArguments,
@@ -615,14 +760,29 @@ fn execute(
     }
     let mut plan = build_plan(arguments)?;
     match arguments.mode {
-        UserMode::DryRun => Ok(success_result(
-            operation,
-            arguments,
-            &plan,
-            "hive.user-install-dry-run-complete",
-            "user installation dry run completed",
-            None,
-        )),
+        UserMode::DryRun => {
+            let executable = qualify_host(arguments, &plan, runner)?;
+            let executable = executable.as_ref().ok_or_else(|| {
+                InstallError::Internal("qualified host executable is missing".to_owned())
+            })?;
+            let host_version = probe_supported_host_version(arguments.host, executable, runner)?;
+            bind_host_version(&mut plan, &host_version);
+            let codex = probe_codex_state_if_required(arguments, Some(executable), runner)?;
+            let claude = probe_claude_state_if_required(arguments, Some(executable), runner)?;
+            let antigravity =
+                probe_antigravity_state_if_required(arguments, Some(executable), runner)?;
+            validate_codex_prestate(arguments, codex.as_ref())?;
+            validate_claude_prestate(arguments, claude.as_ref())?;
+            validate_antigravity_prestate(arguments, &plan, antigravity.as_ref())?;
+            Ok(success_result(
+                operation,
+                arguments,
+                &plan,
+                "hive.user-install-dry-run-complete",
+                "user installation dry run completed",
+                None,
+            ))
+        }
         UserMode::Validate => {
             if !plan.changed_paths.is_empty() {
                 return Err(InstallError::Verification(format!(
@@ -735,11 +895,22 @@ fn execute_apply(
 }
 
 fn rebuild_root_index(arguments: &UserArguments) -> Result<(), InstallError> {
-    hive_wiki::rebuild_index(&arguments.user_root)
+    let installed = crate::user_setup::load_operational_config(&arguments.root_cap)
+        .map_err(|error| InstallError::Conflict(error.message().to_owned()))?;
+    let setup = arguments
+        .setup_override
+        .as_ref()
+        .map(|(config, _)| config)
+        .or(installed.as_ref());
+    if setup.as_ref().is_none_or(|config| !config.wiki.enabled) {
+        return remove_disposable_root_index(&arguments.root_cap);
+    }
+    hive_wiki::shared::ensure_project_registry(&arguments.user_root)
+        .and_then(|_| hive_wiki::shared::rebuild_shared_index(&arguments.user_root))
         .map(|_| ())
         .map_err(|error| {
             InstallError::Verification(format!(
-                "root knowledge index rebuild failed after installation: {error}"
+                "shared knowledge index rebuild failed after installation: {error}"
             ))
         })
 }
@@ -755,8 +926,17 @@ fn validate_applied_bytes(arguments: &UserArguments) -> Result<UserPlan, Install
     }
 }
 
+struct DesiredUserFiles {
+    files: BTreeMap<PathBuf, PlannedFile>,
+    guidance_relative: PathBuf,
+    marketplace_root: Option<PathBuf>,
+}
+
 #[allow(clippy::too_many_lines)]
-fn build_plan(arguments: &UserArguments) -> Result<UserPlan, InstallError> {
+fn build_desired_user_files(
+    arguments: &UserArguments,
+    operational: Option<&(crate::user_setup::UserSetupConfig, Vec<String>)>,
+) -> Result<DesiredUserFiles, InstallError> {
     let mut files = BTreeMap::new();
     let guidance_relative = guidance_path(arguments.host, &arguments.root_cap)?;
     let guidance_existing =
@@ -765,15 +945,25 @@ fn build_plan(arguments: &UserArguments) -> Result<UserPlan, InstallError> {
     files.insert(
         guidance_relative.clone(),
         PlannedFile {
-            bytes: merge_user_marker(&guidance_existing, &render_user_guidance(arguments.host))?,
+            bytes: merge_user_marker(
+                &guidance_existing,
+                &render_user_guidance(arguments.host, operational.map(|(config, _)| config)),
+            )?,
             executable: false,
             ownership: "shared-marker",
         },
     );
-    seed_root_knowledge(&arguments.root_cap, &mut files)?;
+    if operational.is_some_and(|(config, _)| config.wiki.enabled) {
+        seed_root_knowledge(&arguments.root_cap, &mut files)?;
+    }
 
-    let projection = compile_projection(arguments.host.projection_host(), &[])
-        .map_err(|error| InstallError::Internal(error.to_string()))?;
+    let selected_skills = operational.map_or_else(
+        || vec!["hive-update".to_owned(), "setup-hive".to_owned()],
+        |(_, skills)| skills.clone(),
+    );
+    let projection =
+        compile_user_projection(arguments.host.projection_host(), &selected_skills, &[])
+            .map_err(|error| InstallError::Internal(error.to_string()))?;
     let marketplace_root = match arguments.host {
         UserHost::Codex | UserHost::Claude => {
             let relative = PathBuf::from(format!(".hive/marketplaces/{}", arguments.host.as_str()));
@@ -869,9 +1059,86 @@ fn build_plan(arguments: &UserArguments) -> Result<UserPlan, InstallError> {
             Some(plugin_relative)
         }
     };
+    Ok(DesiredUserFiles {
+        files,
+        guidance_relative,
+        marketplace_root,
+    })
+}
 
+fn authenticated_current_inventory(
+    arguments: &UserArguments,
+    desired: &DesiredUserFiles,
+) -> AuthenticatedUserInventory {
+    let entries = ownership_entries(&desired.files);
+    AuthenticatedUserInventory {
+        product_version: env!("CARGO_PKG_VERSION").to_owned(),
+        host: arguments.host,
+        host_version_range: arguments.host.version_range().to_owned(),
+        source_release_digest: source_release_digest_from_entries(&entries),
+        guidance_path: portable(&desired.guidance_relative),
+        entries,
+    }
+}
+
+#[allow(clippy::too_many_lines)]
+fn build_plan(arguments: &UserArguments) -> Result<UserPlan, InstallError> {
+    let installed_operational = crate::user_setup::resolved_operational_skills(&arguments.root_cap)
+        .map_err(|error| InstallError::Conflict(error.message().to_owned()))?;
+    let operational = arguments
+        .setup_override
+        .as_ref()
+        .or(installed_operational.as_ref());
+    if let Some((config, _)) = operational.as_ref() {
+        let selected = config
+            .selected_hosts
+            .iter()
+            .any(|host| host.as_str() == arguments.host.as_str());
+        if !selected {
+            return Err(InstallError::Conflict(format!(
+                "{} is not selected in the operational user setup",
+                arguments.host.as_str()
+            )));
+        }
+    }
     let manifest_relative =
         PathBuf::from(format!(".hive/install/{}.json", arguments.host.as_str()));
+    let prior_manifest =
+        read_installed_manifest(&arguments.root_cap, &manifest_relative, arguments.host)?;
+    let DesiredUserFiles {
+        mut files,
+        guidance_relative,
+        marketplace_root,
+    } = build_desired_user_files(arguments, operational)?;
+    let owns_setup_review = prior_manifest.as_ref().is_some_and(|manifest| {
+        manifest.entries.iter().any(|entry| {
+            entry.path == ".hive/config/user-setup-review.yml"
+                && matches!(
+                    entry.ownership.as_str(),
+                    "migration-state" | "shared-migration-state"
+                )
+        })
+    });
+    let requires_setup_review = prior_manifest.as_ref().is_some_and(|manifest| {
+        manifest.product_version == "0.7.0"
+            && !manifest
+                .entries
+                .iter()
+                .any(|entry| entry.path.contains("/skills/setup-hive/"))
+    });
+    if operational.is_none() && (owns_setup_review || requires_setup_review) {
+        insert_user_setup_review(&mut files);
+    }
+    let authenticated_prior = if operational == installed_operational.as_ref() {
+        None
+    } else {
+        let mut desired_prior =
+            build_desired_user_files(arguments, installed_operational.as_ref())?;
+        if owns_setup_review {
+            insert_user_setup_review(&mut desired_prior.files);
+        }
+        Some(authenticated_current_inventory(arguments, &desired_prior))
+    };
     let source_release_digest = source_release_digest(&files);
     let entries = ownership_entries(&files);
     let plan_digest = inventory_digest(
@@ -882,8 +1149,6 @@ fn build_plan(arguments: &UserArguments) -> Result<UserPlan, InstallError> {
         &source_release_digest,
         &entries,
     );
-    let prior_manifest =
-        read_installed_manifest(&arguments.root_cap, &manifest_relative, arguments.host)?;
     let retired_files = validate_prior_ownership(
         &arguments.root_cap,
         &files,
@@ -891,6 +1156,7 @@ fn build_plan(arguments: &UserArguments) -> Result<UserPlan, InstallError> {
         &source_release_digest,
         &entries,
         prior_manifest.as_ref(),
+        authenticated_prior.as_ref(),
     )?;
     let prior_antigravity_activation_source = arguments.host == UserHost::Antigravity
         && prior_manifest.as_ref().is_some_and(|manifest| {
@@ -948,6 +1214,17 @@ fn build_plan(arguments: &UserArguments) -> Result<UserPlan, InstallError> {
     })
 }
 
+fn insert_user_setup_review(files: &mut BTreeMap<PathBuf, PlannedFile>) {
+    files.insert(
+        PathBuf::from(".hive/config/user-setup-review.yml"),
+        PlannedFile {
+            bytes: USER_070_SETUP_REVIEW.to_vec(),
+            executable: false,
+            ownership: "shared-migration-state",
+        },
+    );
+}
+
 fn guidance_path(host: UserHost, root: &Dir) -> Result<PathBuf, InstallError> {
     match host {
         UserHost::Codex => {
@@ -971,6 +1248,7 @@ fn validate_prior_ownership(
     expected_source_release_digest: &str,
     expected_entries: &[UserOwnershipEntry],
     prior: Option<&UserOwnershipManifest>,
+    authenticated_prior: Option<&AuthenticatedUserInventory>,
 ) -> Result<BTreeMap<PathBuf, RetiredFile>, InstallError> {
     let authenticated = if let Some(manifest) = prior {
         let recomputed = inventory_digest(
@@ -988,12 +1266,16 @@ fn validate_prior_ownership(
         }
         let authenticated = authenticated_user_inventory(
             manifest.host,
-            &manifest.product_version,
-            &manifest.host_version_range,
-            &manifest.source_release_digest,
-            guidance_path,
-            expected_source_release_digest,
-            expected_entries,
+            &InventoryAuthentication {
+                product_version: &manifest.product_version,
+                installed_host_version_range: &manifest.host_version_range,
+                source_release_digest: &manifest.source_release_digest,
+                installed_guidance_path: Path::new(&manifest.guidance_path),
+                current_guidance_path: guidance_path,
+                current_source_release_digest: expected_source_release_digest,
+                current_entries: expected_entries,
+                authenticated_prior,
+            },
         )
         .ok_or_else(|| {
             InstallError::Conflict(
@@ -1024,7 +1306,7 @@ fn validate_prior_ownership(
         let path = portable(relative);
         if matches!(
             planned.ownership,
-            "shared-marker" | "canonical-data-protected"
+            "shared-marker" | "shared-migration-state" | "canonical-data-protected"
         ) {
             continue;
         }
@@ -1193,7 +1475,10 @@ fn validate_authenticated_installed_bytes(
 }
 
 fn is_managed_ownership(ownership: &str) -> bool {
-    !matches!(ownership, "shared-marker" | "canonical-data-protected")
+    !matches!(
+        ownership,
+        "shared-marker" | "shared-migration-state" | "canonical-data-protected"
+    )
 }
 
 #[cfg(unix)]
@@ -1206,9 +1491,34 @@ fn permissions_match_managed_mode(_permissions: FilePermissions, _executable: bo
     true
 }
 
-fn render_user_guidance(host: UserHost) -> Vec<u8> {
+fn render_user_guidance(
+    host: UserHost,
+    setup: Option<&crate::user_setup::UserSetupConfig>,
+) -> Vec<u8> {
+    let body = setup.map_or_else(
+        || {
+            "- State: `setup-required`\n- Use the installed `setup-hive` Skill before ordinary Hive Skills.\n- Before setup completes, only setup, doctor, update, and recover operations are available.\n"
+                .to_owned()
+        },
+        |config| {
+            let hosts = config
+                .selected_hosts
+                .iter()
+                .map(|selected| selected.as_str())
+                .collect::<Vec<_>>()
+                .join(", ");
+            let wiki = if config.wiki.enabled {
+                "enabled"
+            } else {
+                "disabled"
+            };
+            format!(
+                "- State: `operational`\n- Selected hosts: `{hosts}`\n- Global Wiki: `{wiki}`\n- Use `setup-harness` for project expedited or custom setup.\n- Project Markdown Wiki remains canonical; the user-root SQLite index is derived and shared.\n- Use `hive-project-upgrade` for project projection upgrades.\n- Offer one optional refine suggestion for ambiguous or detail-poor ordinary prompts; never rewrite automatically.\n"
+            )
+        },
+    );
     format!(
-        "<!-- AIGENT-HIVE:USER:START -->\n# Aigent Hive user directives\n\n- Host: `{}`\n- Use the installed `setup-harness` Skill to initialize or reconfigure a project-specific Hive harness.\n- Use `hive-project-upgrade` to scan, preview, apply, validate, or recover project projections.\n- Use `hive-knowledge-promote` only for reviewed project-neutral facts, reusable preferences, or portable workflows.\n- Keep each project's `AGENTS.md`, `.agents/`, `.hive/knowledge/`, and disposable SQLite index isolated from other projects.\n- Keep cross-project canonical knowledge under `~/.hive/knowledge/`; treat `~/.hive/index/hive.sqlite3` as disposable.\n- For explicit prompt authoring or improvement, route to `hive-prompt-refine` in refine-only mode.\n- For an ambiguous or detail-poor ordinary request, offer one concise optional refine suggestion while continuing safe discoverable work; never rewrite automatically.\n- Never request provider API credentials or call model-provider APIs on Hive's behalf.\n<!-- AIGENT-HIVE:USER:END -->\n",
+        "<!-- AIGENT-HIVE:USER:START -->\n# Aigent Hive user directives\n\n- Active adapter: `{}`\n{body}- Preserve foreign guidance bytes and modify only exact Hive marker blocks.\n- Never request provider API credentials or call model-provider APIs on Hive's behalf.\n<!-- AIGENT-HIVE:USER:END -->\n",
         host.as_str()
     )
     .into_bytes()
@@ -1390,48 +1700,228 @@ fn inventory_digest(
     sha256_digest(&bytes)
 }
 
+struct InventoryAuthentication<'a> {
+    product_version: &'a str,
+    installed_host_version_range: &'a str,
+    source_release_digest: &'a str,
+    installed_guidance_path: &'a Path,
+    current_guidance_path: &'a Path,
+    current_source_release_digest: &'a str,
+    current_entries: &'a [UserOwnershipEntry],
+    authenticated_prior: Option<&'a AuthenticatedUserInventory>,
+}
+
 fn authenticated_user_inventory(
     host: UserHost,
-    product_version: &str,
-    installed_host_version_range: &str,
-    source_release_digest: &str,
-    current_guidance_path: &Path,
-    current_source_release_digest: &str,
-    current_entries: &[UserOwnershipEntry],
+    request: &InventoryAuthentication<'_>,
 ) -> Option<AuthenticatedUserInventory> {
-    if product_version == env!("CARGO_PKG_VERSION")
-        && source_release_digest == current_source_release_digest
+    if request.product_version == env!("CARGO_PKG_VERSION")
+        && request.source_release_digest == request.current_source_release_digest
     {
-        let host_version_range =
-            if host == UserHost::Antigravity && installed_host_version_range == ">=1.1.7 <2.0.0" {
-                installed_host_version_range
-            } else {
-                host.version_range()
-            };
+        let host_version_range = if host == UserHost::Antigravity
+            && request.installed_host_version_range == ">=1.1.7 <2.0.0"
+        {
+            request.installed_host_version_range
+        } else {
+            host.version_range()
+        };
         return Some(AuthenticatedUserInventory {
-            product_version: product_version.to_owned(),
+            product_version: request.product_version.to_owned(),
             host,
             host_version_range: host_version_range.to_owned(),
-            source_release_digest: source_release_digest.to_owned(),
-            guidance_path: portable(current_guidance_path),
-            entries: current_entries.to_vec(),
+            source_release_digest: request.source_release_digest.to_owned(),
+            guidance_path: portable(request.current_guidance_path),
+            entries: request.current_entries.to_vec(),
         });
     }
+    if let Some(prior) = request.authenticated_prior {
+        if prior.host == host
+            && prior.product_version == request.product_version
+            && prior.host_version_range == request.installed_host_version_range
+            && prior.source_release_digest == request.source_release_digest
+        {
+            return Some(prior.clone());
+        }
+    }
+    if request.product_version == "0.7.0" {
+        if let Some(historical) = historical_070_user_inventory(
+            host,
+            request.installed_host_version_range,
+            request.installed_guidance_path,
+        ) {
+            if historical.source_release_digest == request.source_release_digest {
+                return Some(historical);
+            }
+        }
+    }
     let historical = historical_user_inventory(host);
-    if historical.product_version == product_version
-        && historical.source_release_digest == source_release_digest
+    if historical.product_version == request.product_version
+        && historical.source_release_digest == request.source_release_digest
     {
         return Some(historical);
     }
     if host == UserHost::Antigravity {
         let legacy = legacy_antigravity_directory_scan_inventory();
-        if legacy.product_version == product_version
-            && legacy.source_release_digest == source_release_digest
+        if legacy.product_version == request.product_version
+            && legacy.source_release_digest == request.source_release_digest
         {
             return Some(legacy);
         }
     }
     None
+}
+
+fn historical_070_user_inventory(
+    host: UserHost,
+    installed_host_version_range: &str,
+    guidance_path: &Path,
+) -> Option<AuthenticatedUserInventory> {
+    let supported_range = match host {
+        UserHost::Codex => installed_host_version_range == ">=0.145.0 <1.0.0",
+        UserHost::Claude => installed_host_version_range == ">=2.1.0 <3.0.0",
+        UserHost::Antigravity => matches!(
+            installed_host_version_range,
+            ">=1.1.7 <1.2.0" | ">=1.1.7 <2.0.0"
+        ),
+    };
+    if !supported_range {
+        return None;
+    }
+    let guidance = portable(guidance_path);
+    let valid_guidance = match host {
+        UserHost::Codex => matches!(
+            guidance.as_str(),
+            ".codex/AGENTS.md" | ".codex/AGENTS.override.md"
+        ),
+        UserHost::Claude => guidance == ".claude/CLAUDE.md",
+        UserHost::Antigravity => guidance == ".gemini/GEMINI.md",
+    };
+    if !valid_guidance {
+        return None;
+    }
+    let mut entries = historical_070_host_entries(host);
+    entries.push(historical_070_entry(
+        guidance.clone(),
+        "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+        false,
+        "shared-marker",
+    ));
+    for path in [
+        ".hive/knowledge/Raw/README.md",
+        ".hive/knowledge/Schema/schema.md",
+        ".hive/knowledge/Wiki/index.md",
+        ".hive/knowledge/Wiki/log.md",
+        ".hive/knowledge/suppression.yml",
+    ] {
+        entries.push(historical_070_entry(
+            path.to_owned(),
+            "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+            false,
+            "canonical-data-protected",
+        ));
+    }
+    entries.sort_by(|left, right| left.path.cmp(&right.path));
+    Some(AuthenticatedUserInventory {
+        product_version: "0.7.0".to_owned(),
+        host,
+        host_version_range: installed_host_version_range.to_owned(),
+        source_release_digest: source_release_digest_from_entries(&entries),
+        guidance_path: guidance,
+        entries,
+    })
+}
+
+fn historical_070_entry(
+    path: String,
+    digest: &str,
+    executable: bool,
+    ownership: &str,
+) -> UserOwnershipEntry {
+    UserOwnershipEntry {
+        path,
+        digest: digest.to_owned(),
+        executable,
+        unix_mode: installed_unix_mode(executable),
+        ownership: ownership.to_owned(),
+    }
+}
+
+fn historical_070_host_entries(host: UserHost) -> Vec<UserOwnershipEntry> {
+    let mut entries = Vec::new();
+    match host {
+        UserHost::Codex | UserHost::Claude => {
+            let host_name = host.as_str();
+            let root = format!(".hive/marketplaces/{host_name}");
+            let plugin = format!("{root}/plugins/aigent-hive");
+            for (skill, digest) in LEGACY_ANTIGRAVITY_070_SKILLS {
+                entries.push(historical_070_entry(
+                    format!("{plugin}/skills/{skill}/SKILL.md"),
+                    digest,
+                    false,
+                    "immutable-plugin-package",
+                ));
+            }
+            entries.extend([
+                historical_070_entry(
+                    format!("{plugin}/.codex-plugin/plugin.json"),
+                    USER_070_CODEX_PLUGIN_DIGEST,
+                    false,
+                    "immutable-plugin-package",
+                ),
+                historical_070_entry(
+                    format!("{plugin}/.claude-plugin/plugin.json"),
+                    USER_070_CLAUDE_PLUGIN_DIGEST,
+                    false,
+                    "immutable-plugin-package",
+                ),
+                historical_070_entry(
+                    format!("{plugin}/bin/hive-claude-usage-capture"),
+                    USER_070_CLAUDE_CAPTURE_DIGEST,
+                    true,
+                    "immutable-plugin-package",
+                ),
+                historical_070_entry(
+                    match host {
+                        UserHost::Codex => format!("{root}/.agents/plugins/marketplace.json"),
+                        UserHost::Claude => {
+                            format!("{root}/.claude-plugin/marketplace.json")
+                        }
+                        UserHost::Antigravity => unreachable!(),
+                    },
+                    match host {
+                        UserHost::Codex => USER_070_CODEX_MARKETPLACE_DIGEST,
+                        UserHost::Claude => USER_070_CLAUDE_MARKETPLACE_DIGEST,
+                        UserHost::Antigravity => unreachable!(),
+                    },
+                    false,
+                    "host-adapter-metadata",
+                ),
+            ]);
+        }
+        UserHost::Antigravity => {
+            for (skill, digest) in LEGACY_ANTIGRAVITY_070_SKILLS {
+                entries.push(historical_070_entry(
+                    format!("{ANTIGRAVITY_SOURCE_RELATIVE}/skills/{skill}/SKILL.md"),
+                    digest,
+                    false,
+                    "immutable-plugin-package",
+                ));
+                entries.push(historical_070_entry(
+                    format!(".gemini/config/skills/{skill}/SKILL.md"),
+                    digest,
+                    false,
+                    "host-skill-projection",
+                ));
+            }
+            entries.push(historical_070_entry(
+                format!("{ANTIGRAVITY_SOURCE_RELATIVE}/plugin.json"),
+                LEGACY_ANTIGRAVITY_070_MANIFEST_DIGEST,
+                false,
+                "immutable-plugin-package",
+            ));
+        }
+    }
+    entries
 }
 
 fn historical_user_inventory(host: UserHost) -> AuthenticatedUserInventory {
@@ -1826,11 +2316,41 @@ fn apply_plan(
         }
         activated_snapshots.push((relative.clone(), existing.clone(), *permissions));
     }
+    prune_retired_antigravity_source_directories(arguments, plan);
     Ok(UserTransaction {
         backup_relative,
         journal_relative,
         backup,
     })
+}
+
+fn prune_retired_antigravity_source_directories(arguments: &UserArguments, plan: &UserPlan) {
+    if arguments.host != UserHost::Antigravity {
+        return;
+    }
+    let source = Path::new(ANTIGRAVITY_SOURCE_RELATIVE);
+    let mut directories = BTreeSet::new();
+    for path in plan.retired_files.keys() {
+        let Ok(relative) = path.strip_prefix(source) else {
+            continue;
+        };
+        let mut parent = relative.parent();
+        while let Some(directory) = parent.filter(|directory| !directory.as_os_str().is_empty()) {
+            directories.insert(source.join(directory));
+            parent = directory.parent();
+        }
+    }
+    let mut directories = directories.into_iter().collect::<Vec<_>>();
+    directories.sort_by(|left, right| {
+        right
+            .components()
+            .count()
+            .cmp(&left.components().count())
+            .then_with(|| right.cmp(left))
+    });
+    for directory in directories {
+        let _ = arguments.root_cap.remove_dir(&directory);
+    }
 }
 
 fn preflight_plan(root: &Dir, plan: &UserPlan) -> Result<Vec<PlannedSnapshot>, InstallError> {
@@ -2514,10 +3034,14 @@ fn reconcile_root_index_after_rollback(
     if !index_existed {
         return remove_disposable_root_index(&arguments.root_cap);
     }
-    if hive_wiki::rebuild_index(&arguments.user_root).is_ok() {
-        return Ok(());
-    }
-    remove_disposable_root_index(&arguments.root_cap)
+    hive_wiki::shared::ensure_project_registry(&arguments.user_root)
+        .and_then(|_| hive_wiki::shared::rebuild_shared_index(&arguments.user_root))
+        .map(|_| ())
+        .map_err(|error| {
+            InstallError::Verification(format!(
+                "root knowledge index reconstruction failed during rollback; existing index was preserved: {error}"
+            ))
+        })
 }
 
 fn qualify_recovery_host(
@@ -4336,7 +4860,7 @@ fn validate_plugin_package(arguments: &UserArguments, plan: &UserPlan) -> Result
         UserHost::Claude => ".claude-plugin/plugin.json",
         UserHost::Antigravity => "plugin.json",
     };
-    for relative in [manifest, "skills/setup-harness/SKILL.md"] {
+    for relative in [manifest, "skills/setup-hive/SKILL.md"] {
         let path = root.join(relative);
         if read_optional_regular(&arguments.root_cap, &path, MAX_USER_FILE_BYTES)?.is_none() {
             return Err(InstallError::Verification(format!(
@@ -5327,11 +5851,9 @@ mod tests {
                 HostSabotage::DeleteInstalledSkill
                 | HostSabotage::CrashAfterPluginInverse
                 | HostSabotage::FailAfterPluginMutationAndCompensation => {
-                    fs::remove_file(
-                        self.root.join(
-                            ".hive/marketplaces/codex/plugins/aigent-hive/skills/setup-harness/SKILL.md",
-                        ),
-                    )
+                    fs::remove_file(self.root.join(
+                        ".hive/marketplaces/codex/plugins/aigent-hive/skills/setup-hive/SKILL.md",
+                    ))
                     .expect("delete installed skill");
                 }
                 HostSabotage::TamperGuidanceAfterActivation => {
@@ -5664,7 +6186,25 @@ mod tests {
             mode,
             root_cap: open_user_root(&user_root).expect("pinned user root"),
             user_root,
+            setup_override: None,
         }
+    }
+
+    fn write_operational_setup(root: &Path, selected_hosts: &[&str]) {
+        let path = root.join(".hive/config/user-setup.yml");
+        fs::create_dir_all(path.parent().expect("setup parent")).expect("setup parent");
+        let hosts = selected_hosts
+            .iter()
+            .map(|host| format!("  - {host}"))
+            .collect::<Vec<_>>()
+            .join("\n");
+        fs::write(
+            path,
+            format!(
+                "schema_version: 1\ninterface_language: en\nwiki:\n  enabled: true\n  language: both\nprofile:\n  id: web-developer\npersona:\n  id: balanced\nselected_hosts:\n{hosts}\nskills:\n  mode: individual\n  selected:\n    - setup-hive\n    - hive-update\nusage_guard:\n  enabled: false\n  stop_remaining_percent: 20\n  codexbar_fallback_enabled: false\n"
+            ),
+        )
+        .expect("user setup");
     }
 
     fn seed_historical_user_install(root: &Path, host: UserHost) -> UserOwnershipManifest {
@@ -5726,6 +6266,25 @@ mod tests {
         for (path, bytes) in projection.files {
             let Some(skill_path) = strip_project_skill_prefix(&path) else {
                 continue;
+            };
+            let bytes = match skill_path.to_str() {
+                Some("skills/hive-knowledge-capture/SKILL.md") => include_bytes!(
+                    "../../../harness/project-bases/0.7.0/skills/hive-knowledge-capture/SKILL.md"
+                )
+                .to_vec(),
+                Some("skills/hive-knowledge-maintenance/SKILL.md") => include_bytes!(
+                    "../../../harness/project-bases/0.7.0/skills/hive-knowledge-maintenance/SKILL.md"
+                )
+                .to_vec(),
+                Some("skills/hive-knowledge-query/SKILL.md") => include_bytes!(
+                    "../../../harness/project-bases/0.7.0/skills/hive-knowledge-query/SKILL.md"
+                )
+                .to_vec(),
+                Some("skills/setup-harness/SKILL.md") => include_bytes!(
+                    "../../../harness/project-bases/0.7.0/skills/setup-harness/SKILL.md"
+                )
+                .to_vec(),
+                _ => bytes,
             };
             bytes_by_path.insert(
                 Path::new(".gemini/config/plugins/aigent-hive").join(&skill_path),
@@ -5817,11 +6376,11 @@ mod tests {
     #[test]
     fn user_marker_append_and_replace_preserve_foreign_bytes() {
         let foreign = b"before\r\n<!-- omx:block -->\r\nafter";
-        let first =
-            merge_user_marker(foreign, &render_user_guidance(UserHost::Codex)).expect("append");
+        let first = merge_user_marker(foreign, &render_user_guidance(UserHost::Codex, None))
+            .expect("append");
         assert!(first.starts_with(foreign));
-        let second =
-            merge_user_marker(&first, &render_user_guidance(UserHost::Claude)).expect("replace");
+        let second = merge_user_marker(&first, &render_user_guidance(UserHost::Claude, None))
+            .expect("replace");
         let outside = [&second[..foreign.len()]];
         assert_eq!(outside[0], foreign);
         assert_eq!(find_all(&second, USER_MARKER_START).len(), 1);
@@ -5831,7 +6390,7 @@ mod tests {
     fn malformed_user_markers_fail_closed() {
         let malformed = b"<!-- AIGENT-HIVE:USER:START -->\nmissing end";
         assert!(matches!(
-            merge_user_marker(malformed, &render_user_guidance(UserHost::Codex)),
+            merge_user_marker(malformed, &render_user_guidance(UserHost::Codex, None)),
             Err(InstallError::Conflict(_))
         ));
     }
@@ -5981,15 +6540,15 @@ mod tests {
         for (host, relative) in [
             (
                 UserHost::Codex,
-                ".hive/marketplaces/codex/plugins/aigent-hive/skills/setup-harness/SKILL.md",
+                ".hive/marketplaces/codex/plugins/aigent-hive/skills/setup-hive/SKILL.md",
             ),
             (
                 UserHost::Claude,
-                ".hive/marketplaces/claude/plugins/aigent-hive/skills/setup-harness/SKILL.md",
+                ".hive/marketplaces/claude/plugins/aigent-hive/skills/setup-hive/SKILL.md",
             ),
             (
                 UserHost::Antigravity,
-                ".hive/marketplaces/antigravity/plugins/aigent-hive/skills/setup-harness/SKILL.md",
+                ".hive/marketplaces/antigravity/plugins/aigent-hive/skills/setup-hive/SKILL.md",
             ),
         ] {
             let temporary = tempdir().expect("tempdir");
@@ -6043,17 +6602,17 @@ mod tests {
         for (host, relative, ownership) in [
             (
                 UserHost::Codex,
-                ".hive/marketplaces/codex/plugins/aigent-hive/skills/setup-harness/SKILL.md",
+                ".hive/marketplaces/codex/plugins/aigent-hive/skills/setup-hive/SKILL.md",
                 "immutable-plugin-package",
             ),
             (
                 UserHost::Claude,
-                ".hive/marketplaces/claude/plugins/aigent-hive/skills/setup-harness/SKILL.md",
+                ".hive/marketplaces/claude/plugins/aigent-hive/skills/setup-hive/SKILL.md",
                 "immutable-plugin-package",
             ),
             (
                 UserHost::Antigravity,
-                ".hive/marketplaces/antigravity/plugins/aigent-hive/skills/setup-harness/SKILL.md",
+                ".hive/marketplaces/antigravity/plugins/aigent-hive/skills/setup-hive/SKILL.md",
                 "immutable-plugin-package",
             ),
         ] {
@@ -6171,6 +6730,38 @@ mod tests {
                 )
                 .expect("protected knowledge preserved"),
                 b"historical protected knowledge\n"
+            );
+        }
+    }
+
+    #[test]
+    fn historical_070_user_inventory_is_exact_and_rejects_wrong_bindings() {
+        for (host, range, expected_entries) in [
+            (UserHost::Codex, ">=0.145.0 <1.0.0", 25),
+            (UserHost::Claude, ">=2.1.0 <3.0.0", 25),
+            (UserHost::Antigravity, ">=1.1.7 <1.2.0", 37),
+        ] {
+            let guidance = Path::new(match host {
+                UserHost::Codex => ".codex/AGENTS.md",
+                UserHost::Claude => ".claude/CLAUDE.md",
+                UserHost::Antigravity => ".gemini/GEMINI.md",
+            });
+            let inventory = historical_070_user_inventory(host, range, guidance)
+                .expect("authenticated 0.7 inventory");
+            assert_eq!(inventory.product_version, "0.7.0");
+            assert_eq!(inventory.entries.len(), expected_entries);
+            assert!(valid_sha256(&inventory.source_release_digest));
+            assert!(inventory
+                .entries
+                .windows(2)
+                .all(|pair| pair[0].path < pair[1].path));
+            assert!(!inventory
+                .entries
+                .iter()
+                .any(|entry| entry.path.contains("/skills/setup-hive/")));
+            assert!(historical_070_user_inventory(host, ">=9.0.0 <10.0.0", guidance).is_none());
+            assert!(
+                historical_070_user_inventory(host, range, Path::new(".hive/foreign.md")).is_none()
             );
         }
     }
@@ -6897,7 +7488,7 @@ mod tests {
             .is_file());
         assert!(temporary
             .path()
-            .join(".gemini/config/plugins/aigent-hive/skills/setup-harness/SKILL.md")
+            .join(".gemini/config/plugins/aigent-hive/skills/setup-hive/SKILL.md")
             .is_file());
         assert!(runner
             .calls
@@ -7132,14 +7723,14 @@ mod tests {
                 temporary
                     .path()
                     .join(ANTIGRAVITY_SOURCE_RELATIVE)
-                    .join("skills/setup-harness/SKILL.md")
+                    .join("skills/setup-hive/SKILL.md")
             )
             .expect("source Skill"),
             fs::read(
                 temporary
                     .path()
                     .join(ANTIGRAVITY_STAGE_RELATIVE)
-                    .join("skills/setup-harness/SKILL.md")
+                    .join("skills/setup-hive/SKILL.md")
             )
             .expect("staged Skill")
         );
@@ -7321,6 +7912,7 @@ mod tests {
         use std::os::unix::fs::PermissionsExt;
 
         let temporary = tempdir().expect("tempdir");
+        write_operational_setup(temporary.path(), &["antigravity"]);
         fs::create_dir(temporary.path().join(".gemini")).expect("gemini");
         let guidance = temporary.path().join(".gemini/GEMINI.md");
         fs::write(&guidance, b"foreign executable guidance\n").expect("guidance");
@@ -7904,6 +8496,7 @@ mod tests {
     #[test]
     fn preexisting_index_and_foreign_tamper_remain_recoverable() {
         let temporary = tempdir().expect("tempdir");
+        write_operational_setup(temporary.path(), &["codex", "antigravity"]);
         let initial = args(temporary.path(), UserHost::Antigravity, UserMode::Apply);
         execute(
             UserOperation::Install,
@@ -7911,7 +8504,8 @@ mod tests {
             &AntigravityRunner::new(temporary.path()),
         )
         .expect("initial install");
-        let before = hive_wiki::rebuild_index(&initial.user_root).expect("initial index");
+        let before = hive_wiki::shared::rebuild_shared_index(&initial.user_root)
+            .expect("initial shared index");
         let runner = StatefulHostRunner::new(
             temporary.path(),
             HostSabotage::TamperGuidanceAfterActivation,
@@ -7925,10 +8519,34 @@ mod tests {
             fs::read(temporary.path().join(".codex/AGENTS.md")).expect("foreign guidance"),
             b"tampered guidance\n"
         );
-        hive_wiki::query(&arguments.user_root, Some("rollback-index-probe"), None, 10)
-            .expect("rollback left a current queryable index");
-        let after = hive_wiki::rebuild_index(&arguments.user_root).expect("rebuilt rollback index");
+        hive_wiki::shared::validate_shared_index(&arguments.user_root)
+            .expect("rollback left a current shared index");
+        let after = hive_wiki::shared::rebuild_shared_index(&arguments.user_root)
+            .expect("rebuilt rollback shared index");
         assert_eq!(before.logical_digest, after.logical_digest);
+    }
+
+    #[test]
+    fn rollback_reconstruction_failure_preserves_preexisting_index_and_surfaces_error() {
+        let temporary = tempdir().expect("tempdir");
+        let index = temporary.path().join(ROOT_INDEX_RELATIVE);
+        fs::create_dir_all(index.parent().expect("index parent")).expect("index parent");
+        fs::write(&index, b"prior index bytes\n").expect("prior index");
+        fs::create_dir_all(temporary.path().join(".hive/config/projects.yml"))
+            .expect("invalid registry directory");
+        let arguments = args(temporary.path(), UserHost::Codex, UserMode::Apply);
+
+        let error = reconcile_root_index_after_rollback(&arguments, true)
+            .expect_err("reconstruction failure");
+
+        assert!(matches!(error, InstallError::Verification(_)));
+        assert!(error
+            .message()
+            .contains("root knowledge index reconstruction failed during rollback"));
+        assert_eq!(
+            fs::read(index).expect("preserved index"),
+            b"prior index bytes\n"
+        );
     }
 
     #[test]

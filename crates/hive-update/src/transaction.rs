@@ -38,6 +38,18 @@ const MAX_CONFIG_BYTES: u64 = 1024 * 1024;
 const MAX_BACKUP_FILE_BYTES: u64 = 16 * 1024 * 1024;
 const MAX_BACKUP_TOTAL_BYTES: u64 = 128 * 1024 * 1024;
 const HEX: &[u8; 16] = b"0123456789abcdef";
+const SHARED_INDEX_MINIMUM_VERSION: SemVersion = SemVersion {
+    major: 0,
+    minor: 8,
+    patch: 0,
+};
+const PROJECT_INDEX_FILES: &[&str] = &[
+    ".hive/index/hive.sqlite3",
+    ".hive/index/hive.sqlite3-wal",
+    ".hive/index/hive.sqlite3-shm",
+    ".hive/index/hive.sqlite3-journal",
+    ".hive/index/.stale",
+];
 static TEMP_COUNTER: AtomicU64 = AtomicU64::new(0);
 
 #[cfg(all(test, unix))]
@@ -123,6 +135,8 @@ struct InstalledHarness {
     harness_version: String,
     source_release_version: String,
     usage_stop_remaining_percent: u8,
+    #[serde(default)]
+    preference_provenance: Option<String>,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
@@ -283,6 +297,7 @@ fn prepare_update(
             "installed usage threshold must be an integer from 1 through 99".to_owned(),
         ));
     }
+    require_operational_update_prerequisites(&installed, &verified.manifest.release_version)?;
     let transition = validate_update_transition(&installed, &verified, request.exact_major_target)?;
     let preservation_before = if transition.migration_kind == MigrationKind::CrossMajor {
         Some(snapshot_protected_tree(target)?)
@@ -311,6 +326,7 @@ fn prepare_update(
             capabilities: capabilities.path(),
             mode: SetupMode::DryRun,
             reconfigure_roles: BTreeSet::new(),
+            global_preferences: None,
         },
         target.dir,
         &installed.harness_version,
@@ -360,6 +376,22 @@ fn prepare_update(
         migration_kind: transition.migration_kind,
         migration_id: transition.migration_id,
     })
+}
+
+fn require_operational_update_prerequisites(
+    installed: &InstalledHarness,
+    target_version: &str,
+) -> Result<(), UpdateError> {
+    let target_version: SemVersion = target_version
+        .parse()
+        .map_err(|error: crate::ReleasePolicyError| UpdateError::Input(error.to_string()))?;
+    if target_version >= SHARED_INDEX_MINIMUM_VERSION && installed.preference_provenance.is_none() {
+        return Err(UpdateError::Unsupported(
+            "Hive 0.8+ project update requires validated user setup and transactional shared-registry binding; run `hive setup --scope user` and connected project setup before retrying"
+                .to_owned(),
+        ));
+    }
+    Ok(())
 }
 
 fn validate_update_transition(
@@ -792,6 +824,7 @@ fn activate_update(
             capabilities: capabilities.path(),
             mode: SetupMode::Apply,
             reconfigure_roles: BTreeSet::new(),
+            global_preferences: None,
         },
         target.dir,
         &installed.harness_version,
@@ -823,11 +856,12 @@ fn activate_update(
     journal.journal_digest = journal_digest(&journal)?;
     persist_journal(target, &journal)?;
     write_update_state(target, &journal.next_state)?;
-    let index = rebuild_index_in(target).map_err(|error| {
-        UpdateError::Verification(format!(
-            "successor committed but disposable index rebuild failed: {error}"
-        ))
-    })?;
+    let index_digest = update_project_index_for_version(target, &verified.manifest.release_version)
+        .map_err(|error| {
+            UpdateError::Verification(format!(
+                "successor committed but derived-index maintenance failed: {error}"
+            ))
+        })?;
     remove_exact_regular_file(target, Path::new(JOURNAL_PATH))?;
     let _pruned_backup_count = prune_expired_backups_in(target, request.now_unix);
     Ok(UpdateOutcome {
@@ -839,7 +873,7 @@ fn activate_update(
         target_version: verified.manifest.release_version,
         migration_id,
         backup_id: Some(backup.transaction_id),
-        index_digest: Some(index.logical_digest),
+        index_digest,
     })
 }
 
@@ -927,11 +961,13 @@ pub fn recover_update_in(target_dir: &Dir) -> Result<(), UpdateError> {
         JournalState::Committed => {
             verify_after_digests(&target, &journal.changes)?;
             write_update_state(&target, &journal.next_state)?;
-            rebuild_index_in(&target).map_err(|error| {
-                UpdateError::Verification(format!(
-                    "cannot rebuild disposable index during forward recovery: {error}"
-                ))
-            })?;
+            update_project_index_for_version(&target, &journal.target_version).map_err(
+                |error| {
+                    UpdateError::Verification(format!(
+                        "cannot maintain derived index during forward recovery: {error}"
+                    ))
+                },
+            )?;
         }
         JournalState::Prepared | JournalState::NeedsRecovery => {
             rollback_changes(&target, &journal)?;
@@ -1958,6 +1994,22 @@ fn rebuild_index_in(target: &TargetRoot<'_>) -> Result<hive_wiki::IndexOutcome, 
     }
 }
 
+fn update_project_index_for_version(
+    target: &TargetRoot<'_>,
+    target_version: &str,
+) -> Result<Option<String>, UpdateError> {
+    let target_version: SemVersion = target_version
+        .parse()
+        .map_err(|error: crate::ReleasePolicyError| UpdateError::Internal(error.to_string()))?;
+    if target_version < SHARED_INDEX_MINIMUM_VERSION {
+        return rebuild_index_in(target).map(|outcome| Some(outcome.logical_digest));
+    }
+    for relative in PROJECT_INDEX_FILES {
+        remove_exact_regular_file(target, Path::new(relative))?;
+    }
+    Ok(None)
+}
+
 fn rebuild_index_while_locked(
     target: &TargetRoot<'_>,
 ) -> Result<hive_wiki::IndexOutcome, UpdateError> {
@@ -2092,6 +2144,11 @@ mod tests {
             .join("../../tests/fixtures/phase6/releases/valid-0.7.0")
     }
 
+    fn operational_release_fixture() -> PathBuf {
+        Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../tests/fixtures/phase6/releases/valid-0.8.0")
+    }
+
     fn legacy_builtin_names(version: &str) -> &'static [&'static str] {
         const V04: &[&str] = &[
             "setup-harness",
@@ -2141,6 +2198,7 @@ mod tests {
             capabilities: &phase1_fixture("capabilities-codex-omx.json"),
             mode: SetupMode::Apply,
             reconfigure_roles: BTreeSet::new(),
+            global_preferences: None,
         })
         .expect("current setup");
 
@@ -2187,13 +2245,29 @@ mod tests {
         let historical_query = include_bytes!(
             "../../../tests/fixtures/phase6/migrations/0.4.0-0.6.0-hive-knowledge-query.SKILL.md"
         );
+        let historical_capture = include_bytes!(
+            "../../../harness/project-bases/0.7.0/skills/hive-knowledge-capture/SKILL.md"
+        );
+        let historical_maintenance = include_bytes!(
+            "../../../harness/project-bases/0.7.0/skills/hive-knowledge-maintenance/SKILL.md"
+        );
         fs::write(skill_root.join("setup-harness/SKILL.md"), historical_setup)
             .expect("historical setup projection");
+        fs::write(
+            skill_root.join("hive-knowledge-capture/SKILL.md"),
+            historical_capture,
+        )
+        .expect("historical knowledge capture projection");
         fs::write(
             skill_root.join("hive-knowledge-query/SKILL.md"),
             historical_query,
         )
         .expect("historical knowledge query projection");
+        fs::write(
+            skill_root.join("hive-knowledge-maintenance/SKILL.md"),
+            historical_maintenance,
+        )
+        .expect("historical knowledge maintenance projection");
         if version == "0.5.0" {
             let historical = include_bytes!(
                 "../../../tests/fixtures/phase6/migrations/0.5.0-hive-run-resume.SKILL.md"
@@ -2220,8 +2294,18 @@ mod tests {
         set_active_skill_digest(skills, "setup-harness", &sha256_digest(historical_setup));
         set_active_skill_digest(
             skills,
+            "hive-knowledge-capture",
+            &sha256_digest(historical_capture),
+        );
+        set_active_skill_digest(
+            skills,
             "hive-knowledge-query",
             &sha256_digest(historical_query),
+        );
+        set_active_skill_digest(
+            skills,
+            "hive-knowledge-maintenance",
+            &sha256_digest(historical_maintenance),
         );
         if version == "0.5.0" {
             set_active_skill_digest(
@@ -2349,6 +2433,33 @@ mod tests {
         journal
     }
 
+    fn committed_recovery_fixture(target: &Path, target_version: &str) -> UpdateJournal {
+        let mut journal = prepared_recovery_fixture(target, b"after");
+        let backup_manifest_path = target.join(&journal.backup_manifest_path);
+        let mut backup_manifest: BackupManifest =
+            serde_json::from_slice(&fs::read(&backup_manifest_path).expect("backup manifest"))
+                .expect("decode backup manifest");
+        backup_manifest.target_version = target_version.to_owned();
+        backup_manifest.manifest_digest =
+            backup_manifest_digest(&backup_manifest).expect("backup manifest digest");
+        write_atomic(
+            &backup_manifest_path,
+            &json_line(&backup_manifest, "backup manifest").expect("backup manifest bytes"),
+        )
+        .expect("replace backup manifest");
+
+        journal.state = JournalState::Committed;
+        journal.target_version = target_version.to_owned();
+        journal.next_state.product_version = target_version.to_owned();
+        journal.journal_digest = journal_digest(&journal).expect("journal digest");
+        write_atomic(
+            &target.join(JOURNAL_PATH),
+            &json_line(&journal, "journal").expect("journal bytes"),
+        )
+        .expect("replace journal");
+        journal
+    }
+
     fn snapshot_regular_files(root: &Path) -> BTreeMap<String, Vec<u8>> {
         fn visit(root: &Path, relative: &Path, files: &mut BTreeMap<String, Vec<u8>>) {
             let mut entries = fs::read_dir(root.join(relative))
@@ -2372,6 +2483,44 @@ mod tests {
         let mut files = BTreeMap::new();
         visit(root, Path::new(""), &mut files);
         files
+    }
+
+    #[test]
+    fn signed_0_8_apply_rejects_unconnected_0_7_without_any_target_mutation() {
+        let target = tempfile::tempdir().expect("target");
+        let consumer = target.path().canonicalize().expect("consumer");
+        execute_setup(&SetupRequest {
+            target: &consumer,
+            answers: &phase1_fixture("answers-base.yml"),
+            capabilities: &phase1_fixture("capabilities-codex-omx.json"),
+            mode: SetupMode::Apply,
+            reconfigure_roles: BTreeSet::new(),
+            global_preferences: None,
+        })
+        .expect("unconnected 0.7 setup");
+        let harness = fs::read_to_string(consumer.join(HARNESS_PATH)).expect("installed harness");
+        assert!(harness.contains("harness_version = \"0.7.0\""));
+        assert!(!harness.contains("preference_provenance"));
+        let before = snapshot_regular_files(&consumer);
+        let fixture = operational_release_fixture();
+        let root = fs::read(fixture.join("metadata/root.json")).expect("trusted root");
+
+        let error = execute_update(&update_request(
+            &consumer,
+            &fixture,
+            &root,
+            UpdateMode::Apply,
+        ))
+        .expect_err("unconnected historical install must require setup");
+
+        assert!(matches!(error, UpdateError::Unsupported(_)), "{error:?}");
+        assert_eq!(error.code(), "hive.update-migration-unsupported");
+        assert!(error.to_string().contains("validated user setup"));
+        assert!(error.to_string().contains("shared-registry binding"));
+        assert_eq!(snapshot_regular_files(&consumer), before);
+        assert!(!consumer.join(JOURNAL_PATH).exists());
+        assert!(!consumer.join(".hive/backups").exists());
+        assert!(!consumer.join(UPDATE_STATE_PATH).exists());
     }
 
     #[test]
@@ -2557,6 +2706,63 @@ mod tests {
         assert_eq!(
             fs::read(target.path().join(".hive/config/harness.toml")).expect("restored"),
             b"before"
+        );
+        assert!(!target.path().join(JOURNAL_PATH).exists());
+    }
+
+    #[test]
+    fn committed_pre_0_8_recovery_rebuilds_the_project_index() {
+        let target = tempfile::tempdir().expect("target");
+        committed_recovery_fixture(target.path(), "0.7.0");
+        fs::create_dir_all(target.path().join(".hive/knowledge/Wiki")).expect("Wiki directory");
+        fs::create_dir_all(target.path().join(".hive/knowledge/Raw")).expect("Raw directory");
+        write_new_file(
+            &target.path().join(".hive/knowledge/suppression.yml"),
+            b"schema_version: 1\nentries: []\n",
+        )
+        .expect("suppression ledger");
+
+        recover_update(target.path()).expect("recover");
+
+        assert!(target.path().join(".hive/index/hive.sqlite3").is_file());
+        assert!(!target.path().join(JOURNAL_PATH).exists());
+    }
+
+    #[test]
+    fn post_0_8_project_index_cleanup_returns_no_digest() {
+        let target = tempfile::tempdir().expect("target");
+        write_new_file(&target.path().join(".hive/index/hive.sqlite3"), b"derived").expect("index");
+        let target_dir = open_target_capability(target.path()).expect("target capability");
+        let target_root = TargetRoot { dir: &target_dir };
+
+        let digest =
+            update_project_index_for_version(&target_root, "1.0.0").expect("index cleanup");
+
+        assert!(digest.is_none());
+        assert!(!target.path().join(".hive/index/hive.sqlite3").exists());
+    }
+
+    #[test]
+    fn committed_0_8_recovery_removes_only_fixed_project_index_files() {
+        let target = tempfile::tempdir().expect("target");
+        committed_recovery_fixture(target.path(), "0.8.0");
+        for relative in PROJECT_INDEX_FILES {
+            write_new_file(&target.path().join(relative), relative.as_bytes()).expect("index file");
+        }
+        write_new_file(
+            &target.path().join(".hive/index/foreign.sqlite3"),
+            b"foreign",
+        )
+        .expect("foreign index-adjacent file");
+
+        recover_update(target.path()).expect("recover");
+
+        for relative in PROJECT_INDEX_FILES {
+            assert!(!target.path().join(relative).exists(), "{relative}");
+        }
+        assert_eq!(
+            fs::read(target.path().join(".hive/index/foreign.sqlite3")).expect("foreign bytes"),
+            b"foreign"
         );
         assert!(!target.path().join(JOURNAL_PATH).exists());
     }

@@ -1,6 +1,6 @@
 ---
 name: setup-harness
-description: Inspect a project and configure its local Aigent Hive harness through the signed Hive CLI. Use when a user asks to set up, initialize, install, reconfigure, or regenerate Aigent Hive; when creating AGENTS.md and scoped directives from a project profile; or when selecting a host, persistent roles, memory policy, usage guard, manually approved optional Skills, and eligible fallback data-integrity hooks.
+description: Inspect a project and configure its local Aigent Hive harness through the signed Hive CLI. Use when a user asks to set up, initialize, install, reconfigure, or regenerate Aigent Hive; when choosing expedited global-preference inheritance or custom project preferences; when creating AGENTS.md and scoped directives from a required project kind; or when selecting a host, persistent roles, memory policy, usage guard, manually approved optional Skills, and eligible fallback data-integrity hooks.
 ---
 
 # Setup Harness
@@ -16,8 +16,12 @@ Configure a consumer project without copying Hive source-development instruction
 2. Check the signed Hive CLI.
    - Run `hive setup --help`.
    - If the command is unavailable, report that setup is unsupported in the installed release. Do not reproduce the renderer manually.
+   - Resolve the exact user root selected during global Hive setup. Pass it only through `--user-root`; never inspect host-global configuration or plugin caches.
 3. Ask one setup question at a time.
    - Follow the required sequence under `Setup Question Sequence` below.
+   - Ask for setup mode first, then ask for project kind in both modes.
+   - In `expedited` mode, tell the user that the signed CLI bridge inherits global language, Wiki, persona, and Skill preferences. Do not ask those preference questions.
+   - In `custom` mode, collect explicit project overrides for interface language, Wiki enablement and language, persona, and Skill selection.
    - Infer repository facts before asking the user.
    - Do not infer preference, risk tolerance, host choice, or optional Skill approval.
 4. Resolve compatibility.
@@ -45,17 +49,19 @@ Configure a consumer project without copying Hive source-development instruction
    - Hooks never classify prompt-submission events, rewrite prompts, activate Skills, ingest memory, spawn subagents, orchestrate work, or decide continuation.
    - A `Stop` hook always returns a neutral allow result without a block decision, continue instruction, or re-invocation prompt.
 7. Run a dry run and validate the write set.
+   - Run `hive setup --target <project-root> --answers <setup-answers.yml> --capabilities <capability-resolution.json> --user-root <user-root> --dry-run --output json`.
    - Require the CLI to render into staging first.
    - Reject writes outside Hive-owned paths and the exact Hive marker in shared files.
    - Show conflicts and unsupported host capabilities before mutation.
 8. Apply setup.
+   - Apply the same validated inputs with `--user-root <user-root> --apply`.
    - Preserve non-Hive text and third-party marker blocks byte-for-byte.
    - Materialize each approved role seed into `.hive/team/roles/<role-id>.md` in staging.
    - On reconfigure, preserve existing assignment, handoff, and Markdown body; require explicit approval for definition drift.
    - Do not commit or push unless the user explicitly requested the Git operation.
 9. Verify.
-   - Run `hive setup --target <project-root> --answers <setup-answers.yml> --capabilities <capability-resolution.json> --validate --output json` with the same validated inputs used for the dry run and apply.
-   - Confirm role seeds have schema-valid canonical role documents, Markdown canonical files exist, SQLite files are ignored, setup answers are tracked, and the selected host can discover the generated entrypoint.
+   - Run `hive setup --target <project-root> --answers <setup-answers.yml> --capabilities <capability-resolution.json> --user-root <user-root> --validate --output json` with the same validated inputs used for the dry run and apply.
+   - Confirm role seeds have schema-valid canonical role documents, Markdown canonical files exist, no project-local SQLite exists, the user-root project registry and shared index are valid, setup answers are tracked, and the selected host can discover the generated entrypoint.
    - Report generated paths, skipped optional components, detected limitations, and exact recovery steps.
 
 ## Setup Question Sequence
@@ -64,47 +70,59 @@ Ask only questions whose answers cannot be established from the repository.
 
 ## Required order
 
-1. **Project identity**
+1. **Setup mode**
+   - Offer `expedited` or `custom`.
+   - `expedited` inherits global interface language, Wiki enablement and language, persona, and selected Skills through the signed CLI bridge.
+   - `custom` records explicit project overrides for those preferences.
+2. **Project kind**
+   - Ask this in both modes. Never infer it solely from the repository.
+   - Offer only project kinds present in the signed release.
+   - Explain that `custom` project kind installs the base domain contract without guessing domain rules. Project kind is independent of `custom` setup mode.
+3. **Project identity**
    - Confirm the detected project name and repository root.
-2. **Domain profile**
-   - Offer only profiles present in the signed release.
-   - Explain that `custom` installs the base contract without guessing domain rules.
-3. **Primary host**
+4. **Custom preference overrides**
+   - Ask only when setup mode is `custom`.
+   - Interface language: `en` or `ko`.
+   - Wiki: explicit `enabled` state and `en`, `ko`, or `both`.
+   - Persona: `strict`, `balanced`, `friendly`, or `custom`; require a non-empty custom description.
+   - Skills: recommended suite or an explicit non-empty built-in Skill list.
+   - Do not silently enable a project Wiki when the global Wiki is disabled. The signed CLI must either keep it disabled or include a global re-enable in the same approved action.
+5. **Primary host**
    - `codex`, `claude`, or `antigravity`.
-4. **Persistent roles**
+6. **Persistent roles**
    - Ask which stable team roles the project needs.
    - Record `role_id`, display name, responsibilities, non-responsibilities, context paths, allowed capabilities, write scope, and verification duties.
    - Store role identity and handoff, not a permanent process or model session.
-5. **Knowledge scope**
+7. **Knowledge scope**
    - Confirm which project files may be ingested into Raw/Wiki.
    - Record explicit project-relative include and exclude paths/globs.
    - Exclude credentials, private keys, tokens, and unrelated repositories.
-6. **Root knowledge promotion**
+8. **Root knowledge promotion**
    - Ask which of `fact`, `preference`, and `workflow` may be explicitly promoted.
    - Ask which categories are confidential and must never leave the project.
    - Record a stable project identity plus the SHA-256 binding of the selected user store root.
    - An empty promotion category list keeps all knowledge project-local.
-7. **Usage guard**
-   - Default stop threshold: 10% remaining.
+9. **Usage guard inheritance**
+   - Inherit the global opt-in state and remaining threshold; enabled global setup defaults to 20%.
    - Explain that the threshold is enforceable only when a fresh local subscription usage sensor exists.
    - Without a trustworthy sensor, automatic continuation must fail closed.
-8. **Judge policy**
+10. **Judge policy**
    - Normal risk: one independent judge when requested.
    - Elevated risk: two of three independent judges.
    - Critical risk: three of three plus human approval.
-9. **Optional Skills**
+11. **Optional Skills**
    - Present each candidate separately with provenance and overlap.
    - Present requested filesystem, shell, network, subagent, and external-app capabilities.
    - Require a direct approval or rejection for each capability and candidate.
    - Sort capability IDs and record `sha256(RFC 8785 JCS(payload))` over consent version, exact displayed name/source/revision/content digest, requested/approved capabilities, and UTC-seconds approval time.
-10. **Optional fallback hooks**
+12. **Optional fallback hooks**
    - Ask only when the automatic external capability result is conclusively `absent`.
    - Do not ask when the result is `available`, `incompatible`, or `unknown`.
    - Show each exact capability, event, `.hive/hooks/<capability>` path, executable command, and content digest.
    - Require approval per capability. Rejecting all hooks is valid and produces no hook artifact.
    - Explain that hooks perform only bounded data-integrity diagnostics and never prompt classification or rewriting, Skill activation, memory ingestion, subagent orchestration, or continuation.
    - A `Stop` event always returns a neutral allow result.
-11. **Write preview**
+13. **Write preview**
     - Show files, marker edits, ignored SQLite paths, and any conflicts.
 
 ## Fixed product decisions

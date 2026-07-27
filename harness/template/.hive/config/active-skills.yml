@@ -10,7 +10,7 @@ skills:
   consent_digest: null
 - name: hive-knowledge-capture
   source_type: built-in
-  content_digest: sha256:bff118dd34504091478c636470c4ae113e6eef0ef488eac406c1f2dd79970d91
+  content_digest: sha256:dd05e3e1065cf1fbf0ca04f0ef6f9acfcfdcdf91fd8362071665ac28542a4f1b
   side_effect_class: project-write
   capabilities:
   - filesystem-read
@@ -20,7 +20,7 @@ skills:
   consent_digest: null
 - name: hive-knowledge-maintenance
   source_type: built-in
-  content_digest: sha256:eb196fd8c66722928ba4f691543e199e09947241face5a51eb6b329c391fdd3f
+  content_digest: sha256:de7484f35d262c2c44d52a60f2c6d698f1ccb5d278f10930f412a4b1ad8be90e
   side_effect_class: project-write
   capabilities:
   - filesystem-read
@@ -42,7 +42,7 @@ skills:
   consent_digest: null
 - name: hive-knowledge-query
   source_type: built-in
-  content_digest: sha256:57544a98a992cab44cf81b5a2badf1efd6bba68f6a1785e678b44bf099a4353e
+  content_digest: sha256:3e0354c7b90bf5cc06ce4bce55d604d007ebd4f4fe03581d48e0cdefbf206b60
   side_effect_class: read-only
   capabilities:
   - filesystem-read
@@ -126,7 +126,7 @@ skills:
   consent_digest: null
 - name: setup-harness
   source_type: built-in
-  content_digest: sha256:11316ba100022cbf18713712eaf6d50325ea489dc410a6a4c1a9b8fa2e1a7f0e
+  content_digest: sha256:c1d7082642b29eae9eea16fccc16b3cf89e69b6a0a5c96081a0e38cc33e149b7
   side_effect_class: project-write
   capabilities:
   - filesystem-read

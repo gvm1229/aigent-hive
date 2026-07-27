@@ -34,6 +34,7 @@ ROUTING_REQUEST_SCHEMA_PATH = (
 )
 
 BUILTIN_SKILLS = {
+    "setup-hive",
     "setup-harness",
     "hive-simple-question",
     "hive-prompt-refine",
@@ -51,6 +52,7 @@ BUILTIN_SKILLS = {
     "hive-project-upgrade",
 }
 IMPLEMENTED_SKILLS = {
+    "setup-hive",
     "setup-harness",
     "hive-simple-question",
     "hive-prompt-refine",

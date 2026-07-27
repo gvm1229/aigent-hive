@@ -1,5 +1,6 @@
 schema_version: 1
 project_name: phase1-fixture
+setup_mode: expedited
 project_kind: general
 primary_host: claude
 usage_stop_remaining_percent: 20

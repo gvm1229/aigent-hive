@@ -14,6 +14,15 @@ critical_judge_quorum = {{ critical_judge_quorum | to_json }}
 # Optional Skills are inert until each entry is explicitly approved.
 approved_optional_skills_file = ".hive/config/approved-skills.yml"
 capability_resolution_file = ".hive/config/capability-resolution.yml"
+setup_mode = {{ setup_mode | to_json }}
+preference_provenance = {{ preference_provenance | to_json }}
+interface_language = {{ interface_language | to_json }}
+wiki_enabled = {{ wiki_enabled | to_json }}
+wiki_language = {{ wiki_language | to_json }}
+persona_id = {{ persona_id | to_json }}
+usage_guard_enabled = {{ usage_guard_enabled | to_json }}
+codexbar_fallback_enabled = {{ codexbar_fallback_enabled | to_json }}
+selected_project_skills = {{ selected_project_skills | to_json }}
 {% if capability_resolution.detection == 'absent' and approved_fallback_hooks | length > 0 -%}
 approved_fallback_hooks_file = ".hive/config/approved-hooks.yml"
 {% endif -%}

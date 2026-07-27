@@ -23,6 +23,14 @@ project_identity:
   help: Root knowledge provenance용 project identity
   default: "{{ project_name }}"
 
+setup_mode:
+  type: str
+  help: User-scope preference 적용 방식
+  choices:
+    Expedited: expedited
+    Custom: custom
+  default: expedited
+
 project_kind:
   type: str
   help: 적용할 domain profile
@@ -143,3 +151,58 @@ approved_fallback_hooks:
   help: 표시된 capability, event, project-local path, command와 digest를 확인하고 승인한 fallback hook 목록
   when: "{{ capability_resolution.detection == 'absent' }}"
   default: []
+
+preference_provenance:
+  type: str
+  when: false
+  default: global-inherited
+
+interface_language:
+  type: str
+  when: false
+  default: en
+
+wiki_enabled:
+  type: bool
+  when: false
+  default: true
+
+wiki_language:
+  type: str
+  when: false
+  default: both
+
+persona_id:
+  type: str
+  when: false
+  default: balanced
+
+usage_guard_enabled:
+  type: bool
+  when: false
+  default: true
+
+codexbar_fallback_enabled:
+  type: bool
+  when: false
+  default: true
+
+selected_project_skills:
+  type: yaml
+  when: false
+  default:
+    - hive-judge-package
+    - hive-knowledge-capture
+    - hive-knowledge-maintenance
+    - hive-knowledge-promote
+    - hive-knowledge-query
+    - hive-migrate
+    - hive-project-upgrade
+    - hive-prompt-refine
+    - hive-role-handoff
+    - hive-run-checkpoint
+    - hive-run-resume
+    - hive-simple-question
+    - hive-update
+    - hive-usage-guard
+    - setup-harness

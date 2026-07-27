@@ -264,18 +264,62 @@ Skill 이름 지정 불필요. `사용량 가드를 잔여 15%로 바꿔 줘`, `
 projection의 one-shot pre-dispatch gate는 구현 완료. 실제 host session E2E와
 Codex 외 qualified sensor는 Phase 7 qualification 경계.
 
-Setup은 다음 JSON contract 표면을 사용.
+## User onboarding과 project harness
+
+User-scope 설치 흐름:
+
+1. `hive install --scope user`: `setup-hive`·`hive-update`만 포함한 minimal bootstrap
+2. `setup-hive`: 한 번에 질문 하나씩 수집
+3. `hive setup --scope user`: 검증·preview·복수 host activation
+4. `operational`: 선택한 provider-neutral directive·Skill만 활성화
+
+Global setup 선택:
+
+- Interface language: `en|ko`
+- LLM Wiki language: `en|ko|both`
+- User profile·agent persona
+- Codex·Claude Code·Antigravity host 조합
+- Recommended Skill suite 또는 개별 Skill
+- LLM Wiki: default-on opt-out, Markdown 보존과 SQLite 제거 분리
+- Usage guard: explicit opt-in, default remaining threshold `20%`,
+  native-first sensor와 CodexBar fallback 별도 동의
+
+```bash
+hive install --scope user --host codex \
+  --user-root <user-root> --apply --output json
+
+hive setup --scope user \
+  --answers <user-setup.yml> \
+  --user-root <user-root> \
+  --dry-run --output json
+```
+
+`--dry-run` 검토 뒤 `--apply`, 설치 상태 확인은 `--validate`.
+Host 제거가 필요한 재설정은 silent deactivation 대신 actionable conflict 반환.
+Bootstrap 상태의 ordinary Hive Skill activation 없음.
+
+Project setup:
 
 ```bash
 cargo run -p hive-cli -- setup \
   --target /path/to/consumer-project \
   --answers /path/to/setup-answers.yml \
   --capabilities /path/to/capability-evidence.json \
+  --user-root /path/to/user-root \
   --dry-run \
   --output json
 ```
 
-`--dry-run` 대신 `--apply` 또는 `--validate` 중 정확히 하나를 선택. CI는 세 host의 Copier default fixture, hostile typed-answer fixture, non-absent hook 거부, Rust/Copier parity, role materialization과 consent 변조도 함께 검증.
+모든 mode: project kind 필수 입력.
+`expedited`: global language·Wiki·persona·Skill·usage 설정 상속.
+`custom`: project language·Wiki·persona·Skill override 명시.
+Project Markdown Wiki는 project 정본, SQLite는 user root의
+`.hive/index/hive.sqlite3` 하나만 사용.
+모든 project setup은 operational user root와 `--user-root`를 필수로 요구.
+인증된 `0.7.x` standalone project는 migration·knowledge compatibility 표면에서만 지원.
+
+CI 범위: 세 host Copier fixture, typed answer, role materialization, selected projection,
+global→project 연결, shared index provenance·visibility 검증.
 
 Fresh exact 검증 결과 위치:
 [`docs/state/CURRENT.md`](docs/state/CURRENT.md). Linux·macOS·Windows CI matrix의
@@ -289,19 +333,21 @@ Raw revision으로 저장하고 prepared Wiki draft의 `raw:self`를 exact locat
 치환. Canonical integration은 project-local lock 아래에서 직렬화.
 
 ```bash
-hive knowledge ingest --target . --source docs/source.md --wiki prepared-page.md --output json
-hive knowledge query --target . --text "deterministic index" --output json
-hive knowledge lint --target . --output json
+hive knowledge ingest --target . --user-root <user-root> \
+  --source docs/source.md --wiki prepared-page.md --output json
+hive knowledge query --target . --user-root <user-root> \
+  --text "deterministic index" --output json
+hive knowledge lint --target . --user-root <user-root> --output json
 hive knowledge delete --target . --page-id old-page --reason obsolete \
-  --timestamp 2026-07-24T00:00:00Z --output json
-hive index rebuild --target . --output json
+  --user-root <user-root> --timestamp 2026-07-24T00:00:00Z --output json
+hive index rebuild --user-root <user-root> --output json
 ```
 
-Index는 FTS5, tag, alias, backlink, source graph와 content hash를 투영. Query는
-canonical logical digest와 `.stale` marker를 확인하므로 Markdown을 직접 바꾼 뒤에는
-rebuild 전 query 결과 반환 금지. 삭제는 active Wiki와 더 이상 참조되지 않는 Raw
-revision을 제거하고 fingerprint, locator, reason, replacement, timestamp만 suppression
-ledger에 남김. `reason`은 삭제 prose가 아닌 shipped stable reason-code enum.
+Shared index projection: user Wiki + enabled project Wiki, FTS5·tag·alias·source graph,
+source project·language·digest·visibility provenance.
+Project-private·confidential row의 cross-project query 차단.
+Canonical Markdown 직접 변경 뒤 explicit user-root rebuild 전 query 결과 반환 금지.
+`--target` index rebuild: `0.7.x` legacy compatibility 표면.
 
 ## Subscription usage guard
 
@@ -314,8 +360,9 @@ window를 fallback으로 사용. Automatic resume는 설치된
 선택 가능한 window가 없거나 snapshot이 stale이거나 account/window가 일치하지 않아도
 `usage_unknown`으로 fail-closed.
 
-현재 Codex adapter: 자동 설치 없는 optional CodexBar `0.45.2`를 shell 없이 고정
-argv로 read-only 조회. Raw account 대신 호출자가 제공한 SHA-256 digest만 비교.
+Codex·Claude Code·Antigravity adapter: qualified native CLI sensor 우선.
+CodexBar `0.45.2`: allowlisted native 오류에서만 1회 사용하는 optional fallback.
+Raw account 저장 없음; SHA-256 account digest만 비교.
 
 ```bash
 cargo run -p hive-cli -- usage check \

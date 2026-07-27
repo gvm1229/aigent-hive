@@ -1,5 +1,18 @@
 schema_version: 1
 skills:
+  - name: setup-hive
+    description: Configure or reconfigure provider-neutral Aigent Hive preferences at user scope through the signed Hive CLI.
+    provided_by: hive
+    superseded_by_external: []
+    invocation_intents:
+      - SetupHive
+    side_effect_class: external-write
+    capabilities:
+      - filesystem-read
+      - filesystem-write
+      - shell
+    availability: implemented
+
   - name: setup-harness
     description: Inspect a project and configure or reconfigure its local Aigent Hive harness through the signed Hive CLI.
     provided_by: hive

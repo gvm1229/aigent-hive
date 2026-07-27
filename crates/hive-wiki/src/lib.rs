@@ -1,5 +1,6 @@
 //! Canonical Markdown knowledge operations and a disposable `SQLite` projection.
 
+pub mod shared;
 pub mod source;
 
 use cap_fs_ext::{DirExt, FollowSymlinks, MetadataExt as CapMetadataExt, OpenOptionsFollowExt};

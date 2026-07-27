@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/gvm1229/aigent-hive/schemas/project-registry.schema.json",
+  "title": "Aigent Hive registered project Wiki sources",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "projects"],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "projects": {
+      "type": "array",
+      "maxItems": 256,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "root", "enabled", "language", "visibility"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]{1,62}$"
+          },
+          "root": {
+            "type": "string",
+            "minLength": 1
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "language": {
+            "enum": ["en", "ko", "both", "und"]
+          },
+          "visibility": {
+            "enum": ["shared", "project-private", "confidential"]
+          }
+        }
+      }
+    }
+  }
+}

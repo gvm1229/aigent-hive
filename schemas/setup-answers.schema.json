@@ -7,6 +7,7 @@
   "required": [
     "schema_version",
     "project_name",
+    "setup_mode",
     "project_kind",
     "primary_host",
     "usage_stop_remaining_percent",
@@ -32,8 +33,23 @@
       "maxLength": 160,
       "pattern": "^(?:|\\S(?:.*\\S)?)$"
     },
+    "setup_mode": {
+      "enum": ["expedited", "custom"]
+    },
     "project_kind": {
       "enum": ["general", "custom"]
+    },
+    "interface_language": {
+      "enum": ["en", "ko"]
+    },
+    "wiki": {
+      "$ref": "#/$defs/wiki"
+    },
+    "persona": {
+      "$ref": "#/$defs/persona"
+    },
+    "skills": {
+      "$ref": "#/$defs/skill_selection"
     },
     "primary_host": {
       "enum": ["codex", "claude", "antigravity"]
@@ -345,6 +361,113 @@
           }
         ]
       }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": { "setup_mode": { "const": "custom" } },
+        "required": ["setup_mode"]
+      },
+      "then": {
+        "required": ["interface_language", "wiki", "persona", "skills"]
+      },
+      "else": {
+        "not": {
+          "anyOf": [
+            { "required": ["interface_language"] },
+            { "required": ["wiki"] },
+            { "required": ["persona"] },
+            { "required": ["skills"] }
+          ]
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "nonempty_single_line": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 500,
+      "pattern": "^(?=.*\\S)[^\\r\\n]+$"
+    },
+    "wiki": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["enabled", "language"],
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "language": { "enum": ["en", "ko", "both"] }
+      }
+    },
+    "persona": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["id"],
+          "properties": {
+            "id": { "enum": ["strict", "balanced", "friendly"] }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["id", "custom_description"],
+          "properties": {
+            "id": { "const": "custom" },
+            "custom_description": { "$ref": "#/$defs/nonempty_single_line" }
+          }
+        }
+      ]
+    },
+    "skill_name": {
+      "enum": [
+        "setup-harness",
+        "hive-simple-question",
+        "hive-prompt-refine",
+        "hive-knowledge-capture",
+        "hive-knowledge-query",
+        "hive-knowledge-promote",
+        "hive-knowledge-maintenance",
+        "hive-run-checkpoint",
+        "hive-run-resume",
+        "hive-usage-guard",
+        "hive-role-handoff",
+        "hive-judge-package",
+        "hive-update",
+        "hive-project-upgrade",
+        "hive-migrate"
+      ]
+    },
+    "skill_selection": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["mode", "recommended_suite"],
+          "properties": {
+            "mode": { "const": "recommended" },
+            "recommended_suite": {
+              "enum": ["web-developer", "game-developer", "non-developer"]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["mode", "selected"],
+          "properties": {
+            "mode": { "const": "individual" },
+            "selected": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": { "$ref": "#/$defs/skill_name" }
+            }
+          }
+        }
+      ]
     }
   }
 }

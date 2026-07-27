@@ -16,6 +16,10 @@ from pathlib import Path
 
 import yaml
 from jsonschema import Draft202012Validator, FormatChecker
+from tests.conformance.phase1_support import (
+    FIXTURE_ROOT as PHASE1_FIXTURES,
+    write_operational_user_setup,
+)
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -61,13 +65,38 @@ class Phase2WikiConformance(unittest.TestCase):
     def setUp(self) -> None:
         self.temporary = tempfile.TemporaryDirectory(prefix="aigent-hive-phase2-")
         self.target = Path(self.temporary.name).resolve()
+        self.user_root = self.target.parent / f"{self.target.name}-user-root"
+        write_operational_user_setup(self.user_root)
         knowledge = self.target / ".hive/knowledge"
         shutil.copytree(
             ROOT / "harness/template/.hive/knowledge",
             knowledge,
         )
+        setup = subprocess.run(
+            [
+                str(self.hive),
+                "setup",
+                "--target",
+                str(self.target),
+                "--answers",
+                str(PHASE1_FIXTURES / "answers-base.yml"),
+                "--capabilities",
+                str(PHASE1_FIXTURES / "capabilities-codex-omx.json"),
+                "--user-root",
+                str(self.user_root),
+                "--apply",
+                "--output",
+                "json",
+            ],
+            cwd=ROOT,
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        self.assertEqual(setup.returncode, 0, setup.stdout + setup.stderr)
 
     def tearDown(self) -> None:
+        shutil.rmtree(self.user_root, ignore_errors=True)
         self.temporary.cleanup()
 
     def invoke(
@@ -852,7 +881,10 @@ Deleted body sentinel SECRET-DELETED-PROSE.
             str(alias / "consumer"),
         )
         self.assertNotEqual(process.returncode, 0)
-        self.assertIn(result["status"], {"error", "conflict"})
+        self.assertIn(
+            result["status"],
+            {"error", "conflict", "verification-failed"},
+        )
         self.assertEqual(result["changed_paths"], [])
         self.assertEqual(snapshot_tree(actual_target), before)
 

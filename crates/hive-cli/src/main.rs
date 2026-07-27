@@ -8,14 +8,14 @@ use hive_projection::{
     PromptRefinementResult, Route, RoutingRequest,
 };
 use hive_render::{
-    authorize_hook_with_resolution, execute_setup, HookAuthorization, RenderError, SetupMode,
-    SetupRequest,
+    authorize_hook_with_resolution, execute_setup, execute_setup_with_post_apply,
+    HookAuthorization, RenderError, SetupMode, SetupOutcome, SetupRequest,
 };
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
+use std::cell::RefCell;
 use std::collections::BTreeSet;
 use std::env;
-use std::fs;
 use std::io::{self, Read};
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
@@ -32,6 +32,7 @@ mod usage;
 mod usage_control;
 mod usage_install;
 mod user_install;
+mod user_setup;
 
 const USAGE: &str = "\
 Aigent Hive
@@ -41,7 +42,7 @@ USAGE:
     hive install --scope user --host codex|claude|antigravity (--dry-run|--apply|--validate) [--user-root <dir>] --output json
     hive check-target <path>
     hive setup --help
-    hive setup --target <dir> --answers <yml> --capabilities <json> (--dry-run|--apply|--validate) [--reconfigure-role <role-id>]... --output json
+    hive setup --target <dir> --answers <yml> --capabilities <json> --user-root <dir> (--dry-run|--apply|--validate) [--reconfigure-role <role-id>]... --output json
     hive source-wiki lint --target <source-root> --output json
     hive source-wiki index --target <source-root> --output json
     hive source-wiki query --target <source-root> --language en|ko (--text <query>|--tag <tag>) [--limit <1..100>] --output json
@@ -72,7 +73,7 @@ const SETUP_USAGE: &str = "\
 Create or validate an installed Aigent Hive consumer harness.
 
 USAGE:
-    hive setup --target <dir> --answers <yml> --capabilities <json> (--dry-run|--apply|--validate) [--reconfigure-role <role-id>]... --output json
+    hive setup --target <dir> --answers <yml> --capabilities <json> --user-root <dir> (--dry-run|--apply|--validate) [--reconfigure-role <role-id>]... --output json
 
 MODES:
     --dry-run    Render and validate in staging without changing the target
@@ -148,6 +149,7 @@ struct SetupArguments {
     target: PathBuf,
     answers: PathBuf,
     capabilities: PathBuf,
+    user_root: PathBuf,
     mode: SetupMode,
     reconfigure_roles: BTreeSet<String>,
 }
@@ -155,9 +157,19 @@ struct SetupArguments {
 fn main() -> ExitCode {
     let arguments: Vec<String> = env::args().skip(1).collect();
     match arguments.first().map(String::as_str) {
+        Some("setup")
+            if arguments.iter().any(|argument| argument == "--scope")
+                && arguments.iter().any(|argument| argument == "--help") =>
+        {
+            user_setup::print_help();
+            ExitCode::SUCCESS
+        }
         Some("setup") if is_help_request(&arguments[1..]) => {
             print!("{SETUP_USAGE}");
             ExitCode::SUCCESS
+        }
+        Some("setup") if arguments.iter().any(|argument| argument == "--scope") => {
+            user_setup::run(&arguments[1..])
         }
         Some("setup") => run_setup(&arguments[1..]),
         Some("install") => user_install::run_install(&arguments[1..]),
@@ -424,70 +436,56 @@ fn run_setup(arguments: &[String]) -> ExitCode {
     let parsed = parse_setup(arguments);
     let result = match parsed {
         Ok(arguments) => {
-            let initialize_index = arguments.mode == SetupMode::Apply
-                && match fs::symlink_metadata(arguments.target.join(".hive/index/hive.sqlite3")) {
-                    Ok(metadata) => metadata.file_type().is_symlink() || !metadata.is_file(),
-                    Err(_) => true,
-                };
+            let global_preferences =
+                user_setup::project_preferences(&arguments.user_root).map_err(RenderError::Input);
+            let global_preferences = match global_preferences {
+                Ok(preferences) => preferences,
+                Err(error) => return emit_setup_result(&failure_result(&error)),
+            };
+            let global_wiki_enabled = global_preferences.wiki_enabled;
+            let setup_mode = arguments.mode;
+            let user_root = arguments.user_root.clone();
+            let target = arguments.target.clone();
             let request = SetupRequest {
                 target: &arguments.target,
                 answers: &arguments.answers,
                 capabilities: &arguments.capabilities,
-                mode: arguments.mode,
+                mode: setup_mode,
                 reconfigure_roles: arguments.reconfigure_roles,
+                global_preferences: Some(global_preferences),
             };
-            match execute_setup(&request) {
-                Ok(mut outcome) => {
-                    if initialize_index {
-                        match hive_wiki::rebuild_index(&arguments.target) {
-                            Ok(index) => {
-                                outcome.changed_paths.extend(index.changed_paths);
-                                outcome.changed_paths.sort();
-                                outcome.changed_paths.dedup();
-                            }
-                            Err(error) => {
-                                return emit_setup_result(&failure_result_for(
-                                    "SetupHarness",
-                                    &RenderError::Verification(format!(
-                                        "initial project knowledge index rebuild failed: {error}"
-                                    )),
-                                    outcome.changed_paths,
-                                ));
-                            }
-                        }
-                    }
-                    ActionResult {
-                        schema_version: 1,
-                        action: "SetupHarness",
-                        status: "success",
-                        exit_code: 0,
-                        code: match arguments.mode {
-                            SetupMode::DryRun => "hive.setup-dry-run-complete",
-                            SetupMode::Apply => "hive.setup-complete",
-                            SetupMode::Validate => "hive.setup-valid",
+            match execute_setup_and_registry(&request, &user_root, &target, global_wiki_enabled) {
+                Ok(outcome) => ActionResult {
+                    schema_version: 1,
+                    action: "SetupHarness",
+                    status: "success",
+                    exit_code: 0,
+                    code: match setup_mode {
+                        SetupMode::DryRun => "hive.setup-dry-run-complete",
+                        SetupMode::Apply => "hive.setup-complete",
+                        SetupMode::Validate => "hive.setup-valid",
+                    },
+                    message: match setup_mode {
+                        SetupMode::DryRun => "setup dry run completed".to_owned(),
+                        SetupMode::Apply => "consumer harness setup completed".to_owned(),
+                        SetupMode::Validate => "installed consumer harness is valid".to_owned(),
+                    },
+                    changed_paths: outcome.changed_paths,
+                    evidence: vec![
+                        Evidence {
+                            kind: "report",
+                            locator: format!("orchestration-owner:{}", outcome.resolved_owner),
+                            digest: sha256_digest(outcome.resolved_owner.as_bytes()),
                         },
-                        message: match arguments.mode {
-                            SetupMode::DryRun => "setup dry run completed".to_owned(),
-                            SetupMode::Apply => "consumer harness setup completed".to_owned(),
-                            SetupMode::Validate => "installed consumer harness is valid".to_owned(),
+                        Evidence {
+                            kind: "report",
+                            locator: "render-tree:normalized".to_owned(),
+                            digest: outcome.tree_digest,
                         },
-                        changed_paths: outcome.changed_paths,
-                        evidence: vec![
-                            Evidence {
-                                kind: "report",
-                                locator: format!("orchestration-owner:{}", outcome.resolved_owner),
-                                digest: sha256_digest(outcome.resolved_owner.as_bytes()),
-                            },
-                            Evidence {
-                                kind: "report",
-                                locator: "render-tree:normalized".to_owned(),
-                                digest: outcome.tree_digest,
-                            },
-                        ],
-                        next_action: None,
-                        data: None,
-                    }
-                }
+                    ],
+                    next_action: None,
+                    data: None,
+                },
                 Err(error) => failure_result(&error),
             }
         }
@@ -498,6 +496,153 @@ fn run_setup(arguments: &[String]) -> ExitCode {
         eprintln!("error: {}", result.message);
     }
     ExitCode::from(result.exit_code)
+}
+
+fn execute_setup_and_registry(
+    request: &SetupRequest<'_>,
+    user_root: &Path,
+    target: &Path,
+    global_wiki_enabled: bool,
+) -> Result<SetupOutcome, RenderError> {
+    if request.mode != SetupMode::Apply {
+        let mut outcome = execute_setup(request)?;
+        if let Some(preferences) = outcome.effective_preferences.as_ref() {
+            reconcile_project_registry(
+                user_root,
+                target,
+                preferences,
+                request.mode,
+                global_wiki_enabled,
+                &mut outcome.changed_paths,
+            )?;
+        }
+        return Ok(outcome);
+    }
+
+    let preview = execute_setup(&SetupRequest {
+        target: request.target,
+        answers: request.answers,
+        capabilities: request.capabilities,
+        mode: SetupMode::DryRun,
+        reconfigure_roles: request.reconfigure_roles.clone(),
+        global_preferences: request.global_preferences.clone(),
+    })?;
+    let preferences = preview.effective_preferences.ok_or_else(|| {
+        RenderError::Verification(
+            "connected project setup omitted resolved user preferences".to_owned(),
+        )
+    })?;
+    let registry_changed_paths = RefCell::new(Vec::new());
+    let commit = || {
+        reconcile_project_registry(
+            user_root,
+            target,
+            &preferences,
+            SetupMode::Apply,
+            global_wiki_enabled,
+            &mut registry_changed_paths.borrow_mut(),
+        )
+    };
+    let mut outcome = execute_setup_with_post_apply(request, &commit)?;
+    outcome
+        .changed_paths
+        .extend(registry_changed_paths.into_inner());
+    outcome.changed_paths.sort();
+    outcome.changed_paths.dedup();
+    Ok(outcome)
+}
+
+fn reconcile_project_registry(
+    user_root: &Path,
+    target: &Path,
+    preferences: &hive_render::ResolvedProjectPreferences,
+    mode: SetupMode,
+    global_wiki_enabled: bool,
+    changed_paths: &mut Vec<String>,
+) -> Result<(), RenderError> {
+    use hive_wiki::shared::{
+        KnowledgeLanguage, KnowledgeVisibility, RegisteredProject, PROJECT_REGISTRY_RELATIVE,
+        SHARED_INDEX_RELATIVE,
+    };
+
+    let root = target.canonicalize().map_err(|error| {
+        RenderError::Verification(format!(
+            "cannot canonicalize registered project root: {error}"
+        ))
+    })?;
+    let root_text = root.to_str().ok_or_else(|| {
+        RenderError::Unsupported("registered project root is not valid UTF-8".to_owned())
+    })?;
+    let digest = sha256_digest(root_text.as_bytes());
+    let project_id = format!("project-{}", &digest["sha256:".len()..][..24]);
+    let language = match preferences.wiki_language.as_str() {
+        "en" => KnowledgeLanguage::En,
+        "ko" => KnowledgeLanguage::Ko,
+        "both" => KnowledgeLanguage::Both,
+        value => {
+            return Err(RenderError::Internal(format!(
+                "resolved project Wiki language is invalid: {value}"
+            )))
+        }
+    };
+    let registration = RegisteredProject {
+        id: project_id,
+        root,
+        enabled: preferences.wiki_enabled,
+        language,
+        visibility: KnowledgeVisibility::ProjectPrivate,
+    };
+    match mode {
+        SetupMode::DryRun => {
+            changed_paths.push(format!("user-root:{PROJECT_REGISTRY_RELATIVE}"));
+            if global_wiki_enabled {
+                changed_paths.push(format!("user-root:{SHARED_INDEX_RELATIVE}"));
+            }
+        }
+        SetupMode::Apply => {
+            let registered = hive_wiki::shared::register_project_atomic(
+                user_root,
+                registration,
+                global_wiki_enabled,
+            )
+            .map_err(|error| RenderError::Verification(error.to_string()))?;
+            changed_paths.extend(
+                registered
+                    .registry
+                    .changed_paths
+                    .into_iter()
+                    .map(|path| format!("user-root:{path}")),
+            );
+            if let Some(rebuilt) = registered.shared_index {
+                changed_paths.extend(
+                    rebuilt
+                        .changed_paths
+                        .into_iter()
+                        .map(|path| format!("user-root:{path}")),
+                );
+            }
+        }
+        SetupMode::Validate => {
+            let registry = hive_wiki::shared::load_project_registry(user_root)
+                .map_err(|error| RenderError::Verification(error.to_string()))?;
+            if !registry
+                .projects
+                .iter()
+                .any(|project| project == &registration)
+            {
+                return Err(RenderError::Verification(
+                    "project registration differs from resolved setup preferences".to_owned(),
+                ));
+            }
+            if global_wiki_enabled {
+                hive_wiki::shared::validate_shared_index(user_root)
+                    .map_err(|error| RenderError::Verification(error.to_string()))?;
+            }
+        }
+    }
+    changed_paths.sort();
+    changed_paths.dedup();
+    Ok(())
 }
 
 fn emit_setup_result(result: &ActionResult) -> ExitCode {
@@ -512,6 +657,7 @@ fn parse_setup(arguments: &[String]) -> Result<SetupArguments, RenderError> {
     let mut target = None;
     let mut answers = None;
     let mut capabilities = None;
+    let mut user_root = None;
     let mut mode = None;
     let mut output = None;
     let mut reconfigure_roles = BTreeSet::new();
@@ -522,6 +668,9 @@ fn parse_setup(arguments: &[String]) -> Result<SetupArguments, RenderError> {
             "--answers" => answers = Some(next_value(arguments, &mut index, "--answers")?),
             "--capabilities" => {
                 capabilities = Some(next_value(arguments, &mut index, "--capabilities")?);
+            }
+            "--user-root" => {
+                user_root = Some(next_value(arguments, &mut index, "--user-root")?);
             }
             "--reconfigure-role" => {
                 reconfigure_roles.insert(next_value(arguments, &mut index, "--reconfigure-role")?);
@@ -547,6 +696,7 @@ fn parse_setup(arguments: &[String]) -> Result<SetupArguments, RenderError> {
         target: PathBuf::from(required(target, "--target")?),
         answers: PathBuf::from(required(answers, "--answers")?),
         capabilities: PathBuf::from(required(capabilities, "--capabilities")?),
+        user_root: PathBuf::from(required(user_root, "--user-root")?),
         mode: mode.ok_or_else(|| {
             RenderError::Input("choose exactly one of --dry-run, --apply, or --validate".to_owned())
         })?,
@@ -1495,7 +1645,7 @@ mod tests {
         assert!(is_help_request(&["--help".to_owned()]));
         assert!(SETUP_USAGE.contains(
             "hive setup --target <dir> --answers <yml> --capabilities <json> \
-             (--dry-run|--apply|--validate)"
+             --user-root <dir> (--dry-run|--apply|--validate)"
         ));
         assert!(SETUP_USAGE.contains("--output json"));
     }

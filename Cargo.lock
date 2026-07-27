@@ -423,6 +423,7 @@ dependencies = [
  "serde_json_canonicalizer",
  "tempfile",
  "toml",
+ "yaml_serde",
 ]
 
 [[package]]
