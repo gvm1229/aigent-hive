@@ -56,6 +56,25 @@ git diff --cached --check
 git diff --cached --stat
 ```
 
+## Verification Tiers
+
+Match verification cost to the current boundary:
+
+1. **Work loop** — run the changed Rust crate tests and directly related Python tests only.
+2. **Pre-commit** — run affected crates plus the nearest black-box, schema, static-contract,
+   or regression tests for the changed behavior.
+3. **Pre-push** — run the full Rust workspace and full Python conformance suite once for the
+   logical milestone being pushed. Do not repeat an unchanged full-suite result for every
+   commit in the same milestone.
+4. **Release** — run clean-clone CI, every supported OS/architecture, hostile and security
+   suites, installer/update recovery, signing, provenance, and publication qualification.
+
+Keep existing hostile and security tests. Until the first public release, do not add a new
+hostile edge-case implementation or test unless it directly protects installation, canonical
+data, credentials, external-path confinement, update rollback/recovery, or a regression found
+in the changed behavior. Record other hardening candidates for post-release review instead of
+expanding the active implementation.
+
 After every commit:
 
 ```bash
