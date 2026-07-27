@@ -11,13 +11,19 @@
 - Consumer knowledge core·Skill 안전 계약 재사용
 - OMX/OMC namespace와 runtime state 독립
 - Clean checkout 기반 SQLite 무네트워크 재구축
+- Persistent OS advisory lock marker와 disposable index lifecycle 분리
+- Shared reader·exclusive writer lock과 in-flight claim gap 관찰 0건
+- Ambient SQLite target path 없는 in-memory build·검증과 pinned capability 기반
+  recoverable two-phase CAS publication
 
 ## 결정과 기준선
 
 - [x] [SLW-001] Canonical source Wiki를 tracked `llm-wiki/en/`·`llm-wiki/ko/`로
   고정하고 `omx_wiki/`·`.omx/wiki/`·consumer `.hive/knowledge/` 사용 금지
 - [x] [SLW-002] OMX/OMC를 현재 compatibility dependency와 orchestration owner로만
-  사용하고 장기적으로 host-native·provider-neutral surface로 대체 후 제거하는 방향 기록
+  사용하되 OMX Wiki Skill은 제외하고, durable knowledge가 replaceable orchestrator보다
+  오래 유지되도록 장기 host-native·provider-neutral 대체와 retirement 시 knowledge
+  migration 0건 방향 기록
 - [x] [SLW-003] Hive-owned Skill의 source↔consumer 양방향 reuse, shared canonical
   `harness/skills/`, exact source projection `.agents/skills/`, consent·conformance gate를
   `AGENTS.md`와 source architecture directive에 고정
@@ -36,8 +42,12 @@
   knowledge·Skill routing·upgrade·usage host·security/release·workflow topic의
   영어·한국어 exact slug pair 작성
 - [ ] [SLW-008] Canonical Markdown만으로 ignored
-  `.agents/work/source-wiki/index.sqlite3`를 재구축하고 삭제·corruption 뒤
-  logical query equivalence 검증
+  `.agents/work/source-wiki/index.sqlite3`를 재구축하고, persistent noncanonical
+  `.index.lock`의 shared reader·exclusive writer OS advisory lock, reader의 in-flight
+  claim gap 관찰 0건, ambient SQLite target path 없는 in-memory serialize·deserialize,
+  pinned capability의 recoverable two-phase CAS, crash 뒤 missing live와 exact Hive-owned
+  orphan claim·temporary의 explicit-rebuild-only cleanup, 삭제·corruption 뒤 logical
+  query equivalence와 `query` fail-closed 검증
 - [ ] [SLW-009] Consumer knowledge Skill의 selected workflow를 재사용하는 source-only
   `hive-source-wiki` Skill, simple-question isolation과 explicit capture·maintenance intent
 - [ ] [SLW-010] Missing pair·mismatched source·broken cross-link·symlink·secret candidate·
@@ -60,5 +70,10 @@
 - Canonical source: `AGENTS.md`, directives, architecture, ADR, plan, state, tracked source
 - Wiki: LLM retrieval·onboarding용 reviewed projection
 - SQLite: ignored derived index
+- Lock marker: ignored persistent noncanonical shared-reader·exclusive-writer coordination state
+- Publication: pinned capability 기반 recoverable two-phase CAS
+- Crash recovery: 다음 explicit rebuild만 exact regular Hive-owned claim·temporary 정리
+- Query: missing·stale·corrupt·crash-interrupted index에서 implicit repair 없는 fail-closed
 - Conflict: canonical source 우선, Wiki stale 처리
-- External orchestration: current execution aid, Wiki authority 없음
+- External orchestration: current OMX/OMC 실행 보조, OMX Wiki Skill·Wiki authority 없음
+- Retirement: OMX/OMC 제거 시 durable knowledge migration 0건

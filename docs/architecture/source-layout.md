@@ -66,8 +66,23 @@ state와 user knowledge의 source import 금지.
 `.omx/`·`.omc/` 수정 금지.
 
 계획된 source LLM Wiki: tracked `llm-wiki/en/`·`llm-wiki/ko/` Markdown.
-Derived SQLite: ignored `.agents/work/source-wiki/index.sqlite3`. Consumer `.hive/knowledge/`,
-`omx_wiki/`와 `.omx/wiki/` 사용 금지. 세부 계획:
+Derived SQLite: ignored disposable `.agents/work/source-wiki/index.sqlite3`.
+Coordination marker: ignored persistent noncanonical
+`.agents/work/source-wiki/.index.lock`. Rebuild는 marker regular file의 exclusive OS
+advisory lock, `lint`·`query`는 shared lock 사용. Reader는 writer 완료 뒤 live index를
+bounded read하고 in-memory 검증 종료까지 lock을 유지하여 in-flight claim gap 관찰
+0건. SQLite는 ambient target path에서 직접 open하지 않고 in-memory
+생성→serialize→in-memory deserialize 검증 뒤 pinned source-root capability 내부의
+recoverable two-phase CAS로 publication. Phase 1은 expected live identity 확인과 unique
+Hive-owned claim 이동, Phase 2는 synced temporary의 live 이동과 exact prior claim 정리.
+Crash residue는 missing live index와 exact Hive-owned orphan claim·temporary 가능.
+다음 explicit rebuild만 canonical Markdown에서 disposable index를 재생성하고 exact
+regular Hive-owned claim·temporary path를 정리. `lint`·`query`는 missing·stale·corrupt·
+crash-interrupted index에서 implicit repair 없이 fail-closed. Consumer
+`.hive/knowledge/`, `omx_wiki/`와 `.omx/wiki/` 사용 금지.
+현재 source orchestration: OMX/OMC 활용, OMX Wiki Skill 제외.
+Durable knowledge가 replaceable orchestrator보다 오래 유지되어야 하며 향후 OMX/OMC
+retirement의 knowledge migration은 0건. 세부 계획:
 [`source-llm-wiki.md`](../plans/active/source-llm-wiki.md).
 세부 계약:
 

@@ -1,0 +1,83 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/gvm1229/aigent-hive/schemas/source-wiki-page.schema.json",
+  "title": "Aigent Hive bilingual source Wiki page frontmatter",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "pair_id",
+    "topic_slug",
+    "language",
+    "counterpart",
+    "title",
+    "summary",
+    "tags",
+    "aliases",
+    "sources",
+    "links",
+    "reviewed_revision",
+    "status"
+  ],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "pair_id": {
+      "type": "string",
+      "pattern": "^(?=.{1,96}$)[a-z0-9]+(?:-[a-z0-9]+)*$"
+    },
+    "topic_slug": {
+      "type": "string",
+      "pattern": "^(?=.{1,96}$)[a-z0-9]+(?:-[a-z0-9]+)*$"
+    },
+    "language": { "enum": ["en", "ko"] },
+    "counterpart": {
+      "type": "string",
+      "pattern": "^\\.\\./(?:en|ko)/(?=[a-z0-9-]{1,96}\\.md$)[a-z0-9]+(?:-[a-z0-9]+)*\\.md$"
+    },
+    "title": { "type": "string", "minLength": 1, "pattern": "\\S" },
+    "summary": { "type": "string", "minLength": 1, "pattern": "\\S" },
+    "tags": {
+      "type": "array",
+      "description": "Entries must be lexicographically sorted and unique. JSON Schema enforces uniqueness and item shape; Hive CLI enforces lexicographic sortedness.",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^(?=.{1,96}$)[a-z0-9]+(?:-[a-z0-9]+)*$"
+      }
+    },
+    "aliases": {
+      "type": "array",
+      "description": "Entries must be lexicographically sorted, unique, nonempty, and trimmed. JSON Schema enforces uniqueness and per-item trimming; Hive CLI enforces lexicographic sortedness.",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "pattern": "^(?!\\s)(?![\\s\\S]*\\s$)[\\s\\S]+$"
+      }
+    },
+    "sources": {
+      "type": "array",
+      "description": "Entries must be lexicographically sorted and unique. JSON Schema enforces uniqueness and locator shape; Hive CLI enforces lexicographic sortedness.",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^repo:(?!(?:[^/]+/)*(?:\\.{1,2}|\\.git|\\.hive|\\.omx|\\.omc|\\.codex|\\.claude|omx_wiki)(?:/|#sha256:))[^\\\\/#]+(?:/[^\\\\/#]+)*#sha256:[0-9a-f]{64}$"
+      }
+    },
+    "links": {
+      "type": "array",
+      "description": "Entries must be lexicographically sorted and unique. JSON Schema enforces uniqueness and item shape; Hive CLI enforces lexicographic sortedness.",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^(?=.{1,96}$)[a-z0-9]+(?:-[a-z0-9]+)*$"
+      }
+    },
+    "reviewed_revision": {
+      "type": "string",
+      "pattern": "^git:[0-9a-f]{40}$"
+    },
+    "status": { "const": "active" }
+  }
+}

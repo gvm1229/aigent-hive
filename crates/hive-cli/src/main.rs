@@ -26,6 +26,7 @@ mod knowledge;
 mod project_upgrade;
 mod role;
 mod run;
+mod source_wiki;
 mod update;
 mod usage;
 mod usage_control;
@@ -41,6 +42,9 @@ USAGE:
     hive check-target <path>
     hive setup --help
     hive setup --target <dir> --answers <yml> --capabilities <json> (--dry-run|--apply|--validate) [--reconfigure-role <role-id>]... --output json
+    hive source-wiki lint --target <source-root> --output json
+    hive source-wiki index --target <source-root> --output json
+    hive source-wiki query --target <source-root> --language en|ko (--text <query>|--tag <tag>) [--limit <1..100>] --output json
     hive knowledge ingest|query|promote|lint|delete|suppress --help
     hive project upgrade --target <dir> (--scan|--dry-run|--apply|--validate|--recover) --output json
     hive index rebuild --target <dir> --output json
@@ -157,6 +161,7 @@ fn main() -> ExitCode {
         }
         Some("setup") => run_setup(&arguments[1..]),
         Some("install") => user_install::run_install(&arguments[1..]),
+        Some("source-wiki") => source_wiki::run(&arguments[1..]),
         Some("knowledge") => knowledge::run_knowledge(&arguments[1..]),
         Some("project") => project_upgrade::run(&arguments[1..]),
         Some("index") => knowledge::run_index(&arguments[1..]),

@@ -1,0 +1,6 @@
+interface:
+  display_name: "Hive Source Wiki"
+  short_description: "Maintain provider-neutral bilingual source knowledge"
+  default_prompt: "Use $hive-source-wiki to query or maintain the bilingual source Wiki."
+policy:
+  allow_implicit_invocation: true
