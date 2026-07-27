@@ -2,10 +2,10 @@
 
 - 기준 branch: `develop`
 - product version: `0.7.0`
-- plan revision: `1.47`
+- plan revision: `1.48`
 - 현재 milestone: Phase 7 qualification + source bilingual LLM Wiki `0.8.0`
-- 현재 작업: provider-neutral source Wiki 계획과 source↔consumer Skill reuse directive
-  완료; Wiki implementation, Claude·signed publication qualification 잔여
+- 현재 작업: provider-neutral bilingual Source Wiki 구현·검증 완료; Claude·signed
+  publication qualification 잔여
 - 외부 중지 경계: protected signing/publication credential, 실제 production publication,
   exact `1.0.0` 사용자 authority
 - Plan load: compact `docs/plans/PLAN.md` + `docs/plans/phases/07-public-qualification.md`
@@ -13,13 +13,13 @@
   + `docs/plans/active/native-usage-sensor.md`
   + `docs/plans/active/source-llm-wiki.md`
   + `docs/plans/active/documentation-style.md` + `docs/plans/active/security-review.md`
-- Plan completion: canonical checklist `178/192` 완료, `14`개 미완료, `92.7%`
+- Plan completion: canonical checklist `184/192` 완료, `8`개 미완료, `95.8%`
 - Native Goal routing: legacy `PLAN.md` checkbox 문구를 `phases/07-public-qualification.md`,
   `active/plugin-project-lifecycle.md`, `active/native-usage-sensor.md`,
   `active/source-llm-wiki.md`, `active/documentation-style.md`,
   `active/security-review.md`로 해석
 
-## Source bilingual LLM Wiki 계획
+## Source bilingual LLM Wiki
 
 - Canonical path: `llm-wiki/en/`, `llm-wiki/ko/`
 - 금지 path: `omx_wiki/`, `.omx/wiki/`, source root의 consumer `.hive/knowledge/`
@@ -27,7 +27,16 @@
 - 장기 방향: host-native·provider-neutral capability 대체 뒤 OMX/OMC 제거
 - Consumer reuse: `hive-wiki` core와 capture·maintenance·query 안전 계약
 - Skill reuse: shared canonical `harness/skills/`, exact source `.agents/skills/` projection
-- 현재 상태: plan·directive·decision 완료, Wiki content·source adapter 미구현
+- 현재 상태: 영어 11개·한국어 11개 page, exact pair 11개와 source-confined CLI·Skill 구현 완료
+- Logical digest:
+  `sha256:180247b1d5682d5b942385139f2fea2cd304a5ddb18b816b0c731902ab95af76`
+- 검증: lint finding·warning 0건, 영어·한국어 query PASS, index 삭제 뒤 query
+  fail-closed exit `5`, rebuild equivalence PASS
+- SQLite binary digest는 invocation-local evidence이며 정본·clean-copy equivalence 기준이
+  아님. Logical digest와 query 결과가 rebuild equivalence 기준
+- Targeted tests: `hive-cli` 190/190, `hive-wiki` 27/27, Source Wiki Python 27/27
+- OMX Wiki Skill 제외 이유·향후 OMX/OMC retirement 시 knowledge migration 0건:
+  [`ADR-0011`](../decisions/ADR-0011-source-wiki-independence.md)
 - Active fragment:
   [`source-llm-wiki.md`](../plans/active/source-llm-wiki.md)
 
@@ -114,7 +123,7 @@
 계획 evidence:
 
 - Active fragment 8 KiB 제한 충족
-- Canonical checklist `174/182`, active checklist ID 중복 0건
+- Canonical checklist `184/192`, active checklist ID 중복 0건
 - Plan static contract 29/29, documentation style regression 18/18 PASS
 - Human documentation inventory 1,698/1,698 review, finding 0건
 - Markdown link conformance PASS
@@ -259,25 +268,15 @@ packaging을 추가한 backward-compatible feature minor. Major 변경·추론 �
 
 ## 현재 검증 상태
 
-Current worktree local qualification PASS:
+Source Wiki targeted qualification PASS:
 
-- Locked workspace build, `cargo fmt`, strict Clippy
-- Rust workspace test 365/365
-- Python conformance 517개 실행, 516 PASS, Windows `pwsh` 전용 1개 expected skip
-- User install historical inventory·retirement·journal·recovery 50/50
-- Root knowledge promotion·provenance·external race 10/10
-- Project directive ownership collision·tamper·race 4/4
-- Historical project base registry·tamper 9/9
-- Codex native executable swap fallback 차단
-- Codex plugin package validator PASS
-- Canonical Skill validator 17/17 PASS
-- Copier default host 3개, hostile 1개, invalid-hook 거부 3개, scaffold 4개
-- 사람용 문서 1,698/1,698 review, finding 0건
-- Markdown link와 JSON·YAML·TOML·shell·workflow syntax conformance PASS
-- Product version `0.7.0`
-- Provider SDK·endpoint·credential access·live token finding 0건
-- Skill·template·compiled projection parity
-- 독립 architecture·code·completion verification PASS, actionable finding 0건
+- `hive-cli` 190/190, `hive-wiki` 27/27, Source Wiki Python 27/27
+- Rust workspace 415/415
+- Canonical page 22개, bilingual pair 11개
+- `lint` finding·warning 0건, 영어·한국어 query PASS
+- Index 삭제 뒤 query fail-closed exit `5`, logical digest·query equivalence rebuild PASS
+- Ignored index·persistent lock의 Git 추적 0건
+- Full Python conformance 556개 실행, 555 PASS, Windows `pwsh` 전용 1개 expected skip
 
 ### macOS Apple Silicon local release qualification historical CLEAR
 
@@ -327,8 +326,7 @@ Remote qualification evidence:
 
 ## 다음 action
 
-1. SLW-005–010 source bilingual LLM Wiki 구현·검증
-2. RPH-036 실제 Claude install/update E2E
-3. NUS-020 실제 Claude Pro/Max qualification
-4. NUS-014·P7-013·P7-021 실제 세 host matrix
-5. P7-018·020·037 signed release qualification
+1. RPH-036 실제 Claude install/update E2E
+2. NUS-020 실제 Claude Pro/Max qualification
+3. NUS-014·P7-013·P7-021 실제 세 host matrix
+4. P7-018·020·037 signed release qualification

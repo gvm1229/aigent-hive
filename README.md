@@ -13,7 +13,7 @@
 
 > 🐝 **Aigent Hive:** Codex, Claude Code, Gemini Antigravity 같은 구독형 agent host 위에서 일관된 setup, Skill routing, 역할·지식·run 상태, 안전한 update와 검증 계약을 제공하는 **provider-neutral 로컬 agent harness**
 
-> 🚧 **현재 상태:** product version `0.7.0`; Phase 1–6 완료, Phase 7 local qualification `33/40`. macOS Apple Silicon local release build·package·install·runtime CLEAR. macOS Intel·Windows runtime, 세 host actual session E2E, protected signing·notarization·publication은 외부 authority 대기.
+> 🚧 **현재 상태:** product version `0.7.0`; Phase 1–6 완료, Phase 7 local qualification `35/40`. macOS arm64·Intel과 Windows x86_64 unsigned current-candidate runtime PASS. 실제 Claude session, protected signing·notarization·publication은 외부 authority 대기.
 
 모델 API·provider SDK 미사용. API key 요청·저장 없음. Compatible OMX·OMC가 있으면
 검증된 orchestration 기능 우선 재사용. Detection이 `absent|incompatible|unknown`이면
@@ -30,6 +30,7 @@ explicit consent에서만 허용.
 - [의존성](#의존성)
 - [저장소 구조](#저장소-구조)
 - [개발과 검증](#개발과-검증)
+- [Source bilingual LLM Wiki](#source-bilingual-llm-wiki)
 - [Source 개발 usage safeguard](#source-개발-usage-safeguard)
 - [Canonical knowledge와 disposable index](#canonical-knowledge와-disposable-index)
 - [Subscription usage guard](#subscription-usage-guard)
@@ -43,7 +44,7 @@ explicit consent에서만 허용.
 
 | 구분 | 지원·동작 방식 | Hive의 필수 build dependency |
 | --- | --- | --- |
-| 🖥️ 운영체제 | macOS Apple Silicon local release qualification CLEAR; macOS Intel·Windows와 public signing qualification 대기 | 해당 없음 |
+| 🖥️ 운영체제 | macOS arm64·Intel과 Windows x86_64 unsigned current-candidate runtime PASS; public signing qualification 대기 | 해당 없음 |
 | 🤖 Agent host | Codex·Claude Code·Gemini Antigravity adapter 구현; 실제 session E2E 대기 | 아니요 |
 | 🧭 Orchestration | Compatible OMX·OMC가 감지되면 해당 기능을 우선 사용 | 아니요 |
 | 🪶 Native fallback | OMX·OMC가 unavailable이면 truthful host-native capability 범위에서 동작 | 해당 없음 |
@@ -68,6 +69,7 @@ OMX·OMC: Hive와 함께 사용할 수 있는 우선 orchestration layer. 필수
 | 결정적 setup | typed answer와 capability evidence의 staging 검증, ownership manifest 범위만 적용. Conflict, target retarget, symlink escape, activation 실패 시 user·foreign byte 보존과 중단·rollback. | Source workspace의 consumer harness 생성 금지. |
 | Portable Skill routing | simple-question gate 뒤 narrow description이 맞는 approved Skill만 자동 선택. Codex의 compatible OMX와 Claude의 compatible OMC 기능 우선. | plan, Ralph, team, persistent loop, model runtime 재구현 금지. |
 | Prompt refinement | exact 이름 `hive-prompt-refine`으로 명시적인 prompt 작성·개선 intent만 처리. 기본은 `refine-only`이며 `refine-and-run`은 사용자의 실행 의도가 명시된 경우에만 허용. | 일반 prompt hidden rewrite와 의미 변경을 금지. |
+| Source bilingual LLM Wiki | `llm-wiki/en/`·`llm-wiki/ko/` exact pair와 reviewed source digest를 검증하고 ignored SQLite index를 무네트워크 재구축. | Source workspace 전용. OMX Wiki·consumer knowledge lifecycle과 분리. |
 | Persistent role·run | Markdown 정본에 role identity, handoff, PLAN-derived criterion, evidence, immutable orchestration owner 고정. Fresh session 복구 지원. | CLI 범위는 dispatch brief data 준비까지. Model·subagent spawn 금지. |
 | Subscription usage guard | 설치 threshold를 권위값으로 사용. Session limit은 weekly 대비 우선이며 session 부재 시에만 weekly 사용. Stale, 역행, scope mismatch, sensor 불확실성은 automatic continuation fail-closed. | Optional CodexBar: local read-only sensor. Provider API·credential 사용 없음. |
 | Ed25519 authenticated judge quorum | Clean-context package, owner-sealed assignment, 독립 verdict와 critical human approval 각각을 detached Ed25519 signature로 인증. Public key는 consumer target 밖의 agent-write-denied trust root에서만 읽고 owner·judge·approver key purpose와 identity를 분리. Elevated는 authenticated 2/3, critical은 distinct judge 3/3와 별도 authenticated human approval이 필요. | Hive는 verification만 수행. Private key 생성·보관·signing, judge/model 실행과 판단의 진실성은 외부 authority가 소유. Unsigned v1은 진단 호환만 제공하며 PASS 권한 없음. |
@@ -164,6 +166,7 @@ Rust runtime은 filesystem containment, schema·serialization, RFC 8785 canonica
 ├── harness/             # 출하할 template, Skill, profile, projection source
 ├── schemas/             # provider-neutral JSON Schema contract
 ├── tests/               # Copier fixture와 conformance test
+├── llm-wiki/            # 영어·한국어 source knowledge 정본
 ├── LICENSE              # GitHub가 감지하는 Apache-2.0 전문
 ├── LICENSES/            # REUSE용 Apache-2.0 canonical 전문
 ├── REUSE.toml           # file-scope license mapping
@@ -197,12 +200,33 @@ python -m unittest tests.conformance.test_phase5_judge -v
 python -m unittest tests.conformance.test_phase6_update -v
 ```
 
+## Source bilingual LLM Wiki
+
+Source knowledge 정본: 영어 [`llm-wiki/en/`](llm-wiki/en/), 한국어
+[`llm-wiki/ko/`](llm-wiki/ko/). SQLite index와 persistent advisory lock은 ignored
+`.agents/work/source-wiki/` 아래의 disposable·coordination state.
+
+```bash
+hive source-wiki index --target . --output json
+hive source-wiki lint --target . --output json
+hive source-wiki query --target . --language en --text "source architecture" --output json
+hive source-wiki query --target . --language ko --text "소스 아키텍처" --output json
+```
+
+`lint`와 `query`: missing·stale·corrupt·crash-interrupted index에서 implicit repair 없는
+fail-closed. Rebuild authority: explicit `index` command만 보유.
+
+OMX/OMC는 현재 source orchestration 보조로 사용하지만 durable Wiki authority에서는
+제외. 이유와 향후 OMX/OMC retirement 시 knowledge migration 0건 원칙:
+[`ADR-0011`](docs/decisions/ADR-0011-source-wiki-independence.md).
+
 ## Source 개발 usage safeguard
 
 이 저장소 자체의 장시간 Codex 작업에는 source-only `hive-usage-guard` Skill을 사용.
-Qualified CodexBar `0.45.2`를 별도 watcher가 기본 15초 간격으로 읽고, 매 user turn의
-simple-question 판별 전과 각 tool, mutation, delegation, external write, push, 최종
-응답 전 fresh gate가 halt marker를 강제. Session limit이 있으면 weekly보다
+Qualified Codex app-server native sensor를 먼저 사용하고 CodexBar `0.45.2`는
+fallback-only. 별도 watcher가 기본 15초 간격으로 읽고, 매 user turn의 simple-question
+판별 전과 각 tool, mutation, delegation, external write, push, 최종 응답 전 fresh
+gate가 halt marker를 강제. Session limit이 있으면 weekly보다
 우선하고, 없을 때만 weekly를 사용. 기본 중지선은 remaining `10%` inclusive이며
 quota sensor unknown은 3초 뒤 1회 재시도 후 일시 오류로 기록하고 진행. 이전
 confirmed-limited marker와 session·path·integrity 오류는 계속 fail-closed.

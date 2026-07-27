@@ -33,25 +33,39 @@
 
 ## 구현
 
-- [ ] [SLW-005] `hive-wiki` core를 재사용하는 source-confined
+- [x] [SLW-005] `hive-wiki` core를 재사용하는 source-confined
   `hive source-wiki lint|index|query` adapter, `hive-source.json` identity와
   `llm-wiki/` 외 canonical mutation 차단
-- [ ] [SLW-006] Language, pair ID, topic slug, reciprocal counterpart, canonical source
+- [x] [SLW-006] Language, pair ID, topic slug, reciprocal counterpart, canonical source
   locator와 reviewed revision을 결합한 bilingual page schema와 exact pair validation
-- [ ] [SLW-007] `index.md`와 source overview·boundary·crate architecture·plugin lifecycle·
+- [x] [SLW-007] `index.md`와 source overview·boundary·crate architecture·plugin lifecycle·
   knowledge·Skill routing·upgrade·usage host·security/release·workflow topic의
   영어·한국어 exact slug pair 작성
-- [ ] [SLW-008] Canonical Markdown만으로 ignored
+- [x] [SLW-008] Canonical Markdown만으로 ignored
   `.agents/work/source-wiki/index.sqlite3`를 재구축하고, persistent noncanonical
   `.index.lock`의 shared reader·exclusive writer OS advisory lock, reader의 in-flight
   claim gap 관찰 0건, ambient SQLite target path 없는 in-memory serialize·deserialize,
   pinned capability의 recoverable two-phase CAS, crash 뒤 missing live와 exact Hive-owned
   orphan claim·temporary의 explicit-rebuild-only cleanup, 삭제·corruption 뒤 logical
   query equivalence와 `query` fail-closed 검증
-- [ ] [SLW-009] Consumer knowledge Skill의 selected workflow를 재사용하는 source-only
+- [x] [SLW-009] Consumer knowledge Skill의 selected workflow를 재사용하는 source-only
   `hive-source-wiki` Skill, simple-question isolation과 explicit capture·maintenance intent
-- [ ] [SLW-010] Missing pair·mismatched source·broken cross-link·symlink·secret candidate·
+- [x] [SLW-010] Missing pair·mismatched source·broken cross-link·symlink·secret candidate·
   stale index hostile conformance, 영어·한국어 query와 clean-checkout rebuild PASS
+
+구현 evidence:
+
+- Canonical page: 영어 11개·한국어 11개, exact pair 11개
+- Logical digest:
+  `sha256:180247b1d5682d5b942385139f2fea2cd304a5ddb18b816b0c731902ab95af76`
+- `lint`: finding 0건, warning 0건
+- 영어·한국어 text query: PASS
+- Index 삭제 뒤 query: fail-closed exit `5`
+- Rebuild equivalence: logical digest와 query 결과 일치. SQLite binary digest는
+  invocation-local evidence이며 정본·clean-copy equivalence 기준이 아님
+- Targeted tests: `hive-cli` 190/190, `hive-wiki` 27/27, Source Wiki Python 27/27
+- Full Python conformance: 556개 실행, 555 PASS, Windows `pwsh` 전용 1개 expected skip
+- Git 제외: `.agents/work/source-wiki/index.sqlite3`, `.index.lock`
 
 ## Reuse 판정
 

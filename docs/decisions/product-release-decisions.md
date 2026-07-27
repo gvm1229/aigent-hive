@@ -18,7 +18,7 @@
 | 재구현 금지 | Hive plan·Ralph·team·provider session engine 없음 |
 | Skill | active projection은 구현 완료 built-in 13개; optional은 이름·source·revision·content digest·권한의 개별 수동 승인 후에만 사용 |
 | Skill 양방향 reuse | Hive-owned source↔consumer Skill reuse 허용; shared canonical은 `harness/skills/`, source는 exact `.agents/skills/` projection, scope·safety·consent·conformance review 필수 |
-| Source LLM Wiki | tracked `llm-wiki/en/`·`llm-wiki/ko/` bilingual Markdown 정본, `omx_wiki/`·`.omx/wiki/`·consumer `.hive/knowledge/` 금지, SQLite는 ignored source projection |
+| Source LLM Wiki | tracked `llm-wiki/en/`·`llm-wiki/ko/` bilingual Markdown 정본, `omx_wiki/`·`.omx/wiki/`·consumer `.hive/knowledge/` 금지, SQLite는 ignored source projection, OMX/OMC retirement 시 knowledge migration 0건 |
 | prompt refine | `hive-prompt-refine`; 명시적인 prompt 작성·정제 intent에서만 자동 선택, `refine-only` 기본. 일반 요청이 모호하거나 핵심 세부가 부족하면 작업을 막지 않는 한 줄 optional refine 제안, hidden·automatic rewrite 금지 |
 | fallback hooks | OMX/OMC가 conclusively absent이고 사용자가 capability/event/path/digest를 승인한 경우에만 project-local data-integrity hook 허용 |
 | 사용량 | Codex app-server JSON-RPC, Claude Code status-line JSON capture, 향후 qualified Antigravity structured surface를 native primary로 사용; CodexBar는 세 provider 모두 explicit-consent fallback-only; installed `usage_stop_remaining_percent`가 권위값; pool별 provider-defined window 단독 적용, cadence pool은 session 우선·session 부재 시 weekly fallback, 모든 pool 통과 필수 |
@@ -43,6 +43,9 @@
 | Antigravity plugin ownership | Hive는 `~/.hive/marketplaces/antigravity/` source package만 소유. `agy` staging·import manifest는 host 소유이며 Hive ledger에서 제외. Mutation 전 staging 전체를 authenticated prior와 exact 비교하고 foreign entry는 보존. 신규 rollback은 uninstall, refresh rollback은 prior source 재설치 |
 | Git | `main` 안정, `develop` 일반 개발; `develop → main` PR |
 | 라이선스 | CLI/source, `harness/**`와 생성된 Hive 소유 material 모두 `Apache-2.0` |
+
+Source Wiki의 독립성, OMX Wiki Skill 제외 이유와 장기 OMX/OMC retirement 방향:
+[`ADR-0011`](ADR-0011-source-wiki-independence.md).
 
 ## 미확정 항목
 
