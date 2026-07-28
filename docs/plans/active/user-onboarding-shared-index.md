@@ -64,6 +64,9 @@
 - [x] [UOS-018] `auto-setup-harness`의 global preference 상속, canonical project
   evidence와 confidence record, unresolved-only one-question sequence, zero-question apply gate,
   promotion·third-party Skill·fallback hook의 추론 승인 금지
+- [x] [UOS-019] Wiki enabled 상태의 agent-reviewed task-fact autocapture completion gate:
+  결과·사용 도구 또는 project·작성 기준·원 요청 요약의 bounded 기록, user-root·project
+  범위 분리, disable 시 capture 0건, raw transcript·hook·tool output·runtime ingestion 금지
 
 ## 완료 evidence
 
@@ -91,7 +94,7 @@
 3. UOS-011–014: project mode와 shared index
 4. UOS-015: compatible migration
 5. UOS-016: local qualification
-6. UOS-017–018: initial defaults와 automatic project inference
+6. UOS-017–019: initial defaults, automatic project inference와 task-fact autocapture
 7. Existing Claude·signing·publication external gate
 
 ## 검증 범위

@@ -295,6 +295,15 @@ hive setup --scope user \
 ```
 
 `--dry-run` 검토 뒤 `--apply`, 설치 상태 확인은 `--validate`.
+
+설치 version과 release date 확인:
+
+```text
+hive --version
+hive -v
+```
+
+출력 예시: `hive 0.7.0 (released 2026-07-24)`
 Host 제거가 필요한 재설정은 silent deactivation 대신 actionable conflict 반환.
 Bootstrap 상태의 ordinary Hive Skill activation 없음.
 

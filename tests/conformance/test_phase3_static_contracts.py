@@ -627,6 +627,44 @@ class Phase3SkillSourceContract(unittest.TestCase):
         self.assertIn("conversational imperative endings", template)
         self.assertIn("Conversational imperative", source_directive)
 
+    def test_default_on_wiki_autocaptures_reviewed_task_facts(self) -> None:
+        source_manifest = (REPOSITORY_ROOT / "AGENTS.md").read_text(
+            encoding="utf-8"
+        )
+        source_directive = (
+            REPOSITORY_ROOT / ".agents/directives/04-documentation-state.md"
+        ).read_text(encoding="utf-8")
+        project_directive = (
+            REPOSITORY_ROOT / "harness/directives/01-project-knowledge.md"
+        ).read_text(encoding="utf-8")
+        template_directive = (
+            REPOSITORY_ROOT
+            / "harness/template/.agents/directives/01-project-knowledge.md"
+        ).read_text(encoding="utf-8")
+        template_marker = (
+            REPOSITORY_ROOT / "harness/template/AGENTS.md.jinja"
+        ).read_text(encoding="utf-8")
+        capture_skill = (
+            REPOSITORY_ROOT / "harness/skills/hive-knowledge-capture/SKILL.md"
+        ).read_text(encoding="utf-8")
+
+        self.assertEqual(project_directive, template_directive)
+        for surface in (
+            source_manifest,
+            source_directive,
+            project_directive,
+            template_marker,
+            capture_skill,
+        ):
+            self.assertIn("agent-reviewed", surface.lower())
+            self.assertIn("task fact", surface.lower().replace("-", " "))
+            self.assertIn("raw transcript", surface.lower())
+        for field in ("outcome", "tool", "criteria", "originating request"):
+            self.assertIn(field, project_directive.lower())
+        self.assertIn('"enabled" if wiki_enabled else "disabled"', template_marker)
+        self.assertIn("Do not capture when Wiki is disabled", capture_skill)
+        self.assertNotIn("automatic memory ingestion", capture_skill)
+
     def test_consumer_turn_gate_uses_enforcement_and_semantic_intent(self) -> None:
         template = (
             REPOSITORY_ROOT / "harness/template/AGENTS.md.jinja"

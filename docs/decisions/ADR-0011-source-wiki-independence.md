@@ -17,6 +17,29 @@ Source Wiki 정본:
 
 Source workspace의 `omx_wiki/`, `.omx/wiki/`, `.hive/knowledge/` 사용 금지.
 
+## Agent-reviewed task fact autocapture
+
+Default-on source Wiki의 completion 계약:
+
+- Material source task 종료 전 reusable outcome·artifact·decision·workflow·criterion 판정
+- Current authorized task와 reviewed local artifact만 source
+- 기본 기록: outcome, tool 또는 external project, creation·acceptance criteria,
+  bounded originating request summary
+- Exact request: 사용자 retention intent와 credential·confidentiality·private-path review
+  이후에만 허용
+- External artifact: source corpus import 금지, tracked safe handoff의 Hive-relevant fact만 인용
+- 동일 fact: no-op 또는 current-truth pair 갱신
+- English·Korean pair 동시 기록과 explicit index rebuild
+
+금지 자동화:
+
+- Raw transcript·complete conversation·hidden prompt capture
+- Hook payload·tool output·cache·database·runtime state ingestion
+- `UserPromptSubmit`, `Stop`, `PostToolUse` 기반 memory recorder
+- Consumer knowledge 또는 installed state의 source corpus import
+
+Autocapture 의미: agent-reviewed completion step. Background watcher·hook ingestion 의미 없음.
+
 Index publication 계약:
 
 - `.index.lock`: 정본·index data가 아닌 persistent coordination marker

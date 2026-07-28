@@ -52,6 +52,10 @@
   `hive-source-wiki` Skill, simple-question isolation과 explicit capture·maintenance intent
 - [x] [SLW-010] Missing pair·mismatched source·broken cross-link·symlink·secret candidate·
   stale index hostile conformance, 영어·한국어 query와 clean-checkout rebuild PASS
+- [x] [SLW-011] Material source task 종료 전 agent-reviewed bilingual task-fact autocapture:
+  current authorized artifact와 요청만 대상, 결과·도구·기준·originating request 보존,
+  idempotent current-truth 갱신, raw transcript·hook·runtime ingestion 없는 LumaDeck
+  marketing deck 재개 record와 query 검증
 
 구현 evidence:
 

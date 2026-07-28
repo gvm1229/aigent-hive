@@ -16,6 +16,28 @@ This directive governs durable project memory.
 
 Do not use chat history, `.omx/`, `.agents/work/`, issue drafts, or generated SQLite data as durable project memory.
 
+## Agent-Reviewed Task-Fact Autocapture
+
+- Before the final response for a material source task, decide whether the completed work created
+  or materially revised a reusable artifact, product fact, decision, workflow, criterion, or
+  continuation context.
+- When it did, load `hive-source-wiki` and update the smallest current-truth English/Korean pair.
+- Capture only facts from the current authorized task and its reviewed local artifacts: outcome,
+  tool or external project used, creation or acceptance criteria, and a bounded originating
+  request summary.
+- Preserve an exact originating request only when the user explicitly requests exact retention
+  and the bounded text passes credential, confidentiality, and private-path review.
+- Keep an external artifact outside the source corpus. Record only the Hive-relevant fact and a
+  safe locator in a tracked source handoff or decision document, then cite that repository source
+  from the Wiki pair.
+- Treat an identical fact as an idempotent no-op. Update the existing topic instead of appending a
+  correction diary or duplicating a session record.
+- Never ingest a raw transcript, complete conversation, hook payload, tool output, hidden prompt,
+  cache, database, or runtime state. Autocapture is an agent-reviewed completion step, not a hook
+  or background recorder.
+- Skip autocapture for editless/simple questions, tasks with no durable value, unsafe material, or
+  explicit user opt-out. Report a safety skip only when it affects the requested result.
+
 ## Current-Truth Policy
 
 - Update the existing canonical document instead of appending a correction diary.

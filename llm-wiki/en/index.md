@@ -9,9 +9,9 @@ summary: "Navigation for the provider-neutral bilingual knowledge of the Aigent 
 tags: [entrypoint, navigation, source-wiki]
 aliases: ["Hive source knowledge"]
 sources:
-  - "repo:AGENTS.md#sha256:28626a77b614ca70cd09afdeb8be3d0767e5ca088ab52e942bf2af269d7b9cb2"
+  - "repo:AGENTS.md#sha256:8293c7e01a78bbf6106fc6ee9cca9748171ba2361c5003883ad11faa4a81b396"
   - "repo:hive-source.json#sha256:528b3c6a8f8614a38065144f2de9f3cd527474d5e4ec3f720acd6a27e60f2019"
-links: [boundaries, crate-architecture, knowledge, plugin-lifecycle, security-release, skill-routing, source-overview, upgrade, usage-hosts, workflow]
+links: [boundaries, crate-architecture, knowledge, marketing-deck, plugin-lifecycle, security-release, skill-routing, source-overview, upgrade, usage-hosts, workflow]
 reviewed_revision: "git:7b6cef8887dbc0571e5a65e5bf32bc829ce3c5d5"
 status: active
 ---
@@ -26,6 +26,7 @@ canonical. The local SQLite index is disposable and rebuildable.
 
 - Start with `source-overview` and `boundaries` for purpose, ownership, and provider neutrality.
 - Use `crate-architecture`, `knowledge`, and `skill-routing` for implementation structure.
+- Use `marketing-deck` to resume the Hive overview presentation in LumaDeck.
 - Use `plugin-lifecycle`, `upgrade`, and `usage-hosts` for host-facing lifecycle behavior.
 - Use `security-release` and `workflow` for trust boundaries and maintainer practice.
 

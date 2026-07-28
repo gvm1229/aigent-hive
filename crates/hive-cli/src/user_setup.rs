@@ -1311,8 +1311,17 @@ fn render_user_directive(config: &UserSetupConfig, resolved_skills: &[String]) -
     };
     let profile = render_catalog_selection(&config.profile);
     let persona = render_catalog_selection(&config.persona);
+    let capture = if config.wiki.enabled {
+        "- Before the final response for material work, run agent-reviewed task-fact autocapture \
+into the enabled global Wiki. Record the bounded outcome, tool or project, criteria, and \
+originating request summary from current authorized artifacts; never ingest a raw transcript, \
+hook payload, tool output, hidden prompt, or runtime state.\n"
+    } else {
+        "- Wiki capture is disabled. Do not capture or refresh the knowledge index; preserve \
+canonical Markdown until an explicit deletion request.\n"
+    };
     format!(
-        "# Aigent Hive user preferences\n\n- Setup state: `operational`\n- Interface language: `{}`\n- User profile: {profile}\n- Agent persona: {persona}\n- Selected hosts: `{hosts}`\n- Global Wiki: `{wiki}`\n- Active Skills: `{}`\n- For ambiguous or detail-poor ordinary prompts, offer one concise optional refine suggestion without automatic rewrite.\n- Never request provider credentials or call model-provider APIs on Hive's behalf.\n",
+        "# Aigent Hive user preferences\n\n- Setup state: `operational`\n- Interface language: `{}`\n- User profile: {profile}\n- Agent persona: {persona}\n- Selected hosts: `{hosts}`\n- Global Wiki: `{wiki}`\n- Active Skills: `{}`\n{capture}- For ambiguous or detail-poor ordinary prompts, offer one concise optional refine suggestion without automatic rewrite.\n- Never request provider credentials or call model-provider APIs on Hive's behalf.\n",
         config.interface_language.as_str(),
         resolved_skills.join(", ")
     )
@@ -1773,6 +1782,28 @@ usage_guard:
 
         assert!(rendered.contains("- User profile: `custom` — `웹과 게임`"));
         assert!(rendered.contains("- Agent persona: `custom` — `` friendly `but strict` ``"));
+    }
+
+    #[test]
+    fn user_directive_gates_task_fact_autocapture_on_wiki_enablement() {
+        let mut config = valid_config();
+        let enabled = String::from_utf8(render_user_directive(
+            &config,
+            &["hive-knowledge-capture".to_owned()],
+        ))
+        .expect("enabled guidance");
+        assert!(enabled.contains("agent-reviewed task-fact autocapture"));
+        assert!(enabled.contains("originating request"));
+        assert!(enabled.contains("raw transcript"));
+
+        config.wiki.enabled = false;
+        let disabled = String::from_utf8(render_user_directive(
+            &config,
+            &["hive-knowledge-capture".to_owned()],
+        ))
+        .expect("disabled guidance");
+        assert!(!disabled.contains("agent-reviewed task-fact autocapture"));
+        assert!(disabled.contains("Wiki capture is disabled"));
     }
 
     #[test]

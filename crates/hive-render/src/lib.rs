@@ -2699,6 +2699,12 @@ fn render_agents_marker(
         resolution.resolved_owner,
         resolution.evidence_digest,
     );
+    let marker = marker.replacen(
+        "- Keep durable knowledge in Markdown. Treat `.hive/index/*.sqlite*` as disposable.\n",
+        "- Keep durable knowledge in Markdown. Treat `.hive/index/*.sqlite*` as disposable.\n\
+- When this marker reports Wiki enabled, run agent-reviewed task-fact autocapture before the final response for material work. Record the bounded outcome, tool or project, criteria, and originating request summary from current authorized artifacts; never ingest a raw transcript, hook payload, tool output, hidden prompt, or runtime state.\n",
+        1,
+    );
     if effective_preferences.is_some_and(|preferences| !preferences.usage_guard_enabled) {
         let mut disabled = marker
             .lines()
@@ -6774,6 +6780,8 @@ mod tests {
             };
             assert_eq!(added_since_0_7, expected_added);
             let changed_since_0_7 = [
+                "AGENTS.md",
+                "/directives/01-project-knowledge.md",
                 "/hive-knowledge-capture/SKILL.md",
                 "/hive-knowledge-maintenance/SKILL.md",
                 "/hive-knowledge-query/SKILL.md",
@@ -7034,6 +7042,9 @@ mod tests {
             render_agents_marker(&answers, &resolution, Some(&effective)),
             expected
         );
+        assert!(expected.contains("agent-reviewed task-fact autocapture"));
+        assert!(expected.contains("originating request"));
+        assert!(expected.contains("raw transcript"));
     }
 
     #[test]

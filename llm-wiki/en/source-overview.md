@@ -9,8 +9,8 @@ summary: "Purpose, runtime boundary, and canonical identity of the Aigent Hive R
 tags: [architecture, provider-neutral, source-workspace]
 aliases: ["Aigent Hive source"]
 sources:
-  - "repo:AGENTS.md#sha256:28626a77b614ca70cd09afdeb8be3d0767e5ca088ab52e942bf2af269d7b9cb2"
-  - "repo:Cargo.toml#sha256:ee731c226fdb29253df5f7fb1111573a892d1da34b38fd424e5ec7199f0f346a"
+  - "repo:AGENTS.md#sha256:8293c7e01a78bbf6106fc6ee9cca9748171ba2361c5003883ad11faa4a81b396"
+  - "repo:Cargo.toml#sha256:f9452a03c8e2ab1cb4e673a62cab0cd3aba3674d7b12175ad08df85fd56b5478"
   - "repo:hive-source.json#sha256:528b3c6a8f8614a38065144f2de9f3cd527474d5e4ec3f720acd6a27e60f2019"
 links: [boundaries, crate-architecture, index]
 reviewed_revision: "git:7b6cef8887dbc0571e5a65e5bf32bc829ce3c5d5"

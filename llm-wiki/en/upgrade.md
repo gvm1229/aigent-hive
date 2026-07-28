@@ -9,9 +9,9 @@ summary: "Version policy, signed root updates, project-local three-way upgrades,
 tags: [migration, update, versioning]
 aliases: ["update and migration"]
 sources:
-  - "repo:crates/hive-cli/src/project_upgrade.rs#sha256:a2246dba819fa9cae5a793ba812b33822396ee5ad6a15db01f6b00118ec8b131"
+  - "repo:crates/hive-cli/src/project_upgrade.rs#sha256:ac9005e2003713a5c2e6bbaba3ecb50121a4ea370bb42204bee68326fc9133dd"
   - "repo:crates/hive-update/src/lib.rs#sha256:46a5cc32939b251d8f866df24c701356bfa645a24ca63bdbf531deaa8ea221da"
-  - "repo:docs/decisions/ADR-0006-version-lifecycle.md#sha256:7ff3746a77517b1efd80e7637513997e33915add6c27be713b92c2221f36089e"
+  - "repo:docs/decisions/ADR-0006-version-lifecycle.md#sha256:b314d07c19558eb0de0b629250ea19c4ede782f4afc66d92078e9660f75eb26e"
 links: [boundaries, plugin-lifecycle, security-release]
 reviewed_revision: "git:7b6cef8887dbc0571e5a65e5bf32bc829ce3c5d5"
 status: active

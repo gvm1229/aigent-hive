@@ -49,6 +49,10 @@ Global setup answer:
 - Existing canonical Markdown: 기본 보존
 - Canonical Markdown 삭제: 별도 explicit destructive action
 - Re-enable: preserved Markdown 기반 index rebuild
+- Enabled completion gate: material work의 agent-reviewed task fact 자동 capture
+- 기본 task fact: bounded outcome, tool 또는 project, criteria, originating request summary
+- Exact request: explicit retention intent와 safety review 필요
+- Raw transcript·hook payload·tool output·hidden prompt·runtime state ingestion 금지
 
 ### Usage guard
 

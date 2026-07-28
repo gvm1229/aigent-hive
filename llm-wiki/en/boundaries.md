@@ -9,9 +9,9 @@ summary: "Separation of source, release, consumer ownership, and replaceable orc
 tags: [boundaries, orchestration, ownership]
 aliases: ["Hive ownership boundaries"]
 sources:
-  - "repo:AGENTS.md#sha256:28626a77b614ca70cd09afdeb8be3d0767e5ca088ab52e942bf2af269d7b9cb2"
+  - "repo:AGENTS.md#sha256:8293c7e01a78bbf6106fc6ee9cca9748171ba2361c5003883ad11faa4a81b396"
   - "repo:docs/decisions/ADR-0001-source-release-installed-boundary.md#sha256:51850d51887f4d2cd4759e562aedee458398463e2b219cb94ca7b4540ad5bab7"
-  - "repo:docs/decisions/ADR-0011-source-wiki-independence.md#sha256:e5315d16b0dc932bcedc79add82460220c64bec84e5f1e30e2ed672c93eaa5d4"
+  - "repo:docs/decisions/ADR-0011-source-wiki-independence.md#sha256:15dbcb1c9e294078dc641d0c51c3655bd047cdf1c57629cb4158e7d047097f1b"
 links: [knowledge, plugin-lifecycle, source-overview]
 reviewed_revision: "git:7b6cef8887dbc0571e5a65e5bf32bc829ce3c5d5"
 status: active

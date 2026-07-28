@@ -1,6 +1,6 @@
 ---
 name: hive-source-wiki
-description: Query, lint, index, capture, or maintain Aigent Hive's provider-neutral bilingual source Wiki when the user explicitly requests source Wiki work. Route explicit source Wiki lookup, validation, rebuild, capture, or maintenance intent here; never intercept ordinary simple questions or consumer-project knowledge work.
+description: Query, lint, index, capture, or maintain Aigent Hive's provider-neutral bilingual source Wiki. Route explicit source Wiki work here and load it automatically at the completion gate when a material source task produced durable task facts; never intercept ordinary simple questions or consumer-project knowledge work.
 ---
 
 # Hive Source Wiki
@@ -51,7 +51,8 @@ hive source-wiki query --target <source-root> --language en|ko \
 
 ## Capture and maintenance workflow
 
-1. Require explicit source selection and human-review intent.
+1. Require either explicit source selection or the source completion gate for facts derived only
+   from the current authorized task and reviewed local artifacts.
 2. Reject secret, credential-adjacent, private account, captured session, or unreviewed external material.
 3. Edit tracked files only inside `llm-wiki/en/` and `llm-wiki/ko/`.
 4. Update both language files in the pair together.
@@ -62,6 +63,18 @@ hive source-wiki query --target <source-root> --language en|ko \
 8. Rebuild with `index`, rerun `lint`, then confirm both language paths with `query`.
 9. Review the tracked diff and keep the SQLite index and persistent lock marker untracked.
 
-Do not capture conversations or sessions automatically. Do not ingest an external source without
-explicit selection and review. Do not mutate consumer knowledge, install state, or orchestration
-state.
+## Agent-Reviewed Task-Fact Autocapture
+
+- At the completion gate, capture a material task fact without another prompt when the current
+  authorized task created or substantially revised reusable Hive source knowledge.
+- Preserve the outcome, tool or external project, creation or acceptance criteria, and a bounded
+  originating request summary. Preserve exact request text only after explicit user retention
+  intent and safety review.
+- Record external-artifact facts through a safe tracked source handoff; do not import consumer
+  project files or installed knowledge into `llm-wiki/`.
+- Update one current-truth bilingual topic pair and rebuild the index. Identical input is a no-op.
+- Do not capture an editless/simple question, raw transcript, complete conversation, hook payload,
+  tool output, hidden prompt, cache, database, or runtime state.
+
+Do not ingest an external source without selection and review. Do not mutate consumer knowledge,
+install state, or orchestration state.

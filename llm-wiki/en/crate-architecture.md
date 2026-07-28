@@ -9,11 +9,11 @@ summary: "Workspace members, the CLI command adapter, Wiki-core reuse, and the r
 tags: [architecture, crates, rust]
 aliases: ["Rust workspace architecture"]
 sources:
-  - "repo:Cargo.toml#sha256:ee731c226fdb29253df5f7fb1111573a892d1da34b38fd424e5ec7199f0f346a"
-  - "repo:crates/hive-cli/src/main.rs#sha256:43d4302899e96e74a0f0e1b7f0b66a1e8b16e6c6e74e28d2d90e5c2c993e1ff3"
+  - "repo:Cargo.toml#sha256:f9452a03c8e2ab1cb4e673a62cab0cd3aba3674d7b12175ad08df85fd56b5478"
+  - "repo:crates/hive-cli/src/main.rs#sha256:fc1c697fc7767c062244bcc5e17db6767e38d40b6d42e922f03c163e2f845c03"
   - "repo:crates/hive-wiki/Cargo.toml#sha256:25c10369a5e5b77938ddc7d39541be4cf647d7c051696d9fe230de4a4ef9e107"
   - "repo:docs/architecture/release-update-trust-boundary.md#sha256:3f90ab4526cd1ca556a057af529fada637a2a476374927408098e759ae6deb8f"
-  - "repo:docs/decisions/ADR-0011-source-wiki-independence.md#sha256:e5315d16b0dc932bcedc79add82460220c64bec84e5f1e30e2ed672c93eaa5d4"
+  - "repo:docs/decisions/ADR-0011-source-wiki-independence.md#sha256:15dbcb1c9e294078dc641d0c51c3655bd047cdf1c57629cb4158e7d047097f1b"
 links: [knowledge, source-overview, upgrade]
 reviewed_revision: "git:7b6cef8887dbc0571e5a65e5bf32bc829ce3c5d5"
 status: active

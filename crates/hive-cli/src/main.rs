@@ -1571,8 +1571,12 @@ fn run_human(mut arguments: impl Iterator<Item = String>) -> Result<(), String> 
             reject_extra_arguments(arguments)?;
             check_target(Path::new(&target))
         }
-        Some("-V" | "--version") => {
-            println!("hive {}", env!("CARGO_PKG_VERSION"));
+        Some("-v" | "-V" | "--version") => {
+            println!(
+                "hive {} (released {})",
+                env!("CARGO_PKG_VERSION"),
+                env!("HIVE_RELEASE_DATE")
+            );
             Ok(())
         }
         Some("-h" | "--help") | None => {

@@ -9,9 +9,9 @@ summary: "좁은 intent routing, optional Skill approval과 안전한 source-con
 tags: [consent, routing, skills]
 aliases: ["Skill 라우팅"]
 sources:
-  - "repo:AGENTS.md#sha256:28626a77b614ca70cd09afdeb8be3d0767e5ca088ab52e942bf2af269d7b9cb2"
+  - "repo:AGENTS.md#sha256:8293c7e01a78bbf6106fc6ee9cca9748171ba2361c5003883ad11faa4a81b396"
   - "repo:docs/architecture/skill-consent.md#sha256:062425d9110c2c52abf9f6b61d06c110f288f415b86706eecbf11439d8ac1c37"
-  - "repo:harness/skills/catalog.yml#sha256:defd5f3ec25aace12c12bcb599f838e30820d56cc6b7e213bfac7abc55cabc4e"
+  - "repo:harness/skills/catalog.yml#sha256:43ac874922e77cd461576c213a51397757e282ca55a9d94f923e1b13bf4435cf"
 links: [knowledge, plugin-lifecycle, workflow]
 reviewed_revision: "git:7b6cef8887dbc0571e5a65e5bf32bc829ce3c5d5"
 status: active

@@ -8,6 +8,7 @@
 Aigent Hive source, release bundle과 installed harness는 `X.Y.Z` product version을
 공유. 마지막 완료 milestone은 Phase 6 verifier-only signed release와 safe update
 `0.7.0`이며 root `Cargo.toml`의 `workspace.package.version`이 source 정본.
+Release date 정본: 같은 manifest의 `workspace.metadata.hive.release-date`.
 Independent judge identity와 critical human approval은 protected external public-key
 trust root와 detached Ed25519 attestation으로 검증.
 
@@ -33,7 +34,7 @@ Release gate는 다음 version이 모두 같지 않으면 실패.
 
 - root Cargo workspace package
 - Cargo lock의 Hive workspace package
-- compiled `hive --version`
+- compiled `hive --version|--version aliases`의 product version·release date
 - release bundle manifest와 provenance
 - migration table target
 - generated consumer `.hive/config/harness.toml`
@@ -42,6 +43,7 @@ Release gate는 다음 version이 모두 같지 않으면 실패.
 ## 결과
 
 - 현재 project version은 `0.7.0`
+- `0.7.0` release date: `2026-07-24`
 - `0.1.0 → 0.2.0`은 backward-compatible Phase 1 feature milestone에 따른 minor 증가
 - `0.2.0 → 0.3.0`은 backward-compatible Phase 2 knowledge/index feature milestone에 따른 minor 증가
 - `0.3.0 → 0.4.0`은 backward-compatible Phase 3 Skill/projection feature milestone에 따른 minor 증가

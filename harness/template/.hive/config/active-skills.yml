@@ -19,7 +19,7 @@ skills:
   consent_digest: null
 - name: hive-knowledge-capture
   source_type: built-in
-  content_digest: sha256:dd05e3e1065cf1fbf0ca04f0ef6f9acfcfdcdf91fd8362071665ac28542a4f1b
+  content_digest: sha256:d94419930635f2f093e70e55b0c571ed0937c4a74abda306bfa91c6f380714ad
   side_effect_class: project-write
   capabilities:
   - filesystem-read

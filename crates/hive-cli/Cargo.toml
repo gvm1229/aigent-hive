@@ -29,5 +29,8 @@ tempfile.workspace = true
 
 [dev-dependencies]
 
+[build-dependencies]
+toml.workspace = true
+
 [lints]
 workspace = true

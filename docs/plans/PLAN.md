@@ -1,6 +1,6 @@
 # Aigent Hive active plan index
 
-> Revision: 1.52
+> Revision: 1.53
 > 기준일: 2026-07-28
 > Product version: `0.7.0`
 > 현재 milestone: Phase 7 qualification + global onboarding·shared index `0.8.0`
@@ -8,7 +8,7 @@
 
 ## Goal parameters
 
-- Objective: global onboarding·selected Skill·Wiki opt-out·shared index·자동 setup 18개,
+- Objective: global onboarding·selected Skill·Wiki opt-out·shared index·자동 setup 19개,
   user/plugin lifecycle 1개, native usage sensor 2개와 Phase 7 qualification 5개 완료
 - Success: Mandatory user setup, global preference 기반 expedited/custom project setup,
   user-root 단일 SQLite, 세 host selected Skill projection, Wiki default-on opt-out,
@@ -30,19 +30,20 @@
 | Phase 7 | 35 | 5 | 87.5% |
 | User plugin/project lifecycle | 37 | 1 | 97.4% |
 | Host-native usage sensors | 23 | 2 | 92% |
-| Global onboarding·shared index | 18 | 0 | 100% |
-| Source bilingual LLM Wiki | 10 | 0 | 100% |
+| Global onboarding·shared index | 19 | 0 | 100% |
+| Source bilingual LLM Wiki | 11 | 0 | 100% |
 | Documentation style | 5 | 0 | 100% |
 | Security review | 4 | 0 | 100% |
-| **Canonical total** | **202** | **8** | **96.2%** |
+| **Canonical total** | **204** | **8** | **96.2%** |
 
 External production boundary 항목도 미완료 합계에 포함. Protected authority 없이 완료 처리 금지.
 
 ## 최신 완료 증거
 
-- Full pre-push: Rust workspace `477/477`, Python conformance `576`개 실행,
-  `575` PASS와 Windows `pwsh` 전용 `1`개 expected skip
+- Full pre-push: Rust workspace `480/480`, Python conformance `582`개 실행,
+  `581` PASS와 Windows `pwsh` 전용 `1`개 expected skip
 - Strict Clippy all targets·all features, format check PASS
+- Copier/Rust current projection parity `3/3`, Source Wiki lint finding·warning `0`
 - Shared index 동일 입력 재실행 byte-exact no-op, `changed_paths=[]`
 - Codex·Antigravity expedited/custom connected onboarding matrix `4/4`
 - Initial `Expedited — set everything to default`와 project zero-question inference contract

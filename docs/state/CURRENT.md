@@ -2,10 +2,10 @@
 
 - 기준 branch: `develop`
 - product version: `0.7.0`
-- plan revision: `1.52`
+- plan revision: `1.53`
 - 현재 milestone: Phase 7 qualification + global onboarding·shared index `0.8.0`
-- 현재 작업: Initial global expedited defaults와 `auto-setup-harness` 구현 완료;
-  실제 user install·LumaDeck consumer qualification 진행
+- 현재 작업: Wiki-enabled task-fact 자동 기록과 source bilingual marketing-deck
+  재개 기록, `hive --version|-v|-V` 구현·로컬 CLI 설치 완료
 - 외부 중지 경계: protected signing/publication credential, 실제 production publication,
   exact `1.0.0` 사용자 authority
 - Plan load: compact `docs/plans/PLAN.md` + `docs/plans/phases/07-public-qualification.md`
@@ -14,7 +14,9 @@
   + `docs/plans/active/user-onboarding-shared-index.md`
   + `docs/plans/active/source-llm-wiki.md`
   + `docs/plans/active/documentation-style.md` + `docs/plans/active/security-review.md`
-- Plan completion: canonical checklist `202/210` 완료, `8`개 미완료, `96.2%`
+- Plan completion: canonical checklist `204/212` 완료, `8`개 미완료, `96.2%`
+- Latest pre-push: Rust workspace `480/480`, Python conformance `582`개 실행,
+  `581` PASS와 Windows `pwsh` 전용 `1`개 expected skip
 - Native Goal routing: legacy `PLAN.md` checkbox 문구를 `phases/07-public-qualification.md`,
   `active/plugin-project-lifecycle.md`, `active/native-usage-sensor.md`,
   `active/user-onboarding-shared-index.md`, `active/source-llm-wiki.md`,
@@ -40,6 +42,7 @@ Target: `0.8.0`
 | Project index | User-root 단일 SQLite, project DB 생성 없음 |
 | Initial global expedited | English·English Wiki·strict·all built-ins, 질문 0개 |
 | Project auto onboarding | Global 상속·canonical evidence·unresolved-only 질문 |
+| Wiki task-fact capture | Wiki enabled material-task 종료 시 검토된 결과·도구·기준·요청 요약 자동 기록 |
 
 완료 evidence:
 
@@ -51,9 +54,10 @@ Target: `0.8.0`
   legacy project DB cleanup과 거부 시 전체 install tree 무변경
 - Codex·Antigravity expedited/custom connected matrix 4/4
 - Initial expedited fixed defaults와 `auto-setup-harness` zero-question inference 구현
+- Wiki disable 시 0건, enable 시 agent-reviewed bounded task-fact completion capture
 - Auto Skill canonical·plugin·source·Codex·Claude projection parity
-- Skill validator PASS, `hive-cli` 221/221, `hive-projection` 26/26,
-  setup·projection·documentation Python 114개 PASS
+- Skill validator PASS, `hive-cli` 223/223와 version integration PASS,
+  `hive-render` 59/59, Wiki·static contract 65/65 PASS
 - Signed `0.8.0` release activation은 Phase 7 외부 gate
 - Decision:
   [`ADR-0012`](../decisions/ADR-0012-global-onboarding-shared-index.md)
@@ -68,14 +72,20 @@ Target: `0.8.0`
 - 장기 방향: host-native·provider-neutral capability 대체 뒤 OMX/OMC 제거
 - Consumer reuse: `hive-wiki` core와 capture·maintenance·query 안전 계약
 - Skill reuse: shared canonical `harness/skills/`, exact source `.agents/skills/` projection
-- 현재 상태: 영어 11개·한국어 11개 page, exact pair 11개와 source-confined CLI·Skill 구현 완료
+- 현재 상태: 영어 12개·한국어 12개 page, exact pair 12개와 source-confined
+  CLI·Skill·material-task completion capture 구현 완료
 - Logical digest:
-  `sha256:180247b1d5682d5b942385139f2fea2cd304a5ddb18b816b0c731902ab95af76`
+  `sha256:88dfd81e21839a31bb56268fa61a752514de9d5b7fd9b0ae68447729c4e3a191`
 - 검증: lint finding·warning 0건, 영어·한국어 query PASS, index 삭제 뒤 query
   fail-closed exit `5`, rebuild equivalence PASS
 - SQLite binary digest는 invocation-local evidence이며 정본·clean-copy equivalence 기준이
   아님. Logical digest와 query 결과가 rebuild equivalence 기준
-- Targeted tests: `hive-cli` 190/190, `hive-wiki` 27/27, Source Wiki Python 27/27
+- Marketing deck 재개 record:
+  [`aigent-hive-marketing-deck.md`](artifacts/aigent-hive-marketing-deck.md)
+- LumaDeck 사용·생성 기준·초기 요청 요약:
+  [`marketing-deck.md`](../../llm-wiki/ko/marketing-deck.md)
+- Targeted tests: `hive-cli` 223/223, `hive-render` 59/59,
+  Source Wiki·static contract 65/65
 - OMX Wiki Skill 제외 이유·향후 OMX/OMC retirement 시 knowledge migration 0건:
   [`ADR-0011`](../decisions/ADR-0011-source-wiki-independence.md)
 - Active fragment:
@@ -145,6 +155,10 @@ Target: `0.8.0`
 
 실제 current-host evidence:
 
+- Hive CLI: `~/.local/bin/hive`, `hive --version|-v|-V` 모두
+  `hive 0.7.0 (released 2026-07-24)` 출력
+- 기존 signed user harness에 현재 미서명 source를 덮어쓰는 setup preview는 ownership
+  manifest 불일치로 exit `5`; 안전 경계 우회 0회
 - Codex `0.145.0`: install→validate→update→validate PASS,
   `aigent-hive@aigent-hive` `0.7.0` enabled와 exact local source 확인
 - Codex fresh ephemeral session: detail-poor ordinary request의 optional refine 제안,
@@ -165,7 +179,7 @@ Target: `0.8.0`
 계획 evidence:
 
 - Active fragment 8 KiB 제한 충족
-- Canonical checklist `200/208`, active checklist ID 중복 0건
+- Canonical checklist `204/212`, active checklist ID 중복 0건
 - Plan static contract 29/29, documentation style regression 18/18 PASS
 - Human documentation inventory 1,698/1,698 review, finding 0건
 - Markdown link conformance PASS
@@ -221,7 +235,7 @@ Target: `0.8.0`
 
 - Source-only `hive-usage-guard` Skill과 15초 native Codex app-server primary·CodexBar
   fallback-only watcher
-- 현재 session threshold: remaining `15%` inclusive
+- 현재 session threshold: remaining `30%` inclusive
 - Session window 우선, session 부재 시 weekly fallback
 - Quota sensor unknown: 3초 뒤 1회 재시도, 반복 unknown은 observation 보존과
   `transient_unknown_ignored` 진행, confirmed-limited marker 유지
