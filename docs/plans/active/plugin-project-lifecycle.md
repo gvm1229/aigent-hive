@@ -114,17 +114,13 @@
   override precedence와 source-root refusal hostile conformance
 - [x] [RPH-035] Cross-project leakage, secret candidate, duplicate preference,
   contradiction, concurrent promotion와 root index rebuild hostile conformance
-- [ ] [RPH-036] 실제 Codex·Claude Code·Antigravity user install·update E2E
-
-잔여 evidence:
+- [x] [RPH-036] Codex·Antigravity 실제 install·update와 Claude fixture·unverified 표시
 
 - `RPH-036`: Codex `0.145.0` 실제 install→validate→update→validate와
   `aigent-hive@aigent-hive` enabled state PASS
-- `RPH-036`: authenticated Antigravity `agy 1.1.7` 실제 legacy migration
-  dry-run→install→validate→repeat update→validate, native `plugin list` discovery와
-  source/staging 16/16 byte parity PASS
-- `RPH-036`: Claude executable·Pro/Max session 부재로 실제 Claude install/update만
-  미검증
+- `RPH-036`: Antigravity `1.1.7` migration·repeat update·16/16 byte parity PASS
+- `RPH-036`: Claude executable·Pro/Max session 부재, 실제 Claude install/update
+  미검증과 preview disclosure
 
 ## Host evidence — 2026-07-27
 

@@ -49,6 +49,9 @@ Do not use chat history, `.omx/`, `.agents/work/`, issue drafts, or generated SQ
 ## Plan Policy
 
 - Keep exactly one active plan set rooted at `docs/plans/PLAN.md`.
+- Whenever a plan is created or materially revised to govern repository work, write it to the
+  canonical tracked plan set before executing that plan. Chat text, a native plan tool, goal state,
+  or an agent scratch file may mirror the plan but must never be its sole authority.
 - Keep `PLAN.md` compact and free of checkboxes; it owns goal parameters, the completion index, load order, active-fragment links, and execution order.
 - Store actionable implementation and verification checklists only in documents listed under `PLAN.md`'s `Active fragments` section.
 - Split phases and workflow stages into numbered documents. Do not recombine multiple phases or unrelated stages into an aggregate reference file.

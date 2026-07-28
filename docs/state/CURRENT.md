@@ -2,10 +2,10 @@
 
 - 기준 branch: `develop`
 - product version: `0.7.0`
-- plan revision: `1.53`
+- plan revision: `1.54`
 - 현재 milestone: Phase 7 qualification + global onboarding·shared index `0.8.0`
-- 현재 작업: Wiki-enabled task-fact 자동 기록과 source bilingual marketing-deck
-  재개 기록, `hive --version|-v|-V` 구현·로컬 CLI 설치 완료
+- 현재 작업: `0.8.0 Claude-unverified preview` release plan, Skill metadata budget,
+  current CI 복구와 Windows 실제 기기 인계
 - 외부 중지 경계: protected signing/publication credential, 실제 production publication,
   exact `1.0.0` 사용자 authority
 - Plan load: compact `docs/plans/PLAN.md` + `docs/plans/phases/07-public-qualification.md`
@@ -14,13 +14,17 @@
   + `docs/plans/active/user-onboarding-shared-index.md`
   + `docs/plans/active/source-llm-wiki.md`
   + `docs/plans/active/documentation-style.md` + `docs/plans/active/security-review.md`
-- Plan completion: canonical checklist `204/212` 완료, `8`개 미완료, `96.2%`
-- Latest pre-push: Rust workspace `480/480`, Python conformance `582`개 실행,
+  + `docs/plans/active/preview-release.md`
+- Plan completion: canonical checklist `207/213` 완료, `6`개 미완료, `97.2%`
+- Latest local pre-push: Rust workspace `480/480`, Python conformance `582`개 실행,
   `581` PASS와 Windows `pwsh` 전용 `1`개 expected skip
+- Latest remote: `9b1e951`의 CI `30347960157`과 native release runtime
+  `30347960118` failure, current clean-clone gate 재개방
 - Native Goal routing: legacy `PLAN.md` checkbox 문구를 `phases/07-public-qualification.md`,
   `active/plugin-project-lifecycle.md`, `active/native-usage-sensor.md`,
   `active/user-onboarding-shared-index.md`, `active/source-llm-wiki.md`,
-  `active/documentation-style.md`, `active/security-review.md`로 해석
+  `active/documentation-style.md`, `active/security-review.md`,
+  `active/preview-release.md`로 해석
 
 ## Global onboarding·shared index audit
 
@@ -104,7 +108,7 @@ Target: `0.8.0`
   `multiple`, exit `0`, raw payload persistence 0건
 - 세 provider 공통 CodexBar fallback-only, native limited 뒤 fallback 우회 0회
 - CodexBar 미설치 notification·fixed command preview·explicit current-action consent 구현
-- 잔여: 실제 Claude Pro/Max parity와 future Antigravity native fixture
+- Deferred: 실제 Claude Pro/Max parity와 future Antigravity native fixture
 - Active implementation fragment:
   [`native-usage-sensor.md`](../plans/active/native-usage-sensor.md)
 - Decision:
@@ -147,11 +151,18 @@ Target: `0.8.0`
 - Source `hive-prompt-refine` projection, explicit refine-only routing,
   모호성·핵심 세부 부족 prompt의 optional refine 제안
 
-확인된 gap:
+`0.8.0` preview gap:
+
+- Hive Skill implicit metadata 중복과 context budget
+- Current Linux·Windows·contract CI failure
+- 실제 Windows 기기 install·setup·upgrade acceptance
+- Candidate SHA-256·GitHub artifact attestation·publication
+
+Preview 비차단 deferred:
 
 - 실제 Claude Code install/update E2E
 - 실제 Claude Pro/Max quota usage parity
-- macOS·Windows signing·notarization·publication
+- macOS·Windows signing·notarization과 external TUF production authorization
 
 실제 current-host evidence:
 
@@ -225,11 +236,11 @@ Target: `0.8.0`
 - Native hostile sensor·fallback, Phase 3 projection과 source usage guard regression PASS
 - 독립 Antigravity code·test review: PASS, actionable finding 0건
 
-남은 외부 범위:
+Preview 비차단 deferred:
 
 - 실제 Claude app session E2E
 - 실제 Claude Pro/Max qualified subscription usage sensor
-- Public signed multi-platform release candidate
+- macOS·Windows platform signing과 external TUF production authorization
 
 ## Source 개발 usage safeguard
 
@@ -365,7 +376,7 @@ Source Wiki targeted qualification PASS:
 - Protected 경계: Developer ID signing·notarization·GitHub attestation 미실행
 - Local signature observation: linker ad-hoc, `TeamIdentifier` 없음, Gatekeeper 거부
 
-Remote qualification evidence:
+Historical remote qualification evidence:
 
 - Qualified candidate commit: `28f1c366aa06a609b443724decc474cb7718ea8a`
 - Native release runtime:
@@ -374,24 +385,45 @@ Remote qualification evidence:
 - GitHub Actions CI:
   [run `30205737631`](https://github.com/gvm1229/aigent-hive/actions/runs/30205737631),
   7/7 job PASS
-- P7-040: clean-clone full CI PASS
+- 당시 clean-clone full CI PASS
+
+Current contradiction evidence:
+
+- Current source: `9b1e951069eb2b2563faffe42b8d13810af03d7e`
+- GitHub Actions CI:
+  [run `30347960157`](https://github.com/gvm1229/aigent-hive/actions/runs/30347960157),
+  Linux·Windows Rust, Phase 1과 contract/Copier failure
+- Native release runtime:
+  [run `30347960118`](https://github.com/gvm1229/aigent-hive/actions/runs/30347960118),
+  macOS·Windows release version output contract failure
+- P7-040 current clean-clone gate 미충족
 
 검증 경계:
 
 - 로컬 Windows `pwsh` 부재에 따른 runtime test 1개 expected skip
 - Direct installer의 같은 owner parent handle-pinning race
 
-## 남은 external production gate
+## `0.8.0` preview release gate
 
-- macOS arm64/x86_64 Developer ID signing·notarization evidence
-- Windows x86_64 Azure Artifact Signing evidence
-- 실제 세 host base workflow와 capability matrix
-- Protected GitHub attestation·TUF authorization·public release publication
-- `0.8.x` signed release candidate qualification
+- P7-042 Hive Skill metadata budget·implicit 중복 qualification
+- P7-040 current clean-clone 전체 CI
+- P7-041 실제 Windows 기기 acceptance
+- P7-020 candidate SHA-256·GitHub artifact attestation
+- P7-018 `0.8.0` release candidate qualification
+- P7-037 protected `Claude-unverified preview` GitHub Release publication
+
+Preview 비차단 deferred:
+
+- macOS arm64/x86_64 Developer ID signing·notarization
+- Windows Authenticode 또는 Azure Artifact Signing
+- External TUF production authorization
+- 실제 Claude subscription-backed install·usage parity
 - Exact `1.0.0` 사용자 지시 전 stable major preparation 금지
 
 ## 다음 action
 
-1. RPH-036·NUS-020·NUS-014·P7-013·P7-021 실제 Claude 포함 matrix
-2. P7-018·020·037 signed release qualification
-3. Exact `1.0.0` 사용자 authority 확인
+1. P7-042 Hive Skill metadata budget와 implicit 중복 제거
+2. P7-040 Linux·Windows·contract CI 복구
+3. P7-041 실제 Windows 기기 acceptance
+4. P7-020·018 artifact attestation과 release candidate qualification
+5. P7-037 protected preview publication

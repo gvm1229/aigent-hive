@@ -1,6 +1,6 @@
 # Aigent Hive active plan index
 
-> Revision: 1.53
+> Revision: 1.54
 > 기준일: 2026-07-28
 > Product version: `0.7.0`
 > 현재 milestone: Phase 7 qualification + global onboarding·shared index `0.8.0`
@@ -8,11 +8,12 @@
 
 ## Goal parameters
 
-- Objective: global onboarding·selected Skill·Wiki opt-out·shared index·자동 setup 19개,
-  user/plugin lifecycle 1개, native usage sensor 2개와 Phase 7 qualification 5개 완료
+- Objective: `0.8.0 Claude-unverified preview`의 Skill metadata, current CI,
+  Windows 실제 기기, artifact provenance, candidate와 publication gate 6개 완료
 - Success: Mandatory user setup, global preference 기반 expedited/custom project setup,
   user-root 단일 SQLite, 세 host selected Skill projection, Wiki default-on opt-out,
-  usage guard opt-in `20%`, native-first·CodexBar fallback-only와 signed qualification
+  usage guard opt-in `20%`, native-first·CodexBar fallback-only, SHA-256·GitHub
+  attestation과 실제 Windows acceptance
 - Stop boundary: protected credential, irreversible production publication, exact `1.0.0`
   authority, 현재 source usage guard remaining `30%`
 - Invariants: provider-neutral, canonical Markdown 우선, OMX/OMC replaceable adapter,
@@ -27,21 +28,23 @@
 | 범위 | 완료 | 미완료 | 진행률 |
 | --- | ---: | ---: | ---: |
 | Phase 0–6 | 70 | 0 | 100% |
-| Phase 7 | 35 | 5 | 87.5% |
-| User plugin/project lifecycle | 37 | 1 | 97.4% |
-| Host-native usage sensors | 23 | 2 | 92% |
+| Phase 7 | 36 | 6 | 85.7% |
+| User plugin/project lifecycle | 38 | 0 | 100% |
+| Host-native usage sensors | 24 | 0 | 100% |
 | Global onboarding·shared index | 19 | 0 | 100% |
 | Source bilingual LLM Wiki | 11 | 0 | 100% |
 | Documentation style | 5 | 0 | 100% |
 | Security review | 4 | 0 | 100% |
-| **Canonical total** | **204** | **8** | **96.2%** |
+| **Canonical total** | **207** | **6** | **97.2%** |
 
 External production boundary 항목도 미완료 합계에 포함. Protected authority 없이 완료 처리 금지.
 
 ## 최신 완료 증거
 
-- Full pre-push: Rust workspace `480/480`, Python conformance `582`개 실행,
+- Local pre-push: Rust workspace `480/480`, Python conformance `582`개 실행,
   `581` PASS와 Windows `pwsh` 전용 `1`개 expected skip
+- Current remote contradiction: `9b1e951` CI run `30347960157`과 native runtime
+  `30347960118` failure, P7-040 재개방
 - Strict Clippy all targets·all features, format check PASS
 - Copier/Rust current projection parity `3/3`, Source Wiki lint finding·warning `0`
 - Shared index 동일 입력 재실행 byte-exact no-op, `changed_paths=[]`
@@ -70,6 +73,7 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
 | [`active/source-llm-wiki.md`](active/source-llm-wiki.md) | `SLW-*` | Provider-neutral bilingual source Wiki와 Skill reuse |
 | [`active/documentation-style.md`](active/documentation-style.md) | `DOC-*` | 사람용 문서 style completion gate |
 | [`active/security-review.md`](active/security-review.md) | `SEC-*` | 독립 code·security review finding completion gate |
+| [`active/preview-release.md`](active/preview-release.md) | `P7-*` reference | `0.8.0` preview 실행 순서·범위·인계 |
 
 ## Reconciliation gate
 
@@ -90,14 +94,16 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
 
 ## Current execution order
 
-1. RPH-036·NUS-020·NUS-014·P7-013·P7-021 실제 Claude 포함 matrix
-2. P7-018·020·037 signed release qualification
-3. Exact `1.0.0` 사용자 authority 확인
+1. P7-042 Hive Skill metadata budget와 implicit 중복 제거
+2. P7-040 current clean-clone CI 복구
+3. P7-041 실제 Windows 기기 acceptance
+4. P7-020·018 artifact attestation과 release candidate qualification
+5. P7-037 protected `Claude-unverified preview` publication
 
-## External production boundary
+## `0.8.0` preview deferred boundary
 
 - macOS Developer ID signing·notarization
 - Windows Authenticode signing
-- 실제 Claude protected session E2E
-- Externally signed TUF authorization과 GitHub Release publication
+- 실제 Claude protected session E2E와 Pro/Max usage parity
+- Externally signed TUF production authorization
 - Exact `1.0.0` 사용자 authority
