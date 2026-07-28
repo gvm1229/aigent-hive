@@ -59,15 +59,15 @@
 
 구현 evidence:
 
-- Canonical page: 영어 11개·한국어 11개, exact pair 11개
+- Canonical page: 영어 13개·한국어 13개, exact pair 13개
 - Logical digest:
-  `sha256:180247b1d5682d5b942385139f2fea2cd304a5ddb18b816b0c731902ab95af76`
+  `sha256:4102fd66d5cb57aad0837102643b209c62e845d931b4048fb990f8511c67f48e`
 - `lint`: finding 0건, warning 0건
 - 영어·한국어 text query: PASS
 - Index 삭제 뒤 query: fail-closed exit `5`
 - Rebuild equivalence: logical digest와 query 결과 일치. SQLite binary digest는
   invocation-local evidence이며 정본·clean-copy equivalence 기준이 아님
-- Targeted tests: `hive-cli` 190/190, `hive-wiki` 27/27, Source Wiki Python 27/27
+- Current targeted tests: `hive-wiki` 42/42, Source Wiki·static contract 66/66
 - Full Python conformance: 556개 실행, 555 PASS, Windows `pwsh` 전용 1개 expected skip
 - Git 제외: `.agents/work/source-wiki/index.sqlite3`, `.index.lock`
 

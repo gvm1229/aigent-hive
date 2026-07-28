@@ -76,10 +76,10 @@ Target: `0.8.0`
 - 장기 방향: host-native·provider-neutral capability 대체 뒤 OMX/OMC 제거
 - Consumer reuse: `hive-wiki` core와 capture·maintenance·query 안전 계약
 - Skill reuse: shared canonical `harness/skills/`, exact source `.agents/skills/` projection
-- 현재 상태: 영어 12개·한국어 12개 page, exact pair 12개와 source-confined
+- 현재 상태: 영어 13개·한국어 13개 page, exact pair 13개와 source-confined
   CLI·Skill·material-task completion capture 구현 완료
 - Logical digest:
-  `sha256:88dfd81e21839a31bb56268fa61a752514de9d5b7fd9b0ae68447729c4e3a191`
+  `sha256:4102fd66d5cb57aad0837102643b209c62e845d931b4048fb990f8511c67f48e`
 - 검증: lint finding·warning 0건, 영어·한국어 query PASS, index 삭제 뒤 query
   fail-closed exit `5`, rebuild equivalence PASS
 - SQLite binary digest는 invocation-local evidence이며 정본·clean-copy equivalence 기준이
@@ -88,8 +88,7 @@ Target: `0.8.0`
   [`aigent-hive-marketing-deck.md`](artifacts/aigent-hive-marketing-deck.md)
 - LumaDeck 사용·생성 기준·초기 요청 요약:
   [`marketing-deck.md`](../../llm-wiki/ko/marketing-deck.md)
-- Targeted tests: `hive-cli` 223/223, `hive-render` 59/59,
-  Source Wiki·static contract 65/65
+- Current Wiki tests: `hive-wiki` 42/42, Source Wiki·static contract 66/66
 - OMX Wiki Skill 제외 이유·향후 OMX/OMC retirement 시 knowledge migration 0건:
   [`ADR-0011`](../decisions/ADR-0011-source-wiki-independence.md)
 - Active fragment:
@@ -347,9 +346,8 @@ Global onboarding·shared index local qualification PASS:
 
 Source Wiki targeted qualification PASS:
 
-- `hive-cli` 190/190, `hive-wiki` 27/27, Source Wiki Python 27/27
-- Rust workspace 415/415
-- Canonical page 22개, bilingual pair 11개
+- `hive-wiki` 42/42, Source Wiki·static contract 66/66
+- Canonical page 26개, bilingual pair 13개
 - `lint` finding·warning 0건, 영어·한국어 query PASS
 - Index 삭제 뒤 query fail-closed exit `5`, logical digest·query equivalence rebuild PASS
 - Ignored index·persistent lock의 Git 추적 0건

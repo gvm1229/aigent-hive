@@ -10,10 +10,11 @@ tags: [development, git, verification]
 aliases: ["source development workflow"]
 sources:
   - "repo:.agents/directives/00-editing-discipline.md#sha256:6ff1639897049dea7ccf710c88fe3bcb369d7edf7e62bcd62137ec70a7c7cc24"
+  - "repo:.agents/directives/03-workflow.md#sha256:07c156f90f8440b9669b99ec0b020b323a7d6083b474ffadc537eb97f6987467"
   - "repo:docs/guides/branching-rules.md#sha256:c0b19cc2978f33002a980a7bf9fdb4563fcad8d5096781c3b9f15a0ba99a3304"
-  - "repo:docs/guides/commit-rules.md#sha256:443986db38ba26db52106b49ef92d741b103f5b73f82d95e24f8bfcc20ed2887"
-links: [crate-architecture, skill-routing, usage-hosts]
-reviewed_revision: "git:7b6cef8887dbc0571e5a65e5bf32bc829ce3c5d5"
+  - "repo:docs/guides/commit-rules.md#sha256:9367805c05dc7f9f4f60dd95ea9fd7b7db22de2bd56060c5fbb9583f6ff6a925"
+links: [crate-architecture, product-intent, skill-routing, usage-hosts]
+reviewed_revision: "git:d46e9b7deb5c54fc7cec00c38483388ce563ff1d"
 status: active
 ---
 
@@ -28,7 +29,11 @@ Ordinary development occurs on `develop`. Stable integration reaches `main` thro
 direct ordinary commits to `main`, branch deletion, and unapproved history rewriting are forbidden.
 Before push, verify the remote and exact target ref.
 
-Each commit owns one clear concern, stages only intended files, and uses a concise Korean
-Conventional Commit title without automated co-author trailers. Completion requires fresh targeted
-tests, wider lint or build checks proportional to risk, diff inspection, and explicit reporting of
-any validation gap.
+Each commit owns one independently reviewable and revertible concern. Wiki or documentation state,
+product behavior, version metadata, and release activation are separate by default. A Wiki capture
+and `hive --version` change require separate commits. Existing history is never rewritten merely to
+apply the newer split policy.
+
+Every plan that governs repository work is written into the tracked canonical plan set before
+execution; chat or native plan state cannot be the sole authority. Completion requires fresh
+targeted tests, proportional wider checks, diff inspection, and explicit validation gaps.
