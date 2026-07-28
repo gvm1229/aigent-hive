@@ -503,8 +503,8 @@ else:
                 / "skills/hive-prompt-refine/SKILL.md"
             ).is_file()
         )
-        self.assertFalse(
-            (user_root / ".agents/skills/hive-usage-guard/SKILL.md").exists()
+        self.assertTrue(
+            (user_root / ".agents/skills/hive-usage-guard/SKILL.md").is_file()
         )
         guidance = (user_root / ".codex/AGENTS.md").read_text(encoding="utf-8")
         self.assertIn("State: `operational`", guidance)
