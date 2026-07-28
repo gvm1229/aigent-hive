@@ -1,5 +1,14 @@
 schema_version: 1
 skills:
+- name: auto-setup-harness
+  source_type: built-in
+  content_digest: sha256:3336c86d6cf338e84f2440c4434d06b7d517714a07a0ac9c0c5163f695148b7e
+  side_effect_class: project-write
+  capabilities:
+  - filesystem-read
+  - filesystem-write
+  - shell
+  consent_digest: null
 - name: hive-judge-package
   source_type: built-in
   content_digest: sha256:a87f46c6a21f94944fc465d85b74bf5e8aef308bfbc1b7a08df56e6078f3890c
@@ -126,7 +135,7 @@ skills:
   consent_digest: null
 - name: setup-harness
   source_type: built-in
-  content_digest: sha256:c1d7082642b29eae9eea16fccc16b3cf89e69b6a0a5c96081a0e38cc33e149b7
+  content_digest: sha256:2cd7d8f9318a8acd96a709dd98e9cb8c0d9ff15fb02383097959d45463645a61
   side_effect_class: project-write
   capabilities:
   - filesystem-read

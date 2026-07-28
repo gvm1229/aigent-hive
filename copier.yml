@@ -191,6 +191,7 @@ selected_project_skills:
   type: yaml
   when: false
   default:
+    - auto-setup-harness
     - hive-judge-package
     - hive-knowledge-capture
     - hive-knowledge-maintenance

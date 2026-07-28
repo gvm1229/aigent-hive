@@ -53,6 +53,7 @@ def write_operational_user_setup(root: Path) -> None:
             "skills": {
                 "mode": "individual",
                 "selected": [
+                    "auto-setup-harness",
                     "hive-judge-package",
                     "hive-knowledge-capture",
                     "hive-knowledge-maintenance",

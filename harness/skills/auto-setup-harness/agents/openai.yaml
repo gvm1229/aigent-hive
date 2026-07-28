@@ -1,0 +1,4 @@
+interface:
+  display_name: "Auto Setup Harness"
+  short_description: "Infer project setup and ask only unresolved questions"
+  default_prompt: "Use $auto-setup-harness to inspect this project and install its Hive harness with minimal questions."

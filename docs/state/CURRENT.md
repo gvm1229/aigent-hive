@@ -2,10 +2,10 @@
 
 - 기준 branch: `develop`
 - product version: `0.7.0`
-- plan revision: `1.50`
+- plan revision: `1.52`
 - 현재 milestone: Phase 7 qualification + global onboarding·shared index `0.8.0`
-- 현재 작업: `0.8.0` mandatory global onboarding·selected projection·shared index 구현 완료;
-  이후 Claude·signed publication qualification
+- 현재 작업: Initial global expedited defaults와 `auto-setup-harness` 구현 완료;
+  실제 user install·LumaDeck consumer qualification 진행
 - 외부 중지 경계: protected signing/publication credential, 실제 production publication,
   exact `1.0.0` 사용자 authority
 - Plan load: compact `docs/plans/PLAN.md` + `docs/plans/phases/07-public-qualification.md`
@@ -14,7 +14,7 @@
   + `docs/plans/active/user-onboarding-shared-index.md`
   + `docs/plans/active/source-llm-wiki.md`
   + `docs/plans/active/documentation-style.md` + `docs/plans/active/security-review.md`
-- Plan completion: canonical checklist `200/208` 완료, `8`개 미완료, `96.2%`
+- Plan completion: canonical checklist `202/210` 완료, `8`개 미완료, `96.2%`
 - Native Goal routing: legacy `PLAN.md` checkbox 문구를 `phases/07-public-qualification.md`,
   `active/plugin-project-lifecycle.md`, `active/native-usage-sensor.md`,
   `active/user-onboarding-shared-index.md`, `active/source-llm-wiki.md`,
@@ -38,6 +38,8 @@ Target: `0.8.0`
 | Project setup mode | `expedited|custom`, 양쪽 모두 project kind 필수 |
 | Project type | Required project identity·domain profile |
 | Project index | User-root 단일 SQLite, project DB 생성 없음 |
+| Initial global expedited | English·English Wiki·strict·all built-ins, 질문 0개 |
+| Project auto onboarding | Global 상속·canonical evidence·unresolved-only 질문 |
 
 완료 evidence:
 
@@ -48,6 +50,10 @@ Target: `0.8.0`
 - Connected `0.7.0 → 0.8.0` preference 보존, unconnected setup-required fail-closed,
   legacy project DB cleanup과 거부 시 전체 install tree 무변경
 - Codex·Antigravity expedited/custom connected matrix 4/4
+- Initial expedited fixed defaults와 `auto-setup-harness` zero-question inference 구현
+- Auto Skill canonical·plugin·source·Codex·Claude projection parity
+- Skill validator PASS, `hive-cli` 221/221, `hive-projection` 26/26,
+  setup·projection·documentation Python 114개 PASS
 - Signed `0.8.0` release activation은 Phase 7 외부 gate
 - Decision:
   [`ADR-0012`](../decisions/ADR-0012-global-onboarding-shared-index.md)

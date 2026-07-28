@@ -1,6 +1,6 @@
 # Aigent Hive active plan index
 
-> Revision: 1.51
+> Revision: 1.52
 > 기준일: 2026-07-28
 > Product version: `0.7.0`
 > 현재 milestone: Phase 7 qualification + global onboarding·shared index `0.8.0`
@@ -8,13 +8,13 @@
 
 ## Goal parameters
 
-- Objective: global onboarding·selected Skill·Wiki opt-out·shared index 16개,
+- Objective: global onboarding·selected Skill·Wiki opt-out·shared index·자동 setup 18개,
   user/plugin lifecycle 1개, native usage sensor 2개와 Phase 7 qualification 5개 완료
 - Success: Mandatory user setup, global preference 기반 expedited/custom project setup,
   user-root 단일 SQLite, 세 host selected Skill projection, Wiki default-on opt-out,
   usage guard opt-in `20%`, native-first·CodexBar fallback-only와 signed qualification
 - Stop boundary: protected credential, irreversible production publication, exact `1.0.0`
-  authority, 현재 source usage guard remaining `15%`
+  authority, 현재 source usage guard remaining `30%`
 - Invariants: provider-neutral, canonical Markdown 우선, OMX/OMC replaceable adapter,
   ownership·consent·foreign byte 보존, provider API·credential 경로 없음, force-push 없음,
   explicit-only major
@@ -30,11 +30,11 @@
 | Phase 7 | 35 | 5 | 87.5% |
 | User plugin/project lifecycle | 37 | 1 | 97.4% |
 | Host-native usage sensors | 23 | 2 | 92% |
-| Global onboarding·shared index | 16 | 0 | 100% |
+| Global onboarding·shared index | 18 | 0 | 100% |
 | Source bilingual LLM Wiki | 10 | 0 | 100% |
 | Documentation style | 5 | 0 | 100% |
 | Security review | 4 | 0 | 100% |
-| **Canonical total** | **200** | **8** | **96.2%** |
+| **Canonical total** | **202** | **8** | **96.2%** |
 
 External production boundary 항목도 미완료 합계에 포함. Protected authority 없이 완료 처리 금지.
 
@@ -45,6 +45,7 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
 - Strict Clippy all targets·all features, format check PASS
 - Shared index 동일 입력 재실행 byte-exact no-op, `changed_paths=[]`
 - Codex·Antigravity expedited/custom connected onboarding matrix `4/4`
+- Initial `Expedited — set everything to default`와 project zero-question inference contract
 - 독립 final blocker review: critical·high·medium·low finding `0`건
 
 ## Required load order

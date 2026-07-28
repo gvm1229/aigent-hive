@@ -424,6 +424,7 @@
     "skill_name": {
       "enum": [
         "setup-harness",
+        "auto-setup-harness",
         "hive-simple-question",
         "hive-prompt-refine",
         "hive-knowledge-capture",

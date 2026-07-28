@@ -16,6 +16,8 @@ const HISTORICAL_BUILTINS_YAML: &str =
     include_str!("../../../harness/skills/historical-builtins.yml");
 const SETUP_HIVE: &[u8] = include_bytes!("../../../harness/skills/setup-hive/SKILL.md");
 const SETUP_HARNESS: &[u8] = include_bytes!("../../../harness/skills/setup-harness/SKILL.md");
+const AUTO_SETUP_HARNESS: &[u8] =
+    include_bytes!("../../../harness/skills/auto-setup-harness/SKILL.md");
 const SIMPLE_QUESTION: &[u8] =
     include_bytes!("../../../harness/skills/hive-simple-question/SKILL.md");
 const PROMPT_REFINE: &[u8] = include_bytes!("../../../harness/skills/hive-prompt-refine/SKILL.md");
@@ -731,10 +733,11 @@ fn embedded_skill_source(name: &str) -> Option<&'static [u8]> {
         .find_map(|(candidate, bytes)| (candidate == name).then_some(bytes))
 }
 
-fn embedded_skill_sources() -> [(&'static str, &'static [u8]); 16] {
+fn embedded_skill_sources() -> [(&'static str, &'static [u8]); 17] {
     [
         ("setup-hive", SETUP_HIVE),
         ("setup-harness", SETUP_HARNESS),
+        ("auto-setup-harness", AUTO_SETUP_HARNESS),
         ("hive-simple-question", SIMPLE_QUESTION),
         ("hive-prompt-refine", PROMPT_REFINE),
         ("hive-knowledge-capture", KNOWLEDGE_CAPTURE),
@@ -1843,9 +1846,10 @@ description: Inspect one local file without changing it.
             let first = compile_projection(host, &[]).expect("projection");
             let second = compile_projection(host, &[]).expect("projection");
             assert_eq!(first, second);
-            assert_eq!(first.active_skills.skills.len(), 15);
-            assert_eq!(first.files.len(), 16);
+            assert_eq!(first.active_skills.skills.len(), 16);
+            assert_eq!(first.files.len(), 17);
             for skill in [
+                "auto-setup-harness",
                 "hive-judge-package",
                 "hive-prompt-refine",
                 "hive-run-checkpoint",

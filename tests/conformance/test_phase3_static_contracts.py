@@ -36,6 +36,7 @@ ROUTING_REQUEST_SCHEMA_PATH = (
 BUILTIN_SKILLS = {
     "setup-hive",
     "setup-harness",
+    "auto-setup-harness",
     "hive-simple-question",
     "hive-prompt-refine",
     "hive-knowledge-capture",
@@ -54,6 +55,7 @@ BUILTIN_SKILLS = {
 IMPLEMENTED_SKILLS = {
     "setup-hive",
     "setup-harness",
+    "auto-setup-harness",
     "hive-simple-question",
     "hive-prompt-refine",
     "hive-knowledge-capture",
@@ -93,6 +95,46 @@ def skill_frontmatter(path: Path) -> tuple[dict[str, object], str]:
 
 
 class Phase3SkillSourceContract(unittest.TestCase):
+    def test_source_auto_setup_projection_matches_harness_canonical_bytes(self) -> None:
+        canonical = (
+            SKILL_ROOT / "auto-setup-harness/SKILL.md"
+        ).read_bytes()
+        source_projection = (
+            REPOSITORY_ROOT
+            / ".agents/skills/auto-setup-harness/SKILL.md"
+        ).read_bytes()
+        self.assertEqual(source_projection, canonical)
+
+    def test_auto_setup_infers_and_asks_only_unresolved_fields(self) -> None:
+        skill = (
+            SKILL_ROOT / "auto-setup-harness/SKILL.md"
+        ).read_text(encoding="utf-8")
+        for required in (
+            "confidence as `explicit`, `strong`, or `unresolved`",
+            "Set `setup_mode: expedited`",
+            "Ask only unresolved questions",
+            "Default root-knowledge promotion categories to empty",
+            "Approve no optional third-party Skill and no fallback hook by inference",
+            "Zero-Question Gate",
+        ):
+            with self.subTest(required=required):
+                self.assertIn(required, skill)
+
+    def test_setup_hive_expedited_defaults_are_fixed(self) -> None:
+        skill = (SKILL_ROOT / "setup-hive/SKILL.md").read_text(
+            encoding="utf-8"
+        )
+        for required in (
+            "Expedited — set everything to default",
+            "Interface language: `en`",
+            "Wiki: enabled with language `en`",
+            "Agent persona: `strict`",
+            "every built-in Skill in the signed catalog",
+            "Usage guard: disabled",
+        ):
+            with self.subTest(required=required):
+                self.assertIn(required, skill)
+
     def test_source_prompt_refine_projection_matches_harness_canonical_bytes(self) -> None:
         canonical = (
             SKILL_ROOT / "hive-prompt-refine/SKILL.md"

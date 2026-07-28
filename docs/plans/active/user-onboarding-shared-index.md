@@ -21,6 +21,8 @@
 | Project expedited/custom | Global inherit 또는 bounded custom override | 충족 |
 | Project kind 필수 질문 | Project identity·domain profile 선행 | 충족 |
 | Project Wiki, project DB 없음 | Project Markdown Wiki + user-root 단일 SQLite | 충족 |
+| Initial global expedited | English·English Wiki·strict·all built-ins 고정 기본값 | 충족 |
+| Project auto onboarding | Global 상속·canonical evidence 추론·unresolved-only 질문 | 충족 |
 
 ## 구현
 
@@ -56,6 +58,12 @@
   unconnected setup-required fail-closed, project SQLite derived cleanup과 setup review
 - [x] [UOS-016] Targeted Rust/Python contract, setup matrix, rebuild equivalence,
   Codex·Antigravity local install→global setup→project expedited/custom E2E
+- [x] [UOS-017] Initial `Expedited — set everything to default`: English interface,
+  enabled English Wiki, general custom profile, strict persona, active host, all built-in Skills,
+  usage guard disabled·stored threshold 20·CodexBar fallback disabled
+- [x] [UOS-018] `auto-setup-harness`의 global preference 상속, canonical project
+  evidence와 confidence record, unresolved-only one-question sequence, zero-question apply gate,
+  promotion·third-party Skill·fallback hook의 추론 승인 금지
 
 ## 완료 evidence
 
@@ -68,6 +76,9 @@
 - 동결 `0.7.0` unconnected install의 `0.8.0` 전환 거부와 전체 install tree 무변경
 - Codex·Antigravity expedited/custom connected matrix 4/4
 - Shared index 동일 입력 재실행 byte-exact no-op와 `changed_paths=[]`
+- `auto-setup-harness` canonical·plugin·source·Codex·Claude projection parity
+- Skill validator PASS, `hive-cli` 221/221, `hive-projection` 26/26,
+  setup·projection·documentation Python 114개 PASS
 - Full pre-push Rust workspace 477/477, Python conformance 576개 실행,
   575 PASS와 Windows `pwsh` 전용 1개 expected skip
 - 독립 final blocker review의 severity 전체 finding 0건
@@ -80,7 +91,8 @@
 3. UOS-011–014: project mode와 shared index
 4. UOS-015: compatible migration
 5. UOS-016: local qualification
-6. Existing Claude·signing·publication external gate
+6. UOS-017–018: initial defaults와 automatic project inference
+7. Existing Claude·signing·publication external gate
 
 ## 검증 범위
 

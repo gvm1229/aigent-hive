@@ -19,7 +19,9 @@ Configure a consumer project without copying Hive source-development instruction
    - Resolve the exact user root selected during global Hive setup. Pass it only through `--user-root`; never inspect host-global configuration or plugin caches.
 3. Ask one setup question at a time.
    - Follow the required sequence under `Setup Question Sequence` below.
-   - Ask for setup mode first, then ask for project kind in both modes.
+   - In the guided workflow, ask for setup mode first, then ask for project kind in both modes.
+   - When `auto-setup-harness` supplies a schema-valid evidence record, accept only
+     `explicit` or `strong` inferred facts and ask for every `unresolved` required field.
    - In `expedited` mode, tell the user that the signed CLI bridge inherits global language, Wiki, persona, and Skill preferences. Do not ask those preference questions.
    - In `custom` mode, collect explicit project overrides for interface language, Wiki enablement and language, persona, and Skill selection.
    - Infer repository facts before asking the user.
@@ -75,7 +77,9 @@ Ask only questions whose answers cannot be established from the repository.
    - `expedited` inherits global interface language, Wiki enablement and language, persona, and selected Skills through the signed CLI bridge.
    - `custom` records explicit project overrides for those preferences.
 2. **Project kind**
-   - Ask this in both modes. Never infer it solely from the repository.
+   - Ask this in both guided modes.
+   - `auto-setup-harness` may infer `general` only from an explicit canonical project purpose;
+     it must ask when evidence is missing, contradictory, or points to unsupported domain rules.
    - Offer only project kinds present in the signed release.
    - Explain that `custom` project kind installs the base domain contract without guessing domain rules. Project kind is independent of `custom` setup mode.
 3. **Project identity**

@@ -16,46 +16,63 @@ Configure user-scope Hive preferences without modifying a project harness or pro
    - Resolve the exact `<user-root>` selected during user installation.
    - For reconfiguration, run `hive setup --scope user --answers <user-root>/.hive/config/user-setup.yml --user-root <user-root> --validate --output json` first.
    - Preserve existing answers unless the user changes them.
-3. Ask exactly one question at a time in the required order below.
+3. For initial setup, ask for setup mode first.
+   - Offer `Expedited — set everything to default` and `Custom`.
+   - Expedited performs no further preference questions and uses the fixed defaults below.
+   - Custom asks exactly one question at a time in the required order below.
+   - Reconfiguration preserves existing answers and asks only for requested changes.
+4. Resolve expedited defaults from the signed catalog.
+   - Interface language: `en`.
+   - Wiki: enabled with language `en`.
+   - User profile: `custom` with the fixed description
+     `General user; infer domain context from each project.`
+   - Agent persona: `strict`.
+   - Active hosts: the current authenticated host only.
+   - Skills: `individual` mode with every built-in Skill in the signed catalog.
+   - Usage guard: disabled, stored default remaining threshold `20`, CodexBar fallback disabled.
+   - Selecting expedited authorizes the displayed built-in dependency closure only. It never
+     approves a third-party Skill, CodexBar installation, credential access, or destructive action.
+5. Ask exactly one custom-setup question at a time in the required order below.
    - Explain the available values from the signed user-setup catalog.
    - Do not infer a preference, host selection, custom description, Skill approval, usage-guard opt-in, or fallback consent.
-4. Write the collected answers to a temporary YAML file matching `user-setup.schema.json`.
+6. Write the resolved answers to a temporary YAML file matching `user-setup.schema.json`.
    - Do not include provider credentials, tokens, cookies, account identifiers, or raw usage data.
-5. Preview the resolved setup.
+7. Preview the resolved setup.
    - Run `hive setup --scope user --answers <answers.yml> --user-root <user-root> --dry-run --output json`.
    - Show selected hosts and Skills, mandatory Skills, dependency closure, skipped components, marker edits, and conflicts.
    - Require explicit approval of the displayed dependency closure before apply.
-6. Apply only after preview approval.
+8. Apply only after preview approval or expedited selection with a conflict-free built-in-only preview.
    - Run `hive setup --scope user --answers <answers.yml> --user-root <user-root> --apply --output json`.
    - Preserve foreign bytes and third-party marker blocks.
-7. Validate with the same answers.
+9. Validate with the same answers.
    - Run `hive setup --scope user --answers <answers.yml> --user-root <user-root> --validate --output json`.
    - Report the canonical user setup path, active hosts, active Skills, Wiki state, usage-guard state, and any unsupported host capability.
 
 ## Question Order
 
-Ask only one question, wait for the answer, then continue.
+For initial setup, ask setup mode first. Ask the remaining questions only for `Custom`.
 
-1. **Interface language** — `en` or `ko`.
-2. **Wiki language** — `en`, `ko`, or `both`.
-3. **Wiki enablement** — default `enabled`; offer explicit opt-out without deleting canonical Markdown.
-4. **User profile** — `web-developer`, `game-developer`, `non-developer`, or `custom`.
+1. **Setup mode** — `Expedited — set everything to default` or `Custom`.
+2. **Interface language** — `en` or `ko`.
+3. **Wiki language** — `en`, `ko`, or `both`.
+4. **Wiki enablement** — default `enabled`; offer explicit opt-out without deleting canonical Markdown.
+5. **User profile** — `web-developer`, `game-developer`, `non-developer`, or `custom`.
    - For `custom`, ask the next single question for a non-empty custom description.
-5. **Agent persona** — `strict`, `balanced`, `friendly`, or `custom`.
+6. **Agent persona** — `strict`, `balanced`, `friendly`, or `custom`.
    - For `custom`, ask the next single question for a non-empty custom description.
-6. **Active hosts** — select one or more of `codex`, `claude`, and `antigravity`.
-7. **Skill selection mode** — a signed recommended suite or individual built-in Skills.
+7. **Active hosts** — select one or more of `codex`, `claude`, and `antigravity`.
+8. **Skill selection mode** — a signed recommended suite or individual built-in Skills.
    - Recommended: ask which suite from the signed catalog.
    - Individual: present existing built-ins and collect the selection.
    - Always include mandatory `setup-hive` and preview the full dependency closure.
    - The signed catalog's `optional_third_party_skills` list is empty in this release. Do not offer or activate a third-party Skill until a later release defines its explicit consent contract.
-8. **Usage guard** — explicit opt-in; default disabled.
+9. **Usage guard** — explicit opt-in; default disabled.
    - When enabled, offer the default remaining threshold `20` before asking for a different integer from `1` through `99`.
-9. **CodexBar fallback** — ask only when the usage guard is enabled and the active-host native sensor is unavailable, unsupported, or malformed.
+10. **CodexBar fallback** — ask only when the usage guard is enabled and the active-host native sensor is unavailable, unsupported, or malformed.
    - Explain that CodexBar is fallback-only and never overrides a native success or limited decision.
    - Record whether an already-qualified CodexBar fallback may be used.
    - If installation is needed, show the exact fixed command and request separate current-action consent. Never persist installation consent or infer it from the setup answer.
-10. **Preview approval** — approve or reject the exact write set and dependency closure.
+11. **Preview approval** — approve or reject the exact write set and dependency closure.
 
 ## Reconfiguration
 

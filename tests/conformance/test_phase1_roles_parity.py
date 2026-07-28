@@ -109,6 +109,7 @@ class Phase1CopierParity(Phase1CliTestCase):
         skills = active_ledger["skills"]
         self.assertIsInstance(skills, list)
         expected_names = [
+            "auto-setup-harness",
             "hive-judge-package",
             "hive-knowledge-capture",
             "hive-knowledge-maintenance",

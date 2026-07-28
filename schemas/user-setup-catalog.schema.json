@@ -54,7 +54,7 @@
     "skill_dependencies": {
       "type": "array",
       "minItems": 16,
-      "maxItems": 16,
+      "maxItems": 17,
       "uniqueItems": true,
       "items": { "$ref": "#/$defs/skill_dependency" }
     },
@@ -135,6 +135,7 @@
       "enum": [
         "setup-hive",
         "setup-harness",
+        "auto-setup-harness",
         "hive-simple-question",
         "hive-prompt-refine",
         "hive-knowledge-capture",

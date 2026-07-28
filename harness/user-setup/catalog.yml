@@ -70,6 +70,7 @@ recommended_skill_suites:
     skills:
       - setup-hive
       - setup-harness
+      - auto-setup-harness
       - hive-prompt-refine
       - hive-knowledge-capture
       - hive-knowledge-query
@@ -89,6 +90,7 @@ recommended_skill_suites:
     skills:
       - setup-hive
       - setup-harness
+      - auto-setup-harness
       - hive-prompt-refine
       - hive-knowledge-capture
       - hive-knowledge-query
@@ -110,6 +112,7 @@ recommended_skill_suites:
     skills:
       - setup-hive
       - setup-harness
+      - auto-setup-harness
       - hive-simple-question
       - hive-prompt-refine
       - hive-knowledge-capture
@@ -126,6 +129,9 @@ skill_dependencies:
     requires: []
   - skill: setup-harness
     requires: []
+  - skill: auto-setup-harness
+    requires:
+      - setup-harness
   - skill: hive-simple-question
     requires: []
   - skill: hive-prompt-refine
