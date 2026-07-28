@@ -35,6 +35,15 @@ After bootstrap:
 ## Commit Rules
 
 - One commit contains one clear concern.
+- Define a concern by an independently reviewable and revertible intent, not by file proximity,
+  shared task origin, or the convenience of one staging operation.
+- Split documentation or Wiki state, product behavior, version metadata, release activation, and
+  unrelated test infrastructure by default. Combine them only when they are mechanically
+  inseparable and explain that dependency in the commit body.
+- A Wiki capture and a product version or release-date change are separate commits.
+- Before staging, enumerate the intended commits and the exact paths or hunks owned by each.
+- When one file contains multiple concerns, use patch staging or sequence the edits so each commit
+  contains only its own hunks.
 - Stage only the files required for that concern.
 - Inspect recent human-authored commit style first. If none exists, use:
 
@@ -55,6 +64,9 @@ git status --short
 git diff --cached --check
 git diff --cached --stat
 ```
+
+Run the nearest verification for the staged concern before committing. A later broader suite does
+not make an internally mixed commit acceptable.
 
 ## Verification Tiers
 
@@ -87,6 +99,8 @@ Verify that the message has the intended scope and contains no co-author trailer
 
 - Verify `git remote -v` and the target ref before pushing.
 - Never force-push unless the user explicitly requests a history rewrite.
+- Do not rewrite an existing commit solely to apply current commit-splitting policy unless the user
+  explicitly requests that history change.
 - When explicitly authorized, use `--force-with-lease`, never plain `--force`.
 - Never delete `main` or `develop`.
 - Do not push secrets, runtime state, caches, SQLite files, generated release output, or active-session manifests.

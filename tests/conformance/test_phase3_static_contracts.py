@@ -192,6 +192,43 @@ class Phase3SkillSourceContract(unittest.TestCase):
             source_manifest,
         )
 
+    def test_source_commit_workflow_splits_independent_concerns(self) -> None:
+        directive = (
+            REPOSITORY_ROOT / ".agents/directives/03-workflow.md"
+        ).read_text(encoding="utf-8")
+        guide = (
+            REPOSITORY_ROOT / "docs/guides/commit-rules.md"
+        ).read_text(encoding="utf-8")
+        skill = (
+            REPOSITORY_ROOT / ".agents/skills/hive-commit/SKILL.md"
+        ).read_text(encoding="utf-8")
+        metadata = (
+            REPOSITORY_ROOT
+            / ".agents/skills/hive-commit/agents/openai.yaml"
+        ).read_text(encoding="utf-8")
+
+        for requirement in (
+            "independently reviewable and revertible intent",
+            "A Wiki capture and a product version or release-date change are separate commits.",
+            "use patch staging or sequence the edits",
+            "Do not rewrite an existing commit solely to apply current commit-splitting policy",
+        ):
+            self.assertIn(requirement, directive)
+        for requirement in (
+            "독립 검토·독립 되돌리기 가능한 의도",
+            "Wiki 기록과 `hive --version` 변경의 별도 커밋",
+            "과거 커밋 소급 적용 금지",
+        ):
+            self.assertIn(requirement, guide)
+        for requirement in (
+            "Build a concern map before staging.",
+            "Stage one concern only.",
+            "Do not rewrite, amend, rebase, or split existing history",
+            "Never bypass repository hooks",
+        ):
+            self.assertIn(requirement, skill)
+        self.assertIn("allow_implicit_invocation: true", metadata)
+
     def test_source_consumer_skill_reuse_and_orchestration_independence(self) -> None:
         source_manifest = (REPOSITORY_ROOT / "AGENTS.md").read_text(
             encoding="utf-8"
