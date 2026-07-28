@@ -1022,8 +1022,6 @@ fn resolve_skills(
     }
     if config.usage_guard.enabled {
         selected.insert("hive-usage-guard".to_owned());
-    } else {
-        selected.remove("hive-usage-guard");
     }
     let dependencies: BTreeMap<&str, &[String]> = catalog
         .skill_dependencies
@@ -1680,6 +1678,18 @@ usage_guard:
                 "hive-knowledge-query",
                 "setup-hive",
             ]
+        );
+    }
+
+    #[test]
+    fn disabled_usage_guard_preserves_an_explicitly_selected_control_skill() {
+        let mut config = valid_config();
+        config.skills.selected = vec!["hive-usage-guard".to_owned()];
+        let catalog = parse_and_validate_catalog().expect("catalog");
+
+        assert_eq!(
+            resolve_skills(&config, &catalog).expect("closure"),
+            ["hive-usage-guard", "setup-hive"]
         );
     }
 
