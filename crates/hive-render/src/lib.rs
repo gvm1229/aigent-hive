@@ -6548,6 +6548,12 @@ mod tests {
                 .expect("current active Skill ledger"),
         )
         .expect("active Skill ledger");
+        active.skills.retain(|skill| {
+            frozen_files.contains_key(&PathBuf::from(format!(
+                ".agents/skills/{}/SKILL.md",
+                skill.name
+            )))
+        });
         for skill in &mut active.skills {
             let path = PathBuf::from(format!(".agents/skills/{}/SKILL.md", skill.name));
             skill.content_digest = sha256_digest(
@@ -6752,10 +6758,21 @@ mod tests {
                 .iter()
                 .map(|entry| (entry.path.clone(), entry.content.clone()))
                 .collect::<BTreeMap<_, _>>();
-            assert_eq!(
-                historical_files.keys().collect::<Vec<_>>(),
-                current.files.keys().collect::<Vec<_>>()
-            );
+            let added_since_0_7 = current
+                .files
+                .keys()
+                .filter(|path| !historical_files.contains_key(*path))
+                .map(String::as_str)
+                .collect::<Vec<_>>();
+            let expected_added = if capabilities == "capabilities-claude-omc.json" {
+                vec![
+                    ".agents/skills/auto-setup-harness/SKILL.md",
+                    ".claude/skills/auto-setup-harness/SKILL.md",
+                ]
+            } else {
+                vec![".agents/skills/auto-setup-harness/SKILL.md"]
+            };
+            assert_eq!(added_since_0_7, expected_added);
             let changed_since_0_7 = [
                 "/hive-knowledge-capture/SKILL.md",
                 "/hive-knowledge-maintenance/SKILL.md",
@@ -8108,7 +8125,7 @@ mod tests {
             .expect("old Claude projection ownership should verify");
         let deletions = &transition.deletions;
 
-        assert_eq!(deletions.len(), 15);
+        assert_eq!(deletions.len(), 16);
         assert!(deletions
             .iter()
             .all(|path| path.starts_with(".claude/skills")));
