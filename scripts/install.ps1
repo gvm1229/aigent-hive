@@ -150,8 +150,20 @@ function Move-InstallFile {
     ) {
         throw "install file target is not a regular leaf"
     }
-    if ($Replace) {
-        [IO.File]::Move($Source, $Destination, $true)
+    if ($Replace -and $null -ne $destinationItem) {
+        $destinationDirectory = Split-Path -Parent $Destination
+        $backup = Join-Path $destinationDirectory (
+            ".hive-replace-backup-" + [Guid]::NewGuid().ToString("N")
+        )
+        [IO.File]::Replace($Source, $Destination, $backup)
+        $backupItem = Get-Item -LiteralPath $backup -Force -ErrorAction Stop
+        if (
+            $backupItem.PSIsContainer -or
+            ($backupItem.Attributes -band [IO.FileAttributes]::ReparsePoint)
+        ) {
+            throw "install replacement backup is not a regular leaf"
+        }
+        Remove-Item -LiteralPath $backup -Force
     } else {
         [IO.File]::Move($Source, $Destination)
     }
