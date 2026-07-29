@@ -401,21 +401,41 @@ fn qualify_program(program: &str) -> Result<QualifiedExecutable, SensorError> {
 }
 
 fn resolve_program_in_path(program: &str, search_path: &OsStr) -> Option<PathBuf> {
-    std::env::split_paths(search_path).find_map(|directory| {
-        let candidate = directory.join(program);
-        if let Some(executable) = resolve_executable(&candidate) {
-            return Some(executable);
+    #[cfg(windows)]
+    {
+        let directories = std::env::split_paths(search_path).collect::<Vec<_>>();
+        if program == "codex" {
+            let package_paths = [
+                "node_modules/@openai/codex/node_modules/@openai/codex-win32-x64/vendor/x86_64-pc-windows-msvc/bin/codex.exe",
+                "node_modules/@openai/codex/vendor/x86_64-pc-windows-msvc/bin/codex.exe",
+            ];
+            for directory in &directories {
+                for package_path in package_paths {
+                    if let Some(executable) = resolve_executable(&directory.join(package_path)) {
+                        return Some(executable);
+                    }
+                }
+            }
         }
-        #[cfg(windows)]
-        {
-            for extension in ["exe", "cmd", "bat"] {
-                let executable = directory.join(format!("{program}.{extension}"));
-                if let Some(executable) = resolve_executable(&executable) {
+        for extension in ["exe", "", "cmd", "bat"] {
+            for directory in &directories {
+                let candidate = if extension.is_empty() {
+                    directory.join(program)
+                } else {
+                    directory.join(format!("{program}.{extension}"))
+                };
+                if let Some(executable) = resolve_executable(&candidate) {
                     return Some(executable);
                 }
             }
         }
-        None
+        return None;
+    }
+
+    #[cfg(not(windows))]
+    std::env::split_paths(search_path).find_map(|directory| {
+        let candidate = directory.join(program);
+        resolve_executable(&candidate)
     })
 }
 
@@ -1705,6 +1725,59 @@ mod tests {
                 wrapper
                     .canonicalize()
                     .expect("fixture wrapper should resolve")
+            )
+        );
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn prefers_a_native_windows_executable_over_an_earlier_script_shim() {
+        let shim_directory = tempfile::tempdir().expect("shim directory should exist");
+        let native_directory = tempfile::tempdir().expect("native directory should exist");
+        fs::write(shim_directory.path().join("codex"), b"#!/bin/sh\n")
+            .expect("extensionless shim should be created");
+        fs::write(shim_directory.path().join("codex.cmd"), b"@exit /b 0\r\n")
+            .expect("command shim should be created");
+        let native = native_directory.path().join("codex.exe");
+        fs::write(&native, b"fixture").expect("native executable should be created");
+        let search_path = std::env::join_paths([shim_directory.path(), native_directory.path()])
+            .expect("search path should be valid");
+
+        assert_eq!(
+            resolve_program_in_path("codex", &search_path),
+            Some(
+                native
+                    .canonicalize()
+                    .expect("native fixture should resolve")
+            )
+        );
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn resolves_the_native_binary_behind_the_codex_npm_shim() {
+        let directory = tempfile::tempdir().expect("temporary directory should exist");
+        let native = directory.path().join(
+            "node_modules/@openai/codex/node_modules/@openai/codex-win32-x64/vendor/x86_64-pc-windows-msvc/bin/codex.exe",
+        );
+        fs::create_dir_all(
+            native
+                .parent()
+                .expect("native fixture should have a parent directory"),
+        )
+        .expect("native fixture parent should be created");
+        fs::write(directory.path().join("codex"), b"#!/bin/sh\n")
+            .expect("extensionless shim should be created");
+        fs::write(directory.path().join("codex.cmd"), b"@exit /b 0\r\n")
+            .expect("command shim should be created");
+        fs::write(&native, b"fixture").expect("native executable should be created");
+
+        assert_eq!(
+            resolve_program_in_path("codex", &OsString::from(directory.path())),
+            Some(
+                native
+                    .canonicalize()
+                    .expect("native fixture should resolve")
             )
         );
     }
