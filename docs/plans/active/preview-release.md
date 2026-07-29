@@ -23,7 +23,7 @@
 
 | Gate | 현재 상태 | 정본 항목 |
 | --- | --- | --- |
-| Skill metadata | 110개 Skill, Hive 37개 노출과 정규화 중복 18개 | `P7-042` |
+| Skill metadata | Project projection implicit owner 1개, 나머지 explicit-only, fresh-session 중복 warning 0건 | 완료 |
 | Clean-clone CI | `9b1e951`의 Linux·Windows·contract failure | `P7-040` |
 | Windows UAT | 실제 기기 설치·setup·project harness·upgrade 미검증 | `P7-041` |
 | Windows shell | PowerShell 5.1·`cmd.exe`·source-only PowerShell 7 경계 완료 | 완료 |
@@ -38,17 +38,15 @@
 
 ## 실행 순서
 
-1. `P7-042`: Codex projection별 단일 implicit Hive Skill, explicit-only long-tail,
-   metadata audit와 fresh-session 경고 재검증
-2. `P7-040`: Linux shared-index directory sync, Windows canonical user-root pinning,
+1. `P7-040`: Linux shared-index directory sync, Windows canonical user-root pinning,
    release-version output contract, schema validation failure 수정
-3. `P7-041`: Windows 실제 기기 clean install, global setup, project auto onboarding,
+2. `P7-041`: Windows 실제 기기 clean install, global setup, project auto onboarding,
    shared index, update·rollback smoke
-4. `P7-020`: exact candidate tag 기반 multi-platform archive, SHA-256,
+3. `P7-020`: exact candidate tag 기반 multi-platform archive, SHA-256,
    GitHub artifact attestation 생성
-5. `P7-018`: clean clone, 전체 Rust·Python, 세 OS CI, installer·upgrade·recovery,
+4. `P7-018`: clean clone, 전체 Rust·Python, 세 OS CI, installer·upgrade·recovery,
    Wiki·Skill budget qualification
-6. `P7-037`: `Claude-unverified preview` disclosure와 known limitation을 포함한
+5. `P7-037`: `Claude-unverified preview` disclosure와 known limitation을 포함한
    protected GitHub Release publication
 
 ## Claude preview 경계

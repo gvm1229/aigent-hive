@@ -2,10 +2,10 @@
 
 - 기준 branch: `develop`
 - product version: `0.7.0`
-- plan revision: `1.56`
+- plan revision: `1.57`
 - 현재 milestone: Phase 7 qualification + global onboarding·shared index `0.8.0`
-- 현재 작업: `0.8.0 Claude-unverified preview` release plan, Skill metadata budget,
-  Windows shell install boundary, current CI 복구와 실제 기기 인계
+- 현재 작업: `0.8.0 Claude-unverified preview` release plan, current CI 복구와
+  실제 Windows 기기 acceptance
 - 외부 중지 경계: protected signing/publication credential, 실제 production publication,
   exact `1.0.0` 사용자 authority
 - Plan load: compact `docs/plans/PLAN.md` + `docs/plans/phases/07-public-qualification.md`
@@ -16,7 +16,7 @@
   + `docs/plans/active/windows-shell-install.md`
   + `docs/plans/active/documentation-style.md` + `docs/plans/active/security-review.md`
   + `docs/plans/active/preview-release.md`
-- Plan completion: canonical checklist `210/216` 완료, `6`개 미완료, `97.2%`
+- Plan completion: canonical checklist `211/216` 완료, `5`개 미완료, `97.7%`
 - Latest local Windows: Rust workspace 전체 PASS, PowerShell 5.1·7.6.4 installer와
   `cmd.exe` bootstrap 계약 PASS
 - Latest remote: `9b1e951`의 CI `30347960157`과 native release runtime
@@ -174,7 +174,6 @@ Target: `0.8.0`
 
 `0.8.0` preview gap:
 
-- Hive Skill implicit metadata 중복과 context budget
 - Consumer PowerShell 5.1·`cmd.exe` install과 source-only PowerShell 7 dependency 경계
 - Current Linux·Windows·contract CI failure
 - 실제 Windows 기기 install·setup·upgrade acceptance
@@ -212,7 +211,7 @@ Preview 비차단 deferred:
 계획 evidence:
 
 - Active fragment 8 KiB 제한 충족
-- Canonical checklist `210/216`, active checklist ID 중복 0건
+- Canonical checklist `211/216`, active checklist ID 중복 0건
 - Plan static contract 29/29, documentation style regression 18/18 PASS
 - Human documentation inventory 258/258 review, finding 0건
 - Markdown link conformance PASS
@@ -426,7 +425,6 @@ Current contradiction evidence:
 
 ## `0.8.0` preview release gate
 
-- P7-042 Hive Skill metadata budget·implicit 중복 qualification
 - P7-040 current clean-clone 전체 CI
 - P7-041 실제 Windows 기기 acceptance
 - P7-020 candidate SHA-256·GitHub artifact attestation
@@ -443,8 +441,7 @@ Preview 비차단 deferred:
 
 ## 다음 action
 
-1. P7-042 Hive Skill fresh-session metadata budget·implicit 중복 qualification
-2. P7-040 Linux·Windows·contract CI 복구
-3. P7-041 실제 Windows 기기 acceptance
-4. P7-020·018 artifact attestation과 release candidate qualification
-5. P7-037 protected preview publication
+1. P7-040 Linux·Windows·contract CI 복구
+2. P7-041 실제 Windows 기기 acceptance
+3. P7-020·018 artifact attestation과 release candidate qualification
+4. P7-037 protected preview publication
