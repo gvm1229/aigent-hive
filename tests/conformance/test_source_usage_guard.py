@@ -219,6 +219,10 @@ raise SystemExit(64)
     def hide_codexbar(self) -> None:
         self.fake_command_path("codexbar").unlink(missing_ok=True)
         self.fake_script_path("codexbar").unlink(missing_ok=True)
+        if os.name != "nt":
+            python = self.fake_bin / "python3"
+            if not python.exists():
+                python.symlink_to(sys.executable)
         self.environment["PATH"] = str(self.fake_bin)
 
     def write_fake_codexbar_transient(self) -> None:
