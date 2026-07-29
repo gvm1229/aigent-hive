@@ -838,6 +838,7 @@ class Phase6StaticContracts(unittest.TestCase):
         ]
         self.assertGreaterEqual(len(shells), 1)
         command = r"""
+Import-Module Microsoft.PowerShell.Utility -ErrorAction Stop
 $errors = $null
 $tokens = $null
 $ast = [Management.Automation.Language.Parser]::ParseFile(
