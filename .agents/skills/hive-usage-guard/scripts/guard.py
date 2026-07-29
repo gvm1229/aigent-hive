@@ -216,13 +216,18 @@ def write_json(root: Path, path: Path, value: dict[str, Any]) -> None:
     descriptor, temporary = tempfile.mkstemp(prefix=f".{path.name}.", dir=path.parent)
     temporary_path = Path(temporary)
     try:
-        os.fchmod(descriptor, 0o600)
+        fchmod = getattr(os, "fchmod", None)
+        if callable(fchmod):
+            fchmod(descriptor, 0o600)
         with os.fdopen(descriptor, "wb") as stream:
+            descriptor = -1
             stream.write(payload)
             stream.flush()
             os.fsync(stream.fileno())
         os.replace(temporary_path, path)
     finally:
+        if descriptor >= 0:
+            os.close(descriptor)
         temporary_path.unlink(missing_ok=True)
 
 

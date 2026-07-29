@@ -13,6 +13,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 GUARD = (
@@ -62,6 +63,79 @@ class SourceUsageGuardTests(unittest.TestCase):
         except Exception:
             pass
         self.temporary.cleanup()
+
+    def test_write_json_skips_unavailable_fchmod(self) -> None:
+        guard_namespace = runpy.run_path(str(GUARD))
+        root = self.root.resolve()
+        target = root / "state.json"
+
+        with mock.patch.object(
+            guard_namespace["os"],
+            "fchmod",
+            None,
+            create=True,
+        ):
+            guard_namespace["write_json"](
+                root,
+                target,
+                {"schema_version": 1},
+            )
+
+        self.assertEqual(
+            json.loads(target.read_text(encoding="utf-8")),
+            {"schema_version": 1},
+        )
+        self.assertEqual(list(root.glob(".state.json.*")), [])
+
+    def test_write_json_closes_descriptor_before_failed_write_cleanup(
+        self,
+    ) -> None:
+        guard_namespace = runpy.run_path(str(GUARD))
+        root = self.root.resolve()
+        target = root / "state.json"
+        captured: dict[str, int | Path] = {}
+        original_mkstemp = guard_namespace["tempfile"].mkstemp
+
+        def capture_mkstemp(*args: object, **kwargs: object) -> tuple[int, str]:
+            descriptor, temporary = original_mkstemp(*args, **kwargs)
+            captured["descriptor"] = descriptor
+            captured["temporary"] = Path(temporary)
+            return descriptor, temporary
+
+        with (
+            mock.patch.object(
+                guard_namespace["tempfile"],
+                "mkstemp",
+                side_effect=capture_mkstemp,
+            ),
+            mock.patch.object(
+                guard_namespace["os"],
+                "fchmod",
+                side_effect=OSError("permission update failed"),
+                create=True,
+            ),
+        ):
+            with self.assertRaisesRegex(OSError, "permission update failed"):
+                guard_namespace["write_json"](
+                    root,
+                    target,
+                    {"schema_version": 1},
+                )
+
+        descriptor = captured["descriptor"]
+        self.assertIsInstance(descriptor, int)
+        try:
+            with self.assertRaises(OSError):
+                os.fstat(descriptor)
+        finally:
+            try:
+                os.close(descriptor)
+            except OSError:
+                pass
+        temporary = captured["temporary"]
+        self.assertIsInstance(temporary, Path)
+        self.assertFalse(temporary.exists())
+        self.assertFalse(target.exists())
 
     def switch_codex_thread(self, session_id: str) -> None:
         self.session_id = session_id
