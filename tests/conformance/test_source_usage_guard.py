@@ -6,6 +6,7 @@ from __future__ import annotations
 import datetime as dt
 import json
 import os
+import runpy
 import stat
 import subprocess
 import sys
@@ -35,7 +36,6 @@ class SourceUsageGuardTests(unittest.TestCase):
         (self.root / "hive-source.json").write_text("{}\n", encoding="utf-8")
         (self.root / "AGENTS.md").write_text("# test\n", encoding="utf-8")
         self.session_id = "11111111-1111-1111-1111-111111111111"
-        self.write_session(self.session_id)
         self.fake_bin = self.root / "bin"
         self.fake_bin.mkdir()
         self.fixture = self.root / "usage.json"
@@ -51,6 +51,9 @@ class SourceUsageGuardTests(unittest.TestCase):
             "HIVE_USAGE_SENSOR_CALL_LOG": str(self.call_log),
             "HIVE_FAKE_CODEXBAR_TARGET": str(self.fake_bin / "codexbar"),
             "HIVE_USAGE_UNKNOWN_RETRY_DELAY_SECONDS": "0",
+            "HIVE_USAGE_TEST_PROCESS_ID": str(os.getpid()),
+            "HIVE_USAGE_TEST_PROCESS_START": "fixture-process-start-a",
+            "CODEX_THREAD_ID": self.session_id,
         }
 
     def tearDown(self) -> None:
@@ -60,20 +63,9 @@ class SourceUsageGuardTests(unittest.TestCase):
             pass
         self.temporary.cleanup()
 
-    def write_session(self, session_id: str, *, pid: int | None = None) -> None:
-        path = self.root / ".omx" / "state"
-        path.mkdir(parents=True, exist_ok=True)
-        (path / "session.json").write_text(
-            json.dumps(
-                {
-                    "session_id": session_id,
-                    "native_session_id": session_id,
-                    "cwd": str(self.root),
-                    "pid": os.getpid() if pid is None else pid,
-                }
-            ),
-            encoding="utf-8",
-        )
+    def switch_codex_thread(self, session_id: str) -> None:
+        self.session_id = session_id
+        self.environment["CODEX_THREAD_ID"] = session_id
 
     def write_fake_codexbar(self) -> None:
         executable = self.fake_bin / "codexbar"
@@ -345,6 +337,40 @@ raise SystemExit(64)
     def output(self, completed: subprocess.CompletedProcess[str]) -> dict[str, object]:
         self.assertTrue(completed.stdout.strip(), completed.stderr)
         return json.loads(completed.stdout.strip().splitlines()[-1])
+
+    def process_is_alive(self, pid: int) -> bool:
+        if os.name == "nt":
+            import ctypes
+            from ctypes import wintypes
+
+            kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+            kernel32.OpenProcess.argtypes = [
+                wintypes.DWORD,
+                wintypes.BOOL,
+                wintypes.DWORD,
+            ]
+            kernel32.OpenProcess.restype = wintypes.HANDLE
+            kernel32.WaitForSingleObject.argtypes = [
+                wintypes.HANDLE,
+                wintypes.DWORD,
+            ]
+            kernel32.WaitForSingleObject.restype = wintypes.DWORD
+            kernel32.CloseHandle.argtypes = [wintypes.HANDLE]
+            kernel32.CloseHandle.restype = wintypes.BOOL
+            handle = kernel32.OpenProcess(0x00100000, False, pid)
+            if not handle:
+                return False
+            try:
+                return kernel32.WaitForSingleObject(handle, 0) == 0x00000102
+            finally:
+                kernel32.CloseHandle(handle)
+        try:
+            os.kill(pid, 0)
+        except ProcessLookupError:
+            return False
+        except PermissionError:
+            return True
+        return True
 
     def test_weekly_fallback_halts_at_or_below_inclusive_default(self) -> None:
         self.write_usage(primary=None, secondary_used=90)
@@ -804,7 +830,48 @@ raise SystemExit(64)
         )
         self.assertEqual(settings["threshold_remaining_percent"], 8)
 
-    def test_session_disable_requires_confirmation_and_never_transfers(self) -> None:
+    def test_gate_allows_clean_clone_without_omx_state(self) -> None:
+        self.write_usage(primary=None, secondary_used=1)
+
+        completed = self.run_guard("gate")
+
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        result = self.output(completed)
+        self.assertEqual(result["session_id"], self.session_id)
+        self.assertEqual(result["session_source"], "codex-thread")
+        self.assertTrue(result["watcher"]["active"])
+        self.assertTrue((self.root / ".agents/work/usage-guard").is_dir())
+        self.assertFalse((self.root / ".omx").exists())
+
+    def test_gate_uses_process_identity_when_codex_thread_is_missing(self) -> None:
+        self.environment.pop("CODEX_THREAD_ID")
+        self.write_usage(primary=None, secondary_used=1)
+
+        checked = self.run_guard("check")
+        status = self.run_guard("status")
+
+        self.assertEqual(checked.returncode, 0, checked.stderr)
+        self.assertEqual(status.returncode, 0, status.stderr)
+        checked_result = self.output(checked)
+        status_result = self.output(status)
+        self.assertEqual(checked_result["session_source"], "codex-process")
+        self.assertEqual(status_result["session_source"], "codex-process")
+        self.assertEqual(checked_result["session_id"], status_result["session_id"])
+
+    def test_gate_ignores_invalid_omx_session_state(self) -> None:
+        state = self.root / ".omx/state/session.json"
+        state.parent.mkdir(parents=True)
+        state.write_bytes(b"{not-json\n")
+        before = state.read_bytes()
+        self.write_usage(primary=None, secondary_used=1)
+
+        completed = self.run_guard("gate")
+
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(self.output(completed)["session_id"], self.session_id)
+        self.assertEqual(state.read_bytes(), before)
+
+    def test_session_disable_requires_confirmation(self) -> None:
         self.write_usage(primary=None, secondary_used=91)
 
         refused = self.run_guard("session-disable")
@@ -812,17 +879,174 @@ raise SystemExit(64)
             "session-disable", "--confirm-session-disable"
         )
         bypassed = self.run_guard("check")
-        self.write_session("22222222-2222-2222-2222-222222222222")
-        next_session = self.run_guard("check")
 
         self.assertEqual(refused.returncode, 64, refused.stderr)
         self.assertEqual(disabled.returncode, 0, disabled.stderr)
         self.assertEqual(bypassed.returncode, 0, bypassed.stderr)
         bypass_result = self.output(bypassed)
-        self.assertEqual(bypass_result["quota_decision"], "halted")
+        self.assertEqual(bypass_result["quota_decision"], "not_checked")
         self.assertEqual(bypass_result["enforcement_decision"], "session_bypass")
+
+    def test_session_disable_does_not_transfer_to_new_codex_thread(self) -> None:
+        self.write_usage(primary=None, secondary_used=91)
+        disabled = self.run_guard(
+            "session-disable", "--confirm-session-disable"
+        )
+        self.switch_codex_thread("22222222-2222-2222-2222-222222222222")
+
+        next_session = self.run_guard("check")
+
+        self.assertEqual(disabled.returncode, 0, disabled.stderr)
         self.assertEqual(next_session.returncode, 10, next_session.stderr)
         self.assertTrue(self.output(next_session)["guard_enabled"])
+
+    def test_gate_retires_watcher_from_previous_codex_thread(self) -> None:
+        self.write_usage(primary=None, secondary_used=1)
+        first = self.run_guard("gate")
+        first_pid = int(self.output(first)["watcher"]["pid"])
+        first_state = (
+            self.root
+            / ".agents/work/usage-guard/sessions"
+            / self.session_id
+            / "watcher.json"
+        )
+        self.switch_codex_thread("22222222-2222-2222-2222-222222222222")
+
+        second = self.run_guard("gate")
+
+        self.assertEqual(first.returncode, 0, first.stderr)
+        self.assertEqual(second.returncode, 0, second.stderr)
+        second_pid = int(self.output(second)["watcher"]["pid"])
+        self.assertNotEqual(first_pid, second_pid)
+        self.assertFalse(self.process_is_alive(first_pid))
+        self.assertFalse(first_state.exists())
+
+    def test_process_creation_change_never_reuses_session_bypass(self) -> None:
+        disabled = self.run_guard(
+            "session-disable", "--confirm-session-disable"
+        )
+        self.environment["HIVE_USAGE_TEST_PROCESS_START"] = (
+            "fixture-process-start-b"
+        )
+        self.write_usage(primary=None, secondary_used=1)
+
+        completed = self.run_guard("check")
+
+        self.assertEqual(disabled.returncode, 0, disabled.stderr)
+        self.assertEqual(completed.returncode, 11, completed.stderr)
+        self.assertEqual(self.output(completed)["status"], "usage_unknown")
+
+    def test_watch_stop_never_signals_unrelated_tokenized_process(self) -> None:
+        disabled = self.run_guard(
+            "session-disable", "--confirm-session-disable"
+        )
+        self.assertEqual(disabled.returncode, 0, disabled.stderr)
+        session_root = (
+            self.root
+            / ".agents/work/usage-guard/sessions"
+            / self.session_id
+        )
+        control = json.loads(
+            (session_root / "control.json").read_text(encoding="utf-8")
+        )
+        sleeper = subprocess.Popen(
+            [sys.executable, "-c", "import time; time.sleep(30)"]
+        )
+        try:
+            guard_namespace = runpy.run_path(str(GUARD))
+            watcher = {
+                "schema_version": 1,
+                "session_id": self.session_id,
+                "session_pid": control["session_pid"],
+                "session_source": "codex-thread",
+                "session_process_start": control["session_process_start"],
+                "pid": sleeper.pid,
+                "watcher_process_start": guard_namespace[
+                    "process_start_digest"
+                ](sleeper.pid),
+                "watcher_nonce_digest": "sha256:" + "0" * 64,
+                "started_at": timestamp(),
+                "script": str(GUARD),
+            }
+            (session_root / "watcher.json").write_text(
+                json.dumps(watcher),
+                encoding="utf-8",
+            )
+
+            completed = self.run_guard("watch-stop")
+
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            self.assertIsNone(sleeper.poll())
+            self.assertFalse((session_root / "watcher.json").exists())
+        finally:
+            if sleeper.poll() is None:
+                sleeper.terminate()
+            sleeper.wait(timeout=5)
+
+    def test_disabled_gate_does_not_initialize_quota_sensor(self) -> None:
+        disabled = self.run_guard(
+            "session-disable", "--confirm-session-disable"
+        )
+        self.hide_codexbar()
+        self.call_log.unlink(missing_ok=True)
+
+        bypassed = self.run_guard("gate")
+
+        self.assertEqual(disabled.returncode, 0, disabled.stderr)
+        self.assertEqual(bypassed.returncode, 0, bypassed.stderr)
+        result = self.output(bypassed)
+        self.assertEqual(result["quota_decision"], "not_checked")
+        self.assertEqual(result["enforcement_decision"], "session_bypass")
+        self.assertFalse(self.call_log.exists())
+
+    def test_status_does_not_initialize_quota_sensor(self) -> None:
+        self.hide_codexbar()
+        self.call_log.unlink(missing_ok=True)
+
+        completed = self.run_guard("status")
+
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        result = self.output(completed)
+        self.assertEqual(result["quota_check"], "not-run")
+        self.assertTrue(result["guard_enabled"])
+        self.assertFalse(self.call_log.exists())
+
+    def test_status_reports_fresh_last_quota_without_sensor_call(self) -> None:
+        self.write_usage(primary=None, secondary_used=1)
+        checked = self.run_guard("check")
+        calls_before = self.call_log.read_text(encoding="utf-8")
+
+        completed = self.run_guard("status")
+
+        self.assertEqual(checked.returncode, 0, checked.stderr)
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        result = self.output(completed)
+        self.assertEqual(result["quota_check"], "last-observation")
+        self.assertTrue(result["observation_fresh"])
+        self.assertEqual(result["used_percent"], 1.0)
+        self.assertEqual(result["remaining_percent"], 99.0)
+        self.assertEqual(result["window"], "weekly")
+        self.assertIn("measured_at", result)
+        self.assertEqual(
+            self.call_log.read_text(encoding="utf-8"),
+            calls_before,
+        )
+
+    def test_session_enable_does_not_initialize_quota_sensor(self) -> None:
+        self.assertEqual(
+            self.run_guard(
+                "session-disable", "--confirm-session-disable"
+            ).returncode,
+            0,
+        )
+        self.hide_codexbar()
+        self.call_log.unlink(missing_ok=True)
+
+        completed = self.run_guard("session-enable")
+
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertTrue(self.output(completed)["guard_enabled"])
+        self.assertFalse(self.call_log.exists())
 
     def test_reenable_immediately_restores_halt(self) -> None:
         self.write_usage(primary=None, secondary_used=91)
