@@ -63,6 +63,11 @@ jobs:
           else
             echo "HIVE_BIN=$GITHUB_WORKSPACE/target/debug/hive" >> "$GITHUB_ENV"
           fi
+      - name: Run source usage-guard conformance corpus
+        run: >-
+          python -m unittest
+          tests.conformance.test_source_usage_guard
+          -v
       - name: Run complete Phase 1 conformance corpus
         run: >-
           python -m unittest discover
@@ -106,11 +111,6 @@ jobs:
         run: >-
           python -m unittest
           tests.conformance.test_phase7_usage_control
-          -v
-      - name: Run source usage-guard conformance corpus
-        run: >-
-          python -m unittest
-          tests.conformance.test_source_usage_guard
           -v
 
   copier:
