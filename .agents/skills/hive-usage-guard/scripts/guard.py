@@ -1691,6 +1691,13 @@ def release_watcher_lease(descriptor: int) -> None:
         os.close(descriptor)
 
 
+def read_watcher_lease_payload(descriptor: int, size: int) -> bytes:
+    if os.name == "nt":
+        os.lseek(descriptor, 1, os.SEEK_SET)
+        return b"{" + os.read(descriptor, size)
+    return os.read(descriptor, size)
+
+
 def watcher_lease_matches(
     root: Path,
     session: dict[str, Any],
@@ -1714,7 +1721,10 @@ def watcher_lease_matches(
             or metadata.st_size > 64 * 1024
         ):
             return False
-        payload = os.read(descriptor, metadata.st_size + 1)
+        payload = read_watcher_lease_payload(
+            descriptor,
+            metadata.st_size + 1,
+        )
         if try_lock_watcher_lease(descriptor):
             unlock_watcher_lease(descriptor)
             return False

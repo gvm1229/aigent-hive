@@ -137,6 +137,38 @@ class SourceUsageGuardTests(unittest.TestCase):
         self.assertFalse(temporary.exists())
         self.assertFalse(target.exists())
 
+    def test_windows_watcher_lease_read_skips_locked_first_byte(self) -> None:
+        guard_namespace = runpy.run_path(str(GUARD))
+        payload = b'{"schema_version": 1}\n'
+        descriptor, temporary = tempfile.mkstemp(dir=self.root.resolve())
+        original_read = os.read
+
+        def deny_locked_byte(candidate: int, size: int) -> bytes:
+            if os.lseek(candidate, 0, os.SEEK_CUR) == 0:
+                raise PermissionError("locked byte")
+            return original_read(candidate, size)
+
+        try:
+            os.write(descriptor, payload)
+            os.lseek(descriptor, 0, os.SEEK_SET)
+            with (
+                mock.patch.object(guard_namespace["os"], "name", "nt"),
+                mock.patch.object(
+                    guard_namespace["os"],
+                    "read",
+                    side_effect=deny_locked_byte,
+                ),
+            ):
+                actual = guard_namespace["read_watcher_lease_payload"](
+                    descriptor,
+                    len(payload) + 1,
+                )
+        finally:
+            os.close(descriptor)
+            Path(temporary).unlink(missing_ok=True)
+
+        self.assertEqual(actual, payload)
+
     def switch_codex_thread(self, session_id: str) -> None:
         self.session_id = session_id
         self.environment["CODEX_THREAD_ID"] = session_id
