@@ -34,6 +34,10 @@ After bootstrap:
 
 ## Commit Rules
 
+- Commit every completed source task independently before combining it with later completed work.
+  Never bundle unrelated completed tasks in one commit, even when they share a request, session,
+  milestone, or delivery window. Split a task further when it contains independently reviewable
+  and revertible concerns.
 - One commit contains one clear concern.
 - Define a concern by an independently reviewable and revertible intent, not by file proximity,
   shared task origin, or the convenience of one staging operation.
