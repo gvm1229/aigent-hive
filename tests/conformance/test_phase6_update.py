@@ -415,6 +415,10 @@ class Phase6StaticContracts(unittest.TestCase):
             ".github/workflows/release-runtime.yml",
             triggers["push"]["paths"],
         )
+        self.assertIn(
+            "tests/fixtures/agy-stub.py",
+            triggers["push"]["paths"],
+        )
         self.assertEqual(workflow["permissions"], {"contents": "read"})
         self.assertEqual(set(workflow["jobs"]), {"macos", "windows"})
         macos_matrix = workflow["jobs"]["macos"]["strategy"]["matrix"]["include"]
@@ -455,9 +459,18 @@ class Phase6StaticContracts(unittest.TestCase):
             "hive.user-install-dry-run-complete",
             "hive.user-install-complete",
             "hive.user-install-valid",
+            "tests/fixtures/agy-stub.py",
+            "HIVE_TEST_HOST_LOG",
             "GITHUB_STEP_SUMMARY",
         ):
             self.assertIn(required, text)
+        self.assertEqual(
+            text.count(
+                "actions/setup-python@"
+                "5fda3b95a4ea91299a34e894583c3862153e4b97"
+            ),
+            2,
+        )
         self.assertEqual(text.count("--host antigravity"), 6)
         self.assertEqual(text.count("--dry-run --output json"), 2)
         self.assertEqual(text.count("--apply --output json"), 2)
@@ -476,6 +489,19 @@ class Phase6StaticContracts(unittest.TestCase):
             "scripts/install.ps1",
         ):
             self.assertNotIn(forbidden, text)
+
+        agy_fixture = (ROOT / "tests/fixtures/agy-stub.py").read_text(
+            encoding="utf-8"
+        )
+        for required in (
+            'arguments == ["--version"]',
+            'command.startswith("plugin install ")',
+            'command == "plugin uninstall aigent-hive"',
+            'command == "plugin list"',
+            "No imported plugins.",
+        ):
+            self.assertIn(required, agy_fixture)
+        self.assertNotIn("subprocess", agy_fixture)
 
     def test_direct_homebrew_and_winget_paths_preserve_binary_ownership(self) -> None:
         shell = (ROOT / "scripts/install.sh").read_text(encoding="utf-8")

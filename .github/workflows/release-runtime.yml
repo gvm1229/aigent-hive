@@ -12,6 +12,7 @@ on:
       - harness/**
       - schemas/**
       - scripts/check-release-version.sh
+      - tests/fixtures/agy-stub.py
       - LICENSE
       - .github/workflows/release-runtime.yml
   workflow_dispatch:
@@ -47,6 +48,9 @@ jobs:
         with:
           toolchain: stable
           targets: ${{ matrix.target }}
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
       - name: Build locked native release
         run: |
           version=$(awk -F'"' '/^version = "/ { print $2; exit }' Cargo.toml)
@@ -96,7 +100,13 @@ jobs:
         run: |
           installed="$RUNNER_TEMP/prefix/$PACKAGE/hive"
           user_root="$RUNNER_TEMP/antigravity-user"
+          fake_bin="$RUNNER_TEMP/fake-bin"
           mkdir "$user_root"
+          mkdir "$fake_bin"
+          cp tests/fixtures/agy-stub.py "$fake_bin/agy"
+          chmod +x "$fake_bin/agy"
+          export PATH="$fake_bin:$PATH"
+          export HIVE_TEST_HOST_LOG="$RUNNER_TEMP/antigravity-host"
           "$installed" install --scope user --host antigravity \
             --user-root "$user_root" --dry-run --output json \
             >"$RUNNER_TEMP/install-dry-run.json"
@@ -146,6 +156,9 @@ jobs:
         with:
           toolchain: stable
           targets: x86_64-pc-windows-msvc
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
       - name: Build locked native release
         shell: pwsh
         run: |
@@ -240,7 +253,14 @@ jobs:
         run: |
           $installed = "$env:RUNNER_TEMP\prefix\hive.exe"
           $userRoot = "$env:RUNNER_TEMP\antigravity-user"
+          $fakeBin = "$env:RUNNER_TEMP\fake-bin"
           New-Item -ItemType Directory -Path $userRoot | Out-Null
+          New-Item -ItemType Directory -Path $fakeBin | Out-Null
+          Copy-Item tests/fixtures/agy-stub.py "$fakeBin\agy.py"
+          '@python "%~dp0agy.py" %*' |
+            Set-Content "$fakeBin\agy.cmd" -Encoding ascii
+          $env:PATH = "$fakeBin;$env:PATH"
+          $env:HIVE_TEST_HOST_LOG = "$env:RUNNER_TEMP\antigravity-host"
           $dryRun = & $installed install --scope user --host antigravity `
             --user-root $userRoot --dry-run --output json | ConvertFrom-Json
           if ($dryRun.code -ne "hive.user-install-dry-run-complete") {
