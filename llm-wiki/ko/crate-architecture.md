@@ -10,7 +10,7 @@ tags: [architecture, crates, rust]
 aliases: ["Rust 워크스페이스 구조"]
 sources:
   - "repo:Cargo.toml#sha256:f9452a03c8e2ab1cb4e673a62cab0cd3aba3674d7b12175ad08df85fd56b5478"
-  - "repo:crates/hive-cli/src/main.rs#sha256:fc1c697fc7767c062244bcc5e17db6767e38d40b6d42e922f03c163e2f845c03"
+  - "repo:crates/hive-cli/src/main.rs#sha256:ca575035f04f905bf2ca8f7d780589b5513f7ed672b4de4d9aa82624fda68340"
   - "repo:crates/hive-wiki/Cargo.toml#sha256:25c10369a5e5b77938ddc7d39541be4cf647d7c051696d9fe230de4a4ef9e107"
   - "repo:docs/architecture/release-update-trust-boundary.md#sha256:3f90ab4526cd1ca556a057af529fada637a2a476374927408098e759ae6deb8f"
   - "repo:docs/decisions/ADR-0011-source-wiki-independence.md#sha256:15dbcb1c9e294078dc641d0c51c3655bd047cdf1c57629cb4158e7d047097f1b"

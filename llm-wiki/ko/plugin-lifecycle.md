@@ -9,7 +9,7 @@ summary: "세 지원 host의 native plugin 설치, discovery, guidance append와
 tags: [hosts, installation, plugins]
 aliases: ["사용자 플러그인 수명주기"]
 sources:
-  - "repo:crates/hive-cli/src/user_install.rs#sha256:ea61dbde5664499d96bb895b391c445d822dd7373f8e9c6daa1ee372efa3e90d"
+  - "repo:crates/hive-cli/src/user_install.rs#sha256:15ef5b7b941c20c2df5f8e230dad1ac0f49988e3ae8ca39ca9aac2c50effb98a"
   - "repo:docs/research/user-plugin-host-surfaces.md#sha256:d5fa0cac4d0aebe9ae08c966d16dc8428c9b1dae65a816a2a9500617ffe3e2f6"
   - "repo:harness/plugins/aigent-hive/plugin.json#sha256:2eeb1a2cb0d4f2c616443e1b5844b1e10551457f78f1cb96ff76afb223495e86"
 links: [boundaries, skill-routing, upgrade]

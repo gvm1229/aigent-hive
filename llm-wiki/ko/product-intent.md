@@ -11,7 +11,7 @@ aliases: ["Hive 제품 방향"]
 sources:
   - "repo:docs/decisions/ADR-0011-source-wiki-independence.md#sha256:15dbcb1c9e294078dc641d0c51c3655bd047cdf1c57629cb4158e7d047097f1b"
   - "repo:docs/decisions/ADR-0012-global-onboarding-shared-index.md#sha256:aa1f7e4271db8f3e1ceac5e0b54ed7451405513f37d65571b3e0df899930a8c0"
-  - "repo:docs/decisions/ADR-0013-preview-release-scope.md#sha256:eb5f53e2cc1168888bb5117fdd91ede7016312ee79f8894581017e2e1b1976c5"
+  - "repo:docs/decisions/ADR-0013-preview-release-scope.md#sha256:1ba89150ac521f638f686cd4fa9ff6d8cf256a0e561c0c3b80616fd1a3989f2f"
 links: [boundaries, knowledge, plugin-lifecycle, security-release, skill-routing, usage-hosts]
 reviewed_revision: "git:d46e9b7deb5c54fc7cec00c38483388ce563ff1d"
 status: active
