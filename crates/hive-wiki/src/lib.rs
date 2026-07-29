@@ -701,14 +701,15 @@ fn validate_promotion_policy(
             "promotion category is not approved by project setup: {category}"
         )));
     }
-    let canonical_root = user_root.canonicalize().map_err(|error| {
-        WikiError::Verification(format!(
-            "cannot canonicalize user root {}: {error}",
-            user_root.display()
-        ))
-    })?;
+    let canonical_root = shared::canonical_root(user_root)?;
     let expected_binding = sha256_digest(canonical_root.to_string_lossy().as_bytes());
-    if policy.user_store_binding != expected_binding {
+    let legacy_windows_binding = user_root
+        .canonicalize()
+        .ok()
+        .map(|root| sha256_digest(root.to_string_lossy().as_bytes()));
+    if policy.user_store_binding != expected_binding
+        && legacy_windows_binding.as_deref() != Some(&policy.user_store_binding)
+    {
         return Err(WikiError::Conflict(
             "project user-store binding does not match the selected user root".to_owned(),
         ));

@@ -3314,7 +3314,7 @@ fn parse_claude_marketplace_state(
             match (source, path) {
                 (Some(source), Some(path)) => Ok(ClaudeMarketplaceState {
                     source: source.to_owned(),
-                    path: path.to_owned(),
+                    path: normalize_host_path(path),
                 }),
                 _ => Err(InstallError::Verification(
                     "Claude aigent-hive marketplace state omitted source or path".to_owned(),
@@ -3387,7 +3387,7 @@ fn parse_codex_marketplace_state(
                 .get("root")
                 .and_then(serde_json::Value::as_str)
                 .map(|root| CodexMarketplaceState {
-                    root: root.to_owned(),
+                    root: normalize_host_path(root),
                 })
                 .ok_or_else(|| {
                     InstallError::Verification(
@@ -3434,8 +3434,8 @@ fn parse_codex_plugin_state(bytes: &[u8]) -> Result<Option<CodexPluginState>, In
                     Ok(CodexPluginState {
                         version: version.to_owned(),
                         enabled,
-                        source_path: source_path.to_owned(),
-                        marketplace_source: marketplace_source.to_owned(),
+                        source_path: normalize_host_path(source_path),
+                        marketplace_source: normalize_host_path(marketplace_source),
                     })
                 }
                 _ => Err(InstallError::Verification(
@@ -3449,9 +3449,11 @@ fn parse_codex_plugin_state(bytes: &[u8]) -> Result<Option<CodexPluginState>, In
 fn expected_codex_marketplace_root(arguments: &UserArguments) -> Result<String, InstallError> {
     arguments
         .user_root
-        .join(".hive/marketplaces/codex")
+        .join(".hive")
+        .join("marketplaces")
+        .join("codex")
         .to_str()
-        .map(str::to_owned)
+        .map(normalize_host_path)
         .ok_or_else(|| {
             InstallError::Unsupported("Codex marketplace path is not valid UTF-8".to_owned())
         })
@@ -3460,9 +3462,13 @@ fn expected_codex_marketplace_root(arguments: &UserArguments) -> Result<String, 
 fn expected_codex_plugin_source_path(arguments: &UserArguments) -> Result<String, InstallError> {
     arguments
         .user_root
-        .join(".hive/marketplaces/codex/plugins/aigent-hive")
+        .join(".hive")
+        .join("marketplaces")
+        .join("codex")
+        .join("plugins")
+        .join("aigent-hive")
         .to_str()
-        .map(str::to_owned)
+        .map(normalize_host_path)
         .ok_or_else(|| {
             InstallError::Unsupported("Codex plugin source path is not valid UTF-8".to_owned())
         })
@@ -3471,12 +3477,25 @@ fn expected_codex_plugin_source_path(arguments: &UserArguments) -> Result<String
 fn expected_claude_marketplace_path(arguments: &UserArguments) -> Result<String, InstallError> {
     arguments
         .user_root
-        .join(".hive/marketplaces/claude")
+        .join(".hive")
+        .join("marketplaces")
+        .join("claude")
         .to_str()
-        .map(str::to_owned)
+        .map(normalize_host_path)
         .ok_or_else(|| {
             InstallError::Unsupported("Claude marketplace path is not valid UTF-8".to_owned())
         })
+}
+
+fn normalize_host_path(path: &str) -> String {
+    #[cfg(windows)]
+    {
+        path.replace('/', "\\")
+    }
+    #[cfg(not(windows))]
+    {
+        path.to_owned()
+    }
 }
 
 fn expected_antigravity_source_path(arguments: &UserArguments) -> Result<String, InstallError> {
@@ -8074,7 +8093,7 @@ mod tests {
         assert_eq!(
             parse_codex_marketplace_state(marketplace).expect("marketplace state"),
             Some(CodexMarketplaceState {
-                root: "/tmp/.hive/marketplaces/codex".to_owned()
+                root: normalize_host_path("/tmp/.hive/marketplaces/codex")
             })
         );
         let plugin = br#"{
@@ -8095,8 +8114,8 @@ mod tests {
             Some(CodexPluginState {
                 version: "0.7.0".to_owned(),
                 enabled: true,
-                source_path: "/tmp/plugin".to_owned(),
-                marketplace_source: "/tmp/source".to_owned()
+                source_path: normalize_host_path("/tmp/plugin"),
+                marketplace_source: normalize_host_path("/tmp/source")
             })
         );
         let duplicate = br#"{"marketplaces":[
@@ -8118,7 +8137,7 @@ mod tests {
             parse_claude_marketplace_state(marketplace).expect("marketplace state"),
             Some(ClaudeMarketplaceState {
                 source: "directory".to_owned(),
-                path: "/tmp/.hive/marketplaces/claude".to_owned()
+                path: normalize_host_path("/tmp/.hive/marketplaces/claude")
             })
         );
         let plugin = br#"[{

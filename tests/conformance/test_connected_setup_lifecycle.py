@@ -276,7 +276,8 @@ else:
             [index_path],
         )
         self.assertEqual(list(target.rglob("*.sqlite*")), [])
-        with sqlite3.connect(index_path) as connection:
+        connection = sqlite3.connect(index_path)
+        try:
             self.assertEqual(
                 connection.execute("PRAGMA integrity_check").fetchone(),
                 ("ok",),
@@ -294,6 +295,8 @@ else:
             self.assertEqual(metadata["schema_version"], "2")
             self.assertEqual(metadata["project_count"], "1")
             self.assertRegex(metadata["logical_digest"], r"^sha256:[0-9a-f]{64}$")
+        finally:
+            connection.close()
 
     def test_expedited_project_inherits_operational_global_preferences(self) -> None:
         target = self.setup_project(

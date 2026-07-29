@@ -231,12 +231,8 @@ fn run_shared_query(
     limit: usize,
 ) -> Result<KnowledgeResult, WikiError> {
     require_shared_wiki_enabled(user_root)?;
-    let canonical_user = user_root
-        .canonicalize()
-        .map_err(|error| WikiError::Io(format!("cannot canonicalize user root: {error}")))?;
-    let canonical_target = target
-        .canonicalize()
-        .map_err(|error| WikiError::Io(format!("cannot canonicalize query target: {error}")))?;
+    let canonical_user = hive_wiki::shared::canonical_root(user_root)?;
+    let canonical_target = hive_wiki::shared::canonical_root(target)?;
     let registry = load_project_registry(user_root)?;
     let current_project_id = if canonical_target == canonical_user {
         None
@@ -245,7 +241,11 @@ fn run_shared_query(
             registry
                 .projects
                 .iter()
-                .find(|project| project.enabled && project.root == canonical_target)
+                .find(|project| {
+                    project.enabled
+                        && hive_wiki::shared::canonical_root(&project.root)
+                            .is_ok_and(|registered| registered == canonical_target)
+                })
                 .map(|project| project.id.clone())
                 .ok_or_else(|| {
                     WikiError::InvalidInput(
@@ -628,12 +628,8 @@ fn shared_mutation_target(
     allow_user_root: bool,
 ) -> Result<SharedMutationTarget, WikiError> {
     require_shared_wiki_enabled(user_root)?;
-    let canonical_user = user_root
-        .canonicalize()
-        .map_err(|error| WikiError::Io(format!("cannot canonicalize user root: {error}")))?;
-    let canonical_target = target
-        .canonicalize()
-        .map_err(|error| WikiError::Io(format!("cannot canonicalize knowledge target: {error}")))?;
+    let canonical_user = hive_wiki::shared::canonical_root(user_root)?;
+    let canonical_target = hive_wiki::shared::canonical_root(target)?;
     let registry = load_project_registry(&canonical_user)?;
     let target_kind = if canonical_target == canonical_user {
         if !allow_user_root {
@@ -642,11 +638,11 @@ fn shared_mutation_target(
             ));
         }
         SharedTargetKind::UserRoot
-    } else if registry
-        .projects
-        .iter()
-        .any(|project| project.enabled && project.root == canonical_target)
-    {
+    } else if registry.projects.iter().any(|project| {
+        project.enabled
+            && hive_wiki::shared::canonical_root(&project.root)
+                .is_ok_and(|registered| registered == canonical_target)
+    }) {
         SharedTargetKind::RegisteredProject
     } else {
         return Err(WikiError::InvalidInput(
@@ -921,7 +917,7 @@ mod tests {
             user.path(),
             RegisteredProject {
                 id: "project-test".to_owned(),
-                root: project.path().canonicalize().expect("canonical project"),
+                root: hive_wiki::shared::canonical_root(project.path()).expect("canonical project"),
                 enabled,
                 language: KnowledgeLanguage::En,
                 visibility: KnowledgeVisibility::ProjectPrivate,
@@ -1017,7 +1013,8 @@ mod tests {
             user.path(),
             RegisteredProject {
                 id: "project-disabled".to_owned(),
-                root: disabled.path().canonicalize().expect("canonical disabled"),
+                root: hive_wiki::shared::canonical_root(disabled.path())
+                    .expect("canonical disabled"),
                 enabled: false,
                 language: KnowledgeLanguage::Ko,
                 visibility: KnowledgeVisibility::ProjectPrivate,

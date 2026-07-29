@@ -52,6 +52,37 @@ pub struct RegisteredProject {
     pub visibility: KnowledgeVisibility,
 }
 
+/// Resolve a project or user root to one portable canonical absolute path.
+///
+/// Windows canonicalization returns a verbatim `\\?\` path. Hive removes only
+/// that transport prefix before persisting or comparing the resolved path.
+///
+/// # Errors
+///
+/// Returns an I/O error when the path cannot be canonicalized.
+pub fn canonical_root(path: &Path) -> Result<PathBuf, WikiError> {
+    let canonical = path
+        .canonicalize()
+        .map_err(|error| WikiError::Io(format!("cannot canonicalize root: {error}")))?;
+    Ok(portable_canonical_path(&canonical))
+}
+
+fn portable_canonical_path(path: &Path) -> PathBuf {
+    #[cfg(windows)]
+    {
+        let Some(text) = path.to_str() else {
+            return path.to_owned();
+        };
+        if let Some(unc) = text.strip_prefix(r"\\?\UNC\") {
+            return PathBuf::from(format!(r"\\{unc}"));
+        }
+        if let Some(local) = text.strip_prefix(r"\\?\") {
+            return PathBuf::from(local);
+        }
+    }
+    path.to_owned()
+}
+
 /// Bounded Wiki language provenance.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, Eq, PartialEq)]
 #[serde(rename_all = "kebab-case")]
@@ -296,10 +327,11 @@ pub fn register_project(
 /// concurrent replacement, or failed rollback.
 pub fn register_project_atomic(
     user_root: &Path,
-    project: RegisteredProject,
+    mut project: RegisteredProject,
     rebuild_index: bool,
 ) -> Result<AtomicProjectRegistrationOutcome, WikiError> {
     validate_absolute_root(user_root, "user root")?;
+    project.root = portable_canonical_path(&project.root);
     let root = Dir::open_ambient_dir(user_root, ambient_authority())
         .map_err(|error| WikiError::Io(format!("cannot open user root: {error}")))?;
     let _lock = crate::CapabilityKnowledgeLock::acquire(&root)?;
@@ -702,12 +734,7 @@ fn validate_registry(user_root: &Path, registry: &ProjectRegistry) -> Result<(),
             "project registry cannot contain more than 256 projects".to_owned(),
         ));
     }
-    let canonical_user = user_root.canonicalize().map_err(|error| {
-        WikiError::Io(format!(
-            "cannot canonicalize user root {}: {error}",
-            user_root.display()
-        ))
-    })?;
+    let canonical_user = canonical_root(user_root)?;
     let mut ids = BTreeSet::new();
     let mut roots = BTreeSet::new();
     for project in &registry.projects {
@@ -724,13 +751,13 @@ fn validate_registry(user_root: &Path, registry: &ProjectRegistry) -> Result<(),
             )));
         }
         validate_absolute_root(&project.root, "registered project root")?;
-        let canonical = project.root.canonicalize().map_err(|error| {
+        let canonical = canonical_root(&project.root).map_err(|error| {
             WikiError::Verification(format!(
                 "registered project root is unavailable {}: {error}",
                 project.root.display()
             ))
         })?;
-        if canonical != project.root {
+        if canonical != portable_canonical_path(&project.root) {
             return Err(WikiError::Conflict(format!(
                 "registered project root must be canonical and contain no symlink components: {}",
                 project.root.display()
@@ -852,19 +879,8 @@ fn pin_source_root(path: &Path, name: &str) -> Result<Dir, WikiError> {
     let expected = expected
         .dir_metadata()
         .map_err(|error| WikiError::Io(format!("cannot inspect captured {name}: {error}")))?;
-    let canonical = path.canonicalize().map_err(|error| {
-        WikiError::Io(format!(
-            "cannot canonicalize {name} {}: {error}",
-            path.display()
-        ))
-    })?;
-    if canonical != path {
-        return Err(WikiError::Conflict(format!(
-            "{name} must remain canonical while its capability is pinned"
-        )));
-    }
     injected_shared_ancestor_open_race(path);
-    let pinned = open_source_root_nofollow(&canonical, name)?;
+    let pinned = open_source_root_nofollow(path, name)?;
     let actual = pinned
         .dir_metadata()
         .map_err(|error| WikiError::Io(format!("cannot inspect pinned {name}: {error}")))?;
@@ -1141,13 +1157,14 @@ fn shared_logical_digest(
 
 fn registered_project_id(registry: &ProjectRegistry, root: &Path) -> Result<String, WikiError> {
     validate_absolute_root(root, "current project root")?;
-    let canonical = root.canonicalize().map_err(|error| {
-        WikiError::Io(format!("cannot canonicalize current project root: {error}"))
-    })?;
+    let canonical = canonical_root(root)?;
     registry
         .projects
         .iter()
-        .find(|project| project.enabled && project.root == canonical)
+        .find(|project| {
+            project.enabled
+                && canonical_root(&project.root).is_ok_and(|registered| registered == canonical)
+        })
         .map(|project| project.id.clone())
         .ok_or_else(|| {
             WikiError::InvalidInput(
@@ -1488,7 +1505,7 @@ fn activate_shared_index(
         )));
     }
     let mut options = CapOpenOptions::new();
-    options.read(true).follow(FollowSymlinks::No);
+    options.read(true).write(true).follow(FollowSymlinks::No);
     let durability = index_dir
         .open_with(index_name, &options)
         .and_then(|file| file.sync_all())
@@ -1524,6 +1541,7 @@ fn activate_shared_index(
     Ok(())
 }
 
+#[cfg(unix)]
 fn sync_shared_index_directory(index_dir: &Dir) -> Result<(), WikiError> {
     index_dir
         .try_clone()
@@ -1531,6 +1549,12 @@ fn sync_shared_index_directory(index_dir: &Dir) -> Result<(), WikiError> {
         .into_std_file()
         .sync_all()
         .map_err(|error| WikiError::Io(format!("cannot sync shared index directory: {error}")))
+}
+
+#[cfg(not(unix))]
+#[allow(clippy::unnecessary_wraps)]
+fn sync_shared_index_directory(_index_dir: &Dir) -> Result<(), WikiError> {
+    Ok(())
 }
 
 fn rollback_activated_shared_index(

@@ -323,7 +323,10 @@ else:
                         ).splitlines()
                     ]
                     self.assertTrue(
-                        any(call["program"] == "agy" for call in host_calls)
+                        any(
+                            Path(call["program"]).stem == "agy"
+                            for call in host_calls
+                        )
                     )
                 installed = guidance.read_text(encoding="utf-8")
                 self.assertTrue(installed.startswith(foreign))

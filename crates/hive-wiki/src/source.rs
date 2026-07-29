@@ -1277,12 +1277,23 @@ fn publish_index(
             ))
         })?;
     }
+    sync_source_index_directory(index_dir)
+}
+
+#[cfg(unix)]
+fn sync_source_index_directory(index_dir: &Dir) -> Result<(), WikiError> {
     index_dir
         .try_clone()
         .map_err(|error| WikiError::Io(format!("cannot clone source index directory: {error}")))?
         .into_std_file()
         .sync_all()
         .map_err(|error| WikiError::Io(format!("cannot sync source index directory: {error}")))
+}
+
+#[cfg(not(unix))]
+#[allow(clippy::unnecessary_wraps)]
+fn sync_source_index_directory(_index_dir: &Dir) -> Result<(), WikiError> {
+    Ok(())
 }
 
 fn stale_owned_index_artifacts(index_dir: &Dir) -> Result<Vec<OsString>, WikiError> {

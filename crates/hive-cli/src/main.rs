@@ -565,11 +565,8 @@ fn reconcile_project_registry(
         SHARED_INDEX_RELATIVE,
     };
 
-    let root = target.canonicalize().map_err(|error| {
-        RenderError::Verification(format!(
-            "cannot canonicalize registered project root: {error}"
-        ))
-    })?;
+    let root = hive_wiki::shared::canonical_root(target)
+        .map_err(|error| RenderError::Verification(error.to_string()))?;
     let root_text = root.to_str().ok_or_else(|| {
         RenderError::Unsupported("registered project root is not valid UTF-8".to_owned())
     })?;
