@@ -1282,10 +1282,11 @@ fn publish_index(
 
 #[cfg(unix)]
 fn sync_source_index_directory(index_dir: &Dir) -> Result<(), WikiError> {
+    let mut options = CapOpenOptions::new();
+    options.read(true).follow(FollowSymlinks::No);
     index_dir
-        .try_clone()
-        .map_err(|error| WikiError::Io(format!("cannot clone source index directory: {error}")))?
-        .into_std_file()
+        .open_with(".", &options)
+        .map_err(|error| WikiError::Io(format!("cannot open source index directory: {error}")))?
         .sync_all()
         .map_err(|error| WikiError::Io(format!("cannot sync source index directory: {error}")))
 }
