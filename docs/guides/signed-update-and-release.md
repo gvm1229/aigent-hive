@@ -228,6 +228,50 @@ status와 binary version을 확인. 기존 binary에 valid direct receipt가 없
 중단. Receipt property set, current `hive.exe` SHA-256과 reported version은 모두
 exact 일치 필수. Reparse point는 허용 대상에서 제외.
 
+`cmd.exe` paste/run 명령:
+
+```bat
+set "HIVE_VERSION=0.7.0" && set "HIVE_PREFIX=%LOCALAPPDATA%\AigentHive" && powershell.exe -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command "$ErrorActionPreference='Stop'; $repository='https://github.com/gvm1229/aigent-hive'; $installer=Join-Path ([IO.Path]::GetTempPath()) ('aigent-hive-install-{0}.ps1' -f [Guid]::NewGuid().ToString('N')); try { Invoke-WebRequest -UseBasicParsing -Uri ($repository + '/releases/download/v' + $env:HIVE_VERSION + '/install.ps1') -OutFile $installer; & $installer -Version $env:HIVE_VERSION -Prefix $env:HIVE_PREFIX } finally { Remove-Item -LiteralPath $installer -Force -ErrorAction SilentlyContinue }"
+```
+
+명령 경계:
+
+- `cmd.exe /D /V:OFF`와 동일한 delayed expansion 비활성 전제
+- `HIVE_VERSION` exact SemVer literal
+- Prefix 전달: environment variable, 공백·`%`·`!` 재해석 방지
+- Child PowerShell 실패 exit code 전달
+- 임시 installer의 `finally` 정리
+- Consumer PowerShell 7 탐지·설치 제안 없음
+
+### Windows source dependency
+
+PowerShell 7.6.4 LTS: Windows source 개발·release 검증 전용. Consumer binary,
+direct installer, user setup, project setup의 dependency 제외.
+
+Preview:
+
+```powershell
+powershell.exe -NoProfile -NonInteractive -File `
+    scripts/setup-windows-dependencies.ps1
+```
+
+동의 뒤 사용자 범위 설치:
+
+```powershell
+powershell.exe -NoProfile -NonInteractive -File `
+    scripts/setup-windows-dependencies.ps1 `
+    -Apply -ConfirmInstall -Scope user
+```
+
+고정 installer 위임:
+
+```text
+winget install --id Microsoft.PowerShell --exact --version 7.6.4.0 --source winget --scope user --accept-source-agreements --accept-package-agreements --disable-interactivity
+```
+
+Hive ownership: detection·preview·재검증 한정. 설치·update·uninstall ownership:
+Microsoft와 WinGet.
+
 ### Homebrew와 WinGet
 
 Homebrew formula와 WinGet manifest는 `packaging/` source template에서 release

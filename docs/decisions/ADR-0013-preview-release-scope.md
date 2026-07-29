@@ -38,6 +38,21 @@ Claude Code 실제 subscription session과 Pro/Max usage parity:
 - Package-manager 또는 digest 고정 수동 update
 - Network self-update 비활성
 
+### Windows shell boundary
+
+| Surface | 결정 |
+| --- | --- |
+| Consumer binary·harness | PowerShell runtime dependency 없음 |
+| Direct installer | Windows 기본 PowerShell 5.1 지원 |
+| `cmd.exe` | Exact-version PowerShell 5.1 bootstrap 호출 명령 지원 |
+| Consumer PowerShell 7 | Dependency·탐지 경고·설치 prompt 없음 |
+| Source development·release | PowerShell 7 LTS dependency |
+| Source dependency install | Exact command·package·scope preview와 명시적 동의 뒤 Microsoft 지원 installer 위임 |
+| Ownership | Microsoft 또는 package manager 소유, Hive update·uninstall 없음 |
+
+PowerShell 7 부재는 consumer install 차단 사유에서 제외. Source dependency 설치 거절은
+외부 mutation 0건과 해당 PowerShell 7 전용 검증의 명확한 미실행 상태로 처리.
+
 ### Deferred hardening
 
 - macOS Developer ID signing·notarization
@@ -55,6 +70,9 @@ channel의 자산으로 유지하고 `0.8.0` preview publication 필수 gate에�
 - GitHub artifact attestation·SHA-256·protected tag로 확보 가능한 초기 provenance
 - Windows 실제 사용성 검증과 red CI 수정의 더 높은 release 위험 감소 효과
 - Claude subscription 부재를 숨기지 않는 명시적 미검증 상태
+- Windows 기본 PowerShell 5.1을 활용한 consumer dependency 최소화
+- `cmd.exe` 사용자의 동일 signed bootstrap·verification 경로
+- Source tooling dependency와 shipping runtime dependency의 분리
 
 ## 결과
 
@@ -63,3 +81,4 @@ channel의 자산으로 유지하고 `0.8.0` preview publication 필수 gate에�
 - Heavy signing 미비를 안정성 검증 완료로 오인할 위험 차단
 - Existing verifier code와 future hardened channel의 보존
 - Production publication credential과 사용자 최종 확인의 외부 경계 유지
+- Consumer PowerShell 7 설치·업데이트 ownership 확대 방지

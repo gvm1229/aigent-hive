@@ -294,6 +294,7 @@ class Phase3SkillSourceContract(unittest.TestCase):
             "active/security-review.md",
             "active/source-llm-wiki.md",
             "active/user-onboarding-shared-index.md",
+            "active/windows-shell-install.md",
             "contracts/README.md",
             "phases/07-public-qualification.md",
             "phases/README.md",
@@ -313,6 +314,7 @@ class Phase3SkillSourceContract(unittest.TestCase):
             plan_root / "active/security-review.md",
             plan_root / "active/source-llm-wiki.md",
             plan_root / "active/user-onboarding-shared-index.md",
+            plan_root / "active/windows-shell-install.md",
             plan_root / "phases/07-public-qualification.md",
         ]
         self.assertEqual(
@@ -325,6 +327,7 @@ class Phase3SkillSourceContract(unittest.TestCase):
                 "active/security-review.md",
                 "active/source-llm-wiki.md",
                 "active/user-onboarding-shared-index.md",
+                "active/windows-shell-install.md",
                 "phases/07-public-qualification.md",
             },
         )
@@ -398,6 +401,7 @@ class Phase3SkillSourceContract(unittest.TestCase):
         security_review_path = plan_root / "active/security-review.md"
         source_wiki_path = plan_root / "active/source-llm-wiki.md"
         onboarding_path = plan_root / "active/user-onboarding-shared-index.md"
+        windows_shell_path = plan_root / "active/windows-shell-install.md"
         progress_rows = (
             ("Phase 0–6", *checklist_counts(completed_phase_paths)),
             ("Phase 7", *checklist_counts([phase_7_path])),
@@ -416,6 +420,10 @@ class Phase3SkillSourceContract(unittest.TestCase):
             (
                 "Source bilingual LLM Wiki",
                 *checklist_counts([source_wiki_path]),
+            ),
+            (
+                "Windows shell install boundary",
+                *checklist_counts([windows_shell_path]),
             ),
             ("Documentation style", *checklist_counts([documentation_path])),
             ("Security review", *checklist_counts([security_review_path])),

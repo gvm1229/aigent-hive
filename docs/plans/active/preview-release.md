@@ -12,6 +12,8 @@
 - 실제 host 검증: Codex `0.145.0`, Antigravity `1.1.7`
 - Claude 상태: package·fixture·projection 이론 지원, subscription-backed 실제 검증 없음
 - Windows 상태: CI artifact qualification 이력, 실제 Windows 기기 사용자 검증 필요
+- Windows consumer shell: 기본 PowerShell 5.1·`cmd.exe`, PowerShell 7 dependency 없음
+- Windows source shell: PowerShell 7 LTS 개발·release dependency
 - 업데이트 방식: package manager 또는 digest 고정 수동 설치
 - Network self-update: 비활성
 - 신뢰 기준: exact tag, SHA-256, GitHub artifact attestation, source commit provenance
@@ -24,6 +26,7 @@
 | Skill metadata | 110개 Skill, Hive 37개 노출과 정규화 중복 18개 | `P7-042` |
 | Clean-clone CI | `9b1e951`의 Linux·Windows·contract failure | `P7-040` |
 | Windows UAT | 실제 기기 설치·setup·project harness·upgrade 미검증 | `P7-041` |
+| Windows shell | PowerShell 5.1·`cmd.exe`·source-only PowerShell 7 경계 완료 | 완료 |
 | Candidate trust | Current tag artifact·digest·attestation 미생성 | `P7-020` |
 | Release candidate | Clean candidate qualification 미실행 | `P7-018` |
 | Publication | Protected GitHub Release 미실행 | `P7-037` |
@@ -59,7 +62,10 @@
 ## Windows 인계
 
 - Clean Windows 11 x86_64 기기
-- PowerShell 7과 Git 설치 상태 기록
+- Windows PowerShell 5.1·`cmd.exe`·Git 상태 기록
+- PowerShell 7: source test·release workflow 전용 별도 설치·version 기록
+- `powershell.exe` direct install과 `cmd.exe` paste/run command 모두 검증
+- Consumer install·setup·update 중 PowerShell 7 탐지·설치 제안 0건
 - Release archive SHA-256 확인
 - `hive --version`, user setup, Codex 또는 Antigravity install 검증
 - Project auto onboarding과 user-root shared SQLite 검증

@@ -2,10 +2,10 @@
 
 - 기준 branch: `develop`
 - product version: `0.7.0`
-- plan revision: `1.54`
+- plan revision: `1.56`
 - 현재 milestone: Phase 7 qualification + global onboarding·shared index `0.8.0`
 - 현재 작업: `0.8.0 Claude-unverified preview` release plan, Skill metadata budget,
-  current CI 복구와 Windows 실제 기기 인계
+  Windows shell install boundary, current CI 복구와 실제 기기 인계
 - 외부 중지 경계: protected signing/publication credential, 실제 production publication,
   exact `1.0.0` 사용자 authority
 - Plan load: compact `docs/plans/PLAN.md` + `docs/plans/phases/07-public-qualification.md`
@@ -13,18 +13,40 @@
   + `docs/plans/active/native-usage-sensor.md`
   + `docs/plans/active/user-onboarding-shared-index.md`
   + `docs/plans/active/source-llm-wiki.md`
+  + `docs/plans/active/windows-shell-install.md`
   + `docs/plans/active/documentation-style.md` + `docs/plans/active/security-review.md`
   + `docs/plans/active/preview-release.md`
-- Plan completion: canonical checklist `207/213` 완료, `6`개 미완료, `97.2%`
-- Latest local pre-push: Rust workspace `480/480`, Python conformance `582`개 실행,
-  `581` PASS와 Windows `pwsh` 전용 `1`개 expected skip
+- Plan completion: canonical checklist `210/216` 완료, `6`개 미완료, `97.2%`
+- Latest local Windows: Rust workspace 전체 PASS, PowerShell 5.1·7.6.4 installer와
+  `cmd.exe` bootstrap 계약 PASS
 - Latest remote: `9b1e951`의 CI `30347960157`과 native release runtime
   `30347960118` failure, current clean-clone gate 재개방
 - Native Goal routing: legacy `PLAN.md` checkbox 문구를 `phases/07-public-qualification.md`,
   `active/plugin-project-lifecycle.md`, `active/native-usage-sensor.md`,
   `active/user-onboarding-shared-index.md`, `active/source-llm-wiki.md`,
+  `active/windows-shell-install.md`,
   `active/documentation-style.md`, `active/security-review.md`,
   `active/preview-release.md`로 해석
+
+## Windows shell 설치 경계
+
+- Consumer runtime: `hive.exe`·installed harness의 PowerShell dependency 없음
+- Consumer direct install: Windows 기본 `powershell.exe` 5.1 지원
+- Consumer `cmd.exe`: exact-version PowerShell 5.1 bootstrap 호출 명령 지원
+- Consumer PowerShell 7: dependency·탐지 경고·설치 prompt 없음
+- Source Windows: PowerShell 7.6.4 LTS 개발·release dependency
+- Source dependency setup: exact command·package·scope preview, 명시적 동의,
+  Microsoft 지원 installer 위임, Hive update·uninstall 없음
+- Current host evidence: Windows PowerShell `5.1.26100.8875`, PowerShell `7.6.4`,
+  Rust·Cargo `1.97.1`, Copier `9.17.0`, pip `26.1.2`
+- Current implementation: `[IO.File]::Replace` atomic overwrite, shell-independent
+  UTF-8, `cmd.exe` bootstrap, source dependency preview·동의·재검증
+- Local evidence: Rust workspace 전체 PASS, Phase 6 Windows contract 21개 실행,
+  platform 비대상 8개 expected skip와 나머지 PASS
+- Active fragment:
+  [`windows-shell-install.md`](../plans/active/windows-shell-install.md)
+- Decision:
+  [`ADR-0013`](../decisions/ADR-0013-preview-release-scope.md)
 
 ## Global onboarding·shared index audit
 
@@ -153,6 +175,7 @@ Target: `0.8.0`
 `0.8.0` preview gap:
 
 - Hive Skill implicit metadata 중복과 context budget
+- Consumer PowerShell 5.1·`cmd.exe` install과 source-only PowerShell 7 dependency 경계
 - Current Linux·Windows·contract CI failure
 - 실제 Windows 기기 install·setup·upgrade acceptance
 - Candidate SHA-256·GitHub artifact attestation·publication
@@ -189,9 +212,9 @@ Preview 비차단 deferred:
 계획 evidence:
 
 - Active fragment 8 KiB 제한 충족
-- Canonical checklist `204/212`, active checklist ID 중복 0건
+- Canonical checklist `210/216`, active checklist ID 중복 0건
 - Plan static contract 29/29, documentation style regression 18/18 PASS
-- Human documentation inventory 1,698/1,698 review, finding 0건
+- Human documentation inventory 258/258 review, finding 0건
 - Markdown link conformance PASS
 
 ## Phase 7 shipping usage gate

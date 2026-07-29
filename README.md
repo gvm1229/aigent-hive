@@ -13,7 +13,7 @@
 
 > 🐝 **Aigent Hive:** Codex, Claude Code, Gemini Antigravity 같은 구독형 agent host 위에서 일관된 setup, Skill routing, 역할·지식·run 상태, 안전한 update와 검증 계약을 제공하는 **provider-neutral 로컬 agent harness**
 
-> 🚧 **현재 상태:** product version `0.7.0`; Phase 1–6 완료, Phase 7 local qualification `35/40`. macOS arm64·Intel과 Windows x86_64 unsigned current-candidate runtime PASS. 실제 Claude session, protected signing·notarization·publication은 외부 authority 대기.
+> 🚧 **현재 상태:** product version `0.7.0`; Phase 1–6 완료, Phase 7 qualification `36/42`. macOS arm64·Intel과 Windows x86_64 unsigned current-candidate runtime PASS. 실제 Claude session, protected signing·notarization·publication은 외부 authority 대기.
 
 모델 API·provider SDK 미사용. API key 요청·저장 없음. Compatible OMX·OMC가 있으면
 검증된 orchestration 기능 우선 재사용. Detection이 `absent|incompatible|unknown`이면

@@ -1195,6 +1195,9 @@ try {
         dependency_setup = (
             ROOT / "scripts/setup-windows-dependencies.ps1"
         ).read_text(encoding="utf-8")
+        guide = (
+            ROOT / "docs/guides/signed-update-and-release.md"
+        ).read_text(encoding="utf-8")
         for forbidden in ("pwsh", "winget", "Microsoft.PowerShell"):
             self.assertNotIn(forbidden, installer)
         for required in (
@@ -1207,6 +1210,13 @@ try {
             "requalification failed",
         ):
             self.assertIn(required, dependency_setup)
+        self.assertIn("powershell.exe -NoLogo -NoProfile -NonInteractive", guide)
+        self.assertIn('set "HIVE_VERSION=0.7.0"', guide)
+        self.assertIn('set "HIVE_PREFIX=%LOCALAPPDATA%\\AigentHive"', guide)
+        self.assertIn("$env:HIVE_VERSION", guide)
+        self.assertIn("$env:HIVE_PREFIX", guide)
+        self.assertNotIn("pwsh -", guide)
+
     def test_windows_source_dependency_preview_is_non_mutating(self) -> None:
         if sys.platform != "win32":
             self.skipTest("Windows dependency setup qualification requires Windows")
