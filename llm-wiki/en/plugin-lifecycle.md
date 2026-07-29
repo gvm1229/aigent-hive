@@ -9,11 +9,11 @@ summary: "Native plugin installation, discovery, guidance append, and host-speci
 tags: [hosts, installation, plugins]
 aliases: ["user plugin lifecycle"]
 sources:
-  - "repo:crates/hive-cli/src/user_install.rs#sha256:15ef5b7b941c20c2df5f8e230dad1ac0f49988e3ae8ca39ca9aac2c50effb98a"
+  - "repo:crates/hive-cli/src/user_install.rs#sha256:f58f681db9f6fa1ea6be6d143a3cf8e56d1a243c0a1d66298e7302101c4dffa6"
   - "repo:docs/research/user-plugin-host-surfaces.md#sha256:d5fa0cac4d0aebe9ae08c966d16dc8428c9b1dae65a816a2a9500617ffe3e2f6"
   - "repo:harness/plugins/aigent-hive/plugin.json#sha256:2eeb1a2cb0d4f2c616443e1b5844b1e10551457f78f1cb96ff76afb223495e86"
 links: [boundaries, skill-routing, upgrade]
-reviewed_revision: "git:7b6cef8887dbc0571e5a65e5bf32bc829ce3c5d5"
+reviewed_revision: "git:cb22a76995f7f1b17f826d521c26546ecd674f93"
 status: active
 ---
 

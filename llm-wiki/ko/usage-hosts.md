@@ -10,11 +10,11 @@ tags: [guard, hosts, usage]
 aliases: ["사용량 가드 호스트"]
 sources:
   - "repo:.github/workflows/ci.yml#sha256:60945a807302e95f64373efc5d91ff11269e0f2609dc1d21c707c41e5a79db09"
-  - "repo:crates/hive-cli/src/usage.rs#sha256:5bd67c08505d00136738ed34751412aa37d7242e43ecb0fbb1c22b5c2f4c0fed"
   - "repo:docs/decisions/ADR-0010-native-first-usage-sensors.md#sha256:141e8070b475ee2b0d81e93a69217093e07af9a9ca61c16dcbb31f111ea1d0f4"
-  - "repo:tests/conformance/test_source_usage_guard.py#sha256:6fd6c2db807d251c2cf33c38627114f80dab7541fd26134a687aeb69cdd98df7"
+  - "repo:docs/plans/active/native-usage-sensor.md#sha256:67f78d3be1e0394a434f456eb048e9d0c868b59c98ee060308c4b2640f14514a"
+  - "repo:tests/conformance/test_source_usage_guard.py#sha256:df19f5b1000469f30711a8624e8359761a85e52072eee69f5b3be73e2952ba3b"
 links: [plugin-lifecycle, security-release, workflow]
-reviewed_revision: "git:727ec3fa252e2eabbea4a4c57c4b54f0e3830a99"
+reviewed_revision: "git:cb22a76995f7f1b17f826d521c26546ecd674f93"
 status: active
 ---
 
