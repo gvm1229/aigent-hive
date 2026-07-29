@@ -829,9 +829,30 @@ def validate_render(render_root: Path, input_data_path: Path) -> None:
                 raise AssertionError(
                     f"built-in Skill projection bytes changed: {name}"
                 )
-            if {path.name for path in projection_path.parent.iterdir()} != {
-                "SKILL.md"
-            }:
+            expected_projection_entries = {"SKILL.md"}
+            if projection_root == ".agents":
+                metadata_source = (
+                    REPOSITORY_ROOT
+                    / f"harness/template/.agents/skills/{name}/agents/openai.yaml"
+                )
+                metadata_path = projection_path.parent / "agents/openai.yaml"
+                if (
+                    not metadata_path.is_file()
+                    or read_yaml(metadata_path) != read_yaml(metadata_source)
+                ):
+                    raise AssertionError(
+                        f"built-in Skill metadata projection differs: {name}"
+                    )
+                if {
+                    path.name for path in metadata_path.parent.iterdir()
+                } != {"openai.yaml"}:
+                    raise AssertionError(
+                        f"built-in Skill metadata contains unexpected files: {name}"
+                    )
+                expected_projection_entries.add("agents")
+            if {
+                path.name for path in projection_path.parent.iterdir()
+            } != expected_projection_entries:
                 raise AssertionError(
                     f"built-in Skill projection contains unexpected files: {name}"
                 )
