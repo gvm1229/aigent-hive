@@ -30,7 +30,6 @@
           "content_digest",
           "tags",
           "aliases",
-          "sources",
           "sources"
         ],
         "properties": {
