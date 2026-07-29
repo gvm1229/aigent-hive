@@ -838,7 +838,10 @@ class Phase6StaticContracts(unittest.TestCase):
         ]
         self.assertGreaterEqual(len(shells), 1)
         command = r"""
-Import-Module Microsoft.PowerShell.Utility -ErrorAction Stop
+$utilityModule = Join-Path $PSHOME (
+    "Modules\Microsoft.PowerShell.Utility\Microsoft.PowerShell.Utility.psd1"
+)
+Import-Module $utilityModule -ErrorAction Stop
 $errors = $null
 $tokens = $null
 $ast = [Management.Automation.Language.Parser]::ParseFile(
