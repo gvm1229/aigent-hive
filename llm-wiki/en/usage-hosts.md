@@ -9,11 +9,12 @@ summary: "Native-first quota sensing, CodexBar fallback boundaries, and source-s
 tags: [guard, hosts, usage]
 aliases: ["usage guard hosts"]
 sources:
+  - "repo:.github/workflows/ci.yml#sha256:dff3b1ecd6684dee10c53bcbe376cfc035892245973c8d4849bd7dd758f67e20"
   - "repo:crates/hive-cli/src/usage.rs#sha256:5bd67c08505d00136738ed34751412aa37d7242e43ecb0fbb1c22b5c2f4c0fed"
   - "repo:docs/decisions/ADR-0010-native-first-usage-sensors.md#sha256:141e8070b475ee2b0d81e93a69217093e07af9a9ca61c16dcbb31f111ea1d0f4"
-  - "repo:tests/conformance/test_source_usage_guard.py#sha256:5d31df9f37cce42991af162b4d491e8c1216c318a0cf99cfeff9705727e54c3a"
+  - "repo:tests/conformance/test_source_usage_guard.py#sha256:abc467bb439664c8a4476ad8ad717f0c28b3beda7ca2681115953c95732632eb"
 links: [plugin-lifecycle, security-release, workflow]
-reviewed_revision: "git:f639977e4320307093674ede3aa27cd5c9d4f7c4"
+reviewed_revision: "git:727ec3fa252e2eabbea4a4c57c4b54f0e3830a99"
 status: active
 ---
 
@@ -44,6 +45,11 @@ Recovery controls do not initialize quota sensors. `status` reports the last obs
 explicit freshness, while a disabled gate skips quota sensing and returns `session_bypass`.
 Watchers pin the host creation digest, retire a prior thread watcher on transition, and require a
 matching locked child lease before any stop signal.
+
+State writes are portable across supported hosts. Descriptor permission hardening uses
+`os.fchmod` only when callable, and every pre-stream failure closes the descriptor before temporary
+path cleanup. The source guard conformance corpus runs on Linux, macOS, and Windows so clean-clone
+`gate` and `session-disable` exercise the native Windows file-lock boundary.
 
 Regression acceptance covers clean-clone gate and disable, disabled gate allowance, non-transfer to
 a new thread or recreated process, unchanged malformed OMX bytes, prior-watcher retirement, and
