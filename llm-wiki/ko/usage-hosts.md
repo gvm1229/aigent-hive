@@ -9,7 +9,7 @@ summary: "Native-first quota sensing, CodexBar fallback 경계와 source-session
 tags: [guard, hosts, usage]
 aliases: ["사용량 가드 호스트"]
 sources:
-  - "repo:.github/workflows/ci.yml#sha256:dff3b1ecd6684dee10c53bcbe376cfc035892245973c8d4849bd7dd758f67e20"
+  - "repo:.github/workflows/ci.yml#sha256:ff128ddbcc985f833e7c5b18f6a6b3f9ff5f55851e2216ae98f15375f0441c61"
   - "repo:crates/hive-cli/src/usage.rs#sha256:5bd67c08505d00136738ed34751412aa37d7242e43ecb0fbb1c22b5c2f4c0fed"
   - "repo:docs/decisions/ADR-0010-native-first-usage-sensors.md#sha256:141e8070b475ee2b0d81e93a69217093e07af9a9ca61c16dcbb31f111ea1d0f4"
   - "repo:tests/conformance/test_source_usage_guard.py#sha256:abc467bb439664c8a4476ad8ad717f0c28b3beda7ca2681115953c95732632eb"
