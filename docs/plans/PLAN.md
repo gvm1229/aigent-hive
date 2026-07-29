@@ -99,7 +99,7 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
 
 ## Current execution order
 
-1. P7-042 Hive Skill metadata budget와 implicit 중복 제거
+1. P7-042 Hive Skill fresh-session metadata budget·implicit 중복 qualification
 2. P7-040 current clean-clone CI 복구
 3. P7-041 실제 Windows 기기 acceptance
 4. P7-020·018 artifact attestation과 release candidate qualification
