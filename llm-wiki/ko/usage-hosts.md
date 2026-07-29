@@ -9,10 +9,10 @@ summary: "Native-first quota sensing, CodexBar fallback 경계와 source-session
 tags: [guard, hosts, usage]
 aliases: ["사용량 가드 호스트"]
 sources:
-  - "repo:.github/workflows/ci.yml#sha256:ff128ddbcc985f833e7c5b18f6a6b3f9ff5f55851e2216ae98f15375f0441c61"
+  - "repo:.github/workflows/ci.yml#sha256:60945a807302e95f64373efc5d91ff11269e0f2609dc1d21c707c41e5a79db09"
   - "repo:crates/hive-cli/src/usage.rs#sha256:5bd67c08505d00136738ed34751412aa37d7242e43ecb0fbb1c22b5c2f4c0fed"
   - "repo:docs/decisions/ADR-0010-native-first-usage-sensors.md#sha256:141e8070b475ee2b0d81e93a69217093e07af9a9ca61c16dcbb31f111ea1d0f4"
-  - "repo:tests/conformance/test_source_usage_guard.py#sha256:abc467bb439664c8a4476ad8ad717f0c28b3beda7ca2681115953c95732632eb"
+  - "repo:tests/conformance/test_source_usage_guard.py#sha256:6fd6c2db807d251c2cf33c38627114f80dab7541fd26134a687aeb69cdd98df7"
 links: [plugin-lifecycle, security-release, workflow]
 reviewed_revision: "git:727ec3fa252e2eabbea4a4c57c4b54f0e3830a99"
 status: active
@@ -57,8 +57,10 @@ State write portability:
 
 - `os.fchmod`: callable host에서만 적용
 - pre-stream failure cleanup: descriptor close 후 temporary path 제거
-- CI host: Linux, macOS, Windows
-- Windows acceptance: clean-clone `gate`·`session-disable`과 native file-lock 경계
+- Windows watcher lease: locked first byte 제외 후 guaranteed JSON object prefix 복원
+- Linux·macOS CI: source guard 전체 corpus
+- Windows CI: state write, lease read, clean-clone `gate`, `session-disable`, disabled `gate`
+- Windows 실행 순서: broader Phase 1 corpus 이전
 
 Regression acceptance:
 

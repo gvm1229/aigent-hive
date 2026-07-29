@@ -9,10 +9,10 @@ summary: "Native-first quota sensing, CodexBar fallback boundaries, and source-s
 tags: [guard, hosts, usage]
 aliases: ["usage guard hosts"]
 sources:
-  - "repo:.github/workflows/ci.yml#sha256:ff128ddbcc985f833e7c5b18f6a6b3f9ff5f55851e2216ae98f15375f0441c61"
+  - "repo:.github/workflows/ci.yml#sha256:60945a807302e95f64373efc5d91ff11269e0f2609dc1d21c707c41e5a79db09"
   - "repo:crates/hive-cli/src/usage.rs#sha256:5bd67c08505d00136738ed34751412aa37d7242e43ecb0fbb1c22b5c2f4c0fed"
   - "repo:docs/decisions/ADR-0010-native-first-usage-sensors.md#sha256:141e8070b475ee2b0d81e93a69217093e07af9a9ca61c16dcbb31f111ea1d0f4"
-  - "repo:tests/conformance/test_source_usage_guard.py#sha256:abc467bb439664c8a4476ad8ad717f0c28b3beda7ca2681115953c95732632eb"
+  - "repo:tests/conformance/test_source_usage_guard.py#sha256:6fd6c2db807d251c2cf33c38627114f80dab7541fd26134a687aeb69cdd98df7"
 links: [plugin-lifecycle, security-release, workflow]
 reviewed_revision: "git:727ec3fa252e2eabbea4a4c57c4b54f0e3830a99"
 status: active
@@ -48,8 +48,10 @@ matching locked child lease before any stop signal.
 
 State writes are portable across supported hosts. Descriptor permission hardening uses
 `os.fchmod` only when callable, and every pre-stream failure closes the descriptor before temporary
-path cleanup. The source guard conformance corpus runs on Linux, macOS, and Windows so clean-clone
-`gate` and `session-disable` exercise the native Windows file-lock boundary.
+path cleanup. Windows watcher lease checks skip the locked first byte and reconstruct the guaranteed
+JSON object prefix. Full source guard conformance runs on Linux and macOS; focused Windows
+compatibility regressions cover state writes, lease reads, clean-clone `gate`, `session-disable`,
+and disabled `gate` before the broader Phase 1 corpus.
 
 Regression acceptance covers clean-clone gate and disable, disabled gate allowance, non-transfer to
 a new thread or recreated process, unchanged malformed OMX bytes, prior-watcher retirement, and
