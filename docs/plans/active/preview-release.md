@@ -24,27 +24,33 @@
 | Gate | 현재 상태 | 정본 항목 |
 | --- | --- | --- |
 | Skill metadata | Project projection implicit owner 1개, 나머지 explicit-only, fresh-session 중복 warning 0건 | 완료 |
-| Clean-clone CI | `9b1e951`의 Linux·Windows·contract failure | `P7-040` |
+| Clean-clone CI | `d39ce7f`의 CI 7/7, native runtime 3/3 PASS | 완료 |
 | Windows UAT | Windows 11 x86_64 install·setup·auto onboarding·shared index·update·rollback PASS | 완료 |
 | Windows shell | PowerShell 5.1·`cmd.exe`·source-only PowerShell 7 경계 완료 | 완료 |
-| Candidate trust | Current tag artifact·digest·attestation 미생성 | `P7-020` |
-| Release candidate | Clean candidate qualification 미실행 | `P7-018` |
+| Candidate trust | Exact `0.8.0` source·preview artifact workflow·digest·attestation 미생성 | `P7-020` |
+| Release candidate | Protected `main`의 exact `0.8.0` candidate qualification 미실행 | `P7-018` |
 | Publication | Protected GitHub Release 미실행 | `P7-037` |
 
 원격 evidence:
 
-- [GitHub Actions CI `30347960157`](https://github.com/gvm1229/aigent-hive/actions/runs/30347960157)
-- [Native release runtime `30347960118`](https://github.com/gvm1229/aigent-hive/actions/runs/30347960118)
+- [GitHub Actions CI `30477685613`](https://github.com/gvm1229/aigent-hive/actions/runs/30477685613)
+- [Native release runtime `30477685720`](https://github.com/gvm1229/aigent-hive/actions/runs/30477685720)
+
+현재 release workflow 경계:
+
+- `release.yml`: Developer ID·notarization·Azure signing 필수인 hardened candidate 경로
+- `release-publish.yml`: external TUF authorization과 platform signer evidence 필수
+- Repository environment·secret·variable: 0개
+- ADR-0013 preview baseline용 unsigned archive SHA-256·GitHub attestation 경로 미구현
 
 ## 실행 순서
 
-1. `P7-040`: Linux shared-index directory sync, Windows canonical user-root pinning,
-   release-version output contract, schema validation failure 수정
-2. `P7-020`: exact candidate tag 기반 multi-platform archive, SHA-256,
-   GitHub artifact attestation 생성
-3. `P7-018`: clean clone, 전체 Rust·Python, 세 OS CI, installer·upgrade·recovery,
+1. `P7-020`: ADR-0013 preview 범위 candidate workflow, exact `0.8.0`,
+   multi-platform archive, SHA-256와 GitHub artifact attestation
+2. `P7-018`: protected `main` clean clone, 전체 Rust·Python, 세 OS CI,
+   installer·upgrade·recovery,
    Wiki·Skill budget qualification
-4. `P7-037`: `Claude-unverified preview` disclosure와 known limitation을 포함한
+3. `P7-037`: `Claude-unverified preview` disclosure와 known limitation을 포함한
    protected GitHub Release publication
 
 ## Claude preview 경계

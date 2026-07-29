@@ -2,9 +2,9 @@
 
 - 기준 branch: `develop`
 - product version: `0.7.0`
-- plan revision: `1.58`
+- plan revision: `1.59`
 - 현재 milestone: Phase 7 qualification + global onboarding·shared index `0.8.0`
-- 현재 작업: `0.8.0 Claude-unverified preview` release plan과 current CI 복구
+- 현재 작업: `0.8.0 Claude-unverified preview` candidate trust 경로 준비
 - 외부 중지 경계: protected signing/publication credential, 실제 production publication,
   exact `1.0.0` 사용자 authority
 - Plan load: compact `docs/plans/PLAN.md` + `docs/plans/phases/07-public-qualification.md`
@@ -15,11 +15,11 @@
   + `docs/plans/active/windows-shell-install.md`
   + `docs/plans/active/documentation-style.md` + `docs/plans/active/security-review.md`
   + `docs/plans/active/preview-release.md`
-- Plan completion: canonical checklist `212/216` 완료, `4`개 미완료, `98.1%`
+- Plan completion: canonical checklist `213/216` 완료, `3`개 미완료, `98.6%`
 - Latest local Windows: Rust workspace 전체 PASS, PowerShell 5.1·7.6.4 installer와
   `cmd.exe` bootstrap 계약 PASS
-- Latest remote: `9b1e951`의 CI `30347960157`과 native release runtime
-  `30347960118` failure, current clean-clone gate 재개방
+- Latest remote: `d39ce7f`의 CI `30477685613` 7/7과 native release runtime
+  `30477685720` 3/3 PASS
 - Native Goal routing: legacy `PLAN.md` checkbox 문구를 `phases/07-public-qualification.md`,
   `active/plugin-project-lifecycle.md`, `active/native-usage-sensor.md`,
   `active/user-onboarding-shared-index.md`, `active/source-llm-wiki.md`,
@@ -397,39 +397,35 @@ Source Wiki targeted qualification PASS:
 - Protected 경계: Developer ID signing·notarization·GitHub attestation 미실행
 - Local signature observation: linker ad-hoc, `TeamIdentifier` 없음, Gatekeeper 거부
 
-Historical remote qualification evidence:
+Current remote qualification evidence:
 
-- Qualified candidate commit: `28f1c366aa06a609b443724decc474cb7718ea8a`
+- Current source: `d39ce7f9e86f9c0de8c8517c3e99cca758cba883`
+- GitHub Actions CI:
+  [run `30477685613`](https://github.com/gvm1229/aigent-hive/actions/runs/30477685613),
+  Linux·macOS·Windows 7/7 job PASS
 - Native release runtime:
-  [run `30205737619`](https://github.com/gvm1229/aigent-hive/actions/runs/30205737619),
+  [run `30477685720`](https://github.com/gvm1229/aigent-hive/actions/runs/30477685720),
   macOS arm64·Intel과 Windows x86_64 3/3 job PASS
-- GitHub Actions CI:
-  [run `30205737631`](https://github.com/gvm1229/aigent-hive/actions/runs/30205737631),
-  7/7 job PASS
-- 당시 clean-clone full CI PASS
-
-Current contradiction evidence:
-
-- Current source: `9b1e951069eb2b2563faffe42b8d13810af03d7e`
-- GitHub Actions CI:
-  [run `30347960157`](https://github.com/gvm1229/aigent-hive/actions/runs/30347960157),
-  Linux·Windows Rust, Phase 1과 contract/Copier failure
-- Native release runtime:
-  [run `30347960118`](https://github.com/gvm1229/aigent-hive/actions/runs/30347960118),
-  macOS·Windows release version output contract failure
-- P7-040 current clean-clone gate 미충족
+- P7-040 current clean-clone gate 충족
 
 검증 경계:
 
-- 로컬 Windows `pwsh` 부재에 따른 runtime test 1개 expected skip
+- Local Phase 6 계약 21 PASS, macOS 전용 8개 expected skip
 - Direct installer의 같은 owner parent handle-pinning race
 
 ## `0.8.0` preview release gate
 
-- P7-040 current clean-clone 전체 CI
 - P7-020 candidate SHA-256·GitHub artifact attestation
 - P7-018 `0.8.0` release candidate qualification
 - P7-037 protected `Claude-unverified preview` GitHub Release publication
+
+Candidate trust blocker:
+
+- Current source product version `0.7.0`, exact `0.8.0` candidate 부재
+- `release.yml`: deferred Developer ID·notarization·Azure signing 필수
+- `release-publish.yml`: deferred external TUF·platform signer evidence 필수
+- GitHub repository environment·secret·variable 0개
+- ADR-0013 preview artifact attestation·publication workflow 미구현
 
 Preview 비차단 deferred:
 
@@ -441,6 +437,6 @@ Preview 비차단 deferred:
 
 ## 다음 action
 
-1. P7-040 Linux·Windows·contract CI 복구
-2. P7-020·018 artifact attestation과 release candidate qualification
-3. P7-037 protected preview publication
+1. P7-020 ADR-0013 preview candidate workflow와 exact `0.8.0` 준비
+2. P7-018 protected `main` candidate qualification
+3. P7-037 최종 사용자 확인 뒤 protected preview publication
