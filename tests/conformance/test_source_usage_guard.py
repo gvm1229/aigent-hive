@@ -1319,7 +1319,7 @@ raise SystemExit(64)
         self.assertIn("For every user turn", directive)
         self.assertIn("Only after exit `0`", directive)
         self.assertIn("including simple answers", directive)
-        self.assertIn("allow_implicit_invocation: true", interface)
+        self.assertIn("allow_implicit_invocation: false", interface)
 
     def test_source_and_shipping_guidance_match_fallback_consent_contract(
         self,
