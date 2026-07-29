@@ -3490,7 +3490,14 @@ fn expected_claude_marketplace_path(arguments: &UserArguments) -> Result<String,
 fn normalize_host_path(path: &str) -> String {
     #[cfg(windows)]
     {
-        path.replace('/', "\\")
+        let normalized = path.replace('/', "\\");
+        if let Some(rest) = normalized.strip_prefix(r"\\?\UNC\") {
+            format!(r"\\{rest}")
+        } else if let Some(rest) = normalized.strip_prefix(r"\\?\") {
+            rest.to_owned()
+        } else {
+            normalized
+        }
     }
     #[cfg(not(windows))]
     {
@@ -8123,6 +8130,19 @@ mod tests {
           {"name":"aigent-hive","root":"/tmp/b"}
         ]}"#;
         assert!(parse_codex_marketplace_state(duplicate).is_err());
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn codex_probe_normalizes_windows_verbatim_paths() {
+        assert_eq!(
+            normalize_host_path(r"\\?\C:\Users\hive\marketplace"),
+            r"C:\Users\hive\marketplace"
+        );
+        assert_eq!(
+            normalize_host_path(r"\\?\UNC\server\share\marketplace"),
+            r"\\server\share\marketplace"
+        );
     }
 
     #[test]
