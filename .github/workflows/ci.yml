@@ -107,6 +107,11 @@ jobs:
           python -m unittest
           tests.conformance.test_phase7_usage_control
           -v
+      - name: Run source usage-guard conformance corpus
+        run: >-
+          python -m unittest
+          tests.conformance.test_source_usage_guard
+          -v
 
   copier:
     name: Contract and Copier conformance
