@@ -50,9 +50,11 @@ jobs:
       - name: Build locked native release
         run: |
           version=$(awk -F'"' '/^version = "/ { print $2; exit }' Cargo.toml)
+          release_date=$(awk -F'"' '/^release-date = "/ { print $2; exit }' Cargo.toml)
           scripts/check-release-version.sh "$version"
           cargo build --release --locked --target "$TARGET" --bin hive
           printf 'VERSION=%s\n' "$version" >>"$GITHUB_ENV"
+          printf 'RELEASE_DATE=%s\n' "$release_date" >>"$GITHUB_ENV"
       - name: Verify architecture and package exact release layout
         env:
           EXPECTED_ARCHITECTURE: ${{ matrix.architecture }}
@@ -88,7 +90,7 @@ jobs:
           tar -xzf "$RUNNER_TEMP/$PACKAGE.tar.gz" -C "$prefix"
           installed="$prefix/$PACKAGE/hive"
           test "$(shasum -a 256 "$installed" | cut -d' ' -f1)" = "$BINARY_DIGEST"
-          test "$("$installed" --version)" = "hive $VERSION"
+          test "$("$installed" --version)" = "hive $VERSION (released $RELEASE_DATE)"
           "$installed" doctor | grep -F "aigent-hive $VERSION"
       - name: Qualify isolated Antigravity user install lifecycle
         run: |
@@ -153,6 +155,14 @@ jobs:
             throw "workspace version is unavailable"
           }
           $version = $match.Groups[1].Value
+          $releaseDateMatch = [regex]::Match(
+            $cargo,
+            '(?m)^release-date = "([^"]+)"'
+          )
+          if (-not $releaseDateMatch.Success) {
+            throw "workspace release date is unavailable"
+          }
+          $releaseDate = $releaseDateMatch.Groups[1].Value
           bash scripts/check-release-version.sh $version
           if ($LASTEXITCODE -ne 0) {
             throw "product version parity check failed"
@@ -162,6 +172,8 @@ jobs:
             throw "locked native release build failed"
           }
           "VERSION=$version" | Out-File $env:GITHUB_ENV -Encoding utf8 -Append
+          "RELEASE_DATE=$releaseDate" |
+            Out-File $env:GITHUB_ENV -Encoding utf8 -Append
       - name: Verify architecture and package exact release layout
         shell: pwsh
         run: |
@@ -214,7 +226,10 @@ jobs:
           if ($installedDigest -ne $env:BINARY_DIGEST) {
             throw "installed binary digest mismatch"
           }
-          if ((& $installed --version) -ne "hive $env:VERSION") {
+          if (
+            (& $installed --version) -ne
+            "hive $env:VERSION (released $env:RELEASE_DATE)"
+          ) {
             throw "installed binary version mismatch"
           }
           if ((& $installed doctor) -notcontains "aigent-hive $env:VERSION") {

@@ -27,8 +27,14 @@ if [ -z "$workspace" ] || [ "$workspace" != "$requested" ]; then
   exit 3
 fi
 
+release_date=$(sed -n 's/^release-date = "\([^"]*\)"$/\1/p' Cargo.toml | head -n 1)
+if ! printf '%s\n' "$release_date" | grep -Eq '^[0-9]{4}-[0-9]{2}-[0-9]{2}$'; then
+  echo "workspace release date must be exact YYYY-MM-DD" >&2
+  exit 3
+fi
+
 compiled=$(cargo run --quiet --locked -p hive-cli -- --version)
-if [ "$compiled" != "hive $requested" ]; then
+if [ "$compiled" != "hive $requested (released $release_date)" ]; then
   echo "compiled CLI version differs: $compiled" >&2
   exit 3
 fi
