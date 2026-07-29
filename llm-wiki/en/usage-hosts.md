@@ -9,11 +9,11 @@ summary: "Native-first quota sensing, CodexBar fallback boundaries, and source-s
 tags: [guard, hosts, usage]
 aliases: ["usage guard hosts"]
 sources:
-  - "repo:.agents/skills/hive-usage-guard/scripts/guard.py#sha256:9be7431e5f63d3bfbdcab93b902cb736cd5e13b59622d0817e576f738b1e6df1"
   - "repo:crates/hive-cli/src/usage.rs#sha256:5bd67c08505d00136738ed34751412aa37d7242e43ecb0fbb1c22b5c2f4c0fed"
   - "repo:docs/decisions/ADR-0010-native-first-usage-sensors.md#sha256:141e8070b475ee2b0d81e93a69217093e07af9a9ca61c16dcbb31f111ea1d0f4"
+  - "repo:tests/conformance/test_source_usage_guard.py#sha256:5d31df9f37cce42991af162b4d491e8c1216c318a0cf99cfeff9705727e54c3a"
 links: [plugin-lifecycle, security-release, workflow]
-reviewed_revision: "git:7b6cef8887dbc0571e5a65e5bf32bc829ce3c5d5"
+reviewed_revision: "git:f639977e4320307093674ede3aa27cd5c9d4f7c4"
 status: active
 ---
 
@@ -33,3 +33,20 @@ The source-development Python watcher and boundary gate are separate from the sh
 dispatch guard. A transient `unknown` waits three seconds and retries once; a repeated short glitch
 remains visible but creates no new halt marker. Confirmed quota exhaustion and filesystem, session,
 or sensor-integrity failures remain fail-closed.
+
+Source-session identity never reads `.omx/`. The current Codex thread key is optional; when absent,
+the guard derives a process-scoped identity from the live Codex host PID and mandatory process
+creation digest. Controls bind to the thread or process identity plus that creation digest. A clean
+clone initializes only Hive-owned state under `.agents/work/usage-guard/`, and a new thread never
+inherits another thread's bypass.
+
+Recovery controls do not initialize quota sensors. `status` reports the last observation with
+explicit freshness, while a disabled gate skips quota sensing and returns `session_bypass`.
+Watchers pin the host creation digest, retire a prior thread watcher on transition, and require a
+matching locked child lease before any stop signal.
+
+Regression acceptance covers clean-clone gate and disable, disabled gate allowance, non-transfer to
+a new thread or recreated process, unchanged malformed OMX bytes, prior-watcher retirement, and
+refusal to signal an unrelated process even when watcher state contains its genuine PID and process
+creation digest. The originating requirement was removal of the bootstrap deadlock caused by
+treating optional OMX runtime state as mandatory source-guard authority.

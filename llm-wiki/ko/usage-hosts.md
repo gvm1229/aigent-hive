@@ -9,11 +9,11 @@ summary: "Native-first quota sensing, CodexBar fallback 경계와 source-session
 tags: [guard, hosts, usage]
 aliases: ["사용량 가드 호스트"]
 sources:
-  - "repo:.agents/skills/hive-usage-guard/scripts/guard.py#sha256:9be7431e5f63d3bfbdcab93b902cb736cd5e13b59622d0817e576f738b1e6df1"
   - "repo:crates/hive-cli/src/usage.rs#sha256:5bd67c08505d00136738ed34751412aa37d7242e43ecb0fbb1c22b5c2f4c0fed"
   - "repo:docs/decisions/ADR-0010-native-first-usage-sensors.md#sha256:141e8070b475ee2b0d81e93a69217093e07af9a9ca61c16dcbb31f111ea1d0f4"
+  - "repo:tests/conformance/test_source_usage_guard.py#sha256:5d31df9f37cce42991af162b4d491e8c1216c318a0cf99cfeff9705727e54c3a"
 links: [plugin-lifecycle, security-release, workflow]
-reviewed_revision: "git:7b6cef8887dbc0571e5a65e5bf32bc829ce3c5d5"
+reviewed_revision: "git:f639977e4320307093674ede3aa27cd5c9d4f7c4"
 status: active
 ---
 
@@ -34,3 +34,32 @@ Source-development Python watcher와 boundary gate는 shipping one-shot dispatch
 Transient `unknown`: 3초 대기 후 1회 재시도. 반복되는 짧은 glitch는 observation에 유지하되
 새 halt marker 생성 없음. Confirmed quota exhaustion과 filesystem, session 또는 sensor-integrity
 오류는 fail-closed.
+
+Source-session identity:
+
+- `.omx/` read 0회
+- `CODEX_THREAD_ID` 존재 시 current thread key 사용
+- thread key 부재 시 live Codex host PID와 mandatory process creation digest 기반 identity
+- control binding: thread 또는 process identity + process creation digest
+- clean clone 초기화 경로: `.agents/work/usage-guard/` 한정
+- 새 thread의 이전 bypass 상속 0건
+
+Recovery boundary:
+
+- `status`, `session-disable`, `session-enable`: quota sensor 초기화 없음
+- `status`: 마지막 observation과 freshness 표시
+- disabled `gate`: quota sensor 호출 없이 `session_bypass`
+- thread 전환: 같은 host process의 이전 watcher 종료
+- watcher stop: host creation digest와 locked child lease 일치 필수
+
+Regression acceptance:
+
+- `.omx/` 없는 clean clone의 `gate`·`session-disable`
+- disable 이후 `gate` allowance
+- 새 thread 또는 recreated process로 bypass 전이 0건
+- malformed OMX bytes 불변
+- 이전 thread watcher 정리
+- unrelated process의 genuine PID·creation digest가 담긴 watcher state도 signal 거부
+
+Originating requirement: optional OMX runtime state를 mandatory source-guard authority로 취급한
+bootstrap deadlock 제거.
