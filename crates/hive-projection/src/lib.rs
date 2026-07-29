@@ -424,7 +424,7 @@ pub fn compile_projection(
         })
         .map(|entry| entry.name.clone())
         .collect();
-    compile_selected(host, optional_sources, &catalog, &selected)
+    compile_selected(host, optional_sources, &catalog, &selected, false)
 }
 
 /// Compiles an exact selected user-scope built-in set plus verified optional
@@ -501,7 +501,7 @@ fn compile_named_projection(
             ));
         }
     }
-    compile_selected(host, optional_sources, &catalog, &selected)
+    compile_selected(host, optional_sources, &catalog, &selected, allow_user_only)
 }
 
 fn compile_selected(
@@ -509,6 +509,7 @@ fn compile_selected(
     optional_sources: &[OptionalSkillSource],
     catalog: &SkillCatalog,
     selected: &BTreeSet<String>,
+    preserve_implicit_metadata: bool,
 ) -> Result<Projection, ProjectionError> {
     let mut files = BTreeMap::new();
     let mut active = Vec::new();
@@ -536,7 +537,11 @@ fn compile_selected(
             })?;
             files.insert(
                 skill_metadata_path(host, &entry.name),
-                explicit_only_metadata(metadata)?,
+                if preserve_implicit_metadata {
+                    metadata.to_vec()
+                } else {
+                    explicit_only_metadata(metadata)?
+                },
             );
         }
         active.push(ActiveSkill {
@@ -1996,6 +2001,24 @@ description: Inspect one local file without changing it.
                 .collect::<Vec<_>>(),
             ["hive-update", "hive-usage-guard", "setup-hive"]
         );
+        for (name, expected_implicit) in [
+            ("setup-hive", true),
+            ("hive-update", false),
+            ("hive-usage-guard", true),
+        ] {
+            let metadata = std::str::from_utf8(
+                projection
+                    .files
+                    .get(&format!(".agents/skills/{name}/agents/openai.yaml"))
+                    .expect("selected Skill metadata"),
+            )
+            .expect("selected Skill metadata should be UTF-8");
+            assert_eq!(
+                metadata.contains("allow_implicit_invocation: true"),
+                expected_implicit,
+                "{name} user metadata policy"
+            );
+        }
     }
 
     #[test]
@@ -2023,6 +2046,14 @@ description: Inspect one local file without changing it.
             .skills
             .iter()
             .all(|skill| skill.name != "setup-hive"));
+        let metadata = std::str::from_utf8(
+            projection
+                .files
+                .get(".agents/skills/auto-setup-harness/agents/openai.yaml")
+                .expect("project Skill metadata"),
+        )
+        .expect("project Skill metadata should be UTF-8");
+        assert!(metadata.contains("allow_implicit_invocation: false"));
     }
 
     #[test]

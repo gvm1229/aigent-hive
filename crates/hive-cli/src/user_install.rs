@@ -6457,6 +6457,38 @@ mod tests {
     }
 
     #[test]
+    fn user_plugin_plan_keeps_only_the_selected_host_skill_projection() {
+        for host in [UserHost::Codex, UserHost::Claude, UserHost::Antigravity] {
+            let temporary = tempdir().expect("tempdir");
+            let plan =
+                build_plan(&args(temporary.path(), host, UserMode::DryRun)).expect("host plan");
+            let metadata = PathBuf::from(format!(
+                ".hive/marketplaces/{}/plugins/aigent-hive/skills/setup-hive/agents/openai.yaml",
+                host.as_str()
+            ));
+            if host == UserHost::Claude {
+                assert!(
+                    !plan.files.contains_key(&metadata),
+                    "Claude should not receive Codex metadata"
+                );
+            } else {
+                let text = std::str::from_utf8(
+                    &plan
+                        .files
+                        .get(&metadata)
+                        .expect("host setup metadata")
+                        .bytes,
+                )
+                .expect("host setup metadata should be UTF-8");
+                assert!(
+                    text.contains("allow_implicit_invocation: true"),
+                    "{host:?} should preserve user-plugin invocation metadata"
+                );
+            }
+        }
+    }
+
+    #[test]
     fn supported_host_version_ranges_enforce_floor_ceiling_and_shape() {
         for (host, floor, in_range, ceiling, malformed) in [
             (
