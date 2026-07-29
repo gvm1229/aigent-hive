@@ -10,7 +10,7 @@ tags: [development, git, verification]
 aliases: ["소스 개발 워크플로"]
 sources:
   - "repo:.agents/directives/00-editing-discipline.md#sha256:6ff1639897049dea7ccf710c88fe3bcb369d7edf7e62bcd62137ec70a7c7cc24"
-  - "repo:.agents/directives/03-workflow.md#sha256:07c156f90f8440b9669b99ec0b020b323a7d6083b474ffadc537eb97f6987467"
+  - "repo:.agents/directives/03-workflow.md#sha256:5b882b23c1236ad4667243562add756432c100bfada68a970c4a6134a7bf73c1"
   - "repo:docs/guides/branching-rules.md#sha256:c0b19cc2978f33002a980a7bf9fdb4563fcad8d5096781c3b9f15a0ba99a3304"
   - "repo:docs/guides/commit-rules.md#sha256:9367805c05dc7f9f4f60dd95ea9fd7b7db22de2bd56060c5fbb9583f6ff6a925"
 links: [crate-architecture, product-intent, skill-routing, usage-hosts]
@@ -33,6 +33,10 @@ Commit 단위: 독립 검토·독립 되돌리기 가능한 concern 1개. Wiki·
 behavior, version metadata와 release activation의 기본 분리. Wiki capture와
 `hive --version` 변경의 별도 commit. 새 분리 규칙만을 이유로 한 existing history rewrite
 금지.
+
+완료 source task별 독립 commit 필수. 독립 검토·독립 되돌리기 가능한 concern 보유 task의
+추가 분리. 동일 request·session·milestone·delivery window를 근거로 한 unrelated completed
+task 결합 금지.
 
 Repository work를 통제하는 모든 plan의 실행 전 tracked canonical plan set 기록. Chat 또는
 native plan state의 단독 authority 금지. Completion evidence: fresh targeted test, risk에
