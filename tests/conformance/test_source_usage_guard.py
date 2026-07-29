@@ -50,6 +50,7 @@ class SourceUsageGuardTests(unittest.TestCase):
             "HIVE_SOURCE_USAGE_FIXTURE": str(self.fixture),
             "HIVE_CODEX_NATIVE_FIXTURE": str(self.native_fixture),
             "HIVE_USAGE_SENSOR_CALL_LOG": str(self.call_log),
+            "HIVE_FAKE_CODEX_TARGET": str(self.fake_command_path("codex")),
             "HIVE_FAKE_CODEXBAR_TARGET": str(self.fake_bin / "codexbar"),
             "HIVE_USAGE_UNKNOWN_RETRY_DELAY_SECONDS": "0",
             "HIVE_USAGE_TEST_PROCESS_ID": str(os.getpid()),
@@ -173,8 +174,24 @@ class SourceUsageGuardTests(unittest.TestCase):
         self.session_id = session_id
         self.environment["CODEX_THREAD_ID"] = session_id
 
+    def fake_command_path(self, name: str) -> Path:
+        suffix = ".cmd" if os.name == "nt" else ""
+        return self.fake_bin / f"{name}{suffix}"
+
+    def fake_script_path(self, name: str) -> Path:
+        suffix = ".py" if os.name == "nt" else ""
+        return self.fake_bin / f"{name}{suffix}"
+
+    def wrap_fake_python_command(self, name: str, script: Path) -> None:
+        if os.name != "nt":
+            return
+        self.fake_command_path(name).write_text(
+            f'@echo off\r\n"{sys.executable}" "{script}" %*\r\n',
+            encoding="ascii",
+        )
+
     def write_fake_codexbar(self) -> None:
-        executable = self.fake_bin / "codexbar"
+        executable = self.fake_script_path("codexbar")
         executable.write_text(
             """#!/usr/bin/env python3
 import os
@@ -197,16 +214,15 @@ raise SystemExit(64)
             encoding="utf-8",
         )
         executable.chmod(executable.stat().st_mode | stat.S_IXUSR)
+        self.wrap_fake_python_command("codexbar", executable)
 
     def hide_codexbar(self) -> None:
-        (self.fake_bin / "codexbar").unlink(missing_ok=True)
-        python = self.fake_bin / "python3"
-        if not python.exists():
-            python.symlink_to(sys.executable)
+        self.fake_command_path("codexbar").unlink(missing_ok=True)
+        self.fake_script_path("codexbar").unlink(missing_ok=True)
         self.environment["PATH"] = str(self.fake_bin)
 
     def write_fake_codexbar_transient(self) -> None:
-        executable = self.fake_bin / "codexbar"
+        executable = self.fake_script_path("codexbar")
         executable.write_text(
             """#!/usr/bin/env python3
 import os
@@ -236,6 +252,7 @@ raise SystemExit(64)
             encoding="utf-8",
         )
         executable.chmod(executable.stat().st_mode | stat.S_IXUSR)
+        self.wrap_fake_python_command("codexbar", executable)
 
     def write_fake_brew(self, *, version: str = "Homebrew 4.4.20") -> None:
         executable = self.fake_bin / "brew"
@@ -271,7 +288,7 @@ raise SystemExit(64)
         executable.chmod(executable.stat().st_mode | stat.S_IXUSR)
 
     def write_fake_codex_unsupported(self) -> None:
-        executable = self.fake_bin / "codex"
+        executable = self.fake_script_path("codex")
         executable.write_text(
             """#!/usr/bin/env python3
 import os
@@ -288,9 +305,10 @@ raise SystemExit(64)
             encoding="utf-8",
         )
         executable.chmod(executable.stat().st_mode | stat.S_IXUSR)
+        self.wrap_fake_python_command("codex", executable)
 
     def write_fake_codex_native(self) -> None:
-        executable = self.fake_bin / "codex"
+        executable = self.fake_script_path("codex")
         executable.write_text(
             """#!/usr/bin/env python3
 import json
@@ -325,21 +343,22 @@ for line in sys.stdin:
             encoding="utf-8",
         )
         executable.chmod(executable.stat().st_mode | stat.S_IXUSR)
+        self.wrap_fake_python_command("codex", executable)
 
     def write_fake_codex_identity_swap(self) -> None:
-        executable = self.fake_bin / "codex"
+        executable = self.fake_script_path("codex")
         executable.write_text(
             """#!/usr/bin/env python3
 import os
 import pathlib
 import sys
 
-path = pathlib.Path(__file__)
+path = pathlib.Path(os.environ["HIVE_FAKE_CODEX_TARGET"])
 with pathlib.Path(os.environ["HIVE_USAGE_SENSOR_CALL_LOG"]).open("a") as stream:
     stream.write("codex " + " ".join(sys.argv[1:]) + "\\n")
 if sys.argv[1:] == ["--version"]:
     with path.open("a") as stream:
-        stream.write("\\n# identity changed after qualification\\n")
+        stream.write("\\nrem identity changed after qualification\\n")
     print("codex-cli 0.145.0")
     raise SystemExit(0)
 raise SystemExit(64)
@@ -347,6 +366,7 @@ raise SystemExit(64)
             encoding="utf-8",
         )
         executable.chmod(executable.stat().st_mode | stat.S_IXUSR)
+        self.wrap_fake_python_command("codex", executable)
 
     def write_native_usage(
         self,
@@ -1293,7 +1313,7 @@ raise SystemExit(64)
             / "openai.yaml"
         ).read_text(encoding="utf-8")
 
-        self.assertIn("the user does not need to name this Skill", skill)
+        self.assertIn("even if the user does not name this Skill", skill)
         self.assertIn("Before routing, answering, planning", skill)
         self.assertIn("bare “continue”/“resume”", skill)
         self.assertIn("For every user turn", directive)
@@ -1374,7 +1394,10 @@ raise SystemExit(64)
             / "control.json"
         )
         control.parent.mkdir(parents=True)
-        control.symlink_to(external)
+        try:
+            control.symlink_to(external)
+        except OSError as error:
+            self.skipTest(f"symlink creation is unavailable: {error}")
 
         completed = self.run_guard("check")
 
