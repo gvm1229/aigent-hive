@@ -527,6 +527,18 @@ fn compile_selected(
         })?;
         names.insert(entry.name.clone());
         files.insert(skill_path(host, &entry.name), source.to_vec());
+        if matches!(host, Host::Codex | Host::Antigravity) {
+            let metadata = embedded_skill_metadata(&entry.name).ok_or_else(|| {
+                ProjectionError::new(
+                    "hive.skill-catalog-invalid",
+                    format!("implemented Skill {} has no Codex metadata", entry.name),
+                )
+            })?;
+            files.insert(
+                skill_metadata_path(host, &entry.name),
+                explicit_only_metadata(metadata)?,
+            );
+        }
         active.push(ActiveSkill {
             name: entry.name.clone(),
             source_type: SkillSourceType::BuiltIn,
@@ -727,10 +739,90 @@ fn skill_path(host: Host, name: &str) -> String {
     format!("{}/{name}/SKILL.md", host.skill_root())
 }
 
+fn skill_metadata_path(host: Host, name: &str) -> String {
+    format!("{}/{name}/agents/openai.yaml", host.skill_root())
+}
+
+fn explicit_only_metadata(metadata: &[u8]) -> Result<Vec<u8>, ProjectionError> {
+    const IMPLICIT: &str = "  allow_implicit_invocation: true";
+    const EXPLICIT: &str = "  allow_implicit_invocation: false";
+
+    let text = std::str::from_utf8(metadata).map_err(|_| {
+        ProjectionError::new(
+            "hive.skill-catalog-invalid",
+            "embedded Codex Skill metadata must be UTF-8",
+        )
+    })?;
+    if !text.contains(IMPLICIT) && !text.contains(EXPLICIT) {
+        return Err(ProjectionError::new(
+            "hive.skill-catalog-invalid",
+            "embedded Codex Skill metadata lacks an invocation policy",
+        ));
+    }
+    Ok(text.replace(IMPLICIT, EXPLICIT).into_bytes())
+}
+
 fn embedded_skill_source(name: &str) -> Option<&'static [u8]> {
     embedded_skill_sources()
         .into_iter()
         .find_map(|(candidate, bytes)| (candidate == name).then_some(bytes))
+}
+
+fn embedded_skill_metadata(name: &str) -> Option<&'static [u8]> {
+    match name {
+        "setup-hive" => Some(include_bytes!(
+            "../../../harness/skills/setup-hive/agents/openai.yaml"
+        )),
+        "setup-harness" => Some(include_bytes!(
+            "../../../harness/skills/setup-harness/agents/openai.yaml"
+        )),
+        "auto-setup-harness" => Some(include_bytes!(
+            "../../../harness/skills/auto-setup-harness/agents/openai.yaml"
+        )),
+        "hive-simple-question" => Some(include_bytes!(
+            "../../../harness/skills/hive-simple-question/agents/openai.yaml"
+        )),
+        "hive-prompt-refine" => Some(include_bytes!(
+            "../../../harness/skills/hive-prompt-refine/agents/openai.yaml"
+        )),
+        "hive-knowledge-capture" => Some(include_bytes!(
+            "../../../harness/skills/hive-knowledge-capture/agents/openai.yaml"
+        )),
+        "hive-knowledge-query" => Some(include_bytes!(
+            "../../../harness/skills/hive-knowledge-query/agents/openai.yaml"
+        )),
+        "hive-knowledge-promote" => Some(include_bytes!(
+            "../../../harness/skills/hive-knowledge-promote/agents/openai.yaml"
+        )),
+        "hive-knowledge-maintenance" => Some(include_bytes!(
+            "../../../harness/skills/hive-knowledge-maintenance/agents/openai.yaml"
+        )),
+        "hive-run-checkpoint" => Some(include_bytes!(
+            "../../../harness/skills/hive-run-checkpoint/agents/openai.yaml"
+        )),
+        "hive-run-resume" => Some(include_bytes!(
+            "../../../harness/skills/hive-run-resume/agents/openai.yaml"
+        )),
+        "hive-usage-guard" => Some(include_bytes!(
+            "../../../harness/skills/hive-usage-guard/agents/openai.yaml"
+        )),
+        "hive-role-handoff" => Some(include_bytes!(
+            "../../../harness/skills/hive-role-handoff/agents/openai.yaml"
+        )),
+        "hive-judge-package" => Some(include_bytes!(
+            "../../../harness/skills/hive-judge-package/agents/openai.yaml"
+        )),
+        "hive-update" => Some(include_bytes!(
+            "../../../harness/skills/hive-update/agents/openai.yaml"
+        )),
+        "hive-migrate" => Some(include_bytes!(
+            "../../../harness/skills/hive-migrate/agents/openai.yaml"
+        )),
+        "hive-project-upgrade" => Some(include_bytes!(
+            "../../../harness/skills/hive-project-upgrade/agents/openai.yaml"
+        )),
+        _ => None,
+    }
 }
 
 fn embedded_skill_sources() -> [(&'static str, &'static [u8]); 17] {
@@ -1847,7 +1939,8 @@ description: Inspect one local file without changing it.
             let second = compile_projection(host, &[]).expect("projection");
             assert_eq!(first, second);
             assert_eq!(first.active_skills.skills.len(), 16);
-            assert_eq!(first.files.len(), 17);
+            let expected_file_count = if host == Host::Claude { 17 } else { 33 };
+            assert_eq!(first.files.len(), expected_file_count);
             for skill in [
                 "auto-setup-harness",
                 "hive-judge-package",
@@ -1879,8 +1972,11 @@ description: Inspect one local file without changing it.
 
         let expected_files = BTreeSet::from([
             ".agents/skills/setup-hive/SKILL.md",
+            ".agents/skills/setup-hive/agents/openai.yaml",
             ".agents/skills/hive-update/SKILL.md",
+            ".agents/skills/hive-update/agents/openai.yaml",
             ".agents/skills/hive-usage-guard/SKILL.md",
+            ".agents/skills/hive-usage-guard/agents/openai.yaml",
             ".hive/config/active-skills.yml",
         ]);
         assert_eq!(
@@ -1910,6 +2006,9 @@ description: Inspect one local file without changing it.
         assert!(projection
             .files
             .contains_key(".claude/skills/setup-hive/SKILL.md"));
+        assert!(!projection
+            .files
+            .contains_key(".claude/skills/setup-hive/agents/openai.yaml"));
     }
 
     #[test]

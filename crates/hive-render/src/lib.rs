@@ -3409,6 +3409,22 @@ fn reproduce_projection_ownership(
                 "active Skill projection cannot be reproduced: {error}"
             ))
         })?;
+    let portable_projection = if host == ProjectionHost::Claude {
+        selected_project_skills
+            .map_or_else(
+                || compile_projection(ProjectionHost::Codex, &optional_sources),
+                |selected| {
+                    compile_project_projection(ProjectionHost::Codex, selected, &optional_sources)
+                },
+            )
+            .map_err(|error| {
+                RenderError::Verification(format!(
+                    "portable Skill projection cannot be reproduced: {error}"
+                ))
+            })?
+    } else {
+        current_projection.clone()
+    };
     let expected_active = expected_active_skills(source_version, &current_projection)?;
     if expected_active != active {
         return Err(RenderError::Verification(
@@ -3434,6 +3450,7 @@ fn reproduce_projection_ownership(
         source_version,
         &expected_active,
         &current_projection,
+        &portable_projection,
         &mut read_projected,
     )?;
     if authenticate_directives {
@@ -3519,6 +3536,7 @@ fn authenticate_projected_skill_files(
     source_version: &str,
     expected_active: &ActiveSkills,
     current_projection: &Projection,
+    portable_projection: &Projection,
     read_projected: &mut impl FnMut(&Path, &str) -> Result<Vec<u8>, RenderError>,
 ) -> Result<BTreeMap<PathBuf, Vec<u8>>, RenderError> {
     let mut files = BTreeMap::new();
@@ -3548,6 +3566,24 @@ fn authenticate_projected_skill_files(
                 )));
             }
             files.insert(relative, installed);
+        }
+    }
+    if source_version == env!("CARGO_PKG_VERSION") {
+        for (relative, expected) in &portable_projection.files {
+            let relative = Path::new(relative);
+            if !relative.ends_with("agents/openai.yaml") {
+                continue;
+            }
+            validate_hive_skill_projection_relative(relative)
+                .map_err(|error| RenderError::Verification(error.to_string()))?;
+            let installed = read_projected(relative, "projected Skill metadata")?;
+            if installed != *expected {
+                return Err(RenderError::Verification(format!(
+                    "projected Skill metadata bytes changed: {}",
+                    relative.display()
+                )));
+            }
+            files.insert(relative.to_path_buf(), installed);
         }
     }
     Ok(files)
@@ -6250,6 +6286,7 @@ mod tests {
             ".hive/config/harness.toml",
             ".hive/setup-answers.yml",
             ".agents/skills/hive-update/SKILL.md",
+            ".agents/skills/hive-update/agents/openai.yaml",
             "AGENTS.md",
         ] {
             assert!(
@@ -6768,16 +6805,33 @@ mod tests {
                 .files
                 .keys()
                 .filter(|path| !historical_files.contains_key(*path))
-                .map(String::as_str)
+                .cloned()
                 .collect::<Vec<_>>();
-            let expected_added = if capabilities == "capabilities-claude-omc.json" {
-                vec![
-                    ".agents/skills/auto-setup-harness/SKILL.md",
-                    ".claude/skills/auto-setup-harness/SKILL.md",
-                ]
-            } else {
-                vec![".agents/skills/auto-setup-harness/SKILL.md"]
-            };
+            let mut expected_added = vec![".agents/skills/auto-setup-harness/SKILL.md".to_owned()];
+            for name in [
+                "auto-setup-harness",
+                "hive-judge-package",
+                "hive-knowledge-capture",
+                "hive-knowledge-maintenance",
+                "hive-knowledge-promote",
+                "hive-knowledge-query",
+                "hive-migrate",
+                "hive-project-upgrade",
+                "hive-prompt-refine",
+                "hive-role-handoff",
+                "hive-run-checkpoint",
+                "hive-run-resume",
+                "hive-simple-question",
+                "hive-update",
+                "hive-usage-guard",
+                "setup-harness",
+            ] {
+                expected_added.push(format!(".agents/skills/{name}/agents/openai.yaml"));
+            }
+            if capabilities == "capabilities-claude-omc.json" {
+                expected_added.push(".claude/skills/auto-setup-harness/SKILL.md".to_owned());
+            }
+            expected_added.sort();
             assert_eq!(added_since_0_7, expected_added);
             let changed_since_0_7 = [
                 "AGENTS.md",
@@ -6785,6 +6839,9 @@ mod tests {
                 "/hive-knowledge-capture/SKILL.md",
                 "/hive-knowledge-maintenance/SKILL.md",
                 "/hive-knowledge-query/SKILL.md",
+                "/hive-prompt-refine/SKILL.md",
+                "/hive-simple-question/SKILL.md",
+                "/hive-usage-guard/SKILL.md",
                 "/setup-harness/SKILL.md",
             ];
             for (path, historical_content) in &historical_files {

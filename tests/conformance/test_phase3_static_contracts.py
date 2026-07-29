@@ -72,6 +72,15 @@ IMPLEMENTED_SKILLS = {
     "hive-project-upgrade",
 }
 CATALOG_ONLY_SKILLS = BUILTIN_SKILLS - IMPLEMENTED_SKILLS
+IMPLICIT_PLUGIN_SKILLS = {
+    "setup-hive",
+    "setup-harness",
+    "auto-setup-harness",
+    "hive-simple-question",
+    "hive-prompt-refine",
+    "hive-usage-guard",
+}
+IMPLICIT_DESCRIPTION_BUDGET = 1_200
 
 
 def read_yaml(path: Path) -> dict[str, object]:
@@ -818,6 +827,92 @@ class Phase3SkillSourceContract(unittest.TestCase):
                 self.assertEqual(frontmatter["name"], name)
                 self.assertIsInstance(frontmatter["description"], str)
                 self.assertTrue(frontmatter["description"].strip())
+
+    def test_codex_skill_metadata_has_one_bounded_implicit_projection(
+        self,
+    ) -> None:
+        plugin_root = (
+            REPOSITORY_ROOT / "harness/plugins/aigent-hive/skills"
+        )
+        compatibility_root = (
+            REPOSITORY_ROOT / "harness/template/.agents/skills"
+        )
+        implicit_description_chars = 0
+
+        for name in sorted(IMPLEMENTED_SKILLS):
+            with self.subTest(name=name):
+                source = SKILL_ROOT / name
+                metadata_path = source / "agents/openai.yaml"
+                metadata = read_yaml(metadata_path)
+                interface = metadata.get("interface")
+                policy = metadata.get("policy")
+                self.assertIsInstance(interface, dict)
+                self.assertIsInstance(policy, dict)
+                self.assertEqual(
+                    policy.get("allow_implicit_invocation"),
+                    name in IMPLICIT_PLUGIN_SKILLS,
+                )
+                self.assertIn(f"${name}", interface.get("default_prompt", ""))
+                self.assertEqual(
+                    (plugin_root / name / "agents/openai.yaml").read_bytes(),
+                    metadata_path.read_bytes(),
+                )
+
+                if name == "setup-hive":
+                    self.assertFalse((compatibility_root / name).exists())
+                    continue
+
+                compatibility = read_yaml(
+                    compatibility_root / name / "agents/openai.yaml"
+                )
+                compatibility_policy = compatibility.get("policy")
+                self.assertIsInstance(compatibility_policy, dict)
+                self.assertFalse(
+                    compatibility_policy.get("allow_implicit_invocation")
+                )
+                compatibility_interface = compatibility.get("interface")
+                self.assertIsInstance(compatibility_interface, dict)
+                self.assertIn(
+                    f"${name}",
+                    compatibility_interface.get("default_prompt", ""),
+                )
+
+                if name in IMPLICIT_PLUGIN_SKILLS:
+                    frontmatter, _ = skill_frontmatter(
+                        source / "SKILL.md"
+                    )
+                    description = str(frontmatter["description"])
+                    self.assertLessEqual(len(description), 240)
+                    implicit_description_chars += len(description)
+
+        self.assertLessEqual(
+            implicit_description_chars,
+            IMPLICIT_DESCRIPTION_BUDGET,
+        )
+
+        source_skill_root = REPOSITORY_ROOT / ".agents/skills"
+        overlapping_source_skills = {
+            path.name
+            for path in source_skill_root.iterdir()
+            if path.is_dir() and path.name in IMPLEMENTED_SKILLS
+        }
+        self.assertEqual(
+            overlapping_source_skills,
+            {
+                "auto-setup-harness",
+                "hive-prompt-refine",
+                "hive-usage-guard",
+            },
+        )
+        for name in overlapping_source_skills:
+            source_metadata = read_yaml(
+                source_skill_root / name / "agents/openai.yaml"
+            )
+            source_policy = source_metadata.get("policy")
+            self.assertIsInstance(source_policy, dict)
+            self.assertFalse(
+                source_policy.get("allow_implicit_invocation")
+            )
 
     def test_catalog_only_entries_have_no_discoverable_skill_body(self) -> None:
         for name in sorted(CATALOG_ONLY_SKILLS):

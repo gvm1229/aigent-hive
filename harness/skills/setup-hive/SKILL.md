@@ -1,6 +1,6 @@
 ---
 name: setup-hive
-description: Configure or reconfigure provider-neutral Aigent Hive preferences at user scope through the signed Hive CLI. Use after minimal user installation; when setup is required; or when changing interface language, Wiki language or enablement, user profile, agent persona, active hosts, built-in Skill selection, or usage-guard preferences.
+description: Configure user-scope Hive preferences after installation or when the user asks to change language, hosts, Skills, Wiki, persona, or usage-guard settings.
 ---
 
 # Setup Hive

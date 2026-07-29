@@ -1,6 +1,6 @@
 ---
 name: setup-harness
-description: Inspect a project and configure its local Aigent Hive harness through the signed Hive CLI. Use when a user asks to set up, initialize, install, reconfigure, or regenerate Aigent Hive; when choosing expedited global-preference inheritance or custom project preferences; when creating AGENTS.md and scoped directives from a required project kind; or when selecting a host, persistent roles, memory policy, usage guard, manually approved optional Skills, and eligible fallback data-integrity hooks.
+description: Configure or reconfigure a consumer project's Hive harness when the user asks to set up, install, initialize, or regenerate Hive; require the project kind and signed CLI.
 ---
 
 # Setup Harness

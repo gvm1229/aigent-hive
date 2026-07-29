@@ -154,9 +154,12 @@ class Phase1CopierParity(Phase1CliTestCase):
                         projected.read_bytes(),
                         source.read_bytes(),
                     )
+                    expected_entries = {"SKILL.md"}
+                    if projection_root == ".agents":
+                        expected_entries.add("agents")
                     self.assertEqual(
                         {path.name for path in projected.parent.iterdir()},
-                        {"SKILL.md"},
+                        expected_entries,
                     )
         self.assertEqual((target / ".claude").exists(), host == "claude")
         ledger_bytes = active_ledger_path.read_bytes()

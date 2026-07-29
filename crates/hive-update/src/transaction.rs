@@ -2218,7 +2218,12 @@ mod tests {
         for entry in fs::read_dir(&skill_root).expect("projected Skills") {
             let entry = entry.expect("projected Skill entry");
             let name = entry.file_name().to_string_lossy().into_owned();
-            if !expected.contains(&name.as_str()) {
+            if expected.contains(&name.as_str()) {
+                let metadata = entry.path().join("agents");
+                if metadata.exists() {
+                    fs::remove_dir_all(metadata).expect("remove post-legacy Skill metadata");
+                }
+            } else {
                 fs::remove_dir_all(entry.path()).expect("remove future projection");
             }
         }
@@ -2251,6 +2256,12 @@ mod tests {
         let historical_maintenance = include_bytes!(
             "../../../harness/project-bases/0.7.0/skills/hive-knowledge-maintenance/SKILL.md"
         );
+        let historical_prompt_refine = include_bytes!(
+            "../../../harness/project-bases/0.7.0/skills/hive-prompt-refine/SKILL.md"
+        );
+        let historical_simple_question = include_bytes!(
+            "../../../harness/project-bases/0.7.0/skills/hive-simple-question/SKILL.md"
+        );
         fs::write(skill_root.join("setup-harness/SKILL.md"), historical_setup)
             .expect("historical setup projection");
         fs::write(
@@ -2268,6 +2279,16 @@ mod tests {
             historical_maintenance,
         )
         .expect("historical knowledge maintenance projection");
+        fs::write(
+            skill_root.join("hive-prompt-refine/SKILL.md"),
+            historical_prompt_refine,
+        )
+        .expect("historical prompt refinement projection");
+        fs::write(
+            skill_root.join("hive-simple-question/SKILL.md"),
+            historical_simple_question,
+        )
+        .expect("historical simple question projection");
         if version == "0.5.0" {
             let historical = include_bytes!(
                 "../../../tests/fixtures/phase6/migrations/0.5.0-hive-run-resume.SKILL.md"
@@ -2276,6 +2297,27 @@ mod tests {
                 .expect("historical resume projection");
         }
 
+        rewrite_historical_active_skills(
+            active_path,
+            expected,
+            version,
+            [
+                ("setup-harness", historical_setup),
+                ("hive-knowledge-capture", historical_capture),
+                ("hive-knowledge-query", historical_query),
+                ("hive-knowledge-maintenance", historical_maintenance),
+                ("hive-prompt-refine", historical_prompt_refine),
+                ("hive-simple-question", historical_simple_question),
+            ],
+        );
+    }
+
+    fn rewrite_historical_active_skills(
+        active_path: &Path,
+        expected: &[&str],
+        version: &str,
+        historical: [(&str, &[u8]); 6],
+    ) {
         let mut active: serde_yaml::Value =
             serde_yaml::from_slice(&fs::read(active_path).expect("active skills"))
                 .expect("active skills");
@@ -2291,22 +2333,9 @@ mod tests {
                 .and_then(serde_yaml::Value::as_str)
                 .is_some_and(|name| expected.contains(&name))
         });
-        set_active_skill_digest(skills, "setup-harness", &sha256_digest(historical_setup));
-        set_active_skill_digest(
-            skills,
-            "hive-knowledge-capture",
-            &sha256_digest(historical_capture),
-        );
-        set_active_skill_digest(
-            skills,
-            "hive-knowledge-query",
-            &sha256_digest(historical_query),
-        );
-        set_active_skill_digest(
-            skills,
-            "hive-knowledge-maintenance",
-            &sha256_digest(historical_maintenance),
-        );
+        for (name, bytes) in historical {
+            set_active_skill_digest(skills, name, &sha256_digest(bytes));
+        }
         if version == "0.5.0" {
             set_active_skill_digest(
                 skills,

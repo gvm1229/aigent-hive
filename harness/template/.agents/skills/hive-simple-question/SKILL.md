@@ -1,6 +1,6 @@
 ---
 name: hive-simple-question
-description: Answer a self-contained simple question without project context, tools, memory, extra Skills, subagents, orchestration, or persistent run state. Use only for general questions that can be answered from the user's message and ordinary reasoning; do not use for repository-dependent, current external-data, mutation, or multi-step work.
+description: Answer self-contained general questions requiring no project context, tools, memory, Skills, subagents, orchestration, mutation, or current external data.
 ---
 
 # Hive Simple Question

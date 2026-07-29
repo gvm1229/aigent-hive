@@ -137,6 +137,11 @@ ownership = "hive-skill-projection"
 source = "compiled-skill-projection"
 
 [[paths]]
+pattern = ".agents/skills/*/agents/openai.yaml"
+ownership = "hive-skill-projection"
+source = "compiled-skill-projection"
+
+[[paths]]
 pattern = ".claude/skills/*/SKILL.md"
 ownership = "hive-skill-projection"
 source = "compiled-skill-projection"

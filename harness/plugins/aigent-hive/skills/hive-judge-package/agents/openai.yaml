@@ -2,3 +2,5 @@ interface:
   display_name: "Hive Judge Package"
   short_description: "Validate digest-bound judge provenance"
   default_prompt: "Use $hive-judge-package to validate this clean-context judge package and provenance chain."
+policy:
+  allow_implicit_invocation: false

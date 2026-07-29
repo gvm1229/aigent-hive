@@ -1,6 +1,6 @@
 ---
 name: hive-usage-guard
-description: Inspect or change the installed Aigent Hive usage threshold and current-session safeguard, and run a session-bound preflight immediately before each new automatic dispatch. Use automatically for that dispatch preflight or when the user clearly asks for usage-guard status, an explicit remaining-percentage threshold, current-session disable or bypass, enable or restore, or toggle; the user does not need to name this Skill. Do not infer bypass from urgency, an active run, or a bare continue or resume request.
+description: Control the installed Hive usage guard and run its automatic-dispatch preflight; infer only explicit threshold or session control intent. Never infer bypass from urgency or a bare continue or resume request.
 ---
 
 # Hive Usage Guard

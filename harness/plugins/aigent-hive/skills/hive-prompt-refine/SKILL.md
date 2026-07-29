@@ -1,6 +1,6 @@
 ---
 name: hive-prompt-refine
-description: Create, improve, or structure a copy-ready prompt when the user explicitly asks for prompt refinement, prompt authoring, or conversion of a brief into instructions for another agent. Automatically match requests such as "improve this prompt" or "make a prompt for an agent"; never intercept, rewrite, or execute ordinary questions or ordinary work requests.
+description: Create or refine a copy-ready prompt only when the user explicitly asks; never rewrite or execute ordinary questions or work requests.
 ---
 
 # Hive Prompt Refine

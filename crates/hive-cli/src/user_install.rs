@@ -6280,6 +6280,18 @@ mod tests {
                     "../../../harness/project-bases/0.7.0/skills/hive-knowledge-query/SKILL.md"
                 )
                 .to_vec(),
+                Some("skills/hive-prompt-refine/SKILL.md") => include_bytes!(
+                    "../../../harness/project-bases/0.7.0/skills/hive-prompt-refine/SKILL.md"
+                )
+                .to_vec(),
+                Some("skills/hive-simple-question/SKILL.md") => include_bytes!(
+                    "../../../harness/project-bases/0.7.0/skills/hive-simple-question/SKILL.md"
+                )
+                .to_vec(),
+                Some("skills/hive-usage-guard/SKILL.md") => include_bytes!(
+                    "../../../harness/project-bases/0.7.0/skills/hive-usage-guard/SKILL.md"
+                )
+                .to_vec(),
                 Some("skills/setup-harness/SKILL.md") => include_bytes!(
                     "../../../harness/project-bases/0.7.0/skills/setup-harness/SKILL.md"
                 )

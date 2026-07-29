@@ -1,6 +1,6 @@
 ---
 name: hive-usage-guard
-description: Control and enforce Aigent Hive's source-development native-first usage safeguard for every task in the current session. Use automatically when the user clearly asks to change the remaining-usage threshold, turn the guard on or off, bypass or restore the limit, use quota below the stop line, inspect guard status, or verify task blocking; the user does not need to name this Skill.
+description: Control the source-development usage guard for every task; infer only explicit threshold or session control intent. Never infer bypass from urgency or a bare continue or resume request.
 ---
 
 # Hive Usage Guard

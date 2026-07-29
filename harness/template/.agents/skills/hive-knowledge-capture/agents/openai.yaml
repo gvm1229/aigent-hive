@@ -1,0 +1,6 @@
+interface:
+  display_name: "Hive Knowledge Capture"
+  short_description: "Capture reviewed canonical Hive knowledge"
+  default_prompt: "Use $hive-knowledge-capture to capture this reviewed knowledge explicitly."
+policy:
+  allow_implicit_invocation: false

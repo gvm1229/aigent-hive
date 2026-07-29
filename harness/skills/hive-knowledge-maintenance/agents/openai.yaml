@@ -1,0 +1,6 @@
+interface:
+  display_name: "Hive Knowledge Maintenance"
+  short_description: "Maintain canonical Hive knowledge explicitly"
+  default_prompt: "Use $hive-knowledge-maintenance to run this explicit knowledge maintenance action."
+policy:
+  allow_implicit_invocation: false

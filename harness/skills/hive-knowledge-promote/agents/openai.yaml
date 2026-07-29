@@ -1,0 +1,6 @@
+interface:
+  display_name: "Hive Knowledge Promote"
+  short_description: "Promote reviewed project-neutral knowledge"
+  default_prompt: "Use $hive-knowledge-promote to review and promote this eligible knowledge explicitly."
+policy:
+  allow_implicit_invocation: false

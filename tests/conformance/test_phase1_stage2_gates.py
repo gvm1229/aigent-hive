@@ -67,6 +67,8 @@ CODEX_HIVE_PROJECTION_PATHS = {
         for relative in (
             f"skills/{name}",
             f"skills/{name}/SKILL.md",
+            f"skills/{name}/agents",
+            f"skills/{name}/agents/openai.yaml",
         )
     },
 }

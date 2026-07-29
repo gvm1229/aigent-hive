@@ -192,7 +192,8 @@ pub fn validate_project_relative(path: &Path) -> Result<(), TargetGuardError> {
 ///
 /// This is the only lexical validation surface that permits a path below a
 /// host discovery namespace. It accepts only
-/// `.agents/skills/<safe-name>/SKILL.md` or
+/// `.agents/skills/<safe-name>/SKILL.md`,
+/// `.agents/skills/<safe-name>/agents/openai.yaml`, or
 /// `.claude/skills/<safe-name>/SKILL.md`.
 ///
 /// # Errors
@@ -269,7 +270,9 @@ fn validate_relative_lexical(path: &Path) -> Result<String, TargetGuardError> {
 ///
 /// Host discovery namespaces remain foreign by default. The only accepted
 /// exception is `<host-root>/skills/<safe-name>/SKILL.md` under `.agents` or
-/// `.claude`; this function never accepts the directory itself or another file.
+/// `.claude`, plus Codex Skill metadata at
+/// `.agents/skills/<safe-name>/agents/openai.yaml`. This function never accepts
+/// a directory or another file.
 #[must_use]
 pub fn is_hive_skill_projection_path(path: &Path) -> bool {
     let Some(raw) = path.to_str() else {
@@ -313,11 +316,17 @@ pub fn is_hive_directive_projection_path(path: &Path) -> bool {
 
 fn is_hive_skill_projection_portable(path: &str) -> bool {
     let parts = path.split('/').collect::<Vec<_>>();
-    parts.len() == 4
+    (parts.len() == 4
         && matches!(parts[0], ".agents" | ".claude")
         && parts[1] == "skills"
         && valid_skill_projection_name(parts[2])
-        && parts[3] == "SKILL.md"
+        && parts[3] == "SKILL.md")
+        || (parts.len() == 5
+            && parts[0] == ".agents"
+            && parts[1] == "skills"
+            && valid_skill_projection_name(parts[2])
+            && parts[3] == "agents"
+            && parts[4] == "openai.yaml")
 }
 
 fn valid_skill_projection_name(name: &str) -> bool {
@@ -517,6 +526,7 @@ mod tests {
     fn permits_only_exact_safe_host_skill_projection_files() {
         for path in [
             ".agents/skills/hive-simple-question/SKILL.md",
+            ".agents/skills/hive-simple-question/agents/openai.yaml",
             ".agents/skills/local-inspect/SKILL.md",
             ".claude/skills/setup-harness/SKILL.md",
         ] {
@@ -535,6 +545,9 @@ mod tests {
             ".agents/skills/local-inspect",
             ".agents/skills/local-inspect/README.md",
             ".agents/skills/local-inspect/references/extra.md",
+            ".agents/skills/local-inspect/agents",
+            ".agents/skills/local-inspect/agents/other.yaml",
+            ".claude/skills/local-inspect/agents/openai.yaml",
             ".agents/skills/../outside/SKILL.md",
             ".agents/skills/a/SKILL.md",
             ".agents/skills/Upper/SKILL.md",

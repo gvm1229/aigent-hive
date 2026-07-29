@@ -1,6 +1,6 @@
 ---
 name: auto-setup-harness
-description: Inspect a consumer project, inherit operational global Aigent Hive preferences, infer setup answers from canonical project evidence, ask only questions whose required answers remain unresolved, and install or reconfigure the project harness through the signed Hive CLI. Use when the user asks for automatic, expedited, zero-question, minimal-question, or inferred Hive project onboarding.
+description: Infer consumer-project setup from canonical evidence and ask only unresolved questions when the user requests automatic, expedited, zero-question, or minimal-question onboarding.
 ---
 
 # Auto Setup Harness
