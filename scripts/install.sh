@@ -50,6 +50,27 @@ staged_binary=
 staged_receipt=
 trap 'rm -rf "$work"; test -z "$staged_binary" || rm -f "$staged_binary"; test -z "$staged_receipt" || rm -f "$staged_receipt"' EXIT HUP INT TERM
 
+matches_hive_version() {
+  hive_version_output=$1
+  hive_expected_version=$2
+  hive_version_prefix="hive $hive_expected_version (released "
+  case "$hive_version_output" in
+    "$hive_version_prefix"????-??-??")") ;;
+    *) return 1 ;;
+  esac
+  hive_release_date=${hive_version_output#"$hive_version_prefix"}
+  hive_release_date=${hive_release_date%)}
+  printf '%s\n' "$hive_release_date" | awk -F- '
+    NF == 3 &&
+    $1 ~ /^[0-9][0-9][0-9][0-9]$/ &&
+    $2 ~ /^[0-9][0-9]$/ &&
+    $3 ~ /^[0-9][0-9]$/ &&
+    $2 >= 1 && $2 <= 12 &&
+    $3 >= 1 && $3 <= 31 { exit 0 }
+    { exit 1 }
+  '
+}
+
 parse_receipt() {
   receipt_path=$1
   receipt_json=$(cat "$receipt_path")
@@ -182,7 +203,7 @@ if [ "$actual_team_id" != "$authorized_team_id" ]; then
   echo "signed binary signer differs from the authorized release identity" >&2
   exit 5
 fi
-if [ "$("$binary" --version)" != "hive $version" ]; then
+if ! matches_hive_version "$("$binary" --version)" "$version"; then
   echo "signed binary version differs from requested release" >&2
   exit 5
 fi
@@ -237,7 +258,9 @@ if [ -e "$prefix/bin/hive" ] || [ -L "$prefix/bin/hive" ] \
     exit 3
   fi
   prior_version=$parsed_version
-  if [ "$("$prefix/bin/hive" --version 2>/dev/null || true)" != "hive $prior_version" ]; then
+  if ! matches_hive_version \
+    "$("$prefix/bin/hive" --version 2>/dev/null || true)" \
+    "$prior_version"; then
     echo "existing hive binary is not owned by the direct installer" >&2
     exit 3
   fi

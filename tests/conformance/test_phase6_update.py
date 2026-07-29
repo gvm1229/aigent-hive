@@ -81,7 +81,7 @@ case "$1" in
     done
     package="$destination/aigent-hive-0.7.0-aarch64-apple-darwin"
     mkdir -p "$package"
-    printf '%s\\n' '#!/bin/sh' 'printf "hive 0.7.0\\\\n"' >"$package/hive"
+    printf '%s\\n' '#!/bin/sh' 'printf "hive 0.7.0 (released 2026-07-24)\\\\n"' >"$package/hive"
     chmod 0755 "$package/hive"
     : >"$package/LICENSE"
     ;;
@@ -499,6 +499,10 @@ class Phase6StaticContracts(unittest.TestCase):
         self.assertNotIn("AIGENT_HIVE_MACOS_TEAM_ID", shell)
         self.assertIn("TeamIdentifier", shell)
         self.assertIn("SignerCertificate.Thumbprint", powershell)
+        self.assertIn("matches_hive_version", shell)
+        self.assertIn("Test-HiveVersionOutput", powershell)
+        self.assertIn("(released ", shell)
+        self.assertIn(r"\(released [0-9]{4}-[0-9]{2}-[0-9]{2}\)", powershell)
         parameter_block = re.search(
             r"(?s)^param\((.*?)\)\n\n\$ErrorActionPreference",
             powershell,
@@ -851,6 +855,7 @@ $ast = [Management.Automation.Language.Parser]::ParseFile(
 )
 if ($errors.Count -ne 0) { throw ($errors | Out-String) }
 foreach ($name in @(
+    "Test-HiveVersionOutput",
     "Get-ValidatedDirectReceipt",
     "Assert-ExistingDirectInstall",
     "Assert-AuthorizedAuthenticodeSignature",
@@ -868,6 +873,25 @@ foreach ($name in @(
     )
     if ($null -eq $function) { throw "installer validation function missing: $name" }
     Invoke-Expression $function.Extent.Text
+}
+if (-not (Test-HiveVersionOutput `
+    -Output "hive 0.7.0 (released 2026-07-24)" `
+    -ExpectedVersion "0.7.0"
+)) {
+    throw "dated version output was rejected"
+}
+foreach ($invalidOutput in @(
+    "hive 0.7.0",
+    "hive 0.7.1 (released 2026-07-24)",
+    "hive 0.7.0 (released 2026-7-24)",
+    "hive 0.7.0 (released 2026-07-24) trailing"
+)) {
+    if (Test-HiveVersionOutput `
+        -Output $invalidOutput `
+        -ExpectedVersion "0.7.0"
+    ) {
+        throw "invalid version output was accepted: $invalidOutput"
+    }
 }
 $wrongSignature = [pscustomobject]@{
     Status = "Valid"

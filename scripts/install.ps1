@@ -14,6 +14,20 @@ if (-not [Environment]::Is64BitOperatingSystem) {
     throw "Aigent Hive supports Windows x86_64 only"
 }
 
+function Test-HiveVersionOutput {
+    param(
+        [AllowEmptyString()]
+        [string]$Output,
+        [Parameter(Mandatory = $true)]
+        [string]$ExpectedVersion
+    )
+
+    $escapedVersion = [regex]::Escape($ExpectedVersion)
+    return $Output -cmatch (
+        "^hive $escapedVersion \(released [0-9]{4}-[0-9]{2}-[0-9]{2}\)$"
+    )
+}
+
 function Assert-SafeDirectoryChain {
     param(
         [Parameter(Mandatory = $true)]
@@ -118,7 +132,10 @@ function Assert-ExistingDirectInstall {
         throw "existing hive binary is not owned by the direct installer"
     }
     $priorVersionOutput = & $Destination --version
-    if ($priorVersionOutput -ne "hive $($priorReceipt.version)") {
+    if (-not (Test-HiveVersionOutput `
+        -Output $priorVersionOutput `
+        -ExpectedVersion $priorReceipt.version
+    )) {
         throw "existing hive binary is not owned by the direct installer"
     }
 }
@@ -302,7 +319,10 @@ try {
     Assert-AuthorizedAuthenticodeSignature `
         -Signature $signature `
         -AuthorizedThumbprint $AuthorizedSignerThumbprint
-    if ((& $binary --version) -ne "hive $Version") {
+    if (-not (Test-HiveVersionOutput `
+        -Output (& $binary --version) `
+        -ExpectedVersion $Version
+    )) {
         throw "signed binary version differs from requested release"
     }
 
