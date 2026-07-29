@@ -404,21 +404,19 @@ fn resolve_program_in_path(program: &str, search_path: &OsStr) -> Option<PathBuf
     #[cfg(windows)]
     {
         let directories = std::env::split_paths(search_path).collect::<Vec<_>>();
-        if program == "codex" {
-            let package_paths = [
-                "node_modules/@openai/codex/node_modules/@openai/codex-win32-x64/vendor/x86_64-pc-windows-msvc/bin/codex.exe",
-                "node_modules/@openai/codex/vendor/x86_64-pc-windows-msvc/bin/codex.exe",
-            ];
-            for directory in &directories {
+        for directory in &directories {
+            if program == "codex" {
+                let package_paths = [
+                    "node_modules/@openai/codex/node_modules/@openai/codex-win32-x64/vendor/x86_64-pc-windows-msvc/bin/codex.exe",
+                    "node_modules/@openai/codex/vendor/x86_64-pc-windows-msvc/bin/codex.exe",
+                ];
                 for package_path in package_paths {
                     if let Some(executable) = resolve_executable(&directory.join(package_path)) {
                         return Some(executable);
                     }
                 }
             }
-        }
-        for extension in ["exe", "", "cmd", "bat"] {
-            for directory in &directories {
+            for extension in ["exe", "", "cmd", "bat"] {
                 let candidate = if extension.is_empty() {
                     directory.join(program)
                 } else {
@@ -1731,13 +1729,11 @@ mod tests {
 
     #[cfg(windows)]
     #[test]
-    fn prefers_a_native_windows_executable_over_an_earlier_script_shim() {
+    fn preserves_windows_path_directory_precedence() {
         let shim_directory = tempfile::tempdir().expect("shim directory should exist");
         let native_directory = tempfile::tempdir().expect("native directory should exist");
-        fs::write(shim_directory.path().join("codex"), b"#!/bin/sh\n")
-            .expect("extensionless shim should be created");
-        fs::write(shim_directory.path().join("codex.cmd"), b"@exit /b 0\r\n")
-            .expect("command shim should be created");
+        let wrapper = shim_directory.path().join("codex.cmd");
+        fs::write(&wrapper, b"@exit /b 0\r\n").expect("command shim should be created");
         let native = native_directory.path().join("codex.exe");
         fs::write(&native, b"fixture").expect("native executable should be created");
         let search_path = std::env::join_paths([shim_directory.path(), native_directory.path()])
@@ -1746,9 +1742,9 @@ mod tests {
         assert_eq!(
             resolve_program_in_path("codex", &search_path),
             Some(
-                native
+                wrapper
                     .canonicalize()
-                    .expect("native fixture should resolve")
+                    .expect("earlier wrapper should resolve")
             )
         );
     }
