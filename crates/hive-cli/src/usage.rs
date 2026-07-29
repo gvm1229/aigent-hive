@@ -429,7 +429,7 @@ fn resolve_program_in_path(program: &str, search_path: &OsStr) -> Option<PathBuf
                 }
             }
         }
-        return None;
+        None
     }
 
     #[cfg(not(windows))]
