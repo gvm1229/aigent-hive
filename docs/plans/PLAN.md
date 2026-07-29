@@ -1,6 +1,6 @@
 # Aigent Hive active plan index
 
-> Revision: 1.57
+> Revision: 1.58
 > 기준일: 2026-07-29
 > Product version: `0.7.0`
 > 현재 milestone: Phase 7 qualification + global onboarding·shared index `0.8.0`
@@ -29,7 +29,7 @@
 | 범위 | 완료 | 미완료 | 진행률 |
 | --- | ---: | ---: | ---: |
 | Phase 0–6 | 70 | 0 | 100% |
-| Phase 7 | 37 | 5 | 88.1% |
+| Phase 7 | 38 | 4 | 90.5% |
 | User plugin/project lifecycle | 38 | 0 | 100% |
 | Host-native usage sensors | 24 | 0 | 100% |
 | Global onboarding·shared index | 19 | 0 | 100% |
@@ -37,7 +37,7 @@
 | Windows shell install boundary | 3 | 0 | 100% |
 | Documentation style | 5 | 0 | 100% |
 | Security review | 4 | 0 | 100% |
-| **Canonical total** | **211** | **5** | **97.7%** |
+| **Canonical total** | **212** | **4** | **98.1%** |
 
 External production boundary 항목도 미완료 합계에 포함. Protected authority 없이 완료 처리 금지.
 
@@ -47,6 +47,8 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
   `cmd.exe` bootstrap 계약 PASS
 - Codex Skill metadata: project projection implicit owner 1개, 나머지 explicit-only,
   fresh-session 중복 warning 0건
+- 실제 Windows 11 x86_64: Codex user install·global setup·project auto onboarding,
+  shared index 1개 project, repeat update·rollback·재검증 PASS
 - Current remote contradiction: `9b1e951` CI run `30347960157`과 native runtime
   `30347960118` failure, P7-040 재개방
 - Windows shell: WSI-001–003 완료, consumer PowerShell 7 dependency 0건,
@@ -102,9 +104,8 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
 ## Current execution order
 
 1. P7-040 current clean-clone CI 복구
-2. P7-041 실제 Windows 기기 acceptance
-3. P7-020·018 artifact attestation과 release candidate qualification
-4. P7-037 protected `Claude-unverified preview` publication
+2. P7-020·018 artifact attestation과 release candidate qualification
+3. P7-037 protected `Claude-unverified preview` publication
 
 ## `0.8.0` preview deferred boundary
 

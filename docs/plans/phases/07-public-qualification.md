@@ -109,7 +109,7 @@ Current attestation·publication은 P7-020·037, Windows 실제 기기는 P7-041
 - [x] [P7-038] product version parity, compatible minor/patch bump와 explicit-only major gate
 - [x] [P7-039] public license — 전체 source·harness `Apache-2.0`, 전문, package metadata와 render fixture
 - [ ] [P7-040] current candidate clean clone에서 전체 CI PASS
-- [ ] [P7-041] `WSI-*` 통과 Windows 실제 기기 install·setup·auto onboarding·shared index·update
+- [x] [P7-041] `WSI-*` 통과 Windows 실제 기기 install·setup·auto onboarding·shared index·update
 - [x] [P7-042] Hive Skill implicit 중복 0건과 metadata budget·fresh-session qualification
 
 ---

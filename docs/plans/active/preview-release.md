@@ -25,7 +25,7 @@
 | --- | --- | --- |
 | Skill metadata | Project projection implicit owner 1개, 나머지 explicit-only, fresh-session 중복 warning 0건 | 완료 |
 | Clean-clone CI | `9b1e951`의 Linux·Windows·contract failure | `P7-040` |
-| Windows UAT | 실제 기기 설치·setup·project harness·upgrade 미검증 | `P7-041` |
+| Windows UAT | Windows 11 x86_64 install·setup·auto onboarding·shared index·update·rollback PASS | 완료 |
 | Windows shell | PowerShell 5.1·`cmd.exe`·source-only PowerShell 7 경계 완료 | 완료 |
 | Candidate trust | Current tag artifact·digest·attestation 미생성 | `P7-020` |
 | Release candidate | Clean candidate qualification 미실행 | `P7-018` |
@@ -40,13 +40,11 @@
 
 1. `P7-040`: Linux shared-index directory sync, Windows canonical user-root pinning,
    release-version output contract, schema validation failure 수정
-2. `P7-041`: Windows 실제 기기 clean install, global setup, project auto onboarding,
-   shared index, update·rollback smoke
-3. `P7-020`: exact candidate tag 기반 multi-platform archive, SHA-256,
+2. `P7-020`: exact candidate tag 기반 multi-platform archive, SHA-256,
    GitHub artifact attestation 생성
-4. `P7-018`: clean clone, 전체 Rust·Python, 세 OS CI, installer·upgrade·recovery,
+3. `P7-018`: clean clone, 전체 Rust·Python, 세 OS CI, installer·upgrade·recovery,
    Wiki·Skill budget qualification
-5. `P7-037`: `Claude-unverified preview` disclosure와 known limitation을 포함한
+4. `P7-037`: `Claude-unverified preview` disclosure와 known limitation을 포함한
    protected GitHub Release publication
 
 ## Claude preview 경계
