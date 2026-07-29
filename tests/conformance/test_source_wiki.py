@@ -130,6 +130,10 @@ class SourceWikiConformance(unittest.TestCase):
         )
         return f"---\n{frontmatter}---\n\n{body}"
 
+    @staticmethod
+    def write_page(path: Path, text: str) -> None:
+        path.write_text(text, encoding="utf-8", newline="\n")
+
     def write_pair(
         self,
         slug: str,
@@ -144,7 +148,8 @@ class SourceWikiConformance(unittest.TestCase):
         ko_body: str,
         ko_revision: str = REVISION,
     ) -> None:
-        (self.target / f"llm-wiki/en/{slug}.md").write_text(
+        self.write_page(
+            self.target / f"llm-wiki/en/{slug}.md",
             self.page(
                 language="en",
                 slug=slug,
@@ -154,9 +159,9 @@ class SourceWikiConformance(unittest.TestCase):
                 summary=en_summary,
                 body=en_body,
             ),
-            encoding="utf-8",
         )
-        (self.target / f"llm-wiki/ko/{slug}.md").write_text(
+        self.write_page(
+            self.target / f"llm-wiki/ko/{slug}.md",
             self.page(
                 language="ko",
                 slug=slug,
@@ -167,7 +172,6 @@ class SourceWikiConformance(unittest.TestCase):
                 body=ko_body,
                 revision=ko_revision,
             ),
-            encoding="utf-8",
         )
 
     def read_frontmatter(self, path: Path) -> dict[str, object]:
@@ -185,7 +189,7 @@ class SourceWikiConformance(unittest.TestCase):
             allow_unicode=True,
             sort_keys=False,
         )
-        path.write_text(f"---\n{rendered}---{body}", encoding="utf-8")
+        self.write_page(path, f"---\n{rendered}---{body}")
 
     def set_paired_field(self, slug: str, field: str, value: object) -> None:
         for language in ("en", "ko"):
@@ -319,7 +323,7 @@ class SourceWikiConformance(unittest.TestCase):
         for pair_id, expected_valid in corpus:
             with self.subTest(pair_id=pair_id):
                 for path, original in originals.items():
-                    path.write_text(original, encoding="utf-8")
+                    self.write_page(path, original)
                 self.set_paired_field("boundaries", "pair_id", pair_id)
                 schema_valid = all(
                     Draft202012Validator(PAGE_SCHEMA).is_valid(
@@ -365,7 +369,7 @@ class SourceWikiConformance(unittest.TestCase):
         for relative, expected_valid in corpus:
             with self.subTest(relative=relative):
                 for path, original in originals.items():
-                    path.write_text(original, encoding="utf-8")
+                    self.write_page(path, original)
                 locator = f"repo:{relative}#sha256:{digest}"
                 self.set_paired_field("boundaries", "sources", [locator])
                 schema_valid = all(
@@ -398,7 +402,7 @@ class SourceWikiConformance(unittest.TestCase):
         for field, value, expected_valid in corpus:
             with self.subTest(field=field, value=value):
                 for path, original in originals.items():
-                    path.write_text(original, encoding="utf-8")
+                    self.write_page(path, original)
                 self.set_paired_field("boundaries", field, value)
                 schema_valid = all(
                     Draft202012Validator(PAGE_SCHEMA).is_valid(
@@ -437,7 +441,7 @@ class SourceWikiConformance(unittest.TestCase):
         for field, values in unsorted_values.items():
             with self.subTest(field=field):
                 for path, original in originals.items():
-                    path.write_text(original, encoding="utf-8")
+                    self.write_page(path, original)
                 self.set_paired_field("boundaries", field, values)
 
                 self.assertTrue(
@@ -465,9 +469,9 @@ class SourceWikiConformance(unittest.TestCase):
             "missing-pair",
             {issue["code"] for issue in missing["data"]["issues"]},
         )
-        korean.write_text(
+        self.write_page(
+            korean,
             original.replace(REVISION, f"git:{'1' * 40}"),
-            encoding="utf-8",
         )
 
         mismatch = self.lint()
@@ -492,12 +496,12 @@ class SourceWikiConformance(unittest.TestCase):
     def test_lint_reports_broken_link_and_source_digest_mismatch(self) -> None:
         for language in ("en", "ko"):
             page = self.target / f"llm-wiki/{language}/boundaries.md"
-            page.write_text(
+            self.write_page(
+                page,
                 page.read_text(encoding="utf-8").replace(
                     "links:\n- index",
                     "links:\n- missing",
                 ),
-                encoding="utf-8",
             )
 
         broken = self.lint()
@@ -510,9 +514,9 @@ class SourceWikiConformance(unittest.TestCase):
         for language in ("en", "ko"):
             page = self.target / f"llm-wiki/{language}/boundaries.md"
             text = page.read_text(encoding="utf-8")
-            page.write_text(
+            self.write_page(
+                page,
                 text.replace("links:\n- missing", "links:\n- index"),
-                encoding="utf-8",
             )
         (self.target / "AGENTS.md").write_text("# changed\n", encoding="utf-8")
 
@@ -527,9 +531,9 @@ class SourceWikiConformance(unittest.TestCase):
     def test_stale_and_corrupt_index_block_query_until_rebuild(self) -> None:
         self.assertEqual(self.index()["status"], "success")
         page = self.target / "llm-wiki/en/index.md"
-        page.write_text(
+        self.write_page(
+            page,
             page.read_text(encoding="utf-8") + "\nCanonical change.\n",
-            encoding="utf-8",
         )
 
         stale = self.query("en", "Canonical")
