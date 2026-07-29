@@ -255,7 +255,10 @@ API key를 요청하거나 저장하지 않음.
             root = Path(directory)
             target = root / "target.md"
             target.write_text("text\n", encoding="utf-8")
-            (root / "link.md").symlink_to("target.md")
+            try:
+                (root / "link.md").symlink_to("target.md")
+            except OSError as error:
+                self.skipTest(f"symlink creation is unavailable: {error}")
             output = root / "tests/work/render/AGENTS.md"
             output.parent.mkdir(parents=True)
             output.write_text("generated\n", encoding="utf-8")

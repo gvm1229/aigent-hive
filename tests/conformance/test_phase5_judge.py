@@ -755,12 +755,16 @@ class Phase5JudgeCliContracts(unittest.TestCase):
         outside = self.work / "outside.json"
         outside.write_bytes((FIXTURES / "package-elevated.json").read_bytes())
         symlink = self.target / "judge/package-link.json"
-        symlink.symlink_to(outside)
-        hostile = copy.deepcopy(request)
-        hostile["package"] = "judge/package-link.json"
-        request_path = self.write_judge_json("quorum-symlink.json", hostile)
-        process, _ = self.run_judge("quorum", request_path)
-        self.assertNotEqual(process.returncode, 0)
+        try:
+            symlink.symlink_to(outside)
+        except OSError:
+            pass
+        else:
+            hostile = copy.deepcopy(request)
+            hostile["package"] = "judge/package-link.json"
+            request_path = self.write_judge_json("quorum-symlink.json", hostile)
+            process, _ = self.run_judge("quorum", request_path)
+            self.assertNotEqual(process.returncode, 0)
 
         oversized = self.target / "judge/package-oversized.json"
         oversized.write_bytes(b" " * (256 * 1024 + 1))

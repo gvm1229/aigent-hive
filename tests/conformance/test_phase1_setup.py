@@ -510,7 +510,10 @@ class Phase1SetupConformance(unittest.TestCase):
         outside = self.work_root / "outside"
         target.mkdir()
         outside.mkdir()
-        (target / ".hive").symlink_to(outside, target_is_directory=True)
+        try:
+            (target / ".hive").symlink_to(outside, target_is_directory=True)
+        except OSError as error:
+            self.skipTest(f"symlink creation is unavailable: {error}")
 
         process, _ = self.invoke_setup(target)
 
