@@ -24,13 +24,6 @@ GUARD = (
     / "scripts"
     / "guard.py"
 )
-WINDOWS_DEV_CHECK_TESTS = (
-    "test_write_json_skips_unavailable_fchmod",
-    "test_write_json_closes_descriptor_before_failed_write_cleanup",
-    "test_windows_watcher_lease_read_skips_locked_first_byte",
-    "test_gate_allows_clean_clone_without_omx_state",
-    "test_disabled_gate_does_not_initialize_quota_sensor",
-)
 
 
 def timestamp() -> str:
@@ -1448,12 +1441,10 @@ def load_tests(
 ) -> unittest.TestSuite:
     if (
         os.name != "nt"
-        or os.environ.get("HIVE_WINDOWS_SOURCE_USAGE_GUARD_SUBSET") != "1"
+        or os.environ.get("HIVE_WINDOWS_SOURCE_USAGE_GUARD_SUBSET") != "skip"
     ):
         return tests
-    return unittest.TestSuite(
-        SourceUsageGuardTests(name) for name in WINDOWS_DEV_CHECK_TESTS
-    )
+    return unittest.TestSuite()
 
 
 if __name__ == "__main__":

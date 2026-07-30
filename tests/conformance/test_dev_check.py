@@ -115,11 +115,38 @@ class DevCheckTest(unittest.TestCase):
                 "-v",
             ],
         )
-        if os.name == "nt":
-            self.assertEqual(
-                environments[0]["HIVE_WINDOWS_SOURCE_USAGE_GUARD_SUBSET"],
-                "1",
-            )
+        self.assertNotIn(
+            "HIVE_WINDOWS_SOURCE_USAGE_GUARD_SUBSET",
+            environments[0],
+        )
+
+    def test_windows_default_python_mode_isolates_watcher_tests(self) -> None:
+        commands: list[list[str]] = []
+        environments: list[dict[str, str]] = []
+        with (
+            mock.patch.object(MODULE.os, "name", "nt"),
+            mock.patch.object(
+                MODULE, "resolve_tool", return_value=Path("/tools/uv")
+            ),
+            mock.patch.object(
+                MODULE,
+                "run",
+                side_effect=lambda command, **options: (
+                    commands.append(list(command)),
+                    environments.append(dict(options["environment"])),
+                ),
+            ),
+        ):
+            MODULE.run_python(())
+
+        self.assertEqual(len(commands), 2)
+        for test in MODULE.WINDOWS_SOURCE_GUARD_TESTS:
+            self.assertIn(test, commands[0])
+        self.assertEqual(
+            environments[1]["HIVE_WINDOWS_SOURCE_USAGE_GUARD_SUBSET"],
+            "skip",
+        )
+        self.assertIn("discover", commands[1])
 
     def test_main_supports_targeted_rust_and_pre_push_modes(self) -> None:
         with (

@@ -14,6 +14,18 @@ from typing import Sequence
 
 ROOT = Path(__file__).resolve().parents[1]
 REQUIREMENTS = ROOT / "requirements-conformance.txt"
+WINDOWS_SOURCE_GUARD_TESTS = (
+    "tests.conformance.test_source_usage_guard.SourceUsageGuardTests."
+    "test_write_json_skips_unavailable_fchmod",
+    "tests.conformance.test_source_usage_guard.SourceUsageGuardTests."
+    "test_write_json_closes_descriptor_before_failed_write_cleanup",
+    "tests.conformance.test_source_usage_guard.SourceUsageGuardTests."
+    "test_windows_watcher_lease_read_skips_locked_first_byte",
+    "tests.conformance.test_source_usage_guard.SourceUsageGuardTests."
+    "test_gate_allows_clean_clone_without_omx_state",
+    "tests.conformance.test_source_usage_guard.SourceUsageGuardTests."
+    "test_disabled_gate_does_not_initialize_quota_sensor",
+)
 
 
 class DevCheckError(RuntimeError):
@@ -113,8 +125,6 @@ def run_python(arguments: Sequence[str]) -> None:
     rustc = resolve_tool("rustc", rust_tool=True)
     environment = tool_environment(uv, cargo, rustc)
     environment["RUSTC"] = str(rustc)
-    if os.name == "nt":
-        environment["HIVE_WINDOWS_SOURCE_USAGE_GUARD_SUBSET"] = "1"
     unittest_arguments = list(arguments) or [
         "discover",
         "-s",
@@ -125,23 +135,26 @@ def run_python(arguments: Sequence[str]) -> None:
         "test_*.py",
         "-v",
     ]
-    run(
-        [
-            str(uv),
-            "run",
-            "--python",
-            "3.13",
-            "--isolated",
-            "--no-project",
-            "--with-requirements",
-            str(REQUIREMENTS),
-            "python",
-            "-m",
-            "unittest",
-            *unittest_arguments,
-        ],
-        environment=environment,
-    )
+    prefix = [
+        str(uv),
+        "run",
+        "--python",
+        "3.13",
+        "--isolated",
+        "--no-project",
+        "--with-requirements",
+        str(REQUIREMENTS),
+        "python",
+        "-m",
+        "unittest",
+    ]
+    if os.name == "nt" and not arguments:
+        run(
+            [*prefix, *WINDOWS_SOURCE_GUARD_TESTS, "-v"],
+            environment=environment,
+        )
+        environment["HIVE_WINDOWS_SOURCE_USAGE_GUARD_SUBSET"] = "skip"
+    run([*prefix, *unittest_arguments], environment=environment)
 
 
 def parser() -> argparse.ArgumentParser:
