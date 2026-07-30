@@ -1381,15 +1381,17 @@ raise SystemExit(64)
         guide = (
             REPOSITORY_ROOT / "docs" / "guides" / "source-usage-guard.md"
         ).read_text(encoding="utf-8")
-        readme = (REPOSITORY_ROOT / "README.md").read_text(encoding="utf-8")
 
         self.assertIn("## 실제 session에서 사용", guide)
         self.assertIn("사용량 가드 중지선을 잔여 10%로 설정하고 켜 줘.", guide)
         self.assertIn("이 session에서 사용량 가드를 우회하고 계속해.", guide)
         self.assertIn("session 우회를 해제하고 사용량 가드를 다시 켜 줘.", guide)
         self.assertIn("`계속해`, `resume`, `끝내 줘`", guide)
-        self.assertIn("모든 일반 task를", readme)
-        self.assertIn("`계속해`나 `resume`만으로는 우회 추론 없음.", readme)
+        self.assertIn(
+            "일반 질문, 계획, Skill, tool, write와 후속 task를",
+            guide,
+        )
+        self.assertIn("우회 승인으로 인정 불가", guide)
 
     def test_symlinked_control_state_is_rejected_without_touching_target(self) -> None:
         self.write_usage(primary=None, secondary_used=1)
