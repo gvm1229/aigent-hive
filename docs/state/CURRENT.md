@@ -455,8 +455,12 @@ Current remote qualification evidence:
 Candidate trust blocker:
 
 - Current source product version `0.7.0`, exact `0.8.0` candidate 부재
-- `release.yml`: 새 요구사항에 맞춘 5개 target candidate 계약 검증 중
-- `release-publish.yml`: GitHub Release 제거·npm `test` 전용 전환 필요
+- `release.yml`: 5개 target·6개 npm tarball·embedded installer candidate 계약의
+  local static/package 검증 완료, remote matrix 실행 대기
+- `release-publish.yml`: GitHub Release·npm `latest` 0건과 6개 package `test` 전용
+  publication 계약 구현, protected 실행 대기
+- Direct installer: exact umbrella의 unpkg bootstrap과 scoped npm tarball digest
+  검증 구현, 실제 registry clean install은 publication 뒤 검증
 - GitHub repository environment·secret·variable 0개
 - npm `aigent-hive`·`@aigent-hive/*` name·scope ownership 미확정
 - Interactive activation 미구현
