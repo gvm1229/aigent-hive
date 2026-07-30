@@ -78,6 +78,7 @@ class DevCheckTest(unittest.TestCase):
 
     def test_python_mode_uses_uv_ephemeral_requirements_and_passthrough(self) -> None:
         commands: list[list[str]] = []
+        environments: list[dict[str, str]] = []
         uv = Path("/tools/uv")
         with (
             mock.patch.object(
@@ -86,7 +87,10 @@ class DevCheckTest(unittest.TestCase):
             mock.patch.object(
                 MODULE,
                 "run",
-                side_effect=lambda command, **_: commands.append(list(command)),
+                side_effect=lambda command, **options: (
+                    commands.append(list(command)),
+                    environments.append(dict(options["environment"])),
+                ),
             ),
         ):
             MODULE.run_python(["tests.conformance.test_dev_check", "-v"])
@@ -111,6 +115,11 @@ class DevCheckTest(unittest.TestCase):
                 "-v",
             ],
         )
+        if os.name == "nt":
+            self.assertEqual(
+                environments[0]["HIVE_WINDOWS_SOURCE_USAGE_GUARD_SUBSET"],
+                "1",
+            )
 
     def test_main_supports_targeted_rust_and_pre_push_modes(self) -> None:
         with (
