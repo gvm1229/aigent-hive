@@ -744,9 +744,19 @@ class Phase3SkillSourceContract(unittest.TestCase):
             REPOSITORY_ROOT / "docs/guidance-schema.md"
         ).read_text(encoding="utf-8")
         readme = (REPOSITORY_ROOT / "README.md").read_text(encoding="utf-8")
+        korean_readme = (
+            REPOSITORY_ROOT / "docs/readme/README.ko.md"
+        ).read_text(encoding="utf-8")
 
         self.assertEqual(canonical_skill, projected_skill)
-        for surface in (template, renderer, canonical_skill, guidance, readme):
+        for surface in (
+            template,
+            renderer,
+            canonical_skill,
+            guidance,
+            readme,
+            korean_readme,
+        ):
             self.assertIn("hive usage enforce", surface)
             self.assertIn("hive run resume --dispatch-intent automatic", surface)
         for surface in (template, renderer, canonical_skill):
@@ -776,10 +786,13 @@ class Phase3SkillSourceContract(unittest.TestCase):
         self.assertIn("illustrative rather than a finite phrase", canonical_skill)
         for surface in (template, renderer, canonical_skill):
             self.assertIn("auxiliary evidence", surface)
-        for surface in (guidance, readme):
+        for surface in (guidance, korean_readme):
             normalized = " ".join(surface.split())
             self.assertIn("cancellation 결과는 보조 evidence", normalized)
             self.assertIn("durable goal/task 상태 대체 불가", normalized)
+        normalized_readme = " ".join(readme.split()).lower()
+        self.assertIn("cancellation is auxiliary evidence", normalized_readme)
+        self.assertIn("never replaces durable goal/task state", normalized_readme)
         self.assertIn("start a watcher", canonical_skill)
         self.assertIn("Never install a fallback hook", canonical_skill)
         usage_control = (

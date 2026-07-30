@@ -110,7 +110,7 @@
 - [ ] [P7-043] Linux x86_64·arm64 musl release qualification
 - [ ] [P7-044] `aigent-hive` npm package family·native smoke
 - [ ] [P7-045] Unix·PowerShell·CMD 직접 installer·digest·recovery
-- [ ] [P7-046] 영·한 README·빈 QA 표
+- [x] [P7-046] 영·한 README·빈 QA 표
 - [ ] [P7-047] Bilingual setup·harness
 - [ ] [P7-048] Daily check·offline retry
 - [ ] [P7-049] Interactive `hive update`
