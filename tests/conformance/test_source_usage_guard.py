@@ -212,10 +212,11 @@ class SourceUsageGuardTests(unittest.TestCase):
 
     def test_start_watcher_waits_for_delayed_lease(self) -> None:
         guard_namespace = runpy.run_path(str(GUARD))
+        root = self.root.resolve()
         session = {
             "session_id": self.session_id,
             "pid": os.getpid(),
-            "cwd": str(self.root.resolve()),
+            "cwd": str(root),
             "source": "codex-thread",
             "process_start": "fixture-process-start-a",
         }
@@ -249,7 +250,7 @@ class SourceUsageGuardTests(unittest.TestCase):
             ) as popen,
             mock.patch.object(guard_namespace["time"], "sleep") as sleep,
         ):
-            result = guard_namespace["start_watcher"](self.root, session)
+            result = guard_namespace["start_watcher"](root, session)
 
         self.assertEqual(result, active)
         self.assertEqual(status.call_count, 3)
@@ -265,10 +266,11 @@ class SourceUsageGuardTests(unittest.TestCase):
 
     def test_start_watcher_reaps_process_after_startup_timeout(self) -> None:
         guard_namespace = runpy.run_path(str(GUARD))
+        root = self.root.resolve()
         session = {
             "session_id": self.session_id,
             "pid": os.getpid(),
-            "cwd": str(self.root.resolve()),
+            "cwd": str(root),
             "source": "codex-thread",
             "process_start": "fixture-process-start-a",
         }
@@ -299,13 +301,13 @@ class SourceUsageGuardTests(unittest.TestCase):
                 guard_namespace["GuardError"],
                 "watcher failed to start",
             ):
-                guard_namespace["start_watcher"](self.root, session)
+                guard_namespace["start_watcher"](root, session)
 
         process.terminate.assert_called_once_with()
         process.wait.assert_called_once_with(timeout=5)
         self.assertFalse(
             guard_namespace["watcher_path"](
-                self.root,
+                root,
                 self.session_id,
             ).exists()
         )
