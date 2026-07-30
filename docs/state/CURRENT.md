@@ -44,7 +44,7 @@
   도달성 확인, Git history recoverability 적용
 - Human Wiki: `docs/00-home.md`, `docs/01-index.md`, topic MOC, product overview,
   development guide에서 간소화 직전 README knowledge 복원
-- Atomic knowledge: `docs/facts/en`·`ko` 29개 exact pair, primary fact 1개,
+- Atomic knowledge: `docs/facts/en`·`ko` 30개 exact pair, primary fact 1개,
   cross-link와 source digest
 
 ## Windows shell 설치 경계
@@ -125,10 +125,10 @@ Target: `0.8.0`
 - 장기 방향: host-native·provider-neutral capability 대체 뒤 OMX/OMC 제거
 - Consumer reuse: `hive-wiki` core와 capture·maintenance·query 안전 계약
 - Skill reuse: shared canonical `harness/skills/`, exact source `.agents/skills/` projection
-- 현재 상태: 영어 29개·한국어 29개 atomic fact, exact pair 29개와 source-confined
+- 현재 상태: 영어 30개·한국어 30개 atomic fact, exact pair 30개와 source-confined
   CLI·Skill·material-task completion capture 구현 완료
 - Logical digest:
-  `sha256:e2a0c26acf834d89c9416e174e5e48d87f0ec2b14ebf2e841ab32b23f15e4f4e`
+  `sha256:465260c190578e6122086bdb6f02eda9afc73e0b6cc0c4be388c75b4e11dd618`
 - 검증: lint finding·warning 0건, 영어·한국어 query PASS, index 삭제 뒤 query
   fail-closed exit `5`, rebuild equivalence PASS
 - SQLite binary digest는 invocation-local evidence이며 정본·clean-copy equivalence 기준이
@@ -243,7 +243,7 @@ Pre-1.0 비차단 deferred:
 - Canonical checklist `221/227`, active checklist ID 중복 0건
 - Root English 159줄·Korean 155줄 README, 상호 language link와 빈 QA 표 PASS
 - Plan static contract 29/29, documentation style regression 18/18 PASS
-- Human documentation inventory 1,283/1,283 review, finding 0건
+- Human documentation inventory 1,285/1,285 review, finding 0건
 - Markdown link conformance PASS
 
 ## Phase 7 shipping usage gate
@@ -399,7 +399,7 @@ Global onboarding·shared index local qualification PASS:
 Source docs Wiki targeted qualification PASS:
 
 - `hive-wiki` 33/33, Source Wiki conformance 재검증 PASS
-- Canonical fact 58개, bilingual pair 29개
+- Canonical fact 60개, bilingual pair 30개
 - `lint` finding·warning 0건, 영어·한국어 query PASS
 - Index 삭제 뒤 query fail-closed exit `5`, logical digest·query equivalence rebuild PASS
 - Ignored index·persistent lock의 Git 추적 0건
