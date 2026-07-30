@@ -91,15 +91,17 @@ class DevCheckTest(unittest.TestCase):
         ):
             MODULE.run_python(["tests.conformance.test_dev_check", "-v"])
 
-        self.assertEqual(commands[0][0:5], [
+        self.assertEqual(commands[0][0:7], [
             str(uv),
             "run",
+            "--python",
+            "3.13",
             "--isolated",
             "--no-project",
             "--with-requirements",
         ])
         self.assertEqual(
-            commands[0][5:],
+            commands[0][7:],
             [
                 str(ROOT / "requirements-conformance.txt"),
                 "python",

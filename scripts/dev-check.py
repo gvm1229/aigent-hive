@@ -127,6 +127,8 @@ def run_python(arguments: Sequence[str]) -> None:
         [
             str(uv),
             "run",
+            "--python",
+            "3.13",
             "--isolated",
             "--no-project",
             "--with-requirements",
