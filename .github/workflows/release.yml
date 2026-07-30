@@ -88,7 +88,7 @@ jobs:
               ;;
             *-unknown-linux-musl)
               file "$binary" | grep -F "ELF 64-bit"
-              file "$binary" | grep -F "statically linked"
+              file "$binary" | grep -E "statically linked|static-pie linked"
               ;;
             *)
               exit 4

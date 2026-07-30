@@ -386,6 +386,8 @@ class Phase6StaticContracts(unittest.TestCase):
             "github.workflow_sha",
             "scripts/render-installers.py",
             "--installer-dir",
+            "statically linked",
+            "static-pie linked",
         ):
             self.assertIn(required, candidate)
         for required in (
