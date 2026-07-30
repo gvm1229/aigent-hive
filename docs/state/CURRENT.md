@@ -2,7 +2,7 @@
 
 - 기준 branch: `develop`
 - product version: `0.7.0`
-- plan revision: `1.71`
+- plan revision: `1.72`
 - 현재 milestone: Phase 7 qualification + global onboarding·shared index `0.8.0`
 - 현재 작업: `docs/` Wiki 전환·README knowledge 복원 뒤 `0.8.0` update 구현
 - 외부 중지 경계: GitHub Release·npm `latest`, protected signing/publication credential,
@@ -21,6 +21,8 @@
   `cmd.exe` bootstrap 계약 PASS
 - Latest native remote: `baff938`의 run `30581894132`, macOS·Linux·Windows
   5/5 PASS
+- Latest local npm: current `0.7.0` Windows native binary의 platform·umbrella
+  tarball, isolated global install, version smoke와 source/package SHA-256 byte identity PASS
 - Native Goal routing: legacy `PLAN.md` checkbox 문구를 `phases/07-public-qualification.md`,
   `active/plugin-project-lifecycle.md`, `active/native-usage-sensor.md`,
   `active/user-onboarding-shared-index.md`, `active/source-docs-wiki.md`,
@@ -456,6 +458,13 @@ Current remote qualification evidence:
 Candidate trust blocker:
 
 - Current source product version `0.7.0`, exact `0.8.0` candidate 부재
+- 사용자 지정 순서는 시험 배포 성공 뒤 `develop` → `main` 병합
+- Current workflow는 `main` candidate만 허용하고 Current GitHub ruleset은
+  `main`만 보호; `develop`은 unprotected
+- 권장 해소: `develop` 보호와 candidate authority 전환 뒤 성공한 exact commit의
+  `main` PR 병합
+- 대안: 시험 배포 전 `main` 병합의 명시적 승인
+- 선택 전 unprotected candidate retarget·ruleset mutation·publication 0건
 - `release.yml`: 5개 target·6개 npm tarball·embedded installer candidate 계약의
   local static/package 검증 완료, remote matrix 실행 대기
 - `release-publish.yml`: GitHub Release·npm `latest` 0건과 6개 package `test` 전용
@@ -464,6 +473,12 @@ Candidate trust blocker:
   검증 구현, 실제 registry clean install은 publication 뒤 검증
 - GitHub repository environment·secret·variable 0개
 - npm `aigent-hive`·`@aigent-hive/*` name·scope ownership 미확정
+- Public registry 조회: umbrella·5개 scoped package 모두 E404,
+  name·scope ownership 증거로 사용 금지
+- Local Windows npm baseline: actual `0.7.0` binary의 platform·umbrella pack,
+  isolated global install과 digest
+  `95fd1e924fbb67ae124984cca5575029ff2cbcce4de8fc96250c8a61124207f8`
+  byte identity PASS
 - Interactive activation 미구현
 
 Pre-1.0 비차단 deferred:
@@ -477,9 +492,10 @@ Pre-1.0 비차단 deferred:
 
 ## 다음 action
 
+0. Candidate branch authority 선택과 `develop` protection 여부 확정
 1. P7-044 public npm package family와 native smoke
 2. P7-045 npm-backed Unix·PowerShell·CMD installer와 digest·owner receipt 검증
 3. P7-049 authenticated install-owner adapter를 사용하는 interactive `hive update`
 4. P7-020 artifact·npm provenance workflow
-5. P7-018 protected `main` exact `0.8.0` candidate qualification
+5. P7-018 selected protected branch exact `0.8.0` candidate qualification
 6. P7-037 GitHub Release 없이 npm `test` publication·clean install

@@ -11,7 +11,8 @@
 - npm: exact `0.8.0`과 `test` dist-tag만 publication, `latest` 이동 없음
 - 직접 설치: GitHub Release asset이 아니라 npm registry의 같은 native package 사용
 - Consumer runtime: Rust native binary, Node.js·PowerShell 7 dependency 없음
-- 신뢰 기준: protected `main` exact commit, SHA-256, GitHub artifact attestation
+- 신뢰 기준: 명시적으로 선택된 protected branch의 exact commit, SHA-256,
+  GitHub artifact attestation
 - 공개 명칭: 안정 릴리스로 부르지 않고 `0.8.0 test distribution`으로 표시
 
 실제 안정 릴리스는 사용자가 별도로 승인할 `0.8.x`에서 수행. 그때 npm `latest`,
@@ -33,7 +34,7 @@ Linux는 static musl artifact를 기본 배포 단위로 사용. 실제 build·i
 ## 단일 artifact 계보
 
 ```text
-protected main exact commit
+selected protected branch exact commit
   → platform native build 1회
   → archive + SHA-256 + GitHub attestation
   → npm platform package
@@ -134,6 +135,7 @@ notarization, Authenticode, Azure signing, external TUF는 실제 안정 릴리�
 완료: `P7-046` 영·한 README, `P7-047` bilingual setup, `P7-043` Linux musl
 x86_64·arm64 qualification.
 
+0. Candidate branch authority 선택과 branch protection 확인
 1. `P7-044`: npm package family와 native smoke
 2. `P7-045`: npm-backed Unix·PowerShell·CMD installer와 authenticated owner receipt
 3. `P7-049`: authenticated install-owner adapter를 사용하는 대화형 `hive update`
@@ -144,6 +146,17 @@ x86_64·arm64 qualification.
 `P7-049` 선행 조건: `P7-044`·`P7-045`의 exact-version package와 authenticated
 install-owner adapter 확정. 불확실한 owner 추측과 설치 관리자 우회 binary
 직접 overwrite 금지.
+
+## Candidate branch authority 경계
+
+- 사용자 순서: 시험 배포 성공 뒤 `develop` → `main` 병합
+- Workflow: `main` candidate 한정
+- Ruleset: `main` protected, `develop` unprotected
+- 금지: unprotected candidate retarget·ruleset 무단 변경
+- 권장 선택: `develop` 보호 → candidate·publication authority 전환 → 성공한 exact
+  commit을 PR로 `main`에 병합
+- 대안: 시험 배포 전 `develop` → `main` 병합 승인
+- 선택 전 P7-018·P7-037 activation 중단
 
 ## 완료 기준
 
@@ -162,6 +175,7 @@ install-owner adapter 확정. 불확실한 owner 추측과 설치 관리자 우�
 ## 외부 중지 경계
 
 - npm package name·scope ownership과 Trusted Publishing 설정
+- Candidate branch authority와 `develop` protection 여부
 - Credential·private signing material 접근 금지
 - npm `latest`, GitHub Release, 안정 릴리스는 별도 사용자 승인 전 금지
 - Exact `1.0.0` 별도 명시 전 major release 준비 금지
