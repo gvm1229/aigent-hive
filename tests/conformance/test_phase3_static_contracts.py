@@ -104,6 +104,24 @@ def skill_frontmatter(path: Path) -> tuple[dict[str, object], str]:
 
 
 class Phase3SkillSourceContract(unittest.TestCase):
+    def test_source_directives_preserve_valid_knowledge_during_simplification(self) -> None:
+        manifest = (REPOSITORY_ROOT / "AGENTS.md").read_text(encoding="utf-8")
+        editing = (
+            REPOSITORY_ROOT / ".agents/directives/00-editing-discipline.md"
+        ).read_text(encoding="utf-8")
+        documentation = (
+            REPOSITORY_ROOT / ".agents/directives/04-documentation-state.md"
+        ).read_text(encoding="utf-8")
+        safety = (
+            REPOSITORY_ROOT / ".agents/directives/05-security-safety.md"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn("Move it to the smallest fitting canonical document", manifest)
+        self.assertIn("Inventory the durable claims", editing)
+        self.assertIn("Map every removed durable claim", editing)
+        self.assertIn("verify the exact replacement locator", documentation)
+        self.assertIn("README streamlining is not deletion authority", safety)
+
     def test_source_auto_setup_projection_matches_harness_canonical_bytes(self) -> None:
         canonical = (
             SKILL_ROOT / "auto-setup-harness/SKILL.md"
@@ -545,7 +563,7 @@ class Phase3SkillSourceContract(unittest.TestCase):
 
     def test_full_editing_discipline_is_exact_and_highest_priority(self) -> None:
         expected_digest = (
-            "6ff1639897049dea7ccf710c88fe3bcb369d7edf7e62bcd62137ec70a7c7cc24"
+            "2445eeaa461ac04d9a5919a9d5499dac6cbe6300f8b57e3ab00215fbd5426fd9"
         )
         source_path = (
             REPOSITORY_ROOT / ".agents/directives/00-editing-discipline.md"

@@ -55,7 +55,7 @@ docs/
 
 ## Checklist
 
-- [ ] [DWK-001] Source AI directive에 valid knowledge 이동 우선, deprecated knowledge
+- [x] [DWK-001] Source AI directive에 valid knowledge 이동 우선, deprecated knowledge
   제거 예외, 간소화 전 inventory·replacement 확인 completion gate 추가
 - [ ] [DWK-002] `docs/00-home.md`·`docs/01-index.md`·topic MOC와 old README knowledge
   mapping을 구현하고 누락 지식을 topic document로 복원

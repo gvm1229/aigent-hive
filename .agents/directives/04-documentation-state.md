@@ -41,7 +41,14 @@ Do not use chat history, `.omx/`, `.agents/work/`, issue drafts, or generated SQ
 ## Current-Truth Policy
 
 - Update the existing canonical document instead of appending a correction diary.
-- Remove superseded or deprecated knowledge from the active tree.
+- Before simplifying, consolidating, or removing a knowledge-bearing document, inventory every
+  durable claim that would disappear from the active tree.
+- Move still-valid knowledge into the smallest fitting current topic document or atomic fact note
+  before removing it from the original surface. Record or verify the exact replacement locator.
+- Removal from one presentation surface counts as a move only after the replacement is tracked and
+  reachable from the documentation home or index.
+- Remove deprecated, incorrect, or superseded knowledge from the active tree only after identifying
+  the reason and replacement when one exists.
 - Rely on Git history for ordinary historical recovery.
 - Purge Git history only for secrets, legal erasure, or another explicitly approved exceptional reason.
 - Keep a minimal suppression record when needed to prevent deleted knowledge from being re-ingested. Store only a locator or fingerprint, reason, and replacement; do not duplicate deleted prose.
