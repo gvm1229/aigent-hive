@@ -9,7 +9,7 @@ summary: "Version 0.8.0 publishes only to npm test without a GitHub Release or n
 tags: [distribution, release, test]
 aliases: ["0.8.0 release scope"]
 sources:
-  - "repo:docs/decisions/ADR-0013-0.8-release-scope.md#sha256:cb611bf1e74a33c2590b08602a4786bd646fbc3ce5469a15814fbc6c8f69726d"
+  - "repo:docs/decisions/ADR-0013-0.8-release-scope.md#sha256:0a517849c6db000119e9c677b25304ce87a167b094473990dd9a1bb60ab609b6"
 links: [global-onboarding, version-policy]
 reviewed_revision: "git:cf992996d3076479bdfb433c4171eee046f571ae"
 status: active
