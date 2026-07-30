@@ -7,7 +7,7 @@
 ## 배포 정의
 
 - 목적: 실제 안정 릴리스 전 설치·업데이트·host onboarding 검증
-- GitHub: Release와 prerelease를 만들지 않음
+- GitHub: Release·prerelease 생성 없음
 - npm: exact `0.8.0`과 `test` dist-tag만 publication, `latest` 이동 없음
 - 직접 설치: GitHub Release asset이 아니라 npm registry의 같은 native package 사용
 - Consumer runtime: Rust native binary, Node.js·PowerShell 7 dependency 없음
@@ -28,7 +28,7 @@ GitHub normal release, 안정 설치 명령과 limitation 문구를 다시 확�
 | Windows x86_64 | `x86_64-pc-windows-msvc` | npm·PowerShell·CMD |
 
 Linux는 static musl artifact를 기본 배포 단위로 사용. 실제 build·install·runtime
-증거 없는 platform은 지원 완료로 표시하지 않음.
+증거 없는 platform: 지원 완료 표시 금지.
 
 ## 단일 artifact 계보
 
@@ -92,7 +92,7 @@ curl.exe -fLo install-aigent-hive.cmd https://raw.githubusercontent.com/gvm1229/
 ```
 
 Bootstrap은 embedded exact `0.8.0`과 platform package digest를 검증하고 npm registry
-tarball에서 native binary를 취득. npm CLI나 Node.js는 직접 설치 경로에 필요하지 않음.
+tarball에서 native binary 취득. 직접 설치 경로의 npm CLI·Node.js dependency 없음.
 PowerShell 7 탐지·설치 요구·설치 제안도 없음.
 
 ## 업데이트 UX
@@ -101,8 +101,8 @@ PowerShell 7 탐지·설치 요구·설치 제안도 없음.
 선택 언어 사용. 같은 setup에서 일 1회 자동 업데이트 확인을 별도로 opt-in.
 
 - 자동 확인은 설치하지 않고 새 버전과 exact 명령만 알림
-- 마지막 성공 확인으로부터 24시간 동안 재호출하지 않음
-- Offline·timeout·registry 오류는 성공 시각을 기록하지 않음
+- 마지막 성공 확인부터 24시간 재호출 억제
+- Offline·timeout·registry 오류: 성공 시각 기록 제외
 - 다음 Codex·Claude Code·Antigravity session 첫 작업에서 즉시 재시도
 - Raw registry 응답·credential·provider runtime state 저장 금지
 - `hive update`는 즉시 확인하고 새 버전이 있으면 설치 전 명시적으로 질문
@@ -125,7 +125,7 @@ PowerShell 7 탐지·설치 요구·설치 제안도 없음.
 | `release.yml` | 5개 target build, runtime 검증, digest, attestation, npm tarball staging |
 | `release-publish.yml` | exact candidate와 attestation 재검증, npm `test` publication |
 
-Publication workflow는 Git tag·GitHub Release를 생성하지 않음. Developer ID,
+Publication workflow의 Git tag·GitHub Release 생성 0건. Developer ID,
 notarization, Authenticode, Azure signing, external TUF는 실제 안정 릴리스의
 별도 hardened gate로 deferred.
 
@@ -141,9 +141,9 @@ notarization, Authenticode, Azure signing, external TUF는 실제 안정 릴리�
 8. `P7-018`: protected `main` exact `0.8.0` candidate qualification
 9. `P7-037`: npm `test` publication과 npm·curl clean install 검증
 
-`P7-049`는 `P7-044`와 `P7-045`가 exact-version package와 authenticated
-install-owner adapter를 확정한 뒤 진행한다. 불확실한 owner를 추측하거나 Hive가
-설치 관리자를 우회해 binary를 직접 덮어쓰지 않는다.
+`P7-049` 선행 조건: `P7-044`·`P7-045`의 exact-version package와 authenticated
+install-owner adapter 확정. 불확실한 owner 추측과 설치 관리자 우회 binary
+직접 overwrite 금지.
 
 ## 완료 기준
 
