@@ -1307,24 +1307,42 @@ fn render_user_directive(config: &UserSetupConfig, resolved_skills: &[String]) -
     let wiki = if config.wiki.enabled {
         format!("enabled ({})", config.wiki.language.as_str())
     } else {
-        "disabled; preserve canonical Markdown".to_owned()
+        "disabled".to_owned()
     };
     let profile = render_catalog_selection(&config.profile);
     let persona = render_catalog_selection(&config.persona);
-    let capture = if config.wiki.enabled {
-        "- Before the final response for material work, run agent-reviewed task-fact autocapture \
-into the enabled global Wiki. Record the bounded outcome, tool or project, criteria, and \
-originating request summary from current authorized artifacts; never ingest a raw transcript, \
+    match config.interface_language {
+        InterfaceLanguage::En => {
+            let capture = if config.wiki.enabled {
+                "- Before the final response for material work, run agent-reviewed task-fact \
+autocapture into the enabled global Wiki. Record the bounded outcome, tool or project, criteria, \
+and originating request summary from current authorized artifacts; never ingest a raw transcript, \
 hook payload, tool output, hidden prompt, or runtime state.\n"
-    } else {
-        "- Wiki capture is disabled. Do not capture or refresh the knowledge index; preserve \
-canonical Markdown until an explicit deletion request.\n"
-    };
-    format!(
-        "# Aigent Hive user preferences\n\n- Setup state: `operational`\n- Interface language: `{}`\n- User profile: {profile}\n- Agent persona: {persona}\n- Selected hosts: `{hosts}`\n- Global Wiki: `{wiki}`\n- Active Skills: `{}`\n{capture}- For ambiguous or detail-poor ordinary prompts, offer one concise optional refine suggestion without automatic rewrite.\n- Never request provider credentials or call model-provider APIs on Hive's behalf.\n",
-        config.interface_language.as_str(),
-        resolved_skills.join(", ")
-    )
+            } else {
+                "- Wiki capture is disabled. Do not capture or refresh the knowledge index; \
+preserve canonical Markdown until an explicit deletion request.\n"
+            };
+            format!(
+                "# Aigent Hive user preferences\n\n- Setup state: `operational`\n- Interface language: `en`\n- User profile: {profile}\n- Agent persona: {persona}\n- Selected hosts: `{hosts}`\n- Global Wiki: `{wiki}`\n- Active Skills: `{}`\n{capture}- Ask and answer in English.\n- For ambiguous or detail-poor ordinary prompts, offer one concise optional refine suggestion without automatic rewrite.\n- Never request provider credentials or call model-provider APIs on Hive's behalf.\n",
+                resolved_skills.join(", ")
+            )
+        }
+        InterfaceLanguage::Ko => {
+            let capture = if config.wiki.enabled {
+                "- 중요한 작업의 최종 응답 전 enabled global Wiki에 agent-reviewed task-fact를 \
+기록. 현재 승인된 artifact에서 bounded outcome, tool·project, criteria, originating request \
+summary만 사용하고 raw transcript, hook payload, tool output, hidden prompt, runtime state는 \
+수집하지 않음.\n"
+            } else {
+                "- Wiki capture 비활성. 명시적 삭제 요청 전까지 canonical Markdown을 보존하고 \
+knowledge index를 capture·refresh하지 않음.\n"
+            };
+            format!(
+                "# Aigent Hive 사용자 설정\n\n- 설정 상태: `operational`\n- Interface language: `ko`\n- 사용자 profile: {profile}\n- Agent persona: {persona}\n- 선택 host: `{hosts}`\n- Global Wiki: `{wiki}`\n- 활성 Skill: `{}`\n{capture}- 질문과 응답은 한국어 사용.\n- 모호하거나 핵심 세부가 부족한 일반 prompt에는 자동 rewrite 없이 간결한 optional refine 제안 1개만 제공.\n- Provider credential을 요청하거나 Hive를 대신해 model-provider API를 호출하지 않음.\n",
+                resolved_skills.join(", ")
+            )
+        }
+    }
     .into_bytes()
 }
 
@@ -1782,6 +1800,23 @@ usage_guard:
 
         assert!(rendered.contains("- User profile: `custom` — `웹과 게임`"));
         assert!(rendered.contains("- Agent persona: `custom` — `` friendly `but strict` ``"));
+    }
+
+    #[test]
+    fn user_directive_uses_the_selected_interface_language() {
+        let mut config = valid_config();
+        let english = String::from_utf8(render_user_directive(&config, &["setup-hive".to_owned()]))
+            .expect("English guidance");
+        assert!(english.contains("# Aigent Hive user preferences"));
+        assert!(english.contains("- Ask and answer in English."));
+        assert!(!english.contains("# Aigent Hive 사용자 설정"));
+
+        config.interface_language = InterfaceLanguage::Ko;
+        let korean = String::from_utf8(render_user_directive(&config, &["setup-hive".to_owned()]))
+            .expect("Korean guidance");
+        assert!(korean.contains("# Aigent Hive 사용자 설정"));
+        assert!(korean.contains("- 질문과 응답은 한국어 사용."));
+        assert!(!korean.contains("# Aigent Hive user preferences"));
     }
 
     #[test]

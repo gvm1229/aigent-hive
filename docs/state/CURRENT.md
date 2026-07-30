@@ -2,7 +2,7 @@
 
 - 기준 branch: `develop`
 - product version: `0.7.0`
-- plan revision: `1.62`
+- plan revision: `1.63`
 - 현재 milestone: Phase 7 qualification + global onboarding·shared index `0.8.0`
 - 현재 작업: `0.8.0` npm·curl 시험 배포와 bilingual onboarding·update 구현
 - 외부 중지 경계: GitHub Release·npm `latest`, protected signing/publication credential,
@@ -15,7 +15,7 @@
   + `docs/plans/active/windows-shell-install.md`
   + `docs/plans/active/documentation-style.md` + `docs/plans/active/security-review.md`
   + `docs/plans/active/release-0.8.0.md`
-- Plan completion: canonical checklist `214/223` 완료, `9`개 미완료, `96.0%`
+- Plan completion: canonical checklist `215/223` 완료, `8`개 미완료, `96.4%`
 - Latest local Windows: Rust workspace 전체 PASS, PowerShell 5.1·7.6.4 installer와
   `cmd.exe` bootstrap 계약 PASS
 - Latest remote: `9fb2552`의 CI `30479010450` 7/7 PASS, `d39ce7f`의 native
@@ -80,6 +80,8 @@ Target: `0.8.0`
   legacy project DB cleanup과 거부 시 전체 install tree 무변경
 - Codex·Antigravity expedited/custom connected matrix 4/4
 - Initial expedited fixed defaults와 `auto-setup-harness` zero-question inference 구현
+- Initial setup의 첫 질문 `English|한국어`, 이후 setup Skill 질문·preview와
+  user directive·host guidance의 선택 언어 적용
 - Wiki disable 시 0건, enable 시 agent-reviewed bounded task-fact completion capture
 - Auto Skill canonical·plugin·source·Codex·Claude projection parity
 - 실제 Windows 11 x86_64 Codex user install·validate, recommended global setup,
@@ -177,7 +179,6 @@ Target: `0.8.0`
 
 `0.8.0` 시험 배포 gap:
 
-- Language-first setup과 localized global harness
 - Opt-in daily update check와 interactive owner-aware `hive update`
 - Linux x86_64·arm64 musl native build·install·runtime qualification
 - `aigent-hive@0.8.0|test` package family와 registry publication
@@ -421,7 +422,6 @@ Current remote qualification evidence:
 
 ## `0.8.0` 시험 배포 gate
 
-- P7-047 language-first setup과 localized global harness
 - P7-048 opt-in daily update check·offline retry
 - P7-049 interactive owner-aware `hive update`
 - P7-043 Linux x86_64·arm64 musl qualification
@@ -451,10 +451,9 @@ Pre-1.0 비차단 deferred:
 
 ## 다음 action
 
-1. P7-047 language-first setup·localized global harness
-2. P7-048 daily update check·offline retry
-3. P7-049 interactive owner-aware `hive update`
-4. P7-043·044·045 Linux·npm·direct installer qualification
-5. P7-020 artifact·npm provenance workflow
-6. P7-018 protected `main` exact `0.8.0` candidate qualification
-7. P7-037 GitHub Release 없이 npm `test` publication·clean install
+1. P7-048 daily update check·offline retry
+2. P7-049 interactive owner-aware `hive update`
+3. P7-043·044·045 Linux·npm·direct installer qualification
+4. P7-020 artifact·npm provenance workflow
+5. P7-018 protected `main` exact `0.8.0` candidate qualification
+6. P7-037 GitHub Release 없이 npm `test` publication·clean install

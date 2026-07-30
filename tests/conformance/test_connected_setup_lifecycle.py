@@ -113,7 +113,7 @@ class ConnectedSetupLifecycleConformance(Phase1CliTestCase):
             "antigravity": ".gemini/GEMINI.md",
         }[self.host]
         guidance = (self.user_root / guidance_path).read_text(encoding="utf-8")
-        self.assertIn("State: `operational`", guidance)
+        self.assertIn("상태: `operational`", guidance)
 
     def _write_fake_host(self) -> None:
         program = """\

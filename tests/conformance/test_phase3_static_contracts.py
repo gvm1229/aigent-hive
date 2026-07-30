@@ -135,8 +135,9 @@ class Phase3SkillSourceContract(unittest.TestCase):
         )
         for required in (
             "Expedited — set everything to default",
-            "Interface language: `en`",
-            "Wiki: enabled with language `en`",
+            "ask for interface language first",
+            "Interface language: the language already selected by the user",
+            "Wiki: enabled with the selected interface language",
             "Agent persona: `strict`",
             "every built-in Skill in the signed catalog",
             "Usage guard: disabled",

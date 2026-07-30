@@ -1495,10 +1495,15 @@ fn render_user_guidance(
     host: UserHost,
     setup: Option<&crate::user_setup::UserSetupConfig>,
 ) -> Vec<u8> {
-    let body = setup.map_or_else(
+    let (heading, adapter_label, body, footer) = setup.map_or_else(
         || {
-            "- State: `setup-required`\n- Use the installed `setup-hive` Skill before ordinary Hive Skills.\n- Before setup completes, only setup, doctor, update, and recover operations are available.\n"
-                .to_owned()
+            (
+                "# Aigent Hive user directives / 사용자 지침",
+                "Active adapter / 활성 adapter",
+                "- State / 상태: `setup-required`\n- Ask the user to choose `English` or `한국어` first. / 먼저 `English` 또는 `한국어`를 선택하도록 질문.\n- Use the installed `setup-hive` Skill before ordinary Hive Skills. / 일반 Hive Skill보다 설치된 `setup-hive` Skill을 먼저 사용.\n- Before setup completes, only setup, doctor, update, and recover operations are available. / 설정 완료 전 setup, doctor, update, recover만 사용 가능.\n"
+                    .to_owned(),
+                "- Preserve foreign guidance bytes and modify only exact Hive marker blocks. / Foreign guidance bytes를 보존하고 exact Hive marker block만 변경.\n- Never request provider API credentials or call model-provider APIs on Hive's behalf. / Provider API credential을 요청하거나 Hive를 대신해 model-provider API를 호출하지 않음.\n",
+            )
         },
         |config| {
             let hosts = config
@@ -1512,13 +1517,28 @@ fn render_user_guidance(
             } else {
                 "disabled"
             };
-            format!(
-                "- State: `operational`\n- Selected hosts: `{hosts}`\n- Global Wiki: `{wiki}`\n- Use `setup-harness` for project expedited or custom setup.\n- Project Markdown Wiki remains canonical; the user-root SQLite index is derived and shared.\n- Use `hive-project-upgrade` for project projection upgrades.\n- Offer one optional refine suggestion for ambiguous or detail-poor ordinary prompts; never rewrite automatically.\n"
-            )
+            match config.interface_language {
+                crate::user_setup::InterfaceLanguage::En => (
+                    "# Aigent Hive user directives",
+                    "Active adapter",
+                    format!(
+                        "- State: `operational`\n- Interface language: `en`; ask and answer in English.\n- Selected hosts: `{hosts}`\n- Global Wiki: `{wiki}`\n- Use `setup-harness` for project expedited or custom setup.\n- Project Markdown Wiki remains canonical; the user-root SQLite index is derived and shared.\n- Use `hive-project-upgrade` for project projection upgrades.\n- Offer one optional refine suggestion for ambiguous or detail-poor ordinary prompts; never rewrite automatically.\n"
+                    ),
+                    "- Preserve foreign guidance bytes and modify only exact Hive marker blocks.\n- Never request provider API credentials or call model-provider APIs on Hive's behalf.\n",
+                ),
+                crate::user_setup::InterfaceLanguage::Ko => (
+                    "# Aigent Hive 사용자 지침",
+                    "활성 adapter",
+                    format!(
+                        "- 상태: `operational`\n- Interface language: `ko`; 질문과 응답은 한국어 사용.\n- 선택 host: `{hosts}`\n- Global Wiki: `{wiki}`\n- Project expedited·custom setup에는 `setup-harness` 사용.\n- Project Markdown Wiki가 정본이며 user-root SQLite index는 derived·shared 상태.\n- Project projection upgrade에는 `hive-project-upgrade` 사용.\n- 모호하거나 핵심 세부가 부족한 일반 prompt에는 자동 rewrite 없이 optional refine 제안 1개만 제공.\n"
+                    ),
+                    "- Foreign guidance bytes를 보존하고 exact Hive marker block만 변경.\n- Provider API credential을 요청하거나 Hive를 대신해 model-provider API를 호출하지 않음.\n",
+                ),
+            }
         },
     );
     format!(
-        "<!-- AIGENT-HIVE:USER:START -->\n# Aigent Hive user directives\n\n- Active adapter: `{}`\n{body}- Preserve foreign guidance bytes and modify only exact Hive marker blocks.\n- Never request provider API credentials or call model-provider APIs on Hive's behalf.\n<!-- AIGENT-HIVE:USER:END -->\n",
+        "<!-- AIGENT-HIVE:USER:START -->\n{heading}\n\n- {adapter_label}: `{}`\n{body}{footer}<!-- AIGENT-HIVE:USER:END -->\n",
         host.as_str()
     )
     .into_bytes()

@@ -16,14 +16,18 @@ Configure user-scope Hive preferences without modifying a project harness or pro
    - Resolve the exact `<user-root>` selected during user installation.
    - For reconfiguration, run `hive setup --scope user --answers <user-root>/.hive/config/user-setup.yml --user-root <user-root> --validate --output json` first.
    - Preserve existing answers unless the user changes them.
-3. For initial setup, ask for setup mode first.
+3. For initial setup, ask for interface language first.
+   - Offer `English` and `한국어`.
+   - After the user chooses, ask every remaining question and explain every preview in
+     that language.
+4. Ask for setup mode in the selected language.
    - Offer `Expedited — set everything to default` and `Custom`.
    - Expedited performs no further preference questions and uses the fixed defaults below.
    - Custom asks exactly one question at a time in the required order below.
    - Reconfiguration preserves existing answers and asks only for requested changes.
-4. Resolve expedited defaults from the signed catalog.
-   - Interface language: `en`.
-   - Wiki: enabled with language `en`.
+5. Resolve expedited defaults from the signed catalog.
+   - Interface language: the language already selected by the user.
+   - Wiki: enabled with the selected interface language.
    - User profile: `custom` with the fixed description
      `General user; infer domain context from each project.`
    - Agent persona: `strict`.
@@ -32,28 +36,29 @@ Configure user-scope Hive preferences without modifying a project harness or pro
    - Usage guard: disabled, stored default remaining threshold `20`, CodexBar fallback disabled.
    - Selecting expedited authorizes the displayed built-in dependency closure only. It never
      approves a third-party Skill, CodexBar installation, credential access, or destructive action.
-5. Ask exactly one custom-setup question at a time in the required order below.
+6. Ask exactly one custom-setup question at a time in the required order below.
    - Explain the available values from the signed user-setup catalog.
    - Do not infer a preference, host selection, custom description, Skill approval, usage-guard opt-in, or fallback consent.
-6. Write the resolved answers to a temporary YAML file matching `user-setup.schema.json`.
+7. Write the resolved answers to a temporary YAML file matching `user-setup.schema.json`.
    - Do not include provider credentials, tokens, cookies, account identifiers, or raw usage data.
-7. Preview the resolved setup.
+8. Preview the resolved setup.
    - Run `hive setup --scope user --answers <answers.yml> --user-root <user-root> --dry-run --output json`.
    - Show selected hosts and Skills, mandatory Skills, dependency closure, skipped components, marker edits, and conflicts.
    - Require explicit approval of the displayed dependency closure before apply.
-8. Apply only after preview approval or expedited selection with a conflict-free built-in-only preview.
+9. Apply only after preview approval or expedited selection with a conflict-free built-in-only preview.
    - Run `hive setup --scope user --answers <answers.yml> --user-root <user-root> --apply --output json`.
    - Preserve foreign bytes and third-party marker blocks.
-9. Validate with the same answers.
+10. Validate with the same answers.
    - Run `hive setup --scope user --answers <answers.yml> --user-root <user-root> --validate --output json`.
    - Report the canonical user setup path, active hosts, active Skills, Wiki state, usage-guard state, and any unsupported host capability.
 
 ## Question Order
 
-For initial setup, ask setup mode first. Ask the remaining questions only for `Custom`.
+For initial setup, ask interface language first and immediately switch to it. Then ask
+setup mode. Ask the remaining preference questions only for `Custom`.
 
-1. **Setup mode** — `Expedited — set everything to default` or `Custom`.
-2. **Interface language** — `en` or `ko`.
+1. **Interface language** — `English` (`en`) or `한국어` (`ko`).
+2. **Setup mode** — `Expedited — set everything to default` or `Custom`.
 3. **Wiki language** — `en`, `ko`, or `both`.
 4. **Wiki enablement** — default `enabled`; offer explicit opt-out without deleting canonical Markdown.
 5. **User profile** — `web-developer`, `game-developer`, `non-developer`, or `custom`.

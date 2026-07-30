@@ -1,6 +1,6 @@
 # Aigent Hive active plan index
 
-> Revision: 1.62
+> Revision: 1.63
 > 기준일: 2026-07-31
 > Product version: `0.7.0`
 > 현재 milestone: Phase 7 qualification + global onboarding·shared index `0.8.0`
@@ -29,7 +29,7 @@
 | 범위 | 완료 | 미완료 | 진행률 |
 | --- | ---: | ---: | ---: |
 | Phase 0–6 | 70 | 0 | 100% |
-| Phase 7 | 40 | 9 | 81.6% |
+| Phase 7 | 41 | 8 | 83.7% |
 | User plugin/project lifecycle | 38 | 0 | 100% |
 | Host-native usage sensors | 24 | 0 | 100% |
 | Global onboarding·shared index | 19 | 0 | 100% |
@@ -37,7 +37,7 @@
 | Windows shell install boundary | 3 | 0 | 100% |
 | Documentation style | 5 | 0 | 100% |
 | Security review | 4 | 0 | 100% |
-| **Canonical total** | **214** | **9** | **96.0%** |
+| **Canonical total** | **215** | **8** | **96.4%** |
 
 External production boundary 항목도 미완료 합계에 포함. Protected authority 없이 완료 처리 금지.
 
@@ -58,6 +58,7 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
 - Shared index 동일 입력 재실행 byte-exact no-op, `changed_paths=[]`
 - Codex·Antigravity expedited/custom connected onboarding matrix `4/4`
 - Initial `Expedited — set everything to default`와 project zero-question inference contract
+- English·한국어 language-first setup과 선택 언어 global guidance, `hive-cli` 211개 PASS
 - 독립 final blocker review: critical·high·medium·low finding `0`건
 
 ## Required load order
@@ -103,15 +104,14 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
 
 ## Current execution order
 
-1. P7-047 language-first setup과 localized global harness
-2. P7-048 opt-in daily update check·offline next-session retry
-3. P7-049 interactive owner-aware `hive update`
-4. P7-043 Linux x86_64·arm64 musl release qualification
-5. P7-044 public `aigent-hive` npm package family와 native smoke
-6. P7-045 npm-backed Unix·PowerShell·CMD installer와 digest 검증
-7. P7-020 5개 platform archive·npm tarball provenance
-8. P7-018 protected `main` release candidate qualification
-9. P7-037 GitHub Release 없이 npm `test` publication·clean install 검증
+1. P7-048 opt-in daily update check·offline next-session retry
+2. P7-049 interactive owner-aware `hive update`
+3. P7-043 Linux x86_64·arm64 musl release qualification
+4. P7-044 public `aigent-hive` npm package family와 native smoke
+5. P7-045 npm-backed Unix·PowerShell·CMD installer와 digest 검증
+6. P7-020 5개 platform archive·npm tarball provenance
+7. P7-018 protected `main` release candidate qualification
+8. P7-037 GitHub Release 없이 npm `test` publication·clean install 검증
 
 ## `0.8.0` 비차단 deferred boundary
 
