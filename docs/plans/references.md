@@ -17,6 +17,7 @@
 | dashboard/desktop app | 유보 | CLI public release와 recovery gate 완료 |
 | Rust TUF/signing library | `ed25519-dalek` verifier-only 채택, signing은 external | Private-key custody를 product에 넣지 않고 verifier audit 결손이 확인될 때만 재검토 |
 | Antigravity projection surface | native global plugin·Skill path qualified | host major 또는 plugin manifest contract 변경 |
+| cargo-dist | `0.8.0` 즉시 채택 제외, fit-gap reference | Hive ownership receipt·atomic recovery·단일 artifact 계보를 생성 workflow가 보존할 때 |
 | web/unreal profile source | 아직 미이식 | 각 reference의 generic 부분을 별도 검토하고 domain fixture·precedence test 작성 |
 
 ## References
@@ -36,7 +37,17 @@
 - [RFC 8785 — JSON Canonicalization Scheme](https://www.rfc-editor.org/info/rfc8785)
 - [The Update Framework](https://theupdateframework.io/)
 - [GitHub artifact attestations](https://docs.github.com/en/actions/security-for-github-actions/using-artifact-attestations)
-- [cargo-dist](https://opensource.axo.dev/cargo-dist/)
+- [cargo-dist — configuration](https://axodotdev.github.io/cargo-dist/book/reference/config.html)
+- [cargo-dist — artifact attestations](https://axodotdev.github.io/cargo-dist/book/signing/attestations.html)
+
+### CLI 배포
+
+- [OpenAI Codex — npm·install script](https://github.com/openai/codex#installation)
+- [Anthropic Claude Code — install methods](https://docs.anthropic.com/en/docs/claude-code/setup)
+- [Google Gemini CLI — npm installation](https://github.com/google-gemini/gemini-cli#quickstart)
+- [npm — `package.json` `bin`·optional dependencies](https://docs.npmjs.com/cli/v11/configuring-npm/package-json)
+- [npm — Trusted Publishing](https://docs.npmjs.com/trusted-publishers)
+- [npm — dist-tags](https://docs.npmjs.com/adding-dist-tags-to-packages)
 
 ### 라이선스
 

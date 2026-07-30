@@ -22,11 +22,7 @@
 - [x] [P7-015] upgrade/migration fault injection
 - [x] [P7-016] in-toto/SLSA provenance verifier와 candidate-workflow attestation contract
 - [x] [P7-017] public license 확정 — 전체 source·harness `Apache-2.0`, GitHub 감지와 REUSE 검증 완료
-- [ ] [P7-018] `0.8.x` release candidate qualification
-
-P7-011·012 historical evidence:
-[`ec27458` run](https://github.com/gvm1229/aigent-hive/actions/runs/30201803879).
-Current attestation·publication은 P7-020·037, Windows 실제 기기는 P7-041 소유.
+- [ ] [P7-018] Exact `0.8.0` 전체 release candidate qualification
 
 ## 7. 핵심 conformance와 fault injection
 
@@ -85,10 +81,10 @@ Current attestation·publication은 P7-020·037, Windows 실제 기기는 P7-041
 
 ## 8. 완료 gate
 
-`0.8.0` preview release의 필수 조건:
+`0.8.0` 공개 release의 필수 조건:
 
 - [x] [P7-019] source, release, consumer tree 분리
-- [ ] [P7-020] macOS·Windows archive SHA-256, GitHub attestation·source provenance
+- [ ] [P7-020] 5개 target archive·npm tarball SHA-256·attestation·byte identity
 - [x] [P7-021] Codex·Antigravity 실제 matrix와 Claude fixture·unverified 표시
 - [x] [P7-022] model-provider API dependency와 credential path 0개
 - [x] [P7-023] setup dry-run, ownership, conflict와 source guard
@@ -105,11 +101,14 @@ Current attestation·publication은 P7-020·037, Windows 실제 기기는 P7-041
 - [x] [P7-034] Karpathy Raw/Wiki/Schema와 SQLite rebuild
 - [x] [P7-035] same-major compatibility
 - [x] [P7-036] cross-major no-data-loss migration
-- [ ] [P7-037] `Claude-unverified preview` label·provenance·known limitation publication
+- [ ] [P7-037] GitHub normal release·npm `latest`와 limitation publication
 - [x] [P7-038] product version parity, compatible minor/patch bump와 explicit-only major gate
 - [x] [P7-039] public license — 전체 source·harness `Apache-2.0`, 전문, package metadata와 render fixture
 - [x] [P7-040] current candidate clean clone에서 전체 CI PASS
 - [x] [P7-041] `WSI-*` 통과 Windows 실제 기기 install·setup·auto onboarding·shared index·update
 - [x] [P7-042] Hive Skill implicit 중복 0건과 metadata budget·fresh-session qualification
+- [ ] [P7-043] Linux x86_64·arm64 musl release qualification
+- [ ] [P7-044] `aigent-hive` npm package family·native smoke
+- [ ] [P7-045] Unix·PowerShell·CMD 직접 installer·digest·recovery
 
 ---

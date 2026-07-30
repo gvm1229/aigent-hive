@@ -2,9 +2,9 @@
 
 - 기준 branch: `develop`
 - product version: `0.7.0`
-- plan revision: `1.59`
+- plan revision: `1.60`
 - 현재 milestone: Phase 7 qualification + global onboarding·shared index `0.8.0`
-- 현재 작업: `0.8.0 Claude-unverified preview` candidate trust 경로 준비
+- 현재 작업: `0.8.0` Linux·npm·직접 installer 공개 릴리스 계획 확정
 - 외부 중지 경계: protected signing/publication credential, 실제 production publication,
   exact `1.0.0` 사용자 authority
 - Plan load: compact `docs/plans/PLAN.md` + `docs/plans/phases/07-public-qualification.md`
@@ -14,18 +14,18 @@
   + `docs/plans/active/source-llm-wiki.md`
   + `docs/plans/active/windows-shell-install.md`
   + `docs/plans/active/documentation-style.md` + `docs/plans/active/security-review.md`
-  + `docs/plans/active/preview-release.md`
-- Plan completion: canonical checklist `213/216` 완료, `3`개 미완료, `98.6%`
+  + `docs/plans/active/release-0.8.0.md`
+- Plan completion: canonical checklist `213/219` 완료, `6`개 미완료, `97.3%`
 - Latest local Windows: Rust workspace 전체 PASS, PowerShell 5.1·7.6.4 installer와
   `cmd.exe` bootstrap 계약 PASS
-- Latest remote: `d39ce7f`의 CI `30477685613` 7/7과 native release runtime
-  `30477685720` 3/3 PASS
+- Latest remote: `9fb2552`의 CI `30479010450` 7/7 PASS, `d39ce7f`의 native
+  release runtime `30477685720` 3/3 historical PASS
 - Native Goal routing: legacy `PLAN.md` checkbox 문구를 `phases/07-public-qualification.md`,
   `active/plugin-project-lifecycle.md`, `active/native-usage-sensor.md`,
   `active/user-onboarding-shared-index.md`, `active/source-llm-wiki.md`,
   `active/windows-shell-install.md`,
   `active/documentation-style.md`, `active/security-review.md`,
-  `active/preview-release.md`로 해석
+  `active/release-0.8.0.md`로 해석
 
 ## Windows shell 설치 경계
 
@@ -45,7 +45,7 @@
 - Active fragment:
   [`windows-shell-install.md`](../plans/active/windows-shell-install.md)
 - Decision:
-  [`ADR-0013`](../decisions/ADR-0013-preview-release-scope.md)
+  [`ADR-0013`](../decisions/ADR-0013-0.8-release-scope.md)
 
 ## Global onboarding·shared index audit
 
@@ -174,13 +174,15 @@ Target: `0.8.0`
 - Source `hive-prompt-refine` projection, explicit refine-only routing,
   모호성·핵심 세부 부족 prompt의 optional refine 제안
 
-`0.8.0` preview gap:
+`0.8.0` release gap:
 
-- Consumer PowerShell 5.1·`cmd.exe` install과 source-only PowerShell 7 dependency 경계
-- Current Linux·Windows·contract CI failure
-- Candidate SHA-256·GitHub artifact attestation·publication
+- Linux x86_64·arm64 musl native build·install·runtime qualification
+- `npm install -g aigent-hive` package family와 registry publication
+- Unix·PowerShell·CMD 직접 installer의 simple latest 명령
+- 5개 target SHA-256·GitHub artifact attestation·npm binary identity
+- Exact `0.8.0` candidate qualification과 GitHub·npm publication
 
-Preview 비차단 deferred:
+Pre-1.0 비차단 deferred:
 
 - 실제 Claude Code install/update E2E
 - 실제 Claude Pro/Max quota usage parity
@@ -212,7 +214,7 @@ Preview 비차단 deferred:
 계획 evidence:
 
 - Active fragment 8 KiB 제한 충족
-- Canonical checklist `212/216`, active checklist ID 중복 0건
+- Canonical checklist `213/219`, active checklist ID 중복 0건
 - Plan static contract 29/29, documentation style regression 18/18 PASS
 - Human documentation inventory 258/258 review, finding 0건
 - Markdown link conformance PASS
@@ -258,7 +260,7 @@ Preview 비차단 deferred:
 - Native hostile sensor·fallback, Phase 3 projection과 source usage guard regression PASS
 - 독립 Antigravity code·test review: PASS, actionable finding 0건
 
-Preview 비차단 deferred:
+Pre-1.0 비차단 deferred:
 
 - 실제 Claude app session E2E
 - 실제 Claude Pro/Max qualified subscription usage sensor
@@ -413,21 +415,25 @@ Current remote qualification evidence:
 - Local Phase 6 계약 21 PASS, macOS 전용 8개 expected skip
 - Direct installer의 같은 owner parent handle-pinning race
 
-## `0.8.0` preview release gate
+## `0.8.0` 공개 release gate
 
-- P7-020 candidate SHA-256·GitHub artifact attestation
-- P7-018 `0.8.0` release candidate qualification
-- P7-037 protected `Claude-unverified preview` GitHub Release publication
+- P7-043 Linux x86_64·arm64 musl qualification
+- P7-044 public npm package family와 native smoke
+- P7-045 Unix·PowerShell·CMD 직접 installer와 digest 검증
+- P7-020 5개 target archive·npm tarball provenance
+- P7-018 exact `0.8.0` release candidate qualification
+- P7-037 GitHub normal release·npm `latest` publication
 
 Candidate trust blocker:
 
 - Current source product version `0.7.0`, exact `0.8.0` candidate 부재
-- `release.yml`: deferred Developer ID·notarization·Azure signing 필수
-- `release-publish.yml`: deferred external TUF·platform signer evidence 필수
+- `release.yml`: 5개 target·npm tarball staging 경로 미구현
+- `release-publish.yml`: GitHub Release·npm 순차 publication 경로 미구현
 - GitHub repository environment·secret·variable 0개
-- ADR-0013 preview artifact attestation·publication workflow 미구현
+- npm `aigent-hive`·`@aigent-hive/*` name·scope ownership 미확정
+- ADR-0013 artifact attestation·publication workflow 미구현
 
-Preview 비차단 deferred:
+Pre-1.0 비차단 deferred:
 
 - macOS arm64/x86_64 Developer ID signing·notarization
 - Windows Authenticode 또는 Azure Artifact Signing
@@ -437,6 +443,9 @@ Preview 비차단 deferred:
 
 ## 다음 action
 
-1. P7-020 ADR-0013 preview candidate workflow와 exact `0.8.0` 준비
-2. P7-018 protected `main` candidate qualification
-3. P7-037 최종 사용자 확인 뒤 protected preview publication
+1. P7-043 Linux x86_64·arm64 musl release qualification
+2. P7-044 public `aigent-hive` npm package family 구현
+3. P7-045 Unix·PowerShell·CMD 직접 installer 구현
+4. P7-020 5개 target artifact·npm provenance workflow
+5. P7-018 protected `main` exact `0.8.0` candidate qualification
+6. P7-037 최종 사용자 확인 뒤 GitHub normal release·npm `latest` publication

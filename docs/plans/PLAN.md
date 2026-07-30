@@ -1,20 +1,20 @@
 # Aigent Hive active plan index
 
-> Revision: 1.59
-> 기준일: 2026-07-30
+> Revision: 1.60
+> 기준일: 2026-07-31
 > Product version: `0.7.0`
 > 현재 milestone: Phase 7 qualification + global onboarding·shared index `0.8.0`
 > Entrypoint: `docs/plans/PLAN.md`
 
 ## Goal parameters
 
-- Objective: `0.8.0 Claude-unverified preview`의 Skill metadata, Windows shell,
-  current CI, 실제 기기, artifact provenance, candidate와 publication gate 9개 완료
+- Objective: `Aigent Hive 0.8.0`의 Linux·macOS·Windows native artifact, npm 전역 설치,
+  직접 installer, artifact provenance, candidate와 publication gate 완료
 - Success: Mandatory user setup, global preference 기반 expedited/custom project setup,
   user-root 단일 SQLite, 세 host selected Skill projection, Wiki default-on opt-out,
   usage guard opt-in `20%`, native-first·CodexBar fallback-only, consumer
-  PowerShell 5.1·`cmd.exe`, source-only PowerShell 7, SHA-256·GitHub attestation과
-  실제 Windows acceptance
+  PowerShell 5.1·`cmd.exe`, source-only PowerShell 7, Linux musl x86_64·arm64,
+  `npm install -g aigent-hive`, SHA-256·GitHub attestation과 실제 Windows acceptance
 - Stop boundary: protected credential, irreversible production publication, exact `1.0.0`
   authority, 현재 source usage guard remaining `30%`
 - Invariants: provider-neutral, canonical Markdown 우선, OMX/OMC replaceable adapter,
@@ -29,7 +29,7 @@
 | 범위 | 완료 | 미완료 | 진행률 |
 | --- | ---: | ---: | ---: |
 | Phase 0–6 | 70 | 0 | 100% |
-| Phase 7 | 39 | 3 | 92.9% |
+| Phase 7 | 39 | 6 | 86.7% |
 | User plugin/project lifecycle | 38 | 0 | 100% |
 | Host-native usage sensors | 24 | 0 | 100% |
 | Global onboarding·shared index | 19 | 0 | 100% |
@@ -37,7 +37,7 @@
 | Windows shell install boundary | 3 | 0 | 100% |
 | Documentation style | 5 | 0 | 100% |
 | Security review | 4 | 0 | 100% |
-| **Canonical total** | **213** | **3** | **98.6%** |
+| **Canonical total** | **213** | **6** | **97.3%** |
 
 External production boundary 항목도 미완료 합계에 포함. Protected authority 없이 완료 처리 금지.
 
@@ -49,8 +49,8 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
   fresh-session 중복 warning 0건
 - 실제 Windows 11 x86_64: Codex user install·global setup·project auto onboarding,
   shared index 1개 project, repeat update·rollback·재검증 PASS
-- Current remote: `d39ce7f` CI run `30477685613` 7/7, native runtime
-  `30477685720` 3/3 PASS
+- Current remote: `9fb2552` CI run `30479010450` 7/7 PASS; native runtime
+  `d39ce7f` run `30477685720` 3/3 historical PASS
 - Windows shell: WSI-001–003 완료, consumer PowerShell 7 dependency 0건,
   source dependency helper의 exact WinGet preview·동의·재검증 PASS
 - Strict Clippy all targets·all features, format check PASS
@@ -82,7 +82,7 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
 | [`active/windows-shell-install.md`](active/windows-shell-install.md) | `WSI-*` | Consumer PowerShell 5.1·`cmd.exe`와 source-only PowerShell 7 |
 | [`active/documentation-style.md`](active/documentation-style.md) | `DOC-*` | 사람용 문서 style completion gate |
 | [`active/security-review.md`](active/security-review.md) | `SEC-*` | 독립 code·security review finding completion gate |
-| [`active/preview-release.md`](active/preview-release.md) | `P7-*` reference | `0.8.0` preview 실행 순서·범위·인계 |
+| [`active/release-0.8.0.md`](active/release-0.8.0.md) | `P7-*` reference | `0.8.0` Linux·npm·직접 설치 실행 순서와 범위 |
 
 ## Reconciliation gate
 
@@ -103,11 +103,14 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
 
 ## Current execution order
 
-1. P7-020 preview 범위 artifact attestation workflow와 exact `0.8.0` candidate 준비
-2. P7-018 protected `main` release candidate qualification
-3. P7-037 최종 사용자 확인 뒤 protected `Claude-unverified preview` publication
+1. P7-043 Linux x86_64·arm64 musl release qualification
+2. P7-044 public `aigent-hive` npm package family와 native smoke
+3. P7-045 Unix·PowerShell·CMD 직접 installer와 digest 검증
+4. P7-020 5개 platform archive·npm tarball provenance
+5. P7-018 protected `main` release candidate qualification
+6. P7-037 최종 사용자 확인 뒤 GitHub normal release·npm `latest` publication
 
-## `0.8.0` preview deferred boundary
+## `0.8.0` 비차단 deferred boundary
 
 - macOS Developer ID signing·notarization
 - Windows Authenticode signing

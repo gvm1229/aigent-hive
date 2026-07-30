@@ -2,7 +2,7 @@
 
 > Checklist owner: `WSI-*`
 > Target: `0.8.0`
-> Decision: [`ADR-0013`](../../decisions/ADR-0013-preview-release-scope.md)
+> Decision: [`ADR-0013`](../../decisions/ADR-0013-0.8-release-scope.md)
 > Upstream: [Microsoft PowerShell Windows 설치](https://learn.microsoft.com/powershell/scripting/install/install-powershell-on-windows)
 > 확인일: 2026-07-29
 

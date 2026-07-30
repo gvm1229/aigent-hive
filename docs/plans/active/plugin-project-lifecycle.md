@@ -120,7 +120,7 @@
   `aigent-hive@aigent-hive` enabled state PASS
 - `RPH-036`: Antigravity `1.1.7` migration·repeat update·16/16 byte parity PASS
 - `RPH-036`: Claude executable·Pro/Max session 부재, 실제 Claude install/update
-  미검증과 preview disclosure
+  미검증 disclosure
 
 ## Host evidence — 2026-07-27
 

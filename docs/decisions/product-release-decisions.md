@@ -1,11 +1,11 @@
 # 제품·배포 결정
 
-기준일: 2026-07-27
+기준일: 2026-07-31
 
 | 영역 | 결정 |
 | --- | --- |
 | 구현 언어 | Rust stable, Cargo workspace |
-| 제품 형태 | macOS·Windows CLI-first, 별도 GUI 없음 |
+| 제품 형태 | macOS·Linux·Windows CLI-first, 별도 GUI 없음 |
 | 실행 경계 | 사용자가 로그인한 정액제 subscription host 위에서만 동작 |
 | API | model-provider API 호출·SDK·API key 전부 금지 |
 | 소스와 출하 | Hive source, release bundle, consumer harness 분리 |
@@ -33,15 +33,16 @@
 | release 신뢰 | TUF 1.0.31-compatible offline root 2-of-3와 분리된 targets/snapshot/timestamp, 전역 unique role key, strict Ed25519 verification, old+new root rotation, semantic in-toto/SLSA·platform evidence; signing/private key는 Hive 밖의 external authority |
 | backup | update 전 canonical config/team/run/knowledge와 changed path snapshot, SQLite/runtime/backup/foreign orchestration 제외, exact 7일 경계 이후 validated unreferenced backup만 정리 |
 | 저장소 | 비기밀 canonical source와 data는 Git 추적, runtime/cache/SQLite 제외 |
-| 배포 정본 | GitHub Releases |
+| 배포 정본 | GitHub Releases의 5개 native artifact·SHA-256·attestation; npm·직접 installer는 동일 binary의 배포 adapter |
+| npm 설치 | Public `aigent-hive` umbrella + exact `@aigent-hive/*` platform package, `npm install -g aigent-hive`, `0.8.0`은 `latest`, 별도 preview tag 없음 |
 | host projection | User `~/.agents/directives`·`~/.agents/skills` provider-neutral projection + selected host의 thin native adapter; project Codex·Antigravity `.agents/skills`, Claude `.claude/skills`; foreign byte 보존 |
 | role/run | shared role HANDOFF, PLAN-derived criterion, exact evidence locator, immutable owner pin, sensor-independent manual과 one-role usage-guarded automatic no-spawn resume |
 | 현재 버전 | Phase 6 verifier-only signed release와 safe update milestone `0.7.0`; root Cargo workspace version이 정본, `workspace.metadata.hive.release-date`는 release date 정본 |
 | 버전 증가 | feature는 원칙적으로 `Y`, compatible quick bugfix는 `Z`; `X`는 exact target을 사용자가 명시하고 human confirmation한 경우에만 |
 | 호환성 | major `0`을 포함해 같은 major만 non-breaking upgrade 보장 |
 | cross-major | 사전 경고, 자동 migration, project/docs/preferences 보존, SQLite rebuild |
-| release workflow | OS-signed candidate build, offline GitHub Sigstore bundle·platform evidence, external TUF authorization과 public publication 분리; candidate는 tag/release 권한 없음 |
-| install ownership | fixed official URL+archive allowlist+OS signature를 통과한 direct receipt만 Hive-owned; Homebrew/WinGet binary는 package manager 소유, Hive의 덮어쓰기·manager 실행 금지 |
+| release workflow | `0.8.0`은 5개 target build·digest·GitHub attestation·npm tarball staging과 GitHub normal release·npm `latest` publication 분리; OS signing·external TUF는 후속 opt-in hardened gate |
+| install ownership | Official URL+archive allowlist+SHA-256를 통과한 direct receipt만 Hive-owned; npm 등 package-manager binary는 해당 manager 소유, Hive의 덮어쓰기·manager 실행 금지 |
 | Antigravity plugin ownership | Hive는 `~/.hive/marketplaces/antigravity/` source package만 소유. `agy` staging·import manifest는 host 소유이며 Hive ledger에서 제외. Mutation 전 staging 전체를 authenticated prior와 exact 비교하고 foreign entry는 보존. 신규 rollback은 uninstall, refresh rollback은 prior source 재설치 |
 | Git | `main` 안정, `develop` 일반 개발; `develop → main` PR |
 | 라이선스 | CLI/source, `harness/**`와 생성된 Hive 소유 material 모두 `Apache-2.0` |

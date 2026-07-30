@@ -53,8 +53,8 @@
   callback receipt time 기반 freshness와 sanitized ignored snapshot 구현
 - [x] [NUS-019] Existing status line non-clobbering integration snippet·preview 제공,
   미설정·trust 거절·first response 이전·stale capture를 native unavailable로 분류
-Post-preview deferred `NUS-020`: 실제 Claude Pro/Max host의 5-hour·7-day parity,
-독립 window omission, existing status line non-clobber qualification. `0.8.0` preview
+Pre-1.0 deferred `NUS-020`: 실제 Claude Pro/Max host의 5-hour·7-day parity,
+독립 window omission, existing status line non-clobber qualification. `0.8.0`
 차단 조건 제외, subscription 확보 뒤 active checklist 재등록.
 
 ## 3. Antigravity native sensor
@@ -115,4 +115,4 @@ Post-preview deferred `NUS-020`: 실제 Claude Pro/Max host의 5-hour·7-day par
 
 ## Deferred evidence
 
-- `NUS-020`: 실제 Claude Pro/Max qualification, `0.8.0` preview 비차단
+- `NUS-020`: 실제 Claude Pro/Max qualification, `0.8.0` 비차단
