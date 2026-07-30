@@ -289,6 +289,7 @@ class Phase3SkillSourceContract(unittest.TestCase):
         }
         expected_fragments = {
             "active/documentation-style.md",
+            "active/docs-wiki-migration.md",
             "active/native-usage-sensor.md",
             "active/plugin-project-lifecycle.md",
             "active/release-0.8.0.md",
@@ -309,6 +310,7 @@ class Phase3SkillSourceContract(unittest.TestCase):
 
         active_fragments = [
             plan_root / "active/documentation-style.md",
+            plan_root / "active/docs-wiki-migration.md",
             plan_root / "active/native-usage-sensor.md",
             plan_root / "active/plugin-project-lifecycle.md",
             plan_root / "active/release-0.8.0.md",
@@ -322,6 +324,7 @@ class Phase3SkillSourceContract(unittest.TestCase):
             {path.relative_to(plan_root).as_posix() for path in active_fragments},
             {
                 "active/documentation-style.md",
+                "active/docs-wiki-migration.md",
                 "active/native-usage-sensor.md",
                 "active/plugin-project-lifecycle.md",
                 "active/release-0.8.0.md",
@@ -397,6 +400,7 @@ class Phase3SkillSourceContract(unittest.TestCase):
         )
         phase_7_path = plan_root / "phases/07-public-qualification.md"
         documentation_path = plan_root / "active/documentation-style.md"
+        docs_wiki_path = plan_root / "active/docs-wiki-migration.md"
         native_usage_path = plan_root / "active/native-usage-sensor.md"
         plugin_project_path = plan_root / "active/plugin-project-lifecycle.md"
         security_review_path = plan_root / "active/security-review.md"
@@ -428,6 +432,7 @@ class Phase3SkillSourceContract(unittest.TestCase):
             ),
             ("Documentation style", *checklist_counts([documentation_path])),
             ("Security review", *checklist_counts([security_review_path])),
+            ("Docs Wiki migration", *checklist_counts([docs_wiki_path])),
         )
         total_done = sum(row[1] for row in progress_rows)
         total_open = sum(row[2] for row in progress_rows)

@@ -2,9 +2,9 @@
 
 - 기준 branch: `develop`
 - product version: `0.7.0`
-- plan revision: `1.63`
+- plan revision: `1.64`
 - 현재 milestone: Phase 7 qualification + global onboarding·shared index `0.8.0`
-- 현재 작업: `0.8.0` npm·curl 시험 배포와 bilingual onboarding·update 구현
+- 현재 작업: `docs/` Wiki 전환·README knowledge 복원 뒤 `0.8.0` update 구현
 - 외부 중지 경계: GitHub Release·npm `latest`, protected signing/publication credential,
   exact `1.0.0` 사용자 authority
 - Plan load: compact `docs/plans/PLAN.md` + `docs/plans/phases/07-public-qualification.md`
@@ -14,8 +14,9 @@
   + `docs/plans/active/source-llm-wiki.md`
   + `docs/plans/active/windows-shell-install.md`
   + `docs/plans/active/documentation-style.md` + `docs/plans/active/security-review.md`
+  + `docs/plans/active/docs-wiki-migration.md`
   + `docs/plans/active/release-0.8.0.md`
-- Plan completion: canonical checklist `215/223` 완료, `8`개 미완료, `96.4%`
+- Plan completion: canonical checklist `215/227` 완료, `12`개 미완료, `94.7%`
 - Latest local Windows: Rust workspace 전체 PASS, PowerShell 5.1·7.6.4 installer와
   `cmd.exe` bootstrap 계약 PASS
 - Latest remote: `9fb2552`의 CI `30479010450` 7/7 PASS, `d39ce7f`의 native
@@ -25,7 +26,20 @@
   `active/user-onboarding-shared-index.md`, `active/source-llm-wiki.md`,
   `active/windows-shell-install.md`,
   `active/documentation-style.md`, `active/security-review.md`,
+  `active/docs-wiki-migration.md`,
   `active/release-0.8.0.md`로 해석
+
+## `docs/` Wiki 전환
+
+- 결정: [`ADR-0014`](../decisions/ADR-0014-docs-wiki-architecture.md)
+- Active fragment:
+  [`docs-wiki-migration.md`](../plans/active/docs-wiki-migration.md)
+- 유지: 간결한 English·Korean README와 빈 QA Contributors 표
+- 복원 source: 간소화 직전 Git `README.md`
+- 목표 구조: `docs/00-home.md`, `docs/01-index.md`, topic MOC,
+  `docs/facts/{en,ko}` atomic pair
+- 제거 대상: migration·reference·query 검증 뒤 별도 `llm-wiki/`
+- 보존 원칙: valid knowledge 이동 우선, deprecated·incorrect·superseded knowledge만 제거
 
 ## Windows shell 설치 경계
 
@@ -218,7 +232,7 @@ Pre-1.0 비차단 deferred:
 계획 evidence:
 
 - Active fragment 8 KiB 제한 충족
-- Canonical checklist `214/223`, active checklist ID 중복 0건
+- Canonical checklist `215/227`, active checklist ID 중복 0건
 - Root English 159줄·Korean 155줄 README, 상호 language link와 빈 QA 표 PASS
 - Plan static contract 29/29, documentation style regression 18/18 PASS
 - Human documentation inventory 258/258 review, finding 0건
@@ -451,9 +465,13 @@ Pre-1.0 비차단 deferred:
 
 ## 다음 action
 
-1. P7-048 daily update check·offline retry
-2. P7-049 interactive owner-aware `hive update`
-3. P7-043·044·045 Linux·npm·direct installer qualification
-4. P7-020 artifact·npm provenance workflow
-5. P7-018 protected `main` exact `0.8.0` candidate qualification
-6. P7-037 GitHub Release 없이 npm `test` publication·clean install
+1. DWK-001 knowledge 이동 우선 directive
+2. DWK-002 docs home·index·MOC와 README knowledge 복원
+3. DWK-003 atomic bilingual fact 분할·이동
+4. DWK-004 Source Wiki 경로 전환과 `llm-wiki/` 제거
+5. P7-048 daily update check·offline retry
+6. P7-049 interactive owner-aware `hive update`
+7. P7-043·044·045 Linux·npm·direct installer qualification
+8. P7-020 artifact·npm provenance workflow
+9. P7-018 protected `main` exact `0.8.0` candidate qualification
+10. P7-037 GitHub Release 없이 npm `test` publication·clean install

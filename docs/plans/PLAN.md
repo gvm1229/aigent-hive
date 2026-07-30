@@ -1,6 +1,6 @@
 # Aigent Hive active plan index
 
-> Revision: 1.63
+> Revision: 1.64
 > 기준일: 2026-07-31
 > Product version: `0.7.0`
 > 현재 milestone: Phase 7 qualification + global onboarding·shared index `0.8.0`
@@ -37,7 +37,8 @@
 | Windows shell install boundary | 3 | 0 | 100% |
 | Documentation style | 5 | 0 | 100% |
 | Security review | 4 | 0 | 100% |
-| **Canonical total** | **215** | **8** | **96.4%** |
+| Docs Wiki migration | 0 | 4 | 0% |
+| **Canonical total** | **215** | **12** | **94.7%** |
 
 External production boundary 항목도 미완료 합계에 포함. Protected authority 없이 완료 처리 금지.
 
@@ -83,6 +84,7 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
 | [`active/windows-shell-install.md`](active/windows-shell-install.md) | `WSI-*` | Consumer PowerShell 5.1·`cmd.exe`와 source-only PowerShell 7 |
 | [`active/documentation-style.md`](active/documentation-style.md) | `DOC-*` | 사람용 문서 style completion gate |
 | [`active/security-review.md`](active/security-review.md) | `SEC-*` | 독립 code·security review finding completion gate |
+| [`active/docs-wiki-migration.md`](active/docs-wiki-migration.md) | `DWK-*` | 지식 보존과 `docs/` Wiki·atomic fact 전환 |
 | [`active/release-0.8.0.md`](active/release-0.8.0.md) | `P7-*` reference | `0.8.0` Linux·npm·직접 설치 실행 순서와 범위 |
 
 ## Reconciliation gate
@@ -104,14 +106,18 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
 
 ## Current execution order
 
-1. P7-048 opt-in daily update check·offline next-session retry
-2. P7-049 interactive owner-aware `hive update`
-3. P7-043 Linux x86_64·arm64 musl release qualification
-4. P7-044 public `aigent-hive` npm package family와 native smoke
-5. P7-045 npm-backed Unix·PowerShell·CMD installer와 digest 검증
-6. P7-020 5개 platform archive·npm tarball provenance
-7. P7-018 protected `main` release candidate qualification
-8. P7-037 GitHub Release 없이 npm `test` publication·clean install 검증
+1. DWK-001 valid knowledge 이동 우선 AI directive
+2. DWK-002 docs home·index·topic MOC와 README knowledge 복원
+3. DWK-003 bilingual atomic fact 분할·이동
+4. DWK-004 Source Wiki CLI·Skill·index 경로 전환과 `llm-wiki/` 제거
+5. P7-048 opt-in daily update check·offline next-session retry
+6. P7-049 interactive owner-aware `hive update`
+7. P7-043 Linux x86_64·arm64 musl release qualification
+8. P7-044 public `aigent-hive` npm package family와 native smoke
+9. P7-045 npm-backed Unix·PowerShell·CMD installer와 digest 검증
+10. P7-020 5개 platform archive·npm tarball provenance
+11. P7-018 protected `main` release candidate qualification
+12. P7-037 GitHub Release 없이 npm `test` publication·clean install 검증
 
 ## `0.8.0` 비차단 deferred boundary
 
