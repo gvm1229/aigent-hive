@@ -125,6 +125,7 @@ def run_python(arguments: Sequence[str]) -> None:
     rustc = resolve_tool("rustc", rust_tool=True)
     environment = tool_environment(uv, cargo, rustc)
     environment["RUSTC"] = str(rustc)
+    environment.pop("HIVE_WINDOWS_SOURCE_USAGE_GUARD_SUBSET", None)
     unittest_arguments = list(arguments) or [
         "discover",
         "-s",
