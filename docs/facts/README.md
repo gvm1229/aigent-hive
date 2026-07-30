@@ -45,6 +45,7 @@
 | Release verification | [en](en/release-verification.md) | [ko](ko/release-verification.md) |
 | Linux musl qualification | [en](en/linux-musl-qualification.md) | [ko](ko/linux-musl-qualification.md) |
 | Test fault isolation | [en](en/test-fault-isolation.md) | [ko](ko/test-fault-isolation.md) |
+| Windows namespace gate timeout | [en](en/windows-namespace-gate-timeout.md) | [ko](ko/windows-namespace-gate-timeout.md) |
 | Update transaction | [en](en/update-transaction.md) | [ko](ko/update-transaction.md) |
 | Update discovery | [en](en/update-discovery.md) | [ko](ko/update-discovery.md) |
 | Version policy | [en](en/version-policy.md) | [ko](ko/version-policy.md) |
