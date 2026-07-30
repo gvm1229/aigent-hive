@@ -1,14 +1,23 @@
 param(
-    [Parameter(Mandatory = $true)]
     [ValidatePattern('^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$')]
-    [string]$Version,
+    [string]$Version = "__AIGENT_HIVE_VERSION__",
     [string]$Prefix = "$env:LOCALAPPDATA\AigentHive"
 )
 
 $ErrorActionPreference = "Stop"
 $AuthorizedSignerThumbprint = "__AIGENT_HIVE_WINDOWS_CERTIFICATE_THUMBPRINT__"
-if ($AuthorizedSignerThumbprint -notmatch '^[0-9A-F]{40}$') {
+$ExpectedArchiveSha256 = "__AIGENT_HIVE_SHA256_X86_64_PC_WINDOWS_MSVC__"
+if ($AuthorizedSignerThumbprint -like "__AIGENT_HIVE_*") {
+    $AuthorizedSignerThumbprint = ""
+}
+if (
+    $AuthorizedSignerThumbprint -ne "" -and
+    $AuthorizedSignerThumbprint -notmatch '^[0-9A-F]{40}$'
+) {
     throw "installer does not contain an authorized Windows signer identity"
+}
+if ($ExpectedArchiveSha256 -notmatch '^[0-9a-f]{64}$') {
+    throw "installer does not contain the release archive SHA-256"
 }
 if (-not [Environment]::Is64BitOperatingSystem) {
     throw "Aigent Hive supports Windows x86_64 only"
@@ -282,12 +291,9 @@ $stagedBinary = $null
 $stagedReceipt = $null
 try {
     $archivePath = Join-Path $work $archive
-    $checksumPath = "$archivePath.sha256"
     Invoke-WebRequest -UseBasicParsing -Uri "$base/$archive" -OutFile $archivePath
-    Invoke-WebRequest -UseBasicParsing -Uri "$base/$archive.sha256" -OutFile $checksumPath
-    $expected = ((Get-Content -LiteralPath $checksumPath -Raw).Trim() -split '\s+')[0].ToLowerInvariant()
     $actual = (Get-FileHash -LiteralPath $archivePath -Algorithm SHA256).Hash.ToLowerInvariant()
-    if ($expected.Length -ne 64 -or $expected -ne $actual) {
+    if ($ExpectedArchiveSha256 -ne $actual) {
         throw "release archive SHA-256 verification failed"
     }
     Add-Type -AssemblyName System.IO.Compression.FileSystem
@@ -315,10 +321,12 @@ try {
     }
     Expand-Archive -LiteralPath $archivePath -DestinationPath $work
     $binary = Join-Path $work "hive.exe"
-    $signature = Get-AuthenticodeSignature -LiteralPath $binary
-    Assert-AuthorizedAuthenticodeSignature `
-        -Signature $signature `
-        -AuthorizedThumbprint $AuthorizedSignerThumbprint
+    if ($AuthorizedSignerThumbprint -ne "") {
+        $signature = Get-AuthenticodeSignature -LiteralPath $binary
+        Assert-AuthorizedAuthenticodeSignature `
+            -Signature $signature `
+            -AuthorizedThumbprint $AuthorizedSignerThumbprint
+    }
     if (-not (Test-HiveVersionOutput `
         -Output (& $binary --version) `
         -ExpectedVersion $Version

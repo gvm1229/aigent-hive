@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import re
@@ -48,10 +49,16 @@ def macos_installer_fixture(root: Path, actual_team_id: str) -> tuple[Path, Path
         raise unittest.SkipTest("macOS installer fixture is unavailable on Windows")
     source = (ROOT / "scripts/install.sh").read_text(encoding="utf-8")
     installer = root / "install.sh"
-    installer.write_text(
-        source.replace("__AIGENT_HIVE_APPLE_TEAM_ID__", "FIXTURE123"),
-        encoding="utf-8",
-    )
+    replacements = {
+        "__AIGENT_HIVE_APPLE_TEAM_ID__": "FIXTURE123",
+        "__AIGENT_HIVE_SHA256_AARCH64_APPLE_DARWIN__": "0" * 64,
+        "__AIGENT_HIVE_SHA256_X86_64_APPLE_DARWIN__": "0" * 64,
+        "__AIGENT_HIVE_SHA256_AARCH64_UNKNOWN_LINUX_MUSL__": "0" * 64,
+        "__AIGENT_HIVE_SHA256_X86_64_UNKNOWN_LINUX_MUSL__": "0" * 64,
+    }
+    for marker, value in replacements.items():
+        source = source.replace(marker, value)
+    installer.write_text(source, encoding="utf-8")
     installer.chmod(0o755)
     commands = root / "commands"
     commands.mkdir()
@@ -516,6 +523,64 @@ class Phase6StaticContracts(unittest.TestCase):
             self.assertIn(required, agy_fixture)
         self.assertNotIn("subprocess", agy_fixture)
 
+    def test_direct_installer_renderer_pins_version_and_five_artifact_digests(
+        self,
+    ) -> None:
+        targets = {
+            "aarch64-apple-darwin": ".tar.gz",
+            "x86_64-apple-darwin": ".tar.gz",
+            "aarch64-unknown-linux-musl": ".tar.gz",
+            "x86_64-unknown-linux-musl": ".tar.gz",
+            "x86_64-pc-windows-msvc": ".zip",
+        }
+        with tempfile.TemporaryDirectory(prefix="hive-installers-") as temporary:
+            root = Path(temporary)
+            dist = root / "dist"
+            output = root / "output"
+            dist.mkdir()
+            for target, suffix in targets.items():
+                name = f"aigent-hive-0.8.0-{target}{suffix}"
+                artifact = dist / name
+                artifact.write_bytes(f"artifact:{target}".encode())
+                digest = hashlib.sha256(artifact.read_bytes()).hexdigest()
+                (dist / f"{name}.sha256").write_text(
+                    f"{digest}  {name}\n",
+                    encoding="ascii",
+                )
+            subprocess.run(
+                [
+                    sys.executable,
+                    str(ROOT / "scripts/render-installers.py"),
+                    "--version",
+                    "0.8.0",
+                    "--dist",
+                    str(dist),
+                    "--output",
+                    str(output),
+                ],
+                cwd=ROOT,
+                check=True,
+            )
+            shell = (output / "install.sh").read_text(encoding="utf-8")
+            powershell = (output / "install.ps1").read_text(encoding="utf-8")
+            cmd = (output / "install.cmd").read_text(encoding="utf-8")
+            self.assertNotRegex(
+                shell + powershell + cmd,
+                r"__AIGENT_HIVE_[A-Z0-9_]+__",
+            )
+            self.assertIn("embedded_version='0.8.0'", shell)
+            self.assertIn("x86_64-unknown-linux-musl", shell)
+            self.assertIn("aarch64-unknown-linux-musl", shell)
+            self.assertNotIn("$archive.sha256", shell)
+            self.assertIn('[string]$Version = "0.8.0"', powershell)
+            self.assertNotIn("$archive.sha256", powershell)
+            self.assertIn('set "HIVE_INSTALL_VERSION=0.8.0"', cmd)
+            self.assertIn(
+                "releases/download/v%HIVE_INSTALL_VERSION%/install.ps1",
+                cmd,
+            )
+            self.assertIn("DisableDelayedExpansion", cmd)
+
     def test_direct_homebrew_and_winget_paths_preserve_binary_ownership(self) -> None:
         shell = (ROOT / "scripts/install.sh").read_text(encoding="utf-8")
         powershell = (ROOT / "scripts/install.ps1").read_text(encoding="utf-8")
@@ -535,9 +600,15 @@ class Phase6StaticContracts(unittest.TestCase):
             powershell,
         )
         self.assertIn("__AIGENT_HIVE_APPLE_TEAM_ID__", shell)
+        self.assertIn("__AIGENT_HIVE_SHA256_X86_64_UNKNOWN_LINUX_MUSL__", shell)
+        self.assertIn("__AIGENT_HIVE_SHA256_AARCH64_UNKNOWN_LINUX_MUSL__", shell)
         self.assertNotIn("AIGENT_HIVE_MACOS_TEAM_ID", shell)
         self.assertIn("TeamIdentifier", shell)
         self.assertIn("SignerCertificate.Thumbprint", powershell)
+        self.assertIn(
+            "__AIGENT_HIVE_SHA256_X86_64_PC_WINDOWS_MSVC__",
+            powershell,
+        )
         self.assertIn("matches_hive_version", shell)
         self.assertIn("Test-HiveVersionOutput", powershell)
         self.assertIn("(released ", shell)
@@ -556,7 +627,7 @@ class Phase6StaticContracts(unittest.TestCase):
         self.assertIn('owner":"direct"', shell)
         self.assertIn('owner = "direct"', powershell)
         self.assertNotIn("grep -q", shell)
-        self.assertIn('owned_digest=$(shasum -a 256 "$owned_binary"', shell)
+        self.assertIn('owned_digest=$(sha256_file "$owned_binary")', shell)
         self.assertIn('[ "$parsed_digest" = "$owned_digest" ]', shell)
         self.assertIn('verify_owned_pair "$prefix/bin/hive" "$receipt"', shell)
         self.assertIn("ensure_safe_directory_chain", shell)
@@ -584,6 +655,8 @@ class Phase6StaticContracts(unittest.TestCase):
         )
         self.assertNotIn("AIGENT_HIVE_RELEASE_BASE", shell)
         self.assertNotIn("ReleaseBase", powershell)
+        self.assertNotIn("$archive.sha256", shell)
+        self.assertNotIn("$archive.sha256", powershell)
         self.assertIn("on_arm do", formula)
         self.assertIn("on_intel do", formula)
         self.assertIn("PortableCommandAlias: hive", winget)
