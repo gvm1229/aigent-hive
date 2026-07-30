@@ -85,7 +85,9 @@ if migration["target_version"] != requested:
 
 readme = (root / "README.md").read_text(encoding="utf-8")
 readme_match = re.search(
-    r"(?m)^\| Product version \| `([^`]+)` \|$",
+    r"(?m)^\[!\[Version\]\("
+    r"https://img\.shields\.io/badge/version-([0-9]+\.[0-9]+\.[0-9]+)-"
+    r"[^)]+\)\]\([^)]+\)$",
     readme,
 )
 if readme_match is None or readme_match.group(1) != requested:
