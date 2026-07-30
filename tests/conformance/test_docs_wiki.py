@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import hashlib
 import re
 import unittest
 from pathlib import Path
+
+import yaml
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -65,6 +68,51 @@ class DocsWikiConformance(unittest.TestCase):
             "Plans",
         ):
             self.assertIn(f"## {topic}", index)
+
+    def test_fact_pages_are_atomic_exact_bilingual_pairs(self) -> None:
+        facts = DOCS / "facts"
+        pages: dict[tuple[str, str], tuple[dict[str, object], str]] = {}
+        for language in ("en", "ko"):
+            for path in sorted((facts / language).glob("*.md")):
+                text = path.read_text(encoding="utf-8")
+                self.assertTrue(text.startswith("---\n"), path)
+                frontmatter_text, body = text[4:].split("\n---\n", 1)
+                frontmatter = yaml.safe_load(frontmatter_text)
+                slug = path.stem
+                self.assertEqual(frontmatter["topic_slug"], slug)
+                self.assertEqual(frontmatter["pair_id"], slug)
+                self.assertEqual(frontmatter["language"], language)
+                other = "ko" if language == "en" else "en"
+                self.assertEqual(frontmatter["counterpart"], f"../{other}/{slug}.md")
+                self.assertEqual(body.count("\n# "), 1)
+                self.assertNotIn("\n## ", body)
+                self.assertLessEqual(len(body.encode("utf-8")), 800)
+                for field in ("links", "sources", "tags"):
+                    values = frontmatter[field]
+                    self.assertEqual(values, sorted(set(values)))
+                for source in frontmatter["sources"]:
+                    match = re.fullmatch(
+                        r"repo:([^#]+)#sha256:([0-9a-f]{64})", source
+                    )
+                    self.assertIsNotNone(match, source)
+                    source_path = ROOT / match.group(1)
+                    self.assertTrue(source_path.is_file(), source)
+                    self.assertEqual(
+                        hashlib.sha256(source_path.read_bytes()).hexdigest(),
+                        match.group(2),
+                    )
+                pages[(language, slug)] = (frontmatter, body)
+
+        slugs = {slug for _, slug in pages}
+        self.assertGreaterEqual(len(slugs), 20)
+        self.assertEqual(
+            {slug for language, slug in pages if language == "en"},
+            {slug for language, slug in pages if language == "ko"},
+        )
+        for (language, slug), (frontmatter, _) in pages.items():
+            with self.subTest(language=language, slug=slug):
+                for link in frontmatter["links"]:
+                    self.assertIn(link, slugs)
 
 
 if __name__ == "__main__":

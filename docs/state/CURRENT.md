@@ -2,7 +2,7 @@
 
 - 기준 branch: `develop`
 - product version: `0.7.0`
-- plan revision: `1.66`
+- plan revision: `1.67`
 - 현재 milestone: Phase 7 qualification + global onboarding·shared index `0.8.0`
 - 현재 작업: `docs/` Wiki 전환·README knowledge 복원 뒤 `0.8.0` update 구현
 - 외부 중지 경계: GitHub Release·npm `latest`, protected signing/publication credential,
@@ -16,7 +16,7 @@
   + `docs/plans/active/documentation-style.md` + `docs/plans/active/security-review.md`
   + `docs/plans/active/docs-wiki-migration.md`
   + `docs/plans/active/release-0.8.0.md`
-- Plan completion: canonical checklist `217/227` 완료, `10`개 미완료, `95.6%`
+- Plan completion: canonical checklist `218/227` 완료, `9`개 미완료, `96.0%`
 - Latest local Windows: Rust workspace 전체 PASS, PowerShell 5.1·7.6.4 installer와
   `cmd.exe` bootstrap 계약 PASS
 - Latest remote: `9fb2552`의 CI `30479010450` 7/7 PASS, `d39ce7f`의 native
@@ -44,6 +44,8 @@
   도달성 확인, Git history recoverability 적용
 - Human Wiki: `docs/00-home.md`, `docs/01-index.md`, topic MOC, product overview,
   development guide에서 간소화 직전 README knowledge 복원
+- Atomic knowledge: `docs/facts/en`·`ko` 26개 exact pair, primary fact 1개,
+  cross-link와 source digest
 
 ## Windows shell 설치 경계
 
@@ -236,7 +238,7 @@ Pre-1.0 비차단 deferred:
 계획 evidence:
 
 - Active fragment 8 KiB 제한 충족
-- Canonical checklist `217/227`, active checklist ID 중복 0건
+- Canonical checklist `218/227`, active checklist ID 중복 0건
 - Root English 159줄·Korean 155줄 README, 상호 language link와 빈 QA 표 PASS
 - Plan static contract 29/29, documentation style regression 18/18 PASS
 - Human documentation inventory 258/258 review, finding 0건
@@ -469,11 +471,10 @@ Pre-1.0 비차단 deferred:
 
 ## 다음 action
 
-1. DWK-003 atomic bilingual fact 분할·이동
-2. DWK-004 Source Wiki 경로 전환과 `llm-wiki/` 제거
-3. P7-048 daily update check·offline retry
-4. P7-049 interactive owner-aware `hive update`
-5. P7-043·044·045 Linux·npm·direct installer qualification
-6. P7-020 artifact·npm provenance workflow
-7. P7-018 protected `main` exact `0.8.0` candidate qualification
-8. P7-037 GitHub Release 없이 npm `test` publication·clean install
+1. DWK-004 Source Wiki 경로 전환과 `llm-wiki/` 제거
+2. P7-048 daily update check·offline retry
+3. P7-049 interactive owner-aware `hive update`
+4. P7-043·044·045 Linux·npm·direct installer qualification
+5. P7-020 artifact·npm provenance workflow
+6. P7-018 protected `main` exact `0.8.0` candidate qualification
+7. P7-037 GitHub Release 없이 npm `test` publication·clean install

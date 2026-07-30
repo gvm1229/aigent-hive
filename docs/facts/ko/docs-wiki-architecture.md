@@ -1,0 +1,21 @@
+---
+schema_version: 1
+pair_id: docs-wiki-architecture
+topic_slug: docs-wiki-architecture
+language: ko
+counterpart: ../en/docs-wiki-architecture.md
+title: "`docs/` Wiki 구조"
+summary: "사람용 topic 문서와 atomic fact의 단일 docs Wiki."
+tags: [documentation, wiki]
+aliases: ["Source docs Wiki"]
+sources:
+  - "repo:docs/decisions/ADR-0014-docs-wiki-architecture.md#sha256:99652573c72c2d45b969f8b406bd7a455956559da1253b19894b222a60a6ca59"
+links: [knowledge-preservation, knowledge-storage]
+reviewed_revision: "git:722c8e46dbde5710155b394ef33820ebccd3b85c"
+status: active
+---
+
+# `docs/` Wiki 구조
+
+단일 graph: `docs/` home, 전체 index, topic MOC, 사람이 읽는 architecture·guide,
+`docs/facts/`의 bilingual atomic fact.
