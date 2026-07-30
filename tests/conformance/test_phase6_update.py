@@ -515,6 +515,7 @@ class Phase6StaticContracts(unittest.TestCase):
             "git rev-parse HEAD",
             "lipo -archs",
             "statically linked",
+            "static-pie linked",
             "musl-tools",
             "0x8664",
             "expected-entries.txt",

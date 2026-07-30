@@ -183,7 +183,7 @@ jobs:
           binary="target/$TARGET/release/hive"
           file "$binary" | grep -F "ELF 64-bit"
           file "$binary" | grep -F "$EXPECTED_FILE_ARCHITECTURE"
-          file "$binary" | grep -F "statically linked"
+          file "$binary" | grep -E "statically linked|static-pie linked"
           package="aigent-hive-$VERSION-$TARGET"
           mkdir "$package"
           cp "$binary" "$package/hive"
