@@ -420,13 +420,21 @@ class Phase6StaticContracts(unittest.TestCase):
             triggers["push"]["paths"],
         )
         self.assertEqual(workflow["permissions"], {"contents": "read"})
-        self.assertEqual(set(workflow["jobs"]), {"macos", "windows"})
+        self.assertEqual(set(workflow["jobs"]), {"macos", "linux", "windows"})
         macos_matrix = workflow["jobs"]["macos"]["strategy"]["matrix"]["include"]
         self.assertEqual(
             {(entry["runner"], entry["target"]) for entry in macos_matrix},
             {
                 ("macos-15", "aarch64-apple-darwin"),
                 ("macos-15-intel", "x86_64-apple-darwin"),
+            },
+        )
+        linux_matrix = workflow["jobs"]["linux"]["strategy"]["matrix"]["include"]
+        self.assertEqual(
+            {(entry["runner"], entry["target"]) for entry in linux_matrix},
+            {
+                ("ubuntu-24.04", "x86_64-unknown-linux-musl"),
+                ("ubuntu-24.04-arm", "aarch64-unknown-linux-musl"),
             },
         )
         self.assertEqual(workflow["jobs"]["windows"]["runs-on"], "windows-2025")
@@ -440,13 +448,18 @@ class Phase6StaticContracts(unittest.TestCase):
             "macos-15",
             "macos-15-intel",
             "windows-2025",
+            "ubuntu-24.04-arm",
             "aarch64-apple-darwin",
             "x86_64-apple-darwin",
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
             "x86_64-pc-windows-msvc",
             "cargo build --release --locked",
             "GITHUB_WORKFLOW_SHA",
             "git rev-parse HEAD",
             "lipo -archs",
+            "statically linked",
+            "musl-tools",
             "0x8664",
             "expected-entries.txt",
             '"$package/LICENSE" "$package/hive" | sort',
@@ -469,12 +482,12 @@ class Phase6StaticContracts(unittest.TestCase):
                 "actions/setup-python@"
                 "5fda3b95a4ea91299a34e894583c3862153e4b97"
             ),
-            2,
+            3,
         )
-        self.assertEqual(text.count("--host antigravity"), 6)
-        self.assertEqual(text.count("--dry-run --output json"), 2)
-        self.assertEqual(text.count("--apply --output json"), 2)
-        self.assertEqual(text.count("--validate --output json"), 2)
+        self.assertEqual(text.count("--host antigravity"), 9)
+        self.assertEqual(text.count("--dry-run --output json"), 3)
+        self.assertEqual(text.count("--apply --output json"), 3)
+        self.assertEqual(text.count("--validate --output json"), 3)
         for forbidden in (
             "actions/upload-artifact",
             "actions/attest",
