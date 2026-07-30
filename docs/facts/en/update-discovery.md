@@ -9,9 +9,9 @@ summary: "Opt-in update discovery checks once per successful day without install
 tags: [discovery, update]
 aliases: ["Daily update check"]
 sources:
-  - "repo:docs/decisions/ADR-0013-0.8-release-scope.md#sha256:0a517849c6db000119e9c677b25304ce87a167b094473990dd9a1bb60ab609b6"
+  - "repo:docs/decisions/ADR-0013-0.8-release-scope.md#sha256:2fb97b133d567155c0f333cbe7a401fc7473e849d88db2e2f9b897d7acecb39e"
 links: [global-onboarding, test-distribution]
-reviewed_revision: "git:4e3fb80b77c2e105029c9d6794922c4ce1b2fdeb"
+reviewed_revision: "git:99f39edd08cc4b9d513f073d297bed05e2772c9d"
 status: active
 ---
 

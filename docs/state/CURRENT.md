@@ -130,7 +130,7 @@ Target: `0.8.0`
 - 현재 상태: 영어 30개·한국어 30개 atomic fact, exact pair 30개와 source-confined
   CLI·Skill·material-task completion capture 구현 완료
 - Logical digest:
-  `sha256:465260c190578e6122086bdb6f02eda9afc73e0b6cc0c4be388c75b4e11dd618`
+  `sha256:7ddadf1f834db1c45a9cbc270966db820ee80f492ace8927a6712f7081b600cc`
 - 검증: lint finding·warning 0건, 영어·한국어 query PASS, index 삭제 뒤 query
   fail-closed exit `5`, rebuild equivalence PASS
 - SQLite binary digest는 invocation-local evidence이며 정본·clean-copy equivalence 기준이
