@@ -602,7 +602,7 @@ def validate_render(render_root: Path, input_data_path: Path) -> None:
     if editing_discipline.read_bytes() != canonical_editing_discipline:
         raise AssertionError("rendered editing discipline bytes changed")
     if hashlib.sha256(canonical_editing_discipline).hexdigest() != (
-        "6ff1639897049dea7ccf710c88fe3bcb369d7edf7e62bcd62137ec70a7c7cc24"
+        "2445eeaa461ac04d9a5919a9d5499dac6cbe6300f8b57e3ab00215fbd5426fd9"
     ):
         raise AssertionError("canonical editing discipline digest changed")
 
