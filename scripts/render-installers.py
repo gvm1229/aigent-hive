@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Render version- and digest-pinned direct installers from release artifacts."""
+"""Render version- and digest-pinned direct installers from npm artifacts."""
 
 from __future__ import annotations
 
@@ -14,23 +14,23 @@ ROOT = Path(__file__).resolve().parents[1]
 EXACT_VERSION = re.compile(r"^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$")
 TARGETS = {
     "aarch64-apple-darwin": (
-        ".tar.gz",
+        "aigent-hive-darwin-arm64-{version}.tgz",
         "__AIGENT_HIVE_SHA256_AARCH64_APPLE_DARWIN__",
     ),
     "x86_64-apple-darwin": (
-        ".tar.gz",
+        "aigent-hive-darwin-x64-{version}.tgz",
         "__AIGENT_HIVE_SHA256_X86_64_APPLE_DARWIN__",
     ),
     "aarch64-unknown-linux-musl": (
-        ".tar.gz",
+        "aigent-hive-linux-arm64-{version}.tgz",
         "__AIGENT_HIVE_SHA256_AARCH64_UNKNOWN_LINUX_MUSL__",
     ),
     "x86_64-unknown-linux-musl": (
-        ".tar.gz",
+        "aigent-hive-linux-x64-{version}.tgz",
         "__AIGENT_HIVE_SHA256_X86_64_UNKNOWN_LINUX_MUSL__",
     ),
     "x86_64-pc-windows-msvc": (
-        ".zip",
+        "aigent-hive-win32-x64-{version}.tgz",
         "__AIGENT_HIVE_SHA256_X86_64_PC_WINDOWS_MSVC__",
     ),
 }
@@ -44,22 +44,13 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def read_digest(dist: Path, version: str, target: str, suffix: str) -> str:
-    name = f"aigent-hive-{version}-{target}{suffix}"
-    sidecar = dist / f"{name}.sha256"
-    if not sidecar.is_file() or sidecar.is_symlink():
-        raise SystemExit(f"missing regular checksum sidecar: {sidecar}")
-    fields = sidecar.read_text(encoding="ascii").split()
-    if len(fields) != 2 or fields[1] != name or not re.fullmatch(r"[0-9a-f]{64}", fields[0]):
-        raise SystemExit(f"invalid checksum sidecar: {sidecar}")
+def read_digest(dist: Path, version: str, name_template: str) -> str:
+    name = name_template.format(version=version)
     artifact = dist / name
     if not artifact.is_file() or artifact.is_symlink():
-        raise SystemExit(f"missing regular release artifact: {artifact}")
+        raise SystemExit(f"missing regular npm artifact: {artifact}")
     with artifact.open("rb") as handle:
-        actual = hashlib.file_digest(handle, "sha256").hexdigest()
-    if actual != fields[0]:
-        raise SystemExit(f"release artifact digest mismatch: {artifact}")
-    return fields[0]
+        return hashlib.file_digest(handle, "sha256").hexdigest()
 
 
 def render(source: Path, destination: Path, replacements: dict[str, str]) -> None:
@@ -87,8 +78,8 @@ def main() -> None:
         raise SystemExit("--output must not be a symlink")
 
     replacements = {"__AIGENT_HIVE_VERSION__": args.version}
-    for target, (suffix, marker) in TARGETS.items():
-        replacements[marker] = read_digest(args.dist, args.version, target, suffix)
+    for _, (name_template, marker) in TARGETS.items():
+        replacements[marker] = read_digest(args.dist, args.version, name_template)
 
     render(
         ROOT / "scripts/install.sh",

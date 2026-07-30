@@ -1,4 +1,4 @@
-name: Publish authorized release
+name: Publish npm test distribution
 
 on:
   workflow_dispatch:
@@ -8,15 +8,7 @@ on:
         required: true
         type: string
       candidate_run_id:
-        description: Successful Signed release candidate workflow run id
-        required: true
-        type: string
-      signed_tuf_repository_url:
-        description: Protected HTTPS URL for externally signed TUF repository archive
-        required: true
-        type: string
-      signed_tuf_repository_sha256:
-        description: Exact lowercase SHA-256 of the signed TUF repository archive
+        description: Successful Release candidate workflow run id
         required: true
         type: string
 
@@ -25,20 +17,18 @@ permissions:
 
 jobs:
   publish:
-    name: Verify external authorization and publish
+    name: Verify and publish npm test distribution
     environment: release-publication
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     env:
       VERSION: ${{ inputs.version }}
       RUN_ID: ${{ inputs.candidate_run_id }}
-      SIGNED_URL: ${{ inputs.signed_tuf_repository_url }}
-      EXPECTED_SHA256: ${{ inputs.signed_tuf_repository_sha256 }}
     permissions:
       actions: read
-      contents: write
+      contents: read
+      id-token: write
     steps:
       - name: Validate untrusted dispatch inputs
-        shell: bash
         run: |
           if [[ ! "$VERSION" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
             exit 2
@@ -46,20 +36,14 @@ jobs:
           if [[ ! "$RUN_ID" =~ ^[1-9][0-9]*$ ]]; then
             exit 2
           fi
-          if [[ ! "$EXPECTED_SHA256" =~ ^[0-9a-f]{64}$ ]]; then
-            exit 2
-          fi
-          case "$SIGNED_URL" in
-            https://*) ;;
-            *) exit 2 ;;
-          esac
+          test "$VERSION" = "0.8.0"
       - name: Resolve the exact successful candidate commit
         id: candidate
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           metadata=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RUN_ID")
-          test "$(jq -r .name <<<"$metadata")" = "Signed release candidate"
+          test "$(jq -r .name <<<"$metadata")" = "Release candidate"
           test "$(jq -r .event <<<"$metadata")" = "workflow_dispatch"
           test "$(jq -r .head_branch <<<"$metadata")" = "main"
           test "$(jq -r .conclusion <<<"$metadata")" = "success"
@@ -67,11 +51,17 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ steps.candidate.outputs.sha }}
-      - uses: dtolnay/rust-toolchain@2c7215f132e9ebf062739d9130488b56d53c060c # master 2026-07-16
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          toolchain: stable
-      - name: Enforce product version parity
-        run: scripts/check-release-version.sh "$VERSION"
+          node-version: "24"
+          registry-url: https://registry.npmjs.org
+      - name: Enforce product version and release notes
+        env:
+          CANDIDATE_SHA: ${{ steps.candidate.outputs.sha }}
+        run: |
+          scripts/check-release-version.sh "$VERSION"
+          test -f "docs/releases/$VERSION.md"
+          test "$(git rev-parse HEAD)" = "$CANDIDATE_SHA"
       - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
         with:
           github-token: ${{ github.token }}
@@ -79,191 +69,140 @@ jobs:
           pattern: release-*
           path: dist
           merge-multiple: true
-      - name: Fetch exact externally authorized TUF repository
-        run: |
-          test "$(printf '%s' "$EXPECTED_SHA256" | wc -c)" -eq 64
-          case "$EXPECTED_SHA256" in *[!0-9a-f]*) exit 2 ;; esac
-          curl --fail --location --proto '=https' --tlsv1.2 \
-            --max-filesize 67108864 \
-            --output dist/tuf-repository.tar.gz "$SIGNED_URL"
-          test "$(sha256sum dist/tuf-repository.tar.gz | cut -d' ' -f1)" = "$EXPECTED_SHA256"
-          python3 - <<'PY'
-          import os
-          import shutil
-          import tarfile
-          from pathlib import Path, PurePosixPath
-
-          archive = Path("dist/tuf-repository.tar.gz")
-          destination = Path("signed-repository")
-          max_archive_bytes = 64 * 1024 * 1024
-          max_member_bytes = 64 * 1024 * 1024
-          max_expanded_bytes = 256 * 1024 * 1024
-          max_members = 4096
-
-          if archive.stat().st_size > max_archive_bytes:
-              raise SystemExit("signed TUF archive exceeds the compressed size limit")
-
-          with tarfile.open(archive, mode="r:gz") as repository:
-              members = repository.getmembers()
-              if len(members) > max_members:
-                  raise SystemExit("signed TUF archive contains too many entries")
-
-              normalized = set()
-              expanded_bytes = 0
-              for member in members:
-                  path = PurePosixPath(member.name)
-                  if (
-                      not member.name
-                      or "\\" in member.name
-                      or path.is_absolute()
-                      or any(part in ("", ".", "..") for part in path.parts)
-                  ):
-                      raise SystemExit("signed TUF archive contains an unsafe path")
-                  if member.issym() or member.islnk() or member.isdev() or member.isfifo():
-                      raise SystemExit("signed TUF archive contains a link or special file")
-                  if not (member.isfile() or member.isdir()):
-                      raise SystemExit("signed TUF archive contains an unsupported entry")
-                  if getattr(member, "sparse", None):
-                      raise SystemExit("signed TUF archive contains a sparse file")
-                  if member.name in normalized:
-                      raise SystemExit("signed TUF archive contains a duplicate path")
-                  normalized.add(member.name)
-                  if member.size < 0 or member.size > max_member_bytes:
-                      raise SystemExit("signed TUF archive member exceeds the size limit")
-                  expanded_bytes += member.size
-                  if expanded_bytes > max_expanded_bytes:
-                      raise SystemExit("signed TUF archive exceeds the expanded size limit")
-
-              destination.mkdir(mode=0o755)
-              for member in members:
-                  target = destination.joinpath(*PurePosixPath(member.name).parts)
-                  if member.isdir():
-                      target.mkdir(mode=0o755, parents=True, exist_ok=True)
-                      continue
-                  target.parent.mkdir(mode=0o755, parents=True, exist_ok=True)
-                  source = repository.extractfile(member)
-                  if source is None:
-                      raise SystemExit("signed TUF archive file could not be read")
-                  flags = os.O_CREAT | os.O_EXCL | os.O_WRONLY
-                  if hasattr(os, "O_NOFOLLOW"):
-                      flags |= os.O_NOFOLLOW
-                  descriptor = os.open(target, flags, 0o644)
-                  with source, os.fdopen(descriptor, "wb") as output:
-                      shutil.copyfileobj(source, output, length=1024 * 1024)
-          PY
-      - name: Install the public release root as agent-write-denied input
-        env:
-          RELEASE_ROOT_BASE64: ${{ secrets.HIVE_RELEASE_ROOT_JSON_BASE64 }}
-        run: |
-          test -n "$RELEASE_ROOT_BASE64"
-          printf '%s' "$RELEASE_ROOT_BASE64" | base64 --decode >release-root.json
-          sudo install -d -m 0755 -o root -g root /usr/local/share/aigent-hive
-          sudo install -m 0444 -o root -g root release-root.json \
-            /usr/local/share/aigent-hive/release-root.json
-          rm -f release-root.json
-      - name: Verify TUF authorization and exact candidate artifacts
+      - name: Verify required artifacts, checksums, and GitHub attestations
         env:
           GH_TOKEN: ${{ github.token }}
-          CANDIDATE_SHA: ${{ steps.candidate.outputs.sha }}
         run: |
-          cargo build --locked --bin hive
-          target/debug/hive release verify \
-            --bundle signed-repository \
-            --trust-root /usr/local/share/aigent-hive/release-root.json \
-            --output json
-          authorized_sha=$(jq -er '.source.commit' \
-            signed-repository/targets/bundle-manifest.json)
-          test "$authorized_sha" = "$CANDIDATE_SHA"
-          for artifact in dist/aigent-hive-*; do
-            case "$artifact" in
-              *.sha256|*.sigstore.json|*.platform-evidence.json|*/tuf-repository.tar.gz)
-                continue
-                ;;
-            esac
-            name=$(basename "$artifact")
-            gh attestation verify "$artifact" \
-              --repo "$GITHUB_REPOSITORY" \
-              --bundle "$artifact.sigstore.json"
-            cmp "$artifact" "signed-repository/targets/$name"
-          done
-          jq -s '{schema_version:1,evidence:sort_by(.artifact_path)}' \
-            dist/*.platform-evidence.json >dist/platform-signing-evidence.json
-          jq -S . dist/platform-signing-evidence.json >dist/platform-signing-evidence.canonical.json
-          jq -S . signed-repository/targets/platform-signing-evidence.json \
-            >signed-repository/platform-signing-evidence.canonical.json
-          cmp dist/platform-signing-evidence.canonical.json \
-            signed-repository/platform-signing-evidence.canonical.json
-          python3 - <<'PY'
-          import json
-          from pathlib import Path
-
-          evidence = json.loads(
-              Path("signed-repository/targets/platform-signing-evidence.json").read_text()
-          )["evidence"]
-          mac = {
-              entry["signer"]["value"]
-              for entry in evidence
-              if entry["platform"] == "macos"
-              and entry["signer"]["kind"] == "apple-team-id"
-          }
-          windows = {
-              entry["signer"]["value"]
-              for entry in evidence
-              if entry["platform"] == "windows"
-              and entry["signer"]["kind"] == "authenticode-certificate-thumbprint"
-          }
-          if len(mac) != 1 or len(windows) != 1:
-              raise SystemExit("signed release does not authorize one identity per platform")
-          replacements = (
-              (
-                  Path("scripts/install.sh"),
-                  Path("dist/install.sh"),
-                  "__AIGENT_HIVE_APPLE_TEAM_ID__",
-                  next(iter(mac)),
-              ),
-              (
-                  Path("scripts/install.ps1"),
-                  Path("dist/install.ps1"),
-                  "__AIGENT_HIVE_WINDOWS_CERTIFICATE_THUMBPRINT__",
-                  next(iter(windows)),
-              ),
+          archives=(
+            "aigent-hive-$VERSION-aarch64-apple-darwin.tar.gz"
+            "aigent-hive-$VERSION-x86_64-apple-darwin.tar.gz"
+            "aigent-hive-$VERSION-aarch64-unknown-linux-musl.tar.gz"
+            "aigent-hive-$VERSION-x86_64-unknown-linux-musl.tar.gz"
+            "aigent-hive-$VERSION-x86_64-pc-windows-msvc.zip"
           )
-          for source, destination, marker, value in replacements:
-              rendered = source.read_text()
-              if rendered.count(marker) != 1:
-                  raise SystemExit(f"installer signer marker is invalid: {source}")
-              destination.write_text(rendered.replace(marker, value))
-          PY
+          npm_archives=(
+            "aigent-hive-darwin-arm64-$VERSION.tgz"
+            "aigent-hive-darwin-x64-$VERSION.tgz"
+            "aigent-hive-linux-arm64-$VERSION.tgz"
+            "aigent-hive-linux-x64-$VERSION.tgz"
+            "aigent-hive-win32-x64-$VERSION.tgz"
+            "aigent-hive-$VERSION.tgz"
+          )
+          for archive in "${archives[@]}"; do
+            test -f "dist/$archive"
+            test -f "dist/$archive.sha256"
+            read -r digest name extra <"dist/$archive.sha256"
+            test -z "${extra:-}"
+            test "$name" = "$archive"
+            test "$digest" = "$(sha256sum "dist/$archive" | cut -d' ' -f1)"
+            gh attestation verify "dist/$archive" --repo "$GITHUB_REPOSITORY"
+          done
+          for archive in "${npm_archives[@]}"; do
+            test -f "dist/$archive"
+            gh attestation verify "dist/$archive" --repo "$GITHUB_REPOSITORY"
+          done
+      - name: Verify npm manifests and native binary byte identity
+        run: |
+          verify_package() {
+            archive=$1
+            expected_name=$2
+            manifest=$(tar -xOf "$archive" package/package.json)
+            test "$(jq -r .name <<<"$manifest")" = "$expected_name"
+            test "$(jq -r .version <<<"$manifest")" = "$VERSION"
+            test "$(jq -r '.scripts // empty' <<<"$manifest")" = ""
+          }
+          verify_identity() {
+            native_archive=$1
+            npm_archive=$2
+            executable=$3
+            root=$(mktemp -d)
+            mkdir "$root/native" "$root/npm"
+            case "$native_archive" in
+              *.zip) unzip -q "$native_archive" -d "$root/native" ;;
+              *.tar.gz) tar -xzf "$native_archive" -C "$root/native" ;;
+              *) exit 4 ;;
+            esac
+            tar -xzf "$npm_archive" -C "$root/npm"
+            if [[ "$native_archive" = *.zip ]]; then
+              cmp "$root/native/$executable" "$root/npm/package/bin/$executable"
+            else
+              mapfile -t native_directories < <(
+                find "$root/native" -mindepth 1 -maxdepth 1 -type d
+              )
+              test "${#native_directories[@]}" -eq 1
+              cmp "${native_directories[0]}/$executable" \
+                "$root/npm/package/bin/$executable"
+            fi
+          }
+          verify_package "dist/aigent-hive-darwin-arm64-$VERSION.tgz" \
+            "@aigent-hive/darwin-arm64"
+          verify_package "dist/aigent-hive-darwin-x64-$VERSION.tgz" \
+            "@aigent-hive/darwin-x64"
+          verify_package "dist/aigent-hive-linux-arm64-$VERSION.tgz" \
+            "@aigent-hive/linux-arm64"
+          verify_package "dist/aigent-hive-linux-x64-$VERSION.tgz" \
+            "@aigent-hive/linux-x64"
+          verify_package "dist/aigent-hive-win32-x64-$VERSION.tgz" \
+            "@aigent-hive/win32-x64"
+          verify_package "dist/aigent-hive-$VERSION.tgz" "aigent-hive"
+          umbrella=$(tar -xOf "dist/aigent-hive-$VERSION.tgz" package/package.json)
+          test "$(jq -r '.optionalDependencies | length' <<<"$umbrella")" = 5
+          test "$(jq -r --arg version "$VERSION" \
+            '[.optionalDependencies[] == $version] | all' <<<"$umbrella")" = true
+          for installer in install.sh install.ps1 install.cmd; do
+            tar -xOf "dist/aigent-hive-$VERSION.tgz" \
+              "package/$installer" >"dist/$installer"
+          done
           chmod 0755 dist/install.sh
-      - name: Refuse an existing tag or release
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          version="$VERSION"
-          if git ls-remote --exit-code --tags origin "refs/tags/v$version"; then
-            echo "tag v$version already exists" >&2
-            exit 3
+          if grep -ER '__AIGENT_HIVE_[A-Z0-9_]+__' \
+            dist/install.sh dist/install.ps1 dist/install.cmd; then
+            exit 5
           fi
-          if gh release view "v$version" >/dev/null 2>&1; then
-            echo "release v$version already exists" >&2
-            exit 3
-          fi
-      - name: Publish exact authorized commit and immutable assets
-        env:
-          GH_TOKEN: ${{ github.token }}
+          grep -F "registry.npmjs.org/@aigent-hive/" dist/install.sh
+          grep -F "registry.npmjs.org/@aigent-hive/" dist/install.ps1
+          grep -F "unpkg.com/aigent-hive@$VERSION/install.ps1" dist/install.cmd
+          verify_identity \
+            "dist/aigent-hive-$VERSION-aarch64-apple-darwin.tar.gz" \
+            "dist/aigent-hive-darwin-arm64-$VERSION.tgz" hive
+          verify_identity \
+            "dist/aigent-hive-$VERSION-x86_64-apple-darwin.tar.gz" \
+            "dist/aigent-hive-darwin-x64-$VERSION.tgz" hive
+          verify_identity \
+            "dist/aigent-hive-$VERSION-aarch64-unknown-linux-musl.tar.gz" \
+            "dist/aigent-hive-linux-arm64-$VERSION.tgz" hive
+          verify_identity \
+            "dist/aigent-hive-$VERSION-x86_64-unknown-linux-musl.tar.gz" \
+            "dist/aigent-hive-linux-x64-$VERSION.tgz" hive
+          verify_identity \
+            "dist/aigent-hive-$VERSION-x86_64-pc-windows-msvc.zip" \
+            "dist/aigent-hive-win32-x64-$VERSION.tgz" hive.exe
+      - name: Refuse existing npm versions
         run: |
-          version="$VERSION"
-          sha="${{ steps.candidate.outputs.sha }}"
-          git tag --annotate "v$version" --message "Aigent Hive v$version" "$sha"
-          git push origin "refs/tags/v$version"
-          gh release create "v$version" \
-            dist/install.sh \
-            dist/install.ps1 \
-            dist/aigent-hive-*.tar.gz \
-            dist/aigent-hive-*.tar.gz.sha256 \
-            dist/aigent-hive-*.tar.gz.sigstore.json \
-            dist/aigent-hive-*.zip \
-            dist/aigent-hive-*.zip.sha256 \
-            dist/aigent-hive-*.zip.sigstore.json \
-            --verify-tag --title "Aigent Hive v$version" \
-            --generate-notes --latest=false
+          packages=(
+            "@aigent-hive/darwin-arm64"
+            "@aigent-hive/darwin-x64"
+            "@aigent-hive/linux-arm64"
+            "@aigent-hive/linux-x64"
+            "@aigent-hive/win32-x64"
+            "aigent-hive"
+          )
+          for package in "${packages[@]}"; do
+            if npm view "$package@$VERSION" version >/dev/null 2>&1; then
+              echo "$package@$VERSION already exists" >&2
+              exit 3
+            fi
+          done
+      - name: Publish npm platform packages and umbrella under test
+        run: |
+          npm publish "dist/aigent-hive-darwin-arm64-$VERSION.tgz" \
+            --access public --provenance --tag test
+          npm publish "dist/aigent-hive-darwin-x64-$VERSION.tgz" \
+            --access public --provenance --tag test
+          npm publish "dist/aigent-hive-linux-arm64-$VERSION.tgz" \
+            --access public --provenance --tag test
+          npm publish "dist/aigent-hive-linux-x64-$VERSION.tgz" \
+            --access public --provenance --tag test
+          npm publish "dist/aigent-hive-win32-x64-$VERSION.tgz" \
+            --access public --provenance --tag test
+          npm publish "dist/aigent-hive-$VERSION.tgz" \
+            --access public --provenance --tag test

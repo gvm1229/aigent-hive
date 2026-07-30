@@ -282,9 +282,9 @@ function Assert-AuthorizedAuthenticodeSignature {
     }
 }
 
-$triple = "x86_64-pc-windows-msvc"
-$archive = "aigent-hive-$Version-$triple.zip"
-$base = "https://github.com/gvm1229/aigent-hive/releases/download/v$Version"
+$npmPackage = "win32-x64"
+$archive = "$npmPackage-$Version.tgz"
+$base = "https://registry.npmjs.org/@aigent-hive/$npmPackage/-"
 $work = Join-Path ([IO.Path]::GetTempPath()) ("aigent-hive-install-" + [Guid]::NewGuid())
 New-Item -ItemType Directory -Path $work | Out-Null
 $stagedBinary = $null
@@ -296,31 +296,41 @@ try {
     if ($ExpectedArchiveSha256 -ne $actual) {
         throw "release archive SHA-256 verification failed"
     }
-    Add-Type -AssemblyName System.IO.Compression.FileSystem
-    $zip = [IO.Compression.ZipFile]::OpenRead($archivePath)
-    try {
-        $entries = @($zip.Entries | ForEach-Object { $_.FullName })
-        $expectedEntries = @("hive.exe", "LICENSE")
-        if (
-            $entries.Count -ne $expectedEntries.Count -or
-            (Compare-Object -ReferenceObject $expectedEntries -DifferenceObject $entries)
-        ) {
-            throw "release archive contains an unexpected path"
-        }
-        if ($zip.Entries | Where-Object {
-            $_.FullName.Contains("\") -or
-            $_.FullName.StartsWith("/") -or
-            $_.FullName.Split("/") -contains ".." -or
-            $_.FullName.EndsWith("/")
-        }) {
-            throw "release archive contains an unsafe or nonregular entry"
-        }
+    $tarCommand = Get-Command tar.exe -ErrorAction SilentlyContinue
+    if ($null -eq $tarCommand) {
+        throw "Windows tar.exe is required to install the npm package"
     }
-    finally {
-        $zip.Dispose()
+    $entries = @(& $tarCommand.Source -tzf $archivePath)
+    if ($LASTEXITCODE -ne 0) {
+        throw "release archive could not be listed"
     }
-    Expand-Archive -LiteralPath $archivePath -DestinationPath $work
-    $binary = Join-Path $work "hive.exe"
+    $expectedEntries = @(
+        "package/LICENSE",
+        "package/README.md",
+        "package/bin/hive.exe",
+        "package/package.json"
+    )
+    if (
+        $entries.Count -ne $expectedEntries.Count -or
+        (Compare-Object `
+            -ReferenceObject ($expectedEntries | Sort-Object) `
+            -DifferenceObject ($entries | Sort-Object))
+    ) {
+        throw "release archive contains an unexpected path"
+    }
+    $verboseEntries = @(& $tarCommand.Source -tvzf $archivePath)
+    if (
+        $LASTEXITCODE -ne 0 -or
+        ($verboseEntries | Where-Object { -not $_.StartsWith("-") })
+    ) {
+        throw "release archive contains an unsafe or nonregular entry"
+    }
+    & $tarCommand.Source -xzf $archivePath -C $work `
+        "package/bin/hive.exe" "package/LICENSE"
+    if ($LASTEXITCODE -ne 0) {
+        throw "release archive could not be extracted"
+    }
+    $binary = Join-Path $work "package\bin\hive.exe"
     if ($AuthorizedSignerThumbprint -ne "") {
         $signature = Get-AuthenticodeSignature -LiteralPath $binary
         Assert-AuthorizedAuthenticodeSignature `

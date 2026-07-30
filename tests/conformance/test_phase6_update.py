@@ -79,17 +79,17 @@ esac
         "shasum": "#!/bin/sh\nprintf '%064d  artifact\\n' 0\n",
         "tar": """#!/bin/sh
 case "$1" in
-  -tzf) printf 'aigent-hive-0.7.0-aarch64-apple-darwin/hive\\naigent-hive-0.7.0-aarch64-apple-darwin/LICENSE\\n' ;;
-  -tvzf) printf '%s\\n%s\\n' '-rwxr-xr-x 0/0 1 1980-01-01 00:00 aigent-hive-0.7.0-aarch64-apple-darwin/hive' '-rw-r--r-- 0/0 1 1980-01-01 00:00 aigent-hive-0.7.0-aarch64-apple-darwin/LICENSE' ;;
+  -tzf) printf 'package/bin/hive\\npackage/LICENSE\\npackage/package.json\\npackage/README.md\\n' ;;
+  -tvzf) printf '%s\\n%s\\n%s\\n%s\\n' '-rwxr-xr-x 0/0 1 1980-01-01 00:00 package/bin/hive' '-rw-r--r-- 0/0 1 1980-01-01 00:00 package/LICENSE' '-rw-r--r-- 0/0 1 1980-01-01 00:00 package/package.json' '-rw-r--r-- 0/0 1 1980-01-01 00:00 package/README.md' ;;
   -xzf)
     while [ "$#" -gt 0 ]; do
       if [ "$1" = "-C" ]; then shift; destination=$1; fi
       shift
     done
-    package="$destination/aigent-hive-0.7.0-aarch64-apple-darwin"
-    mkdir -p "$package"
-    printf '%s\\n' '#!/bin/sh' 'printf "hive 0.7.0 (released 2026-07-24)\\\\n"' >"$package/hive"
-    chmod 0755 "$package/hive"
+    package="$destination/package"
+    mkdir -p "$package/bin"
+    printf '%s\\n' '#!/bin/sh' 'printf "hive 0.7.0 (released 2026-07-24)\\\\n"' >"$package/bin/hive"
+    chmod 0755 "$package/bin/hive"
     : >"$package/LICENSE"
     ;;
 esac
@@ -336,48 +336,97 @@ class Phase6StaticContracts(unittest.TestCase):
         )
         self.assertNotIn("SigningKey", update_source)
 
-    def test_signed_release_workflows_separate_build_authority_and_publication(self) -> None:
+    def test_release_workflows_separate_candidate_and_publication(self) -> None:
         candidate = (ROOT / ".github/workflows/release.yml").read_text(
             encoding="utf-8"
         )
         publication = (
             ROOT / ".github/workflows/release-publish.yml"
         ).read_text(encoding="utf-8")
-        yaml.safe_load(candidate)
-        yaml.safe_load(publication)
+        candidate_workflow = yaml.safe_load(candidate)
+        publication_workflow = yaml.safe_load(publication)
+        self.assertEqual(
+            set(candidate_workflow["jobs"]),
+            {"unix", "windows", "npm-umbrella"},
+        )
+        self.assertEqual(set(publication_workflow["jobs"]), {"publish"})
+        unix_matrix = candidate_workflow["jobs"]["unix"]["strategy"]["matrix"][
+            "include"
+        ]
+        self.assertEqual(
+            {(entry["runner"], entry["target"]) for entry in unix_matrix},
+            {
+                ("macos-15", "aarch64-apple-darwin"),
+                ("macos-15-intel", "x86_64-apple-darwin"),
+                ("ubuntu-24.04", "x86_64-unknown-linux-musl"),
+                ("ubuntu-24.04-arm", "aarch64-unknown-linux-musl"),
+            },
+        )
+        self.assertEqual(
+            candidate_workflow["jobs"]["windows"]["runs-on"],
+            "windows-2025",
+        )
         for required in (
+            "Release candidate",
             "macos-15",
             "macos-15-intel",
+            "ubuntu-24.04",
+            "ubuntu-24.04-arm",
             "windows-2025",
-            "codesign --verify --strict",
-            "notarytool submit",
-            "azure/artifact-signing-action@",
-            "ARTIFACT_SIGNING_CERTIFICATE_THUMBPRINT",
-            "apple-team-id",
-            "authenticode-certificate-thumbprint",
+            "aarch64-apple-darwin",
+            "x86_64-apple-darwin",
+            "aarch64-unknown-linux-musl",
+            "x86_64-unknown-linux-musl",
+            "x86_64-pc-windows-msvc",
+            "scripts/package-npm.mjs",
             "actions/attest@",
-            "release-signing",
+            "actions/upload-artifact@",
+            "npm-umbrella",
+            "refs/heads/main",
+            "github.workflow_sha",
+            "scripts/render-installers.py",
+            "--installer-dir",
         ):
             self.assertIn(required, candidate)
         for required in (
+            "candidate_run_id",
+            "Release candidate",
+            "CANDIDATE_SHA",
+            "gh attestation verify",
+            "dist/install.sh",
+            "dist/install.ps1",
+            "dist/install.cmd",
+            "npm publish",
+            "--provenance",
+            "--tag test",
+            "release-publication",
+            'test "$VERSION" = "0.8.0"',
+        ):
+            self.assertIn(required, publication)
+        for forbidden in (
+            "gh release create",
+            "npm publish",
+            "notarytool",
+            "azure/artifact-signing-action@",
+            "release-signing",
+            "APPLE_CERTIFICATE",
+            "ARTIFACT_SIGNING",
+            "gh release create",
+            "--tag latest",
+        ):
+            self.assertNotIn(forbidden, candidate)
+        for forbidden in (
             "signed_tuf_repository_url",
             "HIVE_RELEASE_ROOT_JSON_BASE64",
             "hive release verify",
-            "CANDIDATE_SHA",
-            "authorized_sha",
-            'test "$authorized_sha" = "$CANDIDATE_SHA"',
-            "gh attestation verify",
             "platform-signing-evidence.canonical.json",
-            "__AIGENT_HIVE_APPLE_TEAM_ID__",
-            "__AIGENT_HIVE_WINDOWS_CERTIFICATE_THUMBPRINT__",
-            "dist/install.sh",
-            "dist/install.ps1",
-            'cmp "$artifact"',
-            "release-publication",
+            "notarytool",
+            "azure/artifact-signing-action@",
             "gh release create",
+            "gh release edit",
+            "--tag latest",
         ):
-            self.assertIn(required, publication)
-        self.assertNotIn("gh release create", candidate)
+            self.assertNotIn(forbidden, publication)
         self.assertNotIn("eval ", candidate + publication)
 
     def test_dispatch_inputs_are_never_interpolated_into_run_scripts(self) -> None:
@@ -505,8 +554,6 @@ class Phase6StaticContracts(unittest.TestCase):
             "notarytool",
             "artifact-signing",
             "gh release",
-            "scripts/install.sh",
-            "scripts/install.ps1",
         ):
             self.assertNotIn(forbidden, text)
 
@@ -527,26 +574,20 @@ class Phase6StaticContracts(unittest.TestCase):
         self,
     ) -> None:
         targets = {
-            "aarch64-apple-darwin": ".tar.gz",
-            "x86_64-apple-darwin": ".tar.gz",
-            "aarch64-unknown-linux-musl": ".tar.gz",
-            "x86_64-unknown-linux-musl": ".tar.gz",
-            "x86_64-pc-windows-msvc": ".zip",
+            "aarch64-apple-darwin": "aigent-hive-darwin-arm64-0.8.0.tgz",
+            "x86_64-apple-darwin": "aigent-hive-darwin-x64-0.8.0.tgz",
+            "aarch64-unknown-linux-musl": "aigent-hive-linux-arm64-0.8.0.tgz",
+            "x86_64-unknown-linux-musl": "aigent-hive-linux-x64-0.8.0.tgz",
+            "x86_64-pc-windows-msvc": "aigent-hive-win32-x64-0.8.0.tgz",
         }
         with tempfile.TemporaryDirectory(prefix="hive-installers-") as temporary:
             root = Path(temporary)
             dist = root / "dist"
             output = root / "output"
             dist.mkdir()
-            for target, suffix in targets.items():
-                name = f"aigent-hive-0.8.0-{target}{suffix}"
+            for target, name in targets.items():
                 artifact = dist / name
                 artifact.write_bytes(f"artifact:{target}".encode())
-                digest = hashlib.sha256(artifact.read_bytes()).hexdigest()
-                (dist / f"{name}.sha256").write_text(
-                    f"{digest}  {name}\n",
-                    encoding="ascii",
-                )
             subprocess.run(
                 [
                     sys.executable,
@@ -569,14 +610,14 @@ class Phase6StaticContracts(unittest.TestCase):
                 r"__AIGENT_HIVE_[A-Z0-9_]+__",
             )
             self.assertIn("embedded_version='0.8.0'", shell)
-            self.assertIn("x86_64-unknown-linux-musl", shell)
-            self.assertIn("aarch64-unknown-linux-musl", shell)
+            self.assertIn("npm_package=linux-x64", shell)
+            self.assertIn("npm_package=linux-arm64", shell)
             self.assertNotIn("$archive.sha256", shell)
             self.assertIn('[string]$Version = "0.8.0"', powershell)
             self.assertNotIn("$archive.sha256", powershell)
             self.assertIn('set "HIVE_INSTALL_VERSION=0.8.0"', cmd)
             self.assertIn(
-                "releases/download/v%HIVE_INSTALL_VERSION%/install.ps1",
+                "unpkg.com/aigent-hive@%HIVE_INSTALL_VERSION%/install.ps1",
                 cmd,
             )
             self.assertIn("DisableDelayedExpansion", cmd)
@@ -619,7 +660,15 @@ class Phase6StaticContracts(unittest.TestCase):
         )
         self.assertIsNotNone(parameter_block)
         self.assertNotIn("AuthorizedSigner", parameter_block.group(1))
-        self.assertIn("[IO.Compression.ZipFile]::OpenRead", powershell)
+        self.assertIn("Get-Command tar.exe", powershell)
+        self.assertIn(
+            "registry.npmjs.org/@aigent-hive/$npmPackage/-",
+            powershell,
+        )
+        self.assertIn(
+            "registry.npmjs.org/@aigent-hive/${npm_package}/-",
+            shell,
+        )
         self.assertIn(
             "existing hive binary is not owned by the direct installer",
             powershell,
@@ -1548,10 +1597,6 @@ try {
         self.assertIn(
             f"version-{version.group(1)}-",
             readme,
-        )
-        self.assertRegex(
-            readme,
-            rf"(?m)^\| Product version \| `{re.escape(version.group(1))}` \|$",
         )
         self.assertIn(
             f"- product version: `{version.group(1)}`",

@@ -52,7 +52,7 @@ function fail(message) {
 
 function parseArguments(argv) {
   if (argv.length < 1 || !["platform", "umbrella"].includes(argv[0])) {
-    fail("usage: package-npm.mjs platform|umbrella --version X.Y.Z --output PATH [--target TRIPLE --binary PATH]");
+    fail("usage: package-npm.mjs platform|umbrella --version X.Y.Z --output PATH [--target TRIPLE --binary PATH] [--installer-dir PATH]");
   }
   const options = { kind: argv[0] };
   for (let index = 1; index < argv.length; index += 2) {
@@ -61,7 +61,7 @@ function parseArguments(argv) {
     if (!flag?.startsWith("--") || value === undefined) {
       fail("npm package arguments must use --name value pairs");
     }
-    if (!["--version", "--output", "--target", "--binary"].includes(flag)) {
+    if (!["--version", "--output", "--target", "--binary", "--installer-dir"].includes(flag)) {
       fail(`unsupported npm package argument: ${flag}`);
     }
     options[flag.slice(2)] = value;
@@ -72,11 +72,17 @@ function parseArguments(argv) {
   if (!options.output) {
     fail("--output is required");
   }
-  if (options.kind === "platform" && (!options.target || !options.binary)) {
+  if (
+    options.kind === "platform"
+    && (!options.target || !options.binary || options["installer-dir"])
+  ) {
     fail("platform packaging requires --target and --binary");
   }
-  if (options.kind === "umbrella" && (options.target || options.binary)) {
-    fail("umbrella packaging does not accept --target or --binary");
+  if (
+    options.kind === "umbrella"
+    && (options.target || options.binary || !options["installer-dir"])
+  ) {
+    fail("umbrella packaging requires --installer-dir and does not accept --target or --binary");
   }
   return options;
 }
@@ -165,6 +171,18 @@ function packagePlatform(options) {
 
 function packageUmbrella(options) {
   const destination = prepareDirectory(options.output, "aigent-hive");
+  const installerDirectory = path.resolve(options["installer-dir"]);
+  const installers = ["install.sh", "install.ps1", "install.cmd"].map((name) => {
+    const installer = requireRegularFile(
+      path.join(installerDirectory, name),
+      `rendered ${name}`,
+    );
+    const text = fs.readFileSync(installer, "utf8");
+    if (/__AIGENT_HIVE_[A-Z0-9_]+__/.test(text)) {
+      fail(`rendered ${name} contains an unresolved marker`);
+    }
+    return [name, installer];
+  });
   const optionalDependencies = Object.fromEntries(
     Object.values(platformDefinitions)
       .map(({ packageName }) => [packageName, options.version])
@@ -175,7 +193,14 @@ function packageUmbrella(options) {
     bin: {
       hive: "bin/hive.cjs",
     },
-    files: ["bin/", "LICENSE", "README.md"],
+    files: [
+      "bin/",
+      "install.sh",
+      "install.ps1",
+      "install.cmd",
+      "LICENSE",
+      "README.md",
+    ],
     engines: {
       node: ">=18",
     },
@@ -188,6 +213,11 @@ function packageUmbrella(options) {
   const packagedShim = path.join(destination, "bin", "hive.cjs");
   fs.copyFileSync(sourceShim, packagedShim, fs.constants.COPYFILE_EXCL);
   fs.chmodSync(packagedShim, 0o755);
+  for (const [name, source] of installers) {
+    const packagedInstaller = path.join(destination, name);
+    fs.copyFileSync(source, packagedInstaller, fs.constants.COPYFILE_EXCL);
+    fs.chmodSync(packagedInstaller, name === "install.sh" ? 0o755 : 0o644);
+  }
   process.stdout.write(`${destination}\n`);
 }
 

@@ -7,6 +7,7 @@ import platform
 import shutil
 import subprocess
 import sys
+import tarfile
 import tempfile
 import unittest
 
@@ -39,6 +40,17 @@ class NpmPackagingContract(unittest.TestCase):
     def setUp(self) -> None:
         if NODE is None or NPM is None:
             self.skipTest("Node.js and npm are unavailable")
+
+    @staticmethod
+    def write_installers(root: Path) -> Path:
+        installers = root / "installers"
+        installers.mkdir()
+        for name in ("install.sh", "install.ps1", "install.cmd"):
+            (installers / name).write_text(
+                f"rendered aigent-hive 0.8.0 {name}\n",
+                encoding="utf-8",
+            )
+        return installers
 
     def test_platform_and_umbrella_packages_use_exact_native_contract(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -75,6 +87,8 @@ class NpmPackagingContract(unittest.TestCase):
                 "umbrella",
                 "--version",
                 "0.8.0",
+                "--installer-dir",
+                str(self.write_installers(work)),
                 "--output",
                 str(output),
             )
@@ -86,6 +100,11 @@ class NpmPackagingContract(unittest.TestCase):
                 {definition[0]: "0.8.0" for definition in TARGETS.values()},
             )
             self.assertNotIn("scripts", umbrella)
+            for name in ("install.sh", "install.ps1", "install.cmd"):
+                self.assertEqual(
+                    (output / "aigent-hive" / name).read_text("utf-8"),
+                    f"rendered aigent-hive 0.8.0 {name}\n",
+                )
 
     def test_npm_pack_and_global_install_launch_native_binary(self) -> None:
         node_path = Path(run("node", "-p", "process.execPath").stdout.strip())
@@ -127,6 +146,8 @@ class NpmPackagingContract(unittest.TestCase):
                 "umbrella",
                 "--version",
                 "0.8.0",
+                "--installer-dir",
+                str(self.write_installers(work)),
                 "--output",
                 str(packages),
             )
@@ -141,6 +162,18 @@ class NpmPackagingContract(unittest.TestCase):
                     cwd=packages / platform_name,
                 ).stdout
             )[0]["filename"]
+            with tarfile.open(dist / platform_pack, mode="r:gz") as archive:
+                self.assertEqual(
+                    sorted(archive.getnames()),
+                    sorted(
+                        (
+                            f"package/bin/{TARGETS[current][3]}",
+                            "package/LICENSE",
+                            "package/package.json",
+                            "package/README.md",
+                        )
+                    ),
+                )
 
             umbrella_manifest_path = packages / "aigent-hive/package.json"
             umbrella_manifest = json.loads(umbrella_manifest_path.read_text("utf-8"))

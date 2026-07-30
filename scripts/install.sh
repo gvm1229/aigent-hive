@@ -32,11 +32,11 @@ case "$operating_system" in
   Darwin)
     case "$(uname -m)" in
       arm64)
-        triple=aarch64-apple-darwin
+        npm_package=darwin-arm64
         expected=$sha_aarch64_apple_darwin
         ;;
       x86_64)
-        triple=x86_64-apple-darwin
+        npm_package=darwin-x64
         expected=$sha_x86_64_apple_darwin
         ;;
       *)
@@ -48,11 +48,11 @@ case "$operating_system" in
   Linux)
     case "$(uname -m)" in
       arm64|aarch64)
-        triple=aarch64-unknown-linux-musl
+        npm_package=linux-arm64
         expected=$sha_aarch64_linux_musl
         ;;
       x86_64|amd64)
-        triple=x86_64-unknown-linux-musl
+        npm_package=linux-x64
         expected=$sha_x86_64_linux_musl
         ;;
       *)
@@ -252,9 +252,8 @@ ensure_safe_directory_chain() {
   done
 }
 
-archive="aigent-hive-${version}-${triple}.tar.gz"
-package="aigent-hive-${version}-${triple}"
-base="https://github.com/gvm1229/aigent-hive/releases/download/v${version}"
+archive="${npm_package}-${version}.tgz"
+base="https://registry.npmjs.org/@aigent-hive/${npm_package}/-"
 curl --fail --location --proto '=https' --tlsv1.2 \
   --output "$work/$archive" "$base/$archive"
 
@@ -263,7 +262,13 @@ if [ "${#expected}" -ne 64 ] || [ "$expected" != "$actual" ]; then
   echo "release archive SHA-256 verification failed" >&2
   exit 5
 fi
-if [ "$(tar -tzf "$work/$archive")" != "$(printf '%s\n%s' "$package/hive" "$package/LICENSE")" ]; then
+actual_entries=$(tar -tzf "$work/$archive" | LC_ALL=C sort)
+expected_entries=$(printf '%s\n' \
+  package/LICENSE \
+  package/README.md \
+  package/bin/hive \
+  package/package.json | LC_ALL=C sort)
+if [ "$actual_entries" != "$expected_entries" ]; then
   echo "release archive contains an unexpected path" >&2
   exit 5
 fi
@@ -271,8 +276,8 @@ if ! tar -tvzf "$work/$archive" | awk 'substr($1, 1, 1) != "-" { exit 1 }'; then
   echo "release archive contains a nonregular entry" >&2
   exit 5
 fi
-tar -xzf "$work/$archive" -C "$work"
-binary="$work/$package/hive"
+tar -xzf "$work/$archive" -C "$work" package/bin/hive package/LICENSE
+binary="$work/package/bin/hive"
 if [ "$operating_system" = Darwin ] && [ -n "$authorized_team_id" ]; then
   codesign --verify --strict --verbose=2 "$binary"
   spctl --assess --type execute --verbose=4 "$binary"
