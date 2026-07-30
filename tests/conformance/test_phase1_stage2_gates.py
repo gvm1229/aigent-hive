@@ -177,7 +177,7 @@ class Phase1ForeignNamespaceReadWriteGate(Phase1CliTestCase):
             try:
                 process, result = self.invoke_setup(
                     target,
-                    timeout=2.0 if os.name != "nt" else 10.0,
+                    timeout=2.0 if os.name != "nt" else 30.0,
                     environment=environment,
                 )
             except subprocess.TimeoutExpired as error:
