@@ -107,7 +107,7 @@
 - [x] [P7-040] current candidate clean clone에서 전체 CI PASS
 - [x] [P7-041] `WSI-*` 통과 Windows 실제 기기 install·setup·auto onboarding·shared index·update
 - [x] [P7-042] Hive Skill implicit 중복 0건과 metadata budget·fresh-session qualification
-- [ ] [P7-043] Linux x86_64·arm64 musl release qualification
+- [x] [P7-043] Linux x86_64·arm64 musl release qualification
 - [ ] [P7-044] `aigent-hive` npm package family·native smoke
 - [ ] [P7-045] Unix·PowerShell·CMD 직접 installer·digest·recovery
 - [x] [P7-046] 영·한 README·빈 QA 표

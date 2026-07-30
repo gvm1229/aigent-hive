@@ -2,7 +2,7 @@
 
 - 기준 branch: `develop`
 - product version: `0.7.0`
-- plan revision: `1.70`
+- plan revision: `1.71`
 - 현재 milestone: Phase 7 qualification + global onboarding·shared index `0.8.0`
 - 현재 작업: `docs/` Wiki 전환·README knowledge 복원 뒤 `0.8.0` update 구현
 - 외부 중지 경계: GitHub Release·npm `latest`, protected signing/publication credential,
@@ -16,11 +16,11 @@
   + `docs/plans/active/documentation-style.md` + `docs/plans/active/security-review.md`
   + `docs/plans/active/docs-wiki-migration.md`
   + `docs/plans/active/release-0.8.0.md`
-- Plan completion: canonical checklist `220/227` 완료, `7`개 미완료, `96.9%`
+- Plan completion: canonical checklist `221/227` 완료, `6`개 미완료, `97.4%`
 - Latest local Windows: Rust workspace 전체 PASS, PowerShell 5.1·7.6.4 installer와
   `cmd.exe` bootstrap 계약 PASS
-- Latest remote: `9fb2552`의 CI `30479010450` 7/7 PASS, `d39ce7f`의 native
-  release runtime `30477685720` 3/3 historical PASS
+- Latest native remote: `baff938`의 run `30581894132`, macOS·Linux·Windows
+  5/5 PASS
 - Native Goal routing: legacy `PLAN.md` checkbox 문구를 `phases/07-public-qualification.md`,
   `active/plugin-project-lifecycle.md`, `active/native-usage-sensor.md`,
   `active/user-onboarding-shared-index.md`, `active/source-docs-wiki.md`,
@@ -44,7 +44,7 @@
   도달성 확인, Git history recoverability 적용
 - Human Wiki: `docs/00-home.md`, `docs/01-index.md`, topic MOC, product overview,
   development guide에서 간소화 직전 README knowledge 복원
-- Atomic knowledge: `docs/facts/en`·`ko` 28개 exact pair, primary fact 1개,
+- Atomic knowledge: `docs/facts/en`·`ko` 29개 exact pair, primary fact 1개,
   cross-link와 source digest
 
 ## Windows shell 설치 경계
@@ -125,10 +125,10 @@ Target: `0.8.0`
 - 장기 방향: host-native·provider-neutral capability 대체 뒤 OMX/OMC 제거
 - Consumer reuse: `hive-wiki` core와 capture·maintenance·query 안전 계약
 - Skill reuse: shared canonical `harness/skills/`, exact source `.agents/skills/` projection
-- 현재 상태: 영어 28개·한국어 28개 atomic fact, exact pair 28개와 source-confined
+- 현재 상태: 영어 29개·한국어 29개 atomic fact, exact pair 29개와 source-confined
   CLI·Skill·material-task completion capture 구현 완료
 - Logical digest:
-  `sha256:2375e981b9a04f928cf66cc88c9b5829941091e6cfc98213471756b5d6fd105f`
+  `sha256:e2a0c26acf834d89c9416e174e5e48d87f0ec2b14ebf2e841ab32b23f15e4f4e`
 - 검증: lint finding·warning 0건, 영어·한국어 query PASS, index 삭제 뒤 query
   fail-closed exit `5`, rebuild equivalence PASS
 - SQLite binary digest는 invocation-local evidence이며 정본·clean-copy equivalence 기준이
@@ -240,10 +240,10 @@ Pre-1.0 비차단 deferred:
 계획 evidence:
 
 - Active fragment 8 KiB 제한 충족
-- Canonical checklist `220/227`, active checklist ID 중복 0건
+- Canonical checklist `221/227`, active checklist ID 중복 0건
 - Root English 159줄·Korean 155줄 README, 상호 language link와 빈 QA 표 PASS
 - Plan static contract 29/29, documentation style regression 18/18 PASS
-- Human documentation inventory 258/258 review, finding 0건
+- Human documentation inventory 1,283/1,283 review, finding 0건
 - Markdown link conformance PASS
 
 ## Phase 7 shipping usage gate
@@ -399,7 +399,7 @@ Global onboarding·shared index local qualification PASS:
 Source docs Wiki targeted qualification PASS:
 
 - `hive-wiki` 33/33, Source Wiki conformance 재검증 PASS
-- Canonical fact 56개, bilingual pair 28개
+- Canonical fact 58개, bilingual pair 29개
 - `lint` finding·warning 0건, 영어·한국어 query PASS
 - Index 삭제 뒤 query fail-closed exit `5`, logical digest·query equivalence rebuild PASS
 - Ignored index·persistent lock의 Git 추적 0건
@@ -429,14 +429,15 @@ Source docs Wiki targeted qualification PASS:
 
 Current remote qualification evidence:
 
-- Current source: `d39ce7f9e86f9c0de8c8517c3e99cca758cba883`
-- GitHub Actions CI:
-  [run `30477685613`](https://github.com/gvm1229/aigent-hive/actions/runs/30477685613),
-  Linux·macOS·Windows 7/7 job PASS
+- Current native source:
+  `baff938b99967b4830eee79daa6c4477a607f427`
 - Native release runtime:
-  [run `30477685720`](https://github.com/gvm1229/aigent-hive/actions/runs/30477685720),
-  macOS arm64·Intel과 Windows x86_64 3/3 job PASS
+  [run `30581894132`](https://github.com/gvm1229/aigent-hive/actions/runs/30581894132),
+  macOS arm64·Intel, Linux musl x86_64·arm64, Windows x86_64 5/5 job PASS
+- Linux 두 target: locked release build, ELF architecture·static linkage, package layout,
+  archive digest·실행, isolated Antigravity install lifecycle PASS
 - P7-040 current clean-clone gate 충족
+- P7-043 Linux x86_64·arm64 musl qualification 충족
 
 검증 경계:
 
@@ -445,7 +446,6 @@ Current remote qualification evidence:
 
 ## `0.8.0` 시험 배포 gate
 
-- P7-043 Linux x86_64·arm64 musl qualification
 - P7-044 public npm package family와 native smoke
 - P7-045 npm-backed Unix·PowerShell·CMD installer와 digest·owner receipt 검증
 - P7-049 authenticated install-owner adapter를 사용하는 interactive `hive update`
@@ -477,10 +477,9 @@ Pre-1.0 비차단 deferred:
 
 ## 다음 action
 
-1. P7-043 Linux x86_64·arm64 musl qualification
-2. P7-044 public npm package family와 native smoke
-3. P7-045 npm-backed Unix·PowerShell·CMD installer와 digest·owner receipt 검증
-4. P7-049 authenticated install-owner adapter를 사용하는 interactive `hive update`
-5. P7-020 artifact·npm provenance workflow
-6. P7-018 protected `main` exact `0.8.0` candidate qualification
-7. P7-037 GitHub Release 없이 npm `test` publication·clean install
+1. P7-044 public npm package family와 native smoke
+2. P7-045 npm-backed Unix·PowerShell·CMD installer와 digest·owner receipt 검증
+3. P7-049 authenticated install-owner adapter를 사용하는 interactive `hive update`
+4. P7-020 artifact·npm provenance workflow
+5. P7-018 protected `main` exact `0.8.0` candidate qualification
+6. P7-037 GitHub Release 없이 npm `test` publication·clean install

@@ -1,6 +1,6 @@
 # Aigent Hive active plan index
 
-> Revision: 1.70
+> Revision: 1.71
 > 기준일: 2026-07-31
 > Product version: `0.7.0`
 > 현재 milestone: Phase 7 qualification + global onboarding·shared index `0.8.0`
@@ -29,7 +29,7 @@
 | 범위 | 완료 | 미완료 | 진행률 |
 | --- | ---: | ---: | ---: |
 | Phase 0–6 | 70 | 0 | 100% |
-| Phase 7 | 42 | 7 | 85.7% |
+| Phase 7 | 43 | 6 | 87.8% |
 | User plugin/project lifecycle | 38 | 0 | 100% |
 | Host-native usage sensors | 24 | 0 | 100% |
 | Global onboarding·shared index | 19 | 0 | 100% |
@@ -38,7 +38,7 @@
 | Documentation style | 5 | 0 | 100% |
 | Security review | 4 | 0 | 100% |
 | Docs Wiki migration | 4 | 0 | 100% |
-| **Canonical total** | **220** | **7** | **96.9%** |
+| **Canonical total** | **221** | **6** | **97.4%** |
 
 External production boundary 항목도 미완료 합계에 포함. Protected authority 없이 완료 처리 금지.
 
@@ -50,8 +50,8 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
   fresh-session 중복 warning 0건
 - 실제 Windows 11 x86_64: Codex user install·global setup·project auto onboarding,
   shared index 1개 project, repeat update·rollback·재검증 PASS
-- Current remote: `9fb2552` CI run `30479010450` 7/7 PASS; native runtime
-  `d39ce7f` run `30477685720` 3/3 historical PASS
+- Current native runtime: `baff938` run `30581894132`, Linux musl x86_64·arm64를
+  포함한 macOS·Linux·Windows 5/5 PASS
 - Windows shell: WSI-001–003 완료, consumer PowerShell 7 dependency 0건,
   source dependency helper의 exact WinGet preview·동의·재검증 PASS
 - Strict Clippy all targets·all features, format check PASS
@@ -108,13 +108,12 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
 
 ## Current execution order
 
-1. P7-043 Linux x86_64·arm64 musl release qualification
-2. P7-044 public `aigent-hive` npm package family와 native smoke
-3. P7-045 npm-backed Unix·PowerShell·CMD installer와 digest·owner receipt 검증
-4. P7-049 authenticated install-owner adapter를 사용하는 interactive `hive update`
-5. P7-020 5개 platform archive·npm tarball provenance
-6. P7-018 protected `main` release candidate qualification
-7. P7-037 GitHub Release 없이 npm `test` publication·clean install 검증
+1. P7-044 public `aigent-hive` npm package family와 native smoke
+2. P7-045 npm-backed Unix·PowerShell·CMD installer와 digest·owner receipt 검증
+3. P7-049 authenticated install-owner adapter를 사용하는 interactive `hive update`
+4. P7-020 5개 platform archive·npm tarball provenance
+5. P7-018 protected `main` release candidate qualification
+6. P7-037 GitHub Release 없이 npm `test` publication·clean install 검증
 
 ## `0.8.0` 비차단 deferred boundary
 
