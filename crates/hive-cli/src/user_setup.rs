@@ -164,6 +164,13 @@ pub(crate) struct UsageGuardPreferences {
     pub(crate) codexbar_fallback_enabled: bool,
 }
 
+#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct UpdateCheckPreferences {
+    #[serde(default)]
+    pub(crate) enabled: bool,
+}
+
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(deny_unknown_fields)]
 pub(crate) struct UserSetupConfig {
@@ -174,6 +181,8 @@ pub(crate) struct UserSetupConfig {
     pub(crate) persona: CatalogSelection,
     pub(crate) selected_hosts: Vec<SelectedHost>,
     pub(crate) skills: SkillPreferences,
+    #[serde(default)]
+    pub(crate) update_check: UpdateCheckPreferences,
     pub(crate) usage_guard: UsageGuardPreferences,
 }
 
@@ -1311,6 +1320,11 @@ fn render_user_directive(config: &UserSetupConfig, resolved_skills: &[String]) -
     };
     let profile = render_catalog_selection(&config.profile);
     let persona = render_catalog_selection(&config.persona);
+    let update_check = if config.update_check.enabled {
+        "enabled"
+    } else {
+        "disabled"
+    };
     match config.interface_language {
         InterfaceLanguage::En => {
             let capture = if config.wiki.enabled {
@@ -1323,7 +1337,7 @@ hook payload, tool output, hidden prompt, or runtime state.\n"
 preserve canonical Markdown until an explicit deletion request.\n"
             };
             format!(
-                "# Aigent Hive user preferences\n\n- Setup state: `operational`\n- Interface language: `en`\n- User profile: {profile}\n- Agent persona: {persona}\n- Selected hosts: `{hosts}`\n- Global Wiki: `{wiki}`\n- Active Skills: `{}`\n{capture}- Ask and answer in English.\n- For ambiguous or detail-poor ordinary prompts, offer one concise optional refine suggestion without automatic rewrite.\n- Never request provider credentials or call model-provider APIs on Hive's behalf.\n",
+                "# Aigent Hive user preferences\n\n- Setup state: `operational`\n- Interface language: `en`\n- User profile: {profile}\n- Agent persona: {persona}\n- Selected hosts: `{hosts}`\n- Global Wiki: `{wiki}`\n- Daily update check: `{update_check}`\n- Active Skills: `{}`\n{capture}- When daily update check is enabled, run `hive update --check --user-root <user-root> --output json` before the first Hive task of each host session. A check may notify but must never install.\n- Ask and answer in English.\n- For ambiguous or detail-poor ordinary prompts, offer one concise optional refine suggestion without automatic rewrite.\n- Never request provider credentials or call model-provider APIs on Hive's behalf.\n",
                 resolved_skills.join(", ")
             )
         }
@@ -1338,7 +1352,7 @@ summary만 사용하고 raw transcript, hook payload, tool output, hidden prompt
 knowledge index를 capture·refresh하지 않음.\n"
             };
             format!(
-                "# Aigent Hive 사용자 설정\n\n- 설정 상태: `operational`\n- Interface language: `ko`\n- 사용자 profile: {profile}\n- Agent persona: {persona}\n- 선택 host: `{hosts}`\n- Global Wiki: `{wiki}`\n- 활성 Skill: `{}`\n{capture}- 질문과 응답은 한국어 사용.\n- 모호하거나 핵심 세부가 부족한 일반 prompt에는 자동 rewrite 없이 간결한 optional refine 제안 1개만 제공.\n- Provider credential을 요청하거나 Hive를 대신해 model-provider API를 호출하지 않음.\n",
+                "# Aigent Hive 사용자 설정\n\n- 설정 상태: `operational`\n- Interface language: `ko`\n- 사용자 profile: {profile}\n- Agent persona: {persona}\n- 선택 host: `{hosts}`\n- Global Wiki: `{wiki}`\n- 일일 update 확인: `{update_check}`\n- 활성 Skill: `{}`\n{capture}- 일일 update 확인이 enabled이면 각 host session의 첫 Hive 작업 전에 `hive update --check --user-root <user-root> --output json` 실행. 확인은 알림만 가능하며 설치 금지.\n- 질문과 응답은 한국어 사용.\n- 모호하거나 핵심 세부가 부족한 일반 prompt에는 자동 rewrite 없이 간결한 optional refine 제안 1개만 제공.\n- Provider credential을 요청하거나 Hive를 대신해 model-provider API를 호출하지 않음.\n",
                 resolved_skills.join(", ")
             )
         }
@@ -1559,6 +1573,7 @@ fn success(
             "persona": config.persona,
             "selected_hosts": config.selected_hosts,
             "resolved_skills": resolved_skills,
+            "update_check": config.update_check,
             "usage_guard": config.usage_guard,
         })),
     }
@@ -1817,6 +1832,21 @@ usage_guard:
         assert!(korean.contains("# Aigent Hive 사용자 설정"));
         assert!(korean.contains("- 질문과 응답은 한국어 사용."));
         assert!(!korean.contains("# Aigent Hive user preferences"));
+    }
+
+    #[test]
+    fn update_check_is_opt_in_and_projects_a_no_install_session_command() {
+        let mut config = valid_config();
+        assert!(!config.update_check.enabled);
+        config.update_check.enabled = true;
+
+        let rendered =
+            String::from_utf8(render_user_directive(&config, &["setup-hive".to_owned()]))
+                .expect("English guidance");
+
+        assert!(rendered.contains("- Daily update check: `enabled`"));
+        assert!(rendered.contains("hive update --check --user-root <user-root> --output json"));
+        assert!(rendered.contains("must never install"));
     }
 
     #[test]

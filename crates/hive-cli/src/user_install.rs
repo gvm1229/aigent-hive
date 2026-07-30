@@ -1500,7 +1500,7 @@ fn render_user_guidance(
             (
                 "# Aigent Hive user directives / 사용자 지침",
                 "Active adapter / 활성 adapter",
-                "- State / 상태: `setup-required`\n- Ask the user to choose `English` or `한국어` first. / 먼저 `English` 또는 `한국어`를 선택하도록 질문.\n- Use the installed `setup-hive` Skill before ordinary Hive Skills. / 일반 Hive Skill보다 설치된 `setup-hive` Skill을 먼저 사용.\n- Before setup completes, only setup, doctor, update, and recover operations are available. / 설정 완료 전 setup, doctor, update, recover만 사용 가능.\n"
+                "- State / 상태: `setup-required`\n- Ask the user to choose `English` or `한국어` first, then ask for daily update-check consent. / 먼저 `English` 또는 `한국어`를 선택하고 일일 update 확인 동의를 질문.\n- Use the installed `setup-hive` Skill before ordinary Hive Skills. / 일반 Hive Skill보다 설치된 `setup-hive` Skill을 먼저 사용.\n- Before setup completes, only setup, doctor, update, and recover operations are available. / 설정 완료 전 setup, doctor, update, recover만 사용 가능.\n"
                     .to_owned(),
                 "- Preserve foreign guidance bytes and modify only exact Hive marker blocks. / Foreign guidance bytes를 보존하고 exact Hive marker block만 변경.\n- Never request provider API credentials or call model-provider APIs on Hive's behalf. / Provider API credential을 요청하거나 Hive를 대신해 model-provider API를 호출하지 않음.\n",
             )
@@ -1517,12 +1517,17 @@ fn render_user_guidance(
             } else {
                 "disabled"
             };
+            let update_check = if config.update_check.enabled {
+                "enabled"
+            } else {
+                "disabled"
+            };
             match config.interface_language {
                 crate::user_setup::InterfaceLanguage::En => (
                     "# Aigent Hive user directives",
                     "Active adapter",
                     format!(
-                        "- State: `operational`\n- Interface language: `en`; ask and answer in English.\n- Selected hosts: `{hosts}`\n- Global Wiki: `{wiki}`\n- Use `setup-harness` for project expedited or custom setup.\n- Project Markdown Wiki remains canonical; the user-root SQLite index is derived and shared.\n- Use `hive-project-upgrade` for project projection upgrades.\n- Offer one optional refine suggestion for ambiguous or detail-poor ordinary prompts; never rewrite automatically.\n"
+                        "- State: `operational`\n- Interface language: `en`; ask and answer in English.\n- Selected hosts: `{hosts}`\n- Global Wiki: `{wiki}`\n- Daily update check: `{update_check}`.\n- When enabled, run `hive update --check --user-root <user-root> --output json` before the first Hive task of each host session; never install from a check.\n- Use `setup-harness` for project expedited or custom setup.\n- Project Markdown Wiki remains canonical; the user-root SQLite index is derived and shared.\n- Use `hive-project-upgrade` for project projection upgrades.\n- Offer one optional refine suggestion for ambiguous or detail-poor ordinary prompts; never rewrite automatically.\n"
                     ),
                     "- Preserve foreign guidance bytes and modify only exact Hive marker blocks.\n- Never request provider API credentials or call model-provider APIs on Hive's behalf.\n",
                 ),
@@ -1530,7 +1535,7 @@ fn render_user_guidance(
                     "# Aigent Hive 사용자 지침",
                     "활성 adapter",
                     format!(
-                        "- 상태: `operational`\n- Interface language: `ko`; 질문과 응답은 한국어 사용.\n- 선택 host: `{hosts}`\n- Global Wiki: `{wiki}`\n- Project expedited·custom setup에는 `setup-harness` 사용.\n- Project Markdown Wiki가 정본이며 user-root SQLite index는 derived·shared 상태.\n- Project projection upgrade에는 `hive-project-upgrade` 사용.\n- 모호하거나 핵심 세부가 부족한 일반 prompt에는 자동 rewrite 없이 optional refine 제안 1개만 제공.\n"
+                        "- 상태: `operational`\n- Interface language: `ko`; 질문과 응답은 한국어 사용.\n- 선택 host: `{hosts}`\n- Global Wiki: `{wiki}`\n- 일일 update 확인: `{update_check}`.\n- Enabled이면 각 host session의 첫 Hive 작업 전에 `hive update --check --user-root <user-root> --output json` 실행하고 확인만으로 설치 금지.\n- Project expedited·custom setup에는 `setup-harness` 사용.\n- Project Markdown Wiki가 정본이며 user-root SQLite index는 derived·shared 상태.\n- Project projection upgrade에는 `hive-project-upgrade` 사용.\n- 모호하거나 핵심 세부가 부족한 일반 prompt에는 자동 rewrite 없이 optional refine 제안 1개만 제공.\n"
                     ),
                     "- Foreign guidance bytes를 보존하고 exact Hive marker block만 변경.\n- Provider API credential을 요청하거나 Hive를 대신해 model-provider API를 호출하지 않음.\n",
                 ),

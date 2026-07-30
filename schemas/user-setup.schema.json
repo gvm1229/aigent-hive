@@ -27,6 +27,7 @@
       "items": { "enum": ["codex", "claude", "antigravity"] }
     },
     "skills": { "$ref": "#/$defs/skill_selection" },
+    "update_check": { "$ref": "#/$defs/update_check" },
     "usage_guard": { "$ref": "#/$defs/usage_guard" }
   },
   "$defs": {
@@ -136,6 +137,13 @@
           }
         }
       ]
+    },
+    "update_check": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": { "type": "boolean", "default": false }
+      }
     },
     "usage_guard": {
       "type": "object",

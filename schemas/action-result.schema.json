@@ -25,6 +25,7 @@
         "UpdateHiveUser",
         "ValidateHiveUser",
         "RecoverHiveUser",
+        "CheckHiveUpdate",
         "ValidateRole",
         "RecordRoleHandoff",
         "RoleWork",
