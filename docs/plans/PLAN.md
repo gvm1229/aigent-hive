@@ -1,6 +1,6 @@
 # Aigent Hive active plan index
 
-> Revision: 1.69
+> Revision: 1.70
 > 기준일: 2026-07-31
 > Product version: `0.7.0`
 > 현재 milestone: Phase 7 qualification + global onboarding·shared index `0.8.0`
@@ -108,10 +108,10 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
 
 ## Current execution order
 
-1. P7-049 interactive owner-aware `hive update`
-2. P7-043 Linux x86_64·arm64 musl release qualification
-3. P7-044 public `aigent-hive` npm package family와 native smoke
-4. P7-045 npm-backed Unix·PowerShell·CMD installer와 digest 검증
+1. P7-043 Linux x86_64·arm64 musl release qualification
+2. P7-044 public `aigent-hive` npm package family와 native smoke
+3. P7-045 npm-backed Unix·PowerShell·CMD installer와 digest·owner receipt 검증
+4. P7-049 authenticated install-owner adapter를 사용하는 interactive `hive update`
 5. P7-020 5개 platform archive·npm tarball provenance
 6. P7-018 protected `main` release candidate qualification
 7. P7-037 GitHub Release 없이 npm `test` publication·clean install 검증

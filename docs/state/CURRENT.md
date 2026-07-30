@@ -2,7 +2,7 @@
 
 - 기준 branch: `develop`
 - product version: `0.7.0`
-- plan revision: `1.69`
+- plan revision: `1.70`
 - 현재 milestone: Phase 7 qualification + global onboarding·shared index `0.8.0`
 - 현재 작업: `docs/` Wiki 전환·README knowledge 복원 뒤 `0.8.0` update 구현
 - 외부 중지 경계: GitHub Release·npm `latest`, protected signing/publication credential,
@@ -444,10 +444,10 @@ Current remote qualification evidence:
 
 ## `0.8.0` 시험 배포 gate
 
-- P7-049 interactive owner-aware `hive update`
 - P7-043 Linux x86_64·arm64 musl qualification
 - P7-044 public npm package family와 native smoke
-- P7-045 npm-backed Unix·PowerShell·CMD installer와 digest 검증
+- P7-045 npm-backed Unix·PowerShell·CMD installer와 digest·owner receipt 검증
+- P7-049 authenticated install-owner adapter를 사용하는 interactive `hive update`
 - P7-020 5개 target archive·npm tarball provenance
 - P7-018 exact `0.8.0` release candidate qualification
 - P7-037 GitHub Release 없이 npm `test` publication·clean install
@@ -472,8 +472,10 @@ Pre-1.0 비차단 deferred:
 
 ## 다음 action
 
-1. P7-049 interactive owner-aware `hive update`
-2. P7-043·044·045 Linux·npm·direct installer qualification
-3. P7-020 artifact·npm provenance workflow
-4. P7-018 protected `main` exact `0.8.0` candidate qualification
-5. P7-037 GitHub Release 없이 npm `test` publication·clean install
+1. P7-043 Linux x86_64·arm64 musl qualification
+2. P7-044 public npm package family와 native smoke
+3. P7-045 npm-backed Unix·PowerShell·CMD installer와 digest·owner receipt 검증
+4. P7-049 authenticated install-owner adapter를 사용하는 interactive `hive update`
+5. P7-020 artifact·npm provenance workflow
+6. P7-018 protected `main` exact `0.8.0` candidate qualification
+7. P7-037 GitHub Release 없이 npm `test` publication·clean install

@@ -133,13 +133,17 @@ notarization, Authenticode, Azure signing, external TUF는 실제 안정 릴리�
 
 1. `P7-046`: 영어·한국어 간결 README와 빈 QA Contributors 표
 2. `P7-047`: language-first setup과 localized global harness
-3. `P7-049`: 대화형 `hive update` owner-aware update
-4. `P7-043`: Linux x86_64·arm64 musl qualification
-5. `P7-044`: npm package family와 native smoke
-6. `P7-045`: npm-backed Unix·PowerShell·CMD installer
+3. `P7-043`: Linux x86_64·arm64 musl qualification
+4. `P7-044`: npm package family와 native smoke
+5. `P7-045`: npm-backed Unix·PowerShell·CMD installer와 authenticated owner receipt
+6. `P7-049`: authenticated install-owner adapter를 사용하는 대화형 `hive update`
 7. `P7-020`: archive·npm tarball SHA-256·attestation·byte identity
 8. `P7-018`: protected `main` exact `0.8.0` candidate qualification
 9. `P7-037`: npm `test` publication과 npm·curl clean install 검증
+
+`P7-049`는 `P7-044`와 `P7-045`가 exact-version package와 authenticated
+install-owner adapter를 확정한 뒤 진행한다. 불확실한 owner를 추측하거나 Hive가
+설치 관리자를 우회해 binary를 직접 덮어쓰지 않는다.
 
 ## 완료 기준
 
