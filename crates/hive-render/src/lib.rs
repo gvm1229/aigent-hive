@@ -5267,19 +5267,40 @@ fn activation_fault_from_environment() -> Option<ActivationFault> {
     #[cfg(debug_assertions)]
     {
         let value = std::env::var("HIVE_TEST_ACTIVATION_FAIL_AFTER").ok()?;
-        let fail_after_operations = value.parse::<usize>().ok().filter(|value| *value <= 4096)?;
+        let current_thread = format!("{:?}", std::thread::current().id());
         let fail_rollback =
             std::env::var_os("HIVE_TEST_ROLLBACK_FAIL").is_some_and(|value| value == "1");
-        Some(ActivationFault {
-            fail_after_operations,
-            fail_rollback,
-            projection_cleanup: None,
-        })
+        activation_fault_from_value(&value, &current_thread, fail_rollback)
     }
     #[cfg(not(debug_assertions))]
     {
         None
     }
+}
+
+#[cfg(debug_assertions)]
+fn activation_fault_from_value(
+    value: &str,
+    current_thread: &str,
+    fail_rollback: bool,
+) -> Option<ActivationFault> {
+    let (scope, fail_after_operations) = value
+        .rsplit_once('@')
+        .map_or((None, value), |(scope, operations)| {
+            (Some(scope), operations)
+        });
+    if scope.is_some_and(|scope| scope != current_thread) {
+        return None;
+    }
+    let fail_after_operations = fail_after_operations
+        .parse::<usize>()
+        .ok()
+        .filter(|value| *value <= 4096)?;
+    Some(ActivationFault {
+        fail_after_operations,
+        fail_rollback,
+        projection_cleanup: None,
+    })
 }
 
 fn staging_corruption_from_environment() -> bool {
@@ -6250,23 +6271,24 @@ mod tests {
     #[cfg(unix)]
     use super::execute_setup_in;
     use super::{
-        activate_staged_impl, authorize_hook, authorize_hook_with_resolution,
-        calculate_consent_digest, capability_detection, derive_resolution, encode_role,
-        execute_release_update_for_target_in, execute_release_update_in, execute_setup,
-        execute_setup_with_post_apply, expected_external_runtime,
-        historical_project_upgrade_candidate_in, hook_descriptor_bytes, installed_tree_digest,
-        load_answers, load_resolution, merge_shared_marker, mutate_exact_projection_claimed,
-        open_target_capability, parse_role, prepare_projection_transition,
-        project_upgrade_candidate_in, render_agents_marker, render_project_base, render_tree,
-        replace_capability_file_impl, require_operational_update_preferences,
-        resolve_effective_project_preferences, resolve_project_skill_selection,
-        shared_marker_foreign_digest, update_path_is_owned, valid_digest, valid_role_id,
-        valid_timestamp, validate_hook_approvals, validate_owned_paths, validate_skill_approvals,
-        ActivationFault, ActiveSkills, CapabilityEvidence, CapabilityResolution,
-        ExactProjectionMutation, GlobalProjectPreferences, HookApproval, HookAuthorization,
-        ProjectSkillSelection, ProjectionCleanupFault, RenderError, ReplacePolicy, RoleProfile,
-        RoleSeed, SetupAnswers, SetupMode, SetupRequest, SkillApproval,
-        ValidatedProjectionOwnership, FRESH_CAPABILITY_RESOLUTION_PATH, MARKER_END, MARKER_START,
+        activate_staged_impl, activation_fault_from_value, authorize_hook,
+        authorize_hook_with_resolution, calculate_consent_digest, capability_detection,
+        derive_resolution, encode_role, execute_release_update_for_target_in,
+        execute_release_update_in, execute_setup, execute_setup_with_post_apply,
+        expected_external_runtime, historical_project_upgrade_candidate_in, hook_descriptor_bytes,
+        installed_tree_digest, load_answers, load_resolution, merge_shared_marker,
+        mutate_exact_projection_claimed, open_target_capability, parse_role,
+        prepare_projection_transition, project_upgrade_candidate_in, render_agents_marker,
+        render_project_base, render_tree, replace_capability_file_impl,
+        require_operational_update_preferences, resolve_effective_project_preferences,
+        resolve_project_skill_selection, shared_marker_foreign_digest, update_path_is_owned,
+        valid_digest, valid_role_id, valid_timestamp, validate_hook_approvals,
+        validate_owned_paths, validate_skill_approvals, ActivationFault, ActiveSkills,
+        CapabilityEvidence, CapabilityResolution, ExactProjectionMutation,
+        GlobalProjectPreferences, HookApproval, HookAuthorization, ProjectSkillSelection,
+        ProjectionCleanupFault, RenderError, ReplacePolicy, RoleProfile, RoleSeed, SetupAnswers,
+        SetupMode, SetupRequest, SkillApproval, ValidatedProjectionOwnership,
+        FRESH_CAPABILITY_RESOLUTION_PATH, MARKER_END, MARKER_START,
     };
     use hive_core::{sha256_digest, validate_project_relative};
     use serde_json::Value as JsonValue;
@@ -6278,6 +6300,21 @@ mod tests {
         Path::new(env!("CARGO_MANIFEST_DIR"))
             .join("../../tests/fixtures/phase1")
             .join(name)
+    }
+
+    #[test]
+    fn activation_fault_scope_is_limited_to_the_owning_test_thread() {
+        let fault = activation_fault_from_value("ThreadId(7)@2", "ThreadId(7)", true)
+            .expect("matching thread scope");
+        assert_eq!(fault.fail_after_operations, 2);
+        assert!(fault.fail_rollback);
+        assert!(activation_fault_from_value("ThreadId(7)@2", "ThreadId(8)", false).is_none());
+        assert_eq!(
+            activation_fault_from_value("2", "ThreadId(8)", false)
+                .expect("legacy process scope")
+                .fail_after_operations,
+            2
+        );
     }
 
     #[test]

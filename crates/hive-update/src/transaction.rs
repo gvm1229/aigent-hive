@@ -3335,7 +3335,8 @@ mod tests {
         let fixture = release_fixture();
         let root = fs::read(fixture.join("metadata/root.json")).expect("root");
         let before_readme = fs::read(consumer.join("README.md")).expect("readme");
-        std::env::set_var("HIVE_TEST_ACTIVATION_FAIL_AFTER", "1");
+        let activation_fault = format!("{:?}@1", std::thread::current().id());
+        std::env::set_var("HIVE_TEST_ACTIVATION_FAIL_AFTER", activation_fault);
         let result = execute_update(&update_request(
             &consumer,
             &fixture,
