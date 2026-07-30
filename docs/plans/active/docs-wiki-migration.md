@@ -57,7 +57,7 @@ docs/
 
 - [x] [DWK-001] Source AI directive에 valid knowledge 이동 우선, deprecated knowledge
   제거 예외, 간소화 전 inventory·replacement 확인 completion gate 추가
-- [ ] [DWK-002] `docs/00-home.md`·`docs/01-index.md`·topic MOC와 old README knowledge
+- [x] [DWK-002] `docs/00-home.md`·`docs/01-index.md`·topic MOC와 old README knowledge
   mapping을 구현하고 누락 지식을 topic document로 복원
 - [ ] [DWK-003] 기존 13개 bilingual page를 primary fact 1개 단위의
   `docs/facts/{en,ko}` exact pair로 분할·이동하고 cross-link·source digest 갱신

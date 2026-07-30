@@ -1,6 +1,6 @@
 # Aigent Hive active plan index
 
-> Revision: 1.65
+> Revision: 1.66
 > 기준일: 2026-07-31
 > Product version: `0.7.0`
 > 현재 milestone: Phase 7 qualification + global onboarding·shared index `0.8.0`
@@ -37,8 +37,8 @@
 | Windows shell install boundary | 3 | 0 | 100% |
 | Documentation style | 5 | 0 | 100% |
 | Security review | 4 | 0 | 100% |
-| Docs Wiki migration | 1 | 3 | 25% |
-| **Canonical total** | **216** | **11** | **95.2%** |
+| Docs Wiki migration | 2 | 2 | 50% |
+| **Canonical total** | **217** | **10** | **95.6%** |
 
 External production boundary 항목도 미완료 합계에 포함. Protected authority 없이 완료 처리 금지.
 
@@ -106,17 +106,16 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
 
 ## Current execution order
 
-1. DWK-002 docs home·index·topic MOC와 README knowledge 복원
-2. DWK-003 bilingual atomic fact 분할·이동
-3. DWK-004 Source Wiki CLI·Skill·index 경로 전환과 `llm-wiki/` 제거
-4. P7-048 opt-in daily update check·offline next-session retry
-5. P7-049 interactive owner-aware `hive update`
-6. P7-043 Linux x86_64·arm64 musl release qualification
-7. P7-044 public `aigent-hive` npm package family와 native smoke
-8. P7-045 npm-backed Unix·PowerShell·CMD installer와 digest 검증
-9. P7-020 5개 platform archive·npm tarball provenance
-10. P7-018 protected `main` release candidate qualification
-11. P7-037 GitHub Release 없이 npm `test` publication·clean install 검증
+1. DWK-003 bilingual atomic fact 분할·이동
+2. DWK-004 Source Wiki CLI·Skill·index 경로 전환과 `llm-wiki/` 제거
+3. P7-048 opt-in daily update check·offline next-session retry
+4. P7-049 interactive owner-aware `hive update`
+5. P7-043 Linux x86_64·arm64 musl release qualification
+6. P7-044 public `aigent-hive` npm package family와 native smoke
+7. P7-045 npm-backed Unix·PowerShell·CMD installer와 digest 검증
+8. P7-020 5개 platform archive·npm tarball provenance
+9. P7-018 protected `main` release candidate qualification
+10. P7-037 GitHub Release 없이 npm `test` publication·clean install 검증
 
 ## `0.8.0` 비차단 deferred boundary
 

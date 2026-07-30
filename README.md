@@ -134,12 +134,15 @@ approval.
 
 ## Architecture and maintainer docs
 
+- [Documentation home](./docs/00-home.md)
+- [Complete document index](./docs/01-index.md)
+- [Product overview](./docs/overview/product.md)
+- [Development and verification](./docs/guides/development.md)
 - [Active plan](./docs/plans/PLAN.md)
 - [Current project state](./docs/state/CURRENT.md)
 - [Source layout](./docs/architecture/source-layout.md)
 - [Release and update trust boundary](./docs/architecture/release-update-trust-boundary.md)
 - [Product decisions](./docs/decisions/product-release-decisions.md)
-- [Contributing](./CONTRIBUTING.md)
 
 Development requires Rust stable, Python 3.13 for conformance tests, and PowerShell 7
 for Windows development/release workflows. Consumer installations do not require

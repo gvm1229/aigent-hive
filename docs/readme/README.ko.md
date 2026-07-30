@@ -131,12 +131,15 @@ installation과 미승인 optional third-party Skill은 Hive 소유가 아님.
 
 ## Architecture·maintainer 문서
 
+- [문서 홈](../00-home.md)
+- [전체 문서 색인](../01-index.md)
+- [제품 개요](../overview/product.md)
+- [개발·검증](../guides/development.md)
 - [Active plan](../plans/PLAN.md)
 - [현재 project 상태](../state/CURRENT.md)
 - [Source layout](../architecture/source-layout.md)
 - [Release·update trust boundary](../architecture/release-update-trust-boundary.md)
 - [제품 결정](../decisions/product-release-decisions.md)
-- [Contributing](../../CONTRIBUTING.md)
 
 개발에는 Rust stable, conformance test용 Python 3.13, Windows 개발·release workflow용
 PowerShell 7이 필요. Consumer install은 Python·PowerShell 7을 요구하지 않음.
