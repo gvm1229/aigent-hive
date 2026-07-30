@@ -11,10 +11,10 @@ aliases: ["usage guard hosts"]
 sources:
   - "repo:.github/workflows/ci.yml#sha256:60945a807302e95f64373efc5d91ff11269e0f2609dc1d21c707c41e5a79db09"
   - "repo:docs/decisions/ADR-0010-native-first-usage-sensors.md#sha256:141e8070b475ee2b0d81e93a69217093e07af9a9ca61c16dcbb31f111ea1d0f4"
-  - "repo:docs/plans/active/native-usage-sensor.md#sha256:67f78d3be1e0394a434f456eb048e9d0c868b59c98ee060308c4b2640f14514a"
+  - "repo:docs/plans/active/native-usage-sensor.md#sha256:d2452d3622f65125e8e84261c33c4ff87aa823bb232a65aa6e22baffffd327d8"
   - "repo:tests/conformance/test_source_usage_guard.py#sha256:df19f5b1000469f30711a8624e8359761a85e52072eee69f5b3be73e2952ba3b"
 links: [plugin-lifecycle, security-release, workflow]
-reviewed_revision: "git:cb22a76995f7f1b17f826d521c26546ecd674f93"
+reviewed_revision: "git:51f40e24316e9f776626ddf73676f7719b020a42"
 status: active
 ---
 

@@ -5,15 +5,16 @@ topic_slug: product-intent
 language: en
 counterpart: ../ko/product-intent.md
 title: "Product Intent and Direction"
-summary: "Target users, onboarding, knowledge, host integration, and preview-release direction."
+summary: "Target users, onboarding, knowledge, host integration, and the 0.8.0 release direction."
 tags: [intent, onboarding, product, release]
 aliases: ["Hive product direction"]
 sources:
   - "repo:docs/decisions/ADR-0011-source-wiki-independence.md#sha256:15dbcb1c9e294078dc641d0c51c3655bd047cdf1c57629cb4158e7d047097f1b"
   - "repo:docs/decisions/ADR-0012-global-onboarding-shared-index.md#sha256:aa1f7e4271db8f3e1ceac5e0b54ed7451405513f37d65571b3e0df899930a8c0"
-  - "repo:docs/decisions/ADR-0013-preview-release-scope.md#sha256:1ba89150ac521f638f686cd4fa9ff6d8cf256a0e561c0c3b80616fd1a3989f2f"
+  - "repo:docs/decisions/ADR-0013-0.8-release-scope.md#sha256:3b5b29532bd3e353aaaea9b95637a6582bf6c6ab5dab01ebfc61bc7967ecd613"
+  - "repo:docs/decisions/product-release-decisions.md#sha256:a06b937b8b5b71ee7515e474e96bcd0f07ba66e6977a197380fb42fa88a035ac"
 links: [boundaries, knowledge, plugin-lifecycle, security-release, skill-routing, usage-hosts]
-reviewed_revision: "git:d46e9b7deb5c54fc7cec00c38483388ce563ff1d"
+reviewed_revision: "git:51f40e24316e9f776626ddf73676f7719b020a42"
 status: active
 ---
 
@@ -57,11 +58,16 @@ the host continues to own model execution.
 
 ## `0.8.0` direction
 
-The first public target is a `Claude-unverified preview`. Codex and Antigravity need live evidence;
-Claude remains theory-supported and visibly unverified until a subscription-backed test is
-possible. Real Windows-machine acceptance, clean current CI, bounded Skill metadata, SHA-256, and
-GitHub artifact attestation remain release gates. Platform signing and external TUF production
-quorum are deferred to a future hardened channel.
+The first public target is `Aigent Hive 0.8.0`. Pre-1.0 SemVer communicates evolving maturity, so
+the release uses neither a preview label nor a preview npm dist-tag. The intended primary command
+is `npm install -g aigent-hive`; GitHub Release and verified Unix, PowerShell, and CMD installers
+remain parallel channels. One native artifact lineage covers macOS arm64 and Intel, Linux musl
+x86_64 and arm64, and Windows x86_64.
+
+Codex and Antigravity require live evidence. Claude remains theory-supported and visibly
+unverified until a subscription-backed test is possible. Five-platform SHA-256, GitHub artifact
+attestation, npm binary identity, clean install and recovery remain release gates. Platform
+signing and external TUF production quorum remain deferred to a future hardened channel.
 
 Hive does not become a model runtime, scheduler, provider API client, credential store, or
 replacement for host-native orchestration.

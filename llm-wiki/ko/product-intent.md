@@ -5,15 +5,16 @@ topic_slug: product-intent
 language: ko
 counterpart: ../en/product-intent.md
 title: "제품 의도와 방향"
-summary: "대상 사용자, onboarding, knowledge, host integration과 preview release 방향."
+summary: "대상 사용자, onboarding, knowledge, host integration과 0.8.0 release 방향."
 tags: [intent, onboarding, product, release]
 aliases: ["Hive 제품 방향"]
 sources:
   - "repo:docs/decisions/ADR-0011-source-wiki-independence.md#sha256:15dbcb1c9e294078dc641d0c51c3655bd047cdf1c57629cb4158e7d047097f1b"
   - "repo:docs/decisions/ADR-0012-global-onboarding-shared-index.md#sha256:aa1f7e4271db8f3e1ceac5e0b54ed7451405513f37d65571b3e0df899930a8c0"
-  - "repo:docs/decisions/ADR-0013-preview-release-scope.md#sha256:1ba89150ac521f638f686cd4fa9ff6d8cf256a0e561c0c3b80616fd1a3989f2f"
+  - "repo:docs/decisions/ADR-0013-0.8-release-scope.md#sha256:3b5b29532bd3e353aaaea9b95637a6582bf6c6ab5dab01ebfc61bc7967ecd613"
+  - "repo:docs/decisions/product-release-decisions.md#sha256:a06b937b8b5b71ee7515e474e96bcd0f07ba66e6977a197380fb42fa88a035ac"
 links: [boundaries, knowledge, plugin-lifecycle, security-release, skill-routing, usage-hosts]
-reviewed_revision: "git:d46e9b7deb5c54fc7cec00c38483388ce563ff1d"
+reviewed_revision: "git:51f40e24316e9f776626ddf73676f7719b020a42"
 status: active
 ---
 
@@ -56,11 +57,15 @@ upgrade. Model execution 소유권은 host에 유지.
 
 ## `0.8.0` 방향
 
-첫 public target: `Claude-unverified preview`. Codex·Antigravity live evidence 필수. Claude는
-subscription-backed test 전 theory-supported·unverified 표시. 실제 Windows 기기 acceptance,
-current clean CI, bounded Skill metadata, SHA-256와 GitHub artifact attestation은 release
-gate 유지. Platform signing과 external TUF production quorum은 future hardened channel로
-deferred.
+첫 public target: `Aigent Hive 0.8.0`. Pre-1.0 SemVer를 성숙도 신호로 사용하고 별도
+preview label·npm dist-tag 제외. 주 설치 명령: `npm install -g aigent-hive`. 병렬 channel:
+GitHub Release, 검증된 Unix·PowerShell·CMD installer. 단일 native artifact 계보:
+macOS arm64·Intel, Linux musl x86_64·arm64, Windows x86_64.
+
+Codex·Antigravity live evidence 필수. Claude는 subscription-backed test 전
+theory-supported·unverified 표시. 5개 platform SHA-256·GitHub artifact attestation,
+npm binary identity, clean install·recovery는 release gate 유지. Platform signing과
+external TUF production quorum은 future hardened channel로 deferred.
 
 Hive non-goal: model runtime, scheduler, provider API client, credential store, host-native
 orchestration 대체.
