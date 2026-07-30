@@ -2,10 +2,10 @@
 
 - 기준 branch: `develop`
 - product version: `0.7.0`
-- plan revision: `1.60`
+- plan revision: `1.61`
 - 현재 milestone: Phase 7 qualification + global onboarding·shared index `0.8.0`
-- 현재 작업: `0.8.0` Linux·npm·직접 installer 공개 릴리스 계획 확정
-- 외부 중지 경계: protected signing/publication credential, 실제 production publication,
+- 현재 작업: `0.8.0` npm·curl 시험 배포와 bilingual onboarding·update 구현
+- 외부 중지 경계: GitHub Release·npm `latest`, protected signing/publication credential,
   exact `1.0.0` 사용자 authority
 - Plan load: compact `docs/plans/PLAN.md` + `docs/plans/phases/07-public-qualification.md`
   + `docs/plans/active/plugin-project-lifecycle.md`
@@ -15,7 +15,7 @@
   + `docs/plans/active/windows-shell-install.md`
   + `docs/plans/active/documentation-style.md` + `docs/plans/active/security-review.md`
   + `docs/plans/active/release-0.8.0.md`
-- Plan completion: canonical checklist `213/219` 완료, `6`개 미완료, `97.3%`
+- Plan completion: canonical checklist `213/223` 완료, `10`개 미완료, `95.5%`
 - Latest local Windows: Rust workspace 전체 PASS, PowerShell 5.1·7.6.4 installer와
   `cmd.exe` bootstrap 계약 PASS
 - Latest remote: `9fb2552`의 CI `30479010450` 7/7 PASS, `d39ce7f`의 native
@@ -55,7 +55,8 @@ Target: `0.8.0`
 | --- | --- |
 | User install | 세 host minimal bootstrap 뒤 mandatory global setup |
 | Mandatory global setup | `setup-hive`와 user-scope setup CLI |
-| Language·user profile·persona·multi-host | Signed catalog 기반 one-question sequence |
+| Language·user profile·persona·multi-host | 첫 질문 language, 이후 선택 언어의 signed catalog one-question sequence |
+| Update 확인 | Explicit opt-in daily check, offline 뒤 다음 host session 재시도 |
 | Skill suite 선택 | Recommended 또는 individual, dependency closure preview |
 | Wiki opt-out | Default-on, 언제든 disable/enable, Markdown 보존 |
 | Usage guard 선택 | Explicit opt-in, enabled 기본 `20%`, fallback 별도 consent |
@@ -65,7 +66,7 @@ Target: `0.8.0`
 | Project setup mode | `expedited|custom`, 양쪽 모두 project kind 필수 |
 | Project type | Required project identity·domain profile |
 | Project index | User-root 단일 SQLite, project DB 생성 없음 |
-| Initial global expedited | English·English Wiki·strict·all built-ins, 질문 0개 |
+| Initial global expedited | Language와 update-check consent 뒤 나머지 default 적용 |
 | Project auto onboarding | Global 상속·canonical evidence·unresolved-only 질문 |
 | Wiki task-fact capture | Wiki enabled material-task 종료 시 검토된 결과·도구·기준·요청 요약 자동 기록 |
 
@@ -174,13 +175,16 @@ Target: `0.8.0`
 - Source `hive-prompt-refine` projection, explicit refine-only routing,
   모호성·핵심 세부 부족 prompt의 optional refine 제안
 
-`0.8.0` release gap:
+`0.8.0` 시험 배포 gap:
 
+- English·Korean 간결 README와 빈 QA Contributors 표
+- Language-first setup과 localized global harness
+- Opt-in daily update check와 interactive owner-aware `hive update`
 - Linux x86_64·arm64 musl native build·install·runtime qualification
-- `npm install -g aigent-hive` package family와 registry publication
-- Unix·PowerShell·CMD 직접 installer의 simple latest 명령
+- `aigent-hive@0.8.0|test` package family와 registry publication
+- Unix·PowerShell·CMD npm-backed 직접 installer
 - 5개 target SHA-256·GitHub artifact attestation·npm binary identity
-- Exact `0.8.0` candidate qualification과 GitHub·npm publication
+- Exact `0.8.0` candidate qualification과 npm `test` publication
 
 Pre-1.0 비차단 deferred:
 
@@ -214,7 +218,7 @@ Pre-1.0 비차단 deferred:
 계획 evidence:
 
 - Active fragment 8 KiB 제한 충족
-- Canonical checklist `213/219`, active checklist ID 중복 0건
+- Canonical checklist `213/223`, active checklist ID 중복 0건
 - Plan static contract 29/29, documentation style regression 18/18 PASS
 - Human documentation inventory 258/258 review, finding 0건
 - Markdown link conformance PASS
@@ -415,23 +419,27 @@ Current remote qualification evidence:
 - Local Phase 6 계약 21 PASS, macOS 전용 8개 expected skip
 - Direct installer의 같은 owner parent handle-pinning race
 
-## `0.8.0` 공개 release gate
+## `0.8.0` 시험 배포 gate
 
+- P7-046 English·Korean 간결 README와 빈 QA Contributors 표
+- P7-047 language-first setup과 localized global harness
+- P7-048 opt-in daily update check·offline retry
+- P7-049 interactive owner-aware `hive update`
 - P7-043 Linux x86_64·arm64 musl qualification
 - P7-044 public npm package family와 native smoke
-- P7-045 Unix·PowerShell·CMD 직접 installer와 digest 검증
+- P7-045 npm-backed Unix·PowerShell·CMD installer와 digest 검증
 - P7-020 5개 target archive·npm tarball provenance
 - P7-018 exact `0.8.0` release candidate qualification
-- P7-037 GitHub normal release·npm `latest` publication
+- P7-037 GitHub Release 없이 npm `test` publication·clean install
 
 Candidate trust blocker:
 
 - Current source product version `0.7.0`, exact `0.8.0` candidate 부재
-- `release.yml`: 5개 target·npm tarball staging 경로 미구현
-- `release-publish.yml`: GitHub Release·npm 순차 publication 경로 미구현
+- `release.yml`: 새 요구사항에 맞춘 5개 target candidate 계약 검증 중
+- `release-publish.yml`: GitHub Release 제거·npm `test` 전용 전환 필요
 - GitHub repository environment·secret·variable 0개
 - npm `aigent-hive`·`@aigent-hive/*` name·scope ownership 미확정
-- ADR-0013 artifact attestation·publication workflow 미구현
+- Update check·interactive activation과 localized global harness 미구현
 
 Pre-1.0 비차단 deferred:
 
@@ -439,13 +447,16 @@ Pre-1.0 비차단 deferred:
 - Windows Authenticode 또는 Azure Artifact Signing
 - External TUF production authorization
 - 실제 Claude subscription-backed install·usage parity
+- GitHub normal release와 npm `latest`
 - Exact `1.0.0` 사용자 지시 전 stable major preparation 금지
 
 ## 다음 action
 
-1. P7-043 Linux x86_64·arm64 musl release qualification
-2. P7-044 public `aigent-hive` npm package family 구현
-3. P7-045 Unix·PowerShell·CMD 직접 installer 구현
-4. P7-020 5개 target artifact·npm provenance workflow
-5. P7-018 protected `main` exact `0.8.0` candidate qualification
-6. P7-037 최종 사용자 확인 뒤 GitHub normal release·npm `latest` publication
+1. P7-046 English·Korean 간결 README
+2. P7-047 language-first setup·localized global harness
+3. P7-048 daily update check·offline retry
+4. P7-049 interactive owner-aware `hive update`
+5. P7-043·044·045 Linux·npm·direct installer qualification
+6. P7-020 artifact·npm provenance workflow
+7. P7-018 protected `main` exact `0.8.0` candidate qualification
+8. P7-037 GitHub Release 없이 npm `test` publication·clean install

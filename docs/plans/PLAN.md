@@ -1,6 +1,6 @@
 # Aigent Hive active plan index
 
-> Revision: 1.60
+> Revision: 1.61
 > 기준일: 2026-07-31
 > Product version: `0.7.0`
 > 현재 milestone: Phase 7 qualification + global onboarding·shared index `0.8.0`
@@ -8,14 +8,14 @@
 
 ## Goal parameters
 
-- Objective: `Aigent Hive 0.8.0`의 Linux·macOS·Windows native artifact, npm 전역 설치,
-  직접 installer, artifact provenance, candidate와 publication gate 완료
+- Objective: `Aigent Hive 0.8.0`의 Linux·macOS·Windows native artifact, npm·curl
+  시험 설치, bilingual onboarding, update discovery·activation과 provenance gate 완료
 - Success: Mandatory user setup, global preference 기반 expedited/custom project setup,
   user-root 단일 SQLite, 세 host selected Skill projection, Wiki default-on opt-out,
   usage guard opt-in `20%`, native-first·CodexBar fallback-only, consumer
   PowerShell 5.1·`cmd.exe`, source-only PowerShell 7, Linux musl x86_64·arm64,
-  `npm install -g aigent-hive`, SHA-256·GitHub attestation과 실제 Windows acceptance
-- Stop boundary: protected credential, irreversible production publication, exact `1.0.0`
+  exact `aigent-hive@0.8.0`, SHA-256·GitHub attestation과 실제 Windows acceptance
+- Stop boundary: GitHub Release·npm `latest`, protected credential, exact `1.0.0`
   authority, 현재 source usage guard remaining `30%`
 - Invariants: provider-neutral, canonical Markdown 우선, OMX/OMC replaceable adapter,
   ownership·consent·foreign byte 보존, provider API·credential 경로 없음, force-push 없음,
@@ -29,7 +29,7 @@
 | 범위 | 완료 | 미완료 | 진행률 |
 | --- | ---: | ---: | ---: |
 | Phase 0–6 | 70 | 0 | 100% |
-| Phase 7 | 39 | 6 | 86.7% |
+| Phase 7 | 39 | 10 | 79.6% |
 | User plugin/project lifecycle | 38 | 0 | 100% |
 | Host-native usage sensors | 24 | 0 | 100% |
 | Global onboarding·shared index | 19 | 0 | 100% |
@@ -37,7 +37,7 @@
 | Windows shell install boundary | 3 | 0 | 100% |
 | Documentation style | 5 | 0 | 100% |
 | Security review | 4 | 0 | 100% |
-| **Canonical total** | **213** | **6** | **97.3%** |
+| **Canonical total** | **213** | **10** | **95.5%** |
 
 External production boundary 항목도 미완료 합계에 포함. Protected authority 없이 완료 처리 금지.
 
@@ -103,12 +103,16 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
 
 ## Current execution order
 
-1. P7-043 Linux x86_64·arm64 musl release qualification
-2. P7-044 public `aigent-hive` npm package family와 native smoke
-3. P7-045 Unix·PowerShell·CMD 직접 installer와 digest 검증
-4. P7-020 5개 platform archive·npm tarball provenance
-5. P7-018 protected `main` release candidate qualification
-6. P7-037 최종 사용자 확인 뒤 GitHub normal release·npm `latest` publication
+1. P7-046 English·Korean 간결 README와 빈 QA Contributors 표
+2. P7-047 language-first setup과 localized global harness
+3. P7-048 opt-in daily update check·offline next-session retry
+4. P7-049 interactive owner-aware `hive update`
+5. P7-043 Linux x86_64·arm64 musl release qualification
+6. P7-044 public `aigent-hive` npm package family와 native smoke
+7. P7-045 npm-backed Unix·PowerShell·CMD installer와 digest 검증
+8. P7-020 5개 platform archive·npm tarball provenance
+9. P7-018 protected `main` release candidate qualification
+10. P7-037 GitHub Release 없이 npm `test` publication·clean install 검증
 
 ## `0.8.0` 비차단 deferred boundary
 
@@ -117,3 +121,4 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
 - 실제 Claude protected session E2E와 Pro/Max usage parity
 - Externally signed TUF production authorization
 - Exact `1.0.0` 사용자 authority
+- GitHub normal release와 npm `latest` 안정 channel

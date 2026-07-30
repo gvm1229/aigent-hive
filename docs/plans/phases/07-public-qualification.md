@@ -1,7 +1,7 @@
-# Phase 7 public qualification
+# Phase 7 qualification
 
 > Checklist owner: `P7-*`
-> Load condition: Phase 7 qualification 항목 실행·검증·reconciliation
+> Load: Phase 7
 
 ### Phase 7. Public qualification — target `0.8.0`; `1.0.0`은 explicit major approval 전 금지
 
@@ -81,7 +81,7 @@
 
 ## 8. 완료 gate
 
-`0.8.0` 공개 release의 필수 조건:
+`0.8.0` 시험 배포의 필수 조건:
 
 - [x] [P7-019] source, release, consumer tree 분리
 - [ ] [P7-020] 5개 target archive·npm tarball SHA-256·attestation·byte identity
@@ -101,7 +101,7 @@
 - [x] [P7-034] Karpathy Raw/Wiki/Schema와 SQLite rebuild
 - [x] [P7-035] same-major compatibility
 - [x] [P7-036] cross-major no-data-loss migration
-- [ ] [P7-037] GitHub normal release·npm `latest`와 limitation publication
+- [ ] [P7-037] GitHub Release 없이 npm `test` publication과 npm·curl clean install
 - [x] [P7-038] product version parity, compatible minor/patch bump와 explicit-only major gate
 - [x] [P7-039] public license — 전체 source·harness `Apache-2.0`, 전문, package metadata와 render fixture
 - [x] [P7-040] current candidate clean clone에서 전체 CI PASS
@@ -110,5 +110,9 @@
 - [ ] [P7-043] Linux x86_64·arm64 musl release qualification
 - [ ] [P7-044] `aigent-hive` npm package family·native smoke
 - [ ] [P7-045] Unix·PowerShell·CMD 직접 installer·digest·recovery
+- [ ] [P7-046] 영·한 README·빈 QA 표
+- [ ] [P7-047] Bilingual setup·harness
+- [ ] [P7-048] Daily check·offline retry
+- [ ] [P7-049] Interactive `hive update`
 
 ---
