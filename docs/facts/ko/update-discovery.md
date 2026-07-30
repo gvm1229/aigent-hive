@@ -9,7 +9,7 @@ summary: "설치 없는 opt-in 일일 update 확인."
 tags: [discovery, update]
 aliases: ["일일 update 확인"]
 sources:
-  - "repo:docs/decisions/ADR-0013-0.8-release-scope.md#sha256:7631f6a1b322510cf6b9b1d6e826681362cb494d250cf7137b4a29c446402b35"
+  - "repo:docs/decisions/ADR-0013-0.8-release-scope.md#sha256:cb611bf1e74a33c2590b08602a4786bd646fbc3ce5469a15814fbc6c8f69726d"
 links: [global-onboarding, test-distribution]
 reviewed_revision: "git:4e3fb80b77c2e105029c9d6794922c4ce1b2fdeb"
 status: active
