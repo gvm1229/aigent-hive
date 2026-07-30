@@ -44,7 +44,7 @@
   도달성 확인, Git history recoverability 적용
 - Human Wiki: `docs/00-home.md`, `docs/01-index.md`, topic MOC, product overview,
   development guide에서 간소화 직전 README knowledge 복원
-- Atomic knowledge: `docs/facts/en`·`ko` 27개 exact pair, primary fact 1개,
+- Atomic knowledge: `docs/facts/en`·`ko` 28개 exact pair, primary fact 1개,
   cross-link와 source digest
 
 ## Windows shell 설치 경계
@@ -125,10 +125,10 @@ Target: `0.8.0`
 - 장기 방향: host-native·provider-neutral capability 대체 뒤 OMX/OMC 제거
 - Consumer reuse: `hive-wiki` core와 capture·maintenance·query 안전 계약
 - Skill reuse: shared canonical `harness/skills/`, exact source `.agents/skills/` projection
-- 현재 상태: 영어 27개·한국어 27개 atomic fact, exact pair 27개와 source-confined
+- 현재 상태: 영어 28개·한국어 28개 atomic fact, exact pair 28개와 source-confined
   CLI·Skill·material-task completion capture 구현 완료
 - Logical digest:
-  `sha256:a0aeb499403bdc551bfbba23c3ed1c415a6dfcd7855abe99ed8e334a542b5280`
+  `sha256:2375e981b9a04f928cf66cc88c9b5829941091e6cfc98213471756b5d6fd105f`
 - 검증: lint finding·warning 0건, 영어·한국어 query PASS, index 삭제 뒤 query
   fail-closed exit `5`, rebuild equivalence PASS
 - SQLite binary digest는 invocation-local evidence이며 정본·clean-copy equivalence 기준이
@@ -240,7 +240,7 @@ Pre-1.0 비차단 deferred:
 계획 evidence:
 
 - Active fragment 8 KiB 제한 충족
-- Canonical checklist `218/227`, active checklist ID 중복 0건
+- Canonical checklist `220/227`, active checklist ID 중복 0건
 - Root English 159줄·Korean 155줄 README, 상호 language link와 빈 QA 표 PASS
 - Plan static contract 29/29, documentation style regression 18/18 PASS
 - Human documentation inventory 258/258 review, finding 0건
@@ -399,11 +399,12 @@ Global onboarding·shared index local qualification PASS:
 Source docs Wiki targeted qualification PASS:
 
 - `hive-wiki` 33/33, Source Wiki conformance 재검증 PASS
-- Canonical fact 54개, bilingual pair 27개
+- Canonical fact 56개, bilingual pair 28개
 - `lint` finding·warning 0건, 영어·한국어 query PASS
 - Index 삭제 뒤 query fail-closed exit `5`, logical digest·query equivalence rebuild PASS
 - Ignored index·persistent lock의 Git 추적 0건
-- Full Python conformance 556개 실행, 555 PASS, Windows `pwsh` 전용 1개 expected skip
+- Full Python conformance 565개 실행, failure 0건,
+  Windows platform 제한 37개 expected skip
 
 ### macOS Apple Silicon local release qualification historical CLEAR
 
