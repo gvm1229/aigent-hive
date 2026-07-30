@@ -1,6 +1,6 @@
 # Aigent Hive active plan index
 
-> Revision: 1.67
+> Revision: 1.68
 > 기준일: 2026-07-31
 > Product version: `0.7.0`
 > 현재 milestone: Phase 7 qualification + global onboarding·shared index `0.8.0`
@@ -33,12 +33,12 @@
 | User plugin/project lifecycle | 38 | 0 | 100% |
 | Host-native usage sensors | 24 | 0 | 100% |
 | Global onboarding·shared index | 19 | 0 | 100% |
-| Source bilingual LLM Wiki | 11 | 0 | 100% |
+| Source docs Wiki | 11 | 0 | 100% |
 | Windows shell install boundary | 3 | 0 | 100% |
 | Documentation style | 5 | 0 | 100% |
 | Security review | 4 | 0 | 100% |
-| Docs Wiki migration | 3 | 1 | 75% |
-| **Canonical total** | **218** | **9** | **96.0%** |
+| Docs Wiki migration | 4 | 0 | 100% |
+| **Canonical total** | **219** | **8** | **96.5%** |
 
 External production boundary 항목도 미완료 합계에 포함. Protected authority 없이 완료 처리 금지.
 
@@ -80,7 +80,7 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
 | [`active/plugin-project-lifecycle.md`](active/plugin-project-lifecycle.md) | `RPH-*` | User plugin·project bootstrap·root knowledge·upgrade merge |
 | [`active/native-usage-sensor.md`](active/native-usage-sensor.md) | `NUS-*` | 세 host native-first sensor·CodexBar fallback-only |
 | [`active/user-onboarding-shared-index.md`](active/user-onboarding-shared-index.md) | `UOS-*` | Mandatory global setup·selected projection·shared index |
-| [`active/source-llm-wiki.md`](active/source-llm-wiki.md) | `SLW-*` | Provider-neutral bilingual source Wiki와 Skill reuse |
+| [`active/source-docs-wiki.md`](active/source-docs-wiki.md) | `SLW-*` | `docs/` graph와 bilingual atomic fact·Skill reuse |
 | [`active/windows-shell-install.md`](active/windows-shell-install.md) | `WSI-*` | Consumer PowerShell 5.1·`cmd.exe`와 source-only PowerShell 7 |
 | [`active/documentation-style.md`](active/documentation-style.md) | `DOC-*` | 사람용 문서 style completion gate |
 | [`active/security-review.md`](active/security-review.md) | `SEC-*` | 독립 code·security review finding completion gate |
@@ -106,15 +106,14 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
 
 ## Current execution order
 
-1. DWK-004 Source Wiki CLI·Skill·index 경로 전환과 `llm-wiki/` 제거
-2. P7-048 opt-in daily update check·offline next-session retry
-3. P7-049 interactive owner-aware `hive update`
-4. P7-043 Linux x86_64·arm64 musl release qualification
-5. P7-044 public `aigent-hive` npm package family와 native smoke
-6. P7-045 npm-backed Unix·PowerShell·CMD installer와 digest 검증
-7. P7-020 5개 platform archive·npm tarball provenance
-8. P7-018 protected `main` release candidate qualification
-9. P7-037 GitHub Release 없이 npm `test` publication·clean install 검증
+1. P7-048 opt-in daily update check·offline next-session retry
+2. P7-049 interactive owner-aware `hive update`
+3. P7-043 Linux x86_64·arm64 musl release qualification
+4. P7-044 public `aigent-hive` npm package family와 native smoke
+5. P7-045 npm-backed Unix·PowerShell·CMD installer와 digest 검증
+6. P7-020 5개 platform archive·npm tarball provenance
+7. P7-018 protected `main` release candidate qualification
+8. P7-037 GitHub Release 없이 npm `test` publication·clean install 검증
 
 ## `0.8.0` 비차단 deferred boundary
 

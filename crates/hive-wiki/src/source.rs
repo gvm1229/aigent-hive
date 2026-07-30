@@ -19,7 +19,7 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 const SOURCE_MARKER: &str = "hive-source.json";
-const WIKI_ROOT: &str = "llm-wiki";
+const WIKI_ROOT: &str = "docs/facts";
 const INDEX_DIRECTORY: &str = ".agents/work/source-wiki";
 const INDEX_FILE: &str = "index.sqlite3";
 const LOCK_FILE: &str = ".index.lock";
@@ -27,6 +27,7 @@ const INDEX_RELATIVE: &str = ".agents/work/source-wiki/index.sqlite3";
 const LOCK_RELATIVE: &str = ".agents/work/source-wiki/.index.lock";
 const LOCK_TIMEOUT: Duration = Duration::from_secs(5);
 const INDEX_MAX_BYTES: usize = 64 * 1024 * 1024;
+const FACT_BODY_MAX_BYTES: usize = 800;
 const LOCK_MARKER_V1: &[u8] = b"schema_version=1\n";
 const LOCK_MARKER_V2: &[u8] = b"schema_version=2\n";
 const LOCK_MAX_BYTES: usize = 64;
@@ -619,6 +620,17 @@ fn parse_page(
     if body.trim().is_empty() {
         return Err(WikiError::InvalidInput(format!(
             "source Wiki body must not be empty at {locator}"
+        )));
+    }
+    if body.len() > FACT_BODY_MAX_BYTES {
+        return Err(WikiError::InvalidInput(format!(
+            "source Wiki fact body exceeds {FACT_BODY_MAX_BYTES} bytes at {locator}"
+        )));
+    }
+    let top_level_headings = body.lines().filter(|line| line.starts_with("# ")).count();
+    if top_level_headings != 1 || body.lines().any(|line| line.starts_with("## ")) {
+        return Err(WikiError::InvalidInput(format!(
+            "source Wiki page must contain one H1 and no subsection headings at {locator}"
         )));
     }
     Ok(SourcePage {
@@ -1716,8 +1728,8 @@ mod tests {
 
     fn fixture() -> TempDir {
         let temp = TempDir::new().expect("temp");
-        fs::create_dir_all(temp.path().join("llm-wiki/en")).expect("en");
-        fs::create_dir_all(temp.path().join("llm-wiki/ko")).expect("ko");
+        fs::create_dir_all(temp.path().join("docs/facts/en")).expect("en");
+        fs::create_dir_all(temp.path().join("docs/facts/ko")).expect("ko");
         fs::create_dir_all(temp.path().join("docs")).expect("docs");
         fs::write(
             temp.path().join(SOURCE_MARKER),
@@ -1775,6 +1787,8 @@ mod tests {
              reviewed_revision: git:{REVISION}\n\
              status: active\n\
              ---\n\
+             # {title}\n\
+             \n\
              {body}\n"
         )
     }
@@ -1782,12 +1796,12 @@ mod tests {
     fn write_pair(root: &Path, slug: &str, links: &[&str]) {
         let source = source_locator(root);
         fs::write(
-            root.join(format!("llm-wiki/en/{slug}.md")),
+            root.join(format!("docs/facts/en/{slug}.md")),
             page("en", slug, links, &source, "English source knowledge."),
         )
         .expect("en page");
         fs::write(
-            root.join(format!("llm-wiki/ko/{slug}.md")),
+            root.join(format!("docs/facts/ko/{slug}.md")),
             page("ko", slug, links, &source, "한국어 소스 지식."),
         )
         .expect("ko page");
@@ -1822,7 +1836,7 @@ mod tests {
     fn lint_reports_missing_pair_and_pair_mismatch() {
         let temp = fixture();
         write_pair(temp.path(), "architecture", &[]);
-        fs::remove_file(temp.path().join("llm-wiki/ko/architecture.md")).expect("remove pair");
+        fs::remove_file(temp.path().join("docs/facts/ko/architecture.md")).expect("remove pair");
         let outcome = lint(temp.path()).expect("lint");
         assert!(outcome
             .issues
@@ -1830,7 +1844,7 @@ mod tests {
             .any(|issue| issue.code == "missing-pair"));
 
         write_pair(temp.path(), "architecture", &[]);
-        let path = temp.path().join("llm-wiki/ko/architecture.md");
+        let path = temp.path().join("docs/facts/ko/architecture.md");
         let changed = fs::read_to_string(&path)
             .expect("read")
             .replace("- architecture\n", "- architecture\n- mismatch\n");
@@ -1848,7 +1862,9 @@ mod tests {
         write_pair(temp.path(), "architecture", &[]);
         write_pair(temp.path(), "security", &[]);
         for language in ["en", "ko"] {
-            let path = temp.path().join(format!("llm-wiki/{language}/security.md"));
+            let path = temp
+                .path()
+                .join(format!("docs/facts/{language}/security.md"));
             let changed = fs::read_to_string(&path)
                 .expect("read")
                 .replace("pair_id: security", "pair_id: architecture");
@@ -1859,6 +1875,32 @@ mod tests {
             .issues
             .iter()
             .any(|issue| issue.code == "duplicate-pair-id"));
+    }
+
+    #[test]
+    fn lint_rejects_non_atomic_fact_bodies() {
+        let temp = fixture();
+        write_pair(temp.path(), "architecture", &[]);
+        let path = temp.path().join("docs/facts/en/architecture.md");
+        let with_subsection = fs::read_to_string(&path)
+            .expect("read")
+            .replace("English source knowledge.", "## Extra\n\nUnrelated fact.");
+        fs::write(&path, with_subsection).expect("write subsection");
+        let outcome = lint(temp.path()).expect("lint subsection");
+        assert!(outcome.issues.iter().any(|issue| {
+            issue.code == "invalid-page" && issue.message.contains("no subsection headings")
+        }));
+
+        write_pair(temp.path(), "architecture", &[]);
+        let oversized = fs::read_to_string(&path).expect("read").replace(
+            "English source knowledge.",
+            &"x".repeat(FACT_BODY_MAX_BYTES),
+        );
+        fs::write(path, oversized).expect("write oversized body");
+        let outcome = lint(temp.path()).expect("lint oversized");
+        assert!(outcome.issues.iter().any(|issue| {
+            issue.code == "invalid-page" && issue.message.contains("fact body exceeds")
+        }));
     }
 
     #[test]
@@ -1975,7 +2017,7 @@ mod tests {
     fn invalid_pages_do_not_migrate_or_publish_derived_state() {
         let temp = fixture();
         write_pair(temp.path(), "architecture", &[]);
-        fs::remove_file(temp.path().join("llm-wiki/ko/architecture.md")).expect("missing pair");
+        fs::remove_file(temp.path().join("docs/facts/ko/architecture.md")).expect("missing pair");
         fs::create_dir_all(temp.path().join(INDEX_DIRECTORY)).expect("index directory");
         fs::write(temp.path().join(LOCK_RELATIVE), LOCK_MARKER_V1).expect("legacy marker");
 
@@ -2212,7 +2254,7 @@ mod tests {
             .any(|issue| issue.code == "stale-index"));
 
         rebuild_index(temp.path()).expect("index");
-        let page_path = temp.path().join("llm-wiki/en/architecture.md");
+        let page_path = temp.path().join("docs/facts/en/architecture.md");
         let changed = fs::read_to_string(&page_path).expect("read").replace(
             "English source knowledge.",
             "Changed English source knowledge.",

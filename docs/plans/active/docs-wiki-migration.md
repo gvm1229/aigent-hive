@@ -9,7 +9,7 @@
 - 간결한 root README 유지
 - 기존 README의 유효한 knowledge 전부를 `docs/`에 보존
 - `docs/`에 home·index·topic MOC·atomic fact 계층 적용
-- 별도 `llm-wiki/` 제거
+- standalone source-Wiki directory 제거
 - Source Wiki CLI·Skill·SQLite를 `docs/facts/` 정본에 연결
 - 유효한 knowledge의 삭제 대신 이동을 AI 편집 기본값으로 고정
 
@@ -61,8 +61,9 @@ docs/
   mapping을 구현하고 누락 지식을 topic document로 복원
 - [x] [DWK-003] 기존 13개 bilingual page를 primary fact 1개 단위의
   `docs/facts/{en,ko}` exact pair로 분할·이동하고 cross-link·source digest 갱신
-- [ ] [DWK-004] Source Wiki CLI·Skill·directive·test·state·architecture 경로를
-  `docs/facts/{en,ko}`로 전환하고 `llm-wiki/` 제거, lint·index·query·clean-copy 검증
+- [x] [DWK-004] Source Wiki CLI·Skill·directive·test·state·architecture 경로를
+  `docs/facts/{en,ko}`로 전환하고 standalone directory 제거,
+  lint·index·query·clean-copy 검증
 
 ## 완료 기준
 
@@ -72,6 +73,6 @@ docs/
 - `docs/01-index.md`의 tracked Markdown 누락 0건
 - Fact page별 primary fact 1개, unrelated section 0건
 - English·Korean exact pair와 reciprocal link 100%
-- `llm-wiki` tracked path·canonical reference 0건
+- standalone source-Wiki tracked path·canonical reference 0건
 - Source Wiki lint finding·warning 0건
 - English·Korean query와 index 삭제 뒤 explicit rebuild equivalence PASS

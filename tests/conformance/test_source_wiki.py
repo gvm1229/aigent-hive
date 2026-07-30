@@ -64,8 +64,8 @@ class SourceWikiConformance(unittest.TestCase):
             "# Source contract\n\nProvider-neutral source authority.\n",
             encoding="utf-8",
         )
-        (self.target / "llm-wiki/en").mkdir(parents=True)
-        (self.target / "llm-wiki/ko").mkdir(parents=True)
+        (self.target / "docs/facts/en").mkdir(parents=True)
+        (self.target / "docs/facts/ko").mkdir(parents=True)
         self.write_pair(
             "index",
             links=["boundaries"],
@@ -149,7 +149,7 @@ class SourceWikiConformance(unittest.TestCase):
         ko_revision: str = REVISION,
     ) -> None:
         self.write_page(
-            self.target / f"llm-wiki/en/{slug}.md",
+            self.target / f"docs/facts/en/{slug}.md",
             self.page(
                 language="en",
                 slug=slug,
@@ -161,7 +161,7 @@ class SourceWikiConformance(unittest.TestCase):
             ),
         )
         self.write_page(
-            self.target / f"llm-wiki/ko/{slug}.md",
+            self.target / f"docs/facts/ko/{slug}.md",
             self.page(
                 language="ko",
                 slug=slug,
@@ -193,7 +193,7 @@ class SourceWikiConformance(unittest.TestCase):
 
     def set_paired_field(self, slug: str, field: str, value: object) -> None:
         for language in ("en", "ko"):
-            path = self.target / f"llm-wiki/{language}/{slug}.md"
+            path = self.target / f"docs/facts/{language}/{slug}.md"
             frontmatter = self.read_frontmatter(path)
             frontmatter[field] = value
             self.replace_frontmatter(path, frontmatter)
@@ -251,7 +251,7 @@ class SourceWikiConformance(unittest.TestCase):
         )[1]
 
     def test_index_and_bilingual_query_are_reproducible(self) -> None:
-        for page in sorted((self.target / "llm-wiki").rglob("*.md")):
+        for page in sorted((self.target / "docs/facts").rglob("*.md")):
             frontmatter = yaml.safe_load(page.read_text(encoding="utf-8").split("---")[1])
             Draft202012Validator(PAGE_SCHEMA).validate(frontmatter)
         first = self.index()
@@ -272,7 +272,7 @@ class SourceWikiConformance(unittest.TestCase):
         self.assertGreater(korean["data"]["count"], 0)
         self.assertEqual(english["data"]["hits"][0]["topic_slug"], "index")
         self.assertEqual(english["data"]["hits"][0]["language"], "en")
-        self.assertEqual(english["data"]["hits"][0]["path"], "llm-wiki/en/index.md")
+        self.assertEqual(english["data"]["hits"][0]["path"], "docs/facts/en/index.md")
         self.assertEqual(korean["data"]["hits"][0]["topic_slug"], "index")
         self.assertEqual(korean["data"]["hits"][0]["language"], "ko")
         tagged = self.invoke(
@@ -303,8 +303,8 @@ class SourceWikiConformance(unittest.TestCase):
 
     def test_schema_and_cli_agree_on_slug_hostile_corpus(self) -> None:
         pages = [
-            self.target / "llm-wiki/en/boundaries.md",
-            self.target / "llm-wiki/ko/boundaries.md",
+            self.target / "docs/facts/en/boundaries.md",
+            self.target / "docs/facts/ko/boundaries.md",
         ]
         originals = {path: path.read_text(encoding="utf-8") for path in pages}
         corpus = (
@@ -338,12 +338,12 @@ class SourceWikiConformance(unittest.TestCase):
 
     def test_schema_and_cli_agree_on_source_locator_hostile_corpus(self) -> None:
         pages = [
-            self.target / "llm-wiki/en/boundaries.md",
-            self.target / "llm-wiki/ko/boundaries.md",
+            self.target / "docs/facts/en/boundaries.md",
+            self.target / "docs/facts/ko/boundaries.md",
         ]
         originals = {path: path.read_text(encoding="utf-8") for path in pages}
         source = self.target / "docs/source.md"
-        source.parent.mkdir()
+        source.parent.mkdir(parents=True, exist_ok=True)
         source.write_text("safe repository source\n", encoding="utf-8")
         digest = hashlib.sha256(source.read_bytes()).hexdigest()
         invalid_paths = (
@@ -385,8 +385,8 @@ class SourceWikiConformance(unittest.TestCase):
 
     def test_schema_and_cli_agree_on_expressible_trim_rules(self) -> None:
         pages = [
-            self.target / "llm-wiki/en/boundaries.md",
-            self.target / "llm-wiki/ko/boundaries.md",
+            self.target / "docs/facts/en/boundaries.md",
+            self.target / "docs/facts/ko/boundaries.md",
         ]
         originals = {path: path.read_text(encoding="utf-8") for path in pages}
         corpus = (
@@ -417,12 +417,12 @@ class SourceWikiConformance(unittest.TestCase):
 
     def test_schema_documents_cli_only_lexicographic_sortedness(self) -> None:
         pages = [
-            self.target / "llm-wiki/en/boundaries.md",
-            self.target / "llm-wiki/ko/boundaries.md",
+            self.target / "docs/facts/en/boundaries.md",
+            self.target / "docs/facts/ko/boundaries.md",
         ]
         originals = {path: path.read_text(encoding="utf-8") for path in pages}
         source = self.target / "docs/source.md"
-        source.parent.mkdir()
+        source.parent.mkdir(parents=True, exist_ok=True)
         source.write_text("second canonical source\n", encoding="utf-8")
         source_digest = hashlib.sha256(source.read_bytes()).hexdigest()
         unsorted_values = {
@@ -458,7 +458,7 @@ class SourceWikiConformance(unittest.TestCase):
                 self.assertIn("Hive CLI", description)
 
     def test_lint_reports_missing_pair_and_pair_mismatch(self) -> None:
-        korean = self.target / "llm-wiki/ko/boundaries.md"
+        korean = self.target / "docs/facts/ko/boundaries.md"
         original = korean.read_text(encoding="utf-8")
         korean.unlink()
 
@@ -495,7 +495,7 @@ class SourceWikiConformance(unittest.TestCase):
 
     def test_lint_reports_broken_link_and_source_digest_mismatch(self) -> None:
         for language in ("en", "ko"):
-            page = self.target / f"llm-wiki/{language}/boundaries.md"
+            page = self.target / f"docs/facts/{language}/boundaries.md"
             self.write_page(
                 page,
                 page.read_text(encoding="utf-8").replace(
@@ -512,7 +512,7 @@ class SourceWikiConformance(unittest.TestCase):
             {issue["code"] for issue in broken["data"]["issues"]},
         )
         for language in ("en", "ko"):
-            page = self.target / f"llm-wiki/{language}/boundaries.md"
+            page = self.target / f"docs/facts/{language}/boundaries.md"
             text = page.read_text(encoding="utf-8")
             self.write_page(
                 page,
@@ -530,7 +530,7 @@ class SourceWikiConformance(unittest.TestCase):
 
     def test_stale_and_corrupt_index_block_query_until_rebuild(self) -> None:
         self.assertEqual(self.index()["status"], "success")
-        page = self.target / "llm-wiki/en/index.md"
+        page = self.target / "docs/facts/en/index.md"
         self.write_page(
             page,
             page.read_text(encoding="utf-8") + "\nCanonical change.\n",
@@ -554,7 +554,7 @@ class SourceWikiConformance(unittest.TestCase):
     def test_symlink_and_secret_candidates_are_rejected_without_escape(self) -> None:
         external = self.target / "external.md"
         external.write_text("external sentinel\n", encoding="utf-8")
-        page = self.target / "llm-wiki/en/boundaries.md"
+        page = self.target / "docs/facts/en/boundaries.md"
         page.unlink()
         page.symlink_to(external)
 
@@ -613,14 +613,14 @@ class SourceWikiConformance(unittest.TestCase):
     def test_wiki_root_rejects_ancestor_symlink_escape(self) -> None:
         with tempfile.TemporaryDirectory(prefix="hive-source-wiki-external-") as raw:
             external = Path(raw).resolve()
-            external_wiki = external / "llm-wiki"
-            shutil.copytree(self.target / "llm-wiki", external_wiki)
+            external_wiki = external / "docs/facts"
+            shutil.copytree(self.target / "docs/facts", external_wiki)
             expected = {
                 path.relative_to(external_wiki).as_posix(): path.read_bytes()
                 for path in external_wiki.rglob("*.md")
             }
-            shutil.rmtree(self.target / "llm-wiki")
-            (self.target / "llm-wiki").symlink_to(
+            shutil.rmtree(self.target / "docs/facts")
+            (self.target / "docs/facts").symlink_to(
                 external_wiki,
                 target_is_directory=True,
             )
@@ -698,7 +698,7 @@ class SourceWikiConformance(unittest.TestCase):
         lock = self.target / LOCK_RELATIVE
         lock.parent.mkdir(parents=True)
         lock.write_bytes(V1_LOCK_MARKER)
-        (self.target / "llm-wiki/ko/boundaries.md").unlink()
+        (self.target / "docs/facts/ko/boundaries.md").unlink()
 
         result = self.index()
 
@@ -850,14 +850,14 @@ class SourceWikiConformance(unittest.TestCase):
             path.relative_to(self.target).as_posix(): hashlib.sha256(
                 path.read_bytes()
             ).hexdigest()
-            for path in sorted((self.target / "llm-wiki").rglob("*.md"))
+            for path in sorted((self.target / "docs/facts").rglob("*.md"))
         }
         first = self.index()
         with tempfile.TemporaryDirectory(prefix="hive-source-wiki-clean-") as raw:
             clean = Path(raw).resolve()
             shutil.copy2(self.target / "hive-source.json", clean / "hive-source.json")
             shutil.copy2(self.target / "AGENTS.md", clean / "AGENTS.md")
-            shutil.copytree(self.target / "llm-wiki", clean / "llm-wiki")
+            shutil.copytree(self.target / "docs/facts", clean / "docs/facts")
 
             rebuilt = self.invoke(
                 "source-wiki",
@@ -888,7 +888,7 @@ class SourceWikiConformance(unittest.TestCase):
             path.relative_to(self.target).as_posix(): hashlib.sha256(
                 path.read_bytes()
             ).hexdigest()
-            for path in sorted((self.target / "llm-wiki").rglob("*.md"))
+            for path in sorted((self.target / "docs/facts").rglob("*.md"))
         }
         self.assertEqual(canonical_before, canonical_after)
 
@@ -958,10 +958,10 @@ class SourceWikiConformance(unittest.TestCase):
         self.assertIn("hook", decision.lower())
 
     def test_hive_marketing_deck_has_bilingual_resume_memory(self) -> None:
-        english = (ROOT / "llm-wiki/en/marketing-deck.md").read_text(
+        english = (ROOT / "docs/facts/en/marketing-deck-record.md").read_text(
             encoding="utf-8"
         )
-        korean = (ROOT / "llm-wiki/ko/marketing-deck.md").read_text(
+        korean = (ROOT / "docs/facts/ko/marketing-deck-record.md").read_text(
             encoding="utf-8"
         )
         task_record = (

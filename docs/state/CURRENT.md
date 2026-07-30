@@ -2,7 +2,7 @@
 
 - 기준 branch: `develop`
 - product version: `0.7.0`
-- plan revision: `1.67`
+- plan revision: `1.68`
 - 현재 milestone: Phase 7 qualification + global onboarding·shared index `0.8.0`
 - 현재 작업: `docs/` Wiki 전환·README knowledge 복원 뒤 `0.8.0` update 구현
 - 외부 중지 경계: GitHub Release·npm `latest`, protected signing/publication credential,
@@ -11,19 +11,19 @@
   + `docs/plans/active/plugin-project-lifecycle.md`
   + `docs/plans/active/native-usage-sensor.md`
   + `docs/plans/active/user-onboarding-shared-index.md`
-  + `docs/plans/active/source-llm-wiki.md`
+  + `docs/plans/active/source-docs-wiki.md`
   + `docs/plans/active/windows-shell-install.md`
   + `docs/plans/active/documentation-style.md` + `docs/plans/active/security-review.md`
   + `docs/plans/active/docs-wiki-migration.md`
   + `docs/plans/active/release-0.8.0.md`
-- Plan completion: canonical checklist `218/227` 완료, `9`개 미완료, `96.0%`
+- Plan completion: canonical checklist `219/227` 완료, `8`개 미완료, `96.5%`
 - Latest local Windows: Rust workspace 전체 PASS, PowerShell 5.1·7.6.4 installer와
   `cmd.exe` bootstrap 계약 PASS
 - Latest remote: `9fb2552`의 CI `30479010450` 7/7 PASS, `d39ce7f`의 native
   release runtime `30477685720` 3/3 historical PASS
 - Native Goal routing: legacy `PLAN.md` checkbox 문구를 `phases/07-public-qualification.md`,
   `active/plugin-project-lifecycle.md`, `active/native-usage-sensor.md`,
-  `active/user-onboarding-shared-index.md`, `active/source-llm-wiki.md`,
+  `active/user-onboarding-shared-index.md`, `active/source-docs-wiki.md`,
   `active/windows-shell-install.md`,
   `active/documentation-style.md`, `active/security-review.md`,
   `active/docs-wiki-migration.md`,
@@ -38,7 +38,7 @@
 - 복원 source: 간소화 직전 Git `README.md`
 - 목표 구조: `docs/00-home.md`, `docs/01-index.md`, topic MOC,
   `docs/facts/{en,ko}` atomic pair
-- 제거 대상: migration·reference·query 검증 뒤 별도 `llm-wiki/`
+- 제거 완료: standalone source-Wiki directory를 tracked tree에서 제거
 - 보존 원칙: valid knowledge 이동 우선, deprecated·incorrect·superseded knowledge만 제거
 - AI directive: 간소화 전 durable claim inventory, replacement locator와 docs home·index
   도달성 확인, Git history recoverability 적용
@@ -115,18 +115,18 @@ Target: `0.8.0`
 - Active fragment:
   [`user-onboarding-shared-index.md`](../plans/active/user-onboarding-shared-index.md)
 
-## Source bilingual LLM Wiki
+## Source docs Wiki
 
-- Canonical path: `llm-wiki/en/`, `llm-wiki/ko/`
+- Canonical path: `docs/facts/en/`, `docs/facts/ko/`
 - 금지 path: `omx_wiki/`, `.omx/wiki/`, source root의 consumer `.hive/knowledge/`
 - Current OMX/OMC: replaceable compatibility dependency와 orchestration aid
 - 장기 방향: host-native·provider-neutral capability 대체 뒤 OMX/OMC 제거
 - Consumer reuse: `hive-wiki` core와 capture·maintenance·query 안전 계약
 - Skill reuse: shared canonical `harness/skills/`, exact source `.agents/skills/` projection
-- 현재 상태: 영어 13개·한국어 13개 page, exact pair 13개와 source-confined
+- 현재 상태: 영어 26개·한국어 26개 atomic fact, exact pair 26개와 source-confined
   CLI·Skill·material-task completion capture 구현 완료
 - Logical digest:
-  `sha256:4102fd66d5cb57aad0837102643b209c62e845d931b4048fb990f8511c67f48e`
+  `sha256:4de6bd6b61f012fa521b4ddd20b8ef34c1c7e18342482258b41544fa7827a4b7`
 - 검증: lint finding·warning 0건, 영어·한국어 query PASS, index 삭제 뒤 query
   fail-closed exit `5`, rebuild equivalence PASS
 - SQLite binary digest는 invocation-local evidence이며 정본·clean-copy equivalence 기준이
@@ -134,12 +134,12 @@ Target: `0.8.0`
 - Marketing deck 재개 record:
   [`aigent-hive-marketing-deck.md`](artifacts/aigent-hive-marketing-deck.md)
 - LumaDeck 사용·생성 기준·초기 요청 요약:
-  [`marketing-deck.md`](../../llm-wiki/ko/marketing-deck.md)
-- Current Wiki tests: `hive-wiki` 42/42, Source Wiki·static contract 66/66
+  [`marketing-deck-record.md`](../facts/ko/marketing-deck-record.md)
+- Current Wiki tests: `hive-wiki` 33/33, Source Wiki conformance 재검증 PASS
 - OMX Wiki Skill 제외 이유·향후 OMX/OMC retirement 시 knowledge migration 0건:
   [`ADR-0011`](../decisions/ADR-0011-source-wiki-independence.md)
 - Active fragment:
-  [`source-llm-wiki.md`](../plans/active/source-llm-wiki.md)
+  [`source-docs-wiki.md`](../plans/active/source-docs-wiki.md)
 
 ## 세 host native usage sensor
 
@@ -394,10 +394,10 @@ Global onboarding·shared index local qualification PASS:
 - Codex·Antigravity expedited/custom connected onboarding matrix 4/4
 - 독립 final blocker review의 critical·high·medium·low finding 0건
 
-Source Wiki targeted qualification PASS:
+Source docs Wiki targeted qualification PASS:
 
-- `hive-wiki` 42/42, Source Wiki·static contract 66/66
-- Canonical page 26개, bilingual pair 13개
+- `hive-wiki` 33/33, Source Wiki conformance 재검증 PASS
+- Canonical fact 52개, bilingual pair 26개
 - `lint` finding·warning 0건, 영어·한국어 query PASS
 - Index 삭제 뒤 query fail-closed exit `5`, logical digest·query equivalence rebuild PASS
 - Ignored index·persistent lock의 Git 추적 0건
@@ -471,10 +471,9 @@ Pre-1.0 비차단 deferred:
 
 ## 다음 action
 
-1. DWK-004 Source Wiki 경로 전환과 `llm-wiki/` 제거
-2. P7-048 daily update check·offline retry
-3. P7-049 interactive owner-aware `hive update`
-4. P7-043·044·045 Linux·npm·direct installer qualification
-5. P7-020 artifact·npm provenance workflow
-6. P7-018 protected `main` exact `0.8.0` candidate qualification
-7. P7-037 GitHub Release 없이 npm `test` publication·clean install
+1. P7-048 daily update check·offline retry
+2. P7-049 interactive owner-aware `hive update`
+3. P7-043·044·045 Linux·npm·direct installer qualification
+4. P7-020 artifact·npm provenance workflow
+5. P7-018 protected `main` exact `0.8.0` candidate qualification
+6. P7-037 GitHub Release 없이 npm `test` publication·clean install

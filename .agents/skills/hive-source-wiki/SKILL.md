@@ -5,12 +5,13 @@ description: Query, lint, index, capture, or maintain Aigent Hive's provider-neu
 
 # Hive Source Wiki
 
-Operate only on the Aigent Hive source workspace and its tracked bilingual source knowledge.
+Operate only on the Aigent Hive source workspace and its tracked `docs/` Wiki.
 
 ## Boundaries
 
 - Require a source root identified by `hive-source.json`.
-- Treat `llm-wiki/en/` and `llm-wiki/ko/` as the only canonical source Wiki.
+- Treat `docs/facts/en/` and `docs/facts/ko/` as the canonical atomic fact corpus inside
+  the wider `docs/` Wiki.
 - Treat `.agents/work/source-wiki/index.sqlite3` as ignored, disposable, and rebuildable.
 - Treat `.agents/work/source-wiki/.index.lock` as an ignored, persistent, noncanonical
   coordination marker. Preserve the regular file; rebuild serialization uses its OS advisory
@@ -25,7 +26,10 @@ Operate only on the Aigent Hive source workspace and its tracked bilingual sourc
   derived state. Only the next explicit `index` rebuild may reconstruct from canonical Markdown
   and clean exact regular Hive-owned claim or temporary paths. `lint` and `query` remain
   fail-closed and never repair derived state.
-- Keep every English and Korean page as an exact pair with the same pair identity and reviewed source locators.
+- Keep every English and Korean page as an exact pair with the same pair identity and reviewed
+  source locators.
+- Keep one primary fact per pair. Split unrelated facts into linked pairs instead of adding
+  sections to an existing fact.
 - Reuse provider-neutral consumer knowledge safety workflows and core primitives, not an installed consumer layout, runtime state, or knowledge.
 - Never use or mutate `.omx/`, `.omc/`, `omx_wiki/`, or `.hive/`.
 - Never promote source Wiki content into the consumer product without a separate explicit review.
@@ -54,9 +58,11 @@ hive source-wiki query --target <source-root> --language en|ko \
 1. Require either explicit source selection or the source completion gate for facts derived only
    from the current authorized task and reviewed local artifacts.
 2. Reject secret, credential-adjacent, private account, captured session, or unreviewed external material.
-3. Edit tracked files only inside `llm-wiki/en/` and `llm-wiki/ko/`.
+3. Edit fact pairs only inside `docs/facts/en/` and `docs/facts/ko/`. Update human-facing topic
+   documents, maps, or the index separately when the fact changes navigation or explanation.
 4. Update both language files in the pair together.
-5. Preserve the pair identity, reciprocal counterpart path, reviewed source locators, and matching source locator digests.
+5. Preserve one primary fact, pair identity, reciprocal counterpart path, reviewed source
+   locators, and matching source locator digests.
 6. Prefer current truth over additive correction history.
 7. Run `lint` and repair canonical findings. Before the first rebuild, only a standalone
    `stale-index` finding may be expected.
@@ -71,7 +77,7 @@ hive source-wiki query --target <source-root> --language en|ko \
   originating request summary. Preserve exact request text only after explicit user retention
   intent and safety review.
 - Record external-artifact facts through a safe tracked source handoff; do not import consumer
-  project files or installed knowledge into `llm-wiki/`.
+  project files or installed knowledge into `docs/facts/`.
 - Update one current-truth bilingual topic pair and rebuild the index. Identical input is a no-op.
 - Do not capture an editless/simple question, raw transcript, complete conversation, hook payload,
   tool output, hidden prompt, cache, database, or runtime state.

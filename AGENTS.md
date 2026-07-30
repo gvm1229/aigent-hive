@@ -24,7 +24,7 @@ Hive development directives live under `.agents/`; files under `harness/` are so
 - Require explicit user approval before activating any optional third-party or generated Skill.
 - Resolve relevant approved Skills automatically from narrow descriptions and routing directives. Prefer an OMX/OMC capability over a duplicate Hive workflow, and keep the simple-question path free of unrelated Skill loading.
 - Reuse useful Hive-owned Skills bidirectionally between source development and the consumer product after scope, safety, consent, and conformance review. A shared Skill is canonical under `harness/skills/` and may have an exact source projection under `.agents/skills/`; a source-only Skill remains under `.agents/skills/` until explicitly promoted. Never import installed consumer state, runtime data, or user knowledge into source.
-- For every material source task, apply the agent-reviewed task-fact completion gate in `.agents/directives/04-documentation-state.md` before the final response. Capture durable outcome, tool or project, criteria, and originating-request context in the bilingual source Wiki; never auto-ingest a raw transcript, hook payload, tool output, or runtime state.
+- For every material source task, apply the agent-reviewed task-fact completion gate in `.agents/directives/04-documentation-state.md` before the final response. Capture durable outcome, tool or project, criteria, and originating-request context in the smallest bilingual atomic fact under `docs/facts/`; never auto-ingest a raw transcript, hook payload, tool output, or runtime state.
 - Apply the prompt quality gate in `.agents/directives/01-behavior.md`: explicit prompt authoring or improvement routes to source `hive-prompt-refine`; materially ambiguous or detail-poor ordinary work receives only one concise optional refinement suggestion with no automatic rewrite, Skill load, or execution.
 - Run the source `hive-usage-guard` session gate before every user task, including before the simple-question gate. When halted or unknown, only explicit guard control is allowed; obvious natural-language on/off intent does not require the user to name the Skill.
 - After that gate allows work and before editing anything, read [`.agents/directives/00-editing-discipline.md`](.agents/directives/00-editing-discipline.md) in full. Apply all four sections as the highest-priority editing discipline within this repository contract; never compact, summarize, omit, or substitute any part. Higher-priority system, developer, and user instructions plus Hive security, ownership, credential, and production boundaries still control.
@@ -50,6 +50,9 @@ Also read:
 
 ## Canonical Project Documents
 
+- Documentation home: [`docs/00-home.md`](docs/00-home.md)
+- Complete documentation index: [`docs/01-index.md`](docs/01-index.md)
+- Atomic fact guide: [`docs/facts/README.md`](docs/facts/README.md)
 - Active implementation plan: [`docs/plans/PLAN.md`](docs/plans/PLAN.md)
 - Current handoff state: [`docs/state/CURRENT.md`](docs/state/CURRENT.md)
 - Source layout: [`docs/architecture/source-layout.md`](docs/architecture/source-layout.md)
@@ -67,10 +70,9 @@ Also read:
 | Surface | Purpose | Shipped to consumer projects |
 | --- | --- | --- |
 | Root `AGENTS.md` and `.agents/` | Develop Hive itself | Never |
-| `llm-wiki/` | Provider-neutral bilingual source knowledge | Never |
 | `harness/` | Canonical setup questions, templates, skills, and projections | Compiled or projected through a release |
 | `crates/` | Rust implementation | Compiled binaries/libraries only |
-| `docs/` | Maintainer knowledge and active plan | Never as consumer instructions |
+| `docs/` | Human documentation, bilingual atomic facts, decisions, plan, and state | Never as consumer instructions |
 | `tests/fixtures/` | Synthetic consumer projects and expected output | Never |
 
 Do not generate consumer `.hive/`, consumer `AGENTS.md`, or host projections in the source root. Use disposable directories under `tests/work/`.

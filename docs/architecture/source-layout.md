@@ -39,8 +39,10 @@ aigent-hive/
 │   └── manifest.toml           # ownership·금지 경로
 ├── schemas/
 ├── tests/                     # schema/render/materializer conformance
-├── llm-wiki/                  # 구현된 source bilingual LLM knowledge
 ├── docs/
+│   ├── 00-home.md             # 사람·agent 공통 진입점
+│   ├── 01-index.md            # 전체 문서 catalog
+│   └── facts/{en,ko}/         # bilingual atomic source fact
 ├── LICENSE                    # primary Apache-2.0 전문
 ├── LICENSES/                  # REUSE용 Apache-2.0 canonical 전문
 ├── REUSE.toml                 # file-scope license mapping
@@ -65,7 +67,8 @@ state와 user knowledge의 source import 금지.
 단계에서 consumer 경로를 결정. Runtime state는 ignored `.agents/work/`에 두며
 `.omx/`·`.omc/` 수정 금지.
 
-구현된 source LLM Wiki: tracked `llm-wiki/en/`·`llm-wiki/ko/` Markdown.
+구현된 source docs Wiki: tracked human topic document와
+`docs/facts/en/`·`docs/facts/ko/` atomic Markdown.
 Derived SQLite: ignored disposable `.agents/work/source-wiki/index.sqlite3`.
 Coordination marker: ignored persistent noncanonical
 `.agents/work/source-wiki/.index.lock`. Rebuild는 marker regular file의 exclusive OS
@@ -83,8 +86,9 @@ crash-interrupted index에서 implicit repair 없이 fail-closed. Consumer
 현재 source orchestration: OMX/OMC 활용, OMX Wiki Skill 제외.
 Durable knowledge가 replaceable orchestrator보다 오래 유지되어야 하며 향후 OMX/OMC
 retirement의 knowledge migration은 0건. 결정:
-[`ADR-0011`](../decisions/ADR-0011-source-wiki-independence.md). 구현 checklist:
-[`source-llm-wiki.md`](../plans/active/source-llm-wiki.md).
+[`ADR-0011`](../decisions/ADR-0011-source-wiki-independence.md)과
+[`ADR-0014`](../decisions/ADR-0014-docs-wiki-architecture.md). 구현 checklist:
+[`source-docs-wiki.md`](../plans/active/source-docs-wiki.md).
 세부 계약:
 
 - Role lifecycle: [`role-lifecycle.md`](role-lifecycle.md)

@@ -3,12 +3,12 @@
 - 상태: accepted
 - 날짜: 2026-07-31
 - 범위: source 문서 구조, durable knowledge, source Wiki 색인
-- 대체 대상: ADR-0011의 `llm-wiki/` 저장 경로 결정
+- 대체 대상: ADR-0011의 standalone source-Wiki 저장 경로 결정
 
 ## 문제
 
 - 간결한 README 전환 과정에서 기존의 유효한 제품·개발 지식 누락
-- 별도 `llm-wiki/` 경로로 인한 사람용 문서와 agent용 knowledge의 이중 구조
+- 별도 source-fact directory로 인한 사람용 문서와 agent용 knowledge의 이중 구조
 - 여러 사실과 서로 다른 주제를 한 page에 함께 둔 source Wiki
 - `docs/`의 architecture·decision·guide·research·plan·state 사이를 연결하는 공통
   진입점과 전체 색인 부재
@@ -49,9 +49,9 @@
 - Git의 간소화 직전 README와 현재 문서를 항목별 대조
 - 중복 knowledge는 기존 current document로 연결
 - 누락 knowledge는 topic document로 복원
-- 기존 `llm-wiki/{en,ko}` page는 atomic pair로 분할·이동
+- 기존 standalone source Wiki page는 atomic pair로 분할·이동
 - CLI·Skill·test·directive의 canonical path를 `docs/facts/{en,ko}`로 전환
-- 모든 tracked reference 제거와 lint·query·clean-copy 검증 뒤 `llm-wiki/` 삭제
+- 모든 old-path reference 제거와 lint·query·clean-copy 검증 뒤 standalone directory 삭제
 
 ## 결과
 

@@ -56,4 +56,4 @@ Then create a deck project that concisely explains:
 2. `projects/aigent-hive-overview/slides.md`와 `styles/index.css` 수정
 3. LumaDeck repository의 `AGENTS.md`와 project harness directive 우선 확인
 4. Slidev build·PDF export·전체 slide overflow 검증
-5. 이 source record와 `llm-wiki/{en,ko}/marketing-deck.md` current truth 동시 갱신
+5. 이 source record와 `docs/facts/{en,ko}/marketing-deck-record.md` current truth 동시 갱신

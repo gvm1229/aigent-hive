@@ -129,7 +129,7 @@ Fact별 catalog는 migration 완료 뒤 이 section과 [Fact 안내](facts/READM
 | [Plugin lifecycle](plans/active/plugin-project-lifecycle.md) | User plugin·project lifecycle |
 | [Native usage sensor](plans/active/native-usage-sensor.md) | Host-native sensor |
 | [User onboarding](plans/active/user-onboarding-shared-index.md) | Global setup·shared index |
-| [Source Wiki](plans/active/source-llm-wiki.md) | Existing source Wiki contract |
+| [Source docs Wiki](plans/active/source-docs-wiki.md) | `docs/` graph·atomic fact contract |
 | [Windows install](plans/active/windows-shell-install.md) | PowerShell 5.1·CMD boundary |
 | [Documentation style](plans/active/documentation-style.md) | Human document style |
 | [Security review](plans/active/security-review.md) | Security finding gate |

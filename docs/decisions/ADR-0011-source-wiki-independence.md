@@ -6,13 +6,15 @@
 
 ## 결정
 
-Source Wiki 정본:
+Source Wiki fact 정본:
 
-- English: `llm-wiki/en/`
-- Korean: `llm-wiki/ko/`
+- English: `docs/facts/en/`
+- Korean: `docs/facts/ko/`
+- Human navigation·explanation: `docs/00-home.md`, `docs/01-index.md`, topic document
 - Derived index: ignored `.agents/work/source-wiki/index.sqlite3`
 - Coordination marker: ignored persistent `.agents/work/source-wiki/.index.lock`
-- 문서 계약: exact bilingual pair, reciprocal counterpart, reviewed source locator와 digest
+- 문서 계약: primary fact 1개, exact bilingual pair, reciprocal counterpart, reviewed
+  source locator와 digest
 - 재구축 계약: tracked Markdown만으로 model call·network 없이 SQLite index 재생성
 
 Source workspace의 `omx_wiki/`, `.omx/wiki/`, `.hive/knowledge/` 사용 금지.
@@ -29,7 +31,7 @@ Default-on source Wiki의 completion 계약:
   이후에만 허용
 - External artifact: source corpus import 금지, tracked safe handoff의 Hive-relevant fact만 인용
 - 동일 fact: no-op 또는 current-truth pair 갱신
-- English·Korean pair 동시 기록과 explicit index rebuild
+- English·Korean atomic pair 동시 기록과 explicit index rebuild
 
 금지 자동화:
 
@@ -105,7 +107,7 @@ Index publication 계약:
 ## 결과
 
 - Source knowledge의 provider·orchestrator 독립성
-- English·Korean 동시 검토와 source digest 추적
+- English·Korean atomic fact 동시 검토와 source digest 추적
 - SQLite 손실·corruption 후 pinned capability 기반 deterministic rebuild
 - Persistent shared/exclusive OS advisory lock marker와 disposable index lifecycle 분리
 - Recoverable two-phase CAS와 explicit-rebuild-only orphan cleanup

@@ -93,7 +93,7 @@ fn lint(arguments: &CommonArguments) -> Result<ActionResult, WikiError> {
             code: "hive.source-wiki-lint-failed",
             message: "source Wiki lint found canonical or derived-state errors".to_owned(),
             changed_paths: Vec::new(),
-            evidence: vec![report_evidence("llm-wiki", digest)],
+            evidence: vec![report_evidence("docs/facts", digest)],
             next_action: Some("repair reported issues and run source-wiki lint again".to_owned()),
             data: Some(data),
         })
@@ -103,7 +103,7 @@ fn lint(arguments: &CommonArguments) -> Result<ActionResult, WikiError> {
             "hive.source-wiki-lint-passed",
             "source Wiki lint completed without errors",
             Vec::new(),
-            "llm-wiki",
+            "docs/facts",
             digest,
             data,
         ))

@@ -268,7 +268,7 @@ class Phase3SkillSourceContract(unittest.TestCase):
             REPOSITORY_ROOT / ".agents/directives/02-architecture.md"
         ).read_text(encoding="utf-8")
         plan = (
-            REPOSITORY_ROOT / "docs/plans/active/source-llm-wiki.md"
+            REPOSITORY_ROOT / "docs/plans/active/source-docs-wiki.md"
         ).read_text(encoding="utf-8")
 
         for requirement in (
@@ -284,9 +284,9 @@ class Phase3SkillSourceContract(unittest.TestCase):
         ):
             self.assertIn(requirement, architecture)
         for requirement in (
-            "`llm-wiki/en/`·`llm-wiki/ko/`",
+            "`docs/facts/en/`·`docs/facts/ko/`",
             "`hive-wiki` Markdown parser·lint·SQLite rebuild·query",
-            "`hive-knowledge-capture|maintenance|query`의 안전 계약",
+            "one-H1·no-subsection·800-byte atomic body schema",
         ):
             self.assertIn(requirement, plan)
 
@@ -312,7 +312,7 @@ class Phase3SkillSourceContract(unittest.TestCase):
             "active/plugin-project-lifecycle.md",
             "active/release-0.8.0.md",
             "active/security-review.md",
-            "active/source-llm-wiki.md",
+            "active/source-docs-wiki.md",
             "active/user-onboarding-shared-index.md",
             "active/windows-shell-install.md",
             "contracts/README.md",
@@ -333,7 +333,7 @@ class Phase3SkillSourceContract(unittest.TestCase):
             plan_root / "active/plugin-project-lifecycle.md",
             plan_root / "active/release-0.8.0.md",
             plan_root / "active/security-review.md",
-            plan_root / "active/source-llm-wiki.md",
+            plan_root / "active/source-docs-wiki.md",
             plan_root / "active/user-onboarding-shared-index.md",
             plan_root / "active/windows-shell-install.md",
             plan_root / "phases/07-public-qualification.md",
@@ -347,7 +347,7 @@ class Phase3SkillSourceContract(unittest.TestCase):
                 "active/plugin-project-lifecycle.md",
                 "active/release-0.8.0.md",
                 "active/security-review.md",
-                "active/source-llm-wiki.md",
+                "active/source-docs-wiki.md",
                 "active/user-onboarding-shared-index.md",
                 "active/windows-shell-install.md",
                 "phases/07-public-qualification.md",
@@ -422,7 +422,7 @@ class Phase3SkillSourceContract(unittest.TestCase):
         native_usage_path = plan_root / "active/native-usage-sensor.md"
         plugin_project_path = plan_root / "active/plugin-project-lifecycle.md"
         security_review_path = plan_root / "active/security-review.md"
-        source_wiki_path = plan_root / "active/source-llm-wiki.md"
+        source_wiki_path = plan_root / "active/source-docs-wiki.md"
         onboarding_path = plan_root / "active/user-onboarding-shared-index.md"
         windows_shell_path = plan_root / "active/windows-shell-install.md"
         progress_rows = (
@@ -441,7 +441,7 @@ class Phase3SkillSourceContract(unittest.TestCase):
                 *checklist_counts([onboarding_path]),
             ),
             (
-                "Source bilingual LLM Wiki",
+                "Source docs Wiki",
                 *checklist_counts([source_wiki_path]),
             ),
             (

@@ -48,7 +48,11 @@ Never import installed consumer state back into source, copy source-development 
 - SQLite is a derived local index and may be deleted at any time.
 - No durable fact may exist only in SQLite.
 - A clean checkout containing the canonical tracked Markdown/YAML/TOML and source objects must be sufficient to rebuild the index without a model call or network request.
-- Source LLM Wiki content, when present, is canonical tracked Markdown under `llm-wiki/en/` and `llm-wiki/ko/`. Do not use `omx_wiki/`, `.omx/wiki/`, or consumer `.hive/knowledge/` for source knowledge. Keep any source Wiki SQLite projection ignored under `.agents/work/source-wiki/`.
+- Source Wiki facts are canonical tracked Markdown under `docs/facts/en/` and
+  `docs/facts/ko/`. Keep one primary fact per exact bilingual pair and connect it to the
+  human-readable `docs/` graph.
+- Do not use `omx_wiki/`, `.omx/wiki/`, or consumer `.hive/knowledge/` for source knowledge.
+  Keep the source Wiki SQLite projection ignored under `.agents/work/source-wiki/`.
 
 ## Source Layout
 

@@ -19,7 +19,7 @@
 | 재구현 금지 | Hive plan·Ralph·team·provider session engine 없음 |
 | Skill | `0.8.0` target은 setup/reconfigure core + recommended suite 또는 개별 selected built-in; optional third-party는 이름·source·revision·content digest·권한의 개별 수동 승인 |
 | Skill 양방향 reuse | Hive-owned source↔consumer Skill reuse 허용; shared canonical은 `harness/skills/`, source는 exact `.agents/skills/` projection, scope·safety·consent·conformance review 필수 |
-| Source LLM Wiki | tracked `llm-wiki/en/`·`llm-wiki/ko/` bilingual Markdown 정본, `omx_wiki/`·`.omx/wiki/`·consumer `.hive/knowledge/` 금지, SQLite는 ignored source projection, OMX/OMC retirement 시 knowledge migration 0건 |
+| Source docs Wiki | `docs/` human graph와 tracked `docs/facts/en/`·`ko/` atomic pair 정본, `omx_wiki/`·`.omx/wiki/`·consumer `.hive/knowledge/` 금지, SQLite는 ignored source projection, OMX/OMC retirement 시 knowledge migration 0건 |
 | Wiki autocapture | Wiki enabled 상태의 material task 종료 전 agent-reviewed task fact 기록. Outcome·tool/project·criteria·originating request summary만 bounded capture, exact request는 explicit retention intent 필요, raw transcript·hook·tool output·runtime ingestion 금지 |
 | prompt refine | `hive-prompt-refine`; 명시적인 prompt 작성·정제 intent에서만 자동 선택, `refine-only` 기본. 일반 요청이 모호하거나 핵심 세부가 부족하면 작업을 막지 않는 한 줄 optional refine 제안, hidden·automatic rewrite 금지 |
 | fallback hooks | OMX/OMC가 conclusively absent이고 사용자가 capability/event/path/digest를 승인한 경우에만 project-local data-integrity hook 허용 |
