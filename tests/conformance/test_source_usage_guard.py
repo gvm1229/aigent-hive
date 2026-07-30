@@ -138,6 +138,10 @@ class SourceUsageGuardTests(unittest.TestCase):
         self.assertFalse(temporary.exists())
         self.assertFalse(target.exists())
 
+    @unittest.skipUnless(
+        sys.platform == "win32",
+        "Windows replace semantics are unavailable on this host",
+    )
     def test_windows_write_json_retries_transient_replace_conflict(self) -> None:
         guard_namespace = runpy.run_path(str(GUARD))
         root = self.root.resolve()
@@ -208,7 +212,13 @@ class SourceUsageGuardTests(unittest.TestCase):
 
     def test_start_watcher_waits_for_delayed_lease(self) -> None:
         guard_namespace = runpy.run_path(str(GUARD))
-        session = guard_namespace["load_current_session"](self.root)
+        session = {
+            "session_id": self.session_id,
+            "pid": os.getpid(),
+            "cwd": str(self.root.resolve()),
+            "source": "codex-thread",
+            "process_start": "fixture-process-start-a",
+        }
         process = mock.Mock()
         process.pid = 12345
         process.poll.return_value = None
@@ -255,7 +265,13 @@ class SourceUsageGuardTests(unittest.TestCase):
 
     def test_start_watcher_reaps_process_after_startup_timeout(self) -> None:
         guard_namespace = runpy.run_path(str(GUARD))
-        session = guard_namespace["load_current_session"](self.root)
+        session = {
+            "session_id": self.session_id,
+            "pid": os.getpid(),
+            "cwd": str(self.root.resolve()),
+            "source": "codex-thread",
+            "process_start": "fixture-process-start-a",
+        }
         process = mock.Mock()
         process.pid = 12345
         process.poll.return_value = None
