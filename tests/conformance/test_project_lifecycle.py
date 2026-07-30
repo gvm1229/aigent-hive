@@ -344,7 +344,7 @@ else:
                 self.assertEqual(manifest["host"], host)
                 self.assertTrue(manifest["source_release_digest"].startswith("sha256:"))
                 self.assertFalse((user_root / ".hive/knowledge").exists())
-                self.assertIn("State: `setup-required`", installed)
+                self.assertIn("State / 상태: `setup-required`", installed)
                 if host == "antigravity":
                     self.assertTrue(
                         (
@@ -510,7 +510,7 @@ else:
             (user_root / ".agents/skills/hive-usage-guard/SKILL.md").is_file()
         )
         guidance = (user_root / ".codex/AGENTS.md").read_text(encoding="utf-8")
-        self.assertIn("State: `operational`", guidance)
+        self.assertIn("상태: `operational`", guidance)
 
         reduced = self.write_user_setup_answers(
             "reduced-user-setup",
