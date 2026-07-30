@@ -9,7 +9,7 @@ summary: "가상환경 launcher를 우회해 lease owner와 PID ownership 일치
 tags: [guard, source, windows]
 aliases: ["Windows watcher PID"]
 sources:
-  - "repo:tests/conformance/test_source_usage_guard.py#sha256:6b3a36c7bf6d41839d463f8239ef701221fc49c6303f5c849d2e589e8eadca7d"
+  - "repo:tests/conformance/test_source_usage_guard.py#sha256:710da544b18a78730194854e675dd63c86ea280dd88820a801565e24d6e81a3c"
 links: [source-usage-guard]
 reviewed_revision: "git:2c3485e6442d06871c9d61aec6c896c8fc93db11"
 status: active
