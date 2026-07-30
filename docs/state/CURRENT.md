@@ -2,7 +2,7 @@
 
 - 기준 branch: `develop`
 - product version: `0.7.0`
-- plan revision: `1.68`
+- plan revision: `1.69`
 - 현재 milestone: Phase 7 qualification + global onboarding·shared index `0.8.0`
 - 현재 작업: `docs/` Wiki 전환·README knowledge 복원 뒤 `0.8.0` update 구현
 - 외부 중지 경계: GitHub Release·npm `latest`, protected signing/publication credential,
@@ -16,7 +16,7 @@
   + `docs/plans/active/documentation-style.md` + `docs/plans/active/security-review.md`
   + `docs/plans/active/docs-wiki-migration.md`
   + `docs/plans/active/release-0.8.0.md`
-- Plan completion: canonical checklist `219/227` 완료, `8`개 미완료, `96.5%`
+- Plan completion: canonical checklist `220/227` 완료, `7`개 미완료, `96.9%`
 - Latest local Windows: Rust workspace 전체 PASS, PowerShell 5.1·7.6.4 installer와
   `cmd.exe` bootstrap 계약 PASS
 - Latest remote: `9fb2552`의 CI `30479010450` 7/7 PASS, `d39ce7f`의 native
@@ -44,7 +44,7 @@
   도달성 확인, Git history recoverability 적용
 - Human Wiki: `docs/00-home.md`, `docs/01-index.md`, topic MOC, product overview,
   development guide에서 간소화 직전 README knowledge 복원
-- Atomic knowledge: `docs/facts/en`·`ko` 26개 exact pair, primary fact 1개,
+- Atomic knowledge: `docs/facts/en`·`ko` 27개 exact pair, primary fact 1개,
   cross-link와 source digest
 
 ## Windows shell 설치 경계
@@ -102,6 +102,8 @@ Target: `0.8.0`
 - Initial expedited fixed defaults와 `auto-setup-harness` zero-question inference 구현
 - Initial setup의 첫 질문 `English|한국어`, 이후 setup Skill 질문·preview와
   user directive·host guidance의 선택 언어 적용
+- Initial setup update-check consent, 성공 확인 뒤 24시간 throttle, offline·malformed
+  결과 무기록과 다음 host session retry, check-only no-install 구현
 - Wiki disable 시 0건, enable 시 agent-reviewed bounded task-fact completion capture
 - Auto Skill canonical·plugin·source·Codex·Claude projection parity
 - 실제 Windows 11 x86_64 Codex user install·validate, recommended global setup,
@@ -123,10 +125,10 @@ Target: `0.8.0`
 - 장기 방향: host-native·provider-neutral capability 대체 뒤 OMX/OMC 제거
 - Consumer reuse: `hive-wiki` core와 capture·maintenance·query 안전 계약
 - Skill reuse: shared canonical `harness/skills/`, exact source `.agents/skills/` projection
-- 현재 상태: 영어 26개·한국어 26개 atomic fact, exact pair 26개와 source-confined
+- 현재 상태: 영어 27개·한국어 27개 atomic fact, exact pair 27개와 source-confined
   CLI·Skill·material-task completion capture 구현 완료
 - Logical digest:
-  `sha256:4de6bd6b61f012fa521b4ddd20b8ef34c1c7e18342482258b41544fa7827a4b7`
+  `sha256:a0aeb499403bdc551bfbba23c3ed1c415a6dfcd7855abe99ed8e334a542b5280`
 - 검증: lint finding·warning 0건, 영어·한국어 query PASS, index 삭제 뒤 query
   fail-closed exit `5`, rebuild equivalence PASS
 - SQLite binary digest는 invocation-local evidence이며 정본·clean-copy equivalence 기준이
@@ -199,7 +201,7 @@ Target: `0.8.0`
 
 `0.8.0` 시험 배포 gap:
 
-- Opt-in daily update check와 interactive owner-aware `hive update`
+- Interactive owner-aware `hive update`
 - Linux x86_64·arm64 musl native build·install·runtime qualification
 - `aigent-hive@0.8.0|test` package family와 registry publication
 - Unix·PowerShell·CMD npm-backed 직접 installer
@@ -397,7 +399,7 @@ Global onboarding·shared index local qualification PASS:
 Source docs Wiki targeted qualification PASS:
 
 - `hive-wiki` 33/33, Source Wiki conformance 재검증 PASS
-- Canonical fact 52개, bilingual pair 26개
+- Canonical fact 54개, bilingual pair 27개
 - `lint` finding·warning 0건, 영어·한국어 query PASS
 - Index 삭제 뒤 query fail-closed exit `5`, logical digest·query equivalence rebuild PASS
 - Ignored index·persistent lock의 Git 추적 0건
@@ -442,7 +444,6 @@ Current remote qualification evidence:
 
 ## `0.8.0` 시험 배포 gate
 
-- P7-048 opt-in daily update check·offline retry
 - P7-049 interactive owner-aware `hive update`
 - P7-043 Linux x86_64·arm64 musl qualification
 - P7-044 public npm package family와 native smoke
@@ -458,7 +459,7 @@ Candidate trust blocker:
 - `release-publish.yml`: GitHub Release 제거·npm `test` 전용 전환 필요
 - GitHub repository environment·secret·variable 0개
 - npm `aigent-hive`·`@aigent-hive/*` name·scope ownership 미확정
-- Update check·interactive activation과 localized global harness 미구현
+- Interactive activation 미구현
 
 Pre-1.0 비차단 deferred:
 
@@ -471,9 +472,8 @@ Pre-1.0 비차단 deferred:
 
 ## 다음 action
 
-1. P7-048 daily update check·offline retry
-2. P7-049 interactive owner-aware `hive update`
-3. P7-043·044·045 Linux·npm·direct installer qualification
-4. P7-020 artifact·npm provenance workflow
-5. P7-018 protected `main` exact `0.8.0` candidate qualification
-6. P7-037 GitHub Release 없이 npm `test` publication·clean install
+1. P7-049 interactive owner-aware `hive update`
+2. P7-043·044·045 Linux·npm·direct installer qualification
+3. P7-020 artifact·npm provenance workflow
+4. P7-018 protected `main` exact `0.8.0` candidate qualification
+5. P7-037 GitHub Release 없이 npm `test` publication·clean install

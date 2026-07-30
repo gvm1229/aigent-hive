@@ -29,7 +29,7 @@
 - [x] [SLW-006] Language, pair ID, topic slug, reciprocal counterpart, source digest,
   reviewed revision과 one-H1·no-subsection·800-byte atomic body schema
 - [x] [SLW-007] Source purpose·boundary·crate·onboarding·knowledge·routing·role·run·
-  usage·judge·release·update·workflow의 26개 English·Korean fact pair
+  usage·judge·release·update·workflow의 27개 English·Korean fact pair
 - [x] [SLW-008] Canonical fact만 사용하는 ignored SQLite rebuild, persistent
   shared-reader·exclusive-writer lock, in-memory build·검증과 recoverable two-phase CAS
 - [x] [SLW-009] Source-only `hive-source-wiki` Skill, simple-question isolation과

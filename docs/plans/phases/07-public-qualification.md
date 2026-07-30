@@ -112,7 +112,7 @@
 - [ ] [P7-045] Unix·PowerShell·CMD 직접 installer·digest·recovery
 - [x] [P7-046] 영·한 README·빈 QA 표
 - [x] [P7-047] Bilingual setup·harness
-- [ ] [P7-048] Daily check·offline retry
+- [x] [P7-048] Daily check·offline retry
 - [ ] [P7-049] Interactive `hive update`
 
 ---
