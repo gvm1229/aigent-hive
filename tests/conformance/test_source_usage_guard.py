@@ -138,6 +138,42 @@ class SourceUsageGuardTests(unittest.TestCase):
         self.assertFalse(temporary.exists())
         self.assertFalse(target.exists())
 
+    def test_windows_write_json_retries_transient_replace_conflict(self) -> None:
+        guard_namespace = runpy.run_path(str(GUARD))
+        root = self.root.resolve()
+        target = root / "state.json"
+        original_replace = guard_namespace["os"].replace
+        calls = 0
+
+        def replace_after_conflict(source: Path, destination: Path) -> None:
+            nonlocal calls
+            calls += 1
+            if calls == 1:
+                raise PermissionError("transient Windows replace conflict")
+            original_replace(source, destination)
+
+        with (
+            mock.patch.object(guard_namespace["os"], "name", "nt"),
+            mock.patch.object(
+                guard_namespace["os"],
+                "replace",
+                side_effect=replace_after_conflict,
+            ),
+            mock.patch.object(guard_namespace["time"], "sleep") as sleep,
+        ):
+            guard_namespace["write_json"](
+                root,
+                target,
+                {"schema_version": 1},
+            )
+
+        self.assertEqual(calls, 2)
+        sleep.assert_called_once_with(0.02)
+        self.assertEqual(
+            json.loads(target.read_text(encoding="utf-8")),
+            {"schema_version": 1},
+        )
+
     def test_windows_watcher_lease_read_skips_locked_first_byte(self) -> None:
         guard_namespace = runpy.run_path(str(GUARD))
         payload = b'{"schema_version": 1}\n'
@@ -169,6 +205,94 @@ class SourceUsageGuardTests(unittest.TestCase):
             Path(temporary).unlink(missing_ok=True)
 
         self.assertEqual(actual, payload)
+
+    def test_start_watcher_waits_for_delayed_lease(self) -> None:
+        guard_namespace = runpy.run_path(str(GUARD))
+        session = guard_namespace["load_current_session"](self.root)
+        process = mock.Mock()
+        process.pid = 12345
+        process.poll.return_value = None
+        inactive = {"active": False}
+        active = {
+            "active": True,
+            "pid": process.pid,
+            "started_at": timestamp(),
+            "legacy": False,
+        }
+        status = mock.Mock(side_effect=[inactive, inactive, active])
+
+        with (
+            mock.patch.dict(
+                guard_namespace["start_watcher"].__globals__,
+                {
+                    "retire_superseded_watchers": mock.Mock(),
+                    "watcher_status": status,
+                    "process_start_digest": mock.Mock(
+                        return_value="fixture-watcher-start"
+                    ),
+                },
+            ),
+            mock.patch.object(
+                guard_namespace["subprocess"],
+                "Popen",
+                return_value=process,
+            ) as popen,
+            mock.patch.object(guard_namespace["time"], "sleep") as sleep,
+        ):
+            result = guard_namespace["start_watcher"](self.root, session)
+
+        self.assertEqual(result, active)
+        self.assertEqual(status.call_count, 3)
+        sleep.assert_called_once_with(0.02)
+        process.terminate.assert_not_called()
+        launched = popen.call_args.args[0]
+        expected_python = (
+            getattr(sys, "_base_executable", sys.executable)
+            if os.name == "nt"
+            else sys.executable
+        )
+        self.assertEqual(launched[0], expected_python)
+
+    def test_start_watcher_reaps_process_after_startup_timeout(self) -> None:
+        guard_namespace = runpy.run_path(str(GUARD))
+        session = guard_namespace["load_current_session"](self.root)
+        process = mock.Mock()
+        process.pid = 12345
+        process.poll.return_value = None
+        status = mock.Mock(return_value={"active": False})
+
+        with (
+            mock.patch.dict(
+                guard_namespace["start_watcher"].__globals__,
+                {
+                    "retire_superseded_watchers": mock.Mock(),
+                    "watcher_status": status,
+                    "process_start_digest": mock.Mock(
+                        return_value="fixture-watcher-start"
+                    ),
+                },
+            ),
+            mock.patch.object(
+                guard_namespace["subprocess"],
+                "Popen",
+                return_value=process,
+            ),
+            mock.patch.object(guard_namespace["time"], "sleep"),
+        ):
+            with self.assertRaisesRegex(
+                guard_namespace["GuardError"],
+                "watcher failed to start",
+            ):
+                guard_namespace["start_watcher"](self.root, session)
+
+        process.terminate.assert_called_once_with()
+        process.wait.assert_called_once_with(timeout=5)
+        self.assertFalse(
+            guard_namespace["watcher_path"](
+                self.root,
+                self.session_id,
+            ).exists()
+        )
 
     def switch_codex_thread(self, session_id: str) -> None:
         self.session_id = session_id

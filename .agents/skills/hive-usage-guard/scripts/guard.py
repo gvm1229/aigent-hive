@@ -224,7 +224,14 @@ def write_json(root: Path, path: Path, value: dict[str, Any]) -> None:
             stream.write(payload)
             stream.flush()
             os.fsync(stream.fileno())
-        os.replace(temporary_path, path)
+        for attempt in range(50):
+            try:
+                os.replace(temporary_path, path)
+                break
+            except PermissionError:
+                if os.name != "nt" or attempt == 49:
+                    raise
+                time.sleep(0.02)
     finally:
         if descriptor >= 0:
             os.close(descriptor)
@@ -1874,8 +1881,16 @@ def start_watcher(root: Path, session: dict[str, Any]) -> dict[str, Any]:
         raise GuardError("watcher log is not a regular file")
     log = os.fdopen(log_descriptor, "ab", buffering=0)
     nonce = secrets.token_hex(32)
+    watcher_python = sys.executable
+    base_executable = getattr(sys, "_base_executable", None)
+    if (
+        os.name == "nt"
+        and isinstance(base_executable, str)
+        and Path(base_executable).is_file()
+    ):
+        watcher_python = base_executable
     arguments = [
-        sys.executable,
+        watcher_python,
         str(Path(__file__).resolve()),
         "--root",
         str(root),
@@ -1922,14 +1937,27 @@ def start_watcher(root: Path, session: dict[str, Any]) -> dict[str, Any]:
         "script": str(Path(__file__).resolve()),
     }
     write_json(root, watcher_path(root, session["session_id"]), value)
-    time.sleep(0.1)
-    if process.poll() is not None:
-        remove_owned_file(root, watcher_path(root, session["session_id"]))
-        raise GuardError("usage-guard watcher exited during startup")
-    status = watcher_status(root, session)
-    if not status["active"]:
-        raise GuardError("usage-guard watcher failed to start")
-    return status
+    for _ in range(50):
+        if process.poll() is not None:
+            remove_owned_file(root, watcher_path(root, session["session_id"]))
+            remove_owned_file(
+                root,
+                watcher_lease_path(root, session["session_id"]),
+            )
+            raise GuardError("usage-guard watcher exited during startup")
+        status = watcher_status(root, session)
+        if status["active"]:
+            return status
+        time.sleep(0.02)
+    process.terminate()
+    try:
+        process.wait(timeout=5)
+    except subprocess.TimeoutExpired:
+        process.kill()
+        process.wait(timeout=5)
+    remove_owned_file(root, watcher_path(root, session["session_id"]))
+    remove_owned_file(root, watcher_lease_path(root, session["session_id"]))
+    raise GuardError("usage-guard watcher failed to start")
 
 
 def stop_watcher(root: Path, session: dict[str, Any]) -> dict[str, Any]:
