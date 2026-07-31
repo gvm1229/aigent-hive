@@ -6878,6 +6878,7 @@ mod tests {
                 "/hive-knowledge-query/SKILL.md",
                 "/hive-prompt-refine/SKILL.md",
                 "/hive-simple-question/SKILL.md",
+                "/hive-update/SKILL.md",
                 "/hive-usage-guard/SKILL.md",
                 "/setup-harness/SKILL.md",
             ];
