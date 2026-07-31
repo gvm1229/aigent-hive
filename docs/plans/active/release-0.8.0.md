@@ -147,7 +147,7 @@ install-owner adapter 확정. 불확실한 owner 추측과 설치 관리자 우�
 
 - 사용자 순서: 시험 배포 성공 뒤 `develop` → `main` 병합
 - Workflow authority: protected `develop` candidate 한정
-- Current ruleset: `develop` exact ref에 PR·필수 상태 검사·삭제·강제 push 차단 적용
+- Current ruleset: `develop`에 PR·필수 검사·삭제·강제 push 차단 적용
 - Current publication environment gap: `release-publication` 필수 검토자 없음
 - 사용자 작업: `release-publication`에 필수 검토자 추가
 - 자동화 작업: workflow의 exact `develop` ref·commit·run 검증
