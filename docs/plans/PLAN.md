@@ -1,6 +1,6 @@
 # Aigent Hive active plan index
 
-> Revision: 1.80
+> Revision: 1.81
 > 기준일: 2026-07-31
 > Product version: `0.8.0`
 > 현재 milestone: Phase 7 qualification + global onboarding·shared index `0.8.0`
@@ -31,7 +31,7 @@
 | 범위 | 완료 | 미완료 | 진행률 |
 | --- | ---: | ---: | ---: |
 | Phase 0–6 | 70 | 0 | 100% |
-| Phase 7 | 44 | 5 | 89.8% |
+| Phase 7 | 49 | 0 | 100% |
 | User plugin/project lifecycle | 38 | 0 | 100% |
 | Host-native usage sensors | 24 | 0 | 100% |
 | Global onboarding·shared index | 19 | 0 | 100% |
@@ -40,7 +40,7 @@
 | 문서 말투 | 6 | 0 | 100% |
 | Security review | 4 | 0 | 100% |
 | Docs Wiki migration | 4 | 0 | 100% |
-| **Canonical total** | **223** | **5** | **97.8%** |
+| **Canonical total** | **228** | **0** | **100.0%** |
 
 External production boundary 항목도 미완료 합계에 포함. Protected authority 없이 완료 처리 금지.
 
@@ -52,8 +52,8 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
   fresh-session 중복 warning 0건
 - 실제 Windows 11 x86_64: Codex user install·global setup·project auto onboarding,
   shared index 1개 project, repeat update·rollback·재검증 PASS
-- Current native runtime: `baff938` run `30581894132`, Linux musl x86_64·arm64를
-  포함한 macOS·Linux·Windows 5/5 PASS
+- Current native candidate: exact `420e244` run `30657669889`, Linux musl
+  x86_64·arm64를 포함한 macOS·Linux·Windows 5/5와 npm umbrella PASS
 - Local npm packaging: current `0.8.0` Windows native binary의 platform·umbrella
   tarball 생성, isolated global install, `hive --version`, source/package binary
   SHA-256 byte identity PASS
@@ -71,11 +71,14 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
   미검증 범위 명시, 투영 시험 PASS
 - Opt-in daily update check의 24시간 success throttle, offline next-session retry,
   fixed npm metadata endpoint와 no-install contract
-- Bare `hive update`의 npm `test` 확인, npm·direct owner 인증, 선택 언어 prompt,
+- Bare `hive update`의 npm `latest` 확인, legacy test·stable npm·direct owner 인증,
+  선택 언어 prompt,
   명시적 수락 뒤 exact adapter 실행과 owner·version 재검증
 - 독립 final blocker review: critical·high·medium·low finding `0`건
-- Runs: candidate `30633581092` exact `1031ff0` 5개 target·6개 npm PASS;
-  publication `30634201469` 승인 PASS, 출시 안내 누락으로 게시 전 실패·npm publish 0건
+- npm publication `30658188721`: exact `0.8.0` 여섯 package·provenance·
+  `latest=0.8.0` PASS. 기존 `test=0.8.0-test.1` 보존
+- 실제 Windows npm·CMD clean install, repeat, pending receipt recovery PASS. npm·direct
+  native SHA-256 `330f4e0c8da5b6347400b9b16a9f76b2fb4f94406a2eacfe8c641367ca344ef9`
 
 ## Required load order
 
@@ -125,11 +128,11 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
 `codex/release-0.8.0` 브랜치·`develop` 대상 PR 사용자 승인, PR #8 병합,
 첫 candidate run 성공과 첫 publication run의 npm 게시 전 실패 원인 확인.
 
-1. 출시 안내·게시 오류 진단·감시기 복구 수정 branch push와 `develop` 대상 PR 병합
-2. 새 exact `develop` commit의 `release.yml` 재실행과 P7-044·045·020·018 검증
-3. `release-publish.yml` 승인과 npm `0.8.0|latest` 게시
-4. npm·Unix·PowerShell·CMD clean install·repeat·recovery 검증과 P7-037 완료
-5. npm 배포 성공 commit의 `develop` → `main` PR 병합
+완료: PR #13 병합, exact `420e244` candidate run `30657669889`, publication run
+`30658188721`, npm·Unix·PowerShell·CMD 계약과 실제 Windows clean install·repeat·
+recovery 검증.
+
+다음 작업: npm 배포 성공 commit의 `develop` → `main` PR 병합.
 
 ## `0.8.0` 비차단 deferred boundary
 
