@@ -418,6 +418,7 @@ class Phase6StaticContracts(unittest.TestCase):
             "Verify existing npm tarballs before tag repair",
             'cmp "dist/$archive" "$root/registry.tgz"',
             'npm dist-tag rm "$package" latest',
+            'npm view "$package" "dist-tags.$tag"',
             'test "$(read_tag "$package" test)" = "$PACKAGE_VERSION"',
             "differs from approved candidate",
             "required release notes are missing",
@@ -439,6 +440,7 @@ class Phase6StaticContracts(unittest.TestCase):
         self.assertEqual(publication.count('npm publish "./dist/'), 12)
         self.assertNotIn('npm publish "dist/', publication)
         self.assertNotIn("npm dist-tag add", publication)
+        self.assertNotIn('npm dist-tag ls "$package" --json', publication)
         for forbidden in (
             "gh release create",
             "npm publish",

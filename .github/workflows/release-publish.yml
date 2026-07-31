@@ -319,8 +319,7 @@ jobs:
           read_tag() {
             package=$1
             tag=$2
-            npm dist-tag ls "$package" --json \
-              | jq -r --arg tag "$tag" '.[$tag] // empty'
+            npm view "$package" "dist-tags.$tag"
           }
           for package in "${packages[@]}"; do
             test "$(read_tag "$package" test)" = "$PACKAGE_VERSION"
@@ -353,8 +352,7 @@ jobs:
           read_tag() {
             package=$1
             tag=$2
-            npm dist-tag ls "$package" --json \
-              | jq -r --arg tag "$tag" '.[$tag] // empty'
+            npm view "$package" "dist-tags.$tag"
           }
           for package in "${packages[@]}"; do
             test "$(read_tag "$package" test)" = "$PACKAGE_VERSION"
