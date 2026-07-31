@@ -1155,6 +1155,7 @@ try {
         owner = "direct"
         product = "aigent-hive"
         version = "0.7.0"
+        package_version = "0.7.0-test.1"
         artifact_sha256 = "sha256:" + ("0" * 64)
     } | ConvertTo-Json -Compress | Set-Content -LiteralPath $receipt -Encoding utf8
     Assert-Rejected -Label "mismatched receipt" -Operation {
@@ -1316,6 +1317,7 @@ try {
         owner = "direct"
         product = "aigent-hive"
         version = "0.7.0"
+        package_version = "0.7.0-test.1"
         artifact_sha256 = "sha256:$transactionDigest"
     } | ConvertTo-Json -Compress | Set-Content -LiteralPath $pendingReceipt -Encoding utf8
     Repair-PendingDirectInstall `
@@ -1335,6 +1337,7 @@ try {
         owner = "direct"
         product = "aigent-hive"
         version = "0.7.1"
+        package_version = "0.7.1-test.1"
         artifact_sha256 = "sha256:" + ("0" * 64)
     } | ConvertTo-Json -Compress | Set-Content -LiteralPath $pendingReceipt -Encoding utf8
     Repair-PendingDirectInstall `
@@ -1370,6 +1373,7 @@ try {
         owner = "direct"
         product = "aigent-hive"
         version = "0.7.0"
+        package_version = "0.7.0-test.1"
         artifact_sha256 = "sha256:" + ("0" * 64)
     } | ConvertTo-Json -Compress | Set-Content -LiteralPath $pendingReceipt -Encoding utf8
     Assert-Rejected -Label "mismatched pending receipt" -Operation {
