@@ -34,7 +34,7 @@
 | backup | update 전 canonical config/team/run/knowledge와 changed path snapshot, SQLite/runtime/backup/foreign orchestration 제외, exact 7일 경계 이후 validated unreferenced backup만 정리 |
 | 저장소 | 비기밀 canonical source와 data는 Git 추적, runtime/cache/SQLite 제외 |
 | 배포 정본 | `0.8.0` product candidate는 protected `develop`의 5개 native artifact·SHA-256·attestation; npm `0.8.0-test.N`·직접 installer는 동일 binary의 adapter, GitHub Release 없음 |
-| npm 설치 | Public `aigent-hive` umbrella + exact `@aigent-hive/*` platform package. 첫 시험판 `0.8.0-test.1`, 후속 시험판 `test.N` 순차 증가, `test`만 publication, `latest` 이동 없음. 안정 승인 뒤 `npm install -g aigent-hive` 활성화 |
+| npm 설치 | Public `aigent-hive` umbrella + exact `@aigent-hive/*` platform package. 첫 시험판 `0.8.0-test.1`, 후속 시험판 `test.N` 순차 증가, `test`만 publication, `latest` 이동 없음. 최초 등록만 임시 `NPM_TOKEN`, 이후 6개 Trusted Publisher·OIDC 전용. 안정 승인 뒤 `npm install -g aigent-hive` 활성화 |
 | update 확인 | Global setup explicit opt-in, 성공 확인 24시간 throttle, offline 실패는 성공 시각 미기록·다음 host session 재시도, 확인만으로 install 금지 |
 | binary update | Bare `hive update`가 즉시 확인하고 새 version이 있으면 선택 언어로 질문. 명시적 수락 뒤 authenticated install owner의 exact adapter만 실행 |
 | host projection | User `~/.agents/directives`·`~/.agents/skills` provider-neutral projection + selected host의 thin native adapter; project Codex·Antigravity `.agents/skills`, Claude `.claude/skills`; foreign byte 보존 |

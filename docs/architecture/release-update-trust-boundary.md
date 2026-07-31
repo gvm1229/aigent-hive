@@ -240,6 +240,14 @@ Malformed, future-dated, exact 7일 경계, active, symlinked 또는 foreign-ent
 - 6개 npm package 모두 `0.8.0-test.N`과 `test` dist-tag로 publication
 - Git tag·GitHub Release·npm `latest` 변경 0건
 
+Package가 아직 없는 최초 등록만 `bootstrap_with_token=true`와
+`release-publication` environment의 임시 `NPM_TOKEN` 사용. 이 단계도 같은
+candidate·attestation·manifest·byte identity 검증과 `--tag test --provenance` 적용.
+등록 직후 secret 삭제, 6개 package 각각에 `release-publish.yml`과
+`release-publication`을 결합한 Trusted Publisher 설정, publishing access의 token
+차단 적용. 이후 `bootstrap_with_token=false` 경로에는 `NODE_AUTH_TOKEN`을 주입하지
+않고 GitHub OIDC만 사용.
+
 Direct bootstrap은 exact `aigent-hive@0.8.0-test.N` umbrella의 installer를 사용.
 Installer는 npm registry의 같은 package version scoped platform tarball을 내려받고
 embedded SHA-256, archive entry allowlist, optional OS signature, product binary
