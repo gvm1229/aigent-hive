@@ -1,8 +1,8 @@
 # 현재 상태
 
 - 기준 branch: `develop`
-- product version: `0.7.0`
-- plan revision: `1.75`
+- product version: `0.8.0`
+- plan revision: `1.78`
 - 현재 milestone: Phase 7 qualification + global onboarding·shared index `0.8.0`
 - 현재 작업: `0.8.0` 제품 후보와 `0.8.0-test.N` npm 시험판 분리·배포 준비
 - 외부 중지 경계: GitHub Release·npm `latest`, protected signing/publication credential,
@@ -16,9 +16,13 @@
   + `docs/plans/active/documentation-style.md` + `docs/plans/active/security-review.md`
   + `docs/plans/active/docs-wiki-migration.md`
   + `docs/plans/active/release-0.8.0.md`
-- Plan completion: canonical checklist `222/228` 완료, `6`개 미완료, `97.4%`
-- Latest local Windows: Rust workspace 전체 PASS, PowerShell 5.1·7.6.4 installer와
-  `cmd.exe` bootstrap 계약 PASS
+- Plan completion: canonical checklist `223/228` 완료, `5`개 미완료, `97.8%`
+- Latest local Windows: Rust workspace 전체 PASS. Python 적합성 567개 발견 중
+  530개 실제 실행·통과, 37개 미실행. 미실행 범위: 관리자 권한 없는 Windows의
+  symbolic link 생성 제약 16개, POSIX·Unix 전용 동작 14개, macOS 전용 설치·서명
+  동작 7개. 운영체제 판별: Windows. 미실행 37개: 이 컴퓨터에서 검증 완료로
+  판단할 근거 불충분. PowerShell 5.1·7.6.4 installer와 `cmd.exe`
+  bootstrap 계약은 이 Windows 컴퓨터에서 실제 실행·통과
 - Latest native remote: `baff938`의 run `30581894132`, macOS·Linux·Windows
   5/5 PASS
 - Latest local npm: 제품 `0.8.0`·npm `0.8.0-test.1` 분리 포장 계약,
@@ -127,10 +131,10 @@ Target: `0.8.0`
 - 장기 방향: host-native·provider-neutral capability 대체 뒤 OMX/OMC 제거
 - Consumer reuse: `hive-wiki` core와 capture·maintenance·query 안전 계약
 - Skill reuse: shared canonical `harness/skills/`, exact source `.agents/skills/` projection
-- 현재 상태: 영어 32개·한국어 32개 atomic fact, exact pair 32개와 source-confined
+- 현재 상태: 영어 33개·한국어 33개 atomic fact, exact pair 33개와 source-confined
   CLI·Skill·material-task completion capture 구현 완료
 - Logical digest:
-  `sha256:ac024dee9818a86b999d95a237e20db557decd737aad084da07201e9838eeaad`
+  `sha256:21357283f9da9fdecec59a5025ca55fbd7fec579e4713168fc7a7ef87b95518d`
 - 검증: lint finding·warning 0건, 영어·한국어 query PASS, index 삭제 뒤 query
   fail-closed exit `5`, rebuild equivalence PASS
 - SQLite binary digest는 invocation-local evidence이며 정본·clean-copy equivalence 기준이
@@ -242,7 +246,7 @@ Pre-1.0 비차단 deferred:
 계획 evidence:
 
 - Active fragment 8 KiB 제한 충족
-- Canonical checklist `221/227`, active checklist ID 중복 0건
+- Canonical checklist `223/228`, active checklist ID 중복 0건
 - Root English 159줄·Korean 155줄 README, 상호 language link와 빈 QA 표 PASS
 - Plan static contract 29/29, documentation style regression 18/18 PASS
 - Human documentation inventory 1,285/1,285 review, finding 0건
@@ -397,8 +401,8 @@ Global onboarding·shared index local qualification PASS:
 
 - Strict Clippy all targets·all features와 format check PASS
 - Rust workspace 477/477
-- Python conformance 576개 실행, 575 PASS,
-  Windows `pwsh` 전용 1개 expected skip
+- Python conformance 576개 발견 중 575개 실행·통과. Windows가 아닌 환경에서만
+  가능한 `pwsh` 전용 검사 1개는 현재 Windows 환경에서 미실행
 - Shared index 동일 입력 재실행 byte-exact no-op, `changed_paths=[]`
 - Codex·Antigravity expedited/custom connected onboarding matrix 4/4
 - 독립 final blocker review의 critical·high·medium·low finding 0건
@@ -406,12 +410,13 @@ Global onboarding·shared index local qualification PASS:
 Source docs Wiki targeted qualification PASS:
 
 - `hive-wiki` 33/33, Source Wiki conformance 재검증 PASS
-- Canonical fact 64개, bilingual pair 32개
+- Canonical fact 70개, bilingual pair 35개
 - `lint` finding·warning 0건, 영어·한국어 query PASS
 - Index 삭제 뒤 query fail-closed exit `5`, logical digest·query equivalence rebuild PASS
 - Ignored index·persistent lock의 Git 추적 0건
-- Full Python conformance 565개 실행, failure 0건,
-  Windows platform 제한 37개 expected skip
+- 당시 Full Python conformance 565개 발견 중 528개 실행·통과, 37개 미실행.
+  미실행 범위는 현재 Windows에서 권한 없이 만들 수 없는 symbolic link와
+  POSIX·macOS 전용 동작. 해당 동작의 Windows 검증 완료 근거로 사용 금지
 
 ### macOS Apple Silicon local release qualification historical CLEAR
 
@@ -448,26 +453,30 @@ Current remote qualification evidence:
 
 검증 경계:
 
-- Local Phase 6 계약 21 PASS, macOS 전용 8개 expected skip
+- Local Phase 6 계약: Windows 적용 대상 21개 실행·통과. macOS 전용 8개는 현재
+  Windows 환경에서 실행 불가하여 미실행이며 macOS 동작은 이 결과로 미검증
 - Direct installer의 같은 owner parent handle-pinning race
 
 ## `0.8.0` 시험 배포 gate
 
 - P7-044 public npm package family와 native smoke
 - P7-045 npm-backed Unix·PowerShell·CMD installer와 digest·owner receipt 검증
-- P7-049 authenticated install-owner adapter를 사용하는 interactive `hive update`
+- P7-049 설치 소유자 기반 대화형 `hive update` 완료
 - P7-020 5개 target archive·npm tarball provenance
 - P7-018 exact `0.8.0` release candidate qualification
 - P7-037 GitHub Release 없이 npm `0.8.0-test.N|test` publication·clean install
 
 Candidate trust blocker:
 
-- Current source product version `0.7.0`, exact `0.8.0` candidate 부재
+- Current source product version `0.8.0`; protected remote candidate qualification 대기
 - 사용자 지정 순서: npm 시험 배포 성공 뒤 `develop` → `main` 병합
-- Candidate authority: protected `develop`
-- Current GitHub ruleset: `main`만 보호; `develop` unprotected
-- 사용자 해소 작업: `develop` PR·필수 상태 검사·강제 push 차단 ruleset 적용
-- 보호 확인 전 candidate activation·publication 0건
+- Candidate authority: PR·필수 상태 검사·삭제·강제 push 차단이 적용된 exact `develop`
+- Current GitHub ruleset: `develop` 보호 활성, 우회 권한 없음
+- Current publication environment: `release-publication` 필수 검토자 `gvm1229` 설정
+  확인, 자기 배포 승인 차단 비활성
+- Branch policy: `codex/release-0.8.0` 임시 branch 생성·push와 `develop` 대상 PR
+  사용자 예외 승인 완료. `develop` 직접 push는 보호 규칙상 불가
+- Publication 실행은 `release-publication`의 실행별 검토자 승인 전 대기
 - `release.yml`: 보호된 정확한 `develop` 커밋에서 제품 `0.8.0`과 npm
   `0.8.0-test.N`을 별도 입력으로 받아 5개 target·6개 npm tarball·embedded
   installer candidate 생성. local static/package 검증 완료, remote matrix 실행 대기
@@ -477,16 +486,19 @@ Candidate trust blocker:
 - Direct installer: `0.8.0-test.N` umbrella의 unpkg bootstrap과 scoped npm
   tarball digest 검증 뒤 native 제품 `0.8.0` 확인. 실제 registry clean install은
   publication 뒤 검증
-- GitHub repository environment·secret·variable 0개
-- Local npm: Node.js `24.13.1`, npm `11.17.0`, registry 로그인 없음
-- npm `aigent-hive`·`@aigent-hive/*` name·scope ownership 미확정
+- GitHub repository environment `release-publication` 1개, 최초 등록용
+  `NPM_TOKEN` secret 1개
+- Local npm: Node.js `24.13.1`, npm `11.17.0`, registry 사용자 `gvm1229`
+- npm `aigent-hive`·`@aigent-hive/*` name·scope 신규 등록 권한은 실제 publication
+  전까지 미확정
 - Public registry 조회: umbrella·5개 scoped package 모두 E404,
   name·scope ownership 증거로 사용 금지
-- Local Windows npm baseline: actual `0.7.0` binary의 platform·umbrella pack,
+- Local Windows npm baseline: actual `0.8.0` binary의 platform·umbrella pack,
   isolated global install과 digest
-  `95fd1e924fbb67ae124984cca5575029ff2cbcce4de8fc96250c8a61124207f8`
+  `a8bdb5d7dd42965ec6f4d2f1f334a4ee4184a7f659f09cb92caf794b96524b0d`
   byte identity PASS
-- Interactive activation 미구현
+- Interactive activation: npm `test` 확인, npm·direct owner 인증, 선택 언어 prompt,
+  명시적 수락 뒤 exact adapter 실행·owner와 package version 재검증 PASS
 
 Pre-1.0 비차단 deferred:
 
@@ -499,10 +511,9 @@ Pre-1.0 비차단 deferred:
 
 ## 다음 action
 
-0. `develop` branch protection 사용자 적용과 확인
-1. P7-044 public npm package family와 native smoke
-2. P7-045 npm-backed Unix·PowerShell·CMD installer와 digest·owner receipt 검증
-3. P7-049 authenticated install-owner adapter를 사용하는 interactive `hive update`
+1. `codex/release-0.8.0` 생성·push와 `develop` 대상 PR 검사·병합
+2. P7-044 public npm package family와 native smoke
+3. P7-045 npm-backed Unix·PowerShell·CMD installer와 digest·owner receipt 검증
 4. P7-020 artifact·npm provenance workflow
 5. P7-018 protected `develop` exact `0.8.0` product candidate qualification
 6. P7-037 GitHub Release 없이 npm `0.8.0-test.1|test` publication·clean install

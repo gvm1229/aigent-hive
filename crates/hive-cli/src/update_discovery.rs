@@ -11,7 +11,7 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 const REGISTRY_METADATA_URL: &str = "https://registry.npmjs.org/aigent-hive";
 const UPDATE_CHECK_STATE_RELATIVE: &str = ".hive/runtime/update-check.json";
 const MAX_STATE_BYTES: u64 = 64 * 1024;
-const MAX_METADATA_BYTES: u64 = 1024 * 1024;
+const MAX_METADATA_BYTES: usize = 1024 * 1024;
 const SUCCESS_THROTTLE_SECONDS: i64 = 24 * 60 * 60;
 const NETWORK_TIMEOUT: Duration = Duration::from_secs(10);
 
@@ -45,23 +45,34 @@ struct RegistryClient;
 
 impl MetadataClient for RegistryClient {
     fn fetch(&self) -> Result<Vec<u8>, String> {
-        let config = ureq::Agent::config_builder()
-            .https_only(true)
-            .timeout_global(Some(NETWORK_TIMEOUT))
-            .user_agent(concat!("aigent-hive/", env!("CARGO_PKG_VERSION")))
-            .build();
-        let agent: ureq::Agent = config.into();
-        let mut response = agent
-            .get(REGISTRY_METADATA_URL)
-            .call()
-            .map_err(|error| format!("registry request failed: {error}"))?;
-        response
-            .body_mut()
-            .with_config()
-            .limit(MAX_METADATA_BYTES)
-            .read_to_vec()
-            .map_err(|error| format!("registry response could not be read: {error}"))
+        fetch_https(REGISTRY_METADATA_URL, MAX_METADATA_BYTES)
     }
+}
+
+pub(crate) fn fetch_registry_metadata() -> Result<Vec<u8>, String> {
+    RegistryClient.fetch()
+}
+
+pub(crate) fn fetch_https(url: &str, maximum: usize) -> Result<Vec<u8>, String> {
+    if !url.starts_with("https://") {
+        return Err("update download URL must use HTTPS".to_owned());
+    }
+    let config = ureq::Agent::config_builder()
+        .https_only(true)
+        .timeout_global(Some(NETWORK_TIMEOUT))
+        .user_agent(concat!("aigent-hive/", env!("CARGO_PKG_VERSION")))
+        .build();
+    let agent: ureq::Agent = config.into();
+    let mut response = agent
+        .get(url)
+        .call()
+        .map_err(|error| format!("update request failed: {error}"))?;
+    response
+        .body_mut()
+        .with_config()
+        .limit(maximum as u64)
+        .read_to_vec()
+        .map_err(|error| format!("update response could not be read: {error}"))
 }
 
 pub(crate) fn run(arguments: &[String]) -> ExitCode {
@@ -341,10 +352,20 @@ mod tests {
         };
         let first =
             check(&arguments, 100, &FakeClient(Err("offline".to_owned()))).expect("deferred check");
+        let current: SemVersion = env!("CARGO_PKG_VERSION")
+            .parse()
+            .expect("current product version");
+        let newer = SemVersion {
+            patch: current.patch.checked_add(1).expect("next patch version"),
+            ..current
+        };
         let second = check(
             &arguments,
             101,
-            &FakeClient(Ok(br#"{"versions":{"0.7.0":{},"0.8.0":{}}}"#.to_vec())),
+            &FakeClient(Ok(format!(
+                r#"{{"versions":{{"{current}":{{}},"{newer}":{{}}}}}}"#
+            )
+            .into_bytes())),
         )
         .expect("retried check");
 

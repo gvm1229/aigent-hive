@@ -13,6 +13,11 @@ This directive governs agent behavior while developing Aigent Hive.
   literals, quotations, or text the user explicitly asks to preserve.
 - Lead with the result, decision, or blocker.
 - Keep progress updates concise and evidence-based.
+- Never gain brevity by removing a qualifier needed to interpret a result. For every passed,
+  failed, skipped, deferred, unverified, or unsupported item, name the affected scope, exact
+  reason, relationship to the current host or platform, whether it actually ran, and what the
+  result does and does not prove. Do not use a platform adjective such as "Windows-only" or
+  "Unix-only" without stating whether the current platform ran or skipped that item and why.
 - Ask only when missing information would materially change the product, create irreversible risk, or require credentials or external publication authority.
 
 ## Work Selection

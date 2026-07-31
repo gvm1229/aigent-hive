@@ -2705,6 +2705,12 @@ fn render_agents_marker(
 - When this marker reports Wiki enabled, run agent-reviewed task-fact autocapture before the final response for material work. Record the bounded outcome, tool or project, criteria, and originating request summary from current authorized artifacts; never ingest a raw transcript, hook payload, tool output, hidden prompt, or runtime state.\n",
         1,
     );
+    let marker = marker.replacen(
+        "- Apply the same rule to authored callouts and blockquotes.",
+        "- Never gain brevity by removing a qualifier needed to interpret a result. For every passed, failed, skipped, deferred, unverified, or unsupported item, name the affected scope, exact reason, relationship to the current host or platform, whether it actually ran, and what the result does and does not prove. Do not use a platform adjective such as \"Windows-only\" or \"Unix-only\" without stating whether the current platform ran or skipped that item and why.\n\
+- Apply the same rule to authored callouts and blockquotes.",
+        1,
+    );
     if effective_preferences.is_some_and(|preferences| !preferences.usage_guard_enabled) {
         let mut disabled = marker
             .lines()
@@ -6878,6 +6884,7 @@ mod tests {
                 "/hive-knowledge-query/SKILL.md",
                 "/hive-prompt-refine/SKILL.md",
                 "/hive-simple-question/SKILL.md",
+                "/hive-update/SKILL.md",
                 "/hive-usage-guard/SKILL.md",
                 "/setup-harness/SKILL.md",
             ];

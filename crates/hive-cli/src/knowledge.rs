@@ -1,4 +1,4 @@
-use hive_core::{ensure_no_symlink_ancestors, sha256_digest};
+use hive_core::{ensure_consumer_target, ensure_no_symlink_ancestors, sha256_digest};
 use hive_wiki::shared::{
     load_project_registry, query_shared, rebuild_shared_index, validate_shared_index,
     SHARED_INDEX_RELATIVE,
@@ -230,6 +230,7 @@ fn run_shared_query(
     tag: Option<&str>,
     limit: usize,
 ) -> Result<KnowledgeResult, WikiError> {
+    ensure_consumer_target(target).map_err(|error| WikiError::Conflict(error.to_string()))?;
     require_shared_wiki_enabled(user_root)?;
     let canonical_user = hive_wiki::shared::canonical_root(user_root)?;
     let canonical_target = hive_wiki::shared::canonical_root(target)?;
@@ -627,6 +628,7 @@ fn shared_mutation_target(
     user_root: &Path,
     allow_user_root: bool,
 ) -> Result<SharedMutationTarget, WikiError> {
+    ensure_consumer_target(target).map_err(|error| WikiError::Conflict(error.to_string()))?;
     require_shared_wiki_enabled(user_root)?;
     let canonical_user = hive_wiki::shared::canonical_root(user_root)?;
     let canonical_target = hive_wiki::shared::canonical_root(target)?;

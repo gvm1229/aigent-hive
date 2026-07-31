@@ -1,8 +1,8 @@
 # Aigent Hive active plan index
 
-> Revision: 1.75
+> Revision: 1.78
 > 기준일: 2026-07-31
-> Product version: `0.7.0`
+> Product version: `0.8.0`
 > 현재 milestone: Phase 7 qualification + global onboarding·shared index `0.8.0`
 > Entrypoint: `docs/plans/PLAN.md`
 
@@ -31,7 +31,7 @@
 | 범위 | 완료 | 미완료 | 진행률 |
 | --- | ---: | ---: | ---: |
 | Phase 0–6 | 70 | 0 | 100% |
-| Phase 7 | 43 | 6 | 87.8% |
+| Phase 7 | 44 | 5 | 89.8% |
 | User plugin/project lifecycle | 38 | 0 | 100% |
 | Host-native usage sensors | 24 | 0 | 100% |
 | Global onboarding·shared index | 19 | 0 | 100% |
@@ -40,7 +40,7 @@
 | 문서 말투 | 6 | 0 | 100% |
 | Security review | 4 | 0 | 100% |
 | Docs Wiki migration | 4 | 0 | 100% |
-| **Canonical total** | **222** | **6** | **97.4%** |
+| **Canonical total** | **223** | **5** | **97.8%** |
 
 External production boundary 항목도 미완료 합계에 포함. Protected authority 없이 완료 처리 금지.
 
@@ -54,7 +54,7 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
   shared index 1개 project, repeat update·rollback·재검증 PASS
 - Current native runtime: `baff938` run `30581894132`, Linux musl x86_64·arm64를
   포함한 macOS·Linux·Windows 5/5 PASS
-- Local npm packaging: current `0.7.0` Windows native binary의 platform·umbrella
+- Local npm packaging: current `0.8.0` Windows native binary의 platform·umbrella
   tarball 생성, isolated global install, `hive --version`, source/package binary
   SHA-256 byte identity PASS
 - Windows shell: WSI-001–003 완료, consumer PowerShell 7 dependency 0건,
@@ -67,8 +67,12 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
 - English·한국어 language-first setup과 선택 언어 global guidance, `hive-cli` 211개 PASS
 - 개발·소비자 질문과 응답의 선택 언어 통일, 대체 가능한 일반 영어 단어의 한영
   혼용 금지, 전역·프로젝트 지침 회귀 시험 PASS
+- 개발·소비자 검증 결과 보고 규칙: 범위·이유·현재 환경·실행 여부·입증 범위·
+  미검증 범위 명시, 투영 시험 PASS
 - Opt-in daily update check의 24시간 success throttle, offline next-session retry,
   fixed npm metadata endpoint와 no-install contract
+- Bare `hive update`의 npm `test` 확인, npm·direct owner 인증, 선택 언어 prompt,
+  명시적 수락 뒤 exact adapter 실행과 owner·version 재검증
 - 독립 final blocker review: critical·high·medium·low finding `0`건
 
 ## Required load order
@@ -115,10 +119,12 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
 
 ## Current execution order
 
-0. `develop` protection과 candidate authority 확인
-1. P7-044 public `aigent-hive` npm package family와 native smoke
-2. P7-045 npm-backed Unix·PowerShell·CMD installer와 digest·owner receipt 검증
-3. P7-049 authenticated install-owner adapter를 사용하는 interactive `hive update`
+완료된 선행 조건: `release-publication` 필수 검토자 설정, 임시
+`codex/release-0.8.0` 브랜치·`develop` 대상 PR 사용자 승인.
+
+1. `codex/release-0.8.0` 생성·push와 `develop` 대상 PR 검사·병합
+2. P7-044 public `aigent-hive` npm package family와 native smoke
+3. P7-045 npm-backed Unix·PowerShell·CMD installer와 digest·owner receipt 검증
 4. P7-020 5개 platform archive·npm tarball provenance
 5. P7-018 protected `develop`의 exact `0.8.0` product candidate qualification
 6. P7-037 GitHub Release 없이 npm `0.8.0-test.1`의 `test` publication·clean

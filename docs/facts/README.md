@@ -29,10 +29,12 @@
 | Orchestration owner | [en](en/orchestration-ownership.md) | [ko](ko/orchestration-ownership.md) |
 | Docs Wiki architecture | [en](en/docs-wiki-architecture.md) | [ko](ko/docs-wiki-architecture.md) |
 | 응답 언어 일관성 | [en](en/language-consistency.md) | [ko](ko/language-consistency.md) |
+| 검증 결과 명확성 | [en](en/verification-result-clarity.md) | [ko](ko/verification-result-clarity.md) |
 | 사용자 인계 전 자동 처리 | [en](en/automated-user-handoff.md) | [ko](ko/automated-user-handoff.md) |
 | Knowledge preservation | [en](en/knowledge-preservation.md) | [ko](ko/knowledge-preservation.md) |
 | Knowledge storage | [en](en/knowledge-storage.md) | [ko](ko/knowledge-storage.md) |
 | Shared index | [en](en/shared-index.md) | [ko](ko/shared-index.md) |
+| 공유 색인 대상 경로 안전 | [en](en/shared-index-target-safety.md) | [ko](ko/shared-index-target-safety.md) |
 | Global onboarding | [en](en/global-onboarding.md) | [ko](ko/global-onboarding.md) |
 | Project onboarding | [en](en/project-onboarding.md) | [ko](ko/project-onboarding.md) |
 | Plugin update merge | [en](en/plugin-update-merge.md) | [ko](ko/plugin-update-merge.md) |
@@ -50,6 +52,7 @@
 | Windows namespace gate timeout | [en](en/windows-namespace-gate-timeout.md) | [ko](ko/windows-namespace-gate-timeout.md) |
 | Update transaction | [en](en/update-transaction.md) | [ko](ko/update-transaction.md) |
 | Update discovery | [en](en/update-discovery.md) | [ko](ko/update-discovery.md) |
+| Interactive binary update | [en](en/interactive-binary-update.md) | [ko](ko/interactive-binary-update.md) |
 | Version policy | [en](en/version-policy.md) | [ko](ko/version-policy.md) |
 | `0.8.0` test distribution | [en](en/test-distribution.md) | [ko](ko/test-distribution.md) |
 | Source development | [en](en/source-development.md) | [ko](ko/source-development.md) |

@@ -167,13 +167,16 @@ parse_receipt() {
   receipt_path=$1
   receipt_json=$(cat "$receipt_path")
   receipt_prefix='{"schema_version":1,"owner":"direct","product":"aigent-hive","version":"'
+  receipt_package_marker='","package_version":"'
   receipt_digest_marker='","artifact_sha256":"sha256:'
   case "$receipt_json" in
-    "$receipt_prefix"*"$receipt_digest_marker"*'"}') ;;
+    "$receipt_prefix"*"$receipt_package_marker"*"$receipt_digest_marker"*'"}') ;;
     *) return 1 ;;
   esac
   parsed_version=${receipt_json#"$receipt_prefix"}
-  parsed_version=${parsed_version%%"$receipt_digest_marker"*}
+  parsed_version=${parsed_version%%"$receipt_package_marker"*}
+  parsed_package_version=${receipt_json#*"$receipt_package_marker"}
+  parsed_package_version=${parsed_package_version%%"$receipt_digest_marker"*}
   parsed_digest=${receipt_json#*"$receipt_digest_marker"}
   parsed_digest=${parsed_digest%\}}
   parsed_digest=${parsed_digest%\"}
@@ -189,12 +192,21 @@ parse_receipt() {
   '; then
     return 1
   fi
+  case "$parsed_package_version" in
+    "$parsed_version"-test.[1-9]*)
+      if ! printf '%s\n' "${parsed_package_version#"$parsed_version-test."}" |
+        awk '/^[1-9][0-9]*$/ { next } { exit 1 }'; then
+        return 1
+      fi
+      ;;
+    *) return 1 ;;
+  esac
   case "$parsed_digest" in
     *[!0-9a-f]*|'') return 1 ;;
   esac
   [ "${#parsed_digest}" -eq 64 ] || return 1
-  expected_receipt=$(printf '{"schema_version":1,"owner":"direct","product":"aigent-hive","version":"%s","artifact_sha256":"sha256:%s"}' \
-    "$parsed_version" "$parsed_digest")
+  expected_receipt=$(printf '{"schema_version":1,"owner":"direct","product":"aigent-hive","version":"%s","package_version":"%s","artifact_sha256":"sha256:%s"}' \
+    "$parsed_version" "$parsed_package_version" "$parsed_digest")
   [ "$receipt_json" = "$expected_receipt" ]
 }
 
@@ -379,8 +391,8 @@ set -C
 exec 3>"$staged_receipt"
 set +C
 umask "$prior_umask"
-printf '{"schema_version":1,"owner":"direct","product":"aigent-hive","version":"%s","artifact_sha256":"sha256:%s"}\n' \
-  "$version" "$binary_digest" >&3
+printf '{"schema_version":1,"owner":"direct","product":"aigent-hive","version":"%s","package_version":"%s","artifact_sha256":"sha256:%s"}\n' \
+  "$version" "$package_version" "$binary_digest" >&3
 exec 3>&-
 set_file_mode 0644 "$staged_receipt"
 if [ ! -f "$staged_receipt" ] || [ -L "$staged_receipt" ]; then

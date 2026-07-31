@@ -2,7 +2,7 @@
 
 > Codex, Claude Code, Gemini Antigravity를 위한 provider-neutral 로컬 harness.
 
-[![Version](https://img.shields.io/badge/version-0.7.0-4C1)](../../Cargo.toml)
+[![Version](https://img.shields.io/badge/version-0.8.0-4C1)](../../Cargo.toml)
 [![Rust](https://img.shields.io/badge/Rust-stable-000000?logo=rust)](../../rust-toolchain.toml)
 [![License](https://img.shields.io/badge/license-Apache--2.0-green)](../../LICENSE)
 

@@ -116,7 +116,7 @@ skills:
   consent_digest: null
 - name: hive-update
   source_type: built-in
-  content_digest: sha256:e390663900b8e362ca64d066c35ac7c63ce8a6c88398c35210825e8056d212df
+  content_digest: sha256:7dd9e9c32d99aa05185ef25d1e6fa09195c5a70e721fa4eab87bc1cc522f3703
   side_effect_class: project-write
   capabilities:
   - filesystem-read

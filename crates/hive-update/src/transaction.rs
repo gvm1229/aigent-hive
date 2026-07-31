@@ -12,12 +12,12 @@ use hive_core::{
     validate_hive_directive_projection_relative, validate_hive_skill_projection_relative,
     validate_project_relative, SOURCE_MARKER_FILE,
 };
-#[cfg(test)]
-use hive_render::execute_setup;
 use hive_render::{
     execute_release_update_in, shared_marker_foreign_digest, update_path_is_owned, RenderError,
     SetupChange, SetupMode, SetupOutcome, SetupRequest,
 };
+#[cfg(test)]
+use hive_render::{execute_setup, GlobalProjectPreferences};
 use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
 use sha2::{Digest, Sha256};
@@ -2139,12 +2139,12 @@ mod tests {
             .join(name)
     }
 
-    fn release_fixture() -> PathBuf {
+    fn historical_release_fixture() -> PathBuf {
         Path::new(env!("CARGO_MANIFEST_DIR"))
             .join("../../tests/fixtures/phase6/releases/valid-0.7.0")
     }
 
-    fn operational_release_fixture() -> PathBuf {
+    fn release_fixture() -> PathBuf {
         Path::new(env!("CARGO_MANIFEST_DIR"))
             .join("../../tests/fixtures/phase6/releases/valid-0.8.0")
     }
@@ -2198,14 +2198,27 @@ mod tests {
             capabilities: &phase1_fixture("capabilities-codex-omx.json"),
             mode: SetupMode::Apply,
             reconfigure_roles: BTreeSet::new(),
-            global_preferences: None,
+            global_preferences: Some(GlobalProjectPreferences {
+                interface_language: "en".to_owned(),
+                wiki_enabled: true,
+                wiki_language: "both".to_owned(),
+                persona_id: "balanced".to_owned(),
+                persona_custom_description: None,
+                selected_project_skills: legacy_builtin_names("0.6.0")
+                    .iter()
+                    .map(|name| (*name).to_owned())
+                    .collect(),
+                usage_guard_enabled: false,
+                codexbar_fallback_enabled: false,
+                usage_stop_remaining_percent: 20,
+            }),
         })
-        .expect("current setup");
+        .expect("connected current setup");
 
         let harness_path = target.join(HARNESS_PATH);
         let harness = fs::read_to_string(&harness_path)
             .expect("harness")
-            .replace("0.7.0", version);
+            .replace(env!("CARGO_PKG_VERSION"), version);
         fs::write(harness_path, harness).expect("legacy harness");
         fs::remove_dir_all(target.join(".agents/directives"))
             .expect("remove post-legacy directive projections");
@@ -2527,11 +2540,15 @@ mod tests {
             global_preferences: None,
         })
         .expect("unconnected 0.7 setup");
-        let harness = fs::read_to_string(consumer.join(HARNESS_PATH)).expect("installed harness");
+        let harness_path = consumer.join(HARNESS_PATH);
+        let harness = fs::read_to_string(&harness_path)
+            .expect("installed harness")
+            .replace(env!("CARGO_PKG_VERSION"), "0.7.0");
+        fs::write(&harness_path, &harness).expect("historical harness version");
         assert!(harness.contains("harness_version = \"0.7.0\""));
         assert!(!harness.contains("preference_provenance"));
         let before = snapshot_regular_files(&consumer);
-        let fixture = operational_release_fixture();
+        let fixture = release_fixture();
         let root = fs::read(fixture.join("metadata/root.json")).expect("trusted root");
 
         let error = execute_update(&update_request(
@@ -2594,7 +2611,7 @@ mod tests {
 
     #[test]
     fn major_confirmation_binds_every_real_update_report_field() {
-        let fixture = release_fixture();
+        let fixture = historical_release_fixture();
         let root = fs::read(fixture.join("metadata/root.json")).expect("root");
         let verified =
             verify_release_repository(&root, &fixture, 1_800_000_000, None).expect("release");
@@ -3013,7 +3030,7 @@ mod tests {
         );
         assert!(fs::read_to_string(displaced.join(HARNESS_PATH))
             .expect("updated harness")
-            .contains("0.7.0"));
+            .contains("0.8.0"));
     }
 
     #[cfg(unix)]
@@ -3155,7 +3172,7 @@ mod tests {
             ))
             .unwrap_or_else(|error| panic!("{source_version} dry-run failed: {error}"));
             assert_eq!(dry_run.source_version, source_version);
-            assert_eq!(dry_run.target_version, "0.7.0");
+            assert_eq!(dry_run.target_version, "0.8.0");
             assert_eq!(dry_run.migration_id, "same-major-render-v1");
 
             let applied = execute_update(&update_request(
@@ -3166,7 +3183,7 @@ mod tests {
             ))
             .unwrap_or_else(|error| panic!("{source_version} apply failed: {error}"));
             assert_eq!(applied.source_version, source_version);
-            assert_eq!(applied.target_version, "0.7.0");
+            assert_eq!(applied.target_version, "0.8.0");
             assert_eq!(
                 fs::read(consumer.join("README.md")).expect("readme"),
                 before_readme
@@ -3176,7 +3193,7 @@ mod tests {
                 before_omx
             );
             let migrated = fs::read_to_string(consumer.join(HARNESS_PATH)).expect("harness");
-            assert!(migrated.contains("0.7.0"));
+            assert!(migrated.contains("0.8.0"));
             assert!(
                 migrated.contains("usage_stop_remaining_percent = 37"),
                 "{migrated}"
@@ -3185,7 +3202,7 @@ mod tests {
     }
 
     #[test]
-    fn signed_update_dry_run_and_apply_preserve_foreign_bytes_and_rebuild_index() {
+    fn signed_update_preserves_foreign_bytes_and_removes_legacy_project_index() {
         let target = tempfile::tempdir().expect("target");
         let consumer = target.path().canonicalize().expect("consumer");
         install_legacy_consumer(&consumer, "0.6.0");
@@ -3202,7 +3219,7 @@ mod tests {
         ))
         .expect("dry-run");
         assert_eq!(dry_run.source_version, "0.6.0");
-        assert_eq!(dry_run.target_version, "0.7.0");
+        assert_eq!(dry_run.target_version, "0.8.0");
         assert_eq!(dry_run.migration_id, "same-major-render-v1");
         assert!(dry_run.backup_id.is_none());
         assert!(!consumer.join(UPDATE_STATE_PATH).exists());
@@ -3220,14 +3237,17 @@ mod tests {
         .expect("apply");
         assert_eq!(applied.migration_id, "same-major-render-v1");
         assert!(applied.backup_id.is_some());
-        assert!(applied.index_digest.is_some());
+        assert!(applied.index_digest.is_none());
         assert!(consumer.join(UPDATE_STATE_PATH).is_file());
         assert!(!consumer.join(JOURNAL_PATH).exists());
-        assert!(consumer.join(".hive/index/hive.sqlite3").is_file());
-        for skill in ["hive-update", "hive-migrate"] {
-            assert!(consumer
-                .join(format!(".agents/skills/{skill}/SKILL.md"))
-                .is_file());
+        assert!(!consumer.join(".hive/index/hive.sqlite3").exists());
+        assert!(consumer
+            .join(".agents/skills/setup-harness/SKILL.md")
+            .is_file());
+        for unselected in ["hive-update", "hive-migrate"] {
+            assert!(!consumer
+                .join(format!(".agents/skills/{unselected}/SKILL.md"))
+                .exists());
         }
         assert_eq!(
             fs::read(consumer.join("README.md")).expect("readme"),

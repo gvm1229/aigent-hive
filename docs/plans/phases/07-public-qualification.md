@@ -114,6 +114,6 @@
 - [x] [P7-046] 영·한 README·빈 QA 표
 - [x] [P7-047] Bilingual setup·harness
 - [x] [P7-048] Daily check·offline retry
-- [ ] [P7-049] Interactive `hive update`
+- [x] [P7-049] Interactive `hive update`
 
 ---

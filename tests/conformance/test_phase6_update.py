@@ -1155,6 +1155,7 @@ try {
         owner = "direct"
         product = "aigent-hive"
         version = "0.7.0"
+        package_version = "0.7.0-test.1"
         artifact_sha256 = "sha256:" + ("0" * 64)
     } | ConvertTo-Json -Compress | Set-Content -LiteralPath $receipt -Encoding utf8
     Assert-Rejected -Label "mismatched receipt" -Operation {
@@ -1316,6 +1317,7 @@ try {
         owner = "direct"
         product = "aigent-hive"
         version = "0.7.0"
+        package_version = "0.7.0-test.1"
         artifact_sha256 = "sha256:$transactionDigest"
     } | ConvertTo-Json -Compress | Set-Content -LiteralPath $pendingReceipt -Encoding utf8
     Repair-PendingDirectInstall `
@@ -1335,6 +1337,7 @@ try {
         owner = "direct"
         product = "aigent-hive"
         version = "0.7.1"
+        package_version = "0.7.1-test.1"
         artifact_sha256 = "sha256:" + ("0" * 64)
     } | ConvertTo-Json -Compress | Set-Content -LiteralPath $pendingReceipt -Encoding utf8
     Repair-PendingDirectInstall `
@@ -1370,6 +1373,7 @@ try {
         owner = "direct"
         product = "aigent-hive"
         version = "0.7.0"
+        package_version = "0.7.0-test.1"
         artifact_sha256 = "sha256:" + ("0" * 64)
     } | ConvertTo-Json -Compress | Set-Content -LiteralPath $pendingReceipt -Encoding utf8
     Assert-Rejected -Label "mismatched pending receipt" -Operation {
@@ -1607,9 +1611,13 @@ try {
             cargo,
         )
         self.assertIsNotNone(version)
-        manifest = read_json(RELEASE_FIXTURE / "targets/bundle-manifest.json")
-        migration = read_json(RELEASE_FIXTURE / "targets/migration-table.json")
-        self.assertEqual(version.group(1), "0.7.0")
+        current_fixture = (
+            ROOT
+            / f"tests/fixtures/phase6/releases/valid-{version.group(1)}"
+        )
+        manifest = read_json(current_fixture / "targets/bundle-manifest.json")
+        migration = read_json(current_fixture / "targets/migration-table.json")
+        self.assertEqual(version.group(1), "0.8.0")
         self.assertEqual(manifest["release_version"], version.group(1))
         self.assertEqual(migration["target_version"], version.group(1))
         harness = (

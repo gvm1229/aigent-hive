@@ -1325,7 +1325,7 @@ fn render_user_directive(config: &UserSetupConfig, resolved_skills: &[String]) -
     } else {
         "disabled"
     };
-    match config.interface_language {
+    let mut rendered = match config.interface_language {
         InterfaceLanguage::En => {
             let capture = if config.wiki.enabled {
                 "- Before the final response for material work, run agent-reviewed task-fact \
@@ -1356,8 +1356,16 @@ knowledge index를 capture·refresh하지 않음.\n"
                 resolved_skills.join(", ")
             )
         }
-    }
-    .into_bytes()
+    };
+    rendered.push_str(match config.interface_language {
+        InterfaceLanguage::En => {
+            "- For every passed, failed, skipped, deferred, unverified, or unsupported item, state the affected scope, exact reason, current host or platform relationship, whether it ran, and what the result does and does not prove. Never trade those qualifiers for brevity.\n"
+        }
+        InterfaceLanguage::Ko => {
+            "- 통과·실패·건너뜀·연기·미검증·미지원 항목마다 대상 범위, 정확한 이유, 현재 호스트·운영체제와의 관계, 실제 실행 여부, 증명하는 범위와 증명하지 못한 범위를 모두 명시. 해석에 필요한 한정어를 간결함을 이유로 생략 금지.\n"
+        }
+    });
+    rendered.into_bytes()
 }
 
 fn render_catalog_selection(selection: &CatalogSelection) -> String {
@@ -1824,6 +1832,7 @@ usage_guard:
             .expect("English guidance");
         assert!(english.contains("# Aigent Hive user preferences"));
         assert!(english.contains("- Ask and answer in English."));
+        assert!(english.contains("For every passed, failed, skipped, deferred"));
         assert!(!english.contains("# Aigent Hive 사용자 설정"));
 
         config.interface_language = InterfaceLanguage::Ko;
@@ -1831,6 +1840,7 @@ usage_guard:
             .expect("Korean guidance");
         assert!(korean.contains("# Aigent Hive 사용자 설정"));
         assert!(korean.contains("- 질문과 응답은 한국어 사용."));
+        assert!(korean.contains("통과·실패·건너뜀·연기·미검증·미지원"));
         assert!(!korean.contains("# Aigent Hive user preferences"));
     }
 

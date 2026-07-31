@@ -128,29 +128,28 @@ notarization, Authenticode, Azure signing, external TUF는 실제 안정 릴리�
 ## 실행 순서
 
 완료: `P7-046` 영·한 README, `P7-047` bilingual setup, `P7-043` Linux musl
-x86_64·arm64 qualification.
+x86_64·arm64 qualification, `P7-049` 설치 소유자 기반 대화형 `hive update`.
 
-0. `develop` branch protection과 candidate authority 확인
-1. `P7-044`: npm package family와 native smoke
-2. `P7-045`: npm-backed Unix·PowerShell·CMD installer와 authenticated owner receipt
-3. `P7-049`: authenticated install-owner adapter를 사용하는 대화형 `hive update`
+완료된 선행 조건: `release-publication` 필수 검토자 설정,
+`codex/release-0.8.0` 브랜치·`develop` 대상 PR 사용자 승인.
+
+1. `codex/release-0.8.0` 생성·push와 `develop` 대상 PR 검사·병합
+2. `P7-044`: npm package family와 native smoke
+3. `P7-045`: npm-backed Unix·PowerShell·CMD installer와 authenticated owner receipt
 4. `P7-020`: archive·npm tarball SHA-256·attestation·byte identity
 5. `P7-018`: protected `develop` exact `0.8.0` product candidate qualification
 6. `P7-037`: npm `0.8.0-test.1`의 `test` publication과 npm·curl clean install 검증
 7. 시험 배포 성공 commit의 `develop` → `main` PR 병합
 
-`P7-049` 선행 조건: `P7-044`·`P7-045`의 exact-version package와 authenticated
-install-owner adapter 확정. 불확실한 owner 추측과 설치 관리자 우회 binary
-직접 overwrite 금지.
-
 ## Candidate branch authority 경계
 
 - 사용자 순서: 시험 배포 성공 뒤 `develop` → `main` 병합
 - Workflow authority: protected `develop` candidate 한정
-- Current ruleset gap: `main` protected, `develop` unprotected
-- 사용자 작업: `develop`에 PR·필수 상태 검사·강제 push 차단 ruleset 적용
+- Current ruleset: `develop`에 PR·필수 검사·삭제·강제 push 차단 적용
+- Current publication environment: 필수 검토자 `gvm1229`, 자기 배포 승인 가능
+- Branch exception: `codex/release-0.8.0` 생성·push와 `develop` 대상 PR 사용자 승인 완료
 - 자동화 작업: workflow의 exact `develop` ref·commit·run 검증
-- 보호 확인 전 P7-018·P7-037 activation 중단
+- P7-037 publication은 `release-publication` 검토자의 실행별 승인 뒤 진행
 
 ## 완료 기준
 
@@ -170,7 +169,7 @@ install-owner adapter 확정. 불확실한 owner 추측과 설치 관리자 우�
 ## 외부 중지 경계
 
 - npm 로그인·2FA·organization, 최초 등록용 임시 token과 6개 Trusted Publisher
-- `develop` branch protection 사용자 적용
+- `release-publication` 필수 검토자 설정과 publication 승인
 - Credential·private signing material 접근 금지
 - npm `latest`, GitHub Release, 안정 릴리스는 별도 사용자 승인 전 금지
 - Exact `1.0.0` 별도 명시 전 major release 준비 금지

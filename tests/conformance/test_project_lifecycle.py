@@ -109,14 +109,14 @@ elif command == "plugin list --json":
         plugin_root = os.path.join(user_root, ".hive/marketplaces/codex") if user_root else os.path.join(root, "user-codex/.hive/marketplaces/codex")
         entries = [{{
             "pluginId": "aigent-hive@aigent-hive",
-            "version": "0.7.0",
+            "version": "0.8.0",
             "enabled": True,
             "source": {{"path": os.path.join(plugin_root, "plugins/aigent-hive")}},
             "marketplaceSource": {{"source": plugin_root}},
         }}] if state["plugin"] else []
         print(json.dumps({{"installed": entries, "available": []}}))
     else:
-        entries = [{{"id": "aigent-hive@aigent-hive", "version": "0.7.0", "enabled": True, "scope": "user"}}] if state["plugin"] else []
+        entries = [{{"id": "aigent-hive@aigent-hive", "version": "0.8.0", "enabled": True, "scope": "user"}}] if state["plugin"] else []
         print(json.dumps(entries))
 else:
     print("{{}}")

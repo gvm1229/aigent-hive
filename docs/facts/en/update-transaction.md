@@ -9,9 +9,9 @@ summary: "Verified updates use a dry run, bounded backup, durable journal, and a
 tags: [recovery, transaction, update]
 aliases: ["Safe update transaction"]
 sources:
-  - "repo:crates/hive-update/src/transaction.rs#sha256:d55b9b13726eb812ffdf0e605fe41a24a343157bd41ca175c6750aa6443154ec"
+  - "repo:crates/hive-update/src/transaction.rs#sha256:236f61f1049854628c5dc572183df02498f67eedefd4ec9058672e554c295042"
 links: [plugin-update-merge, release-verification]
-reviewed_revision: "git:235d5e34e89f7ce22f8b50ae7dd38fa012018a14"
+reviewed_revision: "git:847d5ad4066e0086faf05219b3ea1f8c21b3d5f3"
 status: active
 ---
 

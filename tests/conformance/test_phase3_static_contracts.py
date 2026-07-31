@@ -685,6 +685,9 @@ class Phase3SkillSourceContract(unittest.TestCase):
             "Before presenting pending actions or a user handoff, complete every "
             "safe, in-scope, automatable action"
         )
+        explicit_result_scope_rule = (
+            "failed, skipped, deferred, unverified, or unsupported item"
+        )
 
         self.assertIn("Do not insert replaceable English general nouns", source_behavior)
         self.assertIn("write the full passage in English", source_behavior)
@@ -714,10 +717,17 @@ class Phase3SkillSourceContract(unittest.TestCase):
         self.assertIn("present only genuinely user-owned actions", source_behavior)
         self.assertIn(automatic_handoff_rule, template)
         self.assertIn(automatic_handoff_rule, renderer)
+        self.assertIn(explicit_result_scope_rule, source_behavior)
+        self.assertIn(explicit_result_scope_rule, template)
+        self.assertIn(explicit_result_scope_rule, renderer)
         self.assertIn("남은 작업 목록·인계 전", guidance)
         self.assertIn("자동 처리 불가 이유", guidance)
+        self.assertIn("통과·실패·건너뜀·연기·미검증·미지원 결과", guidance)
+        self.assertIn("해석에 필요한 한정어를 간결함을 이유로 생략 금지", guidance)
         self.assertIn("finish every safe, in-scope, automatable task", user_guidance_renderer)
         self.assertIn("남은 작업 제시 전", user_guidance_renderer)
+        self.assertIn(explicit_result_scope_rule, user_guidance_renderer)
+        self.assertIn("통과·실패·건너뜀·연기·미검증·미지원", user_guidance_renderer)
         self.assertIn("대체 가능한 일반 영어 단어의 한영 혼용 금지", guidance)
         self.assertIn(
             "대체 가능한 일반 영어 단어의 한영 혼용 금지",

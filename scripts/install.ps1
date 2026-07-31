@@ -93,6 +93,7 @@ function Get-ValidatedDirectReceipt {
     $expectedProperties = @(
         "artifact_sha256",
         "owner",
+        "package_version",
         "product",
         "schema_version",
         "version"
@@ -104,6 +105,9 @@ function Get-ValidatedDirectReceipt {
         $receipt.owner -ne "direct" -or
         $receipt.product -ne "aigent-hive" -or
         $receipt.version -notmatch '^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$' -or
+        $receipt.package_version -notmatch (
+            '^' + [regex]::Escape($receipt.version) + '-test\.[1-9][0-9]*$'
+        ) -or
         $receipt.artifact_sha256 -notmatch '^sha256:[0-9a-f]{64}$'
     ) {
         throw "existing hive binary is not owned by the direct installer"
@@ -370,6 +374,7 @@ try {
         owner = "direct"
         product = "aigent-hive"
         version = $Version
+        package_version = $PackageVersion
         artifact_sha256 = "sha256:$binaryDigest"
     } | ConvertTo-Json -Compress
     $receiptBytes = [Text.UTF8Encoding]::new($false).GetBytes($receiptJson)
