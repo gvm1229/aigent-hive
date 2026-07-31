@@ -4,7 +4,7 @@
 - product version: `0.7.0`
 - plan revision: `1.74`
 - 현재 milestone: Phase 7 qualification + global onboarding·shared index `0.8.0`
-- 현재 작업: `docs/` Wiki 전환·README knowledge 복원 뒤 `0.8.0` update 구현
+- 현재 작업: `0.8.0` 제품 후보와 `0.8.0-test.N` npm 시험판 분리·배포 준비
 - 외부 중지 경계: GitHub Release·npm `latest`, protected signing/publication credential,
   exact `1.0.0` 사용자 authority
 - Plan load: compact `docs/plans/PLAN.md` + `docs/plans/phases/07-public-qualification.md`
@@ -21,8 +21,8 @@
   `cmd.exe` bootstrap 계약 PASS
 - Latest native remote: `baff938`의 run `30581894132`, macOS·Linux·Windows
   5/5 PASS
-- Latest local npm: current `0.7.0` Windows native binary의 platform·umbrella
-  tarball, isolated global install, version smoke와 source/package SHA-256 byte identity PASS
+- Latest local npm: 제품 `0.8.0`·npm `0.8.0-test.1` 분리 포장 계약,
+  platform·umbrella tarball과 격리 전역 설치 smoke PASS
 - Native Goal routing: legacy `PLAN.md` checkbox 문구를 `phases/07-public-qualification.md`,
   `active/plugin-project-lifecycle.md`, `active/native-usage-sensor.md`,
   `active/user-onboarding-shared-index.md`, `active/source-docs-wiki.md`,
@@ -468,12 +468,14 @@ Candidate trust blocker:
 - Current GitHub ruleset: `main`만 보호; `develop` unprotected
 - 사용자 해소 작업: `develop` PR·필수 상태 검사·강제 push 차단 ruleset 적용
 - 보호 확인 전 candidate activation·publication 0건
-- `release.yml`: 5개 target·6개 npm tarball·embedded installer candidate 계약의
-  local static/package 검증 완료, remote matrix 실행 대기
+- `release.yml`: 보호된 정확한 `develop` 커밋에서 제품 `0.8.0`과 npm
+  `0.8.0-test.N`을 별도 입력으로 받아 5개 target·6개 npm tarball·embedded
+  installer candidate 생성. local static/package 검증 완료, remote matrix 실행 대기
 - `release-publish.yml`: GitHub Release·npm `latest` 0건과 6개 package `test` 전용
-  publication 계약 구현, protected 실행 대기
-- Direct installer: exact umbrella의 unpkg bootstrap과 scoped npm tarball digest
-  검증 구현, 실제 registry clean install은 publication 뒤 검증
+  publication 계약 구현. 성공한 정확한 `develop` 후보만 허용하며 protected 실행 대기
+- Direct installer: `0.8.0-test.N` umbrella의 unpkg bootstrap과 scoped npm
+  tarball digest 검증 뒤 native 제품 `0.8.0` 확인. 실제 registry clean install은
+  publication 뒤 검증
 - GitHub repository environment·secret·variable 0개
 - npm `aigent-hive`·`@aigent-hive/*` name·scope ownership 미확정
 - Public registry 조회: umbrella·5개 scoped package 모두 E404,
