@@ -2,7 +2,7 @@
 
 - 기준 branch: `develop`
 - product version: `0.8.0`
-- plan revision: `1.80`
+- plan revision: `1.81`
 - 현재 milestone: Phase 7 qualification + global onboarding·shared index `0.8.0`
 - 현재 작업: `0.8.0` 제품 후보와 `0.8.0-test.N` npm 시험판 분리·배포 준비
 - 외부 중지 경계: GitHub Release·npm `latest`, protected signing/publication credential,
@@ -17,7 +17,7 @@
   + `docs/plans/active/docs-wiki-migration.md`
   + `docs/plans/active/release-0.8.0.md`
   + `docs/plans/active/v0.9.0-loop-wiki-skills.md`
-- Plan completion: canonical checklist `223/252` 완료, `29`개 미완료, `88.5%`
+- Plan completion: canonical checklist `223/253` 완료, `30`개 미완료, `88.1%`
 - Latest local Windows: Rust workspace 458개 실행·통과. Python 적합성 618개 발견 중
   576개 실제 실행·통과, 42개 미실행. 미실행 범위: 관리자 권한 없는 Windows의
   symbolic link 생성 제약 16개, POSIX·Unix 전용 동작 19개, macOS 전용 설치·서명
@@ -38,8 +38,8 @@
 
 ## v0.9.0 계획
 
-- 상태: 계획 승인, 구현 미착수
-- 결정: [`ADR-0015`](../decisions/ADR-0015-host-native-skill-composition.md) proposed
+- 상태: 계획 최종 승인, 구현 미착수
+- 결정: [`ADR-0015`](../decisions/ADR-0015-host-native-skill-composition.md) accepted
 - Active fragment:
   [`v0.9.0-loop-wiki-skills.md`](../plans/active/v0.9.0-loop-wiki-skills.md)
 - 범위: `hive-loop-engineering`, `hive-wiki`, `ai-slop-cleaner`,
@@ -48,9 +48,14 @@
   retry·evidence edge·independent verification·dynamic steering·terminal state
 - Wiki 계약: `add|query|lint|list|read|delete|refresh`, keyword·tag·category,
   taxonomy, `[[wikilink]]`, agent-reviewed quick-add
-- 금지 경계: scheduler·model runtime·tmux·Stop continuation·`omx_wiki`·`omx`
-  command·raw session 자동 수집 0건
-- 실행 경계: `0.8.0` 시험 배포와 `develop`→`main` 완료 뒤 별도 구현 시작 지시
+- Utility 계약: 회귀 시험 우선 code cleanup·fallback 분류·변경 파일 한정,
+  읽기 전용 bounded 연구·공식 source 우선·저장소 사실 분리·handoff
+- 채택 계약: 전체 OMX·OMC Skill·adapter의 `adopt|merge|exclude` 근거표와
+  비중복·사용자 승인·license·보안·conformance gate
+- 금지 경계: scheduler·model runtime·tmux·Stop continuation·`omx_wiki`·`.omx|.omc`·
+  `omx|omc` command·자동 adapter 우선권·raw session 자동 수집 0건
+- 실행 경계: `0.8.0` 시험 배포와 `develop`→`main` 완료 뒤 별도 구현 시작 지시,
+  V9-025 소유권 전환 우선
 
 ## `docs/` Wiki 전환
 

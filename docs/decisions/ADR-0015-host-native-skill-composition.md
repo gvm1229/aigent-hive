@@ -1,7 +1,7 @@
 # ADR-0015: v0.9 host-native Skill 조합
 
-- 상태: proposed
-- 날짜: 2026-07-31
+- 상태: accepted
+- 날짜: 2026-08-01
 - 대상: `0.9.0`
 - 대체 대상: [`ADR-0004`](ADR-0004-orchestration-ownership.md)
 
@@ -21,7 +21,7 @@ provider-neutral Skill·Markdown 상태 계약 조합. 외부 계층 없이도 �
 - Capability 판정: `supported|best-effort|unsupported|unverified`
 - 필수 capability의 `unsupported|unverified`: 명시적 `host_capability_unsupported`
   차단, 다른 runtime 자동 전환·유사 기능 생성 금지
-- OMX·OMC: 사용자가 별도로 선택 가능한 호환 계층. 자동 우선권·정본 소유권 없음
+- OMX·OMC: 사용자가 별도로 선택 가능한 외부 호환 계층. 필수 dependency·자동 우선권·정본 소유권 없음
 - 기존 `0.8.x` run: 고정된 owner 보존. v0.9 새 run과 명시적 migration에만 새 결정 적용
 
 ## Graph engineering 경계
@@ -32,7 +32,7 @@ provider-neutral Skill·Markdown 상태 계약 조합. 외부 계층 없이도 �
 - 매 node·retry·steering dispatch 전 `hive-usage-guard` gate
 - 독립 verification role과 evidence locator 없는 success edge 금지
 - 기존 `hive-run-checkpoint`, `hive-run-resume`, `hive-role-handoff` 재사용
-- Scheduler·model runtime·session daemon·provider API client·tmux dependency 0개
+- Scheduler·model runtime·session daemon·provider API client·tmux·`omx|omc` command dependency 0개
 - Stop hook 기반 continuation·Ralph clone·team/swarm clone 금지
 - Hook 사용 범위: host-native checkpoint·무결성 알림. 실행 재호출·계속 여부 결정 금지
 
@@ -46,6 +46,12 @@ provider-neutral Skill·Markdown 상태 계약 조합. 외부 계층 없이도 �
 - 초기 suite: `hive-loop-engineering`, `hive-wiki`, `ai-slop-cleaner`,
   `best-practice-research`와 기존 필수 Hive Skill
 - 중복 기능: 하나의 정본 구현 또는 얇은 router로 통합
+- `ai-slop-cleaner`: 회귀 시험 우선, 동작 보존, fallback 분류, smell별 pass,
+  변경 파일 한정과 pass별 품질 gate
+- `best-practice-research`: 읽기 전용 bounded 연구, 공식·upstream 우선, 날짜·version,
+  저장소 사실 분리, 최소 evidence set, 인용과 명시적 handoff
+- 전체 OMX·OMC Skill·adapter: 기능 영역·owner·격차·`adopt|merge|exclude` 근거표 작성
+- Hive 승격 조건: 비중복, 사용자 승인, license·보안·source↔consumer conformance 검토
 
 ## 수락 조건
 
@@ -54,8 +60,11 @@ provider-neutral Skill·Markdown 상태 계약 조합. 외부 계층 없이도 �
 - Cycle·retry·evidence·steering·usage gate·independent verification 회귀 검증
 - Wiki 동사·taxonomy·link·query·quick-add·delete 안전 경계 검증
 - Consumer projection의 tmux·scheduler·Stop continuation·외부 namespace dependency 0건
+- v0.9 지침·계약·routing·projection·test·fact의 host-native 기본값과
+  OMX/OMC 자동 우선권·`omx|omc` command dependency 0건
 
 ## 효력
 
-현재 상태: proposed. 수락 전 ADR-0004의 `0.8.x` 계약 유지. 수락 시 ADR-0004를
-v0.9 새 run에 한해 대체, 기존 run owner pin 불변.
+ADR-0004는 `0.8.x`와 기존 run의 역사적 계약으로 유지. 이 결정은 v0.9 새 run과
+명시적 migration에 적용하며 기존 run owner pin 불변. 실제 지침·계약·projection
+전환 완료 전 v0.9 구현 완료 판정 금지.

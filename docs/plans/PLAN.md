@@ -1,7 +1,7 @@
 # Aigent Hive active plan index
 
-> Revision: 1.80
-> 기준일: 2026-07-31
+> Revision: 1.81
+> 기준일: 2026-08-01
 > Product version: `0.8.0`
 > 현재 milestone: Phase 7 qualification + global onboarding·shared index `0.8.0`
 > Entrypoint: `docs/plans/PLAN.md`
@@ -20,7 +20,7 @@
   first `aigent-hive@0.8.0-test.1`, SHA-256·GitHub attestation과 실제 Windows
   acceptance
 - Stop boundary: GitHub Release·npm `latest`, protected credential, exact `1.0.0`
-  authority, 현재 source usage guard remaining `30%`
+  authority, 현재 source usage guard remaining `5%`
 - Invariants: provider-neutral, canonical Markdown 우선, OMX/OMC replaceable adapter,
   ownership·consent·foreign byte 보존, provider API·credential 경로 없음, force-push 없음,
   explicit-only major, scheduler·tmux·Stop continuation 없음
@@ -42,8 +42,8 @@
 | 문서 말투 | 6 | 0 | 100% |
 | Security review | 4 | 0 | 100% |
 | Docs Wiki migration | 4 | 0 | 100% |
-| v0.9 loop·Wiki·Skill suite | 0 | 24 | 0% |
-| **Canonical total** | **223** | **29** | **88.5%** |
+| v0.9 loop·Wiki·Skill suite | 0 | 25 | 0% |
+| **Canonical total** | **223** | **30** | **88.1%** |
 
 External production boundary 항목도 미완료 합계에 포함. Protected authority 없이 완료 처리 금지.
 
@@ -127,7 +127,7 @@ publication `30647959771`의 npm 쓰기 직전까지 모든 gate PASS.
 2. 기존 candidate `30647361507`로 `release-publish.yml` 재실행·승인
 3. npm·Unix·PowerShell·CMD clean install·repeat·recovery와 P7 미완료 5개 검증
 4. 시험 배포 성공 commit의 `develop` → `main` PR 병합
-5. 별도 구현 시작 지시 뒤 V9-001–024 순차 실행
+5. 별도 구현 시작 지시 뒤 V9-025 소유권 전환, V9-001–024 순차 실행
 
 ## `0.8.0` 비차단 deferred boundary
 
