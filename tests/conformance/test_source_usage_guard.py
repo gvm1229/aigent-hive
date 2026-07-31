@@ -1193,6 +1193,48 @@ raise SystemExit(64)
         self.assertFalse(self.process_is_alive(first_pid))
         self.assertFalse(first_state.exists())
 
+    def test_gate_retires_watcher_after_codex_process_replacement(self) -> None:
+        self.write_usage(primary=None, secondary_used=1)
+        first_owner = subprocess.Popen(
+            [sys.executable, "-c", "import time; time.sleep(30)"]
+        )
+        second_owner = subprocess.Popen(
+            [sys.executable, "-c", "import time; time.sleep(30)"]
+        )
+        try:
+            self.environment["HIVE_USAGE_TEST_PROCESS_ID"] = str(first_owner.pid)
+            self.environment["HIVE_USAGE_TEST_PROCESS_START"] = "first-owner"
+            first = self.run_guard("gate")
+            first_watcher_pid = int(self.output(first)["watcher"]["pid"])
+            first_owner.terminate()
+            first_owner.wait(timeout=5)
+            self.environment["HIVE_USAGE_TEST_PROCESS_ID"] = str(second_owner.pid)
+            self.environment["HIVE_USAGE_TEST_PROCESS_START"] = "second-owner"
+
+            second = self.run_guard("gate")
+
+            self.assertEqual(first.returncode, 0, first.stderr)
+            self.assertEqual(second.returncode, 0, second.stderr)
+            second_watcher_pid = int(self.output(second)["watcher"]["pid"])
+            self.assertNotEqual(first_watcher_pid, second_watcher_pid)
+            self.assertFalse(self.process_is_alive(first_watcher_pid))
+        finally:
+            if second_owner.poll() is None:
+                self.environment["HIVE_USAGE_TEST_PROCESS_ID"] = str(
+                    second_owner.pid
+                )
+                self.environment["HIVE_USAGE_TEST_PROCESS_START"] = "second-owner"
+                self.run_guard("gate")
+                self.run_guard("watch-stop")
+            self.environment["HIVE_USAGE_TEST_PROCESS_ID"] = str(os.getpid())
+            self.environment["HIVE_USAGE_TEST_PROCESS_START"] = (
+                "fixture-process-start-a"
+            )
+            for process in (first_owner, second_owner):
+                if process.poll() is None:
+                    process.terminate()
+                process.wait(timeout=5)
+
     def test_process_creation_change_never_reuses_session_bypass(self) -> None:
         disabled = self.run_guard(
             "session-disable", "--confirm-session-disable"

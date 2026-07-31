@@ -1822,6 +1822,51 @@ def watcher_status(root: Path, session: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def retire_replaced_session_watcher(root: Path, session: dict[str, Any]) -> None:
+    value = read_json(watcher_path(root, session["session_id"]))
+    if value is None:
+        return
+    if (
+        value.get("schema_version") != SCHEMA_VERSION
+        or value.get("session_id") != session["session_id"]
+    ):
+        raise GuardError("invalid usage-guard watcher state")
+    stored_pid = value.get("session_pid")
+    stored_source = value.get("session_source")
+    stored_process_start = value.get("session_process_start")
+    if (
+        stored_pid == session["pid"]
+        and stored_source == session["source"]
+        and stored_process_start == session["process_start"]
+    ):
+        return
+    if (
+        isinstance(stored_pid, bool)
+        or not isinstance(stored_pid, int)
+        or stored_pid <= 0
+        or stored_source not in SESSION_SOURCES
+        or not isinstance(stored_process_start, str)
+    ):
+        raise GuardError("invalid or stale watcher owner")
+    if process_is_alive(stored_pid):
+        try:
+            owner_is_active = (
+                process_start_digest(stored_pid) == stored_process_start
+            )
+        except GuardError as error:
+            raise GuardError("cannot verify stale watcher owner") from error
+        if owner_is_active:
+            raise GuardError("watcher belongs to another active Codex process")
+    previous_session = {
+        "session_id": session["session_id"],
+        "pid": stored_pid,
+        "cwd": str(root),
+        "source": stored_source,
+        "process_start": stored_process_start,
+    }
+    stop_watcher(root, previous_session)
+
+
 def retire_superseded_watchers(root: Path, session: dict[str, Any]) -> None:
     sessions = state_root(root) / "sessions"
     if not sessions.exists():
@@ -1857,6 +1902,7 @@ def retire_superseded_watchers(root: Path, session: dict[str, Any]) -> None:
 
 
 def start_watcher(root: Path, session: dict[str, Any]) -> dict[str, Any]:
+    retire_replaced_session_watcher(root, session)
     retire_superseded_watchers(root, session)
     status = watcher_status(root, session)
     if status["active"]:
