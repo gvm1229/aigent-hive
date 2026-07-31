@@ -1546,8 +1546,19 @@ fn render_user_guidance(
             }
         },
     );
+    let result_clarity = setup.map_or(
+        "- For every passed, failed, skipped, deferred, unverified, or unsupported item, state the affected scope, exact reason, current host or platform relationship, whether it ran, and what the result does and does not prove. / 통과·실패·건너뜀·연기·미검증·미지원 항목마다 대상 범위, 정확한 이유, 현재 호스트·운영체제와의 관계, 실제 실행 여부, 증명 범위와 미증명 범위를 모두 명시.\n",
+        |config| match config.interface_language {
+            crate::user_setup::InterfaceLanguage::En => {
+                "- For every passed, failed, skipped, deferred, unverified, or unsupported item, state the affected scope, exact reason, current host or platform relationship, whether it ran, and what the result does and does not prove. Never trade those qualifiers for brevity.\n"
+            }
+            crate::user_setup::InterfaceLanguage::Ko => {
+                "- 통과·실패·건너뜀·연기·미검증·미지원 항목마다 대상 범위, 정확한 이유, 현재 호스트·운영체제와의 관계, 실제 실행 여부, 증명하는 범위와 증명하지 못한 범위를 모두 명시. 해석에 필요한 한정어를 간결함을 이유로 생략 금지.\n"
+            }
+        },
+    );
     format!(
-        "<!-- AIGENT-HIVE:USER:START -->\n{heading}\n\n- {adapter_label}: `{}`\n{body}{footer}<!-- AIGENT-HIVE:USER:END -->\n",
+        "<!-- AIGENT-HIVE:USER:START -->\n{heading}\n\n- {adapter_label}: `{}`\n{body}{result_clarity}{footer}<!-- AIGENT-HIVE:USER:END -->\n",
         host.as_str()
     )
     .into_bytes()
@@ -6500,6 +6511,7 @@ mod tests {
         ))
         .expect("English guidance");
         assert!(english.contains("use English consistently throughout every question and response"));
+        assert!(english.contains("For every passed, failed, skipped, deferred"));
         assert!(!english.contains("질문과 응답"));
 
         let korean = String::from_utf8(render_user_guidance(
@@ -6509,6 +6521,7 @@ mod tests {
         .expect("Korean guidance");
         assert!(korean.contains("질문과 응답은 한국어로 통일"));
         assert!(korean.contains("대체 가능한 일반 영어 단어의 한영 혼용 금지"));
+        assert!(korean.contains("통과·실패·건너뜀·연기·미검증·미지원"));
         for avoidable_mixture in [
             "활성 adapter",
             "Interface language",
