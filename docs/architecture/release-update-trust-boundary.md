@@ -223,28 +223,29 @@ Malformed, future-dated, exact 7일 경계, active, symlinked 또는 foreign-ent
 
 `.github/workflows/release.yml` candidate 계약:
 
-- Protected `main` exact commit과 입력 version 결합
+- Protected `develop` exact commit, product version과 npm package version 결합
 - macOS arm64·x86_64, Linux musl arm64·x86_64, Windows MSVC x86_64 build
 - Native archive와 exact `@aigent-hive/*` npm platform tarball 생성
 - Artifact SHA-256, GitHub artifact attestation, native/npm binary byte identity
 - Platform artifact digest 기반 direct installer 렌더 후 `aigent-hive` umbrella에 포함
 - Tag·GitHub Release·npm publication 권한 0건
 
-`.github/workflows/release-publish.yml`의 `0.8.0` 계약:
+`.github/workflows/release-publish.yml`의 `0.8.0` product candidate 계약:
 
 - 별도 `release-publication` approval
-- 성공한 protected `main` candidate run과 exact commit 고정
+- 성공한 protected `develop` candidate run과 exact commit 고정
 - 5개 native archive·6개 npm tarball의 checksum·attestation·manifest·byte identity 검증
-- Umbrella 안의 exact-version `install.sh`·`install.ps1`·`install.cmd` 검증
-- 6개 npm package 모두 `test` dist-tag로 publication
+- Umbrella 안의 exact product `0.8.0`·package `0.8.0-test.N`
+  `install.sh`·`install.ps1`·`install.cmd` 검증
+- 6개 npm package 모두 `0.8.0-test.N`과 `test` dist-tag로 publication
 - Git tag·GitHub Release·npm `latest` 변경 0건
 
-Direct bootstrap은 exact `aigent-hive@0.8.0` umbrella의 installer를 사용. Installer는
-npm registry의 exact scoped platform tarball을 내려받고 embedded SHA-256, archive
-entry allowlist, optional OS signature, binary version을 검증한 뒤 `owner=direct`
-receipt를 기록. Receipt는 closed exact field set, installed binary SHA-256,
-binary의 exact version을 결합. Existing executable·receipt의 symlink/reparse 또는
-digest/version 불일치 시 덮어쓰기 금지.
+Direct bootstrap은 exact `aigent-hive@0.8.0-test.N` umbrella의 installer를 사용.
+Installer는 npm registry의 같은 package version scoped platform tarball을 내려받고
+embedded SHA-256, archive entry allowlist, optional OS signature, product binary
+`0.8.0`을 검증한 뒤 `owner=direct` receipt를 기록. Receipt는 closed exact field set,
+installed binary SHA-256, binary의 exact product version을 결합. Existing
+executable·receipt의 symlink/reparse 또는 digest/version 불일치 시 덮어쓰기 금지.
 
 npm global install의 binary owner는 npm. Homebrew·WinGet binary owner는 각 package
 manager. Hive의 직접 binary overwrite와 owner 추측 금지. Bare `hive update`는 명시적

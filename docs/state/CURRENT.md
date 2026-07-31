@@ -2,7 +2,7 @@
 
 - 기준 branch: `develop`
 - product version: `0.7.0`
-- plan revision: `1.73`
+- plan revision: `1.74`
 - 현재 milestone: Phase 7 qualification + global onboarding·shared index `0.8.0`
 - 현재 작업: `docs/` Wiki 전환·README knowledge 복원 뒤 `0.8.0` update 구현
 - 외부 중지 경계: GitHub Release·npm `latest`, protected signing/publication credential,
@@ -205,10 +205,10 @@ Target: `0.8.0`
 
 - Interactive owner-aware `hive update`
 - Linux x86_64·arm64 musl native build·install·runtime qualification
-- `aigent-hive@0.8.0|test` package family와 registry publication
+- `aigent-hive@0.8.0-test.N|test` package family와 registry publication
 - Unix·PowerShell·CMD npm-backed 직접 installer
 - 5개 target SHA-256·GitHub artifact attestation·npm binary identity
-- Exact `0.8.0` candidate qualification과 npm `test` publication
+- Exact product `0.8.0` candidate qualification과 npm `0.8.0-test.N|test` publication
 
 Pre-1.0 비차단 deferred:
 
@@ -458,18 +458,16 @@ Current remote qualification evidence:
 - P7-049 authenticated install-owner adapter를 사용하는 interactive `hive update`
 - P7-020 5개 target archive·npm tarball provenance
 - P7-018 exact `0.8.0` release candidate qualification
-- P7-037 GitHub Release 없이 npm `test` publication·clean install
+- P7-037 GitHub Release 없이 npm `0.8.0-test.N|test` publication·clean install
 
 Candidate trust blocker:
 
 - Current source product version `0.7.0`, exact `0.8.0` candidate 부재
-- 사용자 지정 순서는 시험 배포 성공 뒤 `develop` → `main` 병합
-- Current workflow는 `main` candidate만 허용하고 Current GitHub ruleset은
-  `main`만 보호; `develop`은 unprotected
-- 권장 해소: `develop` 보호와 candidate authority 전환 뒤 성공한 exact commit의
-  `main` PR 병합
-- 대안: 시험 배포 전 `main` 병합의 명시적 승인
-- 선택 전 unprotected candidate retarget·ruleset mutation·publication 0건
+- 사용자 지정 순서: npm 시험 배포 성공 뒤 `develop` → `main` 병합
+- Candidate authority: protected `develop`
+- Current GitHub ruleset: `main`만 보호; `develop` unprotected
+- 사용자 해소 작업: `develop` PR·필수 상태 검사·강제 push 차단 ruleset 적용
+- 보호 확인 전 candidate activation·publication 0건
 - `release.yml`: 5개 target·6개 npm tarball·embedded installer candidate 계약의
   local static/package 검증 완료, remote matrix 실행 대기
 - `release-publish.yml`: GitHub Release·npm `latest` 0건과 6개 package `test` 전용
@@ -497,10 +495,11 @@ Pre-1.0 비차단 deferred:
 
 ## 다음 action
 
-0. Candidate branch authority 선택과 `develop` protection 여부 확정
+0. `develop` branch protection 사용자 적용과 확인
 1. P7-044 public npm package family와 native smoke
 2. P7-045 npm-backed Unix·PowerShell·CMD installer와 digest·owner receipt 검증
 3. P7-049 authenticated install-owner adapter를 사용하는 interactive `hive update`
 4. P7-020 artifact·npm provenance workflow
-5. P7-018 selected protected branch exact `0.8.0` candidate qualification
-6. P7-037 GitHub Release 없이 npm `test` publication·clean install
+5. P7-018 protected `develop` exact `0.8.0` product candidate qualification
+6. P7-037 GitHub Release 없이 npm `0.8.0-test.1|test` publication·clean install
+7. 시험 배포 성공 commit의 `develop` → `main` PR 병합

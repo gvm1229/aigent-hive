@@ -1,6 +1,6 @@
 # Aigent Hive active plan index
 
-> Revision: 1.73
+> Revision: 1.74
 > 기준일: 2026-07-31
 > Product version: `0.7.0`
 > 현재 milestone: Phase 7 qualification + global onboarding·shared index `0.8.0`
@@ -8,13 +8,15 @@
 
 ## Goal parameters
 
-- Objective: `Aigent Hive 0.8.0`의 Linux·macOS·Windows native artifact, npm·curl
-  시험 설치, bilingual onboarding, update discovery·activation과 provenance gate 완료
+- Objective: `Aigent Hive 0.8.0` 후보의 Linux·macOS·Windows native artifact,
+  npm `0.8.0-test.N`·직접 설치 시험, bilingual onboarding, update
+  discovery·activation과 provenance gate 완료
 - Success: Mandatory user setup, global preference 기반 expedited/custom project setup,
   user-root 단일 SQLite, 세 host selected Skill projection, Wiki default-on opt-out,
   usage guard opt-in `20%`, native-first·CodexBar fallback-only, consumer
   PowerShell 5.1·`cmd.exe`, source-only PowerShell 7, Linux musl x86_64·arm64,
-  exact `aigent-hive@0.8.0`, SHA-256·GitHub attestation과 실제 Windows acceptance
+  first `aigent-hive@0.8.0-test.1`, SHA-256·GitHub attestation과 실제 Windows
+  acceptance
 - Stop boundary: GitHub Release·npm `latest`, protected credential, exact `1.0.0`
   authority, 현재 source usage guard remaining `30%`
 - Invariants: provider-neutral, canonical Markdown 우선, OMX/OMC replaceable adapter,
@@ -113,14 +115,15 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
 
 ## Current execution order
 
-0. Candidate branch authority 선택: protected `develop` candidate 뒤 exact commit을
-   `main`으로 병합하거나, 시험 배포 전 `main` 병합을 별도 승인
+0. `develop` protection과 candidate authority 확인
 1. P7-044 public `aigent-hive` npm package family와 native smoke
 2. P7-045 npm-backed Unix·PowerShell·CMD installer와 digest·owner receipt 검증
 3. P7-049 authenticated install-owner adapter를 사용하는 interactive `hive update`
 4. P7-020 5개 platform archive·npm tarball provenance
-5. P7-018 selected protected branch의 exact `0.8.0` candidate qualification
-6. P7-037 GitHub Release 없이 npm `test` publication·clean install 검증
+5. P7-018 protected `develop`의 exact `0.8.0` product candidate qualification
+6. P7-037 GitHub Release 없이 npm `0.8.0-test.1`의 `test` publication·clean
+   install 검증
+7. 시험 배포 성공 commit의 `develop` → `main` PR 병합
 
 ## `0.8.0` 비차단 deferred boundary
 

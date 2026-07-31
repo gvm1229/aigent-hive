@@ -101,7 +101,8 @@
 - [x] [P7-034] Karpathy Raw/Wiki/Schema와 SQLite rebuild
 - [x] [P7-035] same-major compatibility
 - [x] [P7-036] cross-major no-data-loss migration
-- [ ] [P7-037] GitHub Release 없이 npm `test` publication과 npm·curl clean install
+- [ ] [P7-037] GitHub Release 없이 npm `0.8.0-test.N`의 `test` publication과
+  npm·curl 설치
 - [x] [P7-038] product version parity, compatible minor/patch bump와 explicit-only major gate
 - [x] [P7-039] public license — 전체 source·harness `Apache-2.0`, 전문, package metadata와 render fixture
 - [x] [P7-040] current candidate clean clone에서 전체 CI PASS

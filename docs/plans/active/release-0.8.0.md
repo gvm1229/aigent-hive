@@ -8,12 +8,14 @@
 
 - 목적: 실제 안정 릴리스 전 설치·업데이트·host onboarding 검증
 - GitHub: Release·prerelease 생성 없음
-- npm: exact `0.8.0`과 `test` dist-tag만 publication, `latest` 이동 없음
+- npm: `0.8.0-test.N`과 `test` dist-tag만 publication, `latest` 이동 없음
+- 첫 npm 시험판: `0.8.0-test.1`; 반복 시험: `test.2`, `test.3` 순차 증가
+- Product candidate: `0.8.0`; npm package version: `0.8.0-test.N`
 - 직접 설치: GitHub Release asset이 아니라 npm registry의 같은 native package 사용
 - Consumer runtime: Rust native binary, Node.js·PowerShell 7 dependency 없음
 - 신뢰 기준: 명시적으로 선택된 protected branch의 exact commit, SHA-256,
   GitHub artifact attestation
-- 공개 명칭: 안정 릴리스로 부르지 않고 `0.8.0 test distribution`으로 표시
+- 공개 명칭: 안정 릴리스로 부르지 않고 `0.8.0-test.N test distribution`으로 표시
 
 실제 안정 릴리스는 사용자가 별도로 승인할 `0.8.x`에서 수행. 그때 npm `latest`,
 GitHub normal release, 안정 설치 명령과 limitation 문구를 다시 확정.
@@ -50,7 +52,7 @@ selected protected branch exact commit
 ## npm 시험 설치
 
 ```console
-npm install -g aigent-hive@0.8.0
+npm install -g aigent-hive@0.8.0-test.1
 ```
 
 또는 시험 channel을 명시:
@@ -62,7 +64,7 @@ npm install -g aigent-hive@test
 - Public umbrella package: `aigent-hive`
 - Platform package: `@aigent-hive/darwin-arm64`, `darwin-x64`, `linux-arm64`,
   `linux-x64`, `win32-x64`
-- Exact-version optional dependency와 `hive` executable shim
+- Exact package-version optional dependency와 `hive` executable shim
 - Platform package 선행 publication, umbrella package 최종 publication
 - 모든 package는 `--tag test --provenance`; `latest` 이동 금지
 - Package install 이후 `hive --version`과 native architecture smoke
@@ -77,23 +79,24 @@ Unix:
 
 ```sh
 curl --proto '=https' --tlsv1.2 -LsSf \
-  https://raw.githubusercontent.com/gvm1229/aigent-hive/main/scripts/install.sh | sh
+  https://unpkg.com/aigent-hive@0.8.0-test.1/install.sh | sh
 ```
 
 Windows PowerShell 5.1+:
 
 ```powershell
-irm https://raw.githubusercontent.com/gvm1229/aigent-hive/main/scripts/install.ps1 | iex
+irm https://unpkg.com/aigent-hive@0.8.0-test.1/install.ps1 | iex
 ```
 
 Windows CMD:
 
 ```bat
-curl.exe -fLo install-aigent-hive.cmd https://raw.githubusercontent.com/gvm1229/aigent-hive/main/scripts/install.cmd && install-aigent-hive.cmd
+curl.exe -fLo install-aigent-hive.cmd https://unpkg.com/aigent-hive@0.8.0-test.1/install.cmd && install-aigent-hive.cmd
 ```
 
-Bootstrap은 embedded exact `0.8.0`과 platform package digest를 검증하고 npm registry
-tarball에서 native binary 취득. 직접 설치 경로의 npm CLI·Node.js dependency 없음.
+Bootstrap은 embedded product `0.8.0`, npm package `0.8.0-test.1`과 platform package
+digest를 검증하고 npm registry tarball에서 native binary 취득. 직접 설치 경로의 npm
+CLI·Node.js dependency 없음.
 PowerShell 7 탐지·설치 요구·설치 제안도 없음.
 
 ## 업데이트 UX
@@ -109,15 +112,6 @@ PowerShell 7 탐지·설치 요구·설치 제안도 없음.
 - `hive update`는 즉시 확인하고 새 버전이 있으면 설치 전 명시적으로 질문
 - 수락 뒤 현재 install owner의 exact-version adapter만 실행
 - 거절·EOF·noninteractive invocation은 mutation 0건
-
-## README
-
-- Root `README.md`: 간결한 English canonical overview
-- `docs/readme/README.ko.md`: 같은 핵심 구조의 한국어 문서
-- 각 문서의 `Languages` 링크로 상호 이동
-- 설치, 지원 범위, 안전 경계, 빠른 시작, update, contribution만 root README에 유지
-- 상세 architecture·개발 계약은 기존 `docs/` 링크로 이동
-- 두 문서에 빈 `QA Contributors` 표 유지
 
 ## Workflow 역할
 
@@ -135,13 +129,14 @@ notarization, Authenticode, Azure signing, external TUF는 실제 안정 릴리�
 완료: `P7-046` 영·한 README, `P7-047` bilingual setup, `P7-043` Linux musl
 x86_64·arm64 qualification.
 
-0. Candidate branch authority 선택과 branch protection 확인
+0. `develop` branch protection과 candidate authority 확인
 1. `P7-044`: npm package family와 native smoke
 2. `P7-045`: npm-backed Unix·PowerShell·CMD installer와 authenticated owner receipt
 3. `P7-049`: authenticated install-owner adapter를 사용하는 대화형 `hive update`
 4. `P7-020`: archive·npm tarball SHA-256·attestation·byte identity
-5. `P7-018`: protected `main` exact `0.8.0` candidate qualification
-6. `P7-037`: npm `test` publication과 npm·curl clean install 검증
+5. `P7-018`: protected `develop` exact `0.8.0` product candidate qualification
+6. `P7-037`: npm `0.8.0-test.1`의 `test` publication과 npm·curl clean install 검증
+7. 시험 배포 성공 commit의 `develop` → `main` PR 병합
 
 `P7-049` 선행 조건: `P7-044`·`P7-045`의 exact-version package와 authenticated
 install-owner adapter 확정. 불확실한 owner 추측과 설치 관리자 우회 binary
@@ -150,13 +145,11 @@ install-owner adapter 확정. 불확실한 owner 추측과 설치 관리자 우�
 ## Candidate branch authority 경계
 
 - 사용자 순서: 시험 배포 성공 뒤 `develop` → `main` 병합
-- Workflow: `main` candidate 한정
-- Ruleset: `main` protected, `develop` unprotected
-- 금지: unprotected candidate retarget·ruleset 무단 변경
-- 권장 선택: `develop` 보호 → candidate·publication authority 전환 → 성공한 exact
-  commit을 PR로 `main`에 병합
-- 대안: 시험 배포 전 `develop` → `main` 병합 승인
-- 선택 전 P7-018·P7-037 activation 중단
+- Workflow authority: protected `develop` candidate 한정
+- Current ruleset gap: `main` protected, `develop` unprotected
+- 사용자 작업: `develop`에 PR·필수 상태 검사·강제 push 차단 ruleset 적용
+- 자동화 작업: workflow의 exact `develop` ref·commit·run 검증
+- 보호 확인 전 P7-018·P7-037 activation 중단
 
 ## 완료 기준
 
@@ -168,21 +161,22 @@ install-owner adapter 확정. 불확실한 owner 추측과 설치 관리자 우�
 - Bare `hive update`가 확인·질문·동의·설치·재검증 순서를 만족
 - English·Korean initial setup과 global guidance byte fixture PASS
 - Consumer runtime의 Node.js·PowerShell 7 dependency 0건
-- Exact `0.8.0` version parity와 clean-clone 전체 CI PASS
+- Exact product `0.8.0`과 npm package `0.8.0-test.N` 결합 검증,
+  clean-clone 전체 CI PASS
 - Codex·Antigravity 실제 host 회귀 PASS
 - Claude Code 미검증 상태와 signing deferred 범위 공개
 
 ## 외부 중지 경계
 
 - npm package name·scope ownership과 Trusted Publishing 설정
-- Candidate branch authority와 `develop` protection 여부
+- `develop` branch protection 사용자 적용
 - Credential·private signing material 접근 금지
 - npm `latest`, GitHub Release, 안정 릴리스는 별도 사용자 승인 전 금지
 - Exact `1.0.0` 별도 명시 전 major release 준비 금지
 
 ## 후속 안정 릴리스
 
-- 사용자가 승인할 `0.8.x` exact version 결정
+- 사용자가 승인할 안정 `0.8.x` exact version 결정
 - npm `latest` 이동과 기본 install 명령 전환
 - GitHub normal release 필요 여부 재승인
 - macOS Developer ID signing·notarization
