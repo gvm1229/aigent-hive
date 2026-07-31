@@ -681,6 +681,10 @@ class Phase3SkillSourceContract(unittest.TestCase):
             "Keep the selected interface language consistent throughout every "
             "question and response."
         )
+        automatic_handoff_rule = (
+            "Before presenting pending actions or a user handoff, complete every "
+            "safe, in-scope, automatable action"
+        )
 
         self.assertIn("Do not insert replaceable English general nouns", source_behavior)
         self.assertIn("write the full passage in English", source_behavior)
@@ -706,6 +710,14 @@ class Phase3SkillSourceContract(unittest.TestCase):
         self.assertIn(shipped_rule, renderer)
         self.assertIn(language_consistency_rule, template)
         self.assertIn(language_consistency_rule, renderer)
+        self.assertIn("Before presenting a to-do list", source_behavior)
+        self.assertIn("present only genuinely user-owned actions", source_behavior)
+        self.assertIn(automatic_handoff_rule, template)
+        self.assertIn(automatic_handoff_rule, renderer)
+        self.assertIn("남은 작업 목록·인계 전", guidance)
+        self.assertIn("자동 처리 불가 이유", guidance)
+        self.assertIn("finish every safe, in-scope, automatable task", user_guidance_renderer)
+        self.assertIn("남은 작업 제시 전", user_guidance_renderer)
         self.assertIn("대체 가능한 일반 영어 단어의 한영 혼용 금지", guidance)
         self.assertIn(
             "대체 가능한 일반 영어 단어의 한영 혼용 금지",

@@ -22,6 +22,15 @@ This directive governs agent behavior while developing Aigent Hive.
 - For an ordinary work prompt whose goal, scope, constraints, acceptance criteria, or output contract is materially ambiguous or missing, add one concise optional refinement suggestion while continuing every safe, discoverable part of the task.
 - A refinement suggestion must not rewrite the prompt, load `hive-prompt-refine`, authorize execution, or interrupt a sufficiently clear ordinary task or simple question.
 - For implementation, identify the requested outcome, constraints, touched ownership surfaces, verification, and stop condition before editing.
+- Before presenting a to-do list, pending action plan, blocker list, or user handoff, complete
+  every safe, in-scope, automatable action that does not require new user authority,
+  credentials, a protected external mutation, or a materially different product decision.
+- Do not shift an automatable action to the user because it is later in a plan or more convenient
+  to describe than execute.
+- After that automation, present only genuinely user-owned actions as a concise ordered guide.
+  Give each action's exact location, command or operation, expected result or return evidence, and
+  the reason user authority is required. List failed or impossible work separately with its cause
+  and recovery path.
 - Prefer deletion, an existing dependency, or an existing host capability over a new abstraction.
 - Do not copy external project rules unless they are explicitly selected and project-neutral.
 - Keep changes surgical: every touched artifact must map to a requirement, defect, decision, or verification need.

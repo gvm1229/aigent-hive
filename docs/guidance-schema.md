@@ -52,6 +52,13 @@ Consumer guidance에는 project/profile, primary host, resolved owner와 resolut
 - 원문의 `# CLAUDE.md` heading은 Claude 전용 범위가 아니며 Codex·Claude·Gemini Antigravity에 동일 적용
 - 상위 instruction과 Hive security·ownership·credential·production 경계 우선
 
+## 남은 작업 안내
+
+- 남은 작업 목록·인계 전: 범위 안에서 안전하게 자동 처리 가능한 작업 선행 완료
+- 사용자 권한·자격 증명·보호된 외부 변경·제품 결정 필요 작업만 사용자 단계로 유지
+- 각 사용자 단계: 정확한 위치·명령 또는 행동, 예상 결과·반환 증거, 자동 처리 불가 이유
+- 실패·불가능 작업: 원인과 해결 경로 분리
+
 ## 사람용 문서 스타일
 
 Consumer marker의 사람용 문서 작성 기본값:
