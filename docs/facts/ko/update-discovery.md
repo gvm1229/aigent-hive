@@ -9,9 +9,9 @@ summary: "설치 없는 opt-in 일일 update 확인."
 tags: [discovery, update]
 aliases: ["일일 update 확인"]
 sources:
-  - "repo:crates/hive-cli/src/update_discovery.rs#sha256:9841e0c913da22987396f488e22bc0459062aa41f3508d25269ef55a277c6c29"
+  - "repo:crates/hive-cli/src/update_discovery.rs#sha256:650d13734e29745a8ae4634c0dd7f3f8477222e144875b111ce6925fccd86a19"
 links: [global-onboarding, test-distribution]
-reviewed_revision: "git:4e3fb80b77c2e105029c9d6794922c4ce1b2fdeb"
+reviewed_revision: "git:bf9e28d8af36ef8d672694fc3c23fdd1a39233ee"
 status: active
 ---
 
