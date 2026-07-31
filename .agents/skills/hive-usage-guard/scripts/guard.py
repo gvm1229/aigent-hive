@@ -11,6 +11,7 @@ import math
 import os
 import queue
 import re
+import secrets
 import shutil
 import signal
 import stat
@@ -44,12 +45,16 @@ SUPPORTED_CODEX_PLANS = {
 }
 DEFAULT_THRESHOLD = 10
 DEFAULT_POLL_SECONDS = 15
+UNKNOWN_RETRY_COUNT = 1
+UNKNOWN_RETRY_DELAY_SECONDS = 3.0
 MAX_OUTPUT_BYTES = 1024 * 1024
 MAX_SNAPSHOT_AGE_SECONDS = 120
 EXIT_ALLOWED = 0
 EXIT_HALTED = 10
 EXIT_UNKNOWN = 11
 EXIT_USAGE = 64
+CODEX_THREAD_ID_ENV = "CODEX_THREAD_ID"
+SESSION_SOURCES = ("codex-thread", "codex-process")
 USAGE_ARGUMENTS = (
     "usage",
     "--provider",
@@ -211,13 +216,25 @@ def write_json(root: Path, path: Path, value: dict[str, Any]) -> None:
     descriptor, temporary = tempfile.mkstemp(prefix=f".{path.name}.", dir=path.parent)
     temporary_path = Path(temporary)
     try:
-        os.fchmod(descriptor, 0o600)
+        fchmod = getattr(os, "fchmod", None)
+        if callable(fchmod):
+            fchmod(descriptor, 0o600)
         with os.fdopen(descriptor, "wb") as stream:
+            descriptor = -1
             stream.write(payload)
             stream.flush()
             os.fsync(stream.fileno())
-        os.replace(temporary_path, path)
+        for attempt in range(50):
+            try:
+                os.replace(temporary_path, path)
+                break
+            except PermissionError:
+                if os.name != "nt" or attempt == 49:
+                    raise
+                time.sleep(0.02)
     finally:
+        if descriptor >= 0:
+            os.close(descriptor)
         temporary_path.unlink(missing_ok=True)
 
 
@@ -287,9 +304,38 @@ def save_threshold(root: Path, threshold: int) -> dict[str, Any]:
     return value
 
 
+def windows_process_is_alive(pid: int) -> bool:
+    import ctypes
+    from ctypes import wintypes
+
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    kernel32.OpenProcess.argtypes = [
+        wintypes.DWORD,
+        wintypes.BOOL,
+        wintypes.DWORD,
+    ]
+    kernel32.OpenProcess.restype = wintypes.HANDLE
+    kernel32.WaitForSingleObject.argtypes = [
+        wintypes.HANDLE,
+        wintypes.DWORD,
+    ]
+    kernel32.WaitForSingleObject.restype = wintypes.DWORD
+    kernel32.CloseHandle.argtypes = [wintypes.HANDLE]
+    kernel32.CloseHandle.restype = wintypes.BOOL
+    handle = kernel32.OpenProcess(0x00100000, False, pid)
+    if not handle:
+        return False
+    try:
+        return kernel32.WaitForSingleObject(handle, 0) == 0x00000102
+    finally:
+        kernel32.CloseHandle(handle)
+
+
 def process_is_alive(pid: int) -> bool:
     if pid <= 0:
         return False
+    if os.name == "nt":
+        return windows_process_is_alive(pid)
     try:
         os.kill(pid, 0)
     except ProcessLookupError:
@@ -299,24 +345,303 @@ def process_is_alive(pid: int) -> bool:
     return True
 
 
+def ps_executable() -> Path | None:
+    fixed = next(
+        (
+            candidate
+            for candidate in (Path("/bin/ps"), Path("/usr/bin/ps"))
+            if candidate.is_file()
+        ),
+        None,
+    )
+    if fixed is not None:
+        return fixed
+    discovered = shutil.which("ps")
+    return Path(discovered) if discovered is not None else None
+
+
+def windows_process_record(pid: int) -> tuple[int, str] | None:
+    if os.name != "nt":
+        return None
+    import ctypes
+    from ctypes import wintypes
+
+    class ProcessEntry(ctypes.Structure):
+        _fields_ = [
+            ("dwSize", wintypes.DWORD),
+            ("cntUsage", wintypes.DWORD),
+            ("th32ProcessID", wintypes.DWORD),
+            ("th32DefaultHeapID", ctypes.c_size_t),
+            ("th32ModuleID", wintypes.DWORD),
+            ("cntThreads", wintypes.DWORD),
+            ("th32ParentProcessID", wintypes.DWORD),
+            ("pcPriClassBase", wintypes.LONG),
+            ("dwFlags", wintypes.DWORD),
+            ("szExeFile", wintypes.WCHAR * 260),
+        ]
+
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    kernel32.CreateToolhelp32Snapshot.argtypes = [
+        wintypes.DWORD,
+        wintypes.DWORD,
+    ]
+    kernel32.CreateToolhelp32Snapshot.restype = wintypes.HANDLE
+    kernel32.Process32FirstW.argtypes = [
+        wintypes.HANDLE,
+        ctypes.POINTER(ProcessEntry),
+    ]
+    kernel32.Process32FirstW.restype = wintypes.BOOL
+    kernel32.Process32NextW.argtypes = [
+        wintypes.HANDLE,
+        ctypes.POINTER(ProcessEntry),
+    ]
+    kernel32.Process32NextW.restype = wintypes.BOOL
+    kernel32.CloseHandle.argtypes = [wintypes.HANDLE]
+    kernel32.CloseHandle.restype = wintypes.BOOL
+    snapshot = kernel32.CreateToolhelp32Snapshot(0x00000002, 0)
+    invalid_handle = ctypes.c_void_p(-1).value
+    if snapshot == invalid_handle:
+        return None
+    entry = ProcessEntry()
+    entry.dwSize = ctypes.sizeof(entry)
+    try:
+        found = kernel32.Process32FirstW(snapshot, ctypes.byref(entry))
+        while found:
+            if int(entry.th32ProcessID) == pid:
+                return int(entry.th32ParentProcessID), str(entry.szExeFile)
+            found = kernel32.Process32NextW(snapshot, ctypes.byref(entry))
+    finally:
+        kernel32.CloseHandle(snapshot)
+    return None
+
+
+def process_record(pid: int) -> tuple[int, str] | None:
+    if os.name == "nt":
+        return windows_process_record(pid)
+    if os.name != "posix":
+        return None
+    executable = ps_executable()
+    if executable is None:
+        return None
+    try:
+        completed = subprocess.run(
+            [
+                str(executable),
+                "-p",
+                str(pid),
+                "-o",
+                "ppid=",
+                "-o",
+                "comm=",
+            ],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            check=False,
+            timeout=2,
+            text=True,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    if completed.returncode != 0:
+        return None
+    fields = completed.stdout.strip().split(maxsplit=1)
+    if not fields:
+        return None
+    try:
+        parent_pid = int(fields[0])
+    except ValueError:
+        return None
+    command = fields[1] if len(fields) == 2 else ""
+    return parent_pid, command
+
+
+def codex_process_id() -> int:
+    if "HIVE_SOURCE_USAGE_FIXTURE" in os.environ:
+        raw_fixture_pid = os.environ.get("HIVE_USAGE_TEST_PROCESS_ID")
+        if raw_fixture_pid is not None:
+            try:
+                fixture_pid = int(raw_fixture_pid)
+            except ValueError as error:
+                raise GuardError("invalid fixture Codex process identifier") from error
+            if process_is_alive(fixture_pid):
+                return fixture_pid
+            raise GuardError("fixture Codex process is not active")
+    current = os.getppid()
+    visited: set[int] = set()
+    while current > 1 and current not in visited:
+        visited.add(current)
+        record = process_record(current)
+        if record is None:
+            break
+        parent_pid, command = record
+        executable = Path(command).name.lower()
+        if executable in {"codex", "codex.exe"} or executable.startswith("codex-"):
+            return current
+        current = parent_pid
+    raise GuardError("Codex host process identity is unavailable")
+
+
+def windows_process_start_token(pid: int) -> str | None:
+    if os.name != "nt":
+        return None
+    import ctypes
+    from ctypes import wintypes
+
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    kernel32.OpenProcess.argtypes = [
+        wintypes.DWORD,
+        wintypes.BOOL,
+        wintypes.DWORD,
+    ]
+    kernel32.OpenProcess.restype = wintypes.HANDLE
+    kernel32.GetProcessTimes.argtypes = [
+        wintypes.HANDLE,
+        ctypes.POINTER(wintypes.FILETIME),
+        ctypes.POINTER(wintypes.FILETIME),
+        ctypes.POINTER(wintypes.FILETIME),
+        ctypes.POINTER(wintypes.FILETIME),
+    ]
+    kernel32.GetProcessTimes.restype = wintypes.BOOL
+    kernel32.CloseHandle.argtypes = [wintypes.HANDLE]
+    kernel32.CloseHandle.restype = wintypes.BOOL
+    handle = kernel32.OpenProcess(0x1000, False, pid)
+    if not handle:
+        return None
+    creation = wintypes.FILETIME()
+    exit_time = wintypes.FILETIME()
+    kernel = wintypes.FILETIME()
+    user = wintypes.FILETIME()
+    try:
+        if not kernel32.GetProcessTimes(
+            handle,
+            ctypes.byref(creation),
+            ctypes.byref(exit_time),
+            ctypes.byref(kernel),
+            ctypes.byref(user),
+        ):
+            return None
+    finally:
+        kernel32.CloseHandle(handle)
+    value = (int(creation.dwHighDateTime) << 32) | int(creation.dwLowDateTime)
+    return str(value)
+
+
+def process_start_token(pid: int) -> str | None:
+    if "HIVE_SOURCE_USAGE_FIXTURE" in os.environ:
+        fixture_pid = os.environ.get("HIVE_USAGE_TEST_PROCESS_ID")
+        fixture_start = os.environ.get("HIVE_USAGE_TEST_PROCESS_START")
+        if fixture_pid == str(pid) and fixture_start is not None:
+            return fixture_start
+    if os.name == "nt":
+        return windows_process_start_token(pid)
+    if sys.platform.startswith("linux"):
+        path = Path("/proc") / str(pid) / "stat"
+        try:
+            raw = path.read_text(encoding="utf-8")
+        except (OSError, UnicodeError):
+            raw = ""
+        if ")" in raw:
+            fields = raw.rsplit(")", 1)[1].split()
+            if len(fields) > 19:
+                return fields[19]
+    if os.name == "posix":
+        executable = ps_executable()
+        if executable is not None:
+            try:
+                completed = subprocess.run(
+                    [
+                        str(executable),
+                        "-p",
+                        str(pid),
+                        "-o",
+                        "lstart=",
+                    ],
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.DEVNULL,
+                    check=False,
+                    timeout=2,
+                    text=True,
+                )
+            except (OSError, subprocess.TimeoutExpired):
+                completed = None
+            if completed is not None and completed.returncode == 0:
+                started = completed.stdout.strip()
+                if started:
+                    return started
+    return None
+
+
+def process_start_digest(pid: int) -> str:
+    token = process_start_token(pid)
+    if token is None:
+        raise GuardError("Codex process creation identity is unavailable")
+    payload = f"{pid}\0{token}".encode()
+    return "sha256:" + hashlib.sha256(payload).hexdigest()
+
+
+def assert_session_process(session: dict[str, Any]) -> None:
+    session_pid = session["pid"]
+    if not process_is_alive(session_pid):
+        raise SessionExpired("the guarded Codex session process is no longer active")
+    if process_start_digest(session_pid) != session["process_start"]:
+        raise SessionExpired("the guarded Codex session process identity changed")
+
+
 def load_current_session(root: Path, expected_id: str | None = None) -> dict[str, Any]:
-    value = read_json(root / ".omx" / "state" / "session.json", required=True)
-    assert value is not None
-    session_id = value.get("session_id")
-    session_pid = value.get("pid")
-    session_cwd = value.get("cwd")
-    if not isinstance(session_id, str):
-        raise GuardError("OMX session state omitted session_id")
+    session_pid = codex_process_id()
+    if not process_is_alive(session_pid):
+        raise SessionExpired("the guarded Codex process is no longer active")
+    session_process_start = process_start_digest(session_pid)
+    raw_thread_id = os.environ.get(CODEX_THREAD_ID_ENV)
+    if raw_thread_id is not None:
+        session_id = raw_thread_id.strip().lower()
+        session_source = "codex-thread"
+    else:
+        identity = "\0".join(
+            (
+                "codex-process",
+                str(session_pid),
+                session_process_start,
+                str(root),
+            )
+        )
+        session_id = hashlib.sha256(identity.encode()).hexdigest()
+        session_source = "codex-process"
     session_dir(root, session_id)
     if expected_id is not None and session_id != expected_id:
         raise SessionExpired("the guarded Codex session is no longer current")
-    if isinstance(session_pid, bool) or not isinstance(session_pid, int):
-        raise GuardError("OMX session state omitted pid")
-    if not process_is_alive(session_pid):
-        raise SessionExpired("the guarded Codex session process is no longer active")
-    if not isinstance(session_cwd, str) or Path(session_cwd).resolve() != root:
-        raise GuardError("OMX session state belongs to another source root")
-    return {"session_id": session_id, "pid": session_pid, "cwd": session_cwd}
+    return {
+        "session_id": session_id,
+        "pid": session_pid,
+        "cwd": str(root),
+        "source": session_source,
+        "process_start": session_process_start,
+    }
+
+
+def load_pinned_session(
+    root: Path,
+    session_id: str,
+    session_pid: int | None,
+    session_source: str | None,
+    session_process_start: str | None,
+) -> dict[str, Any]:
+    session_dir(root, session_id)
+    if session_pid is None or session_pid <= 0:
+        raise GuardError("pinned Codex session omitted a valid process identifier")
+    if session_source not in SESSION_SOURCES:
+        raise GuardError("pinned Codex session omitted a valid identity source")
+    if not isinstance(session_process_start, str):
+        raise GuardError("pinned Codex session omitted process creation identity")
+    session = {
+        "session_id": session_id,
+        "pid": session_pid,
+        "cwd": str(root),
+        "source": session_source,
+        "process_start": session_process_start,
+    }
+    assert_session_process(session)
+    return session
 
 
 def control_path(root: Path, session_id: str) -> Path:
@@ -339,6 +664,10 @@ def watcher_log_path(root: Path, session_id: str) -> Path:
     return session_dir(root, session_id) / "watcher.log"
 
 
+def watcher_lease_path(root: Path, session_id: str) -> Path:
+    return session_dir(root, session_id) / "watcher.lease"
+
+
 def guard_enabled(root: Path, session: dict[str, Any]) -> bool:
     value = read_json(control_path(root, session["session_id"]))
     if value is None:
@@ -347,6 +676,7 @@ def guard_enabled(root: Path, session: dict[str, Any]) -> bool:
         value.get("schema_version") != SCHEMA_VERSION
         or value.get("session_id") != session["session_id"]
         or value.get("session_pid") != session["pid"]
+        or value.get("session_process_start") != session["process_start"]
         or not isinstance(value.get("guard_enabled"), bool)
     ):
         raise GuardError("invalid or stale session guard control")
@@ -365,6 +695,7 @@ def set_session_enabled(
         "schema_version": SCHEMA_VERSION,
         "session_id": session["session_id"],
         "session_pid": session["pid"],
+        "session_process_start": session["process_start"],
         "guard_enabled": enabled,
         "updated_at": iso_now(),
         "scope": "current-session-only",
@@ -1055,55 +1386,135 @@ def read_quota() -> dict[str, Any]:
         return quota
 
 
-def evaluate(root: Path, expected_session_id: str | None = None) -> tuple[dict[str, Any], int]:
-    session = load_current_session(root, expected_session_id)
+def unknown_retry_delay_seconds() -> float:
+    """Return the production retry delay, with a fixture-only test override."""
+
+    if "HIVE_SOURCE_USAGE_FIXTURE" not in os.environ:
+        return UNKNOWN_RETRY_DELAY_SECONDS
+    raw = os.environ.get("HIVE_USAGE_UNKNOWN_RETRY_DELAY_SECONDS")
+    if raw is None:
+        return UNKNOWN_RETRY_DELAY_SECONDS
+    try:
+        value = float(raw)
+    except ValueError:
+        return UNKNOWN_RETRY_DELAY_SECONDS
+    if not math.isfinite(value) or not 0 <= value <= UNKNOWN_RETRY_DELAY_SECONDS:
+        return UNKNOWN_RETRY_DELAY_SECONDS
+    return value
+
+
+def apply_sensor_unknown(
+    decision: dict[str, Any],
+    error: GuardError,
+) -> None:
+    decision["quota_decision"] = "usage_unknown"
+    decision["reason"] = str(error)
+    if not isinstance(error, CodexBarUnavailable):
+        return
+    decision["notification"] = (
+        "CodexBar fallback is not installed for codex; installation is "
+        "optional and requires explicit current-action consent."
+    )
+    decision["fallback_install"] = {
+        "provider": "codex",
+        "fallback": "codexbar",
+        "availability": "missing",
+        "command_preview": source_guard_command("codex", apply=False),
+        "decline_effect": "core-usable-automatic-dispatch-usage-unknown",
+    }
+    decision["next_action"] = source_guard_command("codex", apply=False)
+
+
+def evaluate(root: Path, session: dict[str, Any]) -> tuple[dict[str, Any], int]:
+    assert_session_process(session)
     settings = load_settings(root)
     enabled = guard_enabled(root, session)
     decision: dict[str, Any] = {
         "schema_version": SCHEMA_VERSION,
         "session_id": session["session_id"],
+        "session_source": session["source"],
+        "session_process_id": session["pid"],
         "guard_enabled": enabled,
         "threshold_remaining_percent": settings["threshold_remaining_percent"],
         "checked_at": iso_now(),
     }
+    if not enabled:
+        decision["quota_decision"] = "not_checked"
+        decision["enforcement_decision"] = "session_bypass"
+        write_json(root, observation_path(root, session["session_id"]), decision)
+        remove_owned_file(root, halt_path(root, session["session_id"]))
+        return decision, EXIT_ALLOWED
     quota_exit = EXIT_ALLOWED
-    try:
-        quota = read_quota()
+    quota: dict[str, Any] | None = None
+    sensor_error: GuardError | None = None
+    retry_count = 0
+    retry_delay = unknown_retry_delay_seconds()
+    transient_unknown = False
+    for attempt in range(UNKNOWN_RETRY_COUNT + 1):
+        try:
+            quota = read_quota()
+            break
+        except NativeSensorIntegrity as error:
+            sensor_error = error
+            break
+        except GuardError as error:
+            sensor_error = error
+            if attempt == UNKNOWN_RETRY_COUNT:
+                transient_unknown = True
+                break
+            retry_count += 1
+            time.sleep(retry_delay)
+
+    if quota is not None:
         decision.update(quota)
         if quota["remaining_percent"] <= settings["threshold_remaining_percent"]:
             decision["quota_decision"] = "halted"
             quota_exit = EXIT_HALTED
         else:
             decision["quota_decision"] = "allowed"
-    except CodexBarUnavailable as error:
-        decision["quota_decision"] = "usage_unknown"
-        decision["reason"] = str(error)
-        decision["notification"] = (
-            "CodexBar fallback is not installed for codex; installation is "
-            "optional and requires explicit current-action consent."
-        )
-        decision["fallback_install"] = {
-            "provider": "codex",
-            "fallback": "codexbar",
-            "availability": "missing",
-            "command_preview": source_guard_command("codex", apply=False),
-            "decline_effect": "core-usable-automatic-dispatch-usage-unknown",
-        }
-        decision["next_action"] = source_guard_command("codex", apply=False)
-        quota_exit = EXIT_UNKNOWN
-    except GuardError as error:
-        decision["quota_decision"] = "usage_unknown"
-        decision["reason"] = str(error)
-        quota_exit = EXIT_UNKNOWN
-    if enabled:
-        decision["enforcement_decision"] = decision["quota_decision"]
-        exit_code = quota_exit
+        if retry_count:
+            decision["transient_unknown_recovered"] = True
     else:
-        decision["enforcement_decision"] = "session_bypass"
-        exit_code = EXIT_ALLOWED
-    write_json(root, observation_path(root, session["session_id"]), decision)
+        if sensor_error is None:
+            raise GuardError("usage sensor failed without an error")
+        apply_sensor_unknown(decision, sensor_error)
+        if transient_unknown:
+            decision["transient_unknown_ignored"] = True
+        else:
+            quota_exit = EXIT_UNKNOWN
+    if retry_count:
+        decision["unknown_retry_count"] = retry_count
+        decision["unknown_retry_delay_seconds"] = retry_delay
+
     halt = halt_path(root, session["session_id"])
-    if enabled and quota_exit in (EXIT_HALTED, EXIT_UNKNOWN):
+    preserve_confirmed_halt = False
+    if enabled and quota is None:
+        existing_halt = read_json(halt)
+        preserve_confirmed_halt = (
+            existing_halt is not None
+            and existing_halt.get("schema_version") == SCHEMA_VERSION
+            and existing_halt.get("session_id") == session["session_id"]
+            and existing_halt.get("decision") == "halted"
+        )
+    if enabled:
+        if preserve_confirmed_halt:
+            decision["confirmed_halt_preserved"] = True
+            if transient_unknown:
+                decision["enforcement_decision"] = "halted"
+                exit_code = EXIT_HALTED
+            else:
+                decision["enforcement_decision"] = decision["quota_decision"]
+                exit_code = quota_exit
+        elif transient_unknown:
+            decision["enforcement_decision"] = "allowed"
+            exit_code = EXIT_ALLOWED
+        else:
+            decision["enforcement_decision"] = decision["quota_decision"]
+            exit_code = quota_exit
+    write_json(root, observation_path(root, session["session_id"]), decision)
+    if preserve_confirmed_halt:
+        pass
+    elif enabled and quota_exit in (EXIT_HALTED, EXIT_UNKNOWN):
         write_json(
             root,
             halt,
@@ -1120,12 +1531,67 @@ def evaluate(root: Path, expected_session_id: str | None = None) -> tuple[dict[s
     return decision, exit_code
 
 
-def command_matches_watcher(pid: int, script: Path, session_id: str) -> bool:
+def status_report(root: Path, session: dict[str, Any]) -> dict[str, Any]:
+    settings = load_settings(root)
+    result = {
+        "schema_version": SCHEMA_VERSION,
+        "session_id": session["session_id"],
+        "session_source": session["source"],
+        "session_process_id": session["pid"],
+        "guard_enabled": guard_enabled(root, session),
+        "threshold_remaining_percent": settings["threshold_remaining_percent"],
+        "quota_check": "not-run",
+        "checked_at": iso_now(),
+        "watcher": watcher_status(root, session),
+        "halt_marker": halt_path(root, session["session_id"]).exists(),
+    }
+    observation = read_json(observation_path(root, session["session_id"]))
+    if observation is None:
+        return result
+    raw_checked_at = observation.get("checked_at")
+    if not isinstance(raw_checked_at, str):
+        raise GuardError("usage observation omitted checked_at")
+    try:
+        observed_at = dt.datetime.fromisoformat(
+            raw_checked_at.replace("Z", "+00:00")
+        )
+    except ValueError as error:
+        raise GuardError("usage observation has an invalid checked_at") from error
+    if observed_at.tzinfo is None:
+        raise GuardError("usage observation checked_at lacks a timezone")
+    observation_age = (utc_now() - observed_at).total_seconds()
+    result["quota_check"] = "last-observation"
+    result["observation_checked_at"] = raw_checked_at
+    result["observation_age_seconds"] = max(0, round(observation_age, 3))
+    result["observation_fresh"] = (
+        -5 <= observation_age <= MAX_SNAPSHOT_AGE_SECONDS
+    )
+    for key in (
+        "quota_decision",
+        "enforcement_decision",
+        "used_percent",
+        "remaining_percent",
+        "window",
+        "measured_at",
+        "sensor",
+        "sensor_version",
+    ):
+        if key in observation:
+            result[key] = observation[key]
+    return result
+
+
+def legacy_command_matches_watcher(
+    pid: int, script: Path, session_id: str
+) -> bool:
     if not process_is_alive(pid):
+        return False
+    executable = ps_executable()
+    if executable is None:
         return False
     try:
         completed = subprocess.run(
-            ["ps", "-p", str(pid), "-o", "command="],
+            [str(executable), "-p", str(pid), "-o", "command="],
             stdout=subprocess.PIPE,
             stderr=subprocess.DEVNULL,
             check=False,
@@ -1143,25 +1609,308 @@ def command_matches_watcher(pid: int, script: Path, session_id: str) -> bool:
     )
 
 
+def watcher_nonce_digest(nonce: str) -> str:
+    if re.fullmatch(r"[0-9a-f]{64}", nonce) is None:
+        raise GuardError("invalid watcher nonce")
+    return "sha256:" + hashlib.sha256(nonce.encode()).hexdigest()
+
+
+def try_lock_watcher_lease(descriptor: int) -> bool:
+    os.lseek(descriptor, 0, os.SEEK_SET)
+    if os.name == "nt":
+        import msvcrt
+
+        try:
+            msvcrt.locking(descriptor, msvcrt.LK_NBLCK, 1)
+        except OSError:
+            return False
+        return True
+    import fcntl
+
+    try:
+        fcntl.flock(descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except BlockingIOError:
+        return False
+    return True
+
+
+def unlock_watcher_lease(descriptor: int) -> None:
+    os.lseek(descriptor, 0, os.SEEK_SET)
+    if os.name == "nt":
+        import msvcrt
+
+        msvcrt.locking(descriptor, msvcrt.LK_UNLCK, 1)
+        return
+    import fcntl
+
+    fcntl.flock(descriptor, fcntl.LOCK_UN)
+
+
+def acquire_watcher_lease(
+    root: Path,
+    session: dict[str, Any],
+    nonce: str,
+) -> int:
+    path = watcher_lease_path(root, session["session_id"])
+    assert_safe_parent(root, path)
+    if path.exists() and path.is_symlink():
+        raise GuardError("refusing symlink watcher lease")
+    flags = os.O_RDWR | os.O_CREAT
+    if hasattr(os, "O_NOFOLLOW"):
+        flags |= os.O_NOFOLLOW
+    try:
+        descriptor = os.open(path, flags, 0o600)
+    except OSError as error:
+        raise GuardError("cannot open watcher lease safely") from error
+    try:
+        metadata = os.fstat(descriptor)
+        if not stat.S_ISREG(metadata.st_mode) or metadata.st_size > 64 * 1024:
+            raise GuardError("watcher lease is not a bounded regular file")
+        if metadata.st_size == 0:
+            os.write(descriptor, b"\n")
+            os.fsync(descriptor)
+        if not try_lock_watcher_lease(descriptor):
+            raise GuardError("another watcher holds the session lease")
+        value = {
+            "schema_version": SCHEMA_VERSION,
+            "session_id": session["session_id"],
+            "session_pid": session["pid"],
+            "session_process_start": session["process_start"],
+            "pid": os.getpid(),
+            "watcher_process_start": process_start_digest(os.getpid()),
+            "watcher_nonce_digest": watcher_nonce_digest(nonce),
+        }
+        payload = (json.dumps(value, sort_keys=True) + "\n").encode()
+        os.lseek(descriptor, 0, os.SEEK_SET)
+        os.ftruncate(descriptor, 0)
+        os.write(descriptor, payload)
+        os.fsync(descriptor)
+        return descriptor
+    except Exception:
+        os.close(descriptor)
+        raise
+
+
+def release_watcher_lease(descriptor: int) -> None:
+    try:
+        unlock_watcher_lease(descriptor)
+    finally:
+        os.close(descriptor)
+
+
+def read_watcher_lease_payload(descriptor: int, size: int) -> bytes:
+    if os.name == "nt":
+        os.lseek(descriptor, 1, os.SEEK_SET)
+        return b"{" + os.read(descriptor, size)
+    return os.read(descriptor, size)
+
+
+def watcher_lease_matches(
+    root: Path,
+    session: dict[str, Any],
+    value: dict[str, Any],
+) -> bool:
+    path = watcher_lease_path(root, session["session_id"])
+    if not path.exists() or path.is_symlink():
+        return False
+    flags = os.O_RDWR
+    if hasattr(os, "O_NOFOLLOW"):
+        flags |= os.O_NOFOLLOW
+    try:
+        descriptor = os.open(path, flags)
+    except OSError:
+        return False
+    try:
+        metadata = os.fstat(descriptor)
+        if (
+            not stat.S_ISREG(metadata.st_mode)
+            or metadata.st_size <= 0
+            or metadata.st_size > 64 * 1024
+        ):
+            return False
+        payload = read_watcher_lease_payload(
+            descriptor,
+            metadata.st_size + 1,
+        )
+        if try_lock_watcher_lease(descriptor):
+            unlock_watcher_lease(descriptor)
+            return False
+        try:
+            lease = json.loads(payload)
+        except (UnicodeDecodeError, json.JSONDecodeError):
+            return False
+        if not isinstance(lease, dict):
+            return False
+        return all(
+            lease.get(key) == expected
+            for key, expected in (
+                ("schema_version", SCHEMA_VERSION),
+                ("session_id", session["session_id"]),
+                ("session_pid", session["pid"]),
+                ("session_process_start", session["process_start"]),
+                ("pid", value.get("pid")),
+                (
+                    "watcher_process_start",
+                    value.get("watcher_process_start"),
+                ),
+                (
+                    "watcher_nonce_digest",
+                    value.get("watcher_nonce_digest"),
+                ),
+            )
+        )
+    finally:
+        os.close(descriptor)
+
+
+def watcher_process_matches(
+    root: Path,
+    value: dict[str, Any],
+    session: dict[str, Any],
+) -> bool:
+    pid = value.get("pid")
+    if isinstance(pid, bool) or not isinstance(pid, int):
+        raise GuardError("invalid watcher state")
+    if not process_is_alive(pid):
+        return False
+    watcher_process_start = value.get("watcher_process_start")
+    watcher_nonce = value.get("watcher_nonce_digest")
+    if watcher_process_start is None or watcher_nonce is None:
+        return legacy_command_matches_watcher(
+            pid,
+            Path(__file__),
+            session["session_id"],
+        )
+    if not isinstance(watcher_process_start, str):
+        raise GuardError("invalid watcher process creation identity")
+    if not isinstance(watcher_nonce, str):
+        raise GuardError("invalid watcher nonce digest")
+    return (
+        process_start_digest(pid) == watcher_process_start
+        and watcher_lease_matches(root, session, value)
+    )
+
+
 def watcher_status(root: Path, session: dict[str, Any]) -> dict[str, Any]:
     value = read_json(watcher_path(root, session["session_id"]))
     if value is None:
         return {"active": False}
+    legacy = (
+        "watcher_process_start" not in value
+        or "watcher_nonce_digest" not in value
+    )
+    if (
+        value.get("schema_version") != SCHEMA_VERSION
+        or value.get("session_id") != session["session_id"]
+        or value.get("session_pid") != session["pid"]
+    ):
+        raise GuardError("invalid or stale watcher owner")
+    if not legacy and (
+        value.get("session_source") != session["source"]
+        or value.get("session_process_start") != session["process_start"]
+    ):
+        raise GuardError("invalid or stale watcher process owner")
     pid = value.get("pid")
     if isinstance(pid, bool) or not isinstance(pid, int):
         raise GuardError("invalid watcher state")
-    active = command_matches_watcher(pid, Path(__file__), session["session_id"])
+    active = watcher_process_matches(root, value, session)
     return {
         "active": active,
         "pid": pid if active else None,
         "started_at": value.get("started_at"),
+        "legacy": legacy,
     }
 
 
+def retire_replaced_session_watcher(root: Path, session: dict[str, Any]) -> None:
+    value = read_json(watcher_path(root, session["session_id"]))
+    if value is None:
+        return
+    if (
+        value.get("schema_version") != SCHEMA_VERSION
+        or value.get("session_id") != session["session_id"]
+    ):
+        raise GuardError("invalid usage-guard watcher state")
+    stored_pid = value.get("session_pid")
+    stored_source = value.get("session_source")
+    stored_process_start = value.get("session_process_start")
+    if (
+        stored_pid == session["pid"]
+        and stored_source == session["source"]
+        and stored_process_start == session["process_start"]
+    ):
+        return
+    if (
+        isinstance(stored_pid, bool)
+        or not isinstance(stored_pid, int)
+        or stored_pid <= 0
+        or stored_source not in SESSION_SOURCES
+        or not isinstance(stored_process_start, str)
+    ):
+        raise GuardError("invalid or stale watcher owner")
+    if process_is_alive(stored_pid):
+        try:
+            owner_is_active = (
+                process_start_digest(stored_pid) == stored_process_start
+            )
+        except GuardError as error:
+            raise GuardError("cannot verify stale watcher owner") from error
+        if owner_is_active:
+            raise GuardError("watcher belongs to another active Codex process")
+    previous_session = {
+        "session_id": session["session_id"],
+        "pid": stored_pid,
+        "cwd": str(root),
+        "source": stored_source,
+        "process_start": stored_process_start,
+    }
+    stop_watcher(root, previous_session)
+
+
+def retire_superseded_watchers(root: Path, session: dict[str, Any]) -> None:
+    sessions = state_root(root) / "sessions"
+    if not sessions.exists():
+        return
+    if sessions.is_symlink() or not sessions.is_dir():
+        raise GuardError("invalid usage-guard sessions directory")
+    for directory in sorted(sessions.iterdir()):
+        if directory.name == session["session_id"]:
+            continue
+        if directory.is_symlink() or not directory.is_dir():
+            raise GuardError("invalid usage-guard session state entry")
+        session_dir(root, directory.name)
+        value = read_json(directory / "watcher.json")
+        if value is None or value.get("session_pid") != session["pid"]:
+            continue
+        stored_process_start = value.get("session_process_start")
+        if (
+            stored_process_start is not None
+            and stored_process_start != session["process_start"]
+        ):
+            continue
+        source = value.get("session_source")
+        if source not in SESSION_SOURCES:
+            source = session["source"]
+        previous_session = {
+            "session_id": directory.name,
+            "pid": session["pid"],
+            "cwd": str(root),
+            "source": source,
+            "process_start": session["process_start"],
+        }
+        stop_watcher(root, previous_session)
+
+
 def start_watcher(root: Path, session: dict[str, Any]) -> dict[str, Any]:
+    retire_replaced_session_watcher(root, session)
+    retire_superseded_watchers(root, session)
     status = watcher_status(root, session)
     if status["active"]:
-        return status
+        if not status["legacy"]:
+            return status
+        stop_watcher(root, session)
+    remove_owned_file(root, watcher_path(root, session["session_id"]))
+    remove_owned_file(root, watcher_lease_path(root, session["session_id"]))
     log_path = watcher_log_path(root, session["session_id"])
     assert_safe_parent(root, log_path)
     if log_path.exists() and log_path.is_symlink():
@@ -1177,13 +1926,30 @@ def start_watcher(root: Path, session: dict[str, Any]) -> dict[str, Any]:
         os.close(log_descriptor)
         raise GuardError("watcher log is not a regular file")
     log = os.fdopen(log_descriptor, "ab", buffering=0)
+    nonce = secrets.token_hex(32)
+    watcher_python = sys.executable
+    base_executable = getattr(sys, "_base_executable", None)
+    if (
+        os.name == "nt"
+        and isinstance(base_executable, str)
+        and Path(base_executable).is_file()
+    ):
+        watcher_python = base_executable
     arguments = [
-        sys.executable,
+        watcher_python,
         str(Path(__file__).resolve()),
         "--root",
         str(root),
         "--session-id",
         session["session_id"],
+        "--session-pid",
+        str(session["pid"]),
+        "--session-source",
+        session["source"],
+        "--session-process-start",
+        session["process_start"],
+        "--watcher-nonce",
+        nonce,
         "watch",
     ]
     try:
@@ -1198,43 +1964,81 @@ def start_watcher(root: Path, session: dict[str, Any]) -> dict[str, Any]:
         )
     finally:
         log.close()
+    try:
+        watcher_process_start = process_start_digest(process.pid)
+    except GuardError:
+        process.terminate()
+        process.wait(timeout=5)
+        raise
     value = {
         "schema_version": SCHEMA_VERSION,
         "session_id": session["session_id"],
         "session_pid": session["pid"],
+        "session_source": session["source"],
+        "session_process_start": session["process_start"],
         "pid": process.pid,
+        "watcher_process_start": watcher_process_start,
+        "watcher_nonce_digest": watcher_nonce_digest(nonce),
         "started_at": iso_now(),
         "script": str(Path(__file__).resolve()),
     }
     write_json(root, watcher_path(root, session["session_id"]), value)
-    time.sleep(0.1)
-    status = watcher_status(root, session)
-    if not status["active"]:
-        raise GuardError("usage-guard watcher failed to start")
-    return status
+    for _ in range(50):
+        if process.poll() is not None:
+            remove_owned_file(root, watcher_path(root, session["session_id"]))
+            remove_owned_file(
+                root,
+                watcher_lease_path(root, session["session_id"]),
+            )
+            raise GuardError("usage-guard watcher exited during startup")
+        status = watcher_status(root, session)
+        if status["active"]:
+            return status
+        time.sleep(0.02)
+    process.terminate()
+    try:
+        process.wait(timeout=5)
+    except subprocess.TimeoutExpired:
+        process.kill()
+        process.wait(timeout=5)
+    remove_owned_file(root, watcher_path(root, session["session_id"]))
+    remove_owned_file(root, watcher_lease_path(root, session["session_id"]))
+    raise GuardError("usage-guard watcher failed to start")
 
 
 def stop_watcher(root: Path, session: dict[str, Any]) -> dict[str, Any]:
+    value = read_json(watcher_path(root, session["session_id"]))
     status = watcher_status(root, session)
     if not status["active"]:
         remove_owned_file(root, watcher_path(root, session["session_id"]))
+        remove_owned_file(root, watcher_lease_path(root, session["session_id"]))
         return {"active": False, "stopped": False}
+    assert value is not None
     pid = int(status["pid"])
     os.kill(pid, signal.SIGTERM)
     for _ in range(50):
-        if not command_matches_watcher(pid, Path(__file__), session["session_id"]):
+        try:
+            active = watcher_process_matches(root, value, session)
+        except GuardError:
+            active = False
+        if not active:
             break
         time.sleep(0.02)
-    if command_matches_watcher(pid, Path(__file__), session["session_id"]):
+    try:
+        active = watcher_process_matches(root, value, session)
+    except GuardError:
+        active = False
+    if active:
         raise GuardError("verified watcher did not stop")
     remove_owned_file(root, watcher_path(root, session["session_id"]))
+    remove_owned_file(root, watcher_lease_path(root, session["session_id"]))
     return {"active": False, "stopped": True}
 
 
-def watch(root: Path, session_id: str, once: bool) -> int:
+def watch(root: Path, session: dict[str, Any], once: bool) -> int:
     while True:
         try:
-            decision, exit_code = evaluate(root, session_id)
+            decision, exit_code = evaluate(root, session)
             print(json.dumps(decision, sort_keys=True), flush=True)
         except SessionExpired as error:
             print(json.dumps({"watcher": "expired", "reason": str(error)}), flush=True)
@@ -1263,6 +2067,14 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", help=argparse.SUPPRESS)
     parser.add_argument("--session-id", help=argparse.SUPPRESS)
+    parser.add_argument("--session-pid", type=int, help=argparse.SUPPRESS)
+    parser.add_argument(
+        "--session-source",
+        choices=SESSION_SOURCES,
+        help=argparse.SUPPRESS,
+    )
+    parser.add_argument("--session-process-start", help=argparse.SUPPRESS)
+    parser.add_argument("--watcher-nonce", help=argparse.SUPPRESS)
     parser.add_argument("--json", action="store_true")
     commands = parser.add_subparsers(dest="command", required=True)
     def command(name: str, **kwargs: Any) -> argparse.ArgumentParser:
@@ -1299,10 +2111,30 @@ def main() -> int:
     try:
         root = discover_root(arguments.root)
         if arguments.command == "watch":
-            session_id = arguments.session_id
-            if session_id is None:
-                session_id = load_current_session(root)["session_id"]
-            return watch(root, session_id, arguments.once)
+            if arguments.session_id is None:
+                session = load_current_session(root)
+                if arguments.watcher_nonce is not None:
+                    raise GuardError("unbound watcher nonce")
+                return watch(root, session, arguments.once)
+            else:
+                session = load_pinned_session(
+                    root,
+                    arguments.session_id,
+                    arguments.session_pid,
+                    arguments.session_source,
+                    arguments.session_process_start,
+                )
+                if arguments.watcher_nonce is None:
+                    raise GuardError("pinned watcher omitted its nonce")
+                lease = acquire_watcher_lease(
+                    root,
+                    session,
+                    arguments.watcher_nonce,
+                )
+                try:
+                    return watch(root, session, arguments.once)
+                finally:
+                    release_watcher_lease(lease)
         if arguments.command == "fallback-install":
             result = fallback_install(
                 arguments.host,
@@ -1314,17 +2146,20 @@ def main() -> int:
         session = load_current_session(root, arguments.session_id)
         if arguments.command == "gate":
             watcher = start_watcher(root, session)
-            decision, exit_code = evaluate(root, session["session_id"])
+            decision, exit_code = evaluate(root, session)
             decision["watcher"] = watcher
             decision["halt_marker"] = halt_path(root, session["session_id"]).exists()
             emit(decision, arguments.json)
             return exit_code
-        if arguments.command in ("check", "status"):
-            decision, exit_code = evaluate(root, session["session_id"])
+        if arguments.command == "check":
+            decision, exit_code = evaluate(root, session)
             decision["watcher"] = watcher_status(root, session)
             decision["halt_marker"] = halt_path(root, session["session_id"]).exists()
             emit(decision, arguments.json)
             return exit_code
+        if arguments.command == "status":
+            emit(status_report(root, session), arguments.json)
+            return EXIT_ALLOWED
         if arguments.command == "set-threshold":
             result = save_threshold(root, arguments.percent)
         elif arguments.command == "session-disable":

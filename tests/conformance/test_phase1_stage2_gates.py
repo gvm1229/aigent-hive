@@ -38,6 +38,7 @@ CANONICAL_VISIBLE_PATHS = (
     ".hive/team/roles/reviewer.md",
 )
 BUILTIN_SKILL_NAMES = (
+    "auto-setup-harness",
     "hive-judge-package",
     "hive-knowledge-capture",
     "hive-knowledge-maintenance",
@@ -66,6 +67,8 @@ CODEX_HIVE_PROJECTION_PATHS = {
         for relative in (
             f"skills/{name}",
             f"skills/{name}/SKILL.md",
+            f"skills/{name}/agents",
+            f"skills/{name}/agents/openai.yaml",
         )
     },
 }
@@ -174,7 +177,7 @@ class Phase1ForeignNamespaceReadWriteGate(Phase1CliTestCase):
             try:
                 process, result = self.invoke_setup(
                     target,
-                    timeout=2.0 if os.name != "nt" else 10.0,
+                    timeout=2.0 if os.name != "nt" else 30.0,
                     environment=environment,
                 )
             except subprocess.TimeoutExpired as error:

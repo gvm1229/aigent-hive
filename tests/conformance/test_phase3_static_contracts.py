@@ -34,7 +34,9 @@ ROUTING_REQUEST_SCHEMA_PATH = (
 )
 
 BUILTIN_SKILLS = {
+    "setup-hive",
     "setup-harness",
+    "auto-setup-harness",
     "hive-simple-question",
     "hive-prompt-refine",
     "hive-knowledge-capture",
@@ -51,7 +53,9 @@ BUILTIN_SKILLS = {
     "hive-project-upgrade",
 }
 IMPLEMENTED_SKILLS = {
+    "setup-hive",
     "setup-harness",
+    "auto-setup-harness",
     "hive-simple-question",
     "hive-prompt-refine",
     "hive-knowledge-capture",
@@ -68,6 +72,15 @@ IMPLEMENTED_SKILLS = {
     "hive-project-upgrade",
 }
 CATALOG_ONLY_SKILLS = BUILTIN_SKILLS - IMPLEMENTED_SKILLS
+IMPLICIT_PLUGIN_SKILLS = {
+    "setup-hive",
+    "setup-harness",
+    "auto-setup-harness",
+    "hive-simple-question",
+    "hive-prompt-refine",
+    "hive-usage-guard",
+}
+IMPLICIT_DESCRIPTION_BUDGET = 1_200
 
 
 def read_yaml(path: Path) -> dict[str, object]:
@@ -91,6 +104,68 @@ def skill_frontmatter(path: Path) -> tuple[dict[str, object], str]:
 
 
 class Phase3SkillSourceContract(unittest.TestCase):
+    def test_source_directives_preserve_valid_knowledge_during_simplification(self) -> None:
+        manifest = (REPOSITORY_ROOT / "AGENTS.md").read_text(encoding="utf-8")
+        editing = (
+            REPOSITORY_ROOT / ".agents/directives/00-editing-discipline.md"
+        ).read_text(encoding="utf-8")
+        documentation = (
+            REPOSITORY_ROOT / ".agents/directives/04-documentation-state.md"
+        ).read_text(encoding="utf-8")
+        safety = (
+            REPOSITORY_ROOT / ".agents/directives/05-security-safety.md"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn("Move it to the smallest fitting canonical document", manifest)
+        self.assertIn("Inventory the durable claims", editing)
+        self.assertIn("Map every removed durable claim", editing)
+        self.assertIn("verify the exact replacement locator", documentation)
+        self.assertIn("README streamlining is not deletion authority", safety)
+
+    def test_source_auto_setup_projection_matches_harness_canonical_bytes(self) -> None:
+        canonical = (
+            SKILL_ROOT / "auto-setup-harness/SKILL.md"
+        ).read_bytes()
+        source_projection = (
+            REPOSITORY_ROOT
+            / ".agents/skills/auto-setup-harness/SKILL.md"
+        ).read_bytes()
+        self.assertEqual(source_projection, canonical)
+
+    def test_auto_setup_infers_and_asks_only_unresolved_fields(self) -> None:
+        skill = (
+            SKILL_ROOT / "auto-setup-harness/SKILL.md"
+        ).read_text(encoding="utf-8")
+        for required in (
+            "confidence as `explicit`, `strong`, or `unresolved`",
+            "Set `setup_mode: expedited`",
+            "Ask only unresolved questions",
+            "Default root-knowledge promotion categories to empty",
+            "Approve no optional third-party Skill and no fallback hook by inference",
+            "Zero-Question Gate",
+        ):
+            with self.subTest(required=required):
+                self.assertIn(required, skill)
+
+    def test_setup_hive_expedited_defaults_are_fixed(self) -> None:
+        skill = (SKILL_ROOT / "setup-hive/SKILL.md").read_text(
+            encoding="utf-8"
+        )
+        for required in (
+            "Expedited — set everything to default",
+            "ask for interface language first",
+            "Interface language: the language already selected by the user",
+            "Daily update check: the explicit answer already selected by the user",
+            "retries on the next host session after offline failure",
+            "never installs an update",
+            "Wiki: enabled with the selected interface language",
+            "Agent persona: `strict`",
+            "every built-in Skill in the signed catalog",
+            "Usage guard: disabled",
+        ):
+            with self.subTest(required=required):
+                self.assertIn(required, skill)
+
     def test_source_prompt_refine_projection_matches_harness_canonical_bytes(self) -> None:
         canonical = (
             SKILL_ROOT / "hive-prompt-refine/SKILL.md"
@@ -139,6 +214,9 @@ class Phase3SkillSourceContract(unittest.TestCase):
             "An unchecked box is not proof that work remains",
             "Derive the `PLAN.md` completion index only from Phase milestone checklists",
             "Update the completion index in the same edit as any counted checklist state change",
+            "Whenever a plan is created or materially revised to govern repository work",
+            "canonical tracked plan set before executing that plan.",
+            "must never be its sole authority",
             "Legacy native goal wording that refers to unchecked items in `docs/plans/PLAN.md` must resolve to the documents listed under `Active fragments`",
             "the intentional absence of checkboxes in the compact index is not completion evidence",
         ):
@@ -147,6 +225,96 @@ class Phase3SkillSourceContract(unittest.TestCase):
             "before starting or resuming any `docs/plans/PLAN.md`-backed goal",
             source_manifest,
         )
+
+    def test_source_commit_workflow_splits_independent_concerns(self) -> None:
+        directive = (
+            REPOSITORY_ROOT / ".agents/directives/03-workflow.md"
+        ).read_text(encoding="utf-8")
+        guide = (
+            REPOSITORY_ROOT / "docs/guides/commit-rules.md"
+        ).read_text(encoding="utf-8")
+        skill = (
+            REPOSITORY_ROOT / ".agents/skills/hive-commit/SKILL.md"
+        ).read_text(encoding="utf-8")
+        metadata = (
+            REPOSITORY_ROOT
+            / ".agents/skills/hive-commit/agents/openai.yaml"
+        ).read_text(encoding="utf-8")
+
+        for requirement in (
+            "independently reviewable and revertible intent",
+            "A Wiki capture and a product version or release-date change are separate commits.",
+            "use patch staging or sequence the edits",
+            "Do not rewrite an existing commit solely to apply current commit-splitting policy",
+        ):
+            self.assertIn(requirement, directive)
+        for requirement in (
+            "독립 검토·독립 되돌리기 가능한 의도",
+            "Wiki 기록과 `hive --version` 변경의 별도 커밋",
+            "과거 커밋 소급 적용 금지",
+        ):
+            self.assertIn(requirement, guide)
+        for requirement in (
+            "Build a concern map before staging.",
+            "Stage one concern only.",
+            "Do not rewrite, amend, rebase, or split existing history",
+            "Never bypass repository hooks",
+        ):
+            self.assertIn(requirement, skill)
+        self.assertIn("allow_implicit_invocation: true", metadata)
+
+    def test_source_directive_amend_skill_has_bounded_explicit_authority(self) -> None:
+        skill = (
+            REPOSITORY_ROOT
+            / ".agents/skills/hive-directive-amend/SKILL.md"
+        ).read_text(encoding="utf-8")
+        metadata = (
+            REPOSITORY_ROOT
+            / ".agents/skills/hive-directive-amend/agents/openai.yaml"
+        ).read_text(encoding="utf-8")
+
+        for requirement in (
+            "$hive-directive-amend [--source|--consumer] <amendment command>",
+            "Stop the command at the first line break.",
+            "No flag: amend both source-development and consumer-product directives.",
+            "`--source`: amend source-development directives only.",
+            "`--consumer`: amend consumer-product directives only.",
+            "Keep this Skill source-only under `.agents/skills/`.",
+            "Never edit generated output alone when a canonical producer exists.",
+        ):
+            self.assertIn(requirement, skill)
+        self.assertIn("allow_implicit_invocation: false", metadata)
+        self.assertIn("$hive-directive-amend", metadata)
+
+    def test_source_consumer_skill_reuse_and_orchestration_independence(self) -> None:
+        source_manifest = (REPOSITORY_ROOT / "AGENTS.md").read_text(
+            encoding="utf-8"
+        )
+        architecture = (
+            REPOSITORY_ROOT / ".agents/directives/02-architecture.md"
+        ).read_text(encoding="utf-8")
+        plan = (
+            REPOSITORY_ROOT / "docs/plans/active/source-docs-wiki.md"
+        ).read_text(encoding="utf-8")
+
+        for requirement in (
+            "Reuse useful Hive-owned Skills bidirectionally",
+            "shared Skill is canonical under `harness/skills/`",
+            "Never import installed consumer state, runtime data, or user knowledge into source.",
+        ):
+            self.assertIn(requirement, source_manifest)
+        for requirement in (
+            "replaceable compatibility dependencies with planned retirement",
+            "Permit bidirectional reuse only for Hive-owned Skill source",
+            "Do not use `omx_wiki/`, `.omx/wiki/`, or consumer `.hive/knowledge/`",
+        ):
+            self.assertIn(requirement, architecture)
+        for requirement in (
+            "`docs/facts/en/`·`docs/facts/ko/`",
+            "`hive-wiki` Markdown parser·lint·SQLite rebuild·query",
+            "one-H1·no-subsection·800-byte atomic body schema",
+        ):
+            self.assertIn(requirement, plan)
 
     def test_plan_index_is_compact_and_active_checklist_ids_are_unique(self) -> None:
         plan_root = REPOSITORY_ROOT / "docs/plans"
@@ -165,9 +333,14 @@ class Phase3SkillSourceContract(unittest.TestCase):
         }
         expected_fragments = {
             "active/documentation-style.md",
+            "active/docs-wiki-migration.md",
             "active/native-usage-sensor.md",
             "active/plugin-project-lifecycle.md",
+            "active/release-0.8.0.md",
             "active/security-review.md",
+            "active/source-docs-wiki.md",
+            "active/user-onboarding-shared-index.md",
+            "active/windows-shell-install.md",
             "contracts/README.md",
             "phases/07-public-qualification.md",
             "phases/README.md",
@@ -181,18 +354,28 @@ class Phase3SkillSourceContract(unittest.TestCase):
 
         active_fragments = [
             plan_root / "active/documentation-style.md",
+            plan_root / "active/docs-wiki-migration.md",
             plan_root / "active/native-usage-sensor.md",
             plan_root / "active/plugin-project-lifecycle.md",
+            plan_root / "active/release-0.8.0.md",
             plan_root / "active/security-review.md",
+            plan_root / "active/source-docs-wiki.md",
+            plan_root / "active/user-onboarding-shared-index.md",
+            plan_root / "active/windows-shell-install.md",
             plan_root / "phases/07-public-qualification.md",
         ]
         self.assertEqual(
             {path.relative_to(plan_root).as_posix() for path in active_fragments},
             {
                 "active/documentation-style.md",
+                "active/docs-wiki-migration.md",
                 "active/native-usage-sensor.md",
                 "active/plugin-project-lifecycle.md",
+                "active/release-0.8.0.md",
                 "active/security-review.md",
+                "active/source-docs-wiki.md",
+                "active/user-onboarding-shared-index.md",
+                "active/windows-shell-install.md",
                 "phases/07-public-qualification.md",
             },
         )
@@ -261,9 +444,13 @@ class Phase3SkillSourceContract(unittest.TestCase):
         )
         phase_7_path = plan_root / "phases/07-public-qualification.md"
         documentation_path = plan_root / "active/documentation-style.md"
+        docs_wiki_path = plan_root / "active/docs-wiki-migration.md"
         native_usage_path = plan_root / "active/native-usage-sensor.md"
         plugin_project_path = plan_root / "active/plugin-project-lifecycle.md"
         security_review_path = plan_root / "active/security-review.md"
+        source_wiki_path = plan_root / "active/source-docs-wiki.md"
+        onboarding_path = plan_root / "active/user-onboarding-shared-index.md"
+        windows_shell_path = plan_root / "active/windows-shell-install.md"
         progress_rows = (
             ("Phase 0–6", *checklist_counts(completed_phase_paths)),
             ("Phase 7", *checklist_counts([phase_7_path])),
@@ -275,8 +462,21 @@ class Phase3SkillSourceContract(unittest.TestCase):
                 "Host-native usage sensors",
                 *checklist_counts([native_usage_path]),
             ),
-            ("Documentation style", *checklist_counts([documentation_path])),
+            (
+                "Global onboarding·shared index",
+                *checklist_counts([onboarding_path]),
+            ),
+            (
+                "Source docs Wiki",
+                *checklist_counts([source_wiki_path]),
+            ),
+            (
+                "Windows shell install boundary",
+                *checklist_counts([windows_shell_path]),
+            ),
+            ("문서 말투", *checklist_counts([documentation_path])),
             ("Security review", *checklist_counts([security_review_path])),
+            ("Docs Wiki migration", *checklist_counts([docs_wiki_path])),
         )
         total_done = sum(row[1] for row in progress_rows)
         total_open = sum(row[2] for row in progress_rows)
@@ -389,7 +589,7 @@ class Phase3SkillSourceContract(unittest.TestCase):
 
     def test_full_editing_discipline_is_exact_and_highest_priority(self) -> None:
         expected_digest = (
-            "6ff1639897049dea7ccf710c88fe3bcb369d7edf7e62bcd62137ec70a7c7cc24"
+            "2445eeaa461ac04d9a5919a9d5499dac6cbe6300f8b57e3ab00215fbd5426fd9"
         )
         source_path = (
             REPOSITORY_ROOT / ".agents/directives/00-editing-discipline.md"
@@ -451,6 +651,9 @@ class Phase3SkillSourceContract(unittest.TestCase):
         self.assertIn("Codex, Claude, and Gemini Antigravity", product_marker)
 
     def test_source_and_consumer_human_documentation_style_contract(self) -> None:
+        source_behavior = (
+            REPOSITORY_ROOT / ".agents/directives/01-behavior.md"
+        ).read_text(encoding="utf-8")
         source_directive = (
             REPOSITORY_ROOT
             / ".agents/directives/08-human-documentation-style.md"
@@ -467,11 +670,29 @@ class Phase3SkillSourceContract(unittest.TestCase):
         guidance = (
             REPOSITORY_ROOT / "docs/guidance-schema.md"
         ).read_text(encoding="utf-8")
+        user_guidance_renderer = (
+            REPOSITORY_ROOT / "crates/hive-cli/src/user_install.rs"
+        ).read_text(encoding="utf-8")
         shipped_rule = (
             "Write human-readable project documents in concise Korean unless "
             "the user explicitly requests another language."
         )
+        language_consistency_rule = (
+            "Keep the selected interface language consistent throughout every "
+            "question and response."
+        )
+        automatic_handoff_rule = (
+            "Before presenting pending actions or a user handoff, complete every "
+            "safe, in-scope, automatable action"
+        )
+        explicit_result_scope_rule = (
+            "failed, skipped, deferred, unverified, or unsupported item"
+        )
 
+        self.assertIn("Do not insert replaceable English general nouns", source_behavior)
+        self.assertIn("write the full passage in English", source_behavior)
+        self.assertIn("Keep each passage in one base language", source_directive)
+        self.assertIn("Replace ordinary English nouns", source_directive)
         self.assertIn("examples, not an exhaustive allowlist", source_directive)
         self.assertIn("`~한다`", source_directive)
         self.assertIn(
@@ -490,6 +711,32 @@ class Phase3SkillSourceContract(unittest.TestCase):
         )
         self.assertIn(shipped_rule, template)
         self.assertIn(shipped_rule, renderer)
+        self.assertIn(language_consistency_rule, template)
+        self.assertIn(language_consistency_rule, renderer)
+        self.assertIn("Before presenting a to-do list", source_behavior)
+        self.assertIn("present only genuinely user-owned actions", source_behavior)
+        self.assertIn(automatic_handoff_rule, template)
+        self.assertIn(automatic_handoff_rule, renderer)
+        self.assertIn(explicit_result_scope_rule, source_behavior)
+        self.assertIn(explicit_result_scope_rule, template)
+        self.assertIn(explicit_result_scope_rule, renderer)
+        self.assertIn("남은 작업 목록·인계 전", guidance)
+        self.assertIn("자동 처리 불가 이유", guidance)
+        self.assertIn("통과·실패·건너뜀·연기·미검증·미지원 결과", guidance)
+        self.assertIn("해석에 필요한 한정어를 간결함을 이유로 생략 금지", guidance)
+        self.assertIn("finish every safe, in-scope, automatable task", user_guidance_renderer)
+        self.assertIn("남은 작업 제시 전", user_guidance_renderer)
+        self.assertIn(explicit_result_scope_rule, user_guidance_renderer)
+        self.assertIn("통과·실패·건너뜀·연기·미검증·미지원", user_guidance_renderer)
+        self.assertIn("대체 가능한 일반 영어 단어의 한영 혼용 금지", guidance)
+        self.assertIn(
+            "대체 가능한 일반 영어 단어의 한영 혼용 금지",
+            user_guidance_renderer,
+        )
+        self.assertIn(
+            "use English consistently throughout every question and response",
+            user_guidance_renderer,
+        )
         exact_pairs = (
             (
                 "Aigent Hive는 provider-neutral 로컬 agent harness다.",
@@ -537,6 +784,44 @@ class Phase3SkillSourceContract(unittest.TestCase):
         self.assertIn("conversational imperative endings", template)
         self.assertIn("Conversational imperative", source_directive)
 
+    def test_default_on_wiki_autocaptures_reviewed_task_facts(self) -> None:
+        source_manifest = (REPOSITORY_ROOT / "AGENTS.md").read_text(
+            encoding="utf-8"
+        )
+        source_directive = (
+            REPOSITORY_ROOT / ".agents/directives/04-documentation-state.md"
+        ).read_text(encoding="utf-8")
+        project_directive = (
+            REPOSITORY_ROOT / "harness/directives/01-project-knowledge.md"
+        ).read_text(encoding="utf-8")
+        template_directive = (
+            REPOSITORY_ROOT
+            / "harness/template/.agents/directives/01-project-knowledge.md"
+        ).read_text(encoding="utf-8")
+        template_marker = (
+            REPOSITORY_ROOT / "harness/template/AGENTS.md.jinja"
+        ).read_text(encoding="utf-8")
+        capture_skill = (
+            REPOSITORY_ROOT / "harness/skills/hive-knowledge-capture/SKILL.md"
+        ).read_text(encoding="utf-8")
+
+        self.assertEqual(project_directive, template_directive)
+        for surface in (
+            source_manifest,
+            source_directive,
+            project_directive,
+            template_marker,
+            capture_skill,
+        ):
+            self.assertIn("agent-reviewed", surface.lower())
+            self.assertIn("task fact", surface.lower().replace("-", " "))
+            self.assertIn("raw transcript", surface.lower())
+        for field in ("outcome", "tool", "criteria", "originating request"):
+            self.assertIn(field, project_directive.lower())
+        self.assertIn('"enabled" if wiki_enabled else "disabled"', template_marker)
+        self.assertIn("Do not capture when Wiki is disabled", capture_skill)
+        self.assertNotIn("automatic memory ingestion", capture_skill)
+
     def test_consumer_turn_gate_uses_enforcement_and_semantic_intent(self) -> None:
         template = (
             REPOSITORY_ROOT / "harness/template/AGENTS.md.jinja"
@@ -556,9 +841,19 @@ class Phase3SkillSourceContract(unittest.TestCase):
             REPOSITORY_ROOT / "docs/guidance-schema.md"
         ).read_text(encoding="utf-8")
         readme = (REPOSITORY_ROOT / "README.md").read_text(encoding="utf-8")
+        korean_readme = (
+            REPOSITORY_ROOT / "docs/readme/README.ko.md"
+        ).read_text(encoding="utf-8")
 
         self.assertEqual(canonical_skill, projected_skill)
-        for surface in (template, renderer, canonical_skill, guidance, readme):
+        for surface in (
+            template,
+            renderer,
+            canonical_skill,
+            guidance,
+            readme,
+            korean_readme,
+        ):
             self.assertIn("hive usage enforce", surface)
             self.assertIn("hive run resume --dispatch-intent automatic", surface)
         for surface in (template, renderer, canonical_skill):
@@ -588,10 +883,13 @@ class Phase3SkillSourceContract(unittest.TestCase):
         self.assertIn("illustrative rather than a finite phrase", canonical_skill)
         for surface in (template, renderer, canonical_skill):
             self.assertIn("auxiliary evidence", surface)
-        for surface in (guidance, readme):
+        for surface in (guidance, korean_readme):
             normalized = " ".join(surface.split())
             self.assertIn("cancellation 결과는 보조 evidence", normalized)
             self.assertIn("durable goal/task 상태 대체 불가", normalized)
+        normalized_readme = " ".join(readme.split()).lower()
+        self.assertIn("cancellation is auxiliary evidence", normalized_readme)
+        self.assertIn("never replaces durable goal/task state", normalized_readme)
         self.assertIn("start a watcher", canonical_skill)
         self.assertIn("Never install a fallback hook", canonical_skill)
         usage_control = (
@@ -647,6 +945,92 @@ class Phase3SkillSourceContract(unittest.TestCase):
                 self.assertEqual(frontmatter["name"], name)
                 self.assertIsInstance(frontmatter["description"], str)
                 self.assertTrue(frontmatter["description"].strip())
+
+    def test_codex_skill_metadata_has_one_bounded_implicit_projection(
+        self,
+    ) -> None:
+        plugin_root = (
+            REPOSITORY_ROOT / "harness/plugins/aigent-hive/skills"
+        )
+        compatibility_root = (
+            REPOSITORY_ROOT / "harness/template/.agents/skills"
+        )
+        implicit_description_chars = 0
+
+        for name in sorted(IMPLEMENTED_SKILLS):
+            with self.subTest(name=name):
+                source = SKILL_ROOT / name
+                metadata_path = source / "agents/openai.yaml"
+                metadata = read_yaml(metadata_path)
+                interface = metadata.get("interface")
+                policy = metadata.get("policy")
+                self.assertIsInstance(interface, dict)
+                self.assertIsInstance(policy, dict)
+                self.assertEqual(
+                    policy.get("allow_implicit_invocation"),
+                    name in IMPLICIT_PLUGIN_SKILLS,
+                )
+                self.assertIn(f"${name}", interface.get("default_prompt", ""))
+                self.assertEqual(
+                    (plugin_root / name / "agents/openai.yaml").read_bytes(),
+                    metadata_path.read_bytes(),
+                )
+
+                if name == "setup-hive":
+                    self.assertFalse((compatibility_root / name).exists())
+                    continue
+
+                compatibility = read_yaml(
+                    compatibility_root / name / "agents/openai.yaml"
+                )
+                compatibility_policy = compatibility.get("policy")
+                self.assertIsInstance(compatibility_policy, dict)
+                self.assertFalse(
+                    compatibility_policy.get("allow_implicit_invocation")
+                )
+                compatibility_interface = compatibility.get("interface")
+                self.assertIsInstance(compatibility_interface, dict)
+                self.assertIn(
+                    f"${name}",
+                    compatibility_interface.get("default_prompt", ""),
+                )
+
+                if name in IMPLICIT_PLUGIN_SKILLS:
+                    frontmatter, _ = skill_frontmatter(
+                        source / "SKILL.md"
+                    )
+                    description = str(frontmatter["description"])
+                    self.assertLessEqual(len(description), 240)
+                    implicit_description_chars += len(description)
+
+        self.assertLessEqual(
+            implicit_description_chars,
+            IMPLICIT_DESCRIPTION_BUDGET,
+        )
+
+        source_skill_root = REPOSITORY_ROOT / ".agents/skills"
+        overlapping_source_skills = {
+            path.name
+            for path in source_skill_root.iterdir()
+            if path.is_dir() and path.name in IMPLEMENTED_SKILLS
+        }
+        self.assertEqual(
+            overlapping_source_skills,
+            {
+                "auto-setup-harness",
+                "hive-prompt-refine",
+                "hive-usage-guard",
+            },
+        )
+        for name in overlapping_source_skills:
+            source_metadata = read_yaml(
+                source_skill_root / name / "agents/openai.yaml"
+            )
+            source_policy = source_metadata.get("policy")
+            self.assertIsInstance(source_policy, dict)
+            self.assertFalse(
+                source_policy.get("allow_implicit_invocation")
+            )
 
     def test_catalog_only_entries_have_no_discoverable_skill_body(self) -> None:
         for name in sorted(CATALOG_ONLY_SKILLS):

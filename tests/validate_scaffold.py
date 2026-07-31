@@ -602,7 +602,7 @@ def validate_render(render_root: Path, input_data_path: Path) -> None:
     if editing_discipline.read_bytes() != canonical_editing_discipline:
         raise AssertionError("rendered editing discipline bytes changed")
     if hashlib.sha256(canonical_editing_discipline).hexdigest() != (
-        "6ff1639897049dea7ccf710c88fe3bcb369d7edf7e62bcd62137ec70a7c7cc24"
+        "2445eeaa461ac04d9a5919a9d5499dac6cbe6300f8b57e3ab00215fbd5426fd9"
     ):
         raise AssertionError("canonical editing discipline digest changed")
 
@@ -775,6 +775,7 @@ def validate_render(render_root: Path, input_data_path: Path) -> None:
     active_entries = active_skills["skills"]
     assert isinstance(active_entries, list)
     expected_skill_names = [
+        "auto-setup-harness",
         "hive-judge-package",
         "hive-knowledge-capture",
         "hive-knowledge-maintenance",
@@ -828,9 +829,30 @@ def validate_render(render_root: Path, input_data_path: Path) -> None:
                 raise AssertionError(
                     f"built-in Skill projection bytes changed: {name}"
                 )
-            if {path.name for path in projection_path.parent.iterdir()} != {
-                "SKILL.md"
-            }:
+            expected_projection_entries = {"SKILL.md"}
+            if projection_root == ".agents":
+                metadata_source = (
+                    REPOSITORY_ROOT
+                    / f"harness/template/.agents/skills/{name}/agents/openai.yaml"
+                )
+                metadata_path = projection_path.parent / "agents/openai.yaml"
+                if (
+                    not metadata_path.is_file()
+                    or read_yaml(metadata_path) != read_yaml(metadata_source)
+                ):
+                    raise AssertionError(
+                        f"built-in Skill metadata projection differs: {name}"
+                    )
+                if {
+                    path.name for path in metadata_path.parent.iterdir()
+                } != {"openai.yaml"}:
+                    raise AssertionError(
+                        f"built-in Skill metadata contains unexpected files: {name}"
+                    )
+                expected_projection_entries.add("agents")
+            if {
+                path.name for path in projection_path.parent.iterdir()
+            } != expected_projection_entries:
                 raise AssertionError(
                     f"built-in Skill projection contains unexpected files: {name}"
                 )

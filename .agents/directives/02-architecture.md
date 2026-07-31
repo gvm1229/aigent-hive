@@ -24,6 +24,7 @@ Never import installed consumer state back into source, copy source-development 
 
 - Do not implement Hive equivalents of plan, Ralph, team, swarm, or provider session runtimes.
 - Prefer a compatible OMX capability on Codex and OMC capability on Claude whenever it is available in the active host. Otherwise use only what the host natively supports.
+- Treat OMX and OMC as replaceable compatibility dependencies with planned retirement, not as Hive authorities. Do not bind canonical data, paths, schemas, Skill identity, or durable knowledge to their namespaces. Retire an adapter only after a provider-neutral or host-native owner covers its required capability.
 - Do not ask the user to choose a pure-Hive orchestration mode. Resolve one owner per run from the active host capability surface and pin it for that run.
 - Preserve OMX/OMC namespaces and let the resolved layer own orchestration. Do not install Hive lifecycle hooks when OMX or OMC is detected.
 - If neither OMX nor OMC is detected, any Hive fallback hook requires an explicit capability preview and user approval before installation.
@@ -34,6 +35,9 @@ Never import installed consumer state back into source, copy source-development 
 - Use Skill descriptions and compact routing directives for semantic task-to-Skill selection; do not build a duplicate prompt-classifier hook.
 - Prefer an existing OMX/OMC Skill over a Hive duplicate.
 - Keep Hive Skills focused on Hive-owned setup, prompt refinement, canonical knowledge, role/run handoff, judge packaging, migration, and update contracts.
+- Permit bidirectional reuse only for Hive-owned Skill source after source/consumer scope, safety, consent, and conformance review. Never treat an installed consumer copy or consumer runtime state as source material.
+- Keep a shared Skill canonical under `harness/skills/<name>/` and project an exact source copy under `.agents/skills/<name>/`. Keep a source-only Skill under `.agents/skills/<name>/` until an explicit product-relevance review promotes it to `harness/skills/`.
+- A consumer Skill reused in source must not require consumer `.hive/` state, mutate an installed harness, weaken source-root refusal, or bypass the source usage guard. Adapt the provider-neutral workflow or core primitive instead of copying consumer state assumptions.
 - Load only the smallest approved Skill set needed for the task. The simple-question path loads no unrelated project Skill or memory.
 
 ## Canonical Data
@@ -44,6 +48,11 @@ Never import installed consumer state back into source, copy source-development 
 - SQLite is a derived local index and may be deleted at any time.
 - No durable fact may exist only in SQLite.
 - A clean checkout containing the canonical tracked Markdown/YAML/TOML and source objects must be sufficient to rebuild the index without a model call or network request.
+- Source Wiki facts are canonical tracked Markdown under `docs/facts/en/` and
+  `docs/facts/ko/`. Keep one primary fact per exact bilingual pair and connect it to the
+  human-readable `docs/` graph.
+- Do not use `omx_wiki/`, `.omx/wiki/`, or consumer `.hive/knowledge/` for source knowledge.
+  Keep the source Wiki SQLite projection ignored under `.agents/work/source-wiki/`.
 
 ## Source Layout
 

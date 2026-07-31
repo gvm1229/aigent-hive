@@ -2,3 +2,5 @@ interface:
   display_name: "Hive Run Checkpoint"
   short_description: "Record a durable canonical Hive run checkpoint"
   default_prompt: "Use $hive-run-checkpoint to record the current durable run state."
+policy:
+  allow_implicit_invocation: false

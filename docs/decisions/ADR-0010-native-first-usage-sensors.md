@@ -31,6 +31,16 @@ Host별 결정:
 - Antigravity: official structured surface qualification 전 `native=unsupported`
 - CodexBar: 세 provider 모두 fallback-only
 
+Antigravity fallback:
+
+- Fixed argv:
+  `codexbar usage --provider antigravity --source cli --format json --json-only`
+- `default`·`antigravity-claude-gpt`의 provider-defined window와 모든 pool 통과
+- Missing·exact `10080` window metadata의 schema v2 `provider` canonical identity
+- Schema v1 Antigravity weekly history의 검증 후 one-way comparison bridge
+- Multi-pool marker의 `multiple` compatibility
+- Incomplete version stdout의 bounded macOS app bundle qualification
+
 Fallback 규칙:
 
 - Native limited 판정 뒤 CodexBar 호출 0회
@@ -53,6 +63,7 @@ Fallback 규칙:
 - Codex experimental protocol version qualification 필요
 - Claude status-line opt-in과 existing configuration composition 필요
 - Antigravity official machine surface 전 CodexBar fallback 의존
+- Antigravity provider-defined multi-pool history와 schema v1 migration 유지 비용
 
 Completion:
 

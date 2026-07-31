@@ -116,3 +116,8 @@ state, input, tamper 또는 detection을 읽지 않고 exit `0`, `decision:allow
 - continuation decision
 
 `Stop` handler는 승인, 변조, malformed input, 재실행 또는 non-absent detection과 관계없이 항상 exit `0`과 neutral allow를 반환. `decision:block`, `continue`, continuation prompt 또는 재귀 실행 loop 생성 금지.
+
+Wiki enabled 상태의 agent-reviewed task-fact autocapture는 hook capability가 아닌 final
+response 전 completion gate. Current authorized task와 reviewed Git-suitable artifact의 bounded
+semantic fact만 사용. Raw transcript, hook payload, tool output, hidden prompt와 runtime state의
+자동 ingestion 금지 유지.

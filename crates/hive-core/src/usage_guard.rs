@@ -1,9 +1,12 @@
 //! Provider-neutral subscription usage policy evaluation.
 
 use serde::{Deserialize, Serialize};
+use std::collections::BTreeSet;
 
 /// Remaining percentage at or below which automatic work must stop.
 pub const DEFAULT_STOP_THRESHOLD_PERCENT: f64 = 10.0;
+/// Backward-compatible quota pool for providers with one shared limit.
+pub const DEFAULT_QUOTA_POOL: &str = "default";
 /// Maximum accepted measurement clock skew into the future.
 pub const DEFAULT_MAX_FUTURE_SKEW_SECONDS: i64 = 5;
 /// Maximum lifetime of a permit after evaluation.
@@ -17,6 +20,8 @@ pub enum UsageWindow {
     Session,
     /// The host's weekly quota window.
     Weekly,
+    /// A provider-defined quota whose cadence is not asserted by the sensor.
+    Provider,
 }
 
 /// Whether a local sensor asserts that a measurement is suitable for enforcement.
@@ -34,7 +39,7 @@ pub enum SourceConfidence {
 /// A provider-neutral quota measurement from a side-effect-free local sensor.
 #[derive(Debug, Clone, Deserialize, PartialEq, Serialize)]
 pub struct UsageSnapshot {
-    /// Snapshot contract version. Only version 1 is currently accepted.
+    /// Snapshot contract version. Version 1 is unpooled; version 2 is pooled.
     pub schema_version: u32,
     /// Stable identifier of the local sensor implementation.
     pub sensor_id: String,
@@ -44,6 +49,9 @@ pub struct UsageSnapshot {
     pub host_scope: String,
     /// Non-reversible digest identifying the measured subscription account.
     pub account_scope_digest: String,
+    /// Stable provider-local quota pool. Present only in pooled schema version 2.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub quota_pool: Option<String>,
     /// Quota window represented by this measurement.
     pub quota_window: UsageWindow,
     /// Remaining quota percentage in the inclusive range `0..=100`.
@@ -164,6 +172,15 @@ pub enum UsageUnknownReason {
     MissingWindow { window: UsageWindow },
     /// A quota window has more than one current measurement.
     DuplicateWindow { window: UsageWindow },
+    /// A provider-local quota pool is missing, malformed, or attached to v1.
+    InvalidQuotaPool { actual: Option<String> },
+    /// The quota window is not valid for the snapshot schema version.
+    InvalidQuotaWindow {
+        schema_version: u32,
+        window: UsageWindow,
+    },
+    /// Provider-defined and cadence-defined windows coexist in one quota pool.
+    ConflictingWindowKinds { quota_pool: String },
     /// The measurement came from a different sensor.
     SensorIdMismatch { expected: String, actual: String },
     /// The measurement came from an unapproved sensor version.
@@ -288,7 +305,9 @@ pub enum UsageDecision {
 /// `previous_snapshots` should contain the last accepted measurement for each
 /// available window. They are used only for monotonicity checks; an empty slice
 /// is valid for the first observation. A session window takes precedence when
-/// present; otherwise the weekly window is the required fallback.
+/// present; otherwise the weekly window is the required fallback. A
+/// provider-defined window is accepted only when no cadence-defined window
+/// coexists in the same pool.
 #[must_use]
 pub fn evaluate_usage(
     policy: &UsagePolicy,
@@ -296,39 +315,80 @@ pub fn evaluate_usage(
     previous_snapshots: &[UsageSnapshot],
     now_unix_seconds: i64,
 ) -> UsageDecision {
-    let snapshot = match unique_snapshot(current_snapshots, UsageWindow::Session) {
-        Ok(Some(snapshot)) => snapshot,
-        Ok(None) => match unique_snapshot(current_snapshots, UsageWindow::Weekly) {
-            Ok(Some(snapshot)) => snapshot,
-            Ok(None) => {
-                return UsageDecision::Unknown(UsageUnknownReason::MissingWindow {
-                    window: UsageWindow::Weekly,
-                });
-            }
-            Err(reason) => return UsageDecision::Unknown(reason),
-        },
-        Err(reason) => return UsageDecision::Unknown(reason),
-    };
-
-    if let Some(reason) = validate_snapshot(policy, snapshot, now_unix_seconds) {
-        return UsageDecision::Unknown(reason);
+    let mut scopes = BTreeSet::new();
+    for snapshot in current_snapshots.iter().chain(previous_snapshots) {
+        scopes.insert(raw_quota_pool(snapshot));
+    }
+    if scopes.is_empty() {
+        return UsageDecision::Unknown(UsageUnknownReason::MissingWindow {
+            window: UsageWindow::Weekly,
+        });
     }
 
-    let mut previous_matching = previous_snapshots
-        .iter()
-        .filter(|previous| previous.quota_window == snapshot.quota_window);
-    if let Some(previous) = previous_matching.next() {
-        if previous_matching.next().is_some() {
-            return UsageDecision::Unknown(UsageUnknownReason::DuplicateWindow {
-                window: snapshot.quota_window,
+    let mut selected = Vec::with_capacity(scopes.len());
+    for scope in scopes {
+        let provider = match unique_snapshot(current_snapshots, scope, UsageWindow::Provider) {
+            Ok(snapshot) => snapshot,
+            Err(reason) => return UsageDecision::Unknown(reason),
+        };
+        let has_cadence_window = current_snapshots.iter().any(|snapshot| {
+            raw_quota_pool(snapshot) == scope
+                && matches!(
+                    snapshot.quota_window,
+                    UsageWindow::Session | UsageWindow::Weekly
+                )
+        });
+        if provider.is_some() && has_cadence_window {
+            return UsageDecision::Unknown(UsageUnknownReason::ConflictingWindowKinds {
+                quota_pool: scope.to_owned(),
             });
         }
-        if let Some(reason) = validate_monotonicity(snapshot, previous) {
+        let snapshot = if let Some(provider) = provider {
+            provider
+        } else {
+            match unique_snapshot(current_snapshots, scope, UsageWindow::Session) {
+                Ok(Some(snapshot)) => snapshot,
+                Ok(None) => match unique_snapshot(current_snapshots, scope, UsageWindow::Weekly) {
+                    Ok(Some(snapshot)) => snapshot,
+                    Ok(None) => {
+                        return UsageDecision::Unknown(UsageUnknownReason::MissingWindow {
+                            window: UsageWindow::Weekly,
+                        });
+                    }
+                    Err(reason) => return UsageDecision::Unknown(reason),
+                },
+                Err(reason) => return UsageDecision::Unknown(reason),
+            }
+        };
+        if let Some(reason) = validate_snapshot(policy, snapshot, now_unix_seconds) {
             return UsageDecision::Unknown(reason);
         }
+        let mut previous_matching = previous_snapshots.iter().filter(|previous| {
+            raw_quota_pool(previous) == raw_quota_pool(snapshot)
+                && previous.quota_window == snapshot.quota_window
+        });
+        if let Some(previous) = previous_matching.next() {
+            if previous_matching.next().is_some() {
+                return UsageDecision::Unknown(UsageUnknownReason::DuplicateWindow {
+                    window: snapshot.quota_window,
+                });
+            }
+            if let Some(reason) = validate_snapshot_contract(policy, previous) {
+                return UsageDecision::Unknown(reason);
+            }
+            if let Some(reason) = validate_monotonicity(snapshot, previous) {
+                return UsageDecision::Unknown(reason);
+            }
+        }
+        selected.push(snapshot);
     }
 
-    if snapshot.remaining_percent <= policy.stop_threshold_percent() {
+    if let Some(snapshot) = selected
+        .iter()
+        .copied()
+        .filter(|snapshot| snapshot.remaining_percent <= policy.stop_threshold_percent())
+        .min_by(|left, right| left.remaining_percent.total_cmp(&right.remaining_percent))
+    {
         return UsageDecision::Block(UsageBlock {
             window: snapshot.quota_window,
             remaining_percent: snapshot.remaining_percent,
@@ -338,18 +398,24 @@ pub fn evaluate_usage(
 
     let policy_expiry = now_unix_seconds.saturating_add(policy.permit_deadline_seconds());
     UsageDecision::Allow(UsagePermit {
-        expires_at_unix_seconds: snapshot.expires_at_unix_seconds.min(policy_expiry),
+        expires_at_unix_seconds: selected
+            .iter()
+            .map(|snapshot| snapshot.expires_at_unix_seconds)
+            .min()
+            .unwrap_or(policy_expiry)
+            .min(policy_expiry),
         consumed: false,
     })
 }
 
-fn unique_snapshot(
-    snapshots: &[UsageSnapshot],
+fn unique_snapshot<'a>(
+    snapshots: &'a [UsageSnapshot],
+    scope: &str,
     window: UsageWindow,
-) -> Result<Option<&UsageSnapshot>, UsageUnknownReason> {
+) -> Result<Option<&'a UsageSnapshot>, UsageUnknownReason> {
     let mut matching = snapshots
         .iter()
-        .filter(|snapshot| snapshot.quota_window == window);
+        .filter(|snapshot| raw_quota_pool(snapshot) == scope && snapshot.quota_window == window);
     let snapshot = matching.next();
     if matching.next().is_some() {
         return Err(UsageUnknownReason::DuplicateWindow { window });
@@ -357,14 +423,69 @@ fn unique_snapshot(
     Ok(snapshot)
 }
 
+fn raw_quota_pool(snapshot: &UsageSnapshot) -> &str {
+    snapshot.quota_pool.as_deref().unwrap_or(DEFAULT_QUOTA_POOL)
+}
+
+fn valid_quota_pool(value: &str) -> bool {
+    !value.is_empty()
+        && value.len() <= 64
+        && value.bytes().enumerate().all(|(index, byte)| match byte {
+            b'a'..=b'z' | b'0'..=b'9' => true,
+            b'-' => index > 0 && index + 1 < value.len(),
+            _ => false,
+        })
+}
+
 fn validate_snapshot(
     policy: &UsagePolicy,
     snapshot: &UsageSnapshot,
     now_unix_seconds: i64,
 ) -> Option<UsageUnknownReason> {
-    if snapshot.schema_version != 1 {
+    if let Some(reason) = validate_snapshot_contract(policy, snapshot) {
+        return Some(reason);
+    }
+    if snapshot.expires_at_unix_seconds <= now_unix_seconds {
+        return Some(UsageUnknownReason::StaleMeasurement {
+            window: snapshot.quota_window,
+            expires_at_unix_seconds: snapshot.expires_at_unix_seconds,
+            evaluated_at_unix_seconds: now_unix_seconds,
+        });
+    }
+    if snapshot.measured_at_unix_seconds
+        > now_unix_seconds.saturating_add(policy.max_future_skew_seconds())
+    {
+        return Some(UsageUnknownReason::FutureMeasurement {
+            window: snapshot.quota_window,
+            measured_at_unix_seconds: snapshot.measured_at_unix_seconds,
+            evaluated_at_unix_seconds: now_unix_seconds,
+        });
+    }
+    None
+}
+
+fn validate_snapshot_contract(
+    policy: &UsagePolicy,
+    snapshot: &UsageSnapshot,
+) -> Option<UsageUnknownReason> {
+    if !matches!(snapshot.schema_version, 1 | 2) {
         return Some(UsageUnknownReason::UnsupportedSchemaVersion {
             actual: snapshot.schema_version,
+        });
+    }
+    match (snapshot.schema_version, snapshot.quota_pool.as_deref()) {
+        (1, None) => {}
+        (2, Some(pool)) if valid_quota_pool(pool) => {}
+        _ => {
+            return Some(UsageUnknownReason::InvalidQuotaPool {
+                actual: snapshot.quota_pool.clone(),
+            });
+        }
+    }
+    if snapshot.schema_version == 1 && snapshot.quota_window == UsageWindow::Provider {
+        return Some(UsageUnknownReason::InvalidQuotaWindow {
+            schema_version: snapshot.schema_version,
+            window: snapshot.quota_window,
         });
     }
     if snapshot.sensor_id != policy.required_sensor_id {
@@ -405,22 +526,6 @@ fn validate_snapshot(
         return Some(UsageUnknownReason::RemainingOutOfRange {
             window: snapshot.quota_window,
             remaining_percent: snapshot.remaining_percent,
-        });
-    }
-    if snapshot.expires_at_unix_seconds <= now_unix_seconds {
-        return Some(UsageUnknownReason::StaleMeasurement {
-            window: snapshot.quota_window,
-            expires_at_unix_seconds: snapshot.expires_at_unix_seconds,
-            evaluated_at_unix_seconds: now_unix_seconds,
-        });
-    }
-    if snapshot.measured_at_unix_seconds
-        > now_unix_seconds.saturating_add(policy.max_future_skew_seconds())
-    {
-        return Some(UsageUnknownReason::FutureMeasurement {
-            window: snapshot.quota_window,
-            measured_at_unix_seconds: snapshot.measured_at_unix_seconds,
-            evaluated_at_unix_seconds: now_unix_seconds,
         });
     }
     None
@@ -477,6 +582,7 @@ mod tests {
             sensor_version: "1.2.3".to_owned(),
             host_scope: "codex".to_owned(),
             account_scope_digest: "sha256:account".to_owned(),
+            quota_pool: None,
             quota_window: window,
             remaining_percent,
             measured_at_unix_seconds: NOW,
@@ -491,6 +597,32 @@ mod tests {
             snapshot(UsageWindow::Session, session),
             snapshot(UsageWindow::Weekly, weekly),
         ]
+    }
+
+    fn scoped_snapshot(scope: &str, window: UsageWindow, remaining_percent: f64) -> UsageSnapshot {
+        let mut snapshot = snapshot(window, remaining_percent);
+        snapshot.schema_version = 2;
+        snapshot.quota_pool = Some(scope.to_owned());
+        snapshot
+    }
+
+    #[test]
+    fn version_one_snapshot_serializes_to_legacy_bytes() {
+        let encoded = serde_json::to_string(&snapshot(UsageWindow::Session, 57.0))
+            .expect("version-one snapshot should serialize");
+
+        assert_eq!(
+            encoded,
+            concat!(
+                r#"{"schema_version":1,"sensor_id":"local-sensor","#,
+                r#""sensor_version":"1.2.3","host_scope":"codex","#,
+                r#""account_scope_digest":"sha256:account","#,
+                r#""quota_window":"session","remaining_percent":57.0,"#,
+                r#""measured_at_unix_seconds":1000,"expires_at_unix_seconds":1030,"#,
+                r#""resets_at_unix_seconds":4600,"source_confidence":"high"}"#
+            )
+        );
+        assert!(!encoded.contains("quota_pool"));
     }
 
     fn assert_unknown(
@@ -651,13 +783,137 @@ mod tests {
     }
 
     #[test]
+    fn every_quota_pool_must_pass_its_selected_window() {
+        let current = [
+            scoped_snapshot("antigravity-gemini", UsageWindow::Provider, 57.0),
+            scoped_snapshot("antigravity-claude-gpt", UsageWindow::Provider, 9.99),
+        ];
+        let UsageDecision::Block(block) = evaluate_usage(&policy(), &current, &[], NOW) else {
+            panic!("a limited provider pool must block automatic dispatch");
+        };
+        assert_eq!(block.window, UsageWindow::Provider);
+        assert_eq!(block.remaining_percent.to_bits(), 9.99_f64.to_bits());
+
+        let allowed = [
+            scoped_snapshot("antigravity-gemini", UsageWindow::Provider, 57.0),
+            scoped_snapshot("antigravity-claude-gpt", UsageWindow::Provider, 51.0),
+        ];
+        assert!(matches!(
+            evaluate_usage(&policy(), &allowed, &[], NOW),
+            UsageDecision::Allow(_)
+        ));
+    }
+
+    #[test]
+    fn provider_and_cadence_windows_cannot_coexist_in_one_pool() {
+        let current = [
+            scoped_snapshot("gemini", UsageWindow::Provider, 57.0),
+            scoped_snapshot("gemini", UsageWindow::Weekly, 57.0),
+        ];
+        assert_unknown(&current, &[], |reason| {
+            matches!(
+                reason,
+                UsageUnknownReason::ConflictingWindowKinds { quota_pool }
+                    if quota_pool == "gemini"
+            )
+        });
+    }
+
+    #[test]
+    fn session_precedence_and_duplicates_are_scoped_per_pool() {
+        let current = [
+            scoped_snapshot("gemini", UsageWindow::Session, 57.0),
+            scoped_snapshot("gemini", UsageWindow::Weekly, 9.99),
+            scoped_snapshot("claude-gpt", UsageWindow::Weekly, 57.0),
+        ];
+        assert!(matches!(
+            evaluate_usage(&policy(), &current, &[], NOW),
+            UsageDecision::Allow(_)
+        ));
+
+        let duplicates = [
+            scoped_snapshot("gemini", UsageWindow::Weekly, 57.0),
+            scoped_snapshot("gemini", UsageWindow::Weekly, 51.0),
+            scoped_snapshot("claude-gpt", UsageWindow::Weekly, 57.0),
+        ];
+        assert_unknown(&duplicates, &[], |reason| {
+            matches!(
+                reason,
+                UsageUnknownReason::DuplicateWindow {
+                    window: UsageWindow::Weekly
+                }
+            )
+        });
+    }
+
+    #[test]
+    fn pool_history_is_matched_by_scope_and_missing_prior_pools_fail_closed() {
+        let previous = [
+            scoped_snapshot("gemini", UsageWindow::Weekly, 57.0),
+            scoped_snapshot("claude-gpt", UsageWindow::Weekly, 57.0),
+        ];
+        let current = [
+            scoped_snapshot("gemini", UsageWindow::Weekly, 56.0),
+            scoped_snapshot("claude-gpt", UsageWindow::Weekly, 55.0),
+        ];
+        assert!(matches!(
+            evaluate_usage(&policy(), &current, &previous, NOW),
+            UsageDecision::Allow(_)
+        ));
+
+        assert_unknown(&current[..1], &previous, |reason| {
+            matches!(reason, UsageUnknownReason::MissingWindow { .. })
+        });
+
+        let legacy = [snapshot(UsageWindow::Weekly, 57.0)];
+        let pooled_default = [scoped_snapshot("default", UsageWindow::Weekly, 56.0)];
+        assert!(matches!(
+            evaluate_usage(&policy(), &pooled_default, &legacy, NOW),
+            UsageDecision::Allow(_)
+        ));
+    }
+
+    #[test]
+    fn malformed_or_misversioned_quota_pool_is_unknown() {
+        let mut invalid = snapshot(UsageWindow::Weekly, 57.0);
+        invalid.schema_version = 2;
+        invalid.quota_pool = Some("Gemini Pool".to_owned());
+        assert_unknown(&[invalid], &[], |reason| {
+            matches!(reason, UsageUnknownReason::InvalidQuotaPool { .. })
+        });
+
+        let mut v1_with_pool = snapshot(UsageWindow::Weekly, 57.0);
+        v1_with_pool.quota_pool = Some("gemini".to_owned());
+        assert_unknown(&[v1_with_pool], &[], |reason| {
+            matches!(reason, UsageUnknownReason::InvalidQuotaPool { .. })
+        });
+
+        let mut v2_without_pool = snapshot(UsageWindow::Weekly, 57.0);
+        v2_without_pool.schema_version = 2;
+        assert_unknown(&[v2_without_pool], &[], |reason| {
+            matches!(reason, UsageUnknownReason::InvalidQuotaPool { .. })
+        });
+
+        let v1_provider = snapshot(UsageWindow::Provider, 57.0);
+        assert_unknown(&[v1_provider], &[], |reason| {
+            matches!(
+                reason,
+                UsageUnknownReason::InvalidQuotaWindow {
+                    schema_version: 1,
+                    window: UsageWindow::Provider
+                }
+            )
+        });
+    }
+
+    #[test]
     fn unsupported_schema_version_is_unknown() {
         let mut unsupported = pair(57.0, 57.0);
-        unsupported[0].schema_version = 2;
+        unsupported[0].schema_version = 3;
         assert_unknown(&unsupported, &[], |reason| {
             matches!(
                 reason,
-                UsageUnknownReason::UnsupportedSchemaVersion { actual: 2 }
+                UsageUnknownReason::UnsupportedSchemaVersion { actual: 3 }
             )
         });
     }
@@ -762,8 +1018,11 @@ mod tests {
 
     #[test]
     fn permit_uses_the_earliest_expiry_and_can_only_be_consumed_once() {
-        let mut current = pair(57.0, 57.0);
-        current[0].expires_at_unix_seconds = NOW + 3;
+        let mut current = vec![
+            scoped_snapshot("gemini", UsageWindow::Weekly, 57.0),
+            scoped_snapshot("claude-gpt", UsageWindow::Weekly, 57.0),
+        ];
+        current[1].expires_at_unix_seconds = NOW + 3;
         let UsageDecision::Allow(mut permit) = evaluate_usage(&policy(), &current, &[], NOW) else {
             panic!("valid measurements should permit dispatch");
         };

@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import re
@@ -48,10 +49,18 @@ def macos_installer_fixture(root: Path, actual_team_id: str) -> tuple[Path, Path
         raise unittest.SkipTest("macOS installer fixture is unavailable on Windows")
     source = (ROOT / "scripts/install.sh").read_text(encoding="utf-8")
     installer = root / "install.sh"
-    installer.write_text(
-        source.replace("__AIGENT_HIVE_APPLE_TEAM_ID__", "FIXTURE123"),
-        encoding="utf-8",
-    )
+    replacements = {
+        "__AIGENT_HIVE_PRODUCT_VERSION__": "0.7.0",
+        "__AIGENT_HIVE_PACKAGE_VERSION__": "0.7.0-test.1",
+        "__AIGENT_HIVE_APPLE_TEAM_ID__": "FIXTURE123",
+        "__AIGENT_HIVE_SHA256_AARCH64_APPLE_DARWIN__": "0" * 64,
+        "__AIGENT_HIVE_SHA256_X86_64_APPLE_DARWIN__": "0" * 64,
+        "__AIGENT_HIVE_SHA256_AARCH64_UNKNOWN_LINUX_MUSL__": "0" * 64,
+        "__AIGENT_HIVE_SHA256_X86_64_UNKNOWN_LINUX_MUSL__": "0" * 64,
+    }
+    for marker, value in replacements.items():
+        source = source.replace(marker, value)
+    installer.write_text(source, encoding="utf-8")
     installer.chmod(0o755)
     commands = root / "commands"
     commands.mkdir()
@@ -72,17 +81,17 @@ esac
         "shasum": "#!/bin/sh\nprintf '%064d  artifact\\n' 0\n",
         "tar": """#!/bin/sh
 case "$1" in
-  -tzf) printf 'aigent-hive-0.7.0-aarch64-apple-darwin/hive\\naigent-hive-0.7.0-aarch64-apple-darwin/LICENSE\\n' ;;
-  -tvzf) printf '%s\\n%s\\n' '-rwxr-xr-x 0/0 1 1980-01-01 00:00 aigent-hive-0.7.0-aarch64-apple-darwin/hive' '-rw-r--r-- 0/0 1 1980-01-01 00:00 aigent-hive-0.7.0-aarch64-apple-darwin/LICENSE' ;;
+  -tzf) printf 'package/bin/hive\\npackage/LICENSE\\npackage/package.json\\npackage/README.md\\n' ;;
+  -tvzf) printf '%s\\n%s\\n%s\\n%s\\n' '-rwxr-xr-x 0/0 1 1980-01-01 00:00 package/bin/hive' '-rw-r--r-- 0/0 1 1980-01-01 00:00 package/LICENSE' '-rw-r--r-- 0/0 1 1980-01-01 00:00 package/package.json' '-rw-r--r-- 0/0 1 1980-01-01 00:00 package/README.md' ;;
   -xzf)
     while [ "$#" -gt 0 ]; do
       if [ "$1" = "-C" ]; then shift; destination=$1; fi
       shift
     done
-    package="$destination/aigent-hive-0.7.0-aarch64-apple-darwin"
-    mkdir -p "$package"
-    printf '%s\\n' '#!/bin/sh' 'printf "hive 0.7.0\\\\n"' >"$package/hive"
-    chmod 0755 "$package/hive"
+    package="$destination/package"
+    mkdir -p "$package/bin"
+    printf '%s\\n' '#!/bin/sh' 'printf "hive 0.7.0 (released 2026-07-24)\\\\n"' >"$package/bin/hive"
+    chmod 0755 "$package/bin/hive"
     : >"$package/LICENSE"
     ;;
 esac
@@ -329,48 +338,126 @@ class Phase6StaticContracts(unittest.TestCase):
         )
         self.assertNotIn("SigningKey", update_source)
 
-    def test_signed_release_workflows_separate_build_authority_and_publication(self) -> None:
+    def test_release_workflows_separate_candidate_and_publication(self) -> None:
         candidate = (ROOT / ".github/workflows/release.yml").read_text(
             encoding="utf-8"
         )
         publication = (
             ROOT / ".github/workflows/release-publish.yml"
         ).read_text(encoding="utf-8")
-        yaml.safe_load(candidate)
-        yaml.safe_load(publication)
+        candidate_workflow = yaml.safe_load(candidate)
+        publication_workflow = yaml.safe_load(publication)
+        self.assertEqual(
+            set(candidate_workflow["jobs"]),
+            {"unix", "windows", "npm-umbrella"},
+        )
+        self.assertEqual(set(publication_workflow["jobs"]), {"publish"})
+        unix_matrix = candidate_workflow["jobs"]["unix"]["strategy"]["matrix"][
+            "include"
+        ]
+        self.assertEqual(
+            {(entry["runner"], entry["target"]) for entry in unix_matrix},
+            {
+                ("macos-15", "aarch64-apple-darwin"),
+                ("macos-15-intel", "x86_64-apple-darwin"),
+                ("ubuntu-24.04", "x86_64-unknown-linux-musl"),
+                ("ubuntu-24.04-arm", "aarch64-unknown-linux-musl"),
+            },
+        )
+        self.assertEqual(
+            candidate_workflow["jobs"]["windows"]["runs-on"],
+            "windows-2025",
+        )
         for required in (
+            "Release candidate",
             "macos-15",
             "macos-15-intel",
+            "ubuntu-24.04",
+            "ubuntu-24.04-arm",
             "windows-2025",
-            "codesign --verify --strict",
-            "notarytool submit",
-            "azure/artifact-signing-action@",
-            "ARTIFACT_SIGNING_CERTIFICATE_THUMBPRINT",
-            "apple-team-id",
-            "authenticode-certificate-thumbprint",
+            "aarch64-apple-darwin",
+            "x86_64-apple-darwin",
+            "aarch64-unknown-linux-musl",
+            "x86_64-unknown-linux-musl",
+            "x86_64-pc-windows-msvc",
+            "scripts/package-npm.mjs",
             "actions/attest@",
-            "release-signing",
+            "actions/upload-artifact@",
+            "npm-umbrella",
+            "refs/heads/develop",
+            "github.workflow_sha",
+            "scripts/render-installers.py",
+            "--installer-dir",
+            "--product-version",
+            "--package-version",
+            "statically linked",
+            "static-pie linked",
         ):
             self.assertIn(required, candidate)
         for required in (
+            "candidate_run_id",
+            "Release candidate",
+            "CANDIDATE_SHA",
+            "gh attestation verify",
+            "dist/install.sh",
+            "dist/install.ps1",
+            "dist/install.cmd",
+            "npm publish",
+            "--provenance",
+            "--tag latest",
+            "release-publication",
+            'test "$PRODUCT_VERSION" = "0.8.0"',
+            'test "$PACKAGE_VERSION" = "$PRODUCT_VERSION"',
+            'head_branch <<<"$metadata")" = "develop"',
+            "bootstrap_with_token",
+            "secrets.NPM_TOKEN",
+            "NODE_AUTH_TOKEN",
+            "!inputs.bootstrap_with_token",
+            'npm view "$package" "dist-tags.$tag"',
+            'read_tag "$package" latest',
+            "differs from approved candidate",
+            "required release notes are missing",
+            'sha256sum --check --strict "$archive.sha256"',
+            "checksum verification failed for $archive",
+            'HIVE_INSTALL_PACKAGE_VERSION=$PACKAGE_VERSION',
+            "https://unpkg.com/aigent-hive@"
+            "%HIVE_INSTALL_PACKAGE_VERSION%/install.ps1",
+        ):
+            self.assertIn(required, publication)
+        self.assertNotIn(
+            'read -r digest name extra <"dist/$archive.sha256"',
+            publication,
+        )
+        self.assertNotIn(
+            "unpkg.com/aigent-hive@$PACKAGE_VERSION/install.ps1",
+            publication,
+        )
+        self.assertEqual(publication.count('npm publish "./dist/'), 12)
+        self.assertNotIn('npm publish "dist/', publication)
+        self.assertNotIn("npm dist-tag add", publication)
+        self.assertNotIn('npm dist-tag ls "$package" --json', publication)
+        for forbidden in (
+            "gh release create",
+            "npm publish",
+            "notarytool",
+            "azure/artifact-signing-action@",
+            "release-signing",
+            "APPLE_CERTIFICATE",
+            "ARTIFACT_SIGNING",
+            "gh release create",
+        ):
+            self.assertNotIn(forbidden, candidate)
+        for forbidden in (
             "signed_tuf_repository_url",
             "HIVE_RELEASE_ROOT_JSON_BASE64",
             "hive release verify",
-            "CANDIDATE_SHA",
-            "authorized_sha",
-            'test "$authorized_sha" = "$CANDIDATE_SHA"',
-            "gh attestation verify",
             "platform-signing-evidence.canonical.json",
-            "__AIGENT_HIVE_APPLE_TEAM_ID__",
-            "__AIGENT_HIVE_WINDOWS_CERTIFICATE_THUMBPRINT__",
-            "dist/install.sh",
-            "dist/install.ps1",
-            'cmp "$artifact"',
-            "release-publication",
+            "notarytool",
+            "azure/artifact-signing-action@",
             "gh release create",
+            "gh release edit",
         ):
-            self.assertIn(required, publication)
-        self.assertNotIn("gh release create", candidate)
+            self.assertNotIn(forbidden, publication)
         self.assertNotIn("eval ", candidate + publication)
 
     def test_dispatch_inputs_are_never_interpolated_into_run_scripts(self) -> None:
@@ -394,13 +481,191 @@ class Phase6StaticContracts(unittest.TestCase):
                 ]
             return []
 
-        for name in ("release.yml", "release-publish.yml"):
+        for name in ("release.yml", "release-publish.yml", "release-runtime.yml"):
             text = (ROOT / ".github/workflows" / name).read_text(encoding="utf-8")
             workflow = yaml.safe_load(text)
             scripts = run_scripts(workflow)
             self.assertTrue(scripts)
             for script in scripts:
                 self.assertNotIn("${{ inputs.", script, name)
+
+    def test_unsigned_native_release_runtime_qualification_contract(self) -> None:
+        path = ROOT / ".github/workflows/release-runtime.yml"
+        text = path.read_text(encoding="utf-8")
+        workflow = yaml.safe_load(text)
+        self.assertIsInstance(workflow, dict)
+        triggers = workflow.get("on", workflow.get(True))
+        self.assertIsInstance(triggers, dict)
+        self.assertIn("workflow_dispatch", triggers)
+        self.assertEqual(triggers["push"]["branches"], ["develop", "main"])
+        self.assertIn(
+            ".github/workflows/release-runtime.yml",
+            triggers["push"]["paths"],
+        )
+        self.assertIn(
+            "tests/fixtures/agy-stub.py",
+            triggers["push"]["paths"],
+        )
+        self.assertEqual(workflow["permissions"], {"contents": "read"})
+        self.assertEqual(set(workflow["jobs"]), {"macos", "linux", "windows"})
+        macos_matrix = workflow["jobs"]["macos"]["strategy"]["matrix"]["include"]
+        self.assertEqual(
+            {(entry["runner"], entry["target"]) for entry in macos_matrix},
+            {
+                ("macos-15", "aarch64-apple-darwin"),
+                ("macos-15-intel", "x86_64-apple-darwin"),
+            },
+        )
+        linux_matrix = workflow["jobs"]["linux"]["strategy"]["matrix"]["include"]
+        self.assertEqual(
+            {(entry["runner"], entry["target"]) for entry in linux_matrix},
+            {
+                ("ubuntu-24.04", "x86_64-unknown-linux-musl"),
+                ("ubuntu-24.04-arm", "aarch64-unknown-linux-musl"),
+            },
+        )
+        self.assertEqual(workflow["jobs"]["windows"]["runs-on"], "windows-2025")
+        for required in (
+            "push:",
+            "workflow_dispatch:",
+            "develop",
+            "main",
+            "permissions:",
+            "contents: read",
+            "macos-15",
+            "macos-15-intel",
+            "windows-2025",
+            "ubuntu-24.04-arm",
+            "aarch64-apple-darwin",
+            "x86_64-apple-darwin",
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "x86_64-pc-windows-msvc",
+            "cargo build --release --locked",
+            "GITHUB_WORKFLOW_SHA",
+            "git rev-parse HEAD",
+            "lipo -archs",
+            "statically linked",
+            "static-pie linked",
+            "musl-tools",
+            "0x8664",
+            "expected-entries.txt",
+            '"$package/LICENSE" "$package/hive" | sort',
+            "Compare-Object $expected $entries",
+            'Compress-Archive -Path "$package\\*"',
+            '$expected = @("LICENSE", "hive.exe")',
+            "if ($LASTEXITCODE -ne 0)",
+            "BINARY_DIGEST",
+            "ARCHIVE_DIGEST",
+            "hive.user-install-dry-run-complete",
+            "hive.user-install-complete",
+            "hive.user-install-valid",
+            "tests/fixtures/agy-stub.py",
+            "HIVE_TEST_HOST_LOG",
+            "GITHUB_STEP_SUMMARY",
+        ):
+            self.assertIn(required, text)
+        self.assertEqual(
+            text.count(
+                "actions/setup-python@"
+                "5fda3b95a4ea91299a34e894583c3862153e4b97"
+            ),
+            3,
+        )
+        self.assertEqual(text.count("--host antigravity"), 9)
+        self.assertEqual(text.count("--dry-run --output json"), 3)
+        self.assertEqual(text.count("--apply --output json"), 3)
+        self.assertEqual(text.count("--validate --output json"), 3)
+        for forbidden in (
+            "actions/upload-artifact",
+            "actions/attest",
+            "id-token: write",
+            "release-signing",
+            "release-publication",
+            "codesign",
+            "notarytool",
+            "artifact-signing",
+            "gh release",
+        ):
+            self.assertNotIn(forbidden, text)
+
+        agy_fixture = (ROOT / "tests/fixtures/agy-stub.py").read_text(
+            encoding="utf-8"
+        )
+        for required in (
+            'arguments == ["--version"]',
+            'command.startswith("plugin install ")',
+            'command == "plugin uninstall aigent-hive"',
+            'command == "plugin list"',
+            "No imported plugins.",
+        ):
+            self.assertIn(required, agy_fixture)
+        self.assertNotIn("subprocess", agy_fixture)
+
+    def test_direct_installer_renderer_pins_version_and_five_artifact_digests(
+        self,
+    ) -> None:
+        targets = {
+            "aarch64-apple-darwin": "aigent-hive-darwin-arm64-0.8.0.tgz",
+            "x86_64-apple-darwin": "aigent-hive-darwin-x64-0.8.0.tgz",
+            "aarch64-unknown-linux-musl": "aigent-hive-linux-arm64-0.8.0.tgz",
+            "x86_64-unknown-linux-musl": "aigent-hive-linux-x64-0.8.0.tgz",
+            "x86_64-pc-windows-msvc": "aigent-hive-win32-x64-0.8.0.tgz",
+        }
+        with tempfile.TemporaryDirectory(prefix="hive-installers-") as temporary:
+            root = Path(temporary)
+            dist = root / "dist"
+            output = root / "output"
+            dist.mkdir()
+            for target, name in targets.items():
+                artifact = dist / name
+                artifact.write_bytes(f"artifact:{target}".encode())
+            subprocess.run(
+                [
+                    sys.executable,
+                    str(ROOT / "scripts/render-installers.py"),
+                    "--product-version",
+                    "0.8.0",
+                    "--package-version",
+                    "0.8.0",
+                    "--dist",
+                    str(dist),
+                    "--output",
+                    str(output),
+                ],
+                cwd=ROOT,
+                check=True,
+            )
+            shell = (output / "install.sh").read_text(encoding="utf-8")
+            powershell = (output / "install.ps1").read_text(encoding="utf-8")
+            cmd = (output / "install.cmd").read_text(encoding="utf-8")
+            self.assertNotRegex(
+                shell + powershell + cmd,
+                r"__AIGENT_HIVE_[A-Z0-9_]+__",
+            )
+            self.assertIn("embedded_product_version='0.8.0'", shell)
+            self.assertIn(
+                "embedded_package_version='0.8.0'",
+                shell,
+            )
+            self.assertIn("npm_package=linux-x64", shell)
+            self.assertIn("npm_package=linux-arm64", shell)
+            self.assertNotIn("$archive.sha256", shell)
+            self.assertIn('[string]$Version = "0.8.0"', powershell)
+            self.assertIn(
+                '[string]$PackageVersion = "0.8.0"',
+                powershell,
+            )
+            self.assertNotIn("$archive.sha256", powershell)
+            self.assertIn(
+                'set "HIVE_INSTALL_PACKAGE_VERSION=0.8.0"',
+                cmd,
+            )
+            self.assertIn(
+                "unpkg.com/aigent-hive@%HIVE_INSTALL_PACKAGE_VERSION%/install.ps1",
+                cmd,
+            )
+            self.assertIn("DisableDelayedExpansion", cmd)
 
     def test_direct_homebrew_and_winget_paths_preserve_binary_ownership(self) -> None:
         shell = (ROOT / "scripts/install.sh").read_text(encoding="utf-8")
@@ -421,16 +686,34 @@ class Phase6StaticContracts(unittest.TestCase):
             powershell,
         )
         self.assertIn("__AIGENT_HIVE_APPLE_TEAM_ID__", shell)
+        self.assertIn("__AIGENT_HIVE_SHA256_X86_64_UNKNOWN_LINUX_MUSL__", shell)
+        self.assertIn("__AIGENT_HIVE_SHA256_AARCH64_UNKNOWN_LINUX_MUSL__", shell)
         self.assertNotIn("AIGENT_HIVE_MACOS_TEAM_ID", shell)
         self.assertIn("TeamIdentifier", shell)
         self.assertIn("SignerCertificate.Thumbprint", powershell)
+        self.assertIn(
+            "__AIGENT_HIVE_SHA256_X86_64_PC_WINDOWS_MSVC__",
+            powershell,
+        )
+        self.assertIn("matches_hive_version", shell)
+        self.assertIn("Test-HiveVersionOutput", powershell)
+        self.assertIn("(released ", shell)
+        self.assertIn(r"\(released [0-9]{4}-[0-9]{2}-[0-9]{2}\)", powershell)
         parameter_block = re.search(
             r"(?s)^param\((.*?)\)\n\n\$ErrorActionPreference",
             powershell,
         )
         self.assertIsNotNone(parameter_block)
         self.assertNotIn("AuthorizedSigner", parameter_block.group(1))
-        self.assertIn("[IO.Compression.ZipFile]::OpenRead", powershell)
+        self.assertIn("Get-Command tar.exe", powershell)
+        self.assertIn(
+            "registry.npmjs.org/@aigent-hive/$npmPackage/-",
+            powershell,
+        )
+        self.assertIn(
+            "registry.npmjs.org/@aigent-hive/${npm_package}/-",
+            shell,
+        )
         self.assertIn(
             "existing hive binary is not owned by the direct installer",
             powershell,
@@ -438,7 +721,7 @@ class Phase6StaticContracts(unittest.TestCase):
         self.assertIn('owner":"direct"', shell)
         self.assertIn('owner = "direct"', powershell)
         self.assertNotIn("grep -q", shell)
-        self.assertIn('owned_digest=$(shasum -a 256 "$owned_binary"', shell)
+        self.assertIn('owned_digest=$(sha256_file "$owned_binary")', shell)
         self.assertIn('[ "$parsed_digest" = "$owned_digest" ]', shell)
         self.assertIn('verify_owned_pair "$prefix/bin/hive" "$receipt"', shell)
         self.assertIn("ensure_safe_directory_chain", shell)
@@ -454,16 +737,21 @@ class Phase6StaticContracts(unittest.TestCase):
         self.assertIn("Assert-SafeDirectoryChain", powershell)
         self.assertIn("Repair-PendingDirectInstall", powershell)
         self.assertIn("[IO.File]::Move", powershell)
+        self.assertIn("[IO.File]::Replace", powershell)
+        self.assertNotIn("[IO.File]::Move($Source, $Destination, $true)", powershell)
         self.assertNotIn("Move-Item", powershell)
         self.assertNotRegex(powershell, r"catch\s*\{\s*\}")
         self.assertIn("install-receipt.pending.json", powershell)
-        self.assertIn("Get-FileHash -LiteralPath $Destination", powershell)
+        self.assertIn("function Get-FileSha256", powershell)
+        self.assertNotIn("Get-FileHash", powershell)
         self.assertIn(
             '$priorReceipt.artifact_sha256 -ne "sha256:$priorDigest"',
             powershell,
         )
         self.assertNotIn("AIGENT_HIVE_RELEASE_BASE", shell)
         self.assertNotIn("ReleaseBase", powershell)
+        self.assertNotIn("$archive.sha256", shell)
+        self.assertNotIn("$archive.sha256", powershell)
         self.assertIn("on_arm do", formula)
         self.assertIn("on_intel do", formula)
         self.assertIn("PortableCommandAlias: hive", winget)
@@ -748,11 +1036,23 @@ class Phase6StaticContracts(unittest.TestCase):
                 self.assertEqual(result.returncode, 0, result)
                 self.assertEqual(external_leaf.read_bytes(), b"preserve")
 
-    def test_windows_ownership_function_executes_when_pwsh_is_available(self) -> None:
-        pwsh = shutil.which("pwsh")
-        if pwsh is None or sys.platform != "win32":
-            self.skipTest("Windows pwsh is unavailable on this host")
+    def test_windows_ownership_functions_match_powershell_5_and_7(self) -> None:
+        if sys.platform != "win32":
+            self.skipTest("Windows PowerShell qualification requires Windows")
+        shells = [
+            executable
+            for executable in (
+                shutil.which("powershell.exe"),
+                shutil.which("pwsh.exe"),
+            )
+            if executable is not None
+        ]
+        self.assertGreaterEqual(len(shells), 1)
         command = r"""
+$utilityModule = Join-Path $PSHOME (
+    "Modules\Microsoft.PowerShell.Utility\Microsoft.PowerShell.Utility.psd1"
+)
+Import-Module $utilityModule -ErrorAction Stop
 $errors = $null
 $tokens = $null
 $ast = [Management.Automation.Language.Parser]::ParseFile(
@@ -762,6 +1062,8 @@ $ast = [Management.Automation.Language.Parser]::ParseFile(
 )
 if ($errors.Count -ne 0) { throw ($errors | Out-String) }
 foreach ($name in @(
+    "Test-HiveVersionOutput",
+    "Get-FileSha256",
     "Get-ValidatedDirectReceipt",
     "Assert-ExistingDirectInstall",
     "Assert-AuthorizedAuthenticodeSignature",
@@ -779,6 +1081,42 @@ foreach ($name in @(
     )
     if ($null -eq $function) { throw "installer validation function missing: $name" }
     Invoke-Expression $function.Extent.Text
+}
+$hashProbe = Join-Path ([IO.Path]::GetTempPath()) (
+    "hive-sha256-" + [Guid]::NewGuid().ToString()
+)
+try {
+    [IO.File]::WriteAllBytes(
+        $hashProbe,
+        [Text.Encoding]::UTF8.GetBytes("abc")
+    )
+    if (
+        (Get-FileSha256 -Path $hashProbe) -ne
+        "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+    ) {
+        throw "module-independent SHA-256 mismatch"
+    }
+} finally {
+    if ([IO.File]::Exists($hashProbe)) { [IO.File]::Delete($hashProbe) }
+}
+if (-not (Test-HiveVersionOutput `
+    -Output "hive 0.7.0 (released 2026-07-24)" `
+    -ExpectedVersion "0.7.0"
+)) {
+    throw "dated version output was rejected"
+}
+foreach ($invalidOutput in @(
+    "hive 0.7.0",
+    "hive 0.7.1 (released 2026-07-24)",
+    "hive 0.7.0 (released 2026-7-24)",
+    "hive 0.7.0 (released 2026-07-24) trailing"
+)) {
+    if (Test-HiveVersionOutput `
+        -Output $invalidOutput `
+        -ExpectedVersion "0.7.0"
+    ) {
+        throw "invalid version output was accepted: $invalidOutput"
+    }
 }
 $wrongSignature = [pscustomobject]@{
     Status = "Valid"
@@ -810,16 +1148,23 @@ function Assert-Rejected {
         if ($_.Exception.Message -eq "$Label was accepted") { throw }
     }
 }
+function Remove-TestJunction {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Path
+    )
+    [IO.Directory]::Delete($Path)
+}
 try {
     $binary = Join-Path $root "hive.cmd"
     $receipt = Join-Path $root "install-receipt.json"
     Assert-ExistingDirectInstall -Destination $binary -ReceiptPath $receipt
-    Set-Content -LiteralPath $receipt -Value "{}" -Encoding utf8NoBOM
+    Set-Content -LiteralPath $receipt -Value "{}" -Encoding utf8
     Assert-Rejected -Label "receipt-only state" -Operation {
         Assert-ExistingDirectInstall -Destination $binary -ReceiptPath $receipt
     }
     Remove-Item -LiteralPath $receipt
-    Set-Content -LiteralPath $binary -Value "not an executable" -Encoding utf8NoBOM
+    Set-Content -LiteralPath $binary -Value "not an executable" -Encoding utf8
     Assert-Rejected -Label "binary-only state" -Operation {
         Assert-ExistingDirectInstall -Destination $binary -ReceiptPath $receipt
     }
@@ -836,7 +1181,7 @@ try {
         '> "%HIVE_EXECUTION_MARKER%" echo executed',
         'echo hive 0.7.0'
     ) -Encoding ascii
-    Set-Content -LiteralPath $receipt -Value "{}" -Encoding utf8NoBOM
+    Set-Content -LiteralPath $receipt -Value "{}" -Encoding utf8
     Assert-Rejected -Label "malformed receipt" -Operation {
         Assert-ExistingDirectInstall -Destination $binary -ReceiptPath $receipt
     }
@@ -848,8 +1193,9 @@ try {
         owner = "direct"
         product = "aigent-hive"
         version = "0.7.0"
+        package_version = "0.7.0-test.1"
         artifact_sha256 = "sha256:" + ("0" * 64)
-    } | ConvertTo-Json -Compress | Set-Content -LiteralPath $receipt -Encoding utf8NoBOM
+    } | ConvertTo-Json -Compress | Set-Content -LiteralPath $receipt -Encoding utf8
     Assert-Rejected -Label "mismatched receipt" -Operation {
         Assert-ExistingDirectInstall -Destination $binary -ReceiptPath $receipt
     }
@@ -867,12 +1213,13 @@ try {
     if (-not ($binaryLink.Attributes -band [IO.FileAttributes]::ReparsePoint)) {
         throw "binary junction is not a reparse point"
     }
-    Set-Content -LiteralPath $receipt -Value "{}" -Encoding utf8NoBOM
+    Set-Content -LiteralPath $receipt -Value "{}" -Encoding utf8
     Assert-Rejected -Label "binary reparse-point state" -Operation {
         Assert-ExistingDirectInstall -Destination $binary -ReceiptPath $receipt
     }
-    Remove-Item -LiteralPath $binary, $receipt -Force
-    Set-Content -LiteralPath $binary -Value "not an executable" -Encoding utf8NoBOM
+    Remove-TestJunction -Path $binary
+    Remove-Item -LiteralPath $receipt -Force
+    Set-Content -LiteralPath $binary -Value "not an executable" -Encoding utf8
     $receiptLink = New-Item `
         -ItemType Junction `
         -Path $receipt `
@@ -884,12 +1231,13 @@ try {
     Assert-Rejected -Label "receipt reparse-point state" -Operation {
         Assert-ExistingDirectInstall -Destination $binary -ReceiptPath $receipt
     }
-    Remove-Item -LiteralPath $binary, $receipt -Force
+    Remove-Item -LiteralPath $binary -Force
+    Remove-TestJunction -Path $receipt
 
     $outside = Join-Path $root "outside"
     New-Item -ItemType Directory -Path $outside | Out-Null
     $sentinel = Join-Path $outside "sentinel"
-    Set-Content -LiteralPath $sentinel -Value "preserve" -Encoding utf8NoBOM
+    Set-Content -LiteralPath $sentinel -Value "preserve" -Encoding utf8
     $linkedPrefix = Join-Path $root "linked-prefix"
     New-Item -ItemType Junction -Path $linkedPrefix -Target $outside | Out-Null
     Assert-Rejected -Label "prefix reparse-point ancestor" -Operation {
@@ -902,7 +1250,7 @@ try {
     ) {
         throw "prefix reparse-point ancestor changed external state"
     }
-    Remove-Item -LiteralPath $linkedPrefix -Force
+    Remove-TestJunction -Path $linkedPrefix
 
     $linkedAncestor = Join-Path $root "linked-ancestor"
     New-Item -ItemType Junction -Path $linkedAncestor -Target $outside | Out-Null
@@ -915,7 +1263,7 @@ try {
     ) {
         throw "reparse point above prefix changed external state"
     }
-    Remove-Item -LiteralPath $linkedAncestor -Force
+    Remove-TestJunction -Path $linkedAncestor
 
     $safePrefix = Join-Path $root "safe-prefix"
     New-Item -ItemType Directory -Path $safePrefix | Out-Null
@@ -927,7 +1275,7 @@ try {
     if ((Test-Path -LiteralPath (Join-Path $outside "hive.exe"))) {
         throw "bin reparse-point ancestor changed external state"
     }
-    Remove-Item -LiteralPath $linkedBin -Force
+    Remove-TestJunction -Path $linkedBin
 
     $linkedShare = Join-Path $safePrefix "share"
     New-Item -ItemType Junction -Path $linkedShare -Target $outside | Out-Null
@@ -937,7 +1285,7 @@ try {
     if ((Test-Path -LiteralPath (Join-Path $outside "aigent-hive"))) {
         throw "share reparse-point ancestor changed external state"
     }
-    Remove-Item -LiteralPath $linkedShare -Force
+    Remove-TestJunction -Path $linkedShare
 
     foreach ($leafCase in @(
         [pscustomobject]@{ Label = "staged receipt to pending"; Replace = $false },
@@ -945,7 +1293,7 @@ try {
         [pscustomobject]@{ Label = "pending receipt to receipt"; Replace = $true }
     )) {
         $sourceLeaf = Join-Path $safePrefix ([Guid]::NewGuid().ToString())
-        Set-Content -LiteralPath $sourceLeaf -Value "owned" -Encoding utf8NoBOM
+        Set-Content -LiteralPath $sourceLeaf -Value "owned" -Encoding utf8
         $destinationLeaf = Join-Path $safePrefix ([Guid]::NewGuid().ToString())
         New-Item -ItemType Junction -Path $destinationLeaf -Target $outside | Out-Null
         Assert-Rejected -Label $leafCase.Label -Operation {
@@ -961,7 +1309,36 @@ try {
         ) {
             throw "$($leafCase.Label) changed external state"
         }
-        Remove-Item -LiteralPath $sourceLeaf, $destinationLeaf -Force
+        Remove-Item -LiteralPath $sourceLeaf -Force
+        Remove-TestJunction -Path $destinationLeaf
+    }
+
+    $replaceSource = Join-Path $safePrefix "replace-source"
+    $replaceDestination = Join-Path $safePrefix "replace-destination"
+    [IO.File]::WriteAllText($replaceSource, "new", [Text.UTF8Encoding]::new($false))
+    [IO.File]::WriteAllText($replaceDestination, "old", [Text.UTF8Encoding]::new($false))
+    Move-InstallFile `
+        -Source $replaceSource `
+        -Destination $replaceDestination `
+        -Replace $true
+    if (
+        (Test-Path -LiteralPath $replaceSource) -or
+        [IO.File]::ReadAllText($replaceDestination) -ne "new"
+    ) {
+        throw "regular replacement did not preserve atomic leaf semantics"
+    }
+
+    $utf8Probe = Join-Path $safePrefix "utf8-probe"
+    $utf8Bytes = [Text.UTF8Encoding]::new($false).GetBytes('{"schema_version":1}')
+    [IO.File]::WriteAllBytes($utf8Probe, $utf8Bytes)
+    $writtenBytes = [IO.File]::ReadAllBytes($utf8Probe)
+    if (
+        $writtenBytes.Length -ge 3 -and
+        $writtenBytes[0] -eq 0xEF -and
+        $writtenBytes[1] -eq 0xBB -and
+        $writtenBytes[2] -eq 0xBF
+    ) {
+        throw "UTF-8 receipt probe contains a BOM"
     }
 
     $transactionRoot = Join-Path $root "transaction"
@@ -969,17 +1346,16 @@ try {
     $transactionBinary = Join-Path $transactionRoot "hive.exe"
     $transactionReceipt = Join-Path $transactionRoot "install-receipt.json"
     $pendingReceipt = Join-Path $transactionRoot "install-receipt.pending.json"
-    Set-Content -LiteralPath $transactionBinary -Value "new binary" -Encoding utf8NoBOM
-    $transactionDigest = (
-        Get-FileHash -LiteralPath $transactionBinary -Algorithm SHA256
-    ).Hash.ToLowerInvariant()
+    Set-Content -LiteralPath $transactionBinary -Value "new binary" -Encoding utf8
+    $transactionDigest = Get-FileSha256 -Path $transactionBinary
     @{
         schema_version = 1
         owner = "direct"
         product = "aigent-hive"
         version = "0.7.0"
+        package_version = "0.7.0-test.1"
         artifact_sha256 = "sha256:$transactionDigest"
-    } | ConvertTo-Json -Compress | Set-Content -LiteralPath $pendingReceipt -Encoding utf8NoBOM
+    } | ConvertTo-Json -Compress | Set-Content -LiteralPath $pendingReceipt -Encoding utf8
     Repair-PendingDirectInstall `
         -Destination $transactionBinary `
         -ReceiptPath $transactionReceipt `
@@ -997,8 +1373,9 @@ try {
         owner = "direct"
         product = "aigent-hive"
         version = "0.7.1"
+        package_version = "0.7.1-test.1"
         artifact_sha256 = "sha256:" + ("0" * 64)
-    } | ConvertTo-Json -Compress | Set-Content -LiteralPath $pendingReceipt -Encoding utf8NoBOM
+    } | ConvertTo-Json -Compress | Set-Content -LiteralPath $pendingReceipt -Encoding utf8
     Repair-PendingDirectInstall `
         -Destination $transactionBinary `
         -ReceiptPath $transactionReceipt `
@@ -1010,7 +1387,7 @@ try {
         throw "valid old pair was not retained"
     }
 
-    Set-Content -LiteralPath $pendingReceipt -Value "{}" -Encoding utf8NoBOM
+    Set-Content -LiteralPath $pendingReceipt -Value "{}" -Encoding utf8
     Assert-Rejected -Label "malformed pending receipt" -Operation {
         Repair-PendingDirectInstall `
             -Destination $transactionBinary `
@@ -1025,15 +1402,16 @@ try {
             -ReceiptPath $transactionReceipt `
             -PendingReceiptPath $pendingReceipt
     }
-    Remove-Item -LiteralPath $pendingReceipt -Force
+    Remove-TestJunction -Path $pendingReceipt
     Remove-Item -LiteralPath $transactionReceipt
     @{
         schema_version = 1
         owner = "direct"
         product = "aigent-hive"
         version = "0.7.0"
+        package_version = "0.7.0-test.1"
         artifact_sha256 = "sha256:" + ("0" * 64)
-    } | ConvertTo-Json -Compress | Set-Content -LiteralPath $pendingReceipt -Encoding utf8NoBOM
+    } | ConvertTo-Json -Compress | Set-Content -LiteralPath $pendingReceipt -Encoding utf8
     Assert-Rejected -Label "mismatched pending receipt" -Operation {
         Repair-PendingDirectInstall `
             -Destination $transactionBinary `
@@ -1049,15 +1427,189 @@ try {
         environment["HIVE_WRONG_WINDOWS_THUMBPRINT"] = read_json(
             WRONG_SIGNERS
         )["windows"]["certificate_thumbprint"]
+        for shell in shells:
+            with self.subTest(shell=shell):
+                result = subprocess.run(
+                    [
+                        shell,
+                        "-NoProfile",
+                        "-NonInteractive",
+                        "-Command",
+                        command,
+                    ],
+                    cwd=ROOT,
+                    env=environment,
+                    check=False,
+                    text=True,
+                    capture_output=True,
+                )
+                self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_windows_shell_install_boundaries_are_explicit(self) -> None:
+        installer = (ROOT / "scripts/install.ps1").read_text(encoding="utf-8")
+        dependency_setup = (
+            ROOT / "scripts/setup-windows-dependencies.ps1"
+        ).read_text(encoding="utf-8")
+        guide = (
+            ROOT / "docs/guides/signed-update-and-release.md"
+        ).read_text(encoding="utf-8")
+        for forbidden in ("pwsh", "winget", "Microsoft.PowerShell"):
+            self.assertNotIn(forbidden, installer)
+        for required in (
+            'PackageId = "Microsoft.PowerShell"',
+            'PackageVersion = "7.6.4.0"',
+            '[switch]$ConfirmInstall',
+            'ValidateSet("user", "machine")',
+            "install-required",
+            "already-satisfied",
+            "requalification failed",
+        ):
+            self.assertIn(required, dependency_setup)
+        self.assertIn("powershell.exe -NoLogo -NoProfile -NonInteractive", guide)
+        self.assertIn('set "HIVE_VERSION=0.7.0"', guide)
+        self.assertIn('set "HIVE_PREFIX=%LOCALAPPDATA%\\AigentHive"', guide)
+        self.assertIn("$env:HIVE_VERSION", guide)
+        self.assertIn("$env:HIVE_PREFIX", guide)
+        self.assertNotIn("pwsh -", guide)
+
+    def test_windows_source_dependency_preview_is_non_mutating(self) -> None:
+        if sys.platform != "win32":
+            self.skipTest("Windows dependency setup qualification requires Windows")
+        powershell = shutil.which("powershell.exe")
+        self.assertIsNotNone(powershell)
+        script = ROOT / "scripts/setup-windows-dependencies.ps1"
         result = subprocess.run(
-            [pwsh, "-NoProfile", "-NonInteractive", "-Command", command],
+            [
+                powershell,
+                "-NoProfile",
+                "-NonInteractive",
+                "-File",
+                str(script),
+            ],
             cwd=ROOT,
-            env=environment,
             check=False,
             text=True,
             capture_output=True,
         )
         self.assertEqual(result.returncode, 0, result.stderr)
+        payload = json.loads(result.stdout)
+        self.assertIn(
+            payload["status"],
+            {"already-satisfied", "install-required"},
+        )
+        self.assertFalse(payload["changed"])
+        self.assertEqual(payload["package_id"], "Microsoft.PowerShell")
+        self.assertEqual(payload["package_version"], "7.6.4.0")
+
+    def test_windows_source_dependency_requires_consent_and_requalifies(
+        self,
+    ) -> None:
+        if sys.platform != "win32":
+            self.skipTest("Windows dependency setup qualification requires Windows")
+        powershell = shutil.which("powershell.exe")
+        self.assertIsNotNone(powershell)
+        script = ROOT / "scripts/setup-windows-dependencies.ps1"
+
+        with tempfile.TemporaryDirectory(prefix="hive-dependencies-") as temporary:
+            root = Path(temporary)
+            marker = root / "winget-invoked"
+            fake_pwsh = root / "pwsh.cmd"
+            fake_winget = root / "winget.cmd"
+            fake_pwsh.write_text("@echo off\necho 7.5.0\n", encoding="ascii")
+            fake_winget.write_text(
+                "\n".join(
+                    (
+                        "@echo off",
+                        '> "%HIVE_WINGET_MARKER%" echo invoked',
+                        '> "%~dp0pwsh.cmd" echo @echo off',
+                        '>> "%~dp0pwsh.cmd" echo echo 7.6.4',
+                        "exit /b 0",
+                        "",
+                    )
+                ),
+                encoding="ascii",
+            )
+            environment = os.environ.copy()
+            environment["PATH"] = str(root)
+            environment["HIVE_WINGET_MARKER"] = str(marker)
+            base_command = [
+                powershell,
+                "-NoProfile",
+                "-NonInteractive",
+                "-File",
+                str(script),
+            ]
+
+            preview = subprocess.run(
+                base_command,
+                cwd=ROOT,
+                env=environment,
+                check=False,
+                text=True,
+                capture_output=True,
+            )
+            self.assertEqual(preview.returncode, 0, preview.stderr)
+            self.assertEqual(
+                json.loads(preview.stdout)["status"],
+                "install-required",
+            )
+            self.assertFalse(marker.exists())
+
+            unconfirmed = subprocess.run(
+                [*base_command, "-Apply"],
+                cwd=ROOT,
+                env=environment,
+                check=False,
+                text=True,
+                capture_output=True,
+            )
+            self.assertNotEqual(unconfirmed.returncode, 0)
+            self.assertFalse(marker.exists())
+
+            applied = subprocess.run(
+                [*base_command, "-Apply", "-ConfirmInstall"],
+                cwd=ROOT,
+                env=environment,
+                check=False,
+                text=True,
+                capture_output=True,
+            )
+            self.assertEqual(applied.returncode, 0, applied.stderr)
+            payload = json.loads(applied.stdout)
+            self.assertEqual(payload["status"], "installed")
+            self.assertTrue(payload["changed"])
+            self.assertEqual(payload["detected_version"], "7.6.4")
+            self.assertTrue(marker.is_file())
+
+    def test_cmd_delegation_preserves_special_prefix_and_child_exit(self) -> None:
+        if sys.platform != "win32":
+            self.skipTest("cmd.exe delegation qualification requires Windows")
+        cmd = shutil.which("cmd.exe")
+        self.assertIsNotNone(cmd)
+        with tempfile.TemporaryDirectory(prefix="hive cmd ") as temporary:
+            root = Path(temporary)
+            prefix = root / "prefix % value!"
+            result_path = root / "result.txt"
+            environment = os.environ.copy()
+            environment["HIVE_PREFIX"] = str(prefix)
+            environment["HIVE_RESULT"] = str(result_path)
+            command = (
+                'powershell.exe -NoLogo -NoProfile -NonInteractive '
+                '-Command "[IO.File]::WriteAllText('
+                "$env:HIVE_RESULT,$env:HIVE_PREFIX,"
+                "[Text.UTF8Encoding]::new($false)); exit 23\""
+            )
+            command_line = f'"{cmd}" /D /V:OFF /C {command}'
+            result = subprocess.run(
+                command_line,
+                cwd=ROOT,
+                env=environment,
+                check=False,
+                text=True,
+                capture_output=True,
+            )
+            self.assertEqual(result.returncode, 23, result.stderr)
+            self.assertEqual(result_path.read_text(encoding="utf-8"), str(prefix))
 
     def test_release_shell_entrypoints_are_executable_and_reject_bad_versions(self) -> None:
         if sys.platform == "win32":
@@ -1076,6 +1628,7 @@ try {
         self.assertIn("exact X.Y.Z", release_gate.stderr)
         environment = os.environ.copy()
         environment["AIGENT_HIVE_VERSION"] = "01.0.0"
+        environment["AIGENT_HIVE_PACKAGE_VERSION"] = "01.0.0-test.1"
         installer = subprocess.run(
             [str(ROOT / "scripts/install.sh")],
             cwd=ROOT,
@@ -1094,9 +1647,13 @@ try {
             cargo,
         )
         self.assertIsNotNone(version)
-        manifest = read_json(RELEASE_FIXTURE / "targets/bundle-manifest.json")
-        migration = read_json(RELEASE_FIXTURE / "targets/migration-table.json")
-        self.assertEqual(version.group(1), "0.7.0")
+        current_fixture = (
+            ROOT
+            / f"tests/fixtures/phase6/releases/valid-{version.group(1)}"
+        )
+        manifest = read_json(current_fixture / "targets/bundle-manifest.json")
+        migration = read_json(current_fixture / "targets/migration-table.json")
+        self.assertEqual(version.group(1), "0.8.0")
         self.assertEqual(manifest["release_version"], version.group(1))
         self.assertEqual(migration["target_version"], version.group(1))
         harness = (
@@ -1111,10 +1668,6 @@ try {
         self.assertIn(
             f"version-{version.group(1)}-",
             readme,
-        )
-        self.assertRegex(
-            readme,
-            rf"(?m)^\| Product version \| `{re.escape(version.group(1))}` \|$",
         )
         self.assertIn(
             f"- product version: `{version.group(1)}`",

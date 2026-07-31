@@ -1,5 +1,6 @@
 schema_version: 1
 project_name: phase1-parity
+setup_mode: expedited
 project_kind: general
 primary_host: codex
 usage_stop_remaining_percent: 20

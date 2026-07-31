@@ -1,0 +1,6 @@
+interface:
+  display_name: "Hive Project Upgrade"
+  short_description: "Upgrade projected Hive project files safely"
+  default_prompt: "Use $hive-project-upgrade to preview or apply this project upgrade explicitly."
+policy:
+  allow_implicit_invocation: false

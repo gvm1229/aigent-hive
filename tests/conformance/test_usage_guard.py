@@ -85,6 +85,42 @@ class UsageSnapshotSchemaConformance(unittest.TestCase):
         with self.assertRaises(ValidationError):
             Draft202012Validator(USAGE_SNAPSHOT_SCHEMA).validate(instance)
 
+    def test_snapshot_accepts_version_two_provider_quota_pool(self) -> None:
+        instance = valid_snapshot()
+        instance["schema_version"] = 2
+        instance["quota_pool"] = "antigravity-claude-gpt"
+        instance["quota_window"] = "provider"
+
+        Draft202012Validator(USAGE_SNAPSHOT_SCHEMA).validate(instance)
+
+    def test_snapshot_rejects_malformed_provider_quota_pool(self) -> None:
+        validator = Draft202012Validator(USAGE_SNAPSHOT_SCHEMA)
+        for quota_pool in ("", "-gemini", "Gemini Pool", "gemini-"):
+            with self.subTest(quota_pool=quota_pool):
+                instance = valid_snapshot()
+                instance["schema_version"] = 2
+                instance["quota_pool"] = quota_pool
+                with self.assertRaises(ValidationError):
+                    validator.validate(instance)
+
+    def test_snapshot_rejects_pool_version_mismatch(self) -> None:
+        validator = Draft202012Validator(USAGE_SNAPSHOT_SCHEMA)
+
+        v1_with_pool = valid_snapshot()
+        v1_with_pool["quota_pool"] = "default"
+        with self.assertRaises(ValidationError):
+            validator.validate(v1_with_pool)
+
+        v2_without_pool = valid_snapshot()
+        v2_without_pool["schema_version"] = 2
+        with self.assertRaises(ValidationError):
+            validator.validate(v2_without_pool)
+
+        v1_provider_window = valid_snapshot()
+        v1_provider_window["quota_window"] = "provider"
+        with self.assertRaises(ValidationError):
+            validator.validate(v1_provider_window)
+
     def test_snapshot_rejects_missing_normalized_field(self) -> None:
         instance = valid_snapshot()
         del instance["expires_at_unix_seconds"]

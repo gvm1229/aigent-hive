@@ -17,6 +17,7 @@ from typing import Any
 
 import yaml
 from jsonschema import Draft202012Validator, FormatChecker
+from tests.conformance.phase1_support import write_operational_user_setup
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -71,6 +72,28 @@ def canonical_digest(value: dict[str, Any]) -> str:
     payload = {key: item for key, item in value.items() if key != "evidence_digest"}
     encoded = json.dumps(
         payload,
+        ensure_ascii=False,
+        separators=(",", ":"),
+        sort_keys=True,
+    ).encode("utf-8")
+    return digest_bytes(encoded)
+
+
+def canonical_usage_history_digest(value: Any) -> str:
+    def normalize_numbers(item: Any) -> Any:
+        if isinstance(item, float) and item.is_integer():
+            return int(item)
+        if isinstance(item, list):
+            return [normalize_numbers(child) for child in item]
+        if isinstance(item, dict):
+            return {
+                key: normalize_numbers(child)
+                for key, child in item.items()
+            }
+        return item
+
+    encoded = json.dumps(
+        normalize_numbers(value),
         ensure_ascii=False,
         separators=(",", ":"),
         sort_keys=True,
@@ -155,6 +178,8 @@ class Phase4Contracts(unittest.TestCase):
         self.input_root.mkdir()
         self.capability_copy_index = 0
         self.target = self.fresh_target("consumer")
+        self.setup_user_root = self.work / "user-root"
+        write_operational_user_setup(self.setup_user_root)
         self.fake_home = self.work / "home"
         for runtime in (".omx", ".omc"):
             sentinel = self.fake_home / runtime / "foreign.txt"
@@ -171,8 +196,12 @@ class Phase4Contracts(unittest.TestCase):
         config = target / ".hive/config"
         config.mkdir()
         (config / "harness.toml").write_text(
-            'schema_version = 1\nprimary_host = "codex"\n'
-            "usage_stop_remaining_percent = 10\n",
+            'schema_version = 1\nharness_version = "0.7.0"\n'
+            'source_release_version = "0.7.0"\n'
+            'primary_host = "codex"\n'
+            "usage_stop_remaining_percent = 10\n"
+            "usage_guard_enabled = true\n"
+            "codexbar_fallback_enabled = true\n",
             encoding="utf-8",
         )
         return target
@@ -180,8 +209,12 @@ class Phase4Contracts(unittest.TestCase):
     def set_installed_host(self, target: Path, host: str) -> None:
         config = target / ".hive/config/harness.toml"
         config.write_text(
-            f'schema_version = 1\nprimary_host = "{host}"\n'
-            "usage_stop_remaining_percent = 10\n",
+            'schema_version = 1\nharness_version = "0.7.0"\n'
+            'source_release_version = "0.7.0"\n'
+            f'primary_host = "{host}"\n'
+            "usage_stop_remaining_percent = 10\n"
+            "usage_guard_enabled = true\n"
+            "codexbar_fallback_enabled = true\n",
             encoding="utf-8",
         )
 
@@ -1318,6 +1351,49 @@ class Phase4Contracts(unittest.TestCase):
                 after = snapshot_tree(target)
                 for path, value in before.items():
                     self.assertEqual(after[path], value)
+                history_path = next(
+                    target.glob(".hive/runtime/usage-history/*.json")
+                )
+                history = json.loads(history_path.read_text(encoding="utf-8"))
+                if host == "antigravity":
+                    self.assertEqual(history["schema_version"], 2)
+                    self.assertEqual(len(history["snapshots"]), 2)
+                    self.assertEqual(
+                        [item["quota_pool"] for item in history["snapshots"]],
+                        ["antigravity-claude-gpt", "default"],
+                    )
+                    self.assertTrue(
+                        all(
+                            item["schema_version"] == 2
+                            for item in history["snapshots"]
+                        )
+                    )
+                    self.assertTrue(
+                        all(
+                            item["quota_window"] == "provider"
+                            for item in history["snapshots"]
+                        )
+                    )
+                else:
+                    self.assertEqual(history["schema_version"], 1)
+                    self.assertEqual(history["snapshot"]["schema_version"], 1)
+                    self.assertNotIn("quota_pool", history["snapshot"])
+                expected_usage = [
+                    "usage",
+                    "--provider",
+                    host,
+                ]
+                if host != "antigravity":
+                    expected_usage.append("--all-accounts")
+                expected_usage.extend(
+                    [
+                        "--source",
+                        "cli",
+                        "--format",
+                        "json",
+                        "--json-only",
+                    ]
+                )
                 self.assertEqual(
                     [
                         json.loads(line)
@@ -1327,17 +1403,7 @@ class Phase4Contracts(unittest.TestCase):
                     ],
                     [
                         ["--version"],
-                        [
-                            "usage",
-                            "--provider",
-                            host,
-                            "--all-accounts",
-                            "--source",
-                            "cli",
-                            "--format",
-                            "json",
-                            "--json-only",
-                        ],
+                        expected_usage,
                     ],
                 )
 
@@ -1599,8 +1665,12 @@ class Phase4Contracts(unittest.TestCase):
                 if threshold is not None:
                     (target / ".hive/config/harness.toml").write_text(
                         "schema_version = 1\n"
+                        'harness_version = "0.7.0"\n'
+                        'source_release_version = "0.7.0"\n'
                         'primary_host = "codex"\n'
-                        f"usage_stop_remaining_percent = {threshold}\n",
+                        f"usage_stop_remaining_percent = {threshold}\n"
+                        "usage_guard_enabled = true\n"
+                        "codexbar_fallback_enabled = true\n",
                         encoding="utf-8",
                     )
                 self.ensure_handoff(target)
@@ -1690,8 +1760,12 @@ class Phase4Contracts(unittest.TestCase):
     def test_automatic_threshold_is_bound_to_installed_config(self) -> None:
         target = self.fresh_target("automatic-threshold-binding")
         (target / ".hive/config/harness.toml").write_text(
-            'schema_version = 1\nprimary_host = "codex"\n'
-            "usage_stop_remaining_percent = 20\n",
+            'schema_version = 1\nharness_version = "0.7.0"\n'
+            'source_release_version = "0.7.0"\n'
+            'primary_host = "codex"\n'
+            "usage_stop_remaining_percent = 20\n"
+            "usage_guard_enabled = true\n"
+            "codexbar_fallback_enabled = true\n",
             encoding="utf-8",
         )
         self.ensure_handoff(target)
@@ -1854,6 +1928,247 @@ class Phase4Contracts(unittest.TestCase):
                 )
                 self.assertEqual(resumed.returncode, 3, resume_payload)
                 self.assertEqual(resume_payload["code"], "hive.run-blocked")
+                self.assertEqual(snapshot_tree(target), before)
+
+    def test_antigravity_migrates_valid_v1_history_to_canonical_v2(self) -> None:
+        target = self.fresh_target("antigravity-v1-history-migration")
+        self.set_installed_host(target, "antigravity")
+        self.ensure_handoff(target)
+        process, payload = self.checkpoint(
+            target,
+            self.checkpoint_request(state="executing"),
+            ANTIGRAVITY_CAPABILITY,
+            "antigravity-v1-history-migration",
+        )
+        self.assert_success(process, payload)
+
+        now = int(time.time())
+        legacy_snapshot = {
+            "schema_version": 1,
+            "sensor_id": "codexbar",
+            "sensor_version": "0.45.2",
+            "host_scope": "antigravity",
+            "account_scope_digest": USAGE_ACCOUNT_DIGEST,
+            "quota_window": "weekly",
+            "remaining_percent": 58,
+            "measured_at_unix_seconds": now - 1,
+            "expires_at_unix_seconds": now + 30,
+            "resets_at_unix_seconds": now + 300,
+            "source_confidence": "high",
+        }
+        history = target / ".hive/runtime/usage-history"
+        history.mkdir(parents=True)
+        key = hashlib.sha256(USAGE_ACCOUNT_DIGEST.encode()).hexdigest()
+        record = history / f"{key}.json"
+        record.write_text(
+            json.dumps(
+                {
+                    "schema_version": 1,
+                    "snapshot": legacy_snapshot,
+                    "evidence_digest": canonical_usage_history_digest(
+                        legacy_snapshot
+                    ),
+                },
+                ensure_ascii=False,
+                separators=(",", ":"),
+                sort_keys=True,
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+
+        resumed, resume_payload = self.resume(
+            target,
+            ANTIGRAVITY_CAPABILITY,
+            dispatch_intent="automatic",
+            account_digest=USAGE_ACCOUNT_DIGEST,
+            extra_environment=self.fake_codexbar_environment(
+                "allow",
+                provider="antigravity",
+            ),
+        )
+        self.assert_success(resumed, resume_payload)
+        self.assertEqual(resume_payload["code"], "hive.run-resume-prepared")
+        migrated = json.loads(record.read_text(encoding="utf-8"))
+        self.assertEqual(migrated["schema_version"], 2)
+        self.assertEqual(
+            [
+                (snapshot["quota_pool"], snapshot["quota_window"])
+                for snapshot in migrated["snapshots"]
+            ],
+            [
+                ("antigravity-claude-gpt", "provider"),
+                ("default", "provider"),
+            ],
+        )
+        self.assertEqual(
+            migrated["evidence_digest"],
+            canonical_usage_history_digest(migrated["snapshots"]),
+        )
+
+    def test_antigravity_window_metadata_change_preserves_v2_history(self) -> None:
+        target = self.fresh_target("antigravity-window-metadata-history")
+        self.set_installed_host(target, "antigravity")
+        self.ensure_handoff(target)
+        process, payload = self.checkpoint(
+            target,
+            self.checkpoint_request(state="executing"),
+            ANTIGRAVITY_CAPABILITY,
+            "antigravity-window-metadata-first",
+        )
+        self.assert_success(process, payload)
+        first, first_payload = self.resume(
+            target,
+            ANTIGRAVITY_CAPABILITY,
+            dispatch_intent="automatic",
+            account_digest=USAGE_ACCOUNT_DIGEST,
+            extra_environment=self.fake_codexbar_environment(
+                "allow",
+                provider="antigravity",
+            ),
+        )
+        self.assert_success(first, first_payload)
+        process, payload = self.checkpoint(
+            target,
+            self.checkpoint_request(
+                state="executing",
+                expected_revision=1,
+                updated_at="2026-07-24T00:01:00Z",
+            ),
+            ANTIGRAVITY_CAPABILITY,
+            "antigravity-window-metadata-second",
+        )
+        self.assert_success(process, payload)
+        second, second_payload = self.resume(
+            target,
+            ANTIGRAVITY_CAPABILITY,
+            dispatch_intent="automatic",
+            account_digest=USAGE_ACCOUNT_DIGEST,
+            extra_environment={
+                **self.fake_codexbar_environment(
+                    "allow",
+                    provider="antigravity",
+                ),
+                "FAKE_CODEXBAR_ANTIGRAVITY_WINDOW_MINUTES": "10080",
+            },
+        )
+        self.assert_success(second, second_payload)
+
+        key = hashlib.sha256(USAGE_ACCOUNT_DIGEST.encode()).hexdigest()
+        record = (
+            target / ".hive/runtime/usage-history" / f"{key}.json"
+        )
+        history = json.loads(record.read_text(encoding="utf-8"))
+        self.assertEqual(history["schema_version"], 2)
+        self.assertEqual(
+            [
+                (snapshot["quota_pool"], snapshot["quota_window"])
+                for snapshot in history["snapshots"]
+            ],
+            [
+                ("antigravity-claude-gpt", "provider"),
+                ("default", "provider"),
+            ],
+        )
+        self.assertEqual(
+            history["evidence_digest"],
+            canonical_usage_history_digest(history["snapshots"]),
+        )
+
+    def test_antigravity_rejects_hostile_v2_history(self) -> None:
+        for corruption in (
+            "reordered",
+            "duplicate-pool-window",
+            "stale-digest",
+            "wrong-account",
+        ):
+            with self.subTest(corruption=corruption):
+                target = self.fresh_target(
+                    f"antigravity-v2-history-{corruption}"
+                )
+                self.set_installed_host(target, "antigravity")
+                self.ensure_handoff(target)
+                process, payload = self.checkpoint(
+                    target,
+                    self.checkpoint_request(state="executing"),
+                    ANTIGRAVITY_CAPABILITY,
+                    f"antigravity-v2-history-first-{corruption}",
+                )
+                self.assert_success(process, payload)
+                first, first_payload = self.resume(
+                    target,
+                    ANTIGRAVITY_CAPABILITY,
+                    dispatch_intent="automatic",
+                    account_digest=USAGE_ACCOUNT_DIGEST,
+                    extra_environment=self.fake_codexbar_environment(
+                        "allow",
+                        provider="antigravity",
+                    ),
+                )
+                self.assert_success(first, first_payload)
+                process, payload = self.checkpoint(
+                    target,
+                    self.checkpoint_request(
+                        state="executing",
+                        expected_revision=1,
+                        updated_at="2026-07-24T00:01:00Z",
+                    ),
+                    ANTIGRAVITY_CAPABILITY,
+                    f"antigravity-v2-history-second-{corruption}",
+                )
+                self.assert_success(process, payload)
+
+                key = hashlib.sha256(USAGE_ACCOUNT_DIGEST.encode()).hexdigest()
+                record = (
+                    target
+                    / ".hive/runtime/usage-history"
+                    / f"{key}.json"
+                )
+                hostile = json.loads(record.read_text(encoding="utf-8"))
+                snapshots = hostile["snapshots"]
+                if corruption == "reordered":
+                    hostile["snapshots"] = list(reversed(snapshots))
+                    hostile["evidence_digest"] = canonical_usage_history_digest(
+                        hostile["snapshots"]
+                    )
+                elif corruption == "duplicate-pool-window":
+                    hostile["snapshots"].append(dict(snapshots[-1]))
+                    hostile["evidence_digest"] = canonical_usage_history_digest(
+                        hostile["snapshots"]
+                    )
+                elif corruption == "stale-digest":
+                    hostile["snapshots"][0]["remaining_percent"] = 56
+                else:
+                    wrong_digest = "sha256:" + ("0" * 64)
+                    for snapshot in hostile["snapshots"]:
+                        snapshot["account_scope_digest"] = wrong_digest
+                    hostile["evidence_digest"] = canonical_usage_history_digest(
+                        hostile["snapshots"]
+                    )
+                record.write_text(
+                    json.dumps(
+                        hostile,
+                        ensure_ascii=False,
+                        separators=(",", ":"),
+                        sort_keys=True,
+                    )
+                    + "\n",
+                    encoding="utf-8",
+                )
+                before = snapshot_tree(target)
+                resumed, resume_payload = self.resume(
+                    target,
+                    ANTIGRAVITY_CAPABILITY,
+                    dispatch_intent="automatic",
+                    account_digest=USAGE_ACCOUNT_DIGEST,
+                    extra_environment=self.fake_codexbar_environment(
+                        "allow",
+                        provider="antigravity",
+                    ),
+                )
+                self.assertEqual(resumed.returncode, 3, resume_payload)
+                self.assertEqual(resume_payload["code"], "hive.run-blocked")
+                self.assertEqual(resume_payload["changed_paths"], [])
                 self.assertEqual(snapshot_tree(target), before)
 
     def test_automatic_authorization_is_one_role_one_brief_and_not_reissued(self) -> None:
@@ -2187,6 +2502,8 @@ class Phase4Contracts(unittest.TestCase):
                     answers_path,
                     "--capabilities",
                     capability,
+                    "--user-root",
+                    self.setup_user_root,
                     "--apply",
                     "--output",
                     "json",

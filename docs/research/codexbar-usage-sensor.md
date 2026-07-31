@@ -12,27 +12,29 @@ Hive의 CodexBar 설치와 provider credential 접근 없음. 감지된 `codexba
 
 `codexbar guard`는 inclusive threshold와 stable exit code를 제공하지만 account, source, measured time과 expiry field 부재. 따라서 Stage 7 freshness·scope 단독 증거로 불충분.
 
-정규화 입력: 다음 command의 stdout JSON.
+정규화 입력:
 
 ```text
-codexbar usage --provider codex --all-accounts --source cli --format json --json-only
+codexbar usage --provider <codex|claude> --all-accounts --source cli --format json --json-only
+codexbar usage --provider antigravity --source cli --format json --json-only
 ```
 
 필수 검증:
 
 - exact qualified CodexBar version
-- `provider=codex`
+- active host와 exact provider 일치
 - active account digest 일치
 - row-level `error` 부재
 - local CLI source
 - `usage.updatedAt` freshness
-- 제공되는 경우 `primary.windowMinutes=300` session window
-- session limit 미제공 시 `secondary.windowMinutes=10080` weekly fallback
-- 선택된 window의 finite `usedPercent`, reset time과 monotonicity
+- Codex·Claude cadence pool의 session 우선, session 부재 시 weekly fallback
+- Antigravity `default`·`antigravity-claude-gpt` pool의 provider-defined window와
+  모든 pool 통과
+- 선택된 모든 window의 finite `usedPercent`, reset time과 monotonicity
 
 어느 조건이든 증명하지 못하면 `usage_unknown`이며 다음 automatic dispatch는 차단.
-Session과 weekly가 함께 있으면 session이 우선. CodexBar 미설치 상태에서도 setup,
-knowledge, update 같은 비-dispatch core 기능의 정상 동작 필요.
+CodexBar 미설치 상태에서도 setup, knowledge, update 같은 비-dispatch core 기능의
+정상 동작 필요.
 
 ## 근거
 
@@ -59,6 +61,15 @@ knowledge, update 같은 비-dispatch core 기능의 정상 동작 필요.
 - 5h session이 있으면 weekly의 low/malformed/duplicate 상태와 무관하게 session만 선택:
   확인
 - session이 없을 때만 단일 10080분 weekly를 fallback으로 선택: 확인
+- Antigravity fixed argv의 `--all-accounts` 제외와 strict nested account identity:
+  확인
+- Antigravity의 `default`·`antigravity-claude-gpt` provider-defined pool과
+  missing·`10080` window metadata canonical identity: 확인
+- 실제 Antigravity gate: threshold `10%`, selected window `multiple`, exit `0`,
+  raw payload persistence 0건
+- Incomplete `CodexBar` version stdout의 app bundle fallback:
+  canonical helper path, captured bounded `Info.plist`, fixed `/usr/bin/plutil`,
+  exact bundle ID·version 확인
 - permit 발급 뒤 represented automatic dispatch 직전에 한 번 소비하고, 재사용·만료 시
   dispatch closure를 실행하지 않는 CLI adapter: 확인
 
@@ -77,15 +88,16 @@ process 실행 금지. 허용된 child process는 위 두 fixed-argv CodexBar re
   Config는 64 KiB 이하 no-follow regular file로 읽으며 missing, malformed, duplicate,
   symlink면 fail-closed.
 - automatic resume는 durable run, owner, role, evidence 검증을 먼저 끝낸 뒤 fresh
-  CodexBar sample을 읽고 permit을 평가. permit은 dispatch brief prepare closure
+  qualified native 또는 CodexBar sample을 읽고 permit을 평가. permit은 dispatch brief prepare closure
   직전에 현재 시각으로 한 번 소비.
 - Hive는 선택된 account digest를 다시 해시한 filename 아래
-  `.hive/runtime/usage-history/*.json`에 선택 window의 provider-neutral snapshot과
+  `.hive/runtime/usage-history/*.json`에 선택 quota pool vector의 provider-neutral snapshot과
   integrity digest만 atomic/no-follow로 기록. Raw account, credential, CodexBar
   원문은 기록에서 제외. 첫 정상 sample은 `history=absent`로 비교 없이 평가하고,
   이후에는 같은 reset remaining 증가, measurement/reset regression을 `usage_unknown`
   으로 처리. Malformed, oversized, account-mismatched, symlink history는
-  fail-closed며 invalid current sample의 prior history 덮어쓰기 차단.
+  fail-closed며 invalid current sample의 prior history 덮어쓰기 차단. Schema v1
+  unpooled exact bytes 보존과 schema v2 pooled canonical ordering 적용.
 - Allow 결과는 정확히 한 selected role의 brief만 포함. Run ID, STATUS revision,
   role ID, canonical brief digest를 묶은 deterministic authorization ID를 만들고
   `.hive/runtime/dispatch-authorizations/*.json`에 sanitized `state=issued` claim을

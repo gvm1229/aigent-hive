@@ -16,13 +16,18 @@ expected_usage_argv = [
     "usage",
     "--provider",
     requested_provider,
-    "--all-accounts",
-    "--source",
-    "cli",
-    "--format",
-    "json",
-    "--json-only",
 ]
+if requested_provider != "antigravity":
+    expected_usage_argv.append("--all-accounts")
+expected_usage_argv.extend(
+    [
+        "--source",
+        "cli",
+        "--format",
+        "json",
+        "--json-only",
+    ]
+)
 if log_path := os.environ.get("FAKE_CODEXBAR_LOG"):
     with Path(log_path).open("a", encoding="utf-8") as log_file:
         log_file.write(json.dumps(sys.argv[1:], separators=(",", ":")) + "\n")
@@ -75,12 +80,17 @@ secondary_used = 43
 error = None
 provider = requested_provider
 source = f"{requested_provider}-cli"
-identity: dict[str, str] | None = {"providerID": requested_provider}
+identity: dict[str, str] | None = {
+    "providerID": requested_provider,
+    "accountEmail": account,
+}
 
 if case == "threshold":
     primary_used = secondary_used = 90
 elif case == "one-window-low":
     primary_used = 92
+elif case == "secondary-pool-low":
+    secondary_used = 92
 elif case == "weekly-only":
     pass
 elif case == "weekly-only-threshold":
@@ -126,6 +136,33 @@ usage: dict[str, object] = {
     "updatedAt": updated_at.isoformat().replace("+00:00", "Z"),
     "identity": identity,
 }
+if requested_provider == "antigravity":
+    usage["primary"] = {
+        "usedPercent": primary_used,
+        "resetsAt": reset_at,
+    }
+    usage["secondary"] = {
+        "usedPercent": secondary_used,
+        "resetsAt": (now + timedelta(days=4)).isoformat().replace("+00:00", "Z"),
+    }
+    antigravity_minutes = os.environ.get(
+        "FAKE_CODEXBAR_ANTIGRAVITY_WINDOW_MINUTES",
+        "missing",
+    )
+    if antigravity_minutes == "10080":
+        usage["primary"]["windowMinutes"] = 10080
+        usage["secondary"]["windowMinutes"] = 10080
+    elif antigravity_minutes == "null":
+        usage["primary"]["windowMinutes"] = None
+        usage["secondary"]["windowMinutes"] = None
+    elif antigravity_minutes != "missing":
+        usage["primary"]["windowMinutes"] = antigravity_minutes
+        usage["secondary"]["windowMinutes"] = antigravity_minutes
+    usage["accountEmail"] = account
+    if identity is not None:
+        identity["accountEmail"] = account
+    if case == "missing-identity":
+        usage.pop("accountEmail", None)
 if case in ("weekly-only", "weekly-only-threshold", "weekly-duplicate"):
     usage["primary"] = None
 if case == "missing-window":
@@ -136,7 +173,9 @@ if case in ("weekly-malformed-session-high", "session-low-weekly-malformed"):
 
 row = {
     "provider": provider,
-    "account": account,
+    "account": "active-antigravity-label"
+    if requested_provider == "antigravity"
+    else account,
     "version": "0.45.2",
     "source": source,
     "error": error,

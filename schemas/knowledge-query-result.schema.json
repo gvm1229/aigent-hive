@@ -13,7 +13,10 @@
   "properties": {
     "project_hit_count": { "type": "integer", "minimum": 0 },
     "root_hit_count": { "type": "integer", "minimum": 0 },
-    "precedence": { "const": "project-first" },
+    "cross_project_hit_count": { "type": "integer", "minimum": 0 },
+    "precedence": {
+      "enum": ["project-first", "own-project,user-root,shared"]
+    },
     "hits": {
       "type": "array",
       "items": {
@@ -27,9 +30,7 @@
           "content_digest",
           "tags",
           "aliases",
-          "sources",
-          "scope",
-          "provenance"
+          "sources"
         ],
         "properties": {
           "id": { "type": "string", "minLength": 1 },
@@ -62,8 +63,30 @@
           "scope": { "enum": ["project", "user-root"] },
           "provenance": {
             "enum": ["project-local", "explicit-promotion"]
+          },
+          "source_project": { "type": "string", "minLength": 1 },
+          "page_id": { "type": "string", "minLength": 1 },
+          "language": { "enum": ["en", "ko", "both", "und"] },
+          "digest": {
+            "type": "string",
+            "pattern": "^sha256:[0-9a-f]{64}$"
+          },
+          "visibility": {
+            "enum": ["shared", "project-private", "confidential"]
           }
-        }
+        },
+        "oneOf": [
+          { "required": ["scope", "provenance"] },
+          {
+            "required": [
+              "source_project",
+              "page_id",
+              "language",
+              "digest",
+              "visibility"
+            ]
+          }
+        ]
       }
     }
   }

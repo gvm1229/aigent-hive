@@ -40,6 +40,9 @@ aigent-hive/
 ├── schemas/
 ├── tests/                     # schema/render/materializer conformance
 ├── docs/
+│   ├── 00-home.md             # 사람·agent 공통 진입점
+│   ├── 01-index.md            # 전체 문서 catalog
+│   └── facts/{en,ko}/         # bilingual atomic source fact
 ├── LICENSE                    # primary Apache-2.0 전문
 ├── LICENSES/                  # REUSE용 Apache-2.0 canonical 전문
 ├── REUSE.toml                 # file-scope license mapping
@@ -49,14 +52,43 @@ aigent-hive/
 
 ## Source `.agents`와 출하물
 
-루트 `.agents/`는 Hive 자체를 개발하는 에이전트 전용. 일부 external runtime이
-`.agents/skills`를 자동 탐색할 수 있으므로 출하용 Skill을 루트 `.agents/skills`에
-배치 금지. 유일한 source-only Skill인 `hive-usage-guard`는 source CodexBar watcher,
-threshold와 current-session override만 관리하며 release bundle이나 consumer
-projection에 포함 없음. Runtime state는 ignored `.agents/work/usage-guard/`에
-두며 `.omx/` 수정 금지.
+루트 `.agents/`: Hive 자체 개발 전용. `.agents/skills/` 허용 class:
 
-출하용 Skill과 directive는 `harness/`에서만 관리하고 release projection 단계에서 소비자 경로를 결정.
+- Source-only Skill: source 개발 경계에서만 사용, consumer projection 없음
+- Shared Skill projection: canonical `harness/skills/<name>/`의 exact source copy
+
+현재 source-only `hive-usage-guard`: source watcher, threshold와 current-session
+override 관리. Shared `hive-prompt-refine`: harness canonical과 exact byte parity.
+Source-only Skill의 consumer 승격과 consumer Skill의 source projection은 product relevance,
+scope, safety, consent와 conformance review 뒤 허용. Installed consumer copy, `.hive/`
+state와 user knowledge의 source import 금지.
+
+출하용 canonical Skill과 directive는 `harness/`에서 관리하고 release projection
+단계에서 consumer 경로를 결정. Runtime state는 ignored `.agents/work/`에 두며
+`.omx/`·`.omc/` 수정 금지.
+
+구현된 source docs Wiki: tracked human topic document와
+`docs/facts/en/`·`docs/facts/ko/` atomic Markdown.
+Derived SQLite: ignored disposable `.agents/work/source-wiki/index.sqlite3`.
+Coordination marker: ignored persistent noncanonical
+`.agents/work/source-wiki/.index.lock`. Rebuild는 marker regular file의 exclusive OS
+advisory lock, `lint`·`query`는 shared lock 사용. Reader는 writer 완료 뒤 live index를
+bounded read하고 in-memory 검증 종료까지 lock을 유지하여 in-flight claim gap 관찰
+0건. SQLite는 ambient target path에서 직접 open하지 않고 in-memory
+생성→serialize→in-memory deserialize 검증 뒤 pinned source-root capability 내부의
+recoverable two-phase CAS로 publication. Phase 1은 expected live identity 확인과 unique
+Hive-owned claim 이동, Phase 2는 synced temporary의 live 이동과 exact prior claim 정리.
+Crash residue는 missing live index와 exact Hive-owned orphan claim·temporary 가능.
+다음 explicit rebuild만 canonical Markdown에서 disposable index를 재생성하고 exact
+regular Hive-owned claim·temporary path를 정리. `lint`·`query`는 missing·stale·corrupt·
+crash-interrupted index에서 implicit repair 없이 fail-closed. Consumer
+`.hive/knowledge/`, `omx_wiki/`와 `.omx/wiki/` 사용 금지.
+현재 source orchestration: OMX/OMC 활용, OMX Wiki Skill 제외.
+Durable knowledge가 replaceable orchestrator보다 오래 유지되어야 하며 향후 OMX/OMC
+retirement의 knowledge migration은 0건. 결정:
+[`ADR-0011`](../decisions/ADR-0011-source-wiki-independence.md)과
+[`ADR-0014`](../decisions/ADR-0014-docs-wiki-architecture.md). 구현 checklist:
+[`source-docs-wiki.md`](../plans/active/source-docs-wiki.md).
 세부 계약:
 
 - Role lifecycle: [`role-lifecycle.md`](role-lifecycle.md)

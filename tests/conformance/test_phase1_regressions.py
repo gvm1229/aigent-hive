@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import subprocess
 from pathlib import Path
 
@@ -35,10 +36,19 @@ class Phase1ProtectedCanonicalData(Phase1CliTestCase):
         first_process, _ = self.invoke_setup(target)
         self.assertEqual(first_process.returncode, 0, first_process.stderr)
         protected = target / relative
-        user_bytes = (
-            f"user-maintained canonical bytes for {relative}\n".encode("utf-8")
-            + b"\x00\xff"
-        )
+        if relative == ".hive/knowledge/suppression.yml":
+            user_bytes = (
+                f"# user-maintained canonical bytes for {relative}\n"
+                "schema_version: 1\n"
+                "entries: []\n"
+            ).encode("utf-8")
+        else:
+            user_bytes = (
+                f"user-maintained canonical bytes for {relative}\n".encode(
+                    "utf-8"
+                )
+                + b"\x00\xff"
+            )
         protected.write_bytes(user_bytes)
 
         second_process, result = self.invoke_setup(target)
@@ -219,6 +229,8 @@ class Phase1ActivationRollback(Phase1CliTestCase):
             str(answers),
             "--capabilities",
             str(FIXTURE_ROOT / "capabilities-codex-omx.json"),
+            "--user-root",
+            str(self.setup_user_root),
             "--apply",
             "--output",
             "json",
@@ -456,6 +468,18 @@ class Phase1InstalledValidation(Phase1CliTestCase):
         self.assertEqual(snapshot_tree(target), before)
         return result
 
+    def replace_harness_version_field(self, target: Path, field: str) -> None:
+        harness = target / ".hive/config/harness.toml"
+        original = harness.read_text(encoding="utf-8")
+        changed, replacement_count = re.subn(
+            rf'(?m)^{re.escape(field)} = "[^"]+"$',
+            f'{field} = "0.2.1"',
+            original,
+            count=1,
+        )
+        self.assertEqual(replacement_count, 1, f"missing {field} in harness.toml")
+        harness.write_text(changed, encoding="utf-8")
+
     def test_validate_rejects_missing_agents_marker(self) -> None:
         target = self.install()
         (target / "AGENTS.md").write_bytes(b"user text without Hive marker\n")
@@ -496,27 +520,13 @@ class Phase1InstalledValidation(Phase1CliTestCase):
 
     def test_validate_rejects_harness_version_mismatch(self) -> None:
         target = self.install()
-        harness = target / ".hive/config/harness.toml"
-        harness.write_text(
-            harness.read_text(encoding="utf-8").replace(
-                'harness_version = "0.7.0"',
-                'harness_version = "0.2.1"',
-            ),
-            encoding="utf-8",
-        )
+        self.replace_harness_version_field(target, "harness_version")
 
         self.assert_validate_rejects_preserving_tree(target)
 
     def test_validate_rejects_source_release_version_mismatch(self) -> None:
         target = self.install()
-        harness = target / ".hive/config/harness.toml"
-        harness.write_text(
-            harness.read_text(encoding="utf-8").replace(
-                'source_release_version = "0.7.0"',
-                'source_release_version = "0.2.1"',
-            ),
-            encoding="utf-8",
-        )
+        self.replace_harness_version_field(target, "source_release_version")
 
         self.assert_validate_rejects_preserving_tree(target)
 

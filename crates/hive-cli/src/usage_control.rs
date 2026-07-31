@@ -72,10 +72,12 @@ struct ParsedBinding {
     process_id: u32,
 }
 
-struct InstalledUsageConfig {
-    threshold: u8,
-    primary_host: String,
-    bytes: Vec<u8>,
+pub(crate) struct InstalledUsageConfig {
+    pub(crate) threshold: u8,
+    pub(crate) primary_host: String,
+    pub(crate) guard_enabled: bool,
+    pub(crate) codexbar_fallback_enabled: bool,
+    pub(crate) bytes: Vec<u8>,
 }
 
 struct TurnObservation {
@@ -713,7 +715,7 @@ fn status(arguments: &StatusArguments) -> Result<ActionResult, AdapterError> {
     let binding = bind_session(&arguments.binding, &config.primary_host);
     let loaded = load_control(&target, &binding)?;
     let halt = load_halt(&target, &binding)?;
-    let guard_enabled = effective_enabled(&loaded);
+    let guard_enabled = effective_enabled(&loaded, config.guard_enabled);
     let override_state_name = override_name(loaded.state);
     let halted = guard_enabled && halt.state == OverrideState::Current;
     let mut evidence = vec![Evidence {
@@ -764,7 +766,7 @@ fn enforce(arguments: &EnforceArguments) -> Result<ActionResult, AdapterError> {
     let config = read_installed_config(&target)?;
     let binding = bind_session(&arguments.binding, &config.primary_host);
     let loaded = load_control(&target, &binding)?;
-    if !effective_enabled(&loaded) {
+    if !effective_enabled(&loaded, config.guard_enabled) {
         return Ok(ActionResult {
             schema_version: 1,
             action: "CheckUsage",
@@ -852,56 +854,7 @@ fn observe_usage(
         .duration_since(UNIX_EPOCH)
         .ok()
         .and_then(|duration| i64::try_from(duration.as_secs()).ok());
-    let snapshot = match config.primary_host.as_str() {
-        "codex" => match account_digest {
-            Some(account_digest) => usage::check_preferred_with_runners(
-                &usage::SystemCommandRunner,
-                &usage::SystemCommandRunner,
-                account_digest,
-                sampled_at,
-            ),
-            None => usage::check_preferred_unique_with_runners(
-                &usage::SystemCommandRunner,
-                &usage::SystemCommandRunner,
-                sampled_at,
-            ),
-        },
-        "claude" => usage::native_then_fallback(
-            usage::UsageHost::Claude,
-            read_claude_capture_snapshot(target, binding, sampled_at),
-            || match account_digest {
-                Some(account_digest) => usage::check_codexbar_provider_with_runner(
-                    &usage::SystemCommandRunner,
-                    usage::UsageHost::Claude,
-                    account_digest,
-                    sampled_at,
-                ),
-                None => usage::check_codexbar_provider_unique_with_runner(
-                    &usage::SystemCommandRunner,
-                    usage::UsageHost::Claude,
-                    sampled_at,
-                ),
-            },
-        ),
-        "antigravity" => usage::native_then_fallback(
-            usage::UsageHost::Antigravity,
-            Err(usage::SensorError::Unsupported),
-            || match account_digest {
-                Some(account_digest) => usage::check_codexbar_provider_with_runner(
-                    &usage::SystemCommandRunner,
-                    usage::UsageHost::Antigravity,
-                    account_digest,
-                    sampled_at,
-                ),
-                None => usage::check_codexbar_provider_unique_with_runner(
-                    &usage::SystemCommandRunner,
-                    usage::UsageHost::Antigravity,
-                    sampled_at,
-                ),
-            },
-        ),
-        _ => Err(usage::SensorError::WrongProvider),
-    };
+    let snapshot = read_usage_snapshot(target, config, binding, account_digest, sampled_at);
     let Ok(snapshot) = snapshot else {
         let error = snapshot.expect_err("the failed sensor result was matched");
         let next_action = match error {
@@ -939,13 +892,76 @@ fn observe_usage(
     };
     TurnObservation {
         decision,
-        selected_window: snapshot
-            .windows
-            .first()
-            .map_or("unknown", |window| window.name),
+        selected_window: snapshot.selected_window_label(),
         measured_at: snapshot.measured_at,
         evidence_digest: snapshot.evidence_digest(),
         next_action: None,
+    }
+}
+
+fn read_usage_snapshot(
+    target: &PinnedTarget,
+    config: &InstalledUsageConfig,
+    binding: &SessionBinding,
+    account_digest: Option<&str>,
+    sampled_at: SystemTime,
+) -> Result<usage::NormalizedSnapshot, usage::SensorError> {
+    match config.primary_host.as_str() {
+        "codex" if config.codexbar_fallback_enabled => match account_digest {
+            Some(account_digest) => usage::check_preferred_with_runners(
+                &usage::SystemCommandRunner,
+                &usage::SystemCommandRunner,
+                account_digest,
+                sampled_at,
+            ),
+            None => usage::check_preferred_unique_with_runners(
+                &usage::SystemCommandRunner,
+                &usage::SystemCommandRunner,
+                sampled_at,
+            ),
+        },
+        "codex" => usage::NativeUsageRunner::read_codex_native(
+            &usage::SystemCommandRunner,
+            account_digest,
+            sampled_at,
+        ),
+        "claude" => native_then_consented_fallback(
+            usage::UsageHost::Claude,
+            read_claude_capture_snapshot(target, binding, sampled_at),
+            config.codexbar_fallback_enabled,
+            || match account_digest {
+                Some(account_digest) => usage::check_codexbar_provider_with_runner(
+                    &usage::SystemCommandRunner,
+                    usage::UsageHost::Claude,
+                    account_digest,
+                    sampled_at,
+                ),
+                None => usage::check_codexbar_provider_unique_with_runner(
+                    &usage::SystemCommandRunner,
+                    usage::UsageHost::Claude,
+                    sampled_at,
+                ),
+            },
+        ),
+        "antigravity" => native_then_consented_fallback(
+            usage::UsageHost::Antigravity,
+            Err(usage::SensorError::Unsupported),
+            config.codexbar_fallback_enabled,
+            || match account_digest {
+                Some(account_digest) => usage::check_codexbar_provider_with_runner(
+                    &usage::SystemCommandRunner,
+                    usage::UsageHost::Antigravity,
+                    account_digest,
+                    sampled_at,
+                ),
+                None => usage::check_codexbar_provider_unique_with_runner(
+                    &usage::SystemCommandRunner,
+                    usage::UsageHost::Antigravity,
+                    sampled_at,
+                ),
+            },
+        ),
+        _ => Err(usage::SensorError::WrongProvider),
     }
 }
 
@@ -1007,7 +1023,8 @@ fn read_claude_capture_snapshot(
                 ("weekly", 10_080) => "weekly",
                 _ => return Err(usage::SensorError::WrongWindows),
             },
-            window_minutes: window.window_minutes,
+            quota_pool: None,
+            window_minutes: Some(window.window_minutes),
             remaining_percent: window.remaining_percent,
             resets_at: window.resets_at_unix_seconds,
         };
@@ -1197,12 +1214,18 @@ fn control_session(arguments: &SessionArguments) -> Result<ActionResult, Adapter
     let config = read_installed_config(&target)?;
     let binding = bind_session(&arguments.binding, &config.primary_host);
     let loaded = load_control(&target, &binding)?;
-    let currently_enabled = effective_enabled(&loaded);
+    let currently_enabled = effective_enabled(&loaded, config.guard_enabled);
     let desired_enabled = match arguments.action {
         SessionAction::Enable => true,
         SessionAction::Disable => false,
         SessionAction::Toggle => !currently_enabled,
     };
+    if desired_enabled && !config.guard_enabled {
+        return Err(AdapterError::Safety(
+            "the installed usage guard is disabled and cannot be enabled by a session override"
+                .to_owned(),
+        ));
+    }
     if !desired_enabled && !arguments.confirm_disable {
         return Err(AdapterError::Input(
             "disabling the current-session usage safeguard requires --confirm-session-disable"
@@ -1263,7 +1286,9 @@ fn control_session(arguments: &SessionArguments) -> Result<ActionResult, Adapter
     })
 }
 
-fn read_installed_config(target: &PinnedTarget) -> Result<InstalledUsageConfig, AdapterError> {
+pub(crate) fn read_installed_config(
+    target: &PinnedTarget,
+) -> Result<InstalledUsageConfig, AdapterError> {
     let bytes = target
         .read_optional(Path::new(CONFIG_PATH), MAX_CONFIG_BYTES)?
         .ok_or_else(|| {
@@ -1291,11 +1316,30 @@ fn parse_installed_config(bytes: Vec<u8>) -> Result<InstalledUsageConfig, Adapte
             )
         })?
         .to_owned();
+    let guard_enabled = required_config_bool(&table, "usage_guard_enabled")?;
+    let codexbar_fallback_enabled = required_config_bool(&table, "codexbar_fallback_enabled")?;
+    if codexbar_fallback_enabled && !guard_enabled {
+        return Err(AdapterError::Safety(
+            "installed harness.toml cannot enable CodexBar fallback while the usage guard is disabled"
+                .to_owned(),
+        ));
+    }
     Ok(InstalledUsageConfig {
         threshold,
         primary_host,
+        guard_enabled,
+        codexbar_fallback_enabled,
         bytes,
     })
+}
+
+fn required_config_bool(table: &toml::Table, key: &str) -> Result<bool, AdapterError> {
+    table
+        .get(key)
+        .and_then(toml::Value::as_bool)
+        .ok_or_else(|| {
+            AdapterError::Safety(format!("installed harness.toml {key} must be a boolean"))
+        })
 }
 
 fn validate_config(bytes: &[u8]) -> Result<(), AdapterError> {
@@ -1494,7 +1538,7 @@ fn load_halt(target: &PinnedTarget, binding: &SessionBinding) -> Result<LoadedHa
         || !matches!(marker.decision.as_str(), "halted" | "usage-unknown")
         || !matches!(
             marker.selected_window.as_str(),
-            "session" | "weekly" | "unknown"
+            "session" | "weekly" | "multiple" | "unknown"
         )
         || !(1..=99).contains(&marker.threshold_remaining_percent)
         || marker.revision == 0
@@ -1526,7 +1570,10 @@ fn is_sha256_digest(value: &str) -> bool {
     })
 }
 
-fn effective_enabled(loaded: &LoadedControl) -> bool {
+fn effective_enabled(loaded: &LoadedControl, installed_enabled: bool) -> bool {
+    if !installed_enabled {
+        return false;
+    }
     if loaded.state != OverrideState::Current {
         return true;
     }
@@ -1534,6 +1581,19 @@ fn effective_enabled(loaded: &LoadedControl) -> bool {
         .control
         .as_ref()
         .is_none_or(|control| control.guard_enabled)
+}
+
+pub(crate) fn native_then_consented_fallback<T>(
+    host: usage::UsageHost,
+    native: Result<T, usage::SensorError>,
+    fallback_enabled: bool,
+    fallback: impl FnOnce() -> Result<T, usage::SensorError>,
+) -> Result<T, usage::SensorError> {
+    if fallback_enabled {
+        usage::native_then_fallback(host, native, fallback)
+    } else {
+        native
+    }
 }
 
 const fn override_name(state: OverrideState) -> &'static str {
@@ -1574,8 +1634,10 @@ fn failure_result(action: &'static str, error: &AdapterError) -> ActionResult {
 #[cfg(test)]
 mod tests {
     use super::{
-        bind_session, claude_capture_path, read_claude_capture_snapshot, ParsedBinding,
-        SessionBinding, MAX_CONTROL_BYTES,
+        bind_session, claude_capture_path, effective_enabled, enforce,
+        native_then_consented_fallback, parse_installed_config, read_claude_capture_snapshot,
+        EnforceArguments, FileSnapshot, LoadedControl, OverrideState, ParsedBinding,
+        SessionBinding, SessionControl, MAX_CONTROL_BYTES,
     };
     use crate::run::PinnedTarget;
     use crate::usage::{native_then_fallback, NormalizedSnapshot, SensorError, UsageHost};
@@ -1648,6 +1710,137 @@ mod tests {
         });
         assert_eq!(result, Err(expected));
         assert_eq!(calls.get(), 0);
+    }
+
+    fn installed_config(host: &str, enabled: bool, fallback_enabled: bool) -> Vec<u8> {
+        let version = env!("CARGO_PKG_VERSION");
+        format!(
+            "schema_version = 1\nharness_version = \"{version}\"\nsource_release_version = \"{version}\"\nprimary_host = \"{host}\"\nusage_guard_enabled = {enabled}\ncodexbar_fallback_enabled = {fallback_enabled}\nusage_stop_remaining_percent = 20\n"
+        )
+        .into_bytes()
+    }
+
+    #[test]
+    fn installed_usage_consent_is_required_and_validated_for_every_host() {
+        for host in ["codex", "claude", "antigravity"] {
+            let enabled = parse_installed_config(installed_config(host, true, false))
+                .expect("enabled config");
+            assert!(enabled.guard_enabled);
+            assert!(!enabled.codexbar_fallback_enabled);
+
+            let disabled = parse_installed_config(installed_config(host, false, false))
+                .expect("disabled config");
+            assert!(!disabled.guard_enabled);
+            assert!(!disabled.codexbar_fallback_enabled);
+
+            assert!(parse_installed_config(installed_config(host, false, true)).is_err());
+        }
+
+        let missing = String::from_utf8(installed_config("codex", true, false))
+            .expect("UTF-8 config")
+            .replace("usage_guard_enabled = true\n", "");
+        assert!(parse_installed_config(missing.into_bytes()).is_err());
+        let malformed = String::from_utf8(installed_config("codex", true, false))
+            .expect("UTF-8 config")
+            .replace(
+                "codexbar_fallback_enabled = false",
+                "codexbar_fallback_enabled = \"false\"",
+            );
+        assert!(parse_installed_config(malformed.into_bytes()).is_err());
+    }
+
+    #[test]
+    fn installed_disable_bypasses_enforcement_for_every_host_without_runtime_state() {
+        for host in ["codex", "claude", "antigravity"] {
+            let directory = temporary_target();
+            let config = directory.path().join(".hive/config");
+            fs::create_dir_all(&config).expect("config directory");
+            fs::write(
+                config.join("harness.toml"),
+                installed_config(host, false, false),
+            )
+            .expect("installed config");
+            let result = enforce(&EnforceArguments {
+                target: directory.path().to_owned(),
+                binding: ParsedBinding {
+                    session_id: format!("{host}-session"),
+                    process_id: 7,
+                },
+                account_digest: None,
+            })
+            .expect("installed disable should bypass enforcement");
+
+            assert_eq!(result.code, "hive.usage-session-bypassed");
+            assert_eq!(
+                result.data.as_ref().map(|data| &data["guard_enabled"]),
+                Some(&json!(false))
+            );
+            assert!(!directory.path().join(".hive/runtime").exists());
+        }
+    }
+
+    #[test]
+    fn installed_disable_dominates_current_session_enable() {
+        let loaded = LoadedControl {
+            relative: std::path::PathBuf::from("control.json"),
+            snapshot: FileSnapshot::Missing,
+            control: Some(SessionControl {
+                schema_version: 1,
+                host_scope: "codex".to_owned(),
+                session_id_digest:
+                    "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+                        .to_owned(),
+                process_id: 1,
+                guard_enabled: true,
+                revision: 1,
+            }),
+            state: OverrideState::Current,
+        };
+        assert!(!effective_enabled(&loaded, false));
+        assert!(effective_enabled(&loaded, true));
+    }
+
+    #[test]
+    fn fallback_consent_controls_every_host_without_changing_native_results() {
+        for host in [UsageHost::Codex, UsageHost::Claude, UsageHost::Antigravity] {
+            let calls = Cell::new(0);
+            assert_eq!(
+                native_then_consented_fallback(host, Ok(5), true, || {
+                    calls.set(calls.get() + 1);
+                    Ok(7)
+                }),
+                Ok(5)
+            );
+            assert_eq!(calls.get(), 0);
+
+            assert_eq!(
+                native_then_consented_fallback(
+                    host,
+                    Err::<u8, _>(SensorError::Unsupported),
+                    false,
+                    || {
+                        calls.set(calls.get() + 1);
+                        Ok(7)
+                    },
+                ),
+                Err(SensorError::Unsupported)
+            );
+            assert_eq!(calls.get(), 0);
+
+            assert_eq!(
+                native_then_consented_fallback(
+                    host,
+                    Err::<u8, _>(SensorError::Unsupported),
+                    true,
+                    || {
+                        calls.set(calls.get() + 1);
+                        Ok(7)
+                    },
+                ),
+                Ok(7)
+            );
+            assert_eq!(calls.get(), 1);
+        }
     }
 
     #[test]

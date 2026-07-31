@@ -34,7 +34,20 @@ After bootstrap:
 
 ## Commit Rules
 
+- Commit every completed source task independently before combining it with later completed work.
+  Never bundle unrelated completed tasks in one commit, even when they share a request, session,
+  milestone, or delivery window. Split a task further when it contains independently reviewable
+  and revertible concerns.
 - One commit contains one clear concern.
+- Define a concern by an independently reviewable and revertible intent, not by file proximity,
+  shared task origin, or the convenience of one staging operation.
+- Split documentation or Wiki state, product behavior, version metadata, release activation, and
+  unrelated test infrastructure by default. Combine them only when they are mechanically
+  inseparable and explain that dependency in the commit body.
+- A Wiki capture and a product version or release-date change are separate commits.
+- Before staging, enumerate the intended commits and the exact paths or hunks owned by each.
+- When one file contains multiple concerns, use patch staging or sequence the edits so each commit
+  contains only its own hunks.
 - Stage only the files required for that concern.
 - Inspect recent human-authored commit style first. If none exists, use:
 
@@ -56,6 +69,28 @@ git diff --cached --check
 git diff --cached --stat
 ```
 
+Run the nearest verification for the staged concern before committing. A later broader suite does
+not make an internally mixed commit acceptable.
+
+## Verification Tiers
+
+Match verification cost to the current boundary:
+
+1. **Work loop** — run the changed Rust crate tests and directly related Python tests only.
+2. **Pre-commit** — run affected crates plus the nearest black-box, schema, static-contract,
+   or regression tests for the changed behavior.
+3. **Pre-push** — run the full Rust workspace and full Python conformance suite once for the
+   logical milestone being pushed. Do not repeat an unchanged full-suite result for every
+   commit in the same milestone.
+4. **Release** — run clean-clone CI, every supported OS/architecture, hostile and security
+   suites, installer/update recovery, signing, provenance, and publication qualification.
+
+Keep existing hostile and security tests. Until the first public release, do not add a new
+hostile edge-case implementation or test unless it directly protects installation, canonical
+data, credentials, external-path confinement, update rollback/recovery, or a regression found
+in the changed behavior. Record other hardening candidates for post-release review instead of
+expanding the active implementation.
+
 After every commit:
 
 ```bash
@@ -68,6 +103,8 @@ Verify that the message has the intended scope and contains no co-author trailer
 
 - Verify `git remote -v` and the target ref before pushing.
 - Never force-push unless the user explicitly requests a history rewrite.
+- Do not rewrite an existing commit solely to apply current commit-splitting policy unless the user
+  explicitly requests that history change.
 - When explicitly authorized, use `--force-with-lease`, never plain `--force`.
 - Never delete `main` or `develop`.
 - Do not push secrets, runtime state, caches, SQLite files, generated release output, or active-session manifests.

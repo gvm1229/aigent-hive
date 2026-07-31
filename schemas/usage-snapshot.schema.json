@@ -4,6 +4,21 @@
   "title": "Aigent Hive usage snapshot",
   "type": "object",
   "additionalProperties": false,
+  "oneOf": [
+    {
+      "properties": {
+        "schema_version": { "const": 1 },
+        "quota_window": { "enum": ["session", "weekly"] }
+      },
+      "not": { "required": ["quota_pool"] }
+    },
+    {
+      "properties": {
+        "schema_version": { "const": 2 }
+      },
+      "required": ["quota_pool"]
+    }
+  ],
   "required": [
     "schema_version",
     "sensor_id",
@@ -18,7 +33,7 @@
     "source_confidence"
   ],
   "properties": {
-    "schema_version": { "const": 1 },
+    "schema_version": { "enum": [1, 2] },
     "sensor_id": {
       "type": "string",
       "minLength": 1
@@ -35,8 +50,12 @@
       "type": "string",
       "pattern": "^sha256:[0-9a-f]{64}$"
     },
+    "quota_pool": {
+      "type": "string",
+      "pattern": "^[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?$"
+    },
     "quota_window": {
-      "enum": ["session", "weekly"]
+      "enum": ["session", "weekly", "provider"]
     },
     "remaining_percent": {
       "type": "number",

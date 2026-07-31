@@ -1,0 +1,6 @@
+interface:
+  display_name: "Hive Prompt Refine"
+  short_description: "Create or refine a copy-ready prompt"
+  default_prompt: "Use $hive-prompt-refine to refine this prompt without executing it."
+policy:
+  allow_implicit_invocation: false

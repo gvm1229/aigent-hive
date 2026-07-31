@@ -1,11 +1,13 @@
 use super::{emit_action_result, ActionResult, Evidence};
 use crate::usage::{
     check_codexbar_provider_unique_with_runner, check_codexbar_provider_with_runner,
-    native_then_fallback, qualify_and_dispatch_preferred_with_runners,
-    qualify_and_dispatch_snapshot, AutomaticDispatchError, SensorError, SystemCommandRunner,
+    qualify_and_dispatch_preferred_with_runners, qualify_and_dispatch_snapshot,
+    AutomaticDispatchError, NativeUsageRunner, SensorError, SystemCommandRunner,
     UsageGuardEvidence, UsageHost, UsageObservation,
 };
-use crate::usage_control::read_claude_capture_for_session;
+use crate::usage_control::{
+    native_then_consented_fallback, read_claude_capture_for_session, read_installed_config,
+};
 use cap_fs_ext::{
     DirExt, FollowSymlinks, MetadataExt as CapMetadataExt, OpenOptionsFollowExt, OpenOptionsSyncExt,
 };
@@ -17,7 +19,7 @@ use hive_core::run::{
     DispatchBrief, DispatchContractError, Host, OwnerBinding, OwnerContinuity, RunPlan, RunState,
     RunStatus, RunStatusDocument, SupportLevel,
 };
-use hive_core::usage_guard::UsageSnapshot;
+use hive_core::usage_guard::{UsageSnapshot, UsageWindow, DEFAULT_QUOTA_POOL};
 use hive_core::{ensure_consumer_target, sha256_digest, validate_project_relative};
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
@@ -35,7 +37,6 @@ const CHECKPOINT_REQUEST_SCHEMA: &str =
 const MAX_EXPLICIT_FILE_BYTES: usize = 1024 * 1024;
 const MAX_EVIDENCE_FILE_BYTES: usize = 256 * 1024;
 const MAX_TOTAL_EVIDENCE_BYTES: usize = 1024 * 1024;
-const MAX_HARNESS_CONFIG_BYTES: usize = 64 * 1024;
 const MAX_RUNTIME_RECORD_BYTES: usize = 64 * 1024;
 const FRESH_CAPABILITY_MAX_AGE: Duration = Duration::from_mins(1);
 const NEW_STATUS_BODY: &[u8] = b"# Run status\n";
@@ -1494,11 +1495,26 @@ fn checkpoint_document(
     .map_err(core_verification)
 }
 
+#[derive(Debug, Deserialize)]
+#[serde(untagged)]
+enum UsageHistoryRecord {
+    V1(UsageHistoryRecordV1),
+    V2(UsageHistoryRecordV2),
+}
+
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
-struct UsageHistoryRecord {
+struct UsageHistoryRecordV1 {
     schema_version: u32,
     snapshot: UsageSnapshot,
+    evidence_digest: String,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+struct UsageHistoryRecordV2 {
+    schema_version: u32,
+    snapshots: Vec<UsageSnapshot>,
     evidence_digest: String,
 }
 
@@ -1519,93 +1535,25 @@ struct DispatchAuthorizationRecord {
 struct InstalledUsageConfig {
     threshold: u8,
     primary_host: Host,
+    guard_enabled: bool,
+    codexbar_fallback_enabled: bool,
+    config_digest: String,
 }
 
 fn installed_usage_config(target: &PinnedTarget) -> Result<InstalledUsageConfig, AdapterError> {
-    let relative = Path::new(".hive/config/harness.toml");
-    let bytes = target
-        .read_optional(relative, MAX_HARNESS_CONFIG_BYTES)?
-        .ok_or_else(|| {
-            AdapterError::Safety(
-                "automatic resume requires installed .hive/config/harness.toml".to_owned(),
-            )
-        })?;
-    let text = std::str::from_utf8(&bytes).map_err(|_| {
-        AdapterError::Safety("installed harness.toml must be valid UTF-8".to_owned())
-    })?;
-    let mut threshold = None;
-    let mut primary_host = None;
-    let mut entered_table = false;
-    for line in text.lines() {
-        let line = line.trim();
-        if line.is_empty() || line.starts_with('#') {
-            continue;
-        }
-        if line.starts_with('[') {
-            entered_table = true;
-            continue;
-        }
-        let Some((key, value)) = line.split_once('=') else {
-            return Err(AdapterError::Safety(
-                "installed harness.toml contains a malformed assignment".to_owned(),
-            ));
-        };
-        match key.trim() {
-            "usage_stop_remaining_percent" => {
-                if entered_table {
-                    return Err(AdapterError::Safety(
-                        "installed usage threshold must be a root harness.toml key".to_owned(),
-                    ));
-                }
-                if threshold.is_some() {
-                    return Err(AdapterError::Safety(
-                        "installed harness.toml contains duplicate usage threshold".to_owned(),
-                    ));
-                }
-                let raw_value = value.trim();
-                let parsed = raw_value
-                    .parse::<u8>()
-                    .ok()
-                    .filter(|parsed| (1..=99).contains(parsed) && parsed.to_string() == raw_value);
-                threshold = Some(parsed.ok_or_else(|| {
-                    AdapterError::Safety(
-                        "installed harness.toml usage threshold must be an integer from 1 to 99"
-                            .to_owned(),
-                    )
-                })?);
-            }
-            "primary_host" => {
-                if entered_table || primary_host.is_some() {
-                    return Err(AdapterError::Safety(
-                        "installed primary_host must be one unique root harness.toml key"
-                            .to_owned(),
-                    ));
-                }
-                primary_host = Some(match value.trim() {
-                    "\"codex\"" => Host::Codex,
-                    "\"claude\"" => Host::Claude,
-                    "\"antigravity\"" => Host::Antigravity,
-                    _ => {
-                        return Err(AdapterError::Safety(
-                            "installed primary_host is unsupported".to_owned(),
-                        ));
-                    }
-                });
-            }
-            _ => {}
-        }
-    }
-    let threshold = threshold.ok_or_else(|| {
-        AdapterError::Safety(
-            "installed harness.toml is missing usage_stop_remaining_percent".to_owned(),
-        )
-    })?;
-    let primary_host = primary_host.ok_or_else(|| {
-        AdapterError::Safety("installed harness.toml is missing primary_host".to_owned())
-    })?;
+    let config = read_installed_config(target)?;
+    let primary_host = match config.primary_host.as_str() {
+        "codex" => Host::Codex,
+        "claude" => Host::Claude,
+        "antigravity" => Host::Antigravity,
+        _ => unreachable!("installed usage config validates the primary host"),
+    };
     Ok(InstalledUsageConfig {
-        threshold,
+        threshold: config.threshold,
         primary_host,
+        guard_enabled: config.guard_enabled,
+        codexbar_fallback_enabled: config.codexbar_fallback_enabled,
+        config_digest: sha256_digest(&config.bytes),
     })
 }
 
@@ -1615,6 +1563,54 @@ fn usage_history_path(account_digest: &str) -> PathBuf {
         "{}.json",
         key.strip_prefix("sha256:").unwrap_or(&key)
     ))
+}
+
+fn valid_quota_pool(value: &str) -> bool {
+    !value.is_empty()
+        && value.len() <= 64
+        && value.bytes().enumerate().all(|(index, byte)| match byte {
+            b'a'..=b'z' | b'0'..=b'9' => true,
+            b'-' => index > 0 && index + 1 < value.len(),
+            _ => false,
+        })
+}
+
+fn usage_window_rank(window: UsageWindow) -> u8 {
+    match window {
+        UsageWindow::Session => 0,
+        UsageWindow::Weekly => 1,
+        UsageWindow::Provider => 2,
+    }
+}
+
+fn canonical_usage_snapshots(snapshots: &[UsageSnapshot]) -> Vec<UsageSnapshot> {
+    let mut canonical = snapshots.to_vec();
+    canonical.sort_by(|left, right| {
+        left.quota_pool
+            .as_deref()
+            .unwrap_or("default")
+            .cmp(right.quota_pool.as_deref().unwrap_or("default"))
+            .then_with(|| {
+                usage_window_rank(left.quota_window).cmp(&usage_window_rank(right.quota_window))
+            })
+    });
+    canonical
+}
+
+fn valid_pooled_history(snapshots: &[UsageSnapshot]) -> bool {
+    let mut keys = BTreeSet::new();
+    !snapshots.is_empty()
+        && snapshots.iter().all(|snapshot| {
+            snapshot.schema_version == 2
+                && snapshot.quota_pool.as_deref().is_some_and(valid_quota_pool)
+                && keys.insert((
+                    snapshot
+                        .quota_pool
+                        .clone()
+                        .expect("validated pooled snapshot"),
+                    usage_window_rank(snapshot.quota_window),
+                ))
+        })
 }
 
 fn read_usage_history(
@@ -1633,19 +1629,54 @@ fn read_usage_history(
     }
     let record: UsageHistoryRecord = serde_json::from_slice(bytes)
         .map_err(|_| AdapterError::Safety("usage history is malformed".to_owned()))?;
-    if record.schema_version != 1
-        || record.snapshot.account_scope_digest != account_digest
-        || record.evidence_digest
-            != sha256_digest(
-                &serde_json_canonicalizer::to_vec(&record.snapshot)
-                    .map_err(|error| AdapterError::Internal(error.to_string()))?,
-            )
-    {
-        return Err(AdapterError::Safety(
-            "usage history failed its account or integrity binding".to_owned(),
-        ));
-    }
-    Ok((path, snapshot, vec![record.snapshot], "available"))
+    let snapshots = match record {
+        UsageHistoryRecord::V1(record) => {
+            if record.schema_version != 1
+                || record.snapshot.schema_version != 1
+                || record.snapshot.quota_pool.is_some()
+                || record.snapshot.account_scope_digest != account_digest
+                || record.evidence_digest
+                    != sha256_digest(
+                        &serde_json_canonicalizer::to_vec(&record.snapshot)
+                            .map_err(|error| AdapterError::Internal(error.to_string()))?,
+                    )
+            {
+                return Err(AdapterError::Safety(
+                    "usage history failed its account or integrity binding".to_owned(),
+                ));
+            }
+            let mut snapshot = record.snapshot;
+            if snapshot.host_scope == "antigravity" && snapshot.quota_window == UsageWindow::Weekly
+            {
+                snapshot.schema_version = 2;
+                snapshot.quota_pool = Some(DEFAULT_QUOTA_POOL.to_owned());
+                snapshot.quota_window = UsageWindow::Provider;
+            }
+            vec![snapshot]
+        }
+        UsageHistoryRecord::V2(record) => {
+            let canonical = canonical_usage_snapshots(&record.snapshots);
+            if record.schema_version != 2
+                || !valid_pooled_history(&record.snapshots)
+                || record.snapshots != canonical
+                || record
+                    .snapshots
+                    .iter()
+                    .any(|snapshot| snapshot.account_scope_digest != account_digest)
+                || record.evidence_digest
+                    != sha256_digest(
+                        &serde_json_canonicalizer::to_vec(&record.snapshots)
+                            .map_err(|error| AdapterError::Internal(error.to_string()))?,
+                    )
+            {
+                return Err(AdapterError::Safety(
+                    "usage history failed its account or integrity binding".to_owned(),
+                ));
+            }
+            record.snapshots
+        }
+    };
+    Ok((path, snapshot, snapshots, "available"))
 }
 
 fn publish_usage_history(
@@ -1654,21 +1685,56 @@ fn publish_usage_history(
     expected: &FileSnapshot,
     snapshots: &[UsageSnapshot],
 ) -> Result<bool, AdapterError> {
-    let [snapshot] = snapshots else {
+    if snapshots.is_empty() {
         return Err(AdapterError::Internal(
-            "normalized usage observation must contain one selected window".to_owned(),
+            "normalized usage observation must contain at least one selected window".to_owned(),
         ));
-    };
-    let record = UsageHistoryRecord {
-        schema_version: 1,
-        snapshot: snapshot.clone(),
-        evidence_digest: sha256_digest(
-            &serde_json_canonicalizer::to_vec(snapshot)
-                .map_err(|error| AdapterError::Internal(error.to_string()))?,
-        ),
-    };
-    let bytes = serde_json_canonicalizer::to_vec(&record)
-        .map_err(|error| AdapterError::Internal(error.to_string()))?;
+    }
+    let canonical = canonical_usage_snapshots(snapshots);
+    let account_digest = &canonical[0].account_scope_digest;
+    if canonical
+        .iter()
+        .any(|snapshot| snapshot.account_scope_digest != *account_digest)
+    {
+        return Err(AdapterError::Internal(
+            "normalized usage observation spans multiple accounts".to_owned(),
+        ));
+    }
+    let bytes = match canonical.as_slice() {
+        [snapshot] if snapshot.schema_version == 1 && snapshot.quota_pool.is_none() => {
+            let record = UsageHistoryRecordV1 {
+                schema_version: 1,
+                snapshot: snapshot.clone(),
+                evidence_digest: sha256_digest(
+                    &serde_json_canonicalizer::to_vec(snapshot)
+                        .map_err(|error| AdapterError::Internal(error.to_string()))?,
+                ),
+            };
+            serde_json_canonicalizer::to_vec(&record)
+        }
+        _ => {
+            if !valid_pooled_history(&canonical) {
+                return Err(AdapterError::Internal(
+                    "pooled usage observation failed its schema or key contract".to_owned(),
+                ));
+            }
+            let record = UsageHistoryRecordV2 {
+                schema_version: 2,
+                snapshots: canonical.clone(),
+                evidence_digest: sha256_digest(
+                    &serde_json_canonicalizer::to_vec(&canonical)
+                        .map_err(|error| AdapterError::Internal(error.to_string()))?,
+                ),
+            };
+            serde_json_canonicalizer::to_vec(&record)
+        }
+    }
+    .map_err(|error| AdapterError::Internal(error.to_string()))?;
+    if bytes.len() > MAX_RUNTIME_RECORD_BYTES {
+        return Err(AdapterError::Internal(
+            "canonical usage history exceeds the runtime record bound".to_owned(),
+        ));
+    }
     target.publish_runtime(path, expected, &bytes)
 }
 
@@ -1764,6 +1830,33 @@ fn publish_authorization(
     let bytes = serde_json_canonicalizer::to_vec(record)
         .map_err(|error| AdapterError::Internal(error.to_string()))?;
     target.publish_runtime(path, expected, &bytes)
+}
+
+#[allow(clippy::too_many_arguments)]
+fn issue_dispatch_authorization(
+    target: &PinnedTarget,
+    path: &Path,
+    expected: &FileSnapshot,
+    authorization_id: &str,
+    run_id: &str,
+    status_revision: u64,
+    role_id: &str,
+    brief_digest: &str,
+    usage_evidence_digest: &str,
+) -> Result<bool, AdapterError> {
+    let mut record = DispatchAuthorizationRecord {
+        schema_version: 1,
+        authorization_id: authorization_id.to_owned(),
+        run_id: run_id.to_owned(),
+        status_revision,
+        role_id: role_id.to_owned(),
+        brief_digest: brief_digest.to_owned(),
+        usage_evidence_digest: usage_evidence_digest.to_owned(),
+        state: "issued".to_owned(),
+        record_digest: String::new(),
+    };
+    record.record_digest = authorization_record_digest(&record)?;
+    publish_authorization(target, path, expected, &record)
 }
 
 #[allow(clippy::too_many_lines)]
@@ -1863,14 +1956,18 @@ fn resume(arguments: &ResumeArguments) -> Result<ActionResult, AdapterError> {
                 "--threshold must equal installed usage_stop_remaining_percent ({configured_threshold})"
             )));
         }
-        if matches!(installed.primary_host, Host::Codex | Host::Antigravity)
+        if installed.guard_enabled
+            && matches!(installed.primary_host, Host::Codex | Host::Antigravity)
             && requested_account_digest.is_none()
         {
             return Err(AdapterError::Input(
                 "Codex and Antigravity automatic dispatch require --account-digest".to_owned(),
             ));
         }
-        if installed.primary_host == Host::Claude && arguments.session_id.is_none() {
+        if installed.guard_enabled
+            && installed.primary_host == Host::Claude
+            && arguments.session_id.is_none()
+        {
             return Err(AdapterError::Input(
                 "Claude automatic dispatch requires --session-id for exact capture binding"
                     .to_owned(),
@@ -1923,17 +2020,51 @@ fn resume(arguments: &ResumeArguments) -> Result<ActionResult, AdapterError> {
             let Some(authorization_snapshot) = authorization_snapshot else {
                 unreachable!("existing authorization is handled by the replay branch")
             };
+            if !installed.guard_enabled {
+                if issue_dispatch_authorization(
+                    &target,
+                    &authorization_path,
+                    &authorization_snapshot,
+                    &authorization_id,
+                    &arguments.run_id,
+                    status.status().revision,
+                    role_id,
+                    &brief_digest,
+                    &installed.config_digest,
+                )? {
+                    runtime_changed_paths.push(portable_relative_path(&authorization_path));
+                }
+                break 'dispatch (
+                    vec![brief],
+                    json!({
+                        "dispatch_intent": "automatic",
+                        "enforced": false,
+                        "outcome": "disabled",
+                        "evidence_digest": installed.config_digest,
+                        "window": null,
+                        "configured_threshold_percent": configured_threshold,
+                        "history": "not_sampled",
+                        "authorization_id": authorization_id,
+                        "role_id": role_id,
+                        "host_scope": installed.primary_host,
+                    }),
+                );
+            }
             let sampled_at = SystemTime::now();
             let prequalified = match installed.primary_host {
-                Host::Codex => None,
+                Host::Codex if installed.codexbar_fallback_enabled => None,
+                Host::Codex => Some(
+                    SystemCommandRunner.read_codex_native(requested_account_digest, sampled_at),
+                ),
                 Host::Claude => {
                     let session_id = arguments
                         .session_id
                         .as_deref()
                         .expect("Claude session id was validated");
-                    Some(native_then_fallback(
+                    Some(native_then_consented_fallback(
                         UsageHost::Claude,
                         read_claude_capture_for_session(&target, session_id, sampled_at),
+                        installed.codexbar_fallback_enabled,
                         || match requested_account_digest {
                             Some(account_digest) => check_codexbar_provider_with_runner(
                                 &SystemCommandRunner,
@@ -1949,9 +2080,10 @@ fn resume(arguments: &ResumeArguments) -> Result<ActionResult, AdapterError> {
                         },
                     ))
                 }
-                Host::Antigravity => Some(native_then_fallback(
+                Host::Antigravity => Some(native_then_consented_fallback(
                     UsageHost::Antigravity,
                     Err(SensorError::Unsupported),
+                    installed.codexbar_fallback_enabled,
                     || {
                         check_codexbar_provider_with_runner(
                             &SystemCommandRunner,
@@ -2036,24 +2168,16 @@ fn resume(arguments: &ResumeArguments) -> Result<ActionResult, AdapterError> {
                     )? {
                         runtime_changed_paths.push(portable_relative_path(&history_path));
                     }
-                    let mut authorization_record = DispatchAuthorizationRecord {
-                        schema_version: 1,
-                        authorization_id: authorization_id.clone(),
-                        run_id: arguments.run_id.clone(),
-                        status_revision: status.status().revision,
-                        role_id: role_id.to_owned(),
-                        brief_digest,
-                        usage_evidence_digest: evidence.digest.clone(),
-                        state: "issued".to_owned(),
-                        record_digest: String::new(),
-                    };
-                    authorization_record.record_digest =
-                        authorization_record_digest(&authorization_record)?;
-                    if publish_authorization(
+                    if issue_dispatch_authorization(
                         &target,
                         &authorization_path,
                         &authorization_snapshot,
-                        &authorization_record,
+                        &authorization_id,
+                        &arguments.run_id,
+                        status.status().revision,
+                        role_id,
+                        &brief_digest,
+                        &evidence.digest,
                     )? {
                         runtime_changed_paths.push(portable_relative_path(&authorization_path));
                     }
@@ -2154,7 +2278,7 @@ fn resume(arguments: &ResumeArguments) -> Result<ActionResult, AdapterError> {
         (
             "hive.run-resume-prepared",
             if arguments.dispatch_intent == DispatchIntent::Automatic {
-                "usage-guard-authorized dispatch data prepared without spawning".to_owned()
+                "automatic dispatch data prepared without spawning".to_owned()
             } else {
                 "manual unenforced dispatch data prepared without spawning".to_owned()
             },
@@ -2558,6 +2682,18 @@ mod tests {
         (temp, target, capability)
     }
 
+    fn write_usage_config(target: &Path, enabled: bool, fallback_enabled: bool) {
+        fs::create_dir_all(target.join(".hive/config")).expect("config directory");
+        let version = env!("CARGO_PKG_VERSION");
+        fs::write(
+            target.join(".hive/config/harness.toml"),
+            format!(
+                "schema_version = 1\nharness_version = \"{version}\"\nsource_release_version = \"{version}\"\nprimary_host = \"codex\"\nusage_guard_enabled = {enabled}\ncodexbar_fallback_enabled = {fallback_enabled}\nusage_stop_remaining_percent = 20\n"
+            ),
+        )
+        .expect("usage config");
+    }
+
     fn write_checkpoint_request(
         target: &Path,
         expected_revision: u64,
@@ -2843,6 +2979,55 @@ mod tests {
         let mut manual_threshold = base.to_vec();
         manual_threshold.extend(["--threshold", "17"].map(str::to_owned));
         assert!(parse_resume_arguments(&manual_threshold).is_err());
+    }
+
+    #[test]
+    fn disabled_installed_guard_bypasses_sensors_and_preserves_one_shot_authorization() {
+        let (_temp, target, capability) = setup_run();
+        write_usage_config(&target, false, false);
+        let request = write_checkpoint_request(&target, 0, "2026-07-24T00:00:00Z", &[], None);
+        checkpoint(&CheckpointArguments {
+            target: target.clone(),
+            request,
+            capabilities: capability.clone(),
+        })
+        .expect("checkpoint");
+        let arguments = ResumeArguments {
+            target,
+            run_id: "run-1".to_owned(),
+            capabilities: capability,
+            dispatch_intent: DispatchIntent::Automatic,
+            account_digest: Some(
+                "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+                    .to_owned(),
+            ),
+            session_id: None,
+            role_id: Some("reviewer".to_owned()),
+            threshold: None,
+        };
+
+        let first = resume(&arguments).expect("disabled guard should bypass sensor dispatch");
+        assert_eq!(first.status, "success");
+        let first_data = first.data.expect("resume data");
+        assert_eq!(first_data["usage_guard"]["enforced"], json!(false));
+        assert_eq!(first_data["usage_guard"]["outcome"], json!("disabled"));
+        assert_eq!(
+            first_data["dispatch_briefs"].as_array().map(Vec::len),
+            Some(1)
+        );
+        assert_eq!(first_data["recovery_only"], json!(false));
+
+        let replay = resume(&arguments).expect("replay should return recovery data");
+        assert_eq!(replay.status, "blocked");
+        let replay_data = replay.data.expect("replay data");
+        assert_eq!(
+            replay_data["usage_guard"]["outcome"],
+            json!("already_issued")
+        );
+        assert_eq!(
+            replay_data["dispatch_briefs"].as_array().map(Vec::len),
+            Some(0)
+        );
     }
 
     #[test]

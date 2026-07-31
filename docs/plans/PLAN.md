@@ -1,20 +1,27 @@
 # Aigent Hive active plan index
 
-> Revision: 1.42
-> 기준일: 2026-07-26
-> Product version: `0.7.0`
-> 현재 milestone: Phase 7 public qualification + user plugin/project lifecycle `0.8.0`
+> Revision: 1.81
+> 기준일: 2026-07-31
+> Product version: `0.8.0`
+> 현재 milestone: Phase 7 qualification + global onboarding·shared index `0.8.0`
 > Entrypoint: `docs/plans/PLAN.md`
 
 ## Goal parameters
 
-- Objective: user plugin/project lifecycle 미완료 1개, 세 host native usage sensor
-  미완료 3개와 Phase 7 protected qualification 7개 완료
-- Success: 세 host user install·project bootstrap·root knowledge promotion·local-priority
-  update, 세 host native-first·CodexBar fallback-only usage guard와 signed
-  multi-platform public qualification
-- Stop boundary: protected credential, irreversible production publication, exact `1.0.0` authority, source usage guard remaining `60%`
-- Invariants: provider-neutral, canonical Markdown 우선, ownership·consent·foreign byte 보존, provider API·credential 경로 없음, force-push 없음, explicit-only major
+- Objective: `Aigent Hive 0.8.0` 후보의 Linux·macOS·Windows native artifact,
+  npm 정식 `0.8.0`·직접 설치 검증, bilingual onboarding, update
+  discovery·activation과 provenance gate 완료
+- Success: Mandatory user setup, global preference 기반 expedited/custom project setup,
+  user-root 단일 SQLite, 세 host selected Skill projection, Wiki default-on opt-out,
+  usage guard opt-in `20%`, native-first·CodexBar fallback-only, consumer
+  PowerShell 5.1·`cmd.exe`, source-only PowerShell 7, Linux musl x86_64·arm64,
+  `aigent-hive@0.8.0`, SHA-256·GitHub attestation과 실제 Windows
+  acceptance
+- Stop boundary: GitHub Release·Git tag, protected credential, exact `1.0.0`
+  authority, 현재 source usage guard remaining `30%`
+- Invariants: provider-neutral, canonical Markdown 우선, OMX/OMC replaceable adapter,
+  ownership·consent·foreign byte 보존, provider API·credential 경로 없음, force-push 없음,
+  explicit-only major
 - Native Goal compatibility: 변경 불가 objective의 “unchecked item in `docs/plans/PLAN.md`”는 `PLAN.md` 내부 checkbox가 아니라 아래 `Active fragments`의 unchecked item을 뜻함
 
 ## Completion index
@@ -24,14 +31,54 @@
 | 범위 | 완료 | 미완료 | 진행률 |
 | --- | ---: | ---: | ---: |
 | Phase 0–6 | 70 | 0 | 100% |
-| Phase 7 | 33 | 7 | 82.5% |
-| User plugin/project lifecycle | 37 | 1 | 97.4% |
-| Host-native usage sensors | 22 | 3 | 88% |
-| Documentation style | 5 | 0 | 100% |
+| Phase 7 | 49 | 0 | 100% |
+| User plugin/project lifecycle | 38 | 0 | 100% |
+| Host-native usage sensors | 24 | 0 | 100% |
+| Global onboarding·shared index | 19 | 0 | 100% |
+| Source docs Wiki | 11 | 0 | 100% |
+| Windows shell install boundary | 3 | 0 | 100% |
+| 문서 말투 | 6 | 0 | 100% |
 | Security review | 4 | 0 | 100% |
-| **Canonical total** | **171** | **11** | **94.0%** |
+| Docs Wiki migration | 4 | 0 | 100% |
+| **Canonical total** | **228** | **0** | **100.0%** |
 
 External production boundary 항목도 미완료 합계에 포함. Protected authority 없이 완료 처리 금지.
+
+## 최신 완료 증거
+
+- Local Windows: Rust workspace 전체 PASS, PowerShell 5.1·7.6.4 installer와
+  `cmd.exe` bootstrap 계약 PASS
+- Codex Skill metadata: project projection implicit owner 1개, 나머지 explicit-only,
+  fresh-session 중복 warning 0건
+- 실제 Windows 11 x86_64: Codex user install·global setup·project auto onboarding,
+  shared index 1개 project, repeat update·rollback·재검증 PASS
+- Current native candidate: exact `420e244` run `30657669889`, Linux musl
+  x86_64·arm64를 포함한 macOS·Linux·Windows 5/5와 npm umbrella PASS
+- Local npm packaging: current `0.8.0` Windows native binary의 platform·umbrella
+  tarball 생성, isolated global install, `hive --version`, source/package binary
+  SHA-256 byte identity PASS
+- Windows shell: WSI-001–003 완료, consumer PowerShell 7 dependency 0건,
+  source dependency helper의 exact WinGet preview·동의·재검증 PASS
+- Strict Clippy all targets·all features, format check PASS
+- Copier/Rust current projection parity `3/3`, Source Wiki lint finding·warning `0`
+- Shared index 동일 입력 재실행 byte-exact no-op, `changed_paths=[]`
+- Codex·Antigravity expedited/custom connected onboarding matrix `4/4`
+- Initial `Expedited — set everything to default`와 project zero-question inference contract
+- English·한국어 language-first setup과 선택 언어 global guidance, `hive-cli` 211개 PASS
+- 개발·소비자 질문과 응답의 선택 언어 통일, 대체 가능한 일반 영어 단어의 한영
+  혼용 금지, 전역·프로젝트 지침 회귀 시험 PASS
+- 개발·소비자 검증 결과 보고 규칙: 범위·이유·현재 환경·실행 여부·입증 범위·
+  미검증 범위 명시, 투영 시험 PASS
+- Opt-in daily update check의 24시간 success throttle, offline next-session retry,
+  fixed npm metadata endpoint와 no-install contract
+- Bare `hive update`의 npm `latest` 확인, legacy test·stable npm·direct owner 인증,
+  선택 언어 prompt,
+  명시적 수락 뒤 exact adapter 실행과 owner·version 재검증
+- 독립 final blocker review: critical·high·medium·low finding `0`건
+- npm publication `30658188721`: exact `0.8.0` 여섯 package·provenance·
+  `latest=0.8.0` PASS. 기존 `test=0.8.0-test.1` 보존
+- 실제 Windows npm·CMD clean install, repeat, pending receipt recovery PASS. npm·direct
+  native SHA-256 `330f4e0c8da5b6347400b9b16a9f76b2fb4f94406a2eacfe8c641367ca344ef9`
 
 ## Required load order
 
@@ -50,8 +97,13 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
 | [`phases/07-public-qualification.md`](phases/07-public-qualification.md) | `P7-*` | Phase 7 local·external qualification과 completion gate |
 | [`active/plugin-project-lifecycle.md`](active/plugin-project-lifecycle.md) | `RPH-*` | User plugin·project bootstrap·root knowledge·upgrade merge |
 | [`active/native-usage-sensor.md`](active/native-usage-sensor.md) | `NUS-*` | 세 host native-first sensor·CodexBar fallback-only |
+| [`active/user-onboarding-shared-index.md`](active/user-onboarding-shared-index.md) | `UOS-*` | Mandatory global setup·selected projection·shared index |
+| [`active/source-docs-wiki.md`](active/source-docs-wiki.md) | `SLW-*` | `docs/` graph와 bilingual atomic fact·Skill reuse |
+| [`active/windows-shell-install.md`](active/windows-shell-install.md) | `WSI-*` | Consumer PowerShell 5.1·`cmd.exe`와 source-only PowerShell 7 |
 | [`active/documentation-style.md`](active/documentation-style.md) | `DOC-*` | 사람용 문서 style completion gate |
 | [`active/security-review.md`](active/security-review.md) | `SEC-*` | 독립 code·security review finding completion gate |
+| [`active/docs-wiki-migration.md`](active/docs-wiki-migration.md) | `DWK-*` | 지식 보존과 `docs/` Wiki·atomic fact 전환 |
+| [`active/release-0.8.0.md`](active/release-0.8.0.md) | `P7-*` reference | `0.8.0` Linux·npm·직접 설치 실행 순서와 범위 |
 
 ## Reconciliation gate
 
@@ -72,17 +124,21 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
 
 ## Current execution order
 
-1. RPH-036 실제 세 host install/update E2E
-2. NUS-020·025 실제 Claude·Antigravity qualification
-3. NUS-014·P7-013·P7-021 실제 세 host matrix
-4. P7-011·012 multi-platform runtime qualification
-5. P7-018·020·037 signed release qualification
-6. Exact `1.0.0` 사용자 authority 확인
+완료된 선행 조건: `release-publication` 필수 검토자 설정, 임시
+`codex/release-0.8.0` 브랜치·`develop` 대상 PR 사용자 승인, PR #8 병합,
+첫 candidate run 성공과 첫 publication run의 npm 게시 전 실패 원인 확인.
 
-## External production boundary
+완료: PR #13 병합, exact `420e244` candidate run `30657669889`, publication run
+`30658188721`, npm·Unix·PowerShell·CMD 계약과 실제 Windows clean install·repeat·
+recovery 검증.
+
+다음 작업: npm 배포 성공 commit의 `develop` → `main` PR 병합.
+
+## `0.8.0` 비차단 deferred boundary
 
 - macOS Developer ID signing·notarization
 - Windows Authenticode signing
-- 실제 Codex·Claude·Gemini Antigravity protected session E2E
-- Externally signed TUF authorization과 GitHub Release publication
+- 실제 Claude protected session E2E와 Pro/Max usage parity
+- Externally signed TUF production authorization
 - Exact `1.0.0` 사용자 authority
+- GitHub normal release와 Git tag

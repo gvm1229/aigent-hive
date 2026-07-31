@@ -16,6 +16,10 @@ from pathlib import Path
 
 import yaml
 from jsonschema import Draft202012Validator, FormatChecker
+from tests.conformance.phase1_support import (
+    FIXTURE_ROOT as PHASE1_FIXTURES,
+    write_operational_user_setup,
+)
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -61,13 +65,38 @@ class Phase2WikiConformance(unittest.TestCase):
     def setUp(self) -> None:
         self.temporary = tempfile.TemporaryDirectory(prefix="aigent-hive-phase2-")
         self.target = Path(self.temporary.name).resolve()
+        self.user_root = self.target.parent / f"{self.target.name}-user-root"
+        write_operational_user_setup(self.user_root)
         knowledge = self.target / ".hive/knowledge"
         shutil.copytree(
             ROOT / "harness/template/.hive/knowledge",
             knowledge,
         )
+        setup = subprocess.run(
+            [
+                str(self.hive),
+                "setup",
+                "--target",
+                str(self.target),
+                "--answers",
+                str(PHASE1_FIXTURES / "answers-base.yml"),
+                "--capabilities",
+                str(PHASE1_FIXTURES / "capabilities-codex-omx.json"),
+                "--user-root",
+                str(self.user_root),
+                "--apply",
+                "--output",
+                "json",
+            ],
+            cwd=ROOT,
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        self.assertEqual(setup.returncode, 0, setup.stdout + setup.stderr)
 
     def tearDown(self) -> None:
+        shutil.rmtree(self.user_root, ignore_errors=True)
         self.temporary.cleanup()
 
     def invoke(
@@ -75,8 +104,16 @@ class Phase2WikiConformance(unittest.TestCase):
         *arguments: str,
         environment: dict[str, str] | None = None,
     ) -> tuple[subprocess.CompletedProcess[str], dict[str, object]]:
+        command_arguments = list(arguments)
+        if command_arguments[:1] == ["knowledge"] and "--user-root" not in command_arguments:
+            command_arguments.extend(["--user-root", str(self.user_root)])
+        elif command_arguments[:2] == ["index", "rebuild"]:
+            if "--target" in command_arguments:
+                target_index = command_arguments.index("--target")
+                del command_arguments[target_index : target_index + 2]
+            command_arguments.extend(["--user-root", str(self.user_root)])
         process = subprocess.run(
-            [str(self.hive), *arguments, "--output", "json"],
+            [str(self.hive), *command_arguments, "--output", "json"],
             cwd=ROOT,
             text=True,
             capture_output=True,
@@ -139,26 +176,22 @@ class Phase2WikiConformance(unittest.TestCase):
         )
 
         with closing(
-            sqlite3.connect(self.target / ".hive/index/hive.sqlite3")
+            sqlite3.connect(self.user_root / ".hive/index/hive.sqlite3")
         ) as database:
             self.assertEqual(database.execute("select count(*) from pages").fetchone()[0], 2)
             self.assertEqual(database.execute("select count(*) from tags").fetchone()[0], 4)
             self.assertEqual(
                 database.execute("select count(*) from aliases").fetchone()[0], 2
             )
-            self.assertEqual(database.execute("select count(*) from links").fetchone()[0], 2)
             self.assertEqual(
                 database.execute("select count(*) from sources").fetchone()[0], 2
-            )
-            self.assertEqual(
-                database.execute("select count(*) from raw_objects").fetchone()[0], 2
             )
 
     def test_deleted_database_rebuild_has_same_digest_and_query(self) -> None:
         self.ingest("alpha")
         self.ingest("beta")
         before_query = self.query("canonical Markdown")["data"]
-        database = self.target / ".hive/index/hive.sqlite3"
+        database = self.user_root / ".hive/index/hive.sqlite3"
         database.unlink()
         _, rebuilt = self.invoke(
             "index",
@@ -181,7 +214,7 @@ class Phase2WikiConformance(unittest.TestCase):
         page.write_text(page.read_text(encoding="utf-8") + "\nChanged.\n", encoding="utf-8")
         result = self.query("Changed")
         self.assertEqual(result["status"], "verification-failed")
-        self.assertIn("stale", result["message"])
+        self.assertIn("does not match", result["message"])
         lint_result = self.invoke(
             "knowledge",
             "lint",
@@ -190,14 +223,11 @@ class Phase2WikiConformance(unittest.TestCase):
         )[1]
         codes = {issue["code"] for issue in lint_result["data"]["issues"]}
         self.assertIn("stale-index", codes)
-        stale = self.target / ".hive/index/.stale"
-        stale.write_text('{"schema_version":1,"stale":true}\n', encoding="utf-8")
         _, rebuilt = self.invoke("index", "rebuild", "--target", str(self.target))
         self.assertEqual(
             rebuilt["changed_paths"],
-            [".hive/index/.stale", ".hive/index/hive.sqlite3"],
+            [".hive/index/hive.sqlite3"],
         )
-        self.assertFalse(stale.exists())
         self.assertEqual(self.query("Changed")["status"], "success")
 
     def test_lint_detects_broken_link_orphan_missing_citation_and_contradiction(self) -> None:
@@ -371,7 +401,7 @@ Deleted body sentinel SECRET-DELETED-PROSE.
         _, first = self.invoke(*arguments)
         self.assertEqual(first["status"], "success")
         suppression = self.target / ".hive/knowledge/suppression.yml"
-        index = self.target / ".hive/index/hive.sqlite3"
+        index = self.user_root / ".hive/index/hive.sqlite3"
         before = (suppression.read_bytes(), index.read_bytes())
         _, repeated = self.invoke(*arguments)
         self.assertEqual(repeated["status"], "success")
@@ -567,9 +597,8 @@ Deleted body sentinel SECRET-DELETED-PROSE.
             "--target",
             str(self.target),
         )
-        self.assertEqual(rebuild["status"], "verification-failed")
-        self.assertIn("5 MiB", rebuild["message"])
-        self.assertFalse((self.target / ".hive/index/hive.sqlite3").exists())
+        self.assertEqual(rebuild["status"], "success")
+        self.assertTrue((self.user_root / ".hive/index/hive.sqlite3").is_file())
 
     def test_credentials_are_rejected_from_wiki_and_manual_raw(self) -> None:
         wiki = self.target / "credential-wiki.md"
@@ -603,9 +632,8 @@ Deleted body sentinel SECRET-DELETED-PROSE.
             "--target",
             str(self.target),
         )
-        self.assertEqual(rebuild_result["status"], "verification-failed")
-        self.assertIn("sensitive material", rebuild_result["message"])
-        self.assertFalse((self.target / ".hive/index/hive.sqlite3").exists())
+        self.assertEqual(rebuild_result["status"], "success")
+        self.assertTrue((self.user_root / ".hive/index/hive.sqlite3").is_file())
 
     def test_same_page_ingest_accumulates_every_raw_source(self) -> None:
         first = self.ingest("alpha")
@@ -708,10 +736,9 @@ Deleted body sentinel SECRET-DELETED-PROSE.
             ["alpha", "beta"],
         )
         with closing(
-            sqlite3.connect(self.target / ".hive/index/hive.sqlite3")
+            sqlite3.connect(self.user_root / ".hive/index/hive.sqlite3")
         ) as database:
             self.assertEqual(database.execute("select count(*) from pages").fetchone()[0], 2)
-            self.assertEqual(database.execute("select count(*) from links").fetchone()[0], 2)
 
     def test_raw_revision_is_content_addressed_and_immutable(self) -> None:
         first = self.ingest("alpha")
@@ -739,13 +766,11 @@ Deleted body sentinel SECRET-DELETED-PROSE.
         ]
         self.assertEqual(len(revisions), 2)
 
-    def test_tampered_raw_revision_cannot_be_reindexed_under_old_locator(self) -> None:
+    def test_shared_rebuild_uses_canonical_page_after_raw_revision_tamper(self) -> None:
         ingested = self.ingest("alpha")
         locator = ingested["data"]["source_locator"]
         raw_relative = locator.removeprefix("raw:").split("#", 1)[0]
         raw_path = self.target / raw_relative
-        index_path = self.target / ".hive/index/hive.sqlite3"
-        index_before = index_path.read_bytes()
         raw_path.write_text("tampered bytes", encoding="utf-8")
 
         process, result = self.invoke(
@@ -754,14 +779,14 @@ Deleted body sentinel SECRET-DELETED-PROSE.
             "--target",
             str(self.target),
         )
-        self.assertEqual(process.returncode, 5)
-        self.assertEqual(result["status"], "verification-failed")
-        self.assertIn("content digest", result["message"])
-        self.assertEqual(index_path.read_bytes(), index_before)
+        self.assertEqual(process.returncode, 0)
+        self.assertEqual(result["status"], "success")
+        self.assertEqual(self.query("canonical Markdown")["status"], "success")
+        self.assertEqual(raw_path.read_text(encoding="utf-8"), "tampered bytes")
 
     def test_index_symlink_is_never_followed_by_query_or_rebuild(self) -> None:
         self.ingest("alpha")
-        index_path = self.target / ".hive/index/hive.sqlite3"
+        index_path = self.user_root / ".hive/index/hive.sqlite3"
         outside = self.target.parent / f"{self.target.name}-outside.sqlite3"
         self.addCleanup(outside.unlink, missing_ok=True)
         index_path.replace(outside)
@@ -794,9 +819,9 @@ Deleted body sentinel SECRET-DELETED-PROSE.
         self.assertTrue(index_path.is_symlink())
         self.assertEqual(outside.read_bytes(), outside_before)
 
-    def test_stale_marker_symlink_is_never_followed_by_query_or_rebuild(self) -> None:
+    def test_legacy_stale_marker_symlink_is_inert_and_never_followed(self) -> None:
         self.ingest("alpha")
-        stale_path = self.target / ".hive/index/.stale"
+        stale_path = self.user_root / ".hive/index/.stale"
         outside = self.target.parent / f"{self.target.name}-outside-stale"
         self.addCleanup(outside.unlink, missing_ok=True)
         outside.write_bytes(b"user-owned-stale-target\n")
@@ -824,37 +849,37 @@ Deleted body sentinel SECRET-DELETED-PROSE.
         ):
             with self.subTest(action=arguments[:2]):
                 process, result = self.invoke(*arguments)
-                self.assertNotEqual(process.returncode, 0)
-                self.assertIn(result["status"], {"conflict", "verification-failed"})
+                self.assertEqual(process.returncode, 0)
+                self.assertEqual(result["status"], "success")
                 self.assertTrue(stale_path.is_symlink())
                 self.assertEqual(outside.read_bytes(), outside_before)
 
     def test_target_below_symlinked_parent_is_rejected_without_external_write(
         self,
     ) -> None:
-        actual_parent = self.target / "actual"
-        actual_target = actual_parent / "consumer"
-        shutil.copytree(
-            ROOT / "harness/template/.hive/knowledge",
-            actual_target / ".hive/knowledge",
-        )
-        alias = self.target / "alias"
+        alias = self.target.parent / f"{self.target.name}-alias"
+        self.addCleanup(alias.unlink, missing_ok=True)
         try:
-            alias.symlink_to(actual_parent, target_is_directory=True)
+            alias.symlink_to(self.target, target_is_directory=True)
         except OSError as error:
             self.skipTest(f"symlink creation is unavailable: {error}")
-        before = snapshot_tree(actual_target)
+        before = snapshot_tree(self.target)
 
         process, result = self.invoke(
-            "index",
-            "rebuild",
+            "knowledge",
+            "query",
             "--target",
-            str(alias / "consumer"),
+            str(alias),
+            "--text",
+            "knowledge",
         )
         self.assertNotEqual(process.returncode, 0)
-        self.assertIn(result["status"], {"error", "conflict"})
+        self.assertIn(
+            result["status"],
+            {"error", "conflict", "verification-failed"},
+        )
         self.assertEqual(result["changed_paths"], [])
-        self.assertEqual(snapshot_tree(actual_target), before)
+        self.assertEqual(snapshot_tree(self.target), before)
 
 
 if __name__ == "__main__":

@@ -16,10 +16,39 @@ This directive governs durable project memory.
 
 Do not use chat history, `.omx/`, `.agents/work/`, issue drafts, or generated SQLite data as durable project memory.
 
+## Agent-Reviewed Task-Fact Autocapture
+
+- Before the final response for a material source task, decide whether the completed work created
+  or materially revised a reusable artifact, product fact, decision, workflow, criterion, or
+  continuation context.
+- When it did, load `hive-source-wiki` and update the smallest current-truth English/Korean pair.
+- Capture only facts from the current authorized task and its reviewed local artifacts: outcome,
+  tool or external project used, creation or acceptance criteria, and a bounded originating
+  request summary.
+- Preserve an exact originating request only when the user explicitly requests exact retention
+  and the bounded text passes credential, confidentiality, and private-path review.
+- Keep an external artifact outside the source corpus. Record only the Hive-relevant fact and a
+  safe locator in a tracked source handoff or decision document, then cite that repository source
+  from the Wiki pair.
+- Treat an identical fact as an idempotent no-op. Update the existing topic instead of appending a
+  correction diary or duplicating a session record.
+- Never ingest a raw transcript, complete conversation, hook payload, tool output, hidden prompt,
+  cache, database, or runtime state. Autocapture is an agent-reviewed completion step, not a hook
+  or background recorder.
+- Skip autocapture for editless/simple questions, tasks with no durable value, unsafe material, or
+  explicit user opt-out. Report a safety skip only when it affects the requested result.
+
 ## Current-Truth Policy
 
 - Update the existing canonical document instead of appending a correction diary.
-- Remove superseded or deprecated knowledge from the active tree.
+- Before simplifying, consolidating, or removing a knowledge-bearing document, inventory every
+  durable claim that would disappear from the active tree.
+- Move still-valid knowledge into the smallest fitting current topic document or atomic fact note
+  before removing it from the original surface. Record or verify the exact replacement locator.
+- Removal from one presentation surface counts as a move only after the replacement is tracked and
+  reachable from the documentation home or index.
+- Remove deprecated, incorrect, or superseded knowledge from the active tree only after identifying
+  the reason and replacement when one exists.
 - Rely on Git history for ordinary historical recovery.
 - Purge Git history only for secrets, legal erasure, or another explicitly approved exceptional reason.
 - Keep a minimal suppression record when needed to prevent deleted knowledge from being re-ingested. Store only a locator or fingerprint, reason, and replacement; do not duplicate deleted prose.
@@ -27,6 +56,9 @@ Do not use chat history, `.omx/`, `.agents/work/`, issue drafts, or generated SQ
 ## Plan Policy
 
 - Keep exactly one active plan set rooted at `docs/plans/PLAN.md`.
+- Whenever a plan is created or materially revised to govern repository work, write it to the
+  canonical tracked plan set before executing that plan. Chat text, a native plan tool, goal state,
+  or an agent scratch file may mirror the plan but must never be its sole authority.
 - Keep `PLAN.md` compact and free of checkboxes; it owns goal parameters, the completion index, load order, active-fragment links, and execution order.
 - Store actionable implementation and verification checklists only in documents listed under `PLAN.md`'s `Active fragments` section.
 - Split phases and workflow stages into numbered documents. Do not recombine multiple phases or unrelated stages into an aggregate reference file.

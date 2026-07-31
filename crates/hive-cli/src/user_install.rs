@@ -7,10 +7,12 @@ use cap_primitives::fs::PermissionsExt as CapPermissionsExt;
 use cap_std::ambient_authority;
 use cap_std::fs::{Dir, OpenOptions};
 use hive_core::sha256_digest;
-use hive_projection::{compile_projection, Host as ProjectionHost};
+#[cfg(test)]
+use hive_projection::compile_projection;
+use hive_projection::{compile_user_projection, Host as ProjectionHost};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::env;
 use std::ffi::{OsStr, OsString};
 #[cfg(test)]
@@ -23,9 +25,91 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 const USER_MARKER_START: &[u8] = b"<!-- AIGENT-HIVE:USER:START -->";
 const USER_MARKER_END: &[u8] = b"<!-- AIGENT-HIVE:USER:END -->";
 const MAX_USER_FILE_BYTES: u64 = 16 * 1024 * 1024;
+const MAX_ANTIGRAVITY_STAGE_FILES: usize = 4_096;
+const MAX_ANTIGRAVITY_STAGE_DIRECTORIES: usize = 4_096;
+const MAX_ANTIGRAVITY_STAGE_DEPTH: usize = 64;
+const MAX_ANTIGRAVITY_STAGE_BYTES: u64 = 64 * 1024 * 1024;
 const COMMAND_TIMEOUT: Duration = Duration::from_mins(2);
 const COMMAND_OUTPUT_LIMIT: usize = 1024 * 1024;
 const ROOT_INDEX_RELATIVE: &str = ".hive/index/hive.sqlite3";
+const ANTIGRAVITY_SOURCE_RELATIVE: &str = ".hive/marketplaces/antigravity/plugins/aigent-hive";
+const ANTIGRAVITY_STAGE_RELATIVE: &str = ".gemini/config/plugins/aigent-hive";
+const LEGACY_ANTIGRAVITY_070_SOURCE_DIGEST: &str =
+    "sha256:0f39dbdccd2a50e49ea3a123a9ca2cd99823485b8c8e5eada8becf8495b7238c";
+const LEGACY_ANTIGRAVITY_070_MANIFEST_DIGEST: &str =
+    "sha256:2eeb1a2cb0d4f2c616443e1b5844b1e10551457f78f1cb96ff76afb223495e86";
+const USER_070_CODEX_PLUGIN_DIGEST: &str =
+    "sha256:4ecb63663a94ffd939aacb9e5179660c46cb72ee9ee379d7bea04279eae35e9e";
+const USER_070_CLAUDE_PLUGIN_DIGEST: &str =
+    "sha256:5590976481b90ab7c11c4109f2abca3282f641d9e86aa4155ce40ad140c38242";
+const USER_070_CLAUDE_CAPTURE_DIGEST: &str =
+    "sha256:d347a2eff52a7908b16d048e50f69abc0696699ad7b02b0d4a1bedb425a5c93b";
+const USER_070_CODEX_MARKETPLACE_DIGEST: &str =
+    "sha256:5fc994474640b82960f5c015c6fdcb50a01df010441b065c991a114e96f84620";
+const USER_070_CLAUDE_MARKETPLACE_DIGEST: &str =
+    "sha256:52681102bb7c8c9c0bb2ce332602e8b4cb418ebfbe0fe1fd0d0cc34ee3aa5af9";
+const LEGACY_ANTIGRAVITY_070_SKILLS: &[(&str, &str)] = &[
+    (
+        "hive-judge-package",
+        "sha256:a87f46c6a21f94944fc465d85b74bf5e8aef308bfbc1b7a08df56e6078f3890c",
+    ),
+    (
+        "hive-knowledge-capture",
+        "sha256:bff118dd34504091478c636470c4ae113e6eef0ef488eac406c1f2dd79970d91",
+    ),
+    (
+        "hive-knowledge-maintenance",
+        "sha256:eb196fd8c66722928ba4f691543e199e09947241face5a51eb6b329c391fdd3f",
+    ),
+    (
+        "hive-knowledge-promote",
+        "sha256:3239382ad2461e31b99a89d32ee69b6bb6fd26faf1a91e50f52aaa9ed21b5159",
+    ),
+    (
+        "hive-knowledge-query",
+        "sha256:57544a98a992cab44cf81b5a2badf1efd6bba68f6a1785e678b44bf099a4353e",
+    ),
+    (
+        "hive-migrate",
+        "sha256:a48df71fcc1d5eb901487f86e807f6acdebf62e0250a564d99fa734f9512ea32",
+    ),
+    (
+        "hive-project-upgrade",
+        "sha256:c673f3fca88085c25d044944bd17e692eafa0105d0eaf31ac53f14737a15ace4",
+    ),
+    (
+        "hive-prompt-refine",
+        "sha256:167fe625b59f020f200f167ac380875b77e79aac111dfa03163f94718834eb42",
+    ),
+    (
+        "hive-role-handoff",
+        "sha256:d59b0866ed27c85bd16f8a8cb9fb8a278df0d4cd5f9ca9262b676f4b513b2eaa",
+    ),
+    (
+        "hive-run-checkpoint",
+        "sha256:e44b6b4456bc02996c44cdab64c25fd4335f360509685f592248e2c342401383",
+    ),
+    (
+        "hive-run-resume",
+        "sha256:fbec4961baef77e9e33a73f2f6caa47d46f093133fe142005067dde8143389b7",
+    ),
+    (
+        "hive-simple-question",
+        "sha256:716be2df49d27e0cbaf28bbd428b01b0a716e1baf6ebca7fab2fd26e91b3fa9a",
+    ),
+    (
+        "hive-update",
+        "sha256:e390663900b8e362ca64d066c35ac7c63ce8a6c88398c35210825e8056d212df",
+    ),
+    (
+        "hive-usage-guard",
+        "sha256:7e18146d1bb6becce19c1bed6d86d6ece488cffc7793d3bfb4a591d5a3ce7a3c",
+    ),
+    (
+        "setup-harness",
+        "sha256:11316ba100022cbf18713712eaf6d50325ea489dc410a6a4c1a9b8fa2e1a7f0e",
+    ),
+];
 const CODEX_PLUGIN_MANIFEST: &[u8] =
     include_bytes!("../../../harness/plugins/aigent-hive/.codex-plugin/plugin.json");
 const CLAUDE_PLUGIN_MANIFEST: &[u8] =
@@ -44,6 +128,7 @@ const ROOT_WIKI_LOG: &[u8] =
     include_bytes!("../../../harness/template/.hive/knowledge/Wiki/log.md");
 const ROOT_SUPPRESSION: &[u8] =
     include_bytes!("../../../harness/template/.hive/knowledge/suppression.yml");
+const USER_070_SETUP_REVIEW: &[u8] = b"schema_version: 1\nsource_version: 0.7.0\nsetup_required: true\nwiki_markdown_preserved: true\nlegacy_skill_projection: all-built-ins\n";
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "lowercase")]
@@ -74,7 +159,7 @@ impl UserHost {
         match self {
             Self::Codex => ">=0.145.0 <1.0.0",
             Self::Claude => ">=2.1.0 <3.0.0",
-            Self::Antigravity => ">=2.3.1 <3.0.0",
+            Self::Antigravity => ">=1.1.7 <1.2.0",
         }
     }
 }
@@ -98,6 +183,7 @@ struct UserArguments {
     mode: UserMode,
     user_root: PathBuf,
     root_cap: Dir,
+    setup_override: Option<(crate::user_setup::UserSetupConfig, Vec<String>)>,
 }
 
 #[derive(Debug)]
@@ -147,6 +233,12 @@ struct PlannedFile {
     ownership: &'static str,
 }
 
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+struct RegularTree {
+    directories: BTreeSet<PathBuf>,
+    files: BTreeMap<PathBuf, Vec<u8>>,
+}
+
 struct UserPlan {
     files: BTreeMap<PathBuf, PlannedFile>,
     retired_files: BTreeMap<PathBuf, RetiredFile>,
@@ -157,6 +249,8 @@ struct UserPlan {
     expected_before: BTreeMap<PathBuf, Option<Vec<u8>>>,
     expected_permissions: BTreeMap<PathBuf, Option<FilePermissions>>,
     qualified_host_version: Option<String>,
+    prior_antigravity_activation_source: bool,
+    expected_antigravity_stage: Option<RegularTree>,
 }
 
 #[derive(Clone)]
@@ -191,6 +285,7 @@ struct UserOwnershipEntry {
     ownership: String,
 }
 
+#[derive(Clone)]
 struct AuthenticatedUserInventory {
     product_version: String,
     host: UserHost,
@@ -214,6 +309,8 @@ struct UserBackupManifest {
     codex_state_before: Option<CodexHostState>,
     #[serde(default)]
     claude_state_before: Option<ClaudeHostState>,
+    #[serde(default)]
+    antigravity_state_before: Option<AntigravityHostState>,
     #[serde(default)]
     host_owned_state: Option<HostStateSnapshot>,
     #[serde(default)]
@@ -255,6 +352,8 @@ enum HostMutation {
     ClaudePluginInstalled,
     ClaudeMarketplaceRefreshed,
     ClaudePluginRefreshed,
+    AntigravityPluginInstalled,
+    AntigravityPluginRefreshed,
 }
 
 type ActivationCommand<'a> = (Vec<&'a str>, Option<HostMutation>);
@@ -264,6 +363,7 @@ type ActivationCommand<'a> = (Vec<&'a str>, Option<HostMutation>);
 enum HostStateSnapshot {
     Codex(CodexHostState),
     Claude(ClaudeHostState),
+    Antigravity(AntigravityHostState),
 }
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -326,11 +426,25 @@ struct ClaudePluginState {
     scope: String,
 }
 
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
+struct AntigravityHostState {
+    plugin: Option<AntigravityPluginState>,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
+struct AntigravityPluginState {
+    source: String,
+    components: Vec<String>,
+}
+
 #[cfg(test)]
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum HostCompensationSurface {
     CodexStructuredJson,
     ClaudeStructuredJson,
+    AntigravityStructuredOutput,
 }
 
 #[cfg(test)]
@@ -343,6 +457,9 @@ fn compensation_surface(mutation: HostMutation) -> HostCompensationSurface {
         | HostMutation::ClaudePluginInstalled
         | HostMutation::ClaudeMarketplaceRefreshed
         | HostMutation::ClaudePluginRefreshed => HostCompensationSurface::ClaudeStructuredJson,
+        HostMutation::AntigravityPluginInstalled | HostMutation::AntigravityPluginRefreshed => {
+            HostCompensationSurface::AntigravityStructuredOutput
+        }
     }
 }
 
@@ -369,6 +486,96 @@ pub(crate) fn run_install(arguments: &[String]) -> ExitCode {
 
 pub(crate) fn run_update(arguments: &[String]) -> ExitCode {
     run(UserOperation::Update, arguments)
+}
+
+pub(crate) fn apply_configured_host(
+    user_root: &Path,
+    selected_host: crate::user_setup::SelectedHost,
+    config: &crate::user_setup::UserSetupConfig,
+    resolved_skills: &[String],
+) -> Result<ActionResult, String> {
+    configured_host(
+        user_root,
+        selected_host,
+        config,
+        resolved_skills,
+        UserMode::Apply,
+    )
+}
+
+pub(crate) fn preview_configured_host(
+    user_root: &Path,
+    selected_host: crate::user_setup::SelectedHost,
+    config: &crate::user_setup::UserSetupConfig,
+    resolved_skills: &[String],
+) -> Result<ActionResult, String> {
+    configured_host(
+        user_root,
+        selected_host,
+        config,
+        resolved_skills,
+        UserMode::DryRun,
+    )
+}
+
+pub(crate) fn validate_configured_host(
+    user_root: &Path,
+    selected_host: crate::user_setup::SelectedHost,
+    config: &crate::user_setup::UserSetupConfig,
+    resolved_skills: &[String],
+) -> Result<ActionResult, String> {
+    configured_host(
+        user_root,
+        selected_host,
+        config,
+        resolved_skills,
+        UserMode::Validate,
+    )
+}
+
+fn configured_host(
+    user_root: &Path,
+    selected_host: crate::user_setup::SelectedHost,
+    config: &crate::user_setup::UserSetupConfig,
+    resolved_skills: &[String],
+    mode: UserMode,
+) -> Result<ActionResult, String> {
+    let host = match selected_host {
+        crate::user_setup::SelectedHost::Codex => UserHost::Codex,
+        crate::user_setup::SelectedHost::Claude => UserHost::Claude,
+        crate::user_setup::SelectedHost::Antigravity => UserHost::Antigravity,
+    };
+    let root_cap = open_user_root(user_root).map_err(|error| error.message().to_owned())?;
+    let arguments = UserArguments {
+        host,
+        mode,
+        user_root: user_root.to_path_buf(),
+        root_cap,
+        setup_override: Some((config.clone(), resolved_skills.to_vec())),
+    };
+    execute(UserOperation::Install, &arguments, &SystemCommandRunner)
+        .map_err(|error| error.message().to_owned())
+}
+
+pub(crate) fn recover_configured_host(
+    user_root: &Path,
+    selected_host: crate::user_setup::SelectedHost,
+) -> Result<ActionResult, String> {
+    let host = match selected_host {
+        crate::user_setup::SelectedHost::Codex => UserHost::Codex,
+        crate::user_setup::SelectedHost::Claude => UserHost::Claude,
+        crate::user_setup::SelectedHost::Antigravity => UserHost::Antigravity,
+    };
+    let root_cap = open_user_root(user_root).map_err(|error| error.message().to_owned())?;
+    let arguments = UserArguments {
+        host,
+        mode: UserMode::Recover,
+        user_root: user_root.to_path_buf(),
+        root_cap,
+        setup_override: None,
+    };
+    execute(UserOperation::Install, &arguments, &SystemCommandRunner)
+        .map_err(|error| error.message().to_owned())
 }
 
 fn run(operation: UserOperation, arguments: &[String]) -> ExitCode {
@@ -464,6 +671,7 @@ fn parse(arguments: &[String]) -> Result<UserArguments, InstallError> {
         mode,
         user_root,
         root_cap,
+        setup_override: None,
     })
 }
 
@@ -475,6 +683,10 @@ fn resolve_user_root() -> Result<PathBuf, InstallError> {
     }
     .ok_or_else(|| InstallError::Input("cannot resolve the user home directory".to_owned()))?;
     Ok(PathBuf::from(value))
+}
+
+pub(crate) fn resolve_user_root_path() -> Result<PathBuf, String> {
+    resolve_user_root().map_err(|error| error.message().to_owned())
 }
 
 fn open_user_root(root: &Path) -> Result<Dir, InstallError> {
@@ -503,6 +715,45 @@ fn open_user_root(root: &Path) -> Result<Dir, InstallError> {
     })
 }
 
+pub(crate) fn open_user_root_for_setup(root: &Path) -> Result<Dir, String> {
+    open_user_root(root).map_err(|error| error.message().to_owned())
+}
+
+pub(crate) fn read_user_setup_file(
+    root: &Dir,
+    relative: &Path,
+    maximum: u64,
+) -> Result<Option<Vec<u8>>, String> {
+    read_optional_regular(root, relative, maximum).map_err(|error| error.message().to_owned())
+}
+
+pub(crate) fn replace_user_setup_file(
+    root: &Dir,
+    relative: &Path,
+    expected: Option<&[u8]>,
+    desired: Option<&[u8]>,
+) -> Result<(), String> {
+    let expected_permissions = expected
+        .map(|_| file_permissions(root, relative))
+        .transpose()
+        .map_err(|error| error.message().to_owned())?;
+    cas_activate(
+        root,
+        relative,
+        expected.map(|bytes| ExpectedFile {
+            bytes,
+            permissions: expected_permissions
+                .expect("existing setup file requires a permission token"),
+        }),
+        desired,
+        FilePermissions {
+            executable: false,
+            unix_mode: None,
+        },
+    )
+    .map_err(|error| error.message().to_owned())
+}
+
 fn execute(
     operation: UserOperation,
     arguments: &UserArguments,
@@ -513,14 +764,29 @@ fn execute(
     }
     let mut plan = build_plan(arguments)?;
     match arguments.mode {
-        UserMode::DryRun => Ok(success_result(
-            operation,
-            arguments,
-            &plan,
-            "hive.user-install-dry-run-complete",
-            "user installation dry run completed",
-            None,
-        )),
+        UserMode::DryRun => {
+            let executable = qualify_host(arguments, &plan, runner)?;
+            let executable = executable.as_ref().ok_or_else(|| {
+                InstallError::Internal("qualified host executable is missing".to_owned())
+            })?;
+            let host_version = probe_supported_host_version(arguments.host, executable, runner)?;
+            bind_host_version(&mut plan, &host_version);
+            let codex = probe_codex_state_if_required(arguments, Some(executable), runner)?;
+            let claude = probe_claude_state_if_required(arguments, Some(executable), runner)?;
+            let antigravity =
+                probe_antigravity_state_if_required(arguments, Some(executable), runner)?;
+            validate_codex_prestate(arguments, codex.as_ref())?;
+            validate_claude_prestate(arguments, claude.as_ref())?;
+            validate_antigravity_prestate(arguments, &plan, antigravity.as_ref())?;
+            Ok(success_result(
+                operation,
+                arguments,
+                &plan,
+                "hive.user-install-dry-run-complete",
+                "user installation dry run completed",
+                None,
+            ))
+        }
         UserMode::Validate => {
             if !plan.changed_paths.is_empty() {
                 return Err(InstallError::Verification(format!(
@@ -528,6 +794,13 @@ fn execute(
                     plan.changed_paths.len()
                 )));
             }
+            let executable = qualify_host(arguments, &plan, runner)?;
+            let executable = executable.as_ref().ok_or_else(|| {
+                InstallError::Internal("qualified host executable is missing".to_owned())
+            })?;
+            let host_version = probe_supported_host_version(arguments.host, executable, runner)?;
+            bind_host_version(&mut plan, &host_version);
+            validate_installed_host(arguments, &plan, executable, runner)?;
             Ok(success_result(
                 operation,
                 arguments,
@@ -549,21 +822,29 @@ fn execute_apply(
     plan: &mut UserPlan,
 ) -> Result<ActionResult, InstallError> {
     let host_executable = qualify_host(arguments, plan, runner)?;
-    let host_version = probe_supported_host_version(
-        arguments.host,
-        host_executable.as_ref().ok_or_else(|| {
-            InstallError::Internal("qualified host executable is missing".to_owned())
-        })?,
-        runner,
-    )?;
-    bind_host_version(plan, &host_version);
+    let host_version = host_executable
+        .as_ref()
+        .map(|executable| probe_supported_host_version(arguments.host, executable, runner))
+        .transpose()?;
+    if let Some(host_version) = host_version.as_deref() {
+        bind_host_version(plan, host_version);
+    }
     let codex_before = probe_codex_state_if_required(arguments, host_executable.as_ref(), runner)?;
     let claude_before =
         probe_claude_state_if_required(arguments, host_executable.as_ref(), runner)?;
+    let antigravity_before =
+        probe_antigravity_state_if_required(arguments, host_executable.as_ref(), runner)?;
     validate_codex_prestate(arguments, codex_before.as_ref())?;
     validate_claude_prestate(arguments, claude_before.as_ref())?;
+    validate_antigravity_prestate(arguments, plan, antigravity_before.as_ref())?;
     let applied_changed_paths = plan.changed_paths.clone();
-    let mut transaction = apply_plan(arguments, plan, codex_before, claude_before)?;
+    let mut transaction = apply_plan(
+        arguments,
+        plan,
+        codex_before,
+        claude_before,
+        antigravity_before,
+    )?;
     let activated = activate_host(
         arguments,
         plan,
@@ -571,21 +852,10 @@ fn execute_apply(
         host_executable.as_ref(),
         runner,
     )
+    .and_then(|()| validate_codex_activation(arguments, host_executable.as_ref(), runner))
+    .and_then(|()| validate_claude_activation(arguments, host_executable.as_ref(), runner))
     .and_then(|()| {
-        validate_codex_activation(
-            arguments,
-            &transaction.backup,
-            host_executable.as_ref(),
-            runner,
-        )
-    })
-    .and_then(|()| {
-        validate_claude_activation(
-            arguments,
-            &transaction.backup,
-            host_executable.as_ref(),
-            runner,
-        )
+        validate_antigravity_activation(arguments, plan, host_executable.as_ref(), runner)
     })
     .and_then(|()| validate_plugin_package(arguments, plan))
     .and_then(|()| rebuild_root_index(arguments))
@@ -599,7 +869,9 @@ fn execute_apply(
             primary,
         )
     })?;
-    bind_host_version(&mut refreshed, &host_version);
+    if let Some(host_version) = host_version.as_deref() {
+        bind_host_version(&mut refreshed, host_version);
+    }
     remove_transaction_journal(arguments, &transaction.journal_relative).map_err(|primary| {
         rollback_after_failure(
             arguments,
@@ -627,11 +899,22 @@ fn execute_apply(
 }
 
 fn rebuild_root_index(arguments: &UserArguments) -> Result<(), InstallError> {
-    hive_wiki::rebuild_index(&arguments.user_root)
+    let installed = crate::user_setup::load_operational_config(&arguments.root_cap)
+        .map_err(|error| InstallError::Conflict(error.message().to_owned()))?;
+    let setup = arguments
+        .setup_override
+        .as_ref()
+        .map(|(config, _)| config)
+        .or(installed.as_ref());
+    if setup.as_ref().is_none_or(|config| !config.wiki.enabled) {
+        return remove_disposable_root_index(&arguments.root_cap);
+    }
+    hive_wiki::shared::ensure_project_registry(&arguments.user_root)
+        .and_then(|_| hive_wiki::shared::rebuild_shared_index(&arguments.user_root))
         .map(|_| ())
         .map_err(|error| {
             InstallError::Verification(format!(
-                "root knowledge index rebuild failed after installation: {error}"
+                "shared knowledge index rebuild failed after installation: {error}"
             ))
         })
 }
@@ -647,8 +930,17 @@ fn validate_applied_bytes(arguments: &UserArguments) -> Result<UserPlan, Install
     }
 }
 
+struct DesiredUserFiles {
+    files: BTreeMap<PathBuf, PlannedFile>,
+    guidance_relative: PathBuf,
+    marketplace_root: Option<PathBuf>,
+}
+
 #[allow(clippy::too_many_lines)]
-fn build_plan(arguments: &UserArguments) -> Result<UserPlan, InstallError> {
+fn build_desired_user_files(
+    arguments: &UserArguments,
+    operational: Option<&(crate::user_setup::UserSetupConfig, Vec<String>)>,
+) -> Result<DesiredUserFiles, InstallError> {
     let mut files = BTreeMap::new();
     let guidance_relative = guidance_path(arguments.host, &arguments.root_cap)?;
     let guidance_existing =
@@ -657,15 +949,25 @@ fn build_plan(arguments: &UserArguments) -> Result<UserPlan, InstallError> {
     files.insert(
         guidance_relative.clone(),
         PlannedFile {
-            bytes: merge_user_marker(&guidance_existing, &render_user_guidance(arguments.host))?,
+            bytes: merge_user_marker(
+                &guidance_existing,
+                &render_user_guidance(arguments.host, operational.map(|(config, _)| config)),
+            )?,
             executable: false,
             ownership: "shared-marker",
         },
     );
-    seed_root_knowledge(&arguments.root_cap, &mut files)?;
+    if operational.is_some_and(|(config, _)| config.wiki.enabled) {
+        seed_root_knowledge(&arguments.root_cap, &mut files)?;
+    }
 
-    let projection = compile_projection(arguments.host.projection_host(), &[])
-        .map_err(|error| InstallError::Internal(error.to_string()))?;
+    let selected_skills = operational.map_or_else(
+        || vec!["hive-update".to_owned(), "setup-hive".to_owned()],
+        |(_, skills)| skills.clone(),
+    );
+    let projection =
+        compile_user_projection(arguments.host.projection_host(), &selected_skills, &[])
+            .map_err(|error| InstallError::Internal(error.to_string()))?;
     let marketplace_root = match arguments.host {
         UserHost::Codex | UserHost::Claude => {
             let relative = PathBuf::from(format!(".hive/marketplaces/{}", arguments.host.as_str()));
@@ -713,7 +1015,7 @@ fn build_plan(arguments: &UserArguments) -> Result<UserPlan, InstallError> {
                 UserHost::Antigravity => unreachable!(),
             };
             let marketplace_relative = match arguments.host {
-                UserHost::Codex => relative.join("marketplace.json"),
+                UserHost::Codex => relative.join(".agents/plugins/marketplace.json"),
                 UserHost::Claude => relative.join(".claude-plugin/marketplace.json"),
                 UserHost::Antigravity => unreachable!(),
             };
@@ -728,12 +1030,13 @@ fn build_plan(arguments: &UserArguments) -> Result<UserPlan, InstallError> {
             Some(relative)
         }
         UserHost::Antigravity => {
+            let plugin_relative = PathBuf::from(ANTIGRAVITY_SOURCE_RELATIVE);
             for (path, bytes) in projection.files {
                 let Some(skill_path) = strip_project_skill_prefix(&path) else {
                     continue;
                 };
                 files.insert(
-                    Path::new(".gemini/config/plugins/aigent-hive").join(&skill_path),
+                    plugin_relative.join(&skill_path),
                     PlannedFile {
                         bytes: bytes.clone(),
                         executable: false,
@@ -750,19 +1053,96 @@ fn build_plan(arguments: &UserArguments) -> Result<UserPlan, InstallError> {
                 );
             }
             files.insert(
-                PathBuf::from(".gemini/config/plugins/aigent-hive/plugin.json"),
+                plugin_relative.join("plugin.json"),
                 PlannedFile {
                     bytes: ANTIGRAVITY_PLUGIN_MANIFEST.to_vec(),
                     executable: false,
                     ownership: "immutable-plugin-package",
                 },
             );
-            None
+            Some(plugin_relative)
         }
     };
+    Ok(DesiredUserFiles {
+        files,
+        guidance_relative,
+        marketplace_root,
+    })
+}
 
+fn authenticated_current_inventory(
+    arguments: &UserArguments,
+    desired: &DesiredUserFiles,
+) -> AuthenticatedUserInventory {
+    let entries = ownership_entries(&desired.files);
+    AuthenticatedUserInventory {
+        product_version: env!("CARGO_PKG_VERSION").to_owned(),
+        host: arguments.host,
+        host_version_range: arguments.host.version_range().to_owned(),
+        source_release_digest: source_release_digest_from_entries(&entries),
+        guidance_path: portable(&desired.guidance_relative),
+        entries,
+    }
+}
+
+#[allow(clippy::too_many_lines)]
+fn build_plan(arguments: &UserArguments) -> Result<UserPlan, InstallError> {
+    let installed_operational = crate::user_setup::resolved_operational_skills(&arguments.root_cap)
+        .map_err(|error| InstallError::Conflict(error.message().to_owned()))?;
+    let operational = arguments
+        .setup_override
+        .as_ref()
+        .or(installed_operational.as_ref());
+    if let Some((config, _)) = operational.as_ref() {
+        let selected = config
+            .selected_hosts
+            .iter()
+            .any(|host| host.as_str() == arguments.host.as_str());
+        if !selected {
+            return Err(InstallError::Conflict(format!(
+                "{} is not selected in the operational user setup",
+                arguments.host.as_str()
+            )));
+        }
+    }
     let manifest_relative =
         PathBuf::from(format!(".hive/install/{}.json", arguments.host.as_str()));
+    let prior_manifest =
+        read_installed_manifest(&arguments.root_cap, &manifest_relative, arguments.host)?;
+    let DesiredUserFiles {
+        mut files,
+        guidance_relative,
+        marketplace_root,
+    } = build_desired_user_files(arguments, operational)?;
+    let owns_setup_review = prior_manifest.as_ref().is_some_and(|manifest| {
+        manifest.entries.iter().any(|entry| {
+            entry.path == ".hive/config/user-setup-review.yml"
+                && matches!(
+                    entry.ownership.as_str(),
+                    "migration-state" | "shared-migration-state"
+                )
+        })
+    });
+    let requires_setup_review = prior_manifest.as_ref().is_some_and(|manifest| {
+        manifest.product_version == "0.7.0"
+            && !manifest
+                .entries
+                .iter()
+                .any(|entry| entry.path.contains("/skills/setup-hive/"))
+    });
+    if operational.is_none() && (owns_setup_review || requires_setup_review) {
+        insert_user_setup_review(&mut files);
+    }
+    let authenticated_prior = if operational == installed_operational.as_ref() {
+        None
+    } else {
+        let mut desired_prior =
+            build_desired_user_files(arguments, installed_operational.as_ref())?;
+        if owns_setup_review {
+            insert_user_setup_review(&mut desired_prior.files);
+        }
+        Some(authenticated_current_inventory(arguments, &desired_prior))
+    };
     let source_release_digest = source_release_digest(&files);
     let entries = ownership_entries(&files);
     let plan_digest = inventory_digest(
@@ -773,8 +1153,6 @@ fn build_plan(arguments: &UserArguments) -> Result<UserPlan, InstallError> {
         &source_release_digest,
         &entries,
     );
-    let prior_manifest =
-        read_installed_manifest(&arguments.root_cap, &manifest_relative, arguments.host)?;
     let retired_files = validate_prior_ownership(
         &arguments.root_cap,
         &files,
@@ -782,7 +1160,17 @@ fn build_plan(arguments: &UserArguments) -> Result<UserPlan, InstallError> {
         &source_release_digest,
         &entries,
         prior_manifest.as_ref(),
+        authenticated_prior.as_ref(),
     )?;
+    let prior_antigravity_activation_source = arguments.host == UserHost::Antigravity
+        && prior_manifest.as_ref().is_some_and(|manifest| {
+            manifest
+                .entries
+                .iter()
+                .any(|entry| entry.path == format!("{ANTIGRAVITY_SOURCE_RELATIVE}/plugin.json"))
+        });
+    let expected_antigravity_stage =
+        authenticated_antigravity_stage_tree(&arguments.root_cap, prior_manifest.as_ref())?;
     let last_backup = prior_manifest
         .as_ref()
         .and_then(|manifest| manifest.last_backup.clone());
@@ -825,7 +1213,20 @@ fn build_plan(arguments: &UserArguments) -> Result<UserPlan, InstallError> {
         expected_before,
         expected_permissions,
         qualified_host_version: None,
+        prior_antigravity_activation_source,
+        expected_antigravity_stage,
     })
+}
+
+fn insert_user_setup_review(files: &mut BTreeMap<PathBuf, PlannedFile>) {
+    files.insert(
+        PathBuf::from(".hive/config/user-setup-review.yml"),
+        PlannedFile {
+            bytes: USER_070_SETUP_REVIEW.to_vec(),
+            executable: false,
+            ownership: "shared-migration-state",
+        },
+    );
 }
 
 fn guidance_path(host: UserHost, root: &Dir) -> Result<PathBuf, InstallError> {
@@ -851,6 +1252,7 @@ fn validate_prior_ownership(
     expected_source_release_digest: &str,
     expected_entries: &[UserOwnershipEntry],
     prior: Option<&UserOwnershipManifest>,
+    authenticated_prior: Option<&AuthenticatedUserInventory>,
 ) -> Result<BTreeMap<PathBuf, RetiredFile>, InstallError> {
     let authenticated = if let Some(manifest) = prior {
         let recomputed = inventory_digest(
@@ -868,11 +1270,16 @@ fn validate_prior_ownership(
         }
         let authenticated = authenticated_user_inventory(
             manifest.host,
-            &manifest.product_version,
-            &manifest.source_release_digest,
-            guidance_path,
-            expected_source_release_digest,
-            expected_entries,
+            &InventoryAuthentication {
+                product_version: &manifest.product_version,
+                installed_host_version_range: &manifest.host_version_range,
+                source_release_digest: &manifest.source_release_digest,
+                installed_guidance_path: Path::new(&manifest.guidance_path),
+                current_guidance_path: guidance_path,
+                current_source_release_digest: expected_source_release_digest,
+                current_entries: expected_entries,
+                authenticated_prior,
+            },
         )
         .ok_or_else(|| {
             InstallError::Conflict(
@@ -903,7 +1310,7 @@ fn validate_prior_ownership(
         let path = portable(relative);
         if matches!(
             planned.ownership,
-            "shared-marker" | "canonical-data-protected"
+            "shared-marker" | "shared-migration-state" | "canonical-data-protected"
         ) {
             continue;
         }
@@ -946,6 +1353,66 @@ fn validate_prior_ownership(
         }
     }
     Ok(retired)
+}
+
+fn authenticated_antigravity_stage_tree(
+    root: &Dir,
+    prior: Option<&UserOwnershipManifest>,
+) -> Result<Option<RegularTree>, InstallError> {
+    let Some(manifest) = prior.filter(|manifest| manifest.host == UserHost::Antigravity) else {
+        return Ok(None);
+    };
+    let source = Path::new(ANTIGRAVITY_SOURCE_RELATIVE);
+    let stage = Path::new(ANTIGRAVITY_STAGE_RELATIVE);
+    let prefix = if manifest
+        .entries
+        .iter()
+        .any(|entry| Path::new(&entry.path) == source.join("plugin.json"))
+    {
+        source
+    } else if manifest
+        .entries
+        .iter()
+        .any(|entry| Path::new(&entry.path) == stage.join("plugin.json"))
+    {
+        stage
+    } else {
+        return Err(InstallError::Conflict(
+            "authenticated prior Antigravity inventory has no plugin package".to_owned(),
+        ));
+    };
+    let mut tree = RegularTree::default();
+    for entry in &manifest.entries {
+        let path = Path::new(&entry.path);
+        let Ok(relative) = path.strip_prefix(prefix) else {
+            continue;
+        };
+        if relative.as_os_str().is_empty() || !is_managed_ownership(&entry.ownership) {
+            continue;
+        }
+        let bytes = read_optional_regular(root, path, MAX_USER_FILE_BYTES)?.ok_or_else(|| {
+            InstallError::Conflict(format!(
+                "authenticated prior Antigravity package is missing {}",
+                entry.path
+            ))
+        })?;
+        insert_regular_tree_file(&mut tree, relative, bytes);
+    }
+    if !tree.files.contains_key(Path::new("plugin.json")) {
+        return Err(InstallError::Conflict(
+            "authenticated prior Antigravity package omitted plugin.json".to_owned(),
+        ));
+    }
+    Ok(Some(tree))
+}
+
+fn insert_regular_tree_file(tree: &mut RegularTree, relative: &Path, bytes: Vec<u8>) {
+    let mut parent = relative.parent();
+    while let Some(directory) = parent.filter(|path| !path.as_os_str().is_empty()) {
+        tree.directories.insert(directory.to_path_buf());
+        parent = directory.parent();
+    }
+    tree.files.insert(relative.to_path_buf(), bytes);
 }
 
 fn validate_manifest_against_authenticated_inventory(
@@ -1012,7 +1479,10 @@ fn validate_authenticated_installed_bytes(
 }
 
 fn is_managed_ownership(ownership: &str) -> bool {
-    !matches!(ownership, "shared-marker" | "canonical-data-protected")
+    !matches!(
+        ownership,
+        "shared-marker" | "shared-migration-state" | "canonical-data-protected"
+    )
 }
 
 #[cfg(unix)]
@@ -1025,9 +1495,70 @@ fn permissions_match_managed_mode(_permissions: FilePermissions, _executable: bo
     true
 }
 
-fn render_user_guidance(host: UserHost) -> Vec<u8> {
+fn render_user_guidance(
+    host: UserHost,
+    setup: Option<&crate::user_setup::UserSetupConfig>,
+) -> Vec<u8> {
+    let (heading, adapter_label, body, footer) = setup.map_or_else(
+        || {
+            (
+                "# Aigent Hive user directives / 사용자 지침",
+                "Active adapter / 활성 adapter",
+                "- State / 상태: `setup-required`\n- Ask the user to choose `English` or `한국어` first, then ask for daily update-check consent. / 먼저 `English` 또는 `한국어`를 선택하고 일일 update 확인 동의를 질문.\n- Use the installed `setup-hive` Skill before ordinary Hive Skills. / 일반 Hive Skill보다 설치된 `setup-hive` Skill을 먼저 사용.\n- Before setup completes, only setup, doctor, update, and recover operations are available. / 설정 완료 전 setup, doctor, update, recover만 사용 가능.\n"
+                    .to_owned(),
+                "- Preserve foreign guidance bytes and modify only exact Hive marker blocks. / Foreign guidance bytes를 보존하고 exact Hive marker block만 변경.\n- Never request provider API credentials or call model-provider APIs on Hive's behalf. / Provider API credential을 요청하거나 Hive를 대신해 model-provider API를 호출하지 않음.\n",
+            )
+        },
+        |config| {
+            let hosts = config
+                .selected_hosts
+                .iter()
+                .map(|selected| selected.as_str())
+                .collect::<Vec<_>>()
+                .join(", ");
+            let wiki = if config.wiki.enabled {
+                "enabled"
+            } else {
+                "disabled"
+            };
+            let update_check = if config.update_check.enabled {
+                "enabled"
+            } else {
+                "disabled"
+            };
+            match config.interface_language {
+                crate::user_setup::InterfaceLanguage::En => (
+                    "# Aigent Hive user directives",
+                    "Active adapter",
+                    format!(
+                        "- State: `operational`\n- Interface language: `en`; use English consistently throughout every question and response. Keep Korean only for exact Korean names, literals, quotations, or text the user asks to preserve.\n- Selected hosts: `{hosts}`\n- Global Wiki: `{wiki}`\n- Daily update check: `{update_check}`.\n- When enabled, run `hive update --check --user-root <user-root> --output json` before the first Hive task of each host session; never install from a check.\n- Use `setup-harness` for project expedited or custom setup.\n- Project Markdown Wiki remains canonical; the user-root SQLite index is derived and shared.\n- Use `hive-project-upgrade` for project projection upgrades.\n- Offer one optional refinement suggestion for ambiguous or detail-poor ordinary requests; never rewrite automatically.\n- Before presenting pending actions, finish every safe, in-scope, automatable task. Present only the remaining user-owned steps as a concise ordered guide with the exact action, expected result, and reason user authority is required. Separate failures or impossible tasks with their causes and recovery paths.\n"
+                    ),
+                    "- Preserve foreign guidance bytes and modify only exact Hive marker blocks.\n- Never request provider API credentials or call model-provider APIs on Hive's behalf.\n",
+                ),
+                crate::user_setup::InterfaceLanguage::Ko => (
+                    "# Aigent Hive 사용자 지침",
+                    "활성 어댑터",
+                    format!(
+                        "- 상태: `operational`\n- 사용 언어: `ko`; 질문과 응답은 한국어로 통일. 고유명사, 제품·패키지 이름, 명령어, 코드 식별자, 경로, 스키마 키, 정확한 화면 문구, 뚜렷한 한국어 대체어가 없는 용어만 영어 유지. 대체 가능한 일반 영어 단어의 한영 혼용 금지.\n- 선택한 호스트: `{hosts}`\n- 전역 위키: `{wiki}`\n- 일일 갱신 확인: `{update_check}`.\n- 활성화한 경우 각 호스트 세션의 첫 Hive 작업 전에 `hive update --check --user-root <user-root> --output json` 실행. 확인만으로 설치 금지.\n- 프로젝트 빠른 설정 또는 사용자 지정 설정에는 `setup-harness` 사용.\n- 프로젝트 Markdown 위키가 정본이며 사용자 루트 SQLite 색인은 파생·공유 상태.\n- 프로젝트 투영 갱신에는 `hive-project-upgrade` 사용.\n- 모호하거나 핵심 세부가 부족한 일반 요청에는 자동 재작성 없이 선택적 개선 제안 1개만 제공.\n- 남은 작업 제시 전 범위 안에서 안전하게 자동 처리 가능한 작업을 모두 완료. 사용자 권한이 필요한 단계만 정확한 행동·예상 결과·권한 필요 이유를 포함한 간결한 순서 안내로 제시. 실패·불가능 작업은 원인과 해결 경로를 분리해 제시.\n"
+                    ),
+                    "- 외부 지침 바이트 보존, 정확한 Hive 표시 블록만 변경.\n- 제공자 API 자격 증명 요청 금지, Hive를 대신한 모델 제공자 API 호출 금지.\n",
+                ),
+            }
+        },
+    );
+    let result_clarity = setup.map_or(
+        "- For every passed, failed, skipped, deferred, unverified, or unsupported item, state the affected scope, exact reason, current host or platform relationship, whether it ran, and what the result does and does not prove. / 통과·실패·건너뜀·연기·미검증·미지원 항목마다 대상 범위, 정확한 이유, 현재 호스트·운영체제와의 관계, 실제 실행 여부, 증명 범위와 미증명 범위를 모두 명시.\n",
+        |config| match config.interface_language {
+            crate::user_setup::InterfaceLanguage::En => {
+                "- For every passed, failed, skipped, deferred, unverified, or unsupported item, state the affected scope, exact reason, current host or platform relationship, whether it ran, and what the result does and does not prove. Never trade those qualifiers for brevity.\n"
+            }
+            crate::user_setup::InterfaceLanguage::Ko => {
+                "- 통과·실패·건너뜀·연기·미검증·미지원 항목마다 대상 범위, 정확한 이유, 현재 호스트·운영체제와의 관계, 실제 실행 여부, 증명하는 범위와 증명하지 못한 범위를 모두 명시. 해석에 필요한 한정어를 간결함을 이유로 생략 금지.\n"
+            }
+        },
+    );
     format!(
-        "<!-- AIGENT-HIVE:USER:START -->\n# Aigent Hive user directives\n\n- Host: `{}`\n- Use the installed `setup-harness` Skill to initialize or reconfigure a project-specific Hive harness.\n- Use `hive-project-upgrade` to scan, preview, apply, validate, or recover project projections.\n- Use `hive-knowledge-promote` only for reviewed project-neutral facts, reusable preferences, or portable workflows.\n- Keep each project's `AGENTS.md`, `.agents/`, `.hive/knowledge/`, and disposable SQLite index isolated from other projects.\n- Keep cross-project canonical knowledge under `~/.hive/knowledge/`; treat `~/.hive/index/hive.sqlite3` as disposable.\n- For explicit prompt authoring or improvement, route to `hive-prompt-refine` in refine-only mode.\n- For an ambiguous or detail-poor ordinary request, offer one concise optional refine suggestion while continuing safe discoverable work; never rewrite automatically.\n- Never request provider API credentials or call model-provider APIs on Hive's behalf.\n<!-- AIGENT-HIVE:USER:END -->\n",
+        "<!-- AIGENT-HIVE:USER:START -->\n{heading}\n\n- {adapter_label}: `{}`\n{body}{result_clarity}{footer}<!-- AIGENT-HIVE:USER:END -->\n",
         host.as_str()
     )
     .into_bytes()
@@ -1209,30 +1740,228 @@ fn inventory_digest(
     sha256_digest(&bytes)
 }
 
+struct InventoryAuthentication<'a> {
+    product_version: &'a str,
+    installed_host_version_range: &'a str,
+    source_release_digest: &'a str,
+    installed_guidance_path: &'a Path,
+    current_guidance_path: &'a Path,
+    current_source_release_digest: &'a str,
+    current_entries: &'a [UserOwnershipEntry],
+    authenticated_prior: Option<&'a AuthenticatedUserInventory>,
+}
+
 fn authenticated_user_inventory(
     host: UserHost,
-    product_version: &str,
-    source_release_digest: &str,
-    current_guidance_path: &Path,
-    current_source_release_digest: &str,
-    current_entries: &[UserOwnershipEntry],
+    request: &InventoryAuthentication<'_>,
 ) -> Option<AuthenticatedUserInventory> {
-    if product_version == env!("CARGO_PKG_VERSION")
-        && source_release_digest == current_source_release_digest
+    if request.product_version == env!("CARGO_PKG_VERSION")
+        && request.source_release_digest == request.current_source_release_digest
     {
+        let host_version_range = if host == UserHost::Antigravity
+            && request.installed_host_version_range == ">=1.1.7 <2.0.0"
+        {
+            request.installed_host_version_range
+        } else {
+            host.version_range()
+        };
         return Some(AuthenticatedUserInventory {
-            product_version: product_version.to_owned(),
+            product_version: request.product_version.to_owned(),
             host,
-            host_version_range: host.version_range().to_owned(),
-            source_release_digest: source_release_digest.to_owned(),
-            guidance_path: portable(current_guidance_path),
-            entries: current_entries.to_vec(),
+            host_version_range: host_version_range.to_owned(),
+            source_release_digest: request.source_release_digest.to_owned(),
+            guidance_path: portable(request.current_guidance_path),
+            entries: request.current_entries.to_vec(),
         });
     }
+    if let Some(prior) = request.authenticated_prior {
+        if prior.host == host
+            && prior.product_version == request.product_version
+            && prior.host_version_range == request.installed_host_version_range
+            && prior.source_release_digest == request.source_release_digest
+        {
+            return Some(prior.clone());
+        }
+    }
+    if request.product_version == "0.7.0" {
+        if let Some(historical) = historical_070_user_inventory(
+            host,
+            request.installed_host_version_range,
+            request.installed_guidance_path,
+        ) {
+            if historical.source_release_digest == request.source_release_digest {
+                return Some(historical);
+            }
+        }
+    }
     let historical = historical_user_inventory(host);
-    (historical.product_version == product_version
-        && historical.source_release_digest == source_release_digest)
-        .then_some(historical)
+    if historical.product_version == request.product_version
+        && historical.source_release_digest == request.source_release_digest
+    {
+        return Some(historical);
+    }
+    if host == UserHost::Antigravity {
+        let legacy = legacy_antigravity_directory_scan_inventory();
+        if legacy.product_version == request.product_version
+            && legacy.source_release_digest == request.source_release_digest
+        {
+            return Some(legacy);
+        }
+    }
+    None
+}
+
+fn historical_070_user_inventory(
+    host: UserHost,
+    installed_host_version_range: &str,
+    guidance_path: &Path,
+) -> Option<AuthenticatedUserInventory> {
+    let supported_range = match host {
+        UserHost::Codex => installed_host_version_range == ">=0.145.0 <1.0.0",
+        UserHost::Claude => installed_host_version_range == ">=2.1.0 <3.0.0",
+        UserHost::Antigravity => matches!(
+            installed_host_version_range,
+            ">=1.1.7 <1.2.0" | ">=1.1.7 <2.0.0"
+        ),
+    };
+    if !supported_range {
+        return None;
+    }
+    let guidance = portable(guidance_path);
+    let valid_guidance = match host {
+        UserHost::Codex => matches!(
+            guidance.as_str(),
+            ".codex/AGENTS.md" | ".codex/AGENTS.override.md"
+        ),
+        UserHost::Claude => guidance == ".claude/CLAUDE.md",
+        UserHost::Antigravity => guidance == ".gemini/GEMINI.md",
+    };
+    if !valid_guidance {
+        return None;
+    }
+    let mut entries = historical_070_host_entries(host);
+    entries.push(historical_070_entry(
+        guidance.clone(),
+        "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+        false,
+        "shared-marker",
+    ));
+    for path in [
+        ".hive/knowledge/Raw/README.md",
+        ".hive/knowledge/Schema/schema.md",
+        ".hive/knowledge/Wiki/index.md",
+        ".hive/knowledge/Wiki/log.md",
+        ".hive/knowledge/suppression.yml",
+    ] {
+        entries.push(historical_070_entry(
+            path.to_owned(),
+            "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+            false,
+            "canonical-data-protected",
+        ));
+    }
+    entries.sort_by(|left, right| left.path.cmp(&right.path));
+    Some(AuthenticatedUserInventory {
+        product_version: "0.7.0".to_owned(),
+        host,
+        host_version_range: installed_host_version_range.to_owned(),
+        source_release_digest: source_release_digest_from_entries(&entries),
+        guidance_path: guidance,
+        entries,
+    })
+}
+
+fn historical_070_entry(
+    path: String,
+    digest: &str,
+    executable: bool,
+    ownership: &str,
+) -> UserOwnershipEntry {
+    UserOwnershipEntry {
+        path,
+        digest: digest.to_owned(),
+        executable,
+        unix_mode: installed_unix_mode(executable),
+        ownership: ownership.to_owned(),
+    }
+}
+
+fn historical_070_host_entries(host: UserHost) -> Vec<UserOwnershipEntry> {
+    let mut entries = Vec::new();
+    match host {
+        UserHost::Codex | UserHost::Claude => {
+            let host_name = host.as_str();
+            let root = format!(".hive/marketplaces/{host_name}");
+            let plugin = format!("{root}/plugins/aigent-hive");
+            for (skill, digest) in LEGACY_ANTIGRAVITY_070_SKILLS {
+                entries.push(historical_070_entry(
+                    format!("{plugin}/skills/{skill}/SKILL.md"),
+                    digest,
+                    false,
+                    "immutable-plugin-package",
+                ));
+            }
+            entries.extend([
+                historical_070_entry(
+                    format!("{plugin}/.codex-plugin/plugin.json"),
+                    USER_070_CODEX_PLUGIN_DIGEST,
+                    false,
+                    "immutable-plugin-package",
+                ),
+                historical_070_entry(
+                    format!("{plugin}/.claude-plugin/plugin.json"),
+                    USER_070_CLAUDE_PLUGIN_DIGEST,
+                    false,
+                    "immutable-plugin-package",
+                ),
+                historical_070_entry(
+                    format!("{plugin}/bin/hive-claude-usage-capture"),
+                    USER_070_CLAUDE_CAPTURE_DIGEST,
+                    true,
+                    "immutable-plugin-package",
+                ),
+                historical_070_entry(
+                    match host {
+                        UserHost::Codex => format!("{root}/.agents/plugins/marketplace.json"),
+                        UserHost::Claude => {
+                            format!("{root}/.claude-plugin/marketplace.json")
+                        }
+                        UserHost::Antigravity => unreachable!(),
+                    },
+                    match host {
+                        UserHost::Codex => USER_070_CODEX_MARKETPLACE_DIGEST,
+                        UserHost::Claude => USER_070_CLAUDE_MARKETPLACE_DIGEST,
+                        UserHost::Antigravity => unreachable!(),
+                    },
+                    false,
+                    "host-adapter-metadata",
+                ),
+            ]);
+        }
+        UserHost::Antigravity => {
+            for (skill, digest) in LEGACY_ANTIGRAVITY_070_SKILLS {
+                entries.push(historical_070_entry(
+                    format!("{ANTIGRAVITY_SOURCE_RELATIVE}/skills/{skill}/SKILL.md"),
+                    digest,
+                    false,
+                    "immutable-plugin-package",
+                ));
+                entries.push(historical_070_entry(
+                    format!(".gemini/config/skills/{skill}/SKILL.md"),
+                    digest,
+                    false,
+                    "host-skill-projection",
+                ));
+            }
+            entries.push(historical_070_entry(
+                format!("{ANTIGRAVITY_SOURCE_RELATIVE}/plugin.json"),
+                LEGACY_ANTIGRAVITY_070_MANIFEST_DIGEST,
+                false,
+                "immutable-plugin-package",
+            ));
+        }
+    }
+    entries
 }
 
 fn historical_user_inventory(host: UserHost) -> AuthenticatedUserInventory {
@@ -1246,9 +1975,72 @@ fn historical_user_inventory(host: UserHost) -> AuthenticatedUserInventory {
     AuthenticatedUserInventory {
         product_version: HISTORICAL_VERSION.to_owned(),
         host,
-        host_version_range: host.version_range().to_owned(),
+        host_version_range: match host {
+            UserHost::Antigravity => ">=2.3.1 <3.0.0",
+            UserHost::Codex | UserHost::Claude => host.version_range(),
+        }
+        .to_owned(),
         source_release_digest: source_release_digest_from_entries(&entries),
         guidance_path: guidance_path.to_owned(),
+        entries,
+    }
+}
+
+fn legacy_antigravity_directory_scan_inventory() -> AuthenticatedUserInventory {
+    const VERSION: &str = "0.7.0";
+    let entry = |path: String, digest: &str, ownership: &str| UserOwnershipEntry {
+        path,
+        digest: digest.to_owned(),
+        executable: false,
+        unix_mode: installed_unix_mode(false),
+        ownership: ownership.to_owned(),
+    };
+    let mut entries = vec![entry(
+        ".gemini/config/plugins/aigent-hive/plugin.json".to_owned(),
+        LEGACY_ANTIGRAVITY_070_MANIFEST_DIGEST,
+        "immutable-plugin-package",
+    )];
+    for (skill, digest) in LEGACY_ANTIGRAVITY_070_SKILLS {
+        entries.push(entry(
+            format!(".gemini/config/plugins/aigent-hive/skills/{skill}/SKILL.md"),
+            digest,
+            "immutable-plugin-package",
+        ));
+        entries.push(entry(
+            format!(".gemini/config/skills/{skill}/SKILL.md"),
+            digest,
+            "host-skill-projection",
+        ));
+    }
+    for (path, ownership) in [
+        (".gemini/GEMINI.md", "shared-marker"),
+        (".hive/knowledge/Raw/README.md", "canonical-data-protected"),
+        (
+            ".hive/knowledge/Schema/schema.md",
+            "canonical-data-protected",
+        ),
+        (".hive/knowledge/Wiki/index.md", "canonical-data-protected"),
+        (".hive/knowledge/Wiki/log.md", "canonical-data-protected"),
+        (
+            ".hive/knowledge/suppression.yml",
+            "canonical-data-protected",
+        ),
+    ] {
+        entries.push(entry(
+            path.to_owned(),
+            "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+            ownership,
+        ));
+    }
+    entries.sort_by(|left, right| left.path.cmp(&right.path));
+    let source_release_digest = source_release_digest_from_entries(&entries);
+    debug_assert_eq!(source_release_digest, LEGACY_ANTIGRAVITY_070_SOURCE_DIGEST);
+    AuthenticatedUserInventory {
+        product_version: VERSION.to_owned(),
+        host: UserHost::Antigravity,
+        host_version_range: ">=2.3.1 <3.0.0".to_owned(),
+        source_release_digest,
+        guidance_path: ".gemini/GEMINI.md".to_owned(),
         entries,
     }
 }
@@ -1421,6 +2213,7 @@ fn apply_plan(
     plan: &mut UserPlan,
     codex_state_before: Option<CodexHostState>,
     claude_state_before: Option<ClaudeHostState>,
+    antigravity_state_before: Option<AntigravityHostState>,
 ) -> Result<UserTransaction, InstallError> {
     let journal_relative = transaction_journal_relative(arguments.host);
     ensure_no_open_transaction(arguments, &journal_relative)?;
@@ -1474,6 +2267,7 @@ fn apply_plan(
         index_existed,
         codex_state_before,
         claude_state_before,
+        antigravity_state_before,
         host_owned_state: None,
         pending_host_transition: None,
         entries: backup_entries,
@@ -1562,11 +2356,41 @@ fn apply_plan(
         }
         activated_snapshots.push((relative.clone(), existing.clone(), *permissions));
     }
+    prune_retired_antigravity_source_directories(arguments, plan);
     Ok(UserTransaction {
         backup_relative,
         journal_relative,
         backup,
     })
+}
+
+fn prune_retired_antigravity_source_directories(arguments: &UserArguments, plan: &UserPlan) {
+    if arguments.host != UserHost::Antigravity {
+        return;
+    }
+    let source = Path::new(ANTIGRAVITY_SOURCE_RELATIVE);
+    let mut directories = BTreeSet::new();
+    for path in plan.retired_files.keys() {
+        let Ok(relative) = path.strip_prefix(source) else {
+            continue;
+        };
+        let mut parent = relative.parent();
+        while let Some(directory) = parent.filter(|directory| !directory.as_os_str().is_empty()) {
+            directories.insert(source.join(directory));
+            parent = directory.parent();
+        }
+    }
+    let mut directories = directories.into_iter().collect::<Vec<_>>();
+    directories.sort_by(|left, right| {
+        right
+            .components()
+            .count()
+            .cmp(&left.components().count())
+            .then_with(|| right.cmp(left))
+    });
+    for directory in directories {
+        let _ = arguments.root_cap.remove_dir(&directory);
+    }
 }
 
 fn preflight_plan(root: &Dir, plan: &UserPlan) -> Result<Vec<PlannedSnapshot>, InstallError> {
@@ -1772,8 +2596,9 @@ fn validate_host_recovery_preconditions(
         UserHost::Claude => Err(InstallError::Verification(
             "Claude transaction backup omitted the pre-mutation structured state".to_owned(),
         )),
+        UserHost::Antigravity if backup.antigravity_state_before.is_some() => Ok(()),
         UserHost::Antigravity => Err(InstallError::Verification(
-            "Antigravity backup unexpectedly contains host mutations".to_owned(),
+            "Antigravity transaction backup omitted the pre-mutation structured state".to_owned(),
         )),
     }
 }
@@ -2249,21 +3074,28 @@ fn reconcile_root_index_after_rollback(
     if !index_existed {
         return remove_disposable_root_index(&arguments.root_cap);
     }
-    if hive_wiki::rebuild_index(&arguments.user_root).is_ok() {
-        return Ok(());
-    }
-    remove_disposable_root_index(&arguments.root_cap)
+    hive_wiki::shared::ensure_project_registry(&arguments.user_root)
+        .and_then(|_| hive_wiki::shared::rebuild_shared_index(&arguments.user_root))
+        .map(|_| ())
+        .map_err(|error| {
+            InstallError::Verification(format!(
+                "root knowledge index reconstruction failed during rollback; existing index was preserved: {error}"
+            ))
+        })
 }
 
 fn qualify_recovery_host(
     arguments: &UserArguments,
-    _backup: &UserBackupManifest,
+    backup: &UserBackupManifest,
     runner: &impl CommandRunner,
 ) -> Result<Option<QualifiedExecutable>, InstallError> {
+    if backup.host_mutations.is_empty() && backup.pending_host_transition.is_none() {
+        return Ok(None);
+    }
     let program = match arguments.host {
         UserHost::Codex => "codex",
         UserHost::Claude => "claude",
-        UserHost::Antigravity => "antigravity",
+        UserHost::Antigravity => "agy",
     };
     let executable = runner.qualify(program).map_err(|error| {
         InstallError::Unsupported(format!(
@@ -2289,7 +3121,9 @@ fn codex_compensation_command(mutation: HostMutation) -> &'static [&'static str]
         HostMutation::ClaudeMarketplaceAdded
         | HostMutation::ClaudePluginInstalled
         | HostMutation::ClaudeMarketplaceRefreshed
-        | HostMutation::ClaudePluginRefreshed => unreachable!("Codex mutation required"),
+        | HostMutation::ClaudePluginRefreshed
+        | HostMutation::AntigravityPluginInstalled
+        | HostMutation::AntigravityPluginRefreshed => unreachable!("Codex mutation required"),
     }
 }
 
@@ -2371,6 +3205,109 @@ fn probe_claude_state(
     })
 }
 
+fn probe_antigravity_state_if_required(
+    arguments: &UserArguments,
+    executable: Option<&QualifiedExecutable>,
+    runner: &impl CommandRunner,
+) -> Result<Option<AntigravityHostState>, InstallError> {
+    if arguments.host != UserHost::Antigravity {
+        return Ok(None);
+    }
+    let executable = executable.ok_or_else(|| {
+        InstallError::Internal("qualified Antigravity executable is missing".to_owned())
+    })?;
+    probe_antigravity_state(executable, runner).map(Some)
+}
+
+fn probe_antigravity_state(
+    executable: &QualifiedExecutable,
+    runner: &impl CommandRunner,
+) -> Result<AntigravityHostState, InstallError> {
+    let command = ["plugin", "list"];
+    let output = runner
+        .run(executable, &command, COMMAND_TIMEOUT, COMMAND_OUTPUT_LIMIT)
+        .map_err(|error| {
+            InstallError::Unsupported(format!(
+                "Antigravity structured state probe `{}` failed: {error}",
+                command.join(" ")
+            ))
+        })?;
+    if !output.success {
+        return Err(InstallError::Unsupported(format!(
+            "Antigravity structured state probe exited unsuccessfully: {}",
+            sanitized_command_diagnostic(&command, &output.stdout)
+        )));
+    }
+    parse_antigravity_plugin_state(&output.stdout).map(|plugin| AntigravityHostState { plugin })
+}
+
+fn parse_antigravity_plugin_state(
+    bytes: &[u8],
+) -> Result<Option<AntigravityPluginState>, InstallError> {
+    let text = std::str::from_utf8(bytes).map_err(|_| {
+        InstallError::Verification(
+            "Antigravity plugin state probe returned non-UTF-8 output".to_owned(),
+        )
+    })?;
+    if text.trim() == "No imported plugins." {
+        return Ok(None);
+    }
+    let value: serde_json::Value = serde_json::from_str(text).map_err(|_| {
+        InstallError::Verification(
+            "Antigravity plugin state probe returned malformed structured output".to_owned(),
+        )
+    })?;
+    let entries = value
+        .get("imports")
+        .and_then(serde_json::Value::as_array)
+        .ok_or_else(|| {
+            InstallError::Verification(
+                "Antigravity plugin state probe omitted imports[]".to_owned(),
+            )
+        })?;
+    let mut matched = entries.iter().filter(|entry| {
+        entry.get("name").and_then(serde_json::Value::as_str) == Some("aigent-hive")
+    });
+    let first = matched.next();
+    if matched.next().is_some() {
+        return Err(InstallError::Verification(
+            "Antigravity plugin state probe returned duplicate aigent-hive entries".to_owned(),
+        ));
+    }
+    first
+        .map(|entry| {
+            let source = entry.get("source").and_then(serde_json::Value::as_str);
+            let imported_at = entry.get("importedAt").and_then(serde_json::Value::as_str);
+            let components = entry
+                .get("components")
+                .and_then(serde_json::Value::as_array)
+                .and_then(|components| {
+                    components
+                        .iter()
+                        .map(serde_json::Value::as_str)
+                        .map(|component| component.map(str::to_owned))
+                        .collect::<Option<Vec<_>>>()
+                });
+            match (source, imported_at, components) {
+                (Some(source), Some(_), Some(components)) => Ok(AntigravityPluginState {
+                    source: source.to_owned(),
+                    components,
+                }),
+                _ => Err(InstallError::Verification(
+                    "Antigravity aigent-hive plugin state omitted required fields".to_owned(),
+                )),
+            }
+        })
+        .transpose()
+}
+
+fn expected_antigravity_plugin_state() -> AntigravityPluginState {
+    AntigravityPluginState {
+        source: "antigravity".to_owned(),
+        components: vec!["skills".to_owned()],
+    }
+}
+
 fn run_claude_probe(
     executable: &QualifiedExecutable,
     command: &[&str],
@@ -2417,7 +3354,7 @@ fn parse_claude_marketplace_state(
             match (source, path) {
                 (Some(source), Some(path)) => Ok(ClaudeMarketplaceState {
                     source: source.to_owned(),
-                    path: path.to_owned(),
+                    path: normalize_host_path(path),
                 }),
                 _ => Err(InstallError::Verification(
                     "Claude aigent-hive marketplace state omitted source or path".to_owned(),
@@ -2490,7 +3427,7 @@ fn parse_codex_marketplace_state(
                 .get("root")
                 .and_then(serde_json::Value::as_str)
                 .map(|root| CodexMarketplaceState {
-                    root: root.to_owned(),
+                    root: normalize_host_path(root),
                 })
                 .ok_or_else(|| {
                     InstallError::Verification(
@@ -2537,8 +3474,8 @@ fn parse_codex_plugin_state(bytes: &[u8]) -> Result<Option<CodexPluginState>, In
                     Ok(CodexPluginState {
                         version: version.to_owned(),
                         enabled,
-                        source_path: source_path.to_owned(),
-                        marketplace_source: marketplace_source.to_owned(),
+                        source_path: normalize_host_path(source_path),
+                        marketplace_source: normalize_host_path(marketplace_source),
                     })
                 }
                 _ => Err(InstallError::Verification(
@@ -2552,9 +3489,11 @@ fn parse_codex_plugin_state(bytes: &[u8]) -> Result<Option<CodexPluginState>, In
 fn expected_codex_marketplace_root(arguments: &UserArguments) -> Result<String, InstallError> {
     arguments
         .user_root
-        .join(".hive/marketplaces/codex")
+        .join(".hive")
+        .join("marketplaces")
+        .join("codex")
         .to_str()
-        .map(str::to_owned)
+        .map(normalize_host_path)
         .ok_or_else(|| {
             InstallError::Unsupported("Codex marketplace path is not valid UTF-8".to_owned())
         })
@@ -2563,9 +3502,13 @@ fn expected_codex_marketplace_root(arguments: &UserArguments) -> Result<String, 
 fn expected_codex_plugin_source_path(arguments: &UserArguments) -> Result<String, InstallError> {
     arguments
         .user_root
-        .join(".hive/marketplaces/codex/plugins/aigent-hive")
+        .join(".hive")
+        .join("marketplaces")
+        .join("codex")
+        .join("plugins")
+        .join("aigent-hive")
         .to_str()
-        .map(str::to_owned)
+        .map(normalize_host_path)
         .ok_or_else(|| {
             InstallError::Unsupported("Codex plugin source path is not valid UTF-8".to_owned())
         })
@@ -2574,11 +3517,44 @@ fn expected_codex_plugin_source_path(arguments: &UserArguments) -> Result<String
 fn expected_claude_marketplace_path(arguments: &UserArguments) -> Result<String, InstallError> {
     arguments
         .user_root
-        .join(".hive/marketplaces/claude")
+        .join(".hive")
+        .join("marketplaces")
+        .join("claude")
+        .to_str()
+        .map(normalize_host_path)
+        .ok_or_else(|| {
+            InstallError::Unsupported("Claude marketplace path is not valid UTF-8".to_owned())
+        })
+}
+
+fn normalize_host_path(path: &str) -> String {
+    #[cfg(windows)]
+    {
+        let normalized = path.replace('/', "\\");
+        if let Some(rest) = normalized.strip_prefix(r"\\?\UNC\") {
+            format!(r"\\{rest}")
+        } else if let Some(rest) = normalized.strip_prefix(r"\\?\") {
+            rest.to_owned()
+        } else {
+            normalized
+        }
+    }
+    #[cfg(not(windows))]
+    {
+        path.to_owned()
+    }
+}
+
+fn expected_antigravity_source_path(arguments: &UserArguments) -> Result<String, InstallError> {
+    arguments
+        .user_root
+        .join(ANTIGRAVITY_SOURCE_RELATIVE)
         .to_str()
         .map(str::to_owned)
         .ok_or_else(|| {
-            InstallError::Unsupported("Claude marketplace path is not valid UTF-8".to_owned())
+            InstallError::Unsupported(
+                "Antigravity plugin source path is not valid UTF-8".to_owned(),
+            )
         })
 }
 
@@ -2619,7 +3595,6 @@ fn validate_codex_prestate(
 
 fn validate_codex_activation(
     arguments: &UserArguments,
-    backup: &UserBackupManifest,
     executable: Option<&QualifiedExecutable>,
     runner: &impl CommandRunner,
 ) -> Result<(), InstallError> {
@@ -2631,14 +3606,18 @@ fn validate_codex_activation(
     })?;
     let state = probe_codex_state(executable, runner)?;
     let marketplace_root = expected_codex_marketplace_root(arguments)?;
+    let plugin_source = expected_codex_plugin_source_path(arguments)?;
     let marketplace_valid = state
         .marketplace
         .as_ref()
         .is_some_and(|marketplace| marketplace.root == marketplace_root);
     let plugin_valid = state.plugin.as_ref().is_some_and(|plugin| {
-        plugin.version == env!("CARGO_PKG_VERSION") && plugin.marketplace_source == marketplace_root
+        plugin.version == env!("CARGO_PKG_VERSION")
+            && plugin.enabled
+            && plugin.source_path == plugin_source
+            && plugin.marketplace_source == marketplace_root
     });
-    if marketplace_valid && plugin_valid && backup.codex_state_before.is_some() {
+    if marketplace_valid && plugin_valid {
         Ok(())
     } else {
         Err(InstallError::Verification(
@@ -2681,7 +3660,6 @@ fn validate_claude_prestate(
 
 fn validate_claude_activation(
     arguments: &UserArguments,
-    backup: &UserBackupManifest,
     executable: Option<&QualifiedExecutable>,
     runner: &impl CommandRunner,
 ) -> Result<(), InstallError> {
@@ -2699,13 +3677,135 @@ fn validate_claude_activation(
     let plugin_valid = state.plugin.as_ref().is_some_and(|plugin| {
         plugin.version == env!("CARGO_PKG_VERSION") && plugin.enabled && plugin.scope == "user"
     });
-    if marketplace_valid && plugin_valid && backup.claude_state_before.is_some() {
+    if marketplace_valid && plugin_valid {
         Ok(())
     } else {
         Err(InstallError::Verification(
             "Claude structured state probe did not confirm activated aigent-hive state".to_owned(),
         ))
     }
+}
+
+fn validate_antigravity_prestate(
+    arguments: &UserArguments,
+    plan: &UserPlan,
+    state: Option<&AntigravityHostState>,
+) -> Result<(), InstallError> {
+    if arguments.host != UserHost::Antigravity {
+        return Ok(());
+    }
+    let plugin = state.and_then(|state| state.plugin.as_ref());
+    if plugin.is_some_and(|plugin| plugin != &expected_antigravity_plugin_state()) {
+        return Err(InstallError::Conflict(
+            "Antigravity aigent-hive plugin has an unsupported native registration shape"
+                .to_owned(),
+        ));
+    }
+    let observed_stage =
+        read_optional_regular_tree(&arguments.root_cap, Path::new(ANTIGRAVITY_STAGE_RELATIVE))?;
+    match (&plan.expected_antigravity_stage, &observed_stage) {
+        (None, None) if plugin.is_none() => Ok(()),
+        (None, _) => Err(InstallError::Conflict(
+            "Antigravity aigent-hive namespace is occupied without authenticated Hive ownership"
+                .to_owned(),
+        )),
+        (Some(expected), Some(observed)) if expected == observed => {
+            if plugin.is_some() && !plan.prior_antigravity_activation_source {
+                return Err(InstallError::Conflict(
+                    "Antigravity aigent-hive plugin is registered without an authenticated Hive source bundle"
+                        .to_owned(),
+                ));
+            }
+            Ok(())
+        }
+        (Some(expected), observed)
+            if plugin.is_none()
+                && observed.as_ref().is_none_or(|observed| {
+                    observed.files.is_empty()
+                        && observed.directories.is_subset(&expected.directories)
+                }) =>
+        {
+            Ok(())
+        }
+        (Some(_), None) => Err(InstallError::Conflict(
+            "Antigravity aigent-hive plugin is registered without its authenticated host stage"
+                .to_owned(),
+        )),
+        (Some(_), Some(_)) => Err(InstallError::Conflict(
+            "Antigravity aigent-hive host stage differs from its authenticated prior package"
+                .to_owned(),
+        )),
+    }
+}
+
+fn validate_installed_host(
+    arguments: &UserArguments,
+    plan: &UserPlan,
+    executable: &QualifiedExecutable,
+    runner: &impl CommandRunner,
+) -> Result<(), InstallError> {
+    match arguments.host {
+        UserHost::Codex => validate_codex_activation(arguments, Some(executable), runner),
+        UserHost::Claude => validate_claude_activation(arguments, Some(executable), runner),
+        UserHost::Antigravity => {
+            validate_antigravity_activation(arguments, plan, Some(executable), runner)
+        }
+    }
+}
+
+fn validate_antigravity_activation(
+    arguments: &UserArguments,
+    plan: &UserPlan,
+    executable: Option<&QualifiedExecutable>,
+    runner: &impl CommandRunner,
+) -> Result<(), InstallError> {
+    if arguments.host != UserHost::Antigravity {
+        return Ok(());
+    }
+    let executable = executable.ok_or_else(|| {
+        InstallError::Internal("qualified Antigravity executable is missing".to_owned())
+    })?;
+    let state = probe_antigravity_state(executable, runner)?;
+    if state.plugin.as_ref() != Some(&expected_antigravity_plugin_state()) {
+        return Err(InstallError::Verification(
+            "Antigravity structured state probe did not confirm activated aigent-hive state"
+                .to_owned(),
+        ));
+    }
+    validate_antigravity_stage(arguments, plan)
+}
+
+fn planned_antigravity_stage(plan: &UserPlan) -> RegularTree {
+    let source = Path::new(ANTIGRAVITY_SOURCE_RELATIVE);
+    let mut expected = RegularTree::default();
+    for (path, planned) in &plan.files {
+        let Ok(relative) = path.strip_prefix(source) else {
+            continue;
+        };
+        insert_regular_tree_file(&mut expected, relative, planned.bytes.clone());
+    }
+    expected
+}
+
+fn validate_antigravity_stage(
+    arguments: &UserArguments,
+    plan: &UserPlan,
+) -> Result<(), InstallError> {
+    let expected = planned_antigravity_stage(plan);
+    let observed =
+        read_optional_regular_tree(&arguments.root_cap, Path::new(ANTIGRAVITY_STAGE_RELATIVE))?
+            .ok_or_else(|| {
+                InstallError::Verification(
+                    "Antigravity native plugin staging directory is missing".to_owned(),
+                )
+            })?;
+    if observed != expected {
+        return Err(InstallError::Verification(
+            "Antigravity native plugin staging differs from the authenticated source tree"
+                .to_owned(),
+        ));
+    }
+    Ok(())
 }
 
 fn sanitized_command_diagnostic(command: &[&str], stdout: &[u8]) -> String {
@@ -2769,9 +3869,20 @@ fn compensate_host_mutations(
             )?;
         }
         UserHost::Antigravity => {
-            return Err(InstallError::Verification(
-                "Antigravity backup unexpectedly contains host mutations".to_owned(),
-            ));
+            let desired = backup.antigravity_state_before.clone().ok_or_else(|| {
+                InstallError::Verification(
+                    "Antigravity transaction backup omitted the pre-mutation structured state"
+                        .to_owned(),
+                )
+            })?;
+            reconcile_antigravity_state(
+                arguments,
+                backup_relative,
+                backup,
+                &desired,
+                executable,
+                runner,
+            )?;
         }
     }
     backup.host_mutations.clear();
@@ -3070,6 +4181,156 @@ fn reconcile_claude_marketplace(
     Ok(current)
 }
 
+fn reconcile_antigravity_state(
+    arguments: &UserArguments,
+    backup_relative: &Path,
+    backup: &mut UserBackupManifest,
+    desired: &AntigravityHostState,
+    executable: &QualifiedExecutable,
+    runner: &impl CommandRunner,
+) -> Result<(), InstallError> {
+    let owned = backup.host_owned_state.clone().ok_or_else(|| {
+        InstallError::Verification(
+            "confirmed Antigravity mutation omitted its exact owned state".to_owned(),
+        )
+    })?;
+    let observed = probe_host_snapshot(arguments.host, executable, runner)?;
+    if observed != owned {
+        return Err(InstallError::Conflict(
+            "Antigravity state drifted after Hive's confirmed transition; recovery preserved external state"
+                .to_owned(),
+        ));
+    }
+    let HostStateSnapshot::Antigravity(mut current) = owned else {
+        return Err(InstallError::Internal(
+            "Antigravity compensation received non-Antigravity state".to_owned(),
+        ));
+    };
+    let mut context = CompensationContext {
+        arguments,
+        backup_relative,
+        backup,
+        executable,
+        runner,
+    };
+    if desired.plugin.is_none() && current.plugin.is_some() {
+        let mut after = current.clone();
+        after.plugin = None;
+        current = run_antigravity_reconciliation_step(
+            &mut context,
+            &["plugin", "uninstall", "aigent-hive"],
+            HostMutation::AntigravityPluginInstalled,
+            &current,
+            &after,
+        )?;
+    } else if desired.plugin.is_some() {
+        let source_path = expected_antigravity_source_path(arguments)?;
+        let validate_command = ["plugin", "validate", source_path.as_str()];
+        let output = runner
+            .run(
+                executable,
+                &validate_command,
+                COMMAND_TIMEOUT,
+                COMMAND_OUTPUT_LIMIT,
+            )
+            .map_err(|error| {
+                InstallError::Internal(format!(
+                    "Antigravity compensation validation failed: {error}"
+                ))
+            })?;
+        if !output.success {
+            return Err(InstallError::Internal(format!(
+                "Antigravity compensation validation returned a non-success result: {}",
+                sanitized_command_diagnostic(&validate_command, &output.stdout)
+            )));
+        }
+        let after = desired.clone();
+        current = run_antigravity_reconciliation_step(
+            &mut context,
+            &["plugin", "install", source_path.as_str()],
+            HostMutation::AntigravityPluginRefreshed,
+            &current,
+            &after,
+        )?;
+        validate_antigravity_recovered_stage(arguments, context.backup)?;
+    }
+    if current == *desired {
+        Ok(())
+    } else {
+        Err(InstallError::Verification(
+            "Antigravity compensation did not restore the pre-mutation structured state".to_owned(),
+        ))
+    }
+}
+
+fn run_antigravity_reconciliation_step(
+    context: &mut CompensationContext<'_, impl CommandRunner>,
+    command: &[&str],
+    mutation: HostMutation,
+    before: &AntigravityHostState,
+    after: &AntigravityHostState,
+) -> Result<AntigravityHostState, InstallError> {
+    let before = HostStateSnapshot::Antigravity(before.clone());
+    let observed = run_compensation_transition(
+        context,
+        command,
+        mutation,
+        &before,
+        HostStateSnapshot::Antigravity(after.clone()),
+    )?;
+    match observed {
+        HostStateSnapshot::Antigravity(state) => Ok(state),
+        HostStateSnapshot::Codex(_) | HostStateSnapshot::Claude(_) => Err(InstallError::Internal(
+            "Antigravity compensation observed another host state".to_owned(),
+        )),
+    }
+}
+
+fn validate_antigravity_recovered_stage(
+    arguments: &UserArguments,
+    backup: &UserBackupManifest,
+) -> Result<(), InstallError> {
+    let source = Path::new(ANTIGRAVITY_SOURCE_RELATIVE);
+    let mut expected = RegularTree::default();
+    for entry in &backup.entries {
+        if !entry.existed {
+            continue;
+        }
+        let source_path = Path::new(&entry.path);
+        let Ok(relative) = source_path.strip_prefix(source) else {
+            continue;
+        };
+        let source_bytes =
+            read_optional_regular(&arguments.root_cap, source_path, MAX_USER_FILE_BYTES)?
+                .ok_or_else(|| {
+                    InstallError::Verification(format!(
+                        "restored Antigravity source omitted {}",
+                        relative.display()
+                    ))
+                })?;
+        insert_regular_tree_file(&mut expected, relative, source_bytes);
+    }
+    if expected.files.is_empty() {
+        return Err(InstallError::Verification(
+            "Antigravity recovery has no authenticated prior source bundle".to_owned(),
+        ));
+    }
+    let observed =
+        read_optional_regular_tree(&arguments.root_cap, Path::new(ANTIGRAVITY_STAGE_RELATIVE))?
+            .ok_or_else(|| {
+                InstallError::Verification(
+                    "restored Antigravity staging directory is missing".to_owned(),
+                )
+            })?;
+    if observed != expected {
+        return Err(InstallError::Verification(
+            "restored Antigravity staging differs from the authenticated prior source tree"
+                .to_owned(),
+        ));
+    }
+    Ok(())
+}
+
 fn run_claude_reconciliation_step(
     context: &mut CompensationContext<'_, impl CommandRunner>,
     command: &[&str],
@@ -3087,9 +4348,9 @@ fn run_claude_reconciliation_step(
     )?;
     match observed {
         HostStateSnapshot::Claude(state) => Ok(state),
-        HostStateSnapshot::Codex(_) => Err(InstallError::Internal(
-            "Claude compensation observed Codex state".to_owned(),
-        )),
+        HostStateSnapshot::Codex(_) | HostStateSnapshot::Antigravity(_) => Err(
+            InstallError::Internal("Claude compensation observed Codex state".to_owned()),
+        ),
     }
 }
 
@@ -3110,9 +4371,9 @@ fn run_codex_reconciliation_step(
     )?;
     match observed {
         HostStateSnapshot::Codex(state) => Ok(state),
-        HostStateSnapshot::Claude(_) => Err(InstallError::Internal(
-            "Codex compensation observed Claude state".to_owned(),
-        )),
+        HostStateSnapshot::Claude(_) | HostStateSnapshot::Antigravity(_) => Err(
+            InstallError::Internal("Codex compensation observed Claude state".to_owned()),
+        ),
     }
 }
 
@@ -3241,7 +4502,7 @@ fn qualify_host(
     let executable_name = match arguments.host {
         UserHost::Codex => "codex",
         UserHost::Claude => "claude",
-        UserHost::Antigravity => "antigravity",
+        UserHost::Antigravity => "agy",
     };
     runner.qualify(executable_name).map(Some).map_err(|_| {
         InstallError::Unsupported(format!(
@@ -3282,7 +4543,7 @@ fn probe_supported_host_version(
         UserHost::Claude => raw
             .strip_suffix(" (Claude Code)")
             .or_else(|| raw.strip_prefix("claude ")),
-        UserHost::Antigravity => raw.strip_prefix("antigravity "),
+        UserHost::Antigravity => Some(raw),
     }
     .ok_or_else(|| {
         InstallError::Unsupported(format!(
@@ -3294,7 +4555,7 @@ fn probe_supported_host_version(
     let (minimum, maximum) = match host {
         UserHost::Codex => ((0, 145, 0), (1, 0, 0)),
         UserHost::Claude => ((2, 1, 0), (3, 0, 0)),
-        UserHost::Antigravity => ((2, 3, 1), (3, 0, 0)),
+        UserHost::Antigravity => ((1, 1, 7), (1, 2, 0)),
     };
     if parsed < minimum || parsed >= maximum {
         return Err(InstallError::Unsupported(format!(
@@ -3361,6 +4622,7 @@ fn activate_host(
         if let Some(mutation) = mutation {
             execute_forward_host_transition(
                 arguments,
+                plan,
                 transaction,
                 executable,
                 runner,
@@ -3391,6 +4653,7 @@ fn activate_host(
 
 fn execute_forward_host_transition(
     arguments: &UserArguments,
+    plan: &UserPlan,
     transaction: &mut UserTransaction,
     executable: &QualifiedExecutable,
     runner: &impl CommandRunner,
@@ -3408,6 +4671,9 @@ fn execute_forward_host_transition(
         return Err(InstallError::Conflict(
             "host state drifted before Hive could issue its next native mutation".to_owned(),
         ));
+    }
+    if let HostStateSnapshot::Antigravity(state) = &observed_before {
+        validate_antigravity_prestate(arguments, plan, Some(state))?;
     }
     let expected_after = expected_host_state_after(arguments, mutation, &expected_before)?;
     transaction.backup.pending_host_transition = Some(PendingHostTransition {
@@ -3455,7 +4721,10 @@ fn initial_host_snapshot(backup: &UserBackupManifest) -> Option<HostStateSnapsho
             .claude_state_before
             .clone()
             .map(HostStateSnapshot::Claude),
-        UserHost::Antigravity => None,
+        UserHost::Antigravity => backup
+            .antigravity_state_before
+            .clone()
+            .map(HostStateSnapshot::Antigravity),
     }
 }
 
@@ -3467,9 +4736,9 @@ fn probe_host_snapshot(
     match host {
         UserHost::Codex => probe_codex_state(executable, runner).map(HostStateSnapshot::Codex),
         UserHost::Claude => probe_claude_state(executable, runner).map(HostStateSnapshot::Claude),
-        UserHost::Antigravity => Err(InstallError::Internal(
-            "Antigravity has no mutable native host state".to_owned(),
-        )),
+        UserHost::Antigravity => {
+            probe_antigravity_state(executable, runner).map(HostStateSnapshot::Antigravity)
+        }
     }
 }
 
@@ -3522,6 +4791,14 @@ fn expected_host_state_after(
                 scope: "user".to_owned(),
             });
             Ok(HostStateSnapshot::Claude(state))
+        }
+        (
+            HostMutation::AntigravityPluginInstalled | HostMutation::AntigravityPluginRefreshed,
+            HostStateSnapshot::Antigravity(state),
+        ) => {
+            let mut state = state.clone();
+            state.plugin = Some(expected_antigravity_plugin_state());
+            Ok(HostStateSnapshot::Antigravity(state))
         }
         _ => Err(InstallError::Internal(
             "host mutation does not match the structured host state".to_owned(),
@@ -3608,7 +4885,24 @@ fn activation_commands<'a>(
             }
             Ok(commands)
         }
-        UserHost::Antigravity => unreachable!(),
+        UserHost::Antigravity => {
+            let before = backup.antigravity_state_before.as_ref().ok_or_else(|| {
+                InstallError::Internal(
+                    "Antigravity transaction omitted the pre-mutation structured state".to_owned(),
+                )
+            })?;
+            Ok(vec![
+                (vec!["plugin", "validate", marketplace_text], None),
+                (
+                    vec!["plugin", "install", marketplace_text],
+                    Some(if before.plugin.is_some() {
+                        HostMutation::AntigravityPluginRefreshed
+                    } else {
+                        HostMutation::AntigravityPluginInstalled
+                    }),
+                ),
+            ])
+        }
     }
 }
 
@@ -3619,14 +4913,20 @@ fn validate_plugin_package(arguments: &UserArguments, plan: &UserPlan) -> Result
             .as_ref()
             .ok_or_else(|| InstallError::Internal("plugin marketplace root is missing".to_owned()))?
             .join("plugins/aigent-hive"),
-        UserHost::Antigravity => PathBuf::from(".gemini/config/plugins/aigent-hive"),
+        UserHost::Antigravity => plan
+            .marketplace_root
+            .as_ref()
+            .ok_or_else(|| {
+                InstallError::Internal("Antigravity plugin source root is missing".to_owned())
+            })?
+            .clone(),
     };
     let manifest = match arguments.host {
         UserHost::Codex => ".codex-plugin/plugin.json",
         UserHost::Claude => ".claude-plugin/plugin.json",
         UserHost::Antigravity => "plugin.json",
     };
-    for relative in [manifest, "skills/setup-harness/SKILL.md"] {
+    for relative in [manifest, "skills/setup-hive/SKILL.md"] {
         let path = root.join(relative);
         if read_optional_regular(&arguments.root_cap, &path, MAX_USER_FILE_BYTES)?.is_none() {
             return Err(InstallError::Verification(format!(
@@ -3722,7 +5022,7 @@ fn read_installed_manifest(
     })?;
     if manifest.schema_version != 1
         || manifest.host != host
-        || manifest.host_version_range != host.version_range()
+        || !recognized_host_version_range(host, &manifest.host_version_range)
         || !valid_sha256(&manifest.source_release_digest)
         || !valid_sha256(&manifest.plan_digest)
         || manifest.entries.is_empty()
@@ -3751,6 +5051,11 @@ fn read_installed_manifest(
         previous = Some(entry.path.as_str());
     }
     Ok(Some(manifest))
+}
+
+fn recognized_host_version_range(host: UserHost, range: &str) -> bool {
+    range == host.version_range()
+        || (host == UserHost::Antigravity && matches!(range, ">=1.1.7 <2.0.0" | ">=2.3.1 <3.0.0"))
 }
 
 fn valid_sha256(value: &str) -> bool {
@@ -3799,6 +5104,116 @@ fn read_optional_regular(
         )));
     }
     Ok(Some(bytes))
+}
+
+fn read_optional_regular_tree(
+    root: &Dir,
+    relative: &Path,
+) -> Result<Option<RegularTree>, InstallError> {
+    validate_relative(relative)?;
+    let Some((parent, name)) = capability_parent(root, relative, false)? else {
+        return Ok(None);
+    };
+    let metadata = match parent.symlink_metadata(&name) {
+        Ok(metadata) => metadata,
+        Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(None),
+        Err(error) => return Err(io_internal("inspect tree", relative, error)),
+    };
+    if metadata.file_type().is_symlink() || !metadata.is_dir() {
+        return Err(InstallError::Conflict(format!(
+            "Antigravity plugin stage must be a no-follow directory: {}",
+            relative.display()
+        )));
+    }
+    let directory = parent.open_dir_nofollow(&name).map_err(|error| {
+        InstallError::Conflict(format!(
+            "cannot pin Antigravity plugin stage {}: {error}",
+            relative.display()
+        ))
+    })?;
+    let mut tree = RegularTree::default();
+    let mut total_bytes = 0_u64;
+    read_regular_tree(&directory, Path::new(""), 0, &mut tree, &mut total_bytes)?;
+    Ok(Some(tree))
+}
+
+fn read_regular_tree(
+    directory: &Dir,
+    prefix: &Path,
+    depth: usize,
+    tree: &mut RegularTree,
+    total_bytes: &mut u64,
+) -> Result<(), InstallError> {
+    let entries = directory.entries().map_err(|error| {
+        InstallError::Internal(format!(
+            "cannot enumerate Antigravity plugin stage: {error}"
+        ))
+    })?;
+    for entry in entries {
+        let name = entry
+            .map_err(|error| {
+                InstallError::Internal(format!(
+                    "cannot read Antigravity plugin stage entry: {error}"
+                ))
+            })?
+            .file_name();
+        let relative = prefix.join(&name);
+        let metadata = directory.symlink_metadata(&name).map_err(|error| {
+            InstallError::Internal(format!(
+                "cannot inspect Antigravity plugin stage entry {}: {error}",
+                relative.display()
+            ))
+        })?;
+        if metadata.is_dir() && !metadata.file_type().is_symlink() {
+            if tree.directories.len() >= MAX_ANTIGRAVITY_STAGE_DIRECTORIES {
+                return Err(InstallError::Conflict(format!(
+                    "Antigravity plugin stage exceeds {MAX_ANTIGRAVITY_STAGE_DIRECTORIES} directories"
+                )));
+            }
+            if depth >= MAX_ANTIGRAVITY_STAGE_DEPTH {
+                return Err(InstallError::Conflict(format!(
+                    "Antigravity plugin stage exceeds depth {MAX_ANTIGRAVITY_STAGE_DEPTH}"
+                )));
+            }
+            tree.directories.insert(relative.clone());
+            let child = directory.open_dir_nofollow(&name).map_err(|error| {
+                InstallError::Conflict(format!(
+                    "cannot pin Antigravity plugin stage directory {}: {error}",
+                    relative.display()
+                ))
+            })?;
+            read_regular_tree(&child, &relative, depth + 1, tree, total_bytes)?;
+            continue;
+        }
+        if !metadata.is_file() || metadata.file_type().is_symlink() {
+            return Err(InstallError::Conflict(format!(
+                "Antigravity plugin stage contains a non-regular entry: {}",
+                relative.display()
+            )));
+        }
+        if tree.files.len() >= MAX_ANTIGRAVITY_STAGE_FILES {
+            return Err(InstallError::Conflict(format!(
+                "Antigravity plugin stage exceeds {MAX_ANTIGRAVITY_STAGE_FILES} files"
+            )));
+        }
+        let bytes = read_optional_regular(directory, Path::new(&name), MAX_USER_FILE_BYTES)?
+            .ok_or_else(|| {
+                InstallError::Conflict(format!(
+                    "Antigravity plugin stage changed during inspection: {}",
+                    relative.display()
+                ))
+            })?;
+        *total_bytes = total_bytes
+            .checked_add(bytes.len() as u64)
+            .ok_or_else(|| InstallError::Conflict("Antigravity stage size overflow".to_owned()))?;
+        if *total_bytes > MAX_ANTIGRAVITY_STAGE_BYTES {
+            return Err(InstallError::Conflict(format!(
+                "Antigravity plugin stage exceeds {MAX_ANTIGRAVITY_STAGE_BYTES} bytes"
+            )));
+        }
+        tree.files.insert(relative, bytes);
+    }
+    Ok(())
 }
 
 fn write_atomic(
@@ -4502,11 +5917,9 @@ mod tests {
                 HostSabotage::DeleteInstalledSkill
                 | HostSabotage::CrashAfterPluginInverse
                 | HostSabotage::FailAfterPluginMutationAndCompensation => {
-                    fs::remove_file(
-                        self.root.join(
-                            ".hive/marketplaces/codex/plugins/aigent-hive/skills/setup-harness/SKILL.md",
-                        ),
-                    )
+                    fs::remove_file(self.root.join(
+                        ".hive/marketplaces/codex/plugins/aigent-hive/skills/setup-hive/SKILL.md",
+                    ))
                     .expect("delete installed skill");
                 }
                 HostSabotage::TamperGuidanceAfterActivation => {
@@ -4584,7 +5997,7 @@ mod tests {
                 {
                     Some("codex") => b"codex-cli 0.145.0\n".to_vec(),
                     Some("claude") => b"2.1.0 (Claude Code)\n".to_vec(),
-                    Some("antigravity") => b"antigravity 2.3.1\n".to_vec(),
+                    Some("agy") => b"1.1.7\n".to_vec(),
                     _ => Vec::new(),
                 };
                 return Ok(CommandOutput {
@@ -4596,6 +6009,132 @@ mod tests {
                 success: true,
                 stdout: Vec::new(),
             })
+        }
+    }
+
+    struct AntigravityRunner {
+        root: PathBuf,
+        calls: Mutex<Vec<String>>,
+        plugin_installed: Mutex<bool>,
+        plugin_probe_count: Mutex<usize>,
+        stage_drift_on_probe: Option<usize>,
+    }
+
+    impl AntigravityRunner {
+        fn new(root: &Path) -> Self {
+            Self {
+                root: root
+                    .canonicalize()
+                    .expect("canonical fake Antigravity root"),
+                calls: Mutex::new(Vec::new()),
+                plugin_installed: Mutex::new(false),
+                plugin_probe_count: Mutex::new(0),
+                stage_drift_on_probe: None,
+            }
+        }
+
+        fn with_stage_drift_on_probe(root: &Path, probe: usize) -> Self {
+            Self {
+                stage_drift_on_probe: Some(probe),
+                ..Self::new(root)
+            }
+        }
+
+        fn copy_tree(source: &Path, destination: &Path) {
+            if destination.exists() {
+                fs::remove_dir_all(destination).expect("remove prior Antigravity staging");
+            }
+            fs::create_dir_all(destination).expect("create Antigravity staging");
+            for entry in fs::read_dir(source).expect("read Antigravity source") {
+                let entry = entry.expect("Antigravity source entry");
+                let source_path = entry.path();
+                let destination_path = destination.join(entry.file_name());
+                if entry.file_type().expect("Antigravity source type").is_dir() {
+                    Self::copy_tree(&source_path, &destination_path);
+                } else {
+                    fs::copy(&source_path, &destination_path)
+                        .expect("copy Antigravity source file");
+                }
+            }
+        }
+    }
+
+    impl CommandRunner for AntigravityRunner {
+        fn qualify(&self, program: &str) -> Result<QualifiedExecutable, SensorError> {
+            assert_eq!(program, "agy");
+            self.calls
+                .lock()
+                .expect("calls")
+                .push(format!("qualify:{program}"));
+            Ok(QualifiedExecutable::synthetic(program))
+        }
+
+        fn run(
+            &self,
+            _program: &QualifiedExecutable,
+            arguments: &[&str],
+            _timeout: Duration,
+            _output_limit: usize,
+        ) -> Result<CommandOutput, SensorError> {
+            let command = arguments.join(" ");
+            self.calls.lock().expect("calls").push(command.clone());
+            if arguments == ["--version"] {
+                return Ok(CommandOutput {
+                    success: true,
+                    stdout: b"1.1.7\n".to_vec(),
+                });
+            }
+            if arguments == ["plugin", "list"] {
+                let mut probe_count = self.plugin_probe_count.lock().expect("probe count");
+                *probe_count += 1;
+                if self.stage_drift_on_probe == Some(*probe_count) {
+                    let foreign = self
+                        .root
+                        .join(ANTIGRAVITY_STAGE_RELATIVE)
+                        .join("foreign-race.txt");
+                    fs::create_dir_all(foreign.parent().expect("foreign stage parent"))
+                        .expect("foreign stage parent");
+                    fs::write(foreign, b"foreign racing stage bytes\n")
+                        .expect("foreign racing stage");
+                }
+                let installed = *self.plugin_installed.lock().expect("plugin");
+                return Ok(CommandOutput {
+                    success: true,
+                    stdout: if installed {
+                        serde_json::to_vec(&json!({
+                            "imports": [{
+                                "name": "aigent-hive",
+                                "source": "antigravity",
+                                "importedAt": "2026-07-26T00:00:00Z",
+                                "components": ["skills"]
+                            }]
+                        }))
+                        .expect("Antigravity import JSON")
+                    } else {
+                        b"No imported plugins.\n".to_vec()
+                    },
+                });
+            }
+            if arguments.len() == 3 && arguments[0] == "plugin" && arguments[1] == "validate" {
+                return Ok(successful_output());
+            }
+            if arguments.len() == 3 && arguments[0] == "plugin" && arguments[1] == "install" {
+                Self::copy_tree(
+                    Path::new(arguments[2]),
+                    &self.root.join(ANTIGRAVITY_STAGE_RELATIVE),
+                );
+                *self.plugin_installed.lock().expect("plugin") = true;
+                return Ok(successful_output());
+            }
+            if arguments == ["plugin", "uninstall", "aigent-hive"] {
+                let stage = self.root.join(ANTIGRAVITY_STAGE_RELATIVE);
+                if stage.exists() {
+                    fs::remove_dir_all(stage).expect("remove Antigravity staging");
+                }
+                *self.plugin_installed.lock().expect("plugin") = false;
+                return Ok(successful_output());
+            }
+            panic!("unexpected Antigravity command: {command}")
         }
     }
 
@@ -4618,7 +6157,7 @@ mod tests {
                 let stdout = match self.qualified_host.lock().expect("host").as_str() {
                     "codex" => b"codex-cli 0.145.0\n".to_vec(),
                     "claude" => b"2.1.0 (Claude Code)\n".to_vec(),
-                    "antigravity" => b"antigravity 2.3.1\n".to_vec(),
+                    "agy" => b"1.1.7\n".to_vec(),
                     _ => Vec::new(),
                 };
                 return Ok(CommandOutput {
@@ -4713,7 +6252,25 @@ mod tests {
             mode,
             root_cap: open_user_root(&user_root).expect("pinned user root"),
             user_root,
+            setup_override: None,
         }
+    }
+
+    fn write_operational_setup(root: &Path, selected_hosts: &[&str]) {
+        let path = root.join(".hive/config/user-setup.yml");
+        fs::create_dir_all(path.parent().expect("setup parent")).expect("setup parent");
+        let hosts = selected_hosts
+            .iter()
+            .map(|host| format!("  - {host}"))
+            .collect::<Vec<_>>()
+            .join("\n");
+        fs::write(
+            path,
+            format!(
+                "schema_version: 1\ninterface_language: en\nwiki:\n  enabled: true\n  language: both\nprofile:\n  id: web-developer\npersona:\n  id: balanced\nselected_hosts:\n{hosts}\nskills:\n  mode: individual\n  selected:\n    - setup-hive\n    - hive-update\nusage_guard:\n  enabled: false\n  stop_remaining_percent: 20\n  codexbar_fallback_enabled: false\n"
+            ),
+        )
+        .expect("user setup");
     }
 
     fn seed_historical_user_install(root: &Path, host: UserHost) -> UserOwnershipManifest {
@@ -4763,6 +6320,103 @@ mod tests {
         manifest
     }
 
+    fn seed_legacy_antigravity_directory_scan_install(root: &Path) {
+        let inventory = legacy_antigravity_directory_scan_inventory();
+        let projection =
+            compile_projection(ProjectionHost::Antigravity, &[]).expect("legacy projection");
+        let mut bytes_by_path = BTreeMap::new();
+        bytes_by_path.insert(
+            PathBuf::from(".gemini/config/plugins/aigent-hive/plugin.json"),
+            ANTIGRAVITY_PLUGIN_MANIFEST.to_vec(),
+        );
+        for (path, bytes) in projection.files {
+            let Some(skill_path) = strip_project_skill_prefix(&path) else {
+                continue;
+            };
+            let bytes = match skill_path.to_str() {
+                Some("skills/hive-knowledge-capture/SKILL.md") => include_bytes!(
+                    "../../../harness/project-bases/0.7.0/skills/hive-knowledge-capture/SKILL.md"
+                )
+                .to_vec(),
+                Some("skills/hive-knowledge-maintenance/SKILL.md") => include_bytes!(
+                    "../../../harness/project-bases/0.7.0/skills/hive-knowledge-maintenance/SKILL.md"
+                )
+                .to_vec(),
+                Some("skills/hive-knowledge-query/SKILL.md") => include_bytes!(
+                    "../../../harness/project-bases/0.7.0/skills/hive-knowledge-query/SKILL.md"
+                )
+                .to_vec(),
+                Some("skills/hive-prompt-refine/SKILL.md") => include_bytes!(
+                    "../../../harness/project-bases/0.7.0/skills/hive-prompt-refine/SKILL.md"
+                )
+                .to_vec(),
+                Some("skills/hive-simple-question/SKILL.md") => include_bytes!(
+                    "../../../harness/project-bases/0.7.0/skills/hive-simple-question/SKILL.md"
+                )
+                .to_vec(),
+                Some("skills/hive-usage-guard/SKILL.md") => include_bytes!(
+                    "../../../harness/project-bases/0.7.0/skills/hive-usage-guard/SKILL.md"
+                )
+                .to_vec(),
+                Some("skills/hive-update/SKILL.md") => include_bytes!(
+                    "../../../harness/project-bases/0.7.0/skills/hive-update/SKILL.md"
+                )
+                .to_vec(),
+                Some("skills/setup-harness/SKILL.md") => include_bytes!(
+                    "../../../harness/project-bases/0.7.0/skills/setup-harness/SKILL.md"
+                )
+                .to_vec(),
+                _ => bytes,
+            };
+            bytes_by_path.insert(
+                Path::new(".gemini/config/plugins/aigent-hive").join(&skill_path),
+                bytes.clone(),
+            );
+            bytes_by_path.insert(Path::new(".gemini/config").join(skill_path), bytes);
+        }
+        for entry in inventory
+            .entries
+            .iter()
+            .filter(|entry| is_managed_ownership(&entry.ownership))
+        {
+            let relative = PathBuf::from(&entry.path);
+            let bytes = bytes_by_path
+                .get(&relative)
+                .expect("legacy authenticated bytes");
+            assert_eq!(sha256_digest(bytes), entry.digest);
+            let target = root.join(&relative);
+            fs::create_dir_all(target.parent().expect("legacy parent")).expect("legacy parent");
+            fs::write(&target, bytes).expect("legacy bytes");
+        }
+        let mut manifest = UserOwnershipManifest {
+            schema_version: 1,
+            product_version: inventory.product_version,
+            host: inventory.host,
+            host_version_range: inventory.host_version_range,
+            source_release_digest: inventory.source_release_digest,
+            plan_digest: String::new(),
+            last_backup: None,
+            guidance_path: inventory.guidance_path,
+            entries: inventory.entries,
+        };
+        manifest.plan_digest = inventory_digest(
+            manifest.host,
+            &manifest.product_version,
+            &manifest.host_version_range,
+            Path::new(&manifest.guidance_path),
+            &manifest.source_release_digest,
+            &manifest.entries,
+        );
+        let manifest_path = root.join(".hive/install/antigravity.json");
+        fs::create_dir_all(manifest_path.parent().expect("legacy manifest parent"))
+            .expect("legacy manifest parent");
+        fs::write(
+            manifest_path,
+            json_line(&manifest).expect("legacy manifest JSON"),
+        )
+        .expect("legacy manifest");
+    }
+
     fn transaction_backup(root: &Path, host: UserHost) -> UserBackupManifest {
         let journal: UserTransactionJournal = serde_json::from_slice(
             &fs::read(root.join(format!(".hive/install-transactions/{}.json", host.as_str())))
@@ -4804,23 +6458,147 @@ mod tests {
     #[test]
     fn user_marker_append_and_replace_preserve_foreign_bytes() {
         let foreign = b"before\r\n<!-- omx:block -->\r\nafter";
-        let first =
-            merge_user_marker(foreign, &render_user_guidance(UserHost::Codex)).expect("append");
+        let first = merge_user_marker(foreign, &render_user_guidance(UserHost::Codex, None))
+            .expect("append");
         assert!(first.starts_with(foreign));
-        let second =
-            merge_user_marker(&first, &render_user_guidance(UserHost::Claude)).expect("replace");
+        let second = merge_user_marker(&first, &render_user_guidance(UserHost::Claude, None))
+            .expect("replace");
         let outside = [&second[..foreign.len()]];
         assert_eq!(outside[0], foreign);
         assert_eq!(find_all(&second, USER_MARKER_START).len(), 1);
     }
 
     #[test]
+    fn operational_user_guidance_keeps_the_selected_language_consistent() {
+        use crate::user_setup::{
+            CatalogSelection, InterfaceLanguage, SelectedHost, SkillPreferences,
+            SkillSelectionMode, UpdateCheckPreferences, UsageGuardPreferences, UserSetupConfig,
+            WikiLanguage, WikiPreferences,
+        };
+
+        let config = |interface_language| UserSetupConfig {
+            schema_version: 1,
+            interface_language,
+            wiki: WikiPreferences {
+                enabled: true,
+                language: WikiLanguage::Both,
+            },
+            profile: CatalogSelection {
+                id: "web-developer".to_owned(),
+                custom_description: None,
+            },
+            persona: CatalogSelection {
+                id: "balanced".to_owned(),
+                custom_description: None,
+            },
+            selected_hosts: vec![SelectedHost::Codex],
+            skills: SkillPreferences {
+                mode: SkillSelectionMode::Individual,
+                recommended_suite: None,
+                selected: vec!["setup-hive".to_owned()],
+            },
+            update_check: UpdateCheckPreferences::default(),
+            usage_guard: UsageGuardPreferences {
+                enabled: false,
+                stop_remaining_percent: 20,
+                codexbar_fallback_enabled: false,
+            },
+        };
+
+        let english = String::from_utf8(render_user_guidance(
+            UserHost::Codex,
+            Some(&config(InterfaceLanguage::En)),
+        ))
+        .expect("English guidance");
+        assert!(english.contains("use English consistently throughout every question and response"));
+        assert!(english.contains("For every passed, failed, skipped, deferred"));
+        assert!(!english.contains("질문과 응답"));
+
+        let korean = String::from_utf8(render_user_guidance(
+            UserHost::Codex,
+            Some(&config(InterfaceLanguage::Ko)),
+        ))
+        .expect("Korean guidance");
+        assert!(korean.contains("질문과 응답은 한국어로 통일"));
+        assert!(korean.contains("대체 가능한 일반 영어 단어의 한영 혼용 금지"));
+        assert!(korean.contains("통과·실패·건너뜀·연기·미검증·미지원"));
+        for avoidable_mixture in [
+            "활성 adapter",
+            "Interface language",
+            "선택 host",
+            "Global Wiki",
+            "일일 update",
+            "Enabled이면",
+            "Project expedited",
+            "optional refine",
+            "Foreign guidance bytes",
+        ] {
+            assert!(!korean.contains(avoidable_mixture));
+        }
+    }
+
+    #[test]
     fn malformed_user_markers_fail_closed() {
         let malformed = b"<!-- AIGENT-HIVE:USER:START -->\nmissing end";
         assert!(matches!(
-            merge_user_marker(malformed, &render_user_guidance(UserHost::Codex)),
+            merge_user_marker(malformed, &render_user_guidance(UserHost::Codex, None)),
             Err(InstallError::Conflict(_))
         ));
+    }
+
+    #[test]
+    fn codex_plan_uses_supported_marketplace_manifest_location() {
+        let temporary = tempdir().expect("tempdir");
+        let plan =
+            build_plan(&args(temporary.path(), UserHost::Codex, UserMode::DryRun)).expect("plan");
+        let marketplace = Path::new(".hive/marketplaces/codex/.agents/plugins/marketplace.json");
+        let bytes = &plan
+            .files
+            .get(marketplace)
+            .expect("Codex marketplace manifest")
+            .bytes;
+        let value: serde_json::Value =
+            serde_json::from_slice(bytes).expect("Codex marketplace JSON");
+        assert_eq!(value["name"], "aigent-hive");
+        assert_eq!(
+            value["plugins"][0]["source"]["path"],
+            "./plugins/aigent-hive"
+        );
+        assert!(!plan
+            .files
+            .contains_key(Path::new(".hive/marketplaces/codex/marketplace.json")));
+    }
+
+    #[test]
+    fn user_plugin_plan_keeps_only_the_selected_host_skill_projection() {
+        for host in [UserHost::Codex, UserHost::Claude, UserHost::Antigravity] {
+            let temporary = tempdir().expect("tempdir");
+            let plan =
+                build_plan(&args(temporary.path(), host, UserMode::DryRun)).expect("host plan");
+            let metadata = PathBuf::from(format!(
+                ".hive/marketplaces/{}/plugins/aigent-hive/skills/setup-hive/agents/openai.yaml",
+                host.as_str()
+            ));
+            if host == UserHost::Claude {
+                assert!(
+                    !plan.files.contains_key(&metadata),
+                    "Claude should not receive Codex metadata"
+                );
+            } else {
+                let text = std::str::from_utf8(
+                    &plan
+                        .files
+                        .get(&metadata)
+                        .expect("host setup metadata")
+                        .bytes,
+                )
+                .expect("host setup metadata should be UTF-8");
+                assert!(
+                    text.contains("allow_implicit_invocation: true"),
+                    "{host:?} should preserve user-plugin invocation metadata"
+                );
+            }
+        }
     }
 
     #[test]
@@ -4842,10 +6620,10 @@ mod tests {
             ),
             (
                 UserHost::Antigravity,
-                "antigravity 2.3.1\n",
-                "antigravity 2.99.0\n",
-                "antigravity 3.0.0\n",
-                "antigravity 2.3.1-dev\n",
+                "1.1.7\n",
+                "1.1.99\n",
+                "1.2.0\n",
+                "agy 1.1.7\n",
             ),
         ] {
             let executable = QualifiedExecutable::synthetic(host.as_str());
@@ -4876,11 +6654,25 @@ mod tests {
     }
 
     #[test]
+    fn antigravity_version_probe_accepts_actual_agy_shape() {
+        let executable = QualifiedExecutable::synthetic("agy");
+        let runner = VersionRunner {
+            stdout: b"1.1.7\n".to_vec(),
+            success: true,
+        };
+        assert_eq!(
+            probe_supported_host_version(UserHost::Antigravity, &executable, &runner)
+                .expect("supported agy"),
+            "1.1.7"
+        );
+    }
+
+    #[test]
     fn unsupported_host_version_stops_before_any_user_filesystem_mutation() {
         for (host, stdout) in [
             (UserHost::Codex, b"codex-cli 1.0.0\n".as_slice()),
             (UserHost::Claude, b"3.0.0 (Claude Code)\n".as_slice()),
-            (UserHost::Antigravity, b"antigravity 3.0.0\n".as_slice()),
+            (UserHost::Antigravity, b"1.2.0\n".as_slice()),
         ] {
             let temporary = tempdir().expect("tempdir");
             let arguments = args(temporary.path(), host, UserMode::Apply);
@@ -4931,15 +6723,15 @@ mod tests {
         for (host, relative) in [
             (
                 UserHost::Codex,
-                ".hive/marketplaces/codex/plugins/aigent-hive/skills/setup-harness/SKILL.md",
+                ".hive/marketplaces/codex/plugins/aigent-hive/skills/setup-hive/SKILL.md",
             ),
             (
                 UserHost::Claude,
-                ".hive/marketplaces/claude/plugins/aigent-hive/skills/setup-harness/SKILL.md",
+                ".hive/marketplaces/claude/plugins/aigent-hive/skills/setup-hive/SKILL.md",
             ),
             (
                 UserHost::Antigravity,
-                ".gemini/config/plugins/aigent-hive/skills/setup-harness/SKILL.md",
+                ".hive/marketplaces/antigravity/plugins/aigent-hive/skills/setup-hive/SKILL.md",
             ),
         ] {
             let temporary = tempdir().expect("tempdir");
@@ -4993,17 +6785,17 @@ mod tests {
         for (host, relative, ownership) in [
             (
                 UserHost::Codex,
-                ".hive/marketplaces/codex/plugins/aigent-hive/skills/setup-harness/SKILL.md",
+                ".hive/marketplaces/codex/plugins/aigent-hive/skills/setup-hive/SKILL.md",
                 "immutable-plugin-package",
             ),
             (
                 UserHost::Claude,
-                ".hive/marketplaces/claude/plugins/aigent-hive/skills/setup-harness/SKILL.md",
+                ".hive/marketplaces/claude/plugins/aigent-hive/skills/setup-hive/SKILL.md",
                 "immutable-plugin-package",
             ),
             (
                 UserHost::Antigravity,
-                ".gemini/config/plugins/aigent-hive/skills/setup-harness/SKILL.md",
+                ".hive/marketplaces/antigravity/plugins/aigent-hive/skills/setup-hive/SKILL.md",
                 "immutable-plugin-package",
             ),
         ] {
@@ -5061,6 +6853,10 @@ mod tests {
 
     #[test]
     fn authenticated_historical_inventory_upgrades_to_current_release_for_every_host() {
+        assert_eq!(
+            historical_user_inventory(UserHost::Antigravity).host_version_range,
+            ">=2.3.1 <3.0.0"
+        );
         for host in [UserHost::Codex, UserHost::Claude, UserHost::Antigravity] {
             let temporary = tempdir().expect("tempdir");
             let historical = historical_user_inventory(host);
@@ -5085,8 +6881,12 @@ mod tests {
                         .expect("historical upgrade");
                 }
                 UserHost::Antigravity => {
-                    execute(UserOperation::Update, &arguments, &FakeRunner::new())
-                        .expect("historical upgrade");
+                    execute(
+                        UserOperation::Update,
+                        &arguments,
+                        &AntigravityRunner::new(temporary.path()),
+                    )
+                    .expect("historical upgrade");
                 }
             }
 
@@ -5115,6 +6915,100 @@ mod tests {
                 b"historical protected knowledge\n"
             );
         }
+    }
+
+    #[test]
+    fn historical_070_user_inventory_is_exact_and_rejects_wrong_bindings() {
+        for (host, range, expected_entries) in [
+            (UserHost::Codex, ">=0.145.0 <1.0.0", 25),
+            (UserHost::Claude, ">=2.1.0 <3.0.0", 25),
+            (UserHost::Antigravity, ">=1.1.7 <1.2.0", 37),
+        ] {
+            let guidance = Path::new(match host {
+                UserHost::Codex => ".codex/AGENTS.md",
+                UserHost::Claude => ".claude/CLAUDE.md",
+                UserHost::Antigravity => ".gemini/GEMINI.md",
+            });
+            let inventory = historical_070_user_inventory(host, range, guidance)
+                .expect("authenticated 0.7 inventory");
+            assert_eq!(inventory.product_version, "0.7.0");
+            assert_eq!(inventory.entries.len(), expected_entries);
+            assert!(valid_sha256(&inventory.source_release_digest));
+            assert!(inventory
+                .entries
+                .windows(2)
+                .all(|pair| pair[0].path < pair[1].path));
+            assert!(!inventory
+                .entries
+                .iter()
+                .any(|entry| entry.path.contains("/skills/setup-hive/")));
+            assert!(historical_070_user_inventory(host, ">=9.0.0 <10.0.0", guidance).is_none());
+            assert!(
+                historical_070_user_inventory(host, range, Path::new(".hive/foreign.md")).is_none()
+            );
+        }
+    }
+
+    #[test]
+    fn authenticated_antigravity_directory_scan_install_migrates_to_native_registry() {
+        let temporary = tempdir().expect("tempdir");
+        seed_legacy_antigravity_directory_scan_install(temporary.path());
+        let arguments = args(temporary.path(), UserHost::Antigravity, UserMode::Apply);
+        let plan = build_plan(&arguments).expect("legacy directory-scan migration plan");
+        assert!(!plan.prior_antigravity_activation_source);
+        assert!(plan
+            .retired_files
+            .contains_key(Path::new(".gemini/config/plugins/aigent-hive/plugin.json")));
+
+        let runner = AntigravityRunner::new(temporary.path());
+        execute(UserOperation::Update, &arguments, &runner).expect("native registry migration");
+        assert_eq!(
+            probe_antigravity_state(&QualifiedExecutable::synthetic("agy"), &runner)
+                .expect("registered state")
+                .plugin,
+            Some(expected_antigravity_plugin_state())
+        );
+        let manifest: UserOwnershipManifest = serde_json::from_slice(
+            &fs::read(temporary.path().join(".hive/install/antigravity.json")).expect("manifest"),
+        )
+        .expect("manifest JSON");
+        assert_eq!(manifest.host_version_range, ">=1.1.7 <1.2.0");
+        assert!(manifest
+            .entries
+            .iter()
+            .any(|entry| entry.path == format!("{ANTIGRAVITY_SOURCE_RELATIVE}/plugin.json")));
+        assert!(!manifest
+            .entries
+            .iter()
+            .any(|entry| entry.path.starts_with(ANTIGRAVITY_STAGE_RELATIVE)));
+    }
+
+    #[test]
+    fn antigravity_legacy_migration_preserves_foreign_stage_entries() {
+        let temporary = tempdir().expect("tempdir");
+        seed_legacy_antigravity_directory_scan_install(temporary.path());
+        let foreign = temporary
+            .path()
+            .join(ANTIGRAVITY_STAGE_RELATIVE)
+            .join("foreign.txt");
+        fs::write(&foreign, b"foreign stage bytes\n").expect("foreign stage");
+        let arguments = args(temporary.path(), UserHost::Antigravity, UserMode::Apply);
+        let runner = AntigravityRunner::new(temporary.path());
+
+        let error = execute(UserOperation::Update, &arguments, &runner)
+            .err()
+            .expect("foreign legacy stage must conflict");
+        assert!(matches!(error, InstallError::Conflict(_)));
+        assert_eq!(
+            fs::read(foreign).expect("foreign stage preserved"),
+            b"foreign stage bytes\n"
+        );
+        assert!(!runner
+            .calls
+            .lock()
+            .expect("calls")
+            .iter()
+            .any(|call| call.starts_with("plugin install ")));
     }
 
     #[test]
@@ -5157,7 +7051,7 @@ mod tests {
         let target = temporary.path().join(&retired);
         fs::write(&target, b"foreign reoccupation after planning\n").expect("reoccupation");
 
-        let error = apply_plan(&arguments, &mut plan, None, None)
+        let error = apply_plan(&arguments, &mut plan, None, None, None)
             .err()
             .expect("reoccupied prior-only path must conflict");
         assert!(matches!(error, InstallError::Conflict(_)));
@@ -5220,7 +7114,7 @@ mod tests {
             .expect("retired executable");
         let arguments = args(temporary.path(), UserHost::Antigravity, UserMode::Apply);
         let mut plan = build_plan(&arguments).expect("historical upgrade plan");
-        apply_plan(&arguments, &mut plan, None, None).expect("interrupted filesystem apply");
+        apply_plan(&arguments, &mut plan, None, None, None).expect("interrupted filesystem apply");
         assert!(!temporary.path().join(&retired.0).exists());
 
         recover(&arguments, &FakeRunner::new()).expect("recover interrupted upgrade");
@@ -5258,9 +7152,9 @@ mod tests {
         let mut plan = build_plan(&arguments).expect("plan");
         fs::rename(&user, &moved).expect("retarget root");
         symlink(&outside, &user).expect("root symlink");
-        apply_plan(&arguments, &mut plan, None, None).expect("pinned apply");
+        apply_plan(&arguments, &mut plan, None, None, None).expect("pinned apply");
         assert!(moved
-            .join(".gemini/config/plugins/aigent-hive/plugin.json")
+            .join(".hive/marketplaces/antigravity/plugins/aigent-hive/plugin.json")
             .is_file());
         assert_eq!(
             fs::read(outside.join("sentinel")).expect("outside"),
@@ -5274,7 +7168,7 @@ mod tests {
         let arguments = args(second.path(), UserHost::Antigravity, UserMode::Apply);
         let mut plan = build_plan(&arguments).expect("plan");
         symlink(outside.path(), second.path().join(".gemini/config")).expect("ancestor symlink");
-        let error = apply_plan(&arguments, &mut plan, None, None)
+        let error = apply_plan(&arguments, &mut plan, None, None, None)
             .err()
             .expect("ancestor swap conflict");
         assert!(matches!(error, InstallError::Conflict(_)));
@@ -5296,7 +7190,7 @@ mod tests {
         fs::create_dir_all(path.parent().expect("late parent")).expect("late parent");
         fs::write(&path, b"late concurrent bytes\n").expect("late drift");
         let before = snapshot_user_tree(temporary.path());
-        let error = apply_plan(&arguments, &mut plan, None, None)
+        let error = apply_plan(&arguments, &mut plan, None, None, None)
             .err()
             .expect("late drift conflict");
         assert!(matches!(error, InstallError::Conflict(_)));
@@ -5324,7 +7218,7 @@ mod tests {
         let arguments = args(temporary.path(), UserHost::Antigravity, UserMode::Apply);
         let mut plan = build_plan(&arguments).expect("plan");
         fs::set_permissions(&guidance, fs::Permissions::from_mode(0o600)).expect("mode drift");
-        let error = apply_plan(&arguments, &mut plan, None, None)
+        let error = apply_plan(&arguments, &mut plan, None, None, None)
             .err()
             .expect("mode drift conflict");
         assert!(matches!(error, InstallError::Conflict(_)));
@@ -5735,7 +7629,7 @@ mod tests {
     }
 
     #[test]
-    fn antigravity_apply_validates_and_recovery_restores_foreign_guidance() {
+    fn antigravity_uses_agy_native_registration_and_preserves_foreign_guidance() {
         let temporary = tempdir().expect("tempdir");
         fs::create_dir(temporary.path().join(".gemini")).expect("gemini");
         fs::write(
@@ -5743,9 +7637,25 @@ mod tests {
             b"foreign guidance\n",
         )
         .expect("guidance");
-        let runner = FakeRunner::new();
+        let runner = AntigravityRunner::new(temporary.path());
         let apply = args(temporary.path(), UserHost::Antigravity, UserMode::Apply);
-        execute(UserOperation::Install, &apply, &runner).expect("apply");
+        let result = execute(UserOperation::Install, &apply, &runner).expect("apply");
+        assert_eq!(
+            result
+                .data
+                .as_ref()
+                .expect("data")
+                .get("qualified_host_version"),
+            Some(&serde_json::Value::String("1.1.7".to_owned()))
+        );
+        assert_eq!(
+            result
+                .data
+                .as_ref()
+                .expect("data")
+                .get("host_version_range"),
+            Some(&serde_json::Value::String(">=1.1.7 <1.2.0".to_owned()))
+        );
         let manifest: UserOwnershipManifest = serde_json::from_slice(
             &fs::read(temporary.path().join(".hive/install/antigravity.json")).expect("manifest"),
         )
@@ -5757,12 +7667,18 @@ mod tests {
         );
         assert!(temporary
             .path()
-            .join(".gemini/config/plugins/aigent-hive/plugin.json")
+            .join(".hive/marketplaces/antigravity/plugins/aigent-hive/plugin.json")
             .is_file());
         assert!(temporary
             .path()
-            .join(".gemini/config/plugins/aigent-hive/skills/setup-harness/SKILL.md")
+            .join(".gemini/config/plugins/aigent-hive/skills/setup-hive/SKILL.md")
             .is_file());
+        assert!(runner
+            .calls
+            .lock()
+            .expect("calls")
+            .iter()
+            .any(|call| call.starts_with("plugin install ")));
         let validate = args(temporary.path(), UserHost::Antigravity, UserMode::Validate);
         execute(UserOperation::Install, &validate, &runner).expect("validate");
         let recover_args = args(temporary.path(), UserHost::Antigravity, UserMode::Recover);
@@ -5771,6 +7687,278 @@ mod tests {
             fs::read(temporary.path().join(".gemini/GEMINI.md")).expect("guidance"),
             b"foreign guidance\n"
         );
+    }
+
+    #[test]
+    fn antigravity_fresh_install_preserves_occupied_host_stage() {
+        for foreign_relative in ["foreign.txt", "empty/placeholder.txt"] {
+            let temporary = tempdir().expect("tempdir");
+            let foreign = temporary
+                .path()
+                .join(ANTIGRAVITY_STAGE_RELATIVE)
+                .join(foreign_relative);
+            fs::create_dir_all(foreign.parent().expect("foreign parent")).expect("foreign parent");
+            fs::write(&foreign, b"foreign stage bytes\n").expect("foreign stage");
+            let runner = AntigravityRunner::new(temporary.path());
+            let arguments = args(temporary.path(), UserHost::Antigravity, UserMode::Apply);
+
+            let error = execute(UserOperation::Install, &arguments, &runner)
+                .err()
+                .expect("occupied fresh stage must conflict");
+            assert!(matches!(error, InstallError::Conflict(_)));
+            assert_eq!(
+                fs::read(foreign).expect("foreign stage preserved"),
+                b"foreign stage bytes\n"
+            );
+            assert!(!temporary
+                .path()
+                .join(".hive/install/antigravity.json")
+                .exists());
+        }
+    }
+
+    #[test]
+    fn antigravity_fresh_install_preserves_empty_occupied_host_stage() {
+        let temporary = tempdir().expect("tempdir");
+        let stage = temporary.path().join(ANTIGRAVITY_STAGE_RELATIVE);
+        fs::create_dir_all(&stage).expect("empty foreign stage");
+        let runner = AntigravityRunner::new(temporary.path());
+        let arguments = args(temporary.path(), UserHost::Antigravity, UserMode::Apply);
+
+        let error = execute(UserOperation::Install, &arguments, &runner)
+            .err()
+            .expect("empty occupied stage must conflict");
+        assert!(matches!(error, InstallError::Conflict(_)));
+        assert!(stage.is_dir());
+    }
+
+    #[test]
+    fn antigravity_refresh_preserves_tampered_or_extended_host_stage() {
+        for case in ["tampered", "extended"] {
+            let temporary = tempdir().expect("tempdir");
+            let runner = AntigravityRunner::new(temporary.path());
+            let arguments = args(temporary.path(), UserHost::Antigravity, UserMode::Apply);
+            execute(UserOperation::Install, &arguments, &runner).expect("initial install");
+            let stage = temporary.path().join(ANTIGRAVITY_STAGE_RELATIVE);
+            let protected = if case == "tampered" {
+                stage.join("plugin.json")
+            } else {
+                stage.join("foreign.txt")
+            };
+            fs::write(&protected, b"locally protected stage bytes\n").expect("stage drift");
+
+            let error = execute(UserOperation::Update, &arguments, &runner)
+                .err()
+                .expect("drifted host stage must conflict");
+            assert!(matches!(error, InstallError::Conflict(_)));
+            assert_eq!(
+                fs::read(protected).expect("stage drift preserved"),
+                b"locally protected stage bytes\n"
+            );
+            assert_eq!(
+                runner
+                    .calls
+                    .lock()
+                    .expect("calls")
+                    .iter()
+                    .filter(|call| call.starts_with("plugin install "))
+                    .count(),
+                1
+            );
+        }
+    }
+
+    #[test]
+    fn antigravity_rechecks_stage_at_the_native_mutation_boundary() {
+        let temporary = tempdir().expect("tempdir");
+        let runner = AntigravityRunner::with_stage_drift_on_probe(temporary.path(), 2);
+        let arguments = args(temporary.path(), UserHost::Antigravity, UserMode::Apply);
+
+        let error = execute(UserOperation::Install, &arguments, &runner)
+            .err()
+            .expect("racing stage drift must conflict");
+        assert!(matches!(error, InstallError::Conflict(_)));
+        assert_eq!(
+            fs::read(
+                temporary
+                    .path()
+                    .join(ANTIGRAVITY_STAGE_RELATIVE)
+                    .join("foreign-race.txt")
+            )
+            .expect("foreign racing stage preserved"),
+            b"foreign racing stage bytes\n"
+        );
+        assert!(!runner
+            .calls
+            .lock()
+            .expect("calls")
+            .iter()
+            .any(|call| call.starts_with("plugin install ")));
+        assert!(!temporary
+            .path()
+            .join(".hive/install/antigravity.json")
+            .exists());
+    }
+
+    #[test]
+    fn antigravity_stage_reader_caps_directory_count_and_depth() {
+        let depth_root = tempdir().expect("depth tempdir");
+        let mut nested = depth_root.path().join(ANTIGRAVITY_STAGE_RELATIVE);
+        for index in 0..=MAX_ANTIGRAVITY_STAGE_DEPTH {
+            nested.push(format!("d{index}"));
+        }
+        fs::create_dir_all(&nested).expect("deep stage");
+        let depth_cap = open_user_root(depth_root.path()).expect("depth root");
+        let error = read_optional_regular_tree(&depth_cap, Path::new(ANTIGRAVITY_STAGE_RELATIVE))
+            .expect_err("deep stage must conflict");
+        assert!(matches!(error, InstallError::Conflict(_)));
+
+        let count_root = tempdir().expect("count tempdir");
+        let stage = count_root.path().join(ANTIGRAVITY_STAGE_RELATIVE);
+        fs::create_dir_all(&stage).expect("stage");
+        for index in 0..=MAX_ANTIGRAVITY_STAGE_DIRECTORIES {
+            fs::create_dir(stage.join(format!("d{index}"))).expect("stage directory");
+        }
+        let count_cap = open_user_root(count_root.path()).expect("count root");
+        let error = read_optional_regular_tree(&count_cap, Path::new(ANTIGRAVITY_STAGE_RELATIVE))
+            .expect_err("wide stage must conflict");
+        assert!(matches!(error, InstallError::Conflict(_)));
+    }
+
+    #[test]
+    fn validate_checks_native_registration_and_exact_antigravity_stage() {
+        let temporary = tempdir().expect("tempdir");
+        let runner = AntigravityRunner::new(temporary.path());
+        let apply = args(temporary.path(), UserHost::Antigravity, UserMode::Apply);
+        execute(UserOperation::Install, &apply, &runner).expect("initial install");
+        let validate = args(temporary.path(), UserHost::Antigravity, UserMode::Validate);
+
+        *runner.plugin_installed.lock().expect("plugin") = false;
+        let error = execute(UserOperation::Install, &validate, &runner)
+            .err()
+            .expect("missing native registration must fail validation");
+        assert!(matches!(error, InstallError::Verification(_)));
+
+        *runner.plugin_installed.lock().expect("plugin") = true;
+        let stage = temporary.path().join(ANTIGRAVITY_STAGE_RELATIVE);
+        fs::remove_dir_all(&stage).expect("remove stage");
+        let error = execute(UserOperation::Install, &validate, &runner)
+            .err()
+            .expect("missing host stage must fail validation");
+        assert!(matches!(error, InstallError::Verification(_)));
+
+        AntigravityRunner::copy_tree(&temporary.path().join(ANTIGRAVITY_SOURCE_RELATIVE), &stage);
+        let foreign = stage.join("foreign.txt");
+        fs::write(&foreign, b"foreign stage bytes\n").expect("foreign stage");
+        let error = execute(UserOperation::Install, &validate, &runner)
+            .err()
+            .expect("foreign host stage must fail validation");
+        assert!(matches!(error, InstallError::Verification(_)));
+        assert_eq!(
+            fs::read(foreign).expect("foreign stage preserved"),
+            b"foreign stage bytes\n"
+        );
+    }
+
+    #[test]
+    fn validate_checks_codex_and_claude_native_registration() {
+        for host in [UserHost::Codex, UserHost::Claude] {
+            let temporary = tempdir().expect("tempdir");
+            let runner = StatefulHostRunner::new(temporary.path(), HostSabotage::None);
+            let apply = args(temporary.path(), host, UserMode::Apply);
+            execute(UserOperation::Install, &apply, &runner).expect("initial install");
+            *runner.plugin_installed.lock().expect("plugin") = false;
+            let validate = args(temporary.path(), host, UserMode::Validate);
+            let error = execute(UserOperation::Install, &validate, &runner)
+                .err()
+                .expect("missing native registration must fail validation");
+            assert!(matches!(error, InstallError::Verification(_)));
+        }
+    }
+
+    #[test]
+    fn antigravity_refresh_and_recovery_restore_registered_prior_bundle() {
+        let temporary = tempdir().expect("tempdir");
+        let runner = AntigravityRunner::new(temporary.path());
+        let install = args(temporary.path(), UserHost::Antigravity, UserMode::Apply);
+        execute(UserOperation::Install, &install, &runner).expect("initial install");
+        execute(UserOperation::Update, &install, &runner).expect("native refresh");
+
+        let install_calls = runner
+            .calls
+            .lock()
+            .expect("calls")
+            .iter()
+            .filter(|call| call.starts_with("plugin install "))
+            .count();
+        assert_eq!(install_calls, 2);
+
+        let recover_args = args(temporary.path(), UserHost::Antigravity, UserMode::Recover);
+        recover(&recover_args, &runner).expect("recover refreshed plugin");
+        assert_eq!(
+            probe_antigravity_state(&QualifiedExecutable::synthetic("agy"), &runner,)
+                .expect("registered state")
+                .plugin,
+            Some(expected_antigravity_plugin_state())
+        );
+        assert_eq!(
+            fs::read(
+                temporary
+                    .path()
+                    .join(ANTIGRAVITY_SOURCE_RELATIVE)
+                    .join("skills/setup-hive/SKILL.md")
+            )
+            .expect("source Skill"),
+            fs::read(
+                temporary
+                    .path()
+                    .join(ANTIGRAVITY_STAGE_RELATIVE)
+                    .join("skills/setup-hive/SKILL.md")
+            )
+            .expect("staged Skill")
+        );
+    }
+
+    #[test]
+    fn antigravity_probe_parser_accepts_cli_shapes_and_rejects_duplicates() {
+        assert_eq!(
+            parse_antigravity_plugin_state(b"No imported plugins.\n").expect("empty"),
+            None
+        );
+        let valid = serde_json::to_vec(&json!({
+            "imports": [{
+                "name": "aigent-hive",
+                "source": "antigravity",
+                "importedAt": "2026-07-26T00:00:00Z",
+                "components": ["skills"]
+            }]
+        }))
+        .expect("valid JSON");
+        assert_eq!(
+            parse_antigravity_plugin_state(&valid).expect("valid state"),
+            Some(expected_antigravity_plugin_state())
+        );
+        let duplicate = serde_json::to_vec(&json!({
+            "imports": [
+                {
+                    "name": "aigent-hive",
+                    "source": "antigravity",
+                    "importedAt": "2026-07-26T00:00:00Z",
+                    "components": ["skills"]
+                },
+                {
+                    "name": "aigent-hive",
+                    "source": "antigravity",
+                    "importedAt": "2026-07-26T00:00:01Z",
+                    "components": ["skills"]
+                }
+            ]
+        }))
+        .expect("duplicate JSON");
+        assert!(matches!(
+            parse_antigravity_plugin_state(&duplicate),
+            Err(InstallError::Verification(_))
+        ));
     }
 
     #[test]
@@ -5843,14 +8031,15 @@ mod tests {
 
     #[test]
     fn unavailable_host_cli_is_detected_before_user_files_change() {
-        let temporary = tempdir().expect("tempdir");
-        let arguments = args(temporary.path(), UserHost::Codex, UserMode::Apply);
-        let error = execute(UserOperation::Install, &arguments, &UnavailableRunner)
-            .err()
-            .expect("missing host CLI");
-        assert!(matches!(error, InstallError::Unsupported(_)));
-        assert!(!temporary.path().join(".codex").exists());
-        assert!(!temporary.path().join(".hive").exists());
+        for host in [UserHost::Codex, UserHost::Claude] {
+            let temporary = tempdir().expect("tempdir");
+            let arguments = args(temporary.path(), host, UserMode::Apply);
+            let error = execute(UserOperation::Install, &arguments, &UnavailableRunner)
+                .err()
+                .expect("missing host CLI");
+            assert!(matches!(error, InstallError::Unsupported(_)));
+            assert_eq!(fs::read_dir(temporary.path()).expect("root").count(), 0);
+        }
     }
 
     #[test]
@@ -5906,6 +8095,7 @@ mod tests {
         use std::os::unix::fs::PermissionsExt;
 
         let temporary = tempdir().expect("tempdir");
+        write_operational_setup(temporary.path(), &["antigravity"]);
         fs::create_dir(temporary.path().join(".gemini")).expect("gemini");
         let guidance = temporary.path().join(".gemini/GEMINI.md");
         fs::write(&guidance, b"foreign executable guidance\n").expect("guidance");
@@ -5916,7 +8106,7 @@ mod tests {
         fs::write(&suppression, ROOT_SUPPRESSION).expect("suppression");
         fs::set_permissions(&suppression, fs::Permissions::from_mode(0o640))
             .expect("suppression mode");
-        let runner = FakeRunner::new();
+        let runner = AntigravityRunner::new(temporary.path());
         let arguments = args(temporary.path(), UserHost::Antigravity, UserMode::Apply);
         execute(UserOperation::Install, &arguments, &runner).expect("apply");
         let manifest: UserOwnershipManifest = serde_json::from_slice(
@@ -5984,7 +8174,7 @@ mod tests {
         .expect("guidance");
         let arguments = args(temporary.path(), UserHost::Antigravity, UserMode::Apply);
         let mut plan = build_plan(&arguments).expect("plan");
-        apply_plan(&arguments, &mut plan, None, None).expect("partial apply");
+        apply_plan(&arguments, &mut plan, None, None, None).expect("partial apply");
         fs::remove_file(temporary.path().join(".hive/install/antigravity.json"))
             .expect("simulate crash before installed manifest activation");
         recover(&arguments, &FakeRunner::new()).expect("journal recovery");
@@ -6055,7 +8245,7 @@ mod tests {
         assert_eq!(
             parse_codex_marketplace_state(marketplace).expect("marketplace state"),
             Some(CodexMarketplaceState {
-                root: "/tmp/.hive/marketplaces/codex".to_owned()
+                root: normalize_host_path("/tmp/.hive/marketplaces/codex")
             })
         );
         let plugin = br#"{
@@ -6076,8 +8266,8 @@ mod tests {
             Some(CodexPluginState {
                 version: "0.7.0".to_owned(),
                 enabled: true,
-                source_path: "/tmp/plugin".to_owned(),
-                marketplace_source: "/tmp/source".to_owned()
+                source_path: normalize_host_path("/tmp/plugin"),
+                marketplace_source: normalize_host_path("/tmp/source")
             })
         );
         let duplicate = br#"{"marketplaces":[
@@ -6085,6 +8275,19 @@ mod tests {
           {"name":"aigent-hive","root":"/tmp/b"}
         ]}"#;
         assert!(parse_codex_marketplace_state(duplicate).is_err());
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn codex_probe_normalizes_windows_verbatim_paths() {
+        assert_eq!(
+            normalize_host_path(r"\\?\C:\Users\hive\marketplace"),
+            r"C:\Users\hive\marketplace"
+        );
+        assert_eq!(
+            normalize_host_path(r"\\?\UNC\server\share\marketplace"),
+            r"\\server\share\marketplace"
+        );
     }
 
     #[test]
@@ -6099,7 +8302,7 @@ mod tests {
             parse_claude_marketplace_state(marketplace).expect("marketplace state"),
             Some(ClaudeMarketplaceState {
                 source: "directory".to_owned(),
-                path: "/tmp/.hive/marketplaces/claude".to_owned()
+                path: normalize_host_path("/tmp/.hive/marketplaces/claude")
             })
         );
         let plugin = br#"[{
@@ -6240,6 +8443,7 @@ mod tests {
             match backup.host_owned_state.expect("owned state evidence") {
                 HostStateSnapshot::Codex(state) => assert!(state.plugin.is_none()),
                 HostStateSnapshot::Claude(state) => assert!(state.plugin.is_none()),
+                HostStateSnapshot::Antigravity(_) => panic!("unexpected Antigravity state"),
             }
         }
     }
@@ -6338,6 +8542,7 @@ mod tests {
             {
                 HostStateSnapshot::Codex(state) => assert!(state.plugin.is_some()),
                 HostStateSnapshot::Claude(state) => assert!(state.plugin.is_some()),
+                HostStateSnapshot::Antigravity(_) => panic!("unexpected Antigravity state"),
             }
         }
     }
@@ -6487,9 +8692,16 @@ mod tests {
     #[test]
     fn preexisting_index_and_foreign_tamper_remain_recoverable() {
         let temporary = tempdir().expect("tempdir");
+        write_operational_setup(temporary.path(), &["codex", "antigravity"]);
         let initial = args(temporary.path(), UserHost::Antigravity, UserMode::Apply);
-        execute(UserOperation::Install, &initial, &FakeRunner::new()).expect("initial install");
-        let before = hive_wiki::rebuild_index(&initial.user_root).expect("initial index");
+        execute(
+            UserOperation::Install,
+            &initial,
+            &AntigravityRunner::new(temporary.path()),
+        )
+        .expect("initial install");
+        let before = hive_wiki::shared::rebuild_shared_index(&initial.user_root)
+            .expect("initial shared index");
         let runner = StatefulHostRunner::new(
             temporary.path(),
             HostSabotage::TamperGuidanceAfterActivation,
@@ -6503,10 +8715,34 @@ mod tests {
             fs::read(temporary.path().join(".codex/AGENTS.md")).expect("foreign guidance"),
             b"tampered guidance\n"
         );
-        hive_wiki::query(&arguments.user_root, Some("rollback-index-probe"), None, 10)
-            .expect("rollback left a current queryable index");
-        let after = hive_wiki::rebuild_index(&arguments.user_root).expect("rebuilt rollback index");
+        hive_wiki::shared::validate_shared_index(&arguments.user_root)
+            .expect("rollback left a current shared index");
+        let after = hive_wiki::shared::rebuild_shared_index(&arguments.user_root)
+            .expect("rebuilt rollback shared index");
         assert_eq!(before.logical_digest, after.logical_digest);
+    }
+
+    #[test]
+    fn rollback_reconstruction_failure_preserves_preexisting_index_and_surfaces_error() {
+        let temporary = tempdir().expect("tempdir");
+        let index = temporary.path().join(ROOT_INDEX_RELATIVE);
+        fs::create_dir_all(index.parent().expect("index parent")).expect("index parent");
+        fs::write(&index, b"prior index bytes\n").expect("prior index");
+        fs::create_dir_all(temporary.path().join(".hive/config/projects.yml"))
+            .expect("invalid registry directory");
+        let arguments = args(temporary.path(), UserHost::Codex, UserMode::Apply);
+
+        let error = reconcile_root_index_after_rollback(&arguments, true)
+            .expect_err("reconstruction failure");
+
+        assert!(matches!(error, InstallError::Verification(_)));
+        assert!(error
+            .message()
+            .contains("root knowledge index reconstruction failed during rollback"));
+        assert_eq!(
+            fs::read(index).expect("preserved index"),
+            b"prior index bytes\n"
+        );
     }
 
     #[test]

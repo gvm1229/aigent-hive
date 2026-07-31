@@ -41,8 +41,7 @@ class RootKnowledgePromotionConformance(Phase1CliTestCase):
         self.fake_bin = self.work_root / "fake-bin"
         self.fake_bin.mkdir()
         self._write_fake_antigravity()
-        self.user_root = self.work_root / "user-root"
-        self.user_root.mkdir()
+        self.user_root = self.setup_user_root
         installed, installed_result = self.invoke(
             "install",
             "--scope",
@@ -60,22 +59,47 @@ class RootKnowledgePromotionConformance(Phase1CliTestCase):
 
     def _write_fake_antigravity(self) -> None:
         program = """\
+import json
+import os
+import shutil
 import sys
+from pathlib import Path
 
-if sys.argv[1:] == ["--version"]:
-    print("antigravity 2.3.1")
+arguments = sys.argv[1:]
+stage = Path(os.environ["HIVE_TEST_USER_ROOT"]) / ".gemini/config/plugins/aigent-hive"
+if arguments == ["--version"]:
+    print("1.1.7")
+elif arguments == ["plugin", "list"]:
+    if stage.exists():
+        print(json.dumps({"imports": [{
+            "name": "aigent-hive",
+            "source": "antigravity",
+            "importedAt": "2026-07-27T00:00:00Z",
+            "components": ["skills"],
+        }]}))
+    else:
+        print("No imported plugins.")
+elif len(arguments) == 3 and arguments[:2] == ["plugin", "install"]:
+    if stage.exists():
+        shutil.rmtree(stage)
+    shutil.copytree(arguments[2], stage)
+    print("{}")
+elif arguments == ["plugin", "uninstall", "aigent-hive"]:
+    if stage.exists():
+        shutil.rmtree(stage)
+    print("{}")
 else:
     print("{}")
 """
         if os.name == "nt":
-            python_path = self.fake_bin / "antigravity.py"
+            python_path = self.fake_bin / "agy.py"
             python_path.write_text(program, encoding="utf-8")
-            (self.fake_bin / "antigravity.cmd").write_text(
-                f'@"{os.sys.executable}" "%~dp0\\antigravity.py" %*\r\n',
+            (self.fake_bin / "agy.cmd").write_text(
+                f'@"{os.sys.executable}" "%~dp0\\agy.py" %*\r\n',
                 encoding="utf-8",
             )
             return
-        executable = self.fake_bin / "antigravity"
+        executable = self.fake_bin / "agy"
         executable.write_text(
             f"#!{os.sys.executable}\n{program}",
             encoding="utf-8",
@@ -87,8 +111,11 @@ else:
         *arguments: str,
         environment: dict[str, str] | None = None,
     ) -> tuple[subprocess.CompletedProcess[str], dict[str, object]]:
+        command_arguments = list(arguments)
+        if command_arguments[:1] == ["knowledge"] and "--user-root" not in command_arguments:
+            command_arguments.extend(["--user-root", str(self.user_root)])
         process = subprocess.run(
-            [str(self.hive_binary), *arguments, "--output", "json"],
+            [str(self.hive_binary), *command_arguments, "--output", "json"],
             cwd=REPOSITORY_ROOT,
             check=False,
             text=True,
@@ -99,6 +126,7 @@ else:
                     "PATH": str(self.fake_bin)
                     + os.pathsep
                     + os.environ.get("PATH", ""),
+                    "HIVE_TEST_USER_ROOT": str(self.user_root),
                     **(environment or {}),
                 }
             ),
@@ -321,12 +349,18 @@ else:
             "deterministic local knowledge",
         )
         self.assertEqual(queried.returncode, 0, queried.stderr)
-        self.assertEqual(query_result["data"]["precedence"], "project-first")
-        self.assertEqual(query_result["data"]["hits"][0]["scope"], "project")
+        self.assertEqual(
+            query_result["data"]["precedence"],
+            "own-project,user-root,shared",
+        )
+        self.assertEqual(
+            query_result["data"]["hits"][0]["visibility"],
+            "project-private",
+        )
         self.assertTrue(
             any(
-                hit["scope"] == "user-root"
-                and hit["provenance"] == "explicit-promotion"
+                hit["source_project"] == "user-root"
+                and hit["visibility"] == "shared"
                 for hit in query_result["data"]["hits"]
             )
         )
@@ -336,6 +370,8 @@ else:
             "query",
             "--target",
             str(self.user_root),
+            "--user-root",
+            str(self.user_root),
             "--text",
             "deterministic local knowledge",
         )[1]["data"]
@@ -344,7 +380,7 @@ else:
         rebuilt, rebuild_result = self.invoke(
             "index",
             "rebuild",
-            "--target",
+            "--user-root",
             str(self.user_root),
         )
         self.assertEqual(rebuilt.returncode, 0, rebuilt.stderr)
@@ -353,6 +389,8 @@ else:
             "knowledge",
             "query",
             "--target",
+            str(self.user_root),
+            "--user-root",
             str(self.user_root),
             "--text",
             "deterministic local knowledge",
@@ -594,23 +632,26 @@ else:
             "--text",
             "deterministic local knowledge",
         )[1]
-        self.assertEqual(queried["data"]["precedence"], "project-first")
+        self.assertEqual(
+            queried["data"]["precedence"],
+            "own-project,user-root,shared",
+        )
         self.assertEqual(queried["data"]["project_hit_count"], 1)
         self.assertEqual(queried["data"]["root_hit_count"], 1)
         self.assertEqual(
             [
-                (hit["scope"], hit["provenance"])
+                (hit["source_project"] == "user-root", hit["visibility"])
                 for hit in queried["data"]["hits"]
             ],
             [
-                ("project", "project-local"),
-                ("user-root", "explicit-promotion"),
+                (False, "project-private"),
+                (True, "shared"),
             ],
         )
         root_hit = next(
             hit
             for hit in queried["data"]["hits"]
-            if hit["scope"] == "user-root"
+            if hit["source_project"] == "user-root"
         )
         self.assertEqual(root_hit["sources"], expected_sources)
         self.assertEqual(root_hit["sources"], sorted(set(root_hit["sources"])))
@@ -656,21 +697,24 @@ else:
             },
         )
         self.assertEqual(query.returncode, 0, query.stderr)
-        self.assertEqual(query_result["data"]["precedence"], "project-first")
+        self.assertEqual(
+            query_result["data"]["precedence"],
+            "own-project,user-root,shared",
+        )
         self.assertEqual(
             [
-                (hit["scope"], hit["provenance"])
+                (hit["source_project"] == "user-root", hit["visibility"])
                 for hit in query_result["data"]["hits"]
             ],
             [
-                ("project", "project-local"),
-                ("user-root", "explicit-promotion"),
+                (False, "project-private"),
+                (True, "shared"),
             ],
         )
         skill_root_hit = next(
             hit
             for hit in query_result["data"]["hits"]
-            if hit["scope"] == "user-root"
+            if hit["source_project"] == "user-root"
         )
         self.assertEqual(
             skill_root_hit["sources"],

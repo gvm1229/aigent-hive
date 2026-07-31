@@ -12,25 +12,25 @@ Use the narrowest explicit maintenance action.
 - Validate without mutation:
 
   ```text
-  hive knowledge lint --target <project-root> --output json
+  hive knowledge lint --target <project-root> --user-root <user-root> --output json
   ```
 
 - Rebuild the disposable index from tracked sources:
 
   ```text
-  hive index rebuild --target <project-root> --output json
+  hive index rebuild --user-root <user-root> --output json
   ```
 
 - Delete a canonical Wiki page and record minimal suppression metadata:
 
   ```text
-  hive knowledge delete --target <project-root> --page-id <id> --reason <reason> [--replacement <locator>] --timestamp <RFC3339> --output json
+  hive knowledge delete --target <project-root> --user-root <user-root> --page-id <id> --reason <reason> [--replacement <locator>] --timestamp <RFC3339> --output json
   ```
 
 - Suppress a deleted source fingerprint from re-ingest:
 
   ```text
-  hive knowledge suppress --target <project-root> --fingerprint <sha256:digest> --source-locator <locator> --reason <reason> [--replacement <locator>] --timestamp <RFC3339> --output json
+  hive knowledge suppress --target <project-root> --user-root <user-root> --fingerprint <sha256:digest> --source-locator <locator> --reason <reason> [--replacement <locator>] --timestamp <RFC3339> --output json
   ```
 
 ## Safety
@@ -38,5 +38,7 @@ Use the narrowest explicit maintenance action.
 - Require explicit deletion or suppression intent; lint or rebuild intent does not authorize canonical deletion.
 - Preserve non-Hive files and all user-authored bytes outside declared Hive ownership.
 - Never edit SQLite as canonical data or migrate it; rebuild it from tracked Markdown/YAML.
+- Treat `hive index rebuild --target <legacy-project>` as a `0.7.x` compatibility action only,
+  never as the operational shared-index route.
 - Keep update/migration activation and knowledge deletion or garbage collection in separate transactions.
 - Report changed paths, evidence digests, and recovery guidance from the CLI result.

@@ -1,0 +1,410 @@
+name: Native release runtime qualification
+
+on:
+  push:
+    branches:
+      - develop
+      - main
+    paths:
+      - Cargo.lock
+      - Cargo.toml
+      - crates/**
+      - harness/**
+      - schemas/**
+      - scripts/check-release-version.sh
+      - tests/fixtures/agy-stub.py
+      - LICENSE
+      - .github/workflows/release-runtime.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  macos:
+    name: macOS ${{ matrix.target }}
+    runs-on: ${{ matrix.runner }}
+    env:
+      TARGET: ${{ matrix.target }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-15
+            target: aarch64-apple-darwin
+            architecture: arm64
+          - runner: macos-15-intel
+            target: x86_64-apple-darwin
+            architecture: x86_64
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Bind source, event, and workflow identity
+        run: |
+          head_sha=$(git rev-parse HEAD)
+          test "$head_sha" = "$GITHUB_SHA"
+          test "$head_sha" = "$GITHUB_WORKFLOW_SHA"
+          printf 'HEAD_SHA=%s\n' "$head_sha" >>"$GITHUB_ENV"
+      - uses: dtolnay/rust-toolchain@2c7215f132e9ebf062739d9130488b56d53c060c # master 2026-07-16
+        with:
+          toolchain: stable
+          targets: ${{ matrix.target }}
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+      - name: Build locked native release
+        run: |
+          version=$(awk -F'"' '/^version = "/ { print $2; exit }' Cargo.toml)
+          release_date=$(awk -F'"' '/^release-date = "/ { print $2; exit }' Cargo.toml)
+          scripts/check-release-version.sh "$version"
+          cargo build --release --locked --target "$TARGET" --bin hive
+          printf 'VERSION=%s\n' "$version" >>"$GITHUB_ENV"
+          printf 'RELEASE_DATE=%s\n' "$release_date" >>"$GITHUB_ENV"
+      - name: Verify architecture and package exact release layout
+        env:
+          EXPECTED_ARCHITECTURE: ${{ matrix.architecture }}
+        run: |
+          binary="target/$TARGET/release/hive"
+          test "$(lipo -archs "$binary")" = "$EXPECTED_ARCHITECTURE"
+          file "$binary" | grep -F "$EXPECTED_ARCHITECTURE"
+          package="aigent-hive-$VERSION-$TARGET"
+          mkdir "$package"
+          cp "$binary" "$package/hive"
+          cp LICENSE "$package/LICENSE"
+          COPYFILE_DISABLE=1 tar --format ustar --uid 0 --gid 0 \
+            -czf "$RUNNER_TEMP/$package.tar.gz" \
+            "$package/hive" "$package/LICENSE"
+          printf '%s\n%s\n' "$package/LICENSE" "$package/hive" | sort \
+            >"$RUNNER_TEMP/expected-entries.txt"
+          tar -tzf "$RUNNER_TEMP/$package.tar.gz" | sort \
+            >"$RUNNER_TEMP/actual-entries.txt"
+          diff -u "$RUNNER_TEMP/expected-entries.txt" \
+            "$RUNNER_TEMP/actual-entries.txt"
+          archive_digest=$(shasum -a 256 "$RUNNER_TEMP/$package.tar.gz" | cut -d' ' -f1)
+          binary_digest=$(shasum -a 256 "$binary" | cut -d' ' -f1)
+          printf '%s  %s\n' "$archive_digest" "$RUNNER_TEMP/$package.tar.gz" \
+            >"$RUNNER_TEMP/$package.tar.gz.sha256"
+          shasum -a 256 -c "$RUNNER_TEMP/$package.tar.gz.sha256"
+          printf 'PACKAGE=%s\n' "$package" >>"$GITHUB_ENV"
+          printf 'ARCHIVE_DIGEST=%s\n' "$archive_digest" >>"$GITHUB_ENV"
+          printf 'BINARY_DIGEST=%s\n' "$binary_digest" >>"$GITHUB_ENV"
+      - name: Extract, digest-match, and execute installed binary
+        run: |
+          prefix="$RUNNER_TEMP/prefix"
+          mkdir "$prefix"
+          tar -xzf "$RUNNER_TEMP/$PACKAGE.tar.gz" -C "$prefix"
+          installed="$prefix/$PACKAGE/hive"
+          test "$(shasum -a 256 "$installed" | cut -d' ' -f1)" = "$BINARY_DIGEST"
+          test "$("$installed" --version)" = "hive $VERSION (released $RELEASE_DATE)"
+          "$installed" doctor | grep -F "aigent-hive $VERSION"
+      - name: Qualify isolated Antigravity user install lifecycle
+        run: |
+          installed="$RUNNER_TEMP/prefix/$PACKAGE/hive"
+          user_root="$RUNNER_TEMP/antigravity-user"
+          fake_bin="$RUNNER_TEMP/fake-bin"
+          mkdir "$user_root"
+          mkdir "$fake_bin"
+          cp tests/fixtures/agy-stub.py "$fake_bin/agy"
+          chmod +x "$fake_bin/agy"
+          export PATH="$fake_bin:$PATH"
+          export HIVE_TEST_HOST_LOG="$RUNNER_TEMP/antigravity-host"
+          "$installed" install --scope user --host antigravity \
+            --user-root "$user_root" --dry-run --output json \
+            >"$RUNNER_TEMP/install-dry-run.json"
+          test "$(jq -r .code "$RUNNER_TEMP/install-dry-run.json")" \
+            = "hive.user-install-dry-run-complete"
+          "$installed" install --scope user --host antigravity \
+            --user-root "$user_root" --apply --output json \
+            >"$RUNNER_TEMP/install-apply.json"
+          test "$(jq -r .code "$RUNNER_TEMP/install-apply.json")" \
+            = "hive.user-install-complete"
+          "$installed" install --scope user --host antigravity \
+            --user-root "$user_root" --validate --output json \
+            >"$RUNNER_TEMP/install-validate.json"
+          test "$(jq -r .code "$RUNNER_TEMP/install-validate.json")" \
+            = "hive.user-install-valid"
+      - name: Record sanitized qualification metadata
+        run: |
+          {
+            printf '### Native release runtime qualification\n\n'
+            printf -- '- source: `%s`\n' "$HEAD_SHA"
+            printf -- '- target: `%s`\n' "$TARGET"
+            printf -- '- binary digest: `sha256:%s`\n' "$BINARY_DIGEST"
+            printf -- '- archive digest: `sha256:%s`\n' "$ARCHIVE_DIGEST"
+            printf -- '- package entries: `LICENSE`, `hive`\n'
+            printf -- '- Antigravity lifecycle: `dry-run`, `apply`, `validate`\n'
+          } >>"$GITHUB_STEP_SUMMARY"
+
+  linux:
+    name: Linux ${{ matrix.target }}
+    runs-on: ${{ matrix.runner }}
+    env:
+      TARGET: ${{ matrix.target }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            target: x86_64-unknown-linux-musl
+            file_architecture: x86-64
+          - runner: ubuntu-24.04-arm
+            target: aarch64-unknown-linux-musl
+            file_architecture: ARM aarch64
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Bind source, event, and workflow identity
+        run: |
+          head_sha=$(git rev-parse HEAD)
+          test "$head_sha" = "$GITHUB_SHA"
+          test "$head_sha" = "$GITHUB_WORKFLOW_SHA"
+          printf 'HEAD_SHA=%s\n' "$head_sha" >>"$GITHUB_ENV"
+      - name: Install the native musl linker
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends musl-tools
+      - uses: dtolnay/rust-toolchain@2c7215f132e9ebf062739d9130488b56d53c060c # master 2026-07-16
+        with:
+          toolchain: stable
+          targets: ${{ matrix.target }}
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+      - name: Build locked native release
+        run: |
+          version=$(awk -F'"' '/^version = "/ { print $2; exit }' Cargo.toml)
+          release_date=$(awk -F'"' '/^release-date = "/ { print $2; exit }' Cargo.toml)
+          scripts/check-release-version.sh "$version"
+          cargo build --release --locked --target "$TARGET" --bin hive
+          printf 'VERSION=%s\n' "$version" >>"$GITHUB_ENV"
+          printf 'RELEASE_DATE=%s\n' "$release_date" >>"$GITHUB_ENV"
+      - name: Verify architecture and package exact release layout
+        env:
+          EXPECTED_FILE_ARCHITECTURE: ${{ matrix.file_architecture }}
+        run: |
+          binary="target/$TARGET/release/hive"
+          file "$binary" | grep -F "ELF 64-bit"
+          file "$binary" | grep -F "$EXPECTED_FILE_ARCHITECTURE"
+          file "$binary" | grep -E "statically linked|static-pie linked"
+          package="aigent-hive-$VERSION-$TARGET"
+          mkdir "$package"
+          cp "$binary" "$package/hive"
+          cp LICENSE "$package/LICENSE"
+          tar --format ustar --owner 0 --group 0 \
+            -czf "$RUNNER_TEMP/$package.tar.gz" \
+            "$package/hive" "$package/LICENSE"
+          printf '%s\n%s\n' "$package/LICENSE" "$package/hive" | sort \
+            >"$RUNNER_TEMP/expected-entries.txt"
+          tar -tzf "$RUNNER_TEMP/$package.tar.gz" | sort \
+            >"$RUNNER_TEMP/actual-entries.txt"
+          diff -u "$RUNNER_TEMP/expected-entries.txt" \
+            "$RUNNER_TEMP/actual-entries.txt"
+          archive_digest=$(sha256sum "$RUNNER_TEMP/$package.tar.gz" | cut -d' ' -f1)
+          binary_digest=$(sha256sum "$binary" | cut -d' ' -f1)
+          printf '%s  %s\n' "$archive_digest" "$RUNNER_TEMP/$package.tar.gz" \
+            >"$RUNNER_TEMP/$package.tar.gz.sha256"
+          sha256sum -c "$RUNNER_TEMP/$package.tar.gz.sha256"
+          printf 'PACKAGE=%s\n' "$package" >>"$GITHUB_ENV"
+          printf 'ARCHIVE_DIGEST=%s\n' "$archive_digest" >>"$GITHUB_ENV"
+          printf 'BINARY_DIGEST=%s\n' "$binary_digest" >>"$GITHUB_ENV"
+      - name: Extract, digest-match, and execute installed binary
+        run: |
+          prefix="$RUNNER_TEMP/prefix"
+          mkdir "$prefix"
+          tar -xzf "$RUNNER_TEMP/$PACKAGE.tar.gz" -C "$prefix"
+          installed="$prefix/$PACKAGE/hive"
+          test "$(sha256sum "$installed" | cut -d' ' -f1)" = "$BINARY_DIGEST"
+          test "$("$installed" --version)" = "hive $VERSION (released $RELEASE_DATE)"
+          "$installed" doctor | grep -F "aigent-hive $VERSION"
+      - name: Qualify isolated Antigravity user install lifecycle
+        run: |
+          installed="$RUNNER_TEMP/prefix/$PACKAGE/hive"
+          user_root="$RUNNER_TEMP/antigravity-user"
+          fake_bin="$RUNNER_TEMP/fake-bin"
+          mkdir "$user_root"
+          mkdir "$fake_bin"
+          cp tests/fixtures/agy-stub.py "$fake_bin/agy"
+          chmod +x "$fake_bin/agy"
+          export PATH="$fake_bin:$PATH"
+          export HIVE_TEST_HOST_LOG="$RUNNER_TEMP/antigravity-host"
+          "$installed" install --scope user --host antigravity \
+            --user-root "$user_root" --dry-run --output json \
+            >"$RUNNER_TEMP/install-dry-run.json"
+          test "$(jq -r .code "$RUNNER_TEMP/install-dry-run.json")" \
+            = "hive.user-install-dry-run-complete"
+          "$installed" install --scope user --host antigravity \
+            --user-root "$user_root" --apply --output json \
+            >"$RUNNER_TEMP/install-apply.json"
+          test "$(jq -r .code "$RUNNER_TEMP/install-apply.json")" \
+            = "hive.user-install-complete"
+          "$installed" install --scope user --host antigravity \
+            --user-root "$user_root" --validate --output json \
+            >"$RUNNER_TEMP/install-validate.json"
+          test "$(jq -r .code "$RUNNER_TEMP/install-validate.json")" \
+            = "hive.user-install-valid"
+      - name: Record sanitized qualification metadata
+        run: |
+          {
+            printf '### Native release runtime qualification\n\n'
+            printf -- '- source: `%s`\n' "$HEAD_SHA"
+            printf -- '- target: `%s`\n' "$TARGET"
+            printf -- '- linkage: `static musl`\n'
+            printf -- '- binary digest: `sha256:%s`\n' "$BINARY_DIGEST"
+            printf -- '- archive digest: `sha256:%s`\n' "$ARCHIVE_DIGEST"
+            printf -- '- package entries: `LICENSE`, `hive`\n'
+            printf -- '- Antigravity lifecycle: `dry-run`, `apply`, `validate`\n'
+          } >>"$GITHUB_STEP_SUMMARY"
+
+  windows:
+    name: Windows x86_64
+    runs-on: windows-2025
+    env:
+      TARGET: x86_64-pc-windows-msvc
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Bind source, event, and workflow identity
+        shell: pwsh
+        run: |
+          $headSha = (git rev-parse HEAD).Trim()
+          if (
+            $headSha -ne $env:GITHUB_SHA -or
+            $headSha -ne $env:GITHUB_WORKFLOW_SHA
+          ) {
+            throw "source, event, and workflow identity differ"
+          }
+          "HEAD_SHA=$headSha" | Out-File $env:GITHUB_ENV -Encoding utf8 -Append
+      - uses: dtolnay/rust-toolchain@2c7215f132e9ebf062739d9130488b56d53c060c # master 2026-07-16
+        with:
+          toolchain: stable
+          targets: x86_64-pc-windows-msvc
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+      - name: Build locked native release
+        shell: pwsh
+        run: |
+          $cargo = Get-Content Cargo.toml -Raw
+          $match = [regex]::Match($cargo, '(?m)^version = "([^"]+)"')
+          if (-not $match.Success) {
+            throw "workspace version is unavailable"
+          }
+          $version = $match.Groups[1].Value
+          $releaseDateMatch = [regex]::Match(
+            $cargo,
+            '(?m)^release-date = "([^"]+)"'
+          )
+          if (-not $releaseDateMatch.Success) {
+            throw "workspace release date is unavailable"
+          }
+          $releaseDate = $releaseDateMatch.Groups[1].Value
+          bash scripts/check-release-version.sh $version
+          if ($LASTEXITCODE -ne 0) {
+            throw "product version parity check failed"
+          }
+          cargo build --release --locked --target $env:TARGET --bin hive
+          if ($LASTEXITCODE -ne 0) {
+            throw "locked native release build failed"
+          }
+          "VERSION=$version" | Out-File $env:GITHUB_ENV -Encoding utf8 -Append
+          "RELEASE_DATE=$releaseDate" |
+            Out-File $env:GITHUB_ENV -Encoding utf8 -Append
+      - name: Verify architecture and package exact release layout
+        shell: pwsh
+        run: |
+          $binary = "target\$env:TARGET\release\hive.exe"
+          $bytes = [System.IO.File]::ReadAllBytes($binary)
+          $peOffset = [BitConverter]::ToInt32($bytes, 0x3c)
+          $machine = [BitConverter]::ToUInt16($bytes, $peOffset + 4)
+          if ($machine -ne 0x8664) {
+            throw "release binary is not x86_64 PE"
+          }
+          $package = "aigent-hive-$env:VERSION-$env:TARGET"
+          New-Item -ItemType Directory -Path $package | Out-Null
+          Copy-Item $binary "$package\hive.exe"
+          Copy-Item LICENSE "$package\LICENSE"
+          $archive = "$env:RUNNER_TEMP\$package.zip"
+          Compress-Archive -Path "$package\*" -DestinationPath $archive
+          $zip = [System.IO.Compression.ZipFile]::OpenRead($archive)
+          try {
+            $entries = $zip.Entries |
+              ForEach-Object { $_.FullName.Replace('\', '/') } |
+              Sort-Object
+          } finally {
+            $zip.Dispose()
+          }
+          $expected = @("LICENSE", "hive.exe") | Sort-Object
+          if (Compare-Object $expected $entries) {
+            throw "release archive entries differ from the exact layout"
+          }
+          $archiveDigest = (Get-FileHash $archive -Algorithm SHA256).Hash.ToLowerInvariant()
+          $binaryDigest = (Get-FileHash $binary -Algorithm SHA256).Hash.ToLowerInvariant()
+          $checksum = "$env:RUNNER_TEMP\$package.zip.sha256"
+          "$archiveDigest  $archive" | Set-Content $checksum -Encoding ascii
+          $expectedDigest = ((Get-Content $checksum -Raw) -split '\s+')[0]
+          if (
+            (Get-FileHash $archive -Algorithm SHA256).Hash.ToLowerInvariant() -ne
+            $expectedDigest
+          ) {
+            throw "release archive checksum mismatch"
+          }
+          "PACKAGE=$package" | Out-File $env:GITHUB_ENV -Encoding utf8 -Append
+          "ARCHIVE_DIGEST=$archiveDigest" | Out-File $env:GITHUB_ENV -Encoding utf8 -Append
+          "BINARY_DIGEST=$binaryDigest" | Out-File $env:GITHUB_ENV -Encoding utf8 -Append
+      - name: Extract, digest-match, and execute installed binary
+        shell: pwsh
+        run: |
+          $prefix = "$env:RUNNER_TEMP\prefix"
+          Expand-Archive "$env:RUNNER_TEMP\$env:PACKAGE.zip" -DestinationPath $prefix
+          $installed = "$prefix\hive.exe"
+          $installedDigest = (Get-FileHash $installed -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($installedDigest -ne $env:BINARY_DIGEST) {
+            throw "installed binary digest mismatch"
+          }
+          if (
+            (& $installed --version) -ne
+            "hive $env:VERSION (released $env:RELEASE_DATE)"
+          ) {
+            throw "installed binary version mismatch"
+          }
+          if ((& $installed doctor) -notcontains "aigent-hive $env:VERSION") {
+            throw "installed binary doctor failed"
+          }
+      - name: Qualify isolated Antigravity user install lifecycle
+        shell: pwsh
+        run: |
+          $installed = "$env:RUNNER_TEMP\prefix\hive.exe"
+          $userRoot = "$env:RUNNER_TEMP\antigravity-user"
+          $fakeBin = "$env:RUNNER_TEMP\fake-bin"
+          New-Item -ItemType Directory -Path $userRoot | Out-Null
+          New-Item -ItemType Directory -Path $fakeBin | Out-Null
+          Copy-Item tests/fixtures/agy-stub.py "$fakeBin\agy.py"
+          '@python "%~dp0agy.py" %*' |
+            Set-Content "$fakeBin\agy.cmd" -Encoding ascii
+          $env:PATH = "$fakeBin;$env:PATH"
+          $env:HIVE_TEST_HOST_LOG = "$env:RUNNER_TEMP\antigravity-host"
+          $dryRun = & $installed install --scope user --host antigravity `
+            --user-root $userRoot --dry-run --output json | ConvertFrom-Json
+          if ($dryRun.code -ne "hive.user-install-dry-run-complete") {
+            throw "Antigravity user install dry run failed"
+          }
+          $apply = & $installed install --scope user --host antigravity `
+            --user-root $userRoot --apply --output json | ConvertFrom-Json
+          if ($apply.code -ne "hive.user-install-complete") {
+            throw "Antigravity user install apply failed"
+          }
+          $validate = & $installed install --scope user --host antigravity `
+            --user-root $userRoot --validate --output json | ConvertFrom-Json
+          if ($validate.code -ne "hive.user-install-valid") {
+            throw "Antigravity user install validation failed"
+          }
+      - name: Record sanitized qualification metadata
+        shell: pwsh
+        run: |
+          @"
+          ### Native release runtime qualification
+
+          - source: ``$env:HEAD_SHA``
+          - target: ``$env:TARGET``
+          - binary digest: ``sha256:$env:BINARY_DIGEST``
+          - archive digest: ``sha256:$env:ARCHIVE_DIGEST``
+          - package entries: ``LICENSE``, ``hive.exe``
+          - Antigravity lifecycle: ``dry-run``, ``apply``, ``validate``
+          "@ | Out-File $env:GITHUB_STEP_SUMMARY -Encoding utf8 -Append

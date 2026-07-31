@@ -221,35 +221,47 @@ Malformed, future-dated, exact 7일 경계, active, symlinked 또는 foreign-ent
 
 ## Release와 installer ownership
 
-`.github/workflows/release.yml`은 protected `release-signing` environment에서:
+`.github/workflows/release.yml` candidate 계약:
 
-- macOS arm64/x86_64의 Developer ID signing과 notarization.
-- Windows x86_64의 Azure Artifact Signing OIDC 기반 Authenticode signing/timestamp.
-- exact artifact SHA-256과 GitHub artifact attestation을 생성.
-- offline Sigstore bundle과 `verified` platform-evidence fragment를 candidate artifact로
-  보존.
+- Protected `develop` exact commit, product version과 npm package version 결합
+- macOS arm64·x86_64, Linux musl arm64·x86_64, Windows MSVC x86_64 build
+- Native archive와 exact `@aigent-hive/*` npm platform tarball 생성
+- Artifact SHA-256, GitHub artifact attestation, native/npm binary byte identity
+- Platform artifact digest 기반 direct installer 렌더 후 `aigent-hive` umbrella에 포함
+- Tag·GitHub Release·npm publication 권한 0건
 
-이 candidate workflow는 tag나 GitHub Release를 만들 권한이 없음.
+`.github/workflows/release-publish.yml`의 `0.8.0` product candidate 계약:
 
-`.github/workflows/release-publish.yml`은 별도 `release-publication` approval 뒤:
+- 별도 `release-publication` approval
+- 성공한 protected `develop` candidate run과 exact commit 고정
+- 5개 native archive·6개 npm tarball의 checksum·attestation·manifest·byte identity 검증
+- Umbrella 안의 exact product·package `0.8.0`
+  `install.sh`·`install.ps1`·`install.cmd` 검증
+- 6개 npm package 모두 exact `0.8.0`과 `latest` dist-tag로 publication
+- Git tag·GitHub Release 생성 0건
 
-- 성공한 main candidate run과 exact commit을 고정.
-- external signer가 만든 TUF repository archive와 protected public root를 read-only 조회.
-- `hive release verify` 뒤 signed bundle manifest의 `source.commit`이 선택한 candidate
-  run SHA와 exact하게 같은지 확인.
-- candidate/TUF target byte comparison을 통과.
-- 각 candidate의 Sigstore bundle과 merged platform-evidence exact comparison을
-  통과.
-- 기존 tag/release가 없을 때만 exact commit을 tag하고 immutable asset을 공개.
+Package가 아직 없는 최초 등록만 `bootstrap_with_token=true`와
+`release-publication` environment의 임시 `NPM_TOKEN` 사용. 이 단계도 같은
+candidate·attestation·manifest·byte identity 검증과 `--tag latest --provenance` 적용.
+등록 직후 secret 삭제, 6개 package 각각에 `release-publish.yml`과
+`release-publication`을 결합한 Trusted Publisher 설정, publishing access의 token
+차단 적용. 이후 `bootstrap_with_token=false` 경로에는 `NODE_AUTH_TOKEN`을 주입하지
+않고 GitHub OIDC만 사용.
 
-Direct bootstrap은 official GitHub Release URL만 사용하고 archive entry allowlist,
-archive SHA-256, OS signature·Gatekeeper/Authenticode와 binary version을 검증한 뒤
-`owner=direct` receipt를 남김. Receipt는 closed exact field set, installed binary
-SHA-256과 그 binary가 보고하는 exact version을 결합. 기존 executable 또는
-receipt가 symlink/reparse이거나 receipt digest/version이 현재 binary와 다르면 stale
-direct receipt로 보아 덮어쓰기 금지. Homebrew/WinGet은 binary owner이며 Hive updater는
-그 executable 덮어쓰기와 package manager 실행 금지. `hive update`는
-현재 running CLI가 지원하는 signed route로 consumer harness만 갱신.
+Direct bootstrap은 exact `aigent-hive@0.8.0` umbrella의 installer를 사용.
+Installer는 npm registry의 같은 package version scoped platform tarball을 내려받고
+embedded SHA-256, archive entry allowlist, optional OS signature, product binary
+`0.8.0`을 검증한 뒤 `owner=direct` receipt를 기록. Receipt는 closed exact field set,
+installed binary SHA-256, binary의 exact product version을 결합. Existing
+executable·receipt의 symlink/reparse 또는 digest/version 불일치 시 덮어쓰기 금지.
+
+npm global install의 binary owner는 npm. Homebrew·WinGet binary owner는 각 package
+manager. Hive의 직접 binary overwrite와 owner 추측 금지. Bare `hive update`는 명시적
+수락 뒤 authenticated owner의 exact adapter에만 위임.
+
+macOS Developer ID·notarization, Windows Authenticode·Azure Artifact Signing,
+external TUF production authorization은 후속 hardened gate이며 npm `0.8.0`
+배포의 dependency가 아님.
 
 ## 보장하지 않는 것
 

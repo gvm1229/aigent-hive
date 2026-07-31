@@ -1,0 +1,6 @@
+interface:
+  display_name: "Hive Knowledge Query"
+  short_description: "Query canonical Hive knowledge"
+  default_prompt: "Use $hive-knowledge-query to query canonical Hive knowledge explicitly."
+policy:
+  allow_implicit_invocation: false

@@ -1,17 +1,75 @@
 param(
-    [Parameter(Mandatory = $true)]
     [ValidatePattern('^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$')]
-    [string]$Version,
+    [string]$Version = "__AIGENT_HIVE_PRODUCT_VERSION__",
+    [ValidatePattern('^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-test\.[1-9][0-9]*)?$')]
+    [string]$PackageVersion = "__AIGENT_HIVE_PACKAGE_VERSION__",
     [string]$Prefix = "$env:LOCALAPPDATA\AigentHive"
 )
 
 $ErrorActionPreference = "Stop"
 $AuthorizedSignerThumbprint = "__AIGENT_HIVE_WINDOWS_CERTIFICATE_THUMBPRINT__"
-if ($AuthorizedSignerThumbprint -notmatch '^[0-9A-F]{40}$') {
+$ExpectedArchiveSha256 = "__AIGENT_HIVE_SHA256_X86_64_PC_WINDOWS_MSVC__"
+if ($AuthorizedSignerThumbprint -like "__AIGENT_HIVE_*") {
+    $AuthorizedSignerThumbprint = ""
+}
+if (
+    $AuthorizedSignerThumbprint -ne "" -and
+    $AuthorizedSignerThumbprint -notmatch '^[0-9A-F]{40}$'
+) {
     throw "installer does not contain an authorized Windows signer identity"
+}
+if ($ExpectedArchiveSha256 -notmatch '^[0-9a-f]{64}$') {
+    throw "installer does not contain the release archive SHA-256"
 }
 if (-not [Environment]::Is64BitOperatingSystem) {
     throw "Aigent Hive supports Windows x86_64 only"
+}
+if (
+    $PackageVersion -ne $Version -and
+    $PackageVersion -notmatch ('^' + [regex]::Escape($Version) + '-test\.[1-9][0-9]*$')
+) {
+    throw "PackageVersion must equal Version or use Version-test.N"
+}
+
+function Test-HiveVersionOutput {
+    param(
+        [AllowEmptyString()]
+        [string]$Output,
+        [Parameter(Mandatory = $true)]
+        [string]$ExpectedVersion
+    )
+
+    $escapedVersion = [regex]::Escape($ExpectedVersion)
+    return $Output -cmatch (
+        "^hive $escapedVersion \(released [0-9]{4}-[0-9]{2}-[0-9]{2}\)$"
+    )
+}
+
+function Get-FileSha256 {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Path
+    )
+
+    $stream = [IO.File]::Open(
+        $Path,
+        [IO.FileMode]::Open,
+        [IO.FileAccess]::Read,
+        [IO.FileShare]::Read
+    )
+    try {
+        $algorithm = [Security.Cryptography.SHA256]::Create()
+        try {
+            $digest = $algorithm.ComputeHash($stream)
+        }
+        finally {
+            $algorithm.Dispose()
+        }
+    }
+    finally {
+        $stream.Dispose()
+    }
+    return [BitConverter]::ToString($digest).Replace("-", "").ToLowerInvariant()
 }
 
 function Assert-SafeDirectoryChain {
@@ -68,6 +126,7 @@ function Get-ValidatedDirectReceipt {
     $expectedProperties = @(
         "artifact_sha256",
         "owner",
+        "package_version",
         "product",
         "schema_version",
         "version"
@@ -79,6 +138,12 @@ function Get-ValidatedDirectReceipt {
         $receipt.owner -ne "direct" -or
         $receipt.product -ne "aigent-hive" -or
         $receipt.version -notmatch '^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$' -or
+        (
+            $receipt.package_version -ne $receipt.version -and
+            $receipt.package_version -notmatch (
+                '^' + [regex]::Escape($receipt.version) + '-test\.[1-9][0-9]*$'
+            )
+        ) -or
         $receipt.artifact_sha256 -notmatch '^sha256:[0-9a-f]{64}$'
     ) {
         throw "existing hive binary is not owned by the direct installer"
@@ -111,14 +176,17 @@ function Assert-ExistingDirectInstall {
         throw "existing hive binary is not owned by the direct installer"
     }
     $priorReceipt = Get-ValidatedDirectReceipt -ReceiptPath $ReceiptPath
-    $priorDigest = (Get-FileHash -LiteralPath $Destination -Algorithm SHA256).Hash.ToLowerInvariant()
+    $priorDigest = Get-FileSha256 -Path $Destination
     if (
         $priorReceipt.artifact_sha256 -ne "sha256:$priorDigest"
     ) {
         throw "existing hive binary is not owned by the direct installer"
     }
     $priorVersionOutput = & $Destination --version
-    if ($priorVersionOutput -ne "hive $($priorReceipt.version)") {
+    if (-not (Test-HiveVersionOutput `
+        -Output $priorVersionOutput `
+        -ExpectedVersion $priorReceipt.version
+    )) {
         throw "existing hive binary is not owned by the direct installer"
     }
 }
@@ -150,8 +218,20 @@ function Move-InstallFile {
     ) {
         throw "install file target is not a regular leaf"
     }
-    if ($Replace) {
-        [IO.File]::Move($Source, $Destination, $true)
+    if ($Replace -and $null -ne $destinationItem) {
+        $destinationDirectory = Split-Path -Parent $Destination
+        $backup = Join-Path $destinationDirectory (
+            ".hive-replace-backup-" + [Guid]::NewGuid().ToString("N")
+        )
+        [IO.File]::Replace($Source, $Destination, $backup)
+        $backupItem = Get-Item -LiteralPath $backup -Force -ErrorAction Stop
+        if (
+            $backupItem.PSIsContainer -or
+            ($backupItem.Attributes -band [IO.FileAttributes]::ReparsePoint)
+        ) {
+            throw "install replacement backup is not a regular leaf"
+        }
+        Remove-Item -LiteralPath $backup -Force
     } else {
         [IO.File]::Move($Source, $Destination)
     }
@@ -183,9 +263,7 @@ function Repair-PendingDirectInstall {
         -not $destinationItem.PSIsContainer -and
         -not ($destinationItem.Attributes -band [IO.FileAttributes]::ReparsePoint)
     ) {
-        $destinationDigest = (
-            Get-FileHash -LiteralPath $Destination -Algorithm SHA256
-        ).Hash.ToLowerInvariant()
+        $destinationDigest = Get-FileSha256 -Path $Destination
         if ($pendingReceipt.artifact_sha256 -eq "sha256:$destinationDigest") {
             if ($null -ne $receiptItem) {
                 Get-ValidatedDirectReceipt -ReceiptPath $ReceiptPath | Out-Null
@@ -205,9 +283,7 @@ function Repair-PendingDirectInstall {
             -not $destinationItem.PSIsContainer -and
             -not ($destinationItem.Attributes -band [IO.FileAttributes]::ReparsePoint)
         ) {
-            $destinationDigest = (
-                Get-FileHash -LiteralPath $Destination -Algorithm SHA256
-            ).Hash.ToLowerInvariant()
+            $destinationDigest = Get-FileSha256 -Path $Destination
             if ($priorReceipt.artifact_sha256 -eq "sha256:$destinationDigest") {
                 Assert-SafeDirectoryChain -Path $destinationDirectory
                 Assert-SafeDirectoryChain -Path $receiptDirectory
@@ -244,53 +320,65 @@ function Assert-AuthorizedAuthenticodeSignature {
     }
 }
 
-$triple = "x86_64-pc-windows-msvc"
-$archive = "aigent-hive-$Version-$triple.zip"
-$base = "https://github.com/gvm1229/aigent-hive/releases/download/v$Version"
+$npmPackage = "win32-x64"
+$archive = "$npmPackage-$PackageVersion.tgz"
+$base = "https://registry.npmjs.org/@aigent-hive/$npmPackage/-"
 $work = Join-Path ([IO.Path]::GetTempPath()) ("aigent-hive-install-" + [Guid]::NewGuid())
 New-Item -ItemType Directory -Path $work | Out-Null
 $stagedBinary = $null
 $stagedReceipt = $null
 try {
     $archivePath = Join-Path $work $archive
-    $checksumPath = "$archivePath.sha256"
     Invoke-WebRequest -UseBasicParsing -Uri "$base/$archive" -OutFile $archivePath
-    Invoke-WebRequest -UseBasicParsing -Uri "$base/$archive.sha256" -OutFile $checksumPath
-    $expected = ((Get-Content -LiteralPath $checksumPath -Raw).Trim() -split '\s+')[0].ToLowerInvariant()
-    $actual = (Get-FileHash -LiteralPath $archivePath -Algorithm SHA256).Hash.ToLowerInvariant()
-    if ($expected.Length -ne 64 -or $expected -ne $actual) {
+    $actual = Get-FileSha256 -Path $archivePath
+    if ($ExpectedArchiveSha256 -ne $actual) {
         throw "release archive SHA-256 verification failed"
     }
-    Add-Type -AssemblyName System.IO.Compression.FileSystem
-    $zip = [IO.Compression.ZipFile]::OpenRead($archivePath)
-    try {
-        $entries = @($zip.Entries | ForEach-Object { $_.FullName })
-        $expectedEntries = @("hive.exe", "LICENSE")
-        if (
-            $entries.Count -ne $expectedEntries.Count -or
-            (Compare-Object -ReferenceObject $expectedEntries -DifferenceObject $entries)
-        ) {
-            throw "release archive contains an unexpected path"
-        }
-        if ($zip.Entries | Where-Object {
-            $_.FullName.Contains("\") -or
-            $_.FullName.StartsWith("/") -or
-            $_.FullName.Split("/") -contains ".." -or
-            $_.FullName.EndsWith("/")
-        }) {
-            throw "release archive contains an unsafe or nonregular entry"
-        }
+    $tarCommand = Get-Command tar.exe -ErrorAction SilentlyContinue
+    if ($null -eq $tarCommand) {
+        throw "Windows tar.exe is required to install the npm package"
     }
-    finally {
-        $zip.Dispose()
+    $entries = @(& $tarCommand.Source -tzf $archivePath)
+    if ($LASTEXITCODE -ne 0) {
+        throw "release archive could not be listed"
     }
-    Expand-Archive -LiteralPath $archivePath -DestinationPath $work
-    $binary = Join-Path $work "hive.exe"
-    $signature = Get-AuthenticodeSignature -LiteralPath $binary
-    Assert-AuthorizedAuthenticodeSignature `
-        -Signature $signature `
-        -AuthorizedThumbprint $AuthorizedSignerThumbprint
-    if ((& $binary --version) -ne "hive $Version") {
+    $expectedEntries = @(
+        "package/LICENSE",
+        "package/README.md",
+        "package/bin/hive.exe",
+        "package/package.json"
+    )
+    if (
+        $entries.Count -ne $expectedEntries.Count -or
+        (Compare-Object `
+            -ReferenceObject ($expectedEntries | Sort-Object) `
+            -DifferenceObject ($entries | Sort-Object))
+    ) {
+        throw "release archive contains an unexpected path"
+    }
+    $verboseEntries = @(& $tarCommand.Source -tvzf $archivePath)
+    if (
+        $LASTEXITCODE -ne 0 -or
+        ($verboseEntries | Where-Object { -not $_.StartsWith("-") })
+    ) {
+        throw "release archive contains an unsafe or nonregular entry"
+    }
+    & $tarCommand.Source -xzf $archivePath -C $work `
+        "package/bin/hive.exe" "package/LICENSE"
+    if ($LASTEXITCODE -ne 0) {
+        throw "release archive could not be extracted"
+    }
+    $binary = Join-Path $work "package\bin\hive.exe"
+    if ($AuthorizedSignerThumbprint -ne "") {
+        $signature = Get-AuthenticodeSignature -LiteralPath $binary
+        Assert-AuthorizedAuthenticodeSignature `
+            -Signature $signature `
+            -AuthorizedThumbprint $AuthorizedSignerThumbprint
+    }
+    if (-not (Test-HiveVersionOutput `
+        -Output (& $binary --version) `
+        -ExpectedVersion $Version
+    )) {
         throw "signed binary version differs from requested release"
     }
 
@@ -312,12 +400,13 @@ try {
     Assert-SafeDirectoryChain -Path $binDirectory
     Assert-SafeDirectoryChain -Path $shareDirectory
     [IO.File]::Copy($binary, $stagedBinary, $false)
-    $binaryDigest = (Get-FileHash -LiteralPath $binary -Algorithm SHA256).Hash.ToLowerInvariant()
+    $binaryDigest = Get-FileSha256 -Path $binary
     $receiptJson = @{
         schema_version = 1
         owner = "direct"
         product = "aigent-hive"
         version = $Version
+        package_version = $PackageVersion
         artifact_sha256 = "sha256:$binaryDigest"
     } | ConvertTo-Json -Compress
     $receiptBytes = [Text.UTF8Encoding]::new($false).GetBytes($receiptJson)

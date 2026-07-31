@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import copy
+import difflib
 import hashlib
 import json
 import os
@@ -37,6 +38,63 @@ def normalized_copier_tree(
 
 
 class Phase1CopierParity(Phase1CliTestCase):
+    def assert_copier_trees_equal(
+        self,
+        rust_target: Path,
+        copier_target: Path,
+    ) -> None:
+        rust_tree = normalized_copier_tree(rust_target)
+        copier_tree = normalized_copier_tree(copier_target)
+        if rust_tree == copier_tree:
+            return
+        differences = []
+        for path in sorted(rust_tree.keys() | copier_tree.keys()):
+            rust_entry = rust_tree.get(path)
+            copier_entry = copier_tree.get(path)
+            if rust_entry == copier_entry:
+                continue
+            if rust_entry is None:
+                differences.append(f"{path}: Copier only")
+                continue
+            if copier_entry is None:
+                differences.append(f"{path}: Rust only")
+                continue
+            rust_kind, rust_content = rust_entry
+            copier_kind, copier_content = copier_entry
+            if isinstance(rust_content, bytes):
+                rust_summary = hashlib.sha256(rust_content).hexdigest()
+            else:
+                rust_summary = repr(rust_content)
+            if isinstance(copier_content, bytes):
+                copier_summary = hashlib.sha256(copier_content).hexdigest()
+            else:
+                copier_summary = repr(copier_content)
+            differences.append(
+                f"{path}: Rust {rust_kind} {rust_summary}; "
+                f"Copier {copier_kind} {copier_summary}"
+            )
+            if isinstance(rust_content, bytes) and isinstance(
+                copier_content, bytes
+            ):
+                try:
+                    rust_lines = rust_content.decode("utf-8").splitlines(
+                        keepends=True
+                    )
+                    copier_lines = copier_content.decode("utf-8").splitlines(
+                        keepends=True
+                    )
+                except UnicodeDecodeError:
+                    continue
+                differences.extend(
+                    difflib.unified_diff(
+                        rust_lines,
+                        copier_lines,
+                        fromfile=f"rust/{path}",
+                        tofile=f"copier/{path}",
+                    )
+                )
+        self.fail("Copier/Rust tree mismatch:\n" + "\n".join(differences))
+
     def assert_builtin_projection(
         self,
         target: Path,
@@ -51,6 +109,7 @@ class Phase1CopierParity(Phase1CliTestCase):
         skills = active_ledger["skills"]
         self.assertIsInstance(skills, list)
         expected_names = [
+            "auto-setup-harness",
             "hive-judge-package",
             "hive-knowledge-capture",
             "hive-knowledge-maintenance",
@@ -95,9 +154,12 @@ class Phase1CopierParity(Phase1CliTestCase):
                         projected.read_bytes(),
                         source.read_bytes(),
                     )
+                    expected_entries = {"SKILL.md"}
+                    if projection_root == ".agents":
+                        expected_entries.add("agents")
                     self.assertEqual(
                         {path.name for path in projected.parent.iterdir()},
-                        {"SKILL.md"},
+                        expected_entries,
                     )
         self.assertEqual((target / ".claude").exists(), host == "claude")
         ledger_bytes = active_ledger_path.read_bytes()
@@ -140,10 +202,7 @@ class Phase1CopierParity(Phase1CliTestCase):
 
         self.assertEqual(rust_process.returncode, 0)
         self.assertEqual(copier_process.returncode, 0, copier_process.stderr)
-        self.assertEqual(
-            normalized_copier_tree(rust_target),
-            normalized_copier_tree(copier_target),
-        )
+        self.assert_copier_trees_equal(rust_target, copier_target)
 
     def test_copier_and_rust_approved_hook_conditional_trees_are_byte_equal(
         self,
@@ -181,10 +240,7 @@ class Phase1CopierParity(Phase1CliTestCase):
 
         self.assertEqual(rust_process.returncode, 0, rust_process.stderr)
         self.assertEqual(copier_process.returncode, 0, copier_process.stderr)
-        self.assertEqual(
-            normalized_copier_tree(rust_target),
-            normalized_copier_tree(copier_target),
-        )
+        self.assert_copier_trees_equal(rust_target, copier_target)
 
     def test_copier_and_rust_builtin_skill_trees_match_for_each_host(
         self,
@@ -257,10 +313,7 @@ class Phase1CopierParity(Phase1CliTestCase):
                     0,
                     copier_process.stderr,
                 )
-                self.assertEqual(
-                    normalized_copier_tree(rust_target),
-                    normalized_copier_tree(copier_target),
-                )
+                self.assert_copier_trees_equal(rust_target, copier_target)
                 self.assert_builtin_projection(rust_target, host=host)
                 self.assert_builtin_projection(copier_target, host=host)
 
@@ -471,6 +524,7 @@ class Phase1AnswerMigrationConformance(Phase1CliTestCase):
         }
         expected["approved_fallback_hooks"] = []
         expected["project_identity"] = legacy["project_name"]
+        expected["setup_mode"] = "expedited"
         expected["root_knowledge_promotion_categories"] = []
         expected["confidential_knowledge_categories"] = []
         expected["user_store_binding"] = ""

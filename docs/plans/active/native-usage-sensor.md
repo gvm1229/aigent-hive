@@ -53,8 +53,9 @@
   callback receipt time 기반 freshness와 sanitized ignored snapshot 구현
 - [x] [NUS-019] Existing status line non-clobbering integration snippet·preview 제공,
   미설정·trust 거절·first response 이전·stale capture를 native unavailable로 분류
-- [ ] [NUS-020] Mock stdin JSON, missing independent window, null·stale·wrong-session,
-  cancellation·concurrent write와 actual Claude Pro/Max host qualification
+Pre-1.0 deferred `NUS-020`: 실제 Claude Pro/Max host의 5-hour·7-day parity,
+독립 window omission, existing status line non-clobber qualification. `0.8.0`
+차단 조건 제외, subscription 확보 뒤 active checklist 재등록.
 
 ## 3. Antigravity native sensor
 
@@ -66,8 +67,8 @@
   adapter 활성화; TUI text·screen·private LSP/HTTP·credential·browser state parsing 금지
 - [x] [NUS-024] Structured surface 부재 시 `native=unsupported`를 명시하고
   qualified CodexBar Antigravity adapter만 fallback으로 허용
-- [ ] [NUS-025] Future native fixture와 실제 Antigravity host parity, unsupported
-  state·CodexBar fallback·native limited no-fallback conformance
+- [x] [NUS-025] 실제 Antigravity host의 truthful unsupported·CodexBar fallback
+  parity qualification
 
 ## 4. Source·shipping integration
 
@@ -93,8 +94,9 @@
   provider의 truthful unsupported와 fallback 최대 1회
 - [x] [NUS-013] Source watcher·one-shot shipping guard·automatic resume의 existing
   fail-closed, session binding, authorization replay와 monotonicity regression 전수 통과
-- [ ] [NUS-014] Opt-in 세 host qualification에서 native/CodexBar normalized
-  snapshot parity 또는 truthful unsupported, raw account·quota·credential persistence 0건
+- [x] [NUS-014] Codex·Antigravity 실제 opt-in normalized snapshot parity 또는
+  truthful unsupported, Claude fixture conformance와 미검증 disclosure,
+  raw account·quota·credential persistence 0건
 - [x] [NUS-015] Provider별 notification의 install accept·decline·package-manager
   unavailable, non-interactive 실행과 source/consumer guidance parity
 
@@ -104,9 +106,13 @@
 - Codex·Claude Code·Antigravity CLI 재설치 제안 없음
 - CodexBar 분류: 모든 provider에서 fallback-only
 - Antigravity의 현재 상태: native machine sensor `unsupported`, CodexBar fallback 허용
+- Antigravity fallback command:
+  `codexbar usage --provider antigravity --source cli --format json --json-only`
+- Antigravity quota pool: `default`와 `antigravity-claude-gpt`의 provider-defined
+  window, 모든 pool 통과 필수
+- Antigravity live gate: CodexBar `0.45.2`, threshold `10%`, selected window
+  `multiple`, exit `0`, raw payload persistence 0건
 
-## 잔여 evidence
+## Deferred evidence
 
-- `NUS-014`: 실제 세 host opt-in parity 잔여
-- `NUS-020`: 실제 Claude Pro/Max qualification 잔여
-- `NUS-025`: 실제 Antigravity parity·future native fixture 잔여
+- `NUS-020`: 실제 Claude Pro/Max qualification, `0.8.0` 비차단

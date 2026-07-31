@@ -14,7 +14,10 @@ use serde::{Deserialize, Serialize};
 const CATALOG_YAML: &str = include_str!("../../../harness/skills/catalog.yml");
 const HISTORICAL_BUILTINS_YAML: &str =
     include_str!("../../../harness/skills/historical-builtins.yml");
+const SETUP_HIVE: &[u8] = include_bytes!("../../../harness/skills/setup-hive/SKILL.md");
 const SETUP_HARNESS: &[u8] = include_bytes!("../../../harness/skills/setup-harness/SKILL.md");
+const AUTO_SETUP_HARNESS: &[u8] =
+    include_bytes!("../../../harness/skills/auto-setup-harness/SKILL.md");
 const SIMPLE_QUESTION: &[u8] =
     include_bytes!("../../../harness/skills/hive-simple-question/SKILL.md");
 const PROMPT_REFINE: &[u8] = include_bytes!("../../../harness/skills/hive-prompt-refine/SKILL.md");
@@ -413,6 +416,101 @@ pub fn compile_projection(
     optional_sources: &[OptionalSkillSource],
 ) -> Result<Projection, ProjectionError> {
     let catalog = embedded_catalog()?;
+    let selected = catalog
+        .skills
+        .iter()
+        .filter(|entry| {
+            entry.availability == Availability::Implemented && entry.name != "setup-hive"
+        })
+        .map(|entry| entry.name.clone())
+        .collect();
+    compile_selected(host, optional_sources, &catalog, &selected, false)
+}
+
+/// Compiles an exact selected user-scope built-in set plus verified optional
+/// source proofs.
+///
+/// `setup-hive` is intentionally user-scope only and remains absent from
+/// project projections compiled by [`compile_projection`].
+///
+/// # Errors
+///
+/// Returns an error when a selected name is unknown, unavailable, duplicated,
+/// or the optional source proof is invalid.
+pub fn compile_user_projection(
+    host: Host,
+    selected_names: &[String],
+    optional_sources: &[OptionalSkillSource],
+) -> Result<Projection, ProjectionError> {
+    compile_named_projection(host, selected_names, optional_sources, true)
+}
+
+/// Compiles an exact selected project-scope built-in set plus verified
+/// optional source proofs.
+///
+/// The user-only `setup-hive` Skill is rejected. Callers must resolve and
+/// preview dependency closure before invoking this deterministic projection.
+///
+/// # Errors
+///
+/// Returns an error when a selected name is unknown, unavailable, duplicated,
+/// user-only, or the optional source proof is invalid.
+pub fn compile_project_projection(
+    host: Host,
+    selected_names: &[String],
+    optional_sources: &[OptionalSkillSource],
+) -> Result<Projection, ProjectionError> {
+    compile_named_projection(host, selected_names, optional_sources, false)
+}
+
+fn compile_named_projection(
+    host: Host,
+    selected_names: &[String],
+    optional_sources: &[OptionalSkillSource],
+    allow_user_only: bool,
+) -> Result<Projection, ProjectionError> {
+    let catalog = embedded_catalog()?;
+    let selected: BTreeSet<String> = selected_names.iter().cloned().collect();
+    if selected.len() != selected_names.len() {
+        return Err(ProjectionError::new(
+            "hive.skill-selection-invalid",
+            "selected user Skills must be unique",
+        ));
+    }
+    for name in &selected {
+        let entry = catalog
+            .skills
+            .iter()
+            .find(|entry| entry.name == *name)
+            .ok_or_else(|| {
+                ProjectionError::new(
+                    "hive.skill-selection-invalid",
+                    format!("selected user Skill is unknown: {name}"),
+                )
+            })?;
+        if entry.availability != Availability::Implemented {
+            return Err(ProjectionError::new(
+                "hive.skill-selection-invalid",
+                format!("selected user Skill is unavailable: {name}"),
+            ));
+        }
+        if !allow_user_only && name == "setup-hive" {
+            return Err(ProjectionError::new(
+                "hive.skill-selection-invalid",
+                "setup-hive is user-scope only",
+            ));
+        }
+    }
+    compile_selected(host, optional_sources, &catalog, &selected, allow_user_only)
+}
+
+fn compile_selected(
+    host: Host,
+    optional_sources: &[OptionalSkillSource],
+    catalog: &SkillCatalog,
+    selected: &BTreeSet<String>,
+    preserve_implicit_metadata: bool,
+) -> Result<Projection, ProjectionError> {
     let mut files = BTreeMap::new();
     let mut active = Vec::new();
     let mut names = BTreeSet::new();
@@ -420,7 +518,7 @@ pub fn compile_projection(
     for entry in catalog
         .skills
         .iter()
-        .filter(|entry| entry.availability == Availability::Implemented)
+        .filter(|entry| selected.contains(&entry.name))
     {
         let source = embedded_skill_source(&entry.name).ok_or_else(|| {
             ProjectionError::new(
@@ -430,6 +528,22 @@ pub fn compile_projection(
         })?;
         names.insert(entry.name.clone());
         files.insert(skill_path(host, &entry.name), source.to_vec());
+        if matches!(host, Host::Codex | Host::Antigravity) {
+            let metadata = embedded_skill_metadata(&entry.name).ok_or_else(|| {
+                ProjectionError::new(
+                    "hive.skill-catalog-invalid",
+                    format!("implemented Skill {} has no Codex metadata", entry.name),
+                )
+            })?;
+            files.insert(
+                skill_metadata_path(host, &entry.name),
+                if preserve_implicit_metadata {
+                    metadata.to_vec()
+                } else {
+                    explicit_only_metadata(metadata)?
+                },
+            );
+        }
         active.push(ActiveSkill {
             name: entry.name.clone(),
             source_type: SkillSourceType::BuiltIn,
@@ -630,15 +744,97 @@ fn skill_path(host: Host, name: &str) -> String {
     format!("{}/{name}/SKILL.md", host.skill_root())
 }
 
+fn skill_metadata_path(host: Host, name: &str) -> String {
+    format!("{}/{name}/agents/openai.yaml", host.skill_root())
+}
+
+fn explicit_only_metadata(metadata: &[u8]) -> Result<Vec<u8>, ProjectionError> {
+    const IMPLICIT: &str = "  allow_implicit_invocation: true";
+    const EXPLICIT: &str = "  allow_implicit_invocation: false";
+
+    let text = std::str::from_utf8(metadata).map_err(|_| {
+        ProjectionError::new(
+            "hive.skill-catalog-invalid",
+            "embedded Codex Skill metadata must be UTF-8",
+        )
+    })?;
+    if !text.contains(IMPLICIT) && !text.contains(EXPLICIT) {
+        return Err(ProjectionError::new(
+            "hive.skill-catalog-invalid",
+            "embedded Codex Skill metadata lacks an invocation policy",
+        ));
+    }
+    Ok(text.replace(IMPLICIT, EXPLICIT).into_bytes())
+}
+
 fn embedded_skill_source(name: &str) -> Option<&'static [u8]> {
     embedded_skill_sources()
         .into_iter()
         .find_map(|(candidate, bytes)| (candidate == name).then_some(bytes))
 }
 
-fn embedded_skill_sources() -> [(&'static str, &'static [u8]); 15] {
+fn embedded_skill_metadata(name: &str) -> Option<&'static [u8]> {
+    match name {
+        "setup-hive" => Some(include_bytes!(
+            "../../../harness/skills/setup-hive/agents/openai.yaml"
+        )),
+        "setup-harness" => Some(include_bytes!(
+            "../../../harness/skills/setup-harness/agents/openai.yaml"
+        )),
+        "auto-setup-harness" => Some(include_bytes!(
+            "../../../harness/skills/auto-setup-harness/agents/openai.yaml"
+        )),
+        "hive-simple-question" => Some(include_bytes!(
+            "../../../harness/skills/hive-simple-question/agents/openai.yaml"
+        )),
+        "hive-prompt-refine" => Some(include_bytes!(
+            "../../../harness/skills/hive-prompt-refine/agents/openai.yaml"
+        )),
+        "hive-knowledge-capture" => Some(include_bytes!(
+            "../../../harness/skills/hive-knowledge-capture/agents/openai.yaml"
+        )),
+        "hive-knowledge-query" => Some(include_bytes!(
+            "../../../harness/skills/hive-knowledge-query/agents/openai.yaml"
+        )),
+        "hive-knowledge-promote" => Some(include_bytes!(
+            "../../../harness/skills/hive-knowledge-promote/agents/openai.yaml"
+        )),
+        "hive-knowledge-maintenance" => Some(include_bytes!(
+            "../../../harness/skills/hive-knowledge-maintenance/agents/openai.yaml"
+        )),
+        "hive-run-checkpoint" => Some(include_bytes!(
+            "../../../harness/skills/hive-run-checkpoint/agents/openai.yaml"
+        )),
+        "hive-run-resume" => Some(include_bytes!(
+            "../../../harness/skills/hive-run-resume/agents/openai.yaml"
+        )),
+        "hive-usage-guard" => Some(include_bytes!(
+            "../../../harness/skills/hive-usage-guard/agents/openai.yaml"
+        )),
+        "hive-role-handoff" => Some(include_bytes!(
+            "../../../harness/skills/hive-role-handoff/agents/openai.yaml"
+        )),
+        "hive-judge-package" => Some(include_bytes!(
+            "../../../harness/skills/hive-judge-package/agents/openai.yaml"
+        )),
+        "hive-update" => Some(include_bytes!(
+            "../../../harness/skills/hive-update/agents/openai.yaml"
+        )),
+        "hive-migrate" => Some(include_bytes!(
+            "../../../harness/skills/hive-migrate/agents/openai.yaml"
+        )),
+        "hive-project-upgrade" => Some(include_bytes!(
+            "../../../harness/skills/hive-project-upgrade/agents/openai.yaml"
+        )),
+        _ => None,
+    }
+}
+
+fn embedded_skill_sources() -> [(&'static str, &'static [u8]); 17] {
     [
+        ("setup-hive", SETUP_HIVE),
         ("setup-harness", SETUP_HARNESS),
+        ("auto-setup-harness", AUTO_SETUP_HARNESS),
         ("hive-simple-question", SIMPLE_QUESTION),
         ("hive-prompt-refine", PROMPT_REFINE),
         ("hive-knowledge-capture", KNOWLEDGE_CAPTURE),
@@ -1747,9 +1943,11 @@ description: Inspect one local file without changing it.
             let first = compile_projection(host, &[]).expect("projection");
             let second = compile_projection(host, &[]).expect("projection");
             assert_eq!(first, second);
-            assert_eq!(first.active_skills.skills.len(), 15);
-            assert_eq!(first.files.len(), 16);
+            assert_eq!(first.active_skills.skills.len(), 16);
+            let expected_file_count = if host == Host::Claude { 17 } else { 33 };
+            assert_eq!(first.files.len(), expected_file_count);
             for skill in [
+                "auto-setup-harness",
                 "hive-judge-package",
                 "hive-prompt-refine",
                 "hive-run-checkpoint",
@@ -1764,6 +1962,110 @@ description: Inspect one local file without changing it.
                     .contains_key(&format!("{}/{skill}/SKILL.md", host.skill_root())));
             }
         }
+    }
+
+    #[test]
+    fn user_projection_contains_exact_caller_resolved_skill_selection() {
+        let selected = vec![
+            "setup-hive".to_owned(),
+            "hive-update".to_owned(),
+            "hive-usage-guard".to_owned(),
+        ];
+
+        let projection =
+            compile_user_projection(Host::Codex, &selected, &[]).expect("user projection");
+
+        let expected_files = BTreeSet::from([
+            ".agents/skills/setup-hive/SKILL.md",
+            ".agents/skills/setup-hive/agents/openai.yaml",
+            ".agents/skills/hive-update/SKILL.md",
+            ".agents/skills/hive-update/agents/openai.yaml",
+            ".agents/skills/hive-usage-guard/SKILL.md",
+            ".agents/skills/hive-usage-guard/agents/openai.yaml",
+            ".hive/config/active-skills.yml",
+        ]);
+        assert_eq!(
+            projection
+                .files
+                .keys()
+                .map(String::as_str)
+                .collect::<BTreeSet<_>>(),
+            expected_files
+        );
+        assert_eq!(
+            projection
+                .active_skills
+                .skills
+                .iter()
+                .map(|skill| skill.name.as_str())
+                .collect::<Vec<_>>(),
+            ["hive-update", "hive-usage-guard", "setup-hive"]
+        );
+        for (name, expected_implicit) in [
+            ("setup-hive", true),
+            ("hive-update", false),
+            ("hive-usage-guard", true),
+        ] {
+            let metadata = std::str::from_utf8(
+                projection
+                    .files
+                    .get(&format!(".agents/skills/{name}/agents/openai.yaml"))
+                    .expect("selected Skill metadata"),
+            )
+            .expect("selected Skill metadata should be UTF-8");
+            assert_eq!(
+                metadata.contains("allow_implicit_invocation: true"),
+                expected_implicit,
+                "{name} user metadata policy"
+            );
+        }
+    }
+
+    #[test]
+    fn setup_hive_is_available_in_user_projection() {
+        let projection = compile_user_projection(Host::Claude, &["setup-hive".to_owned()], &[])
+            .expect("setup-hive user projection");
+
+        assert!(projection
+            .files
+            .contains_key(".claude/skills/setup-hive/SKILL.md"));
+        assert!(!projection
+            .files
+            .contains_key(".claude/skills/setup-hive/agents/openai.yaml"));
+    }
+
+    #[test]
+    fn project_projection_excludes_setup_hive() {
+        let projection = compile_projection(Host::Codex, &[]).expect("project projection");
+
+        assert!(!projection
+            .files
+            .contains_key(".agents/skills/setup-hive/SKILL.md"));
+        assert!(projection
+            .active_skills
+            .skills
+            .iter()
+            .all(|skill| skill.name != "setup-hive"));
+        let metadata = std::str::from_utf8(
+            projection
+                .files
+                .get(".agents/skills/auto-setup-harness/agents/openai.yaml")
+                .expect("project Skill metadata"),
+        )
+        .expect("project Skill metadata should be UTF-8");
+        assert!(metadata.contains("allow_implicit_invocation: false"));
+    }
+
+    #[test]
+    fn user_projection_rejects_unknown_skill_selection() {
+        let error = compile_user_projection(Host::Antigravity, &["unknown-skill".to_owned()], &[])
+            .expect_err("unknown selection must fail");
+
+        assert_eq!(error.code(), "hive.skill-selection-invalid");
+        assert_eq!(
+            error.message(),
+            "selected user Skill is unknown: unknown-skill"
+        );
     }
 
     #[test]

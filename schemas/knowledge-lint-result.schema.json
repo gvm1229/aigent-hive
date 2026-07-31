@@ -4,7 +4,13 @@
   "title": "Aigent Hive knowledge lint data",
   "type": "object",
   "additionalProperties": false,
-  "required": ["issues", "error_count", "warning_count"],
+  "required": [
+    "issues",
+    "error_count",
+    "warning_count",
+    "shared_index_digest",
+    "shared_index_path"
+  ],
   "properties": {
     "issues": {
       "type": "array",
@@ -21,6 +27,16 @@
       }
     },
     "error_count": { "type": "integer", "minimum": 0 },
-    "warning_count": { "type": "integer", "minimum": 0 }
+    "warning_count": { "type": "integer", "minimum": 0 },
+    "shared_index_digest": {
+      "type": ["string", "null"],
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "shared_index_path": {
+      "anyOf": [
+        { "const": ".hive/index/hive.sqlite3" },
+        { "type": "null" }
+      ]
+    }
   }
 }

@@ -21,9 +21,9 @@ knowledge projection.
    Or use `--tag <tag>` instead of `--text <query>`.
 4. Preserve `project-first` precedence. Cite each returned canonical locator, `scope`, and
    promotion provenance; distinguish retrieved facts from inference.
-5. If either derived index is stale or unavailable, run no write automatically. Report that
-   `hive index rebuild --target <project-root>` or
-   `hive index rebuild --target <user-root>` is the explicit maintenance action.
+5. If the shared derived index is stale or unavailable, run no write automatically. Report
+   `hive index rebuild --user-root <user-root> --output json` as the explicit operational
+   maintenance action. Treat `--target <legacy-project>` as `0.7.x` compatibility only.
 
 ## Safety
 

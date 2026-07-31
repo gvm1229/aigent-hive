@@ -36,6 +36,8 @@ harness_version = "0.7.0"
 source_release_version = "0.7.0"
 project_name = "usage-control"
 primary_host = "codex"
+usage_guard_enabled = true
+codexbar_fallback_enabled = true
 usage_stop_remaining_percent = 10
 foreign_preserved = "exact bytes"
 """
@@ -808,7 +810,81 @@ class ShippingUsageControlConformance(Phase1CliTestCase):
             code="hive.usage-allowed",
         )
         self.assertEqual(result["data"]["host_scope"], "antigravity")
-        self.assertEqual(len(sensor_log.read_text(encoding="utf-8").splitlines()), 2)
+        self.assertEqual(result["data"]["selected_window"], "multiple")
+        self.assertEqual(
+            [
+                json.loads(line)
+                for line in sensor_log.read_text(encoding="utf-8").splitlines()
+            ],
+            [
+                ["--version"],
+                [
+                    "usage",
+                    "--provider",
+                    "antigravity",
+                    "--source",
+                    "cli",
+                    "--format",
+                    "json",
+                    "--json-only",
+                ],
+            ],
+        )
+
+        limited, limited_result = self.invoke(
+            "usage",
+            "enforce",
+            "--target",
+            str(self.consumer),
+            "--session-id",
+            "antigravity-limited-session",
+            "--process-id",
+            "992",
+            "--account-digest",
+            ACCOUNT_DIGEST,
+            sensor_case="secondary-pool-low",
+            extra_environment={
+                "FAKE_CODEXBAR_PROVIDER": "antigravity",
+            },
+        )
+        self.assert_result(
+            limited,
+            limited_result,
+            action="CheckUsage",
+            exit_code=3,
+            status="blocked",
+            code="hive.usage-limited",
+        )
+        self.assertEqual(limited_result["data"]["selected_window"], "multiple")
+
+        default_limited, default_limited_result = self.invoke(
+            "usage",
+            "enforce",
+            "--target",
+            str(self.consumer),
+            "--session-id",
+            "antigravity-default-limited-session",
+            "--process-id",
+            "993",
+            "--account-digest",
+            ACCOUNT_DIGEST,
+            sensor_case="one-window-low",
+            extra_environment={
+                "FAKE_CODEXBAR_PROVIDER": "antigravity",
+            },
+        )
+        self.assert_result(
+            default_limited,
+            default_limited_result,
+            action="CheckUsage",
+            exit_code=3,
+            status="blocked",
+            code="hive.usage-limited",
+        )
+        self.assertEqual(
+            default_limited_result["data"]["selected_window"],
+            "multiple",
+        )
 
     def test_enforce_creates_a_latched_marker_and_repeat_skips_the_sensor(
         self,

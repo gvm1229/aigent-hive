@@ -1,26 +1,25 @@
 # 사용자 plugin과 project harness lifecycle 계획
 
 > Checklist owner: `RPH-*`
-> Load condition: user-scope 설치·update, project bootstrap, root knowledge promotion,
-> project upgrade 구현·검증
+> Load condition: user 설치·update, project bootstrap, knowledge promotion·upgrade
 > Decision: [`ADR-0009`](../../decisions/ADR-0009-user-plugin-project-knowledge-boundary.md)
+> `0.8.0` target: [`UOS plan`](user-onboarding-shared-index.md)
 
 ## 목표
 
 - Codex·Claude Code·Gemini Antigravity의 native install surface에 맞춘 Aigent Hive 배포
 - User-scope guidance의 exact Hive marker append와 foreign bytes 보존
-- Project별 `AGENTS.md`, `.agents/`, `.hive/knowledge`, disposable SQLite 격리
-- Project knowledge의 안전한 user-scope promotion과 root SQLite 재구축
+- Project canonical Wiki + user-root shared SQLite; 전환은 UOS plan 소유
 - Signed base 기반 local-priority three-way update와 one-action root·project upgrade
 
 ## 확인된 기준선
 
 | 범위 | 현재 상태 | 구현 gap |
 | --- | --- | --- |
-| Project setup 질문·render | promotion·confidential scope·project identity·user store binding 포함 | 실제 세 host E2E 잔여 |
+| Project setup 질문·render | 단일 custom-like sequence, promotion·project identity 포함 | expedited/global inherit·preference 질문 잔여 |
 | Shared guidance merge | user·project marker append·own-block replace·foreign byte 보존 | 실제 host update E2E 잔여 |
 | Host plugin·Skill projection | 세 host native plugin package, portable `.agents/skills`, Claude adapter | 실제 host install/update E2E 잔여 |
-| Project·root knowledge | canonical Markdown, project/root SQLite, explicit promotion·rebuild | protected host qualification 잔여 |
+| Project·root knowledge | `0.7.0` canonical Markdown + 독립 project/root SQLite | UOS shared index migration 잔여 |
 | Project·user update | durable journal·backup·recover와 historical-base local-priority merge | 실제 세 host E2E 잔여 |
 
 ## 1. Boundary와 host adapter
@@ -115,20 +114,23 @@
   override precedence와 source-root refusal hostile conformance
 - [x] [RPH-035] Cross-project leakage, secret candidate, duplicate preference,
   contradiction, concurrent promotion와 root index rebuild hostile conformance
-- [ ] [RPH-036] Unmodified replace, user-modified local priority, disjoint upstream add,
-  missing base, interrupted root·project update와 세 host install/update E2E
+- [x] [RPH-036] Codex·Antigravity 실제 install·update와 Claude fixture·unverified 표시
 
-잔여 evidence:
+- `RPH-036`: Codex `0.145.0` 실제 install→validate→update→validate와
+  `aigent-hive@aigent-hive` enabled state PASS
+- `RPH-036`: Antigravity `1.1.7` migration·repeat update·16/16 byte parity PASS
+- `RPH-036`: Claude executable·Pro/Max session 부재, 실제 Claude install/update
+  미검증 disclosure
 
-- `RPH-036`: fixture 기반 install/update·merge·interruption 검증 완료, 실제 세 host
-  install/update E2E 잔여
+## Host evidence — 2026-07-27
 
-## Current host evidence — 2026-07-26
-
-- Codex: `.codex-plugin/plugin.json`, bundled `skills/`, marketplace install과
+- Codex: `.codex-plugin/plugin.json`, bundled `skills/`,
+  `.agents/plugins/marketplace.json` marketplace install과
   nonempty `~/.codex/AGENTS.override.md` 우선, 그 외 `~/.codex/AGENTS.md`
 - Claude Code: `.claude-plugin/plugin.json`, bundled `skills/`, marketplace install,
   `~/.claude/CLAUDE.md`
-- Antigravity: `~/.gemini/config/plugins/aigent-hive/plugin.json`, bundled `skills/`,
-  compatibility global `~/.gemini/config/skills/`
+- Antigravity: Hive-owned
+  `~/.hive/marketplaces/antigravity/plugins/aigent-hive`, `agy plugin install`,
+  host-owned `~/.gemini/config/plugins/aigent-hive`, compatibility global
+  `~/.gemini/config/skills/`
 - 공통 결론: 동일 product contract와 host별 native packaging adapter

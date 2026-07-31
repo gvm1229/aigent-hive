@@ -9,6 +9,12 @@ document.
 
 ## Korean style
 
+- Keep each passage in one base language. In Korean prose, keep English only for proper nouns,
+  product or package names, commands, code identifiers, paths, schema keys, exact UI labels, and
+  terms without a clear Korean equivalent. Replace ordinary English nouns when a clear Korean
+  expression exists.
+- In an English passage, use English throughout except for exact Korean names, literals,
+  quotations, or text the user explicitly asks to preserve.
 - Prefer short headings, bullets, tables, and checklists over long prose.
 - Prefer noun phrases or concise verb-noun endings such as `추가`, `정리`, `검증`, `확인`,
   `보강`, `제거`, and `적용`.
@@ -31,6 +37,8 @@ the prohibition to these exact strings.
 
 | Avoid | Use |
 | --- | --- |
+| `남은 blocker와 solution을 정리.` | `남은 장애 요인과 해결 방법 정리` |
+| `release candidate의 clean install 검증.` | `출시 후보의 깨끗한 환경 설치 검증` |
 | `Aigent Hive는 provider-neutral 로컬 agent harness다.` | `Aigent Hive: provider-neutral 로컬 agent harness` |
 | `Product version은 0.7.0이다.` | `Product version: 0.7.0` |
 | `Release 계약이 구현됐다.` | `Release 계약 구현 완료` |

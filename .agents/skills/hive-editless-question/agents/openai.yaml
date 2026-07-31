@@ -1,0 +1,6 @@
+interface:
+  display_name: "Hive Editless Question"
+  short_description: "Analyze repository questions without making changes"
+  default_prompt: "Use $hive-editless-question to answer this repository question without changing files."
+policy:
+  allow_implicit_invocation: true

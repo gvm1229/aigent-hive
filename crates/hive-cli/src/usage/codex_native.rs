@@ -371,7 +371,8 @@ fn normalize_window(value: &Value, now: u64) -> Result<NormalizedWindow, SensorE
         .ok_or(SensorError::Stale)?;
     Ok(NormalizedWindow {
         name,
-        window_minutes: expected_minutes,
+        quota_pool: None,
+        window_minutes: Some(expected_minutes),
         remaining_percent: 100.0 - used,
         resets_at,
     })

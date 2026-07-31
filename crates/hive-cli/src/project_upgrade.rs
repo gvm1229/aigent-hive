@@ -27,6 +27,12 @@ use std::time::{SystemTime, UNIX_EPOCH};
 const BASE_PATH: &str = ".hive/config/project-base.json";
 const OVERRIDES_PATH: &str = ".hive/config/project-overrides.json";
 const JOURNAL_PATH: &str = ".hive/runtime/project-upgrade-journal.json";
+const LEGACY_DERIVED_INDEX_PATHS: [&str; 4] = [
+    ".hive/index/hive.sqlite3",
+    ".hive/index/hive.sqlite3-wal",
+    ".hive/index/hive.sqlite3-shm",
+    ".hive/index/.stale",
+];
 const MAX_LEDGER_BYTES: u64 = 8 * 1024 * 1024;
 const CLAIMED_JOURNAL_LOCATOR_MARKER: &str = "; claimed journal retained at ";
 
@@ -173,6 +179,28 @@ pub(crate) fn run(arguments: &[String]) -> ExitCode {
     let result = result.unwrap_or_else(|error| failure(&error));
     emit(&result);
     ExitCode::from(result.exit_code)
+}
+
+pub(crate) fn authenticate_legacy_knowledge_target(target: &Path) -> Result<(), UpdateError> {
+    ensure_consumer_target(target).map_err(|error| UpdateError::Input(error.to_string()))?;
+    let target_dir = open_target_capability(target)?;
+    ensure_pinned_consumer_target(&target_dir)?;
+    let candidate = project_upgrade_candidate_in(&target_dir).map_err(render_error)?;
+    let ledger = read_base_ledger(&target_dir, &candidate.files)?.ok_or_else(|| {
+        UpdateError::Verification(
+            "legacy project-local knowledge requires an authenticated project base".to_owned(),
+        )
+    })?;
+    let version = release_version(&ledger.product_version).ok_or_else(|| {
+        UpdateError::Verification("project base product version is invalid".to_owned())
+    })?;
+    if version > (0, 7, 0) {
+        return Err(UpdateError::Unsupported(
+            "project-local SQLite is supported only for authenticated Hive 0.7 or earlier; use --user-root"
+                .to_owned(),
+        ));
+    }
+    Ok(())
 }
 
 fn parse(arguments: &[String]) -> Result<(PathBuf, CommandMode), UpdateError> {
@@ -325,6 +353,12 @@ fn prepare(target: &Dir) -> Result<UpgradePlan, UpdateError> {
         OVERRIDES_PATH.to_owned(),
         override_bytes,
     )?;
+    plan_legacy_derived_index_cleanup(
+        target,
+        &mut final_files,
+        &source_version,
+        &candidate.product_version,
+    )?;
     let mut changed_paths = final_files.keys().cloned().collect::<Vec<_>>();
     changed_paths.sort();
     let expected_before = changed_paths
@@ -358,6 +392,41 @@ fn prepare(target: &Dir) -> Result<UpgradePlan, UpdateError> {
         changed_paths,
         plan_digest: sha256_digest(&canonical),
     })
+}
+
+fn plan_legacy_derived_index_cleanup(
+    target: &Dir,
+    final_files: &mut BTreeMap<String, Option<Vec<u8>>>,
+    source_version: &str,
+    target_version: &str,
+) -> Result<(), UpdateError> {
+    if !is_legacy_070_migration(source_version, target_version) {
+        return Ok(());
+    }
+    for path in LEGACY_DERIVED_INDEX_PATHS {
+        if read_full_optional(target, Path::new(path))?.is_some() {
+            final_files.insert(path.to_owned(), None);
+        }
+    }
+    Ok(())
+}
+
+fn is_legacy_070_migration(source_version: &str, target_version: &str) -> bool {
+    source_version == "0.7.0"
+        && release_version(target_version).is_some_and(|target| target > (0, 7, 0))
+}
+
+fn release_version(version: &str) -> Option<(u64, u64, u64)> {
+    let release = version
+        .split_once('-')
+        .map_or(version, |(release, _)| release);
+    let mut components = release.split('.');
+    let version = (
+        components.next()?.parse().ok()?,
+        components.next()?.parse().ok()?,
+        components.next()?.parse().ok()?,
+    );
+    components.next().is_none().then_some(version)
 }
 
 fn read_base_ledger(
@@ -728,6 +797,22 @@ fn read_bounded_optional(
 
 #[allow(clippy::too_many_lines)]
 fn apply(target: &Dir, plan: &UpgradePlan) -> Result<ProjectResult, UpdateError> {
+    let fail_after = if cfg!(debug_assertions) {
+        std::env::var("HIVE_PROJECT_UPGRADE_FAIL_AFTER")
+            .ok()
+            .and_then(|value| value.parse().ok())
+    } else {
+        None
+    };
+    apply_with_failure_after(target, plan, fail_after)
+}
+
+#[allow(clippy::too_many_lines)]
+fn apply_with_failure_after(
+    target: &Dir,
+    plan: &UpgradePlan,
+    fail_after: Option<usize>,
+) -> Result<ProjectResult, UpdateError> {
     if plan.changed_paths.is_empty() {
         return Ok(plan_result(plan, CommandMode::Apply));
     }
@@ -788,12 +873,7 @@ fn apply(target: &Dir, plan: &UpgradePlan) -> Result<ProjectResult, UpdateError>
     let mut applied = Vec::new();
     let result = (|| {
         for (index, path) in plan.changed_paths.iter().enumerate() {
-            if cfg!(debug_assertions)
-                && std::env::var("HIVE_PROJECT_UPGRADE_FAIL_AFTER")
-                    .ok()
-                    .as_deref()
-                    == Some(&index.to_string())
-            {
+            if fail_after == Some(index) {
                 return Err(UpdateError::Internal(
                     "injected project upgrade activation failure".to_owned(),
                 ));
@@ -2318,6 +2398,126 @@ mod tests {
             changed_paths: vec![path.to_owned()],
             plan_digest: sha256_digest(b"test-plan"),
         }
+    }
+
+    fn deletion_plan(target: &Dir, final_files: BTreeMap<String, Option<Vec<u8>>>) -> UpgradePlan {
+        let changed_paths = final_files.keys().cloned().collect::<Vec<_>>();
+        let expected_before = changed_paths
+            .iter()
+            .map(|path| {
+                let bytes = read_full_optional(target, Path::new(path))
+                    .expect("expected-before read")
+                    .expect("planned deletion exists");
+                (
+                    path.clone(),
+                    ExpectedBefore {
+                        digest: Some(sha256_digest(&bytes)),
+                        bytes: Some(bytes),
+                    },
+                )
+            })
+            .collect();
+        UpgradePlan {
+            source_version: "0.7.0".to_owned(),
+            target_version: "0.8.0".to_owned(),
+            reports: Vec::new(),
+            final_files,
+            expected_before,
+            changed_paths,
+            plan_digest: sha256_digest(b"legacy-derived-index-cleanup"),
+        }
+    }
+
+    fn seed_legacy_derived_index(root: &Path) -> BTreeMap<String, Vec<u8>> {
+        LEGACY_DERIVED_INDEX_PATHS
+            .iter()
+            .enumerate()
+            .map(|(index, path)| {
+                let bytes = format!("derived-{index}\n").into_bytes();
+                let active = root.join(path);
+                fs::create_dir_all(active.parent().expect("derived parent"))
+                    .expect("derived parent");
+                fs::write(&active, &bytes).expect("derived bytes");
+                ((*path).to_owned(), bytes)
+            })
+            .collect()
+    }
+
+    #[test]
+    fn legacy_070_derived_index_cleanup_applies_and_preserves_markdown_knowledge() {
+        let temporary = tempdir().expect("temporary target");
+        let target = target_dir(temporary.path());
+        seed_legacy_derived_index(temporary.path());
+        let knowledge = temporary.path().join(".hive/knowledge/en/project.md");
+        fs::create_dir_all(knowledge.parent().expect("knowledge parent"))
+            .expect("knowledge parent");
+        fs::write(&knowledge, b"# Canonical knowledge\n").expect("knowledge");
+        let mut final_files = BTreeMap::new();
+
+        plan_legacy_derived_index_cleanup(&target, &mut final_files, "0.7.0", "0.8.0")
+            .expect("cleanup plan");
+        let plan = deletion_plan(&target, final_files);
+        let preview = plan_result(&plan, CommandMode::DryRun);
+        let mut expected_paths = LEGACY_DERIVED_INDEX_PATHS.map(str::to_owned).to_vec();
+        expected_paths.sort();
+
+        assert_eq!(preview.changed_paths, expected_paths);
+        apply_with_failure_after(&target, &plan, None).expect("cleanup apply");
+        for path in LEGACY_DERIVED_INDEX_PATHS {
+            assert!(!temporary.path().join(path).exists(), "{path}");
+        }
+        assert_eq!(
+            fs::read(&knowledge).expect("preserved knowledge"),
+            b"# Canonical knowledge\n"
+        );
+    }
+
+    #[test]
+    fn legacy_070_derived_index_cleanup_rolls_back_every_deleted_file_after_injected_failure() {
+        let temporary = tempdir().expect("temporary target");
+        let target = target_dir(temporary.path());
+        let original = seed_legacy_derived_index(temporary.path());
+        let mut final_files = BTreeMap::new();
+        plan_legacy_derived_index_cleanup(&target, &mut final_files, "0.7.0", "0.8.0")
+            .expect("cleanup plan");
+        let plan = deletion_plan(&target, final_files);
+
+        let Err(error) = apply_with_failure_after(&target, &plan, Some(2)) else {
+            panic!("injected activation failure expected");
+        };
+
+        assert!(matches!(error, UpdateError::Internal(_)));
+        for (path, bytes) in original {
+            assert_eq!(
+                fs::read(temporary.path().join(path)).expect("rolled-back derived bytes"),
+                bytes
+            );
+        }
+        assert!(!temporary.path().join(JOURNAL_PATH).exists());
+        assert!(!temporary.path().join(".hive/backups").exists());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn legacy_070_derived_index_cleanup_rejects_symlink_without_mutation() {
+        use std::os::unix::fs::symlink;
+
+        let temporary = tempdir().expect("temporary target");
+        let index = temporary.path().join(".hive/index");
+        fs::create_dir_all(&index).expect("index");
+        fs::write(index.join("outside"), b"outside\n").expect("outside");
+        symlink("outside", index.join("hive.sqlite3")).expect("derived symlink");
+        let target = target_dir(temporary.path());
+
+        let error =
+            plan_legacy_derived_index_cleanup(&target, &mut BTreeMap::new(), "0.7.0", "0.8.0")
+                .expect_err("symlink must be rejected");
+
+        assert!(matches!(error, UpdateError::Verification(_)));
+        assert_eq!(
+            fs::read(index.join("outside")).expect("outside preserved"),
+            b"outside\n"
+        );
     }
 
     fn full_registry(files: &BTreeMap<String, Vec<u8>>) -> HistoricalProjectBase {

@@ -20,10 +20,12 @@
       "enum": [
         "UnknownAction",
         "SetupHarness",
+        "SetupHiveUser",
         "InstallHiveUser",
         "UpdateHiveUser",
         "ValidateHiveUser",
         "RecoverHiveUser",
+        "CheckHiveUpdate",
         "ValidateRole",
         "RecordRoleHandoff",
         "RoleWork",
@@ -51,6 +53,9 @@
         "DeleteKnowledge",
         "SuppressKnowledge",
         "RebuildKnowledgeIndex",
+        "LintSourceWiki",
+        "QuerySourceWiki",
+        "RebuildSourceWikiIndex",
         "UpdateHarness"
       ]
     },
