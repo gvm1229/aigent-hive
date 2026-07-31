@@ -1,8 +1,8 @@
 # 현재 상태
 
 - 기준 branch: `develop`
-- product version: `0.7.0`
-- plan revision: `1.75`
+- product version: `0.8.0`
+- plan revision: `1.76`
 - 현재 milestone: Phase 7 qualification + global onboarding·shared index `0.8.0`
 - 현재 작업: `0.8.0` 제품 후보와 `0.8.0-test.N` npm 시험판 분리·배포 준비
 - 외부 중지 경계: GitHub Release·npm `latest`, protected signing/publication credential,
@@ -462,12 +462,13 @@ Current remote qualification evidence:
 
 Candidate trust blocker:
 
-- Current source product version `0.7.0`, exact `0.8.0` candidate 부재
+- Current source product version `0.8.0`; protected remote candidate qualification 대기
 - 사용자 지정 순서: npm 시험 배포 성공 뒤 `develop` → `main` 병합
-- Candidate authority: protected `develop`
-- Current GitHub ruleset: `main`만 보호; `develop` unprotected
-- 사용자 해소 작업: `develop` PR·필수 상태 검사·강제 push 차단 ruleset 적용
-- 보호 확인 전 candidate activation·publication 0건
+- Candidate authority: PR·필수 상태 검사·삭제·강제 push 차단이 적용된 exact `develop`
+- Current GitHub ruleset: `develop` 보호 활성, 우회 권한 없음
+- Current publication environment: `release-publication` 존재, 필수 검토자 없음
+- 사용자 해소 작업: `release-publication`에 필수 검토자 추가
+- 환경 검토자 확인 전 publication 0건
 - `release.yml`: 보호된 정확한 `develop` 커밋에서 제품 `0.8.0`과 npm
   `0.8.0-test.N`을 별도 입력으로 받아 5개 target·6개 npm tarball·embedded
   installer candidate 생성. local static/package 검증 완료, remote matrix 실행 대기
@@ -477,14 +478,16 @@ Candidate trust blocker:
 - Direct installer: `0.8.0-test.N` umbrella의 unpkg bootstrap과 scoped npm
   tarball digest 검증 뒤 native 제품 `0.8.0` 확인. 실제 registry clean install은
   publication 뒤 검증
-- GitHub repository environment·secret·variable 0개
-- Local npm: Node.js `24.13.1`, npm `11.17.0`, registry 로그인 없음
-- npm `aigent-hive`·`@aigent-hive/*` name·scope ownership 미확정
+- GitHub repository environment `release-publication` 1개, 최초 등록용
+  `NPM_TOKEN` secret 1개
+- Local npm: Node.js `24.13.1`, npm `11.17.0`, registry 사용자 `gvm1229`
+- npm `aigent-hive`·`@aigent-hive/*` name·scope 신규 등록 권한은 실제 publication
+  전까지 미확정
 - Public registry 조회: umbrella·5개 scoped package 모두 E404,
   name·scope ownership 증거로 사용 금지
-- Local Windows npm baseline: actual `0.7.0` binary의 platform·umbrella pack,
+- Local Windows npm baseline: actual `0.8.0` binary의 platform·umbrella pack,
   isolated global install과 digest
-  `95fd1e924fbb67ae124984cca5575029ff2cbcce4de8fc96250c8a61124207f8`
+  `a8bdb5d7dd42965ec6f4d2f1f334a4ee4184a7f659f09cb92caf794b96524b0d`
   byte identity PASS
 - Interactive activation 미구현
 
@@ -499,7 +502,7 @@ Pre-1.0 비차단 deferred:
 
 ## 다음 action
 
-0. `develop` branch protection 사용자 적용과 확인
+0. `release-publication` 필수 검토자 사용자 설정과 확인
 1. P7-044 public npm package family와 native smoke
 2. P7-045 npm-backed Unix·PowerShell·CMD installer와 digest·owner receipt 검증
 3. P7-049 authenticated install-owner adapter를 사용하는 interactive `hive update`

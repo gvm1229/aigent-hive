@@ -1,8 +1,8 @@
 # Aigent Hive active plan index
 
-> Revision: 1.75
+> Revision: 1.76
 > 기준일: 2026-07-31
-> Product version: `0.7.0`
+> Product version: `0.8.0`
 > 현재 milestone: Phase 7 qualification + global onboarding·shared index `0.8.0`
 > Entrypoint: `docs/plans/PLAN.md`
 
@@ -54,7 +54,7 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
   shared index 1개 project, repeat update·rollback·재검증 PASS
 - Current native runtime: `baff938` run `30581894132`, Linux musl x86_64·arm64를
   포함한 macOS·Linux·Windows 5/5 PASS
-- Local npm packaging: current `0.7.0` Windows native binary의 platform·umbrella
+- Local npm packaging: current `0.8.0` Windows native binary의 platform·umbrella
   tarball 생성, isolated global install, `hive --version`, source/package binary
   SHA-256 byte identity PASS
 - Windows shell: WSI-001–003 완료, consumer PowerShell 7 dependency 0건,
@@ -115,7 +115,7 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
 
 ## Current execution order
 
-0. `develop` protection과 candidate authority 확인
+0. `release-publication` 필수 검토자 설정 확인
 1. P7-044 public `aigent-hive` npm package family와 native smoke
 2. P7-045 npm-backed Unix·PowerShell·CMD installer와 digest·owner receipt 검증
 3. P7-049 authenticated install-owner adapter를 사용하는 interactive `hive update`

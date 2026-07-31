@@ -79,8 +79,8 @@ flowchart LR
 
 ## Version·release 상태
 
-- Current product version: `0.7.0`
-- Next target: exact `0.8.0` test distribution
+- Current product version: `0.8.0`
+- Current target: exact `0.8.0` test distribution
 - `0.8.0`: npm `test`, GitHub Release 없음, npm `latest` 이동 없음
 - Stable `0.8.x`: 사용자 별도 승인 뒤 결정
 - Major: exact 사용자 지시 전 자동 준비·추론 금지

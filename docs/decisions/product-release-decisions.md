@@ -39,7 +39,7 @@
 | binary update | Bare `hive update`가 즉시 확인하고 새 version이 있으면 선택 언어로 질문. 명시적 수락 뒤 authenticated install owner의 exact adapter만 실행 |
 | host projection | User `~/.agents/directives`·`~/.agents/skills` provider-neutral projection + selected host의 thin native adapter; project Codex·Antigravity `.agents/skills`, Claude `.claude/skills`; foreign byte 보존 |
 | role/run | shared role HANDOFF, PLAN-derived criterion, exact evidence locator, immutable owner pin, sensor-independent manual과 one-role usage-guarded automatic no-spawn resume |
-| 현재 버전 | Phase 6 verifier-only signed release와 safe update milestone `0.7.0`; root Cargo workspace version이 정본, `workspace.metadata.hive.release-date`는 release date 정본 |
+| 현재 버전 | Phase 7 시험 배포 제품 후보 `0.8.0`; root Cargo workspace version이 정본, `workspace.metadata.hive.release-date`는 release date 정본 |
 | 버전 증가 | feature는 원칙적으로 `Y`, compatible quick bugfix는 `Z`; `X`는 exact target을 사용자가 명시하고 human confirmation한 경우에만 |
 | 호환성 | major `0`을 포함해 같은 major만 non-breaking upgrade 보장 |
 | cross-major | 사전 경고, 자동 migration, project/docs/preferences 보존, SQLite rebuild |
