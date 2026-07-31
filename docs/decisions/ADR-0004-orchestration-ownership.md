@@ -2,6 +2,8 @@
 
 - 상태: accepted
 - 날짜: 2026-07-23
+- v0.9 대체 제안: [`ADR-0015`](ADR-0015-host-native-skill-composition.md)
+- 현재 효력: ADR-0015 수락 전 기존 `0.8.x` 계약 유지
 
 ## 결정
 

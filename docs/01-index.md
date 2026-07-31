@@ -47,6 +47,7 @@ current catalog.
 | [ADR-0012](decisions/ADR-0012-global-onboarding-shared-index.md) | Global onboarding·shared index |
 | [ADR-0013](decisions/ADR-0013-0.8-release-scope.md) | `0.8.0` test distribution |
 | [ADR-0014](decisions/ADR-0014-docs-wiki-architecture.md) | `docs/` Wiki architecture |
+| [ADR-0015](decisions/ADR-0015-host-native-skill-composition.md) | v0.9 host-native Skill 조합 제안 |
 
 ## Guides
 
