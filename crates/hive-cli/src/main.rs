@@ -28,6 +28,7 @@ mod role;
 mod run;
 mod source_wiki;
 mod update;
+mod update_activation;
 mod update_discovery;
 mod usage;
 mod usage_control;
@@ -47,6 +48,7 @@ USAGE:
     hive source-wiki lint --target <source-root> --output json
     hive source-wiki index --target <source-root> --output json
     hive source-wiki query --target <source-root> --language en|ko (--text <query>|--tag <tag>) [--limit <1..100>] --output json
+    hive update
     hive update --check --user-root <absolute-dir> --output json
     hive knowledge ingest|query|promote|lint|delete|suppress --help
     hive project upgrade --target <dir> (--scan|--dry-run|--apply|--validate|--recover) --output json
@@ -187,6 +189,7 @@ fn main() -> ExitCode {
         Some("run") => run::run_run(&arguments[1..]),
         Some("judge") => judge::run_judge(&arguments[1..]),
         Some("release") => update::run_release(&arguments[1..]),
+        Some("update") if arguments.len() == 1 => update_activation::run(),
         Some("update") if arguments.get(1).map(String::as_str) == Some("--check") => {
             update_discovery::run(&arguments[1..])
         }

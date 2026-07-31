@@ -685,6 +685,10 @@ fn resolve_user_root() -> Result<PathBuf, InstallError> {
     Ok(PathBuf::from(value))
 }
 
+pub(crate) fn resolve_user_root_path() -> Result<PathBuf, String> {
+    resolve_user_root().map_err(|error| error.message().to_owned())
+}
+
 fn open_user_root(root: &Path) -> Result<Dir, InstallError> {
     if !root.is_absolute() {
         return Err(InstallError::Input(
@@ -6341,6 +6345,10 @@ mod tests {
                 .to_vec(),
                 Some("skills/hive-usage-guard/SKILL.md") => include_bytes!(
                     "../../../harness/project-bases/0.7.0/skills/hive-usage-guard/SKILL.md"
+                )
+                .to_vec(),
+                Some("skills/hive-update/SKILL.md") => include_bytes!(
+                    "../../../harness/project-bases/0.7.0/skills/hive-update/SKILL.md"
                 )
                 .to_vec(),
                 Some("skills/setup-harness/SKILL.md") => include_bytes!(
