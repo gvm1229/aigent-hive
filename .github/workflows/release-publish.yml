@@ -116,10 +116,13 @@ jobs:
           for archive in "${archives[@]}"; do
             test -f "dist/$archive"
             test -f "dist/$archive.sha256"
-            read -r digest name extra <"dist/$archive.sha256"
-            test -z "${extra:-}"
-            test "$name" = "$archive"
-            test "$digest" = "$(sha256sum "dist/$archive" | cut -d' ' -f1)"
+            if ! (
+              cd dist
+              sha256sum --check --strict "$archive.sha256"
+            ); then
+              echo "::error file=dist/$archive.sha256::checksum verification failed for $archive"
+              exit 1
+            fi
             gh attestation verify "dist/$archive" --repo "$GITHUB_REPOSITORY"
           done
           for archive in "${npm_archives[@]}"; do

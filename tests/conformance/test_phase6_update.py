@@ -415,8 +415,14 @@ class Phase6StaticContracts(unittest.TestCase):
             "!inputs.bootstrap_with_token",
             "differs from approved candidate",
             "required release notes are missing",
+            'sha256sum --check --strict "$archive.sha256"',
+            "checksum verification failed for $archive",
         ):
             self.assertIn(required, publication)
+        self.assertNotIn(
+            'read -r digest name extra <"dist/$archive.sha256"',
+            publication,
+        )
         for forbidden in (
             "gh release create",
             "npm publish",
