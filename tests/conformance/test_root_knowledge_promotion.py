@@ -111,8 +111,11 @@ else:
         *arguments: str,
         environment: dict[str, str] | None = None,
     ) -> tuple[subprocess.CompletedProcess[str], dict[str, object]]:
+        command_arguments = list(arguments)
+        if command_arguments[:1] == ["knowledge"] and "--user-root" not in command_arguments:
+            command_arguments.extend(["--user-root", str(self.user_root)])
         process = subprocess.run(
-            [str(self.hive_binary), *arguments, "--output", "json"],
+            [str(self.hive_binary), *command_arguments, "--output", "json"],
             cwd=REPOSITORY_ROOT,
             check=False,
             text=True,
