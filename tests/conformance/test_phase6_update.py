@@ -749,7 +749,8 @@ class Phase6StaticContracts(unittest.TestCase):
         self.assertNotIn("Move-Item", powershell)
         self.assertNotRegex(powershell, r"catch\s*\{\s*\}")
         self.assertIn("install-receipt.pending.json", powershell)
-        self.assertIn("Get-FileHash -LiteralPath $Destination", powershell)
+        self.assertIn("function Get-FileSha256", powershell)
+        self.assertNotIn("Get-FileHash", powershell)
         self.assertIn(
             '$priorReceipt.artifact_sha256 -ne "sha256:$priorDigest"',
             powershell,
@@ -1069,6 +1070,7 @@ $ast = [Management.Automation.Language.Parser]::ParseFile(
 if ($errors.Count -ne 0) { throw ($errors | Out-String) }
 foreach ($name in @(
     "Test-HiveVersionOutput",
+    "Get-FileSha256",
     "Get-ValidatedDirectReceipt",
     "Assert-ExistingDirectInstall",
     "Assert-AuthorizedAuthenticodeSignature",
@@ -1086,6 +1088,23 @@ foreach ($name in @(
     )
     if ($null -eq $function) { throw "installer validation function missing: $name" }
     Invoke-Expression $function.Extent.Text
+}
+$hashProbe = Join-Path ([IO.Path]::GetTempPath()) (
+    "hive-sha256-" + [Guid]::NewGuid().ToString()
+)
+try {
+    [IO.File]::WriteAllBytes(
+        $hashProbe,
+        [Text.Encoding]::UTF8.GetBytes("abc")
+    )
+    if (
+        (Get-FileSha256 -Path $hashProbe) -ne
+        "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+    ) {
+        throw "module-independent SHA-256 mismatch"
+    }
+} finally {
+    if ([IO.File]::Exists($hashProbe)) { [IO.File]::Delete($hashProbe) }
 }
 if (-not (Test-HiveVersionOutput `
     -Output "hive 0.7.0 (released 2026-07-24)" `
@@ -1335,9 +1354,7 @@ try {
     $transactionReceipt = Join-Path $transactionRoot "install-receipt.json"
     $pendingReceipt = Join-Path $transactionRoot "install-receipt.pending.json"
     Set-Content -LiteralPath $transactionBinary -Value "new binary" -Encoding utf8
-    $transactionDigest = (
-        Get-FileHash -LiteralPath $transactionBinary -Algorithm SHA256
-    ).Hash.ToLowerInvariant()
+    $transactionDigest = Get-FileSha256 -Path $transactionBinary
     @{
         schema_version = 1
         owner = "direct"

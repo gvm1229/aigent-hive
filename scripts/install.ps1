@@ -39,6 +39,33 @@ function Test-HiveVersionOutput {
     )
 }
 
+function Get-FileSha256 {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Path
+    )
+
+    $stream = [IO.File]::Open(
+        $Path,
+        [IO.FileMode]::Open,
+        [IO.FileAccess]::Read,
+        [IO.FileShare]::Read
+    )
+    try {
+        $algorithm = [Security.Cryptography.SHA256]::Create()
+        try {
+            $digest = $algorithm.ComputeHash($stream)
+        }
+        finally {
+            $algorithm.Dispose()
+        }
+    }
+    finally {
+        $stream.Dispose()
+    }
+    return [BitConverter]::ToString($digest).Replace("-", "").ToLowerInvariant()
+}
+
 function Assert-SafeDirectoryChain {
     param(
         [Parameter(Mandatory = $true)]
@@ -140,7 +167,7 @@ function Assert-ExistingDirectInstall {
         throw "existing hive binary is not owned by the direct installer"
     }
     $priorReceipt = Get-ValidatedDirectReceipt -ReceiptPath $ReceiptPath
-    $priorDigest = (Get-FileHash -LiteralPath $Destination -Algorithm SHA256).Hash.ToLowerInvariant()
+    $priorDigest = Get-FileSha256 -Path $Destination
     if (
         $priorReceipt.artifact_sha256 -ne "sha256:$priorDigest"
     ) {
@@ -227,9 +254,7 @@ function Repair-PendingDirectInstall {
         -not $destinationItem.PSIsContainer -and
         -not ($destinationItem.Attributes -band [IO.FileAttributes]::ReparsePoint)
     ) {
-        $destinationDigest = (
-            Get-FileHash -LiteralPath $Destination -Algorithm SHA256
-        ).Hash.ToLowerInvariant()
+        $destinationDigest = Get-FileSha256 -Path $Destination
         if ($pendingReceipt.artifact_sha256 -eq "sha256:$destinationDigest") {
             if ($null -ne $receiptItem) {
                 Get-ValidatedDirectReceipt -ReceiptPath $ReceiptPath | Out-Null
@@ -249,9 +274,7 @@ function Repair-PendingDirectInstall {
             -not $destinationItem.PSIsContainer -and
             -not ($destinationItem.Attributes -band [IO.FileAttributes]::ReparsePoint)
         ) {
-            $destinationDigest = (
-                Get-FileHash -LiteralPath $Destination -Algorithm SHA256
-            ).Hash.ToLowerInvariant()
+            $destinationDigest = Get-FileSha256 -Path $Destination
             if ($priorReceipt.artifact_sha256 -eq "sha256:$destinationDigest") {
                 Assert-SafeDirectoryChain -Path $destinationDirectory
                 Assert-SafeDirectoryChain -Path $receiptDirectory
@@ -298,7 +321,7 @@ $stagedReceipt = $null
 try {
     $archivePath = Join-Path $work $archive
     Invoke-WebRequest -UseBasicParsing -Uri "$base/$archive" -OutFile $archivePath
-    $actual = (Get-FileHash -LiteralPath $archivePath -Algorithm SHA256).Hash.ToLowerInvariant()
+    $actual = Get-FileSha256 -Path $archivePath
     if ($ExpectedArchiveSha256 -ne $actual) {
         throw "release archive SHA-256 verification failed"
     }
@@ -368,7 +391,7 @@ try {
     Assert-SafeDirectoryChain -Path $binDirectory
     Assert-SafeDirectoryChain -Path $shareDirectory
     [IO.File]::Copy($binary, $stagedBinary, $false)
-    $binaryDigest = (Get-FileHash -LiteralPath $binary -Algorithm SHA256).Hash.ToLowerInvariant()
+    $binaryDigest = Get-FileSha256 -Path $binary
     $receiptJson = @{
         schema_version = 1
         owner = "direct"
