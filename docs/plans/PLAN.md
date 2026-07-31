@@ -1,6 +1,6 @@
 # Aigent Hive active plan index
 
-> Revision: 1.82
+> Revision: 1.83
 > 기준일: 2026-08-01
 > Product version: `0.8.0`
 > 현재 milestone: Phase 7 qualification + global onboarding·shared index `0.8.0`
@@ -11,7 +11,7 @@
 - Objective: `Aigent Hive 0.8.0` 후보의 Linux·macOS·Windows native artifact,
   npm `0.8.0-test.N`·직접 설치 시험, bilingual onboarding, update
   discovery·activation과 provenance gate 완료
-- Queued `0.9.0`: host-native loop·Wiki·Skill suite·전역 knowledge RAG
+- Queued `0.9.0`: host-native loop·Wiki·Skill suite·전역 RAG·knowledge 이식·scan
 - Success: Mandatory user setup, global preference 기반 expedited/custom project setup,
   user-root 단일 SQLite, 세 host selected Skill projection, Wiki default-on opt-out,
   usage guard opt-in `20%`, native-first·CodexBar fallback-only, consumer
@@ -43,7 +43,8 @@
 | Docs Wiki migration | 4 | 0 | 100% |
 | v0.9 loop·Wiki·Skill suite | 0 | 25 | 0% |
 | v0.9 global knowledge RAG | 0 | 20 | 0% |
-| **Canonical total** | **223** | **50** | **81.7%** |
+| v0.9 knowledge portability·scan | 0 | 18 | 0% |
+| **Canonical total** | **223** | **68** | **76.6%** |
 
 External production boundary 항목도 미완료 합계에 포함. Protected authority 없이 완료 처리 금지.
 
@@ -61,10 +62,6 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
 - Copier/Rust current projection parity `3/3`, Source Wiki lint finding·warning `0`
 - Shared index 동일 입력 재실행 byte-exact no-op, `changed_paths=[]`
 - Codex·Antigravity expedited/custom connected onboarding matrix `4/4`
-- Initial `Expedited — set everything to default`와 project zero-question inference contract
-- English·한국어 language-first setup과 선택 언어 global guidance, `hive-cli` 211개 PASS
-- 개발·소비자 질문과 응답의 선택 언어 통일, 대체 가능한 일반 영어 단어의 한영
-  혼용 금지, 전역·프로젝트 지침 회귀 시험 PASS
 - 개발·소비자 검증 결과 보고 규칙: 범위·이유·현재 환경·실행 여부·입증 범위·
   미검증 범위 명시, 투영 시험 PASS
 - Opt-in daily update check의 24시간 success throttle, offline next-session retry,
@@ -101,6 +98,7 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
 | [`active/release-0.8.0.md`](active/release-0.8.0.md) | `P7-*` reference | `0.8.0` Linux·npm·직접 설치 실행 순서와 범위 |
 | [`active/v0.9.0-loop-wiki-skills.md`](active/v0.9.0-loop-wiki-skills.md) | `V9-*` | Host-native graph engineering·통합 Wiki·초기 Skill suite |
 | [`active/v0.9.0-global-knowledge-rag.md`](active/v0.9.0-global-knowledge-rag.md) | `RAG-*` | 전역 RAG |
+| [`active/v0.9.0-knowledge-portability-scan.md`](active/v0.9.0-knowledge-portability-scan.md) | `KPX-*` | Knowledge 이식·directory scan·automatic query |
 
 ## Reconciliation gate
 
@@ -128,7 +126,7 @@ publication `30647959771`의 npm 쓰기 직전까지 모든 gate PASS.
 2. 기존 candidate `30647361507`로 `release-publish.yml` 재실행·승인
 3. npm·Unix·PowerShell·CMD clean install·repeat·recovery와 P7 미완료 5개 검증
 4. 시험 배포 성공 commit의 `develop` → `main` PR 병합
-5. 별도 지시 뒤 V9-025, `V9-*`·`RAG-*` fragment 순서 실행
+5. 별도 지시 뒤 V9-025 → KPX-001–007 → `RAG-*` → KPX-008–018 → 잔여 `V9-*`
 
 ## `0.8.0` 비차단 deferred boundary
 

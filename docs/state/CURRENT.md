@@ -2,7 +2,7 @@
 
 - 기준 branch: `develop`
 - product version: `0.8.0`
-- plan revision: `1.82`
+- plan revision: `1.83`
 - 현재 milestone: Phase 7 qualification + global onboarding·shared index `0.8.0`
 - 현재 작업: `0.8.0` 제품 후보와 `0.8.0-test.N` npm 시험판 분리·배포 준비
 - 외부 중지 경계: GitHub Release·npm `latest`, protected signing/publication credential,
@@ -18,7 +18,8 @@
   + `docs/plans/active/release-0.8.0.md`
   + `docs/plans/active/v0.9.0-loop-wiki-skills.md`
   + `docs/plans/active/v0.9.0-global-knowledge-rag.md`
-- Plan completion: canonical checklist `223/273` 완료, `50`개 미완료, `81.7%`
+  + `docs/plans/active/v0.9.0-knowledge-portability-scan.md`
+- Plan completion: canonical checklist `223/291` 완료, `68`개 미완료, `76.6%`
 - Latest local Windows: Rust workspace 458개 실행·통과. Python 적합성 618개 발견 중
   576개 실제 실행·통과, 42개 미실행. 미실행 범위: 관리자 권한 없는 Windows의
   symbolic link 생성 제약 16개, POSIX·Unix 전용 동작 19개, macOS 전용 설치·서명
@@ -73,7 +74,28 @@
   mandatory write, citation-ready chunk result와 fresh-session recall
 - DB 방향: 기존 SQLite derived boundary 유지, chunk·generation·dirty journal schema 확대,
   measured recall deficiency에서만 local vector projection 검토
+- 이식: `.hivekb` canonical bundle export·import 뒤 destination SQLite rebuild
+- 수집: directory별 table 대신 stable `collection_id`, explicit `hive-knowledge-scan`과
+  project claim → reusable candidate 2단계 review
+- 검색 Skill: 새 find Skill 없이 기존 `hive-knowledge-query`의 질문·research·work
+  bounded automatic route
 - 안전 경계: Wiki opt-out, raw transcript·secret·credential·SQLite-only fact 0건
+
+## v0.9.0 knowledge 이식·directory scan
+
+- 상태: 계획 최종 승인, 구현 미착수
+- Active fragment:
+  [`v0.9.0-knowledge-portability-scan.md`](../plans/active/v0.9.0-knowledge-portability-scan.md)
+- Research:
+  [`knowledge-portability-ingestion-retrieval.md`](../research/knowledge-portability-ingestion-retrieval.md)
+- Bundle: deterministic ZIP + versioned manifest·SHA-256, SQLite·runtime·absolute path 제외
+- Collection: fixed normalized schema, stable ID, detached destination mapping
+- Scan: tracked-first inventory, claim kind·assertion status, evidence-qualified convention,
+  기존 promote의 consolidated consent 재사용
+- Retrieval: existing query Skill single owner, turn당 1회 top 5·byte budget,
+  retrieved instruction authority 0건
+- Adversarial review: overlap·schema growth·archive path·secret·poisoning·truth overclaim·
+  path portability·context overload finding 교정, 사용자 결정 잔여 0건
 
 ## `docs/` Wiki 전환
 
@@ -286,9 +308,9 @@ Pre-1.0 비차단 deferred:
 계획 evidence:
 
 - Active fragment 8 KiB 제한 충족
-- Canonical checklist `223/228`, active checklist ID 중복 0건
+- Canonical checklist `223/291`, active checklist ID 중복 0건
 - Root English 159줄·Korean 155줄 README, 상호 language link와 빈 QA 표 PASS
-- Plan static contract 29/29, documentation style regression 18/18 PASS
+- Phase 3 static contract 41/41, documentation style regression 18/18 PASS
 - Human documentation inventory 1,285/1,285 review, finding 0건
 - Markdown link conformance PASS
 
@@ -343,7 +365,7 @@ Pre-1.0 비차단 deferred:
 
 - Source-only `hive-usage-guard` Skill과 15초 native Codex app-server primary·CodexBar
   fallback-only watcher
-- 현재 session threshold: remaining `30%` inclusive
+- 현재 session threshold: remaining `5%` inclusive
 - Session window 우선, session 부재 시 weekly fallback
 - Quota sensor unknown: 3초 뒤 1회 재시도, 반복 unknown은 observation 보존과
   `transient_unknown_ignored` 진행, confirmed-limited marker 유지

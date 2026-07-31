@@ -81,6 +81,7 @@ current catalog.
 | [Codex Skill budget](research/codex-skill-context-budget.md) | Skill metadata·context cost |
 | [Plugin host surface](research/user-plugin-host-surfaces.md) | 세 host install surface |
 | [SQLite index](research/rusqlite-sqlite-index.md) | `rusqlite`·FTS5 evidence |
+| [Knowledge 이식·scan](research/knowledge-portability-ingestion-retrieval.md) | Portable bundle·collection·retrieval evidence |
 
 ## Facts
 
@@ -146,3 +147,4 @@ Fact별 catalog는 migration 완료 뒤 이 section과 [Fact 안내](facts/READM
 | [`0.8.0` release](plans/active/release-0.8.0.md) | Test distribution execution |
 | [v0.9 loop·Wiki·Skill suite](plans/active/v0.9.0-loop-wiki-skills.md) | Host-native graph engineering 계획 |
 | [v0.9 전역 knowledge RAG](plans/active/v0.9.0-global-knowledge-rag.md) | Cross-project retrieval·mandatory memory 계획 |
+| [v0.9 knowledge 이식·scan](plans/active/v0.9.0-knowledge-portability-scan.md) | Canonical bundle·directory scan·automatic query 계획 |

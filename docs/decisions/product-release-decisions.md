@@ -13,6 +13,7 @@
 | canonical data | 지식·role·run은 Markdown, setup/config/approval은 tracked YAML/TOML, Raw는 허용된 source object |
 | SQLite | `0.8.0` target은 `~/.hive/index/hive.sqlite3` 단일 projection; user Wiki + 등록 project Wiki 기반 무네트워크 rebuild, project DB 없음 |
 | v0.9 knowledge RAG | 모든 질문의 simple-question 이전 bounded retrieval, named project scope, durable user fact·preference·workflow mandatory write, citation-ready chunk·score·locator 반환. Markdown 정본 유지, SQLite는 incremental FTS5 RAG projection과 measured deficiency 이후 optional local vector만 허용 |
+| v0.9 knowledge portability·scan | SQLite 복사 대신 checksummed `.hivekb` canonical bundle export·import, 고정 normalized table의 `collection_id`, explicit `hive-knowledge-scan`, 기존 query Skill의 bounded automatic retrieval. Secret·confidential·runtime·absolute path·retrieved instruction authority 제외 |
 | Global onboarding | Minimal bootstrap 뒤 mandatory `setup-hive`; 첫 질문은 language, 이후 모든 질문과 host 지침은 선택 언어. Wiki language·profile·persona·host·Skill·Wiki·usage·update-check preference 정본은 `~/.hive/config/user-setup.yml` |
 | orchestration | Codex의 compatible OMX, Claude의 compatible OMC를 우선하고 `absent|incompatible|unknown`이면 truthful host native가 소유; setup 선택지와 mid-run switch 없음 |
 | orchestration 독립 | OMX/OMC는 현재 replaceable compatibility dependency; 장기적으로 host-native·provider-neutral capability로 대체 후 제거, canonical data·path·schema·Skill identity 의존 없음 |
@@ -56,7 +57,7 @@ Source Wiki의 독립성, OMX Wiki Skill 제외 이유와 장기 OMX/OMC retirem
 Global onboarding, Wiki opt-out, selected Skill projection과 user-root 단일 shared index:
 [`ADR-0012`](ADR-0012-global-onboarding-shared-index.md).
 
-v0.9 cross-project retrieval, mandatory durable memory와 derived RAG index:
+v0.9 cross-project retrieval, mandatory durable memory, portable bundle·directory scan과 derived RAG index:
 [`ADR-0016`](ADR-0016-global-knowledge-rag.md).
 
 ## 미확정 항목

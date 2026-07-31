@@ -341,6 +341,7 @@ class Phase3SkillSourceContract(unittest.TestCase):
             "active/source-docs-wiki.md",
             "active/user-onboarding-shared-index.md",
             "active/v0.9.0-global-knowledge-rag.md",
+            "active/v0.9.0-knowledge-portability-scan.md",
             "active/v0.9.0-loop-wiki-skills.md",
             "active/windows-shell-install.md",
             "contracts/README.md",
@@ -364,6 +365,7 @@ class Phase3SkillSourceContract(unittest.TestCase):
             plan_root / "active/source-docs-wiki.md",
             plan_root / "active/user-onboarding-shared-index.md",
             plan_root / "active/v0.9.0-global-knowledge-rag.md",
+            plan_root / "active/v0.9.0-knowledge-portability-scan.md",
             plan_root / "active/v0.9.0-loop-wiki-skills.md",
             plan_root / "active/windows-shell-install.md",
             plan_root / "phases/07-public-qualification.md",
@@ -380,6 +382,7 @@ class Phase3SkillSourceContract(unittest.TestCase):
                 "active/source-docs-wiki.md",
                 "active/user-onboarding-shared-index.md",
                 "active/v0.9.0-global-knowledge-rag.md",
+                "active/v0.9.0-knowledge-portability-scan.md",
                 "active/v0.9.0-loop-wiki-skills.md",
                 "active/windows-shell-install.md",
                 "phases/07-public-qualification.md",
@@ -457,6 +460,9 @@ class Phase3SkillSourceContract(unittest.TestCase):
         source_wiki_path = plan_root / "active/source-docs-wiki.md"
         onboarding_path = plan_root / "active/user-onboarding-shared-index.md"
         v09_rag_path = plan_root / "active/v0.9.0-global-knowledge-rag.md"
+        v09_portability_path = (
+            plan_root / "active/v0.9.0-knowledge-portability-scan.md"
+        )
         v09_skill_path = plan_root / "active/v0.9.0-loop-wiki-skills.md"
         windows_shell_path = plan_root / "active/windows-shell-install.md"
         progress_rows = (
@@ -493,6 +499,10 @@ class Phase3SkillSourceContract(unittest.TestCase):
                 "v0.9 global knowledge RAG",
                 *checklist_counts([v09_rag_path]),
             ),
+            (
+                "v0.9 knowledge portability·scan",
+                *checklist_counts([v09_portability_path]),
+            ),
         )
         total_done = sum(row[1] for row in progress_rows)
         total_open = sum(row[2] for row in progress_rows)
@@ -527,6 +537,28 @@ class Phase3SkillSourceContract(unittest.TestCase):
                     (fragment.parent / path).exists(),
                     f"broken plan link: {fragment.relative_to(plan_root)} -> {target}",
                 )
+
+    def test_v09_knowledge_portability_plan_has_bounded_nonoverlap(self) -> None:
+        plan = (
+            REPOSITORY_ROOT
+            / "docs/plans/active/v0.9.0-knowledge-portability-scan.md"
+        ).read_text(encoding="utf-8")
+        research = (
+            REPOSITORY_ROOT
+            / "docs/research/knowledge-portability-ingestion-retrieval.md"
+        ).read_text(encoding="utf-8")
+        for requirement in (
+            "SQLite·WAL·SHM",
+            "directory별 table",
+            "collection_id",
+            "hive-knowledge-scan",
+            "기존 `hive-knowledge-query`",
+            "untrusted data",
+            "detached",
+        ):
+            with self.subTest(requirement=requirement):
+                self.assertIn(requirement, plan)
+        self.assertIn("사용자 결정 잔여: 없음", research)
 
     def test_source_prompt_refine_plan_requires_optional_quality_suggestion(
         self,

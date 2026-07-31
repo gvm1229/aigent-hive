@@ -12,6 +12,7 @@
 - [Antigravity native usage sensor 조사](antigravity-native-usage-sensor.md)
 - [세 host user plugin surface 조사](user-plugin-host-surfaces.md)
 - [`rusqlite 0.40.1` disposable SQLite index 검토](rusqlite-sqlite-index.md)
+- [Knowledge 이식·directory 수집·검색 조사](knowledge-portability-ingestion-retrieval.md)
 - `netwaif/usage-coach`
 - `netwaif/multi-agent-starter`
 - `Yeachan-Heo/oh-my-codex`
