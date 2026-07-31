@@ -13,22 +13,19 @@ project knowledge, durable role/run state, usage safeguards, and safe update con
 It never asks for model-provider API keys, calls model-provider APIs, or replaces the
 host's own model runtime.
 
-## 0.8.0 test distribution
+## Install 0.8.0
 
-`0.8.0` is the product candidate, not the stable public release. npm test packages use
-separate versions such as `0.8.0-test.1` under the `test` tag. They do not create a
-GitHub Release or move npm's `latest` tag.
-
-After the test distribution is published:
+`0.8.0` is published on npm as `latest` for installation validation. This publication
+does not create a GitHub Release or Git release tag.
 
 ```console
-npm install -g aigent-hive@0.8.0-test.1
+npm install -g aigent-hive
 ```
 
-or:
+Or pin the exact version:
 
 ```console
-npm install -g aigent-hive@test
+npm install -g aigent-hive@0.8.0
 ```
 
 The npm installer requires Node.js and npm. The installed `hive` runtime is a native
@@ -38,19 +35,19 @@ Rust binary and does not require Node.js.
 
 ```sh
 curl --proto '=https' --tlsv1.2 -LsSf \
-  https://unpkg.com/aigent-hive@0.8.0-test.1/install.sh | sh
+  https://unpkg.com/aigent-hive@0.8.0/install.sh | sh
 ```
 
 ### Windows PowerShell 5.1+
 
 ```powershell
-irm https://unpkg.com/aigent-hive@0.8.0-test.1/install.ps1 | iex
+irm https://unpkg.com/aigent-hive@0.8.0/install.ps1 | iex
 ```
 
 ### Windows Command Prompt
 
 ```bat
-curl.exe -fLo install-aigent-hive.cmd https://unpkg.com/aigent-hive@0.8.0-test.1/install.cmd && install-aigent-hive.cmd
+curl.exe -fLo install-aigent-hive.cmd https://unpkg.com/aigent-hive@0.8.0/install.cmd && install-aigent-hive.cmd
 ```
 
 The direct installers fetch the same native package bytes from npm, verify the
