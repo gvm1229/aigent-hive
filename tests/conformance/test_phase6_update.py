@@ -430,6 +430,8 @@ class Phase6StaticContracts(unittest.TestCase):
             "unpkg.com/aigent-hive@$PACKAGE_VERSION/install.ps1",
             publication,
         )
+        self.assertEqual(publication.count('npm publish "./dist/'), 12)
+        self.assertNotIn('npm publish "dist/', publication)
         for forbidden in (
             "gh release create",
             "npm publish",
