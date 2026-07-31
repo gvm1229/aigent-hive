@@ -76,9 +76,17 @@ jobs:
         env:
           CANDIDATE_SHA: ${{ steps.candidate.outputs.sha }}
         run: |
+          actual_sha=$(git rev-parse HEAD)
+          if [ "$actual_sha" != "$CANDIDATE_SHA" ]; then
+            echo "::error::checked out commit $actual_sha differs from approved candidate $CANDIDATE_SHA"
+            exit 1
+          fi
+          release_notes="docs/releases/$PRODUCT_VERSION.md"
+          if [ ! -f "$release_notes" ]; then
+            echo "::error file=$release_notes::required release notes are missing for product version $PRODUCT_VERSION"
+            exit 1
+          fi
           scripts/check-release-version.sh "$PRODUCT_VERSION"
-          test -f "docs/releases/$PRODUCT_VERSION.md"
-          test "$(git rev-parse HEAD)" = "$CANDIDATE_SHA"
       - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
         with:
           github-token: ${{ github.token }}

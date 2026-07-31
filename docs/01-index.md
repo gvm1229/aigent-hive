@@ -60,6 +60,13 @@ current catalog.
 | [Judge attestation](guides/ed25519-judge-attestations.md) | External signature ceremony |
 | [Signed update·release](guides/signed-update-and-release.md) | Update·candidate·publication procedure |
 
+## Releases
+
+| 문서 | 설명 |
+| --- | --- |
+| [Release 안내](releases/README.md) | 제품 버전별 출시 안내 MOC |
+| [`0.8.0`](releases/0.8.0.md) | npm 시험 배포용 제품 후보 |
+
 ## Research
 
 | 문서 | 설명 |

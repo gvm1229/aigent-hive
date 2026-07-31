@@ -14,6 +14,7 @@ Source 개발자와 agent를 위한 공통 문서 진입점.
 | 결정 근거 확인 | [Decision 안내](decisions/README.md) |
 | 개발·검증 실행 | [Development guide](guides/development.md) |
 | 운영 절차 확인 | [Guide 안내](guides/README.md) |
+| 출시 안내 확인 | [Release 안내](releases/README.md) |
 | 외부 조사 확인 | [Research 안내](research/README.md) |
 | 원자 knowledge 검색 | [Fact 안내](facts/README.md) |
 | README 언어 선택 | [English](../README.md) · [한국어](readme/README.ko.md) |
@@ -25,6 +26,7 @@ overview      제품의 목적·지원 범위·기능
 architecture  현재 동작 구조와 trust boundary
 decisions     채택한 선택과 배제한 대안
 guides        사람이 실행하는 절차와 명령
+releases      제품 버전별 변경점·배포 범위·제약
 research      외부 자료·version·확인일 기반 조사
 facts         한 문서에 한 가지 reusable fact
 plans         아직 완료되지 않은 목표와 acceptance
@@ -46,7 +48,8 @@ Fact와 source 불일치 시 source·ADR 우선. 유효한 knowledge의 문서 �
 
 ## 현재와 과거
 
-- Current truth: `overview/`, `architecture/`, `decisions/`, `guides/`, `facts/`, `state/`
+- Current truth: `overview/`, `architecture/`, `decisions/`, `guides/`, `releases/`,
+  `facts/`, `state/`
 - Future work: `plans/`
 - Dated external evidence: `research/`
 - Ordinary history: Git
