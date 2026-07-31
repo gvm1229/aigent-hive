@@ -1527,17 +1527,17 @@ fn render_user_guidance(
                     "# Aigent Hive user directives",
                     "Active adapter",
                     format!(
-                        "- State: `operational`\n- Interface language: `en`; ask and answer in English.\n- Selected hosts: `{hosts}`\n- Global Wiki: `{wiki}`\n- Daily update check: `{update_check}`.\n- When enabled, run `hive update --check --user-root <user-root> --output json` before the first Hive task of each host session; never install from a check.\n- Use `setup-harness` for project expedited or custom setup.\n- Project Markdown Wiki remains canonical; the user-root SQLite index is derived and shared.\n- Use `hive-project-upgrade` for project projection upgrades.\n- Offer one optional refine suggestion for ambiguous or detail-poor ordinary prompts; never rewrite automatically.\n"
+                        "- State: `operational`\n- Interface language: `en`; use English consistently throughout every question and response. Keep Korean only for exact Korean names, literals, quotations, or text the user asks to preserve.\n- Selected hosts: `{hosts}`\n- Global Wiki: `{wiki}`\n- Daily update check: `{update_check}`.\n- When enabled, run `hive update --check --user-root <user-root> --output json` before the first Hive task of each host session; never install from a check.\n- Use `setup-harness` for project expedited or custom setup.\n- Project Markdown Wiki remains canonical; the user-root SQLite index is derived and shared.\n- Use `hive-project-upgrade` for project projection upgrades.\n- Offer one optional refinement suggestion for ambiguous or detail-poor ordinary requests; never rewrite automatically.\n"
                     ),
                     "- Preserve foreign guidance bytes and modify only exact Hive marker blocks.\n- Never request provider API credentials or call model-provider APIs on Hive's behalf.\n",
                 ),
                 crate::user_setup::InterfaceLanguage::Ko => (
                     "# Aigent Hive 사용자 지침",
-                    "활성 adapter",
+                    "활성 어댑터",
                     format!(
-                        "- 상태: `operational`\n- Interface language: `ko`; 질문과 응답은 한국어 사용.\n- 선택 host: `{hosts}`\n- Global Wiki: `{wiki}`\n- 일일 update 확인: `{update_check}`.\n- Enabled이면 각 host session의 첫 Hive 작업 전에 `hive update --check --user-root <user-root> --output json` 실행하고 확인만으로 설치 금지.\n- Project expedited·custom setup에는 `setup-harness` 사용.\n- Project Markdown Wiki가 정본이며 user-root SQLite index는 derived·shared 상태.\n- Project projection upgrade에는 `hive-project-upgrade` 사용.\n- 모호하거나 핵심 세부가 부족한 일반 prompt에는 자동 rewrite 없이 optional refine 제안 1개만 제공.\n"
+                        "- 상태: `operational`\n- 사용 언어: `ko`; 질문과 응답은 한국어로 통일. 고유명사, 제품·패키지 이름, 명령어, 코드 식별자, 경로, 스키마 키, 정확한 화면 문구, 뚜렷한 한국어 대체어가 없는 용어만 영어 유지. 대체 가능한 일반 영어 단어의 한영 혼용 금지.\n- 선택한 호스트: `{hosts}`\n- 전역 위키: `{wiki}`\n- 일일 갱신 확인: `{update_check}`.\n- 활성화한 경우 각 호스트 세션의 첫 Hive 작업 전에 `hive update --check --user-root <user-root> --output json` 실행. 확인만으로 설치 금지.\n- 프로젝트 빠른 설정 또는 사용자 지정 설정에는 `setup-harness` 사용.\n- 프로젝트 Markdown 위키가 정본이며 사용자 루트 SQLite 색인은 파생·공유 상태.\n- 프로젝트 투영 갱신에는 `hive-project-upgrade` 사용.\n- 모호하거나 핵심 세부가 부족한 일반 요청에는 자동 재작성 없이 선택적 개선 제안 1개만 제공.\n"
                     ),
-                    "- Foreign guidance bytes를 보존하고 exact Hive marker block만 변경.\n- Provider API credential을 요청하거나 Hive를 대신해 model-provider API를 호출하지 않음.\n",
+                    "- 외부 지침 바이트 보존, 정확한 Hive 표시 블록만 변경.\n- 제공자 API 자격 증명 요청 금지, Hive를 대신한 모델 제공자 API 호출 금지.\n",
                 ),
             }
         },
@@ -6447,6 +6447,73 @@ mod tests {
         let outside = [&second[..foreign.len()]];
         assert_eq!(outside[0], foreign);
         assert_eq!(find_all(&second, USER_MARKER_START).len(), 1);
+    }
+
+    #[test]
+    fn operational_user_guidance_keeps_the_selected_language_consistent() {
+        use crate::user_setup::{
+            CatalogSelection, InterfaceLanguage, SelectedHost, SkillPreferences,
+            SkillSelectionMode, UpdateCheckPreferences, UsageGuardPreferences, UserSetupConfig,
+            WikiLanguage, WikiPreferences,
+        };
+
+        let config = |interface_language| UserSetupConfig {
+            schema_version: 1,
+            interface_language,
+            wiki: WikiPreferences {
+                enabled: true,
+                language: WikiLanguage::Both,
+            },
+            profile: CatalogSelection {
+                id: "web-developer".to_owned(),
+                custom_description: None,
+            },
+            persona: CatalogSelection {
+                id: "balanced".to_owned(),
+                custom_description: None,
+            },
+            selected_hosts: vec![SelectedHost::Codex],
+            skills: SkillPreferences {
+                mode: SkillSelectionMode::Individual,
+                recommended_suite: None,
+                selected: vec!["setup-hive".to_owned()],
+            },
+            update_check: UpdateCheckPreferences::default(),
+            usage_guard: UsageGuardPreferences {
+                enabled: false,
+                stop_remaining_percent: 20,
+                codexbar_fallback_enabled: false,
+            },
+        };
+
+        let english = String::from_utf8(render_user_guidance(
+            UserHost::Codex,
+            Some(&config(InterfaceLanguage::En)),
+        ))
+        .expect("English guidance");
+        assert!(english.contains("use English consistently throughout every question and response"));
+        assert!(!english.contains("질문과 응답"));
+
+        let korean = String::from_utf8(render_user_guidance(
+            UserHost::Codex,
+            Some(&config(InterfaceLanguage::Ko)),
+        ))
+        .expect("Korean guidance");
+        assert!(korean.contains("질문과 응답은 한국어로 통일"));
+        assert!(korean.contains("대체 가능한 일반 영어 단어의 한영 혼용 금지"));
+        for avoidable_mixture in [
+            "활성 adapter",
+            "Interface language",
+            "선택 host",
+            "Global Wiki",
+            "일일 update",
+            "Enabled이면",
+            "Project expedited",
+            "optional refine",
+            "Foreign guidance bytes",
+        ] {
+            assert!(!korean.contains(avoidable_mixture));
+        }
     }
 
     #[test]

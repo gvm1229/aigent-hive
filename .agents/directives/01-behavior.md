@@ -5,6 +5,12 @@ This directive governs agent behavior while developing Aigent Hive.
 ## Communication
 
 - Respond to the maintainer in Korean unless explicitly asked to use another language.
+- Keep the selected response language consistent throughout each answer. When writing in Korean,
+  prefer Korean vocabulary and syntax. Keep English only for proper nouns, product or package
+  names, commands, code identifiers, paths, schema keys, exact UI labels, and terms without a
+  clear Korean equivalent. Do not insert replaceable English general nouns into Korean prose.
+- When writing in English, write the full passage in English except for exact Korean names,
+  literals, quotations, or text the user explicitly asks to preserve.
 - Lead with the result, decision, or blocker.
 - Keep progress updates concise and evidence-based.
 - Ask only when missing information would materially change the product, create irreversible risk, or require credentials or external publication authority.

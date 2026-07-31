@@ -628,6 +628,9 @@ class Phase3SkillSourceContract(unittest.TestCase):
         self.assertIn("Codex, Claude, and Gemini Antigravity", product_marker)
 
     def test_source_and_consumer_human_documentation_style_contract(self) -> None:
+        source_behavior = (
+            REPOSITORY_ROOT / ".agents/directives/01-behavior.md"
+        ).read_text(encoding="utf-8")
         source_directive = (
             REPOSITORY_ROOT
             / ".agents/directives/08-human-documentation-style.md"
@@ -644,11 +647,22 @@ class Phase3SkillSourceContract(unittest.TestCase):
         guidance = (
             REPOSITORY_ROOT / "docs/guidance-schema.md"
         ).read_text(encoding="utf-8")
+        user_guidance_renderer = (
+            REPOSITORY_ROOT / "crates/hive-cli/src/user_install.rs"
+        ).read_text(encoding="utf-8")
         shipped_rule = (
             "Write human-readable project documents in concise Korean unless "
             "the user explicitly requests another language."
         )
+        language_consistency_rule = (
+            "Keep the selected interface language consistent throughout every "
+            "question and response."
+        )
 
+        self.assertIn("Do not insert replaceable English general nouns", source_behavior)
+        self.assertIn("write the full passage in English", source_behavior)
+        self.assertIn("Keep each passage in one base language", source_directive)
+        self.assertIn("Replace ordinary English nouns", source_directive)
         self.assertIn("examples, not an exhaustive allowlist", source_directive)
         self.assertIn("`~한다`", source_directive)
         self.assertIn(
@@ -667,6 +681,17 @@ class Phase3SkillSourceContract(unittest.TestCase):
         )
         self.assertIn(shipped_rule, template)
         self.assertIn(shipped_rule, renderer)
+        self.assertIn(language_consistency_rule, template)
+        self.assertIn(language_consistency_rule, renderer)
+        self.assertIn("대체 가능한 일반 영어 단어의 한영 혼용 금지", guidance)
+        self.assertIn(
+            "대체 가능한 일반 영어 단어의 한영 혼용 금지",
+            user_guidance_renderer,
+        )
+        self.assertIn(
+            "use English consistently throughout every question and response",
+            user_guidance_renderer,
+        )
         exact_pairs = (
             (
                 "Aigent Hive는 provider-neutral 로컬 agent harness다.",
