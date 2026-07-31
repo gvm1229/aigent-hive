@@ -29,6 +29,7 @@
 | Orchestration owner | [en](en/orchestration-ownership.md) | [ko](ko/orchestration-ownership.md) |
 | Docs Wiki architecture | [en](en/docs-wiki-architecture.md) | [ko](ko/docs-wiki-architecture.md) |
 | 응답 언어 일관성 | [en](en/language-consistency.md) | [ko](ko/language-consistency.md) |
+| 검증 결과 명확성 | [en](en/verification-result-clarity.md) | [ko](ko/verification-result-clarity.md) |
 | 사용자 인계 전 자동 처리 | [en](en/automated-user-handoff.md) | [ko](ko/automated-user-handoff.md) |
 | Knowledge preservation | [en](en/knowledge-preservation.md) | [ko](ko/knowledge-preservation.md) |
 | Knowledge storage | [en](en/knowledge-storage.md) | [ko](ko/knowledge-storage.md) |
