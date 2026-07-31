@@ -2,7 +2,7 @@
 
 - 기준 branch: `develop`
 - product version: `0.8.0`
-- plan revision: `1.77`
+- plan revision: `1.78`
 - 현재 milestone: Phase 7 qualification + global onboarding·shared index `0.8.0`
 - 현재 작업: `0.8.0` 제품 후보와 `0.8.0-test.N` npm 시험판 분리·배포 준비
 - 외부 중지 경계: GitHub Release·npm `latest`, protected signing/publication credential,
@@ -17,9 +17,12 @@
   + `docs/plans/active/docs-wiki-migration.md`
   + `docs/plans/active/release-0.8.0.md`
 - Plan completion: canonical checklist `223/228` 완료, `5`개 미완료, `97.8%`
-- Latest local Windows: Rust workspace 전체 PASS, Python 적합성 567개 PASS·
-  Windows 권한 전용 37개 정상 skip, PowerShell 5.1·7.6.4 installer와
-  `cmd.exe` bootstrap 계약 PASS
+- Latest local Windows: Rust workspace 전체 PASS. Python 적합성 567개 발견 중
+  530개 실제 실행·통과, 37개 미실행. 미실행 범위: 관리자 권한 없는 Windows의
+  symbolic link 생성 제약 16개, POSIX·Unix 전용 동작 14개, macOS 전용 설치·서명
+  동작 7개. 운영체제 판별: Windows. 미실행 37개: 이 컴퓨터에서 검증 완료로
+  판단할 근거 불충분. PowerShell 5.1·7.6.4 installer와 `cmd.exe`
+  bootstrap 계약은 이 Windows 컴퓨터에서 실제 실행·통과
 - Latest native remote: `baff938`의 run `30581894132`, macOS·Linux·Windows
   5/5 PASS
 - Latest local npm: 제품 `0.8.0`·npm `0.8.0-test.1` 분리 포장 계약,
@@ -398,8 +401,8 @@ Global onboarding·shared index local qualification PASS:
 
 - Strict Clippy all targets·all features와 format check PASS
 - Rust workspace 477/477
-- Python conformance 576개 실행, 575 PASS,
-  Windows `pwsh` 전용 1개 expected skip
+- Python conformance 576개 발견 중 575개 실행·통과. Windows가 아닌 환경에서만
+  가능한 `pwsh` 전용 검사 1개는 현재 Windows 환경에서 미실행
 - Shared index 동일 입력 재실행 byte-exact no-op, `changed_paths=[]`
 - Codex·Antigravity expedited/custom connected onboarding matrix 4/4
 - 독립 final blocker review의 critical·high·medium·low finding 0건
@@ -407,12 +410,13 @@ Global onboarding·shared index local qualification PASS:
 Source docs Wiki targeted qualification PASS:
 
 - `hive-wiki` 33/33, Source Wiki conformance 재검증 PASS
-- Canonical fact 64개, bilingual pair 32개
+- Canonical fact 70개, bilingual pair 35개
 - `lint` finding·warning 0건, 영어·한국어 query PASS
 - Index 삭제 뒤 query fail-closed exit `5`, logical digest·query equivalence rebuild PASS
 - Ignored index·persistent lock의 Git 추적 0건
-- Full Python conformance 565개 실행, failure 0건,
-  Windows platform 제한 37개 expected skip
+- 당시 Full Python conformance 565개 발견 중 528개 실행·통과, 37개 미실행.
+  미실행 범위는 현재 Windows에서 권한 없이 만들 수 없는 symbolic link와
+  POSIX·macOS 전용 동작. 해당 동작의 Windows 검증 완료 근거로 사용 금지
 
 ### macOS Apple Silicon local release qualification historical CLEAR
 
@@ -449,7 +453,8 @@ Current remote qualification evidence:
 
 검증 경계:
 
-- Local Phase 6 계약 21 PASS, macOS 전용 8개 expected skip
+- Local Phase 6 계약: Windows 적용 대상 21개 실행·통과. macOS 전용 8개는 현재
+  Windows 환경에서 실행 불가하여 미실행이며 macOS 동작은 이 결과로 미검증
 - Direct installer의 같은 owner parent handle-pinning race
 
 ## `0.8.0` 시험 배포 gate
@@ -467,12 +472,11 @@ Candidate trust blocker:
 - 사용자 지정 순서: npm 시험 배포 성공 뒤 `develop` → `main` 병합
 - Candidate authority: PR·필수 상태 검사·삭제·강제 push 차단이 적용된 exact `develop`
 - Current GitHub ruleset: `develop` 보호 활성, 우회 권한 없음
-- Current publication environment: `release-publication` 존재, GitHub API 기준 필수
-  검토자 없음
-- 사용자 해소 작업: `release-publication` 필수 검토자 저장 재확인
-- Branch policy: 임시 branch 생성은 사용자 예외 승인 필요, `develop` 직접 push는
-  보호 규칙상 불가
-- 환경 검토자 확인 전 publication 0건
+- Current publication environment: `release-publication` 필수 검토자 `gvm1229` 설정
+  확인, 자기 배포 승인 차단 비활성
+- Branch policy: `codex/release-0.8.0` 임시 branch 생성·push와 `develop` 대상 PR
+  사용자 예외 승인 완료. `develop` 직접 push는 보호 규칙상 불가
+- Publication 실행은 `release-publication`의 실행별 검토자 승인 전 대기
 - `release.yml`: 보호된 정확한 `develop` 커밋에서 제품 `0.8.0`과 npm
   `0.8.0-test.N`을 별도 입력으로 받아 5개 target·6개 npm tarball·embedded
   installer candidate 생성. local static/package 검증 완료, remote matrix 실행 대기
@@ -507,8 +511,7 @@ Pre-1.0 비차단 deferred:
 
 ## 다음 action
 
-0. `release-publication` 필수 검토자 저장 재확인
-1. `codex/release-0.8.0` 임시 branch·PR 예외의 사용자 승인
+1. `codex/release-0.8.0` 생성·push와 `develop` 대상 PR 검사·병합
 2. P7-044 public npm package family와 native smoke
 3. P7-045 npm-backed Unix·PowerShell·CMD installer와 digest·owner receipt 검증
 4. P7-020 artifact·npm provenance workflow

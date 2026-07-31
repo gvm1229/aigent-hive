@@ -1,6 +1,6 @@
 # Aigent Hive active plan index
 
-> Revision: 1.77
+> Revision: 1.78
 > 기준일: 2026-07-31
 > Product version: `0.8.0`
 > 현재 milestone: Phase 7 qualification + global onboarding·shared index `0.8.0`
@@ -67,6 +67,8 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
 - English·한국어 language-first setup과 선택 언어 global guidance, `hive-cli` 211개 PASS
 - 개발·소비자 질문과 응답의 선택 언어 통일, 대체 가능한 일반 영어 단어의 한영
   혼용 금지, 전역·프로젝트 지침 회귀 시험 PASS
+- 개발·소비자 검증 결과 보고 규칙: 범위·이유·현재 환경·실행 여부·입증 범위·
+  미검증 범위 명시, 투영 시험 PASS
 - Opt-in daily update check의 24시간 success throttle, offline next-session retry,
   fixed npm metadata endpoint와 no-install contract
 - Bare `hive update`의 npm `test` 확인, npm·direct owner 인증, 선택 언어 prompt,
@@ -117,14 +119,17 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
 
 ## Current execution order
 
-0. `release-publication` 필수 검토자 설정 확인
-1. P7-044 public `aigent-hive` npm package family와 native smoke
-2. P7-045 npm-backed Unix·PowerShell·CMD installer와 digest·owner receipt 검증
-3. P7-020 5개 platform archive·npm tarball provenance
-4. P7-018 protected `develop`의 exact `0.8.0` product candidate qualification
-5. P7-037 GitHub Release 없이 npm `0.8.0-test.1`의 `test` publication·clean
+완료된 선행 조건: `release-publication` 필수 검토자 설정, 임시
+`codex/release-0.8.0` 브랜치·`develop` 대상 PR 사용자 승인.
+
+1. `codex/release-0.8.0` 생성·push와 `develop` 대상 PR 검사·병합
+2. P7-044 public `aigent-hive` npm package family와 native smoke
+3. P7-045 npm-backed Unix·PowerShell·CMD installer와 digest·owner receipt 검증
+4. P7-020 5개 platform archive·npm tarball provenance
+5. P7-018 protected `develop`의 exact `0.8.0` product candidate qualification
+6. P7-037 GitHub Release 없이 npm `0.8.0-test.1`의 `test` publication·clean
    install 검증
-6. 시험 배포 성공 commit의 `develop` → `main` PR 병합
+7. 시험 배포 성공 commit의 `develop` → `main` PR 병합
 
 ## `0.8.0` 비차단 deferred boundary
 
