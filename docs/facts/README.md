@@ -28,6 +28,7 @@
 | Crate ownership | [en](en/crate-ownership.md) | [ko](ko/crate-ownership.md) |
 | Orchestration owner | [en](en/orchestration-ownership.md) | [ko](ko/orchestration-ownership.md) |
 | Docs Wiki architecture | [en](en/docs-wiki-architecture.md) | [ko](ko/docs-wiki-architecture.md) |
+| 응답 언어 일관성 | [en](en/language-consistency.md) | [ko](ko/language-consistency.md) |
 | Knowledge preservation | [en](en/knowledge-preservation.md) | [ko](ko/knowledge-preservation.md) |
 | Knowledge storage | [en](en/knowledge-storage.md) | [ko](ko/knowledge-storage.md) |
 | Shared index | [en](en/shared-index.md) | [ko](ko/shared-index.md) |

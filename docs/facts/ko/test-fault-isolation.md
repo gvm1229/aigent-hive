@@ -4,22 +4,22 @@ pair_id: test-fault-isolation
 topic_slug: test-fault-isolation
 language: ko
 counterpart: ../en/test-fault-isolation.md
-title: "시험 fault 격리"
-summary: "In-process activation fault를 소유 Rust 시험 thread로 제한."
+title: "시험 장애 주입 격리"
+summary: "실행 중 장애 주입을 이를 소유한 Rust 시험 스레드로 제한."
 tags: [release, test, update]
-aliases: ["activation fault scope"]
+aliases: ["장애 주입 범위"]
 sources:
-  - "repo:crates/hive-render/src/lib.rs#sha256:46d4bbf77befbc60d21f3787299beeb0f2e3d4acf102fd772c751936c26aa1c4"
+  - "repo:crates/hive-render/src/lib.rs#sha256:0e951341e2019cae36ad1bca31e7b20660abe68efb99f301093ce5786e989640"
   - "repo:crates/hive-update/src/transaction.rs#sha256:d55b9b13726eb812ffdf0e605fe41a24a343157bd41ca175c6750aa6443154ec"
 links: [test-distribution]
-reviewed_revision: "git:235d5e39a36b4c9d395a65ee4fa7a7ed52515768"
+reviewed_revision: "git:ed553c9b397c2ce5c0586c28b8aa665bea842c0d"
 status: active
 ---
 
-# 시험 fault 격리
+# 시험 장애 주입 격리
 
-Rust unit test의 injected activation failure: 소유 test thread로 범위 제한.
-효과: 병렬 update 시험의 fault 오소비 차단.
-격리 CLI subprocess conformance용 numeric process scope 호환 유지.
-수용 기준: parser 회귀 시험과 반복 병렬 `hive-update` suite 통과.
-도입 맥락: 사용자 요청 `0.8.0` 시험 배포 qualification.
+Rust 단위 시험의 장애 주입: 해당 시험 스레드로 범위 제한.
+효과: 병렬 갱신 시험의 장애 주입 오소비 차단.
+격리된 CLI 하위 프로세스 적합성 시험을 위한 숫자형 프로세스 범위 호환 유지.
+수용 기준: 구문 분석기 회귀 시험과 반복 병렬 `hive-update` 시험 전체 완료
+도입 배경: 사용자 요청 `0.8.0` 시험 배포 검증.
