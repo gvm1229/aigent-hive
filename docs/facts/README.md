@@ -34,6 +34,7 @@
 | Knowledge preservation | [en](en/knowledge-preservation.md) | [ko](ko/knowledge-preservation.md) |
 | Knowledge storage | [en](en/knowledge-storage.md) | [ko](ko/knowledge-storage.md) |
 | Shared index | [en](en/shared-index.md) | [ko](ko/shared-index.md) |
+| Global knowledge RAG | [en](en/global-knowledge-rag.md) | [ko](ko/global-knowledge-rag.md) |
 | 공유 색인 대상 경로 안전 | [en](en/shared-index-target-safety.md) | [ko](ko/shared-index-target-safety.md) |
 | Global onboarding | [en](en/global-onboarding.md) | [ko](ko/global-onboarding.md) |
 | Project onboarding | [en](en/project-onboarding.md) | [ko](ko/project-onboarding.md) |

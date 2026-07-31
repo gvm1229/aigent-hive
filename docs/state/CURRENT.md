@@ -90,7 +90,7 @@
   도달성 확인, Git history recoverability 적용
 - Human Wiki: `docs/00-home.md`, `docs/01-index.md`, topic MOC, product overview,
   development guide에서 간소화 직전 README knowledge 복원
-- Atomic knowledge: `docs/facts/en`·`ko` 32개 exact pair, primary fact 1개,
+- Atomic knowledge: `docs/facts/en`·`ko` 39개 exact pair, primary fact 1개,
   cross-link와 source digest
 
 ## Windows shell 설치 경계
