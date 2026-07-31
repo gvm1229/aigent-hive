@@ -2,7 +2,7 @@
 
 - 기준 branch: `develop`
 - product version: `0.7.0`
-- plan revision: `1.72`
+- plan revision: `1.73`
 - 현재 milestone: Phase 7 qualification + global onboarding·shared index `0.8.0`
 - 현재 작업: `docs/` Wiki 전환·README knowledge 복원 뒤 `0.8.0` update 구현
 - 외부 중지 경계: GitHub Release·npm `latest`, protected signing/publication credential,
@@ -16,7 +16,7 @@
   + `docs/plans/active/documentation-style.md` + `docs/plans/active/security-review.md`
   + `docs/plans/active/docs-wiki-migration.md`
   + `docs/plans/active/release-0.8.0.md`
-- Plan completion: canonical checklist `221/227` 완료, `6`개 미완료, `97.4%`
+- Plan completion: canonical checklist `222/228` 완료, `6`개 미완료, `97.4%`
 - Latest local Windows: Rust workspace 전체 PASS, PowerShell 5.1·7.6.4 installer와
   `cmd.exe` bootstrap 계약 PASS
 - Latest native remote: `baff938`의 run `30581894132`, macOS·Linux·Windows
@@ -317,6 +317,11 @@ Source guard는 개발 workspace 전용. Shipping 제품은 watcher 없이 one-s
 - Source directive: `.agents/directives/08-human-documentation-style.md`
 - Consumer projection: `harness/template/AGENTS.md.jinja`, compiled renderer,
   `docs/guidance-schema.md`
+- 대화 언어: 선택 언어로 질문·응답 전체 통일
+- 한국어 대화: 고유명사·제품명·패키지명·명령어·코드 식별자·경로·스키마 키·정확한
+  화면 문구·뚜렷한 한국어 대체어가 없는 용어만 영어 유지
+- 영어 대화: 정확한 한국어 이름·문자열·인용문·사용자 보존 요청을 제외하고 영어로 통일
+- 소비자 전역 지침: 한국어 선택 시 대체 가능한 일반 영어 단어의 한영 혼용 금지
 - 한국어 설명문: 짧은 heading·bullet·table·checklist와 의미 중심 명사구 우선
 - Declarative·conversational sentence-form과 기계적 nominalization 금지
 - Exact bad/good 21쌍, authored callout·blockquote 적용, 비제한 규칙 명시

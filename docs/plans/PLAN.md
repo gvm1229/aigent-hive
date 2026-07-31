@@ -1,6 +1,6 @@
 # Aigent Hive active plan index
 
-> Revision: 1.72
+> Revision: 1.73
 > 기준일: 2026-07-31
 > Product version: `0.7.0`
 > 현재 milestone: Phase 7 qualification + global onboarding·shared index `0.8.0`
@@ -35,10 +35,10 @@
 | Global onboarding·shared index | 19 | 0 | 100% |
 | Source docs Wiki | 11 | 0 | 100% |
 | Windows shell install boundary | 3 | 0 | 100% |
-| Documentation style | 5 | 0 | 100% |
+| 문서 말투 | 6 | 0 | 100% |
 | Security review | 4 | 0 | 100% |
 | Docs Wiki migration | 4 | 0 | 100% |
-| **Canonical total** | **221** | **6** | **97.4%** |
+| **Canonical total** | **222** | **6** | **97.4%** |
 
 External production boundary 항목도 미완료 합계에 포함. Protected authority 없이 완료 처리 금지.
 
@@ -63,6 +63,8 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
 - Codex·Antigravity expedited/custom connected onboarding matrix `4/4`
 - Initial `Expedited — set everything to default`와 project zero-question inference contract
 - English·한국어 language-first setup과 선택 언어 global guidance, `hive-cli` 211개 PASS
+- 개발·소비자 질문과 응답의 선택 언어 통일, 대체 가능한 일반 영어 단어의 한영
+  혼용 금지, 전역·프로젝트 지침 회귀 시험 PASS
 - Opt-in daily update check의 24시간 success throttle, offline next-session retry,
   fixed npm metadata endpoint와 no-install contract
 - 독립 final blocker review: critical·high·medium·low finding `0`건

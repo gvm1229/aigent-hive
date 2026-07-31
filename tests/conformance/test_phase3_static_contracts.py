@@ -451,7 +451,7 @@ class Phase3SkillSourceContract(unittest.TestCase):
                 "Windows shell install boundary",
                 *checklist_counts([windows_shell_path]),
             ),
-            ("Documentation style", *checklist_counts([documentation_path])),
+            ("문서 말투", *checklist_counts([documentation_path])),
             ("Security review", *checklist_counts([security_review_path])),
             ("Docs Wiki migration", *checklist_counts([docs_wiki_path])),
         )

@@ -41,3 +41,5 @@ Completion gate:
 - [x] [DOC-003] Local Markdown link·heading anchor PASS
 - [x] [DOC-004] Changed human docs independent semantic review PASS
 - [x] [DOC-005] 전체 workspace·conformance 검증 PASS
+- [x] [DOC-006] 개발·소비자 질문과 응답의 선택 언어 통일, 한국어에서 대체 가능한
+  일반 영어 단어의 한영 혼용 금지, 전역·프로젝트 지침과 생성 결과 회귀 시험
