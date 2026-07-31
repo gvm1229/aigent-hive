@@ -50,6 +50,8 @@ def macos_installer_fixture(root: Path, actual_team_id: str) -> tuple[Path, Path
     source = (ROOT / "scripts/install.sh").read_text(encoding="utf-8")
     installer = root / "install.sh"
     replacements = {
+        "__AIGENT_HIVE_PRODUCT_VERSION__": "0.7.0",
+        "__AIGENT_HIVE_PACKAGE_VERSION__": "0.7.0-test.1",
         "__AIGENT_HIVE_APPLE_TEAM_ID__": "FIXTURE123",
         "__AIGENT_HIVE_SHA256_AARCH64_APPLE_DARWIN__": "0" * 64,
         "__AIGENT_HIVE_SHA256_X86_64_APPLE_DARWIN__": "0" * 64,
@@ -1586,6 +1588,7 @@ try {
         self.assertIn("exact X.Y.Z", release_gate.stderr)
         environment = os.environ.copy()
         environment["AIGENT_HIVE_VERSION"] = "01.0.0"
+        environment["AIGENT_HIVE_PACKAGE_VERSION"] = "01.0.0-test.1"
         installer = subprocess.run(
             [str(ROOT / "scripts/install.sh")],
             cwd=ROOT,
