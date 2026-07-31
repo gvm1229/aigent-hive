@@ -1,6 +1,6 @@
 # Aigent Hive active plan index
 
-> Revision: 1.78
+> Revision: 1.79
 > 기준일: 2026-07-31
 > Product version: `0.8.0`
 > 현재 milestone: Phase 7 qualification + global onboarding·shared index `0.8.0`
@@ -74,6 +74,8 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
 - Bare `hive update`의 npm `test` 확인, npm·direct owner 인증, 선택 언어 prompt,
   명시적 수락 뒤 exact adapter 실행과 owner·version 재검증
 - 독립 final blocker review: critical·high·medium·low finding `0`건
+- Runs: candidate `30633581092` exact `1031ff0` 5개 target·6개 npm PASS;
+  publication `30634201469` 승인 PASS, 출시 안내 누락으로 게시 전 실패·npm publish 0건
 
 ## Required load order
 
@@ -120,16 +122,14 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
 ## Current execution order
 
 완료된 선행 조건: `release-publication` 필수 검토자 설정, 임시
-`codex/release-0.8.0` 브랜치·`develop` 대상 PR 사용자 승인.
+`codex/release-0.8.0` 브랜치·`develop` 대상 PR 사용자 승인, PR #8 병합,
+첫 candidate run 성공과 첫 publication run의 npm 게시 전 실패 원인 확인.
 
-1. `codex/release-0.8.0` 생성·push와 `develop` 대상 PR 검사·병합
-2. P7-044 public `aigent-hive` npm package family와 native smoke
-3. P7-045 npm-backed Unix·PowerShell·CMD installer와 digest·owner receipt 검증
-4. P7-020 5개 platform archive·npm tarball provenance
-5. P7-018 protected `develop`의 exact `0.8.0` product candidate qualification
-6. P7-037 GitHub Release 없이 npm `0.8.0-test.1`의 `test` publication·clean
-   install 검증
-7. 시험 배포 성공 commit의 `develop` → `main` PR 병합
+1. 출시 안내·게시 오류 진단·감시기 복구 수정 branch push와 `develop` 대상 PR 병합
+2. 새 exact `develop` commit의 `release.yml` 재실행과 P7-044·045·020·018 검증
+3. `release-publish.yml` 승인과 npm `0.8.0-test.1|test` 게시
+4. npm·Unix·PowerShell·CMD clean install·repeat·recovery 검증과 P7-037 완료
+5. 시험 배포 성공 commit의 `develop` → `main` PR 병합
 
 ## `0.8.0` 비차단 deferred boundary
 

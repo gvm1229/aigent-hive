@@ -130,16 +130,16 @@ notarization, Authenticode, Azure signing, external TUF는 실제 안정 릴리�
 완료: `P7-046` 영·한 README, `P7-047` bilingual setup, `P7-043` Linux musl
 x86_64·arm64 qualification, `P7-049` 설치 소유자 기반 대화형 `hive update`.
 
-완료된 선행 조건: `release-publication` 필수 검토자 설정,
-`codex/release-0.8.0` 브랜치·`develop` 대상 PR 사용자 승인.
+선행 완료: 필수 검토자·branch/PR authority, PR #8 병합, candidate run
+`30633581092` PASS. Publication run `30634201469`: 승인 PASS, 출시 안내 누락으로
+게시 전 실패·npm publish 0건.
 
-1. `codex/release-0.8.0` 생성·push와 `develop` 대상 PR 검사·병합
-2. `P7-044`: npm package family와 native smoke
-3. `P7-045`: npm-backed Unix·PowerShell·CMD installer와 authenticated owner receipt
-4. `P7-020`: archive·npm tarball SHA-256·attestation·byte identity
-5. `P7-018`: protected `develop` exact `0.8.0` product candidate qualification
-6. `P7-037`: npm `0.8.0-test.1`의 `test` publication과 npm·curl clean install 검증
-7. 시험 배포 성공 commit의 `develop` → `main` PR 병합
+1. 출시 안내·게시 오류 진단·감시기 복구 수정 branch push와 `develop` 대상 PR 병합
+2. 새 exact `develop` commit의 candidate 재실행과 `P7-044`·`P7-045`·`P7-020`·
+   `P7-018` 검증
+3. `release-publish.yml` 승인과 npm `0.8.0-test.1|test` 게시
+4. npm·Unix·PowerShell·CMD clean install·repeat·recovery와 `P7-037` 검증
+5. 시험 배포 성공 commit의 `develop` → `main` PR 병합
 
 ## Candidate branch authority 경계
 

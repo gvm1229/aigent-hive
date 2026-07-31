@@ -2,7 +2,7 @@
 
 - 기준 branch: `develop`
 - product version: `0.8.0`
-- plan revision: `1.78`
+- plan revision: `1.79`
 - 현재 milestone: Phase 7 qualification + global onboarding·shared index `0.8.0`
 - 현재 작업: `0.8.0` 제품 후보와 `0.8.0-test.N` npm 시험판 분리·배포 준비
 - 외부 중지 경계: GitHub Release·npm `latest`, protected signing/publication credential,
@@ -468,7 +468,7 @@ Current remote qualification evidence:
 
 Candidate trust blocker:
 
-- Current source product version `0.8.0`; protected remote candidate qualification 대기
+- Current source product version `0.8.0`; 수정 반영 뒤 protected remote candidate 재검증 대기
 - 사용자 지정 순서: npm 시험 배포 성공 뒤 `develop` → `main` 병합
 - Candidate authority: PR·필수 상태 검사·삭제·강제 push 차단이 적용된 exact `develop`
 - Current GitHub ruleset: `develop` 보호 활성, 우회 권한 없음
@@ -476,10 +476,15 @@ Candidate trust blocker:
   확인, 자기 배포 승인 차단 비활성
 - Branch policy: `codex/release-0.8.0` 임시 branch 생성·push와 `develop` 대상 PR
   사용자 예외 승인 완료. `develop` 직접 push는 보호 규칙상 불가
-- Publication 실행은 `release-publication`의 실행별 검토자 승인 전 대기
+- First candidate run `30633581092`: exact `develop` commit `1031ff0`, 5개 native
+  target·6개 npm tarball PASS
+- First publication run `30634201469`: `release-publication` 승인 PASS,
+  `docs/releases/0.8.0.md` 누락으로 npm 게시 전 실패, npm publish 실행 0건
+- Corrective branch: 제품 후보 출시 안내, 명확한 게시 선행 검사 오류, Codex process
+  교체 뒤 source watcher 복구와 회귀 시험
 - `release.yml`: 보호된 정확한 `develop` 커밋에서 제품 `0.8.0`과 npm
   `0.8.0-test.N`을 별도 입력으로 받아 5개 target·6개 npm tarball·embedded
-  installer candidate 생성. local static/package 검증 완료, remote matrix 실행 대기
+  installer candidate 생성. 첫 remote matrix PASS, corrective merge 뒤 새 exact commit 재실행 필요
 - `release-publish.yml`: GitHub Release·npm `latest` 0건과 6개 package `test` 전용
   publication 계약 구현. 성공한 정확한 `develop` 후보만 허용. 최초 등록은 명시적
   `bootstrap_with_token=true`·임시 `NPM_TOKEN`, 이후는 OIDC 전용
@@ -511,10 +516,8 @@ Pre-1.0 비차단 deferred:
 
 ## 다음 action
 
-1. `codex/release-0.8.0` 생성·push와 `develop` 대상 PR 검사·병합
-2. P7-044 public npm package family와 native smoke
-3. P7-045 npm-backed Unix·PowerShell·CMD installer와 digest·owner receipt 검증
-4. P7-020 artifact·npm provenance workflow
-5. P7-018 protected `develop` exact `0.8.0` product candidate qualification
-6. P7-037 GitHub Release 없이 npm `0.8.0-test.1|test` publication·clean install
-7. 시험 배포 성공 commit의 `develop` → `main` PR 병합
+1. Corrective branch push와 `develop` 대상 PR 검사·병합
+2. 새 exact `develop` commit의 release candidate와 P7-044·045·020·018 재검증
+3. `release-publish.yml` 승인과 npm `0.8.0-test.1|test` 게시
+4. npm·Unix·PowerShell·CMD clean install·repeat·recovery와 P7-037 검증
+5. 시험 배포 성공 commit의 `develop` → `main` PR 병합
