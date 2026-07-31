@@ -417,10 +417,17 @@ class Phase6StaticContracts(unittest.TestCase):
             "required release notes are missing",
             'sha256sum --check --strict "$archive.sha256"',
             "checksum verification failed for $archive",
+            'HIVE_INSTALL_PACKAGE_VERSION=$PACKAGE_VERSION',
+            "https://unpkg.com/aigent-hive@"
+            "%HIVE_INSTALL_PACKAGE_VERSION%/install.ps1",
         ):
             self.assertIn(required, publication)
         self.assertNotIn(
             'read -r digest name extra <"dist/$archive.sha256"',
+            publication,
+        )
+        self.assertNotIn(
+            "unpkg.com/aigent-hive@$PACKAGE_VERSION/install.ps1",
             publication,
         )
         for forbidden in (
