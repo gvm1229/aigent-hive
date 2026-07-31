@@ -9,9 +9,9 @@ summary: "Compatible OMX or OMC owns orchestration; otherwise the host owns nati
 tags: [orchestration, ownership]
 aliases: ["Orchestration owner"]
 sources:
-  - "repo:docs/decisions/ADR-0004-orchestration-ownership.md#sha256:0888b22473297bf6161141b508e7e276d5c8cc3bf5ffe9c43269b16c3fec347e"
-links: [product-non-goals, skill-routing]
-reviewed_revision: "git:722c8e46dbde5710155b394ef33820ebccd3b85c"
+  - "repo:docs/decisions/ADR-0004-orchestration-ownership.md#sha256:d180f7a9c22d525888e329e026a7b971e579f877c03dd9fee265967ab34cec69"
+links: [product-non-goals, skill-routing, v0-9-skill-suite-plan]
+reviewed_revision: "git:be5253bcbd0d9818333e5702d0ef9ce438ee4d62"
 status: active
 ---
 
@@ -19,4 +19,5 @@ status: active
 
 Compatible OMX on Codex or OMC on Claude owns established orchestration. Otherwise
 the active host owns only its truthful native capability. Hive does not switch a
-pinned run owner silently.
+pinned run owner silently. ADR-0015 proposes host-native Skill composition for v0.9
+new runs while preserving existing owner pins.
