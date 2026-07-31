@@ -2,7 +2,7 @@
 
 - 기준 branch: `develop`
 - product version: `0.8.0`
-- plan revision: `1.76`
+- plan revision: `1.77`
 - 현재 milestone: Phase 7 qualification + global onboarding·shared index `0.8.0`
 - 현재 작업: `0.8.0` 제품 후보와 `0.8.0-test.N` npm 시험판 분리·배포 준비
 - 외부 중지 경계: GitHub Release·npm `latest`, protected signing/publication credential,
@@ -16,8 +16,8 @@
   + `docs/plans/active/documentation-style.md` + `docs/plans/active/security-review.md`
   + `docs/plans/active/docs-wiki-migration.md`
   + `docs/plans/active/release-0.8.0.md`
-- Plan completion: canonical checklist `222/228` 완료, `6`개 미완료, `97.4%`
-- Latest local Windows: Rust workspace 전체 PASS, Python 적합성 566개 PASS·
+- Plan completion: canonical checklist `223/228` 완료, `5`개 미완료, `97.8%`
+- Latest local Windows: Rust workspace 전체 PASS, Python 적합성 567개 PASS·
   Windows 권한 전용 37개 정상 skip, PowerShell 5.1·7.6.4 installer와
   `cmd.exe` bootstrap 계약 PASS
 - Latest native remote: `baff938`의 run `30581894132`, macOS·Linux·Windows
@@ -128,10 +128,10 @@ Target: `0.8.0`
 - 장기 방향: host-native·provider-neutral capability 대체 뒤 OMX/OMC 제거
 - Consumer reuse: `hive-wiki` core와 capture·maintenance·query 안전 계약
 - Skill reuse: shared canonical `harness/skills/`, exact source `.agents/skills/` projection
-- 현재 상태: 영어 32개·한국어 32개 atomic fact, exact pair 32개와 source-confined
+- 현재 상태: 영어 33개·한국어 33개 atomic fact, exact pair 33개와 source-confined
   CLI·Skill·material-task completion capture 구현 완료
 - Logical digest:
-  `sha256:279a3a7d4a44609ff54e5141676d452dbddd4db40a63b798ae9d5f8b3285569c`
+  `sha256:21357283f9da9fdecec59a5025ca55fbd7fec579e4713168fc7a7ef87b95518d`
 - 검증: lint finding·warning 0건, 영어·한국어 query PASS, index 삭제 뒤 query
   fail-closed exit `5`, rebuild equivalence PASS
 - SQLite binary digest는 invocation-local evidence이며 정본·clean-copy equivalence 기준이
@@ -243,7 +243,7 @@ Pre-1.0 비차단 deferred:
 계획 evidence:
 
 - Active fragment 8 KiB 제한 충족
-- Canonical checklist `222/228`, active checklist ID 중복 0건
+- Canonical checklist `223/228`, active checklist ID 중복 0건
 - Root English 159줄·Korean 155줄 README, 상호 language link와 빈 QA 표 PASS
 - Plan static contract 29/29, documentation style regression 18/18 PASS
 - Human documentation inventory 1,285/1,285 review, finding 0건
@@ -456,7 +456,7 @@ Current remote qualification evidence:
 
 - P7-044 public npm package family와 native smoke
 - P7-045 npm-backed Unix·PowerShell·CMD installer와 digest·owner receipt 검증
-- P7-049 authenticated install-owner adapter를 사용하는 interactive `hive update`
+- P7-049 설치 소유자 기반 대화형 `hive update` 완료
 - P7-020 5개 target archive·npm tarball provenance
 - P7-018 exact `0.8.0` release candidate qualification
 - P7-037 GitHub Release 없이 npm `0.8.0-test.N|test` publication·clean install
@@ -493,7 +493,8 @@ Candidate trust blocker:
   isolated global install과 digest
   `a8bdb5d7dd42965ec6f4d2f1f334a4ee4184a7f659f09cb92caf794b96524b0d`
   byte identity PASS
-- Interactive activation 미구현
+- Interactive activation: npm `test` 확인, npm·direct owner 인증, 선택 언어 prompt,
+  명시적 수락 뒤 exact adapter 실행·owner와 package version 재검증 PASS
 
 Pre-1.0 비차단 deferred:
 
@@ -510,8 +511,7 @@ Pre-1.0 비차단 deferred:
 1. `codex/release-0.8.0` 임시 branch·PR 예외의 사용자 승인
 2. P7-044 public npm package family와 native smoke
 3. P7-045 npm-backed Unix·PowerShell·CMD installer와 digest·owner receipt 검증
-4. P7-049 authenticated install-owner adapter를 사용하는 interactive `hive update`
-5. P7-020 artifact·npm provenance workflow
-6. P7-018 protected `develop` exact `0.8.0` product candidate qualification
-7. P7-037 GitHub Release 없이 npm `0.8.0-test.1|test` publication·clean install
-8. 시험 배포 성공 commit의 `develop` → `main` PR 병합
+4. P7-020 artifact·npm provenance workflow
+5. P7-018 protected `develop` exact `0.8.0` product candidate qualification
+6. P7-037 GitHub Release 없이 npm `0.8.0-test.1|test` publication·clean install
+7. 시험 배포 성공 commit의 `develop` → `main` PR 병합
