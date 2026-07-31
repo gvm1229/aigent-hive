@@ -1,6 +1,6 @@
 # Aigent Hive active plan index
 
-> Revision: 1.76
+> Revision: 1.77
 > 기준일: 2026-07-31
 > Product version: `0.8.0`
 > 현재 milestone: Phase 7 qualification + global onboarding·shared index `0.8.0`
@@ -31,7 +31,7 @@
 | 범위 | 완료 | 미완료 | 진행률 |
 | --- | ---: | ---: | ---: |
 | Phase 0–6 | 70 | 0 | 100% |
-| Phase 7 | 43 | 6 | 87.8% |
+| Phase 7 | 44 | 5 | 89.8% |
 | User plugin/project lifecycle | 38 | 0 | 100% |
 | Host-native usage sensors | 24 | 0 | 100% |
 | Global onboarding·shared index | 19 | 0 | 100% |
@@ -40,7 +40,7 @@
 | 문서 말투 | 6 | 0 | 100% |
 | Security review | 4 | 0 | 100% |
 | Docs Wiki migration | 4 | 0 | 100% |
-| **Canonical total** | **222** | **6** | **97.4%** |
+| **Canonical total** | **223** | **5** | **97.8%** |
 
 External production boundary 항목도 미완료 합계에 포함. Protected authority 없이 완료 처리 금지.
 
@@ -69,6 +69,8 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
   혼용 금지, 전역·프로젝트 지침 회귀 시험 PASS
 - Opt-in daily update check의 24시간 success throttle, offline next-session retry,
   fixed npm metadata endpoint와 no-install contract
+- Bare `hive update`의 npm `test` 확인, npm·direct owner 인증, 선택 언어 prompt,
+  명시적 수락 뒤 exact adapter 실행과 owner·version 재검증
 - 독립 final blocker review: critical·high·medium·low finding `0`건
 
 ## Required load order
@@ -118,12 +120,11 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
 0. `release-publication` 필수 검토자 설정 확인
 1. P7-044 public `aigent-hive` npm package family와 native smoke
 2. P7-045 npm-backed Unix·PowerShell·CMD installer와 digest·owner receipt 검증
-3. P7-049 authenticated install-owner adapter를 사용하는 interactive `hive update`
-4. P7-020 5개 platform archive·npm tarball provenance
-5. P7-018 protected `develop`의 exact `0.8.0` product candidate qualification
-6. P7-037 GitHub Release 없이 npm `0.8.0-test.1`의 `test` publication·clean
+3. P7-020 5개 platform archive·npm tarball provenance
+4. P7-018 protected `develop`의 exact `0.8.0` product candidate qualification
+5. P7-037 GitHub Release 없이 npm `0.8.0-test.1`의 `test` publication·clean
    install 검증
-7. 시험 배포 성공 commit의 `develop` → `main` PR 병합
+6. 시험 배포 성공 commit의 `develop` → `main` PR 병합
 
 ## `0.8.0` 비차단 deferred boundary
 
