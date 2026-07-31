@@ -413,6 +413,8 @@ class Phase6StaticContracts(unittest.TestCase):
             "secrets.NPM_TOKEN",
             "NODE_AUTH_TOKEN",
             "!inputs.bootstrap_with_token",
+            "differs from approved candidate",
+            "required release notes are missing",
         ):
             self.assertIn(required, publication)
         for forbidden in (
