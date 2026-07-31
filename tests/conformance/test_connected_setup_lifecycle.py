@@ -178,7 +178,7 @@ elif command == "plugin list --json":
     if state["plugin"]:
         installed.append({
             "pluginId": "aigent-hive@aigent-hive",
-            "version": "0.7.0",
+            "version": "0.8.0",
             "enabled": True,
             "source": {"path": str(marketplace / "plugins/aigent-hive")},
             "marketplaceSource": {"source": str(marketplace)},
