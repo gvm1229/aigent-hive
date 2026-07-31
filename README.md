@@ -15,14 +15,14 @@ host's own model runtime.
 
 ## 0.8.0 test distribution
 
-`0.8.0` is an installation and update test, not the stable public release. It will be
-published to npm under the exact version and `test` tag only. It will not create a
+`0.8.0` is the product candidate, not the stable public release. npm test packages use
+separate versions such as `0.8.0-test.1` under the `test` tag. They do not create a
 GitHub Release or move npm's `latest` tag.
 
 After the test distribution is published:
 
 ```console
-npm install -g aigent-hive@0.8.0
+npm install -g aigent-hive@0.8.0-test.1
 ```
 
 or:
@@ -38,19 +38,19 @@ Rust binary and does not require Node.js.
 
 ```sh
 curl --proto '=https' --tlsv1.2 -LsSf \
-  https://unpkg.com/aigent-hive@0.8.0/install.sh | sh
+  https://unpkg.com/aigent-hive@0.8.0-test.1/install.sh | sh
 ```
 
 ### Windows PowerShell 5.1+
 
 ```powershell
-irm https://unpkg.com/aigent-hive@0.8.0/install.ps1 | iex
+irm https://unpkg.com/aigent-hive@0.8.0-test.1/install.ps1 | iex
 ```
 
 ### Windows Command Prompt
 
 ```bat
-curl.exe -fLo install-aigent-hive.cmd https://unpkg.com/aigent-hive@0.8.0/install.cmd && install-aigent-hive.cmd
+curl.exe -fLo install-aigent-hive.cmd https://unpkg.com/aigent-hive@0.8.0-test.1/install.cmd && install-aigent-hive.cmd
 ```
 
 The direct installers fetch the same native package bytes from npm, verify the

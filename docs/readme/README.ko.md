@@ -14,13 +14,13 @@ Model-provider API key 요청·provider API 호출·host model runtime 대체 �
 
 ## 0.8.0 시험 배포
 
-`0.8.0`: 설치·업데이트 검증용, 안정 공개 릴리스 제외. npm exact version과
-`test` tag로만 배포. GitHub Release 생성·npm `latest` 이동 없음.
+제품 후보 버전 `0.8.0`과 npm 시험판 버전 `0.8.0-test.N` 분리.
+npm `test` 태그로만 배포하며 GitHub Release 생성·npm `latest` 이동 없음.
 
 시험 배포가 완료된 뒤 설치:
 
 ```console
-npm install -g aigent-hive@0.8.0
+npm install -g aigent-hive@0.8.0-test.1
 ```
 
 또는:
@@ -36,19 +36,19 @@ Node.js dependency 없음.
 
 ```sh
 curl --proto '=https' --tlsv1.2 -LsSf \
-  https://unpkg.com/aigent-hive@0.8.0/install.sh | sh
+  https://unpkg.com/aigent-hive@0.8.0-test.1/install.sh | sh
 ```
 
 ### Windows PowerShell 5.1+
 
 ```powershell
-irm https://unpkg.com/aigent-hive@0.8.0/install.ps1 | iex
+irm https://unpkg.com/aigent-hive@0.8.0-test.1/install.ps1 | iex
 ```
 
 ### Windows 명령 프롬프트
 
 ```bat
-curl.exe -fLo install-aigent-hive.cmd https://unpkg.com/aigent-hive@0.8.0/install.cmd && install-aigent-hive.cmd
+curl.exe -fLo install-aigent-hive.cmd https://unpkg.com/aigent-hive@0.8.0-test.1/install.cmd && install-aigent-hive.cmd
 ```
 
 직접 installer: npm의 동일 native package bytes 수신, embedded exact-version
