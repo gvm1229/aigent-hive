@@ -130,15 +130,15 @@ notarization, Authenticode, Azure signing, external TUF는 실제 안정 릴리�
 완료: `P7-046` 영·한 README, `P7-047` bilingual setup, `P7-043` Linux musl
 x86_64·arm64 qualification, `P7-049` 설치 소유자 기반 대화형 `hive update`.
 
-선행 완료: 필수 검토자·branch/PR authority, PR #8 병합, candidate run
-`30633581092` PASS. Publication run `30634201469`: 승인 PASS, 출시 안내 누락으로
-게시 전 실패·npm publish 0건.
+`ef55325` candidate `30647361507`의 target 5개·npm tarball
+6개 PASS. 게시 실행 `30647959771` 선행 검사 PASS 뒤 첫 게시에서
+npm `E403`. 원인: 2FA 우회 권한 없는 `NPM_TOKEN`. 등록 0건.
 
-1. 출시 안내·게시 오류 진단·감시기 복구 수정 branch push와 `develop` 대상 PR 병합
-2. 새 exact `develop` commit의 candidate 재실행과 `P7-044`·`P7-045`·`P7-020`·
-   `P7-018` 검증
-3. `release-publish.yml` 승인과 npm `0.8.0-test.1|test` 게시
-4. npm·Unix·PowerShell·CMD clean install·repeat·recovery와 `P7-037` 검증
+1. `NPM_TOKEN`을 6개 package 게시·2FA 우회 권한의 granular token으로 교체
+2. 기존 candidate run `30647361507`을 입력으로 `release-publish.yml` 재실행·승인
+3. 6개 `0.8.0-test.1|test` 등록과 native smoke 확인
+4. npm·Unix·PowerShell·CMD clean install·repeat·recovery와 `P7-018`·`P7-020`·
+   `P7-037`·`P7-044`·`P7-045` 검증
 5. 시험 배포 성공 commit의 `develop` → `main` PR 병합
 
 ## Candidate branch authority 경계
@@ -168,7 +168,7 @@ x86_64·arm64 qualification, `P7-049` 설치 소유자 기반 대화형 `hive up
 
 ## 외부 중지 경계
 
-- npm 로그인·2FA·organization, 최초 등록용 임시 token과 6개 Trusted Publisher
+- npm 로그인·2FA·organization, 최초 등록용 2FA 우회 granular token과 6개 Trusted Publisher
 - `release-publication` 필수 검토자 설정과 publication 승인
 - Credential·private signing material 접근 금지
 - npm `latest`, GitHub Release, 안정 릴리스는 별도 사용자 승인 전 금지

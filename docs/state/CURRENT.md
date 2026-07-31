@@ -468,7 +468,7 @@ Current remote qualification evidence:
 
 Candidate trust blocker:
 
-- Current source product version `0.8.0`; 수정 반영 뒤 protected remote candidate 재검증 대기
+- Current source product version `0.8.0`; exact protected `develop` candidate 검증 완료
 - 사용자 지정 순서: npm 시험 배포 성공 뒤 `develop` → `main` 병합
 - Candidate authority: PR·필수 상태 검사·삭제·강제 push 차단이 적용된 exact `develop`
 - Current GitHub ruleset: `develop` 보호 활성, 우회 권한 없음
@@ -476,15 +476,18 @@ Candidate trust blocker:
   확인, 자기 배포 승인 차단 비활성
 - Branch policy: `codex/release-0.8.0` 임시 branch 생성·push와 `develop` 대상 PR
   사용자 예외 승인 완료. `develop` 직접 push는 보호 규칙상 불가
-- First candidate run `30633581092`: exact `develop` commit `1031ff0`, 5개 native
-  target·6개 npm tarball PASS
-- First publication run `30634201469`: `release-publication` 승인 PASS,
-  `docs/releases/0.8.0.md` 누락으로 npm 게시 전 실패, npm publish 실행 0건
-- Corrective branch: 제품 후보 출시 안내, 명확한 게시 선행 검사 오류, Codex process
-  교체 뒤 source watcher 복구와 회귀 시험
+- Latest candidate run `30647361507`: exact `develop` commit
+  `ef5532564612e9e484b4fcd786551056c639a38f`, 5개 native target·6개 npm tarball PASS
+- Latest publication run `30647959771`: 후보·출시 안내·checksum·attestation·npm
+  manifest·native byte identity·version 부재 검사 PASS. 첫
+  `@aigent-hive/darwin-arm64@0.8.0-test.1` 게시에서 npm `E403`
+- 실패 원인: `NPM_TOKEN`에 npm의 2FA 우회 게시 권한 부재. Codex process PID,
+  source usage guard, 후보 artifact와 무관
+- 게시 결과: 첫 package 등록 실패, 뒤 5개 게시 명령 미실행, 6개 exact version
+  registry 조회 E404
 - `release.yml`: 보호된 정확한 `develop` 커밋에서 제품 `0.8.0`과 npm
   `0.8.0-test.N`을 별도 입력으로 받아 5개 target·6개 npm tarball·embedded
-  installer candidate 생성. 첫 remote matrix PASS, corrective merge 뒤 새 exact commit 재실행 필요
+  installer candidate 생성. Latest remote matrix PASS
 - `release-publish.yml`: GitHub Release·npm `latest` 0건과 6개 package `test` 전용
   publication 계약 구현. 성공한 정확한 `develop` 후보만 허용. 최초 등록은 명시적
   `bootstrap_with_token=true`·임시 `NPM_TOKEN`, 이후는 OIDC 전용
@@ -516,8 +519,9 @@ Pre-1.0 비차단 deferred:
 
 ## 다음 action
 
-1. Corrective branch push와 `develop` 대상 PR 검사·병합
-2. 새 exact `develop` commit의 release candidate와 P7-044·045·020·018 재검증
-3. `release-publish.yml` 승인과 npm `0.8.0-test.1|test` 게시
-4. npm·Unix·PowerShell·CMD clean install·repeat·recovery와 P7-037 검증
+1. `release-publication`의 `NPM_TOKEN`을 6개 package 게시 권한과 2FA 우회를 갖춘
+   granular access token으로 교체
+2. 기존 candidate run `30647361507`을 입력으로 `release-publish.yml` 재실행·승인
+3. 6개 `0.8.0-test.1|test` 등록과 native smoke 확인
+4. npm·Unix·PowerShell·CMD clean install·repeat·recovery와 P7-018·020·037·044·045 검증
 5. 시험 배포 성공 commit의 `develop` → `main` PR 병합
