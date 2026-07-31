@@ -9,9 +9,9 @@ summary: "Opt-in update discovery checks once per successful day without install
 tags: [discovery, update]
 aliases: ["Daily update check"]
 sources:
-  - "repo:crates/hive-cli/src/update_discovery.rs#sha256:650d13734e29745a8ae4634c0dd7f3f8477222e144875b111ce6925fccd86a19"
+  - "repo:crates/hive-cli/src/update_discovery.rs#sha256:f8728f81d8268b70c54460aa6a0f78b66fac0bb49253811cffedeb6fd06eb286"
 links: [global-onboarding, test-distribution]
-reviewed_revision: "git:bf9e28d8af36ef8d672694fc3c23fdd1a39233ee"
+reviewed_revision: "git:bd6d9249b8641590269d32deb97d13b2816ba75e"
 status: active
 ---
 

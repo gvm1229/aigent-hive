@@ -10,10 +10,10 @@ tags: [communication, documentation, projection]
 aliases: ["language consistency", "mixed-language response"]
 sources:
   - "repo:.agents/directives/01-behavior.md#sha256:d59f86031a7bb6f889eeaa00598794fdd2f73375da7d03cdb6a5b49d4884dc0f"
-  - "repo:crates/hive-cli/src/user_install.rs#sha256:0ed886384328d10f394f0f2f8fb6f1deed69908af026ecaa17e1e75e17b39a3a"
+  - "repo:crates/hive-cli/src/user_install.rs#sha256:18b30d35eef4e0db6e2dce0caef804a3918648a0940fdb189c74a049d59e5f73"
   - "repo:harness/template/AGENTS.md.jinja#sha256:6198d9b0380ee4e46d44a6aab9ea759c0080690e3353a9309da1a12c5b1939c2"
 links: [global-onboarding, source-development]
-reviewed_revision: "git:8c190672e3f08ade9bdf985016bcf7b00fa157a1"
+reviewed_revision: "git:bd6d9249b8641590269d32deb97d13b2816ba75e"
 status: active
 ---
 

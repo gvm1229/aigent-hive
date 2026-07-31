@@ -50,6 +50,7 @@
 | Windows namespace gate timeout | [en](en/windows-namespace-gate-timeout.md) | [ko](ko/windows-namespace-gate-timeout.md) |
 | Update transaction | [en](en/update-transaction.md) | [ko](ko/update-transaction.md) |
 | Update discovery | [en](en/update-discovery.md) | [ko](ko/update-discovery.md) |
+| Interactive binary update | [en](en/interactive-binary-update.md) | [ko](ko/interactive-binary-update.md) |
 | Version policy | [en](en/version-policy.md) | [ko](ko/version-policy.md) |
 | `0.8.0` test distribution | [en](en/test-distribution.md) | [ko](ko/test-distribution.md) |
 | Source development | [en](en/source-development.md) | [ko](ko/source-development.md) |
