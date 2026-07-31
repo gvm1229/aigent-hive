@@ -24,6 +24,11 @@
   PowerShell `7.6.4` LTS, Rust·Cargo `1.97.1`
 - `scripts/install.ps1`: PowerShell 5.1·7 parser와 overwrite·receipt·pending
   recovery runtime PASS
+- CMD가 실행한 Windows PowerShell 5.1은 상속된 `PSModulePath`에서 PowerShell 7용
+  `Microsoft.PowerShell.Utility`를 먼저 찾아 `Get-FileHash` 자동 불러오기에 실패
+- 설치기 해시 계산: 모듈 검색을 사용하지 않는
+  `System.Security.Cryptography.SHA256` 직접 호출. 오염된 CMD 환경의 최초 설치·
+  반복 설치·대기 영수증 복구 PASS
 - Atomic overwrite: 기존 destination의 `[IO.File]::Replace`와 신규 destination의
   two-argument `[IO.File]::Move` 분리
 - UTF-8: Windows PowerShell 5.1·7 공통 BOM 없는 .NET UTF-8 byte contract
@@ -48,6 +53,8 @@
 - `python -m unittest tests.conformance.test_phase6_update`: 21개 실행,
   platform 비대상 8개 expected skip, 나머지 PASS
 - Windows PowerShell 5.1·PowerShell 7.6.4 동일 installer runtime PASS
+- PowerShell 7 모듈 폴더가 Windows PowerShell 폴더보다 앞선 `PSModulePath`를
+  `cmd.exe`에서 상속한 회귀 환경 PASS
 - `cmd.exe /D /V:OFF` 공백·`%`·`!` prefix와 child exit code `23` 전달 PASS
 - `scripts/setup-windows-dependencies.ps1` preview·동의·fake WinGet·재검증 PASS
 
