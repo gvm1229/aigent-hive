@@ -341,10 +341,20 @@ mod tests {
         };
         let first =
             check(&arguments, 100, &FakeClient(Err("offline".to_owned()))).expect("deferred check");
+        let current: SemVersion = env!("CARGO_PKG_VERSION")
+            .parse()
+            .expect("current product version");
+        let newer = SemVersion {
+            patch: current.patch.checked_add(1).expect("next patch version"),
+            ..current
+        };
         let second = check(
             &arguments,
             101,
-            &FakeClient(Ok(br#"{"versions":{"0.7.0":{},"0.8.0":{}}}"#.to_vec())),
+            &FakeClient(Ok(format!(
+                r#"{{"versions":{{"{current}":{{}},"{newer}":{{}}}}}}"#
+            )
+            .into_bytes())),
         )
         .expect("retried check");
 
