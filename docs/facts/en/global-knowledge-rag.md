@@ -5,23 +5,21 @@ topic_slug: global-knowledge-rag
 language: en
 counterpart: ../ko/global-knowledge-rag.md
 title: "Global Knowledge RAG"
-summary: "The accepted v0.9 plan adds mandatory durable-memory writes and fast user-root or cross-project retrieval before question routing."
+summary: "The accepted v0.9 plan adds mandatory durable-memory writes and automatic retrieval for questions, research, and knowledge-dependent tasks."
 tags: [knowledge, rag, retrieval, v0-9]
 aliases: ["Cross-project RAG", "Mandatory memory"]
 sources:
-  - "repo:docs/decisions/ADR-0016-global-knowledge-rag.md#sha256:055496481dd5f0fa5ffcd92d6ddc6b456a01ce0db8edd998ccc3d2ae307f050e"
-  - "repo:docs/plans/active/v0.9.0-global-knowledge-rag.md#sha256:4de98fc240cd60feb243a74ecbe4f46af79639f61d599a48f282cdc84b87ea3d"
-links: [knowledge-storage, shared-index, v0-9-skill-suite-plan]
-reviewed_revision: "git:6e3eb11fb43b99971f73e1fed471ea6b34e8ba33"
+  - "repo:docs/decisions/ADR-0016-global-knowledge-rag.md#sha256:ece47739f1d17b0d7ba604e5126fec55b445693335da10e54563b6cf2aa91224"
+  - "repo:docs/plans/active/v0.9.0-global-knowledge-rag.md#sha256:0285b4850dfbb2651a2a8787c5d8c9b8c3b79cd3c3d1589c32106d2bb1847f43"
+links: [knowledge-portability-scan, knowledge-storage, shared-index, v0-9-skill-suite-plan]
+reviewed_revision: "git:4ef913efce07f4e86da98915c5ae5056dfac23e6"
 status: active
 ---
 
 # Global Knowledge RAG
 
-The accepted v0.9 plan upgrades the existing user-root FTS5 foundation into a
-citation-ready RAG projection. Every question receives one bounded retrieval
-preflight when the global Wiki is enabled. Reusable user-stated facts,
-preferences, and workflows require an agent-reviewed canonical Markdown write,
-including non-project preferences and explicit named-project scope. SQLite may
-be replaced or extended for chunks, ranking, and incremental freshness, but it
-remains disposable and never owns the sole copy of durable knowledge.
+The v0.9 plan expands the existing `hive-knowledge-query` into the bounded
+automatic retrieval owner for questions, research, and knowledge-dependent
+tasks. Reusable user facts, preferences, and workflows require canonical
+Markdown writes with named project or collection scope. SQLite may change for
+chunks, claims, ranking, and incremental freshness, but remains disposable.

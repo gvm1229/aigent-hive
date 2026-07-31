@@ -112,7 +112,7 @@
   도달성 확인, Git history recoverability 적용
 - Human Wiki: `docs/00-home.md`, `docs/01-index.md`, topic MOC, product overview,
   development guide에서 간소화 직전 README knowledge 복원
-- Atomic knowledge: `docs/facts/en`·`ko` 39개 exact pair, primary fact 1개,
+- Atomic knowledge: `docs/facts/en`·`ko` 40개 exact pair, primary fact 1개,
   cross-link와 source digest
 
 ## Windows shell 설치 경계
@@ -193,10 +193,10 @@ Target: `0.8.0`
 - 장기 방향: host-native·provider-neutral capability 대체 뒤 OMX/OMC 제거
 - Consumer reuse: `hive-wiki` core와 capture·maintenance·query 안전 계약
 - Skill reuse: shared canonical `harness/skills/`, exact source `.agents/skills/` projection
-- 현재 상태: 영어 37개·한국어 37개 atomic fact, exact pair 37개와 source-confined
+- 현재 상태: 영어 40개·한국어 40개 atomic fact, exact pair 40개와 source-confined
   CLI·Skill·material-task completion capture 구현 완료
 - Logical digest:
-  `sha256:e9b5f4efc2ab464db3a07d4456004ad6d26f4bccdb458efc8ad8f8409a05d161`
+  `sha256:9dfc1266564078e728100c6017b54a221eaa9a85e7e8b2cf6831e04ee10b2f29`
 - 검증: lint finding·warning 0건, 영어·한국어 query PASS, index 삭제 뒤 query
   fail-closed exit `5`, rebuild equivalence PASS
 - SQLite binary digest는 invocation-local evidence이며 정본·clean-copy equivalence 기준이
@@ -469,7 +469,7 @@ Global onboarding·shared index local qualification PASS:
 - Codex·Antigravity expedited/custom connected onboarding matrix 4/4
 - 독립 final blocker review의 critical·high·medium·low finding 0건
 
-Source docs Wiki targeted qualification PASS:
+Source docs Wiki targeted qualification historical PASS:
 
 - `hive-wiki` 33/33, Source Wiki conformance 재검증 PASS
 - Canonical fact 74개, bilingual pair 37개
