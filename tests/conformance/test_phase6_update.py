@@ -1607,9 +1607,13 @@ try {
             cargo,
         )
         self.assertIsNotNone(version)
-        manifest = read_json(RELEASE_FIXTURE / "targets/bundle-manifest.json")
-        migration = read_json(RELEASE_FIXTURE / "targets/migration-table.json")
-        self.assertEqual(version.group(1), "0.7.0")
+        current_fixture = (
+            ROOT
+            / f"tests/fixtures/phase6/releases/valid-{version.group(1)}"
+        )
+        manifest = read_json(current_fixture / "targets/bundle-manifest.json")
+        migration = read_json(current_fixture / "targets/migration-table.json")
+        self.assertEqual(version.group(1), "0.8.0")
         self.assertEqual(manifest["release_version"], version.group(1))
         self.assertEqual(migration["target_version"], version.group(1))
         harness = (
