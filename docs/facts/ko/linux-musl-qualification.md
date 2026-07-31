@@ -10,9 +10,9 @@ tags: [linux, release, test]
 aliases: ["P7-043"]
 sources:
   - "repo:.github/workflows/release-runtime.yml#sha256:89cc2b2c3b209e48e48fdd13b032c6c72eea612246ecf376d3e9d71f30702b63"
-  - "repo:docs/plans/phases/07-public-qualification.md#sha256:639cfdc5ba7e9ff34e2fc139fdacfcffdbcf35617db1ec4ada074fdc3a7b6e07"
+  - "repo:docs/plans/phases/07-public-qualification.md#sha256:379df42cc0d33872117fe1f484a24aa4fba06805f1e9dafb9b0e07098ee04f83"
 links: [test-distribution]
-reviewed_revision: "git:16279760c12914a1ae0660da9d154c6884a19a92"
+reviewed_revision: "git:a7be86f2558442c2cec3596abe2f481dd91d268f"
 status: active
 ---
 

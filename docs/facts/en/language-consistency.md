@@ -9,11 +9,11 @@ summary: "Source agents and consumer harnesses keep each question and response i
 tags: [communication, documentation, projection]
 aliases: ["language consistency", "mixed-language response"]
 sources:
-  - "repo:.agents/directives/01-behavior.md#sha256:ea88119052b2208ddcc7fe23c6b8fac640f9ff6b558aa091374ac1da2a1e3cb5"
-  - "repo:crates/hive-cli/src/user_install.rs#sha256:33df1458e98a1fa28a6808189b1a8d78b9ade03c93f5796edc881f18fbbec790"
-  - "repo:harness/template/AGENTS.md.jinja#sha256:ba73b338622138b0eb68668c55fd14827be6b9d7db2ddfad79b5f481b5d0d045"
+  - "repo:.agents/directives/01-behavior.md#sha256:d59f86031a7bb6f889eeaa00598794fdd2f73375da7d03cdb6a5b49d4884dc0f"
+  - "repo:crates/hive-cli/src/user_install.rs#sha256:0ed886384328d10f394f0f2f8fb6f1deed69908af026ecaa17e1e75e17b39a3a"
+  - "repo:harness/template/AGENTS.md.jinja#sha256:6198d9b0380ee4e46d44a6aab9ea759c0080690e3353a9309da1a12c5b1939c2"
 links: [global-onboarding, source-development]
-reviewed_revision: "git:ed553c9b397c2ce5c0586c28b8aa665bea842c0d"
+reviewed_revision: "git:8c190672e3f08ade9bdf985016bcf7b00fa157a1"
 status: active
 ---
 
