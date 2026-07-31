@@ -17,25 +17,31 @@ const INSTALL_TIMEOUT: Duration = Duration::from_mins(10);
 const INSTALL_OUTPUT_LIMIT: usize = 4 * 1024 * 1024;
 
 #[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
-struct TestPackageVersion {
+enum PackageChannel {
+    Test(u64),
+    Stable,
+}
+
+#[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
+struct PackageVersion {
     product: SemVersion,
-    revision: u64,
+    channel: PackageChannel,
     exact: String,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 enum InstallOwner {
     Npm {
-        package_version: TestPackageVersion,
+        package_version: PackageVersion,
     },
     Direct {
-        package_version: TestPackageVersion,
+        package_version: PackageVersion,
         prefix: PathBuf,
     },
 }
 
 impl InstallOwner {
-    fn package_version(&self) -> &TestPackageVersion {
+    fn package_version(&self) -> &PackageVersion {
         match self {
             Self::Npm { package_version }
             | Self::Direct {
@@ -78,13 +84,13 @@ impl RegistrySource for LiveRegistry {
 }
 
 trait Installer {
-    fn install(&self, owner: &InstallOwner, target: &TestPackageVersion) -> Result<(), String>;
+    fn install(&self, owner: &InstallOwner, target: &PackageVersion) -> Result<(), String>;
 }
 
 struct LiveInstaller;
 
 impl Installer for LiveInstaller {
-    fn install(&self, owner: &InstallOwner, target: &TestPackageVersion) -> Result<(), String> {
+    fn install(&self, owner: &InstallOwner, target: &PackageVersion) -> Result<(), String> {
         match owner {
             InstallOwner::Npm { .. } => install_with_npm(target, &SystemCommandRunner),
             InstallOwner::Direct { prefix, .. } => {
@@ -103,7 +109,7 @@ struct RegistryMetadata {
 
 #[derive(Deserialize)]
 struct DistTags {
-    test: String,
+    latest: String,
 }
 
 #[derive(Deserialize)]
@@ -208,10 +214,10 @@ fn update_flow(
         .map_err(|error| format!("compiled Hive version is invalid: {error}"))?;
     let owner = discover_owner(executable, current_product)?;
     let metadata = registry.fetch()?;
-    let target = target_test_package(&metadata)?;
+    let target = target_package(&metadata)?;
     if target.product.major != current_product.major {
         return Err(format!(
-            "the test distribution targets product {} and requires explicit major-version authority",
+            "the npm distribution targets product {} and requires explicit major-version authority",
             target.product
         ));
     }
@@ -237,14 +243,13 @@ fn update_flow(
     Ok(FlowOutcome::Installed)
 }
 
-fn target_test_package(bytes: &[u8]) -> Result<TestPackageVersion, String> {
+fn target_package(bytes: &[u8]) -> Result<PackageVersion, String> {
     let metadata: RegistryMetadata = serde_json::from_slice(bytes)
         .map_err(|error| format!("registry response is malformed JSON: {error}"))?;
-    let target = parse_test_package_version(&metadata.dist_tags.test)?;
-    let package = metadata
-        .versions
-        .get(&target.exact)
-        .ok_or_else(|| "registry test tag does not name a published package version".to_owned())?;
+    let target = parse_package_version(&metadata.dist_tags.latest)?;
+    let package = metadata.versions.get(&target.exact).ok_or_else(|| {
+        "registry latest tag does not name a published package version".to_owned()
+    })?;
     let bound_product: SemVersion = package
         .aigent_hive
         .product_version
@@ -256,25 +261,27 @@ fn target_test_package(bytes: &[u8]) -> Result<TestPackageVersion, String> {
     Ok(target)
 }
 
-fn parse_test_package_version(value: &str) -> Result<TestPackageVersion, String> {
-    let (product, revision) = value
-        .split_once("-test.")
-        .ok_or_else(|| "npm test package version must be PRODUCT_VERSION-test.N".to_owned())?;
-    if revision.is_empty()
-        || revision.starts_with('0')
-        || !revision.bytes().all(|byte| byte.is_ascii_digit())
-    {
-        return Err("npm test package revision must be a positive integer".to_owned());
-    }
+fn parse_package_version(value: &str) -> Result<PackageVersion, String> {
+    let (product, channel) = if let Some((product, revision)) = value.split_once("-test.") {
+        if revision.is_empty()
+            || revision.starts_with('0')
+            || !revision.bytes().all(|byte| byte.is_ascii_digit())
+        {
+            return Err("npm test package revision must be a positive integer".to_owned());
+        }
+        let revision = revision
+            .parse()
+            .map_err(|_| "npm test package revision is out of range".to_owned())?;
+        (product, PackageChannel::Test(revision))
+    } else {
+        (value, PackageChannel::Stable)
+    };
     let product: SemVersion = product
         .parse()
-        .map_err(|error| format!("npm test package product version is invalid: {error}"))?;
-    let revision = revision
-        .parse()
-        .map_err(|_| "npm test package revision is out of range".to_owned())?;
-    Ok(TestPackageVersion {
+        .map_err(|error| format!("npm package product version is invalid: {error}"))?;
+    Ok(PackageVersion {
         product,
-        revision,
+        channel,
         exact: value.to_owned(),
     })
 }
@@ -317,7 +324,7 @@ fn discover_direct(
         .version
         .parse()
         .map_err(|error| format!("direct install product version is invalid: {error}"))?;
-    let package_version = parse_test_package_version(&receipt.package_version)?;
+    let package_version = parse_package_version(&receipt.package_version)?;
     if receipt.schema_version != 1
         || receipt.owner != "direct"
         || receipt.product != "aigent-hive"
@@ -358,7 +365,7 @@ fn discover_npm(executable: &Path, expected_product: SemVersion) -> Result<Insta
         .product_version
         .parse()
         .map_err(|error| format!("npm platform product version is invalid: {error}"))?;
-    let package_version = parse_test_package_version(&manifest.version)?;
+    let package_version = parse_package_version(&manifest.version)?;
     if manifest.name != expected_name
         || product != expected_product
         || package_version.product != product
@@ -421,10 +428,7 @@ const fn is_reparse_point(_metadata: &fs::Metadata) -> bool {
     false
 }
 
-fn install_with_npm(
-    target: &TestPackageVersion,
-    runner: &impl CommandRunner,
-) -> Result<(), String> {
+fn install_with_npm(target: &PackageVersion, runner: &impl CommandRunner) -> Result<(), String> {
     let program_name = if cfg!(windows) { "npm.cmd" } else { "npm" };
     let program = runner
         .qualify(program_name)
@@ -446,7 +450,7 @@ fn install_with_npm(
 
 fn install_direct(
     prefix: &Path,
-    target: &TestPackageVersion,
+    target: &PackageVersion,
     runner: &impl CommandRunner,
 ) -> Result<(), String> {
     let extension = if cfg!(windows) { ".ps1" } else { ".sh" };
@@ -524,7 +528,7 @@ fn install_direct(
     Ok(())
 }
 
-fn validate_direct_installer(bytes: &[u8], target: &TestPackageVersion) -> Result<(), String> {
+fn validate_direct_installer(bytes: &[u8], target: &PackageVersion) -> Result<(), String> {
     let text =
         std::str::from_utf8(bytes).map_err(|_| "direct installer is not valid UTF-8".to_owned())?;
     if text.contains("__AIGENT_HIVE_") {
@@ -562,7 +566,7 @@ fn write_prompt(
     output: &mut impl Write,
     language: Language,
     owner: &InstallOwner,
-    target: &TestPackageVersion,
+    target: &PackageVersion,
 ) -> Result<(), String> {
     let command = match owner {
         InstallOwner::Npm { .. } => format!("npm install -g aigent-hive@{}", target.exact),
@@ -600,11 +604,11 @@ fn write_prompt(
 fn write_current(
     output: &mut impl Write,
     language: Language,
-    current: &TestPackageVersion,
+    current: &PackageVersion,
 ) -> Result<(), String> {
     let message = match language {
         Language::En => format!("Aigent Hive is current at {}.\n", current.exact),
-        Language::Ko => format!("Aigent Hive 현재 시험판: {}.\n", current.exact),
+        Language::Ko => format!("Aigent Hive 최신 버전 사용 중: {}.\n", current.exact),
     };
     output
         .write_all(message.as_bytes())
@@ -624,7 +628,7 @@ fn write_declined(output: &mut impl Write, language: Language) -> Result<(), Str
 fn write_installed(
     output: &mut impl Write,
     language: Language,
-    target: &TestPackageVersion,
+    target: &PackageVersion,
 ) -> Result<(), String> {
     let message = match language {
         Language::En => format!("Aigent Hive update complete: {}.\n", target.exact),
@@ -665,11 +669,7 @@ mod tests {
     }
 
     impl Installer for FakeInstaller {
-        fn install(
-            &self,
-            _owner: &InstallOwner,
-            target: &TestPackageVersion,
-        ) -> Result<(), String> {
+        fn install(&self, _owner: &InstallOwner, target: &PackageVersion) -> Result<(), String> {
             self.calls.borrow_mut().push(target.exact.clone());
             if let Some(manifest) = &self.manifest {
                 fs::write(
@@ -688,10 +688,10 @@ mod tests {
     }
 
     fn metadata(version: &str) -> FakeRegistry {
-        let product = version.split_once("-test.").expect("test version").0;
+        let product = version.split("-test.").next().expect("package version");
         FakeRegistry(
             format!(
-                r#"{{"dist-tags":{{"test":"{version}"}},"versions":{{"{version}":{{"aigentHive":{{"productVersion":"{product}"}}}}}}}}"#
+                r#"{{"dist-tags":{{"latest":"{version}"}},"versions":{{"{version}":{{"aigentHive":{{"productVersion":"{product}"}}}}}}}}"#
             )
             .into_bytes(),
         )
@@ -699,6 +699,10 @@ mod tests {
 
     fn package(revision: u64) -> String {
         format!("{}-test.{revision}", env!("CARGO_PKG_VERSION"))
+    }
+
+    fn stable_package() -> String {
+        env!("CARGO_PKG_VERSION").to_owned()
     }
 
     fn fake_npm_install(package_version: &str) -> (tempfile::TempDir, PathBuf) {
@@ -723,18 +727,21 @@ mod tests {
     }
 
     #[test]
-    fn strict_test_package_versions_are_ordered_by_product_then_revision() {
-        let first = parse_test_package_version("0.8.0-test.1").expect("first");
-        let second = parse_test_package_version("0.8.0-test.2").expect("second");
-        let next = parse_test_package_version("0.8.1-test.1").expect("next");
+    fn package_versions_order_tests_before_stable_and_then_next_product() {
+        let first = parse_package_version("0.8.0-test.1").expect("first");
+        let second = parse_package_version("0.8.0-test.2").expect("second");
+        let stable = parse_package_version("0.8.0").expect("stable");
+        let next = parse_package_version("0.8.1-test.1").expect("next");
         assert!(first < second);
+        assert!(second < stable);
+        assert!(stable < next);
         assert!(second < next);
-        assert!(parse_test_package_version("0.8.0-test.0").is_err());
-        assert!(parse_test_package_version("0.8.0-preview.1").is_err());
+        assert!(parse_package_version("0.8.0-test.0").is_err());
+        assert!(parse_package_version("0.8.0-preview.1").is_err());
     }
 
     #[test]
-    fn npm_owner_requires_platform_product_and_test_version_binding() {
+    fn npm_owner_accepts_legacy_test_package_binding() {
         let current = package(1);
         let (_root, binary) = fake_npm_install(&current);
         let product: SemVersion = env!("CARGO_PKG_VERSION").parse().expect("product");
@@ -746,7 +753,7 @@ mod tests {
     #[test]
     fn declined_update_does_not_invoke_the_install_owner() {
         let current = package(1);
-        let target = package(2);
+        let target = stable_package();
         let (_root, binary) = fake_npm_install(&current);
         let installer = FakeInstaller::default();
         let mut input = Cursor::new(b"n\n");
@@ -769,7 +776,7 @@ mod tests {
 
     #[test]
     fn current_package_skips_confirmation_and_installation() {
-        let current = package(2);
+        let current = stable_package();
         let (_root, binary) = fake_npm_install(&current);
         let installer = FakeInstaller::default();
         let mut input = Cursor::new(Vec::<u8>::new());
@@ -787,13 +794,13 @@ mod tests {
         assert!(installer.calls.borrow().is_empty());
         assert!(String::from_utf8(output)
             .expect("output")
-            .contains("현재 시험판"));
+            .contains("최신 버전 사용 중"));
     }
 
     #[test]
     fn accepted_update_invokes_owner_once_and_revalidates_exact_package() {
         let current = package(1);
-        let target = package(2);
+        let target = stable_package();
         let (root, binary) = fake_npm_install(&current);
         let installer = FakeInstaller {
             calls: RefCell::new(Vec::new()),

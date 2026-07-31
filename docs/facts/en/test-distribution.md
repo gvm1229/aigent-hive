@@ -4,24 +4,26 @@ pair_id: test-distribution
 topic_slug: test-distribution
 language: en
 counterpart: ../ko/test-distribution.md
-title: "0.8.0 Test Distribution"
-summary: "Product candidate 0.8.0 uses npm package versions 0.8.0-test.N without a GitHub Release or npm latest."
+title: "npm 0.8.0 Distribution"
+summary: "Exact npm 0.8.0 is the latest install channel while GitHub Release and Git release tags remain absent."
 tags: [distribution, release, test]
 aliases: ["0.8.0 release scope"]
 sources:
   - "repo:Cargo.toml#sha256:5083784d829c1e5ee6e642b54a3e616e78327dc1b8deb139bc00f8d14374b830"
-  - "repo:scripts/package-npm.mjs#sha256:22c8a4e6b71764d2c3987a3525736d7406ce2a0d6da75ed96da420996a4d2e2c"
-links: [global-onboarding, version-policy]
-reviewed_revision: "git:b74afdae66f2704c6b24e42d47332ed931e2fecd"
+  - "repo:scripts/package-npm.mjs#sha256:7d286e69158752940c877ce7b8604ee336b7beb7ede0632871d9bae2e9546710"
+links: [global-onboarding, version-policy, windows-powershell-module-isolation]
+reviewed_revision: "git:cdde668bed5f3b35e08a35f64e7e25594ce9c3a2"
 status: active
 ---
 
-# 0.8.0 Test Distribution
+# npm 0.8.0 Distribution
 
-The product candidate is `0.8.0`, dated `2026-07-31`; npm transport starts at
-`0.8.0-test.1` under `test`. No GitHub Release, stable npm `0.8.0`, or `latest`
-move occurs. Artifacts originate from exact protected `develop`; after npm and
-direct-installer qualification, the same commit reaches `main` by pull request.
-Acceptance requires separate product/package inputs, exact manifests, matching
-platform dependencies, and passing packaging/workflow tests. Origin: repeatable
-installation tests requested before the maintainer approves a public release.
+Exact npm `0.8.0` is published under `latest`; `npm install -g aigent-hive` and
+exact `@0.8.0` resolve the same package family. The immutable
+`0.8.0-test.1|test` distribution remains as prior validation history. No GitHub
+Release or Git release tag is created. Artifacts originate from the exact
+protected `develop` candidate, and successful npm qualification precedes the
+same commit's pull request to `main`. Acceptance requires exact product/package
+version equality, matching platform dependencies, provenance, byte identity,
+and packaging/workflow tests. Origin: the maintainer requested the untagged
+`0.8.0` npm release when npm required a valid `latest` channel.

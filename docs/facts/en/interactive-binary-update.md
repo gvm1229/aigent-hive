@@ -9,16 +9,17 @@ summary: "Bare hive update delegates an exact confirmed package to the authentic
 tags: [installation, update]
 aliases: ["Install-owner update"]
 sources:
-  - "repo:README.md#sha256:4367530f3f660e786c271b1e9f3d26768b3bf5fa4f5f607becdc46e1d490aca8"
+  - "repo:README.md#sha256:e661c49bf5438e10aa42623894040a8531be18f47152b7a5530e9acbe812025d"
 links: [test-distribution, update-discovery, update-transaction]
-reviewed_revision: "git:bd6d9249b8641590269d32deb97d13b2816ba75e"
+reviewed_revision: "git:19f6326521d7f963fca8e41aaf716c5fc987e975"
 status: active
 ---
 
 # Interactive Binary Update
 
 Bare `hive update` requires an interactive terminal and uses the selected interface language.
-It resolves the npm `test` package, authenticates the running npm package manifest or direct
-receipt, previews the exact owner adapter, installs only after explicit acceptance, and
-revalidates the activated owner and version. Decline, EOF, and noninteractive calls make no
-installation change.
+It resolves npm `latest`, authenticates the running npm package manifest or direct receipt,
+previews the exact owner adapter, installs only after explicit acceptance, and revalidates the
+activated owner and version. A legacy `0.8.0-test.N` owner remains valid and sorts below exact
+stable `0.8.0`, allowing an explicit update without losing ownership evidence. Decline, EOF,
+and noninteractive calls make no installation change.

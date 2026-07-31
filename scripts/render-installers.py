@@ -72,13 +72,8 @@ def main() -> None:
     args = parse_args()
     if not EXACT_VERSION.fullmatch(args.product_version):
         raise SystemExit("--product-version must be an exact X.Y.Z version")
-    package_pattern = re.compile(
-        rf"^{re.escape(args.product_version)}-test\.([1-9][0-9]*)$"
-    )
-    if not package_pattern.fullmatch(args.package_version):
-        raise SystemExit(
-            "--package-version must be PRODUCT_VERSION-test.N with positive N"
-        )
+    if args.package_version != args.product_version:
+        raise SystemExit("--package-version must equal PRODUCT_VERSION")
     if not args.dist.is_dir() or args.dist.is_symlink():
         raise SystemExit("--dist must be a regular directory")
     args.output.mkdir(parents=True, exist_ok=True)

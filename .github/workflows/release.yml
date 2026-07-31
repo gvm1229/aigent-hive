@@ -8,7 +8,7 @@ on:
         required: true
         type: string
       package_version:
-        description: Exact npm test package version, PRODUCT_VERSION-test.N
+        description: Exact npm package version; must equal product version
         required: true
         type: string
 
