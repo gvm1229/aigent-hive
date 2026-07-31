@@ -410,9 +410,15 @@ class Phase6StaticContracts(unittest.TestCase):
             "PRODUCT_VERSION-test.N",
             'head_branch <<<"$metadata")" = "develop"',
             "bootstrap_with_token",
+            "repair_existing_test_tags",
             "secrets.NPM_TOKEN",
             "NODE_AUTH_TOKEN",
             "!inputs.bootstrap_with_token",
+            "!inputs.repair_existing_test_tags",
+            "Verify existing npm tarballs before tag repair",
+            'cmp "dist/$archive" "$root/registry.tgz"',
+            'npm dist-tag rm "$package" latest',
+            'test "$(read_tag "$package" test)" = "$PACKAGE_VERSION"',
             "differs from approved candidate",
             "required release notes are missing",
             'sha256sum --check --strict "$archive.sha256"',
@@ -432,6 +438,7 @@ class Phase6StaticContracts(unittest.TestCase):
         )
         self.assertEqual(publication.count('npm publish "./dist/'), 12)
         self.assertNotIn('npm publish "dist/', publication)
+        self.assertNotIn("npm dist-tag add", publication)
         for forbidden in (
             "gh release create",
             "npm publish",

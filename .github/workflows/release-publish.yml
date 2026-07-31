@@ -20,6 +20,11 @@ on:
         required: true
         default: false
         type: boolean
+      repair_existing_test_tags:
+        description: Repair tags only after verifying existing registry tarballs
+        required: true
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -34,6 +39,7 @@ jobs:
       PACKAGE_VERSION: ${{ inputs.package_version }}
       RUN_ID: ${{ inputs.candidate_run_id }}
       BOOTSTRAP_WITH_TOKEN: ${{ inputs.bootstrap_with_token }}
+      REPAIR_EXISTING_TEST_TAGS: ${{ inputs.repair_existing_test_tags }}
     permissions:
       actions: read
       contents: read
@@ -53,6 +59,11 @@ jobs:
           fi
           test "$BOOTSTRAP_WITH_TOKEN" = "true" \
             || test "$BOOTSTRAP_WITH_TOKEN" = "false"
+          test "$REPAIR_EXISTING_TEST_TAGS" = "true" \
+            || test "$REPAIR_EXISTING_TEST_TAGS" = "false"
+          if [ "$REPAIR_EXISTING_TEST_TAGS" = "true" ]; then
+            test "$BOOTSTRAP_WITH_TOKEN" = "true"
+          fi
           test "$PRODUCT_VERSION" = "0.8.0"
       - name: Resolve the exact successful candidate commit
         id: candidate
@@ -211,6 +222,7 @@ jobs:
             "dist/aigent-hive-$PRODUCT_VERSION-x86_64-pc-windows-msvc.zip" \
             "dist/aigent-hive-win32-x64-$PACKAGE_VERSION.tgz" hive.exe
       - name: Refuse existing npm versions
+        if: ${{ !inputs.repair_existing_test_tags }}
         run: |
           packages=(
             "@aigent-hive/darwin-arm64"
@@ -226,8 +238,39 @@ jobs:
               exit 3
             fi
           done
+      - name: Verify existing npm tarballs before tag repair
+        if: inputs.repair_existing_test_tags
+        run: |
+          verify_registry_archive() {
+            package=$1
+            archive=$2
+            root=$(mktemp -d)
+            tarball=$(npm view "$package@$PACKAGE_VERSION" dist.tarball)
+            test -n "$tarball"
+            curl --fail --location --silent --show-error \
+              "$tarball" --output "$root/registry.tgz"
+            cmp "dist/$archive" "$root/registry.tgz"
+          }
+          verify_registry_archive \
+            "@aigent-hive/darwin-arm64" \
+            "aigent-hive-darwin-arm64-$PACKAGE_VERSION.tgz"
+          verify_registry_archive \
+            "@aigent-hive/darwin-x64" \
+            "aigent-hive-darwin-x64-$PACKAGE_VERSION.tgz"
+          verify_registry_archive \
+            "@aigent-hive/linux-arm64" \
+            "aigent-hive-linux-arm64-$PACKAGE_VERSION.tgz"
+          verify_registry_archive \
+            "@aigent-hive/linux-x64" \
+            "aigent-hive-linux-x64-$PACKAGE_VERSION.tgz"
+          verify_registry_archive \
+            "@aigent-hive/win32-x64" \
+            "aigent-hive-win32-x64-$PACKAGE_VERSION.tgz"
+          verify_registry_archive \
+            "aigent-hive" \
+            "aigent-hive-$PACKAGE_VERSION.tgz"
       - name: Publish first npm package family under test
-        if: inputs.bootstrap_with_token
+        if: ${{ inputs.bootstrap_with_token && !inputs.repair_existing_test_tags }}
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
@@ -245,7 +288,7 @@ jobs:
           npm publish "./dist/aigent-hive-$PACKAGE_VERSION.tgz" \
             --access public --provenance --tag test
       - name: Publish npm package family through trusted publishing under test
-        if: ${{ !inputs.bootstrap_with_token }}
+        if: ${{ !inputs.bootstrap_with_token && !inputs.repair_existing_test_tags }}
         run: |
           npm publish "./dist/aigent-hive-darwin-arm64-$PACKAGE_VERSION.tgz" \
             --access public --provenance --tag test
@@ -259,3 +302,61 @@ jobs:
             --access public --provenance --tag test
           npm publish "./dist/aigent-hive-$PACKAGE_VERSION.tgz" \
             --access public --provenance --tag test
+      - name: Normalize npm tags with the bootstrap token
+        if: inputs.bootstrap_with_token
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          test -n "$NODE_AUTH_TOKEN"
+          packages=(
+            "@aigent-hive/darwin-arm64"
+            "@aigent-hive/darwin-x64"
+            "@aigent-hive/linux-arm64"
+            "@aigent-hive/linux-x64"
+            "@aigent-hive/win32-x64"
+            "aigent-hive"
+          )
+          read_tag() {
+            package=$1
+            tag=$2
+            npm dist-tag ls "$package" --json \
+              | jq -r --arg tag "$tag" '.[$tag] // empty'
+          }
+          for package in "${packages[@]}"; do
+            test "$(read_tag "$package" test)" = "$PACKAGE_VERSION"
+            if [ "$(read_tag "$package" latest)" = "$PACKAGE_VERSION" ]; then
+              npm dist-tag rm "$package" latest
+            fi
+            for attempt in 1 2 3 4 5 6; do
+              if [ -z "$(read_tag "$package" latest)" ]; then
+                break
+              fi
+              if [ "$attempt" = 6 ]; then
+                echo "::error::$package still has an npm latest tag" >&2
+                exit 6
+              fi
+              sleep 5
+            done
+            test "$(read_tag "$package" test)" = "$PACKAGE_VERSION"
+          done
+      - name: Verify npm tags after trusted publication
+        if: ${{ !inputs.bootstrap_with_token && !inputs.repair_existing_test_tags }}
+        run: |
+          packages=(
+            "@aigent-hive/darwin-arm64"
+            "@aigent-hive/darwin-x64"
+            "@aigent-hive/linux-arm64"
+            "@aigent-hive/linux-x64"
+            "@aigent-hive/win32-x64"
+            "aigent-hive"
+          )
+          read_tag() {
+            package=$1
+            tag=$2
+            npm dist-tag ls "$package" --json \
+              | jq -r --arg tag "$tag" '.[$tag] // empty'
+          }
+          for package in "${packages[@]}"; do
+            test "$(read_tag "$package" test)" = "$PACKAGE_VERSION"
+            test "$(read_tag "$package" latest)" != "$PACKAGE_VERSION"
+          done
