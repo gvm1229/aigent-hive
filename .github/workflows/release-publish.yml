@@ -15,6 +15,11 @@ on:
         description: Successful Release candidate workflow run id
         required: true
         type: string
+      bootstrap_with_token:
+        description: First publication only; use the temporary NPM_TOKEN secret
+        required: true
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -28,6 +33,7 @@ jobs:
       PRODUCT_VERSION: ${{ inputs.product_version }}
       PACKAGE_VERSION: ${{ inputs.package_version }}
       RUN_ID: ${{ inputs.candidate_run_id }}
+      BOOTSTRAP_WITH_TOKEN: ${{ inputs.bootstrap_with_token }}
     permissions:
       actions: read
       contents: read
@@ -45,6 +51,8 @@ jobs:
           if [[ ! "$RUN_ID" =~ ^[1-9][0-9]*$ ]]; then
             exit 2
           fi
+          test "$BOOTSTRAP_WITH_TOKEN" = "true" \
+            || test "$BOOTSTRAP_WITH_TOKEN" = "false"
           test "$PRODUCT_VERSION" = "0.8.0"
       - name: Resolve the exact successful candidate commit
         id: candidate
@@ -203,7 +211,26 @@ jobs:
               exit 3
             fi
           done
-      - name: Publish npm platform packages and umbrella under test
+      - name: Publish first npm package family under test
+        if: inputs.bootstrap_with_token
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          test -n "$NODE_AUTH_TOKEN"
+          npm publish "dist/aigent-hive-darwin-arm64-$PACKAGE_VERSION.tgz" \
+            --access public --provenance --tag test
+          npm publish "dist/aigent-hive-darwin-x64-$PACKAGE_VERSION.tgz" \
+            --access public --provenance --tag test
+          npm publish "dist/aigent-hive-linux-arm64-$PACKAGE_VERSION.tgz" \
+            --access public --provenance --tag test
+          npm publish "dist/aigent-hive-linux-x64-$PACKAGE_VERSION.tgz" \
+            --access public --provenance --tag test
+          npm publish "dist/aigent-hive-win32-x64-$PACKAGE_VERSION.tgz" \
+            --access public --provenance --tag test
+          npm publish "dist/aigent-hive-$PACKAGE_VERSION.tgz" \
+            --access public --provenance --tag test
+      - name: Publish npm package family through trusted publishing under test
+        if: ${{ !inputs.bootstrap_with_token }}
         run: |
           npm publish "dist/aigent-hive-darwin-arm64-$PACKAGE_VERSION.tgz" \
             --access public --provenance --tag test

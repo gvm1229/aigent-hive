@@ -407,6 +407,10 @@ class Phase6StaticContracts(unittest.TestCase):
             'test "$PRODUCT_VERSION" = "0.8.0"',
             "PRODUCT_VERSION-test.N",
             'head_branch <<<"$metadata")" = "develop"',
+            "bootstrap_with_token",
+            "secrets.NPM_TOKEN",
+            "NODE_AUTH_TOKEN",
+            "!inputs.bootstrap_with_token",
         ):
             self.assertIn(required, publication)
         for forbidden in (
