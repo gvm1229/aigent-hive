@@ -12,21 +12,20 @@ Hive: subscription 인증 agent host에 일관된 setup, Skill routing, project 
 지속 가능한 role/run 상태, usage safeguard와 안전한 update 계약 제공.
 Model-provider API key 요청·provider API 호출·host model runtime 대체 없음.
 
-## 0.8.0 시험 배포
+## 0.8.0 설치
 
-제품 후보 버전 `0.8.0`과 npm 시험판 버전 `0.8.0-test.N` 분리.
-npm `test` 태그로만 배포하며 GitHub Release 생성·npm `latest` 이동 없음.
+설치 검증용 npm `0.8.0|latest` 배포. GitHub Release와 Git release tag 생성 없음.
 
-시험 배포가 완료된 뒤 설치:
+기본 설치:
 
 ```console
-npm install -g aigent-hive@0.8.0-test.1
+npm install -g aigent-hive
 ```
 
-또는:
+또는 exact version 고정:
 
 ```console
-npm install -g aigent-hive@test
+npm install -g aigent-hive@0.8.0
 ```
 
 npm 설치 dependency: Node.js·npm. 설치된 `hive` runtime: native Rust binary,
@@ -36,19 +35,19 @@ Node.js dependency 없음.
 
 ```sh
 curl --proto '=https' --tlsv1.2 -LsSf \
-  https://unpkg.com/aigent-hive@0.8.0-test.1/install.sh | sh
+  https://unpkg.com/aigent-hive@0.8.0/install.sh | sh
 ```
 
 ### Windows PowerShell 5.1+
 
 ```powershell
-irm https://unpkg.com/aigent-hive@0.8.0-test.1/install.ps1 | iex
+irm https://unpkg.com/aigent-hive@0.8.0/install.ps1 | iex
 ```
 
 ### Windows 명령 프롬프트
 
 ```bat
-curl.exe -fLo install-aigent-hive.cmd https://unpkg.com/aigent-hive@0.8.0-test.1/install.cmd && install-aigent-hive.cmd
+curl.exe -fLo install-aigent-hive.cmd https://unpkg.com/aigent-hive@0.8.0/install.cmd && install-aigent-hive.cmd
 ```
 
 직접 installer: npm의 동일 native package bytes 수신, embedded exact-version
@@ -97,6 +96,8 @@ hive update
 즉시 version 확인. 새 version이 있으면 exact update 내용을 설명하고 authenticated
 install owner를 실행하기 전에 질문. 거절·stdin 종료·noninteractive 실행에서는 설치
 mutation 0건.
+기존 `0.8.0-test.N` 설치의 소유권 증거를 유지하며, 같은 확인 절차로 exact
+`0.8.0` 갱신 가능.
 
 Daily check: 마지막 성공 확인부터 24시간 throttle. Offline·failed check는 성공
 기록 제외; 다음 Codex·Claude Code·Antigravity session에서 재시도.

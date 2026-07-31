@@ -1,7 +1,7 @@
 param(
     [ValidatePattern('^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$')]
     [string]$Version = "__AIGENT_HIVE_PRODUCT_VERSION__",
-    [ValidatePattern('^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)-test\.[1-9][0-9]*$')]
+    [ValidatePattern('^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-test\.[1-9][0-9]*)?$')]
     [string]$PackageVersion = "__AIGENT_HIVE_PACKAGE_VERSION__",
     [string]$Prefix = "$env:LOCALAPPDATA\AigentHive"
 )
@@ -24,6 +24,12 @@ if ($ExpectedArchiveSha256 -notmatch '^[0-9a-f]{64}$') {
 if (-not [Environment]::Is64BitOperatingSystem) {
     throw "Aigent Hive supports Windows x86_64 only"
 }
+if (
+    $PackageVersion -ne $Version -and
+    $PackageVersion -notmatch ('^' + [regex]::Escape($Version) + '-test\.[1-9][0-9]*$')
+) {
+    throw "PackageVersion must equal Version or use Version-test.N"
+}
 
 function Test-HiveVersionOutput {
     param(
@@ -37,6 +43,33 @@ function Test-HiveVersionOutput {
     return $Output -cmatch (
         "^hive $escapedVersion \(released [0-9]{4}-[0-9]{2}-[0-9]{2}\)$"
     )
+}
+
+function Get-FileSha256 {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Path
+    )
+
+    $stream = [IO.File]::Open(
+        $Path,
+        [IO.FileMode]::Open,
+        [IO.FileAccess]::Read,
+        [IO.FileShare]::Read
+    )
+    try {
+        $algorithm = [Security.Cryptography.SHA256]::Create()
+        try {
+            $digest = $algorithm.ComputeHash($stream)
+        }
+        finally {
+            $algorithm.Dispose()
+        }
+    }
+    finally {
+        $stream.Dispose()
+    }
+    return [BitConverter]::ToString($digest).Replace("-", "").ToLowerInvariant()
 }
 
 function Assert-SafeDirectoryChain {
@@ -105,8 +138,11 @@ function Get-ValidatedDirectReceipt {
         $receipt.owner -ne "direct" -or
         $receipt.product -ne "aigent-hive" -or
         $receipt.version -notmatch '^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$' -or
-        $receipt.package_version -notmatch (
-            '^' + [regex]::Escape($receipt.version) + '-test\.[1-9][0-9]*$'
+        (
+            $receipt.package_version -ne $receipt.version -and
+            $receipt.package_version -notmatch (
+                '^' + [regex]::Escape($receipt.version) + '-test\.[1-9][0-9]*$'
+            )
         ) -or
         $receipt.artifact_sha256 -notmatch '^sha256:[0-9a-f]{64}$'
     ) {
@@ -140,7 +176,7 @@ function Assert-ExistingDirectInstall {
         throw "existing hive binary is not owned by the direct installer"
     }
     $priorReceipt = Get-ValidatedDirectReceipt -ReceiptPath $ReceiptPath
-    $priorDigest = (Get-FileHash -LiteralPath $Destination -Algorithm SHA256).Hash.ToLowerInvariant()
+    $priorDigest = Get-FileSha256 -Path $Destination
     if (
         $priorReceipt.artifact_sha256 -ne "sha256:$priorDigest"
     ) {
@@ -227,9 +263,7 @@ function Repair-PendingDirectInstall {
         -not $destinationItem.PSIsContainer -and
         -not ($destinationItem.Attributes -band [IO.FileAttributes]::ReparsePoint)
     ) {
-        $destinationDigest = (
-            Get-FileHash -LiteralPath $Destination -Algorithm SHA256
-        ).Hash.ToLowerInvariant()
+        $destinationDigest = Get-FileSha256 -Path $Destination
         if ($pendingReceipt.artifact_sha256 -eq "sha256:$destinationDigest") {
             if ($null -ne $receiptItem) {
                 Get-ValidatedDirectReceipt -ReceiptPath $ReceiptPath | Out-Null
@@ -249,9 +283,7 @@ function Repair-PendingDirectInstall {
             -not $destinationItem.PSIsContainer -and
             -not ($destinationItem.Attributes -band [IO.FileAttributes]::ReparsePoint)
         ) {
-            $destinationDigest = (
-                Get-FileHash -LiteralPath $Destination -Algorithm SHA256
-            ).Hash.ToLowerInvariant()
+            $destinationDigest = Get-FileSha256 -Path $Destination
             if ($priorReceipt.artifact_sha256 -eq "sha256:$destinationDigest") {
                 Assert-SafeDirectoryChain -Path $destinationDirectory
                 Assert-SafeDirectoryChain -Path $receiptDirectory
@@ -298,7 +330,7 @@ $stagedReceipt = $null
 try {
     $archivePath = Join-Path $work $archive
     Invoke-WebRequest -UseBasicParsing -Uri "$base/$archive" -OutFile $archivePath
-    $actual = (Get-FileHash -LiteralPath $archivePath -Algorithm SHA256).Hash.ToLowerInvariant()
+    $actual = Get-FileSha256 -Path $archivePath
     if ($ExpectedArchiveSha256 -ne $actual) {
         throw "release archive SHA-256 verification failed"
     }
@@ -368,7 +400,7 @@ try {
     Assert-SafeDirectoryChain -Path $binDirectory
     Assert-SafeDirectoryChain -Path $shareDirectory
     [IO.File]::Copy($binary, $stagedBinary, $false)
-    $binaryDigest = (Get-FileHash -LiteralPath $binary -Algorithm SHA256).Hash.ToLowerInvariant()
+    $binaryDigest = Get-FileSha256 -Path $binary
     $receiptJson = @{
         schema_version = 1
         owner = "direct"

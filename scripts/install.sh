@@ -26,15 +26,16 @@ if ! printf '%s\n' "$version" | awk -F. '
   exit 2
 fi
 case "$package_version" in
+  "$version") ;;
   "$version"-test.[1-9]*)
     if ! printf '%s\n' "${package_version#"$version-test."}" |
       awk '/^[1-9][0-9]*$/ { next } { exit 1 }'; then
-      echo "AIGENT_HIVE_PACKAGE_VERSION must be PRODUCT_VERSION-test.N" >&2
+      echo "AIGENT_HIVE_PACKAGE_VERSION must equal PRODUCT_VERSION or use PRODUCT_VERSION-test.N" >&2
       exit 2
     fi
     ;;
   *)
-    echo "AIGENT_HIVE_PACKAGE_VERSION must be PRODUCT_VERSION-test.N" >&2
+    echo "AIGENT_HIVE_PACKAGE_VERSION must equal PRODUCT_VERSION or use PRODUCT_VERSION-test.N" >&2
     exit 2
     ;;
 esac
@@ -193,6 +194,7 @@ parse_receipt() {
     return 1
   fi
   case "$parsed_package_version" in
+    "$parsed_version") ;;
     "$parsed_version"-test.[1-9]*)
       if ! printf '%s\n' "${parsed_package_version#"$parsed_version-test."}" |
         awk '/^[1-9][0-9]*$/ { next } { exit 1 }'; then

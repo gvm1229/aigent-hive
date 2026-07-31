@@ -1,4 +1,4 @@
-# `0.8.0` 시험 배포 실행 계획
+# `0.8.0` npm 배포 실행 계획
 
 > Target: `0.8.0`
 > Checklist owner: [`P7-*`](../phases/07-public-qualification.md)
@@ -6,23 +6,22 @@
 
 ## 배포 정의
 
-- 목적: 실제 안정 릴리스 전 설치·업데이트·host onboarding 검증
+- 목적: 설치·업데이트·host onboarding의 실제 공개 registry 검증
 - GitHub: Release·prerelease 생성 없음
-- npm: `0.8.0-test.N`과 `test` dist-tag만 publication, `latest` 이동 없음
-- 첫 npm 시험판: `0.8.0-test.1`; 반복 시험: `test.2`, `test.3` 순차 증가
-- Product candidate: `0.8.0`; npm package version: `0.8.0-test.N`
+- npm: exact `0.8.0` publication과 `latest` dist-tag 이동
+- 기존 `0.8.0-test.1|test`는 삭제·변경하지 않는 이전 검증 channel
+- Product candidate와 npm package version: `0.8.0`
 - 직접 설치: GitHub Release asset이 아니라 npm registry의 같은 native package 사용
 - Consumer runtime: Rust native binary, Node.js·PowerShell 7 dependency 없음
 - 신뢰 기준: 명시적으로 선택된 protected branch의 exact commit, SHA-256,
   GitHub artifact attestation
-- 공개 명칭: 안정 릴리스로 부르지 않고 `0.8.0-test.N test distribution`으로 표시
+- 공개 명칭: npm `0.8.0`; GitHub Release 없이 설치 검증 목적임을 문서화
 
-실제 안정 릴리스는 사용자가 별도로 승인할 `0.8.x`에서 수행. 그때 npm `latest`,
-GitHub normal release, 안정 설치 명령과 limitation 문구를 다시 확정.
+GitHub normal release는 사용자가 별도로 승인할 후속 `0.8.x`에서 수행.
 
 ## 지원 platform
 
-| Platform | Rust target | 시험 배포 경로 |
+| Platform | Rust target | 배포 경로 |
 | --- | --- | --- |
 | macOS Apple Silicon | `aarch64-apple-darwin` | npm·`install.sh` |
 | macOS Intel | `x86_64-apple-darwin` | npm·`install.sh` |
@@ -49,16 +48,16 @@ selected protected branch exact commit
 - Platform allowlist, exact version, digest, archive member 검증
 - 설치 receipt·package-manager ownership·atomic activation·failure recovery 유지
 
-## npm 시험 설치
+## npm 설치
 
 ```console
-npm install -g aigent-hive@0.8.0-test.1
+npm install -g aigent-hive
 ```
 
-또는 시험 channel을 명시:
+또는 exact version을 명시:
 
 ```console
-npm install -g aigent-hive@test
+npm install -g aigent-hive@0.8.0
 ```
 
 - Public umbrella package: `aigent-hive`
@@ -66,7 +65,7 @@ npm install -g aigent-hive@test
   `linux-x64`, `win32-x64`
 - Exact package-version optional dependency와 `hive` executable shim
 - Platform package 선행 publication, umbrella package 최종 publication
-- 모든 package는 `--tag test --provenance`; `latest` 이동 금지
+- 모든 package는 `--tag latest --provenance`; 게시 뒤 `latest=0.8.0` 검증
 - Package install 이후 `hive --version`과 native architecture smoke
 - Node.js/npm은 npm 설치 channel의 dependency일 뿐 `hive` runtime dependency 아님
 
@@ -80,22 +79,22 @@ Unix:
 
 ```sh
 curl --proto '=https' --tlsv1.2 -LsSf \
-  https://unpkg.com/aigent-hive@0.8.0-test.1/install.sh | sh
+  https://unpkg.com/aigent-hive@0.8.0/install.sh | sh
 ```
 
 Windows PowerShell 5.1+:
 
 ```powershell
-irm https://unpkg.com/aigent-hive@0.8.0-test.1/install.ps1 | iex
+irm https://unpkg.com/aigent-hive@0.8.0/install.ps1 | iex
 ```
 
 Windows CMD:
 
 ```bat
-curl.exe -fLo install-aigent-hive.cmd https://unpkg.com/aigent-hive@0.8.0-test.1/install.cmd && install-aigent-hive.cmd
+curl.exe -fLo install-aigent-hive.cmd https://unpkg.com/aigent-hive@0.8.0/install.cmd && install-aigent-hive.cmd
 ```
 
-Bootstrap은 embedded product `0.8.0`, npm package `0.8.0-test.1`과 platform package
+Bootstrap은 embedded product·npm package `0.8.0`과 platform package
 digest를 검증하고 npm registry tarball에서 native binary 취득. 직접 설치 경로의 npm
 CLI·Node.js dependency 없음.
 PowerShell 7 탐지·설치 요구·설치 제안도 없음.
@@ -119,7 +118,7 @@ PowerShell 7 탐지·설치 요구·설치 제안도 없음.
 | Workflow | 역할 |
 | --- | --- |
 | `release.yml` | 5개 target build, runtime 검증, digest, attestation, npm tarball staging |
-| `release-publish.yml` | exact candidate와 attestation 재검증, npm `test` publication |
+| `release-publish.yml` | exact candidate와 attestation 재검증, npm `latest` publication |
 
 Publication workflow의 Git tag·GitHub Release 생성 0건. Developer ID,
 notarization, Authenticode, Azure signing, external TUF는 실제 안정 릴리스의
@@ -130,20 +129,22 @@ notarization, Authenticode, Azure signing, external TUF는 실제 안정 릴리�
 완료: `P7-046` 영·한 README, `P7-047` bilingual setup, `P7-043` Linux musl
 x86_64·arm64 qualification, `P7-049` 설치 소유자 기반 대화형 `hive update`.
 
-`ef55325` candidate `30647361507`의 target 5개·npm tarball
-6개 PASS. 게시 실행 `30647959771` 선행 검사 PASS 뒤 첫 게시에서
-npm `E403`. 원인: 2FA 우회 권한 없는 `NPM_TOKEN`. 등록 0건.
+완료:
 
-1. `NPM_TOKEN`을 6개 package 게시·2FA 우회 권한의 granular token으로 교체
-2. 기존 candidate run `30647361507`을 입력으로 `release-publish.yml` 재실행·승인
-3. 6개 `0.8.0-test.1|test` 등록과 native smoke 확인
-4. npm·Unix·PowerShell·CMD clean install·repeat·recovery와 `P7-018`·`P7-020`·
-   `P7-037`·`P7-044`·`P7-045` 검증
-5. 시험 배포 성공 commit의 `develop` → `main` PR 병합
+- PR #13을 `develop` exact `420e244`로 병합
+- Candidate run `30657669889`: 5개 native target·6개 npm tarball·installer·
+  SHA-256·attestation·byte identity PASS
+- Publication run `30658188721`: exact `0.8.0` 여섯 package와
+  `latest=0.8.0` PASS, 기존 `test=0.8.0-test.1` 보존
+- 실제 Windows npm·CMD clean install·repeat·pending receipt recovery PASS
+- npm·direct native SHA-256:
+  `330f4e0c8da5b6347400b9b16a9f76b2fb4f94406a2eacfe8c641367ca344ef9`
+
+다음 작업: npm 배포 성공 commit의 `develop` → `main` PR 병합.
 
 ## Candidate branch authority 경계
 
-- 사용자 순서: 시험 배포 성공 뒤 `develop` → `main` 병합
+- 사용자 순서: npm 배포 성공 뒤 `develop` → `main` 병합
 - Workflow authority: protected `develop` candidate 한정
 - Current ruleset: `develop`에 PR·필수 검사·삭제·강제 push 차단 적용
 - Current publication environment: 필수 검토자 `gvm1229`, 자기 배포 승인 가능
@@ -156,12 +157,12 @@ npm `E403`. 원인: 2FA 우회 권한 없는 `NPM_TOKEN`. 등록 0건.
 - 5개 target artifact와 expected architecture 일치
 - Candidate archive와 npm-installed binary의 SHA-256 byte identity
 - npm exact/test와 curl·PowerShell·CMD clean install·repeat update·recovery PASS
-- GitHub Release·prerelease·release tag 0건, npm `latest` 이동 0건
+- GitHub Release·prerelease·release tag 0건, npm `latest=0.8.0`
 - Auto check가 24시간 success throttle과 offline next-session retry를 만족
 - Bare `hive update`가 확인·질문·동의·설치·재검증 순서를 만족
 - English·Korean initial setup과 global guidance byte fixture PASS
 - Consumer runtime의 Node.js·PowerShell 7 dependency 0건
-- Exact product `0.8.0`과 npm package `0.8.0-test.N` 결합 검증,
+- Exact product와 npm package `0.8.0` 결합 검증,
   clean-clone 전체 CI PASS
 - Codex·Antigravity 실제 host 회귀 PASS
 - Claude Code 미검증 상태와 signing deferred 범위 공개
@@ -171,13 +172,12 @@ npm `E403`. 원인: 2FA 우회 권한 없는 `NPM_TOKEN`. 등록 0건.
 - npm 로그인·2FA·organization, 최초 등록용 2FA 우회 granular token과 6개 Trusted Publisher
 - `release-publication` 필수 검토자 설정과 publication 승인
 - Credential·private signing material 접근 금지
-- npm `latest`, GitHub Release, 안정 릴리스는 별도 사용자 승인 전 금지
+- GitHub Release와 release tag는 별도 사용자 승인 전 금지
 - Exact `1.0.0` 별도 명시 전 major release 준비 금지
 
-## 후속 안정 릴리스
+## 후속 GitHub 릴리스
 
-- 사용자가 승인할 안정 `0.8.x` exact version 결정
-- npm `latest` 이동과 기본 install 명령 전환
+- 사용자가 승인할 후속 `0.8.x` exact version 결정
 - GitHub normal release 필요 여부 재승인
 - macOS Developer ID signing·notarization
 - Windows Authenticode 또는 Azure Artifact Signing

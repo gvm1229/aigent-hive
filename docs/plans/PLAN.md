@@ -1,6 +1,6 @@
 # Aigent Hive active plan index
 
-> Revision: 1.83
+> Revision: 1.84
 > 기준일: 2026-08-01
 > Product version: `0.8.0`
 > 현재 milestone: Phase 7 qualification + global onboarding·shared index `0.8.0`
@@ -9,17 +9,17 @@
 ## Goal parameters
 
 - Objective: `Aigent Hive 0.8.0` 후보의 Linux·macOS·Windows native artifact,
-  npm `0.8.0-test.N`·직접 설치 시험, bilingual onboarding, update
+  npm 정식 `0.8.0`·직접 설치 검증, bilingual onboarding, update
   discovery·activation과 provenance gate 완료
 - Queued `0.9.0`: host-native loop·Wiki·Skill suite·전역 RAG·knowledge 이식·scan
 - Success: Mandatory user setup, global preference 기반 expedited/custom project setup,
   user-root 단일 SQLite, 세 host selected Skill projection, Wiki default-on opt-out,
   usage guard opt-in `20%`, native-first·CodexBar fallback-only, consumer
   PowerShell 5.1·`cmd.exe`, source-only PowerShell 7, Linux musl x86_64·arm64,
-  first `aigent-hive@0.8.0-test.1`, SHA-256·GitHub attestation과 실제 Windows
+  `aigent-hive@0.8.0`, SHA-256·GitHub attestation과 실제 Windows
   acceptance
-- Stop boundary: GitHub Release·npm `latest`, protected credential, exact `1.0.0`
-  authority, 현재 source usage guard remaining `5%`
+- Stop boundary: GitHub Release·Git tag, protected credential, exact `1.0.0`
+  authority, 현재 source usage guard remaining `60%`
 - Invariants: provider-neutral, canonical Markdown 우선, OMX/OMC replaceable adapter,
   ownership·consent·foreign byte 보존, provider API·credential 경로 없음, force-push 없음,
   explicit-only major, scheduler·tmux·Stop continuation 없음
@@ -32,7 +32,7 @@
 | 범위 | 완료 | 미완료 | 진행률 |
 | --- | ---: | ---: | ---: |
 | Phase 0–6 | 70 | 0 | 100% |
-| Phase 7 | 44 | 5 | 89.8% |
+| Phase 7 | 49 | 0 | 100% |
 | User plugin/project lifecycle | 38 | 0 | 100% |
 | Host-native usage sensors | 24 | 0 | 100% |
 | Global onboarding·shared index | 19 | 0 | 100% |
@@ -44,7 +44,7 @@
 | v0.9 loop·Wiki·Skill suite | 0 | 25 | 0% |
 | v0.9 global knowledge RAG | 0 | 20 | 0% |
 | v0.9 knowledge portability·scan | 0 | 18 | 0% |
-| **Canonical total** | **223** | **68** | **76.6%** |
+| **Canonical total** | **228** | **63** | **78.4%** |
 
 External production boundary 항목도 미완료 합계에 포함. Protected authority 없이 완료 처리 금지.
 
@@ -66,11 +66,14 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
   미검증 범위 명시, 투영 시험 PASS
 - Opt-in daily update check의 24시간 success throttle, offline next-session retry,
   fixed npm metadata endpoint와 no-install contract
-- Bare `hive update`의 npm `test` 확인, npm·direct owner 인증, 선택 언어 prompt,
+- Bare `hive update`의 npm `latest` 확인, legacy test·stable npm·direct owner 인증,
+  선택 언어 prompt,
   명시적 수락 뒤 exact adapter 실행과 owner·version 재검증
 - 독립 final blocker review: critical·high·medium·low finding `0`건
-- Remote candidate `30647361507`의 5개 target·6개 npm PASS. Publication
-  `30647959771`: 선행 검사 PASS, 2FA 우회 token 부재로 등록 0건
+- npm publication `30658188721`: exact `0.8.0` 여섯 package·provenance·
+  `latest=0.8.0` PASS. 기존 `test=0.8.0-test.1` 보존
+- 실제 Windows npm·CMD clean install, repeat, pending receipt recovery PASS. npm·direct
+  native SHA-256 `330f4e0c8da5b6347400b9b16a9f76b2fb4f94406a2eacfe8c641367ca344ef9`
 
 ## Required load order
 
@@ -119,14 +122,15 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
 
 ## Current execution order
 
-완료된 선행 조건: PR #8–12 병합, exact `ef55325` candidate `30647361507` PASS,
-publication `30647959771`의 npm 쓰기 직전까지 모든 gate PASS.
+완료: PR #13 병합, exact `420e244` candidate run `30657669889`, publication run
+`30658188721`, npm·Unix·PowerShell·CMD 계약과 실제 Windows clean install·repeat·
+recovery 검증.
 
-1. `NPM_TOKEN`을 6개 package 게시·2FA 우회 권한의 granular token으로 교체
-2. 기존 candidate `30647361507`로 `release-publish.yml` 재실행·승인
-3. npm·Unix·PowerShell·CMD clean install·repeat·recovery와 P7 미완료 5개 검증
-4. 시험 배포 성공 commit의 `develop` → `main` PR 병합
-5. 별도 지시 뒤 V9-025 → KPX-001–007 → `RAG-*` → KPX-008–018 → 잔여 `V9-*`
+1. V9-025: orchestration owner 전환과 OMX/OMC inventory
+2. KPX-001–007: bundle·identity·schema·import safety
+3. RAG-001–020: 전역 retrieval·capture·freshness
+4. KPX-008–018: scan·promotion·automatic query
+5. V9-001–024: loop·Wiki·utility Skill·qualification
 
 ## `0.8.0` 비차단 deferred boundary
 
@@ -135,4 +139,4 @@ publication `30647959771`의 npm 쓰기 직전까지 모든 gate PASS.
 - 실제 Claude protected session E2E와 Pro/Max usage parity
 - Externally signed TUF production authorization
 - Exact `1.0.0` 사용자 authority
-- GitHub normal release와 npm `latest` 안정 channel
+- GitHub normal release와 Git tag

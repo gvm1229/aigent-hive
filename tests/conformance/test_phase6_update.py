@@ -404,15 +404,17 @@ class Phase6StaticContracts(unittest.TestCase):
             "dist/install.cmd",
             "npm publish",
             "--provenance",
-            "--tag test",
+            "--tag latest",
             "release-publication",
             'test "$PRODUCT_VERSION" = "0.8.0"',
-            "PRODUCT_VERSION-test.N",
+            'test "$PACKAGE_VERSION" = "$PRODUCT_VERSION"',
             'head_branch <<<"$metadata")" = "develop"',
             "bootstrap_with_token",
             "secrets.NPM_TOKEN",
             "NODE_AUTH_TOKEN",
             "!inputs.bootstrap_with_token",
+            'npm view "$package" "dist-tags.$tag"',
+            'read_tag "$package" latest',
             "differs from approved candidate",
             "required release notes are missing",
             'sha256sum --check --strict "$archive.sha256"',
@@ -432,6 +434,8 @@ class Phase6StaticContracts(unittest.TestCase):
         )
         self.assertEqual(publication.count('npm publish "./dist/'), 12)
         self.assertNotIn('npm publish "dist/', publication)
+        self.assertNotIn("npm dist-tag add", publication)
+        self.assertNotIn('npm dist-tag ls "$package" --json', publication)
         for forbidden in (
             "gh release create",
             "npm publish",
@@ -441,7 +445,6 @@ class Phase6StaticContracts(unittest.TestCase):
             "APPLE_CERTIFICATE",
             "ARTIFACT_SIGNING",
             "gh release create",
-            "--tag latest",
         ):
             self.assertNotIn(forbidden, candidate)
         for forbidden in (
@@ -453,7 +456,6 @@ class Phase6StaticContracts(unittest.TestCase):
             "azure/artifact-signing-action@",
             "gh release create",
             "gh release edit",
-            "--tag latest",
         ):
             self.assertNotIn(forbidden, publication)
         self.assertNotIn("eval ", candidate + publication)
@@ -604,11 +606,11 @@ class Phase6StaticContracts(unittest.TestCase):
         self,
     ) -> None:
         targets = {
-            "aarch64-apple-darwin": "aigent-hive-darwin-arm64-0.8.0-test.1.tgz",
-            "x86_64-apple-darwin": "aigent-hive-darwin-x64-0.8.0-test.1.tgz",
-            "aarch64-unknown-linux-musl": "aigent-hive-linux-arm64-0.8.0-test.1.tgz",
-            "x86_64-unknown-linux-musl": "aigent-hive-linux-x64-0.8.0-test.1.tgz",
-            "x86_64-pc-windows-msvc": "aigent-hive-win32-x64-0.8.0-test.1.tgz",
+            "aarch64-apple-darwin": "aigent-hive-darwin-arm64-0.8.0.tgz",
+            "x86_64-apple-darwin": "aigent-hive-darwin-x64-0.8.0.tgz",
+            "aarch64-unknown-linux-musl": "aigent-hive-linux-arm64-0.8.0.tgz",
+            "x86_64-unknown-linux-musl": "aigent-hive-linux-x64-0.8.0.tgz",
+            "x86_64-pc-windows-msvc": "aigent-hive-win32-x64-0.8.0.tgz",
         }
         with tempfile.TemporaryDirectory(prefix="hive-installers-") as temporary:
             root = Path(temporary)
@@ -625,7 +627,7 @@ class Phase6StaticContracts(unittest.TestCase):
                     "--product-version",
                     "0.8.0",
                     "--package-version",
-                    "0.8.0-test.1",
+                    "0.8.0",
                     "--dist",
                     str(dist),
                     "--output",
@@ -643,7 +645,7 @@ class Phase6StaticContracts(unittest.TestCase):
             )
             self.assertIn("embedded_product_version='0.8.0'", shell)
             self.assertIn(
-                "embedded_package_version='0.8.0-test.1'",
+                "embedded_package_version='0.8.0'",
                 shell,
             )
             self.assertIn("npm_package=linux-x64", shell)
@@ -651,12 +653,12 @@ class Phase6StaticContracts(unittest.TestCase):
             self.assertNotIn("$archive.sha256", shell)
             self.assertIn('[string]$Version = "0.8.0"', powershell)
             self.assertIn(
-                '[string]$PackageVersion = "0.8.0-test.1"',
+                '[string]$PackageVersion = "0.8.0"',
                 powershell,
             )
             self.assertNotIn("$archive.sha256", powershell)
             self.assertIn(
-                'set "HIVE_INSTALL_PACKAGE_VERSION=0.8.0-test.1"',
+                'set "HIVE_INSTALL_PACKAGE_VERSION=0.8.0"',
                 cmd,
             )
             self.assertIn(
@@ -740,7 +742,8 @@ class Phase6StaticContracts(unittest.TestCase):
         self.assertNotIn("Move-Item", powershell)
         self.assertNotRegex(powershell, r"catch\s*\{\s*\}")
         self.assertIn("install-receipt.pending.json", powershell)
-        self.assertIn("Get-FileHash -LiteralPath $Destination", powershell)
+        self.assertIn("function Get-FileSha256", powershell)
+        self.assertNotIn("Get-FileHash", powershell)
         self.assertIn(
             '$priorReceipt.artifact_sha256 -ne "sha256:$priorDigest"',
             powershell,
@@ -1060,6 +1063,7 @@ $ast = [Management.Automation.Language.Parser]::ParseFile(
 if ($errors.Count -ne 0) { throw ($errors | Out-String) }
 foreach ($name in @(
     "Test-HiveVersionOutput",
+    "Get-FileSha256",
     "Get-ValidatedDirectReceipt",
     "Assert-ExistingDirectInstall",
     "Assert-AuthorizedAuthenticodeSignature",
@@ -1077,6 +1081,23 @@ foreach ($name in @(
     )
     if ($null -eq $function) { throw "installer validation function missing: $name" }
     Invoke-Expression $function.Extent.Text
+}
+$hashProbe = Join-Path ([IO.Path]::GetTempPath()) (
+    "hive-sha256-" + [Guid]::NewGuid().ToString()
+)
+try {
+    [IO.File]::WriteAllBytes(
+        $hashProbe,
+        [Text.Encoding]::UTF8.GetBytes("abc")
+    )
+    if (
+        (Get-FileSha256 -Path $hashProbe) -ne
+        "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+    ) {
+        throw "module-independent SHA-256 mismatch"
+    }
+} finally {
+    if ([IO.File]::Exists($hashProbe)) { [IO.File]::Delete($hashProbe) }
 }
 if (-not (Test-HiveVersionOutput `
     -Output "hive 0.7.0 (released 2026-07-24)" `
@@ -1326,9 +1347,7 @@ try {
     $transactionReceipt = Join-Path $transactionRoot "install-receipt.json"
     $pendingReceipt = Join-Path $transactionRoot "install-receipt.pending.json"
     Set-Content -LiteralPath $transactionBinary -Value "new binary" -Encoding utf8
-    $transactionDigest = (
-        Get-FileHash -LiteralPath $transactionBinary -Algorithm SHA256
-    ).Hash.ToLowerInvariant()
+    $transactionDigest = Get-FileSha256 -Path $transactionBinary
     @{
         schema_version = 1
         owner = "direct"

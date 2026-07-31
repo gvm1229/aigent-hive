@@ -56,8 +56,9 @@
 | Update transaction | [en](en/update-transaction.md) | [ko](ko/update-transaction.md) |
 | Update discovery | [en](en/update-discovery.md) | [ko](ko/update-discovery.md) |
 | Interactive binary update | [en](en/interactive-binary-update.md) | [ko](ko/interactive-binary-update.md) |
+| Windows PowerShell module isolation | [en](en/windows-powershell-module-isolation.md) | [ko](ko/windows-powershell-module-isolation.md) |
 | Version policy | [en](en/version-policy.md) | [ko](ko/version-policy.md) |
-| `0.8.0` test distribution | [en](en/test-distribution.md) | [ko](ko/test-distribution.md) |
+| npm `0.8.0` distribution | [en](en/test-distribution.md) | [ko](ko/test-distribution.md) |
 | Source development | [en](en/source-development.md) | [ko](ko/source-development.md) |
 | Marketing deck record | [en](en/marketing-deck-record.md) | [ko](ko/marketing-deck-record.md) |
 | v0.9 Skill suite 계획 | [en](en/v0-9-skill-suite-plan.md) | [ko](ko/v0-9-skill-suite-plan.md) |

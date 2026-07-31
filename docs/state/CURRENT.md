@@ -2,10 +2,10 @@
 
 - 기준 branch: `develop`
 - product version: `0.8.0`
-- plan revision: `1.83`
-- 현재 milestone: Phase 7 qualification + global onboarding·shared index `0.8.0`
-- 현재 작업: `0.8.0` 제품 후보와 `0.8.0-test.N` npm 시험판 분리·배포 준비
-- 외부 중지 경계: GitHub Release·npm `latest`, protected signing/publication credential,
+- plan revision: `1.84`
+- 현재 milestone: `0.9.0` host-native loop·Wiki·Skill suite·전역 knowledge
+- 현재 작업: v0.9.0 active plan 전체 구현·검증
+- 외부 중지 경계: GitHub Release·Git tag, protected signing/publication credential,
   exact `1.0.0` 사용자 authority
 - Plan load: compact `docs/plans/PLAN.md` + `docs/plans/phases/07-public-qualification.md`
   + `docs/plans/active/plugin-project-lifecycle.md`
@@ -19,17 +19,20 @@
   + `docs/plans/active/v0.9.0-loop-wiki-skills.md`
   + `docs/plans/active/v0.9.0-global-knowledge-rag.md`
   + `docs/plans/active/v0.9.0-knowledge-portability-scan.md`
-- Plan completion: canonical checklist `223/291` 완료, `68`개 미완료, `76.6%`
+- Plan completion: canonical checklist `228/291` 완료, `63`개 미완료, `78.4%`
 - Latest local Windows: Rust workspace 458개 실행·통과. Python 적합성 618개 발견 중
   576개 실제 실행·통과, 42개 미실행. 미실행 범위: 관리자 권한 없는 Windows의
   symbolic link 생성 제약 16개, POSIX·Unix 전용 동작 19개, macOS 전용 설치·서명
   동작 7개. 운영체제 판별: Windows. 미실행 42개: 이 컴퓨터에서 검증 완료로
   판단할 근거 불충분. PowerShell 5.1·7.6.4 installer와 `cmd.exe`
   bootstrap 계약은 이 Windows 컴퓨터에서 실제 실행·통과
-- Latest native remote: `baff938`의 run `30581894132`, macOS·Linux·Windows
-  5/5 PASS
-- Latest local npm: 제품 `0.8.0`·npm `0.8.0-test.1` 분리 포장 계약,
-  platform·umbrella tarball과 격리 전역 설치 smoke PASS
+- Latest native remote: exact `420e244`의 candidate run `30657669889`,
+  macOS·Linux·Windows 5/5와 npm umbrella PASS
+- Latest npm publication: run `30658188721`, exact `0.8.0` 여섯 package,
+  `latest=0.8.0`, 기존 `test=0.8.0-test.1`, provenance PASS
+- Actual Windows public install: npm·CMD clean install, repeat, pending receipt recovery,
+  product·receipt `0.8.0`, npm·direct SHA-256
+  `330f4e0c8da5b6347400b9b16a9f76b2fb4f94406a2eacfe8c641367ca344ef9`
 - Native Goal routing: legacy `PLAN.md` checkbox 문구를 `phases/07-public-qualification.md`,
   `active/plugin-project-lifecycle.md`, `active/native-usage-sensor.md`,
   `active/user-onboarding-shared-index.md`, `active/source-docs-wiki.md`,
@@ -267,14 +270,14 @@ Target: `0.8.0`
 - Source `hive-prompt-refine` projection, explicit refine-only routing,
   모호성·핵심 세부 부족 prompt의 optional refine 제안
 
-`0.8.0` 시험 배포 gap:
+`0.8.0` npm 배포 gap:
 
 - Interactive owner-aware `hive update`
 - Linux x86_64·arm64 musl native build·install·runtime qualification
-- `aigent-hive@0.8.0-test.N|test` package family와 registry publication
+- `aigent-hive@0.8.0|latest` package family와 registry publication
 - Unix·PowerShell·CMD npm-backed 직접 installer
 - 5개 target SHA-256·GitHub artifact attestation·npm binary identity
-- Exact product `0.8.0` candidate qualification과 npm `0.8.0-test.N|test` publication
+- Exact product·npm `0.8.0` candidate qualification과 `latest` publication
 
 Pre-1.0 비차단 deferred:
 
@@ -365,7 +368,7 @@ Pre-1.0 비차단 deferred:
 
 - Source-only `hive-usage-guard` Skill과 15초 native Codex app-server primary·CodexBar
   fallback-only watcher
-- 현재 session threshold: remaining `5%` inclusive
+- 현재 session threshold: remaining `60%` inclusive
 - Session window 우선, session 부재 시 weekly fallback
 - Quota sensor unknown: 3초 뒤 1회 재시도, 반복 unknown은 observation 보존과
   `transient_unknown_ignored` 진행, confirmed-limited marker 유지
@@ -519,50 +522,42 @@ Current remote qualification evidence:
   Windows 환경에서 실행 불가하여 미실행이며 macOS 동작은 이 결과로 미검증
 - Direct installer의 같은 owner parent handle-pinning race
 
-## `0.8.0` 시험 배포 gate
+## `0.8.0` npm 배포 완료
 
-- P7-044 public npm package family와 native smoke
-- P7-045 npm-backed Unix·PowerShell·CMD installer와 digest·owner receipt 검증
+- P7-044 public npm package family와 native smoke 완료
+- P7-045 npm-backed Unix·PowerShell·CMD installer와 digest·owner receipt 검증 완료
 - P7-049 설치 소유자 기반 대화형 `hive update` 완료
-- P7-020 5개 target archive·npm tarball provenance
-- P7-018 exact `0.8.0` release candidate qualification
-- P7-037 GitHub Release 없이 npm `0.8.0-test.N|test` publication·clean install
+- P7-020 5개 target archive·npm tarball provenance 완료
+- P7-018 exact `0.8.0` release candidate qualification 완료
+- P7-037 GitHub Release 없이 npm `0.8.0|latest` publication·clean install 완료
 
-Candidate trust blocker:
+배포 증거:
 
-- Current source product version `0.8.0`; exact protected `develop` candidate 검증 완료
-- 사용자 지정 순서: npm 시험 배포 성공 뒤 `develop` → `main` 병합
+- Current source·npm product version `0.8.0`
+- 사용자 지정 순서: npm `0.8.0` 배포 성공 뒤 `develop` → `main` 병합
 - Candidate authority: PR·필수 상태 검사·삭제·강제 push 차단이 적용된 exact `develop`
 - Current GitHub ruleset: `develop` 보호 활성, 우회 권한 없음
 - Current publication environment: `release-publication` 필수 검토자 `gvm1229` 설정
   확인, 자기 배포 승인 차단 비활성
 - Branch policy: `codex/release-0.8.0` 임시 branch 생성·push와 `develop` 대상 PR
   사용자 예외 승인 완료. `develop` 직접 push는 보호 규칙상 불가
-- Latest candidate run `30647361507`: exact `develop` commit
-  `ef5532564612e9e484b4fcd786551056c639a38f`, 5개 native target·6개 npm tarball PASS
-- Latest publication run `30647959771`: 후보·출시 안내·checksum·attestation·npm
-  manifest·native byte identity·version 부재 검사 PASS. 첫
-  `@aigent-hive/darwin-arm64@0.8.0-test.1` 게시에서 npm `E403`
-- 실패 원인: `NPM_TOKEN`에 npm의 2FA 우회 게시 권한 부재. Codex process PID,
-  source usage guard, 후보 artifact와 무관
-- 게시 결과: 첫 package 등록 실패, 뒤 5개 게시 명령 미실행, 6개 exact version
-  registry 조회 E404
-- `release.yml`: 보호된 정확한 `develop` 커밋에서 제품 `0.8.0`과 npm
-  `0.8.0-test.N`을 별도 입력으로 받아 5개 target·6개 npm tarball·embedded
-  installer candidate 생성. Latest remote matrix PASS
-- `release-publish.yml`: GitHub Release·npm `latest` 0건과 6개 package `test` 전용
-  publication 계약 구현. 성공한 정확한 `develop` 후보만 허용. 최초 등록은 명시적
+- First candidate run `30633581092`: exact `develop` commit `1031ff0`, 5개 native
+  target·6개 npm tarball PASS
+- First publication run `30634201469`: `release-publication` 승인 PASS,
+  `docs/releases/0.8.0.md` 누락으로 npm 게시 전 실패, npm publish 실행 0건
+- Corrective branch: 제품 후보 출시 안내, 명확한 게시 선행 검사 오류, Codex process
+  교체 뒤 source watcher 복구와 회귀 시험
+- `release.yml`: protected exact `420e244`, run `30657669889` PASS
+- `release-publish.yml`: GitHub Release 0건과 6개 package `latest` publication 계약으로
+  전환. 성공한 정확한 `develop` 후보만 허용. 최초 등록은 명시적
   `bootstrap_with_token=true`·임시 `NPM_TOKEN`, 이후는 OIDC 전용
-- Direct installer: `0.8.0-test.N` umbrella의 unpkg bootstrap과 scoped npm
-  tarball digest 검증 뒤 native 제품 `0.8.0` 확인. 실제 registry clean install은
-  publication 뒤 검증
+- Direct installer: exact `0.8.0` unpkg bootstrap, scoped npm tarball digest,
+  native 제품·receipt `0.8.0`, polluted `PSModulePath` CMD 회귀 PASS
 - GitHub repository environment `release-publication` 1개, 최초 등록용
   `NPM_TOKEN` secret 1개
 - Local npm: Node.js `24.13.1`, npm `11.17.0`, registry 사용자 `gvm1229`
-- npm `aigent-hive`·`@aigent-hive/*` name·scope 신규 등록 권한은 실제 publication
-  전까지 미확정
-- Public registry 조회: umbrella·5개 scoped package 모두 E404,
-  name·scope ownership 증거로 사용 금지
+- Public registry: umbrella·5개 scoped package exact·latest `0.8.0`, test
+  `0.8.0-test.1`
 - Local Windows npm baseline: actual `0.8.0` binary의 platform·umbrella pack,
   isolated global install과 digest
   `a8bdb5d7dd42965ec6f4d2f1f334a4ee4184a7f659f09cb92caf794b96524b0d`
@@ -576,14 +571,13 @@ Pre-1.0 비차단 deferred:
 - Windows Authenticode 또는 Azure Artifact Signing
 - External TUF production authorization
 - 실제 Claude subscription-backed install·usage parity
-- GitHub normal release와 npm `latest`
+- GitHub normal release와 Git tag
 - Exact `1.0.0` 사용자 지시 전 stable major preparation 금지
 
 ## 다음 action
 
-1. `release-publication`의 `NPM_TOKEN`을 6개 package 게시 권한과 2FA 우회를 갖춘
-   granular access token으로 교체
-2. 기존 candidate run `30647361507`을 입력으로 `release-publish.yml` 재실행·승인
-3. 6개 `0.8.0-test.1|test` 등록과 native smoke 확인
-4. npm·Unix·PowerShell·CMD clean install·repeat·recovery와 P7-018·020·037·044·045 검증
-5. 시험 배포 성공 commit의 `develop` → `main` PR 병합
+1. V9-025 orchestration owner 전환과 capability inventory
+2. KPX-001–007 portable bundle·collection schema·safe import
+3. RAG-001–020 automatic retrieval·mandatory capture·freshness
+4. KPX-008–018 directory scan·promotion·automatic query
+5. V9-001–024 loop·Wiki·utility Skill·전체 qualification
