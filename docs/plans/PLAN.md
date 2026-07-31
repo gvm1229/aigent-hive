@@ -1,6 +1,6 @@
 # Aigent Hive active plan index
 
-> Revision: 1.79
+> Revision: 1.80
 > 기준일: 2026-07-31
 > Product version: `0.8.0`
 > 현재 milestone: Phase 7 qualification + global onboarding·shared index `0.8.0`
@@ -11,6 +11,8 @@
 - Objective: `Aigent Hive 0.8.0` 후보의 Linux·macOS·Windows native artifact,
   npm `0.8.0-test.N`·직접 설치 시험, bilingual onboarding, update
   discovery·activation과 provenance gate 완료
+- Queued objective: `0.8.0` 시험 배포 완료 뒤 `0.9.0` host-native loop
+  engineering·통합 Wiki·초기 Skill suite 구현·검증
 - Success: Mandatory user setup, global preference 기반 expedited/custom project setup,
   user-root 단일 SQLite, 세 host selected Skill projection, Wiki default-on opt-out,
   usage guard opt-in `20%`, native-first·CodexBar fallback-only, consumer
@@ -21,7 +23,7 @@
   authority, 현재 source usage guard remaining `30%`
 - Invariants: provider-neutral, canonical Markdown 우선, OMX/OMC replaceable adapter,
   ownership·consent·foreign byte 보존, provider API·credential 경로 없음, force-push 없음,
-  explicit-only major
+  explicit-only major, scheduler·tmux·Stop continuation 없음
 - Native Goal compatibility: 변경 불가 objective의 “unchecked item in `docs/plans/PLAN.md`”는 `PLAN.md` 내부 checkbox가 아니라 아래 `Active fragments`의 unchecked item을 뜻함
 
 ## Completion index
@@ -40,7 +42,8 @@
 | 문서 말투 | 6 | 0 | 100% |
 | Security review | 4 | 0 | 100% |
 | Docs Wiki migration | 4 | 0 | 100% |
-| **Canonical total** | **223** | **5** | **97.8%** |
+| v0.9 loop·Wiki·Skill suite | 0 | 24 | 0% |
+| **Canonical total** | **223** | **29** | **88.5%** |
 
 External production boundary 항목도 미완료 합계에 포함. Protected authority 없이 완료 처리 금지.
 
@@ -52,11 +55,6 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
   fresh-session 중복 warning 0건
 - 실제 Windows 11 x86_64: Codex user install·global setup·project auto onboarding,
   shared index 1개 project, repeat update·rollback·재검증 PASS
-- Current native runtime: `baff938` run `30581894132`, Linux musl x86_64·arm64를
-  포함한 macOS·Linux·Windows 5/5 PASS
-- Local npm packaging: current `0.8.0` Windows native binary의 platform·umbrella
-  tarball 생성, isolated global install, `hive --version`, source/package binary
-  SHA-256 byte identity PASS
 - Windows shell: WSI-001–003 완료, consumer PowerShell 7 dependency 0건,
   source dependency helper의 exact WinGet preview·동의·재검증 PASS
 - Strict Clippy all targets·all features, format check PASS
@@ -74,8 +72,8 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
 - Bare `hive update`의 npm `test` 확인, npm·direct owner 인증, 선택 언어 prompt,
   명시적 수락 뒤 exact adapter 실행과 owner·version 재검증
 - 독립 final blocker review: critical·high·medium·low finding `0`건
-- Runs: candidate `30633581092` exact `1031ff0` 5개 target·6개 npm PASS;
-  publication `30634201469` 승인 PASS, 출시 안내 누락으로 게시 전 실패·npm publish 0건
+- Remote candidate `30647361507`의 5개 target·6개 npm PASS. Publication
+  `30647959771`: 선행 검사 PASS, 2FA 우회 token 부재로 등록 0건
 
 ## Required load order
 
@@ -101,6 +99,7 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
 | [`active/security-review.md`](active/security-review.md) | `SEC-*` | 독립 code·security review finding completion gate |
 | [`active/docs-wiki-migration.md`](active/docs-wiki-migration.md) | `DWK-*` | 지식 보존과 `docs/` Wiki·atomic fact 전환 |
 | [`active/release-0.8.0.md`](active/release-0.8.0.md) | `P7-*` reference | `0.8.0` Linux·npm·직접 설치 실행 순서와 범위 |
+| [`active/v0.9.0-loop-wiki-skills.md`](active/v0.9.0-loop-wiki-skills.md) | `V9-*` | Host-native graph engineering·통합 Wiki·초기 Skill suite |
 
 ## Reconciliation gate
 
@@ -121,15 +120,14 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
 
 ## Current execution order
 
-완료된 선행 조건: `release-publication` 필수 검토자 설정, 임시
-`codex/release-0.8.0` 브랜치·`develop` 대상 PR 사용자 승인, PR #8 병합,
-첫 candidate run 성공과 첫 publication run의 npm 게시 전 실패 원인 확인.
+완료된 선행 조건: PR #8–12 병합, exact `ef55325` candidate `30647361507` PASS,
+publication `30647959771`의 npm 쓰기 직전까지 모든 gate PASS.
 
-1. 출시 안내·게시 오류 진단·감시기 복구 수정 branch push와 `develop` 대상 PR 병합
-2. 새 exact `develop` commit의 `release.yml` 재실행과 P7-044·045·020·018 검증
-3. `release-publish.yml` 승인과 npm `0.8.0-test.1|test` 게시
-4. npm·Unix·PowerShell·CMD clean install·repeat·recovery 검증과 P7-037 완료
-5. 시험 배포 성공 commit의 `develop` → `main` PR 병합
+1. `NPM_TOKEN`을 6개 package 게시·2FA 우회 권한의 granular token으로 교체
+2. 기존 candidate `30647361507`로 `release-publish.yml` 재실행·승인
+3. npm·Unix·PowerShell·CMD clean install·repeat·recovery와 P7 미완료 5개 검증
+4. 시험 배포 성공 commit의 `develop` → `main` PR 병합
+5. 별도 구현 시작 지시 뒤 V9-001–024 순차 실행
 
 ## `0.8.0` 비차단 deferred boundary
 

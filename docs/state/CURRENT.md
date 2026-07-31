@@ -2,7 +2,7 @@
 
 - 기준 branch: `develop`
 - product version: `0.8.0`
-- plan revision: `1.79`
+- plan revision: `1.80`
 - 현재 milestone: Phase 7 qualification + global onboarding·shared index `0.8.0`
 - 현재 작업: `0.8.0` 제품 후보와 `0.8.0-test.N` npm 시험판 분리·배포 준비
 - 외부 중지 경계: GitHub Release·npm `latest`, protected signing/publication credential,
@@ -16,7 +16,8 @@
   + `docs/plans/active/documentation-style.md` + `docs/plans/active/security-review.md`
   + `docs/plans/active/docs-wiki-migration.md`
   + `docs/plans/active/release-0.8.0.md`
-- Plan completion: canonical checklist `223/228` 완료, `5`개 미완료, `97.8%`
+  + `docs/plans/active/v0.9.0-loop-wiki-skills.md`
+- Plan completion: canonical checklist `223/252` 완료, `29`개 미완료, `88.5%`
 - Latest local Windows: Rust workspace 458개 실행·통과. Python 적합성 618개 발견 중
   576개 실제 실행·통과, 42개 미실행. 미실행 범위: 관리자 권한 없는 Windows의
   symbolic link 생성 제약 16개, POSIX·Unix 전용 동작 19개, macOS 전용 설치·서명
@@ -33,7 +34,23 @@
   `active/windows-shell-install.md`,
   `active/documentation-style.md`, `active/security-review.md`,
   `active/docs-wiki-migration.md`,
-  `active/release-0.8.0.md`로 해석
+  `active/release-0.8.0.md`, `active/v0.9.0-loop-wiki-skills.md`로 해석
+
+## v0.9.0 계획
+
+- 상태: 계획 승인, 구현 미착수
+- 결정: [`ADR-0015`](../decisions/ADR-0015-host-native-skill-composition.md) proposed
+- Active fragment:
+  [`v0.9.0-loop-wiki-skills.md`](../plans/active/v0.9.0-loop-wiki-skills.md)
+- 범위: `hive-loop-engineering`, `hive-wiki`, `ai-slop-cleaner`,
+  `best-practice-research`, 기존 run·role·usage·judge Skill 조합
+- Loop 계약: host-native subagent·goal·hook capability, DAG·cycle detection·bounded
+  retry·evidence edge·independent verification·dynamic steering·terminal state
+- Wiki 계약: `add|query|lint|list|read|delete|refresh`, keyword·tag·category,
+  taxonomy, `[[wikilink]]`, agent-reviewed quick-add
+- 금지 경계: scheduler·model runtime·tmux·Stop continuation·`omx_wiki`·`omx`
+  command·raw session 자동 수집 0건
+- 실행 경계: `0.8.0` 시험 배포와 `develop`→`main` 완료 뒤 별도 구현 시작 지시
 
 ## `docs/` Wiki 전환
 

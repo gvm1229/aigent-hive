@@ -143,3 +143,4 @@ Fact별 catalog는 migration 완료 뒤 이 section과 [Fact 안내](facts/READM
 | [Security review](plans/active/security-review.md) | Security finding gate |
 | [Docs Wiki migration](plans/active/docs-wiki-migration.md) | Knowledge preservation·path migration |
 | [`0.8.0` release](plans/active/release-0.8.0.md) | Test distribution execution |
+| [v0.9 loop·Wiki·Skill suite](plans/active/v0.9.0-loop-wiki-skills.md) | Host-native graph engineering 계획 |
