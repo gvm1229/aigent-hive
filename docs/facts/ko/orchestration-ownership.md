@@ -5,18 +5,20 @@ topic_slug: orchestration-ownership
 language: ko
 counterpart: ../en/orchestration-ownership.md
 title: "Orchestration ownership"
-summary: "Compatible OMX·OMC 우선, 그 외 host-native owner."
+summary: "0.8 기존 run의 owner pin 유지, v0.9 새 run의 검증된 host-native capability 기본값."
 tags: [orchestration, ownership]
 aliases: ["Orchestration owner"]
 sources:
   - "repo:docs/decisions/ADR-0004-orchestration-ownership.md#sha256:d180f7a9c22d525888e329e026a7b971e579f877c03dd9fee265967ab34cec69"
+  - "repo:docs/decisions/ADR-0015-host-native-skill-composition.md#sha256:06938e887dc4992019718ea51ca0ec55f7bea4a56a647dd12409cd22c9375708"
 links: [product-non-goals, skill-routing, v0-9-skill-suite-plan]
-reviewed_revision: "git:be5253bcbd0d9818333e5702d0ef9ce438ee4d62"
+reviewed_revision: "git:8414989a4f7822f8cbdf5e936d984150700825a4"
 status: active
 ---
 
 # Orchestration ownership
 
-Owner 우선순위: Codex의 compatible OMX, Claude의 compatible OMC, 그 외 active
-host의 truthful native capability. Pinned run owner의 silent switch 금지. ADR-0015의
-v0.9 새 run 대상 host-native Skill 조합 제안과 기존 owner pin 보존.
+`0.8.x`와 기존 run: ADR-0004의 OMX·OMC·host-native owner pin 유지.
+v0.9 새 run: ADR-0015의 검증된 host-native capability 기본값.
+OMX·OMC: 명시적 사용자 선택 외부 호환 계층, Hive dependency 아님.
+공통 경계: pinned run owner의 silent switch 금지.
