@@ -382,10 +382,12 @@ class Phase6StaticContracts(unittest.TestCase):
             "actions/attest@",
             "actions/upload-artifact@",
             "npm-umbrella",
-            "refs/heads/main",
+            "refs/heads/develop",
             "github.workflow_sha",
             "scripts/render-installers.py",
             "--installer-dir",
+            "--product-version",
+            "--package-version",
             "statically linked",
             "static-pie linked",
         ):
@@ -402,7 +404,9 @@ class Phase6StaticContracts(unittest.TestCase):
             "--provenance",
             "--tag test",
             "release-publication",
-            'test "$VERSION" = "0.8.0"',
+            'test "$PRODUCT_VERSION" = "0.8.0"',
+            "PRODUCT_VERSION-test.N",
+            'head_branch <<<"$metadata")" = "develop"',
         ):
             self.assertIn(required, publication)
         for forbidden in (
@@ -577,11 +581,11 @@ class Phase6StaticContracts(unittest.TestCase):
         self,
     ) -> None:
         targets = {
-            "aarch64-apple-darwin": "aigent-hive-darwin-arm64-0.8.0.tgz",
-            "x86_64-apple-darwin": "aigent-hive-darwin-x64-0.8.0.tgz",
-            "aarch64-unknown-linux-musl": "aigent-hive-linux-arm64-0.8.0.tgz",
-            "x86_64-unknown-linux-musl": "aigent-hive-linux-x64-0.8.0.tgz",
-            "x86_64-pc-windows-msvc": "aigent-hive-win32-x64-0.8.0.tgz",
+            "aarch64-apple-darwin": "aigent-hive-darwin-arm64-0.8.0-test.1.tgz",
+            "x86_64-apple-darwin": "aigent-hive-darwin-x64-0.8.0-test.1.tgz",
+            "aarch64-unknown-linux-musl": "aigent-hive-linux-arm64-0.8.0-test.1.tgz",
+            "x86_64-unknown-linux-musl": "aigent-hive-linux-x64-0.8.0-test.1.tgz",
+            "x86_64-pc-windows-msvc": "aigent-hive-win32-x64-0.8.0-test.1.tgz",
         }
         with tempfile.TemporaryDirectory(prefix="hive-installers-") as temporary:
             root = Path(temporary)
@@ -595,8 +599,10 @@ class Phase6StaticContracts(unittest.TestCase):
                 [
                     sys.executable,
                     str(ROOT / "scripts/render-installers.py"),
-                    "--version",
+                    "--product-version",
                     "0.8.0",
+                    "--package-version",
+                    "0.8.0-test.1",
                     "--dist",
                     str(dist),
                     "--output",
@@ -612,15 +618,26 @@ class Phase6StaticContracts(unittest.TestCase):
                 shell + powershell + cmd,
                 r"__AIGENT_HIVE_[A-Z0-9_]+__",
             )
-            self.assertIn("embedded_version='0.8.0'", shell)
+            self.assertIn("embedded_product_version='0.8.0'", shell)
+            self.assertIn(
+                "embedded_package_version='0.8.0-test.1'",
+                shell,
+            )
             self.assertIn("npm_package=linux-x64", shell)
             self.assertIn("npm_package=linux-arm64", shell)
             self.assertNotIn("$archive.sha256", shell)
             self.assertIn('[string]$Version = "0.8.0"', powershell)
-            self.assertNotIn("$archive.sha256", powershell)
-            self.assertIn('set "HIVE_INSTALL_VERSION=0.8.0"', cmd)
             self.assertIn(
-                "unpkg.com/aigent-hive@%HIVE_INSTALL_VERSION%/install.ps1",
+                '[string]$PackageVersion = "0.8.0-test.1"',
+                powershell,
+            )
+            self.assertNotIn("$archive.sha256", powershell)
+            self.assertIn(
+                'set "HIVE_INSTALL_PACKAGE_VERSION=0.8.0-test.1"',
+                cmd,
+            )
+            self.assertIn(
+                "unpkg.com/aigent-hive@%HIVE_INSTALL_PACKAGE_VERSION%/install.ps1",
                 cmd,
             )
             self.assertIn("DisableDelayedExpansion", cmd)

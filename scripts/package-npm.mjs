@@ -52,7 +52,7 @@ function fail(message) {
 
 function parseArguments(argv) {
   if (argv.length < 1 || !["platform", "umbrella"].includes(argv[0])) {
-    fail("usage: package-npm.mjs platform|umbrella --version X.Y.Z --output PATH [--target TRIPLE --binary PATH] [--installer-dir PATH]");
+    fail("usage: package-npm.mjs platform|umbrella --product-version X.Y.Z --package-version X.Y.Z-test.N --output PATH [--target TRIPLE --binary PATH] [--installer-dir PATH]");
   }
   const options = { kind: argv[0] };
   for (let index = 1; index < argv.length; index += 2) {
@@ -61,13 +61,19 @@ function parseArguments(argv) {
     if (!flag?.startsWith("--") || value === undefined) {
       fail("npm package arguments must use --name value pairs");
     }
-    if (!["--version", "--output", "--target", "--binary", "--installer-dir"].includes(flag)) {
+    if (!["--product-version", "--package-version", "--output", "--target", "--binary", "--installer-dir"].includes(flag)) {
       fail(`unsupported npm package argument: ${flag}`);
     }
     options[flag.slice(2)] = value;
   }
-  if (!exactVersionPattern.test(options.version ?? "")) {
-    fail("--version must be an exact X.Y.Z version");
+  if (!exactVersionPattern.test(options["product-version"] ?? "")) {
+    fail("--product-version must be an exact X.Y.Z version");
+  }
+  const packageVersionPattern = new RegExp(
+    `^${options["product-version"].replaceAll(".", "\\.")}-test\\.([1-9][0-9]*)$`,
+  );
+  if (!packageVersionPattern.test(options["package-version"] ?? "")) {
+    fail("--package-version must be PRODUCT_VERSION-test.N with positive N");
   }
   if (!options.output) {
     fail("--output is required");
@@ -120,18 +126,21 @@ function writeJson(destination, value) {
   });
 }
 
-function writePackageReadme(destination, packageName, version) {
+function writePackageReadme(destination, packageName, productVersion, packageVersion) {
   fs.writeFileSync(
     path.join(destination, "README.md"),
-    `# ${packageName}\n\nNative Aigent Hive ${version} release package. Install the public CLI with \`npm install -g aigent-hive\`.\n`,
+    `# ${packageName}\n\nAigent Hive ${productVersion} test package ${packageVersion}. Install the test CLI with \`npm install -g aigent-hive@test\`.\n`,
     { encoding: "utf8", flag: "wx", mode: 0o644 },
   );
 }
 
-function commonManifest(name, version) {
+function commonManifest(name, productVersion, packageVersion) {
   return {
     name,
-    version,
+    version: packageVersion,
+    aigentHive: {
+      productVersion,
+    },
     description: "Provider-neutral local agent harness for subscription-authenticated hosts",
     license: "Apache-2.0",
     repository: {
@@ -155,13 +164,22 @@ function packagePlatform(options) {
   const binary = requireRegularFile(options.binary, "native binary");
   const destination = prepareDirectory(options.output, definition.directoryName);
   const manifest = {
-    ...commonManifest(definition.packageName, options.version),
+    ...commonManifest(
+      definition.packageName,
+      options["product-version"],
+      options["package-version"],
+    ),
     os: [definition.os],
     cpu: [definition.cpu],
     files: ["bin/", "LICENSE", "README.md"],
   };
   writeJson(path.join(destination, "package.json"), manifest);
-  writePackageReadme(destination, definition.packageName, options.version);
+  writePackageReadme(
+    destination,
+    definition.packageName,
+    options["product-version"],
+    options["package-version"],
+  );
   fs.copyFileSync(path.join(repositoryRoot, "LICENSE"), path.join(destination, "LICENSE"));
   const packagedBinary = path.join(destination, "bin", definition.executable);
   fs.copyFileSync(binary, packagedBinary, fs.constants.COPYFILE_EXCL);
@@ -185,11 +203,15 @@ function packageUmbrella(options) {
   });
   const optionalDependencies = Object.fromEntries(
     Object.values(platformDefinitions)
-      .map(({ packageName }) => [packageName, options.version])
+      .map(({ packageName }) => [packageName, options["package-version"]])
       .sort(([left], [right]) => left.localeCompare(right)),
   );
   const manifest = {
-    ...commonManifest("aigent-hive", options.version),
+    ...commonManifest(
+      "aigent-hive",
+      options["product-version"],
+      options["package-version"],
+    ),
     bin: {
       hive: "bin/hive.cjs",
     },
@@ -207,7 +229,12 @@ function packageUmbrella(options) {
     optionalDependencies,
   };
   writeJson(path.join(destination, "package.json"), manifest);
-  writePackageReadme(destination, "aigent-hive", options.version);
+  writePackageReadme(
+    destination,
+    "aigent-hive",
+    options["product-version"],
+    options["package-version"],
+  );
   fs.copyFileSync(path.join(repositoryRoot, "LICENSE"), path.join(destination, "LICENSE"));
   const sourceShim = path.join(repositoryRoot, "packaging", "npm", "bin", "hive.cjs");
   const packagedShim = path.join(destination, "bin", "hive.cjs");

@@ -1,6 +1,8 @@
 param(
     [ValidatePattern('^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$')]
-    [string]$Version = "__AIGENT_HIVE_VERSION__",
+    [string]$Version = "__AIGENT_HIVE_PRODUCT_VERSION__",
+    [ValidatePattern('^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)-test\.[1-9][0-9]*$')]
+    [string]$PackageVersion = "__AIGENT_HIVE_PACKAGE_VERSION__",
     [string]$Prefix = "$env:LOCALAPPDATA\AigentHive"
 )
 
@@ -283,7 +285,7 @@ function Assert-AuthorizedAuthenticodeSignature {
 }
 
 $npmPackage = "win32-x64"
-$archive = "$npmPackage-$Version.tgz"
+$archive = "$npmPackage-$PackageVersion.tgz"
 $base = "https://registry.npmjs.org/@aigent-hive/$npmPackage/-"
 $work = Join-Path ([IO.Path]::GetTempPath()) ("aigent-hive-install-" + [Guid]::NewGuid())
 New-Item -ItemType Directory -Path $work | Out-Null

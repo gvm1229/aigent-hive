@@ -3,8 +3,12 @@ name: Release candidate
 on:
   workflow_dispatch:
     inputs:
-      version:
+      product_version:
         description: Exact product version already present in source
+        required: true
+        type: string
+      package_version:
+        description: Exact npm test package version, PRODUCT_VERSION-test.N
         required: true
         type: string
 
@@ -16,7 +20,8 @@ jobs:
     name: ${{ matrix.label }}
     runs-on: ${{ matrix.runner }}
     env:
-      VERSION: ${{ inputs.version }}
+      PRODUCT_VERSION: ${{ inputs.product_version }}
+      PACKAGE_VERSION: ${{ inputs.package_version }}
       TARGET: ${{ matrix.target }}
       PLATFORM_PACKAGE: ${{ matrix.platform_package }}
     permissions:
@@ -45,7 +50,7 @@ jobs:
             platform_package: linux-arm64
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - name: Enforce exact protected main candidate source
+      - name: Enforce exact protected develop candidate source
         env:
           CANDIDATE_REF: ${{ github.ref }}
           CANDIDATE_REF_NAME: ${{ github.ref_name }}
@@ -54,11 +59,11 @@ jobs:
           WORKFLOW_SHA: ${{ github.workflow_sha }}
         run: |
           test "$GITHUB_EVENT_NAME" = "workflow_dispatch"
-          test "$CANDIDATE_REF" = "refs/heads/main"
-          test "$CANDIDATE_REF_NAME" = "main"
+          test "$CANDIDATE_REF" = "refs/heads/develop"
+          test "$CANDIDATE_REF_NAME" = "develop"
           test "$CANDIDATE_REF_TYPE" = "branch"
           test "$CANDIDATE_SHA" = "$WORKFLOW_SHA"
-          test "$CANDIDATE_SHA" = "$(git rev-parse refs/remotes/origin/main)"
+          test "$CANDIDATE_SHA" = "$(git rev-parse refs/remotes/origin/develop)"
       - name: Install the native musl linker
         if: runner.os == 'Linux'
         run: |
@@ -73,7 +78,7 @@ jobs:
           node-version: "24"
       - name: Enforce source version and build locked native binary
         run: |
-          scripts/check-release-version.sh "$VERSION"
+          scripts/check-release-version.sh "$PRODUCT_VERSION"
           cargo build --release --locked --target "$TARGET" --bin hive
       - name: Verify native architecture and runtime
         run: |
@@ -94,11 +99,11 @@ jobs:
               exit 4
               ;;
           esac
-          test "$("$binary" --version | cut -d' ' -f2)" = "$VERSION"
-          "$binary" doctor | grep -F "aigent-hive $VERSION"
+          test "$("$binary" --version | cut -d' ' -f2)" = "$PRODUCT_VERSION"
+          "$binary" doctor | grep -F "aigent-hive $PRODUCT_VERSION"
       - name: Package native archive and npm platform package
         run: |
-          package="aigent-hive-$VERSION-$TARGET"
+          package="aigent-hive-$PRODUCT_VERSION-$TARGET"
           mkdir "$package"
           cp "target/$TARGET/release/hive" "$package/hive"
           cp LICENSE "$package/LICENSE"
@@ -114,40 +119,42 @@ jobs:
           printf '%s  %s\n' "$archive_digest" "$package.tar.gz" \
             >"$package.tar.gz.sha256"
           npm_directory=$(node scripts/package-npm.mjs platform \
-            --version "$VERSION" \
+            --product-version "$PRODUCT_VERSION" \
+            --package-version "$PACKAGE_VERSION" \
             --target "$TARGET" \
             --binary "target/$TARGET/release/hive" \
             --output "$RUNNER_TEMP/npm")
           npm_result=$(cd "$npm_directory" && npm pack --json \
             --pack-destination "$GITHUB_WORKSPACE")
           npm_archive=$(printf '%s' "$npm_result" | jq -er '.[0].filename')
-          test "$npm_archive" = "aigent-hive-$PLATFORM_PACKAGE-$VERSION.tgz"
+          test "$npm_archive" = "aigent-hive-$PLATFORM_PACKAGE-$PACKAGE_VERSION.tgz"
       - name: Generate GitHub artifact attestations
         id: attestation
         uses: actions/attest@f7c74d28b9d84cb8768d0b8ca14a4bac6ef463e6 # v4.1.0
         with:
           subject-path: |
-            aigent-hive-${{ env.VERSION }}-${{ matrix.target }}.tar.gz
-            aigent-hive-${{ matrix.platform_package }}-${{ env.VERSION }}.tgz
+            aigent-hive-${{ env.PRODUCT_VERSION }}-${{ matrix.target }}.tar.gz
+            aigent-hive-${{ matrix.platform_package }}-${{ env.PACKAGE_VERSION }}.tgz
       - name: Preserve candidate attestation bundle
         run: |
           cp "${{ steps.attestation.outputs.bundle-path }}" \
-            "aigent-hive-$VERSION-$TARGET.attestation.jsonl"
+            "aigent-hive-$PRODUCT_VERSION-$TARGET.attestation.jsonl"
       - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
           name: release-${{ matrix.target }}
           path: |
-            aigent-hive-${{ env.VERSION }}-${{ matrix.target }}.tar.gz
-            aigent-hive-${{ env.VERSION }}-${{ matrix.target }}.tar.gz.sha256
-            aigent-hive-${{ matrix.platform_package }}-${{ env.VERSION }}.tgz
-            aigent-hive-${{ env.VERSION }}-${{ matrix.target }}.attestation.jsonl
+            aigent-hive-${{ env.PRODUCT_VERSION }}-${{ matrix.target }}.tar.gz
+            aigent-hive-${{ env.PRODUCT_VERSION }}-${{ matrix.target }}.tar.gz.sha256
+            aigent-hive-${{ matrix.platform_package }}-${{ env.PACKAGE_VERSION }}.tgz
+            aigent-hive-${{ env.PRODUCT_VERSION }}-${{ matrix.target }}.attestation.jsonl
           if-no-files-found: error
 
   windows:
     name: Windows x86_64
     runs-on: windows-2025
     env:
-      VERSION: ${{ inputs.version }}
+      PRODUCT_VERSION: ${{ inputs.product_version }}
+      PACKAGE_VERSION: ${{ inputs.package_version }}
       TARGET: x86_64-pc-windows-msvc
     permissions:
       contents: read
@@ -155,7 +162,7 @@ jobs:
       attestations: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - name: Enforce exact protected main candidate source
+      - name: Enforce exact protected develop candidate source
         shell: bash
         env:
           CANDIDATE_REF: ${{ github.ref }}
@@ -165,11 +172,11 @@ jobs:
           WORKFLOW_SHA: ${{ github.workflow_sha }}
         run: |
           test "$GITHUB_EVENT_NAME" = "workflow_dispatch"
-          test "$CANDIDATE_REF" = "refs/heads/main"
-          test "$CANDIDATE_REF_NAME" = "main"
+          test "$CANDIDATE_REF" = "refs/heads/develop"
+          test "$CANDIDATE_REF_NAME" = "develop"
           test "$CANDIDATE_REF_TYPE" = "branch"
           test "$CANDIDATE_SHA" = "$WORKFLOW_SHA"
-          test "$CANDIDATE_SHA" = "$(git rev-parse refs/remotes/origin/main)"
+          test "$CANDIDATE_SHA" = "$(git rev-parse refs/remotes/origin/develop)"
       - uses: dtolnay/rust-toolchain@2c7215f132e9ebf062739d9130488b56d53c060c # master 2026-07-16
         with:
           toolchain: stable
@@ -180,7 +187,7 @@ jobs:
       - name: Enforce source version and build locked native binary
         shell: bash
         run: |
-          scripts/check-release-version.sh "$VERSION"
+          scripts/check-release-version.sh "$PRODUCT_VERSION"
           cargo build --release --locked --target "$TARGET" --bin hive
       - name: Verify architecture and package native archive
         shell: pwsh
@@ -191,10 +198,10 @@ jobs:
           if ([BitConverter]::ToUInt16($bytes, $peOffset + 4) -ne 0x8664) {
             throw "release binary is not x86_64 PE"
           }
-          if ((& $binary --version).Split(" ")[1] -ne $env:VERSION) {
+          if ((& $binary --version).Split(" ")[1] -ne $env:PRODUCT_VERSION) {
             throw "release binary version mismatch"
           }
-          $package = "aigent-hive-$env:VERSION-$env:TARGET"
+          $package = "aigent-hive-$env:PRODUCT_VERSION-$env:TARGET"
           New-Item -ItemType Directory -Path $package | Out-Null
           Copy-Item $binary "$package\hive.exe"
           Copy-Item LICENSE "$package\LICENSE"
@@ -205,7 +212,8 @@ jobs:
         shell: pwsh
         run: |
           $npmDirectory = node scripts/package-npm.mjs platform `
-            --version $env:VERSION `
+            --product-version $env:PRODUCT_VERSION `
+            --package-version $env:PACKAGE_VERSION `
             --target $env:TARGET `
             --binary "target\$env:TARGET\release\hive.exe" `
             --output "$env:RUNNER_TEMP\npm"
@@ -217,7 +225,7 @@ jobs:
             Pop-Location
           }
           $npmArchive = $npmResult[0].filename
-          if ($npmArchive -ne "aigent-hive-win32-x64-$env:VERSION.tgz") {
+          if ($npmArchive -ne "aigent-hive-win32-x64-$env:PACKAGE_VERSION.tgz") {
             throw "unexpected npm platform archive name"
           }
       - name: Generate GitHub artifact attestations
@@ -225,21 +233,21 @@ jobs:
         uses: actions/attest@f7c74d28b9d84cb8768d0b8ca14a4bac6ef463e6 # v4.1.0
         with:
           subject-path: |
-            aigent-hive-${{ env.VERSION }}-x86_64-pc-windows-msvc.zip
-            aigent-hive-win32-x64-${{ env.VERSION }}.tgz
+            aigent-hive-${{ env.PRODUCT_VERSION }}-x86_64-pc-windows-msvc.zip
+            aigent-hive-win32-x64-${{ env.PACKAGE_VERSION }}.tgz
       - name: Preserve candidate attestation bundle
         shell: pwsh
         run: >-
           Copy-Item "${{ steps.attestation.outputs.bundle-path }}"
-          "aigent-hive-$env:VERSION-$env:TARGET.attestation.jsonl"
+          "aigent-hive-$env:PRODUCT_VERSION-$env:TARGET.attestation.jsonl"
       - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
           name: release-x86_64-pc-windows-msvc
           path: |
-            aigent-hive-${{ env.VERSION }}-x86_64-pc-windows-msvc.zip
-            aigent-hive-${{ env.VERSION }}-x86_64-pc-windows-msvc.zip.sha256
-            aigent-hive-win32-x64-${{ env.VERSION }}.tgz
-            aigent-hive-${{ env.VERSION }}-x86_64-pc-windows-msvc.attestation.jsonl
+            aigent-hive-${{ env.PRODUCT_VERSION }}-x86_64-pc-windows-msvc.zip
+            aigent-hive-${{ env.PRODUCT_VERSION }}-x86_64-pc-windows-msvc.zip.sha256
+            aigent-hive-win32-x64-${{ env.PACKAGE_VERSION }}.tgz
+            aigent-hive-${{ env.PRODUCT_VERSION }}-x86_64-pc-windows-msvc.attestation.jsonl
           if-no-files-found: error
 
   npm-umbrella:
@@ -247,7 +255,8 @@ jobs:
     needs: [unix, windows]
     runs-on: ubuntu-24.04
     env:
-      VERSION: ${{ inputs.version }}
+      PRODUCT_VERSION: ${{ inputs.product_version }}
+      PACKAGE_VERSION: ${{ inputs.package_version }}
     permissions:
       actions: read
       contents: read
@@ -255,15 +264,15 @@ jobs:
       attestations: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - name: Enforce exact protected main candidate source
+      - name: Enforce exact protected develop candidate source
         env:
           CANDIDATE_REF: ${{ github.ref }}
           CANDIDATE_SHA: ${{ github.sha }}
           WORKFLOW_SHA: ${{ github.workflow_sha }}
         run: |
-          test "$CANDIDATE_REF" = "refs/heads/main"
+          test "$CANDIDATE_REF" = "refs/heads/develop"
           test "$CANDIDATE_SHA" = "$WORKFLOW_SHA"
-          test "$CANDIDATE_SHA" = "$(git rev-parse refs/remotes/origin/main)"
+          test "$CANDIDATE_SHA" = "$(git rev-parse refs/remotes/origin/develop)"
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: "24"
@@ -275,33 +284,35 @@ jobs:
       - name: Render digest-pinned npm direct installers
         run: |
           python3 scripts/render-installers.py \
-            --version "$VERSION" \
+            --product-version "$PRODUCT_VERSION" \
+            --package-version "$PACKAGE_VERSION" \
             --dist dist \
             --output "$RUNNER_TEMP/installers"
       - name: Package npm umbrella with direct installers
         run: |
-          scripts/check-release-version.sh "$VERSION"
+          scripts/check-release-version.sh "$PRODUCT_VERSION"
           npm_directory=$(node scripts/package-npm.mjs umbrella \
-            --version "$VERSION" \
+            --product-version "$PRODUCT_VERSION" \
+            --package-version "$PACKAGE_VERSION" \
             --installer-dir "$RUNNER_TEMP/installers" \
             --output "$RUNNER_TEMP/npm")
           npm_result=$(cd "$npm_directory" && npm pack --json \
             --pack-destination "$GITHUB_WORKSPACE")
           npm_archive=$(printf '%s' "$npm_result" | jq -er '.[0].filename')
-          test "$npm_archive" = "aigent-hive-$VERSION.tgz"
+          test "$npm_archive" = "aigent-hive-$PACKAGE_VERSION.tgz"
       - name: Generate GitHub artifact attestation
         id: attestation
         uses: actions/attest@f7c74d28b9d84cb8768d0b8ca14a4bac6ef463e6 # v4.1.0
         with:
-          subject-path: aigent-hive-${{ env.VERSION }}.tgz
+          subject-path: aigent-hive-${{ env.PACKAGE_VERSION }}.tgz
       - name: Preserve candidate attestation bundle
         run: |
           cp "${{ steps.attestation.outputs.bundle-path }}" \
-            "aigent-hive-$VERSION-npm-umbrella.attestation.jsonl"
+            "aigent-hive-$PACKAGE_VERSION-npm-umbrella.attestation.jsonl"
       - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
           name: release-npm-umbrella
           path: |
-            aigent-hive-${{ env.VERSION }}.tgz
-            aigent-hive-${{ env.VERSION }}-npm-umbrella.attestation.jsonl
+            aigent-hive-${{ env.PACKAGE_VERSION }}.tgz
+            aigent-hive-${{ env.PACKAGE_VERSION }}-npm-umbrella.attestation.jsonl
           if-no-files-found: error

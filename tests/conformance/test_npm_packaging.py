@@ -63,8 +63,10 @@ class NpmPackagingContract(unittest.TestCase):
                     "node",
                     str(PACKAGER),
                     "platform",
-                    "--version",
+                    "--product-version",
                     "0.8.0",
+                    "--package-version",
+                    "0.8.0-test.1",
                     "--output",
                     str(output),
                     "--target",
@@ -75,7 +77,11 @@ class NpmPackagingContract(unittest.TestCase):
                 directory = output / name.split("/", 1)[1]
                 manifest = json.loads((directory / "package.json").read_text("utf-8"))
                 self.assertEqual(manifest["name"], name)
-                self.assertEqual(manifest["version"], "0.8.0")
+                self.assertEqual(manifest["version"], "0.8.0-test.1")
+                self.assertEqual(
+                    manifest["aigentHive"],
+                    {"productVersion": "0.8.0"},
+                )
                 self.assertEqual(manifest["os"], [operating_system])
                 self.assertEqual(manifest["cpu"], [cpu])
                 self.assertEqual((directory / "bin" / executable).read_bytes(), binary.read_bytes())
@@ -85,8 +91,10 @@ class NpmPackagingContract(unittest.TestCase):
                 "node",
                 str(PACKAGER),
                 "umbrella",
-                "--version",
+                "--product-version",
                 "0.8.0",
+                "--package-version",
+                "0.8.0-test.1",
                 "--installer-dir",
                 str(self.write_installers(work)),
                 "--output",
@@ -97,7 +105,14 @@ class NpmPackagingContract(unittest.TestCase):
             self.assertEqual(umbrella["bin"], {"hive": "bin/hive.cjs"})
             self.assertEqual(
                 umbrella["optionalDependencies"],
-                {definition[0]: "0.8.0" for definition in TARGETS.values()},
+                {
+                    definition[0]: "0.8.0-test.1"
+                    for definition in TARGETS.values()
+                },
+            )
+            self.assertEqual(
+                umbrella["aigentHive"],
+                {"productVersion": "0.8.0"},
             )
             self.assertNotIn("scripts", umbrella)
             for name in ("install.sh", "install.ps1", "install.cmd"):
@@ -131,8 +146,10 @@ class NpmPackagingContract(unittest.TestCase):
                 "node",
                 str(PACKAGER),
                 "platform",
-                "--version",
+                "--product-version",
                 "0.8.0",
+                "--package-version",
+                "0.8.0-test.1",
                 "--output",
                 str(packages),
                 "--target",
@@ -144,8 +161,10 @@ class NpmPackagingContract(unittest.TestCase):
                 "node",
                 str(PACKAGER),
                 "umbrella",
-                "--version",
+                "--product-version",
                 "0.8.0",
+                "--package-version",
+                "0.8.0-test.1",
                 "--installer-dir",
                 str(self.write_installers(work)),
                 "--output",

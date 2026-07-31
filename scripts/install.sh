@@ -1,8 +1,10 @@
 #!/bin/sh
 set -eu
 
-embedded_version='__AIGENT_HIVE_VERSION__'
-version=${AIGENT_HIVE_VERSION:-$embedded_version}
+embedded_product_version='__AIGENT_HIVE_PRODUCT_VERSION__'
+embedded_package_version='__AIGENT_HIVE_PACKAGE_VERSION__'
+version=${AIGENT_HIVE_VERSION:-$embedded_product_version}
+package_version=${AIGENT_HIVE_PACKAGE_VERSION:-$embedded_package_version}
 prefix=${AIGENT_HIVE_PREFIX:-"${HOME:?HOME is required}/.local"}
 authorized_team_id='__AIGENT_HIVE_APPLE_TEAM_ID__'
 sha_aarch64_apple_darwin='__AIGENT_HIVE_SHA256_AARCH64_APPLE_DARWIN__'
@@ -10,10 +12,23 @@ sha_x86_64_apple_darwin='__AIGENT_HIVE_SHA256_X86_64_APPLE_DARWIN__'
 sha_aarch64_linux_musl='__AIGENT_HIVE_SHA256_AARCH64_UNKNOWN_LINUX_MUSL__'
 sha_x86_64_linux_musl='__AIGENT_HIVE_SHA256_X86_64_UNKNOWN_LINUX_MUSL__'
 
-if [ -z "$version" ] || [ "$version" = "$embedded_version" ]; then
+if [ -z "$version" ] || [ "$version" = "$embedded_product_version" ]; then
   echo "installer does not contain an exact released X.Y.Z version" >&2
   exit 2
 fi
+case "$package_version" in
+  "$version"-test.[1-9]*)
+    if ! printf '%s\n' "${package_version#"$version-test."}" |
+      awk '/^[1-9][0-9]*$/ { next } { exit 1 }'; then
+      echo "AIGENT_HIVE_PACKAGE_VERSION must be PRODUCT_VERSION-test.N" >&2
+      exit 2
+    fi
+    ;;
+  *)
+    echo "AIGENT_HIVE_PACKAGE_VERSION must be PRODUCT_VERSION-test.N" >&2
+    exit 2
+    ;;
+esac
 if ! printf '%s\n' "$version" | awk -F. '
   NF != 3 { exit 1 }
   {
@@ -252,7 +267,7 @@ ensure_safe_directory_chain() {
   done
 }
 
-archive="${npm_package}-${version}.tgz"
+archive="${npm_package}-${package_version}.tgz"
 base="https://registry.npmjs.org/@aigent-hive/${npm_package}/-"
 curl --fail --location --proto '=https' --tlsv1.2 \
   --output "$work/$archive" "$base/$archive"

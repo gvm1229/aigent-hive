@@ -38,14 +38,15 @@ TARGETS = {
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--version", required=True)
+    parser.add_argument("--product-version", required=True)
+    parser.add_argument("--package-version", required=True)
     parser.add_argument("--dist", required=True, type=Path)
     parser.add_argument("--output", required=True, type=Path)
     return parser.parse_args()
 
 
-def read_digest(dist: Path, version: str, name_template: str) -> str:
-    name = name_template.format(version=version)
+def read_digest(dist: Path, package_version: str, name_template: str) -> str:
+    name = name_template.format(version=package_version)
     artifact = dist / name
     if not artifact.is_file() or artifact.is_symlink():
         raise SystemExit(f"missing regular npm artifact: {artifact}")
@@ -69,17 +70,29 @@ def render(source: Path, destination: Path, replacements: dict[str, str]) -> Non
 
 def main() -> None:
     args = parse_args()
-    if not EXACT_VERSION.fullmatch(args.version):
-        raise SystemExit("--version must be an exact X.Y.Z version")
+    if not EXACT_VERSION.fullmatch(args.product_version):
+        raise SystemExit("--product-version must be an exact X.Y.Z version")
+    package_pattern = re.compile(
+        rf"^{re.escape(args.product_version)}-test\.([1-9][0-9]*)$"
+    )
+    if not package_pattern.fullmatch(args.package_version):
+        raise SystemExit(
+            "--package-version must be PRODUCT_VERSION-test.N with positive N"
+        )
     if not args.dist.is_dir() or args.dist.is_symlink():
         raise SystemExit("--dist must be a regular directory")
     args.output.mkdir(parents=True, exist_ok=True)
     if args.output.is_symlink():
         raise SystemExit("--output must not be a symlink")
 
-    replacements = {"__AIGENT_HIVE_VERSION__": args.version}
+    replacements = {
+        "__AIGENT_HIVE_PRODUCT_VERSION__": args.product_version,
+        "__AIGENT_HIVE_PACKAGE_VERSION__": args.package_version,
+    }
     for _, (name_template, marker) in TARGETS.items():
-        replacements[marker] = read_digest(args.dist, args.version, name_template)
+        replacements[marker] = read_digest(
+            args.dist, args.package_version, name_template
+        )
 
     render(
         ROOT / "scripts/install.sh",
@@ -93,7 +106,8 @@ def main() -> None:
         ROOT / "scripts/install.ps1",
         args.output / "install.ps1",
         {
-            "__AIGENT_HIVE_VERSION__": args.version,
+            "__AIGENT_HIVE_PRODUCT_VERSION__": args.product_version,
+            "__AIGENT_HIVE_PACKAGE_VERSION__": args.package_version,
             "__AIGENT_HIVE_SHA256_X86_64_PC_WINDOWS_MSVC__": replacements[
                 "__AIGENT_HIVE_SHA256_X86_64_PC_WINDOWS_MSVC__"
             ],
@@ -103,7 +117,7 @@ def main() -> None:
     render(
         ROOT / "scripts/install.cmd",
         args.output / "install.cmd",
-        {"__AIGENT_HIVE_VERSION__": args.version},
+        {"__AIGENT_HIVE_PACKAGE_VERSION__": args.package_version},
     )
     shell_mode = (args.output / "install.sh").stat().st_mode
     (args.output / "install.sh").chmod(shell_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
