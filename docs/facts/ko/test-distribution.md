@@ -9,7 +9,6 @@ summary: "제품 후보 0.8.0과 npm 시험판 0.8.0-test.N을 분리하며 GitH
 tags: [distribution, release, test]
 aliases: ["0.8.0 release scope"]
 sources:
-  - "repo:docs/decisions/ADR-0013-0.8-release-scope.md#sha256:a958146a8ea6d747fa485cf5ba0ec81f0471567723589fe82a6aa90815cece06"
   - "repo:scripts/package-npm.mjs#sha256:22c8a4e6b71764d2c3987a3525736d7406ce2a0d6da75ed96da420996a4d2e2c"
 links: [global-onboarding, version-policy]
 reviewed_revision: "git:3143c0e90b3c474c739651f7ddc2350bbf5e020a"

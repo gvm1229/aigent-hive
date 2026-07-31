@@ -9,9 +9,9 @@ summary: "Dry run·bounded backup·durable journal·atomic activation."
 tags: [recovery, transaction, update]
 aliases: ["Safe update transaction"]
 sources:
-  - "repo:docs/architecture/release-update-trust-boundary.md#sha256:3afa39d749791724d15aaef22619c3bc69eef0286f324f0990b193c6f1617d65"
+  - "repo:crates/hive-update/src/transaction.rs#sha256:d55b9b13726eb812ffdf0e605fe41a24a343157bd41ca175c6750aa6443154ec"
 links: [plugin-update-merge, release-verification]
-reviewed_revision: "git:a7be86f2558442c2cec3596abe2f481dd91d268f"
+reviewed_revision: "git:235d5e34e89f7ce22f8b50ae7dd38fa012018a14"
 status: active
 ---
 

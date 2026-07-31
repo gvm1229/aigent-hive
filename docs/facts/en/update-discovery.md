@@ -9,9 +9,9 @@ summary: "Opt-in update discovery checks once per successful day without install
 tags: [discovery, update]
 aliases: ["Daily update check"]
 sources:
-  - "repo:docs/decisions/ADR-0013-0.8-release-scope.md#sha256:a958146a8ea6d747fa485cf5ba0ec81f0471567723589fe82a6aa90815cece06"
+  - "repo:crates/hive-cli/src/update_discovery.rs#sha256:9841e0c913da22987396f488e22bc0459062aa41f3508d25269ef55a277c6c29"
 links: [global-onboarding, test-distribution]
-reviewed_revision: "git:a7be86f2558442c2cec3596abe2f481dd91d268f"
+reviewed_revision: "git:4e3fb80b77c2e105029c9d6794922c4ce1b2fdeb"
 status: active
 ---
 
