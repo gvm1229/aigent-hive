@@ -2,7 +2,7 @@
 
 - 기준 branch: `develop`
 - product version: `0.7.0`
-- plan revision: `1.74`
+- plan revision: `1.75`
 - 현재 milestone: Phase 7 qualification + global onboarding·shared index `0.8.0`
 - 현재 작업: `0.8.0` 제품 후보와 `0.8.0-test.N` npm 시험판 분리·배포 준비
 - 외부 중지 경계: GitHub Release·npm `latest`, protected signing/publication credential,
@@ -472,11 +472,13 @@ Candidate trust blocker:
   `0.8.0-test.N`을 별도 입력으로 받아 5개 target·6개 npm tarball·embedded
   installer candidate 생성. local static/package 검증 완료, remote matrix 실행 대기
 - `release-publish.yml`: GitHub Release·npm `latest` 0건과 6개 package `test` 전용
-  publication 계약 구현. 성공한 정확한 `develop` 후보만 허용하며 protected 실행 대기
+  publication 계약 구현. 성공한 정확한 `develop` 후보만 허용. 최초 등록은 명시적
+  `bootstrap_with_token=true`·임시 `NPM_TOKEN`, 이후는 OIDC 전용
 - Direct installer: `0.8.0-test.N` umbrella의 unpkg bootstrap과 scoped npm
   tarball digest 검증 뒤 native 제품 `0.8.0` 확인. 실제 registry clean install은
   publication 뒤 검증
 - GitHub repository environment·secret·variable 0개
+- Local npm: Node.js `24.13.1`, npm `11.17.0`, registry 로그인 없음
 - npm `aigent-hive`·`@aigent-hive/*` name·scope ownership 미확정
 - Public registry 조회: umbrella·5개 scoped package 모두 E404,
   name·scope ownership 증거로 사용 금지

@@ -1,6 +1,6 @@
 # Aigent Hive active plan index
 
-> Revision: 1.74
+> Revision: 1.75
 > 기준일: 2026-07-31
 > Product version: `0.7.0`
 > 현재 milestone: Phase 7 qualification + global onboarding·shared index `0.8.0`

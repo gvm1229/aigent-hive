@@ -70,8 +70,9 @@ npm install -g aigent-hive@test
 - Package install 이후 `hive --version`과 native architecture smoke
 - Node.js/npm은 npm 설치 channel의 dependency일 뿐 `hive` runtime dependency 아님
 
-안정 릴리스 승인 뒤에만 기본 명령 `npm install -g aigent-hive`가 최신 안정 버전을
-설치하도록 `latest`를 이동.
+최초 등록만 `release-publication`의 임시 `NPM_TOKEN`과
+`bootstrap_with_token=true` 사용. 등록 직후 secret 삭제, 6개 package에
+`release-publish.yml` Trusted Publisher 연결, token 차단. 이후 OIDC 전용.
 
 ## curl·Windows 직접 설치
 
@@ -168,7 +169,7 @@ install-owner adapter 확정. 불확실한 owner 추측과 설치 관리자 우�
 
 ## 외부 중지 경계
 
-- npm package name·scope ownership과 Trusted Publishing 설정
+- npm 로그인·2FA·organization, 최초 등록용 임시 token과 6개 Trusted Publisher
 - `develop` branch protection 사용자 적용
 - Credential·private signing material 접근 금지
 - npm `latest`, GitHub Release, 안정 릴리스는 별도 사용자 승인 전 금지
