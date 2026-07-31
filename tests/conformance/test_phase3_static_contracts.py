@@ -340,6 +340,7 @@ class Phase3SkillSourceContract(unittest.TestCase):
             "active/security-review.md",
             "active/source-docs-wiki.md",
             "active/user-onboarding-shared-index.md",
+            "active/v0.9.0-global-knowledge-rag.md",
             "active/v0.9.0-loop-wiki-skills.md",
             "active/windows-shell-install.md",
             "contracts/README.md",
@@ -362,6 +363,7 @@ class Phase3SkillSourceContract(unittest.TestCase):
             plan_root / "active/security-review.md",
             plan_root / "active/source-docs-wiki.md",
             plan_root / "active/user-onboarding-shared-index.md",
+            plan_root / "active/v0.9.0-global-knowledge-rag.md",
             plan_root / "active/v0.9.0-loop-wiki-skills.md",
             plan_root / "active/windows-shell-install.md",
             plan_root / "phases/07-public-qualification.md",
@@ -377,6 +379,7 @@ class Phase3SkillSourceContract(unittest.TestCase):
                 "active/security-review.md",
                 "active/source-docs-wiki.md",
                 "active/user-onboarding-shared-index.md",
+                "active/v0.9.0-global-knowledge-rag.md",
                 "active/v0.9.0-loop-wiki-skills.md",
                 "active/windows-shell-install.md",
                 "phases/07-public-qualification.md",
@@ -453,6 +456,7 @@ class Phase3SkillSourceContract(unittest.TestCase):
         security_review_path = plan_root / "active/security-review.md"
         source_wiki_path = plan_root / "active/source-docs-wiki.md"
         onboarding_path = plan_root / "active/user-onboarding-shared-index.md"
+        v09_rag_path = plan_root / "active/v0.9.0-global-knowledge-rag.md"
         v09_skill_path = plan_root / "active/v0.9.0-loop-wiki-skills.md"
         windows_shell_path = plan_root / "active/windows-shell-install.md"
         progress_rows = (
@@ -484,6 +488,10 @@ class Phase3SkillSourceContract(unittest.TestCase):
             (
                 "v0.9 loop·Wiki·Skill suite",
                 *checklist_counts([v09_skill_path]),
+            ),
+            (
+                "v0.9 global knowledge RAG",
+                *checklist_counts([v09_rag_path]),
             ),
         )
         total_done = sum(row[1] for row in progress_rows)

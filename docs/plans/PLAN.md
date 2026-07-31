@@ -1,6 +1,6 @@
 # Aigent Hive active plan index
 
-> Revision: 1.81
+> Revision: 1.82
 > 기준일: 2026-08-01
 > Product version: `0.8.0`
 > 현재 milestone: Phase 7 qualification + global onboarding·shared index `0.8.0`
@@ -11,8 +11,7 @@
 - Objective: `Aigent Hive 0.8.0` 후보의 Linux·macOS·Windows native artifact,
   npm `0.8.0-test.N`·직접 설치 시험, bilingual onboarding, update
   discovery·activation과 provenance gate 완료
-- Queued objective: `0.8.0` 시험 배포 완료 뒤 `0.9.0` host-native loop
-  engineering·통합 Wiki·초기 Skill suite 구현·검증
+- Queued `0.9.0`: host-native loop·Wiki·Skill suite·전역 knowledge RAG
 - Success: Mandatory user setup, global preference 기반 expedited/custom project setup,
   user-root 단일 SQLite, 세 host selected Skill projection, Wiki default-on opt-out,
   usage guard opt-in `20%`, native-first·CodexBar fallback-only, consumer
@@ -43,7 +42,8 @@
 | Security review | 4 | 0 | 100% |
 | Docs Wiki migration | 4 | 0 | 100% |
 | v0.9 loop·Wiki·Skill suite | 0 | 25 | 0% |
-| **Canonical total** | **223** | **30** | **88.1%** |
+| v0.9 global knowledge RAG | 0 | 20 | 0% |
+| **Canonical total** | **223** | **50** | **81.7%** |
 
 External production boundary 항목도 미완료 합계에 포함. Protected authority 없이 완료 처리 금지.
 
@@ -100,6 +100,7 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
 | [`active/docs-wiki-migration.md`](active/docs-wiki-migration.md) | `DWK-*` | 지식 보존과 `docs/` Wiki·atomic fact 전환 |
 | [`active/release-0.8.0.md`](active/release-0.8.0.md) | `P7-*` reference | `0.8.0` Linux·npm·직접 설치 실행 순서와 범위 |
 | [`active/v0.9.0-loop-wiki-skills.md`](active/v0.9.0-loop-wiki-skills.md) | `V9-*` | Host-native graph engineering·통합 Wiki·초기 Skill suite |
+| [`active/v0.9.0-global-knowledge-rag.md`](active/v0.9.0-global-knowledge-rag.md) | `RAG-*` | 전역 RAG |
 
 ## Reconciliation gate
 
@@ -127,7 +128,7 @@ publication `30647959771`의 npm 쓰기 직전까지 모든 gate PASS.
 2. 기존 candidate `30647361507`로 `release-publish.yml` 재실행·승인
 3. npm·Unix·PowerShell·CMD clean install·repeat·recovery와 P7 미완료 5개 검증
 4. 시험 배포 성공 commit의 `develop` → `main` PR 병합
-5. 별도 구현 시작 지시 뒤 V9-025 소유권 전환, V9-001–024 순차 실행
+5. 별도 지시 뒤 V9-025, `V9-*`·`RAG-*` fragment 순서 실행
 
 ## `0.8.0` 비차단 deferred boundary
 

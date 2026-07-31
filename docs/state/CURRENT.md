@@ -2,7 +2,7 @@
 
 - 기준 branch: `develop`
 - product version: `0.8.0`
-- plan revision: `1.81`
+- plan revision: `1.82`
 - 현재 milestone: Phase 7 qualification + global onboarding·shared index `0.8.0`
 - 현재 작업: `0.8.0` 제품 후보와 `0.8.0-test.N` npm 시험판 분리·배포 준비
 - 외부 중지 경계: GitHub Release·npm `latest`, protected signing/publication credential,
@@ -17,7 +17,8 @@
   + `docs/plans/active/docs-wiki-migration.md`
   + `docs/plans/active/release-0.8.0.md`
   + `docs/plans/active/v0.9.0-loop-wiki-skills.md`
-- Plan completion: canonical checklist `223/253` 완료, `30`개 미완료, `88.1%`
+  + `docs/plans/active/v0.9.0-global-knowledge-rag.md`
+- Plan completion: canonical checklist `223/273` 완료, `50`개 미완료, `81.7%`
 - Latest local Windows: Rust workspace 458개 실행·통과. Python 적합성 618개 발견 중
   576개 실제 실행·통과, 42개 미실행. 미실행 범위: 관리자 권한 없는 Windows의
   symbolic link 생성 제약 16개, POSIX·Unix 전용 동작 19개, macOS 전용 설치·서명
@@ -34,7 +35,8 @@
   `active/windows-shell-install.md`,
   `active/documentation-style.md`, `active/security-review.md`,
   `active/docs-wiki-migration.md`,
-  `active/release-0.8.0.md`, `active/v0.9.0-loop-wiki-skills.md`로 해석
+  `active/release-0.8.0.md`, `active/v0.9.0-loop-wiki-skills.md`,
+  `active/v0.9.0-global-knowledge-rag.md`로 해석
 
 ## v0.9.0 계획
 
@@ -56,6 +58,22 @@
   `omx|omc` command·자동 adapter 우선권·raw session 자동 수집 0건
 - 실행 경계: `0.8.0` 시험 배포와 `develop`→`main` 완료 뒤 별도 구현 시작 지시,
   V9-025 소유권 전환 우선
+
+## v0.9.0 전역 knowledge RAG
+
+- 상태: 계획 최종 승인, 구현 미착수
+- 결정: [`ADR-0016`](../decisions/ADR-0016-global-knowledge-rag.md) accepted
+- Active fragment:
+  [`v0.9.0-global-knowledge-rag.md`](../plans/active/v0.9.0-global-knowledge-rag.md)
+- 기존 기반: user-root Markdown·단일 SQLite, FTS5·tag·alias·BM25,
+  visibility-aware shared project query
+- 확인된 gap: simple-question memory 차단, explicit-only query, material-task-only capture,
+  chunk context·mandatory preference write·fast freshness path 부재
+- 목표: 모든 질문의 bounded retrieval preflight, named project scope, durable user statement의
+  mandatory write, citation-ready chunk result와 fresh-session recall
+- DB 방향: 기존 SQLite derived boundary 유지, chunk·generation·dirty journal schema 확대,
+  measured recall deficiency에서만 local vector projection 검토
+- 안전 경계: Wiki opt-out, raw transcript·secret·credential·SQLite-only fact 0건
 
 ## `docs/` Wiki 전환
 
