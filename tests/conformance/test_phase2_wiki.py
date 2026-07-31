@@ -857,24 +857,21 @@ Deleted body sentinel SECRET-DELETED-PROSE.
     def test_target_below_symlinked_parent_is_rejected_without_external_write(
         self,
     ) -> None:
-        actual_parent = self.target / "actual"
-        actual_target = actual_parent / "consumer"
-        shutil.copytree(
-            ROOT / "harness/template/.hive/knowledge",
-            actual_target / ".hive/knowledge",
-        )
-        alias = self.target / "alias"
+        alias = self.target.parent / f"{self.target.name}-alias"
+        self.addCleanup(alias.unlink, missing_ok=True)
         try:
-            alias.symlink_to(actual_parent, target_is_directory=True)
+            alias.symlink_to(self.target, target_is_directory=True)
         except OSError as error:
             self.skipTest(f"symlink creation is unavailable: {error}")
-        before = snapshot_tree(actual_target)
+        before = snapshot_tree(self.target)
 
         process, result = self.invoke(
-            "index",
-            "rebuild",
+            "knowledge",
+            "query",
             "--target",
-            str(alias / "consumer"),
+            str(alias),
+            "--text",
+            "knowledge",
         )
         self.assertNotEqual(process.returncode, 0)
         self.assertIn(
@@ -882,7 +879,7 @@ Deleted body sentinel SECRET-DELETED-PROSE.
             {"error", "conflict", "verification-failed"},
         )
         self.assertEqual(result["changed_paths"], [])
-        self.assertEqual(snapshot_tree(actual_target), before)
+        self.assertEqual(snapshot_tree(self.target), before)
 
 
 if __name__ == "__main__":
