@@ -12,8 +12,17 @@ sha_x86_64_apple_darwin='__AIGENT_HIVE_SHA256_X86_64_APPLE_DARWIN__'
 sha_aarch64_linux_musl='__AIGENT_HIVE_SHA256_AARCH64_UNKNOWN_LINUX_MUSL__'
 sha_x86_64_linux_musl='__AIGENT_HIVE_SHA256_X86_64_UNKNOWN_LINUX_MUSL__'
 
-if [ -z "$version" ] || [ "$version" = "$embedded_product_version" ]; then
-  echo "installer does not contain an exact released X.Y.Z version" >&2
+if ! printf '%s\n' "$version" | awk -F. '
+  NF != 3 { exit 1 }
+  {
+    for (part = 1; part <= 3; part += 1) {
+      if ($part !~ /^(0|[1-9][0-9]*)$/) {
+        exit 1
+      }
+    }
+  }
+'; then
+  echo "AIGENT_HIVE_VERSION must be exact X.Y.Z" >&2
   exit 2
 fi
 case "$package_version" in
@@ -29,19 +38,6 @@ case "$package_version" in
     exit 2
     ;;
 esac
-if ! printf '%s\n' "$version" | awk -F. '
-  NF != 3 { exit 1 }
-  {
-    for (part = 1; part <= 3; part += 1) {
-      if ($part !~ /^(0|[1-9][0-9]*)$/) {
-        exit 1
-      }
-    }
-  }
-'; then
-  echo "AIGENT_HIVE_VERSION must be exact X.Y.Z" >&2
-  exit 2
-fi
 operating_system=$(uname -s)
 case "$operating_system" in
   Darwin)
