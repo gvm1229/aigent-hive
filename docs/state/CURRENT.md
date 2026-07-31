@@ -17,7 +17,8 @@
   + `docs/plans/active/docs-wiki-migration.md`
   + `docs/plans/active/release-0.8.0.md`
 - Plan completion: canonical checklist `222/228` 완료, `6`개 미완료, `97.4%`
-- Latest local Windows: Rust workspace 전체 PASS, PowerShell 5.1·7.6.4 installer와
+- Latest local Windows: Rust workspace 전체 PASS, Python 적합성 566개 PASS·
+  Windows 권한 전용 37개 정상 skip, PowerShell 5.1·7.6.4 installer와
   `cmd.exe` bootstrap 계약 PASS
 - Latest native remote: `baff938`의 run `30581894132`, macOS·Linux·Windows
   5/5 PASS
@@ -130,7 +131,7 @@ Target: `0.8.0`
 - 현재 상태: 영어 32개·한국어 32개 atomic fact, exact pair 32개와 source-confined
   CLI·Skill·material-task completion capture 구현 완료
 - Logical digest:
-  `sha256:ac024dee9818a86b999d95a237e20db557decd737aad084da07201e9838eeaad`
+  `sha256:279a3a7d4a44609ff54e5141676d452dbddd4db40a63b798ae9d5f8b3285569c`
 - 검증: lint finding·warning 0건, 영어·한국어 query PASS, index 삭제 뒤 query
   fail-closed exit `5`, rebuild equivalence PASS
 - SQLite binary digest는 invocation-local evidence이며 정본·clean-copy equivalence 기준이
@@ -242,7 +243,7 @@ Pre-1.0 비차단 deferred:
 계획 evidence:
 
 - Active fragment 8 KiB 제한 충족
-- Canonical checklist `221/227`, active checklist ID 중복 0건
+- Canonical checklist `222/228`, active checklist ID 중복 0건
 - Root English 159줄·Korean 155줄 README, 상호 language link와 빈 QA 표 PASS
 - Plan static contract 29/29, documentation style regression 18/18 PASS
 - Human documentation inventory 1,285/1,285 review, finding 0건
@@ -466,8 +467,11 @@ Candidate trust blocker:
 - 사용자 지정 순서: npm 시험 배포 성공 뒤 `develop` → `main` 병합
 - Candidate authority: PR·필수 상태 검사·삭제·강제 push 차단이 적용된 exact `develop`
 - Current GitHub ruleset: `develop` 보호 활성, 우회 권한 없음
-- Current publication environment: `release-publication` 존재, 필수 검토자 없음
-- 사용자 해소 작업: `release-publication`에 필수 검토자 추가
+- Current publication environment: `release-publication` 존재, GitHub API 기준 필수
+  검토자 없음
+- 사용자 해소 작업: `release-publication` 필수 검토자 저장 재확인
+- Branch policy: 임시 branch 생성은 사용자 예외 승인 필요, `develop` 직접 push는
+  보호 규칙상 불가
 - 환경 검토자 확인 전 publication 0건
 - `release.yml`: 보호된 정확한 `develop` 커밋에서 제품 `0.8.0`과 npm
   `0.8.0-test.N`을 별도 입력으로 받아 5개 target·6개 npm tarball·embedded
@@ -502,11 +506,12 @@ Pre-1.0 비차단 deferred:
 
 ## 다음 action
 
-0. `release-publication` 필수 검토자 사용자 설정과 확인
-1. P7-044 public npm package family와 native smoke
-2. P7-045 npm-backed Unix·PowerShell·CMD installer와 digest·owner receipt 검증
-3. P7-049 authenticated install-owner adapter를 사용하는 interactive `hive update`
-4. P7-020 artifact·npm provenance workflow
-5. P7-018 protected `develop` exact `0.8.0` product candidate qualification
-6. P7-037 GitHub Release 없이 npm `0.8.0-test.1|test` publication·clean install
-7. 시험 배포 성공 commit의 `develop` → `main` PR 병합
+0. `release-publication` 필수 검토자 저장 재확인
+1. `codex/release-0.8.0` 임시 branch·PR 예외의 사용자 승인
+2. P7-044 public npm package family와 native smoke
+3. P7-045 npm-backed Unix·PowerShell·CMD installer와 digest·owner receipt 검증
+4. P7-049 authenticated install-owner adapter를 사용하는 interactive `hive update`
+5. P7-020 artifact·npm provenance workflow
+6. P7-018 protected `develop` exact `0.8.0` product candidate qualification
+7. P7-037 GitHub Release 없이 npm `0.8.0-test.1|test` publication·clean install
+8. 시험 배포 성공 commit의 `develop` → `main` PR 병합
