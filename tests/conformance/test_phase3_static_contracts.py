@@ -263,6 +263,29 @@ class Phase3SkillSourceContract(unittest.TestCase):
             self.assertIn(requirement, skill)
         self.assertIn("allow_implicit_invocation: true", metadata)
 
+    def test_source_directive_amend_skill_has_bounded_explicit_authority(self) -> None:
+        skill = (
+            REPOSITORY_ROOT
+            / ".agents/skills/hive-directive-amend/SKILL.md"
+        ).read_text(encoding="utf-8")
+        metadata = (
+            REPOSITORY_ROOT
+            / ".agents/skills/hive-directive-amend/agents/openai.yaml"
+        ).read_text(encoding="utf-8")
+
+        for requirement in (
+            "$hive-directive-amend [--source|--consumer] <amendment command>",
+            "Stop the command at the first line break.",
+            "No flag: amend both source-development and consumer-product directives.",
+            "`--source`: amend source-development directives only.",
+            "`--consumer`: amend consumer-product directives only.",
+            "Keep this Skill source-only under `.agents/skills/`.",
+            "Never edit generated output alone when a canonical producer exists.",
+        ):
+            self.assertIn(requirement, skill)
+        self.assertIn("allow_implicit_invocation: false", metadata)
+        self.assertIn("$hive-directive-amend", metadata)
+
     def test_source_consumer_skill_reuse_and_orchestration_independence(self) -> None:
         source_manifest = (REPOSITORY_ROOT / "AGENTS.md").read_text(
             encoding="utf-8"
