@@ -2,9 +2,9 @@
 
 - 기준 branch: `develop`
 - product version: `0.8.0`
-- plan revision: `1.80`
+- plan revision: `1.81`
 - 현재 milestone: Phase 7 qualification + global onboarding·shared index `0.8.0`
-- 현재 작업: 수정된 CMD 설치기를 포함한 npm exact `0.8.0|latest` 배포 준비
+- 현재 작업: npm exact `0.8.0|latest` 배포 완료, `develop` → `main` 반영
 - 외부 중지 경계: GitHub Release·Git tag, protected signing/publication credential,
   exact `1.0.0` 사용자 authority
 - Plan load: compact `docs/plans/PLAN.md` + `docs/plans/phases/07-public-qualification.md`
@@ -16,18 +16,20 @@
   + `docs/plans/active/documentation-style.md` + `docs/plans/active/security-review.md`
   + `docs/plans/active/docs-wiki-migration.md`
   + `docs/plans/active/release-0.8.0.md`
-- Plan completion: canonical checklist `223/228` 완료, `5`개 미완료, `97.8%`
+- Plan completion: canonical checklist `228/228` 완료, 미완료 `0`, `100%`
 - Latest local Windows: Rust workspace 458개 실행·통과. Python 적합성 618개 발견 중
   576개 실제 실행·통과, 42개 미실행. 미실행 범위: 관리자 권한 없는 Windows의
   symbolic link 생성 제약 16개, POSIX·Unix 전용 동작 19개, macOS 전용 설치·서명
   동작 7개. 운영체제 판별: Windows. 미실행 42개: 이 컴퓨터에서 검증 완료로
   판단할 근거 불충분. PowerShell 5.1·7.6.4 installer와 `cmd.exe`
   bootstrap 계약은 이 Windows 컴퓨터에서 실제 실행·통과
-- Latest native remote: `baff938`의 run `30581894132`, macOS·Linux·Windows
-  5/5 PASS
-- Latest local npm: 제품·npm `0.8.0` 정식 포장 전환 진행 중. 기존 `0.8.0-test.1`
-  포장 계약과
-  platform·umbrella tarball과 격리 전역 설치 smoke PASS
+- Latest native remote: exact `420e244`의 candidate run `30657669889`,
+  macOS·Linux·Windows 5/5와 npm umbrella PASS
+- Latest npm publication: run `30658188721`, exact `0.8.0` 여섯 package,
+  `latest=0.8.0`, 기존 `test=0.8.0-test.1`, provenance PASS
+- Actual Windows public install: npm·CMD clean install, repeat, pending receipt recovery,
+  product·receipt `0.8.0`, npm·direct SHA-256
+  `330f4e0c8da5b6347400b9b16a9f76b2fb4f94406a2eacfe8c641367ca344ef9`
 - Native Goal routing: legacy `PLAN.md` checkbox 문구를 `phases/07-public-qualification.md`,
   `active/plugin-project-lifecycle.md`, `active/native-usage-sensor.md`,
   `active/user-onboarding-shared-index.md`, `active/source-docs-wiki.md`,
@@ -458,18 +460,18 @@ Current remote qualification evidence:
   Windows 환경에서 실행 불가하여 미실행이며 macOS 동작은 이 결과로 미검증
 - Direct installer의 같은 owner parent handle-pinning race
 
-## `0.8.0` npm 배포 gate
+## `0.8.0` npm 배포 완료
 
-- P7-044 public npm package family와 native smoke
-- P7-045 npm-backed Unix·PowerShell·CMD installer와 digest·owner receipt 검증
+- P7-044 public npm package family와 native smoke 완료
+- P7-045 npm-backed Unix·PowerShell·CMD installer와 digest·owner receipt 검증 완료
 - P7-049 설치 소유자 기반 대화형 `hive update` 완료
-- P7-020 5개 target archive·npm tarball provenance
-- P7-018 exact `0.8.0` release candidate qualification
-- P7-037 GitHub Release 없이 npm `0.8.0|latest` publication·clean install
+- P7-020 5개 target archive·npm tarball provenance 완료
+- P7-018 exact `0.8.0` release candidate qualification 완료
+- P7-037 GitHub Release 없이 npm `0.8.0|latest` publication·clean install 완료
 
-Candidate trust blocker:
+배포 증거:
 
-- Current source product version `0.8.0`; 수정 반영 뒤 protected remote candidate 재검증 대기
+- Current source·npm product version `0.8.0`
 - 사용자 지정 순서: npm `0.8.0` 배포 성공 뒤 `develop` → `main` 병합
 - Candidate authority: PR·필수 상태 검사·삭제·강제 push 차단이 적용된 exact `develop`
 - Current GitHub ruleset: `develop` 보호 활성, 우회 권한 없음
@@ -483,22 +485,17 @@ Candidate trust blocker:
   `docs/releases/0.8.0.md` 누락으로 npm 게시 전 실패, npm publish 실행 0건
 - Corrective branch: 제품 후보 출시 안내, 명확한 게시 선행 검사 오류, Codex process
   교체 뒤 source watcher 복구와 회귀 시험
-- `release.yml`: 보호된 정확한 `develop` 커밋에서 제품·npm exact `0.8.0`을 받아
-  5개 target·6개 npm tarball·embedded
-  installer candidate 생성. 첫 remote matrix PASS, corrective merge 뒤 새 exact commit 재실행 필요
+- `release.yml`: protected exact `420e244`, run `30657669889` PASS
 - `release-publish.yml`: GitHub Release 0건과 6개 package `latest` publication 계약으로
   전환. 성공한 정확한 `develop` 후보만 허용. 최초 등록은 명시적
   `bootstrap_with_token=true`·임시 `NPM_TOKEN`, 이후는 OIDC 전용
-- Direct installer: exact `0.8.0` umbrella의 unpkg bootstrap과 scoped npm
-  tarball digest 검증 뒤 native 제품 `0.8.0` 확인. 실제 registry clean install은
-  publication 뒤 검증
+- Direct installer: exact `0.8.0` unpkg bootstrap, scoped npm tarball digest,
+  native 제품·receipt `0.8.0`, polluted `PSModulePath` CMD 회귀 PASS
 - GitHub repository environment `release-publication` 1개, 최초 등록용
   `NPM_TOKEN` secret 1개
 - Local npm: Node.js `24.13.1`, npm `11.17.0`, registry 사용자 `gvm1229`
-- npm `aigent-hive`·`@aigent-hive/*` name·scope 신규 등록 권한은 실제 publication
-  전까지 미확정
-- Public registry 조회: umbrella·5개 scoped package 모두 E404,
-  name·scope ownership 증거로 사용 금지
+- Public registry: umbrella·5개 scoped package exact·latest `0.8.0`, test
+  `0.8.0-test.1`
 - Local Windows npm baseline: actual `0.8.0` binary의 platform·umbrella pack,
   isolated global install과 digest
   `a8bdb5d7dd42965ec6f4d2f1f334a4ee4184a7f659f09cb92caf794b96524b0d`
@@ -517,8 +514,5 @@ Pre-1.0 비차단 deferred:
 
 ## 다음 action
 
-1. Corrective branch push와 `develop` 대상 PR 검사·병합
-2. 새 exact `develop` commit의 release candidate와 P7-044·045·020·018 재검증
-3. `release-publish.yml` 승인과 npm `0.8.0|latest` 게시
-4. npm·Unix·PowerShell·CMD clean install·repeat·recovery와 P7-037 검증
-5. npm 배포 성공 commit의 `develop` → `main` PR 병합
+1. npm 배포 성공 commit의 `develop` → `main` PR 병합
+2. Trusted Publisher 설정 확인 뒤 임시 `NPM_TOKEN` 삭제

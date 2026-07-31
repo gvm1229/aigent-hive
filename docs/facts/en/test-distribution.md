@@ -9,21 +9,19 @@ summary: "Exact npm 0.8.0 is the latest install channel while GitHub Release and
 tags: [distribution, release, test]
 aliases: ["0.8.0 release scope"]
 sources:
-  - "repo:Cargo.toml#sha256:5083784d829c1e5ee6e642b54a3e616e78327dc1b8deb139bc00f8d14374b830"
-  - "repo:scripts/package-npm.mjs#sha256:7d286e69158752940c877ce7b8604ee336b7beb7ede0632871d9bae2e9546710"
+  - "repo:docs/releases/0.8.0.md#sha256:1d5100af5c1f8b2d9e19d2a730acdcff9d1fa276c0cfdb364ec9b33164b78205"
 links: [global-onboarding, version-policy, windows-powershell-module-isolation]
-reviewed_revision: "git:cdde668bed5f3b35e08a35f64e7e25594ce9c3a2"
+reviewed_revision: "git:e37de7ff99fb235f673a4d3273deb54d6284999e"
 status: active
 ---
 
 # npm 0.8.0 Distribution
 
-Exact npm `0.8.0` is published under `latest`; `npm install -g aigent-hive` and
-exact `@0.8.0` resolve the same package family. The immutable
-`0.8.0-test.1|test` distribution remains as prior validation history. No GitHub
-Release or Git release tag is created. Artifacts originate from the exact
-protected `develop` candidate, and successful npm qualification precedes the
-same commit's pull request to `main`. Acceptance requires exact product/package
-version equality, matching platform dependencies, provenance, byte identity,
-and packaging/workflow tests. Origin: the maintainer requested the untagged
-`0.8.0` npm release when npm required a valid `latest` channel.
+Candidate run `30657669889` qualified protected `develop` commit `420e244`.
+Publication run `30658188721` then published all six npm packages as exact
+`0.8.0|latest`, while preserving immutable `0.8.0-test.1|test`. The npm and
+Windows direct-install binaries share SHA-256
+`330f4e0c8da5b6347400b9b16a9f76b2fb4f94406a2eacfe8c641367ca344ef9`.
+No GitHub Release or Git release tag was created. Origin: the maintainer
+approved exact `0.8.0` publication because npm installation needed a valid
+`latest` channel.
