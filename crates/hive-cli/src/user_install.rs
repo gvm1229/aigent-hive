@@ -118,6 +118,61 @@ const ANTIGRAVITY_PLUGIN_MANIFEST: &[u8] =
     include_bytes!("../../../harness/plugins/aigent-hive/plugin.json");
 const CLAUDE_USAGE_CAPTURE: &[u8] =
     include_bytes!("../../../harness/plugins/aigent-hive/bin/hive-claude-usage-capture");
+const USER_080_CODEX_PLUGIN_MANIFEST: &[u8] = include_bytes!(
+    "../../../harness/user-bases/0.8.0/plugins/aigent-hive/.codex-plugin/plugin.json"
+);
+const USER_080_CLAUDE_PLUGIN_MANIFEST: &[u8] = include_bytes!(
+    "../../../harness/user-bases/0.8.0/plugins/aigent-hive/.claude-plugin/plugin.json"
+);
+const USER_080_ANTIGRAVITY_PLUGIN_MANIFEST: &[u8] =
+    include_bytes!("../../../harness/user-bases/0.8.0/plugins/aigent-hive/plugin.json");
+const USER_080_CLAUDE_USAGE_CAPTURE: &[u8] = include_bytes!(
+    "../../../harness/user-bases/0.8.0/plugins/aigent-hive/bin/hive-claude-usage-capture"
+);
+const USER_080_CODEX_MARKETPLACE: &[u8] =
+    include_bytes!("../../../harness/user-bases/0.8.0/adapters/codex-marketplace.json");
+const USER_080_CLAUDE_MARKETPLACE: &[u8] =
+    include_bytes!("../../../harness/user-bases/0.8.0/adapters/claude-marketplace.json");
+
+macro_rules! frozen_user_skill_0_8 {
+    ($name:literal) => {
+        (
+            $name,
+            include_bytes!(concat!(
+                "../../../harness/user-bases/0.8.0/plugins/aigent-hive/skills/",
+                $name,
+                "/SKILL.md"
+            ))
+            .as_slice(),
+            include_bytes!(concat!(
+                "../../../harness/user-bases/0.8.0/plugins/aigent-hive/skills/",
+                $name,
+                "/agents/openai.yaml"
+            ))
+            .as_slice(),
+        )
+    };
+}
+
+const USER_080_SKILLS: [(&str, &[u8], &[u8]); 17] = [
+    frozen_user_skill_0_8!("auto-setup-harness"),
+    frozen_user_skill_0_8!("hive-judge-package"),
+    frozen_user_skill_0_8!("hive-knowledge-capture"),
+    frozen_user_skill_0_8!("hive-knowledge-maintenance"),
+    frozen_user_skill_0_8!("hive-knowledge-promote"),
+    frozen_user_skill_0_8!("hive-knowledge-query"),
+    frozen_user_skill_0_8!("hive-migrate"),
+    frozen_user_skill_0_8!("hive-project-upgrade"),
+    frozen_user_skill_0_8!("hive-prompt-refine"),
+    frozen_user_skill_0_8!("hive-role-handoff"),
+    frozen_user_skill_0_8!("hive-run-checkpoint"),
+    frozen_user_skill_0_8!("hive-run-resume"),
+    frozen_user_skill_0_8!("hive-simple-question"),
+    frozen_user_skill_0_8!("hive-update"),
+    frozen_user_skill_0_8!("hive-usage-guard"),
+    frozen_user_skill_0_8!("setup-harness"),
+    frozen_user_skill_0_8!("setup-hive"),
+];
 const ROOT_RAW_README: &[u8] =
     include_bytes!("../../../harness/template/.hive/knowledge/Raw/README.md");
 const ROOT_SCHEMA: &[u8] =
@@ -1274,6 +1329,7 @@ fn validate_prior_ownership(
                 product_version: &manifest.product_version,
                 installed_host_version_range: &manifest.host_version_range,
                 source_release_digest: &manifest.source_release_digest,
+                installed_entries: &manifest.entries,
                 installed_guidance_path: Path::new(&manifest.guidance_path),
                 current_guidance_path: guidance_path,
                 current_source_release_digest: expected_source_release_digest,
@@ -1744,6 +1800,7 @@ struct InventoryAuthentication<'a> {
     product_version: &'a str,
     installed_host_version_range: &'a str,
     source_release_digest: &'a str,
+    installed_entries: &'a [UserOwnershipEntry],
     installed_guidance_path: &'a Path,
     current_guidance_path: &'a Path,
     current_source_release_digest: &'a str,
@@ -1783,6 +1840,18 @@ fn authenticated_user_inventory(
             return Some(prior.clone());
         }
     }
+    if request.product_version == "0.8.0" {
+        if let Some(historical) = historical_080_user_inventory(
+            host,
+            request.installed_host_version_range,
+            request.installed_guidance_path,
+            request.installed_entries,
+        ) {
+            if historical.source_release_digest == request.source_release_digest {
+                return Some(historical);
+            }
+        }
+    }
     if request.product_version == "0.7.0" {
         if let Some(historical) = historical_070_user_inventory(
             host,
@@ -1809,6 +1878,300 @@ fn authenticated_user_inventory(
         }
     }
     None
+}
+
+#[allow(clippy::too_many_lines)]
+fn historical_080_user_inventory(
+    host: UserHost,
+    installed_host_version_range: &str,
+    guidance_path: &Path,
+    installed_entries: &[UserOwnershipEntry],
+) -> Option<AuthenticatedUserInventory> {
+    const KNOWLEDGE_PATHS: [&str; 5] = [
+        ".hive/knowledge/Raw/README.md",
+        ".hive/knowledge/Schema/schema.md",
+        ".hive/knowledge/Wiki/index.md",
+        ".hive/knowledge/Wiki/log.md",
+        ".hive/knowledge/suppression.yml",
+    ];
+    if installed_host_version_range != host.version_range()
+        || !installed_entries
+            .windows(2)
+            .all(|pair| pair[0].path < pair[1].path)
+        || installed_entries.iter().any(|entry| {
+            !valid_sha256(&entry.digest)
+                || entry.executable && entry.unix_mode != installed_unix_mode(true)
+                || !entry.executable && entry.unix_mode != installed_unix_mode(false)
+        })
+    {
+        return None;
+    }
+    let guidance = portable(guidance_path);
+    let valid_guidance = match host {
+        UserHost::Codex => matches!(
+            guidance.as_str(),
+            ".codex/AGENTS.md" | ".codex/AGENTS.override.md"
+        ),
+        UserHost::Claude => guidance == ".claude/CLAUDE.md",
+        UserHost::Antigravity => guidance == ".gemini/GEMINI.md",
+    };
+    if !valid_guidance {
+        return None;
+    }
+
+    let expected_managed = ownership_entries(&historical_080_managed_files(host));
+    let expected_by_path = expected_managed
+        .iter()
+        .map(|entry| (entry.path.as_str(), entry))
+        .collect::<BTreeMap<_, _>>();
+    let installed_paths = installed_entries
+        .iter()
+        .map(|entry| entry.path.as_str())
+        .collect::<BTreeSet<_>>();
+    for entry in installed_entries
+        .iter()
+        .filter(|entry| is_managed_ownership(&entry.ownership))
+    {
+        let expected = expected_by_path.get(entry.path.as_str())?;
+        if entry.digest != expected.digest
+            || entry.executable != expected.executable
+            || entry.unix_mode != expected.unix_mode
+            || entry.ownership != expected.ownership
+        {
+            return None;
+        }
+    }
+    if historical_080_required_paths(host)
+        .iter()
+        .any(|path| !installed_paths.contains(path.as_str()))
+    {
+        return None;
+    }
+    for (name, _, _) in USER_080_SKILLS {
+        let paths = historical_080_skill_paths(host, name);
+        let present = paths
+            .iter()
+            .filter(|path| installed_paths.contains(path.as_str()))
+            .count();
+        if (present != 0 && present != paths.len()) || (name == "setup-hive" && present == 0) {
+            return None;
+        }
+    }
+
+    let mut guidance_count = 0;
+    let mut knowledge_count = 0;
+    let mut review_count = 0;
+    for entry in installed_entries
+        .iter()
+        .filter(|entry| !is_managed_ownership(&entry.ownership))
+    {
+        if entry.executable {
+            return None;
+        }
+        match entry.ownership.as_str() {
+            "shared-marker" if entry.path == guidance => guidance_count += 1,
+            "canonical-data-protected" if KNOWLEDGE_PATHS.contains(&entry.path.as_str()) => {
+                knowledge_count += 1;
+            }
+            "shared-migration-state" if entry.path == ".hive/config/user-setup-review.yml" => {
+                review_count += 1;
+            }
+            _ => return None,
+        }
+    }
+    if guidance_count != 1
+        || !matches!(knowledge_count, 0 | 5)
+        || review_count > 1
+        || installed_entries.len()
+            != installed_entries
+                .iter()
+                .map(|entry| entry.path.as_str())
+                .collect::<BTreeSet<_>>()
+                .len()
+    {
+        return None;
+    }
+
+    Some(AuthenticatedUserInventory {
+        product_version: "0.8.0".to_owned(),
+        host,
+        host_version_range: installed_host_version_range.to_owned(),
+        source_release_digest: source_release_digest_from_entries(installed_entries),
+        guidance_path: guidance,
+        entries: installed_entries.to_vec(),
+    })
+}
+
+#[allow(clippy::too_many_lines)]
+fn historical_080_managed_files(host: UserHost) -> BTreeMap<PathBuf, PlannedFile> {
+    let mut files = BTreeMap::new();
+    match host {
+        UserHost::Codex | UserHost::Claude => {
+            let root = PathBuf::from(format!(
+                ".hive/marketplaces/{}/plugins/aigent-hive",
+                host.as_str()
+            ));
+            for &(name, skill, metadata) in &USER_080_SKILLS {
+                files.insert(
+                    root.join(format!("skills/{name}/SKILL.md")),
+                    PlannedFile {
+                        bytes: skill.to_vec(),
+                        executable: false,
+                        ownership: "immutable-plugin-package",
+                    },
+                );
+                if host == UserHost::Codex {
+                    files.insert(
+                        root.join(format!("skills/{name}/agents/openai.yaml")),
+                        PlannedFile {
+                            bytes: metadata.to_vec(),
+                            executable: false,
+                            ownership: "immutable-plugin-package",
+                        },
+                    );
+                }
+            }
+            for (relative, bytes, executable) in [
+                (
+                    ".codex-plugin/plugin.json",
+                    USER_080_CODEX_PLUGIN_MANIFEST,
+                    false,
+                ),
+                (
+                    ".claude-plugin/plugin.json",
+                    USER_080_CLAUDE_PLUGIN_MANIFEST,
+                    false,
+                ),
+                (
+                    "bin/hive-claude-usage-capture",
+                    USER_080_CLAUDE_USAGE_CAPTURE,
+                    true,
+                ),
+            ] {
+                files.insert(
+                    root.join(relative),
+                    PlannedFile {
+                        bytes: bytes.to_vec(),
+                        executable,
+                        ownership: "immutable-plugin-package",
+                    },
+                );
+            }
+            let marketplace = PathBuf::from(format!(
+                ".hive/marketplaces/{}/{}",
+                host.as_str(),
+                if host == UserHost::Codex {
+                    ".agents/plugins/marketplace.json"
+                } else {
+                    ".claude-plugin/marketplace.json"
+                }
+            ));
+            files.insert(
+                marketplace,
+                PlannedFile {
+                    bytes: if host == UserHost::Codex {
+                        USER_080_CODEX_MARKETPLACE.to_vec()
+                    } else {
+                        USER_080_CLAUDE_MARKETPLACE.to_vec()
+                    },
+                    executable: false,
+                    ownership: "host-adapter-metadata",
+                },
+            );
+        }
+        UserHost::Antigravity => {
+            for &(name, skill, metadata) in &USER_080_SKILLS {
+                for (relative, bytes, ownership) in [
+                    (
+                        PathBuf::from(ANTIGRAVITY_SOURCE_RELATIVE)
+                            .join(format!("skills/{name}/SKILL.md")),
+                        skill,
+                        "immutable-plugin-package",
+                    ),
+                    (
+                        PathBuf::from(ANTIGRAVITY_SOURCE_RELATIVE)
+                            .join(format!("skills/{name}/agents/openai.yaml")),
+                        metadata,
+                        "immutable-plugin-package",
+                    ),
+                    (
+                        PathBuf::from(format!(".gemini/config/skills/{name}/SKILL.md")),
+                        skill,
+                        "host-skill-projection",
+                    ),
+                    (
+                        PathBuf::from(format!(".gemini/config/skills/{name}/agents/openai.yaml")),
+                        metadata,
+                        "host-skill-projection",
+                    ),
+                ] {
+                    files.insert(
+                        relative,
+                        PlannedFile {
+                            bytes: bytes.to_vec(),
+                            executable: false,
+                            ownership,
+                        },
+                    );
+                }
+            }
+            files.insert(
+                PathBuf::from(ANTIGRAVITY_SOURCE_RELATIVE).join("plugin.json"),
+                PlannedFile {
+                    bytes: USER_080_ANTIGRAVITY_PLUGIN_MANIFEST.to_vec(),
+                    executable: false,
+                    ownership: "immutable-plugin-package",
+                },
+            );
+        }
+    }
+    files
+}
+
+fn historical_080_skill_paths(host: UserHost, name: &str) -> Vec<String> {
+    match host {
+        UserHost::Codex => vec![
+            format!(".hive/marketplaces/codex/plugins/aigent-hive/skills/{name}/SKILL.md"),
+            format!(
+                ".hive/marketplaces/codex/plugins/aigent-hive/skills/{name}/agents/openai.yaml"
+            ),
+        ],
+        UserHost::Claude => vec![format!(
+            ".hive/marketplaces/claude/plugins/aigent-hive/skills/{name}/SKILL.md"
+        )],
+        UserHost::Antigravity => vec![
+            format!("{ANTIGRAVITY_SOURCE_RELATIVE}/skills/{name}/SKILL.md"),
+            format!("{ANTIGRAVITY_SOURCE_RELATIVE}/skills/{name}/agents/openai.yaml"),
+            format!(".gemini/config/skills/{name}/SKILL.md"),
+            format!(".gemini/config/skills/{name}/agents/openai.yaml"),
+        ],
+    }
+}
+
+fn historical_080_required_paths(host: UserHost) -> Vec<String> {
+    match host {
+        UserHost::Codex | UserHost::Claude => {
+            let host_name = host.as_str();
+            let root = format!(".hive/marketplaces/{host_name}");
+            let plugin = format!("{root}/plugins/aigent-hive");
+            vec![
+                format!("{plugin}/.codex-plugin/plugin.json"),
+                format!("{plugin}/.claude-plugin/plugin.json"),
+                format!("{plugin}/bin/hive-claude-usage-capture"),
+                format!(
+                    "{root}/{}",
+                    if host == UserHost::Codex {
+                        ".agents/plugins/marketplace.json"
+                    } else {
+                        ".claude-plugin/marketplace.json"
+                    }
+                ),
+            ]
+        }
+        UserHost::Antigravity => {
+            vec![format!("{ANTIGRAVITY_SOURCE_RELATIVE}/plugin.json")]
+        }
+    }
 }
 
 fn historical_070_user_inventory(
@@ -6320,6 +6683,84 @@ mod tests {
         manifest
     }
 
+    fn seed_historical_080_user_install(root: &Path, host: UserHost) -> UserOwnershipManifest {
+        let files = historical_080_managed_files(host);
+        let guidance_path = match host {
+            UserHost::Codex => ".codex/AGENTS.md",
+            UserHost::Claude => ".claude/CLAUDE.md",
+            UserHost::Antigravity => ".gemini/GEMINI.md",
+        };
+        let guidance_bytes = b"foreign prefix\n\n<!-- AIGENT-HIVE:USER:START -->\nfrozen 0.8 marker\n<!-- AIGENT-HIVE:USER:END -->\n";
+        let mut entries = ownership_entries(&files);
+        entries.push(UserOwnershipEntry {
+            path: guidance_path.to_owned(),
+            digest: sha256_digest(guidance_bytes),
+            executable: false,
+            unix_mode: installed_unix_mode(false),
+            ownership: "shared-marker".to_owned(),
+        });
+        entries.sort_by(|left, right| left.path.cmp(&right.path));
+        let source_release_digest = source_release_digest_from_entries(&entries);
+        let mut manifest = UserOwnershipManifest {
+            schema_version: 1,
+            product_version: "0.8.0".to_owned(),
+            host,
+            host_version_range: host.version_range().to_owned(),
+            source_release_digest,
+            plan_digest: String::new(),
+            last_backup: None,
+            guidance_path: guidance_path.to_owned(),
+            entries,
+        };
+        manifest.plan_digest = inventory_digest(
+            host,
+            &manifest.product_version,
+            &manifest.host_version_range,
+            Path::new(&manifest.guidance_path),
+            &manifest.source_release_digest,
+            &manifest.entries,
+        );
+        for (relative, file) in files {
+            let target = root.join(relative);
+            fs::create_dir_all(target.parent().expect("0.8 historical parent"))
+                .expect("0.8 historical parent");
+            fs::write(&target, &file.bytes).expect("0.8 historical bytes");
+            #[cfg(unix)]
+            {
+                use std::os::unix::fs::PermissionsExt;
+                fs::set_permissions(
+                    &target,
+                    fs::Permissions::from_mode(if file.executable { 0o755 } else { 0o644 }),
+                )
+                .expect("0.8 historical mode");
+            }
+        }
+        let guidance = root.join(guidance_path);
+        fs::create_dir_all(guidance.parent().expect("0.8 guidance parent"))
+            .expect("0.8 guidance parent");
+        fs::write(guidance, guidance_bytes).expect("0.8 guidance bytes");
+        let manifest_path = root.join(format!(".hive/install/{}.json", host.as_str()));
+        fs::create_dir_all(manifest_path.parent().expect("0.8 manifest parent"))
+            .expect("0.8 manifest parent");
+        fs::write(
+            manifest_path,
+            json_line(&manifest).expect("0.8 historical manifest JSON"),
+        )
+        .expect("0.8 historical manifest");
+        manifest
+    }
+
+    fn assert_user_entries_equal(actual: &[UserOwnershipEntry], expected: &[UserOwnershipEntry]) {
+        assert_eq!(actual.len(), expected.len());
+        for (actual, expected) in actual.iter().zip(expected) {
+            assert_eq!(actual.path, expected.path);
+            assert_eq!(actual.digest, expected.digest);
+            assert_eq!(actual.executable, expected.executable);
+            assert_eq!(actual.unix_mode, expected.unix_mode);
+            assert_eq!(actual.ownership, expected.ownership);
+        }
+    }
+
     fn seed_legacy_antigravity_directory_scan_install(root: &Path) {
         let inventory = legacy_antigravity_directory_scan_inventory();
         let projection =
@@ -6946,6 +7387,97 @@ mod tests {
             assert!(
                 historical_070_user_inventory(host, range, Path::new(".hive/foreign.md")).is_none()
             );
+        }
+    }
+
+    #[test]
+    fn historical_080_user_inventory_authenticates_exact_snapshots_for_every_host() {
+        for (host, expected_entries) in [
+            (UserHost::Codex, 39),
+            (UserHost::Claude, 22),
+            (UserHost::Antigravity, 70),
+        ] {
+            let temporary = tempdir().expect("tempdir");
+            let manifest = seed_historical_080_user_install(temporary.path(), host);
+            let inventory = historical_080_user_inventory(
+                host,
+                &manifest.host_version_range,
+                Path::new(&manifest.guidance_path),
+                &manifest.entries,
+            )
+            .expect("authenticated 0.8 inventory");
+            assert_eq!(inventory.product_version, "0.8.0");
+            assert_eq!(inventory.entries.len(), expected_entries);
+            assert_user_entries_equal(&inventory.entries, &manifest.entries);
+            assert_eq!(
+                inventory.source_release_digest,
+                manifest.source_release_digest
+            );
+
+            let authenticated = authenticated_user_inventory(
+                host,
+                &InventoryAuthentication {
+                    product_version: "0.8.0",
+                    installed_host_version_range: &manifest.host_version_range,
+                    source_release_digest: &manifest.source_release_digest,
+                    installed_entries: &manifest.entries,
+                    installed_guidance_path: Path::new(&manifest.guidance_path),
+                    current_guidance_path: Path::new(&manifest.guidance_path),
+                    current_source_release_digest:
+                        "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+                    current_entries: &[],
+                    authenticated_prior: None,
+                },
+            )
+            .expect("0.8 branch should authenticate independently of current bytes");
+            assert_user_entries_equal(&authenticated.entries, &manifest.entries);
+
+            let mut tampered = manifest.entries.clone();
+            let managed = tampered
+                .iter_mut()
+                .find(|entry| is_managed_ownership(&entry.ownership))
+                .expect("managed entry");
+            managed.digest = format!("sha256:{}", "f".repeat(64));
+            assert!(historical_080_user_inventory(
+                host,
+                &manifest.host_version_range,
+                Path::new(&manifest.guidance_path),
+                &tampered,
+            )
+            .is_none());
+            assert!(historical_080_user_inventory(
+                host,
+                ">=9.0.0 <10.0.0",
+                Path::new(&manifest.guidance_path),
+                &manifest.entries,
+            )
+            .is_none());
+        }
+    }
+
+    #[test]
+    fn historical_080_install_supports_retirement_and_rejects_byte_tamper() {
+        for host in [UserHost::Codex, UserHost::Claude, UserHost::Antigravity] {
+            let temporary = tempdir().expect("tempdir");
+            let manifest = seed_historical_080_user_install(temporary.path(), host);
+            let arguments = args(temporary.path(), host, UserMode::DryRun);
+            let plan = build_plan(&arguments).expect("authenticated 0.8 update plan");
+            assert!(plan
+                .retired_files
+                .keys()
+                .any(|path| { portable(path).contains("/skills/auto-setup-harness/SKILL.md") }));
+
+            let tampered_path = manifest
+                .entries
+                .iter()
+                .find(|entry| is_managed_ownership(&entry.ownership))
+                .map(|entry| temporary.path().join(&entry.path))
+                .expect("managed 0.8 path");
+            fs::write(&tampered_path, b"tampered frozen 0.8 bytes\n").expect("tamper frozen path");
+            let Err(error) = build_plan(&arguments) else {
+                panic!("tampered 0.8 bytes must fail closed");
+            };
+            assert!(matches!(error, InstallError::Conflict(_)));
         }
     }
 

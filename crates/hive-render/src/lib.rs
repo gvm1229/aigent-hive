@@ -821,8 +821,7 @@ pub fn project_upgrade_candidate_in(
 ///
 /// Release `0.7.0` is the first full-ledger registry entry. Releases `0.1.0`
 /// through `0.6.0` retain their legacy Skill-only authentication contract.
-/// Future releases must preserve this branch byte-for-byte when adding a new
-/// full-ledger entry.
+/// Each full-ledger release remains isolated from later canonical templates.
 ///
 /// # Errors
 ///
@@ -835,6 +834,7 @@ pub fn historical_project_upgrade_candidate_in(
 ) -> Result<HistoricalProjectBase, RenderError> {
     let files = match version {
         "0.7.0" => frozen_project_base_0_7(target_dir)?,
+        "0.8.0" => frozen_project_base_0_8(target_dir)?,
         _ => Err(RenderError::Unsupported(format!(
             "historical full project base is not embedded: {version}"
         )))?,
@@ -1111,6 +1111,342 @@ fn frozen_project_base_0_7(target_dir: &Dir) -> Result<BTreeMap<String, Vec<u8>>
     Ok(files)
 }
 
+#[allow(clippy::too_many_lines)]
+fn frozen_project_base_0_8(target_dir: &Dir) -> Result<BTreeMap<String, Vec<u8>>, RenderError> {
+    #[derive(Deserialize)]
+    struct Answers0_8 {
+        schema_version: u32,
+        project_name: String,
+        setup_mode: String,
+        project_kind: String,
+        primary_host: String,
+        approved_optional_skills: Vec<SkillApproval>,
+    }
+
+    #[derive(Deserialize)]
+    struct Resolution0_8 {
+        schema_version: u32,
+        detection: String,
+        resolved_owner: String,
+        evidence_digest: String,
+    }
+
+    #[derive(Deserialize)]
+    struct Harness0_8 {
+        schema_version: u32,
+        harness_version: String,
+        source_release_version: String,
+        project_name: String,
+        project_kind: String,
+        setup_mode: String,
+        preference_provenance: String,
+        interface_language: String,
+        wiki_enabled: bool,
+        wiki_language: String,
+        persona_id: String,
+        selected_project_skills: Vec<String>,
+        usage_guard_enabled: bool,
+        primary_host: String,
+        external_capability_detection: String,
+        resolved_owner: String,
+        resolution_evidence_digest: String,
+    }
+
+    macro_rules! frozen_skill_0_8 {
+        ($name:literal) => {
+            (
+                $name,
+                include_bytes!(concat!(
+                    "../../../harness/project-bases/0.8.0/skills/",
+                    $name,
+                    "/SKILL.md"
+                ))
+                .as_slice(),
+                include_bytes!(concat!(
+                    "../../../harness/project-bases/0.8.0/skills/",
+                    $name,
+                    "/agents/openai.yaml"
+                ))
+                .as_slice(),
+            )
+        };
+    }
+
+    const DIRECTIVES: [(&str, &[u8]); 3] = [
+        (
+            "00-project-harness.md",
+            include_bytes!("../../../harness/project-bases/0.8.0/directives/00-project-harness.md"),
+        ),
+        (
+            "01-project-knowledge.md",
+            include_bytes!(
+                "../../../harness/project-bases/0.8.0/directives/01-project-knowledge.md"
+            ),
+        ),
+        (
+            "02-project-upgrade.md",
+            include_bytes!("../../../harness/project-bases/0.8.0/directives/02-project-upgrade.md"),
+        ),
+    ];
+    const SKILLS: [(&str, &[u8], &[u8]); 16] = [
+        frozen_skill_0_8!("auto-setup-harness"),
+        frozen_skill_0_8!("hive-judge-package"),
+        frozen_skill_0_8!("hive-knowledge-capture"),
+        frozen_skill_0_8!("hive-knowledge-maintenance"),
+        frozen_skill_0_8!("hive-knowledge-promote"),
+        frozen_skill_0_8!("hive-knowledge-query"),
+        frozen_skill_0_8!("hive-migrate"),
+        frozen_skill_0_8!("hive-project-upgrade"),
+        frozen_skill_0_8!("hive-prompt-refine"),
+        frozen_skill_0_8!("hive-role-handoff"),
+        frozen_skill_0_8!("hive-run-checkpoint"),
+        frozen_skill_0_8!("hive-run-resume"),
+        frozen_skill_0_8!("hive-simple-question"),
+        frozen_skill_0_8!("hive-update"),
+        frozen_skill_0_8!("hive-usage-guard"),
+        frozen_skill_0_8!("setup-harness"),
+    ];
+
+    let answers: Answers0_8 = serde_yaml::from_slice(&read_target_required(
+        target_dir,
+        Path::new(".hive/setup-answers.yml"),
+        "0.8 setup answers",
+    )?)
+    .map_err(|error| {
+        RenderError::Verification(format!("invalid frozen 0.8 setup answers: {error}"))
+    })?;
+    let resolution: Resolution0_8 = serde_yaml::from_slice(&read_target_required(
+        target_dir,
+        Path::new(".hive/config/capability-resolution.yml"),
+        "0.8 capability resolution",
+    )?)
+    .map_err(|error| {
+        RenderError::Verification(format!("invalid frozen 0.8 capability resolution: {error}"))
+    })?;
+    let harness_bytes = read_target_required(
+        target_dir,
+        Path::new(".hive/config/harness.toml"),
+        "0.8 harness config",
+    )?;
+    let harness_text = std::str::from_utf8(&harness_bytes).map_err(|_| {
+        RenderError::Verification("frozen 0.8 harness config is not UTF-8".to_owned())
+    })?;
+    let harness: Harness0_8 = toml::from_str(harness_text).map_err(|error| {
+        RenderError::Verification(format!("invalid frozen 0.8 harness config: {error}"))
+    })?;
+
+    let preference_provenance_matches = matches!(
+        (
+            harness.setup_mode.as_str(),
+            harness.preference_provenance.as_str()
+        ),
+        ("expedited", "global-inherited") | ("custom", "project-custom")
+    );
+    let owner_matches_detection = match resolution.detection.as_str() {
+        "available" => {
+            (harness.primary_host == "codex" && resolution.resolved_owner == "omx")
+                || (harness.primary_host == "claude" && resolution.resolved_owner == "omc")
+        }
+        "absent" | "incompatible" | "unknown" => resolution.resolved_owner == "host-native",
+        _ => false,
+    };
+    let inputs_match = answers.schema_version == 1
+        && harness.schema_version == 1
+        && harness.harness_version == "0.8.0"
+        && harness.source_release_version == "0.8.0"
+        && resolution.schema_version == 1
+        && answers.project_name == harness.project_name
+        && answers.project_kind == harness.project_kind
+        && answers.setup_mode == harness.setup_mode
+        && answers.primary_host == harness.primary_host
+        && resolution.detection == harness.external_capability_detection
+        && resolution.resolved_owner == harness.resolved_owner
+        && resolution.evidence_digest == harness.resolution_evidence_digest
+        && !harness.project_name.trim().is_empty()
+        && matches!(harness.project_kind.as_str(), "general" | "custom")
+        && matches!(harness.setup_mode.as_str(), "expedited" | "custom")
+        && preference_provenance_matches
+        && matches!(harness.interface_language.as_str(), "en" | "ko")
+        && matches!(harness.wiki_language.as_str(), "en" | "ko" | "both")
+        && matches!(
+            harness.persona_id.as_str(),
+            "strict" | "balanced" | "friendly" | "custom"
+        )
+        && matches!(
+            harness.primary_host.as_str(),
+            "codex" | "claude" | "antigravity"
+        )
+        && matches!(
+            harness.resolved_owner.as_str(),
+            "host-native" | "omx" | "omc"
+        )
+        && owner_matches_detection
+        && valid_digest(&harness.resolution_evidence_digest)
+        && harness
+            .selected_project_skills
+            .windows(2)
+            .all(|pair| pair[0] < pair[1]);
+    if !inputs_match {
+        return Err(RenderError::Verification(
+            "frozen 0.8 project-base inputs are invalid or inconsistent".to_owned(),
+        ));
+    }
+    validate_skill_approvals(&answers.approved_optional_skills).map_err(as_verification)?;
+    let approved_ledger: SkillLedger = serde_yaml::from_slice(&read_target_required(
+        target_dir,
+        Path::new(".hive/config/approved-skills.yml"),
+        "0.8 approved optional Skill ledger",
+    )?)
+    .map_err(|error| {
+        RenderError::Verification(format!(
+            "invalid frozen 0.8 approved optional Skill ledger: {error}"
+        ))
+    })?;
+    if approved_ledger.skills != answers.approved_optional_skills {
+        return Err(RenderError::Verification(
+            "frozen 0.8 optional Skill ledger differs from setup approval authority".to_owned(),
+        ));
+    }
+
+    let built_in_names = SKILLS
+        .iter()
+        .map(|(name, _, _)| *name)
+        .collect::<BTreeSet<_>>();
+    if harness
+        .selected_project_skills
+        .iter()
+        .any(|name| !built_in_names.contains(name.as_str()))
+    {
+        return Err(RenderError::Verification(
+            "frozen 0.8 selected project Skill is not in the embedded release".to_owned(),
+        ));
+    }
+    let selected = harness
+        .selected_project_skills
+        .iter()
+        .map(String::as_str)
+        .collect::<BTreeSet<_>>();
+    let mut files = BTreeMap::new();
+    for (name, content) in DIRECTIVES {
+        files.insert(format!(".agents/directives/{name}"), content.to_vec());
+    }
+    for &(name, content, metadata) in &SKILLS {
+        if !selected.contains(name) {
+            continue;
+        }
+        files.insert(format!(".agents/skills/{name}/SKILL.md"), content.to_vec());
+        files.insert(
+            format!(".agents/skills/{name}/agents/openai.yaml"),
+            metadata.to_vec(),
+        );
+        if harness.primary_host == "claude" {
+            files.insert(format!(".claude/skills/{name}/SKILL.md"), content.to_vec());
+        }
+    }
+
+    let mut reserved_names = built_in_names.clone();
+    reserved_names.insert("setup-hive");
+    let mut optional_names = BTreeSet::new();
+    for approval in &answers.approved_optional_skills {
+        let Some(source) = approval.source.strip_prefix("path:") else {
+            continue;
+        };
+        if approval.approved_capabilities != approval.requested_capabilities {
+            continue;
+        }
+        if reserved_names.contains(approval.name.as_str())
+            || !optional_names.insert(approval.name.as_str())
+        {
+            return Err(RenderError::Verification(format!(
+                "frozen 0.8 optional Skill name collides with another projection: {}",
+                approval.name
+            )));
+        }
+        let source = PathBuf::from(source);
+        validate_project_relative(&source)
+            .map_err(|error| RenderError::Verification(error.to_string()))?;
+        if source.file_name() != Some(OsStr::new("SKILL.md"))
+            || [".agents", ".claude", ".hive"]
+                .iter()
+                .any(|root| source.starts_with(root))
+            || matches!(
+                source.to_str(),
+                Some("AGENTS.md" | "CLAUDE.md" | "GEMINI.md")
+            )
+        {
+            return Err(RenderError::Verification(format!(
+                "frozen 0.8 optional Skill source is inside a Hive-managed namespace: {}",
+                source.display()
+            )));
+        }
+        let skill_md = read_target_required(
+            target_dir,
+            &source,
+            "0.8 approved project-local optional Skill source",
+        )?;
+        validate_frozen_0_8_optional_source(approval, &skill_md)?;
+        files.insert(
+            format!(".agents/skills/{}/SKILL.md", approval.name),
+            skill_md.clone(),
+        );
+        if harness.primary_host == "claude" {
+            files.insert(
+                format!(".claude/skills/{}/SKILL.md", approval.name),
+                skill_md,
+            );
+        }
+    }
+
+    let wiki_state = if harness.wiki_enabled {
+        "enabled"
+    } else {
+        "disabled"
+    };
+    let mut marker = include_str!("../../../harness/project-bases/0.8.0/AGENTS.md.template")
+        .replace("{{ project_name }}", &harness.project_name)
+        .replace("{{ project_kind }}", &harness.project_kind)
+        .replace("{{ setup_mode }}", &harness.setup_mode)
+        .replace(
+            "{{ preference_provenance }}",
+            &harness.preference_provenance,
+        )
+        .replace("{{ interface_language }}", &harness.interface_language)
+        .replace(
+            "{{ \"enabled\" if wiki_enabled else \"disabled\" }}",
+            wiki_state,
+        )
+        .replace("{{ wiki_language }}", &harness.wiki_language)
+        .replace("{{ persona_id }}", &harness.persona_id)
+        .replace("{{ primary_host }}", &harness.primary_host)
+        .replace(
+            "{{ capability_resolution.resolved_owner }}",
+            &harness.resolved_owner,
+        )
+        .replace(
+            "{{ capability_resolution.evidence_digest }}",
+            &harness.resolution_evidence_digest,
+        );
+    if !harness.usage_guard_enabled {
+        marker = marker
+            .lines()
+            .map(|line| {
+                if line.starts_with("- Immediately before each new automatic dispatch") {
+                    "- Usage guard: disabled by installed preference. Do not run `hive usage enforce` or call a native/CodexBar sensor automatically. Automatic resume must report `data.usage_guard.enforced=false`, `outcome=disabled`, one authorization ID, and exactly one dispatch brief."
+                } else {
+                    line
+                }
+            })
+            .collect::<Vec<_>>()
+            .join("\n");
+        marker.push('\n');
+    }
+    files.insert("AGENTS.md".to_owned(), marker.into_bytes());
+    let adapter = format!("{MARKER_START}\n@AGENTS.md\n{MARKER_END}\n").into_bytes();
+    files.insert("CLAUDE.md".to_owned(), adapter.clone());
+    files.insert("GEMINI.md".to_owned(), adapter);
+    Ok(files)
+}
+
 fn validate_frozen_0_7_optional_source(
     approval: &SkillApproval,
     skill_md: &[u8],
@@ -1163,6 +1499,64 @@ fn validate_frozen_0_7_optional_source(
     if frontmatter.name != approval.name || frontmatter.description.trim().is_empty() {
         return Err(RenderError::Verification(format!(
             "frozen 0.7 optional Skill frontmatter differs from approval: {}",
+            approval.name
+        )));
+    }
+    Ok(())
+}
+
+fn validate_frozen_0_8_optional_source(
+    approval: &SkillApproval,
+    skill_md: &[u8],
+) -> Result<(), RenderError> {
+    #[derive(Deserialize)]
+    #[serde(deny_unknown_fields)]
+    struct Frontmatter0_8 {
+        name: String,
+        description: String,
+    }
+
+    let projected = PathBuf::from(format!(".agents/skills/{}/SKILL.md", approval.name));
+    validate_hive_skill_projection_relative(&projected)
+        .map_err(|error| RenderError::Verification(error.to_string()))?;
+    let digest = sha256_digest(skill_md);
+    if approval.revision != digest || approval.content_digest != digest {
+        return Err(RenderError::Verification(format!(
+            "frozen 0.8 optional Skill bytes differ from approval: {}",
+            approval.name
+        )));
+    }
+    let text = std::str::from_utf8(skill_md).map_err(|_| {
+        RenderError::Verification(format!(
+            "frozen 0.8 optional Skill is not UTF-8: {}",
+            approval.name
+        ))
+    })?;
+    let (rest, delimiter) = if let Some(rest) = text.strip_prefix("---\n") {
+        (rest, "\n---\n")
+    } else if let Some(rest) = text.strip_prefix("---\r\n") {
+        (rest, "\r\n---\r\n")
+    } else {
+        return Err(RenderError::Verification(format!(
+            "frozen 0.8 optional Skill has no frontmatter: {}",
+            approval.name
+        )));
+    };
+    let (frontmatter, _) = rest.split_once(delimiter).ok_or_else(|| {
+        RenderError::Verification(format!(
+            "frozen 0.8 optional Skill has unterminated frontmatter: {}",
+            approval.name
+        ))
+    })?;
+    let frontmatter: Frontmatter0_8 = serde_yaml::from_str(frontmatter).map_err(|error| {
+        RenderError::Verification(format!(
+            "frozen 0.8 optional Skill frontmatter is invalid for {}: {error}",
+            approval.name
+        ))
+    })?;
+    if frontmatter.name != approval.name || frontmatter.description.trim().is_empty() {
+        return Err(RenderError::Verification(format!(
+            "frozen 0.8 optional Skill frontmatter differs from approval: {}",
             approval.name
         )));
     }
@@ -6285,7 +6679,8 @@ mod tests {
         installed_tree_digest, load_answers, load_resolution, merge_shared_marker,
         mutate_exact_projection_claimed, open_target_capability, parse_role,
         prepare_projection_transition, project_upgrade_candidate_in, render_agents_marker,
-        render_project_base, render_tree, replace_capability_file_impl,
+        render_project_base, render_setup_answers, render_tree, render_tree_with_preferences,
+        render_yaml_projection, replace_capability_file_impl,
         require_operational_update_preferences, resolve_effective_project_preferences,
         resolve_project_skill_selection, shared_marker_foreign_digest, update_path_is_owned,
         valid_digest, valid_role_id, valid_timestamp, validate_hook_approvals,
@@ -6920,6 +7315,116 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::too_many_lines)]
+    fn frozen_0_8_full_registry_preserves_selected_projection_and_marker_bytes() {
+        for (answers, capabilities, usage_guard_enabled, expected_files) in [
+            ("answers-base.yml", "capabilities-codex-omx.json", true, 10),
+            (
+                "answers-claude.yml",
+                "capabilities-claude-omc.json",
+                false,
+                12,
+            ),
+        ] {
+            let temporary = tempfile::tempdir().expect("temporary directory");
+            let target = temporary.path().canonicalize().expect("canonical target");
+            execute_setup(&SetupRequest {
+                target: &target,
+                answers: &fixture(answers),
+                capabilities: &fixture(capabilities),
+                mode: SetupMode::Apply,
+                reconfigure_roles: BTreeSet::new(),
+                global_preferences: Some(GlobalProjectPreferences {
+                    interface_language: "ko".to_owned(),
+                    wiki_enabled: true,
+                    wiki_language: "both".to_owned(),
+                    persona_id: "friendly".to_owned(),
+                    persona_custom_description: None,
+                    selected_project_skills: vec![
+                        "hive-prompt-refine".to_owned(),
+                        "setup-harness".to_owned(),
+                    ],
+                    usage_guard_enabled,
+                    codexbar_fallback_enabled: false,
+                    usage_stop_remaining_percent: 19,
+                }),
+            })
+            .expect("operational project setup");
+            let target_dir = open_target_capability(&target).expect("target capability");
+            let harness_path = target.join(".hive/config/harness.toml");
+            let harness = fs::read_to_string(&harness_path)
+                .expect("harness config")
+                .replace(
+                    &format!("harness_version = \"{}\"", env!("CARGO_PKG_VERSION")),
+                    "harness_version = \"0.8.0\"",
+                )
+                .replace(
+                    &format!("source_release_version = \"{}\"", env!("CARGO_PKG_VERSION")),
+                    "source_release_version = \"0.8.0\"",
+                );
+            fs::write(&harness_path, harness).expect("pinned 0.8 harness config");
+
+            let historical = historical_project_upgrade_candidate_in(&target_dir, "0.8.0")
+                .expect("frozen 0.8 registry");
+            assert_eq!(historical.product_version, "0.8.0");
+            assert_eq!(historical.files.len(), expected_files);
+            assert!(historical
+                .files
+                .windows(2)
+                .all(|pair| pair[0].path < pair[1].path));
+            assert!(historical
+                .files
+                .iter()
+                .all(|entry| entry.content_digest == sha256_digest(&entry.content)));
+            assert!(historical
+                .files
+                .iter()
+                .all(|entry| { !entry.path.contains("/skills/") || entry.kind == "skill" }));
+            let frozen = historical
+                .files
+                .iter()
+                .map(|entry| (entry.path.clone(), entry.content.clone()))
+                .collect::<BTreeMap<_, _>>();
+            assert!(frozen.contains_key(".agents/skills/setup-harness/agents/openai.yaml"));
+            assert!(frozen.contains_key(".agents/skills/hive-prompt-refine/agents/openai.yaml"));
+            for path in [
+                ".agents/skills/setup-harness/agents/openai.yaml",
+                ".agents/skills/hive-prompt-refine/agents/openai.yaml",
+            ] {
+                assert!(String::from_utf8_lossy(&frozen[path])
+                    .contains("allow_implicit_invocation: false"));
+            }
+            assert!(!frozen.contains_key(".agents/skills/hive-knowledge-query/SKILL.md"));
+            if capabilities == "capabilities-claude-omc.json" {
+                assert!(frozen.contains_key(".claude/skills/setup-harness/SKILL.md"));
+                assert!(String::from_utf8_lossy(&frozen["AGENTS.md"])
+                    .contains("Usage guard: disabled by installed preference"));
+            } else {
+                assert!(!frozen.contains_key(".claude/skills/setup-harness/SKILL.md"));
+                assert!(
+                    String::from_utf8_lossy(&frozen["AGENTS.md"]).contains("hive usage enforce")
+                );
+            }
+            assert!(historical_project_upgrade_candidate_in(&target_dir, "0.8.1").is_err());
+            assert!(historical_project_upgrade_candidate_in(&target_dir, "0.9.0").is_err());
+
+            let harness = fs::read_to_string(&harness_path).expect("0.8 harness config");
+            fs::write(
+                &harness_path,
+                harness.replace(
+                    "selected_project_skills = [\"hive-prompt-refine\", \"setup-harness\"]",
+                    "selected_project_skills = [\"future-skill\"]",
+                ),
+            )
+            .expect("tampered selection");
+            assert!(matches!(
+                historical_project_upgrade_candidate_in(&target_dir, "0.8.0"),
+                Err(RenderError::Verification(_))
+            ));
+        }
+    }
+
+    #[test]
     fn frozen_0_7_registry_authenticates_approved_path_skill_and_rejects_source_tamper() {
         for (answers_fixture, capabilities_fixture, expected_paths) in [
             (
@@ -6970,6 +7475,134 @@ mod tests {
                 Err(RenderError::Verification(_))
             ));
         }
+    }
+
+    #[test]
+    fn frozen_0_8_registry_authenticates_approved_path_skill_and_rejects_source_tamper() {
+        for (answers_fixture, capabilities_fixture, expected_paths) in [
+            (
+                "answers-base.yml",
+                "capabilities-codex-omx.json",
+                vec![".agents/skills/local-inspect/SKILL.md"],
+            ),
+            (
+                "answers-claude.yml",
+                "capabilities-claude-omc.json",
+                vec![
+                    ".agents/skills/local-inspect/SKILL.md",
+                    ".claude/skills/local-inspect/SKILL.md",
+                ],
+            ),
+        ] {
+            let temporary = tempfile::tempdir().expect("temporary directory");
+            let source = temporary
+                .path()
+                .join("vendor-skills/local-inspect/SKILL.md");
+            fs::create_dir_all(source.parent().expect("source parent")).expect("source parent");
+            let skill_bytes = optional_skill_bytes("v1");
+            fs::write(&source, &skill_bytes).expect("optional source");
+            let (mut answers, _) =
+                load_answers(&fixture(answers_fixture)).expect("answers should load");
+            answers.approved_optional_skills = vec![signed_local_skill(&skill_bytes)];
+            let resolution =
+                load_resolution(&fixture(capabilities_fixture)).expect("resolution should load");
+            apply_optional_skill_fixture_0_8(temporary.path(), &answers, &resolution);
+            pin_harness_to_0_8(temporary.path());
+            let target = open_target_capability(temporary.path()).expect("target capability");
+
+            let historical =
+                historical_project_upgrade_candidate_in(&target, "0.8.0").expect("0.8 registry");
+            for path in expected_paths {
+                let entry = historical
+                    .files
+                    .iter()
+                    .find(|entry| entry.path == path)
+                    .expect("approved optional projection");
+                assert_eq!(entry.kind, "skill");
+                assert_eq!(entry.content, skill_bytes);
+                assert_eq!(entry.content_digest, sha256_digest(&skill_bytes));
+            }
+
+            fs::write(&source, optional_skill_bytes("tampered")).expect("tampered source");
+            assert!(matches!(
+                historical_project_upgrade_candidate_in(&target, "0.8.0"),
+                Err(RenderError::Verification(_))
+            ));
+        }
+    }
+
+    #[test]
+    fn frozen_0_8_registry_rejects_reserved_optional_name_and_allows_literal_braces() {
+        let collision = tempfile::tempdir().expect("temporary directory");
+        let local_source = collision
+            .path()
+            .join("vendor-skills/local-inspect/SKILL.md");
+        fs::create_dir_all(local_source.parent().expect("source parent")).expect("source parent");
+        let local_bytes = optional_skill_bytes("v1");
+        fs::write(&local_source, &local_bytes).expect("optional source");
+        let (mut answers, _) =
+            load_answers(&fixture("answers-base.yml")).expect("answers should load");
+        answers.approved_optional_skills = vec![signed_local_skill(&local_bytes)];
+        let resolution = load_resolution(&fixture("capabilities-codex-omx.json"))
+            .expect("resolution should load");
+        apply_optional_skill_fixture_0_8(collision.path(), &answers, &resolution);
+        pin_harness_to_0_8(collision.path());
+
+        let reserved_bytes =
+            b"---\nname: setup-hive\ndescription: Reserved collision fixture.\n---\n\n# Reserved\n";
+        answers.approved_optional_skills = vec![signed_path_skill(
+            "setup-hive",
+            "path:vendor-skills/setup-hive/SKILL.md",
+            reserved_bytes,
+        )];
+        fs::write(
+            collision.path().join(".hive/setup-answers.yml"),
+            render_setup_answers(&answers).expect("reserved answers"),
+        )
+        .expect("reserved answers");
+        fs::write(
+            collision.path().join(".hive/config/approved-skills.yml"),
+            render_yaml_projection(
+                Some("# Generated from explicit setup approvals."),
+                "skills",
+                &answers.approved_optional_skills,
+            )
+            .expect("reserved ledger"),
+        )
+        .expect("reserved ledger");
+        let collision_target =
+            open_target_capability(collision.path()).expect("collision target capability");
+        assert!(matches!(
+            historical_project_upgrade_candidate_in(&collision_target, "0.8.0"),
+            Err(RenderError::Verification(_))
+        ));
+
+        let braces = tempfile::tempdir().expect("temporary directory");
+        let answers_path = braces.path().join("answers.yml");
+        let fixture_answers = fs::read_to_string(fixture("answers-base.yml"))
+            .expect("fixture answers")
+            .replace("phase1-fixture", "phase1 {{ fixture }}");
+        fs::write(&answers_path, fixture_answers).expect("brace answers");
+        let target = braces.path().canonicalize().expect("canonical target");
+        execute_setup(&SetupRequest {
+            target: &target,
+            answers: &answers_path,
+            capabilities: &fixture("capabilities-codex-omx.json"),
+            mode: SetupMode::Apply,
+            reconfigure_roles: BTreeSet::new(),
+            global_preferences: Some(test_global_preferences()),
+        })
+        .expect("brace project setup");
+        pin_harness_to_0_8(&target);
+        let target_dir = open_target_capability(&target).expect("brace target capability");
+        let historical = historical_project_upgrade_candidate_in(&target_dir, "0.8.0")
+            .expect("literal braces are valid project data");
+        let marker = historical
+            .files
+            .iter()
+            .find(|entry| entry.path == "AGENTS.md")
+            .expect("historical marker");
+        assert!(String::from_utf8_lossy(&marker.content).contains("phase1 {{ fixture }}"));
     }
 
     #[cfg(unix)]
@@ -7235,11 +7868,19 @@ mod tests {
     }
 
     fn signed_local_skill(bytes: &[u8]) -> SkillApproval {
+        signed_path_skill(
+            "local-inspect",
+            "path:vendor-skills/local-inspect/SKILL.md",
+            bytes,
+        )
+    }
+
+    fn signed_path_skill(name: &str, source: &str, bytes: &[u8]) -> SkillApproval {
         let digest = sha256_digest(bytes);
         let mut approval = SkillApproval {
             consent_version: 1,
-            name: "local-inspect".to_owned(),
-            source: "path:vendor-skills/local-inspect/SKILL.md".to_owned(),
+            name: name.to_owned(),
+            source: source.to_owned(),
             revision: digest.clone(),
             content_digest: digest,
             requested_capabilities: vec!["filesystem-read".to_owned()],
@@ -7250,6 +7891,23 @@ mod tests {
         approval.consent_digest =
             calculate_consent_digest(&approval).expect("local Skill consent should canonicalize");
         approval
+    }
+
+    fn test_global_preferences() -> GlobalProjectPreferences {
+        GlobalProjectPreferences {
+            interface_language: "ko".to_owned(),
+            wiki_enabled: true,
+            wiki_language: "both".to_owned(),
+            persona_id: "friendly".to_owned(),
+            persona_custom_description: None,
+            selected_project_skills: vec![
+                "hive-prompt-refine".to_owned(),
+                "setup-harness".to_owned(),
+            ],
+            usage_guard_enabled: true,
+            codexbar_fallback_enabled: false,
+            usage_stop_remaining_percent: 60,
+        }
     }
 
     fn apply_optional_skill_fixture(
@@ -7276,6 +7934,57 @@ mod tests {
             None,
         )
         .expect("optional Skill fixture should activate");
+    }
+
+    fn apply_optional_skill_fixture_0_8(
+        target: &Path,
+        answers: &SetupAnswers,
+        resolution: &CapabilityResolution,
+    ) {
+        let target_dir = open_target_capability(target).expect("target capability should open");
+        let global = test_global_preferences();
+        let effective = resolve_effective_project_preferences(answers, Some(&global))
+            .expect("0.8 preferences should resolve")
+            .expect("0.8 preferences should be active");
+        let planned = render_tree_with_preferences(
+            &target_dir,
+            answers,
+            resolution,
+            &BTreeSet::new(),
+            Some(&effective),
+        )
+        .expect("optional 0.8 Skill tree should render");
+        let transition = prepare_projection_transition(&target_dir, &planned, answers)
+            .expect("optional 0.8 Skill projection preflight should succeed");
+        activate_staged_impl(
+            target,
+            &target_dir,
+            &planned,
+            &transition.deletions,
+            answers,
+            resolution,
+            &transition.expected_before,
+            None,
+            None,
+            None,
+            None,
+        )
+        .expect("optional 0.8 Skill fixture should activate");
+    }
+
+    fn pin_harness_to_0_8(target: &Path) {
+        let harness_path = target.join(".hive/config/harness.toml");
+        let harness = fs::read_to_string(&harness_path)
+            .expect("harness config")
+            .replace(
+                &format!("harness_version = \"{}\"", env!("CARGO_PKG_VERSION")),
+                "harness_version = \"0.8.0\"",
+            )
+            .replace(
+                &format!("source_release_version = \"{}\"", env!("CARGO_PKG_VERSION")),
+                "source_release_version = \"0.8.0\"",
+            );
+        fs::write(harness_path, harness).expect("pinned 0.8 harness config");
     }
 
     fn projection_recovery_bytes(parent: &Path) -> Vec<Vec<u8>> {

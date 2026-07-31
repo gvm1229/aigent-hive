@@ -1,0 +1,6 @@
+interface:
+  display_name: "Hive Role Handoff"
+  short_description: "Record an explicit persistent role handoff"
+  default_prompt: "Use $hive-role-handoff to record this role handoff explicitly."
+policy:
+  allow_implicit_invocation: false
