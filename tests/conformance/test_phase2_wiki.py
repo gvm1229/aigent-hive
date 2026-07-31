@@ -819,7 +819,7 @@ Deleted body sentinel SECRET-DELETED-PROSE.
         self.assertTrue(index_path.is_symlink())
         self.assertEqual(outside.read_bytes(), outside_before)
 
-    def test_stale_marker_symlink_is_never_followed_by_query_or_rebuild(self) -> None:
+    def test_legacy_stale_marker_symlink_is_inert_and_never_followed(self) -> None:
         self.ingest("alpha")
         stale_path = self.user_root / ".hive/index/.stale"
         outside = self.target.parent / f"{self.target.name}-outside-stale"
@@ -849,8 +849,8 @@ Deleted body sentinel SECRET-DELETED-PROSE.
         ):
             with self.subTest(action=arguments[:2]):
                 process, result = self.invoke(*arguments)
-                self.assertNotEqual(process.returncode, 0)
-                self.assertIn(result["status"], {"conflict", "verification-failed"})
+                self.assertEqual(process.returncode, 0)
+                self.assertEqual(result["status"], "success")
                 self.assertTrue(stale_path.is_symlink())
                 self.assertEqual(outside.read_bytes(), outside_before)
 
