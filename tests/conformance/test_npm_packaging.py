@@ -66,7 +66,7 @@ class NpmPackagingContract(unittest.TestCase):
                     "--product-version",
                     "0.8.0",
                     "--package-version",
-                    "0.8.0-test.1",
+                    "0.8.0",
                     "--output",
                     str(output),
                     "--target",
@@ -77,7 +77,7 @@ class NpmPackagingContract(unittest.TestCase):
                 directory = output / name.split("/", 1)[1]
                 manifest = json.loads((directory / "package.json").read_text("utf-8"))
                 self.assertEqual(manifest["name"], name)
-                self.assertEqual(manifest["version"], "0.8.0-test.1")
+                self.assertEqual(manifest["version"], "0.8.0")
                 self.assertEqual(
                     manifest["aigentHive"],
                     {"productVersion": "0.8.0"},
@@ -94,7 +94,7 @@ class NpmPackagingContract(unittest.TestCase):
                 "--product-version",
                 "0.8.0",
                 "--package-version",
-                "0.8.0-test.1",
+                "0.8.0",
                 "--installer-dir",
                 str(self.write_installers(work)),
                 "--output",
@@ -106,7 +106,7 @@ class NpmPackagingContract(unittest.TestCase):
             self.assertEqual(
                 umbrella["optionalDependencies"],
                 {
-                    definition[0]: "0.8.0-test.1"
+                    definition[0]: "0.8.0"
                     for definition in TARGETS.values()
                 },
             )
@@ -149,7 +149,7 @@ class NpmPackagingContract(unittest.TestCase):
                 "--product-version",
                 "0.8.0",
                 "--package-version",
-                "0.8.0-test.1",
+                "0.8.0",
                 "--output",
                 str(packages),
                 "--target",
@@ -164,7 +164,7 @@ class NpmPackagingContract(unittest.TestCase):
                 "--product-version",
                 "0.8.0",
                 "--package-version",
-                "0.8.0-test.1",
+                "0.8.0",
                 "--installer-dir",
                 str(self.write_installers(work)),
                 "--output",

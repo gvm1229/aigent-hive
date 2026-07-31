@@ -404,22 +404,17 @@ class Phase6StaticContracts(unittest.TestCase):
             "dist/install.cmd",
             "npm publish",
             "--provenance",
-            "--tag test",
+            "--tag latest",
             "release-publication",
             'test "$PRODUCT_VERSION" = "0.8.0"',
-            "PRODUCT_VERSION-test.N",
+            'test "$PACKAGE_VERSION" = "$PRODUCT_VERSION"',
             'head_branch <<<"$metadata")" = "develop"',
             "bootstrap_with_token",
-            "repair_existing_test_tags",
             "secrets.NPM_TOKEN",
             "NODE_AUTH_TOKEN",
             "!inputs.bootstrap_with_token",
-            "!inputs.repair_existing_test_tags",
-            "Verify existing npm tarballs before tag repair",
-            'cmp "dist/$archive" "$root/registry.tgz"',
-            'npm dist-tag rm "$package" latest',
             'npm view "$package" "dist-tags.$tag"',
-            'test "$(read_tag "$package" test)" = "$PACKAGE_VERSION"',
+            'read_tag "$package" latest',
             "differs from approved candidate",
             "required release notes are missing",
             'sha256sum --check --strict "$archive.sha256"',
@@ -450,7 +445,6 @@ class Phase6StaticContracts(unittest.TestCase):
             "APPLE_CERTIFICATE",
             "ARTIFACT_SIGNING",
             "gh release create",
-            "--tag latest",
         ):
             self.assertNotIn(forbidden, candidate)
         for forbidden in (
@@ -462,7 +456,6 @@ class Phase6StaticContracts(unittest.TestCase):
             "azure/artifact-signing-action@",
             "gh release create",
             "gh release edit",
-            "--tag latest",
         ):
             self.assertNotIn(forbidden, publication)
         self.assertNotIn("eval ", candidate + publication)
@@ -613,11 +606,11 @@ class Phase6StaticContracts(unittest.TestCase):
         self,
     ) -> None:
         targets = {
-            "aarch64-apple-darwin": "aigent-hive-darwin-arm64-0.8.0-test.1.tgz",
-            "x86_64-apple-darwin": "aigent-hive-darwin-x64-0.8.0-test.1.tgz",
-            "aarch64-unknown-linux-musl": "aigent-hive-linux-arm64-0.8.0-test.1.tgz",
-            "x86_64-unknown-linux-musl": "aigent-hive-linux-x64-0.8.0-test.1.tgz",
-            "x86_64-pc-windows-msvc": "aigent-hive-win32-x64-0.8.0-test.1.tgz",
+            "aarch64-apple-darwin": "aigent-hive-darwin-arm64-0.8.0.tgz",
+            "x86_64-apple-darwin": "aigent-hive-darwin-x64-0.8.0.tgz",
+            "aarch64-unknown-linux-musl": "aigent-hive-linux-arm64-0.8.0.tgz",
+            "x86_64-unknown-linux-musl": "aigent-hive-linux-x64-0.8.0.tgz",
+            "x86_64-pc-windows-msvc": "aigent-hive-win32-x64-0.8.0.tgz",
         }
         with tempfile.TemporaryDirectory(prefix="hive-installers-") as temporary:
             root = Path(temporary)
@@ -634,7 +627,7 @@ class Phase6StaticContracts(unittest.TestCase):
                     "--product-version",
                     "0.8.0",
                     "--package-version",
-                    "0.8.0-test.1",
+                    "0.8.0",
                     "--dist",
                     str(dist),
                     "--output",
@@ -652,7 +645,7 @@ class Phase6StaticContracts(unittest.TestCase):
             )
             self.assertIn("embedded_product_version='0.8.0'", shell)
             self.assertIn(
-                "embedded_package_version='0.8.0-test.1'",
+                "embedded_package_version='0.8.0'",
                 shell,
             )
             self.assertIn("npm_package=linux-x64", shell)
@@ -660,12 +653,12 @@ class Phase6StaticContracts(unittest.TestCase):
             self.assertNotIn("$archive.sha256", shell)
             self.assertIn('[string]$Version = "0.8.0"', powershell)
             self.assertIn(
-                '[string]$PackageVersion = "0.8.0-test.1"',
+                '[string]$PackageVersion = "0.8.0"',
                 powershell,
             )
             self.assertNotIn("$archive.sha256", powershell)
             self.assertIn(
-                'set "HIVE_INSTALL_PACKAGE_VERSION=0.8.0-test.1"',
+                'set "HIVE_INSTALL_PACKAGE_VERSION=0.8.0"',
                 cmd,
             )
             self.assertIn(

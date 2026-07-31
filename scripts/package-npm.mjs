@@ -52,7 +52,7 @@ function fail(message) {
 
 function parseArguments(argv) {
   if (argv.length < 1 || !["platform", "umbrella"].includes(argv[0])) {
-    fail("usage: package-npm.mjs platform|umbrella --product-version X.Y.Z --package-version X.Y.Z-test.N --output PATH [--target TRIPLE --binary PATH] [--installer-dir PATH]");
+    fail("usage: package-npm.mjs platform|umbrella --product-version X.Y.Z --package-version X.Y.Z --output PATH [--target TRIPLE --binary PATH] [--installer-dir PATH]");
   }
   const options = { kind: argv[0] };
   for (let index = 1; index < argv.length; index += 2) {
@@ -69,11 +69,8 @@ function parseArguments(argv) {
   if (!exactVersionPattern.test(options["product-version"] ?? "")) {
     fail("--product-version must be an exact X.Y.Z version");
   }
-  const packageVersionPattern = new RegExp(
-    `^${options["product-version"].replaceAll(".", "\\.")}-test\\.([1-9][0-9]*)$`,
-  );
-  if (!packageVersionPattern.test(options["package-version"] ?? "")) {
-    fail("--package-version must be PRODUCT_VERSION-test.N with positive N");
+  if (options["package-version"] !== options["product-version"]) {
+    fail("--package-version must equal PRODUCT_VERSION");
   }
   if (!options.output) {
     fail("--output is required");
@@ -129,7 +126,7 @@ function writeJson(destination, value) {
 function writePackageReadme(destination, packageName, productVersion, packageVersion) {
   fs.writeFileSync(
     path.join(destination, "README.md"),
-    `# ${packageName}\n\nAigent Hive ${productVersion} test package ${packageVersion}. Install the test CLI with \`npm install -g aigent-hive@test\`.\n`,
+    `# ${packageName}\n\nAigent Hive ${productVersion} package ${packageVersion}. Install the CLI with \`npm install -g aigent-hive\`.\n`,
     { encoding: "utf8", flag: "wx", mode: 0o644 },
   );
 }
