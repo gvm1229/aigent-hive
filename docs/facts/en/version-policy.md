@@ -9,9 +9,9 @@ summary: "Compatible features increment minor, fixes increment patch, and major 
 tags: [release, semver, version]
 aliases: ["Version lifecycle"]
 sources:
-  - "repo:docs/decisions/ADR-0006-version-lifecycle.md#sha256:b314d07c19558eb0de0b629250ea19c4ede782f4afc66d92078e9660f75eb26e"
+  - "repo:docs/decisions/ADR-0006-version-lifecycle.md#sha256:0cb27b7ca375a4e3646e0bb2a498052a9e266f72effde3b7659ed2e83f5f0298"
 links: [release-verification, test-distribution]
-reviewed_revision: "git:722c8e46dbde5710155b394ef33820ebccd3b85c"
+reviewed_revision: "git:e072135e0148176a5a91159f60ad36ad82eabf73"
 status: active
 ---
 

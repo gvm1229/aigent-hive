@@ -9,21 +9,19 @@ summary: "Product candidate 0.8.0 uses npm package versions 0.8.0-test.N without
 tags: [distribution, release, test]
 aliases: ["0.8.0 release scope"]
 sources:
+  - "repo:Cargo.toml#sha256:5083784d829c1e5ee6e642b54a3e616e78327dc1b8deb139bc00f8d14374b830"
   - "repo:scripts/package-npm.mjs#sha256:22c8a4e6b71764d2c3987a3525736d7406ce2a0d6da75ed96da420996a4d2e2c"
 links: [global-onboarding, version-policy]
-reviewed_revision: "git:3143c0e90b3c474c739651f7ddc2350bbf5e020a"
+reviewed_revision: "git:b74afdae66f2704c6b24e42d47332ed931e2fecd"
 status: active
 ---
 
 # 0.8.0 Test Distribution
 
-The product candidate remains exact `0.8.0`, while npm transport versions use
-`0.8.0-test.N`; the first candidate is `0.8.0-test.1`. The `test` tag makes it
-installable as `aigent-hive@test` without consuming stable npm `0.8.0`, creating a
-GitHub Release, or moving npm `latest`. Candidate artifacts must originate from the
-exact protected `develop` commit. After successful npm and direct-installer
-qualification, that same commit moves to `main` through a pull request. Acceptance:
-separate product and package inputs, exact manifest metadata, matching platform
-dependency versions, and passing packaging and release-workflow tests. Origin: the
-maintainer requested repeatable pre-release installation tests before approving the
-actual public release.
+The product candidate is `0.8.0`, dated `2026-07-31`; npm transport starts at
+`0.8.0-test.1` under `test`. No GitHub Release, stable npm `0.8.0`, or `latest`
+move occurs. Artifacts originate from exact protected `develop`; after npm and
+direct-installer qualification, the same commit reaches `main` by pull request.
+Acceptance requires separate product/package inputs, exact manifests, matching
+platform dependencies, and passing packaging/workflow tests. Origin: repeatable
+installation tests requested before the maintainer approves a public release.
