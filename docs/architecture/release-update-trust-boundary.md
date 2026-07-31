@@ -235,20 +235,20 @@ Malformed, future-dated, exact 7일 경계, active, symlinked 또는 foreign-ent
 - 별도 `release-publication` approval
 - 성공한 protected `develop` candidate run과 exact commit 고정
 - 5개 native archive·6개 npm tarball의 checksum·attestation·manifest·byte identity 검증
-- Umbrella 안의 exact product `0.8.0`·package `0.8.0-test.N`
+- Umbrella 안의 exact product·package `0.8.0`
   `install.sh`·`install.ps1`·`install.cmd` 검증
-- 6개 npm package 모두 `0.8.0-test.N`과 `test` dist-tag로 publication
-- Git tag·GitHub Release·npm `latest` 변경 0건
+- 6개 npm package 모두 exact `0.8.0`과 `latest` dist-tag로 publication
+- Git tag·GitHub Release 생성 0건
 
 Package가 아직 없는 최초 등록만 `bootstrap_with_token=true`와
 `release-publication` environment의 임시 `NPM_TOKEN` 사용. 이 단계도 같은
-candidate·attestation·manifest·byte identity 검증과 `--tag test --provenance` 적용.
+candidate·attestation·manifest·byte identity 검증과 `--tag latest --provenance` 적용.
 등록 직후 secret 삭제, 6개 package 각각에 `release-publish.yml`과
 `release-publication`을 결합한 Trusted Publisher 설정, publishing access의 token
 차단 적용. 이후 `bootstrap_with_token=false` 경로에는 `NODE_AUTH_TOKEN`을 주입하지
 않고 GitHub OIDC만 사용.
 
-Direct bootstrap은 exact `aigent-hive@0.8.0-test.N` umbrella의 installer를 사용.
+Direct bootstrap은 exact `aigent-hive@0.8.0` umbrella의 installer를 사용.
 Installer는 npm registry의 같은 package version scoped platform tarball을 내려받고
 embedded SHA-256, archive entry allowlist, optional OS signature, product binary
 `0.8.0`을 검증한 뒤 `owner=direct` receipt를 기록. Receipt는 closed exact field set,
@@ -260,8 +260,8 @@ manager. Hive의 직접 binary overwrite와 owner 추측 금지. Bare `hive upda
 수락 뒤 authenticated owner의 exact adapter에만 위임.
 
 macOS Developer ID·notarization, Windows Authenticode·Azure Artifact Signing,
-external TUF production authorization은 안정 배포용 후속 hardened gate. `0.8.0`
-시험 배포의 dependency 아님.
+external TUF production authorization은 후속 hardened gate이며 npm `0.8.0`
+배포의 dependency가 아님.
 
 ## 보장하지 않는 것
 

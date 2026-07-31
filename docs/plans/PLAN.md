@@ -1,6 +1,6 @@
 # Aigent Hive active plan index
 
-> Revision: 1.79
+> Revision: 1.80
 > 기준일: 2026-07-31
 > Product version: `0.8.0`
 > 현재 milestone: Phase 7 qualification + global onboarding·shared index `0.8.0`
@@ -9,15 +9,15 @@
 ## Goal parameters
 
 - Objective: `Aigent Hive 0.8.0` 후보의 Linux·macOS·Windows native artifact,
-  npm `0.8.0-test.N`·직접 설치 시험, bilingual onboarding, update
+  npm 정식 `0.8.0`·직접 설치 검증, bilingual onboarding, update
   discovery·activation과 provenance gate 완료
 - Success: Mandatory user setup, global preference 기반 expedited/custom project setup,
   user-root 단일 SQLite, 세 host selected Skill projection, Wiki default-on opt-out,
   usage guard opt-in `20%`, native-first·CodexBar fallback-only, consumer
   PowerShell 5.1·`cmd.exe`, source-only PowerShell 7, Linux musl x86_64·arm64,
-  first `aigent-hive@0.8.0-test.1`, SHA-256·GitHub attestation과 실제 Windows
+  `aigent-hive@0.8.0`, SHA-256·GitHub attestation과 실제 Windows
   acceptance
-- Stop boundary: GitHub Release·npm `latest`, protected credential, exact `1.0.0`
+- Stop boundary: GitHub Release·Git tag, protected credential, exact `1.0.0`
   authority, 현재 source usage guard remaining `30%`
 - Invariants: provider-neutral, canonical Markdown 우선, OMX/OMC replaceable adapter,
   ownership·consent·foreign byte 보존, provider API·credential 경로 없음, force-push 없음,
@@ -127,9 +127,9 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
 
 1. 출시 안내·게시 오류 진단·감시기 복구 수정 branch push와 `develop` 대상 PR 병합
 2. 새 exact `develop` commit의 `release.yml` 재실행과 P7-044·045·020·018 검증
-3. `release-publish.yml` 승인과 npm `0.8.0-test.1|test` 게시
+3. `release-publish.yml` 승인과 npm `0.8.0|latest` 게시
 4. npm·Unix·PowerShell·CMD clean install·repeat·recovery 검증과 P7-037 완료
-5. 시험 배포 성공 commit의 `develop` → `main` PR 병합
+5. npm 배포 성공 commit의 `develop` → `main` PR 병합
 
 ## `0.8.0` 비차단 deferred boundary
 
@@ -138,4 +138,4 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
 - 실제 Claude protected session E2E와 Pro/Max usage parity
 - Externally signed TUF production authorization
 - Exact `1.0.0` 사용자 authority
-- GitHub normal release와 npm `latest` 안정 channel
+- GitHub normal release와 Git tag

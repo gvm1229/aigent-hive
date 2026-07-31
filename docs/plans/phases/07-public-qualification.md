@@ -81,7 +81,7 @@
 
 ## 8. 완료 gate
 
-`0.8.0` 시험 배포의 필수 조건:
+`0.8.0` npm 배포의 필수 조건:
 
 - [x] [P7-019] source, release, consumer tree 분리
 - [ ] [P7-020] 5개 target archive·npm tarball SHA-256·attestation·byte identity
@@ -101,7 +101,7 @@
 - [x] [P7-034] Karpathy Raw/Wiki/Schema와 SQLite rebuild
 - [x] [P7-035] same-major compatibility
 - [x] [P7-036] cross-major no-data-loss migration
-- [ ] [P7-037] GitHub Release 없이 npm `0.8.0-test.N`의 `test` publication과
+- [ ] [P7-037] GitHub Release 없이 npm `0.8.0`의 `latest` publication과
   npm·curl 설치
 - [x] [P7-038] product version parity, compatible minor/patch bump와 explicit-only major gate
 - [x] [P7-039] public license — 전체 source·harness `Apache-2.0`, 전문, package metadata와 render fixture
