@@ -44,6 +44,7 @@
 | Usage sensor | [en](en/usage-sensor-policy.md) | [ko](ko/usage-sensor-policy.md) |
 | Automatic dispatch guard | [en](en/automatic-dispatch-guard.md) | [ko](ko/automatic-dispatch-guard.md) |
 | Source usage guard | [en](en/source-usage-guard.md) | [ko](ko/source-usage-guard.md) |
+| Source watcher process replacement | [en](en/source-watcher-process-replacement.md) | [ko](ko/source-watcher-process-replacement.md) |
 | Windows source watcher identity | [en](en/windows-watcher-identity.md) | [ko](ko/windows-watcher-identity.md) |
 | Judge verification | [en](en/judge-verification.md) | [ko](ko/judge-verification.md) |
 | Release verification | [en](en/release-verification.md) | [ko](ko/release-verification.md) |
