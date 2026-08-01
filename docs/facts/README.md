@@ -62,6 +62,7 @@
 | Source development | [en](en/source-development.md) | [ko](ko/source-development.md) |
 | Marketing deck record | [en](en/marketing-deck-record.md) | [ko](ko/marketing-deck-record.md) |
 | v0.9 Skill suite | [en](en/v0-9-skill-suite-plan.md) | [ko](ko/v0-9-skill-suite-plan.md) |
+| v0.9 full release | [en](en/v0-9-full-release.md) | [ko](ko/v0-9-full-release.md) |
 
 ## 정본 관계
 
