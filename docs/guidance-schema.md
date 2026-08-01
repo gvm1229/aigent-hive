@@ -135,6 +135,6 @@ Source 개발 지침인 root `AGENTS.md`와 `.agents/`의 release 또는 consume
 
 ## External runtime 경계
 
-Hive marker는 compatible OMX/OMC precedence와 non-clobber 규칙만 설명. `.omx/`, `.omc/`, plugin cache, host-global configuration, session manifest, external runtime marker의 Hive state import·생성·수정·삭제·소유권 주장 금지.
+Hive marker는 host-native 기본값, 명시 선택·고정된 `0.8.x` OMX/OMC 호환 경로와 non-clobber 규칙만 설명. `.omx/`, `.omc/`, plugin cache, host-global configuration, session manifest, external runtime marker의 Hive state import·생성·수정·삭제·소유권 주장 금지.
 
-Fallback hook guidance도 Hive data-integrity capability의 조건부 consent 경계만 기술. External runtime의 plan, Ralph, team, Skill routing, prompt classification 또는 continuation state projection 금지.
+Optional hook guidance도 host가 지원하는 exact event와 Hive data-integrity capability의 조건부 consent 경계만 기술. External runtime의 plan, Ralph, team, Skill routing, prompt classification 또는 continuation state projection 금지.

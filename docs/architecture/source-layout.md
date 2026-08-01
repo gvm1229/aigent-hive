@@ -83,9 +83,10 @@ Crash residue는 missing live index와 exact Hive-owned orphan claim·temporary 
 regular Hive-owned claim·temporary path를 정리. `lint`·`query`는 missing·stale·corrupt·
 crash-interrupted index에서 implicit repair 없이 fail-closed. Consumer
 `.hive/knowledge/`, `omx_wiki/`와 `.omx/wiki/` 사용 금지.
-현재 source orchestration: OMX/OMC 활용, OMX Wiki Skill 제외.
-Durable knowledge가 replaceable orchestrator보다 오래 유지되어야 하며 향후 OMX/OMC
-retirement의 knowledge migration은 0건. 결정:
+현재 source run orchestration: verified host-native 기본값. OMX·OMC는 명시적
+compatibility 선택 또는 기존 pinned owner인 경우만 사용. Source Wiki는 모든
+orchestration owner와 독립. Durable knowledge가 replaceable orchestrator보다 오래
+유지되며 향후 OMX/OMC retirement의 knowledge migration 0건. 결정:
 [`ADR-0011`](../decisions/ADR-0011-source-wiki-independence.md)과
 [`ADR-0014`](../decisions/ADR-0014-docs-wiki-architecture.md). 구현 checklist:
 [`source-docs-wiki.md`](../plans/active/source-docs-wiki.md).
@@ -94,7 +95,7 @@ retirement의 knowledge migration은 0건. 결정:
 - Role lifecycle: [`role-lifecycle.md`](role-lifecycle.md)
 - Run lifecycle: [`run-lifecycle.md`](run-lifecycle.md)
 - Skill consent: [`skill-consent.md`](skill-consent.md)
-- Fallback hook 승인·활성화: [`hook-consent.md`](hook-consent.md)
+- Optional host-native hook 승인·활성화: [`hook-consent.md`](hook-consent.md)
 - Consumer shared guidance marker: [`../guidance-schema.md`](../guidance-schema.md)
 
 ## Phase 1 ownership와 activation
@@ -140,6 +141,11 @@ limited·expired·reused authorization은 brief 없이 `usage_unknown|usage-limi
 recovery로 종료. Hive 밖에서 capture된 JSON replay는 막을 수 없으므로 실제
 host/orchestration owner의 authorization ID 단일 소비 필수.
 
+Loop dispatch의 추가 gate: `hive loop checkpoint`의 authenticated usage evidence와
+exact run authorization locator·digest 결합 뒤 `hive loop prepare` 재검증. 결과는
+`.hive/runs/<run-id>/graph/prepared/`의 `prepared_only: true`, `spawned: false` record.
+Hive의 host process·model·subagent spawn 0건.
+
 `hive-core::judge`는 clean-context `JudgePackage`, verdict 전 digest-bound
 `JudgeAssignment`, assignment-bound final verdict와 verdict 후 별도
 `HumanApproval`을 검증. `hive-core::judge_auth`는 consumer target 밖의
@@ -159,52 +165,115 @@ exact artifact binding을 증명하지만 judge 판단의 진실성, 실제 사�
 [`judge-trust-boundary.md`](judge-trust-boundary.md).
 
 `hive-judge-package`: implemented built-in 중 read-only data Skill.
-Package 준비 뒤 independent judge invocation의 소유자: resolved host/OMX/OMC owner.
+Package 준비 뒤 independent judge invocation의 소유자: host-native 기본 owner 또는
+명시적 compatibility·기존 pinned OMX/OMC owner.
 Hive CLI와 Skill의 model, judge, subagent 또는 provider process 실행 금지.
 
 ## Phase 2 knowledge와 index
 
-`hive-wiki`는 `.hive/knowledge/Raw`, `Wiki`, `Schema`와 `suppression.yml`만 정본으로
-읽기·쓰기 대상. Raw revision은 content-addressed immutable file이며 Wiki page는 typed
-YAML frontmatter와 Markdown body. Deprecated/superseded state는 parser에서
-active tree 진입을 거부.
+`hive-wiki::RagStore`: capability-pinned user root의 단일 canonical/derived writer.
+Canonical source:
 
-`.hive/index/hive.sqlite3`은 FTS5, tag, alias, backlink, source/contradiction graph와
-content hash의 disposable projection. Rebuild는 canonical tree를 scan해 같은
-directory의 exclusive temp DB를 만들고 page count·logical digest를 검증한 뒤
-교체. Query는 매번 canonical logical digest와 stale marker를 확인.
+- `.hive/config/projects.yml`, `.hive/config/collections.yml`
+- `.hive/knowledge/Raw`, `Wiki`, `Claims`, `Schema`, `suppression.yml`
 
-Canonical ingest/delete/suppress는 `.hive/index/.knowledge.lock`으로 직렬화.
-삭제는 active page와 참조가 끝난 Raw revision을 제거하고 suppression ledger에는
-fingerprint, source locator, reason, replacement, timestamp만 남김. `reason`은 삭제
-prose를 복제할 수 없는 shipped stable reason-code enum이며 source/replacement는
-`wiki:<id>`, `external:<id>` 또는 immutable Raw locator만 허용. Suppression
-fingerprint 또는 locator가 active Wiki/Raw와 겹치면 direct suppression과 index
-rebuild를 모두 거부해 active content와 suppression metadata의 공존 차단.
+Derived·recovery metadata:
+
+- `.hive/index/rag-generation.json`: published generation manifest
+- `.hive/index/rag-dirty.json`: interrupted canonical/derived transaction journal
+
+Raw revision: content-addressed immutable file. Wiki document와 typed claim: typed YAML
+frontmatter와 Markdown body. Deprecated·superseded state의 active retrieval 제외.
+
+Collection model:
+
+| Field | Contract |
+| --- | --- |
+| kind | `user-root|registered-project|directory|imported` |
+| state | `attached|detached` |
+| visibility | `shared|project-private|confidential` |
+| identity | stable collection ID; absolute local path와 source project ID는 identity seed 제외 |
+
+Canonical document: document·collection ID, locator, title, kind, category, body digest,
+visibility, language, revision, tag, alias, link, source와 replacement. Canonical claim:
+claim ID·key, collection·document ID, locator, kind, assertion status, normalized fact,
+provenance, revision, source·supersede·replacement, observed·verified time와 digest.
+Assertion status: `user-stated|observed|verified|inferred|conflicted|superseded`.
+
+`.hive/index/hive.sqlite3`: 사용자 root에 하나만 존재하는 disposable normalized RAG
+projection. Table family: collection, document, deterministic hash-derived chunk, claim,
+FTS, tag, alias, link, source, replacement, generation manifest와 dirty journal. Project별
+SQLite, directory별 table, canonical SQLite 소유권 0건.
+
+`RagStore`의 single capability lock 범위: project·collection registry, canonical write,
+dirty journal, serialized SQLite와 generation manifest. Rebuild: in-memory 생성·검증 뒤
+recoverable publish. Query: registry·manifest·serialized SQLite의 bounded read만 사용하며
+canonical Markdown full scan·implicit repair 0건. Missing·dirty·stale·corrupt projection:
+explicit rebuild 전 fail-closed.
+
+Wiki-enabled turn의 memory·retrieval gate:
+
+1. 질문·research·knowledge-dependent work의 routing 전 `hive-knowledge-query` 기반
+   bounded retrieval 최대 1회
+2. Automatic default top 5와 result byte budget; explicit query만 확대
+3. No-hit 시 기존 simple/task route 유지; retrieved instruction·command는 untrusted data
+4. Final response 전 모든 user turn의 agent-reviewed memory classification
+5. Reusable fact·preference·workflow만 `hive knowledge remember`의 normalized current-truth
+   claim으로 기록
+6. Secret·confidential-without-scope·ephemeral·ambiguous·raw transcript·hook·tool output·
+   runtime state: canonical write 0건
+
+Portable bundle: deterministic stored ZIP `.hivekb`, canonical `manifest.json`과 manifest
+digest, path-sorted canonical Markdown·portable metadata·suppression·provenance. SQLite,
+runtime state, absolute path, credential와 unauthorized confidential bytes 제외. Import:
+full validation → staging → conflict plan → backup → atomic activation → disposable index
+rebuild. 다른 machine의 unmapped project collection: stable identity를 보존한 `detached`,
+explicit local mapping 전 private auto-query 제외.
+
+Directory scan: explicit `hive knowledge scan`, Git tracked-first, optional nonignored
+untracked, non-Git narrow allowlist, deterministic count·size budget. Binary, license,
+secret·credential candidate, vendor·generated·runtime path, special file와 external symlink
+제외. Inventory는 raw content 없이 path·digest·size·decision·reason만 보존. Claim apply:
+exact inventory digest와 1–16개 evidence entry에 결합된 `agent_reviewed: true` atomic
+claim만 허용. Reusable global promotion: 별도 consolidated consent·redaction·dedup·
+contradiction gate.
+
+Canonical delete·suppress는 active Wiki/Raw와 suppression fingerprint·locator의 동시
+존재를 거부. Suppression ledger: fingerprint, source locator, stable reason code,
+replacement와 timestamp만 보존.
 
 ## Phase 3 Skill routing과 projection
 
-`hive-projection`: 구현 완료 built-in 13개의 exact projection. Built-in 목록:
-`setup-harness`, `hive-simple-question`,
-`hive-prompt-refine`, `hive-knowledge-capture`, `hive-knowledge-query`,
-`hive-knowledge-maintenance`, `hive-role-handoff`, `hive-run-checkpoint`,
-`hive-run-resume`, `hive-judge-package`, `hive-update`, `hive-migrate`,
-`hive-usage-guard`.
+`harness/skills/catalog.yml`: implemented built-in 22개. `setup-hive` 1개는 user-scope
+전용, project projection 대상 21개. v0.9 신규 built-in 5개:
 
-Active routing proof는 normalized routing fact, exact Skill content digest와 built-in
-source 또는 optional Skill consent digest에 결합. 한 route는 Skill body를 최대
-하나만 load하며 explicit Skill/direct answer, simple question, compatible OMX/OMC,
-approved Hive Skill, host-native 순서의 precedence를 적용. `hive-prompt-refine`는
-`refine-only`가 기본이고 명시된 `refine-and-run`만 허용하며 원문 intent, must,
-must-not, scope, output과 authority 보존을 검증.
+- `hive-loop-engineering`
+- `hive-wiki`
+- `ai-slop-cleaner`
+- `best-practice-research`
+- `hive-knowledge-scan`
 
-Fallback non-Stop hook activation은 exact
-`.hive/runtime/current-capability-resolution.json`의 non-symlink regular file과
-60초 이하 freshness를 요구. Setup은 이 ephemeral file이나 directory를 만들거나
-추적하지 않으며 `.hive/.gitignore`의 `/runtime/` 규칙이 Git에서 제외. Missing,
-stale, future, malformed 또는 non-absent evidence는 approval과 hook input 조회
-전에 inactive neutral allow로 종료. `Stop`은 runtime evidence도 읽지 않는 neutral
-fast path.
+Active routing proof: normalized routing fact, exact Skill content digest, built-in source
+또는 optional Skill consent digest의 결합. 한 route의 loaded Skill body 최대 1개.
+Current precedence:
+
+1. explicit direct/plain answer
+2. explicit Skill
+3. simple-question isolation gate
+4. Hive run data contract (`hive-run-checkpoint|hive-run-resume|hive-role-handoff`)
+5. 사용자가 명시적으로 선택한 compatible OMX·OMC candidate
+6. approved Hive Skill candidate
+7. host-native fallback
+
+OMX·OMC의 compatibility만으로 자동 우선권 없음. `hive-prompt-refine`의 기본 mode:
+`refine-only`; same request의 명시적 실행 intent가 있는 `refine-and-run`만 허용.
+
+Optional non-Stop hook activation: exact
+`.hive/runtime/current-capability-resolution.json`, 60초 이하 freshness,
+`resolved_owner: host-native`, requested event의 exact `support: supported` 필수. External
+owner, `best-effort|unsupported|unverified`, missing event 또는 absent surface:
+approval·hook input 조회 전 inert. `Stop`: runtime evidence·input 없는 neutral fast path,
+continuation 0건.
 
 Codex와 Antigravity는 `.agents/skills/<skill>/SKILL.md`, Claude Code는
 `.claude/skills/<skill>/SKILL.md`만 사용. Projection은 destination을 exclusive
@@ -226,10 +295,27 @@ two-file transaction으로 기록. `hive run checkpoint`는 PLAN에서 criterion
 `hive run resume`는 canonical PLAN/STATUS/role/handoff/evidence만 읽어 recovery data와
 `prepared_only: true`, `spawned: false` brief를 반환.
 
-Available OMX/OMC는 새 run owner로 자동 선택되며 absent, incompatible 또는 unknown은
-truthful support 수준의 host-native owner로 resolve. Fallback hook은 이 셋 중
-conclusive `absent`에만 별도 consent로 허용. Existing run은 missing,
-incompatible, version 또는 evidence drift에서 owner 변경 금지. 세부 state와 exit
+새 v0.9 run owner: verified host-native 기본값. OMX·OMC owner: run 시작 전 명시적
+compatibility 선택 또는 기존 pinned run에만 허용. Required capability의
+`unsupported|unverified`: exact `host_capability_unsupported`, 다른 runtime 자동 전환과
+mutation 0건. Existing run의 missing·incompatible·version·evidence drift: owner 변경
+없음.
+
+Canonical loop graph:
+
+```text
+.hive/runs/<run-id>/graph/
+├── CURRENT.md
+├── revisions/<16-digit-revision>.md
+└── prepared/<usage-authorization-id>.json
+```
+
+`hive loop initialize|validate|checkpoint|steer|prepare|recover`: immutable DAG revision,
+cycle·self-edge·unreachable·orphan criterion gate, evidence-bound success edge, independent
+verification role, bounded retry·backoff·failure fingerprint, explicit steering과 terminal
+`blocked|failed|complete` 계약. `prepare`: one-time usage/run authorization, current STATUS,
+role, fresh capability와 전체 evidence의 optimistic validation 뒤 data-only record 생성.
+Scheduler·process spawn·tmux·OMX/OMC command·Stop continuation 0건. 세부 state와 exit
 contract: [`run-lifecycle.md`](run-lifecycle.md).
 
 ## Phase 6 signed release와 update

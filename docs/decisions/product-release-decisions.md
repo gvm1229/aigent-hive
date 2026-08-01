@@ -15,7 +15,7 @@
 | v0.9 knowledge RAG | 모든 질문의 simple-question 이전 bounded retrieval, named project scope, durable user fact·preference·workflow mandatory write, citation-ready chunk·score·locator 반환. Markdown 정본 유지, SQLite는 incremental FTS5 RAG projection과 measured deficiency 이후 optional local vector만 허용 |
 | v0.9 knowledge portability·scan | SQLite 복사 대신 checksummed `.hivekb` canonical bundle export·import, 고정 normalized table의 `collection_id`, explicit `hive-knowledge-scan`, 기존 query Skill의 bounded automatic retrieval. Secret·confidential·runtime·absolute path·retrieved instruction authority 제외 |
 | Global onboarding | Minimal bootstrap 뒤 mandatory `setup-hive`; 첫 질문은 language, 이후 모든 질문과 host 지침은 선택 언어. Wiki language·profile·persona·host·Skill·Wiki·usage·update-check preference 정본은 `~/.hive/config/user-setup.yml` |
-| orchestration | Codex의 compatible OMX, Claude의 compatible OMC를 우선하고 `absent|incompatible|unknown`이면 truthful host native가 소유; setup 선택지와 mid-run switch 없음 |
+| orchestration | 검증된 host-native capability가 기본 소유. OMX·OMC는 사용자 명시 선택 또는 고정된 `0.8.x` 실행의 호환 owner만 허용하며 mid-run switch 없음 |
 | orchestration 독립 | OMX/OMC는 현재 replaceable compatibility dependency; 장기적으로 host-native·provider-neutral capability로 대체 후 제거, canonical data·path·schema·Skill identity 의존 없음 |
 | runtime 관찰 | active host capability metadata, side-effect-free public `--version`, pinned-qualified usage sensor의 fixed-argv·JSON-RPC read만 허용; foreign state·provider credential read 금지 |
 | 재구현 금지 | Hive plan·Ralph·team·provider session engine 없음 |
@@ -24,7 +24,7 @@
 | Source docs Wiki | `docs/` human graph와 tracked `docs/facts/en/`·`ko/` atomic pair 정본, `omx_wiki/`·`.omx/wiki/`·consumer `.hive/knowledge/` 금지, SQLite는 ignored source projection, OMX/OMC retirement 시 knowledge migration 0건 |
 | Wiki autocapture | Wiki enabled 상태의 material task 종료 전 agent-reviewed task fact 기록. Outcome·tool/project·criteria·originating request summary만 bounded capture, exact request는 explicit retention intent 필요, raw transcript·hook·tool output·runtime ingestion 금지 |
 | prompt refine | `hive-prompt-refine`; 명시적인 prompt 작성·정제 intent에서만 자동 선택, `refine-only` 기본. 일반 요청이 모호하거나 핵심 세부가 부족하면 작업을 막지 않는 한 줄 optional refine 제안, hidden·automatic rewrite 금지 |
-| fallback hooks | OMX/OMC가 conclusively absent이고 사용자가 capability/event/path/digest를 승인한 경우에만 project-local data-integrity hook 허용 |
+| optional hooks | host가 exact integrity event를 지원하고 사용자가 capability/event/path/digest를 승인한 경우에만 project-local hook 허용 |
 | 사용량 | Global setup explicit opt-in과 enabled 기본 remaining `20%`; Codex app-server JSON-RPC, Claude Code status-line JSON capture, 향후 qualified Antigravity structured surface를 native primary로 사용; CodexBar는 세 provider 모두 explicit-consent fallback-only |
 | Claude sensor ownership | Plugin executable만 제공; user가 Claude host의 `/statusline`으로 opt-in하며 Hive의 `~/.claude/settings.json` mutation 없음, existing status line non-clobber |
 | Antigravity sensor truth | Official structured surface 확인 전 `native=unsupported`; interactive TUI·private LSP/HTTP·credential·browser state parsing 금지 |

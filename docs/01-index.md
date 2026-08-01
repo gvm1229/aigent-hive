@@ -82,6 +82,7 @@ current catalog.
 | [Plugin host surface](research/user-plugin-host-surfaces.md) | 세 host install surface |
 | [SQLite index](research/rusqlite-sqlite-index.md) | `rusqlite`·FTS5 evidence |
 | [Knowledge 이식·scan](research/knowledge-portability-ingestion-retrieval.md) | Portable bundle·collection·retrieval evidence |
+| [v0.9 capability inventory](research/v0.9-omx-omc-capability-inventory.md) | OMX·OMC·Hive `adopt|merge|exclude` 근거표 |
 
 ## Facts
 

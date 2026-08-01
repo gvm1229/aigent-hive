@@ -2,7 +2,7 @@
 
 > Codex, Claude Code, Gemini Antigravity를 위한 provider-neutral 로컬 harness.
 
-[![Version](https://img.shields.io/badge/version-0.8.0-4C1)](../../Cargo.toml)
+[![Version](https://img.shields.io/badge/version-0.9.0-4C1)](../../Cargo.toml)
 [![Rust](https://img.shields.io/badge/Rust-stable-000000?logo=rust)](../../rust-toolchain.toml)
 [![License](https://img.shields.io/badge/license-Apache--2.0-green)](../../LICENSE)
 
@@ -11,6 +11,8 @@
 Hive: subscription 인증 agent host에 일관된 setup, Skill routing, project knowledge,
 지속 가능한 role/run 상태, usage safeguard와 안전한 update 계약 제공.
 Model-provider API key 요청·provider API 호출·host model runtime 대체 없음.
+
+Source `0.9.0` 구현 완료, 미배포 상태. 설치 대상은 최신 배포판 `0.8.0` 유지.
 
 ## 0.8.0 설치
 

@@ -29,7 +29,7 @@ provider-neutral 로컬 agent harness.
 | Operating system | macOS arm64·Intel, Windows x86_64 candidate runtime 검증; Linux musl x86_64·arm64 qualification 진행 |
 | Agent host | Codex·Claude Code·Gemini Antigravity adapter |
 | Live evidence | Codex·Antigravity actual host; Claude subscription session 미검증 |
-| Orchestration | Compatible OMX·OMC 우선, 그 외 truthful host-native capability |
+| Orchestration | 검증된 host-native capability 기본; OMX·OMC는 명시 선택 또는 고정된 `0.8.x` 실행의 호환 경로 |
 | Model access | 사용자의 subscription-authenticated host session |
 | Data | Local-first tracked text, disposable SQLite |
 | Consumer shell | Unix shell, Windows PowerShell 5.1, `cmd.exe`; PowerShell 7 불필요 |
@@ -39,7 +39,7 @@ provider-neutral 로컬 agent harness.
 ## 핵심 원칙
 
 - **Provider-neutral:** 공통 contract 우선, host별 파일은 projection
-- **재사용 우선:** OMX·OMC·host capability의 plan·team·loop 중복 구현 금지
+- **실행 경계:** Hive는 durable loop graph와 evidence만 소유하고 실행·subagent spawn은 host-native capability에 위임
 - **Text 정본:** Markdown·YAML·TOML canonical, SQLite 재생성 가능
 - **사용자 data 보호:** ownership, staging, diff, backup, rollback, validation
 - **명시적 동의:** Optional Skill·fallback hook·외부 설치의 preview와 approval
@@ -54,9 +54,9 @@ provider-neutral 로컬 agent harness.
 | 결정적 setup | Typed answer·capability evidence 검증, manifest-owned path만 activation | [Source layout](../architecture/source-layout.md) |
 | User onboarding | Language-first setup, selected host·Skill projection, user-root preference | [ADR-0012](../decisions/ADR-0012-global-onboarding-shared-index.md) |
 | Project onboarding | Global preference 상속, unresolved essential question만 확인 | [ADR-0009](../decisions/ADR-0009-user-plugin-project-knowledge-boundary.md) |
-| Skill routing | Simple-question isolation 뒤 approved Skill 1개, OMX·OMC precedence | [Skill consent](../architecture/skill-consent.md) |
+| Skill routing | Bounded knowledge retrieval 뒤 simple-question isolation과 최소 approved Skill 선택 | [Skill consent](../architecture/skill-consent.md) |
 | Prompt refinement | Explicit prompt intent의 `refine-only`, ordinary prompt hidden rewrite 금지 | [Product decisions](../decisions/product-release-decisions.md) |
-| Knowledge | Canonical Markdown, shared disposable SQLite, cross-project provenance | [ADR-0003](../decisions/ADR-0003-markdown-sqlite-boundary.md) |
+| Knowledge | Canonical Markdown, shared disposable SQLite FTS5 RAG, cross-project provenance와 portable bundle | [ADR-0016](../decisions/ADR-0016-global-knowledge-rag.md) |
 | Persistent role·run | Role identity·handoff·criterion·owner pin과 fresh-session recovery | [Role](../architecture/role-lifecycle.md) · [Run](../architecture/run-lifecycle.md) |
 | Usage guard | Native-first sensor, session-first policy, automatic dispatch fail-closed | [Source guard](../guides/source-usage-guard.md) |
 | Judge quorum | Clean-context package와 detached Ed25519 verification | [Judge boundary](../architecture/judge-trust-boundary.md) |
@@ -69,19 +69,20 @@ provider-neutral 로컬 agent harness.
 flowchart LR
     A["Source workspace"] --> B["Release bundle"]
     B --> C["Installed consumer harness"]
-    C --> D{"Compatible OMX/OMC?"}
-    D -->|"yes"| E["External orchestration owner"]
-    D -->|"no"| F["Truthful host-native support"]
-    F --> G{"Conclusive absence + consent?"}
-    G -->|"yes"| H["Project-local integrity hook"]
-    G -->|"no"| I["No fallback hook"]
+    C --> D["Verified host-native capability"]
+    D --> E{"Explicit compatibility selection or pinned 0.8 run?"}
+    E -->|"yes"| F["Compatible OMX/OMC owner"]
+    E -->|"no"| G["Host-native owner"]
+    G --> H{"Supported exact hook event + consent?"}
+    H -->|"yes"| I["Project-local integrity hook"]
+    H -->|"no"| J["No hook"]
 ```
 
 ## Version·release 상태
 
-- Current product version: `0.8.0`
-- Current target: exact `0.8.0` test distribution
-- `0.8.0`: npm `test`, GitHub Release 없음, npm `latest` 이동 없음
+- Current source version: `0.9.0` 구현 완료, 미배포
+- Latest published version: `0.8.0`
+- `0.8.0`: npm `latest=0.8.0` 게시 완료, GitHub Release·Git release tag 없음
 - Stable `0.8.x`: 사용자 별도 승인 뒤 결정
 - Major: exact 사용자 지시 전 자동 준비·추론 금지
 

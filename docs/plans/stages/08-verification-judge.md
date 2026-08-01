@@ -46,7 +46,7 @@ Judge는 `PASS`, `FAIL`, `INDETERMINATE`만 반환. `FAIL`은 재현 가능한 f
 - quorum 계산은 deterministic code
 - FAIL finding은 affected criterion/task에 연결
 - `hive-judge-package`는 deterministic verification 뒤 read-only package 생성만
-  수행하며 simple-question gate와 compatible OMX/OMC precedence를 보존
+  수행하며 bounded knowledge retrieval, simple-question gate와 host-native 기본값 보존
 - package, assignment, verdict와 approval은 target-contained target-relative path만
   bounded no-follow read하며 aggregate output에서 identity, slot, finding, digest와
   개별 verdict를 숨김
