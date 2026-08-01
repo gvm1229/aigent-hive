@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/gvm1229/aigent-hive/schemas/loop-dispatch.schema.json",
+  "title": "Aigent Hive provider-neutral loop dispatch binding",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "run_id",
+    "graph_revision",
+    "graph_digest",
+    "kind",
+    "node_id",
+    "attempt",
+    "role_id",
+    "brief_digest",
+    "capability_snapshot_digest",
+    "usage_evidence_id",
+    "prepared_only"
+  ],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "run_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]{1,126}$"
+    },
+    "graph_revision": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 9007199254740991
+    },
+    "graph_digest": { "$ref": "#/$defs/digest" },
+    "kind": { "enum": ["node", "retry", "steering"] },
+    "node_id": {
+      "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/id" }]
+    },
+    "attempt": {
+      "type": ["integer", "null"],
+      "minimum": 1,
+      "maximum": 64
+    },
+    "role_id": {
+      "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/roleId" }]
+    },
+    "brief_digest": { "$ref": "#/$defs/digest" },
+    "capability_snapshot_digest": { "$ref": "#/$defs/digest" },
+    "usage_evidence_id": { "$ref": "#/$defs/id" },
+    "prepared_only": { "const": true }
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"
+    },
+    "roleId": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]{1,62}$"
+    },
+    "digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": { "kind": { "enum": ["node", "retry"] } },
+        "required": ["kind"]
+      },
+      "then": {
+        "properties": {
+          "node_id": { "$ref": "#/$defs/id" },
+          "attempt": { "type": "integer" },
+          "role_id": { "$ref": "#/$defs/roleId" }
+        }
+      },
+      "else": {
+        "properties": {
+          "node_id": { "type": "null" },
+          "attempt": { "type": "null" },
+          "role_id": { "type": "null" }
+        }
+      }
+    }
+  ]
+}

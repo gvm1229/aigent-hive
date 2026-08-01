@@ -9,6 +9,7 @@ use sha2::{Digest, Sha256};
 
 pub mod judge;
 pub mod judge_auth;
+pub mod loop_graph;
 pub mod role;
 pub mod run;
 pub mod usage_guard;
