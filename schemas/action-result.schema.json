@@ -43,7 +43,18 @@
         "ResumeWork",
         "VerifyWork",
         "IngestKnowledge",
+        "AddKnowledge",
         "QueryKnowledge",
+        "ListKnowledge",
+        "ReadKnowledge",
+        "RememberKnowledge",
+        "RetrieveKnowledge",
+        "AuthorizeConfidentialKnowledge",
+        "MapKnowledgeCollection",
+        "RefreshKnowledge",
+        "ScanKnowledge",
+        "ExportKnowledge",
+        "ImportKnowledge",
         "PromoteKnowledge",
         "ScanProjectUpgrade",
         "UpdateProjectHarness",
@@ -93,7 +104,14 @@
         "required": ["kind", "locator", "digest"],
         "properties": {
           "kind": {
-            "enum": ["command", "file", "test", "verdict", "report", "release"]
+            "enum": [
+              "command",
+              "file",
+              "test",
+              "verdict",
+              "report",
+              "release"
+            ]
           },
           "locator": { "type": "string", "minLength": 1 },
           "digest": {

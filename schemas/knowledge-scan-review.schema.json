@@ -1,0 +1,190 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/gvm1229/aigent-hive/schemas/knowledge-scan-review.schema.json",
+  "title": "Aigent Hive reviewed directory-scan claims",
+  "description": "Agent-reviewed, digest-bound claim candidates for one exact content-free scan inventory.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "inventory_digest", "claims"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "inventory_digest": { "$ref": "#/$defs/sha256" },
+    "claims": {
+      "type": "array",
+      "maxItems": 2000,
+      "x-uniqueBy": "claim_id",
+      "items": { "$ref": "#/$defs/reviewed_claim" }
+    }
+  },
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "portable_path": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4096,
+      "pattern": "^(?!/)(?![A-Za-z]:)(?!.*\\\\)(?!.*:)(?!\\.{1,2}(?:/|$))(?!.*\\/\\.{1,2}(?:/|$))(?!.*//)(?!.*[\\u0000-\\u001f\\u007f])[^/]+(?:/[^/]+)*$"
+    },
+    "bounded_optional": {
+      "oneOf": [
+        {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 400,
+          "pattern": "^(?!\\s)(?!.*\\s$)(?!.*\\u0000)[\\s\\S]+$"
+        },
+        { "type": "null" }
+      ]
+    },
+    "claim_kind": {
+      "enum": [
+        "project-profile",
+        "decision",
+        "convention",
+        "preference",
+        "workflow",
+        "dependency-evidence",
+        "outcome",
+        "question"
+      ]
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["locator", "content_digest", "kind"],
+      "properties": {
+        "locator": { "$ref": "#/$defs/portable_path" },
+        "content_digest": { "$ref": "#/$defs/sha256" },
+        "kind": {
+          "enum": ["document", "implementation", "test", "build", "user-intent"]
+        }
+      }
+    },
+    "reviewed_claim": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "claim_id",
+        "kind",
+        "statement",
+        "evidence",
+        "agent_reviewed",
+        "global_promotion_candidate"
+      ],
+      "properties": {
+        "schema_version": { "const": 1 },
+        "claim_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 96,
+          "pattern": "^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$"
+        },
+        "kind": { "$ref": "#/$defs/claim_kind" },
+        "statement": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 800,
+          "pattern": "^(?!\\s)(?!.*\\s$)(?!.*[\\u0000-\\u001f\\u007f])[\\s\\S]+$"
+        },
+        "version": { "$ref": "#/$defs/bounded_optional" },
+        "revision": { "$ref": "#/$defs/bounded_optional" },
+        "applicability": { "$ref": "#/$defs/bounded_optional" },
+        "evidence": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 16,
+          "x-uniqueBy": "locator",
+          "x-mustMatchInventory": ["locator", "content_digest"],
+          "items": { "$ref": "#/$defs/evidence" }
+        },
+        "agent_reviewed": { "const": true },
+        "global_promotion_candidate": { "type": "boolean" }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "kind": { "const": "dependency-evidence" } },
+            "required": ["kind"]
+          },
+          "then": {
+            "anyOf": [
+              { "required": ["version"], "properties": { "version": { "type": "string" } } },
+              { "required": ["revision"], "properties": { "revision": { "type": "string" } } }
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": { "const": "convention" },
+              "global_promotion_candidate": { "const": true }
+            },
+            "required": ["kind", "global_promotion_candidate"]
+          },
+          "then": {
+            "required": ["applicability"],
+            "properties": {
+              "applicability": { "type": "string" },
+              "evidence": {
+                "allOf": [
+                  { "contains": { "properties": { "kind": { "enum": ["test", "build"] } }, "required": ["kind"] } },
+                  { "contains": { "properties": { "kind": { "enum": ["document", "user-intent"] } }, "required": ["kind"] } }
+                ]
+              }
+            },
+            "anyOf": [
+              { "required": ["version"], "properties": { "version": { "type": "string" } } },
+              { "required": ["revision"], "properties": { "revision": { "type": "string" } } }
+            ]
+          }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "outcome" } }, "required": ["kind"] },
+          "then": {
+            "properties": {
+              "evidence": {
+                "contains": {
+                  "properties": { "kind": { "enum": ["test", "build"] } },
+                  "required": ["kind"]
+                }
+              }
+            },
+            "anyOf": [
+              { "required": ["version"], "properties": { "version": { "type": "string" } } },
+              { "required": ["revision"], "properties": { "revision": { "type": "string" } } }
+            ]
+          }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "preference" } }, "required": ["kind"] },
+          "then": {
+            "properties": {
+              "evidence": {
+                "contains": {
+                  "properties": { "kind": { "const": "user-intent" } },
+                  "required": ["kind"]
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "project-profile" } }, "required": ["kind"] },
+          "then": {
+            "properties": {
+              "evidence": {
+                "contains": {
+                  "properties": { "kind": { "const": "document" } },
+                  "required": ["kind"]
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

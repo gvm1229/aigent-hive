@@ -1,0 +1,117 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/gvm1229/aigent-hive/schemas/knowledge-collection-registry.schema.json",
+  "title": "Aigent Hive knowledge collection registry",
+  "description": "Canonical logical collection registry. Local locators are installation-only attachments and never collection identities.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "collections"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "collections": {
+      "type": "array",
+      "maxItems": 10000,
+      "contains": {
+        "properties": { "kind": { "const": "user-root" } },
+        "required": ["kind"]
+      },
+      "minContains": 0,
+      "maxContains": 1,
+      "x-order": "collection_id",
+      "x-uniqueBy": ["collection_id", "source_project_id"],
+      "items": { "$ref": "#/$defs/collection" }
+    }
+  },
+  "x-fixedCollectionTables": [
+    "collections",
+    "documents",
+    "chunks",
+    "claims",
+    "sources",
+    "links",
+    "replacements"
+  ],
+  "$defs": {
+    "collection_id": {
+      "type": "string",
+      "pattern": "^(?:user-root|collection-[0-9a-f]{64})$"
+    },
+    "bounded_identity": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 1024,
+      "pattern": "^(?!\\s)(?!.*\\s$)(?!.*[\\u0000-\\u001f\\u007f]).+$"
+    },
+    "collection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "collection_id",
+        "kind",
+        "state",
+        "default_visibility"
+      ],
+      "properties": {
+        "collection_id": { "$ref": "#/$defs/collection_id" },
+        "kind": {
+          "enum": ["user-root", "registered-project", "directory", "imported"]
+        },
+        "state": { "enum": ["attached", "detached"] },
+        "aliases": {
+          "type": "array",
+          "maxItems": 256,
+          "uniqueItems": true,
+          "x-caseFoldUnique": true,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "pattern": "^(?!\\s)(?!.*[\\u0000-\\u001f\\u007f]).*\\S$"
+          }
+        },
+        "local_locator": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 32768,
+          "pattern": "^(?:[A-Za-z]:[\\\\/]|/|\\\\\\\\).+$"
+        },
+        "source_project_id": { "$ref": "#/$defs/bounded_identity" },
+        "default_visibility": {
+          "enum": ["shared", "project-private", "confidential"]
+        }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "kind": { "const": "user-root" } }, "required": ["kind"] },
+          "then": {
+            "properties": { "collection_id": { "const": "user-root" } },
+            "not": { "required": ["source_project_id"] }
+          },
+          "else": {
+            "properties": {
+              "collection_id": {
+                "type": "string",
+                "pattern": "^collection-[0-9a-f]{64}$"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": { "kind": { "const": "registered-project" } },
+            "required": ["kind"]
+          },
+          "then": { "required": ["source_project_id"] }
+        },
+        {
+          "if": {
+            "properties": { "state": { "const": "attached" } },
+            "required": ["state"]
+          },
+          "then": { "required": ["local_locator"] },
+          "else": { "not": { "required": ["local_locator"] } }
+        }
+      ]
+    }
+  }
+}

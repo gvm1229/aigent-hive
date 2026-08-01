@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/gvm1229/aigent-hive/schemas/knowledge-retrieve-request.schema.json",
+  "title": "Aigent Hive knowledge retrieval request",
+  "description": "Bounded retrieval input. Query expansion is caller-supplied, and confidential access authorizes one exact collection identifier.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["scope", "query", "top_k", "byte_budget"],
+  "properties": {
+    "scope": { "$ref": "#/$defs/scope" },
+    "current_collection_id": { "$ref": "#/$defs/bounded_256" },
+    "query": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4096,
+      "pattern": "^(?!\\s)(?!.*\\s$)(?!.*\\u0000)[\\s\\S]+$"
+    },
+    "query_expansions": {
+      "type": "array",
+      "maxItems": 8,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 4096,
+        "pattern": "^(?!\\s)(?!.*\\s$)(?!.*\\u0000)[\\s\\S]+$"
+      }
+    },
+    "top_k": { "type": "integer", "minimum": 1, "maximum": 100 },
+    "byte_budget": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 1048576
+    },
+    "confidential_collection_id": { "$ref": "#/$defs/collection_id" }
+  },
+  "$defs": {
+    "collection_id": {
+      "type": "string",
+      "pattern": "^(?:user-root|collection-[0-9a-f]{64})$"
+    },
+    "bounded_256": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256,
+      "pattern": "^(?!\\s)(?!.*\\s$)(?!.*\\u0000)[\\s\\S]+$"
+    },
+    "scope": {
+      "oneOf": [
+        { "enum": ["auto", "global", "all-visible"] },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["project"],
+          "properties": { "project": { "$ref": "#/$defs/bounded_256" } }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["collection"],
+          "properties": { "collection": { "$ref": "#/$defs/bounded_256" } }
+        }
+      ]
+    }
+  }
+}

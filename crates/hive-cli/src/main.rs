@@ -23,6 +23,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 mod judge;
 mod knowledge;
+mod knowledge_scan;
 mod project_upgrade;
 mod role;
 mod run;
@@ -50,7 +51,7 @@ USAGE:
     hive source-wiki query --target <source-root> --language en|ko (--text <query>|--tag <tag>) [--limit <1..100>] --output json
     hive update
     hive update --check --user-root <absolute-dir> --output json
-    hive knowledge ingest|query|promote|lint|delete|suppress --help
+    hive knowledge add|authorize-confidential|collection|delete|export|import|ingest|lint|list|promote|query|read|refresh|remember|retrieve|scan|suppress --help
     hive project upgrade --target <dir> (--scan|--dry-run|--apply|--validate|--recover) --output json
     hive index rebuild --target <dir> --output json
     hive route --request <json> --output json
@@ -605,24 +606,37 @@ fn reconcile_project_registry(
             }
         }
         SetupMode::Apply => {
-            let registered = hive_wiki::shared::register_project_atomic(
-                user_root,
-                registration,
-                global_wiki_enabled,
-            )
-            .map_err(|error| RenderError::Verification(error.to_string()))?;
-            changed_paths.extend(
-                registered
-                    .registry
-                    .changed_paths
-                    .into_iter()
-                    .map(|path| format!("user-root:{path}")),
-            );
-            if let Some(rebuilt) = registered.shared_index {
+            if global_wiki_enabled {
+                let registered =
+                    hive_wiki::shared::register_project_atomic(user_root, registration, true)
+                        .map_err(|error| RenderError::Verification(error.to_string()))?;
                 changed_paths.extend(
-                    rebuilt
+                    registered
+                        .registry
                         .changed_paths
                         .into_iter()
+                        .map(|path| format!("user-root:{path}")),
+                );
+                if let Some(rebuilt) = registered.shared_index {
+                    changed_paths.extend(
+                        rebuilt
+                            .changed_paths
+                            .into_iter()
+                            .map(|path| format!("user-root:{path}")),
+                    );
+                }
+            } else {
+                let registered = hive_wiki::shared::register_project_with_shared_index_disabled(
+                    user_root,
+                    registration,
+                )
+                .map_err(|error| RenderError::Verification(error.to_string()))?;
+                changed_paths.extend(
+                    registered
+                        .registry
+                        .changed_paths
+                        .into_iter()
+                        .chain(registered.removed_derived_paths)
                         .map(|path| format!("user-root:{path}")),
                 );
             }
@@ -641,6 +655,9 @@ fn reconcile_project_registry(
             }
             if global_wiki_enabled {
                 hive_wiki::shared::validate_shared_index(user_root)
+                    .map_err(|error| RenderError::Verification(error.to_string()))?;
+            } else {
+                hive_wiki::shared::validate_shared_derived_state_absent(user_root)
                     .map_err(|error| RenderError::Verification(error.to_string()))?;
             }
         }
@@ -1625,10 +1642,10 @@ fn check_target(target: &Path) -> Result<(), String> {
 mod tests {
     use super::{
         execute_hook_capability, failure_result_for, is_help_request, mark_derived_state_stale,
-        normalize_hook_path, parse_hook, parse_setup, run_human, wants_json, ActionResult,
-        HookInput, SETUP_USAGE, USAGE,
+        normalize_hook_path, parse_hook, parse_setup, reconcile_project_registry, run_human,
+        wants_json, ActionResult, HookInput, SETUP_USAGE, USAGE,
     };
-    use hive_render::RenderError;
+    use hive_render::{RenderError, ResolvedProjectPreferences, SetupMode};
     use std::fs;
     use std::path::{Path, PathBuf};
     use std::time::{SystemTime, UNIX_EPOCH};
@@ -1839,6 +1856,84 @@ mod tests {
         fs::remove_dir_all(&target).expect("temporary target should be removed");
         assert_eq!(first, second);
         assert_eq!(first, b"{\"schema_version\":1,\"stale\":true}\n");
+    }
+
+    #[test]
+    fn setup_disables_and_validates_complete_disposable_rag_cleanup() {
+        let temporary = temporary_directory("setup-wiki-disabled");
+        let user = temporary.join("user");
+        let project = temporary.join("project");
+        fs::create_dir_all(&user).expect("user root");
+        fs::create_dir_all(&project).expect("project root");
+        let preferences = ResolvedProjectPreferences {
+            setup_mode: "expedited".to_owned(),
+            provenance: "test".to_owned(),
+            interface_language: "en".to_owned(),
+            wiki_enabled: true,
+            wiki_language: "both".to_owned(),
+            persona_id: "balanced".to_owned(),
+            persona_custom_description: None,
+            selected_project_skills: Vec::new(),
+            usage_guard_enabled: false,
+            codexbar_fallback_enabled: false,
+            usage_stop_remaining_percent: 60,
+        };
+        let mut changed = Vec::new();
+        reconcile_project_registry(
+            &user,
+            &project,
+            &preferences,
+            SetupMode::Apply,
+            true,
+            &mut changed,
+        )
+        .expect("enable Global Wiki");
+        for relative in hive_wiki::shared::SHARED_DERIVED_RELATIVES {
+            let path = user.join(relative);
+            fs::create_dir_all(path.parent().expect("derived parent")).expect("derived parent");
+            if !path.exists() {
+                fs::write(path, b"derived\n").expect("derived artifact");
+            }
+        }
+
+        changed.clear();
+        reconcile_project_registry(
+            &user,
+            &project,
+            &preferences,
+            SetupMode::Apply,
+            false,
+            &mut changed,
+        )
+        .expect("disable Global Wiki");
+
+        for relative in hive_wiki::shared::SHARED_DERIVED_RELATIVES {
+            assert!(!user.join(relative).exists(), "{relative}");
+            assert!(changed.contains(&format!("user-root:{relative}")));
+        }
+        reconcile_project_registry(
+            &user,
+            &project,
+            &preferences,
+            SetupMode::Validate,
+            false,
+            &mut Vec::new(),
+        )
+        .expect("validate disabled Global Wiki");
+
+        fs::create_dir_all(user.join(".hive/index")).expect("index directory");
+        fs::write(user.join(".hive/index/.stale"), b"stale\n").expect("stale marker");
+        let error = reconcile_project_registry(
+            &user,
+            &project,
+            &preferences,
+            SetupMode::Validate,
+            false,
+            &mut Vec::new(),
+        )
+        .expect_err("disabled validation must reject derived residue");
+        assert!(matches!(error, RenderError::Verification(_)));
+        fs::remove_dir_all(temporary).expect("temporary target should be removed");
     }
 
     #[test]
