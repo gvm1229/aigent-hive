@@ -258,6 +258,9 @@ class Phase3SkillSourceContract(unittest.TestCase):
             "A Wiki capture and a product version or release-date change are separate commits.",
             "use patch staging or sequence the edits",
             "Do not rewrite an existing commit solely to apply current commit-splitting policy",
+            "ordinary fast-forward direct pushes",
+            "do not require a pull request or required status checks",
+            "A created `staging` branch must use a strict ruleset",
         ):
             self.assertIn(requirement, directive)
         for requirement in (

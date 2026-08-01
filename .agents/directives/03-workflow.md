@@ -13,10 +13,15 @@ Before any Git operation that stages, unstages, commits, switches branches, merg
 
 ## Branch Strategy
 
-Maintain exactly two long-lived branches:
+Maintain two default long-lived branches:
 
 - `main` — stable, publicly releasable baseline
-- `develop` — ongoing integration and ordinary development
+- `develop` — ongoing integration and ordinary development; ordinary fast-forward direct pushes
+  are allowed
+
+Create `staging` only when an explicit release plan needs a separate pre-production branch and the
+user authorizes it. A created `staging` branch must use a strict ruleset with pull requests,
+required status checks, deletion protection, and non-fast-forward protection.
 
 Bootstrap rules:
 
@@ -27,6 +32,8 @@ Bootstrap rules:
 After bootstrap:
 
 - Perform ordinary work on `develop`.
+- Push ordinary verified commits directly to `develop`; do not require a pull request or required
+  status checks for this branch.
 - Do not commit ordinary work directly to `main`.
 - Integrate `develop` into `main` through a pull request.
 - Do not create named, purpose, feature, or snapshot branches under the default policy.
@@ -127,7 +134,7 @@ Verify that the message has the intended scope and contains no co-author trailer
 - Do not rewrite an existing commit solely to apply current commit-splitting policy unless the user
   explicitly requests that history change.
 - When explicitly authorized, use `--force-with-lease`, never plain `--force`.
-- Never delete `main` or `develop`.
+- Never delete `main`, `develop`, or an active release `staging` branch.
 - Do not push secrets, runtime state, caches, SQLite files, generated release output, or active-session manifests.
 
 ## Completion Boundary
