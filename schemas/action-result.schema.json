@@ -64,6 +64,13 @@
         "DeleteKnowledge",
         "SuppressKnowledge",
         "RebuildKnowledgeIndex",
+        "Loop",
+        "InitializeLoop",
+        "ValidateLoop",
+        "CheckpointLoop",
+        "SteerLoop",
+        "PrepareLoopDispatch",
+        "RecoverLoop",
         "LintSourceWiki",
         "QuerySourceWiki",
         "RebuildSourceWikiIndex",
@@ -110,7 +117,13 @@
               "test",
               "verdict",
               "report",
-              "release"
+              "release",
+              "loop-graph",
+              "loop-evidence",
+              "usage-authorization",
+              "capability-resolution",
+              "run-status",
+              "prepared-dispatch"
             ]
           },
           "locator": { "type": "string", "minLength": 1 },

@@ -24,6 +24,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 mod judge;
 mod knowledge;
 mod knowledge_scan;
+mod loop_engineering;
 mod project_upgrade;
 mod role;
 mod run;
@@ -68,6 +69,7 @@ USAGE:
     hive role handoff --target <dir> --request <request.json> --output json
     hive run checkpoint --target <dir> --request <request.json> --capabilities <fresh-json> --output json
     hive run resume --target <dir> --run <run-id> --capabilities <fresh-json> [--dispatch-intent manual|automatic] [--account-digest <sha256:...>] [--session-id <host-session-id>] [--role <role-id> [--threshold <1..99>]] --output json
+    hive loop initialize|validate|checkpoint|steer|prepare|recover --help
     hive judge package --target <dir> --request <json> --output json
     hive judge quorum --target <dir> --request <json> --output json
     hive release verify --bundle <release-dir> --trust-root <external-protected-root.json> --output json
@@ -188,6 +190,7 @@ fn main() -> ExitCode {
         Some("usage") => run_usage(&arguments[1..]),
         Some("role") => role::run_role(&arguments[1..]),
         Some("run") => run::run_run(&arguments[1..]),
+        Some("loop") => loop_engineering::run_loop(&arguments[1..]),
         Some("judge") => judge::run_judge(&arguments[1..]),
         Some("release") => update::run_release(&arguments[1..]),
         Some("update") if arguments.len() == 1 => update_activation::run(),
