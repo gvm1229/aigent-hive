@@ -1,6 +1,6 @@
 # 제품·배포 결정
 
-기준일: 2026-08-01
+기준일: 2026-08-02
 
 | 영역 | 결정 |
 | --- | --- |
@@ -10,9 +10,11 @@
 | API | model-provider API 호출·SDK·API key 전부 금지 |
 | 소스와 출하 | Hive source, release bundle, consumer harness 분리 |
 | setup template | Copier 9.17.0을 authoring·CI에 사용, 소비자 runtime dependency 금지 |
-| canonical data | 지식·role·run은 Markdown, setup/config/approval은 tracked YAML/TOML, Raw는 허용된 source object |
-| SQLite | `0.8.0` target은 `~/.hive/index/hive.sqlite3` 단일 projection; user Wiki + 등록 project Wiki 기반 무네트워크 rebuild, project DB 없음 |
-| v0.9 knowledge RAG | 모든 질문의 simple-question 이전 bounded retrieval, named project scope, durable user fact·preference·workflow mandatory write, citation-ready chunk·score·locator 반환. Markdown 정본 유지, SQLite는 incremental FTS5 RAG projection과 measured deficiency 이후 optional local vector만 허용 |
+| canonical data | Source Wiki·role·run·plan은 Markdown. Consumer Wiki는 `markdown|notion` user-scope backend 중 하나. Setup/config/approval은 tracked YAML/TOML, Raw는 허용된 source object |
+| SQLite | `~/.hive/index/hive.sqlite3` 단일 disposable projection. Markdown mode는 무네트워크 rebuild, Notion mode는 selected remote scope 기반 rebuild. Project DB 없음 |
+| v0.9 knowledge RAG | 모든 질문의 simple-question 이전 bounded retrieval, named project scope, durable user fact·preference·workflow mandatory write, citation-ready chunk·score·locator 반환. Selected backend 정본 우선, SQLite는 incremental FTS5 RAG projection과 measured deficiency 이후 optional local vector만 허용 |
+| Notion Wiki backend | Notion 유일 정본·active local Wiki Markdown 0건·SQLite changed-only projection. Official plugin/app → hosted MCP → consented REST, 매 turn freshness gate, Notion-first write, Webhook·Notion AI 이중 검색·양방향 Markdown sync 0건 |
+| Discord integration | 초기 범위는 usage guard 중단의 optional outbound webhook. Claude inbound는 official Discord Channel 위임, Codex inbound continuation은 official capability 전 `unsupported` |
 | v0.9 knowledge portability·scan | SQLite 복사 대신 checksummed `.hivekb` canonical bundle export·import, 고정 normalized table의 `collection_id`, explicit `hive-knowledge-scan`, 기존 query Skill의 bounded automatic retrieval. Secret·confidential·runtime·absolute path·retrieved instruction authority 제외 |
 | Global onboarding | Minimal bootstrap 뒤 mandatory `setup-hive`; 첫 질문은 language, 이후 모든 질문과 host 지침은 선택 언어. Wiki language·profile·persona·host·Skill·Wiki·usage·update-check preference 정본은 `~/.hive/config/user-setup.yml` |
 | orchestration | 검증된 host-native capability가 기본 소유. OMX·OMC는 사용자 명시 선택 또는 고정된 `0.8.x` 실행의 호환 owner만 허용하며 mid-run switch 없음 |
@@ -62,6 +64,9 @@ v0.9 cross-project retrieval, mandatory durable memory, portable bundle·directo
 
 `0.9.0` 정식 GitHub·npm release identity, final candidate와 production signing:
 [`ADR-0017`](ADR-0017-0.9-full-release.md).
+
+Notion canonical backend·SQLite projection·Discord outbound 경계:
+[`ADR-0018`](ADR-0018-notion-wiki-backend.md).
 
 ## 미확정 항목
 

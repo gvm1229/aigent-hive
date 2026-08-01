@@ -25,15 +25,13 @@
 - RAG 50,000 chunk와 `.hivekb` 100 collection·50,000 chunk 성능 gate 통과
 - `0.8.0` frozen project·user base와 synthetic release fixture 무변경
 - Release notes: [`docs/releases/0.9.0.md`](../../releases/0.9.0.md)
+- 기능 마감: [`v0.9.0-test-finalization.md`](v0.9.0-test-finalization.md)
 - 기존 `release.yml`: remote `develop` candidate만 허용
 - 기존 `release-publish.yml`: exact `0.8.0` hardcode와 `develop` candidate 결합
 - GitHub normal Release·tag 생성 workflow 부재
 - Repository release tag 부재
 - Apple·Windows·external TUF production signer 증거 미확인
-- GitHub ruleset: `Develop safety`는 deletion·non-fast-forward만 적용,
-  `Protect main`은 PR·required checks 4개 적용
 - Remote `develop`: `e4f1d6001a0a6ad5f41dccc350a0e585bbe9c9d0`
-- `staging` branch: 현재 final-main candidate 계보에 불필요하여 생성 0건
 
 ## Version·channel 계약
 
@@ -85,7 +83,8 @@ remote develop qualification
 - [ ] [REL9-006] Fresh clone의 Rust format·strict Clippy·workspace all-target·all-feature test와 Python 전체 적합성
 - [ ] [REL9-007] Ubuntu·macOS·Windows CI와 Linux musl x86_64·arm64 release runtime PASS
 - [ ] [REL9-008] Installer·update·rollback·recovery·secret·symlink·path confinement hostile suite PASS
-- [ ] [REL9-009] 시험·정식 feature/default parity와 공통 `report to developer` preview·collect·보존·redaction·no-upload conformance
+- [ ] [REL9-009] 시험·정식 feature/default parity, `markdown|notion` backend,
+  Discord outbound와 공통 `report to developer` preview·collect·보존·redaction·no-upload conformance
 - [ ] [REL9-010] RAG 50,000 chunk와 `.hivekb` 100 collection·50,000 chunk release profile 재측정·threshold PASS
 - [ ] [REL9-011] Codex·Antigravity 실제 install·setup·project·update 회귀와 Claude fixture·미검증 범위 공개
 
@@ -112,12 +111,13 @@ remote develop qualification
 
 ## 실행 순서
 
-1. `REL9-001` 원격 `develop` 기준선 고정
-2. `REL9-002–005` version grammar·분리 workflow 구현·독립 커밋
-3. `REL9-006–012` clean clone·cross-platform 시험 후보 검증
-4. `REL9-013–016` bare 시험판 독립 게시·수용·선택형 numbered 시험판
-5. `REL9-017–024` main 통합·stable candidate·signing·별도 정식 publication
-6. `REL9-025–026` 관찰·current-truth 완료 기록
+1. `TST9-*`·`PRF-*` 기능 마감과 release handoff
+2. `REL9-001` 원격 `develop` 기준선 재고정
+3. `REL9-002–005` version grammar·분리 workflow 구현·독립 커밋
+4. `REL9-006–012` clean clone·cross-platform 시험 후보 검증
+5. `REL9-013–016` bare 시험판 독립 게시·수용·선택형 numbered 시험판
+6. `REL9-017–024` main 통합·stable candidate·signing·별도 정식 publication
+7. `REL9-025–026` 관찰·current-truth 완료 기록
 
 ## 외부 권한 경계
 

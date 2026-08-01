@@ -1,7 +1,7 @@
 # Aigent Hive active plan index
 
-> Revision: 1.89
-> 기준일: 2026-08-01
+> Revision: 1.90
+> 기준일: 2026-08-02
 > Product version: `0.9.0`
 > 현재 milestone: `0.9.0` 정식 릴리스 준비
 > Entrypoint: `docs/plans/PLAN.md`
@@ -10,17 +10,13 @@
 
 - Objective: `Aigent Hive 0.9.0-test` 독립 시험 배포·수용 뒤 별도 `0.9.0` 정식
   GitHub·npm 릴리스와 public update 검증
-- Success: Mandatory user setup, global preference 기반 expedited/custom project setup,
-  user-root 단일 SQLite, 세 host selected Skill projection, Wiki default-on opt-out,
-  usage guard opt-in `20%`, native-first·CodexBar fallback-only, consumer
-  PowerShell 5.1·`cmd.exe`, source-only PowerShell 7, Linux musl x86_64·arm64,
-  bare `aigent-hive@0.9.0-test|test`, 선택형 numbered test, stable `latest` 보존,
-  시험·정식 feature parity, `aigent-hive@0.9.0|latest`, OS signing·TUF·SHA-256·
-  GitHub attestation과 public install·update acceptance, materially ambiguous work의
-  prompt-refine 자동 선택·승인 전 정지
+- Success: 아래 Active fragments의 evidence-backed completion. 시험판 핵심 gate는
+  `PRF-*` prompt approval, `TST9-*` Wiki backend·integration, `REL9-*` 독립 test·stable
+  publication과 public acceptance
 - Stop boundary: protected review·environment approval, signing·TUF·npm credential,
   exact `1.0.0` authority, 현재 source usage guard remaining `60%`
-- Invariants: provider-neutral, canonical Markdown 우선, OMX/OMC replaceable adapter,
+- Invariants: provider-neutral, backend별 canonical source 우선, SQLite 파생 상태,
+  Source Wiki·run·role·plan Markdown 정본, OMX/OMC replaceable adapter,
   ownership·consent·foreign byte 보존, provider API·credential 경로 없음, force-push 없음,
   explicit-only major, scheduler·tmux·Stop continuation 없음
 - Native Goal compatibility: 변경 불가 objective의 “unchecked item in `docs/plans/PLAN.md`”는 `PLAN.md` 내부 checkbox가 아니라 아래 `Active fragments`의 unchecked item을 뜻함
@@ -45,8 +41,9 @@
 | v0.9 global knowledge RAG | 20 | 0 | 100% |
 | v0.9 knowledge portability·scan | 18 | 0 | 100% |
 | Prompt refine 자동 routing | 0 | 12 | 0% |
+| v0.9 test 기능 마감 | 0 | 18 | 0% |
 | v0.9 full release | 1 | 25 | 3.8% |
-| **Canonical total** | **292** | **37** | **88.8%** |
+| **Canonical total** | **292** | **55** | **84.1%** |
 
 External production boundary 항목도 미완료 합계에 포함. Protected authority 없이 완료 처리 금지.
 
@@ -106,6 +103,7 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
 | [`active/v0.9.0-global-knowledge-rag.md`](active/v0.9.0-global-knowledge-rag.md) | `RAG-*` | 전역 RAG |
 | [`active/v0.9.0-knowledge-portability-scan.md`](active/v0.9.0-knowledge-portability-scan.md) | `KPX-*` | Knowledge 이식·directory scan·automatic query |
 | [`active/prompt-refine-auto-routing.md`](active/prompt-refine-auto-routing.md) | `PRF-*` | Material ambiguity 자동 refine·승인 전 정지 |
+| [`active/v0.9.0-test-finalization.md`](active/v0.9.0-test-finalization.md) | `TST9-*` | Notion·SQLite, Discord outbound, 문제 보고와 시험판 기능 마감 |
 | [`active/release-0.9.0.md`](active/release-0.9.0.md) | `REL9-*` | 정식 GitHub·npm 릴리스와 public acceptance |
 
 ## Reconciliation gate
@@ -133,6 +131,7 @@ recovery 검증.
 
 완료: V9-001–025, RAG-001–020, KPX-001–018.
 
-다음: PRF-001–007 prompt refine 계약·구현 뒤 PRF-008–012 검증.
+다음: TST9-001–012 backend·Notion index 계약·구현과 PRF-001–012 prompt refine
+계약·승인 정지.
 
-후속: REL9-002–005 release activation.
+후속: TST9-013–018 integration·qualification 뒤 REL9-002–005 release activation.

@@ -2,9 +2,9 @@
 
 - 기준 branch: `develop`
 - product version: `0.9.0`
-- plan revision: `1.89`
+- plan revision: `1.90`
 - 현재 milestone: `0.9.0` 정식 릴리스 준비
-- 현재 작업: PRF-001–007 prompt refine 자동 routing·승인 정지
+- 현재 작업: `0.9.0-test` backend·integration·prompt-refine 기능 마감 계획
 - 외부 중지 경계: protected review·environment approval, signing·TUF·npm credential,
   exact `1.0.0` 사용자 authority
 - Plan load: compact `docs/plans/PLAN.md` + `docs/plans/phases/07-public-qualification.md`
@@ -20,8 +20,9 @@
   + `docs/plans/active/v0.9.0-global-knowledge-rag.md`
   + `docs/plans/active/v0.9.0-knowledge-portability-scan.md`
   + `docs/plans/active/prompt-refine-auto-routing.md`
+  + `docs/plans/active/v0.9.0-test-finalization.md`
   + `docs/plans/active/release-0.9.0.md`
-- Plan completion: canonical checklist `292/329` 완료, `37`개 미완료, `88.8%`
+- Plan completion: canonical checklist `292/347` 완료, `55`개 미완료, `84.1%`
 - Latest local Windows: Rust workspace 459개 실행·통과. Python 적합성 670개 발견 중
   628개 실제 실행·통과, 42개 미실행. 미실행 범위: 관리자 권한 없는 Windows의
   symbolic link 생성 제약 16개, POSIX·Unix 전용 동작 19개, macOS 전용 설치·서명
@@ -64,6 +65,23 @@
   `omx|omc` command·자동 adapter 우선권·raw session 자동 수집 0건
 - 실행 결과: V9-001–025 완료, host-native 기본값 전환과 세 host projection PASS
 
+## `0.9.0-test` 기능 마감
+
+- 상태: 계획 확정, 구현 미착수
+- 결정: [`ADR-0018`](../decisions/ADR-0018-notion-wiki-backend.md) accepted
+- Active fragment:
+  [`v0.9.0-test-finalization.md`](../plans/active/v0.9.0-test-finalization.md)
+- Wiki backend: user-scope `markdown|notion` 상호 배타 선택
+- Markdown mode: 기존 local Markdown 정본·user-root SQLite projection
+- Notion mode: Notion 유일 정본·local Wiki Markdown 0건·user-root SQLite projection
+- Retrieval: 두 mode 모두 기존 Hive FTS5·ranking·citation schema
+- Freshness: Notion mode의 매 turn remote revision preflight·changed-only fetch
+- Notion write: remote canonical-first 뒤 SQLite write-through·dirty recovery
+- 제외: Webhook·Notion AI 이중 검색·양방향 Markdown sync
+- Discord: usage guard 중단의 optional outbound, Claude inbound official plugin 위임,
+  Codex inbound official capability 전 `unsupported`
+- 다음 작업: TST9-001–003 backend·migration·consent contract
+
 ## v0.9.0 시험·정식 릴리스
 
 - 상태: 계획 활성, publication 미실행
@@ -85,7 +103,7 @@
 - `staging`: 현재 release flow에 불필요하여 생성 0건
 - Production gate: 5개 native target·6개 npm package, OS signing·notarization,
   external TUF, public install·`0.8.0 → 0.9.0` update
-- 다음 작업: REL9-002–005 version grammar·분리 release workflow activation
+- 다음 작업: TST9-*·PRF-* 기능 마감 뒤 REL9-002–005 version grammar·분리 release workflow activation
 
 ## Prompt refine 자동 routing
 

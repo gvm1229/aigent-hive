@@ -361,6 +361,7 @@ class Phase3SkillSourceContract(unittest.TestCase):
             "active/v0.9.0-global-knowledge-rag.md",
             "active/v0.9.0-knowledge-portability-scan.md",
             "active/v0.9.0-loop-wiki-skills.md",
+            "active/v0.9.0-test-finalization.md",
             "active/windows-shell-install.md",
             "contracts/README.md",
             "phases/07-public-qualification.md",
@@ -387,6 +388,7 @@ class Phase3SkillSourceContract(unittest.TestCase):
             plan_root / "active/v0.9.0-global-knowledge-rag.md",
             plan_root / "active/v0.9.0-knowledge-portability-scan.md",
             plan_root / "active/v0.9.0-loop-wiki-skills.md",
+            plan_root / "active/v0.9.0-test-finalization.md",
             plan_root / "active/windows-shell-install.md",
             plan_root / "phases/07-public-qualification.md",
         ]
@@ -406,6 +408,7 @@ class Phase3SkillSourceContract(unittest.TestCase):
                 "active/v0.9.0-global-knowledge-rag.md",
                 "active/v0.9.0-knowledge-portability-scan.md",
                 "active/v0.9.0-loop-wiki-skills.md",
+                "active/v0.9.0-test-finalization.md",
                 "active/windows-shell-install.md",
                 "phases/07-public-qualification.md",
             },
@@ -480,6 +483,9 @@ class Phase3SkillSourceContract(unittest.TestCase):
         plugin_project_path = plan_root / "active/plugin-project-lifecycle.md"
         prompt_refine_path = plan_root / "active/prompt-refine-auto-routing.md"
         release_09_path = plan_root / "active/release-0.9.0.md"
+        test_finalization_path = (
+            plan_root / "active/v0.9.0-test-finalization.md"
+        )
         security_review_path = plan_root / "active/security-review.md"
         source_wiki_path = plan_root / "active/source-docs-wiki.md"
         onboarding_path = plan_root / "active/user-onboarding-shared-index.md"
@@ -530,6 +536,10 @@ class Phase3SkillSourceContract(unittest.TestCase):
             (
                 "Prompt refine 자동 routing",
                 *checklist_counts([prompt_refine_path]),
+            ),
+            (
+                "v0.9 test 기능 마감",
+                *checklist_counts([test_finalization_path]),
             ),
             (
                 "v0.9 full release",

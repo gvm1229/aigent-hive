@@ -5,6 +5,8 @@
 - 대상: `0.9.0`
 - 부분 대체: [`ADR-0012`](ADR-0012-global-onboarding-shared-index.md)의 query·capture·
   data portability, Stage 3 simple-question memory isolation
+- 후속 부분 대체: Consumer Notion mode의 canonical source·rebuild는
+  [`ADR-0018`](ADR-0018-notion-wiki-backend.md)
 
 ## 현재 기반과 gap
 
