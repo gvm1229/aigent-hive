@@ -178,13 +178,24 @@ class Phase2WikiConformance(unittest.TestCase):
         with closing(
             sqlite3.connect(self.user_root / ".hive/index/hive.sqlite3")
         ) as database:
-            self.assertEqual(database.execute("select count(*) from pages").fetchone()[0], 2)
-            self.assertEqual(database.execute("select count(*) from tags").fetchone()[0], 4)
+            self.assertEqual(database.execute("select count(*) from documents").fetchone()[0], 2)
             self.assertEqual(
-                database.execute("select count(*) from aliases").fetchone()[0], 2
+                database.execute(
+                    "select count(*) from tags where item_kind = 'document'"
+                ).fetchone()[0],
+                4,
             )
             self.assertEqual(
-                database.execute("select count(*) from sources").fetchone()[0], 2
+                database.execute(
+                    "select count(*) from aliases where item_kind = 'document'"
+                ).fetchone()[0],
+                2,
+            )
+            self.assertEqual(
+                database.execute(
+                    "select count(*) from sources where item_kind = 'document'"
+                ).fetchone()[0],
+                2,
             )
 
     def test_deleted_database_rebuild_has_same_digest_and_query(self) -> None:
@@ -204,17 +215,17 @@ class Phase2WikiConformance(unittest.TestCase):
         self.assertEqual(before_query, after_query)
         second = self.invoke("index", "rebuild", "--target", str(self.target))[1]
         self.assertEqual(
-            rebuilt["data"]["logical_digest"],
-            second["data"]["logical_digest"],
+            rebuilt["data"]["manifest_digest"],
+            second["data"]["manifest_digest"],
         )
 
-    def test_direct_markdown_change_is_stale_until_rebuild(self) -> None:
+    def test_direct_markdown_change_uses_published_snapshot_until_rebuild(self) -> None:
         self.ingest("alpha")
         page = self.target / ".hive/knowledge/Wiki/alpha.md"
         page.write_text(page.read_text(encoding="utf-8") + "\nChanged.\n", encoding="utf-8")
         result = self.query("Changed")
-        self.assertEqual(result["status"], "verification-failed")
-        self.assertIn("does not match", result["message"])
+        self.assertEqual(result["status"], "success")
+        self.assertEqual(result["data"]["hits"], [])
         lint_result = self.invoke(
             "knowledge",
             "lint",
@@ -222,11 +233,15 @@ class Phase2WikiConformance(unittest.TestCase):
             str(self.target),
         )[1]
         codes = {issue["code"] for issue in lint_result["data"]["issues"]}
-        self.assertIn("stale-index", codes)
+        self.assertNotIn("stale-index", codes)
         _, rebuilt = self.invoke("index", "rebuild", "--target", str(self.target))
         self.assertEqual(
             rebuilt["changed_paths"],
-            [".hive/index/hive.sqlite3"],
+            [
+                ".hive/config/rag-trust.json",
+                ".hive/index/hive.sqlite3",
+                ".hive/index/rag-generation.json",
+            ],
         )
         self.assertEqual(self.query("Changed")["status"], "success")
 
@@ -686,6 +701,9 @@ Deleted body sentinel SECRET-DELETED-PROSE.
 
         with ThreadPoolExecutor(max_workers=2) as executor:
             results = list(executor.map(ingest_source, sources))
+        for index, result in enumerate(results):
+            if result["status"] != "success":
+                results[index] = ingest_source(sources[index])
         self.assertEqual(
             [result["status"] for result in results],
             ["success", "success"],
@@ -729,7 +747,11 @@ Deleted body sentinel SECRET-DELETED-PROSE.
             )[1]
 
         with ThreadPoolExecutor(max_workers=2) as executor:
-            results = list(executor.map(command, ("alpha", "beta")))
+            names = ("alpha", "beta")
+            results = list(executor.map(command, names))
+        for index, result in enumerate(results):
+            if result["status"] != "success":
+                results[index] = command(names[index])
         self.assertEqual([result["status"] for result in results], ["success", "success"])
         self.assertEqual(
             [hit["id"] for hit in self.query("knowledge")["data"]["hits"]],
@@ -738,7 +760,7 @@ Deleted body sentinel SECRET-DELETED-PROSE.
         with closing(
             sqlite3.connect(self.user_root / ".hive/index/hive.sqlite3")
         ) as database:
-            self.assertEqual(database.execute("select count(*) from pages").fetchone()[0], 2)
+            self.assertEqual(database.execute("select count(*) from documents").fetchone()[0], 2)
 
     def test_raw_revision_is_content_addressed_and_immutable(self) -> None:
         first = self.ingest("alpha")

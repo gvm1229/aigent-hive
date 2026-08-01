@@ -178,7 +178,7 @@ elif command == "plugin list --json":
     if state["plugin"]:
         installed.append({
             "pluginId": "aigent-hive@aigent-hive",
-            "version": "0.8.0",
+            "version": "0.9.0",
             "enabled": True,
             "source": {"path": str(marketplace / "plugins/aigent-hive")},
             "marketplaceSource": {"source": str(marketplace)},
@@ -282,19 +282,19 @@ else:
                 connection.execute("PRAGMA integrity_check").fetchone(),
                 ("ok",),
             )
-            metadata = dict(connection.execute("SELECT key, value FROM meta"))
+            metadata = connection.execute(
+                "SELECT schema_version, generation, manifest_digest, entry_count FROM meta"
+            ).fetchone()
+            self.assertEqual(metadata[0], 5)
+            self.assertGreaterEqual(metadata[1], 1)
+            self.assertRegex(metadata[2], r"^sha256:[0-9a-f]{64}$")
+            self.assertGreaterEqual(metadata[3], 0)
             self.assertEqual(
-                set(metadata),
-                {
-                    "schema_version",
-                    "logical_digest",
-                    "page_count",
-                    "project_count",
-                },
+                connection.execute(
+                    "SELECT count(*) FROM collections WHERE source_project_id IS NOT NULL"
+                ).fetchone(),
+                (1,),
             )
-            self.assertEqual(metadata["schema_version"], "2")
-            self.assertEqual(metadata["project_count"], "1")
-            self.assertRegex(metadata["logical_digest"], r"^sha256:[0-9a-f]{64}$")
         finally:
             connection.close()
 
