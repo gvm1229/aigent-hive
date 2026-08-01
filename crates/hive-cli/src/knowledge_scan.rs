@@ -1551,6 +1551,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::zombie_processes)]
     fn git_process_helper() {
         match env::var("HIVE_TEST_GIT_HELPER_MODE").as_deref() {
             Ok("timeout") => thread::sleep(Duration::from_secs(5)),

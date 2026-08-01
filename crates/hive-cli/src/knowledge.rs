@@ -143,7 +143,7 @@ pub(crate) fn run_knowledge(arguments: &[String]) -> ExitCode {
             Some("authorize-confidential") => run_authorize_confidential(&arguments[1..])
                 .unwrap_or_else(|error| failure("AuthorizeConfidentialKnowledge", &error)),
             Some("authorize-collection") => run_authorize_collection(&arguments[1..])
-                .unwrap_or_else(|error| failure("AuthorizeKnowledgeCollectionMapping", &error)),
+                .unwrap_or_else(|error| failure("MapKnowledgeCollection", &error)),
             Some("collection") => run_collection(&arguments[1..])
                 .unwrap_or_else(|error| failure("MapKnowledgeCollection", &error)),
             Some("refresh") => run_refresh(&arguments[1..])
@@ -4346,6 +4346,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::too_many_lines)]
     fn detached_collection_mapping_is_atomic_and_enables_private_auto_recall() {
         use hive_wiki::rag::RagVisibility;
 
