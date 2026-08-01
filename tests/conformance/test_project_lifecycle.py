@@ -511,6 +511,12 @@ else:
         )
         guidance = (user_root / ".codex/AGENTS.md").read_text(encoding="utf-8")
         self.assertIn("상태: `operational`", guidance)
+        self.assertIn(
+            "명시적 요청이 없는 한 모든 질문과 응답에 한국어 사용", guidance
+        )
+        self.assertIn(
+            "다른 언어로 작성된 메시지만으로 이 선호를 변경하지 않음", guidance
+        )
 
         reduced = self.write_user_setup_answers(
             "reduced-user-setup",

@@ -15,6 +15,7 @@ Hive development directives live under `.agents/`; files under `harness/` are so
 ## Prime Directives
 
 - Treat this repository as Hive source, never as a consumer project with an installed Hive harness.
+- Respond to the maintainer in Korean unless the maintainer explicitly requests another language for the current response. A request written in another language does not by itself override this rule.
 - Keep source, release artifacts, and installed consumer harnesses physically and logically separate.
 - Do not implement a model runtime, scheduler, Ralph/plan/team clone, or provider API client. Use host-native capabilities and Hive-owned provider-neutral contracts by default. Use OMX/OMC only when the user explicitly selects a compatible external layer or a legacy run remains pinned to its recorded owner. Keep canonical data, paths, contracts, and Skills provider-neutral so external compatibility can be removed without knowledge or ownership migration loss.
 - Keep knowledge, role, and run state canonical in Markdown; keep setup/config authority in tracked typed YAML/TOML. Treat SQLite as a disposable, reproducible local index over those sources.

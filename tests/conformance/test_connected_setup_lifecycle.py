@@ -324,6 +324,12 @@ else:
                 "setup-harness",
             ],
         )
+        agents = (target / "AGENTS.md").read_text(encoding="utf-8")
+        self.assertIn("selected interface language `ko`", agents)
+        self.assertIn(
+            "A message written in another language does not by itself change this preference.",
+            agents,
+        )
         self.assert_shared_user_store(target)
 
     def test_custom_project_preserves_explicit_project_preferences(self) -> None:
@@ -354,6 +360,12 @@ else:
         self.assertTrue(harness["usage_guard_enabled"])
         self.assertEqual(harness["usage_stop_remaining_percent"], 17)
         self.assertEqual(harness["selected_project_skills"], ["setup-harness"])
+        agents = (target / "AGENTS.md").read_text(encoding="utf-8")
+        self.assertIn("selected interface language `en`", agents)
+        self.assertIn(
+            "A message written in another language does not by itself change this preference.",
+            agents,
+        )
         self.assert_shared_user_store(target)
 
 

@@ -1337,7 +1337,7 @@ hook payload, tool output, hidden prompt, or runtime state.\n"
 preserve canonical Markdown until an explicit deletion request.\n"
             };
             format!(
-                "# Aigent Hive user preferences\n\n- Setup state: `operational`\n- Interface language: `en`\n- User profile: {profile}\n- Agent persona: {persona}\n- Selected hosts: `{hosts}`\n- Global Wiki: `{wiki}`\n- Daily update check: `{update_check}`\n- Active Skills: `{}`\n{capture}- When daily update check is enabled, run `hive update --check --user-root <user-root> --output json` before the first Hive task of each host session. A check may notify but must never install.\n- Ask and answer in English.\n- For ambiguous or detail-poor ordinary prompts, offer one concise optional refine suggestion without automatic rewrite.\n- Never request provider credentials or call model-provider APIs on Hive's behalf.\n",
+                "# Aigent Hive user preferences\n\n- Setup state: `operational`\n- Interface language: `en`\n- User profile: {profile}\n- Agent persona: {persona}\n- Selected hosts: `{hosts}`\n- Global Wiki: `{wiki}`\n- Daily update check: `{update_check}`\n- Active Skills: `{}`\n{capture}- When daily update check is enabled, run `hive update --check --user-root <user-root> --output json` before the first Hive task of each host session. A check may notify but must never install.\n- Use English for every question and response unless the user explicitly requests another language for the current response. A message written in another language does not by itself change this preference.\n- For ambiguous or detail-poor ordinary prompts, offer one concise optional refine suggestion without automatic rewrite.\n- Never request provider credentials or call model-provider APIs on Hive's behalf.\n",
                 resolved_skills.join(", ")
             )
         }
@@ -1352,7 +1352,7 @@ summary만 사용하고 raw transcript, hook payload, tool output, hidden prompt
 knowledge index를 capture·refresh하지 않음.\n"
             };
             format!(
-                "# Aigent Hive 사용자 설정\n\n- 설정 상태: `operational`\n- Interface language: `ko`\n- 사용자 profile: {profile}\n- Agent persona: {persona}\n- 선택 host: `{hosts}`\n- Global Wiki: `{wiki}`\n- 일일 update 확인: `{update_check}`\n- 활성 Skill: `{}`\n{capture}- 일일 update 확인이 enabled이면 각 host session의 첫 Hive 작업 전에 `hive update --check --user-root <user-root> --output json` 실행. 확인은 알림만 가능하며 설치 금지.\n- 질문과 응답은 한국어 사용.\n- 모호하거나 핵심 세부가 부족한 일반 prompt에는 자동 rewrite 없이 간결한 optional refine 제안 1개만 제공.\n- Provider credential을 요청하거나 Hive를 대신해 model-provider API를 호출하지 않음.\n",
+                "# Aigent Hive 사용자 설정\n\n- 설정 상태: `operational`\n- Interface language: `ko`\n- 사용자 profile: {profile}\n- Agent persona: {persona}\n- 선택 host: `{hosts}`\n- Global Wiki: `{wiki}`\n- 일일 update 확인: `{update_check}`\n- 활성 Skill: `{}`\n{capture}- 일일 update 확인이 enabled이면 각 host session의 첫 Hive 작업 전에 `hive update --check --user-root <user-root> --output json` 실행. 확인은 알림만 가능하며 설치 금지.\n- 현재 응답에 다른 언어를 사용하라는 명시적 요청이 없는 한 모든 질문과 응답에 한국어 사용. 다른 언어로 작성된 메시지만으로 이 선호를 변경하지 않음.\n- 모호하거나 핵심 세부가 부족한 일반 prompt에는 자동 rewrite 없이 간결한 optional refine 제안 1개만 제공.\n- Provider credential을 요청하거나 Hive를 대신해 model-provider API를 호출하지 않음.\n",
                 resolved_skills.join(", ")
             )
         }
@@ -1852,7 +1852,12 @@ usage_guard:
         let english = String::from_utf8(render_user_directive(&config, &["setup-hive".to_owned()]))
             .expect("English guidance");
         assert!(english.contains("# Aigent Hive user preferences"));
-        assert!(english.contains("- Ask and answer in English."));
+        assert!(english.contains(
+            "Use English for every question and response unless the user explicitly requests another language for the current response"
+        ));
+        assert!(english.contains(
+            "A message written in another language does not by itself change this preference"
+        ));
         assert!(english.contains("For every passed, failed, skipped, deferred"));
         assert!(!english.contains("# Aigent Hive 사용자 설정"));
 
@@ -1860,7 +1865,8 @@ usage_guard:
         let korean = String::from_utf8(render_user_directive(&config, &["setup-hive".to_owned()]))
             .expect("Korean guidance");
         assert!(korean.contains("# Aigent Hive 사용자 설정"));
-        assert!(korean.contains("- 질문과 응답은 한국어 사용."));
+        assert!(korean.contains("명시적 요청이 없는 한 모든 질문과 응답에 한국어 사용"));
+        assert!(korean.contains("다른 언어로 작성된 메시지만으로 이 선호를 변경하지 않음"));
         assert!(korean.contains("통과·실패·건너뜀·연기·미검증·미지원"));
         assert!(!korean.contains("# Aigent Hive user preferences"));
     }

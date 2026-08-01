@@ -757,6 +757,7 @@ class Phase3SkillSourceContract(unittest.TestCase):
         source_behavior = (
             REPOSITORY_ROOT / ".agents/directives/01-behavior.md"
         ).read_text(encoding="utf-8")
+        normalized_source_behavior = " ".join(source_behavior.split())
         source_documentation = (
             REPOSITORY_ROOT / ".agents/directives/04-documentation-state.md"
         ).read_text(encoding="utf-8")
@@ -783,9 +784,18 @@ class Phase3SkillSourceContract(unittest.TestCase):
             "Write human-readable project documents in concise Korean unless "
             "the user explicitly requests another language."
         )
-        language_consistency_rule = (
-            "Keep the selected interface language consistent throughout every "
-            "question and response."
+        source_response_language_rule = (
+            "Respond to the maintainer in Korean unless the maintainer explicitly "
+            "requests another language for the current response."
+        )
+        selected_language_rule = (
+            "Use the selected interface language `{{ interface_language }}` for "
+            "every question and response unless the user explicitly requests another "
+            "language for the current response."
+        )
+        message_language_non_override_rule = (
+            "A message written in another language does not by itself change this "
+            "preference."
         )
         automatic_handoff_rule = (
             "Before presenting pending actions or a user handoff, complete every "
@@ -821,8 +831,11 @@ class Phase3SkillSourceContract(unittest.TestCase):
         )
         self.assertIn(shipped_rule, template)
         self.assertIn(shipped_rule, renderer)
-        self.assertIn(language_consistency_rule, template)
-        self.assertIn(language_consistency_rule, renderer)
+        self.assertIn(source_response_language_rule, source_manifest)
+        self.assertIn(source_response_language_rule, normalized_source_behavior)
+        self.assertIn(selected_language_rule, template)
+        self.assertIn(message_language_non_override_rule, template)
+        self.assertIn(message_language_non_override_rule, renderer)
         self.assertIn("Before presenting a to-do list", source_behavior)
         self.assertIn("present only genuinely user-owned actions", source_behavior)
         self.assertIn(automatic_handoff_rule, template)
@@ -850,7 +863,13 @@ class Phase3SkillSourceContract(unittest.TestCase):
             user_guidance_renderer,
         )
         self.assertIn(
-            "use English consistently throughout every question and response",
+            "use English for every question and response unless the user explicitly "
+            "requests another language for the current response",
+            user_guidance_renderer,
+        )
+        self.assertIn(message_language_non_override_rule, user_guidance_renderer)
+        self.assertIn(
+            "다른 언어로 작성된 메시지만으로 이 선호를 변경하지 않음",
             user_guidance_renderer,
         )
         exact_pairs = (
