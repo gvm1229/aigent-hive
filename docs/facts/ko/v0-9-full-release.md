@@ -4,25 +4,22 @@ pair_id: v0-9-full-release
 topic_slug: v0-9-full-release
 language: ko
 counterpart: ../en/v0-9-full-release.md
-title: "Aigent Hive 0.9.0 정식 릴리스"
-summary: "0.9.0 최종 artifact·tag·GitHub Release·npm publication을 하나의 protected main commit에 결합"
+title: "Aigent Hive 0.9.0 시험·정식 릴리스"
+summary: "0.9.0은 독립 bare 시험 채널의 수용 뒤 별도 승인된 정식 publication 사용."
 tags: [distribution, release, signing, v0-9]
 aliases: ["0.9.0 release plan", "full release"]
 sources:
-  - "repo:docs/decisions/ADR-0017-0.9-full-release.md#sha256:123404518f674d04bc55b19726a172c28d0fd7e51b2f6d5c63ffbc1f55889a60"
+  - "repo:docs/decisions/ADR-0017-0.9-full-release.md#sha256:d6bcfc0ec1e77c1f76cb8e24e7686457311099026f8af7cd191ad568d351e1ec"
 links: [release-verification, test-distribution, version-policy]
-reviewed_revision: "git:2f7acd20ba3c7d79e4cf98ed84c3a4807915d55f"
+reviewed_revision: "git:5e09d0ff23e841381c22bac24e707dbc6402dae4"
 status: active
 ---
 
-# Aigent Hive 0.9.0 정식 릴리스
+# Aigent Hive 0.9.0 시험·정식 릴리스
 
-관리자 승인 범위: exact `0.9.0` 정식 릴리스 계획과 구현 기준선의 원격 `develop`
-push. Publication 계보: protected `main` 단일 commit의 final candidate, annotated
-`v0.9.0`, GitHub Release, signed native artifact 5개, npm package 6개, direct
-installer. Branch authority: `develop` 일반 fast-forward push 허용, deletion·
-non-fast-forward 차단; final production `main`은 PR과 release check 4개 필수.
-엄격한 `staging`은 승인된 release plan이 요구할 때만 생성하며 현재 흐름에는
-불필요. 필수 선행 증거: Apple·Windows signing, external TUF authorization,
-protected approval, public install·upgrade. 범위 제외: 다른 version, force-push,
-branch deletion, credential custody.
+기본 시험 identity: package `0.9.0-test`, npm `test`, GitHub prerelease. 추가 시험판:
+필요 시에만 `0.9.0-test.N`. 시험 publication의 `latest` 변경·정식 publication trigger
+0건. 시험·정식 artifact의 기능·기본값·진단 계약 동일. 소비자 공통 문제 보고:
+명시적 preview·export, 자동 upload 0건. 정식 `0.9.0|latest`: 시험 수용 뒤 별도
+protected `main` publication. 정식 선행 증거: Apple·Windows signing, external TUF,
+protected approval, public install·upgrade.

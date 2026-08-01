@@ -1,6 +1,6 @@
 # Aigent Hive active plan index
 
-> Revision: 1.87
+> Revision: 1.88
 > 기준일: 2026-08-01
 > Product version: `0.9.0`
 > 현재 milestone: `0.9.0` 정식 릴리스 준비
@@ -8,13 +8,15 @@
 
 ## Goal parameters
 
-- Objective: `Aigent Hive 0.9.0` 정식 GitHub·npm 릴리스와 public update 검증
+- Objective: `Aigent Hive 0.9.0-test` 독립 시험 배포·수용 뒤 별도 `0.9.0` 정식
+  GitHub·npm 릴리스와 public update 검증
 - Success: Mandatory user setup, global preference 기반 expedited/custom project setup,
   user-root 단일 SQLite, 세 host selected Skill projection, Wiki default-on opt-out,
   usage guard opt-in `20%`, native-first·CodexBar fallback-only, consumer
   PowerShell 5.1·`cmd.exe`, source-only PowerShell 7, Linux musl x86_64·arm64,
-  `aigent-hive@0.9.0`, OS signing·TUF·SHA-256·GitHub attestation과 public
-  install·update acceptance
+  bare `aigent-hive@0.9.0-test|test`, 선택형 numbered test, stable `latest` 보존,
+  시험·정식 feature parity, `aigent-hive@0.9.0|latest`, OS signing·TUF·SHA-256·
+  GitHub attestation과 public install·update acceptance
 - Stop boundary: protected review·environment approval, signing·TUF·npm credential,
   exact `1.0.0` authority, 현재 source usage guard remaining `60%`
 - Invariants: provider-neutral, canonical Markdown 우선, OMX/OMC replaceable adapter,

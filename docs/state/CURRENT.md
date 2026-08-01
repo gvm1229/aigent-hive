@@ -2,7 +2,7 @@
 
 - 기준 branch: `develop`
 - product version: `0.9.0`
-- plan revision: `1.87`
+- plan revision: `1.88`
 - 현재 milestone: `0.9.0` 정식 릴리스 준비
 - 현재 작업: REL9-002–005 release workflow activation
 - 외부 중지 경계: protected review·environment approval, signing·TUF·npm credential,
@@ -63,15 +63,19 @@
   `omx|omc` command·자동 adapter 우선권·raw session 자동 수집 0건
 - 실행 결과: V9-001–025 완료, host-native 기본값 전환과 세 host projection PASS
 
-## v0.9.0 정식 릴리스
+## v0.9.0 시험·정식 릴리스
 
 - 상태: 계획 활성, publication 미실행
-- 사용자 authority: full `0.9.0` 계획과 원격 `develop` push 승인
+- 사용자 authority: 분리된 시험·정식 `0.9.0` 계획과 원격 `develop` push 승인
 - 결정: [`ADR-0017`](../decisions/ADR-0017-0.9-full-release.md) accepted
 - Active fragment: [`release-0.9.0.md`](../plans/active/release-0.9.0.md)
 - 변경점: [`docs/releases/0.9.0.md`](../releases/0.9.0.md)
-- Final identity: protected `main` exact commit·annotated `v0.9.0`·GitHub Release·
-  npm `0.9.0|latest`
+- Test identity: 기본 `0.9.0-test|test`, 추가 시험 시에만 `0.9.0-test.N|test`,
+  기존 `latest` 불변
+- Stable identity: 시험 수용 뒤 별도 protected `main` exact commit·annotated `v0.9.0`·
+  GitHub normal Release·npm `0.9.0|latest`
+- Parity: 시험·정식 기능·명령·기본값 동일, 시험 전용 기능 0건
+- 공통 문제 보고: 명시적 preview·collect·export, 자동 업로드·raw prompt 기본 수집 0건
 - 확인된 activation gap: `release-publish.yml`의 exact `0.8.0` hardcode,
   candidate workflow의 `develop` 전용 ref, GitHub normal Release workflow 부재
 - Branch ruleset: `Develop safety`의 deletion·non-fast-forward만 적용,
@@ -80,7 +84,7 @@
 - `staging`: 현재 release flow에 불필요하여 생성 0건
 - Production gate: 5개 native target·6개 npm package, OS signing·notarization,
   external TUF, public install·`0.8.0 → 0.9.0` update
-- 다음 작업: REL9-002–005 release workflow activation
+- 다음 작업: REL9-002–005 version grammar·분리 release workflow activation
 
 ## v0.9.0 전역 knowledge RAG
 
