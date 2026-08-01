@@ -59,6 +59,14 @@ Consumer guidance에는 project/profile, primary host, resolved owner와 resolut
 - 각 사용자 단계: 정확한 위치·명령 또는 행동, 예상 결과·반환 증거, 자동 처리 불가 이유
 - 실패·불가능 작업: 원인과 해결 경로 분리
 
+## 계획 제시
+
+- 현재 요청에서 사용자의 명시적 제외 요청이 없는 모든 계획: 적절한 project Markdown 파일에 선행 기록
+- 다른 contract의 canonical 계획 기록 의무: 사용자 제외 요청으로 해제 불가
+- Session의 persisted 계획 전문 일대일 복제 금지
+- 일반 참조: 간결한 요약과 파일 경로
+- 광범위한 검토: 전문 복제 대신 파일 경로
+
 ## 사람용 문서 스타일
 
 Consumer marker의 사람용 문서 작성 기본값:

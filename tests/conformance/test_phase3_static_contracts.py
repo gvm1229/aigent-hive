@@ -738,6 +738,9 @@ class Phase3SkillSourceContract(unittest.TestCase):
         source_behavior = (
             REPOSITORY_ROOT / ".agents/directives/01-behavior.md"
         ).read_text(encoding="utf-8")
+        source_documentation = (
+            REPOSITORY_ROOT / ".agents/directives/04-documentation-state.md"
+        ).read_text(encoding="utf-8")
         source_directive = (
             REPOSITORY_ROOT
             / ".agents/directives/08-human-documentation-style.md"
@@ -768,6 +771,10 @@ class Phase3SkillSourceContract(unittest.TestCase):
         automatic_handoff_rule = (
             "Before presenting pending actions or a user handoff, complete every "
             "safe, in-scope, automatable action"
+        )
+        persisted_plan_rule = (
+            "Unless the user explicitly opts out for the current request, write every "
+            "plan to an appropriate project Markdown file"
         )
         explicit_result_scope_rule = (
             "failed, skipped, deferred, unverified, or unsupported item"
@@ -801,15 +808,21 @@ class Phase3SkillSourceContract(unittest.TestCase):
         self.assertIn("present only genuinely user-owned actions", source_behavior)
         self.assertIn(automatic_handoff_rule, template)
         self.assertIn(automatic_handoff_rule, renderer)
+        self.assertIn("Never mirror a persisted plan one-for-one", source_documentation)
+        self.assertIn(persisted_plan_rule, template)
+        self.assertIn(persisted_plan_rule, renderer)
         self.assertIn(explicit_result_scope_rule, source_behavior)
         self.assertIn(explicit_result_scope_rule, template)
         self.assertIn(explicit_result_scope_rule, renderer)
         self.assertIn("남은 작업 목록·인계 전", guidance)
         self.assertIn("자동 처리 불가 이유", guidance)
+        self.assertIn("Session의 persisted 계획 전문 일대일 복제 금지", guidance)
         self.assertIn("통과·실패·건너뜀·연기·미검증·미지원 결과", guidance)
         self.assertIn("해석에 필요한 한정어를 간결함을 이유로 생략 금지", guidance)
         self.assertIn("finish every safe, in-scope, automatable task", user_guidance_renderer)
         self.assertIn("남은 작업 제시 전", user_guidance_renderer)
+        self.assertIn("write every plan to an appropriate project Markdown file", user_guidance_renderer)
+        self.assertIn("저장한 계획 전문을 session에 일대일 복제하지 않고", user_guidance_renderer)
         self.assertIn(explicit_result_scope_rule, user_guidance_renderer)
         self.assertIn("통과·실패·건너뜀·연기·미검증·미지원", user_guidance_renderer)
         self.assertIn("대체 가능한 일반 영어 단어의 한영 혼용 금지", guidance)

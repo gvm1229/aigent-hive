@@ -74,6 +74,12 @@ Do not use chat history, `.omx/`, `.agents/work/`, issue drafts, or generated SQ
 ## Plan Policy
 
 - Keep exactly one active plan set rooted at `docs/plans/PLAN.md`.
+- Unless the user explicitly opts out for the current request, write every plan to the
+  appropriate canonical Markdown file before presenting or executing it. An opt-out does not
+  override another rule that independently requires durable plan state.
+- Never mirror a persisted plan one-for-one in the session. Reference it with a concise summary
+  and its file path; when extensive review is appropriate, present the file path instead of
+  reproducing the plan.
 - Whenever a plan is created or materially revised to govern repository work, write it to the
   canonical tracked plan set before executing that plan. Chat text, a native plan tool, goal state,
   or an agent scratch file may mirror the plan but must never be its sole authority.
