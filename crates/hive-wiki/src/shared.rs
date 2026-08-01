@@ -1963,7 +1963,7 @@ mod tests {
     }
 
     #[test]
-    fn legacy_shared_query_never_returns_confidential_rows() {
+    fn legacy_shared_query_returns_confidential_only_to_owning_project() {
         let (_temporary, user, first, _second) = fixture();
         let mut registry = load_project_registry(&user).unwrap();
         registry.projects[0].visibility = KnowledgeVisibility::Confidential;
@@ -1974,9 +1974,14 @@ mod tests {
         .unwrap();
         rebuild_shared_index(&user).unwrap();
 
-        assert!(query_shared(&user, Some(&first), Some("private"), None, 20)
-            .unwrap()
-            .is_empty());
+        assert_eq!(
+            query_shared(&user, Some(&first), Some("private"), None, 20)
+                .unwrap()
+                .iter()
+                .map(|hit| hit.page_id.as_str())
+                .collect::<Vec<_>>(),
+            vec!["private-page"]
+        );
         assert!(query_shared(&user, None, Some("private"), None, 20)
             .unwrap()
             .is_empty());

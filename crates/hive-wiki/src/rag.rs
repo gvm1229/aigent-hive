@@ -1397,7 +1397,7 @@ pub fn query_wiki_pages_serialized(
                      (d.collection_id = 'user-root' AND d.visibility <> 'confidential')
                      OR (d.collection_id <> 'user-root' AND d.visibility = 'shared')
                      OR (d.collection_id = ?4 AND c.state = 'attached'
-                         AND d.visibility <> 'confidential')
+                         AND d.visibility IN ('project-private', 'confidential'))
                    )
                  ORDER BY
                    CASE WHEN d.collection_id = ?4 THEN 0
@@ -1435,7 +1435,7 @@ pub fn query_wiki_pages_serialized(
                      (d.collection_id = 'user-root' AND d.visibility <> 'confidential')
                      OR (d.collection_id <> 'user-root' AND d.visibility = 'shared')
                      OR (d.collection_id = ?3 AND c.state = 'attached'
-                         AND d.visibility <> 'confidential')
+                         AND d.visibility IN ('project-private', 'confidential'))
                    )
                  ORDER BY
                    CASE WHEN d.collection_id = ?3 THEN 0

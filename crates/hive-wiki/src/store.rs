@@ -960,6 +960,48 @@ impl RagStore {
         Ok(dirty)
     }
 
+    /// Remove this operation's recovery journal after its external canonical write rolled back.
+    ///
+    /// The exact serialized journal must still be present. A missing or replaced journal fails
+    /// closed so this operation cannot erase another writer's recovery evidence.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the journal is missing, differs from `expected`, is unsafe, or
+    /// cannot be removed atomically.
+    pub fn abort_external_canonical_mutation(
+        &self,
+        expected: &PersistentDirtyState,
+    ) -> Result<(), WikiError> {
+        let _lock = crate::CapabilityKnowledgeLock::acquire(&self.root)?;
+        validate_dirty_state(expected)?;
+        let expected_bytes = json_bytes(expected, "RAG dirty journal")?;
+        let current_bytes = read_bounded_optional(
+            &self.root,
+            Path::new(RAG_DIRTY_RELATIVE),
+            MAX_DIRTY_BYTES,
+            "RAG dirty journal",
+        )?
+        .ok_or_else(|| {
+            WikiError::Verification(
+                "RAG dirty journal disappeared before rollback cleanup".to_owned(),
+            )
+        })?;
+        if current_bytes != expected_bytes {
+            return Err(WikiError::Verification(
+                "RAG dirty journal changed before rollback cleanup".to_owned(),
+            ));
+        }
+        let mut snapshots = [crate::CapabilityFileSnapshot::capture(
+            &self.root,
+            Path::new(RAG_DIRTY_RELATIVE),
+        )?];
+        crate::transactional_capability(&self.root, &mut snapshots, |snapshots| {
+            snapshots[0].remove(&self.root)?;
+            Ok(())
+        })
+    }
+
     /// Report whether an interrupted canonical mutation journal is present.
     ///
     /// # Errors
@@ -4136,6 +4178,29 @@ mod tests {
                 "retrieval mutated {relative}"
             );
         }
+    }
+
+    #[test]
+    fn external_rollback_removes_only_its_exact_dirty_journal() {
+        let (temporary, store) = store();
+        let expected = store
+            .begin_external_canonical_mutation(&[(
+                PathBuf::from(".hive/knowledge/Wiki/rolled-back.md"),
+                wiki_bytes("rolled-back", "Rolled back canonical evidence."),
+            )])
+            .expect("publish dirty journal");
+        let mut mismatched = expected.clone();
+        mismatched.target_generation += 1;
+
+        assert!(matches!(
+            store.abort_external_canonical_mutation(&mismatched),
+            Err(WikiError::Verification(_))
+        ));
+        assert!(temporary.path().join(RAG_DIRTY_RELATIVE).is_file());
+        store
+            .abort_external_canonical_mutation(&expected)
+            .expect("remove exact rolled-back journal");
+        assert!(!temporary.path().join(RAG_DIRTY_RELATIVE).exists());
     }
 
     #[test]

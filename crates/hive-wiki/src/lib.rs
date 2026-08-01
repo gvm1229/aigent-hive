@@ -531,18 +531,23 @@ fn ingest_with_projection(
             ));
         }
         drop(lock);
-        shared.store.begin_external_canonical_mutation(&writes)?;
-        let _lock = KnowledgeLock::acquire(target)?;
+        let dirty = shared.store.begin_external_canonical_mutation(&writes)?;
+        let canonical_lock = KnowledgeLock::acquire(target)?;
         for snapshot in &snapshots {
             snapshot.verify_current()?;
         }
-        commit_ingest_canonical(
+        let commit = commit_ingest_canonical(
             &raw_absolute,
             &source_bytes,
             &wiki_absolute,
             &canonical_bytes,
             &snapshots,
-        )?;
+        );
+        if let Err(error) = commit {
+            drop(canonical_lock);
+            abort_external_after_rollback(shared.store, &dirty, &error)?;
+            return Err(error);
+        }
         let mut changed_paths = Vec::new();
         if raw_changed {
             changed_paths.push(raw_path);
@@ -673,16 +678,21 @@ fn promote_with_projection(
                     ));
                 }
                 drop(lock);
-                shared.store.begin_external_canonical_mutation(&writes)?;
-                let _lock = CapabilityKnowledgeLock::acquire(&user_root.dir)?;
+                let dirty = shared.store.begin_external_canonical_mutation(&writes)?;
+                let canonical_lock = CapabilityKnowledgeLock::acquire(&user_root.dir)?;
                 plan.snapshots[0].verify_current(&user_root.dir)?;
                 plan.snapshots[1].verify_current(&user_root.dir)?;
-                commit_promotion_canonical(
+                let commit = commit_promotion_canonical(
                     &user_root,
                     &mut plan.snapshots[..2],
                     &plan.raw_bytes,
                     &plan.wiki_bytes,
-                )?;
+                );
+                if let Err(error) = commit {
+                    drop(canonical_lock);
+                    abort_external_after_rollback(shared.store, &dirty, &error)?;
+                    return Err(error);
+                }
                 let mut changed_paths = Vec::new();
                 if raw_changed {
                     changed_paths.push(plan.raw_path);
@@ -1109,10 +1119,10 @@ fn suppress_with_projection(
             shared_dirty_path(shared.namespace, SUPPRESSION_RELATIVE),
             bytes.clone(),
         )];
-        shared.store.begin_external_canonical_mutation(&writes)?;
-        let _lock = KnowledgeLock::acquire(target)?;
+        let dirty = shared.store.begin_external_canonical_mutation(&writes)?;
+        let canonical_lock = KnowledgeLock::acquire(target)?;
         snapshots[0].verify_current()?;
-        transactional(&snapshots, || {
+        let commit = transactional(&snapshots, || {
             write_atomic(&target.join(SUPPRESSION_RELATIVE), &bytes)?;
             if cfg!(debug_assertions)
                 && env::var("HIVE_WIKI_TEST_FAIL_AFTER_CANONICAL_WRITES").as_deref() == Ok("1")
@@ -1122,7 +1132,12 @@ fn suppress_with_projection(
                 ));
             }
             Ok(())
-        })?;
+        });
+        if let Err(error) = commit {
+            drop(canonical_lock);
+            abort_external_after_rollback(shared.store, &dirty, &error)?;
+            return Err(error);
+        }
         return Ok(KnowledgeOutcome {
             changed_paths: vec![SUPPRESSION_RELATIVE.to_owned()],
             page_id: None,
@@ -1311,12 +1326,12 @@ fn delete_page_with_projection(
                 .map(|path| (shared_dirty_path(shared.namespace, path), Vec::new())),
         );
         drop(lock);
-        shared.store.begin_external_canonical_mutation(&writes)?;
-        let _lock = KnowledgeLock::acquire(target)?;
+        let dirty = shared.store.begin_external_canonical_mutation(&writes)?;
+        let canonical_lock = KnowledgeLock::acquire(target)?;
         for snapshot in &snapshots {
             snapshot.verify_current()?;
         }
-        transactional(&snapshots, || {
+        let commit = transactional(&snapshots, || {
             fs::remove_file(&absolute).map_err(|error| {
                 WikiError::Io(format!("cannot delete {}: {error}", absolute.display()))
             })?;
@@ -1336,7 +1351,12 @@ fn delete_page_with_projection(
                 ));
             }
             Ok(())
-        })?;
+        });
+        if let Err(error) = commit {
+            drop(canonical_lock);
+            abort_external_after_rollback(shared.store, &dirty, &error)?;
+            return Err(error);
+        }
         let mut changed_paths = vec![page.relative_path.clone(), SUPPRESSION_RELATIVE.to_owned()];
         changed_paths.extend(removed_raw);
         changed_paths.sort();
@@ -2405,6 +2425,20 @@ fn commit_ingest_canonical(
         }
     }
     result
+}
+
+fn abort_external_after_rollback(
+    store: &store::RagStore,
+    dirty: &store::PersistentDirtyState,
+    operation_error: &WikiError,
+) -> Result<(), WikiError> {
+    store
+        .abort_external_canonical_mutation(dirty)
+        .map_err(|cleanup_error| {
+            WikiError::Io(format!(
+                "knowledge mutation failed: {operation_error}; dirty-journal cleanup failed: {cleanup_error}"
+            ))
+        })
 }
 
 fn canonical_logical_digest(target: &Path) -> Result<String, WikiError> {
