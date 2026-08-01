@@ -18,8 +18,8 @@ status: active
 
 # Linux musl Qualification
 
-GitHub run `30581894132` qualified both `x86_64-unknown-linux-musl` and
-`aarch64-unknown-linux-musl`. Acceptance covered locked release builds, ELF
+GitHub run `30581894132` qualified both x86_64 and arm64 musl targets. Acceptance
+covered locked release builds, ELF
 architecture and static linkage, exact package layout, archive digest, installed
 binary execution, and isolated Antigravity install lifecycle. Origin: the requested
 Linux support for the `0.8.0` test distribution.

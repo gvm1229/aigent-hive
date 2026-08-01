@@ -21,6 +21,6 @@ status: active
 `30658188721`은 npm 패키지 여섯 개를 exact `0.8.0|latest`로 게시하고, 변경할 수
 없는 기존 `0.8.0-test.1|test` 보존. npm과 Windows 직접 설치 바이너리의
 SHA-256은
-`330f4e0c8da5b6347400b9b16a9f76b2fb4f94406a2eacfe8c641367ca344ef9`로 동일.
+`sha256:330f4e0c8da5b6347400b9b16a9f76b2fb4f94406a2eacfe8c641367ca344ef9`로 동일.
 GitHub Release와 Git 출시 태그 생성 없음. 요청 배경: npm 설치에 유효한
 `latest` 경로가 필요하므로 관리자가 exact `0.8.0` 게시 승인.

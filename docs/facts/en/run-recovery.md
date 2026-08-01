@@ -9,7 +9,7 @@ summary: "A fresh session resumes from canonical criteria, status, role, handoff
 tags: [recovery, run]
 aliases: ["Fresh-session resume"]
 sources:
-  - "repo:docs/architecture/run-lifecycle.md#sha256:24a50e2f5cdeeb465349d5fed86f9b6c83fe6dd9916456d078cbc499e7e2445a"
+  - "repo:docs/architecture/run-lifecycle.md#sha256:488841374212363c27c88e2358176f231c402ab365645d7e43d588eca749e742"
 links: [automatic-dispatch-guard, role-state]
 reviewed_revision: "git:722c8e46dbde5710155b394ef33820ebccd3b85c"
 status: active

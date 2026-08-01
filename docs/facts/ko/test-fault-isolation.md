@@ -9,8 +9,8 @@ summary: "실행 중 장애 주입을 이를 소유한 Rust 시험 스레드로 
 tags: [release, test, update]
 aliases: ["장애 주입 범위"]
 sources:
-  - "repo:crates/hive-render/src/lib.rs#sha256:fc457d87baed22e7cfcaabb38fa799fe8dc778ceb873af48ac062dddb3c6537d"
-  - "repo:crates/hive-update/src/transaction.rs#sha256:236f61f1049854628c5dc572183df02498f67eedefd4ec9058672e554c295042"
+  - "repo:crates/hive-render/src/lib.rs#sha256:ef42018d1d7d3b4e601299e0deee0f17333938a92ec636790475f71eaf2826fb"
+  - "repo:crates/hive-update/src/transaction.rs#sha256:cdde5a6e6cb9f3ff193a74061899f2c21e87e56ee2ace126b9f9e73c1cea9436"
 links: [test-distribution]
 reviewed_revision: "git:847d5ad4066e0086faf05219b3ea1f8c21b3d5f3"
 status: active

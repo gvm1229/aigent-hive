@@ -18,8 +18,7 @@ status: active
 
 # Linux musl qualification
 
-GitHub run `30581894132`: `x86_64-unknown-linux-musl`·
-`aarch64-unknown-linux-musl` qualification 통과.
+GitHub run `30581894132`: x86_64·arm64 musl qualification 통과.
 수용 범위: locked release build, ELF architecture·static linkage, exact package
 layout, archive digest, installed binary 실행, isolated Antigravity install lifecycle.
 도입 맥락: 사용자 요청 `0.8.0` 시험 배포 Linux 지원.
