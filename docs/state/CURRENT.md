@@ -73,7 +73,7 @@
 - 구현: 모든 질문의 bounded retrieval preflight, named project scope, durable user statement의
   mandatory write, citation-ready chunk result와 fresh-session recall
 - DB: SQLite derived boundary, chunk·generation·dirty journal, 검증된 resident generation
-- 성능: 50,000 chunk cold p95 `168.6215ms`, warm p95 `0.1367ms`
+- 성능: 50,000 chunk cold p95 `163.3569ms`, warm p95 `0.1178ms`
 - 이식: `.hivekb` canonical bundle export·import 뒤 destination SQLite rebuild
 - 수집: directory별 table 대신 stable `collection_id`, explicit `hive-knowledge-scan`과
   project claim → reusable candidate 2단계 review
@@ -94,8 +94,8 @@
   기존 promote의 consolidated consent 재사용
 - Retrieval: existing query Skill single owner, turn당 1회 top 5·byte budget,
   retrieved instruction authority 0건
-- Qualification: 100 collection·50,000 chunk export p95 `2268.9644ms`,
-  import+rebuild p95 `7253.5748ms`
+- Qualification: 100 collection·50,000 chunk export p95 `1066.9209ms`,
+  import+rebuild p95 `3255.1537ms`
 - Adversarial review: overlap·schema growth·archive path·secret·poisoning·truth overclaim·
   path portability·context overload finding 교정, 사용자 결정 잔여 0건
 

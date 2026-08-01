@@ -74,10 +74,10 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
   native SHA-256 `330f4e0c8da5b6347400b9b16a9f76b2fb4f94406a2eacfe8c641367ca344ef9`
 - v0.9 host-native loop adapter와 5개 canonical Skill의 세 host projection·hostile
   conformance PASS, tmux·scheduler·OMX/OMC 자동 의존성 0건
-- v0.9 전역 RAG 50,000 chunk: cold p95 `168.6215ms`, prepared-resident warm p95
-  `0.1367ms`, bilingual recall@5 `>= 90%`
-- v0.9 `.hivekb` 100 collection·50,000 chunk: export p95 `2268.9644ms`,
-  import+rebuild p95 `7253.5748ms`
+- v0.9 전역 RAG 50,000 chunk: cold p95 `163.3569ms`, prepared-resident warm p95
+  `0.1178ms`, bilingual recall@5 `>= 90%`
+- v0.9 `.hivekb` 100 collection·50,000 chunk: export p95 `1066.9209ms`,
+  import+rebuild p95 `3255.1537ms`
 
 ## Required load order
 
