@@ -259,7 +259,8 @@ class Phase3SkillSourceContract(unittest.TestCase):
             "use patch staging or sequence the edits",
             "Do not rewrite an existing commit solely to apply current commit-splitting policy",
             "ordinary fast-forward direct pushes",
-            "do not require a pull request or required status checks",
+            "Push ordinary verified commits directly to `develop`",
+            "status checks for this branch.",
             "A created `staging` branch must use a strict ruleset",
         ):
             self.assertIn(requirement, directive)
