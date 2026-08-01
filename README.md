@@ -2,7 +2,7 @@
 
 > A provider-neutral local harness for Codex, Claude Code, and Gemini Antigravity.
 
-[![Version](https://img.shields.io/badge/version-0.8.0-4C1)](Cargo.toml)
+[![Version](https://img.shields.io/badge/version-0.9.0-4C1)](Cargo.toml)
 [![Rust](https://img.shields.io/badge/Rust-stable-000000?logo=rust)](rust-toolchain.toml)
 [![License](https://img.shields.io/badge/license-Apache--2.0-green)](LICENSE)
 
@@ -12,6 +12,9 @@ Hive gives subscription-authenticated agent hosts one consistent setup, Skill ro
 project knowledge, durable role/run state, usage safeguards, and safe update contracts.
 It never asks for model-provider API keys, calls model-provider APIs, or replaces the
 host's own model runtime.
+
+Source `0.9.0` is implemented but not published. Installation remains on the latest
+published release, `0.8.0`.
 
 ## Install 0.8.0
 

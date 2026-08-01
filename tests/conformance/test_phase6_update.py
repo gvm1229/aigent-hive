@@ -24,7 +24,11 @@ from jsonschema.exceptions import ValidationError
 
 ROOT = Path(__file__).resolve().parents[2]
 SCHEMAS = ROOT / "schemas"
-RELEASE_FIXTURE = ROOT / "tests/fixtures/phase6/releases/valid-0.7.0"
+LATEST_PUBLISHED_VERSION = "0.8.0"
+RELEASE_FIXTURE = (
+    ROOT
+    / f"tests/fixtures/phase6/releases/valid-{LATEST_PUBLISHED_VERSION}"
+)
 WRONG_SIGNERS = ROOT / "tests/fixtures/phase6/platform-signers/wrong-valid-signers.json"
 DIGEST = "sha256:" + "0" * 64
 
@@ -1640,37 +1644,29 @@ try {
         self.assertEqual(installer.returncode, 2)
         self.assertIn("exact X.Y.Z", installer.stderr)
 
-    def test_product_version_matches_signed_feature_fixture(self) -> None:
+    def test_source_product_version_surfaces_match(self) -> None:
         cargo = (ROOT / "Cargo.toml").read_text(encoding="utf-8")
         version = re.search(
             r"\[workspace\.package\]\s+version = \"([^\"]+)\"",
             cargo,
         )
         self.assertIsNotNone(version)
-        current_fixture = (
-            ROOT
-            / f"tests/fixtures/phase6/releases/valid-{version.group(1)}"
-        )
-        manifest = read_json(current_fixture / "targets/bundle-manifest.json")
-        migration = read_json(current_fixture / "targets/migration-table.json")
-        self.assertEqual(version.group(1), "0.8.0")
-        self.assertEqual(manifest["release_version"], version.group(1))
-        self.assertEqual(migration["target_version"], version.group(1))
+        source_version = version.group(1)
         harness = (
             ROOT / "harness/template/.hive/config/harness.toml.jinja"
         ).read_text(encoding="utf-8")
-        self.assertIn(f'harness_version = "{version.group(1)}"', harness)
+        self.assertIn(f'harness_version = "{source_version}"', harness)
         self.assertIn(
-            f'source_release_version = "{version.group(1)}"',
+            f'source_release_version = "{source_version}"',
             harness,
         )
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
         self.assertIn(
-            f"version-{version.group(1)}-",
+            f"version-{source_version}-",
             readme,
         )
         self.assertIn(
-            f"- product version: `{version.group(1)}`",
+            f"- product version: `{source_version}`",
             (ROOT / "docs/state/CURRENT.md").read_text(encoding="utf-8"),
         )
         lock = tomllib.loads((ROOT / "Cargo.lock").read_text(encoding="utf-8"))
@@ -1681,8 +1677,31 @@ try {
         ]
         self.assertTrue(hive_packages)
         self.assertTrue(
-            all(package["version"] == version.group(1) for package in hive_packages)
+            all(package["version"] == source_version for package in hive_packages)
         )
+
+    def test_latest_published_fixture_matches_immutable_0_8_surface(self) -> None:
+        self.assertEqual(LATEST_PUBLISHED_VERSION, "0.8.0")
+        manifest = read_json(RELEASE_FIXTURE / "targets/bundle-manifest.json")
+        migration = read_json(RELEASE_FIXTURE / "targets/migration-table.json")
+        inventory = read_json(
+            RELEASE_FIXTURE / "targets/release-surface-inventory.json"
+        )
+        self.assertEqual(manifest["release_version"], LATEST_PUBLISHED_VERSION)
+        self.assertEqual(migration["target_version"], LATEST_PUBLISHED_VERSION)
+        self.assertEqual(inventory["product_version"], LATEST_PUBLISHED_VERSION)
+
+        registry = yaml.safe_load(
+            (ROOT / "harness/release/historical-surfaces.yml").read_text(
+                encoding="utf-8"
+            )
+        )
+        published = [
+            release
+            for release in registry["releases"]
+            if release["product_version"] == LATEST_PUBLISHED_VERSION
+        ]
+        self.assertEqual(published, [inventory])
 
 
 class Phase6CliContracts(unittest.TestCase):

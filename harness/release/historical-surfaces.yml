@@ -45,3 +45,34 @@ releases:
       - .agents/skills/hive-judge-package/SKILL.md
       - .agents/skills/hive-migrate/SKILL.md
       - .agents/skills/hive-update/SKILL.md
+  - product_version: 0.8.0
+    schema_version: 1
+    schemas:
+      - action-result.schema.json
+      - backup-manifest.schema.json
+      - major-release-confirmation.schema.json
+      - migration-table.schema.json
+      - platform-signing-evidence.schema.json
+      - release-bundle-manifest.schema.json
+      - release-surface-inventory.schema.json
+      - update-journal.schema.json
+      - update-state.schema.json
+    skills:
+      - hive-judge-package
+      - hive-migrate
+      - hive-update
+    capabilities:
+      - authenticated-judge-quorum
+      - global-onboarding-shared-index
+      - signed-offline-update
+    migrations:
+      - same-major-render-v1
+    templates:
+      - .hive/config/harness.toml
+    ownership:
+      - ephemeral-backup
+      - hive-generated-config
+    projections:
+      - .agents/skills/hive-judge-package/SKILL.md
+      - .agents/skills/hive-migrate/SKILL.md
+      - .agents/skills/hive-update/SKILL.md

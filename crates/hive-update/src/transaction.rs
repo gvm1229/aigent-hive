@@ -2146,6 +2146,11 @@ mod tests {
 
     fn release_fixture() -> PathBuf {
         Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../tests/fixtures/phase6/releases/valid-0.9.0")
+    }
+
+    fn published_release_fixture() -> PathBuf {
+        Path::new(env!("CARGO_MANIFEST_DIR"))
             .join("../../tests/fixtures/phase6/releases/valid-0.8.0")
     }
 
@@ -2275,6 +2280,17 @@ mod tests {
         let historical_simple_question = include_bytes!(
             "../../../harness/project-bases/0.7.0/skills/hive-simple-question/SKILL.md"
         );
+        let historical_checkpoint = include_bytes!(
+            "../../../harness/project-bases/0.7.0/skills/hive-run-checkpoint/SKILL.md"
+        );
+        let historical_resume =
+            include_bytes!("../../../harness/project-bases/0.7.0/skills/hive-run-resume/SKILL.md");
+        let historical_handoff = include_bytes!(
+            "../../../harness/project-bases/0.7.0/skills/hive-role-handoff/SKILL.md"
+        );
+        let historical_judge = include_bytes!(
+            "../../../harness/project-bases/0.7.0/skills/hive-judge-package/SKILL.md"
+        );
         fs::write(skill_root.join("setup-harness/SKILL.md"), historical_setup)
             .expect("historical setup projection");
         fs::write(
@@ -2302,6 +2318,17 @@ mod tests {
             historical_simple_question,
         )
         .expect("historical simple question projection");
+        for (name, bytes) in [
+            ("hive-run-checkpoint", historical_checkpoint.as_slice()),
+            ("hive-run-resume", historical_resume.as_slice()),
+            ("hive-role-handoff", historical_handoff.as_slice()),
+            ("hive-judge-package", historical_judge.as_slice()),
+        ] {
+            if expected.contains(&name) {
+                fs::write(skill_root.join(format!("{name}/SKILL.md")), bytes)
+                    .expect("historical execution Skill projection");
+            }
+        }
         if version == "0.5.0" {
             let historical = include_bytes!(
                 "../../../tests/fixtures/phase6/migrations/0.5.0-hive-run-resume.SKILL.md"
@@ -2314,13 +2341,17 @@ mod tests {
             active_path,
             expected,
             version,
-            [
+            &[
                 ("setup-harness", historical_setup),
                 ("hive-knowledge-capture", historical_capture),
                 ("hive-knowledge-query", historical_query),
                 ("hive-knowledge-maintenance", historical_maintenance),
                 ("hive-prompt-refine", historical_prompt_refine),
                 ("hive-simple-question", historical_simple_question),
+                ("hive-run-checkpoint", historical_checkpoint),
+                ("hive-run-resume", historical_resume),
+                ("hive-role-handoff", historical_handoff),
+                ("hive-judge-package", historical_judge),
             ],
         );
     }
@@ -2329,7 +2360,7 @@ mod tests {
         active_path: &Path,
         expected: &[&str],
         version: &str,
-        historical: [(&str, &[u8]); 6],
+        historical: &[(&str, &[u8])],
     ) {
         let mut active: serde_yaml::Value =
             serde_yaml::from_slice(&fs::read(active_path).expect("active skills"))
@@ -2346,8 +2377,10 @@ mod tests {
                 .and_then(serde_yaml::Value::as_str)
                 .is_some_and(|name| expected.contains(&name))
         });
-        for (name, bytes) in historical {
-            set_active_skill_digest(skills, name, &sha256_digest(bytes));
+        for &(name, bytes) in historical {
+            if expected.contains(&name) {
+                set_active_skill_digest(skills, name, &sha256_digest(bytes));
+            }
         }
         if version == "0.5.0" {
             set_active_skill_digest(
@@ -2528,7 +2561,7 @@ mod tests {
     }
 
     #[test]
-    fn signed_0_8_apply_rejects_unconnected_0_7_without_any_target_mutation() {
+    fn signed_current_apply_rejects_unconnected_0_7_without_any_target_mutation() {
         let target = tempfile::tempdir().expect("target");
         let consumer = target.path().canonicalize().expect("consumer");
         execute_setup(&SetupRequest {
@@ -2567,6 +2600,70 @@ mod tests {
         assert!(!consumer.join(JOURNAL_PATH).exists());
         assert!(!consumer.join(".hive/backups").exists());
         assert!(!consumer.join(UPDATE_STATE_PATH).exists());
+    }
+
+    #[test]
+    fn current_updater_rejects_published_0_8_release_without_target_mutation() {
+        let fixture = published_release_fixture();
+        let root = fs::read(fixture.join("metadata/root.json")).expect("trusted root");
+        for mode in [UpdateMode::DryRun, UpdateMode::Apply] {
+            let target = tempfile::tempdir().expect("target");
+            let consumer = target.path().canonicalize().expect("consumer");
+            install_legacy_consumer(&consumer, "0.6.0");
+            let before = snapshot_regular_files(&consumer);
+
+            let error = execute_update(&update_request(&consumer, &fixture, &root, mode))
+                .expect_err("running updater must reject another exact release version");
+
+            assert!(matches!(error, UpdateError::Verification(_)));
+            assert!(error
+                .to_string()
+                .contains("release target 0.8.0 differs from running updater 0.9.0"));
+            assert_eq!(snapshot_regular_files(&consumer), before);
+            assert!(!consumer.join(JOURNAL_PATH).exists());
+            assert!(!consumer.join(UPDATE_STATE_PATH).exists());
+            assert!(!consumer.join(".hive/backups").exists());
+        }
+    }
+
+    #[test]
+    fn synthetic_current_release_fixture_is_explicitly_test_only_and_public_only() {
+        let fixture = release_fixture();
+        let marker = fs::read_to_string(fixture.join("TEST-ONLY.md")).expect("test-only marker");
+        let marker_lowered = marker.to_ascii_lowercase();
+        assert!(marker.contains("Synthetic test fixture"));
+        assert!(marker.contains("must never be published"));
+        assert!(marker_lowered.contains("private signing material is intentionally absent"));
+        let provenance = fs::read_to_string(fixture.join("targets/provenance.intoto.json"))
+            .expect("synthetic signed provenance");
+        assert!(provenance.contains(r#""target":"test""#));
+        assert!(provenance.contains(r#""invocationId":"fixture""#));
+        assert!(provenance.contains("aigent-hive-0.9.0-test"));
+        let platform_evidence =
+            fs::read_to_string(fixture.join("targets/platform-signing-evidence.json"))
+                .expect("synthetic platform evidence");
+        assert!(platform_evidence.contains("fixture-public-evidence"));
+
+        for (path, bytes) in snapshot_regular_files(&fixture) {
+            let path_lowered = path.to_ascii_lowercase();
+            assert!(
+                !["private", "secret", "credential", ".key", ".pem"]
+                    .iter()
+                    .any(|marker| path_lowered.contains(marker)),
+                "private-material-like fixture path: {path}"
+            );
+            let lowered = String::from_utf8_lossy(&bytes).to_ascii_lowercase();
+            for forbidden in [
+                "private_key",
+                "secret_key",
+                "begin private key",
+                "pkcs8",
+                "signing seed",
+                "credential",
+            ] {
+                assert!(!lowered.contains(forbidden), "{path}: {forbidden}");
+            }
+        }
     }
 
     #[test]
@@ -3030,7 +3127,7 @@ mod tests {
         );
         assert!(fs::read_to_string(displaced.join(HARNESS_PATH))
             .expect("updated harness")
-            .contains("0.8.0"));
+            .contains("0.9.0"));
     }
 
     #[cfg(unix)]
@@ -3172,7 +3269,7 @@ mod tests {
             ))
             .unwrap_or_else(|error| panic!("{source_version} dry-run failed: {error}"));
             assert_eq!(dry_run.source_version, source_version);
-            assert_eq!(dry_run.target_version, "0.8.0");
+            assert_eq!(dry_run.target_version, "0.9.0");
             assert_eq!(dry_run.migration_id, "same-major-render-v1");
 
             let applied = execute_update(&update_request(
@@ -3183,7 +3280,7 @@ mod tests {
             ))
             .unwrap_or_else(|error| panic!("{source_version} apply failed: {error}"));
             assert_eq!(applied.source_version, source_version);
-            assert_eq!(applied.target_version, "0.8.0");
+            assert_eq!(applied.target_version, "0.9.0");
             assert_eq!(
                 fs::read(consumer.join("README.md")).expect("readme"),
                 before_readme
@@ -3193,7 +3290,7 @@ mod tests {
                 before_omx
             );
             let migrated = fs::read_to_string(consumer.join(HARNESS_PATH)).expect("harness");
-            assert!(migrated.contains("0.8.0"));
+            assert!(migrated.contains("0.9.0"));
             assert!(
                 migrated.contains("usage_stop_remaining_percent = 37"),
                 "{migrated}"
@@ -3219,7 +3316,7 @@ mod tests {
         ))
         .expect("dry-run");
         assert_eq!(dry_run.source_version, "0.6.0");
-        assert_eq!(dry_run.target_version, "0.8.0");
+        assert_eq!(dry_run.target_version, "0.9.0");
         assert_eq!(dry_run.migration_id, "same-major-render-v1");
         assert!(dry_run.backup_id.is_none());
         assert!(!consumer.join(UPDATE_STATE_PATH).exists());

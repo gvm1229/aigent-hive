@@ -1,7 +1,7 @@
 # 현재 상태
 
 - 기준 branch: `develop`
-- product version: `0.8.0`
+- product version: `0.9.0`
 - plan revision: `1.84`
 - 현재 milestone: `0.9.0` host-native loop·Wiki·Skill suite·전역 knowledge
 - 현재 작업: v0.9.0 active plan 전체 구현·검증
