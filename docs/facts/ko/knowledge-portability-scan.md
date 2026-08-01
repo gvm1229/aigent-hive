@@ -13,7 +13,7 @@ sources:
   - "repo:docs/plans/active/v0.9.0-knowledge-portability-scan.md#sha256:976150863fbb552b17b456b5bdaf4f6ce2780dcd7ed9af45ebcf565aae709e05"
   - "repo:docs/research/knowledge-portability-ingestion-retrieval.md#sha256:983844189f92fca165ed1c85eadf975dc404b46ddea4111ab956823448b15de6"
 links: [global-knowledge-rag, knowledge-storage, shared-index, v0-9-skill-suite-plan]
-reviewed_revision: "git:d28c11908507cd0ae9f79ed0dfb4bcabf345ced2"
+reviewed_revision: "git:07322584b55a4db104c5c230f502168feb94f7a7"
 status: active
 ---
 
@@ -22,4 +22,4 @@ status: active
 v0.9 구현: canonical Markdown·portable metadata의 deterministic `.hivekb` 이식과
 destination index rebuild, stable `collection_id`, evidence-qualified scan, reviewed root
 promotion, bounded automatic query. 100 collection·50,000 chunk qualification:
-export p95 `2268.9644ms`, import+rebuild p95 `7253.5748ms`.
+export p95 `1066.9209ms`, import+rebuild p95 `3255.1537ms`.

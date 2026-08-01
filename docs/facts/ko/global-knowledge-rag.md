@@ -12,7 +12,7 @@ sources:
   - "repo:docs/decisions/ADR-0016-global-knowledge-rag.md#sha256:ece47739f1d17b0d7ba604e5126fec55b445693335da10e54563b6cf2aa91224"
   - "repo:docs/plans/active/v0.9.0-global-knowledge-rag.md#sha256:2b7b1132b276dc59c0a00076d8aca13aebcb75eefb2dd66a3e1f9d51494fbba9"
 links: [knowledge-portability-scan, knowledge-storage, shared-index, v0-9-skill-suite-plan]
-reviewed_revision: "git:d28c11908507cd0ae9f79ed0dfb4bcabf345ced2"
+reviewed_revision: "git:07322584b55a4db104c5c230f502168feb94f7a7"
 status: active
 ---
 
@@ -21,4 +21,4 @@ status: active
 v0.9 구현: `hive-knowledge-query`의 bounded automatic retrieval, reusable user
 fact·preference·workflow의 canonical Markdown 필수 기록, named project·collection scope,
 citation-ready chunk, fresh-session recall, derived-only repair. 50,000 chunk qualification:
-cold p95 `168.6215ms`, prepared-resident warm p95 `0.1367ms`.
+cold p95 `163.3569ms`, prepared-resident warm p95 `0.1178ms`.
