@@ -10,9 +10,9 @@ tags: [communication, reporting, verification]
 aliases: ["skip reporting", "verification qualifiers"]
 sources:
   - "repo:.agents/directives/01-behavior.md#sha256:a78fc02202dc5c3b934e28924dd86660d297151f4905606dc7a26f2179083eaa"
-  - "repo:crates/hive-cli/src/user_install.rs#sha256:f790e1c19261cd6367504b074eb5516d8f4486e4bc7316ec9776327847e40272"
-  - "repo:docs/guidance-schema.md#sha256:8d81babc67179cf5170fbde10cdb73fcaeaa0735f2c98a116f61eda9b2ec86ec"
-  - "repo:harness/template/AGENTS.md.jinja#sha256:65ff8ac38eebfea005dbde07fe1e4cf12148129a050ba1f83296867bcd98a0c5"
+  - "repo:crates/hive-cli/src/user_install.rs#sha256:e21faccc9dae23d7522de433e345890509ce8d742fa8fe6a375f0892e35713db"
+  - "repo:docs/guidance-schema.md#sha256:aca1d198c2fc72a5bde7f63d128467ad297454ec5ce5c7a55c6b010a022f0f2a"
+  - "repo:harness/template/AGENTS.md.jinja#sha256:9e5694a62099d262872bd6e1f167d839d9eb3f51c3d6cdfd4884656350cc0ec4"
 links: [language-consistency, release-verification]
 reviewed_revision: "git:c5d7b90c0b2e126f73fdfd6da850d5eed07b4d61"
 status: active

@@ -31,6 +31,7 @@
 | 응답 언어 일관성 | [en](en/language-consistency.md) | [ko](ko/language-consistency.md) |
 | 검증 결과 명확성 | [en](en/verification-result-clarity.md) | [ko](ko/verification-result-clarity.md) |
 | 사용자 인계 전 자동 처리 | [en](en/automated-user-handoff.md) | [ko](ko/automated-user-handoff.md) |
+| 계획 Markdown 정본 | [en](en/plan-persistence.md) | [ko](ko/plan-persistence.md) |
 | Knowledge preservation | [en](en/knowledge-preservation.md) | [ko](ko/knowledge-preservation.md) |
 | Knowledge storage | [en](en/knowledge-storage.md) | [ko](ko/knowledge-storage.md) |
 | Shared index | [en](en/shared-index.md) | [ko](ko/shared-index.md) |
@@ -41,6 +42,8 @@
 | Project onboarding | [en](en/project-onboarding.md) | [ko](ko/project-onboarding.md) |
 | Plugin update merge | [en](en/plugin-update-merge.md) | [ko](ko/plugin-update-merge.md) |
 | Skill routing | [en](en/skill-routing.md) | [ko](ko/skill-routing.md) |
+| Prompt refine 승인 routing | [en](en/prompt-refine-routing.md) | [ko](ko/prompt-refine-routing.md) |
+| Discord·Notion host integration | [en](en/host-external-integrations.md) | [ko](ko/host-external-integrations.md) |
 | Role state | [en](en/role-state.md) | [ko](ko/role-state.md) |
 | Run recovery | [en](en/run-recovery.md) | [ko](ko/run-recovery.md) |
 | Usage sensor | [en](en/usage-sensor-policy.md) | [ko](ko/usage-sensor-policy.md) |
