@@ -1,29 +1,61 @@
 //! User-root shared knowledge index built from canonical Markdown sources.
 
-use crate::{parse_page_bytes, reject_likely_credentials, QueryHit, WikiError};
-use cap_fs_ext::{DirExt, FollowSymlinks, MetadataExt as CapMetadataExt, OpenOptionsFollowExt};
+use crate::collection::USER_ROOT_COLLECTION_ID;
+use crate::rag::{build_rag_index, RagVisibility, WikiPageQueryRequest};
+use crate::store::RagStore;
+#[cfg(test)]
+use crate::{parse_page_bytes, reject_likely_credentials};
+use crate::{QueryHit, WikiError};
+#[cfg(test)]
+use cap_fs_ext::{DirExt, MetadataExt as CapMetadataExt};
+use cap_fs_ext::{FollowSymlinks, OpenOptionsFollowExt};
 use cap_std::ambient_authority;
 use cap_std::fs::{Dir, OpenOptions as CapOpenOptions};
 use hive_core::{ensure_no_symlink_ancestors, sha256_digest};
+#[cfg(test)]
 use rusqlite::types::Value;
-use rusqlite::{params, Connection, Rows, MAIN_DB};
+#[cfg(test)]
+use rusqlite::{params, Connection, MAIN_DB};
 use serde::{Deserialize, Serialize};
-use std::collections::{BTreeMap, BTreeSet};
+#[cfg(test)]
+use std::collections::BTreeMap;
+use std::collections::BTreeSet;
+#[cfg(test)]
 use std::ffi::{OsStr, OsString};
 use std::fs;
-use std::io::{self, Read, Write};
+use std::io::Read;
+#[cfg(test)]
+use std::io::{self, Write};
 use std::path::{Component, Path, PathBuf};
+#[cfg(test)]
 use std::sync::atomic::{AtomicU64, Ordering};
 
 /// Canonical user-root project registration ledger.
 pub const PROJECT_REGISTRY_RELATIVE: &str = ".hive/config/projects.yml";
-/// The only `0.8.0` product knowledge database.
+/// The single user-root disposable RAG database.
 pub const SHARED_INDEX_RELATIVE: &str = ".hive/index/hive.sqlite3";
+/// Complete user-root RAG operational state removed when Global Wiki is disabled.
+///
+/// The list includes the canonical trust receipt as well as disposable projection files.
+pub const SHARED_DERIVED_RELATIVES: [&str; 8] = [
+    SHARED_INDEX_RELATIVE,
+    ".hive/index/hive.sqlite3-wal",
+    ".hive/index/hive.sqlite3-shm",
+    ".hive/index/hive.sqlite3-journal",
+    crate::store::RAG_MANIFEST_RELATIVE,
+    crate::store::RAG_TRUST_RELATIVE,
+    crate::store::RAG_DIRTY_RELATIVE,
+    ".hive/index/.stale",
+];
 
+#[cfg(test)]
 const WIKI_RELATIVE: &str = ".hive/knowledge/Wiki";
 const MAX_REGISTRY_BYTES: usize = 1024 * 1024;
+#[cfg(test)]
 const MAX_PAGE_BYTES: usize = 2 * 1024 * 1024;
+#[cfg(test)]
 const MAX_SHARED_INDEX_BYTES: usize = 64 * 1024 * 1024;
+#[cfg(test)]
 static SHARED_INDEX_TEMP_SEQUENCE: AtomicU64 = AtomicU64::new(0);
 
 /// Strict canonical registration ledger for shared index sources.
@@ -121,6 +153,7 @@ pub enum KnowledgeVisibility {
 }
 
 impl KnowledgeVisibility {
+    #[cfg(test)]
     const fn as_str(self) -> &'static str {
         match self {
             Self::Shared => "shared",
@@ -163,6 +196,15 @@ pub struct AtomicProjectRegistrationOutcome {
     pub shared_index: Option<SharedIndexOutcome>,
 }
 
+/// Atomic project registration while Global Wiki remains disabled.
+#[derive(Debug, Clone, Serialize, Eq, PartialEq)]
+pub struct DisabledSharedIndexRegistrationOutcome {
+    /// Canonical registry mutation evidence.
+    pub registry: ProjectRegistryOutcome,
+    /// Disposable RAG paths removed by the transaction.
+    pub removed_derived_paths: Vec<String>,
+}
+
 /// Query hit with complete source and visibility provenance.
 #[derive(Debug, Clone, Serialize, Eq, PartialEq)]
 pub struct SharedQueryHit {
@@ -181,6 +223,7 @@ pub struct SharedQueryHit {
     pub page: QueryHit,
 }
 
+#[cfg(test)]
 #[derive(Debug)]
 struct SharedPage {
     source_project: String,
@@ -332,6 +375,49 @@ pub fn register_project_atomic(
 ) -> Result<AtomicProjectRegistrationOutcome, WikiError> {
     validate_absolute_root(user_root, "user root")?;
     project.root = portable_canonical_path(&project.root);
+    if !rebuild_index {
+        return register_project_without_index(user_root, project, false)
+            .map(|(outcome, _)| outcome);
+    }
+    let store = RagStore::open(user_root)?;
+    let committed = store.register_project_atomic(project)?;
+    let bytes = serde_yaml::to_string(&committed.registry)
+        .map_err(|error| WikiError::Io(format!("cannot encode project registry: {error}")))?
+        .into_bytes();
+    let registry_digest = sha256_digest(&bytes);
+    let registry_changed = committed
+        .store
+        .changed_paths
+        .iter()
+        .any(|path| path == PROJECT_REGISTRY_RELATIVE);
+    let shared_index = if rebuild_index {
+        Some(shared_outcome_from_commit(
+            &store,
+            &committed.registry,
+            &committed.store,
+        )?)
+    } else {
+        None
+    };
+    Ok(AtomicProjectRegistrationOutcome {
+        registry: ProjectRegistryOutcome {
+            changed_paths: if registry_changed {
+                vec![PROJECT_REGISTRY_RELATIVE.to_owned()]
+            } else {
+                Vec::new()
+            },
+            project_count: committed.registry.projects.len(),
+            registry_digest,
+        },
+        shared_index,
+    })
+}
+
+fn register_project_without_index(
+    user_root: &Path,
+    project: RegisteredProject,
+    remove_derived: bool,
+) -> Result<(AtomicProjectRegistrationOutcome, Vec<String>), WikiError> {
     let root = Dir::open_ambient_dir(user_root, ambient_authority())
         .map_err(|error| WikiError::Io(format!("cannot open user root: {error}")))?;
     let _lock = crate::CapabilityKnowledgeLock::acquire(&root)?;
@@ -359,35 +445,63 @@ pub fn register_project_atomic(
     let bytes = serde_yaml::to_string(&registry)
         .map_err(|error| WikiError::Io(format!("cannot encode project registry: {error}")))?
         .into_bytes();
-    if bytes.len() > MAX_REGISTRY_BYTES {
-        return Err(WikiError::InvalidInput(
-            "project registry exceeds the 1 MiB limit".to_owned(),
-        ));
-    }
     let registry_digest = sha256_digest(&bytes);
-    let mut snapshots = [crate::CapabilityFileSnapshot::capture(
-        &root,
-        Path::new(PROJECT_REGISTRY_RELATIVE),
-    )?];
-    let mut shared_index = None;
-    let changed = crate::transactional_capability(&root, &mut snapshots, |snapshots| {
-        let changed = snapshots[0].install_staged(&root, &bytes)?;
-        if rebuild_index {
-            shared_index = Some(rebuild_shared_index_locked(user_root, &root)?);
-        }
-        Ok(changed)
-    })?;
-    Ok(AtomicProjectRegistrationOutcome {
-        registry: ProjectRegistryOutcome {
-            changed_paths: if changed {
-                vec![PROJECT_REGISTRY_RELATIVE.to_owned()]
-            } else {
-                Vec::new()
+    let mut relatives = vec![PROJECT_REGISTRY_RELATIVE];
+    if remove_derived {
+        relatives.extend(SHARED_DERIVED_RELATIVES);
+    }
+    let mut snapshots = relatives
+        .iter()
+        .map(|relative| crate::CapabilityFileSnapshot::capture(&root, Path::new(relative)))
+        .collect::<Result<Vec<_>, _>>()?;
+    let (changed, removed_derived_paths) =
+        crate::transactional_capability(&root, &mut snapshots, |snapshots| {
+            let changed = snapshots[0].install_staged(&root, &bytes)?;
+            let mut removed = Vec::new();
+            for (snapshot, relative) in snapshots[1..].iter_mut().zip(SHARED_DERIVED_RELATIVES) {
+                if snapshot.remove(&root)? {
+                    removed.push(relative.to_owned());
+                }
+            }
+            Ok((changed, removed))
+        })?;
+    Ok((
+        AtomicProjectRegistrationOutcome {
+            registry: ProjectRegistryOutcome {
+                changed_paths: if changed {
+                    vec![PROJECT_REGISTRY_RELATIVE.to_owned()]
+                } else {
+                    Vec::new()
+                },
+                project_count: registry.projects.len(),
+                registry_digest,
             },
-            project_count: registry.projects.len(),
-            registry_digest,
+            shared_index: None,
         },
-        shared_index,
+        removed_derived_paths,
+    ))
+}
+
+/// Register one project and atomically remove the RAG projection and trust receipt.
+///
+/// This is the setup path for a disabled Global Wiki. Canonical Wiki and registry bytes other
+/// than the requested registration are preserved.
+///
+/// # Errors
+///
+/// Returns an error for an unsafe root, invalid registration, unsafe derived path, concurrent
+/// replacement, or rollback failure.
+pub fn register_project_with_shared_index_disabled(
+    user_root: &Path,
+    mut project: RegisteredProject,
+) -> Result<DisabledSharedIndexRegistrationOutcome, WikiError> {
+    validate_absolute_root(user_root, "user root")?;
+    project.root = portable_canonical_path(&project.root);
+    let (registered, removed_derived_paths) =
+        register_project_without_index(user_root, project, true)?;
+    Ok(DisabledSharedIndexRegistrationOutcome {
+        registry: registered.registry,
+        removed_derived_paths,
     })
 }
 
@@ -402,13 +516,144 @@ pub fn register_project_atomic(
 #[allow(clippy::too_many_lines)]
 pub fn rebuild_shared_index(user_root: &Path) -> Result<SharedIndexOutcome, WikiError> {
     validate_absolute_root(user_root, "user root")?;
+    let registry = load_project_registry(user_root)?;
+    let store = RagStore::open(user_root)?;
+    let recovered = if store.is_dirty()? {
+        Some(store.rebuild()?)
+    } else {
+        None
+    };
+    let mut synchronized = store.sync_project_registry(&registry)?;
+    if let Some(recovered) = recovered {
+        synchronized.changed_paths.extend(recovered.changed_paths);
+        synchronized.changed_paths.sort();
+        synchronized.changed_paths.dedup();
+    }
+    let current = store.validate_current()?;
+    let snapshot = store.load_canonical_snapshot(current.generation)?;
+    let candidate = build_rag_index(&snapshot).map_err(|error| {
+        WikiError::Verification(format!(
+            "cannot verify the canonical RAG rebuild candidate: {error}"
+        ))
+    })?;
+    let mut committed = if candidate.manifest.logical_digest == current.manifest_digest {
+        synchronized
+    } else {
+        let mut rebuilt = store.rebuild()?;
+        rebuilt.changed_paths.extend(synchronized.changed_paths);
+        rebuilt.changed_paths.sort();
+        rebuilt.changed_paths.dedup();
+        rebuilt
+    };
+    committed.changed_paths.sort();
+    committed.changed_paths.dedup();
+    shared_outcome_from_commit(&store, &registry, &committed)
+}
+
+/// Remove user-root RAG operational state while preserving canonical knowledge bytes.
+///
+/// # Errors
+///
+/// Returns an error for an unsafe user root, non-regular derived path, concurrent
+/// replacement, or rollback failure.
+pub fn remove_shared_derived_state(user_root: &Path) -> Result<Vec<String>, WikiError> {
+    validate_absolute_root(user_root, "user root")?;
     let root = Dir::open_ambient_dir(user_root, ambient_authority())
         .map_err(|error| WikiError::Io(format!("cannot open user root: {error}")))?;
     let _lock = crate::CapabilityKnowledgeLock::acquire(&root)?;
-    rebuild_shared_index_locked(user_root, &root)
+    let mut snapshots = SHARED_DERIVED_RELATIVES
+        .iter()
+        .map(|relative| crate::CapabilityFileSnapshot::capture(&root, Path::new(relative)))
+        .collect::<Result<Vec<_>, _>>()?;
+    crate::transactional_capability(&root, &mut snapshots, |snapshots| {
+        let mut changed = Vec::new();
+        for (snapshot, relative) in snapshots.iter_mut().zip(SHARED_DERIVED_RELATIVES) {
+            if snapshot.remove(&root)? {
+                changed.push(relative.to_owned());
+            }
+        }
+        Ok(changed)
+    })
 }
 
-fn rebuild_shared_index_locked(
+/// Verify that no user-root RAG projection or trust receipt remains.
+///
+/// # Errors
+///
+/// Returns an error for an unsafe user root, unsafe derived path, or any derived artifact that
+/// still exists.
+pub fn validate_shared_derived_state_absent(user_root: &Path) -> Result<(), WikiError> {
+    validate_absolute_root(user_root, "user root")?;
+    let root = Dir::open_ambient_dir(user_root, ambient_authority())
+        .map_err(|error| WikiError::Io(format!("cannot open user root: {error}")))?;
+    let _lock = crate::CapabilityKnowledgeLock::acquire(&root)?;
+    for relative in SHARED_DERIVED_RELATIVES {
+        let Some((parent, name)) = crate::capability_parent(&root, Path::new(relative), false)?
+        else {
+            continue;
+        };
+        match parent.symlink_metadata(&name) {
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+            Err(error) => {
+                return Err(WikiError::Io(format!(
+                    "cannot inspect disposable RAG path {relative}: {error}"
+                )))
+            }
+            Ok(_) => {
+                return Err(WikiError::Verification(format!(
+                    "disposable RAG path remains while Global Wiki is disabled: {relative}"
+                )))
+            }
+        }
+    }
+    Ok(())
+}
+
+fn shared_outcome_from_commit(
+    store: &RagStore,
+    registry: &ProjectRegistry,
+    committed: &crate::store::StoreCommit,
+) -> Result<SharedIndexOutcome, WikiError> {
+    let snapshot = store.load_canonical_snapshot(committed.generation)?;
+    let shared_collection_ids = snapshot
+        .registry
+        .collections
+        .iter()
+        .filter(|collection| {
+            collection.collection_id == USER_ROOT_COLLECTION_ID
+                || collection.source_project_id.is_some()
+        })
+        .map(|collection| collection.collection_id.as_str())
+        .collect::<BTreeSet<_>>();
+    Ok(SharedIndexOutcome {
+        changed_paths: committed.changed_paths.clone(),
+        page_count: snapshot
+            .documents
+            .iter()
+            .filter(|document| shared_collection_ids.contains(document.collection_id.as_str()))
+            .count(),
+        project_count: registry
+            .projects
+            .iter()
+            .filter(|project| project.enabled)
+            .count(),
+        logical_digest: committed.manifest_digest.clone(),
+    })
+}
+
+#[cfg(test)]
+pub(crate) fn rebuild_legacy_shared_index_for_test(
+    user_root: &Path,
+) -> Result<SharedIndexOutcome, WikiError> {
+    validate_absolute_root(user_root, "user root")?;
+    let root = Dir::open_ambient_dir(user_root, ambient_authority())
+        .map_err(|error| WikiError::Io(format!("cannot open user root: {error}")))?;
+    let _lock = crate::CapabilityKnowledgeLock::acquire(&root)?;
+    rebuild_legacy_shared_index_locked(user_root, &root)
+}
+
+#[cfg(test)]
+fn rebuild_legacy_shared_index_locked(
     user_root: &Path,
     root: &Dir,
 ) -> Result<SharedIndexOutcome, WikiError> {
@@ -448,6 +693,7 @@ fn rebuild_shared_index_locked(
     })
 }
 
+#[cfg(test)]
 #[allow(clippy::too_many_lines)]
 fn build_shared_projection(
     registry: &ProjectRegistry,
@@ -576,12 +822,8 @@ fn build_shared_projection(
 /// Returns an error when the registry or canonical pages are invalid, the index is missing
 /// or unsafe, or any derived schema, row, provenance, or FTS projection is stale.
 pub fn validate_shared_index(user_root: &Path) -> Result<String, WikiError> {
-    let registry = load_project_registry(user_root)?;
-    let pages = collect_shared_pages(user_root, &registry)?;
-    let expected = shared_logical_digest(&registry, &pages)?;
-    let connection = open_shared_index_snapshot(user_root)?;
-    validate_shared_projection(&connection, &registry, &pages, &expected)?;
-    Ok(expected)
+    let store = RagStore::open(user_root)?;
+    Ok(store.validate_current()?.manifest_digest)
 }
 
 /// Query the current shared index with project visibility enforcement.
@@ -600,9 +842,29 @@ pub fn query_shared(
     tag: Option<&str>,
     limit: usize,
 ) -> Result<Vec<SharedQueryHit>, WikiError> {
-    if text.is_none() && tag.is_none() {
+    query_shared_filtered(user_root, current_project, text, tag, None, limit)
+}
+
+/// Query the current RAG index with combined text, tag, and Wiki-category filters.
+///
+/// This compatibility facade reads one verified RAG generation and never enumerates
+/// canonical Markdown at query time.
+///
+/// # Errors
+///
+/// Returns an error for invalid query options, an unregistered current project, stale
+/// derived state, or a read-only `SQLite` failure.
+pub fn query_shared_filtered(
+    user_root: &Path,
+    current_project: Option<&Path>,
+    text: Option<&str>,
+    tag: Option<&str>,
+    category: Option<&str>,
+    limit: usize,
+) -> Result<Vec<SharedQueryHit>, WikiError> {
+    if text.is_none() && tag.is_none() && category.is_none() {
         return Err(WikiError::InvalidInput(
-            "query requires --text or --tag".to_owned(),
+            "query requires --text, --tag, or --category".to_owned(),
         ));
     }
     if !(1..=100).contains(&limit) {
@@ -614,113 +876,61 @@ pub fn query_shared(
     let current_id = current_project
         .map(|path| registered_project_id(&registry, path))
         .transpose()?;
-    let pages = collect_shared_pages(user_root, &registry)?;
-    let expected = shared_logical_digest(&registry, &pages)?;
-    let connection = open_shared_index_snapshot(user_root)?;
-    validate_shared_projection(&connection, &registry, &pages, &expected)?;
-    query_shared_connection(&connection, current_id.as_deref(), text, tag, limit)
-}
-
-fn query_shared_connection(
-    connection: &Connection,
-    current_id: Option<&str>,
-    text: Option<&str>,
-    tag: Option<&str>,
-    limit: usize,
-) -> Result<Vec<SharedQueryHit>, WikiError> {
-    let sql_limit = i64::try_from(limit)
-        .map_err(|_| WikiError::InvalidInput("query limit is too large".to_owned()))?;
-    let mut statement;
-    let mut rows = if let Some(search) = text {
-        let expression = fts_expression(search)?;
-        statement = connection
-            .prepare(
-                "SELECT p.source_project, p.page_id, p.language, p.visibility,
-                        p.kind, p.summary, p.path, p.content_digest
-                 FROM pages_fts f JOIN pages p ON p.row_key = f.row_key
-                 WHERE pages_fts MATCH ?1
-                   AND (?2 IS NULL OR EXISTS (
-                     SELECT 1 FROM tags t WHERE t.row_key = p.row_key AND t.tag = ?2
-                   ))
-                   AND (
-                     p.source_project = 'user-root'
-                     OR p.visibility = 'shared'
-                     OR p.source_project = ?3
-                   )
-                 ORDER BY
-                   CASE WHEN p.source_project = ?3 THEN 0
-                        WHEN p.source_project = 'user-root' THEN 1
-                        ELSE 2 END,
-                   bm25(pages_fts), p.source_project, p.page_id
-                 LIMIT ?4",
-            )
-            .map_err(sqlite_error)?;
-        statement
-            .query(params![expression, tag, current_id, sql_limit])
-            .map_err(sqlite_error)?
-    } else {
-        statement = connection
-            .prepare(
-                "SELECT p.source_project, p.page_id, p.language, p.visibility,
-                        p.kind, p.summary, p.path, p.content_digest
-                 FROM pages p
-                 WHERE EXISTS (
-                   SELECT 1 FROM tags t WHERE t.row_key = p.row_key AND t.tag = ?1
-                 )
-                   AND (
-                     p.source_project = 'user-root'
-                     OR p.visibility = 'shared'
-                     OR p.source_project = ?2
-                   )
-                 ORDER BY
-                   CASE WHEN p.source_project = ?2 THEN 0
-                        WHEN p.source_project = 'user-root' THEN 1
-                        ELSE 2 END,
-                   p.source_project, p.page_id
-                 LIMIT ?3",
-            )
-            .map_err(sqlite_error)?;
-        statement
-            .query(params![tag, current_id, sql_limit])
-            .map_err(sqlite_error)?
-    };
-    collect_query_hits(connection, &mut rows)
-}
-
-fn collect_query_hits(
-    connection: &Connection,
-    rows: &mut Rows<'_>,
-) -> Result<Vec<SharedQueryHit>, WikiError> {
-    let mut hits = Vec::new();
-    while let Some(row) = rows.next().map_err(sqlite_error)? {
-        let source_project: String = row.get(0).map_err(sqlite_error)?;
-        let page_id: String = row.get(1).map_err(sqlite_error)?;
-        let language: String = row.get(2).map_err(sqlite_error)?;
-        let visibility: String = row.get(3).map_err(sqlite_error)?;
-        let kind: String = row.get(4).map_err(sqlite_error)?;
-        let summary: String = row.get(5).map_err(sqlite_error)?;
-        let path: String = row.get(6).map_err(sqlite_error)?;
-        let digest: String = row.get(7).map_err(sqlite_error)?;
-        let key = row_key(&source_project, &page_id);
-        hits.push(SharedQueryHit {
-            source_project,
-            page_id: page_id.clone(),
-            language,
-            digest: digest.clone(),
-            visibility,
-            page: QueryHit {
-                id: page_id,
-                kind,
-                summary,
-                path,
-                content_digest: digest,
-                tags: select_values(connection, "tags", "tag", &key)?,
-                aliases: select_values(connection, "aliases", "alias", &key)?,
-                sources: select_values(connection, "sources", "locator", &key)?,
-            },
-        });
-    }
-    Ok(hits)
+    let store = RagStore::open(user_root)?;
+    let hits = store.query_wiki_pages(&WikiPageQueryRequest {
+        current_project_id: current_id.clone(),
+        text: text.map(str::to_owned),
+        tag: tag.map(str::to_owned),
+        category: category.map(str::to_owned),
+        limit,
+    })?;
+    hits.into_iter()
+        .map(|hit| {
+            let source_project = hit
+                .source_project_id
+                .unwrap_or_else(|| "user-root".to_owned());
+            let language = registry
+                .projects
+                .iter()
+                .find(|project| project.id == source_project)
+                .map_or("und", |project| project.language.as_str())
+                .to_owned();
+            let page_id = Path::new(&hit.locator)
+                .file_stem()
+                .and_then(|value| value.to_str())
+                .filter(|value| !value.is_empty())
+                .ok_or_else(|| {
+                    WikiError::Verification(format!(
+                        "indexed Wiki locator has no page ID: {}",
+                        hit.locator
+                    ))
+                })?
+                .to_owned();
+            let visibility = match hit.visibility {
+                RagVisibility::Shared => "shared",
+                RagVisibility::ProjectPrivate => "project-private",
+                RagVisibility::Confidential => "confidential",
+            }
+            .to_owned();
+            Ok(SharedQueryHit {
+                source_project,
+                page_id: page_id.clone(),
+                language,
+                digest: hit.digest.clone(),
+                visibility,
+                page: QueryHit {
+                    id: page_id,
+                    kind: hit.kind,
+                    summary: hit.summary,
+                    path: hit.locator,
+                    content_digest: hit.digest,
+                    tags: hit.tags,
+                    aliases: hit.aliases,
+                    sources: hit.sources,
+                },
+            })
+        })
+        .collect()
 }
 
 fn validate_registry(user_root: &Path, registry: &ProjectRegistry) -> Result<(), WikiError> {
@@ -798,6 +1008,7 @@ fn validate_absolute_root(path: &Path, name: &str) -> Result<(), WikiError> {
     Ok(())
 }
 
+#[cfg(test)]
 fn collect_shared_pages(
     user_root: &Path,
     registry: &ProjectRegistry,
@@ -845,9 +1056,6 @@ fn injected_shared_root_open_race(path: &Path) {
     });
 }
 
-#[cfg(not(test))]
-fn injected_shared_root_open_race(_path: &Path) {}
-
 #[cfg(test)]
 type SharedAncestorOpenRace = Box<dyn FnMut(&Path) -> bool>;
 
@@ -869,9 +1077,7 @@ fn injected_shared_ancestor_open_race(path: &Path) {
     });
 }
 
-#[cfg(not(test))]
-fn injected_shared_ancestor_open_race(_path: &Path) {}
-
+#[cfg(test)]
 fn pin_source_root(path: &Path, name: &str) -> Result<Dir, WikiError> {
     validate_absolute_root(path, name)?;
     let expected = Dir::open_ambient_dir(path, ambient_authority())
@@ -897,6 +1103,7 @@ fn pin_source_root(path: &Path, name: &str) -> Result<Dir, WikiError> {
     Ok(pinned)
 }
 
+#[cfg(test)]
 fn open_source_root_nofollow(path: &Path, name: &str) -> Result<Dir, WikiError> {
     let mut filesystem_root = PathBuf::new();
     let mut components = Vec::new();
@@ -987,9 +1194,7 @@ fn injected_shared_page_open_race() {
     });
 }
 
-#[cfg(not(test))]
-fn injected_shared_page_open_race() {}
-
+#[cfg(test)]
 fn collect_source_pages(
     source_root: &Dir,
     source_project: &str,
@@ -1058,6 +1263,7 @@ fn collect_source_pages(
     Ok(())
 }
 
+#[cfg(test)]
 fn read_source_page(
     wiki: &Dir,
     name: &OsStr,
@@ -1116,6 +1322,7 @@ fn read_source_page(
     })
 }
 
+#[cfg(test)]
 fn shared_logical_digest(
     registry: &ProjectRegistry,
     pages: &BTreeMap<String, SharedPage>,
@@ -1173,15 +1380,7 @@ fn registered_project_id(registry: &ProjectRegistry, root: &Path) -> Result<Stri
         })
 }
 
-fn open_shared_index_snapshot(user_root: &Path) -> Result<Connection, WikiError> {
-    validate_absolute_root(user_root, "user root")?;
-    let root = Dir::open_ambient_dir(user_root, ambient_authority())
-        .map_err(|error| WikiError::Io(format!("cannot open user root: {error}")))?;
-    let (parent, name) = crate::capability_parent(&root, Path::new(SHARED_INDEX_RELATIVE), false)?
-        .ok_or_else(|| WikiError::Verification("shared SQLite index is missing".to_owned()))?;
-    open_shared_index_snapshot_at(&parent, &name)
-}
-
+#[cfg(test)]
 fn open_shared_index_snapshot_at(parent: &Dir, name: &OsStr) -> Result<Connection, WikiError> {
     let file = crate::open_capability_file_nofollow(parent, name).map_err(|error| {
         WikiError::Verification(format!(
@@ -1213,6 +1412,7 @@ fn open_shared_index_snapshot_at(parent: &Dir, name: &OsStr) -> Result<Connectio
     Ok(connection)
 }
 
+#[cfg(test)]
 fn existing_shared_index_is_current(
     root: &Dir,
     registry: &ProjectRegistry,
@@ -1238,6 +1438,7 @@ fn existing_shared_index_is_current(
     Ok(validation.is_ok())
 }
 
+#[cfg(test)]
 fn validate_shared_projection(
     connection: &Connection,
     registry: &ProjectRegistry,
@@ -1312,6 +1513,7 @@ fn validate_shared_projection(
     Ok(())
 }
 
+#[cfg(test)]
 fn projection_rows(
     connection: &Connection,
     query: &str,
@@ -1330,6 +1532,7 @@ fn projection_rows(
     Ok(rows)
 }
 
+#[cfg(test)]
 fn verify_connection(
     connection: &Connection,
     digest: &str,
@@ -1363,12 +1566,14 @@ fn verify_connection(
     Ok(())
 }
 
+#[cfg(test)]
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 struct SharedIndexIdentity {
     dev: u64,
     ino: u64,
 }
 
+#[cfg(test)]
 impl SharedIndexIdentity {
     fn from_metadata(metadata: &cap_std::fs::Metadata) -> Self {
         Self {
@@ -1378,6 +1583,7 @@ impl SharedIndexIdentity {
     }
 }
 
+#[cfg(test)]
 fn publish_shared_index(root: &Dir, bytes: &[u8]) -> Result<(), WikiError> {
     if bytes.is_empty() || bytes.len() > MAX_SHARED_INDEX_BYTES {
         return Err(WikiError::Verification(
@@ -1399,6 +1605,7 @@ fn publish_shared_index(root: &Dir, bytes: &[u8]) -> Result<(), WikiError> {
     Ok(())
 }
 
+#[cfg(test)]
 fn unique_shared_index_names(index_dir: &Dir) -> Result<(OsString, OsString), WikiError> {
     loop {
         let suffix = format!(
@@ -1416,6 +1623,7 @@ fn unique_shared_index_names(index_dir: &Dir) -> Result<(OsString, OsString), Wi
     }
 }
 
+#[cfg(test)]
 fn shared_index_identity(
     index_dir: &Dir,
     name: &OsStr,
@@ -1434,6 +1642,7 @@ fn shared_index_identity(
     }
 }
 
+#[cfg(test)]
 fn write_synced_shared_index(
     index_dir: &Dir,
     temporary: &OsStr,
@@ -1458,6 +1667,7 @@ fn write_synced_shared_index(
     Ok(())
 }
 
+#[cfg(test)]
 fn activate_shared_index(
     index_dir: &Dir,
     index_name: &OsStr,
@@ -1541,7 +1751,7 @@ fn activate_shared_index(
     Ok(())
 }
 
-#[cfg(unix)]
+#[cfg(all(test, unix))]
 fn sync_shared_index_directory(index_dir: &Dir) -> Result<(), WikiError> {
     let mut options = CapOpenOptions::new();
     options.read(true).follow(FollowSymlinks::No);
@@ -1552,12 +1762,13 @@ fn sync_shared_index_directory(index_dir: &Dir) -> Result<(), WikiError> {
         .map_err(|error| WikiError::Io(format!("cannot sync shared index directory: {error}")))
 }
 
-#[cfg(not(unix))]
+#[cfg(all(test, not(unix)))]
 #[allow(clippy::unnecessary_wraps)]
 fn sync_shared_index_directory(_index_dir: &Dir) -> Result<(), WikiError> {
     Ok(())
 }
 
+#[cfg(test)]
 fn rollback_activated_shared_index(
     index_dir: &Dir,
     index_name: &OsStr,
@@ -1580,6 +1791,7 @@ fn rollback_activated_shared_index(
     rollback_shared_index(index_dir, index_name, backup, cause)
 }
 
+#[cfg(test)]
 fn rollback_shared_index(
     index_dir: &Dir,
     index_name: &OsStr,
@@ -1621,41 +1833,7 @@ fn injected_shared_replacement_failure() -> Option<WikiError> {
     })
 }
 
-#[cfg(not(test))]
-fn injected_shared_replacement_failure() -> Option<WikiError> {
-    None
-}
-
-fn select_values(
-    connection: &Connection,
-    table: &str,
-    column: &str,
-    row_key: &str,
-) -> Result<Vec<String>, WikiError> {
-    let sql = format!("SELECT {column} FROM {table} WHERE row_key = ?1 ORDER BY {column}");
-    let mut statement = connection.prepare(&sql).map_err(sqlite_error)?;
-    let values = statement
-        .query_map([row_key], |row| row.get(0))
-        .map_err(sqlite_error)?
-        .collect::<Result<Vec<_>, _>>()
-        .map_err(sqlite_error)?;
-    Ok(values)
-}
-
-fn fts_expression(value: &str) -> Result<String, WikiError> {
-    let tokens: Vec<_> = value
-        .split_whitespace()
-        .filter(|token| !token.is_empty())
-        .map(|token| format!("\"{}\"", token.replace('"', "\"\"")))
-        .collect();
-    if tokens.is_empty() {
-        return Err(WikiError::InvalidInput(
-            "query text must contain a searchable token".to_owned(),
-        ));
-    }
-    Ok(tokens.join(" AND "))
-}
-
+#[cfg(test)]
 fn row_key(source_project: &str, page_id: &str) -> String {
     format!("{source_project}\u{1f}{page_id}")
 }
@@ -1670,6 +1848,7 @@ fn valid_slug(value: &str) -> bool {
 }
 
 #[allow(clippy::needless_pass_by_value)]
+#[cfg(test)]
 fn sqlite_error(error: rusqlite::Error) -> WikiError {
     WikiError::Sqlite(error.to_string())
 }
@@ -1713,7 +1892,7 @@ mod tests {
                     root: first.clone(),
                     enabled: true,
                     language: KnowledgeLanguage::En,
-                    visibility: KnowledgeVisibility::Confidential,
+                    visibility: KnowledgeVisibility::ProjectPrivate,
                 },
                 RegisteredProject {
                     id: "second-project".to_owned(),
@@ -1744,8 +1923,10 @@ mod tests {
         let connection = Connection::open(user.join(SHARED_INDEX_RELATIVE)).unwrap();
         let row: (String, String, String, String) = connection
             .query_row(
-                "SELECT source_project, page_id, language, visibility
-                 FROM pages WHERE page_id = 'private-page'",
+                "SELECT c.source_project_id, d.kind, d.category, d.visibility
+                 FROM documents d JOIN collections c
+                   ON c.collection_id = d.collection_id
+                 WHERE d.locator = '.hive/knowledge/Wiki/private-page.md'",
                 [],
                 |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?)),
             )
@@ -1754,11 +1935,13 @@ mod tests {
             row,
             (
                 "first-project".to_owned(),
-                "private-page".to_owned(),
-                "en".to_owned(),
-                "confidential".to_owned()
+                "concept".to_owned(),
+                "concept".to_owned(),
+                "project-private".to_owned()
             )
         );
+        let private = query_shared(&user, Some(&first), Some("private"), None, 20).unwrap();
+        assert_eq!(private[0].language, "en");
     }
 
     #[test]
@@ -1777,6 +1960,26 @@ mod tests {
         assert!(from_first.iter().any(|hit| hit.page_id == "private-page"));
         let from_second = query_shared(&user, Some(&second), Some("searchable"), None, 20).unwrap();
         assert!(!from_second.iter().any(|hit| hit.page_id == "private-page"));
+    }
+
+    #[test]
+    fn legacy_shared_query_never_returns_confidential_rows() {
+        let (_temporary, user, first, _second) = fixture();
+        let mut registry = load_project_registry(&user).unwrap();
+        registry.projects[0].visibility = KnowledgeVisibility::Confidential;
+        fs::write(
+            user.join(PROJECT_REGISTRY_RELATIVE),
+            serde_yaml::to_string(&registry).unwrap(),
+        )
+        .unwrap();
+        rebuild_shared_index(&user).unwrap();
+
+        assert!(query_shared(&user, Some(&first), Some("private"), None, 20)
+            .unwrap()
+            .is_empty());
+        assert!(query_shared(&user, None, Some("private"), None, 20)
+            .unwrap()
+            .is_empty());
     }
 
     #[test]
@@ -1867,12 +2070,13 @@ mod tests {
     }
 
     #[test]
-    fn query_detects_canonical_page_change_until_rebuild() {
+    fn query_uses_the_published_generation_until_explicit_rebuild() {
         let (_temporary, user, _first, second) = fixture();
         rebuild_shared_index(&user).unwrap();
         write_page(&second, "shared-page", "changed searchable");
-        let error = query_shared(&user, None, Some("changed"), None, 20).unwrap_err();
-        assert!(matches!(error, WikiError::Verification(_)));
+        assert!(query_shared(&user, None, Some("changed"), None, 20)
+            .unwrap()
+            .is_empty());
         rebuild_shared_index(&user).unwrap();
         assert_eq!(
             query_shared(&user, None, Some("changed"), None, 20)
@@ -1889,17 +2093,13 @@ mod tests {
         let connection = Connection::open(user.join(SHARED_INDEX_RELATIVE)).unwrap();
         connection
             .execute(
-                "UPDATE pages SET visibility = 'shared'
-                 WHERE page_id = 'private-page'",
+                "UPDATE documents SET visibility = 'shared'
+                 WHERE locator = '.hive/knowledge/Wiki/private-page.md'",
                 [],
             )
             .unwrap();
         let retained: String = connection
-            .query_row(
-                "SELECT value FROM meta WHERE key = 'logical_digest'",
-                [],
-                |row| row.get(0),
-            )
+            .query_row("SELECT manifest_digest FROM meta", [], |row| row.get(0))
             .unwrap();
         assert_eq!(retained, rebuilt.logical_digest);
         drop(connection);
@@ -2055,26 +2255,26 @@ mod tests {
     fn opened_snapshot_is_independent_of_index_path_replacement() {
         let (_temporary, user, _first, second) = fixture();
         let first = rebuild_shared_index(&user).unwrap();
-        let registry = load_project_registry(&user).unwrap();
-        let pages = collect_shared_pages(&user, &registry).unwrap();
-        let snapshot = open_shared_index_snapshot(&user).unwrap();
+        let snapshot = fs::read(user.join(SHARED_INDEX_RELATIVE)).unwrap();
+        let manifest: crate::rag::GenerationManifest = serde_json::from_slice(
+            &fs::read(user.join(crate::store::RAG_MANIFEST_RELATIVE)).unwrap(),
+        )
+        .unwrap();
+        let registry = RagStore::open(&user).unwrap().load_registry().unwrap();
 
         write_page(&second, "shared-page", "replacement searchable");
         let second = rebuild_shared_index(&user).unwrap();
         assert_ne!(first.logical_digest, second.logical_digest);
 
-        validate_shared_projection(&snapshot, &registry, &pages, &first.logical_digest).unwrap();
-        let old_hits =
-            query_shared_connection(&snapshot, None, Some("searchable"), None, 20).unwrap();
-        assert_eq!(
-            old_hits
-                .iter()
-                .map(|hit| hit.page_id.as_str())
-                .collect::<Vec<_>>(),
-            vec!["root-page", "shared-page"]
-        );
+        let request = WikiPageQueryRequest {
+            current_project_id: None,
+            text: Some("replacement".to_owned()),
+            tag: None,
+            category: None,
+            limit: 20,
+        };
         assert!(
-            query_shared_connection(&snapshot, None, Some("replacement"), None, 20)
+            crate::rag::query_wiki_pages_serialized(&snapshot, &manifest, &registry, &request)
                 .unwrap()
                 .is_empty()
         );
@@ -2117,48 +2317,48 @@ mod tests {
     }
 
     #[test]
-    fn replacement_failure_restores_the_exact_prior_index() {
+    fn legacy_v08_sqlite_migrates_to_rag_without_canonical_byte_change() {
         let (_temporary, user, _first, second) = fixture();
-        rebuild_shared_index(&user).unwrap();
-        let index = user.join(SHARED_INDEX_RELATIVE);
-        let before = fs::read(&index).unwrap();
-        write_page(&second, "shared-page", "replacement searchable");
-        INJECT_SHARED_REPLACEMENT_FAILURE.with(|injected| injected.set(true));
-        let error = rebuild_shared_index(&user).unwrap_err();
-        assert!(error.to_string().contains("injected"));
-        assert_eq!(fs::read(&index).unwrap(), before);
-        assert!(fs::read_dir(index.parent().unwrap()).unwrap().all(|entry| {
-            !entry
-                .unwrap()
-                .file_name()
-                .to_string_lossy()
-                .starts_with(".hive.sqlite3.")
-        }));
-        write_page(&second, "shared-page", "shared searchable");
-        validate_shared_index(&user).unwrap();
-    }
+        rebuild_legacy_shared_index_for_test(&user).unwrap();
+        let legacy = Connection::open(user.join(SHARED_INDEX_RELATIVE)).unwrap();
+        let legacy_schema: String = legacy
+            .query_row(
+                "SELECT value FROM meta WHERE key = 'schema_version'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(legacy_schema, "2");
+        drop(legacy);
+        let canonical = [
+            user.join(WIKI_RELATIVE).join("root-page.md"),
+            second.join(WIKI_RELATIVE).join("shared-page.md"),
+        ]
+        .map(|path| (path.clone(), fs::read(path).unwrap()));
 
-    #[test]
-    fn atomic_registration_failure_restores_registry_and_index() {
-        let (_temporary, user, first, _second) = fixture();
         rebuild_shared_index(&user).unwrap();
-        let registry_path = user.join(PROJECT_REGISTRY_RELATIVE);
-        let index_path = user.join(SHARED_INDEX_RELATIVE);
-        let registry_before = fs::read(&registry_path).unwrap();
-        let index_before = fs::read(&index_path).unwrap();
-        let updated = RegisteredProject {
-            id: "first-project".to_owned(),
-            root: first,
-            enabled: true,
-            language: KnowledgeLanguage::Both,
-            visibility: KnowledgeVisibility::Shared,
-        };
-        INJECT_SHARED_REPLACEMENT_FAILURE.with(|injected| injected.set(true));
-        let error = register_project_atomic(&user, updated, true).unwrap_err();
-        assert!(error.to_string().contains("injected"));
-        assert_eq!(fs::read(&registry_path).unwrap(), registry_before);
-        assert_eq!(fs::read(&index_path).unwrap(), index_before);
-        validate_shared_index(&user).unwrap();
+
+        let rag = Connection::open(user.join(SHARED_INDEX_RELATIVE)).unwrap();
+        let schema: u32 = rag
+            .query_row("SELECT schema_version FROM meta", [], |row| row.get(0))
+            .unwrap();
+        assert_eq!(schema, crate::rag::RAG_SCHEMA_VERSION);
+        assert!(rag
+            .query_row(
+                "SELECT name FROM sqlite_master WHERE type='table' AND name='pages'",
+                [],
+                |row| row.get::<_, String>(0),
+            )
+            .is_err());
+        for (path, bytes) in canonical {
+            assert_eq!(fs::read(path).unwrap(), bytes);
+        }
+        assert_eq!(
+            query_shared(&user, None, Some("searchable"), None, 20)
+                .unwrap()
+                .len(),
+            2
+        );
     }
 
     #[test]
@@ -2185,5 +2385,46 @@ mod tests {
         let registry = load_project_registry(&user).unwrap();
         assert_eq!(registry.projects[0].language, KnowledgeLanguage::Both);
         assert_eq!(registry.projects[0].visibility, KnowledgeVisibility::Shared);
+    }
+
+    #[test]
+    fn disabled_shared_index_registration_removes_all_derived_state_atomically() {
+        let (_temporary, user, first, _second) = fixture();
+        rebuild_shared_index(&user).unwrap();
+        for relative in SHARED_DERIVED_RELATIVES {
+            let path = user.join(relative);
+            fs::create_dir_all(path.parent().unwrap()).unwrap();
+            if !path.exists() {
+                fs::write(path, b"derived\n").unwrap();
+            }
+        }
+        assert!(matches!(
+            validate_shared_derived_state_absent(&user),
+            Err(WikiError::Verification(_))
+        ));
+        let page = user.join(WIKI_RELATIVE).join("root-page.md");
+        let page_before = fs::read(&page).unwrap();
+        let updated = RegisteredProject {
+            id: "first-project".to_owned(),
+            root: first,
+            enabled: true,
+            language: KnowledgeLanguage::Both,
+            visibility: KnowledgeVisibility::ProjectPrivate,
+        };
+
+        let outcome = register_project_with_shared_index_disabled(&user, updated).unwrap();
+
+        assert_eq!(
+            outcome.registry.changed_paths,
+            vec![PROJECT_REGISTRY_RELATIVE]
+        );
+        assert_eq!(
+            outcome.removed_derived_paths,
+            SHARED_DERIVED_RELATIVES.map(str::to_owned)
+        );
+        validate_shared_derived_state_absent(&user).unwrap();
+        assert_eq!(fs::read(page).unwrap(), page_before);
+        let registry = load_project_registry(&user).unwrap();
+        assert_eq!(registry.projects[0].language, KnowledgeLanguage::Both);
     }
 }
