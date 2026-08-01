@@ -1,6 +1,6 @@
 # Aigent Hive active plan index
 
-> Revision: 1.88
+> Revision: 1.89
 > 기준일: 2026-08-01
 > Product version: `0.9.0`
 > 현재 milestone: `0.9.0` 정식 릴리스 준비
@@ -16,7 +16,8 @@
   PowerShell 5.1·`cmd.exe`, source-only PowerShell 7, Linux musl x86_64·arm64,
   bare `aigent-hive@0.9.0-test|test`, 선택형 numbered test, stable `latest` 보존,
   시험·정식 feature parity, `aigent-hive@0.9.0|latest`, OS signing·TUF·SHA-256·
-  GitHub attestation과 public install·update acceptance
+  GitHub attestation과 public install·update acceptance, materially ambiguous work의
+  prompt-refine 자동 선택·승인 전 정지
 - Stop boundary: protected review·environment approval, signing·TUF·npm credential,
   exact `1.0.0` authority, 현재 source usage guard remaining `60%`
 - Invariants: provider-neutral, canonical Markdown 우선, OMX/OMC replaceable adapter,
@@ -43,8 +44,9 @@
 | v0.9 loop·Wiki·Skill suite | 25 | 0 | 100% |
 | v0.9 global knowledge RAG | 20 | 0 | 100% |
 | v0.9 knowledge portability·scan | 18 | 0 | 100% |
+| Prompt refine 자동 routing | 0 | 12 | 0% |
 | v0.9 full release | 1 | 25 | 3.8% |
-| **Canonical total** | **292** | **25** | **92.1%** |
+| **Canonical total** | **292** | **37** | **88.8%** |
 
 External production boundary 항목도 미완료 합계에 포함. Protected authority 없이 완료 처리 금지.
 
@@ -52,16 +54,11 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
 
 - Local Windows: Rust workspace 전체 PASS, PowerShell 5.1·7.6.4 installer와
   `cmd.exe` bootstrap 계약 PASS
-- Codex Skill metadata: project projection implicit owner 1개, 나머지 explicit-only,
-  fresh-session 중복 warning 0건
 - 실제 Windows 11 x86_64: Codex user install·global setup·project auto onboarding,
   shared index 1개 project, repeat update·rollback·재검증 PASS
 - Windows shell: WSI-001–003 완료, consumer PowerShell 7 dependency 0건,
   source dependency helper의 exact WinGet preview·동의·재검증 PASS
 - Strict Clippy all targets·all features, format check PASS
-- Copier/Rust current projection parity `3/3`, Source Wiki lint finding·warning `0`
-- Shared index 동일 입력 재실행 byte-exact no-op, `changed_paths=[]`
-- Codex·Antigravity expedited/custom connected onboarding matrix `4/4`
 - 개발·소비자 검증 결과 보고 규칙: 범위·이유·현재 환경·실행 여부·입증 범위·
   미검증 범위 명시, 투영 시험 PASS
 - Opt-in daily update check의 24시간 success throttle, offline next-session retry,
@@ -108,6 +105,7 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
 | [`active/v0.9.0-loop-wiki-skills.md`](active/v0.9.0-loop-wiki-skills.md) | `V9-*` | Host-native graph engineering·통합 Wiki·초기 Skill suite |
 | [`active/v0.9.0-global-knowledge-rag.md`](active/v0.9.0-global-knowledge-rag.md) | `RAG-*` | 전역 RAG |
 | [`active/v0.9.0-knowledge-portability-scan.md`](active/v0.9.0-knowledge-portability-scan.md) | `KPX-*` | Knowledge 이식·directory scan·automatic query |
+| [`active/prompt-refine-auto-routing.md`](active/prompt-refine-auto-routing.md) | `PRF-*` | Material ambiguity 자동 refine·승인 전 정지 |
 | [`active/release-0.9.0.md`](active/release-0.9.0.md) | `REL9-*` | 정식 GitHub·npm 릴리스와 public acceptance |
 
 ## Reconciliation gate
@@ -135,4 +133,6 @@ recovery 검증.
 
 완료: V9-001–025, RAG-001–020, KPX-001–018.
 
-다음: REL9-002–005 release activation.
+다음: PRF-001–007 prompt refine 계약·구현 뒤 PRF-008–012 검증.
+
+후속: REL9-002–005 release activation.

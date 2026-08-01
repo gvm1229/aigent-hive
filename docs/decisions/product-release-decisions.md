@@ -23,7 +23,7 @@
 | Skill 양방향 reuse | Hive-owned source↔consumer Skill reuse 허용; shared canonical은 `harness/skills/`, source는 exact `.agents/skills/` projection, scope·safety·consent·conformance review 필수 |
 | Source docs Wiki | `docs/` human graph와 tracked `docs/facts/en/`·`ko/` atomic pair 정본, `omx_wiki/`·`.omx/wiki/`·consumer `.hive/knowledge/` 금지, SQLite는 ignored source projection, OMX/OMC retirement 시 knowledge migration 0건 |
 | Wiki autocapture | Wiki enabled 상태의 material task 종료 전 agent-reviewed task fact 기록. Outcome·tool/project·criteria·originating request summary만 bounded capture, exact request는 explicit retention intent 필요, raw transcript·hook·tool output·runtime ingestion 금지 |
-| prompt refine | `hive-prompt-refine`; 명시적인 prompt 작성·정제 intent에서만 자동 선택, `refine-only` 기본. 일반 요청이 모호하거나 핵심 세부가 부족하면 작업을 막지 않는 한 줄 optional refine 제안, hidden·automatic rewrite 금지 |
+| prompt refine | `hive-prompt-refine`; 명시적 작성·정제 intent와 materially ambiguous ordinary work에서 자동 선택, `refine-only` 기본. Refined prompt 제시 뒤 exact 사용자 승인까지 정지. Same-request 실행은 explicit `--run`만 허용, simple/editless question·clear work·hidden rewrite·prompt-classifier hook 제외 |
 | optional hooks | host가 exact integrity event를 지원하고 사용자가 capability/event/path/digest를 승인한 경우에만 project-local hook 허용 |
 | 사용량 | Global setup explicit opt-in과 enabled 기본 remaining `20%`; Codex app-server JSON-RPC, Claude Code status-line JSON capture, 향후 qualified Antigravity structured surface를 native primary로 사용; CodexBar는 세 provider 모두 explicit-consent fallback-only |
 | Claude sensor ownership | Plugin executable만 제공; user가 Claude host의 `/statusline`으로 opt-in하며 Hive의 `~/.claude/settings.json` mutation 없음, existing status line non-clobber |

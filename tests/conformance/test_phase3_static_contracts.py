@@ -352,6 +352,7 @@ class Phase3SkillSourceContract(unittest.TestCase):
             "active/docs-wiki-migration.md",
             "active/native-usage-sensor.md",
             "active/plugin-project-lifecycle.md",
+            "active/prompt-refine-auto-routing.md",
             "active/release-0.8.0.md",
             "active/release-0.9.0.md",
             "active/security-review.md",
@@ -377,6 +378,7 @@ class Phase3SkillSourceContract(unittest.TestCase):
             plan_root / "active/docs-wiki-migration.md",
             plan_root / "active/native-usage-sensor.md",
             plan_root / "active/plugin-project-lifecycle.md",
+            plan_root / "active/prompt-refine-auto-routing.md",
             plan_root / "active/release-0.8.0.md",
             plan_root / "active/release-0.9.0.md",
             plan_root / "active/security-review.md",
@@ -395,6 +397,7 @@ class Phase3SkillSourceContract(unittest.TestCase):
                 "active/docs-wiki-migration.md",
                 "active/native-usage-sensor.md",
                 "active/plugin-project-lifecycle.md",
+                "active/prompt-refine-auto-routing.md",
                 "active/release-0.8.0.md",
                 "active/release-0.9.0.md",
                 "active/security-review.md",
@@ -475,6 +478,7 @@ class Phase3SkillSourceContract(unittest.TestCase):
         docs_wiki_path = plan_root / "active/docs-wiki-migration.md"
         native_usage_path = plan_root / "active/native-usage-sensor.md"
         plugin_project_path = plan_root / "active/plugin-project-lifecycle.md"
+        prompt_refine_path = plan_root / "active/prompt-refine-auto-routing.md"
         release_09_path = plan_root / "active/release-0.9.0.md"
         security_review_path = plan_root / "active/security-review.md"
         source_wiki_path = plan_root / "active/source-docs-wiki.md"
@@ -522,6 +526,10 @@ class Phase3SkillSourceContract(unittest.TestCase):
             (
                 "v0.9 knowledge portability·scan",
                 *checklist_counts([v09_portability_path]),
+            ),
+            (
+                "Prompt refine 자동 routing",
+                *checklist_counts([prompt_refine_path]),
             ),
             (
                 "v0.9 full release",
@@ -584,12 +592,12 @@ class Phase3SkillSourceContract(unittest.TestCase):
                 self.assertIn(requirement, plan)
         self.assertIn("사용자 결정 잔여: 없음", research)
 
-    def test_source_prompt_refine_plan_requires_optional_quality_suggestion(
+    def test_prompt_refine_auto_routing_plan_requires_approval_stop(
         self,
     ) -> None:
         plan_root = REPOSITORY_ROOT / "docs/plans"
         fragment = (
-            plan_root / "active/plugin-project-lifecycle.md"
+            plan_root / "active/prompt-refine-auto-routing.md"
         ).read_text(encoding="utf-8")
         adr = (
             REPOSITORY_ROOT
@@ -600,15 +608,16 @@ class Phase3SkillSourceContract(unittest.TestCase):
         ).read_text(encoding="utf-8")
 
         for required in (
-            "모호하거나 핵심 세부가 부족한 prompt",
-            "한 줄 optional refine 제안",
-            "rewrite·Skill load·execution 0회",
-            "충분히 명확한 ordinary work·simple question",
+            "Material ambiguity",
+            "awaiting-approval",
+            "`$hive-prompt-refine --run <payload>`",
+            "Simple question·editless question·clear work",
+            "Prompt 분류용 hook·provider API·hidden rewrite 0건",
         ):
             with self.subTest(required=required):
                 self.assertIn(required, fragment)
         self.assertIn("Prompt quality gate", adr)
-        self.assertIn("모호성·핵심 세부 부족 prompt", current)
+        self.assertIn("material ambiguity 자동 `refine-only`", current)
 
     def test_native_usage_sensor_plan_demotes_codexbar_for_all_hosts(
         self,

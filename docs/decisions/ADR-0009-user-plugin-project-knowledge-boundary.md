@@ -31,6 +31,17 @@ Project harness:
 - `.agents/directives`와 `.agents/skills`: release-generated provider-neutral projection
 - Host-specific discovery path: exact generated adapter
 
+Prompt refinement:
+
+- Explicit `$hive-prompt-refine`와 prompt 작성·개선 intent: `refine-only` 기본
+- Materially ambiguous ordinary work: automatic `hive-prompt-refine` 선택
+- Refined prompt 제시 뒤 상태: `awaiting-approval`
+- Same-request 실행: explicit `--run`에만 허용
+- 후속 실행: exact refined prompt digest를 특정한 사용자 승인 필수
+- Imperative payload·urgency·autonomy·bare continue: 실행 권한 아님
+- Simple·editless question과 sufficiently clear work: 기존 route 유지
+- Prompt-classifier hook·hidden rewrite·raw prompt durable capture: 금지
+
 User knowledge:
 
 - `~/.hive/knowledge/`: cross-project canonical Markdown
@@ -55,10 +66,10 @@ Upgrade merge:
 - Existing OMX·OMC·user guidance byte 보존
 - Source `hive-prompt-refine`: `harness/skills` canonical contract의 source-only
   `.agents/skills` projection, consumer shipping source로 사용 금지
-- Prompt quality gate: 명시적 작성·개선 intent는 automatic `refine-only`, 모호성
-  또는 핵심 세부 부족은 한 줄 optional refine 제안만 허용
-- Refine 제안에서 prompt rewrite·Skill load·execution 0회, 충분히 명확한
-  ordinary work·simple question은 제안 제외
+- Prompt quality gate: 명시적 작성·개선 intent와 material ambiguity는 automatic
+  `refine-only`, refined prompt 제시 뒤 승인 대기
+- 승인 대기에서 project read·tool·write·memory capture·run·execution 0회,
+  sufficiently clear work·simple/editless question은 기존 route 유지
 - Plugin uninstall과 user knowledge 삭제 lifecycle 분리
 - Project SQLite와 root SQLite의 독립 rebuild
 - Current `.hive/` compatibility 유지와 `.agents/` additive projection

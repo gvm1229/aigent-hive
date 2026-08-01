@@ -2,9 +2,9 @@
 
 - 기준 branch: `develop`
 - product version: `0.9.0`
-- plan revision: `1.88`
+- plan revision: `1.89`
 - 현재 milestone: `0.9.0` 정식 릴리스 준비
-- 현재 작업: REL9-002–005 release workflow activation
+- 현재 작업: PRF-001–007 prompt refine 자동 routing·승인 정지
 - 외부 중지 경계: protected review·environment approval, signing·TUF·npm credential,
   exact `1.0.0` 사용자 authority
 - Plan load: compact `docs/plans/PLAN.md` + `docs/plans/phases/07-public-qualification.md`
@@ -19,8 +19,9 @@
   + `docs/plans/active/v0.9.0-loop-wiki-skills.md`
   + `docs/plans/active/v0.9.0-global-knowledge-rag.md`
   + `docs/plans/active/v0.9.0-knowledge-portability-scan.md`
+  + `docs/plans/active/prompt-refine-auto-routing.md`
   + `docs/plans/active/release-0.9.0.md`
-- Plan completion: canonical checklist `292/317` 완료, `25`개 미완료, `92.1%`
+- Plan completion: canonical checklist `292/329` 완료, `37`개 미완료, `88.8%`
 - Latest local Windows: Rust workspace 459개 실행·통과. Python 적합성 670개 발견 중
   628개 실제 실행·통과, 42개 미실행. 미실행 범위: 관리자 권한 없는 Windows의
   symbolic link 생성 제약 16개, POSIX·Unix 전용 동작 19개, macOS 전용 설치·서명
@@ -85,6 +86,20 @@
 - Production gate: 5개 native target·6개 npm package, OS signing·notarization,
   external TUF, public install·`0.8.0 → 0.9.0` update
 - 다음 작업: REL9-002–005 version grammar·분리 release workflow activation
+
+## Prompt refine 자동 routing
+
+- 상태: 원인 확인·수정 계획 활성, 구현 미착수
+- Active fragment:
+  [`prompt-refine-auto-routing.md`](../plans/active/prompt-refine-auto-routing.md)
+- 원인: source·consumer policy와 Skill catalog의 explicit-only·suggestion-only 계약
+- 결함: explicit invocation 뒤 imperative payload를 실행 승인으로 오해한 host-level
+  mode boundary
+- 목표: material ambiguity 자동 `refine-only`, refined prompt 제시 뒤
+  `awaiting-approval`, exact 후속 승인 전 side effect 0건
+- 보존: simple/editless question·clear work route, prompt-classifier hook 금지,
+  frozen `0.7.0|0.8.0` Skill bytes
+- 다음 작업: PRF-001–004 contract fixture·schema, PRF-005–007 projection·router 구현
 
 ## v0.9.0 전역 knowledge RAG
 
@@ -290,8 +305,8 @@ Target: `0.8.0`
   user-root 단일 SQLite·explicit promotion
 - Historical exact base, unmodified replace, modified local-priority three-way merge
 - Durable journal, executable-mode backup, host-state compensation과 crash recovery
-- Source `hive-prompt-refine` projection, explicit refine-only routing,
-  모호성·핵심 세부 부족 prompt의 optional refine 제안
+- Source `hive-prompt-refine` projection, 현재 explicit refine-only routing,
+  material ambiguity automatic refine-only 전환 계획
 
 `0.8.0` npm 배포 gap:
 
