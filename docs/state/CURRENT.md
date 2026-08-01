@@ -2,9 +2,9 @@
 
 - 기준 branch: `develop`
 - product version: `0.9.0`
-- plan revision: `1.86`
+- plan revision: `1.87`
 - 현재 milestone: `0.9.0` 정식 릴리스 준비
-- 현재 작업: 변경점·릴리스 계획 확정과 원격 `develop` 기준선 고정
+- 현재 작업: REL9-002–005 release workflow activation
 - 외부 중지 경계: protected review·environment approval, signing·TUF·npm credential,
   exact `1.0.0` 사용자 authority
 - Plan load: compact `docs/plans/PLAN.md` + `docs/plans/phases/07-public-qualification.md`
@@ -20,7 +20,7 @@
   + `docs/plans/active/v0.9.0-global-knowledge-rag.md`
   + `docs/plans/active/v0.9.0-knowledge-portability-scan.md`
   + `docs/plans/active/release-0.9.0.md`
-- Plan completion: canonical checklist `291/317` 완료, `26`개 미완료, `91.8%`
+- Plan completion: canonical checklist `292/317` 완료, `25`개 미완료, `92.1%`
 - Latest local Windows: Rust workspace 459개 실행·통과. Python 적합성 670개 발견 중
   628개 실제 실행·통과, 42개 미실행. 미실행 범위: 관리자 권한 없는 Windows의
   symbolic link 생성 제약 16개, POSIX·Unix 전용 동작 19개, macOS 전용 설치·서명
@@ -74,9 +74,13 @@
   npm `0.9.0|latest`
 - 확인된 activation gap: `release-publish.yml`의 exact `0.8.0` hardcode,
   candidate workflow의 `develop` 전용 ref, GitHub normal Release workflow 부재
+- Branch ruleset: `Develop safety`의 deletion·non-fast-forward만 적용,
+  `Protect main`의 PR·required checks 4개 유지
+- Remote `develop`: `e4f1d6001a0a6ad5f41dccc350a0e585bbe9c9d0` 반영 확인
+- `staging`: 현재 release flow에 불필요하여 생성 0건
 - Production gate: 5개 native target·6개 npm package, OS signing·notarization,
   external TUF, public install·`0.8.0 → 0.9.0` update
-- 다음 작업: REL9-001 원격 `develop` 기준선 고정
+- 다음 작업: REL9-002–005 release workflow activation
 
 ## v0.9.0 전역 knowledge RAG
 
@@ -550,12 +554,13 @@ Current remote qualification evidence:
 
 - Current source·npm product version `0.8.0`
 - 사용자 지정 순서: npm `0.8.0` 배포 성공 뒤 `develop` → `main` 병합
-- Candidate authority: PR·필수 상태 검사·삭제·강제 push 차단이 적용된 exact `develop`
-- Current GitHub ruleset: `develop` 보호 활성, 우회 권한 없음
+- Historical candidate authority: PR·필수 상태 검사·삭제·강제 push 차단이 적용된
+  exact `develop`
+- Historical GitHub ruleset: `0.8.0` candidate 당시 `develop` 보호 활성
 - Current publication environment: `release-publication` 필수 검토자 `gvm1229` 설정
   확인, 자기 배포 승인 차단 비활성
-- Branch policy: `codex/release-0.8.0` 임시 branch 생성·push와 `develop` 대상 PR
-  사용자 예외 승인 완료. `develop` 직접 push는 보호 규칙상 불가
+- Historical branch policy: `codex/release-0.8.0` 임시 branch와 `develop` 대상 PR
+  사용자 예외 승인
 - First candidate run `30633581092`: exact `develop` commit `1031ff0`, 5개 native
   target·6개 npm tarball PASS
 - First publication run `30634201469`: `release-publication` 승인 PASS,

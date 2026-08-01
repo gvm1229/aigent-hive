@@ -1,6 +1,6 @@
 # Aigent Hive active plan index
 
-> Revision: 1.86
+> Revision: 1.87
 > 기준일: 2026-08-01
 > Product version: `0.9.0`
 > 현재 milestone: `0.9.0` 정식 릴리스 준비
@@ -41,8 +41,8 @@
 | v0.9 loop·Wiki·Skill suite | 25 | 0 | 100% |
 | v0.9 global knowledge RAG | 20 | 0 | 100% |
 | v0.9 knowledge portability·scan | 18 | 0 | 100% |
-| v0.9 full release | 0 | 26 | 0% |
-| **Canonical total** | **291** | **26** | **91.8%** |
+| v0.9 full release | 1 | 25 | 3.8% |
+| **Canonical total** | **292** | **25** | **92.1%** |
 
 External production boundary 항목도 미완료 합계에 포함. Protected authority 없이 완료 처리 금지.
 
@@ -133,4 +133,4 @@ recovery 검증.
 
 완료: V9-001–025, RAG-001–020, KPX-001–018.
 
-다음: REL9-001 원격 `develop` 기준선 고정, REL9-002–005 release activation.
+다음: REL9-002–005 release activation.

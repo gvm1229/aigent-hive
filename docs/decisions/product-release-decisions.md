@@ -48,7 +48,7 @@
 | release workflow | `develop` 사전 후보 뒤 `main` final candidate 재빌드. 5개 target·6개 npm·digest·attestation·OS signing·TUF 검증 뒤 annotated `v0.9.0`·GitHub Release·npm `latest` publication |
 | install ownership | Direct receipt binary만 Hive-owned. npm binary는 npm 소유이며 Hive의 직접 덮어쓰기 금지; bare update의 사용자 승인 뒤 exact npm command 위임만 허용. Homebrew·WinGet은 기존 owner 경계 유지 |
 | Antigravity plugin ownership | Hive는 `~/.hive/marketplaces/antigravity/` source package만 소유. `agy` staging·import manifest는 host 소유이며 Hive ledger에서 제외. Mutation 전 staging 전체를 authenticated prior와 exact 비교하고 foreign entry는 보존. 신규 rollback은 uninstall, refresh rollback은 prior source 재설치 |
-| Git | `main` 안정, `develop` 일반 개발; `develop → main` PR |
+| Git | `develop` 일반 fast-forward direct push, `main` production PR·required checks. `staging`은 명시적 release 필요·승인 때만 생성하고 strict ruleset 적용 |
 | 라이선스 | CLI/source, `harness/**`와 생성된 Hive 소유 material 모두 `Apache-2.0` |
 
 Source Wiki의 독립성, OMX Wiki Skill 제외 이유와 장기 OMX/OMC retirement 방향:

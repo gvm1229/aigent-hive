@@ -21,16 +21,20 @@
 - RAG 50,000 chunk와 `.hivekb` 100 collection·50,000 chunk 성능 gate 통과
 - `0.8.0` frozen project·user base와 synthetic release fixture 무변경
 - Release notes: [`docs/releases/0.9.0.md`](../../releases/0.9.0.md)
-- 기존 `release.yml`: protected `develop` manual candidate만 허용
+- 기존 `release.yml`: remote `develop` manual candidate만 허용
 - 기존 `release-publish.yml`: exact `0.8.0` hardcode와 `develop` candidate 결합
 - GitHub normal Release·tag 생성 workflow 부재
 - Repository release tag 부재
 - Apple·Windows·external TUF production signer 증거 미확인
+- GitHub ruleset: `Develop safety`는 deletion·non-fast-forward만 적용,
+  `Protect main`은 PR·required checks 4개 적용
+- Remote `develop` 기준선: `e4f1d6001a0a6ad5f41dccc350a0e585bbe9c9d0`
+- `staging` branch: 현재 final-main candidate 계보에 불필요하여 생성 0건
 
 ## Artifact 계보
 
 ```text
-protected develop qualification
+remote develop qualification
   → develop → main PR·required CI
   → protected main exact final candidate
   → 5 native archives + 6 npm tarballs
@@ -51,10 +55,10 @@ protected develop qualification
 
 ### A. 기준선과 workflow activation
 
-- [ ] [REL9-001] 현재 implementation·계획·변경점 커밋의 원격 `develop` 반영과 exact remote SHA 확인
+- [x] [REL9-001] 현재 implementation·계획·변경점 커밋의 원격 `develop` 반영과 exact remote SHA `e4f1d6001a0a6ad5f41dccc350a0e585bbe9c9d0` 확인
 - [ ] [REL9-002] `0.9.0` version·release date·README·CURRENT·Cargo lock·harness template·fixture parity와 release notes gate
 - [ ] [REL9-003] `release-publish.yml`의 `0.8.0` hardcode 제거, exact requested version·final candidate run·branch·SHA 결합
-- [ ] [REL9-004] `release.yml`의 protected `develop` 사전 후보와 protected `main` 최종 후보를 explicit input으로 분리하고 ref downgrade 차단
+- [ ] [REL9-004] `release.yml`의 remote `develop` 사전 후보와 protected `main` 최종 후보를 explicit input으로 분리하고 ref downgrade 차단
 - [ ] [REL9-005] GitHub normal Release workflow 추가: annotated tag·release body·asset·checksum·attestation·idempotency·existing-version refusal
 
 ### B. Clean-clone qualification
@@ -68,7 +72,7 @@ protected develop qualification
 
 ### C. Candidate와 signing
 
-- [ ] [REL9-012] Protected `develop` exact SHA에서 pre-integration candidate 5 target·6 npm·installer·byte identity PASS
+- [ ] [REL9-012] Remote `develop` exact SHA에서 pre-integration candidate 5 target·6 npm·installer·byte identity PASS
 - [ ] [REL9-013] `develop → main` PR의 required CI·review·non-force merge와 exact main SHA 고정
 - [ ] [REL9-014] Protected `main` exact SHA에서 final candidate 재빌드·attestation·artifact inventory PASS
 - [ ] [REL9-015] macOS Developer ID signing·notarization과 stapled verification evidence
