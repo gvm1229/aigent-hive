@@ -48,14 +48,15 @@
         {
           "type": "object",
           "additionalProperties": false,
-          "required": ["name", "provided_by", "compatible"],
+          "required": ["name", "provided_by", "compatible", "explicit_selection"],
           "properties": {
             "name": {
               "type": "string",
               "pattern": "^[a-z][a-z0-9-]{1,62}$"
             },
             "provided_by": { "enum": ["omx", "omc"] },
-            "compatible": { "type": "boolean" }
+            "compatible": { "type": "boolean" },
+            "explicit_selection": { "type": "boolean" }
           }
         }
       ]

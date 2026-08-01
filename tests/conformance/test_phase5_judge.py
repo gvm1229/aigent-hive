@@ -332,12 +332,14 @@ class Phase5JudgeStaticContracts(unittest.TestCase):
         self.assertEqual(entry["source_type"], "built-in")
         self.assertIsNone(entry["consent_digest"])
 
-    def test_judge_skill_preserves_simple_question_and_external_owner_precedence(
+    def test_judge_skill_preserves_simple_question_and_v09_owner_contract(
         self,
     ) -> None:
         text = SKILL.read_text(encoding="utf-8").casefold()
         self.assertIn("simple-question gate first", text)
-        self.assertIn("preferred orchestration owner", text)
+        self.assertIn("host-native owner by default", text)
+        self.assertIn("explicitly selected external compatibility owner", text)
+        self.assertIn("legacy 0.8.x owner", text)
         command_lines = tuple(
             line.strip()
             for line in text.splitlines()

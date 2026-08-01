@@ -17,10 +17,13 @@ FIXTURE_ROOT = REPOSITORY_ROOT / "tests/fixtures/phase1"
 SCHEMA_ROOT = REPOSITORY_ROOT / "schemas"
 EXPECTED_ROOT = FIXTURE_ROOT / "expected"
 VALID_CAPABILITY_DIGESTS = {
+    "capabilities-codex-host-native-hooks.json": "sha256:8b260a7698068a4ec113bb1f60dfc84147647f8b2bae6a5de1fd852a79eea833",
     "capabilities-absent.json": "sha256:ff554b1b02ac93d7112f69022268466caed8d75229fc7bd0f672071f98c8376a",
     "capabilities-antigravity-absent.json": "sha256:f302144ed6a975b85a8a6c62ab39918070ad9168364ea570c1006a474664b7d8",
+    "capabilities-claude-host-native.json": "sha256:6a9a4f9c08c86f15e64000541b38964717616da70994ecf69fed8c35bf6d9e80",
     "capabilities-claude-omc-executable.json": "sha256:b9a73552fe6b7eb91663b965d123ac71765e42309553f22352009f2df5de4ed8",
     "capabilities-claude-omc.json": "sha256:9519678e71925179bc93e4fabc7686d5595da3e456de6a850a9ac10179a76cb0",
+    "capabilities-codex-host-native.json": "sha256:0218bcf5a147a6cbfe3f5fb2fd5bea3053db5f99c37abcaf833a27543546a4e2",
     "capabilities-codex-omx-executable.json": "sha256:4c4d9f4ea469ee3c16bac54555ac1bebfc7a01adc9764033db471cb5a6472656",
     "capabilities-codex-omx.json": "sha256:a4f187054f8152eabb31990e470fee0ec849bd3ddeac2dbd071a1c6e0eaf3d81",
     "capabilities-incompatible.json": "sha256:0f66adcb318fe2076c75931dfdef897a4f91ca11f9a555d96b0134f7056ea7c6",
@@ -163,13 +166,17 @@ class Phase1FixtureConformance(unittest.TestCase):
             },
         )
 
-    def test_available_evidence_resolves_matching_external_owner(self) -> None:
+    def test_available_evidence_supports_host_native_default_and_matching_external_selection(self) -> None:
         fixtures = (
+            ("capabilities-codex-host-native.json", "codex", "omx", "host-native"),
             ("capabilities-codex-omx.json", "codex", "omx"),
+            ("capabilities-claude-host-native.json", "claude", "omc", "host-native"),
             ("capabilities-claude-omc.json", "claude", "omc"),
         )
 
-        for fixture_name, expected_host, expected_owner in fixtures:
+        for fixture in fixtures:
+            fixture_name, expected_host, expected_runtime, *owner = fixture
+            expected_owner = owner[0] if owner else expected_runtime
             with self.subTest(fixture=fixture_name):
                 capability_input = json.loads(
                     (FIXTURE_ROOT / fixture_name).read_text(encoding="utf-8")
@@ -178,7 +185,7 @@ class Phase1FixtureConformance(unittest.TestCase):
                 self.assertEqual(capability_input["host"], expected_host)
                 self.assertEqual(
                     capability_input["external_runtime"],
-                    expected_owner,
+                    expected_runtime,
                 )
                 self.assertEqual(
                     capability_input["resolved_owner"],
@@ -231,17 +238,19 @@ class Phase1FixtureConformance(unittest.TestCase):
             with self.subTest(case=case["name"]):
                 self.assertTrue(list(validator.iter_errors(case["matrix"])))
 
-    def test_partial_hook_ledger_satisfies_the_machine_schema(self) -> None:
+    def test_supported_host_native_hook_ledger_satisfies_the_machine_schema(self) -> None:
         schema = json.loads(
             (SCHEMA_ROOT / "hook-consent.schema.json").read_text(encoding="utf-8")
         )
         answers = read_yaml(FIXTURE_ROOT / "answers-partial-hooks.yml")
         capability_input = json.loads(
-            (FIXTURE_ROOT / "capabilities-absent.json").read_text(encoding="utf-8")
+            (
+                FIXTURE_ROOT / "capabilities-codex-host-native-hooks.json"
+            ).read_text(encoding="utf-8")
         )
         ledger = {
             "schema_version": 1,
-            "detection": "absent",
+            "detection": capability_input["detection"],
             "resolution_evidence_digest": capability_input["evidence_digest"],
             "hooks": answers["approved_fallback_hooks"],
         }

@@ -12,7 +12,7 @@
     {
       "name": "hive-prompt-refine",
       "source_type": "built-in",
-      "content_digest": "sha256:581153b0d07539345372f0e87ab48c51b969dfe57a8e279353e35d000c4d8f76",
+      "content_digest": "sha256:290ba87629582a4260f3e4c497d52571739edafa438329d310dfdcc6e04f962b",
       "side_effect_class": "none",
       "capabilities": [],
       "consent_digest": null,

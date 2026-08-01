@@ -5,7 +5,7 @@ description: Record the current durable Hive run state in canonical STATUS.md th
 
 # Hive Run Checkpoint
 
-Record state only. Execution and continuation remain owned by the already resolved host, OMX, or OMC capability.
+Record state only. Execution and continuation remain owned by the run's pinned owner. New v0.9 runs default to host-native capabilities; an explicitly selected external compatibility owner or legacy 0.8.x OMX/OMC owner remains pinned.
 
 ## Workflow
 
@@ -17,7 +17,7 @@ Record state only. Execution and continuation remain owned by the already resolv
    - Record passed, failed, or unverified criteria truthfully.
    - Reference evidence only as `.hive/runs/<run-id>/evidence/<safe-file>#sha256:<64-lowercase-hex>`.
    - Include active role IDs whose documents bind the exact run and `.hive/runs/<run-id>/HANDOFF.md`.
-   - Do not include an owner choice. Owner resolution is automatic and immutable after the first checkpoint.
+   - Do not include an owner choice. Run creation supplies the owner: host-native by default for v0.9, explicitly selected external compatibility when requested, or the preserved owner of an existing 0.8.x run. The owner is immutable after the first checkpoint.
 5. Obtain a fresh normalized capability-resolution JSON from the active host adapter. Do not probe or read `.omx/`, `.omc/`, plugin caches, session state, or host-global configuration.
 6. Run:
 

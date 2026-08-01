@@ -1,6 +1,6 @@
 {
   "name": "aigent-hive",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "description": "Install and maintain project-local Aigent Hive harnesses without provider API credentials.",
   "author": {
     "name": "Aigent Hive maintainers",

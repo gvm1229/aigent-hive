@@ -12,7 +12,7 @@
     {
       "name": "hive-simple-question",
       "source_type": "built-in",
-      "content_digest": "sha256:c8c39db30d086cfda9f1989b50fade83523a23c2354d3713d84b707318b36fe6",
+      "content_digest": "sha256:d9eb13d81e66fbcc22c1aa73fd693f660d8bee9dc651905e1b1b9f2a0278afb9",
       "side_effect_class": "none",
       "capabilities": [],
       "consent_digest": null,

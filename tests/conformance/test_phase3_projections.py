@@ -27,12 +27,16 @@ LOCAL_SKILL_SOURCE = (
     PHASE3_FIXTURES / "optional/local-inspect/SKILL.md"
 )
 PROJECTED_BUILTINS = (
+    "ai-slop-cleaner",
     "auto-setup-harness",
+    "best-practice-research",
     "setup-harness",
     "hive-simple-question",
     "hive-prompt-refine",
     "hive-knowledge-capture",
     "hive-knowledge-query",
+    "hive-knowledge-scan",
+    "hive-loop-engineering",
     "hive-knowledge-maintenance",
     "hive-knowledge-promote",
     "hive-project-upgrade",
@@ -42,6 +46,7 @@ PROJECTED_BUILTINS = (
     "hive-judge-package",
     "hive-update",
     "hive-usage-guard",
+    "hive-wiki",
     "hive-migrate",
 )
 CATALOG_ONLY = ()
@@ -378,7 +383,7 @@ class Phase3FallbackHookExclusions(Phase3ProjectionTestCase):
         install, _ = self.invoke_setup(
             target,
             answers=FIXTURE_ROOT / "answers-partial-hooks.yml",
-            capabilities="capabilities-absent.json",
+            capabilities="capabilities-codex-host-native-hooks.json",
         )
         self.assertEqual(install.returncode, 0, install.stderr)
         guarded_input = self.work_root / "must-not-read.fifo"
@@ -428,7 +433,7 @@ class Phase3FallbackHookExclusions(Phase3ProjectionTestCase):
         install, _ = self.invoke_setup(
             target,
             answers=FIXTURE_ROOT / "answers-partial-hooks.yml",
-            capabilities="capabilities-absent.json",
+            capabilities="capabilities-codex-host-native-hooks.json",
         )
         self.assertEqual(install.returncode, 0, install.stderr)
 
@@ -460,7 +465,7 @@ class Phase3FallbackHookExclusions(Phase3ProjectionTestCase):
         process, _ = self.invoke_setup(
             target,
             answers=FIXTURE_ROOT / "answers-all-hooks.yml",
-            capabilities="capabilities-absent.json",
+            capabilities="capabilities-codex-host-native-hooks.json",
         )
         self.assertEqual(process.returncode, 0, process.stderr)
 
@@ -479,7 +484,7 @@ class Phase3FallbackHookExclusions(Phase3ProjectionTestCase):
         process, _ = self.invoke_setup(
             target,
             answers=FIXTURE_ROOT / "answers-all-hooks.yml",
-            capabilities="capabilities-absent.json",
+            capabilities="capabilities-codex-host-native-hooks.json",
         )
         self.assertEqual(process.returncode, 0, process.stderr)
 

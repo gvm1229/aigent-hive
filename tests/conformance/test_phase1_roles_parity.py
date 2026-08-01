@@ -109,12 +109,16 @@ class Phase1CopierParity(Phase1CliTestCase):
         skills = active_ledger["skills"]
         self.assertIsInstance(skills, list)
         expected_names = [
+            "ai-slop-cleaner",
             "auto-setup-harness",
+            "best-practice-research",
             "hive-judge-package",
             "hive-knowledge-capture",
             "hive-knowledge-maintenance",
             "hive-knowledge-promote",
             "hive-knowledge-query",
+            "hive-knowledge-scan",
+            "hive-loop-engineering",
             "hive-migrate",
             "hive-project-upgrade",
             "hive-prompt-refine",
@@ -124,6 +128,7 @@ class Phase1CopierParity(Phase1CliTestCase):
             "hive-simple-question",
             "hive-update",
             "hive-usage-guard",
+            "hive-wiki",
             "setup-harness",
         ]
         self.assertEqual([entry["name"] for entry in skills], expected_names)
@@ -219,7 +224,7 @@ class Phase1CopierParity(Phase1CliTestCase):
         rust_process, _ = self.invoke_setup(
             rust_target,
             answers=FIXTURE_ROOT / "answers-all-hooks.yml",
-            capabilities="capabilities-absent.json",
+            capabilities="capabilities-codex-host-native-hooks.json",
         )
         copier_process = subprocess.run(
             [
@@ -241,6 +246,81 @@ class Phase1CopierParity(Phase1CliTestCase):
         self.assertEqual(rust_process.returncode, 0, rust_process.stderr)
         self.assertEqual(copier_process.returncode, 0, copier_process.stderr)
         self.assert_copier_trees_equal(rust_target, copier_target)
+
+    def test_copier_rejects_hooks_without_exact_supported_host_native_events(
+        self,
+    ) -> None:
+        copier = os.environ.get("COPIER_BIN") or shutil.which("copier")
+        self.assertIsNotNone(
+            copier,
+            "Copier 9.17.0 is required for the Phase 1 parity gate",
+        )
+        supported = json.loads(
+            (FIXTURE_ROOT / "capabilities-codex-host-native-hooks.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        absent = json.loads(
+            (FIXTURE_ROOT / "capabilities-absent.json").read_text(encoding="utf-8")
+        )
+        external_owner = copy.deepcopy(supported)
+        external_owner["resolved_owner"] = "omx"
+        unsupported_event = copy.deepcopy(supported)
+        unsupported_event["hook_events"]["PreToolUse"]["support"] = "unsupported"
+
+        for resolution in (external_owner, unsupported_event):
+            payload = {
+                key: value
+                for key, value in resolution.items()
+                if key != "evidence_digest"
+            }
+            canonical = json.dumps(
+                payload,
+                ensure_ascii=False,
+                separators=(",", ":"),
+                sort_keys=True,
+            ).encode("utf-8")
+            resolution["evidence_digest"] = (
+                "sha256:" + hashlib.sha256(canonical).hexdigest()
+            )
+
+        cases = {
+            "absent": absent,
+            "external-owner": external_owner,
+            "unsupported-event": unsupported_event,
+        }
+        for name, resolution in cases.items():
+            with self.subTest(name=name):
+                copier_data = read_yaml(
+                    FIXTURE_ROOT / "copier-hooks-parity-data.yml"
+                )
+                copier_data["capability_resolution"] = resolution
+                data_path = self.work_root / f"copier-hooks-{name}.yml"
+                write_yaml(data_path, copier_data)
+                target = self.work_root / f"copier-hooks-{name}"
+                process = subprocess.run(
+                    [
+                        str(copier),
+                        "copy",
+                        "--trust",
+                        "--defaults",
+                        "--data-file",
+                        str(data_path),
+                        str(REPOSITORY_ROOT),
+                        str(target),
+                    ],
+                    cwd=REPOSITORY_ROOT,
+                    check=False,
+                    text=True,
+                    capture_output=True,
+                )
+
+                self.assertNotEqual(process.returncode, 0)
+                self.assertIn("supported event", process.stderr)
+                self.assertFalse(
+                    (target / ".hive/config/approved-hooks.yml").exists()
+                )
+                self.assertFalse((target / ".hive/hooks").exists())
 
     def test_copier_and_rust_builtin_skill_trees_match_for_each_host(
         self,

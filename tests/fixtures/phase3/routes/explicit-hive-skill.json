@@ -9,14 +9,15 @@
   "external_candidate": {
     "name": "analyze",
     "provided_by": "omx",
-    "compatible": true
+    "compatible": true,
+    "explicit_selection": true
   },
   "hive_candidate": "hive-knowledge-query",
   "active_hive_skills": [
     {
       "name": "hive-knowledge-query",
       "source_type": "built-in",
-      "content_digest": "sha256:3e0354c7b90bf5cc06ce4bce55d604d007ebd4f4fe03581d48e0cdefbf206b60",
+      "content_digest": "sha256:c19a76a14e65332477b7ddf4779d59eb9f5ac7baaca44a3ac4384d050e40ccb0",
       "side_effect_class": "read-only",
       "capabilities": ["filesystem-read", "memory-read", "shell"],
       "consent_digest": null,

@@ -16,6 +16,24 @@ This directive governs durable project memory.
 
 Do not use chat history, `.omx/`, `.agents/work/`, issue drafts, or generated SQLite data as durable project memory.
 
+## Mandatory Turn Memory Gate
+
+- On every user turn while Global Wiki is enabled, classify explicit reusable facts,
+  preferences, workflows, corrections, and completed reusable outcomes before the final response.
+- Write each safe durable item as one bounded normalized canonical claim through
+  `hive knowledge remember`; require the canonical Markdown and derived-index receipt before
+  reporting completion. Resolve `user-root|current-project|named-project` scope explicitly and
+  fail closed on unknown or ambiguous named scope.
+- Treat an identical current truth as an idempotent no-op and use an explicit supersede plan for
+  a correction. Never append a correction diary or leave durable truth only in SQLite.
+- Write nothing for credentials, likely secrets, confidential data without current-action
+  authorization, ephemeral status, ambiguous inference, raw transcript, complete conversation,
+  hook payload, tool output, hidden prompt, cache, database, or runtime state. Wiki disabled also
+  means zero memory mutation.
+- This turn gate is an agent-reviewed foreground step, never a hook, background recorder, or raw
+  query capture. Source-product outcomes still use the bilingual atomic-fact gate below; do not
+  duplicate one fact in both stores unless it also has a distinct user-global use.
+
 ## Agent-Reviewed Task-Fact Autocapture
 
 - Before the final response for a material source task, decide whether the completed work created

@@ -9,7 +9,8 @@
   "external_candidate": {
     "name": "analyze",
     "provided_by": "omx",
-    "compatible": true
+    "compatible": true,
+    "explicit_selection": true
   },
   "hive_candidate": "hive-knowledge-query",
   "active_hive_skills": [],

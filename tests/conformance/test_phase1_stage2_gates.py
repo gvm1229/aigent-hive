@@ -38,12 +38,16 @@ CANONICAL_VISIBLE_PATHS = (
     ".hive/team/roles/reviewer.md",
 )
 BUILTIN_SKILL_NAMES = (
+    "ai-slop-cleaner",
     "auto-setup-harness",
+    "best-practice-research",
     "hive-judge-package",
     "hive-knowledge-capture",
     "hive-knowledge-maintenance",
     "hive-knowledge-promote",
     "hive-knowledge-query",
+    "hive-knowledge-scan",
+    "hive-loop-engineering",
     "hive-migrate",
     "hive-project-upgrade",
     "hive-prompt-refine",
@@ -53,6 +57,7 @@ BUILTIN_SKILL_NAMES = (
     "hive-simple-question",
     "hive-update",
     "hive-usage-guard",
+    "hive-wiki",
     "setup-harness",
 )
 CODEX_HIVE_PROJECTION_PATHS = {
@@ -258,7 +263,7 @@ class Phase1HookForeignEntryGate(Phase1CliTestCase):
         setup_process, setup_result = self.invoke_setup(
             target,
             answers=FIXTURE_ROOT / "answers-partial-hooks.yml",
-            capabilities="capabilities-absent.json",
+            capabilities="capabilities-codex-host-native-hooks.json",
         )
 
         self.assertEqual(setup_process.returncode, 0, setup_process.stderr)

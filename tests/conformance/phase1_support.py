@@ -53,12 +53,16 @@ def write_operational_user_setup(root: Path) -> None:
             "skills": {
                 "mode": "individual",
                 "selected": [
+                    "ai-slop-cleaner",
                     "auto-setup-harness",
+                    "best-practice-research",
                     "hive-judge-package",
                     "hive-knowledge-capture",
                     "hive-knowledge-maintenance",
                     "hive-knowledge-promote",
                     "hive-knowledge-query",
+                    "hive-knowledge-scan",
+                    "hive-loop-engineering",
                     "hive-migrate",
                     "hive-project-upgrade",
                     "hive-prompt-refine",
@@ -68,6 +72,7 @@ def write_operational_user_setup(root: Path) -> None:
                     "hive-simple-question",
                     "hive-update",
                     "hive-usage-guard",
+                    "hive-wiki",
                     "setup-harness",
                     "setup-hive",
                 ],
@@ -143,7 +148,7 @@ class Phase1CliTestCase(unittest.TestCase):
         target: Path,
         *,
         answers: Path | None = None,
-        capabilities: Path | str = "capabilities-codex-omx.json",
+        capabilities: Path | str = "capabilities-codex-host-native.json",
         mode: str = "--apply",
         reconfigure_roles: tuple[str, ...] = (),
         extra_arguments: tuple[str, ...] = (),
@@ -206,7 +211,7 @@ class Phase1CliTestCase(unittest.TestCase):
         *,
         capability: str,
         event: str,
-        capabilities: Path | str | None = "capabilities-absent.json",
+        capabilities: Path | str | None = "capabilities-codex-host-native-hooks.json",
         input_path: Path | None = None,
     ) -> tuple[subprocess.CompletedProcess[str], dict[str, object]]:
         command = [

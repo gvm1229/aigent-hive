@@ -132,7 +132,7 @@ impl Error for RenderError {}
 pub struct SetupOutcome {
     /// Project-relative paths whose bytes differ from the active target.
     pub changed_paths: Vec<String>,
-    /// Automatically selected orchestration owner.
+    /// Pinned orchestration owner selected for this setup.
     pub resolved_owner: String,
     /// Digest of the complete normalized planned tree.
     pub tree_digest: String,
@@ -531,11 +531,11 @@ pub fn expected_external_runtime(target: &Path) -> Result<Option<&'static str>, 
     }
 }
 
-/// Validate an installed fallback hook with required fresh host evidence.
+/// Validate an installed optional hook with required fresh host evidence.
 ///
-/// Every state other than conclusive `absent` makes the fallback hook inert
-/// before installed hook authorization proceeds. The caller can therefore
-/// perform this check before reading hook event input.
+/// Only an exact event qualified as `supported` for the installed host-native
+/// owner may proceed. Absent, unsupported, unverified, best-effort, and
+/// externally owned surfaces remain inert before hook event input is read.
 ///
 /// # Errors
 ///
@@ -551,7 +551,8 @@ pub fn authorize_hook_with_resolution(
     let fresh_path = validate_fresh_capability_resolution_path(target, fresh_capabilities)?;
     let fresh = load_resolution(&fresh_path)?;
     validate_resolution_host(&fresh.host, &fresh)?;
-    if derive_resolution(&fresh)?.0 != "absent" {
+    let _ = derive_resolution(&fresh)?;
+    if !host_native_hook_event_supported(&fresh, event) {
         return Ok(HookAuthorization::Inert);
     }
     ensure_consumer_target(target).map_err(|error| RenderError::Safety(error.to_string()))?;
@@ -562,13 +563,13 @@ pub fn authorize_hook_with_resolution(
             "fresh capability evidence does not address the installed host".to_owned(),
         ));
     }
-    let (detection, _, _) = derive_resolution(&resolution)?;
-    if detection != "absent" {
+    let _ = derive_resolution(&resolution)?;
+    if !host_native_hook_event_supported(&resolution, event) {
         return Ok(HookAuthorization::Inert);
     }
     if fresh.evidence_digest != resolution.evidence_digest {
         return Err(RenderError::Safety(
-            "fresh capability evidence does not match the installed absent resolution".to_owned(),
+            "fresh capability evidence does not match the installed hook resolution".to_owned(),
         ));
     }
     let bytes = read_target_required(
@@ -581,11 +582,11 @@ pub fn authorize_hook_with_resolution(
         RenderError::Safety(format!("fallback hook approval ledger is invalid: {error}"))
     })?;
     if ledger.schema_version != 1
-        || ledger.detection != "absent"
+        || ledger.detection != resolution.detection
         || ledger.resolution_evidence_digest != resolution.evidence_digest
     {
         return Err(RenderError::Safety(
-            "fallback hook approval does not bind current absent evidence".to_owned(),
+            "optional hook approval does not bind the current host-native evidence".to_owned(),
         ));
     }
     let hook = ledger
@@ -2167,6 +2168,11 @@ fn resolve_effective_project_preferences(
         }
         _ => unreachable!("setup mode was validated"),
     };
+    if !effective.wiki_enabled {
+        effective
+            .selected_project_skills
+            .retain(|name| !name.starts_with("hive-knowledge-") && name != "hive-wiki");
+    }
     effective.selected_project_skills.sort();
     Ok(Some(effective))
 }
@@ -2426,7 +2432,7 @@ fn validate_resolution_host(
     }
     if resolution.resolved_owner != owner {
         return Err(RenderError::Input(format!(
-            "capability owner must resolve automatically to {owner}"
+            "capability owner is not valid for the selected host capability path: {owner}"
         )));
     }
     if resolution.external_runtime.as_deref() != external_runtime {
@@ -2490,11 +2496,17 @@ fn derive_resolution(
         return Ok(("unknown", "host-native", None));
     }
     if compatible {
-        return Ok((
-            "available",
-            expected_runtime.expect("Codex and Claude have an expected runtime"),
-            expected_runtime,
-        ));
+        let owner = if resolution.resolved_owner == "host-native" {
+            "host-native"
+        } else if resolution.resolved_owner.as_str() == expected_runtime.expect("runtime") {
+            expected_runtime.expect("runtime")
+        } else {
+            return Err(RenderError::Input(
+                "compatible external owner must match the active host or remain host-native"
+                    .to_owned(),
+            ));
+        };
+        return Ok(("available", owner, expected_runtime));
     }
     if incompatible {
         return Ok(("incompatible", "host-native", expected_runtime));
@@ -2567,11 +2579,6 @@ fn validate_hook_approvals(
     hooks: &[HookApproval],
     resolution: &CapabilityResolution,
 ) -> Result<(), RenderError> {
-    if !hooks.is_empty() && resolution.detection != "absent" {
-        return Err(RenderError::Safety(
-            "fallback hooks require conclusive external capability absence".to_owned(),
-        ));
-    }
     let mut identities = BTreeSet::new();
     for hook in hooks {
         if hook.consent_version != 1
@@ -2598,6 +2605,11 @@ fn validate_hook_approvals(
                 )));
             }
         };
+        if !host_native_hook_event_supported(resolution, expected_event) {
+            return Err(RenderError::Safety(format!(
+                "optional hook requires a supported host-native event: {expected_event}"
+            )));
+        }
         let expected_path = format!(".hive/hooks/{}", hook.capability);
         let expected_command = format!(
             "hive hook --capability {} --event {expected_event} \
@@ -2623,6 +2635,19 @@ fn validate_hook_approvals(
         verify_consent_digest(hook, &hook.consent_digest, "fallback hook")?;
     }
     Ok(())
+}
+
+fn host_native_hook_event_supported(resolution: &CapabilityResolution, event: &str) -> bool {
+    resolution.detection == "available"
+        && resolution.resolved_owner == "host-native"
+        && resolution
+            .hook_events
+            .as_ref()
+            .and_then(|events| events.get(event))
+            .and_then(JsonValue::as_object)
+            .and_then(|claim| claim.get("support"))
+            .and_then(JsonValue::as_str)
+            == Some("supported")
 }
 
 fn hook_descriptor_bytes(hook: &HookApproval) -> Result<Vec<u8>, RenderError> {
@@ -3055,7 +3080,7 @@ fn render_harness_toml(
             .expect("writing to String cannot fail");
         }
     }
-    if resolution.detection == "absent" && !answers.approved_fallback_hooks.is_empty() {
+    if !answers.approved_fallback_hooks.is_empty() {
         output.push_str("approved_fallback_hooks_file = \".hive/config/approved-hooks.yml\"\n");
     }
     output.push_str(
@@ -3085,7 +3110,7 @@ fn render_agents_marker(
         )
     });
     let marker = format!(
-        "{MARKER_START}\n# Aigent Hive\n\nProject: `{}`\nProfile: `{}`\n{}Primary host: `{}`\nResolved orchestration owner: `{}`\nResolution evidence: `{}`\n\n- Read canonical Hive configuration from `.hive/config/harness.toml`.\n- Before editing anything, read `.hive/directives/00-editing-discipline.md` in full. Apply all four sections as the highest-priority editing discipline within the Hive contract; never compact, summarize, omit, or substitute any part. Its literal `# CLAUDE.md` heading is original text, not Claude-only scope: the directive applies identically on Codex, Claude, and Gemini Antigravity. Higher-priority instructions and Hive security, ownership, credential, and production boundaries still control.\n- Immediately before each new automatic dispatch, run `hive usage enforce --target <project-root> --session-id <exact-current-host-session-id> --process-id <exact-current-host-process-id> [--account-digest <active-account-digest>] --output json`. Do not run `enforce` for ordinary answers, manual work, or other non-dispatch actions. The account digest may be omitted only when the qualified local sensor exposes exactly one unambiguous account. A current halt marker takes priority; exit `3` blocks that automatic dispatch. Exit `0` is only a session-bound preflight and never authorizes dispatch. Automatic dispatch requires a separate `hive run resume --dispatch-intent automatic` result with `data.usage_guard.enforced=true`, `outcome=authorized`, one authorization ID, and exactly one dispatch brief. A confirmed current-session disable bypasses this preflight but does not authorize dispatch. Non-Codex automatic dispatch fails closed until a qualified local sensor exists. Never transfer an override or halt marker to another host, session, or process. Recognize obvious threshold/off/on intent by meaning rather than a finite phrase list. A bare continue, resume, finish, urgency, or active run never authorizes bypass.\n- Load only the directives and knowledge required by the current request.\n- For a simple question, do not load project memory, spawn agents, or edit files.\n- Route explicit prompt authoring or improvement intent to `hive-prompt-refine` in `refine-only` mode unless the same request explicitly asks to execute the result.\n- If an ordinary work prompt materially lacks a goal, scope, constraints, acceptance criteria, or output contract, offer one concise optional refinement suggestion without rewriting the prompt, loading the Skill, or executing the suggestion. Do not interrupt sufficiently clear ordinary work or a simple question.\n- Before presenting pending actions or a user handoff, complete every safe, in-scope, automatable action that does not require new user authority, credentials, a protected external mutation, or a materially different product decision. Then give only the genuinely user-owned actions as a concise ordered guide with each exact location, command or operation, expected result or return evidence, and reason user authority is required. List failed or impossible work separately with its cause and recovery path.\n- Keep durable role identity in `.hive/team/roles/`; the active host owns sessions and subagents.\n- Keep durable knowledge in Markdown. Treat `.hive/index/*.sqlite*` as disposable.\n- Keep the selected interface language consistent throughout every question and response. In Korean, keep English only for proper nouns, product or package names, commands, code identifiers, paths, schema keys, exact UI labels, and terms without a clear Korean equivalent; replace ordinary English nouns with Korean. In English, write the full passage in English except for exact Korean names, literals, quotations, or text the user explicitly asks to preserve.\n- Write human-readable project documents in concise Korean unless the user explicitly requests another language. Prefer short headings, bullets, tables, checklists, and semantic noun phrases.\n- Do not end authored explanatory Korean prose with declarative or conversational forms. `~다`, `~한다`, `~된다`, `~이다`, `~있다`, `~없다`, `~않는다`, `~했다`, `~됐다`, `~합니다`, `~됩니다`, and `~해요` are non-exhaustive prohibited examples.\n- Do not mechanically change those endings to `~음` or the attached `~ㅁ` form. This includes Korean stems, mixed English-Korean forms, state labels followed by a copula, and possibility clauses. Rewrite the full clause: avoid `Release 계약이 구현됐다.` and `Release 계약이 구현됐음.`; use `Release 계약 구현 완료`. Avoid `API key를 요청하거나 저장하지 않는다.` and `API key를 요청하거나 저장하지 않음.`; use `API key 요청·저장 없음`.\n- Exact bad → good examples (not exhaustive): `Aigent Hive는 provider-neutral 로컬 agent harness다.` → `Aigent Hive: provider-neutral 로컬 agent harness`; `Product version은 0.7.0이다.` → `Product version: 0.7.0`; `Release 계약이 구현됐다.` → `Release 계약 구현 완료`; `API key를 요청하거나 저장하지 않는다.` → `API key 요청·저장 없음`; `이 기능을 사용합니다.` → `기능 사용`; `다음 단계에서 검증해요.` → `다음 단계: 검증`; `검증이 필요합니다.` → `검증 필요`; `업데이트가 완료되었습니다.` → `업데이트 완료`; `Release 계약이 구현됐음.` → `Release 계약 구현 완료`; `API key를 요청하거나 저장하지 않음.` → `API key 요청·저장 없음`.\n- Mechanical nounization examples (not exhaustive): `Status는 INDETERMINATE다.` → `Status: INDETERMINATE`; `문서를 읽음.` → `문서 확인`; `작업이 끝남.` → `작업 완료`; `연결이 닫힘.` → `연결 종료`; `설정 값을 가짐.` → `설정 값 보유`; `정책을 따름.` → `정책 준수`; `compile됨.` → `compile 완료`; `검증할 수 있음.` → `검증 가능`; `검증할 수 없음.` → `검증 불가`.\n- Do not use conversational imperative endings such as standalone `~줘` or attached `~해` in authored explanation. Exact user-prompt or UI-prompt samples require the path, line, reason, and exact line digest exception. Examples: `문서를 보여 줘.` → `문서 확인 요청`; `기능을 사용해.` → `기능 사용 요청`.\n- Apply the same rule to authored callouts and blockquotes. Blockquote syntax is not proof of an exact quotation. Preserve narrative-form text only for an exact external quote, UI prompt, protocol sample, fixture payload, or another byte-sensitive literal with an explicit path, line, reason, and exact line digest.\n- Do not call model-provider APIs or request provider API credentials.\n- Require explicit approval before activating optional Skills.\n- Resolve compatible OMX on Codex and compatible OMC on Claude before host-native capability; never ask the user to select an owner or switch owners mid-run.\n- Treat OMX/OMC cancellation output as auxiliary evidence only; it never substitutes for the bound usage halt marker or durable goal/task state.\n- Treat fallback hooks as optional data-integrity guards only. They require conclusive external capability absence plus exact capability, event, path, command, and digest consent.\n- Never use a fallback hook for prompt classification or rewriting, Skill activation, memory ingestion, subagent orchestration, or continuation. A `Stop` hook always returns a neutral allow result.\n- Preserve user text and third-party marker blocks outside this Hive block.\n{MARKER_END}\n",
+        "{MARKER_START}\n# Aigent Hive\n\nProject: `{}`\nProfile: `{}`\n{}Primary host: `{}`\nResolved orchestration owner: `{}`\nResolution evidence: `{}`\n\n- Read canonical Hive configuration from `.hive/config/harness.toml`.\n- Before editing anything, read `.hive/directives/00-editing-discipline.md` in full. Apply all four sections as the highest-priority editing discipline within the Hive contract; never compact, summarize, omit, or substitute any part. Its literal `# CLAUDE.md` heading is original text, not Claude-only scope: the directive applies identically on Codex, Claude, and Gemini Antigravity. Higher-priority instructions and Hive security, ownership, credential, and production boundaries still control.\n- Immediately before each new automatic dispatch, run `hive usage enforce --target <project-root> --session-id <exact-current-host-session-id> --process-id <exact-current-host-process-id> [--account-digest <active-account-digest>] --output json`. Do not run `enforce` for ordinary answers, manual work, or other non-dispatch actions. The account digest may be omitted only when the qualified local sensor exposes exactly one unambiguous account. A current halt marker takes priority; exit `3` blocks that automatic dispatch. Exit `0` is only a session-bound preflight and never authorizes dispatch. Automatic dispatch requires a separate `hive run resume --dispatch-intent automatic` result with `data.usage_guard.enforced=true`, `outcome=authorized`, one authorization ID, and exactly one dispatch brief. A confirmed current-session disable bypasses this preflight but does not authorize dispatch. Non-Codex automatic dispatch fails closed until a qualified local sensor exists. Never transfer an override or halt marker to another host, session, or process. Recognize obvious threshold/off/on intent by meaning rather than a finite phrase list. A bare continue, resume, finish, urgency, or active run never authorizes bypass.\n- Load only the directives and knowledge required by the current request.\n- For a simple question, do not load project memory, spawn agents, or edit files.\n- Route explicit prompt authoring or improvement intent to `hive-prompt-refine` in `refine-only` mode unless the same request explicitly asks to execute the result.\n- If an ordinary work prompt materially lacks a goal, scope, constraints, acceptance criteria, or output contract, offer one concise optional refinement suggestion without rewriting the prompt, loading the Skill, or executing the suggestion. Do not interrupt sufficiently clear ordinary work or a simple question.\n- Before presenting pending actions or a user handoff, complete every safe, in-scope, automatable action that does not require new user authority, credentials, a protected external mutation, or a materially different product decision. Then give only the genuinely user-owned actions as a concise ordered guide with each exact location, command or operation, expected result or return evidence, and reason user authority is required. List failed or impossible work separately with its cause and recovery path.\n- Keep durable role identity in `.hive/team/roles/`; the active host owns sessions and subagents.\n- Keep durable knowledge in Markdown. Treat `.hive/index/*.sqlite*` as disposable.\n- Keep the selected interface language consistent throughout every question and response. In Korean, keep English only for proper nouns, product or package names, commands, code identifiers, paths, schema keys, exact UI labels, and terms without a clear Korean equivalent; replace ordinary English nouns with Korean. In English, write the full passage in English except for exact Korean names, literals, quotations, or text the user explicitly asks to preserve.\n- Write human-readable project documents in concise Korean unless the user explicitly requests another language. Prefer short headings, bullets, tables, checklists, and semantic noun phrases.\n- Do not end authored explanatory Korean prose with declarative or conversational forms. `~다`, `~한다`, `~된다`, `~이다`, `~있다`, `~없다`, `~않는다`, `~했다`, `~됐다`, `~합니다`, `~됩니다`, and `~해요` are non-exhaustive prohibited examples.\n- Do not mechanically change those endings to `~음` or the attached `~ㅁ` form. This includes Korean stems, mixed English-Korean forms, state labels followed by a copula, and possibility clauses. Rewrite the full clause: avoid `Release 계약이 구현됐다.` and `Release 계약이 구현됐음.`; use `Release 계약 구현 완료`. Avoid `API key를 요청하거나 저장하지 않는다.` and `API key를 요청하거나 저장하지 않음.`; use `API key 요청·저장 없음`.\n- Exact bad → good examples (not exhaustive): `Aigent Hive는 provider-neutral 로컬 agent harness다.` → `Aigent Hive: provider-neutral 로컬 agent harness`; `Product version은 0.7.0이다.` → `Product version: 0.7.0`; `Release 계약이 구현됐다.` → `Release 계약 구현 완료`; `API key를 요청하거나 저장하지 않는다.` → `API key 요청·저장 없음`; `이 기능을 사용합니다.` → `기능 사용`; `다음 단계에서 검증해요.` → `다음 단계: 검증`; `검증이 필요합니다.` → `검증 필요`; `업데이트가 완료되었습니다.` → `업데이트 완료`; `Release 계약이 구현됐음.` → `Release 계약 구현 완료`; `API key를 요청하거나 저장하지 않음.` → `API key 요청·저장 없음`.\n- Mechanical nounization examples (not exhaustive): `Status는 INDETERMINATE다.` → `Status: INDETERMINATE`; `문서를 읽음.` → `문서 확인`; `작업이 끝남.` → `작업 완료`; `연결이 닫힘.` → `연결 종료`; `설정 값을 가짐.` → `설정 값 보유`; `정책을 따름.` → `정책 준수`; `compile됨.` → `compile 완료`; `검증할 수 있음.` → `검증 가능`; `검증할 수 없음.` → `검증 불가`.\n- Do not use conversational imperative endings such as standalone `~줘` or attached `~해` in authored explanation. Exact user-prompt or UI-prompt samples require the path, line, reason, and exact line digest exception. Examples: `문서를 보여 줘.` → `문서 확인 요청`; `기능을 사용해.` → `기능 사용 요청`.\n- Apply the same rule to authored callouts and blockquotes. Blockquote syntax is not proof of an exact quotation. Preserve narrative-form text only for an exact external quote, UI prompt, protocol sample, fixture payload, or another byte-sensitive literal with an explicit path, line, reason, and exact line digest.\n- Do not call model-provider APIs or request provider API credentials.\n- Require explicit approval before activating optional Skills.\n- Start every new v0.9 run with verified host-native capabilities. Use OMX or OMC only when the user explicitly selects that external compatibility layer before the run starts. Preserve the owner already pinned by an existing run, including a 0.8.x OMX/OMC owner, and never switch owners mid-run.\n- Treat OMX/OMC cancellation output as auxiliary evidence only; it never substitutes for the bound usage halt marker or durable goal/task state.\n- Treat optional Hive hooks as data-integrity guards only. They require a supported host-native hook surface plus exact capability, event, path, command, and digest consent, and they remain absent for an explicitly selected external owner.\n- Never use a fallback hook for prompt classification or rewriting, Skill activation, memory ingestion, subagent orchestration, or continuation. A `Stop` hook always returns a neutral allow result.\n- Preserve user text and third-party marker blocks outside this Hive block.\n{MARKER_END}\n",
         answers.project_name,
         answers.project_kind,
         preference_summary,
@@ -3094,9 +3119,20 @@ fn render_agents_marker(
         resolution.evidence_digest,
     );
     let marker = marker.replacen(
+        "- Load only the directives and knowledge required by the current request.\n",
+        "- Load only the directives and knowledge required by the current request.\n\
+- When Wiki is enabled, run at most one bounded `hive knowledge retrieve` before question, research, design, plan, debug, or implementation work. Skip retrieval during usage-guard or setup control, when Wiki is disabled, for acknowledgment-only or context-free requests, or after the current turn already performed the lookup.\n",
+        1,
+    );
+    let marker = marker.replacen(
+        "- For a simple question, do not load project memory, spawn agents, or edit files.",
+        "- For a simple question, do not spawn agents or edit files. Load canonical memory only through that bounded retrieval preflight when the question needs project or user context.",
+        1,
+    );
+    let marker = marker.replacen(
         "- Keep durable knowledge in Markdown. Treat `.hive/index/*.sqlite*` as disposable.\n",
         "- Keep durable knowledge in Markdown. Treat `.hive/index/*.sqlite*` as disposable.\n\
-- When this marker reports Wiki enabled, run agent-reviewed task-fact autocapture before the final response for material work. Record the bounded outcome, tool or project, criteria, and originating request summary from current authorized artifacts; never ingest a raw transcript, hook payload, tool output, hidden prompt, or runtime state.\n",
+- Before the final response on every Wiki-enabled turn, perform agent-reviewed classification of current authorized user statements and outcomes as a reusable task fact, preference, or workflow. Record the bounded outcome, tool or project, criteria, and originating request summary. When reusable, run `hive knowledge remember`, require its canonical-write receipt, and only then finish. Never write raw transcripts, secrets, ambiguous or ephemeral content, or confidential content without its exact authorized scope.\n",
         1,
     );
     let marker = marker.replacen(
@@ -4030,7 +4066,7 @@ fn optional_source_from_approval(
 fn stale_hook_deletions<T: TargetRead + ?Sized>(
     target: &T,
     desired: &[HookApproval],
-    resolution: &CapabilityResolution,
+    _resolution: &CapabilityResolution,
 ) -> Result<BTreeSet<PathBuf>, RenderError> {
     let ledger_path = PathBuf::from(".hive/config/approved-hooks.yml");
     let Some(bytes) = read_target_optional(target, &ledger_path)? else {
@@ -4057,7 +4093,7 @@ fn stale_hook_deletions<T: TargetRead + ?Sized>(
         .iter()
         .filter(|hook| !desired_paths.contains(Path::new(&hook.path)))
         .collect();
-    let remove_ledger = desired.is_empty() || resolution.detection != "absent";
+    let remove_ledger = desired.is_empty();
     if stale_hooks.is_empty() && !remove_ledger {
         return Ok(BTreeSet::new());
     }
@@ -4092,7 +4128,7 @@ fn validate_revoked_hook_ownership<T: TargetRead + ?Sized>(
     let installed_resolution = read_installed_resolution(target).map_err(&conflict)?;
     validate_resolution(&installed_answers, &installed_resolution).map_err(&conflict)?;
     if ledger.schema_version != 1
-        || ledger.detection != "absent"
+        || ledger.detection != installed_resolution.detection
         || ledger.resolution_evidence_digest != installed_resolution.evidence_digest
         || ledger.hooks != installed_answers.approved_fallback_hooks
     {
@@ -5777,14 +5813,13 @@ fn validate_installed(target: &Path) -> Result<(), RenderError> {
         let ledger: HookLedger = serde_json::from_value(hook_value).map_err(|error| {
             RenderError::Verification(format!("invalid installed hook ledger: {error}"))
         })?;
-        if resolution.detection != "absent"
-            || ledger.schema_version != 1
-            || ledger.detection != "absent"
+        if ledger.schema_version != 1
+            || ledger.detection != resolution.detection
             || ledger.resolution_evidence_digest != resolution.evidence_digest
             || ledger.hooks != installed_answers.approved_fallback_hooks
         {
             return Err(RenderError::Verification(
-                "installed hooks do not bind current approvals and absent evidence".to_owned(),
+                "installed hooks do not bind current approvals and host-native evidence".to_owned(),
             ));
         }
         validate_hook_approvals(&ledger.hooks, &resolution).map_err(as_verification)?;
@@ -6400,11 +6435,12 @@ fn render_knowledge_scope(answers: &SetupAnswers) -> Result<Vec<u8>, RenderError
 }
 
 fn render_hook_ledger(hooks: &[HookApproval], resolution: &CapabilityResolution) -> Vec<u8> {
-    let mut output = "# Generated only from explicit fallback-hook approvals after conclusive external capability absence.\n\
+    let mut output = "# Generated only from explicit optional-hook approvals for a supported host-native event.\n\
 schema_version: 1\n\
-detection: absent\n\
-resolution_evidence_digest: "
+detection: "
         .to_owned();
+    output.push_str(&resolution.detection);
+    output.push_str("\nresolution_evidence_digest: ");
     output.push_str(
         &serde_json::to_string(&resolution.evidence_digest)
             .expect("serializing a string to JSON cannot fail"),
@@ -7222,6 +7258,58 @@ mod tests {
             .contains("does not match the installed harness"));
     }
 
+    fn current_skill_paths_added_since_0_7(capabilities: &str) -> Vec<String> {
+        let new_body_skills = [
+            "ai-slop-cleaner",
+            "auto-setup-harness",
+            "best-practice-research",
+            "hive-knowledge-scan",
+            "hive-loop-engineering",
+            "hive-wiki",
+        ];
+        let metadata_skills = [
+            "ai-slop-cleaner",
+            "auto-setup-harness",
+            "best-practice-research",
+            "hive-judge-package",
+            "hive-knowledge-capture",
+            "hive-knowledge-maintenance",
+            "hive-knowledge-promote",
+            "hive-knowledge-query",
+            "hive-knowledge-scan",
+            "hive-loop-engineering",
+            "hive-migrate",
+            "hive-project-upgrade",
+            "hive-prompt-refine",
+            "hive-role-handoff",
+            "hive-run-checkpoint",
+            "hive-run-resume",
+            "hive-simple-question",
+            "hive-update",
+            "hive-usage-guard",
+            "hive-wiki",
+            "setup-harness",
+        ];
+        let mut expected = new_body_skills
+            .iter()
+            .map(|name| format!(".agents/skills/{name}/SKILL.md"))
+            .collect::<Vec<_>>();
+        expected.extend(
+            metadata_skills
+                .iter()
+                .map(|name| format!(".agents/skills/{name}/agents/openai.yaml")),
+        );
+        if capabilities == "capabilities-claude-omc.json" {
+            expected.extend(
+                new_body_skills
+                    .iter()
+                    .map(|name| format!(".claude/skills/{name}/SKILL.md")),
+            );
+        }
+        expected.sort();
+        expected
+    }
+
     #[test]
     fn frozen_0_7_full_registry_matches_release_and_ignores_current_candidate_mutation() {
         for (answers, capabilities) in [
@@ -7245,39 +7333,22 @@ mod tests {
                 .filter(|path| !historical_files.contains_key(*path))
                 .cloned()
                 .collect::<Vec<_>>();
-            let mut expected_added = vec![".agents/skills/auto-setup-harness/SKILL.md".to_owned()];
-            for name in [
-                "auto-setup-harness",
-                "hive-judge-package",
-                "hive-knowledge-capture",
-                "hive-knowledge-maintenance",
-                "hive-knowledge-promote",
-                "hive-knowledge-query",
-                "hive-migrate",
-                "hive-project-upgrade",
-                "hive-prompt-refine",
-                "hive-role-handoff",
-                "hive-run-checkpoint",
-                "hive-run-resume",
-                "hive-simple-question",
-                "hive-update",
-                "hive-usage-guard",
-                "setup-harness",
-            ] {
-                expected_added.push(format!(".agents/skills/{name}/agents/openai.yaml"));
-            }
-            if capabilities == "capabilities-claude-omc.json" {
-                expected_added.push(".claude/skills/auto-setup-harness/SKILL.md".to_owned());
-            }
-            expected_added.sort();
+            let expected_added = current_skill_paths_added_since_0_7(capabilities);
             assert_eq!(added_since_0_7, expected_added);
             let changed_since_0_7 = [
                 "AGENTS.md",
+                "/directives/00-project-harness.md",
                 "/directives/01-project-knowledge.md",
+                "/hive-judge-package/SKILL.md",
                 "/hive-knowledge-capture/SKILL.md",
                 "/hive-knowledge-maintenance/SKILL.md",
+                "/hive-knowledge-promote/SKILL.md",
                 "/hive-knowledge-query/SKILL.md",
+                "/hive-project-upgrade/SKILL.md",
                 "/hive-prompt-refine/SKILL.md",
+                "/hive-role-handoff/SKILL.md",
+                "/hive-run-checkpoint/SKILL.md",
+                "/hive-run-resume/SKILL.md",
                 "/hive-simple-question/SKILL.md",
                 "/hive-update/SKILL.md",
                 "/hive-usage-guard/SKILL.md",
@@ -7776,7 +7847,8 @@ mod tests {
             render_agents_marker(&answers, &resolution, Some(&effective)),
             expected
         );
-        assert!(expected.contains("agent-reviewed task-fact autocapture"));
+        assert!(expected.contains("reusable task fact"));
+        assert!(expected.contains("hive knowledge remember"));
         assert!(expected.contains("originating request"));
         assert!(expected.contains("raw transcript"));
     }
@@ -8027,6 +8099,24 @@ mod tests {
         }
     }
 
+    fn supported_host_native_hook_resolution() -> CapabilityResolution {
+        let mut resolution = absent_resolution();
+        resolution.detection = "available".to_owned();
+        resolution.external_runtime = Some("omx".to_owned());
+        resolution.hook_events = Some(BTreeMap::from([(
+            "Stop".to_owned(),
+            serde_json::json!({
+                "support": "supported",
+                "evidence": [{
+                    "source": "qualification-fixture",
+                    "locator": "fixture:codex-stop",
+                    "digest": format!("sha256:{}", "8".repeat(64)),
+                }],
+            }),
+        )]));
+        resolution
+    }
+
     fn signed_hook() -> HookApproval {
         let mut approval = HookApproval {
             consent_version: 1,
@@ -8095,7 +8185,7 @@ mod tests {
     #[test]
     fn every_hook_consent_field_and_descriptor_byte_is_bound() {
         let valid = signed_hook();
-        let resolution = absent_resolution();
+        let resolution = supported_host_native_hook_resolution();
         assert!(validate_hook_approvals(std::slice::from_ref(&valid), &resolution).is_ok());
 
         let mut mutations = Vec::new();
@@ -8134,7 +8224,28 @@ mod tests {
     }
 
     #[test]
-    fn resolver_derives_owner_from_positive_evidence_and_rejects_contradictions() {
+    fn optional_hooks_require_exact_supported_host_native_event() {
+        let hook = signed_hook();
+        assert!(
+            validate_hook_approvals(std::slice::from_ref(&hook), &absent_resolution()).is_err()
+        );
+
+        let mut external = supported_host_native_hook_resolution();
+        external.resolved_owner = "omx".to_owned();
+        assert!(validate_hook_approvals(std::slice::from_ref(&hook), &external).is_err());
+
+        let mut best_effort = supported_host_native_hook_resolution();
+        best_effort
+            .hook_events
+            .as_mut()
+            .expect("hook events")
+            .get_mut("Stop")
+            .expect("Stop claim")["support"] = JsonValue::String("best-effort".to_owned());
+        assert!(validate_hook_approvals(std::slice::from_ref(&hook), &best_effort).is_err());
+    }
+
+    #[test]
+    fn resolver_accepts_host_native_default_or_matching_external_pin_and_rejects_contradictions() {
         let mut resolution = absent_resolution();
         resolution.detection = "available".to_owned();
         resolution.external_runtime = Some("omx".to_owned());
@@ -8148,6 +8259,11 @@ mod tests {
         assert_eq!(
             derive_resolution(&resolution).expect("catalog evidence should be sufficient"),
             ("available", "omx", Some("omx"))
+        );
+        resolution.resolved_owner = "host-native".to_owned();
+        assert_eq!(
+            derive_resolution(&resolution).expect("host-native is the compatible default"),
+            ("available", "host-native", Some("omx"))
         );
 
         resolution.evidence.push(CapabilityEvidence {
@@ -8946,7 +9062,7 @@ mod tests {
             .expect("old Claude projection ownership should verify");
         let deletions = &transition.deletions;
 
-        assert_eq!(deletions.len(), 16);
+        assert_eq!(deletions.len(), 21);
         assert!(deletions
             .iter()
             .all(|path| path.starts_with(".claude/skills")));
@@ -9106,6 +9222,38 @@ mod tests {
                 .expect("enriched capability matrix should validate"),
             "available"
         );
+    }
+
+    #[test]
+    fn fresh_supported_host_native_event_authorizes_exact_installed_hook() {
+        let temporary = tempfile::tempdir().expect("temporary directory");
+        apply_fixture(
+            temporary.path(),
+            "answers-partial-hooks.yml",
+            "capabilities-codex-host-native-hooks.json",
+        );
+        let target = temporary
+            .path()
+            .canonicalize()
+            .expect("fixture target should have a stable path");
+        let fresh = target.join(FRESH_CAPABILITY_RESOLUTION_PATH);
+        fs::create_dir_all(fresh.parent().expect("fresh evidence should have a parent"))
+            .expect("fresh evidence parent should exist");
+        fs::write(
+            &fresh,
+            fs::read(fixture("capabilities-codex-host-native-hooks.json"))
+                .expect("fresh host-native evidence fixture should be readable"),
+        )
+        .expect("fresh evidence should be written with a current timestamp");
+
+        let authorization = authorize_hook_with_resolution(
+            &target,
+            "protect-hive-owned-state",
+            "PreToolUse",
+            Path::new(FRESH_CAPABILITY_RESOLUTION_PATH),
+        )
+        .expect("exact supported host-native event should authorize");
+        assert_eq!(authorization, HookAuthorization::Authorized);
     }
 
     #[test]
@@ -9506,7 +9654,7 @@ mod tests {
         apply_fixture(
             temporary.path(),
             "answers-partial-hooks.yml",
-            "capabilities-absent.json",
+            "capabilities-codex-host-native-hooks.json",
         );
         let sentinel = temporary.path().join(".hive/hooks/user-sentinel");
         fs::write(&sentinel, b"user bytes").expect("sentinel should be written");

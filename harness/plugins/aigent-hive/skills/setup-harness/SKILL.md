@@ -26,13 +26,15 @@ Configure a consumer project without copying Hive source-development instruction
    - In `custom` mode, collect explicit project overrides for interface language, Wiki enablement and language, persona, and Skill selection.
    - Infer repository facts before asking the user.
    - Do not infer preference, risk tolerance, host choice, or optional Skill approval.
-4. Resolve compatibility.
-   - Do not ask the user to choose an orchestration owner.
-   - On Codex, prefer compatible OMX. On Claude Code, prefer compatible OMC. Otherwise resolve host-native capability.
-   - Normalize the read-only result to `available`, `absent`, `incompatible`, or `unknown`.
+4. Resolve the v0.9 owner and capabilities.
+   - Default a new run to the active host's verified native capabilities without asking an owner question.
+   - Treat OMX and OMC as external compatibility options only. Accept one only when the user explicitly requests and confirms it before the run starts; installation or capability evidence alone never changes the default.
+   - Preserve any owner already pinned by an existing run, including a 0.8.x OMX/OMC owner. Reconfigure never migrates or replaces that owner implicitly.
+   - Normalize host-native capability support to `supported`, `best-effort`, `unsupported`, or `unverified`. A required `unsupported` or `unverified` capability stops before writes with `host_capability_unsupported`.
+   - Retain `available`, `absent`, `incompatible`, or `unknown` external detection only for an explicitly selected compatibility layer or validation of legacy 0.8.x state.
    - Compute `evidence_digest` as `sha256(RFC 8785 JCS(normalized capability-resolution object excluding only evidence_digest))`. This binds host, version, surface, detection, external runtime, resolved owner, capability claims, and evidence.
    - Positive evidence may come only from active-host Skill/plugin capability metadata or a public executable path with side-effect-free `--version`.
-   - Conclusive `absent` requires both host-catalog absence and public executable absence. A missing probe surface is `unknown`, not `absent`.
+   - An explicitly selected external layer requires positive compatibility evidence. Missing, incompatible, or unknown evidence is unsupported and never triggers an automatic owner fallback.
    - Never install, update, configure, or invoke OMX/OMC.
    - Never infer state by reading `.omx/`, `.omc/`, plugin caches, session state, or host-global configuration.
    - Do not install Hive copies of plan, Ralph, team, persistent execution loops, or semantic routing hooks.
@@ -41,12 +43,12 @@ Configure a consumer project without copying Hive source-development instruction
    - Require explicit approval for every requested capability and Skill. An empty approval list is valid.
    - Sort capability IDs and bind consent version, displayed provenance, content digest, requested/approved capabilities, and UTC-seconds approval time with `sha256(RFC 8785 JCS(payload))`.
    - Recompute the digest before staging and never repair a mismatch automatically.
-6. Offer fallback hooks only after conclusive absence.
-   - Do not ask, render, register, or execute a fallback hook when detection is `available`, `incompatible`, or `unknown`.
-   - For `absent`, show each exact capability, event, `.hive/hooks/<capability>` path, `hive hook --capability <capability> --event <event> --capabilities .hive/runtime/current-capability-resolution.json --output json` command, and content digest.
+6. Offer optional data-integrity hooks only on a supported host-native hook surface.
+   - Do not ask, render, register, or execute a hook when the host-native hook surface is `unsupported` or `unverified`, or when an explicit external compatibility owner is active.
+   - Show each exact capability, event, `.hive/hooks/<capability>` path, `hive hook --capability <capability> --event <event> --capabilities .hive/runtime/current-capability-resolution.json --output json` command, and content digest.
    - Require explicit approval per hook capability. Declining every hook is fully supported and must create no hook approval artifact or command.
    - Limit hooks to `protect-hive-owned-state`, `update-integrity-guard`, `derived-state-invalidation`, and `checkpoint-reminder`.
-   - Require the host adapter to refresh `.hive/runtime/current-capability-resolution.json` immediately before each non-Stop invocation. Setup never creates or tracks this ephemeral file; missing, stale, malformed, or non-absent evidence leaves the hook inert before hook input is read.
+   - Require the host adapter to refresh `.hive/runtime/current-capability-resolution.json` immediately before each non-Stop invocation. Setup never creates or tracks this ephemeral file; missing, stale, malformed, unsupported, or unverified host-native evidence leaves the hook inert before hook input is read.
    - Hook adapters pass a versioned JSON object on stdin. It contains `schema_version` and `event`, plus only the typed fields needed by the approved capability: `tool`/`operation`/`path`, `action` with dry-run/backup/staging gates, canonical `path`, or `status_path`/`checkpoint_present`.
    - Hooks never classify prompt-submission events, rewrite prompts, activate Skills, ingest memory, spawn subagents, orchestrate work, or decide continuation.
    - A `Stop` hook always returns a neutral allow result without a block decision, continue instruction, or re-invocation prompt.
@@ -119,9 +121,9 @@ Ask only questions whose answers cannot be established from the repository.
    - Present requested filesystem, shell, network, subagent, and external-app capabilities.
    - Require a direct approval or rejection for each capability and candidate.
    - Sort capability IDs and record `sha256(RFC 8785 JCS(payload))` over consent version, exact displayed name/source/revision/content digest, requested/approved capabilities, and UTC-seconds approval time.
-12. **Optional fallback hooks**
-   - Ask only when the automatic external capability result is conclusively `absent`.
-   - Do not ask when the result is `available`, `incompatible`, or `unknown`.
+12. **Optional data-integrity hooks**
+   - Ask only when the active host exposes a supported native hook surface and no explicit external compatibility owner is active.
+   - Do not ask when the native hook surface is `unsupported` or `unverified`.
    - Show each exact capability, event, `.hive/hooks/<capability>` path, executable command, and content digest.
    - Require approval per capability. Rejecting all hooks is valid and produces no hook artifact.
    - Explain that hooks perform only bounded data-integrity diagnostics and never prompt classification or rewriting, Skill activation, memory ingestion, subagent orchestration, or continuation.
@@ -140,7 +142,7 @@ Do not ask about these:
 - SQLite, WAL/SHM, generated backup, and runtime cache exclusion
 - Seven-day maximum backup retention
 - No Hive implementation of plan, Ralph, team, or provider session orchestration
-- Orchestration owner selection: Codex prefers compatible OMX, Claude prefers compatible OMC, and every other supported case uses host-native capability
+- Orchestration owner selection: new v0.9 runs use verified host-native capabilities by default; OMX/OMC requires explicit user selection; existing 0.8.x owner pins remain unchanged
 - Owner detection evidence sources: active-host capability metadata and side-effect-free public `--version` only
 
 ## Safety Invariants
@@ -150,8 +152,8 @@ Do not ask about these:
 - Never activate an optional Skill without explicit approval.
 - Never activate a Skill whose consent payload or digest fails validation.
 - Never claim persistent completion, subagents, or usage enforcement when the selected host does not expose the required capability.
-- Never silently switch from OMX/OMC to another orchestration layer.
-- Never offer or install fallback hooks unless the capability result is conclusively `absent`.
-- Never treat `incompatible` or `unknown` as absence.
+- Never silently switch from a host-native, explicitly selected external, or legacy-pinned owner to another orchestration layer.
+- Never offer or install data-integrity hooks without a supported host-native hook surface and exact user consent, or while an explicit external compatibility owner is active.
+- Never treat `best-effort`, `unsupported`, or `unverified` as supported.
 - Never allow a fallback `Stop` hook to continue or block a session.
 - Never use Copier directly against the live consumer tree; Copier is an authoring and CI surface.

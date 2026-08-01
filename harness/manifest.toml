@@ -77,6 +77,11 @@ ownership = "user-consent-protected"
 source = "conditional-template"
 
 [[paths]]
+pattern = ".hive/config/rag-trust.json"
+ownership = "canonical-data-protected"
+source = "rag-generation-receipt"
+
+[[paths]]
 pattern = ".hive/hooks/**"
 ownership = "user-consent-protected"
 source = "conditional-hook-projection"

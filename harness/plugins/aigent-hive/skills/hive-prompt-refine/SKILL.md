@@ -47,4 +47,4 @@ Structure the refined prompt only as far as useful:
 - Output contract
 - Stop, blocker, and escalation conditions
 
-For explicit `refine-and-run`, show the refined prompt first, then hand execution to the normally resolved host or external orchestration owner. This Skill does not implement an execution loop.
+For explicit `refine-and-run`, show the refined prompt first, then hand execution to the host-native owner by default or to an explicitly selected or already pinned external compatibility owner. This Skill does not implement an execution loop.

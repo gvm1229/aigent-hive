@@ -40,7 +40,7 @@ skills:
     availability: implemented
 
   - name: hive-simple-question
-    description: Answer a self-contained simple question without project context, tools, memory, extra Skills, subagents, orchestration, or persistent run state.
+    description: Answer a self-contained question after required usage and knowledge gates without project inspection, external research, multi-step work, or mutation.
     provided_by: hive
     superseded_by_external: []
     invocation_intents:
@@ -60,7 +60,7 @@ skills:
     availability: implemented
 
   - name: hive-knowledge-capture
-    description: Integrate an explicitly selected non-confidential source and reviewed Wiki draft into canonical Hive knowledge through the signed Hive CLI.
+    description: Review every Wiki-enabled user turn for one durable fact, preference, or workflow and write only an agent-reviewed canonical claim; also ingest reviewed sources.
     provided_by: hive
     superseded_by_external: []
     invocation_intents:
@@ -74,11 +74,12 @@ skills:
     availability: implemented
 
   - name: hive-knowledge-query
-    description: Query canonical Hive knowledge by text or tag without changing canonical project data.
+    description: Run one target-derived bounded Hive retrieval, with one-action authorization for every confidential scope and untrusted-result isolation.
     provided_by: hive
     superseded_by_external: []
     invocation_intents:
-      - QueryKnowledge
+      - AuthorizeConfidentialKnowledge
+      - RetrieveKnowledge
     side_effect_class: read-only
     capabilities:
       - filesystem-read
@@ -87,11 +88,11 @@ skills:
     availability: implemented
 
   - name: hive-knowledge-promote
-    description: Review and promote an eligible project-neutral fact, reusable preference, or portable workflow into user-scope canonical Hive knowledge.
+    description: Preview and explicitly promote one digest-bound eligible page or reviewed scan claim into user-scope canonical Hive knowledge.
     provided_by: hive
     superseded_by_external: []
     invocation_intents:
-      - IngestKnowledge
+      - PromoteKnowledge
     side_effect_class: external-write
     capabilities:
       - filesystem-read
@@ -220,5 +221,79 @@ skills:
     capabilities:
       - filesystem-read
       - filesystem-write
+      - shell
+    availability: implemented
+
+  - name: hive-loop-engineering
+    description: Engineer and validate bounded evidence-gated Hive run graphs while leaving every task launch to the active host.
+    provided_by: hive
+    superseded_by_external: []
+    invocation_intents:
+      - RunWork
+    side_effect_class: project-write
+    capabilities:
+      - filesystem-read
+      - filesystem-write
+      - run-state
+      - shell
+    availability: implemented
+
+  - name: hive-wiki
+    description: Route explicit Wiki verbs through truthful source or consumer surfaces without inventing unsupported commands or creating another data owner.
+    provided_by: hive
+    superseded_by_external: []
+    invocation_intents:
+      - DeleteKnowledge
+      - IngestKnowledge
+      - LintKnowledge
+      - QueryKnowledge
+      - RebuildKnowledgeIndex
+    side_effect_class: external-write
+    capabilities:
+      - filesystem-read
+      - filesystem-write
+      - memory-read
+      - memory-write
+      - shell
+    availability: implemented
+
+  - name: ai-slop-cleaner
+    description: Clean explicitly selected code or UI slop through a regression-first, behavior-preserving, changed-files-only workflow.
+    provided_by: hive
+    superseded_by_external: []
+    invocation_intents:
+      - RunWork
+    side_effect_class: project-write
+    capabilities:
+      - filesystem-read
+      - filesystem-write
+      - shell
+    availability: implemented
+
+  - name: best-practice-research
+    description: Research current engineering practices through bounded read-only official and upstream evidence with citation-ready handoff.
+    provided_by: hive
+    superseded_by_external: []
+    invocation_intents:
+      - RunWork
+    side_effect_class: read-only
+    capabilities:
+      - filesystem-read
+      - network
+      - shell
+    availability: implemented
+
+  - name: hive-knowledge-scan
+    description: Inventory an exact directory, atomically apply reviewed claims to one stable collection, and route reusable candidates through explicit promotion.
+    provided_by: hive
+    superseded_by_external: []
+    invocation_intents:
+      - ScanKnowledge
+    side_effect_class: external-write
+    capabilities:
+      - filesystem-read
+      - filesystem-write
+      - memory-read
+      - memory-write
       - shell
     availability: implemented

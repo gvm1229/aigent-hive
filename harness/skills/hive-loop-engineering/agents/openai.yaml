@@ -1,0 +1,6 @@
+interface:
+  display_name: "Hive Loop Engineering"
+  short_description: "Engineer bounded evidence-gated run graphs"
+  default_prompt: "Use $hive-loop-engineering to prepare and validate this bounded run graph."
+policy:
+  allow_implicit_invocation: false

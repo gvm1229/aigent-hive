@@ -1027,7 +1027,7 @@ fn resolve_skills(
     };
     selected.extend(catalog.mandatory_skills.iter().cloned());
     if !config.wiki.enabled {
-        selected.retain(|name| !name.starts_with("hive-knowledge-"));
+        selected.retain(|name| !name.starts_with("hive-knowledge-") && name != "hive-wiki");
     }
     if config.usage_guard.enabled {
         selected.insert("hive-usage-guard".to_owned());
@@ -1702,6 +1702,7 @@ skills:
   mode: individual
   selected:
     - hive-knowledge-capture
+    - hive-wiki
 usage_guard:
   enabled: true
 ",
@@ -1726,6 +1727,26 @@ usage_guard:
             [
                 "hive-knowledge-capture",
                 "hive-knowledge-query",
+                "setup-hive",
+            ]
+        );
+    }
+
+    #[test]
+    fn enabled_wiki_skill_resolves_the_complete_reused_knowledge_stack() {
+        let mut config = valid_config();
+        config.skills.selected = vec!["hive-wiki".to_owned()];
+        let catalog = parse_and_validate_catalog().expect("catalog");
+
+        assert_eq!(
+            resolve_skills(&config, &catalog).expect("closure"),
+            [
+                "hive-knowledge-capture",
+                "hive-knowledge-maintenance",
+                "hive-knowledge-promote",
+                "hive-knowledge-query",
+                "hive-knowledge-scan",
+                "hive-wiki",
                 "setup-hive",
             ]
         );

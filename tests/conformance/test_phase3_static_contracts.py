@@ -34,6 +34,8 @@ ROUTING_REQUEST_SCHEMA_PATH = (
 )
 
 BUILTIN_SKILLS = {
+    "ai-slop-cleaner",
+    "best-practice-research",
     "setup-hive",
     "setup-harness",
     "auto-setup-harness",
@@ -42,6 +44,8 @@ BUILTIN_SKILLS = {
     "hive-knowledge-capture",
     "hive-knowledge-promote",
     "hive-knowledge-query",
+    "hive-knowledge-scan",
+    "hive-loop-engineering",
     "hive-knowledge-maintenance",
     "hive-run-checkpoint",
     "hive-run-resume",
@@ -51,8 +55,11 @@ BUILTIN_SKILLS = {
     "hive-usage-guard",
     "hive-migrate",
     "hive-project-upgrade",
+    "hive-wiki",
 }
 IMPLEMENTED_SKILLS = {
+    "ai-slop-cleaner",
+    "best-practice-research",
     "setup-hive",
     "setup-harness",
     "auto-setup-harness",
@@ -61,6 +68,8 @@ IMPLEMENTED_SKILLS = {
     "hive-knowledge-capture",
     "hive-knowledge-promote",
     "hive-knowledge-query",
+    "hive-knowledge-scan",
+    "hive-loop-engineering",
     "hive-knowledge-maintenance",
     "hive-run-checkpoint",
     "hive-run-resume",
@@ -70,6 +79,7 @@ IMPLEMENTED_SKILLS = {
     "hive-usage-guard",
     "hive-migrate",
     "hive-project-upgrade",
+    "hive-wiki",
 }
 CATALOG_ONLY_SKILLS = BUILTIN_SKILLS - IMPLEMENTED_SKILLS
 IMPLICIT_PLUGIN_SKILLS = {
@@ -77,10 +87,12 @@ IMPLICIT_PLUGIN_SKILLS = {
     "setup-harness",
     "auto-setup-harness",
     "hive-simple-question",
+    "hive-knowledge-capture",
+    "hive-knowledge-query",
     "hive-prompt-refine",
     "hive-usage-guard",
 }
-IMPLICIT_DESCRIPTION_BUDGET = 1_200
+IMPLICIT_DESCRIPTION_BUDGET = 1_800
 
 
 def read_yaml(path: Path) -> dict[str, object]:
@@ -635,6 +647,18 @@ class Phase3SkillSourceContract(unittest.TestCase):
         self.assertIn("CodexBar: 세 provider 모두 fallback-only", adr)
         self.assertIn("Native limited 판정 뒤 CodexBar 호출 0회", adr)
 
+    def test_rag_trust_receipt_has_exact_canonical_ownership(self) -> None:
+        manifest = (REPOSITORY_ROOT / "harness/manifest.toml").read_text(
+            encoding="utf-8"
+        )
+        receipt = (
+            'pattern = ".hive/config/rag-trust.json"\n'
+            'ownership = "canonical-data-protected"\n'
+            'source = "rag-generation-receipt"'
+        )
+        self.assertEqual(manifest.count(receipt), 1)
+        self.assertNotIn('pattern = ".hive/config/**"', manifest)
+
     def test_full_editing_discipline_is_exact_and_highest_priority(self) -> None:
         expected_digest = (
             "2445eeaa461ac04d9a5919a9d5499dac6cbe6300f8b57e3ab00215fbd5426fd9"
@@ -994,6 +1018,15 @@ class Phase3SkillSourceContract(unittest.TestCase):
                 self.assertIsInstance(frontmatter["description"], str)
                 self.assertTrue(frontmatter["description"].strip())
 
+    def test_current_plugin_skill_bodies_match_canonical_sources(self) -> None:
+        plugin_root = REPOSITORY_ROOT / "harness/plugins/aigent-hive/skills"
+        for name in sorted(IMPLEMENTED_SKILLS):
+            with self.subTest(name=name):
+                self.assertEqual(
+                    (plugin_root / name / "SKILL.md").read_bytes(),
+                    (SKILL_ROOT / name / "SKILL.md").read_bytes(),
+                )
+
     def test_codex_skill_metadata_has_one_bounded_implicit_projection(
         self,
     ) -> None:
@@ -1065,9 +1098,17 @@ class Phase3SkillSourceContract(unittest.TestCase):
         self.assertEqual(
             overlapping_source_skills,
             {
+                "ai-slop-cleaner",
                 "auto-setup-harness",
+                "best-practice-research",
+                "hive-knowledge-capture",
+                "hive-knowledge-query",
+                "hive-knowledge-scan",
+                "hive-loop-engineering",
                 "hive-prompt-refine",
+                "hive-simple-question",
                 "hive-usage-guard",
+                "hive-wiki",
             },
         )
         for name in overlapping_source_skills:

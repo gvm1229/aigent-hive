@@ -5,7 +5,7 @@ description: Read and validate a durable Hive run through the signed Hive CLI an
 
 # Hive Run Resume
 
-Recover provider-neutral state only. This Skill never starts work or launches the resolved orchestration owner.
+Recover provider-neutral state only. This Skill never starts work or launches the pinned owner. It preserves host-native v0.9 owners, explicitly selected external compatibility owners, and legacy 0.8.x OMX/OMC owners without migration.
 
 ## Workflow
 

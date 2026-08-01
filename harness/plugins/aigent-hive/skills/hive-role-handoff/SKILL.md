@@ -5,7 +5,7 @@ description: Record an explicitly requested persistent-role assignment and role-
 
 # Hive Role Handoff
 
-Perform one explicit optimistic two-file mutation. Leave orchestration and dispatch to the resolved host owner.
+Perform one explicit optimistic two-file mutation. Leave orchestration and dispatch to the run's pinned owner: host-native by default for new v0.9 runs, explicitly selected external compatibility when requested, or the preserved owner of an existing 0.8.x run.
 
 ## Workflow
 

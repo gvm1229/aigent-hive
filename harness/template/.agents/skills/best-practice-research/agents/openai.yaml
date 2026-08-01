@@ -1,0 +1,6 @@
+interface:
+  display_name: "Best Practice Research"
+  short_description: "Research current practices from primary sources"
+  default_prompt: "Use $best-practice-research to research current guidance and return a cited handoff."
+policy:
+  allow_implicit_invocation: false

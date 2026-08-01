@@ -7,8 +7,6 @@ use cap_primitives::fs::PermissionsExt as CapPermissionsExt;
 use cap_std::ambient_authority;
 use cap_std::fs::{Dir, OpenOptions};
 use hive_core::sha256_digest;
-#[cfg(test)]
-use hive_projection::compile_projection;
 use hive_projection::{compile_user_projection, Host as ProjectionHost};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
@@ -25,6 +23,7 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 const USER_MARKER_START: &[u8] = b"<!-- AIGENT-HIVE:USER:START -->";
 const USER_MARKER_END: &[u8] = b"<!-- AIGENT-HIVE:USER:END -->";
 const MAX_USER_FILE_BYTES: u64 = 16 * 1024 * 1024;
+const MAX_DERIVED_INDEX_BYTES: u64 = 128 * 1024 * 1024;
 const MAX_ANTIGRAVITY_STAGE_FILES: usize = 4_096;
 const MAX_ANTIGRAVITY_STAGE_DIRECTORIES: usize = 4_096;
 const MAX_ANTIGRAVITY_STAGE_DEPTH: usize = 64;
@@ -3413,9 +3412,20 @@ fn remove_disposable_root_index(root: &Dir) -> Result<(), InstallError> {
         ROOT_INDEX_RELATIVE,
         ".hive/index/hive.sqlite3-wal",
         ".hive/index/hive.sqlite3-shm",
+        ".hive/index/hive.sqlite3-journal",
+        hive_wiki::store::RAG_MANIFEST_RELATIVE,
+        hive_wiki::store::RAG_TRUST_RELATIVE,
+        hive_wiki::store::RAG_DIRTY_RELATIVE,
         ".hive/index/.stale",
     ] {
-        let expected = read_optional_regular(root, Path::new(relative), MAX_USER_FILE_BYTES)?;
+        let maximum = match relative {
+            ROOT_INDEX_RELATIVE
+            | ".hive/index/hive.sqlite3-wal"
+            | ".hive/index/hive.sqlite3-shm"
+            | ".hive/index/hive.sqlite3-journal" => MAX_DERIVED_INDEX_BYTES,
+            _ => MAX_USER_FILE_BYTES,
+        };
+        let expected = read_optional_regular(root, Path::new(relative), maximum)?;
         let expected_permissions = expected
             .as_ref()
             .map(|_| file_permissions(root, Path::new(relative)))
@@ -5751,14 +5761,16 @@ fn cas_activate_with_barrier(
     if let Some(barrier) = after_claim {
         barrier(&parent, &name, &quarantine);
     }
-    let claimed =
-        read_optional_regular(&quarantine, Path::new("claimed.bin"), MAX_USER_FILE_BYTES)?
-            .ok_or_else(|| {
-                InstallError::Verification(format!(
-                    "claimed user installation object is missing at {}",
-                    recovery_locator(relative).display()
-                ))
-            })?;
+    let claimed_maximum = u64::try_from(expected.bytes.len())
+        .unwrap_or(u64::MAX)
+        .max(MAX_USER_FILE_BYTES);
+    let claimed = read_optional_regular(&quarantine, Path::new("claimed.bin"), claimed_maximum)?
+        .ok_or_else(|| {
+            InstallError::Verification(format!(
+                "claimed user installation object is missing at {}",
+                recovery_locator(relative).display()
+            ))
+        })?;
     let claimed_permissions = file_permissions(&quarantine, Path::new("claimed.bin"))?;
     if claimed != expected.bytes || claimed_permissions != expected.permissions {
         restore_claim(&parent, &name, quarantine, &quarantine_name, relative)?;
@@ -6761,59 +6773,84 @@ mod tests {
         }
     }
 
+    #[allow(clippy::too_many_lines)]
     fn seed_legacy_antigravity_directory_scan_install(root: &Path) {
+        const LEGACY_MANIFEST: &[u8] = b"{\n  \"name\": \"aigent-hive\"\n}\n";
+        const LEGACY_SKILLS: &[(&str, &[u8])] = &[
+            (
+                "hive-judge-package",
+                include_bytes!("../../../harness/project-bases/0.7.0/skills/hive-judge-package/SKILL.md"),
+            ),
+            (
+                "hive-knowledge-capture",
+                include_bytes!("../../../harness/project-bases/0.7.0/skills/hive-knowledge-capture/SKILL.md"),
+            ),
+            (
+                "hive-knowledge-maintenance",
+                include_bytes!("../../../harness/project-bases/0.7.0/skills/hive-knowledge-maintenance/SKILL.md"),
+            ),
+            (
+                "hive-knowledge-promote",
+                include_bytes!("../../../harness/project-bases/0.7.0/skills/hive-knowledge-promote/SKILL.md"),
+            ),
+            (
+                "hive-knowledge-query",
+                include_bytes!("../../../harness/project-bases/0.7.0/skills/hive-knowledge-query/SKILL.md"),
+            ),
+            (
+                "hive-migrate",
+                include_bytes!("../../../harness/project-bases/0.7.0/skills/hive-migrate/SKILL.md"),
+            ),
+            (
+                "hive-project-upgrade",
+                include_bytes!("../../../harness/project-bases/0.7.0/skills/hive-project-upgrade/SKILL.md"),
+            ),
+            (
+                "hive-prompt-refine",
+                include_bytes!("../../../harness/project-bases/0.7.0/skills/hive-prompt-refine/SKILL.md"),
+            ),
+            (
+                "hive-role-handoff",
+                include_bytes!("../../../harness/project-bases/0.7.0/skills/hive-role-handoff/SKILL.md"),
+            ),
+            (
+                "hive-run-checkpoint",
+                include_bytes!("../../../harness/project-bases/0.7.0/skills/hive-run-checkpoint/SKILL.md"),
+            ),
+            (
+                "hive-run-resume",
+                include_bytes!("../../../harness/project-bases/0.7.0/skills/hive-run-resume/SKILL.md"),
+            ),
+            (
+                "hive-simple-question",
+                include_bytes!("../../../harness/project-bases/0.7.0/skills/hive-simple-question/SKILL.md"),
+            ),
+            (
+                "hive-update",
+                include_bytes!("../../../harness/project-bases/0.7.0/skills/hive-update/SKILL.md"),
+            ),
+            (
+                "hive-usage-guard",
+                include_bytes!("../../../harness/project-bases/0.7.0/skills/hive-usage-guard/SKILL.md"),
+            ),
+            (
+                "setup-harness",
+                include_bytes!("../../../harness/project-bases/0.7.0/skills/setup-harness/SKILL.md"),
+            ),
+        ];
         let inventory = legacy_antigravity_directory_scan_inventory();
-        let projection =
-            compile_projection(ProjectionHost::Antigravity, &[]).expect("legacy projection");
         let mut bytes_by_path = BTreeMap::new();
         bytes_by_path.insert(
             PathBuf::from(".gemini/config/plugins/aigent-hive/plugin.json"),
-            ANTIGRAVITY_PLUGIN_MANIFEST.to_vec(),
+            LEGACY_MANIFEST.to_vec(),
         );
-        for (path, bytes) in projection.files {
-            let Some(skill_path) = strip_project_skill_prefix(&path) else {
-                continue;
-            };
-            let bytes = match skill_path.to_str() {
-                Some("skills/hive-knowledge-capture/SKILL.md") => include_bytes!(
-                    "../../../harness/project-bases/0.7.0/skills/hive-knowledge-capture/SKILL.md"
-                )
-                .to_vec(),
-                Some("skills/hive-knowledge-maintenance/SKILL.md") => include_bytes!(
-                    "../../../harness/project-bases/0.7.0/skills/hive-knowledge-maintenance/SKILL.md"
-                )
-                .to_vec(),
-                Some("skills/hive-knowledge-query/SKILL.md") => include_bytes!(
-                    "../../../harness/project-bases/0.7.0/skills/hive-knowledge-query/SKILL.md"
-                )
-                .to_vec(),
-                Some("skills/hive-prompt-refine/SKILL.md") => include_bytes!(
-                    "../../../harness/project-bases/0.7.0/skills/hive-prompt-refine/SKILL.md"
-                )
-                .to_vec(),
-                Some("skills/hive-simple-question/SKILL.md") => include_bytes!(
-                    "../../../harness/project-bases/0.7.0/skills/hive-simple-question/SKILL.md"
-                )
-                .to_vec(),
-                Some("skills/hive-usage-guard/SKILL.md") => include_bytes!(
-                    "../../../harness/project-bases/0.7.0/skills/hive-usage-guard/SKILL.md"
-                )
-                .to_vec(),
-                Some("skills/hive-update/SKILL.md") => include_bytes!(
-                    "../../../harness/project-bases/0.7.0/skills/hive-update/SKILL.md"
-                )
-                .to_vec(),
-                Some("skills/setup-harness/SKILL.md") => include_bytes!(
-                    "../../../harness/project-bases/0.7.0/skills/setup-harness/SKILL.md"
-                )
-                .to_vec(),
-                _ => bytes,
-            };
+        for (name, bytes) in LEGACY_SKILLS {
+            let skill_path = PathBuf::from(format!("skills/{name}/SKILL.md"));
             bytes_by_path.insert(
                 Path::new(".gemini/config/plugins/aigent-hive").join(&skill_path),
-                bytes.clone(),
+                bytes.to_vec(),
             );
-            bytes_by_path.insert(Path::new(".gemini/config").join(skill_path), bytes);
+            bytes_by_path.insert(Path::new(".gemini/config").join(skill_path), bytes.to_vec());
         }
         for entry in inventory
             .entries
@@ -9252,6 +9289,64 @@ mod tests {
         let after = hive_wiki::shared::rebuild_shared_index(&arguments.user_root)
             .expect("rebuilt rollback shared index");
         assert_eq!(before.logical_digest, after.logical_digest);
+    }
+
+    #[test]
+    fn wiki_disable_removes_every_disposable_rag_artifact() {
+        let temporary = tempdir().expect("tempdir");
+        let index = temporary.path().join(".hive/index");
+        fs::create_dir_all(&index).expect("index directory");
+        fs::create_dir_all(temporary.path().join(".hive/config")).expect("config directory");
+        let relatives = [
+            ROOT_INDEX_RELATIVE,
+            ".hive/index/hive.sqlite3-wal",
+            ".hive/index/hive.sqlite3-shm",
+            ".hive/index/hive.sqlite3-journal",
+            hive_wiki::store::RAG_MANIFEST_RELATIVE,
+            hive_wiki::store::RAG_TRUST_RELATIVE,
+            hive_wiki::store::RAG_DIRTY_RELATIVE,
+            ".hive/index/.stale",
+        ];
+        for relative in relatives {
+            fs::write(temporary.path().join(relative), b"derived").expect("derived artifact");
+        }
+        let root =
+            Dir::open_ambient_dir(temporary.path(), ambient_authority()).expect("pinned user root");
+
+        remove_disposable_root_index(&root).expect("remove disposable RAG state");
+
+        for relative in relatives {
+            assert!(!temporary.path().join(relative).exists(), "{relative}");
+        }
+    }
+
+    #[test]
+    fn wiki_disable_removes_large_bounded_sqlite_state() {
+        let temporary = tempdir().expect("tempdir");
+        let index = temporary.path().join(".hive/index");
+        fs::create_dir_all(&index).expect("index directory");
+        for relative in [
+            ROOT_INDEX_RELATIVE,
+            ".hive/index/hive.sqlite3-wal",
+            ".hive/index/hive.sqlite3-shm",
+        ] {
+            fs::File::create(temporary.path().join(relative))
+                .expect("derived artifact")
+                .set_len(MAX_USER_FILE_BYTES + 1)
+                .expect("large sparse artifact");
+        }
+        let root =
+            Dir::open_ambient_dir(temporary.path(), ambient_authority()).expect("pinned user root");
+
+        remove_disposable_root_index(&root).expect("remove large disposable RAG state");
+
+        for relative in [
+            ROOT_INDEX_RELATIVE,
+            ".hive/index/hive.sqlite3-wal",
+            ".hive/index/hive.sqlite3-shm",
+        ] {
+            assert!(!temporary.path().join(relative).exists(), "{relative}");
+        }
     }
 
     #[test]

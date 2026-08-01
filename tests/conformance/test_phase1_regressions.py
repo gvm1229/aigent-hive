@@ -330,7 +330,7 @@ class Phase1HookRevocation(Phase1CliTestCase):
         process, _ = self.invoke_setup(
             target,
             answers=FIXTURE_ROOT / "answers-partial-hooks.yml",
-            capabilities="capabilities-absent.json",
+            capabilities="capabilities-codex-host-native-hooks.json",
         )
         self.assertEqual(process.returncode, 0, process.stderr)
         return target
@@ -439,7 +439,7 @@ class Phase1InstalledValidation(Phase1CliTestCase):
                 else FIXTURE_ROOT / "answers-base.yml"
             ),
             capabilities=(
-                "capabilities-absent.json"
+                "capabilities-codex-host-native-hooks.json"
                 if with_hooks
                 else "capabilities-codex-omx.json"
             ),
@@ -499,7 +499,7 @@ class Phase1InstalledValidation(Phase1CliTestCase):
         self.assert_validate_rejects_preserving_tree(
             target,
             answers=FIXTURE_ROOT / "answers-partial-hooks.yml",
-            capabilities="capabilities-absent.json",
+            capabilities="capabilities-codex-host-native-hooks.json",
         )
 
     def test_validate_rejects_missing_approved_hook_descriptor(self) -> None:
@@ -509,7 +509,7 @@ class Phase1InstalledValidation(Phase1CliTestCase):
         self.assert_validate_rejects_preserving_tree(
             target,
             answers=FIXTURE_ROOT / "answers-partial-hooks.yml",
-            capabilities="capabilities-absent.json",
+            capabilities="capabilities-codex-host-native-hooks.json",
         )
 
     def test_validate_rejects_missing_required_role(self) -> None:
@@ -638,7 +638,7 @@ class Phase1CliSurface(Phase1CliTestCase):
         setup_process, _ = self.invoke_setup(
             target,
             answers=FIXTURE_ROOT / "answers-partial-hooks.yml",
-            capabilities="capabilities-absent.json",
+            capabilities="capabilities-codex-host-native-hooks.json",
         )
         self.assertEqual(setup_process.returncode, 0, setup_process.stderr)
         before = snapshot_tree(target)
@@ -686,7 +686,7 @@ class Phase1ProtectionHookPaths(Phase1CliTestCase):
         process, _ = self.invoke_setup(
             target,
             answers=FIXTURE_ROOT / "answers-partial-hooks.yml",
-            capabilities="capabilities-absent.json",
+            capabilities="capabilities-codex-host-native-hooks.json",
         )
         self.assertEqual(process.returncode, 0, process.stderr)
         return target

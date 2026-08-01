@@ -23,7 +23,7 @@ persona_id = {{ persona_id | to_json }}
 usage_guard_enabled = {{ usage_guard_enabled | to_json }}
 codexbar_fallback_enabled = {{ codexbar_fallback_enabled | to_json }}
 selected_project_skills = {{ selected_project_skills | to_json }}
-{% if capability_resolution.detection == 'absent' and approved_fallback_hooks | length > 0 -%}
+{% if capability_resolution.detection == 'available' and capability_resolution.resolved_owner == 'host-native' and approved_fallback_hooks | length > 0 -%}
 approved_fallback_hooks_file = ".hive/config/approved-hooks.yml"
 {% endif -%}
 role_seed_file = ".hive/config/role-seeds.yml"

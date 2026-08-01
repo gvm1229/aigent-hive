@@ -47,4 +47,4 @@ Validate provider-neutral judge artifacts. This Skill does not invoke a judge, c
 - Never manufacture requester, task-agent, owner, judge-instance, eligibility, or human-approver provenance. Missing authenticated owner provenance fails closed as `INDETERMINATE`.
 - Never expose one judge's output to another judge before all independent results are sealed.
 - Never create a plan, Ralph loop, team workflow, retry loop, automatic continuation, or orchestration substitute.
-- Never select, replace, install, configure, invoke, or inspect private state for OMX/OMC. Compatible OMX/OMC remains the preferred orchestration owner while this canonical Hive data Skill may coexist.
+- Never select, replace, install, configure, invoke, or inspect private state for OMX/OMC. New v0.9 judging uses the pinned host-native owner by default. An explicitly selected external compatibility owner or legacy 0.8.x owner may coexist with this canonical Hive data Skill without being migrated or replaced.

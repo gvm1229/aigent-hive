@@ -39,6 +39,14 @@ const UPDATE_HARNESS: &[u8] = include_bytes!("../../../harness/skills/hive-updat
 const MIGRATE_HARNESS: &[u8] = include_bytes!("../../../harness/skills/hive-migrate/SKILL.md");
 const PROJECT_UPGRADE: &[u8] =
     include_bytes!("../../../harness/skills/hive-project-upgrade/SKILL.md");
+const LOOP_ENGINEERING: &[u8] =
+    include_bytes!("../../../harness/skills/hive-loop-engineering/SKILL.md");
+const HIVE_WIKI: &[u8] = include_bytes!("../../../harness/skills/hive-wiki/SKILL.md");
+const AI_SLOP_CLEANER: &[u8] = include_bytes!("../../../harness/skills/ai-slop-cleaner/SKILL.md");
+const BEST_PRACTICE_RESEARCH: &[u8] =
+    include_bytes!("../../../harness/skills/best-practice-research/SKILL.md");
+const KNOWLEDGE_SCAN: &[u8] =
+    include_bytes!("../../../harness/skills/hive-knowledge-scan/SKILL.md");
 
 /// A stable validation or compilation failure.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -826,11 +834,26 @@ fn embedded_skill_metadata(name: &str) -> Option<&'static [u8]> {
         "hive-project-upgrade" => Some(include_bytes!(
             "../../../harness/skills/hive-project-upgrade/agents/openai.yaml"
         )),
+        "hive-loop-engineering" => Some(include_bytes!(
+            "../../../harness/skills/hive-loop-engineering/agents/openai.yaml"
+        )),
+        "hive-wiki" => Some(include_bytes!(
+            "../../../harness/skills/hive-wiki/agents/openai.yaml"
+        )),
+        "ai-slop-cleaner" => Some(include_bytes!(
+            "../../../harness/skills/ai-slop-cleaner/agents/openai.yaml"
+        )),
+        "best-practice-research" => Some(include_bytes!(
+            "../../../harness/skills/best-practice-research/agents/openai.yaml"
+        )),
+        "hive-knowledge-scan" => Some(include_bytes!(
+            "../../../harness/skills/hive-knowledge-scan/agents/openai.yaml"
+        )),
         _ => None,
     }
 }
 
-fn embedded_skill_sources() -> [(&'static str, &'static [u8]); 17] {
+fn embedded_skill_sources() -> [(&'static str, &'static [u8]); 22] {
     [
         ("setup-hive", SETUP_HIVE),
         ("setup-harness", SETUP_HARNESS),
@@ -849,6 +872,11 @@ fn embedded_skill_sources() -> [(&'static str, &'static [u8]); 17] {
         ("hive-update", UPDATE_HARNESS),
         ("hive-migrate", MIGRATE_HARNESS),
         ("hive-project-upgrade", PROJECT_UPGRADE),
+        ("hive-loop-engineering", LOOP_ENGINEERING),
+        ("hive-wiki", HIVE_WIKI),
+        ("ai-slop-cleaner", AI_SLOP_CLEANER),
+        ("best-practice-research", BEST_PRACTICE_RESEARCH),
+        ("hive-knowledge-scan", KNOWLEDGE_SCAN),
     ]
 }
 
@@ -872,6 +900,9 @@ pub struct ExternalCandidate {
     pub name: String,
     pub provided_by: ExternalProvider,
     pub compatible: bool,
+    /// Whether the user explicitly selected this external compatibility layer.
+    #[serde(default)]
+    pub explicit_selection: bool,
 }
 
 /// Supported external orchestration providers. They remain runtime-owned.
@@ -1087,7 +1118,7 @@ fn resolve_non_plain_route(
     if let Some(external) = request
         .external_candidate
         .as_ref()
-        .filter(|candidate| candidate.compatible)
+        .filter(|candidate| candidate.compatible && candidate.explicit_selection)
     {
         validate_skill_name(&external.name)?;
         if external_provider_matches_host(external.provided_by, request.host) {
@@ -1338,11 +1369,17 @@ fn action_for_skill(skill: &str) -> Option<LogicalAction> {
     match skill {
         "hive-simple-question" => Some(LogicalAction::AnswerSimpleQuestion),
         "hive-prompt-refine" => Some(LogicalAction::RefinePrompt),
-        "hive-knowledge-capture" | "hive-knowledge-promote" => Some(LogicalAction::IngestKnowledge),
-        "hive-knowledge-query" => Some(LogicalAction::QueryKnowledge),
-        "hive-run-checkpoint" | "hive-role-handoff" | "hive-usage-guard" => {
-            Some(LogicalAction::RunWork)
-        }
+        "hive-knowledge-capture"
+        | "hive-knowledge-maintenance"
+        | "hive-knowledge-promote"
+        | "hive-knowledge-scan" => Some(LogicalAction::IngestKnowledge),
+        "hive-knowledge-query" | "hive-wiki" => Some(LogicalAction::QueryKnowledge),
+        "ai-slop-cleaner"
+        | "best-practice-research"
+        | "hive-loop-engineering"
+        | "hive-run-checkpoint"
+        | "hive-role-handoff"
+        | "hive-usage-guard" => Some(LogicalAction::RunWork),
         "hive-run-resume" => Some(LogicalAction::ResumeWork),
         "hive-update" | "hive-migrate" | "hive-project-upgrade" => {
             Some(LogicalAction::UpdateHarness)
@@ -1943,18 +1980,23 @@ description: Inspect one local file without changing it.
             let first = compile_projection(host, &[]).expect("projection");
             let second = compile_projection(host, &[]).expect("projection");
             assert_eq!(first, second);
-            assert_eq!(first.active_skills.skills.len(), 16);
-            let expected_file_count = if host == Host::Claude { 17 } else { 33 };
+            assert_eq!(first.active_skills.skills.len(), 21);
+            let expected_file_count = if host == Host::Claude { 22 } else { 43 };
             assert_eq!(first.files.len(), expected_file_count);
             for skill in [
+                "ai-slop-cleaner",
                 "auto-setup-harness",
+                "best-practice-research",
                 "hive-judge-package",
+                "hive-knowledge-scan",
+                "hive-loop-engineering",
                 "hive-prompt-refine",
                 "hive-run-checkpoint",
                 "hive-run-resume",
                 "hive-role-handoff",
                 "hive-update",
                 "hive-usage-guard",
+                "hive-wiki",
                 "hive-migrate",
             ] {
                 assert!(first
@@ -2096,6 +2138,70 @@ description: Inspect one local file without changing it.
         assert_eq!(error.code(), "hive.skill-history-unsupported");
     }
 
+    fn assert_projected_builtin_sources<const N: usize>(expected: [(&str, &[u8], &[u8]); N]) {
+        let projection = compile_projection(Host::Codex, &[]).expect("projection");
+        for (name, embedded, template) in expected {
+            assert_eq!(embedded, template);
+            assert_eq!(
+                projection
+                    .files
+                    .get(&format!(".agents/skills/{name}/SKILL.md"))
+                    .map(Vec::as_slice),
+                Some(embedded)
+            );
+            let active = projection
+                .active_skills
+                .skills
+                .iter()
+                .find(|skill| skill.name == name)
+                .expect("active built-in");
+            assert_eq!(active.content_digest, sha256_digest(embedded));
+        }
+    }
+
+    #[test]
+    fn v09_skill_sources_templates_embeddings_and_digests_match() {
+        let expected = [
+            (
+                "ai-slop-cleaner",
+                AI_SLOP_CLEANER,
+                include_bytes!("../../../harness/template/.agents/skills/ai-slop-cleaner/SKILL.md")
+                    .as_slice(),
+            ),
+            (
+                "best-practice-research",
+                BEST_PRACTICE_RESEARCH,
+                include_bytes!(
+                    "../../../harness/template/.agents/skills/best-practice-research/SKILL.md"
+                )
+                .as_slice(),
+            ),
+            (
+                "hive-knowledge-scan",
+                KNOWLEDGE_SCAN,
+                include_bytes!(
+                    "../../../harness/template/.agents/skills/hive-knowledge-scan/SKILL.md"
+                )
+                .as_slice(),
+            ),
+            (
+                "hive-loop-engineering",
+                LOOP_ENGINEERING,
+                include_bytes!(
+                    "../../../harness/template/.agents/skills/hive-loop-engineering/SKILL.md"
+                )
+                .as_slice(),
+            ),
+            (
+                "hive-wiki",
+                HIVE_WIKI,
+                include_bytes!("../../../harness/template/.agents/skills/hive-wiki/SKILL.md")
+                    .as_slice(),
+            ),
+        ];
+        assert_projected_builtin_sources(expected);
+    }
+
     #[test]
     fn data_skill_sources_templates_embeddings_and_digests_match() {
         let expected = [
@@ -2150,24 +2256,7 @@ description: Inspect one local file without changing it.
                 .as_slice(),
             ),
         ];
-        let projection = compile_projection(Host::Codex, &[]).expect("projection");
-        for (name, embedded, template) in expected {
-            assert_eq!(embedded, template);
-            assert_eq!(
-                projection
-                    .files
-                    .get(&format!(".agents/skills/{name}/SKILL.md"))
-                    .map(Vec::as_slice),
-                Some(embedded)
-            );
-            let active = projection
-                .active_skills
-                .skills
-                .iter()
-                .find(|skill| skill.name == name)
-                .expect("active built-in");
-            assert_eq!(active.content_digest, sha256_digest(embedded));
-        }
+        assert_projected_builtin_sources(expected);
     }
 
     #[test]
@@ -2242,6 +2331,7 @@ description: Inspect one local file without changing it.
             name: "analyze".to_owned(),
             provided_by: ExternalProvider::Omx,
             compatible: true,
+            explicit_selection: true,
         });
 
         let result = resolve_route(&request).expect("route");
@@ -2362,6 +2452,7 @@ description: Inspect one local file without changing it.
                 name: "analyze".to_owned(),
                 provided_by: ExternalProvider::Omx,
                 compatible: true,
+                explicit_selection: false,
             });
             request.hive_candidate = Some(skill.to_owned());
             request.active_hive_skills = vec![builtin_proof(skill)];
@@ -2376,7 +2467,7 @@ description: Inspect one local file without changing it.
     }
 
     #[test]
-    fn compatible_external_candidate_still_precedes_other_hive_candidates() {
+    fn explicitly_selected_compatible_external_candidate_precedes_hive_candidates() {
         for (host, provider) in [
             (Host::Codex, ExternalProvider::Omx),
             (Host::Claude, ExternalProvider::Omc),
@@ -2388,6 +2479,7 @@ description: Inspect one local file without changing it.
                     name: "analyze".to_owned(),
                     provided_by: provider,
                     compatible: true,
+                    explicit_selection: true,
                 });
                 request.hive_candidate = Some(skill.to_owned());
                 request.active_hive_skills = vec![builtin_proof(skill)];
@@ -2399,6 +2491,28 @@ description: Inspect one local file without changing it.
                 assert_eq!(result.load_skill_bodies.len(), 1);
             }
         }
+    }
+
+    #[test]
+    fn compatible_but_unselected_external_candidate_does_not_precede_hive() {
+        let mut request = routing_request();
+        request.external_candidate = Some(ExternalCandidate {
+            name: "analyze".to_owned(),
+            provided_by: ExternalProvider::Omx,
+            compatible: true,
+            explicit_selection: false,
+        });
+        request.hive_candidate = Some("hive-knowledge-query".to_owned());
+        request.active_hive_skills = vec![builtin_proof("hive-knowledge-query")];
+
+        let result = resolve_route(&request).expect("host-native default route");
+
+        assert_eq!(result.route, Route::HiveSkill);
+        assert_eq!(
+            result.selected_skill.as_deref(),
+            Some("hive-knowledge-query")
+        );
+        assert_eq!(result.provided_by, Some(RouteProvider::Hive));
     }
 
     #[test]

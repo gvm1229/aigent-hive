@@ -139,7 +139,7 @@ class Phase3RoutingContract(Phase1CliTestCase):
             ["hive-prompt-refine"],
         )
 
-    def test_compatible_omx_skill_precedes_hive_candidate(self) -> None:
+    def test_explicitly_selected_compatible_omx_skill_precedes_hive_candidate(self) -> None:
         process, result = self.invoke_route("omx-analyze.json")
         self.assertEqual(process.returncode, 0, process.stderr)
         decision = self.decision(result)
@@ -147,6 +147,15 @@ class Phase3RoutingContract(Phase1CliTestCase):
         self.assertEqual(decision["selected_skill"], "analyze")
         self.assertEqual(decision["provided_by"], "omx")
         self.assertEqual(decision["load_skill_bodies"], ["analyze"])
+
+    def test_compatible_but_unselected_omx_uses_host_native_route(self) -> None:
+        process, result = self.invoke_route("omx-analyze-unselected.json")
+        self.assertEqual(process.returncode, 0, process.stderr)
+        decision = self.decision(result)
+        self.assertEqual(decision["route"], "host-native")
+        self.assertIsNone(decision["selected_skill"])
+        self.assertEqual(decision["provided_by"], "host-native")
+        self.assertEqual(decision["load_skill_bodies"], [])
 
     def test_explicit_skill_precedes_simple_and_external_candidates(self) -> None:
         process, result = self.invoke_route("explicit-hive-skill.json")

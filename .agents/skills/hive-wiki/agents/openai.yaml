@@ -1,0 +1,6 @@
+interface:
+  display_name: "Hive Wiki"
+  short_description: "Route canonical Hive Wiki operations"
+  default_prompt: "Use $hive-wiki to route this explicit Wiki operation to its canonical owner."
+policy:
+  allow_implicit_invocation: false

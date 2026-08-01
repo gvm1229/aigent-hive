@@ -24,5 +24,6 @@ Merge contract:
 - overlapping changes: preserve the local hunk and report the omitted incoming hunk
 - missing or unauthenticated base: active bytes unchanged and conflict
 - active conflict markers: forbidden
+- existing run owner pins are canonical run state: preserve every 0.8.x OMX/OMC owner and every v0.9 host-native or explicitly selected external owner; never migrate an owner as a projection side effect
 
 Do not edit `.omx/`, `.omc/`, provider credentials, or foreign paths.

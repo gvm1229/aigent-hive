@@ -65,16 +65,21 @@ recommended_skill_suites:
       en: Web developer suite
       ko: 웹 개발자 모음
     description:
-      en: Project setup, prompt refinement, knowledge, checkpoints, usage guard, and updates
-      ko: 프로젝트 설정·프롬프트 정리·지식·체크포인트·사용량 보호·업데이트
+      en: Project setup, graph work, cleanup, research, Wiki, checkpoints, usage guard, and updates
+      ko: 프로젝트 설정·그래프 작업·정리·조사·Wiki·체크포인트·사용량 보호·업데이트
     skills:
       - setup-hive
       - setup-harness
       - auto-setup-harness
+      - ai-slop-cleaner
+      - best-practice-research
+      - hive-loop-engineering
       - hive-prompt-refine
+      - hive-wiki
       - hive-knowledge-capture
       - hive-knowledge-query
       - hive-knowledge-maintenance
+      - hive-knowledge-scan
       - hive-run-checkpoint
       - hive-run-resume
       - hive-usage-guard
@@ -85,16 +90,21 @@ recommended_skill_suites:
       en: Game developer suite
       ko: 게임 개발자 모음
     description:
-      en: Project setup, knowledge, roles, checkpoints, verification packaging, and updates
-      ko: 프로젝트 설정·지식·역할·체크포인트·검증 패키지·업데이트
+      en: Project setup, graph work, cleanup, research, Wiki, roles, verification, and updates
+      ko: 프로젝트 설정·그래프 작업·정리·조사·Wiki·역할·검증·업데이트
     skills:
       - setup-hive
       - setup-harness
       - auto-setup-harness
+      - ai-slop-cleaner
+      - best-practice-research
+      - hive-loop-engineering
       - hive-prompt-refine
+      - hive-wiki
       - hive-knowledge-capture
       - hive-knowledge-query
       - hive-knowledge-maintenance
+      - hive-knowledge-scan
       - hive-run-checkpoint
       - hive-run-resume
       - hive-role-handoff
@@ -107,17 +117,20 @@ recommended_skill_suites:
       en: Non-developer suite
       ko: 비개발자 모음
     description:
-      en: Simple questions, guided setup, prompt refinement, knowledge, usage guard, and updates
-      ko: 간단한 질문·안내형 설정·프롬프트 정리·지식·사용량 보호·업데이트
+      en: Simple questions, guided setup, research, Wiki, prompt refinement, usage guard, and updates
+      ko: 간단한 질문·안내형 설정·조사·Wiki·프롬프트 정리·사용량 보호·업데이트
     skills:
       - setup-hive
       - setup-harness
       - auto-setup-harness
+      - best-practice-research
       - hive-simple-question
       - hive-prompt-refine
+      - hive-wiki
       - hive-knowledge-capture
       - hive-knowledge-query
       - hive-knowledge-maintenance
+      - hive-knowledge-scan
       - hive-usage-guard
       - hive-update
 
@@ -167,6 +180,26 @@ skill_dependencies:
   - skill: hive-migrate
     requires:
       - hive-update
+  - skill: hive-loop-engineering
+    requires:
+      - hive-judge-package
+      - hive-role-handoff
+      - hive-run-checkpoint
+      - hive-run-resume
+      - hive-usage-guard
+  - skill: hive-wiki
+    requires:
+      - hive-knowledge-capture
+      - hive-knowledge-maintenance
+      - hive-knowledge-query
+      - hive-knowledge-scan
+  - skill: ai-slop-cleaner
+    requires: []
+  - skill: best-practice-research
+    requires: []
+  - skill: hive-knowledge-scan
+    requires:
+      - hive-knowledge-promote
 
 # Reserved for a future signed consent contract. This release supports built-in Skills only.
 optional_third_party_skills: []
