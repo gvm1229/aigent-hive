@@ -1120,24 +1120,7 @@ fn suppress_with_projection(
             bytes.clone(),
         )];
         let dirty = shared.store.begin_external_canonical_mutation(&writes)?;
-        let canonical_lock = KnowledgeLock::acquire(target)?;
-        snapshots[0].verify_current()?;
-        let commit = transactional(&snapshots, || {
-            write_atomic(&target.join(SUPPRESSION_RELATIVE), &bytes)?;
-            if cfg!(debug_assertions)
-                && env::var("HIVE_WIKI_TEST_FAIL_AFTER_CANONICAL_WRITES").as_deref() == Ok("1")
-            {
-                return Err(WikiError::Io(
-                    "injected failure after canonical knowledge writes".to_owned(),
-                ));
-            }
-            Ok(())
-        });
-        if let Err(error) = commit {
-            drop(canonical_lock);
-            abort_external_after_rollback(shared.store, &dirty, &error)?;
-            return Err(error);
-        }
+        commit_shared_suppression(target, shared.store, &dirty, &snapshots[0], &bytes)?;
         return Ok(KnowledgeOutcome {
             changed_paths: vec![SUPPRESSION_RELATIVE.to_owned()],
             page_id: None,
@@ -2439,6 +2422,34 @@ fn abort_external_after_rollback(
                 "knowledge mutation failed: {operation_error}; dirty-journal cleanup failed: {cleanup_error}"
             ))
         })
+}
+
+fn commit_shared_suppression(
+    target: &Path,
+    store: &store::RagStore,
+    dirty: &store::PersistentDirtyState,
+    snapshot: &FileSnapshot,
+    bytes: &[u8],
+) -> Result<(), WikiError> {
+    let canonical_lock = KnowledgeLock::acquire(target)?;
+    snapshot.verify_current()?;
+    let commit = transactional(std::slice::from_ref(snapshot), || {
+        write_atomic(&target.join(SUPPRESSION_RELATIVE), bytes)?;
+        if cfg!(debug_assertions)
+            && env::var("HIVE_WIKI_TEST_FAIL_AFTER_CANONICAL_WRITES").as_deref() == Ok("1")
+        {
+            return Err(WikiError::Io(
+                "injected failure after canonical knowledge writes".to_owned(),
+            ));
+        }
+        Ok(())
+    });
+    if let Err(error) = commit {
+        drop(canonical_lock);
+        abort_external_after_rollback(store, dirty, &error)?;
+        return Err(error);
+    }
+    Ok(())
 }
 
 fn canonical_logical_digest(target: &Path) -> Result<String, WikiError> {
