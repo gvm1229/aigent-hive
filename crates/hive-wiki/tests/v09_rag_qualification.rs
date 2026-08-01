@@ -3,6 +3,8 @@ use hive_wiki::collection::{
     CollectionKind, CollectionRecord, CollectionRegistry, CollectionState, CollectionVisibility,
     COLLECTION_SCHEMA_VERSION, USER_ROOT_COLLECTION_ID,
 };
+#[cfg(not(debug_assertions))]
+use hive_wiki::rag::PreparedRagIndex;
 use hive_wiki::rag::{
     build_rag_index, document_digest, plan_remember, retrieve_serialized, AssertionStatus,
     CanonicalDocument, ClaimKind, ClaimProvenance, RagLanguage, RagSnapshot, RagVisibility,
@@ -751,11 +753,12 @@ fn qualification_50k_chunks_meets_warm_and_fresh_load_p95_thresholds() {
     }
 
     let resident = fs::read(&index_path).expect("resident index bytes");
+    let prepared = PreparedRagIndex::from_serialized(&resident, &manifest, &registry)
+        .expect("prepare authenticated resident index");
     let mut warm_samples = Vec::with_capacity(40);
     for _ in 0..40 {
         let started = Instant::now();
-        let result =
-            retrieve_serialized(&resident, &manifest, &registry, &request).expect("warm retrieval");
+        let result = prepared.retrieve(&request).expect("warm retrieval");
         assert_eq!(
             result.hits[0].item_id,
             stable_id("document-", "qualification-049999")
@@ -766,7 +769,7 @@ fn qualification_50k_chunks_meets_warm_and_fresh_load_p95_thresholds() {
     let cold_p95 = percentile_95(fresh_load_samples);
     let warm_p95 = percentile_95(warm_samples);
     eprintln!(
-        "v09_rag_qualification chunks=50000 methodology=fresh-file-load cold_p95_ms={} warm_p95_ms={}",
+        "v09_rag_qualification chunks=50000 methodology=fresh-file-load/prepared-resident cold_p95_ms={} warm_p95_ms={}",
         cold_p95.as_secs_f64() * 1_000.0,
         warm_p95.as_secs_f64() * 1_000.0
     );

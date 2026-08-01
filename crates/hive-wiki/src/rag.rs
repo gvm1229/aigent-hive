@@ -1071,6 +1071,52 @@ pub fn build_rag_index(snapshot: &RagSnapshot) -> Result<RagIndexArtifact, RagEr
     })
 }
 
+/// Verified resident RAG generation for repeated low-latency retrieval.
+///
+/// Construction authenticates the exact serialized generation, checks relational
+/// integrity, and canonicalizes the collection registry once. The resident `SQLite`
+/// connection is immutable; every retrieval still validates the request and resolves
+/// its visibility scope independently.
+pub struct PreparedRagIndex {
+    connection: Connection,
+    manifest: GenerationManifest,
+    registry: CollectionRegistry,
+}
+
+impl PreparedRagIndex {
+    /// Authenticate and prepare one immutable serialized RAG generation.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the bytes are absent, oversized, corrupt, stale, dirty,
+    /// or inconsistent with the supplied manifest and collection registry.
+    pub fn from_serialized(
+        sqlite_bytes: &[u8],
+        expected_manifest: &GenerationManifest,
+        registry: &CollectionRegistry,
+    ) -> Result<Self, RagError> {
+        validate_serialized_index(sqlite_bytes, expected_manifest)?;
+        let connection = deserialize_connection(sqlite_bytes)?;
+        let registry = verify_retrieval_snapshot(&connection, expected_manifest, registry)?;
+        Ok(Self {
+            connection,
+            manifest: expected_manifest.clone(),
+            registry,
+        })
+    }
+
+    /// Retrieve from the already authenticated resident generation.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the request violates scope, visibility, query, top-k,
+    /// or byte-budget constraints, or when the read-only `SQLite` query fails.
+    pub fn retrieve(&self, request: &RetrievalRequest) -> Result<RetrievalResult, RagError> {
+        validate_retrieval_request(request)?;
+        retrieve_from_connection(&self.connection, &self.manifest, &self.registry, request)
+    }
+}
+
 /// Retrieve ranked chunks from serialized disposable index bytes.
 ///
 /// Freshness is checked using only the supplied generation manifest and indexed
@@ -1088,14 +1134,30 @@ pub fn retrieve_serialized(
     request: &RetrievalRequest,
 ) -> Result<RetrievalResult, RagError> {
     validate_retrieval_request(request)?;
+    validate_serialized_index(sqlite_bytes, expected_manifest)?;
+    let connection = deserialize_connection(sqlite_bytes)?;
+    let canonical_registry = verify_retrieval_snapshot(&connection, expected_manifest, registry)?;
+    retrieve_from_connection(&connection, expected_manifest, &canonical_registry, request)
+}
+
+fn validate_serialized_index(
+    sqlite_bytes: &[u8],
+    expected_manifest: &GenerationManifest,
+) -> Result<(), RagError> {
     if sqlite_bytes.is_empty() || sqlite_bytes.len() > MAX_INDEX_BYTES {
         return Err(RagError::RepairRequired(
             "RAG index bytes are absent or exceed the supported bound".to_owned(),
         ));
     }
-    verify_serialized_digest(sqlite_bytes, expected_manifest)?;
-    let connection = deserialize_connection(sqlite_bytes)?;
-    verify_manifest_fast(&connection, expected_manifest)?;
+    verify_serialized_digest(sqlite_bytes, expected_manifest)
+}
+
+fn verify_retrieval_snapshot(
+    connection: &Connection,
+    expected_manifest: &GenerationManifest,
+    registry: &CollectionRegistry,
+) -> Result<CollectionRegistry, RagError> {
+    verify_manifest_fast(connection, expected_manifest)?;
     let dirty_count: i64 = connection
         .query_row("SELECT COUNT(*) FROM dirty_journal", [], |row| row.get(0))
         .map_err(sqlite_error)?;
@@ -1108,8 +1170,18 @@ pub fn retrieve_serialized(
     let canonical_registry = registry
         .canonicalized()
         .map_err(|error| RagError::InvalidInput(error.to_string()))?;
-    verify_registry_projection(&connection, &canonical_registry)?;
-    let resolved_scope = resolve_scope(&canonical_registry, request)?;
+    verify_registry_projection(connection, &canonical_registry)?;
+    Ok(canonical_registry)
+}
+
+#[allow(clippy::too_many_lines)]
+fn retrieve_from_connection(
+    connection: &Connection,
+    expected_manifest: &GenerationManifest,
+    canonical_registry: &CollectionRegistry,
+    request: &RetrievalRequest,
+) -> Result<RetrievalResult, RagError> {
+    let resolved_scope = resolve_scope(canonical_registry, request)?;
     let fts_query = build_fts_query(&request.query, &request.query_expansions)?;
     let folded_query = folded_alias(&request.query);
     let mut statement = connection
@@ -1194,7 +1266,7 @@ pub fn retrieve_serialized(
             insufficient_budget = true;
             break;
         }
-        let sources = load_sources(&connection, &candidate.item_kind, &candidate.item_id)?;
+        let sources = load_sources(connection, &candidate.item_kind, &candidate.item_id)?;
         let matched_field = matched_field(&candidate, &folded_query);
         let rank_score = candidate_score(&candidate, &folded_query);
         returned_bytes += text.len();
