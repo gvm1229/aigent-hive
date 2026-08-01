@@ -1,17 +1,15 @@
 # Aigent Hive active plan index
 
-> Revision: 1.84
+> Revision: 1.85
 > 기준일: 2026-08-01
-> Product version: `0.8.0`
-> 현재 milestone: Phase 7 qualification + global onboarding·shared index `0.8.0`
+> Product version: `0.9.0`
+> 현재 milestone: `0.9.0` source 구현·local qualification 완료
 > Entrypoint: `docs/plans/PLAN.md`
 
 ## Goal parameters
 
-- Objective: `Aigent Hive 0.8.0` 후보의 Linux·macOS·Windows native artifact,
-  npm 정식 `0.8.0`·직접 설치 검증, bilingual onboarding, update
-  discovery·activation과 provenance gate 완료
-- Queued `0.9.0`: host-native loop·Wiki·Skill suite·전역 RAG·knowledge 이식·scan
+- Objective: `Aigent Hive 0.9.0`의 host-native loop·Wiki·Skill suite·전역 RAG·
+  knowledge 이식·scan source 구현과 local qualification 완료
 - Success: Mandatory user setup, global preference 기반 expedited/custom project setup,
   user-root 단일 SQLite, 세 host selected Skill projection, Wiki default-on opt-out,
   usage guard opt-in `20%`, native-first·CodexBar fallback-only, consumer
@@ -41,10 +39,10 @@
 | 문서 말투 | 6 | 0 | 100% |
 | Security review | 4 | 0 | 100% |
 | Docs Wiki migration | 4 | 0 | 100% |
-| v0.9 loop·Wiki·Skill suite | 0 | 25 | 0% |
-| v0.9 global knowledge RAG | 0 | 20 | 0% |
-| v0.9 knowledge portability·scan | 0 | 18 | 0% |
-| **Canonical total** | **228** | **63** | **78.4%** |
+| v0.9 loop·Wiki·Skill suite | 25 | 0 | 100% |
+| v0.9 global knowledge RAG | 20 | 0 | 100% |
+| v0.9 knowledge portability·scan | 18 | 0 | 100% |
+| **Canonical total** | **291** | **0** | **100.0%** |
 
 External production boundary 항목도 미완료 합계에 포함. Protected authority 없이 완료 처리 금지.
 
@@ -74,6 +72,12 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
   `latest=0.8.0` PASS. 기존 `test=0.8.0-test.1` 보존
 - 실제 Windows npm·CMD clean install, repeat, pending receipt recovery PASS. npm·direct
   native SHA-256 `330f4e0c8da5b6347400b9b16a9f76b2fb4f94406a2eacfe8c641367ca344ef9`
+- v0.9 host-native loop adapter와 5개 canonical Skill의 세 host projection·hostile
+  conformance PASS, tmux·scheduler·OMX/OMC 자동 의존성 0건
+- v0.9 전역 RAG 50,000 chunk: cold p95 `168.6215ms`, prepared-resident warm p95
+  `0.1367ms`, bilingual recall@5 `>= 90%`
+- v0.9 `.hivekb` 100 collection·50,000 chunk: export p95 `2268.9644ms`,
+  import+rebuild p95 `7253.5748ms`
 
 ## Required load order
 
@@ -126,11 +130,9 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
 `30658188721`, npm·Unix·PowerShell·CMD 계약과 실제 Windows clean install·repeat·
 recovery 검증.
 
-1. V9-025: orchestration owner 전환과 OMX/OMC inventory
-2. KPX-001–007: bundle·identity·schema·import safety
-3. RAG-001–020: 전역 retrieval·capture·freshness
-4. KPX-008–018: scan·promotion·automatic query
-5. V9-001–024: loop·Wiki·utility Skill·qualification
+완료: V9-001–025, RAG-001–020, KPX-001–018.
+
+다음: 사용자 승인 뒤 publication qualification·release activation.
 
 ## `0.8.0` 비차단 deferred boundary
 

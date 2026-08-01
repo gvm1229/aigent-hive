@@ -2,9 +2,9 @@
 
 - 기준 branch: `develop`
 - product version: `0.9.0`
-- plan revision: `1.84`
-- 현재 milestone: `0.9.0` host-native loop·Wiki·Skill suite·전역 knowledge
-- 현재 작업: v0.9.0 active plan 전체 구현·검증
+- plan revision: `1.85`
+- 현재 milestone: `0.9.0` source 구현·local qualification 완료
+- 현재 작업: 사용자 승인 전 publication 대기
 - 외부 중지 경계: GitHub Release·Git tag, protected signing/publication credential,
   exact `1.0.0` 사용자 authority
 - Plan load: compact `docs/plans/PLAN.md` + `docs/plans/phases/07-public-qualification.md`
@@ -19,9 +19,9 @@
   + `docs/plans/active/v0.9.0-loop-wiki-skills.md`
   + `docs/plans/active/v0.9.0-global-knowledge-rag.md`
   + `docs/plans/active/v0.9.0-knowledge-portability-scan.md`
-- Plan completion: canonical checklist `228/291` 완료, `63`개 미완료, `78.4%`
-- Latest local Windows: Rust workspace 458개 실행·통과. Python 적합성 618개 발견 중
-  576개 실제 실행·통과, 42개 미실행. 미실행 범위: 관리자 권한 없는 Windows의
+- Plan completion: canonical checklist `291/291` 완료, `0`개 미완료, `100%`
+- Latest local Windows: Rust workspace 459개 실행·통과. Python 적합성 670개 발견 중
+  628개 실제 실행·통과, 42개 미실행. 미실행 범위: 관리자 권한 없는 Windows의
   symbolic link 생성 제약 16개, POSIX·Unix 전용 동작 19개, macOS 전용 설치·서명
   동작 7개. 운영체제 판별: Windows. 미실행 42개: 이 컴퓨터에서 검증 완료로
   판단할 근거 불충분. PowerShell 5.1·7.6.4 installer와 `cmd.exe`
@@ -42,9 +42,9 @@
   `active/release-0.8.0.md`, `active/v0.9.0-loop-wiki-skills.md`,
   `active/v0.9.0-global-knowledge-rag.md`로 해석
 
-## v0.9.0 계획
+## v0.9.0 구현
 
-- 상태: 계획 최종 승인, 구현 미착수
+- 상태: source 구현·local qualification 완료, publication 미실행
 - 결정: [`ADR-0015`](../decisions/ADR-0015-host-native-skill-composition.md) accepted
 - Active fragment:
   [`v0.9.0-loop-wiki-skills.md`](../plans/active/v0.9.0-loop-wiki-skills.md)
@@ -60,23 +60,20 @@
   비중복·사용자 승인·license·보안·conformance gate
 - 금지 경계: scheduler·model runtime·tmux·Stop continuation·`omx_wiki`·`.omx|.omc`·
   `omx|omc` command·자동 adapter 우선권·raw session 자동 수집 0건
-- 실행 경계: `0.8.0` 시험 배포와 `develop`→`main` 완료 뒤 별도 구현 시작 지시,
-  V9-025 소유권 전환 우선
+- 실행 결과: V9-001–025 완료, host-native 기본값 전환과 세 host projection PASS
 
 ## v0.9.0 전역 knowledge RAG
 
-- 상태: 계획 최종 승인, 구현 미착수
+- 상태: RAG-001–020 완료, publication 미실행
 - 결정: [`ADR-0016`](../decisions/ADR-0016-global-knowledge-rag.md) accepted
 - Active fragment:
   [`v0.9.0-global-knowledge-rag.md`](../plans/active/v0.9.0-global-knowledge-rag.md)
 - 기존 기반: user-root Markdown·단일 SQLite, FTS5·tag·alias·BM25,
   visibility-aware shared project query
-- 확인된 gap: simple-question memory 차단, explicit-only query, material-task-only capture,
-  chunk context·mandatory preference write·fast freshness path 부재
-- 목표: 모든 질문의 bounded retrieval preflight, named project scope, durable user statement의
+- 구현: 모든 질문의 bounded retrieval preflight, named project scope, durable user statement의
   mandatory write, citation-ready chunk result와 fresh-session recall
-- DB 방향: 기존 SQLite derived boundary 유지, chunk·generation·dirty journal schema 확대,
-  measured recall deficiency에서만 local vector projection 검토
+- DB: SQLite derived boundary, chunk·generation·dirty journal, 검증된 resident generation
+- 성능: 50,000 chunk cold p95 `168.6215ms`, warm p95 `0.1367ms`
 - 이식: `.hivekb` canonical bundle export·import 뒤 destination SQLite rebuild
 - 수집: directory별 table 대신 stable `collection_id`, explicit `hive-knowledge-scan`과
   project claim → reusable candidate 2단계 review
@@ -86,7 +83,7 @@
 
 ## v0.9.0 knowledge 이식·directory scan
 
-- 상태: 계획 최종 승인, 구현 미착수
+- 상태: KPX-001–018 완료, publication 미실행
 - Active fragment:
   [`v0.9.0-knowledge-portability-scan.md`](../plans/active/v0.9.0-knowledge-portability-scan.md)
 - Research:
@@ -97,6 +94,8 @@
   기존 promote의 consolidated consent 재사용
 - Retrieval: existing query Skill single owner, turn당 1회 top 5·byte budget,
   retrieved instruction authority 0건
+- Qualification: 100 collection·50,000 chunk export p95 `2268.9644ms`,
+  import+rebuild p95 `7253.5748ms`
 - Adversarial review: overlap·schema growth·archive path·secret·poisoning·truth overclaim·
   path portability·context overload finding 교정, 사용자 결정 잔여 0건
 
