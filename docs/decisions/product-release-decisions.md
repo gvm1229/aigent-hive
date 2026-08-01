@@ -35,17 +35,17 @@
 | release 신뢰 | TUF 1.0.31-compatible offline root 2-of-3와 분리된 targets/snapshot/timestamp, 전역 unique role key, strict Ed25519 verification, old+new root rotation, semantic in-toto/SLSA·platform evidence; signing/private key는 Hive 밖의 external authority |
 | backup | update 전 canonical config/team/run/knowledge와 changed path snapshot, SQLite/runtime/backup/foreign orchestration 제외, exact 7일 경계 이후 validated unreferenced backup만 정리 |
 | 저장소 | 비기밀 canonical source와 data는 Git 추적, runtime/cache/SQLite 제외 |
-| 배포 정본 | `0.8.0` product candidate는 protected `develop`의 5개 native artifact·SHA-256·attestation; npm exact `0.8.0`·직접 installer는 동일 binary의 adapter, GitHub Release 없음 |
+| 배포 정본 | `0.8.0` npm 시험 배포 이력 보존. `0.9.0` 정식 릴리스는 protected `main` exact final candidate·annotated tag·GitHub Release·npm·direct installer를 동일 native binary와 digest로 결합 |
 | npm 설치 | Public `aigent-hive` umbrella + exact `@aigent-hive/*` platform package. `0.8.0|latest`를 기본 설치로 제공하고 기존 `0.8.0-test.1|test`는 immutable 검증 이력으로 유지. 최초 등록만 임시 `NPM_TOKEN`, 이후 6개 Trusted Publisher·OIDC 전용 |
 | update 확인 | Global setup explicit opt-in, 성공 확인 24시간 throttle, offline 실패는 성공 시각 미기록·다음 host session 재시도, 확인만으로 install 금지 |
 | binary update | Bare `hive update`가 즉시 확인하고 새 version이 있으면 선택 언어로 질문. 명시적 수락 뒤 authenticated install owner의 exact adapter만 실행 |
 | host projection | User `~/.agents/directives`·`~/.agents/skills` provider-neutral projection + selected host의 thin native adapter; project Codex·Antigravity `.agents/skills`, Claude `.claude/skills`; foreign byte 보존 |
 | role/run | shared role HANDOFF, PLAN-derived criterion, exact evidence locator, immutable owner pin, sensor-independent manual과 one-role usage-guarded automatic no-spawn resume |
-| 현재 버전 | Phase 7 npm 배포 제품 후보 `0.8.0`; root Cargo workspace version이 정본, `workspace.metadata.hive.release-date`는 release date 정본 |
+| 현재 버전 | 정식 릴리스 준비 target `0.9.0`; root Cargo workspace version과 `workspace.metadata.hive.release-date`가 정본 |
 | 버전 증가 | feature는 원칙적으로 `Y`, compatible quick bugfix는 `Z`; `X`는 exact target을 사용자가 명시하고 human confirmation한 경우에만 |
 | 호환성 | major `0`을 포함해 같은 major만 non-breaking upgrade 보장 |
 | cross-major | 사전 경고, 자동 migration, project/docs/preferences 보존, SQLite rebuild |
-| release workflow | `0.8.0` product candidate의 5개 target build·digest·GitHub attestation·npm exact `0.8.0` tarball staging과 `latest` publication 분리. GitHub Release 없음; npm 배포 성공 뒤 `develop` → `main` PR; OS signing·external TUF는 후속 opt-in hardened gate |
+| release workflow | `develop` 사전 후보 뒤 `main` final candidate 재빌드. 5개 target·6개 npm·digest·attestation·OS signing·TUF 검증 뒤 annotated `v0.9.0`·GitHub Release·npm `latest` publication |
 | install ownership | Direct receipt binary만 Hive-owned. npm binary는 npm 소유이며 Hive의 직접 덮어쓰기 금지; bare update의 사용자 승인 뒤 exact npm command 위임만 허용. Homebrew·WinGet은 기존 owner 경계 유지 |
 | Antigravity plugin ownership | Hive는 `~/.hive/marketplaces/antigravity/` source package만 소유. `agy` staging·import manifest는 host 소유이며 Hive ledger에서 제외. Mutation 전 staging 전체를 authenticated prior와 exact 비교하고 foreign entry는 보존. 신규 rollback은 uninstall, refresh rollback은 prior source 재설치 |
 | Git | `main` 안정, `develop` 일반 개발; `develop → main` PR |
@@ -59,6 +59,9 @@ Global onboarding, Wiki opt-out, selected Skill projection과 user-root 단일 s
 
 v0.9 cross-project retrieval, mandatory durable memory, portable bundle·directory scan과 derived RAG index:
 [`ADR-0016`](ADR-0016-global-knowledge-rag.md).
+
+`0.9.0` 정식 GitHub·npm release identity, final candidate와 production signing:
+[`ADR-0017`](ADR-0017-0.9-full-release.md).
 
 ## 미확정 항목
 

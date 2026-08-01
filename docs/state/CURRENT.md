@@ -2,10 +2,10 @@
 
 - 기준 branch: `develop`
 - product version: `0.9.0`
-- plan revision: `1.85`
-- 현재 milestone: `0.9.0` source 구현·local qualification 완료
-- 현재 작업: 사용자 승인 전 publication 대기
-- 외부 중지 경계: GitHub Release·Git tag, protected signing/publication credential,
+- plan revision: `1.86`
+- 현재 milestone: `0.9.0` 정식 릴리스 준비
+- 현재 작업: 변경점·릴리스 계획 확정과 원격 `develop` 기준선 고정
+- 외부 중지 경계: protected review·environment approval, signing·TUF·npm credential,
   exact `1.0.0` 사용자 authority
 - Plan load: compact `docs/plans/PLAN.md` + `docs/plans/phases/07-public-qualification.md`
   + `docs/plans/active/plugin-project-lifecycle.md`
@@ -19,7 +19,8 @@
   + `docs/plans/active/v0.9.0-loop-wiki-skills.md`
   + `docs/plans/active/v0.9.0-global-knowledge-rag.md`
   + `docs/plans/active/v0.9.0-knowledge-portability-scan.md`
-- Plan completion: canonical checklist `291/291` 완료, `0`개 미완료, `100%`
+  + `docs/plans/active/release-0.9.0.md`
+- Plan completion: canonical checklist `291/317` 완료, `26`개 미완료, `91.8%`
 - Latest local Windows: Rust workspace 459개 실행·통과. Python 적합성 670개 발견 중
   628개 실제 실행·통과, 42개 미실행. 미실행 범위: 관리자 권한 없는 Windows의
   symbolic link 생성 제약 16개, POSIX·Unix 전용 동작 19개, macOS 전용 설치·서명
@@ -61,6 +62,21 @@
 - 금지 경계: scheduler·model runtime·tmux·Stop continuation·`omx_wiki`·`.omx|.omc`·
   `omx|omc` command·자동 adapter 우선권·raw session 자동 수집 0건
 - 실행 결과: V9-001–025 완료, host-native 기본값 전환과 세 host projection PASS
+
+## v0.9.0 정식 릴리스
+
+- 상태: 계획 활성, publication 미실행
+- 사용자 authority: full `0.9.0` 계획과 원격 `develop` push 승인
+- 결정: [`ADR-0017`](../decisions/ADR-0017-0.9-full-release.md) accepted
+- Active fragment: [`release-0.9.0.md`](../plans/active/release-0.9.0.md)
+- 변경점: [`docs/releases/0.9.0.md`](../releases/0.9.0.md)
+- Final identity: protected `main` exact commit·annotated `v0.9.0`·GitHub Release·
+  npm `0.9.0|latest`
+- 확인된 activation gap: `release-publish.yml`의 exact `0.8.0` hardcode,
+  candidate workflow의 `develop` 전용 ref, GitHub normal Release workflow 부재
+- Production gate: 5개 native target·6개 npm package, OS signing·notarization,
+  external TUF, public install·`0.8.0 → 0.9.0` update
+- 다음 작업: REL9-001 원격 `develop` 기준선 고정
 
 ## v0.9.0 전역 knowledge RAG
 

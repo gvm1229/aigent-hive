@@ -21,3 +21,4 @@ Accepted product decision과 선택 근거의 정본.
 | `docs/` Wiki architecture | [ADR-0014](ADR-0014-docs-wiki-architecture.md) |
 | v0.9 host-native Skill 조합 | [ADR-0015](ADR-0015-host-native-skill-composition.md) |
 | v0.9 전역 knowledge RAG | [ADR-0016](ADR-0016-global-knowledge-rag.md) |
+| `0.9.0` 정식 릴리스 | [ADR-0017](ADR-0017-0.9-full-release.md) |

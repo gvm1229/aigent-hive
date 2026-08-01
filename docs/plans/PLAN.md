@@ -1,23 +1,22 @@
 # Aigent Hive active plan index
 
-> Revision: 1.85
+> Revision: 1.86
 > 기준일: 2026-08-01
 > Product version: `0.9.0`
-> 현재 milestone: `0.9.0` source 구현·local qualification 완료
+> 현재 milestone: `0.9.0` 정식 릴리스 준비
 > Entrypoint: `docs/plans/PLAN.md`
 
 ## Goal parameters
 
-- Objective: `Aigent Hive 0.9.0`의 host-native loop·Wiki·Skill suite·전역 RAG·
-  knowledge 이식·scan source 구현과 local qualification 완료
+- Objective: `Aigent Hive 0.9.0` 정식 GitHub·npm 릴리스와 public update 검증
 - Success: Mandatory user setup, global preference 기반 expedited/custom project setup,
   user-root 단일 SQLite, 세 host selected Skill projection, Wiki default-on opt-out,
   usage guard opt-in `20%`, native-first·CodexBar fallback-only, consumer
   PowerShell 5.1·`cmd.exe`, source-only PowerShell 7, Linux musl x86_64·arm64,
-  `aigent-hive@0.8.0`, SHA-256·GitHub attestation과 실제 Windows
-  acceptance
-- Stop boundary: GitHub Release·Git tag, protected credential, exact `1.0.0`
-  authority, 현재 source usage guard remaining `60%`
+  `aigent-hive@0.9.0`, OS signing·TUF·SHA-256·GitHub attestation과 public
+  install·update acceptance
+- Stop boundary: protected review·environment approval, signing·TUF·npm credential,
+  exact `1.0.0` authority, 현재 source usage guard remaining `60%`
 - Invariants: provider-neutral, canonical Markdown 우선, OMX/OMC replaceable adapter,
   ownership·consent·foreign byte 보존, provider API·credential 경로 없음, force-push 없음,
   explicit-only major, scheduler·tmux·Stop continuation 없음
@@ -42,7 +41,8 @@
 | v0.9 loop·Wiki·Skill suite | 25 | 0 | 100% |
 | v0.9 global knowledge RAG | 20 | 0 | 100% |
 | v0.9 knowledge portability·scan | 18 | 0 | 100% |
-| **Canonical total** | **291** | **0** | **100.0%** |
+| v0.9 full release | 0 | 26 | 0% |
+| **Canonical total** | **291** | **26** | **91.8%** |
 
 External production boundary 항목도 미완료 합계에 포함. Protected authority 없이 완료 처리 금지.
 
@@ -106,6 +106,7 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
 | [`active/v0.9.0-loop-wiki-skills.md`](active/v0.9.0-loop-wiki-skills.md) | `V9-*` | Host-native graph engineering·통합 Wiki·초기 Skill suite |
 | [`active/v0.9.0-global-knowledge-rag.md`](active/v0.9.0-global-knowledge-rag.md) | `RAG-*` | 전역 RAG |
 | [`active/v0.9.0-knowledge-portability-scan.md`](active/v0.9.0-knowledge-portability-scan.md) | `KPX-*` | Knowledge 이식·directory scan·automatic query |
+| [`active/release-0.9.0.md`](active/release-0.9.0.md) | `REL9-*` | 정식 GitHub·npm 릴리스와 public acceptance |
 
 ## Reconciliation gate
 
@@ -132,13 +133,4 @@ recovery 검증.
 
 완료: V9-001–025, RAG-001–020, KPX-001–018.
 
-다음: 사용자 승인 뒤 publication qualification·release activation.
-
-## `0.8.0` 비차단 deferred boundary
-
-- macOS Developer ID signing·notarization
-- Windows Authenticode signing
-- 실제 Claude protected session E2E와 Pro/Max usage parity
-- Externally signed TUF production authorization
-- Exact `1.0.0` 사용자 authority
-- GitHub normal release와 Git tag
+다음: REL9-001 원격 `develop` 기준선 고정, REL9-002–005 release activation.

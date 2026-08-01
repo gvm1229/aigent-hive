@@ -6,7 +6,7 @@
 ## 결정
 
 Aigent Hive source, release bundle과 installed harness는 `X.Y.Z` product version을
-공유. 현재 시험 배포 제품 후보는 Phase 7의 `0.8.0`이며 root `Cargo.toml`의
+공유. 현재 정식 릴리스 준비 target은 `0.9.0`이며 root `Cargo.toml`의
 `workspace.package.version`이 source 정본.
 Release date 정본: 같은 manifest의 `workspace.metadata.hive.release-date`.
 Independent judge identity와 critical human approval은 protected external public-key
@@ -42,8 +42,8 @@ Release gate는 다음 version이 모두 같지 않으면 실패.
 
 ## 결과
 
-- 현재 project version은 `0.8.0`
-- `0.8.0` release date: `2026-07-31`
+- 현재 source version: `0.9.0`
+- `0.9.0` release date 정본: `2026-08-01`
 - `0.1.0 → 0.2.0`은 backward-compatible Phase 1 feature milestone에 따른 minor 증가
 - `0.2.0 → 0.3.0`은 backward-compatible Phase 2 knowledge/index feature milestone에 따른 minor 증가
 - `0.3.0 → 0.4.0`은 backward-compatible Phase 3 Skill/projection feature milestone에 따른 minor 증가
@@ -52,6 +52,8 @@ Release gate는 다음 version이 모두 같지 않으면 실패.
 - `0.6.0 → 0.7.0`은 Phase 6 verifier-only signed release, update/migration과 crash-safe recovery completion gate를 충족한 backward-compatible minor 증가
 - `0.7.0 → 0.8.0`은 전역 초기 설정·공유 색인, Linux와 npm·직접 설치 시험
   배포 기능을 검증하기 위한 backward-compatible minor 증가
+- `0.8.0 → 0.9.0`은 host-native loop·Skill suite·전역 RAG·knowledge 이식·scan의
+  backward-compatible minor 증가
 - 실제 compatible feature delivery마다 minor를, 빠른 compatible fix마다 patch를 증가
 - explicit user instruction 없는 major bump 0회
 - same-major breaking fixture는 release/update 거부

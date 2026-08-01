@@ -349,6 +349,7 @@ class Phase3SkillSourceContract(unittest.TestCase):
             "active/native-usage-sensor.md",
             "active/plugin-project-lifecycle.md",
             "active/release-0.8.0.md",
+            "active/release-0.9.0.md",
             "active/security-review.md",
             "active/source-docs-wiki.md",
             "active/user-onboarding-shared-index.md",
@@ -373,6 +374,7 @@ class Phase3SkillSourceContract(unittest.TestCase):
             plan_root / "active/native-usage-sensor.md",
             plan_root / "active/plugin-project-lifecycle.md",
             plan_root / "active/release-0.8.0.md",
+            plan_root / "active/release-0.9.0.md",
             plan_root / "active/security-review.md",
             plan_root / "active/source-docs-wiki.md",
             plan_root / "active/user-onboarding-shared-index.md",
@@ -390,6 +392,7 @@ class Phase3SkillSourceContract(unittest.TestCase):
                 "active/native-usage-sensor.md",
                 "active/plugin-project-lifecycle.md",
                 "active/release-0.8.0.md",
+                "active/release-0.9.0.md",
                 "active/security-review.md",
                 "active/source-docs-wiki.md",
                 "active/user-onboarding-shared-index.md",
@@ -468,6 +471,7 @@ class Phase3SkillSourceContract(unittest.TestCase):
         docs_wiki_path = plan_root / "active/docs-wiki-migration.md"
         native_usage_path = plan_root / "active/native-usage-sensor.md"
         plugin_project_path = plan_root / "active/plugin-project-lifecycle.md"
+        release_09_path = plan_root / "active/release-0.9.0.md"
         security_review_path = plan_root / "active/security-review.md"
         source_wiki_path = plan_root / "active/source-docs-wiki.md"
         onboarding_path = plan_root / "active/user-onboarding-shared-index.md"
@@ -514,6 +518,10 @@ class Phase3SkillSourceContract(unittest.TestCase):
             (
                 "v0.9 knowledge portability·scan",
                 *checklist_counts([v09_portability_path]),
+            ),
+            (
+                "v0.9 full release",
+                *checklist_counts([release_09_path]),
             ),
         )
         total_done = sum(row[1] for row in progress_rows)

@@ -49,6 +49,7 @@ current catalog.
 | [ADR-0014](decisions/ADR-0014-docs-wiki-architecture.md) | `docs/` Wiki architecture |
 | [ADR-0015](decisions/ADR-0015-host-native-skill-composition.md) | v0.9 host-native Skill 조합 |
 | [ADR-0016](decisions/ADR-0016-global-knowledge-rag.md) | v0.9 전역 knowledge RAG |
+| [ADR-0017](decisions/ADR-0017-0.9-full-release.md) | `0.9.0` 정식 릴리스 |
 
 ## Guides
 
@@ -68,6 +69,7 @@ current catalog.
 | --- | --- |
 | [Release 안내](releases/README.md) | 제품 버전별 출시 안내 MOC |
 | [`0.8.0`](releases/0.8.0.md) | npm 시험 배포용 제품 후보 |
+| [`0.9.0`](releases/0.9.0.md) | `0.8.0` 대비 변경점·정식 출시 gate |
 
 ## Research
 
@@ -149,3 +151,4 @@ Fact별 catalog는 migration 완료 뒤 이 section과 [Fact 안내](facts/READM
 | [v0.9 loop·Wiki·Skill suite](plans/active/v0.9.0-loop-wiki-skills.md) | Host-native graph engineering 계획 |
 | [v0.9 전역 knowledge RAG](plans/active/v0.9.0-global-knowledge-rag.md) | Cross-project retrieval·mandatory memory 계획 |
 | [v0.9 knowledge 이식·scan](plans/active/v0.9.0-knowledge-portability-scan.md) | Canonical bundle·directory scan·automatic query 계획 |
+| [`0.9.0` 정식 릴리스](plans/active/release-0.9.0.md) | GitHub·npm publication·public acceptance 계획 |
