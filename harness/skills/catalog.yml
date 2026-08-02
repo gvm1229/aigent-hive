@@ -50,7 +50,7 @@ skills:
     availability: implemented
 
   - name: hive-prompt-refine
-    description: Create, improve, or structure a copy-ready prompt when the user explicitly asks for prompt refinement or prompt authoring; never intercept ordinary questions or ordinary work requests.
+    description: Create, improve, or structure a copy-ready prompt for explicit prompt intent or material ambiguity in ordinary work; refine-only always stops for exact approval before execution.
     provided_by: hive
     superseded_by_external: []
     invocation_intents:

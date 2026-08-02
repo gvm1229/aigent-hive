@@ -4,8 +4,8 @@ use hive_core::{
     validate_project_relative,
 };
 use hive_projection::{
-    resolve_route, validate_prompt_refinement, LogicalAction, PromptRefinementInput,
-    PromptRefinementResult, Route, RoutingRequest,
+    prompt_refinement_lifecycle, resolve_route, validate_prompt_refinement, LogicalAction,
+    PromptRefinementInput, PromptRefinementResult, PromptRefinementState, Route, RoutingRequest,
 };
 use hive_render::{
     authorize_hook_with_resolution, execute_setup, execute_setup_with_post_apply,
@@ -57,6 +57,7 @@ USAGE:
     hive index rebuild --target <dir> --output json
     hive route --request <json> --output json
     hive prompt validate --request <input.json> --result <result.json> --output json
+    hive prompt approve --request <input.json> --result <result.json> --digest <sha256:...> --target-host codex|claude|antigravity --confirm-refined-prompt --output json
     hive hook --capability <name> --event <event> [--capabilities <fresh-json>] [--input <json>] --output json
     hive usage check --account-digest <sha256:...> [--threshold <1..99>] --output json
     hive usage enforce --target <dir> --session-id <id> --process-id <positive-u32> [--account-digest <sha256:...>] --output json
@@ -899,7 +900,18 @@ struct PromptContracts {
 }
 
 fn run_prompt(arguments: &[String]) -> ExitCode {
-    let result = match parse_prompt(arguments).and_then(read_prompt_contracts) {
+    match arguments.first().map(String::as_str) {
+        Some("validate") => run_prompt_validate(arguments),
+        Some("approve") => run_prompt_approve(arguments),
+        _ => emit_action_result(&invalid_input_result(
+            "RefinePrompt",
+            "prompt requires the validate or approve action".to_owned(),
+        )),
+    }
+}
+
+fn run_prompt_validate(arguments: &[String]) -> ExitCode {
+    let result = match parse_prompt_validate(arguments).and_then(read_prompt_contracts) {
         Ok(contracts) => {
             if contracts.input.mode == hive_projection::RefineMode::RefineAndRun
                 && !contracts.input.explicit_run_intent
@@ -915,15 +927,7 @@ fn run_prompt(arguments: &[String]) -> ExitCode {
                 )
             } else {
                 match validate_prompt_refinement(&contracts.input, &contracts.output) {
-                    Ok(()) => prompt_result(
-                        "success",
-                        0,
-                        "hive.prompt-refinement-valid",
-                        "prompt refinement preserves the normalized contract".to_owned(),
-                        &contracts.arguments,
-                        &contracts.input_bytes,
-                        &contracts.output_bytes,
-                    ),
+                    Ok(()) => prompt_validation_success(&contracts),
                     Err(error) if error.code() == "hive.refine-run-not-authorized" => {
                         prompt_result(
                             "blocked",
@@ -952,10 +956,7 @@ fn run_prompt(arguments: &[String]) -> ExitCode {
     emit_action_result(&result)
 }
 
-fn parse_prompt(arguments: &[String]) -> Result<PromptArguments, String> {
-    if arguments.first().map(String::as_str) != Some("validate") {
-        return Err("prompt requires the validate action".to_owned());
-    }
+fn parse_prompt_validate(arguments: &[String]) -> Result<PromptArguments, String> {
     let mut request = None;
     let mut result = None;
     let mut output = None;
@@ -983,6 +984,153 @@ fn parse_prompt(arguments: &[String]) -> Result<PromptArguments, String> {
     Ok(PromptArguments {
         request: request.ok_or_else(|| "missing required option --request".to_owned())?,
         result: result.ok_or_else(|| "missing required option --result".to_owned())?,
+    })
+}
+
+struct PromptApprovalArguments {
+    contracts: PromptArguments,
+    digest: String,
+    target_host: String,
+    confirmed: bool,
+}
+
+fn run_prompt_approve(arguments: &[String]) -> ExitCode {
+    let result = match parse_prompt_approval(arguments) {
+        Ok(arguments) if !arguments.confirmed => prompt_approval_confirmation_required_result(),
+        Ok(arguments) => {
+            let digest = arguments.digest.clone();
+            let target_host = arguments.target_host.clone();
+            match read_prompt_contracts(arguments.contracts) {
+                Ok(contracts) => {
+                    match validate_prompt_refinement(&contracts.input, &contracts.output) {
+                        Ok(()) => {
+                            let expected_digest =
+                                sha256_digest(contracts.output.refined_prompt.as_bytes());
+                            if contracts.input.mode != hive_projection::RefineMode::RefineOnly {
+                                prompt_result(
+                                "blocked",
+                                3,
+                                "hive.refine-approval-not-required",
+                                "only a refine-only result may enter a later approval lifecycle"
+                                    .to_owned(),
+                                &contracts.arguments,
+                                &contracts.input_bytes,
+                                &contracts.output_bytes,
+                            )
+                            } else if digest != expected_digest {
+                                prompt_result(
+                                    "blocked",
+                                    3,
+                                    "hive.refine-approval-stale",
+                                    "approval digest does not bind the current refined prompt"
+                                        .to_owned(),
+                                    &contracts.arguments,
+                                    &contracts.input_bytes,
+                                    &contracts.output_bytes,
+                                )
+                            } else if !matches!(
+                                target_host.as_str(),
+                                "codex" | "claude" | "antigravity"
+                            ) {
+                                invalid_input_result(
+                                    "RefinePrompt",
+                                    "target host must be codex, claude, or antigravity".to_owned(),
+                                )
+                            } else if contracts
+                                .input
+                                .target_host
+                                .is_some_and(|host| prompt_host_name(host) != target_host)
+                            {
+                                prompt_result(
+                                    "blocked",
+                                    3,
+                                    "hive.refine-approval-host-mismatch",
+                                    "approval target host differs from the refined prompt contract"
+                                        .to_owned(),
+                                    &contracts.arguments,
+                                    &contracts.input_bytes,
+                                    &contracts.output_bytes,
+                                )
+                            } else {
+                                prompt_approval_success(&contracts, &target_host, &expected_digest)
+                            }
+                        }
+                        Err(error) if error.code() == "hive.refine-run-not-authorized" => {
+                            prompt_result(
+                                "blocked",
+                                3,
+                                error.code(),
+                                error.message().to_owned(),
+                                &contracts.arguments,
+                                &contracts.input_bytes,
+                                &contracts.output_bytes,
+                            )
+                        }
+                        Err(error) => prompt_result(
+                            "verification-failed",
+                            5,
+                            error.code(),
+                            error.message().to_owned(),
+                            &contracts.arguments,
+                            &contracts.input_bytes,
+                            &contracts.output_bytes,
+                        ),
+                    }
+                }
+                Err(message) => invalid_input_result("RefinePrompt", message),
+            }
+        }
+        Err(message) => invalid_input_result("RefinePrompt", message),
+    };
+    emit_action_result(&result)
+}
+
+fn parse_prompt_approval(arguments: &[String]) -> Result<PromptApprovalArguments, String> {
+    let mut request = None;
+    let mut result = None;
+    let mut digest = None;
+    let mut target_host = None;
+    let mut output = None;
+    let mut confirmed = false;
+    let mut index = 1;
+    while index < arguments.len() {
+        let option = &arguments[index];
+        index += 1;
+        if option == "--confirm-refined-prompt" {
+            if confirmed {
+                return Err("duplicate prompt approval option: --confirm-refined-prompt".to_owned());
+            }
+            confirmed = true;
+            continue;
+        }
+        let value = arguments
+            .get(index)
+            .ok_or_else(|| format!("missing value for {option}"))?;
+        match option.as_str() {
+            "--request" if request.is_none() => request = Some(PathBuf::from(value)),
+            "--result" if result.is_none() => result = Some(PathBuf::from(value)),
+            "--digest" if digest.is_none() => digest = Some(value.clone()),
+            "--target-host" if target_host.is_none() => target_host = Some(value.clone()),
+            "--output" if output.is_none() => output = Some(value.clone()),
+            "--request" | "--result" | "--digest" | "--target-host" | "--output" => {
+                return Err(format!("duplicate prompt approval option: {option}"));
+            }
+            _ => return Err(format!("unknown prompt approval option: {option}")),
+        }
+        index += 1;
+    }
+    if output.as_deref() != Some("json") {
+        return Err("prompt approve requires --output json".to_owned());
+    }
+    Ok(PromptApprovalArguments {
+        contracts: PromptArguments {
+            request: request.ok_or_else(|| "missing required option --request".to_owned())?,
+            result: result.ok_or_else(|| "missing required option --result".to_owned())?,
+        },
+        digest: digest.ok_or_else(|| "missing required option --digest".to_owned())?,
+        target_host: target_host
+            .ok_or_else(|| "missing required option --target-host".to_owned())?,
+        confirmed,
     })
 }
 
@@ -1046,6 +1194,67 @@ fn validate_json_schema(
         .map_err(|error| format!("{label} violates the JSON Schema contract: {error}"))
 }
 
+fn prompt_validation_success(contracts: &PromptContracts) -> ActionResult {
+    let lifecycle = prompt_refinement_lifecycle(&contracts.input, &contracts.output);
+    let next_action = match lifecycle.state {
+        PromptRefinementState::AwaitingApproval => "awaiting-approval",
+        PromptRefinementState::Authorized => "host-owned-execution",
+    };
+    ActionResult {
+        schema_version: 1,
+        action: "RefinePrompt",
+        status: "success",
+        exit_code: 0,
+        code: "hive.prompt-refinement-valid",
+        message: "prompt refinement preserves the normalized contract".to_owned(),
+        changed_paths: Vec::new(),
+        evidence: vec![
+            file_evidence(&contracts.arguments.request, &contracts.input_bytes),
+            file_evidence(&contracts.arguments.result, &contracts.output_bytes),
+        ],
+        next_action: Some(next_action.to_owned()),
+        data: Some(
+            serde_json::to_value(lifecycle).expect("prompt refinement lifecycle must serialize"),
+        ),
+    }
+}
+
+fn prompt_approval_success(
+    contracts: &PromptContracts,
+    target_host: &str,
+    refined_prompt_digest: &str,
+) -> ActionResult {
+    ActionResult {
+        schema_version: 1,
+        action: "RefinePrompt",
+        status: "success",
+        exit_code: 0,
+        code: "hive.prompt-approved",
+        message: "exact refined prompt approval is bound for host-owned execution".to_owned(),
+        changed_paths: Vec::new(),
+        evidence: vec![
+            file_evidence(&contracts.arguments.request, &contracts.input_bytes),
+            file_evidence(&contracts.arguments.result, &contracts.output_bytes),
+        ],
+        next_action: Some("host-owned-execution".to_owned()),
+        data: Some(serde_json::json!({
+            "state": "authorized",
+            "refined_prompt_digest": refined_prompt_digest,
+            "target_host": target_host,
+            "execution_owner": "host-native",
+            "result_locator": contracts.arguments.result.display().to_string(),
+        })),
+    }
+}
+
+const fn prompt_host_name(host: hive_projection::Host) -> &'static str {
+    match host {
+        hive_projection::Host::Codex => "codex",
+        hive_projection::Host::Claude => "claude",
+        hive_projection::Host::Antigravity => "antigravity",
+    }
+}
+
 fn prompt_result(
     status: &'static str,
     exit_code: u8,
@@ -1068,6 +1277,21 @@ fn prompt_result(
             file_evidence(&arguments.result, output_bytes),
         ],
         next_action: None,
+        data: None,
+    }
+}
+
+fn prompt_approval_confirmation_required_result() -> ActionResult {
+    ActionResult {
+        schema_version: 1,
+        action: "RefinePrompt",
+        status: "blocked",
+        exit_code: 3,
+        code: "hive.refine-approval-confirmation-required",
+        message: "prompt approval requires --confirm-refined-prompt".to_owned(),
+        changed_paths: Vec::new(),
+        evidence: Vec::new(),
+        next_action: Some("awaiting-approval".to_owned()),
         data: None,
     }
 }

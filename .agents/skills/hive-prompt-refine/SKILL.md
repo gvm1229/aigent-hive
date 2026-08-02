@@ -1,6 +1,6 @@
 ---
 name: hive-prompt-refine
-description: Create or refine a copy-ready prompt only when the user explicitly asks; never rewrite or execute ordinary questions or work requests.
+description: Create or refine a copy-ready prompt for explicit prompt intent or materially ambiguous ordinary work; default to refine-only and stop for exact approval before execution.
 ---
 
 # Hive Prompt Refine
@@ -11,9 +11,12 @@ Preserve the user's meaning while producing a concise, copy-ready prompt.
 
 - Default to `refine-only`.
 - Use `refine-and-run` only when the user explicitly asks in the same request to execute the refined prompt.
-- Do not rewrite ordinary questions or ordinary work requests.
+- Automatic invocation is allowed only when normalized routing establishes material ambiguity in an ordinary work request.
+- Do not rewrite or execute a sufficiently clear ordinary task, simple question, editless question, explicit external workflow, or explicit unrelated Skill.
 - Do not treat urgency, autonomy language, or a request for a complete prompt as permission to run it.
-- In `refine-only`, do not execute the prompt, read project files, call tools, write files, spawn subagents, create a run, or capture memory.
+- In `refine-only`, return the refined prompt and its digest with state `awaiting-approval`.
+- In `refine-only`, do not execute the prompt, read project files, call tools, write files, spawn subagents, create a run, capture memory, or continue automatically.
+- A correction returns a new refined prompt and invalidates any prior digest. A later execution requires an explicit approval naming the current exact digest and target host.
 
 ## Workflow
 
@@ -26,6 +29,7 @@ Preserve the user's meaning while producing a concise, copy-ready prompt.
 7. If a target host is explicit, add only the minimal host-specific syntax needed for that target.
 8. Compare the refined prompt with the original before returning it. Preserve every must, must-not, scope boundary, target output, named tool or provider choice, and user authority boundary.
 9. Avoid expanding a prompt that is already sufficiently precise.
+10. Stop immediately after the `awaiting-approval` output. A bare “continue”, imperative payload, urgency, or autonomy wording is not approval.
 
 If optional project grounding is explicitly requested, keep it a separate read-only action with its own capability decision. Do not silently read the project as part of refinement.
 
@@ -36,6 +40,7 @@ Return these sections:
 1. `Intent summary`
 2. `Assumptions and unresolved items`
 3. `Refined prompt`
+4. `Approval state`: `awaiting-approval` with the exact refined-prompt digest, or `authorized` only for explicit same-request `--run`
 
 Structure the refined prompt only as far as useful:
 

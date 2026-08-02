@@ -29,6 +29,11 @@ RESULT_SCHEMA = json.loads(
         REPOSITORY_ROOT / "schemas/prompt-refinement-result.schema.json"
     ).read_text(encoding="utf-8")
 )
+LIFECYCLE_SCHEMA = json.loads(
+    (
+        REPOSITORY_ROOT / "schemas/prompt-refinement-lifecycle.schema.json"
+    ).read_text(encoding="utf-8")
+)
 SELF_CONTAINED_RESULT_SCHEMA = copy.deepcopy(RESULT_SCHEMA)
 SELF_CONTAINED_RESULT_SCHEMA["properties"]["preserved"] = copy.deepcopy(
     INPUT_SCHEMA["$defs"]["preservation"]
@@ -82,6 +87,44 @@ class Phase3PromptRefinementContract(Phase1CliTestCase):
         self.assertEqual(process.returncode, result["exit_code"])
         return process, result
 
+    def invoke_approve(
+        self,
+        digest: str,
+        *,
+        target_host: str = "codex",
+        confirm: bool = True,
+    ) -> tuple[subprocess.CompletedProcess[str], dict[str, object]]:
+        command = [
+            str(self.hive_binary),
+            "prompt",
+            "approve",
+            "--request",
+            str(FIXTURE_ROOT / "valid-input.json"),
+            "--result",
+            str(FIXTURE_ROOT / "valid-result.json"),
+            "--digest",
+            digest,
+            "--target-host",
+            target_host,
+        ]
+        if confirm:
+            command.append("--confirm-refined-prompt")
+        command.extend(["--output", "json"])
+        process = subprocess.run(
+            command,
+            cwd=REPOSITORY_ROOT,
+            check=False,
+            text=True,
+            capture_output=True,
+        )
+        result = json.loads(process.stdout)
+        Draft202012Validator(
+            ACTION_RESULT_SCHEMA,
+            format_checker=FormatChecker(),
+        ).validate(result)
+        self.assertEqual(process.returncode, result["exit_code"])
+        return process, result
+
     def test_valid_request_matches_input_schema(self) -> None:
         Draft202012Validator(
             INPUT_SCHEMA,
@@ -102,6 +145,15 @@ class Phase3PromptRefinementContract(Phase1CliTestCase):
         self.assertEqual(process.returncode, 0, process.stderr)
         self.assertEqual(result["action"], "RefinePrompt")
         self.assertEqual(result["status"], "success")
+        self.assertEqual(result["next_action"], "awaiting-approval")
+        lifecycle = result["data"]
+        self.assertIsInstance(lifecycle, dict)
+        Draft202012Validator(
+            LIFECYCLE_SCHEMA,
+            format_checker=FormatChecker(),
+        ).validate(lifecycle)
+        self.assertEqual(lifecycle["state"], "awaiting-approval")
+        self.assertFalse(lifecycle["execution_authorized"])
 
     def test_refinement_missing_must_not_is_rejected(self) -> None:
         process, result = self.invoke_validate(
@@ -146,6 +198,38 @@ class Phase3PromptRefinementContract(Phase1CliTestCase):
         )
         self.assertEqual(process.returncode, 0, process.stderr)
         self.assertEqual(result["status"], "success")
+        self.assertEqual(result["next_action"], "host-owned-execution")
+        lifecycle = result["data"]
+        self.assertIsInstance(lifecycle, dict)
+        self.assertEqual(lifecycle["state"], "authorized")
+        self.assertTrue(lifecycle["execution_authorized"])
+
+    def test_exact_followup_approval_authorizes_only_the_current_digest(self) -> None:
+        digest = "sha256:4dc9439ca7e12adfccc9ecaddf0dc1636c6ff4bb572ed967fa004f943061c841"
+        process, result = self.invoke_approve(digest)
+        self.assertEqual(process.returncode, 0, process.stderr)
+        self.assertEqual(result["code"], "hive.prompt-approved")
+        self.assertEqual(result["next_action"], "host-owned-execution")
+        data = result["data"]
+        self.assertIsInstance(data, dict)
+        self.assertEqual(data["state"], "authorized")
+        self.assertEqual(data["refined_prompt_digest"], digest)
+        self.assertEqual(data["target_host"], "codex")
+        self.assertNotIn("refined_prompt", data)
+
+    def test_stale_or_generic_followup_approval_is_blocked(self) -> None:
+        for digest, confirm in (
+            ("sha256:" + "0" * 64, True),
+            (
+                "sha256:4dc9439ca7e12adfccc9ecaddf0dc1636c6ff4bb572ed967fa004f943061c841",
+                False,
+            ),
+        ):
+            with self.subTest(digest=digest, confirm=confirm):
+                process, result = self.invoke_approve(digest, confirm=confirm)
+                self.assertEqual(process.returncode, 3, process.stderr)
+                self.assertEqual(result["status"], "blocked")
+                self.assertEqual(result["changed_paths"], [])
 
     def test_refine_and_run_missing_user_authority_is_rejected(self) -> None:
         process, result = self.invoke_validate(

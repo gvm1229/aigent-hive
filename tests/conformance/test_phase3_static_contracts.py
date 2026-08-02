@@ -188,7 +188,7 @@ class Phase3SkillSourceContract(unittest.TestCase):
         ).read_bytes()
         self.assertEqual(source_projection, canonical)
 
-    def test_source_prompt_quality_gate_is_suggestion_only(self) -> None:
+    def test_source_prompt_quality_gate_automatically_refines_material_ambiguity(self) -> None:
         directive = (
             REPOSITORY_ROOT / ".agents/directives/01-behavior.md"
         ).read_text(encoding="utf-8")
@@ -196,15 +196,16 @@ class Phase3SkillSourceContract(unittest.TestCase):
             encoding="utf-8"
         )
         for required in (
-            "one concise optional refinement suggestion",
-            "must not rewrite the prompt",
-            "load `hive-prompt-refine`",
-            "sufficiently clear ordinary task or simple question",
+            "automatically load `hive-prompt-refine`",
+            "`awaiting-approval`",
+            "project read, tool, write, network, subagent, run, memory capture, and execution",
+            "sufficiently clear ordinary task, simple or editless question",
         ):
             with self.subTest(required=required):
                 self.assertIn(required, directive)
         self.assertIn("prompt quality gate", source_manifest)
-        self.assertIn("no automatic rewrite, Skill load, or execution", source_manifest)
+        self.assertIn("materially ambiguous ordinary work route", source_manifest)
+        self.assertIn("awaiting-approval", source_manifest)
 
     def test_plan_backed_goal_reconciles_every_checklist_before_execution(
         self,

@@ -921,7 +921,7 @@ pub enum RefineMode {
     RefineAndRun,
 }
 
-/// Host-normalized prompt quality used only for an optional suggestion.
+/// Host-normalized prompt quality used for a bounded automatic refinement gate.
 #[derive(Clone, Copy, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum PromptQuality {
@@ -1022,7 +1022,7 @@ pub fn resolve_route(request: &RoutingRequest) -> Result<RoutingDecision, Projec
     let fallback_action = request.explicit_action.unwrap_or(LogicalAction::RunWork);
 
     // Explicit direct/plain intent is the highest-precedence no-workflow lane.
-    let mut resolved = if request.plain_answer {
+    let resolved = if request.plain_answer {
         decision(
             Route::Direct,
             LogicalAction::AnswerSimpleQuestion,
@@ -1034,11 +1034,18 @@ pub fn resolve_route(request: &RoutingRequest) -> Result<RoutingDecision, Projec
     } else {
         resolve_non_plain_route(request, fallback_action)?
     };
-    resolved.refine_suggestion = should_offer_refine_suggestion(request, &resolved);
+    if should_automatically_refine(request, &resolved) {
+        return resolve_hive_skill(
+            request,
+            "hive-prompt-refine",
+            LogicalAction::RefinePrompt,
+            Route::HiveSkill,
+        );
+    }
     Ok(resolved)
 }
 
-fn should_offer_refine_suggestion(request: &RoutingRequest, resolved: &RoutingDecision) -> bool {
+fn should_automatically_refine(request: &RoutingRequest, resolved: &RoutingDecision) -> bool {
     matches!(
         request.prompt_quality,
         PromptQuality::Ambiguous | PromptQuality::MissingCoreDetails
@@ -1077,6 +1084,16 @@ fn resolve_non_plain_route(
             None,
             None,
         ));
+    }
+    if request.explicit_action == Some(LogicalAction::RefinePrompt)
+        && request.explicit_skill.is_none()
+    {
+        return resolve_hive_skill(
+            request,
+            "hive-prompt-refine",
+            LogicalAction::RefinePrompt,
+            Route::HiveSkill,
+        );
     }
 
     if let Some(explicit) = resolve_explicit_skill(request, fallback_action)? {
@@ -1468,6 +1485,28 @@ pub struct RefinementSideEffects {
     pub model_execution: bool,
 }
 
+/// Lifecycle state returned after a refinement envelope passes validation.
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum PromptRefinementState {
+    /// The result is presentation-only until an exact follow-up approval.
+    AwaitingApproval,
+    /// Same-request explicit `--run` or a validated exact approval permits host handoff.
+    Authorized,
+}
+
+/// Digest-bound result state that a host can use without retaining the raw prompt.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct PromptRefinementLifecycle {
+    pub schema_version: u32,
+    pub state: PromptRefinementState,
+    pub refined_prompt_digest: String,
+    pub target_host: Option<Host>,
+    pub execution_authorized: bool,
+    pub side_effects: RefinementSideEffects,
+}
+
 /// Candidate prompt refinement output to validate before returning.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(deny_unknown_fields)]
@@ -1589,6 +1628,26 @@ pub fn validate_prompt_refinement(
         }
     }
     Ok(())
+}
+
+/// Build the exact state emitted after a successful refinement validation.
+#[must_use]
+pub fn prompt_refinement_lifecycle(
+    input: &PromptRefinementInput,
+    result: &PromptRefinementResult,
+) -> PromptRefinementLifecycle {
+    PromptRefinementLifecycle {
+        schema_version: 1,
+        state: if result.execution_authorized {
+            PromptRefinementState::Authorized
+        } else {
+            PromptRefinementState::AwaitingApproval
+        },
+        refined_prompt_digest: sha256_digest(result.refined_prompt.as_bytes()),
+        target_host: input.target_host,
+        execution_authorized: result.execution_authorized,
+        side_effects: result.side_effects.clone(),
+    }
 }
 
 fn validate_preservation(
@@ -1818,25 +1877,30 @@ mod tests {
     }
 
     #[test]
-    fn ambiguous_host_native_work_offers_only_an_optional_refine_suggestion() {
+    fn ambiguous_host_native_work_automatically_loads_refine_only() {
         let mut request = routing_request();
         request.explicit_action = None;
         request.prompt_quality = PromptQuality::Ambiguous;
+        request.active_hive_skills = vec![builtin_proof("hive-prompt-refine")];
 
         let resolved = resolve_route(&request).expect("routing succeeds");
 
-        assert_eq!(resolved.route, Route::HostNative);
-        assert_eq!(resolved.logical_action, LogicalAction::RunWork);
-        assert!(resolved.refine_suggestion);
-        assert!(resolved.selected_skill.is_none());
-        assert!(resolved.load_skill_bodies.is_empty());
-        assert_eq!(resolved.mode, None);
+        assert_eq!(resolved.route, Route::HiveSkill);
+        assert_eq!(resolved.logical_action, LogicalAction::RefinePrompt);
+        assert!(!resolved.refine_suggestion);
+        assert_eq!(
+            resolved.selected_skill.as_deref(),
+            Some("hive-prompt-refine")
+        );
+        assert_eq!(resolved.load_skill_bodies, ["hive-prompt-refine"]);
+        assert_eq!(resolved.mode, Some(RefineMode::RefineOnly));
     }
 
     #[test]
-    fn clear_work_and_simple_questions_never_offer_refine_suggestions() {
+    fn clear_work_and_simple_questions_never_automatically_refine() {
         let clear = resolve_route(&routing_request()).expect("clear work routes");
         assert!(!clear.refine_suggestion);
+        assert_eq!(clear.route, Route::HostNative);
 
         let mut simple = routing_request();
         simple.explicit_action = Some(LogicalAction::AnswerSimpleQuestion);
@@ -1846,6 +1910,23 @@ mod tests {
         simple.active_hive_skills = vec![builtin_proof("hive-simple-question")];
         let simple = resolve_route(&simple).expect("simple question routes");
         assert!(!simple.refine_suggestion);
+        assert_eq!(simple.route, Route::SimpleQuestion);
+    }
+
+    #[test]
+    fn explicit_refinement_action_loads_the_hive_skill_without_a_host_candidate() {
+        let mut request = routing_request();
+        request.explicit_action = Some(LogicalAction::RefinePrompt);
+        request.active_hive_skills = vec![builtin_proof("hive-prompt-refine")];
+
+        let resolved = resolve_route(&request).expect("explicit refine route");
+
+        assert_eq!(resolved.route, Route::HiveSkill);
+        assert_eq!(
+            resolved.selected_skill.as_deref(),
+            Some("hive-prompt-refine")
+        );
+        assert_eq!(resolved.mode, Some(RefineMode::RefineOnly));
     }
 
     fn builtin_proof(name: &str) -> ActiveHiveSkillProof {

@@ -34,9 +34,10 @@ This directive governs agent behavior while developing Aigent Hive.
 - Answer simple questions directly after that retrieval without starting a planning workflow,
   spawning agents, or editing project files. A relevant cross-project or user-global fact is not
   unrelated memory.
-- Route explicit prompt authoring or refinement intent to the source `hive-prompt-refine` Skill in `refine-only` mode unless the same request explicitly authorizes execution.
-- For an ordinary work prompt whose goal, scope, constraints, acceptance criteria, or output contract is materially ambiguous or missing, add one concise optional refinement suggestion while continuing every safe, discoverable part of the task.
-- A refinement suggestion must not rewrite the prompt, load `hive-prompt-refine`, authorize execution, or interrupt a sufficiently clear ordinary task or simple question.
+- Route explicit prompt authoring or refinement intent to the source `hive-prompt-refine` Skill in `refine-only` mode unless the same request explicitly authorizes `--run` execution.
+- For an ordinary work prompt whose goal, scope, constraints, acceptance criteria, or output contract have two or more reasonable interpretations that materially change the result, automatically load `hive-prompt-refine` in `refine-only` mode.
+- Refine-only returns a refined-prompt digest and `awaiting-approval` state. Before exact digest-bound approval, project read, tool, write, network, subagent, run, memory capture, and execution remain forbidden.
+- Do not automatically refine a sufficiently clear ordinary task, simple or editless question, explicit unrelated Skill, explicit external workflow, or request whose missing locator is safely discoverable without changing the result.
 - For implementation, identify the requested outcome, constraints, touched ownership surfaces, verification, and stop condition before editing.
 - Before presenting a to-do list, pending action plan, blocker list, or user handoff, complete
   every safe, in-scope, automatable action that does not require new user authority,
