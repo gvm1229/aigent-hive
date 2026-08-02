@@ -2,7 +2,7 @@
 
 - 기준 branch: `develop`
 - product version: `0.9.0`
-- plan revision: `1.92`
+- plan revision: `1.93`
 - 현재 milestone: `0.9.0` 정식 릴리스 준비
 - 현재 작업: Hive-native iterative·team·multi-goal host feasibility와 Codex·Claude
   exact-model custom subagent 안전 protocol
@@ -73,14 +73,20 @@
 - Active fragment:
   [`model-routed-custom-subagents.md`](../plans/active/model-routed-custom-subagents.md)
 - 지원: OpenAI Codex·Claude Code. Antigravity는 근거 있는 custom-agent surface 확보 전 unsupported
-- 목표: Sol Advisor의 orchestrator→routine/complex implementer→fresh reviewer 흐름 clean-room 동등 구현
+- 목표: Sol Advisor의 orchestrator→routine/complex implementer→reserved independent Judge 흐름 clean-room 동등 구현
 - Model authority: role별 exact model ID·thinking level 고정, runtime receipt 불일치 결과 fail-closed
 - Scope: user·project canonical role과 host projection, project precedence, preview·명시적 동의·non-clobber
-- Built-in 후보: routine·complex implementer, fresh reviewer, design specialist,
-  article writer, research specialist, verifier
+- Built-in 후보: routine·complex implementer, design·article·research specialist,
+  user-scope reserved `hive-independent-judge`
 - Auto-call: Skill·role description 기반 semantic route, simple·작은 단일 단계·증명 불가 task 제외
 - 생성 Skill: 목적 우선 질문 뒤 이름·양쪽 host model/effort·scope·권한 추천,
   `1 수락 | 2 수동 | 3 수정`, 적용 뒤 동일 auto-route registry 통합
+- Judge 정책: setup의 `explicit`은 strict iterative·team·multi-goal terminal gate만,
+  `implicit`은 strict gate + 일반 material-risk route. Natural-language reconfigure 지원
+- Judge 경계: Codex `gpt-5.6-sol/max` 후보, Claude exact profile 검증 대기, project shadow 금지.
+  Agent는 verdict만 생성하고 외부 signer가 Ed25519 private key 소유
+- Token 경계: scheduler tick·heartbeat·retry별 Judge `0건`; dispatch 전 usage guard,
+  strict gate 제한 시 성공 우회 없이 pending·usage-limited 중지
 - 다음 작업: MRA-001–006 Codex·Claude 공식·실제 lifecycle와 Sol Advisor 기능 동등성 검증
 - Activation gate: 양쪽 host fresh-session E2E·exact attestation·ownership consent·hostile test 전 default-off
 

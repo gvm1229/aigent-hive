@@ -351,6 +351,7 @@ class Phase3SkillSourceContract(unittest.TestCase):
         expected_fragments = {
             "active/documentation-style.md",
             "active/docs-wiki-migration.md",
+            "active/model-routed-custom-subagents.md",
             "active/native-usage-sensor.md",
             "active/native-iterative-execution.md",
             "active/plugin-project-lifecycle.md",
@@ -379,6 +380,7 @@ class Phase3SkillSourceContract(unittest.TestCase):
         active_fragments = [
             plan_root / "active/documentation-style.md",
             plan_root / "active/docs-wiki-migration.md",
+            plan_root / "active/model-routed-custom-subagents.md",
             plan_root / "active/native-usage-sensor.md",
             plan_root / "active/native-iterative-execution.md",
             plan_root / "active/plugin-project-lifecycle.md",
@@ -400,6 +402,7 @@ class Phase3SkillSourceContract(unittest.TestCase):
             {
                 "active/documentation-style.md",
                 "active/docs-wiki-migration.md",
+                "active/model-routed-custom-subagents.md",
                 "active/native-usage-sensor.md",
                 "active/native-iterative-execution.md",
                 "active/plugin-project-lifecycle.md",
@@ -483,6 +486,9 @@ class Phase3SkillSourceContract(unittest.TestCase):
         phase_7_path = plan_root / "phases/07-public-qualification.md"
         documentation_path = plan_root / "active/documentation-style.md"
         docs_wiki_path = plan_root / "active/docs-wiki-migration.md"
+        model_routed_path = (
+            plan_root / "active/model-routed-custom-subagents.md"
+        )
         native_usage_path = plan_root / "active/native-usage-sensor.md"
         native_iterative_path = plan_root / "active/native-iterative-execution.md"
         plugin_project_path = plan_root / "active/plugin-project-lifecycle.md"
@@ -541,6 +547,10 @@ class Phase3SkillSourceContract(unittest.TestCase):
             (
                 "Hive-native 반복 실행",
                 *checklist_counts([native_iterative_path]),
+            ),
+            (
+                "Model-routed custom subagent",
+                *checklist_counts([model_routed_path]),
             ),
             (
                 "Prompt refine 자동 routing",

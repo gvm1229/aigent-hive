@@ -12,6 +12,8 @@
 - 새 사용자 결정: OMX·OMC 의존성 완전 제거와 유용 기능의 Hive clean-room 구현
 - 추가 사용자 결정: Sol Advisor 기능 동등성, Codex·Claude task별 custom subagent와
   exact model·thinking level 사전 고정, 목적 기반 custom-agent 생성·자동 route를 `0.9.0`에 포함
+- 추가 사용자 결정: Ed25519 Judge를 Sol/Claude exact-model reserved custom agent로 전환하고,
+  setup에서 `explicit|implicit` 호출 정책 선택. Strict workflow는 선택값과 무관하게 Judge 강제
 - 직접 계기: selected session pointer와 실제 session ID 불일치로 Stop 권한 실패,
   반복 no-op 응답, cancel·usage control 복구 방해
 - 기존 기반: immutable graph revision, evidence, retry data, steering, prepare-only envelope,
@@ -33,14 +35,22 @@
 - Hive 소유: provider-neutral role 정본, task trigger·negative route, 양쪽 host model/effort,
   user/project scope, projection digest, runtime attestation acceptance
 - Host 소유: custom-agent discovery, native dispatch, model call·session·process, runtime metadata
-- Functional baseline: primary orchestrator, routine implementer, complex implementer,
-  fresh read-only reviewer, exact role·model·effort 결과 gate
+- Functional baseline: primary orchestrator, routine/complex implementer, reserved read-only
+  independent Judge, exact role·model·effort·definition digest gate
 - 자동 선택: Hive Skill과 같은 narrow semantic description route. 별도 classifier hook 없음
 - Model authority: 검증된 exact ID·effort만 활성화, floating alias·silent fallback 결과 수용 금지
 - Scope authority: user·project 모두 지원, project 우선. Host file은 preview·명시적 동의·
   Hive ownership digest 일치 때만 생성·교체
 - On-demand 생성: 목적 질문→이름·Codex/Claude model/effort·scope·권한 추천→
   `1 수락 | 2 수동 | 3 수정`→검증·projection·auto-route 통합
+- Judge authority: user-scope reserved definition만 허용, project shadow·생성 Skill override 금지.
+  Codex 후보는 `gpt-5.6-sol/max`; Claude exact profile은 실제 lifecycle 검증 뒤 활성화
+- Invocation policy: user setup의 `explicit`은 strict workflow terminal gate만, `implicit`은
+  strict gate와 일반 material-risk route. 초기 custom setup 질문과 natural-language reconfigure 지원
+- Strict boundary: iterative·team·multi-goal criterion·goal terminal acceptance만 Judge 강제,
+  scheduler tick·heartbeat·retry별 호출 금지. Usage 제한 시 성공 우회 없이 pending 중지
+- Trust boundary: Agent는 verdict만 생성, 외부 signer가 Ed25519 private key 소유.
+  Hive는 assignment·role·exact model/effort·definition digest 결합 서명과 quorum만 검증
 - Canonical plan:
   [`model-routed-custom-subagents.md`](../plans/active/model-routed-custom-subagents.md)
 
@@ -99,6 +109,8 @@
 8. Exact role·model·effort·scope·definition digest runtime receipt와 mismatch fail-closed
 9. Purpose-first 생성 Skill의 3개 decision path와 생성 role automatic route 검증
 10. Foreign·user-authored host config overwrite `0건`
+11. 두 Judge mode setup·natural-language reconfigure와 strict workflow 강제 terminal gate 검증
+12. Project Judge shadow·policy downgrade·signer/model mismatch fail-closed
 
 ## 결과
 

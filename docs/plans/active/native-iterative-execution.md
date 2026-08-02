@@ -13,6 +13,7 @@
 - Host 소유의 실제 model·subagent 실행과 선언형 envelope 소비
 - Provider API·credential·model runtime·직접 process spawn `0건`
 - Ambient·selected session pointer 기반 mutation authority `0건`
+- 호출 정책과 무관한 strict workflow criterion·goal terminal authenticated Judge
 - Legacy OMX·OMC run의 read-only provenance와 새 native identity 기반 명시적 migration
 
 ## 채택 원칙
@@ -23,6 +24,7 @@
 4. Host capability 미확인 상태의 성공·exactly-once·강제 cancel 주장 금지
 5. 지원 불충분 상태의 `dispatch-uncertain|unsupported` 정직한 중지
 6. Usage guard·cancel·status·recover의 scheduler lock·pointer 독립 접근
+7. Judge는 terminal acceptance gate 한정, scheduler tick·heartbeat·retry별 호출 금지
 
 ## 구현 순서
 
@@ -52,11 +54,11 @@
 
 ### D. Host·Skill
 
-- [ ] [NAT-016] 세 host의 declarative envelope consumption adapter와 capability별 truthful result
-- [ ] [NAT-017] Ralph급 persistent criterion loop의 `hive-iterative-execution` Skill
-- [ ] [NAT-018] Mailbox·barrier·shared-path lease·lane cancel·독립 verifier 기반 `hive-team-execution` Skill
-- [ ] [NAT-019] AND·OR·quorum criterion·budget·terminal lattice·nested cancel 기반 `hive-multi-goal` Skill
-- [ ] [NAT-020] Planning·review·QA·research·performance loop의 useful OMX·OMC parity 통합
+- [ ] [NAT-016] 세 host declarative envelope adapter, exact role receipt와 reserved Judge profile 소비
+- [ ] [NAT-017] Ralph급 persistent criterion loop와 criterion terminal Judge gate의 `hive-iterative-execution` Skill
+- [ ] [NAT-018] Mailbox·barrier·shared-path lease·lane cancel·goal terminal Judge 기반 `hive-team-execution` Skill
+- [ ] [NAT-019] AND·OR·quorum criterion·budget·terminal lattice·nested cancel·goal/aggregate Judge gate 기반 `hive-multi-goal` Skill
+- [ ] [NAT-020] Planning·review·QA·research·performance loop parity와 explicit/implicit 무관 strict Judge 정책 통합
 
 ### E. Qualification·activation
 
@@ -75,6 +77,7 @@
 - 잘못된 selected pointer와 Stop 100회에서 canonical mutation `0건`
 - Pointer mismatch 중 exact-ID cancel·status·recover·usage guard control 성공
 - Host idempotency proof 부재의 automatic reclaim `0건`
+- Authenticated Judge 없이 strict criterion·goal 완료 전이 `0건`; usage 제한은 pending 중지
 - Legacy run migration 뒤 원본 owner·foreign bytes 변경 `0건`
 - 기능 activation 전 feasibility·ADR acceptance·schema·security gate 완료
 

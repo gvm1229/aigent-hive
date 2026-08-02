@@ -1,6 +1,6 @@
 # Aigent Hive active plan index
 
-> Revision: 1.92
+> Revision: 1.93
 > 기준일: 2026-08-03
 > Product version: `0.9.0`
 > 현재 milestone: `0.9.0` 정식 릴리스 준비
@@ -8,8 +8,8 @@
 
 ## Goal parameters
 
-- Objective: Hive-native iterative·team·multi-goal execution과 Codex·Claude exact-model
-  custom subagent routing의 feasibility·안전 계약을 먼저 확정한 뒤 `Aigent Hive
+- Objective: Hive-native iterative·team·multi-goal execution, Codex·Claude exact-model
+  custom subagent routing, 설정 가능한 authenticated Judge 호출 정책의 feasibility·안전 계약을 확정한 뒤 `Aigent Hive
   0.9.0-test` 독립 시험 배포·수용, 별도 `0.9.0` 정식 GitHub·npm 릴리스와 public update 검증
 - Success: 아래 Active fragments의 evidence-backed completion. 시험판 핵심 gate는
   `MRA-*` model-routed subagent, `PRF-*` prompt approval, `TST9-*` Wiki backend·integration,
@@ -52,24 +52,9 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
 
 ## 최신 완료 증거
 
-- Local·실제 Windows: Rust workspace, PowerShell 5.1·7.6.4, `cmd.exe`, Codex install·
-  setup·onboarding·shared index·update·rollback PASS
-- Opt-in daily update check의 24시간 success throttle, offline next-session retry,
-  fixed npm metadata endpoint와 no-install contract
-- Bare `hive update`의 npm `latest` 확인, legacy test·stable npm·direct owner 인증,
-  선택 언어 prompt,
-  명시적 수락 뒤 exact adapter 실행과 owner·version 재검증
-- 독립 final blocker review: critical·high·medium·low finding `0`건
-- npm publication `30658188721`: exact `0.8.0` 여섯 package·provenance·
-  `latest=0.8.0` PASS. 기존 `test=0.8.0-test.1` 보존
-- 실제 Windows npm·CMD clean install, repeat, pending receipt recovery PASS. npm·direct
-  native SHA-256 `330f4e0c8da5b6347400b9b16a9f76b2fb4f94406a2eacfe8c641367ca344ef9`
-- v0.9 host-native loop adapter와 5개 canonical Skill의 세 host projection·hostile
-  conformance PASS, tmux·scheduler·OMX/OMC 자동 의존성 0건
-- v0.9 전역 RAG 50,000 chunk: cold p95 `163.3569ms`, prepared-resident warm p95
-  `0.1178ms`, bilingual recall@5 `>= 90%`
-- v0.9 `.hivekb` 100 collection·50,000 chunk: export p95 `1066.9209ms`,
-  import+rebuild p95 `3255.1537ms`
+- 상세 완료 증거·실행 수치·publication 식별자: [`CURRENT.md`](../state/CURRENT.md)
+- `0.8.0` npm·Windows clean install·repeat·recovery와 public update acceptance PASS
+- v0.9 loop·Wiki·Skill suite, 50,000-chunk RAG, `.hivekb` portability qualification PASS
 - Hive-native 반복 실행 정책·계획: RALPLAN-DR, Architect `APPROVE_WITH_CHANGES`,
   Critic 최종 `APPROVE`, stale-pointer authority·typed receipt·legacy migration 계약 정본화
 
@@ -101,7 +86,7 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
 | [`active/v0.9.0-global-knowledge-rag.md`](active/v0.9.0-global-knowledge-rag.md) | `RAG-*` | 전역 RAG |
 | [`active/v0.9.0-knowledge-portability-scan.md`](active/v0.9.0-knowledge-portability-scan.md) | `KPX-*` | Knowledge 이식·directory scan·automatic query |
 | [`active/native-iterative-execution.md`](active/native-iterative-execution.md) | `NAT-*` | Hive-native iterative·team·multi-goal execution |
-| [`active/model-routed-custom-subagents.md`](active/model-routed-custom-subagents.md) | `MRA-*` | Codex·Claude exact-model custom subagent·Sol Advisor 동등 auto-route |
+| [`active/model-routed-custom-subagents.md`](active/model-routed-custom-subagents.md) | `MRA-*` | Codex·Claude exact-model custom subagent·authenticated Judge 정책·Sol Advisor 동등 auto-route |
 | [`active/prompt-refine-auto-routing.md`](active/prompt-refine-auto-routing.md) | `PRF-*` | Material ambiguity 자동 refine·승인 전 정지 |
 | [`active/v0.9.0-test-finalization.md`](active/v0.9.0-test-finalization.md) | `TST9-*` | Notion·SQLite, Discord outbound, 문제 보고와 시험판 기능 마감 |
 | [`active/release-0.9.0.md`](active/release-0.9.0.md) | `REL9-*` | 정식 GitHub·npm 릴리스와 public acceptance |
@@ -135,5 +120,5 @@ recovery 검증.
 feasibility, Codex·Claude exact-model agent lifecycle·receipt 검증. 결과 전 ADR
 acceptance·runtime schema/core·custom-agent projection activation 금지.
 
-후속: MRA-007–032 canonical role·auto-route·생성 Skill, NAT protocol·core와 `NAT-016`
-연계, TST9·PRF 기능 마감, REL9 release activation.
+후속: MRA-007–032 canonical role·Judge explicit/implicit setup·auto-route·생성 Skill,
+NAT protocol·core와 `NAT-016` 연계, TST9·PRF 기능 마감, REL9 release activation.
