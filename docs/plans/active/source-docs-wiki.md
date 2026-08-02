@@ -18,8 +18,8 @@
 
 - [x] [SLW-001] Canonical source fact를 tracked `docs/facts/en/`·`docs/facts/ko/`로
   고정하고 `omx_wiki/`·`.omx/wiki/`·consumer `.hive/knowledge/` 사용 금지
-- [x] [SLW-002] OMX·OMC를 compatibility dependency와 orchestration owner로만
-  사용하고 durable Wiki authority에서 제외
+- [x] [SLW-002] OMX·OMC를 durable Wiki authority에서 제외하고 신규 workflow dependency
+  없이 legacy foreign provenance만 보존
 - [x] [SLW-003] Hive-owned Skill의 source↔consumer reuse와
   `harness/skills/` canonical·`.agents/skills/` source projection 계약
 - [x] [SLW-004] `hive-wiki` Markdown parser·lint·SQLite rebuild·query와 knowledge
@@ -47,4 +47,4 @@
 - SQLite: ignored derived index
 - Lock: ignored noncanonical coordination marker
 - Query: missing·stale·corrupt index에서 fail-closed
-- External orchestration: 실행 보조, Wiki authority 없음
+- Legacy external provenance: Wiki authority 없음

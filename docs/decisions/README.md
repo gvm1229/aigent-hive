@@ -23,3 +23,4 @@ Accepted product decision과 선택 근거의 정본.
 | v0.9 전역 knowledge RAG | [ADR-0016](ADR-0016-global-knowledge-rag.md) |
 | `0.9.0` 정식 릴리스 | [ADR-0017](ADR-0017-0.9-full-release.md) |
 | Notion Wiki backend | [ADR-0018](ADR-0018-notion-wiki-backend.md) |
+| Hive-native 반복 실행 | [ADR-0019](ADR-0019-hive-native-iterative-execution.md) |

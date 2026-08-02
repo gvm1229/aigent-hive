@@ -1,9 +1,10 @@
 # ADR-0015: v0.9 host-native Skill 조합
 
-- 상태: accepted
+- 상태: implemented baseline; orchestration non-goal superseded by proposed ADR-0019
 - 날짜: 2026-08-01
 - 대상: `0.9.0`
 - 대체 대상: [`ADR-0004`](ADR-0004-orchestration-ownership.md)
+- 후속 정책: [`ADR-0019`](ADR-0019-hive-native-iterative-execution.md)
 
 ## 배경
 
@@ -12,7 +13,7 @@ ADR-0004의 Codex→OMX·Claude Code→OMC 우선순위는 외부 호환 계층�
 provider-neutral Skill·Markdown 상태 계약 조합. 외부 계층 없이도 같은 지식·역할·실행
 상태를 유지하는 제품 경계 필요.
 
-## 제안 결정
+## 구현 기준선
 
 - 새 run의 기본 실행 소유자: 검증된 host-native capability
 - Hive 소유 범위: Skill 조합, DAG·상태 전이 계약, `.hive/` Markdown 정본,
@@ -21,7 +22,7 @@ provider-neutral Skill·Markdown 상태 계약 조합. 외부 계층 없이도 �
 - Capability 판정: `supported|best-effort|unsupported|unverified`
 - 필수 capability의 `unsupported|unverified`: 명시적 `host_capability_unsupported`
   차단, 다른 runtime 자동 전환·유사 기능 생성 금지
-- OMX·OMC: 사용자가 별도로 선택 가능한 외부 호환 계층. 필수 dependency·자동 우선권·정본 소유권 없음
+- OMX·OMC: 당시 사용자가 별도로 선택 가능한 외부 호환 계층. 신규 workflow 경로는 ADR-0019에서 제거
 - 기존 `0.8.x` run: 고정된 owner 보존. v0.9 새 run과 명시적 migration에만 새 결정 적용
 
 ## Graph engineering 경계
@@ -32,8 +33,9 @@ provider-neutral Skill·Markdown 상태 계약 조합. 외부 계층 없이도 �
 - 매 node·retry·steering dispatch 전 `hive-usage-guard` gate
 - 독립 verification role과 evidence locator 없는 success edge 금지
 - 기존 `hive-run-checkpoint`, `hive-run-resume`, `hive-role-handoff` 재사용
-- Scheduler·model runtime·session daemon·provider API client·tmux·`omx|omc` command dependency 0개
-- Stop hook 기반 continuation·Ralph clone·team/swarm clone 금지
+- 구현 완료 기준선: scheduler·model runtime·session daemon·provider API client·tmux·`omx|omc` command dependency 0개
+- 당시 범위: Stop hook continuation·Ralph·team/swarm runtime 제외
+- 후속 범위: provider-neutral scheduler·iterative·team·multi-goal 구현 허용, provider runtime·direct process spawn 금지
 - Hook 사용 범위: host-native checkpoint·무결성 알림. 실행 재호출·계속 여부 결정 금지
 
 ## Wiki와 Skill 조합
@@ -53,7 +55,7 @@ provider-neutral Skill·Markdown 상태 계약 조합. 외부 계층 없이도 �
 - 전체 OMX·OMC Skill·adapter: 기능 영역·owner·격차·`adopt|merge|exclude` 근거표 작성
 - Hive 승격 조건: 비중복, 사용자 승인, license·보안·source↔consumer conformance 검토
 
-## 수락 조건
+## 기준선 수락 조건
 
 - v0.9 active plan의 `V9-*` 완료
 - 세 host capability matrix와 unsupported 결과 검증
@@ -66,5 +68,5 @@ provider-neutral Skill·Markdown 상태 계약 조합. 외부 계층 없이도 �
 ## 효력
 
 ADR-0004는 `0.8.x`와 기존 run의 역사적 계약으로 유지. 이 결정은 v0.9 새 run과
-명시적 migration에 적용하며 기존 run owner pin 불변. 실제 지침·계약·projection
-전환 완료 전 v0.9 구현 완료 판정 금지.
+명시적 migration에 적용한 data-only baseline. Scheduler·Ralph·team 비구현 정책은
+ADR-0019의 사용자 결정으로 superseded. 기존 run owner·foreign bytes 불변.

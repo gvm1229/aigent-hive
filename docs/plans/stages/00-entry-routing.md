@@ -25,7 +25,7 @@ Skill resolution은 action 분류 뒤 다음 precedence를 사용:
 3. bounded cross-project knowledge retrieval
 4. 승인되어 host discovery surface에 projection된 Hive 고유 Skill
 5. host-native direct capability
-6. 사용자가 명시 선택했거나 고정된 `0.8.x` 실행의 compatible OMX/OMC Skill
+6. Legacy external run의 explicit migration·recovery reader
 
 Semantic routing은 Skill의 좁은 `description`과 generated `AGENTS.md`의 compact mapping으로 수행. Hive가 별도 `UserPromptSubmit` classifier hook을 생성 금지. Catalog가 크더라도 사용자가 승인한 Skill만 active projection에 들어가며, 한 task에는 필요한 최소 Skill 집합만 본문을 load.
 
@@ -55,7 +55,7 @@ CLI process exit 의미:
 - [x] 세 host에서 같은 logical action이 같은 contract로 resolve
 - [x] unknown action이 project write 또는 agent spawn 없이 실패
 - [x] host별 alias가 core state에 저장 금지
-- [x] investigate 요청은 host-native capability가 기본이며 명시 선택·고정된 `0.8.x` owner만 compatible OMX/OMC 사용
+- [x] investigate 요청은 approved Hive Skill 또는 host-native capability 사용, 신규 OMX/OMC routing 0건
 - [x] approved Hive-only Skill은 이름을 직접 말하지 않아도 matching description에서 자동 선택
 - [x] simple-question fixture에서 Skill description 외 추가 Skill body load 0개
 - [x] explicit `plain answer`/`no workflow` 요청이 automatic Skill invocation에 우선

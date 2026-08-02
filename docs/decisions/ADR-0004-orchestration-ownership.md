@@ -1,9 +1,10 @@
 # ADR-0004: 기존 orchestration runtime 사용
 
-- 상태: superseded by ADR-0015
+- 상태: superseded by ADR-0015 and ADR-0019
 - 날짜: 2026-07-23
-- v0.9 대체 제안: [`ADR-0015`](ADR-0015-host-native-skill-composition.md)
-- 현재 효력: 새 `0.9.x` 실행에는 없음. 고정된 `0.8.x` 실행의 역사적 호환 계약만 유지
+- v0.9 대체: [`ADR-0015`](ADR-0015-host-native-skill-composition.md)
+- 신규 정책: [`ADR-0019`](ADR-0019-hive-native-iterative-execution.md)
+- 현재 효력: 신규 실행에는 없음. 고정된 `0.8.x` 실행의 read-only 역사적 provenance만 유지
 
 ## 역사적 `0.8.x` 결정
 
@@ -42,11 +43,13 @@ provider-neutral brief만 `prepared_only: true`, `spawned: false`로 준비.
 
 `0.8.x`에서 OMX/OMC가 선택된 host는 Hive lifecycle hook과 duplicate orchestration Skill 설치 금지. `0.9.x` optional hook은 ADR-0015에 따라 host가 지원하는 exact integrity event와 별도 동의가 있을 때만 허용.
 
-`hive-role-handoff`, `hive-run-checkpoint`, `hive-run-resume`는 role/run Markdown
-정본을 기록·검증·복구하는 data Skills. Compatible OMX/OMC와 함께 projection 가능. Plan, Ralph, team, retry, persistent loop 실행·복제 금지.
+`hive-role-handoff`, `hive-run-checkpoint`, `hive-run-resume`: 당시 role/run Markdown
+정본을 기록·검증·복구한 data Skills. 신규 Hive-native iterative·team·multi-goal 정책은
+ADR-0019 소유. Legacy 외부 owner의 in-place 전환 금지.
 
 Hook descriptor는 `{schema_version, capability, event, path, command}`만 포함한 RFC 8785 JCS object의 UTF-8 bytes와 trailing LF. Content digest는 이 설치 bytes를, consent digest는 content digest와 승인 시각을 포함한 approval payload 전체를 결합. Activation은 ledger, 현재 resolution, descriptor bytes와 두 digest를 다시 검증.
 
 Detection이 `available`, `incompatible` 또는 `unknown`이면 기존 Hive hook도 neutral/inert. Fallback hook의 `UserPromptSubmit` classification, prompt rewrite, Skill activation, orchestration, automatic memory ingest, continuation 수행 금지. `Stop`: 모든 입력·승인 상태에서 neutral allow, continuation loop 생성 금지. 상세 계약: [`../architecture/hook-consent.md`](../architecture/hook-consent.md).
 
-Semantic Skill routing은 host Skill discovery, narrow descriptions와 compact `AGENTS.md` precedence가 담당. OMX/OMC의 keyword detector, classifier, Stop continuation 복제 금지.
+Historical semantic routing: host Skill discovery와 compact `AGENTS.md` precedence. 신규 실행의
+Hive-native routing·continuation authority는 ADR-0019의 exact target·event head·one-time authority 계약 적용.

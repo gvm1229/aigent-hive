@@ -83,10 +83,10 @@ Crash residue는 missing live index와 exact Hive-owned orphan claim·temporary 
 regular Hive-owned claim·temporary path를 정리. `lint`·`query`는 missing·stale·corrupt·
 crash-interrupted index에서 implicit repair 없이 fail-closed. Consumer
 `.hive/knowledge/`, `omx_wiki/`와 `.omx/wiki/` 사용 금지.
-현재 source run orchestration: verified host-native 기본값. OMX·OMC는 명시적
-compatibility 선택 또는 기존 pinned owner인 경우만 사용. Source Wiki는 모든
-orchestration owner와 독립. Durable knowledge가 replaceable orchestrator보다 오래
-유지되며 향후 OMX/OMC retirement의 knowledge migration 0건. 결정:
+현재 source run orchestration: host-native prepare-only baseline. 후속 목표:
+Hive-native event·scheduler·receipt·cancel·team·multi-goal control과 host executor 분리.
+신규 OMX·OMC dependency 없음, legacy pinned owner는 read-only provenance. Source Wiki는
+orchestration control과 독립이며 knowledge migration `0건`. 결정:
 [`ADR-0011`](../decisions/ADR-0011-source-wiki-independence.md)과
 [`ADR-0014`](../decisions/ADR-0014-docs-wiki-architecture.md). 구현 checklist:
 [`source-docs-wiki.md`](../plans/active/source-docs-wiki.md).
@@ -261,19 +261,19 @@ Current precedence:
 2. explicit Skill
 3. simple-question isolation gate
 4. Hive run data contract (`hive-run-checkpoint|hive-run-resume|hive-role-handoff`)
-5. 사용자가 명시적으로 선택한 compatible OMX·OMC candidate
-6. approved Hive Skill candidate
-7. host-native fallback
+5. approved Hive orchestration·task Skill candidate
+6. host-native direct capability
+7. legacy migration·recovery의 explicit foreign provenance reader
 
-OMX·OMC의 compatibility만으로 자동 우선권 없음. `hive-prompt-refine`의 기본 mode:
+신규 OMX·OMC routing 없음. `hive-prompt-refine`의 기본 mode:
 `refine-only`; same request의 명시적 실행 intent가 있는 `refine-and-run`만 허용.
 
-Optional non-Stop hook activation: exact
+Optional lifecycle hook activation: exact
 `.hive/runtime/current-capability-resolution.json`, 60초 이하 freshness,
-`resolved_owner: host-native`, requested event의 exact `support: supported` 필수. External
-owner, `best-effort|unsupported|unverified`, missing event 또는 absent surface:
-approval·hook input 조회 전 inert. `Stop`: runtime evidence·input 없는 neutral fast path,
-continuation 0건.
+`resolved_owner: host-native`, requested event의 exact `support: supported` 필수. Legacy
+external owner, `best-effort|unsupported|unverified`, missing event 또는 absent surface:
+approval·hook input 조회 전 inert. Exact target·event head·control epoch·one-time authority
+필수, selected session pointer authority `0건`.
 
 Codex와 Antigravity는 `.agents/skills/<skill>/SKILL.md`, Claude Code는
 `.claude/skills/<skill>/SKILL.md`만 사용. Projection은 destination을 exclusive
@@ -295,8 +295,9 @@ two-file transaction으로 기록. `hive run checkpoint`는 PLAN에서 criterion
 `hive run resume`는 canonical PLAN/STATUS/role/handoff/evidence만 읽어 recovery data와
 `prepared_only: true`, `spawned: false` brief를 반환.
 
-새 v0.9 run owner: verified host-native 기본값. OMX·OMC owner: run 시작 전 명시적
-compatibility 선택 또는 기존 pinned run에만 허용. Required capability의
+현재 새 v0.9 run owner: verified host-native prepare-only 기본값. 신규 Hive-native control은
+ADR-0019 feasibility 전 default-off. Legacy OMX·OMC owner: read-only provenance만 허용.
+Required capability의
 `unsupported|unverified`: exact `host_capability_unsupported`, 다른 runtime 자동 전환과
 mutation 0건. Existing run의 missing·incompatible·version·evidence drift: owner 변경
 없음.
@@ -315,8 +316,9 @@ cycle·self-edge·unreachable·orphan criterion gate, evidence-bound success edg
 verification role, bounded retry·backoff·failure fingerprint, explicit steering과 terminal
 `blocked|failed|complete` 계약. `prepare`: one-time usage/run authorization, current STATUS,
 role, fresh capability와 전체 evidence의 optimistic validation 뒤 data-only record 생성.
-Scheduler·process spawn·tmux·OMX/OMC command·Stop continuation 0건. 세부 state와 exit
-contract: [`run-lifecycle.md`](run-lifecycle.md).
+현재 baseline의 scheduler·process spawn·tmux·OMX/OMC command·Stop continuation 0건.
+후속 native logical scheduler는 direct process spawn 없이 host envelope 사용. 세부 state와
+exit contract: [`run-lifecycle.md`](run-lifecycle.md).
 
 ## Phase 6 signed release와 update
 

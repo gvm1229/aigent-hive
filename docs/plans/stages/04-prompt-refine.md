@@ -14,7 +14,7 @@ Flow:
 2. project-scoped prompt일 때만 허용된 read-only context에서 실제 path, command와 제약을 확인
 3. objective, scope, inputs, constraints, acceptance, output shape와 stop condition의 ambiguity를 평가
 4. 결과를 바꾸는 필수 정보가 없으면 한 번에 한 질문만 수행
-5. 복잡한 요구사항 정제가 필요하고 OMX/OMC interview Skill이 available하면 기존 Skill을 사용하며, 없으면 host-native question surface만 사용
+5. 복잡한 요구사항 정제가 필요하면 Hive-native interview workflow 또는 host question surface 사용
 6. 사용자가 답하지 않은 비필수 항목은 명시적인 assumption 또는 placeholder로 남기고 사실을 창작 금지
 7. provider-neutral prompt를 기본 생성하고 사용자가 target host를 지정했을 때만 Codex/Claude/Antigravity syntax로 얇게 projection
 8. intent summary, assumptions/unresolved items와 copy-ready refined prompt를 분리해 반환
@@ -41,7 +41,7 @@ Stop, blocker, and escalation conditions
 - provider-neutral `PromptRefinement` input/result schema와 normalized fixture 추가
 - intent·constraint·acceptance preservation을 structural field와 text locator로 검증
 - optional project grounding은 read-only capability로 분리하고 simple-question path와 memory ingest에서 격리
-- OMX/OMC에 있는 analysis/interview capability는 호출 가능하지만 Hive가 classifier, interview engine 또는 prompt hook을 복제 금지
+- OMX/OMC analysis·interview 기능은 NAT-002 clean-room 재평가 대상, 신규 external invocation 없음
 - prompt artifact에 original/refined text를 함께 저장할 때 secret scan과 explicit save consent 적용
 
 #### 완료 조건

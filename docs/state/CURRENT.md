@@ -2,9 +2,9 @@
 
 - 기준 branch: `develop`
 - product version: `0.9.0`
-- plan revision: `1.90`
+- plan revision: `1.91`
 - 현재 milestone: `0.9.0` 정식 릴리스 준비
-- 현재 작업: `0.9.0-test` backend·integration·prompt-refine 기능 마감 계획
+- 현재 작업: Hive-native iterative·team·multi-goal host feasibility와 안전 protocol
 - 외부 중지 경계: protected review·environment approval, signing·TUF·npm credential,
   exact `1.0.0` 사용자 authority
 - Plan load: compact `docs/plans/PLAN.md` + `docs/plans/phases/07-public-qualification.md`
@@ -19,10 +19,11 @@
   + `docs/plans/active/v0.9.0-loop-wiki-skills.md`
   + `docs/plans/active/v0.9.0-global-knowledge-rag.md`
   + `docs/plans/active/v0.9.0-knowledge-portability-scan.md`
+  + `docs/plans/active/native-iterative-execution.md`
   + `docs/plans/active/prompt-refine-auto-routing.md`
   + `docs/plans/active/v0.9.0-test-finalization.md`
   + `docs/plans/active/release-0.9.0.md`
-- Plan completion: canonical checklist `292/347` 완료, `55`개 미완료, `84.1%`
+- Plan completion: canonical checklist `293/371` 완료, `78`개 미완료, `79.0%`
 - Latest local Windows: Rust workspace 459개 실행·통과. Python 적합성 670개 발견 중
   628개 실제 실행·통과, 42개 미실행. 미실행 범위: 관리자 권한 없는 Windows의
   symbolic link 생성 제약 16개, POSIX·Unix 전용 동작 19개, macOS 전용 설치·서명
@@ -43,7 +44,23 @@
   `active/documentation-style.md`, `active/security-review.md`,
   `active/docs-wiki-migration.md`,
   `active/release-0.8.0.md`, `active/v0.9.0-loop-wiki-skills.md`,
-  `active/v0.9.0-global-knowledge-rag.md`로 해석
+  `active/v0.9.0-global-knowledge-rag.md`, `active/native-iterative-execution.md`로 해석
+
+## Hive-native 반복 실행 전환
+
+- 상태: RALPLAN-DR·Architect·Critic 승인과 정본 plan·proposed ADR 완료, host feasibility 미착수
+- 결정: [`ADR-0019`](../decisions/ADR-0019-hive-native-iterative-execution.md) proposed
+- Active fragment:
+  [`native-iterative-execution.md`](../plans/active/native-iterative-execution.md)
+- Hive 소유 목표: event reducer·logical scheduler·lease·receipt·cancel·team·multi-goal state
+- Host 소유 유지: model call·model/subagent process·native task identity·envelope consume
+- 신규 경계: OMX·OMC functional dependency 없음, provider API·credential·direct process spawn 없음
+- Authority: selected session pointer는 selector only; exact target·event head·control epoch·one-time authority 필수
+- Incident regression: wrong pointer + Stop 100회 canonical mutation `0건`, cancel·guard·recover 독립 접근
+- 불확실 dispatch: qualified non-launch proof 없는 automatic reclaim `0건`, `dispatch-uncertain` 중지
+- Legacy run: read-only provenance, migration은 새 native identity와 원본 byte 불변
+- 다음 작업: NAT-002 capability inventory 재분류, NAT-003–004 세 host feasibility spike
+- Activation gate: feasibility·ADR acceptance·schema·security qualification 전 default-off
 
 ## v0.9.0 구현
 
@@ -61,8 +78,10 @@
   읽기 전용 bounded 연구·공식 source 우선·저장소 사실 분리·handoff
 - 채택 계약: 전체 OMX·OMC Skill·adapter의 `adopt|merge|exclude` 근거표와
   비중복·사용자 승인·license·보안·conformance gate
-- 금지 경계: scheduler·model runtime·tmux·Stop continuation·`omx_wiki`·`.omx|.omc`·
+- 완료 기준선: scheduler·model runtime·tmux·Stop continuation·`omx_wiki`·`.omx|.omc`·
   `omx|omc` command·자동 adapter 우선권·raw session 자동 수집 0건
+- 후속 정책: scheduler·iterative·team·multi-goal non-goal은 ADR-0019로 superseded,
+  model runtime·provider API·direct process spawn 금지는 유지
 - 실행 결과: V9-001–025 완료, host-native 기본값 전환과 세 host projection PASS
 
 ## `0.9.0-test` 기능 마감
@@ -248,8 +267,8 @@ Target: `0.8.0`
 
 - Canonical path: `docs/facts/en/`, `docs/facts/ko/`
 - 금지 path: `omx_wiki/`, `.omx/wiki/`, source root의 consumer `.hive/knowledge/`
-- Current OMX/OMC: replaceable compatibility dependency와 orchestration aid
-- 장기 방향: host-native·provider-neutral capability 대체 뒤 OMX/OMC 제거
+- Current OMX/OMC: 신규 workflow dependency 제거 결정, legacy foreign provenance만 보존
+- 장기 방향: Hive-native provider-neutral orchestration과 explicit legacy migration
 - Consumer reuse: `hive-wiki` core와 capture·maintenance·query 안전 계약
 - Skill reuse: shared canonical `harness/skills/`, exact source `.agents/skills/` projection
 - 현재 상태: 영어 46개·한국어 46개 atomic fact, exact pair 46개와 source-confined
@@ -302,10 +321,11 @@ Target: `0.8.0`
 | 6 | verifier-only signed release, update·migration·backup·crash recovery, installer ownership |
 | 7 local | shipping one-shot usage gate, 세 host projection, provenance verifier, fault injection |
 
-제품 경계:
+구현 완료된 v0.9 기준선:
 
 - Provider API·SDK·credential path 없음
-- Model runtime, scheduler, plan/Ralph/team/persistent-loop clone 없음
+- Model runtime·provider session engine·direct model/subagent process launcher 없음
+- Native scheduler·iterative·team·multi-goal: ADR-0019의 default-off 후속 계획, 현재 release 범위 밖
 - Source workspace, release bundle, installed consumer harness의 물리·논리 분리
 - Release private key 생성·읽기·저장·signing 없음
 - Canonical state: tracked Markdown·YAML·TOML

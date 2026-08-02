@@ -3,20 +3,21 @@
 ## 소유 경계
 
 - Hive 소유: `.hive/runs/<run-id>/`의 tracked Markdown, immutable graph revision,
-  evidence 검증, checkpoint·resume·steering·prepare 계약
-- Host 소유: model 실행, subagent 생성, goal 유지, 실제 dispatch와 continuation
-- Hive 금지 범위: model call, process spawn, scheduler, session daemon, provider API,
-  tmux, retry loop 실행, `omx|omc` command 호출, `Stop` continuation
+  evidence 검증, checkpoint·resume·steering·prepare 계약과 예정된 event reducer·logical
+  scheduler·lease·receipt·cancel·team·multi-goal state
+- Host 소유: model 실행, subagent 생성, native task identity와 declarative envelope 소비
+- Hive 금지 범위: model call, model·subagent process spawn, provider session daemon,
+  provider API·credential, `omx|omc` command 호출
 
-새 v0.9 run의 기본 owner: fresh evidence로 검증된 `host-native`. OMX·OMC는 run 시작
-전 사용자의 명시적 compatibility 선택 또는 기존 run의 고정 owner인 경우만 허용.
+현재 구현 baseline: fresh evidence로 검증된 `host-native` owner의 prepare-only dispatch.
+예정된 native control plane: ADR-0019 feasibility·acceptance 전 default-off.
 
 | Run 상태 | Owner 결정 | 부족한 필수 capability |
 | --- | --- | --- |
-| 새 v0.9 run | `host-native` 기본값 | `unsupported|unverified` → `host_capability_unsupported`, exit `4`, mutation 0건 |
-| 명시적 compatibility 선택 | active host와 compatible한 OMX 또는 OMC | 자동 대체 없음 |
+| 현재 새 v0.9 run | `host-native` prepare-only 기본값 | `unsupported|unverified` → `host_capability_unsupported`, exit `4`, mutation 0건 |
+| 신규 native orchestration | Hive control + host executor | Feasibility·ADR acceptance 전 default-off |
 | 기존 run | `STATUS.md`에 고정된 owner 유지 | 중간 owner 전환 없음 |
-| 기존 0.8.x run | 고정된 OMX·OMC owner의 역사적 계약 유지 | 명시적 migration 전 v0.9 기본값 적용 없음 |
+| 기존 0.8.x external run | 고정 owner의 read-only provenance | 명시적 migration은 새 native run identity 생성 |
 
 ## Canonical artifact
 
@@ -178,13 +179,27 @@ ID 단일 소비 필수.
 Hive의 host process·model·subagent 실행 0건. Prepared record는 실행 명령이 아닌 exact
 host-owned dispatch data.
 
-## External compatibility와 공존
+## Hive-native orchestration 전환
 
-Explicit OMX/OMC owner 또는 기존 pinned owner와의 공존 범위: canonical Hive data
-검증·기록·복구. Hive의 plan, Ralph, team, retry·persistent-loop Skill, lifecycle hook,
-OMX/OMC command와 foreign state 접근 0건. `hive-role-handoff`,
-`hive-run-checkpoint`, `hive-run-resume`, `hive-loop-engineering`: owner-independent data
-Skill.
+현재 prepare-only graph 위의 default-off 확장 계획:
+
+- Immutable event revision + `EVENT-CURRENT.toml` 단일 commit
+- Exact target·expected head·control epoch·authenticated one-time authority
+- Typed claim·launch·heartbeat·lookup·non-launch·cancel·result receipt
+- `dispatch-uncertain`과 proof-gated safe reclaim
+- Logical scheduler·lease fencing·budget·backpressure
+- Team mailbox·barrier·shared-path lease와 multi-goal aggregation
+- Cancel·status·recover·usage guard의 selected pointer·scheduler lock 독립 접근
+
+정본 계획: [`../plans/active/native-iterative-execution.md`](../plans/active/native-iterative-execution.md).
+Protocol: [`../plans/contracts/06-native-orchestration-state.md`](../plans/contracts/06-native-orchestration-state.md),
+[`../plans/contracts/07-native-orchestration-workflows.md`](../plans/contracts/07-native-orchestration-workflows.md).
+
+## Legacy external provenance
+
+기존 pinned OMX/OMC owner의 foreign bytes·owner metadata: read-only provenance.
+신규 workflow의 OMX/OMC 선택·command·runtime dependency 없음. Explicit migration은
+별도 native run identity·staged generation·receipt·rollback locator 사용, 원본 변경 `0건`.
 
 ## 검증 계약
 
@@ -196,4 +211,6 @@ Skill.
 - Fresh-session recovery: transcript·SQLite 없이 tracked canonical artifact만 사용
 - Automatic resume write 범위: Git-ignored Hive-owned usage history와 dispatch authorization
 - Loop prepare write 범위: exact graph prepared record 하나; spawn·continuation 0건
-- Stop hook 기반 continuation·scheduler·tmux·Ralph/team clone 0건
+- Ambient·selected pointer authority `0건`
+- Provider API·credential·direct model/subagent process spawn `0건`
+- Native scheduler activation 전 feasibility·ADR acceptance 필수

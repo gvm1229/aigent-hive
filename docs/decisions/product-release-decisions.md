@@ -17,10 +17,10 @@
 | Discord integration | 초기 범위는 usage guard 중단의 optional outbound webhook. Claude inbound는 official Discord Channel 위임, Codex inbound continuation은 official capability 전 `unsupported` |
 | v0.9 knowledge portability·scan | SQLite 복사 대신 checksummed `.hivekb` canonical bundle export·import, 고정 normalized table의 `collection_id`, explicit `hive-knowledge-scan`, 기존 query Skill의 bounded automatic retrieval. Secret·confidential·runtime·absolute path·retrieved instruction authority 제외 |
 | Global onboarding | Minimal bootstrap 뒤 mandatory `setup-hive`; 첫 질문은 language, 이후 모든 질문과 host 지침은 선택 언어. Wiki language·profile·persona·host·Skill·Wiki·usage·update-check preference 정본은 `~/.hive/config/user-setup.yml` |
-| orchestration | 검증된 host-native capability가 기본 소유. OMX·OMC는 사용자 명시 선택 또는 고정된 `0.8.x` 실행의 호환 owner만 허용하며 mid-run switch 없음 |
-| orchestration 독립 | OMX/OMC는 현재 replaceable compatibility dependency; 장기적으로 host-native·provider-neutral capability로 대체 후 제거, canonical data·path·schema·Skill identity 의존 없음 |
+| orchestration | Hive가 iterative judgment·logical scheduler·lease·receipt·cancel·team·multi-goal state 소유, host가 declarative envelope의 model·subagent 실행 소유 |
+| orchestration 독립 | 신규 workflow의 OMX/OMC functional dependency 없음. Legacy external-owner run은 read-only provenance, migration은 새 Hive-native identity 생성 |
 | runtime 관찰 | active host capability metadata, side-effect-free public `--version`, pinned-qualified usage sensor의 fixed-argv·JSON-RPC read만 허용; foreign state·provider credential read 금지 |
-| 재구현 금지 | Hive plan·Ralph·team·provider session engine 없음 |
+| runtime 경계 | Hive-native plan·Ralph급 loop·team·multi-goal 구현 허용. Provider session engine·model runtime·direct process launcher 금지 |
 | Skill | `0.8.0` target은 setup/reconfigure core + recommended suite 또는 개별 selected built-in; optional third-party는 이름·source·revision·content digest·권한의 개별 수동 승인 |
 | Skill 양방향 reuse | Hive-owned source↔consumer Skill reuse 허용; shared canonical은 `harness/skills/`, source는 exact `.agents/skills/` projection, scope·safety·consent·conformance review 필수 |
 | Source docs Wiki | `docs/` human graph와 tracked `docs/facts/en/`·`ko/` atomic pair 정본, `omx_wiki/`·`.omx/wiki/`·consumer `.hive/knowledge/` 금지, SQLite는 ignored source projection, OMX/OMC retirement 시 knowledge migration 0건 |
@@ -32,6 +32,8 @@
 | Antigravity sensor truth | Official structured surface 확인 전 `native=unsupported`; interactive TUI·private LSP/HTTP·credential·browser state parsing 금지 |
 | sensor fallback 설치 | Active-host native sensor 불가와 CodexBar 미설치 때만 필요성·대상·command preview 제공 후 current action explicit consent 요청; 수락 시 supported package manager 사용, 거절 시 core 유지와 automatic dispatch fail-closed |
 | dispatch replay | Hive는 같은 authorization 재발급을 거부하지만 capture된 JSON의 외부 replay는 차단하지 못함; host/orchestration owner가 authorization ID를 한 번만 소비 |
+| orchestration authority | Selected session pointer는 selector only. Mutation은 exact target·event head·control epoch·request digest·external trust root의 one-time authority 필수 |
+| orchestration uncertainty | Host idempotency·receipt proof 부재 시 automatic reclaim 금지와 `dispatch-uncertain` 중지 |
 | judge | verdict 전 digest-bound assignment, exact roster/slot/instance/evidence/timestamp, requester/task-agent 배제, verdict 후 별도 human approval; elevated 2/3, critical 3/3+human |
 | judge 신뢰 | consumer target 밖의 agent-write-denied TOML public-key trust root, purpose-bound detached Ed25519 signature와 aggregate-only output; Hive는 strict verification만 수행하고 private-key custody/signing은 외부 authority가 소유 |
 | release 신뢰 | TUF 1.0.31-compatible offline root 2-of-3와 분리된 targets/snapshot/timestamp, 전역 unique role key, strict Ed25519 verification, old+new root rotation, semantic in-toto/SLSA·platform evidence; signing/private key는 Hive 밖의 external authority |
@@ -67,6 +69,9 @@ v0.9 cross-project retrieval, mandatory durable memory, portable bundle·directo
 
 Notion canonical backend·SQLite projection·Discord outbound 경계:
 [`ADR-0018`](ADR-0018-notion-wiki-backend.md).
+
+Hive-native iterative·team·multi-goal execution과 OMX·OMC 신규 dependency 제거:
+[`ADR-0019`](ADR-0019-hive-native-iterative-execution.md).
 
 ## 미확정 항목
 

@@ -6,7 +6,7 @@
 | --- | --- |
 | [Source layout](source-layout.md) | Source·release·consumer tree와 crate ownership |
 | [Role lifecycle](role-lifecycle.md) | Persistent role identity·handoff |
-| [Run lifecycle](run-lifecycle.md) | Criterion·checkpoint·resume·owner pin |
+| [Run lifecycle](run-lifecycle.md) | Criterion·checkpoint·event·scheduler·receipt·cancel·resume |
 | [Skill consent](skill-consent.md) | Optional Skill approval·activation |
 | [Hook consent](hook-consent.md) | Fallback hook preview·consent·inert state |
 | [Judge trust boundary](judge-trust-boundary.md) | Clean-context package·Ed25519 quorum |
