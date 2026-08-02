@@ -18,7 +18,8 @@ use crate::portable::{
     BundleSourceKind, PortableEntryClassification, ValidatedBundlePlan,
 };
 use crate::rag::{
-    build_rag_index, parse_claim_markdown, GenerationManifest, RagVisibility, RAG_SCHEMA_VERSION,
+    build_rag_index, parse_claim_markdown, GenerationManifest, RagVisibility,
+    MAX_SERIALIZED_INDEX_BYTES, RAG_SCHEMA_VERSION,
 };
 use crate::shared::SHARED_INDEX_RELATIVE;
 use crate::store::{
@@ -54,7 +55,6 @@ const MAX_WIKI_BYTES: usize = 2 * 1024 * 1024;
 const MAX_SUPPRESSION_BYTES: usize = 1024 * 1024;
 const MAX_MANIFEST_BYTES: usize = 128 * 1024;
 const MAX_DIRTY_BYTES: usize = 1024 * 1024;
-const MAX_INDEX_BYTES: usize = 128 * 1024 * 1024;
 const MAX_COLLECTIONS: usize = 10_000;
 const MAX_ALIASES: usize = 256;
 const MAX_CHANGED_PATH_BYTES: usize = 240;
@@ -2305,7 +2305,7 @@ fn reject_dirty(root: &Dir) -> Result<(), WikiError> {
     let _ = read_bounded_optional(
         root,
         Path::new(SHARED_INDEX_RELATIVE),
-        MAX_INDEX_BYTES,
+        MAX_SERIALIZED_INDEX_BYTES,
         "RAG SQLite index",
     )?;
     Ok(())

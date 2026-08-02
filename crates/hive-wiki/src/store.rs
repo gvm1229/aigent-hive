@@ -10,7 +10,8 @@ use crate::rag::{
     render_claim_markdown, retrieve_serialized, AssertionStatus, CanonicalClaim, CanonicalDocument,
     ClaimKind, ClaimProvenance, GenerationManifest, RagError, RagIndexArtifact, RagLanguage,
     RagSnapshot, RagVisibility, RememberDisposition, RememberPlan, RememberRequest,
-    RememberSourceKind, RetrievalRequest, RetrievalResult, RetrievalScope, RAG_SCHEMA_VERSION,
+    RememberSourceKind, RetrievalRequest, RetrievalResult, RetrievalScope,
+    MAX_SERIALIZED_INDEX_BYTES, RAG_SCHEMA_VERSION,
 };
 use crate::scan::{
     ClaimKind as ScanClaimKind, ReviewedClaim, ScanClaimMetadata, ScanPromotionStatus,
@@ -48,7 +49,6 @@ const MAX_WIKI_BYTES: usize = 2 * 1024 * 1024;
 const MAX_MANIFEST_BYTES: usize = 128 * 1024;
 pub(crate) const MAX_RAG_TRUST_BYTES: usize = 16 * 1024;
 const MAX_DIRTY_BYTES: usize = 1024 * 1024;
-const MAX_INDEX_BYTES: usize = 128 * 1024 * 1024;
 const MAX_EXTERNAL_CANONICAL_BYTES: usize = 16 * 1024 * 1024;
 const DIRTY_SCHEMA_VERSION: u32 = 2;
 const RAG_TRUST_SCHEMA_VERSION: u32 = 1;
@@ -1067,7 +1067,7 @@ impl RagStore {
         let sqlite_bytes = read_bounded_required(
             &self.root,
             Path::new(SHARED_INDEX_RELATIVE),
-            MAX_INDEX_BYTES,
+            MAX_SERIALIZED_INDEX_BYTES,
             "RAG SQLite index",
         )?;
         crate::rag::query_wiki_pages_serialized(&sqlite_bytes, &manifest, &registry, request)
@@ -1100,7 +1100,7 @@ impl RagStore {
         let sqlite_bytes = read_bounded_required(
             &self.root,
             Path::new(SHARED_INDEX_RELATIVE),
-            MAX_INDEX_BYTES,
+            MAX_SERIALIZED_INDEX_BYTES,
             "RAG SQLite index",
         )?;
         retrieve_serialized(&sqlite_bytes, &manifest, &registry, request).map_err(rag_error)
@@ -1166,7 +1166,7 @@ impl RagStore {
         let sqlite_bytes = read_bounded_required(
             &self.root,
             Path::new(SHARED_INDEX_RELATIVE),
-            MAX_INDEX_BYTES,
+            MAX_SERIALIZED_INDEX_BYTES,
             "RAG SQLite index",
         )?;
         Ok(Some(ExternalIndexSnapshot {
@@ -1228,7 +1228,7 @@ impl RagStore {
         }
         if artifact.manifest.schema_version != RAG_SCHEMA_VERSION
             || artifact.manifest.generation == 0
-            || artifact.sqlite_bytes.len() > MAX_INDEX_BYTES
+            || artifact.sqlite_bytes.len() > MAX_SERIALIZED_INDEX_BYTES
         {
             return Err(WikiError::InvalidInput(
                 "external RAG artifact has an unsupported generation or size".to_owned(),
@@ -1360,7 +1360,11 @@ impl RagStore {
                 MAX_RAG_TRUST_BYTES,
                 "RAG canonical trust binding",
             ),
-            (SHARED_INDEX_RELATIVE, MAX_INDEX_BYTES, "RAG SQLite index"),
+            (
+                SHARED_INDEX_RELATIVE,
+                MAX_SERIALIZED_INDEX_BYTES,
+                "RAG SQLite index",
+            ),
         ] {
             preflight_bounded_required(&self.root, Path::new(relative), max_bytes, label)?;
         }
@@ -2227,7 +2231,7 @@ impl RagStore {
         let sqlite_bytes = read_bounded_required(
             &self.root,
             Path::new(SHARED_INDEX_RELATIVE),
-            MAX_INDEX_BYTES,
+            MAX_SERIALIZED_INDEX_BYTES,
             "RAG SQLite index",
         )?;
         probe_rag_index(&sqlite_bytes, &manifest, &registry).map_err(|error| {
@@ -2252,7 +2256,7 @@ impl RagStore {
         let Some(sqlite_bytes) = read_bounded_optional(
             &self.root,
             Path::new(SHARED_INDEX_RELATIVE),
-            MAX_INDEX_BYTES,
+            MAX_SERIALIZED_INDEX_BYTES,
             "RAG SQLite index",
         )?
         else {

@@ -23,7 +23,11 @@ pub const RAG_SCHEMA_VERSION: u32 = 6;
 /// Version of the canonical typed-claim Markdown contract.
 pub const CLAIM_SCHEMA_VERSION: u32 = 1;
 
-const MAX_INDEX_BYTES: usize = 128 * 1024 * 1024;
+/// Maximum size of one authenticated serialized SQLite RAG projection.
+///
+/// The limit accommodates the release-qualified 50,000-chunk corpus while
+/// retaining a finite in-memory deserialization boundary.
+pub const MAX_SERIALIZED_INDEX_BYTES: usize = 256 * 1024 * 1024;
 const MAX_DOCUMENT_BYTES: usize = 2 * 1024 * 1024;
 const MAX_FACT_BYTES: usize = 16 * 1024;
 const MAX_QUERY_BYTES: usize = 4096;
@@ -1056,9 +1060,9 @@ pub fn build_rag_index(snapshot: &RagSnapshot) -> Result<RagIndexArtifact, RagEr
         .serialize(MAIN_DB)
         .map_err(sqlite_error)?
         .to_vec();
-    if sqlite_bytes.len() > MAX_INDEX_BYTES {
+    if sqlite_bytes.len() > MAX_SERIALIZED_INDEX_BYTES {
         return Err(RagError::InvalidInput(format!(
-            "serialized RAG index exceeds {MAX_INDEX_BYTES} bytes"
+            "serialized RAG index exceeds {MAX_SERIALIZED_INDEX_BYTES} bytes"
         )));
     }
     manifest.sqlite_digest = sha256_digest(&sqlite_bytes);
@@ -1198,9 +1202,9 @@ pub fn build_incremental_remote_rag_index(
         .serialize(MAIN_DB)
         .map_err(sqlite_error)?
         .to_vec();
-    if sqlite_bytes.len() > MAX_INDEX_BYTES {
+    if sqlite_bytes.len() > MAX_SERIALIZED_INDEX_BYTES {
         return Err(RagError::InvalidInput(format!(
-            "serialized RAG index exceeds {MAX_INDEX_BYTES} bytes"
+            "serialized RAG index exceeds {MAX_SERIALIZED_INDEX_BYTES} bytes"
         )));
     }
     manifest.sqlite_digest = sha256_digest(&sqlite_bytes);
@@ -1386,7 +1390,7 @@ fn validate_serialized_index(
     sqlite_bytes: &[u8],
     expected_manifest: &GenerationManifest,
 ) -> Result<(), RagError> {
-    if sqlite_bytes.is_empty() || sqlite_bytes.len() > MAX_INDEX_BYTES {
+    if sqlite_bytes.is_empty() || sqlite_bytes.len() > MAX_SERIALIZED_INDEX_BYTES {
         return Err(RagError::RepairRequired(
             "RAG index bytes are absent or exceed the supported bound".to_owned(),
         ));
@@ -1586,7 +1590,7 @@ pub fn query_wiki_pages_serialized(
         .as_deref()
         .map(canonical_wiki_category)
         .transpose()?;
-    if sqlite_bytes.is_empty() || sqlite_bytes.len() > MAX_INDEX_BYTES {
+    if sqlite_bytes.is_empty() || sqlite_bytes.len() > MAX_SERIALIZED_INDEX_BYTES {
         return Err(RagError::RepairRequired(
             "RAG index bytes are absent or exceed the supported bound".to_owned(),
         ));
@@ -2843,7 +2847,7 @@ fn verify_serialized_digest(
     sqlite_bytes: &[u8],
     expected: &GenerationManifest,
 ) -> Result<(), RagError> {
-    if sqlite_bytes.is_empty() || sqlite_bytes.len() > MAX_INDEX_BYTES {
+    if sqlite_bytes.is_empty() || sqlite_bytes.len() > MAX_SERIALIZED_INDEX_BYTES {
         return Err(RagError::RepairRequired(
             "RAG index bytes are absent or exceed the supported bound".to_owned(),
         ));
