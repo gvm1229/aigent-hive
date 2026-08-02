@@ -81,9 +81,9 @@ pub(crate) fn run(arguments: &[String]) -> ExitCode {
         return ExitCode::SUCCESS;
     }
     let result = match arguments.first().map(String::as_str) {
-        Some("preview") => parse_preview(&arguments[1..]).and_then(preview),
+        Some("preview") => parse_preview(&arguments[1..]).and_then(|parsed| preview(&parsed)),
         Some("collect") => parse_collect(&arguments[1..]).and_then(collect),
-        Some("export") => parse_export(&arguments[1..]).and_then(export),
+        Some("export") => parse_export(&arguments[1..]).and_then(|parsed| export(&parsed)),
         Some(action) => Err(AdapterError::Input(format!(
             "unknown report action: {action}"
         ))),
@@ -184,7 +184,7 @@ fn required<'a>(options: &[(&'a str, &'a str)], key: &str) -> Result<&'a str, Ad
         .ok_or_else(|| AdapterError::Input(format!("missing required report option {key}")))
 }
 
-fn preview(arguments: PreviewArguments) -> Result<ActionResult, AdapterError> {
+fn preview(arguments: &PreviewArguments) -> Result<ActionResult, AdapterError> {
     let target = PinnedTarget::open(&arguments.target)?;
     Ok(ActionResult {
         schema_version: 1,
@@ -264,7 +264,7 @@ fn collect(arguments: CollectArguments) -> Result<ActionResult, AdapterError> {
     })
 }
 
-fn export(arguments: ExportArguments) -> Result<ActionResult, AdapterError> {
+fn export(arguments: &ExportArguments) -> Result<ActionResult, AdapterError> {
     let target = PinnedTarget::open(&arguments.target)?;
     let relative = report_relative(&arguments.report_id)?;
     let bytes = target.read_required(&relative, MAX_REPORT_BYTES)?;
@@ -501,7 +501,7 @@ mod tests {
         assert!(text.contains("\"raw_prompt_included\":false"));
         assert!(text.contains("\"automatic_upload\":false"));
 
-        export(ExportArguments {
+        export(&ExportArguments {
             target,
             report_id,
             destination: destination.clone(),
