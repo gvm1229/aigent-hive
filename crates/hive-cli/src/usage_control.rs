@@ -847,30 +847,38 @@ fn enforce(arguments: &EnforceArguments) -> Result<ActionResult, AdapterError> {
             .marker
             .as_ref()
             .expect("a published current halt always has a marker");
-        let outcome = crate::discord::notify_usage_halt(
-            config.discord_guard_enabled,
-            config.discord_webhook_url_env.as_deref(),
-            &crate::discord::UsageHaltNotification {
-                decision: &marker.decision,
-                host_scope: &marker.host_scope,
-                selected_window: &marker.selected_window,
-                threshold_remaining_percent: marker.threshold_remaining_percent,
-                measured_at: marker.measured_at,
-                evidence_digest: &marker.evidence_digest,
-            },
-        );
-        if let Some(data) = result
-            .data
-            .as_mut()
-            .and_then(serde_json::Value::as_object_mut)
-        {
-            data.insert(
-                "discord_notification".to_owned(),
-                json!({ "outcome": outcome.as_str(), "outbound_only": true }),
-            );
-        }
+        record_discord_notification(&mut result, &config, marker);
     }
     Ok(result)
+}
+
+fn record_discord_notification(
+    result: &mut ActionResult,
+    config: &InstalledUsageConfig,
+    marker: &HaltMarker,
+) {
+    let outcome = crate::discord::notify_usage_halt(
+        config.discord_guard_enabled,
+        config.discord_webhook_url_env.as_deref(),
+        &crate::discord::UsageHaltNotification {
+            decision: &marker.decision,
+            host_scope: &marker.host_scope,
+            selected_window: &marker.selected_window,
+            threshold_remaining_percent: marker.threshold_remaining_percent,
+            measured_at: marker.measured_at,
+            evidence_digest: &marker.evidence_digest,
+        },
+    );
+    if let Some(data) = result
+        .data
+        .as_mut()
+        .and_then(serde_json::Value::as_object_mut)
+    {
+        data.insert(
+            "discord_notification".to_owned(),
+            json!({ "outcome": outcome.as_str(), "outbound_only": true }),
+        );
+    }
 }
 
 fn observe_usage(
