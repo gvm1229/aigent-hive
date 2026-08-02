@@ -21,6 +21,7 @@ use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 use std::time::{SystemTime, UNIX_EPOCH};
 
+mod discord;
 mod judge;
 mod knowledge;
 mod knowledge_scan;
@@ -53,6 +54,7 @@ USAGE:
     hive update
     hive update --check --user-root <absolute-dir> --output json
     hive knowledge add|authorize-confidential|collection|delete|export|import|ingest|lint|list|promote|query|read|refresh|remember|retrieve|scan|suppress --help
+    hive discord inbound --host codex|claude|antigravity --output json
     hive project upgrade --target <dir> (--scan|--dry-run|--apply|--validate|--recover) --output json
     hive index rebuild --target <dir> --output json
     hive route --request <json> --output json
@@ -183,6 +185,7 @@ fn main() -> ExitCode {
         Some("install") => user_install::run_install(&arguments[1..]),
         Some("source-wiki") => source_wiki::run(&arguments[1..]),
         Some("knowledge") => knowledge::run_knowledge(&arguments[1..]),
+        Some("discord") => discord::run(&arguments[1..]),
         Some("project") => project_upgrade::run(&arguments[1..]),
         Some("index") => knowledge::run_index(&arguments[1..]),
         Some("route") => run_route(&arguments[1..]),
@@ -2104,6 +2107,8 @@ mod tests {
             selected_project_skills: Vec::new(),
             usage_guard_enabled: false,
             codexbar_fallback_enabled: false,
+            discord_guard_enabled: false,
+            discord_webhook_url_env: None,
             usage_stop_remaining_percent: 60,
         };
         let mut changed = Vec::new();

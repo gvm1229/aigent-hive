@@ -2216,6 +2216,8 @@ mod tests {
                     .collect(),
                 usage_guard_enabled: false,
                 codexbar_fallback_enabled: false,
+                discord_guard_enabled: false,
+                discord_webhook_url_env: None,
                 usage_stop_remaining_percent: 20,
             }),
         })

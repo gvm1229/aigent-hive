@@ -182,6 +182,15 @@ pub(crate) struct SkillPreferences {
     pub(crate) selected: Vec<String>,
 }
 
+#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct DiscordGuardPreferences {
+    #[serde(default)]
+    pub(crate) enabled: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(crate) webhook_url_env: Option<String>,
+}
+
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(deny_unknown_fields)]
 pub(crate) struct UsageGuardPreferences {
@@ -191,6 +200,8 @@ pub(crate) struct UsageGuardPreferences {
     pub(crate) stop_remaining_percent: u8,
     #[serde(default)]
     pub(crate) codexbar_fallback_enabled: bool,
+    #[serde(default)]
+    pub(crate) discord: DiscordGuardPreferences,
 }
 
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
@@ -837,7 +848,39 @@ fn validate_config_semantics(config: &UserSetupConfig) -> Result<(), SetupError>
             "codexbar_fallback_enabled must be false when the usage guard is disabled".to_owned(),
         ));
     }
+    let discord = &config.usage_guard.discord;
+    match (
+        config.usage_guard.enabled,
+        discord.enabled,
+        discord.webhook_url_env.as_deref(),
+    ) {
+        (false, true, _) => {
+            return Err(SetupError::Input(
+                "Discord usage notification requires the usage guard to be enabled".to_owned(),
+            ));
+        }
+        (_, true, Some(name)) if valid_environment_name(name) => {}
+        (_, true, _) => {
+            return Err(SetupError::Input(
+                "Discord usage notification requires a valid webhook_url_env name".to_owned(),
+            ));
+        }
+        (_, false, None) => {}
+        (_, false, Some(_)) => {
+            return Err(SetupError::Input(
+                "Discord webhook_url_env must be absent while Discord notification is disabled"
+                    .to_owned(),
+            ));
+        }
+    }
     Ok(())
+}
+
+fn valid_environment_name(value: &str) -> bool {
+    let mut characters = value.chars();
+    matches!(characters.next(), Some('A'..='Z' | '_'))
+        && characters.all(|character| matches!(character, 'A'..='Z' | '0'..='9' | '_'))
+        && value.len() <= 128
 }
 
 fn validate_notion_id(label: &str, value: &str) -> Result<(), SetupError> {
@@ -1556,6 +1599,8 @@ pub(crate) fn project_preferences(user_root: &Path) -> Result<GlobalProjectPrefe
         selected_project_skills,
         usage_guard_enabled: config.usage_guard.enabled,
         codexbar_fallback_enabled: config.usage_guard.codexbar_fallback_enabled,
+        discord_guard_enabled: config.usage_guard.discord.enabled,
+        discord_webhook_url_env: config.usage_guard.discord.webhook_url_env,
         usage_stop_remaining_percent: config.usage_guard.stop_remaining_percent,
     })
 }
@@ -1770,6 +1815,26 @@ usage_guard: {}
         assert!(!config.usage_guard.enabled);
         assert_eq!(config.usage_guard.stop_remaining_percent, 20);
         assert!(!config.usage_guard.codexbar_fallback_enabled);
+        assert!(!config.usage_guard.discord.enabled);
+        assert!(config.usage_guard.discord.webhook_url_env.is_none());
+    }
+
+    #[test]
+    fn discord_usage_notification_requires_guard_and_environment_name() {
+        let mut config = valid_config();
+        config.usage_guard.enabled = true;
+        config.usage_guard.discord.enabled = true;
+        config.usage_guard.discord.webhook_url_env = Some("HIVE_DISCORD_WEBHOOK_URL".to_owned());
+        validate_config_semantics(&config).expect("enabled Discord notification");
+
+        config.usage_guard.discord.webhook_url_env = Some("discord_webhook".to_owned());
+        let error = validate_config_semantics(&config).expect_err("lowercase environment rejected");
+        assert!(error.message().contains("webhook_url_env"));
+
+        config.usage_guard.discord.webhook_url_env = Some("HIVE_DISCORD_WEBHOOK_URL".to_owned());
+        config.usage_guard.enabled = false;
+        let error = validate_config_semantics(&config).expect_err("guard dependency rejected");
+        assert!(error.message().contains("usage guard"));
     }
 
     #[test]

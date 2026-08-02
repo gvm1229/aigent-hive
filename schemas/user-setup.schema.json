@@ -183,7 +183,34 @@
           "maximum": 99,
           "default": 20
         },
-        "codexbar_fallback_enabled": { "type": "boolean", "default": false }
+        "codexbar_fallback_enabled": { "type": "boolean", "default": false },
+        "discord": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": { "type": "boolean", "default": false },
+            "webhook_url_env": {
+              "type": "string",
+              "pattern": "^[A-Z_][A-Z0-9_]{0,127}$"
+            }
+          },
+          "allOf": [
+            {
+              "if": {
+                "properties": { "enabled": { "const": true } },
+                "required": ["enabled"]
+              },
+              "then": { "required": ["webhook_url_env"] }
+            },
+            {
+              "if": {
+                "properties": { "enabled": { "const": false } },
+                "required": ["enabled"]
+              },
+              "then": { "not": { "required": ["webhook_url_env"] } }
+            }
+          ]
+        }
       },
       "allOf": [
         {

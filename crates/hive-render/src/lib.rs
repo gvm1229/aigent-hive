@@ -156,6 +156,8 @@ pub struct ResolvedProjectPreferences {
     pub selected_project_skills: Vec<String>,
     pub usage_guard_enabled: bool,
     pub codexbar_fallback_enabled: bool,
+    pub discord_guard_enabled: bool,
+    pub discord_webhook_url_env: Option<String>,
     pub usage_stop_remaining_percent: u8,
 }
 
@@ -253,6 +255,12 @@ pub struct GlobalProjectPreferences {
     pub usage_guard_enabled: bool,
     /// Whether the user approved the fixed `CodexBar` fallback adapter.
     pub codexbar_fallback_enabled: bool,
+    /// Whether a newly published usage halt sends an outbound Discord notification.
+    pub discord_guard_enabled: bool,
+    /// Environment variable containing the Discord incoming webhook URL.
+    ///
+    /// This is only the environment-variable name, never a webhook secret.
+    pub discord_webhook_url_env: Option<String>,
     /// Remaining-usage stop threshold inherited by every project.
     pub usage_stop_remaining_percent: u8,
 }
@@ -269,6 +277,8 @@ struct EffectiveProjectPreferences {
     selected_project_skills: Vec<String>,
     usage_guard_enabled: bool,
     codexbar_fallback_enabled: bool,
+    discord_guard_enabled: bool,
+    discord_webhook_url_env: Option<String>,
     usage_stop_remaining_percent: u8,
 }
 
@@ -422,6 +432,10 @@ struct InstalledHarness {
     usage_guard_enabled: Option<bool>,
     #[serde(default)]
     codexbar_fallback_enabled: bool,
+    #[serde(default)]
+    discord_guard_enabled: bool,
+    #[serde(default)]
+    discord_webhook_url_env: Option<String>,
     primary_host: String,
     external_capability_detection: String,
     resolved_owner: String,
@@ -1647,6 +1661,8 @@ fn execute_release_update_for_target_in(
             selected_project_skills: preferences.selected_project_skills,
             usage_guard_enabled: preferences.usage_guard_enabled,
             codexbar_fallback_enabled: preferences.codexbar_fallback_enabled,
+            discord_guard_enabled: preferences.discord_guard_enabled,
+            discord_webhook_url_env: preferences.discord_webhook_url_env,
             usage_stop_remaining_percent: preferences.usage_stop_remaining_percent,
         }
     });
@@ -1842,6 +1858,8 @@ fn resolved_preferences(
         selected_project_skills: preferences.selected_project_skills.clone(),
         usage_guard_enabled: preferences.usage_guard_enabled,
         codexbar_fallback_enabled: preferences.codexbar_fallback_enabled,
+        discord_guard_enabled: preferences.discord_guard_enabled,
+        discord_webhook_url_env: preferences.discord_webhook_url_env.clone(),
         usage_stop_remaining_percent: preferences.usage_stop_remaining_percent,
     })
 }
@@ -2138,6 +2156,8 @@ fn resolve_effective_project_preferences(
             selected_project_skills: global.selected_project_skills.clone(),
             usage_guard_enabled: global.usage_guard_enabled,
             codexbar_fallback_enabled: global.codexbar_fallback_enabled,
+            discord_guard_enabled: global.discord_guard_enabled,
+            discord_webhook_url_env: global.discord_webhook_url_env.clone(),
             usage_stop_remaining_percent: global.usage_stop_remaining_percent,
         },
         "custom" => {
@@ -2173,6 +2193,8 @@ fn resolve_effective_project_preferences(
                 )?,
                 usage_guard_enabled: global.usage_guard_enabled,
                 codexbar_fallback_enabled: global.codexbar_fallback_enabled,
+                discord_guard_enabled: global.discord_guard_enabled,
+                discord_webhook_url_env: global.discord_webhook_url_env.clone(),
                 usage_stop_remaining_percent: global.usage_stop_remaining_percent,
             }
         }
@@ -2215,6 +2237,13 @@ fn validate_global_project_preferences(
             .iter()
             .any(|name| name == "setup-hive")
         || (global.codexbar_fallback_enabled && !global.usage_guard_enabled)
+        || (global.discord_guard_enabled && !global.usage_guard_enabled)
+        || (global.discord_guard_enabled
+            && !global
+                .discord_webhook_url_env
+                .as_deref()
+                .is_some_and(valid_environment_name))
+        || (!global.discord_guard_enabled && global.discord_webhook_url_env.is_some())
         || !(1..=99).contains(&global.usage_stop_remaining_percent)
     {
         return Err(RenderError::Input(
@@ -2222,6 +2251,13 @@ fn validate_global_project_preferences(
         ));
     }
     Ok(())
+}
+
+fn valid_environment_name(value: &str) -> bool {
+    let mut characters = value.chars();
+    matches!(characters.next(), Some('A'..='Z' | '_'))
+        && characters.all(|character| matches!(character, 'A'..='Z' | '0'..='9' | '_'))
+        && value.len() <= 128
 }
 
 fn resolve_project_skill_selection(
@@ -3073,7 +3109,7 @@ fn render_harness_toml(
             .join(", ");
         write!(
             &mut output,
-            "setup_mode = {}\npreference_provenance = {}\ninterface_language = {}\nwiki_enabled = {}\nwiki_backend = {}\nwiki_language = {}\npersona_id = {}\nusage_guard_enabled = {}\ncodexbar_fallback_enabled = {}\nselected_project_skills = [{selected}]\n",
+            "setup_mode = {}\npreference_provenance = {}\ninterface_language = {}\nwiki_enabled = {}\nwiki_backend = {}\nwiki_language = {}\npersona_id = {}\nusage_guard_enabled = {}\ncodexbar_fallback_enabled = {}\ndiscord_guard_enabled = {}\nselected_project_skills = [{selected}]\n",
             quoted(&answers.setup_mode),
             quoted(preferences.provenance),
             quoted(&preferences.interface_language),
@@ -3083,8 +3119,17 @@ fn render_harness_toml(
             quoted(&preferences.persona_id),
             preferences.usage_guard_enabled,
             preferences.codexbar_fallback_enabled,
+            preferences.discord_guard_enabled,
         )
         .expect("writing to String cannot fail");
+        if let Some(environment_name) = &preferences.discord_webhook_url_env {
+            writeln!(
+                &mut output,
+                "discord_webhook_url_env = {}",
+                quoted(environment_name)
+            )
+            .expect("writing to String cannot fail");
+        }
         if let Some(description) = &preferences.persona_custom_description {
             writeln!(
                 &mut output,
@@ -5980,6 +6025,8 @@ fn effective_preferences_from_harness(
         selected_project_skills: harness.selected_project_skills.clone(),
         usage_guard_enabled,
         codexbar_fallback_enabled: harness.codexbar_fallback_enabled,
+        discord_guard_enabled: harness.discord_guard_enabled,
+        discord_webhook_url_env: harness.discord_webhook_url_env.clone(),
         usage_stop_remaining_percent: harness.usage_stop_remaining_percent,
     };
     validate_global_project_preferences(&global).map_err(as_verification)?;
@@ -5998,6 +6045,8 @@ fn effective_preferences_from_harness(
         selected_project_skills: harness.selected_project_skills.clone(),
         usage_guard_enabled,
         codexbar_fallback_enabled: harness.codexbar_fallback_enabled,
+        discord_guard_enabled: harness.discord_guard_enabled,
+        discord_webhook_url_env: harness.discord_webhook_url_env.clone(),
         usage_stop_remaining_percent: harness.usage_stop_remaining_percent,
     }))
 }
@@ -6950,6 +6999,8 @@ mod tests {
             ],
             usage_guard_enabled: true,
             codexbar_fallback_enabled: true,
+            discord_guard_enabled: true,
+            discord_webhook_url_env: Some("HIVE_DISCORD_WEBHOOK_URL".to_owned()),
             usage_stop_remaining_percent: 17,
         };
 
@@ -6970,6 +7021,11 @@ mod tests {
         assert_eq!(effective.provenance, "global-inherited");
         assert!(!effective.wiki_enabled);
         assert!(effective.codexbar_fallback_enabled);
+        assert!(effective.discord_guard_enabled);
+        assert_eq!(
+            effective.discord_webhook_url_env.as_deref(),
+            Some("HIVE_DISCORD_WEBHOOK_URL")
+        );
         assert_eq!(effective.usage_stop_remaining_percent, 17);
         assert!(!target.join(".hive/knowledge/Wiki/index.md").exists());
         assert!(!target.join(".hive/knowledge/Wiki/log.md").exists());
@@ -6987,6 +7043,8 @@ mod tests {
         assert!(harness.contains("preference_provenance = \"global-inherited\""));
         assert!(harness.contains("usage_stop_remaining_percent = 17"));
         assert!(harness.contains("codexbar_fallback_enabled = true"));
+        assert!(harness.contains("discord_guard_enabled = true"));
+        assert!(harness.contains("discord_webhook_url_env = \"HIVE_DISCORD_WEBHOOK_URL\""));
         assert!(harness
             .contains("selected_project_skills = [\"hive-prompt-refine\", \"setup-harness\"]"));
 
@@ -7015,6 +7073,8 @@ mod tests {
             selected_project_skills: vec!["hive-wiki".to_owned()],
             usage_guard_enabled: true,
             codexbar_fallback_enabled: false,
+            discord_guard_enabled: false,
+            discord_webhook_url_env: None,
             usage_stop_remaining_percent: 20,
         };
 
@@ -7069,6 +7129,8 @@ mod tests {
                     selected_project_skills: vec!["setup-harness".to_owned()],
                     usage_guard_enabled: false,
                     codexbar_fallback_enabled: false,
+                    discord_guard_enabled: false,
+                    discord_webhook_url_env: None,
                     usage_stop_remaining_percent: 20,
                 }),
             },
@@ -7103,6 +7165,8 @@ mod tests {
             ],
             usage_guard_enabled: false,
             codexbar_fallback_enabled: false,
+            discord_guard_enabled: false,
+            discord_webhook_url_env: None,
             usage_stop_remaining_percent: 17,
         };
         let installed = execute_setup(&SetupRequest {
@@ -7164,6 +7228,8 @@ mod tests {
             selected_project_skills: vec!["setup-harness".to_owned()],
             usage_guard_enabled: true,
             codexbar_fallback_enabled: false,
+            discord_guard_enabled: false,
+            discord_webhook_url_env: None,
             usage_stop_remaining_percent: 20,
         };
         let error = require_operational_update_preferences("0.8.0", None)
@@ -7280,6 +7346,8 @@ mod tests {
                 selected_project_skills: vec!["setup-harness".to_owned()],
                 usage_guard_enabled: false,
                 codexbar_fallback_enabled: false,
+                discord_guard_enabled: false,
+                discord_webhook_url_env: None,
                 usage_stop_remaining_percent: 20,
             }),
         })
@@ -7317,6 +7385,8 @@ mod tests {
                 selected_project_skills: vec!["setup-harness".to_owned()],
                 usage_guard_enabled: true,
                 codexbar_fallback_enabled: false,
+                discord_guard_enabled: false,
+                discord_webhook_url_env: None,
                 usage_stop_remaining_percent: 20,
             }),
         })
@@ -7556,6 +7626,8 @@ mod tests {
                     ],
                     usage_guard_enabled,
                     codexbar_fallback_enabled: false,
+                    discord_guard_enabled: false,
+                    discord_webhook_url_env: None,
                     usage_stop_remaining_percent: 19,
                 }),
             })
@@ -7952,6 +8024,8 @@ mod tests {
             selected_project_skills: vec!["setup-harness".to_owned()],
             usage_guard_enabled: true,
             codexbar_fallback_enabled: true,
+            discord_guard_enabled: false,
+            discord_webhook_url_env: None,
             usage_stop_remaining_percent: 20,
         };
         let effective = resolve_effective_project_preferences(&answers, Some(&global))
@@ -8131,6 +8205,8 @@ mod tests {
             ],
             usage_guard_enabled: true,
             codexbar_fallback_enabled: false,
+            discord_guard_enabled: false,
+            discord_webhook_url_env: None,
             usage_stop_remaining_percent: 60,
         }
     }

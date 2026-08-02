@@ -6058,6 +6058,7 @@ fn unix_seconds() -> Result<u64, InstallError> {
 mod tests {
     use super::*;
     use crate::usage::{CommandOutput, QualifiedExecutable, SensorError};
+    use crate::user_setup::DiscordGuardPreferences;
     use std::sync::Mutex;
     use tempfile::tempdir;
 
@@ -6998,6 +6999,7 @@ mod tests {
                 enabled: false,
                 stop_remaining_percent: 20,
                 codexbar_fallback_enabled: false,
+                discord: DiscordGuardPreferences::default(),
             },
         };
 

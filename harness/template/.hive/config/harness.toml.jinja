@@ -22,6 +22,10 @@ wiki_language = {{ wiki_language | to_json }}
 persona_id = {{ persona_id | to_json }}
 usage_guard_enabled = {{ usage_guard_enabled | to_json }}
 codexbar_fallback_enabled = {{ codexbar_fallback_enabled | to_json }}
+discord_guard_enabled = {{ discord_guard_enabled | to_json }}
+{% if discord_webhook_url_env -%}
+discord_webhook_url_env = {{ discord_webhook_url_env | to_json }}
+{% endif -%}
 selected_project_skills = {{ selected_project_skills | to_json }}
 {% if capability_resolution.detection == 'available' and capability_resolution.resolved_owner == 'host-native' and approved_fallback_hooks | length > 0 -%}
 approved_fallback_hooks_file = ".hive/config/approved-hooks.yml"
