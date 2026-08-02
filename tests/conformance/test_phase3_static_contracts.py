@@ -320,7 +320,8 @@ class Phase3SkillSourceContract(unittest.TestCase):
         ):
             self.assertIn(requirement, source_manifest)
         for requirement in (
-            "replaceable compatibility dependencies with planned retirement",
+            "Do not select, invoke, install, or configure OMX/OMC for a new workflow",
+            "foreign read-only provenance",
             "Permit bidirectional reuse only for Hive-owned Skill source",
             "Do not use `omx_wiki/`, `.omx/wiki/`, or consumer `.hive/knowledge/`",
         ):
@@ -351,6 +352,7 @@ class Phase3SkillSourceContract(unittest.TestCase):
             "active/documentation-style.md",
             "active/docs-wiki-migration.md",
             "active/native-usage-sensor.md",
+            "active/native-iterative-execution.md",
             "active/plugin-project-lifecycle.md",
             "active/prompt-refine-auto-routing.md",
             "active/release-0.8.0.md",
@@ -378,6 +380,7 @@ class Phase3SkillSourceContract(unittest.TestCase):
             plan_root / "active/documentation-style.md",
             plan_root / "active/docs-wiki-migration.md",
             plan_root / "active/native-usage-sensor.md",
+            plan_root / "active/native-iterative-execution.md",
             plan_root / "active/plugin-project-lifecycle.md",
             plan_root / "active/prompt-refine-auto-routing.md",
             plan_root / "active/release-0.8.0.md",
@@ -398,6 +401,7 @@ class Phase3SkillSourceContract(unittest.TestCase):
                 "active/documentation-style.md",
                 "active/docs-wiki-migration.md",
                 "active/native-usage-sensor.md",
+                "active/native-iterative-execution.md",
                 "active/plugin-project-lifecycle.md",
                 "active/prompt-refine-auto-routing.md",
                 "active/release-0.8.0.md",
@@ -480,6 +484,7 @@ class Phase3SkillSourceContract(unittest.TestCase):
         documentation_path = plan_root / "active/documentation-style.md"
         docs_wiki_path = plan_root / "active/docs-wiki-migration.md"
         native_usage_path = plan_root / "active/native-usage-sensor.md"
+        native_iterative_path = plan_root / "active/native-iterative-execution.md"
         plugin_project_path = plan_root / "active/plugin-project-lifecycle.md"
         prompt_refine_path = plan_root / "active/prompt-refine-auto-routing.md"
         release_09_path = plan_root / "active/release-0.9.0.md"
@@ -532,6 +537,10 @@ class Phase3SkillSourceContract(unittest.TestCase):
             (
                 "v0.9 knowledge portability·scan",
                 *checklist_counts([v09_portability_path]),
+            ),
+            (
+                "Hive-native 반복 실행",
+                *checklist_counts([native_iterative_path]),
             ),
             (
                 "Prompt refine 자동 routing",
