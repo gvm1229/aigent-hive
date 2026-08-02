@@ -808,6 +808,10 @@ class Phase3SkillSourceContract(unittest.TestCase):
         explicit_result_scope_rule = (
             "failed, skipped, deferred, unverified, or unsupported item"
         )
+        simple_explanation_rule = "Explain in simple terms by default."
+        precise_example_rule = (
+            "do not force irrelevant examples or weaken technical precision"
+        )
 
         self.assertIn("Do not insert replaceable English general nouns", source_behavior)
         self.assertIn("write the full passage in English", source_behavior)
@@ -833,8 +837,14 @@ class Phase3SkillSourceContract(unittest.TestCase):
         self.assertIn(shipped_rule, renderer)
         self.assertIn(source_response_language_rule, source_manifest)
         self.assertIn(source_response_language_rule, normalized_source_behavior)
+        self.assertIn(simple_explanation_rule, source_behavior)
+        self.assertIn(precise_example_rule, source_behavior)
         self.assertIn(selected_language_rule, template)
         self.assertIn(message_language_non_override_rule, template)
+        self.assertIn(simple_explanation_rule, template)
+        self.assertIn(precise_example_rule, template)
+        self.assertIn(simple_explanation_rule, renderer)
+        self.assertIn(precise_example_rule, renderer)
         self.assertIn(message_language_non_override_rule, renderer)
         self.assertIn("Before presenting a to-do list", source_behavior)
         self.assertIn("present only genuinely user-owned actions", source_behavior)
@@ -851,12 +861,21 @@ class Phase3SkillSourceContract(unittest.TestCase):
         self.assertIn("Session의 persisted 계획 전문 일대일 복제 금지", guidance)
         self.assertIn("통과·실패·건너뜀·연기·미검증·미지원 결과", guidance)
         self.assertIn("해석에 필요한 한정어를 간결함을 이유로 생략 금지", guidance)
+        self.assertIn("기본 설명은 쉬운 말과 직접적인 표현 우선", guidance)
+        self.assertIn("관련 없는 예시 강제와 기술적 정확성 약화 금지", guidance)
         self.assertIn("finish every safe, in-scope, automatable task", user_guidance_renderer)
         self.assertIn("남은 작업 제시 전", user_guidance_renderer)
         self.assertIn("write every plan to an appropriate project Markdown file", user_guidance_renderer)
         self.assertIn("저장한 계획 전문을 session에 일대일 복제하지 않고", user_guidance_renderer)
         self.assertIn(explicit_result_scope_rule, user_guidance_renderer)
         self.assertIn("통과·실패·건너뜀·연기·미검증·미지원", user_guidance_renderer)
+        self.assertIn(simple_explanation_rule, user_guidance_renderer)
+        self.assertIn(precise_example_rule, user_guidance_renderer)
+        self.assertIn("기본 설명은 쉬운 말로 작성", user_guidance_renderer)
+        self.assertIn(
+            "관련 없는 예시 강제 또는 기술적 정확성 약화 금지",
+            user_guidance_renderer,
+        )
         self.assertIn("대체 가능한 일반 영어 단어의 한영 혼용 금지", guidance)
         self.assertIn(
             "대체 가능한 일반 영어 단어의 한영 혼용 금지",

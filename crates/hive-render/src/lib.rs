@@ -3141,6 +3141,12 @@ fn render_agents_marker(
         1,
     );
     let marker = marker.replacen(
+        "- Write human-readable project documents in concise Korean unless the user explicitly requests another language.",
+        "- Explain in simple terms by default. Use concrete examples when they materially improve understanding, but do not force irrelevant examples or weaken technical precision.\n\
+- Write human-readable project documents in concise Korean unless the user explicitly requests another language.",
+        1,
+    );
+    let marker = marker.replacen(
         "- Apply the same rule to authored callouts and blockquotes.",
         "- Never gain brevity by removing a qualifier needed to interpret a result. For every passed, failed, skipped, deferred, unverified, or unsupported item, name the affected scope, exact reason, relationship to the current host or platform, whether it actually ran, and what the result does and does not prove. Do not use a platform adjective such as \"Windows-only\" or \"Unix-only\" without stating whether the current platform ran or skipped that item and why.\n\
 - Apply the same rule to authored callouts and blockquotes.",
@@ -7857,6 +7863,10 @@ mod tests {
         assert!(expected.contains("originating request"));
         assert!(expected.contains("raw transcript"));
         assert!(expected.contains("selected interface language `en`"));
+        assert!(expected.contains("Explain in simple terms by default"));
+        assert!(expected.contains(
+            "do not force irrelevant examples or weaken technical precision"
+        ));
 
         global.interface_language = "ko".to_owned();
         let korean_effective = resolve_effective_project_preferences(&answers, Some(&global))

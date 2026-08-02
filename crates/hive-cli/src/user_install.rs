@@ -1601,6 +1601,17 @@ fn render_user_guidance(
             }
         },
     );
+    let explanation_style = setup.map_or(
+        "- Explain in simple terms by default. Use concrete examples when they materially improve understanding, but do not force irrelevant examples or weaken technical precision. / 기본 설명은 쉬운 말로 작성. 이해에 도움이 될 때 구체적 예시 사용. 관련 없는 예시 강제 또는 기술적 정확성 약화 금지.\n",
+        |config| match config.interface_language {
+            crate::user_setup::InterfaceLanguage::En => {
+                "- Explain in simple terms by default. Use concrete examples when they materially improve understanding, but do not force irrelevant examples or weaken technical precision.\n"
+            }
+            crate::user_setup::InterfaceLanguage::Ko => {
+                "- 기본 설명은 쉬운 말로 작성. 이해에 도움이 될 때 구체적 예시 사용. 관련 없는 예시 강제 또는 기술적 정확성 약화 금지.\n"
+            }
+        },
+    );
     let result_clarity = setup.map_or(
         "- For every passed, failed, skipped, deferred, unverified, or unsupported item, state the affected scope, exact reason, current host or platform relationship, whether it ran, and what the result does and does not prove. / 통과·실패·건너뜀·연기·미검증·미지원 항목마다 대상 범위, 정확한 이유, 현재 호스트·운영체제와의 관계, 실제 실행 여부, 증명 범위와 미증명 범위를 모두 명시.\n",
         |config| match config.interface_language {
@@ -1613,7 +1624,7 @@ fn render_user_guidance(
         },
     );
     format!(
-        "<!-- AIGENT-HIVE:USER:START -->\n{heading}\n\n- {adapter_label}: `{}`\n{body}{result_clarity}{footer}<!-- AIGENT-HIVE:USER:END -->\n",
+        "<!-- AIGENT-HIVE:USER:START -->\n{heading}\n\n- {adapter_label}: `{}`\n{body}{explanation_style}{result_clarity}{footer}<!-- AIGENT-HIVE:USER:END -->\n",
         host.as_str()
     )
     .into_bytes()
@@ -6994,6 +7005,9 @@ mod tests {
         assert!(english.contains(
             "A message written in another language does not by itself change this preference"
         ));
+        assert!(english.contains("Explain in simple terms by default"));
+        assert!(english
+            .contains("do not force irrelevant examples or weaken technical precision"));
         assert!(english.contains("For every passed, failed, skipped, deferred"));
         assert!(!english.contains("질문과 응답"));
 
@@ -7005,6 +7019,8 @@ mod tests {
         assert!(korean.contains("명시적 요청이 없는 한 모든 질문과 응답에 한국어 사용"));
         assert!(korean.contains("다른 언어로 작성된 메시지만으로 이 선호를 변경하지 않음"));
         assert!(korean.contains("대체 가능한 일반 영어 단어의 한영 혼용 금지"));
+        assert!(korean.contains("기본 설명은 쉬운 말로 작성"));
+        assert!(korean.contains("관련 없는 예시 강제 또는 기술적 정확성 약화 금지"));
         assert!(korean.contains("통과·실패·건너뜀·연기·미검증·미지원"));
         for avoidable_mixture in [
             "활성 adapter",

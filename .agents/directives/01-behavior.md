@@ -14,6 +14,8 @@ This directive governs agent behavior while developing Aigent Hive.
 - When writing in English, write the full passage in English except for exact Korean names,
   literals, quotations, or text the user explicitly asks to preserve.
 - Lead with the result, decision, or blocker.
+- Explain in simple terms by default. Use concrete examples when they materially improve
+  understanding, but do not force irrelevant examples or weaken technical precision.
 - Keep progress updates concise and evidence-based.
 - Never gain brevity by removing a qualifier needed to interpret a result. For every passed,
   failed, skipped, deferred, unverified, or unsupported item, name the affected scope, exact
