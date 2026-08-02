@@ -10,9 +10,9 @@ tags: [distribution, release, signing, v0-9]
 aliases: ["0.9.0 release plan", "full release"]
 sources:
   - "repo:docs/decisions/ADR-0017-0.9-full-release.md#sha256:9172a8fa815052211dac6f561775f47852f4fe86bd629cb02004bbf5e0e30acb"
-  - "repo:docs/plans/active/release-0.9.0.md#sha256:c15f515371704df7137aed30358690c127df14e99002d4be26b3542fa4e286cf"
+  - "repo:docs/plans/active/release-0.9.0.md#sha256:a92dc2b297a4ab75d95cc81d665bb4090eeb0ba6b401d6fe73261edabf8f2886"
 links: [host-external-integrations, release-verification, test-distribution, version-policy]
-reviewed_revision: "git:e48af805488a328ae910e6c76e3e08d5a0fa2d33"
+reviewed_revision: "git:e28d85ab841f447d6910fc084469e60e167353ff"
 status: active
 ---
 
@@ -21,7 +21,7 @@ status: active
 기본 시험: `0.9.0-test`, npm `test`, GitHub prerelease. 추가 시험판: 필요 시에만
 `0.9.0-test.N`. `6761f0b` candidate run `30771098518`: 5개 native target·npm umbrella
 PASS. Public 시험 publication: default-branch workflow 등록 전까지 차단, 실패 dispatch의
-npm·tag·GitHub Release mutation 0건. 등록 전용 `main` PR·review 뒤 protected publication.
+npm·tag·GitHub Release mutation 0건. 등록 PR #16 draft의 `main` review·merge 대기.
 시험 publication의 `latest` 변경·정식 trigger 0건. 시험·정식 artifact 동일:
 feature·default·diagnostic, report preview·export, `markdown|notion`, optional Discord
 guard. 정식: 시험 수용 뒤 별도 protected `main` publication.
