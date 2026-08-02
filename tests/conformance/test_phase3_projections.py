@@ -67,6 +67,21 @@ def canonical_digest(value: object) -> str:
 
 
 class Phase3ProjectionTestCase(Phase1CliTestCase):
+    def enable_notion_backend(self) -> None:
+        config_path = self.setup_user_root / ".hive/config/user-setup.yml"
+        config = read_yaml(config_path)
+        config["wiki"] = {
+            "enabled": True,
+            "language": "both",
+            "backend": "notion",
+            "notion": {
+                "workspace_id": "workspace-fixture",
+                "scope_id": "scope-fixture",
+                "local_index_consent": True,
+            },
+        }
+        write_yaml(config_path, config)
+
     def answers_for_host(self, host: str) -> Path:
         answers = read_yaml(FIXTURE_ROOT / "answers-no-role-no-hook.yml")
         answers["primary_host"] = host
@@ -139,6 +154,28 @@ class Phase3HostProjection(Phase3ProjectionTestCase):
                             / "SKILL.md"
                         ).is_file()
                     )
+
+    def test_notion_backend_projects_without_local_wiki_markdown_for_each_host(
+        self,
+    ) -> None:
+        self.enable_notion_backend()
+        for host in ("codex", "claude", "antigravity"):
+            with self.subTest(host=host):
+                target = self.install_host(host)
+                harness = (target / ".hive/config/harness.toml").read_text(
+                    encoding="utf-8"
+                )
+                self.assertIn('wiki_backend = "notion"', harness)
+                self.assertFalse((target / ".hive/knowledge/Wiki").exists())
+                self.assertTrue(
+                    (target / ".agents/skills/hive-wiki/SKILL.md").is_file()
+                )
+                self.assertTrue(
+                    (
+                        self.discovery_root(target, host)
+                        / "hive-wiki/SKILL.md"
+                    ).is_file()
+                )
 
     def test_each_host_projects_the_automatic_dispatch_usage_gate(self) -> None:
         for host in ("codex", "claude", "antigravity"):
