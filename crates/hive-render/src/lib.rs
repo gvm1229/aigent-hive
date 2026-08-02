@@ -143,6 +143,11 @@ pub struct SetupOutcome {
 }
 
 /// Public effective project preference snapshot for registry and CLI evidence.
+///
+/// The boolean fields intentionally remain separate: each represents an
+/// independently consented project preference and is rendered as its own
+/// canonical setting.
+#[allow(clippy::struct_excessive_bools)]
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct ResolvedProjectPreferences {
     pub setup_mode: String,
@@ -235,6 +240,10 @@ pub struct SetupRequest<'a> {
 }
 
 /// Validated user-scope preferences supplied by the CLI bridge.
+///
+/// The boolean fields intentionally remain separate: each represents an
+/// independently consented user preference and has distinct setup semantics.
+#[allow(clippy::struct_excessive_bools)]
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct GlobalProjectPreferences {
     /// Preferred user-facing interface language.
@@ -265,6 +274,8 @@ pub struct GlobalProjectPreferences {
     pub usage_stop_remaining_percent: u8,
 }
 
+/// Internal normalized form of independently consented preference flags.
+#[allow(clippy::struct_excessive_bools)]
 #[derive(Debug, Clone, Eq, PartialEq)]
 struct EffectiveProjectPreferences {
     provenance: &'static str,
