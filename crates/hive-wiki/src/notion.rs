@@ -11,9 +11,9 @@ use crate::collection::{
     CollectionVisibility, COLLECTION_SCHEMA_VERSION,
 };
 use crate::rag::{
-    build_rag_index, canonical_wiki_category, document_digest, documents_from_serialized,
-    retrieve_serialized, CanonicalDocument, RagIndexArtifact, RagLanguage, RagSnapshot,
-    RagVisibility, RetrievalRequest, RetrievalResult, RAG_SCHEMA_VERSION,
+    build_incremental_remote_rag_index, build_rag_index, canonical_wiki_category, document_digest,
+    documents_from_serialized, retrieve_serialized, CanonicalDocument, RagIndexArtifact,
+    RagLanguage, RagSnapshot, RagVisibility, RetrievalRequest, RetrievalResult, RAG_SCHEMA_VERSION,
 };
 use crate::store::{RagStore, StoreCommit};
 use hive_core::sha256_digest;
@@ -489,8 +489,41 @@ pub fn sync_snapshot_for_generation(
         documents: documents.clone(),
         claims: Vec::new(),
     };
-    let artifact = build_rag_index(&snapshot)
-        .map_err(|error| NotionError(format!("cannot build Notion RAG projection: {error}")))?;
+    let artifact = if let Some(previous) = previous {
+        let changed_pages = changed_page_ids
+            .iter()
+            .map(String::as_str)
+            .collect::<BTreeSet<_>>();
+        let deleted_pages = tombstoned_page_ids
+            .iter()
+            .map(String::as_str)
+            .collect::<BTreeSet<_>>();
+        let changed_documents = documents
+            .iter()
+            .filter(|document| changed_pages.contains(page_id_from_locator(&document.locator)))
+            .map(|document| document.document_id.clone())
+            .collect::<BTreeSet<_>>();
+        let deleted_documents = previous
+            .documents
+            .iter()
+            .filter(|document| deleted_pages.contains(page_id_from_locator(&document.locator)))
+            .map(|document| document.document_id.clone())
+            .collect::<BTreeSet<_>>();
+        build_incremental_remote_rag_index(
+            &previous.artifact,
+            &snapshot,
+            &changed_documents,
+            &deleted_documents,
+        )
+        .map_err(|error| {
+            NotionError(format!(
+                "cannot incrementally build Notion RAG projection: {error}"
+            ))
+        })?
+    } else {
+        build_rag_index(&snapshot)
+            .map_err(|error| NotionError(format!("cannot build Notion RAG projection: {error}")))?
+    };
     Ok(NotionSyncOutcome {
         projection: NotionProjection {
             schema_version: 1,
@@ -571,7 +604,7 @@ pub fn sync_and_publish(
         load_persisted_projection(store)?
     };
     let generation = if rebuild {
-        Some(store.next_external_generation()?)
+        Some(store.next_external_recovery_generation(Path::new(NOTION_LEDGER_RELATIVE))?)
     } else {
         None
     };
@@ -587,11 +620,19 @@ pub fn sync_and_publish(
     let ledger = sync.projection.ledger();
     validate_ledger(&ledger)?;
     let ledger_bytes = canonical_ledger_bytes(&ledger)?;
-    let store_commit = store.publish_external_index(
-        Path::new(NOTION_LEDGER_RELATIVE),
-        &ledger_bytes,
-        &sync.projection.artifact,
-    )?;
+    let store_commit = if rebuild {
+        store.publish_external_index_recovery(
+            Path::new(NOTION_LEDGER_RELATIVE),
+            &ledger_bytes,
+            &sync.projection.artifact,
+        )?
+    } else {
+        store.publish_external_index(
+            Path::new(NOTION_LEDGER_RELATIVE),
+            &ledger_bytes,
+            &sync.projection.artifact,
+        )?
+    };
     Ok(NotionPersistedOutcome {
         sync,
         store: store_commit,

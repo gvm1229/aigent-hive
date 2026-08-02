@@ -1071,6 +1071,148 @@ pub fn build_rag_index(snapshot: &RagSnapshot) -> Result<RagIndexArtifact, RagEr
     })
 }
 
+/// Update a verified remote-canonical projection without rewriting unchanged
+/// document or chunk rows.
+///
+/// This intentionally accepts only document-only snapshots. Markdown-backed
+/// stores continue to use [`build_rag_index`], while a complete remote
+/// inventory can reuse the already-verified rows for unchanged pages. The
+/// caller supplies the exact changed and deleted document IDs; their set must
+/// describe the entire transition from the prior generation to `snapshot`.
+///
+/// # Errors
+///
+/// Returns an error when the prior SQLite generation is invalid, the registry
+/// or lineage differs, a changed set is incomplete, or SQLite cannot apply the
+/// bounded row-level transaction.
+pub fn build_incremental_remote_rag_index(
+    previous: &RagIndexArtifact,
+    snapshot: &RagSnapshot,
+    changed_document_ids: &BTreeSet<String>,
+    deleted_document_ids: &BTreeSet<String>,
+) -> Result<RagIndexArtifact, RagError> {
+    let canonical = canonicalize_snapshot(snapshot)?;
+    if !canonical.claims.is_empty() {
+        return Err(RagError::InvalidInput(
+            "remote incremental RAG projection cannot contain local claims".to_owned(),
+        ));
+    }
+    if previous.manifest.schema_version != RAG_SCHEMA_VERSION
+        || previous.manifest.generation.checked_add(1) != Some(canonical.generation)
+    {
+        return Err(RagError::Conflict(
+            "remote incremental RAG generation does not advance the verified prior generation"
+                .to_owned(),
+        ));
+    }
+    let prior_documents = documents_from_serialized(
+        &previous.sqlite_bytes,
+        &previous.manifest,
+        &canonical.registry,
+    )?;
+    let prior_by_id = prior_documents
+        .iter()
+        .map(|document| (document.document_id.as_str(), document))
+        .collect::<BTreeMap<_, _>>();
+    let target_by_id = canonical
+        .documents
+        .iter()
+        .map(|document| (document.document_id.as_str(), document))
+        .collect::<BTreeMap<_, _>>();
+    if changed_document_ids
+        .iter()
+        .any(|document_id| !target_by_id.contains_key(document_id.as_str()))
+        || deleted_document_ids
+            .iter()
+            .any(|document_id| !prior_by_id.contains_key(document_id.as_str()))
+        || !changed_document_ids.is_disjoint(deleted_document_ids)
+    {
+        return Err(RagError::InvalidInput(
+            "remote incremental RAG changed document set is outside the prior or target generation"
+                .to_owned(),
+        ));
+    }
+    let mut expected_target_ids = prior_by_id
+        .keys()
+        .map(|document_id| (*document_id).to_owned())
+        .collect::<BTreeSet<_>>();
+    for document_id in deleted_document_ids {
+        expected_target_ids.remove(document_id);
+    }
+    expected_target_ids.extend(changed_document_ids.iter().cloned());
+    let actual_target_ids = target_by_id
+        .keys()
+        .map(|document_id| (*document_id).to_owned())
+        .collect::<BTreeSet<_>>();
+    if expected_target_ids != actual_target_ids {
+        return Err(RagError::InvalidInput(
+            "remote incremental RAG changed document set does not cover the complete inventory"
+                .to_owned(),
+        ));
+    }
+
+    let mut manifest = generation_manifest(&canonical)?;
+    let mut connection = deserialize_connection(&previous.sqlite_bytes)?;
+    connection
+        .execute_batch(
+            "PRAGMA foreign_keys = ON; PRAGMA journal_mode = OFF; PRAGMA synchronous = OFF;",
+        )
+        .map_err(sqlite_error)?;
+    let transaction = connection.transaction().map_err(sqlite_error)?;
+    let mut replaced_ids = changed_document_ids.clone();
+    replaced_ids.extend(deleted_document_ids.iter().cloned());
+    for document_id in &replaced_ids {
+        let prior = prior_by_id.get(document_id.as_str()).copied();
+        if let Some(document) = prior {
+            delete_document_projection(&transaction, document)?;
+        }
+    }
+    for document_id in changed_document_ids {
+        let document = target_by_id
+            .get(document_id.as_str())
+            .expect("changed documents were validated against the target inventory");
+        insert_document(&transaction, document)?;
+        for chunk in document_chunks(document) {
+            insert_chunk(&transaction, &chunk)?;
+        }
+        insert_document_manifest(&transaction, document)?;
+    }
+    transaction
+        .execute(
+            "UPDATE meta SET generation = ?1, manifest_digest = ?2, entry_count = ?3",
+            params![
+                sql_i64("generation", manifest.generation)?,
+                manifest.logical_digest,
+                sql_i64_usize("entry_count", manifest.entry_count)?,
+            ],
+        )
+        .map_err(sqlite_error)?;
+    transaction.commit().map_err(sqlite_error)?;
+    let chunk_count = canonical
+        .documents
+        .iter()
+        .map(|document| document_chunks(document).len())
+        .sum();
+    verify_projection(&connection, &manifest, &canonical.registry, chunk_count)?;
+    let sqlite_bytes = connection
+        .serialize(MAIN_DB)
+        .map_err(sqlite_error)?
+        .to_vec();
+    if sqlite_bytes.len() > MAX_INDEX_BYTES {
+        return Err(RagError::InvalidInput(format!(
+            "serialized RAG index exceeds {MAX_INDEX_BYTES} bytes"
+        )));
+    }
+    manifest.sqlite_digest = sha256_digest(&sqlite_bytes);
+    Ok(RagIndexArtifact {
+        sqlite_bytes,
+        manifest,
+        document_count: canonical.documents.len(),
+        claim_count: 0,
+        chunk_count,
+    })
+}
+
 /// Verified resident RAG generation for repeated low-latency retrieval.
 ///
 /// Construction authenticates the exact serialized generation, checks relational
@@ -2250,6 +2392,92 @@ fn insert_document(connection: &Connection, document: &CanonicalDocument) -> Res
         &document.sources,
         document.replacement.as_deref(),
     )
+}
+
+fn insert_document_manifest(
+    connection: &Connection,
+    document: &CanonicalDocument,
+) -> Result<(), RagError> {
+    connection
+        .execute(
+            "INSERT INTO generation_manifest (collection_id, item_kind, item_id, locator, digest, revision) VALUES (?1, 'document', ?2, ?3, ?4, ?5)",
+            params![
+                document.collection_id,
+                document.document_id,
+                document.locator,
+                document.digest,
+                sql_i64("manifest revision", document.revision)?,
+            ],
+        )
+        .map_err(sqlite_error)?;
+    Ok(())
+}
+
+fn delete_document_projection(
+    connection: &Connection,
+    document: &CanonicalDocument,
+) -> Result<(), RagError> {
+    let document_rowid: i64 = connection
+        .query_row(
+            "SELECT rowid FROM documents WHERE document_id = ?1",
+            [&document.document_id],
+            |row| row.get(0),
+        )
+        .map_err(sqlite_error)?;
+    connection
+        .execute(
+            "INSERT INTO documents_fts(documents_fts, rowid, title, body, tags, aliases) VALUES ('delete', ?1, ?2, ?3, ?4, ?5)",
+            params![
+                document_rowid,
+                document.title,
+                document.body,
+                document.tags.join(" "),
+                document.aliases.join(" "),
+            ],
+        )
+        .map_err(sqlite_error)?;
+    for chunk in document_chunks(document) {
+        let chunk_rowid: i64 = connection
+            .query_row(
+                "SELECT rowid FROM chunks WHERE chunk_id = ?1",
+                [&chunk.chunk_id],
+                |row| row.get(0),
+            )
+            .map_err(sqlite_error)?;
+        connection
+            .execute(
+                "INSERT INTO chunks_fts(chunks_fts, rowid, title, text, tags, aliases) VALUES ('delete', ?1, ?2, ?3, ?4, ?5)",
+                params![chunk_rowid, chunk.title, chunk.text, chunk.tags, chunk.aliases],
+            )
+            .map_err(sqlite_error)?;
+    }
+    connection
+        .execute(
+            "DELETE FROM chunks WHERE item_kind = 'document' AND item_id = ?1",
+            [&document.document_id],
+        )
+        .map_err(sqlite_error)?;
+    for table in ["tags", "aliases", "links", "sources", "replacements"] {
+        connection
+            .execute(
+                &format!("DELETE FROM {table} WHERE item_kind = 'document' AND item_id = ?1"),
+                [&document.document_id],
+            )
+            .map_err(sqlite_error)?;
+    }
+    connection
+        .execute(
+            "DELETE FROM generation_manifest WHERE item_kind = 'document' AND item_id = ?1",
+            [&document.document_id],
+        )
+        .map_err(sqlite_error)?;
+    connection
+        .execute(
+            "DELETE FROM documents WHERE document_id = ?1",
+            [&document.document_id],
+        )
+        .map_err(sqlite_error)?;
+    Ok(())
 }
 
 fn insert_claim(connection: &Connection, claim: &CanonicalClaim) -> Result<(), RagError> {

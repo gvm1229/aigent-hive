@@ -1194,6 +1194,32 @@ impl RagStore {
         ledger_bytes: &[u8],
         artifact: &RagIndexArtifact,
     ) -> Result<StoreCommit, WikiError> {
+        self.publish_external_index_inner(ledger_relative, ledger_bytes, artifact, false)
+    }
+
+    /// Publish a fully re-fetched remote-canonical generation over its own
+    /// interrupted external write journal.
+    ///
+    /// The caller must have independently validated a complete remote inventory
+    /// before invoking this recovery path. It cannot recover a Markdown or
+    /// other local-canonical dirty journal, and it retains the original dirty
+    /// bytes if the new publication cannot complete.
+    pub fn publish_external_index_recovery(
+        &self,
+        ledger_relative: &Path,
+        ledger_bytes: &[u8],
+        artifact: &RagIndexArtifact,
+    ) -> Result<StoreCommit, WikiError> {
+        self.publish_external_index_inner(ledger_relative, ledger_bytes, artifact, true)
+    }
+
+    fn publish_external_index_inner(
+        &self,
+        ledger_relative: &Path,
+        ledger_bytes: &[u8],
+        artifact: &RagIndexArtifact,
+        recovery: bool,
+    ) -> Result<StoreCommit, WikiError> {
         validate_external_ledger_relative(ledger_relative)?;
         if ledger_bytes.is_empty() || ledger_bytes.len() > MAX_EXTERNAL_CANONICAL_BYTES {
             return Err(WikiError::InvalidInput(
@@ -1209,8 +1235,12 @@ impl RagStore {
             ));
         }
         let _lock = crate::CapabilityKnowledgeLock::acquire(&self.root)?;
-        self.reject_dirty_mutation()?;
-        let expected_generation = self.next_generation()?;
+        let expected_generation = if recovery {
+            self.external_recovery_generation_locked(ledger_relative)?
+        } else {
+            self.reject_dirty_mutation()?;
+            self.next_generation()?
+        };
         if artifact.manifest.generation != expected_generation {
             return Err(WikiError::Conflict(
                 "external RAG artifact generation changed before publication".to_owned(),
@@ -1269,6 +1299,21 @@ impl RagStore {
         let _lock = crate::CapabilityKnowledgeLock::acquire(&self.root)?;
         self.reject_dirty_mutation()?;
         self.next_generation()
+    }
+
+    /// Return the exact generation that a complete remote refresh may use to
+    /// recover an interrupted write to one external ledger.
+    ///
+    /// This is deliberately narrower than generic dirty recovery: a remote
+    /// inventory is canonical only for the selected external ledger and may
+    /// not clear a local Markdown mutation journal.
+    pub fn next_external_recovery_generation(
+        &self,
+        ledger_relative: &Path,
+    ) -> Result<u64, WikiError> {
+        validate_external_ledger_relative(ledger_relative)?;
+        let _lock = crate::CapabilityKnowledgeLock::acquire(&self.root)?;
+        self.external_recovery_generation_locked(ledger_relative)
     }
 
     /// Validate the current normalized index without changing canonical or derived state.
@@ -1937,6 +1982,56 @@ impl RagStore {
             ));
         }
         self.verify_dirty_targets(&dirty)?;
+        Ok(next.max(dirty.target_generation))
+    }
+
+    fn external_recovery_generation_locked(
+        &self,
+        ledger_relative: &Path,
+    ) -> Result<u64, WikiError> {
+        let base = self.load_manifest_repairable()?;
+        let next = base.as_ref().map_or(Ok(1), |manifest| {
+            manifest.generation.checked_add(1).ok_or_else(|| {
+                WikiError::Conflict("RAG generation counter is exhausted".to_owned())
+            })
+        })?;
+        let Some(bytes) = read_bounded_optional(
+            &self.root,
+            Path::new(RAG_DIRTY_RELATIVE),
+            MAX_DIRTY_BYTES,
+            "RAG dirty journal",
+        )?
+        else {
+            return Ok(next);
+        };
+        let dirty = serde_json::from_slice::<PersistentDirtyState>(&bytes).map_err(|error| {
+            WikiError::Verification(format!(
+                "RAG dirty journal is corrupt and cannot authorize external recovery: {error}"
+            ))
+        })?;
+        validate_dirty_state(&dirty)?;
+        let lineage_matches = base.as_ref().map_or_else(
+            || dirty.base_generation == 0 && dirty.base_manifest_digest == empty_manifest_digest(),
+            |manifest| {
+                dirty.base_generation == manifest.generation
+                    && dirty.base_manifest_digest == manifest.logical_digest
+            },
+        );
+        if !lineage_matches {
+            return Err(WikiError::Conflict(
+                "RAG dirty journal lineage differs from the published generation".to_owned(),
+            ));
+        }
+        let expected_locator = path_to_locator(ledger_relative);
+        if dirty.entries.len() != 1
+            || dirty.entries[0].locator != expected_locator
+            || dirty.entries[0].delete
+        {
+            return Err(WikiError::Verification(
+                "external recovery cannot clear a dirty journal outside its selected remote ledger"
+                    .to_owned(),
+            ));
+        }
         Ok(next.max(dirty.target_generation))
     }
 
