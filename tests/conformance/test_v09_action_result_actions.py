@@ -57,6 +57,10 @@ EXPECTED_ACTIONS = {
     "ExportKnowledge",
     "ImportKnowledge",
     "PromoteKnowledge",
+    "NotionKnowledge",
+    "SyncNotionKnowledge",
+    "RetrieveNotionKnowledge",
+    "WriteThroughNotionKnowledge",
     "ScanProjectUpgrade",
     "UpdateProjectHarness",
     "ValidateProjectUpgrade",
@@ -148,7 +152,14 @@ class ActionResultActionTests(unittest.TestCase):
             "next_action": None,
             "data": {},
         }
-        for action in ("AuthorizeConfidentialKnowledge", "MapKnowledgeCollection"):
+        for action in (
+            "AuthorizeConfidentialKnowledge",
+            "MapKnowledgeCollection",
+            "NotionKnowledge",
+            "SyncNotionKnowledge",
+            "RetrieveNotionKnowledge",
+            "WriteThroughNotionKnowledge",
+        ):
             with self.subTest(action=action):
                 validator.validate({**base, "action": action})
         self.assertTrue(
