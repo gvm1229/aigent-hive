@@ -1,6 +1,6 @@
 # Aigent Hive active plan index
 
-> Revision: 1.96
+> Revision: 1.97
 > 기준일: 2026-08-03
 > Product version: `0.9.0`
 > 현재 milestone: `0.9.0` 정식 릴리스 준비
@@ -120,5 +120,5 @@ recovery 검증.
 `6761f0b` candidate run `30771098518` 5 target·npm umbrella PASS, fresh clone
 Rust·Python 적합성 PASS.
 
-다음: GitHub Actions default branch에 `release-test-publish.yml`을 등록하는 최소 `main`
-PR·review 뒤 `REL9-013` bare test prerelease. `REL9-017–026` stable 경로는 별도 승인까지 보류.
+다음: `main` 등록 PR #16 draft의 review·merge 뒤 `REL9-013` bare test prerelease.
+`REL9-017–026` stable 경로는 별도 승인까지 보류.

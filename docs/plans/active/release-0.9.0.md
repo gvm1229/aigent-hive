@@ -29,8 +29,7 @@
 - 기능 마감: [`v0.9.0-test-finalization.md`](v0.9.0-test-finalization.md)
 - Test candidate: run `30771098518`, exact `6761f0b`, 5 target·npm umbrella PASS
 - Test publication: existing protected `release-publication` environment 재사용
-- Dispatch registration: `release-test-publish.yml`의 default-branch 등록 부재,
-  CLI·REST dispatch `404`, npm·tag·GitHub Release mutation `0건`
+- Dispatch: PR #16 draft; `main` merge 전 `404`, mutation `0건`
 - Apple·Windows·external TUF production signer 증거 미확인
 - Source baseline: `cee06e013cfbeca907c018b26c35a89bee0b703b`, `develop` 포함
 
