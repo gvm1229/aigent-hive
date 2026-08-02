@@ -1,21 +1,21 @@
 # Aigent Hive active plan index
 
-> Revision: 1.91
-> 기준일: 2026-08-02
+> Revision: 1.92
+> 기준일: 2026-08-03
 > Product version: `0.9.0`
 > 현재 milestone: `0.9.0` 정식 릴리스 준비
 > Entrypoint: `docs/plans/PLAN.md`
 
 ## Goal parameters
 
-- Objective: Hive-native iterative·team·multi-goal execution feasibility와 안전 계약을
-  먼저 확정한 뒤 `Aigent Hive 0.9.0-test` 독립 시험 배포·수용, 별도 `0.9.0` 정식
-  GitHub·npm 릴리스와 public update 검증
+- Objective: Hive-native iterative·team·multi-goal execution과 Codex·Claude exact-model
+  custom subagent routing의 feasibility·안전 계약을 먼저 확정한 뒤 `Aigent Hive
+  0.9.0-test` 독립 시험 배포·수용, 별도 `0.9.0` 정식 GitHub·npm 릴리스와 public update 검증
 - Success: 아래 Active fragments의 evidence-backed completion. 시험판 핵심 gate는
-  `PRF-*` prompt approval, `TST9-*` Wiki backend·integration, `REL9-*` 독립 test·stable
-  publication과 public acceptance
+  `MRA-*` model-routed subagent, `PRF-*` prompt approval, `TST9-*` Wiki backend·integration,
+  `REL9-*` 독립 test·stable publication과 public acceptance
 - Stop boundary: protected review·environment approval, signing·TUF·npm credential,
-  exact `1.0.0` authority, 현재 source usage guard remaining `60%`
+  exact `1.0.0` authority, source usage guard remaining threshold `30%`
 - Invariants: provider-neutral, backend별 canonical source 우선, SQLite 파생 상태,
   Source Wiki·run·role·plan·orchestration event Markdown/TOML 정본,
   ownership·consent·foreign byte 보존, provider API·credential·direct model process 경로 없음,
@@ -42,10 +42,11 @@
 | v0.9 global knowledge RAG | 20 | 0 | 100% |
 | v0.9 knowledge portability·scan | 18 | 0 | 100% |
 | Hive-native 반복 실행 | 1 | 23 | 4.2% |
+| Model-routed custom subagent | 0 | 32 | 0% |
 | Prompt refine 자동 routing | 0 | 12 | 0% |
 | v0.9 test 기능 마감 | 0 | 18 | 0% |
 | v0.9 full release | 1 | 25 | 3.8% |
-| **Canonical total** | **293** | **78** | **79.0%** |
+| **Canonical total** | **293** | **110** | **72.7%** |
 
 External production boundary 항목도 미완료 합계에 포함. Protected authority 없이 완료 처리 금지.
 
@@ -100,6 +101,7 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
 | [`active/v0.9.0-global-knowledge-rag.md`](active/v0.9.0-global-knowledge-rag.md) | `RAG-*` | 전역 RAG |
 | [`active/v0.9.0-knowledge-portability-scan.md`](active/v0.9.0-knowledge-portability-scan.md) | `KPX-*` | Knowledge 이식·directory scan·automatic query |
 | [`active/native-iterative-execution.md`](active/native-iterative-execution.md) | `NAT-*` | Hive-native iterative·team·multi-goal execution |
+| [`active/model-routed-custom-subagents.md`](active/model-routed-custom-subagents.md) | `MRA-*` | Codex·Claude exact-model custom subagent·Sol Advisor 동등 auto-route |
 | [`active/prompt-refine-auto-routing.md`](active/prompt-refine-auto-routing.md) | `PRF-*` | Material ambiguity 자동 refine·승인 전 정지 |
 | [`active/v0.9.0-test-finalization.md`](active/v0.9.0-test-finalization.md) | `TST9-*` | Notion·SQLite, Discord outbound, 문제 보고와 시험판 기능 마감 |
 | [`active/release-0.9.0.md`](active/release-0.9.0.md) | `REL9-*` | 정식 GitHub·npm 릴리스와 public acceptance |
@@ -129,7 +131,9 @@ recovery 검증.
 
 완료: V9-001–025, RAG-001–020, KPX-001–018.
 
-다음: NAT-002–005 clean-room parity inventory와 세 host envelope·receipt·cancel
-feasibility. 결과 전 ADR acceptance·runtime schema/core activation 금지.
+다음: NAT-002–005와 MRA-001–006의 clean-room parity inventory, 세 host orchestration
+feasibility, Codex·Claude exact-model agent lifecycle·receipt 검증. 결과 전 ADR
+acceptance·runtime schema/core·custom-agent projection activation 금지.
 
-후속: NAT protocol·core·Skill qualification, TST9·PRF 기능 마감, REL9 release activation.
+후속: MRA-007–032 canonical role·auto-route·생성 Skill, NAT protocol·core와 `NAT-016`
+연계, TST9·PRF 기능 마감, REL9 release activation.

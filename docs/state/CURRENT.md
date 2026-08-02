@@ -2,9 +2,10 @@
 
 - 기준 branch: `develop`
 - product version: `0.9.0`
-- plan revision: `1.91`
+- plan revision: `1.92`
 - 현재 milestone: `0.9.0` 정식 릴리스 준비
-- 현재 작업: Hive-native iterative·team·multi-goal host feasibility와 안전 protocol
+- 현재 작업: Hive-native iterative·team·multi-goal host feasibility와 Codex·Claude
+  exact-model custom subagent 안전 protocol
 - 외부 중지 경계: protected review·environment approval, signing·TUF·npm credential,
   exact `1.0.0` 사용자 authority
 - Plan load: compact `docs/plans/PLAN.md` + `docs/plans/phases/07-public-qualification.md`
@@ -20,10 +21,11 @@
   + `docs/plans/active/v0.9.0-global-knowledge-rag.md`
   + `docs/plans/active/v0.9.0-knowledge-portability-scan.md`
   + `docs/plans/active/native-iterative-execution.md`
+  + `docs/plans/active/model-routed-custom-subagents.md`
   + `docs/plans/active/prompt-refine-auto-routing.md`
   + `docs/plans/active/v0.9.0-test-finalization.md`
   + `docs/plans/active/release-0.9.0.md`
-- Plan completion: canonical checklist `293/371` 완료, `78`개 미완료, `79.0%`
+- Plan completion: canonical checklist `293/403` 완료, `110`개 미완료, `72.7%`
 - Latest local Windows: Rust workspace 459개 실행·통과. Python 적합성 670개 발견 중
   628개 실제 실행·통과, 42개 미실행. 미실행 범위: 관리자 권한 없는 Windows의
   symbolic link 생성 제약 16개, POSIX·Unix 전용 동작 19개, macOS 전용 설치·서명
@@ -44,7 +46,8 @@
   `active/documentation-style.md`, `active/security-review.md`,
   `active/docs-wiki-migration.md`,
   `active/release-0.8.0.md`, `active/v0.9.0-loop-wiki-skills.md`,
-  `active/v0.9.0-global-knowledge-rag.md`, `active/native-iterative-execution.md`로 해석
+  `active/v0.9.0-global-knowledge-rag.md`, `active/native-iterative-execution.md`,
+  `active/model-routed-custom-subagents.md`로 해석
 
 ## Hive-native 반복 실행 전환
 
@@ -59,8 +62,27 @@
 - Incident regression: wrong pointer + Stop 100회 canonical mutation `0건`, cancel·guard·recover 독립 접근
 - 불확실 dispatch: qualified non-launch proof 없는 automatic reclaim `0건`, `dispatch-uncertain` 중지
 - Legacy run: read-only provenance, migration은 새 native identity와 원본 byte 불변
-- 다음 작업: NAT-002 capability inventory 재분류, NAT-003–004 세 host feasibility spike
+- 다음 작업: NAT-002–005와 MRA-001–006 capability·Sol Advisor parity 재분류,
+  세 host orchestration과 Codex·Claude exact-model lifecycle feasibility spike
 - Activation gate: feasibility·ADR acceptance·schema·security qualification 전 default-off
+
+## Model-routed custom subagent
+
+- 상태: `0.9.0` 실행 계획 활성, 구현 미착수
+- 결정: [`ADR-0019`](../decisions/ADR-0019-hive-native-iterative-execution.md) proposed
+- Active fragment:
+  [`model-routed-custom-subagents.md`](../plans/active/model-routed-custom-subagents.md)
+- 지원: OpenAI Codex·Claude Code. Antigravity는 근거 있는 custom-agent surface 확보 전 unsupported
+- 목표: Sol Advisor의 orchestrator→routine/complex implementer→fresh reviewer 흐름 clean-room 동등 구현
+- Model authority: role별 exact model ID·thinking level 고정, runtime receipt 불일치 결과 fail-closed
+- Scope: user·project canonical role과 host projection, project precedence, preview·명시적 동의·non-clobber
+- Built-in 후보: routine·complex implementer, fresh reviewer, design specialist,
+  article writer, research specialist, verifier
+- Auto-call: Skill·role description 기반 semantic route, simple·작은 단일 단계·증명 불가 task 제외
+- 생성 Skill: 목적 우선 질문 뒤 이름·양쪽 host model/effort·scope·권한 추천,
+  `1 수락 | 2 수동 | 3 수정`, 적용 뒤 동일 auto-route registry 통합
+- 다음 작업: MRA-001–006 Codex·Claude 공식·실제 lifecycle와 Sol Advisor 기능 동등성 검증
+- Activation gate: 양쪽 host fresh-session E2E·exact attestation·ownership consent·hostile test 전 default-off
 
 ## v0.9.0 구현
 

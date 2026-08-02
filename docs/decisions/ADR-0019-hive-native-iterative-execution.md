@@ -1,8 +1,8 @@
 # ADR-0019: Hive-native 반복 실행 소유권
 
 - 상태: proposed
-- 날짜: 2026-08-02
-- 대상: `0.9.x` 이후 구현
+- 날짜: 2026-08-03
+- 대상: `0.9.0`
 - 정책 전환: ADR-0015의 scheduler·Ralph·team 재구현 금지
 - Historical provenance: [`ADR-0004`](ADR-0004-orchestration-ownership.md), [`ADR-0015`](ADR-0015-host-native-skill-composition.md)
 
@@ -10,6 +10,8 @@
 
 - 기존 비구현 이유: 핵심 기술 불가능보다 외부 orchestration owner와의 의도 충돌
 - 새 사용자 결정: OMX·OMC 의존성 완전 제거와 유용 기능의 Hive clean-room 구현
+- 추가 사용자 결정: Sol Advisor 기능 동등성, Codex·Claude task별 custom subagent와
+  exact model·thinking level 사전 고정, 목적 기반 custom-agent 생성·자동 route를 `0.9.0`에 포함
 - 직접 계기: selected session pointer와 실제 session ID 불일치로 Stop 권한 실패,
   반복 no-op 응답, cancel·usage control 복구 방해
 - 기존 기반: immutable graph revision, evidence, retry data, steering, prepare-only envelope,
@@ -24,6 +26,23 @@
 - Legacy external-owner run: read-only provenance, explicit migration의 새 native identity
 - Provider API·SDK·credential·direct model/subagent process spawn 없음
 - Feature 기본값: `off`; host feasibility와 qualification 뒤 별도 activation 결정
+
+## Model-routed custom subagent 결정
+
+- 지원 host: OpenAI Codex·Claude Code 한정. Antigravity는 이 기능에서 `unsupported`
+- Hive 소유: provider-neutral role 정본, task trigger·negative route, 양쪽 host model/effort,
+  user/project scope, projection digest, runtime attestation acceptance
+- Host 소유: custom-agent discovery, native dispatch, model call·session·process, runtime metadata
+- Functional baseline: primary orchestrator, routine implementer, complex implementer,
+  fresh read-only reviewer, exact role·model·effort 결과 gate
+- 자동 선택: Hive Skill과 같은 narrow semantic description route. 별도 classifier hook 없음
+- Model authority: 검증된 exact ID·effort만 활성화, floating alias·silent fallback 결과 수용 금지
+- Scope authority: user·project 모두 지원, project 우선. Host file은 preview·명시적 동의·
+  Hive ownership digest 일치 때만 생성·교체
+- On-demand 생성: 목적 질문→이름·Codex/Claude model/effort·scope·권한 추천→
+  `1 수락 | 2 수동 | 3 수정`→검증·projection·auto-route 통합
+- Canonical plan:
+  [`model-routed-custom-subagents.md`](../plans/active/model-routed-custom-subagents.md)
 
 ## 선택지
 
@@ -76,6 +95,10 @@
 4. Shadow reducer와 cancel/guard fail-safe qualification
 5. Provider SDK·credential·process spawn static finding `0건`
 6. Stale-pointer hostile E2E와 migration recovery 통과
+7. Codex·Claude user/project custom-agent fresh-session lifecycle 실제 proof
+8. Exact role·model·effort·scope·definition digest runtime receipt와 mismatch fail-closed
+9. Purpose-first 생성 Skill의 3개 decision path와 생성 role automatic route 검증
+10. Foreign·user-authored host config overwrite `0건`
 
 ## 결과
 
@@ -83,6 +106,7 @@
 - Scheduler·Ralph·team 비구현 정책은 신규 개발 지침에서 제거
 - Runtime activation은 feasibility 전 금지
 - 기존 `V9-*` 완료 상태 재개방 없음; 신규 `NAT-*` fragment 소유
+- Exact-model custom subagent는 신규 `MRA-*` fragment 소유, `NAT-016` host adapter와 연계
 - Legacy owner in-place 전환 없음
 
 ## Rollback
