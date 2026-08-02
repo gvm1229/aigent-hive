@@ -9,10 +9,10 @@ summary: "Source and consumer agents explain in simple terms by default and use 
 tags: [communication, guidance, projection]
 aliases: ["concrete examples", "plain-language explanation"]
 sources:
-  - "repo:.agents/directives/01-behavior.md#sha256:d1e3d4cbc89c962bfae66b5a9c135562bd962fa0d8a3765ad2d150e4a9e41195"
-  - "repo:crates/hive-cli/src/user_install.rs#sha256:f358b71778a5da093ffdad11470a7f4367573f037f219e4a497dc877bbd86f35"
+  - "repo:.agents/directives/01-behavior.md#sha256:24e61b7fd37bc1b9e0a73933547d5b369b9ca2cdde6c9adc10ba29bd23d50143"
+  - "repo:crates/hive-cli/src/user_install.rs#sha256:3f634fae4465c6c868462a29c502c698b69a2ed7f28a40249c10a26b9804c21f"
   - "repo:docs/guidance-schema.md#sha256:fd8fffda818038ee48b66b0581787e2fd741404b0a9253ca34c0d55f15ad4d15"
-  - "repo:harness/template/AGENTS.md.jinja#sha256:c53d41177ef323c50041c8e02928fd1db9904188c22d652d5a80dfbd454228e5"
+  - "repo:harness/template/AGENTS.md.jinja#sha256:070d97440343d699565448c239efb55c905df79119df289525d41edc6e81581f"
 links: [language-consistency, verification-result-clarity]
 reviewed_revision: "git:33f365d3dbb1af51333a6dbb1834ce437a932ea0"
 status: active
