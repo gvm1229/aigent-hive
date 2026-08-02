@@ -96,7 +96,27 @@ pub fn canonical_root(path: &Path) -> Result<PathBuf, WikiError> {
     let canonical = path
         .canonicalize()
         .map_err(|error| WikiError::Io(format!("cannot canonicalize root: {error}")))?;
-    Ok(portable_canonical_path(&canonical))
+    Ok(platform_canonical_root(&portable_canonical_path(
+        &canonical,
+    )))
+}
+
+/// Normalize only macOS's operating-system-owned `/var` compatibility alias.
+///
+/// `std::fs::canonicalize` may retain `/var` even though it is the immutable
+/// system link to `/private/var`. Capability pinning deliberately rejects every
+/// symlink component, so retaining that spelling makes valid temporary and user
+/// roots fail before their first user-controlled component. No arbitrary
+/// symlink is resolved here.
+fn platform_canonical_root(path: &Path) -> PathBuf {
+    #[cfg(target_os = "macos")]
+    {
+        let var = Path::new("/var");
+        if let Ok(relative) = path.strip_prefix(var) {
+            return Path::new("/private/var").join(relative);
+        }
+    }
+    path.to_owned()
 }
 
 fn portable_canonical_path(path: &Path) -> PathBuf {
@@ -967,7 +987,7 @@ fn validate_registry(user_root: &Path, registry: &ProjectRegistry) -> Result<(),
                 project.root.display()
             ))
         })?;
-        if canonical != portable_canonical_path(&project.root) {
+        if canonical != platform_canonical_root(&portable_canonical_path(&project.root)) {
             return Err(WikiError::Conflict(format!(
                 "registered project root must be canonical and contain no symlink components: {}",
                 project.root.display()
@@ -988,6 +1008,7 @@ fn validate_registry(user_root: &Path, registry: &ProjectRegistry) -> Result<(),
 }
 
 fn validate_absolute_root(path: &Path, name: &str) -> Result<(), WikiError> {
+    let path = platform_canonical_root(path);
     if !path.is_absolute()
         || path
             .components()
@@ -997,7 +1018,7 @@ fn validate_absolute_root(path: &Path, name: &str) -> Result<(), WikiError> {
             "{name} must be an absolute normalized path"
         )));
     }
-    let metadata = fs::symlink_metadata(path).map_err(|error| {
+    let metadata = fs::symlink_metadata(&path).map_err(|error| {
         WikiError::Io(format!("cannot inspect {name} {}: {error}", path.display()))
     })?;
     if metadata.file_type().is_symlink() || !metadata.is_dir() {
@@ -1079,14 +1100,15 @@ fn injected_shared_ancestor_open_race(path: &Path) {
 
 #[cfg(test)]
 fn pin_source_root(path: &Path, name: &str) -> Result<Dir, WikiError> {
-    validate_absolute_root(path, name)?;
-    let expected = Dir::open_ambient_dir(path, ambient_authority())
+    let path = platform_canonical_root(path);
+    validate_absolute_root(&path, name)?;
+    let expected = Dir::open_ambient_dir(&path, ambient_authority())
         .map_err(|error| WikiError::Io(format!("cannot capture {name} identity: {error}")))?;
     let expected = expected
         .dir_metadata()
         .map_err(|error| WikiError::Io(format!("cannot inspect captured {name}: {error}")))?;
-    injected_shared_ancestor_open_race(path);
-    let pinned = open_source_root_nofollow(path, name)?;
+    injected_shared_ancestor_open_race(&path);
+    let pinned = open_source_root_nofollow(&path, name)?;
     let actual = pinned
         .dir_metadata()
         .map_err(|error| WikiError::Io(format!("cannot inspect pinned {name}: {error}")))?;
@@ -1105,6 +1127,7 @@ fn pin_source_root(path: &Path, name: &str) -> Result<Dir, WikiError> {
 
 #[cfg(test)]
 fn open_source_root_nofollow(path: &Path, name: &str) -> Result<Dir, WikiError> {
+    let path = platform_canonical_root(path);
     let mut filesystem_root = PathBuf::new();
     let mut components = Vec::new();
     for component in path.components() {
@@ -1146,7 +1169,7 @@ fn open_source_root_nofollow(path: &Path, name: &str) -> Result<Dir, WikiError> 
             )));
         }
         if index == last {
-            injected_shared_root_open_race(path);
+            injected_shared_root_open_race(&path);
         }
         let next = current.open_dir_nofollow(&component).map_err(|error| {
             WikiError::Conflict(format!(

@@ -6,6 +6,7 @@ use crate::portable::{
 use cap_fs_ext::{DirExt, FollowSymlinks, MetadataExt as CapMetadataExt, OpenOptionsFollowExt};
 use cap_std::ambient_authority;
 use cap_std::fs::{Dir, OpenOptions as CapOpenOptions};
+use hive_core::normalize_platform_root;
 use std::error::Error;
 use std::ffi::{OsStr, OsString};
 use std::fmt::{self, Display, Formatter};
@@ -317,7 +318,7 @@ fn normalized_absolute(path: &Path) -> Result<PathBuf, BundleIoError> {
             "bundle path could not be normalized absolutely".to_owned(),
         ));
     }
-    Ok(normalized)
+    Ok(normalize_platform_root(&normalized))
 }
 
 fn open_directory_nofollow(path: &Path) -> Result<(Dir, ObjectIdentity), BundleIoError> {
