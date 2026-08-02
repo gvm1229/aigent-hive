@@ -32,7 +32,7 @@
 - Dispatch registration: `release-test-publish.yml`의 default-branch 등록 부재,
   CLI·REST dispatch `404`, npm·tag·GitHub Release mutation `0건`
 - Apple·Windows·external TUF production signer 증거 미확인
-- Remote `develop`: `cee06e013cfbeca907c018b26c35a89bee0b703b`
+- Source baseline: `cee06e013cfbeca907c018b26c35a89bee0b703b`, `develop` 포함
 
 ## 현재 프로젝트 상태
 
@@ -65,7 +65,7 @@ attestation·signing·TUF → `v0.9.0` normal Release·npm `latest` → public a
 
 ### A. 기준선과 workflow activation
 
-- [x] [REL9-001] 현재 implementation·계획·변경점 커밋의 원격 `develop` 반영과 exact remote SHA `cee06e013cfbeca907c018b26c35a89bee0b703b` 확인
+- [x] [REL9-001] release source baseline `cee06e013cfbeca907c018b26c35a89bee0b703b`의 `develop` 포함 확인
 - [x] [REL9-002] `0.9.0` product identity와 stable·bare test·numbered test grammar, 문서·fixture·release notes parity
 - [x] [REL9-003] package version을 product version과 분리하고 `0.9.0-test[.N]` parser·installer·receipt·upgrade 계약 구현
 - [x] [REL9-004] `release.yml` candidate를 explicit channel·version·ref·SHA에 결합하고 시험·정식 ref downgrade 차단

@@ -2,7 +2,7 @@
 
 - 기준 branch: `develop`
 - product version: `0.9.0`
-- plan revision: `1.95`
+- plan revision: `1.96`
 - 현재 milestone: `0.9.0-test` prerelease registration
 - 현재 작업: test publication workflow의 default-branch 등록·보호 review 대기
 - 외부 중지 경계: `main` PR·review, protected publication approval, signing·TUF·npm credential,
@@ -146,7 +146,7 @@
 - Candidate: run `30771098518`, exact `6761f0b`, 5 target·npm umbrella·direct installer PASS
 - Dispatch blocker: `release-test-publish.yml`의 default-branch 등록 부재. CLI·REST `404`, npm·tag·GitHub prerelease mutation `0건`
 - Protected environment: 기존 `release-publication` reviewer gate 재사용
-- Remote `develop`: `cee06e013cfbeca907c018b26c35a89bee0b703b` 반영 확인
+- Source baseline: `cee06e013cfbeca907c018b26c35a89bee0b703b`, `develop` 포함
 - `staging`: 현재 release flow에 불필요하여 생성 0건
 - Production gate: 5개 native target·6개 npm package, OS signing·notarization,
   external TUF, public install·`0.8.0 → 0.9.0` update

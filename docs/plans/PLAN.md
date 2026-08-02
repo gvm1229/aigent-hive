@@ -1,6 +1,6 @@
 # Aigent Hive active plan index
 
-> Revision: 1.95
+> Revision: 1.96
 > 기준일: 2026-08-03
 > Product version: `0.9.0`
 > 현재 milestone: `0.9.0` 정식 릴리스 준비
