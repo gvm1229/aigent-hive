@@ -1824,7 +1824,7 @@ fn protect_authorization_file(file: &cap_std::fs::File) -> Result<(), WikiError>
 }
 
 fn verify_authorization_file_identity(
-    _canonical_user_root: &Path,
+    canonical_user_root: &Path,
     capability_metadata: &cap_std::fs::Metadata,
     std_metadata: &fs::Metadata,
 ) -> Result<(), WikiError> {
@@ -1836,7 +1836,7 @@ fn verify_authorization_file_identity(
     #[cfg(unix)]
     {
         use std::os::unix::fs::MetadataExt;
-        let owner = fs::metadata(_canonical_user_root.join(KNOWLEDGE_AUTHORIZATION_RELATIVE))
+        let owner = fs::metadata(canonical_user_root.join(KNOWLEDGE_AUTHORIZATION_RELATIVE))
             .map_err(|error| {
                 WikiError::Io(format!("cannot inspect authorization owner: {error}"))
             })?;
@@ -1847,7 +1847,7 @@ fn verify_authorization_file_identity(
         }
     }
     #[cfg(windows)]
-    let _ = std_metadata;
+    let _ = (canonical_user_root, std_metadata);
     Ok(())
 }
 
@@ -3255,6 +3255,13 @@ mod tests {
             .expect("temporary root")
     }
 
+    fn temp_root_outside_repository() -> TempDir {
+        let repository = fs::canonicalize(Path::new(env!("CARGO_MANIFEST_DIR")).join("../.."))
+            .expect("canonical repository root");
+        TempDir::new_in(repository.parent().expect("repository parent"))
+            .expect("external temporary root")
+    }
+
     fn write_empty_knowledge(root: &Path) {
         fs::create_dir_all(root.join(".hive/knowledge/Wiki")).expect("Wiki directory");
         fs::create_dir_all(root.join(".hive/knowledge/Raw")).expect("Raw directory");
@@ -4476,7 +4483,7 @@ mod tests {
     #[test]
     fn scan_apply_rejects_credentials_before_registry_or_index_mutation() {
         let user = temp_root();
-        let target = temp_root();
+        let target = temp_root_outside_repository();
         write_user_setup(user.path(), true);
         write_empty_knowledge(user.path());
         fs::write(target.path().join("README.md"), "# Safe project purpose\n")

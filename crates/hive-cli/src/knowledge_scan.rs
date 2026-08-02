@@ -236,7 +236,7 @@ fn validate_git_arguments(arguments: &[OsString], target: &Path) -> Result<(), W
 }
 
 fn fixed_git_environment() -> Vec<(OsString, OsString)> {
-    let mut environment = vec![
+    let environment = vec![
         (OsString::from("GIT_ATTR_NOSYSTEM"), OsString::from("1")),
         (OsString::from("GIT_CONFIG_COUNT"), OsString::from("0")),
         (OsString::from("GIT_CONFIG_NOSYSTEM"), OsString::from("1")),
@@ -248,9 +248,13 @@ fn fixed_git_environment() -> Vec<(OsString, OsString)> {
         (OsString::from("NO_COLOR"), OsString::from("1")),
     ];
     #[cfg(windows)]
-    if let Some(system_root) = env::var_os("SystemRoot") {
-        environment.push((OsString::from("SystemRoot"), system_root));
-    }
+    let environment = {
+        let mut environment = environment;
+        if let Some(system_root) = env::var_os("SystemRoot") {
+            environment.push((OsString::from("SystemRoot"), system_root));
+        }
+        environment
+    };
     environment
 }
 
