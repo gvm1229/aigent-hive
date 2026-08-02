@@ -2,7 +2,7 @@
 
 > Checklist owner: `PRF-*`
 > Target: `0.9.0`
-> 상태: 계획 확정, 구현 미착수
+> 상태: 구현·검증 완료
 > Decision: [`ADR-0009`](../../decisions/ADR-0009-user-plugin-project-knowledge-boundary.md)
 
 ## 목표
@@ -90,33 +90,35 @@ candidate prompt
 
 ## Checklist
 
+- 검증: source·consumer projection, Phase 3 route·lifecycle, fresh clone Rust·Python 전체 적합성 PASS
+
 ### A. Contract
 
-- [ ] [PRF-001] Explicit-only·suggestion-only current truth와 typed router baseline fixture 고정
-- [ ] [PRF-002] `$hive-prompt-refine` refine-only 기본, `--run` same-request 승인,
+- [x] [PRF-001] Explicit-only·suggestion-only current truth와 typed router baseline fixture 고정
+- [x] [PRF-002] `$hive-prompt-refine` refine-only 기본, `--run` same-request 승인,
   imperative payload 비승인 문법 확정
-- [ ] [PRF-003] Material ambiguity 판정과 usage·setup·explicit Skill·simple/editless·clear
+- [x] [PRF-003] Material ambiguity 판정과 usage·setup·explicit Skill·simple/editless·clear
   work precedence 확정
-- [ ] [PRF-004] Refined prompt digest·`awaiting-approval|authorized`·stale approval·correction
+- [x] [PRF-004] Refined prompt digest·`awaiting-approval|authorized`·stale approval·correction
   lifecycle schema 확정
 
 ### B. Implementation
 
-- [ ] [PRF-005] Source·consumer directive, Skill description·body, catalog·metadata의 automatic
+- [x] [PRF-005] Source·consumer directive, Skill description·body, catalog·metadata의 automatic
   refine-only discovery와 mandatory stop 반영
-- [ ] [PRF-006] Normalized `prompt_quality`의 suggestion-only 분기를 automatic Skill route로
+- [x] [PRF-006] Normalized `prompt_quality`의 suggestion-only 분기를 automatic Skill route로
   전환하고 approval envelope·CLI validation 구현
-- [ ] [PRF-007] Canonical Skill의 source·Codex·Claude·Antigravity projection parity와 frozen
+- [x] [PRF-007] Canonical Skill의 source·Codex·Claude·Antigravity projection parity와 frozen
   historical base 불변 검증
 
 ### C. Verification
 
-- [ ] [PRF-008] Ambiguous work 자동 선택과 clear work·simple/editless negative route fixture
-- [ ] [PRF-009] Explicit command + imperative payload의 refined prompt 이후 tool·read·write·run
+- [x] [PRF-008] Ambiguous work 자동 선택과 clear work·simple/editless negative route fixture
+- [x] [PRF-009] Explicit command + imperative payload의 refined prompt 이후 tool·read·write·run
   0건과 `awaiting-approval` 검증
-- [ ] [PRF-010] 후속 exact 승인 실행, correction 재정제, stale·generic approval 차단 E2E
-- [ ] [PRF-011] 세 host fresh-session 자동 discovery·single-body load·prompt-classifier hook 0건 검증
-- [ ] [PRF-012] Full Rust·Python 적합성, 문서 style·projection·release note·bilingual fact 완료
+- [x] [PRF-010] 후속 exact 승인 실행, correction 재정제, stale·generic approval 차단 E2E
+- [x] [PRF-011] 세 host fresh-session 자동 discovery·single-body load·prompt-classifier hook 0건 검증
+- [x] [PRF-012] Full Rust·Python 적합성, 문서 style·projection·release note·bilingual fact 완료
 
 ## 완료 기준
 

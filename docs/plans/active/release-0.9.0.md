@@ -21,17 +21,18 @@
 ## 현재 기준선
 
 - Source version·release date: `0.9.0`, `2026-08-01`
-- Local qualification: Rust 459개 통과, Python 628개 통과·42개 platform skip
+- Fresh clone `6761f0b`: Rust format·strict Clippy·workspace all-target·all-feature,
+  Python 677개 PASS·platform skip 5개
 - RAG 50,000 chunk와 `.hivekb` 100 collection·50,000 chunk 성능 gate 통과
 - `0.8.0` frozen project·user base와 synthetic release fixture 무변경
 - Release notes: [`docs/releases/0.9.0.md`](../../releases/0.9.0.md)
 - 기능 마감: [`v0.9.0-test-finalization.md`](v0.9.0-test-finalization.md)
-- 기존 `release.yml`: remote `develop` candidate만 허용
-- 기존 `release-publish.yml`: exact `0.8.0` hardcode와 `develop` candidate 결합
-- GitHub normal Release·tag 생성 workflow 부재
-- Repository release tag 부재
+- Test candidate: run `30771098518`, exact `6761f0b`, 5 target·npm umbrella PASS
+- Test publication: existing protected `release-publication` environment 재사용
+- Dispatch registration: `release-test-publish.yml`의 default-branch 등록 부재,
+  CLI·REST dispatch `404`, npm·tag·GitHub Release mutation `0건`
 - Apple·Windows·external TUF production signer 증거 미확인
-- Remote `develop`: `3c2c03dc792976c0acafb4377e8591e2a83ef848`
+- Remote `develop`: `cee06e013cfbeca907c018b26c35a89bee0b703b`
 
 ## 현재 프로젝트 상태
 
@@ -64,25 +65,25 @@ attestation·signing·TUF → `v0.9.0` normal Release·npm `latest` → public a
 
 ### A. 기준선과 workflow activation
 
-- [x] [REL9-001] 현재 implementation·계획·변경점 커밋의 원격 `develop` 반영과 exact remote SHA `e4f1d6001a0a6ad5f41dccc350a0e585bbe9c9d0` 확인
-- [ ] [REL9-002] `0.9.0` product identity와 stable·bare test·numbered test grammar, 문서·fixture·release notes parity
-- [ ] [REL9-003] package version을 product version과 분리하고 `0.9.0-test[.N]` parser·installer·receipt·upgrade 계약 구현
-- [ ] [REL9-004] `release.yml` candidate를 explicit channel·version·ref·SHA에 결합하고 시험·정식 ref downgrade 차단
+- [x] [REL9-001] 현재 implementation·계획·변경점 커밋의 원격 `develop` 반영과 exact remote SHA `cee06e013cfbeca907c018b26c35a89bee0b703b` 확인
+- [x] [REL9-002] `0.9.0` product identity와 stable·bare test·numbered test grammar, 문서·fixture·release notes parity
+- [x] [REL9-003] package version을 product version과 분리하고 `0.9.0-test[.N]` parser·installer·receipt·upgrade 계약 구현
+- [x] [REL9-004] `release.yml` candidate를 explicit channel·version·ref·SHA에 결합하고 시험·정식 ref downgrade 차단
 - [ ] [REL9-005] 독립 test prerelease와 stable normal Release workflow 추가: 상호 trigger 0건, tag·asset·checksum·attestation·idempotency·existing-version refusal
 
 ### B. Clean-clone qualification
 
-- [ ] [REL9-006] Fresh clone의 Rust format·strict Clippy·workspace all-target·all-feature test와 Python 전체 적합성
-- [ ] [REL9-007] Ubuntu·macOS·Windows CI와 Linux musl x86_64·arm64 release runtime PASS
-- [ ] [REL9-008] Installer·update·rollback·recovery·secret·symlink·path confinement hostile suite PASS
-- [ ] [REL9-009] 시험·정식 feature/default parity, `markdown|notion` backend,
+- [x] [REL9-006] Fresh clone의 Rust format·strict Clippy·workspace all-target·all-feature test와 Python 전체 적합성
+- [x] [REL9-007] Ubuntu·macOS·Windows CI와 Linux musl x86_64·arm64 release runtime PASS
+- [x] [REL9-008] Installer·update·rollback·recovery·secret·symlink·path confinement hostile suite PASS
+- [x] [REL9-009] 시험·정식 feature/default parity, `markdown|notion` backend,
   Discord outbound와 공통 `report to developer` preview·collect·보존·redaction·no-upload conformance
-- [ ] [REL9-010] RAG 50,000 chunk와 `.hivekb` 100 collection·50,000 chunk release profile 재측정·threshold PASS
+- [x] [REL9-010] RAG 50,000 chunk와 `.hivekb` 100 collection·50,000 chunk release profile 재측정·threshold PASS
 - [ ] [REL9-011] Codex·Antigravity 실제 install·setup·project·update 회귀와 Claude fixture·미검증 범위 공개
 
 ### C. 시험 배포와 수용
 
-- [ ] [REL9-012] Remote `develop` exact SHA의 `0.9.0-test` candidate 5 target·6 npm·installer·byte identity PASS
+- [x] [REL9-012] Remote `develop` exact SHA의 `0.9.0-test` candidate 5 target·6 npm·installer·byte identity PASS
 - [ ] [REL9-013] 기본 시험판의 GitHub prerelease·npm `0.9.0-test|test` 독립 게시와 기존 `latest` snapshot 불변 확인
 - [ ] [REL9-014] Public test install·update·문제 보고 기능과 stable parity acceptance
 - [ ] [REL9-015] 수용 기간의 blocker triage·privacy·disk retention 검증, bare 시험판 재게시 금지 확인
@@ -116,6 +117,7 @@ attestation·signing·TUF → `v0.9.0` normal Release·npm `latest` → public a
 - `main` PR review·merge와 protected environment approval
 - Apple·Windows signing identity와 external TUF threshold signer
 - GitHub prerelease·normal Release 생성 권한과 npm Trusted Publisher environment
+- Test publication workflow의 default-branch 등록을 위한 최소 `main` PR·review
 - Credential·private key·2FA material의 저장소·agent 노출 금지
 - 각 외부 mutation 직전 exact SHA·artifact digest·대상 preview 재확인
 

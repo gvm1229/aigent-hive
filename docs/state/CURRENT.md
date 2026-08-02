@@ -2,11 +2,10 @@
 
 - 기준 branch: `develop`
 - product version: `0.9.0`
-- plan revision: `1.94`
-- 현재 milestone: `0.9.0` 정식 릴리스 준비
-- 현재 작업: Hive-native iterative·team·multi-goal host feasibility와 Codex·Claude
-  exact-model custom subagent 안전 protocol
-- 외부 중지 경계: protected review·environment approval, signing·TUF·npm credential,
+- plan revision: `1.95`
+- 현재 milestone: `0.9.0-test` prerelease registration
+- 현재 작업: test publication workflow의 default-branch 등록·보호 review 대기
+- 외부 중지 경계: `main` PR·review, protected publication approval, signing·TUF·npm credential,
   exact `1.0.0` 사용자 authority
 - Plan load: compact `docs/plans/PLAN.md` + `docs/plans/phases/07-public-qualification.md`
   + `docs/plans/active/plugin-project-lifecycle.md`
@@ -25,7 +24,9 @@
   + `docs/plans/active/prompt-refine-auto-routing.md`
   + `docs/plans/active/v0.9.0-test-finalization.md`
   + `docs/plans/active/release-0.9.0.md`
-- Plan completion: canonical checklist `293/403` 완료, `110`개 미완료, `72.7%`
+- Plan completion: canonical checklist `332/403` 완료, `71`개 미완료, `82.4%`
+- Fresh clone: exact `6761f0b`, Rust format·strict Clippy·workspace all-feature, Python 677개 PASS·platform skip 5개
+- Test candidate: [run `30771098518`](https://github.com/gvm1229/aigent-hive/actions/runs/30771098518), exact `6761f0b`, 5 target·npm umbrella PASS
 - Latest local Windows: Rust workspace 459개 실행·통과. Python 적합성 670개 발견 중
   628개 실제 실행·통과, 42개 미실행. 미실행 범위: 관리자 권한 없는 Windows의
   symbolic link 생성 제약 16개, POSIX·Unix 전용 동작 19개, macOS 전용 설치·서명
@@ -114,7 +115,7 @@
 
 ## `0.9.0-test` 기능 마감
 
-- 상태: 계획 확정, 구현 미착수
+- 상태: `TST9-001–018` 구현·검증 완료, public test publication 대기
 - 결정: [`ADR-0018`](../decisions/ADR-0018-notion-wiki-backend.md) accepted
 - Active fragment:
   [`v0.9.0-test-finalization.md`](../plans/active/v0.9.0-test-finalization.md)
@@ -127,11 +128,11 @@
 - 제외: Webhook·Notion AI 이중 검색·양방향 Markdown sync
 - Discord: usage guard 중단의 optional outbound, Claude inbound official plugin 위임,
   Codex inbound official capability 전 `unsupported`
-- 다음 작업: TST9-001–003 backend·migration·consent contract
+- 다음 작업: `REL9-013` protected test publication
 
 ## v0.9.0 시험·정식 릴리스
 
-- 상태: 계획 활성, publication 미실행
+- 상태: candidate·fresh clone qualification PASS, public test publication 미실행
 - 사용자 authority: 분리된 시험·정식 `0.9.0` 계획과 원격 `develop` push 승인
 - 결정: [`ADR-0017`](../decisions/ADR-0017-0.9-full-release.md) accepted
 - Active fragment: [`release-0.9.0.md`](../plans/active/release-0.9.0.md)
@@ -142,19 +143,18 @@
   GitHub normal Release·npm `0.9.0|latest`
 - Parity: 시험·정식 기능·명령·기본값 동일, 시험 전용 기능 0건
 - 공통 문제 보고: 명시적 preview·collect·export, 자동 업로드·raw prompt 기본 수집 0건
-- 확인된 activation gap: `release-publish.yml`의 exact `0.8.0` hardcode,
-  candidate workflow의 `develop` 전용 ref, GitHub normal Release workflow 부재
-- Branch ruleset: `Develop safety`의 deletion·non-fast-forward만 적용,
-  `Protect main`의 PR·required checks 4개 유지
-- Remote `develop`: `e4f1d6001a0a6ad5f41dccc350a0e585bbe9c9d0` 반영 확인
+- Candidate: run `30771098518`, exact `6761f0b`, 5 target·npm umbrella·direct installer PASS
+- Dispatch blocker: `release-test-publish.yml`의 default-branch 등록 부재. CLI·REST `404`, npm·tag·GitHub prerelease mutation `0건`
+- Protected environment: 기존 `release-publication` reviewer gate 재사용
+- Remote `develop`: `cee06e013cfbeca907c018b26c35a89bee0b703b` 반영 확인
 - `staging`: 현재 release flow에 불필요하여 생성 0건
 - Production gate: 5개 native target·6개 npm package, OS signing·notarization,
   external TUF, public install·`0.8.0 → 0.9.0` update
-- 다음 작업: TST9-*·PRF-* 기능 마감 뒤 REL9-002–005 version grammar·분리 release workflow activation
+- 다음 작업: registration-only `main` PR·review 뒤 `REL9-013` test publication
 
 ## Prompt refine 자동 routing
 
-- 상태: 원인 확인·수정 계획 활성, 구현 미착수
+- 상태: `PRF-001–012` 구현·검증 완료
 - Active fragment:
   [`prompt-refine-auto-routing.md`](../plans/active/prompt-refine-auto-routing.md)
 - 원인: source·consumer policy와 Skill catalog의 explicit-only·suggestion-only 계약
@@ -164,7 +164,7 @@
   `awaiting-approval`, exact 후속 승인 전 side effect 0건
 - 보존: simple/editless question·clear work route, prompt-classifier hook 금지,
   frozen `0.7.0|0.8.0` Skill bytes
-- 다음 작업: PRF-001–004 contract fixture·schema, PRF-005–007 projection·router 구현
+- 다음 작업: test publication 뒤 public parity 수용 관찰
 
 ## v0.9.0 전역 knowledge RAG
 
