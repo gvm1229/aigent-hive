@@ -181,9 +181,8 @@ where
     if !valid_webhook_url(url) {
         return NotificationOutcome::InvalidWebhookUrl;
     }
-    let payload = match serde_json::to_vec(&payload_for(halt)) {
-        Ok(payload) => payload,
-        Err(_) => return NotificationOutcome::DeliveryFailed,
+    let Ok(payload) = serde_json::to_vec(&payload_for(halt)) else {
+        return NotificationOutcome::DeliveryFailed;
     };
     for _ in 0..DELIVERY_ATTEMPTS {
         if deliver(url, &payload).is_ok() {
