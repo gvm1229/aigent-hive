@@ -27,6 +27,7 @@ mod knowledge;
 mod knowledge_scan;
 mod loop_engineering;
 mod project_upgrade;
+mod report;
 mod role;
 mod run;
 mod source_wiki;
@@ -55,6 +56,7 @@ USAGE:
     hive update --check --user-root <absolute-dir> --output json
     hive knowledge add|authorize-confidential|collection|delete|export|import|ingest|lint|list|promote|query|read|refresh|remember|retrieve|scan|suppress --help
     hive discord inbound --host codex|claude|antigravity --output json
+    hive report preview|collect|export --help
     hive project upgrade --target <dir> (--scan|--dry-run|--apply|--validate|--recover) --output json
     hive index rebuild --target <dir> --output json
     hive route --request <json> --output json
@@ -186,6 +188,7 @@ fn main() -> ExitCode {
         Some("source-wiki") => source_wiki::run(&arguments[1..]),
         Some("knowledge") => knowledge::run_knowledge(&arguments[1..]),
         Some("discord") => discord::run(&arguments[1..]),
+        Some("report") => report::run(&arguments[1..]),
         Some("project") => project_upgrade::run(&arguments[1..]),
         Some("index") => knowledge::run_index(&arguments[1..]),
         Some("route") => run_route(&arguments[1..]),
