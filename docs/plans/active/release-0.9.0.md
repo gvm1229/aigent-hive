@@ -31,7 +31,32 @@
 - GitHub normal Release·tag 생성 workflow 부재
 - Repository release tag 부재
 - Apple·Windows·external TUF production signer 증거 미확인
-- Remote `develop`: `e4f1d6001a0a6ad5f41dccc350a0e585bbe9c9d0`
+- Remote `develop`: `3c2c03dc792976c0acafb4377e8591e2a83ef848`
+
+## 현재 프로젝트 상태 — 2026-08-03
+
+- Git 기준선: local `develop` HEAD와 `origin/develop` exact
+  `3c2c03dc792976c0acafb4377e8591e2a83ef848`
+- 이 계획 변경 제외 작업 트리: tracked 수정 4개와 untracked Notion 구현·시험 2개;
+  사용자 소유
+- Local foreign state: `docs/.obsidian/`; 릴리스 범위 제외
+- 부분 구현: `markdown|notion` setup schema·install 분기, provider-neutral Notion
+  adapter·revision/tombstone·RAG projection과 fail-closed 시험
+- 대상 검증: Notion backend 시험 3개 PASS, setup schema JSON parse PASS
+- 미완료 검증: `cargo fmt --all --check` FAIL, `hive-cli` compile은
+  `GlobalProjectPreferences.wiki_backend` field 부재로 FAIL
+- Source Wiki: dirty source에 연결된 source digest mismatch 10건; qualification 전
+  bilingual fact 갱신·index rebuild 필요
+- 릴리스 identity: Cargo·harness template·release note의 `0.9.0` 정렬
+- npm Trusted Publisher: platform 5개와 umbrella 1개 모두
+  `gvm1229/aigent-hive`·`release-publish.yml`·`release-publication`으로 검증 완료
+- 공개 npm: 6개 package 모두 `latest=0.8.0`; `0.9.0` publication 0건
+- GitHub Actions: 2026-07-31 이후 candidate·publish run 0건; 최신 성공 계보는
+  `0.8.0` commit `420e244577b6b4c340a0b03074cdf019edb348f2`
+- Credential 전환: `release-publication`의 `NPM_TOKEN` 유지; OIDC 실제 게시 성공과
+  rollback 확인 전 삭제 금지
+- Checklist 판정: 신규 완료 증거 0건, `TST9-*` 부분 구현 상태,
+  `REL9-001–026` 중 `REL9-001`만 완료
 
 ## Version·channel 계약
 
