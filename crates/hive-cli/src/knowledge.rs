@@ -83,6 +83,13 @@ const LEGACY_DERIVED_RELATIVES: [&str; 4] = [
     ".hive/index/.stale",
 ];
 
+type NotionSyncInputs<'a> = (
+    PathBuf,
+    NotionCapabilityReceipt,
+    NotionSyncRequest,
+    Vec<(&'a str, &'a str)>,
+);
+
 const KNOWLEDGE_AUTHORIZATION_RELATIVE: &str = ".hive/runtime/knowledge-authorizations";
 const KNOWLEDGE_AUTHORIZATION_CONSUMED_RELATIVE: &str =
     ".hive/runtime/knowledge-authorizations/consumed";
@@ -199,15 +206,7 @@ fn run_notion(arguments: &[String]) -> Result<KnowledgeResult, WikiError> {
 fn parse_notion_sync_inputs<'a>(
     arguments: &'a [String],
     extra: &[&str],
-) -> Result<
-    (
-        PathBuf,
-        NotionCapabilityReceipt,
-        NotionSyncRequest,
-        Vec<(&'a str, &'a str)>,
-    ),
-    WikiError,
-> {
+) -> Result<NotionSyncInputs<'a>, WikiError> {
     let mut allowed = vec!["--user-root", "--capability", "--snapshot"];
     allowed.extend(extra.iter().copied());
     let options = parse_options(arguments, &allowed)?;
@@ -228,7 +227,7 @@ fn run_notion_sync(arguments: &[String], rebuild: bool) -> Result<KnowledgeResul
     let (user_root, capability, snapshot, _) = parse_notion_sync_inputs(arguments, &[])?;
     let store = RagStore::open(&user_root)?;
     let outcome = sync_notion_and_publish(&store, &capability, &snapshot, rebuild)
-        .map_err(map_notion_error)?;
+        .map_err(|error| map_notion_error(&error))?;
     let code = if rebuild {
         "hive.notion-rebuilt"
     } else {
@@ -271,9 +270,10 @@ fn run_notion_retrieve(arguments: &[String]) -> Result<KnowledgeResult, WikiErro
     }
     request.current_collection_id = None;
     let store = RagStore::open(&user_root)?;
-    let freshness =
-        sync_notion_and_publish(&store, &capability, &snapshot, false).map_err(map_notion_error)?;
-    let retrieval = retrieve_notion_persisted(&store, &request).map_err(map_notion_error)?;
+    let freshness = sync_notion_and_publish(&store, &capability, &snapshot, false)
+        .map_err(|error| map_notion_error(&error))?;
+    let retrieval =
+        retrieve_notion_persisted(&store, &request).map_err(|error| map_notion_error(&error))?;
     let digest = retrieval.manifest_digest.clone();
     Ok(success(
         "RetrieveNotionKnowledge",
@@ -296,10 +296,11 @@ fn run_notion_write_through(arguments: &[String]) -> Result<KnowledgeResult, Wik
         Path::new(required(&options, "--write-receipt")?),
         "Notion write receipt",
     )?;
-    validate_write_receipt(&capability, &snapshot, &receipt).map_err(map_notion_error)?;
+    validate_write_receipt(&capability, &snapshot, &receipt)
+        .map_err(|error| map_notion_error(&error))?;
     let store = RagStore::open(&user_root)?;
-    let outcome =
-        sync_notion_and_publish(&store, &capability, &snapshot, false).map_err(map_notion_error)?;
+    let outcome = sync_notion_and_publish(&store, &capability, &snapshot, false)
+        .map_err(|error| map_notion_error(&error))?;
     let digest = outcome.store.manifest_digest.clone();
     Ok(success(
         "WriteThroughNotionKnowledge",
@@ -349,7 +350,7 @@ fn validate_notion_backend(
     Ok(())
 }
 
-fn map_notion_error(error: hive_wiki::notion::NotionError) -> WikiError {
+fn map_notion_error(error: &hive_wiki::notion::NotionError) -> WikiError {
     WikiError::Verification(error.to_string())
 }
 
