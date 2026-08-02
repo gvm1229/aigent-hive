@@ -1100,26 +1100,8 @@ fn resolve_non_plain_route(
         return Ok(explicit);
     }
 
-    // An explicit simple action also enters the isolation gate.
-    if request.explicit_action == Some(LogicalAction::AnswerSimpleQuestion)
-        || (request.explicit_action.is_none() && request.simple_question)
-    {
-        if request.project_context_required {
-            return Ok(decision(
-                Route::Blocked,
-                LogicalAction::AnswerSimpleQuestion,
-                None,
-                None,
-                None,
-                Some(LogicalAction::RunWork),
-            ));
-        }
-        return resolve_hive_skill(
-            request,
-            "hive-simple-question",
-            LogicalAction::AnswerSimpleQuestion,
-            Route::SimpleQuestion,
-        );
+    if let Some(simple_question) = resolve_simple_question_route(request)? {
+        return Ok(simple_question);
     }
 
     if let Some(skill) = request
@@ -1177,6 +1159,33 @@ fn resolve_non_plain_route(
         refinement_mode(fallback_action, request),
         None,
     ))
+}
+
+fn resolve_simple_question_route(
+    request: &RoutingRequest,
+) -> Result<Option<RoutingDecision>, ProjectionError> {
+    // An explicit simple action also enters the isolation gate.
+    if request.explicit_action != Some(LogicalAction::AnswerSimpleQuestion)
+        && (request.explicit_action.is_some() || !request.simple_question)
+    {
+        return Ok(None);
+    }
+    if request.project_context_required {
+        return Ok(Some(decision(
+            Route::Blocked,
+            LogicalAction::AnswerSimpleQuestion,
+            None,
+            None,
+            None,
+            Some(LogicalAction::RunWork),
+        )));
+    }
+    Ok(Some(resolve_hive_skill(
+        request,
+        "hive-simple-question",
+        LogicalAction::AnswerSimpleQuestion,
+        Route::SimpleQuestion,
+    )?))
 }
 
 fn resolve_explicit_skill(
