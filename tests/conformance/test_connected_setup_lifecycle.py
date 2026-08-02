@@ -285,7 +285,7 @@ else:
             metadata = connection.execute(
                 "SELECT schema_version, generation, manifest_digest, entry_count FROM meta"
             ).fetchone()
-            self.assertEqual(metadata[0], 5)
+            self.assertEqual(metadata[0], 6)
             self.assertGreaterEqual(metadata[1], 1)
             self.assertRegex(metadata[2], r"^sha256:[0-9a-f]{64}$")
             self.assertGreaterEqual(metadata[3], 0)
