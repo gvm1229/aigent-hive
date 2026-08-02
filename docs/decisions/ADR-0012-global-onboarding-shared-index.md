@@ -21,13 +21,13 @@
 Global setup answer:
 
 - Interface language: `en|ko`
-- LLM Wiki language: `en|ko|both`
+- Wiki language: `en|ko|both`
 - User profile: signed release catalog의 web developer, game developer,
   non-developer와 `custom`
 - Agent persona: signed release catalog의 strict, balanced, friendly와 `custom`
 - Active host: `codex|claude|antigravity` 복수 선택
 - Skill selection: recommended suite 또는 개별 선택
-- LLM Wiki: 기본 `enabled`, 명시적 opt-out
+- Wiki: 기본 `enabled`, 명시적 opt-out
 - Usage guard: 명시적 opt-in, enabled 상태의 기본 remaining threshold `20%`
 
 ### User projection
@@ -43,7 +43,7 @@ Global setup answer:
 
 ### Wiki lifecycle
 
-- Global LLM Wiki 기본 활성화
+- Global Wiki 기본 활성화
 - Setup 중 opt-out, 이후 setup rerun 또는 명백한 agent request로 disable·enable
 - Disable: capture·query·automatic retrieval·index refresh 중지
 - Existing canonical Markdown: 기본 보존

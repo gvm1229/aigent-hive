@@ -2,7 +2,7 @@
 
 현재 계획에 영향을 준 외부 근거:
 
-- Andrej Karpathy LLM Wiki gist
+- Andrej Karpathy Wiki gist
 - `multica-ai/andrej-karpathy-skills`
 - Agent Skills specification
 - Copier configuration/update documentation

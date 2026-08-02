@@ -19,3 +19,5 @@ status: active
 
 `docs/` is one Wiki graph with a home, complete index, topic maps, human-readable
 architecture and guides, and bilingual atomic facts under `docs/facts/`.
+The former standalone source Wiki layout and name are absent from tracked source;
+the current CLI, Skills, tests, and index use `docs/facts/`.

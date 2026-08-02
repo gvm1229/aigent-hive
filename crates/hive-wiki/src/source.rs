@@ -1960,7 +1960,7 @@ mod tests {
 
     #[cfg(unix)]
     #[test]
-    fn llm_wiki_ancestor_symlink_is_refused() {
+    fn docs_facts_ancestor_symlink_is_refused() {
         let temp = fixture();
         write_pair(temp.path(), "architecture", &[]);
         let external = temp.path().join("external-wiki");

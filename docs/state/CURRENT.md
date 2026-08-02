@@ -252,14 +252,13 @@ Target: `0.8.0`
 - 장기 방향: host-native·provider-neutral capability 대체 뒤 OMX/OMC 제거
 - Consumer reuse: `hive-wiki` core와 capture·maintenance·query 안전 계약
 - Skill reuse: shared canonical `harness/skills/`, exact source `.agents/skills/` projection
-- 현재 상태: 영어 43개·한국어 43개 atomic fact, exact pair 43개와 source-confined
+- 현재 상태: 영어 46개·한국어 46개 atomic fact, exact pair 46개와 source-confined
   CLI·Skill·material-task completion capture 구현 완료
-- Derived source Wiki index: 43 pair 변경 뒤 stale, current local `hive 0.7.0`은 제거된
-  `llm-wiki/` layout 요구, Cargo 부재로 current source binary rebuild 불가
-- 이전 40 pair logical digest:
-  `sha256:9dfc1266564078e728100c6017b54a221eaa9a85e7e8b2cf6831e04ee10b2f29`
-- 현재 검증: fact schema·pair·source digest·body limit·문서 graph 28개 시험 PASS;
-  current source Wiki lint·index·영어·한국어 query는 fresh binary 확보 뒤 필요
+- Derived source Wiki index: `docs/facts/` 46 pair 기준 rebuild 완료
+- Current logical digest:
+  `sha256:71c830f55adaf85d92c58c1a8ff3ebfe816789bd70e857e2a8c1dc47791dc502`
+- 현재 검증: fact schema·pair·source digest·body limit·문서 graph 시험과 current
+  `target/debug/hive` Source Wiki lint·index·영어·한국어 query PASS
 - SQLite binary digest는 invocation-local evidence이며 정본·clean-copy equivalence 기준이
   아님. Logical digest와 query 결과가 rebuild equivalence 기준
 - Marketing deck 재개 record:

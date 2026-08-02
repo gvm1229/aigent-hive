@@ -9,7 +9,7 @@ summary: "Initial setup chooses language first and records user-scope host prefe
 tags: [onboarding, setup]
 aliases: ["User setup"]
 sources:
-  - "repo:docs/decisions/ADR-0012-global-onboarding-shared-index.md#sha256:aa1f7e4271db8f3e1ceac5e0b54ed7451405513f37d65571b3e0df899930a8c0"
+  - "repo:docs/decisions/ADR-0012-global-onboarding-shared-index.md#sha256:44401a82ba3bd9f2bc4048876f5480157720bc5fce005a7c0b63f4d960f63bf1"
 links: [project-onboarding, test-distribution]
 reviewed_revision: "git:722c8e46dbde5710155b394ef33820ebccd3b85c"
 status: active

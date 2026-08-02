@@ -592,12 +592,12 @@ class SourceWikiConformance(unittest.TestCase):
             external = Path(raw).resolve()
             source = external / "source.md"
             source.write_text("external sentinel\n", encoding="utf-8")
-            (self.target / "docs").symlink_to(external, target_is_directory=True)
+            (self.target / "evidence").symlink_to(external, target_is_directory=True)
             digest = hashlib.sha256(source.read_bytes()).hexdigest()
             self.set_paired_field(
                 "boundaries",
                 "sources",
-                [f"repo:docs/source.md#sha256:{digest}"],
+                [f"repo:evidence/source.md#sha256:{digest}"],
             )
 
             result = self.lint()
@@ -932,6 +932,18 @@ class SourceWikiConformance(unittest.TestCase):
             "OMX/OMC retirement 시 source knowledge migration 0건",
         ):
             self.assertIn(requirement, decision)
+
+    def test_obsolete_standalone_source_wiki_name_is_absent(self) -> None:
+        pattern = "llm" + "[-_ ]" + "wiki"
+        result = subprocess.run(
+            ["git", "grep", "-I", "-n", "-i", "-E", pattern, "--", "."],
+            cwd=ROOT,
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        self.assertEqual(result.stdout, "")
 
     def test_material_source_task_autocapture_contract_is_durable(self) -> None:
         source_manifest = (ROOT / "AGENTS.md").read_text(encoding="utf-8")

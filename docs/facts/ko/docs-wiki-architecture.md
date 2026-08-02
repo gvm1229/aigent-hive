@@ -19,3 +19,5 @@ status: active
 
 단일 graph: `docs/` home, 전체 index, topic MOC, 사람이 읽는 architecture·guide,
 `docs/facts/`의 bilingual atomic fact.
+이전 standalone source Wiki layout·명칭: tracked source에서 제거. Current CLI·Skill·시험·
+index: `docs/facts/` 사용.
