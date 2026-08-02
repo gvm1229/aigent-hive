@@ -5,18 +5,22 @@ topic_slug: judge-verification
 language: ko
 counterpart: ../en/judge-verification.md
 title: "Judge verification 경계"
-summary: "Clean-context judge artifact 검증과 judge 실행·signing 비소유."
+summary: "외부 서명 Judge artifact 검증과 v0.9.0 reserved exact-model Judge 호출 정책."
 tags: [judge, security, verification]
 aliases: ["Ed25519 judge quorum"]
 sources:
   - "repo:docs/decisions/ADR-0007-ed25519-judge-trust.md#sha256:5a17bcd8f6869437a9e37c025c4fa2da285ff03af16a7144552162bac5a09a1a"
-links: [product-non-goals, release-verification]
-reviewed_revision: "git:722c8e46dbde5710155b394ef33820ebccd3b85c"
+  - "repo:docs/decisions/ADR-0019-hive-native-iterative-execution.md#sha256:cc7e79da6c27052fb9dc256a47e057deab617bbb66a567da8455d9135d6407b8"
+  - "repo:docs/plans/active/model-routed-custom-subagents.md#sha256:a2779d3f1ebab829c48214fd4486f9505e7207b6de1cdfe3c6af56c9121534ce"
+links: [model-routed-custom-subagents, orchestration-ownership, product-non-goals, release-verification]
+reviewed_revision: "git:4e750ce659c953d7d71ab6e9536c29968ab1f028"
 status: active
 ---
 
 # Judge verification 경계
 
-Hive 범위: bounded clean-context evidence package, external signed assignment·verdict·
-critical human approval 검증. 비소유: private key 생성, signing, judge 실행, 판단
-진실성 보증.
+현재 Hive 범위: bounded evidence package와 외부 서명 assignment·verdict·critical human approval 검증.
+Private key·signing·agent 실행 비소유. `0.9.0` 계획: exact model/effort receipt의 fresh read-only
+user-scope custom Judge. `explicit`은 strict terminal gate 한정, `implicit`은 material-risk task 추가.
+Strict gate는 항상 quorum 필수, scheduler tick별 dispatch 금지. Host는 agent 실행, 외부 signer는 서명,
+Hive는 digest-bound quorum 검증.
