@@ -68,12 +68,23 @@ def render(source: Path, destination: Path, replacements: dict[str, str]) -> Non
     destination.write_text(text, encoding="utf-8", newline="\n")
 
 
+def valid_package_version(product_version: str, package_version: str) -> bool:
+    return package_version == product_version or bool(
+        re.fullmatch(
+            re.escape(product_version) + r"-test(?:\.[1-9][0-9]*)?",
+            package_version,
+        )
+    )
+
+
 def main() -> None:
     args = parse_args()
     if not EXACT_VERSION.fullmatch(args.product_version):
         raise SystemExit("--product-version must be an exact X.Y.Z version")
-    if args.package_version != args.product_version:
-        raise SystemExit("--package-version must equal PRODUCT_VERSION")
+    if not valid_package_version(args.product_version, args.package_version):
+        raise SystemExit(
+            "--package-version must equal PRODUCT_VERSION or use PRODUCT_VERSION-test[.N]"
+        )
     if not args.dist.is_dir() or args.dist.is_symlink():
         raise SystemExit("--dist must be a regular directory")
     args.output.mkdir(parents=True, exist_ok=True)

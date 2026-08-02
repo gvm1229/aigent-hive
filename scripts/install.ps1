@@ -1,7 +1,7 @@
 param(
     [ValidatePattern('^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$')]
     [string]$Version = "__AIGENT_HIVE_PRODUCT_VERSION__",
-    [ValidatePattern('^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-test\.[1-9][0-9]*)?$')]
+    [ValidatePattern('^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-test(\.[1-9][0-9]*)?)?$')]
     [string]$PackageVersion = "__AIGENT_HIVE_PACKAGE_VERSION__",
     [string]$Prefix = "$env:LOCALAPPDATA\AigentHive"
 )
@@ -26,9 +26,9 @@ if (-not [Environment]::Is64BitOperatingSystem) {
 }
 if (
     $PackageVersion -ne $Version -and
-    $PackageVersion -notmatch ('^' + [regex]::Escape($Version) + '-test\.[1-9][0-9]*$')
+    $PackageVersion -notmatch ('^' + [regex]::Escape($Version) + '-test(\.[1-9][0-9]*)?$')
 ) {
-    throw "PackageVersion must equal Version or use Version-test.N"
+    throw "PackageVersion must equal Version or use Version-test[.N]"
 }
 
 function Test-HiveVersionOutput {
@@ -141,7 +141,7 @@ function Get-ValidatedDirectReceipt {
         (
             $receipt.package_version -ne $receipt.version -and
             $receipt.package_version -notmatch (
-                '^' + [regex]::Escape($receipt.version) + '-test\.[1-9][0-9]*$'
+                '^' + [regex]::Escape($receipt.version) + '-test(\.[1-9][0-9]*)?$'
             )
         ) -or
         $receipt.artifact_sha256 -notmatch '^sha256:[0-9a-f]{64}$'

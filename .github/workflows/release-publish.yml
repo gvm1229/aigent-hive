@@ -1,4 +1,4 @@
-name: Publish npm distribution
+name: Publish stable npm distribution
 
 on:
   workflow_dispatch:
@@ -8,7 +8,7 @@ on:
         required: true
         type: string
       package_version:
-        description: Exact npm package version; must equal product version
+        description: Exact stable npm package version; must equal product version
         required: true
         type: string
       candidate_run_id:
@@ -22,7 +22,7 @@ on:
         type: boolean
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   publish:
@@ -36,7 +36,7 @@ jobs:
       BOOTSTRAP_WITH_TOKEN: ${{ inputs.bootstrap_with_token }}
     permissions:
       actions: read
-      contents: read
+      contents: write
       id-token: write
     steps:
       - name: Validate untrusted dispatch inputs
@@ -53,7 +53,6 @@ jobs:
           fi
           test "$BOOTSTRAP_WITH_TOKEN" = "true" \
             || test "$BOOTSTRAP_WITH_TOKEN" = "false"
-          test "$PRODUCT_VERSION" = "0.8.0"
       - name: Resolve the exact successful candidate commit
         id: candidate
         env:
@@ -62,7 +61,7 @@ jobs:
           metadata=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RUN_ID")
           test "$(jq -r .name <<<"$metadata")" = "Release candidate"
           test "$(jq -r .event <<<"$metadata")" = "workflow_dispatch"
-          test "$(jq -r .head_branch <<<"$metadata")" = "develop"
+          test "$(jq -r .head_branch <<<"$metadata")" = "main"
           test "$(jq -r .conclusion <<<"$metadata")" = "success"
           echo "sha=$(jq -r .head_sha <<<"$metadata")" >>"$GITHUB_OUTPUT"
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -94,6 +93,17 @@ jobs:
           pattern: release-*
           path: dist
           merge-multiple: true
+      - name: Bind stable publication to the exact stable candidate
+        env:
+          CANDIDATE_SHA: ${{ steps.candidate.outputs.sha }}
+        run: |
+          metadata=$(cat dist/release-candidate.json)
+          test "$(jq -r .schema_version <<<"$metadata")" = "1"
+          test "$(jq -r .channel <<<"$metadata")" = "stable"
+          test "$(jq -r .product_version <<<"$metadata")" = "$PRODUCT_VERSION"
+          test "$(jq -r .package_version <<<"$metadata")" = "$PACKAGE_VERSION"
+          test "$(jq -r .ref <<<"$metadata")" = "refs/heads/main"
+          test "$(jq -r .sha <<<"$metadata")" = "$CANDIDATE_SHA"
       - name: Verify required artifacts, checksums, and GitHub attestations
         env:
           GH_TOKEN: ${{ github.token }}
@@ -226,6 +236,21 @@ jobs:
               exit 3
             fi
           done
+      - name: Refuse an existing stable tag or release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CANDIDATE_SHA: ${{ steps.candidate.outputs.sha }}
+        run: |
+          tag="v$PRODUCT_VERSION"
+          if git ls-remote --exit-code --tags origin "refs/tags/$tag" >/dev/null 2>&1; then
+            echo "$tag already exists" >&2
+            exit 3
+          fi
+          if gh release view "$tag" >/dev/null 2>&1; then
+            echo "$tag already has a GitHub Release" >&2
+            exit 3
+          fi
+          test "$CANDIDATE_SHA" = "$(git rev-parse HEAD)"
       - name: Publish npm package family with the bootstrap token
         if: inputs.bootstrap_with_token
         env:
@@ -286,3 +311,18 @@ jobs:
               sleep 5
             done
           done
+      - name: Create annotated stable tag and normal GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CANDIDATE_SHA: ${{ steps.candidate.outputs.sha }}
+        run: |
+          tag="v$PRODUCT_VERSION"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "$tag" "$CANDIDATE_SHA" -m "Aigent Hive $PRODUCT_VERSION"
+          git push origin "refs/tags/$tag"
+          gh release create "$tag" \
+            --target "$CANDIDATE_SHA" \
+            --title "Aigent Hive $PRODUCT_VERSION" \
+            --notes-file "docs/releases/$PRODUCT_VERSION.md" \
+            dist/*.tar.gz dist/*.zip dist/*.sha256 dist/*.tgz dist/*.attestation.jsonl

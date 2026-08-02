@@ -52,7 +52,7 @@ function fail(message) {
 
 function parseArguments(argv) {
   if (argv.length < 1 || !["platform", "umbrella"].includes(argv[0])) {
-    fail("usage: package-npm.mjs platform|umbrella --product-version X.Y.Z --package-version X.Y.Z --output PATH [--target TRIPLE --binary PATH] [--installer-dir PATH]");
+    fail("usage: package-npm.mjs platform|umbrella --product-version X.Y.Z --package-version X.Y.Z[-test[.N]] --output PATH [--target TRIPLE --binary PATH] [--installer-dir PATH]");
   }
   const options = { kind: argv[0] };
   for (let index = 1; index < argv.length; index += 2) {
@@ -69,8 +69,8 @@ function parseArguments(argv) {
   if (!exactVersionPattern.test(options["product-version"] ?? "")) {
     fail("--product-version must be an exact X.Y.Z version");
   }
-  if (options["package-version"] !== options["product-version"]) {
-    fail("--package-version must equal PRODUCT_VERSION");
+  if (!validPackageVersion(options["product-version"], options["package-version"])) {
+    fail("--package-version must equal PRODUCT_VERSION or use PRODUCT_VERSION-test[.N]");
   }
   if (!options.output) {
     fail("--output is required");
@@ -88,6 +88,14 @@ function parseArguments(argv) {
     fail("umbrella packaging requires --installer-dir and does not accept --target or --binary");
   }
   return options;
+}
+
+function validPackageVersion(productVersion, packageVersion) {
+  if (packageVersion === productVersion || packageVersion === `${productVersion}-test`) {
+    return true;
+  }
+  const escapedProduct = productVersion.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(`^${escapedProduct}-test\\.[1-9][0-9]*$`).test(packageVersion ?? "");
 }
 
 function requireRegularFile(inputPath, label) {
