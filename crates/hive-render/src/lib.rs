@@ -3108,6 +3108,50 @@ fn render_agents_marker(
     resolution: &CapabilityResolution,
     effective_preferences: Option<&EffectiveProjectPreferences>,
 ) -> String {
+    if let Some(preferences) = effective_preferences {
+        let marker = include_str!("../../../harness/template/AGENTS.md.jinja")
+            .replace("{{ project_name }}", &answers.project_name)
+            .replace("{{ project_kind }}", &answers.project_kind)
+            .replace("{{ setup_mode }}", &answers.setup_mode)
+            .replace("{{ preference_provenance }}", preferences.provenance)
+            .replace("{{ interface_language }}", &preferences.interface_language)
+            .replace(
+                "{{ \"enabled\" if wiki_enabled else \"disabled\" }}",
+                if preferences.wiki_enabled {
+                    "enabled"
+                } else {
+                    "disabled"
+                },
+            )
+            .replace("{{ wiki_backend }}", &preferences.wiki_backend)
+            .replace("{{ wiki_language }}", &preferences.wiki_language)
+            .replace("{{ persona_id }}", &preferences.persona_id)
+            .replace("{{ primary_host }}", &answers.primary_host)
+            .replace(
+                "{{ capability_resolution.resolved_owner }}",
+                &resolution.resolved_owner,
+            )
+            .replace(
+                "{{ capability_resolution.evidence_digest }}",
+                &resolution.evidence_digest,
+            );
+        if !preferences.usage_guard_enabled {
+            let mut disabled = marker
+                .lines()
+                .map(|line| {
+                    if line.starts_with("- Immediately before each new automatic dispatch") {
+                        "- Usage guard: disabled by installed preference. Do not run `hive usage enforce` or call a native/CodexBar sensor automatically. Automatic resume must report `data.usage_guard.enforced=false`, `outcome=disabled`, one authorization ID, and exactly one dispatch brief."
+                    } else {
+                        line
+                    }
+                })
+                .collect::<Vec<_>>()
+                .join("\n");
+            disabled.push('\n');
+            return disabled;
+        }
+        return marker;
+    }
     let selected_interface_language = effective_preferences
         .map_or("configured interface language", |preferences| {
             preferences.interface_language.as_str()
