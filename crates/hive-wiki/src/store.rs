@@ -109,7 +109,7 @@ pub struct ExternalIndexSnapshot {
     pub ledger_bytes: Vec<u8>,
     /// Authenticated disposable RAG generation metadata.
     pub manifest: GenerationManifest,
-    /// Authenticated disposable SQLite projection bytes.
+    /// Authenticated disposable `SQLite` projection bytes.
     pub sqlite_bytes: Vec<u8>,
 }
 
@@ -1110,13 +1110,13 @@ impl RagStore {
     ///
     /// This method deliberately does not interpret the ledger: the backend owns
     /// its remote identity and revision contract. It does enforce the same
-    /// no-follow paths, dirty-state barrier, manifest trust binding, and SQLite
+    /// no-follow paths, dirty-state barrier, manifest trust binding, and `SQLite`
     /// byte bounds used by the Markdown backend.
     ///
     /// # Errors
     ///
     /// Returns an error when the ledger path is unsafe, the projection is dirty,
-    /// or the ledger, manifest, trust binding, or SQLite bytes are unavailable.
+    /// or the ledger, manifest, trust binding, or `SQLite` bytes are unavailable.
     pub fn load_external_index(
         &self,
         ledger_relative: &Path,
@@ -1134,6 +1134,11 @@ impl RagStore {
     ///
     /// A missing ledger is a normal pre-setup state. Any partially present or
     /// invalid generation still fails closed rather than being treated as empty.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the ledger path is unsafe, the store is dirty, or
+    /// a partially present ledger and projection cannot be verified.
     pub fn load_external_index_optional(
         &self,
         ledger_relative: &Path,
@@ -1180,8 +1185,8 @@ impl RagStore {
     ///
     /// The caller supplies an already validated, complete remote snapshot. The
     /// ledger is the only durable remote-source state; page content remains only
-    /// in the disposable SQLite projection. A transaction first records the
-    /// exact ledger write as dirty, then publishes SQLite and its manifest, and
+    /// in the disposable `SQLite` projection. A transaction first records the
+    /// exact ledger write as dirty, then publishes `SQLite` and its manifest, and
     /// only clears dirty after all bytes are durable.
     ///
     /// # Errors
@@ -1204,6 +1209,11 @@ impl RagStore {
     /// before invoking this recovery path. It cannot recover a Markdown or
     /// other local-canonical dirty journal, and it retains the original dirty
     /// bytes if the new publication cannot complete.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the ledger path is unsafe, a nonmatching dirty
+    /// journal exists, or the next generation cannot be recovered.
     pub fn publish_external_index_recovery(
         &self,
         ledger_relative: &Path,
@@ -1292,9 +1302,14 @@ impl RagStore {
     /// Reserve no state but report the next publishable external generation.
     ///
     /// Remote adapters use this only to build a complete recovery snapshot after
-    /// a disposable SQLite loss. Publication rechecks the value under the same
+    /// a disposable `SQLite` loss. Publication rechecks the value under the same
     /// exclusive lock, so a concurrent writer becomes a conflict rather than a
     /// stale-success.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the store is dirty or the current generation
+    /// cannot be read safely.
     pub fn next_external_generation(&self) -> Result<u64, WikiError> {
         let _lock = crate::CapabilityKnowledgeLock::acquire(&self.root)?;
         self.reject_dirty_mutation()?;
@@ -1307,6 +1322,11 @@ impl RagStore {
     /// This is deliberately narrower than generic dirty recovery: a remote
     /// inventory is canonical only for the selected external ledger and may
     /// not clear a local Markdown mutation journal.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the ledger path is unsafe or the exact external
+    /// dirty state cannot yield a next recovery generation.
     pub fn next_external_recovery_generation(
         &self,
         ledger_relative: &Path,
@@ -3224,7 +3244,9 @@ fn validate_external_ledger_relative(relative: &Path) -> Result<(), WikiError> {
     })?;
     if *hive != OsStr::new(".hive")
         || *index != OsStr::new("index")
-        || !file.ends_with(".json")
+        || !Path::new(file)
+            .extension()
+            .is_some_and(|extension| extension.eq_ignore_ascii_case("json"))
         || file.len() > 128
     {
         return Err(WikiError::InvalidInput(

@@ -31,7 +31,7 @@ const MAX_PAGES: usize = 100_000;
 /// Small remote revision ledger retained by a Notion backend.
 ///
 /// It intentionally excludes page bodies, chunks, prompts, and transcripts.
-/// Normalized remote page content exists only in the disposable SQLite index.
+/// Normalized remote page content exists only in the disposable `SQLite` index.
 pub const NOTION_LEDGER_RELATIVE: &str = ".hive/index/notion-ledger.json";
 
 /// Supported remote adapters in strict preference order.
@@ -168,7 +168,7 @@ pub struct NotionRevisionEntry {
     pub digest: String,
 }
 
-/// Complete derived Notion state retained beside the disposable SQLite bytes.
+/// Complete derived Notion state retained beside the disposable `SQLite` bytes.
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
 #[serde(deny_unknown_fields)]
 pub struct NotionProjection {
@@ -214,7 +214,7 @@ pub struct NotionPersistedOutcome {
     pub store: StoreCommit,
 }
 
-/// Host-confirmed remote write operation used for SQLite write-through.
+/// Host-confirmed remote write operation used for `SQLite` write-through.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, Eq, PartialEq)]
 #[serde(rename_all = "kebab-case")]
 pub enum NotionWriteOperation {
@@ -252,7 +252,7 @@ impl From<crate::WikiError> for NotionError {
 }
 
 impl NotionProjection {
-    /// Return the body-free ledger which may be persisted beside SQLite.
+    /// Return the body-free ledger which may be persisted beside `SQLite`.
     #[must_use]
     pub fn ledger(&self) -> NotionLedger {
         NotionLedger {
@@ -268,6 +268,11 @@ impl NotionProjection {
 }
 
 /// Select the first fully capable adapter in plugin → MCP → consented REST order.
+///
+/// # Errors
+///
+/// Returns [`NotionError`] when a receipt is malformed, lacks an operation, or
+/// selects REST without explicit consent.
 pub fn resolve_adapter(
     receipts: &[NotionCapabilityReceipt],
 ) -> Result<NotionCapabilityReceipt, NotionError> {
@@ -306,7 +311,12 @@ pub fn resolve_adapter(
     ))
 }
 
-/// Validate a complete inventory and publish a backend-neutral SQLite generation.
+/// Validate a complete inventory and publish a backend-neutral `SQLite` generation.
+///
+/// # Errors
+///
+/// Returns [`NotionError`] when the receipt or inventory is incomplete, drifts
+/// from the selected scope, or cannot form a verified next generation.
 pub fn sync_snapshot(
     previous: Option<&NotionProjection>,
     capability: &NotionCapabilityReceipt,
@@ -317,9 +327,15 @@ pub fn sync_snapshot(
 
 /// Validate a complete remote inventory with an optional explicit generation.
 ///
-/// Recovery uses `generation` only after a SQLite loss or schema replacement,
+/// Recovery uses `generation` only after a `SQLite` loss or schema replacement,
 /// when every active page is supplied again. Ordinary incremental refreshes use
 /// the previous generation and cannot skip or downgrade it.
+///
+/// # Errors
+///
+/// Returns [`NotionError`] when the receipt, inventory, generation, or remote
+/// page content cannot safely produce one complete projection.
+#[allow(clippy::too_many_lines)]
 pub fn sync_snapshot_for_generation(
     previous: Option<&NotionProjection>,
     capability: &NotionCapabilityReceipt,
@@ -541,11 +557,16 @@ pub fn sync_snapshot_for_generation(
     })
 }
 
-/// Load a body-free Notion ledger and recover unchanged pages from verified SQLite.
+/// Load a body-free Notion ledger and recover unchanged pages from verified `SQLite`.
 ///
-/// SQLite is used only after a complete remote inventory has already selected a
+/// `SQLite` is used only after a complete remote inventory has already selected a
 /// remote source for the next generation; a caller must not treat this helper as
 /// a local canonical-source fallback.
+///
+/// # Errors
+///
+/// Returns [`NotionError`] when the ledger, derived projection, or their
+/// generation binding is missing, malformed, or inconsistent.
 pub fn load_persisted_projection(
     store: &RagStore,
 ) -> Result<Option<NotionProjection>, NotionError> {
@@ -585,13 +606,18 @@ pub fn load_persisted_projection(
     }))
 }
 
-/// Synchronize host-supplied remote data, then atomically write through SQLite.
+/// Synchronize host-supplied remote data, then atomically write through `SQLite`.
 ///
 /// With `rebuild` false, unchanged page content is recovered only from a prior
 /// verified projection and a missing/corrupt local index fails closed. With
 /// `rebuild` true, the host must provide every active page again; this supports
 /// deletion, corruption, and schema-change recovery without a local Markdown
 /// fallback.
+///
+/// # Errors
+///
+/// Returns [`NotionError`] when the fresh inventory cannot be validated or its
+/// ledger and derived projection cannot be atomically published.
 pub fn sync_and_publish(
     store: &RagStore,
     capability: &NotionCapabilityReceipt,
@@ -639,7 +665,12 @@ pub fn sync_and_publish(
     })
 }
 
-/// Retrieve only from a verified Notion-derived SQLite generation.
+/// Retrieve only from a verified Notion-derived `SQLite` generation.
+///
+/// # Errors
+///
+/// Returns [`NotionError`] when the persisted ledger or projection is not a
+/// verified complete Notion generation, or the retrieval request is invalid.
 pub fn retrieve_persisted(
     store: &RagStore,
     request: &RetrievalRequest,
@@ -663,7 +694,12 @@ pub fn retrieve_persisted(
 }
 
 /// Verify that a host-owned Notion write is represented by the complete fresh
-/// inventory before SQLite publication.
+/// inventory before `SQLite` publication.
+///
+/// # Errors
+///
+/// Returns [`NotionError`] when the receipt, write capability, inventory, or
+/// returned page revision cannot prove the completed canonical write.
 pub fn validate_write_receipt(
     capability: &NotionCapabilityReceipt,
     request: &NotionSyncRequest,

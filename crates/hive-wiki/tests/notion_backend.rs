@@ -40,7 +40,7 @@ fn page(revision: &str, body: &str) -> NotionPage {
 
 fn page_with_id(page_id: &str, revision: &str, body: &str) -> NotionPage {
     let mut value = page(revision, body);
-    value.page_id = page_id.to_owned();
+    page_id.clone_into(&mut value.page_id);
     value.title = format!("Guide {page_id}");
     value
 }

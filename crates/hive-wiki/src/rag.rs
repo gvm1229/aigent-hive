@@ -23,7 +23,7 @@ pub const RAG_SCHEMA_VERSION: u32 = 6;
 /// Version of the canonical typed-claim Markdown contract.
 pub const CLAIM_SCHEMA_VERSION: u32 = 1;
 
-/// Maximum size of one authenticated serialized SQLite RAG projection.
+/// Maximum size of one authenticated serialized `SQLite` RAG projection.
 ///
 /// The limit accommodates the release-qualified 50,000-chunk corpus while
 /// retaining a finite in-memory deserialization boundary.
@@ -1086,9 +1086,15 @@ pub fn build_rag_index(snapshot: &RagSnapshot) -> Result<RagIndexArtifact, RagEr
 ///
 /// # Errors
 ///
-/// Returns an error when the prior SQLite generation is invalid, the registry
-/// or lineage differs, a changed set is incomplete, or SQLite cannot apply the
+/// Returns an error when the prior `SQLite` generation is invalid, the registry
+/// or lineage differs, a changed set is incomplete, or `SQLite` cannot apply the
 /// bounded row-level transaction.
+///
+/// # Panics
+///
+/// Panics only if the validated changed-document ID set no longer resolves in
+/// the canonical target snapshot during this in-memory operation.
+#[allow(clippy::too_many_lines)]
 pub fn build_incremental_remote_rag_index(
     previous: &RagIndexArtifact,
     snapshot: &RagSnapshot,
@@ -1289,7 +1295,7 @@ pub fn retrieve_serialized(
 /// Recover the exact document records retained in a verified disposable index.
 ///
 /// This is used only by a remote-canonical backend to retain unchanged pages in
-/// the SQLite projection between complete remote inventories. It never treats
+/// the `SQLite` projection between complete remote inventories. It never treats
 /// the index as a canonical source: the caller must still perform a fresh
 /// remote inventory before publishing a new generation.
 ///
