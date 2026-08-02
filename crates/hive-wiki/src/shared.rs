@@ -2125,7 +2125,7 @@ mod tests {
         use std::os::unix::fs::symlink;
 
         let (temporary, user, _first, _second) = fixture();
-        rebuild_shared_index(&user).unwrap();
+        rebuild_legacy_shared_index_for_test(&user).unwrap();
         let index = user.join(SHARED_INDEX_RELATIVE);
         let index_before = fs::read(&index).unwrap();
         let root_page = user.join(WIKI_RELATIVE).join("root-page.md");
@@ -2141,13 +2141,14 @@ mod tests {
         });
 
         assert!(matches!(
-            rebuild_shared_index(&user),
+            rebuild_legacy_shared_index_for_test(&user),
             Err(WikiError::Verification(_))
         ));
         assert_eq!(fs::read(&index).unwrap(), index_before);
 
         fs::remove_file(&root_page).unwrap();
         fs::write(&root_page, page_before).unwrap();
+        rebuild_shared_index(&user).unwrap();
         validate_shared_index(&user).unwrap();
         assert!(query_shared(&user, None, Some("external-only"), None, 20)
             .unwrap()
@@ -2160,7 +2161,7 @@ mod tests {
         use std::os::unix::fs::symlink;
 
         let (temporary, user, first, _second) = fixture();
-        rebuild_shared_index(&user).unwrap();
+        rebuild_legacy_shared_index_for_test(&user).unwrap();
         let index = user.join(SHARED_INDEX_RELATIVE);
         let index_before = fs::read(&index).unwrap();
         let saved = temporary.path().join("first-saved");
@@ -2181,13 +2182,14 @@ mod tests {
         });
 
         assert!(matches!(
-            rebuild_shared_index(&user),
+            rebuild_legacy_shared_index_for_test(&user),
             Err(WikiError::Conflict(_))
         ));
         assert_eq!(fs::read(&index).unwrap(), index_before);
 
         fs::remove_file(&first).unwrap();
         fs::rename(saved, &first).unwrap();
+        rebuild_shared_index(&user).unwrap();
         validate_shared_index(&user).unwrap();
         assert!(
             query_shared(&user, Some(&first), Some("external-only"), None, 20)
@@ -2212,7 +2214,7 @@ mod tests {
             serde_yaml::to_string(&registry).unwrap(),
         )
         .unwrap();
-        rebuild_shared_index(&user).unwrap();
+        rebuild_legacy_shared_index_for_test(&user).unwrap();
         let index = user.join(SHARED_INDEX_RELATIVE);
         let index_before = fs::read(&index).unwrap();
 
@@ -2241,13 +2243,14 @@ mod tests {
         });
 
         assert!(matches!(
-            rebuild_shared_index(&user),
+            rebuild_legacy_shared_index_for_test(&user),
             Err(WikiError::Conflict(_))
         ));
         assert_eq!(fs::read(&index).unwrap(), index_before);
 
         fs::rename(&controlled, external_restore).unwrap();
         fs::rename(saved, &controlled).unwrap();
+        rebuild_shared_index(&user).unwrap();
         validate_shared_index(&user).unwrap();
         assert!(
             query_shared(&user, Some(&nested), Some("external-only"), None, 20)

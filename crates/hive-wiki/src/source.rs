@@ -1926,6 +1926,7 @@ mod tests {
     #[test]
     fn symlinks_are_refused_but_cited_source_content_is_not_ingested() {
         let temp = fixture();
+        let original_source = source_locator(temp.path());
         write_pair(temp.path(), "architecture", &[]);
         let external = temp.path().join("external.md");
         fs::write(&external, b"outside\n").expect("external");
@@ -1945,6 +1946,7 @@ mod tests {
         .expect("credential-bearing cited source");
         let digest = sha256_digest(b"token=abcdefghijklmnopqrstuvwxyz\n");
         let digest = digest.strip_prefix("sha256:").expect("digest prefix");
+        let replacement_source = format!("repo:docs/source.md#sha256:{digest}");
         for language in ["en", "ko"] {
             let path = temp
                 .path()
@@ -1952,8 +1954,10 @@ mod tests {
                 .join(language)
                 .join("architecture.md");
             let text = fs::read_to_string(&path).expect("read fact");
-            fs::write(&path, text.replace(&"0".repeat(64), digest)).expect("update citation");
+            fs::write(&path, text.replace(&original_source, &replacement_source))
+                .expect("update citation");
         }
+        rebuild_index(temp.path()).expect("rebuild source Wiki index");
         let outcome = lint(temp.path()).expect("lint");
         assert!(outcome.issues.is_empty());
     }
