@@ -35,7 +35,7 @@
 
 ## 현재 프로젝트 상태 — 2026-08-03
 
-- Git 기준선: local `develop` HEAD와 `origin/develop` exact
+- 검토 시작 Git 기준선: local `develop` HEAD와 `origin/develop` exact
   `3c2c03dc792976c0acafb4377e8591e2a83ef848`
 - 이 계획 변경 제외 작업 트리: tracked 수정 4개와 untracked Notion 구현·시험 2개;
   사용자 소유
