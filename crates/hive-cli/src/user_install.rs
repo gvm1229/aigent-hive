@@ -963,6 +963,9 @@ fn rebuild_root_index(arguments: &UserArguments) -> Result<(), InstallError> {
     if setup.as_ref().is_none_or(|config| !config.wiki.enabled) {
         return remove_disposable_root_index(&arguments.root_cap);
     }
+    if setup.is_some_and(|config| config.wiki.backend == crate::user_setup::WikiBackend::Notion) {
+        return Ok(());
+    }
     hive_wiki::shared::ensure_project_registry(&arguments.user_root)
         .and_then(|_| hive_wiki::shared::rebuild_shared_index(&arguments.user_root))
         .map(|_| ())
@@ -1011,7 +1014,9 @@ fn build_desired_user_files(
             ownership: "shared-marker",
         },
     );
-    if operational.is_some_and(|(config, _)| config.wiki.enabled) {
+    if operational.is_some_and(|(config, _)| {
+        config.wiki.enabled && config.wiki.backend == crate::user_setup::WikiBackend::Markdown
+    }) {
         seed_root_knowledge(&arguments.root_cap, &mut files)?;
     }
 
@@ -1572,7 +1577,7 @@ fn render_user_guidance(
                 .collect::<Vec<_>>()
                 .join(", ");
             let wiki = if config.wiki.enabled {
-                "enabled"
+                config.wiki.backend.as_str()
             } else {
                 "disabled"
             };
@@ -6962,7 +6967,7 @@ mod tests {
         use crate::user_setup::{
             CatalogSelection, InterfaceLanguage, SelectedHost, SkillPreferences,
             SkillSelectionMode, UpdateCheckPreferences, UsageGuardPreferences, UserSetupConfig,
-            WikiLanguage, WikiPreferences,
+            WikiBackend, WikiLanguage, WikiPreferences,
         };
 
         let config = |interface_language| UserSetupConfig {
@@ -6971,6 +6976,8 @@ mod tests {
             wiki: WikiPreferences {
                 enabled: true,
                 language: WikiLanguage::Both,
+                backend: WikiBackend::Markdown,
+                notion: None,
             },
             profile: CatalogSelection {
                 id: "web-developer".to_owned(),

@@ -43,7 +43,29 @@
       "required": ["language"],
       "properties": {
         "enabled": { "type": "boolean", "default": true },
-        "language": { "enum": ["en", "ko", "both"] }
+        "language": { "enum": ["en", "ko", "both"] },
+        "backend": { "enum": ["markdown", "notion"], "default": "markdown" },
+        "notion": { "$ref": "#/$defs/notion_wiki" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "backend": { "const": "notion" } }, "required": ["backend"] },
+          "then": {
+            "required": ["notion"],
+            "properties": { "enabled": { "const": true } }
+          },
+          "else": { "not": { "required": ["notion"] } }
+        }
+      ]
+    },
+    "notion_wiki": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["workspace_id", "scope_id", "local_index_consent"],
+      "properties": {
+        "workspace_id": { "$ref": "#/$defs/nonempty_single_line" },
+        "scope_id": { "$ref": "#/$defs/nonempty_single_line" },
+        "local_index_consent": { "const": true }
       }
     },
     "profile": {

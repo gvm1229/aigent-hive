@@ -2206,6 +2206,7 @@ mod tests {
             global_preferences: Some(GlobalProjectPreferences {
                 interface_language: "en".to_owned(),
                 wiki_enabled: true,
+                wiki_backend: "markdown".to_owned(),
                 wiki_language: "both".to_owned(),
                 persona_id: "balanced".to_owned(),
                 persona_custom_description: None,

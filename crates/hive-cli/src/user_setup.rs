@@ -92,6 +92,31 @@ pub(crate) enum WikiLanguage {
     Both,
 }
 
+#[derive(Clone, Copy, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub(crate) enum WikiBackend {
+    #[default]
+    Markdown,
+    Notion,
+}
+
+impl WikiBackend {
+    pub(crate) const fn as_str(self) -> &'static str {
+        match self {
+            Self::Markdown => "markdown",
+            Self::Notion => "notion",
+        }
+    }
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct NotionWikiPreferences {
+    pub(crate) workspace_id: String,
+    pub(crate) scope_id: String,
+    pub(crate) local_index_consent: bool,
+}
+
 impl WikiLanguage {
     const fn as_str(self) -> &'static str {
         match self {
@@ -108,6 +133,10 @@ pub(crate) struct WikiPreferences {
     #[serde(default = "default_true")]
     pub(crate) enabled: bool,
     pub(crate) language: WikiLanguage,
+    #[serde(default)]
+    pub(crate) backend: WikiBackend,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(crate) notion: Option<NotionWikiPreferences>,
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -764,6 +793,40 @@ fn validate_config_semantics(config: &UserSetupConfig) -> Result<(), SetupError>
     validate_custom_selection(&config.profile, "profile")?;
     validate_custom_selection(&config.persona, "persona")?;
     validate_sorted_unique_hosts(&config.selected_hosts)?;
+    match (
+        config.wiki.enabled,
+        config.wiki.backend,
+        config.wiki.notion.as_ref(),
+    ) {
+        (_, WikiBackend::Markdown, None) => {}
+        (true, WikiBackend::Notion, Some(notion)) => {
+            validate_notion_id("workspace_id", &notion.workspace_id)?;
+            validate_notion_id("scope_id", &notion.scope_id)?;
+            if !notion.local_index_consent {
+                return Err(SetupError::Input(
+                    "Notion Wiki requires explicit consent to store derived content in local SQLite"
+                        .to_owned(),
+                ));
+            }
+        }
+        (false, WikiBackend::Notion, _) => {
+            return Err(SetupError::Input(
+                "disabled Wiki must use the markdown backend without Notion configuration"
+                    .to_owned(),
+            ));
+        }
+        (_, WikiBackend::Markdown, Some(_)) => {
+            return Err(SetupError::Input(
+                "markdown Wiki backend must not include Notion configuration".to_owned(),
+            ));
+        }
+        (true, WikiBackend::Notion, None) => {
+            return Err(SetupError::Input(
+                "notion Wiki backend requires workspace_id, scope_id, and local_index_consent"
+                    .to_owned(),
+            ));
+        }
+    }
     if !(1..=99).contains(&config.usage_guard.stop_remaining_percent) {
         return Err(SetupError::Input(
             "usage guard stop_remaining_percent must be between 1 and 99".to_owned(),
@@ -773,6 +836,20 @@ fn validate_config_semantics(config: &UserSetupConfig) -> Result<(), SetupError>
         return Err(SetupError::Input(
             "codexbar_fallback_enabled must be false when the usage guard is disabled".to_owned(),
         ));
+    }
+    Ok(())
+}
+
+fn validate_notion_id(label: &str, value: &str) -> Result<(), SetupError> {
+    if value.trim() != value
+        || value.is_empty()
+        || value.len() > 500
+        || value.chars().any(char::is_control)
+        || value.contains(['/', '\\'])
+        || value == "."
+        || value == ".."
+    {
+        return Err(SetupError::Input(format!("invalid Notion {label}")));
     }
     Ok(())
 }
@@ -816,6 +893,12 @@ fn reject_host_deselection(
             error.message()
         ))
     })?;
+    if installed.wiki.backend != desired.wiki.backend {
+        return Err(SetupError::Conflict(
+            "Wiki backend changes require a separate previewed migration; user setup cannot switch backends"
+                .to_owned(),
+        ));
+    }
     let desired_hosts = desired
         .selected_hosts
         .iter()
@@ -1314,7 +1397,11 @@ fn render_user_directive(config: &UserSetupConfig, resolved_skills: &[String]) -
         .collect::<Vec<_>>()
         .join(", ");
     let wiki = if config.wiki.enabled {
-        format!("enabled ({})", config.wiki.language.as_str())
+        format!(
+            "enabled (backend={}, language={})",
+            config.wiki.backend.as_str(),
+            config.wiki.language.as_str()
+        )
     } else {
         "disabled".to_owned()
     };
@@ -1461,6 +1548,7 @@ pub(crate) fn project_preferences(user_root: &Path) -> Result<GlobalProjectPrefe
     Ok(GlobalProjectPreferences {
         interface_language: config.interface_language.as_str().to_owned(),
         wiki_enabled: config.wiki.enabled,
+        wiki_backend: config.wiki.backend.as_str().to_owned(),
         wiki_language: config.wiki.language.as_str().to_owned(),
         persona_id: config.persona.id,
         persona_custom_description: config.persona.custom_description,
@@ -1681,6 +1769,64 @@ usage_guard: {}
         assert!(!config.usage_guard.enabled);
         assert_eq!(config.usage_guard.stop_remaining_percent, 20);
         assert!(!config.usage_guard.codexbar_fallback_enabled);
+    }
+
+    #[test]
+    fn notion_wiki_requires_explicit_local_index_consent_and_cannot_reconfigure_in_place() {
+        let notion = parse_and_validate_config(
+            br"
+schema_version: 1
+interface_language: en
+wiki:
+  enabled: true
+  language: both
+  backend: notion
+  notion:
+    workspace_id: workspace-a
+    scope_id: scope-a
+    local_index_consent: true
+profile:
+  id: non-developer
+persona:
+  id: balanced
+selected_hosts:
+  - codex
+skills:
+  mode: individual
+  selected:
+    - setup-hive
+usage_guard: {}
+",
+        )
+        .expect("explicit Notion consent should be valid");
+        assert_eq!(notion.wiki.backend, WikiBackend::Notion);
+        assert_eq!(
+            notion
+                .wiki
+                .notion
+                .as_ref()
+                .expect("Notion settings")
+                .scope_id,
+            "scope-a"
+        );
+
+        let mut without_consent = notion.clone();
+        without_consent
+            .wiki
+            .notion
+            .as_mut()
+            .expect("Notion settings")
+            .local_index_consent = false;
+        let error = validate_config_semantics(&without_consent)
+            .expect_err("local SQLite consent is mandatory");
+        assert!(error.message().contains("explicit consent"));
+
+        let installed = valid_config();
+        let installed_bytes = canonical_config(&installed).expect("installed bytes");
+        let error = reject_host_deselection(Some(&installed_bytes), &notion)
+            .expect_err("backend changes require a distinct migration");
+        assert_eq!(error.status(), "conflict");
+        assert!(error.message().contains("separate previewed migration"));
     }
 
     #[test]

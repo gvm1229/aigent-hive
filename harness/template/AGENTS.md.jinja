@@ -6,7 +6,7 @@ Profile: `{{ project_kind }}`
 Setup mode: `{{ setup_mode }}`
 Preference provenance: `{{ preference_provenance }}`
 Interface language: `{{ interface_language }}`
-Wiki: `{{ "enabled" if wiki_enabled else "disabled" }}` (`{{ wiki_language }}`)
+Wiki: `{{ "enabled" if wiki_enabled else "disabled" }}` (backend=`{{ wiki_backend }}`, language=`{{ wiki_language }}`)
 Persona: `{{ persona_id }}`
 Primary host: `{{ primary_host }}`
 Resolved orchestration owner: `{{ capability_resolution.resolved_owner }}`

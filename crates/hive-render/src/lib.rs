@@ -149,6 +149,7 @@ pub struct ResolvedProjectPreferences {
     pub provenance: String,
     pub interface_language: String,
     pub wiki_enabled: bool,
+    pub wiki_backend: String,
     pub wiki_language: String,
     pub persona_id: String,
     pub persona_custom_description: Option<String>,
@@ -238,6 +239,8 @@ pub struct GlobalProjectPreferences {
     pub interface_language: String,
     /// Whether canonical Wiki capture and query are enabled globally.
     pub wiki_enabled: bool,
+    /// Canonical Wiki backend inherited by every project.
+    pub wiki_backend: String,
     /// Canonical Wiki language selection.
     pub wiki_language: String,
     /// Selected agent persona id.
@@ -259,6 +262,7 @@ struct EffectiveProjectPreferences {
     provenance: &'static str,
     interface_language: String,
     wiki_enabled: bool,
+    wiki_backend: String,
     wiki_language: String,
     persona_id: String,
     persona_custom_description: Option<String>,
@@ -404,6 +408,8 @@ struct InstalledHarness {
     interface_language: Option<String>,
     #[serde(default)]
     wiki_enabled: Option<bool>,
+    #[serde(default)]
+    wiki_backend: Option<String>,
     #[serde(default)]
     wiki_language: Option<String>,
     #[serde(default)]
@@ -1634,6 +1640,7 @@ fn execute_release_update_for_target_in(
         GlobalProjectPreferences {
             interface_language: preferences.interface_language,
             wiki_enabled: preferences.wiki_enabled,
+            wiki_backend: preferences.wiki_backend,
             wiki_language: preferences.wiki_language,
             persona_id: preferences.persona_id,
             persona_custom_description: preferences.persona_custom_description,
@@ -1828,6 +1835,7 @@ fn resolved_preferences(
         provenance: preferences.provenance.to_owned(),
         interface_language: preferences.interface_language.clone(),
         wiki_enabled: preferences.wiki_enabled,
+        wiki_backend: preferences.wiki_backend.clone(),
         wiki_language: preferences.wiki_language.clone(),
         persona_id: preferences.persona_id.clone(),
         persona_custom_description: preferences.persona_custom_description.clone(),
@@ -2123,6 +2131,7 @@ fn resolve_effective_project_preferences(
             provenance: "global-inherited",
             interface_language: global.interface_language.clone(),
             wiki_enabled: global.wiki_enabled,
+            wiki_backend: global.wiki_backend.clone(),
             wiki_language: global.wiki_language.clone(),
             persona_id: global.persona_id.clone(),
             persona_custom_description: global.persona_custom_description.clone(),
@@ -2152,6 +2161,7 @@ fn resolve_effective_project_preferences(
                     .clone()
                     .expect("custom preferences were validated"),
                 wiki_enabled: wiki.enabled,
+                wiki_backend: global.wiki_backend.clone(),
                 wiki_language: wiki.language.clone(),
                 persona_id: persona.id.clone(),
                 persona_custom_description: persona.custom_description.clone(),
@@ -2196,6 +2206,7 @@ fn validate_global_project_preferences(
         .len()
         == global.selected_project_skills.len();
     if !matches!(global.interface_language.as_str(), "en" | "ko")
+        || !matches!(global.wiki_backend.as_str(), "markdown" | "notion")
         || !matches!(global.wiki_language.as_str(), "en" | "ko" | "both")
         || !(custom_persona_valid || standard_persona_valid)
         || !unique_skills
@@ -2715,7 +2726,9 @@ fn render_tree_with_preferences<T: TargetRead + ?Sized>(
     let mut files = BTreeMap::new();
     insert_static_files(&mut files);
     preserve_protected_seeds(target, &mut files)?;
-    if effective_preferences.is_some_and(|preferences| !preferences.wiki_enabled) {
+    if effective_preferences.is_some_and(|preferences| {
+        !preferences.wiki_enabled || preferences.wiki_backend == "notion"
+    }) {
         files.remove(Path::new(".hive/knowledge/Wiki/index.md"));
         files.remove(Path::new(".hive/knowledge/Wiki/log.md"));
     }
@@ -3060,11 +3073,12 @@ fn render_harness_toml(
             .join(", ");
         write!(
             &mut output,
-            "setup_mode = {}\npreference_provenance = {}\ninterface_language = {}\nwiki_enabled = {}\nwiki_language = {}\npersona_id = {}\nusage_guard_enabled = {}\ncodexbar_fallback_enabled = {}\nselected_project_skills = [{selected}]\n",
+            "setup_mode = {}\npreference_provenance = {}\ninterface_language = {}\nwiki_enabled = {}\nwiki_backend = {}\nwiki_language = {}\npersona_id = {}\nusage_guard_enabled = {}\ncodexbar_fallback_enabled = {}\nselected_project_skills = [{selected}]\n",
             quoted(&answers.setup_mode),
             quoted(preferences.provenance),
             quoted(&preferences.interface_language),
             preferences.wiki_enabled,
+            quoted(&preferences.wiki_backend),
             quoted(&preferences.wiki_language),
             quoted(&preferences.persona_id),
             preferences.usage_guard_enabled,
@@ -3100,7 +3114,7 @@ fn render_agents_marker(
         });
     let preference_summary = effective_preferences.map_or_else(String::new, |preferences| {
         format!(
-            "Setup mode: `{}`\nPreference provenance: `{}`\nInterface language: `{}`\nWiki: `{}` (`{}`)\nPersona: `{}`\n",
+            "Setup mode: `{}`\nPreference provenance: `{}`\nInterface language: `{}`\nWiki: `{}` (backend=`{}`, language=`{}`)\nPersona: `{}`\n",
             answers.setup_mode,
             preferences.provenance,
             preferences.interface_language,
@@ -3109,6 +3123,7 @@ fn render_agents_marker(
             } else {
                 "disabled"
             },
+            preferences.wiki_backend,
             preferences.wiki_language,
             preferences.persona_id,
         )
@@ -5849,7 +5864,11 @@ fn validate_installed(target: &Path) -> Result<(), RenderError> {
     }
     validate_hook_tree(target, &installed_answers.approved_fallback_hooks)?;
     validate_roles(target, &installed_answers.persistent_roles)?;
-    validate_protected_contract(target, harness.wiki_enabled.unwrap_or(true))?;
+    validate_protected_contract(
+        target,
+        harness.wiki_enabled.unwrap_or(true),
+        harness.wiki_backend.as_deref().unwrap_or("markdown"),
+    )?;
     validate_editing_discipline(target)?;
     validate_installed_marker(target, &installed_answers, &resolution)?;
     Ok(())
@@ -5889,6 +5908,10 @@ fn effective_preferences_from_harness(
     let wiki_enabled = harness.wiki_enabled.ok_or_else(|| {
         RenderError::Verification("installed effective Wiki state is missing".to_owned())
     })?;
+    let wiki_backend = harness
+        .wiki_backend
+        .clone()
+        .unwrap_or_else(|| "markdown".to_owned());
     let wiki_language = harness.wiki_language.clone().ok_or_else(|| {
         RenderError::Verification("installed effective Wiki language is missing".to_owned())
     })?;
@@ -5906,6 +5929,7 @@ fn effective_preferences_from_harness(
     let global = GlobalProjectPreferences {
         interface_language: interface_language.clone(),
         wiki_enabled,
+        wiki_backend: wiki_backend.clone(),
         wiki_language: wiki_language.clone(),
         persona_id: persona_id.clone(),
         persona_custom_description: harness.persona_custom_description.clone(),
@@ -5923,6 +5947,7 @@ fn effective_preferences_from_harness(
         },
         interface_language,
         wiki_enabled,
+        wiki_backend,
         wiki_language,
         persona_id,
         persona_custom_description: harness.persona_custom_description.clone(),
@@ -6052,7 +6077,11 @@ fn validate_editing_discipline(target: &Path) -> Result<(), RenderError> {
     Ok(())
 }
 
-fn validate_protected_contract(target: &Path, wiki_enabled: bool) -> Result<(), RenderError> {
+fn validate_protected_contract(
+    target: &Path,
+    wiki_enabled: bool,
+    wiki_backend: &str,
+) -> Result<(), RenderError> {
     const ALWAYS_REQUIRED: &[&str] = &[
         ".hive/knowledge/Raw/README.md",
         ".hive/knowledge/Schema/schema.md",
@@ -6060,11 +6089,12 @@ fn validate_protected_contract(target: &Path, wiki_enabled: bool) -> Result<(), 
         ".hive/runs/README.md",
         ".hive/team/roles/README.md",
     ];
+    let local_wiki_required = wiki_enabled && wiki_backend == "markdown";
     for path in ALWAYS_REQUIRED
         .iter()
         .copied()
-        .chain(wiki_enabled.then_some(".hive/knowledge/Wiki/index.md"))
-        .chain(wiki_enabled.then_some(".hive/knowledge/Wiki/log.md"))
+        .chain(local_wiki_required.then_some(".hive/knowledge/Wiki/index.md"))
+        .chain(local_wiki_required.then_some(".hive/knowledge/Wiki/log.md"))
     {
         let bytes = read_target_required(target, Path::new(path), "protected canonical seed")
             .map_err(as_verification)?;
@@ -6866,6 +6896,7 @@ mod tests {
         let preferences = GlobalProjectPreferences {
             interface_language: "ko".to_owned(),
             wiki_enabled: false,
+            wiki_backend: "markdown".to_owned(),
             wiki_language: "both".to_owned(),
             persona_id: "friendly".to_owned(),
             persona_custom_description: None,
@@ -6927,6 +6958,53 @@ mod tests {
     }
 
     #[test]
+    fn notion_backend_installs_without_local_wiki_markdown() {
+        let temporary = tempfile::tempdir().expect("temporary directory");
+        let target = temporary.path().canonicalize().expect("canonical target");
+        let preferences = GlobalProjectPreferences {
+            interface_language: "en".to_owned(),
+            wiki_enabled: true,
+            wiki_backend: "notion".to_owned(),
+            wiki_language: "both".to_owned(),
+            persona_id: "balanced".to_owned(),
+            persona_custom_description: None,
+            selected_project_skills: vec!["hive-wiki".to_owned()],
+            usage_guard_enabled: true,
+            codexbar_fallback_enabled: false,
+            usage_stop_remaining_percent: 20,
+        };
+
+        let outcome = execute_setup(&SetupRequest {
+            target: &target,
+            answers: &fixture("answers-base.yml"),
+            capabilities: &fixture("capabilities-codex-omx.json"),
+            mode: SetupMode::Apply,
+            reconfigure_roles: BTreeSet::new(),
+            global_preferences: Some(preferences.clone()),
+        })
+        .expect("Notion setup should render");
+        let effective = outcome
+            .effective_preferences
+            .expect("effective preferences should be public evidence");
+        assert_eq!(effective.wiki_backend, "notion");
+        assert!(!target.join(".hive/knowledge/Wiki/index.md").exists());
+        assert!(!target.join(".hive/knowledge/Wiki/log.md").exists());
+        let harness =
+            fs::read_to_string(target.join(".hive/config/harness.toml")).expect("harness config");
+        assert!(harness.contains("wiki_backend = \"notion\""));
+
+        execute_setup(&SetupRequest {
+            target: &target,
+            answers: &fixture("answers-base.yml"),
+            capabilities: &fixture("capabilities-codex-omx.json"),
+            mode: SetupMode::Validate,
+            reconfigure_roles: BTreeSet::new(),
+            global_preferences: Some(preferences),
+        })
+        .expect("Notion installation should validate without Markdown Wiki seeds");
+    }
+
+    #[test]
     fn connected_commit_failure_rolls_back_the_project_activation() {
         let temporary = tempfile::tempdir().expect("temporary directory");
         let target = temporary.path().canonicalize().expect("canonical target");
@@ -6940,6 +7018,7 @@ mod tests {
                 global_preferences: Some(GlobalProjectPreferences {
                     interface_language: "ko".to_owned(),
                     wiki_enabled: true,
+                    wiki_backend: "markdown".to_owned(),
                     wiki_language: "both".to_owned(),
                     persona_id: "friendly".to_owned(),
                     persona_custom_description: None,
@@ -6970,6 +7049,7 @@ mod tests {
         let preferences = GlobalProjectPreferences {
             interface_language: "ko".to_owned(),
             wiki_enabled: true,
+            wiki_backend: "markdown".to_owned(),
             wiki_language: "both".to_owned(),
             persona_id: "friendly".to_owned(),
             persona_custom_description: None,
@@ -7033,6 +7113,7 @@ mod tests {
         let preferences = GlobalProjectPreferences {
             interface_language: "ko".to_owned(),
             wiki_enabled: true,
+            wiki_backend: "markdown".to_owned(),
             wiki_language: "both".to_owned(),
             persona_id: "friendly".to_owned(),
             persona_custom_description: None,
@@ -7148,6 +7229,7 @@ mod tests {
             global_preferences: Some(GlobalProjectPreferences {
                 interface_language: "en".to_owned(),
                 wiki_enabled: false,
+                wiki_backend: "markdown".to_owned(),
                 wiki_language: "both".to_owned(),
                 persona_id: "balanced".to_owned(),
                 persona_custom_description: None,
@@ -7184,6 +7266,7 @@ mod tests {
             global_preferences: Some(GlobalProjectPreferences {
                 interface_language: "en".to_owned(),
                 wiki_enabled: true,
+                wiki_backend: "markdown".to_owned(),
                 wiki_language: "both".to_owned(),
                 persona_id: "balanced".to_owned(),
                 persona_custom_description: None,
@@ -7419,6 +7502,7 @@ mod tests {
                 global_preferences: Some(GlobalProjectPreferences {
                     interface_language: "ko".to_owned(),
                     wiki_enabled: true,
+                    wiki_backend: "markdown".to_owned(),
                     wiki_language: "both".to_owned(),
                     persona_id: "friendly".to_owned(),
                     persona_custom_description: None,
@@ -7817,6 +7901,7 @@ mod tests {
         let mut global = GlobalProjectPreferences {
             interface_language: "en".to_owned(),
             wiki_enabled: true,
+            wiki_backend: "markdown".to_owned(),
             wiki_language: "both".to_owned(),
             persona_id: "balanced".to_owned(),
             persona_custom_description: None,
@@ -7842,6 +7927,7 @@ mod tests {
                     "disabled"
                 },
             )
+            .replace("{{ wiki_backend }}", &effective.wiki_backend)
             .replace("{{ wiki_language }}", &effective.wiki_language)
             .replace("{{ persona_id }}", &effective.persona_id)
             .replace("{{ primary_host }}", &answers.primary_host)
@@ -7991,6 +8077,7 @@ mod tests {
         GlobalProjectPreferences {
             interface_language: "ko".to_owned(),
             wiki_enabled: true,
+            wiki_backend: "markdown".to_owned(),
             wiki_language: "both".to_owned(),
             persona_id: "friendly".to_owned(),
             persona_custom_description: None,
