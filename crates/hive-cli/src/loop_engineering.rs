@@ -2406,7 +2406,8 @@ mod tests {
     const SECOND_CRITERION: &str = "criterion-b";
 
     struct Fixture {
-        temp: TempDir,
+        _temp: TempDir,
+        root: PathBuf,
         target: PathBuf,
         input: PathBuf,
         initial: LoopGraphDocument,
@@ -2543,7 +2544,8 @@ mod tests {
 
     fn fixture(support: CapabilitySupportLevel) -> Fixture {
         let temp = TempDir::new().expect("temporary fixture");
-        let target = temp.path().join("consumer");
+        let fixture_root = temp.path().canonicalize().expect("canonical fixture root");
+        let target = fixture_root.join("consumer");
         let run = target.join(".hive/runs").join(RUN_ID);
         fs::create_dir_all(run.join("evidence")).expect("run directories");
         fs::create_dir_all(target.join(".hive/config")).expect("config directory");
@@ -2557,7 +2559,7 @@ mod tests {
         )
         .into_bytes();
         fs::write(run.join("PLAN.md"), &plan_bytes).expect("run plan");
-        let capability_path = temp.path().join("capabilities.json");
+        let capability_path = fixture_root.join("capabilities.json");
         let capability_bytes = capability_bytes(support);
         fs::write(&capability_path, &capability_bytes).expect("capability file");
         let capability =
@@ -2618,14 +2620,15 @@ mod tests {
             .expect("usage control bytes"),
         )
         .expect("usage control");
-        let input = temp.path().join("initial.md");
+        let input = fixture_root.join("initial.md");
         fs::write(
             &input,
             initial.encode_canonical().expect("initial graph bytes"),
         )
         .expect("initial input");
         Fixture {
-            temp,
+            _temp: temp,
+            root: fixture_root,
             target,
             input,
             initial,
@@ -2729,13 +2732,13 @@ mod tests {
         });
         let candidate = LoopGraphDocument::from_graph(graph, fixture.initial.body().to_vec())
             .expect("usage candidate");
-        let candidate_path = fixture.temp.path().join("revision-2.md");
+        let candidate_path = fixture.root.join("revision-2.md");
         fs::write(
             &candidate_path,
             candidate.encode_canonical().expect("candidate bytes"),
         )
         .expect("candidate input");
-        let request_path = fixture.temp.path().join("checkpoint-2.json");
+        let request_path = fixture.root.join("checkpoint-2.json");
         fs::write(
             &request_path,
             serde_json::to_vec(&json!({
@@ -2764,7 +2767,7 @@ mod tests {
         current: &LoopGraphDocument,
         brief_digest: &str,
     ) -> PathBuf {
-        let request_path = fixture.temp.path().join("prepare.json");
+        let request_path = fixture.root.join("prepare.json");
         fs::write(
             &request_path,
             serde_json::to_vec(&json!({
@@ -2881,13 +2884,13 @@ mod tests {
         });
         let candidate = LoopGraphDocument::from_graph(graph, current.body().to_vec())
             .expect("attempt checkpoint graph");
-        let candidate_path = fixture.temp.path().join(format!("{label}-3.md"));
+        let candidate_path = fixture.root.join(format!("{label}-3.md"));
         fs::write(
             &candidate_path,
             candidate.encode_canonical().expect("candidate bytes"),
         )
         .expect("candidate file");
-        let request_path = fixture.temp.path().join(format!("{label}-3.json"));
+        let request_path = fixture.root.join(format!("{label}-3.json"));
         fs::write(
             &request_path,
             serde_json::to_vec(&json!({
@@ -3172,13 +3175,13 @@ mod tests {
         });
         let candidate = LoopGraphDocument::from_graph(graph, current.body().to_vec())
             .expect("attempt candidate");
-        let candidate_path = fixture.temp.path().join("attempt-3.md");
+        let candidate_path = fixture.root.join("attempt-3.md");
         fs::write(
             &candidate_path,
             candidate.encode_canonical().expect("candidate bytes"),
         )
         .expect("candidate file");
-        let request_path = fixture.temp.path().join("attempt-3.json");
+        let request_path = fixture.root.join("attempt-3.json");
         fs::write(
             &request_path,
             serde_json::to_vec(&json!({
@@ -3415,13 +3418,13 @@ mod tests {
         graph.passed_criteria.push(CRITERION.to_owned());
         let candidate = LoopGraphDocument::from_graph(graph, current.body().to_vec())
             .expect("candidate is valid at the core metadata layer");
-        let candidate_path = fixture.temp.path().join("forged-verifier-4.md");
+        let candidate_path = fixture.root.join("forged-verifier-4.md");
         fs::write(
             &candidate_path,
             candidate.encode_canonical().expect("candidate bytes"),
         )
         .expect("candidate file");
-        let request_path = fixture.temp.path().join("forged-verifier-4.json");
+        let request_path = fixture.root.join("forged-verifier-4.json");
         fs::write(
             &request_path,
             serde_json::to_vec(&json!({
@@ -3460,7 +3463,7 @@ mod tests {
         initialize_fixture(&fixture);
         let current_path = fixture.target.join(".hive/runs/demo-run/graph/CURRENT.md");
         let current_before = fs::read(&current_path).expect("current before");
-        let request_path = fixture.temp.path().join("stale.json");
+        let request_path = fixture.root.join("stale.json");
         fs::write(
             &request_path,
             serde_json::to_vec(&json!({
@@ -3508,10 +3511,10 @@ mod tests {
         });
         let candidate = LoopGraphDocument::from_graph(graph, fixture.initial.body().to_vec())
             .expect("steering candidate");
-        let candidate_path = fixture.temp.path().join("steering-2.md");
+        let candidate_path = fixture.root.join("steering-2.md");
         let candidate_bytes = candidate.encode_canonical().expect("candidate bytes");
         fs::write(&candidate_path, &candidate_bytes).expect("candidate file");
-        let request_path = fixture.temp.path().join("steering-2.json");
+        let request_path = fixture.root.join("steering-2.json");
         fs::write(
             &request_path,
             serde_json::to_vec(&json!({
@@ -3592,13 +3595,13 @@ mod tests {
         });
         let candidate = LoopGraphDocument::from_graph(graph, fixture.initial.body().to_vec())
             .expect("metadata-valid steering candidate");
-        let candidate_path = fixture.temp.path().join("explicit-steering-2.md");
+        let candidate_path = fixture.root.join("explicit-steering-2.md");
         fs::write(
             &candidate_path,
             candidate.encode_canonical().expect("candidate bytes"),
         )
         .expect("candidate file");
-        let request_path = fixture.temp.path().join("explicit-steering-2.json");
+        let request_path = fixture.root.join("explicit-steering-2.json");
         fs::write(
             &request_path,
             serde_json::to_vec(&json!({
