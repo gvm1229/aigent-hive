@@ -37,7 +37,8 @@ Configure a consumer project without copying Hive source-development instruction
    - An explicitly selected external layer requires positive compatibility evidence. Missing, incompatible, or unknown evidence is unsupported and never triggers an automatic owner fallback.
    - Never install, update, configure, or invoke OMX/OMC.
    - Never infer state by reading `.omx/`, `.omc/`, plugin caches, session state, or host-global configuration.
-   - Do not install Hive copies of plan, Ralph, team, persistent execution loops, or semantic routing hooks.
+   - Install Hive-native iterative, team, multi-goal, or scheduler capabilities only when the signed release implements them, the selected host passes the required capability checks, the feature is activated, and every optional Skill has explicit approval.
+   - Never substitute an OMX/OMC runtime, namespace, command, or state tree for a missing Hive-native capability.
 5. Present optional Skills individually.
    - Show name, purpose, source, pinned revision, content digest, requested tools, and overlap.
    - Require explicit approval for every requested capability and Skill. An empty approval list is valid.
@@ -141,7 +142,8 @@ Do not ask about these:
 - Git tracking for non-confidential canonical files
 - SQLite, WAL/SHM, generated backup, and runtime cache exclusion
 - Seven-day maximum backup retention
-- No Hive implementation of plan, Ralph, team, or provider session orchestration
+- Hive-native iterative, team, multi-goal, and logical-scheduler capabilities remain unavailable until their signed release, host qualification, and activation gates pass
+- No provider session engine, model runtime, direct model/subagent process launcher, or OMX/OMC runtime dependency
 - Orchestration owner selection: new v0.9 runs use verified host-native capabilities by default; OMX/OMC requires explicit user selection; existing 0.8.x owner pins remain unchanged
 - Owner detection evidence sources: active-host capability metadata and side-effect-free public `--version` only
 
