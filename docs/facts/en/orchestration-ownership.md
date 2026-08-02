@@ -5,21 +5,22 @@ topic_slug: orchestration-ownership
 language: en
 counterpart: ../ko/orchestration-ownership.md
 title: "Orchestration Ownership"
-summary: "Existing 0.8 runs retain their pinned owner; v0.9 new runs default to verified host-native capabilities."
+summary: "Hive owns provider-neutral iterative control while hosts own model and subagent execution."
 tags: [orchestration, ownership]
 aliases: ["Orchestration owner"]
 sources:
-  - "repo:docs/decisions/ADR-0004-orchestration-ownership.md#sha256:f58554acf449855ca192ac1219d87019ca7ecc665506366455000bac78f24d87"
-  - "repo:docs/decisions/ADR-0015-host-native-skill-composition.md#sha256:06938e887dc4992019718ea51ca0ec55f7bea4a56a647dd12409cd22c9375708"
+  - "repo:docs/decisions/ADR-0004-orchestration-ownership.md#sha256:0400842448b5e73cedabe1d2eb941abf343a0e1564b2e161c8e54d6677af017e"
+  - "repo:docs/decisions/ADR-0015-host-native-skill-composition.md#sha256:003a95d576041a8dfd3035b448a970919a2cb547c65a14035e8c789025113fa1"
+  - "repo:docs/decisions/ADR-0019-hive-native-iterative-execution.md#sha256:26c75dbbf2eca2e7197a29849952ae30d50fbae5b373dd0c52016c465f256f13"
 links: [product-non-goals, skill-routing, v0-9-skill-suite-plan]
-reviewed_revision: "git:d28c11908507cd0ae9f79ed0dfb4bcabf345ced2"
+reviewed_revision: "git:a86bb5bc4aa01c9823fa670e83cb538b9f031cbf"
 status: active
 ---
 
 # Orchestration Ownership
 
-ADR-0004 remains the historical contract for 0.8.x and existing runs, including
-their pinned OMX, OMC, or host-native owner. Accepted ADR-0015 makes verified
-host-native capability the default for v0.9 new runs. OMX and OMC become explicit,
-user-selected compatibility layers rather than Hive dependencies. Hive never
-switches a pinned run owner silently.
+ADR-0019 permits Hive-owned deterministic events, logical scheduling, leases,
+receipts, cancellation, team coordination, and multi-goal state. The host retains
+model and subagent execution. New workflows have no OMX/OMC dependency. Existing
+external-owner runs remain read-only provenance; explicit migration creates a new
+Hive-native run identity instead of switching an owner in place.

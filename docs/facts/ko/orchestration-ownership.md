@@ -5,20 +5,21 @@ topic_slug: orchestration-ownership
 language: ko
 counterpart: ../en/orchestration-ownership.md
 title: "Orchestration ownership"
-summary: "0.8 기존 run의 owner pin 유지, v0.9 새 run의 검증된 host-native capability 기본값."
+summary: "Hive의 provider-neutral 반복 제어 소유, host의 model·subagent 실행 소유."
 tags: [orchestration, ownership]
 aliases: ["Orchestration owner"]
 sources:
-  - "repo:docs/decisions/ADR-0004-orchestration-ownership.md#sha256:f58554acf449855ca192ac1219d87019ca7ecc665506366455000bac78f24d87"
-  - "repo:docs/decisions/ADR-0015-host-native-skill-composition.md#sha256:06938e887dc4992019718ea51ca0ec55f7bea4a56a647dd12409cd22c9375708"
+  - "repo:docs/decisions/ADR-0004-orchestration-ownership.md#sha256:0400842448b5e73cedabe1d2eb941abf343a0e1564b2e161c8e54d6677af017e"
+  - "repo:docs/decisions/ADR-0015-host-native-skill-composition.md#sha256:003a95d576041a8dfd3035b448a970919a2cb547c65a14035e8c789025113fa1"
+  - "repo:docs/decisions/ADR-0019-hive-native-iterative-execution.md#sha256:26c75dbbf2eca2e7197a29849952ae30d50fbae5b373dd0c52016c465f256f13"
 links: [product-non-goals, skill-routing, v0-9-skill-suite-plan]
-reviewed_revision: "git:d28c11908507cd0ae9f79ed0dfb4bcabf345ced2"
+reviewed_revision: "git:a86bb5bc4aa01c9823fa670e83cb538b9f031cbf"
 status: active
 ---
 
 # Orchestration ownership
 
-`0.8.x`와 기존 run: ADR-0004의 OMX·OMC·host-native owner pin 유지.
-v0.9 새 run: ADR-0015의 검증된 host-native capability 기본값.
-OMX·OMC: 명시적 사용자 선택 외부 호환 계층, Hive dependency 아님.
-공통 경계: pinned run owner의 silent switch 금지.
+ADR-0019의 Hive 소유 범위: deterministic event, logical scheduler, lease, receipt,
+cancel, team coordination, multi-goal state. Host 소유 범위: model·subagent 실행.
+신규 workflow의 OMX·OMC dependency 없음. 기존 external-owner run: read-only
+provenance. 명시적 migration: in-place owner switch 대신 새 Hive-native run identity.

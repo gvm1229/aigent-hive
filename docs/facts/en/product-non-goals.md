@@ -5,17 +5,19 @@ topic_slug: product-non-goals
 language: en
 counterpart: ../ko/product-non-goals.md
 title: "Product Non-goals"
-summary: "Hive does not own model execution, provider credentials, or orchestration runtimes."
+summary: "Hive does not own model execution, provider credentials, provider session engines, or direct process launch."
 tags: [boundary, product]
 aliases: ["Hive non-goals"]
 sources:
-  - "repo:docs/overview/product.md#sha256:ff323e5c13a71c1423280cc7961c249e7b5364a2c7611f42379dc22a0a571155"
+  - "repo:docs/overview/product.md#sha256:40d669481f2ea0df4986345e30c3c258450fba12ecb3530c3c9a51d634886fb4"
 links: [orchestration-ownership, product-purpose]
-reviewed_revision: "git:e072135e0148176a5a91159f60ad36ad82eabf73"
+reviewed_revision: "git:a86bb5bc4aa01c9823fa670e83cb538b9f031cbf"
 status: active
 ---
 
 # Product Non-goals
 
-Hive is not a model runtime, scheduler, provider API client, credential store, or
-replacement for host-native or compatible OMX/OMC orchestration.
+Hive is not a model runtime, provider session engine, provider API client,
+credential store, or direct model/subagent process launcher. Hive-native logical
+scheduling and iterative, team, and multi-goal control are permitted behind
+implementation, host-qualification, consent, and activation gates.

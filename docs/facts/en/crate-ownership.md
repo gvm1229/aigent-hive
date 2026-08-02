@@ -9,14 +9,15 @@ summary: "Each workspace crate owns one provider-neutral implementation boundary
 tags: [architecture, rust]
 aliases: ["Crate map"]
 sources:
-  - "repo:docs/plans/contracts/05-rust-boundaries.md#sha256:94c01e74d71356343b467917b0b1afe7669caf00f97d7b72de2fc98d872aa62a"
+  - "repo:docs/plans/contracts/05-rust-boundaries.md#sha256:b947e72402f5d858ed31f71cc95dba653fc915a5b96ea7fc338c87d418a9ec2c"
 links: [artifact-boundaries, source-development]
-reviewed_revision: "git:722c8e46dbde5710155b394ef33820ebccd3b85c"
+reviewed_revision: "git:a86bb5bc4aa01c9823fa670e83cb538b9f031cbf"
 status: active
 ---
 
 # Rust Crate Ownership
 
-`hive-core` owns invariants, `hive-render` deterministic projection, `hive-wiki`
+`hive-core` owns invariants and the planned provider-neutral orchestration reducer
+and logical scheduler. `hive-render` owns deterministic projection, `hive-wiki`
 Markdown and SQLite knowledge, `hive-projection` Skill routing, `hive-update`
 verification and migration, and `hive-cli` command adapters.

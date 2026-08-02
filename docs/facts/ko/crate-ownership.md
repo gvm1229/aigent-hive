@@ -9,14 +9,15 @@ summary: "Workspace crate별 provider-neutral 구현 경계."
 tags: [architecture, rust]
 aliases: ["Crate map"]
 sources:
-  - "repo:docs/plans/contracts/05-rust-boundaries.md#sha256:94c01e74d71356343b467917b0b1afe7669caf00f97d7b72de2fc98d872aa62a"
+  - "repo:docs/plans/contracts/05-rust-boundaries.md#sha256:b947e72402f5d858ed31f71cc95dba653fc915a5b96ea7fc338c87d418a9ec2c"
 links: [artifact-boundaries, source-development]
-reviewed_revision: "git:722c8e46dbde5710155b394ef33820ebccd3b85c"
+reviewed_revision: "git:a86bb5bc4aa01c9823fa670e83cb538b9f031cbf"
 status: active
 ---
 
 # Rust crate ownership
 
-Ownership map: `hive-core` invariant, `hive-render` deterministic projection,
-`hive-wiki` Markdown·SQLite knowledge, `hive-projection` Skill routing,
-`hive-update` verification·migration, `hive-cli` command adapter.
+Ownership map: `hive-core` invariant·계획된 provider-neutral orchestration
+reducer·logical scheduler, `hive-render` deterministic projection, `hive-wiki`
+Markdown·SQLite knowledge, `hive-projection` Skill routing, `hive-update`
+verification·migration, `hive-cli` command adapter.
