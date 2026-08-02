@@ -44,7 +44,7 @@
 - On-demand 생성: 목적 질문→이름·Codex/Claude model/effort·scope·권한 추천→
   `1 수락 | 2 수동 | 3 수정`→검증·projection·auto-route 통합
 - Judge authority: user-scope reserved definition만 허용, project shadow·생성 Skill override 금지.
-  Codex 후보는 `gpt-5.6-sol/max`; Claude exact profile은 실제 lifecycle 검증 뒤 활성화
+  Codex 후보는 `gpt-5.6-sol/high`; Claude exact profile은 실제 lifecycle 검증 뒤 활성화
 - Invocation policy: user setup의 `explicit`은 strict workflow terminal gate만, `implicit`은
   strict gate와 일반 material-risk route. 초기 custom setup 질문과 natural-language reconfigure 지원
 - Strict boundary: iterative·team·multi-goal criterion·goal terminal acceptance만 Judge 강제,

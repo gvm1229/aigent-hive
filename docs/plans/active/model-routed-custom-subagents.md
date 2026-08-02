@@ -20,7 +20,7 @@
 | --- | --- | --- | --- | --- |
 | `hive-routine-implementer` | 반복 구현·정형 수정 | `gpt-5.6-luna` / `max` | `claude-sonnet-5` / `high` | bounded write |
 | `hive-complex-implementer` | 복잡 구현·architecture 연계 | `gpt-5.6-terra` / `max` | `claude-opus-4-8` / `max` | bounded write |
-| `hive-independent-judge` | 독립 acceptance·security 판정 | `gpt-5.6-sol` / `max` | `claude-opus-4-8` / `max` | read-only |
+| `hive-independent-judge` | 독립 acceptance·security 판정 | `gpt-5.6-sol` / `high` | `claude-opus-4-8` / `max` | read-only |
 | `hive-design-specialist` | UX·visual·interaction 설계 | `gpt-5.6-sol` / `max` | `claude-opus-4-8` / `max` | read-only 기본 |
 | `hive-article-writer` | article·guide·long-form 문서 | `gpt-5.6-sol` / `high` | `claude-sonnet-5` / `high` | bounded docs write |
 | `hive-research-specialist` | 근거 수집·비교·synthesis | `gpt-5.6-terra` / `high` | `claude-sonnet-5` / `high` | read-only |
@@ -83,7 +83,7 @@
 
 - [ ] [MRA-014] `hive-routine-implementer` role·fixture·host projections
 - [ ] [MRA-015] `hive-complex-implementer` role·fixture·host projections
-- [ ] [MRA-016] Reserved `hive-independent-judge`·Sol Max/Claude exact profile·fresh read-only·shadow 거부
+- [ ] [MRA-016] Reserved `hive-independent-judge`·Sol High/Claude exact profile·fresh read-only·shadow 거부
 - [ ] [MRA-017] `hive-design-specialist` role·design task fixture
 - [ ] [MRA-018] `hive-article-writer` role·article task fixture
 - [ ] [MRA-019] `hive-research-specialist` role·citation/read-only fixture
