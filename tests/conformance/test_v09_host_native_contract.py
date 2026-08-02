@@ -10,9 +10,10 @@ REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 
 CURRENT_REQUIRED = {
     ".agents/directives/02-architecture.md": (
-        "Default every new v0.9 run to verified host-native capabilities",
-        "explicit user selection",
-        "including a 0.8.x run owned by OMX or OMC",
+        "Implement Hive-native iterative planning",
+        "Do not select, invoke, install, or configure OMX/OMC for a new workflow",
+        "creates a new Hive-native run identity",
+        "dispatch-uncertain",
     ),
     "harness/directives/00-project-harness.md": (
         "host-native capabilities by default for new v0.9 runs",
@@ -88,6 +89,24 @@ class V09HostNativeContractTests(unittest.TestCase):
                         relative = path.relative_to(REPOSITORY_ROOT).as_posix()
                         findings.append(f"{relative}: {match.group(0)}")
         self.assertEqual(findings, [], "\n".join(findings))
+
+    def test_source_contract_allows_native_orchestration_without_provider_runtime(self) -> None:
+        text = (REPOSITORY_ROOT / ".agents/directives/02-architecture.md").read_text(
+            encoding="utf-8"
+        )
+        for required in (
+            "logical scheduling",
+            "team coordination",
+            "multi-goal execution",
+            "declarative execution envelopes",
+            "authenticated single-action authority",
+        ):
+            self.assertIn(required, text)
+        for forbidden in (
+            "model-provider API",
+            "launch a model/subagent process",
+        ):
+            self.assertIn(forbidden, text)
 
     def test_run_data_skills_preserve_pinned_owner(self) -> None:
         for relative in (
