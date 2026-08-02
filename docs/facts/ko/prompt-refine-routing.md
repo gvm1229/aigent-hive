@@ -10,9 +10,9 @@ tags: [prompt, routing, skill]
 aliases: ["Prompt approval gate"]
 sources:
   - "repo:docs/decisions/ADR-0009-user-plugin-project-knowledge-boundary.md#sha256:59129f4216306b3c095ab64574700135da0f289df4aab6554f0213e24c40c6f3"
-  - "repo:docs/plans/active/prompt-refine-auto-routing.md#sha256:2c70a7ef894396d4bf1a3160c59d42f81e60c80905fe7c00d5f19f33de411b03"
+  - "repo:docs/plans/active/prompt-refine-auto-routing.md#sha256:a56c022be4e24ac6e7acf402e186d1ddbe4a1a39bc4d2c0eb16104e472b3108a"
 links: [orchestration-ownership, skill-routing]
-reviewed_revision: "git:507cdf98de2b0873b0e554fd1bc53810b11c7dc0"
+reviewed_revision: "git:bf7c1d3e36cd94e8ee5f2a68d9f8ca5c4c9f9c87"
 status: active
 ---
 
