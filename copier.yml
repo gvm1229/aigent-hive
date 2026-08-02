@@ -176,6 +176,11 @@ wiki_enabled:
   when: false
   default: true
 
+wiki_backend:
+  type: str
+  when: false
+  default: markdown
+
 wiki_language:
   type: str
   when: false
@@ -195,6 +200,16 @@ codexbar_fallback_enabled:
   type: bool
   when: false
   default: true
+
+discord_guard_enabled:
+  type: bool
+  when: false
+  default: false
+
+discord_webhook_url_env:
+  type: str
+  when: false
+  default: ""
 
 selected_project_skills:
   type: yaml
