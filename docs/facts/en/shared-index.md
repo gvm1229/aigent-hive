@@ -9,13 +9,18 @@ summary: "One user-root SQLite index projects enabled global and project Markdow
 tags: [index, knowledge]
 aliases: ["Shared knowledge index"]
 sources:
+  - "repo:crates/hive-wiki/src/lib.rs#sha256:e577da51c227170276e09c7961bb24cebb892091c3cb2e9c3be8e8f74b85ecbb"
   - "repo:docs/decisions/ADR-0012-global-onboarding-shared-index.md#sha256:44401a82ba3bd9f2bc4048876f5480157720bc5fce005a7c0b63f4d960f63bf1"
 links: [knowledge-storage, project-onboarding]
-reviewed_revision: "git:722c8e46dbde5710155b394ef33820ebccd3b85c"
+reviewed_revision: "git:5c734e139785b32062587308b41395981c0d209b"
 status: active
 ---
 
 # User-root Shared Index
 
 Enabled user and project Markdown feeds one disposable SQLite database under the user
-root. Projects do not create independent canonical or derived databases.
+root. Projects do not create independent canonical or derived databases. Shared canonical
+mutations publish a persistent dirty marker before writing. When optimistic snapshot
+verification detects a concurrent edit, Hive clears that marker before returning the conflict,
+so a safe retry remains available. The concurrent same-page ingest regression test is the
+acceptance criterion for this recovery path.
