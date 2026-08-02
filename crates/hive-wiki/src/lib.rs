@@ -534,7 +534,11 @@ fn ingest_with_projection(
         let dirty = shared.store.begin_external_canonical_mutation(&writes)?;
         let canonical_lock = KnowledgeLock::acquire(target)?;
         for snapshot in &snapshots {
-            snapshot.verify_current()?;
+            if let Err(error) = snapshot.verify_current() {
+                drop(canonical_lock);
+                abort_external_after_rollback(shared.store, &dirty, &error)?;
+                return Err(error);
+            }
         }
         let commit = commit_ingest_canonical(
             &raw_absolute,
