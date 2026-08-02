@@ -7006,8 +7006,7 @@ mod tests {
             "A message written in another language does not by itself change this preference"
         ));
         assert!(english.contains("Explain in simple terms by default"));
-        assert!(english
-            .contains("do not force irrelevant examples or weaken technical precision"));
+        assert!(english.contains("do not force irrelevant examples or weaken technical precision"));
         assert!(english.contains("For every passed, failed, skipped, deferred"));
         assert!(!english.contains("질문과 응답"));
 

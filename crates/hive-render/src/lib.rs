@@ -3094,10 +3094,10 @@ fn render_agents_marker(
     resolution: &CapabilityResolution,
     effective_preferences: Option<&EffectiveProjectPreferences>,
 ) -> String {
-    let selected_interface_language = effective_preferences.map_or(
-        "configured interface language",
-        |preferences| preferences.interface_language.as_str(),
-    );
+    let selected_interface_language = effective_preferences
+        .map_or("configured interface language", |preferences| {
+            preferences.interface_language.as_str()
+        });
     let preference_summary = effective_preferences.map_or_else(String::new, |preferences| {
         format!(
             "Setup mode: `{}`\nPreference provenance: `{}`\nInterface language: `{}`\nWiki: `{}` (`{}`)\nPersona: `{}`\n",
@@ -7864,9 +7864,7 @@ mod tests {
         assert!(expected.contains("raw transcript"));
         assert!(expected.contains("selected interface language `en`"));
         assert!(expected.contains("Explain in simple terms by default"));
-        assert!(expected.contains(
-            "do not force irrelevant examples or weaken technical precision"
-        ));
+        assert!(expected.contains("do not force irrelevant examples or weaken technical precision"));
 
         global.interface_language = "ko".to_owned();
         let korean_effective = resolve_effective_project_preferences(&answers, Some(&global))
