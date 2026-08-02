@@ -1527,11 +1527,12 @@ pub(crate) fn resolved_operational_skills(
     Ok(Some((config, skills)))
 }
 
-pub(crate) fn operational_wiki_enabled(user_root: &Path) -> Result<bool, String> {
+/// Return the validated global Wiki mode without exposing setup-file bytes.
+pub(crate) fn operational_wiki_preferences(user_root: &Path) -> Result<WikiPreferences, String> {
     let root = super::user_install::open_user_root_for_setup(user_root)?;
     load_operational_config(&root)
         .map_err(|error| error.message().to_owned())?
-        .map(|config| config.wiki.enabled)
+        .map(|config| config.wiki)
         .ok_or_else(|| "global Hive setup is required for shared knowledge operations".to_owned())
 }
 

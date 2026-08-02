@@ -98,6 +98,21 @@ pub struct StoreCommit {
     pub manifest_digest: String,
 }
 
+/// A verified external-canonical RAG generation plus its small local ledger.
+///
+/// The ledger is intentionally opaque to this generic store. Remote backends
+/// validate its schema and bind it to the returned generation before using the
+/// projection. It must never contain a second canonical content cache.
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct ExternalIndexSnapshot {
+    /// Exact persisted remote revision ledger bytes.
+    pub ledger_bytes: Vec<u8>,
+    /// Authenticated disposable RAG generation metadata.
+    pub manifest: GenerationManifest,
+    /// Authenticated disposable SQLite projection bytes.
+    pub sqlite_bytes: Vec<u8>,
+}
+
 /// Collection registration plus rebuilt-index evidence.
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
 #[serde(deny_unknown_fields)]
@@ -1089,6 +1104,171 @@ impl RagStore {
             "RAG SQLite index",
         )?;
         retrieve_serialized(&sqlite_bytes, &manifest, &registry, request).map_err(rag_error)
+    }
+
+    /// Load one external-canonical ledger and its complete disposable projection.
+    ///
+    /// This method deliberately does not interpret the ledger: the backend owns
+    /// its remote identity and revision contract. It does enforce the same
+    /// no-follow paths, dirty-state barrier, manifest trust binding, and SQLite
+    /// byte bounds used by the Markdown backend.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the ledger path is unsafe, the projection is dirty,
+    /// or the ledger, manifest, trust binding, or SQLite bytes are unavailable.
+    pub fn load_external_index(
+        &self,
+        ledger_relative: &Path,
+    ) -> Result<ExternalIndexSnapshot, WikiError> {
+        self.load_external_index_optional(ledger_relative)?
+            .ok_or_else(|| {
+                WikiError::Verification(
+                    "external canonical ledger is missing; complete remote refresh is required"
+                        .to_owned(),
+                )
+            })
+    }
+
+    /// Load an external-canonical projection when its ledger has been initialized.
+    ///
+    /// A missing ledger is a normal pre-setup state. Any partially present or
+    /// invalid generation still fails closed rather than being treated as empty.
+    pub fn load_external_index_optional(
+        &self,
+        ledger_relative: &Path,
+    ) -> Result<Option<ExternalIndexSnapshot>, WikiError> {
+        validate_external_ledger_relative(ledger_relative)?;
+        let _lock = crate::CapabilityKnowledgeLock::acquire(&self.root)?;
+        if read_bounded_optional(
+            &self.root,
+            Path::new(RAG_DIRTY_RELATIVE),
+            MAX_DIRTY_BYTES,
+            "RAG dirty journal",
+        )?
+        .is_some()
+        {
+            return Err(WikiError::Verification(
+                "RAG store is dirty; refresh the remote canonical source before retrieval"
+                    .to_owned(),
+            ));
+        }
+        let Some(ledger_bytes) = read_bounded_optional(
+            &self.root,
+            ledger_relative,
+            MAX_EXTERNAL_CANONICAL_BYTES,
+            "external canonical ledger",
+        )?
+        else {
+            return Ok(None);
+        };
+        let manifest = self.load_manifest_required()?;
+        let sqlite_bytes = read_bounded_required(
+            &self.root,
+            Path::new(SHARED_INDEX_RELATIVE),
+            MAX_INDEX_BYTES,
+            "RAG SQLite index",
+        )?;
+        Ok(Some(ExternalIndexSnapshot {
+            ledger_bytes,
+            manifest,
+            sqlite_bytes,
+        }))
+    }
+
+    /// Atomically publish one remote-canonical ledger and its derived index.
+    ///
+    /// The caller supplies an already validated, complete remote snapshot. The
+    /// ledger is the only durable remote-source state; page content remains only
+    /// in the disposable SQLite projection. A transaction first records the
+    /// exact ledger write as dirty, then publishes SQLite and its manifest, and
+    /// only clears dirty after all bytes are durable.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error for an unsafe ledger path, malformed generation, dirty
+    /// prior state, concurrent generation change, or failed atomic publication.
+    pub fn publish_external_index(
+        &self,
+        ledger_relative: &Path,
+        ledger_bytes: &[u8],
+        artifact: &RagIndexArtifact,
+    ) -> Result<StoreCommit, WikiError> {
+        validate_external_ledger_relative(ledger_relative)?;
+        if ledger_bytes.is_empty() || ledger_bytes.len() > MAX_EXTERNAL_CANONICAL_BYTES {
+            return Err(WikiError::InvalidInput(
+                "external canonical ledger exceeds its bounded size".to_owned(),
+            ));
+        }
+        if artifact.manifest.schema_version != RAG_SCHEMA_VERSION
+            || artifact.manifest.generation == 0
+            || artifact.sqlite_bytes.len() > MAX_INDEX_BYTES
+        {
+            return Err(WikiError::InvalidInput(
+                "external RAG artifact has an unsupported generation or size".to_owned(),
+            ));
+        }
+        let _lock = crate::CapabilityKnowledgeLock::acquire(&self.root)?;
+        self.reject_dirty_mutation()?;
+        let expected_generation = self.next_generation()?;
+        if artifact.manifest.generation != expected_generation {
+            return Err(WikiError::Conflict(
+                "external RAG artifact generation changed before publication".to_owned(),
+            ));
+        }
+        let writes = vec![(ledger_relative.to_path_buf(), ledger_bytes.to_vec())];
+        let dirty = self.dirty_state(artifact.manifest.generation, &writes)?;
+        validate_dirty_state(&dirty)?;
+        let dirty_bytes = json_bytes(&dirty, "RAG dirty journal")?;
+        let manifest_bytes = json_bytes(&artifact.manifest, "RAG generation manifest")?;
+        let trust_bytes = rag_trust_bytes_for_manifest(&artifact.manifest, &manifest_bytes)?;
+        let paths = [
+            PathBuf::from(RAG_DIRTY_RELATIVE),
+            ledger_relative.to_path_buf(),
+            PathBuf::from(SHARED_INDEX_RELATIVE),
+            PathBuf::from(RAG_MANIFEST_RELATIVE),
+            PathBuf::from(RAG_TRUST_RELATIVE),
+        ];
+        let mut snapshots = paths
+            .iter()
+            .map(|path| crate::CapabilityFileSnapshot::capture(&self.root, path))
+            .collect::<Result<Vec<_>, _>>()?;
+        crate::transactional_capability(&self.root, &mut snapshots, |snapshots| {
+            snapshots[0].install_staged(&self.root, &dirty_bytes)?;
+            let mut changed = Vec::new();
+            if snapshots[1].install_staged(&self.root, ledger_bytes)? {
+                changed.push(path_to_locator(ledger_relative));
+            }
+            if snapshots[2].install_staged(&self.root, &artifact.sqlite_bytes)? {
+                changed.push(SHARED_INDEX_RELATIVE.to_owned());
+            }
+            if snapshots[3].install_staged(&self.root, &manifest_bytes)? {
+                changed.push(RAG_MANIFEST_RELATIVE.to_owned());
+            }
+            snapshots[0].remove(&self.root)?;
+            if snapshots[4].install_staged(&self.root, &trust_bytes)? {
+                changed.push(RAG_TRUST_RELATIVE.to_owned());
+            }
+            changed.sort();
+            changed.dedup();
+            Ok(StoreCommit {
+                changed_paths: changed,
+                generation: artifact.manifest.generation,
+                manifest_digest: artifact.manifest.logical_digest.clone(),
+            })
+        })
+    }
+
+    /// Reserve no state but report the next publishable external generation.
+    ///
+    /// Remote adapters use this only to build a complete recovery snapshot after
+    /// a disposable SQLite loss. Publication rechecks the value under the same
+    /// exclusive lock, so a concurrent writer becomes a conflict rather than a
+    /// stale-success.
+    pub fn next_external_generation(&self) -> Result<u64, WikiError> {
+        let _lock = crate::CapabilityKnowledgeLock::acquire(&self.root)?;
+        self.reject_dirty_mutation()?;
+        self.next_generation()
     }
 
     /// Validate the current normalized index without changing canonical or derived state.
@@ -2927,6 +3107,30 @@ fn validate_dirty_state(dirty: &PersistentDirtyState) -> Result<(), WikiError> {
             ));
         }
         validate_prefixed_sha256("dirty target digest", &entry.target_digest)?;
+    }
+    Ok(())
+}
+
+fn validate_external_ledger_relative(relative: &Path) -> Result<(), WikiError> {
+    let components = relative.components().collect::<Vec<_>>();
+    let [Component::Normal(hive), Component::Normal(index), Component::Normal(file)] =
+        components.as_slice()
+    else {
+        return Err(WikiError::InvalidInput(
+            "external canonical ledger must be one .hive/index JSON file".to_owned(),
+        ));
+    };
+    let file = file.to_str().ok_or_else(|| {
+        WikiError::InvalidInput("external canonical ledger filename must be UTF-8".to_owned())
+    })?;
+    if *hive != OsStr::new(".hive")
+        || *index != OsStr::new("index")
+        || !file.ends_with(".json")
+        || file.len() > 128
+    {
+        return Err(WikiError::InvalidInput(
+            "external canonical ledger must be one .hive/index JSON file".to_owned(),
+        ));
     }
     Ok(())
 }

@@ -11,6 +11,11 @@ use hive_wiki::collection::{
     CollectionKind, CollectionResolution, CollectionState, CollectionVisibility,
     USER_ROOT_COLLECTION_ID,
 };
+use hive_wiki::notion::{
+    retrieve_persisted as retrieve_notion_persisted, sync_and_publish as sync_notion_and_publish,
+    validate_write_receipt, NotionCapabilityReceipt, NotionPersistedOutcome, NotionSyncRequest,
+    NotionWriteReceipt, NOTION_LEDGER_RELATIVE,
+};
 use hive_wiki::portable::{BundleLimits, BundleScope};
 use hive_wiki::rag::{
     plan_remember, CanonicalClaim, ClaimProvenance, RagError, RagVisibility, RememberRequest,
@@ -63,6 +68,10 @@ USAGE:
     hive knowledge scan --target <dir> (--inventory|--candidates <review.json>|--apply <review.json>) [--include-untracked] [--prior-inventory <json>] [--user-root <dir>] --output json
     hive knowledge export --user-root <dir> --scope global|shared|project:<id>|collection:<id>|all-portable --bundle <path>.hivekb [--replace-backup <file-name>] --output json
     hive knowledge import --user-root <dir> --bundle <path>.hivekb (--dry-run|--apply) --output json
+    hive knowledge notion sync --user-root <dir> --capability <receipt.json> --snapshot <complete-inventory.json> --output json
+    hive knowledge notion rebuild --user-root <dir> --capability <receipt.json> --snapshot <complete-inventory.json> --output json
+    hive knowledge notion retrieve --user-root <dir> --capability <receipt.json> --snapshot <complete-inventory.json> (--request <request.json>|--query <text> [--scope global] [--top-k <1..100>] [--byte-budget <bytes>]) --output json
+    hive knowledge notion write-through --user-root <dir> --capability <receipt.json> --snapshot <complete-inventory.json> --write-receipt <confirmed-write.json> --output json
     hive knowledge refresh (--target <legacy-project>|--user-root <dir>) --output json
     hive index rebuild (--target <legacy-project>|--user-root <dir>) --output json
 ";
@@ -140,6 +149,8 @@ pub(crate) fn run_knowledge(arguments: &[String]) -> ExitCode {
                 .unwrap_or_else(|error| failure("RememberKnowledge", &error)),
             Some("retrieve") => run_retrieve(&arguments[1..])
                 .unwrap_or_else(|error| failure("RetrieveKnowledge", &error)),
+            Some("notion") => run_notion(&arguments[1..])
+                .unwrap_or_else(|error| failure("NotionKnowledge", &error)),
             Some("authorize-confidential") => run_authorize_confidential(&arguments[1..])
                 .unwrap_or_else(|error| failure("AuthorizeConfidentialKnowledge", &error)),
             Some("authorize-collection") => run_authorize_collection(&arguments[1..])
@@ -166,6 +177,195 @@ pub(crate) fn run_knowledge(arguments: &[String]) -> ExitCode {
         };
     emit(&result);
     ExitCode::from(result.exit_code)
+}
+
+fn run_notion(arguments: &[String]) -> Result<KnowledgeResult, WikiError> {
+    let action = arguments.first().map(String::as_str).ok_or_else(|| {
+        WikiError::InvalidInput(
+            "knowledge notion requires sync, rebuild, retrieve, or write-through".to_owned(),
+        )
+    })?;
+    match action {
+        "sync" => run_notion_sync(&arguments[1..], false),
+        "rebuild" => run_notion_sync(&arguments[1..], true),
+        "retrieve" => run_notion_retrieve(&arguments[1..]),
+        "write-through" => run_notion_write_through(&arguments[1..]),
+        _ => Err(WikiError::InvalidInput(format!(
+            "unknown knowledge notion action: {action}"
+        ))),
+    }
+}
+
+fn parse_notion_sync_inputs<'a>(
+    arguments: &'a [String],
+    extra: &[&str],
+) -> Result<
+    (
+        PathBuf,
+        NotionCapabilityReceipt,
+        NotionSyncRequest,
+        Vec<(&'a str, &'a str)>,
+    ),
+    WikiError,
+> {
+    let mut allowed = vec!["--user-root", "--capability", "--snapshot"];
+    allowed.extend(extra.iter().copied());
+    let options = parse_options(arguments, &allowed)?;
+    let user_root = PathBuf::from(required(&options, "--user-root")?);
+    let capability = read_json_bounded::<NotionCapabilityReceipt>(
+        Path::new(required(&options, "--capability")?),
+        "Notion capability receipt",
+    )?;
+    let snapshot = read_json_bounded::<NotionSyncRequest>(
+        Path::new(required(&options, "--snapshot")?),
+        "complete Notion inventory",
+    )?;
+    validate_notion_backend(&user_root, &capability)?;
+    Ok((user_root, capability, snapshot, options))
+}
+
+fn run_notion_sync(arguments: &[String], rebuild: bool) -> Result<KnowledgeResult, WikiError> {
+    let (user_root, capability, snapshot, _) = parse_notion_sync_inputs(arguments, &[])?;
+    let store = RagStore::open(&user_root)?;
+    let outcome = sync_notion_and_publish(&store, &capability, &snapshot, rebuild)
+        .map_err(map_notion_error)?;
+    let code = if rebuild {
+        "hive.notion-rebuilt"
+    } else {
+        "hive.notion-fresh"
+    };
+    let message = if rebuild {
+        "complete Notion inventory rebuilt the disposable SQLite projection"
+    } else {
+        "complete Notion inventory freshness preflight completed"
+    };
+    let digest = outcome.store.manifest_digest.clone();
+    Ok(success(
+        "SyncNotionKnowledge",
+        code,
+        message,
+        outcome.store.changed_paths.clone(),
+        NOTION_LEDGER_RELATIVE,
+        &digest,
+        notion_sync_data(&outcome),
+    ))
+}
+
+fn run_notion_retrieve(arguments: &[String]) -> Result<KnowledgeResult, WikiError> {
+    let (user_root, capability, snapshot, options) = parse_notion_sync_inputs(
+        arguments,
+        &[
+            "--request",
+            "--scope",
+            "--query",
+            "--top-k",
+            "--byte-budget",
+        ],
+    )?;
+    let mut request = parse_retrieval_request(&options, RetrievalScope::Global)?;
+    if !matches!(request.scope, RetrievalScope::Global) {
+        return Err(WikiError::InvalidInput(
+            "Notion mode retrieval currently requires the selected Notion scope (global)"
+                .to_owned(),
+        ));
+    }
+    request.current_collection_id = None;
+    let store = RagStore::open(&user_root)?;
+    let freshness =
+        sync_notion_and_publish(&store, &capability, &snapshot, false).map_err(map_notion_error)?;
+    let retrieval = retrieve_notion_persisted(&store, &request).map_err(map_notion_error)?;
+    let digest = retrieval.manifest_digest.clone();
+    Ok(success(
+        "RetrieveNotionKnowledge",
+        "hive.notion-retrieved-fresh",
+        "fresh Notion preflight and bounded SQLite retrieval completed",
+        freshness.store.changed_paths.clone(),
+        SHARED_INDEX_RELATIVE,
+        &digest,
+        json!({
+            "freshness": notion_sync_data(&freshness),
+            "retrieval": retrieval,
+        }),
+    ))
+}
+
+fn run_notion_write_through(arguments: &[String]) -> Result<KnowledgeResult, WikiError> {
+    let (user_root, capability, snapshot, options) =
+        parse_notion_sync_inputs(arguments, &["--write-receipt"])?;
+    let receipt = read_json_bounded::<NotionWriteReceipt>(
+        Path::new(required(&options, "--write-receipt")?),
+        "Notion write receipt",
+    )?;
+    validate_write_receipt(&capability, &snapshot, &receipt).map_err(map_notion_error)?;
+    let store = RagStore::open(&user_root)?;
+    let outcome =
+        sync_notion_and_publish(&store, &capability, &snapshot, false).map_err(map_notion_error)?;
+    let digest = outcome.store.manifest_digest.clone();
+    Ok(success(
+        "WriteThroughNotionKnowledge",
+        "hive.notion-write-through-complete",
+        "host-confirmed Notion canonical write was validated and written through to SQLite",
+        outcome.store.changed_paths.clone(),
+        NOTION_LEDGER_RELATIVE,
+        &digest,
+        json!({
+            "write": {
+                "operation": receipt.operation,
+                "page_id": receipt.page_id,
+                "revision": receipt.revision,
+            },
+            "freshness": notion_sync_data(&outcome),
+        }),
+    ))
+}
+
+fn validate_notion_backend(
+    user_root: &Path,
+    capability: &NotionCapabilityReceipt,
+) -> Result<(), WikiError> {
+    let wiki = super::user_setup::operational_wiki_preferences(user_root).map_err(|error| {
+        WikiError::Verification(format!("cannot authorize Notion mode: {error}"))
+    })?;
+    if !wiki.enabled || wiki.backend != super::user_setup::WikiBackend::Notion {
+        return Err(WikiError::Conflict(
+            "knowledge notion requires enabled global Wiki backend notion".to_owned(),
+        ));
+    }
+    let Some(notion) = wiki.notion else {
+        return Err(WikiError::Verification(
+            "Notion backend configuration is incomplete".to_owned(),
+        ));
+    };
+    if !notion.local_index_consent {
+        return Err(WikiError::Verification(
+            "Notion backend lacks consent for local derived SQLite content".to_owned(),
+        ));
+    }
+    if notion.workspace_id != capability.workspace_id || notion.scope_id != capability.scope_id {
+        return Err(WikiError::Conflict(
+            "Notion capability receipt differs from the selected workspace or scope".to_owned(),
+        ));
+    }
+    Ok(())
+}
+
+fn map_notion_error(error: hive_wiki::notion::NotionError) -> WikiError {
+    WikiError::Verification(error.to_string())
+}
+
+fn notion_sync_data(outcome: &NotionPersistedOutcome) -> Value {
+    json!({
+        "adapter": outcome.sync.projection.adapter,
+        "workspace_id": outcome.sync.projection.workspace_id,
+        "scope_id": outcome.sync.projection.scope_id,
+        "generation": outcome.store.generation,
+        "changed_page_ids": outcome.sync.changed_page_ids,
+        "tombstoned_page_ids": outcome.sync.tombstoned_page_ids,
+        "remote_requests": outcome.sync.remote_requests,
+        "document_count": outcome.sync.projection.documents.len(),
+        "chunk_count": outcome.sync.projection.artifact.chunk_count,
+        "store": outcome.store,
+    })
 }
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
@@ -3025,10 +3225,14 @@ fn prepare_shared_mutation(shared: &SharedMutationTarget) -> Result<Vec<String>,
 }
 
 fn require_shared_wiki_enabled(user_root: &Path) -> Result<(), WikiError> {
-    match super::user_setup::operational_wiki_enabled(user_root) {
-        Ok(true) => Ok(()),
-        Ok(false) => Err(WikiError::Conflict(
+    match super::user_setup::operational_wiki_preferences(user_root) {
+        Ok(preferences) if preferences.enabled && preferences.backend == super::user_setup::WikiBackend::Markdown => Ok(()),
+        Ok(preferences) if !preferences.enabled => Err(WikiError::Conflict(
             "global Wiki is disabled; canonical Markdown is preserved and shared knowledge operations are unavailable"
+                .to_owned(),
+        )),
+        Ok(_) => Err(WikiError::Conflict(
+            "global Wiki backend notion has no local Markdown canonical store; use knowledge notion"
                 .to_owned(),
         )),
         Err(error) => Err(WikiError::Verification(format!(
@@ -3312,6 +3516,97 @@ mod tests {
             ),
         )
         .expect("user setup");
+    }
+
+    fn write_notion_user_setup(root: &Path) {
+        fs::create_dir_all(root.join(".hive/config")).expect("user config");
+        fs::write(
+            root.join(".hive/config/user-setup.yml"),
+            "schema_version: 1\ninterface_language: en\nwiki:\n  enabled: true\n  language: both\n  backend: notion\n  notion:\n    workspace_id: workspace-a\n    scope_id: scope-a\n    local_index_consent: true\nprofile:\n  id: web-developer\npersona:\n  id: balanced\nselected_hosts:\n  - codex\nskills:\n  mode: individual\n  selected:\n    - setup-hive\nusage_guard:\n  enabled: false\n  stop_remaining_percent: 20\n  codexbar_fallback_enabled: false\n",
+        )
+        .expect("Notion user setup");
+    }
+
+    fn write_notion_inputs(root: &Path) -> (PathBuf, PathBuf) {
+        use hive_wiki::notion::{
+            NotionAdapter, NotionCapabilityReceipt, NotionInventoryEntry, NotionPage,
+            NotionSyncRequest, RequiredCapability,
+        };
+
+        let capability = root.join("notion-capability.json");
+        let snapshot = root.join("notion-snapshot.json");
+        fs::write(
+            &capability,
+            serde_json::to_vec(&NotionCapabilityReceipt {
+                schema_version: 1,
+                adapter: NotionAdapter::HostPlugin,
+                workspace_id: "workspace-a".to_owned(),
+                scope_id: "scope-a".to_owned(),
+                capabilities: RequiredCapability::ALL.to_vec(),
+                rest_consent: false,
+            })
+            .expect("capability JSON"),
+        )
+        .expect("write capability");
+        fs::write(
+            &snapshot,
+            serde_json::to_vec(&NotionSyncRequest {
+                schema_version: 1,
+                workspace_id: "workspace-a".to_owned(),
+                scope_id: "scope-a".to_owned(),
+                inventory_complete: true,
+                next_cursor: None,
+                inventory: vec![NotionInventoryEntry {
+                    page_id: "page-a".to_owned(),
+                    revision: "rev-1".to_owned(),
+                    deleted: false,
+                }],
+                pages: vec![NotionPage {
+                    page_id: "page-a".to_owned(),
+                    revision: "rev-1".to_owned(),
+                    title: "Deployment guide".to_owned(),
+                    body: "Alpha deployment procedure".to_owned(),
+                    kind: "workflow".to_owned(),
+                    language: "en".to_owned(),
+                    tags: vec!["deployment".to_owned()],
+                    aliases: vec!["ship".to_owned()],
+                    sources: Vec::new(),
+                    complete: true,
+                    truncated: false,
+                    unknown_blocks: Vec::new(),
+                }],
+            })
+            .expect("snapshot JSON"),
+        )
+        .expect("write snapshot");
+        (capability, snapshot)
+    }
+
+    #[test]
+    fn notion_retrieval_requires_fresh_host_inventory_and_keeps_no_local_wiki_markdown() {
+        let user = temp_root();
+        write_notion_user_setup(user.path());
+        let (capability, snapshot) = write_notion_inputs(user.path());
+        let result = run_notion_retrieve(&[
+            "--user-root".to_owned(),
+            user.path().display().to_string(),
+            "--capability".to_owned(),
+            capability.display().to_string(),
+            "--snapshot".to_owned(),
+            snapshot.display().to_string(),
+            "--query".to_owned(),
+            "Alpha".to_owned(),
+            "--output".to_owned(),
+            "json".to_owned(),
+        ])
+        .expect("fresh Notion retrieval");
+        assert_eq!(result.code, "hive.notion-retrieved-fresh");
+        assert!(!user.path().join(".hive/knowledge/Wiki").exists());
+        let ledger =
+            fs::read_to_string(user.path().join(NOTION_LEDGER_RELATIVE)).expect("Notion ledger");
+        assert!(!ledger.contains("Alpha deployment procedure"));
+        let data = result.data.expect("retrieval data");
+        assert_eq!(data["retrieval"]["hits"].as_array().map(Vec::len), Some(1));
     }
 
     fn write_remember_request(root: &Path) -> PathBuf {

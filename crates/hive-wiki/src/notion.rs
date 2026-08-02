@@ -11,19 +11,28 @@ use crate::collection::{
     CollectionVisibility, COLLECTION_SCHEMA_VERSION,
 };
 use crate::rag::{
-    build_rag_index, canonical_wiki_category, document_digest, CanonicalDocument, RagIndexArtifact,
-    RagLanguage, RagSnapshot, RagVisibility, RAG_SCHEMA_VERSION,
+    build_rag_index, canonical_wiki_category, document_digest, documents_from_serialized,
+    retrieve_serialized, CanonicalDocument, RagIndexArtifact, RagLanguage, RagSnapshot,
+    RagVisibility, RetrievalRequest, RetrievalResult, RAG_SCHEMA_VERSION,
 };
+use crate::store::{RagStore, StoreCommit};
 use hive_core::sha256_digest;
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
 use std::error::Error;
 use std::fmt::{self, Display, Formatter};
+use std::path::Path;
 
 const MAX_ID_BYTES: usize = 500;
 const MAX_REVISION_BYTES: usize = 500;
 const MAX_PAGE_BYTES: usize = 2 * 1024 * 1024;
 const MAX_PAGES: usize = 100_000;
+
+/// Small remote revision ledger retained by a Notion backend.
+///
+/// It intentionally excludes page bodies, chunks, prompts, and transcripts.
+/// Normalized remote page content exists only in the disposable SQLite index.
+pub const NOTION_LEDGER_RELATIVE: &str = ".hive/index/notion-ledger.json";
 
 /// Supported remote adapters in strict preference order.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, Eq, PartialEq, Ord, PartialOrd)]
@@ -174,6 +183,19 @@ pub struct NotionProjection {
     pub artifact: RagIndexArtifact,
 }
 
+/// Persisted Notion identity and revision state bound to one RAG generation.
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
+#[serde(deny_unknown_fields)]
+pub struct NotionLedger {
+    pub schema_version: u32,
+    pub workspace_id: String,
+    pub scope_id: String,
+    pub adapter: NotionAdapter,
+    pub registry: CollectionRegistry,
+    pub revisions: Vec<NotionRevisionEntry>,
+    pub manifest: crate::rag::GenerationManifest,
+}
+
 /// Successful fresh publication or an unchanged no-op.
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
 #[serde(deny_unknown_fields)]
@@ -182,6 +204,33 @@ pub struct NotionSyncOutcome {
     pub changed_page_ids: Vec<String>,
     pub tombstoned_page_ids: Vec<String>,
     pub remote_requests: usize,
+}
+
+/// Durable publication evidence for one Notion remote refresh.
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
+#[serde(deny_unknown_fields)]
+pub struct NotionPersistedOutcome {
+    pub sync: NotionSyncOutcome,
+    pub store: StoreCommit,
+}
+
+/// Host-confirmed remote write operation used for SQLite write-through.
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, Eq, PartialEq)]
+#[serde(rename_all = "kebab-case")]
+pub enum NotionWriteOperation {
+    Create,
+    Update,
+}
+
+/// Credential-free receipt returned after a host owns a Notion create or update.
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
+#[serde(deny_unknown_fields)]
+pub struct NotionWriteReceipt {
+    pub schema_version: u32,
+    pub operation: NotionWriteOperation,
+    pub page_id: String,
+    pub revision: String,
+    pub completed: bool,
 }
 
 /// Stable fail-closed error for remote canonical-source receipts.
@@ -195,6 +244,28 @@ impl Display for NotionError {
 }
 
 impl Error for NotionError {}
+
+impl From<crate::WikiError> for NotionError {
+    fn from(error: crate::WikiError) -> Self {
+        Self(format!("Notion derived-index operation failed: {error}"))
+    }
+}
+
+impl NotionProjection {
+    /// Return the body-free ledger which may be persisted beside SQLite.
+    #[must_use]
+    pub fn ledger(&self) -> NotionLedger {
+        NotionLedger {
+            schema_version: 1,
+            workspace_id: self.workspace_id.clone(),
+            scope_id: self.scope_id.clone(),
+            adapter: self.adapter,
+            registry: self.registry.clone(),
+            revisions: self.revisions.clone(),
+            manifest: self.artifact.manifest.clone(),
+        }
+    }
+}
 
 /// Select the first fully capable adapter in plugin → MCP → consented REST order.
 pub fn resolve_adapter(
@@ -241,6 +312,20 @@ pub fn sync_snapshot(
     capability: &NotionCapabilityReceipt,
     request: &NotionSyncRequest,
 ) -> Result<NotionSyncOutcome, NotionError> {
+    sync_snapshot_for_generation(previous, capability, request, None)
+}
+
+/// Validate a complete remote inventory with an optional explicit generation.
+///
+/// Recovery uses `generation` only after a SQLite loss or schema replacement,
+/// when every active page is supplied again. Ordinary incremental refreshes use
+/// the previous generation and cannot skip or downgrade it.
+pub fn sync_snapshot_for_generation(
+    previous: Option<&NotionProjection>,
+    capability: &NotionCapabilityReceipt,
+    request: &NotionSyncRequest,
+    generation: Option<u64>,
+) -> Result<NotionSyncOutcome, NotionError> {
     validate_receipt(capability)?;
     if resolve_adapter(std::slice::from_ref(capability)).is_err() {
         return Err(NotionError(
@@ -269,6 +354,14 @@ pub fn sync_snapshot(
     if request.inventory.len() > MAX_PAGES || request.pages.len() > MAX_PAGES {
         return Err(NotionError(
             "Notion page inventory exceeds the bounded limit".to_owned(),
+        ));
+    }
+
+    let expected_generation = next_generation(previous)?;
+    let generation = generation.unwrap_or(expected_generation);
+    if generation == 0 || (previous.is_some() && generation != expected_generation) {
+        return Err(NotionError(
+            "Notion generation is not a valid next remote generation".to_owned(),
         ));
     }
 
@@ -330,12 +423,7 @@ pub fn sync_snapshot(
                 )));
             }
             changed_page_ids.push((*page_id).to_owned());
-            page_document(
-                page,
-                &request.workspace_id,
-                &request.scope_id,
-                next_generation(previous)?,
-            )?
+            page_document(page, &request.workspace_id, &request.scope_id, generation)?
         } else {
             if fetched.contains_key(page_id) {
                 return Err(NotionError(format!(
@@ -396,7 +484,7 @@ pub fn sync_snapshot(
     let registry = notion_registry(&request.workspace_id, &request.scope_id)?;
     let snapshot = RagSnapshot {
         schema_version: RAG_SCHEMA_VERSION,
-        generation: next_generation(previous)?,
+        generation,
         registry: registry.clone(),
         documents: documents.clone(),
         claims: Vec::new(),
@@ -417,6 +505,268 @@ pub fn sync_snapshot(
         remote_requests: 1 + request.pages.len(),
         changed_page_ids,
         tombstoned_page_ids,
+    })
+}
+
+/// Load a body-free Notion ledger and recover unchanged pages from verified SQLite.
+///
+/// SQLite is used only after a complete remote inventory has already selected a
+/// remote source for the next generation; a caller must not treat this helper as
+/// a local canonical-source fallback.
+pub fn load_persisted_projection(
+    store: &RagStore,
+) -> Result<Option<NotionProjection>, NotionError> {
+    let Some(snapshot) = store.load_external_index_optional(Path::new(NOTION_LEDGER_RELATIVE))?
+    else {
+        return Ok(None);
+    };
+    let ledger: NotionLedger = serde_json::from_slice(&snapshot.ledger_bytes)
+        .map_err(|_| NotionError("Notion revision ledger is malformed".to_owned()))?;
+    validate_ledger(&ledger)?;
+    if ledger.manifest != snapshot.manifest {
+        return Err(NotionError(
+            "Notion revision ledger is not bound to the published RAG generation".to_owned(),
+        ));
+    }
+    let documents =
+        documents_from_serialized(&snapshot.sqlite_bytes, &ledger.manifest, &ledger.registry)
+            .map_err(|error| {
+                NotionError(format!("Notion SQLite projection is invalid: {error}"))
+            })?;
+    validate_recovered_documents(&ledger, &documents)?;
+    Ok(Some(NotionProjection {
+        schema_version: ledger.schema_version,
+        workspace_id: ledger.workspace_id,
+        scope_id: ledger.scope_id,
+        adapter: ledger.adapter,
+        registry: ledger.registry,
+        revisions: ledger.revisions,
+        documents,
+        artifact: RagIndexArtifact {
+            sqlite_bytes: snapshot.sqlite_bytes,
+            manifest: snapshot.manifest,
+            document_count: 0,
+            claim_count: 0,
+            chunk_count: 0,
+        },
+    }))
+}
+
+/// Synchronize host-supplied remote data, then atomically write through SQLite.
+///
+/// With `rebuild` false, unchanged page content is recovered only from a prior
+/// verified projection and a missing/corrupt local index fails closed. With
+/// `rebuild` true, the host must provide every active page again; this supports
+/// deletion, corruption, and schema-change recovery without a local Markdown
+/// fallback.
+pub fn sync_and_publish(
+    store: &RagStore,
+    capability: &NotionCapabilityReceipt,
+    request: &NotionSyncRequest,
+    rebuild: bool,
+) -> Result<NotionPersistedOutcome, NotionError> {
+    let previous = if rebuild {
+        None
+    } else {
+        load_persisted_projection(store)?
+    };
+    let generation = if rebuild {
+        Some(store.next_external_generation()?)
+    } else {
+        None
+    };
+    let sync = sync_snapshot_for_generation(previous.as_ref(), capability, request, generation)?;
+    if sync.changed_page_ids.is_empty() && sync.tombstoned_page_ids.is_empty() && !rebuild {
+        let store = StoreCommit {
+            changed_paths: Vec::new(),
+            generation: sync.projection.artifact.manifest.generation,
+            manifest_digest: sync.projection.artifact.manifest.logical_digest.clone(),
+        };
+        return Ok(NotionPersistedOutcome { sync, store });
+    }
+    let ledger = sync.projection.ledger();
+    validate_ledger(&ledger)?;
+    let ledger_bytes = canonical_ledger_bytes(&ledger)?;
+    let store_commit = store.publish_external_index(
+        Path::new(NOTION_LEDGER_RELATIVE),
+        &ledger_bytes,
+        &sync.projection.artifact,
+    )?;
+    Ok(NotionPersistedOutcome {
+        sync,
+        store: store_commit,
+    })
+}
+
+/// Retrieve only from a verified Notion-derived SQLite generation.
+pub fn retrieve_persisted(
+    store: &RagStore,
+    request: &RetrievalRequest,
+) -> Result<RetrievalResult, NotionError> {
+    let snapshot = store.load_external_index(Path::new(NOTION_LEDGER_RELATIVE))?;
+    let ledger: NotionLedger = serde_json::from_slice(&snapshot.ledger_bytes)
+        .map_err(|_| NotionError("Notion revision ledger is malformed".to_owned()))?;
+    validate_ledger(&ledger)?;
+    if ledger.manifest != snapshot.manifest {
+        return Err(NotionError(
+            "Notion revision ledger is not bound to the published RAG generation".to_owned(),
+        ));
+    }
+    retrieve_serialized(
+        &snapshot.sqlite_bytes,
+        &ledger.manifest,
+        &ledger.registry,
+        request,
+    )
+    .map_err(|error| NotionError(format!("Notion SQLite retrieval failed: {error}")))
+}
+
+/// Verify that a host-owned Notion write is represented by the complete fresh
+/// inventory before SQLite publication.
+pub fn validate_write_receipt(
+    capability: &NotionCapabilityReceipt,
+    request: &NotionSyncRequest,
+    receipt: &NotionWriteReceipt,
+) -> Result<(), NotionError> {
+    validate_receipt(capability)?;
+    if receipt.schema_version != 1 || !receipt.completed {
+        return Err(NotionError(
+            "Notion write receipt is incomplete or unsupported".to_owned(),
+        ));
+    }
+    validate_id("write receipt page_id", &receipt.page_id)?;
+    validate_revision(&receipt.revision)?;
+    let required = match receipt.operation {
+        NotionWriteOperation::Create => RequiredCapability::Create,
+        NotionWriteOperation::Update => RequiredCapability::Update,
+    };
+    if !capability.capabilities.contains(&required) {
+        return Err(NotionError(
+            "Notion adapter did not prove the completed write capability".to_owned(),
+        ));
+    }
+    let inventory = request
+        .inventory
+        .iter()
+        .find(|entry| entry.page_id == receipt.page_id && !entry.deleted)
+        .ok_or_else(|| {
+            NotionError(
+                "Notion write receipt page is absent from the complete fresh inventory".to_owned(),
+            )
+        })?;
+    let page = request
+        .pages
+        .iter()
+        .find(|page| page.page_id == receipt.page_id)
+        .ok_or_else(|| {
+            NotionError(
+                "Notion write receipt page content is absent from the fresh response".to_owned(),
+            )
+        })?;
+    if inventory.revision != receipt.revision || page.revision != receipt.revision {
+        return Err(NotionError(
+            "Notion write receipt revision is not bound to the fresh inventory and page".to_owned(),
+        ));
+    }
+    validate_page(page)
+}
+
+fn canonical_ledger_bytes(ledger: &NotionLedger) -> Result<Vec<u8>, NotionError> {
+    let mut bytes = serde_json::to_vec(ledger).map_err(|error| {
+        NotionError(format!("cannot serialize Notion revision ledger: {error}"))
+    })?;
+    bytes.push(b'\n');
+    Ok(bytes)
+}
+
+fn validate_ledger(ledger: &NotionLedger) -> Result<(), NotionError> {
+    if ledger.schema_version != 1 {
+        return Err(NotionError(
+            "unsupported Notion revision ledger version".to_owned(),
+        ));
+    }
+    validate_id("workspace_id", &ledger.workspace_id)?;
+    validate_id("scope_id", &ledger.scope_id)?;
+    if ledger.manifest.schema_version != RAG_SCHEMA_VERSION || ledger.manifest.generation == 0 {
+        return Err(NotionError(
+            "Notion revision ledger has an unsupported RAG generation".to_owned(),
+        ));
+    }
+    if !is_sha256_digest(&ledger.manifest.logical_digest)
+        || !is_sha256_digest(&ledger.manifest.sqlite_digest)
+    {
+        return Err(NotionError(
+            "Notion revision ledger has invalid generation digests".to_owned(),
+        ));
+    }
+    let expected_registry = notion_registry(&ledger.workspace_id, &ledger.scope_id)?;
+    if ledger.registry != expected_registry {
+        return Err(NotionError(
+            "Notion revision ledger collection registry differs from its selected scope".to_owned(),
+        ));
+    }
+    if ledger.revisions.len() > MAX_PAGES
+        || ledger
+            .revisions
+            .windows(2)
+            .any(|pair| pair[0].page_id >= pair[1].page_id)
+    {
+        return Err(NotionError(
+            "Notion revision ledger page identities are not sorted and unique".to_owned(),
+        ));
+    }
+    for revision in &ledger.revisions {
+        validate_id("page_id", &revision.page_id)?;
+        validate_revision(&revision.revision)?;
+        if !is_sha256_digest(&revision.digest) {
+            return Err(NotionError(
+                "Notion revision ledger contains an invalid page digest".to_owned(),
+            ));
+        }
+    }
+    Ok(())
+}
+
+fn validate_recovered_documents(
+    ledger: &NotionLedger,
+    documents: &[CanonicalDocument],
+) -> Result<(), NotionError> {
+    if documents.len() != ledger.revisions.len() {
+        return Err(NotionError(
+            "Notion SQLite document set does not match its remote revision ledger".to_owned(),
+        ));
+    }
+    let revisions = ledger
+        .revisions
+        .iter()
+        .map(|entry| (entry.page_id.as_str(), entry))
+        .collect::<BTreeMap<_, _>>();
+    let expected_collection = &ledger.registry.collections[0].collection_id;
+    for document in documents {
+        let page_id = page_id_from_locator(&document.locator);
+        let Some(revision) = revisions.get(page_id) else {
+            return Err(NotionError(
+                "Notion SQLite document locator lies outside the remote revision ledger".to_owned(),
+            ));
+        };
+        if document.collection_id != *expected_collection
+            || document.digest != revision.digest
+            || document.revision > ledger.manifest.generation
+        {
+            return Err(NotionError(
+                "Notion SQLite document does not match its remote revision ledger".to_owned(),
+            ));
+        }
+    }
+    Ok(())
+}
+
+fn is_sha256_digest(value: &str) -> bool {
+    value.strip_prefix("sha256:").is_some_and(|raw| {
+        raw.len() == 64
+            && raw
+                .bytes()
+                .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
     })
 }
 

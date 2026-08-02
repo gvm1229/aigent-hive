@@ -1,8 +1,12 @@
 use hive_wiki::notion::{
-    resolve_adapter, sync_snapshot, NotionAdapter, NotionCapabilityReceipt, NotionInventoryEntry,
-    NotionPage, NotionSyncRequest, RequiredCapability,
+    load_persisted_projection, resolve_adapter, retrieve_persisted, sync_and_publish,
+    sync_snapshot, NotionAdapter, NotionCapabilityReceipt, NotionInventoryEntry, NotionPage,
+    NotionSyncRequest, RequiredCapability, NOTION_LEDGER_RELATIVE,
 };
 use hive_wiki::rag::{retrieve_serialized, RetrievalRequest, RetrievalScope};
+use hive_wiki::shared::SHARED_INDEX_RELATIVE;
+use hive_wiki::store::RagStore;
+use std::path::Path;
 
 fn receipt(adapter: NotionAdapter, rest_consent: bool) -> NotionCapabilityReceipt {
     NotionCapabilityReceipt {
@@ -148,4 +152,61 @@ fn partial_or_unfetched_changed_content_never_publishes_a_fresh_generation() {
             .to_string()
             .contains("incomplete")
     );
+}
+
+#[test]
+fn persisted_notion_mode_keeps_only_a_revision_ledger_and_recovers_from_sqlite_loss() {
+    let root = tempfile::tempdir().expect("temporary user root");
+    let store = RagStore::open(root.path()).expect("pin user root");
+    let capability = receipt(NotionAdapter::HostPlugin, false);
+    let first = sync_and_publish(
+        &store,
+        &capability,
+        &request("rev-1", vec![page("rev-1", "Alpha deployment procedure")]),
+        false,
+    )
+    .expect("initial remote generation");
+    assert_eq!(first.store.generation, 1);
+    assert!(!root.path().join(".hive/knowledge/Wiki").exists());
+    let ledger = std::fs::read_to_string(root.path().join(NOTION_LEDGER_RELATIVE))
+        .expect("body-free revision ledger");
+    assert!(!ledger.contains("Alpha deployment procedure"));
+    assert!(ledger.contains("page-a"));
+
+    let recovered = load_persisted_projection(&store)
+        .expect("load persisted projection")
+        .expect("projection exists");
+    assert_eq!(recovered.documents.len(), 1);
+    assert_eq!(recovered.documents[0].body, "Alpha deployment procedure");
+    let result = retrieve_persisted(
+        &store,
+        &RetrievalRequest {
+            scope: RetrievalScope::Global,
+            current_collection_id: None,
+            query: "Alpha".to_owned(),
+            query_expansions: Vec::new(),
+            top_k: 5,
+            byte_budget: 4096,
+            confidential_collection_id: None,
+        },
+    )
+    .expect("backend-neutral persisted retrieval");
+    assert_eq!(result.hits.len(), 1);
+
+    let unchanged = sync_and_publish(&store, &capability, &request("rev-1", Vec::new()), false)
+        .expect("bounded unchanged preflight");
+    assert!(unchanged.sync.changed_page_ids.is_empty());
+    assert!(unchanged.store.changed_paths.is_empty());
+
+    std::fs::remove_file(root.path().join(SHARED_INDEX_RELATIVE)).expect("remove disposable index");
+    assert!(sync_and_publish(&store, &capability, &request("rev-1", Vec::new()), false).is_err());
+    let rebuilt = sync_and_publish(
+        &store,
+        &capability,
+        &request("rev-1", vec![page("rev-1", "Alpha deployment procedure")]),
+        true,
+    )
+    .expect("remote full rebuild after SQLite loss");
+    assert_eq!(rebuilt.store.generation, 2);
+    assert!(root.path().join(Path::new(SHARED_INDEX_RELATIVE)).is_file());
 }

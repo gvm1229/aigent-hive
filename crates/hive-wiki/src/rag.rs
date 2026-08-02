@@ -19,7 +19,7 @@ use std::io::Cursor;
 use std::str::FromStr;
 
 /// Version of the disposable RAG projection schema.
-pub const RAG_SCHEMA_VERSION: u32 = 5;
+pub const RAG_SCHEMA_VERSION: u32 = 6;
 /// Version of the canonical typed-claim Markdown contract.
 pub const CLAIM_SCHEMA_VERSION: u32 = 1;
 
@@ -1140,6 +1140,106 @@ pub fn retrieve_serialized(
     retrieve_from_connection(&connection, expected_manifest, &canonical_registry, request)
 }
 
+/// Recover the exact document records retained in a verified disposable index.
+///
+/// This is used only by a remote-canonical backend to retain unchanged pages in
+/// the SQLite projection between complete remote inventories. It never treats
+/// the index as a canonical source: the caller must still perform a fresh
+/// remote inventory before publishing a new generation.
+///
+/// # Errors
+///
+/// Returns an error when the serialized generation is absent, stale, corrupt,
+/// dirty, or inconsistent with the supplied manifest and collection registry.
+pub fn documents_from_serialized(
+    sqlite_bytes: &[u8],
+    expected_manifest: &GenerationManifest,
+    registry: &CollectionRegistry,
+) -> Result<Vec<CanonicalDocument>, RagError> {
+    validate_serialized_index(sqlite_bytes, expected_manifest)?;
+    let connection = deserialize_connection(sqlite_bytes)?;
+    let _registry = verify_retrieval_snapshot(&connection, expected_manifest, registry)?;
+    let claim_count: i64 = connection
+        .query_row("SELECT COUNT(*) FROM claims", [], |row| row.get(0))
+        .map_err(sqlite_error)?;
+    if claim_count != 0 {
+        return Err(RagError::RepairRequired(
+            "remote Notion projection must not contain local canonical claims".to_owned(),
+        ));
+    }
+    let mut statement = connection
+        .prepare(
+            "SELECT document_id, collection_id, locator, title, kind, category,
+                    body, digest, visibility, language, revision, replacement
+             FROM documents ORDER BY document_id",
+        )
+        .map_err(sqlite_error)?;
+    let rows = statement
+        .query_map([], |row| {
+            let revision = row.get::<_, i64>(10)?;
+            let revision = u64::try_from(revision).map_err(|_| {
+                rusqlite::Error::FromSqlConversionFailure(
+                    10,
+                    rusqlite::types::Type::Integer,
+                    Box::new(RagError::RepairRequired(
+                        "indexed document revision is outside the supported range".to_owned(),
+                    )),
+                )
+            })?;
+            let visibility = RagVisibility::parse(&row.get::<_, String>(8)?)
+                .map_err(to_sqlite_conversion_error)?;
+            let language = RagLanguage::parse(&row.get::<_, String>(9)?)
+                .map_err(to_sqlite_conversion_error)?;
+            Ok(CanonicalDocument {
+                document_id: row.get(0)?,
+                collection_id: row.get(1)?,
+                locator: row.get(2)?,
+                title: row.get(3)?,
+                kind: row.get(4)?,
+                category: row.get(5)?,
+                body: row.get(6)?,
+                digest: row.get(7)?,
+                visibility,
+                language,
+                revision,
+                tags: Vec::new(),
+                aliases: Vec::new(),
+                links: Vec::new(),
+                sources: Vec::new(),
+                replacement: row.get(11)?,
+            })
+        })
+        .map_err(sqlite_error)?;
+    let mut documents = rows
+        .collect::<rusqlite::Result<Vec<_>>>()
+        .map_err(sqlite_error)?;
+    for document in &mut documents {
+        document.tags = load_item_values(
+            &connection,
+            "tags",
+            "tag",
+            "document",
+            &document.document_id,
+        )?;
+        document.aliases = load_item_values(
+            &connection,
+            "aliases",
+            "alias",
+            "document",
+            &document.document_id,
+        )?;
+        document.links = load_item_values(
+            &connection,
+            "links",
+            "locator",
+            "document",
+            &document.document_id,
+        )?;
+        document.sources = load_sources(&connection, "document", &document.document_id)?;
+    }
+    Ok(documents)
+}
+
 fn validate_serialized_index(
     sqlite_bytes: &[u8],
     expected_manifest: &GenerationManifest,
@@ -1958,6 +2058,7 @@ fn initialize_schema(connection: &Connection) -> Result<(), RagError> {
                  collection_id TEXT NOT NULL REFERENCES collections(collection_id),
                  locator TEXT NOT NULL,
                  title TEXT NOT NULL,
+                 body TEXT NOT NULL,
                  kind TEXT NOT NULL,
                  category TEXT NOT NULL,
                  digest TEXT NOT NULL,
@@ -2110,12 +2211,13 @@ fn insert_collection(
 fn insert_document(connection: &Connection, document: &CanonicalDocument) -> Result<(), RagError> {
     connection
         .execute(
-            "INSERT INTO documents (document_id, collection_id, locator, title, kind, category, digest, visibility, language, revision, replacement) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
+            "INSERT INTO documents (document_id, collection_id, locator, title, body, kind, category, digest, visibility, language, revision, replacement) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)",
             params![
                 document.document_id,
                 document.collection_id,
                 document.locator,
                 document.title,
+                document.body,
                 document.kind,
                 document.category,
                 document.digest,
