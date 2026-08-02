@@ -5,22 +5,23 @@ topic_slug: v0-9-full-release
 language: ko
 counterpart: ../en/v0-9-full-release.md
 title: "Aigent Hive 0.9.0 시험·정식 릴리스"
-summary: "0.9.0은 독립 bare 시험 채널의 수용 뒤 별도 승인된 정식 publication 사용."
+summary: "0.9.0은 독립 게시 가능한 bare 시험 채널의 수용 뒤 별도 승인된 정식 publication 사용."
 tags: [distribution, release, signing, v0-9]
 aliases: ["0.9.0 release plan", "full release"]
 sources:
-  - "repo:docs/decisions/ADR-0017-0.9-full-release.md#sha256:f7f0428ef5d7e194a08d97d64ec13b02f50edf0b6598c6bcf19396942a9d1782"
+  - "repo:docs/decisions/ADR-0017-0.9-full-release.md#sha256:9172a8fa815052211dac6f561775f47852f4fe86bd629cb02004bbf5e0e30acb"
+  - "repo:docs/plans/active/release-0.9.0.md#sha256:df7dcaa87728498e03902dd8de2f1225ec6ef475f8894ba8b8d9f49f7540425c"
 links: [host-external-integrations, release-verification, test-distribution, version-policy]
-reviewed_revision: "git:fc1e23854bf6cbc09a2dc7704d8185ae247212a0"
+reviewed_revision: "git:bf7c1d3e36cd94e8ee5f2a68d9f8ca5c4c9f9c87"
 status: active
 ---
 
 # Aigent Hive 0.9.0 시험·정식 릴리스
 
-기본 시험 identity: package `0.9.0-test`, npm `test`, GitHub prerelease. 추가 시험판:
-필요 시에만 `0.9.0-test.N`. 시험 publication의 `latest` 변경·정식 publication trigger
-0건. 시험·정식 artifact의 기능·기본값·진단 계약 동일. 소비자 공통 문제 보고:
-명시적 preview·export, 자동 upload 0건. Parity 범위: `markdown|notion` backend와
-optional Discord guard 알림. 정식 `0.9.0|latest`: 시험 수용 뒤 별도 protected `main`
-publication. 정식 선행 증거: Apple·Windows signing, external TUF, protected approval,
-public install·upgrade.
+기본 시험: `0.9.0-test`, npm `test`, GitHub prerelease. 추가 시험판: 필요 시에만
+`0.9.0-test.N`. `6761f0b` candidate run `30771098518`: 5개 native target·npm umbrella
+PASS. Public 시험 publication: default-branch workflow 등록 전까지 차단, 실패 dispatch의
+npm·tag·GitHub Release mutation 0건. 등록 전용 `main` PR·review 뒤 protected publication.
+시험 publication의 `latest` 변경·정식 trigger 0건. 시험·정식 artifact 동일:
+feature·default·diagnostic, report preview·export, `markdown|notion`, optional Discord
+guard. 정식: 시험 수용 뒤 별도 protected `main` publication.
