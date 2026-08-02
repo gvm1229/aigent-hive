@@ -31,7 +31,7 @@ concurrency:
 jobs:
   publish:
     name: Verify and publish independent test prerelease
-    environment: release-test-publication
+    environment: release-publication
     runs-on: ubuntu-24.04
     env:
       PRODUCT_VERSION: ${{ inputs.product_version }}
