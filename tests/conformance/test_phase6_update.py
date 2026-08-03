@@ -479,7 +479,8 @@ class Phase6StaticContracts(unittest.TestCase):
             stable_publication,
         )
         self.assertEqual(stable_publication.count('npm publish "./dist/'), 12)
-        self.assertEqual(test_publication.count('npm publish "$archive"'), 2)
+        self.assertEqual(test_publication.count('npm publish "./$archive"'), 2)
+        self.assertNotIn('npm publish "$archive"', test_publication)
         self.assertNotIn('npm publish "dist/', stable_publication + test_publication)
         self.assertNotIn("npm dist-tag add", stable_publication + test_publication)
         self.assertNotIn(

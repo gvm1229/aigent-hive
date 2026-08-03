@@ -229,7 +229,7 @@ jobs:
             "dist/aigent-hive-linux-x64-$PACKAGE_VERSION.tgz" \
             "dist/aigent-hive-win32-x64-$PACKAGE_VERSION.tgz" \
             "dist/aigent-hive-$PACKAGE_VERSION.tgz"; do
-            npm publish "$archive" --access public --provenance --tag test
+            npm publish "./$archive" --access public --provenance --tag test
           done
       - name: Publish npm package family through trusted publishing
         if: ${{ !inputs.bootstrap_with_token }}
@@ -241,7 +241,7 @@ jobs:
             "dist/aigent-hive-linux-x64-$PACKAGE_VERSION.tgz" \
             "dist/aigent-hive-win32-x64-$PACKAGE_VERSION.tgz" \
             "dist/aigent-hive-$PACKAGE_VERSION.tgz"; do
-            npm publish "$archive" --access public --provenance --tag test
+            npm publish "./$archive" --access public --provenance --tag test
           done
       - name: Verify test tags and stable latest snapshots
         run: |
