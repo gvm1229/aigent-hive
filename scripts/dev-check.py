@@ -65,7 +65,9 @@ def resolve_tool(name: str, *, rust_tool: bool = False) -> Path:
 
 def tool_environment(*tools: Path) -> dict[str, str]:
     environment = os.environ.copy()
-    directories = list(dict.fromkeys(str(tool.parent) for tool in tools))
+    directories = list(
+        dict.fromkeys(os.path.dirname(os.fspath(tool)) for tool in tools)
+    )
     inherited_path = environment.get("PATH")
     if inherited_path:
         directories.append(inherited_path)
