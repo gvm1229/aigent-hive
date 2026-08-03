@@ -29,7 +29,8 @@
 - 기능 마감: [`v0.9.0-test-finalization.md`](v0.9.0-test-finalization.md)
 - Test candidate: run `30771098518`, exact `6761f0b`, 5 target·npm umbrella PASS
 - Test publication: existing protected `release-publication` environment 재사용
-- Dispatch: PR #16 draft; `main` merge 전 `404`, mutation `0건`
+- Test workflow: PR #16 `main` merge; [PR #17](https://github.com/gvm1229/aigent-hive/pull/17) review·merge 대기
+- PR #17: `deployment: false`, approval·secret 유지, test dispatch 보류
 - Apple·Windows·external TUF production signer 증거 미확인
 - Source baseline: `cee06e013cfbeca907c018b26c35a89bee0b703b`, `develop` 포함
 
@@ -68,7 +69,7 @@ attestation·signing·TUF → `v0.9.0` normal Release·npm `latest` → public a
 - [x] [REL9-002] `0.9.0` product identity와 stable·bare test·numbered test grammar, 문서·fixture·release notes parity
 - [x] [REL9-003] package version을 product version과 분리하고 `0.9.0-test[.N]` parser·installer·receipt·upgrade 계약 구현
 - [x] [REL9-004] `release.yml` candidate를 explicit channel·version·ref·SHA에 결합하고 시험·정식 ref downgrade 차단
-- [ ] [REL9-005] 독립 test prerelease와 stable normal Release workflow 추가: 상호 trigger 0건, tag·asset·checksum·attestation·idempotency·existing-version refusal
+- [x] [REL9-005] 독립 test prerelease와 stable normal Release workflow 추가: 상호 trigger 0건, tag·asset·checksum·attestation·idempotency·existing-version refusal
 
 ### B. Clean-clone qualification
 

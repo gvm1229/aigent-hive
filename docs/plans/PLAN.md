@@ -1,6 +1,6 @@
 # Aigent Hive active plan index
 
-> Revision: 1.97
+> Revision: 1.98
 > 기준일: 2026-08-03
 > Product version: `0.9.0`
 > 현재 milestone: `0.9.0` 정식 릴리스 준비
@@ -45,8 +45,8 @@
 | Model-routed custom subagent | 0 | 32 | 0% |
 | Prompt refine 자동 routing | 12 | 0 | 100% |
 | v0.9 test 기능 마감 | 18 | 0 | 100% |
-| v0.9 full release | 10 | 16 | 38.5% |
-| **Canonical total** | **332** | **71** | **82.4%** |
+| v0.9 full release | 11 | 15 | 42.3% |
+| **Canonical total** | **333** | **70** | **82.6%** |
 
 External production boundary 항목도 미완료 합계에 포함. Protected authority 없이 완료 처리 금지.
 
@@ -116,9 +116,11 @@ recovery 검증.
 
 완료: V9-001–025, RAG-001–020, KPX-001–018.
 
-현재: `PRF-001–012`, `TST9-001–018`, `REL9-001–004·006–010·012` 완료. exact
+현재: `PRF-001–012`, `TST9-001–018`, `REL9-001–010·012` 완료. exact
 `6761f0b` candidate run `30771098518` 5 target·npm umbrella PASS, fresh clone
 Rust·Python 적합성 PASS.
 
-다음: `main` 등록 PR #16 draft의 review·merge 뒤 `REL9-013` bare test prerelease.
+다음: PR #16 merge 완료, [release-surface PR #17](https://github.com/gvm1229/aigent-hive/pull/17)의
+CI·review·`main` merge 뒤 `REL9-013` bare test prerelease. `deployment: false` 적용 뒤
+GitHub Release 중심 소비자 노출과 protected environment approval 유지.
 `REL9-017–026` stable 경로는 별도 승인까지 보류.
