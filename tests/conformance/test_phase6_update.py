@@ -361,9 +361,17 @@ class Phase6StaticContracts(unittest.TestCase):
         )
         self.assertEqual(set(stable_workflow["jobs"]), {"publish"})
         self.assertEqual(set(test_workflow["jobs"]), {"publish"})
+        expected_publication_environment = {
+            "name": "release-publication",
+            "deployment": False,
+        }
+        self.assertEqual(
+            stable_workflow["jobs"]["publish"]["environment"],
+            expected_publication_environment,
+        )
         self.assertEqual(
             test_workflow["jobs"]["publish"]["environment"],
-            "release-publication",
+            expected_publication_environment,
         )
         unix_matrix = candidate_workflow["jobs"]["unix"]["strategy"]["matrix"][
             "include"
