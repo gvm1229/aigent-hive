@@ -27,7 +27,9 @@ permissions:
 jobs:
   publish:
     name: Verify and publish npm distribution
-    environment: release-publication
+    environment:
+      name: release-publication
+      deployment: false
     runs-on: ubuntu-24.04
     env:
       PRODUCT_VERSION: ${{ inputs.product_version }}
