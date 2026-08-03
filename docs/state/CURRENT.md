@@ -2,9 +2,9 @@
 
 - 기준 branch: `develop`
 - product version: `0.9.0`
-- plan revision: `1.98`
+- plan revision: `1.99`
 - 현재 milestone: `0.9.0-test` prerelease registration
-- 현재 작업: [release-surface PR #17](https://github.com/gvm1229/aigent-hive/pull/17) CI·review·`main` merge 대기
+- 현재 작업: [test publication run `30789141992`](https://github.com/gvm1229/aigent-hive/actions/runs/30789141992) protected approval 대기
 - 외부 중지 경계: `main` PR·review, protected publication approval, signing·TUF·npm credential,
   exact `1.0.0` 사용자 authority
 - Plan load: compact `docs/plans/PLAN.md` + `docs/plans/phases/07-public-qualification.md`
@@ -149,13 +149,14 @@
 - Test workflow registration: [#16](https://github.com/gvm1229/aigent-hive/pull/16) `main` merge 완료
 - Release surface: [#17](https://github.com/gvm1229/aigent-hive/pull/17) CI·review·`main` merge 대기,
   `release-publication` approval·secret 유지와 future Deployment record 생성 비활성화
-- Test dispatch: #17 merge 전 보류, 신규 Deployment record `0건`
+- Test dispatch: [run `30789141992`](https://github.com/gvm1229/aigent-hive/actions/runs/30789141992)
+  protected approval 대기, `latest`·tag·GitHub Release mutation `0건`
 - Protected environment: 기존 `release-publication` reviewer gate 재사용
 - Source baseline: `cee06e013cfbeca907c018b26c35a89bee0b703b`, `develop` 포함
 - `staging`: 현재 release flow에 불필요하여 생성 0건
 - Production gate: 5개 native target·6개 npm package, OS signing·notarization,
   external TUF, public install·`0.8.0 → 0.9.0` update
-- 다음 작업: PR #17 review·merge 뒤 `REL9-013` test publication
+- 다음 작업: run `30789141992` approval 뒤 `REL9-013` test publication 검증
 
 ## Prompt refine 자동 routing
 
