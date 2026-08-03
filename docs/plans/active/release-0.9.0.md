@@ -29,10 +29,10 @@
 - 기능 마감: [`v0.9.0-test-finalization.md`](v0.9.0-test-finalization.md)
 - Test candidate: run `30771098518`, exact `6761f0b`, 5 target·npm umbrella PASS
 - Test publication: existing protected `release-publication` environment 재사용
-- Test workflow: PR #16 `main` merge; run `30789141992` protected approval 대기
+- Test workflow: PR #16 `main` merge; run `30789141992` archive path 실패, mutation `0건`
+- Retry: run `30808850724` protected approval 대기, `./dist` local file spec
 - Release surface: [PR #17](https://github.com/gvm1229/aigent-hive/pull/17) review·merge, `deployment: false`
 - Apple·Windows·external TUF production signer 증거 미확인
-- Source baseline: `cee06e013cfbeca907c018b26c35a89bee0b703b`, `develop` 포함
 
 ## 현재 프로젝트 상태
 

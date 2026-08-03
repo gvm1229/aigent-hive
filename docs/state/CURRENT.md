@@ -2,9 +2,9 @@
 
 - 기준 branch: `develop`
 - product version: `0.9.0`
-- plan revision: `1.99`
+- plan revision: `2.00`
 - 현재 milestone: `0.9.0-test` prerelease registration
-- 현재 작업: [test publication run `30789141992`](https://github.com/gvm1229/aigent-hive/actions/runs/30789141992) protected approval 대기
+- 현재 작업: [test publication run `30808850724`](https://github.com/gvm1229/aigent-hive/actions/runs/30808850724) protected approval 대기
 - 외부 중지 경계: `main` PR·review, protected publication approval, signing·TUF·npm credential,
   exact `1.0.0` 사용자 authority
 - Plan load: compact `docs/plans/PLAN.md` + `docs/plans/phases/07-public-qualification.md`
@@ -24,7 +24,7 @@
   + `docs/plans/active/prompt-refine-auto-routing.md`
   + `docs/plans/active/v0.9.0-test-finalization.md`
   + `docs/plans/active/release-0.9.0.md`
-- Plan completion: canonical checklist `332/403` 완료, `71`개 미완료, `82.4%`
+- Plan completion: canonical checklist `333/403` 완료, `70`개 미완료, `82.6%`
 - Fresh clone: exact `6761f0b`, Rust format·strict Clippy·workspace all-feature, Python 677개 PASS·platform skip 5개
 - Test candidate: [run `30771098518`](https://github.com/gvm1229/aigent-hive/actions/runs/30771098518), exact `6761f0b`, 5 target·npm umbrella PASS
 - Latest local Windows: Rust workspace 459개 실행·통과. Python 적합성 670개 발견 중
@@ -150,13 +150,15 @@
 - Release surface: [#17](https://github.com/gvm1229/aigent-hive/pull/17) CI·review·`main` merge 대기,
   `release-publication` approval·secret 유지와 future Deployment record 생성 비활성화
 - Test dispatch: [run `30789141992`](https://github.com/gvm1229/aigent-hive/actions/runs/30789141992)
-  protected approval 대기, `latest`·tag·GitHub Release mutation `0건`
+  `dist/...` Git remote parse failure, 첫 npm 게시 전 중단, `latest`·tag·GitHub Release mutation `0건`
+- Test retry: [run `30808850724`](https://github.com/gvm1229/aigent-hive/actions/runs/30808850724)
+  `./dist/...` local file spec, protected approval 대기
 - Protected environment: 기존 `release-publication` reviewer gate 재사용
 - Source baseline: `cee06e013cfbeca907c018b26c35a89bee0b703b`, `develop` 포함
 - `staging`: 현재 release flow에 불필요하여 생성 0건
 - Production gate: 5개 native target·6개 npm package, OS signing·notarization,
   external TUF, public install·`0.8.0 → 0.9.0` update
-- 다음 작업: run `30789141992` approval 뒤 `REL9-013` test publication 검증
+- 다음 작업: run `30808850724` approval 뒤 `REL9-013` test publication 검증
 
 ## Prompt refine 자동 routing
 

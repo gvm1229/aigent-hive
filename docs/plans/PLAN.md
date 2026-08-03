@@ -1,6 +1,6 @@
 # Aigent Hive active plan index
 
-> Revision: 1.99
+> Revision: 2.00
 > 기준일: 2026-08-03
 > Product version: `0.9.0`
 > 현재 milestone: `0.9.0` 정식 릴리스 준비
@@ -121,6 +121,6 @@ recovery 검증.
 Rust·Python 적합성 PASS.
 
 다음: run [`30789141992`](https://github.com/gvm1229/aigent-hive/actions/runs/30789141992)의
-protected approval 뒤 `REL9-013` prerelease 검증. [release-surface PR #17](https://github.com/gvm1229/aigent-hive/pull/17)의
-`main` merge 뒤 stable workflow도 `deployment: false` 적용.
+local archive path 실패 수정 뒤 run [`30808850724`](https://github.com/gvm1229/aigent-hive/actions/runs/30808850724) protected approval·`REL9-013` prerelease 검증.
+[release-surface PR #17](https://github.com/gvm1229/aigent-hive/pull/17)의 `main` merge 뒤 stable workflow도 `deployment: false` 적용.
 `REL9-017–026` stable 경로는 별도 승인까지 보류.
