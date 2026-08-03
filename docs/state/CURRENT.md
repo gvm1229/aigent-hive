@@ -144,6 +144,8 @@
 - Parity: 시험·정식 기능·명령·기본값 동일, 시험 전용 기능 0건
 - 공통 문제 보고: 명시적 preview·collect·export, 자동 업로드·raw prompt 기본 수집 0건
 - Candidate: run `30771098518`, exact `6761f0b`, 5 target·npm umbrella·direct installer PASS
+- Host preflight: Codex `0.146.0` dry-run PASS; Antigravity `1.1.9` unowned
+  `aigent-hive` namespace conflict, host apply·update 보류
 - Test workflow registration: [#16](https://github.com/gvm1229/aigent-hive/pull/16) `main` merge 완료
 - Release surface: [#17](https://github.com/gvm1229/aigent-hive/pull/17) CI·review·`main` merge 대기,
   `release-publication` approval·secret 유지와 future Deployment record 생성 비활성화
