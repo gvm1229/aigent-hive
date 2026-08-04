@@ -1,6 +1,6 @@
 # Aigent Hive active plan index
 
-> Revision: 2.00
+> Revision: 2.01
 > 기준일: 2026-08-03
 > Product version: `0.9.0`
 > 현재 milestone: `0.9.0` 정식 릴리스 준비
@@ -14,7 +14,7 @@
 - Success: 아래 Active fragments의 evidence-backed completion. 시험판 핵심 gate는
   `MRA-*` model-routed subagent, `PRF-*` prompt approval, `TST9-*` Wiki backend·integration,
   `REL9-*` 독립 test·stable publication과 public acceptance
-- Stop boundary: protected review·environment approval, signing·TUF·npm credential,
+- Stop boundary: protected `main` review, signing·TUF·npm credential,
   exact `1.0.0` authority, source usage guard remaining threshold `30%`
 - Invariants: provider-neutral, backend별 canonical source 우선, SQLite 파생 상태,
   Source Wiki·run·role·plan·orchestration event Markdown/TOML 정본,
@@ -120,7 +120,6 @@ recovery 검증.
 `6761f0b` candidate run `30771098518` 5 target·npm umbrella PASS, fresh clone
 Rust·Python 적합성 PASS.
 
-다음: run [`30789141992`](https://github.com/gvm1229/aigent-hive/actions/runs/30789141992)의
-local archive path 실패 수정 뒤 run [`30808850724`](https://github.com/gvm1229/aigent-hive/actions/runs/30808850724) protected approval·`REL9-013` prerelease 검증.
-[release-surface PR #17](https://github.com/gvm1229/aigent-hive/pull/17)의 `main` merge 뒤 stable workflow도 `deployment: false` 적용.
+다음: `release-publication` reviewer 제거와 `NPM_TOKEN` bootstrap test retry 뒤 `REL9-013` prerelease 검증.
+[release-surface PR #17](https://github.com/gvm1229/aigent-hive/pull/17)의 `main` merge 뒤 stable workflow의 `deployment: false` 적용.
 `REL9-017–026` stable 경로는 별도 승인까지 보류.

@@ -28,9 +28,9 @@
 - Release notes: [`docs/releases/0.9.0.md`](../../releases/0.9.0.md)
 - 기능 마감: [`v0.9.0-test-finalization.md`](v0.9.0-test-finalization.md)
 - Test candidate: run `30771098518`, exact `6761f0b`, 5 target·npm umbrella PASS
-- Test publication: existing protected `release-publication` environment 재사용
-- Test workflow: PR #16 `main` merge; run `30789141992` archive path 실패, mutation `0건`
-- Retry: run `30808850724` protected approval 대기, `./dist` local file spec
+- Test publication: `release-publication` reviewer 제거, secret 보존
+- Tests: `30789141992` archive path·`30808850724` npm `404` 실패, mutation `0건`
+- Retry: `NPM_TOKEN` bootstrap, reviewer 승인 0건
 - Release surface: [PR #17](https://github.com/gvm1229/aigent-hive/pull/17) review·merge, `deployment: false`
 - Apple·Windows·external TUF production signer 증거 미확인
 
@@ -114,7 +114,7 @@ attestation·signing·TUF → `v0.9.0` normal Release·npm `latest` → public a
 
 ## 외부 권한 경계
 
-- `main` PR review·merge와 protected environment approval
+- `main` PR review·merge, `release-publication` reviewer 0명
 - Apple·Windows signing identity와 external TUF threshold signer
 - GitHub prerelease·normal Release 생성 권한과 npm Trusted Publisher environment
 - Test publication workflow의 default-branch 등록을 위한 최소 `main` PR·review

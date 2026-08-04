@@ -2,10 +2,10 @@
 
 - 기준 branch: `develop`
 - product version: `0.9.0`
-- plan revision: `2.00`
+- plan revision: `2.01`
 - 현재 milestone: `0.9.0-test` prerelease registration
-- 현재 작업: [test publication run `30808850724`](https://github.com/gvm1229/aigent-hive/actions/runs/30808850724) protected approval 대기
-- 외부 중지 경계: `main` PR·review, protected publication approval, signing·TUF·npm credential,
+- 현재 작업: `release-publication` reviewer 제거와 `NPM_TOKEN` bootstrap test retry
+- 외부 중지 경계: `main` PR·review, signing·TUF·npm credential,
   exact `1.0.0` 사용자 authority
 - Plan load: compact `docs/plans/PLAN.md` + `docs/plans/phases/07-public-qualification.md`
   + `docs/plans/active/plugin-project-lifecycle.md`
@@ -148,17 +148,17 @@
   `aigent-hive` namespace conflict, host apply·update 보류
 - Test workflow registration: [#16](https://github.com/gvm1229/aigent-hive/pull/16) `main` merge 완료
 - Release surface: [#17](https://github.com/gvm1229/aigent-hive/pull/17) CI·review·`main` merge 대기,
-  `release-publication` approval·secret 유지와 future Deployment record 생성 비활성화
+  `release-publication` secret 유지·reviewer 제거와 future Deployment record 생성 비활성화
 - Test dispatch: [run `30789141992`](https://github.com/gvm1229/aigent-hive/actions/runs/30789141992)
   `dist/...` Git remote parse failure, 첫 npm 게시 전 중단, `latest`·tag·GitHub Release mutation `0건`
 - Test retry: [run `30808850724`](https://github.com/gvm1229/aigent-hive/actions/runs/30808850724)
-  `./dist/...` local file spec, protected approval 대기
-- Protected environment: 기존 `release-publication` reviewer gate 재사용
+  `./dist/...` local file spec 뒤 first npm publish `404`, version mutation `0건`
+- Next retry: `release-publication` reviewer 제거, `NPM_TOKEN` bootstrap
 - Source baseline: `cee06e013cfbeca907c018b26c35a89bee0b703b`, `develop` 포함
 - `staging`: 현재 release flow에 불필요하여 생성 0건
 - Production gate: 5개 native target·6개 npm package, OS signing·notarization,
   external TUF, public install·`0.8.0 → 0.9.0` update
-- 다음 작업: run `30808850724` approval 뒤 `REL9-013` test publication 검증
+- 다음 작업: reviewer-free bootstrap retry 뒤 `REL9-013` test publication 검증
 
 ## Prompt refine 자동 routing
 
