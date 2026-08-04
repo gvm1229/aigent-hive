@@ -24,7 +24,7 @@
   + `docs/plans/active/prompt-refine-auto-routing.md`
   + `docs/plans/active/v0.9.0-test-finalization.md`
   + `docs/plans/active/release-0.9.0.md`
-- Plan completion: canonical checklist `333/403` 완료, `70`개 미완료, `82.6%`
+- Plan completion: canonical checklist `334/403` 완료, `69`개 미완료, `82.9%`
 - Fresh clone: exact `6761f0b`, Rust format·strict Clippy·workspace all-feature, Python 677개 PASS·platform skip 5개
 - Test candidate: [run `30771098518`](https://github.com/gvm1229/aigent-hive/actions/runs/30771098518), exact `6761f0b`, 5 target·npm umbrella PASS
 - Latest local Windows: Rust workspace 459개 실행·통과. Python 적합성 670개 발견 중
