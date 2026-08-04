@@ -3,9 +3,9 @@
 - 기준 branch: `develop`
 - product version: `0.9.0`
 - plan revision: `2.01`
-- 현재 milestone: `0.9.0-test` prerelease registration
-- 현재 작업: `release-publication` reviewer 제거와 `NPM_TOKEN` bootstrap test retry
-- 외부 중지 경계: `main` PR·review, signing·TUF·npm credential,
+- 현재 milestone: `0.9.0-test` public acceptance
+- 현재 작업: public test update·report 수용 관찰과 GitHub tag/Release 자동화 credential authority
+- 외부 중지 경계: `main` PR·review, signing·TUF·GitHub tag/Release 자동화 credential,
   exact `1.0.0` 사용자 authority
 - Plan load: compact `docs/plans/PLAN.md` + `docs/plans/phases/07-public-qualification.md`
   + `docs/plans/active/plugin-project-lifecycle.md`
@@ -132,7 +132,8 @@
 
 ## v0.9.0 시험·정식 릴리스
 
-- 상태: candidate·fresh clone qualification PASS, public test publication 미실행
+- 상태: candidate·fresh clone qualification PASS, public test prerelease·npm 게시 완료;
+  수용 관찰 진행
 - 사용자 authority: 분리된 시험·정식 `0.9.0` 계획과 원격 `develop` push 승인
 - 결정: [`ADR-0017`](../decisions/ADR-0017-0.9-full-release.md) accepted
 - Active fragment: [`release-0.9.0.md`](../plans/active/release-0.9.0.md)
@@ -148,17 +149,24 @@
   `aigent-hive` namespace conflict, host apply·update 보류
 - Test workflow registration: [#16](https://github.com/gvm1229/aigent-hive/pull/16) `main` merge 완료
 - Release surface: [#17](https://github.com/gvm1229/aigent-hive/pull/17) CI·review·`main` merge 대기,
-  `release-publication` secret 유지·reviewer 제거와 future Deployment record 생성 비활성화
+  `release-publication` secret 유지·reviewer 0명과 future Deployment record 생성 비활성화
 - Test dispatch: [run `30789141992`](https://github.com/gvm1229/aigent-hive/actions/runs/30789141992)
   `dist/...` Git remote parse failure, 첫 npm 게시 전 중단, `latest`·tag·GitHub Release mutation `0건`
 - Test retry: [run `30808850724`](https://github.com/gvm1229/aigent-hive/actions/runs/30808850724)
   `./dist/...` local file spec 뒤 first npm publish `404`, version mutation `0건`
-- Next retry: `release-publication` reviewer 제거, `NPM_TOKEN` bootstrap
+- Bootstrap retry: [run `30890841117`](https://github.com/gvm1229/aigent-hive/actions/runs/30890841117)는
+  여섯 npm `0.9.0-test` publish와 `test=0.9.0-test`, `latest=0.8.0` verification까지 PASS.
+  마지막 tag/Release는 GitHub App token의 workflow-tag 권한 거부로 실패
+- Actual prerelease: authenticated maintainer recovery로 `6761f0b` annotated
+  `v0.9.0-test`, [GitHub prerelease](https://github.com/gvm1229/aigent-hive/releases/tag/v0.9.0-test),
+  22 assets 생성 완료. npm public install `0.8.0 → 0.9.0-test`와 CLI 실행 확인
+- Future automation: reviewer 0명이라 publish job 승인 대기 0건. tag/Release까지 workflow만으로
+  끝내려면 contents·workflows write만 가진 repo-scoped GitHub App/fine-grained secret의 별도 authority 필요
 - Source baseline: `cee06e013cfbeca907c018b26c35a89bee0b703b`, `develop` 포함
 - `staging`: 현재 release flow에 불필요하여 생성 0건
 - Production gate: 5개 native target·6개 npm package, OS signing·notarization,
   external TUF, public install·`0.8.0 → 0.9.0` update
-- 다음 작업: reviewer-free bootstrap retry 뒤 `REL9-013` test publication 검증
+- 다음 작업: `REL9-014–016` public acceptance·retention 관찰; stable은 별도 main 후보까지 시작 금지
 
 ## Prompt refine 자동 routing
 

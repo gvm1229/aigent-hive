@@ -28,9 +28,12 @@
 - Release notes: [`docs/releases/0.9.0.md`](../../releases/0.9.0.md)
 - 기능 마감: [`v0.9.0-test-finalization.md`](v0.9.0-test-finalization.md)
 - Test candidate: run `30771098518`, exact `6761f0b`, 5 target·npm umbrella PASS
-- Test publication: `release-publication` reviewer 제거, secret 보존
+- Test publication: `release-publication` reviewer 0명, secret 보존, 승인 대기 0건
 - Tests: `30789141992` archive path·`30808850724` npm `404` 실패, mutation `0건`
-- Retry: `NPM_TOKEN` bootstrap, reviewer 승인 0건
+- Bootstrap: run `30890841117` 여섯 npm `0.9.0-test` 게시·`test` 전환, 모든
+  `latest=0.8.0` 확인 뒤 GitHub App workflow-tag 권한 거부로 최종 step 실패
+- Public prerelease: authenticated maintainer recovery로 candidate `6761f0b`의 annotated
+  `v0.9.0-test`, GitHub prerelease와 22 asset 게시 완료
 - Release surface: [PR #17](https://github.com/gvm1229/aigent-hive/pull/17) review·merge, `deployment: false`
 - Apple·Windows·external TUF production signer 증거 미확인
 
@@ -84,7 +87,7 @@ attestation·signing·TUF → `v0.9.0` normal Release·npm `latest` → public a
 ### C. 시험 배포와 수용
 
 - [x] [REL9-012] Remote `develop` exact SHA의 `0.9.0-test` candidate 5 target·6 npm·installer·byte identity PASS
-- [ ] [REL9-013] 기본 시험판의 GitHub prerelease·npm `0.9.0-test|test` 독립 게시와 기존 `latest` snapshot 불변 확인
+- [x] [REL9-013] 기본 시험판의 GitHub prerelease·npm `0.9.0-test|test` 독립 게시와 기존 `latest` snapshot 불변 확인
 - [ ] [REL9-014] Public test install·update·문제 보고 기능과 stable parity acceptance
 - [ ] [REL9-015] 수용 기간의 blocker triage·privacy·disk retention 검증, bare 시험판 재게시 금지 확인
 - [ ] [REL9-016] 추가 시험판 필요 시에만 `0.9.0-test.N|test` 생성·검증·이전 시험판 계보 보존
@@ -111,6 +114,22 @@ attestation·signing·TUF → `v0.9.0` normal Release·npm `latest` → public a
 5. `REL9-013–016` bare 시험판 독립 게시·수용·선택형 numbered 시험판
 6. `REL9-017–024` main 통합·stable candidate·signing·별도 정식 publication
 7. `REL9-025–026` 관찰·current-truth 완료 기록
+
+## 시험 게시 실행 증거 (2026-08-04)
+
+- GitHub environment `release-publication`: required reviewer `0`; 이후 시험·정식 publish
+  job은 승인 없이 시작한다. `deployment: false`이므로 새 GitHub Deployment record도 만들지 않는다.
+- Run [`30890841117`](https://github.com/gvm1229/aigent-hive/actions/runs/30890841117)는
+  npm Trusted Publisher bootstrap으로 여섯 package `0.9.0-test`를 게시하고, 각
+  `test=0.9.0-test`, `latest=0.8.0`을 확인했다.
+- 그 run의 마지막 GitHub tag/Release step은 Actions GitHub App token에 workflow 파일을
+  포함한 tag 생성 권한이 없어 실패했다. 기존 실패 이력은 삭제하거나 성공으로 바꾸지 않는다.
+- 인증된 maintainer recovery가 `6761f0b9b67a2674d091642a35f196402bd4c15a`의 annotated
+  `v0.9.0-test`와 [GitHub prerelease](https://github.com/gvm1229/aigent-hive/releases/tag/v0.9.0-test)
+  (22 assets)를 생성했다. stable `v0.9.0`·npm `0.9.0`·`latest` 변경은 0건이다.
+- 향후 workflow만으로 tag·Release까지 완료하려면 이 저장소로 제한한 GitHub App 또는
+  fine-grained token을 별도 secret으로 보관할 명시적 authority가 필요하다. contents와
+  workflows write만 부여하고, 현재 maintainer credential을 자동으로 복제하지 않는다.
 
 ## 외부 권한 경계
 

@@ -120,6 +120,10 @@ recovery 검증.
 `6761f0b` candidate run `30771098518` 5 target·npm umbrella PASS, fresh clone
 Rust·Python 적합성 PASS.
 
-다음: `release-publication` reviewer 제거와 `NPM_TOKEN` bootstrap test retry 뒤 `REL9-013` prerelease 검증.
+현재: `release-publication` reviewer 0명. run `30890841117`은 여섯 npm `0.9.0-test`를
+게시하고 `test=0.9.0-test`, `latest=0.8.0`을 확인했다. GitHub App token의 workflow-tag
+권한 거부로 마지막 tag/Release step은 실패했으나, authenticated maintainer recovery가 exact
+candidate `v0.9.0-test` prerelease와 22 assets를 게시했다.
 [release-surface PR #17](https://github.com/gvm1229/aigent-hive/pull/17)의 `main` merge 뒤 stable workflow의 `deployment: false` 적용.
-`REL9-017–026` stable 경로는 별도 승인까지 보류.
+다음은 `REL9-014–016` public test acceptance·retention 관찰이며, `REL9-017–026` stable 경로는
+별도 main 후보·authority까지 보류한다.
