@@ -10,7 +10,7 @@ tags: [distribution, release, signing, v0-9]
 aliases: ["0.9.0 release plan", "full release"]
 sources:
   - "repo:docs/decisions/ADR-0017-0.9-full-release.md#sha256:9172a8fa815052211dac6f561775f47852f4fe86bd629cb02004bbf5e0e30acb"
-  - "repo:docs/plans/active/release-0.9.0.md#sha256:48d88db3020fbad2f4e5fd3aa76ed0e3b663be58f1dafd66229f446e754831f0"
+  - "repo:docs/plans/active/release-0.9.0.md#sha256:06f4243bc56e0a75525bae3c838bf8599e26d9e143fc8f75ff332134f42dd468"
 links: [host-external-integrations, release-verification, test-distribution, version-policy]
 reviewed_revision: "git:0a2fb65ae90b93fb111fd75acff42e917692b69e"
 status: active
