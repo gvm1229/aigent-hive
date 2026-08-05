@@ -388,7 +388,7 @@ class Phase6StaticContracts(unittest.TestCase):
             self.assertEqual(
                 app_token_step["with"],
                 {
-                    "client-id": "${{ secrets.RELEASE_APP_CLIENT_ID }}",
+                    "client-id": "${{ vars.RELEASE_APP_CLIENT_ID }}",
                     "private-key": "${{ secrets.RELEASE_APP_PRIVATE_KEY }}",
                     "owner": "${{ github.repository_owner }}",
                     "repositories": "aigent-hive",
