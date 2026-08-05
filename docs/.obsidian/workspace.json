@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "releases/0.9.0.md",
+                "file": "releases/0.8.0.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "0.9.0"
+              "title": "0.8.0"
             }
           }
         ]
@@ -94,7 +94,6 @@
             "state": {
               "type": "backlink",
               "state": {
-                "file": "releases/0.9.0.md",
                 "collapseAll": false,
                 "extraContext": false,
                 "sortOrder": "alphabetical",
@@ -104,7 +103,7 @@
                 "unlinkedCollapsed": true
               },
               "icon": "links-coming-in",
-              "title": "0.9.0 의 백링크"
+              "title": "백링크"
             }
           },
           {
@@ -113,12 +112,11 @@
             "state": {
               "type": "outgoing-link",
               "state": {
-                "file": "releases/0.9.0.md",
                 "linksCollapsed": false,
                 "unlinkedCollapsed": true
               },
               "icon": "links-going-out",
-              "title": "0.9.0 의 나가는 링크"
+              "title": "나가는 링크"
             }
           },
           {
@@ -185,16 +183,31 @@
   },
   "active": "17cc44d03d3b91aa",
   "lastOpenFiles": [
-    "facts/ko/model-routed-custom-subagents.md",
-    "facts/en/model-routed-custom-subagents.md",
-    "plans/active/model-routed-custom-subagents.md",
-    "releases/0.8.0.md",
+    "research/v0.9-omx-omc-capability-inventory.md",
+    "research/knowledge-portability-ingestion-retrieval.md",
+    "research/discord-notion-host-integrations.md",
     "releases/0.9.0.md",
-    "readme/README.ko.md",
-    "00-home.md",
-    "01-index.md",
-    "guides/branching-rules.md",
-    "guides/development.md",
-    "guides/commit-rules.md"
+    "plans/contracts/07-native-orchestration-workflows.md",
+    "plans/contracts/06-native-orchestration-state.md",
+    "plans/active/v0.9.0-test-finalization.md",
+    "plans/active/v0.9.0-loop-wiki-skills.md",
+    "plans/active/v0.9.0-knowledge-portability-scan.md",
+    "plans/active/v0.9.0-global-knowledge-rag.md",
+    "plans/active/release-0.9.0.md",
+    "plans/active/prompt-refine-auto-routing.md",
+    "plans/active/native-iterative-execution.md",
+    "plans/active/model-routed-custom-subagents.md",
+    "facts/ko/v0-9-skill-suite-plan.md",
+    "facts/ko/v0-9-full-release.md",
+    "facts/ko/simple-explanation-default.md",
+    "facts/ko/prompt-refine-routing.md",
+    "facts/ko/plan-persistence.md",
+    "facts/ko/model-routed-custom-subagents.md",
+    "facts/ko/knowledge-portability-scan.md",
+    "facts/ko/host-external-integrations.md",
+    "facts/ko/global-knowledge-rag.md",
+    "facts/ko/dev-check-platform-path.md",
+    "facts/en/v0-9-skill-suite-plan.md",
+    "facts/en/v0-9-full-release.md"
   ]
 }
