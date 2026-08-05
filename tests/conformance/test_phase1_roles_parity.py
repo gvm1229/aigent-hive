@@ -38,6 +38,34 @@ def normalized_copier_tree(
 
 
 class Phase1CopierParity(Phase1CliTestCase):
+    def copier_template_source(self) -> Path:
+        template = self.work_root / "copier-template"
+        if not template.exists():
+            def ignore_source_only_paths(
+                directory: str,
+                names: list[str],
+            ) -> set[str]:
+                directory_path = Path(directory)
+                ignored = {name for name in names if name == "node_modules"}
+                if directory_path == REPOSITORY_ROOT:
+                    ignored.update({".claude", ".git", "target"})
+                elif directory_path == REPOSITORY_ROOT / ".agents":
+                    ignored.add("work")
+                elif directory_path == REPOSITORY_ROOT / "harness/template/.claude/skills":
+                    user_only_directory = directory_path / "setup-hive"
+                    if user_only_directory.is_dir() and not any(
+                        user_only_directory.iterdir()
+                    ):
+                        ignored.add("setup-hive")
+                return ignored
+
+            shutil.copytree(
+                REPOSITORY_ROOT,
+                template,
+                ignore=ignore_source_only_paths,
+            )
+        return template
+
     def assert_copier_trees_equal(
         self,
         rust_target: Path,
@@ -196,7 +224,7 @@ class Phase1CopierParity(Phase1CliTestCase):
                 "--defaults",
                 "--data-file",
                 str(FIXTURE_ROOT / "copier-parity-data.yml"),
-                str(REPOSITORY_ROOT),
+                str(self.copier_template_source()),
                 str(copier_target),
             ],
             cwd=REPOSITORY_ROOT,
@@ -234,7 +262,7 @@ class Phase1CopierParity(Phase1CliTestCase):
                 "--defaults",
                 "--data-file",
                 str(FIXTURE_ROOT / "copier-hooks-parity-data.yml"),
-                str(REPOSITORY_ROOT),
+                str(self.copier_template_source()),
                 str(copier_target),
             ],
             cwd=REPOSITORY_ROOT,
@@ -306,7 +334,7 @@ class Phase1CopierParity(Phase1CliTestCase):
                         "--defaults",
                         "--data-file",
                         str(data_path),
-                        str(REPOSITORY_ROOT),
+                        str(self.copier_template_source()),
                         str(target),
                     ],
                     cwd=REPOSITORY_ROOT,
@@ -374,7 +402,7 @@ class Phase1CopierParity(Phase1CliTestCase):
                         "--defaults",
                         "--data-file",
                         str(copier_data_path),
-                        str(REPOSITORY_ROOT),
+                        str(self.copier_template_source()),
                         str(copier_target),
                     ],
                     cwd=REPOSITORY_ROOT,
