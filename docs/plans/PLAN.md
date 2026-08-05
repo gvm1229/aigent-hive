@@ -1,7 +1,7 @@
 # Aigent Hive active plan index
 
-> Revision: 2.01
-> 기준일: 2026-08-03
+> Revision: 2.02
+> 기준일: 2026-08-06
 > Product version: `0.9.0`
 > 현재 milestone: `0.9.0` 정식 릴리스 준비
 > Entrypoint: `docs/plans/PLAN.md`
@@ -120,10 +120,9 @@ recovery 검증.
 `6761f0b` candidate run `30771098518` 5 target·npm umbrella PASS, fresh clone
 Rust·Python 적합성 PASS.
 
-현재: `release-publication` reviewer 0명. run `30890841117`은 여섯 npm `0.9.0-test`를
-게시하고 `test=0.9.0-test`, `latest=0.8.0`을 확인했다. GitHub App token의 workflow-tag
-권한 거부로 마지막 tag/Release step은 실패했으나, authenticated maintainer recovery가 exact
-candidate `v0.9.0-test` prerelease와 22 assets를 게시했다.
+현재: reviewer 0명. `0.9.0-test` 여섯 npm package·tag·prerelease
+게시 완료, `latest=0.8.0` 유지. App credentials 등록 뒤 workflow token 전환과
+`0.9.0-test.1` 자동 publication 예정.
 [release-surface PR #17](https://github.com/gvm1229/aigent-hive/pull/17)의 `main` merge 뒤 stable workflow의 `deployment: false` 적용.
 다음은 `REL9-014–016` public test acceptance·retention 관찰이며, `REL9-017–026` stable 경로는
 별도 main 후보·authority까지 보류한다.

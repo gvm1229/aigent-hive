@@ -2,10 +2,10 @@
 
 - 기준 branch: `develop`
 - product version: `0.9.0`
-- plan revision: `2.01`
+- plan revision: `2.02`
 - 현재 milestone: `0.9.0-test` public acceptance
-- 현재 작업: public test update·report 수용 관찰과 GitHub tag/Release 자동화 credential authority
-- 외부 중지 경계: `main` PR·review, signing·TUF·GitHub tag/Release 자동화 credential,
+- 현재 작업: GitHub App token workflow 전환과 `0.9.0-test.1` 자동 시험 게시
+- 외부 중지 경계: `main` PR·review, signing·TUF,
   exact `1.0.0` 사용자 authority
 - Plan load: compact `docs/plans/PLAN.md` + `docs/plans/phases/07-public-qualification.md`
   + `docs/plans/active/plugin-project-lifecycle.md`
@@ -160,8 +160,8 @@
 - Actual prerelease: authenticated maintainer recovery로 `6761f0b` annotated
   `v0.9.0-test`, [GitHub prerelease](https://github.com/gvm1229/aigent-hive/releases/tag/v0.9.0-test),
   22 assets 생성 완료. npm public install `0.8.0 → 0.9.0-test`와 CLI 실행 확인
-- Future automation: reviewer 0명이라 publish job 승인 대기 0건. tag/Release까지 workflow만으로
-  끝내려면 contents·workflows write만 가진 repo-scoped GitHub App/fine-grained secret의 별도 authority 필요
+- App automation: reviewer 0명. `release-publication`에 repo-scoped App client ID·private key 등록,
+  value 조회·기록 없이 `contents|workflows: write` installation token workflow 전환 예정
 - Source baseline: `cee06e013cfbeca907c018b26c35a89bee0b703b`, `develop` 포함
 - `staging`: 현재 release flow에 불필요하여 생성 0건
 - Production gate: 5개 native target·6개 npm package, OS signing·notarization,

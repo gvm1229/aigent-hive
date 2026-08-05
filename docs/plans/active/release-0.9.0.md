@@ -20,26 +20,11 @@
 
 ## 현재 기준선
 
-- Source version·release date: `0.9.0`, `2026-08-01`
-- Fresh clone `6761f0b`: Rust format·strict Clippy·workspace all-target·all-feature,
-  Python 677개 PASS·platform skip 5개
-- RAG 50,000 chunk와 `.hivekb` 100 collection·50,000 chunk 성능 gate 통과
-- `0.8.0` frozen project·user base와 synthetic release fixture 무변경
-- Release notes: [`docs/releases/0.9.0.md`](../../releases/0.9.0.md)
-- 기능 마감: [`v0.9.0-test-finalization.md`](v0.9.0-test-finalization.md)
-- Test candidate: run `30771098518`, exact `6761f0b`, 5 target·npm umbrella PASS
-- Test publication: `release-publication` reviewer 0명, secret 보존, 승인 대기 0건
-- Tests: `30789141992` archive path·`30808850724` npm `404` 실패, mutation `0건`
-- Bootstrap: run `30890841117` 여섯 npm `0.9.0-test` 게시·`test` 전환, 모든
-  `latest=0.8.0` 확인 뒤 GitHub App workflow-tag 권한 거부로 최종 step 실패
-- Public prerelease: authenticated maintainer recovery로 candidate `6761f0b`의 annotated
-  `v0.9.0-test`, GitHub prerelease와 22 asset 게시 완료
-- Release surface: [PR #17](https://github.com/gvm1229/aigent-hive/pull/17) review·merge, `deployment: false`
-- Apple·Windows·external TUF production signer 증거 미확인
-
-## 현재 프로젝트 상태
-
-정확한 진행·검증·외부 권한 상태는 [`CURRENT.md`](../../state/CURRENT.md)에서 관리.
+- Product: `0.9.0`; notes: [`0.9.0.md`](../../releases/0.9.0.md)
+- Candidate `30771098518`, `6761f0b`: 5 targets·npm umbrella·fresh clone PASS
+- `0.9.0-test`: six npm package·annotated tag·prerelease 22 assets; `latest=0.8.0` 유지
+- [PR #17](https://github.com/gvm1229/aigent-hive/pull/17): `deployment: false` main 반영 대기
+- 상세 run·failure·external signer evidence: [`CURRENT.md`](../../state/CURRENT.md)
 
 ## Version·channel 계약
 
@@ -115,27 +100,21 @@ attestation·signing·TUF → `v0.9.0` normal Release·npm `latest` → public a
 6. `REL9-017–024` main 통합·stable candidate·signing·별도 정식 publication
 7. `REL9-025–026` 관찰·current-truth 완료 기록
 
-## 시험 게시 실행 증거 (2026-08-04)
+## GitHub App finalization (2026-08-06)
 
-- GitHub environment `release-publication`: required reviewer `0`; 이후 시험·정식 publish
-  job은 승인 없이 시작한다. `deployment: false`이므로 새 GitHub Deployment record도 만들지 않는다.
-- Run [`30890841117`](https://github.com/gvm1229/aigent-hive/actions/runs/30890841117)는
-  npm Trusted Publisher bootstrap으로 여섯 package `0.9.0-test`를 게시하고, 각
-  `test=0.9.0-test`, `latest=0.8.0`을 확인했다.
-- 그 run의 마지막 GitHub tag/Release step은 Actions GitHub App token에 workflow 파일을
-  포함한 tag 생성 권한이 없어 실패했다. 기존 실패 이력은 삭제하거나 성공으로 바꾸지 않는다.
-- 인증된 maintainer recovery가 `6761f0b9b67a2674d091642a35f196402bd4c15a`의 annotated
-  `v0.9.0-test`와 [GitHub prerelease](https://github.com/gvm1229/aigent-hive/releases/tag/v0.9.0-test)
-  (22 assets)를 생성했다. stable `v0.9.0`·npm `0.9.0`·`latest` 변경은 0건이다.
-- 향후 workflow만으로 tag·Release까지 완료하려면 이 저장소로 제한한 GitHub App 또는
-  fine-grained token을 별도 secret으로 보관할 명시적 authority가 필요하다. contents와
-  workflows write만 부여하고, 현재 maintainer credential을 자동으로 복제하지 않는다.
+- `release-publication` reviewer `0`, `deployment: false`; `0.9.0-test`는 npm 여섯 package,
+  annotated tag, prerelease 22 assets 게시 완료와 `latest=0.8.0` 유지
+- Environment의 App client ID·private key는 값 확인·기록 없이 workflow 전용 사용
+- 두 publish workflow: App installation token의 `contents|workflows: write`, credential-free
+  checkout, 최종 tag·Release에만 token 주입, missing/permission failure는 npm 게시 전 중단
+- 첫 end-to-end automation: immutable bare test 대신 `0.9.0-test.1|test`; stable 경로 시작 0건
+- Run·digest·failure history의 current truth: [`CURRENT.md`](../../state/CURRENT.md)
 
 ## 외부 권한 경계
 
 - `main` PR review·merge, `release-publication` reviewer 0명
 - Apple·Windows signing identity와 external TUF threshold signer
-- GitHub prerelease·normal Release 생성 권한과 npm Trusted Publisher environment
+- GitHub App installation의 `contents|workflows: write`와 npm Trusted Publisher environment
 - Test publication workflow의 default-branch 등록을 위한 최소 `main` PR·review
 - Credential·private key·2FA material의 저장소·agent 노출 금지
 - 각 외부 mutation 직전 exact SHA·artifact digest·대상 preview 재확인
