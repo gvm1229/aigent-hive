@@ -45,8 +45,8 @@
 | Model-routed custom subagent | 0 | 32 | 0% |
 | Prompt refine 자동 routing | 12 | 0 | 100% |
 | v0.9 test 기능 마감 | 18 | 0 | 100% |
-| v0.9 full release | 11 | 15 | 42.3% |
-| **Canonical total** | **333** | **70** | **82.6%** |
+| v0.9 full release | 12 | 14 | 46.2% |
+| **Canonical total** | **334** | **69** | **82.9%** |
 
 External production boundary 항목도 미완료 합계에 포함. Protected authority 없이 완료 처리 금지.
 
