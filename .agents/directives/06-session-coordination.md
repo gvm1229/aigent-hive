@@ -32,6 +32,10 @@ Required fields:
 
 - path/from/repository/root
 
+## Temporary Worktrees
+
+- /absolute/path | branch-or-ref | purpose | removal boundary | status: active | removed | retained (reason)
+
 ## Notes / Blockers
 
 - <optional note>
@@ -61,5 +65,8 @@ Required fields:
    commit the foundation before dependent concerns.
 5. Do not use concurrent editing, a shared milestone, or a final full-suite gate as a reason to
    accumulate independently revertible work in one uncommitted worktree.
+6. Before the final response, resolve every active-session `Temporary Worktrees` entry. Verify
+   owned cleanup with `git worktree list --porcelain`; record an exact retained path and reason
+   when cleanup cannot safely proceed.
 
 This is advisory coordination. Serialize overlapping edits under the default two-branch policy. Use another branch or worktree only when the user explicitly authorizes that exception.
