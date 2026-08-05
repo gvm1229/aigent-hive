@@ -373,6 +373,56 @@ class Phase6StaticContracts(unittest.TestCase):
             test_workflow["jobs"]["publish"]["environment"],
             expected_publication_environment,
         )
+        for workflow in (stable_workflow, test_workflow):
+            steps = workflow["jobs"]["publish"]["steps"]
+            app_token_index, app_token_step = next(
+                (index, step)
+                for index, step in enumerate(steps)
+                if step.get("id") == "release-token"
+            )
+            self.assertEqual(
+                app_token_step["uses"],
+                "actions/create-github-app-token@"
+                "bcd2ba49218906704ab6c1aa796996da409d3eb1",
+            )
+            self.assertEqual(
+                app_token_step["with"],
+                {
+                    "client-id": "${{ secrets.RELEASE_APP_CLIENT_ID }}",
+                    "private-key": "${{ secrets.RELEASE_APP_PRIVATE_KEY }}",
+                    "owner": "${{ github.repository_owner }}",
+                    "repositories": "aigent-hive",
+                    "permission-contents": "write",
+                    "permission-workflows": "write",
+                },
+            )
+            checkout_step = next(
+                step
+                for step in steps
+                if step.get("uses", "").startswith("actions/checkout@")
+            )
+            self.assertFalse(checkout_step["with"]["persist-credentials"])
+            first_publish_index = next(
+                index
+                for index, step in enumerate(steps)
+                if step.get("name", "").startswith("Publish npm package family")
+            )
+            self.assertLess(app_token_index, first_publish_index)
+            release_step = next(
+                step
+                for step in steps
+                if step.get("name", "").startswith("Create annotated")
+            )
+            self.assertEqual(
+                release_step["env"]["GH_TOKEN"],
+                "${{ steps.release-token.outputs.token }}",
+            )
+            self.assertEqual(
+                release_step["env"]["RELEASE_GIT_TOKEN"],
+                "${{ steps.release-token.outputs.token }}",
+            )
+            self.assertIn('test -n "$RELEASE_GIT_TOKEN"', release_step["run"])
+            self.assertIn("http.https://github.com/.extraheader", release_step["run"])
         unix_matrix = candidate_workflow["jobs"]["unix"]["strategy"]["matrix"][
             "include"
         ]

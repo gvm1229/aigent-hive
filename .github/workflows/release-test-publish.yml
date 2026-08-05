@@ -71,10 +71,21 @@ jobs:
           test "$(jq -r .head_branch <<<"$metadata")" = "develop"
           test "$(jq -r .conclusion <<<"$metadata")" = "success"
           echo "sha=$(jq -r .head_sha <<<"$metadata")" >>"$GITHUB_OUTPUT"
+      - name: Create release GitHub App token
+        id: release-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          client-id: ${{ secrets.RELEASE_APP_CLIENT_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: aigent-hive
+          permission-contents: write
+          permission-workflows: write
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ steps.candidate.outputs.sha }}
           fetch-depth: 0
+          persist-credentials: false
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: "24"
@@ -261,14 +272,19 @@ jobs:
           done <"$RUNNER_TEMP/latest-before.tsv"
       - name: Create annotated prerelease tag and GitHub prerelease
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ steps.release-token.outputs.token }}
+          RELEASE_GIT_TOKEN: ${{ steps.release-token.outputs.token }}
           CANDIDATE_SHA: ${{ steps.candidate.outputs.sha }}
         run: |
+          test -n "$RELEASE_GIT_TOKEN"
           tag="v$PACKAGE_VERSION"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git tag -a "$tag" "$CANDIDATE_SHA" -m "Aigent Hive $PACKAGE_VERSION test prerelease"
-          git push origin "refs/tags/$tag"
+          auth_header="$(printf 'x-access-token:%s' "$RELEASE_GIT_TOKEN" | base64 -w 0)"
+          git -c http.https://github.com/.extraheader="AUTHORIZATION: basic $auth_header" \
+            push origin "refs/tags/$tag"
+          unset auth_header
           gh release create "$tag" \
             --target "$CANDIDATE_SHA" \
             --prerelease \
