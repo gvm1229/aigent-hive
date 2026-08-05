@@ -2,9 +2,9 @@
 
 - 기준 branch: `develop`
 - product version: `0.9.0`
-- plan revision: `2.02`
+- plan revision: `2.03`
 - 현재 milestone: `0.9.0-test` public acceptance
-- 현재 작업: GitHub App token workflow 전환과 `0.9.0-test.1` 자동 시험 게시
+- 현재 작업: `REL9-014–015` public test acceptance·retention 관찰
 - 외부 중지 경계: `main` PR·review, signing·TUF,
   exact `1.0.0` 사용자 authority
 - Plan load: compact `docs/plans/PLAN.md` + `docs/plans/phases/07-public-qualification.md`
@@ -128,7 +128,7 @@
 - 제외: Webhook·Notion AI 이중 검색·양방향 Markdown sync
 - Discord: usage guard 중단의 optional outbound, Claude inbound official plugin 위임,
   Codex inbound official capability 전 `unsupported`
-- 다음 작업: `REL9-013` protected test publication
+- 다음 작업: `REL9-014–015` public test acceptance·retention 관찰
 
 ## v0.9.0 시험·정식 릴리스
 
@@ -160,13 +160,15 @@
 - Actual prerelease: authenticated maintainer recovery로 `6761f0b` annotated
   `v0.9.0-test`, [GitHub prerelease](https://github.com/gvm1229/aigent-hive/releases/tag/v0.9.0-test),
   22 assets 생성 완료. npm public install `0.8.0 → 0.9.0-test`와 CLI 실행 확인
-- App automation: reviewer 0명. `release-publication`에 repo-scoped App client ID·private key 등록,
-  value 조회·기록 없이 `contents|workflows: write` installation token workflow 전환 예정
-- Source baseline: `cee06e013cfbeca907c018b26c35a89bee0b703b`, `develop` 포함
+- App automation: reviewer 0명. client ID Variable·private key Secret, `contents|workflows: write`
+  installation token, credential-free checkout 적용. [candidate `31042797141`](https://github.com/gvm1229/aigent-hive/actions/runs/31042797141)
+  `dd0224a`와 [publication `31043631056`](https://github.com/gvm1229/aigent-hive/actions/runs/31043631056) PASS.
+  `0.9.0-test.1` 여섯 npm package `test`, `latest=0.8.0`, annotated tag·22-asset prerelease 확인
+- Source baseline: `dd0224a9d358803b38e38f279ba30687a5d71dbe`, `develop` 포함
 - `staging`: 현재 release flow에 불필요하여 생성 0건
 - Production gate: 5개 native target·6개 npm package, OS signing·notarization,
   external TUF, public install·`0.8.0 → 0.9.0` update
-- 다음 작업: `REL9-014–016` public acceptance·retention 관찰; stable은 별도 main 후보까지 시작 금지
+- 다음 작업: `REL9-014–015` public acceptance·retention 관찰; stable은 별도 main 후보까지 시작 금지
 
 ## Prompt refine 자동 routing
 

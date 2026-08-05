@@ -75,7 +75,7 @@ attestation·signing·TUF → `v0.9.0` normal Release·npm `latest` → public a
 - [x] [REL9-013] 기본 시험판의 GitHub prerelease·npm `0.9.0-test|test` 독립 게시와 기존 `latest` snapshot 불변 확인
 - [ ] [REL9-014] Public test install·update·문제 보고 기능과 stable parity acceptance
 - [ ] [REL9-015] 수용 기간의 blocker triage·privacy·disk retention 검증, bare 시험판 재게시 금지 확인
-- [ ] [REL9-016] 추가 시험판 필요 시에만 `0.9.0-test.N|test` 생성·검증·이전 시험판 계보 보존
+- [x] [REL9-016] 추가 시험판 필요 시에만 `0.9.0-test.N|test` 생성·검증·이전 시험판 계보 보존
 - [ ] [REL9-017] 시험 수용 뒤 `develop → main` PR required CI·review·non-force merge와 exact main SHA 고정
 
 ### D. 정식 candidate·publication·public acceptance
@@ -102,13 +102,13 @@ attestation·signing·TUF → `v0.9.0` normal Release·npm `latest` → public a
 
 ## GitHub App finalization (2026-08-06)
 
-- `release-publication` reviewer `0`, `deployment: false`; `0.9.0-test`는 npm 여섯 package,
-  annotated tag, prerelease 22 assets 게시 완료와 `latest=0.8.0` 유지
-- Environment의 App client ID·private key는 값 확인·기록 없이 workflow 전용 사용
-- 두 publish workflow: App installation token의 `contents|workflows: write`, credential-free
-  checkout, 최종 tag·Release에만 token 주입, missing/permission failure는 npm 게시 전 중단
-- 첫 end-to-end automation: immutable bare test 대신 `0.9.0-test.1|test`; stable 경로 시작 0건
-- Run·digest·failure history의 current truth: [`CURRENT.md`](../../state/CURRENT.md)
+- `release-publication` reviewer `0`; `0.9.0-test`의 여섯 npm package·tag·22-asset prerelease,
+  `latest=0.8.0` 유지
+- App client ID Variable·private key Secret, `contents|workflows: write` installation token,
+  credential-free checkout·최종 tag/Release token 주입
+- `0.9.0-test.1|test`: candidate `31042797141`·`dd0224a`, publication `31043631056` PASS,
+  여섯 package `test=0.9.0-test.1`·`latest=0.8.0`, prerelease 22 assets; stable 시작 0건
+- Run·digest·failure history: [`CURRENT.md`](../../state/CURRENT.md)
 
 ## 외부 권한 경계
 
