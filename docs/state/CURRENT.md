@@ -2,9 +2,9 @@
 
 - 기준 branch: `develop`
 - product version: `0.9.0`
-- plan revision: `2.14`
+- plan revision: `2.15`
 - 현재 milestone: `0.9.0-test` public acceptance·retention
-- 현재 작업: `KST-002–006` 한국어 global setup 용어·비배타 사용자 profile·project workflow 분리 대기
+- 현재 작업: `KST-002–006`, `GSS-004–008` global setup 용어·profile·Skill selection 복구 대기
 - 외부 중지 경계: `main` PR·review, signing·TUF,
   exact `1.0.0` 사용자 authority
 - Plan load: compact `docs/plans/PLAN.md` + `docs/plans/phases/07-public-qualification.md`
@@ -27,11 +27,14 @@
   + `docs/plans/active/test-release-setup-routing.md`
   + `docs/plans/active/bootstrap-global-setup-recovery.md`
   + `docs/plans/active/korean-setup-terminology.md`
-- Plan completion: canonical checklist `350/423` 완료, `73`개 미완료, `82.7%`
+  + `docs/plans/active/global-skill-selection.md`
+- Plan completion: canonical checklist `353/431` 완료, `78`개 미완료, `81.9%`
 - Korean setup 용어: `setup-hive`의 한국어 용어 규칙 부재. `Skill → 기술` 즉석 번역 확인,
   `recommended suite`·`profile|persona|host` 표기 일관성 조사 완료. Global profile: 비배타 사용자
   맥락 전용, project workflow·작업 우선순위 결정 금지. 다음 구현: schema migration·exact Korean
   sample·projection parity·static regression·독립 numbered test release
+- Global Skill selection: profile-bound recommended suite 제거 예정. 새 setup 기본 all built-in,
+  변경 시 per-Skill toggle; existing recommended closure는 preview·명시 approval 전 유지
 - Developer binary: `scripts/dev-install.sh`의 sandbox·global·CAS rollback과 `product-dev`
   version identity, isolated global activation·rollback 회귀 검증 완료
 - Legacy setup recovery: schema-1 `0.7.0`의 19개 legacy projection은 saved preference·path

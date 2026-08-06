@@ -5,14 +5,14 @@ topic_slug: global-onboarding
 language: ko
 counterpart: ../en/global-onboarding.md
 title: "Global onboarding"
-summary: "선택형 bootstrap의 global/project scope 보존, 한국어 exact term·비배타 사용자 맥락."
+summary: "선택형 bootstrap의 scope 보존, 한국어 exact term·사용자 맥락·all built-in 기본 활성화."
 tags: [bootstrap, onboarding, setup]
 aliases: ["User setup"]
 sources:
   - "repo:README.md#sha256:072bfc2c939e2a2e2e26f897b4cca9a876bd9d4be28adc8db14bafe7e5bb941b"
   - "repo:crates/hive-cli/src/user_install.rs#sha256:35f3cace4b6297a298b8b59db208b3d8ecfd82331758fb6bd34dd1ec03aa8ec7"
   - "repo:crates/hive-cli/src/user_setup.rs#sha256:12fbe0128457b6c9d0a4f32744eb3eb678c715129bb04bfc64d6f8cef5c073bc"
-  - "repo:docs/decisions/ADR-0012-global-onboarding-shared-index.md#sha256:a14989780a0783c98c953418c01f242eca5fe97254d6fbc01508f6d4ca153ef3"
+  - "repo:docs/decisions/ADR-0012-global-onboarding-shared-index.md#sha256:1b205aeec354bb90bc5921111227c6a00cee586ac3bd23a37f8f0aeb0c004237"
 links: [project-onboarding, test-distribution]
 reviewed_revision: "git:d211300dea66781251306e376e43bf9e798504ef"
 status: active
@@ -27,3 +27,6 @@ project inspection 없는 global setup 시작.
 `Skill`·`Wiki` exact 유지와 canonical regression sample 관리.
 
 Global profile: 비배타 사용자 맥락 전용. Project workflow·기술 선택·작업 우선순위: project scope 전용.
+
+Global setup: 모든 built-in Skill 기본 활성화. Profile-bound recommended suite 제거, Skill별 toggle.
+Existing recorded closure: approved preview 전 유지.

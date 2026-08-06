@@ -407,6 +407,8 @@ class Phase3SkillSourceContract(unittest.TestCase):
             "active/documentation-style.md",
             "active/bootstrap-global-setup-recovery.md",
             "active/docs-wiki-migration.md",
+            "active/global-skill-selection.md",
+            "active/korean-setup-terminology.md",
             "active/model-routed-custom-subagents.md",
             "active/native-usage-sensor.md",
             "active/native-iterative-execution.md",
@@ -438,6 +440,8 @@ class Phase3SkillSourceContract(unittest.TestCase):
             plan_root / "active/documentation-style.md",
             plan_root / "active/bootstrap-global-setup-recovery.md",
             plan_root / "active/docs-wiki-migration.md",
+            plan_root / "active/global-skill-selection.md",
+            plan_root / "active/korean-setup-terminology.md",
             plan_root / "active/model-routed-custom-subagents.md",
             plan_root / "active/native-usage-sensor.md",
             plan_root / "active/native-iterative-execution.md",
@@ -462,6 +466,8 @@ class Phase3SkillSourceContract(unittest.TestCase):
                 "active/documentation-style.md",
                 "active/bootstrap-global-setup-recovery.md",
                 "active/docs-wiki-migration.md",
+                "active/global-skill-selection.md",
+                "active/korean-setup-terminology.md",
                 "active/model-routed-custom-subagents.md",
                 "active/native-usage-sensor.md",
                 "active/native-iterative-execution.md",
@@ -550,6 +556,12 @@ class Phase3SkillSourceContract(unittest.TestCase):
             plan_root / "active/bootstrap-global-setup-recovery.md"
         )
         docs_wiki_path = plan_root / "active/docs-wiki-migration.md"
+        global_skill_selection_path = (
+            plan_root / "active/global-skill-selection.md"
+        )
+        korean_setup_terminology_path = (
+            plan_root / "active/korean-setup-terminology.md"
+        )
         model_routed_path = (
             plan_root / "active/model-routed-custom-subagents.md"
         )
@@ -636,6 +648,14 @@ class Phase3SkillSourceContract(unittest.TestCase):
             (
                 "Bootstrap·user projection recovery",
                 *checklist_counts([bootstrap_recovery_path]),
+            ),
+            (
+                "한국어 setup 용어 복구",
+                *checklist_counts([korean_setup_terminology_path]),
+            ),
+            (
+                "Global Skill 선택 단순화",
+                *checklist_counts([global_skill_selection_path]),
             ),
         )
         total_done = sum(row[1] for row in progress_rows)
