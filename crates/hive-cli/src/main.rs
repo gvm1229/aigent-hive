@@ -1849,6 +1849,8 @@ fn version_output() -> String {
 fn version_output_for(product: &str, package: &str, release_date: &str) -> String {
     if package == product {
         format!("AIgent Hive v{product} (released {release_date})")
+    } else if package == format!("{product}-dev") {
+        format!("AIgent Hive v{product}-dev · local developer build (built {release_date})")
     } else if package == format!("{product}-test") {
         format!("AIgent Hive v{product}-test · developer test build (released {release_date})")
     } else {
@@ -1919,7 +1921,11 @@ mod tests {
     }
 
     #[test]
-    fn version_output_surfaces_a_test_package_version() {
+    fn version_output_surfaces_developer_build_kinds() {
+        assert_eq!(
+            version_output_for("0.9.0", "0.9.0-dev", "2026-08-07"),
+            "AIgent Hive v0.9.0-dev · local developer build (built 2026-08-07)"
+        );
         assert_eq!(
             version_output_for("0.9.0", "0.9.0-test.2", "2026-08-06"),
             "AIgent Hive v0.9.0-test #2 · developer test build (released 2026-08-06)"

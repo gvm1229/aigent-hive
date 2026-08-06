@@ -2,21 +2,22 @@ use std::process::Command;
 
 #[test]
 fn version_aliases_report_product_version_and_release_date() {
-    let expected = if env!("HIVE_PACKAGE_VERSION") == env!("CARGO_PKG_VERSION") {
-        format!(
-            "AIgent Hive v{} (released {})\n",
-            env!("CARGO_PKG_VERSION"),
-            env!("HIVE_PACKAGE_RELEASE_DATE")
-        )
+    let product = env!("CARGO_PKG_VERSION");
+    let package = env!("HIVE_PACKAGE_VERSION");
+    let release_date = env!("HIVE_PACKAGE_RELEASE_DATE");
+    let expected = if package == product {
+        format!("AIgent Hive v{} (released {})\n", product, release_date)
+    } else if package == format!("{product}-dev") {
+        format!("AIgent Hive v{product}-dev · local developer build (built {release_date})\n")
     } else {
         format!(
             "AIgent Hive v{}-test{} · developer test build (released {})\n",
-            env!("CARGO_PKG_VERSION"),
-            env!("HIVE_PACKAGE_VERSION")
-                .strip_prefix(&format!("{}-test", env!("CARGO_PKG_VERSION")))
+            product,
+            package
+                .strip_prefix(&format!("{product}-test"))
                 .expect("validated test package version")
                 .replace('.', " #"),
-            env!("HIVE_PACKAGE_RELEASE_DATE")
+            release_date
         )
     };
     for argument in ["--version", "-v", "-V"] {

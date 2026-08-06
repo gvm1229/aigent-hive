@@ -22,7 +22,7 @@ fn main() {
         env::var("AIGENT_HIVE_PACKAGE_VERSION").unwrap_or_else(|_| product_version.clone());
     assert!(
         valid_package_version(&product_version, &package_version),
-        "AIGENT_HIVE_PACKAGE_VERSION must equal the product version or use product-test[.N]"
+        "AIGENT_HIVE_PACKAGE_VERSION must equal the product version or use product-dev or product-test[.N]"
     );
     println!("cargo:rerun-if-env-changed=AIGENT_HIVE_PACKAGE_VERSION");
     println!("cargo:rustc-env=HIVE_PACKAGE_VERSION={package_version}");
@@ -61,6 +61,7 @@ fn valid_release_date(value: &str) -> bool {
 
 fn valid_package_version(product: &str, package: &str) -> bool {
     package == product
+        || package.strip_suffix("-dev") == Some(product)
         || package.strip_suffix("-test") == Some(product)
         || package
             .strip_prefix(&format!("{product}-test."))
@@ -84,11 +85,17 @@ mod tests {
     }
 
     #[test]
-    fn package_version_requires_the_current_product_or_a_test_suffix() {
+    fn package_version_requires_the_current_product_or_a_developer_suffix() {
         assert!(valid_package_version("0.9.0", "0.9.0"));
+        assert!(valid_package_version("0.9.0", "0.9.0-dev"));
         assert!(valid_package_version("0.9.0", "0.9.0-test"));
         assert!(valid_package_version("0.9.0", "0.9.0-test.2"));
-        for invalid in ["0.9.0-test.0", "0.9.0-test.02", "0.9.1-test.2"] {
+        for invalid in [
+            "0.9.0-dev.1",
+            "0.9.0-test.0",
+            "0.9.0-test.02",
+            "0.9.1-test.2",
+        ] {
             assert!(!valid_package_version("0.9.0", invalid), "{invalid}");
         }
     }
