@@ -178,6 +178,29 @@ class Phase3SkillSourceContract(unittest.TestCase):
             with self.subTest(required=required):
                 self.assertIn(required, skill)
 
+    def test_setup_scope_routing_keeps_global_and_project_work_disjoint(self) -> None:
+        global_skill = (SKILL_ROOT / "setup-hive/SKILL.md").read_text(
+            encoding="utf-8"
+        )
+        project_skill = (SKILL_ROOT / "setup-harness/SKILL.md").read_text(
+            encoding="utf-8"
+        )
+        for required in (
+            "## Scope Routing",
+            "bare request to set up, install, configure, or reconfigure Hive",
+            "Do not inspect an ambient working directory",
+            "Never create, preview, or apply a project harness",
+        ):
+            with self.subTest(global_requirement=required):
+                self.assertIn(required, global_skill)
+        for required in (
+            "only when the user identifies a project, repository, folder, path",
+            "Those requests belong to `setup-hive`",
+            "separate confirmation before project inspection, preview, or apply",
+        ):
+            with self.subTest(project_requirement=required):
+                self.assertIn(required, project_skill)
+
     def test_source_prompt_refine_projection_matches_harness_canonical_bytes(self) -> None:
         canonical = (
             SKILL_ROOT / "hive-prompt-refine/SKILL.md"
@@ -361,6 +384,7 @@ class Phase3SkillSourceContract(unittest.TestCase):
             "active/release-0.9.0.md",
             "active/security-review.md",
             "active/source-docs-wiki.md",
+            "active/test-release-setup-routing.md",
             "active/user-onboarding-shared-index.md",
             "active/v0.9.0-global-knowledge-rag.md",
             "active/v0.9.0-knowledge-portability-scan.md",
@@ -390,6 +414,7 @@ class Phase3SkillSourceContract(unittest.TestCase):
             plan_root / "active/release-0.9.0.md",
             plan_root / "active/security-review.md",
             plan_root / "active/source-docs-wiki.md",
+            plan_root / "active/test-release-setup-routing.md",
             plan_root / "active/user-onboarding-shared-index.md",
             plan_root / "active/v0.9.0-global-knowledge-rag.md",
             plan_root / "active/v0.9.0-knowledge-portability-scan.md",
@@ -412,6 +437,7 @@ class Phase3SkillSourceContract(unittest.TestCase):
                 "active/release-0.9.0.md",
                 "active/security-review.md",
                 "active/source-docs-wiki.md",
+                "active/test-release-setup-routing.md",
                 "active/user-onboarding-shared-index.md",
                 "active/v0.9.0-global-knowledge-rag.md",
                 "active/v0.9.0-knowledge-portability-scan.md",
@@ -495,6 +521,7 @@ class Phase3SkillSourceContract(unittest.TestCase):
         plugin_project_path = plan_root / "active/plugin-project-lifecycle.md"
         prompt_refine_path = plan_root / "active/prompt-refine-auto-routing.md"
         release_09_path = plan_root / "active/release-0.9.0.md"
+        test_routing_path = plan_root / "active/test-release-setup-routing.md"
         test_finalization_path = (
             plan_root / "active/v0.9.0-test-finalization.md"
         )
@@ -564,6 +591,10 @@ class Phase3SkillSourceContract(unittest.TestCase):
             (
                 "v0.9 full release",
                 *checklist_counts([release_09_path]),
+            ),
+            (
+                "Test release setup routing",
+                *checklist_counts([test_routing_path]),
             ),
         )
         total_done = sum(row[1] for row in progress_rows)

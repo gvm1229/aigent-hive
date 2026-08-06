@@ -47,6 +47,36 @@ const USER_070_CODEX_MARKETPLACE_DIGEST: &str =
     "sha256:5fc994474640b82960f5c015c6fdcb50a01df010441b065c991a114e96f84620";
 const USER_070_CLAUDE_MARKETPLACE_DIGEST: &str =
     "sha256:52681102bb7c8c9c0bb2ce332602e8b4cb418ebfbe0fe1fd0d0cc34ee3aa5af9";
+const PRE_SCOPE_ROUTING_SETUP_HIVE_DIGEST: &str =
+    "sha256:891b6af921dfdbe390df51a6ee69874bc16ca29adc5b483b18b7cb4d5bb66a57";
+const PRE_SCOPE_ROUTING_SETUP_HARNESS_DIGEST: &str =
+    "sha256:8e0d1e2bc964eefbfedc24b462d657552250fb976c18f534c6601328c0b7451c";
+const USER_070_CODEX_ONBOARDING_SOURCE_DIGEST: &str =
+    "sha256:b9e0364aedca5b56a7a8a189570c054ceeb00c5ec4f58361901ce513a85fa371";
+const USER_070_CODEX_ONBOARDING_GUIDANCE_DIGEST: &str =
+    "sha256:b36972eeb3905d23421fb6d604b48369300c93be9a63cdeb19bf347b2628f430";
+const USER_070_CODEX_ONBOARDING_RAW_README_DIGEST: &str =
+    "sha256:eb57ad2af4196916dd0bb9e899723fe822b618b08e920f74b8f3f1110cd2eb82";
+const USER_070_CODEX_ONBOARDING_SCHEMA_DIGEST: &str =
+    "sha256:411b45789a64cef406b4fe0de87e85f8fb03649bcce62a0f647774c3ffebf396";
+const USER_070_CODEX_ONBOARDING_WIKI_INDEX_DIGEST: &str =
+    "sha256:4982a7080053b989bf26ef87076c818b89c7b9b65591ae30af1e51296b9489b6";
+const USER_070_CODEX_ONBOARDING_WIKI_LOG_DIGEST: &str =
+    "sha256:73f63a7979e80ef74aa5181f214e22ca173b56300b1b5af5b2cd2eb716a27031";
+const USER_070_CODEX_ONBOARDING_SUPPRESSION_DIGEST: &str =
+    "sha256:4511250f4407bf8e3d4c66deaea468602e8faf5734b4f9b5a57d93bf54ab68cc";
+const USER_070_CODEX_ONBOARDING_AUTO_SETUP_DIGEST: &str =
+    "sha256:3336c86d6cf338e84f2440c4434d06b7d517714a07a0ac9c0c5163f695148b7e";
+const USER_070_CODEX_ONBOARDING_KNOWLEDGE_CAPTURE_DIGEST: &str =
+    "sha256:dd05e3e1065cf1fbf0ca04f0ef6f9acfcfdcdf91fd8362071665ac28542a4f1b";
+const USER_070_CODEX_ONBOARDING_KNOWLEDGE_MAINTENANCE_DIGEST: &str =
+    "sha256:de7484f35d262c2c44d52a60f2c6d698f1ccb5d278f10930f412a4b1ad8be90e";
+const USER_070_CODEX_ONBOARDING_KNOWLEDGE_QUERY_DIGEST: &str =
+    "sha256:3e0354c7b90bf5cc06ce4bce55d604d007ebd4f4fe03581d48e0cdefbf206b60";
+const USER_070_CODEX_ONBOARDING_SETUP_HARNESS_DIGEST: &str =
+    "sha256:2cd7d8f9318a8acd96a709dd98e9cb8c0d9ff15fb02383097959d45463645a61";
+const USER_070_CODEX_ONBOARDING_SETUP_HIVE_DIGEST: &str =
+    "sha256:4ee3a621dd2149a3fde6aa1df8c36cef3ab249404ac4d00934197596340e39e6";
 const LEGACY_ANTIGRAVITY_070_SKILLS: &[(&str, &str)] = &[
     (
         "hive-judge-package",
@@ -1855,6 +1885,9 @@ fn authenticated_user_inventory(
             return Some(prior.clone());
         }
     }
+    if let Some(historical) = pre_scope_routing_test_inventory(host, request) {
+        return Some(historical);
+    }
     if request.product_version == "0.8.0" {
         if let Some(historical) = historical_080_user_inventory(
             host,
@@ -1868,6 +1901,15 @@ fn authenticated_user_inventory(
         }
     }
     if request.product_version == "0.7.0" {
+        if let Some(historical) = historical_070_codex_onboarding_inventory(
+            host,
+            request.installed_host_version_range,
+            request.installed_guidance_path,
+        ) {
+            if historical.source_release_digest == request.source_release_digest {
+                return Some(historical);
+            }
+        }
         if let Some(historical) = historical_070_user_inventory(
             host,
             request.installed_host_version_range,
@@ -1893,6 +1935,150 @@ fn authenticated_user_inventory(
         }
     }
     None
+}
+
+fn historical_070_codex_onboarding_inventory(
+    host: UserHost,
+    installed_host_version_range: &str,
+    guidance_path: &Path,
+) -> Option<AuthenticatedUserInventory> {
+    if host != UserHost::Codex
+        || installed_host_version_range != ">=0.145.0 <1.0.0"
+        || portable(guidance_path) != ".codex/AGENTS.md"
+    {
+        return None;
+    }
+
+    let mut entries = historical_070_host_entries(host);
+    for (path, digest) in [
+        (
+            ".hive/marketplaces/codex/plugins/aigent-hive/skills/auto-setup-harness/SKILL.md",
+            USER_070_CODEX_ONBOARDING_AUTO_SETUP_DIGEST,
+        ),
+        (
+            ".hive/marketplaces/codex/plugins/aigent-hive/skills/hive-knowledge-capture/SKILL.md",
+            USER_070_CODEX_ONBOARDING_KNOWLEDGE_CAPTURE_DIGEST,
+        ),
+        (
+            ".hive/marketplaces/codex/plugins/aigent-hive/skills/hive-knowledge-maintenance/SKILL.md",
+            USER_070_CODEX_ONBOARDING_KNOWLEDGE_MAINTENANCE_DIGEST,
+        ),
+        (
+            ".hive/marketplaces/codex/plugins/aigent-hive/skills/hive-knowledge-query/SKILL.md",
+            USER_070_CODEX_ONBOARDING_KNOWLEDGE_QUERY_DIGEST,
+        ),
+        (
+            ".hive/marketplaces/codex/plugins/aigent-hive/skills/setup-harness/SKILL.md",
+            USER_070_CODEX_ONBOARDING_SETUP_HARNESS_DIGEST,
+        ),
+        (
+            ".hive/marketplaces/codex/plugins/aigent-hive/skills/setup-hive/SKILL.md",
+            USER_070_CODEX_ONBOARDING_SETUP_HIVE_DIGEST,
+        ),
+    ] {
+        if let Some(entry) = entries.iter_mut().find(|entry| entry.path == path) {
+            digest.clone_into(&mut entry.digest);
+        } else {
+            entries.push(historical_070_entry(
+                path.to_owned(),
+                digest,
+                false,
+                "immutable-plugin-package",
+            ));
+        }
+    }
+    entries.extend([
+        historical_070_entry(
+            ".codex/AGENTS.md".to_owned(),
+            USER_070_CODEX_ONBOARDING_GUIDANCE_DIGEST,
+            false,
+            "shared-marker",
+        ),
+        historical_070_entry(
+            ".hive/knowledge/Raw/README.md".to_owned(),
+            USER_070_CODEX_ONBOARDING_RAW_README_DIGEST,
+            false,
+            "canonical-data-protected",
+        ),
+        historical_070_entry(
+            ".hive/knowledge/Schema/schema.md".to_owned(),
+            USER_070_CODEX_ONBOARDING_SCHEMA_DIGEST,
+            false,
+            "canonical-data-protected",
+        ),
+        historical_070_entry(
+            ".hive/knowledge/Wiki/index.md".to_owned(),
+            USER_070_CODEX_ONBOARDING_WIKI_INDEX_DIGEST,
+            false,
+            "canonical-data-protected",
+        ),
+        historical_070_entry(
+            ".hive/knowledge/Wiki/log.md".to_owned(),
+            USER_070_CODEX_ONBOARDING_WIKI_LOG_DIGEST,
+            false,
+            "canonical-data-protected",
+        ),
+        historical_070_entry(
+            ".hive/knowledge/suppression.yml".to_owned(),
+            USER_070_CODEX_ONBOARDING_SUPPRESSION_DIGEST,
+            false,
+            "canonical-data-protected",
+        ),
+    ]);
+    entries.sort_by(|left, right| left.path.cmp(&right.path));
+    let source_release_digest = source_release_digest_from_entries(&entries);
+    if source_release_digest != USER_070_CODEX_ONBOARDING_SOURCE_DIGEST {
+        return None;
+    }
+    Some(AuthenticatedUserInventory {
+        product_version: "0.7.0".to_owned(),
+        host,
+        host_version_range: installed_host_version_range.to_owned(),
+        source_release_digest,
+        guidance_path: ".codex/AGENTS.md".to_owned(),
+        entries,
+    })
+}
+
+fn pre_scope_routing_test_inventory(
+    host: UserHost,
+    request: &InventoryAuthentication<'_>,
+) -> Option<AuthenticatedUserInventory> {
+    if request.product_version != "0.9.0"
+        || request.installed_host_version_range != host.version_range()
+        || request.current_entries.is_empty()
+    {
+        return None;
+    }
+
+    let mut entries = request.current_entries.to_vec();
+    let mut setup_hive = false;
+    for entry in &mut entries {
+        if !is_managed_ownership(&entry.ownership) {
+            continue;
+        }
+        if entry.path.ends_with("/skills/setup-hive/SKILL.md") {
+            PRE_SCOPE_ROUTING_SETUP_HIVE_DIGEST.clone_into(&mut entry.digest);
+            setup_hive = true;
+        } else if entry.path.ends_with("/skills/setup-harness/SKILL.md") {
+            PRE_SCOPE_ROUTING_SETUP_HARNESS_DIGEST.clone_into(&mut entry.digest);
+        }
+    }
+    if !setup_hive {
+        return None;
+    }
+    let source_release_digest = source_release_digest_from_entries(&entries);
+    if request.source_release_digest != source_release_digest {
+        return None;
+    }
+    Some(AuthenticatedUserInventory {
+        product_version: request.product_version.to_owned(),
+        host,
+        host_version_range: request.installed_host_version_range.to_owned(),
+        source_release_digest,
+        guidance_path: portable(request.installed_guidance_path),
+        entries,
+    })
 }
 
 #[allow(clippy::too_many_lines)]
@@ -7520,6 +7706,81 @@ mod tests {
             )
             .is_none());
         }
+    }
+
+    #[test]
+    fn pre_scope_routing_test_inventory_accepts_only_the_exact_test_predecessor() {
+        let temporary = tempdir().expect("tempdir");
+        let arguments = args(temporary.path(), UserHost::Codex, UserMode::DryRun);
+        let desired = build_desired_user_files(&arguments, None).expect("current desired files");
+        let current = authenticated_current_inventory(&arguments, &desired);
+        let mut predecessor_entries = current.entries.clone();
+        let setup_hive = predecessor_entries
+            .iter_mut()
+            .find(|entry| entry.path.ends_with("/skills/setup-hive/SKILL.md"))
+            .expect("setup-hive projection");
+        setup_hive.digest = PRE_SCOPE_ROUTING_SETUP_HIVE_DIGEST.to_owned();
+        let predecessor_digest = source_release_digest_from_entries(&predecessor_entries);
+        let request = InventoryAuthentication {
+            product_version: "0.9.0",
+            installed_host_version_range: UserHost::Codex.version_range(),
+            source_release_digest: &predecessor_digest,
+            installed_entries: &predecessor_entries,
+            installed_guidance_path: Path::new(".codex/AGENTS.md"),
+            current_guidance_path: Path::new(".codex/AGENTS.md"),
+            current_source_release_digest: &current.source_release_digest,
+            current_entries: &current.entries,
+            authenticated_prior: None,
+        };
+
+        let authenticated = authenticated_user_inventory(UserHost::Codex, &request)
+            .expect("exact pre-routing test inventory");
+        assert_user_entries_equal(&authenticated.entries, &predecessor_entries);
+        assert_eq!(authenticated.source_release_digest, predecessor_digest);
+
+        let forged_digest = format!("sha256:{}", "0".repeat(64));
+        let forged = InventoryAuthentication {
+            source_release_digest: &forged_digest,
+            ..request
+        };
+        assert!(authenticated_user_inventory(UserHost::Codex, &forged).is_none());
+    }
+
+    #[test]
+    fn historical_070_codex_onboarding_inventory_authenticates_only_its_frozen_snapshot() {
+        let inventory = historical_070_codex_onboarding_inventory(
+            UserHost::Codex,
+            ">=0.145.0 <1.0.0",
+            Path::new(".codex/AGENTS.md"),
+        )
+        .expect("frozen Codex onboarding inventory");
+        assert_eq!(
+            inventory.source_release_digest,
+            USER_070_CODEX_ONBOARDING_SOURCE_DIGEST
+        );
+        assert_eq!(inventory.entries.len(), 27);
+
+        let request = InventoryAuthentication {
+            product_version: "0.7.0",
+            installed_host_version_range: ">=0.145.0 <1.0.0",
+            source_release_digest: &inventory.source_release_digest,
+            installed_entries: &inventory.entries,
+            installed_guidance_path: Path::new(".codex/AGENTS.md"),
+            current_guidance_path: Path::new(".codex/AGENTS.md"),
+            current_source_release_digest:
+                "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+            current_entries: &[],
+            authenticated_prior: None,
+        };
+        let authenticated =
+            authenticated_user_inventory(UserHost::Codex, &request).expect("frozen 0.7 snapshot");
+        assert_user_entries_equal(&authenticated.entries, &inventory.entries);
+        assert!(historical_070_codex_onboarding_inventory(
+            UserHost::Codex,
+            ">=9.0.0 <10.0.0",
+            Path::new(".codex/AGENTS.md"),
+        )
+        .is_none());
     }
 
     #[test]

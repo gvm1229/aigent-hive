@@ -1,11 +1,20 @@
 ---
 name: setup-harness
-description: Configure or reconfigure a consumer project's Hive harness when the user asks to set up, install, initialize, or regenerate Hive; require the project kind and signed CLI.
+description: Configure or reconfigure a local Hive harness only for an explicitly identified project, repository, folder, or path. Route global user-scope setup, preference changes, and bare Hive setup to setup-hive.
 ---
 
 # Setup Harness
 
 Configure a consumer project without copying Hive source-development instructions or modifying third-party runtime state.
+
+## Scope Routing
+
+- Select this Skill only when the user identifies a project, repository, folder, path, or the
+  current project as the target for a local harness.
+- Do not select it for global or user-scope preference changes, or for a bare request to set up,
+  install, configure, or reconfigure Hive. Those requests belong to `setup-hive`.
+- When the user explicitly requests both scopes, let `setup-hive` finish first and wait for a
+  separate confirmation before project inspection, preview, or apply.
 
 ## Workflow
 

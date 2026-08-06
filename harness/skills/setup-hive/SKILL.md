@@ -1,11 +1,21 @@
 ---
 name: setup-hive
-description: Configure user-scope Hive preferences after installation or when the user asks to change language, hosts, Skills, Wiki, persona, or usage-guard settings.
+description: Configure or reconfigure global user-scope Hive preferences. Use for bare Hive setup or preference changes without an explicit project, repository, folder, or path; never inspect or configure a project harness.
 ---
 
 # Setup Hive
 
 Configure user-scope Hive preferences without modifying a project harness or provider credentials.
+
+## Scope Routing
+
+- Select this Skill for global or user-scope preference, language, host, Skill, Wiki, persona,
+  or usage-guard requests.
+- Treat a bare request to set up, install, configure, or reconfigure Hive as global user-scope
+  setup. Do not inspect an ambient working directory or request a project path.
+- When the user explicitly requests both global and project setup, finish global setup first, then
+  ask whether to start the separately scoped project setup.
+- Never create, preview, or apply a project harness through this Skill.
 
 ## Workflow
 
