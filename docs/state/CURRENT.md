@@ -28,7 +28,7 @@
   + `docs/plans/active/bootstrap-global-setup-recovery.md`
 - Plan completion: canonical checklist `348/416` 완료, `68`개 미완료, `83.7%`
 - Developer binary: `scripts/dev-install.sh`의 sandbox·global·CAS rollback과 `product-dev`
-  version identity 검증 완료
+  version identity, isolated global activation·rollback 회귀 검증 완료
 - Source Wiki route: source marker 확인 뒤 `hive source-wiki query` 사용,
   consumer `hive knowledge retrieve`의 source root 호출 금지·static contract 36개 PASS
 - Fresh clone: exact `6761f0b`, Rust format·strict Clippy·workspace all-feature, Python 677개 PASS·platform skip 5개
