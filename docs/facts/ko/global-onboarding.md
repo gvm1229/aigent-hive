@@ -10,10 +10,10 @@ tags: [bootstrap, onboarding, setup]
 aliases: ["User setup"]
 sources:
   - "repo:README.md#sha256:072bfc2c939e2a2e2e26f897b4cca9a876bd9d4be28adc8db14bafe7e5bb941b"
-  - "repo:crates/hive-cli/src/user_setup.rs#sha256:b51f51d18455515f964727fad6efb6bb2181826f2f30794ae2bbc27c7c48207d"
+  - "repo:crates/hive-cli/src/user_setup.rs#sha256:ff6bd5eabfb169efa9e763628d3ae876564396b01d901807ededf18999b21b0d"
   - "repo:docs/decisions/ADR-0012-global-onboarding-shared-index.md#sha256:183d58c69302e82b0cc911fab51a75137dad54439c3de4a46e38de13a13adf7b"
 links: [project-onboarding, test-distribution]
-reviewed_revision: "git:005fa7c6aa9f7f43e5edfde31dffc146f1efe25b"
+reviewed_revision: "git:16c09937d59f1906d7a77b8c722c6ffd9c69416a"
 status: active
 ---
 
