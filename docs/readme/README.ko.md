@@ -74,6 +74,34 @@ curl.exe -fLo install-aigent-hive.cmd https://unpkg.com/aigent-hive@0.8.0/instal
 SHA-256 검증, direct-install ownership receipt 기록. npm·Node.js·PowerShell 7
 dependency 없음.
 
+## 선택형 one-prompt 설정
+
+Codex, Claude Code 또는 Gemini Antigravity에게 user-level 설치 전체 진행을 맡기려면 아래
+prompt 사용. 선택 사항이며, 아래 4단계 설정은 예측 가능한 수동 경로로 유지.
+
+```text
+I want the optional one-prompt Aigent Hive setup. Work only at user scope; do not inspect,
+initialize, or change any project, repository, folder, or current working directory.
+
+First ask whether I want the stable release 0.8.0 (recommended) or the developer test build
+0.9.0-test.3. The stable install guidance is https://github.com/gvm1229/aigent-hive#install-080
+and the test-build release notes are https://github.com/gvm1229/aigent-hive/releases/tag/v0.9.0-test.3.
+Detect my operating system and active host (Codex, Claude Code, or Gemini Antigravity), asking
+me if either is unclear. Check whether Node.js and npm are available. If they are missing,
+give me the official OS-specific Node.js installation command and request any approval the host
+requires before installing it. Then install the exact Hive release I selected using the official
+method in the linked guidance, verify `hive --version`, and activate only my host with
+`hive install --scope user --host <detected-host> --apply --output json`.
+
+Then begin interactive global setup in this conversation. For a first setup, ask only whether I
+want English or Korean first; continue one question at a time. For existing settings, first ask
+whether I want to change one setting or review everything. Do not start project setup afterward:
+offer the separate project-setup prompt instead. Never ask for provider API credentials or install
+an optional third-party Skill.
+```
+
+이 선택지는 고른 release만 설치. Test build는 npm `test` tag 전용이며 `latest` 변경 없음.
+
 ## 지원 target
 
 | Platform | Native target | 0.8.0 gate |

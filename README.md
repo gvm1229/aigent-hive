@@ -74,6 +74,36 @@ The direct installers fetch the same native package bytes from npm, verify the
 embedded exact-version SHA-256, and record direct-install ownership. They do not
 require npm, Node.js, or PowerShell 7.
 
+## Optional one-prompt setup
+
+If you want Codex, Claude Code, or Gemini Antigravity to guide the entire user-level
+installation, paste the following prompt instead of manually following the first three
+setup steps below. It is optional: the four-step setup remains the predictable manual path.
+
+```text
+I want the optional one-prompt Aigent Hive setup. Work only at user scope; do not inspect,
+initialize, or change any project, repository, folder, or current working directory.
+
+First ask whether I want the stable release 0.8.0 (recommended) or the developer test build
+0.9.0-test.3. The stable install guidance is https://github.com/gvm1229/aigent-hive#install-080
+and the test-build release notes are https://github.com/gvm1229/aigent-hive/releases/tag/v0.9.0-test.3.
+Detect my operating system and active host (Codex, Claude Code, or Gemini Antigravity), asking
+me if either is unclear. Check whether Node.js and npm are available. If they are missing,
+give me the official OS-specific Node.js installation command and request any approval the host
+requires before installing it. Then install the exact Hive release I selected using the official
+method in the linked guidance, verify `hive --version`, and activate only my host with
+`hive install --scope user --host <detected-host> --apply --output json`.
+
+Then begin interactive global setup in this conversation. For a first setup, ask only whether I
+want English or Korean first; continue one question at a time. For existing settings, first ask
+whether I want to change one setting or review everything. Do not start project setup afterward:
+offer the separate project-setup prompt instead. Never ask for provider API credentials or install
+an optional third-party Skill.
+```
+
+This option installs only the release you choose. A test build stays on npm's `test` tag and does
+not change `latest`.
+
 ## Supported targets
 
 | Platform | Native target | 0.8.0 gate |
