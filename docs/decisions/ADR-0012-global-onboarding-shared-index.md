@@ -66,6 +66,10 @@ Global setup answer:
 - Reconfigure: 부분 preference 변경 또는 전체 setup 재검토 선택 우선
 - Refresh 필요 상태: preference·project 안전 여부와 update/preview 선택 우선
 - Internal path·digest·projection 용어: 기본 안내 제외, 요청 시 diagnostic 제공
+- 한국어 대화: `Skill`, `Wiki`, host·product name, command, path, schema key, Skill ID는 exact
+  term 유지. 일반 설명만 한국어화하며 `Skill → 기술` 같은 일반명사 직역 금지
+- 한국어 setup 질문: canonical `setup-hive`의 exact sample·용어표와 source-to-projection
+  regression으로 관리
 
 ### Source developer binary
 

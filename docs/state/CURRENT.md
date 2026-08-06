@@ -2,9 +2,9 @@
 
 - 기준 branch: `develop`
 - product version: `0.9.0`
-- plan revision: `2.13`
+- plan revision: `2.14`
 - 현재 milestone: `0.9.0-test` public acceptance·retention
-- 현재 작업: `REL9-014–015` public test acceptance·retention 관찰
+- 현재 작업: `KST-002–005` 한국어 global setup product term·질문 표기 복구 대기
 - 외부 중지 경계: `main` PR·review, signing·TUF,
   exact `1.0.0` 사용자 authority
 - Plan load: compact `docs/plans/PLAN.md` + `docs/plans/phases/07-public-qualification.md`
@@ -26,7 +26,11 @@
   + `docs/plans/active/release-0.9.0.md`
   + `docs/plans/active/test-release-setup-routing.md`
   + `docs/plans/active/bootstrap-global-setup-recovery.md`
-- Plan completion: canonical checklist `349/417` 완료, `68`개 미완료, `83.7%`
+  + `docs/plans/active/korean-setup-terminology.md`
+- Plan completion: canonical checklist `350/422` 완료, `72`개 미완료, `82.9%`
+- Korean setup 용어: `setup-hive`의 한국어 용어 규칙 부재. `Skill → 기술` 즉석 번역 확인,
+  `recommended suite`·`profile|persona|host` 표기 일관성 조사 완료. 다음 구현: exact Korean
+  sample·projection parity·static regression·독립 numbered test release
 - Developer binary: `scripts/dev-install.sh`의 sandbox·global·CAS rollback과 `product-dev`
   version identity, isolated global activation·rollback 회귀 검증 완료
 - Legacy setup recovery: schema-1 `0.7.0`의 19개 legacy projection은 saved preference·path

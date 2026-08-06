@@ -10,7 +10,7 @@ tags: [index, knowledge]
 aliases: ["Shared knowledge index"]
 sources:
   - "repo:crates/hive-wiki/src/lib.rs#sha256:292a7ce29540a77026fd99620aac10b35e85f51ee7490e003b19f789c6bf6fd4"
-  - "repo:docs/decisions/ADR-0012-global-onboarding-shared-index.md#sha256:2f653de651b5a7b540efab9522e5808156cc527ac6b3cda20df4a3f943b66c07"
+  - "repo:docs/decisions/ADR-0012-global-onboarding-shared-index.md#sha256:dc4ddb908ecef82f197b0055cea3adb36602f0b924f8a285add60c1d9b7f7ec7"
 links: [knowledge-storage, project-onboarding]
 reviewed_revision: "git:d211300dea66781251306e376e43bf9e798504ef"
 status: active
