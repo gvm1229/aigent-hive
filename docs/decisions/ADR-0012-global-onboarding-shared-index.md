@@ -30,6 +30,15 @@ Global setup answer:
 - Wiki: 기본 `enabled`, 명시적 opt-out
 - Usage guard: 명시적 opt-in, enabled 상태의 기본 remaining threshold `20%`
 
+### Setup scope routing
+
+- Global·user-scope preference, language, host, Skill, Wiki, persona, usage guard 요청: `setup-hive`
+- Project·repository·folder·path의 local harness 요청: `setup-harness`
+- Bare Hive setup·reconfigure 요청: global user-scope 우선, ambient working directory inspection 없음
+- Global·project 동시 요청: global setup 완료 뒤 project setup의 별도 사용자 확인
+- Numbered test release의 user projection update: exact authenticated predecessor inventory만 허용
+- Unknown·변조 predecessor manifest: preview·apply 차단과 foreign byte 보존
+
 ### User projection
 
 - Provider-neutral generated projection: `~/.agents/directives/`,

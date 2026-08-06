@@ -1,6 +1,6 @@
 # Aigent Hive active plan index
 
-> Revision: 2.04
+> Revision: 2.05
 > 기준일: 2026-08-06
 > Product version: `0.9.0`
 > 현재 milestone: `0.9.0` 정식 릴리스 준비
@@ -8,12 +8,10 @@
 
 ## Goal parameters
 
-- Objective: Hive-native iterative·team·multi-goal execution, Codex·Claude exact-model
-  custom subagent routing, 설정 가능한 authenticated Judge 호출 정책의 feasibility·안전 계약을 확정한 뒤 `Aigent Hive
-  0.9.0-test` 독립 시험 배포·수용, 별도 `0.9.0` 정식 GitHub·npm 릴리스와 public update 검증
-- Success: 아래 Active fragments의 evidence-backed completion. 시험판 핵심 gate는
-  `MRA-*` model-routed subagent, `PRF-*` prompt approval, `TST9-*` Wiki backend·integration,
-  `REL9-*` 독립 test·stable publication과 public acceptance
+- Objective: Hive-native execution·custom subagent routing·Judge policy 안전 계약, `0.9.0-test`
+  독립 시험 배포·수용, 별도 `0.9.0` 정식 GitHub·npm 릴리스와 public update 검증
+- Success: Active fragment evidence-backed completion. 시험판 핵심 gate: `MRA-*`, `PRF-*`,
+  `TST9-*`, `REL9-*` 독립 test·stable publication과 public acceptance
 - Stop boundary: protected `main` review, signing·TUF·npm credential,
   exact `1.0.0` authority, source usage guard remaining threshold `30%`
 - Invariants: provider-neutral, backend별 canonical source 우선, SQLite 파생 상태,
@@ -46,7 +44,8 @@
 | Prompt refine 자동 routing | 12 | 0 | 100% |
 | v0.9 test 기능 마감 | 18 | 0 | 100% |
 | v0.9 full release | 13 | 13 | 50% |
-| **Canonical total** | **335** | **68** | **83.1%** |
+| Test release setup routing | 3 | 1 | 75% |
+| **Canonical total** | **338** | **69** | **83.0%** |
 
 External production boundary 항목도 미완료 합계에 포함. Protected authority 없이 완료 처리 금지.
 
@@ -86,10 +85,11 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
 | [`active/v0.9.0-global-knowledge-rag.md`](active/v0.9.0-global-knowledge-rag.md) | `RAG-*` | 전역 RAG |
 | [`active/v0.9.0-knowledge-portability-scan.md`](active/v0.9.0-knowledge-portability-scan.md) | `KPX-*` | Knowledge 이식·directory scan·automatic query |
 | [`active/native-iterative-execution.md`](active/native-iterative-execution.md) | `NAT-*` | Hive-native iterative·team·multi-goal execution |
-| [`active/model-routed-custom-subagents.md`](active/model-routed-custom-subagents.md) | `MRA-*` | Codex·Claude exact-model custom subagent·authenticated Judge 정책·Sol Advisor 동등 auto-route |
+| [`active/model-routed-custom-subagents.md`](active/model-routed-custom-subagents.md) | `MRA-*` | Codex·Claude custom subagent·Judge 정책 |
 | [`active/prompt-refine-auto-routing.md`](active/prompt-refine-auto-routing.md) | `PRF-*` | Material ambiguity 자동 refine·승인 전 정지 |
 | [`active/v0.9.0-test-finalization.md`](active/v0.9.0-test-finalization.md) | `TST9-*` | Notion·SQLite, Discord outbound, 문제 보고와 시험판 기능 마감 |
 | [`active/release-0.9.0.md`](active/release-0.9.0.md) | `REL9-*` | 정식 GitHub·npm 릴리스와 public acceptance |
+| [`active/test-release-setup-routing.md`](active/test-release-setup-routing.md) | `TUR-*` | Global·project setup routing과 numbered test user projection 인증 |
 
 ## Reconciliation gate
 
@@ -125,3 +125,6 @@ Rust·Python 적합성 PASS.
 [release-surface PR #17](https://github.com/gvm1229/aigent-hive/pull/17)의 `main` merge 뒤 stable workflow의 `deployment: false` 적용.
 다음은 `REL9-014–015` public test acceptance·retention 관찰이며, `REL9-017–026` stable 경로는
 별도 main 후보·authority까지 보류한다.
+
+현재: `TUR-001–003` routing·legacy/test projection 인증 PASS.
+다음: `TUR-004` test.3 candidate·publication·global setup acceptance.

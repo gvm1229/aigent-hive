@@ -72,33 +72,39 @@ code signing은 후속 안정 릴리스로 deferred.
 
 ## 첫 설정
 
-Hive CLI 설치 후 Codex, Claude Code 또는 Gemini Antigravity에서 대상 project를 열고
-아래 공통 prompt 입력:
-
-```text
-Install Aigent Hive for this host, then set it up for the current project. Use the recommended defaults where they do not require my choice, inspect the project first, show the exact write preview, and ask me only about choices that require my approval.
-```
-
-세 지원 host 공통 prompt. Active host의 Hive projection 활성화, user-scope setup, 현재
-project 설정 순서. User-scope setup 첫 선택: `English` 또는 `한국어`. Daily update check:
-explicit opt-in. Project setup 질문 범위: 안전한 추론이 불가한 required preference,
-host, optional capability.
-
-### Terminal fallback
-
-Active host의 setup command 실행 불가 시 terminal에서 host projection 활성화:
+Hive CLI 설치 후 terminal에서 host projection 활성화:
 
 ```console
 hive install --scope user --host codex --apply --output json
 ```
 
-필요 시 `codex`를 `claude` 또는 `antigravity`로 변경 후 동일 prompt 입력.
+필요 시 `codex`를 `claude` 또는 `antigravity`로 변경. 이 작업은 authenticated known prior user
+installation을 현재 projection으로 갱신하기 전에 복구. Unknown 또는 modified ownership manifest는
+계속 거부.
 
-공통 prompt 범위: harness activation·setup. Update, optional third-party Skill,
-provider credential 접근 권한 포함 없음.
+### 1. Global preference 설정
 
-Hive-owned exact write set preview, foreign guidance bytes 보존, canonical Markdown
-knowledge 유지.
+Codex, Claude Code 또는 Gemini Antigravity에서 아래 공통 prompt 입력:
+
+```text
+Configure or reconfigure my global Aigent Hive preferences for this host. Do not inspect or configure a project, repository, folder, or current working directory. Start the interactive user-scope setup.
+```
+
+이 prompt는 language 선택, update-check consent, global preference를 포함한 global setup 전용.
+Global preference 변경 시에도 같은 prompt 재사용.
+
+### 2. Project 한 개 설정
+
+Host에서 정확한 project를 열고 아래 별도 prompt 입력:
+
+```text
+Configure the local Aigent Hive harness for this project. Use my existing global Hive preferences, inspect only this project, show the exact write preview, and ask me only about choices that require my approval.
+```
+
+Project target 명시 시에만 project setup 시작. 두 scope 동시 요청은 global setup 완료 후 project
+inspection·change 전 별도 확인.
+
+두 prompt 모두 update, optional third-party Skill, provider credential 접근 권한 포함 없음.
 
 ## 업데이트
 

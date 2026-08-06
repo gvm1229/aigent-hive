@@ -74,33 +74,40 @@ stability release.
 
 ## First setup
 
-After installing the Hive CLI, open the target project in Codex, Claude Code, or Gemini
-Antigravity and paste this single prompt:
-
-```text
-Install Aigent Hive for this host, then set it up for the current project. Use the recommended defaults where they do not require my choice, inspect the project first, show the exact write preview, and ask me only about choices that require my approval.
-```
-
-The same prompt is for all three supported hosts. The active host identifies itself,
-activates its own Hive projection, completes user-scope setup, then configures the
-current project. User-scope setup still asks for `English` or `한국어` first, and for
-opt-in daily update checks. Project setup still asks for every required preference,
-host, and optional capability that it cannot safely infer.
-
-### Manual terminal fallback
-
-If the active host cannot run the setup commands, activate the host projection in a
-terminal:
+After installing the Hive CLI, activate the host projection in a terminal:
 
 ```console
 hive install --scope user --host codex --apply --output json
 ```
 
-Replace `codex` with `claude` or `antigravity` when appropriate, then paste the same
-prompt above into that host.
+Replace `codex` with `claude` or `antigravity` for that host. This operation restores an
+authenticated known prior user installation before updating it to the current projection;
+it still refuses unknown or modified ownership manifests.
 
-The prompt covers harness activation and setup; it does not authorize an update,
-optional third-party Skill, or provider-credential access.
+### 1. Configure global preferences
+
+Open Codex, Claude Code, or Gemini Antigravity and paste this shared prompt:
+
+```text
+Configure or reconfigure my global Aigent Hive preferences for this host. Do not inspect or configure a project, repository, folder, or current working directory. Start the interactive user-scope setup.
+```
+
+This always starts global setup, including language selection, update-check consent, and
+global preferences. Reuse it whenever global preferences change.
+
+### 2. Configure one project
+
+Open the exact project in the host and paste this separate prompt:
+
+```text
+Configure the local Aigent Hive harness for this project. Use my existing global Hive preferences, inspect only this project, show the exact write preview, and ask me only about choices that require my approval.
+```
+
+Project setup begins only with an explicit project target. A request that includes both
+scopes completes global setup first and asks before inspecting or changing the project.
+
+Neither prompt authorizes an update, optional third-party Skill, or provider-credential
+access.
 
 Hive previews its exact owned write set, preserves foreign guidance bytes, and keeps
 canonical knowledge in Markdown.

@@ -100,38 +100,13 @@ attestation·signing·TUF → `v0.9.0` normal Release·npm `latest` → public a
 6. `REL9-017–024` main 통합·stable candidate·signing·별도 정식 publication
 7. `REL9-025–026` 관찰·current-truth 완료 기록
 
-## GitHub App finalization (2026-08-06)
+## 시험판 publication 기준선 (2026-08-06)
 
-- `release-publication` reviewer `0`; `0.9.0-test`의 여섯 npm package·tag·22-asset prerelease,
-  `latest=0.8.0` 유지
-- App client ID Variable·private key Secret, `contents|workflows: write` installation token,
-  credential-free checkout·최종 tag/Release token 주입
-- `0.9.0-test.1|test`: candidate `31042797141`·`dd0224a`, publication `31043631056` PASS,
-  여섯 package `test=0.9.0-test.1`·`latest=0.8.0`, prerelease 22 assets; stable 시작 0건
-- Run·digest·failure history: [`CURRENT.md`](../../state/CURRENT.md)
-
-## `0.9.0-test.2` corrective iteration (2026-08-06)
-
-`0.9.0-test.1`의 npm·native package identity는 정확하지만 `hive --version` 출력이
-product version만 표시. npm published version 불변 조건에 따라 기존 artifact 변경 대신
-추가 numbered test release 사용.
-
-1. build metadata에 exact package version·package release date 주입, stable의 기존 출력 형식 보존
-2. test package `--version`에 `AIgent Hive v0.9.0-test #2 · developer test build (released 2026-08-06)` 표시
-3. Unix·PowerShell direct installer의 product·package version 검증 계약 보강
-4. candidate·six npm package·`test` tag·annotated tag·22-asset prerelease 재검증
-5. 실제 npm 설치의 `hive --version` 확인 뒤 `REL9-014` 수용 증거 반영
-
-### 완료 증거
-
-- candidate [`31082481203`](https://github.com/gvm1229/aigent-hive/actions/runs/31082481203):
-  `6980e8b`의 5 native target·npm umbrella PASS
-- publication [`31083602464`](https://github.com/gvm1229/aigent-hive/actions/runs/31083602464):
-  여섯 npm package `test=0.9.0-test.2`·`latest=0.8.0`, annotated `v0.9.0-test.2`, 22-asset prerelease
-- isolated npm install: `AIgent Hive v0.9.0-test #2 · developer test build (released 2026-08-06)`
-- trusted publishing run [`31083140684`](https://github.com/gvm1229/aigent-hive/actions/runs/31083140684):
-  npm scoped package `404`, package·tag·Release mutation 0건; existing registry-auth fallback publication 사용
-- 잔여 외부 정비: npm trusted publisher binding 확인 뒤 `bootstrap_with_token=false` 재검증
+- `release-publication` reviewer `0`, App installation token `contents|workflows: write`, credential-free
+  checkout·최종 tag/Release token 주입
+- `0.9.0-test.1|.2` 여섯 npm package·annotated tag·22-asset prerelease PASS, `latest=0.8.0` 유지
+- test.2 CLI: `AIgent Hive v0.9.0-test #2 · developer test build (released 2026-08-06)`
+- exact run·digest·failure·registry fallback evidence: [`CURRENT.md`](../../state/CURRENT.md)
 
 ## 외부 권한 경계
 
