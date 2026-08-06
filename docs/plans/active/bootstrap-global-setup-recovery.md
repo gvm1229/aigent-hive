@@ -12,19 +12,19 @@
 
 ## Checklist
 
-- [ ] [BGR-001] User projection의 authenticated historical base·live local·incoming digest
+- [x] [BGR-001] User projection의 authenticated historical base·live local·incoming digest
   판별과 vanilla exact replacement
-- [ ] [BGR-002] Modified directive·Skill의 local-priority three-way merge, disjoint incoming
+- [x] [BGR-002] Modified directive·Skill의 local-priority three-way merge, disjoint incoming
   hunk 추가·overlap local 보존·unknown base fail-closed
-- [ ] [BGR-003] Dry-run·apply·validate의 merge preview, changed/retained/omitted inventory와
+- [x] [BGR-003] Dry-run·apply·validate의 merge preview, changed/retained/omitted inventory와
   atomic rollback·recovery
-- [ ] [BGR-004] Global setup 초기 language-first, 부분 변경, 전체 재검토의 one-question
+- [x] [BGR-004] Global setup 초기 language-first, 부분 변경, 전체 재검토의 one-question
   interaction과 drift 상태별 쉬운 안내
-- [ ] [BGR-005] Hive 미설치 전 선택형 bootstrap prompt: release 선택·OS install·host activation·
+- [x] [BGR-005] Hive 미설치 전 선택형 bootstrap prompt: release 선택·OS install·host activation·
   global-only setup·project setup opt-in 경계
-- [ ] [BGR-006] Rust·Python regression: vanilla, disjoint/overlap local edit, unauthenticated
+- [x] [BGR-006] Rust·Python regression: vanilla, disjoint/overlap local edit, unauthenticated
   base, setup UX·bootstrap docs/projection parity
-- [ ] [BGR-007] English·Korean README·ADR·bilingual fact와 source Wiki current truth
+- [x] [BGR-007] English·Korean README·ADR·bilingual fact와 source Wiki current truth
 
 ## 완료 기준
 

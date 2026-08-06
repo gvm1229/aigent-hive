@@ -1,6 +1,6 @@
 # Aigent Hive active plan index
 
-> Revision: 2.06
+> Revision: 2.07
 > 기준일: 2026-08-06
 > Product version: `0.9.0`
 > 현재 milestone: `0.9.0` 정식 릴리스 준비
@@ -45,8 +45,8 @@
 | v0.9 test 기능 마감 | 18 | 0 | 100% |
 | v0.9 full release | 13 | 13 | 50% |
 | Test release setup routing | 4 | 0 | 100% |
-| Bootstrap·user projection recovery | 0 | 7 | 0% |
-| **Canonical total** | **339** | **75** | **81.9%** |
+| Bootstrap·user projection recovery | 7 | 0 | 100% |
+| **Canonical total** | **346** | **68** | **83.6%** |
 
 External production boundary 항목도 미완료 합계에 포함. Protected authority 없이 완료 처리 금지.
 
@@ -112,7 +112,6 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
 
 ## Current execution order
 
-현재: `BGR-001–007` bootstrap 선택지·global setup UX·user projection local-priority merge.
-시험·정식 배포 이력·외부 증거: [`release-0.9.0.md`](active/release-0.9.0.md),
-[`CURRENT.md`](../state/CURRENT.md). 다음 release gate: `REL9-014–015` public test
+완료: `BGR-001–007` bootstrap 선택지·global setup UX·user projection local-priority merge.
+다음 release gate: `REL9-014–015` public test
 acceptance·retention 관찰, stable 경로는 별도 main authority까지 보류.
