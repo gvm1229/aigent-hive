@@ -1423,7 +1423,60 @@ fn projection_base_files(
             })
             .collect();
     }
+    if prior.product_version == "0.7.0" {
+        return legacy_070_projection_base(root, prior);
+    }
     legacy_test3_projection_base(root, prior)
+}
+
+fn legacy_070_projection_base(
+    root: &Dir,
+    prior: &UserProjectionManifest,
+) -> Result<BTreeMap<PathBuf, Vec<u8>>, SetupError> {
+    let installed = super::user_install::read_user_setup_file(
+        root,
+        Path::new(USER_SETUP_RELATIVE),
+        MAX_USER_SETUP_BYTES,
+    )
+    .map_err(SetupError::Conflict)?
+    .ok_or_else(|| {
+        SetupError::Conflict(
+            "Hive cannot identify the release original because the saved global preferences are missing. No files were changed."
+                .to_owned(),
+        )
+    })?;
+    if sha256_digest(&installed) != prior.setup_digest {
+        return Err(SetupError::Conflict(
+            "Hive cannot identify the release original because the saved global preferences changed outside Hive. No files were changed."
+                .to_owned(),
+        ));
+    }
+    let config = parse_and_validate_config(&installed).map_err(|_| {
+        SetupError::Conflict(
+            "Hive cannot read the saved global preferences needed for a safe refresh. No files were changed."
+                .to_owned(),
+        )
+    })?;
+    let catalog = parse_and_validate_catalog()
+        .map_err(|error| SetupError::Internal(error.message().to_owned()))?;
+    let skills = resolve_skills(&config, &catalog)?;
+    let base = user_projection_files(&config, &skills)?;
+    let expected = base
+        .iter()
+        .map(|(path, bytes)| (portable(path), sha256_digest(bytes)))
+        .collect::<Vec<_>>();
+    let recorded = prior
+        .entries
+        .iter()
+        .map(|entry| (entry.path.clone(), entry.digest.clone()))
+        .collect::<Vec<_>>();
+    if expected != recorded {
+        return Err(SetupError::Conflict(
+            "Hive cannot authenticate the release original for this older setup. No files were changed."
+                .to_owned(),
+        ));
+    }
+    Ok(base)
 }
 
 fn legacy_test3_projection_base(
@@ -1987,6 +2040,41 @@ usage_guard:
         }
     }
 
+    fn seed_legacy_070_projection(
+        root: &Path,
+        config: &UserSetupConfig,
+    ) -> (Vec<String>, Vec<u8>, usize) {
+        let catalog = parse_and_validate_catalog().expect("catalog");
+        let skills = resolve_skills(config, &catalog).expect("skill closure");
+        let old_files = user_projection_files(config, &skills).expect("legacy files");
+        for (relative, bytes) in &old_files {
+            let full = root.join(relative);
+            fs::create_dir_all(full.parent().expect("projection parent"))
+                .expect("projection parent");
+            fs::write(full, bytes).expect("legacy projection bytes");
+        }
+        let answers = canonical_config(config).expect("answers");
+        let answer_path = root.join(USER_SETUP_RELATIVE);
+        fs::create_dir_all(answer_path.parent().expect("answers parent")).expect("answers parent");
+        fs::write(answer_path, &answers).expect("saved answers");
+        let manifest = UserProjectionManifest {
+            schema_version: 1,
+            product_version: "0.7.0".to_owned(),
+            package_version: None,
+            setup_digest: sha256_digest(&answers),
+            entries: old_files
+                .iter()
+                .map(|(relative, bytes)| UserProjectionEntry {
+                    path: portable(relative),
+                    digest: sha256_digest(bytes),
+                })
+                .collect(),
+            base_entries: Vec::new(),
+        };
+        write_projection_manifest(root, &manifest);
+        (skills, answers, old_files.len())
+    }
+
     fn seeded_projection_plan(
         base: &[u8],
         local: Vec<u8>,
@@ -2185,6 +2273,80 @@ usage_guard:
 
         assert_eq!(report.disposition, MergeDisposition::IncomingReplace);
         assert!(!report.local_priority);
+    }
+
+    #[test]
+    fn legacy_070_global_projection_has_an_authenticated_vanilla_upgrade_base() {
+        let temporary = tempfile::tempdir().expect("temporary user root");
+        let config = valid_config();
+        let (skills, answers, old_file_count) =
+            seed_legacy_070_projection(temporary.path(), &config);
+        let root =
+            super::super::user_install::open_user_root_for_setup(temporary.path()).expect("root");
+
+        let planned = plan_user_projection(&root, &config, &skills, &answers)
+            .expect("0.7.0 vanilla upgrade preview");
+        let manifest = planned
+            .changes
+            .iter()
+            .find(|change| change.path == PathBuf::from(USER_PROJECTION_MANIFEST_RELATIVE))
+            .and_then(|change| change.after.as_deref())
+            .expect("schema-2 manifest update");
+        let upgraded: UserProjectionManifest =
+            serde_json::from_slice(manifest).expect("upgraded projection manifest");
+
+        assert_eq!(upgraded.schema_version, 2);
+        assert_eq!(upgraded.product_version, env!("CARGO_PKG_VERSION"));
+        assert!(upgraded.package_version.is_some());
+        assert_eq!(upgraded.base_entries.len(), old_file_count);
+    }
+
+    #[test]
+    fn legacy_070_global_projection_preserves_a_local_edit() {
+        let temporary = tempfile::tempdir().expect("temporary user root");
+        let config = valid_config();
+        let (skills, answers, _) = seed_legacy_070_projection(temporary.path(), &config);
+        let path = PathBuf::from(".agents/skills/setup-hive/SKILL.md");
+        let full = temporary.path().join(&path);
+        let mut local = fs::read(&full).expect("legacy setup-hive");
+        local.extend_from_slice(b"\n<!-- local note -->\n");
+        fs::write(&full, &local).expect("local edit");
+        let root =
+            super::super::user_install::open_user_root_for_setup(temporary.path()).expect("root");
+
+        let planned = plan_user_projection(&root, &config, &skills, &answers)
+            .expect("0.7.0 local edit preview");
+        let report = planned
+            .reports
+            .iter()
+            .find(|report| report.path == portable(&path))
+            .expect("setup-hive report");
+
+        assert!(report.local_priority);
+        assert!(!planned.changes.iter().any(|change| change.path == path));
+        assert_eq!(fs::read(full).expect("local edit retained"), local);
+    }
+
+    #[test]
+    fn legacy_070_global_projection_rejects_an_unknown_inventory() {
+        let temporary = tempfile::tempdir().expect("temporary user root");
+        let config = valid_config();
+        let (skills, answers, _) = seed_legacy_070_projection(temporary.path(), &config);
+        let manifest_path = temporary.path().join(USER_PROJECTION_MANIFEST_RELATIVE);
+        let mut manifest: UserProjectionManifest =
+            serde_json::from_slice(&fs::read(&manifest_path).expect("legacy manifest"))
+                .expect("legacy manifest JSON");
+        manifest.entries.pop();
+        write_projection_manifest(temporary.path(), &manifest);
+        let root =
+            super::super::user_install::open_user_root_for_setup(temporary.path()).expect("root");
+
+        let Err(error) = plan_user_projection(&root, &config, &skills, &answers) else {
+            panic!("unknown 0.7.0 inventory must stop");
+        };
+
+        assert_eq!(error.status(), "conflict");
+        assert!(error.message().contains("No files were changed"));
     }
 
     #[test]
