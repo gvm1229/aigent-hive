@@ -1,6 +1,6 @@
 # Aigent Hive active plan index
 
-> Revision: 2.05
+> Revision: 2.06
 > 기준일: 2026-08-06
 > Product version: `0.9.0`
 > 현재 milestone: `0.9.0` 정식 릴리스 준비
@@ -45,7 +45,8 @@
 | v0.9 test 기능 마감 | 18 | 0 | 100% |
 | v0.9 full release | 13 | 13 | 50% |
 | Test release setup routing | 4 | 0 | 100% |
-| **Canonical total** | **339** | **68** | **83.3%** |
+| Bootstrap·user projection recovery | 0 | 7 | 0% |
+| **Canonical total** | **339** | **75** | **81.9%** |
 
 External production boundary 항목도 미완료 합계에 포함. Protected authority 없이 완료 처리 금지.
 
@@ -90,6 +91,7 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
 | [`active/v0.9.0-test-finalization.md`](active/v0.9.0-test-finalization.md) | `TST9-*` | Notion·SQLite, Discord outbound, 문제 보고와 시험판 기능 마감 |
 | [`active/release-0.9.0.md`](active/release-0.9.0.md) | `REL9-*` | 정식 GitHub·npm 릴리스와 public acceptance |
 | [`active/test-release-setup-routing.md`](active/test-release-setup-routing.md) | `TUR-*` | Global·project setup routing과 numbered test user projection 인증 |
+| [`active/bootstrap-global-setup-recovery.md`](active/bootstrap-global-setup-recovery.md) | `BGR-*` | 선택형 bootstrap, 쉬운 global setup 복구, user projection merge |
 
 ## Reconciliation gate
 
@@ -110,21 +112,7 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
 
 ## Current execution order
 
-완료: PR #13 병합, exact `420e244` candidate run `30657669889`, publication run
-`30658188721`, npm·Unix·PowerShell·CMD 계약과 실제 Windows clean install·repeat·
-recovery 검증.
-
-완료: V9-001–025, RAG-001–020, KPX-001–018.
-
-현재: `PRF-001–012`, `TST9-001–018`, `REL9-001–010·012` 완료. exact
-`6761f0b` candidate run `30771098518` 5 target·npm umbrella PASS, fresh clone
-Rust·Python 적합성 PASS.
-
-현재: reviewer 0명. `0.9.0-test`, `0.9.0-test.1`, `0.9.0-test.2`의 여섯 npm package·tag·prerelease
-게시 완료, 세 시험판 모두 `latest=0.8.0` 유지. App token 자동 publication PASS.
-[release-surface PR #17](https://github.com/gvm1229/aigent-hive/pull/17)의 `main` merge 뒤 stable workflow의 `deployment: false` 적용.
-다음은 `REL9-014–015` public test acceptance·retention 관찰이며, `REL9-017–026` stable 경로는
-별도 main 후보·authority까지 보류한다.
-
-완료: `TUR-001–004` routing·legacy/test projection 인증, test.3 candidate·publication PASS.
-다음: `REL9-014–015` public test acceptance·retention 관찰.
+현재: `BGR-001–007` bootstrap 선택지·global setup UX·user projection local-priority merge.
+시험·정식 배포 이력·외부 증거: [`release-0.9.0.md`](active/release-0.9.0.md),
+[`CURRENT.md`](../state/CURRENT.md). 다음 release gate: `REL9-014–015` public test
+acceptance·retention 관찰, stable 경로는 별도 main authority까지 보류.

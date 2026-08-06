@@ -374,6 +374,7 @@ class Phase3SkillSourceContract(unittest.TestCase):
         }
         expected_fragments = {
             "active/documentation-style.md",
+            "active/bootstrap-global-setup-recovery.md",
             "active/docs-wiki-migration.md",
             "active/model-routed-custom-subagents.md",
             "active/native-usage-sensor.md",
@@ -404,6 +405,7 @@ class Phase3SkillSourceContract(unittest.TestCase):
 
         active_fragments = [
             plan_root / "active/documentation-style.md",
+            plan_root / "active/bootstrap-global-setup-recovery.md",
             plan_root / "active/docs-wiki-migration.md",
             plan_root / "active/model-routed-custom-subagents.md",
             plan_root / "active/native-usage-sensor.md",
@@ -427,6 +429,7 @@ class Phase3SkillSourceContract(unittest.TestCase):
             {path.relative_to(plan_root).as_posix() for path in active_fragments},
             {
                 "active/documentation-style.md",
+                "active/bootstrap-global-setup-recovery.md",
                 "active/docs-wiki-migration.md",
                 "active/model-routed-custom-subagents.md",
                 "active/native-usage-sensor.md",
@@ -512,6 +515,9 @@ class Phase3SkillSourceContract(unittest.TestCase):
         )
         phase_7_path = plan_root / "phases/07-public-qualification.md"
         documentation_path = plan_root / "active/documentation-style.md"
+        bootstrap_recovery_path = (
+            plan_root / "active/bootstrap-global-setup-recovery.md"
+        )
         docs_wiki_path = plan_root / "active/docs-wiki-migration.md"
         model_routed_path = (
             plan_root / "active/model-routed-custom-subagents.md"
@@ -595,6 +601,10 @@ class Phase3SkillSourceContract(unittest.TestCase):
             (
                 "Test release setup routing",
                 *checklist_counts([test_routing_path]),
+            ),
+            (
+                "Bootstrap·user projection recovery",
+                *checklist_counts([bootstrap_recovery_path]),
             ),
         )
         total_done = sum(row[1] for row in progress_rows)

@@ -49,6 +49,18 @@ Global setup answer:
 - Foreign byte와 third-party marker 보존
 - Setup bootstrap·reconfigure Skill: 항상 설치
 - 선택 Skill dependency closure: preview와 사용자 승인 필수
+- Authenticated historical base와 live local·incoming digest 비교
+- `local == base`: incoming exact replacement
+- Disjoint local·incoming text 변경: 양쪽 hunk 결합
+- Overlap: local hunk 보존·omitted incoming hunk preview
+- Missing·unauthenticated base: active bytes 불변·conflict
+
+### Global setup UX
+
+- Initial setup: interface language 질문 우선
+- Reconfigure: 부분 preference 변경 또는 전체 setup 재검토 선택 우선
+- Refresh 필요 상태: preference·project 안전 여부와 update/preview 선택 우선
+- Internal path·digest·projection 용어: 기본 안내 제외, 요청 시 diagnostic 제공
 
 ### Wiki lifecycle
 
