@@ -51,6 +51,8 @@ const PRE_SCOPE_ROUTING_SETUP_HIVE_DIGEST: &str =
     "sha256:891b6af921dfdbe390df51a6ee69874bc16ca29adc5b483b18b7cb4d5bb66a57";
 const PRE_SCOPE_ROUTING_SETUP_HARNESS_DIGEST: &str =
     "sha256:8e0d1e2bc964eefbfedc24b462d657552250fb976c18f534c6601328c0b7451c";
+const TEST3_SETUP_HIVE_DIGEST: &str =
+    "sha256:5a729db9b80c9e3c008ecc5b24d927219015ba44dd72a60564afba4476c07bb4";
 const USER_070_CODEX_ONBOARDING_SOURCE_DIGEST: &str =
     "sha256:b9e0364aedca5b56a7a8a189570c054ceeb00c5ec4f58361901ce513a85fa371";
 const USER_070_CODEX_ONBOARDING_GUIDANCE_DIGEST: &str =
@@ -1885,6 +1887,9 @@ fn authenticated_user_inventory(
             return Some(prior.clone());
         }
     }
+    if let Some(historical) = test_three_user_inventory(host, request) {
+        return Some(historical);
+    }
     if let Some(historical) = pre_scope_routing_test_inventory(host, request) {
         return Some(historical);
     }
@@ -1935,6 +1940,44 @@ fn authenticated_user_inventory(
         }
     }
     None
+}
+
+fn test_three_user_inventory(
+    host: UserHost,
+    request: &InventoryAuthentication<'_>,
+) -> Option<AuthenticatedUserInventory> {
+    if request.product_version != "0.9.0"
+        || request.installed_host_version_range != host.version_range()
+        || request.current_entries.is_empty()
+    {
+        return None;
+    }
+
+    let mut entries = request.current_entries.to_vec();
+    let mut setup_hive = false;
+    for entry in &mut entries {
+        if is_managed_ownership(&entry.ownership)
+            && entry.path.ends_with("/skills/setup-hive/SKILL.md")
+        {
+            TEST3_SETUP_HIVE_DIGEST.clone_into(&mut entry.digest);
+            setup_hive = true;
+        }
+    }
+    if !setup_hive {
+        return None;
+    }
+    let source_release_digest = source_release_digest_from_entries(&entries);
+    if request.source_release_digest != source_release_digest {
+        return None;
+    }
+    Some(AuthenticatedUserInventory {
+        product_version: request.product_version.to_owned(),
+        host,
+        host_version_range: request.installed_host_version_range.to_owned(),
+        source_release_digest,
+        guidance_path: portable(request.installed_guidance_path),
+        entries,
+    })
 }
 
 fn historical_070_codex_onboarding_inventory(
@@ -7744,6 +7787,43 @@ mod tests {
             ..request
         };
         assert!(authenticated_user_inventory(UserHost::Codex, &forged).is_none());
+    }
+
+    #[test]
+    fn test_three_inventory_accepts_only_the_published_test_three_predecessor() {
+        let temporary = tempdir().expect("tempdir");
+        let arguments = args(temporary.path(), UserHost::Codex, UserMode::DryRun);
+        let desired = build_desired_user_files(&arguments, None).expect("current desired files");
+        let current = authenticated_current_inventory(&arguments, &desired);
+        let mut predecessor_entries = current.entries.clone();
+        let setup_hive = predecessor_entries
+            .iter_mut()
+            .find(|entry| entry.path.ends_with("/skills/setup-hive/SKILL.md"))
+            .expect("setup-hive projection");
+        setup_hive.digest = TEST3_SETUP_HIVE_DIGEST.to_owned();
+        let predecessor_digest = source_release_digest_from_entries(&predecessor_entries);
+        let request = InventoryAuthentication {
+            product_version: "0.9.0",
+            installed_host_version_range: UserHost::Codex.version_range(),
+            source_release_digest: &predecessor_digest,
+            installed_entries: &predecessor_entries,
+            installed_guidance_path: Path::new(".codex/AGENTS.md"),
+            current_guidance_path: Path::new(".codex/AGENTS.md"),
+            current_source_release_digest: &current.source_release_digest,
+            current_entries: &current.entries,
+            authenticated_prior: None,
+        };
+
+        let authenticated =
+            test_three_user_inventory(UserHost::Codex, &request).expect("exact test.3 inventory");
+        assert_user_entries_equal(&authenticated.entries, &predecessor_entries);
+
+        let forged_digest = format!("sha256:{}", "0".repeat(64));
+        let forged = InventoryAuthentication {
+            source_release_digest: &forged_digest,
+            ..request
+        };
+        assert!(test_three_user_inventory(UserHost::Codex, &forged).is_none());
     }
 
     #[test]

@@ -1363,6 +1363,16 @@ fn user_projection_files(
     Ok(files)
 }
 
+fn legacy_070_projection_files(
+    config: &UserSetupConfig,
+    resolved_skills: &[String],
+) -> Result<BTreeMap<PathBuf, Vec<u8>>, SetupError> {
+    Ok(user_projection_files(config, resolved_skills)?
+        .into_iter()
+        .filter(|(path, _)| !path.ends_with("agents/openai.yaml"))
+        .collect())
+}
+
 fn render_projection_manifest(
     setup_bytes: &[u8],
     files: &BTreeMap<PathBuf, Vec<u8>>,
@@ -1460,21 +1470,39 @@ fn legacy_070_projection_base(
     let catalog = parse_and_validate_catalog()
         .map_err(|error| SetupError::Internal(error.message().to_owned()))?;
     let skills = resolve_skills(&config, &catalog)?;
-    let base = user_projection_files(&config, &skills)?;
-    let expected = base
+    let expected_paths = legacy_070_projection_files(&config, &skills)?
         .iter()
-        .map(|(path, bytes)| (portable(path), sha256_digest(bytes)))
+        .map(|(path, _)| portable(path))
         .collect::<Vec<_>>();
-    let recorded = prior
+    let recorded_paths = prior
         .entries
         .iter()
-        .map(|entry| (entry.path.clone(), entry.digest.clone()))
+        .map(|entry| entry.path.clone())
         .collect::<Vec<_>>();
-    if expected != recorded {
+    if expected_paths != recorded_paths {
         return Err(SetupError::Conflict(
-            "Hive cannot authenticate the release original for this older setup. No files were changed."
+            "Hive cannot safely refresh this older setup because its recorded Hive file list does not match the supported 0.7.0 installation. No files were changed."
                 .to_owned(),
         ));
+    }
+    let mut base = BTreeMap::new();
+    for entry in &prior.entries {
+        let path = PathBuf::from(&entry.path);
+        let bytes = super::user_install::read_user_setup_file(root, &path, MAX_USER_SETUP_BYTES)
+            .map_err(SetupError::Conflict)?
+            .ok_or_else(|| {
+                SetupError::Conflict(
+                    "Hive cannot safely refresh this older setup because a recorded Hive file is missing. No files were changed."
+                        .to_owned(),
+                )
+            })?;
+        if sha256_digest(&bytes) != entry.digest {
+            return Err(SetupError::Conflict(
+                "Hive cannot safely refresh this older setup because some Hive files changed after that installation. No files were changed."
+                    .to_owned(),
+            ));
+        }
+        base.insert(path, bytes);
     }
     Ok(base)
 }
@@ -2046,7 +2074,7 @@ usage_guard:
     ) -> (Vec<String>, Vec<u8>, usize) {
         let catalog = parse_and_validate_catalog().expect("catalog");
         let skills = resolve_skills(config, &catalog).expect("skill closure");
-        let old_files = user_projection_files(config, &skills).expect("legacy files");
+        let old_files = legacy_070_projection_files(config, &skills).expect("legacy files");
         for (relative, bytes) in &old_files {
             let full = root.join(relative);
             fs::create_dir_all(full.parent().expect("projection parent"))
@@ -2298,11 +2326,23 @@ usage_guard:
         assert_eq!(upgraded.schema_version, 2);
         assert_eq!(upgraded.product_version, env!("CARGO_PKG_VERSION"));
         assert!(upgraded.package_version.is_some());
-        assert_eq!(upgraded.base_entries.len(), old_file_count);
+        let catalog = parse_and_validate_catalog().expect("catalog");
+        let current_skills = resolve_skills(&config, &catalog).expect("skill closure");
+        let current_files = user_projection_files(&config, &current_skills).expect("current files");
+        assert!(current_files.len() > old_file_count);
+        assert_eq!(upgraded.base_entries.len(), current_files.len());
+        assert!(planned.changes.iter().any(|change| {
+            change
+                .path
+                .to_string_lossy()
+                .ends_with("/agents/openai.yaml")
+                && change.before.is_none()
+                && change.after.is_some()
+        }));
     }
 
     #[test]
-    fn legacy_070_global_projection_preserves_a_local_edit() {
+    fn legacy_070_global_projection_rejects_a_local_edit_before_schema_two_upgrade() {
         let temporary = tempfile::tempdir().expect("temporary user root");
         let config = valid_config();
         let (skills, answers, _) = seed_legacy_070_projection(temporary.path(), &config);
@@ -2314,16 +2354,12 @@ usage_guard:
         let root =
             super::super::user_install::open_user_root_for_setup(temporary.path()).expect("root");
 
-        let planned = plan_user_projection(&root, &config, &skills, &answers)
-            .expect("0.7.0 local edit preview");
-        let report = planned
-            .reports
-            .iter()
-            .find(|report| report.path == portable(&path))
-            .expect("setup-hive report");
+        let Err(error) = plan_user_projection(&root, &config, &skills, &answers) else {
+            panic!("legacy local edit must stop before schema-2 upgrade");
+        };
 
-        assert!(report.local_priority);
-        assert!(!planned.changes.iter().any(|change| change.path == path));
+        assert_eq!(error.status(), "conflict");
+        assert!(error.message().contains("No files were changed"));
         assert_eq!(fs::read(full).expect("local edit retained"), local);
     }
 
