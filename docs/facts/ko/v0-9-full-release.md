@@ -10,16 +10,16 @@ tags: [distribution, release, signing, v0-9]
 aliases: ["0.9.0 release plan", "full release"]
 sources:
   - "repo:docs/decisions/ADR-0017-0.9-full-release.md#sha256:9172a8fa815052211dac6f561775f47852f4fe86bd629cb02004bbf5e0e30acb"
-  - "repo:docs/plans/active/release-0.9.0.md#sha256:979c5cc733a3cc7d2397fcae1ce689036558f9dd297751e3562c9b6498500d52"
+  - "repo:docs/plans/active/release-0.9.0.md#sha256:895f472996413d4cb93379173eff022d34f2f5acd50be53955ef19214b25906f"
 links: [host-external-integrations, release-verification, test-distribution, version-policy]
-reviewed_revision: "git:0a2fb65ae90b93fb111fd75acff42e917692b69e"
+reviewed_revision: "git:6980e8b38c08a9ebe483a4ffa7937f70999d63a5"
 status: active
 ---
 
 # Aigent Hive 0.9.0 시험·정식 릴리스
 
-기본 시험은 `0.9.0-test`·npm `test`·GitHub prerelease이며 `.N`은 선택형. `6761f0b`의
-candidate `30771098518`과 maintainer recovery로 `v0.9.0-test` 22-asset prerelease 생성.
-App token candidate `31042797141`의 `dd0224a`, publication `31043631056`으로
-`v0.9.0-test.1` 22-asset prerelease 생성. 여섯 package `test=0.9.0-test.1`,
-`latest=0.8.0`; stable `v0.9.0`·npm `0.9.0` 부재.
+시험 prerelease: npm `test`·GitHub prerelease, stable `v0.9.0` 부재. `6980e8b`의 candidate
+`31082481203`, publication `31083602464`으로 `v0.9.0-test.2` 22-asset prerelease 생성. 여섯
+package `test=0.9.0-test.2`, `latest=0.8.0`; 격리 install의 developer-test build label·`2026-08-06`
+출력 확인. Trusted publishing `31083140684`의 scoped-package `404` 2회, mutation 0건;
+existing registry-auth fallback publication 완료.
