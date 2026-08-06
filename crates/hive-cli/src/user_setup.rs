@@ -1988,7 +1988,7 @@ usage_guard:
     }
 
     fn seeded_projection_plan(
-        base: Vec<u8>,
+        base: &[u8],
         local: Vec<u8>,
     ) -> (AppliedProjection, Vec<u8>, PathBuf) {
         let temporary = tempfile::tempdir().expect("temporary user root");
@@ -2001,7 +2001,7 @@ usage_guard:
         let full = temporary.path().join(&path);
         fs::create_dir_all(full.parent().expect("skill parent")).expect("skill parent");
         fs::write(&full, local).expect("local Skill");
-        write_projection_manifest(temporary.path(), &schema_two_manifest(&path, &base));
+        write_projection_manifest(temporary.path(), &schema_two_manifest(&path, base));
         let root =
             super::super::user_install::open_user_root_for_setup(temporary.path()).expect("root");
         let planned = plan_user_projection(
@@ -2035,7 +2035,7 @@ usage_guard:
             .replace("# Setup Hive", "# Earlier Setup Hive");
         base = replaced.into_bytes();
 
-        let (planned, expected, target) = seeded_projection_plan(base.clone(), base);
+        let (planned, expected, target) = seeded_projection_plan(&base, base.clone());
         let report = planned
             .reports
             .iter()
@@ -2067,7 +2067,7 @@ usage_guard:
 
         let mut disjoint_local = base.clone();
         disjoint_local.extend_from_slice(b"\n<!-- local note -->\n");
-        let (merged, _, target) = seeded_projection_plan(base.clone(), disjoint_local);
+        let (merged, _, target) = seeded_projection_plan(&base, disjoint_local);
         let merged_report = merged
             .reports
             .iter()
@@ -2087,7 +2087,7 @@ usage_guard:
             .expect("UTF-8 base")
             .replace("# Earlier Setup Hive", "# Local Setup Hive")
             .into_bytes();
-        let (overlap, _, target) = seeded_projection_plan(base, overlap_local);
+        let (overlap, _, target) = seeded_projection_plan(&base, overlap_local);
         let overlap_report = overlap
             .reports
             .iter()
@@ -2124,14 +2124,13 @@ usage_guard:
         let catalog = parse_and_validate_catalog().expect("catalog");
         let skills = resolve_skills(&config, &catalog).expect("skill closure");
 
-        let error = match plan_user_projection(
+        let Err(error) = plan_user_projection(
             &root,
             &config,
             &skills,
             &canonical_config(&config).expect("answers"),
-        ) {
-            Ok(_) => panic!("unknown base must stop before writes"),
-            Err(error) => error,
+        ) else {
+            panic!("unknown base must stop before writes");
         };
 
         assert_eq!(error.status(), "conflict");
