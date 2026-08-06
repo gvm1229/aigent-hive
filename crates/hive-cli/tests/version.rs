@@ -6,7 +6,7 @@ fn version_aliases_report_product_version_and_release_date() {
     let package = env!("HIVE_PACKAGE_VERSION");
     let release_date = env!("HIVE_PACKAGE_RELEASE_DATE");
     let expected = if package == product {
-        format!("AIgent Hive v{} (released {})\n", product, release_date)
+        format!("AIgent Hive v{product} (released {release_date})\n")
     } else if package == format!("{product}-dev") {
         format!("AIgent Hive v{product}-dev · local developer build (built {release_date})\n")
     } else {

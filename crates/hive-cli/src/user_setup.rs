@@ -1592,8 +1592,8 @@ fn legacy_070_projection_base(
         .map_err(|error| SetupError::Internal(error.message().to_owned()))?;
     let skills = resolve_skills(&config, &catalog)?;
     let expected_paths = legacy_070_projection_files(&config, &skills)?
-        .iter()
-        .map(|(path, _)| portable(path))
+        .keys()
+        .map(|path| portable(path))
         .collect::<Vec<_>>();
     let recorded_paths = prior
         .entries
@@ -2447,7 +2447,7 @@ usage_guard:
         let manifest = planned
             .changes
             .iter()
-            .find(|change| change.path == PathBuf::from(USER_PROJECTION_MANIFEST_RELATIVE))
+            .find(|change| change.path == Path::new(USER_PROJECTION_MANIFEST_RELATIVE))
             .and_then(|change| change.after.as_deref())
             .expect("schema-2 manifest update");
         let upgraded: UserProjectionManifest =
