@@ -116,6 +116,37 @@ def skill_frontmatter(path: Path) -> tuple[dict[str, object], str]:
 
 
 class Phase3SkillSourceContract(unittest.TestCase):
+    def test_source_knowledge_preflight_never_uses_consumer_retrieval(self) -> None:
+        manifest = (REPOSITORY_ROOT / "AGENTS.md").read_text(encoding="utf-8")
+        behavior = (
+            REPOSITORY_ROOT / ".agents/directives/01-behavior.md"
+        ).read_text(encoding="utf-8")
+        architecture = (
+            REPOSITORY_ROOT / ".agents/directives/02-architecture.md"
+        ).read_text(encoding="utf-8")
+        source_wiki = (
+            REPOSITORY_ROOT / ".agents/skills/hive-source-wiki/SKILL.md"
+        ).read_text(encoding="utf-8")
+
+        for name, text in (
+            ("manifest", manifest),
+            ("behavior", behavior),
+            ("architecture", architecture),
+            ("source_wiki", source_wiki),
+        ):
+            with self.subTest(path=name):
+                self.assertIn("hive-source.json", text)
+                self.assertIn("hive source-wiki query", text)
+                self.assertIn("hive knowledge retrieve", text)
+        self.assertIn("a source-root refusal is not a", manifest)
+        self.assertIn("completed lookup", manifest)
+        self.assertIn("source-root refusal", behavior)
+        self.assertIn("does not satisfy the", behavior)
+        self.assertIn("retrieval gate", behavior)
+        self.assertIn("attached consumer project", architecture)
+        self.assertIn("single automatic source pre-work", source_wiki)
+        self.assertIn("lookup", source_wiki)
+
     def test_source_directives_preserve_valid_knowledge_during_simplification(self) -> None:
         manifest = (REPOSITORY_ROOT / "AGENTS.md").read_text(encoding="utf-8")
         editing = (

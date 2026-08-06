@@ -1,6 +1,6 @@
 ---
 name: hive-source-wiki
-description: Query, lint, index, capture, or maintain Aigent Hive's provider-neutral bilingual source Wiki. Route explicit source Wiki work here and load it automatically at the completion gate when a material source task produced durable task facts; never intercept ordinary simple questions or consumer-project knowledge work.
+description: Query, lint, index, capture, or maintain Aigent Hive's provider-neutral bilingual source Wiki. Use it for the source workspace's automatic pre-work knowledge lookup and the material-task completion gate; never route the source root through consumer knowledge retrieval or intercept consumer-project knowledge work.
 ---
 
 # Hive Source Wiki
@@ -45,12 +45,17 @@ hive source-wiki query --target <source-root> --language en|ko \
   (--text <query>|--tag <tag>) [--limit <1..100>] --output json
 ```
 
+- For the automatic pre-work lookup required by the source behavior directive, detect
+  `hive-source.json` first and run the bounded `source-wiki query` command directly. Never call
+  consumer `hive knowledge retrieve` with the source root, and never count its expected source
+  guard conflict as a completed lookup.
 - Run `lint` before relying on pair, metadata, link, source locator, secret-safety, or current
   index claims. It may wait for a writer and reports missing, stale, or corrupt derived state
   without repair.
 - Run `index` only to rebuild the disposable SQLite projection.
-- Run `query` only for explicit source Wiki lookup intent. Missing, stale, corrupt, or
-  crash-interrupted derived state fails closed until an explicit rebuild.
+- Run `query` for explicit source Wiki lookup intent or the single automatic source pre-work
+  lookup. Missing, stale, corrupt, or crash-interrupted derived state fails closed until an
+  explicit rebuild.
 - Keep ordinary simple questions on the simple-question path without loading this Skill.
 
 ## Capture and maintenance workflow

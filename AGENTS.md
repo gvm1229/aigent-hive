@@ -15,6 +15,10 @@ Hive development directives live under `.agents/`; files under `harness/` are so
 ## Prime Directives
 
 - Treat this repository as Hive source, never as a consumer project with an installed Hive harness.
+- Resolve automatic knowledge lookup by target class before invoking a command. When the current
+  root contains `hive-source.json`, use `hive source-wiki query --target <source-root>` and never
+  pass the source root to consumer `hive knowledge retrieve`; a source-root refusal is not a
+  completed lookup. Reserve consumer retrieval for an attached external consumer project.
 - Respond to the maintainer in Korean unless the maintainer explicitly requests another language for the current response. A request written in another language does not by itself override this rule.
 - Keep source, release artifacts, and installed consumer harnesses physically and logically separate.
 - Implement Hive-native iterative planning, logical scheduling, team coordination, and multi-goal execution through provider-neutral canonical state and declarative host envelopes. Never implement a model runtime, provider API client, credential path, or direct model/subagent process launcher. Do not use OMX/OMC for new workflows. Preserve legacy foreign bytes as read-only provenance and migrate a legacy run only through an explicit, validated action that creates a new Hive-native run identity.
