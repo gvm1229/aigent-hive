@@ -13,8 +13,8 @@ project knowledge, durable role/run state, usage safeguards, and safe update con
 It never asks for model-provider API keys, calls model-provider APIs, or replaces the
 host's own model runtime.
 
-Source `0.9.0` is implemented but not published. Installation remains on the latest
-published release, `0.8.0`.
+Stable `0.8.0` remains the npm `latest` release. Developer test build `0.9.0-test.3`
+is published only on npm `test` and as a GitHub prerelease.
 
 ## Install 0.8.0
 
@@ -33,6 +33,23 @@ npm install -g aigent-hive@0.8.0
 
 The npm installer requires Node.js and npm. The installed `hive` runtime is a native
 Rust binary and does not require Node.js.
+
+### Developer test build 0.9.0-test.3
+
+For developers and contributors testing the next release:
+
+```console
+npm install -g aigent-hive@0.9.0-test.3
+hive --version
+```
+
+Expected version label:
+
+```text
+AIgent Hive v0.9.0-test #3 · developer test build (released 2026-08-06)
+```
+
+This explicit version never changes npm `latest`.
 
 ### macOS and Linux with curl
 
@@ -74,7 +91,17 @@ stability release.
 
 ## First setup
 
-After installing the Hive CLI, activate the host projection in a terminal:
+Follow these four steps in order. Repeat step 2 for each host, step 4 for each project,
+and step 3 whenever global preferences change.
+
+### 1. Install the Hive CLI
+
+Use one command from [Install 0.8.0](#install-080) above. The npm installation provides the
+`hive` command; it does not yet activate Hive inside a host.
+
+### 2. Activate Hive for this host
+
+In a terminal, activate the host projection:
 
 ```console
 hive install --scope user --host codex --apply --output json
@@ -84,7 +111,7 @@ Replace `codex` with `claude` or `antigravity` for that host. This operation res
 authenticated known prior user installation before updating it to the current projection;
 it still refuses unknown or modified ownership manifests.
 
-### 1. Configure global preferences
+### 3. Configure global preferences
 
 Open Codex, Claude Code, or Gemini Antigravity and paste this shared prompt:
 
@@ -92,10 +119,11 @@ Open Codex, Claude Code, or Gemini Antigravity and paste this shared prompt:
 Configure or reconfigure my global Aigent Hive preferences for this host. Do not inspect or configure a project, repository, folder, or current working directory. Start the interactive user-scope setup.
 ```
 
-This always starts global setup, including language selection, update-check consent, and
-global preferences. Reuse it whenever global preferences change.
+Use this prompt for the first setup and later preference changes. It configures only your
+user-scope language, Wiki, persona, Skills, and update preferences; it never inspects the
+current folder or creates a project harness.
 
-### 2. Configure one project
+### 4. Configure one project
 
 Open the exact project in the host and paste this separate prompt:
 
@@ -103,8 +131,16 @@ Open the exact project in the host and paste this separate prompt:
 Configure the local Aigent Hive harness for this project. Use my existing global Hive preferences, inspect only this project, show the exact write preview, and ask me only about choices that require my approval.
 ```
 
-Project setup begins only with an explicit project target. A request that includes both
-scopes completes global setup first and asks before inspecting or changing the project.
+Use this prompt once for each repository. It inherits your global preferences and only changes
+the named project after showing its exact write preview. If the host is not open in the project,
+name the project with an absolute path instead:
+
+```text
+Configure the local Aigent Hive harness for the project at /absolute/path/to/project. Use my existing global Hive preferences, inspect only that project, show the exact write preview, and ask me only about choices that require my approval.
+```
+
+Do not use the project prompt from your home directory without a project path. A request that
+includes both scopes completes global setup first and asks before inspecting or changing a project.
 
 Neither prompt authorizes an update, optional third-party Skill, or provider-credential
 access.

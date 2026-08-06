@@ -12,7 +12,8 @@ Hive: subscription 인증 agent host에 일관된 setup, Skill routing, project 
 지속 가능한 role/run 상태, usage safeguard와 안전한 update 계약 제공.
 Model-provider API key 요청·provider API 호출·host model runtime 대체 없음.
 
-Source `0.9.0` 구현 완료, 미배포 상태. 설치 대상은 최신 배포판 `0.8.0` 유지.
+Stable `0.8.0`: npm `latest` 유지. Developer test build `0.9.0-test.3`: npm `test`와
+GitHub prerelease 전용 배포.
 
 ## 0.8.0 설치
 
@@ -32,6 +33,23 @@ npm install -g aigent-hive@0.8.0
 
 npm 설치 dependency: Node.js·npm. 설치된 `hive` runtime: native Rust binary,
 Node.js dependency 없음.
+
+### Developer test build 0.9.0-test.3
+
+다음 release 검증용 developer·contributor 설치:
+
+```console
+npm install -g aigent-hive@0.9.0-test.3
+hive --version
+```
+
+예상 version label:
+
+```text
+AIgent Hive v0.9.0-test #3 · developer test build (released 2026-08-06)
+```
+
+Exact version 설치: npm `latest` 변경 없음.
 
 ### macOS·Linux curl
 
@@ -72,7 +90,16 @@ code signing은 후속 안정 릴리스로 deferred.
 
 ## 첫 설정
 
-Hive CLI 설치 후 terminal에서 host projection 활성화:
+아래 4단계 순서. Host마다 2단계, project마다 4단계 반복. Global preference 변경 시 3단계 재실행.
+
+### 1. Hive CLI 설치
+
+위 [Install 0.8.0](#install-080) 중 한 가지 명령 사용. npm 설치 범위: `hive` command 제공;
+host 내부 Hive 활성화 전 단계.
+
+### 2. 이 host에 Hive 연결
+
+Terminal에서 host projection 활성화:
 
 ```console
 hive install --scope user --host codex --apply --output json
@@ -82,7 +109,7 @@ hive install --scope user --host codex --apply --output json
 installation을 현재 projection으로 갱신하기 전에 복구. Unknown 또는 modified ownership manifest는
 계속 거부.
 
-### 1. Global preference 설정
+### 3. Global preference 설정
 
 Codex, Claude Code 또는 Gemini Antigravity에서 아래 공통 prompt 입력:
 
@@ -90,10 +117,10 @@ Codex, Claude Code 또는 Gemini Antigravity에서 아래 공통 prompt 입력:
 Configure or reconfigure my global Aigent Hive preferences for this host. Do not inspect or configure a project, repository, folder, or current working directory. Start the interactive user-scope setup.
 ```
 
-이 prompt는 language 선택, update-check consent, global preference를 포함한 global setup 전용.
-Global preference 변경 시에도 같은 prompt 재사용.
+최초 설정·기본값 변경용 prompt. User-scope language·Wiki·persona·Skill·update preference만
+설정; 현재 folder inspection·project harness 생성 없음.
 
-### 2. Project 한 개 설정
+### 4. Project 한 개 설정
 
 Host에서 정확한 project를 열고 아래 별도 prompt 입력:
 
@@ -101,8 +128,15 @@ Host에서 정확한 project를 열고 아래 별도 prompt 입력:
 Configure the local Aigent Hive harness for this project. Use my existing global Hive preferences, inspect only this project, show the exact write preview, and ask me only about choices that require my approval.
 ```
 
-Project target 명시 시에만 project setup 시작. 두 scope 동시 요청은 global setup 완료 후 project
-inspection·change 전 별도 확인.
+Project마다 한 번씩 사용. Global preference 상속, exact write preview 후 해당 project만 변경.
+Host에서 project open 불가 시 absolute path 명시:
+
+```text
+Configure the local Aigent Hive harness for the project at /absolute/path/to/project. Use my existing global Hive preferences, inspect only that project, show the exact write preview, and ask me only about choices that require my approval.
+```
+
+Home directory에서 path 없는 project prompt 사용 금지. 두 scope 동시 요청: global setup 완료 후
+project inspection·change 전 별도 확인.
 
 두 prompt 모두 update, optional third-party Skill, provider credential 접근 권한 포함 없음.
 
