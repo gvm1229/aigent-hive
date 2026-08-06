@@ -37,6 +37,12 @@
   all built-in·개별 Skill toggle·one-entry-per-line 적용. 기존 recommended closure는 saved
   answer validate에서만 해석, 새 `all|individual` preview·approval 전 활성 Skill 추가 0건.
   project recommendation은 분리 catalog 유지
+- Global Skill test release: `0.9.0-test.4` candidate `31125304895`는 Linux x86_64 hosted
+  runner 미배정(15분 28초)으로 publish 전 중단했고, 동일 source 재시도 `31125945638`도
+  모든 runner가 배정되지 않아 취소. 2026-08-07 GitHub Status API: Actions `major_outage`,
+  critical investigating incident. source·local qualification은 완료, npm·tag·GitHub Release·
+  `latest` mutation은 0건. Actions 복구 뒤 exact `548983d` candidate 성공 후 test publication
+  dispatch 필요
 - Developer binary: `scripts/dev-install.sh`의 sandbox·global·CAS rollback과 `product-dev`
   version identity, isolated global activation·rollback 회귀 검증 완료
 - Legacy setup recovery: schema-1 `0.7.0`의 19개 legacy projection은 saved preference·path

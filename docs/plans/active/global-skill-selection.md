@@ -46,3 +46,9 @@
 - project 추천 세트: `harness/project-setup/skill-suites.yml`로 분리, global profile 결합 없음
 - 검증: `hive-cli` user setup 30개, `hive-render` 66개, user/project·connected·static·v0.9
   Python 69개 통과
+- release 대기: `0.9.0-test.4` candidate `31125304895`는 Linux x86_64 hosted runner를
+  15분 28초 동안 배정하지 못해 publish 전 중단. 동일 source 재시도 `31125945638`도 모든
+  hosted runner가 배정되지 않아 취소. 2026-08-07 GitHub Status API는 Actions를
+  `major_outage`·critical investigating incident로 보고했으며, npm·tag·GitHub Release·`latest`
+  mutation은 모두 0건. Actions 복구 뒤 exact `548983d`로 candidate를 재실행하고 성공한
+  candidate ID를 사용해 test publication을 dispatch한다.
