@@ -8,7 +8,6 @@
     "schema_version",
     "profiles",
     "personas",
-    "recommended_skill_suites",
     "mandatory_skills",
     "skill_dependencies",
     "optional_third_party_skills"
@@ -36,17 +35,6 @@
         { "$ref": "#/$defs/balanced_persona" },
         { "$ref": "#/$defs/friendly_persona" },
         { "$ref": "#/$defs/custom_persona" }
-      ],
-      "items": false
-    },
-    "recommended_skill_suites": {
-      "type": "array",
-      "minItems": 3,
-      "maxItems": 3,
-      "prefixItems": [
-        { "$ref": "#/$defs/web_suite" },
-        { "$ref": "#/$defs/game_suite" },
-        { "$ref": "#/$defs/non_developer_suite" }
       ],
       "items": false
     },
@@ -155,41 +143,6 @@
         "hive-update",
         "hive-project-upgrade",
         "hive-migrate"
-      ]
-    },
-    "suite": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["id", "display_name", "description", "skills"],
-      "properties": {
-        "id": { "type": "string" },
-        "display_name": { "$ref": "#/$defs/localized_text" },
-        "description": { "$ref": "#/$defs/localized_text" },
-        "skills": {
-          "type": "array",
-          "minItems": 1,
-          "uniqueItems": true,
-          "contains": { "const": "setup-hive" },
-          "items": { "$ref": "#/$defs/skill_name" }
-        }
-      }
-    },
-    "web_suite": {
-      "allOf": [
-        { "$ref": "#/$defs/suite" },
-        { "properties": { "id": { "const": "web-developer" } } }
-      ]
-    },
-    "game_suite": {
-      "allOf": [
-        { "$ref": "#/$defs/suite" },
-        { "properties": { "id": { "const": "game-developer" } } }
-      ]
-    },
-    "non_developer_suite": {
-      "allOf": [
-        { "$ref": "#/$defs/suite" },
-        { "properties": { "id": { "const": "non-developer" } } }
       ]
     },
     "skill_dependency": {

@@ -62,7 +62,7 @@ Configure user-scope Hive preferences without modifying a project harness or pro
      `General user; infer domain context from each project.`
    - Agent persona: `strict`.
    - Active hosts: the current authenticated host only.
-   - Skills: `individual` mode with every built-in Skill in the signed catalog.
+   - Skills: `all` mode with every built-in Skill in the signed catalog.
    - Usage guard: disabled, stored default remaining threshold `20`, CodexBar fallback disabled.
    - Selecting expedited authorizes the displayed built-in dependency closure only. It never
      approves a third-party Skill, CodexBar installation, credential access, or destructive action.
@@ -102,10 +102,12 @@ consent and setup mode. Ask the remaining preference questions only for `Custom`
 7. **Agent persona** — `strict`, `balanced`, `friendly`, or `custom`.
    - For `custom`, ask the next single question for a non-empty custom description.
 8. **Active hosts** — select one or more of `codex`, `claude`, and `antigravity`.
-9. **Skill selection mode** — a signed recommended suite or individual built-in Skills.
-   - Recommended: ask which suite from the signed catalog.
-   - Individual: present existing built-ins and collect the selection.
+9. **Skills** — every built-in Skill is active by default.
+   - Ask whether to keep every built-in Skill active or choose Skills individually.
+   - For individual choice, present every built-in Skill as one Markdown list item per line and collect each on/off decision independently.
    - Always include mandatory `setup-hive` and preview the full dependency closure.
+   - Never derive active Skills from the user profile, persona, or host selection.
+   - Existing `recommended` configuration is a legacy saved value. Preserve its exact recorded closure until the user reviews and approves a new `all` or `individual` preview.
    - The signed catalog's `optional_third_party_skills` list is empty in this release. Do not offer or activate a third-party Skill until a later release defines its explicit consent contract.
 10. **Usage guard** — explicit opt-in; default disabled.
    - When enabled, offer the default remaining threshold `20` before asking for a different integer from `1` through `99`.

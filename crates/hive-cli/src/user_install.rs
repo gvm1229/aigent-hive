@@ -7220,7 +7220,6 @@ mod tests {
             selected_hosts: vec![SelectedHost::Codex],
             skills: SkillPreferences {
                 mode: SkillSelectionMode::Individual,
-                recommended_suite: None,
                 selected: vec!["setup-hive".to_owned()],
             },
             update_check: UpdateCheckPreferences::default(),

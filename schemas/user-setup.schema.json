@@ -141,12 +141,9 @@
         {
           "type": "object",
           "additionalProperties": false,
-          "required": ["mode", "recommended_suite"],
+          "required": ["mode"],
           "properties": {
-            "mode": { "const": "recommended" },
-            "recommended_suite": {
-              "enum": ["web-developer", "game-developer", "non-developer"]
-            }
+            "mode": { "const": "all" }
           }
         },
         {

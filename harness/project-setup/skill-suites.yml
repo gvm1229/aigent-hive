@@ -1,0 +1,122 @@
+schema_version: 1
+project_skill_suites:
+  - id: web-developer
+    skills:
+      - setup-hive
+      - setup-harness
+      - auto-setup-harness
+      - ai-slop-cleaner
+      - best-practice-research
+      - hive-loop-engineering
+      - hive-prompt-refine
+      - hive-wiki
+      - hive-knowledge-capture
+      - hive-knowledge-query
+      - hive-knowledge-maintenance
+      - hive-knowledge-scan
+      - hive-run-checkpoint
+      - hive-run-resume
+      - hive-usage-guard
+      - hive-update
+      - hive-project-upgrade
+  - id: game-developer
+    skills:
+      - setup-hive
+      - setup-harness
+      - auto-setup-harness
+      - ai-slop-cleaner
+      - best-practice-research
+      - hive-loop-engineering
+      - hive-prompt-refine
+      - hive-wiki
+      - hive-knowledge-capture
+      - hive-knowledge-query
+      - hive-knowledge-maintenance
+      - hive-knowledge-scan
+      - hive-run-checkpoint
+      - hive-run-resume
+      - hive-role-handoff
+      - hive-judge-package
+      - hive-usage-guard
+      - hive-update
+      - hive-project-upgrade
+  - id: non-developer
+    skills:
+      - setup-hive
+      - setup-harness
+      - auto-setup-harness
+      - best-practice-research
+      - hive-simple-question
+      - hive-prompt-refine
+      - hive-wiki
+      - hive-knowledge-capture
+      - hive-knowledge-query
+      - hive-knowledge-maintenance
+      - hive-knowledge-scan
+      - hive-usage-guard
+      - hive-update
+mandatory_skills:
+  - setup-hive
+skill_dependencies:
+  - skill: setup-hive
+    requires: []
+  - skill: setup-harness
+    requires: []
+  - skill: auto-setup-harness
+    requires:
+      - setup-harness
+  - skill: hive-simple-question
+    requires: []
+  - skill: hive-prompt-refine
+    requires: []
+  - skill: hive-knowledge-capture
+    requires:
+      - hive-knowledge-query
+  - skill: hive-knowledge-query
+    requires: []
+  - skill: hive-knowledge-promote
+    requires:
+      - hive-knowledge-query
+      - hive-knowledge-capture
+  - skill: hive-knowledge-maintenance
+    requires:
+      - hive-knowledge-query
+  - skill: hive-run-checkpoint
+    requires: []
+  - skill: hive-run-resume
+    requires:
+      - hive-run-checkpoint
+  - skill: hive-usage-guard
+    requires: []
+  - skill: hive-role-handoff
+    requires: []
+  - skill: hive-judge-package
+    requires: []
+  - skill: hive-update
+    requires: []
+  - skill: hive-project-upgrade
+    requires:
+      - hive-update
+  - skill: hive-migrate
+    requires:
+      - hive-update
+  - skill: hive-loop-engineering
+    requires:
+      - hive-judge-package
+      - hive-role-handoff
+      - hive-run-checkpoint
+      - hive-run-resume
+      - hive-usage-guard
+  - skill: hive-wiki
+    requires:
+      - hive-knowledge-capture
+      - hive-knowledge-maintenance
+      - hive-knowledge-query
+      - hive-knowledge-scan
+  - skill: ai-slop-cleaner
+    requires: []
+  - skill: best-practice-research
+    requires: []
+  - skill: hive-knowledge-scan
+    requires:
+      - hive-knowledge-promote

@@ -224,17 +224,16 @@ else:
         *,
         hosts: list[str],
         wiki_enabled: bool = True,
-        skills_mode: str = "recommended",
+        skills_mode: str = "all",
         selected_skills: list[str] | None = None,
         usage_enabled: bool = False,
         threshold: int = 20,
     ) -> Path:
         path = self.work_root / f"{name}.yml"
         skills: dict[str, object]
-        if skills_mode == "recommended":
+        if skills_mode == "all":
             skills = {
-                "mode": "recommended",
-                "recommended_suite": "web-developer",
+                "mode": "all",
             }
         else:
             skills = {
@@ -438,8 +437,8 @@ else:
         self.assertEqual(installed.returncode, 0, installed.stderr)
         self.assertEqual(install_result["code"], "hive.user-install-complete")
 
-        recommended = self.write_user_setup_answers(
-            "recommended-user-setup",
+        all_built_ins = self.write_user_setup_answers(
+            "all-built-ins-user-setup",
             hosts=["codex"],
         )
         before_preview = snapshot_tree(user_root)
@@ -448,7 +447,7 @@ else:
             "--scope",
             "user",
             "--answers",
-            str(recommended),
+            str(all_built_ins),
             "--user-root",
             str(user_root),
             "--dry-run",
@@ -485,7 +484,7 @@ else:
             "--scope",
             "user",
             "--answers",
-            str(recommended),
+            str(all_built_ins),
             "--user-root",
             str(user_root),
             "--apply",

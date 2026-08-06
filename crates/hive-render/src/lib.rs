@@ -2130,7 +2130,7 @@ fn validate_project_setup_preferences(answers: &SetupAnswers) -> Result<(), Rend
 #[derive(Deserialize)]
 struct ProjectSuiteCatalog {
     schema_version: u32,
-    recommended_skill_suites: Vec<ProjectSuite>,
+    project_skill_suites: Vec<ProjectSuite>,
     mandatory_skills: Vec<String>,
     skill_dependencies: Vec<ProjectSkillDependency>,
 }
@@ -2297,7 +2297,7 @@ fn resolve_project_skill_selection(
                 .as_deref()
                 .expect("recommended selection was schema-validated");
             catalog
-                .recommended_skill_suites
+                .project_skill_suites
                 .iter()
                 .find(|suite| suite.id == suite_id)
                 .map(|suite| suite.skills.iter().cloned().collect())
@@ -2341,7 +2341,10 @@ fn resolve_project_skill_selection(
 }
 
 fn project_skill_catalog() -> Result<ProjectSuiteCatalog, RenderError> {
-    serde_yaml::from_str(include_str!("../../../harness/user-setup/catalog.yml")).map_err(|error| {
+    serde_yaml::from_str(include_str!(
+        "../../../harness/project-setup/skill-suites.yml"
+    ))
+    .map_err(|error| {
         RenderError::Internal(format!("embedded user setup catalog is invalid: {error}"))
     })
 }
@@ -2351,7 +2354,7 @@ fn validate_project_skill_catalog(
     available: &BTreeSet<String>,
 ) -> Result<(), RenderError> {
     let mut suite_ids = BTreeSet::new();
-    let suites_valid = catalog.recommended_skill_suites.iter().all(|suite| {
+    let suites_valid = catalog.project_skill_suites.iter().all(|suite| {
         suite_ids.insert(suite.id.as_str())
             && !suite.skills.is_empty()
             && project_skill_names_are_valid(&suite.skills, available)

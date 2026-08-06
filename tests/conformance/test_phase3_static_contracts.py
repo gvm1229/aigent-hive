@@ -209,6 +209,23 @@ class Phase3SkillSourceContract(unittest.TestCase):
             with self.subTest(required=required):
                 self.assertIn(required, skill)
 
+    def test_global_skill_selection_defaults_to_all_without_profile_suites(self) -> None:
+        setup_catalog = read_yaml(
+            REPOSITORY_ROOT / "harness/user-setup/catalog.yml"
+        )
+        user_schema = (
+            REPOSITORY_ROOT / "schemas/user-setup.schema.json"
+        ).read_text(encoding="utf-8")
+        setup_skill = (SKILL_ROOT / "setup-hive/SKILL.md").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertNotIn("recommended_skill_suites", setup_catalog)
+        self.assertNotIn("recommended_skill_suites", user_schema)
+        self.assertIn('"const": "all"', user_schema)
+        self.assertIn("Never derive active Skills from the user profile", setup_skill)
+        self.assertIn("one Markdown list item per line", setup_skill)
+
     def test_source_and_consumer_lists_use_one_entry_per_line(self) -> None:
         source = (REPOSITORY_ROOT / ".agents/directives/01-behavior.md").read_text(
             encoding="utf-8"

@@ -171,7 +171,7 @@ impl SelectedHost {
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "lowercase")]
 pub(crate) enum SkillSelectionMode {
-    Recommended,
+    All,
     Individual,
 }
 
@@ -179,8 +179,6 @@ pub(crate) enum SkillSelectionMode {
 #[serde(deny_unknown_fields)]
 pub(crate) struct SkillPreferences {
     pub(crate) mode: SkillSelectionMode,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub(crate) recommended_suite: Option<String>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub(crate) selected: Vec<String>,
 }
@@ -246,15 +244,6 @@ struct CatalogChoice {
 
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
-struct SkillSuite {
-    id: String,
-    display_name: LocalizedText,
-    description: LocalizedText,
-    skills: Vec<String>,
-}
-
-#[derive(Debug, Deserialize)]
-#[serde(deny_unknown_fields)]
 struct SkillDependency {
     skill: String,
     requires: Vec<String>,
@@ -266,7 +255,6 @@ struct UserSetupCatalog {
     schema_version: u32,
     profiles: Vec<CatalogChoice>,
     personas: Vec<CatalogChoice>,
-    recommended_skill_suites: Vec<SkillSuite>,
     mandatory_skills: Vec<String>,
     skill_dependencies: Vec<SkillDependency>,
     optional_third_party_skills: Vec<String>,
@@ -462,10 +450,6 @@ fn resolve_user_root() -> Result<PathBuf, SetupError> {
 #[allow(clippy::too_many_lines)]
 fn execute(arguments: &Arguments) -> Result<ActionResult, SetupError> {
     let answer_bytes = read_bounded_regular(&arguments.answers, MAX_ANSWERS_BYTES)?;
-    let config = parse_and_validate_config(&answer_bytes)?;
-    let catalog = parse_and_validate_catalog()?;
-    let resolved_skills = resolve_skills(&config, &catalog)?;
-    let desired = canonical_config(&config)?;
     let relative = Path::new(USER_SETUP_RELATIVE);
     let existing = super::user_install::read_user_setup_file(
         &arguments.root_cap,
@@ -473,6 +457,16 @@ fn execute(arguments: &Arguments) -> Result<ActionResult, SetupError> {
         MAX_USER_SETUP_BYTES,
     )
     .map_err(SetupError::Conflict)?;
+    let legacy_answers = existing.as_deref() == Some(answer_bytes.as_slice())
+        && has_legacy_recommended_skill_selection(&answer_bytes)?;
+    let config = if legacy_answers {
+        parse_and_validate_installed_config(&answer_bytes)?
+    } else {
+        parse_and_validate_config(&answer_bytes)?
+    };
+    let catalog = parse_and_validate_catalog()?;
+    let resolved_skills = resolve_skills(&config, &catalog)?;
+    let desired = canonical_config(&config)?;
     let before_state = detect_state(&arguments.root_cap)?;
     let changed = existing.as_deref() != Some(desired.as_slice());
     if matches!(arguments.mode, SetupMode::DryRun | SetupMode::Apply) {
@@ -521,18 +515,25 @@ fn execute(arguments: &Arguments) -> Result<ActionResult, SetupError> {
             let installed = existing.ok_or_else(|| {
                 SetupError::Verification("user setup is required before validation".to_owned())
             })?;
-            let installed_config = parse_and_validate_config(&installed).map_err(|error| {
-                SetupError::Verification(format!(
-                    "installed user setup config is invalid: {}",
-                    error.message()
-                ))
-            })?;
+            let installed_config =
+                parse_and_validate_installed_config(&installed).map_err(|error| {
+                    SetupError::Verification(format!(
+                        "installed user setup config is invalid: {}",
+                        error.message()
+                    ))
+                })?;
             if installed_config != config {
                 return Err(SetupError::Verification(
                     "installed user setup differs from the supplied answers".to_owned(),
                 ));
             }
-            validate_user_projection(&arguments.root_cap, &config, &resolved_skills, &desired)?;
+            let validation_setup = if legacy_answers { &installed } else { &desired };
+            validate_user_projection(
+                &arguments.root_cap,
+                &config,
+                &resolved_skills,
+                validation_setup,
+            )?;
             for host in &config.selected_hosts {
                 super::user_install::validate_configured_host(
                     &arguments.user_root,
@@ -782,13 +783,142 @@ fn rollback_activated_hosts(
 }
 
 fn parse_and_validate_config(bytes: &[u8]) -> Result<UserSetupConfig, SetupError> {
-    let value: JsonValue = serde_yaml::from_slice(bytes)
+    parse_and_validate_config_inner(bytes, false)
+}
+
+fn parse_and_validate_installed_config(bytes: &[u8]) -> Result<UserSetupConfig, SetupError> {
+    parse_and_validate_config_inner(bytes, true)
+}
+
+fn parse_and_validate_config_inner(
+    bytes: &[u8],
+    allow_legacy_recommended: bool,
+) -> Result<UserSetupConfig, SetupError> {
+    let mut value: JsonValue = serde_yaml::from_slice(bytes)
         .map_err(|error| SetupError::Input(format!("invalid user setup YAML: {error}")))?;
+    let migrated = migrate_legacy_recommended_skill_selection(&mut value)?;
+    if migrated && !allow_legacy_recommended {
+        return Err(SetupError::Input(
+            "recommended Skill suites are no longer accepted; choose mode all or individual"
+                .to_owned(),
+        ));
+    }
     validate_schema(USER_SETUP_SCHEMA, &value, "user setup")?;
     let config: UserSetupConfig = serde_json::from_value(value)
         .map_err(|error| SetupError::Input(format!("invalid user setup values: {error}")))?;
     validate_config_semantics(&config)?;
     Ok(config)
+}
+
+fn has_legacy_recommended_skill_selection(bytes: &[u8]) -> Result<bool, SetupError> {
+    let value: JsonValue = serde_yaml::from_slice(bytes)
+        .map_err(|error| SetupError::Input(format!("invalid user setup YAML: {error}")))?;
+    Ok(value
+        .get("skills")
+        .and_then(JsonValue::as_object)
+        .and_then(|skills| skills.get("mode"))
+        .is_some_and(|mode| mode == "recommended"))
+}
+
+fn migrate_legacy_recommended_skill_selection(value: &mut JsonValue) -> Result<bool, SetupError> {
+    let Some(skills) = value.get_mut("skills").and_then(JsonValue::as_object_mut) else {
+        return Ok(false);
+    };
+    if skills.get("mode") != Some(&JsonValue::String("recommended".to_owned())) {
+        return Ok(false);
+    }
+    let suite = skills
+        .get("recommended_suite")
+        .and_then(JsonValue::as_str)
+        .ok_or_else(|| {
+            SetupError::Input(
+                "legacy recommended Skill selection requires recommended_suite".to_owned(),
+            )
+        })?;
+    if skills.contains_key("selected") {
+        return Err(SetupError::Input(
+            "legacy recommended Skill selection must not include selected".to_owned(),
+        ));
+    }
+    let selected = legacy_recommended_skill_set(suite).ok_or_else(|| {
+        SetupError::Input(format!("unknown legacy recommended Skill suite: {suite}"))
+    })?;
+    skills.insert(
+        "mode".to_owned(),
+        JsonValue::String("individual".to_owned()),
+    );
+    skills.remove("recommended_suite");
+    skills.insert(
+        "selected".to_owned(),
+        JsonValue::Array(
+            selected
+                .iter()
+                .map(|name| JsonValue::String((*name).to_owned()))
+                .collect(),
+        ),
+    );
+    Ok(true)
+}
+
+fn legacy_recommended_skill_set(suite: &str) -> Option<&'static [&'static str]> {
+    match suite {
+        "web-developer" => Some(&[
+            "setup-hive",
+            "setup-harness",
+            "auto-setup-harness",
+            "ai-slop-cleaner",
+            "best-practice-research",
+            "hive-loop-engineering",
+            "hive-prompt-refine",
+            "hive-wiki",
+            "hive-knowledge-capture",
+            "hive-knowledge-query",
+            "hive-knowledge-maintenance",
+            "hive-knowledge-scan",
+            "hive-run-checkpoint",
+            "hive-run-resume",
+            "hive-usage-guard",
+            "hive-update",
+            "hive-project-upgrade",
+        ]),
+        "game-developer" => Some(&[
+            "setup-hive",
+            "setup-harness",
+            "auto-setup-harness",
+            "ai-slop-cleaner",
+            "best-practice-research",
+            "hive-loop-engineering",
+            "hive-prompt-refine",
+            "hive-wiki",
+            "hive-knowledge-capture",
+            "hive-knowledge-query",
+            "hive-knowledge-maintenance",
+            "hive-knowledge-scan",
+            "hive-run-checkpoint",
+            "hive-run-resume",
+            "hive-role-handoff",
+            "hive-judge-package",
+            "hive-usage-guard",
+            "hive-update",
+            "hive-project-upgrade",
+        ]),
+        "non-developer" => Some(&[
+            "setup-hive",
+            "setup-harness",
+            "auto-setup-harness",
+            "best-practice-research",
+            "hive-simple-question",
+            "hive-prompt-refine",
+            "hive-wiki",
+            "hive-knowledge-capture",
+            "hive-knowledge-query",
+            "hive-knowledge-maintenance",
+            "hive-knowledge-scan",
+            "hive-usage-guard",
+            "hive-update",
+        ]),
+        _ => None,
+    }
 }
 
 fn parse_and_validate_catalog() -> Result<UserSetupCatalog, SetupError> {
@@ -961,7 +1091,7 @@ fn reject_host_deselection(
     let Some(installed) = installed else {
         return Ok(());
     };
-    let installed = parse_and_validate_config(installed).map_err(|error| {
+    let installed = parse_and_validate_installed_config(installed).map_err(|error| {
         SetupError::Conflict(format!(
             "installed user setup is invalid: {}",
             error.message()
@@ -1052,22 +1182,6 @@ fn validate_catalog_semantics(catalog: &UserSetupCatalog) -> Result<(), SetupErr
                 .to_owned(),
         ));
     }
-    let mut suites = BTreeSet::new();
-    for suite in &catalog.recommended_skill_suites {
-        validate_localized(&suite.display_name, "suite display_name")?;
-        validate_localized(&suite.description, "suite description")?;
-        if !suites.insert(suite.id.as_str()) || suite.skills.is_empty() {
-            return Err(SetupError::Internal(
-                "embedded recommended suite identifiers and skills must be unique".to_owned(),
-            ));
-        }
-        validate_skill_names(&suite.skills, &built_ins, "recommended suite")?;
-    }
-    if suites != BTreeSet::from(["game-developer", "non-developer", "web-developer"]) {
-        return Err(SetupError::Internal(
-            "embedded recommended suite coverage is not exact".to_owned(),
-        ));
-    }
     validate_skill_names(&catalog.mandatory_skills, &built_ins, "mandatory skills")?;
     let mut dependency_keys = BTreeSet::new();
     for dependency in &catalog.skill_dependencies {
@@ -1079,6 +1193,11 @@ fn validate_catalog_semantics(catalog: &UserSetupCatalog) -> Result<(), SetupErr
             ));
         }
         validate_skill_names(&dependency.requires, &built_ins, "skill dependency")?;
+    }
+    if dependency_keys != built_ins {
+        return Err(SetupError::Internal(
+            "embedded Skill dependencies must cover every built-in Skill exactly".to_owned(),
+        ));
     }
     Ok(())
 }
@@ -1156,27 +1275,29 @@ fn resolve_skills(
         )));
     }
     let mut selected: BTreeSet<String> = match config.skills.mode {
-        SkillSelectionMode::Recommended => {
+        SkillSelectionMode::All => {
             if !config.skills.selected.is_empty() {
                 return Err(SetupError::Input(
-                    "recommended Skill mode must not include individual selections".to_owned(),
+                    "all Skill mode must not include individual selections".to_owned(),
                 ));
             }
-            let suite = config.skills.recommended_suite.as_deref().ok_or_else(|| {
-                SetupError::Input("recommended Skill mode requires recommended_suite".to_owned())
-            })?;
-            let entry = catalog
-                .recommended_skill_suites
-                .iter()
-                .find(|entry| entry.id == suite)
-                .ok_or_else(|| SetupError::Input(format!("unknown recommended suite: {suite}")))?;
-            entry.skills.iter().cloned().collect()
+            embedded_catalog()
+                .map_err(|error| SetupError::Internal(error.to_string()))?
+                .skills
+                .into_iter()
+                .filter(|entry| {
+                    matches!(
+                        entry.availability,
+                        hive_projection::Availability::Implemented
+                    )
+                })
+                .map(|entry| entry.name)
+                .collect()
         }
         SkillSelectionMode::Individual => {
-            if config.skills.recommended_suite.is_some() || config.skills.selected.is_empty() {
+            if config.skills.selected.is_empty() {
                 return Err(SetupError::Input(
-                    "individual Skill mode requires selected and forbids recommended_suite"
-                        .to_owned(),
+                    "individual Skill mode requires selected".to_owned(),
                 ));
             }
             config.skills.selected.iter().cloned().collect()
@@ -1461,7 +1582,7 @@ fn legacy_070_projection_base(
                 .to_owned(),
         ));
     }
-    let config = parse_and_validate_config(&installed).map_err(|_| {
+    let config = parse_and_validate_installed_config(&installed).map_err(|_| {
         SetupError::Conflict(
             "Hive cannot read the saved global preferences needed for a safe refresh. No files were changed."
                 .to_owned(),
@@ -1535,7 +1656,7 @@ fn legacy_test3_projection_base(
                 .to_owned(),
         ));
     }
-    let config = parse_and_validate_config(&installed).map_err(|_| {
+    let config = parse_and_validate_installed_config(&installed).map_err(|_| {
         SetupError::Conflict(
             "Hive cannot read the saved global preferences needed for a safe refresh. No files were changed."
                 .to_owned(),
@@ -1612,12 +1733,21 @@ fn validate_user_projection(
     setup_bytes: &[u8],
 ) -> Result<(), SetupError> {
     let planned = plan_user_projection(root, config, resolved_skills, setup_bytes)?;
-    if planned.changed_paths.is_empty() {
+    let mut drifted_paths = planned
+        .reports
+        .iter()
+        .filter(|report| report.local_digest != report.incoming_digest)
+        .map(|report| report.path.clone())
+        .collect::<Vec<_>>();
+    drifted_paths.extend(planned.changed_paths);
+    drifted_paths.sort();
+    drifted_paths.dedup();
+    if drifted_paths.is_empty() {
         Ok(())
     } else {
-        Err(SetupError::Verification(format!(
+        Err(SetupError::Conflict(format!(
             "installed user projection differs at: {}",
-            planned.changed_paths.join(", ")
+            drifted_paths.join(", ")
         )))
     }
 }
@@ -1813,7 +1943,7 @@ pub(crate) fn load_operational_config(root: &Dir) -> Result<Option<UserSetupConf
     else {
         return Ok(None);
     };
-    parse_and_validate_config(&bytes)
+    parse_and_validate_installed_config(&bytes)
         .map(Some)
         .map_err(|error| {
             SetupError::Conflict(format!(
@@ -2391,6 +2521,75 @@ usage_guard:
         assert_eq!(catalog.schema_version, 1);
         assert_eq!(catalog.mandatory_skills, ["setup-hive"]);
         assert!(catalog.optional_third_party_skills.is_empty());
+    }
+
+    #[test]
+    fn all_skill_mode_resolves_every_implemented_builtin() {
+        let mut config = valid_config();
+        config.skills = SkillPreferences {
+            mode: SkillSelectionMode::All,
+            selected: Vec::new(),
+        };
+        let catalog = parse_and_validate_catalog().expect("catalog");
+        let expected = embedded_catalog()
+            .expect("built-in catalog")
+            .skills
+            .into_iter()
+            .filter(|entry| {
+                matches!(
+                    entry.availability,
+                    hive_projection::Availability::Implemented
+                )
+            })
+            .map(|entry| entry.name)
+            .collect::<BTreeSet<_>>();
+
+        assert_eq!(
+            resolve_skills(&config, &catalog)
+                .expect("all built-ins")
+                .into_iter()
+                .collect::<BTreeSet<_>>(),
+            expected
+        );
+    }
+
+    #[test]
+    fn legacy_recommended_selection_requires_saved_config_and_preserves_its_closure() {
+        let legacy = br"
+schema_version: 1
+interface_language: en
+wiki:
+  enabled: true
+  language: both
+profile:
+  id: web-developer
+persona:
+  id: balanced
+selected_hosts:
+  - codex
+skills:
+  mode: recommended
+  recommended_suite: web-developer
+usage_guard: {}
+";
+        let error = parse_and_validate_config(legacy).expect_err("new answer rejects suite");
+        assert!(error.message().contains("no longer accepted"));
+
+        let migrated =
+            parse_and_validate_installed_config(legacy).expect("existing setting migration");
+        assert_eq!(migrated.skills.mode, SkillSelectionMode::Individual);
+        assert!(migrated
+            .skills
+            .selected
+            .contains(&"hive-usage-guard".to_owned()));
+        assert!(!migrated
+            .skills
+            .selected
+            .contains(&"hive-simple-question".to_owned()));
+        let canonical = String::from_utf8(canonical_config(&migrated).expect("new format"))
+            .expect("UTF-8 config");
+        assert!(canonical.contains("mode: individual"));
+        assert!(!canonical.contains("recommended_suite"));
     }
 
     #[test]
