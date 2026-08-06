@@ -3,6 +3,7 @@ use cap_std::fs::Dir;
 use hive_core::sha256_digest;
 use hive_projection::{compile_user_projection, embedded_catalog, Host as ProjectionHost};
 use hive_render::GlobalProjectPreferences;
+use hive_update::{three_way_merge, MergeDisposition};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value as JsonValue};
 use std::collections::{BTreeMap, BTreeSet};
@@ -22,6 +23,8 @@ const USER_SETUP_CATALOG_SCHEMA: &str =
 const USER_SETUP_CATALOG: &str = include_str!("../../../harness/user-setup/catalog.yml");
 const MAX_ANSWERS_BYTES: u64 = 1024 * 1024;
 const MAX_USER_SETUP_BYTES: u64 = 1024 * 1024;
+const USER_PROJECTION_090_TEST3_SETUP_HIVE: &[u8] =
+    include_bytes!("../../../harness/user-bases/0.9.0-test.3/skills/setup-hive/SKILL.md");
 
 const USER_SETUP_USAGE: &str = "\
 Configure or validate Aigent Hive user preferences.
@@ -274,8 +277,12 @@ struct UserSetupCatalog {
 struct UserProjectionManifest {
     schema_version: u32,
     product_version: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    package_version: Option<String>,
     setup_digest: String,
     entries: Vec<UserProjectionEntry>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    base_entries: Vec<UserProjectionBaseEntry>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -285,15 +292,36 @@ struct UserProjectionEntry {
     digest: String,
 }
 
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+struct UserProjectionBaseEntry {
+    path: String,
+    digest: String,
+    content: String,
+}
+
 struct AppliedProjection {
     changes: Vec<ProjectionChange>,
     changed_paths: Vec<String>,
+    reports: Vec<UserProjectionPathReport>,
 }
 
 struct ProjectionChange {
     path: PathBuf,
     before: Option<Vec<u8>>,
     after: Option<Vec<u8>>,
+}
+
+#[derive(Debug, Serialize)]
+struct UserProjectionPathReport {
+    path: String,
+    base_digest: Option<String>,
+    local_digest: Option<String>,
+    incoming_digest: Option<String>,
+    final_digest: Option<String>,
+    disposition: MergeDisposition,
+    omitted_incoming_hunks: usize,
+    local_priority: bool,
 }
 
 const fn default_true() -> bool {
@@ -486,6 +514,7 @@ fn execute(arguments: &Arguments) -> Result<ActionResult, SetupError> {
                 "user setup dry run completed",
                 &answer_bytes,
                 &desired,
+                &projection.reports,
             ))
         }
         SetupMode::Validate => {
@@ -528,6 +557,7 @@ fn execute(arguments: &Arguments) -> Result<ActionResult, SetupError> {
                 "installed user setup is valid",
                 &answer_bytes,
                 &desired,
+                &[],
             ))
         }
         SetupMode::Apply => {
@@ -636,6 +666,7 @@ fn execute(arguments: &Arguments) -> Result<ActionResult, SetupError> {
                 "user setup completed",
                 &answer_bytes,
                 &desired,
+                &projection.reports,
             ))
         }
     }
@@ -1212,6 +1243,109 @@ fn plan_user_projection(
     resolved_skills: &[String],
     setup_bytes: &[u8],
 ) -> Result<AppliedProjection, SetupError> {
+    let files = user_projection_files(config, resolved_skills)?;
+    let manifest_relative = Path::new(USER_PROJECTION_MANIFEST_RELATIVE);
+    let prior_bytes =
+        super::user_install::read_user_setup_file(root, manifest_relative, MAX_USER_SETUP_BYTES)
+            .map_err(SetupError::Conflict)?;
+    let prior = prior_bytes
+        .as_deref()
+        .map(parse_projection_manifest)
+        .transpose()?;
+    let base_files = projection_base_files(root, prior.as_ref())?;
+    let prior_owned_paths = prior
+        .as_ref()
+        .map(|manifest| {
+            manifest
+                .entries
+                .iter()
+                .map(|entry| PathBuf::from(&entry.path))
+                .collect::<BTreeSet<_>>()
+        })
+        .unwrap_or_default();
+
+    let mut paths = base_files.keys().cloned().collect::<BTreeSet<_>>();
+    paths.extend(files.keys().cloned());
+    let mut planned = AppliedProjection {
+        changes: Vec::new(),
+        changed_paths: Vec::new(),
+        reports: Vec::new(),
+    };
+    for path in paths {
+        let before = super::user_install::read_user_setup_file(root, &path, MAX_USER_SETUP_BYTES)
+            .map_err(SetupError::Conflict)?;
+        let base = base_files.get(&path);
+        let incoming = files.get(&path);
+        if prior.is_some()
+            && base.is_none()
+            && before.is_some()
+            && before.as_deref() != incoming.map(Vec::as_slice)
+        {
+            return Err(SetupError::Conflict(format!(
+                "Hive cannot safely refresh this setup file because its release original is unavailable: {}. No files were changed.",
+                path.display()
+            )));
+        }
+        if before.is_some() && !prior_owned_paths.contains(&path) {
+            return Err(SetupError::Conflict(format!(
+                "user projection path exists without Hive ownership proof: {}",
+                path.display()
+            )));
+        }
+        let merged = three_way_merge(
+            &path,
+            base.map(Vec::as_slice),
+            before.as_deref(),
+            incoming.map(Vec::as_slice),
+        )
+        .map_err(|error| SetupError::Conflict(error.to_string()))?;
+        let after = merged.bytes;
+        planned.reports.push(UserProjectionPathReport {
+            path: portable(&path),
+            base_digest: base.map(|bytes| sha256_digest(bytes)),
+            local_digest: before.as_deref().map(sha256_digest),
+            incoming_digest: incoming.map(|bytes| sha256_digest(bytes)),
+            final_digest: after.as_deref().map(sha256_digest),
+            disposition: merged.disposition,
+            omitted_incoming_hunks: merged.omitted_incoming_hunks,
+            local_priority: merged.local_priority,
+        });
+        if before != after {
+            planned.changed_paths.push(portable(&path));
+            planned.changes.push(ProjectionChange {
+                path,
+                before,
+                after,
+            });
+        }
+    }
+
+    let manifest_bytes = render_projection_manifest(setup_bytes, &files)?;
+    let manifest_before =
+        super::user_install::read_user_setup_file(root, manifest_relative, MAX_USER_SETUP_BYTES)
+            .map_err(SetupError::Conflict)?;
+    if manifest_before.as_deref() != Some(manifest_bytes.as_slice()) {
+        planned
+            .changed_paths
+            .push(USER_PROJECTION_MANIFEST_RELATIVE.to_owned());
+        planned.changes.push(ProjectionChange {
+            path: manifest_relative.to_path_buf(),
+            before: manifest_before,
+            after: Some(manifest_bytes),
+        });
+    }
+    planned.changed_paths.sort();
+    planned.changed_paths.dedup();
+    planned
+        .reports
+        .sort_by(|left, right| left.path.cmp(&right.path));
+    Ok(planned)
+}
+
+fn user_projection_files(
+    config: &UserSetupConfig,
+    resolved_skills: &[String],
+) -> Result<BTreeMap<PathBuf, Vec<u8>>, SetupError> {
     let mut files = BTreeMap::<PathBuf, Vec<u8>>::new();
     let projection = compile_user_projection(ProjectionHost::Codex, resolved_skills, &[])
         .map_err(|error| SetupError::Internal(error.to_string()))?;
@@ -1226,17 +1360,13 @@ fn plan_user_projection(
         PathBuf::from(".agents/directives/00-hive-user.md"),
         render_user_directive(config, resolved_skills),
     );
+    Ok(files)
+}
 
-    let manifest_relative = Path::new(USER_PROJECTION_MANIFEST_RELATIVE);
-    let prior_bytes =
-        super::user_install::read_user_setup_file(root, manifest_relative, MAX_USER_SETUP_BYTES)
-            .map_err(SetupError::Conflict)?;
-    let prior = prior_bytes
-        .as_deref()
-        .map(parse_projection_manifest)
-        .transpose()?;
-    authenticate_projection(root, prior.as_ref())?;
-
+fn render_projection_manifest(
+    setup_bytes: &[u8],
+    files: &BTreeMap<PathBuf, Vec<u8>>,
+) -> Result<Vec<u8>, SetupError> {
     let entries = files
         .iter()
         .map(|(path, bytes)| UserProjectionEntry {
@@ -1244,11 +1374,26 @@ fn plan_user_projection(
             digest: sha256_digest(bytes),
         })
         .collect::<Vec<_>>();
+    let base_entries = files
+        .iter()
+        .map(|(path, bytes)| {
+            let content = String::from_utf8(bytes.clone()).map_err(|_| {
+                SetupError::Internal(format!("user projection must be UTF-8: {}", path.display()))
+            })?;
+            Ok(UserProjectionBaseEntry {
+                path: portable(path),
+                digest: sha256_digest(bytes),
+                content,
+            })
+        })
+        .collect::<Result<Vec<_>, SetupError>>()?;
     let manifest = UserProjectionManifest {
-        schema_version: 1,
+        schema_version: 2,
         product_version: env!("CARGO_PKG_VERSION").to_owned(),
+        package_version: Some(env!("HIVE_PACKAGE_VERSION").to_owned()),
         setup_digest: sha256_digest(setup_bytes),
         entries,
+        base_entries,
     };
     let mut manifest_bytes = serde_json::to_vec_pretty(&manifest).map_err(|error| {
         SetupError::Internal(format!(
@@ -1256,55 +1401,89 @@ fn plan_user_projection(
         ))
     })?;
     manifest_bytes.push(b'\n');
-    files.insert(manifest_relative.to_path_buf(), manifest_bytes);
+    Ok(manifest_bytes)
+}
 
-    let prior_paths = prior
-        .as_ref()
-        .map(|manifest| {
-            manifest
-                .entries
-                .iter()
-                .map(|entry| PathBuf::from(&entry.path))
-                .collect::<BTreeSet<_>>()
-        })
-        .unwrap_or_default();
-    let prior_owned_paths = prior_paths.clone();
-    let desired_paths = files.keys().cloned().collect::<BTreeSet<_>>();
-    let mut operations = Vec::new();
-    for path in prior_paths.difference(&desired_paths) {
-        operations.push((path.clone(), None));
-    }
-    for (path, bytes) in files {
-        operations.push((path, Some(bytes)));
-    }
-    operations.sort_by(|left, right| left.0.cmp(&right.0));
-
-    let mut planned = AppliedProjection {
-        changes: Vec::new(),
-        changed_paths: Vec::new(),
+fn projection_base_files(
+    root: &Dir,
+    prior: Option<&UserProjectionManifest>,
+) -> Result<BTreeMap<PathBuf, Vec<u8>>, SetupError> {
+    let Some(prior) = prior else {
+        return Ok(BTreeMap::new());
     };
-    for (path, after) in operations {
-        let before = super::user_install::read_user_setup_file(root, &path, MAX_USER_SETUP_BYTES)
-            .map_err(SetupError::Conflict)?;
-        if before == after {
-            continue;
-        }
-        if before.is_some() && path != manifest_relative && !prior_owned_paths.contains(&path) {
-            return Err(SetupError::Conflict(format!(
-                "user projection path exists without Hive ownership proof: {}",
-                path.display()
-            )));
-        }
-        planned.changed_paths.push(portable(&path));
-        planned.changes.push(ProjectionChange {
-            path,
-            before,
-            after,
-        });
+    if prior.schema_version == 2 {
+        return prior
+            .base_entries
+            .iter()
+            .map(|entry| {
+                Ok((
+                    PathBuf::from(&entry.path),
+                    entry.content.as_bytes().to_vec(),
+                ))
+            })
+            .collect();
     }
-    planned.changed_paths.sort();
-    planned.changed_paths.dedup();
-    Ok(planned)
+    legacy_test3_projection_base(root, prior)
+}
+
+fn legacy_test3_projection_base(
+    root: &Dir,
+    prior: &UserProjectionManifest,
+) -> Result<BTreeMap<PathBuf, Vec<u8>>, SetupError> {
+    if prior.product_version != "0.9.0" {
+        return Err(SetupError::Conflict(
+            "Hive cannot identify the release original for this setup. No files were changed."
+                .to_owned(),
+        ));
+    }
+    let installed = super::user_install::read_user_setup_file(
+        root,
+        Path::new(USER_SETUP_RELATIVE),
+        MAX_USER_SETUP_BYTES,
+    )
+    .map_err(SetupError::Conflict)?
+    .ok_or_else(|| {
+        SetupError::Conflict(
+            "Hive cannot identify the release original because the saved global preferences are missing. No files were changed."
+                .to_owned(),
+        )
+    })?;
+    if sha256_digest(&installed) != prior.setup_digest {
+        return Err(SetupError::Conflict(
+            "Hive cannot identify the release original because the saved global preferences changed outside Hive. No files were changed."
+                .to_owned(),
+        ));
+    }
+    let config = parse_and_validate_config(&installed).map_err(|_| {
+        SetupError::Conflict(
+            "Hive cannot read the saved global preferences needed for a safe refresh. No files were changed."
+                .to_owned(),
+        )
+    })?;
+    let catalog = parse_and_validate_catalog()
+        .map_err(|error| SetupError::Internal(error.message().to_owned()))?;
+    let skills = resolve_skills(&config, &catalog)?;
+    let mut base = user_projection_files(&config, &skills)?;
+    base.insert(
+        PathBuf::from(".agents/skills/setup-hive/SKILL.md"),
+        USER_PROJECTION_090_TEST3_SETUP_HIVE.to_vec(),
+    );
+    let expected = base
+        .iter()
+        .map(|(path, bytes)| (portable(path), sha256_digest(bytes)))
+        .collect::<Vec<_>>();
+    let recorded = prior
+        .entries
+        .iter()
+        .map(|entry| (entry.path.clone(), entry.digest.clone()))
+        .collect::<Vec<_>>();
+    if expected != recorded {
+        return Err(SetupError::Conflict(
+            "Hive cannot authenticate the release original for this older setup. No files were changed."
+                .to_owned(),
+        ));
+    }
+    Ok(base)
 }
 
 fn apply_user_projection(
@@ -1313,12 +1492,17 @@ fn apply_user_projection(
     resolved_skills: &[String],
     setup_bytes: &[u8],
 ) -> Result<AppliedProjection, SetupError> {
-    let planned = plan_user_projection(root, config, resolved_skills, setup_bytes)?;
+    let AppliedProjection {
+        changes,
+        changed_paths,
+        reports,
+    } = plan_user_projection(root, config, resolved_skills, setup_bytes)?;
     let mut applied = AppliedProjection {
         changes: Vec::new(),
-        changed_paths: planned.changed_paths,
+        changed_paths,
+        reports,
     };
-    for change in planned.changes {
+    for change in changes {
         if let Err(primary) = super::user_install::replace_user_setup_file(
             root,
             &change.path,
@@ -1375,13 +1559,42 @@ fn parse_projection_manifest(bytes: &[u8]) -> Result<UserProjectionManifest, Set
             "installed user projection manifest is invalid: {error}"
         ))
     })?;
-    if manifest.schema_version != 1
+    if !matches!(manifest.schema_version, 1 | 2)
         || manifest.product_version.is_empty()
         || !valid_sha256(&manifest.setup_digest)
     {
         return Err(SetupError::Conflict(
             "installed user projection manifest binding is invalid".to_owned(),
         ));
+    }
+    if manifest.schema_version == 1
+        && (manifest.package_version.is_some() || !manifest.base_entries.is_empty())
+    {
+        return Err(SetupError::Conflict(
+            "installed user projection manifest binding is invalid".to_owned(),
+        ));
+    }
+    if manifest.schema_version == 2 {
+        if manifest
+            .package_version
+            .as_deref()
+            .is_none_or(str::is_empty)
+            || manifest.base_entries.len() != manifest.entries.len()
+        {
+            return Err(SetupError::Conflict(
+                "installed user projection manifest binding is invalid".to_owned(),
+            ));
+        }
+        for (entry, base) in manifest.entries.iter().zip(&manifest.base_entries) {
+            if entry.path != base.path
+                || entry.digest != base.digest
+                || sha256_digest(base.content.as_bytes()) != base.digest
+            {
+                return Err(SetupError::Conflict(
+                    "installed user projection base inventory is invalid".to_owned(),
+                ));
+            }
+        }
     }
     let mut previous = None;
     for entry in &manifest.entries {
@@ -1400,36 +1613,6 @@ fn parse_projection_manifest(bytes: &[u8]) -> Result<UserProjectionManifest, Set
         previous = Some(entry.path.as_str());
     }
     Ok(manifest)
-}
-
-fn authenticate_projection(
-    root: &Dir,
-    prior: Option<&UserProjectionManifest>,
-) -> Result<(), SetupError> {
-    let Some(prior) = prior else {
-        return Ok(());
-    };
-    for entry in &prior.entries {
-        let bytes = super::user_install::read_user_setup_file(
-            root,
-            Path::new(&entry.path),
-            MAX_USER_SETUP_BYTES,
-        )
-        .map_err(SetupError::Conflict)?
-        .ok_or_else(|| {
-            SetupError::Conflict(format!(
-                "owned user projection path is missing: {}",
-                entry.path
-            ))
-        })?;
-        if sha256_digest(&bytes) != entry.digest {
-            return Err(SetupError::Conflict(format!(
-                "owned user projection path has local modifications: {}",
-                entry.path
-            )));
-        }
-    }
-    Ok(())
 }
 
 fn render_user_directive(config: &UserSetupConfig, resolved_skills: &[String]) -> Vec<u8> {
@@ -1679,6 +1862,7 @@ fn success(
     message: &'static str,
     answer_bytes: &[u8],
     desired: &[u8],
+    projection_reports: &[UserProjectionPathReport],
 ) -> ActionResult {
     ActionResult {
         schema_version: 1,
@@ -1717,6 +1901,9 @@ fn success(
             "resolved_skills": resolved_skills,
             "update_check": config.update_check,
             "usage_guard": config.usage_guard,
+            "user_projection": {
+                "paths": projection_reports,
+            },
         })),
     }
 }
@@ -1773,11 +1960,232 @@ usage_guard:
         .expect("valid config")
     }
 
+    fn write_projection_manifest(root: &Path, manifest: &UserProjectionManifest) {
+        let path = root.join(USER_PROJECTION_MANIFEST_RELATIVE);
+        fs::create_dir_all(path.parent().expect("manifest parent")).expect("manifest parent");
+        let mut bytes = serde_json::to_vec_pretty(manifest).expect("manifest JSON");
+        bytes.push(b'\n');
+        fs::write(path, bytes).expect("projection manifest");
+    }
+
+    fn schema_two_manifest(path: &Path, base: &[u8]) -> UserProjectionManifest {
+        let entry = UserProjectionEntry {
+            path: portable(path),
+            digest: sha256_digest(base),
+        };
+        UserProjectionManifest {
+            schema_version: 2,
+            product_version: env!("CARGO_PKG_VERSION").to_owned(),
+            package_version: Some(env!("HIVE_PACKAGE_VERSION").to_owned()),
+            setup_digest: sha256_digest(b"fixture setup\n"),
+            entries: vec![entry.clone()],
+            base_entries: vec![UserProjectionBaseEntry {
+                path: entry.path,
+                digest: entry.digest,
+                content: String::from_utf8(base.to_vec()).expect("UTF-8 base"),
+            }],
+        }
+    }
+
+    fn seeded_projection_plan(
+        base: Vec<u8>,
+        local: Vec<u8>,
+    ) -> (AppliedProjection, Vec<u8>, PathBuf) {
+        let temporary = tempfile::tempdir().expect("temporary user root");
+        let config = valid_config();
+        let catalog = parse_and_validate_catalog().expect("catalog");
+        let skills = resolve_skills(&config, &catalog).expect("skill closure");
+        let files = user_projection_files(&config, &skills).expect("desired files");
+        let path = PathBuf::from(".agents/skills/setup-hive/SKILL.md");
+        let incoming = files.get(&path).expect("setup-hive source").clone();
+        let full = temporary.path().join(&path);
+        fs::create_dir_all(full.parent().expect("skill parent")).expect("skill parent");
+        fs::write(&full, local).expect("local Skill");
+        write_projection_manifest(temporary.path(), &schema_two_manifest(&path, &base));
+        let root =
+            super::super::user_install::open_user_root_for_setup(temporary.path()).expect("root");
+        let planned = plan_user_projection(
+            &root,
+            &config,
+            &skills,
+            &canonical_config(&config).expect("answers"),
+        )
+        .expect("projection plan");
+        (planned, incoming, path)
+    }
+
     #[test]
     fn user_setup_help_describes_all_modes() {
         assert!(USER_SETUP_USAGE.contains("--scope user"));
         assert!(USER_SETUP_USAGE.contains("--dry-run|--apply|--validate"));
         assert!(USER_SETUP_USAGE.contains("--output json"));
+    }
+
+    #[test]
+    fn user_projection_replaces_an_authenticated_vanilla_base() {
+        let config = valid_config();
+        let catalog = parse_and_validate_catalog().expect("catalog");
+        let skills = resolve_skills(&config, &catalog).expect("skill closure");
+        let files = user_projection_files(&config, &skills).expect("desired files");
+        let path = PathBuf::from(".agents/skills/setup-hive/SKILL.md");
+        let incoming = files.get(&path).expect("setup-hive source").clone();
+        let mut base = incoming.clone();
+        let replaced = String::from_utf8(base.clone())
+            .expect("UTF-8 Skill")
+            .replace("# Setup Hive", "# Earlier Setup Hive");
+        base = replaced.into_bytes();
+
+        let (planned, expected, target) = seeded_projection_plan(base.clone(), base);
+        let report = planned
+            .reports
+            .iter()
+            .find(|report| report.path == portable(&target))
+            .expect("target report");
+
+        assert_eq!(expected, incoming);
+        assert_eq!(report.disposition, MergeDisposition::IncomingReplace);
+        assert!(!report.local_priority);
+        assert!(planned
+            .changes
+            .iter()
+            .any(|change| change.path == target
+                && change.after.as_deref() == Some(incoming.as_slice())));
+    }
+
+    #[test]
+    fn user_projection_merges_disjoint_local_edits_and_retains_overlaps() {
+        let config = valid_config();
+        let catalog = parse_and_validate_catalog().expect("catalog");
+        let skills = resolve_skills(&config, &catalog).expect("skill closure");
+        let files = user_projection_files(&config, &skills).expect("desired files");
+        let path = PathBuf::from(".agents/skills/setup-hive/SKILL.md");
+        let incoming = files.get(&path).expect("setup-hive source").clone();
+        let base = String::from_utf8(incoming)
+            .expect("UTF-8 Skill")
+            .replace("# Setup Hive", "# Earlier Setup Hive")
+            .into_bytes();
+
+        let mut disjoint_local = base.clone();
+        disjoint_local.extend_from_slice(b"\n<!-- local note -->\n");
+        let (merged, _, target) = seeded_projection_plan(base.clone(), disjoint_local);
+        let merged_report = merged
+            .reports
+            .iter()
+            .find(|report| report.path == portable(&target))
+            .expect("merged report");
+        assert_eq!(merged_report.disposition, MergeDisposition::Merged);
+        assert!(merged_report.local_priority);
+        assert_eq!(merged_report.omitted_incoming_hunks, 0);
+        assert!(merged
+            .changes
+            .iter()
+            .find(|change| change.path == target)
+            .and_then(|change| change.after.as_deref())
+            .is_some_and(|bytes| bytes.ends_with(b"<!-- local note -->\n")));
+
+        let overlap_local = String::from_utf8(base.clone())
+            .expect("UTF-8 base")
+            .replace("# Earlier Setup Hive", "# Local Setup Hive")
+            .into_bytes();
+        let (overlap, _, target) = seeded_projection_plan(base, overlap_local);
+        let overlap_report = overlap
+            .reports
+            .iter()
+            .find(|report| report.path == portable(&target))
+            .expect("overlap report");
+        assert!(overlap_report.local_priority);
+        assert!(overlap_report.omitted_incoming_hunks > 0);
+        assert!(!overlap.changes.iter().any(|change| change.path == target));
+    }
+
+    #[test]
+    fn legacy_user_projection_without_an_authenticated_base_stays_unchanged() {
+        let temporary = tempfile::tempdir().expect("temporary user root");
+        let path = PathBuf::from(".agents/skills/setup-hive/SKILL.md");
+        let full = temporary.path().join(&path);
+        fs::create_dir_all(full.parent().expect("skill parent")).expect("skill parent");
+        let local = b"local-only setup instructions\n".to_vec();
+        fs::write(&full, &local).expect("local Skill");
+        let manifest = UserProjectionManifest {
+            schema_version: 1,
+            product_version: "0.8.0".to_owned(),
+            package_version: None,
+            setup_digest: sha256_digest(b"fixture setup\n"),
+            entries: vec![UserProjectionEntry {
+                path: portable(&path),
+                digest: sha256_digest(&local),
+            }],
+            base_entries: Vec::new(),
+        };
+        write_projection_manifest(temporary.path(), &manifest);
+        let root =
+            super::super::user_install::open_user_root_for_setup(temporary.path()).expect("root");
+        let config = valid_config();
+        let catalog = parse_and_validate_catalog().expect("catalog");
+        let skills = resolve_skills(&config, &catalog).expect("skill closure");
+
+        let error = match plan_user_projection(
+            &root,
+            &config,
+            &skills,
+            &canonical_config(&config).expect("answers"),
+        ) {
+            Ok(_) => panic!("unknown base must stop before writes"),
+            Err(error) => error,
+        };
+
+        assert_eq!(error.status(), "conflict");
+        assert!(error.message().contains("No files were changed"));
+        assert_eq!(fs::read(full).expect("unchanged local Skill"), local);
+    }
+
+    #[test]
+    fn test_three_global_projection_has_an_authenticated_vanilla_upgrade_base() {
+        let temporary = tempfile::tempdir().expect("temporary user root");
+        let config = valid_config();
+        let catalog = parse_and_validate_catalog().expect("catalog");
+        let skills = resolve_skills(&config, &catalog).expect("skill closure");
+        let mut old_files = user_projection_files(&config, &skills).expect("old files");
+        let path = PathBuf::from(".agents/skills/setup-hive/SKILL.md");
+        old_files.insert(path.clone(), USER_PROJECTION_090_TEST3_SETUP_HIVE.to_vec());
+        for (relative, bytes) in &old_files {
+            let full = temporary.path().join(relative);
+            fs::create_dir_all(full.parent().expect("projection parent"))
+                .expect("projection parent");
+            fs::write(full, bytes).expect("old projection bytes");
+        }
+        let answers = canonical_config(&config).expect("answers");
+        let answer_path = temporary.path().join(USER_SETUP_RELATIVE);
+        fs::create_dir_all(answer_path.parent().expect("answers parent")).expect("answers parent");
+        fs::write(answer_path, &answers).expect("saved answers");
+        let manifest = UserProjectionManifest {
+            schema_version: 1,
+            product_version: "0.9.0".to_owned(),
+            package_version: None,
+            setup_digest: sha256_digest(&answers),
+            entries: old_files
+                .iter()
+                .map(|(relative, bytes)| UserProjectionEntry {
+                    path: portable(relative),
+                    digest: sha256_digest(bytes),
+                })
+                .collect(),
+            base_entries: Vec::new(),
+        };
+        write_projection_manifest(temporary.path(), &manifest);
+        let root =
+            super::super::user_install::open_user_root_for_setup(temporary.path()).expect("root");
+
+        let planned = plan_user_projection(&root, &config, &skills, &answers)
+            .expect("test.3 vanilla upgrade preview");
+        let report = planned
+            .reports
+            .iter()
+            .find(|report| report.path == portable(&path))
+            .expect("setup-hive report");
+
+        assert_eq!(report.disposition, MergeDisposition::IncomingReplace);
+        assert!(!report.local_priority);
     }
 
     #[test]
@@ -2179,6 +2587,7 @@ usage_guard:
                 after: Some(desired_projection.to_vec()),
             }],
             changed_paths: Vec::new(),
+            reports: Vec::new(),
         };
         let failures = [
             SetupError::Verification("injected operational config load failure".to_owned()),
@@ -2232,6 +2641,7 @@ usage_guard:
                 after: Some(b"desired projection\n".to_vec()),
             }],
             changed_paths: Vec::new(),
+            reports: Vec::new(),
         };
 
         let error = finish_applied_setup(

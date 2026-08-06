@@ -24,23 +24,37 @@ Configure user-scope Hive preferences without modifying a project harness or pro
    - Never reproduce setup writes manually.
 2. Detect whether this is initial setup or reconfiguration.
    - Resolve the exact `<user-root>` selected during user installation.
-   - For reconfiguration, run `hive setup --scope user --answers <user-root>/.hive/config/user-setup.yml --user-root <user-root> --validate --output json` first.
-   - Preserve existing answers unless the user changes them.
+   - For reconfiguration, read the saved answers and run
+     `hive setup --scope user --answers <user-root>/.hive/config/user-setup.yml --user-root <user-root> --validate --output json` before offering writes.
+   - Do not show raw path, hash, manifest, projection, or drift diagnostics by default.
+   - If validation finds a Hive-file refresh, say in the current interface language:
+     `Hive needs to refresh its own setup files before changing settings. Your preferences and projects are safe. Would you like to review the update?`
+   - If the preview retains local edits, say:
+     `Some Hive setup files contain changes you made. They will not be overwritten. Would you like to review the merge preview?`
+   - Explain the underlying file or digest only after the user asks `Why?` or requests diagnostics.
 3. For initial setup, ask for interface language first.
    - Offer `English` and `한국어`.
    - After the user chooses, ask every remaining question and explain every preview in
      that language.
-4. Ask whether daily update checking should be enabled.
+   - Start with this one question only: `Welcome to Aigent Hive. Would you like to continue in English or Korean?`
+4. For a valid reconfiguration, start with this one question in the saved interface language:
+   `Your Hive settings are ready. Would you like to change one setting or review everything from the beginning?`
+   - `Change one setting`: show the current answer for each requested setting, preserve every
+     other answer, and ask one question at a time.
+   - `Review everything`: ask the interface-language question first, using the saved language as
+     the default, then ask every remaining setup question one at a time with saved answers as
+     defaults.
+5. Ask whether daily update checking should be enabled.
    - This is explicit opt-in and defaults to disabled.
    - Explain the 24-hour successful-check throttle, next-session offline retry, and no-install
      boundary.
-5. Ask for setup mode in the selected language.
+6. Ask for setup mode in the selected language.
    - Offer `Expedited — set everything to default` and `Custom`.
    - Initial setup asks for update-check consent next. Expedited performs no further preference
      questions after that consent and uses the fixed defaults below.
    - Custom asks exactly one question at a time in the required order below.
    - Reconfiguration preserves existing answers and asks only for requested changes.
-6. Resolve expedited defaults from the signed catalog.
+7. Resolve expedited defaults from the signed catalog.
    - Interface language: the language already selected by the user.
    - Daily update check: the explicit answer already selected by the user.
    - Wiki: enabled with the selected interface language.
@@ -52,19 +66,19 @@ Configure user-scope Hive preferences without modifying a project harness or pro
    - Usage guard: disabled, stored default remaining threshold `20`, CodexBar fallback disabled.
    - Selecting expedited authorizes the displayed built-in dependency closure only. It never
      approves a third-party Skill, CodexBar installation, credential access, or destructive action.
-7. Ask exactly one custom-setup question at a time in the required order below.
+8. Ask exactly one custom-setup question at a time in the required order below.
    - Explain the available values from the signed user-setup catalog.
    - Do not infer a preference, host selection, custom description, Skill approval, usage-guard opt-in, or fallback consent.
-8. Write the resolved answers to a temporary YAML file matching `user-setup.schema.json`.
+9. Write the resolved answers to a temporary YAML file matching `user-setup.schema.json`.
    - Do not include provider credentials, tokens, cookies, account identifiers, or raw usage data.
-9. Preview the resolved setup.
+10. Preview the resolved setup.
    - Run `hive setup --scope user --answers <answers.yml> --user-root <user-root> --dry-run --output json`.
    - Show selected hosts and Skills, mandatory Skills, dependency closure, skipped components, marker edits, and conflicts.
    - Require explicit approval of the displayed dependency closure before apply.
-10. Apply only after preview approval or expedited selection with a conflict-free built-in-only preview.
+11. Apply only after preview approval or expedited selection with a conflict-free built-in-only preview.
    - Run `hive setup --scope user --answers <answers.yml> --user-root <user-root> --apply --output json`.
    - Preserve foreign bytes and third-party marker blocks.
-11. Validate with the same answers.
+12. Validate with the same answers.
    - Run `hive setup --scope user --answers <answers.yml> --user-root <user-root> --validate --output json`.
    - Report the canonical user setup path, active hosts, active Skills, Wiki state, usage-guard state, and any unsupported host capability.
 
@@ -100,7 +114,11 @@ consent and setup mode. Ask the remaining preference questions only for `Custom`
 
 ## Reconfiguration
 
-- Show current answers before asking for changes.
+- Do not lead with a technical validation result. State whether settings are ready, need a Hive
+  refresh, or contain preserved local changes, then offer the relevant next choice.
+- Start with `change one setting` or `review everything from the beginning`; do not assume which
+  preference the user wants to change.
+- During a full review, language remains the first question and all saved answers remain defaults.
 - Preserve canonical Wiki Markdown when Wiki is disabled.
 - Treat Wiki deletion, host uninstall, Skill data deletion, and provider configuration changes as separate destructive actions outside this Skill.
 - Re-run dry-run, apply, and validate with one consistent answer file.
