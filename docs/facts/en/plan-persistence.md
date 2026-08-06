@@ -10,7 +10,7 @@ tags: [documentation, plan, state]
 aliases: ["Markdown plan authority"]
 sources:
   - "repo:.agents/directives/04-documentation-state.md#sha256:2c28051633c998e082ca08ea2cf84e401192a6b29222e9803568d11a12fc2671"
-  - "repo:harness/template/AGENTS.md.jinja#sha256:070d97440343d699565448c239efb55c905df79119df289525d41edc6e81581f"
+  - "repo:harness/template/AGENTS.md.jinja#sha256:bb858b1021be8b3fd9fc282820a34a4e923dea6a47e01bdddcf9745510c1381d"
 links: [automated-user-handoff, source-development]
 reviewed_revision: "git:19eda4d7ef87fe3122c14c455df07758c3dc6ff1"
 status: active

@@ -9,10 +9,10 @@ summary: "소스·소비자 에이전트의 쉬운 말 기본 설명과 이해�
 tags: [communication, guidance, projection]
 aliases: ["구체적 예시", "쉬운 말 설명"]
 sources:
-  - "repo:.agents/directives/01-behavior.md#sha256:b84d45bd3fb28b67581ff024fdfb8d0aaf0dfbbda580f712c96d1228685dadbb"
+  - "repo:.agents/directives/01-behavior.md#sha256:a3fad4148b713fa44c79c4906c297e621a529798785f9b916d67fc0aeff8b4e5"
   - "repo:crates/hive-cli/src/user_install.rs#sha256:35f3cace4b6297a298b8b59db208b3d8ecfd82331758fb6bd34dd1ec03aa8ec7"
   - "repo:docs/guidance-schema.md#sha256:fd8fffda818038ee48b66b0581787e2fd741404b0a9253ca34c0d55f15ad4d15"
-  - "repo:harness/template/AGENTS.md.jinja#sha256:070d97440343d699565448c239efb55c905df79119df289525d41edc6e81581f"
+  - "repo:harness/template/AGENTS.md.jinja#sha256:bb858b1021be8b3fd9fc282820a34a4e923dea6a47e01bdddcf9745510c1381d"
 links: [language-consistency, verification-result-clarity]
 reviewed_revision: "git:35e6b79a024350487f823780101a28be24a9f4c7"
 status: active
@@ -22,5 +22,6 @@ status: active
 
 소스 개발·설치된 소비자 에이전트의 기본 설명: 쉬운 말 사용. 이해에 실질적인 도움이
 될 때만 구체적 예시 추가. 관련 없는 예시 강제와 기술적 정확성 약화 금지. 완료 기준:
+모든 사용자 대면 목록: Markdown 항목당 한 줄. 독립 선택지는 comma-separated paragraph 금지.
 소스·소비자 지침 생산자, 선택 언어별 사용자 지침, 직접 회귀 검사에 같은 제한 규칙
 투영. 요청 배경: 이 설명 방식을 기본값으로 지정한 유지관리자 요청.

@@ -209,6 +209,27 @@ class Phase3SkillSourceContract(unittest.TestCase):
             with self.subTest(required=required):
                 self.assertIn(required, skill)
 
+    def test_source_and_consumer_lists_use_one_entry_per_line(self) -> None:
+        source = (REPOSITORY_ROOT / ".agents/directives/01-behavior.md").read_text(
+            encoding="utf-8"
+        )
+        consumer = (REPOSITORY_ROOT / "harness/template/AGENTS.md.jinja").read_text(
+            encoding="utf-8"
+        )
+        setup_hive = (SKILL_ROOT / "setup-hive/SKILL.md").read_text(encoding="utf-8")
+
+        shared_rule = (
+            "Present every user-facing list as a readable Markdown list or table with one "
+            "complete item per line."
+        )
+        for surface in (source, consumer):
+            with self.subTest(surface=surface[:32]):
+                normalized = " ".join(surface.split())
+                self.assertIn(shared_rule, normalized)
+                self.assertIn("comma-separated prose", normalized)
+        self.assertIn("one complete\n     Markdown list or table entry per line", setup_hive)
+        self.assertIn("comma-separated paragraph", setup_hive)
+
     def test_setup_scope_routing_keeps_global_and_project_work_disjoint(self) -> None:
         global_skill = (SKILL_ROOT / "setup-hive/SKILL.md").read_text(
             encoding="utf-8"

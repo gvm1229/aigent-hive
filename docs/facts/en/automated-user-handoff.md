@@ -9,9 +9,9 @@ summary: "Hive finishes safe automatable work before handing concise user-owned 
 tags: [automation, behavior, handoff]
 aliases: ["todo handoff", "user-owned steps"]
 sources:
-  - "repo:.agents/directives/01-behavior.md#sha256:b84d45bd3fb28b67581ff024fdfb8d0aaf0dfbbda580f712c96d1228685dadbb"
+  - "repo:.agents/directives/01-behavior.md#sha256:a3fad4148b713fa44c79c4906c297e621a529798785f9b916d67fc0aeff8b4e5"
   - "repo:crates/hive-cli/src/user_install.rs#sha256:35f3cace4b6297a298b8b59db208b3d8ecfd82331758fb6bd34dd1ec03aa8ec7"
-  - "repo:harness/template/AGENTS.md.jinja#sha256:070d97440343d699565448c239efb55c905df79119df289525d41edc6e81581f"
+  - "repo:harness/template/AGENTS.md.jinja#sha256:bb858b1021be8b3fd9fc282820a34a4e923dea6a47e01bdddcf9745510c1381d"
 links: [language-consistency, source-development]
 reviewed_revision: "git:35e6b79a024350487f823780101a28be24a9f4c7"
 status: active

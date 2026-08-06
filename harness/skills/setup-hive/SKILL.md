@@ -69,6 +69,9 @@ Configure user-scope Hive preferences without modifying a project harness or pro
 8. Ask exactly one custom-setup question at a time in the required order below.
    - Explain the available values from the signed user-setup catalog.
    - Do not infer a preference, host selection, custom description, Skill approval, usage-guard opt-in, or fallback consent.
+   - Present every user-facing choice, Skill list, dependency list, and write list as one complete
+     Markdown list or table entry per line. Never combine independently selectable items into a
+     comma-separated paragraph.
 9. Write the resolved answers to a temporary YAML file matching `user-setup.schema.json`.
    - Do not include provider credentials, tokens, cookies, account identifiers, or raw usage data.
 10. Preview the resolved setup.

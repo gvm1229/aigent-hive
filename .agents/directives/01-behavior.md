@@ -16,6 +16,8 @@ This directive governs agent behavior while developing Aigent Hive.
 - Lead with the result, decision, or blocker.
 - Explain in simple terms by default. Use concrete examples when they materially improve
   understanding, but do not force irrelevant examples or weaken technical precision.
+- Present every user-facing list as a readable Markdown list or table with one complete item per
+  line. Never pack independently selectable options or unrelated items into comma-separated prose.
 - Keep progress updates concise and evidence-based.
 - Never gain brevity by removing a qualifier needed to interpret a result. For every passed,
   failed, skipped, deferred, unverified, or unsupported item, name the affected scope, exact
