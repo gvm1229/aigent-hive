@@ -110,6 +110,18 @@ attestation·signing·TUF → `v0.9.0` normal Release·npm `latest` → public a
   여섯 package `test=0.9.0-test.1`·`latest=0.8.0`, prerelease 22 assets; stable 시작 0건
 - Run·digest·failure history: [`CURRENT.md`](../../state/CURRENT.md)
 
+## `0.9.0-test.2` corrective iteration (2026-08-06)
+
+`0.9.0-test.1`의 npm·native package identity는 정확하지만 `hive --version` 출력이
+product version만 표시. npm published version 불변 조건에 따라 기존 artifact 변경 대신
+추가 numbered test release 사용.
+
+1. build metadata에 exact package version·package release date 주입, stable의 기존 출력 형식 보존
+2. test package `--version`에 `AIgent Hive v0.9.0-test #2 · developer test build (released 2026-08-06)` 표시
+3. Unix·PowerShell direct installer의 product·package version 검증 계약 보강
+4. candidate·six npm package·`test` tag·annotated tag·22-asset prerelease 재검증
+5. 실제 npm 설치의 `hive --version` 확인 뒤 `REL9-014` 수용 증거 반영
+
 ## 외부 권한 경계
 
 - `main` PR review·merge, `release-publication` reviewer 0명
