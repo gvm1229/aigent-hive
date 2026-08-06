@@ -72,22 +72,33 @@ code signing은 후속 안정 릴리스로 deferred.
 
 ## 첫 설정
 
-사용하는 host에 Hive 설치:
+Hive CLI 설치 후 Codex, Claude Code 또는 Gemini Antigravity에서 대상 project를 열고
+아래 공통 prompt 입력:
+
+```text
+Install Aigent Hive for this host, then set it up for the current project. Use the recommended defaults where they do not require my choice, inspect the project first, show the exact write preview, and ask me only about choices that require my approval.
+```
+
+세 지원 host 공통 prompt. Active host의 Hive projection 활성화, user-scope setup, 현재
+project 설정 순서. User-scope setup 첫 선택: `English` 또는 `한국어`. Daily update check:
+explicit opt-in. Project setup 질문 범위: 안전한 추론이 불가한 required preference,
+host, optional capability.
+
+### Terminal fallback
+
+Active host의 setup command 실행 불가 시 terminal에서 host projection 활성화:
 
 ```console
 hive install --scope user --host codex --apply --output json
 ```
 
-필요하면 `codex`를 `claude` 또는 `antigravity`로 변경. 이후 host에 Aigent Hive
-설정을 요청. 첫 선택은 `English` 또는 `한국어`이며, 나머지 모든 설정 질문과 global
-Hive 지침은 선택 언어 사용.
+필요 시 `codex`를 `claude` 또는 `antigravity`로 변경 후 동일 prompt 입력.
 
-Setup 질문: 일 1회 update 확인 허용 여부. 명시적 opt-in이며 자동 확인 범위는
-새 version 알림, 설치 0건.
+공통 prompt 범위: harness activation·setup. Update, optional third-party Skill,
+provider credential 접근 권한 포함 없음.
 
-Project에서는 현재 repository에 Hive setup을 요청. Hive가 소유할 exact write set을
-미리 보여 주고 foreign guidance bytes를 보존하며 canonical knowledge는 Markdown으로
-유지.
+Hive-owned exact write set preview, foreign guidance bytes 보존, canonical Markdown
+knowledge 유지.
 
 ## 업데이트
 

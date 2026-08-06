@@ -74,21 +74,36 @@ stability release.
 
 ## First setup
 
-Install Hive for the host you use:
+After installing the Hive CLI, open the target project in Codex, Claude Code, or Gemini
+Antigravity and paste this single prompt:
+
+```text
+Install Aigent Hive for this host, then set it up for the current project. Use the recommended defaults where they do not require my choice, inspect the project first, show the exact write preview, and ask me only about choices that require my approval.
+```
+
+The same prompt is for all three supported hosts. The active host identifies itself,
+activates its own Hive projection, completes user-scope setup, then configures the
+current project. User-scope setup still asks for `English` or `한국어` first, and for
+opt-in daily update checks. Project setup still asks for every required preference,
+host, and optional capability that it cannot safely infer.
+
+### Manual terminal fallback
+
+If the active host cannot run the setup commands, activate the host projection in a
+terminal:
 
 ```console
 hive install --scope user --host codex --apply --output json
 ```
 
-Replace `codex` with `claude` or `antigravity` when appropriate. Then ask the host to
-set up Aigent Hive. The first choice is `English` or `한국어`; every later setup question
-and the global Hive guidance use that language.
+Replace `codex` with `claude` or `antigravity` when appropriate, then paste the same
+prompt above into that host.
 
-Setup also asks whether Hive may check for updates once per day. This is opt-in.
-Automatic checks only report a newer version. They never install one.
+The prompt covers harness activation and setup; it does not authorize an update,
+optional third-party Skill, or provider-credential access.
 
-For a project, ask Hive to set up the current repository. Hive previews its exact owned
-write set, preserves foreign guidance bytes, and keeps canonical knowledge in Markdown.
+Hive previews its exact owned write set, preserves foreign guidance bytes, and keeps
+canonical knowledge in Markdown.
 
 ## Updating
 
