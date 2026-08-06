@@ -46,8 +46,8 @@
 | v0.9 full release | 13 | 13 | 50% |
 | Test release setup routing | 4 | 0 | 100% |
 | Bootstrap·user projection recovery | 9 | 0 | 100% |
-| 한국어 setup 용어 복구 | 1 | 4 | 20% |
-| **Canonical total** | **350** | **72** | **82.9%** |
+| 한국어 setup 용어 복구 | 1 | 5 | 16.7% |
+| **Canonical total** | **350** | **73** | **82.7%** |
 
 External production boundary 항목도 미완료 합계에 포함. Protected authority 없이 완료 처리 금지.
 
@@ -120,7 +120,7 @@ authenticated global setup recovery.
 완료: `SLW-012` source marker 기반 knowledge 조회 route 분리와 재발 방지 검증.
 완료: `BGR-001–007` bootstrap 선택지·global setup UX·user projection local-priority merge.
 조사 완료: `KST-001` Korean global setup 용어 source·projection·CLI 범위 확인.
-다음 구현 대기: `KST-002–005` `Skill` 고유명사 유지, exact Korean interaction sample·회귀
-검사, 독립 numbered test 수용.
+다음 구현 대기: `KST-002–006` `Skill` 고유명사 유지, 비배타 global profile·project workflow
+분리, exact Korean interaction sample·회귀 검사, 독립 numbered test 수용.
 다음 release gate: `REL9-014–015` public test
 acceptance·retention 관찰, stable 경로는 별도 main authority까지 보류.

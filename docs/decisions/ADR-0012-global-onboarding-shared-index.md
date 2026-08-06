@@ -22,8 +22,8 @@ Global setup answer:
 
 - Interface language: `en|ko`
 - Wiki language: `en|ko|both`
-- User profile: signed release catalog의 web developer, game developer,
-  non-developer와 `custom`
+- User profile: 사용자 이해용 전역 기본 맥락. signed release catalog의 복수 context와 optional
+  사용자 설명 동시 선택·보존. workflow·작업 우선순위·project별 구현 방식 결정 금지
 - Agent persona: signed release catalog의 strict, balanced, friendly와 `custom`
 - Active host: `codex|claude|antigravity` 복수 선택
 - Skill selection: recommended suite 또는 개별 선택
@@ -112,6 +112,7 @@ Global setup answer:
 공통 계약:
 
 - Project kind 질문 생략 금지
+- 현재 project의 workflow·기술 선택·delivery constraint·작업 우선순위: project scope 전용
 - Project별 `AGENTS.md`, `.agents/`, canonical `.hive/knowledge/`
 - Global Wiki disable 상태의 project Wiki: disable 상속
 - Custom project Wiki opt-in: global Wiki enable 또는 동일 action의 global re-enable 필요
