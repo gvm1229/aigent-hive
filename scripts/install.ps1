@@ -36,12 +36,27 @@ function Test-HiveVersionOutput {
         [AllowEmptyString()]
         [string]$Output,
         [Parameter(Mandatory = $true)]
-        [string]$ExpectedVersion
+        [string]$ExpectedVersion,
+        [Parameter(Mandatory = $true)]
+        [string]$ExpectedPackageVersion
     )
 
-    $escapedVersion = [regex]::Escape($ExpectedVersion)
+    if ($ExpectedPackageVersion -eq $ExpectedVersion) {
+        $expected = "^AIgent Hive v" + [regex]::Escape($ExpectedVersion) +
+            " \(released [0-9]{4}-[0-9]{2}-[0-9]{2}\)$"
+    }
+    elseif ($ExpectedPackageVersion -eq "${ExpectedVersion}-test") {
+        $expected = "^AIgent Hive v" + [regex]::Escape($ExpectedVersion) +
+            "-test · developer test build \(released [0-9]{4}-[0-9]{2}-[0-9]{2}\)$"
+    }
+    else {
+        $revision = $ExpectedPackageVersion.Substring(("${ExpectedVersion}-test.").Length)
+        $expected = "^AIgent Hive v" + [regex]::Escape($ExpectedVersion) +
+            "-test #" + [regex]::Escape($revision) +
+            " · developer test build \(released [0-9]{4}-[0-9]{2}-[0-9]{2}\)$"
+    }
     return $Output -cmatch (
-        "^hive $escapedVersion \(released [0-9]{4}-[0-9]{2}-[0-9]{2}\)$"
+        $expected
     )
 }
 
@@ -185,7 +200,8 @@ function Assert-ExistingDirectInstall {
     $priorVersionOutput = & $Destination --version
     if (-not (Test-HiveVersionOutput `
         -Output $priorVersionOutput `
-        -ExpectedVersion $priorReceipt.version
+        -ExpectedVersion $priorReceipt.version `
+        -ExpectedPackageVersion $priorReceipt.package_version
     )) {
         throw "existing hive binary is not owned by the direct installer"
     }
@@ -377,7 +393,8 @@ try {
     }
     if (-not (Test-HiveVersionOutput `
         -Output (& $binary --version) `
-        -ExpectedVersion $Version
+        -ExpectedVersion $Version `
+        -ExpectedPackageVersion $PackageVersion
     )) {
         throw "signed binary version differs from requested release"
     }

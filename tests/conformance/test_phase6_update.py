@@ -94,7 +94,7 @@ case "$1" in
     done
     package="$destination/package"
     mkdir -p "$package/bin"
-    printf '%s\\n' '#!/bin/sh' 'printf "hive 0.7.0 (released 2026-07-24)\\\\n"' >"$package/bin/hive"
+    printf '%s\\n' '#!/bin/sh' 'printf "AIgent Hive v0.7.0-test #1 · developer test build (released 2026-07-24)\\\\n"' >"$package/bin/hive"
     chmod 0755 "$package/bin/hive"
     : >"$package/LICENSE"
     ;;
@@ -439,6 +439,19 @@ class Phase6StaticContracts(unittest.TestCase):
             candidate_workflow["jobs"]["windows"]["runs-on"],
             "windows-2025",
         )
+        candidate_triggers = candidate_workflow.get("on", candidate_workflow.get(True))
+        self.assertIsInstance(candidate_triggers, dict)
+        candidate_inputs = candidate_triggers["workflow_dispatch"]["inputs"]
+        self.assertEqual(
+            candidate_inputs["release_date"],
+            {
+                "description": (
+                    "Exact package release date embedded in the shipped CLI (YYYY-MM-DD)"
+                ),
+                "required": True,
+                "type": "string",
+            },
+        )
         for required in (
             "Release candidate",
             "macos-15",
@@ -463,8 +476,11 @@ class Phase6StaticContracts(unittest.TestCase):
             "--installer-dir",
             "--product-version",
             "--package-version",
+            "AIGENT_HIVE_PACKAGE_RELEASE_DATE",
+            "PACKAGE_RELEASE_DATE",
             '"$PRODUCT_VERSION"-test)',
             "release-candidate.json",
+            "release_date",
             "statically linked",
             "static-pie linked",
         ):
@@ -1271,20 +1287,29 @@ try {
     if ([IO.File]::Exists($hashProbe)) { [IO.File]::Delete($hashProbe) }
 }
 if (-not (Test-HiveVersionOutput `
-    -Output "hive 0.7.0 (released 2026-07-24)" `
-    -ExpectedVersion "0.7.0"
+    -Output "AIgent Hive v0.7.0 (released 2026-07-24)" `
+    -ExpectedVersion "0.7.0" `
+    -ExpectedPackageVersion "0.7.0"
 )) {
     throw "dated version output was rejected"
 }
+if (-not (Test-HiveVersionOutput `
+    -Output "AIgent Hive v0.9.0-test #2 · developer test build (released 2026-08-06)" `
+    -ExpectedVersion "0.9.0" `
+    -ExpectedPackageVersion "0.9.0-test.2"
+)) {
+    throw "test package version output was rejected"
+}
 foreach ($invalidOutput in @(
-    "hive 0.7.0",
-    "hive 0.7.1 (released 2026-07-24)",
-    "hive 0.7.0 (released 2026-7-24)",
-    "hive 0.7.0 (released 2026-07-24) trailing"
+    "AIgent Hive v0.7.0",
+    "AIgent Hive v0.7.1 (released 2026-07-24)",
+    "AIgent Hive v0.7.0 (released 2026-7-24)",
+    "AIgent Hive v0.7.0 (released 2026-07-24) trailing"
 )) {
     if (Test-HiveVersionOutput `
         -Output $invalidOutput `
-        -ExpectedVersion "0.7.0"
+        -ExpectedVersion "0.7.0" `
+        -ExpectedPackageVersion "0.7.0"
     ) {
         throw "invalid version output was accepted: $invalidOutput"
     }

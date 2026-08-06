@@ -108,8 +108,16 @@ trap 'rm -rf "$work"; test -z "$staged_binary" || rm -f "$staged_binary"; test -
 
 matches_hive_version() {
   hive_version_output=$1
-  hive_expected_version=$2
-  hive_version_prefix="hive $hive_expected_version (released "
+  hive_product_version=$2
+  hive_package_version=$3
+  if [ "$hive_product_version" = "$hive_package_version" ]; then
+    hive_version_prefix="AIgent Hive v$hive_product_version (released "
+  elif [ "$hive_package_version" = "$hive_product_version-test" ]; then
+    hive_version_prefix="AIgent Hive v$hive_product_version-test · developer test build (released "
+  else
+    hive_revision=${hive_package_version#"$hive_product_version-test."}
+    hive_version_prefix="AIgent Hive v$hive_product_version-test #$hive_revision · developer test build (released "
+  fi
   case "$hive_version_output" in
     "$hive_version_prefix"????-??-??")") ;;
     *) return 1 ;;
@@ -315,7 +323,7 @@ if [ "$operating_system" = Darwin ] && [ -n "$authorized_team_id" ]; then
     exit 5
   fi
 fi
-if ! matches_hive_version "$("$binary" --version)" "$version"; then
+if ! matches_hive_version "$("$binary" --version)" "$version" "$package_version"; then
   echo "signed binary version differs from requested release" >&2
   exit 5
 fi
@@ -370,9 +378,10 @@ if [ -e "$prefix/bin/hive" ] || [ -L "$prefix/bin/hive" ] \
     exit 3
   fi
   prior_version=$parsed_version
+  prior_package_version=$parsed_package_version
   if ! matches_hive_version \
     "$("$prefix/bin/hive" --version 2>/dev/null || true)" \
-    "$prior_version"; then
+    "$prior_version" "$prior_package_version"; then
     echo "existing hive binary is not owned by the direct installer" >&2
     exit 3
   fi

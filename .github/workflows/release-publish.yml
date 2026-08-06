@@ -115,6 +115,7 @@ jobs:
           test "$(jq -r .channel <<<"$metadata")" = "stable"
           test "$(jq -r .product_version <<<"$metadata")" = "$PRODUCT_VERSION"
           test "$(jq -r .package_version <<<"$metadata")" = "$PACKAGE_VERSION"
+          [[ "$(jq -r .release_date <<<"$metadata")" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]
           test "$(jq -r .ref <<<"$metadata")" = "refs/heads/main"
           test "$(jq -r .sha <<<"$metadata")" = "$CANDIDATE_SHA"
       - name: Verify required artifacts, checksums, and GitHub attestations

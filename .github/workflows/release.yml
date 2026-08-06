@@ -18,6 +18,10 @@ on:
         options:
           - test
           - stable
+      release_date:
+        description: Exact package release date embedded in the shipped CLI (YYYY-MM-DD)
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -30,6 +34,7 @@ jobs:
       PRODUCT_VERSION: ${{ inputs.product_version }}
       PACKAGE_VERSION: ${{ inputs.package_version }}
       CHANNEL: ${{ inputs.channel }}
+      PACKAGE_RELEASE_DATE: ${{ inputs.release_date }}
       TARGET: ${{ matrix.target }}
       PLATFORM_PACKAGE: ${{ matrix.platform_package }}
     permissions:
@@ -84,6 +89,7 @@ jobs:
             *) exit 2 ;;
           esac
           test "$GITHUB_EVENT_NAME" = "workflow_dispatch"
+          [[ "$PACKAGE_RELEASE_DATE" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]
           test "$CANDIDATE_REF" = "refs/heads/$expected_ref"
           test "$CANDIDATE_REF_NAME" = "$expected_ref"
           test "$CANDIDATE_REF_TYPE" = "branch"
@@ -104,7 +110,9 @@ jobs:
       - name: Enforce source version and build locked native binary
         run: |
           scripts/check-release-version.sh "$PRODUCT_VERSION"
-          cargo build --release --locked --target "$TARGET" --bin hive
+          AIGENT_HIVE_PACKAGE_VERSION="$PACKAGE_VERSION" \
+            AIGENT_HIVE_PACKAGE_RELEASE_DATE="$PACKAGE_RELEASE_DATE" \
+            cargo build --release --locked --target "$TARGET" --bin hive
       - name: Verify native architecture and runtime
         run: |
           binary="target/$TARGET/release/hive"
@@ -124,7 +132,20 @@ jobs:
               exit 4
               ;;
           esac
-          test "$("$binary" --version | cut -d' ' -f2)" = "$PRODUCT_VERSION"
+          case "$PACKAGE_VERSION" in
+            "$PRODUCT_VERSION")
+              expected_version="AIgent Hive v$PRODUCT_VERSION (released $PACKAGE_RELEASE_DATE)"
+              ;;
+            "$PRODUCT_VERSION"-test)
+              expected_version="AIgent Hive v$PRODUCT_VERSION-test · developer test build (released $PACKAGE_RELEASE_DATE)"
+              ;;
+            "$PRODUCT_VERSION"-test.*)
+              revision=${PACKAGE_VERSION#"$PRODUCT_VERSION-test."}
+              expected_version="AIgent Hive v$PRODUCT_VERSION-test #$revision · developer test build (released $PACKAGE_RELEASE_DATE)"
+              ;;
+            *) exit 4 ;;
+          esac
+          test "$("$binary" --version)" = "$expected_version"
           "$binary" doctor | grep -F "aigent-hive $PRODUCT_VERSION"
       - name: Package native archive and npm platform package
         run: |
@@ -181,6 +202,7 @@ jobs:
       PRODUCT_VERSION: ${{ inputs.product_version }}
       PACKAGE_VERSION: ${{ inputs.package_version }}
       CHANNEL: ${{ inputs.channel }}
+      PACKAGE_RELEASE_DATE: ${{ inputs.release_date }}
       TARGET: x86_64-pc-windows-msvc
     permissions:
       contents: read
@@ -215,6 +237,7 @@ jobs:
             *) exit 2 ;;
           esac
           test "$GITHUB_EVENT_NAME" = "workflow_dispatch"
+          [[ "$PACKAGE_RELEASE_DATE" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]
           test "$CANDIDATE_REF" = "refs/heads/$expected_ref"
           test "$CANDIDATE_REF_NAME" = "$expected_ref"
           test "$CANDIDATE_REF_TYPE" = "branch"
@@ -231,7 +254,9 @@ jobs:
         shell: bash
         run: |
           scripts/check-release-version.sh "$PRODUCT_VERSION"
-          cargo build --release --locked --target "$TARGET" --bin hive
+          AIGENT_HIVE_PACKAGE_VERSION="$PACKAGE_VERSION" \
+            AIGENT_HIVE_PACKAGE_RELEASE_DATE="$PACKAGE_RELEASE_DATE" \
+            cargo build --release --locked --target "$TARGET" --bin hive
       - name: Verify architecture and package native archive
         shell: pwsh
         run: |
@@ -241,7 +266,15 @@ jobs:
           if ([BitConverter]::ToUInt16($bytes, $peOffset + 4) -ne 0x8664) {
             throw "release binary is not x86_64 PE"
           }
-          if ((& $binary --version).Split(" ")[1] -ne $env:PRODUCT_VERSION) {
+          if ($env:PACKAGE_VERSION -eq $env:PRODUCT_VERSION) {
+            $expectedVersion = "AIgent Hive v$($env:PRODUCT_VERSION) (released $env:PACKAGE_RELEASE_DATE)"
+          } elseif ($env:PACKAGE_VERSION -eq "$($env:PRODUCT_VERSION)-test") {
+            $expectedVersion = "AIgent Hive v$($env:PRODUCT_VERSION)-test · developer test build (released $env:PACKAGE_RELEASE_DATE)"
+          } else {
+            $revision = $env:PACKAGE_VERSION.Substring(("$($env:PRODUCT_VERSION)-test.").Length)
+            $expectedVersion = "AIgent Hive v$($env:PRODUCT_VERSION)-test #$revision · developer test build (released $env:PACKAGE_RELEASE_DATE)"
+          }
+          if ((& $binary --version) -ne $expectedVersion) {
             throw "release binary version mismatch"
           }
           $package = "aigent-hive-$env:PRODUCT_VERSION-$env:TARGET"
@@ -301,6 +334,7 @@ jobs:
       PRODUCT_VERSION: ${{ inputs.product_version }}
       PACKAGE_VERSION: ${{ inputs.package_version }}
       CHANNEL: ${{ inputs.channel }}
+      PACKAGE_RELEASE_DATE: ${{ inputs.release_date }}
     permissions:
       actions: read
       contents: read
@@ -334,6 +368,7 @@ jobs:
             *) exit 2 ;;
           esac
           test "$GITHUB_EVENT_NAME" = "workflow_dispatch"
+          [[ "$PACKAGE_RELEASE_DATE" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]
           test "$CANDIDATE_REF" = "refs/heads/$expected_ref"
           test "$CANDIDATE_REF_NAME" = "$expected_ref"
           test "$CANDIDATE_REF_TYPE" = "branch"
@@ -380,8 +415,8 @@ jobs:
           CANDIDATE_SHA: ${{ github.sha }}
           CANDIDATE_REF: ${{ github.ref }}
         run: |
-          printf '{"schema_version":1,"channel":"%s","product_version":"%s","package_version":"%s","ref":"%s","sha":"%s"}\n' \
-            "$CHANNEL" "$PRODUCT_VERSION" "$PACKAGE_VERSION" "$CANDIDATE_REF" "$CANDIDATE_SHA" \
+          printf '{"schema_version":1,"channel":"%s","product_version":"%s","package_version":"%s","release_date":"%s","ref":"%s","sha":"%s"}\n' \
+            "$CHANNEL" "$PRODUCT_VERSION" "$PACKAGE_VERSION" "$PACKAGE_RELEASE_DATE" "$CANDIDATE_REF" "$CANDIDATE_SHA" \
             >release-candidate.json
       - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:

@@ -1827,11 +1827,7 @@ fn run_human(mut arguments: impl Iterator<Item = String>) -> Result<(), String> 
             check_target(Path::new(&target))
         }
         Some("-v" | "-V" | "--version") => {
-            println!(
-                "hive {} (released {})",
-                env!("CARGO_PKG_VERSION"),
-                env!("HIVE_RELEASE_DATE")
-            );
+            println!("{}", version_output());
             Ok(())
         }
         Some("-h" | "--help") | None => {
@@ -1839,6 +1835,29 @@ fn run_human(mut arguments: impl Iterator<Item = String>) -> Result<(), String> 
             Ok(())
         }
         Some(command) => Err(format!("unknown command: {command}\n\n{USAGE}")),
+    }
+}
+
+fn version_output() -> String {
+    version_output_for(
+        env!("CARGO_PKG_VERSION"),
+        env!("HIVE_PACKAGE_VERSION"),
+        env!("HIVE_PACKAGE_RELEASE_DATE"),
+    )
+}
+
+fn version_output_for(product: &str, package: &str, release_date: &str) -> String {
+    if package == product {
+        format!("AIgent Hive v{product} (released {release_date})")
+    } else if package == format!("{product}-test") {
+        format!("AIgent Hive v{product}-test · developer test build (released {release_date})")
+    } else {
+        let revision = package
+            .strip_prefix(&format!("{product}-test."))
+            .expect("embedded package version is validated by build.rs");
+        format!(
+            "AIgent Hive v{product}-test #{revision} · developer test build (released {release_date})"
+        )
     }
 }
 
@@ -1876,7 +1895,7 @@ mod tests {
     use super::{
         execute_hook_capability, failure_result_for, is_help_request, mark_derived_state_stale,
         normalize_hook_path, parse_hook, parse_setup, reconcile_project_registry, run_human,
-        wants_json, ActionResult, HookInput, SETUP_USAGE, USAGE,
+        version_output_for, wants_json, ActionResult, HookInput, SETUP_USAGE, USAGE,
     };
     use hive_render::{RenderError, ResolvedProjectPreferences, SetupMode};
     use std::fs;
@@ -1897,6 +1916,14 @@ mod tests {
     #[test]
     fn help_is_the_default_command() {
         assert_eq!(run_human(std::iter::empty()), Ok(()));
+    }
+
+    #[test]
+    fn version_output_surfaces_a_test_package_version() {
+        assert_eq!(
+            version_output_for("0.9.0", "0.9.0-test.2", "2026-08-06"),
+            "AIgent Hive v0.9.0-test #2 · developer test build (released 2026-08-06)"
+        );
     }
 
     #[test]
