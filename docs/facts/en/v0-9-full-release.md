@@ -10,16 +10,16 @@ tags: [distribution, release, signing, v0-9]
 aliases: ["0.9.0 release plan", "full release"]
 sources:
   - "repo:docs/decisions/ADR-0017-0.9-full-release.md#sha256:9172a8fa815052211dac6f561775f47852f4fe86bd629cb02004bbf5e0e30acb"
-  - "repo:docs/plans/active/release-0.9.0.md#sha256:eb18df03b5a407f3fb3a405a9af0dd146ff653d92dbc5ba6528f08198efedc7c"
+  - "repo:docs/plans/active/release-0.9.0.md#sha256:79ade57874d13dbf8657de917f1d5b571ccfb457c2cbcd5dc81425425a8973dc"
 links: [host-external-integrations, release-verification, test-distribution, version-policy]
-reviewed_revision: "git:6980e8b38c08a9ebe483a4ffa7937f70999d63a5"
+reviewed_revision: "git:a78aed2efcf96d34ef020addc30ebdd70f035286"
 status: active
 ---
 
 # Aigent Hive 0.9.0 Test and Stable Release
 
 Test prereleases use npm `test` and GitHub prereleases; stable `v0.9.0` remains absent. Candidate
-`31082481203` from `6980e8b` and publication `31083602464` created `v0.9.0-test.2` with 22 assets.
-All six packages have `test=0.9.0-test.2`, `latest=0.8.0`; an isolated install prints the exact
-developer-test build label and `2026-08-06`. Trusted publishing `31083140684` returned two scoped-package
-`404`s without mutation, then the existing registry-auth fallback published the release.
+`31090062784` and publication `31090917408` from `5341bdf` created `v0.9.0-test.3` with 22 assets.
+All six packages have `test=0.9.0-test.3`, `latest=0.8.0`; the annotated prerelease tag is
+`v0.9.0-test.3`. Its CLI label is `AIgent Hive v0.9.0-test #3 · developer test build (released
+2026-08-06)`.
