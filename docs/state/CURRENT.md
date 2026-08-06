@@ -2,7 +2,7 @@
 
 - 기준 branch: `develop`
 - product version: `0.9.0`
-- plan revision: `2.11`
+- plan revision: `2.13`
 - 현재 milestone: `0.9.0-test` public acceptance·retention
 - 현재 작업: `REL9-014–015` public test acceptance·retention 관찰
 - 외부 중지 경계: `main` PR·review, signing·TUF,
@@ -26,9 +26,14 @@
   + `docs/plans/active/release-0.9.0.md`
   + `docs/plans/active/test-release-setup-routing.md`
   + `docs/plans/active/bootstrap-global-setup-recovery.md`
-- Plan completion: canonical checklist `348/416` 완료, `68`개 미완료, `83.7%`
+- Plan completion: canonical checklist `349/417` 완료, `68`개 미완료, `83.7%`
 - Developer binary: `scripts/dev-install.sh`의 sandbox·global·CAS rollback과 `product-dev`
   version identity, isolated global activation·rollback 회귀 검증 완료
+- Legacy setup recovery: schema-1 `0.7.0`의 19개 legacy projection은 saved preference·path
+  inventory·live digest 일치 뒤 schema 2 base로 이관. later Codex metadata는 추가 처리,
+  pre-schema-2 local edit·unknown inventory는 write 0건. `0.9.0-test.3` Codex host inventory도
+  frozen `setup-hive` digest 기반 인증 복구. local user-scope apply·validate PASS, stale
+  Antigravity `0.7.0` Hive-only projection은 recoverable Trash 이동, canonical knowledge·index 보존
 - Source Wiki route: source marker 확인 뒤 `hive source-wiki query` 사용,
   consumer `hive knowledge retrieve`의 source root 호출 금지·static contract 36개 PASS
 - Fresh clone: exact `6761f0b`, Rust format·strict Clippy·workspace all-feature, Python 677개 PASS·platform skip 5개

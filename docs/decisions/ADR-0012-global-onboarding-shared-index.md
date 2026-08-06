@@ -37,6 +37,8 @@ Global setup answer:
 - Bare Hive setup·reconfigure 요청: global user-scope 우선, ambient working directory inspection 없음
 - Global·project 동시 요청: global setup 완료 뒤 project setup의 별도 사용자 확인
 - Numbered test release의 user projection update: exact authenticated predecessor inventory만 허용
+- `0.9.0-test.3` Codex host inventory: frozen `setup-hive` digest와 current selected projection의
+  exact inventory 조합만 predecessor 인증
 - Unknown·변조 predecessor manifest: preview·apply 차단과 foreign byte 보존
 
 ### User projection
@@ -50,9 +52,12 @@ Global setup answer:
 - Setup bootstrap·reconfigure Skill: 항상 설치
 - 선택 Skill dependency closure: preview와 사용자 승인 필수
 - Authenticated historical base와 live local·incoming digest 비교
+- Schema-1 `0.7.0`: saved preference digest·지원 legacy path inventory·모든 recorded live digest
+  일치 시에만 base 인증. later `agents/openai.yaml` metadata는 신규 파일로 추가하고 schema 2 full base 기록
 - `local == base`: incoming exact replacement
 - Disjoint local·incoming text 변경: 양쪽 hunk 결합
 - Overlap: local hunk 보존·omitted incoming hunk preview
+- Schema-2 전 legacy local edit: fabricated base·자동 merge 없이 conflict와 active byte 보존
 - Missing·unauthenticated base: active bytes 불변·conflict
 
 ### Global setup UX

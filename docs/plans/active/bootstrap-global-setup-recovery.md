@@ -27,6 +27,9 @@
 - [x] [BGR-007] English·Korean README·ADR·bilingual fact와 source Wiki current truth
 - [x] [BGR-008] Source developer의 `--sandbox|--global|--rollback` binary lifecycle,
   canonical user data 불변과 active executable CAS recovery regression
+- [x] [BGR-009] Schema-1 `0.7.0` user projection의 authenticated vanilla replacement,
+  later metadata 추가·pre-schema-2 local edit 보존 차단·unknown manifest fail-closed와
+  `0.9.0-test.3` host inventory의 fresh global setup recovery
 
 ## 완료 기준
 
@@ -34,6 +37,7 @@
 - Modified user projection: preview의 local retained·incoming omitted disclosure, active
   conflict marker 0건
 - Unknown·tampered base: write preview·apply 0건과 recoverable conflict
+- Schema-1 local edit: schema-2 base 부재 상태의 자동 merge 0건과 active byte 보존
 - 초기 global setup: language 질문 우선
 - Reconfigure: 부분 변경 또는 전체 재검토 선택 우선
 - Refresh 필요 상태: preference·project 안전 여부와 다음 선택 우선, internal path·hash 기본 노출 0건
