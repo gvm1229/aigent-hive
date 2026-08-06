@@ -1,6 +1,6 @@
 # Aigent Hive active plan index
 
-> Revision: 2.08
+> Revision: 2.09
 > 기준일: 2026-08-06
 > Product version: `0.9.0`
 > 현재 milestone: `0.9.0` 정식 릴리스 준비
@@ -31,7 +31,7 @@
 | User plugin/project lifecycle | 38 | 0 | 100% |
 | Host-native usage sensors | 24 | 0 | 100% |
 | Global onboarding·shared index | 19 | 0 | 100% |
-| Source docs Wiki | 11 | 1 | 91.7% |
+| Source docs Wiki | 12 | 0 | 100% |
 | Windows shell install boundary | 3 | 0 | 100% |
 | 문서 말투 | 6 | 0 | 100% |
 | Security review | 4 | 0 | 100% |
@@ -46,7 +46,7 @@
 | v0.9 full release | 13 | 13 | 50% |
 | Test release setup routing | 4 | 0 | 100% |
 | Bootstrap·user projection recovery | 7 | 0 | 100% |
-| **Canonical total** | **346** | **69** | **83.4%** |
+| **Canonical total** | **347** | **68** | **83.6%** |
 
 External production boundary 항목도 미완료 합계에 포함. Protected authority 없이 완료 처리 금지.
 
@@ -112,7 +112,7 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
 
 ## Current execution order
 
-진행: `SLW-012` source marker 기반 knowledge 조회 route 분리와 재발 방지 검증.
+완료: `SLW-012` source marker 기반 knowledge 조회 route 분리와 재발 방지 검증.
 완료: `BGR-001–007` bootstrap 선택지·global setup UX·user projection local-priority merge.
 다음 release gate: `REL9-014–015` public test
 acceptance·retention 관찰, stable 경로는 별도 main authority까지 보류.

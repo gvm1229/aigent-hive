@@ -2,9 +2,9 @@
 
 - 기준 branch: `develop`
 - product version: `0.9.0`
-- plan revision: `2.08`
+- plan revision: `2.09`
 - 현재 milestone: `0.9.0-test` public acceptance·retention
-- 현재 작업: `SLW-012` source/consumer knowledge 조회 route 재발 방지
+- 현재 작업: `REL9-014–015` public test acceptance·retention 관찰
 - 외부 중지 경계: `main` PR·review, signing·TUF,
   exact `1.0.0` 사용자 authority
 - Plan load: compact `docs/plans/PLAN.md` + `docs/plans/phases/07-public-qualification.md`
@@ -26,7 +26,9 @@
   + `docs/plans/active/release-0.9.0.md`
   + `docs/plans/active/test-release-setup-routing.md`
   + `docs/plans/active/bootstrap-global-setup-recovery.md`
-- Plan completion: canonical checklist `346/415` 완료, `69`개 미완료, `83.4%`
+- Plan completion: canonical checklist `347/415` 완료, `68`개 미완료, `83.6%`
+- Source Wiki route: source marker 확인 뒤 `hive source-wiki query` 사용,
+  consumer `hive knowledge retrieve`의 source root 호출 금지·static contract 36개 PASS
 - Fresh clone: exact `6761f0b`, Rust format·strict Clippy·workspace all-feature, Python 677개 PASS·platform skip 5개
 - Test candidate: [run `30771098518`](https://github.com/gvm1229/aigent-hive/actions/runs/30771098518), exact `6761f0b`, 5 target·npm umbrella PASS
 - Latest local Windows: Rust workspace 459개 실행·통과. Python 적합성 670개 발견 중

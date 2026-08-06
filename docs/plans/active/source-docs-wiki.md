@@ -38,7 +38,7 @@
   hostile conformance와 English·Korean clean-checkout rebuild
 - [x] [SLW-011] Material source task의 agent-reviewed bilingual task-fact completion
   capture, raw transcript·hook·runtime ingestion 0건
-- [ ] [SLW-012] `hive-source.json` source root의 automatic knowledge 조회를
+- [x] [SLW-012] `hive-source.json` source root의 automatic knowledge 조회를
   `hive source-wiki query`로 고정하고 consumer `hive knowledge retrieve` 호출 금지,
   source·consumer route의 static regression
 
