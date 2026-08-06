@@ -122,6 +122,17 @@ product version만 표시. npm published version 불변 조건에 따라 기존 
 4. candidate·six npm package·`test` tag·annotated tag·22-asset prerelease 재검증
 5. 실제 npm 설치의 `hive --version` 확인 뒤 `REL9-014` 수용 증거 반영
 
+### 완료 증거
+
+- candidate [`31082481203`](https://github.com/gvm1229/aigent-hive/actions/runs/31082481203):
+  `6980e8b`의 5 native target·npm umbrella PASS
+- publication [`31083602464`](https://github.com/gvm1229/aigent-hive/actions/runs/31083602464):
+  여섯 npm package `test=0.9.0-test.2`·`latest=0.8.0`, annotated `v0.9.0-test.2`, 22-asset prerelease
+- isolated npm install: `AIgent Hive v0.9.0-test #2 · developer test build (released 2026-08-06)`
+- trusted publishing run [`31083140684`](https://github.com/gvm1229/aigent-hive/actions/runs/31083140684):
+  npm scoped package `404`, package·tag·Release mutation 0건; existing registry-auth fallback publication 사용
+- 잔여 외부 정비: npm trusted publisher binding 확인 뒤 `bootstrap_with_token=false` 재검증
+
 ## 외부 권한 경계
 
 - `main` PR review·merge, `release-publication` reviewer 0명

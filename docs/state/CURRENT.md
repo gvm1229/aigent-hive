@@ -2,7 +2,7 @@
 
 - 기준 branch: `develop`
 - product version: `0.9.0`
-- plan revision: `2.03`
+- plan revision: `2.04`
 - 현재 milestone: `0.9.0-test` public acceptance
 - 현재 작업: `REL9-014–015` public test acceptance·retention 관찰
 - 외부 중지 경계: `main` PR·review, signing·TUF,
@@ -24,7 +24,7 @@
   + `docs/plans/active/prompt-refine-auto-routing.md`
   + `docs/plans/active/v0.9.0-test-finalization.md`
   + `docs/plans/active/release-0.9.0.md`
-- Plan completion: canonical checklist `334/403` 완료, `69`개 미완료, `82.9%`
+- Plan completion: canonical checklist `335/403` 완료, `68`개 미완료, `83.1%`
 - Fresh clone: exact `6761f0b`, Rust format·strict Clippy·workspace all-feature, Python 677개 PASS·platform skip 5개
 - Test candidate: [run `30771098518`](https://github.com/gvm1229/aigent-hive/actions/runs/30771098518), exact `6761f0b`, 5 target·npm umbrella PASS
 - Latest local Windows: Rust workspace 459개 실행·통과. Python 적합성 670개 발견 중
@@ -164,7 +164,14 @@
   installation token, credential-free checkout 적용. [candidate `31042797141`](https://github.com/gvm1229/aigent-hive/actions/runs/31042797141)
   `dd0224a`와 [publication `31043631056`](https://github.com/gvm1229/aigent-hive/actions/runs/31043631056) PASS.
   `0.9.0-test.1` 여섯 npm package `test`, `latest=0.8.0`, annotated tag·22-asset prerelease 확인
-- Source baseline: `dd0224a9d358803b38e38f279ba30687a5d71dbe`, `develop` 포함
+- Corrected test publication: [candidate `31082481203`](https://github.com/gvm1229/aigent-hive/actions/runs/31082481203)
+  `6980e8b`의 5 native target·npm umbrella PASS; [publication `31083602464`](https://github.com/gvm1229/aigent-hive/actions/runs/31083602464)
+  `0.9.0-test.2` 여섯 package `test`, `latest=0.8.0`, annotated tag·22-asset prerelease PASS.
+  Isolated npm install `--version`: `AIgent Hive v0.9.0-test #2 · developer test build (released 2026-08-06)`
+- Trusted publishing exception: [run `31083140684`](https://github.com/gvm1229/aigent-hive/actions/runs/31083140684)의
+  2회 `@aigent-hive/darwin-arm64` registry `404`, npm package·tag·GitHub Release mutation 0건;
+  existing registry-auth fallback으로 `31083602464` 게시 완료. npm trusted publisher binding 재정비 뒤 token 없는 경로 재검증 필요
+- Source baseline: `6980e8b38c08a9ebe483a4ffa7937f70999d63a5`, `develop` 포함
 - `staging`: 현재 release flow에 불필요하여 생성 0건
 - Production gate: 5개 native target·6개 npm package, OS signing·notarization,
   external TUF, public install·`0.8.0 → 0.9.0` update
