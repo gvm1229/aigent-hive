@@ -21,12 +21,12 @@
 
 ## Checklist
 
-- [ ] [GSS-004] `recommended_skill_suites`·`SkillSelectionMode::Recommended` 제거와 `all|individual`
-  typed config·schema·catalog·saved answer migration 설계
-- [ ] [GSS-005] global setup 기본 all-built-in·per-Skill toggle 질문·한 줄 목록·dependency preview 구현
-- [ ] [GSS-006] canonical Skill·plugin·host projection·README·generated directive 동기화;
+- [x] [GSS-004] `recommended_skill_suites`·`SkillSelectionMode::Recommended` 제거와 `all|individual`
+  typed config·schema·catalog·saved answer migration 구현
+- [x] [GSS-005] global setup 기본 all-built-in·per-Skill toggle 질문·한 줄 목록·dependency preview 구현
+- [x] [GSS-006] canonical Skill·plugin·host projection·README·generated directive 동기화;
   profile과 Skill 선택 연결 0건
-- [ ] [GSS-007] existing user configuration migration·all/individual toggle·one-entry-per-line static·Rust·host
+- [x] [GSS-007] existing user configuration migration·all/individual toggle·one-entry-per-line static·Rust·host
   smoke regression
 - [ ] [GSS-008] 새 numbered test release의 global Skill selection 수용; `latest` mutation 없음
 
@@ -37,3 +37,12 @@
 - profile 선택과 활성 Skill set의 결합 0건
 - user-facing Skill·dependency 목록: 항목당 한 줄, comma-separated 선택 목록 0건
 - existing recommended user configuration: preview 없는 Skill 추가 0건
+
+## 구현 증거
+
+- `a30eb47`: global catalog·schema·`SkillSelectionMode`의 `all|individual` 전환
+- legacy `recommended`: 저장된 동일 answer의 validate만 과거 closure 해석, 새 answer 거부,
+  apply 전 dry-run preview 유지
+- project 추천 세트: `harness/project-setup/skill-suites.yml`로 분리, global profile 결합 없음
+- 검증: `hive-cli` user setup 30개, `hive-render` 66개, user/project·connected·static·v0.9
+  Python 69개 통과

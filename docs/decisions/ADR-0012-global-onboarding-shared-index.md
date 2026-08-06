@@ -28,6 +28,9 @@ Global setup answer:
 - Active host: `codex|claude|antigravity` 복수 선택
 - Skill selection: 모든 built-in Skill 기본 활성화. 변경은 Skill별 on/off; profile·recommended suite
   결합 없음. existing recommended closure 변경은 preview·명시 approval 이후
+  - typed user config: `all|individual`; legacy `recommended`는 저장된 config validate·preview
+    migration 전용
+  - project setup recommendation: global catalog와 분리된 project-only catalog
 - Wiki: 기본 `enabled`, 명시적 opt-out
 - Usage guard: 명시적 opt-in, enabled 상태의 기본 remaining threshold `20%`
 

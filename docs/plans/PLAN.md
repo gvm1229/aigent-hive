@@ -1,6 +1,6 @@
 # Aigent Hive active plan index
 
-> Revision: 2.15
+> Revision: 2.16
 > 기준일: 2026-08-07
 > Product version: `0.9.0`
 > 현재 milestone: `0.9.0` 정식 릴리스 준비
@@ -47,8 +47,8 @@
 | Test release setup routing | 4 | 0 | 100% |
 | Bootstrap·user projection recovery | 9 | 0 | 100% |
 | 한국어 setup 용어 복구 | 1 | 5 | 16.7% |
-| Global Skill 선택 단순화 | 3 | 5 | 37.5% |
-| **Canonical total** | **353** | **78** | **81.9%** |
+| Global Skill 선택 단순화 | 7 | 1 | 87.5% |
+| **Canonical total** | **357** | **74** | **82.8%** |
 
 External production boundary 항목도 미완료 합계에 포함. Protected authority 없이 완료 처리 금지.
 
@@ -117,4 +117,4 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
 ## Current execution order
 
 완료 증거: [`CURRENT.md`](../state/CURRENT.md)와 owning active fragment.
-다음 구현: `KST-002–006`, `GSS-004–008`; stable 경로는 별도 `main` authority까지 보류.
+다음 구현: `KST-002–006`, `GSS-008`; stable 경로는 별도 `main` authority까지 보류.

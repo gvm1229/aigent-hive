@@ -153,6 +153,11 @@ Use this prompt for the first setup and later preference changes. It configures 
 user-scope language, Wiki, persona, Skills, and update preferences; it never inspects the
 current folder or creates a project harness.
 
+All built-in Skills are active by default. If you prefer a smaller set, choose Skills one by
+one during setup; `setup-hive` always remains active. Your profile, persona, and selected host
+never change the active Skill set. Users with an earlier recommended-suite setting keep its exact
+existing Skill set until they review and approve a new preview.
+
 ### 4. Configure one project
 
 Open the exact project in the host and paste this separate prompt:

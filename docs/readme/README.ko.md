@@ -148,6 +148,10 @@ Configure or reconfigure my global Aigent Hive preferences for this host. Do not
 최초 설정·기본값 변경용 prompt. User-scope language·Wiki·persona·Skill·update preference만
 설정; 현재 folder inspection·project harness 생성 없음.
 
+모든 built-in Skill: 기본 활성화. 더 작은 구성이 필요하면 setup 중 Skill을 하나씩 선택. `setup-hive`는
+항상 활성 상태 유지. Profile·persona·selected host는 활성 Skill set 변경 없음. Earlier recommended
+suite 설정: 새 preview 검토·승인 전 기존 Skill set 유지.
+
 ### 4. Project 한 개 설정
 
 Host에서 정확한 project를 열고 아래 별도 prompt 입력:

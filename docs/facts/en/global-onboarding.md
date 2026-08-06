@@ -9,12 +9,12 @@ summary: "Optional bootstrap preserves scope; Korean setup keeps exact terms, us
 tags: [bootstrap, onboarding, setup]
 aliases: ["User setup"]
 sources:
-  - "repo:README.md#sha256:072bfc2c939e2a2e2e26f897b4cca9a876bd9d4be28adc8db14bafe7e5bb941b"
-  - "repo:crates/hive-cli/src/user_install.rs#sha256:35f3cace4b6297a298b8b59db208b3d8ecfd82331758fb6bd34dd1ec03aa8ec7"
-  - "repo:crates/hive-cli/src/user_setup.rs#sha256:12fbe0128457b6c9d0a4f32744eb3eb678c715129bb04bfc64d6f8cef5c073bc"
-  - "repo:docs/decisions/ADR-0012-global-onboarding-shared-index.md#sha256:1b205aeec354bb90bc5921111227c6a00cee586ac3bd23a37f8f0aeb0c004237"
+  - "repo:README.md#sha256:6ddf3dd877c31e3f6e525ea6a659fdf90233cbf008cfc3be355f271267c9fa94"
+  - "repo:crates/hive-cli/src/user_install.rs#sha256:2c61916f31b5a6ae66f6c2a615c41bcf4ac91ea2ca95d388f5d357cd5d872269"
+  - "repo:crates/hive-cli/src/user_setup.rs#sha256:0292baa97d8ec193709ae756e56393af34085d781d7c341fe5d0d1ab0ed244e0"
+  - "repo:docs/decisions/ADR-0012-global-onboarding-shared-index.md#sha256:2e064212050d755bf101322fdcc94f8a737db7b59204b75bb6bfcd64d8e32ceb"
 links: [project-onboarding, test-distribution]
-reviewed_revision: "git:d211300dea66781251306e376e43bf9e798504ef"
+reviewed_revision: "git:a30eb472f72773109da16706f4dbcb81cef76421"
 status: active
 ---
 
@@ -30,4 +30,5 @@ Global profiles retain nonexclusive user context only. Project workflow, technic
 work priority belong to project scope.
 
 Global setup enables all built-in Skills by default. Per-Skill toggles replace profile-bound
-recommended suites; existing recorded closures remain until an approved preview changes them.
+recommended suites. The typed user configuration accepts only `all|individual`; a saved legacy
+suite preserves its recorded closure until an approved preview writes the new form.
