@@ -9,9 +9,9 @@ summary: "Source work uses Rust stable, Python conformance, and PowerShell 7 onl
 tags: [development, toolchain]
 aliases: ["Development dependencies"]
 sources:
-  - "repo:docs/guides/development.md#sha256:6040d3a786a298c8b086c475e64055d1e31bef423df475d6e6cee1791fdca9f2"
+  - "repo:docs/guides/development.md#sha256:4817aa22c26daa5ffbe5635ebcfce829f92a46b613e725df845eafcf83f278d7"
 links: [crate-ownership, source-usage-guard]
-reviewed_revision: "git:722c8e46dbde5710155b394ef33820ebccd3b85c"
+reviewed_revision: "git:e72e2f95883ad4503335123d487405d064fb36ac"
 status: active
 ---
 

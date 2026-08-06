@@ -66,6 +66,7 @@
 | Version policy | [en](en/version-policy.md) | [ko](ko/version-policy.md) |
 | npm `0.8.0` distribution | [en](en/test-distribution.md) | [ko](ko/test-distribution.md) |
 | Source development | [en](en/source-development.md) | [ko](ko/source-development.md) |
+| Developer binary lifecycle | [en](en/developer-binary-lifecycle.md) | [ko](ko/developer-binary-lifecycle.md) |
 | Temporary Git worktree lifecycle | [en](en/git-worktree-lifecycle.md) | [ko](ko/git-worktree-lifecycle.md) |
 | Marketing deck record | [en](en/marketing-deck-record.md) | [ko](ko/marketing-deck-record.md) |
 | v0.9 Skill suite | [en](en/v0-9-skill-suite-plan.md) | [ko](ko/v0-9-skill-suite-plan.md) |
