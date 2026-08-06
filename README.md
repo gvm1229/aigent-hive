@@ -157,8 +157,8 @@ hive update
 This performs an immediate version check. If a newer version exists, Hive explains the
 exact update and asks before invoking the authenticated install owner. Declining,
 closing stdin, or running non-interactively causes no installation.
-An existing `0.8.0-test.N` installation keeps its owner evidence and may update to exact
-`0.8.0` through the same confirmation flow.
+An existing `0.9.0-test.N` installation keeps its owner evidence and may update to exact
+stable `0.9.0` through the same confirmation flow when that stable release is published.
 
 When daily checks are enabled, a successful check is throttled for 24 hours. An offline
 or failed check is not recorded as successful, so the next Codex, Claude Code, or

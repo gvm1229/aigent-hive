@@ -149,8 +149,8 @@ hive update
 즉시 version 확인. 새 version이 있으면 exact update 내용을 설명하고 authenticated
 install owner를 실행하기 전에 질문. 거절·stdin 종료·noninteractive 실행에서는 설치
 mutation 0건.
-기존 `0.8.0-test.N` 설치의 소유권 증거를 유지하며, 같은 확인 절차로 exact
-`0.8.0` 갱신 가능.
+기존 `0.9.0-test.N` 설치의 소유권 증거 유지. Stable `0.9.0` 배포 뒤 같은 확인 절차로
+exact stable version 갱신 가능.
 
 Daily check: 마지막 성공 확인부터 24시간 throttle. Offline·failed check는 성공
 기록 제외; 다음 Codex·Claude Code·Antigravity session에서 재시도.
