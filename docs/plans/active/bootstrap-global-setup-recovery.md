@@ -25,6 +25,8 @@
 - [x] [BGR-006] Rust·Python regression: vanilla, disjoint/overlap local edit, unauthenticated
   base, setup UX·bootstrap docs/projection parity
 - [x] [BGR-007] English·Korean README·ADR·bilingual fact와 source Wiki current truth
+- [x] [BGR-008] Source developer의 `--sandbox|--global|--rollback` binary lifecycle,
+  canonical user data 불변과 active executable CAS recovery regression
 
 ## 완료 기준
 

@@ -2,7 +2,7 @@
 
 - 기준 branch: `develop`
 - product version: `0.9.0`
-- plan revision: `2.09`
+- plan revision: `2.11`
 - 현재 milestone: `0.9.0-test` public acceptance·retention
 - 현재 작업: `REL9-014–015` public test acceptance·retention 관찰
 - 외부 중지 경계: `main` PR·review, signing·TUF,
@@ -26,7 +26,9 @@
   + `docs/plans/active/release-0.9.0.md`
   + `docs/plans/active/test-release-setup-routing.md`
   + `docs/plans/active/bootstrap-global-setup-recovery.md`
-- Plan completion: canonical checklist `347/415` 완료, `68`개 미완료, `83.6%`
+- Plan completion: canonical checklist `348/416` 완료, `68`개 미완료, `83.7%`
+- Developer binary: `scripts/dev-install.sh`의 sandbox·global·CAS rollback과 `product-dev`
+  version identity 검증 완료
 - Source Wiki route: source marker 확인 뒤 `hive source-wiki query` 사용,
   consumer `hive knowledge retrieve`의 source root 호출 금지·static contract 36개 PASS
 - Fresh clone: exact `6761f0b`, Rust format·strict Clippy·workspace all-feature, Python 677개 PASS·platform skip 5개

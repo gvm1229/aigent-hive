@@ -62,6 +62,14 @@ Global setup answer:
 - Refresh 필요 상태: preference·project 안전 여부와 update/preview 선택 우선
 - Internal path·digest·projection 용어: 기본 안내 제외, 요청 시 diagnostic 제공
 
+### Source developer binary
+
+- `scripts/dev-install.sh --sandbox`: source-local `product-dev` binary만 build
+- `--global`: active `hive` executable만 backup 뒤 atomic replacement; canonical user data 무변경
+- `--rollback`: developer binary digest가 아직 active target과 일치할 때만 saved executable 복구
+- `product-dev` version output은 local developer build로 표기하며 npm public `product-test[.N]`
+  release identity를 사용하지 않음
+
 ### Wiki lifecycle
 
 - Global Wiki 기본 활성화
