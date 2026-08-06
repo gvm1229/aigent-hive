@@ -21,8 +21,8 @@
   prior-release validation과 foreign·변조 byte fail-closed 유지
 - [x] [TUR-003] Global-only·project-only·combined request와 test projection update의 Rust·Python
   regression
-- [ ] [TUR-004] `0.9.0-test.3|test` candidate·publication·existing test projection에서 global
-  setup interactive acceptance
+- [x] [TUR-004] `0.9.0-test.3|test` candidate·publication·existing test projection의 global
+  setup routing acceptance
 
 ## 완료 기준
 
@@ -31,3 +31,11 @@
 - Known legacy·test predecessor: exact inventory 검증 뒤 user projection preview·apply 가능
 - Unknown·modified predecessor: write preview·apply 0건과 exact conflict
 - `test` 갱신, `latest=0.8.0` 유지
+
+## 완료 증거
+
+- candidate [`31090062784`](https://github.com/gvm1229/aigent-hive/actions/runs/31090062784):
+  `5341bdf` 5 native target·npm umbrella·direct installer PASS
+- publication [`31090917408`](https://github.com/gvm1229/aigent-hive/actions/runs/31090917408):
+  여섯 package `test=0.9.0-test.3`, `latest=0.8.0`, annotated `v0.9.0-test.3`, 22-asset prerelease PASS
+- 기존 Codex legacy user installation의 source test.3 dry-run: authenticated preview PASS

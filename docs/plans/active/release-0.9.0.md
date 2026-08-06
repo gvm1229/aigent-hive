@@ -106,6 +106,8 @@ attestation·signing·TUF → `v0.9.0` normal Release·npm `latest` → public a
   checkout·최종 tag/Release token 주입
 - `0.9.0-test.1|.2` 여섯 npm package·annotated tag·22-asset prerelease PASS, `latest=0.8.0` 유지
 - test.2 CLI: `AIgent Hive v0.9.0-test #2 · developer test build (released 2026-08-06)`
+- test.3: candidate `31090062784`·publication `31090917408`, `5341bdf`, 여섯 package
+  `test=0.9.0-test.3`·`latest=0.8.0`, annotated tag·22-asset prerelease PASS
 - exact run·digest·failure·registry fallback evidence: [`CURRENT.md`](../../state/CURRENT.md)
 
 ## 외부 권한 경계

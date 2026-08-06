@@ -44,8 +44,8 @@
 | Prompt refine 자동 routing | 12 | 0 | 100% |
 | v0.9 test 기능 마감 | 18 | 0 | 100% |
 | v0.9 full release | 13 | 13 | 50% |
-| Test release setup routing | 3 | 1 | 75% |
-| **Canonical total** | **338** | **69** | **83.0%** |
+| Test release setup routing | 4 | 0 | 100% |
+| **Canonical total** | **339** | **68** | **83.3%** |
 
 External production boundary 항목도 미완료 합계에 포함. Protected authority 없이 완료 처리 금지.
 
@@ -126,5 +126,5 @@ Rust·Python 적합성 PASS.
 다음은 `REL9-014–015` public test acceptance·retention 관찰이며, `REL9-017–026` stable 경로는
 별도 main 후보·authority까지 보류한다.
 
-현재: `TUR-001–003` routing·legacy/test projection 인증 PASS.
-다음: `TUR-004` test.3 candidate·publication·global setup acceptance.
+완료: `TUR-001–004` routing·legacy/test projection 인증, test.3 candidate·publication PASS.
+다음: `REL9-014–015` public test acceptance·retention 관찰.

@@ -3,8 +3,8 @@
 - 기준 branch: `develop`
 - product version: `0.9.0`
 - plan revision: `2.05`
-- 현재 milestone: `0.9.0-test` setup routing·projection continuity
-- 현재 작업: `TUR-004` test.3 candidate·publication과 global setup acceptance
+- 현재 milestone: `0.9.0-test` public acceptance·retention
+- 현재 작업: `REL9-014–015` public test acceptance·retention 관찰
 - 외부 중지 경계: `main` PR·review, signing·TUF,
   exact `1.0.0` 사용자 authority
 - Plan load: compact `docs/plans/PLAN.md` + `docs/plans/phases/07-public-qualification.md`
@@ -25,7 +25,7 @@
   + `docs/plans/active/v0.9.0-test-finalization.md`
   + `docs/plans/active/release-0.9.0.md`
   + `docs/plans/active/test-release-setup-routing.md`
-- Plan completion: canonical checklist `338/407` 완료, `69`개 미완료, `83.0%`
+- Plan completion: canonical checklist `339/407` 완료, `68`개 미완료, `83.3%`
 - Fresh clone: exact `6761f0b`, Rust format·strict Clippy·workspace all-feature, Python 677개 PASS·platform skip 5개
 - Test candidate: [run `30771098518`](https://github.com/gvm1229/aigent-hive/actions/runs/30771098518), exact `6761f0b`, 5 target·npm umbrella PASS
 - Latest local Windows: Rust workspace 459개 실행·통과. Python 적합성 670개 발견 중
@@ -173,6 +173,11 @@
   2회 `@aigent-hive/darwin-arm64` registry `404`, npm package·tag·GitHub Release mutation 0건;
   existing registry-auth fallback으로 `31083602464` 게시 완료. npm trusted publisher binding 재정비 뒤 token 없는 경로 재검증 필요
 - Source baseline: `6980e8b38c08a9ebe483a4ffa7937f70999d63a5`, `develop` 포함
+- Setup-routing test publication: [candidate `31090062784`](https://github.com/gvm1229/aigent-hive/actions/runs/31090062784)
+  와 [publication `31090917408`](https://github.com/gvm1229/aigent-hive/actions/runs/31090917408) PASS.
+  exact `5341bdf3562cb1ed8fdd3323965cc5f529649107`, 여섯 npm package
+  `test=0.9.0-test.3`·`latest=0.8.0`, annotated `v0.9.0-test.3`, 22-asset prerelease.
+  Existing Codex legacy user installation의 source test.3 dry-run authenticated preview PASS.
 - `staging`: 현재 release flow에 불필요하여 생성 0건
 - Production gate: 5개 native target·6개 npm package, OS signing·notarization,
   external TUF, public install·`0.8.0 → 0.9.0` update
