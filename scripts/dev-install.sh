@@ -65,7 +65,7 @@ case "$product_version" in
 esac
 package_version="${AIGENT_HIVE_PACKAGE_VERSION:-$product_version-dev}"
 release_date="${AIGENT_HIVE_PACKAGE_RELEASE_DATE:-$(date +%F)}"
-binary="$root/target/release/hive"
+binary="${AIGENT_HIVE_DEV_BINARY:-$root/target/release/hive}"
 
 resolve_cargo() {
   if command -v cargo >/dev/null 2>&1; then
@@ -88,6 +88,13 @@ resolve_cargo() {
 }
 
 build() {
+  if [ -n "${AIGENT_HIVE_DEV_BINARY:-}" ]; then
+    [ -f "$binary" ] && [ ! -L "$binary" ] && [ -x "$binary" ] || {
+      echo "AIGENT_HIVE_DEV_BINARY must name an executable regular file" >&2
+      exit 5
+    }
+    return 0
+  fi
   cargo_command=$(resolve_cargo)
   (
     cd "$root"
@@ -97,8 +104,8 @@ build() {
       AIGENT_HIVE_PACKAGE_RELEASE_DATE="$release_date" \
       "$cargo_command" build --locked --release -p hive-cli
   )
-  [ -f "$binary" ] && [ ! -L "$binary" ] || {
-    echo "developer build did not produce a regular hive binary" >&2
+  [ -f "$binary" ] && [ ! -L "$binary" ] && [ -x "$binary" ] || {
+    echo "developer build did not produce an executable regular hive binary" >&2
     exit 5
   }
 }
