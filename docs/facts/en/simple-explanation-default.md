@@ -10,11 +10,11 @@ tags: [communication, guidance, projection]
 aliases: ["concrete examples", "plain-language explanation"]
 sources:
   - "repo:.agents/directives/01-behavior.md#sha256:b84d45bd3fb28b67581ff024fdfb8d0aaf0dfbbda580f712c96d1228685dadbb"
-  - "repo:crates/hive-cli/src/user_install.rs#sha256:39bc19a47799793c2f2e984f5d7d6edb4e18fbbd96ec33ac30e7c258fda66d0b"
+  - "repo:crates/hive-cli/src/user_install.rs#sha256:35f3cace4b6297a298b8b59db208b3d8ecfd82331758fb6bd34dd1ec03aa8ec7"
   - "repo:docs/guidance-schema.md#sha256:fd8fffda818038ee48b66b0581787e2fd741404b0a9253ca34c0d55f15ad4d15"
   - "repo:harness/template/AGENTS.md.jinja#sha256:070d97440343d699565448c239efb55c905df79119df289525d41edc6e81581f"
 links: [language-consistency, verification-result-clarity]
-reviewed_revision: "git:33f365d3dbb1af51333a6dbb1834ce437a932ea0"
+reviewed_revision: "git:35e6b79a024350487f823780101a28be24a9f4c7"
 status: active
 ---
 
