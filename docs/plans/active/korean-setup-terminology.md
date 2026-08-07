@@ -52,20 +52,22 @@
 
 ## Checklist
 
-- [ ] [KST-002] `setup-hive`에 한국어 interaction terminology contract와 host-independent exact
+- [x] [KST-002] `setup-hive`에 한국어 interaction terminology contract와 host-independent exact
   sample 추가
-- [ ] [KST-003] 단일 `CatalogSelection` profile을 복수 context + optional 사용자 설명으로 교체;
+- [x] [KST-003] 단일 `CatalogSelection` profile을 복수 context + optional 사용자 설명으로 교체;
   existing single profile의 무손실 migration·global user data 보존
-- [ ] [KST-004] catalog·`setup-hive`·generated user directive·README의 profile 질문을 사용자 맥락으로
+- [x] [KST-004] catalog·`setup-hive`·generated user directive·README의 profile 질문을 사용자 맥락으로
   교체; workflow·우선순위·project별 작업 방식 문구 제거와 project scope 분리
-- [ ] [KST-005] canonical Skill → plugin·host projection parity와 Korean sample static regression;
+- [x] [KST-005] canonical Skill → plugin·host projection parity와 Korean sample static regression;
   `기술`·전역 workflow 우선순위 회귀 차단과 세 host human smoke prompt 기록
 - [ ] [KST-006] 새 numbered test candidate·publication으로 설치된 global setup Korean flow 수용;
   stable `latest` mutation 없음
 
 ## 수용 기준
 
-- “Skill 선택 방식을 골라 주세요” 이후 `권장 Skill 세트`·`개별 내장 Skill` 표기
+- `Skill 선택 방식`
+  - `모든 내장 Skill 사용`
+  - `개별 내장 Skill 선택`
 - `Skill`을 `기술`로 번역한 setup 질문·설명 0건
 - 복합 사용자: 복수 기본 맥락과 사용자 설명의 동시 입력·저장·재구성 가능
 - 전역 profile: project workflow·작업 우선순위 변경 0건
@@ -73,3 +75,13 @@
 - Canonical source와 current projection exact parity
 - Historical authenticated base 변경 0건
 - test release만 독립 게시, `latest`는 기존 stable 유지
+
+## 구현 증거
+
+- `UserProfile`: 복수 `contexts`와 선택 `description`의 typed schema·semantic validation
+- legacy single profile: canonical YAML 직렬화 전 무손실 user-context migration
+- global guidance: 사용자 기본 맥락의 project workflow·구현 방식·작업 우선순위·Skill 선택 영향 없음
+- Korean interaction: `Skill` product term 유지, `기술` 번역 금지, 항목당 한 줄 선택지
+- projection: canonical `setup-hive`와 plugin projection byte 동일
+- verification: `hive-cli user_setup` 32개, setup·project·static Python 70개 통과
+- host smoke prompt: Codex·Claude·Antigravity 공통 `setup-hive` routing prompt와 Korean exact samples 고정; 실제 설치 수용은 `KST-006`의 numbered test release 범위

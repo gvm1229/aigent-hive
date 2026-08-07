@@ -10,7 +10,7 @@ tags: [automation, behavior, handoff]
 aliases: ["사용자 수행 단계", "할 일 인계"]
 sources:
   - "repo:.agents/directives/01-behavior.md#sha256:a3fad4148b713fa44c79c4906c297e621a529798785f9b916d67fc0aeff8b4e5"
-  - "repo:crates/hive-cli/src/user_install.rs#sha256:2c61916f31b5a6ae66f6c2a615c41bcf4ac91ea2ca95d388f5d357cd5d872269"
+  - "repo:crates/hive-cli/src/user_install.rs#sha256:a722397099348116c5c43cdee8753249b8c8f293be480f23d298f2d2a2eeb04b"
   - "repo:harness/template/AGENTS.md.jinja#sha256:bb858b1021be8b3fd9fc282820a34a4e923dea6a47e01bdddcf9745510c1381d"
 links: [language-consistency, source-development]
 reviewed_revision: "git:35e6b79a024350487f823780101a28be24a9f4c7"

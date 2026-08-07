@@ -47,10 +47,10 @@
 | v0.9 full release | 13 | 13 | 50% |
 | Test release setup routing | 4 | 0 | 100% |
 | Bootstrap·user projection recovery | 9 | 0 | 100% |
-| 한국어 setup 용어 복구 | 1 | 5 | 16.7% |
+| 한국어 setup 용어 복구 | 5 | 1 | 83.3% |
 | Global Skill 선택 단순화 | 8 | 0 | 100% |
 | Discord·Notion 연결 UX | 0 | 18 | 0% |
-| **Canonical total** | **358** | **91** | **79.7%** |
+| **Canonical total** | **362** | **87** | **80.6%** |
 
 External production boundary 항목도 미완료 합계에 포함. Protected authority 없이 완료 처리 금지.
 
@@ -120,5 +120,5 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
 ## Current execution order
 
 완료 증거: [`CURRENT.md`](../state/CURRENT.md)와 owning active fragment.
-다음 구현: `KST-002–005` → `DNI-001–017` → 동일 numbered test release의
-`KST-006`·`DNI-018`; stable 경로는 별도 `main` authority까지 보류.
+다음 구현: `DNI-001–017` → 동일 numbered test release의 `KST-006`·`DNI-018`;
+stable 경로는 별도 `main` authority까지 보류.

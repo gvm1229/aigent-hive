@@ -5,14 +5,16 @@ topic_slug: global-onboarding
 language: en
 counterpart: ../ko/global-onboarding.md
 title: "Global Onboarding"
-summary: "Optional bootstrap preserves scope; Korean setup keeps exact terms, user context, and all built-in Skills by default."
+summary: "Global setup stores multiple user contexts without choosing project workflows; Korean product terms and all built-in Skill defaults remain fixed."
 tags: [bootstrap, onboarding, setup]
 aliases: ["User setup"]
 sources:
-  - "repo:README.md#sha256:50cd128b1944c5f687cf00197cf1bbc9440c57118fb76d20adf1b3f59cd41bd6"
-  - "repo:crates/hive-cli/src/user_install.rs#sha256:2c61916f31b5a6ae66f6c2a615c41bcf4ac91ea2ca95d388f5d357cd5d872269"
-  - "repo:crates/hive-cli/src/user_setup.rs#sha256:6599ff6e43448f255f975be5db3fafff0ea9156579c29ed835ffacadb9f5d06c"
+  - "repo:README.md#sha256:30e7d1dece221c145e4a75fe9e05ec9520ca3ab58b7d1311088b9c4ad72759ef"
+  - "repo:crates/hive-cli/src/user_setup.rs#sha256:128edc67999108258248cd5d1c356666931bbc7a6d9a747eaf108bc0cf5125f3"
   - "repo:docs/decisions/ADR-0012-global-onboarding-shared-index.md#sha256:2e064212050d755bf101322fdcc94f8a737db7b59204b75bb6bfcd64d8e32ceb"
+  - "repo:harness/skills/setup-hive/SKILL.md#sha256:cb996a8698314710ce527c2c1d5bf41c0895bead8e7d52f9b1c4052b8d6666f6"
+  - "repo:harness/user-setup/catalog.yml#sha256:af1147b8468f48eb81ec77ed4a14d5eba2fd31a4302e5459544fec3b2e22b595"
+  - "repo:schemas/user-setup.schema.json#sha256:680009cadc1d41add4b16331bde37509cf636c845644a3923094a281110fb786"
 links: [project-onboarding, test-distribution]
 reviewed_revision: "git:0c0a3fd18bd4b3746202c5a38aa7cb03d4b94908"
 status: active
@@ -24,11 +26,4 @@ Manual order: CLI installation, host activation, global setup, explicit project 
 one-prompt path starts global setup without project inspection.
 
 Supported legacy recovery requires matching saved-preference and live-file evidence; other bytes
-remain unchanged. Korean setup retains `Skill` and `Wiki` exactly with canonical regression samples.
-
-Global profiles retain nonexclusive user context only. Project workflow, technical choices, and
-work priority belong to project scope.
-
-Global setup enables all built-in Skills by default. Per-Skill toggles replace profile-bound
-recommended suites. The typed user configuration accepts only `all|individual`; a saved legacy
-suite preserves its recorded closure until an approved preview writes the new form.
+remain unchanged. See `global-user-contexts` for contexts, Skill selection, and Korean product terms.

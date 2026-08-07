@@ -5,14 +5,16 @@ topic_slug: global-onboarding
 language: ko
 counterpart: ../en/global-onboarding.md
 title: "Global onboarding"
-summary: "선택형 bootstrap의 scope 보존, 한국어 exact term·사용자 맥락·all built-in 기본 활성화."
+summary: "복수 사용자 맥락 저장과 project workflow 비결정, 한국어 product term·all built-in Skill 기본값 유지."
 tags: [bootstrap, onboarding, setup]
 aliases: ["User setup"]
 sources:
-  - "repo:README.md#sha256:50cd128b1944c5f687cf00197cf1bbc9440c57118fb76d20adf1b3f59cd41bd6"
-  - "repo:crates/hive-cli/src/user_install.rs#sha256:2c61916f31b5a6ae66f6c2a615c41bcf4ac91ea2ca95d388f5d357cd5d872269"
-  - "repo:crates/hive-cli/src/user_setup.rs#sha256:6599ff6e43448f255f975be5db3fafff0ea9156579c29ed835ffacadb9f5d06c"
+  - "repo:README.md#sha256:30e7d1dece221c145e4a75fe9e05ec9520ca3ab58b7d1311088b9c4ad72759ef"
+  - "repo:crates/hive-cli/src/user_setup.rs#sha256:128edc67999108258248cd5d1c356666931bbc7a6d9a747eaf108bc0cf5125f3"
   - "repo:docs/decisions/ADR-0012-global-onboarding-shared-index.md#sha256:2e064212050d755bf101322fdcc94f8a737db7b59204b75bb6bfcd64d8e32ceb"
+  - "repo:harness/skills/setup-hive/SKILL.md#sha256:cb996a8698314710ce527c2c1d5bf41c0895bead8e7d52f9b1c4052b8d6666f6"
+  - "repo:harness/user-setup/catalog.yml#sha256:af1147b8468f48eb81ec77ed4a14d5eba2fd31a4302e5459544fec3b2e22b595"
+  - "repo:schemas/user-setup.schema.json#sha256:680009cadc1d41add4b16331bde37509cf636c845644a3923094a281110fb786"
 links: [project-onboarding, test-distribution]
 reviewed_revision: "git:0c0a3fd18bd4b3746202c5a38aa7cb03d4b94908"
 status: active
@@ -23,11 +25,5 @@ status: active
 수동 첫 설정 순서: CLI 설치, host activation, global setup, 명시 project setup. 선택형 one-prompt 경로:
 project inspection 없는 global setup 시작.
 
-지원 legacy 복구: saved preference·live file evidence 일치 조건. 그 외 active byte 보존. 한국어 setup:
-`Skill`·`Wiki` exact 유지와 canonical regression sample 관리.
-
-Global profile: 비배타 사용자 맥락 전용. Project workflow·기술 선택·작업 우선순위: project scope 전용.
-
-Global setup: 모든 built-in Skill 기본 활성화. Profile-bound recommended suite 제거, Skill별 toggle.
-Typed user config: `all|individual`만 허용. Saved legacy suite: approved preview로 새 형식 저장 전
-recorded closure 유지.
+지원 legacy 복구: saved preference·live file evidence 일치 조건. 그 외 active byte 보존. 사용자 맥락,
+Skill 선택, 한국어 product term: `global-user-contexts` 참고.
