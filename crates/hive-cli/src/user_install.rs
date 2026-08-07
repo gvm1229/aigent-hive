@@ -1887,6 +1887,11 @@ fn authenticated_user_inventory(
             return Some(prior.clone());
         }
     }
+    if let Some(developer) =
+        developer_authenticated_user_inventory(host, request, env!("HIVE_PACKAGE_VERSION"))
+    {
+        return Some(developer);
+    }
     if let Some(historical) = test_three_user_inventory(host, request) {
         return Some(historical);
     }
@@ -1940,6 +1945,36 @@ fn authenticated_user_inventory(
         }
     }
     None
+}
+
+/// A local `-dev` binary is intentionally not a public release identity. It may therefore use
+/// the currently installed, internally reproducible user manifest as its three-way base, but
+/// only after the ordinary manifest and live-byte checks in `validate_prior_ownership` run.
+/// Public stable and `-test[.N]` builds never enter this branch.
+fn developer_authenticated_user_inventory(
+    host: UserHost,
+    request: &InventoryAuthentication<'_>,
+    package_version: &str,
+) -> Option<AuthenticatedUserInventory> {
+    if package_version != format!("{}-dev", env!("CARGO_PKG_VERSION"))
+        || request.product_version != env!("CARGO_PKG_VERSION")
+        || request.installed_host_version_range != host.version_range()
+        || portable(request.installed_guidance_path) != portable(request.current_guidance_path)
+        || request.installed_entries.is_empty()
+        || request.source_release_digest
+            != source_release_digest_from_entries(request.installed_entries)
+    {
+        return None;
+    }
+
+    Some(AuthenticatedUserInventory {
+        product_version: request.product_version.to_owned(),
+        host,
+        host_version_range: request.installed_host_version_range.to_owned(),
+        source_release_digest: request.source_release_digest.to_owned(),
+        guidance_path: portable(request.installed_guidance_path),
+        entries: request.installed_entries.to_vec(),
+    })
 }
 
 fn test_three_user_inventory(
@@ -7823,6 +7858,44 @@ mod tests {
             ..request
         };
         assert!(test_three_user_inventory(UserHost::Codex, &forged).is_none());
+    }
+
+    #[test]
+    fn developer_build_accepts_only_an_internally_reproducible_prior_inventory() {
+        let temporary = tempdir().expect("tempdir");
+        let arguments = args(temporary.path(), UserHost::Codex, UserMode::DryRun);
+        let desired = build_desired_user_files(&arguments, None).expect("current desired files");
+        let current = authenticated_current_inventory(&arguments, &desired);
+        let request = InventoryAuthentication {
+            product_version: "0.9.0",
+            installed_host_version_range: UserHost::Codex.version_range(),
+            source_release_digest: &current.source_release_digest,
+            installed_entries: &current.entries,
+            installed_guidance_path: Path::new(".codex/AGENTS.md"),
+            current_guidance_path: Path::new(".codex/AGENTS.md"),
+            current_source_release_digest:
+                "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+            current_entries: &[],
+            authenticated_prior: None,
+        };
+
+        let authenticated =
+            developer_authenticated_user_inventory(UserHost::Codex, &request, "0.9.0-dev")
+                .expect("developer base");
+        assert_user_entries_equal(&authenticated.entries, &current.entries);
+        assert!(
+            developer_authenticated_user_inventory(UserHost::Codex, &request, "0.9.0-test.4")
+                .is_none()
+        );
+
+        let forged_digest = format!("sha256:{}", "0".repeat(64));
+        let forged = InventoryAuthentication {
+            source_release_digest: &forged_digest,
+            ..request
+        };
+        assert!(
+            developer_authenticated_user_inventory(UserHost::Codex, &forged, "0.9.0-dev").is_none()
+        );
     }
 
     #[test]
