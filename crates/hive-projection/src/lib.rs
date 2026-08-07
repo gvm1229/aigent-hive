@@ -12,6 +12,7 @@ use hive_core::sha256_digest;
 use serde::{Deserialize, Serialize};
 
 const CATALOG_YAML: &str = include_str!("../../../harness/skills/catalog.yml");
+const RETIRED_SKILL_NAMES_YAML: &str = include_str!("../../../harness/skills/retired-names.yml");
 const HISTORICAL_BUILTINS_YAML: &str =
     include_str!("../../../harness/skills/historical-builtins.yml");
 const SETUP_HIVE: &[u8] = include_bytes!("../../../harness/skills/configure/SKILL.md");
@@ -94,37 +95,16 @@ pub enum DescriptorLanguage {
     Ko,
 }
 
-/// Maps a public or legacy built-in Skill name to its current public name.
+/// Maps a public or retired built-in Skill name to its current public name.
 ///
-/// Legacy names are accepted only as migration input. Every new projection and
-/// active-Skill record uses the returned public name.
-#[must_use]
-pub fn canonical_builtin_skill_name(name: &str) -> Option<&'static str> {
-    Some(match name {
-        "setup-hive" | "configure" => "configure",
-        "setup-harness" | "setup-project" => "setup-project",
-        "auto-setup-harness" | "auto-setup-project" => "auto-setup-project",
-        "hive-simple-question" | "answer" => "answer",
-        "hive-prompt-refine" | "refine-prompt" => "refine-prompt",
-        "hive-knowledge-capture" | "record-knowledge" => "record-knowledge",
-        "hive-knowledge-query" | "search-knowledge" => "search-knowledge",
-        "hive-knowledge-promote" | "share-knowledge" => "share-knowledge",
-        "hive-knowledge-maintenance" | "maintain-knowledge" => "maintain-knowledge",
-        "hive-run-checkpoint" | "save-progress" => "save-progress",
-        "hive-run-resume" | "resume-work" => "resume-work",
-        "hive-usage-guard" | "manage-usage" => "manage-usage",
-        "hive-role-handoff" | "handoff-role" => "handoff-role",
-        "hive-judge-package" | "verify-package" => "verify-package",
-        "hive-update" | "update-hive" => "update-hive",
-        "hive-project-upgrade" | "upgrade-project" => "upgrade-project",
-        "hive-migrate" | "migrate-project" => "migrate-project",
-        "hive-loop-engineering" | "engineer-run" => "engineer-run",
-        "hive-wiki" | "manage-wiki" => "manage-wiki",
-        "hive-knowledge-scan" | "import-repository-knowledge" => "import-repository-knowledge",
-        "ai-slop-cleaner" | "clean-ai-slop" => "clean-ai-slop",
-        "best-practice-research" | "research-practices" => "research-practices",
-        _ => return None,
-    })
+/// Retired names are accepted only as migration input. Every new projection
+/// and active-Skill record uses the returned public name.
+pub fn canonical_builtin_skill_name(name: &str) -> Result<Option<String>, ProjectionError> {
+    let catalog = embedded_catalog()?;
+    if catalog.skills.iter().any(|skill| skill.name == name) {
+        return Ok(Some(name.to_owned()));
+    }
+    Ok(retired_builtin_skill_names()?.get(name).cloned())
 }
 
 impl Host {
@@ -194,6 +174,57 @@ pub struct SkillCatalog {
     pub skills: Vec<SkillCatalogEntry>,
 }
 
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct RetiredSkillNameLedger {
+    schema_version: u32,
+    retired_names: BTreeMap<String, String>,
+}
+
+/// Returns the canonical retired-ID ledger used by selection migration and
+/// ownership-aware projection cleanup.
+///
+/// Every entry is flattened to the current public ID. When a public Skill is
+/// renamed again, its former public ID and every earlier retired ID remain in
+/// this ledger with the new current ID, so resolution stays transitive.
+pub fn retired_builtin_skill_names() -> Result<BTreeMap<String, String>, ProjectionError> {
+    let ledger: RetiredSkillNameLedger =
+        serde_yaml::from_str(RETIRED_SKILL_NAMES_YAML).map_err(|error| {
+            ProjectionError::new(
+                "hive.skill-name-ledger-invalid",
+                format!("retired Skill name ledger is not valid YAML: {error}"),
+            )
+        })?;
+    if ledger.schema_version != 1 {
+        return Err(ProjectionError::new(
+            "hive.skill-name-ledger-invalid",
+            "retired Skill name ledger schema_version must be 1",
+        ));
+    }
+    let catalog: SkillCatalog = serde_yaml::from_str(CATALOG_YAML).map_err(|error| {
+        ProjectionError::new(
+            "hive.skill-catalog-invalid",
+            format!("embedded catalog is not valid YAML: {error}"),
+        )
+    })?;
+    let current = catalog
+        .skills
+        .iter()
+        .map(|skill| skill.name.as_str())
+        .collect::<BTreeSet<_>>();
+    for (retired, current_name) in &ledger.retired_names {
+        validate_skill_name(retired)?;
+        validate_skill_name(current_name)?;
+        if current.contains(retired.as_str()) || !current.contains(current_name.as_str()) {
+            return Err(ProjectionError::new(
+                "hive.skill-name-ledger-invalid",
+                format!("retired Skill mapping is not a retired-to-current mapping: {retired}"),
+            ));
+        }
+    }
+    Ok(ledger.retired_names)
+}
+
 /// Parses and semantically validates the catalog embedded at build time.
 ///
 /// # Errors
@@ -235,6 +266,18 @@ pub fn embedded_catalog() -> Result<SkillCatalog, ProjectionError> {
             "catalog external supersession",
         )?;
         validate_sorted_unique(&skill.invocation_intents, "catalog invocation intents")?;
+    }
+    // Validate the ledger whenever the catalog is loaded so every call site
+    // fails closed when a future rename is incomplete or ambiguous.
+    let retired_names = retired_builtin_skill_names()?;
+    if retired_names
+        .values()
+        .any(|name| !names.contains(name.as_str()))
+    {
+        return Err(ProjectionError::new(
+            "hive.skill-name-ledger-invalid",
+            "retired Skill name ledger targets a missing catalog Skill",
+        ));
     }
 
     for (name, _) in embedded_skill_sources() {
@@ -546,10 +589,9 @@ fn compile_named_projection(
         .iter()
         .map(|name| {
             canonical_builtin_skill_name(name)
-                .unwrap_or(name)
-                .to_owned()
+                .map(|canonical| canonical.unwrap_or_else(|| name.clone()))
         })
-        .collect();
+        .collect::<Result<_, _>>()?;
     if selected.len() != selected_names.len() {
         return Err(ProjectionError::new(
             "hive.skill-selection-invalid",
@@ -601,6 +643,7 @@ fn compile_selected(
     let mut files = BTreeMap::new();
     let mut active = Vec::new();
     let mut names = BTreeSet::new();
+    let retired_names = retired_builtin_skill_names()?;
 
     for entry in catalog
         .skills
@@ -655,10 +698,12 @@ fn compile_selected(
                 format!("Skill name {name} is already active or reserved"),
             ));
         }
-        if catalog.skills.iter().any(|entry| entry.name == *name) {
+        if catalog.skills.iter().any(|entry| entry.name == *name)
+            || retired_names.contains_key(name)
+        {
             return Err(ProjectionError::new(
                 "hive.skill-projection-conflict",
-                format!("optional Skill {name} collides with the built-in catalog"),
+                format!("optional Skill {name} collides with a current or retired built-in Skill"),
             ));
         }
 
@@ -2468,6 +2513,33 @@ description: Inspect one local file without changing it.
         assert!(!projection
             .files
             .contains_key(".agents/skills/ai-slop-cleaner/SKILL.md"));
+    }
+
+    #[test]
+    fn retired_skill_name_ledger_resolves_every_old_name_to_a_current_id() {
+        let catalog = embedded_catalog().expect("embedded catalog");
+        let current = catalog
+            .skills
+            .iter()
+            .map(|skill| skill.name.as_str())
+            .collect::<BTreeSet<_>>();
+        let retired = retired_builtin_skill_names().expect("retired name ledger");
+
+        assert_eq!(retired.len(), 22);
+        for (old_name, current_name) in retired {
+            assert!(
+                !current.contains(old_name.as_str()),
+                "retired ID remains public"
+            );
+            assert!(
+                current.contains(current_name.as_str()),
+                "missing current target"
+            );
+            assert_eq!(
+                canonical_builtin_skill_name(&old_name).expect("ledger resolves old ID"),
+                Some(current_name),
+            );
+        }
     }
 
     #[test]

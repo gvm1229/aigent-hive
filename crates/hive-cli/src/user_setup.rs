@@ -855,8 +855,8 @@ fn migrate_legacy_skill_names(value: &mut JsonValue) -> Result<(), SetupError> {
             SetupError::Input("selected Skills must contain only names".to_owned())
         })?;
         let canonical = canonical_builtin_skill_name(name)
-            .unwrap_or(name)
-            .to_owned();
+            .map_err(|error| SetupError::Internal(error.to_string()))?
+            .unwrap_or_else(|| name.to_owned());
         if !names.insert(canonical.clone()) {
             return Err(SetupError::Input(format!(
                 "legacy Skill migration creates a duplicate selection: {canonical}"

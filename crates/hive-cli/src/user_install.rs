@@ -7951,22 +7951,55 @@ mod tests {
     fn historical_080_install_supports_retirement_and_rejects_byte_tamper() {
         for host in [UserHost::Codex, UserHost::Claude, UserHost::Antigravity] {
             let temporary = tempdir().expect("tempdir");
-            let manifest = seed_historical_080_user_install(temporary.path(), host);
-            let arguments = args(temporary.path(), host, UserMode::DryRun);
+            seed_historical_080_user_install(temporary.path(), host);
+            let arguments = args(temporary.path(), host, UserMode::Apply);
             let plan = build_plan(&arguments).expect("authenticated 0.8 update plan");
-            assert!(plan
-                .retired_files
-                .keys()
-                .any(|path| { portable(path).contains("/skills/auto-setup-harness/SKILL.md") }));
+            for (name, _, _) in USER_080_SKILLS {
+                for path in historical_080_skill_paths(host, name) {
+                    assert!(
+                        plan.retired_files.contains_key(Path::new(&path)),
+                        "authenticated 0.8 retired Skill path must be planned: {path}"
+                    );
+                }
+            }
+            match host {
+                UserHost::Codex | UserHost::Claude => {
+                    execute(
+                        UserOperation::Update,
+                        &arguments,
+                        &StatefulHostRunner::new(temporary.path(), HostSabotage::None),
+                    )
+                    .expect("authenticated 0.8 upgrade");
+                }
+                UserHost::Antigravity => {
+                    execute(
+                        UserOperation::Update,
+                        &arguments,
+                        &AntigravityRunner::new(temporary.path()),
+                    )
+                    .expect("authenticated 0.8 upgrade");
+                }
+            }
+            for (name, _, _) in USER_080_SKILLS {
+                for path in historical_080_skill_paths(host, name) {
+                    assert!(
+                        !temporary.path().join(path).exists(),
+                        "authenticated retired Skill path must be removed"
+                    );
+                }
+            }
 
+            let tampered = tempdir().expect("tampered tempdir");
+            let manifest = seed_historical_080_user_install(tampered.path(), host);
+            let tampered_arguments = args(tampered.path(), host, UserMode::Apply);
             let tampered_path = manifest
                 .entries
                 .iter()
                 .find(|entry| is_managed_ownership(&entry.ownership))
-                .map(|entry| temporary.path().join(&entry.path))
+                .map(|entry| tampered.path().join(&entry.path))
                 .expect("managed 0.8 path");
             fs::write(&tampered_path, b"tampered frozen 0.8 bytes\n").expect("tamper frozen path");
-            let Err(error) = build_plan(&arguments) else {
+            let Err(error) = build_plan(&tampered_arguments) else {
                 panic!("tampered 0.8 bytes must fail closed");
             };
             assert!(matches!(error, InstallError::Conflict(_)));

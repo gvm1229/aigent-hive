@@ -3299,6 +3299,14 @@ mod tests {
         assert!(consumer
             .join(".agents/skills/setup-project/SKILL.md")
             .is_file());
+        for retired in legacy_builtin_names("0.6.0") {
+            assert!(
+                !consumer
+                    .join(format!(".agents/skills/{retired}/SKILL.md"))
+                    .exists(),
+                "authenticated retired Skill path must be removed: {retired}"
+            );
+        }
         for unselected in ["update-hive", "migrate-project"] {
             assert!(!consumer
                 .join(format!(".agents/skills/{unselected}/SKILL.md"))

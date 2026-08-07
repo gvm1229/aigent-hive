@@ -2212,17 +2212,27 @@ fn resolve_effective_project_preferences(
         _ => unreachable!("setup mode was validated"),
     };
     if !effective.wiki_enabled {
-        effective.selected_project_skills.retain(|name| {
-            !matches!(
-                canonical_builtin_skill_name(name).unwrap_or(name.as_str()),
-                "record-knowledge"
-                    | "search-knowledge"
-                    | "share-knowledge"
-                    | "maintain-knowledge"
-                    | "import-repository-knowledge"
-                    | "manage-wiki"
-            )
-        });
+        effective.selected_project_skills = effective
+            .selected_project_skills
+            .into_iter()
+            .map(|name| -> Result<Option<String>, RenderError> {
+                let canonical = canonical_builtin_skill_name(&name)
+                    .map_err(|error| RenderError::Internal(error.to_string()))?;
+                let is_knowledge_skill = matches!(
+                    canonical.as_deref().unwrap_or(name.as_str()),
+                    "record-knowledge"
+                        | "search-knowledge"
+                        | "share-knowledge"
+                        | "maintain-knowledge"
+                        | "import-repository-knowledge"
+                        | "manage-wiki"
+                );
+                Ok((!is_knowledge_skill).then_some(name))
+            })
+            .collect::<Result<Vec<_>, _>>()?
+            .into_iter()
+            .flatten()
+            .collect();
     }
     effective.selected_project_skills.sort();
     Ok(Some(effective))
@@ -2254,7 +2264,11 @@ fn validate_global_project_preferences(
         || global
             .selected_project_skills
             .iter()
-            .any(|name| canonical_builtin_skill_name(name) == Some("configure"))
+            .try_fold(false, |found, name| {
+                canonical_builtin_skill_name(name)
+                    .map(|canonical| found || canonical.as_deref() == Some("configure"))
+                    .map_err(|error| RenderError::Internal(error.to_string()))
+            })?
         || (global.codexbar_fallback_enabled && !global.usage_guard_enabled)
         || (global.discord_guard_enabled && !global.usage_guard_enabled)
         || (global.discord_guard_enabled
@@ -2300,10 +2314,10 @@ fn resolve_project_skill_selection(
             .into_iter()
             .map(|name| {
                 canonical_builtin_skill_name(&name)
-                    .unwrap_or(&name)
-                    .to_owned()
+                    .map(|canonical| canonical.unwrap_or(name))
+                    .map_err(|error| RenderError::Internal(error.to_string()))
             })
-            .collect::<BTreeSet<_>>(),
+            .collect::<Result<BTreeSet<_>, _>>()?,
         "recommended" => {
             let suite_id = selection
                 .recommended_suite
