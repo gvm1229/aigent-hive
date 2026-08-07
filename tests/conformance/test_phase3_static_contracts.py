@@ -290,6 +290,24 @@ class Phase3SkillSourceContract(unittest.TestCase):
             with self.subTest(project_requirement=required):
                 self.assertIn(required, project_skill)
 
+    def test_global_setup_refreshes_authenticated_hive_files_without_review_question(self) -> None:
+        source = (REPOSITORY_ROOT / ".agents/directives/01-behavior.md").read_text(
+            encoding="utf-8"
+        )
+        setup_hive = (SKILL_ROOT / "setup-hive/SKILL.md").read_text(encoding="utf-8")
+
+        self.assertIn("do not ask a yes/no question", source)
+        for required in (
+            "hive install --scope user --host <host> --dry-run --output json",
+            "hive setup --scope user --answers <saved-answers> --user-root",
+            "do not ask whether to review or continue",
+            "Rerun both validations",
+        ):
+            with self.subTest(required=required):
+                self.assertIn(required, setup_hive)
+        self.assertNotIn("Would you like to review the update?", setup_hive)
+        self.assertNotIn("Would you like to review the merge preview?", setup_hive)
+
     def test_source_prompt_refine_projection_matches_harness_canonical_bytes(self) -> None:
         canonical = (
             SKILL_ROOT / "hive-prompt-refine/SKILL.md"

@@ -25,6 +25,11 @@ This directive governs agent behavior while developing Aigent Hive.
   result does and does not prove. Do not use a platform adjective such as "Windows-only" or
   "Unix-only" without stating whether the current platform ran or skipped that item and why.
 - Ask only when missing information would materially change the product, create irreversible risk, or require credentials or external publication authority.
+- During setup or reconfiguration, do not ask a yes/no question for a deterministic, authenticated,
+  Hive-owned refresh that the user's setup request already authorizes. Run its preview and safe
+  apply automatically, then state the result before the next meaningful preference question. Ask
+  only when authentication fails, local edits require a material choice, or another authority
+  boundary applies.
 
 ## Work Selection
 

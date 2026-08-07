@@ -27,10 +27,17 @@ Configure user-scope Hive preferences without modifying a project harness or pro
    - For reconfiguration, read the saved answers and run
      `hive setup --scope user --answers <user-root>/.hive/config/user-setup.yml --user-root <user-root> --validate --output json` before offering writes.
    - Do not show raw path, hash, manifest, projection, or drift diagnostics by default.
-   - If validation finds a Hive-file refresh, say in the current interface language:
-     `Hive needs to refresh its own setup files before changing settings. Your preferences and projects are safe. Would you like to review the update?`
-   - If the preview retains local edits, say:
-     `Some Hive setup files contain changes you made. They will not be overwritten. Would you like to review the merge preview?`
+   - If validation finds an authenticated Hive-file refresh, run the smallest matching
+     `hive install --scope user --host <host> --dry-run --output json`, then apply that exact
+     safe Hive-owned refresh automatically. If the saved-answer validation reports an outdated
+     user projection, run `hive setup --scope user --answers <saved-answers> --user-root
+     <user-root> --dry-run --output json`, then apply that exact projection refresh automatically.
+     Rerun both validations. The explicit global setup request already authorizes these
+     deterministic prerequisites; do not ask whether to review or continue.
+   - State a short plain-language result, then begin the next meaningful setup question. If the
+     preview preserves local edits, state that they were preserved; do not ask a review-only
+     question. Ask only if authentication fails, the preview needs a material user choice, or a
+     separate authority boundary applies.
    - Explain the underlying file or digest only after the user asks `Why?` or requests diagnostics.
 3. For initial setup, ask for interface language first.
    - Offer `English` and `한국어`.
@@ -122,8 +129,9 @@ consent and setup mode. Ask the remaining preference questions only for `Custom`
 
 ## Reconfiguration
 
-- Do not lead with a technical validation result. State whether settings are ready, need a Hive
-  refresh, or contain preserved local changes, then offer the relevant next choice.
+- Do not lead with a technical validation result. Complete any authenticated Hive-only refresh
+  automatically, state whether settings are ready or local changes were preserved, then offer the
+  relevant next meaningful preference choice.
 - Start with `change one setting` or `review everything from the beginning`; do not assume which
   preference the user wants to change.
 - During a full review, language remains the first question and all saved answers remain defaults.
@@ -156,7 +164,8 @@ choices, constraints, and delivery priorities.
 ## Safety Invariants
 
 - Operate only at user scope. Never add or update a project harness.
-- Use only `hive setup --scope user` for setup state changes.
+- Use `hive install --scope user --host <host>` only for the authenticated Hive-file refresh
+  prerequisite; use `hive setup --scope user` for all preference state changes.
 - Never call a model-provider API or request, read, store, or forward provider credentials.
 - Never read or mutate `.omx/`, `.omc/`, provider runtime state, or host-global configuration.
 - Never activate an optional third-party Skill through this workflow.
