@@ -253,6 +253,7 @@ python scripts/dev-check.py pre-push
 
 | Name | GitHub | Tested platform or area |
 | --- | --- | --- |
+| John Doe | — | Placeholder |
 
 ## License
 
