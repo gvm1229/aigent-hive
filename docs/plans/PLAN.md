@@ -49,8 +49,8 @@
 | Bootstrap·user projection recovery | 9 | 0 | 100% |
 | 한국어 setup 용어 복구 | 5 | 1 | 83.3% |
 | Global Skill 선택 단순화 | 8 | 0 | 100% |
-| Discord·Notion 연결 UX | 0 | 18 | 0% |
-| **Canonical total** | **362** | **87** | **80.6%** |
+| Discord·Notion 연결 UX | 1 | 17 | 5.6% |
+| **Canonical total** | **363** | **86** | **80.8%** |
 
 External production boundary 항목도 미완료 합계에 포함. Protected authority 없이 완료 처리 금지.
 

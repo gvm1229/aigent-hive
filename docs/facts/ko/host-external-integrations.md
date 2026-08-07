@@ -9,9 +9,9 @@ summary: "Integration core 구현 완료, end-to-end global setup·host OAuth ha
 tags: [discord, integration, notion]
 aliases: ["Host integration priority"]
 sources:
-  - "repo:docs/decisions/ADR-0018-notion-wiki-backend.md#sha256:4d6b1e5a018e5ef5ed129323927c191c1d74208a8c3d2d5b05678096629e9f82"
-  - "repo:docs/plans/active/discord-notion-onboarding.md#sha256:acdd99039a9b030af94549ba7fb7eb9c9fbf6d51002ba0584082f0d623a3c6dc"
-  - "repo:docs/research/discord-notion-host-integrations.md#sha256:b97e5fdeff0be50747d147dad8f8b8c2dcc8487f0e54ea28decbc0da30cecf08"
+  - "repo:docs/decisions/ADR-0018-notion-wiki-backend.md#sha256:9eed99de00f33af8c7b022efa62e28952ee7e516ef9e9f98fd0bd595d7e1577c"
+  - "repo:docs/plans/active/discord-notion-onboarding.md#sha256:034aaea79a8cc792525ad1a5ea8b98c99bd4f22ce43f1045d06bb052b4d00e46"
+  - "repo:docs/research/discord-notion-host-integrations.md#sha256:5b26108090c75343964f5452c3b7fd20a1df6300feda8561847bad6feb1748b9"
 links: [knowledge-storage, orchestration-ownership]
 reviewed_revision: "git:a8f2ef61565e15edef9e42355877f2d393058f80"
 status: active

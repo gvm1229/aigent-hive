@@ -41,6 +41,17 @@
 - Notion content: untrusted data, embedded instruction authority 0건
 - Remote canonical write 성공·SQLite publication 실패: dirty generation과 query fail-closed
 
+### DNI-001 위협 모델 보강
+
+| 위협 | 차단 계약 |
+| --- | --- |
+| Host config·OAuth token 탈취 또는 무단 변경 | Hive의 host config mutation·OAuth callback·token 저장 없음; host UI·CLI 소유 |
+| Notion content의 prompt injection | remote content untrusted 처리, instruction authority·자동 Skill activation·외부 전송 없음 |
+| Scope·workspace 또는 adapter drift | exact workspace·scope·read/create/update receipt 재검증, mismatch fail-closed |
+| Discord의 prompt·secret·경로 유출 | raw prompt 기본 제외, opt-in preview·redaction 전송, credential·absolute path·transcript 0건 |
+| Discord delivery failure·429 | guard 판정과 delivery 분리, bounded retry·진단, 자동 resume 없음 |
+| Claude/Codex session 탈취 | Claude 공식 Channel plugin 위임, Codex 공식 compatible channel 전 `unsupported` |
+
 ### Discord
 
 - 초기 범위: usage guard 중단의 optional outbound webhook 알림

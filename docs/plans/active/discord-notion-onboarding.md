@@ -70,7 +70,7 @@
 
 ### A. 계약·host 연결
 
-- [ ] [DNI-001] 기존 schema·CLI·Skill·research·test의 end-to-end gap 표와 ADR·threat model 갱신
+- [x] [DNI-001] 기존 schema·CLI·Skill·research·test의 end-to-end gap 표와 ADR·threat model 갱신
 - [ ] [DNI-002] `user-setup` catalog·schema에 Wiki backend, Notion scope·local index consent,
   Discord opt-in·prompt privacy mode의 typed migration 추가
 - [ ] [DNI-003] Host plugin/app·hosted MCP·REST의 provider-neutral capability envelope와
@@ -122,6 +122,13 @@
 4. `DNI-014–015`: README·대화·HTML 시각 안내
 5. `DNI-016–017`: 회귀·host fixture·실제 E2E
 6. `KST-006` + `DNI-018`: 동일 candidate의 한국어 setup·integration 수용
+
+## DNI-001 증거
+
+- 2026-08-07 Notion 공식 MCP 문서의 Codex·Claude Code·Antigravity hosted MCP·OAuth 절차 재확인
+- Codex plugin/app의 workspace role·permission·action confirmation 소유와 Hive access grant 불가 재확인
+- Claude Discord Channels research preview·실행 중 session 한정 재확인
+- schema·receipt·SQLite·Discord·setup·안내 gap 표와 ADR 위협 모델 반영
 
 ## 완료 기준
 

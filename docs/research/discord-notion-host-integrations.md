@@ -1,6 +1,6 @@
 # Discord·Notion host integration 조사
 
-> 조사일: 2026-08-01
+> 조사일: 2026-08-07
 > 적용 대상: Aigent Hive v0.9 이후 optional integration
 > 조사 방식: 공식·upstream 문서 우선, 외부 mutation 0건
 
@@ -68,8 +68,9 @@
 
 | Host | 1순위 | 2순위 | 최후 fallback |
 | --- | --- | --- | --- |
-| Claude Code | Notion 공식 Claude plugin | `https://mcp.notion.com/mcp` | 사용자 승인형 REST import/export |
-| Codex | workspace에서 허용된 Notion plugin/app | `https://mcp.notion.com/mcp` | 사용자 승인형 REST import/export |
+| Claude Code | Notion 공식 Claude plugin | `https://mcp.notion.com/mcp` + `/mcp` OAuth | 사용자 승인형 REST import/export |
+| Codex | workspace에서 허용된 Notion plugin/app | `https://mcp.notion.com/mcp` + `codex mcp login notion` OAuth | 사용자 승인형 REST import/export |
+| Antigravity | 공식 hosted MCP custom server | browser OAuth | 사용자 승인형 REST import/export |
 
 - Notion 공식 hosted MCP: OAuth 기반, Claude Code·Codex 연결 절차 제공
 - 작업 범위: 사용자 Notion 권한 안의 search·fetch·page 생성·수정·data source query
@@ -82,6 +83,31 @@
 - Exact scope inventory·revision·read·create·update capability 부재: `unsupported`
 - User-scope `markdown|notion` 선택, project별 혼합 mode 제외
 - 기존 `0.8.x` upgrade: `markdown` 유지, implicit migration 0건
+
+## 2026-08-07 공식 재검증
+
+- Notion: remote MCP `https://mcp.notion.com/mcp`와 OAuth, Codex·Claude Code·Antigravity별
+  연결 절차 제공
+- Codex: Notion MCP 추가·OAuth는 host config와 `codex mcp login notion` 소유; Hive의 host config
+  mutation 금지 유지
+- Claude Code: Notion MCP 등록 뒤 `/mcp` OAuth; local·project·user scope 구분은 Claude 소유
+- Antigravity: deprecated gallery connector 대신 custom server와 OAuth 권고
+- Notion MCP: read·create·update 가능; selected workspace 권한과 host/plugin action confirmation 유지
+- Notion 보안: official endpoint만 사용, 원격 content untrusted 처리, write action confirmation 필요
+- Claude Channels: Discord 포함 research preview; 실행 중 session에서만 event·reply 전달, Hive Discord
+  bridge 중복 구현 제외
+- Codex plugin/app: workspace role·app permission·action confirmation 상속, Hive가 접근 권한 부여 불가
+
+## 현재 구현 gap
+
+| 계약 | 현재 evidence | DNI 후속 |
+| --- | --- | --- |
+| Typed preference | `user_setup.rs`의 backend·scope·SQLite consent·Discord env 이름 | connection method·privacy mode·migration |
+| Capability receipt | `hive-wiki/src/notion.rs`의 adapter 우선순위·scope·read/write 검증 | host 탐지·fresh receipt 생성·OAuth handoff |
+| Notion SQLite | `knowledge notion`의 freshness·write-through·dirty fail-closed | host Skill의 매 turn envelope 연결 |
+| Discord notifier | HTTPS webhook·retry·secret 비저장 | project·run·요청 요약·진행 상태 payload |
+| Global setup | `setup-hive`의 기본값·Wiki 설명 | one-question backend·OAuth·test notification 흐름 |
+| 안내·수용 | research·core test만 존재 | README·HTML guide·실제 host E2E |
 
 ## Notion indexing 계약
 
@@ -121,19 +147,19 @@
 
 | Source | 상태·적용 범위 | 확인일 |
 | --- | --- | --- |
-| [Anthropic Channels](https://code.claude.com/docs/en/channels) | research preview, Discord 포함, same-session event·reply·allowlist | 2026-08-01 |
+| [Anthropic Channels](https://code.claude.com/docs/en/channels) | research preview, Discord 포함, 실행 중 same-session event·reply | 2026-08-07 |
 | [Anthropic Channels reference](https://code.claude.com/docs/en/channels-reference) | MCP channel, reply tool, inbound gate, permission relay | 2026-08-01 |
 | [Anthropic Discord plugin](https://claude.com/plugins/discord) | 공식 Discord bridge plugin | 2026-08-01 |
 | [Discord interactions](https://docs.discord.com/developers/interactions/receiving-and-responding) | Gateway 또는 webhook 수신, interaction response·token | 2026-08-01 |
 | [Discord rate limits](https://docs.discord.com/developers/topics/rate-limits) | route·global rate limit와 `429` 처리 | 2026-08-01 |
-| [Notion MCP overview](https://developers.notion.com/guides/mcp/overview) | 공식 hosted MCP, OAuth, workspace read·write | 2026-08-01 |
-| [Notion MCP 연결](https://developers.notion.com/guides/mcp/get-started-with-mcp) | Claude Code·Codex 설정, hosted MCP 우선 | 2026-08-01 |
-| [Notion MCP security](https://developers.notion.com/guides/mcp/mcp-security-best-practices) | 공식 endpoint 검증, 사용자 권한과 human review | 2026-08-01 |
+| [Notion MCP overview](https://developers.notion.com/guides/mcp/overview) | 공식 hosted MCP, OAuth, workspace read·write | 2026-08-07 |
+| [Notion MCP 연결](https://developers.notion.com/guides/mcp/get-started-with-mcp) | Claude Code·Codex·Antigravity hosted MCP·OAuth 절차 | 2026-08-07 |
+| [Notion MCP security](https://developers.notion.com/guides/mcp/mcp-security-best-practices) | official endpoint·untrusted content·write confirmation | 2026-08-07 |
 | [Notion MCP tools](https://developers.notion.com/guides/mcp/mcp-supported-tools) | search·fetch·create·update·query와 rate limit | 2026-08-01 |
 | [Notion Markdown content](https://developers.notion.com/guides/data-apis/working-with-markdown-content) | full page Markdown, truncation·unknown block 표시 | 2026-08-02 |
 | [Notion search limits](https://developers.notion.com/reference/search-optimizations-and-limitations) | exhaustive·immediate search 비보장 | 2026-08-02 |
 | [Anthropic Notion plugin](https://claude.com/plugins/notion) | Notion Labs 제공 Claude plugin | 2026-08-01 |
-| [OpenAI Codex plugins](https://help.openai.com/en/articles/20001256-plugins-in-codex/) | app permission·role·action confirmation 상속, 2026-08-01 갱신 확인 | 2026-08-01 |
+| [OpenAI Codex plugins](https://help.openai.com/en/articles/20001256-plugins-in-codex/) | app permission·role·action confirmation 상속, Hive의 access grant 불가 | 2026-08-07 |
 
 ## 남은 불확실성
 

@@ -4,8 +4,8 @@
 - product version: `0.9.0`
 - plan revision: `2.18`
 - 현재 milestone: `0.9.0-test` public acceptance·retention
-- 현재 작업: `KST-002–005` global setup 용어·복수 사용자 맥락 구현 완료. 다음 작업
-  `DNI-001–017` Discord·Notion end-to-end setup·프로젝트별 usage-guard 알림; 동일
+- 현재 작업: `KST-002–005` global setup 용어·복수 사용자 맥락 구현 완료, `DNI-001` 공식 host
+  재검증·gap·위협 모델 갱신 완료. 다음 작업 `DNI-002–017` Discord·Notion end-to-end setup·프로젝트별 usage-guard 알림; 동일
   numbered test release에서 `KST-006`·`DNI-018` 수용
 - 외부 중지 경계: `main` PR·review, signing·TUF,
   exact `1.0.0` 사용자 authority
@@ -31,7 +31,7 @@
   + `docs/plans/active/korean-setup-terminology.md`
   + `docs/plans/active/global-skill-selection.md`
   + `docs/plans/active/discord-notion-onboarding.md`
-- Plan completion: canonical checklist `362/449` 완료, `87`개 미완료, `80.6%`
+- Plan completion: canonical checklist `363/449` 완료, `86`개 미완료, `80.8%`
 - Discord·Notion UX 감사: typed global schema·Notion SQLite engine·Discord outbound core는 존재.
   `setup-hive`의 backend·연결 질문, host browser OAuth handoff, webhook 대화·시험 알림,
   HTML 안내, project·run·request·progress payload는 부재. `DNI-001–018` 후속 계획 활성화
