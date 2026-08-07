@@ -9,7 +9,7 @@ summary: "Optional bootstrap preserves scope; Korean setup keeps exact terms, us
 tags: [bootstrap, onboarding, setup]
 aliases: ["User setup"]
 sources:
-  - "repo:README.md#sha256:6ddf3dd877c31e3f6e525ea6a659fdf90233cbf008cfc3be355f271267c9fa94"
+  - "repo:README.md#sha256:50cd128b1944c5f687cf00197cf1bbc9440c57118fb76d20adf1b3f59cd41bd6"
   - "repo:crates/hive-cli/src/user_install.rs#sha256:2c61916f31b5a6ae66f6c2a615c41bcf4ac91ea2ca95d388f5d357cd5d872269"
   - "repo:crates/hive-cli/src/user_setup.rs#sha256:6599ff6e43448f255f975be5db3fafff0ea9156579c29ed835ffacadb9f5d06c"
   - "repo:docs/decisions/ADR-0012-global-onboarding-shared-index.md#sha256:2e064212050d755bf101322fdcc94f8a737db7b59204b75bb6bfcd64d8e32ceb"

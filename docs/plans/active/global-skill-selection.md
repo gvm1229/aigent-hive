@@ -28,7 +28,7 @@
   profile과 Skill 선택 연결 0건
 - [x] [GSS-007] existing user configuration migration·all/individual toggle·one-entry-per-line static·Rust·host
   smoke regression
-- [ ] [GSS-008] 새 numbered test release의 global Skill selection 수용; `latest` mutation 없음
+- [x] [GSS-008] 새 numbered test release의 global Skill selection 수용; `latest` mutation 없음
 
 ## 수용 기준
 
@@ -46,9 +46,10 @@
 - project 추천 세트: `harness/project-setup/skill-suites.yml`로 분리, global profile 결합 없음
 - 검증: `hive-cli` user setup 30개, `hive-render` 66개, user/project·connected·static·v0.9
   Python 69개 통과
-- release 대기: `0.9.0-test.4` candidate `31125304895`는 Linux x86_64 hosted runner를
-  15분 28초 동안 배정하지 못해 publish 전 중단. 동일 source 재시도 `31125945638`도 모든
-  hosted runner가 배정되지 않아 취소. 2026-08-07 GitHub Status API는 Actions를
-  `major_outage`·critical investigating incident로 보고했으며, npm·tag·GitHub Release·`latest`
-  mutation은 모두 0건. Actions 복구 뒤 exact `548983d`로 candidate를 재실행하고 성공한
-  candidate ID를 사용해 test publication을 dispatch한다.
+- test.4: GitHub Actions 장애 복구 뒤 candidate
+  [`31134306991`](https://github.com/gvm1229/aigent-hive/actions/runs/31134306991)의 5 native
+  target·npm umbrella/direct installer PASS. Publication
+  [`31135040224`](https://github.com/gvm1229/aigent-hive/actions/runs/31135040224)가 bootstrap
+  registry-token fallback으로 여섯 package `test=0.9.0-test.4`·`latest=0.8.0`, annotated
+  `v0.9.0-test.4`·22-asset GitHub prerelease를 생성. 격리 npm install은
+  `AIgent Hive v0.9.0-test #4 · developer test build (released 2026-08-07)` 출력 확인

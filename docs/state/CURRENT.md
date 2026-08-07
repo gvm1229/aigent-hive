@@ -4,7 +4,7 @@
 - product version: `0.9.0`
 - plan revision: `2.16`
 - 현재 milestone: `0.9.0-test` public acceptance·retention
-- 현재 작업: `KST-002–006`, `GSS-008` global setup 용어·profile·Skill selection 복구
+- 현재 작업: `KST-002–006` global setup 용어 복구
 - 외부 중지 경계: `main` PR·review, signing·TUF,
   exact `1.0.0` 사용자 authority
 - Plan load: compact `docs/plans/PLAN.md` + `docs/plans/phases/07-public-qualification.md`
@@ -37,12 +37,11 @@
   all built-in·개별 Skill toggle·one-entry-per-line 적용. 기존 recommended closure는 saved
   answer validate에서만 해석, 새 `all|individual` preview·approval 전 활성 Skill 추가 0건.
   project recommendation은 분리 catalog 유지
-- Global Skill test release: `0.9.0-test.4` candidate `31125304895`는 Linux x86_64 hosted
-  runner 미배정(15분 28초)으로 publish 전 중단했고, 동일 source 재시도 `31125945638`도
-  모든 runner가 배정되지 않아 취소. 2026-08-07 GitHub Status API: Actions `major_outage`,
-  critical investigating incident. source·local qualification은 완료, npm·tag·GitHub Release·
-  `latest` mutation은 0건. Actions 복구 뒤 exact `548983d` candidate 성공 후 test publication
-  dispatch 필요
+- Global Skill test release: candidate `31134306991` 5 native target·npm umbrella/direct
+  installer PASS, publication `31135040224` PASS. 여섯 package `test=0.9.0-test.4`,
+  `latest=0.8.0`; annotated `v0.9.0-test.4`·22-asset prerelease와 isolated CLI
+  `AIgent Hive v0.9.0-test #4 · developer test build (released 2026-08-07)` 확인. Trusted
+  Publisher registry 404는 bootstrap registry-token fallback으로 안전하게 해소
 - Developer binary: `scripts/dev-install.sh`의 sandbox·global·CAS rollback과 `product-dev`
   version identity, isolated global activation·rollback 회귀 검증 완료
 - Legacy setup recovery: schema-1 `0.7.0`의 19개 legacy projection은 saved preference·path
@@ -204,6 +203,10 @@
   exact `5341bdf3562cb1ed8fdd3323965cc5f529649107`, 여섯 npm package
   `test=0.9.0-test.3`·`latest=0.8.0`, annotated `v0.9.0-test.3`, 22-asset prerelease.
   Existing Codex legacy user installation의 source test.3 dry-run authenticated preview PASS.
+- Global Skill test publication: [candidate `31134306991`](https://github.com/gvm1229/aigent-hive/actions/runs/31134306991)
+  5 native target·npm umbrella/direct installer PASS; [publication `31135040224`](https://github.com/gvm1229/aigent-hive/actions/runs/31135040224)
+  PASS. `dc4466d42f4d3c4b71472e1ee8e6f27b58b2212a`, 여섯 package `test=0.9.0-test.4`,
+  `latest=0.8.0`, annotated `v0.9.0-test.4`·22-asset prerelease와 isolated CLI #4 확인
 - `staging`: 현재 release flow에 불필요하여 생성 0건
 - Production gate: 5개 native target·6개 npm package, OS signing·notarization,
   external TUF, public install·`0.8.0 → 0.9.0` update

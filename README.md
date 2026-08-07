@@ -13,7 +13,7 @@ project knowledge, durable role/run state, usage safeguards, and safe update con
 It never asks for model-provider API keys, calls model-provider APIs, or replaces the
 host's own model runtime.
 
-Stable `0.8.0` remains the npm `latest` release. Developer test build `0.9.0-test.3`
+Stable `0.8.0` remains the npm `latest` release. Developer test build `0.9.0-test.4`
 is published only on npm `test` and as a GitHub prerelease.
 
 ## Install 0.8.0
@@ -34,19 +34,19 @@ npm install -g aigent-hive@0.8.0
 The npm installer requires Node.js and npm. The installed `hive` runtime is a native
 Rust binary and does not require Node.js.
 
-### Developer test build 0.9.0-test.3
+### Developer test build 0.9.0-test.4
 
 For developers and contributors testing the next release:
 
 ```console
-npm install -g aigent-hive@0.9.0-test.3
+npm install -g aigent-hive@0.9.0-test.4
 hive --version
 ```
 
 Expected version label:
 
 ```text
-AIgent Hive v0.9.0-test #3 · developer test build (released 2026-08-06)
+AIgent Hive v0.9.0-test #4 · developer test build (released 2026-08-07)
 ```
 
 This explicit version never changes npm `latest`.
@@ -85,8 +85,8 @@ I want the optional one-prompt Aigent Hive setup. Work only at user scope; do no
 initialize, or change any project, repository, folder, or current working directory.
 
 First ask whether I want the stable release 0.8.0 (recommended) or the developer test build
-0.9.0-test.3. The stable install guidance is https://github.com/gvm1229/aigent-hive#install-080
-and the test-build release notes are https://github.com/gvm1229/aigent-hive/releases/tag/v0.9.0-test.3.
+0.9.0-test.4. The stable install guidance is https://github.com/gvm1229/aigent-hive#install-080
+and the test-build release notes are https://github.com/gvm1229/aigent-hive/releases/tag/v0.9.0-test.4.
 Detect my operating system and active host (Codex, Claude Code, or Gemini Antigravity), asking
 me if either is unclear. Check whether Node.js and npm are available. If they are missing,
 give me the official OS-specific Node.js installation command and request any approval the host

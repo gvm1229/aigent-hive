@@ -12,7 +12,7 @@ Hive: subscription 인증 agent host에 일관된 setup, Skill routing, project 
 지속 가능한 role/run 상태, usage safeguard와 안전한 update 계약 제공.
 Model-provider API key 요청·provider API 호출·host model runtime 대체 없음.
 
-Stable `0.8.0`: npm `latest` 유지. Developer test build `0.9.0-test.3`: npm `test`와
+Stable `0.8.0`: npm `latest` 유지. Developer test build `0.9.0-test.4`: npm `test`와
 GitHub prerelease 전용 배포.
 
 ## 0.8.0 설치
@@ -34,19 +34,19 @@ npm install -g aigent-hive@0.8.0
 npm 설치 dependency: Node.js·npm. 설치된 `hive` runtime: native Rust binary,
 Node.js dependency 없음.
 
-### Developer test build 0.9.0-test.3
+### Developer test build 0.9.0-test.4
 
 다음 release 검증용 developer·contributor 설치:
 
 ```console
-npm install -g aigent-hive@0.9.0-test.3
+npm install -g aigent-hive@0.9.0-test.4
 hive --version
 ```
 
 예상 version label:
 
 ```text
-AIgent Hive v0.9.0-test #3 · developer test build (released 2026-08-06)
+AIgent Hive v0.9.0-test #4 · developer test build (released 2026-08-07)
 ```
 
 Exact version 설치: npm `latest` 변경 없음.
@@ -84,8 +84,8 @@ I want the optional one-prompt Aigent Hive setup. Work only at user scope; do no
 initialize, or change any project, repository, folder, or current working directory.
 
 First ask whether I want the stable release 0.8.0 (recommended) or the developer test build
-0.9.0-test.3. The stable install guidance is https://github.com/gvm1229/aigent-hive#install-080
-and the test-build release notes are https://github.com/gvm1229/aigent-hive/releases/tag/v0.9.0-test.3.
+0.9.0-test.4. The stable install guidance is https://github.com/gvm1229/aigent-hive#install-080
+and the test-build release notes are https://github.com/gvm1229/aigent-hive/releases/tag/v0.9.0-test.4.
 Detect my operating system and active host (Codex, Claude Code, or Gemini Antigravity), asking
 me if either is unclear. Check whether Node.js and npm are available. If they are missing,
 give me the official OS-specific Node.js installation command and request any approval the host
