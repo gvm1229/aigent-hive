@@ -64,6 +64,19 @@ Global setup answer:
 - Schema-2 전 legacy local edit: fabricated base·자동 merge 없이 conflict와 active byte 보존
 - Missing·unauthenticated base: active bytes 불변·conflict
 
+### Public Skill identity amendment (`0.9.0`)
+
+- Host-facing invocation: `aigent-hive:<short-name>`
+- Consumer built-in Skill: short action-oriented IDs만 신규 projection·catalog·preview에 출력
+- Legacy `hive-*`, `setup-hive`, `setup-harness`, `ai-slop-cleaner`,
+  `best-practice-research`: saved selection migration 입력 전용
+- Migration result: `configure`, `setup-project`, `record-knowledge`,
+  `import-repository-knowledge`, `clean-ai-slop`, `research-practices` 등 current public ID
+- `en|ko` global interface language: Hive-owned user projection의 display name, short description,
+  `SKILL.md` frontmatter description에 적용
+- Workflow body: provider-neutral English contract 유지
+- Historical release inventory: frozen byte·old ID 보존, current rename 대상 제외
+
 ### Global setup UX
 
 - Initial setup: interface language 질문 우선

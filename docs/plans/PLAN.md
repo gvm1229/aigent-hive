@@ -49,9 +49,9 @@
 | Bootstrap·user projection recovery | 11 | 0 | 100% |
 | 한국어 setup 용어 복구 | 5 | 1 | 83.3% |
 | Global Skill 선택 단순화 | 8 | 0 | 100% |
-| Public Skill identity·localization | 0 | 5 | 0% |
+| Public Skill identity·localization | 4 | 1 | 80% |
 | Discord·Notion 연결 UX | 1 | 17 | 5.6% |
-| **Canonical total** | **365** | **91** | **80.0%** |
+| **Canonical total** | **369** | **87** | **80.9%** |
 
 External production boundary 항목도 미완료 합계에 포함. Protected authority 없이 완료 처리 금지.
 
@@ -114,5 +114,5 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
 ## Current execution order
 
 완료 증거: [`CURRENT.md`](../state/CURRENT.md)와 owning active fragment.
-다음 결정: `SIL-001` public name mapping 확정. 이후 `SIL-002–005`와 `DNI-001–017` 실행;
-stable 경로는 별도 `main` authority까지 보류.
+다음 작업: `SIL-005` 독립 시험 게시·수용. `DNI-002–017`은 별도 범위. Stable 경로: 별도
+`main` authority까지 보류.

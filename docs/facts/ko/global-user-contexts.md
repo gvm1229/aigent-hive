@@ -10,10 +10,10 @@ tags: [bootstrap, communication, onboarding]
 aliases: ["사용자 맥락", "사용자 프로필"]
 sources:
   - "repo:README.md#sha256:30e7d1dece221c145e4a75fe9e05ec9520ca3ab58b7d1311088b9c4ad72759ef"
-  - "repo:crates/hive-cli/src/user_setup.rs#sha256:a4d69016bdf3c5f0e8ee75839c7076b804ce55a8583fa56aabd933545d148611"
-  - "repo:harness/skills/setup-hive/SKILL.md#sha256:2851a369d75eaa79fe50ba9295787c09edbf7b25163e6fb64260ceba472db843"
-  - "repo:harness/user-setup/catalog.yml#sha256:af1147b8468f48eb81ec77ed4a14d5eba2fd31a4302e5459544fec3b2e22b595"
-  - "repo:schemas/user-setup.schema.json#sha256:b94594a2597f8eab3bcb778c24b892ee45c3856ce421043a79c3861b59cb99ee"
+  - "repo:crates/hive-cli/src/user_setup.rs#sha256:df21e8a7a78b3e65478f3d18265f43ec2d24e6d971fc4dbca3ae89e006c20706"
+  - "repo:harness/skills/configure/SKILL.md#sha256:17a80a35d5f367421c661374dec54147d0cabb4f48c4c5a640b15253bd5f0222"
+  - "repo:harness/user-setup/catalog.yml#sha256:7dc82dbf559075ce4286e7dd19aec0ddc22e04f35ad4a8a60f43129a4dba2a1f"
+  - "repo:schemas/user-setup.schema.json#sha256:87bb452a4240faccdef5c96488b7492c3764f44a2819e8e7733b8c41dadc70b9"
 links: [global-onboarding, language-consistency]
 reviewed_revision: "git:a679bb4d1ea439ef172e8a7f59b649d6d34a1983"
 status: active

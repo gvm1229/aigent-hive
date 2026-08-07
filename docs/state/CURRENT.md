@@ -45,11 +45,11 @@
   all built-in·개별 Skill toggle·one-entry-per-line 적용. 기존 recommended closure는 saved
   answer validate에서만 해석, 새 `all|individual` preview·approval 전 활성 Skill 추가 0건.
   project recommendation은 분리 catalog 유지
-- Public Skill identity·localization: Oh My Codex의 short-name + plugin-namespace model 확인.
-  Hive의 current `hive-` name prefix는 `aigent-hive:` provider namespace와 중복. Proposed
-  consumer mapping·legacy migration·selected-language descriptor contract는
-  [`skill-identity-localization.md`](../plans/active/skill-identity-localization.md)에 기록.
-  `SIL-001` public mapping approval 전 identifier rename·projection mutation·test publication 없음
+- Public Skill identity·localization: 22개 consumer Skill의 public short name 적용. Host invocation:
+  `aigent-hive:<short-name>`. Legacy ID는 saved selection 입력에서만 short name으로 이관하며
+  apply 뒤 재출력 없음. `en|ko` user projection의 `SKILL.md` description·Codex metadata
+  descriptor 동기화, project template·Copier·Rust projection parity 검증 완료. 상세 mapping·남은
+  시험 게시: [`skill-identity-localization.md`](../plans/active/skill-identity-localization.md)
 - Global Skill test release: candidate `31134306991` 5 native target·npm umbrella/direct
   installer PASS, publication `31135040224` PASS. 여섯 package `test=0.9.0-test.4`,
   `latest=0.8.0`; annotated `v0.9.0-test.4`·22-asset prerelease와 isolated CLI

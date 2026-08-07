@@ -63,15 +63,15 @@ consumer setup or receive the `aigent-hive:` plugin namespace.
 
 ## Checklist
 
-- [ ] [SIL-001] Confirm the proposed public-name mapping and document the exact host invocation
+- [x] [SIL-001] Confirm the public-name mapping and document the exact host invocation
   syntax, including the selected-host `aigent-hive:` namespace
-- [ ] [SIL-002] Add a typed legacy-to-short-name migration for saved selections, dependency
+- [x] [SIL-002] Add a typed legacy-to-short-name migration for saved selections, dependency
   closure, ownership manifests, optional-Skill collision checks, update three-way bases, and
   incoming custom edits; old IDs accepted only as migration input and never emitted after apply
-- [ ] [SIL-003] Render selected-language display names and concise descriptions from canonical
+- [x] [SIL-003] Render selected-language display names and concise descriptions from canonical
   `en|ko` locale data into Hive-owned user and selected-host marketplace projections; no host
   cache mutation or foreign-byte overwrite
-- [ ] [SIL-004] Rename canonical consumer Skills and all generated projections, preserve the
+- [x] [SIL-004] Rename canonical consumer Skills and all generated projections, preserve the
   `aigent-hive:<short-name>` host namespace, and revise global setup, README, schemas, release
   metadata, and migration guidance
 - [ ] [SIL-005] Add migration, dependency, ownership, Korean/English descriptor, host discovery,
