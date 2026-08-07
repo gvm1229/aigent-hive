@@ -16,13 +16,12 @@
     "schema_version": { "const": 1 },
     "profiles": {
       "type": "array",
-      "minItems": 4,
-      "maxItems": 4,
+      "minItems": 3,
+      "maxItems": 3,
       "prefixItems": [
         { "$ref": "#/$defs/web_profile" },
         { "$ref": "#/$defs/game_profile" },
-        { "$ref": "#/$defs/non_developer_profile" },
-        { "$ref": "#/$defs/custom_profile" }
+        { "$ref": "#/$defs/non_developer_profile" }
       ],
       "items": false
     },
@@ -87,12 +86,6 @@
       "allOf": [
         { "$ref": "#/$defs/catalog_entry" },
         { "properties": { "id": { "const": "non-developer" } } }
-      ]
-    },
-    "custom_profile": {
-      "allOf": [
-        { "$ref": "#/$defs/catalog_entry" },
-        { "properties": { "id": { "const": "custom" } } }
       ]
     },
     "strict_persona": {

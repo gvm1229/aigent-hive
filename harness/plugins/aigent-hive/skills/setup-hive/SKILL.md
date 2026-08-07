@@ -58,8 +58,7 @@ Configure user-scope Hive preferences without modifying a project harness or pro
    - Interface language: the language already selected by the user.
    - Daily update check: the explicit answer already selected by the user.
    - Wiki: enabled with the selected interface language.
-   - User profile: `custom` with the fixed description
-     `General user; infer domain context from each project.`
+   - User contexts: `general knowledge work` with no additional description.
    - Agent persona: `strict`.
    - Active hosts: the current authenticated host only.
    - Skills: `all` mode with every built-in Skill in the signed catalog.
@@ -97,8 +96,12 @@ consent and setup mode. Ask the remaining preference questions only for `Custom`
 3. **Setup mode** — `Expedited — set everything to default` or `Custom`.
 4. **Wiki language** — `en`, `ko`, or `both`.
 5. **Wiki enablement** — default `enabled`; offer explicit opt-out without deleting canonical Markdown.
-6. **User profile** — `web-developer`, `game-developer`, `non-developer`, or `custom`.
-   - For `custom`, ask the next single question for a non-empty custom description.
+6. **User contexts** — select any combination of `web-developer`, `game-developer`, and
+   `non-developer`.
+   - These contexts help Hive understand the user. They never select a project workflow,
+     implementation approach, delivery priority, or active Skill set.
+   - Ask one optional follow-up question for a single-line user description. A description is
+     required only when no context is selected.
 7. **Agent persona** — `strict`, `balanced`, `friendly`, or `custom`.
    - For `custom`, ask the next single question for a non-empty custom description.
 8. **Active hosts** — select one or more of `codex`, `claude`, and `antigravity`.
@@ -127,6 +130,28 @@ consent and setup mode. Ask the remaining preference questions only for `Custom`
 - Preserve canonical Wiki Markdown when Wiki is disabled.
 - Treat Wiki deletion, host uninstall, Skill data deletion, and provider configuration changes as separate destructive actions outside this Skill.
 - Re-run dry-run, apply, and validate with one consistent answer file.
+
+## Korean interaction contract
+
+When the selected interface language is Korean, retain product terms and identifiers exactly as
+`Aigent Hive`, `Skill`, `Wiki`, `Codex`, `Claude`, `Antigravity`, `CodexBar`, `Notion`, commands,
+paths, schema keys, Skill IDs, and versions. Do not translate `Skill` as `기술`.
+
+Use these host-independent question patterns, one question at a time:
+
+1. `계속 사용할 언어를 선택해 주세요: English 또는 한국어.`
+2. `사용자 기본 맥락을 선택해 주세요. 여러 항목을 함께 선택할 수 있으며, 이 선택은 프로젝트의 작업 흐름이나 우선순위를 정하지 않습니다.`
+   - `웹 개발`: 웹 애플리케이션 관련 배경 또는 관심사
+   - `게임 개발`: 게임 관련 배경 또는 관심사
+   - `일반 지식 작업`: 소프트웨어 개발 외 배경 또는 관심사
+3. `추가로 알려 줄 배경, 관심사, 선호가 있나요? 없으면 건너뛸 수 있습니다.`
+4. `Skill 선택 방식을 골라 주세요.`
+   - `모든 내장 Skill 사용`
+   - `개별 내장 Skill 선택`
+
+Do not describe a global user context as a role that prioritizes web, game, non-development, or
+any other project workflow. Project setup alone determines project-specific workflow, technical
+choices, constraints, and delivery priorities.
 
 ## Safety Invariants
 

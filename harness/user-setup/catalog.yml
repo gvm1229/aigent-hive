@@ -2,32 +2,25 @@ schema_version: 1
 profiles:
   - id: web-developer
     display_name:
-      en: Web developer
-      ko: 웹 개발자
+      en: Web development
+      ko: 웹 개발
     description:
-      en: Web application development, testing, review, and project maintenance
-      ko: 웹 애플리케이션 개발·테스트·리뷰·프로젝트 유지보수
+      en: Background or interest in web applications; it does not select a project workflow
+      ko: 웹 애플리케이션 관련 배경 또는 관심사이며 프로젝트 작업 흐름을 정하지 않음
   - id: game-developer
     display_name:
-      en: Game developer
-      ko: 게임 개발자
+      en: Game development
+      ko: 게임 개발
     description:
-      en: Game systems, content pipelines, testing, and project maintenance
-      ko: 게임 시스템·콘텐츠 파이프라인·테스트·프로젝트 유지보수
+      en: Background or interest in games; it does not select a project workflow
+      ko: 게임 관련 배경 또는 관심사이며 프로젝트 작업 흐름을 정하지 않음
   - id: non-developer
     display_name:
-      en: Non-developer
-      ko: 비개발자
+      en: General knowledge work
+      ko: 일반 지식 작업
     description:
-      en: General questions, writing, knowledge work, and guided project setup
-      ko: 일반 질문·글쓰기·지식 작업·안내형 프로젝트 설정
-  - id: custom
-    display_name:
-      en: Custom profile
-      ko: 사용자 정의 프로필
-    description:
-      en: User-supplied profile description without inferred domain rules
-      ko: 도메인 규칙 추론 없는 사용자 제공 프로필 설명
+      en: Background or interest outside software development; it does not select a project workflow
+      ko: 소프트웨어 개발 외 배경 또는 관심사이며 프로젝트 작업 흐름을 정하지 않음
 
 personas:
   - id: strict

@@ -226,6 +226,26 @@ class Phase3SkillSourceContract(unittest.TestCase):
         self.assertIn("Never derive active Skills from the user profile", setup_skill)
         self.assertIn("one Markdown list item per line", setup_skill)
 
+    def test_global_setup_uses_user_contexts_and_preserves_korean_product_terms(self) -> None:
+        setup_catalog = read_yaml(
+            REPOSITORY_ROOT / "harness/user-setup/catalog.yml"
+        )
+        user_schema = (
+            REPOSITORY_ROOT / "schemas/user-setup.schema.json"
+        ).read_text(encoding="utf-8")
+        setup_skill = (SKILL_ROOT / "setup-hive/SKILL.md").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertEqual(len(setup_catalog["profiles"]), 3)
+        self.assertNotIn("custom", [entry["id"] for entry in setup_catalog["profiles"]])
+        self.assertIn('"contexts"', user_schema)
+        self.assertIn('"description"', user_schema)
+        self.assertIn("select any combination", setup_skill)
+        self.assertIn("Do not translate `Skill` as `기술`", setup_skill)
+        self.assertIn("여러 항목을 함께 선택할 수 있으며", setup_skill)
+        self.assertIn("프로젝트의 작업 흐름이나 우선순위를 정하지 않습니다", setup_skill)
+
     def test_source_and_consumer_lists_use_one_entry_per_line(self) -> None:
         source = (REPOSITORY_ROOT / ".agents/directives/01-behavior.md").read_text(
             encoding="utf-8"

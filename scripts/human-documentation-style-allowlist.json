@@ -370,5 +370,53 @@
     "line": 33,
     "reason": "Consumer marker negative example required for source and projection parity.",
     "text_sha256": "251095d746fcd08aa58f2b9a70fbd18a6bd007bc2854c121208c9b720aeca4a9"
+  },
+  {
+    "path": "harness/skills/setup-hive/SKILL.md",
+    "line": 142,
+    "reason": "Exact Korean global-setup language prompt preserves user-facing UI bytes.",
+    "text_sha256": "6a48c748a1d7ad94caa1eeacf4f3ebf8c5f32296d9ffee6f141bec5619533e6b"
+  },
+  {
+    "path": "harness/skills/setup-hive/SKILL.md",
+    "line": 143,
+    "reason": "Exact Korean global-setup user-context prompt preserves user-facing UI bytes.",
+    "text_sha256": "0e658b3551af9d1c4219a9dab28ab13e7959fb8bbfc368d604712c28b4dd00db"
+  },
+  {
+    "path": "harness/skills/setup-hive/SKILL.md",
+    "line": 147,
+    "reason": "Exact Korean global-setup description prompt preserves user-facing UI bytes.",
+    "text_sha256": "287bc3bfb43959e1673f453a05d6ebd4d5dcabcb51d47ddb675500dbb1ae396d"
+  },
+  {
+    "path": "harness/skills/setup-hive/SKILL.md",
+    "line": 148,
+    "reason": "Exact Korean global-setup Skill-selection prompt preserves user-facing UI bytes.",
+    "text_sha256": "7951805fd073b27d796a83b6e270b820d52e17cb9e4058df0f74b9198c4f9942"
+  },
+  {
+    "path": "harness/plugins/aigent-hive/skills/setup-hive/SKILL.md",
+    "line": 142,
+    "reason": "Exact Korean global-setup language prompt preserves user-facing UI bytes.",
+    "text_sha256": "6a48c748a1d7ad94caa1eeacf4f3ebf8c5f32296d9ffee6f141bec5619533e6b"
+  },
+  {
+    "path": "harness/plugins/aigent-hive/skills/setup-hive/SKILL.md",
+    "line": 143,
+    "reason": "Exact Korean global-setup user-context prompt preserves user-facing UI bytes.",
+    "text_sha256": "0e658b3551af9d1c4219a9dab28ab13e7959fb8bbfc368d604712c28b4dd00db"
+  },
+  {
+    "path": "harness/plugins/aigent-hive/skills/setup-hive/SKILL.md",
+    "line": 147,
+    "reason": "Exact Korean global-setup description prompt preserves user-facing UI bytes.",
+    "text_sha256": "287bc3bfb43959e1673f453a05d6ebd4d5dcabcb51d47ddb675500dbb1ae396d"
+  },
+  {
+    "path": "harness/plugins/aigent-hive/skills/setup-hive/SKILL.md",
+    "line": 148,
+    "reason": "Exact Korean global-setup Skill-selection prompt preserves user-facing UI bytes.",
+    "text_sha256": "7951805fd073b27d796a83b6e270b820d52e17cb9e4058df0f74b9198c4f9942"
   }
 ]

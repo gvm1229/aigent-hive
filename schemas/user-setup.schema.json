@@ -69,24 +69,20 @@
       }
     },
     "profile": {
-      "oneOf": [
-        {
-          "type": "object",
-          "additionalProperties": false,
-          "required": ["id"],
-          "properties": {
-            "id": { "enum": ["web-developer", "game-developer", "non-developer"] }
-          }
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["contexts"],
+      "properties": {
+        "contexts": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "enum": ["web-developer", "game-developer", "non-developer"] }
         },
-        {
-          "type": "object",
-          "additionalProperties": false,
-          "required": ["id", "custom_description"],
-          "properties": {
-            "id": { "const": "custom" },
-            "custom_description": { "$ref": "#/$defs/nonempty_single_line" }
-          }
-        }
+        "description": { "$ref": "#/$defs/nonempty_single_line" }
+      },
+      "anyOf": [
+        { "properties": { "contexts": { "minItems": 1 } } },
+        { "required": ["description"] }
       ]
     },
     "persona": {

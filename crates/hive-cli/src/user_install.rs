@@ -7196,8 +7196,8 @@ mod tests {
     fn operational_user_guidance_keeps_the_selected_language_consistent() {
         use crate::user_setup::{
             CatalogSelection, InterfaceLanguage, SelectedHost, SkillPreferences,
-            SkillSelectionMode, UpdateCheckPreferences, UsageGuardPreferences, UserSetupConfig,
-            WikiBackend, WikiLanguage, WikiPreferences,
+            SkillSelectionMode, UpdateCheckPreferences, UsageGuardPreferences, UserProfile,
+            UserSetupConfig, WikiBackend, WikiLanguage, WikiPreferences,
         };
 
         let config = |interface_language| UserSetupConfig {
@@ -7209,9 +7209,9 @@ mod tests {
                 backend: WikiBackend::Markdown,
                 notion: None,
             },
-            profile: CatalogSelection {
-                id: "web-developer".to_owned(),
-                custom_description: None,
+            profile: UserProfile {
+                contexts: vec!["web-developer".to_owned()],
+                description: None,
             },
             persona: CatalogSelection {
                 id: "balanced".to_owned(),

@@ -150,6 +150,14 @@ pub(crate) struct CatalogSelection {
     pub(crate) custom_description: Option<String>,
 }
 
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct UserProfile {
+    pub(crate) contexts: Vec<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(crate) description: Option<String>,
+}
+
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Ord, PartialEq, PartialOrd, Serialize)]
 #[serde(rename_all = "lowercase")]
 pub(crate) enum SelectedHost {
@@ -218,7 +226,7 @@ pub(crate) struct UserSetupConfig {
     pub(crate) schema_version: u32,
     pub(crate) interface_language: InterfaceLanguage,
     pub(crate) wiki: WikiPreferences,
-    pub(crate) profile: CatalogSelection,
+    pub(crate) profile: UserProfile,
     pub(crate) persona: CatalogSelection,
     pub(crate) selected_hosts: Vec<SelectedHost>,
     pub(crate) skills: SkillPreferences,
@@ -796,13 +804,14 @@ fn parse_and_validate_config_inner(
 ) -> Result<UserSetupConfig, SetupError> {
     let mut value: JsonValue = serde_yaml::from_slice(bytes)
         .map_err(|error| SetupError::Input(format!("invalid user setup YAML: {error}")))?;
-    let migrated = migrate_legacy_recommended_skill_selection(&mut value)?;
-    if migrated && !allow_legacy_recommended {
+    let migrated_skills = migrate_legacy_recommended_skill_selection(&mut value)?;
+    if migrated_skills && !allow_legacy_recommended {
         return Err(SetupError::Input(
             "recommended Skill suites are no longer accepted; choose mode all or individual"
                 .to_owned(),
         ));
     }
+    migrate_legacy_single_profile(&mut value)?;
     validate_schema(USER_SETUP_SCHEMA, &value, "user setup")?;
     let config: UserSetupConfig = serde_json::from_value(value)
         .map_err(|error| SetupError::Input(format!("invalid user setup values: {error}")))?;
@@ -857,6 +866,32 @@ fn migrate_legacy_recommended_skill_selection(value: &mut JsonValue) -> Result<b
                 .collect(),
         ),
     );
+    Ok(true)
+}
+
+fn migrate_legacy_single_profile(value: &mut JsonValue) -> Result<bool, SetupError> {
+    let Some(profile) = value.get_mut("profile").and_then(JsonValue::as_object_mut) else {
+        return Ok(false);
+    };
+    if profile.contains_key("contexts") {
+        return Ok(false);
+    }
+    let Some(id) = profile.get("id").and_then(JsonValue::as_str) else {
+        return Ok(false);
+    };
+    let description = profile.get("custom_description").cloned();
+    let contexts = match id {
+        "web-developer" | "game-developer" | "non-developer" => {
+            vec![JsonValue::String(id.to_owned())]
+        }
+        "custom" => Vec::new(),
+        _ => return Ok(false),
+    };
+    profile.clear();
+    profile.insert("contexts".to_owned(), JsonValue::Array(contexts));
+    if let Some(description) = description {
+        profile.insert("description".to_owned(), description);
+    }
     Ok(true)
 }
 
@@ -962,7 +997,7 @@ fn validate_config_semantics(config: &UserSetupConfig) -> Result<(), SetupError>
             "user setup schema_version must be 1".to_owned(),
         ));
     }
-    validate_custom_selection(&config.profile, "profile")?;
+    validate_user_profile(&config.profile)?;
     validate_custom_selection(&config.persona, "persona")?;
     validate_sorted_unique_hosts(&config.selected_hosts)?;
     match (
@@ -1084,6 +1119,41 @@ fn validate_custom_selection(selection: &CatalogSelection, label: &str) -> Resul
     }
 }
 
+fn validate_user_profile(profile: &UserProfile) -> Result<(), SetupError> {
+    let mut contexts = BTreeSet::new();
+    for context in &profile.contexts {
+        if !contexts.insert(context.as_str()) {
+            return Err(SetupError::Input(
+                "user profile contexts must not contain duplicates".to_owned(),
+            ));
+        }
+    }
+    match profile.description.as_deref() {
+        Some(value)
+            if !value.trim().is_empty()
+                && !value.contains('\r')
+                && !value.contains('\n')
+                && value.chars().count() <= 500 => {}
+        Some(value) if value.chars().count() > 500 => {
+            return Err(SetupError::Input(
+                "user profile description must not exceed 500 Unicode scalar values".to_owned(),
+            ));
+        }
+        Some(_) => {
+            return Err(SetupError::Input(
+                "user profile description must be a nonblank single line".to_owned(),
+            ));
+        }
+        None => {}
+    }
+    if profile.contexts.is_empty() && profile.description.is_none() {
+        return Err(SetupError::Input(
+            "user profile requires at least one context or a description".to_owned(),
+        ));
+    }
+    Ok(())
+}
+
 fn reject_host_deselection(
     installed: Option<&[u8]>,
     desired: &UserSetupConfig,
@@ -1150,8 +1220,8 @@ fn validate_catalog_semantics(catalog: &UserSetupCatalog) -> Result<(), SetupErr
     }
     validate_catalog_choices(
         &catalog.profiles,
-        &["custom", "game-developer", "non-developer", "web-developer"],
-        "profile",
+        &["game-developer", "non-developer", "web-developer"],
+        "user context",
     )?;
     validate_catalog_choices(
         &catalog.personas,
@@ -1254,15 +1324,12 @@ fn resolve_skills(
     config: &UserSetupConfig,
     catalog: &UserSetupCatalog,
 ) -> Result<Vec<String>, SetupError> {
-    if !catalog
-        .profiles
-        .iter()
-        .any(|entry| entry.id == config.profile.id)
-    {
-        return Err(SetupError::Input(format!(
-            "unknown user profile: {}",
-            config.profile.id
-        )));
+    for context in &config.profile.contexts {
+        if !catalog.profiles.iter().any(|entry| entry.id == *context) {
+            return Err(SetupError::Input(format!(
+                "unknown user context: {context}",
+            )));
+        }
     }
     if !catalog
         .personas
@@ -1842,7 +1909,7 @@ fn render_user_directive(config: &UserSetupConfig, resolved_skills: &[String]) -
     } else {
         "disabled".to_owned()
     };
-    let profile = render_catalog_selection(&config.profile);
+    let profile = render_user_profile(&config.profile);
     let persona = render_catalog_selection(&config.persona);
     let update_check = if config.update_check.enabled {
         "enabled"
@@ -1861,7 +1928,7 @@ hook payload, tool output, hidden prompt, or runtime state.\n"
 preserve canonical Markdown until an explicit deletion request.\n"
             };
             format!(
-                "# Aigent Hive user preferences\n\n- Setup state: `operational`\n- Interface language: `en`\n- User profile: {profile}\n- Agent persona: {persona}\n- Selected hosts: `{hosts}`\n- Global Wiki: `{wiki}`\n- Daily update check: `{update_check}`\n- Active Skills: `{}`\n{capture}- When daily update check is enabled, run `hive update --check --user-root <user-root> --output json` before the first Hive task of each host session. A check may notify but must never install.\n- Use English for every question and response unless the user explicitly requests another language for the current response. A message written in another language does not by itself change this preference.\n- For ambiguous or detail-poor ordinary prompts, offer one concise optional refine suggestion without automatic rewrite.\n- Never request provider credentials or call model-provider APIs on Hive's behalf.\n",
+                "# Aigent Hive user preferences\n\n- Setup state: `operational`\n- Interface language: `en`\n- User contexts: {profile}\n- Agent persona: {persona}\n- Selected hosts: `{hosts}`\n- Global Wiki: `{wiki}`\n- Daily update check: `{update_check}`\n- Active Skills: `{}`\n{capture}- User contexts inform only the global background. They never select a project workflow, implementation approach, delivery priority, or active Skill set.\n- When daily update check is enabled, run `hive update --check --user-root <user-root> --output json` before the first Hive task of each host session. A check may notify but must never install.\n- Use English for every question and response unless the user explicitly requests another language for the current response. A message written in another language does not by itself change this preference.\n- For ambiguous or detail-poor ordinary prompts, offer one concise optional refine suggestion without automatic rewrite.\n- Never request provider credentials or call model-provider APIs on Hive's behalf.\n",
                 resolved_skills.join(", ")
             )
         }
@@ -1876,7 +1943,7 @@ summary만 사용하고 raw transcript, hook payload, tool output, hidden prompt
 knowledge index를 capture·refresh하지 않음.\n"
             };
             format!(
-                "# Aigent Hive 사용자 설정\n\n- 설정 상태: `operational`\n- Interface language: `ko`\n- 사용자 profile: {profile}\n- Agent persona: {persona}\n- 선택 host: `{hosts}`\n- Global Wiki: `{wiki}`\n- 일일 update 확인: `{update_check}`\n- 활성 Skill: `{}`\n{capture}- 일일 update 확인이 enabled이면 각 host session의 첫 Hive 작업 전에 `hive update --check --user-root <user-root> --output json` 실행. 확인은 알림만 가능하며 설치 금지.\n- 현재 응답에 다른 언어를 사용하라는 명시적 요청이 없는 한 모든 질문과 응답에 한국어 사용. 다른 언어로 작성된 메시지만으로 이 선호를 변경하지 않음.\n- 모호하거나 핵심 세부가 부족한 일반 prompt에는 자동 rewrite 없이 간결한 optional refine 제안 1개만 제공.\n- Provider credential을 요청하거나 Hive를 대신해 model-provider API를 호출하지 않음.\n",
+                "# Aigent Hive 사용자 설정\n\n- 설정 상태: `operational`\n- Interface language: `ko`\n- 사용자 기본 맥락: {profile}\n- 에이전트 페르소나: {persona}\n- 선택 호스트: `{hosts}`\n- Global Wiki: `{wiki}`\n- 일일 update 확인: `{update_check}`\n- 활성 Skill: `{}`\n{capture}- 사용자 기본 맥락은 전역 배경 정보만 제공하며 프로젝트 작업 흐름, 구현 방식, 작업 우선순위, 활성 Skill을 정하지 않음.\n- 일일 update 확인이 enabled이면 각 host session의 첫 Hive 작업 전에 `hive update --check --user-root <user-root> --output json` 실행. 확인은 알림만 가능하며 설치 금지.\n- 현재 응답에 다른 언어를 사용하라는 명시적 요청이 없는 한 모든 질문과 응답에 한국어 사용. 다른 언어로 작성된 메시지만으로 이 선호를 변경하지 않음.\n- 모호하거나 핵심 세부가 부족한 일반 prompt에는 자동 rewrite 없이 간결한 optional refine 제안 1개만 제공.\n- Provider credential을 요청하거나 Hive를 대신해 model-provider API를 호출하지 않음.\n",
                 resolved_skills.join(", ")
             )
         }
@@ -1897,6 +1964,22 @@ fn render_catalog_selection(selection: &CatalogSelection) -> String {
         || format!("`{}`", selection.id),
         |description| format!("`{}` — {}", selection.id, markdown_code_span(description)),
     )
+}
+
+fn render_user_profile(profile: &UserProfile) -> String {
+    let contexts = profile
+        .contexts
+        .iter()
+        .map(|context| format!("`{context}`"))
+        .collect::<Vec<_>>()
+        .join(", ");
+    match (&contexts[..], profile.description.as_deref()) {
+        ("", Some(description)) => markdown_code_span(description),
+        (contexts, Some(description)) => {
+            format!("{contexts} — {}", markdown_code_span(description))
+        }
+        (contexts, None) => contexts.to_owned(),
+    }
 }
 
 fn markdown_code_span(value: &str) -> String {
@@ -2593,6 +2676,77 @@ usage_guard: {}
     }
 
     #[test]
+    fn legacy_single_profile_migrates_to_user_contexts_without_losing_description() {
+        let migrated = parse_and_validate_config(
+            r"
+schema_version: 1
+interface_language: ko
+wiki:
+  language: both
+profile:
+  id: custom
+  custom_description: 웹과 게임을 함께 만듦
+persona:
+  id: balanced
+selected_hosts:
+  - codex
+skills:
+  mode: individual
+  selected:
+    - setup-hive
+usage_guard: {}
+"
+            .as_bytes(),
+        )
+        .expect("legacy profile migration");
+
+        assert!(migrated.profile.contexts.is_empty());
+        assert_eq!(
+            migrated.profile.description.as_deref(),
+            Some("웹과 게임을 함께 만듦")
+        );
+        let canonical = String::from_utf8(canonical_config(&migrated).expect("canonical config"))
+            .expect("UTF-8 config");
+        assert!(canonical.contains("contexts: []"));
+        assert!(canonical.contains("description: 웹과 게임을 함께 만듦"));
+        assert!(!canonical.contains("custom_description"));
+    }
+
+    #[test]
+    fn user_profile_accepts_multiple_contexts_without_affecting_skill_resolution() {
+        let config = parse_and_validate_config(
+            r"
+schema_version: 1
+interface_language: ko
+wiki:
+  language: ko
+profile:
+  contexts:
+    - web-developer
+    - game-developer
+  description: 웹과 게임을 함께 만듦
+persona:
+  id: strict
+selected_hosts:
+  - codex
+skills:
+  mode: individual
+  selected:
+    - hive-simple-question
+usage_guard: {}
+"
+            .as_bytes(),
+        )
+        .expect("multiple contexts");
+        let catalog = parse_and_validate_catalog().expect("catalog");
+
+        assert_eq!(
+            resolve_skills(&config, &catalog).expect("skill resolution"),
+            ["hive-simple-question", "setup-hive"]
+        );
+    }
+
+    #[test]
     fn setup_defaults_enable_wiki_and_keep_guard_native_first() {
         let config = parse_and_validate_config(
             br"
@@ -2823,31 +2977,31 @@ usage_guard:
     }
 
     #[test]
-    fn custom_description_limit_counts_unicode_scalars() {
+    fn user_profile_description_limit_counts_unicode_scalars() {
         let accepted = CatalogSelection {
             id: "custom".to_owned(),
             custom_description: Some("한".repeat(500)),
         };
-        validate_custom_selection(&accepted, "profile").expect("500 Unicode scalars");
+        validate_custom_selection(&accepted, "persona").expect("500 Unicode scalars");
 
         let rejected = CatalogSelection {
             id: "custom".to_owned(),
             custom_description: Some("한".repeat(501)),
         };
         let error =
-            validate_custom_selection(&rejected, "profile").expect_err("501 Unicode scalars");
+            validate_custom_selection(&rejected, "persona").expect_err("501 Unicode scalars");
         assert_eq!(
             error.message(),
-            "custom profile custom_description must not exceed 500 Unicode scalar values"
+            "custom persona custom_description must not exceed 500 Unicode scalar values"
         );
     }
 
     #[test]
     fn generic_user_directive_safely_includes_custom_descriptions() {
         let mut config = valid_config();
-        config.profile = CatalogSelection {
-            id: "custom".to_owned(),
-            custom_description: Some("웹과 게임".to_owned()),
+        config.profile = UserProfile {
+            contexts: vec!["game-developer".to_owned(), "web-developer".to_owned()],
+            description: Some("웹과 게임".to_owned()),
         };
         config.persona = CatalogSelection {
             id: "custom".to_owned(),
@@ -2858,7 +3012,9 @@ usage_guard:
             String::from_utf8(render_user_directive(&config, &["setup-hive".to_owned()]))
                 .expect("UTF-8 guidance");
 
-        assert!(rendered.contains("- User profile: `custom` — `웹과 게임`"));
+        assert!(
+            rendered.contains("- User contexts: `game-developer`, `web-developer` — `웹과 게임`")
+        );
         assert!(rendered.contains("- Agent persona: `custom` — `` friendly `but strict` ``"));
     }
 
