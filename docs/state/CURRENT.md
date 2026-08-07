@@ -2,10 +2,10 @@
 
 - 기준 branch: `develop`
 - product version: `0.9.0`
-- plan revision: `2.20`
+- plan revision: `2.21`
 - 현재 milestone: `0.9.0-test` public acceptance·retention
-- 현재 작업: `SIL-006` retired Skill ID ledger·`0.8.0` all-host authenticated cleanup·변조
-  no-write conflict 구현 완료. 다음 작업 `SIL-005`: 전체 회귀 적합성·독립 `0.9.0-test.5` 시험 게시
+- 현재 작업: `SIL-001–006` public Skill identity·localization·retired-ID cleanup과
+  `0.9.0-test.5` 독립 시험 게시 완료. 다음 작업 `DNI-002–017`: Discord·Notion 연결 UX
 - 외부 중지 경계: `main` PR·review, signing·TUF,
   exact `1.0.0` 사용자 authority
 - Plan load: compact `docs/plans/PLAN.md` + `docs/plans/phases/07-public-qualification.md`
@@ -30,7 +30,7 @@
   + `docs/plans/active/korean-setup-terminology.md`
   + `docs/plans/active/global-skill-selection.md`
   + `docs/plans/active/discord-notion-onboarding.md`
-- Plan completion: canonical checklist `370/457` 완료, `87`개 미완료, `81.0%`
+- Plan completion: canonical checklist `371/457` 완료, `86`개 미완료, `81.2%`
 - Discord·Notion UX 감사: typed global schema·Notion SQLite engine·Discord outbound core는 존재.
   `setup-hive`의 backend·연결 질문, host browser OAuth handoff, webhook 대화·시험 알림,
   HTML 안내, project·run·request·progress payload는 부재. `DNI-001–018` 후속 계획 활성화
@@ -47,9 +47,10 @@
   `aigent-hive:<short-name>`. Canonical `retired-names.yml`: retired ID→current ID mapping·collision
   reservation·saved selection migration. 삭제 authority: frozen historical release inventory 또는 installed
   ownership manifest의 exact byte 검증만 허용. `0.8.0` 세 host의 historic Skill path 전체 삭제와 변조
-  path no-write conflict 회귀 확인. 상세 mapping·남은 시험 게시:
-  [`skill-identity-localization.md`](../plans/active/skill-identity-localization.md). 이전 candidate
-  `31180614229` 취소, 새 구현 포함 candidate 필요
+  path no-write conflict 회귀 확인. [candidate `31183471023`](https://github.com/gvm1229/aigent-hive/actions/runs/31183471023)
+  5 native target·npm umbrella PASS. [publication `31184578205`](https://github.com/gvm1229/aigent-hive/actions/runs/31184578205)
+  registry-token fallback PASS; six npm package `test=0.9.0-test.5`, `latest=0.8.0`, annotated
+  `v0.9.0-test.5`·22-asset prerelease 확인. Trusted Publishing은 새 scoped platform package에 `404` 반환
 - Global Skill test release: candidate `31134306991` 5 native target·npm umbrella/direct
   installer PASS, publication `31135040224` PASS. 여섯 package `test=0.9.0-test.4`,
   `latest=0.8.0`; annotated `v0.9.0-test.4`·22-asset prerelease와 isolated CLI

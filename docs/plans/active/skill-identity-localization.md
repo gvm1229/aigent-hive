@@ -92,9 +92,11 @@ consumer setup or receive the `aigent-hive:` plugin namespace.
   updates, refusing modified or foreign retired paths without writes. Evidence: `retired-names.yml`,
   `hive-projection` ledger validation, and `historical_080_install_supports_retirement_and_rejects_byte_tamper`
   exercise every historic user Skill path on all three hosts
-- [ ] [SIL-005] Add migration, dependency, ownership, Korean/English descriptor, host discovery,
+- [x] [SIL-005] Add migration, dependency, ownership, Korean/English descriptor, host discovery,
   clean upgrade, retired-path cleanup/conflict, and selected-language reconfigure regressions;
-  qualify in a separate test publication while leaving npm `latest` on the stable release
+  qualify in a separate test publication while leaving npm `latest` on the stable release. Evidence:
+  candidate `31183471023` all five native targets·npm umbrella PASS; publication `31184578205`
+  PASS, `test=0.9.0-test.5`, `latest=0.8.0`, `v0.9.0-test.5` GitHub prerelease
 
 ## Acceptance
 

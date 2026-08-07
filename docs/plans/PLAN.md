@@ -1,6 +1,6 @@
 # Aigent Hive active plan index
 
-> Revision: 2.20
+> Revision: 2.21
 > 기준일: 2026-08-07
 > Product version: `0.9.0`
 > 현재 milestone: `0.9.0` 정식 릴리스 준비
@@ -49,9 +49,9 @@
 | Bootstrap·user projection recovery | 11 | 0 | 100% |
 | 한국어 setup 용어 복구 | 5 | 1 | 83.3% |
 | Global Skill 선택 단순화 | 8 | 0 | 100% |
-| Public Skill identity·localization | 5 | 1 | 83.3% |
+| Public Skill identity·localization | 6 | 0 | 100% |
 | Discord·Notion 연결 UX | 1 | 17 | 5.6% |
-| **Canonical total** | **370** | **87** | **81.0%** |
+| **Canonical total** | **371** | **86** | **81.2%** |
 
 External production boundary 항목도 미완료 합계에 포함. Protected authority 없이 완료 처리 금지.
 
@@ -114,5 +114,5 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
 ## Current execution order
 
 완료 증거: [`CURRENT.md`](../state/CURRENT.md)와 owning active fragment.
-다음 작업: `SIL-005` 독립 시험 게시·수용. `DNI-002–017`은 별도 범위. Stable 경로: 별도
+다음 작업: `DNI-002–017` Discord·Notion 연결 UX. Stable 경로: 별도
 `main` authority까지 보류.
