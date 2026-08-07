@@ -1,6 +1,6 @@
 # Aigent Hive active plan index
 
-> Revision: 2.22
+> Revision: 2.24
 > 기준일: 2026-08-07
 > Product version: `0.9.0`
 > 현재 milestone: `0.9.0` 정식 릴리스 준비
@@ -31,7 +31,7 @@
 | Phase 7 | 49 | 0 | 100% |
 | User plugin/project lifecycle | 38 | 0 | 100% |
 | Host-native usage sensors | 24 | 0 | 100% |
-| Global onboarding·shared index | 19 | 1 | 95% |
+| Global onboarding·shared index | 19 | 0 | 100% |
 | Source docs Wiki | 12 | 0 | 100% |
 | Windows shell install boundary | 3 | 0 | 100% |
 | 문서 말투 | 6 | 0 | 100% |
@@ -46,12 +46,12 @@
 | v0.9 test 기능 마감 | 18 | 0 | 100% |
 | v0.9 full release | 13 | 13 | 50% |
 | Test release setup routing | 4 | 0 | 100% |
-| Bootstrap·user projection recovery | 11 | 0 | 100% |
+| Bootstrap·user projection recovery | 13 | 0 | 100% |
 | 한국어 setup 용어 복구 | 5 | 1 | 83.3% |
 | Global Skill 선택 단순화 | 8 | 0 | 100% |
 | Public Skill identity·localization | 6 | 0 | 100% |
 | Discord·Notion 연결 UX | 1 | 17 | 5.6% |
-| **Canonical total** | **371** | **87** | **81.0%** |
+| **Canonical total** | **373** | **86** | **81.3%** |
 
 External production boundary 항목도 미완료 합계에 포함. Protected authority 없이 완료 처리 금지.
 

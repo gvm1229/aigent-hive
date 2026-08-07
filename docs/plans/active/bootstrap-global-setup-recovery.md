@@ -34,8 +34,11 @@
   검증 뒤 developer-only projection refresh, public stable·test build fail-closed 유지
 - [x] [BGR-011] Global setup 요청의 authenticated Hive-only install·saved-answer projection
   refresh 자동 preview·apply·revalidate, review-only yes/no 질문 제거
-- [ ] [BGR-012] 사용자 설명에서 내부 구현 용어보다 실제 파일·사용자 영향·안전한 다음 행동을
+- [x] [BGR-012] 사용자 설명에서 내부 구현 용어보다 실제 파일·사용자 영향·안전한 다음 행동을
   먼저 제시하고, 내부 용어는 요청 시에만 쉬운 말로 풀어 설명
+- [x] [BGR-013] 정확한 developer-build ownership manifest와 live Hive-owned byte 조건에서만
+  public numbered test와 같은 saved-answer refresh를 preview·apply·validate로 이관하고,
+  public release 게시 없이 local `-dev` build로 회귀 검증
 
 ## 완료 기준
 
