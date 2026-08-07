@@ -68,7 +68,8 @@ Global setup answer:
 
 - Initial setup: interface language 질문 우선
 - Reconfigure: 부분 preference 변경 또는 전체 setup 재검토 선택 우선
-- Refresh 필요 상태: preference·project 안전 여부와 update/preview 선택 우선
+- Refresh 필요 상태: authenticated Hive-only install과 saved-answer user projection은 preview 뒤
+  자동 apply·revalidate. 별도 review-only yes/no 질문 없음
 - Internal path·digest·projection 용어: 기본 안내 제외, 요청 시 diagnostic 제공
 - 한국어 대화: `Skill`, `Wiki`, host·product name, command, path, schema key, Skill ID는 exact
   term 유지. 일반 설명만 한국어화하며 `Skill → 기술` 같은 일반명사 직역 금지
@@ -82,6 +83,9 @@ Global setup answer:
 - `--rollback`: developer binary digest가 아직 active target과 일치할 때만 saved executable 복구
 - `product-dev` version output은 local developer build로 표기하며 npm public `product-test[.N]`
   release identity를 사용하지 않음
+- Local `product-dev` binary: internally reproducible prior manifest와 live managed byte 일치 시
+  developer-only three-way base 허용. Public stable·test binary는 signed historical base 부재 시
+  계속 fail-closed
 
 ### Wiki lifecycle
 

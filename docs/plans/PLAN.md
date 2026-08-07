@@ -46,11 +46,11 @@
 | v0.9 test 기능 마감 | 18 | 0 | 100% |
 | v0.9 full release | 13 | 13 | 50% |
 | Test release setup routing | 4 | 0 | 100% |
-| Bootstrap·user projection recovery | 9 | 0 | 100% |
+| Bootstrap·user projection recovery | 11 | 0 | 100% |
 | 한국어 setup 용어 복구 | 5 | 1 | 83.3% |
 | Global Skill 선택 단순화 | 8 | 0 | 100% |
 | Discord·Notion 연결 UX | 1 | 17 | 5.6% |
-| **Canonical total** | **363** | **86** | **80.8%** |
+| **Canonical total** | **365** | **86** | **80.9%** |
 
 External production boundary 항목도 미완료 합계에 포함. Protected authority 없이 완료 처리 금지.
 

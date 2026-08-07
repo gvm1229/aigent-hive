@@ -30,6 +30,10 @@
 - [x] [BGR-009] Schema-1 `0.7.0` user projection의 authenticated vanilla replacement,
   later metadata 추가·pre-schema-2 local edit 보존 차단·unknown manifest fail-closed와
   `0.9.0-test.3` host inventory의 fresh global setup recovery
+- [x] [BGR-010] Local `-dev` binary의 internally reproducible prior user manifest·live byte
+  검증 뒤 developer-only projection refresh, public stable·test build fail-closed 유지
+- [x] [BGR-011] Global setup 요청의 authenticated Hive-only install·saved-answer projection
+  refresh 자동 preview·apply·revalidate, review-only yes/no 질문 제거
 
 ## 완료 기준
 
@@ -41,4 +45,6 @@
 - 초기 global setup: language 질문 우선
 - Reconfigure: 부분 변경 또는 전체 재검토 선택 우선
 - Refresh 필요 상태: preference·project 안전 여부와 다음 선택 우선, internal path·hash 기본 노출 0건
+- Authenticated refresh: 기존 global setup 요청 안에서 자동 preview·apply·revalidate, 별도 review
+  확인 0건
 - Bootstrap: project inspection·provider credential·silent installer 0건

@@ -4,7 +4,8 @@
 - product version: `0.9.0`
 - plan revision: `2.18`
 - 현재 milestone: `0.9.0-test` public acceptance·retention
-- 현재 작업: `KST-002–005` global setup 용어·복수 사용자 맥락 구현 완료, `DNI-001` 공식 host
+- 현재 작업: `BGR-010–011` local developer global projection recovery·trivial refresh 자동화 완료,
+  `KST-002–005` global setup 용어·복수 사용자 맥락 구현 완료, `DNI-001` 공식 host
   재검증·gap·위협 모델 갱신 완료. 다음 작업 `DNI-002–017` Discord·Notion end-to-end setup·프로젝트별 usage-guard 알림; 동일
   numbered test release에서 `KST-006`·`DNI-018` 수용
 - 외부 중지 경계: `main` PR·review, signing·TUF,
@@ -31,7 +32,7 @@
   + `docs/plans/active/korean-setup-terminology.md`
   + `docs/plans/active/global-skill-selection.md`
   + `docs/plans/active/discord-notion-onboarding.md`
-- Plan completion: canonical checklist `363/449` 완료, `86`개 미완료, `80.8%`
+- Plan completion: canonical checklist `365/451` 완료, `86`개 미완료, `80.9%`
 - Discord·Notion UX 감사: typed global schema·Notion SQLite engine·Discord outbound core는 존재.
   `setup-hive`의 backend·연결 질문, host browser OAuth handoff, webhook 대화·시험 알림,
   HTML 안내, project·run·request·progress payload는 부재. `DNI-001–018` 후속 계획 활성화
@@ -50,7 +51,11 @@
   `AIgent Hive v0.9.0-test #4 · developer test build (released 2026-08-07)` 확인. Trusted
   Publisher registry 404는 bootstrap registry-token fallback으로 안전하게 해소
 - Developer binary: `scripts/dev-install.sh`의 sandbox·global·CAS rollback과 `product-dev`
-  version identity, isolated global activation·rollback 회귀 검증 완료
+  version identity, isolated global activation·rollback 회귀 검증 완료. Local `-dev` binary는
+  internally reproducible prior manifest·live byte 일치 때만 developer-only global projection
+  refresh 허용, public stable·test binary의 fail-closed 보존
+- Global setup refresh: authenticated user install·saved-answer projection drift의 dry-run·apply·
+  revalidate 자동 처리. Review-only yes/no 질문 제거, local edit·인증 실패·별도 권한 경계만 질문
 - Legacy setup recovery: schema-1 `0.7.0`의 19개 legacy projection은 saved preference·path
   inventory·live digest 일치 뒤 schema 2 base로 이관. later Codex metadata는 추가 처리,
   pre-schema-2 local edit·unknown inventory는 write 0건. `0.9.0-test.3` Codex host inventory도

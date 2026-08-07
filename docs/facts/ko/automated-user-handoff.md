@@ -9,8 +9,8 @@ summary: "안전하게 자동화할 수 있는 작업을 먼저 끝내고 사용
 tags: [automation, behavior, handoff]
 aliases: ["사용자 수행 단계", "할 일 인계"]
 sources:
-  - "repo:.agents/directives/01-behavior.md#sha256:a3fad4148b713fa44c79c4906c297e621a529798785f9b916d67fc0aeff8b4e5"
-  - "repo:crates/hive-cli/src/user_install.rs#sha256:a722397099348116c5c43cdee8753249b8c8f293be480f23d298f2d2a2eeb04b"
+  - "repo:.agents/directives/01-behavior.md#sha256:e92fc32054100c81742fa37aac4354bd971feafe62d887b7b6c8f6aa65882e49"
+  - "repo:crates/hive-cli/src/user_install.rs#sha256:037c9a991a929a76aee9da633a6ecb666e3b45d02315c0e721934eccedd2245a"
   - "repo:harness/template/AGENTS.md.jinja#sha256:bb858b1021be8b3fd9fc282820a34a4e923dea6a47e01bdddcf9745510c1381d"
 links: [language-consistency, source-development]
 reviewed_revision: "git:35e6b79a024350487f823780101a28be24a9f4c7"
