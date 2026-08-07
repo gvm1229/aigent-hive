@@ -494,6 +494,7 @@ class Phase3SkillSourceContract(unittest.TestCase):
             "active/release-0.8.0.md",
             "active/release-0.9.0.md",
             "active/security-review.md",
+            "active/skill-identity-localization.md",
             "active/source-docs-wiki.md",
             "active/test-release-setup-routing.md",
             "active/user-onboarding-shared-index.md",
@@ -528,6 +529,7 @@ class Phase3SkillSourceContract(unittest.TestCase):
             plan_root / "active/release-0.8.0.md",
             plan_root / "active/release-0.9.0.md",
             plan_root / "active/security-review.md",
+            plan_root / "active/skill-identity-localization.md",
             plan_root / "active/source-docs-wiki.md",
             plan_root / "active/test-release-setup-routing.md",
             plan_root / "active/user-onboarding-shared-index.md",
@@ -555,6 +557,7 @@ class Phase3SkillSourceContract(unittest.TestCase):
                 "active/release-0.8.0.md",
                 "active/release-0.9.0.md",
                 "active/security-review.md",
+                "active/skill-identity-localization.md",
                 "active/source-docs-wiki.md",
                 "active/test-release-setup-routing.md",
                 "active/user-onboarding-shared-index.md",
@@ -655,6 +658,9 @@ class Phase3SkillSourceContract(unittest.TestCase):
             plan_root / "active/v0.9.0-test-finalization.md"
         )
         security_review_path = plan_root / "active/security-review.md"
+        skill_identity_localization_path = (
+            plan_root / "active/skill-identity-localization.md"
+        )
         source_wiki_path = plan_root / "active/source-docs-wiki.md"
         onboarding_path = plan_root / "active/user-onboarding-shared-index.md"
         v09_rag_path = plan_root / "active/v0.9.0-global-knowledge-rag.md"
@@ -736,6 +742,10 @@ class Phase3SkillSourceContract(unittest.TestCase):
             (
                 "Global Skill 선택 단순화",
                 *checklist_counts([global_skill_selection_path]),
+            ),
+            (
+                "Public Skill identity·localization",
+                *checklist_counts([skill_identity_localization_path]),
             ),
             (
                 "Discord·Notion 연결 UX",

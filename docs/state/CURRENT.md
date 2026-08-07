@@ -2,7 +2,7 @@
 
 - 기준 branch: `develop`
 - product version: `0.9.0`
-- plan revision: `2.18`
+- plan revision: `2.19`
 - 현재 milestone: `0.9.0-test` public acceptance·retention
 - 현재 작업: `BGR-010–011` local developer global projection recovery·trivial refresh 자동화 완료,
   `KST-002–005` global setup 용어·복수 사용자 맥락 구현 완료, `DNI-001` 공식 host
@@ -45,6 +45,11 @@
   all built-in·개별 Skill toggle·one-entry-per-line 적용. 기존 recommended closure는 saved
   answer validate에서만 해석, 새 `all|individual` preview·approval 전 활성 Skill 추가 0건.
   project recommendation은 분리 catalog 유지
+- Public Skill identity·localization: Oh My Codex의 short-name + plugin-namespace model 확인.
+  Hive의 current `hive-` name prefix는 `aigent-hive:` provider namespace와 중복. Proposed
+  consumer mapping·legacy migration·selected-language descriptor contract는
+  [`skill-identity-localization.md`](../plans/active/skill-identity-localization.md)에 기록.
+  `SIL-001` public mapping approval 전 identifier rename·projection mutation·test publication 없음
 - Global Skill test release: candidate `31134306991` 5 native target·npm umbrella/direct
   installer PASS, publication `31135040224` PASS. 여섯 package `test=0.9.0-test.4`,
   `latest=0.8.0`; annotated `v0.9.0-test.4`·22-asset prerelease와 isolated CLI

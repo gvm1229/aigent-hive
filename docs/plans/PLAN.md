@@ -49,18 +49,11 @@
 | Bootstrap·user projection recovery | 11 | 0 | 100% |
 | 한국어 setup 용어 복구 | 5 | 1 | 83.3% |
 | Global Skill 선택 단순화 | 8 | 0 | 100% |
+| Public Skill identity·localization | 0 | 5 | 0% |
 | Discord·Notion 연결 UX | 1 | 17 | 5.6% |
-| **Canonical total** | **365** | **86** | **80.9%** |
+| **Canonical total** | **365** | **91** | **80.0%** |
 
 External production boundary 항목도 미완료 합계에 포함. Protected authority 없이 완료 처리 금지.
-
-## 최신 완료 증거
-
-- 상세 완료 증거·실행 수치·publication 식별자: [`CURRENT.md`](../state/CURRENT.md)
-- `0.8.0` npm·Windows clean install·repeat·recovery와 public update acceptance PASS
-- v0.9 loop·Wiki·Skill suite, 50,000-chunk RAG, `.hivekb` portability qualification PASS
-- Hive-native 반복 실행 정책·계획: RALPLAN-DR, Architect `APPROVE_WITH_CHANGES`,
-  Critic 최종 `APPROVE`, stale-pointer authority·typed receipt·legacy migration 계약 정본화
 
 ## Required load order
 
@@ -98,6 +91,7 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
 | [`active/bootstrap-global-setup-recovery.md`](active/bootstrap-global-setup-recovery.md) | `BGR-*` | 선택형 bootstrap, 쉬운 global setup 복구, user projection merge |
 | [`active/korean-setup-terminology.md`](active/korean-setup-terminology.md) | `KST-*` | 한국어 global setup product term·질문 표기 |
 | [`active/global-skill-selection.md`](active/global-skill-selection.md) | `GSS-*` | all-built-in 기본값·개별 토글·목록 표기 |
+| [`active/skill-identity-localization.md`](active/skill-identity-localization.md) | `SIL-*` | public Skill 이름·plugin namespace·선택 언어 descriptor |
 | [`active/discord-notion-onboarding.md`](active/discord-notion-onboarding.md) | `DNI-*` | Discord·Notion global setup·프로젝트별 중단 알림·HTML 안내 |
 
 ## Reconciliation gate
@@ -120,5 +114,5 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
 ## Current execution order
 
 완료 증거: [`CURRENT.md`](../state/CURRENT.md)와 owning active fragment.
-다음 구현: `DNI-001–017` → 동일 numbered test release의 `KST-006`·`DNI-018`;
+다음 결정: `SIL-001` public name mapping 확정. 이후 `SIL-002–005`와 `DNI-001–017` 실행;
 stable 경로는 별도 `main` authority까지 보류.
