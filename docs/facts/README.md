@@ -44,6 +44,7 @@
 | Project onboarding | [en](en/project-onboarding.md) | [ko](ko/project-onboarding.md) |
 | Plugin update merge | [en](en/plugin-update-merge.md) | [ko](ko/plugin-update-merge.md) |
 | Skill routing | [en](en/skill-routing.md) | [ko](ko/skill-routing.md) |
+| Public Skill identity | [en](en/public-skill-identity.md) | [ko](ko/public-skill-identity.md) |
 | Model-routed custom subagent | [en](en/model-routed-custom-subagents.md) | [ko](ko/model-routed-custom-subagents.md) |
 | Prompt refine 승인 routing | [en](en/prompt-refine-routing.md) | [ko](ko/prompt-refine-routing.md) |
 | Discord·Notion host integration | [en](en/host-external-integrations.md) | [ko](ko/host-external-integrations.md) |
