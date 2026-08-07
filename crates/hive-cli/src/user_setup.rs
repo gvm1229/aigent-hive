@@ -198,6 +198,16 @@ pub(crate) struct DiscordGuardPreferences {
     pub(crate) enabled: bool,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub(crate) webhook_url_env: Option<String>,
+    #[serde(default)]
+    pub(crate) request_privacy: DiscordRequestPrivacy,
+}
+
+#[derive(Clone, Copy, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "kebab-case")]
+pub(crate) enum DiscordRequestPrivacy {
+    #[default]
+    Summary,
+    RawPrompt,
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -2775,6 +2785,10 @@ usage_guard: {}
         assert!(!config.usage_guard.codexbar_fallback_enabled);
         assert!(!config.usage_guard.discord.enabled);
         assert!(config.usage_guard.discord.webhook_url_env.is_none());
+        assert_eq!(
+            config.usage_guard.discord.request_privacy,
+            DiscordRequestPrivacy::Summary
+        );
     }
 
     #[test]
@@ -2783,6 +2797,7 @@ usage_guard: {}
         config.usage_guard.enabled = true;
         config.usage_guard.discord.enabled = true;
         config.usage_guard.discord.webhook_url_env = Some("HIVE_DISCORD_WEBHOOK_URL".to_owned());
+        config.usage_guard.discord.request_privacy = DiscordRequestPrivacy::RawPrompt;
         validate_config_semantics(&config).expect("enabled Discord notification");
 
         config.usage_guard.discord.webhook_url_env = Some("discord_webhook".to_owned());
