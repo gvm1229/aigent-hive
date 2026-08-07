@@ -2,7 +2,7 @@
 
 - 기준 branch: `develop`
 - product version: `0.9.0`
-- plan revision: `2.16`
+- plan revision: `2.17`
 - 현재 milestone: `0.9.0-test` public acceptance·retention
 - 현재 작업: `KST-002–006` global setup 용어 복구
 - 외부 중지 경계: `main` PR·review, signing·TUF,
