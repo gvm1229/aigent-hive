@@ -592,12 +592,12 @@ class SourceWikiConformance(unittest.TestCase):
             external = Path(raw).resolve()
             source = external / "source.md"
             source.write_text("external sentinel\n", encoding="utf-8")
-            (self.target / "docs").symlink_to(external, target_is_directory=True)
+            (self.target / "evidence").symlink_to(external, target_is_directory=True)
             digest = hashlib.sha256(source.read_bytes()).hexdigest()
             self.set_paired_field(
                 "boundaries",
                 "sources",
-                [f"repo:docs/source.md#sha256:{digest}"],
+                [f"repo:evidence/source.md#sha256:{digest}"],
             )
 
             result = self.lint()

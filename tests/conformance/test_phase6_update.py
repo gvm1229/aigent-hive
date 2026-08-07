@@ -345,13 +345,30 @@ class Phase6StaticContracts(unittest.TestCase):
         publication = (
             ROOT / ".github/workflows/release-publish.yml"
         ).read_text(encoding="utf-8")
+        test_publication = (
+            ROOT / ".github/workflows/release-test-publish.yml"
+        ).read_text(encoding="utf-8")
         candidate_workflow = yaml.safe_load(candidate)
         publication_workflow = yaml.safe_load(publication)
+        test_publication_workflow = yaml.safe_load(test_publication)
         self.assertEqual(
             set(candidate_workflow["jobs"]),
             {"unix", "windows", "npm-umbrella"},
         )
         self.assertEqual(set(publication_workflow["jobs"]), {"publish"})
+        self.assertEqual(set(test_publication_workflow["jobs"]), {"publish"})
+        expected_publication_environment = {
+            "name": "release-publication",
+            "deployment": False,
+        }
+        self.assertEqual(
+            publication_workflow["jobs"]["publish"]["environment"],
+            expected_publication_environment,
+        )
+        self.assertEqual(
+            test_publication_workflow["jobs"]["publish"]["environment"],
+            expected_publication_environment,
+        )
         unix_matrix = candidate_workflow["jobs"]["unix"]["strategy"]["matrix"][
             "include"
         ]
