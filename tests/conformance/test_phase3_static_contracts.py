@@ -165,6 +165,23 @@ class Phase3SkillSourceContract(unittest.TestCase):
         self.assertIn("verify the exact replacement locator", documentation)
         self.assertIn("README streamlining is not deletion authority", safety)
 
+    def test_source_explanations_start_with_user_visible_effects(self) -> None:
+        behavior = (
+            REPOSITORY_ROOT / ".agents/directives/01-behavior.md"
+        ).read_text(encoding="utf-8")
+        normalized = " ".join(behavior.split())
+
+        for required in (
+            "Do not lead a user-facing outcome, heading, or first sentence",
+            "`projection`, `manifest`, `digest`, `inventory`, or `authentication`",
+            "the Hive files installed for this computer or project",
+            "the saved setting or knowledge affected",
+            "the next safe action",
+            "define it in the same sentence",
+        ):
+            with self.subTest(required=required):
+                self.assertIn(required, normalized)
+
     def test_source_auto_setup_projection_matches_harness_canonical_bytes(self) -> None:
         canonical = (
             SKILL_ROOT / "auto-setup-project/SKILL.md"

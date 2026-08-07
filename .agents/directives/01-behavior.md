@@ -16,6 +16,12 @@ This directive governs agent behavior while developing Aigent Hive.
 - Lead with the result, decision, or blocker.
 - Explain in simple terms by default. Use concrete examples when they materially improve
   understanding, but do not force irrelevant examples or weaken technical precision.
+- Do not lead a user-facing outcome, heading, or first sentence with an internal implementation
+  term such as `projection`, `manifest`, `digest`, `inventory`, or `authentication`. First name
+  the concrete thing the user can recognize or act on: the Hive files installed for this computer
+  or project, the saved setting or knowledge affected, and the next safe action. If an internal
+  term is needed for a diagnosis, introduce it only after that plain-language explanation and
+  define it in the same sentence; never assume that the term is ordinary user vocabulary.
 - Present every user-facing list as a readable Markdown list or table with one complete item per
   line. Never pack independently selectable options or unrelated items into comma-separated prose.
 - Keep progress updates concise and evidence-based.
