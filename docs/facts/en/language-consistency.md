@@ -11,7 +11,7 @@ aliases: ["language consistency", "mixed-language response"]
 sources:
   - "repo:.agents/directives/01-behavior.md#sha256:aff2586323a4db2acad51cd0225b9791e4d0a974cd1a2e96d92eeaafbacdf5d6"
   - "repo:AGENTS.md#sha256:25506eed7bd08bec0af012507dbd2dc1353ae0dcccb502b3212c862b6b42be46"
-  - "repo:crates/hive-cli/src/user_install.rs#sha256:282c641531d7a72009ee3973801ee8d20ea1305fd7e6f836f202e6a4e22508d4"
+  - "repo:crates/hive-cli/src/user_install.rs#sha256:b70fedb14754fcb1d4c6d570381f845e5ae1be923d49f6ac929356add0e1777f"
   - "repo:harness/template/AGENTS.md.jinja#sha256:64f33fed294900badc58d8ff6b4f7144d0c43bf003884abdcae5c703a60cdd7a"
 links: [global-onboarding, source-development]
 reviewed_revision: "git:35e6b79a024350487f823780101a28be24a9f4c7"

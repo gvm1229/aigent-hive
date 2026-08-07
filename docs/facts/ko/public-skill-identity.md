@@ -9,8 +9,8 @@ summary: "Consumer Skill의 짧은 동작 이름, aigent-hive plugin namespace, 
 tags: [localization, migration, plugin, skill]
 aliases: ["Skill naming"]
 sources:
-  - "repo:docs/plans/PLAN.md#sha256:b584aa3e57a316c23de5df4a5f403a8daa36561220ac3199385f529b5a21ce0d"
-  - "repo:docs/plans/active/skill-identity-localization.md#sha256:84d413a9632773e8a617cc40429ffecbb88a1c609cd9e96bd77ee431de594900"
+  - "repo:docs/plans/PLAN.md#sha256:7da60789ebf4f03df4fbdf3b970878e186230ef62d2e32c0d8bc403d0e2e91d9"
+  - "repo:docs/plans/active/skill-identity-localization.md#sha256:143bbe51fdd932b352471e586a873420d0037af4950050f01cab1647277f2f0d"
 links: [global-onboarding, skill-routing]
 reviewed_revision: "git:90624108d8774fea2ed71efe64a5263cbb14fbe5"
 status: active
@@ -18,9 +18,8 @@ status: active
 
 # Public Skill identity
 
-Consumer Skill: 짧은 동작 이름과 host 제공 `aigent-hive:<name>` namespace. `record-knowledge`:
-검토된 durable fact 1개 기록. `import-repository-knowledge`: 검토 기반 repository bulk onboarding.
-`clean-ai-slop`·`research-practices`: 일관된 public name 완성. 저장된 legacy ID: validation 전 short
-name 이관, 새 projection 출력: current ID만 사용. Hive-owned user projection의 display name·short
-description·`SKILL.md` frontmatter description: 선택 `en|ko` interface language 적용. Historical release
-inventory: exact old byte 보존. Unauthenticated·overlap local change: no-write conflict 유지.
+Consumer Skill: 짧은 동작 이름과 `aigent-hive:<name>` namespace. 저장된 retired ID: current ID 이관,
+새 projection: current ID만 출력. Canonical retired-ID ledger: 이름 해석·예약 전용. old projection 삭제
+권한: frozen historical release inventory 또는 installed ownership manifest의 exact byte 검증만 허용.
+변조·unknown·foreign path: write 없이 conflict. Hive-owned display name·description: 선택 `en|ko`
+interface language 적용.

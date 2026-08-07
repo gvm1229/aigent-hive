@@ -72,6 +72,11 @@ Global setup answer:
   `best-practice-research`: saved selection migration 입력 전용
 - Migration result: `configure`, `setup-project`, `record-knowledge`,
   `import-repository-knowledge`, `clean-ai-slop`, `research-practices` 등 current public ID
+- Rename ledger: retired ID → current ID canonical mapping. saved selection migration, dependency
+  closure, collision reservation에 공통 사용. 삭제 권한 없음
+- Retired projection cleanup: frozen release inventory 또는 installed ownership manifest의 release byte
+  ·ownership proof 일치 때만 삭제. 변조·unknown·foreign path는 write 0건 conflict. Future rename: ledger와
+  authenticated historical-base cleanup regression 동시 추가
 - `en|ko` global interface language: Hive-owned user projection의 display name, short description,
   `SKILL.md` frontmatter description에 적용
 - Workflow body: provider-neutral English contract 유지

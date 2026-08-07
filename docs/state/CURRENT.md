@@ -2,12 +2,10 @@
 
 - 기준 branch: `develop`
 - product version: `0.9.0`
-- plan revision: `2.19`
+- plan revision: `2.20`
 - 현재 milestone: `0.9.0-test` public acceptance·retention
-- 현재 작업: `BGR-010–011` local developer global projection recovery·trivial refresh 자동화 완료,
-  `KST-002–005` global setup 용어·복수 사용자 맥락 구현 완료, `DNI-001` 공식 host
-  재검증·gap·위협 모델 갱신 완료. 다음 작업 `DNI-002–017` Discord·Notion end-to-end setup·프로젝트별 usage-guard 알림; 동일
-  numbered test release에서 `KST-006`·`DNI-018` 수용
+- 현재 작업: `SIL-006` retired Skill ID ledger·`0.8.0` all-host authenticated cleanup·변조
+  no-write conflict 구현 완료. 다음 작업 `SIL-005`: 전체 회귀 적합성·독립 `0.9.0-test.5` 시험 게시
 - 외부 중지 경계: `main` PR·review, signing·TUF,
   exact `1.0.0` 사용자 authority
 - Plan load: compact `docs/plans/PLAN.md` + `docs/plans/phases/07-public-qualification.md`
@@ -32,7 +30,7 @@
   + `docs/plans/active/korean-setup-terminology.md`
   + `docs/plans/active/global-skill-selection.md`
   + `docs/plans/active/discord-notion-onboarding.md`
-- Plan completion: canonical checklist `365/451` 완료, `86`개 미완료, `80.9%`
+- Plan completion: canonical checklist `370/457` 완료, `87`개 미완료, `81.0%`
 - Discord·Notion UX 감사: typed global schema·Notion SQLite engine·Discord outbound core는 존재.
   `setup-hive`의 backend·연결 질문, host browser OAuth handoff, webhook 대화·시험 알림,
   HTML 안내, project·run·request·progress payload는 부재. `DNI-001–018` 후속 계획 활성화
@@ -46,10 +44,12 @@
   answer validate에서만 해석, 새 `all|individual` preview·approval 전 활성 Skill 추가 0건.
   project recommendation은 분리 catalog 유지
 - Public Skill identity·localization: 22개 consumer Skill의 public short name 적용. Host invocation:
-  `aigent-hive:<short-name>`. Legacy ID는 saved selection 입력에서만 short name으로 이관하며
-  apply 뒤 재출력 없음. `en|ko` user projection의 `SKILL.md` description·Codex metadata
-  descriptor 동기화, project template·Copier·Rust projection parity 검증 완료. 상세 mapping·남은
-  시험 게시: [`skill-identity-localization.md`](../plans/active/skill-identity-localization.md)
+  `aigent-hive:<short-name>`. Canonical `retired-names.yml`: retired ID→current ID mapping·collision
+  reservation·saved selection migration. 삭제 authority: frozen historical release inventory 또는 installed
+  ownership manifest의 exact byte 검증만 허용. `0.8.0` 세 host의 historic Skill path 전체 삭제와 변조
+  path no-write conflict 회귀 확인. 상세 mapping·남은 시험 게시:
+  [`skill-identity-localization.md`](../plans/active/skill-identity-localization.md). 이전 candidate
+  `31180614229` 취소, 새 구현 포함 candidate 필요
 - Global Skill test release: candidate `31134306991` 5 native target·npm umbrella/direct
   installer PASS, publication `31135040224` PASS. 여섯 package `test=0.9.0-test.4`,
   `latest=0.8.0`; annotated `v0.9.0-test.4`·22-asset prerelease와 isolated CLI
