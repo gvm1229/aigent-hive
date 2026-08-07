@@ -26,6 +26,11 @@
 - Notion search: 초기 scope 선택·복구·누락 진단
 - 매 user turn: remote revision freshness 확인과 changed-only fetch
 - Webhook·양방향 Markdown sync·Notion AI 병렬 검색 0건
+- Global setup의 `markdown|notion` 명시적 선택과 expedited 기본 `markdown`
+- Notion 선택 시 official host plugin/app → hosted MCP → consented REST 연결 탐지
+- Official host surface의 browser OAuth handoff와 완료 후 workspace·scope capability receipt 재검증
+- Hive 자체 OAuth callback server·token 저장·host-global config mutation 0건
+- 연결·scope·SQLite disclosure·시험 read/write의 한 질문씩 대화형 setup
 
 ### Capability·security
 
@@ -41,7 +46,18 @@
 - 초기 범위: usage guard 중단의 optional outbound webhook 알림
 - Claude inbound continuation: official Discord Channel plugin 위임
 - Codex inbound continuation: official supported session channel 전까지 `unsupported`
-- Webhook payload의 raw prompt·transcript·credential·continuation token 0건
+- 전역 incoming webhook을 project가 상속하고 payload에서 안전한 project ID·run ID로 구분
+- Payload의 정제된 요청 요약·canonical 진행 상태·checkpoint·재개 안내
+- 원문 prompt 기본 제외; 전역 명시적 opt-in·전송 preview·redaction 뒤에만 제한적 포함
+- Credential·transcript·절대 경로·continuation token의 외부 전송 0건
+- 대화형 webhook 설정·환경변수 검증·시험 알림과 배포 bundle의 self-contained HTML 안내
+
+### 구현 상태 구분
+
+- `TST9-*`: typed backend, SQLite projection, capability receipt 검증, outbound notifier core
+- `DNI-*`: 실제 host connection, global setup 대화, browser OAuth handoff, project-aware payload,
+  README·HTML 안내와 end-to-end 수용
+- 내부 core 완료를 사용자 연결 완료로 해석 금지
 
 ## 선택 근거
 
@@ -68,4 +84,5 @@
 - Existing Markdown-mode portability·무네트워크 rebuild 보존
 - Source Wiki·run·role·plan의 tracked Markdown authority 불변
 - 세부 실행: [`v0.9.0-test-finalization.md`](../plans/active/v0.9.0-test-finalization.md)
+- End-to-end 후속: [`discord-notion-onboarding.md`](../plans/active/discord-notion-onboarding.md)
 - 근거: [`discord-notion-host-integrations.md`](../research/discord-notion-host-integrations.md)

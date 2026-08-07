@@ -1,6 +1,6 @@
 # Aigent Hive active plan index
 
-> Revision: 2.17
+> Revision: 2.18
 > 기준일: 2026-08-07
 > Product version: `0.9.0`
 > 현재 milestone: `0.9.0` 정식 릴리스 준비
@@ -8,8 +8,9 @@
 
 ## Goal parameters
 
-- Objective: Hive-native execution·custom subagent routing·Judge policy 안전 계약, `0.9.0-test`
-  독립 시험 배포·수용, 별도 `0.9.0` 정식 GitHub·npm 릴리스와 public update 검증
+- Objective: Hive-native execution·custom subagent routing·Judge policy 안전 계약, Discord·Notion
+  end-to-end global setup·프로젝트별 usage-guard 알림, `0.9.0-test` 독립 시험 배포·수용,
+  별도 `0.9.0` 정식 GitHub·npm 릴리스와 public update 검증
 - Success: Active fragment evidence-backed completion. 시험판 핵심 gate: `MRA-*`, `PRF-*`,
   `TST9-*`, `REL9-*` 독립 test·stable publication과 public acceptance
 - Stop boundary: protected `main` review, signing·TUF·npm credential,
@@ -48,7 +49,8 @@
 | Bootstrap·user projection recovery | 9 | 0 | 100% |
 | 한국어 setup 용어 복구 | 1 | 5 | 16.7% |
 | Global Skill 선택 단순화 | 8 | 0 | 100% |
-| **Canonical total** | **358** | **73** | **83.1%** |
+| Discord·Notion 연결 UX | 0 | 18 | 0% |
+| **Canonical total** | **358** | **91** | **79.7%** |
 
 External production boundary 항목도 미완료 합계에 포함. Protected authority 없이 완료 처리 금지.
 
@@ -96,6 +98,7 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
 | [`active/bootstrap-global-setup-recovery.md`](active/bootstrap-global-setup-recovery.md) | `BGR-*` | 선택형 bootstrap, 쉬운 global setup 복구, user projection merge |
 | [`active/korean-setup-terminology.md`](active/korean-setup-terminology.md) | `KST-*` | 한국어 global setup product term·질문 표기 |
 | [`active/global-skill-selection.md`](active/global-skill-selection.md) | `GSS-*` | all-built-in 기본값·개별 토글·목록 표기 |
+| [`active/discord-notion-onboarding.md`](active/discord-notion-onboarding.md) | `DNI-*` | Discord·Notion global setup·프로젝트별 중단 알림·HTML 안내 |
 
 ## Reconciliation gate
 
@@ -117,4 +120,5 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
 ## Current execution order
 
 완료 증거: [`CURRENT.md`](../state/CURRENT.md)와 owning active fragment.
-다음 구현: `KST-002–006`; stable 경로는 별도 `main` authority까지 보류.
+다음 구현: `KST-002–005` → `DNI-001–017` → 동일 numbered test release의
+`KST-006`·`DNI-018`; stable 경로는 별도 `main` authority까지 보류.

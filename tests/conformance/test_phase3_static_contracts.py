@@ -445,6 +445,7 @@ class Phase3SkillSourceContract(unittest.TestCase):
             "active/documentation-style.md",
             "active/bootstrap-global-setup-recovery.md",
             "active/docs-wiki-migration.md",
+            "active/discord-notion-onboarding.md",
             "active/global-skill-selection.md",
             "active/korean-setup-terminology.md",
             "active/model-routed-custom-subagents.md",
@@ -478,6 +479,7 @@ class Phase3SkillSourceContract(unittest.TestCase):
             plan_root / "active/documentation-style.md",
             plan_root / "active/bootstrap-global-setup-recovery.md",
             plan_root / "active/docs-wiki-migration.md",
+            plan_root / "active/discord-notion-onboarding.md",
             plan_root / "active/global-skill-selection.md",
             plan_root / "active/korean-setup-terminology.md",
             plan_root / "active/model-routed-custom-subagents.md",
@@ -504,6 +506,7 @@ class Phase3SkillSourceContract(unittest.TestCase):
                 "active/documentation-style.md",
                 "active/bootstrap-global-setup-recovery.md",
                 "active/docs-wiki-migration.md",
+                "active/discord-notion-onboarding.md",
                 "active/global-skill-selection.md",
                 "active/korean-setup-terminology.md",
                 "active/model-routed-custom-subagents.md",
@@ -594,6 +597,7 @@ class Phase3SkillSourceContract(unittest.TestCase):
             plan_root / "active/bootstrap-global-setup-recovery.md"
         )
         docs_wiki_path = plan_root / "active/docs-wiki-migration.md"
+        discord_notion_path = plan_root / "active/discord-notion-onboarding.md"
         global_skill_selection_path = (
             plan_root / "active/global-skill-selection.md"
         )
@@ -694,6 +698,10 @@ class Phase3SkillSourceContract(unittest.TestCase):
             (
                 "Global Skill 선택 단순화",
                 *checklist_counts([global_skill_selection_path]),
+            ),
+            (
+                "Discord·Notion 연결 UX",
+                *checklist_counts([discord_notion_path]),
             ),
         )
         total_done = sum(row[1] for row in progress_rows)

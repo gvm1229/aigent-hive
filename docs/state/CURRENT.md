@@ -2,9 +2,11 @@
 
 - 기준 branch: `develop`
 - product version: `0.9.0`
-- plan revision: `2.17`
+- plan revision: `2.18`
 - 현재 milestone: `0.9.0-test` public acceptance·retention
-- 현재 작업: `KST-002–006` global setup 용어 복구
+- 현재 작업: `KST-002–005` global setup 용어 복구 뒤 `DNI-001–017` Discord·Notion
+  end-to-end setup·프로젝트별 usage-guard 알림; 동일 numbered test release에서
+  `KST-006`·`DNI-018` 수용
 - 외부 중지 경계: `main` PR·review, signing·TUF,
   exact `1.0.0` 사용자 authority
 - Plan load: compact `docs/plans/PLAN.md` + `docs/plans/phases/07-public-qualification.md`
@@ -28,7 +30,11 @@
   + `docs/plans/active/bootstrap-global-setup-recovery.md`
   + `docs/plans/active/korean-setup-terminology.md`
   + `docs/plans/active/global-skill-selection.md`
-- Plan completion: canonical checklist `357/431` 완료, `74`개 미완료, `82.8%`
+  + `docs/plans/active/discord-notion-onboarding.md`
+- Plan completion: canonical checklist `358/449` 완료, `91`개 미완료, `79.7%`
+- Discord·Notion UX 감사: typed global schema·Notion SQLite engine·Discord outbound core는 존재.
+  `setup-hive`의 backend·연결 질문, host browser OAuth handoff, webhook 대화·시험 알림,
+  HTML 안내, project·run·request·progress payload는 부재. `DNI-001–018` 후속 계획 활성화
 - Korean setup 용어: `setup-hive`의 한국어 용어 규칙 부재. `Skill → 기술` 즉석 번역 확인,
   `recommended suite`·`profile|persona|host` 표기 일관성 조사 완료. Global profile: 비배타 사용자
   맥락 전용, project workflow·작업 우선순위 결정 금지. 다음 구현: schema migration·exact Korean
