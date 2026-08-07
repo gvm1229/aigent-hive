@@ -135,57 +135,57 @@ OMC_MERGE = frozenset(
 
 CURRENT_SOURCE_SKILLS = frozenset(
     {
-        "ai-slop-cleaner",
-        "auto-setup-harness",
-        "best-practice-research",
+        "clean-ai-slop",
+        "auto-setup-project",
+        "research-practices",
         "hive-commit",
         "hive-directive-amend",
         "hive-editless-question",
-        "hive-knowledge-capture",
-        "hive-knowledge-query",
-        "hive-knowledge-scan",
-        "hive-loop-engineering",
-        "hive-prompt-refine",
-        "hive-simple-question",
+        "record-knowledge",
+        "search-knowledge",
+        "import-repository-knowledge",
+        "engineer-run",
+        "refine-prompt",
+        "answer",
         "hive-source-wiki",
         "hive-usage-guard",
-        "hive-wiki",
+        "manage-wiki",
     }
 )
 CURRENT_CONSUMER_SKILLS = frozenset(
     {
-        "ai-slop-cleaner",
-        "auto-setup-harness",
-        "best-practice-research",
-        "hive-judge-package",
-        "hive-knowledge-capture",
-        "hive-knowledge-maintenance",
-        "hive-knowledge-promote",
-        "hive-knowledge-query",
-        "hive-knowledge-scan",
-        "hive-loop-engineering",
-        "hive-migrate",
-        "hive-project-upgrade",
-        "hive-prompt-refine",
-        "hive-role-handoff",
-        "hive-run-checkpoint",
-        "hive-run-resume",
-        "hive-simple-question",
-        "hive-update",
-        "hive-usage-guard",
-        "hive-wiki",
-        "setup-harness",
-        "setup-hive",
+        "clean-ai-slop",
+        "auto-setup-project",
+        "research-practices",
+        "verify-package",
+        "record-knowledge",
+        "maintain-knowledge",
+        "share-knowledge",
+        "search-knowledge",
+        "import-repository-knowledge",
+        "engineer-run",
+        "migrate-project",
+        "upgrade-project",
+        "refine-prompt",
+        "handoff-role",
+        "save-progress",
+        "resume-work",
+        "answer",
+        "update-hive",
+        "manage-usage",
+        "manage-wiki",
+        "setup-project",
+        "configure",
     }
 )
 CURRENT_SHARED_SKILLS = CURRENT_SOURCE_SKILLS & CURRENT_CONSUMER_SKILLS
 
 V09_SKILL_NAMES = (
-    "ai-slop-cleaner",
-    "best-practice-research",
-    "hive-knowledge-scan",
-    "hive-loop-engineering",
-    "hive-wiki",
+    "clean-ai-slop",
+    "research-practices",
+    "import-repository-knowledge",
+    "engineer-run",
+    "manage-wiki",
 )
 V09_RUNTIME_FILES = (
     "Cargo.toml",
@@ -205,6 +205,10 @@ V09_RUNTIME_FILES = (
     "crates/hive-wiki/src/shared.rs",
     "crates/hive-wiki/src/store.rs",
     "harness/skills/catalog.yml",
+    "harness/skills/record-knowledge/SKILL.md",
+    "harness/skills/maintain-knowledge/SKILL.md",
+    "harness/skills/share-knowledge/SKILL.md",
+    "harness/skills/search-knowledge/SKILL.md",
     "schemas/host-capability.schema.json",
     "schemas/loop-dispatch.schema.json",
     "schemas/loop-graph.schema.json",
@@ -217,12 +221,16 @@ V09_DIRECTIVE_FILES = (
     ".agents/directives/05-security-safety.md",
 )
 V09_SKILL_GLOBS = (
-    "ai-slop-cleaner",
-    "best-practice-research",
-    "hive-knowledge-*",
-    "hive-loop-*",
+    "clean-ai-slop",
+    "research-practices",
+    "record-knowledge",
+    "maintain-knowledge",
+    "share-knowledge",
+    "search-knowledge",
+    "import-repository-knowledge",
+    "engineer-run",
     "hive-source-wiki",
-    "hive-wiki",
+    "manage-wiki",
 )
 TEXT_SUFFIXES = {
     ".json",
@@ -491,7 +499,7 @@ class V09SkillInventoryDocumentContract(unittest.TestCase):
         self.assertEqual(actual_consumer, CURRENT_CONSUMER_SKILLS)
         self.assertEqual(len(CURRENT_SOURCE_SKILLS), 15)
         self.assertEqual(len(CURRENT_CONSUMER_SKILLS), 22)
-        self.assertEqual(len(CURRENT_SHARED_SKILLS), 11)
+        self.assertEqual(len(CURRENT_SHARED_SKILLS), 10)
 
         sections = (
             (
@@ -500,7 +508,7 @@ class V09SkillInventoryDocumentContract(unittest.TestCase):
                 CURRENT_SOURCE_SKILLS,
             ),
             (
-                "### 현재 source↔consumer 교집합 11/11",
+                "### 현재 source↔consumer 교집합 10/10",
                 "### 게시된 0.8 기준선",
                 CURRENT_SHARED_SKILLS,
             ),
@@ -519,7 +527,7 @@ class V09SkillInventoryDocumentContract(unittest.TestCase):
             section(
                 self.text,
                 "### 현재 consumer Skill 22/22",
-                "### 현재 source↔consumer 교집합 11/11",
+                "### 현재 source↔consumer 교집합 10/10",
             ),
         )
         self.assertEqual(len(consumer_values), len(CURRENT_CONSUMER_SKILLS))
@@ -643,10 +651,10 @@ class V09RuntimeBoundaryContract(unittest.TestCase):
             "crates/hive-wiki/src/scan.rs",
             "crates/hive-wiki/src/store.rs",
             "harness/skills/catalog.yml",
-            "harness/skills/hive-knowledge-capture/SKILL.md",
-            "harness/skills/hive-knowledge-maintenance/SKILL.md",
-            "harness/skills/hive-knowledge-promote/SKILL.md",
-            "harness/skills/hive-knowledge-query/SKILL.md",
+            "harness/skills/record-knowledge/SKILL.md",
+            "harness/skills/maintain-knowledge/SKILL.md",
+            "harness/skills/share-knowledge/SKILL.md",
+            "harness/skills/search-knowledge/SKILL.md",
             "schemas/knowledge-bundle-manifest.schema.json",
             "schemas/knowledge-scan-result.schema.json",
             "schemas/loop-dispatch.schema.json",

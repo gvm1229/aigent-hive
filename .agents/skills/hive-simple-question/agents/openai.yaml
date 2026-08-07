@@ -1,6 +1,0 @@
-interface:
-  display_name: "Hive Simple Question"
-  short_description: "Answer a self-contained general question"
-  default_prompt: "Use $hive-simple-question to answer this self-contained question after the required gates."
-policy:
-  allow_implicit_invocation: false

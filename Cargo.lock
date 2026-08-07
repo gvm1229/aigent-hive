@@ -517,6 +517,7 @@ dependencies = [
  "cap-std",
  "ed25519-dalek",
  "hive-core",
+ "hive-projection",
  "hive-render",
  "hive-wiki",
  "serde",

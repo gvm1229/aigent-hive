@@ -53,71 +53,71 @@ personas:
       ko: 행동 추론 없는 사용자 제공 상호작용 방식
 
 mandatory_skills:
-  - setup-hive
+  - configure
 
 skill_dependencies:
-  - skill: setup-hive
+  - skill: configure
     requires: []
-  - skill: setup-harness
+  - skill: setup-project
     requires: []
-  - skill: auto-setup-harness
+  - skill: auto-setup-project
     requires:
-      - setup-harness
-  - skill: hive-simple-question
+      - setup-project
+  - skill: answer
     requires: []
-  - skill: hive-prompt-refine
+  - skill: refine-prompt
     requires: []
-  - skill: hive-knowledge-capture
+  - skill: record-knowledge
     requires:
-      - hive-knowledge-query
-  - skill: hive-knowledge-query
+      - search-knowledge
+  - skill: search-knowledge
     requires: []
-  - skill: hive-knowledge-promote
+  - skill: share-knowledge
     requires:
-      - hive-knowledge-query
-      - hive-knowledge-capture
-  - skill: hive-knowledge-maintenance
+      - search-knowledge
+      - record-knowledge
+  - skill: maintain-knowledge
     requires:
-      - hive-knowledge-query
-  - skill: hive-run-checkpoint
+      - search-knowledge
+  - skill: save-progress
     requires: []
-  - skill: hive-run-resume
+  - skill: resume-work
     requires:
-      - hive-run-checkpoint
-  - skill: hive-usage-guard
+      - save-progress
+  - skill: manage-usage
     requires: []
-  - skill: hive-role-handoff
+  - skill: handoff-role
     requires: []
-  - skill: hive-judge-package
+  - skill: verify-package
     requires: []
-  - skill: hive-update
+  - skill: update-hive
     requires: []
-  - skill: hive-project-upgrade
+  - skill: upgrade-project
     requires:
-      - hive-update
-  - skill: hive-migrate
+      - update-hive
+  - skill: migrate-project
     requires:
-      - hive-update
-  - skill: hive-loop-engineering
+      - update-hive
+  - skill: engineer-run
     requires:
-      - hive-judge-package
-      - hive-role-handoff
-      - hive-run-checkpoint
-      - hive-run-resume
-      - hive-usage-guard
-  - skill: hive-wiki
+      - verify-package
+      - handoff-role
+      - save-progress
+      - resume-work
+      - manage-usage
+  - skill: manage-wiki
     requires:
-      - hive-knowledge-capture
-      - hive-knowledge-maintenance
-      - hive-knowledge-query
-      - hive-knowledge-scan
-  - skill: ai-slop-cleaner
+      - record-knowledge
+      - maintain-knowledge
+      - search-knowledge
+      - import-repository-knowledge
+  - skill: clean-ai-slop
     requires: []
-  - skill: best-practice-research
+  - skill: research-practices
     requires: []
-  - skill: hive-knowledge-scan
+  - skill: import-repository-knowledge
     requires:
-      - hive-knowledge-promote
+      - share-knowledge
 
 # Reserved for a future signed consent contract. This release supports built-in Skills only.
 optional_third_party_skills: []

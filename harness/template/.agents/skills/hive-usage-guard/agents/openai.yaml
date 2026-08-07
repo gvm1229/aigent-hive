@@ -1,6 +1,0 @@
-interface:
-  display_name: "Hive Usage Guard"
-  short_description: "Control the installed Hive usage safeguard"
-  default_prompt: "Use $hive-usage-guard to show or change this installed Hive usage safeguard."
-policy:
-  allow_implicit_invocation: false

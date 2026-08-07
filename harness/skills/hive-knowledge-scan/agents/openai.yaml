@@ -1,6 +1,0 @@
-interface:
-  display_name: "Hive Knowledge Scan"
-  short_description: "Review directory facts before canonical capture"
-  default_prompt: "Use $hive-knowledge-scan to inventory this directory and prepare reviewed facts."
-policy:
-  allow_implicit_invocation: false

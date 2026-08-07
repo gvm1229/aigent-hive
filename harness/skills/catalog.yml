@@ -1,6 +1,6 @@
 schema_version: 1
 skills:
-  - name: setup-hive
+  - name: configure
     description: Configure or reconfigure provider-neutral Aigent Hive preferences at user scope through the signed Hive CLI.
     provided_by: hive
     superseded_by_external: []
@@ -13,7 +13,7 @@ skills:
       - shell
     availability: implemented
 
-  - name: setup-harness
+  - name: setup-project
     description: Inspect a project and configure or reconfigure its local Aigent Hive harness through the signed Hive CLI.
     provided_by: hive
     superseded_by_external: []
@@ -26,7 +26,7 @@ skills:
       - shell
     availability: implemented
 
-  - name: auto-setup-harness
+  - name: auto-setup-project
     description: Inherit operational global preferences, infer project setup from canonical repository evidence, ask only unresolved questions, and configure the harness through the signed Hive CLI.
     provided_by: hive
     superseded_by_external: []
@@ -39,7 +39,7 @@ skills:
       - shell
     availability: implemented
 
-  - name: hive-simple-question
+  - name: answer
     description: Answer a self-contained question after required usage and knowledge gates without project inspection, external research, multi-step work, or mutation.
     provided_by: hive
     superseded_by_external: []
@@ -49,7 +49,7 @@ skills:
     capabilities: []
     availability: implemented
 
-  - name: hive-prompt-refine
+  - name: refine-prompt
     description: Create, improve, or structure a copy-ready prompt for explicit prompt intent or material ambiguity in ordinary work; refine-only always stops for exact approval before execution.
     provided_by: hive
     superseded_by_external: []
@@ -59,7 +59,7 @@ skills:
     capabilities: []
     availability: implemented
 
-  - name: hive-knowledge-capture
+  - name: record-knowledge
     description: Review every Wiki-enabled user turn for one durable fact, preference, or workflow and write only an agent-reviewed canonical claim; also ingest reviewed sources.
     provided_by: hive
     superseded_by_external: []
@@ -73,7 +73,7 @@ skills:
       - shell
     availability: implemented
 
-  - name: hive-knowledge-query
+  - name: search-knowledge
     description: Run one target-derived bounded Hive retrieval, with one-action authorization for every confidential scope and untrusted-result isolation.
     provided_by: hive
     superseded_by_external: []
@@ -87,7 +87,7 @@ skills:
       - shell
     availability: implemented
 
-  - name: hive-knowledge-promote
+  - name: share-knowledge
     description: Preview and explicitly promote one digest-bound eligible page or reviewed scan claim into user-scope canonical Hive knowledge.
     provided_by: hive
     superseded_by_external: []
@@ -102,7 +102,7 @@ skills:
       - shell
     availability: implemented
 
-  - name: hive-knowledge-maintenance
+  - name: maintain-knowledge
     description: Lint, rebuild, delete, or suppress canonical Hive knowledge through explicit signed CLI actions while preserving the disposable-index boundary.
     provided_by: hive
     superseded_by_external: []
@@ -120,7 +120,7 @@ skills:
       - shell
     availability: implemented
 
-  - name: hive-run-checkpoint
+  - name: save-progress
     description: Record a durable Hive run checkpoint in canonical Markdown without owning execution, retries, or continuation.
     provided_by: hive
     superseded_by_external: []
@@ -133,7 +133,7 @@ skills:
       - run-state
     availability: implemented
 
-  - name: hive-run-resume
+  - name: resume-work
     description: Read and validate a durable Hive run handoff for a host-owned fresh-session resume without starting a persistence loop.
     provided_by: hive
     superseded_by_external: []
@@ -145,7 +145,7 @@ skills:
       - run-state
     availability: implemented
 
-  - name: hive-usage-guard
+  - name: manage-usage
     description: Inspect or change the installed usage threshold and current-session safeguard through the signed Hive CLI without owning continuation or orchestration.
     provided_by: hive
     superseded_by_external: []
@@ -159,7 +159,7 @@ skills:
       - shell
     availability: implemented
 
-  - name: hive-role-handoff
+  - name: handoff-role
     description: Update canonical role assignment and handoff Markdown while preserving user-authored role content and leaving orchestration to the resolved host owner.
     provided_by: hive
     superseded_by_external: []
@@ -172,7 +172,7 @@ skills:
       - run-state
     availability: implemented
 
-  - name: hive-judge-package
+  - name: verify-package
     description: Validate a digest-bound clean-context package and authenticated Ed25519 owner, judge, and human attestations without signing, running a model, or exposing judge identities or findings.
     provided_by: hive
     superseded_by_external: []
@@ -185,7 +185,7 @@ skills:
       - run-state
     availability: implemented
 
-  - name: hive-update
+  - name: update-hive
     description: Stage, verify, back up, and atomically activate a compatible signed Hive update without changing canonical knowledge or external plugins.
     provided_by: hive
     superseded_by_external: []
@@ -198,7 +198,7 @@ skills:
       - shell
     availability: implemented
 
-  - name: hive-project-upgrade
+  - name: upgrade-project
     description: Scan, preview, apply, validate, or recover release-generated project directives and Skills with a local-priority three-way merge.
     provided_by: hive
     superseded_by_external: []
@@ -211,7 +211,7 @@ skills:
       - shell
     availability: implemented
 
-  - name: hive-migrate
+  - name: migrate-project
     description: Apply an explicitly supported Hive schema migration with ownership protection, backup, validation, and rollback while rebuilding disposable indexes.
     provided_by: hive
     superseded_by_external: []
@@ -224,7 +224,7 @@ skills:
       - shell
     availability: implemented
 
-  - name: hive-loop-engineering
+  - name: engineer-run
     description: Engineer and validate bounded evidence-gated Hive run graphs while leaving every task launch to the active host.
     provided_by: hive
     superseded_by_external: []
@@ -238,7 +238,7 @@ skills:
       - shell
     availability: implemented
 
-  - name: hive-wiki
+  - name: manage-wiki
     description: Route explicit Wiki verbs through truthful source or consumer surfaces without inventing unsupported commands or creating another data owner.
     provided_by: hive
     superseded_by_external: []
@@ -257,7 +257,7 @@ skills:
       - shell
     availability: implemented
 
-  - name: ai-slop-cleaner
+  - name: clean-ai-slop
     description: Clean explicitly selected code or UI slop through a regression-first, behavior-preserving, changed-files-only workflow.
     provided_by: hive
     superseded_by_external: []
@@ -270,7 +270,7 @@ skills:
       - shell
     availability: implemented
 
-  - name: best-practice-research
+  - name: research-practices
     description: Research current engineering practices through bounded read-only official and upstream evidence with citation-ready handoff.
     provided_by: hive
     superseded_by_external: []
@@ -283,7 +283,7 @@ skills:
       - shell
     availability: implemented
 
-  - name: hive-knowledge-scan
+  - name: import-repository-knowledge
     description: Inventory an exact directory, atomically apply reviewed claims to one stable collection, and route reusable candidates through explicit promotion.
     provided_by: hive
     superseded_by_external: []

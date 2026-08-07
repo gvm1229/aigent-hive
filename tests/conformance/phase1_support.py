@@ -53,9 +53,9 @@ def write_operational_user_setup(root: Path) -> None:
             "skills": {
                 "mode": "individual",
                 "selected": [
-                    "ai-slop-cleaner",
+                    "clean-ai-slop",
                     "auto-setup-harness",
-                    "best-practice-research",
+                    "research-practices",
                     "hive-judge-package",
                     "hive-knowledge-capture",
                     "hive-knowledge-maintenance",

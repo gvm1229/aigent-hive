@@ -1,6 +1,0 @@
-interface:
-  display_name: "Setup Harness"
-  short_description: "프로젝트용 Aigent Hive harness를 대화형으로 구성"
-  default_prompt: "Use $setup-harness to inspect this project and configure its local Aigent Hive harness."
-policy:
-  allow_implicit_invocation: false

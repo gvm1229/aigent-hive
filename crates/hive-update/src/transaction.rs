@@ -2265,6 +2265,13 @@ mod tests {
         version: &str,
         expected: &[&str],
     ) {
+        // The current projection uses public short names.  A legacy fixture is
+        // deliberately rebuilt with its original directories so update tests
+        // exercise migration from the exact historical on-disk shape.
+        for name in expected {
+            fs::create_dir_all(skill_root.join(name))
+                .expect("create historical Skill projection directory");
+        }
         let historical_setup = include_bytes!(
             "../../../tests/fixtures/phase6/migrations/0.4.0-0.6.0-setup-harness.SKILL.md"
         );
@@ -2340,81 +2347,29 @@ mod tests {
                 .expect("historical resume projection");
         }
 
-        rewrite_historical_active_skills(
-            active_path,
-            expected,
-            version,
-            &[
-                ("setup-harness", historical_setup),
-                ("hive-knowledge-capture", historical_capture),
-                ("hive-knowledge-query", historical_query),
-                ("hive-knowledge-maintenance", historical_maintenance),
-                ("hive-prompt-refine", historical_prompt_refine),
-                ("hive-simple-question", historical_simple_question),
-                ("hive-run-checkpoint", historical_checkpoint),
-                ("hive-run-resume", historical_resume),
-                ("hive-role-handoff", historical_handoff),
-                ("hive-judge-package", historical_judge),
-            ],
-        );
+        rewrite_historical_active_skills(active_path, expected, version);
     }
 
-    fn rewrite_historical_active_skills(
-        active_path: &Path,
-        expected: &[&str],
-        version: &str,
-        historical: &[(&str, &[u8])],
-    ) {
-        let mut active: serde_yaml::Value =
-            serde_yaml::from_slice(&fs::read(active_path).expect("active skills"))
-                .expect("active skills");
-        let skills = active
-            .as_mapping_mut()
-            .and_then(|mapping| mapping.get_mut(serde_yaml::Value::from("skills")))
-            .and_then(serde_yaml::Value::as_sequence_mut)
-            .expect("skills");
-        skills.retain(|entry| {
-            entry
-                .as_mapping()
-                .and_then(|mapping| mapping.get(serde_yaml::Value::from("name")))
-                .and_then(serde_yaml::Value::as_str)
-                .is_some_and(|name| expected.contains(&name))
-        });
-        for &(name, bytes) in historical {
-            if expected.contains(&name) {
-                set_active_skill_digest(skills, name, &sha256_digest(bytes));
-            }
-        }
-        if version == "0.5.0" {
-            set_active_skill_digest(
-                skills,
-                "hive-run-resume",
-                "sha256:edfbee35142b8a228d4cdb36d2674b719548fea9884d4a2b6a31353adcebb7c5",
-            );
-        }
+    fn rewrite_historical_active_skills(active_path: &Path, expected: &[&str], version: &str) {
+        let skills = hive_projection::historical_builtin_skills(version)
+            .expect("embedded historical active Skills");
+        assert_eq!(
+            skills
+                .iter()
+                .map(|skill| skill.name.as_str())
+                .collect::<BTreeSet<_>>(),
+            expected.iter().copied().collect::<BTreeSet<_>>(),
+            "legacy fixture must use the exact authenticated Skill inventory"
+        );
+        let active = hive_projection::ActiveSkills {
+            schema_version: 1,
+            skills,
+        };
         fs::write(
             active_path,
             serde_yaml::to_string(&active).expect("active skills"),
         )
         .expect("legacy active skills");
-    }
-
-    fn set_active_skill_digest(skills: &mut [serde_yaml::Value], name: &str, digest: &str) {
-        let entry = skills
-            .iter_mut()
-            .find(|entry| {
-                entry
-                    .as_mapping()
-                    .and_then(|mapping| mapping.get(serde_yaml::Value::from("name")))
-                    .and_then(serde_yaml::Value::as_str)
-                    == Some(name)
-            })
-            .and_then(serde_yaml::Value::as_mapping_mut)
-            .expect("historical active Skill entry");
-        entry.insert(
-            serde_yaml::Value::from("content_digest"),
-            serde_yaml::Value::from(digest),
-        );
     }
 
     fn update_request<'a>(
@@ -3342,9 +3297,9 @@ mod tests {
         assert!(!consumer.join(JOURNAL_PATH).exists());
         assert!(!consumer.join(".hive/index/hive.sqlite3").exists());
         assert!(consumer
-            .join(".agents/skills/setup-harness/SKILL.md")
+            .join(".agents/skills/setup-project/SKILL.md")
             .is_file());
-        for unselected in ["hive-update", "hive-migrate"] {
+        for unselected in ["update-hive", "migrate-project"] {
             assert!(!consumer
                 .join(format!(".agents/skills/{unselected}/SKILL.md"))
                 .exists());

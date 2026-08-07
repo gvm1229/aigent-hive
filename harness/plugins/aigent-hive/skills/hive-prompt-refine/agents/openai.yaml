@@ -1,6 +1,0 @@
-interface:
-  display_name: "Hive Prompt Refine"
-  short_description: "Refine ambiguous work, then await approval"
-  default_prompt: "Use $hive-prompt-refine to refine this prompt without executing it."
-policy:
-  allow_implicit_invocation: true

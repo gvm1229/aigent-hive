@@ -21,6 +21,7 @@ tempfile.workspace = true
 toml.workspace = true
 
 [dev-dependencies]
+hive-projection = { path = "../hive-projection" }
 
 [lints]
 workspace = true

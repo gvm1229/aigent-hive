@@ -812,9 +812,9 @@ def validate_render(render_root: Path, input_data_path: Path) -> None:
     active_entries = active_skills["skills"]
     assert isinstance(active_entries, list)
     expected_skill_names = [
-        "ai-slop-cleaner",
+        "clean-ai-slop",
         "auto-setup-harness",
-        "best-practice-research",
+        "research-practices",
         "hive-judge-package",
         "hive-knowledge-capture",
         "hive-knowledge-maintenance",

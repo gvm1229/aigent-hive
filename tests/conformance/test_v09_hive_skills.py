@@ -13,18 +13,18 @@ import yaml
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 CANONICAL_ROOT = REPOSITORY_ROOT / "harness/skills"
 NEW_SKILLS = (
-    "ai-slop-cleaner",
-    "best-practice-research",
-    "hive-knowledge-scan",
-    "hive-loop-engineering",
-    "hive-wiki",
+    "clean-ai-slop",
+    "research-practices",
+    "import-repository-knowledge",
+    "engineer-run",
+    "manage-wiki",
 )
 GATED_EXISTING = (
-    "hive-knowledge-capture",
-    "hive-knowledge-query",
-    "hive-simple-question",
+    "record-knowledge",
+    "search-knowledge",
+    "answer",
 )
-PROMOTION_SKILLS = ("hive-knowledge-promote",)
+PROMOTION_SKILLS = ("share-knowledge",)
 BODY_ROOTS = (
     "harness/skills",
     ".agents/skills",
@@ -99,7 +99,7 @@ class V09HiveSkillProjectionTests(unittest.TestCase):
                     canonical["policy"]["allow_implicit_invocation"],
                     name in implicit,
                 )
-                self.assertIn(f"${name}", canonical["interface"]["default_prompt"])
+                self.assertIn(f"$aigent-hive:{name}", canonical["interface"]["default_prompt"])
                 for root in METADATA_ROOTS[1::2]:
                     metadata = read_yaml(
                         REPOSITORY_ROOT / root / name / "agents/openai.yaml"
@@ -137,12 +137,12 @@ class V09HiveSkillProjectionTests(unittest.TestCase):
 
 class V09HiveSkillBehaviorTests(unittest.TestCase):
     def test_loop_automatic_prepare_contract_has_exact_authorization_sequence(self) -> None:
-        text = skill_text("hive-loop-engineering")
+        text = skill_text("engineer-run")
         assert_order(
             self,
             text,
             (
-                "$hive-usage-guard",
+                "$aigent-hive:manage-usage",
                 "evidence_digest",
                 "hive run resume",
                 "--dispatch-intent automatic",
@@ -189,7 +189,7 @@ class V09HiveSkillBehaviorTests(unittest.TestCase):
         self.assertRegex(source, r'"spawned": false')
 
     def test_wiki_has_exact_ten_verb_surface_and_safety_contract(self) -> None:
-        text = skill_text("hive-wiki")
+        text = skill_text("manage-wiki")
         for verb in (
             "add",
             "query",
@@ -207,7 +207,7 @@ class V09HiveSkillBehaviorTests(unittest.TestCase):
             self.assertIn(required, text)
 
     def test_wiki_source_routes_only_real_source_surfaces(self) -> None:
-        text = skill_text("hive-wiki")
+        text = skill_text("manage-wiki")
         scope = text.split("## Scope", 1)[1].split("## Verbs", 1)[0]
         for required in (
             "source `add`",
@@ -222,7 +222,7 @@ class V09HiveSkillBehaviorTests(unittest.TestCase):
         self.assertNotIn("route `add|query|lint|list|read|delete|refresh`", scope)
 
     def test_wiki_quick_add_asks_only_for_missing_review_fields(self) -> None:
-        text = skill_text("hive-wiki")
+        text = skill_text("manage-wiki")
         quick_add = text.split("## Quick add", 1)[1].split("## Safety", 1)[0]
         for required in (
             "title",
@@ -242,7 +242,7 @@ class V09HiveSkillBehaviorTests(unittest.TestCase):
         self.assertIn("never re-ask a known field", quick_add)
 
     def test_cleaner_research_and_scan_keep_their_narrow_boundaries(self) -> None:
-        cleaner = skill_text("ai-slop-cleaner")
+        cleaner = skill_text("clean-ai-slop")
         for required in (
             "changed-file allowlist",
             "pre-existing-failure",
@@ -253,7 +253,7 @@ class V09HiveSkillBehaviorTests(unittest.TestCase):
         ):
             self.assertIn(required, cleaner)
 
-        research = skill_text("best-practice-research")
+        research = skill_text("research-practices")
         for required in (
             "read-only",
             "official specification",
@@ -264,19 +264,19 @@ class V09HiveSkillBehaviorTests(unittest.TestCase):
         ):
             self.assertIn(required, research)
 
-        scan = skill_text("hive-knowledge-scan")
+        scan = skill_text("import-repository-knowledge")
         assert_order(self, scan, ("--inventory", "--candidates", "--apply"))
         for required in (
             "target_mutated=false",
             "Never create a table per directory",
             "untrusted data",
-            "$hive-knowledge-promote",
+            "$aigent-hive:share-knowledge",
             "--expected-source-digest",
             "--confirm-global-promotion",
         ):
             self.assertIn(required, scan)
 
-        promote = skill_text("hive-knowledge-promote")
+        promote = skill_text("share-knowledge")
         assert_order(
             self,
             promote,
@@ -296,7 +296,7 @@ class V09HiveSkillBehaviorTests(unittest.TestCase):
             self.assertIn(required, promote)
 
     def test_query_capture_and_simple_question_gates_do_not_overlap(self) -> None:
-        query = skill_text("hive-knowledge-query")
+        query = skill_text("search-knowledge")
         for required in (
             "exactly one automatic lookup",
             "--target <current-project-root>",
@@ -313,11 +313,11 @@ class V09HiveSkillBehaviorTests(unittest.TestCase):
             "query drift",
             "untrusted data",
             "On no hit",
-            "$best-practice-research",
+            "$aigent-hive:research-practices",
         ):
             self.assertIn(required, query)
 
-        capture = skill_text("hive-knowledge-capture")
+        capture = skill_text("record-knowledge")
         for required in (
             "every user turn",
             "knowledge-remember-request.schema.json",
@@ -328,11 +328,11 @@ class V09HiveSkillBehaviorTests(unittest.TestCase):
         ):
             self.assertIn(required, capture)
 
-        simple = skill_text("hive-simple-question")
+        simple = skill_text("answer")
         for required in (
             "single bounded retrieval result",
             "Do not call another tool",
-            "separate `$hive-knowledge-capture` completion gate",
+            "separate `$aigent-hive:record-knowledge` completion gate",
             "Ordinary",
             "remain write-free",
         ):

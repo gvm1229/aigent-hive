@@ -34,63 +34,63 @@ ROUTING_REQUEST_SCHEMA_PATH = (
 )
 
 BUILTIN_SKILLS = {
-    "ai-slop-cleaner",
-    "best-practice-research",
-    "setup-hive",
-    "setup-harness",
-    "auto-setup-harness",
-    "hive-simple-question",
-    "hive-prompt-refine",
-    "hive-knowledge-capture",
-    "hive-knowledge-promote",
-    "hive-knowledge-query",
-    "hive-knowledge-scan",
-    "hive-loop-engineering",
-    "hive-knowledge-maintenance",
-    "hive-run-checkpoint",
-    "hive-run-resume",
-    "hive-role-handoff",
-    "hive-judge-package",
-    "hive-update",
-    "hive-usage-guard",
-    "hive-migrate",
-    "hive-project-upgrade",
-    "hive-wiki",
+    "clean-ai-slop",
+    "research-practices",
+    "configure",
+    "setup-project",
+    "auto-setup-project",
+    "answer",
+    "refine-prompt",
+    "record-knowledge",
+    "share-knowledge",
+    "search-knowledge",
+    "import-repository-knowledge",
+    "engineer-run",
+    "maintain-knowledge",
+    "save-progress",
+    "resume-work",
+    "handoff-role",
+    "verify-package",
+    "update-hive",
+    "manage-usage",
+    "migrate-project",
+    "upgrade-project",
+    "manage-wiki",
 }
 IMPLEMENTED_SKILLS = {
-    "ai-slop-cleaner",
-    "best-practice-research",
-    "setup-hive",
-    "setup-harness",
-    "auto-setup-harness",
-    "hive-simple-question",
-    "hive-prompt-refine",
-    "hive-knowledge-capture",
-    "hive-knowledge-promote",
-    "hive-knowledge-query",
-    "hive-knowledge-scan",
-    "hive-loop-engineering",
-    "hive-knowledge-maintenance",
-    "hive-run-checkpoint",
-    "hive-run-resume",
-    "hive-role-handoff",
-    "hive-judge-package",
-    "hive-update",
-    "hive-usage-guard",
-    "hive-migrate",
-    "hive-project-upgrade",
-    "hive-wiki",
+    "clean-ai-slop",
+    "research-practices",
+    "configure",
+    "setup-project",
+    "auto-setup-project",
+    "answer",
+    "refine-prompt",
+    "record-knowledge",
+    "share-knowledge",
+    "search-knowledge",
+    "import-repository-knowledge",
+    "engineer-run",
+    "maintain-knowledge",
+    "save-progress",
+    "resume-work",
+    "handoff-role",
+    "verify-package",
+    "update-hive",
+    "manage-usage",
+    "migrate-project",
+    "upgrade-project",
+    "manage-wiki",
 }
 CATALOG_ONLY_SKILLS = BUILTIN_SKILLS - IMPLEMENTED_SKILLS
 IMPLICIT_PLUGIN_SKILLS = {
-    "setup-hive",
-    "setup-harness",
-    "auto-setup-harness",
-    "hive-simple-question",
-    "hive-knowledge-capture",
-    "hive-knowledge-query",
-    "hive-prompt-refine",
-    "hive-usage-guard",
+    "configure",
+    "setup-project",
+    "auto-setup-project",
+    "answer",
+    "record-knowledge",
+    "search-knowledge",
+    "refine-prompt",
+    "manage-usage",
 }
 IMPLICIT_DESCRIPTION_BUDGET = 1_800
 
@@ -167,17 +167,17 @@ class Phase3SkillSourceContract(unittest.TestCase):
 
     def test_source_auto_setup_projection_matches_harness_canonical_bytes(self) -> None:
         canonical = (
-            SKILL_ROOT / "auto-setup-harness/SKILL.md"
+            SKILL_ROOT / "auto-setup-project/SKILL.md"
         ).read_bytes()
         source_projection = (
             REPOSITORY_ROOT
-            / ".agents/skills/auto-setup-harness/SKILL.md"
+            / ".agents/skills/auto-setup-project/SKILL.md"
         ).read_bytes()
         self.assertEqual(source_projection, canonical)
 
     def test_auto_setup_infers_and_asks_only_unresolved_fields(self) -> None:
         skill = (
-            SKILL_ROOT / "auto-setup-harness/SKILL.md"
+            SKILL_ROOT / "auto-setup-project/SKILL.md"
         ).read_text(encoding="utf-8")
         for required in (
             "confidence as `explicit`, `strong`, or `unresolved`",
@@ -191,7 +191,7 @@ class Phase3SkillSourceContract(unittest.TestCase):
                 self.assertIn(required, skill)
 
     def test_setup_hive_expedited_defaults_are_fixed(self) -> None:
-        skill = (SKILL_ROOT / "setup-hive/SKILL.md").read_text(
+        skill = (SKILL_ROOT / "configure/SKILL.md").read_text(
             encoding="utf-8"
         )
         for required in (
@@ -216,7 +216,7 @@ class Phase3SkillSourceContract(unittest.TestCase):
         user_schema = (
             REPOSITORY_ROOT / "schemas/user-setup.schema.json"
         ).read_text(encoding="utf-8")
-        setup_skill = (SKILL_ROOT / "setup-hive/SKILL.md").read_text(
+        setup_skill = (SKILL_ROOT / "configure/SKILL.md").read_text(
             encoding="utf-8"
         )
 
@@ -233,7 +233,7 @@ class Phase3SkillSourceContract(unittest.TestCase):
         user_schema = (
             REPOSITORY_ROOT / "schemas/user-setup.schema.json"
         ).read_text(encoding="utf-8")
-        setup_skill = (SKILL_ROOT / "setup-hive/SKILL.md").read_text(
+        setup_skill = (SKILL_ROOT / "configure/SKILL.md").read_text(
             encoding="utf-8"
         )
 
@@ -253,7 +253,7 @@ class Phase3SkillSourceContract(unittest.TestCase):
         consumer = (REPOSITORY_ROOT / "harness/template/AGENTS.md.jinja").read_text(
             encoding="utf-8"
         )
-        setup_hive = (SKILL_ROOT / "setup-hive/SKILL.md").read_text(encoding="utf-8")
+        setup_hive = (SKILL_ROOT / "configure/SKILL.md").read_text(encoding="utf-8")
 
         shared_rule = (
             "Present every user-facing list as a readable Markdown list or table with one "
@@ -268,10 +268,10 @@ class Phase3SkillSourceContract(unittest.TestCase):
         self.assertIn("comma-separated paragraph", setup_hive)
 
     def test_setup_scope_routing_keeps_global_and_project_work_disjoint(self) -> None:
-        global_skill = (SKILL_ROOT / "setup-hive/SKILL.md").read_text(
+        global_skill = (SKILL_ROOT / "configure/SKILL.md").read_text(
             encoding="utf-8"
         )
-        project_skill = (SKILL_ROOT / "setup-harness/SKILL.md").read_text(
+        project_skill = (SKILL_ROOT / "setup-project/SKILL.md").read_text(
             encoding="utf-8"
         )
         for required in (
@@ -284,7 +284,7 @@ class Phase3SkillSourceContract(unittest.TestCase):
                 self.assertIn(required, global_skill)
         for required in (
             "only when the user identifies a project, repository, folder, path",
-            "Those requests belong to `setup-hive`",
+            "Those requests belong to `configure`",
             "separate confirmation before project inspection, preview, or apply",
         ):
             with self.subTest(project_requirement=required):
@@ -294,7 +294,7 @@ class Phase3SkillSourceContract(unittest.TestCase):
         source = (REPOSITORY_ROOT / ".agents/directives/01-behavior.md").read_text(
             encoding="utf-8"
         )
-        setup_hive = (SKILL_ROOT / "setup-hive/SKILL.md").read_text(encoding="utf-8")
+        setup_hive = (SKILL_ROOT / "configure/SKILL.md").read_text(encoding="utf-8")
 
         self.assertIn("do not ask a yes/no question", source)
         for required in (
@@ -310,11 +310,11 @@ class Phase3SkillSourceContract(unittest.TestCase):
 
     def test_source_prompt_refine_projection_matches_harness_canonical_bytes(self) -> None:
         canonical = (
-            SKILL_ROOT / "hive-prompt-refine/SKILL.md"
+            SKILL_ROOT / "refine-prompt/SKILL.md"
         ).read_bytes()
         source_projection = (
             REPOSITORY_ROOT
-            / ".agents/skills/hive-prompt-refine/SKILL.md"
+            / ".agents/skills/refine-prompt/SKILL.md"
         ).read_bytes()
         self.assertEqual(source_projection, canonical)
 
@@ -326,7 +326,7 @@ class Phase3SkillSourceContract(unittest.TestCase):
             encoding="utf-8"
         )
         for required in (
-            "automatically load `hive-prompt-refine`",
+            "automatically load `aigent-hive:refine-prompt`",
             "`awaiting-approval`",
             "project read, tool, write, network, subagent, run, memory capture, and execution",
             "sufficiently clear ordinary task, simple or editless question",
@@ -1162,7 +1162,7 @@ class Phase3SkillSourceContract(unittest.TestCase):
             REPOSITORY_ROOT / "harness/template/AGENTS.md.jinja"
         ).read_text(encoding="utf-8")
         capture_skill = (
-            REPOSITORY_ROOT / "harness/skills/hive-knowledge-capture/SKILL.md"
+            REPOSITORY_ROOT / "harness/skills/record-knowledge/SKILL.md"
         ).read_text(encoding="utf-8")
 
         self.assertEqual(project_directive, template_directive)
@@ -1190,12 +1190,12 @@ class Phase3SkillSourceContract(unittest.TestCase):
             REPOSITORY_ROOT / "crates/hive-render/src/lib.rs"
         ).read_text(encoding="utf-8")
         canonical_skill = (
-            REPOSITORY_ROOT / "harness/skills/hive-usage-guard/SKILL.md"
+            REPOSITORY_ROOT / "harness/skills/manage-usage/SKILL.md"
         ).read_text(encoding="utf-8")
         projected_skill = (
             REPOSITORY_ROOT
             / "harness/template/.agents"
-            / "skills/hive-usage-guard/SKILL.md"
+            / "skills/manage-usage/SKILL.md"
         ).read_text(encoding="utf-8")
         guidance = (
             REPOSITORY_ROOT / "docs/guidance-schema.md"
@@ -1339,13 +1339,13 @@ class Phase3SkillSourceContract(unittest.TestCase):
                     policy.get("allow_implicit_invocation"),
                     name in IMPLICIT_PLUGIN_SKILLS,
                 )
-                self.assertIn(f"${name}", interface.get("default_prompt", ""))
+                self.assertIn(f"$aigent-hive:{name}", interface.get("default_prompt", ""))
                 self.assertEqual(
                     (plugin_root / name / "agents/openai.yaml").read_bytes(),
                     metadata_path.read_bytes(),
                 )
 
-                if name == "setup-hive":
+                if name == "configure":
                     self.assertFalse((compatibility_root / name).exists())
                     continue
 
@@ -1360,7 +1360,7 @@ class Phase3SkillSourceContract(unittest.TestCase):
                 compatibility_interface = compatibility.get("interface")
                 self.assertIsInstance(compatibility_interface, dict)
                 self.assertIn(
-                    f"${name}",
+                    f"$aigent-hive:{name}",
                     compatibility_interface.get("default_prompt", ""),
                 )
 
@@ -1386,17 +1386,16 @@ class Phase3SkillSourceContract(unittest.TestCase):
         self.assertEqual(
             overlapping_source_skills,
             {
-                "ai-slop-cleaner",
-                "auto-setup-harness",
-                "best-practice-research",
-                "hive-knowledge-capture",
-                "hive-knowledge-query",
-                "hive-knowledge-scan",
-                "hive-loop-engineering",
-                "hive-prompt-refine",
-                "hive-simple-question",
-                "hive-usage-guard",
-                "hive-wiki",
+                "clean-ai-slop",
+                "auto-setup-project",
+                "research-practices",
+                "record-knowledge",
+                "search-knowledge",
+                "import-repository-knowledge",
+                "engineer-run",
+                "refine-prompt",
+                "answer",
+                "manage-wiki",
             },
         )
         for name in overlapping_source_skills:
@@ -1418,9 +1417,9 @@ class Phase3SkillSourceContract(unittest.TestCase):
         self,
     ) -> None:
         expected = {
-            "hive-run-checkpoint": "hive run checkpoint",
-            "hive-run-resume": "hive run resume",
-            "hive-role-handoff": "hive role handoff",
+            "save-progress": "hive run checkpoint",
+            "resume-work": "hive run resume",
+            "handoff-role": "hive role handoff",
         }
         for name, command in expected.items():
             with self.subTest(name=name):
@@ -1445,9 +1444,9 @@ class Phase3SkillSourceContract(unittest.TestCase):
             / "harness/template/.agents/skills"
         )
         for name in (
-            "hive-run-checkpoint",
-            "hive-run-resume",
-            "hive-role-handoff",
+            "save-progress",
+            "resume-work",
+            "handoff-role",
         ):
             with self.subTest(name=name):
                 self.assertEqual(
@@ -1472,7 +1471,7 @@ class Phase3SkillSourceContract(unittest.TestCase):
 
     def test_simple_question_source_forbids_project_capabilities(self) -> None:
         _, body = skill_frontmatter(
-            SKILL_ROOT / "hive-simple-question/SKILL.md"
+            SKILL_ROOT / "answer/SKILL.md"
         )
         normalized = body.casefold()
         required_boundaries = (
@@ -1490,7 +1489,7 @@ class Phase3SkillSourceContract(unittest.TestCase):
 
     def test_prompt_refine_source_defaults_to_refine_only(self) -> None:
         frontmatter, body = skill_frontmatter(
-            SKILL_ROOT / "hive-prompt-refine/SKILL.md"
+            SKILL_ROOT / "refine-prompt/SKILL.md"
         )
         description = str(frontmatter["description"]).casefold()
         normalized = body.casefold()
@@ -1502,7 +1501,7 @@ class Phase3SkillSourceContract(unittest.TestCase):
         self,
     ) -> None:
         _, body = skill_frontmatter(
-            SKILL_ROOT / "hive-prompt-refine/SKILL.md"
+            SKILL_ROOT / "refine-prompt/SKILL.md"
         )
         normalized = body.casefold()
         self.assertIn("refine-and-run", normalized)
@@ -1510,7 +1509,7 @@ class Phase3SkillSourceContract(unittest.TestCase):
 
     def test_prompt_refine_source_forbids_hidden_rewrite(self) -> None:
         _, body = skill_frontmatter(
-            SKILL_ROOT / "hive-prompt-refine/SKILL.md"
+            SKILL_ROOT / "refine-prompt/SKILL.md"
         )
         normalized = body.casefold()
         self.assertIn("ordinary", normalized)
@@ -1519,7 +1518,7 @@ class Phase3SkillSourceContract(unittest.TestCase):
 
     def test_prompt_refine_source_declares_meaning_preservation(self) -> None:
         _, body = skill_frontmatter(
-            SKILL_ROOT / "hive-prompt-refine/SKILL.md"
+            SKILL_ROOT / "refine-prompt/SKILL.md"
         )
         normalized = body.casefold()
         for field in ("must", "must-not", "scope", "output", "authority"):

@@ -1,6 +1,0 @@
-interface:
-  display_name: "Hive Knowledge Query"
-  short_description: "Retrieve bounded canonical context before work"
-  default_prompt: "Use $hive-knowledge-query to run the single bounded knowledge lookup for this turn."
-policy:
-  allow_implicit_invocation: false

@@ -1,6 +1,0 @@
-interface:
-  display_name: "Hive Knowledge Capture"
-  short_description: "Remember reviewed durable knowledge safely"
-  default_prompt: "Use $hive-knowledge-capture to review this turn and remember any safe durable claim."
-policy:
-  allow_implicit_invocation: false

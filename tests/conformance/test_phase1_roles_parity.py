@@ -52,11 +52,11 @@ class Phase1CopierParity(Phase1CliTestCase):
                 elif directory_path == REPOSITORY_ROOT / ".agents":
                     ignored.add("work")
                 elif directory_path == REPOSITORY_ROOT / "harness/template/.claude/skills":
-                    user_only_directory = directory_path / "setup-hive"
+                    user_only_directory = directory_path / "configure"
                     if user_only_directory.is_dir() and not any(
                         user_only_directory.iterdir()
                     ):
-                        ignored.add("setup-hive")
+                        ignored.add("configure")
                 return ignored
 
             shutil.copytree(
@@ -136,29 +136,29 @@ class Phase1CopierParity(Phase1CliTestCase):
         active_ledger = read_yaml(active_ledger_path)
         skills = active_ledger["skills"]
         self.assertIsInstance(skills, list)
-        expected_names = [
-            "ai-slop-cleaner",
-            "auto-setup-harness",
-            "best-practice-research",
-            "hive-judge-package",
-            "hive-knowledge-capture",
-            "hive-knowledge-maintenance",
-            "hive-knowledge-promote",
-            "hive-knowledge-query",
-            "hive-knowledge-scan",
-            "hive-loop-engineering",
-            "hive-migrate",
-            "hive-project-upgrade",
-            "hive-prompt-refine",
-            "hive-role-handoff",
-            "hive-run-checkpoint",
-            "hive-run-resume",
-            "hive-simple-question",
-            "hive-update",
-            "hive-usage-guard",
-            "hive-wiki",
-            "setup-harness",
-        ]
+        expected_names = sorted([
+            "clean-ai-slop",
+            "auto-setup-project",
+            "research-practices",
+            "verify-package",
+            "record-knowledge",
+            "maintain-knowledge",
+            "share-knowledge",
+            "search-knowledge",
+            "import-repository-knowledge",
+            "engineer-run",
+            "migrate-project",
+            "upgrade-project",
+            "refine-prompt",
+            "handoff-role",
+            "save-progress",
+            "resume-work",
+            "answer",
+            "update-hive",
+            "manage-usage",
+            "manage-wiki",
+            "setup-project",
+        ])
         self.assertEqual([entry["name"] for entry in skills], expected_names)
         for projection_root in projection_roots:
             projected_skill_root = target / projection_root / "skills"

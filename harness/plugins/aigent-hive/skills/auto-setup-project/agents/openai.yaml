@@ -1,0 +1,6 @@
+interface:
+  display_name: "Automatically set up project"
+  short_description: "Set up a project from repository evidence with minimal questions."
+  default_prompt: "Use $aigent-hive:auto-setup-project to inspect this project and install its Hive harness with minimal questions."
+policy:
+  allow_implicit_invocation: true

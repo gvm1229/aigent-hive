@@ -1,64 +1,163 @@
 schema_version: 1
 skills:
-- name: ai-slop-cleaner
+- name: answer
   source_type: built-in
-  content_digest: sha256:64677e50a430c530e6cd80b9af638cdce3d86578a0a889f83ce5df80afce9c90
+  content_digest: sha256:55ff588fb5a2ebb8f0ffcea48a917bbc522a1e68cd6ac6742c8fd2a3dd2ee243
+  side_effect_class: none
+  capabilities: []
+  consent_digest: null
+- name: auto-setup-project
+  source_type: built-in
+  content_digest: sha256:2a4f95cc7197c14339cf778b058136ed3ba3090e09d8c78d738059dde3c753f3
   side_effect_class: project-write
   capabilities:
   - filesystem-read
   - filesystem-write
   - shell
   consent_digest: null
-- name: auto-setup-harness
+- name: clean-ai-slop
   source_type: built-in
-  content_digest: sha256:d97042cc39f36f8a966b068b7ef765ad1fcd88b152698a9b8106ed2add88a2e0
+  content_digest: sha256:3833f9d5e99e4dce6f83832976f23367369f0b69e89768009877b91da2ba360e
   side_effect_class: project-write
   capabilities:
   - filesystem-read
   - filesystem-write
   - shell
   consent_digest: null
-- name: best-practice-research
+- name: engineer-run
   source_type: built-in
-  content_digest: sha256:9893740064e44702cfd0daf290277826246b35375f9fe6a282676f2554328a7d
+  content_digest: sha256:8f78b2109ae189c1031280eb9edab6e4b92cc20c50e50334cec03531f1f22eeb
+  side_effect_class: project-write
+  capabilities:
+  - filesystem-read
+  - filesystem-write
+  - run-state
+  - shell
+  consent_digest: null
+- name: handoff-role
+  source_type: built-in
+  content_digest: sha256:d9d3439860919bdfe4ee306177bc7e429b16ffb74b03aa7d6ef83a8562536713
+  side_effect_class: project-write
+  capabilities:
+  - filesystem-read
+  - filesystem-write
+  - run-state
+  consent_digest: null
+- name: import-repository-knowledge
+  source_type: built-in
+  content_digest: sha256:0cb8fdac39a4558cf5d9ebdda8fdb3771dfb16814f0930589c40de48726fddad
+  side_effect_class: external-write
+  capabilities:
+  - filesystem-read
+  - filesystem-write
+  - memory-read
+  - memory-write
+  - shell
+  consent_digest: null
+- name: maintain-knowledge
+  source_type: built-in
+  content_digest: sha256:89ef545f3ad0de7661bd101dfa4dedc6085dcba4e219da47641341763165e2b0
+  side_effect_class: project-write
+  capabilities:
+  - filesystem-read
+  - filesystem-write
+  - memory-read
+  - memory-write
+  - shell
+  consent_digest: null
+- name: manage-usage
+  source_type: built-in
+  content_digest: sha256:6f3907b3a218aa2f902e7287335931086b38cd53130376424599bc255f0a0ced
+  side_effect_class: project-write
+  capabilities:
+  - filesystem-read
+  - filesystem-write
+  - run-state
+  - shell
+  consent_digest: null
+- name: manage-wiki
+  source_type: built-in
+  content_digest: sha256:7aead490cac30990d8fb43d6e26d8ff26b64dac19eab1ceca23134a10f4071a1
+  side_effect_class: external-write
+  capabilities:
+  - filesystem-read
+  - filesystem-write
+  - memory-read
+  - memory-write
+  - shell
+  consent_digest: null
+- name: migrate-project
+  source_type: built-in
+  content_digest: sha256:a78c6f2fe42b8c83f7981e2e774ca2d23bc2e9232e510645e61c93b38087487d
+  side_effect_class: project-write
+  capabilities:
+  - filesystem-read
+  - filesystem-write
+  - shell
+  consent_digest: null
+- name: record-knowledge
+  source_type: built-in
+  content_digest: sha256:7795816824272de3857e34131023faa1df922b11f883cc50daf0ec321021c039
+  side_effect_class: project-write
+  capabilities:
+  - filesystem-read
+  - filesystem-write
+  - memory-write
+  - shell
+  consent_digest: null
+- name: refine-prompt
+  source_type: built-in
+  content_digest: sha256:ee2de1307fbe22889b190a42e94ad38be9dd151d46ecc15c7928da91d0f287d2
+  side_effect_class: none
+  capabilities: []
+  consent_digest: null
+- name: research-practices
+  source_type: built-in
+  content_digest: sha256:3451d5dbf8361e4b392aa8183933c7f935f0c77eaedf44e475f870b5bb222455
   side_effect_class: read-only
   capabilities:
   - filesystem-read
   - network
   - shell
   consent_digest: null
-- name: hive-judge-package
+- name: resume-work
   source_type: built-in
-  content_digest: sha256:1e948d01fdaebcea15a0e2d7eef3214963f38ad2809376f07da4097dfa2331de
+  content_digest: sha256:b5bee3baa476a223e1c448b5ce7fc80a808c3f57b0e24246ca8e05294fc29d71
   side_effect_class: read-only
   capabilities:
   - filesystem-read
   - run-state
   consent_digest: null
-- name: hive-knowledge-capture
+- name: save-progress
   source_type: built-in
-  content_digest: sha256:d8c2eecb1fa7f3c18f9d5b2a42103b49ce20144be084b34d3fa7781b53393224
+  content_digest: sha256:dc73fbfb64273c1c9cd5b54920051bfa31d30102c7bd47cc8a59d583a2ea7d6a
   side_effect_class: project-write
   capabilities:
   - filesystem-read
   - filesystem-write
-  - memory-write
-  - shell
+  - run-state
   consent_digest: null
-- name: hive-knowledge-maintenance
+- name: search-knowledge
   source_type: built-in
-  content_digest: sha256:de7484f35d262c2c44d52a60f2c6d698f1ccb5d278f10930f412a4b1ad8be90e
-  side_effect_class: project-write
+  content_digest: sha256:e2d21cbebdecb62292d0fd0fdbea5b378769f525c3c8ed24cd2b129d1b8f04d9
+  side_effect_class: read-only
   capabilities:
   - filesystem-read
-  - filesystem-write
   - memory-read
-  - memory-write
   - shell
   consent_digest: null
-- name: hive-knowledge-promote
+- name: setup-project
   source_type: built-in
-  content_digest: sha256:77acba073d23ee590983d18c1678e79e246f6421a65888efb24edb283f9e7e2c
+  content_digest: sha256:a7a1e9dd1b472b67ec5492af71e8cb9ff2fe965438fbf0112046364ea861cc10
+  side_effect_class: project-write
+  capabilities:
+  - filesystem-read
+  - filesystem-write
+  - shell
+  consent_digest: null
+- name: share-knowledge
+  source_type: built-in
+  content_digest: sha256:636c800140d8915c8c0095288d1784d259e9b3e137b23c1b007161f394c268a3
   side_effect_class: external-write
   capabilities:
   - filesystem-read
@@ -67,128 +166,29 @@ skills:
   - memory-write
   - shell
   consent_digest: null
-- name: hive-knowledge-query
+- name: update-hive
   source_type: built-in
-  content_digest: sha256:c19a76a14e65332477b7ddf4779d59eb9f5ac7baaca44a3ac4384d050e40ccb0
-  side_effect_class: read-only
-  capabilities:
-  - filesystem-read
-  - memory-read
-  - shell
-  consent_digest: null
-- name: hive-knowledge-scan
-  source_type: built-in
-  content_digest: sha256:c465acbb8370894280a7c1afbd80cffa69c7f7c3d087dbde0d15e7199bf2f07c
-  side_effect_class: external-write
-  capabilities:
-  - filesystem-read
-  - filesystem-write
-  - memory-read
-  - memory-write
-  - shell
-  consent_digest: null
-- name: hive-loop-engineering
-  source_type: built-in
-  content_digest: sha256:b12645fdd2819a08b2533b280913d7ce1f35879fd552ec88c6595cfb2a531c2d
-  side_effect_class: project-write
-  capabilities:
-  - filesystem-read
-  - filesystem-write
-  - run-state
-  - shell
-  consent_digest: null
-- name: hive-migrate
-  source_type: built-in
-  content_digest: sha256:a48df71fcc1d5eb901487f86e807f6acdebf62e0250a564d99fa734f9512ea32
+  content_digest: sha256:b3c349986486fe6031081ba18a74e455466bc1ae538fb24e8e3a90624584da97
   side_effect_class: project-write
   capabilities:
   - filesystem-read
   - filesystem-write
   - shell
   consent_digest: null
-- name: hive-project-upgrade
+- name: upgrade-project
   source_type: built-in
-  content_digest: sha256:53973d6cee2e81e50e56a4c343d8a4ea0a46216adb0392d8bad270002f1c29a2
+  content_digest: sha256:16be2d86dd42f209e1d40f0486824a1c7778c1ed5987afa105a5ca3bca7ae9f3
   side_effect_class: project-write
   capabilities:
   - filesystem-read
   - filesystem-write
   - shell
   consent_digest: null
-- name: hive-prompt-refine
+- name: verify-package
   source_type: built-in
-  content_digest: sha256:c2b01a47706256110c5c1c3f3c5171d146658d54199616030af5aea1cf4f2f77
-  side_effect_class: none
-  capabilities: []
-  consent_digest: null
-- name: hive-role-handoff
-  source_type: built-in
-  content_digest: sha256:0aa6e96b87be9b84a4bf74be3ac04a205460d38ce254a58e1a187cb39f9c42c6
-  side_effect_class: project-write
-  capabilities:
-  - filesystem-read
-  - filesystem-write
-  - run-state
-  consent_digest: null
-- name: hive-run-checkpoint
-  source_type: built-in
-  content_digest: sha256:c19d27ef096ef1b624e0180a20cb31698e3ac6331718bf709f6659aaadead9a6
-  side_effect_class: project-write
-  capabilities:
-  - filesystem-read
-  - filesystem-write
-  - run-state
-  consent_digest: null
-- name: hive-run-resume
-  source_type: built-in
-  content_digest: sha256:888a295eca86730dcc9595c4d95fae331a5158d7812cf359071a174b1a79fd19
+  content_digest: sha256:ede41689c68b217a4a1ee801bad69514f85293233fb900c4060b75658d2dc019
   side_effect_class: read-only
   capabilities:
   - filesystem-read
   - run-state
-  consent_digest: null
-- name: hive-simple-question
-  source_type: built-in
-  content_digest: sha256:d9eb13d81e66fbcc22c1aa73fd693f660d8bee9dc651905e1b1b9f2a0278afb9
-  side_effect_class: none
-  capabilities: []
-  consent_digest: null
-- name: hive-update
-  source_type: built-in
-  content_digest: sha256:7dd9e9c32d99aa05185ef25d1e6fa09195c5a70e721fa4eab87bc1cc522f3703
-  side_effect_class: project-write
-  capabilities:
-  - filesystem-read
-  - filesystem-write
-  - shell
-  consent_digest: null
-- name: hive-usage-guard
-  source_type: built-in
-  content_digest: sha256:4e21eab317f03fdf3afe4b0553514d3998846d972ab7d8a3aafaee115bfdfc27
-  side_effect_class: project-write
-  capabilities:
-  - filesystem-read
-  - filesystem-write
-  - run-state
-  - shell
-  consent_digest: null
-- name: hive-wiki
-  source_type: built-in
-  content_digest: sha256:4f98a9c8dda168c843f6a7656c30b17bedc98732fb6e73f7687b83c06ddc2541
-  side_effect_class: external-write
-  capabilities:
-  - filesystem-read
-  - filesystem-write
-  - memory-read
-  - memory-write
-  - shell
-  consent_digest: null
-- name: setup-harness
-  source_type: built-in
-  content_digest: sha256:361a0485c5f94399ed4834b517a993d9b440b90d1334538522f79b1f566fbcb7
-  side_effect_class: project-write
-  capabilities:
-  - filesystem-read
-  - filesystem-write
-  - shell
   consent_digest: null

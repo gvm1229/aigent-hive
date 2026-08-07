@@ -1,6 +1,0 @@
-interface:
-  display_name: "Hive Update"
-  short_description: "Verify and activate a signed Hive update"
-  default_prompt: "Use $hive-update to dry-run and apply this signed offline Hive release."
-policy:
-  allow_implicit_invocation: false

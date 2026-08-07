@@ -27,9 +27,9 @@ LOCAL_SKILL_SOURCE = (
     PHASE3_FIXTURES / "optional/local-inspect/SKILL.md"
 )
 PROJECTED_BUILTINS = (
-    "ai-slop-cleaner",
+    "clean-ai-slop",
     "auto-setup-harness",
-    "best-practice-research",
+    "research-practices",
     "setup-harness",
     "hive-simple-question",
     "hive-prompt-refine",
