@@ -2,9 +2,10 @@
 
 - 기준 branch: `develop`
 - product version: `0.9.0`
-- plan revision: `2.21`
+- plan revision: `2.22`
 - 현재 milestone: `0.9.0-test` public acceptance·retention
-- 현재 작업: `SIL-001–006` public Skill identity·localization·retired-ID cleanup과
+- 현재 작업: `BGR-012` source 응답의 내부 용어 억제·사용자 영향 우선 설명 규칙과 회귀 검증.
+  `SIL-001–006` public Skill identity·localization·retired-ID cleanup과
   `0.9.0-test.5` 독립 시험 게시 완료. 다음 작업 `DNI-002–017`: Discord·Notion 연결 UX
 - 외부 중지 경계: `main` PR·review, signing·TUF,
   exact `1.0.0` 사용자 authority
