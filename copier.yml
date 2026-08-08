@@ -206,6 +206,17 @@ discord_guard_enabled:
   when: false
   default: false
 
+discord_message_fields:
+  type: yaml
+  when: false
+  default:
+    - remaining-usage
+    - project
+    - request
+    - progress
+    - host
+    - resume
+
 discord_webhook_url_env:
   type: str
   when: false
