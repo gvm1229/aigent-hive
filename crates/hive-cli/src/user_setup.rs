@@ -17,6 +17,7 @@ use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
 const USER_SETUP_RELATIVE: &str = ".hive/config/user-setup.yml";
+const USER_SETUP_PROGRESS_RELATIVE: &str = ".hive/config/user-setup-progress.yml";
 const USER_PROJECTION_MANIFEST_RELATIVE: &str = ".hive/install/user-projection.json";
 const LEGACY_USER_SETUP_REVIEW_RELATIVE: &str = ".hive/config/user-setup-review.yml";
 const LEGACY_USER_SETUP_REVIEW: &[u8] = b"schema_version: 1\nsource_version: 0.7.0\nsetup_required: true\nwiki_markdown_preserved: true\nlegacy_skill_projection: all-built-ins\n";
@@ -34,6 +35,8 @@ Configure or validate Aigent Hive user preferences.
 
 USAGE:
     hive setup --scope user --answers <yml> (--dry-run|--apply|--validate) [--user-root <dir>] --output json
+    hive setup --progress save --scope user --step <step> --answers <yml> [--user-root <dir>] --output json
+    hive setup --progress status|clear --scope user [--user-root <dir>] --output json
 
 MODES:
     --dry-run    Validate answers and preview the owned user configuration change
@@ -255,6 +258,14 @@ pub(crate) struct UserSetupConfig {
     pub(crate) usage_guard: UsageGuardPreferences,
 }
 
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+struct UserSetupProgress {
+    schema_version: u32,
+    step: String,
+    answers: UserSetupConfig,
+}
+
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct LocalizedText {
@@ -389,10 +400,248 @@ pub(crate) fn print_help() {
 }
 
 pub(crate) fn run(arguments: &[String]) -> ExitCode {
+    if arguments.first().map(String::as_str) == Some("--progress") {
+        return run_progress(&arguments[1..]);
+    }
     let result = parse(arguments)
         .and_then(|arguments| execute(&arguments))
         .unwrap_or_else(|error| failure(&error));
     emit_action_result(&result)
+}
+
+fn run_progress(arguments: &[String]) -> ExitCode {
+    let result = parse_progress(arguments)
+        .and_then(execute_progress)
+        .unwrap_or_else(|error| failure(&error));
+    emit_action_result(&result)
+}
+
+#[derive(Debug)]
+enum ProgressAction {
+    Save { step: String, answers: PathBuf },
+    Status,
+    Clear,
+}
+
+#[derive(Debug)]
+struct ProgressArguments {
+    action: ProgressAction,
+    root_cap: Dir,
+}
+
+fn parse_progress(arguments: &[String]) -> Result<ProgressArguments, SetupError> {
+    let action = arguments.first().ok_or_else(|| {
+        SetupError::Input("setup progress requires save, status, or clear".to_owned())
+    })?;
+    let mut scope = None;
+    let mut answers = None;
+    let mut step = None;
+    let mut output = None;
+    let mut user_root = None;
+    let mut index = 1;
+    while index < arguments.len() {
+        let option = arguments[index].as_str();
+        let value = arguments
+            .get(index + 1)
+            .filter(|value| !value.starts_with("--"))
+            .ok_or_else(|| SetupError::Input(format!("missing value for {option}")))?;
+        let slot = match option {
+            "--scope" => &mut scope,
+            "--answers" => &mut answers,
+            "--step" => &mut step,
+            "--output" => &mut output,
+            "--user-root" => &mut user_root,
+            _ => {
+                return Err(SetupError::Input(format!(
+                    "unknown setup progress option: {option}"
+                )))
+            }
+        };
+        if slot.replace(value.clone()).is_some() {
+            return Err(SetupError::Input(format!("duplicate option: {option}")));
+        }
+        index += 2;
+    }
+    if scope.as_deref() != Some("user") || output.as_deref() != Some("json") {
+        return Err(SetupError::Input(
+            "setup progress requires --scope user and --output json".to_owned(),
+        ));
+    }
+    let action = match action.as_str() {
+        "save" => {
+            let step = step.ok_or_else(|| {
+                SetupError::Input("setup progress save requires --step".to_owned())
+            })?;
+            if step.is_empty()
+                || step.len() > 80
+                || !step
+                    .bytes()
+                    .all(|byte| byte.is_ascii_lowercase() || byte.is_ascii_digit() || byte == b'-')
+            {
+                return Err(SetupError::Input(
+                    "setup progress step must use lowercase letters, digits, or hyphens".to_owned(),
+                ));
+            }
+            ProgressAction::Save {
+                step,
+                answers: PathBuf::from(answers.ok_or_else(|| {
+                    SetupError::Input("setup progress save requires --answers".to_owned())
+                })?),
+            }
+        }
+        "status" => {
+            if answers.is_some() || step.is_some() {
+                return Err(SetupError::Input(
+                    "setup progress status accepts no --answers or --step".to_owned(),
+                ));
+            }
+            ProgressAction::Status
+        }
+        "clear" => {
+            if answers.is_some() || step.is_some() {
+                return Err(SetupError::Input(
+                    "setup progress clear accepts no --answers or --step".to_owned(),
+                ));
+            }
+            ProgressAction::Clear
+        }
+        _ => {
+            return Err(SetupError::Input(
+                "setup progress requires save, status, or clear".to_owned(),
+            ))
+        }
+    };
+    let user_root = user_root.map_or_else(resolve_user_root, |value| Ok(PathBuf::from(value)))?;
+    let root_cap =
+        super::user_install::open_user_root_for_setup(&user_root).map_err(SetupError::Conflict)?;
+    Ok(ProgressArguments { action, root_cap })
+}
+
+fn execute_progress(arguments: ProgressArguments) -> Result<ActionResult, SetupError> {
+    let relative = Path::new(USER_SETUP_PROGRESS_RELATIVE);
+    let existing = super::user_install::read_user_setup_file(
+        &arguments.root_cap,
+        relative,
+        MAX_USER_SETUP_BYTES,
+    )
+    .map_err(SetupError::Conflict)?;
+    match arguments.action {
+        ProgressAction::Save { step, answers } => {
+            let answer_bytes = read_bounded_regular(&answers, MAX_ANSWERS_BYTES)?;
+            let config = parse_and_validate_config(&answer_bytes)?;
+            let progress = UserSetupProgress {
+                schema_version: 1,
+                step,
+                answers: config,
+            };
+            let desired = serde_yaml::to_string(&progress)
+                .map_err(|error| {
+                    SetupError::Internal(format!("cannot serialize setup progress: {error}"))
+                })?
+                .into_bytes();
+            super::user_install::replace_user_setup_file(
+                &arguments.root_cap,
+                relative,
+                existing.as_deref(),
+                Some(&desired),
+            )
+            .map_err(SetupError::Conflict)?;
+            Ok(progress_result(
+                "SaveUserSetupProgress",
+                "success",
+                0,
+                "hive.user-setup-progress-saved",
+                "user setup progress saved",
+                vec![USER_SETUP_PROGRESS_RELATIVE.to_owned()],
+                Some(&progress),
+            ))
+        }
+        ProgressAction::Status => {
+            let progress = existing.as_deref().map(parse_progress_file).transpose()?;
+            Ok(progress_result(
+                "InspectUserSetupProgress",
+                "success",
+                0,
+                "hive.user-setup-progress-status",
+                "user setup progress inspected",
+                Vec::new(),
+                progress.as_ref(),
+            ))
+        }
+        ProgressAction::Clear => {
+            if existing.is_some() {
+                super::user_install::replace_user_setup_file(
+                    &arguments.root_cap,
+                    relative,
+                    existing.as_deref(),
+                    None,
+                )
+                .map_err(SetupError::Conflict)?;
+            }
+            Ok(progress_result(
+                "ClearUserSetupProgress",
+                "success",
+                0,
+                "hive.user-setup-progress-cleared",
+                "user setup progress cleared",
+                existing
+                    .map(|_| vec![USER_SETUP_PROGRESS_RELATIVE.to_owned()])
+                    .unwrap_or_default(),
+                None,
+            ))
+        }
+    }
+}
+
+fn parse_progress_file(bytes: &[u8]) -> Result<UserSetupProgress, SetupError> {
+    let progress: UserSetupProgress = serde_yaml::from_slice(bytes).map_err(|error| {
+        SetupError::Verification(format!("invalid user setup progress: {error}"))
+    })?;
+    if progress.schema_version != 1 {
+        return Err(SetupError::Verification(
+            "unsupported user setup progress schema".to_owned(),
+        ));
+    }
+    if progress.step.is_empty()
+        || progress.step.len() > 80
+        || !progress
+            .step
+            .bytes()
+            .all(|byte| byte.is_ascii_lowercase() || byte.is_ascii_digit() || byte == b'-')
+    {
+        return Err(SetupError::Verification(
+            "invalid user setup progress step".to_owned(),
+        ));
+    }
+    validate_config_semantics(&progress.answers)?;
+    Ok(progress)
+}
+
+fn progress_result(
+    action: &'static str,
+    status: &'static str,
+    exit_code: u8,
+    code: &'static str,
+    message: &'static str,
+    changed_paths: Vec<String>,
+    progress: Option<&UserSetupProgress>,
+) -> ActionResult {
+    ActionResult {
+        schema_version: 1,
+        action,
+        status,
+        exit_code,
+        code,
+        message: message.to_owned(),
+        changed_paths,
+        evidence: Vec::new(),
+        next_action: None,
+        data: Some(json!({
+            "pending": progress.is_some(),
+            "step": progress.map(|value| value.step.as_str()),
+            "answers": progress.map(|value| &value.answers),
+        })),
+    }
 }
 
 fn parse(arguments: &[String]) -> Result<Arguments, SetupError> {

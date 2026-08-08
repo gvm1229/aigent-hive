@@ -19,6 +19,7 @@ Inspect the host-owned Discord inbound continuation boundary.
 
 USAGE:
     hive discord inbound --host codex|claude|antigravity --output json
+    hive discord test --webhook-env <ENVIRONMENT_NAME> --output json
 
 Discord notification delivery remains outbound-only. Claude inbound handling is
 delegated to the official Claude Discord Channel plugin. Codex continuation is
@@ -65,6 +66,7 @@ pub(crate) fn run(arguments: &[String]) -> ExitCode {
     }
     let result = match arguments.first().map(String::as_str) {
         Some("inbound") => parse_inbound(&arguments[1..]).map(inbound_result),
+        Some("test") => parse_test(&arguments[1..]).map(test_result),
         Some(action) => Err(format!("unknown Discord action: {action}")),
         None => unreachable!("empty arguments returned above"),
     };
@@ -81,6 +83,70 @@ pub(crate) fn run(arguments: &[String]) -> ExitCode {
         data: None,
     });
     emit_action_result(&result)
+}
+
+fn parse_test(arguments: &[String]) -> Result<&str, String> {
+    if arguments.len() != 4
+        || arguments.first().map(String::as_str) != Some("--webhook-env")
+        || arguments.get(2).map(String::as_str) != Some("--output")
+        || arguments.get(3).map(String::as_str) != Some("json")
+    {
+        return Err(
+            "Discord test requires --webhook-env <ENVIRONMENT_NAME> --output json".to_owned(),
+        );
+    }
+    let name = arguments[1].as_str();
+    if valid_environment_name(name) {
+        Ok(name)
+    } else {
+        Err("Discord webhook environment name is invalid".to_owned())
+    }
+}
+
+fn test_result(environment_name: &str) -> ActionResult {
+    let outcome = match env::var(environment_name) {
+        Ok(url) => {
+            let payload = DiscordPayload {
+                content: "Aigent Hive Discord connection test.".to_owned(),
+                allowed_mentions: AllowedMentions { parse: Vec::new() },
+            };
+            notify_payload_with_url(&url, &payload, deliver_https)
+        }
+        Err(_) => NotificationOutcome::MissingWebhookEnvironment,
+    };
+    let (status, exit_code, code, message) = match outcome {
+        NotificationOutcome::Sent => (
+            "success",
+            0,
+            "hive.discord-test-sent",
+            "Discord connection test sent",
+        ),
+        NotificationOutcome::MissingWebhookEnvironment => (
+            "verification-failed",
+            5,
+            "hive.discord-test-missing-webhook",
+            "Discord connection test could not read a valid webhook from the configured environment",
+        ),
+        NotificationOutcome::InvalidWebhookUrl | NotificationOutcome::DeliveryFailed => (
+            "verification-failed",
+            5,
+            "hive.discord-test-delivery-failed",
+            "Discord connection test could not be delivered",
+        ),
+        NotificationOutcome::Disabled => unreachable!("test never disables delivery"),
+    };
+    ActionResult {
+        schema_version: 1,
+        action: "TestDiscordWebhook",
+        status,
+        exit_code,
+        code,
+        message: message.to_owned(),
+        changed_paths: Vec::new(),
+        evidence: Vec::new(),
+        next_action: None,
+        data: Some(json!({ "outcome": outcome.as_str() })),
+    }
 }
 
 fn parse_inbound(arguments: &[String]) -> Result<&str, String> {
@@ -173,6 +239,17 @@ pub(crate) fn notify_usage_halt(
 fn notify_with_url<F>(
     url: &str,
     halt: &UsageHaltNotification<'_>,
+    deliver: F,
+) -> NotificationOutcome
+where
+    F: FnMut(&str, &[u8]) -> Result<(), ()>,
+{
+    notify_payload_with_url(url, &payload_for(halt), deliver)
+}
+
+fn notify_payload_with_url<F>(
+    url: &str,
+    payload: &DiscordPayload,
     mut deliver: F,
 ) -> NotificationOutcome
 where
@@ -181,7 +258,7 @@ where
     if !valid_webhook_url(url) {
         return NotificationOutcome::InvalidWebhookUrl;
     }
-    let Ok(payload) = serde_json::to_vec(&payload_for(halt)) else {
+    let Ok(payload) = serde_json::to_vec(payload) else {
         return NotificationOutcome::DeliveryFailed;
     };
     for _ in 0..DELIVERY_ATTEMPTS {
@@ -190,6 +267,13 @@ where
         }
     }
     NotificationOutcome::DeliveryFailed
+}
+
+fn valid_environment_name(value: &str) -> bool {
+    let mut characters = value.chars();
+    matches!(characters.next(), Some('A'..='Z' | '_'))
+        && value.chars().count() <= 128
+        && characters.all(|character| matches!(character, 'A'..='Z' | '0'..='9' | '_'))
 }
 
 fn payload_for(halt: &UsageHaltNotification<'_>) -> DiscordPayload {
