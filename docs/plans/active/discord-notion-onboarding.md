@@ -1,4 +1,4 @@
-# Discord·Notion 연결과 usage-guard 알림 계획
+# Discord·Notion 연결 계획
 
 > Checklist owner: `DNI-*`
 > Target: 다음 독립 `0.9.0-test.N`
@@ -10,7 +10,7 @@
 
 - 전역 setup 대화 안의 Markdown·Notion backend 선택과 실제 연결 검증
 - 공식 Notion plugin/app 또는 hosted MCP의 host 소유 브라우저 OAuth 우선
-- Discord webhook 생성·환경변수 설정·시험 알림의 대화형 안내
+- Discord webhook·환경변수·시험 알림 대화형 안내
 - 프로젝트·run·요청·진행 상태를 구분하는 usage-guard 중단 알림
 - README와 함께 배포되는 접근 가능한 단일 HTML 시각 안내서
 - Credential·원문 prompt·절대 경로의 기본 외부 전송 0건
@@ -80,14 +80,15 @@
 
 ### B. 전역 setup 경험
 
-- [ ] [DNI-005] `setup-hive` custom 흐름에 Markdown·Notion 선택, 연결 방식, scope,
-  SQLite disclosure·동의를 한 질문씩 추가; expedited 기본 Markdown 유지
+- [ ] [DNI-005] `setup-hive` custom에 Markdown·Notion, 연결·scope·SQLite 동의 질문 추가.
+  expedited 기본 Markdown 유지, Notion OAuth 안내·receipt 확인 전 다음 질문 진행 0건
 - [ ] [DNI-006] Notion 시험 read·create/update capability preview와 사용자 승인 후 제한된 시험,
-  실패 시 설정 미활성·재개 가능한 진단 구현
+  실패 시 설정 미활성·비밀 없는 진행 기록·같은 단계 재개 진단 구현
 - [ ] [DNI-007] Usage guard opt-in 뒤 Discord 설정 선택, webhook 생성 안내, 환경변수 이름 검증,
-  secret 비저장과 선택형 시험 알림 구현
+  secret 비저장·단일 시험 알림 구현. 활성화 동의에 시험 알림 포함
 - [ ] [DNI-008] Reconfigure의 Notion 재인증·scope 변경·Discord on/off·webhook 교체와
-  기존 설정 보존·dry-run·rollback 구현
+  기존 설정 보존·dry-run·rollback 구현. 미완료 연결은 `전체 검토`, `선택 항목 검토`, `중단한 단계부터 계속`
+  제공; 완료 답변·receipt 재검증 뒤 필요 단계만 재질문
 
 ### C. Runtime 연결
 
@@ -139,6 +140,7 @@
 - Plan-backed 진행률의 canonical checklist 계산, 임의 추정 백분율 0건
 - 원문 prompt·credential·절대 경로의 동의 없는 Discord 전송 0건
 - README·대화형 setup·HTML 안내의 동일 순서·용어·복구 절차
+- 연결 실패·설정 종료 뒤 비밀 없는 진행 기록 보존과 다음 실행의 세 재개 선택지
 - 시험판·정식판 기능 차이 0건, 시험판 게시 뒤 npm `latest` mutation 0건
 
 ## 외부 중지 경계

@@ -6,7 +6,7 @@
 - 현재 milestone: `0.9.0-test` public acceptance·retention
 - 현재 작업: `BGR-012–013` source 응답의 내부 용어 억제·사용자 영향 우선 설명과 local
   `-dev → 0.9.0-test.6` user-scope validation 완료. Public release 미게시. `SIL-001–006` public Skill identity·localization·retired-ID cleanup과
-  `0.9.0-test.5` 독립 시험 게시 완료. 다음 작업 `DNI-002–017`: Discord·Notion 연결 UX
+  `0.9.0-test.5` 독립 시험 게시 완료. 다음 작업 `DNI-002–018`: Discord·Notion 연결 UX
 - 외부 중지 경계: `main` PR·review, signing·TUF,
   exact `1.0.0` 사용자 authority
 - Plan load: compact `docs/plans/PLAN.md` + `docs/plans/phases/07-public-qualification.md`
@@ -34,7 +34,8 @@
 - Plan completion: canonical checklist `371/457` 완료, `86`개 미완료, `81.2%`
 - Discord·Notion UX 감사: typed global schema·Notion SQLite engine·Discord outbound core는 존재.
   `setup-hive`의 backend·연결 질문, host browser OAuth handoff, webhook 대화·시험 알림,
-  HTML 안내, project·run·request·progress payload는 부재. `DNI-001–018` 후속 계획 활성화
+  HTML 안내, project·run·request·progress payload는 부재. 연결 실패 뒤 비밀 없는 질문 진행 기록과
+  `전체 검토|선택 항목 검토|중단한 단계부터 계속` 재개 선택지도 부재. `DNI-001–018` 후속 계획 활성화
 - Korean setup 용어: `setup-hive` Korean interaction contract·exact sample 추가. `Skill → 기술`
   번역 차단, `UserProfile`의 복수 context·선택 description과 legacy single-profile 무손실
   migration 적용. Global user context의 project workflow·구현 방식·작업 우선순위·Skill 선택 영향

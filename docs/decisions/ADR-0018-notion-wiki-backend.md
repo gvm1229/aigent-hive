@@ -31,6 +31,10 @@
 - Official host surface의 browser OAuth handoff와 완료 후 workspace·scope capability receipt 재검증
 - Hive 자체 OAuth callback server·token 저장·host-global config mutation 0건
 - 연결·scope·SQLite disclosure·시험 read/write의 한 질문씩 대화형 setup
+- 연결 시험 실패 또는 설정 종료: 적용 전 답변·현재 질문·안전한 오류 요약만 Hive 관리 진행 기록에
+  보존. OAuth token·webhook URL·원문 prompt·절대 경로 보존 0건
+- 미완료 기록 재실행: `처음부터 전체 검토`, `선택 항목 검토`, `중단한 단계부터 계속` 제공. 계속 선택 시
+  완료 답변과 연결 receipt 재검증 뒤 실패 또는 다음 단계부터 진행
 
 ### Capability·security
 
@@ -62,6 +66,7 @@
 - 원문 prompt 기본 제외; 전역 명시적 opt-in·전송 preview·redaction 뒤에만 제한적 포함
 - Credential·transcript·절대 경로·continuation token의 외부 전송 0건
 - 대화형 webhook 설정·환경변수 검증·시험 알림과 배포 bundle의 self-contained HTML 안내
+- Discord 활성화 동의: webhook URL의 Hive 저장 없이 환경변수 이름만 저장하고 단일 시험 알림까지 포함
 
 ### 구현 상태 구분
 
