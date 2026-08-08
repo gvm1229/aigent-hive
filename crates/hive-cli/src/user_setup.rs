@@ -1081,7 +1081,7 @@ fn parse_and_validate_config_inner(
         ));
     }
     migrate_legacy_skill_names(&mut value)?;
-    migrate_legacy_single_profile(&mut value)?;
+    migrate_legacy_single_profile(&mut value);
     validate_schema(USER_SETUP_SCHEMA, &value, "user setup")?;
     let config: UserSetupConfig = serde_json::from_value(value)
         .map_err(|error| SetupError::Input(format!("invalid user setup values: {error}")))?;
@@ -1166,15 +1166,15 @@ fn migrate_legacy_recommended_skill_selection(value: &mut JsonValue) -> Result<b
     Ok(true)
 }
 
-fn migrate_legacy_single_profile(value: &mut JsonValue) -> Result<bool, SetupError> {
+fn migrate_legacy_single_profile(value: &mut JsonValue) -> bool {
     let Some(profile) = value.get_mut("profile").and_then(JsonValue::as_object_mut) else {
-        return Ok(false);
+        return false;
     };
     if profile.contains_key("contexts") {
-        return Ok(false);
+        return false;
     }
     let Some(id) = profile.get("id").and_then(JsonValue::as_str) else {
-        return Ok(false);
+        return false;
     };
     let description = profile.get("custom_description").cloned();
     let contexts = match id {
@@ -1182,14 +1182,14 @@ fn migrate_legacy_single_profile(value: &mut JsonValue) -> Result<bool, SetupErr
             vec![JsonValue::String(id.to_owned())]
         }
         "custom" => Vec::new(),
-        _ => return Ok(false),
+        _ => return false,
     };
     profile.clear();
     profile.insert("contexts".to_owned(), JsonValue::Array(contexts));
     if let Some(description) = description {
         profile.insert("description".to_owned(), description);
     }
-    Ok(true)
+    true
 }
 
 fn legacy_recommended_skill_set(suite: &str) -> Option<&'static [&'static str]> {

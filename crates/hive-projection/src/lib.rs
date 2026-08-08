@@ -99,6 +99,10 @@ pub enum DescriptorLanguage {
 ///
 /// Retired names are accepted only as migration input. Every new projection
 /// and active-Skill record uses the returned public name.
+///
+/// # Errors
+///
+/// Returns an error when the embedded Skill catalog or retired-name ledger is invalid.
 pub fn canonical_builtin_skill_name(name: &str) -> Result<Option<String>, ProjectionError> {
     let catalog = embedded_catalog()?;
     if catalog.skills.iter().any(|skill| skill.name == name) {
@@ -187,6 +191,11 @@ struct RetiredSkillNameLedger {
 /// Every entry is flattened to the current public ID. When a public Skill is
 /// renamed again, its former public ID and every earlier retired ID remain in
 /// this ledger with the new current ID, so resolution stays transitive.
+///
+/// # Errors
+///
+/// Returns an error when the ledger or catalog is invalid, names collide, or a mapping target
+/// is not a current built-in Skill.
 pub fn retired_builtin_skill_names() -> Result<BTreeMap<String, String>, ProjectionError> {
     let ledger: RetiredSkillNameLedger =
         serde_yaml::from_str(RETIRED_SKILL_NAMES_YAML).map_err(|error| {
@@ -544,6 +553,11 @@ pub fn compile_user_projection(
 
 /// Compiles a user projection whose Hive-owned labels and descriptions match
 /// the selected interface language.
+///
+/// # Errors
+///
+/// Returns an error when selection, dependency closure, optional-source proof, or localized
+/// metadata validation fails.
 pub fn compile_user_projection_localized(
     host: Host,
     selected_names: &[String],
@@ -979,6 +993,7 @@ fn replace_metadata_line(
     Ok(rendered.into_bytes())
 }
 
+#[allow(clippy::too_many_lines)]
 fn localized_skill_text(
     name: &str,
     language: DescriptorLanguage,
