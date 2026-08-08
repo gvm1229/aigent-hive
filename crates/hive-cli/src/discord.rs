@@ -28,6 +28,7 @@ unsupported until an official compatible capability is verified.
 
 /// Non-sensitive halt fields allowed in an outbound notification.
 pub(crate) struct UsageHaltNotification<'a> {
+    pub(crate) project_name: &'a str,
     pub(crate) decision: &'a str,
     pub(crate) host_scope: &'a str,
     pub(crate) selected_window: &'a str,
@@ -284,7 +285,8 @@ fn payload_for(halt: &UsageHaltNotification<'_>) -> DiscordPayload {
     };
     DiscordPayload {
         content: format!(
-            "Aigent Hive usage guard stopped a workflow.\\nstate: {state}\\nhost: {}\\nwindow: {}\\nthreshold_remaining_percent: {}\\nmeasured_at: {}\\nevidence_digest: {}",
+            "Aigent Hive usage guard stopped a workflow.\\nproject: {}\\nstate: {state}\\nhost: {}\\nwindow: {}\\nthreshold_remaining_percent: {}\\nrequest: not shared (request content stays local)\\nprogress: unknown (no canonical run progress is available)\\nresume: return to this project and ask Hive to continue\\nmeasured_at: {}\\nevidence_digest: {}",
+            display_project_name(halt.project_name),
             halt.host_scope,
             halt.selected_window,
             halt.threshold_remaining_percent,
@@ -292,6 +294,22 @@ fn payload_for(halt: &UsageHaltNotification<'_>) -> DiscordPayload {
             halt.evidence_digest,
         ),
         allowed_mentions: AllowedMentions { parse: Vec::new() },
+    }
+}
+
+fn display_project_name(value: &str) -> String {
+    let allowed = !value.is_empty()
+        && value.len() <= 80
+        && value.chars().all(|character| {
+            character.is_ascii_alphanumeric() || matches!(character, ' ' | '.' | '_' | '-')
+        });
+    if allowed {
+        value.to_owned()
+    } else {
+        format!(
+            "project-{}",
+            &hive_core::sha256_digest(value.as_bytes())[7..19]
+        )
     }
 }
 
@@ -333,12 +351,13 @@ fn deliver_https(url: &str, payload: &[u8]) -> Result<(), ()> {
 #[cfg(test)]
 mod tests {
     use super::{
-        inbound_result, notify_with_url, payload_for, valid_webhook_url, NotificationOutcome,
-        UsageHaltNotification,
+        display_project_name, inbound_result, notify_with_url, payload_for, valid_webhook_url,
+        NotificationOutcome, UsageHaltNotification,
     };
 
     fn notification<'a>() -> UsageHaltNotification<'a> {
         UsageHaltNotification {
+            project_name: "aigent-hive",
             decision: "halted",
             host_scope: "codex",
             selected_window: "weekly",
@@ -357,6 +376,13 @@ mod tests {
         assert!(!payload.contains("prompt"));
         assert!(!payload.contains("token"));
         assert!(!payload.contains("webhook"));
+        assert!(payload.contains("project: aigent-hive"));
+        assert!(payload.contains("progress: unknown"));
+    }
+
+    #[test]
+    fn unsafe_project_name_is_replaced_with_a_stable_non_path_identifier() {
+        assert!(display_project_name("../../secret").starts_with("project-"));
     }
 
     #[test]

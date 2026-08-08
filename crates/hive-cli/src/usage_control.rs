@@ -73,6 +73,7 @@ struct ParsedBinding {
 }
 
 pub(crate) struct InstalledUsageConfig {
+    pub(crate) project_name: String,
     pub(crate) threshold: u8,
     pub(crate) primary_host: String,
     pub(crate) guard_enabled: bool,
@@ -861,6 +862,7 @@ fn record_discord_notification(
         config.discord_guard_enabled,
         config.discord_webhook_url_env.as_deref(),
         &crate::discord::UsageHaltNotification {
+            project_name: &config.project_name,
             decision: &marker.decision,
             host_scope: &marker.host_scope,
             selected_window: &marker.selected_window,
@@ -1343,6 +1345,9 @@ fn parse_installed_config(bytes: Vec<u8>) -> Result<InstalledUsageConfig, Adapte
     let table = toml::from_str::<toml::Table>(text).map_err(|error| {
         AdapterError::Safety(format!("installed harness.toml is invalid: {error}"))
     })?;
+    let project_name = optional_config_string(&table, "project_name")?
+        .filter(|value| !value.is_empty() && value.len() <= 512)
+        .unwrap_or_else(|| "unknown-project".to_owned());
     let primary_host = table
         .get("primary_host")
         .and_then(toml::Value::as_str)
@@ -1388,6 +1393,7 @@ fn parse_installed_config(bytes: Vec<u8>) -> Result<InstalledUsageConfig, Adapte
         }
     }
     Ok(InstalledUsageConfig {
+        project_name,
         threshold,
         primary_host,
         guard_enabled,
