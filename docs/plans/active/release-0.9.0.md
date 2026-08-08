@@ -35,9 +35,13 @@
 - 원인 판정: 실제 호스트 명령 응답·marketplace package·활성화 이후 상태의 전환 구간 미검증
 - 해결 범위: 현재 Codex JSON 계약에 맞춘 adapter·parser·version qualification, 임시
   `plugin → codex plugin` bridge와 호스트 전역 설정 수동 쓰기 제거
+- local 재현·수정 증거: Codex CLI `0.147.0`, macOS 격리 user root에서 `/tmp`가 host JSON의
+  `/private/tmp`와 달라 activation이 중단됨. no-follow user root 확인 뒤 physical path 정규화 적용,
+  `install → setup dry-run → setup apply → setup validate → install validate`와 structured list PASS
 - 회귀 흐름: 격리 user root의 marketplace add → plugin add → 구조화 목록 검증 →
   `hive setup --scope user` dry-run·apply·validate → 실패 되돌리기·foreign byte 보존
-- 출시 조건: 수정된 numbered 시험판의 Windows clean install·fresh Codex session 수용 뒤 stable 진행
+- 출시 조건: 수정된 numbered 시험판의 Windows clean install·fresh Codex session 수용 뒤 stable 진행.
+  macOS local evidence는 구현 회귀 증거이며 Windows 수용의 대체 근거 아님
 
 ## Version·channel 계약
 

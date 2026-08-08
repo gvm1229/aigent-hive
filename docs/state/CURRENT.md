@@ -5,8 +5,9 @@
 - plan revision: `2.27`
 - 현재 milestone: `0.9.0` Codex plugin 활성화 차단 문제 복구
 - `0.9.0` 예외: 실제 Antigravity host 수용과 Claude fixture 공개 제외. Codex 실제 plugin 활성화·global setup은 `REL9-011` 필수 gate. `develop → main` CI는 병합 gate 일시 면제이며 실패·미실행 범위 공개 유지
-- Codex 차단 문제: `0.9.0-test.5` 활성화 실패와 부분 상태 되돌리기 관찰. 현재 Codex CLI `0.146.1`, `hive setup --scope user --help` 제공 확인. 해결 범위는 현재 JSON 계약의 adapter·parser·version qualification, 격리 user root의 marketplace→plugin→setup E2E, 실패 되돌리기·foreign byte 보존, numbered 시험판 clean install 수용
-- 현재 작업: Codex plugin 활성화 차단 문제 복구. 단일 OIDC npm workflow 구현과 Copier·Rust Discord `message_fields` parity 복구 완료
+- Codex 차단 문제: `0.9.0-test.5` 활성화 실패와 부분 상태 되돌리기 관찰. macOS의 Codex CLI `0.147.0` 격리 user root에서 `/tmp`와 host JSON의 `/private/tmp` 표기 불일치 재현. no-follow 확인 뒤 physical path 정규화 적용
+- Codex local 검증: 격리 `install → setup dry-run → setup apply → setup validate → install validate`와 structured marketplace·plugin 목록 PASS. rollback·foreign byte 보존 Rust 회귀 PASS. 현재 macOS 실행은 Windows clean install·fresh session 수용 증명 아님
+- 현재 작업: Codex plugin 활성화 차단 문제 복구 완료. 수정 numbered 시험판과 Windows fresh-session 수용 전 stable publication 중지. 단일 OIDC npm workflow 구현과 Copier·Rust Discord `message_fields` parity 복구 완료
 - Discord 수용: 실제·시험 알림의 동일 renderer·선택 필드·선택 언어, 시험 알림 첫 줄의 변경 안내 고지, 첨부 화면의 webhook 전달
 - `0.9.0-test.6`: 후보 [run `31254605322`](https://github.com/gvm1229/aigent-hive/actions/runs/31254605322)의 5개 native target·npm 묶음·attestation PASS. Trusted Publishing [run `31255061771`](https://github.com/gvm1229/aigent-hive/actions/runs/31255061771)와 bootstrap fallback [run `31255167232`](https://github.com/gvm1229/aigent-hive/actions/runs/31255167232)의 첫 `@aigent-hive/darwin-arm64` npm `404`, npm version·tag·GitHub prerelease mutation 0건, stable 미착수. `BGR-012–013` source 응답의 내부 용어 억제·사용자 영향 우선 설명과 local
   `-dev → 0.9.0-test.6` user-scope validation 완료. `SIL-001–006` public Skill identity·localization·retired-ID cleanup과
@@ -37,7 +38,7 @@
   + `docs/plans/active/global-skill-selection.md`
   + `docs/plans/active/discord-onboarding-v09.md`
   + `docs/plans/active/v0.10.0-notion-candidate.md`
-- Plan completion: canonical checklist `374/462` 완료, `88`개 미완료, `81.0%`
+- Plan completion: canonical checklist `375/464` 완료, `89`개 미완료, `80.8%`
 - 출시 분리: `0.9.0`의 user-visible Wiki는 local Markdown 정본과 SQLite projection만 제공.
   Notion backend·host browser OAuth·freshness·write-through·사용자 문서는 `0.10.0-test`까지 보류.
   Discord webhook 대화·시험 알림, HTML 안내, project·run·요청·progress payload는 `DIS9-*` 후속 범위
