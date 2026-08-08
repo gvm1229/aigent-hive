@@ -150,9 +150,9 @@ jobs:
           copier copy --trust --defaults
           --data-file tests/fixtures/copier-hostile-data.yml
           . tests/work/copier-hostile
-      - name: Reject fallback hooks without conclusive absence
+      - name: Reject fallback hooks without a supported host-native event
         run: |
-          for detection in available incompatible unknown; do
+          for detection in absent incompatible unknown; do
             if copier copy --trust --defaults \
               --data-file tests/fixtures/copier-hostile-data.yml \
               --data "capability_resolution={\"host\":\"claude\",\"detection\":\"${detection}\"}" \
@@ -160,7 +160,7 @@ jobs:
               >"tests/work/copier-invalid-hooks-${detection}.log" 2>&1; then
               exit 1
             fi
-            grep -q "fallback hook은 compatible OMX/OMC가 conclusively absent일 때만 승인할 수 있습니다" \
+            grep -q "optional hook은 available host-native surface의 정확한 supported event에서만 승인할 수 있습니다" \
               "tests/work/copier-invalid-hooks-${detection}.log"
             test ! -e "tests/work/copier-invalid-hooks-${detection}/.hive/setup-answers.yml"
           done
