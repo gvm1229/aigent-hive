@@ -51,9 +51,9 @@ OWNER_KEYS = (
     "subagent_support",
 )
 DATA_SKILLS = {
-    "hive-role-handoff",
-    "hive-run-checkpoint",
-    "hive-run-resume",
+    "handoff-role",
+    "save-progress",
+    "resume-work",
 }
 RAW_USAGE_ACCOUNT = "usage-guard@example.invalid"
 USAGE_ACCOUNT_DIGEST = (
