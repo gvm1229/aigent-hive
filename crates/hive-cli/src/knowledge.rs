@@ -3609,7 +3609,7 @@ mod tests {
 
     #[cfg(feature = "notion-preview")]
     #[test]
-    fn notion_retrieval_requires_fresh_host_inventory_and_keeps_no_local_wiki_markdown() {
+    fn v09_notion_retrieval_is_rejected_without_local_wiki_markdown() {
         let user = temp_root();
         write_notion_user_setup(user.path());
         let (capability, snapshot) = write_notion_inputs(user.path());
@@ -3624,15 +3624,19 @@ mod tests {
             "Alpha".to_owned(),
             "--output".to_owned(),
             "json".to_owned(),
-        ])
-        .expect("fresh Notion retrieval");
-        assert_eq!(result.code, "hive.notion-retrieved-fresh");
+        ]);
+        let Err(error) = result else {
+            panic!("v0.9 must reject Notion user setup");
+        };
+        match error {
+            WikiError::Verification(message) => {
+                assert!(message.contains("installed user setup is invalid"));
+                assert!(message.contains("\"markdown\" was expected"));
+            }
+            other => panic!("unexpected Notion rejection: {other:?}"),
+        }
         assert!(!user.path().join(".hive/knowledge/Wiki").exists());
-        let ledger =
-            fs::read_to_string(user.path().join(NOTION_LEDGER_RELATIVE)).expect("Notion ledger");
-        assert!(!ledger.contains("Alpha deployment procedure"));
-        let data = result.data.expect("retrieval data");
-        assert_eq!(data["retrieval"]["hits"].as_array().map(Vec::len), Some(1));
+        assert!(!user.path().join(NOTION_LEDGER_RELATIVE).exists());
     }
 
     fn write_remember_request(root: &Path) -> PathBuf {
