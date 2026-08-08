@@ -155,27 +155,22 @@ class Phase3HostProjection(Phase3ProjectionTestCase):
                         ).is_file()
                     )
 
-    def test_notion_backend_projects_without_local_wiki_markdown_for_each_host(
+    def test_v09_rejects_notion_user_setup_for_each_host(
         self,
     ) -> None:
         self.enable_notion_backend()
         for host in ("codex", "claude", "antigravity"):
             with self.subTest(host=host):
-                target = self.install_host(host)
-                harness = (target / ".hive/config/harness.toml").read_text(
-                    encoding="utf-8"
+                target = self.work_root / f"consumer-{host}"
+                target.mkdir()
+                process, _ = self.invoke_setup(
+                    target,
+                    answers=self.answers_for_host(host),
+                    capabilities=self.capability_for_host(host),
                 )
-                self.assertIn('wiki_backend = "notion"', harness)
-                self.assertFalse((target / ".hive/knowledge/Wiki").exists())
-                self.assertTrue(
-                    (target / ".agents/skills/hive-wiki/SKILL.md").is_file()
-                )
-                self.assertTrue(
-                    (
-                        self.discovery_root(target, host)
-                        / "hive-wiki/SKILL.md"
-                    ).is_file()
-                )
+                self.assertEqual(process.returncode, 2, process.stderr)
+                self.assertIn("/wiki/backend", process.stderr)
+                self.assertFalse((target / ".hive/config/harness.toml").exists())
 
     def test_each_host_projects_the_automatic_dispatch_usage_gate(self) -> None:
         for host in ("codex", "claude", "antigravity"):

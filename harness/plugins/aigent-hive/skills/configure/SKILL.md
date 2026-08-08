@@ -87,7 +87,7 @@ Configure user-scope Hive preferences without modifying a project harness or pro
      comma-separated paragraph.
 9. Write the resolved answers to a temporary YAML file matching `user-setup.schema.json`.
    - Do not include provider credentials, tokens, cookies, account identifiers, or raw usage data.
-10. After every completed Notion or Discord integration step, save the complete current non-secret
+10. After every completed Discord integration step, save the complete current non-secret
     answer set and the next step with `hive setup --progress save --scope user --step <step>
     --answers <answers.yml> --user-root <user-root> --output json`.
     - Hive stores no OAuth token, webhook URL, raw prompt, transcript, or absolute path in this
@@ -119,41 +119,25 @@ consent and setup mode. Ask the remaining preference questions only for `Custom`
 3. **Setup mode** — `Expedited — set everything to default` or `Custom`.
 4. **Wiki language** — `en`, `ko`, or `both`.
 5. **Wiki enablement** — default `enabled`; offer explicit opt-out without deleting canonical Markdown.
-6. **Wiki backend** — select `markdown` or `notion`.
-   - `markdown` keeps the local Markdown Wiki as the source of truth and can be viewed with
-     Obsidian or another Markdown viewer.
-   - `notion` uses the selected Notion scope as the only Wiki source of truth. Hive keeps a local
-     SQLite search index only after explicit consent.
-   - For `notion`, first save progress at `notion-connect`, then prefer the active host's official
-     Notion plugin/app; use the official hosted MCP only when that surface is unavailable. Open
-     the host-provided browser sign-in flow and wait for the user to complete it.
-   - Do not ask the user to paste an OAuth token, API key, cookie, or Notion secret. Ask the host
-     for a credential-free capability receipt containing the exact workspace, selected scope, and
-     read/create/update permissions. The `notion` choice authorizes one limited connection test;
-     show its scope and effect before running it, then continue only on a successful receipt.
-   - If the official host path is unavailable, report `unsupported` and offer to keep `markdown`;
-     never silently fall back to REST or ask for a raw Notion token.
-7. **Wiki language** — `en`, `ko`, or `both`.
-8. **Wiki enablement** — default `enabled`; offer explicit opt-out without deleting canonical Markdown.
-9. **User contexts** — select any combination of `web-developer`, `game-developer`, and
+6. **User contexts** — select any combination of `web-developer`, `game-developer`, and
    `non-developer`.
    - These contexts help Hive understand the user. They never select a project workflow,
      implementation approach, delivery priority, or active Skill set.
    - Ask one optional follow-up question for a single-line user description. A description is
      required only when no context is selected.
-10. **Agent persona** — `strict`, `balanced`, `friendly`, or `custom`.
+7. **Agent persona** — `strict`, `balanced`, `friendly`, or `custom`.
    - For `custom`, ask the next single question for a non-empty custom description.
-11. **Active hosts** — select one or more of `codex`, `claude`, and `antigravity`.
-12. **Skills** — every built-in Skill is active by default.
+8. **Active hosts** — select one or more of `codex`, `claude`, and `antigravity`.
+9. **Skills** — every built-in Skill is active by default.
    - Ask whether to keep every built-in Skill active or choose Skills individually.
    - For individual choice, present every built-in Skill as one Markdown list item per line and collect each on/off decision independently.
    - Always include mandatory `configure` and preview the full dependency closure.
    - Never derive active Skills from the user profile, persona, or host selection.
    - Existing `recommended` configuration is a legacy saved value. Preserve its exact recorded closure until the user reviews and approves a new `all` or `individual` preview.
    - The signed catalog's `optional_third_party_skills` list is empty in this release. Do not offer or activate a third-party Skill until a later release defines its explicit consent contract.
-13. **Usage guard** — explicit opt-in; default disabled.
+10. **Usage guard** — explicit opt-in; default disabled.
    - When enabled, offer the default remaining threshold `20` before asking for a different integer from `1` through `99`.
-14. **Discord usage notification** — ask only when the usage guard is enabled.
+11. **Discord usage notification** — ask only when the usage guard is enabled.
    - Offer `No` by default and `Yes — send a test notification` as the opt-in choice.
    - When enabled, guide the user to create one Discord incoming webhook and set its URL in a
      local environment variable such as `HIVE_DISCORD_WEBHOOK_URL`. Hive records only the
@@ -162,11 +146,11 @@ consent and setup mode. Ask the remaining preference questions only for `Custom`
      then run `hive discord test --webhook-env <ENVIRONMENT_NAME> --output json`.
    - A sent test permits the next question. A missing, invalid, offline, or rejected delivery
      keeps the integration disabled and preserves progress at `discord-test`.
-15. **CodexBar fallback** — ask only when the usage guard is enabled and the active-host native sensor is unavailable, unsupported, or malformed.
+12. **CodexBar fallback** — ask only when the usage guard is enabled and the active-host native sensor is unavailable, unsupported, or malformed.
    - Explain that CodexBar is fallback-only and never overrides a native success or limited decision.
    - Record whether an already-qualified CodexBar fallback may be used.
    - If installation is needed, show the exact fixed command and request separate current-action consent. Never persist installation consent or infer it from the setup answer.
-16. **Preview approval** — approve or reject the exact write set and dependency closure.
+13. **Preview approval** — approve or reject the exact write set and dependency closure.
 
 ## Reconfiguration
 
@@ -184,7 +168,7 @@ consent and setup mode. Ask the remaining preference questions only for `Custom`
 ## Korean interaction contract
 
 When the selected interface language is Korean, retain product terms and identifiers exactly as
-`Aigent Hive`, `Skill`, `Wiki`, `Codex`, `Claude`, `Antigravity`, `CodexBar`, `Notion`, commands,
+`Aigent Hive`, `Skill`, `Wiki`, `Codex`, `Claude`, `Antigravity`, `CodexBar`, commands,
 paths, schema keys, Skill IDs, and versions. Do not translate `Skill` as `기술`.
 
 Use these host-independent question patterns, one question at a time:
@@ -198,15 +182,11 @@ Use these host-independent question patterns, one question at a time:
 4. `Skill 선택 방식을 골라 주세요.`
    - `모든 내장 Skill 사용`
    - `개별 내장 Skill 선택`
-5. `Wiki를 어디에 저장할까요?`
-   - `Markdown`: 이 컴퓨터의 Markdown Wiki 사용. Obsidian 같은 앱으로 열기 가능
-   - `Notion`: Notion을 Wiki의 원본으로 사용. 빠른 검색용 SQLite 색인은 이 컴퓨터에 생성
-6. `Notion을 연결하려면 Codex의 공식 Notion 연결 화면에서 로그인해 주세요. 비밀번호, API key,
-   token은 이 대화에 보내지 마세요. 연결이 끝나면 선택한 Notion 공간에서 읽기·쓰기 시험을 확인합니다.`
-7. `사용량 한도에 도달했을 때 Discord 알림을 받을까요?`
+5. `Wiki는 이 컴퓨터의 Markdown 파일에 저장합니다. Obsidian 같은 앱으로 열 수 있습니다.`
+6. `사용량 한도에 도달했을 때 Discord 알림을 받을까요?`
    - `아니요`
    - `예, 시험 알림도 보내기`
-8. `Discord webhook URL을 환경 변수에 저장해 주세요. 예: HIVE_DISCORD_WEBHOOK_URL. URL 자체는
+7. `Discord webhook URL을 환경 변수에 저장해 주세요. 예: HIVE_DISCORD_WEBHOOK_URL. URL 자체는
    보내지 말고 환경 변수 이름만 알려 주세요. Hive가 시험 알림을 보내 연결을 확인합니다.`
 
 Do not describe a global user context as a role that prioritizes web, game, non-development, or

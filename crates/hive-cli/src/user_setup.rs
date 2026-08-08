@@ -3144,8 +3144,8 @@ usage_guard: {}
     }
 
     #[test]
-    fn notion_wiki_requires_explicit_local_index_consent_and_cannot_reconfigure_in_place() {
-        let notion = parse_and_validate_config(
+    fn notion_wiki_is_rejected_by_the_v0_9_user_setup_schema() {
+        let error = parse_and_validate_config(
             br"
 schema_version: 1
 interface_language: en
@@ -3170,35 +3170,8 @@ skills:
 usage_guard: {}
 ",
         )
-        .expect("explicit Notion consent should be valid");
-        assert_eq!(notion.wiki.backend, WikiBackend::Notion);
-        assert_eq!(
-            notion
-                .wiki
-                .notion
-                .as_ref()
-                .expect("Notion settings")
-                .scope_id,
-            "scope-a"
-        );
-
-        let mut without_consent = notion.clone();
-        without_consent
-            .wiki
-            .notion
-            .as_mut()
-            .expect("Notion settings")
-            .local_index_consent = false;
-        let error = validate_config_semantics(&without_consent)
-            .expect_err("local SQLite consent is mandatory");
-        assert!(error.message().contains("explicit consent"));
-
-        let installed = valid_config();
-        let installed_bytes = canonical_config(&installed).expect("installed bytes");
-        let error = reject_host_deselection(Some(&installed_bytes), &notion)
-            .expect_err("backend changes require a distinct migration");
-        assert_eq!(error.status(), "conflict");
-        assert!(error.message().contains("separate previewed migration"));
+        .expect_err("v0.9 must not accept a Notion user setup");
+        assert!(error.message().contains("/wiki/backend"));
     }
 
     #[test]

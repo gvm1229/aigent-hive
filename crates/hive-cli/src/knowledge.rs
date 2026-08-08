@@ -11,6 +11,7 @@ use hive_wiki::collection::{
     CollectionKind, CollectionResolution, CollectionState, CollectionVisibility,
     USER_ROOT_COLLECTION_ID,
 };
+#[cfg(feature = "notion-preview")]
 use hive_wiki::notion::{
     retrieve_persisted as retrieve_notion_persisted, sync_and_publish as sync_notion_and_publish,
     validate_write_receipt, NotionCapabilityReceipt, NotionPersistedOutcome, NotionSyncRequest,
@@ -68,12 +69,16 @@ USAGE:
     hive knowledge scan --target <dir> (--inventory|--candidates <review.json>|--apply <review.json>) [--include-untracked] [--prior-inventory <json>] [--user-root <dir>] --output json
     hive knowledge export --user-root <dir> --scope global|shared|project:<id>|collection:<id>|all-portable --bundle <path>.hivekb [--replace-backup <file-name>] --output json
     hive knowledge import --user-root <dir> --bundle <path>.hivekb (--dry-run|--apply) --output json
+    hive knowledge refresh (--target <legacy-project>|--user-root <dir>) --output json
+    hive index rebuild (--target <legacy-project>|--user-root <dir>) --output json
+";
+
+#[cfg(feature = "notion-preview")]
+const NOTION_KNOWLEDGE_USAGE: &str = "\
     hive knowledge notion sync --user-root <dir> --capability <receipt.json> --snapshot <complete-inventory.json> --output json
     hive knowledge notion rebuild --user-root <dir> --capability <receipt.json> --snapshot <complete-inventory.json> --output json
     hive knowledge notion retrieve --user-root <dir> --capability <receipt.json> --snapshot <complete-inventory.json> (--request <request.json>|--query <text> [--scope global] [--top-k <1..100>] [--byte-budget <bytes>]) --output json
     hive knowledge notion write-through --user-root <dir> --capability <receipt.json> --snapshot <complete-inventory.json> --write-receipt <confirmed-write.json> --output json
-    hive knowledge refresh (--target <legacy-project>|--user-root <dir>) --output json
-    hive index rebuild (--target <legacy-project>|--user-root <dir>) --output json
 ";
 
 const LEGACY_DERIVED_RELATIVES: [&str; 4] = [
@@ -83,6 +88,7 @@ const LEGACY_DERIVED_RELATIVES: [&str; 4] = [
     ".hive/index/.stale",
 ];
 
+#[cfg(feature = "notion-preview")]
 type NotionSyncInputs<'a> = (
     PathBuf,
     NotionCapabilityReceipt,
@@ -125,6 +131,8 @@ struct KnowledgeEvidence {
 pub(crate) fn run_knowledge(arguments: &[String]) -> ExitCode {
     if is_help(arguments) {
         print!("{KNOWLEDGE_USAGE}");
+        #[cfg(feature = "notion-preview")]
+        print!("{NOTION_KNOWLEDGE_USAGE}");
         return ExitCode::SUCCESS;
     }
     let result =
@@ -156,6 +164,7 @@ pub(crate) fn run_knowledge(arguments: &[String]) -> ExitCode {
                 .unwrap_or_else(|error| failure("RememberKnowledge", &error)),
             Some("retrieve") => run_retrieve(&arguments[1..])
                 .unwrap_or_else(|error| failure("RetrieveKnowledge", &error)),
+            #[cfg(feature = "notion-preview")]
             Some("notion") => run_notion(&arguments[1..])
                 .unwrap_or_else(|error| failure("NotionKnowledge", &error)),
             Some("authorize-confidential") => run_authorize_confidential(&arguments[1..])
@@ -186,6 +195,7 @@ pub(crate) fn run_knowledge(arguments: &[String]) -> ExitCode {
     ExitCode::from(result.exit_code)
 }
 
+#[cfg(feature = "notion-preview")]
 fn run_notion(arguments: &[String]) -> Result<KnowledgeResult, WikiError> {
     let action = arguments.first().map(String::as_str).ok_or_else(|| {
         WikiError::InvalidInput(
@@ -203,6 +213,7 @@ fn run_notion(arguments: &[String]) -> Result<KnowledgeResult, WikiError> {
     }
 }
 
+#[cfg(feature = "notion-preview")]
 fn parse_notion_sync_inputs<'a>(
     arguments: &'a [String],
     extra: &[&str],
@@ -223,6 +234,7 @@ fn parse_notion_sync_inputs<'a>(
     Ok((user_root, capability, snapshot, options))
 }
 
+#[cfg(feature = "notion-preview")]
 fn run_notion_sync(arguments: &[String], rebuild: bool) -> Result<KnowledgeResult, WikiError> {
     let (user_root, capability, snapshot, _) = parse_notion_sync_inputs(arguments, &[])?;
     let store = RagStore::open(&user_root)?;
@@ -250,6 +262,7 @@ fn run_notion_sync(arguments: &[String], rebuild: bool) -> Result<KnowledgeResul
     ))
 }
 
+#[cfg(feature = "notion-preview")]
 fn run_notion_retrieve(arguments: &[String]) -> Result<KnowledgeResult, WikiError> {
     let (user_root, capability, snapshot, options) = parse_notion_sync_inputs(
         arguments,
@@ -289,6 +302,7 @@ fn run_notion_retrieve(arguments: &[String]) -> Result<KnowledgeResult, WikiErro
     ))
 }
 
+#[cfg(feature = "notion-preview")]
 fn run_notion_write_through(arguments: &[String]) -> Result<KnowledgeResult, WikiError> {
     let (user_root, capability, snapshot, options) =
         parse_notion_sync_inputs(arguments, &["--write-receipt"])?;
@@ -320,6 +334,7 @@ fn run_notion_write_through(arguments: &[String]) -> Result<KnowledgeResult, Wik
     ))
 }
 
+#[cfg(feature = "notion-preview")]
 fn validate_notion_backend(
     user_root: &Path,
     capability: &NotionCapabilityReceipt,
@@ -350,10 +365,12 @@ fn validate_notion_backend(
     Ok(())
 }
 
+#[cfg(feature = "notion-preview")]
 fn map_notion_error(error: &hive_wiki::notion::NotionError) -> WikiError {
     WikiError::Verification(error.to_string())
 }
 
+#[cfg(feature = "notion-preview")]
 fn notion_sync_data(outcome: &NotionPersistedOutcome) -> Value {
     json!({
         "adapter": outcome.sync.projection.adapter,
@@ -3519,6 +3536,12 @@ mod tests {
         .expect("user setup");
     }
 
+    #[test]
+    fn v09_knowledge_help_does_not_advertise_notion() {
+        assert!(!KNOWLEDGE_USAGE.contains("notion"));
+    }
+
+    #[cfg(feature = "notion-preview")]
     fn write_notion_user_setup(root: &Path) {
         fs::create_dir_all(root.join(".hive/config")).expect("user config");
         fs::write(
@@ -3528,6 +3551,7 @@ mod tests {
         .expect("Notion user setup");
     }
 
+    #[cfg(feature = "notion-preview")]
     fn write_notion_inputs(root: &Path) -> (PathBuf, PathBuf) {
         use hive_wiki::notion::{
             NotionAdapter, NotionCapabilityReceipt, NotionInventoryEntry, NotionPage,
@@ -3583,6 +3607,7 @@ mod tests {
         (capability, snapshot)
     }
 
+    #[cfg(feature = "notion-preview")]
     #[test]
     fn notion_retrieval_requires_fresh_host_inventory_and_keeps_no_local_wiki_markdown() {
         let user = temp_root();
