@@ -7,7 +7,7 @@ capability_resolution:
   host: claude
   host_version: fixture
   surface: cli
-  detection: absent
+  detection: available
   external_runtime: null
   resolved_owner: host-native
   capabilities:
@@ -18,6 +18,13 @@ capability_resolution:
     continuous-loop: unsupported
     usage-sensor: unsupported
     independent-judge: supported
+  hook_events:
+    Stop:
+      support: supported
+      evidence:
+        - source: qualification-fixture
+          locator: fixture:claude-stop
+          digest: sha256:3333333333333333333333333333333333333333333333333333333333333333
   evidence_digest: sha256:22977b96a46b9649ce62cc8a90b1ffd7576524be598568ad186b72b7795f6c65
   evidence:
     - source: host-catalog
