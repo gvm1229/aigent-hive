@@ -1293,8 +1293,12 @@ if (-not (Test-HiveVersionOutput `
 )) {
     throw "dated version output was rejected"
 }
+$testVersionOutput = (
+    "AIgent Hive v0.9.0-test #2 " + [char]0x00B7 +
+    " developer test build (released 2026-08-06)"
+)
 if (-not (Test-HiveVersionOutput `
-    -Output "AIgent Hive v0.9.0-test #2 · developer test build (released 2026-08-06)" `
+    -Output $testVersionOutput `
     -ExpectedVersion "0.9.0" `
     -ExpectedPackageVersion "0.9.0-test.2"
 )) {
