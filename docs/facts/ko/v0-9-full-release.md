@@ -10,7 +10,7 @@ tags: [distribution, release, signing, v0-9]
 aliases: ["0.9.0 release plan", "full release"]
 sources:
   - "repo:docs/decisions/ADR-0017-0.9-full-release.md#sha256:f534f4713c0a95b9a5e7ad63eed1470cd4cfd720adb37ecaea85f0a5dfad5009"
-  - "repo:docs/plans/active/release-0.9.0.md#sha256:eb57729c43e676c42fcb133b60b0efc5d17f4400805758447728fad2b4de8027"
+  - "repo:docs/plans/active/release-0.9.0.md#sha256:8b4e7976e8c6876f805e6441447294baf2e8f3156417526d465098c75980ef3e"
 links: [host-external-integrations, release-verification, test-distribution, version-policy]
 reviewed_revision: "git:a78aed2efcf96d34ef020addc30ebdd70f035286"
 status: active
@@ -22,4 +22,4 @@ status: active
 시험판은 `0.9.0-test.5`이고 `latest=0.8.0`은 유지됐다. commit `9e08a48`의
 `0.9.0-test.6` 후보 `31254605322`는 모든 native target·npm 묶음·attestation을 만들었지만,
 두 publication 시도는 첫 scoped package의 npm `404`에서 중단됐다. 별도 token fallback workflow 대신
-channel을 묶는 단일 `release-publish.yml`을 사용한다.
+channel을 묶는 단일 `release-publish.yml`을 사용하며 Copier·Rust는 같은 Discord 기본 필드를 출력한다.

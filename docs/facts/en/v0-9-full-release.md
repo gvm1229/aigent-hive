@@ -10,7 +10,7 @@ tags: [distribution, release, signing, v0-9]
 aliases: ["0.9.0 release plan", "full release"]
 sources:
   - "repo:docs/decisions/ADR-0017-0.9-full-release.md#sha256:f534f4713c0a95b9a5e7ad63eed1470cd4cfd720adb37ecaea85f0a5dfad5009"
-  - "repo:docs/plans/active/release-0.9.0.md#sha256:eb57729c43e676c42fcb133b60b0efc5d17f4400805758447728fad2b4de8027"
+  - "repo:docs/plans/active/release-0.9.0.md#sha256:8b4e7976e8c6876f805e6441447294baf2e8f3156417526d465098c75980ef3e"
 links: [host-external-integrations, release-verification, test-distribution, version-policy]
 reviewed_revision: "git:a78aed2efcf96d34ef020addc30ebdd70f035286"
 status: active
@@ -23,3 +23,4 @@ public prerelease is `0.9.0-test.5`, while `latest=0.8.0` remains unchanged. Can
 `31254605322` built `0.9.0-test.6` from `9e08a48` for all native targets, the npm umbrella, and
 attestations, but both publication attempts stopped at the first scoped package with npm `404`.
 One channel-bound `release-publish.yml` now replaces the separate token fallback workflows.
+Copier and Rust now emit the same default Discord message-field configuration.

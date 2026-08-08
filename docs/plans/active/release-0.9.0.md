@@ -93,6 +93,7 @@ attestation·signing·TUF → `v0.9.0` normal Release·npm `latest` → public a
 - [ ] [REL9-025] Release·registry·installer 관찰, critical 회귀 0건과 rollback 판정
 - [ ] [REL9-026] PLAN·CURRENT·release notes·ADR·bilingual fact에 run ID·SHA·digest·지원·미검증 범위 최종 반영
 - [ ] [REL9-027] `release-publish.yml` 단일 OIDC publication: `channel=test|stable`별 exact branch·candidate·tag·Release guard, `NPM_TOKEN` fallback 제거, six-package Trusted Publisher 설정 안내와 static contract 검증
+- [x] [REL9-028] Copier와 Rust harness renderer가 Discord `message_fields` 기본값을 byte-exact하게 동일 출력하는 parity PASS — `Copier 9.17.0` 격리 검증에서 4개 parity PASS
 
 ## 실행 순서
 
@@ -102,8 +103,9 @@ attestation·signing·TUF → `v0.9.0` normal Release·npm `latest` → public a
 4. `REL9-006–012` clean clone·cross-platform 시험 후보 검증
 5. `REL9-013–016` bare 시험판 독립 게시·수용·선택형 numbered 시험판
 6. `REL9-027` 단일 OIDC publication 구현·Trusted Publisher 설정
-7. `REL9-017–024` main 통합·stable candidate·signing·별도 정식 publication
-8. `REL9-025–026` 관찰·current-truth 완료 기록
+7. `REL9-028` Copier·Rust Discord 설정 parity 복구
+8. `REL9-017–024` main 통합·stable candidate·signing·별도 정식 publication
+9. `REL9-025–026` 관찰·current-truth 완료 기록
 
 ## 외부 권한 경계
 
