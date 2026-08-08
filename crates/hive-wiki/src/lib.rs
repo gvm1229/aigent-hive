@@ -35,6 +35,7 @@ use tempfile::NamedTempFile;
 const INDEX_RELATIVE: &str = ".hive/index/hive.sqlite3";
 const STALE_RELATIVE: &str = ".hive/index/.stale";
 const LOCK_RELATIVE: &str = ".hive/index/.knowledge.lock";
+const SHARED_OPERATION_LOCK_RELATIVE: &str = ".hive/index/.shared-operation.lock";
 const SUPPRESSION_RELATIVE: &str = ".hive/knowledge/suppression.yml";
 const WIKI_RELATIVE: &str = ".hive/knowledge/Wiki";
 const RAW_RELATIVE: &str = ".hive/knowledge/Raw";
@@ -4496,7 +4497,15 @@ struct CapabilityKnowledgeLock {
 
 impl CapabilityKnowledgeLock {
     fn acquire(root: &Dir) -> Result<Self, WikiError> {
-        let (index, name) = capability_parent(root, Path::new(LOCK_RELATIVE), true)?
+        Self::acquire_at(root, Path::new(LOCK_RELATIVE))
+    }
+
+    fn acquire_shared_operation(root: &Dir) -> Result<Self, WikiError> {
+        Self::acquire_at(root, Path::new(SHARED_OPERATION_LOCK_RELATIVE))
+    }
+
+    fn acquire_at(root: &Dir, relative: &Path) -> Result<Self, WikiError> {
+        let (index, name) = capability_parent(root, relative, true)?
             .ok_or_else(|| WikiError::Io("lock directory disappeared".to_owned()))?;
         let started = Instant::now();
         loop {

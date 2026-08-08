@@ -200,6 +200,11 @@ pub struct CanonicalKnowledgeLock {
     _inner: crate::CapabilityKnowledgeLock,
 }
 
+/// Exclusive user-root lock covering one complete shared canonical mutation and rebuild.
+pub struct SharedKnowledgeOperationLock {
+    _inner: crate::CapabilityKnowledgeLock,
+}
+
 impl RagStore {
     /// Pin an existing user root without creating or changing any files.
     ///
@@ -255,6 +260,19 @@ impl RagStore {
     pub fn acquire_authorization_lock(&self) -> Result<CanonicalKnowledgeLock, WikiError> {
         crate::CapabilityKnowledgeLock::acquire(&self.root)
             .map(|inner| CanonicalKnowledgeLock { _inner: inner })
+    }
+
+    /// Serialize a complete shared mutation across preparation, canonical writes, and rebuild.
+    ///
+    /// This outer lock is distinct from the inner publication lock, so callers may safely hold
+    /// it while invoking store operations that acquire the canonical publication lock.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the operation lock cannot be created or acquired within the bound.
+    pub fn acquire_shared_operation_lock(&self) -> Result<SharedKnowledgeOperationLock, WikiError> {
+        crate::CapabilityKnowledgeLock::acquire_shared_operation(&self.root)
+            .map(|inner| SharedKnowledgeOperationLock { _inner: inner })
     }
 
     /// Ensure the user-root collection, registry, generation state, and RAG index exist.

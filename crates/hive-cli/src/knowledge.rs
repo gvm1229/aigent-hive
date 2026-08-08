@@ -28,7 +28,8 @@ use hive_wiki::shared::{
     validate_shared_index, SHARED_INDEX_RELATIVE,
 };
 use hive_wiki::store::{
-    validate_reviewed_claims_for_apply, CollectionRegistration, RagStore, StoreCommit,
+    validate_reviewed_claims_for_apply, CollectionRegistration, RagStore,
+    SharedKnowledgeOperationLock, StoreCommit,
 };
 use hive_wiki::{
     delete_page, delete_page_shared, ingest, ingest_shared, lint, list_pages, promote,
@@ -2172,6 +2173,10 @@ fn run_ingest(arguments: &[String]) -> Result<KnowledgeResult, WikiError> {
     let shared = optional(&options, "--user-root")
         .map(|root| shared_mutation_target(&target, Path::new(root), true))
         .transpose()?;
+    let _shared_operation_lock = shared
+        .as_ref()
+        .map(acquire_shared_operation_lock)
+        .transpose()?;
     if shared.is_none() {
         authorize_legacy_target(&target)?;
     }
@@ -2841,6 +2846,9 @@ fn run_page_promote(arguments: &[String]) -> Result<KnowledgeResult, WikiError> 
     let target = PathBuf::from(required(&options, "--target")?);
     let user_root = PathBuf::from(required(&options, "--user-root")?);
     let shared = shared_mutation_target(&target, &user_root, false)?;
+    let _shared_operation_lock = (mode == PromotionMode::Apply)
+        .then(|| acquire_shared_operation_lock(&shared))
+        .transpose()?;
     let page_id = required(&options, "--page-id")?;
     let category = match required(&options, "--category")? {
         "fact" => PromotionCategory::Fact,
@@ -3082,6 +3090,10 @@ fn run_delete(arguments: &[String]) -> Result<KnowledgeResult, WikiError> {
     let shared = optional(&options, "--user-root")
         .map(|root| shared_mutation_target(&target, Path::new(root), true))
         .transpose()?;
+    let _shared_operation_lock = shared
+        .as_ref()
+        .map(acquire_shared_operation_lock)
+        .transpose()?;
     if shared.is_none() {
         authorize_legacy_target(&target)?;
     }
@@ -3145,6 +3157,10 @@ fn run_suppress(arguments: &[String]) -> Result<KnowledgeResult, WikiError> {
     let target = PathBuf::from(required(&options, "--target")?);
     let shared = optional(&options, "--user-root")
         .map(|root| shared_mutation_target(&target, Path::new(root), true))
+        .transpose()?;
+    let _shared_operation_lock = shared
+        .as_ref()
+        .map(acquire_shared_operation_lock)
         .transpose()?;
     if shared.is_none() {
         authorize_legacy_target(&target)?;
@@ -3240,6 +3256,12 @@ fn prepare_shared_mutation(shared: &SharedMutationTarget) -> Result<Vec<String>,
         .into_iter()
         .map(|path| format!("user-root:{path}"))
         .collect())
+}
+
+fn acquire_shared_operation_lock(
+    shared: &SharedMutationTarget,
+) -> Result<SharedKnowledgeOperationLock, WikiError> {
+    RagStore::open(&shared.user_root)?.acquire_shared_operation_lock()
 }
 
 fn require_shared_wiki_enabled(user_root: &Path) -> Result<(), WikiError> {
