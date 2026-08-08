@@ -47,13 +47,15 @@ function Test-HiveVersionOutput {
     }
     elseif ($ExpectedPackageVersion -eq "${ExpectedVersion}-test") {
         $expected = "^AIgent Hive v" + [regex]::Escape($ExpectedVersion) +
-            "-test · developer test build \(released [0-9]{4}-[0-9]{2}-[0-9]{2}\)$"
+            "-test " + [regex]::Escape([char]0x00B7) +
+            " developer test build \(released [0-9]{4}-[0-9]{2}-[0-9]{2}\)$"
     }
     else {
         $revision = $ExpectedPackageVersion.Substring(("${ExpectedVersion}-test.").Length)
         $expected = "^AIgent Hive v" + [regex]::Escape($ExpectedVersion) +
             "-test #" + [regex]::Escape($revision) +
-            " · developer test build \(released [0-9]{4}-[0-9]{2}-[0-9]{2}\)$"
+            " " + [regex]::Escape([char]0x00B7) +
+            " developer test build \(released [0-9]{4}-[0-9]{2}-[0-9]{2}\)$"
     }
     return $Output -cmatch (
         $expected
