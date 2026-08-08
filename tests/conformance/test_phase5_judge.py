@@ -21,10 +21,10 @@ from jsonschema import Draft202012Validator, FormatChecker, ValidationError
 ROOT = Path(__file__).resolve().parents[2]
 FIXTURES = ROOT / "tests/fixtures/phase5/judge"
 SCHEMAS = ROOT / "schemas"
-SKILL = ROOT / "harness/skills/hive-judge-package/SKILL.md"
+SKILL = ROOT / "harness/skills/verify-package/SKILL.md"
 PROJECTED_SKILL = (
     ROOT
-    / "harness/template/.agents/skills/hive-judge-package/SKILL.md"
+    / "harness/template/.agents/skills/verify-package/SKILL.md"
 )
 CATALOG = ROOT / "harness/skills/catalog.yml"
 ACTIVE_SKILLS = ROOT / "harness/template/.hive/config/active-skills.yml"
@@ -316,7 +316,7 @@ class Phase5JudgeStaticContracts(unittest.TestCase):
     def test_judge_skill_is_implemented_read_only_builtin(self) -> None:
         catalog = read_yaml(CATALOG)
         entry = next(
-            item for item in catalog["skills"] if item["name"] == "hive-judge-package"
+            item for item in catalog["skills"] if item["name"] == "verify-package"
         )
         self.assertEqual(entry["availability"], "implemented")
         self.assertEqual(entry["side_effect_class"], "read-only")
@@ -326,7 +326,7 @@ class Phase5JudgeStaticContracts(unittest.TestCase):
     def test_active_skill_digest_matches_canonical_source_bytes(self) -> None:
         ledger = read_yaml(ACTIVE_SKILLS)
         entry = next(
-            item for item in ledger["skills"] if item["name"] == "hive-judge-package"
+            item for item in ledger["skills"] if item["name"] == "verify-package"
         )
         self.assertEqual(entry["content_digest"], digest_bytes(SKILL.read_bytes()))
         self.assertEqual(entry["source_type"], "built-in")
