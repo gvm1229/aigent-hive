@@ -27,27 +27,27 @@ LOCAL_SKILL_SOURCE = (
     PHASE3_FIXTURES / "optional/local-inspect/SKILL.md"
 )
 PROJECTED_BUILTINS = (
+    "answer",
+    "auto-setup-project",
     "clean-ai-slop",
-    "auto-setup-harness",
+    "engineer-run",
+    "handoff-role",
+    "import-repository-knowledge",
+    "maintain-knowledge",
+    "manage-usage",
+    "manage-wiki",
+    "migrate-project",
+    "record-knowledge",
+    "refine-prompt",
     "research-practices",
-    "setup-harness",
-    "hive-simple-question",
-    "hive-prompt-refine",
-    "hive-knowledge-capture",
-    "hive-knowledge-query",
-    "hive-knowledge-scan",
-    "hive-loop-engineering",
-    "hive-knowledge-maintenance",
-    "hive-knowledge-promote",
-    "hive-project-upgrade",
-    "hive-role-handoff",
-    "hive-run-checkpoint",
-    "hive-run-resume",
-    "hive-judge-package",
-    "hive-update",
-    "hive-usage-guard",
-    "hive-wiki",
-    "hive-migrate",
+    "resume-work",
+    "save-progress",
+    "search-knowledge",
+    "setup-project",
+    "share-knowledge",
+    "update-hive",
+    "upgrade-project",
+    "verify-package",
 )
 CATALOG_ONLY = ()
 
@@ -179,7 +179,7 @@ class Phase3HostProjection(Phase3ProjectionTestCase):
                 agents = (target / "AGENTS.md").read_text(encoding="utf-8")
                 skill = (
                     self.discovery_root(target, host)
-                    / "hive-usage-guard/SKILL.md"
+                    / "manage-usage/SKILL.md"
                 ).read_text(encoding="utf-8")
                 for surface in (agents, skill):
                     self.assertIn("hive usage enforce", surface)
@@ -280,9 +280,9 @@ class Phase3HostProjection(Phase3ProjectionTestCase):
                 )
                 self.assertNotIn(b"UserPromptSubmit", discovery_bytes)
                 for skill in (
-                    "hive-run-checkpoint",
-                    "hive-run-resume",
-                    "hive-role-handoff",
+                    "save-progress",
+                    "resume-work",
+                    "handoff-role",
                 ):
                     self.assertTrue(
                         (
@@ -571,7 +571,7 @@ class Phase3ProjectionHostile(Phase3ProjectionTestCase):
         target = self.work_root / "builtin-conflict"
         projected = (
             self.discovery_root(target, "codex")
-            / "hive-simple-question/SKILL.md"
+            / "answer/SKILL.md"
         )
         projected.parent.mkdir(parents=True)
         user_bytes = b"user-owned colliding Skill bytes\x00\xff\n"

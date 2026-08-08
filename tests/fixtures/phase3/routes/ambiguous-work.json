@@ -10,9 +10,9 @@
   "hive_candidate": null,
   "active_hive_skills": [
     {
-      "name": "hive-prompt-refine",
+      "name": "refine-prompt",
       "source_type": "built-in",
-      "content_digest": "sha256:c2b01a47706256110c5c1c3f3c5171d146658d54199616030af5aea1cf4f2f77",
+      "content_digest": "sha256:ee2de1307fbe22889b190a42e94ad38be9dd151d46ecc15c7928da91d0f287d2",
       "side_effect_class": "none",
       "capabilities": [],
       "consent_digest": null,

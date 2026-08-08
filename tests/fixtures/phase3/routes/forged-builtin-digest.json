@@ -7,10 +7,10 @@
   "simple_question": false,
   "project_context_required": false,
   "external_candidate": null,
-  "hive_candidate": "hive-knowledge-query",
+  "hive_candidate": "search-knowledge",
   "active_hive_skills": [
     {
-      "name": "hive-knowledge-query",
+      "name": "search-knowledge",
       "source_type": "built-in",
       "content_digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
       "side_effect_class": "read-only",

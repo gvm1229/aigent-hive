@@ -2,7 +2,7 @@
   "schema_version": 1,
   "host": "codex",
   "explicit_action": null,
-  "explicit_skill": "hive-knowledge-query",
+  "explicit_skill": "search-knowledge",
   "plain_answer": false,
   "simple_question": true,
   "project_context_required": true,
@@ -12,12 +12,12 @@
     "compatible": true,
     "explicit_selection": true
   },
-  "hive_candidate": "hive-knowledge-query",
+  "hive_candidate": "search-knowledge",
   "active_hive_skills": [
     {
-      "name": "hive-knowledge-query",
+      "name": "search-knowledge",
       "source_type": "built-in",
-      "content_digest": "sha256:c19a76a14e65332477b7ddf4779d59eb9f5ac7baaca44a3ac4384d050e40ccb0",
+      "content_digest": "sha256:e2d21cbebdecb62292d0fd0fdbea5b378769f525c3c8ed24cd2b129d1b8f04d9",
       "side_effect_class": "read-only",
       "capabilities": ["filesystem-read", "memory-read", "shell"],
       "consent_digest": null,
