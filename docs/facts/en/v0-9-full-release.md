@@ -10,19 +10,18 @@ tags: [distribution, release, signing, v0-9]
 aliases: ["0.9.0 release plan", "full release"]
 sources:
   - "repo:docs/decisions/ADR-0017-0.9-full-release.md#sha256:ee293a5b839fb7af3b7f4ebefc9be662f9ab595242e37cf31e6b143c6c69cb20"
-  - "repo:docs/plans/active/release-0.9.0.md#sha256:bf7fa4f0f5d2639358490df5e7978e9756cfe633e82ef84251ba4dc179101a05"
+  - "repo:docs/plans/active/release-0.9.0.md#sha256:04fd1386880e69f61277c8618eb810901cfbd05ff95d24fab6493172feb25a54"
 links: [host-external-integrations, release-verification, test-distribution, version-policy]
-reviewed_revision: "git:27816088abbcfca7233e0e006f8b1e6cdec7aa55"
+reviewed_revision: "git:50a3420f5b8c8aadae4dde3d74cf44c76f19bf88"
 status: active
 ---
 
 # Aigent Hive 0.9.0 Test and Stable Release
 
-Stable `v0.9.0` remains absent. The latest public prerelease is `0.9.0-test.5`, with
-`latest=0.8.0` unchanged. Candidate `31254605322` passed five native targets, npm packaging, and
-attestation, but both publication attempts stopped before creating `0.9.0-test.6` artifacts.
-Codex CLI `0.146.1` plugin activation is now a required `REL9-011` gate: current JSON
-adapter/parser qualification, isolated marketplace→plugin→user-setup validation, rollback and
-foreign-byte preservation, fresh-session discovery, and fixed numbered-prerelease acceptance.
-One channel-bound `release-publish.yml` replaces separate token fallback workflows, and Copier and
-Rust emit the same default Discord message-field configuration.
+Stable `v0.9.0` remains absent; `0.9.0-test.5` remains the latest public prerelease and
+`latest=0.8.0` is unchanged. Candidate `31254605322` passed five native targets, npm packaging,
+and attestation, but publication stopped before `0.9.0-test.6` artifacts. Codex CLI `0.147.0`
+reproduced physical-path reporting in an isolated macOS user root. Hive now canonicalizes the
+no-follow-validated root before activation and setup validation. The local install/setup flow and
+rollback and foreign-byte regressions pass. `REL9-011` remains open pending a fixed numbered
+prerelease's Windows clean-install and fresh-session acceptance.
