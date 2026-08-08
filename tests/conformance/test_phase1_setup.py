@@ -698,7 +698,7 @@ class Phase1SetupConformance(unittest.TestCase):
         answers["persona"] = {"id": "friendly"}
         answers["skills"] = {
             "mode": "individual",
-            "selected": ["setup-harness", "hive-prompt-refine"],
+            "selected": ["setup-project", "refine-prompt"],
         }
         write_answers(answer_path, answers)
 
@@ -718,7 +718,7 @@ class Phase1SetupConformance(unittest.TestCase):
             installed_answers["skills"],
             {
                 "mode": "individual",
-                "selected": ["setup-harness", "hive-prompt-refine"],
+                "selected": ["setup-project", "refine-prompt"],
             },
         )
 
