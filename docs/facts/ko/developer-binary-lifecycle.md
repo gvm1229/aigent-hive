@@ -23,7 +23,7 @@ status: active
 `scripts/dev-install.sh --sandbox`: source local `product-dev` binary build. `--global`: 기존
 active Hive executable backup 뒤 atomic 교체. `--rollback`: active developer digest가 일치할 때만
 그 executable 복구. 세 경로 모두 canonical user preference·knowledge·index·directive·Skill과
-project `.hive`를 초기화·삭제·migration·변경하지 않는다. Local binary: `local developer build`
+project `.hive` 초기화·삭제·migration·변경 금지. Local binary: `local developer build`
 출력, public `developer test build` identity 미사용. Local `-dev` binary만 internally reproducible
 prior user manifest와 live managed byte 일치 조건의 projection refresh base 사용. Public stable·test
 release는 signed historical base 부재 시 fail-closed 유지.

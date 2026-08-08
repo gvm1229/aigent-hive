@@ -93,10 +93,10 @@ scripts/dev-install.sh --sandbox
 ```
 
 출력은 공개 시험판과 구분되는 `AIgent Hive vX.Y.Z-dev · local developer build (built
-YYYY-MM-DD)`이다. 기존 전역 `hive`를 이 개발 binary로 임시 교체하려면
+YYYY-MM-DD)` 형식. 기존 전역 `hive`를 이 개발 binary로 임시 교체하려면
 `scripts/dev-install.sh --global`, 이전 실행 파일 복구는 `scripts/dev-install.sh --rollback`을
-사용한다. 세 mode 모두 `~/.hive`의 preference·knowledge·index와 user directive·Skill, project
-`.hive`를 생성·변경·삭제하지 않는다.
+사용. 세 mode 모두 `~/.hive`의 preference·knowledge·index와 user directive·Skill, project
+`.hive` 생성·변경·삭제 금지.
 
 ## CLI 진단 예시
 

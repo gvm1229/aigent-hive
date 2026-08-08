@@ -13,7 +13,7 @@
 ## 결정
 
 - 모든 built-in Skill: 전역 setup 기본 활성화
-- `recommended` mode·profile 기반 Skill 묶음: 제거
+- 삭제 대상: `recommended` mode 및 profile별 Skill suite
 - 선택 변경: Skill별 on/off 토글; `setup-hive`는 필수 유지
 - optional third-party Skill: 기존 explicit approval 경계 유지
 - 모든 사용자 대면 목록: 항목당 Markdown 한 줄

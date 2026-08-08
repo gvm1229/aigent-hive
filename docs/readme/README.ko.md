@@ -122,7 +122,7 @@ code signing은 후속 안정 릴리스로 deferred.
 
 ### 1. Hive CLI 설치
 
-위 [Install 0.8.0](#install-080) 중 한 가지 명령 사용. npm 설치 범위: `hive` command 제공;
+위 [0.8.0 설치](#080-설치) 중 한 가지 명령 사용. npm 설치 범위: `hive` command 제공;
 host 내부 Hive 활성화 전 단계.
 
 ### 2. 이 host에 Hive 연결

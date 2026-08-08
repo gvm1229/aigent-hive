@@ -100,7 +100,7 @@ Global setup answer:
 - `--global`: active `hive` executable만 backup 뒤 atomic replacement; canonical user data 무변경
 - `--rollback`: developer binary digest가 아직 active target과 일치할 때만 saved executable 복구
 - `product-dev` version output은 local developer build로 표기하며 npm public `product-test[.N]`
-  release identity를 사용하지 않음
+  release identity 미사용
 - Local `product-dev` binary: internally reproducible prior manifest와 live managed byte 일치 시
   developer-only three-way base 허용. Public stable·test binary는 signed historical base 부재 시
   계속 fail-closed
