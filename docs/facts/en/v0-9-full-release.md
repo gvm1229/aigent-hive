@@ -5,22 +5,24 @@ topic_slug: v0-9-full-release
 language: en
 counterpart: ../ko/v0-9-full-release.md
 title: "Aigent Hive 0.9.0 Test and Stable Release"
-summary: "The 0.9.0 test prerelease uses a protected independent channel before a separately authorized stable publication."
+summary: "The 0.9.0 stable release is blocked until current Codex plugin activation and setup pass a fixed numbered prerelease."
 tags: [distribution, release, signing, v0-9]
 aliases: ["0.9.0 release plan", "full release"]
 sources:
-  - "repo:docs/decisions/ADR-0017-0.9-full-release.md#sha256:f534f4713c0a95b9a5e7ad63eed1470cd4cfd720adb37ecaea85f0a5dfad5009"
-  - "repo:docs/plans/active/release-0.9.0.md#sha256:8b4e7976e8c6876f805e6441447294baf2e8f3156417526d465098c75980ef3e"
+  - "repo:docs/decisions/ADR-0017-0.9-full-release.md#sha256:ee293a5b839fb7af3b7f4ebefc9be662f9ab595242e37cf31e6b143c6c69cb20"
+  - "repo:docs/plans/active/release-0.9.0.md#sha256:bf7fa4f0f5d2639358490df5e7978e9756cfe633e82ef84251ba4dc179101a05"
 links: [host-external-integrations, release-verification, test-distribution, version-policy]
-reviewed_revision: "git:a78aed2efcf96d34ef020addc30ebdd70f035286"
+reviewed_revision: "git:27816088abbcfca7233e0e006f8b1e6cdec7aa55"
 status: active
 ---
 
 # Aigent Hive 0.9.0 Test and Stable Release
 
-Test prereleases use npm `test` and GitHub prereleases; stable `v0.9.0` remains absent. The latest
-public prerelease is `0.9.0-test.5`, while `latest=0.8.0` remains unchanged. Candidate
-`31254605322` built `0.9.0-test.6` from `9e08a48` for all native targets, the npm umbrella, and
-attestations, but both publication attempts stopped at the first scoped package with npm `404`.
-One channel-bound `release-publish.yml` now replaces the separate token fallback workflows.
-Copier and Rust now emit the same default Discord message-field configuration.
+Stable `v0.9.0` remains absent. The latest public prerelease is `0.9.0-test.5`, with
+`latest=0.8.0` unchanged. Candidate `31254605322` passed five native targets, npm packaging, and
+attestation, but both publication attempts stopped before creating `0.9.0-test.6` artifacts.
+Codex CLI `0.146.1` plugin activation is now a required `REL9-011` gate: current JSON
+adapter/parser qualification, isolated marketplace→plugin→user-setup validation, rollback and
+foreign-byte preservation, fresh-session discovery, and fixed numbered-prerelease acceptance.
+One channel-bound `release-publish.yml` replaces separate token fallback workflows, and Copier and
+Rust emit the same default Discord message-field configuration.

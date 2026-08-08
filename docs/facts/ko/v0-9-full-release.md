@@ -5,21 +5,24 @@ topic_slug: v0-9-full-release
 language: ko
 counterpart: ../en/v0-9-full-release.md
 title: "Aigent Hive 0.9.0 시험·정식 릴리스"
-summary: "0.9.0 시험 prerelease의 protected 독립 채널과 별도 승인 정식 publication 계약."
+summary: "현재 Codex plugin 활성화·setup 수정 numbered 시험판 수용 전 0.9.0 stable 출시 차단."
 tags: [distribution, release, signing, v0-9]
 aliases: ["0.9.0 release plan", "full release"]
 sources:
-  - "repo:docs/decisions/ADR-0017-0.9-full-release.md#sha256:f534f4713c0a95b9a5e7ad63eed1470cd4cfd720adb37ecaea85f0a5dfad5009"
-  - "repo:docs/plans/active/release-0.9.0.md#sha256:8b4e7976e8c6876f805e6441447294baf2e8f3156417526d465098c75980ef3e"
+  - "repo:docs/decisions/ADR-0017-0.9-full-release.md#sha256:ee293a5b839fb7af3b7f4ebefc9be662f9ab595242e37cf31e6b143c6c69cb20"
+  - "repo:docs/plans/active/release-0.9.0.md#sha256:bf7fa4f0f5d2639358490df5e7978e9756cfe633e82ef84251ba4dc179101a05"
 links: [host-external-integrations, release-verification, test-distribution, version-policy]
-reviewed_revision: "git:a78aed2efcf96d34ef020addc30ebdd70f035286"
+reviewed_revision: "git:27816088abbcfca7233e0e006f8b1e6cdec7aa55"
 status: active
 ---
 
 # Aigent Hive 0.9.0 시험·정식 릴리스
 
-시험 prerelease는 npm `test`·GitHub prerelease이며 stable `v0.9.0`은 아직 없다. 최신 공개
-시험판은 `0.9.0-test.5`이고 `latest=0.8.0`은 유지됐다. commit `9e08a48`의
-`0.9.0-test.6` 후보 `31254605322`는 모든 native target·npm 묶음·attestation을 만들었지만,
-두 publication 시도는 첫 scoped package의 npm `404`에서 중단됐다. 별도 token fallback workflow 대신
-channel을 묶는 단일 `release-publish.yml`을 사용하며 Copier·Rust는 같은 Discord 기본 필드를 출력한다.
+- Stable `v0.9.0`: 미게시
+- 최신 공개 시험판: `0.9.0-test.5`; `latest=0.8.0` 유지
+- 후보 `31254605322`: 5개 native target·npm packaging·attestation PASS, 게시 2회는
+  `0.9.0-test.6` artifact 생성 전 중단
+- `REL9-011`: Codex CLI `0.146.1` 현재 JSON adapter·parser 검증, 격리
+  marketplace→plugin→user-setup, 실패 되돌리기·foreign byte 보존, fresh-session discovery,
+  수정 numbered 시험판 수용의 필수 출시 gate
+- 단일 `release-publish.yml` OIDC와 Copier·Rust Discord 기본 필드 parity 완료

@@ -9,7 +9,7 @@ summary: "Discord v0.9은 현지화한 outbound 사용량 알림 항목을 안�
 tags: [discord, integration, notion]
 aliases: ["Host integration priority"]
 sources:
-  - "repo:crates/hive-cli/src/discord.rs#sha256:8aaef5e930d56ce3053ea5e239c114cc99529853ec31a4f7173647d2193895fb"
+  - "repo:crates/hive-cli/src/discord.rs#sha256:524edb6f4e70a64cef99ffdef0e8347275701836c49e5b8b155edd37242fa6bd"
   - "repo:crates/hive-cli/src/usage_control.rs#sha256:ad1c22fbacbfab22bd4120a94bad5cb10ebc45936e39c5b0f586f5d9a2467a92"
   - "repo:crates/hive-cli/src/user_setup.rs#sha256:9d0a796027dde450cfec2162ac1073305068aa4ac0e6351303f4976c1ad87f38"
   - "repo:docs/decisions/ADR-0018-notion-wiki-backend.md#sha256:9ad86748e6144d65c143194538ba95369258ea0b00336f1b81d347fe1ce87245"
