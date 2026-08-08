@@ -238,7 +238,7 @@ else:
         else:
             skills = {
                 "mode": "individual",
-                "selected": selected_skills or ["setup-hive"],
+                "selected": selected_skills or ["configure"],
             }
         write_yaml(
             path,
@@ -348,7 +348,7 @@ else:
                     self.assertTrue(
                         (
                             user_root
-                            / ".gemini/config/skills/setup-hive/SKILL.md"
+                            / ".gemini/config/skills/configure/SKILL.md"
                         ).is_file()
                     )
                     self.assertEqual(
@@ -364,7 +364,7 @@ else:
                         (
                             user_root
                             / ".gemini/config/plugins/aigent-hive"
-                            / "skills/setup-hive/SKILL.md"
+                            / "skills/configure/SKILL.md"
                         ).is_file()
                     )
                 else:
@@ -372,14 +372,14 @@ else:
                         (
                             user_root
                             / f".hive/marketplaces/{host}/plugins/aigent-hive"
-                            / "skills/setup-hive/SKILL.md"
+                            / "skills/configure/SKILL.md"
                         ).is_file()
                     )
                     self.assertFalse(
                         (
                             user_root
                             / f".hive/marketplaces/{host}/plugins/aigent-hive"
-                            / "skills/hive-prompt-refine/SKILL.md"
+                            / "skills/refine-prompt/SKILL.md"
                         ).exists()
                     )
                     if host == "codex":
@@ -460,7 +460,7 @@ else:
         self.assertEqual(preview_result["data"]["setup_state"], "setup-required")
         self.assertEqual(snapshot_tree(user_root), before_preview)
         self.assertIn(
-            "hive-knowledge-query", preview_result["data"]["resolved_skills"]
+            "search-knowledge", preview_result["data"]["resolved_skills"]
         )
         self.assertIn(
             ".hive/config/user-setup.yml", preview_result["changed_paths"]
@@ -470,12 +470,12 @@ else:
             preview_result["changed_paths"],
         )
         self.assertIn(
-            ".agents/skills/hive-prompt-refine/SKILL.md",
+            ".agents/skills/refine-prompt/SKILL.md",
             preview_result["changed_paths"],
         )
         self.assertIn(
             ".hive/marketplaces/codex/plugins/aigent-hive/skills/"
-            "hive-prompt-refine/SKILL.md",
+            "refine-prompt/SKILL.md",
             preview_result["changed_paths"],
         )
 
@@ -496,17 +496,17 @@ else:
         self.assertTrue((user_root / ".hive/knowledge/Wiki/index.md").is_file())
         self.assertTrue((user_root / ".hive/index/hive.sqlite3").is_file())
         self.assertTrue(
-            (user_root / ".agents/skills/hive-prompt-refine/SKILL.md").is_file()
+            (user_root / ".agents/skills/refine-prompt/SKILL.md").is_file()
         )
         self.assertTrue(
             (
                 user_root
                 / ".hive/marketplaces/codex/plugins/aigent-hive"
-                / "skills/hive-prompt-refine/SKILL.md"
+                / "skills/refine-prompt/SKILL.md"
             ).is_file()
         )
         self.assertTrue(
-            (user_root / ".agents/skills/hive-usage-guard/SKILL.md").is_file()
+            (user_root / ".agents/skills/manage-usage/SKILL.md").is_file()
         )
         guidance = (user_root / ".codex/AGENTS.md").read_text(encoding="utf-8")
         self.assertIn("상태: `operational`", guidance)
@@ -522,7 +522,7 @@ else:
             hosts=["codex"],
             wiki_enabled=False,
             skills_mode="individual",
-            selected_skills=["setup-hive", "hive-prompt-refine"],
+            selected_skills=["configure", "refine-prompt"],
             usage_enabled=True,
             threshold=17,
         )
@@ -542,16 +542,16 @@ else:
         self.assertFalse((user_root / ".hive/index/hive.sqlite3").exists())
         self.assertTrue((user_root / ".hive/knowledge/Wiki/index.md").is_file())
         self.assertTrue(
-            (user_root / ".agents/skills/hive-usage-guard/SKILL.md").is_file()
+            (user_root / ".agents/skills/manage-usage/SKILL.md").is_file()
         )
         self.assertFalse(
-            (user_root / ".agents/skills/hive-knowledge-query/SKILL.md").exists()
+            (user_root / ".agents/skills/search-knowledge/SKILL.md").exists()
         )
         self.assertFalse(
             (
                 user_root
                 / ".hive/marketplaces/codex/plugins/aigent-hive"
-                / "skills/hive-knowledge-query/SKILL.md"
+                / "skills/search-knowledge/SKILL.md"
             ).exists()
         )
         installed_config = read_yaml(user_root / ".hive/config/user-setup.yml")
@@ -596,7 +596,7 @@ else:
         host_skill = (
             user_root
             / ".hive/marketplaces/codex/plugins/aigent-hive"
-            / "skills/hive-prompt-refine/SKILL.md"
+            / "skills/refine-prompt/SKILL.md"
         )
         host_bytes = host_skill.read_bytes()
         host_skill.write_bytes(host_bytes + b"\nlocal tamper\n")
@@ -664,7 +664,7 @@ else:
             "multi-host-user-setup",
             hosts=["codex", "claude", "antigravity"],
             skills_mode="individual",
-            selected_skills=["hive-knowledge-capture"],
+            selected_skills=["record-knowledge"],
         )
         preview_before = snapshot_tree(user_root)
         preview, preview_result = self.invoke(
@@ -682,15 +682,15 @@ else:
         self.assertEqual(snapshot_tree(user_root), preview_before)
         self.assertEqual(
             preview_result["data"]["resolved_skills"],
-            ["hive-knowledge-capture", "hive-knowledge-query", "setup-hive"],
+            ["configure", "record-knowledge", "search-knowledge"],
         )
         host_skill_paths = {
             "codex": ".hive/marketplaces/codex/plugins/aigent-hive/skills/"
-            "hive-knowledge-query/SKILL.md",
+            "search-knowledge/SKILL.md",
             "claude": ".hive/marketplaces/claude/plugins/aigent-hive/skills/"
-            "hive-knowledge-query/SKILL.md",
+            "search-knowledge/SKILL.md",
             "antigravity": ".gemini/config/skills/"
-            "hive-knowledge-query/SKILL.md",
+            "search-knowledge/SKILL.md",
         }
         for path in host_skill_paths.values():
             self.assertIn(
@@ -757,9 +757,9 @@ else:
                         (target / ".agents/directives" / directive).is_file()
                     )
                 for skill in (
-                    "hive-prompt-refine",
-                    "hive-project-upgrade",
-                    "hive-knowledge-promote",
+                    "refine-prompt",
+                    "upgrade-project",
+                    "share-knowledge",
                 ):
                     self.assertTrue(
                         (target / ".agents/skills" / skill / "SKILL.md").is_file()
@@ -782,7 +782,7 @@ else:
                     self.assertTrue(
                         (
                             target
-                            / ".claude/skills/hive-project-upgrade/SKILL.md"
+                            / ".claude/skills/upgrade-project/SKILL.md"
                         ).is_file()
                     )
                 else:
@@ -790,7 +790,7 @@ else:
 
     def test_upgrade_preserves_local_skill_and_recovers_injected_failure(self) -> None:
         target = self.setup_project("upgrade-consumer")
-        skill = target / ".agents/skills/hive-simple-question/SKILL.md"
+        skill = target / ".agents/skills/answer/SKILL.md"
         user_suffix = b"\n<!-- user-local-preference -->\n"
         skill.write_bytes(skill.read_bytes() + user_suffix)
         generated_config = target / ".hive/config/harness.toml"
@@ -813,11 +813,11 @@ else:
             report["path"]: report for report in scan_result["data"]["reports"]
         }
         self.assertEqual(
-            reports[".agents/skills/hive-simple-question/SKILL.md"]["disposition"],
+            reports[".agents/skills/answer/SKILL.md"]["disposition"],
             "local-preserved",
         )
         self.assertTrue(
-            reports[".agents/skills/hive-simple-question/SKILL.md"]["local_priority"]
+            reports[".agents/skills/answer/SKILL.md"]["local_priority"]
         )
 
         active_before = {
@@ -869,7 +869,7 @@ else:
         )
         self.assertEqual(
             [entry["path"] for entry in overrides["files"]],
-            [".agents/skills/hive-simple-question/SKILL.md"],
+            [".agents/skills/answer/SKILL.md"],
         )
 
         valid, valid_result = self.invoke(
@@ -886,7 +886,7 @@ else:
         for case in ("missing", "tampered"):
             with self.subTest(case=case):
                 target = self.setup_project(f"base-{case}")
-                skill = target / ".agents/skills/hive-simple-question/SKILL.md"
+                skill = target / ".agents/skills/answer/SKILL.md"
                 skill.write_text(
                     skill.read_text(encoding="utf-8") + "\nUser change.\n",
                     encoding="utf-8",
