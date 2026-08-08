@@ -752,9 +752,11 @@ fn parse(arguments: &[String]) -> Result<Arguments, SetupError> {
             "user setup requires --output json".to_owned(),
         ));
     }
-    let user_root = user_root.map_or_else(resolve_user_root, |value| Ok(PathBuf::from(value)))?;
-    let root_cap =
-        super::user_install::open_user_root_for_setup(&user_root).map_err(SetupError::Conflict)?;
+    let requested_user_root =
+        user_root.map_or_else(resolve_user_root, |value| Ok(PathBuf::from(value)))?;
+    let (user_root, root_cap) =
+        super::user_install::open_canonical_user_root_for_setup(&requested_user_root)
+            .map_err(SetupError::Conflict)?;
     Ok(Arguments {
         answers: PathBuf::from(
             answers.ok_or_else(|| SetupError::Input("missing --answers".to_owned()))?,
@@ -2637,6 +2639,29 @@ usage_guard:
 ",
         )
         .expect("valid config")
+    }
+
+    #[test]
+    fn cli_parse_uses_the_physical_user_root_after_no_follow_validation() {
+        let temporary = tempfile::tempdir().expect("tempdir");
+        let requested = temporary.path().to_path_buf();
+        let expected = requested.canonicalize().expect("canonical user root");
+        let answers = requested.join("answers.yml");
+        let arguments = vec![
+            "--scope".to_owned(),
+            "user".to_owned(),
+            "--answers".to_owned(),
+            answers.display().to_string(),
+            "--user-root".to_owned(),
+            requested.display().to_string(),
+            "--dry-run".to_owned(),
+            "--output".to_owned(),
+            "json".to_owned(),
+        ];
+
+        let parsed = parse(&arguments).expect("parse user setup arguments");
+
+        assert_eq!(parsed.user_root, expected);
     }
 
     fn write_projection_manifest(root: &Path, manifest: &UserProjectionManifest) {

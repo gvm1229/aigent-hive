@@ -633,11 +633,12 @@ fn configured_host(
         crate::user_setup::SelectedHost::Claude => UserHost::Claude,
         crate::user_setup::SelectedHost::Antigravity => UserHost::Antigravity,
     };
-    let root_cap = open_user_root(user_root).map_err(|error| error.message().to_owned())?;
+    let (user_root, root_cap) =
+        open_canonical_user_root(user_root).map_err(|error| error.message().to_owned())?;
     let arguments = UserArguments {
         host,
         mode,
-        user_root: user_root.to_path_buf(),
+        user_root,
         root_cap,
         setup_override: Some((config.clone(), resolved_skills.to_vec())),
     };
@@ -654,11 +655,12 @@ pub(crate) fn recover_configured_host(
         crate::user_setup::SelectedHost::Claude => UserHost::Claude,
         crate::user_setup::SelectedHost::Antigravity => UserHost::Antigravity,
     };
-    let root_cap = open_user_root(user_root).map_err(|error| error.message().to_owned())?;
+    let (user_root, root_cap) =
+        open_canonical_user_root(user_root).map_err(|error| error.message().to_owned())?;
     let arguments = UserArguments {
         host,
         mode: UserMode::Recover,
-        user_root: user_root.to_path_buf(),
+        user_root,
         root_cap,
         setup_override: None,
     };
@@ -752,8 +754,9 @@ fn parse(arguments: &[String]) -> Result<UserArguments, InstallError> {
         }
     };
     let mode = mode.ok_or_else(|| InstallError::Input("missing install/update mode".to_owned()))?;
-    let user_root = user_root.map_or_else(resolve_user_root, |value| Ok(PathBuf::from(value)))?;
-    let root_cap = open_user_root(&user_root)?;
+    let requested_user_root =
+        user_root.map_or_else(resolve_user_root, |value| Ok(PathBuf::from(value)))?;
+    let (user_root, root_cap) = open_canonical_user_root(&requested_user_root)?;
     Ok(UserArguments {
         host,
         mode,
@@ -803,8 +806,23 @@ fn open_user_root(root: &Path) -> Result<Dir, InstallError> {
     })
 }
 
+fn open_canonical_user_root(root: &Path) -> Result<(PathBuf, Dir), InstallError> {
+    let root_cap = open_user_root(root)?;
+    let canonical = root.canonicalize().map_err(|error| {
+        InstallError::Conflict(format!(
+            "cannot resolve user root {} after no-follow validation: {error}",
+            root.display()
+        ))
+    })?;
+    Ok((canonical, root_cap))
+}
+
 pub(crate) fn open_user_root_for_setup(root: &Path) -> Result<Dir, String> {
     open_user_root(root).map_err(|error| error.message().to_owned())
+}
+
+pub(crate) fn open_canonical_user_root_for_setup(root: &Path) -> Result<(PathBuf, Dir), String> {
+    open_canonical_user_root(root).map_err(|error| error.message().to_owned())
 }
 
 pub(crate) fn read_user_setup_file(
@@ -6922,6 +6940,28 @@ mod tests {
             user_root,
             setup_override: None,
         }
+    }
+
+    #[test]
+    fn cli_parse_uses_the_physical_user_root_after_no_follow_validation() {
+        let temporary = tempdir().expect("tempdir");
+        let requested = temporary.path().to_path_buf();
+        let expected = requested.canonicalize().expect("canonical user root");
+        let arguments = vec![
+            "--scope".to_owned(),
+            "user".to_owned(),
+            "--host".to_owned(),
+            "codex".to_owned(),
+            "--user-root".to_owned(),
+            requested.display().to_string(),
+            "--dry-run".to_owned(),
+            "--output".to_owned(),
+            "json".to_owned(),
+        ];
+
+        let parsed = parse(&arguments).expect("parse user installation arguments");
+
+        assert_eq!(parsed.user_root, expected);
     }
 
     fn write_operational_setup(root: &Path, selected_hosts: &[&str]) {
