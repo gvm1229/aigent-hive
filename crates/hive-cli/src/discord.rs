@@ -105,7 +105,7 @@ pub(crate) fn run(arguments: &[String]) -> ExitCode {
     }
     let result = match arguments.first().map(String::as_str) {
         Some("inbound") => parse_inbound(&arguments[1..]).map(inbound_result),
-        Some("test") => parse_test(&arguments[1..]).map(test_result),
+        Some("test") => parse_test(&arguments[1..]).map(|parsed| test_result(&parsed)),
         Some(action) => Err(format!("unknown Discord action: {action}")),
         None => unreachable!("empty arguments returned above"),
     };
@@ -142,7 +142,7 @@ fn parse_test(arguments: &[String]) -> Result<TestArguments, String> {
             .ok_or_else(|| "Discord test option requires a value".to_owned())?;
         match arguments[index].as_str() {
             "--webhook-env" => webhook_env = Some(value.clone()),
-            "--language" if matches!(value.as_str(), "en" | "ko") => language = value.clone(),
+            "--language" if matches!(value.as_str(), "en" | "ko") => language.clone_from(value),
             "--fields" => fields = value.split(',').map(str::to_owned).collect(),
             "--output" if value == "json" => output_json = true,
             _ => {
@@ -168,7 +168,7 @@ fn parse_test(arguments: &[String]) -> Result<TestArguments, String> {
     })
 }
 
-fn test_result(arguments: TestArguments) -> ActionResult {
+fn test_result(arguments: &TestArguments) -> ActionResult {
     let outcome = match env::var(&arguments.webhook_env) {
         Ok(url) => {
             let payload = payload_for(
@@ -434,14 +434,16 @@ fn payload_for(halt: &UsageHaltNotification<'_>, test: bool) -> DiscordPayload {
 fn display_remaining_usage(remaining_percent: Option<f64>, korean: bool) -> String {
     remaining_percent
         .filter(|value| value.is_finite() && (0.0..=100.0).contains(value))
-        .map(|value| format!("{value:.2}%"))
-        .unwrap_or_else(|| {
-            if korean {
-                "알 수 없음".to_owned()
-            } else {
-                "unknown".to_owned()
-            }
-        })
+        .map_or_else(
+            || {
+                if korean {
+                    "알 수 없음".to_owned()
+                } else {
+                    "unknown".to_owned()
+                }
+            },
+            |value| format!("{value:.2}%"),
+        )
 }
 
 fn display_project_name(value: &str) -> String {
@@ -502,7 +504,7 @@ mod tests {
         payload_for, valid_webhook_url, NotificationOutcome, UsageHaltNotification,
     };
 
-    fn notification<'a>(fields: &'a [String]) -> UsageHaltNotification<'a> {
+    fn notification(fields: &[String]) -> UsageHaltNotification<'_> {
         UsageHaltNotification {
             project_name: "aigent-hive",
             host_scope: "codex",
