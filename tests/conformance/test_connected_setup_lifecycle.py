@@ -318,10 +318,10 @@ else:
         self.assertEqual(
             harness["selected_project_skills"],
             [
-                "hive-knowledge-query",
-                "hive-prompt-refine",
-                "hive-usage-guard",
-                "setup-harness",
+                "manage-usage",
+                "refine-prompt",
+                "search-knowledge",
+                "setup-project",
             ],
         )
         agents = (target / "AGENTS.md").read_text(encoding="utf-8")
@@ -342,7 +342,7 @@ else:
                 "persona": {"id": "strict"},
                 "skills": {
                     "mode": "individual",
-                    "selected": ["setup-harness"],
+                    "selected": ["setup-project"],
                 },
             }
         )
@@ -359,7 +359,7 @@ else:
         self.assertEqual(harness["persona_id"], "strict")
         self.assertTrue(harness["usage_guard_enabled"])
         self.assertEqual(harness["usage_stop_remaining_percent"], 17)
-        self.assertEqual(harness["selected_project_skills"], ["setup-harness"])
+        self.assertEqual(harness["selected_project_skills"], ["setup-project"])
         agents = (target / "AGENTS.md").read_text(encoding="utf-8")
         self.assertIn("selected interface language `en`", agents)
         self.assertIn(
