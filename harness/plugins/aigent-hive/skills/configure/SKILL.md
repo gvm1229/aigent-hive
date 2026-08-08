@@ -145,7 +145,22 @@ consent and setup mode. Ask the remaining preference questions only for `Custom`
      local environment variable such as `HIVE_DISCORD_WEBHOOK_URL`. Hive records only the
      variable name, never the webhook URL.
    - Confirm that the environment variable name is uppercase letters, digits, and underscores,
-     then run `hive discord test --webhook-env <ENVIRONMENT_NAME> --output json`.
+     then ask for the notification fields in the exact order the user wants. The default order is:
+     - `remaining-usage`
+     - `project`
+     - `request`
+     - `progress`
+     - `host`
+     - `resume`
+   - The notification language always follows the selected interface language. Do not mix Korean
+     and English labels in one notification.
+   - Interpret a request such as “include remaining usage and project in Korean” as the typed
+     `message_fields` selection plus the already-selected interface language. Do not invent an
+     unbounded free-text webhook template.
+   - Run `hive discord test --webhook-env <ENVIRONMENT_NAME> --language <en|ko> --fields
+     <ordered-field-list> --output json`. Its payload must use the same fields, order, and
+     language as a real usage-guard alert. Only its first line identifies it as a test message
+     and explains that the user may freely ask to change the format.
    - A sent test permits the next question. A missing, invalid, offline, or rejected delivery
      keeps the integration disabled and preserves progress at `discord-test`.
 12. **CodexBar fallback** — ask only when the usage guard is enabled and the active-host native sensor is unavailable, unsupported, or malformed.
@@ -191,6 +206,8 @@ consent and setup mode. Ask the remaining preference questions only for `Custom`
      - Discord usage notification: enabled or disabled; available only when the usage guard is enabled and sends outbound-only notices.
      - Discord webhook environment variable: uppercase variable name such as `HIVE_DISCORD_WEBHOOK_URL`; Hive records the name, never the URL.
      - Discord request privacy: default `summary` or explicit `raw-prompt` opt-in after preview and redaction.
+     - Discord notification format: safe field list and order. Fields: `remaining-usage`, `project`, `request`, `progress`, `host`, `resume`, `measured-at`, and `evidence`.
+     - Discord notification language: always the interface language. A test message differs from a real alert only by its first-line test disclaimer.
 - After this catalog, ask for exactly one numbered parent setting or named child setting. Do not ask
   the user to rediscover a hidden Discord option through the usage-guard question.
 - During a full review, language remains the first question and all saved answers remain defaults.
@@ -221,6 +238,7 @@ Use these host-independent question patterns, one question at a time:
    - `예, 시험 알림도 보내기`
 7. `Discord webhook URL을 환경 변수에 저장해 주세요. 예: HIVE_DISCORD_WEBHOOK_URL. URL 자체는
    보내지 말고 환경 변수 이름만 알려 주세요. Hive가 시험 알림을 보내 연결을 확인합니다.`
+8. `Discord 알림에 넣을 항목과 순서를 알려 주세요. 기본값은 남은 사용량, 프로젝트, 요청, 진행 상태, 호스트, 계속하기입니다. 시험 알림은 실제 알림과 같은 형식이며 첫 줄에만 시험 안내가 추가됩니다.`
 
 For Korean partial reconfiguration, show this complete catalog before asking which setting to change:
 
@@ -251,6 +269,8 @@ For Korean partial reconfiguration, show this complete catalog before asking whi
    - Discord 사용량 알림: 켜기 또는 끄기. 사용량 보호를 켠 경우에만 선택 가능하며 Hive에서 Discord로 보내는 알림만 지원
    - Discord webhook 환경 변수: `HIVE_DISCORD_WEBHOOK_URL` 같은 대문자 환경 변수 이름. Hive는 URL 자체를 저장하지 않음
    - Discord 요청 공개 범위: 기본 `summary` 또는 preview·redaction 뒤 명시적으로 선택한 `raw-prompt`
+   - Discord 알림 형식: 안전한 항목의 포함 여부와 순서. `remaining-usage`, `project`, `request`, `progress`, `host`, `resume`, `measured-at`, `evidence` 중 선택
+   - Discord 알림 언어: 인터페이스 언어와 동일. 시험 알림은 실제 중단 알림과 같은 항목·순서·언어이며 첫 줄에만 시험 안내 추가
 
 Then ask for one numbered parent setting or named child setting. Do not replace this catalog with a
 single examples-only sentence.

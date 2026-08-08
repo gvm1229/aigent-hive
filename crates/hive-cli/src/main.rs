@@ -2145,6 +2145,14 @@ mod tests {
             codexbar_fallback_enabled: false,
             discord_guard_enabled: false,
             discord_webhook_url_env: None,
+            discord_message_fields: vec![
+                "remaining-usage".to_owned(),
+                "project".to_owned(),
+                "request".to_owned(),
+                "progress".to_owned(),
+                "host".to_owned(),
+                "resume".to_owned(),
+            ],
             usage_stop_remaining_percent: 60,
         };
         let mut changed = Vec::new();

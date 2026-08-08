@@ -74,12 +74,14 @@ struct ParsedBinding {
 
 pub(crate) struct InstalledUsageConfig {
     pub(crate) project_name: String,
+    pub(crate) interface_language: String,
     pub(crate) threshold: u8,
     pub(crate) primary_host: String,
     pub(crate) guard_enabled: bool,
     pub(crate) codexbar_fallback_enabled: bool,
     pub(crate) discord_guard_enabled: bool,
     pub(crate) discord_webhook_url_env: Option<String>,
+    pub(crate) discord_message_fields: Vec<String>,
     pub(crate) bytes: Vec<u8>,
 }
 
@@ -88,6 +90,7 @@ struct TurnObservation {
     selected_window: &'static str,
     measured_at: u64,
     evidence_digest: String,
+    remaining_percent: Option<f64>,
     next_action: Option<String>,
 }
 
@@ -173,6 +176,8 @@ struct HaltMarker {
     decision: String,
     selected_window: String,
     threshold_remaining_percent: u8,
+    #[serde(default)]
+    remaining_percent: Option<f64>,
     measured_at: u64,
     evidence_digest: String,
     revision: u64,
@@ -825,6 +830,7 @@ fn enforce(arguments: &EnforceArguments) -> Result<ActionResult, AdapterError> {
         decision: decision.to_owned(),
         selected_window: observation.selected_window.to_owned(),
         threshold_remaining_percent: config.threshold,
+        remaining_percent: observation.remaining_percent,
         measured_at: observation.measured_at,
         evidence_digest: observation.evidence_digest,
         revision: 1,
@@ -863,12 +869,13 @@ fn record_discord_notification(
         config.discord_webhook_url_env.as_deref(),
         &crate::discord::UsageHaltNotification {
             project_name: &config.project_name,
-            decision: &marker.decision,
             host_scope: &marker.host_scope,
             selected_window: &marker.selected_window,
-            threshold_remaining_percent: marker.threshold_remaining_percent,
+            remaining_percent: marker.remaining_percent,
             measured_at: marker.measured_at,
             evidence_digest: &marker.evidence_digest,
+            interface_language: &config.interface_language,
+            message_fields: &config.discord_message_fields,
         },
     );
     if let Some(data) = result
@@ -912,10 +919,11 @@ fn observe_usage(
             evidence_digest: sha256_digest(
                 format!("usage-sensor-error:{}:{error}", config.primary_host).as_bytes(),
             ),
+            remaining_percent: None,
             next_action,
         };
     };
-    let decision = match sampled_at_unix.and_then(|now| {
+    let (decision, remaining_percent) = match sampled_at_unix.and_then(|now| {
         UsagePolicy::new(
             &snapshot.sensor_id,
             &snapshot.sensor_version,
@@ -926,15 +934,16 @@ fn observe_usage(
         .ok()
         .map(|policy| evaluate_usage(&policy, &snapshot.core_snapshots(), &[], now))
     }) {
-        Some(UsageDecision::Allow(_)) => None,
-        Some(UsageDecision::Block(_)) => Some("halted"),
-        Some(UsageDecision::Unknown(_)) | None => Some("usage-unknown"),
+        Some(UsageDecision::Allow(_)) => (None, None),
+        Some(UsageDecision::Block(block)) => (Some("halted"), Some(block.remaining_percent)),
+        Some(UsageDecision::Unknown(_)) | None => (Some("usage-unknown"), None),
     };
     TurnObservation {
         decision,
         selected_window: snapshot.selected_window_label(),
         measured_at: snapshot.measured_at,
         evidence_digest: snapshot.evidence_digest(),
+        remaining_percent,
         next_action: None,
     }
 }
@@ -1348,6 +1357,18 @@ fn parse_installed_config(bytes: Vec<u8>) -> Result<InstalledUsageConfig, Adapte
     let project_name = optional_config_string(&table, "project_name")?
         .filter(|value| !value.is_empty() && value.len() <= 512)
         .unwrap_or_else(|| "unknown-project".to_owned());
+    let interface_language = match table.get("interface_language") {
+        None => "en".to_owned(),
+        Some(value) => value
+            .as_str()
+            .filter(|language| matches!(*language, "en" | "ko"))
+            .ok_or_else(|| {
+                AdapterError::Safety(
+                    "installed harness.toml interface_language must be en or ko".to_owned(),
+                )
+            })?
+            .to_owned(),
+    };
     let primary_host = table
         .get("primary_host")
         .and_then(toml::Value::as_str)
@@ -1364,6 +1385,8 @@ fn parse_installed_config(bytes: Vec<u8>) -> Result<InstalledUsageConfig, Adapte
     let discord_guard_enabled =
         optional_config_bool(&table, "discord_guard_enabled")?.unwrap_or(false);
     let discord_webhook_url_env = optional_config_string(&table, "discord_webhook_url_env")?;
+    let discord_message_fields = optional_config_string_array(&table, "discord_message_fields")?
+        .unwrap_or_else(crate::discord::default_message_fields);
     if codexbar_fallback_enabled && !guard_enabled {
         return Err(AdapterError::Safety(
             "installed harness.toml cannot enable CodexBar fallback while the usage guard is disabled"
@@ -1392,14 +1415,21 @@ fn parse_installed_config(bytes: Vec<u8>) -> Result<InstalledUsageConfig, Adapte
             ));
         }
     }
+    if !crate::discord::valid_message_fields(&discord_message_fields) {
+        return Err(AdapterError::Safety(
+            "installed harness.toml Discord message fields are invalid".to_owned(),
+        ));
+    }
     Ok(InstalledUsageConfig {
         project_name,
+        interface_language,
         threshold,
         primary_host,
         guard_enabled,
         codexbar_fallback_enabled,
         discord_guard_enabled,
         discord_webhook_url_env,
+        discord_message_fields,
         bytes,
     })
 }
@@ -1422,6 +1452,27 @@ fn optional_config_bool(table: &toml::Table, key: &str) -> Result<Option<bool>, 
             })
         })
         .transpose()
+}
+
+fn optional_config_string_array(
+    table: &toml::Table,
+    key: &str,
+) -> Result<Option<Vec<String>>, AdapterError> {
+    let Some(value) = table.get(key) else {
+        return Ok(None);
+    };
+    let array = value.as_array().ok_or_else(|| {
+        AdapterError::Safety(format!("installed harness.toml {key} must be an array"))
+    })?;
+    array
+        .iter()
+        .map(|entry| {
+            entry.as_str().map(str::to_owned).ok_or_else(|| {
+                AdapterError::Safety(format!("installed harness.toml {key} must contain strings"))
+            })
+        })
+        .collect::<Result<Vec<_>, _>>()
+        .map(Some)
 }
 
 fn optional_config_string(table: &toml::Table, key: &str) -> Result<Option<String>, AdapterError> {
@@ -1641,6 +1692,9 @@ fn load_halt(target: &PinnedTarget, binding: &SessionBinding) -> Result<LoadedHa
             "session" | "weekly" | "multiple" | "unknown"
         )
         || !(1..=99).contains(&marker.threshold_remaining_percent)
+        || marker
+            .remaining_percent
+            .is_some_and(|value| !value.is_finite() || !(0.0..=100.0).contains(&value))
         || marker.revision == 0
     {
         return Err(AdapterError::Safety(
@@ -1815,7 +1869,7 @@ mod tests {
     fn installed_config(host: &str, enabled: bool, fallback_enabled: bool) -> Vec<u8> {
         let version = env!("CARGO_PKG_VERSION");
         format!(
-            "schema_version = 1\nharness_version = \"{version}\"\nsource_release_version = \"{version}\"\nprimary_host = \"{host}\"\nusage_guard_enabled = {enabled}\ncodexbar_fallback_enabled = {fallback_enabled}\nusage_stop_remaining_percent = 20\n"
+            "schema_version = 1\nharness_version = \"{version}\"\nsource_release_version = \"{version}\"\ninterface_language = \"en\"\nprimary_host = \"{host}\"\nusage_guard_enabled = {enabled}\ncodexbar_fallback_enabled = {fallback_enabled}\nusage_stop_remaining_percent = 20\n"
         )
         .into_bytes()
     }

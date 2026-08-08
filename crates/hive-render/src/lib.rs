@@ -163,6 +163,7 @@ pub struct ResolvedProjectPreferences {
     pub codexbar_fallback_enabled: bool,
     pub discord_guard_enabled: bool,
     pub discord_webhook_url_env: Option<String>,
+    pub discord_message_fields: Vec<String>,
     pub usage_stop_remaining_percent: u8,
 }
 
@@ -270,6 +271,8 @@ pub struct GlobalProjectPreferences {
     ///
     /// This is only the environment-variable name, never a webhook secret.
     pub discord_webhook_url_env: Option<String>,
+    /// Ordered safe fields rendered into a Discord usage notification.
+    pub discord_message_fields: Vec<String>,
     /// Remaining-usage stop threshold inherited by every project.
     pub usage_stop_remaining_percent: u8,
 }
@@ -290,6 +293,7 @@ struct EffectiveProjectPreferences {
     codexbar_fallback_enabled: bool,
     discord_guard_enabled: bool,
     discord_webhook_url_env: Option<String>,
+    discord_message_fields: Vec<String>,
     usage_stop_remaining_percent: u8,
 }
 
@@ -447,6 +451,8 @@ struct InstalledHarness {
     discord_guard_enabled: bool,
     #[serde(default)]
     discord_webhook_url_env: Option<String>,
+    #[serde(default)]
+    discord_message_fields: Vec<String>,
     primary_host: String,
     external_capability_detection: String,
     resolved_owner: String,
@@ -1674,6 +1680,7 @@ fn execute_release_update_for_target_in(
             codexbar_fallback_enabled: preferences.codexbar_fallback_enabled,
             discord_guard_enabled: preferences.discord_guard_enabled,
             discord_webhook_url_env: preferences.discord_webhook_url_env,
+            discord_message_fields: preferences.discord_message_fields,
             usage_stop_remaining_percent: preferences.usage_stop_remaining_percent,
         }
     });
@@ -1871,6 +1878,7 @@ fn resolved_preferences(
         codexbar_fallback_enabled: preferences.codexbar_fallback_enabled,
         discord_guard_enabled: preferences.discord_guard_enabled,
         discord_webhook_url_env: preferences.discord_webhook_url_env.clone(),
+        discord_message_fields: preferences.discord_message_fields.clone(),
         usage_stop_remaining_percent: preferences.usage_stop_remaining_percent,
     })
 }
@@ -2169,6 +2177,7 @@ fn resolve_effective_project_preferences(
             codexbar_fallback_enabled: global.codexbar_fallback_enabled,
             discord_guard_enabled: global.discord_guard_enabled,
             discord_webhook_url_env: global.discord_webhook_url_env.clone(),
+            discord_message_fields: global.discord_message_fields.clone(),
             usage_stop_remaining_percent: global.usage_stop_remaining_percent,
         },
         "custom" => {
@@ -2206,6 +2215,7 @@ fn resolve_effective_project_preferences(
                 codexbar_fallback_enabled: global.codexbar_fallback_enabled,
                 discord_guard_enabled: global.discord_guard_enabled,
                 discord_webhook_url_env: global.discord_webhook_url_env.clone(),
+                discord_message_fields: global.discord_message_fields.clone(),
                 usage_stop_remaining_percent: global.usage_stop_remaining_percent,
             }
         }
@@ -2277,6 +2287,7 @@ fn validate_global_project_preferences(
                 .as_deref()
                 .is_some_and(valid_environment_name))
         || (!global.discord_guard_enabled && global.discord_webhook_url_env.is_some())
+        || !valid_discord_message_fields(&global.discord_message_fields)
         || !(1..=99).contains(&global.usage_stop_remaining_percent)
     {
         return Err(RenderError::Input(
@@ -2291,6 +2302,47 @@ fn valid_environment_name(value: &str) -> bool {
     matches!(characters.next(), Some('A'..='Z' | '_'))
         && characters.all(|character| matches!(character, 'A'..='Z' | '0'..='9' | '_'))
         && value.len() <= 128
+}
+
+fn default_discord_message_fields() -> Vec<String> {
+    [
+        "remaining-usage",
+        "project",
+        "request",
+        "progress",
+        "host",
+        "resume",
+    ]
+    .into_iter()
+    .map(str::to_owned)
+    .collect()
+}
+
+fn valid_discord_message_fields(fields: &[String]) -> bool {
+    !fields.is_empty()
+        && fields.len() <= 8
+        && fields.iter().all(|field| {
+            matches!(
+                field.as_str(),
+                "remaining-usage"
+                    | "project"
+                    | "request"
+                    | "progress"
+                    | "host"
+                    | "resume"
+                    | "measured-at"
+                    | "evidence"
+            )
+        })
+        && fields.iter().collect::<BTreeSet<_>>().len() == fields.len()
+}
+
+fn normalized_discord_message_fields(fields: &[String]) -> Vec<String> {
+    if fields.is_empty() {
+        default_discord_message_fields()
+    } else {
+        fields.to_vec()
+    }
 }
 
 fn resolve_project_skill_selection(
@@ -3150,7 +3202,7 @@ fn render_harness_toml(
             .join(", ");
         write!(
             &mut output,
-            "setup_mode = {}\npreference_provenance = {}\ninterface_language = {}\nwiki_enabled = {}\nwiki_backend = {}\nwiki_language = {}\npersona_id = {}\nusage_guard_enabled = {}\ncodexbar_fallback_enabled = {}\ndiscord_guard_enabled = {}\nselected_project_skills = [{selected}]\n",
+            "setup_mode = {}\npreference_provenance = {}\ninterface_language = {}\nwiki_enabled = {}\nwiki_backend = {}\nwiki_language = {}\npersona_id = {}\nusage_guard_enabled = {}\ncodexbar_fallback_enabled = {}\ndiscord_guard_enabled = {}\ndiscord_message_fields = [{}]\nselected_project_skills = [{selected}]\n",
             quoted(&answers.setup_mode),
             quoted(preferences.provenance),
             quoted(&preferences.interface_language),
@@ -3161,6 +3213,12 @@ fn render_harness_toml(
             preferences.usage_guard_enabled,
             preferences.codexbar_fallback_enabled,
             preferences.discord_guard_enabled,
+            preferences
+                .discord_message_fields
+                .iter()
+                .map(|field| quoted(field))
+                .collect::<Vec<_>>()
+                .join(", "),
         )
         .expect("writing to String cannot fail");
         if let Some(environment_name) = &preferences.discord_webhook_url_env {
@@ -6068,6 +6126,7 @@ fn effective_preferences_from_harness(
         codexbar_fallback_enabled: harness.codexbar_fallback_enabled,
         discord_guard_enabled: harness.discord_guard_enabled,
         discord_webhook_url_env: harness.discord_webhook_url_env.clone(),
+        discord_message_fields: normalized_discord_message_fields(&harness.discord_message_fields),
         usage_stop_remaining_percent: harness.usage_stop_remaining_percent,
     };
     validate_global_project_preferences(&global).map_err(as_verification)?;
@@ -6088,6 +6147,7 @@ fn effective_preferences_from_harness(
         codexbar_fallback_enabled: harness.codexbar_fallback_enabled,
         discord_guard_enabled: harness.discord_guard_enabled,
         discord_webhook_url_env: harness.discord_webhook_url_env.clone(),
+        discord_message_fields: normalized_discord_message_fields(&harness.discord_message_fields),
         usage_stop_remaining_percent: harness.usage_stop_remaining_percent,
     }))
 }
@@ -6884,23 +6944,23 @@ mod tests {
     use super::{
         activate_staged_impl, activation_fault_from_value, authorize_hook,
         authorize_hook_with_resolution, calculate_consent_digest, capability_detection,
-        derive_resolution, encode_role, execute_release_update_for_target_in,
-        execute_release_update_in, execute_setup, execute_setup_with_post_apply,
-        expected_external_runtime, historical_project_upgrade_candidate_in, hook_descriptor_bytes,
-        installed_tree_digest, load_answers, load_resolution, merge_shared_marker,
-        mutate_exact_projection_claimed, open_target_capability, parse_role,
-        prepare_projection_transition, project_upgrade_candidate_in, render_agents_marker,
-        render_project_base, render_setup_answers, render_tree, render_tree_with_preferences,
-        render_yaml_projection, replace_capability_file_impl,
-        require_operational_update_preferences, resolve_effective_project_preferences,
-        resolve_project_skill_selection, shared_marker_foreign_digest, update_path_is_owned,
-        valid_digest, valid_role_id, valid_timestamp, validate_hook_approvals,
-        validate_owned_paths, validate_skill_approvals, ActivationFault, ActiveSkills,
-        CapabilityEvidence, CapabilityResolution, ExactProjectionMutation,
-        GlobalProjectPreferences, HookApproval, HookAuthorization, ProjectSkillSelection,
-        ProjectionCleanupFault, RenderError, ReplacePolicy, RoleProfile, RoleSeed, SetupAnswers,
-        SetupMode, SetupRequest, SkillApproval, ValidatedProjectionOwnership,
-        FRESH_CAPABILITY_RESOLUTION_PATH, MARKER_END, MARKER_START,
+        default_discord_message_fields, derive_resolution, encode_role,
+        execute_release_update_for_target_in, execute_release_update_in, execute_setup,
+        execute_setup_with_post_apply, expected_external_runtime,
+        historical_project_upgrade_candidate_in, hook_descriptor_bytes, installed_tree_digest,
+        load_answers, load_resolution, merge_shared_marker, mutate_exact_projection_claimed,
+        open_target_capability, parse_role, prepare_projection_transition,
+        project_upgrade_candidate_in, render_agents_marker, render_project_base,
+        render_setup_answers, render_tree, render_tree_with_preferences, render_yaml_projection,
+        replace_capability_file_impl, require_operational_update_preferences,
+        resolve_effective_project_preferences, resolve_project_skill_selection,
+        shared_marker_foreign_digest, update_path_is_owned, valid_digest, valid_role_id,
+        valid_timestamp, validate_hook_approvals, validate_owned_paths, validate_skill_approvals,
+        ActivationFault, ActiveSkills, CapabilityEvidence, CapabilityResolution,
+        ExactProjectionMutation, GlobalProjectPreferences, HookApproval, HookAuthorization,
+        ProjectSkillSelection, ProjectionCleanupFault, RenderError, ReplacePolicy, RoleProfile,
+        RoleSeed, SetupAnswers, SetupMode, SetupRequest, SkillApproval,
+        ValidatedProjectionOwnership, FRESH_CAPABILITY_RESOLUTION_PATH, MARKER_END, MARKER_START,
     };
     use hive_core::{sha256_digest, validate_project_relative};
     use serde_json::Value as JsonValue;
@@ -7039,6 +7099,7 @@ mod tests {
             codexbar_fallback_enabled: true,
             discord_guard_enabled: true,
             discord_webhook_url_env: Some("HIVE_DISCORD_WEBHOOK_URL".to_owned()),
+            discord_message_fields: vec!["project".to_owned(), "remaining-usage".to_owned()],
             usage_stop_remaining_percent: 17,
         };
 
@@ -7064,6 +7125,10 @@ mod tests {
             effective.discord_webhook_url_env.as_deref(),
             Some("HIVE_DISCORD_WEBHOOK_URL")
         );
+        assert_eq!(
+            effective.discord_message_fields,
+            ["project", "remaining-usage"]
+        );
         assert_eq!(effective.usage_stop_remaining_percent, 17);
         assert!(!target.join(".hive/knowledge/Wiki/index.md").exists());
         assert!(!target.join(".hive/knowledge/Wiki/log.md").exists());
@@ -7082,6 +7147,7 @@ mod tests {
         assert!(harness.contains("usage_stop_remaining_percent = 17"));
         assert!(harness.contains("codexbar_fallback_enabled = true"));
         assert!(harness.contains("discord_guard_enabled = true"));
+        assert!(harness.contains("discord_message_fields = [\"project\", \"remaining-usage\"]"));
         assert!(harness.contains("discord_webhook_url_env = \"HIVE_DISCORD_WEBHOOK_URL\""));
         assert!(
             harness.contains("selected_project_skills = [\"refine-prompt\", \"setup-project\"]")
@@ -7114,6 +7180,7 @@ mod tests {
             codexbar_fallback_enabled: false,
             discord_guard_enabled: false,
             discord_webhook_url_env: None,
+            discord_message_fields: default_discord_message_fields(),
             usage_stop_remaining_percent: 20,
         };
 
@@ -7170,6 +7237,7 @@ mod tests {
                     codexbar_fallback_enabled: false,
                     discord_guard_enabled: false,
                     discord_webhook_url_env: None,
+                    discord_message_fields: default_discord_message_fields(),
                     usage_stop_remaining_percent: 20,
                 }),
             },
@@ -7203,6 +7271,7 @@ mod tests {
             codexbar_fallback_enabled: false,
             discord_guard_enabled: false,
             discord_webhook_url_env: None,
+            discord_message_fields: default_discord_message_fields(),
             usage_stop_remaining_percent: 17,
         };
         let installed = execute_setup(&SetupRequest {
@@ -7266,6 +7335,7 @@ mod tests {
             codexbar_fallback_enabled: false,
             discord_guard_enabled: false,
             discord_webhook_url_env: None,
+            discord_message_fields: default_discord_message_fields(),
             usage_stop_remaining_percent: 20,
         };
         let error = require_operational_update_preferences("0.8.0", None)
@@ -7384,6 +7454,7 @@ mod tests {
                 codexbar_fallback_enabled: false,
                 discord_guard_enabled: false,
                 discord_webhook_url_env: None,
+                discord_message_fields: default_discord_message_fields(),
                 usage_stop_remaining_percent: 20,
             }),
         })
@@ -7423,6 +7494,7 @@ mod tests {
                 codexbar_fallback_enabled: false,
                 discord_guard_enabled: false,
                 discord_webhook_url_env: None,
+                discord_message_fields: default_discord_message_fields(),
                 usage_stop_remaining_percent: 20,
             }),
         })
@@ -7650,6 +7722,7 @@ mod tests {
                     codexbar_fallback_enabled: false,
                     discord_guard_enabled: false,
                     discord_webhook_url_env: None,
+                    discord_message_fields: default_discord_message_fields(),
                     usage_stop_remaining_percent: 19,
                 }),
             })
@@ -8048,6 +8121,7 @@ mod tests {
             codexbar_fallback_enabled: true,
             discord_guard_enabled: false,
             discord_webhook_url_env: None,
+            discord_message_fields: default_discord_message_fields(),
             usage_stop_remaining_percent: 20,
         };
         let effective = resolve_effective_project_preferences(&answers, Some(&global))
@@ -8229,6 +8303,7 @@ mod tests {
             codexbar_fallback_enabled: false,
             discord_guard_enabled: false,
             discord_webhook_url_env: None,
+            discord_message_fields: default_discord_message_fields(),
             usage_stop_remaining_percent: 60,
         }
     }

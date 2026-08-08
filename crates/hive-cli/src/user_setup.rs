@@ -204,7 +204,7 @@ pub(crate) struct SkillPreferences {
     pub(crate) selected: Vec<String>,
 }
 
-#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(deny_unknown_fields)]
 pub(crate) struct DiscordGuardPreferences {
     #[serde(default)]
@@ -213,6 +213,19 @@ pub(crate) struct DiscordGuardPreferences {
     pub(crate) webhook_url_env: Option<String>,
     #[serde(default)]
     pub(crate) request_privacy: DiscordRequestPrivacy,
+    #[serde(default = "default_discord_message_fields")]
+    pub(crate) message_fields: Vec<DiscordMessageField>,
+}
+
+impl Default for DiscordGuardPreferences {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            webhook_url_env: None,
+            request_privacy: DiscordRequestPrivacy::Summary,
+            message_fields: default_discord_message_fields(),
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
@@ -221,6 +234,45 @@ pub(crate) enum DiscordRequestPrivacy {
     #[default]
     Summary,
     RawPrompt,
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "kebab-case")]
+pub(crate) enum DiscordMessageField {
+    RemainingUsage,
+    Project,
+    Request,
+    Progress,
+    Host,
+    Resume,
+    MeasuredAt,
+    Evidence,
+}
+
+impl DiscordMessageField {
+    pub(crate) const fn as_str(self) -> &'static str {
+        match self {
+            Self::RemainingUsage => "remaining-usage",
+            Self::Project => "project",
+            Self::Request => "request",
+            Self::Progress => "progress",
+            Self::Host => "host",
+            Self::Resume => "resume",
+            Self::MeasuredAt => "measured-at",
+            Self::Evidence => "evidence",
+        }
+    }
+}
+
+fn default_discord_message_fields() -> Vec<DiscordMessageField> {
+    vec![
+        DiscordMessageField::RemainingUsage,
+        DiscordMessageField::Project,
+        DiscordMessageField::Request,
+        DiscordMessageField::Progress,
+        DiscordMessageField::Host,
+        DiscordMessageField::Resume,
+    ]
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -1366,6 +1418,19 @@ fn validate_config_semantics(config: &UserSetupConfig) -> Result<(), SetupError>
             ));
         }
     }
+    if discord.message_fields.is_empty()
+        || discord
+            .message_fields
+            .iter()
+            .map(|field| field.as_str())
+            .collect::<BTreeSet<_>>()
+            .len()
+            != discord.message_fields.len()
+    {
+        return Err(SetupError::Input(
+            "Discord message_fields must be a non-empty list without duplicates".to_owned(),
+        ));
+    }
     Ok(())
 }
 
@@ -2390,6 +2455,14 @@ pub(crate) fn project_preferences(user_root: &Path) -> Result<GlobalProjectPrefe
         codexbar_fallback_enabled: config.usage_guard.codexbar_fallback_enabled,
         discord_guard_enabled: config.usage_guard.discord.enabled,
         discord_webhook_url_env: config.usage_guard.discord.webhook_url_env,
+        discord_message_fields: config
+            .usage_guard
+            .discord
+            .message_fields
+            .into_iter()
+            .map(DiscordMessageField::as_str)
+            .map(str::to_owned)
+            .collect(),
         usage_stop_remaining_percent: config.usage_guard.stop_remaining_percent,
     })
 }
@@ -3122,6 +3195,10 @@ usage_guard: {}
             config.usage_guard.discord.request_privacy,
             DiscordRequestPrivacy::Summary
         );
+        assert_eq!(
+            config.usage_guard.discord.message_fields,
+            default_discord_message_fields()
+        );
     }
 
     #[test]
@@ -3141,6 +3218,20 @@ usage_guard: {}
         config.usage_guard.enabled = false;
         let error = validate_config_semantics(&config).expect_err("guard dependency rejected");
         assert!(error.message().contains("usage guard"));
+
+        config.usage_guard.enabled = true;
+        config.usage_guard.discord.message_fields = vec![
+            DiscordMessageField::Project,
+            DiscordMessageField::RemainingUsage,
+        ];
+        validate_config_semantics(&config).expect("ordered Discord fields accepted");
+        let canonical = String::from_utf8(canonical_config(&config).expect("canonical config"))
+            .expect("UTF-8 config");
+        assert!(canonical.contains("message_fields:\n    - project\n    - remaining-usage"));
+
+        config.usage_guard.discord.message_fields.clear();
+        let error = validate_config_semantics(&config).expect_err("empty fields rejected");
+        assert!(error.message().contains("message_fields"));
     }
 
     #[test]

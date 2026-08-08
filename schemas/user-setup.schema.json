@@ -168,6 +168,31 @@
             "request_privacy": {
               "enum": ["summary", "raw-prompt"],
               "default": "summary"
+            },
+            "message_fields": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": {
+                "enum": [
+                  "remaining-usage",
+                  "project",
+                  "request",
+                  "progress",
+                  "host",
+                  "resume",
+                  "measured-at",
+                  "evidence"
+                ]
+              },
+              "default": [
+                "remaining-usage",
+                "project",
+                "request",
+                "progress",
+                "host",
+                "resume"
+              ]
             }
           },
           "allOf": [
