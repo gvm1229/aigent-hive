@@ -9,12 +9,12 @@ summary: "복수 사용자 맥락 저장과 project workflow 비결정, authenti
 tags: [bootstrap, onboarding, setup]
 aliases: ["User setup"]
 sources:
-  - "repo:README.md#sha256:413ed120770591773c5efab11aa1bc3587687b411eff47a665802b5bf0f5ea2b"
-  - "repo:crates/hive-cli/src/user_setup.rs#sha256:fcbdc8566036c3c7601b661baed7380a5cb27412f22f5d3c2961dce0daa80c3d"
-  - "repo:docs/decisions/ADR-0012-global-onboarding-shared-index.md#sha256:be6e9fd0b94f9cf8a994cce4bb1e8f5b0e8396420968832e285de366dc8e16f9"
-  - "repo:harness/skills/configure/SKILL.md#sha256:6d298591b98e8da50fc9cfb40696562bde8a2d18d2d9e58204f40e44e15f4d19"
+  - "repo:README.md#sha256:00245e45b8c796c5d33f046ac2ff2ef5efea300b331d078e1122ae4df246da7e"
+  - "repo:crates/hive-cli/src/user_setup.rs#sha256:9d0a796027dde450cfec2162ac1073305068aa4ac0e6351303f4976c1ad87f38"
+  - "repo:docs/decisions/ADR-0012-global-onboarding-shared-index.md#sha256:315391aa3b280409c6c19185aff55bcd21af1fb724de89a7007fc84c73a44aa3"
+  - "repo:harness/skills/configure/SKILL.md#sha256:abeb032e21d2576366025465d54080966767fb7e17cca57848acf093eaa83eaf"
   - "repo:harness/user-setup/catalog.yml#sha256:7dc82dbf559075ce4286e7dd19aec0ddc22e04f35ad4a8a60f43129a4dba2a1f"
-  - "repo:schemas/user-setup.schema.json#sha256:34cfb17b238af67733c1250f5de6306cf6c75ef9df41f1934d6f1edc46d4a2da"
+  - "repo:schemas/user-setup.schema.json#sha256:46b360a9f91e154d1440e2997b56a964edd122383ccfc9b105b4e2ae4f8939f9"
 links: [project-onboarding, test-distribution]
 reviewed_revision: "git:dbae17b5e5bb39d068891b823dcd14f42ae23e10"
 status: active

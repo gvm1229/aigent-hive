@@ -9,7 +9,7 @@ summary: "같은 Codex 작업의 종료된 소유자 감시기만 안전하게 �
 tags: [guard, process, source]
 aliases: ["Stale watcher owner recovery"]
 sources:
-  - "repo:tests/conformance/test_source_usage_guard.py#sha256:e6d29a38db42c18e49763da9013171caf990bad1c054590ada8a939a699f36bf"
+  - "repo:tests/conformance/test_source_usage_guard.py#sha256:75f089329e7522a24f54fc9eb082284eb12f4bd3190a322d29aa158975a422b9"
 links: [source-usage-guard, windows-watcher-identity]
 reviewed_revision: "git:a1fb6e848117b83354144540df01474e68d25aa8"
 status: active
