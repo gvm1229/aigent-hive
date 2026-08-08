@@ -5,7 +5,7 @@
 - 60분 발표용 deck과 presenter notes 생성 완료
 - Slide 수: 91
 - 구성: 1부 기능·사용법 58장, 2부 설치 14장, 3부 설계·원리 19장
-- 내용 기준: `0.9.0-test.5`, 공개 short Skill name 22개
+- 내용 기준: 안정판 `0.9.0`, 공개 short Skill name 22개
 - 제작 도구: LumaDeck
 - LumaDeck repository: `~/Documents/WebProjects/luma-deck`
 - Deck project: `projects/aigent-hive-overview/`
@@ -14,9 +14,11 @@
 - Style source: `projects/aigent-hive-overview/styles/index.css`
 - Deck metadata: `projects/aigent-hive-overview/deck.json`
 - Validated HTML build:
-  `artifacts/aigent-hive-overview/html/0.9.0-test.5-20260808/index.html`
+  `artifacts/aigent-hive-overview/html/0.9.0-stable-20260808/index.html`
 - Logo: honeycomb `H` placeholder; final logo design은 후속 작업
-- 검증: Slidev production build, 1280×720 전체 91장 overflow 검사, 대표 화면 육안 검수
+- Typography: Pretendard Variable 전용; macOS user font와 webfont source 일치
+- Layout spacing: 1280×720 기준 모든 slide의 사방 48px 동일 padding
+- 검증: Slidev production build, 전체 91장 font·padding·line-height·text-box contact·overflow 검사, Safari 육안 검수
 - 비차단 경고: dependency `@vueuse/core`의 Rolldown pure-annotation 경고 2건
 
 ## Creation criteria
@@ -24,7 +26,7 @@
 Current presentation targets:
 
 1. 30분 기능·사용법: 특장점과 `AGENTS.md` 단독 구성 대비, core 기능과 공개 Skill별 설명·직후 예시
-2. 10분 설치: README 기반 exact test version 설치와 setup/configure 질문·예시 답변·행동 차이
+2. 10분 설치: 안정판 `0.9.0` 설치와 setup/configure 질문·예시 답변·행동 차이
 3. 20분 설계·원리: canonical state, projection, transaction, routing, knowledge, run, update, 검증 구조
 4. 개발 convention: 저장소 정본 계획, concern 단위 workflow, ADR lifecycle, REL·SIL·TST·NAT·MRA·DNI prefix
 
