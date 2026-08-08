@@ -9,7 +9,7 @@ summary: "Consumer Skills use short action-oriented names under the aigent-hive 
 tags: [localization, migration, plugin, skill]
 aliases: ["Skill naming"]
 sources:
-  - "repo:docs/plans/PLAN.md#sha256:04d294a72737bf42f7249da6e546530214333bb3c15bcbcf7bfe6f5d9c0bb08c"
+  - "repo:docs/plans/PLAN.md#sha256:aaaf40a2618a888822eeaf404621966e1e79237916ff487621f90cd69e6da480"
   - "repo:docs/plans/active/skill-identity-localization.md#sha256:7a5ce0b43d26fe195dc2dd1f0bd2f4a8d578ae2115caa46f88856eb279e5c0e7"
 links: [global-onboarding, skill-routing]
 reviewed_revision: "git:90624108d8774fea2ed71efe64a5263cbb14fbe5"

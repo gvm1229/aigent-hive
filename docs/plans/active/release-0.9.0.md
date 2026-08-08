@@ -20,17 +20,7 @@
 
 ## 현재 기준선
 
-- Product: `0.9.0`; notes: [`0.9.0.md`](../../releases/0.9.0.md)
-- 최신 공개 시험판: `0.9.0-test.5`; npm `test=0.9.0-test.5`, `latest=0.8.0`
-- `0.9.0-test.6` 후보: [run `31254605322`](https://github.com/gvm1229/aigent-hive/actions/runs/31254605322),
-  exact `9e08a48f7429d9dfaf8f9585aeb83c778536c253`, 5개 native target·npm 묶음·attestation PASS
-- `0.9.0-test.6` 게시: Trusted Publishing [run `31255061771`](https://github.com/gvm1229/aigent-hive/actions/runs/31255061771)와
-  bootstrap fallback [run `31255167232`](https://github.com/gvm1229/aigent-hive/actions/runs/31255167232)가 모두 첫 scoped package의 npm `404`로 중단.
-  각 run은 첫 게시 전 실패했으므로 `0.9.0-test.6` npm version·tag·GitHub prerelease 생성은 0건
-- Candidate `30771098518`, `6761f0b`: 5 targets·npm umbrella·fresh clone PASS
-- `0.9.0-test`: six npm package·annotated tag·prerelease 22 assets; `latest=0.8.0` 유지
-- [PR #18](https://github.com/gvm1229/aigent-hive/pull/18) CI 복구: Clippy → Skill 경로 → Copier fixture → 로컬 검증 → `develop` push·재검사
-- 상세 run·failure·external signer evidence: [`CURRENT.md`](../../state/CURRENT.md)
+- 최신 npm·candidate·실패 run·외부 signer 상태: [`CURRENT.md`](../../state/CURRENT.md)
 
 ## 이번 정식 릴리스의 명시적 제외와 면제
 
@@ -47,6 +37,8 @@
 - npm immutability에 따른 bare 시험판 재게시 금지, 변경 시 numbered suffix 사용
 - 시험판 전용 기능·기본값·logging·build flag 0건
 - 시험판 publication의 정식 workflow trigger·tag·`latest` mutation 0건
+- 시험·정식 publication: 하나의 `release-publish.yml`에서 `channel=test|stable` 입력으로만 분기
+- 게시 인증: 여섯 npm package의 동일 GitHub Actions Trusted Publisher·OIDC만 사용, write token 경로 0건
 
 ## Artifact 계보
 
@@ -100,6 +92,7 @@ attestation·signing·TUF → `v0.9.0` normal Release·npm `latest` → public a
 - [ ] [REL9-024] GitHub·npm·direct binary byte identity·provenance와 public update discovery·consent PASS
 - [ ] [REL9-025] Release·registry·installer 관찰, critical 회귀 0건과 rollback 판정
 - [ ] [REL9-026] PLAN·CURRENT·release notes·ADR·bilingual fact에 run ID·SHA·digest·지원·미검증 범위 최종 반영
+- [ ] [REL9-027] `release-publish.yml` 단일 OIDC publication: `channel=test|stable`별 exact branch·candidate·tag·Release guard, `NPM_TOKEN` fallback 제거, six-package Trusted Publisher 설정 안내와 static contract 검증
 
 ## 실행 순서
 
@@ -108,17 +101,15 @@ attestation·signing·TUF → `v0.9.0` normal Release·npm `latest` → public a
 3. `REL9-002–005` version grammar·분리 workflow 구현·독립 커밋
 4. `REL9-006–012` clean clone·cross-platform 시험 후보 검증
 5. `REL9-013–016` bare 시험판 독립 게시·수용·선택형 numbered 시험판
-6. `REL9-017–024` main 통합·stable candidate·signing·별도 정식 publication
-7. `REL9-025–026` 관찰·current-truth 완료 기록
+6. `REL9-027` 단일 OIDC publication 구현·Trusted Publisher 설정
+7. `REL9-017–024` main 통합·stable candidate·signing·별도 정식 publication
+8. `REL9-025–026` 관찰·current-truth 완료 기록
 
 ## 외부 권한 경계
 
-- `main` PR review·merge, `release-publication` reviewer 0명
-- Apple·Windows signing identity와 external TUF threshold signer
-- GitHub App installation의 `contents|workflows: write`와 npm Trusted Publisher environment
-- Test publication workflow의 default-branch 등록을 위한 최소 `main` PR·review
+- `main` PR·Apple/Windows signing·external TUF·npm package settings의 사용자 권한 필요
 - Credential·private key·2FA material의 저장소·agent 노출 금지
-- 각 외부 mutation 직전 exact SHA·artifact digest·대상 preview 재확인
+- 외부 mutation 직전 exact SHA·artifact digest·대상 preview 재확인
 
 ## 완료 기준
 

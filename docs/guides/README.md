@@ -10,3 +10,4 @@
 | [Source usage guard](source-usage-guard.md) | Source session quota safeguard |
 | [Judge attestation](ed25519-judge-attestations.md) | External key·assignment·verdict ceremony |
 | [Signed update·release](signed-update-and-release.md) | Verification·candidate·publication procedure |
+| [npm Trusted Publisher](npm-trusted-publisher.md) | six npm package OIDC 연결·test·stable publication |

@@ -3,9 +3,9 @@
 - 기준 branch: `develop`
 - product version: `0.9.0`
 - plan revision: `2.26`
-- 현재 milestone: `0.9.0` npm publication 권한 복구
+- 현재 milestone: `0.9.0` 단일 OIDC npm publication workflow
 - `0.9.0` 예외: `REL9-011` 실제 Codex·Antigravity host 수용과 Claude fixture 공개 제외. `develop → main` CI는 병합 gate 일시 면제이며 실패·미실행 범위 공개 유지
-- 현재 작업: `DIS9-007`의 사용자 지정 Discord 중단 알림 형식·언어·시험 알림 동등성 구현. 실제 중단 알림과 시험 알림은 같은 renderer·선택 필드·선택 언어 사용, 시험 알림 첫 줄만 변경 안내 고지 추가. 첨부된 Discord 화면으로 webhook 전달은 유지보수자가 수용했다. `0.9.0-test.6` 후보 [run `31254605322`](https://github.com/gvm1229/aigent-hive/actions/runs/31254605322)는 5개 native target·npm 묶음·attestation PASS. 그러나 Trusted Publishing [run `31255061771`](https://github.com/gvm1229/aigent-hive/actions/runs/31255061771)와 bootstrap fallback [run `31255167232`](https://github.com/gvm1229/aigent-hive/actions/runs/31255167232)가 모두 첫 `@aigent-hive/darwin-arm64` npm `404`로 게시 전 중단했다. `0.9.0-test.6` npm version·tag·GitHub prerelease mutation은 0건이며, stable은 시작하지 않았다. `BGR-012–013` source 응답의 내부 용어 억제·사용자 영향 우선 설명과 local
+- 현재 작업: 시험·정식의 분리된 npm publish workflow를 `release-publish.yml` 하나로 통합. `channel=test|stable`이 exact `develop|main` 후보, npm `test|latest`, prerelease·normal Release를 각각 고정. npm package별 하나의 Trusted Publisher 제약에 맞춰 게시용 `NPM_TOKEN` fallback 제거. 이 변경의 push 뒤 유지보수자가 여섯 package에 같은 workflow 파일을 한 번만 연결. `DIS9-007`의 사용자 지정 Discord 중단 알림 형식·언어·시험 알림 동등성 구현 완료, 첨부된 Discord 화면으로 webhook 전달 수용. `0.9.0-test.6` 후보 [run `31254605322`](https://github.com/gvm1229/aigent-hive/actions/runs/31254605322)는 5개 native target·npm 묶음·attestation PASS. 기존 두 게시 시도는 첫 `@aigent-hive/darwin-arm64` npm `404`로 게시 전 중단했고, `0.9.0-test.6` npm version·tag·GitHub prerelease 생성은 0건. `BGR-012–013` source 응답의 내부 용어 억제·사용자 영향 우선 설명과 local
   `-dev → 0.9.0-test.6` user-scope validation 완료. `SIL-001–006` public Skill identity·localization·retired-ID cleanup과
   `0.9.0-test.5` 독립 시험 게시 완료. `N10-001` Notion 사용자 노출 차단 완료. `DIS9-004`의 부분 설정 전체 목록·Discord 하위 항목 표시 계약 구현. 다음 작업:
   `DIS9-002–010` Discord 연결 UX. Notion end-to-end 기능은 `0.10.0-test`까지 보류

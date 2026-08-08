@@ -9,7 +9,7 @@ summary: "Global setup stores multiple user contexts without choosing project wo
 tags: [bootstrap, onboarding, setup]
 aliases: ["User setup"]
 sources:
-  - "repo:README.md#sha256:00245e45b8c796c5d33f046ac2ff2ef5efea300b331d078e1122ae4df246da7e"
+  - "repo:README.md#sha256:67c09e54e76df72ee9ac6acbde5b88fbb0a6653e1d7172e3f789a8d99c2434b7"
   - "repo:crates/hive-cli/src/user_setup.rs#sha256:9d0a796027dde450cfec2162ac1073305068aa4ac0e6351303f4976c1ad87f38"
   - "repo:docs/decisions/ADR-0012-global-onboarding-shared-index.md#sha256:315391aa3b280409c6c19185aff55bcd21af1fb724de89a7007fc84c73a44aa3"
   - "repo:harness/skills/configure/SKILL.md#sha256:abeb032e21d2576366025465d54080966767fb7e17cca57848acf093eaa83eaf"

@@ -45,7 +45,7 @@
 | Model-routed custom subagent | 0 | 32 | 0% |
 | Prompt refine 자동 routing | 12 | 0 | 100% |
 | v0.9 test 기능 마감 | 18 | 0 | 100% |
-| v0.9 full release | 13 | 12 | 52% |
+| v0.9 full release | 13 | 13 | 50% |
 | Test release setup routing | 4 | 0 | 100% |
 | Bootstrap·user projection recovery | 13 | 0 | 100% |
 | 한국어 setup 용어 복구 | 5 | 1 | 83.3% |
@@ -53,7 +53,7 @@
 | Public Skill identity·localization | 6 | 0 | 100% |
 | Discord `v0.9` 연결 UX | 1 | 9 | 10% |
 | Notion `v0.10` 후보 | 1 | 10 | 9.1% |
-| **Canonical total** | **374** | **87** | **81.1%** |
+| **Canonical total** | **374** | **88** | **81.0%** |
 
 External production boundary 항목도 미완료 합계에 포함. Protected authority 없이 완료 처리 금지.
 

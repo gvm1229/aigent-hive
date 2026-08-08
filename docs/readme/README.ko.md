@@ -12,12 +12,12 @@ Hive: subscription 인증 agent host에 일관된 setup, Skill routing, project 
 지속 가능한 role/run 상태, usage safeguard와 안전한 update 계약 제공.
 Model-provider API key 요청·provider API 호출·host model runtime 대체 없음.
 
-Stable `0.9.0`: npm `latest` 배포. Developer test build `0.9.0-test.5`: npm `test`와
-GitHub prerelease 전용 유지.
+현재 stable `0.8.0`: npm `latest` 배포. Developer test build `0.9.0-test.5`: npm `test`와
+GitHub prerelease 전용 유지. Stable `0.9.0`은 아직 배포 전.
 
-## 0.9.0 설치
+## 현재 stable 설치
 
-npm `0.9.0|latest`, GitHub normal Release, annotated Git tag 배포.
+npm `0.8.0|latest`, GitHub normal Release, annotated Git tag 배포.
 
 기본 설치:
 
@@ -28,7 +28,7 @@ npm install -g aigent-hive
 또는 exact version 고정:
 
 ```console
-npm install -g aigent-hive@0.9.0
+npm install -g aigent-hive@0.8.0
 ```
 
 npm 설치 dependency: Node.js·npm. 설치된 `hive` runtime: native Rust binary,
@@ -37,7 +37,7 @@ Node.js dependency 없음.
 예상 stable version label:
 
 ```text
-AIgent Hive v0.9.0 (released 2026-08-08)
+AIgent Hive v0.8.0
 ```
 
 ### Developer test build 0.9.0-test.5
@@ -61,19 +61,19 @@ Exact version 설치: npm `latest` 변경 없음.
 
 ```sh
 curl --proto '=https' --tlsv1.2 -LsSf \
-  https://unpkg.com/aigent-hive@0.9.0/install.sh | sh
+  https://unpkg.com/aigent-hive@0.8.0/install.sh | sh
 ```
 
 ### Windows PowerShell 5.1+
 
 ```powershell
-irm https://unpkg.com/aigent-hive@0.9.0/install.ps1 | iex
+irm https://unpkg.com/aigent-hive@0.8.0/install.ps1 | iex
 ```
 
 ### Windows 명령 프롬프트
 
 ```bat
-curl.exe -fLo install-aigent-hive.cmd https://unpkg.com/aigent-hive@0.9.0/install.cmd && install-aigent-hive.cmd
+curl.exe -fLo install-aigent-hive.cmd https://unpkg.com/aigent-hive@0.8.0/install.cmd && install-aigent-hive.cmd
 ```
 
 직접 installer: npm의 동일 native package bytes 수신, embedded exact-version
@@ -89,8 +89,8 @@ prompt 사용. 선택 사항이며, 아래 4단계 설정은 예측 가능한 �
 I want the optional one-prompt Aigent Hive setup. Work only at user scope; do not inspect,
 initialize, or change any project, repository, folder, or current working directory.
 
-First ask whether I want the stable release 0.9.0 (recommended) or the developer test build
-0.9.0-test.5. The stable install guidance is https://github.com/gvm1229/aigent-hive#install-090
+First ask whether I want the current stable release 0.8.0 (recommended) or the developer test build
+0.9.0-test.5. The stable install guidance is https://github.com/gvm1229/aigent-hive#install-the-current-stable-release
 and the test-build release notes are https://github.com/gvm1229/aigent-hive/releases/tag/v0.9.0-test.5.
 Detect my operating system and active host (Codex, Claude Code, or Gemini Antigravity), asking
 me if either is unclear. Check whether Node.js and npm are available. If they are missing,
@@ -128,7 +128,7 @@ code signing은 후속 안정 릴리스로 deferred.
 
 ### 1. Hive CLI 설치
 
-위 [0.8.0 설치](#080-설치) 중 한 가지 명령 사용. npm 설치 범위: `hive` command 제공;
+위 [현재 stable 설치](#현재-stable-설치) 중 한 가지 명령 사용. npm 설치 범위: `hive` command 제공;
 host 내부 Hive 활성화 전 단계.
 
 ### 2. 이 host에 Hive 연결

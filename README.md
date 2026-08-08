@@ -13,12 +13,13 @@ project knowledge, durable role/run state, usage safeguards, and safe update con
 It never asks for model-provider API keys, calls model-provider APIs, or replaces the
 host's own model runtime.
 
-Stable `0.9.0` is the npm `latest` release. Developer test build `0.9.0-test.5`
-remains available only on npm `test` and as a GitHub prerelease.
+Stable `0.8.0` is the current npm `latest` release. Developer test build
+`0.9.0-test.5` remains available only on npm `test` and as a GitHub prerelease.
+Stable `0.9.0` is being prepared and is not published yet.
 
-## Install 0.9.0
+## Install the current stable release
 
-`0.9.0` is published on npm as `latest`, with a normal GitHub Release and annotated Git tag.
+`0.8.0` is published on npm as `latest`, with a normal GitHub Release and annotated Git tag.
 
 ```console
 npm install -g aigent-hive
@@ -27,7 +28,7 @@ npm install -g aigent-hive
 Or pin the exact version:
 
 ```console
-npm install -g aigent-hive@0.9.0
+npm install -g aigent-hive@0.8.0
 ```
 
 The npm installer requires Node.js and npm. The installed `hive` runtime is a native
@@ -36,7 +37,7 @@ Rust binary and does not require Node.js.
 Expected stable version label:
 
 ```text
-AIgent Hive v0.9.0 (released 2026-08-08)
+AIgent Hive v0.8.0
 ```
 
 ### Developer test build 0.9.0-test.5
@@ -60,19 +61,19 @@ This explicit version never changes npm `latest`.
 
 ```sh
 curl --proto '=https' --tlsv1.2 -LsSf \
-  https://unpkg.com/aigent-hive@0.9.0/install.sh | sh
+  https://unpkg.com/aigent-hive@0.8.0/install.sh | sh
 ```
 
 ### Windows PowerShell 5.1+
 
 ```powershell
-irm https://unpkg.com/aigent-hive@0.9.0/install.ps1 | iex
+irm https://unpkg.com/aigent-hive@0.8.0/install.ps1 | iex
 ```
 
 ### Windows Command Prompt
 
 ```bat
-curl.exe -fLo install-aigent-hive.cmd https://unpkg.com/aigent-hive@0.9.0/install.cmd && install-aigent-hive.cmd
+curl.exe -fLo install-aigent-hive.cmd https://unpkg.com/aigent-hive@0.8.0/install.cmd && install-aigent-hive.cmd
 ```
 
 The direct installers fetch the same native package bytes from npm, verify the
@@ -89,8 +90,8 @@ setup steps below. It is optional: the four-step setup remains the predictable m
 I want the optional one-prompt Aigent Hive setup. Work only at user scope; do not inspect,
 initialize, or change any project, repository, folder, or current working directory.
 
-First ask whether I want the stable release 0.9.0 (recommended) or the developer test build
-0.9.0-test.5. The stable install guidance is https://github.com/gvm1229/aigent-hive#install-090
+First ask whether I want the current stable release 0.8.0 (recommended) or the developer test build
+0.9.0-test.5. The stable install guidance is https://github.com/gvm1229/aigent-hive#install-the-current-stable-release
 and the test-build release notes are https://github.com/gvm1229/aigent-hive/releases/tag/v0.9.0-test.5.
 Detect my operating system and active host (Codex, Claude Code, or Gemini Antigravity), asking
 me if either is unclear. Check whether Node.js and npm are available. If they are missing,
@@ -131,7 +132,7 @@ and step 3 whenever global preferences change.
 
 ### 1. Install the Hive CLI
 
-Use one command from [Install 0.9.0](#install-090) above. The npm installation provides the
+Use one command from [Install the current stable release](#install-the-current-stable-release) above. The npm installation provides the
 `hive` command; it does not yet activate Hive inside a host.
 
 ### 2. Activate Hive for this host
