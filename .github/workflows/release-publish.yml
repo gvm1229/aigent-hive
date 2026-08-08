@@ -1,32 +1,38 @@
-name: Publish stable npm distribution
+name: Publish npm distribution
 
 on:
   workflow_dispatch:
     inputs:
       product_version:
-        description: Exact product version
+        description: Exact product version in the candidate source
         required: true
         type: string
       package_version:
-        description: Exact stable npm package version; must equal product version
+        description: Exact npm package version for the selected channel
         required: true
         type: string
       candidate_run_id:
-        description: Successful Release candidate workflow run id
+        description: Successful Release candidate workflow run id for the selected channel
         required: true
         type: string
-      bootstrap_with_token:
-        description: First publication only; use the temporary NPM_TOKEN secret
+      channel:
+        description: Publication channel and candidate branch
         required: true
-        default: false
-        type: boolean
+        type: choice
+        options:
+          - test
+          - stable
 
 permissions:
   contents: write
 
+concurrency:
+  group: release-${{ inputs.channel }}-${{ inputs.package_version }}
+  cancel-in-progress: false
+
 jobs:
   publish:
-    name: Verify and publish npm distribution
+    name: Verify and publish channel-bound npm distribution
     environment:
       name: release-publication
       deployment: false
@@ -35,35 +41,54 @@ jobs:
       PRODUCT_VERSION: ${{ inputs.product_version }}
       PACKAGE_VERSION: ${{ inputs.package_version }}
       RUN_ID: ${{ inputs.candidate_run_id }}
-      BOOTSTRAP_WITH_TOKEN: ${{ inputs.bootstrap_with_token }}
+      CHANNEL: ${{ inputs.channel }}
     permissions:
       actions: read
       contents: write
       id-token: write
     steps:
-      - name: Validate untrusted dispatch inputs
+      - name: Validate untrusted dispatch inputs and bind the channel contract
+        id: contract
         run: |
           if [[ ! "$PRODUCT_VERSION" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
             exit 2
           fi
-          if [[ ! "$PACKAGE_VERSION" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
-            exit 2
-          fi
-          test "$PACKAGE_VERSION" = "$PRODUCT_VERSION"
-          if [[ ! "$RUN_ID" =~ ^[1-9][0-9]*$ ]]; then
-            exit 2
-          fi
-          test "$BOOTSTRAP_WITH_TOKEN" = "true" \
-            || test "$BOOTSTRAP_WITH_TOKEN" = "false"
-      - name: Resolve the exact successful candidate commit
+          [[ "$RUN_ID" =~ ^[1-9][0-9]*$ ]]
+          case "$CHANNEL" in
+            test)
+              case "$PACKAGE_VERSION" in
+                "$PRODUCT_VERSION"-test) ;;
+                "$PRODUCT_VERSION"-test.[1-9]*)
+                  [[ "${PACKAGE_VERSION#"$PRODUCT_VERSION-test."}" =~ ^[1-9][0-9]*$ ]]
+                  ;;
+                *) exit 2 ;;
+              esac
+              branch=develop
+              npm_tag=test
+              prerelease=true
+              ;;
+            stable)
+              [[ "$PACKAGE_VERSION" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]
+              test "$PACKAGE_VERSION" = "$PRODUCT_VERSION"
+              branch=main
+              npm_tag=latest
+              prerelease=false
+              ;;
+            *) exit 2 ;;
+          esac
+          printf 'branch=%s\n' "$branch" >>"$GITHUB_OUTPUT"
+          printf 'npm_tag=%s\n' "$npm_tag" >>"$GITHUB_OUTPUT"
+          printf 'prerelease=%s\n' "$prerelease" >>"$GITHUB_OUTPUT"
+      - name: Resolve the exact successful channel candidate
         id: candidate
         env:
           GH_TOKEN: ${{ github.token }}
+          EXPECTED_BRANCH: ${{ steps.contract.outputs.branch }}
         run: |
           metadata=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RUN_ID")
           test "$(jq -r .name <<<"$metadata")" = "Release candidate"
           test "$(jq -r .event <<<"$metadata")" = "workflow_dispatch"
-          test "$(jq -r .head_branch <<<"$metadata")" = "main"
+          test "$(jq -r .head_branch <<<"$metadata")" = "$EXPECTED_BRANCH"
           test "$(jq -r .conclusion <<<"$metadata")" = "success"
           echo "sha=$(jq -r .head_sha <<<"$metadata")" >>"$GITHUB_OUTPUT"
       - name: Create release GitHub App token
@@ -106,17 +131,18 @@ jobs:
           pattern: release-*
           path: dist
           merge-multiple: true
-      - name: Bind stable publication to the exact stable candidate
+      - name: Bind publication to the exact channel candidate
         env:
           CANDIDATE_SHA: ${{ steps.candidate.outputs.sha }}
+          EXPECTED_BRANCH: ${{ steps.contract.outputs.branch }}
         run: |
           metadata=$(cat dist/release-candidate.json)
           test "$(jq -r .schema_version <<<"$metadata")" = "1"
-          test "$(jq -r .channel <<<"$metadata")" = "stable"
+          test "$(jq -r .channel <<<"$metadata")" = "$CHANNEL"
           test "$(jq -r .product_version <<<"$metadata")" = "$PRODUCT_VERSION"
           test "$(jq -r .package_version <<<"$metadata")" = "$PACKAGE_VERSION"
           [[ "$(jq -r .release_date <<<"$metadata")" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]
-          test "$(jq -r .ref <<<"$metadata")" = "refs/heads/main"
+          test "$(jq -r .ref <<<"$metadata")" = "refs/heads/$EXPECTED_BRANCH"
           test "$(jq -r .sha <<<"$metadata")" = "$CANDIDATE_SHA"
       - name: Verify required artifacts, checksums, and GitHub attestations
         env:
@@ -250,12 +276,12 @@ jobs:
               exit 3
             fi
           done
-      - name: Refuse an existing stable tag or release
+      - name: Refuse an existing channel tag or release
         env:
           GH_TOKEN: ${{ github.token }}
           CANDIDATE_SHA: ${{ steps.candidate.outputs.sha }}
         run: |
-          tag="v$PRODUCT_VERSION"
+          tag="v$PACKAGE_VERSION"
           if git ls-remote --exit-code --tags origin "refs/tags/$tag" >/dev/null 2>&1; then
             echo "$tag already exists" >&2
             exit 3
@@ -265,40 +291,37 @@ jobs:
             exit 3
           fi
           test "$CANDIDATE_SHA" = "$(git rev-parse HEAD)"
-      - name: Publish npm package family with the bootstrap token
-        if: inputs.bootstrap_with_token
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: Snapshot stable tags before test publication
+        if: ${{ inputs.channel == 'test' }}
         run: |
-          test -n "$NODE_AUTH_TOKEN"
-          npm publish "./dist/aigent-hive-darwin-arm64-$PACKAGE_VERSION.tgz" \
-            --access public --provenance --tag latest
-          npm publish "./dist/aigent-hive-darwin-x64-$PACKAGE_VERSION.tgz" \
-            --access public --provenance --tag latest
-          npm publish "./dist/aigent-hive-linux-arm64-$PACKAGE_VERSION.tgz" \
-            --access public --provenance --tag latest
-          npm publish "./dist/aigent-hive-linux-x64-$PACKAGE_VERSION.tgz" \
-            --access public --provenance --tag latest
-          npm publish "./dist/aigent-hive-win32-x64-$PACKAGE_VERSION.tgz" \
-            --access public --provenance --tag latest
-          npm publish "./dist/aigent-hive-$PACKAGE_VERSION.tgz" \
-            --access public --provenance --tag latest
+          : >"$RUNNER_TEMP/latest-before.tsv"
+          for package in \
+            "@aigent-hive/darwin-arm64" \
+            "@aigent-hive/darwin-x64" \
+            "@aigent-hive/linux-arm64" \
+            "@aigent-hive/linux-x64" \
+            "@aigent-hive/win32-x64" \
+            "aigent-hive"; do
+            latest=$(npm view "$package" 'dist-tags.latest')
+            test -n "$latest"
+            printf '%s\t%s\n' "$package" "$latest" >>"$RUNNER_TEMP/latest-before.tsv"
+          done
       - name: Publish npm package family through trusted publishing
-        if: ${{ !inputs.bootstrap_with_token }}
+        env:
+          NPM_TAG: ${{ steps.contract.outputs.npm_tag }}
         run: |
-          npm publish "./dist/aigent-hive-darwin-arm64-$PACKAGE_VERSION.tgz" \
-            --access public --provenance --tag latest
-          npm publish "./dist/aigent-hive-darwin-x64-$PACKAGE_VERSION.tgz" \
-            --access public --provenance --tag latest
-          npm publish "./dist/aigent-hive-linux-arm64-$PACKAGE_VERSION.tgz" \
-            --access public --provenance --tag latest
-          npm publish "./dist/aigent-hive-linux-x64-$PACKAGE_VERSION.tgz" \
-            --access public --provenance --tag latest
-          npm publish "./dist/aigent-hive-win32-x64-$PACKAGE_VERSION.tgz" \
-            --access public --provenance --tag latest
-          npm publish "./dist/aigent-hive-$PACKAGE_VERSION.tgz" \
-            --access public --provenance --tag latest
-      - name: Verify npm latest tags
+          for archive in \
+            "dist/aigent-hive-darwin-arm64-$PACKAGE_VERSION.tgz" \
+            "dist/aigent-hive-darwin-x64-$PACKAGE_VERSION.tgz" \
+            "dist/aigent-hive-linux-arm64-$PACKAGE_VERSION.tgz" \
+            "dist/aigent-hive-linux-x64-$PACKAGE_VERSION.tgz" \
+            "dist/aigent-hive-win32-x64-$PACKAGE_VERSION.tgz" \
+            "dist/aigent-hive-$PACKAGE_VERSION.tgz"; do
+            npm publish "./$archive" --access public --provenance --tag "$NPM_TAG"
+          done
+      - name: Verify npm channel tags
+        env:
+          NPM_TAG: ${{ steps.contract.outputs.npm_tag }}
         run: |
           packages=(
             "@aigent-hive/darwin-arm64"
@@ -315,33 +338,50 @@ jobs:
           }
           for package in "${packages[@]}"; do
             for attempt in 1 2 3 4 5 6 7 8 9 10 11 12; do
-              if [ "$(read_tag "$package" latest)" = "$PACKAGE_VERSION" ]; then
+              if [ "$(read_tag "$package" "$NPM_TAG")" = "$PACKAGE_VERSION" ]; then
                 break
               fi
               if [ "$attempt" = 12 ]; then
-                echo "::error::$package latest tag did not reach $PACKAGE_VERSION" >&2
+                echo "::error::$package $NPM_TAG tag did not reach $PACKAGE_VERSION" >&2
                 exit 6
               fi
               sleep 5
             done
           done
-      - name: Create annotated stable tag and normal GitHub Release
+      - name: Verify stable tags remain unchanged for test publication
+        if: ${{ inputs.channel == 'test' }}
+        run: |
+          while IFS="$(printf '\t')" read -r package latest_before; do
+            latest_after=$(npm view "$package" 'dist-tags.latest')
+            test "$latest_after" = "$latest_before"
+          done <"$RUNNER_TEMP/latest-before.tsv"
+      - name: Create annotated channel tag and GitHub Release
         env:
           GH_TOKEN: ${{ steps.release-token.outputs.token }}
           RELEASE_GIT_TOKEN: ${{ steps.release-token.outputs.token }}
           CANDIDATE_SHA: ${{ steps.candidate.outputs.sha }}
+          PRERELEASE: ${{ steps.contract.outputs.prerelease }}
         run: |
           test -n "$RELEASE_GIT_TOKEN"
-          tag="v$PRODUCT_VERSION"
+          tag="v$PACKAGE_VERSION"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git tag -a "$tag" "$CANDIDATE_SHA" -m "Aigent Hive $PRODUCT_VERSION"
+          git tag -a "$tag" "$CANDIDATE_SHA" -m "Aigent Hive $PACKAGE_VERSION $CHANNEL"
           auth_header="$(printf 'x-access-token:%s' "$RELEASE_GIT_TOKEN" | base64 -w 0)"
           git -c http.https://github.com/.extraheader="AUTHORIZATION: basic $auth_header" \
             push origin "refs/tags/$tag"
           unset auth_header
-          gh release create "$tag" \
-            --target "$CANDIDATE_SHA" \
-            --title "Aigent Hive $PRODUCT_VERSION" \
-            --notes-file "docs/releases/$PRODUCT_VERSION.md" \
-            dist/*.tar.gz dist/*.zip dist/*.sha256 dist/*.tgz dist/*.attestation.jsonl
+          if [ "$PRERELEASE" = "true" ]; then
+            gh release create "$tag" \
+              --target "$CANDIDATE_SHA" \
+              --prerelease \
+              --title "Aigent Hive $PACKAGE_VERSION test" \
+              --notes-file "docs/releases/$PRODUCT_VERSION.md" \
+              dist/*.tar.gz dist/*.zip dist/*.sha256 dist/*.tgz dist/*.attestation.jsonl
+          else
+            gh release create "$tag" \
+              --target "$CANDIDATE_SHA" \
+              --title "Aigent Hive $PRODUCT_VERSION" \
+              --notes-file "docs/releases/$PRODUCT_VERSION.md" \
+              dist/*.tar.gz dist/*.zip dist/*.sha256 dist/*.tgz dist/*.attestation.jsonl
+          fi

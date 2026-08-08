@@ -342,87 +342,91 @@ class Phase6StaticContracts(unittest.TestCase):
         )
         self.assertNotIn("SigningKey", update_source)
 
-    def test_release_workflows_separate_candidate_and_publication(self) -> None:
+    def test_release_workflow_separates_candidate_and_channel_publication(self) -> None:
         candidate = (ROOT / ".github/workflows/release.yml").read_text(
             encoding="utf-8"
         )
-        stable_publication = (
+        publication = (
             ROOT / ".github/workflows/release-publish.yml"
         ).read_text(encoding="utf-8")
-        test_publication = (
-            ROOT / ".github/workflows/release-test-publish.yml"
-        ).read_text(encoding="utf-8")
         candidate_workflow = yaml.safe_load(candidate)
-        stable_workflow = yaml.safe_load(stable_publication)
-        test_workflow = yaml.safe_load(test_publication)
+        publication_workflow = yaml.safe_load(publication)
         self.assertEqual(
             set(candidate_workflow["jobs"]),
             {"unix", "windows", "npm-umbrella"},
         )
-        self.assertEqual(set(stable_workflow["jobs"]), {"publish"})
-        self.assertEqual(set(test_workflow["jobs"]), {"publish"})
+        self.assertEqual(set(publication_workflow["jobs"]), {"publish"})
+        publication_triggers = publication_workflow.get(
+            "on", publication_workflow.get(True)
+        )
+        self.assertIsInstance(publication_triggers, dict)
+        publication_inputs = publication_triggers["workflow_dispatch"]["inputs"]
+        self.assertEqual(
+            publication_inputs["channel"],
+            {
+                "description": "Publication channel and candidate branch",
+                "required": True,
+                "type": "choice",
+                "options": ["test", "stable"],
+            },
+        )
         expected_publication_environment = {
             "name": "release-publication",
             "deployment": False,
         }
         self.assertEqual(
-            stable_workflow["jobs"]["publish"]["environment"],
+            publication_workflow["jobs"]["publish"]["environment"],
             expected_publication_environment,
+        )
+        steps = publication_workflow["jobs"]["publish"]["steps"]
+        app_token_index, app_token_step = next(
+            (index, step)
+            for index, step in enumerate(steps)
+            if step.get("id") == "release-token"
         )
         self.assertEqual(
-            test_workflow["jobs"]["publish"]["environment"],
-            expected_publication_environment,
+            app_token_step["uses"],
+            "actions/create-github-app-token@"
+            "bcd2ba49218906704ab6c1aa796996da409d3eb1",
         )
-        for workflow in (stable_workflow, test_workflow):
-            steps = workflow["jobs"]["publish"]["steps"]
-            app_token_index, app_token_step = next(
-                (index, step)
-                for index, step in enumerate(steps)
-                if step.get("id") == "release-token"
-            )
-            self.assertEqual(
-                app_token_step["uses"],
-                "actions/create-github-app-token@"
-                "bcd2ba49218906704ab6c1aa796996da409d3eb1",
-            )
-            self.assertEqual(
-                app_token_step["with"],
-                {
-                    "client-id": "${{ vars.RELEASE_APP_CLIENT_ID }}",
-                    "private-key": "${{ secrets.RELEASE_APP_PRIVATE_KEY }}",
-                    "owner": "${{ github.repository_owner }}",
-                    "repositories": "aigent-hive",
-                    "permission-contents": "write",
-                    "permission-workflows": "write",
-                },
-            )
-            checkout_step = next(
-                step
-                for step in steps
-                if step.get("uses", "").startswith("actions/checkout@")
-            )
-            self.assertFalse(checkout_step["with"]["persist-credentials"])
-            first_publish_index = next(
-                index
-                for index, step in enumerate(steps)
-                if step.get("name", "").startswith("Publish npm package family")
-            )
-            self.assertLess(app_token_index, first_publish_index)
-            release_step = next(
-                step
-                for step in steps
-                if step.get("name", "").startswith("Create annotated")
-            )
-            self.assertEqual(
-                release_step["env"]["GH_TOKEN"],
-                "${{ steps.release-token.outputs.token }}",
-            )
-            self.assertEqual(
-                release_step["env"]["RELEASE_GIT_TOKEN"],
-                "${{ steps.release-token.outputs.token }}",
-            )
-            self.assertIn('test -n "$RELEASE_GIT_TOKEN"', release_step["run"])
-            self.assertIn("http.https://github.com/.extraheader", release_step["run"])
+        self.assertEqual(
+            app_token_step["with"],
+            {
+                "client-id": "${{ vars.RELEASE_APP_CLIENT_ID }}",
+                "private-key": "${{ secrets.RELEASE_APP_PRIVATE_KEY }}",
+                "owner": "${{ github.repository_owner }}",
+                "repositories": "aigent-hive",
+                "permission-contents": "write",
+                "permission-workflows": "write",
+            },
+        )
+        checkout_step = next(
+            step
+            for step in steps
+            if step.get("uses", "").startswith("actions/checkout@")
+        )
+        self.assertFalse(checkout_step["with"]["persist-credentials"])
+        first_publish_index = next(
+            index
+            for index, step in enumerate(steps)
+            if step.get("name", "").startswith("Publish npm package family")
+        )
+        self.assertLess(app_token_index, first_publish_index)
+        release_step = next(
+            step
+            for step in steps
+            if step.get("name", "").startswith("Create annotated")
+        )
+        self.assertEqual(
+            release_step["env"]["GH_TOKEN"],
+            "${{ steps.release-token.outputs.token }}",
+        )
+        self.assertEqual(
+            release_step["env"]["RELEASE_GIT_TOKEN"],
+            "${{ steps.release-token.outputs.token }}",
+        )
+        self.assertIn('test -n "$RELEASE_GIT_TOKEN"', release_step["run"])
+        self.assertIn("http.https://github.com/.extraheader", release_step["run"])
         unix_matrix = candidate_workflow["jobs"]["unix"]["strategy"]["matrix"][
             "include"
         ]
@@ -486,26 +490,30 @@ class Phase6StaticContracts(unittest.TestCase):
         ):
             self.assertIn(required, candidate)
         for required in (
-            "candidate_run_id",
+            "channel",
+            "test)",
+            "stable)",
+            "branch=develop",
+            "branch=main",
+            "npm_tag=test",
+            "npm_tag=latest",
+            "prerelease=true",
+            "prerelease=false",
             "Release candidate",
             "CANDIDATE_SHA",
+            "EXPECTED_BRANCH",
             "gh attestation verify",
             "dist/install.sh",
             "dist/install.ps1",
             "dist/install.cmd",
             "npm publish",
             "--provenance",
-            "--tag latest",
+            '--tag "$NPM_TAG"',
             "release-publication",
             'test "$PACKAGE_VERSION" = "$PRODUCT_VERSION"',
-            'head_branch <<<"$metadata")" = "main"',
-            'channel <<<"$metadata")" = "stable"',
-            "bootstrap_with_token",
-            "secrets.NPM_TOKEN",
-            "NODE_AUTH_TOKEN",
-            "!inputs.bootstrap_with_token",
-            'npm view "$package" "dist-tags.$tag"',
-            'read_tag "$package" latest',
+            'channel <<<"$metadata")" = "$CHANNEL"',
+            "latest-before.tsv",
+            "--prerelease",
             "differs from approved candidate",
             "required release notes are missing",
             'sha256sum --check --strict "$archive.sha256"',
@@ -516,42 +524,24 @@ class Phase6StaticContracts(unittest.TestCase):
             "gh release create",
             "git tag -a",
         ):
-            self.assertIn(required, stable_publication)
-        for required in (
-            "Publish test prerelease",
-            "release-publication",
-            'head_branch <<<"$metadata")" = "develop"',
-            'channel <<<"$metadata")" = "test"',
-            '"$PRODUCT_VERSION"-test)',
-            "--tag test",
-            "latest-before.tsv",
-            "dist-tags.latest",
-            "dist-tags.test",
-            "--prerelease",
-            "gh release create",
-            "git tag -a",
-            "bootstrap_with_token",
-            "secrets.NPM_TOKEN",
-        ):
-            self.assertIn(required, test_publication)
-        self.assertNotIn("--tag latest", test_publication)
-        self.assertNotIn("--prerelease", stable_publication)
+            self.assertIn(required, publication)
+        for forbidden in ("bootstrap_with_token", "secrets.NPM_TOKEN", "NODE_AUTH_TOKEN"):
+            self.assertNotIn(forbidden, publication)
         self.assertNotIn(
             'read -r digest name extra <"dist/$archive.sha256"',
-            stable_publication,
+            publication,
         )
         self.assertNotIn(
             "unpkg.com/aigent-hive@$PACKAGE_VERSION/install.ps1",
-            stable_publication,
+            publication,
         )
-        self.assertEqual(stable_publication.count('npm publish "./dist/'), 12)
-        self.assertEqual(test_publication.count('npm publish "./$archive"'), 2)
-        self.assertNotIn('npm publish "$archive"', test_publication)
-        self.assertNotIn('npm publish "dist/', stable_publication + test_publication)
-        self.assertNotIn("npm dist-tag add", stable_publication + test_publication)
+        self.assertEqual(publication.count('npm publish "./$archive"'), 1)
+        self.assertNotIn('npm publish "$archive"', publication)
+        self.assertNotIn('npm publish "dist/', publication)
+        self.assertNotIn("npm dist-tag add", publication)
         self.assertNotIn(
             'npm dist-tag ls "$package" --json',
-            stable_publication + test_publication,
+            publication,
         )
         for forbidden in (
             "gh release create",
@@ -573,8 +563,8 @@ class Phase6StaticContracts(unittest.TestCase):
             "azure/artifact-signing-action@",
             "gh release edit",
         ):
-            self.assertNotIn(forbidden, stable_publication + test_publication)
-        self.assertNotIn("eval ", candidate + stable_publication + test_publication)
+            self.assertNotIn(forbidden, publication)
+        self.assertNotIn("eval ", candidate + publication)
 
     def test_dispatch_inputs_are_never_interpolated_into_run_scripts(self) -> None:
         def run_scripts(value: object) -> list[str]:
@@ -600,7 +590,6 @@ class Phase6StaticContracts(unittest.TestCase):
         for name in (
             "release.yml",
             "release-publish.yml",
-            "release-test-publish.yml",
             "release-runtime.yml",
         ):
             text = (ROOT / ".github/workflows" / name).read_text(encoding="utf-8")
