@@ -1522,12 +1522,12 @@ raise SystemExit(64)
         ).read_text(encoding="utf-8")
         canonical = (
             REPOSITORY_ROOT
-            / "harness/skills/hive-usage-guard/SKILL.md"
+            / "harness/skills/manage-usage/SKILL.md"
         ).read_bytes()
         projections = (
-            "harness/plugins/aigent-hive/skills/hive-usage-guard/SKILL.md",
-            "harness/template/.agents/skills/hive-usage-guard/SKILL.md",
-            "harness/template/.claude/skills/hive-usage-guard/SKILL.md",
+            "harness/plugins/aigent-hive/skills/manage-usage/SKILL.md",
+            "harness/template/.agents/skills/manage-usage/SKILL.md",
+            "harness/template/.claude/skills/manage-usage/SKILL.md",
         )
 
         for projection in projections:
