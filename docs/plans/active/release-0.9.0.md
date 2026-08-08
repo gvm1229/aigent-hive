@@ -23,7 +23,7 @@
 - Product: `0.9.0`; notes: [`0.9.0.md`](../../releases/0.9.0.md)
 - Candidate `30771098518`, `6761f0b`: 5 targets·npm umbrella·fresh clone PASS
 - `0.9.0-test`: six npm package·annotated tag·prerelease 22 assets; `latest=0.8.0` 유지
-- [PR #17](https://github.com/gvm1229/aigent-hive/pull/17): `deployment: false` main 반영 대기
+- [PR #18](https://github.com/gvm1229/aigent-hive/pull/18) CI 복구: Clippy → Skill 경로 → Copier fixture → 로컬 검증 → `develop` push·재검사
 - 상세 run·failure·external signer evidence: [`CURRENT.md`](../../state/CURRENT.md)
 
 ## 이번 정식 릴리스의 명시적 제외와 면제
