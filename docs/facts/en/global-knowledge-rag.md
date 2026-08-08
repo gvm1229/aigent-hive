@@ -19,8 +19,8 @@ status: active
 # Global Knowledge RAG
 
 v0.9 expands `hive-knowledge-query` into the bounded automatic retrieval owner
-and requires selected-backend canonical writes for reusable user facts,
-preferences, and workflows. Markdown mode writes Markdown; Notion mode writes the
-selected Notion scope and keeps SQLite derived. Named project and collection scope, citation-ready chunks,
+and requires Markdown canonical writes for reusable user facts, preferences, and
+workflows. Named project and collection scope, citation-ready chunks,
 fresh-session recall, and derived-only repair are implemented. The 50,000-chunk
 qualification measured 163.3569ms cold p95 and 0.1178ms prepared-resident warm p95.
+Notion backend work is deferred to the first v0.10 test release.

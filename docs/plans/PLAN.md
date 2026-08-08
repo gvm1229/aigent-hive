@@ -1,15 +1,16 @@
 # Aigent Hive active plan index
 
-> Revision: 2.24
-> 기준일: 2026-08-07
+> Revision: 2.25
+> 기준일: 2026-08-08
 > Product version: `0.9.0`
 > 현재 milestone: `0.9.0` 정식 릴리스 준비
 > Entrypoint: `docs/plans/PLAN.md`
 
 ## Goal parameters
 
-- Objective: Hive-native execution·custom subagent routing·Judge policy 안전 계약, Discord·Notion
-  end-to-end global setup·프로젝트별 usage-guard 알림, `0.9.0-test` 독립 시험 배포·수용,
+- Objective: Hive-native execution·custom subagent routing·Judge policy 안전 계약, Discord
+  end-to-end global setup·프로젝트별 usage-guard 알림, `0.9.0` Markdown Wiki 공개 범위,
+  Notion `0.10.0-test` 후보 준비, `0.9.0-test` 독립 시험 배포·수용,
   별도 `0.9.0` 정식 GitHub·npm 릴리스와 public update 검증
 - Success: Active fragment evidence-backed completion. 시험판 핵심 gate: `MRA-*`, `PRF-*`,
   `TST9-*`, `REL9-*` 독립 test·stable publication과 public acceptance
@@ -50,8 +51,9 @@
 | 한국어 setup 용어 복구 | 5 | 1 | 83.3% |
 | Global Skill 선택 단순화 | 8 | 0 | 100% |
 | Public Skill identity·localization | 6 | 0 | 100% |
-| Discord·Notion 연결 UX | 1 | 17 | 5.6% |
-| **Canonical total** | **373** | **86** | **81.3%** |
+| Discord `v0.9` 연결 UX | 1 | 9 | 10% |
+| Notion `v0.10` 후보 | 1 | 10 | 9.1% |
+| **Canonical total** | **374** | **88** | **81.0%** |
 
 External production boundary 항목도 미완료 합계에 포함. Protected authority 없이 완료 처리 금지.
 
@@ -85,14 +87,15 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
 | [`active/native-iterative-execution.md`](active/native-iterative-execution.md) | `NAT-*` | Hive-native iterative·team·multi-goal execution |
 | [`active/model-routed-custom-subagents.md`](active/model-routed-custom-subagents.md) | `MRA-*` | Codex·Claude custom subagent·Judge 정책 |
 | [`active/prompt-refine-auto-routing.md`](active/prompt-refine-auto-routing.md) | `PRF-*` | Material ambiguity 자동 refine·승인 전 정지 |
-| [`active/v0.9.0-test-finalization.md`](active/v0.9.0-test-finalization.md) | `TST9-*` | Notion·SQLite, Discord outbound, 문제 보고와 시험판 기능 마감 |
+| [`active/v0.9.0-test-finalization.md`](active/v0.9.0-test-finalization.md) | `TST9-*` | Markdown Wiki, Discord outbound, 문제 보고와 시험판 기능 마감 |
 | [`active/release-0.9.0.md`](active/release-0.9.0.md) | `REL9-*` | 정식 GitHub·npm 릴리스와 public acceptance |
 | [`active/test-release-setup-routing.md`](active/test-release-setup-routing.md) | `TUR-*` | Global·project setup routing과 numbered test user projection 인증 |
 | [`active/bootstrap-global-setup-recovery.md`](active/bootstrap-global-setup-recovery.md) | `BGR-*` | 선택형 bootstrap, 쉬운 global setup 복구, user projection merge |
 | [`active/korean-setup-terminology.md`](active/korean-setup-terminology.md) | `KST-*` | 한국어 global setup product term·질문 표기 |
 | [`active/global-skill-selection.md`](active/global-skill-selection.md) | `GSS-*` | all-built-in 기본값·개별 토글·목록 표기 |
 | [`active/skill-identity-localization.md`](active/skill-identity-localization.md) | `SIL-*` | public Skill 이름·plugin namespace·선택 언어 descriptor |
-| [`active/discord-notion-onboarding.md`](active/discord-notion-onboarding.md) | `DNI-*` | Discord·Notion global setup·프로젝트별 중단 알림·HTML 안내 |
+| [`active/discord-onboarding-v09.md`](active/discord-onboarding-v09.md) | `DIS9-*` | Discord global setup·프로젝트별 중단 알림·HTML 안내 |
+| [`active/v0.10.0-notion-candidate.md`](active/v0.10.0-notion-candidate.md) | `N10-*` | Notion 연결·freshness·write-through와 `0.10.0-test` 후보 |
 
 ## Reconciliation gate
 
@@ -114,5 +117,5 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
 ## Current execution order
 
 완료 증거: [`CURRENT.md`](../state/CURRENT.md)와 owning active fragment.
-다음 작업: `DNI-002–017` Discord·Notion 연결 UX. Stable 경로: 별도
-`main` authority까지 보류.
+다음 작업: `DIS9-002–010` Discord 연결 UX. Notion 연결은 `N10-002–011`과 함께
+`0.10.0-test`까지 보류. Stable 경로: 별도 `main` authority까지 보류.

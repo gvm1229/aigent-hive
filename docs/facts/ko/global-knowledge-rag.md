@@ -19,7 +19,6 @@ status: active
 # 전역 knowledge RAG
 
 v0.9 구현: `hive-knowledge-query`의 bounded automatic retrieval, reusable user
-fact·preference·workflow의 selected-backend canonical 기록. Markdown mode는 Markdown,
-Notion mode는 selected Notion scope 정본·SQLite 파생 상태. Named project·collection
-scope, citation-ready chunk, fresh-session recall, derived-only repair. 50,000 chunk qualification:
-cold p95 `163.3569ms`, prepared-resident warm p95 `0.1178ms`.
+fact·preference·workflow의 Markdown canonical 기록. Named project·collection scope,
+citation-ready chunk, fresh-session recall, derived-only repair. 50,000 chunk qualification:
+cold p95 `163.3569ms`, prepared-resident warm p95 `0.1178ms`. Notion backend: 첫 v0.10 시험판 보류.

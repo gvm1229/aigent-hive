@@ -500,7 +500,7 @@ class Phase3SkillSourceContract(unittest.TestCase):
             "active/documentation-style.md",
             "active/bootstrap-global-setup-recovery.md",
             "active/docs-wiki-migration.md",
-            "active/discord-notion-onboarding.md",
+            "active/discord-onboarding-v09.md",
             "active/global-skill-selection.md",
             "active/korean-setup-terminology.md",
             "active/model-routed-custom-subagents.md",
@@ -519,6 +519,7 @@ class Phase3SkillSourceContract(unittest.TestCase):
             "active/v0.9.0-knowledge-portability-scan.md",
             "active/v0.9.0-loop-wiki-skills.md",
             "active/v0.9.0-test-finalization.md",
+            "active/v0.10.0-notion-candidate.md",
             "active/windows-shell-install.md",
             "contracts/README.md",
             "phases/07-public-qualification.md",
@@ -535,7 +536,7 @@ class Phase3SkillSourceContract(unittest.TestCase):
             plan_root / "active/documentation-style.md",
             plan_root / "active/bootstrap-global-setup-recovery.md",
             plan_root / "active/docs-wiki-migration.md",
-            plan_root / "active/discord-notion-onboarding.md",
+            plan_root / "active/discord-onboarding-v09.md",
             plan_root / "active/global-skill-selection.md",
             plan_root / "active/korean-setup-terminology.md",
             plan_root / "active/model-routed-custom-subagents.md",
@@ -554,6 +555,7 @@ class Phase3SkillSourceContract(unittest.TestCase):
             plan_root / "active/v0.9.0-knowledge-portability-scan.md",
             plan_root / "active/v0.9.0-loop-wiki-skills.md",
             plan_root / "active/v0.9.0-test-finalization.md",
+            plan_root / "active/v0.10.0-notion-candidate.md",
             plan_root / "active/windows-shell-install.md",
             plan_root / "phases/07-public-qualification.md",
         ]
@@ -563,7 +565,7 @@ class Phase3SkillSourceContract(unittest.TestCase):
                 "active/documentation-style.md",
                 "active/bootstrap-global-setup-recovery.md",
                 "active/docs-wiki-migration.md",
-                "active/discord-notion-onboarding.md",
+                "active/discord-onboarding-v09.md",
                 "active/global-skill-selection.md",
                 "active/korean-setup-terminology.md",
                 "active/model-routed-custom-subagents.md",
@@ -582,6 +584,7 @@ class Phase3SkillSourceContract(unittest.TestCase):
                 "active/v0.9.0-knowledge-portability-scan.md",
                 "active/v0.9.0-loop-wiki-skills.md",
                 "active/v0.9.0-test-finalization.md",
+                "active/v0.10.0-notion-candidate.md",
                 "active/windows-shell-install.md",
                 "phases/07-public-qualification.md",
             },
@@ -655,7 +658,8 @@ class Phase3SkillSourceContract(unittest.TestCase):
             plan_root / "active/bootstrap-global-setup-recovery.md"
         )
         docs_wiki_path = plan_root / "active/docs-wiki-migration.md"
-        discord_notion_path = plan_root / "active/discord-notion-onboarding.md"
+        discord_path = plan_root / "active/discord-onboarding-v09.md"
+        notion_candidate_path = plan_root / "active/v0.10.0-notion-candidate.md"
         global_skill_selection_path = (
             plan_root / "active/global-skill-selection.md"
         )
@@ -765,8 +769,12 @@ class Phase3SkillSourceContract(unittest.TestCase):
                 *checklist_counts([skill_identity_localization_path]),
             ),
             (
-                "Discord·Notion 연결 UX",
-                *checklist_counts([discord_notion_path]),
+                "Discord `v0.9` 연결 UX",
+                *checklist_counts([discord_path]),
+            ),
+            (
+                "Notion `v0.10` 후보",
+                *checklist_counts([notion_candidate_path]),
             ),
         )
         total_done = sum(row[1] for row in progress_rows)

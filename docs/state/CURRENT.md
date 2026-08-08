@@ -2,11 +2,12 @@
 
 - 기준 branch: `develop`
 - product version: `0.9.0`
-- plan revision: `2.24`
+- plan revision: `2.25`
 - 현재 milestone: `0.9.0-test` public acceptance·retention
 - 현재 작업: `BGR-012–013` source 응답의 내부 용어 억제·사용자 영향 우선 설명과 local
   `-dev → 0.9.0-test.6` user-scope validation 완료. Public release 미게시. `SIL-001–006` public Skill identity·localization·retired-ID cleanup과
-  `0.9.0-test.5` 독립 시험 게시 완료. 다음 작업 `DNI-002–018`: Discord·Notion 연결 UX
+  `0.9.0-test.5` 독립 시험 게시 완료. `N10-001` Notion 사용자 노출 차단 완료. 다음 작업:
+  `DIS9-002–010` Discord 연결 UX. Notion end-to-end 기능은 `0.10.0-test`까지 보류
 - 외부 중지 경계: `main` PR·review, signing·TUF,
   exact `1.0.0` 사용자 authority
 - Plan load: compact `docs/plans/PLAN.md` + `docs/plans/phases/07-public-qualification.md`
@@ -30,12 +31,12 @@
   + `docs/plans/active/bootstrap-global-setup-recovery.md`
   + `docs/plans/active/korean-setup-terminology.md`
   + `docs/plans/active/global-skill-selection.md`
-  + `docs/plans/active/discord-notion-onboarding.md`
-- Plan completion: canonical checklist `371/457` 완료, `86`개 미완료, `81.2%`
-- Discord·Notion UX 감사: typed global schema·Notion SQLite engine·Discord outbound core는 존재.
-  `setup-hive`의 backend·연결 질문, host browser OAuth handoff, webhook 대화·시험 알림,
-  HTML 안내, project·run·request·progress payload는 부재. 연결 실패 뒤 비밀 없는 질문 진행 기록과
-  `전체 검토|선택 항목 검토|중단한 단계부터 계속` 재개 선택지도 부재. `DNI-001–018` 후속 계획 활성화
+  + `docs/plans/active/discord-onboarding-v09.md`
+  + `docs/plans/active/v0.10.0-notion-candidate.md`
+- Plan completion: canonical checklist `374/462` 완료, `88`개 미완료, `81.0%`
+- 출시 분리: `0.9.0`의 user-visible Wiki는 local Markdown 정본과 SQLite projection만 제공.
+  Notion backend·host browser OAuth·freshness·write-through·사용자 문서는 `0.10.0-test`까지 보류.
+  Discord webhook 대화·시험 알림, HTML 안내, project·run·요청·progress payload는 `DIS9-*` 후속 범위
 - Korean setup 용어: `setup-hive` Korean interaction contract·exact sample 추가. `Skill → 기술`
   번역 차단, `UserProfile`의 복수 context·선택 description과 legacy single-profile 무손실
   migration 적용. Global user context의 project workflow·구현 방식·작업 우선순위·Skill 선택 영향
@@ -162,16 +163,11 @@
 ## `0.9.0-test` 기능 마감
 
 - 상태: `TST9-001–018` 구현·검증 완료, public test publication 대기
-- 결정: [`ADR-0018`](../decisions/ADR-0018-notion-wiki-backend.md) accepted
+- 결정: [`ADR-0018`](../decisions/ADR-0018-notion-wiki-backend.md) accepted, Notion 공개 범위 `0.10.0-test` 보류
 - Active fragment:
   [`v0.9.0-test-finalization.md`](../plans/active/v0.9.0-test-finalization.md)
-- Wiki backend: user-scope `markdown|notion` 상호 배타 선택
-- Markdown mode: 기존 local Markdown 정본·user-root SQLite projection
-- Notion mode: Notion 유일 정본·local Wiki Markdown 0건·user-root SQLite projection
-- Retrieval: 두 mode 모두 기존 Hive FTS5·ranking·citation schema
-- Freshness: Notion mode의 매 turn remote revision preflight·changed-only fetch
-- Notion write: remote canonical-first 뒤 SQLite write-through·dirty recovery
-- 제외: Webhook·Notion AI 이중 검색·양방향 Markdown sync
+- Wiki backend: local Markdown 정본·user-root SQLite projection
+- Notion typed core: `0.10.0-test` 후보로 보류, `0.9.0` user setup·help·README·release note 노출 없음
 - Discord: usage guard 중단의 optional outbound, Claude inbound official plugin 위임,
   Codex inbound official capability 전 `unsupported`
 - 다음 작업: `REL9-014–015` public test acceptance·retention 관찰
