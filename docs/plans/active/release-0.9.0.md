@@ -7,58 +7,51 @@
 
 ## 목표
 
-- 기본 시험판 `0.9.0-test`, 추가 시험판 선택 시에만 `0.9.0-test.N`
-- npm `test`의 독립 배포와 기존 stable `latest` 보존
-- 시험판 수용 뒤 별도 승인·시점의 protected `main` 기반 정식 `0.9.0`
-- GitHub normal Release와 5개 native artifact·SHA-256·attestation·서명 증거
-- npm 여섯 package exact `0.9.0`, `latest=0.9.0`
-- 시험판·정식판의 기능·기본값·진단 계약 일치
-- 소비자 공통 `report to developer`의 명시적 수집·preview·export, 자동 업로드 0건
-- npm·Unix·PowerShell 5.1·CMD 설치와 `0.8.0 → 0.9.0` update 검증
-- Release·npm·direct installer의 native binary byte identity
-- Canonical source·release bundle·installed harness의 version·digest 계보
+- `0.9.0-test[.N]` 독립 시험 배포와 stable `latest` 보존
+- 시험 수용 뒤 protected `main` exact commit 기반 정식 `0.9.0`
+- GitHub normal Release·5개 native artifact·6개 npm package·3개 direct installer의
+  SHA-256·attestation·서명·byte identity
+- 시험·정식 기능·기본값·진단 일치와 명시적 `report to developer`·자동 업로드 0건
+- `0.8.0 → 0.9.0` 무손실 update와 source·release·installed version·digest 계보
 
 ## 현재 기준선
 
 - Product: `0.9.0`; notes: [`0.9.0.md`](../../releases/0.9.0.md)
 - 최신 공개 시험판: `0.9.0-test.5`; npm `test=0.9.0-test.5`, `latest=0.8.0`
-- `0.9.0-test.6` 후보: [run `31254605322`](https://github.com/gvm1229/aigent-hive/actions/runs/31254605322),
-  exact `9e08a48f7429d9dfaf8f9585aeb83c778536c253`, 5개 native target·npm 묶음·attestation PASS
-- `0.9.0-test.6` 게시: Trusted Publishing [run `31255061771`](https://github.com/gvm1229/aigent-hive/actions/runs/31255061771)와
-  bootstrap fallback [run `31255167232`](https://github.com/gvm1229/aigent-hive/actions/runs/31255167232)가 모두 첫 scoped package의 npm `404`로 중단.
-  각 run은 첫 게시 전 실패했으므로 `0.9.0-test.6` npm version·tag·GitHub prerelease 생성은 0건
-- Candidate `30771098518`, `6761f0b`: 5 targets·npm umbrella·fresh clone PASS
-- `0.9.0-test`: six npm package·annotated tag·prerelease 22 assets; `latest=0.8.0` 유지
-- [PR #18](https://github.com/gvm1229/aigent-hive/pull/18) CI 복구: Clippy → Skill 경로 → Copier fixture → 로컬 검증 → `develop` push·재검사
+- `0.9.0-test.6` 후보 `31254605322`: exact `9e08a48`, 5개 native target·npm 묶음·attestation PASS
+- `0.9.0-test.6` 게시 2회: 첫 scoped package npm `404`, npm version·tag·GitHub prerelease 생성 0건
 - 상세 run·failure·external signer evidence: [`CURRENT.md`](../../state/CURRENT.md)
 
 ## 이번 정식 릴리스의 명시적 제외와 면제
 
-- `REL9-011`: 유지보수자 요청에 따른 제외. Codex·Antigravity 실제 설치·설정·프로젝트·업데이트 회귀와 Claude fixture 공개는 `0.9.0` 정식 완료 증거에서 제외. 해당 host 사용성·호환성 검증 완료 주장 금지
+- Codex 실제 plugin 활성화·global setup: `REL9-011` 필수 출시 gate
+- Antigravity 실제 설치·설정·프로젝트·업데이트 회귀와 Claude fixture 공개: 유지보수자 요청에 따른 제외 유지. 해당 host 사용성·호환성 검증 완료 주장 금지
 - `REL9-017`의 CI: 유지보수자 요청에 따른 병합 gate 일시 면제. 실패·미실행 CI는 통과 증거가 아니며 `CURRENT.md`에 정확한 실패 범위 기록
+
+## Codex plugin 활성화 장애
+
+- 관찰: `0.9.0-test.5`의 Codex plugin 활성화 실패와 부분 설치 되돌리기 완료
+- 현재 환경: Codex CLI `0.146.1`; `hive setup --scope user --help` 제공 확인
+- 원인 판정: 실제 호스트 명령 응답·marketplace package·활성화 이후 상태의 전환 구간 미검증
+- 해결 범위: 현재 Codex JSON 계약에 맞춘 adapter·parser·version qualification, 임시
+  `plugin → codex plugin` bridge와 호스트 전역 설정 수동 쓰기 제거
+- 회귀 흐름: 격리 user root의 marketplace add → plugin add → 구조화 목록 검증 →
+  `hive setup --scope user` dry-run·apply·validate → 실패 되돌리기·foreign byte 보존
+- 출시 조건: 수정된 numbered 시험판의 Windows clean install·fresh Codex session 수용 뒤 stable 진행
 
 ## Version·channel 계약
 
-- Product version: `0.9.0`
-- 기본 시험 package version: `0.9.0-test`
-- 선택형 추가 시험 package version: `0.9.0-test.1`, `0.9.0-test.2`, …
-- 시험 배포: npm dist-tag `test`, GitHub prerelease, stable `latest` 변경 0건
-- 정식 배포: npm dist-tag `latest`, GitHub normal Release, 시험 배포와 동시 실행 금지
-- npm immutability에 따른 bare 시험판 재게시 금지, 변경 시 numbered suffix 사용
-- 시험판 전용 기능·기본값·logging·build flag 0건
-- 시험판 publication의 정식 workflow trigger·tag·`latest` mutation 0건
+- 상세 정본: [`ADR-0017`](../../decisions/ADR-0017-0.9-full-release.md)
+- 시험: `0.9.0-test[.N]`, npm `test`, GitHub prerelease, stable `latest` 변경 0건
+- 정식: exact `0.9.0`, npm `latest`, GitHub normal Release, 시험과 동시 게시 금지
+- Bare 시험판 재게시·시험판 전용 기능·기본값·진단·정식 workflow trigger 0건
 
 ## Artifact 계보
 
-`develop` 시험 후보 → prerelease·npm `test` → 수용 → protected `main` stable 후보 →
-attestation·signing·TUF → `v0.9.0` normal Release·npm `latest` → public acceptance
-
-- `develop` artifact: pre-integration qualification 전용
-- `main` artifact: publication 대상 최종 계보
-- 각 시험판의 candidate·GitHub prerelease·npm `test` exact commit 일치
-- Stable candidate·tag·GitHub normal Release·npm `latest` exact commit 일치
-- Merge 뒤 재빌드 없는 develop artifact 재사용 금지
-- Publish workflow의 untrusted input·run·branch·SHA·attestation 재검증
+- 흐름: `develop` 시험 후보 → prerelease·npm `test` → 수용 → protected `main` stable 후보 →
+  signing·TUF → `v0.9.0` normal Release·npm `latest`
+- `develop` artifact: 사전 검증 전용. `main` artifact: 정식 게시 전용
+- Channel별 candidate·tag·Release·npm exact commit 일치와 develop artifact 재사용 금지
 
 ## 구현·검증 checklist
 
@@ -78,7 +71,9 @@ attestation·signing·TUF → `v0.9.0` normal Release·npm `latest` → public a
 - [x] [REL9-009] 시험·정식 feature/default parity, `markdown|notion` backend,
   Discord outbound와 공통 `report to developer` preview·collect·보존·redaction·no-upload conformance
 - [x] [REL9-010] RAG 50,000 chunk와 `.hivekb` 100 collection·50,000 chunk release profile 재측정·threshold PASS
-- [-] [REL9-011] Codex·Antigravity 실제 install·setup·project·update 회귀와 Claude fixture·미검증 범위 공개 — `0.9.0` 명시적 제외
+- [ ] [REL9-011] Codex CLI `0.146.1`의 실제 marketplace·plugin 활성화, structured state
+  검증, `hive setup --scope user` dry-run·apply·validate, 실패 되돌리기와 fresh-session
+  discovery 회귀 통과. 임시 bridge·호스트 전역 설정 수동 쓰기 0건
 
 ### C. 시험 배포와 수용
 
@@ -106,23 +101,21 @@ attestation·signing·TUF → `v0.9.0` normal Release·npm `latest` → public a
 1. `TST9-*`·`PRF-*` 기능 마감과 release handoff
 2. `REL9-001` 원격 `develop` 기준선 재고정
 3. `REL9-002–005` version grammar·분리 workflow 구현·독립 커밋
-4. `REL9-006–012` clean clone·cross-platform 시험 후보 검증
+4. `REL9-006–012` clean clone·cross-platform 시험 후보와 Codex 실제 활성화 검증
 5. `REL9-013–016` bare 시험판 독립 게시·수용·선택형 numbered 시험판
 6. `REL9-017–024` main 통합·stable candidate·signing·별도 정식 publication
 7. `REL9-025–026` 관찰·current-truth 완료 기록
 
 ## 외부 권한 경계
 
-- `main` PR review·merge, `release-publication` reviewer 0명
+- `main` PR review·merge와 protected `release-publication` approval
 - Apple·Windows signing identity와 external TUF threshold signer
-- GitHub App installation의 `contents|workflows: write`와 npm Trusted Publisher environment
-- Test publication workflow의 default-branch 등록을 위한 최소 `main` PR·review
-- Credential·private key·2FA material의 저장소·agent 노출 금지
-- 각 외부 mutation 직전 exact SHA·artifact digest·대상 preview 재확인
+- GitHub App write 권한·npm Trusted Publisher·test workflow 등록 권한
+- Credential·private key·2FA material 노출 금지와 외부 mutation 직전 exact 대상 재확인
 
 ## 완료 기준
 
-- `REL9-011`을 제외한 모든 in-scope `REL9-*` evidence-backed 완료
+- 모든 in-scope `REL9-*` evidence-backed 완료
 - 시험 `test`와 stable `latest`의 독립 mutation·exact commit 증거
 - GitHub tag·Release·npm `latest`의 exact `0.9.0`·main SHA 일치
 - 5개 platform artifact·6개 npm package·3개 direct installer 검증

@@ -1,6 +1,6 @@
 # Aigent Hive active plan index
 
-> Revision: 2.26
+> Revision: 2.27
 > 기준일: 2026-08-08
 > Product version: `0.9.0`
 > 현재 milestone: `0.9.0` 정식 릴리스 준비
@@ -12,8 +12,8 @@
   end-to-end global setup·프로젝트별 usage-guard 알림, `0.9.0` Markdown Wiki 공개 범위,
   Notion `0.10.0-test` 후보 준비, `0.9.0-test` 독립 시험 배포·수용,
   별도 `0.9.0` 정식 GitHub·npm 릴리스와 public update 검증
-- Success: Active fragment evidence-backed completion. 시험판 핵심 gate: `MRA-*`, `PRF-*`,
-  `TST9-*`, `REL9-*` 독립 test·stable publication과 public acceptance
+- Success: Active fragment 증거 기반 완료. 핵심 gate: `MRA-*`, `PRF-*`, `TST9-*`,
+  Codex plugin 활성화 회귀와 `REL9-*` 시험·정식 수용
 - Stop boundary: protected `main` review, signing·TUF·npm credential,
   exact `1.0.0` authority, source usage guard remaining threshold `30%`
 - Invariants: provider-neutral, backend별 canonical source 우선, SQLite 파생 상태,
@@ -45,7 +45,7 @@
 | Model-routed custom subagent | 0 | 32 | 0% |
 | Prompt refine 자동 routing | 12 | 0 | 100% |
 | v0.9 test 기능 마감 | 18 | 0 | 100% |
-| v0.9 full release | 13 | 12 | 52% |
+| v0.9 full release | 13 | 13 | 50% |
 | Test release setup routing | 4 | 0 | 100% |
 | Bootstrap·user projection recovery | 13 | 0 | 100% |
 | 한국어 setup 용어 복구 | 5 | 1 | 83.3% |
@@ -53,7 +53,7 @@
 | Public Skill identity·localization | 6 | 0 | 100% |
 | Discord `v0.9` 연결 UX | 1 | 9 | 10% |
 | Notion `v0.10` 후보 | 1 | 10 | 9.1% |
-| **Canonical total** | **374** | **87** | **81.1%** |
+| **Canonical total** | **374** | **88** | **81.0%** |
 
 External production boundary 항목도 미완료 합계에 포함. Protected authority 없이 완료 처리 금지.
 
@@ -117,6 +117,6 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
 ## Current execution order
 
 완료 증거: [`CURRENT.md`](../state/CURRENT.md)와 owning active fragment.
-다음 작업: `DIS9-002–010` Discord 연결 UX와 `REL9-014–026` 정식 릴리스 준비. `REL9-011`
-실제 host 수용 확인은 유지보수자 요청으로 제외. Notion 연결은 `N10-002–011`과 함께
-`0.10.0-test`까지 보류.
+다음 작업: `REL9-011` Codex CLI `0.146.1` 활성화·global setup 회귀,
+`DIS9-002–010`, `REL9-014–026`. Antigravity·Claude 공개 제외 유지, Notion은
+`N10-002–011`·`0.10.0-test`까지 보류.
