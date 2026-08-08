@@ -2,8 +2,9 @@
 
 - 기준 branch: `develop`
 - product version: `0.9.0`
-- plan revision: `2.25`
+- plan revision: `2.26`
 - 현재 milestone: `0.9.0-test` public acceptance·retention
+- `0.9.0` 예외: `REL9-011` 실제 Codex·Antigravity host 수용과 Claude fixture 공개 제외. `develop → main` CI는 병합 gate 일시 면제이며 실패·미실행 범위 공개 유지
 - 현재 작업: `BGR-012–013` source 응답의 내부 용어 억제·사용자 영향 우선 설명과 local
   `-dev → 0.9.0-test.6` user-scope validation 완료. Public release 미게시. `SIL-001–006` public Skill identity·localization·retired-ID cleanup과
   `0.9.0-test.5` 독립 시험 게시 완료. `N10-001` Notion 사용자 노출 차단 완료. `DIS9-004`의 부분 설정 전체 목록·Discord 하위 항목 표시 계약 구현. 다음 작업:

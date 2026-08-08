@@ -26,6 +26,11 @@
 - [PR #17](https://github.com/gvm1229/aigent-hive/pull/17): `deployment: false` main 반영 대기
 - 상세 run·failure·external signer evidence: [`CURRENT.md`](../../state/CURRENT.md)
 
+## 이번 정식 릴리스의 명시적 제외와 면제
+
+- `REL9-011`: 유지보수자 요청에 따른 제외. Codex·Antigravity 실제 설치·설정·프로젝트·업데이트 회귀와 Claude fixture 공개는 `0.9.0` 정식 완료 증거에 포함하지 않음. 해당 host 사용성·호환성 검증 완료 주장 금지
+- `REL9-017`의 CI: 유지보수자 요청에 따른 병합 gate 일시 면제. 실패·미실행 CI는 통과 증거가 아니며 `CURRENT.md`에 정확한 실패 범위 기록
+
 ## Version·channel 계약
 
 - Product version: `0.9.0`
@@ -67,7 +72,7 @@ attestation·signing·TUF → `v0.9.0` normal Release·npm `latest` → public a
 - [x] [REL9-009] 시험·정식 feature/default parity, `markdown|notion` backend,
   Discord outbound와 공통 `report to developer` preview·collect·보존·redaction·no-upload conformance
 - [x] [REL9-010] RAG 50,000 chunk와 `.hivekb` 100 collection·50,000 chunk release profile 재측정·threshold PASS
-- [ ] [REL9-011] Codex·Antigravity 실제 install·setup·project·update 회귀와 Claude fixture·미검증 범위 공개
+- [-] [REL9-011] Codex·Antigravity 실제 install·setup·project·update 회귀와 Claude fixture·미검증 범위 공개 — `0.9.0` 명시적 제외
 
 ### C. 시험 배포와 수용
 
@@ -76,7 +81,7 @@ attestation·signing·TUF → `v0.9.0` normal Release·npm `latest` → public a
 - [ ] [REL9-014] Public test install·update·문제 보고 기능과 stable parity acceptance
 - [ ] [REL9-015] 수용 기간의 blocker triage·privacy·disk retention 검증, bare 시험판 재게시 금지 확인
 - [x] [REL9-016] 추가 시험판 필요 시에만 `0.9.0-test.N|test` 생성·검증·이전 시험판 계보 보존
-- [ ] [REL9-017] 시험 수용 뒤 `develop → main` PR required CI·review·non-force merge와 exact main SHA 고정
+- [ ] [REL9-017] 시험 수용 뒤 `develop → main` PR·non-force merge와 exact main SHA 고정. CI 결과 기록은 유지하되 이번 `0.9.0` 병합 gate 제외
 
 ### D. 정식 candidate·publication·public acceptance
 
@@ -100,15 +105,6 @@ attestation·signing·TUF → `v0.9.0` normal Release·npm `latest` → public a
 6. `REL9-017–024` main 통합·stable candidate·signing·별도 정식 publication
 7. `REL9-025–026` 관찰·current-truth 완료 기록
 
-## 시험판 publication 기준선 (2026-08-06)
-
-- `release-publication`: reviewer `0`, App token `contents|workflows: write`, credential-free checkout
-- test.1–.3: 여섯 npm package·annotated tag·22-asset prerelease, `latest=0.8.0` 유지
-- test.4: candidate `31134306991`·publication `31135040224`, `dc4466d`, 여섯 package
-  `test=0.9.0-test.4`·`latest=0.8.0`, annotated tag·22-asset prerelease와 격리 CLI #4 PASS.
-  Trusted Publisher registry 404는 bootstrap registry-token fallback으로 게시
-- history·run·digest·fallback evidence: [`CURRENT.md`](../../state/CURRENT.md)
-
 ## 외부 권한 경계
 
 - `main` PR review·merge, `release-publication` reviewer 0명
@@ -120,7 +116,7 @@ attestation·signing·TUF → `v0.9.0` normal Release·npm `latest` → public a
 
 ## 완료 기준
 
-- `REL9-001–026` 전부 evidence-backed 완료
+- `REL9-011`을 제외한 모든 in-scope `REL9-*` evidence-backed 완료
 - 시험 `test`와 stable `latest`의 독립 mutation·exact commit 증거
 - GitHub tag·Release·npm `latest`의 exact `0.9.0`·main SHA 일치
 - 5개 platform artifact·6개 npm package·3개 direct installer 검증
