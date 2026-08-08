@@ -3540,11 +3540,13 @@ mod tests {
     fn project_registry_sync_attaches_and_detaches_stable_collections() {
         let (_temporary, store) = store();
         let project = tempfile::tempdir().expect("project root");
+        let project_root =
+            crate::shared::canonical_root(project.path()).expect("canonical project root");
         let enabled = ProjectRegistry {
             schema_version: 1,
             projects: vec![RegisteredProject {
                 id: "project-b".to_owned(),
-                root: project.path().to_path_buf(),
+                root: project_root,
                 enabled: true,
                 language: KnowledgeLanguage::Both,
                 visibility: KnowledgeVisibility::Shared,
