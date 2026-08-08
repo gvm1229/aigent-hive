@@ -6,7 +6,7 @@
 - 현재 milestone: `0.9.0-test` public acceptance·retention
 - 현재 작업: `BGR-012–013` source 응답의 내부 용어 억제·사용자 영향 우선 설명과 local
   `-dev → 0.9.0-test.6` user-scope validation 완료. Public release 미게시. `SIL-001–006` public Skill identity·localization·retired-ID cleanup과
-  `0.9.0-test.5` 독립 시험 게시 완료. `N10-001` Notion 사용자 노출 차단 완료. 다음 작업:
+  `0.9.0-test.5` 독립 시험 게시 완료. `N10-001` Notion 사용자 노출 차단 완료. `DIS9-004`의 부분 설정 전체 목록·Discord 하위 항목 표시 계약 구현. 다음 작업:
   `DIS9-002–010` Discord 연결 UX. Notion end-to-end 기능은 `0.10.0-test`까지 보류
 - 외부 중지 경계: `main` PR·review, signing·TUF,
   exact `1.0.0` 사용자 authority

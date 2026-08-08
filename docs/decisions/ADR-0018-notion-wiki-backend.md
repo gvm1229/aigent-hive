@@ -74,6 +74,7 @@
 - Credential·transcript·절대 경로·continuation token의 외부 전송 0건
 - 대화형 webhook 설정·환경변수 검증·시험 알림과 배포 bundle의 self-contained HTML 안내
 - Discord 활성화 동의: webhook URL의 Hive 저장 없이 환경변수 이름만 저장하고 단일 시험 알림까지 포함
+- 부분 설정 변경: 예시 문장 대신 전체 전역 설정과 하위 설정을 한 줄 목록으로 먼저 표시. 사용량 보호 하위에 Discord 알림·webhook 환경 변수 이름·요청 공개 범위 포함
 
 ### 구현 상태 구분
 

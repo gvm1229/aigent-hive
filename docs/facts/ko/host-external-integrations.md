@@ -9,8 +9,8 @@ summary: "Discord는 v0.9 설정 목표 유지, Notion 연결·host OAuth는 첫
 tags: [discord, integration, notion]
 aliases: ["Host integration priority"]
 sources:
-  - "repo:docs/decisions/ADR-0018-notion-wiki-backend.md#sha256:b213a200cffcc19535be1f4ffeddb155911d92d578f72a5f1d5e9d9a2bc86b0c"
-  - "repo:docs/plans/active/discord-onboarding-v09.md#sha256:f76164f5c89117abdb663004b4268b16fbe45771a3f4b52d76558b3d316db77b"
+  - "repo:docs/decisions/ADR-0018-notion-wiki-backend.md#sha256:9ad86748e6144d65c143194538ba95369258ea0b00336f1b81d347fe1ce87245"
+  - "repo:docs/plans/active/discord-onboarding-v09.md#sha256:931d25f2b4d2673fbce477b5c0972bb54fe9b604b12f07ee541b92389dfcb6e8"
   - "repo:docs/plans/active/v0.10.0-notion-candidate.md#sha256:f863a6c59dde7c117e9b4b294cb0974e051ffca5970d830cfa75e50d9799dc4f"
   - "repo:docs/research/discord-notion-host-integrations.md#sha256:5b26108090c75343964f5452c3b7fd20a1df6300feda8561847bad6feb1748b9"
 links: [knowledge-storage, orchestration-ownership]
