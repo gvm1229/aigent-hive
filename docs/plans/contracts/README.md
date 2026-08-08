@@ -8,3 +8,5 @@
 | 2 | [`02-artifacts-source.md`](02-artifacts-source.md) | Artifact, durable state, source 구조 |
 | 4 | [`04-consumer-harness.md`](04-consumer-harness.md) | Consumer harness 구조 |
 | 5 | [`05-rust-boundaries.md`](05-rust-boundaries.md) | Crate, host projection, Skill catalog |
+| 6 | [`06-native-orchestration-state.md`](06-native-orchestration-state.md) | Event·authority·receipt·cancel·scheduler 상태 계약 |
+| 7 | [`07-native-orchestration-workflows.md`](07-native-orchestration-workflows.md) | Team·multi-goal·host feasibility·migration·검증 |

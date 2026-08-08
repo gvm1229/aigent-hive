@@ -169,7 +169,7 @@ x86_64·arm64 qualification, `P7-049` 설치 소유자 기반 대화형 `hive up
 
 ## 외부 중지 경계
 
-- npm 로그인·2FA·organization, 최초 등록용 임시 token과 6개 Trusted Publisher
+- npm 로그인·2FA·organization, 최초 등록용 2FA 우회 granular token과 6개 Trusted Publisher
 - `release-publication` 필수 검토자 설정과 publication 승인
 - Credential·private signing material 접근 금지
 - GitHub Release와 release tag는 별도 사용자 승인 전 금지

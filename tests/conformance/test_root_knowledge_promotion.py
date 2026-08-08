@@ -538,8 +538,8 @@ else:
         )
         before_secret = snapshot_tree(self.user_root)
         secret, secret_result = self.promote(self.project)
-        self.assertEqual(secret.returncode, 3, secret.stderr)
-        self.assertEqual(secret_result["status"], "conflict")
+        self.assertEqual(secret.returncode, 5, secret.stderr)
+        self.assertEqual(secret_result["status"], "verification-failed")
         self.assertEqual(snapshot_tree(self.user_root), before_secret)
         page.write_bytes(safe_page)
 
@@ -568,11 +568,14 @@ else:
             ),
             encoding="utf-8",
         )
-        before_contradiction = snapshot_tree(self.user_root)
+        before_contradiction = snapshot_tree(self.user_root / ".hive/knowledge")
         contradiction, contradiction_result = self.promote(second_project)
         self.assertEqual(contradiction.returncode, 3, contradiction.stderr)
         self.assertEqual(contradiction_result["status"], "conflict")
-        self.assertEqual(snapshot_tree(self.user_root), before_contradiction)
+        self.assertEqual(
+            snapshot_tree(self.user_root / ".hive/knowledge"),
+            before_contradiction,
+        )
 
     def test_concurrent_duplicate_promotion_is_serialized_and_idempotent(self) -> None:
         second_project = self.setup_project("project-b", "stable-project-b")
@@ -688,22 +691,17 @@ else:
 
         query, query_result = self.invoke_skill_command(
             REPOSITORY_ROOT / "harness/skills/hive-knowledge-query/SKILL.md",
-            "--text <query>",
+            "--scope auto --query <query>",
             {
-                "<project-root>": str(self.project),
+                "<current-project-root>": str(self.project),
                 "<user-root>": str(self.user_root),
                 "<query>": "deterministic",
-                "<1..100>": "10",
             },
         )
         self.assertEqual(query.returncode, 0, query.stderr)
-        self.assertEqual(
-            query_result["data"]["precedence"],
-            "own-project,user-root,shared",
-        )
-        self.assertEqual(
+        self.assertCountEqual(
             [
-                (hit["source_project"] == "user-root", hit["visibility"])
+                (hit["collection_id"] == "user-root", hit["visibility"])
                 for hit in query_result["data"]["hits"]
             ],
             [
@@ -714,7 +712,7 @@ else:
         skill_root_hit = next(
             hit
             for hit in query_result["data"]["hits"]
-            if hit["source_project"] == "user-root"
+            if hit["collection_id"] == "user-root"
         )
         self.assertEqual(
             skill_root_hit["sources"],

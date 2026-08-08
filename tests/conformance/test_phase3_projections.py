@@ -27,22 +27,27 @@ LOCAL_SKILL_SOURCE = (
     PHASE3_FIXTURES / "optional/local-inspect/SKILL.md"
 )
 PROJECTED_BUILTINS = (
-    "auto-setup-harness",
-    "setup-harness",
-    "hive-simple-question",
-    "hive-prompt-refine",
-    "hive-knowledge-capture",
-    "hive-knowledge-query",
-    "hive-knowledge-maintenance",
-    "hive-knowledge-promote",
-    "hive-project-upgrade",
-    "hive-role-handoff",
-    "hive-run-checkpoint",
-    "hive-run-resume",
-    "hive-judge-package",
-    "hive-update",
-    "hive-usage-guard",
-    "hive-migrate",
+    "answer",
+    "auto-setup-project",
+    "clean-ai-slop",
+    "engineer-run",
+    "handoff-role",
+    "import-repository-knowledge",
+    "maintain-knowledge",
+    "manage-usage",
+    "manage-wiki",
+    "migrate-project",
+    "record-knowledge",
+    "refine-prompt",
+    "research-practices",
+    "resume-work",
+    "save-progress",
+    "search-knowledge",
+    "setup-project",
+    "share-knowledge",
+    "update-hive",
+    "upgrade-project",
+    "verify-package",
 )
 CATALOG_ONLY = ()
 
@@ -62,6 +67,21 @@ def canonical_digest(value: object) -> str:
 
 
 class Phase3ProjectionTestCase(Phase1CliTestCase):
+    def enable_notion_backend(self) -> None:
+        config_path = self.setup_user_root / ".hive/config/user-setup.yml"
+        config = read_yaml(config_path)
+        config["wiki"] = {
+            "enabled": True,
+            "language": "both",
+            "backend": "notion",
+            "notion": {
+                "workspace_id": "workspace-fixture",
+                "scope_id": "scope-fixture",
+                "local_index_consent": True,
+            },
+        }
+        write_yaml(config_path, config)
+
     def answers_for_host(self, host: str) -> Path:
         answers = read_yaml(FIXTURE_ROOT / "answers-no-role-no-hook.yml")
         answers["primary_host"] = host
@@ -135,6 +155,23 @@ class Phase3HostProjection(Phase3ProjectionTestCase):
                         ).is_file()
                     )
 
+    def test_v09_rejects_notion_user_setup_for_each_host(
+        self,
+    ) -> None:
+        self.enable_notion_backend()
+        for host in ("codex", "claude", "antigravity"):
+            with self.subTest(host=host):
+                target = self.work_root / f"consumer-{host}"
+                target.mkdir()
+                process, _ = self.invoke_setup(
+                    target,
+                    answers=self.answers_for_host(host),
+                    capabilities=self.capability_for_host(host),
+                )
+                self.assertEqual(process.returncode, 2, process.stderr)
+                self.assertIn("/wiki/backend", process.stderr)
+                self.assertFalse((target / ".hive/config/harness.toml").exists())
+
     def test_each_host_projects_the_automatic_dispatch_usage_gate(self) -> None:
         for host in ("codex", "claude", "antigravity"):
             with self.subTest(host=host):
@@ -142,7 +179,7 @@ class Phase3HostProjection(Phase3ProjectionTestCase):
                 agents = (target / "AGENTS.md").read_text(encoding="utf-8")
                 skill = (
                     self.discovery_root(target, host)
-                    / "hive-usage-guard/SKILL.md"
+                    / "manage-usage/SKILL.md"
                 ).read_text(encoding="utf-8")
                 for surface in (agents, skill):
                     self.assertIn("hive usage enforce", surface)
@@ -243,9 +280,9 @@ class Phase3HostProjection(Phase3ProjectionTestCase):
                 )
                 self.assertNotIn(b"UserPromptSubmit", discovery_bytes)
                 for skill in (
-                    "hive-run-checkpoint",
-                    "hive-run-resume",
-                    "hive-role-handoff",
+                    "save-progress",
+                    "resume-work",
+                    "handoff-role",
                 ):
                     self.assertTrue(
                         (
@@ -378,7 +415,7 @@ class Phase3FallbackHookExclusions(Phase3ProjectionTestCase):
         install, _ = self.invoke_setup(
             target,
             answers=FIXTURE_ROOT / "answers-partial-hooks.yml",
-            capabilities="capabilities-absent.json",
+            capabilities="capabilities-codex-host-native-hooks.json",
         )
         self.assertEqual(install.returncode, 0, install.stderr)
         guarded_input = self.work_root / "must-not-read.fifo"
@@ -428,7 +465,7 @@ class Phase3FallbackHookExclusions(Phase3ProjectionTestCase):
         install, _ = self.invoke_setup(
             target,
             answers=FIXTURE_ROOT / "answers-partial-hooks.yml",
-            capabilities="capabilities-absent.json",
+            capabilities="capabilities-codex-host-native-hooks.json",
         )
         self.assertEqual(install.returncode, 0, install.stderr)
 
@@ -460,7 +497,7 @@ class Phase3FallbackHookExclusions(Phase3ProjectionTestCase):
         process, _ = self.invoke_setup(
             target,
             answers=FIXTURE_ROOT / "answers-all-hooks.yml",
-            capabilities="capabilities-absent.json",
+            capabilities="capabilities-codex-host-native-hooks.json",
         )
         self.assertEqual(process.returncode, 0, process.stderr)
 
@@ -479,7 +516,7 @@ class Phase3FallbackHookExclusions(Phase3ProjectionTestCase):
         process, _ = self.invoke_setup(
             target,
             answers=FIXTURE_ROOT / "answers-all-hooks.yml",
-            capabilities="capabilities-absent.json",
+            capabilities="capabilities-codex-host-native-hooks.json",
         )
         self.assertEqual(process.returncode, 0, process.stderr)
 
@@ -534,7 +571,7 @@ class Phase3ProjectionHostile(Phase3ProjectionTestCase):
         target = self.work_root / "builtin-conflict"
         projected = (
             self.discovery_root(target, "codex")
-            / "hive-simple-question/SKILL.md"
+            / "answer/SKILL.md"
         )
         projected.parent.mkdir(parents=True)
         user_bytes = b"user-owned colliding Skill bytes\x00\xff\n"

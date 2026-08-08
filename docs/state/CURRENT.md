@@ -1,11 +1,15 @@
 # 현재 상태
 
 - 기준 branch: `develop`
-- product version: `0.8.0`
-- plan revision: `1.81`
-- 현재 milestone: Phase 7 qualification + global onboarding·shared index `0.8.0`
-- 현재 작업: npm exact `0.8.0|latest` 배포 완료, `develop` → `main` 반영
-- 외부 중지 경계: GitHub Release·Git tag, protected signing/publication credential,
+- product version: `0.9.0`
+- plan revision: `2.26`
+- 현재 milestone: `0.9.0-test` public acceptance·retention
+- `0.9.0` 예외: `REL9-011` 실제 Codex·Antigravity host 수용과 Claude fixture 공개 제외. `develop → main` CI는 병합 gate 일시 면제이며 실패·미실행 범위 공개 유지
+- 현재 작업: `BGR-012–013` source 응답의 내부 용어 억제·사용자 영향 우선 설명과 local
+  `-dev → 0.9.0-test.6` user-scope validation 완료. Public release 미게시. `SIL-001–006` public Skill identity·localization·retired-ID cleanup과
+  `0.9.0-test.5` 독립 시험 게시 완료. `N10-001` Notion 사용자 노출 차단 완료. `DIS9-004`의 부분 설정 전체 목록·Discord 하위 항목 표시 계약 구현. 다음 작업:
+  `DIS9-002–010` Discord 연결 UX. Notion end-to-end 기능은 `0.10.0-test`까지 보류
+- 외부 중지 경계: `main` PR·review, signing·TUF,
   exact `1.0.0` 사용자 authority
 - Plan load: compact `docs/plans/PLAN.md` + `docs/plans/phases/07-public-qualification.md`
   + `docs/plans/active/plugin-project-lifecycle.md`
@@ -16,9 +20,63 @@
   + `docs/plans/active/documentation-style.md` + `docs/plans/active/security-review.md`
   + `docs/plans/active/docs-wiki-migration.md`
   + `docs/plans/active/release-0.8.0.md`
-- Plan completion: canonical checklist `228/228` 완료, 미완료 `0`, `100%`
-- Latest local Windows: Rust workspace 458개 실행·통과. Python 적합성 618개 발견 중
-  576개 실제 실행·통과, 42개 미실행. 미실행 범위: 관리자 권한 없는 Windows의
+  + `docs/plans/active/v0.9.0-loop-wiki-skills.md`
+  + `docs/plans/active/v0.9.0-global-knowledge-rag.md`
+  + `docs/plans/active/v0.9.0-knowledge-portability-scan.md`
+  + `docs/plans/active/native-iterative-execution.md`
+  + `docs/plans/active/model-routed-custom-subagents.md`
+  + `docs/plans/active/prompt-refine-auto-routing.md`
+  + `docs/plans/active/v0.9.0-test-finalization.md`
+  + `docs/plans/active/release-0.9.0.md`
+  + `docs/plans/active/test-release-setup-routing.md`
+  + `docs/plans/active/bootstrap-global-setup-recovery.md`
+  + `docs/plans/active/korean-setup-terminology.md`
+  + `docs/plans/active/global-skill-selection.md`
+  + `docs/plans/active/discord-onboarding-v09.md`
+  + `docs/plans/active/v0.10.0-notion-candidate.md`
+- Plan completion: canonical checklist `374/462` 완료, `88`개 미완료, `81.0%`
+- 출시 분리: `0.9.0`의 user-visible Wiki는 local Markdown 정본과 SQLite projection만 제공.
+  Notion backend·host browser OAuth·freshness·write-through·사용자 문서는 `0.10.0-test`까지 보류.
+  Discord webhook 대화·시험 알림, HTML 안내, project·run·요청·progress payload는 `DIS9-*` 후속 범위
+- Korean setup 용어: `setup-hive` Korean interaction contract·exact sample 추가. `Skill → 기술`
+  번역 차단, `UserProfile`의 복수 context·선택 description과 legacy single-profile 무손실
+  migration 적용. Global user context의 project workflow·구현 방식·작업 우선순위·Skill 선택 영향
+  없음. canonical·plugin projection byte 동일, Rust 32개·Python 70개 통과. 다음 작업: 독립
+  numbered test release `KST-006`
+- Global Skill selection: `a30eb47`로 profile-bound recommended suite 제거, 새 setup 기본
+  all built-in·개별 Skill toggle·one-entry-per-line 적용. 기존 recommended closure는 saved
+  answer validate에서만 해석, 새 `all|individual` preview·approval 전 활성 Skill 추가 0건.
+  project recommendation은 분리 catalog 유지
+- Public Skill identity·localization: 22개 consumer Skill의 public short name 적용. Host invocation:
+  `aigent-hive:<short-name>`. Canonical `retired-names.yml`: retired ID→current ID mapping·collision
+  reservation·saved selection migration. 삭제 authority: frozen historical release inventory 또는 installed
+  ownership manifest의 exact byte 검증만 허용. `0.8.0` 세 host의 historic Skill path 전체 삭제와 변조
+  path no-write conflict 회귀 확인. [candidate `31183471023`](https://github.com/gvm1229/aigent-hive/actions/runs/31183471023)
+  5 native target·npm umbrella PASS. [publication `31184578205`](https://github.com/gvm1229/aigent-hive/actions/runs/31184578205)
+  registry-token fallback PASS; six npm package `test=0.9.0-test.5`, `latest=0.8.0`, annotated
+  `v0.9.0-test.5`·22-asset prerelease 확인. Trusted Publishing은 새 scoped platform package에 `404` 반환
+- Global Skill test release: candidate `31134306991` 5 native target·npm umbrella/direct
+  installer PASS, publication `31135040224` PASS. 여섯 package `test=0.9.0-test.4`,
+  `latest=0.8.0`; annotated `v0.9.0-test.4`·22-asset prerelease와 isolated CLI
+  `AIgent Hive v0.9.0-test #4 · developer test build (released 2026-08-07)` 확인. Trusted
+  Publisher registry 404는 bootstrap registry-token fallback으로 안전하게 해소
+- Developer binary: `scripts/dev-install.sh`의 sandbox·global·CAS rollback과 `product-dev`
+  version identity, isolated global activation·rollback 회귀 검증 완료. Local `-dev` binary는
+  internally reproducible prior manifest·live byte 일치 때만 developer-only global projection
+  refresh 허용, public stable·test binary의 fail-closed 보존
+- Global setup refresh: authenticated user install·saved-answer projection drift의 dry-run·apply·
+  revalidate 자동 처리. Review-only yes/no 질문 제거, local edit·인증 실패·별도 권한 경계만 질문
+- Legacy setup recovery: schema-1 `0.7.0`의 19개 legacy projection은 saved preference·path
+  inventory·live digest 일치 뒤 schema 2 base로 이관. later Codex metadata는 추가 처리,
+  pre-schema-2 local edit·unknown inventory는 write 0건. `0.9.0-test.3` Codex host inventory도
+  frozen `setup-hive` digest 기반 인증 복구. local user-scope apply·validate PASS, stale
+  Antigravity `0.7.0` Hive-only projection은 recoverable Trash 이동, canonical knowledge·index 보존
+- Source Wiki route: source marker 확인 뒤 `hive source-wiki query` 사용,
+  consumer `hive knowledge retrieve`의 source root 호출 금지·static contract 36개 PASS
+- Fresh clone: exact `6761f0b`, Rust format·strict Clippy·workspace all-feature, Python 677개 PASS·platform skip 5개
+- Test candidate: [run `30771098518`](https://github.com/gvm1229/aigent-hive/actions/runs/30771098518), exact `6761f0b`, 5 target·npm umbrella PASS
+- Latest local Windows: Rust workspace 459개 실행·통과. Python 적합성 670개 발견 중
+  628개 실제 실행·통과, 42개 미실행. 미실행 범위: 관리자 권한 없는 Windows의
   symbolic link 생성 제약 16개, POSIX·Unix 전용 동작 19개, macOS 전용 설치·서명
   동작 7개. 운영체제 판별: Windows. 미실행 42개: 이 컴퓨터에서 검증 완료로
   판단할 근거 불충분. PowerShell 5.1·7.6.4 installer와 `cmd.exe`
@@ -36,7 +94,191 @@
   `active/windows-shell-install.md`,
   `active/documentation-style.md`, `active/security-review.md`,
   `active/docs-wiki-migration.md`,
-  `active/release-0.8.0.md`로 해석
+  `active/release-0.8.0.md`, `active/v0.9.0-loop-wiki-skills.md`,
+  `active/v0.9.0-global-knowledge-rag.md`, `active/native-iterative-execution.md`,
+  `active/model-routed-custom-subagents.md`로 해석
+
+## Hive-native 반복 실행 전환
+
+- 상태: RALPLAN-DR·Architect·Critic 승인과 정본 plan·proposed ADR 완료, host feasibility 미착수
+- 결정: [`ADR-0019`](../decisions/ADR-0019-hive-native-iterative-execution.md) proposed
+- Active fragment:
+  [`native-iterative-execution.md`](../plans/active/native-iterative-execution.md)
+- Hive 소유 목표: event reducer·logical scheduler·lease·receipt·cancel·team·multi-goal state
+- Host 소유 유지: model call·model/subagent process·native task identity·envelope consume
+- 신규 경계: OMX·OMC functional dependency 없음, provider API·credential·direct process spawn 없음
+- Authority: selected session pointer는 selector only; exact target·event head·control epoch·one-time authority 필수
+- Incident regression: wrong pointer + Stop 100회 canonical mutation `0건`, cancel·guard·recover 독립 접근
+- 불확실 dispatch: qualified non-launch proof 없는 automatic reclaim `0건`, `dispatch-uncertain` 중지
+- Legacy run: read-only provenance, migration은 새 native identity와 원본 byte 불변
+- 다음 작업: NAT-002–005와 MRA-001–006 capability·Sol Advisor parity 재분류,
+  세 host orchestration과 Codex·Claude exact-model lifecycle feasibility spike
+- Activation gate: feasibility·ADR acceptance·schema·security qualification 전 default-off
+
+## Model-routed custom subagent
+
+- 상태: `0.9.0` 실행 계획 활성, 구현 미착수
+- 결정: [`ADR-0019`](../decisions/ADR-0019-hive-native-iterative-execution.md) proposed
+- Active fragment:
+  [`model-routed-custom-subagents.md`](../plans/active/model-routed-custom-subagents.md)
+- 지원: OpenAI Codex·Claude Code. Antigravity는 근거 있는 custom-agent surface 확보 전 unsupported
+- 목표: Sol Advisor의 orchestrator→routine/complex implementer→reserved independent Judge 흐름 clean-room 동등 구현
+- Model authority: role별 exact model ID·thinking level 고정, runtime receipt 불일치 결과 fail-closed
+- Scope: user·project canonical role과 host projection, project precedence, preview·명시적 동의·non-clobber
+- Built-in 후보: routine·complex implementer, design·article·research specialist,
+  user-scope reserved `hive-independent-judge`
+- Auto-call: Skill·role description 기반 semantic route, simple·작은 단일 단계·증명 불가 task 제외
+- 생성 Skill: 목적 우선 질문 뒤 이름·양쪽 host model/effort·scope·권한 추천,
+  `1 수락 | 2 수동 | 3 수정`, 적용 뒤 동일 auto-route registry 통합
+- Judge 정책: setup의 `explicit`은 strict iterative·team·multi-goal terminal gate만,
+  `implicit`은 strict gate + 일반 material-risk route. Natural-language reconfigure 지원
+- Judge 경계: Codex `gpt-5.6-sol/high` 후보, Claude exact profile 검증 대기, project shadow 금지.
+  Agent는 verdict만 생성하고 외부 signer가 Ed25519 private key 소유
+- Token 경계: scheduler tick·heartbeat·retry별 Judge `0건`; dispatch 전 usage guard,
+  strict gate 제한 시 성공 우회 없이 pending·usage-limited 중지
+- 다음 작업: MRA-001–006 Codex·Claude 공식·실제 lifecycle와 Sol Advisor 기능 동등성 검증
+- Activation gate: 양쪽 host fresh-session E2E·exact attestation·ownership consent·hostile test 전 default-off
+
+## v0.9.0 구현
+
+- 상태: source 구현·local qualification 완료, publication 미실행
+- 결정: [`ADR-0015`](../decisions/ADR-0015-host-native-skill-composition.md) accepted
+- Active fragment:
+  [`v0.9.0-loop-wiki-skills.md`](../plans/active/v0.9.0-loop-wiki-skills.md)
+- 범위: `hive-loop-engineering`, `hive-wiki`, `ai-slop-cleaner`,
+  `best-practice-research`, 기존 run·role·usage·judge Skill 조합
+- Loop 계약: host-native subagent·goal·hook capability, DAG·cycle detection·bounded
+  retry·evidence edge·independent verification·dynamic steering·terminal state
+- Wiki 계약: `add|query|lint|list|read|delete|refresh`, keyword·tag·category,
+  taxonomy, `[[wikilink]]`, agent-reviewed quick-add
+- Utility 계약: 회귀 시험 우선 code cleanup·fallback 분류·변경 파일 한정,
+  읽기 전용 bounded 연구·공식 source 우선·저장소 사실 분리·handoff
+- 채택 계약: 전체 OMX·OMC Skill·adapter의 `adopt|merge|exclude` 근거표와
+  비중복·사용자 승인·license·보안·conformance gate
+- 완료 기준선: scheduler·model runtime·tmux·Stop continuation·`omx_wiki`·`.omx|.omc`·
+  `omx|omc` command·자동 adapter 우선권·raw session 자동 수집 0건
+- 후속 정책: scheduler·iterative·team·multi-goal non-goal은 ADR-0019로 superseded,
+  model runtime·provider API·direct process spawn 금지는 유지
+- 실행 결과: V9-001–025 완료, host-native 기본값 전환과 세 host projection PASS
+
+## `0.9.0-test` 기능 마감
+
+- 상태: `TST9-001–018` 구현·검증 완료, public test publication 대기
+- 결정: [`ADR-0018`](../decisions/ADR-0018-notion-wiki-backend.md) accepted, Notion 공개 범위 `0.10.0-test` 보류
+- Active fragment:
+  [`v0.9.0-test-finalization.md`](../plans/active/v0.9.0-test-finalization.md)
+- Wiki backend: local Markdown 정본·user-root SQLite projection
+- Notion typed core: `0.10.0-test` 후보로 보류, `0.9.0` user setup·help·README·release note 노출 없음
+- Discord: usage guard 중단의 optional outbound, Claude inbound official plugin 위임,
+  Codex inbound official capability 전 `unsupported`
+- 다음 작업: `REL9-014–015` public test acceptance·retention 관찰
+
+## v0.9.0 시험·정식 릴리스
+
+- 상태: candidate·fresh clone qualification PASS, public test prerelease·npm 게시 완료;
+  수용 관찰 진행
+- 사용자 authority: 분리된 시험·정식 `0.9.0` 계획과 원격 `develop` push 승인
+- 결정: [`ADR-0017`](../decisions/ADR-0017-0.9-full-release.md) accepted
+- Active fragment: [`release-0.9.0.md`](../plans/active/release-0.9.0.md)
+- 변경점: [`docs/releases/0.9.0.md`](../releases/0.9.0.md)
+- Test identity: 기본 `0.9.0-test|test`, 추가 시험 시에만 `0.9.0-test.N|test`,
+  기존 `latest` 불변
+- Stable identity: 시험 수용 뒤 별도 protected `main` exact commit·annotated `v0.9.0`·
+  GitHub normal Release·npm `0.9.0|latest`
+- Parity: 시험·정식 기능·명령·기본값 동일, 시험 전용 기능 0건
+- 공통 문제 보고: 명시적 preview·collect·export, 자동 업로드·raw prompt 기본 수집 0건
+- Candidate: run `30771098518`, exact `6761f0b`, 5 target·npm umbrella·direct installer PASS
+- Host preflight: Codex `0.146.0` dry-run PASS; Antigravity `1.1.9` unowned
+  `aigent-hive` namespace conflict, host apply·update 보류
+- Test workflow registration: [#16](https://github.com/gvm1229/aigent-hive/pull/16) `main` merge 완료
+- Release surface: [#17](https://github.com/gvm1229/aigent-hive/pull/17) CI·review·`main` merge 대기,
+  `release-publication` secret 유지·reviewer 0명과 future Deployment record 생성 비활성화
+- Test dispatch: [run `30789141992`](https://github.com/gvm1229/aigent-hive/actions/runs/30789141992)
+  `dist/...` Git remote parse failure, 첫 npm 게시 전 중단, `latest`·tag·GitHub Release mutation `0건`
+- Test retry: [run `30808850724`](https://github.com/gvm1229/aigent-hive/actions/runs/30808850724)
+  `./dist/...` local file spec 뒤 first npm publish `404`, version mutation `0건`
+- Bootstrap retry: [run `30890841117`](https://github.com/gvm1229/aigent-hive/actions/runs/30890841117)는
+  여섯 npm `0.9.0-test` publish와 `test=0.9.0-test`, `latest=0.8.0` verification까지 PASS.
+  마지막 tag/Release는 GitHub App token의 workflow-tag 권한 거부로 실패
+- Actual prerelease: authenticated maintainer recovery로 `6761f0b` annotated
+  `v0.9.0-test`, [GitHub prerelease](https://github.com/gvm1229/aigent-hive/releases/tag/v0.9.0-test),
+  22 assets 생성 완료. npm public install `0.8.0 → 0.9.0-test`와 CLI 실행 확인
+- App automation: reviewer 0명. client ID Variable·private key Secret, `contents|workflows: write`
+  installation token, credential-free checkout 적용. [candidate `31042797141`](https://github.com/gvm1229/aigent-hive/actions/runs/31042797141)
+  `dd0224a`와 [publication `31043631056`](https://github.com/gvm1229/aigent-hive/actions/runs/31043631056) PASS.
+  `0.9.0-test.1` 여섯 npm package `test`, `latest=0.8.0`, annotated tag·22-asset prerelease 확인
+- Corrected test publication: [candidate `31082481203`](https://github.com/gvm1229/aigent-hive/actions/runs/31082481203)
+  `6980e8b`의 5 native target·npm umbrella PASS; [publication `31083602464`](https://github.com/gvm1229/aigent-hive/actions/runs/31083602464)
+  `0.9.0-test.2` 여섯 package `test`, `latest=0.8.0`, annotated tag·22-asset prerelease PASS.
+  Isolated npm install `--version`: `AIgent Hive v0.9.0-test #2 · developer test build (released 2026-08-06)`
+- Trusted publishing exception: [run `31083140684`](https://github.com/gvm1229/aigent-hive/actions/runs/31083140684)의
+  2회 `@aigent-hive/darwin-arm64` registry `404`, npm package·tag·GitHub Release mutation 0건;
+  existing registry-auth fallback으로 `31083602464` 게시 완료. npm trusted publisher binding 재정비 뒤 token 없는 경로 재검증 필요
+- Source baseline: `6980e8b38c08a9ebe483a4ffa7937f70999d63a5`, `develop` 포함
+- Setup-routing test publication: [candidate `31090062784`](https://github.com/gvm1229/aigent-hive/actions/runs/31090062784)
+  와 [publication `31090917408`](https://github.com/gvm1229/aigent-hive/actions/runs/31090917408) PASS.
+  exact `5341bdf3562cb1ed8fdd3323965cc5f529649107`, 여섯 npm package
+  `test=0.9.0-test.3`·`latest=0.8.0`, annotated `v0.9.0-test.3`, 22-asset prerelease.
+  Existing Codex legacy user installation의 source test.3 dry-run authenticated preview PASS.
+- Global Skill test publication: [candidate `31134306991`](https://github.com/gvm1229/aigent-hive/actions/runs/31134306991)
+  5 native target·npm umbrella/direct installer PASS; [publication `31135040224`](https://github.com/gvm1229/aigent-hive/actions/runs/31135040224)
+  PASS. `dc4466d42f4d3c4b71472e1ee8e6f27b58b2212a`, 여섯 package `test=0.9.0-test.4`,
+  `latest=0.8.0`, annotated `v0.9.0-test.4`·22-asset prerelease와 isolated CLI #4 확인
+- `staging`: 현재 release flow에 불필요하여 생성 0건
+- Production gate: 5개 native target·6개 npm package, OS signing·notarization,
+  external TUF, public install·`0.8.0 → 0.9.0` update
+- 다음 작업: `REL9-014–015` public acceptance·retention 관찰; stable은 별도 main 후보까지 시작 금지
+
+## Prompt refine 자동 routing
+
+- 상태: `PRF-001–012` 구현·검증 완료
+- Active fragment:
+  [`prompt-refine-auto-routing.md`](../plans/active/prompt-refine-auto-routing.md)
+- 원인: source·consumer policy와 Skill catalog의 explicit-only·suggestion-only 계약
+- 결함: explicit invocation 뒤 imperative payload를 실행 승인으로 오해한 host-level
+  mode boundary
+- 목표: material ambiguity 자동 `refine-only`, refined prompt 제시 뒤
+  `awaiting-approval`, exact 후속 승인 전 side effect 0건
+- 보존: simple/editless question·clear work route, prompt-classifier hook 금지,
+  frozen `0.7.0|0.8.0` Skill bytes
+- 다음 작업: test publication 뒤 public parity 수용 관찰
+
+## v0.9.0 전역 knowledge RAG
+
+- 상태: RAG-001–020 완료, publication 미실행
+- 결정: [`ADR-0016`](../decisions/ADR-0016-global-knowledge-rag.md) accepted
+- Active fragment:
+  [`v0.9.0-global-knowledge-rag.md`](../plans/active/v0.9.0-global-knowledge-rag.md)
+- 기존 기반: user-root Markdown·단일 SQLite, FTS5·tag·alias·BM25,
+  visibility-aware shared project query
+- 구현: 모든 질문의 bounded retrieval preflight, named project scope, durable user statement의
+  mandatory write, citation-ready chunk result와 fresh-session recall
+- DB: SQLite derived boundary, chunk·generation·dirty journal, 검증된 resident generation
+- 성능: 50,000 chunk cold p95 `163.3569ms`, warm p95 `0.1178ms`
+- 이식: `.hivekb` canonical bundle export·import 뒤 destination SQLite rebuild
+- 수집: directory별 table 대신 stable `collection_id`, explicit `hive-knowledge-scan`과
+  project claim → reusable candidate 2단계 review
+- 검색 Skill: 새 find Skill 없이 기존 `hive-knowledge-query`의 질문·research·work
+  bounded automatic route
+- 안전 경계: Wiki opt-out, raw transcript·secret·credential·SQLite-only fact 0건
+
+## v0.9.0 knowledge 이식·directory scan
+
+- 상태: KPX-001–018 완료, publication 미실행
+- Active fragment:
+  [`v0.9.0-knowledge-portability-scan.md`](../plans/active/v0.9.0-knowledge-portability-scan.md)
+- Research:
+  [`knowledge-portability-ingestion-retrieval.md`](../research/knowledge-portability-ingestion-retrieval.md)
+- Bundle: deterministic ZIP + versioned manifest·SHA-256, SQLite·runtime·absolute path 제외
+- Collection: fixed normalized schema, stable ID, detached destination mapping
+- Scan: tracked-first inventory, claim kind·assertion status, evidence-qualified convention,
+  기존 promote의 consolidated consent 재사용
+- Retrieval: existing query Skill single owner, turn당 1회 top 5·byte budget,
+  retrieved instruction authority 0건
+- Qualification: 100 collection·50,000 chunk export p95 `1066.9209ms`,
+  import+rebuild p95 `3255.1537ms`
+- Adversarial review: overlap·schema growth·archive path·secret·poisoning·truth overclaim·
+  path portability·context overload finding 교정, 사용자 결정 잔여 0건
 
 ## `docs/` Wiki 전환
 
@@ -53,7 +295,7 @@
   도달성 확인, Git history recoverability 적용
 - Human Wiki: `docs/00-home.md`, `docs/01-index.md`, topic MOC, product overview,
   development guide에서 간소화 직전 README knowledge 복원
-- Atomic knowledge: `docs/facts/en`·`ko` 32개 exact pair, primary fact 1개,
+- Atomic knowledge: `docs/facts/en`·`ko` 40개 exact pair, primary fact 1개,
   cross-link와 source digest
 
 ## Windows shell 설치 경계
@@ -130,16 +372,17 @@ Target: `0.8.0`
 
 - Canonical path: `docs/facts/en/`, `docs/facts/ko/`
 - 금지 path: `omx_wiki/`, `.omx/wiki/`, source root의 consumer `.hive/knowledge/`
-- Current OMX/OMC: replaceable compatibility dependency와 orchestration aid
-- 장기 방향: host-native·provider-neutral capability 대체 뒤 OMX/OMC 제거
+- Current OMX/OMC: 신규 workflow dependency 제거 결정, legacy foreign provenance만 보존
+- 장기 방향: Hive-native provider-neutral orchestration과 explicit legacy migration
 - Consumer reuse: `hive-wiki` core와 capture·maintenance·query 안전 계약
 - Skill reuse: shared canonical `harness/skills/`, exact source `.agents/skills/` projection
-- 현재 상태: 영어 37개·한국어 37개 atomic fact, exact pair 37개와 source-confined
+- 현재 상태: 영어 46개·한국어 46개 atomic fact, exact pair 46개와 source-confined
   CLI·Skill·material-task completion capture 구현 완료
-- Logical digest:
-  `sha256:e9b5f4efc2ab464db3a07d4456004ad6d26f4bccdb458efc8ad8f8409a05d161`
-- 검증: lint finding·warning 0건, 영어·한국어 query PASS, index 삭제 뒤 query
-  fail-closed exit `5`, rebuild equivalence PASS
+- Derived source Wiki index: `docs/facts/` 46 pair 기준 rebuild 완료
+- Current logical digest:
+  `sha256:71c830f55adaf85d92c58c1a8ff3ebfe816789bd70e857e2a8c1dc47791dc502`
+- 현재 검증: fact schema·pair·source digest·body limit·문서 graph 시험과 current
+  `target/debug/hive` Source Wiki lint·index·영어·한국어 query PASS
 - SQLite binary digest는 invocation-local evidence이며 정본·clean-copy equivalence 기준이
   아님. Logical digest와 query 결과가 rebuild equivalence 기준
 - Marketing deck 재개 record:
@@ -183,10 +426,11 @@ Target: `0.8.0`
 | 6 | verifier-only signed release, update·migration·backup·crash recovery, installer ownership |
 | 7 local | shipping one-shot usage gate, 세 host projection, provenance verifier, fault injection |
 
-제품 경계:
+구현 완료된 v0.9 기준선:
 
 - Provider API·SDK·credential path 없음
-- Model runtime, scheduler, plan/Ralph/team/persistent-loop clone 없음
+- Model runtime·provider session engine·direct model/subagent process launcher 없음
+- Native scheduler·iterative·team·multi-goal: ADR-0019의 default-off 후속 계획, 현재 release 범위 밖
 - Source workspace, release bundle, installed consumer harness의 물리·논리 분리
 - Release private key 생성·읽기·저장·signing 없음
 - Canonical state: tracked Markdown·YAML·TOML
@@ -205,8 +449,8 @@ Target: `0.8.0`
   user-root 단일 SQLite·explicit promotion
 - Historical exact base, unmodified replace, modified local-priority three-way merge
 - Durable journal, executable-mode backup, host-state compensation과 crash recovery
-- Source `hive-prompt-refine` projection, explicit refine-only routing,
-  모호성·핵심 세부 부족 prompt의 optional refine 제안
+- Source `hive-prompt-refine` projection, 현재 explicit refine-only routing,
+  material ambiguity automatic refine-only 전환 계획
 
 `0.8.0` npm 배포 gap:
 
@@ -249,9 +493,9 @@ Pre-1.0 비차단 deferred:
 계획 evidence:
 
 - Active fragment 8 KiB 제한 충족
-- Canonical checklist `223/228`, active checklist ID 중복 0건
+- Canonical checklist `223/291`, active checklist ID 중복 0건
 - Root English 159줄·Korean 155줄 README, 상호 language link와 빈 QA 표 PASS
-- Plan static contract 29/29, documentation style regression 18/18 PASS
+- Phase 3 static contract 41/41, documentation style regression 18/18 PASS
 - Human documentation inventory 1,285/1,285 review, finding 0건
 - Markdown link conformance PASS
 
@@ -306,7 +550,7 @@ Pre-1.0 비차단 deferred:
 
 - Source-only `hive-usage-guard` Skill과 15초 native Codex app-server primary·CodexBar
   fallback-only watcher
-- 현재 session threshold: remaining `30%` inclusive
+- 현재 session threshold: remaining `60%` inclusive
 - Session window 우선, session 부재 시 weekly fallback
 - Quota sensor unknown: 3초 뒤 1회 재시도, 반복 unknown은 observation 보존과
   `transient_unknown_ignored` 진행, confirmed-limited marker 유지
@@ -410,7 +654,7 @@ Global onboarding·shared index local qualification PASS:
 - Codex·Antigravity expedited/custom connected onboarding matrix 4/4
 - 독립 final blocker review의 critical·high·medium·low finding 0건
 
-Source docs Wiki targeted qualification PASS:
+Source docs Wiki targeted qualification historical PASS:
 
 - `hive-wiki` 33/33, Source Wiki conformance 재검증 PASS
 - Canonical fact 74개, bilingual pair 37개
@@ -473,12 +717,13 @@ Current remote qualification evidence:
 
 - Current source·npm product version `0.8.0`
 - 사용자 지정 순서: npm `0.8.0` 배포 성공 뒤 `develop` → `main` 병합
-- Candidate authority: PR·필수 상태 검사·삭제·강제 push 차단이 적용된 exact `develop`
-- Current GitHub ruleset: `develop` 보호 활성, 우회 권한 없음
+- Historical candidate authority: PR·필수 상태 검사·삭제·강제 push 차단이 적용된
+  exact `develop`
+- Historical GitHub ruleset: `0.8.0` candidate 당시 `develop` 보호 활성
 - Current publication environment: `release-publication` 필수 검토자 `gvm1229` 설정
   확인, 자기 배포 승인 차단 비활성
-- Branch policy: `codex/release-0.8.0` 임시 branch 생성·push와 `develop` 대상 PR
-  사용자 예외 승인 완료. `develop` 직접 push는 보호 규칙상 불가
+- Historical branch policy: `codex/release-0.8.0` 임시 branch와 `develop` 대상 PR
+  사용자 예외 승인
 - First candidate run `30633581092`: exact `develop` commit `1031ff0`, 5개 native
   target·6개 npm tarball PASS
 - First publication run `30634201469`: `release-publication` 승인 PASS,
@@ -514,5 +759,8 @@ Pre-1.0 비차단 deferred:
 
 ## 다음 action
 
-1. npm 배포 성공 commit의 `develop` → `main` PR 병합
-2. Trusted Publisher 설정 확인 뒤 임시 `NPM_TOKEN` 삭제
+1. V9-025 orchestration owner 전환과 capability inventory
+2. KPX-001–007 portable bundle·collection schema·safe import
+3. RAG-001–020 automatic retrieval·mandatory capture·freshness
+4. KPX-008–018 directory scan·promotion·automatic query
+5. V9-001–024 loop·Wiki·utility Skill·전체 qualification

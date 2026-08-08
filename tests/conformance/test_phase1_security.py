@@ -62,7 +62,7 @@ class Phase1ConsentHostile(Phase1CliTestCase):
         process, result = self.invoke_setup(
             target,
             answers=answer_path,
-            capabilities="capabilities-absent.json",
+            capabilities="capabilities-codex-host-native-hooks.json",
         )
 
         self.assertEqual(process.returncode, expected_exit)
@@ -292,7 +292,7 @@ class Phase1InstalledHookConformance(Phase1CliTestCase):
         process, _ = self.invoke_setup(
             target,
             answers=FIXTURE_ROOT / "answers-partial-hooks.yml",
-            capabilities="capabilities-absent.json",
+            capabilities="capabilities-codex-host-native-hooks.json",
         )
         self.assertEqual(process.returncode, 0)
         return target
@@ -335,12 +335,14 @@ class Phase1InstalledHookConformance(Phase1CliTestCase):
         runtime_path = target / FRESH_HOOK_CAPABILITIES_PATH
         self.assertFalse(runtime_path.exists())
         runtime_path.parent.mkdir(parents=True)
-        fresh_absent = (FIXTURE_ROOT / "capabilities-absent.json").read_bytes()
+        fresh_supported = (
+            FIXTURE_ROOT / "capabilities-codex-host-native-hooks.json"
+        ).read_bytes()
         pretool_input = (FIXTURE_ROOT / "pretool-input.json").read_text(
             encoding="utf-8"
         )
 
-        runtime_path.write_bytes(fresh_absent)
+        runtime_path.write_bytes(fresh_supported)
         active_process, active_result = self.invoke_stored_hook_command(
             target,
             ".hive/hooks/protect-hive-owned-state",
@@ -349,6 +351,19 @@ class Phase1InstalledHookConformance(Phase1CliTestCase):
         self.assertEqual(active_process.returncode, 3, active_process.stderr)
         self.assertIs(active_result.get("active"), True)
         self.assertEqual(active_result.get("decision"), "block")
+
+        runtime_path.write_bytes(
+            (FIXTURE_ROOT / "capabilities-absent.json").read_bytes()
+        )
+        absent_process, absent_result = self.invoke_stored_hook_command(
+            target,
+            ".hive/hooks/protect-hive-owned-state",
+            input_text="{must-not-be-read\n",
+        )
+        self.assertEqual(absent_process.returncode, 0, absent_process.stderr)
+        self.assertIs(absent_result.get("active"), False)
+        self.assertEqual(absent_result.get("decision"), "allow")
+        self.assertNotIn("invalid hook input", absent_process.stderr)
 
         runtime_path.unlink()
         missing_process, missing_result = self.invoke_stored_hook_command(
@@ -361,7 +376,7 @@ class Phase1InstalledHookConformance(Phase1CliTestCase):
         self.assertEqual(missing_result.get("decision"), "allow")
         self.assertNotIn("invalid hook input", missing_process.stderr)
 
-        runtime_path.write_bytes(fresh_absent)
+        runtime_path.write_bytes(fresh_supported)
         stale_time = time.time() - 61
         os.utime(runtime_path, (stale_time, stale_time))
         stale_process, stale_result = self.invoke_stored_hook_command(
@@ -398,19 +413,19 @@ class Phase1InstalledHookConformance(Phase1CliTestCase):
         self.assert_neutral_stop(stop_process, stop_result)
         self.assertEqual(stop_process.stderr, "")
 
-    def test_fresh_absent_matrix_must_match_the_ledger_bound_resolution(
+    def test_fresh_supported_matrix_must_match_the_ledger_bound_resolution(
         self,
     ) -> None:
         target = self.install_approved_hooks()
-        different_absent = json.loads(
-            (FIXTURE_ROOT / "capabilities-absent.json").read_text(
+        different_supported = json.loads(
+            (FIXTURE_ROOT / "capabilities-codex-host-native-hooks.json").read_text(
                 encoding="utf-8"
             )
         )
-        different_absent["host_version"] = "different-valid-absent-evidence"
+        different_supported["host_version"] = "different-valid-host-native-evidence"
         digest_payload = {
             key: value
-            for key, value in different_absent.items()
+            for key, value in different_supported.items()
             if key != "evidence_digest"
         }
         canonical = json.dumps(
@@ -419,12 +434,12 @@ class Phase1InstalledHookConformance(Phase1CliTestCase):
             sort_keys=True,
             separators=(",", ":"),
         ).encode()
-        different_absent["evidence_digest"] = (
+        different_supported["evidence_digest"] = (
             f"sha256:{hashlib.sha256(canonical).hexdigest()}"
         )
-        different_path = self.work_root / "different-absent.json"
+        different_path = self.work_root / "different-host-native.json"
         different_path.write_text(
-            json.dumps(different_absent, ensure_ascii=False) + "\n",
+            json.dumps(different_supported, ensure_ascii=False) + "\n",
             encoding="utf-8",
         )
         malformed_input = self.work_root / "must-not-be-read.json"
@@ -578,7 +593,7 @@ class Phase1InstalledHookConformance(Phase1CliTestCase):
         setup_process, _ = self.invoke_setup(
             target,
             answers=FIXTURE_ROOT / "answers-all-hooks.yml",
-            capabilities="capabilities-absent.json",
+            capabilities="capabilities-codex-host-native-hooks.json",
         )
         self.assertEqual(setup_process.returncode, 0, setup_process.stderr)
         malformed = self.work_root / "malformed-posttool.json"

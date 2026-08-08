@@ -10,16 +10,21 @@ publish = false
 name = "hive"
 path = "src/main.rs"
 
+[features]
+notion-preview = []
+
 [dependencies]
 cap-fs-ext.workspace = true
 cap-primitives.workspace = true
 cap-std.workspace = true
+getrandom.workspace = true
 hive-core = { path = "../hive-core" }
 hive-projection = { path = "../hive-projection" }
 hive-render = { path = "../hive-render" }
 hive-update = { path = "../hive-update" }
 hive-wiki = { path = "../hive-wiki" }
 jsonschema.workspace = true
+process-wrap.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 serde_json_canonicalizer.workspace = true

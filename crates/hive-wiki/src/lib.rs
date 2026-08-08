@@ -1,7 +1,15 @@
 //! Canonical Markdown knowledge operations and a disposable `SQLite` projection.
 
+pub mod bundle_io;
+pub mod bundle_store;
+pub mod collection;
+pub mod notion;
+pub mod portable;
+pub mod rag;
+pub mod scan;
 pub mod shared;
 pub mod source;
+pub mod store;
 
 use cap_fs_ext::{DirExt, FollowSymlinks, MetadataExt as CapMetadataExt, OpenOptionsFollowExt};
 use cap_std::ambient_authority;
@@ -27,11 +35,15 @@ use tempfile::NamedTempFile;
 const INDEX_RELATIVE: &str = ".hive/index/hive.sqlite3";
 const STALE_RELATIVE: &str = ".hive/index/.stale";
 const LOCK_RELATIVE: &str = ".hive/index/.knowledge.lock";
+const SHARED_OPERATION_LOCK_RELATIVE: &str = ".hive/index/.shared-operation.lock";
 const SUPPRESSION_RELATIVE: &str = ".hive/knowledge/suppression.yml";
 const WIKI_RELATIVE: &str = ".hive/knowledge/Wiki";
 const RAW_RELATIVE: &str = ".hive/knowledge/Raw";
 const LOCK_TIMEOUT: Duration = Duration::from_secs(5);
 const MAX_RAW_BYTES: usize = 5 * 1024 * 1024;
+const MAX_WIKI_PAGE_BYTES: u64 = 2 * 1024 * 1024;
+const MAX_CANONICAL_CONTROL_BYTES: u64 = 1024 * 1024;
+const MAX_DERIVED_INDEX_BYTES: u64 = 128 * 1024 * 1024;
 static CAP_TEMP_COUNTER: AtomicU64 = AtomicU64::new(0);
 
 /// Stable failure classes for CLI exit mapping.
@@ -228,6 +240,25 @@ pub struct QueryHit {
     pub sources: Vec<String>,
 }
 
+/// One canonical Wiki page plus explicit reciprocal-link evidence.
+#[derive(Debug, Clone, Serialize, Eq, PartialEq)]
+pub struct WikiReadResult {
+    /// Validated canonical frontmatter.
+    pub frontmatter: WikiFrontmatter,
+    /// Canonical Markdown body.
+    pub body: String,
+    /// Consumer-relative canonical path.
+    pub path: String,
+    /// Digest of the exact canonical page bytes.
+    pub content_digest: String,
+    /// Sorted declared and `[[wikilink]]` outgoing page IDs.
+    pub outgoing_links: Vec<String>,
+    /// Sorted page IDs that link to this page.
+    pub backlinks: Vec<String>,
+    /// Outgoing links whose destination does not link back.
+    pub nonreciprocal_links: Vec<String>,
+}
+
 /// User-root promotion category.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, Eq, PartialEq)]
 #[serde(rename_all = "kebab-case")]
@@ -353,8 +384,57 @@ pub fn ingest(
     source: &Path,
     wiki_draft: &Path,
 ) -> Result<KnowledgeOutcome, WikiError> {
+    ingest_with_projection(target, source, wiki_draft, None)
+}
+
+/// Ingest canonical Raw/Wiki bytes for a shared RAG collection without writing a legacy index.
+///
+/// The caller must rebuild the shared store after success. Any interruption after validation
+/// leaves a persistent dirty journal so retrieval fails closed until that rebuild.
+///
+/// # Errors
+///
+/// Returns the same validation and canonical-write errors as [`ingest`], plus errors for an
+/// invalid shared namespace or dirty-journal publication.
+pub fn ingest_shared(
+    target: &Path,
+    source: &Path,
+    wiki_draft: &Path,
+    user_root: &Path,
+    namespace: &str,
+) -> Result<KnowledgeOutcome, WikiError> {
+    validate_id(namespace)?;
+    let store = store::RagStore::open(user_root)?;
+    ingest_with_projection(
+        target,
+        source,
+        wiki_draft,
+        Some(SharedMutationProjection {
+            store: &store,
+            namespace,
+        }),
+    )
+}
+
+#[derive(Clone, Copy)]
+struct SharedMutationProjection<'a> {
+    store: &'a store::RagStore,
+    namespace: &'a str,
+}
+
+fn shared_dirty_path(namespace: &str, relative: &str) -> PathBuf {
+    Path::new("collections").join(namespace).join(relative)
+}
+
+#[allow(clippy::too_many_lines)]
+fn ingest_with_projection(
+    target: &Path,
+    source: &Path,
+    wiki_draft: &Path,
+    shared: Option<SharedMutationProjection<'_>>,
+) -> Result<KnowledgeOutcome, WikiError> {
     validate_target(target)?;
-    let _lock = KnowledgeLock::acquire(target)?;
+    let lock = KnowledgeLock::acquire(target)?;
     let source_bytes = read_raw_source(source)?;
     if source_bytes.is_empty() {
         return Err(WikiError::InvalidInput(
@@ -424,6 +504,70 @@ pub fn ingest(
     }
     validate_frontmatter(&page.frontmatter)?;
     let canonical_bytes = render_page(&page.frontmatter, &page.body)?;
+    if let Some(shared) = shared {
+        let snapshots = [
+            FileSnapshot::capture(&raw_absolute)?,
+            FileSnapshot::capture(&wiki_absolute)?,
+        ];
+        let raw_changed = snapshots[0].would_write(&source_bytes);
+        let wiki_changed = snapshots[1].would_write(&canonical_bytes);
+        if !raw_changed && !wiki_changed {
+            return Ok(KnowledgeOutcome {
+                changed_paths: Vec::new(),
+                page_id: Some(page.frontmatter.id),
+                source_locator: Some(raw_locator),
+                logical_digest: canonical_logical_digest(target)?,
+            });
+        }
+        let mut writes = Vec::new();
+        if raw_changed {
+            writes.push((
+                shared_dirty_path(shared.namespace, &raw_path),
+                source_bytes.clone(),
+            ));
+        }
+        if wiki_changed {
+            writes.push((
+                shared_dirty_path(shared.namespace, &wiki_relative),
+                canonical_bytes.clone(),
+            ));
+        }
+        drop(lock);
+        let dirty = shared.store.begin_external_canonical_mutation(&writes)?;
+        let canonical_lock = KnowledgeLock::acquire(target)?;
+        for snapshot in &snapshots {
+            if let Err(error) = snapshot.verify_current() {
+                drop(canonical_lock);
+                abort_external_after_rollback(shared.store, &dirty, &error)?;
+                return Err(error);
+            }
+        }
+        let commit = commit_ingest_canonical(
+            &raw_absolute,
+            &source_bytes,
+            &wiki_absolute,
+            &canonical_bytes,
+            &snapshots,
+        );
+        if let Err(error) = commit {
+            drop(canonical_lock);
+            abort_external_after_rollback(shared.store, &dirty, &error)?;
+            return Err(error);
+        }
+        let mut changed_paths = Vec::new();
+        if raw_changed {
+            changed_paths.push(raw_path);
+        }
+        if wiki_changed {
+            changed_paths.push(wiki_relative);
+        }
+        return Ok(KnowledgeOutcome {
+            changed_paths,
+            page_id: Some(page.frontmatter.id),
+            source_locator: Some(raw_locator),
+            logical_digest: canonical_logical_digest(target)?,
+        });
+    }
     let (raw_changed, wiki_changed, index) = commit_ingest_mutation(
         target,
         &raw_absolute,
@@ -465,6 +609,43 @@ pub fn promote(
     category: PromotionCategory,
     mode: PromotionMode,
 ) -> Result<PromotionOutcome, WikiError> {
+    promote_with_projection(project, user_root, page_id, category, mode, None)
+}
+
+/// Promote into shared canonical knowledge without writing a legacy user-root index.
+///
+/// # Errors
+///
+/// Returns the same errors as [`promote`], plus shared dirty-journal errors.
+pub fn promote_shared(
+    project: &Path,
+    user_root: &Path,
+    page_id: &str,
+    category: PromotionCategory,
+    mode: PromotionMode,
+) -> Result<PromotionOutcome, WikiError> {
+    let store = store::RagStore::open(user_root)?;
+    promote_with_projection(
+        project,
+        user_root,
+        page_id,
+        category,
+        mode,
+        Some(SharedMutationProjection {
+            store: &store,
+            namespace: "user-root",
+        }),
+    )
+}
+
+fn promote_with_projection(
+    project: &Path,
+    user_root: &Path,
+    page_id: &str,
+    category: PromotionCategory,
+    mode: PromotionMode,
+    shared: Option<SharedMutationProjection<'_>>,
+) -> Result<PromotionOutcome, WikiError> {
     validate_target(project)?;
     validate_target(user_root)?;
     validate_id(page_id)?;
@@ -478,9 +659,59 @@ pub fn promote(
             Ok(plan.outcome)
         }
         PromotionMode::Apply => {
-            let _lock = CapabilityKnowledgeLock::acquire(&user_root.dir)?;
+            let lock = CapabilityKnowledgeLock::acquire(&user_root.dir)?;
             let mut plan = build_promotion_plan(&project_root, &user_root, page_id, category)?;
             capability_test_pause("after-plan-before-claim")?;
+            if let Some(shared) = shared {
+                let raw_changed = plan.snapshots[0].would_install(&plan.raw_bytes);
+                let wiki_changed = plan.snapshots[1].would_install(&plan.wiki_bytes);
+                if !raw_changed && !wiki_changed {
+                    plan.outcome.changed_paths.clear();
+                    plan.outcome.applied = true;
+                    return Ok(plan.outcome);
+                }
+                let mut writes = Vec::new();
+                if raw_changed {
+                    writes.push((
+                        shared_dirty_path(shared.namespace, &plan.raw_path),
+                        plan.raw_bytes.clone(),
+                    ));
+                }
+                if wiki_changed {
+                    writes.push((
+                        shared_dirty_path(shared.namespace, &plan.wiki_path),
+                        plan.wiki_bytes.clone(),
+                    ));
+                }
+                drop(lock);
+                let dirty = shared.store.begin_external_canonical_mutation(&writes)?;
+                let canonical_lock = CapabilityKnowledgeLock::acquire(&user_root.dir)?;
+                plan.snapshots[0].verify_current(&user_root.dir)?;
+                plan.snapshots[1].verify_current(&user_root.dir)?;
+                let commit = commit_promotion_canonical(
+                    &user_root,
+                    &mut plan.snapshots[..2],
+                    &plan.raw_bytes,
+                    &plan.wiki_bytes,
+                );
+                if let Err(error) = commit {
+                    drop(canonical_lock);
+                    abort_external_after_rollback(shared.store, &dirty, &error)?;
+                    return Err(error);
+                }
+                let mut changed_paths = Vec::new();
+                if raw_changed {
+                    changed_paths.push(plan.raw_path);
+                }
+                if wiki_changed {
+                    changed_paths.push(plan.wiki_path);
+                }
+                changed_paths.sort();
+                plan.outcome.changed_paths = changed_paths;
+                plan.outcome.logical_digest = canonical_logical_digest_capability(&user_root.dir)?;
+                plan.outcome.applied = true;
+                return Ok(plan.outcome);
+            }
             let (raw_changed, wiki_changed, index) = commit_promotion_mutation(
                 &user_root,
                 &mut plan.snapshots,
@@ -811,12 +1042,43 @@ fn reject_promoted_credentials(bytes: &[u8]) -> Result<(), WikiError> {
 /// Returns an error when the entry or target is invalid or the ledger/index
 /// cannot be updated and verified.
 pub fn suppress(target: &Path, entry: SuppressionEntry) -> Result<KnowledgeOutcome, WikiError> {
+    suppress_with_projection(target, entry, None)
+}
+
+/// Add a canonical suppression entry for a shared collection without a legacy index write.
+///
+/// # Errors
+///
+/// Returns the same errors as [`suppress`], plus shared dirty-journal errors.
+pub fn suppress_shared(
+    target: &Path,
+    entry: SuppressionEntry,
+    user_root: &Path,
+    namespace: &str,
+) -> Result<KnowledgeOutcome, WikiError> {
+    validate_id(namespace)?;
+    let store = store::RagStore::open(user_root)?;
+    suppress_with_projection(
+        target,
+        entry,
+        Some(SharedMutationProjection {
+            store: &store,
+            namespace,
+        }),
+    )
+}
+
+fn suppress_with_projection(
+    target: &Path,
+    entry: SuppressionEntry,
+    shared: Option<SharedMutationProjection<'_>>,
+) -> Result<KnowledgeOutcome, WikiError> {
     validate_target(target)?;
     validate_suppression_entry(&entry)?;
-    let _lock = KnowledgeLock::acquire(target)?;
+    let lock = KnowledgeLock::acquire(target)?;
     let mut ledger = read_suppression(target)?;
     let ledger_changed = !ledger.entries.contains(&entry);
-    if !ledger_changed {
+    if !ledger_changed && shared.is_none() {
         if let Ok(logical_digest) = ensure_index_current(target) {
             return Ok(KnowledgeOutcome {
                 changed_paths: Vec::new(),
@@ -842,6 +1104,35 @@ pub fn suppress(target: &Path, entry: SuppressionEntry) -> Result<KnowledgeOutco
         return Err(WikiError::Conflict(format!(
             "suppression cannot coexist with active canonical content: {locator}"
         )));
+    }
+    if let Some(shared) = shared {
+        if !ledger_changed {
+            return Ok(KnowledgeOutcome {
+                changed_paths: Vec::new(),
+                page_id: None,
+                source_locator: None,
+                logical_digest: logical_digest(&pages, &raw, &ledger)?,
+            });
+        }
+        let bytes = serde_yaml::to_string(&ledger)
+            .map_err(|error| {
+                WikiError::Io(format!("cannot serialize suppression ledger: {error}"))
+            })?
+            .into_bytes();
+        let snapshots = [FileSnapshot::capture(&target.join(SUPPRESSION_RELATIVE))?];
+        drop(lock);
+        let writes = vec![(
+            shared_dirty_path(shared.namespace, SUPPRESSION_RELATIVE),
+            bytes.clone(),
+        )];
+        let dirty = shared.store.begin_external_canonical_mutation(&writes)?;
+        commit_shared_suppression(target, shared.store, &dirty, &snapshots[0], &bytes)?;
+        return Ok(KnowledgeOutcome {
+            changed_paths: vec![SUPPRESSION_RELATIVE.to_owned()],
+            page_id: None,
+            source_locator: None,
+            logical_digest: canonical_logical_digest(target)?,
+        });
     }
     let snapshots = [
         FileSnapshot::capture(&target.join(SUPPRESSION_RELATIVE))?,
@@ -884,6 +1175,47 @@ pub fn delete_page(
     replacement: Option<&str>,
     timestamp: &str,
 ) -> Result<KnowledgeOutcome, WikiError> {
+    delete_page_with_projection(target, page_id, reason, replacement, timestamp, None)
+}
+
+/// Delete shared canonical knowledge without creating or rewriting a legacy index.
+///
+/// # Errors
+///
+/// Returns the same errors as [`delete_page`], plus shared dirty-journal errors.
+pub fn delete_page_shared(
+    target: &Path,
+    page_id: &str,
+    reason: &str,
+    replacement: Option<&str>,
+    timestamp: &str,
+    user_root: &Path,
+    namespace: &str,
+) -> Result<KnowledgeOutcome, WikiError> {
+    validate_id(namespace)?;
+    let store = store::RagStore::open(user_root)?;
+    delete_page_with_projection(
+        target,
+        page_id,
+        reason,
+        replacement,
+        timestamp,
+        Some(SharedMutationProjection {
+            store: &store,
+            namespace,
+        }),
+    )
+}
+
+#[allow(clippy::too_many_lines)]
+fn delete_page_with_projection(
+    target: &Path,
+    page_id: &str,
+    reason: &str,
+    replacement: Option<&str>,
+    timestamp: &str,
+    shared: Option<SharedMutationProjection<'_>>,
+) -> Result<KnowledgeOutcome, WikiError> {
     validate_target(target)?;
     validate_id(page_id)?;
     validate_suppression_reason(reason)?;
@@ -891,7 +1223,7 @@ pub fn delete_page(
     if let Some(value) = replacement {
         validate_suppression_locator("replacement", value)?;
     }
-    let _lock = KnowledgeLock::acquire(target)?;
+    let lock = KnowledgeLock::acquire(target)?;
     let pages = scan_pages(target)?;
     let page = pages
         .get(page_id)
@@ -959,6 +1291,72 @@ pub fn delete_page(
     });
     let ledger_bytes = serde_yaml::to_string(&ledger)
         .map_err(|error| WikiError::Io(format!("cannot serialize suppression ledger: {error}")))?;
+    if let Some(shared) = shared {
+        let mut snapshots = vec![
+            FileSnapshot::capture(&absolute)?,
+            FileSnapshot::capture(&target.join(SUPPRESSION_RELATIVE))?,
+        ];
+        for path in &removed_raw {
+            snapshots.push(FileSnapshot::capture(&target.join(path))?);
+        }
+        let mut writes = vec![
+            (
+                shared_dirty_path(shared.namespace, &page.relative_path),
+                Vec::new(),
+            ),
+            (
+                shared_dirty_path(shared.namespace, SUPPRESSION_RELATIVE),
+                ledger_bytes.clone().into_bytes(),
+            ),
+        ];
+        writes.extend(
+            removed_raw
+                .iter()
+                .map(|path| (shared_dirty_path(shared.namespace, path), Vec::new())),
+        );
+        drop(lock);
+        let dirty = shared.store.begin_external_canonical_mutation(&writes)?;
+        let canonical_lock = KnowledgeLock::acquire(target)?;
+        for snapshot in &snapshots {
+            snapshot.verify_current()?;
+        }
+        let commit = transactional(&snapshots, || {
+            fs::remove_file(&absolute).map_err(|error| {
+                WikiError::Io(format!("cannot delete {}: {error}", absolute.display()))
+            })?;
+            for path in &removed_raw {
+                fs::remove_file(target.join(path)).map_err(|error| {
+                    WikiError::Io(format!(
+                        "cannot delete obsolete Raw revision {path}: {error}"
+                    ))
+                })?;
+            }
+            write_atomic(&target.join(SUPPRESSION_RELATIVE), ledger_bytes.as_bytes())?;
+            if cfg!(debug_assertions)
+                && env::var("HIVE_WIKI_TEST_FAIL_AFTER_CANONICAL_WRITES").as_deref() == Ok("1")
+            {
+                return Err(WikiError::Io(
+                    "injected failure after canonical knowledge writes".to_owned(),
+                ));
+            }
+            Ok(())
+        });
+        if let Err(error) = commit {
+            drop(canonical_lock);
+            abort_external_after_rollback(shared.store, &dirty, &error)?;
+            return Err(error);
+        }
+        let mut changed_paths = vec![page.relative_path.clone(), SUPPRESSION_RELATIVE.to_owned()];
+        changed_paths.extend(removed_raw);
+        changed_paths.sort();
+        changed_paths.dedup();
+        return Ok(KnowledgeOutcome {
+            changed_paths,
+            page_id: Some(page_id.to_owned()),
+            source_locator: None,
+            logical_digest: canonical_logical_digest(target)?,
+        });
+    }
     let mut snapshots = vec![
         FileSnapshot::capture(&absolute)?,
         FileSnapshot::capture(&target.join(SUPPRESSION_RELATIVE))?,
@@ -1023,17 +1421,60 @@ pub fn query(
     tag: Option<&str>,
     limit: usize,
 ) -> Result<Vec<QueryHit>, WikiError> {
+    query_filtered(target, text, tag, None, limit)
+}
+
+/// Query the current projection with an optional canonical v0.9 category filter.
+///
+/// # Errors
+///
+/// Returns an error for an empty query, unsupported category, stale derived state,
+/// or a read-only `SQLite` query failure.
+pub fn query_filtered(
+    target: &Path,
+    text: Option<&str>,
+    tag: Option<&str>,
+    category: Option<&str>,
+    limit: usize,
+) -> Result<Vec<QueryHit>, WikiError> {
     validate_target(target)?;
-    if text.is_none() && tag.is_none() {
+    if text.is_none() && tag.is_none() && category.is_none() {
         return Err(WikiError::InvalidInput(
-            "query requires --text or --tag".to_owned(),
+            "query requires --text, --tag, or --category".to_owned(),
         ));
     }
+    query_catalog(target, text, tag, category, limit)
+}
+
+/// List canonical pages in deterministic ID order with optional tag/category filters.
+///
+/// # Errors
+///
+/// Returns an error for an unsupported category, invalid limit, stale derived state,
+/// or a read-only `SQLite` query failure.
+pub fn list_pages(
+    target: &Path,
+    tag: Option<&str>,
+    category: Option<&str>,
+    limit: usize,
+) -> Result<Vec<QueryHit>, WikiError> {
+    validate_target(target)?;
+    query_catalog(target, None, tag, category, limit)
+}
+
+fn query_catalog(
+    target: &Path,
+    text: Option<&str>,
+    tag: Option<&str>,
+    category: Option<&str>,
+    limit: usize,
+) -> Result<Vec<QueryHit>, WikiError> {
     if !(1..=100).contains(&limit) {
         return Err(WikiError::InvalidInput(
             "query limit must be from 1 through 100".to_owned(),
         ));
     }
+    let category = category.map(validate_category).transpose()?;
     ensure_index_current(target)?;
     let index_path = target.join(INDEX_RELATIVE);
     let connection = Connection::open_with_flags(
@@ -1051,7 +1492,28 @@ pub fn query(
                    AND (?2 IS NULL OR EXISTS (
                      SELECT 1 FROM tags t WHERE t.page_id = p.id AND t.tag = ?2
                    ))
+                   AND (?3 IS NULL OR p.kind = ?3)
                  ORDER BY bm25(pages_fts), p.id
+                 LIMIT ?4",
+            )
+            .map_err(sqlite_error)?;
+        let sql_limit = i64::try_from(limit)
+            .map_err(|_| WikiError::InvalidInput("query limit is too large".to_owned()))?;
+        collect_hits(
+            &connection,
+            statement.query(params![expression, tag, category, sql_limit]),
+            limit,
+        )?
+    } else {
+        let mut statement = connection
+            .prepare(
+                "SELECT p.id, p.kind, p.summary, p.path, p.content_hash
+                 FROM pages p
+                 WHERE (?1 IS NULL OR EXISTS (
+                   SELECT 1 FROM tags t WHERE t.page_id = p.id AND t.tag = ?1
+                 ))
+                   AND (?2 IS NULL OR p.kind = ?2)
+                 ORDER BY p.id
                  LIMIT ?3",
             )
             .map_err(sqlite_error)?;
@@ -1059,24 +1521,54 @@ pub fn query(
             .map_err(|_| WikiError::InvalidInput("query limit is too large".to_owned()))?;
         collect_hits(
             &connection,
-            statement.query(params![expression, tag, sql_limit]),
+            statement.query(params![tag, category, sql_limit]),
             limit,
         )?
-    } else {
-        let mut statement = connection
-            .prepare(
-                "SELECT p.id, p.kind, p.summary, p.path, p.content_hash
-                 FROM pages p JOIN tags t ON t.page_id = p.id
-                 WHERE t.tag = ?1
-                 ORDER BY p.id
-                 LIMIT ?2",
-            )
-            .map_err(sqlite_error)?;
-        let sql_limit = i64::try_from(limit)
-            .map_err(|_| WikiError::InvalidInput("query limit is too large".to_owned()))?;
-        collect_hits(&connection, statement.query(params![tag, sql_limit]), limit)?
     };
     Ok(rows)
+}
+
+/// Read one canonical page and compute reciprocal-link evidence from Markdown.
+///
+/// # Errors
+///
+/// Returns an error for an unsafe target, invalid or unknown page ID, or malformed
+/// canonical Wiki content.
+pub fn read_page(target: &Path, page_id: &str) -> Result<WikiReadResult, WikiError> {
+    validate_target(target)?;
+    validate_id(page_id)?;
+    let pages = scan_pages(target)?;
+    let page = pages
+        .get(page_id)
+        .ok_or_else(|| WikiError::InvalidInput(format!("unknown Wiki page ID: {page_id}")))?;
+    let outgoing_links = effective_links(page);
+    let backlinks = pages
+        .iter()
+        .filter(|(_, candidate)| {
+            effective_links(candidate)
+                .iter()
+                .any(|link| link == page_id)
+        })
+        .map(|(id, _)| id.clone())
+        .collect::<Vec<_>>();
+    let nonreciprocal_links = outgoing_links
+        .iter()
+        .filter(|target_id| {
+            pages.get(*target_id).is_none_or(|target_page| {
+                !effective_links(target_page).iter().any(|id| id == page_id)
+            })
+        })
+        .cloned()
+        .collect();
+    Ok(WikiReadResult {
+        frontmatter: page.frontmatter.clone(),
+        body: page.body.clone(),
+        path: page.relative_path.clone(),
+        content_digest: page.content_digest.clone(),
+        outgoing_links,
+        backlinks,
+        nonreciprocal_links,
+    })
 }
 
 /// Lint canonical pages, citations, contradictions, graph integrity, and index freshness.
@@ -1303,7 +1795,7 @@ fn rebuild_index_locked(target: &Path) -> Result<IndexOutcome, WikiError> {
                 "INSERT INTO pages VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
                 params![
                     meta.id,
-                    meta.kind,
+                    canonical_category(&meta.kind),
                     meta.summary,
                     page.relative_path,
                     meta.status,
@@ -1896,6 +2388,84 @@ fn commit_ingest_mutation(
     result
 }
 
+fn commit_ingest_canonical(
+    raw_path: &Path,
+    raw_bytes: &[u8],
+    wiki_path: &Path,
+    wiki_bytes: &[u8],
+    snapshots: &[FileSnapshot; 2],
+) -> Result<(), WikiError> {
+    let raw_parent_existed = raw_path.parent().is_some_and(Path::exists);
+    let result = transactional(snapshots, || {
+        write_immutable(raw_path, raw_bytes)?;
+        write_atomic(wiki_path, wiki_bytes)?;
+        if cfg!(debug_assertions)
+            && env::var("HIVE_WIKI_TEST_FAIL_AFTER_CANONICAL_WRITES").as_deref() == Ok("1")
+        {
+            return Err(WikiError::Io(
+                "injected failure after canonical knowledge writes".to_owned(),
+            ));
+        }
+        Ok(())
+    });
+    if result.is_err() && !raw_parent_existed {
+        if let Some(parent) = raw_path.parent() {
+            let _ = fs::remove_dir(parent);
+        }
+    }
+    result
+}
+
+fn abort_external_after_rollback(
+    store: &store::RagStore,
+    dirty: &store::PersistentDirtyState,
+    operation_error: &WikiError,
+) -> Result<(), WikiError> {
+    store
+        .abort_external_canonical_mutation(dirty)
+        .map_err(|cleanup_error| {
+            WikiError::Io(format!(
+                "knowledge mutation failed: {operation_error}; dirty-journal cleanup failed: {cleanup_error}"
+            ))
+        })
+}
+
+fn commit_shared_suppression(
+    target: &Path,
+    store: &store::RagStore,
+    dirty: &store::PersistentDirtyState,
+    snapshot: &FileSnapshot,
+    bytes: &[u8],
+) -> Result<(), WikiError> {
+    let canonical_lock = KnowledgeLock::acquire(target)?;
+    snapshot.verify_current()?;
+    let commit = transactional(std::slice::from_ref(snapshot), || {
+        write_atomic(&target.join(SUPPRESSION_RELATIVE), bytes)?;
+        if cfg!(debug_assertions)
+            && env::var("HIVE_WIKI_TEST_FAIL_AFTER_CANONICAL_WRITES").as_deref() == Ok("1")
+        {
+            return Err(WikiError::Io(
+                "injected failure after canonical knowledge writes".to_owned(),
+            ));
+        }
+        Ok(())
+    });
+    if let Err(error) = commit {
+        drop(canonical_lock);
+        abort_external_after_rollback(store, dirty, &error)?;
+        return Err(error);
+    }
+    Ok(())
+}
+
+fn canonical_logical_digest(target: &Path) -> Result<String, WikiError> {
+    logical_digest(
+        &scan_pages(target)?,
+        &scan_raw(target)?,
+        &read_suppression(target)?,
+    )
+}
+
 fn merge_sorted_unique(target: &mut Vec<String>, existing: &[String]) {
     let mut merged: BTreeSet<String> = target.iter().cloned().collect();
     merged.extend(existing.iter().cloned());
@@ -1909,10 +2479,7 @@ fn validate_frontmatter(value: &WikiFrontmatter) -> Result<(), WikiError> {
         ));
     }
     validate_id(&value.id)?;
-    if !matches!(
-        value.kind.as_str(),
-        "source-summary" | "entity" | "concept" | "comparison" | "synthesis" | "open-question"
-    ) {
+    if canonical_category(&value.kind).is_empty() {
         return Err(WikiError::InvalidInput(format!(
             "unsupported Wiki kind: {}",
             value.kind
@@ -1957,6 +2524,30 @@ fn validate_frontmatter(value: &WikiFrontmatter) -> Result<(), WikiError> {
         validate_nonempty("contradiction source_b", &contradiction.source_b)?;
     }
     Ok(())
+}
+
+fn canonical_category(kind: &str) -> &'static str {
+    match kind {
+        "source" | "source-summary" => "source",
+        "entity" => "entity",
+        "concept" => "concept",
+        "comparison" => "comparison",
+        "synthesis" => "synthesis",
+        "question" | "open-question" => "question",
+        "decision" => "decision",
+        "workflow" => "workflow",
+        _ => "",
+    }
+}
+
+fn validate_category(category: &str) -> Result<&str, WikiError> {
+    let canonical = canonical_category(category);
+    if canonical.is_empty() {
+        return Err(WikiError::InvalidInput(format!(
+            "unsupported Wiki category: {category}"
+        )));
+    }
+    Ok(canonical)
 }
 
 fn validate_suppression_entry(entry: &SuppressionEntry) -> Result<(), WikiError> {
@@ -2193,6 +2784,7 @@ fn parse_raw_locator(locator: &str) -> Option<(&str, &str)> {
     Some((path, fingerprint))
 }
 
+#[allow(clippy::too_many_lines)]
 fn reject_likely_credentials(bytes: &[u8]) -> Result<(), WikiError> {
     let text = String::from_utf8_lossy(bytes);
     let lowered = text.to_ascii_lowercase();
@@ -2273,10 +2865,14 @@ fn reject_likely_credentials(bytes: &[u8]) -> Result<(), WikiError> {
     let private_key_block = lowered
         .lines()
         .any(|line| line.contains("-----begin ") && line.contains("private key"));
+    let natural_language_credential = lowered.lines().any(line_contains_natural_credential);
+    let opaque_secret = lowered.lines().any(line_contains_opaque_secret);
     if assigned_credential
         || whitespace_credential
         || token_prefix
         || private_key_block
+        || natural_language_credential
+        || opaque_secret
         || markers.iter().any(|marker| lowered.contains(marker))
     {
         return Err(WikiError::InvalidInput(
@@ -2284,6 +2880,294 @@ fn reject_likely_credentials(bytes: &[u8]) -> Result<(), WikiError> {
         ));
     }
     Ok(())
+}
+
+fn line_contains_opaque_secret(line: &str) -> bool {
+    let exempt_span = exact_nonsecret_opaque_span(line);
+    let mut token_start = 0;
+
+    for (index, character) in line.char_indices() {
+        if is_opaque_separator(character) {
+            if opaque_span_is_secret(line, token_start, index, exempt_span) {
+                return true;
+            }
+            token_start = index + character.len_utf8();
+        }
+    }
+
+    opaque_span_is_secret(line, token_start, line.len(), exempt_span)
+}
+
+fn is_opaque_separator(character: char) -> bool {
+    character.is_whitespace()
+        || matches!(
+            character,
+            '"' | '\'' | '`' | ',' | ';' | '(' | ')' | '[' | ']' | ':'
+        )
+}
+
+fn opaque_span_is_secret(
+    line: &str,
+    start: usize,
+    end: usize,
+    exempt_span: Option<(usize, usize)>,
+) -> bool {
+    if start >= end
+        || exempt_span
+            .is_some_and(|(exempt_start, exempt_end)| start >= exempt_start && end <= exempt_end)
+        || is_recognized_public_identifier_span(line, start, end)
+    {
+        return false;
+    }
+
+    suspicious_opaque_secret(&line[start..end])
+}
+
+fn is_recognized_public_identifier_span(line: &str, start: usize, end: usize) -> bool {
+    let candidate = &line[start..end];
+    let prefix = &line[..start];
+    (candidate.len() == 64
+        && candidate.bytes().all(|byte| byte.is_ascii_hexdigit())
+        && (prefix.ends_with("sha256:") || prefix.ends_with("sha-256:")))
+        || (candidate.len() == 40
+            && candidate.bytes().all(|byte| byte.is_ascii_hexdigit())
+            && prefix.ends_with("git:"))
+}
+
+fn exact_nonsecret_opaque_span(line: &str) -> Option<(usize, usize)> {
+    let colon = line.find(':');
+    let equals = line.find('=');
+    let separator = match (colon, equals) {
+        (Some(colon), Some(equals)) => colon.min(equals),
+        (Some(index), None) | (None, Some(index)) => index,
+        (None, None) => return None,
+    };
+    let (raw_key, raw_value) = line.split_at(separator);
+    let key = raw_key
+        .trim()
+        .trim_matches(|character: char| matches!(character, '"' | '\'' | '`' | '-' | '{' | '['))
+        .trim();
+    let raw_value = raw_value.get(1..)?;
+    let leading_whitespace = raw_value.len() - raw_value.trim_start().len();
+    let token_start = separator + 1 + leading_whitespace;
+    let raw_token = raw_value.split_whitespace().next()?;
+    let value = normalized_opaque_token(raw_token);
+    if value.is_empty() {
+        return None;
+    }
+    let value_start = token_start + raw_token.find(value)?;
+    let value_end = value_start + value.len();
+    let identifier_context = matches!(
+        key,
+        "id" | "locator"
+            | "source"
+            | "sources"
+            | "supersedes"
+            | "replacement"
+            | "project_pseudonym"
+    ) || key.ends_with("_id");
+    let digest_context = matches!(
+        key,
+        "sha256"
+            | "sha-256"
+            | "digest"
+            | "checksum"
+            | "content hash"
+            | "content_hash"
+            | "다이제스트"
+            | "체크섬"
+            | "콘텐츠 해시"
+    ) || key.ends_with("_digest")
+        || key.ends_with("_checksum");
+    let fingerprint_context = matches!(
+        key,
+        "fingerprint" | "content fingerprint" | "content_fingerprint" | "지문" | "콘텐츠 지문"
+    ) || key.ends_with("_fingerprint");
+    if identifier_context
+        || (digest_context && is_exact_sha256_value(value))
+        || (fingerprint_context && is_public_fingerprint_value(value))
+    {
+        Some((value_start, value_end))
+    } else {
+        None
+    }
+}
+
+fn normalized_opaque_token(value: &str) -> &str {
+    value.trim_matches(|character: char| {
+        matches!(
+            character,
+            '"' | '\'' | '`' | ',' | ';' | '.' | ':' | '(' | ')' | '[' | ']' | '{' | '}'
+        )
+    })
+}
+
+fn is_exact_sha256_value(value: &str) -> bool {
+    let hex = value
+        .strip_prefix("sha256:")
+        .or_else(|| value.strip_prefix("sha-256:"))
+        .unwrap_or(value);
+    hex.len() == 64 && hex.bytes().all(|byte| byte.is_ascii_hexdigit())
+}
+
+fn is_public_fingerprint_value(value: &str) -> bool {
+    if is_exact_sha256_value(value) {
+        return true;
+    }
+    let candidate = value
+        .strip_prefix("sha256:")
+        .or_else(|| value.strip_prefix("sha-256:"))
+        .unwrap_or(value);
+    (24..=128).contains(&candidate.len())
+        && candidate.bytes().all(|byte| {
+            byte.is_ascii_alphanumeric() || matches!(byte, b'+' | b'/' | b'_' | b'-' | b'=')
+        })
+        && candidate.bytes().any(|byte| byte.is_ascii_alphabetic())
+        && candidate.bytes().any(|byte| byte.is_ascii_digit())
+}
+
+fn line_contains_natural_credential(line: &str) -> bool {
+    const CONTEXTS: &[&str] = &[
+        "api key",
+        "api-key",
+        "api_key",
+        "access token",
+        "access-token",
+        "access_token",
+        "auth token",
+        "auth-token",
+        "auth_token",
+        "client secret",
+        "client-secret",
+        "client_secret",
+        "private key",
+        "private-key",
+        "private_key",
+        "password",
+        "passphrase",
+        "credential",
+        "secret",
+        "api 키",
+        "접근 토큰",
+        "액세스 토큰",
+        "인증 토큰",
+        "클라이언트 비밀",
+        "비밀 키",
+        "개인 키",
+        "비밀번호",
+        "암호",
+        "암호문구",
+        "자격 증명",
+        "자격증명",
+    ];
+    CONTEXTS.iter().any(|context| {
+        let mut offset = 0;
+        while let Some(relative_index) = line.get(offset..).and_then(|text| text.find(context)) {
+            let context_end = offset + relative_index + context.len();
+            if line
+                .get(context_end..)
+                .and_then(natural_credential_value)
+                .is_some_and(suspicious_natural_secret)
+            {
+                return true;
+            }
+            offset = context_end;
+        }
+        false
+    })
+}
+
+fn natural_credential_value(remainder: &str) -> Option<&str> {
+    let mut remainder = remainder.trim_start();
+    remainder = remainder.trim_start_matches(['은', '는', '이', '가', '을', '를']);
+    remainder = remainder.trim_start();
+    for qualifier in [
+        "digest",
+        "hash",
+        "fingerprint",
+        "다이제스트",
+        "해시",
+        "지문",
+    ] {
+        if let Some(value) = remainder.strip_prefix(qualifier) {
+            if value.starts_with(|character: char| {
+                character.is_whitespace() || matches!(character, ':' | '=')
+            }) {
+                remainder = value.trim_start();
+                break;
+            }
+        }
+    }
+    for connector in ["is ", "was ", "equals ", "=", ":"] {
+        if let Some(value) = remainder.strip_prefix(connector) {
+            return Some(value.trim());
+        }
+    }
+    None
+}
+
+fn suspicious_natural_secret(value: &str) -> bool {
+    let candidate = value
+        .split_whitespace()
+        .next()
+        .unwrap_or_default()
+        .trim_matches(|character: char| {
+            matches!(
+                character,
+                '"' | '\'' | '`' | ',' | ';' | '.' | '(' | ')' | '[' | ']'
+            )
+        });
+    if !suspicious_secret(candidate) {
+        return false;
+    }
+    suspicious_opaque_secret(candidate)
+        || (candidate.len() >= 8
+            && candidate.bytes().any(|byte| byte.is_ascii_alphabetic())
+            && (candidate.bytes().any(|byte| byte.is_ascii_digit())
+                || candidate.matches('-').count() >= 2))
+}
+
+fn suspicious_opaque_secret(value: &str) -> bool {
+    let candidate = value.trim_matches(|character: char| {
+        matches!(
+            character,
+            '"' | '\'' | '`' | ',' | ';' | '.' | ':' | '(' | ')' | '[' | ']' | '{' | '}'
+        )
+    });
+    if !suspicious_secret(candidate)
+        || candidate.len() < 24
+        || ["claim-", "document-", "collection-", "project-", "shared-"]
+            .iter()
+            .any(|prefix| candidate.starts_with(prefix))
+    {
+        return false;
+    }
+    let unique = candidate.bytes().collect::<BTreeSet<_>>().len();
+    if candidate.bytes().all(|byte| byte.is_ascii_hexdigit()) {
+        return candidate.len() >= 32 && unique >= 8;
+    }
+    let base64_alphabet = candidate.bytes().all(|byte| {
+        byte.is_ascii_alphanumeric() || matches!(byte, b'+' | b'/' | b'_' | b'-' | b'=')
+    });
+    let has_alpha = candidate.bytes().any(|byte| byte.is_ascii_alphabetic());
+    let has_digit = candidate.bytes().any(|byte| byte.is_ascii_digit());
+    base64_alphabet && has_alpha && has_digit && unique >= 12 && byte_entropy(candidate) >= 3.85
+}
+
+fn byte_entropy(value: &str) -> f64 {
+    let mut counts = [0_u16; 256];
+    for byte in value.bytes() {
+        counts[usize::from(byte)] = counts[usize::from(byte)].saturating_add(1);
+    }
+    let length = f64::from(u32::try_from(value.len()).unwrap_or(u32::MAX));
+    counts
+        .into_iter()
+        .filter(|count| *count != 0)
+        .map(|count| {
+            let probability = f64::from(count) / length;
+            -probability * probability.log2()
+        })
+        .sum()
 }
 
 fn credential_assignment_value<'a>(line: &'a str, name: &str) -> Option<&'a str> {
@@ -2330,7 +3214,13 @@ fn suspicious_secret(value: &str) -> bool {
             | "placeholder"
             | "<placeholder>"
             | "your-api-key"
+            | "your-token-here"
+            | "dummy"
             | "changeme"
+            | "삭제됨"
+            | "[삭제됨]"
+            | "<삭제됨>"
+            | "마스킹"
     );
     if normalized.is_empty()
         || (normalized.starts_with("${") && normalized.ends_with('}'))
@@ -2543,6 +3433,75 @@ fn open_capability_file_nofollow(parent: &Dir, name: &OsStr) -> io::Result<cap_s
     parent.open_with(name, &options)
 }
 
+fn managed_file_maximum(relative: &Path) -> u64 {
+    if relative == Path::new(INDEX_RELATIVE) {
+        MAX_DERIVED_INDEX_BYTES
+    } else if relative.starts_with(Path::new(RAW_RELATIVE)) {
+        u64::try_from(MAX_RAW_BYTES).expect("Raw byte limit fits u64")
+    } else if relative.starts_with(Path::new(WIKI_RELATIVE)) {
+        MAX_WIKI_PAGE_BYTES
+    } else {
+        MAX_CANONICAL_CONTROL_BYTES
+    }
+}
+
+fn read_capability_file_bounded(
+    parent: &Dir,
+    name: &OsStr,
+    relative: &Path,
+    preflight: &cap_std::fs::Metadata,
+    maximum: u64,
+) -> Result<(Vec<u8>, cap_std::fs::Metadata), WikiError> {
+    if preflight.len() > maximum {
+        return Err(WikiError::Conflict(format!(
+            "managed knowledge file exceeds its bounded read limit: {}",
+            relative.display()
+        )));
+    }
+    let mut file = open_capability_file_nofollow(parent, name).map_err(|error| {
+        WikiError::Io(format!(
+            "cannot open managed knowledge file no-follow {}: {error}",
+            relative.display()
+        ))
+    })?;
+    let opened = file.metadata().map_err(|error| {
+        WikiError::Io(format!(
+            "cannot inspect opened managed knowledge file {}: {error}",
+            relative.display()
+        ))
+    })?;
+    if !opened.is_file()
+        || opened.len() > maximum
+        || (CapMetadataExt::dev(&opened), CapMetadataExt::ino(&opened))
+            != (
+                CapMetadataExt::dev(preflight),
+                CapMetadataExt::ino(preflight),
+            )
+    {
+        return Err(WikiError::Conflict(format!(
+            "managed knowledge file changed during bounded no-follow open: {}",
+            relative.display()
+        )));
+    }
+    let mut bytes = Vec::with_capacity(usize::try_from(opened.len()).unwrap_or(0));
+    Read::by_ref(&mut file)
+        .take(maximum.saturating_add(1))
+        .read_to_end(&mut bytes)
+        .map_err(|error| {
+            WikiError::Io(format!(
+                "cannot read managed knowledge file {}: {error}",
+                relative.display()
+            ))
+        })?;
+    if bytes.len() as u64 != opened.len() || bytes.len() as u64 > maximum {
+        return Err(WikiError::Conflict(format!(
+            "managed knowledge file changed during bounded read: {}",
+            relative.display()
+        )));
+    }
+    Ok((bytes, opened))
+}
+
 fn read_capability_optional(root: &Dir, relative: &Path) -> Result<Option<Vec<u8>>, WikiError> {
     let Some((parent, name)) = capability_parent(root, relative, false)? else {
         return Ok(None);
@@ -2554,19 +3513,13 @@ fn read_capability_optional(root: &Dir, relative: &Path) -> Result<Option<Vec<u8
             relative.display()
         ))),
         Ok(metadata) if metadata.is_file() => {
-            let mut file = open_capability_file_nofollow(&parent, &name).map_err(|error| {
-                WikiError::Io(format!(
-                    "cannot open managed knowledge file no-follow {}: {error}",
-                    relative.display()
-                ))
-            })?;
-            let mut bytes = Vec::new();
-            file.read_to_end(&mut bytes).map_err(|error| {
-                WikiError::Io(format!(
-                    "cannot read managed knowledge file {}: {error}",
-                    relative.display()
-                ))
-            })?;
+            let (bytes, _) = read_capability_file_bounded(
+                &parent,
+                &name,
+                relative,
+                &metadata,
+                managed_file_maximum(relative),
+            )?;
             Ok(Some(bytes))
         }
         Ok(_) => Err(WikiError::Conflict(format!(
@@ -2625,12 +3578,14 @@ fn scan_pages_capability(root: &Dir) -> Result<BTreeMap<String, WikiPage>, WikiE
         {
             continue;
         }
-        let mut file = open_capability_file_nofollow(&wiki, &name)
-            .map_err(|error| WikiError::Io(format!("cannot open Wiki page: {error}")))?;
-        let mut bytes = Vec::new();
-        file.read_to_end(&mut bytes)
-            .map_err(|error| WikiError::Io(format!("cannot read Wiki page: {error}")))?;
         let relative = format!("{WIKI_RELATIVE}/{}", path.to_string_lossy());
+        let (bytes, _) = read_capability_file_bounded(
+            &wiki,
+            &name,
+            Path::new(&relative),
+            &metadata,
+            MAX_WIKI_PAGE_BYTES,
+        )?;
         reject_likely_credentials(&bytes).map_err(|error| {
             WikiError::Verification(format!(
                 "canonical Wiki page contains likely sensitive material at {relative}: {error}"
@@ -2852,7 +3807,11 @@ enum CapabilityFileState {
     },
 }
 
-fn capability_file_state(root: &Dir, relative: &Path) -> Result<CapabilityFileState, WikiError> {
+fn capability_file_state_bounded(
+    root: &Dir,
+    relative: &Path,
+    maximum: u64,
+) -> Result<CapabilityFileState, WikiError> {
     let Some((parent, name)) = capability_parent(root, relative, false)? else {
         return Ok(CapabilityFileState::Missing);
     };
@@ -2863,28 +3822,9 @@ fn capability_file_state(root: &Dir, relative: &Path) -> Result<CapabilityFileSt
             relative.display()
         ))),
         Ok(metadata) if metadata.is_file() => {
-            let mut file = open_capability_file_nofollow(&parent, &name).map_err(|error| {
-                WikiError::Io(format!(
-                    "cannot open managed knowledge file {}: {error}",
-                    relative.display()
-                ))
-            })?;
-            let mut bytes = Vec::new();
-            file.read_to_end(&mut bytes).map_err(|error| {
-                WikiError::Io(format!(
-                    "cannot read managed knowledge file {}: {error}",
-                    relative.display()
-                ))
-            })?;
-            let permissions = file
-                .metadata()
-                .map_err(|error| {
-                    WikiError::Io(format!(
-                        "cannot inspect managed knowledge mode {}: {error}",
-                        relative.display()
-                    ))
-                })?
-                .permissions();
+            let (bytes, opened) =
+                read_capability_file_bounded(&parent, &name, relative, &metadata, maximum)?;
+            let permissions = opened.permissions();
             Ok(CapabilityFileState::File {
                 bytes,
                 mode: CapabilityFileMode {
@@ -2901,6 +3841,10 @@ fn capability_file_state(root: &Dir, relative: &Path) -> Result<CapabilityFileSt
     }
 }
 
+fn capability_file_state(root: &Dir, relative: &Path) -> Result<CapabilityFileState, WikiError> {
+    capability_file_state_bounded(root, relative, managed_file_maximum(relative))
+}
+
 struct CapabilityFileSnapshot {
     relative: PathBuf,
     original: CapabilityFileState,
@@ -2908,6 +3852,7 @@ struct CapabilityFileSnapshot {
     original_claim: Option<PathBuf>,
     disposable_claims: Vec<PathBuf>,
     modified: bool,
+    maximum: u64,
 }
 
 impl CapabilityFileSnapshot {
@@ -2920,7 +3865,26 @@ impl CapabilityFileSnapshot {
             original_claim: None,
             disposable_claims: Vec::new(),
             modified: false,
+            maximum: managed_file_maximum(relative),
         })
+    }
+
+    fn verify_current(&self, root: &Dir) -> Result<(), WikiError> {
+        if capability_file_state(root, &self.relative)? == self.current {
+            Ok(())
+        } else {
+            Err(WikiError::Conflict(format!(
+                "canonical path changed after planning: {}",
+                self.relative.display()
+            )))
+        }
+    }
+
+    fn would_install(&self, bytes: &[u8]) -> bool {
+        match &self.current {
+            CapabilityFileState::Missing => true,
+            CapabilityFileState::File { bytes: current, .. } => current != bytes,
+        }
     }
 
     fn claim_current(&mut self, root: &Dir) -> Result<PathBuf, WikiError> {
@@ -2944,7 +3908,7 @@ impl CapabilityFileSnapshot {
             .parent()
             .unwrap_or_else(|| Path::new(""))
             .join(&claim_name);
-        let claimed = capability_file_state(root, &claim_relative)?;
+        let claimed = capability_file_state_bounded(root, &claim_relative, self.maximum)?;
         if claimed != self.current {
             let restored = parent.hard_link(&claim_name, &parent, &name).is_ok();
             if restored {
@@ -2990,7 +3954,7 @@ impl CapabilityFileSnapshot {
             .parent()
             .unwrap_or_else(|| Path::new(""))
             .join(&temporary_name);
-        let installed = capability_file_state(root, &temporary_relative)?;
+        let installed = capability_file_state_bounded(root, &temporary_relative, self.maximum)?;
         if !matches!(self.current, CapabilityFileState::Missing) {
             if let Err(error) = self.claim_current(root) {
                 let _ = parent.remove_file(&temporary_name);
@@ -3127,6 +4091,13 @@ impl CapabilityFileSnapshot {
                 let _ = parent.remove_file(name);
             }
         }
+    }
+
+    fn transient_claim_paths(&self) -> impl Iterator<Item = &Path> {
+        self.original_claim
+            .iter()
+            .chain(self.disposable_claims.iter())
+            .map(PathBuf::as_path)
     }
 }
 
@@ -3278,6 +4249,45 @@ fn commit_promotion_mutation(
     result
 }
 
+fn commit_promotion_canonical(
+    root: &PinnedRoot,
+    snapshots: &mut [CapabilityFileSnapshot],
+    raw_bytes: &[u8],
+    wiki_bytes: &[u8],
+) -> Result<(), WikiError> {
+    let raw_parent = snapshots[0]
+        .relative
+        .parent()
+        .ok_or_else(|| WikiError::Io("promotion Raw path has no parent".to_owned()))?
+        .to_path_buf();
+    let raw_parent_existed = capability_directory_exists(&root.dir, &raw_parent)?;
+    let result = transactional_capability(&root.dir, snapshots, |snapshots| {
+        snapshots[0].write_immutable(&root.dir, raw_bytes)?;
+        snapshots[1].install_staged(&root.dir, wiki_bytes)?;
+        if cfg!(debug_assertions)
+            && env::var("HIVE_WIKI_TEST_FAIL_AFTER_CANONICAL_WRITES").as_deref() == Ok("1")
+        {
+            return Err(WikiError::Io(
+                "injected failure after canonical knowledge writes".to_owned(),
+            ));
+        }
+        Ok(())
+    });
+    if result.is_err() && !raw_parent_existed {
+        remove_capability_empty_directory(&root.dir, &raw_parent)?;
+    }
+    result
+}
+
+fn canonical_logical_digest_capability(root: &Dir) -> Result<String, WikiError> {
+    logical_digest(
+        &scan_pages_capability(root)?,
+        &scan_raw_capability(root)?,
+        &read_suppression_capability(root)?,
+    )
+}
+
+#[derive(Clone, Eq, PartialEq)]
 enum FileState {
     Missing,
     File(Vec<u8>),
@@ -3311,6 +4321,24 @@ impl FileSnapshot {
                 "cannot inspect managed knowledge path {}: {error}",
                 path.display()
             ))),
+        }
+    }
+
+    fn verify_current(&self) -> Result<(), WikiError> {
+        if Self::capture(&self.path)?.state == self.state {
+            Ok(())
+        } else {
+            Err(WikiError::Conflict(format!(
+                "canonical path changed after planning: {}",
+                self.path.display()
+            )))
+        }
+    }
+
+    fn would_write(&self, bytes: &[u8]) -> bool {
+        match &self.state {
+            FileState::Missing => true,
+            FileState::File(current) => current != bytes,
         }
     }
 
@@ -3469,7 +4497,15 @@ struct CapabilityKnowledgeLock {
 
 impl CapabilityKnowledgeLock {
     fn acquire(root: &Dir) -> Result<Self, WikiError> {
-        let (index, name) = capability_parent(root, Path::new(LOCK_RELATIVE), true)?
+        Self::acquire_at(root, Path::new(LOCK_RELATIVE))
+    }
+
+    fn acquire_shared_operation(root: &Dir) -> Result<Self, WikiError> {
+        Self::acquire_at(root, Path::new(SHARED_OPERATION_LOCK_RELATIVE))
+    }
+
+    fn acquire_at(root: &Dir, relative: &Path) -> Result<Self, WikiError> {
+        let (index, name) = capability_parent(root, relative, true)?
             .ok_or_else(|| WikiError::Io("lock directory disappeared".to_owned()))?;
         let started = Instant::now();
         loop {
@@ -3609,6 +4645,49 @@ mod tests {
     }
 
     #[test]
+    fn category_mapping_filter_and_reciprocal_link_report_are_deterministic() {
+        let temporary = tempfile::tempdir().unwrap();
+        let target = temporary.path().canonicalize().unwrap();
+        write_seed(&target);
+        let alpha_source = target.join("alpha-source.md");
+        let alpha_draft = target.join("alpha-draft.md");
+        fs::write(&alpha_source, "Alpha source").unwrap();
+        fs::write(
+            &alpha_draft,
+            draft("alpha", "Alpha body links to [[beta]].")
+                .replace("kind: concept", "kind: source-summary"),
+        )
+        .unwrap();
+        ingest(&target, &alpha_source, &alpha_draft).unwrap();
+
+        let beta_source = target.join("beta-source.md");
+        let beta_draft = target.join("beta-draft.md");
+        fs::write(&beta_source, "Beta source").unwrap();
+        fs::write(&beta_draft, draft("beta", "Beta body has no backlink.")).unwrap();
+        ingest(&target, &beta_source, &beta_draft).unwrap();
+
+        let source_hits = query_filtered(&target, None, None, Some("source"), 10).unwrap();
+        assert_eq!(source_hits.len(), 1);
+        assert_eq!(source_hits[0].id, "alpha");
+        assert_eq!(source_hits[0].kind, "source");
+        let concept_hits = list_pages(&target, None, Some("concept"), 10).unwrap();
+        assert_eq!(
+            concept_hits
+                .iter()
+                .map(|hit| hit.id.as_str())
+                .collect::<Vec<_>>(),
+            vec!["beta"]
+        );
+
+        let alpha = read_page(&target, "alpha").unwrap();
+        assert_eq!(alpha.outgoing_links, vec!["beta"]);
+        assert!(alpha.backlinks.is_empty());
+        assert_eq!(alpha.nonreciprocal_links, vec!["beta"]);
+        let beta = read_page(&target, "beta").unwrap();
+        assert_eq!(beta.backlinks, vec!["alpha"]);
+    }
+
+    #[test]
     fn suppression_contract_has_no_body_field() {
         let entry = SuppressionEntry {
             fingerprint: format!("sha256:{}", "0".repeat(64)),
@@ -3627,6 +4706,82 @@ mod tests {
         assert!(validate_timestamp("2026-02-29T00:00:00Z").is_err());
         assert!(validate_timestamp("2024-02-29T23:59:59Z").is_ok());
         assert!(validate_timestamp("2026-07-24T24:00:00Z").is_err());
+    }
+
+    #[test]
+    fn credential_detector_covers_natural_language_and_opaque_values() {
+        for text in [
+            "The deployment password is A7qP9mZ2-vK4sT8n-rL6wX3c.\n",
+            "배포 비밀번호는 A7qP9mZ2vK4sT8nR6wX3cQ5b 입니다.\n",
+            "opaque: 9f8a7b6c5d4e3f2019283746abcdef01\n",
+            "opaque: QWxwaGE5QmV0YTJHYW1tYTdEZWx0YTQ=\n",
+        ] {
+            assert!(
+                reject_likely_credentials(text.as_bytes()).is_err(),
+                "{text}"
+            );
+        }
+        for text in [
+            "password is <redacted>\n",
+            "비밀번호는 [삭제됨]\n",
+            "sha256:9f8a7b6c5d4e3f2019283746abcdef019f8a7b6c5d4e3f2019283746abcdef01\n",
+            "content fingerprint = QWxwaGE5QmV0YTJHYW1tYTdEZWx0YTQ=\n",
+        ] {
+            assert!(reject_likely_credentials(text.as_bytes()).is_ok(), "{text}");
+        }
+    }
+
+    #[test]
+    fn credential_detector_scans_every_value_on_digest_lines() {
+        const DIGEST_HEX: &str = "9f8a7b6c5d4e3f2019283746abcdef019f8a7b6c5d4e3f2019283746abcdef01";
+        const PUBLIC_FINGERPRINT: &str = "QWxwaGE5QmV0YTJHYW1tYTdEZWx0YTQ=";
+        const OPAQUE_SECRET: &str = "A7qP9mZ2vK4sT8nR6wX3cQ5b";
+        for text in [
+            format!("content digest: sha256:{DIGEST_HEX}; password digest: {OPAQUE_SECRET}\n"),
+            format!("콘텐츠 해시: sha256:{DIGEST_HEX}; 비밀번호 다이제스트: {OPAQUE_SECRET}\n"),
+            format!("content fingerprint = {PUBLIC_FINGERPRINT}; opaque: {OPAQUE_SECRET}\n"),
+            format!("digest: sha256:{DIGEST_HEX}:{OPAQUE_SECRET}\n"),
+            format!("password digest: sha256:{DIGEST_HEX}\n"),
+            format!("비밀번호 해시: sha256:{DIGEST_HEX}\n"),
+            format!("api key is <redacted>; password digest: sha256:{DIGEST_HEX}\n"),
+            format!("API 키는 [삭제됨]; 비밀번호 해시: sha256:{DIGEST_HEX}\n"),
+            format!("password digest: {PUBLIC_FINGERPRINT}\n"),
+            format!("비밀번호 지문: {PUBLIC_FINGERPRINT}\n"),
+        ] {
+            assert!(
+                reject_likely_credentials(text.as_bytes()).is_err(),
+                "{text}"
+            );
+        }
+        for text in [
+            format!("sha256:{DIGEST_HEX}\n"),
+            format!("digest: {DIGEST_HEX}\n"),
+            format!("content_digest: sha256:{DIGEST_HEX}\n"),
+            format!("content fingerprint = {PUBLIC_FINGERPRINT}\n"),
+            format!("content fingerprint = {PUBLIC_FINGERPRINT}; password is <redacted>\n"),
+            format!("콘텐츠 해시: sha256:{DIGEST_HEX}; 비밀번호는 [삭제됨]\n"),
+            "reviewed_revision: git:0123456789abcdef0123456789abcdef01234567\n".to_owned(),
+            format!("- repo:docs/source.md#sha256:{DIGEST_HEX}\n"),
+        ] {
+            assert!(reject_likely_credentials(text.as_bytes()).is_ok(), "{text}");
+        }
+    }
+
+    #[test]
+    fn capability_file_state_rejects_oversized_sparse_index_before_read() {
+        let temporary = tempfile::tempdir().unwrap();
+        fs::create_dir_all(temporary.path().join(".hive/index")).unwrap();
+        let index = temporary.path().join(INDEX_RELATIVE);
+        fs::File::create(&index)
+            .unwrap()
+            .set_len(MAX_DERIVED_INDEX_BYTES + 1)
+            .unwrap();
+        let root = Dir::open_ambient_dir(temporary.path(), ambient_authority()).unwrap();
+        let Err(error) = capability_file_state(&root, Path::new(INDEX_RELATIVE)) else {
+            panic!("oversized index was accepted");
+        };
+        assert!(matches!(error, WikiError::Conflict(_)));
+        assert!(error.to_string().contains("bounded read limit"));
     }
 
     fn promotion_fixture() -> (tempfile::TempDir, PathBuf, PathBuf) {
@@ -3710,6 +4865,48 @@ user_store_binding: {binding}\n"
                 .unwrap();
         assert!(!page.contains("stable-example"));
         assert!(!page.contains(project.to_string_lossy().as_ref()));
+    }
+
+    #[test]
+    fn shared_promotion_keeps_rag_bytes_until_the_dirty_recovery_rebuild() {
+        let (_temporary, project, user_root) = promotion_fixture();
+        let store = store::RagStore::open(&user_root).unwrap();
+        store.ensure_registry().unwrap();
+        let index = user_root.join(INDEX_RELATIVE);
+        let index_before = fs::read(&index).unwrap();
+
+        let applied = promote_shared(
+            &project,
+            &user_root,
+            "preference-page",
+            PromotionCategory::Preference,
+            PromotionMode::Apply,
+        )
+        .unwrap();
+
+        assert!(applied.applied);
+        assert_eq!(fs::read(&index).unwrap(), index_before);
+        assert!(user_root.join(store::RAG_DIRTY_RELATIVE).is_file());
+        assert!(!user_root.join(STALE_RELATIVE).exists());
+        assert!(matches!(
+            store.validate_current(),
+            Err(WikiError::Verification(_))
+        ));
+
+        store.rebuild().unwrap();
+
+        assert!(!user_root.join(store::RAG_DIRTY_RELATIVE).exists());
+        store.validate_current().unwrap();
+        let hits = store
+            .query_wiki_pages(&rag::WikiPageQueryRequest {
+                current_project_id: None,
+                text: Some("reversible".to_owned()),
+                tag: None,
+                category: None,
+                limit: 10,
+            })
+            .unwrap();
+        assert_eq!(hits.len(), 1);
     }
 
     #[test]

@@ -8,7 +8,7 @@
       "surface": "cli",
       "detection": "available",
       "external_runtime": "omx",
-      "resolved_owner": "host-native",
+      "resolved_owner": "omc",
       "capabilities": {
         "instructions": "supported",
         "simple-question-isolation": "supported",

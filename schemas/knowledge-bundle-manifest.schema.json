@@ -1,0 +1,115 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/gvm1229/aigent-hive/schemas/knowledge-bundle-manifest.schema.json",
+  "title": "Aigent Hive portable knowledge bundle manifest",
+  "description": "Canonical manifest for a bounded .hivekb archive. Only portable canonical classifications may enter a bundle.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "source", "scope", "entries"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "source": { "$ref": "#/$defs/source" },
+    "scope": { "$ref": "#/$defs/scope" },
+    "entries": {
+      "type": "array",
+      "maxItems": 10000,
+      "uniqueItems": true,
+      "x-order": "strict-ascii-path",
+      "x-uniqueBy": "ascii-casefold-path",
+      "items": { "$ref": "#/$defs/entry" }
+    }
+  },
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "identity": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "id", "logical_digest"],
+      "properties": {
+        "kind": { "enum": ["user-root", "project", "collection"] },
+        "id": { "$ref": "#/$defs/identity" },
+        "logical_digest": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "scope": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind"],
+          "properties": { "kind": { "const": "global" } }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind"],
+          "properties": { "kind": { "const": "shared" } }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind"],
+          "properties": { "kind": { "const": "all-portable" } }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "id"],
+          "properties": {
+            "kind": { "const": "project" },
+            "id": { "$ref": "#/$defs/identity" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "id"],
+          "properties": {
+            "kind": { "const": "collection" },
+            "id": { "$ref": "#/$defs/identity" }
+          }
+        }
+      ]
+    },
+    "archive_path": {
+      "type": "string",
+      "minLength": 6,
+      "maxLength": 240,
+      "pattern": "^data/(?!\\.{1,2}(?:/|$))(?!.*\\/\\.{1,2}(?:/|$))(?![^/]*\\.(?:/|$))(?!.*\\/[^/]*\\.(?:/|$))[A-Za-z0-9._-]+(?:/[A-Za-z0-9._-]+)*$",
+      "not": {
+        "pattern": "(?:^|/)(?:[Cc][Oo][Nn]|[Pp][Rr][Nn]|[Aa][Uu][Xx]|[Nn][Uu][Ll]|[Cc][Oo][Mm][1-9]|[Ll][Pp][Tt][1-9])(?:\\.[^/]*)?(?:/|$)"
+      }
+    },
+    "entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "length", "sha256", "classification"],
+      "properties": {
+        "path": { "$ref": "#/$defs/archive_path" },
+        "length": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 8388608
+        },
+        "sha256": { "$ref": "#/$defs/sha256" },
+        "classification": {
+          "enum": [
+            "canonical-markdown",
+            "portable-metadata",
+            "suppression",
+            "provenance"
+          ]
+        }
+      }
+    }
+  }
+}

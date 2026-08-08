@@ -1,0 +1,396 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/gvm1229/aigent-hive/schemas/knowledge-scan-result.schema.json",
+  "title": "Aigent Hive directory knowledge scan result",
+  "description": "Inner data for the inventory, reviewed-candidates, and canonical apply phases. Scan receipts contain metadata and digests, never file content.",
+  "oneOf": [
+    { "$ref": "#/$defs/inventory_result" },
+    { "$ref": "#/$defs/candidates_result" },
+    { "$ref": "#/$defs/apply_result" }
+  ],
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "collection_id": {
+      "type": "string",
+      "pattern": "^(?:user-root|collection-[0-9a-f]{64})$"
+    },
+    "portable_path": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4096,
+      "pattern": "^(?!/)(?![A-Za-z]:)(?!.*\\\\)(?!.*:)(?!\\.{1,2}(?:/|$))(?!.*\\/\\.{1,2}(?:/|$))(?!.*//)(?!.*[\\u0000-\\u001f\\u007f])[^/]+(?:/[^/]+)*$"
+    },
+    "absolute_path": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 32768,
+      "pattern": "^(?:[A-Za-z]:[\\\\/]|/|\\\\\\\\).+$"
+    },
+    "scan_entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "relative_path",
+        "content_digest",
+        "byte_len",
+        "tracked",
+        "decision",
+        "reason"
+      ],
+      "properties": {
+        "relative_path": { "$ref": "#/$defs/portable_path" },
+        "content_digest": {
+          "oneOf": [{ "$ref": "#/$defs/sha256" }, { "type": "null" }]
+        },
+        "byte_len": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "tracked": { "type": "boolean" },
+        "decision": { "enum": ["included", "skipped"] },
+        "reason": {
+          "enum": [
+            "project-document",
+            "test-evidence",
+            "dependency-manifest",
+            "configuration",
+            "source-evidence",
+            "symlink",
+            "special-file",
+            "untracked-not-requested",
+            "generated-vendor-runtime-path",
+            "secret-candidate-path",
+            "license-text",
+            "non-git-not-allowlisted",
+            "unsupported-file-type",
+            "file-byte-budget",
+            "file-count-budget",
+            "total-byte-budget",
+            "binary-or-non-utf8",
+            "secret-candidate-content"
+          ]
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "decision": { "const": "included" } },
+            "required": ["decision"]
+          },
+          "then": {
+            "properties": {
+              "content_digest": { "$ref": "#/$defs/sha256" },
+              "byte_len": { "maximum": 2097152 },
+              "reason": {
+                "enum": [
+                  "project-document",
+                  "test-evidence",
+                  "dependency-manifest",
+                  "configuration",
+                  "source-evidence"
+                ]
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "content_digest": { "type": "null" },
+              "reason": {
+                "enum": [
+                  "symlink",
+                  "special-file",
+                  "untracked-not-requested",
+                  "generated-vendor-runtime-path",
+                  "secret-candidate-path",
+                  "license-text",
+                  "non-git-not-allowlisted",
+                  "unsupported-file-type",
+                  "file-byte-budget",
+                  "file-count-budget",
+                  "total-byte-budget",
+                  "binary-or-non-utf8",
+                  "secret-candidate-content"
+                ]
+              }
+            }
+          }
+        }
+      ]
+    },
+    "scan_inventory": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "root_kind",
+        "include_untracked",
+        "included_count",
+        "skipped_count",
+        "included_bytes",
+        "entries",
+        "inventory_digest",
+        "unchanged"
+      ],
+      "properties": {
+        "schema_version": { "const": 1 },
+        "root_kind": { "enum": ["git", "non-git"] },
+        "include_untracked": { "type": "boolean" },
+        "included_count": { "type": "integer", "minimum": 0, "maximum": 2000 },
+        "skipped_count": { "type": "integer", "minimum": 0, "maximum": 10000 },
+        "included_bytes": { "type": "integer", "minimum": 0, "maximum": 33554432 },
+        "entries": {
+          "type": "array",
+          "maxItems": 10000,
+          "x-uniqueBy": "relative_path",
+          "x-countsMatch": ["included_count", "skipped_count", "included_bytes"],
+          "items": { "$ref": "#/$defs/scan_entry" }
+        },
+        "inventory_digest": { "$ref": "#/$defs/sha256" },
+        "unchanged": { "type": "boolean" }
+      }
+    },
+    "scan_delta": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["added", "changed", "removed", "renamed"],
+      "properties": {
+        "added": { "$ref": "#/$defs/path_list" },
+        "changed": { "$ref": "#/$defs/path_list" },
+        "removed": { "$ref": "#/$defs/path_list" },
+        "renamed": {
+          "type": "array",
+          "maxItems": 10000,
+          "uniqueItems": true,
+          "items": {
+            "type": "array",
+            "minItems": 2,
+            "maxItems": 2,
+            "prefixItems": [
+              { "$ref": "#/$defs/portable_path" },
+              { "$ref": "#/$defs/portable_path" }
+            ],
+            "items": false
+          }
+        }
+      }
+    },
+    "path_list": {
+      "type": "array",
+      "maxItems": 10000,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/portable_path" }
+    },
+    "scan": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["canonical_target", "inventory", "target_mutated"],
+      "properties": {
+        "canonical_target": { "$ref": "#/$defs/absolute_path" },
+        "inventory": { "$ref": "#/$defs/scan_inventory" },
+        "delta": { "$ref": "#/$defs/scan_delta" },
+        "target_mutated": { "const": false }
+      }
+    },
+    "claim_kind": {
+      "enum": [
+        "project-profile",
+        "decision",
+        "convention",
+        "preference",
+        "workflow",
+        "dependency-evidence",
+        "outcome",
+        "question"
+      ]
+    },
+    "nullable_bounded_400": {
+      "oneOf": [
+        {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 400,
+          "pattern": "^(?!\\s)(?!.*\\s$)(?!.*\\u0000)[\\s\\S]+$"
+        },
+        { "type": "null" }
+      ]
+    },
+    "claim_evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["locator", "content_digest", "kind"],
+      "properties": {
+        "locator": { "$ref": "#/$defs/portable_path" },
+        "content_digest": { "$ref": "#/$defs/sha256" },
+        "kind": {
+          "enum": ["document", "implementation", "test", "build", "user-intent"]
+        }
+      }
+    },
+    "reviewed_claim": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "claim_id",
+        "kind",
+        "statement",
+        "version",
+        "revision",
+        "applicability",
+        "evidence",
+        "agent_reviewed",
+        "global_promotion_candidate"
+      ],
+      "properties": {
+        "schema_version": { "const": 1 },
+        "claim_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 96,
+          "pattern": "^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$"
+        },
+        "kind": { "$ref": "#/$defs/claim_kind" },
+        "statement": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 800,
+          "pattern": "^(?!\\s)(?!.*\\s$)(?!.*[\\u0000-\\u001f\\u007f])[\\s\\S]+$"
+        },
+        "version": { "$ref": "#/$defs/nullable_bounded_400" },
+        "revision": { "$ref": "#/$defs/nullable_bounded_400" },
+        "applicability": { "$ref": "#/$defs/nullable_bounded_400" },
+        "evidence": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 16,
+          "x-uniqueBy": "locator",
+          "items": { "$ref": "#/$defs/claim_evidence" }
+        },
+        "agent_reviewed": { "const": true },
+        "global_promotion_candidate": { "type": "boolean" }
+      }
+    },
+    "validated_claims": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["inventory_digest", "collection_claims", "promotion_candidates"],
+      "properties": {
+        "inventory_digest": { "$ref": "#/$defs/sha256" },
+        "collection_claims": {
+          "type": "array",
+          "maxItems": 2000,
+          "x-uniqueBy": "claim_id",
+          "items": { "$ref": "#/$defs/reviewed_claim" }
+        },
+        "promotion_candidates": {
+          "type": "array",
+          "maxItems": 2000,
+          "uniqueItems": true,
+          "x-exactlyFlaggedBy": "collection_claims[*].global_promotion_candidate",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 96,
+            "pattern": "^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$"
+          }
+        }
+      }
+    },
+    "inventory_result": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["phase", "scan"],
+      "properties": {
+        "phase": { "const": "inventory" },
+        "scan": { "$ref": "#/$defs/scan" }
+      }
+    },
+    "candidates_result": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["phase", "scan", "validated_claims", "canonical_mutation"],
+      "properties": {
+        "phase": { "const": "candidates" },
+        "scan": { "$ref": "#/$defs/scan" },
+        "validated_claims": { "$ref": "#/$defs/validated_claims" },
+        "canonical_mutation": { "const": false }
+      }
+    },
+    "scan_collection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "collection_id",
+        "kind",
+        "state",
+        "aliases",
+        "local_locator",
+        "default_visibility"
+      ],
+      "properties": {
+        "collection_id": { "$ref": "#/$defs/collection_id" },
+        "kind": { "const": "directory" },
+        "state": { "const": "attached" },
+        "aliases": {
+          "type": "array",
+          "maxItems": 256,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "pattern": "^(?!\\s)(?!.*[\\u0000-\\u001f\\u007f]).*\\S$"
+          }
+        },
+        "local_locator": { "$ref": "#/$defs/absolute_path" },
+        "source_project_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1024
+        },
+        "default_visibility": { "const": "project-private" }
+      },
+      "not": { "required": ["source_project_id"] }
+    },
+    "store_commit": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["changed_paths", "generation", "manifest_digest"],
+      "properties": {
+        "changed_paths": { "$ref": "#/$defs/path_list" },
+        "generation": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "manifest_digest": { "$ref": "#/$defs/sha256" }
+      },
+      "x-noopWhen": "changed_paths is empty"
+    },
+    "runtime_apply_result": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "phase",
+        "scan",
+        "validated_claims",
+        "collection",
+        "store",
+        "target_mutated"
+      ],
+      "properties": {
+        "phase": { "const": "apply" },
+        "scan": { "$ref": "#/$defs/scan" },
+        "validated_claims": { "$ref": "#/$defs/validated_claims" },
+        "collection": { "$ref": "#/$defs/scan_collection" },
+        "store": { "$ref": "#/$defs/store_commit" },
+        "target_mutated": { "const": false }
+      }
+    },
+    "apply_result": { "$ref": "#/$defs/runtime_apply_result" }
+  }
+}

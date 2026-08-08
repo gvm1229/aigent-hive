@@ -2082,6 +2082,30 @@ mod tests {
             observe_surface_delta("0.6.0".parse().expect("baseline"), &baseline).expect("observed"),
             SurfaceDelta::CompatibleFix
         );
+
+        let published_path = Path::new(env!("CARGO_MANIFEST_DIR")).join(
+            "../../tests/fixtures/phase6/releases/valid-0.8.0/targets/release-surface-inventory.json",
+        );
+        let published: SurfaceInventory = parse_json(
+            &fs::read(published_path).expect("published inventory"),
+            "published inventory",
+        )
+        .expect("published inventory");
+        assert_eq!(
+            observe_surface_delta("0.8.0".parse().expect("baseline"), &published)
+                .expect("published baseline"),
+            SurfaceDelta::None
+        );
+
+        let mut next_feature = published;
+        next_feature.product_version = "0.9.0".to_owned();
+        next_feature.skills.push("hive-loop-engineering".to_owned());
+        next_feature.skills.sort();
+        assert_eq!(
+            observe_surface_delta("0.8.0".parse().expect("baseline"), &next_feature)
+                .expect("next feature"),
+            SurfaceDelta::AdditiveFeature
+        );
     }
 
     #[test]

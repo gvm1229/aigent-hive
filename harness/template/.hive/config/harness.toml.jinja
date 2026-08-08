@@ -1,6 +1,6 @@
 schema_version = 1
-harness_version = "0.8.0"
-source_release_version = "0.8.0"
+harness_version = "0.9.0"
+source_release_version = "0.9.0"
 project_name = {{ project_name | to_json }}
 project_kind = {{ project_kind | to_json }}
 primary_host = {{ primary_host | to_json }}
@@ -18,12 +18,17 @@ setup_mode = {{ setup_mode | to_json }}
 preference_provenance = {{ preference_provenance | to_json }}
 interface_language = {{ interface_language | to_json }}
 wiki_enabled = {{ wiki_enabled | to_json }}
+wiki_backend = {{ wiki_backend | to_json }}
 wiki_language = {{ wiki_language | to_json }}
 persona_id = {{ persona_id | to_json }}
 usage_guard_enabled = {{ usage_guard_enabled | to_json }}
 codexbar_fallback_enabled = {{ codexbar_fallback_enabled | to_json }}
+discord_guard_enabled = {{ discord_guard_enabled | to_json }}
+{% if discord_webhook_url_env -%}
+discord_webhook_url_env = {{ discord_webhook_url_env | to_json }}
+{% endif -%}
 selected_project_skills = {{ selected_project_skills | to_json }}
-{% if capability_resolution.detection == 'absent' and approved_fallback_hooks | length > 0 -%}
+{% if capability_resolution.detection == 'available' and capability_resolution.resolved_owner == 'host-native' and approved_fallback_hooks | length > 0 -%}
 approved_fallback_hooks_file = ".hive/config/approved-hooks.yml"
 {% endif -%}
 role_seed_file = ".hive/config/role-seeds.yml"

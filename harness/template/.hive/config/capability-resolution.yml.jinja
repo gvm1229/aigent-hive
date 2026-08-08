@@ -9,6 +9,10 @@ external_runtime: {{ capability_resolution.external_runtime | to_json }}
 resolved_owner: {{ capability_resolution.resolved_owner | to_json }}
 capabilities:
 {{ capability_resolution.capabilities | to_nice_yaml | indent(2, true) -}}
+{% if capability_resolution.hook_events is defined -%}
+hook_events:
+{{ capability_resolution.hook_events | to_nice_yaml(indent=2) | indent(2, true) -}}
+{% endif -%}
 evidence_digest: {{ capability_resolution.evidence_digest | to_json }}
 evidence:
 {{ capability_resolution.evidence | to_nice_yaml | indent(2, true) -}}

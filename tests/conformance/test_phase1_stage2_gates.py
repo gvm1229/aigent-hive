@@ -38,22 +38,27 @@ CANONICAL_VISIBLE_PATHS = (
     ".hive/team/roles/reviewer.md",
 )
 BUILTIN_SKILL_NAMES = (
-    "auto-setup-harness",
-    "hive-judge-package",
-    "hive-knowledge-capture",
-    "hive-knowledge-maintenance",
-    "hive-knowledge-promote",
-    "hive-knowledge-query",
-    "hive-migrate",
-    "hive-project-upgrade",
-    "hive-prompt-refine",
-    "hive-role-handoff",
-    "hive-run-checkpoint",
-    "hive-run-resume",
-    "hive-simple-question",
-    "hive-update",
-    "hive-usage-guard",
-    "setup-harness",
+    "clean-ai-slop",
+    "auto-setup-project",
+    "research-practices",
+    "verify-package",
+    "record-knowledge",
+    "maintain-knowledge",
+    "share-knowledge",
+    "search-knowledge",
+    "import-repository-knowledge",
+    "engineer-run",
+    "migrate-project",
+    "upgrade-project",
+    "refine-prompt",
+    "handoff-role",
+    "save-progress",
+    "resume-work",
+    "answer",
+    "update-hive",
+    "manage-usage",
+    "manage-wiki",
+    "setup-project",
 )
 CODEX_HIVE_PROJECTION_PATHS = {
     "directives",
@@ -177,7 +182,7 @@ class Phase1ForeignNamespaceReadWriteGate(Phase1CliTestCase):
             try:
                 process, result = self.invoke_setup(
                     target,
-                    timeout=2.0 if os.name != "nt" else 30.0,
+                    timeout=10.0 if os.name != "nt" else 30.0,
                     environment=environment,
                 )
             except subprocess.TimeoutExpired as error:
@@ -258,7 +263,7 @@ class Phase1HookForeignEntryGate(Phase1CliTestCase):
         setup_process, setup_result = self.invoke_setup(
             target,
             answers=FIXTURE_ROOT / "answers-partial-hooks.yml",
-            capabilities="capabilities-absent.json",
+            capabilities="capabilities-codex-host-native-hooks.json",
         )
 
         self.assertEqual(setup_process.returncode, 0, setup_process.stderr)
@@ -480,7 +485,7 @@ class Phase1NoConsentProjectionGate(Phase1CliTestCase):
         self.assertIsInstance(skills, list)
         self.assertEqual(
             [entry["name"] for entry in skills],
-            list(BUILTIN_SKILL_NAMES),
+            sorted(BUILTIN_SKILL_NAMES),
         )
         for entry in skills:
             with self.subTest(active_skill=entry["name"]):

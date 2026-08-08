@@ -179,11 +179,16 @@ usage_guard:
         with closing(sqlite3.connect(database_path)) as database:
             row = database.execute(
                 """
-                SELECT source_project, page_id, language, content_digest, visibility
-                FROM pages WHERE page_id = 'private-page'
+                SELECT c.source_project_id, d.locator, d.language, d.digest, d.visibility
+                FROM documents d
+                JOIN collections c ON c.collection_id = d.collection_id
+                WHERE d.locator = '.hive/knowledge/Wiki/private-page.md'
                 """
             ).fetchone()
-        self.assertEqual(row[:3], ("private-project", "private-page", "en"))
+        self.assertEqual(
+            row[:3],
+            ("private-project", ".hive/knowledge/Wiki/private-page.md", "und"),
+        )
         self.assertRegex(row[3], r"^sha256:[0-9a-f]{64}$")
         self.assertEqual(row[4], "confidential")
 
@@ -216,8 +221,8 @@ usage_guard:
             "--text",
             "changed",
         )
-        self.assertEqual(process.returncode, 5)
-        self.assertEqual(result["code"], "hive.knowledge-verification-failed")
+        self.assertEqual(process.returncode, 0)
+        self.assertEqual(result["data"]["hits"], [])
         self.invoke("index", "rebuild", "--user-root", str(self.user_root))
         self.assertEqual(
             [

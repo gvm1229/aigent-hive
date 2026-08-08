@@ -34,7 +34,7 @@ if ! printf '%s\n' "$release_date" | grep -Eq '^[0-9]{4}-[0-9]{2}-[0-9]{2}$'; th
 fi
 
 compiled=$(cargo run --quiet --locked -p hive-cli -- --version)
-if [ "$compiled" != "hive $requested (released $release_date)" ]; then
+if [ "$compiled" != "AIgent Hive v$requested (released $release_date)" ]; then
   echo "compiled CLI version differs: $compiled" >&2
   exit 3
 fi

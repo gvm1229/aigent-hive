@@ -9,6 +9,7 @@ use sha2::{Digest, Sha256};
 
 pub mod judge;
 pub mod judge_auth;
+pub mod loop_graph;
 pub mod role;
 pub mod run;
 pub mod usage_guard;
@@ -34,6 +35,23 @@ pub(crate) fn validate_json_schema(
 
 /// Marker that distinguishes the Hive source workspace from a consumer project.
 pub const SOURCE_MARKER_FILE: &str = "hive-source.json";
+
+/// Normalize the macOS-owned `/var` compatibility spelling for no-follow I/O.
+///
+/// macOS exposes `/var` as its fixed `/private/var` system alias. Filesystem
+/// capability walkers correctly reject arbitrary symlink components, but must
+/// begin from the physical spelling for this operating-system alias. Other
+/// paths and platforms are left byte-for-byte unchanged.
+#[must_use]
+pub fn normalize_platform_root(path: &Path) -> PathBuf {
+    #[cfg(target_os = "macos")]
+    {
+        if let Ok(relative) = path.strip_prefix("/var") {
+            return Path::new("/private/var").join(relative);
+        }
+    }
+    path.to_owned()
+}
 
 /// Errors raised before a command is allowed to mutate a target project.
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -396,25 +414,26 @@ fn ensure_no_symlink_ancestors_validated(
     target: &Path,
     relative: &Path,
 ) -> Result<(), TargetGuardError> {
-    match fs::symlink_metadata(target) {
+    let target = normalize_platform_root(target);
+    match fs::symlink_metadata(&target) {
         Ok(metadata) if metadata.file_type().is_symlink() => {
             return Err(TargetGuardError::SymlinkAncestor {
-                path: target.to_path_buf(),
+                path: target.clone(),
             });
         }
         Ok(metadata) if !metadata.is_dir() => {
             return Err(TargetGuardError::PathInspectionFailed {
-                path: target.to_path_buf(),
+                path: target.clone(),
             });
         }
         Ok(_) => {}
         Err(_) => {
             return Err(TargetGuardError::PathInspectionFailed {
-                path: target.to_path_buf(),
+                path: target.clone(),
             });
         }
     }
-    let mut current = target.to_path_buf();
+    let mut current = target;
     for component in relative.components() {
         let Component::Normal(part) = component else {
             unreachable!("validated path contains only normal components");

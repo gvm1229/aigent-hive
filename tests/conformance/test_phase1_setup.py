@@ -97,7 +97,7 @@ class Phase1SetupConformance(unittest.TestCase):
         target: Path,
         *,
         answers: Path | None = None,
-        capabilities: str = "capabilities-codex-omx.json",
+        capabilities: str = "capabilities-codex-host-native.json",
         mode: str = "--apply",
         reconfigure_roles: tuple[str, ...] = (),
     ) -> tuple[subprocess.CompletedProcess[str], dict[str, object]]:
@@ -212,23 +212,23 @@ class Phase1SetupConformance(unittest.TestCase):
         process, result = self.invoke_setup(
             target,
             answers=answer_path,
-            capabilities="capabilities-absent.json",
+            capabilities="capabilities-codex-host-native-hooks.json",
         )
 
         self.assertEqual(process.returncode, expected_exit)
         self.assertEqual(result["changed_paths"], [])
         self.assertEqual(snapshot_tree(target), {})
 
-    def test_codex_uses_compatible_omx_owner_automatically(self) -> None:
+    def test_codex_uses_host_native_owner_by_default_when_omx_is_compatible(self) -> None:
         target = self.work_root / "consumer"
         target.mkdir()
 
         process, result = self.invoke_setup(target)
 
         self.assertEqual(process.returncode, 0)
-        self.assert_owner_evidence(result, "omx")
+        self.assert_owner_evidence(result, "host-native")
 
-    def test_claude_uses_compatible_omc_owner_automatically(self) -> None:
+    def test_claude_uses_host_native_owner_by_default_when_omc_is_compatible(self) -> None:
         target = self.work_root / "consumer"
         target.mkdir()
         answer_path, answers = self.copied_answers()
@@ -238,11 +238,11 @@ class Phase1SetupConformance(unittest.TestCase):
         process, result = self.invoke_setup(
             target,
             answers=answer_path,
-            capabilities="capabilities-claude-omc.json",
+            capabilities="capabilities-claude-host-native.json",
         )
 
         self.assertEqual(process.returncode, 0)
-        self.assert_owner_evidence(result, "omc")
+        self.assert_owner_evidence(result, "host-native")
 
     def test_absent_external_runtime_uses_host_native_owner(self) -> None:
         target = self.work_root / "consumer"
@@ -256,11 +256,14 @@ class Phase1SetupConformance(unittest.TestCase):
         self.assertEqual(process.returncode, 0)
         self.assert_owner_evidence(result, "host-native")
 
-    def test_available_external_runtime_installs_no_fallback_hooks(self) -> None:
+    def test_explicit_external_runtime_installs_no_optional_hooks(self) -> None:
         target = self.work_root / "consumer"
         target.mkdir()
 
-        process, _ = self.invoke_setup(target)
+        process, _ = self.invoke_setup(
+            target,
+            capabilities="capabilities-codex-omx.json",
+        )
 
         self.assertEqual(process.returncode, 0)
         self.assert_no_hook_artifacts(target)
@@ -324,6 +327,7 @@ class Phase1SetupConformance(unittest.TestCase):
         process, _ = self.invoke_setup(
             target,
             answers=FIXTURE_ROOT / "answers-partial-hooks.yml",
+            capabilities="capabilities-codex-omx.json",
         )
 
         self.assertEqual(process.returncode, 3)
@@ -341,7 +345,7 @@ class Phase1SetupConformance(unittest.TestCase):
         self.assertEqual(process.returncode, 0)
         self.assert_no_hook_artifacts(target)
 
-    def test_absent_external_runtime_projects_only_approved_hooks(self) -> None:
+    def test_absent_external_runtime_rejects_injected_hook_approval(self) -> None:
         target = self.work_root / "consumer"
         target.mkdir()
 
@@ -349,6 +353,19 @@ class Phase1SetupConformance(unittest.TestCase):
             target,
             answers=FIXTURE_ROOT / "answers-partial-hooks.yml",
             capabilities="capabilities-absent.json",
+        )
+
+        self.assertEqual(process.returncode, 3)
+        self.assert_no_hook_artifacts(target)
+
+    def test_supported_host_native_events_project_only_approved_hooks(self) -> None:
+        target = self.work_root / "consumer"
+        target.mkdir()
+
+        process, _ = self.invoke_setup(
+            target,
+            answers=FIXTURE_ROOT / "answers-partial-hooks.yml",
+            capabilities="capabilities-codex-host-native-hooks.json",
         )
 
         self.assertEqual(process.returncode, 0)
@@ -499,7 +516,7 @@ class Phase1SetupConformance(unittest.TestCase):
         process, _ = self.invoke_setup(
             target,
             answers=answer_path,
-            capabilities="capabilities-absent.json",
+            capabilities="capabilities-codex-host-native-hooks.json",
         )
 
         self.assertEqual(process.returncode, 2)
@@ -681,7 +698,7 @@ class Phase1SetupConformance(unittest.TestCase):
         answers["persona"] = {"id": "friendly"}
         answers["skills"] = {
             "mode": "individual",
-            "selected": ["setup-harness", "hive-prompt-refine"],
+            "selected": ["setup-project", "refine-prompt"],
         }
         write_answers(answer_path, answers)
 
@@ -701,7 +718,7 @@ class Phase1SetupConformance(unittest.TestCase):
             installed_answers["skills"],
             {
                 "mode": "individual",
-                "selected": ["setup-harness", "hive-prompt-refine"],
+                "selected": ["setup-project", "refine-prompt"],
             },
         )
 

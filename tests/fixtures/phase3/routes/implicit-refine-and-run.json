@@ -7,7 +7,7 @@
   "simple_question": false,
   "project_context_required": false,
   "external_candidate": null,
-  "hive_candidate": "hive-prompt-refine",
+  "hive_candidate": "refine-prompt",
   "active_hive_skills": [],
   "refine_mode": "refine-and-run",
   "explicit_run_intent": false

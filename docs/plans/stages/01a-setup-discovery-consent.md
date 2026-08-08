@@ -23,19 +23,19 @@
 6. usage stop threshold
 7. judge policy
 8. optional Skills
-9. OMX/OMC가 conclusively absent일 때만 optional fallback hooks
+9. host가 지원하는 exact integrity event가 있을 때만 optional hooks
 10. 최종 write preview
 
-Orchestration owner: preference가 아닌 capability resolution 결과. Codex는 compatible OMX capability, Claude Code는 compatible OMC capability를 먼저 사용하고, 둘이 active host에서 확인되지 않을 때만 host-native로 resolve. Positive evidence는 host가 현재 session에 노출한 Skill/plugin metadata 또는 public executable의 side-effect-free `--version` 중 하나면 충분. Hive는 `.omx/`, `.omc/`, host-global config, session state와 plugin cache를 읽어 추론 금지.
+Orchestration owner: 검증된 host-native capability가 기본. OMX·OMC는 사용자가 명시 선택했거나 기존 `0.8.x` run owner가 고정된 경우에만 side-effect-free evidence로 호환성을 검증. Hive는 `.omx/`, `.omc/`, host-global config, session state와 plugin cache를 읽어 추론 금지.
 
 Detection 결과:
 
 | 결과 | 의미 | setup 동작 |
 | --- | --- | --- |
-| `available` | compatible OMX/OMC capability 확인 | external owner 우선, Hive hook 질문·artifact 0개 |
-| `absent` | host catalog와 public probe 모두 명확히 없음 | host-native, optional fallback hook consent 질문 가능 |
-| `incompatible` | 설치 evidence와 지원 version/capability 불일치 | 진단 후 해당 고급 기능 `unsupported`, hook fallback 금지 |
-| `unknown` | probe surface 부재로 외부 runtime 부재 증명 불가 | host-native best-effort, hook fallback 금지 |
+| `available` | 명시 선택·고정된 owner의 compatible OMX/OMC 확인 | 해당 compatibility owner 유지 |
+| `absent` | 선택한 external runtime의 명확한 부재 | 진단 후 중지, 조용한 owner 전환 금지 |
+| `incompatible` | 설치 evidence와 지원 version/capability 불일치 | 진단 후 해당 고급 기능 `unsupported` |
+| `unknown` | 선택한 external runtime 검증 불가 | 진단 후 중지, host-native 신규 run은 별도 시작 |
 
 한 run이 시작되면 resolved owner와 evidence digest를 `STATUS.md`에 고정. Run 도중 environment가 바뀌어도 조용히 owner를 교체 금지. 다음 새 run 또는 명시 reconfigure에서 다시 resolve.
 
@@ -43,9 +43,9 @@ Optional Skill은 자동 추천 가능. 각 항목은 개별 승인 대상. 승�
 
 Consent v1: `consent_version`, name, source, revision, `content_digest`, 정렬된 requested/approved capability와 UTC-seconds `approved_at`을 RFC 8785 JCS로 canonicalize한 UTF-8 bytes의 SHA-256. 정확한 계약은 `docs/architecture/skill-consent.md` 참조. Hive는 staging, projection, activation과 migration activation 전에 digest를 재계산. Field 변경 또는 digest 불일치 시 자동 재서명 금지, Skill inert 유지와 재승인 요구.
 
-Fallback hook: Skill consent와 분리된 approval object. `absent`일 때만 다음 capability preview 표시.
+Optional integrity hook: Skill consent와 분리된 approval object. 현재 host가 exact event를 지원할 때만 다음 capability preview 표시.
 
-> 이 프로젝트에서 compatible OMX/OMC installation을 감지하지 못했습니다. Aigent Hive는 선택적으로 project-local fallback hooks를 설치할 수 있습니다. 이 hooks는 `.hive/` ownership 위반 사전 경고, durable run checkpoint 누락 감지, update/migration 무결성 검사와 bounded diagnostic만 수행합니다. Skill routing, prompt 재작성, subagent orchestration, 자동 memory ingest 또는 Stop continuation은 수행하지 않습니다. 설치할 event, project-local path, executable command, requested capability와 content digest는 아래 preview와 같습니다. 설치하시겠습니까?
+> 현재 host가 아래 exact integrity event를 지원합니다. Aigent Hive는 선택적으로 project-local hooks를 설치할 수 있습니다. 이 hooks는 `.hive/` ownership 위반 사전 경고, durable run checkpoint 누락 감지, update/migration 무결성 검사와 bounded diagnostic만 수행합니다. Skill routing, prompt 재작성, subagent orchestration, 자동 memory ingest 또는 Stop continuation은 수행하지 않습니다. 설치할 event, project-local path, executable command, requested capability와 content digest는 아래 preview와 같습니다. 설치하시겠습니까?
 
 사용자 선택: 표시된 hook capability별 승인 또는 전체 거절. 거절해도 setup은 성공하며 host-native 기능만 사용. 승인 record는 `.hive/config/approved-hooks.yml`에 tracked canonical data로 저장. Approval이 없거나 digest/path/event가 변하면 hook을 render·등록·실행 금지.
 

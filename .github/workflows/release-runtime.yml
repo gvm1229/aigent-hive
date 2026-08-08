@@ -94,7 +94,7 @@ jobs:
           tar -xzf "$RUNNER_TEMP/$PACKAGE.tar.gz" -C "$prefix"
           installed="$prefix/$PACKAGE/hive"
           test "$(shasum -a 256 "$installed" | cut -d' ' -f1)" = "$BINARY_DIGEST"
-          test "$("$installed" --version)" = "hive $VERSION (released $RELEASE_DATE)"
+          test "$("$installed" --version)" = "AIgent Hive v$VERSION (released $RELEASE_DATE)"
           "$installed" doctor | grep -F "aigent-hive $VERSION"
       - name: Qualify isolated Antigravity user install lifecycle
         run: |
@@ -212,7 +212,7 @@ jobs:
           tar -xzf "$RUNNER_TEMP/$PACKAGE.tar.gz" -C "$prefix"
           installed="$prefix/$PACKAGE/hive"
           test "$(sha256sum "$installed" | cut -d' ' -f1)" = "$BINARY_DIGEST"
-          test "$("$installed" --version)" = "hive $VERSION (released $RELEASE_DATE)"
+          test "$("$installed" --version)" = "AIgent Hive v$VERSION (released $RELEASE_DATE)"
           "$installed" doctor | grep -F "aigent-hive $VERSION"
       - name: Qualify isolated Antigravity user install lifecycle
         run: |
@@ -360,7 +360,7 @@ jobs:
           }
           if (
             (& $installed --version) -ne
-            "hive $env:VERSION (released $env:RELEASE_DATE)"
+            "AIgent Hive v$env:VERSION (released $env:RELEASE_DATE)"
           ) {
             throw "installed binary version mismatch"
           }

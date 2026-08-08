@@ -933,6 +933,18 @@ class SourceWikiConformance(unittest.TestCase):
         ):
             self.assertIn(requirement, decision)
 
+    def test_obsolete_standalone_source_wiki_name_is_absent(self) -> None:
+        pattern = "llm" + "[-_ ]" + "wiki"
+        result = subprocess.run(
+            ["git", "grep", "-I", "-n", "-i", "-E", pattern, "--", "."],
+            cwd=ROOT,
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        self.assertEqual(result.stdout, "")
+
     def test_material_source_task_autocapture_contract_is_durable(self) -> None:
         source_manifest = (ROOT / "AGENTS.md").read_text(encoding="utf-8")
         documentation_directive = (

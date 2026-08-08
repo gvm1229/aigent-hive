@@ -59,16 +59,28 @@ Consumer guidance에는 project/profile, primary host, resolved owner와 resolut
 - 각 사용자 단계: 정확한 위치·명령 또는 행동, 예상 결과·반환 증거, 자동 처리 불가 이유
 - 실패·불가능 작업: 원인과 해결 경로 분리
 
+## 계획 제시
+
+- 현재 요청에서 사용자의 명시적 제외 요청이 없는 모든 계획: 적절한 project Markdown 파일에 선행 기록
+- 다른 contract의 canonical 계획 기록 의무: 사용자 제외 요청으로 해제 불가
+- Session의 persisted 계획 전문 일대일 복제 금지
+- 일반 참조: 간결한 요약과 파일 경로
+- 광범위한 검토: 전문 복제 대신 파일 경로
+
 ## 사람용 문서 스타일
 
 Consumer marker의 사람용 문서 작성 기본값:
 
 - 사용자가 다른 언어를 명시하지 않은 경우 간결한 한국어
-- 선택 언어를 질문과 응답 전체에서 일관되게 사용
+- 설치 시 선택한 interface language를 질문과 응답 전체에서 일관되게 사용. 현재 응답에
+  다른 언어를 사용하라는 명시적 요청만 일회성 override로 인정하고, 다른 언어로 작성된
+  메시지만으로 선호 변경 금지
 - 한국어에서는 고유명사, 제품·패키지 이름, 명령어, 코드 식별자, 경로, 스키마 키,
   정확한 화면 문구, 뚜렷한 한국어 대체어가 없는 용어만 영어 유지
 - 대체 가능한 일반 영어 단어의 한영 혼용 금지
 - 영어에서는 정확한 한국어 이름·문자열·인용문·사용자 보존 요청을 제외하고 영어로 통일
+- 기본 설명은 쉬운 말과 직접적인 표현 우선
+- 이해에 도움이 될 때 구체적 예시 추가, 관련 없는 예시 강제와 기술적 정확성 약화 금지
 - 짧은 heading, bullet, table, checklist 우선
 - `추가`, `정리`, `검증`, `확인`, `적용` 같은 명사형·동작 명사형 우선
 - 설명문을 끝내는 `~다`, `~한다`, `~된다`, `~이다`, `~있다`, `~없다`, `~않는다`,
@@ -135,6 +147,6 @@ Source 개발 지침인 root `AGENTS.md`와 `.agents/`의 release 또는 consume
 
 ## External runtime 경계
 
-Hive marker는 compatible OMX/OMC precedence와 non-clobber 규칙만 설명. `.omx/`, `.omc/`, plugin cache, host-global configuration, session manifest, external runtime marker의 Hive state import·생성·수정·삭제·소유권 주장 금지.
+Hive marker는 host-native 기본값, 명시 선택·고정된 `0.8.x` OMX/OMC 호환 경로와 non-clobber 규칙만 설명. `.omx/`, `.omc/`, plugin cache, host-global configuration, session manifest, external runtime marker의 Hive state import·생성·수정·삭제·소유권 주장 금지.
 
-Fallback hook guidance도 Hive data-integrity capability의 조건부 consent 경계만 기술. External runtime의 plan, Ralph, team, Skill routing, prompt classification 또는 continuation state projection 금지.
+Optional hook guidance도 host가 지원하는 exact event와 Hive data-integrity capability의 조건부 consent 경계만 기술. External runtime의 plan, Ralph, team, Skill routing, prompt classification 또는 continuation state projection 금지.

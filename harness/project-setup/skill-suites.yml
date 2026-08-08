@@ -1,0 +1,122 @@
+schema_version: 1
+project_skill_suites:
+  - id: web-developer
+    skills:
+      - configure
+      - setup-project
+      - auto-setup-project
+      - clean-ai-slop
+      - research-practices
+      - engineer-run
+      - refine-prompt
+      - manage-wiki
+      - record-knowledge
+      - search-knowledge
+      - maintain-knowledge
+      - import-repository-knowledge
+      - save-progress
+      - resume-work
+      - manage-usage
+      - update-hive
+      - upgrade-project
+  - id: game-developer
+    skills:
+      - configure
+      - setup-project
+      - auto-setup-project
+      - clean-ai-slop
+      - research-practices
+      - engineer-run
+      - refine-prompt
+      - manage-wiki
+      - record-knowledge
+      - search-knowledge
+      - maintain-knowledge
+      - import-repository-knowledge
+      - save-progress
+      - resume-work
+      - handoff-role
+      - verify-package
+      - manage-usage
+      - update-hive
+      - upgrade-project
+  - id: non-developer
+    skills:
+      - configure
+      - setup-project
+      - auto-setup-project
+      - research-practices
+      - answer
+      - refine-prompt
+      - manage-wiki
+      - record-knowledge
+      - search-knowledge
+      - maintain-knowledge
+      - import-repository-knowledge
+      - manage-usage
+      - update-hive
+mandatory_skills:
+  - configure
+skill_dependencies:
+  - skill: configure
+    requires: []
+  - skill: setup-project
+    requires: []
+  - skill: auto-setup-project
+    requires:
+      - setup-project
+  - skill: answer
+    requires: []
+  - skill: refine-prompt
+    requires: []
+  - skill: record-knowledge
+    requires:
+      - search-knowledge
+  - skill: search-knowledge
+    requires: []
+  - skill: share-knowledge
+    requires:
+      - search-knowledge
+      - record-knowledge
+  - skill: maintain-knowledge
+    requires:
+      - search-knowledge
+  - skill: save-progress
+    requires: []
+  - skill: resume-work
+    requires:
+      - save-progress
+  - skill: manage-usage
+    requires: []
+  - skill: handoff-role
+    requires: []
+  - skill: verify-package
+    requires: []
+  - skill: update-hive
+    requires: []
+  - skill: upgrade-project
+    requires:
+      - update-hive
+  - skill: migrate-project
+    requires:
+      - update-hive
+  - skill: engineer-run
+    requires:
+      - verify-package
+      - handoff-role
+      - save-progress
+      - resume-work
+      - manage-usage
+  - skill: manage-wiki
+    requires:
+      - record-knowledge
+      - maintain-knowledge
+      - search-knowledge
+      - import-repository-knowledge
+  - skill: clean-ai-slop
+    requires: []
+  - skill: research-practices
+    requires: []
+  - skill: import-repository-knowledge
+    requires:
+      - share-knowledge

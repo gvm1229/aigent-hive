@@ -13,10 +13,15 @@ Before any Git operation that stages, unstages, commits, switches branches, merg
 
 ## Branch Strategy
 
-Maintain exactly two long-lived branches:
+Maintain two default long-lived branches:
 
 - `main` — stable, publicly releasable baseline
-- `develop` — ongoing integration and ordinary development
+- `develop` — ongoing integration and ordinary development; ordinary fast-forward direct pushes
+  are allowed
+
+Create `staging` only when an explicit release plan needs a separate pre-production branch and the
+user authorizes it. A created `staging` branch must use a strict ruleset with pull requests,
+required status checks, deletion protection, and non-fast-forward protection.
 
 Bootstrap rules:
 
@@ -27,10 +32,34 @@ Bootstrap rules:
 After bootstrap:
 
 - Perform ordinary work on `develop`.
+- Push ordinary verified commits directly to `develop`; do not require a pull request or required
+  status checks for this branch.
 - Do not commit ordinary work directly to `main`.
 - Integrate `develop` into `main` through a pull request.
 - Do not create named, purpose, feature, or snapshot branches under the default policy.
 - Create another branch only when the user explicitly authorizes that exception for a specific task.
+
+## Temporary Worktree and Clone Lifecycle
+
+- A temporary worktree or clean-context clone is an isolation boundary for an authorized branch,
+  protected-target PR, or exact-ref qualification. It is not a default organization mechanism or
+  a substitute for ordinary commit splitting.
+- Before creating one, record its exact absolute path, branch or detached ref, purpose, owner,
+  and removal boundary in the active-session manifest. Do not create a worktree merely because
+  concurrent editing might be convenient.
+- A pushed PR branch is not a reason to retain its local worktree. After its concern has been
+  committed, pushed, and verified, remove the clean local worktree in the same task with
+  `git worktree remove <exact-path>`, then run `git worktree prune` and inspect
+  `git worktree list --porcelain`.
+- Do not use `--force`, remove the primary worktree, or remove a path not recorded as owned by
+  the active session. A dirty temporary worktree or clone requires an owned commit and requested
+  push, or an explicit retained-path report; never discard or silently leave its changes.
+- Apply the same completion rule to disposable clean-context clones. Move a clone with retained
+  local bytes to a recoverable location only after verifying its required commits or blobs are
+  reachable from the intended remote ref.
+- Before the final response, resolve every temporary path owned by the session as `removed` or
+  `retained` with an exact reason. A failed cleanup remains an incomplete task boundary and must
+  name the path and recovery action.
 
 ## Commit Rules
 
@@ -72,6 +101,27 @@ git diff --cached --stat
 Run the nearest verification for the staged concern before committing. A later broader suite does
 not make an internally mixed commit acceptable.
 
+## Iterative Commit Checkpoints
+
+- Treat local commits as ordinary implementation boundaries, not publication. A request to
+  implement through multiple milestones authorizes the local commits required by this directive
+  unless the user explicitly forbids commits. A prohibition on publishing, releasing, tagging, or
+  pushing does not prohibit local commits.
+- Before starting the next independently reviewable concern, verify and commit the completed
+  concern. Do not postpone completed concerns until every checklist item, security review, or
+  milestone in a larger plan is complete.
+- An unfinished concern may remain uncommitted only when its nearest verification cannot run until
+  mechanically inseparable work is complete. Record that dependency in the active-session manifest
+  and do not begin an unrelated concern while it remains unresolved.
+- At each checkpoint, count exact changed files with `git status --porcelain=v1 -uall` and refresh
+  the concern map. When the worktree exceeds 50 changed files or contains more than one concern,
+  stop new edits and commit every completed concern before continuing.
+- A single generated or projected concern may exceed 50 files only when the concern map records
+  its canonical source, every projection family, and the verification proving source-to-projection
+  parity. File count never justifies combining independent concerns.
+- A final full-suite result supplements checkpoint verification; it never replaces concern-local
+  verification or local commits.
+
 ## Verification Tiers
 
 Match verification cost to the current boundary:
@@ -106,7 +156,7 @@ Verify that the message has the intended scope and contains no co-author trailer
 - Do not rewrite an existing commit solely to apply current commit-splitting policy unless the user
   explicitly requests that history change.
 - When explicitly authorized, use `--force-with-lease`, never plain `--force`.
-- Never delete `main` or `develop`.
+- Never delete `main`, `develop`, or an active release `staging` branch.
 - Do not push secrets, runtime state, caches, SQLite files, generated release output, or active-session manifests.
 
 ## Completion Boundary

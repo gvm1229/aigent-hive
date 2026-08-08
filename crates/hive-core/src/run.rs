@@ -161,7 +161,7 @@ pub struct CapabilityResolution {
     pub detection: CapabilityDetection,
     /// Expected external runtime, if one is present.
     pub external_runtime: Option<ExternalRuntime>,
-    /// Automatically derived owner.
+    /// Host-native default or matching explicitly selected/pinned external owner.
     pub resolved_owner: ResolvedOwner,
     /// Qualified capability support map.
     pub capabilities: BTreeMap<String, JsonValue>,
@@ -175,7 +175,7 @@ pub struct CapabilityResolution {
 }
 
 impl CapabilityResolution {
-    /// Parse, schema-validate, digest-verify, and independently derive ownership.
+    /// Parse, schema-validate, digest-verify, and validate the selected owner.
     ///
     /// # Errors
     ///
@@ -220,15 +220,33 @@ impl CapabilityResolution {
         })
     }
 
-    /// Return whether fallback data-integrity hooks may be offered.
+    /// Return whether at least one qualified host-native hook may be offered.
     ///
-    /// Only conclusive external-runtime absence is eligible. Available,
-    /// incompatible, and unknown detection remain ineligible.
+    /// External owners and absent, incompatible, or unknown detection remain
+    /// ineligible. Call [`Self::host_native_hook_event_supported`] before
+    /// authorizing any exact event.
     #[must_use]
-    pub const fn fallback_hooks_eligible(&self) -> bool {
-        matches!(self.detection, CapabilityDetection::Absent)
+    pub fn fallback_hooks_eligible(&self) -> bool {
+        self.hook_events.as_ref().is_some_and(|events| {
+            events
+                .keys()
+                .any(|event| self.host_native_hook_event_supported(event))
+        })
+    }
+
+    /// Return whether the exact event has qualified host-native support.
+    #[must_use]
+    pub fn host_native_hook_event_supported(&self, event: &str) -> bool {
+        matches!(self.detection, CapabilityDetection::Available)
             && matches!(self.resolved_owner, ResolvedOwner::HostNative)
-            && self.external_runtime.is_none()
+            && self
+                .hook_events
+                .as_ref()
+                .and_then(|events| events.get(event))
+                .and_then(JsonValue::as_object)
+                .and_then(|claim| claim.get("support"))
+                .and_then(JsonValue::as_str)
+                == Some("supported")
     }
 
     /// Derive the immutable owner binding stored in a run checkpoint.
@@ -261,7 +279,7 @@ pub struct OwnerBinding {
     pub surface: HostSurface,
     /// Pinned external runtime, if any.
     pub external_runtime: Option<ExternalRuntime>,
-    /// Pinned automatic owner.
+    /// Pinned owner.
     pub resolved_owner: ResolvedOwner,
     /// Full capability-resolution evidence digest.
     pub resolution_evidence_digest: String,
@@ -286,7 +304,7 @@ pub enum CapabilityContractError {
     IndeterminateEvidence,
     /// A required capability claim is missing.
     MissingCapability(&'static str),
-    /// Declared owner/detection/runtime does not match independent derivation.
+    /// Declared owner is incompatible with the detected host/runtime path.
     UserSelectedOwner,
 }
 
@@ -308,7 +326,7 @@ impl Display for CapabilityContractError {
                 write!(formatter, "capability matrix is missing {name}")
             }
             Self::UserSelectedOwner => formatter.write_str(
-                "capability owner, runtime, and detection must be derived from evidence",
+                "capability owner must remain host-native or match the compatible active-host runtime",
             ),
         }
     }
@@ -381,10 +399,15 @@ fn derive_owner(
         ExternalRuntime::Omc => ResolvedOwner::Omc,
     };
     if compatible {
+        let owner = match resolution.resolved_owner {
+            ResolvedOwner::HostNative => ResolvedOwner::HostNative,
+            owner if owner == expected_owner => owner,
+            _ => return Err(CapabilityContractError::UserSelectedOwner),
+        };
         return Ok(DerivedOwner {
             detection: CapabilityDetection::Available,
             external_runtime: Some(expected_runtime),
-            owner: expected_owner,
+            owner,
         });
     }
     if incompatible {
@@ -1906,14 +1929,10 @@ mod tests {
     }
 
     #[test]
-    fn capability_owner_is_derived_and_user_selection_is_rejected() {
+    fn compatible_capability_accepts_host_native_default_or_matching_external_pin() {
         let compatible = compatible_capability("fixture");
         assert_eq!(compatible.resolved_owner, ResolvedOwner::Omx);
         assert_eq!(compatible.external_runtime, Some(ExternalRuntime::Omx));
-        assert!(!compatible.fallback_hooks_eligible());
-        assert!(absent_capability().fallback_hooks_eligible());
-        assert!(!incompatible_capability().fallback_hooks_eligible());
-        assert!(!unknown_capability().fallback_hooks_eligible());
 
         let mut value: JsonValue = serde_json::from_slice(&with_digest(json!({
             "schema_version": 1,
@@ -1948,8 +1967,20 @@ mod tests {
                 .remove("evidence_digest");
             value
         });
+        let host_native = CapabilityResolution::parse_json(&bytes)
+            .expect("compatible capability may retain the host-native default");
+        assert_eq!(host_native.resolved_owner, ResolvedOwner::HostNative);
+        assert_eq!(host_native.external_runtime, Some(ExternalRuntime::Omx));
+
+        let mut mismatched: JsonValue =
+            serde_json::from_slice(&bytes).expect("host-native capability JSON");
+        mismatched
+            .as_object_mut()
+            .expect("object")
+            .remove("evidence_digest");
+        mismatched["resolved_owner"] = json!("omc");
         assert!(matches!(
-            CapabilityResolution::parse_json(&bytes),
+            CapabilityResolution::parse_json(&with_digest(mismatched)),
             Err(CapabilityContractError::Schema(_) | CapabilityContractError::UserSelectedOwner)
         ));
 
@@ -1985,6 +2016,34 @@ mod tests {
             ),
             Err(CapabilityContractError::EvidenceDigestMismatch)
         );
+    }
+
+    #[test]
+    fn optional_hooks_require_exact_supported_host_native_events() {
+        let mut compatible = compatible_capability("fixture");
+        assert!(!compatible.fallback_hooks_eligible());
+        assert!(!absent_capability().fallback_hooks_eligible());
+        assert!(!incompatible_capability().fallback_hooks_eligible());
+        assert!(!unknown_capability().fallback_hooks_eligible());
+
+        compatible.resolved_owner = ResolvedOwner::HostNative;
+        compatible.hook_events = Some(BTreeMap::from([
+            (
+                "PreToolUse".to_owned(),
+                json!({"support": "best-effort", "evidence": []}),
+            ),
+            (
+                "Stop".to_owned(),
+                json!({"support": "supported", "evidence": []}),
+            ),
+        ]));
+        assert!(compatible.fallback_hooks_eligible());
+        assert!(compatible.host_native_hook_event_supported("Stop"));
+        assert!(!compatible.host_native_hook_event_supported("PreToolUse"));
+
+        compatible.resolved_owner = ResolvedOwner::Omx;
+        assert!(!compatible.fallback_hooks_eligible());
+        assert!(!compatible.host_native_hook_event_supported("Stop"));
     }
 
     #[test]

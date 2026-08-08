@@ -145,8 +145,9 @@ pub(crate) struct PinnedTarget {
 
 impl PinnedTarget {
     pub(crate) fn open(target: &Path) -> Result<Self, AdapterError> {
-        ensure_consumer_target(target).map_err(|error| AdapterError::Safety(error.to_string()))?;
         let absolute = absolute_lexical(target)?;
+        ensure_consumer_target(&absolute)
+            .map_err(|error| AdapterError::Safety(error.to_string()))?;
         let dir = open_directory_nofollow_path(&absolute)?;
         let pinned = Self {
             requested: absolute,
@@ -955,21 +956,23 @@ fn read_explicit_file_with_metadata_and_hooks(
 }
 
 fn absolute_lexical(path: &Path) -> Result<PathBuf, AdapterError> {
-    if path.is_absolute() {
-        Ok(path.to_path_buf())
+    let absolute = if path.is_absolute() {
+        path.to_path_buf()
     } else {
         std::env::current_dir()
             .map(|current| current.join(path))
             .map_err(|error| {
                 AdapterError::Input(format!("cannot resolve current directory: {error}"))
-            })
-    }
+            })?
+    };
+    Ok(hive_core::normalize_platform_root(&absolute))
 }
 
 pub(crate) fn open_directory_nofollow_path(path: &Path) -> Result<Dir, AdapterError> {
+    let normalized = hive_core::normalize_platform_root(path);
     let mut root = PathBuf::new();
     let mut names = Vec::new();
-    for component in path.components() {
+    for component in normalized.components() {
         match component {
             Component::Prefix(prefix) => root.push(prefix.as_os_str()),
             Component::RootDir => root.push(component.as_os_str()),
@@ -977,7 +980,7 @@ pub(crate) fn open_directory_nofollow_path(path: &Path) -> Result<Dir, AdapterEr
             Component::CurDir | Component::ParentDir => {
                 return Err(AdapterError::Safety(format!(
                     "directory path is not lexically safe: {}",
-                    path.display()
+                    normalized.display()
                 )));
             }
         }
@@ -985,7 +988,7 @@ pub(crate) fn open_directory_nofollow_path(path: &Path) -> Result<Dir, AdapterEr
     if root.as_os_str().is_empty() {
         return Err(AdapterError::Safety(format!(
             "directory path is not absolute: {}",
-            path.display()
+            normalized.display()
         )));
     }
     let mut current = Dir::open_ambient_dir(&root, ambient_authority()).map_err(|error| {

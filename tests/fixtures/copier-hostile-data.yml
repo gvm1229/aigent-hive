@@ -7,8 +7,8 @@ capability_resolution:
   host: claude
   host_version: fixture
   surface: cli
-  detection: absent
-  external_runtime: null
+  detection: available
+  external_runtime: omc
   resolved_owner: host-native
   capabilities:
     instructions: supported
@@ -18,11 +18,42 @@ capability_resolution:
     continuous-loop: unsupported
     usage-sensor: unsupported
     independent-judge: supported
-  evidence_digest: sha256:22977b96a46b9649ce62cc8a90b1ffd7576524be598568ad186b72b7795f6c65
+  hook_events:
+    UserPromptSubmit:
+      support: unsupported
+      evidence:
+        - source: qualification-fixture
+          locator: fixture:claude-user-prompt-submit
+          digest: sha256:3333333333333333333333333333333333333333333333333333333333333333
+    PreToolUse:
+      support: unsupported
+      evidence:
+        - source: qualification-fixture
+          locator: fixture:claude-pre-tool-use
+          digest: sha256:3333333333333333333333333333333333333333333333333333333333333333
+    PostToolUse:
+      support: unsupported
+      evidence:
+        - source: qualification-fixture
+          locator: fixture:claude-post-tool-use
+          digest: sha256:3333333333333333333333333333333333333333333333333333333333333333
+    PreCompact:
+      support: unsupported
+      evidence:
+        - source: qualification-fixture
+          locator: fixture:claude-pre-compact
+          digest: sha256:3333333333333333333333333333333333333333333333333333333333333333
+    Stop:
+      support: supported
+      evidence:
+        - source: qualification-fixture
+          locator: fixture:claude-stop
+          digest: sha256:3333333333333333333333333333333333333333333333333333333333333333
+  evidence_digest: sha256:ea55cdad9bbdacc69b389437d090e345453fc916e7c5b60e8f6405248b044897
   evidence:
     - source: host-catalog
       locator: active-host-capability-metadata
-      outcome: absent
+      outcome: compatible
       digest: sha256:1111111111111111111111111111111111111111111111111111111111111111
     - source: public-executable
       locator: omc --version

@@ -36,20 +36,20 @@ class Phase1CapabilityConformance(Phase1CliTestCase):
         write_yaml(path, answers)
         return path
 
-    def test_codex_catalog_only_compatible_evidence_resolves_omx(self) -> None:
+    def test_codex_catalog_compatibility_keeps_host_native_default(self) -> None:
         target = self.work_root / "consumer"
         target.mkdir()
 
         process, result = self.invoke_setup(
             target,
             answers=self.answers_for_host("codex"),
-            capabilities="capabilities-codex-omx.json",
+            capabilities="capabilities-codex-host-native.json",
         )
 
         self.assertEqual(process.returncode, 0)
-        self.assert_owner(result, "omx")
+        self.assert_owner(result, "host-native")
 
-    def test_codex_executable_only_compatible_evidence_resolves_omx(self) -> None:
+    def test_explicit_codex_external_selection_resolves_omx(self) -> None:
         target = self.work_root / "consumer"
         target.mkdir()
 
@@ -62,20 +62,20 @@ class Phase1CapabilityConformance(Phase1CliTestCase):
         self.assertEqual(process.returncode, 0)
         self.assert_owner(result, "omx")
 
-    def test_claude_catalog_only_compatible_evidence_resolves_omc(self) -> None:
+    def test_claude_catalog_compatibility_keeps_host_native_default(self) -> None:
         target = self.work_root / "consumer"
         target.mkdir()
 
         process, result = self.invoke_setup(
             target,
             answers=self.answers_for_host("claude"),
-            capabilities="capabilities-claude-omc.json",
+            capabilities="capabilities-claude-host-native.json",
         )
 
         self.assertEqual(process.returncode, 0)
-        self.assert_owner(result, "omc")
+        self.assert_owner(result, "host-native")
 
-    def test_claude_executable_only_compatible_evidence_resolves_omc(self) -> None:
+    def test_explicit_claude_external_selection_resolves_omc(self) -> None:
         target = self.work_root / "consumer"
         target.mkdir()
 

@@ -17,24 +17,32 @@ Never import installed consumer state back into source, copy source-development 
 - Hive runs locally on top of an already authenticated subscription host.
 - Hive must not call Anthropic, OpenAI, Google, or other model APIs.
 - Hive must not request, read, store, or forward provider API keys.
-- The active host or external orchestration layer owns model calls, subagent processes, session continuation, and retries.
-- Hive owns setup, deterministic projection, Markdown data contracts, SQLite indexing, validation, migration, and update safety.
+- The active host owns model calls and model/subagent processes and consumes Hive-produced declarative execution envelopes.
+- Hive owns setup, deterministic projection, Markdown data contracts, SQLite indexing, validation, migration, update safety, iterative execution judgment, logical scheduling, leases, receipts, cancellation, team coordination, and multi-goal state.
+- Hive orchestration must remain a local deterministic control plane, not a provider client, model runtime, process launcher, or opaque session daemon.
 
 ## Orchestration Boundary
 
-- Do not implement Hive equivalents of plan, Ralph, team, swarm, or provider session runtimes.
-- Prefer a compatible OMX capability on Codex and OMC capability on Claude whenever it is available in the active host. Otherwise use only what the host natively supports.
-- Treat OMX and OMC as replaceable compatibility dependencies with planned retirement, not as Hive authorities. Do not bind canonical data, paths, schemas, Skill identity, or durable knowledge to their namespaces. Retire an adapter only after a provider-neutral or host-native owner covers its required capability.
-- Do not ask the user to choose a pure-Hive orchestration mode. Resolve one owner per run from the active host capability surface and pin it for that run.
-- Preserve OMX/OMC namespaces and let the resolved layer own orchestration. Do not install Hive lifecycle hooks when OMX or OMC is detected.
-- If neither OMX nor OMC is detected, any Hive fallback hook requires an explicit capability preview and user approval before installation.
-- If a required capability is unavailable, report it as unsupported. Do not silently emulate it or switch backends.
+- Implement Hive-native iterative planning, bounded retry, logical scheduling, team coordination, and multi-goal execution as provider-neutral state machines and Skills.
+- Keep new orchestration capability default-off until the relevant host proves envelope consumption, typed receipts, cancellation, and safe reclaim behavior. An unsupported capability produces a truthful unsupported or `dispatch-uncertain` result, never an automatic backend switch.
+- Do not select, invoke, install, or configure OMX/OMC for a new workflow. Preserve legacy `.omx/.omc` bytes and pinned owner metadata as foreign read-only provenance.
+- Migrate a legacy external-owner run only through an explicit validated command that creates a new Hive-native run identity and leaves the original owner and bytes unchanged.
+- Treat ambient or selected session pointers as selectors only, never mutation authority. Bind every state mutation to the exact target, expected event head, control epoch, request digest, and authenticated single-action authority.
+- Keep status, cancellation, recovery, and usage-guard control reachable by exact ID without scheduler locks or selected-session pointers. Normal cancellation commits through the canonical event head; corrupt-head emergency cancellation uses a separately authenticated bounded recovery path.
+- An optional host lifecycle hook requires a supported exact event, capability preview, scoped authority, exact run revision, one-time action binding, and explicit user approval. Never infer authority from a pointer, transcript, current directory, or hook session selection.
+- Never claim exactly-once dispatch without a qualified host receipt and idempotency contract. When launch status cannot be proven, stop at `dispatch-uncertain` and require proof-gated recovery.
 
 ## Skill Routing Boundary
 
+- Classify knowledge routes before tool selection. A root containing `hive-source.json` owns the
+  tracked Source Wiki route, including `hive source-wiki query --target <source-root>`, and must
+  never be supplied as the target of consumer `hive knowledge retrieve`. Consumer retrieval
+  requires a separate, attached consumer project. Do not convert a source guard conflict into a
+  skipped or successful knowledge preflight.
 - Use Skill descriptions and compact routing directives for semantic task-to-Skill selection; do not build a duplicate prompt-classifier hook.
-- Prefer an existing OMX/OMC Skill over a Hive duplicate.
-- Keep Hive Skills focused on Hive-owned setup, prompt refinement, canonical knowledge, role/run handoff, judge packaging, migration, and update contracts.
+- Let host-native discovery and narrow Hive Skill descriptions route work into Hive-owned iterative, team, multi-goal, planning, verification, setup, knowledge, migration, and update workflows.
+- Do not route new work to OMX/OMC Skills. A legacy external artifact may be inspected only through an explicit migration or recovery contract that preserves foreign bytes.
+- Keep Hive execution Skills declarative: they may reduce canonical state, issue bounded leases, validate receipts, and prepare host envelopes, but never call a model-provider API or launch a model/subagent process.
 - Permit bidirectional reuse only for Hive-owned Skill source after source/consumer scope, safety, consent, and conformance review. Never treat an installed consumer copy or consumer runtime state as source material.
 - Keep a shared Skill canonical under `harness/skills/<name>/` and project an exact source copy under `.agents/skills/<name>/`. Keep a source-only Skill under `.agents/skills/<name>/` until an explicit product-relevance review promotes it to `harness/skills/`.
 - A consumer Skill reused in source must not require consumer `.hive/` state, mutate an installed harness, weaken source-root refusal, or bypass the source usage guard. Adapt the provider-neutral workflow or core primitive instead of copying consumer state assumptions.

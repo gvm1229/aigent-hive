@@ -43,28 +43,25 @@
       "required": ["language"],
       "properties": {
         "enabled": { "type": "boolean", "default": true },
-        "language": { "enum": ["en", "ko", "both"] }
+        "language": { "enum": ["en", "ko", "both"] },
+        "backend": { "const": "markdown", "default": "markdown" }
       }
     },
     "profile": {
-      "oneOf": [
-        {
-          "type": "object",
-          "additionalProperties": false,
-          "required": ["id"],
-          "properties": {
-            "id": { "enum": ["web-developer", "game-developer", "non-developer"] }
-          }
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["contexts"],
+      "properties": {
+        "contexts": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "enum": ["web-developer", "game-developer", "non-developer"] }
         },
-        {
-          "type": "object",
-          "additionalProperties": false,
-          "required": ["id", "custom_description"],
-          "properties": {
-            "id": { "const": "custom" },
-            "custom_description": { "$ref": "#/$defs/nonempty_single_line" }
-          }
-        }
+        "description": { "$ref": "#/$defs/nonempty_single_line" }
+      },
+      "anyOf": [
+        { "properties": { "contexts": { "minItems": 1 } } },
+        { "required": ["description"] }
       ]
     },
     "persona": {
@@ -90,23 +87,28 @@
     },
     "skill_name": {
       "enum": [
-        "setup-hive",
-        "setup-harness",
-        "auto-setup-harness",
-        "hive-simple-question",
-        "hive-prompt-refine",
-        "hive-knowledge-capture",
-        "hive-knowledge-query",
-        "hive-knowledge-promote",
-        "hive-knowledge-maintenance",
-        "hive-run-checkpoint",
-        "hive-run-resume",
-        "hive-usage-guard",
-        "hive-role-handoff",
-        "hive-judge-package",
-        "hive-update",
-        "hive-project-upgrade",
-        "hive-migrate"
+        "configure",
+        "setup-project",
+        "auto-setup-project",
+        "clean-ai-slop",
+        "research-practices",
+        "engineer-run",
+        "manage-wiki",
+        "answer",
+        "refine-prompt",
+        "record-knowledge",
+        "search-knowledge",
+        "import-repository-knowledge",
+        "share-knowledge",
+        "maintain-knowledge",
+        "save-progress",
+        "resume-work",
+        "manage-usage",
+        "handoff-role",
+        "verify-package",
+        "update-hive",
+        "upgrade-project",
+        "migrate-project"
       ]
     },
     "skill_selection": {
@@ -114,12 +116,9 @@
         {
           "type": "object",
           "additionalProperties": false,
-          "required": ["mode", "recommended_suite"],
+          "required": ["mode"],
           "properties": {
-            "mode": { "const": "recommended" },
-            "recommended_suite": {
-              "enum": ["web-developer", "game-developer", "non-developer"]
-            }
+            "mode": { "const": "all" }
           }
         },
         {
@@ -156,7 +155,38 @@
           "maximum": 99,
           "default": 20
         },
-        "codexbar_fallback_enabled": { "type": "boolean", "default": false }
+        "codexbar_fallback_enabled": { "type": "boolean", "default": false },
+        "discord": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": { "type": "boolean", "default": false },
+            "webhook_url_env": {
+              "type": "string",
+              "pattern": "^[A-Z_][A-Z0-9_]{0,127}$"
+            },
+            "request_privacy": {
+              "enum": ["summary", "raw-prompt"],
+              "default": "summary"
+            }
+          },
+          "allOf": [
+            {
+              "if": {
+                "properties": { "enabled": { "const": true } },
+                "required": ["enabled"]
+              },
+              "then": { "required": ["webhook_url_env"] }
+            },
+            {
+              "if": {
+                "properties": { "enabled": { "const": false } },
+                "required": ["enabled"]
+              },
+              "then": { "not": { "required": ["webhook_url_env"] } }
+            }
+          ]
+        }
       },
       "allOf": [
         {

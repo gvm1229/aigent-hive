@@ -11,9 +11,9 @@ use hive_core::{
     validate_hive_skill_projection_relative, validate_project_relative, TargetGuardError,
 };
 use hive_projection::{
-    compile_project_projection, compile_projection, embedded_catalog, historical_builtin_skills,
-    ActiveSkills, Availability, Host as ProjectionHost, OptionalSkillConsent, OptionalSkillSource,
-    Projection, SkillSourceType,
+    canonical_builtin_skill_name, compile_project_projection, compile_projection, embedded_catalog,
+    historical_builtin_skills, ActiveSkills, Availability, Host as ProjectionHost,
+    OptionalSkillConsent, OptionalSkillSource, Projection, SkillSourceType,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
@@ -132,7 +132,7 @@ impl Error for RenderError {}
 pub struct SetupOutcome {
     /// Project-relative paths whose bytes differ from the active target.
     pub changed_paths: Vec<String>,
-    /// Automatically selected orchestration owner.
+    /// Pinned orchestration owner selected for this setup.
     pub resolved_owner: String,
     /// Digest of the complete normalized planned tree.
     pub tree_digest: String,
@@ -143,18 +143,26 @@ pub struct SetupOutcome {
 }
 
 /// Public effective project preference snapshot for registry and CLI evidence.
+///
+/// The boolean fields intentionally remain separate: each represents an
+/// independently consented project preference and is rendered as its own
+/// canonical setting.
+#[allow(clippy::struct_excessive_bools)]
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct ResolvedProjectPreferences {
     pub setup_mode: String,
     pub provenance: String,
     pub interface_language: String,
     pub wiki_enabled: bool,
+    pub wiki_backend: String,
     pub wiki_language: String,
     pub persona_id: String,
     pub persona_custom_description: Option<String>,
     pub selected_project_skills: Vec<String>,
     pub usage_guard_enabled: bool,
     pub codexbar_fallback_enabled: bool,
+    pub discord_guard_enabled: bool,
+    pub discord_webhook_url_env: Option<String>,
     pub usage_stop_remaining_percent: u8,
 }
 
@@ -232,12 +240,18 @@ pub struct SetupRequest<'a> {
 }
 
 /// Validated user-scope preferences supplied by the CLI bridge.
+///
+/// The boolean fields intentionally remain separate: each represents an
+/// independently consented user preference and has distinct setup semantics.
+#[allow(clippy::struct_excessive_bools)]
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct GlobalProjectPreferences {
     /// Preferred user-facing interface language.
     pub interface_language: String,
     /// Whether canonical Wiki capture and query are enabled globally.
     pub wiki_enabled: bool,
+    /// Canonical Wiki backend inherited by every project.
+    pub wiki_backend: String,
     /// Canonical Wiki language selection.
     pub wiki_language: String,
     /// Selected agent persona id.
@@ -250,21 +264,32 @@ pub struct GlobalProjectPreferences {
     pub usage_guard_enabled: bool,
     /// Whether the user approved the fixed `CodexBar` fallback adapter.
     pub codexbar_fallback_enabled: bool,
+    /// Whether a newly published usage halt sends an outbound Discord notification.
+    pub discord_guard_enabled: bool,
+    /// Environment variable containing the Discord incoming webhook URL.
+    ///
+    /// This is only the environment-variable name, never a webhook secret.
+    pub discord_webhook_url_env: Option<String>,
     /// Remaining-usage stop threshold inherited by every project.
     pub usage_stop_remaining_percent: u8,
 }
 
+/// Internal normalized form of independently consented preference flags.
+#[allow(clippy::struct_excessive_bools)]
 #[derive(Debug, Clone, Eq, PartialEq)]
 struct EffectiveProjectPreferences {
     provenance: &'static str,
     interface_language: String,
     wiki_enabled: bool,
+    wiki_backend: String,
     wiki_language: String,
     persona_id: String,
     persona_custom_description: Option<String>,
     selected_project_skills: Vec<String>,
     usage_guard_enabled: bool,
     codexbar_fallback_enabled: bool,
+    discord_guard_enabled: bool,
+    discord_webhook_url_env: Option<String>,
     usage_stop_remaining_percent: u8,
 }
 
@@ -405,6 +430,8 @@ struct InstalledHarness {
     #[serde(default)]
     wiki_enabled: Option<bool>,
     #[serde(default)]
+    wiki_backend: Option<String>,
+    #[serde(default)]
     wiki_language: Option<String>,
     #[serde(default)]
     persona_id: Option<String>,
@@ -416,6 +443,10 @@ struct InstalledHarness {
     usage_guard_enabled: Option<bool>,
     #[serde(default)]
     codexbar_fallback_enabled: bool,
+    #[serde(default)]
+    discord_guard_enabled: bool,
+    #[serde(default)]
+    discord_webhook_url_env: Option<String>,
     primary_host: String,
     external_capability_detection: String,
     resolved_owner: String,
@@ -531,11 +562,11 @@ pub fn expected_external_runtime(target: &Path) -> Result<Option<&'static str>, 
     }
 }
 
-/// Validate an installed fallback hook with required fresh host evidence.
+/// Validate an installed optional hook with required fresh host evidence.
 ///
-/// Every state other than conclusive `absent` makes the fallback hook inert
-/// before installed hook authorization proceeds. The caller can therefore
-/// perform this check before reading hook event input.
+/// Only an exact event qualified as `supported` for the installed host-native
+/// owner may proceed. Absent, unsupported, unverified, best-effort, and
+/// externally owned surfaces remain inert before hook event input is read.
 ///
 /// # Errors
 ///
@@ -551,7 +582,8 @@ pub fn authorize_hook_with_resolution(
     let fresh_path = validate_fresh_capability_resolution_path(target, fresh_capabilities)?;
     let fresh = load_resolution(&fresh_path)?;
     validate_resolution_host(&fresh.host, &fresh)?;
-    if derive_resolution(&fresh)?.0 != "absent" {
+    let _ = derive_resolution(&fresh)?;
+    if !host_native_hook_event_supported(&fresh, event) {
         return Ok(HookAuthorization::Inert);
     }
     ensure_consumer_target(target).map_err(|error| RenderError::Safety(error.to_string()))?;
@@ -562,13 +594,13 @@ pub fn authorize_hook_with_resolution(
             "fresh capability evidence does not address the installed host".to_owned(),
         ));
     }
-    let (detection, _, _) = derive_resolution(&resolution)?;
-    if detection != "absent" {
+    let _ = derive_resolution(&resolution)?;
+    if !host_native_hook_event_supported(&resolution, event) {
         return Ok(HookAuthorization::Inert);
     }
     if fresh.evidence_digest != resolution.evidence_digest {
         return Err(RenderError::Safety(
-            "fresh capability evidence does not match the installed absent resolution".to_owned(),
+            "fresh capability evidence does not match the installed hook resolution".to_owned(),
         ));
     }
     let bytes = read_target_required(
@@ -581,11 +613,11 @@ pub fn authorize_hook_with_resolution(
         RenderError::Safety(format!("fallback hook approval ledger is invalid: {error}"))
     })?;
     if ledger.schema_version != 1
-        || ledger.detection != "absent"
+        || ledger.detection != resolution.detection
         || ledger.resolution_evidence_digest != resolution.evidence_digest
     {
         return Err(RenderError::Safety(
-            "fallback hook approval does not bind current absent evidence".to_owned(),
+            "optional hook approval does not bind the current host-native evidence".to_owned(),
         ));
     }
     let hook = ledger
@@ -821,8 +853,7 @@ pub fn project_upgrade_candidate_in(
 ///
 /// Release `0.7.0` is the first full-ledger registry entry. Releases `0.1.0`
 /// through `0.6.0` retain their legacy Skill-only authentication contract.
-/// Future releases must preserve this branch byte-for-byte when adding a new
-/// full-ledger entry.
+/// Each full-ledger release remains isolated from later canonical templates.
 ///
 /// # Errors
 ///
@@ -835,6 +866,7 @@ pub fn historical_project_upgrade_candidate_in(
 ) -> Result<HistoricalProjectBase, RenderError> {
     let files = match version {
         "0.7.0" => frozen_project_base_0_7(target_dir)?,
+        "0.8.0" => frozen_project_base_0_8(target_dir)?,
         _ => Err(RenderError::Unsupported(format!(
             "historical full project base is not embedded: {version}"
         )))?,
@@ -1111,6 +1143,342 @@ fn frozen_project_base_0_7(target_dir: &Dir) -> Result<BTreeMap<String, Vec<u8>>
     Ok(files)
 }
 
+#[allow(clippy::too_many_lines)]
+fn frozen_project_base_0_8(target_dir: &Dir) -> Result<BTreeMap<String, Vec<u8>>, RenderError> {
+    #[derive(Deserialize)]
+    struct Answers0_8 {
+        schema_version: u32,
+        project_name: String,
+        setup_mode: String,
+        project_kind: String,
+        primary_host: String,
+        approved_optional_skills: Vec<SkillApproval>,
+    }
+
+    #[derive(Deserialize)]
+    struct Resolution0_8 {
+        schema_version: u32,
+        detection: String,
+        resolved_owner: String,
+        evidence_digest: String,
+    }
+
+    #[derive(Deserialize)]
+    struct Harness0_8 {
+        schema_version: u32,
+        harness_version: String,
+        source_release_version: String,
+        project_name: String,
+        project_kind: String,
+        setup_mode: String,
+        preference_provenance: String,
+        interface_language: String,
+        wiki_enabled: bool,
+        wiki_language: String,
+        persona_id: String,
+        selected_project_skills: Vec<String>,
+        usage_guard_enabled: bool,
+        primary_host: String,
+        external_capability_detection: String,
+        resolved_owner: String,
+        resolution_evidence_digest: String,
+    }
+
+    macro_rules! frozen_skill_0_8 {
+        ($name:literal) => {
+            (
+                $name,
+                include_bytes!(concat!(
+                    "../../../harness/project-bases/0.8.0/skills/",
+                    $name,
+                    "/SKILL.md"
+                ))
+                .as_slice(),
+                include_bytes!(concat!(
+                    "../../../harness/project-bases/0.8.0/skills/",
+                    $name,
+                    "/agents/openai.yaml"
+                ))
+                .as_slice(),
+            )
+        };
+    }
+
+    const DIRECTIVES: [(&str, &[u8]); 3] = [
+        (
+            "00-project-harness.md",
+            include_bytes!("../../../harness/project-bases/0.8.0/directives/00-project-harness.md"),
+        ),
+        (
+            "01-project-knowledge.md",
+            include_bytes!(
+                "../../../harness/project-bases/0.8.0/directives/01-project-knowledge.md"
+            ),
+        ),
+        (
+            "02-project-upgrade.md",
+            include_bytes!("../../../harness/project-bases/0.8.0/directives/02-project-upgrade.md"),
+        ),
+    ];
+    const SKILLS: [(&str, &[u8], &[u8]); 16] = [
+        frozen_skill_0_8!("auto-setup-harness"),
+        frozen_skill_0_8!("hive-judge-package"),
+        frozen_skill_0_8!("hive-knowledge-capture"),
+        frozen_skill_0_8!("hive-knowledge-maintenance"),
+        frozen_skill_0_8!("hive-knowledge-promote"),
+        frozen_skill_0_8!("hive-knowledge-query"),
+        frozen_skill_0_8!("hive-migrate"),
+        frozen_skill_0_8!("hive-project-upgrade"),
+        frozen_skill_0_8!("hive-prompt-refine"),
+        frozen_skill_0_8!("hive-role-handoff"),
+        frozen_skill_0_8!("hive-run-checkpoint"),
+        frozen_skill_0_8!("hive-run-resume"),
+        frozen_skill_0_8!("hive-simple-question"),
+        frozen_skill_0_8!("hive-update"),
+        frozen_skill_0_8!("hive-usage-guard"),
+        frozen_skill_0_8!("setup-harness"),
+    ];
+
+    let answers: Answers0_8 = serde_yaml::from_slice(&read_target_required(
+        target_dir,
+        Path::new(".hive/setup-answers.yml"),
+        "0.8 setup answers",
+    )?)
+    .map_err(|error| {
+        RenderError::Verification(format!("invalid frozen 0.8 setup answers: {error}"))
+    })?;
+    let resolution: Resolution0_8 = serde_yaml::from_slice(&read_target_required(
+        target_dir,
+        Path::new(".hive/config/capability-resolution.yml"),
+        "0.8 capability resolution",
+    )?)
+    .map_err(|error| {
+        RenderError::Verification(format!("invalid frozen 0.8 capability resolution: {error}"))
+    })?;
+    let harness_bytes = read_target_required(
+        target_dir,
+        Path::new(".hive/config/harness.toml"),
+        "0.8 harness config",
+    )?;
+    let harness_text = std::str::from_utf8(&harness_bytes).map_err(|_| {
+        RenderError::Verification("frozen 0.8 harness config is not UTF-8".to_owned())
+    })?;
+    let harness: Harness0_8 = toml::from_str(harness_text).map_err(|error| {
+        RenderError::Verification(format!("invalid frozen 0.8 harness config: {error}"))
+    })?;
+
+    let preference_provenance_matches = matches!(
+        (
+            harness.setup_mode.as_str(),
+            harness.preference_provenance.as_str()
+        ),
+        ("expedited", "global-inherited") | ("custom", "project-custom")
+    );
+    let owner_matches_detection = match resolution.detection.as_str() {
+        "available" => {
+            (harness.primary_host == "codex" && resolution.resolved_owner == "omx")
+                || (harness.primary_host == "claude" && resolution.resolved_owner == "omc")
+        }
+        "absent" | "incompatible" | "unknown" => resolution.resolved_owner == "host-native",
+        _ => false,
+    };
+    let inputs_match = answers.schema_version == 1
+        && harness.schema_version == 1
+        && harness.harness_version == "0.8.0"
+        && harness.source_release_version == "0.8.0"
+        && resolution.schema_version == 1
+        && answers.project_name == harness.project_name
+        && answers.project_kind == harness.project_kind
+        && answers.setup_mode == harness.setup_mode
+        && answers.primary_host == harness.primary_host
+        && resolution.detection == harness.external_capability_detection
+        && resolution.resolved_owner == harness.resolved_owner
+        && resolution.evidence_digest == harness.resolution_evidence_digest
+        && !harness.project_name.trim().is_empty()
+        && matches!(harness.project_kind.as_str(), "general" | "custom")
+        && matches!(harness.setup_mode.as_str(), "expedited" | "custom")
+        && preference_provenance_matches
+        && matches!(harness.interface_language.as_str(), "en" | "ko")
+        && matches!(harness.wiki_language.as_str(), "en" | "ko" | "both")
+        && matches!(
+            harness.persona_id.as_str(),
+            "strict" | "balanced" | "friendly" | "custom"
+        )
+        && matches!(
+            harness.primary_host.as_str(),
+            "codex" | "claude" | "antigravity"
+        )
+        && matches!(
+            harness.resolved_owner.as_str(),
+            "host-native" | "omx" | "omc"
+        )
+        && owner_matches_detection
+        && valid_digest(&harness.resolution_evidence_digest)
+        && harness
+            .selected_project_skills
+            .windows(2)
+            .all(|pair| pair[0] < pair[1]);
+    if !inputs_match {
+        return Err(RenderError::Verification(
+            "frozen 0.8 project-base inputs are invalid or inconsistent".to_owned(),
+        ));
+    }
+    validate_skill_approvals(&answers.approved_optional_skills).map_err(as_verification)?;
+    let approved_ledger: SkillLedger = serde_yaml::from_slice(&read_target_required(
+        target_dir,
+        Path::new(".hive/config/approved-skills.yml"),
+        "0.8 approved optional Skill ledger",
+    )?)
+    .map_err(|error| {
+        RenderError::Verification(format!(
+            "invalid frozen 0.8 approved optional Skill ledger: {error}"
+        ))
+    })?;
+    if approved_ledger.skills != answers.approved_optional_skills {
+        return Err(RenderError::Verification(
+            "frozen 0.8 optional Skill ledger differs from setup approval authority".to_owned(),
+        ));
+    }
+
+    let built_in_names = SKILLS
+        .iter()
+        .map(|(name, _, _)| *name)
+        .collect::<BTreeSet<_>>();
+    if harness
+        .selected_project_skills
+        .iter()
+        .any(|name| !built_in_names.contains(name.as_str()))
+    {
+        return Err(RenderError::Verification(
+            "frozen 0.8 selected project Skill is not in the embedded release".to_owned(),
+        ));
+    }
+    let selected = harness
+        .selected_project_skills
+        .iter()
+        .map(String::as_str)
+        .collect::<BTreeSet<_>>();
+    let mut files = BTreeMap::new();
+    for (name, content) in DIRECTIVES {
+        files.insert(format!(".agents/directives/{name}"), content.to_vec());
+    }
+    for &(name, content, metadata) in &SKILLS {
+        if !selected.contains(name) {
+            continue;
+        }
+        files.insert(format!(".agents/skills/{name}/SKILL.md"), content.to_vec());
+        files.insert(
+            format!(".agents/skills/{name}/agents/openai.yaml"),
+            metadata.to_vec(),
+        );
+        if harness.primary_host == "claude" {
+            files.insert(format!(".claude/skills/{name}/SKILL.md"), content.to_vec());
+        }
+    }
+
+    let mut reserved_names = built_in_names.clone();
+    reserved_names.insert("setup-hive");
+    let mut optional_names = BTreeSet::new();
+    for approval in &answers.approved_optional_skills {
+        let Some(source) = approval.source.strip_prefix("path:") else {
+            continue;
+        };
+        if approval.approved_capabilities != approval.requested_capabilities {
+            continue;
+        }
+        if reserved_names.contains(approval.name.as_str())
+            || !optional_names.insert(approval.name.as_str())
+        {
+            return Err(RenderError::Verification(format!(
+                "frozen 0.8 optional Skill name collides with another projection: {}",
+                approval.name
+            )));
+        }
+        let source = PathBuf::from(source);
+        validate_project_relative(&source)
+            .map_err(|error| RenderError::Verification(error.to_string()))?;
+        if source.file_name() != Some(OsStr::new("SKILL.md"))
+            || [".agents", ".claude", ".hive"]
+                .iter()
+                .any(|root| source.starts_with(root))
+            || matches!(
+                source.to_str(),
+                Some("AGENTS.md" | "CLAUDE.md" | "GEMINI.md")
+            )
+        {
+            return Err(RenderError::Verification(format!(
+                "frozen 0.8 optional Skill source is inside a Hive-managed namespace: {}",
+                source.display()
+            )));
+        }
+        let skill_md = read_target_required(
+            target_dir,
+            &source,
+            "0.8 approved project-local optional Skill source",
+        )?;
+        validate_frozen_0_8_optional_source(approval, &skill_md)?;
+        files.insert(
+            format!(".agents/skills/{}/SKILL.md", approval.name),
+            skill_md.clone(),
+        );
+        if harness.primary_host == "claude" {
+            files.insert(
+                format!(".claude/skills/{}/SKILL.md", approval.name),
+                skill_md,
+            );
+        }
+    }
+
+    let wiki_state = if harness.wiki_enabled {
+        "enabled"
+    } else {
+        "disabled"
+    };
+    let mut marker = include_str!("../../../harness/project-bases/0.8.0/AGENTS.md.template")
+        .replace("{{ project_name }}", &harness.project_name)
+        .replace("{{ project_kind }}", &harness.project_kind)
+        .replace("{{ setup_mode }}", &harness.setup_mode)
+        .replace(
+            "{{ preference_provenance }}",
+            &harness.preference_provenance,
+        )
+        .replace("{{ interface_language }}", &harness.interface_language)
+        .replace(
+            "{{ \"enabled\" if wiki_enabled else \"disabled\" }}",
+            wiki_state,
+        )
+        .replace("{{ wiki_language }}", &harness.wiki_language)
+        .replace("{{ persona_id }}", &harness.persona_id)
+        .replace("{{ primary_host }}", &harness.primary_host)
+        .replace(
+            "{{ capability_resolution.resolved_owner }}",
+            &harness.resolved_owner,
+        )
+        .replace(
+            "{{ capability_resolution.evidence_digest }}",
+            &harness.resolution_evidence_digest,
+        );
+    if !harness.usage_guard_enabled {
+        marker = marker
+            .lines()
+            .map(|line| {
+                if line.starts_with("- Immediately before each new automatic dispatch") {
+                    "- Usage guard: disabled by installed preference. Do not run `hive usage enforce` or call a native/CodexBar sensor automatically. Automatic resume must report `data.usage_guard.enforced=false`, `outcome=disabled`, one authorization ID, and exactly one dispatch brief."
+                } else {
+                    line
+                }
+            })
+            .collect::<Vec<_>>()
+            .join("\n");
+        marker.push('\n');
+    }
+    files.insert("AGENTS.md".to_owned(), marker.into_bytes());
+    let adapter = format!("{MARKER_START}\n@AGENTS.md\n{MARKER_END}\n").into_bytes();
+    files.insert("CLAUDE.md".to_owned(), adapter.clone());
+    files.insert("GEMINI.md".to_owned(), adapter);
+    Ok(files)
+}
+
 fn validate_frozen_0_7_optional_source(
     approval: &SkillApproval,
     skill_md: &[u8],
@@ -1163,6 +1531,64 @@ fn validate_frozen_0_7_optional_source(
     if frontmatter.name != approval.name || frontmatter.description.trim().is_empty() {
         return Err(RenderError::Verification(format!(
             "frozen 0.7 optional Skill frontmatter differs from approval: {}",
+            approval.name
+        )));
+    }
+    Ok(())
+}
+
+fn validate_frozen_0_8_optional_source(
+    approval: &SkillApproval,
+    skill_md: &[u8],
+) -> Result<(), RenderError> {
+    #[derive(Deserialize)]
+    #[serde(deny_unknown_fields)]
+    struct Frontmatter0_8 {
+        name: String,
+        description: String,
+    }
+
+    let projected = PathBuf::from(format!(".agents/skills/{}/SKILL.md", approval.name));
+    validate_hive_skill_projection_relative(&projected)
+        .map_err(|error| RenderError::Verification(error.to_string()))?;
+    let digest = sha256_digest(skill_md);
+    if approval.revision != digest || approval.content_digest != digest {
+        return Err(RenderError::Verification(format!(
+            "frozen 0.8 optional Skill bytes differ from approval: {}",
+            approval.name
+        )));
+    }
+    let text = std::str::from_utf8(skill_md).map_err(|_| {
+        RenderError::Verification(format!(
+            "frozen 0.8 optional Skill is not UTF-8: {}",
+            approval.name
+        ))
+    })?;
+    let (rest, delimiter) = if let Some(rest) = text.strip_prefix("---\n") {
+        (rest, "\n---\n")
+    } else if let Some(rest) = text.strip_prefix("---\r\n") {
+        (rest, "\r\n---\r\n")
+    } else {
+        return Err(RenderError::Verification(format!(
+            "frozen 0.8 optional Skill has no frontmatter: {}",
+            approval.name
+        )));
+    };
+    let (frontmatter, _) = rest.split_once(delimiter).ok_or_else(|| {
+        RenderError::Verification(format!(
+            "frozen 0.8 optional Skill has unterminated frontmatter: {}",
+            approval.name
+        ))
+    })?;
+    let frontmatter: Frontmatter0_8 = serde_yaml::from_str(frontmatter).map_err(|error| {
+        RenderError::Verification(format!(
+            "frozen 0.8 optional Skill frontmatter is invalid for {}: {error}",
+            approval.name
+        ))
+    })?;
+    if frontmatter.name != approval.name || frontmatter.description.trim().is_empty() {
+        return Err(RenderError::Verification(format!(
+            "frozen 0.8 optional Skill frontmatter differs from approval: {}",
             approval.name
         )));
     }
@@ -1239,12 +1665,15 @@ fn execute_release_update_for_target_in(
         GlobalProjectPreferences {
             interface_language: preferences.interface_language,
             wiki_enabled: preferences.wiki_enabled,
+            wiki_backend: preferences.wiki_backend,
             wiki_language: preferences.wiki_language,
             persona_id: preferences.persona_id,
             persona_custom_description: preferences.persona_custom_description,
             selected_project_skills: preferences.selected_project_skills,
             usage_guard_enabled: preferences.usage_guard_enabled,
             codexbar_fallback_enabled: preferences.codexbar_fallback_enabled,
+            discord_guard_enabled: preferences.discord_guard_enabled,
+            discord_webhook_url_env: preferences.discord_webhook_url_env,
             usage_stop_remaining_percent: preferences.usage_stop_remaining_percent,
         }
     });
@@ -1433,12 +1862,15 @@ fn resolved_preferences(
         provenance: preferences.provenance.to_owned(),
         interface_language: preferences.interface_language.clone(),
         wiki_enabled: preferences.wiki_enabled,
+        wiki_backend: preferences.wiki_backend.clone(),
         wiki_language: preferences.wiki_language.clone(),
         persona_id: preferences.persona_id.clone(),
         persona_custom_description: preferences.persona_custom_description.clone(),
         selected_project_skills: preferences.selected_project_skills.clone(),
         usage_guard_enabled: preferences.usage_guard_enabled,
         codexbar_fallback_enabled: preferences.codexbar_fallback_enabled,
+        discord_guard_enabled: preferences.discord_guard_enabled,
+        discord_webhook_url_env: preferences.discord_webhook_url_env.clone(),
         usage_stop_remaining_percent: preferences.usage_stop_remaining_percent,
     })
 }
@@ -1698,7 +2130,7 @@ fn validate_project_setup_preferences(answers: &SetupAnswers) -> Result<(), Rend
 #[derive(Deserialize)]
 struct ProjectSuiteCatalog {
     schema_version: u32,
-    recommended_skill_suites: Vec<ProjectSuite>,
+    project_skill_suites: Vec<ProjectSuite>,
     mandatory_skills: Vec<String>,
     skill_dependencies: Vec<ProjectSkillDependency>,
 }
@@ -1728,12 +2160,15 @@ fn resolve_effective_project_preferences(
             provenance: "global-inherited",
             interface_language: global.interface_language.clone(),
             wiki_enabled: global.wiki_enabled,
+            wiki_backend: global.wiki_backend.clone(),
             wiki_language: global.wiki_language.clone(),
             persona_id: global.persona_id.clone(),
             persona_custom_description: global.persona_custom_description.clone(),
             selected_project_skills: global.selected_project_skills.clone(),
             usage_guard_enabled: global.usage_guard_enabled,
             codexbar_fallback_enabled: global.codexbar_fallback_enabled,
+            discord_guard_enabled: global.discord_guard_enabled,
+            discord_webhook_url_env: global.discord_webhook_url_env.clone(),
             usage_stop_remaining_percent: global.usage_stop_remaining_percent,
         },
         "custom" => {
@@ -1757,6 +2192,7 @@ fn resolve_effective_project_preferences(
                     .clone()
                     .expect("custom preferences were validated"),
                 wiki_enabled: wiki.enabled,
+                wiki_backend: global.wiki_backend.clone(),
                 wiki_language: wiki.language.clone(),
                 persona_id: persona.id.clone(),
                 persona_custom_description: persona.custom_description.clone(),
@@ -1768,11 +2204,36 @@ fn resolve_effective_project_preferences(
                 )?,
                 usage_guard_enabled: global.usage_guard_enabled,
                 codexbar_fallback_enabled: global.codexbar_fallback_enabled,
+                discord_guard_enabled: global.discord_guard_enabled,
+                discord_webhook_url_env: global.discord_webhook_url_env.clone(),
                 usage_stop_remaining_percent: global.usage_stop_remaining_percent,
             }
         }
         _ => unreachable!("setup mode was validated"),
     };
+    if !effective.wiki_enabled {
+        effective.selected_project_skills = effective
+            .selected_project_skills
+            .into_iter()
+            .map(|name| -> Result<Option<String>, RenderError> {
+                let canonical = canonical_builtin_skill_name(&name)
+                    .map_err(|error| RenderError::Internal(error.to_string()))?;
+                let is_knowledge_skill = matches!(
+                    canonical.as_deref().unwrap_or(name.as_str()),
+                    "record-knowledge"
+                        | "search-knowledge"
+                        | "share-knowledge"
+                        | "maintain-knowledge"
+                        | "import-repository-knowledge"
+                        | "manage-wiki"
+                );
+                Ok((!is_knowledge_skill).then_some(name))
+            })
+            .collect::<Result<Vec<_>, _>>()?
+            .into_iter()
+            .flatten()
+            .collect();
+    }
     effective.selected_project_skills.sort();
     Ok(Some(effective))
 }
@@ -1796,14 +2257,26 @@ fn validate_global_project_preferences(
         .len()
         == global.selected_project_skills.len();
     if !matches!(global.interface_language.as_str(), "en" | "ko")
+        || !matches!(global.wiki_backend.as_str(), "markdown" | "notion")
         || !matches!(global.wiki_language.as_str(), "en" | "ko" | "both")
         || !(custom_persona_valid || standard_persona_valid)
         || !unique_skills
         || global
             .selected_project_skills
             .iter()
-            .any(|name| name == "setup-hive")
+            .try_fold(false, |found, name| {
+                canonical_builtin_skill_name(name)
+                    .map(|canonical| found || canonical.as_deref() == Some("configure"))
+                    .map_err(|error| RenderError::Internal(error.to_string()))
+            })?
         || (global.codexbar_fallback_enabled && !global.usage_guard_enabled)
+        || (global.discord_guard_enabled && !global.usage_guard_enabled)
+        || (global.discord_guard_enabled
+            && !global
+                .discord_webhook_url_env
+                .as_deref()
+                .is_some_and(valid_environment_name))
+        || (!global.discord_guard_enabled && global.discord_webhook_url_env.is_some())
         || !(1..=99).contains(&global.usage_stop_remaining_percent)
     {
         return Err(RenderError::Input(
@@ -1811,6 +2284,13 @@ fn validate_global_project_preferences(
         ));
     }
     Ok(())
+}
+
+fn valid_environment_name(value: &str) -> bool {
+    let mut characters = value.chars();
+    matches!(characters.next(), Some('A'..='Z' | '_'))
+        && characters.all(|character| matches!(character, 'A'..='Z' | '0'..='9' | '_'))
+        && value.len() <= 128
 }
 
 fn resolve_project_skill_selection(
@@ -1832,14 +2312,19 @@ fn resolve_project_skill_selection(
             .clone()
             .expect("individual selection was schema-validated")
             .into_iter()
-            .collect::<BTreeSet<_>>(),
+            .map(|name| {
+                canonical_builtin_skill_name(&name)
+                    .map(|canonical| canonical.unwrap_or(name))
+                    .map_err(|error| RenderError::Internal(error.to_string()))
+            })
+            .collect::<Result<BTreeSet<_>, _>>()?,
         "recommended" => {
             let suite_id = selection
                 .recommended_suite
                 .as_deref()
                 .expect("recommended selection was schema-validated");
             catalog
-                .recommended_skill_suites
+                .project_skill_suites
                 .iter()
                 .find(|suite| suite.id == suite_id)
                 .map(|suite| suite.skills.iter().cloned().collect())
@@ -1852,10 +2337,10 @@ fn resolve_project_skill_selection(
         _ => unreachable!("Skill selection mode was schema-validated"),
     };
     if recommended {
-        selected.remove("setup-hive");
-    } else if selected.contains("setup-hive") {
+        selected.remove("configure");
+    } else if selected.contains("configure") {
         return Err(RenderError::Input(
-            "setup-hive is user-scope only and cannot be selected for a project".to_owned(),
+            "configure is user-scope only and cannot be selected for a project".to_owned(),
         ));
     }
     let dependencies = catalog
@@ -1883,7 +2368,10 @@ fn resolve_project_skill_selection(
 }
 
 fn project_skill_catalog() -> Result<ProjectSuiteCatalog, RenderError> {
-    serde_yaml::from_str(include_str!("../../../harness/user-setup/catalog.yml")).map_err(|error| {
+    serde_yaml::from_str(include_str!(
+        "../../../harness/project-setup/skill-suites.yml"
+    ))
+    .map_err(|error| {
         RenderError::Internal(format!("embedded user setup catalog is invalid: {error}"))
     })
 }
@@ -1893,7 +2381,7 @@ fn validate_project_skill_catalog(
     available: &BTreeSet<String>,
 ) -> Result<(), RenderError> {
     let mut suite_ids = BTreeSet::new();
-    let suites_valid = catalog.recommended_skill_suites.iter().all(|suite| {
+    let suites_valid = catalog.project_skill_suites.iter().all(|suite| {
         suite_ids.insert(suite.id.as_str())
             && !suite.skills.is_empty()
             && project_skill_names_are_valid(&suite.skills, available)
@@ -1905,7 +2393,7 @@ fn validate_project_skill_catalog(
             && project_skill_names_are_valid(&dependency.requires, available)
     });
     if catalog.schema_version != 1
-        || catalog.mandatory_skills != ["setup-hive"]
+        || catalog.mandatory_skills != ["configure"]
         || suite_ids != BTreeSet::from(["game-developer", "non-developer", "web-developer"])
         || !suites_valid
         || !dependencies_valid
@@ -2032,7 +2520,7 @@ fn validate_resolution_host(
     }
     if resolution.resolved_owner != owner {
         return Err(RenderError::Input(format!(
-            "capability owner must resolve automatically to {owner}"
+            "capability owner is not valid for the selected host capability path: {owner}"
         )));
     }
     if resolution.external_runtime.as_deref() != external_runtime {
@@ -2096,11 +2584,17 @@ fn derive_resolution(
         return Ok(("unknown", "host-native", None));
     }
     if compatible {
-        return Ok((
-            "available",
-            expected_runtime.expect("Codex and Claude have an expected runtime"),
-            expected_runtime,
-        ));
+        let owner = if resolution.resolved_owner == "host-native" {
+            "host-native"
+        } else if resolution.resolved_owner.as_str() == expected_runtime.expect("runtime") {
+            expected_runtime.expect("runtime")
+        } else {
+            return Err(RenderError::Input(
+                "compatible external owner must match the active host or remain host-native"
+                    .to_owned(),
+            ));
+        };
+        return Ok(("available", owner, expected_runtime));
     }
     if incompatible {
         return Ok(("incompatible", "host-native", expected_runtime));
@@ -2173,11 +2667,6 @@ fn validate_hook_approvals(
     hooks: &[HookApproval],
     resolution: &CapabilityResolution,
 ) -> Result<(), RenderError> {
-    if !hooks.is_empty() && resolution.detection != "absent" {
-        return Err(RenderError::Safety(
-            "fallback hooks require conclusive external capability absence".to_owned(),
-        ));
-    }
     let mut identities = BTreeSet::new();
     for hook in hooks {
         if hook.consent_version != 1
@@ -2204,6 +2693,11 @@ fn validate_hook_approvals(
                 )));
             }
         };
+        if !host_native_hook_event_supported(resolution, expected_event) {
+            return Err(RenderError::Safety(format!(
+                "optional hook requires a supported host-native event: {expected_event}"
+            )));
+        }
         let expected_path = format!(".hive/hooks/{}", hook.capability);
         let expected_command = format!(
             "hive hook --capability {} --event {expected_event} \
@@ -2229,6 +2723,19 @@ fn validate_hook_approvals(
         verify_consent_digest(hook, &hook.consent_digest, "fallback hook")?;
     }
     Ok(())
+}
+
+fn host_native_hook_event_supported(resolution: &CapabilityResolution, event: &str) -> bool {
+    resolution.detection == "available"
+        && resolution.resolved_owner == "host-native"
+        && resolution
+            .hook_events
+            .as_ref()
+            .and_then(|events| events.get(event))
+            .and_then(JsonValue::as_object)
+            .and_then(|claim| claim.get("support"))
+            .and_then(JsonValue::as_str)
+            == Some("supported")
 }
 
 fn hook_descriptor_bytes(hook: &HookApproval) -> Result<Vec<u8>, RenderError> {
@@ -2296,7 +2803,9 @@ fn render_tree_with_preferences<T: TargetRead + ?Sized>(
     let mut files = BTreeMap::new();
     insert_static_files(&mut files);
     preserve_protected_seeds(target, &mut files)?;
-    if effective_preferences.is_some_and(|preferences| !preferences.wiki_enabled) {
+    if effective_preferences.is_some_and(|preferences| {
+        !preferences.wiki_enabled || preferences.wiki_backend == "notion"
+    }) {
         files.remove(Path::new(".hive/knowledge/Wiki/index.md"));
         files.remove(Path::new(".hive/knowledge/Wiki/log.md"));
     }
@@ -2641,17 +3150,27 @@ fn render_harness_toml(
             .join(", ");
         write!(
             &mut output,
-            "setup_mode = {}\npreference_provenance = {}\ninterface_language = {}\nwiki_enabled = {}\nwiki_language = {}\npersona_id = {}\nusage_guard_enabled = {}\ncodexbar_fallback_enabled = {}\nselected_project_skills = [{selected}]\n",
+            "setup_mode = {}\npreference_provenance = {}\ninterface_language = {}\nwiki_enabled = {}\nwiki_backend = {}\nwiki_language = {}\npersona_id = {}\nusage_guard_enabled = {}\ncodexbar_fallback_enabled = {}\ndiscord_guard_enabled = {}\nselected_project_skills = [{selected}]\n",
             quoted(&answers.setup_mode),
             quoted(preferences.provenance),
             quoted(&preferences.interface_language),
             preferences.wiki_enabled,
+            quoted(&preferences.wiki_backend),
             quoted(&preferences.wiki_language),
             quoted(&preferences.persona_id),
             preferences.usage_guard_enabled,
             preferences.codexbar_fallback_enabled,
+            preferences.discord_guard_enabled,
         )
         .expect("writing to String cannot fail");
+        if let Some(environment_name) = &preferences.discord_webhook_url_env {
+            writeln!(
+                &mut output,
+                "discord_webhook_url_env = {}",
+                quoted(environment_name)
+            )
+            .expect("writing to String cannot fail");
+        }
         if let Some(description) = &preferences.persona_custom_description {
             writeln!(
                 &mut output,
@@ -2661,7 +3180,7 @@ fn render_harness_toml(
             .expect("writing to String cannot fail");
         }
     }
-    if resolution.detection == "absent" && !answers.approved_fallback_hooks.is_empty() {
+    if !answers.approved_fallback_hooks.is_empty() {
         output.push_str("approved_fallback_hooks_file = \".hive/config/approved-hooks.yml\"\n");
     }
     output.push_str(
@@ -2675,9 +3194,57 @@ fn render_agents_marker(
     resolution: &CapabilityResolution,
     effective_preferences: Option<&EffectiveProjectPreferences>,
 ) -> String {
+    if let Some(preferences) = effective_preferences {
+        let marker = include_str!("../../../harness/template/AGENTS.md.jinja")
+            .replace("{{ project_name }}", &answers.project_name)
+            .replace("{{ project_kind }}", &answers.project_kind)
+            .replace("{{ setup_mode }}", &answers.setup_mode)
+            .replace("{{ preference_provenance }}", preferences.provenance)
+            .replace("{{ interface_language }}", &preferences.interface_language)
+            .replace(
+                "{{ \"enabled\" if wiki_enabled else \"disabled\" }}",
+                if preferences.wiki_enabled {
+                    "enabled"
+                } else {
+                    "disabled"
+                },
+            )
+            .replace("{{ wiki_backend }}", &preferences.wiki_backend)
+            .replace("{{ wiki_language }}", &preferences.wiki_language)
+            .replace("{{ persona_id }}", &preferences.persona_id)
+            .replace("{{ primary_host }}", &answers.primary_host)
+            .replace(
+                "{{ capability_resolution.resolved_owner }}",
+                &resolution.resolved_owner,
+            )
+            .replace(
+                "{{ capability_resolution.evidence_digest }}",
+                &resolution.evidence_digest,
+            );
+        if !preferences.usage_guard_enabled {
+            let mut disabled = marker
+                .lines()
+                .map(|line| {
+                    if line.starts_with("- Immediately before each new automatic dispatch") {
+                        "- Usage guard: disabled by installed preference. Do not run `hive usage enforce` or call a native/CodexBar sensor automatically. Automatic resume must report `data.usage_guard.enforced=false`, `outcome=disabled`, one authorization ID, and exactly one dispatch brief."
+                    } else {
+                        line
+                    }
+                })
+                .collect::<Vec<_>>()
+                .join("\n");
+            disabled.push('\n');
+            return disabled;
+        }
+        return marker;
+    }
+    let selected_interface_language = effective_preferences
+        .map_or("configured interface language", |preferences| {
+            preferences.interface_language.as_str()
+        });
     let preference_summary = effective_preferences.map_or_else(String::new, |preferences| {
         format!(
-            "Setup mode: `{}`\nPreference provenance: `{}`\nInterface language: `{}`\nWiki: `{}` (`{}`)\nPersona: `{}`\n",
+            "Setup mode: `{}`\nPreference provenance: `{}`\nInterface language: `{}`\nWiki: `{}` (backend=`{}`, language=`{}`)\nPersona: `{}`\n",
             answers.setup_mode,
             preferences.provenance,
             preferences.interface_language,
@@ -2686,23 +3253,42 @@ fn render_agents_marker(
             } else {
                 "disabled"
             },
+            preferences.wiki_backend,
             preferences.wiki_language,
             preferences.persona_id,
         )
     });
     let marker = format!(
-        "{MARKER_START}\n# Aigent Hive\n\nProject: `{}`\nProfile: `{}`\n{}Primary host: `{}`\nResolved orchestration owner: `{}`\nResolution evidence: `{}`\n\n- Read canonical Hive configuration from `.hive/config/harness.toml`.\n- Before editing anything, read `.hive/directives/00-editing-discipline.md` in full. Apply all four sections as the highest-priority editing discipline within the Hive contract; never compact, summarize, omit, or substitute any part. Its literal `# CLAUDE.md` heading is original text, not Claude-only scope: the directive applies identically on Codex, Claude, and Gemini Antigravity. Higher-priority instructions and Hive security, ownership, credential, and production boundaries still control.\n- Immediately before each new automatic dispatch, run `hive usage enforce --target <project-root> --session-id <exact-current-host-session-id> --process-id <exact-current-host-process-id> [--account-digest <active-account-digest>] --output json`. Do not run `enforce` for ordinary answers, manual work, or other non-dispatch actions. The account digest may be omitted only when the qualified local sensor exposes exactly one unambiguous account. A current halt marker takes priority; exit `3` blocks that automatic dispatch. Exit `0` is only a session-bound preflight and never authorizes dispatch. Automatic dispatch requires a separate `hive run resume --dispatch-intent automatic` result with `data.usage_guard.enforced=true`, `outcome=authorized`, one authorization ID, and exactly one dispatch brief. A confirmed current-session disable bypasses this preflight but does not authorize dispatch. Non-Codex automatic dispatch fails closed until a qualified local sensor exists. Never transfer an override or halt marker to another host, session, or process. Recognize obvious threshold/off/on intent by meaning rather than a finite phrase list. A bare continue, resume, finish, urgency, or active run never authorizes bypass.\n- Load only the directives and knowledge required by the current request.\n- For a simple question, do not load project memory, spawn agents, or edit files.\n- Route explicit prompt authoring or improvement intent to `hive-prompt-refine` in `refine-only` mode unless the same request explicitly asks to execute the result.\n- If an ordinary work prompt materially lacks a goal, scope, constraints, acceptance criteria, or output contract, offer one concise optional refinement suggestion without rewriting the prompt, loading the Skill, or executing the suggestion. Do not interrupt sufficiently clear ordinary work or a simple question.\n- Before presenting pending actions or a user handoff, complete every safe, in-scope, automatable action that does not require new user authority, credentials, a protected external mutation, or a materially different product decision. Then give only the genuinely user-owned actions as a concise ordered guide with each exact location, command or operation, expected result or return evidence, and reason user authority is required. List failed or impossible work separately with its cause and recovery path.\n- Keep durable role identity in `.hive/team/roles/`; the active host owns sessions and subagents.\n- Keep durable knowledge in Markdown. Treat `.hive/index/*.sqlite*` as disposable.\n- Keep the selected interface language consistent throughout every question and response. In Korean, keep English only for proper nouns, product or package names, commands, code identifiers, paths, schema keys, exact UI labels, and terms without a clear Korean equivalent; replace ordinary English nouns with Korean. In English, write the full passage in English except for exact Korean names, literals, quotations, or text the user explicitly asks to preserve.\n- Write human-readable project documents in concise Korean unless the user explicitly requests another language. Prefer short headings, bullets, tables, checklists, and semantic noun phrases.\n- Do not end authored explanatory Korean prose with declarative or conversational forms. `~다`, `~한다`, `~된다`, `~이다`, `~있다`, `~없다`, `~않는다`, `~했다`, `~됐다`, `~합니다`, `~됩니다`, and `~해요` are non-exhaustive prohibited examples.\n- Do not mechanically change those endings to `~음` or the attached `~ㅁ` form. This includes Korean stems, mixed English-Korean forms, state labels followed by a copula, and possibility clauses. Rewrite the full clause: avoid `Release 계약이 구현됐다.` and `Release 계약이 구현됐음.`; use `Release 계약 구현 완료`. Avoid `API key를 요청하거나 저장하지 않는다.` and `API key를 요청하거나 저장하지 않음.`; use `API key 요청·저장 없음`.\n- Exact bad → good examples (not exhaustive): `Aigent Hive는 provider-neutral 로컬 agent harness다.` → `Aigent Hive: provider-neutral 로컬 agent harness`; `Product version은 0.7.0이다.` → `Product version: 0.7.0`; `Release 계약이 구현됐다.` → `Release 계약 구현 완료`; `API key를 요청하거나 저장하지 않는다.` → `API key 요청·저장 없음`; `이 기능을 사용합니다.` → `기능 사용`; `다음 단계에서 검증해요.` → `다음 단계: 검증`; `검증이 필요합니다.` → `검증 필요`; `업데이트가 완료되었습니다.` → `업데이트 완료`; `Release 계약이 구현됐음.` → `Release 계약 구현 완료`; `API key를 요청하거나 저장하지 않음.` → `API key 요청·저장 없음`.\n- Mechanical nounization examples (not exhaustive): `Status는 INDETERMINATE다.` → `Status: INDETERMINATE`; `문서를 읽음.` → `문서 확인`; `작업이 끝남.` → `작업 완료`; `연결이 닫힘.` → `연결 종료`; `설정 값을 가짐.` → `설정 값 보유`; `정책을 따름.` → `정책 준수`; `compile됨.` → `compile 완료`; `검증할 수 있음.` → `검증 가능`; `검증할 수 없음.` → `검증 불가`.\n- Do not use conversational imperative endings such as standalone `~줘` or attached `~해` in authored explanation. Exact user-prompt or UI-prompt samples require the path, line, reason, and exact line digest exception. Examples: `문서를 보여 줘.` → `문서 확인 요청`; `기능을 사용해.` → `기능 사용 요청`.\n- Apply the same rule to authored callouts and blockquotes. Blockquote syntax is not proof of an exact quotation. Preserve narrative-form text only for an exact external quote, UI prompt, protocol sample, fixture payload, or another byte-sensitive literal with an explicit path, line, reason, and exact line digest.\n- Do not call model-provider APIs or request provider API credentials.\n- Require explicit approval before activating optional Skills.\n- Resolve compatible OMX on Codex and compatible OMC on Claude before host-native capability; never ask the user to select an owner or switch owners mid-run.\n- Treat OMX/OMC cancellation output as auxiliary evidence only; it never substitutes for the bound usage halt marker or durable goal/task state.\n- Treat fallback hooks as optional data-integrity guards only. They require conclusive external capability absence plus exact capability, event, path, command, and digest consent.\n- Never use a fallback hook for prompt classification or rewriting, Skill activation, memory ingestion, subagent orchestration, or continuation. A `Stop` hook always returns a neutral allow result.\n- Preserve user text and third-party marker blocks outside this Hive block.\n{MARKER_END}\n",
+        "{MARKER_START}\n# Aigent Hive\n\nProject: `{}`\nProfile: `{}`\n{}Primary host: `{}`\nResolved orchestration owner: `{}`\nResolution evidence: `{}`\n\n- Read canonical Hive configuration from `.hive/config/harness.toml`.\n- Before editing anything, read `.hive/directives/00-editing-discipline.md` in full. Apply all four sections as the highest-priority editing discipline within the Hive contract; never compact, summarize, omit, or substitute any part. Its literal `# CLAUDE.md` heading is original text, not Claude-only scope: the directive applies identically on Codex, Claude, and Gemini Antigravity. Higher-priority instructions and Hive security, ownership, credential, and production boundaries still control.\n- Immediately before each new automatic dispatch, run `hive usage enforce --target <project-root> --session-id <exact-current-host-session-id> --process-id <exact-current-host-process-id> [--account-digest <active-account-digest>] --output json`. Do not run `enforce` for ordinary answers, manual work, or other non-dispatch actions. The account digest may be omitted only when the qualified local sensor exposes exactly one unambiguous account. A current halt marker takes priority; exit `3` blocks that automatic dispatch. Exit `0` is only a session-bound preflight and never authorizes dispatch. Automatic dispatch requires a separate `hive run resume --dispatch-intent automatic` result with `data.usage_guard.enforced=true`, `outcome=authorized`, one authorization ID, and exactly one dispatch brief. A confirmed current-session disable bypasses this preflight but does not authorize dispatch. Non-Codex automatic dispatch fails closed until a qualified local sensor exists. Never transfer an override or halt marker to another host, session, or process. Recognize obvious threshold/off/on intent by meaning rather than a finite phrase list. A bare continue, resume, finish, urgency, or active run never authorizes bypass.\n- Load only the directives and knowledge required by the current request.\n- For a simple question, do not load project memory, spawn agents, or edit files.\n- Route explicit prompt authoring or improvement intent to `hive-prompt-refine` in `refine-only` mode unless the same request explicitly asks to execute the result.\n- If an ordinary work prompt materially lacks a goal, scope, constraints, acceptance criteria, or output contract, offer one concise optional refinement suggestion without rewriting the prompt, loading the Skill, or executing the suggestion. Do not interrupt sufficiently clear ordinary work or a simple question.\n- Unless the user explicitly opts out for the current request, write every plan to an appropriate project Markdown file before presenting or executing it. Never mirror the persisted plan one-for-one in the session; reference it with a concise summary and file path, or provide the file path alone for extensive review.\n- Before presenting pending actions or a user handoff, complete every safe, in-scope, automatable action that does not require new user authority, credentials, a protected external mutation, or a materially different product decision. Then give only the genuinely user-owned actions as a concise ordered guide with each exact location, command or operation, expected result or return evidence, and reason user authority is required. List failed or impossible work separately with its cause and recovery path.\n- Keep durable role identity in `.hive/team/roles/`; the active host owns sessions and subagents.\n- Keep durable knowledge in Markdown. Treat `.hive/index/*.sqlite*` as disposable.\n- Use the selected interface language `{}` for every question and response unless the user explicitly requests another language for the current response. A message written in another language does not by itself change this preference. In Korean, keep English only for proper nouns, product or package names, commands, code identifiers, paths, schema keys, exact UI labels, and terms without a clear Korean equivalent; replace ordinary English nouns with Korean. In English, write the full passage in English except for exact Korean names, literals, quotations, or text the user explicitly asks to preserve.\n- Write human-readable project documents in concise Korean unless the user explicitly requests another language. Prefer short headings, bullets, tables, checklists, and semantic noun phrases.\n- Do not end authored explanatory Korean prose with declarative or conversational forms. `~다`, `~한다`, `~된다`, `~이다`, `~있다`, `~없다`, `~않는다`, `~했다`, `~됐다`, `~합니다`, `~됩니다`, and `~해요` are non-exhaustive prohibited examples.\n- Do not mechanically change those endings to `~음` or the attached `~ㅁ` form. This includes Korean stems, mixed English-Korean forms, state labels followed by a copula, and possibility clauses. Rewrite the full clause: avoid `Release 계약이 구현됐다.` and `Release 계약이 구현됐음.`; use `Release 계약 구현 완료`. Avoid `API key를 요청하거나 저장하지 않는다.` and `API key를 요청하거나 저장하지 않음.`; use `API key 요청·저장 없음`.\n- Exact bad → good examples (not exhaustive): `Aigent Hive는 provider-neutral 로컬 agent harness다.` → `Aigent Hive: provider-neutral 로컬 agent harness`; `Product version은 0.7.0이다.` → `Product version: 0.7.0`; `Release 계약이 구현됐다.` → `Release 계약 구현 완료`; `API key를 요청하거나 저장하지 않는다.` → `API key 요청·저장 없음`; `이 기능을 사용합니다.` → `기능 사용`; `다음 단계에서 검증해요.` → `다음 단계: 검증`; `검증이 필요합니다.` → `검증 필요`; `업데이트가 완료되었습니다.` → `업데이트 완료`; `Release 계약이 구현됐음.` → `Release 계약 구현 완료`; `API key를 요청하거나 저장하지 않음.` → `API key 요청·저장 없음`.\n- Mechanical nounization examples (not exhaustive): `Status는 INDETERMINATE다.` → `Status: INDETERMINATE`; `문서를 읽음.` → `문서 확인`; `작업이 끝남.` → `작업 완료`; `연결이 닫힘.` → `연결 종료`; `설정 값을 가짐.` → `설정 값 보유`; `정책을 따름.` → `정책 준수`; `compile됨.` → `compile 완료`; `검증할 수 있음.` → `검증 가능`; `검증할 수 없음.` → `검증 불가`.\n- Do not use conversational imperative endings such as standalone `~줘` or attached `~해` in authored explanation. Exact user-prompt or UI-prompt samples require the path, line, reason, and exact line digest exception. Examples: `문서를 보여 줘.` → `문서 확인 요청`; `기능을 사용해.` → `기능 사용 요청`.\n- Apply the same rule to authored callouts and blockquotes. Blockquote syntax is not proof of an exact quotation. Preserve narrative-form text only for an exact external quote, UI prompt, protocol sample, fixture payload, or another byte-sensitive literal with an explicit path, line, reason, and exact line digest.\n- Do not call model-provider APIs or request provider API credentials.\n- Require explicit approval before activating optional Skills.\n- Start every new v0.9 run with verified host-native capabilities. Use OMX or OMC only when the user explicitly selects that external compatibility layer before the run starts. Preserve the owner already pinned by an existing run, including a 0.8.x OMX/OMC owner, and never switch owners mid-run.\n- Treat OMX/OMC cancellation output as auxiliary evidence only; it never substitutes for the bound usage halt marker or durable goal/task state.\n- Treat optional Hive hooks as data-integrity guards only. They require a supported host-native hook surface plus exact capability, event, path, command, and digest consent, and they remain absent for an explicitly selected external owner.\n- Never use a fallback hook for prompt classification or rewriting, Skill activation, memory ingestion, subagent orchestration, or continuation. A `Stop` hook always returns a neutral allow result.\n- Preserve user text and third-party marker blocks outside this Hive block.\n{MARKER_END}\n",
         answers.project_name,
         answers.project_kind,
         preference_summary,
         answers.primary_host,
         resolution.resolved_owner,
         resolution.evidence_digest,
+        selected_interface_language,
+    );
+    let marker = marker.replacen(
+        "- Load only the directives and knowledge required by the current request.\n",
+        "- Load only the directives and knowledge required by the current request.\n\
+- When Wiki is enabled, run at most one bounded `hive knowledge retrieve` before question, research, design, plan, debug, or implementation work. Skip retrieval during usage-guard or setup control, when Wiki is disabled, for acknowledgment-only or context-free requests, or after the current turn already performed the lookup.\n",
+        1,
+    );
+    let marker = marker.replacen(
+        "- For a simple question, do not load project memory, spawn agents, or edit files.",
+        "- For a simple question, do not spawn agents or edit files. Load canonical memory only through that bounded retrieval preflight when the question needs project or user context.",
+        1,
     );
     let marker = marker.replacen(
         "- Keep durable knowledge in Markdown. Treat `.hive/index/*.sqlite*` as disposable.\n",
         "- Keep durable knowledge in Markdown. Treat `.hive/index/*.sqlite*` as disposable.\n\
-- When this marker reports Wiki enabled, run agent-reviewed task-fact autocapture before the final response for material work. Record the bounded outcome, tool or project, criteria, and originating request summary from current authorized artifacts; never ingest a raw transcript, hook payload, tool output, hidden prompt, or runtime state.\n",
+- Before the final response on every Wiki-enabled turn, perform agent-reviewed classification of current authorized user statements and outcomes as a reusable task fact, preference, or workflow. Record the bounded outcome, tool or project, criteria, and originating request summary. When reusable, run `hive knowledge remember`, require its canonical-write receipt, and only then finish. Never write raw transcripts, secrets, ambiguous or ephemeral content, or confidential content without its exact authorized scope.\n",
+        1,
+    );
+    let marker = marker.replacen(
+        "- Write human-readable project documents in concise Korean unless the user explicitly requests another language.",
+        "- Explain in simple terms by default. Use concrete examples when they materially improve understanding, but do not force irrelevant examples or weaken technical precision.\n\
+- Write human-readable project documents in concise Korean unless the user explicitly requests another language.",
         1,
     );
     let marker = marker.replacen(
@@ -3636,7 +4222,7 @@ fn optional_source_from_approval(
 fn stale_hook_deletions<T: TargetRead + ?Sized>(
     target: &T,
     desired: &[HookApproval],
-    resolution: &CapabilityResolution,
+    _resolution: &CapabilityResolution,
 ) -> Result<BTreeSet<PathBuf>, RenderError> {
     let ledger_path = PathBuf::from(".hive/config/approved-hooks.yml");
     let Some(bytes) = read_target_optional(target, &ledger_path)? else {
@@ -3663,7 +4249,7 @@ fn stale_hook_deletions<T: TargetRead + ?Sized>(
         .iter()
         .filter(|hook| !desired_paths.contains(Path::new(&hook.path)))
         .collect();
-    let remove_ledger = desired.is_empty() || resolution.detection != "absent";
+    let remove_ledger = desired.is_empty();
     if stale_hooks.is_empty() && !remove_ledger {
         return Ok(BTreeSet::new());
     }
@@ -3698,7 +4284,7 @@ fn validate_revoked_hook_ownership<T: TargetRead + ?Sized>(
     let installed_resolution = read_installed_resolution(target).map_err(&conflict)?;
     validate_resolution(&installed_answers, &installed_resolution).map_err(&conflict)?;
     if ledger.schema_version != 1
-        || ledger.detection != "absent"
+        || ledger.detection != installed_resolution.detection
         || ledger.resolution_evidence_digest != installed_resolution.evidence_digest
         || ledger.hooks != installed_answers.approved_fallback_hooks
     {
@@ -5383,14 +5969,13 @@ fn validate_installed(target: &Path) -> Result<(), RenderError> {
         let ledger: HookLedger = serde_json::from_value(hook_value).map_err(|error| {
             RenderError::Verification(format!("invalid installed hook ledger: {error}"))
         })?;
-        if resolution.detection != "absent"
-            || ledger.schema_version != 1
-            || ledger.detection != "absent"
+        if ledger.schema_version != 1
+            || ledger.detection != resolution.detection
             || ledger.resolution_evidence_digest != resolution.evidence_digest
             || ledger.hooks != installed_answers.approved_fallback_hooks
         {
             return Err(RenderError::Verification(
-                "installed hooks do not bind current approvals and absent evidence".to_owned(),
+                "installed hooks do not bind current approvals and host-native evidence".to_owned(),
             ));
         }
         validate_hook_approvals(&ledger.hooks, &resolution).map_err(as_verification)?;
@@ -5409,7 +5994,11 @@ fn validate_installed(target: &Path) -> Result<(), RenderError> {
     }
     validate_hook_tree(target, &installed_answers.approved_fallback_hooks)?;
     validate_roles(target, &installed_answers.persistent_roles)?;
-    validate_protected_contract(target, harness.wiki_enabled.unwrap_or(true))?;
+    validate_protected_contract(
+        target,
+        harness.wiki_enabled.unwrap_or(true),
+        harness.wiki_backend.as_deref().unwrap_or("markdown"),
+    )?;
     validate_editing_discipline(target)?;
     validate_installed_marker(target, &installed_answers, &resolution)?;
     Ok(())
@@ -5449,6 +6038,10 @@ fn effective_preferences_from_harness(
     let wiki_enabled = harness.wiki_enabled.ok_or_else(|| {
         RenderError::Verification("installed effective Wiki state is missing".to_owned())
     })?;
+    let wiki_backend = harness
+        .wiki_backend
+        .clone()
+        .unwrap_or_else(|| "markdown".to_owned());
     let wiki_language = harness.wiki_language.clone().ok_or_else(|| {
         RenderError::Verification("installed effective Wiki language is missing".to_owned())
     })?;
@@ -5466,12 +6059,15 @@ fn effective_preferences_from_harness(
     let global = GlobalProjectPreferences {
         interface_language: interface_language.clone(),
         wiki_enabled,
+        wiki_backend: wiki_backend.clone(),
         wiki_language: wiki_language.clone(),
         persona_id: persona_id.clone(),
         persona_custom_description: harness.persona_custom_description.clone(),
         selected_project_skills: harness.selected_project_skills.clone(),
         usage_guard_enabled,
         codexbar_fallback_enabled: harness.codexbar_fallback_enabled,
+        discord_guard_enabled: harness.discord_guard_enabled,
+        discord_webhook_url_env: harness.discord_webhook_url_env.clone(),
         usage_stop_remaining_percent: harness.usage_stop_remaining_percent,
     };
     validate_global_project_preferences(&global).map_err(as_verification)?;
@@ -5483,12 +6079,15 @@ fn effective_preferences_from_harness(
         },
         interface_language,
         wiki_enabled,
+        wiki_backend,
         wiki_language,
         persona_id,
         persona_custom_description: harness.persona_custom_description.clone(),
         selected_project_skills: harness.selected_project_skills.clone(),
         usage_guard_enabled,
         codexbar_fallback_enabled: harness.codexbar_fallback_enabled,
+        discord_guard_enabled: harness.discord_guard_enabled,
+        discord_webhook_url_env: harness.discord_webhook_url_env.clone(),
         usage_stop_remaining_percent: harness.usage_stop_remaining_percent,
     }))
 }
@@ -5612,7 +6211,11 @@ fn validate_editing_discipline(target: &Path) -> Result<(), RenderError> {
     Ok(())
 }
 
-fn validate_protected_contract(target: &Path, wiki_enabled: bool) -> Result<(), RenderError> {
+fn validate_protected_contract(
+    target: &Path,
+    wiki_enabled: bool,
+    wiki_backend: &str,
+) -> Result<(), RenderError> {
     const ALWAYS_REQUIRED: &[&str] = &[
         ".hive/knowledge/Raw/README.md",
         ".hive/knowledge/Schema/schema.md",
@@ -5620,11 +6223,12 @@ fn validate_protected_contract(target: &Path, wiki_enabled: bool) -> Result<(), 
         ".hive/runs/README.md",
         ".hive/team/roles/README.md",
     ];
+    let local_wiki_required = wiki_enabled && wiki_backend == "markdown";
     for path in ALWAYS_REQUIRED
         .iter()
         .copied()
-        .chain(wiki_enabled.then_some(".hive/knowledge/Wiki/index.md"))
-        .chain(wiki_enabled.then_some(".hive/knowledge/Wiki/log.md"))
+        .chain(local_wiki_required.then_some(".hive/knowledge/Wiki/index.md"))
+        .chain(local_wiki_required.then_some(".hive/knowledge/Wiki/log.md"))
     {
         let bytes = read_target_required(target, Path::new(path), "protected canonical seed")
             .map_err(as_verification)?;
@@ -6006,11 +6610,12 @@ fn render_knowledge_scope(answers: &SetupAnswers) -> Result<Vec<u8>, RenderError
 }
 
 fn render_hook_ledger(hooks: &[HookApproval], resolution: &CapabilityResolution) -> Vec<u8> {
-    let mut output = "# Generated only from explicit fallback-hook approvals after conclusive external capability absence.\n\
+    let mut output = "# Generated only from explicit optional-hook approvals for a supported host-native event.\n\
 schema_version: 1\n\
-detection: absent\n\
-resolution_evidence_digest: "
+detection: "
         .to_owned();
+    output.push_str(&resolution.detection);
+    output.push_str("\nresolution_evidence_digest: ");
     output.push_str(
         &serde_json::to_string(&resolution.evidence_digest)
             .expect("serializing a string to JSON cannot fail"),
@@ -6285,7 +6890,8 @@ mod tests {
         installed_tree_digest, load_answers, load_resolution, merge_shared_marker,
         mutate_exact_projection_claimed, open_target_capability, parse_role,
         prepare_projection_transition, project_upgrade_candidate_in, render_agents_marker,
-        render_project_base, render_tree, replace_capability_file_impl,
+        render_project_base, render_setup_answers, render_tree, render_tree_with_preferences,
+        render_yaml_projection, replace_capability_file_impl,
         require_operational_update_preferences, resolve_effective_project_preferences,
         resolve_project_skill_selection, shared_marker_foreign_digest, update_path_is_owned,
         valid_digest, valid_role_id, valid_timestamp, validate_hook_approvals,
@@ -6424,15 +7030,15 @@ mod tests {
         let preferences = GlobalProjectPreferences {
             interface_language: "ko".to_owned(),
             wiki_enabled: false,
+            wiki_backend: "markdown".to_owned(),
             wiki_language: "both".to_owned(),
             persona_id: "friendly".to_owned(),
             persona_custom_description: None,
-            selected_project_skills: vec![
-                "setup-harness".to_owned(),
-                "hive-prompt-refine".to_owned(),
-            ],
+            selected_project_skills: vec!["setup-project".to_owned(), "refine-prompt".to_owned()],
             usage_guard_enabled: true,
             codexbar_fallback_enabled: true,
+            discord_guard_enabled: true,
+            discord_webhook_url_env: Some("HIVE_DISCORD_WEBHOOK_URL".to_owned()),
             usage_stop_remaining_percent: 17,
         };
 
@@ -6453,14 +7059,19 @@ mod tests {
         assert_eq!(effective.provenance, "global-inherited");
         assert!(!effective.wiki_enabled);
         assert!(effective.codexbar_fallback_enabled);
+        assert!(effective.discord_guard_enabled);
+        assert_eq!(
+            effective.discord_webhook_url_env.as_deref(),
+            Some("HIVE_DISCORD_WEBHOOK_URL")
+        );
         assert_eq!(effective.usage_stop_remaining_percent, 17);
         assert!(!target.join(".hive/knowledge/Wiki/index.md").exists());
         assert!(!target.join(".hive/knowledge/Wiki/log.md").exists());
         assert!(target
-            .join(".agents/skills/setup-harness/SKILL.md")
+            .join(".agents/skills/setup-project/SKILL.md")
             .is_file());
         assert!(target
-            .join(".agents/skills/hive-prompt-refine/SKILL.md")
+            .join(".agents/skills/refine-prompt/SKILL.md")
             .is_file());
         assert!(!target
             .join(".agents/skills/hive-knowledge-query/SKILL.md")
@@ -6470,8 +7081,11 @@ mod tests {
         assert!(harness.contains("preference_provenance = \"global-inherited\""));
         assert!(harness.contains("usage_stop_remaining_percent = 17"));
         assert!(harness.contains("codexbar_fallback_enabled = true"));
-        assert!(harness
-            .contains("selected_project_skills = [\"hive-prompt-refine\", \"setup-harness\"]"));
+        assert!(harness.contains("discord_guard_enabled = true"));
+        assert!(harness.contains("discord_webhook_url_env = \"HIVE_DISCORD_WEBHOOK_URL\""));
+        assert!(
+            harness.contains("selected_project_skills = [\"refine-prompt\", \"setup-project\"]")
+        );
 
         execute_setup(&SetupRequest {
             target: &target,
@@ -6482,6 +7096,55 @@ mod tests {
             global_preferences: Some(preferences),
         })
         .expect("effective preference installation should validate");
+    }
+
+    #[test]
+    fn notion_backend_installs_without_local_wiki_markdown() {
+        let temporary = tempfile::tempdir().expect("temporary directory");
+        let target = temporary.path().canonicalize().expect("canonical target");
+        let preferences = GlobalProjectPreferences {
+            interface_language: "en".to_owned(),
+            wiki_enabled: true,
+            wiki_backend: "notion".to_owned(),
+            wiki_language: "both".to_owned(),
+            persona_id: "balanced".to_owned(),
+            persona_custom_description: None,
+            selected_project_skills: vec!["manage-wiki".to_owned()],
+            usage_guard_enabled: true,
+            codexbar_fallback_enabled: false,
+            discord_guard_enabled: false,
+            discord_webhook_url_env: None,
+            usage_stop_remaining_percent: 20,
+        };
+
+        let outcome = execute_setup(&SetupRequest {
+            target: &target,
+            answers: &fixture("answers-base.yml"),
+            capabilities: &fixture("capabilities-codex-omx.json"),
+            mode: SetupMode::Apply,
+            reconfigure_roles: BTreeSet::new(),
+            global_preferences: Some(preferences.clone()),
+        })
+        .expect("Notion setup should render");
+        let effective = outcome
+            .effective_preferences
+            .expect("effective preferences should be public evidence");
+        assert_eq!(effective.wiki_backend, "notion");
+        assert!(!target.join(".hive/knowledge/Wiki/index.md").exists());
+        assert!(!target.join(".hive/knowledge/Wiki/log.md").exists());
+        let harness =
+            fs::read_to_string(target.join(".hive/config/harness.toml")).expect("harness config");
+        assert!(harness.contains("wiki_backend = \"notion\""));
+
+        execute_setup(&SetupRequest {
+            target: &target,
+            answers: &fixture("answers-base.yml"),
+            capabilities: &fixture("capabilities-codex-omx.json"),
+            mode: SetupMode::Validate,
+            reconfigure_roles: BTreeSet::new(),
+            global_preferences: Some(preferences),
+        })
+        .expect("Notion installation should validate without Markdown Wiki seeds");
     }
 
     #[test]
@@ -6498,12 +7161,15 @@ mod tests {
                 global_preferences: Some(GlobalProjectPreferences {
                     interface_language: "ko".to_owned(),
                     wiki_enabled: true,
+                    wiki_backend: "markdown".to_owned(),
                     wiki_language: "both".to_owned(),
                     persona_id: "friendly".to_owned(),
                     persona_custom_description: None,
-                    selected_project_skills: vec!["setup-harness".to_owned()],
+                    selected_project_skills: vec!["setup-project".to_owned()],
                     usage_guard_enabled: false,
                     codexbar_fallback_enabled: false,
+                    discord_guard_enabled: false,
+                    discord_webhook_url_env: None,
                     usage_stop_remaining_percent: 20,
                 }),
             },
@@ -6528,15 +7194,15 @@ mod tests {
         let preferences = GlobalProjectPreferences {
             interface_language: "ko".to_owned(),
             wiki_enabled: true,
+            wiki_backend: "markdown".to_owned(),
             wiki_language: "both".to_owned(),
             persona_id: "friendly".to_owned(),
             persona_custom_description: None,
-            selected_project_skills: vec![
-                "hive-prompt-refine".to_owned(),
-                "setup-harness".to_owned(),
-            ],
+            selected_project_skills: vec!["refine-prompt".to_owned(), "setup-project".to_owned()],
             usage_guard_enabled: false,
             codexbar_fallback_enabled: false,
+            discord_guard_enabled: false,
+            discord_webhook_url_env: None,
             usage_stop_remaining_percent: 17,
         };
         let installed = execute_setup(&SetupRequest {
@@ -6591,12 +7257,15 @@ mod tests {
         let preferences = GlobalProjectPreferences {
             interface_language: "ko".to_owned(),
             wiki_enabled: true,
+            wiki_backend: "markdown".to_owned(),
             wiki_language: "both".to_owned(),
             persona_id: "friendly".to_owned(),
             persona_custom_description: None,
-            selected_project_skills: vec!["setup-harness".to_owned()],
+            selected_project_skills: vec!["setup-project".to_owned()],
             usage_guard_enabled: true,
             codexbar_fallback_enabled: false,
+            discord_guard_enabled: false,
+            discord_webhook_url_env: None,
             usage_stop_remaining_percent: 20,
         };
         let error = require_operational_update_preferences("0.8.0", None)
@@ -6693,7 +7362,7 @@ mod tests {
             .expect("base answers")
             .replace(
                 "setup_mode: expedited\n",
-                "setup_mode: custom\ninterface_language: ko\nwiki:\n  enabled: true\n  language: both\npersona:\n  id: friendly\nskills:\n  mode: individual\n  selected:\n    - setup-harness\n",
+                "setup_mode: custom\ninterface_language: ko\nwiki:\n  enabled: true\n  language: both\npersona:\n  id: friendly\nskills:\n  mode: individual\n  selected:\n    - setup-project\n",
             );
         fs::write(&answers_path, answers).expect("custom answers");
 
@@ -6706,12 +7375,15 @@ mod tests {
             global_preferences: Some(GlobalProjectPreferences {
                 interface_language: "en".to_owned(),
                 wiki_enabled: false,
+                wiki_backend: "markdown".to_owned(),
                 wiki_language: "both".to_owned(),
                 persona_id: "balanced".to_owned(),
                 persona_custom_description: None,
-                selected_project_skills: vec!["setup-harness".to_owned()],
+                selected_project_skills: vec!["setup-project".to_owned()],
                 usage_guard_enabled: false,
                 codexbar_fallback_enabled: false,
+                discord_guard_enabled: false,
+                discord_webhook_url_env: None,
                 usage_stop_remaining_percent: 20,
             }),
         })
@@ -6729,7 +7401,7 @@ mod tests {
             .expect("base answers")
             .replace(
                 "setup_mode: expedited\n",
-                "setup_mode: custom\ninterface_language: ko\nwiki:\n  enabled: true\n  language: both\npersona:\n  id: friendly\nskills:\n  mode: individual\n  selected:\n    - hive-knowledge-promote\n",
+                "setup_mode: custom\ninterface_language: ko\nwiki:\n  enabled: true\n  language: both\npersona:\n  id: friendly\nskills:\n  mode: individual\n  selected:\n    - share-knowledge\n",
             );
         fs::write(&answers_path, answers).expect("custom answers");
 
@@ -6742,12 +7414,15 @@ mod tests {
             global_preferences: Some(GlobalProjectPreferences {
                 interface_language: "en".to_owned(),
                 wiki_enabled: true,
+                wiki_backend: "markdown".to_owned(),
                 wiki_language: "both".to_owned(),
                 persona_id: "balanced".to_owned(),
                 persona_custom_description: None,
-                selected_project_skills: vec!["setup-harness".to_owned()],
+                selected_project_skills: vec!["setup-project".to_owned()],
                 usage_guard_enabled: true,
                 codexbar_fallback_enabled: false,
+                discord_guard_enabled: false,
+                discord_webhook_url_env: None,
                 usage_stop_remaining_percent: 20,
             }),
         })
@@ -6758,17 +7433,9 @@ mod tests {
             .expect("effective preferences should be returned");
         assert_eq!(
             effective.selected_project_skills,
-            [
-                "hive-knowledge-capture",
-                "hive-knowledge-promote",
-                "hive-knowledge-query",
-            ]
+            ["record-knowledge", "search-knowledge", "share-knowledge",]
         );
-        for skill in [
-            "hive-knowledge-capture",
-            "hive-knowledge-promote",
-            "hive-knowledge-query",
-        ] {
+        for skill in ["record-knowledge", "search-knowledge", "share-knowledge"] {
             assert!(target
                 .join(format!(".agents/skills/{skill}/SKILL.md"))
                 .is_file());
@@ -6776,7 +7443,7 @@ mod tests {
         let harness =
             fs::read_to_string(target.join(".hive/config/harness.toml")).expect("harness config");
         assert!(harness.contains(
-            "selected_project_skills = [\"hive-knowledge-capture\", \"hive-knowledge-promote\", \"hive-knowledge-query\"]"
+            "selected_project_skills = [\"record-knowledge\", \"search-knowledge\", \"share-knowledge\"]"
         ));
         assert!(harness.contains("codexbar_fallback_enabled = false"));
     }
@@ -6786,14 +7453,14 @@ mod tests {
         let selection = ProjectSkillSelection {
             mode: "individual".to_owned(),
             recommended_suite: None,
-            selected: Some(vec!["setup-hive".to_owned()]),
+            selected: Some(vec!["configure".to_owned()]),
         };
 
         let error = resolve_project_skill_selection(&selection)
-            .expect_err("setup-hive must remain user-scope only");
+            .expect_err("configure must remain user-scope only");
 
         assert_eq!(error.code(), "hive.setup-invalid-input");
-        assert!(error.to_string().contains("setup-hive is user-scope only"));
+        assert!(error.to_string().contains("configure is user-scope only"));
     }
 
     #[test]
@@ -6827,6 +7494,50 @@ mod tests {
             .contains("does not match the installed harness"));
     }
 
+    fn current_skill_paths_added_since_0_7(capabilities: &str) -> Vec<String> {
+        let new_body_skills = [
+            "answer",
+            "auto-setup-project",
+            "clean-ai-slop",
+            "engineer-run",
+            "handoff-role",
+            "import-repository-knowledge",
+            "maintain-knowledge",
+            "manage-usage",
+            "manage-wiki",
+            "migrate-project",
+            "record-knowledge",
+            "refine-prompt",
+            "research-practices",
+            "resume-work",
+            "save-progress",
+            "search-knowledge",
+            "setup-project",
+            "share-knowledge",
+            "update-hive",
+            "upgrade-project",
+            "verify-package",
+        ];
+        let mut expected = new_body_skills
+            .iter()
+            .map(|name| format!(".agents/skills/{name}/SKILL.md"))
+            .collect::<Vec<_>>();
+        expected.extend(
+            new_body_skills
+                .iter()
+                .map(|name| format!(".agents/skills/{name}/agents/openai.yaml")),
+        );
+        if capabilities == "capabilities-claude-omc.json" {
+            expected.extend(
+                new_body_skills
+                    .iter()
+                    .map(|name| format!(".claude/skills/{name}/SKILL.md")),
+            );
+        }
+        expected.sort();
+        expected
+    }
+
     #[test]
     fn frozen_0_7_full_registry_matches_release_and_ignores_current_candidate_mutation() {
         for (answers, capabilities) in [
@@ -6850,52 +7561,37 @@ mod tests {
                 .filter(|path| !historical_files.contains_key(*path))
                 .cloned()
                 .collect::<Vec<_>>();
-            let mut expected_added = vec![".agents/skills/auto-setup-harness/SKILL.md".to_owned()];
-            for name in [
-                "auto-setup-harness",
-                "hive-judge-package",
-                "hive-knowledge-capture",
-                "hive-knowledge-maintenance",
-                "hive-knowledge-promote",
-                "hive-knowledge-query",
-                "hive-migrate",
-                "hive-project-upgrade",
-                "hive-prompt-refine",
-                "hive-role-handoff",
-                "hive-run-checkpoint",
-                "hive-run-resume",
-                "hive-simple-question",
-                "hive-update",
-                "hive-usage-guard",
-                "setup-harness",
-            ] {
-                expected_added.push(format!(".agents/skills/{name}/agents/openai.yaml"));
-            }
-            if capabilities == "capabilities-claude-omc.json" {
-                expected_added.push(".claude/skills/auto-setup-harness/SKILL.md".to_owned());
-            }
-            expected_added.sort();
+            let expected_added = current_skill_paths_added_since_0_7(capabilities);
             assert_eq!(added_since_0_7, expected_added);
             let changed_since_0_7 = [
                 "AGENTS.md",
+                "/directives/00-project-harness.md",
                 "/directives/01-project-knowledge.md",
+                "/hive-judge-package/SKILL.md",
                 "/hive-knowledge-capture/SKILL.md",
                 "/hive-knowledge-maintenance/SKILL.md",
+                "/hive-knowledge-promote/SKILL.md",
                 "/hive-knowledge-query/SKILL.md",
+                "/hive-project-upgrade/SKILL.md",
                 "/hive-prompt-refine/SKILL.md",
+                "/hive-role-handoff/SKILL.md",
+                "/hive-run-checkpoint/SKILL.md",
+                "/hive-run-resume/SKILL.md",
                 "/hive-simple-question/SKILL.md",
                 "/hive-update/SKILL.md",
                 "/hive-usage-guard/SKILL.md",
                 "/setup-harness/SKILL.md",
             ];
             for (path, historical_content) in &historical_files {
-                if changed_since_0_7
-                    .iter()
-                    .any(|suffix| path.ends_with(suffix))
-                {
-                    assert_ne!(historical_content, &current.files[path]);
-                } else {
-                    assert_eq!(historical_content, &current.files[path], "{path}");
+                if let Some(current_content) = current.files.get(path) {
+                    if changed_since_0_7
+                        .iter()
+                        .any(|suffix| path.ends_with(suffix))
+                    {
+                        assert_ne!(historical_content, current_content);
+                    } else {
+                        assert_eq!(historical_content, current_content, "{path}");
+                    }
                 }
             }
 
@@ -6916,6 +7612,119 @@ mod tests {
                     .content,
                 current.files[".agents/directives/00-project-harness.md"]
             );
+        }
+    }
+
+    #[test]
+    #[allow(clippy::too_many_lines)]
+    fn frozen_0_8_full_registry_preserves_selected_projection_and_marker_bytes() {
+        for (answers, capabilities, usage_guard_enabled, expected_files) in [
+            ("answers-base.yml", "capabilities-codex-omx.json", true, 10),
+            (
+                "answers-claude.yml",
+                "capabilities-claude-omc.json",
+                false,
+                12,
+            ),
+        ] {
+            let temporary = tempfile::tempdir().expect("temporary directory");
+            let target = temporary.path().canonicalize().expect("canonical target");
+            execute_setup(&SetupRequest {
+                target: &target,
+                answers: &fixture(answers),
+                capabilities: &fixture(capabilities),
+                mode: SetupMode::Apply,
+                reconfigure_roles: BTreeSet::new(),
+                global_preferences: Some(GlobalProjectPreferences {
+                    interface_language: "ko".to_owned(),
+                    wiki_enabled: true,
+                    wiki_backend: "markdown".to_owned(),
+                    wiki_language: "both".to_owned(),
+                    persona_id: "friendly".to_owned(),
+                    persona_custom_description: None,
+                    selected_project_skills: vec![
+                        "hive-prompt-refine".to_owned(),
+                        "setup-harness".to_owned(),
+                    ],
+                    usage_guard_enabled,
+                    codexbar_fallback_enabled: false,
+                    discord_guard_enabled: false,
+                    discord_webhook_url_env: None,
+                    usage_stop_remaining_percent: 19,
+                }),
+            })
+            .expect("operational project setup");
+            let target_dir = open_target_capability(&target).expect("target capability");
+            let harness_path = target.join(".hive/config/harness.toml");
+            let harness = fs::read_to_string(&harness_path)
+                .expect("harness config")
+                .replace(
+                    &format!("harness_version = \"{}\"", env!("CARGO_PKG_VERSION")),
+                    "harness_version = \"0.8.0\"",
+                )
+                .replace(
+                    &format!("source_release_version = \"{}\"", env!("CARGO_PKG_VERSION")),
+                    "source_release_version = \"0.8.0\"",
+                );
+            fs::write(&harness_path, harness).expect("pinned 0.8 harness config");
+
+            let historical = historical_project_upgrade_candidate_in(&target_dir, "0.8.0")
+                .expect("frozen 0.8 registry");
+            assert_eq!(historical.product_version, "0.8.0");
+            assert_eq!(historical.files.len(), expected_files);
+            assert!(historical
+                .files
+                .windows(2)
+                .all(|pair| pair[0].path < pair[1].path));
+            assert!(historical
+                .files
+                .iter()
+                .all(|entry| entry.content_digest == sha256_digest(&entry.content)));
+            assert!(historical
+                .files
+                .iter()
+                .all(|entry| { !entry.path.contains("/skills/") || entry.kind == "skill" }));
+            let frozen = historical
+                .files
+                .iter()
+                .map(|entry| (entry.path.clone(), entry.content.clone()))
+                .collect::<BTreeMap<_, _>>();
+            assert!(frozen.contains_key(".agents/skills/setup-harness/agents/openai.yaml"));
+            assert!(frozen.contains_key(".agents/skills/hive-prompt-refine/agents/openai.yaml"));
+            for path in [
+                ".agents/skills/setup-harness/agents/openai.yaml",
+                ".agents/skills/hive-prompt-refine/agents/openai.yaml",
+            ] {
+                assert!(String::from_utf8_lossy(&frozen[path])
+                    .contains("allow_implicit_invocation: false"));
+            }
+            assert!(!frozen.contains_key(".agents/skills/hive-knowledge-query/SKILL.md"));
+            if capabilities == "capabilities-claude-omc.json" {
+                assert!(frozen.contains_key(".claude/skills/setup-harness/SKILL.md"));
+                assert!(String::from_utf8_lossy(&frozen["AGENTS.md"])
+                    .contains("Usage guard: disabled by installed preference"));
+            } else {
+                assert!(!frozen.contains_key(".claude/skills/setup-harness/SKILL.md"));
+                assert!(
+                    String::from_utf8_lossy(&frozen["AGENTS.md"]).contains("hive usage enforce")
+                );
+            }
+            assert!(historical_project_upgrade_candidate_in(&target_dir, "0.8.1").is_err());
+            assert!(historical_project_upgrade_candidate_in(&target_dir, "0.9.0").is_err());
+
+            let harness = fs::read_to_string(&harness_path).expect("0.8 harness config");
+            fs::write(
+                &harness_path,
+                harness.replace(
+                    "selected_project_skills = [\"hive-prompt-refine\", \"setup-harness\"]",
+                    "selected_project_skills = [\"future-skill\"]",
+                ),
+            )
+            .expect("tampered selection");
+            assert!(matches!(
+                historical_project_upgrade_candidate_in(&target_dir, "0.8.0"),
+                Err(RenderError::Verification(_))
+            ));
         }
     }
 
@@ -6970,6 +7779,134 @@ mod tests {
                 Err(RenderError::Verification(_))
             ));
         }
+    }
+
+    #[test]
+    fn frozen_0_8_registry_authenticates_approved_path_skill_and_rejects_source_tamper() {
+        for (answers_fixture, capabilities_fixture, expected_paths) in [
+            (
+                "answers-base.yml",
+                "capabilities-codex-omx.json",
+                vec![".agents/skills/local-inspect/SKILL.md"],
+            ),
+            (
+                "answers-claude.yml",
+                "capabilities-claude-omc.json",
+                vec![
+                    ".agents/skills/local-inspect/SKILL.md",
+                    ".claude/skills/local-inspect/SKILL.md",
+                ],
+            ),
+        ] {
+            let temporary = tempfile::tempdir().expect("temporary directory");
+            let source = temporary
+                .path()
+                .join("vendor-skills/local-inspect/SKILL.md");
+            fs::create_dir_all(source.parent().expect("source parent")).expect("source parent");
+            let skill_bytes = optional_skill_bytes("v1");
+            fs::write(&source, &skill_bytes).expect("optional source");
+            let (mut answers, _) =
+                load_answers(&fixture(answers_fixture)).expect("answers should load");
+            answers.approved_optional_skills = vec![signed_local_skill(&skill_bytes)];
+            let resolution =
+                load_resolution(&fixture(capabilities_fixture)).expect("resolution should load");
+            apply_optional_skill_fixture_0_8(temporary.path(), &answers, &resolution);
+            pin_harness_to_0_8(temporary.path());
+            let target = open_target_capability(temporary.path()).expect("target capability");
+
+            let historical =
+                historical_project_upgrade_candidate_in(&target, "0.8.0").expect("0.8 registry");
+            for path in expected_paths {
+                let entry = historical
+                    .files
+                    .iter()
+                    .find(|entry| entry.path == path)
+                    .expect("approved optional projection");
+                assert_eq!(entry.kind, "skill");
+                assert_eq!(entry.content, skill_bytes);
+                assert_eq!(entry.content_digest, sha256_digest(&skill_bytes));
+            }
+
+            fs::write(&source, optional_skill_bytes("tampered")).expect("tampered source");
+            assert!(matches!(
+                historical_project_upgrade_candidate_in(&target, "0.8.0"),
+                Err(RenderError::Verification(_))
+            ));
+        }
+    }
+
+    #[test]
+    fn frozen_0_8_registry_rejects_reserved_optional_name_and_allows_literal_braces() {
+        let collision = tempfile::tempdir().expect("temporary directory");
+        let local_source = collision
+            .path()
+            .join("vendor-skills/local-inspect/SKILL.md");
+        fs::create_dir_all(local_source.parent().expect("source parent")).expect("source parent");
+        let local_bytes = optional_skill_bytes("v1");
+        fs::write(&local_source, &local_bytes).expect("optional source");
+        let (mut answers, _) =
+            load_answers(&fixture("answers-base.yml")).expect("answers should load");
+        answers.approved_optional_skills = vec![signed_local_skill(&local_bytes)];
+        let resolution = load_resolution(&fixture("capabilities-codex-omx.json"))
+            .expect("resolution should load");
+        apply_optional_skill_fixture_0_8(collision.path(), &answers, &resolution);
+        pin_harness_to_0_8(collision.path());
+
+        let reserved_bytes =
+            b"---\nname: setup-hive\ndescription: Reserved collision fixture.\n---\n\n# Reserved\n";
+        answers.approved_optional_skills = vec![signed_path_skill(
+            "setup-hive",
+            "path:vendor-skills/setup-hive/SKILL.md",
+            reserved_bytes,
+        )];
+        fs::write(
+            collision.path().join(".hive/setup-answers.yml"),
+            render_setup_answers(&answers).expect("reserved answers"),
+        )
+        .expect("reserved answers");
+        fs::write(
+            collision.path().join(".hive/config/approved-skills.yml"),
+            render_yaml_projection(
+                Some("# Generated from explicit setup approvals."),
+                "skills",
+                &answers.approved_optional_skills,
+            )
+            .expect("reserved ledger"),
+        )
+        .expect("reserved ledger");
+        let collision_target =
+            open_target_capability(collision.path()).expect("collision target capability");
+        assert!(matches!(
+            historical_project_upgrade_candidate_in(&collision_target, "0.8.0"),
+            Err(RenderError::Verification(_))
+        ));
+
+        let braces = tempfile::tempdir().expect("temporary directory");
+        let answers_path = braces.path().join("answers.yml");
+        let fixture_answers = fs::read_to_string(fixture("answers-base.yml"))
+            .expect("fixture answers")
+            .replace("phase1-fixture", "phase1 {{ fixture }}");
+        fs::write(&answers_path, fixture_answers).expect("brace answers");
+        let target = braces.path().canonicalize().expect("canonical target");
+        execute_setup(&SetupRequest {
+            target: &target,
+            answers: &answers_path,
+            capabilities: &fixture("capabilities-codex-omx.json"),
+            mode: SetupMode::Apply,
+            reconfigure_roles: BTreeSet::new(),
+            global_preferences: Some(test_global_preferences()),
+        })
+        .expect("brace project setup");
+        pin_harness_to_0_8(&target);
+        let target_dir = open_target_capability(&target).expect("brace target capability");
+        let historical = historical_project_upgrade_candidate_in(&target_dir, "0.8.0")
+            .expect("literal braces are valid project data");
+        let marker = historical
+            .files
+            .iter()
+            .find(|entry| entry.path == "AGENTS.md")
+            .expect("historical marker");
+        assert!(String::from_utf8_lossy(&marker.content).contains("phase1 {{ fixture }}"));
     }
 
     #[cfg(unix)]
@@ -7099,15 +8036,18 @@ mod tests {
         let (answers, _) = load_answers(&fixture("answers-base.yml")).expect("answers should load");
         let resolution = load_resolution(&fixture("capabilities-codex-omx.json"))
             .expect("resolution should load");
-        let global = GlobalProjectPreferences {
+        let mut global = GlobalProjectPreferences {
             interface_language: "en".to_owned(),
             wiki_enabled: true,
+            wiki_backend: "markdown".to_owned(),
             wiki_language: "both".to_owned(),
             persona_id: "balanced".to_owned(),
             persona_custom_description: None,
             selected_project_skills: vec!["setup-harness".to_owned()],
             usage_guard_enabled: true,
             codexbar_fallback_enabled: true,
+            discord_guard_enabled: false,
+            discord_webhook_url_env: None,
             usage_stop_remaining_percent: 20,
         };
         let effective = resolve_effective_project_preferences(&answers, Some(&global))
@@ -7127,6 +8067,7 @@ mod tests {
                     "disabled"
                 },
             )
+            .replace("{{ wiki_backend }}", &effective.wiki_backend)
             .replace("{{ wiki_language }}", &effective.wiki_language)
             .replace("{{ persona_id }}", &effective.persona_id)
             .replace("{{ primary_host }}", &answers.primary_host)
@@ -7143,9 +8084,21 @@ mod tests {
             render_agents_marker(&answers, &resolution, Some(&effective)),
             expected
         );
-        assert!(expected.contains("agent-reviewed task-fact autocapture"));
+        assert!(expected.contains("reusable task fact"));
+        assert!(expected.contains("hive knowledge remember"));
         assert!(expected.contains("originating request"));
         assert!(expected.contains("raw transcript"));
+        assert!(expected.contains("selected interface language `en`"));
+        assert!(expected.contains("Explain in simple terms by default"));
+        assert!(expected.contains("do not force irrelevant examples or weaken technical precision"));
+
+        global.interface_language = "ko".to_owned();
+        let korean_effective = resolve_effective_project_preferences(&answers, Some(&global))
+            .expect("Korean preferences should resolve")
+            .expect("Korean preferences should produce an effective projection");
+        let korean_marker = render_agents_marker(&answers, &resolution, Some(&korean_effective));
+        assert!(korean_marker.contains("selected interface language `ko`"));
+        assert!(!korean_marker.contains("selected interface language `en`"));
     }
 
     #[test]
@@ -7235,11 +8188,19 @@ mod tests {
     }
 
     fn signed_local_skill(bytes: &[u8]) -> SkillApproval {
+        signed_path_skill(
+            "local-inspect",
+            "path:vendor-skills/local-inspect/SKILL.md",
+            bytes,
+        )
+    }
+
+    fn signed_path_skill(name: &str, source: &str, bytes: &[u8]) -> SkillApproval {
         let digest = sha256_digest(bytes);
         let mut approval = SkillApproval {
             consent_version: 1,
-            name: "local-inspect".to_owned(),
-            source: "path:vendor-skills/local-inspect/SKILL.md".to_owned(),
+            name: name.to_owned(),
+            source: source.to_owned(),
             revision: digest.clone(),
             content_digest: digest,
             requested_capabilities: vec!["filesystem-read".to_owned()],
@@ -7250,6 +8211,26 @@ mod tests {
         approval.consent_digest =
             calculate_consent_digest(&approval).expect("local Skill consent should canonicalize");
         approval
+    }
+
+    fn test_global_preferences() -> GlobalProjectPreferences {
+        GlobalProjectPreferences {
+            interface_language: "ko".to_owned(),
+            wiki_enabled: true,
+            wiki_backend: "markdown".to_owned(),
+            wiki_language: "both".to_owned(),
+            persona_id: "friendly".to_owned(),
+            persona_custom_description: None,
+            selected_project_skills: vec![
+                "hive-prompt-refine".to_owned(),
+                "setup-harness".to_owned(),
+            ],
+            usage_guard_enabled: true,
+            codexbar_fallback_enabled: false,
+            discord_guard_enabled: false,
+            discord_webhook_url_env: None,
+            usage_stop_remaining_percent: 60,
+        }
     }
 
     fn apply_optional_skill_fixture(
@@ -7276,6 +8257,57 @@ mod tests {
             None,
         )
         .expect("optional Skill fixture should activate");
+    }
+
+    fn apply_optional_skill_fixture_0_8(
+        target: &Path,
+        answers: &SetupAnswers,
+        resolution: &CapabilityResolution,
+    ) {
+        let target_dir = open_target_capability(target).expect("target capability should open");
+        let global = test_global_preferences();
+        let effective = resolve_effective_project_preferences(answers, Some(&global))
+            .expect("0.8 preferences should resolve")
+            .expect("0.8 preferences should be active");
+        let planned = render_tree_with_preferences(
+            &target_dir,
+            answers,
+            resolution,
+            &BTreeSet::new(),
+            Some(&effective),
+        )
+        .expect("optional 0.8 Skill tree should render");
+        let transition = prepare_projection_transition(&target_dir, &planned, answers)
+            .expect("optional 0.8 Skill projection preflight should succeed");
+        activate_staged_impl(
+            target,
+            &target_dir,
+            &planned,
+            &transition.deletions,
+            answers,
+            resolution,
+            &transition.expected_before,
+            None,
+            None,
+            None,
+            None,
+        )
+        .expect("optional 0.8 Skill fixture should activate");
+    }
+
+    fn pin_harness_to_0_8(target: &Path) {
+        let harness_path = target.join(".hive/config/harness.toml");
+        let harness = fs::read_to_string(&harness_path)
+            .expect("harness config")
+            .replace(
+                &format!("harness_version = \"{}\"", env!("CARGO_PKG_VERSION")),
+                "harness_version = \"0.8.0\"",
+            )
+            .replace(
+                &format!("source_release_version = \"{}\"", env!("CARGO_PKG_VERSION")),
+                "source_release_version = \"0.8.0\"",
+            );
+        fs::write(harness_path, harness).expect("pinned 0.8 harness config");
     }
 
     fn projection_recovery_bytes(parent: &Path) -> Vec<Vec<u8>> {
@@ -7316,6 +8348,24 @@ mod tests {
             evidence_digest: format!("sha256:{}", "4".repeat(64)),
             evidence: Vec::new(),
         }
+    }
+
+    fn supported_host_native_hook_resolution() -> CapabilityResolution {
+        let mut resolution = absent_resolution();
+        resolution.detection = "available".to_owned();
+        resolution.external_runtime = Some("omx".to_owned());
+        resolution.hook_events = Some(BTreeMap::from([(
+            "Stop".to_owned(),
+            serde_json::json!({
+                "support": "supported",
+                "evidence": [{
+                    "source": "qualification-fixture",
+                    "locator": "fixture:codex-stop",
+                    "digest": format!("sha256:{}", "8".repeat(64)),
+                }],
+            }),
+        )]));
+        resolution
     }
 
     fn signed_hook() -> HookApproval {
@@ -7386,7 +8436,7 @@ mod tests {
     #[test]
     fn every_hook_consent_field_and_descriptor_byte_is_bound() {
         let valid = signed_hook();
-        let resolution = absent_resolution();
+        let resolution = supported_host_native_hook_resolution();
         assert!(validate_hook_approvals(std::slice::from_ref(&valid), &resolution).is_ok());
 
         let mut mutations = Vec::new();
@@ -7425,7 +8475,28 @@ mod tests {
     }
 
     #[test]
-    fn resolver_derives_owner_from_positive_evidence_and_rejects_contradictions() {
+    fn optional_hooks_require_exact_supported_host_native_event() {
+        let hook = signed_hook();
+        assert!(
+            validate_hook_approvals(std::slice::from_ref(&hook), &absent_resolution()).is_err()
+        );
+
+        let mut external = supported_host_native_hook_resolution();
+        external.resolved_owner = "omx".to_owned();
+        assert!(validate_hook_approvals(std::slice::from_ref(&hook), &external).is_err());
+
+        let mut best_effort = supported_host_native_hook_resolution();
+        best_effort
+            .hook_events
+            .as_mut()
+            .expect("hook events")
+            .get_mut("Stop")
+            .expect("Stop claim")["support"] = JsonValue::String("best-effort".to_owned());
+        assert!(validate_hook_approvals(std::slice::from_ref(&hook), &best_effort).is_err());
+    }
+
+    #[test]
+    fn resolver_accepts_host_native_default_or_matching_external_pin_and_rejects_contradictions() {
         let mut resolution = absent_resolution();
         resolution.detection = "available".to_owned();
         resolution.external_runtime = Some("omx".to_owned());
@@ -7439,6 +8510,11 @@ mod tests {
         assert_eq!(
             derive_resolution(&resolution).expect("catalog evidence should be sufficient"),
             ("available", "omx", Some("omx"))
+        );
+        resolution.resolved_owner = "host-native".to_owned();
+        assert_eq!(
+            derive_resolution(&resolution).expect("host-native is the compatible default"),
+            ("available", "host-native", Some("omx"))
         );
 
         resolution.evidence.push(CapabilityEvidence {
@@ -7527,7 +8603,7 @@ mod tests {
             .canonicalize()
             .expect("fixture target should have a stable path");
         apply_fixture(&target, "answers-base.yml", "capabilities-codex-omx.json");
-        let projected = target.join(".agents/skills/hive-simple-question/SKILL.md");
+        let projected = target.join(".agents/skills/answer/SKILL.md");
         fs::write(&projected, b"user collision bytes\x00\xff\n")
             .expect("projected fixture should be tampered");
 
@@ -7665,7 +8741,7 @@ mod tests {
             .expect("tree should render");
         let transition = prepare_projection_transition(&target_dir, &planned, &answers)
             .expect("first-install projection preflight should prove absence");
-        let projected = target.join(".agents/skills/hive-simple-question/SKILL.md");
+        let projected = target.join(".agents/skills/answer/SKILL.md");
         let create_foreign = || {
             fs::create_dir_all(projected.parent().expect("projection should have a parent"))
                 .expect("foreign projection parent should be created");
@@ -7758,7 +8834,7 @@ mod tests {
             .expect("changed tree should render");
         let transition = prepare_projection_transition(&target_dir, &planned, &answers)
             .expect("installed projection ownership should verify");
-        let projected = target.join(".agents/skills/hive-simple-question/SKILL.md");
+        let projected = target.join(".agents/skills/answer/SKILL.md");
         let tamper_projection = || {
             fs::write(&projected, b"tampered race bytes\x00\xff\n")
                 .expect("projected Skill should be tampered after preflight");
@@ -8237,7 +9313,7 @@ mod tests {
             .expect("old Claude projection ownership should verify");
         let deletions = &transition.deletions;
 
-        assert_eq!(deletions.len(), 16);
+        assert_eq!(deletions.len(), 21);
         assert!(deletions
             .iter()
             .all(|path| path.starts_with(".claude/skills")));
@@ -8262,12 +9338,8 @@ mod tests {
             fs::read(foreign).expect("foreign file should remain"),
             b"foreign discovery bytes\x00\xff\n"
         );
-        assert!(target
-            .join(".agents/skills/hive-simple-question/SKILL.md")
-            .is_file());
-        assert!(!target
-            .join(".claude/skills/hive-simple-question/SKILL.md")
-            .exists());
+        assert!(target.join(".agents/skills/answer/SKILL.md").is_file());
+        assert!(!target.join(".claude/skills/answer/SKILL.md").exists());
     }
 
     #[test]
@@ -8397,6 +9469,38 @@ mod tests {
                 .expect("enriched capability matrix should validate"),
             "available"
         );
+    }
+
+    #[test]
+    fn fresh_supported_host_native_event_authorizes_exact_installed_hook() {
+        let temporary = tempfile::tempdir().expect("temporary directory");
+        apply_fixture(
+            temporary.path(),
+            "answers-partial-hooks.yml",
+            "capabilities-codex-host-native-hooks.json",
+        );
+        let target = temporary
+            .path()
+            .canonicalize()
+            .expect("fixture target should have a stable path");
+        let fresh = target.join(FRESH_CAPABILITY_RESOLUTION_PATH);
+        fs::create_dir_all(fresh.parent().expect("fresh evidence should have a parent"))
+            .expect("fresh evidence parent should exist");
+        fs::write(
+            &fresh,
+            fs::read(fixture("capabilities-codex-host-native-hooks.json"))
+                .expect("fresh host-native evidence fixture should be readable"),
+        )
+        .expect("fresh evidence should be written with a current timestamp");
+
+        let authorization = authorize_hook_with_resolution(
+            &target,
+            "protect-hive-owned-state",
+            "PreToolUse",
+            Path::new(FRESH_CAPABILITY_RESOLUTION_PATH),
+        )
+        .expect("exact supported host-native event should authorize");
+        assert_eq!(authorization, HookAuthorization::Authorized);
     }
 
     #[test]
@@ -8797,7 +9901,7 @@ mod tests {
         apply_fixture(
             temporary.path(),
             "answers-partial-hooks.yml",
-            "capabilities-absent.json",
+            "capabilities-codex-host-native-hooks.json",
         );
         let sentinel = temporary.path().join(".hive/hooks/user-sentinel");
         fs::write(&sentinel, b"user bytes").expect("sentinel should be written");

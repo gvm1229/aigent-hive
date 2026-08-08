@@ -21,7 +21,7 @@ current catalog.
 | [Architecture 안내](architecture/README.md) | Architecture MOC |
 | [Source layout](architecture/source-layout.md) | Source·release·consumer tree와 crate |
 | [Role lifecycle](architecture/role-lifecycle.md) | Persistent role·handoff |
-| [Run lifecycle](architecture/run-lifecycle.md) | Checkpoint·resume·owner pin |
+| [Run lifecycle](architecture/run-lifecycle.md) | Checkpoint·event·scheduler·receipt·cancel·resume |
 | [Skill consent](architecture/skill-consent.md) | Optional Skill approval |
 | [Hook consent](architecture/hook-consent.md) | Fallback hook approval |
 | [Judge trust](architecture/judge-trust-boundary.md) | Clean-context Ed25519 quorum |
@@ -47,6 +47,11 @@ current catalog.
 | [ADR-0012](decisions/ADR-0012-global-onboarding-shared-index.md) | Global onboarding·shared index |
 | [ADR-0013](decisions/ADR-0013-0.8-release-scope.md) | `0.8.0` test distribution |
 | [ADR-0014](decisions/ADR-0014-docs-wiki-architecture.md) | `docs/` Wiki architecture |
+| [ADR-0015](decisions/ADR-0015-host-native-skill-composition.md) | v0.9 host-native Skill 조합 |
+| [ADR-0016](decisions/ADR-0016-global-knowledge-rag.md) | v0.9 전역 knowledge RAG |
+| [ADR-0017](decisions/ADR-0017-0.9-full-release.md) | `0.9.0` 정식 릴리스 |
+| [ADR-0018](decisions/ADR-0018-notion-wiki-backend.md) | Notion Wiki backend |
+| [ADR-0019](decisions/ADR-0019-hive-native-iterative-execution.md) | Hive-native 반복 실행 소유권 |
 
 ## Guides
 
@@ -66,6 +71,7 @@ current catalog.
 | --- | --- |
 | [Release 안내](releases/README.md) | 제품 버전별 출시 안내 MOC |
 | [`0.8.0`](releases/0.8.0.md) | npm 시험 배포용 제품 후보 |
+| [`0.9.0`](releases/0.9.0.md) | `0.8.0` 대비 변경점·정식 출시 gate |
 
 ## Research
 
@@ -79,6 +85,9 @@ current catalog.
 | [Codex Skill budget](research/codex-skill-context-budget.md) | Skill metadata·context cost |
 | [Plugin host surface](research/user-plugin-host-surfaces.md) | 세 host install surface |
 | [SQLite index](research/rusqlite-sqlite-index.md) | `rusqlite`·FTS5 evidence |
+| [Knowledge 이식·scan](research/knowledge-portability-ingestion-retrieval.md) | Portable bundle·collection·retrieval evidence |
+| [v0.9 capability inventory](research/v0.9-omx-omc-capability-inventory.md) | OMX·OMC·Hive `adopt|merge|exclude` 근거표 |
+| [Discord·Notion host integration](research/discord-notion-host-integrations.md) | Host plugin·MCP·outbound 알림 경계 |
 
 ## Facts
 
@@ -119,6 +128,8 @@ Fact별 catalog는 migration 완료 뒤 이 section과 [Fact 안내](facts/READM
 | [Artifact source](plans/contracts/02-artifacts-source.md) | Artifact contract |
 | [Consumer harness](plans/contracts/04-consumer-harness.md) | Installed harness contract |
 | [Rust boundary](plans/contracts/05-rust-boundaries.md) | Crate responsibility |
+| [Native orchestration state](plans/contracts/06-native-orchestration-state.md) | Event·authority·receipt·cancel·scheduler |
+| [Native orchestration workflow](plans/contracts/07-native-orchestration-workflows.md) | Team·multi-goal·feasibility·migration |
 | [Stage 안내](plans/stages/README.md) | Workflow stage MOC |
 | [Stage 0](plans/stages/00-entry-routing.md) | Entry routing |
 | [Stage 1a](plans/stages/01a-setup-discovery-consent.md) | Discovery·consent |
@@ -142,3 +153,9 @@ Fact별 catalog는 migration 완료 뒤 이 section과 [Fact 안내](facts/READM
 | [Security review](plans/active/security-review.md) | Security finding gate |
 | [Docs Wiki migration](plans/active/docs-wiki-migration.md) | Knowledge preservation·path migration |
 | [`0.8.0` release](plans/active/release-0.8.0.md) | Test distribution execution |
+| [v0.9 loop·Wiki·Skill suite](plans/active/v0.9.0-loop-wiki-skills.md) | Host-native graph engineering 계획 |
+| [v0.9 전역 knowledge RAG](plans/active/v0.9.0-global-knowledge-rag.md) | Cross-project retrieval·mandatory memory 계획 |
+| [v0.9 knowledge 이식·scan](plans/active/v0.9.0-knowledge-portability-scan.md) | Canonical bundle·directory scan·automatic query 계획 |
+| [Hive-native 반복 실행](plans/active/native-iterative-execution.md) | Scheduler·receipt·cancel·team·multi-goal 계획 |
+| [Prompt refine 자동 routing](plans/active/prompt-refine-auto-routing.md) | Material ambiguity·승인 전 정지 계획 |
+| [`0.9.0` 정식 릴리스](plans/active/release-0.9.0.md) | GitHub·npm publication·public acceptance 계획 |

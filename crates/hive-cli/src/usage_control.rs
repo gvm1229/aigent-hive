@@ -73,10 +73,13 @@ struct ParsedBinding {
 }
 
 pub(crate) struct InstalledUsageConfig {
+    pub(crate) project_name: String,
     pub(crate) threshold: u8,
     pub(crate) primary_host: String,
     pub(crate) guard_enabled: bool,
     pub(crate) codexbar_fallback_enabled: bool,
+    pub(crate) discord_guard_enabled: bool,
+    pub(crate) discord_webhook_url_env: Option<String>,
     pub(crate) bytes: Vec<u8>,
 }
 
@@ -840,7 +843,44 @@ fn enforce(arguments: &EnforceArguments) -> Result<ActionResult, AdapterError> {
     }
     let mut result = halted_result(&binding, &published, changed);
     result.next_action = next_action;
+    if changed {
+        let marker = published
+            .marker
+            .as_ref()
+            .expect("a published current halt always has a marker");
+        record_discord_notification(&mut result, &config, marker);
+    }
     Ok(result)
+}
+
+fn record_discord_notification(
+    result: &mut ActionResult,
+    config: &InstalledUsageConfig,
+    marker: &HaltMarker,
+) {
+    let outcome = crate::discord::notify_usage_halt(
+        config.discord_guard_enabled,
+        config.discord_webhook_url_env.as_deref(),
+        &crate::discord::UsageHaltNotification {
+            project_name: &config.project_name,
+            decision: &marker.decision,
+            host_scope: &marker.host_scope,
+            selected_window: &marker.selected_window,
+            threshold_remaining_percent: marker.threshold_remaining_percent,
+            measured_at: marker.measured_at,
+            evidence_digest: &marker.evidence_digest,
+        },
+    );
+    if let Some(data) = result
+        .data
+        .as_mut()
+        .and_then(serde_json::Value::as_object_mut)
+    {
+        data.insert(
+            "discord_notification".to_owned(),
+            json!({ "outcome": outcome.as_str(), "outbound_only": true }),
+        );
+    }
 }
 
 fn observe_usage(
@@ -1305,6 +1345,9 @@ fn parse_installed_config(bytes: Vec<u8>) -> Result<InstalledUsageConfig, Adapte
     let table = toml::from_str::<toml::Table>(text).map_err(|error| {
         AdapterError::Safety(format!("installed harness.toml is invalid: {error}"))
     })?;
+    let project_name = optional_config_string(&table, "project_name")?
+        .filter(|value| !value.is_empty() && value.len() <= 512)
+        .unwrap_or_else(|| "unknown-project".to_owned());
     let primary_host = table
         .get("primary_host")
         .and_then(toml::Value::as_str)
@@ -1318,17 +1361,45 @@ fn parse_installed_config(bytes: Vec<u8>) -> Result<InstalledUsageConfig, Adapte
         .to_owned();
     let guard_enabled = required_config_bool(&table, "usage_guard_enabled")?;
     let codexbar_fallback_enabled = required_config_bool(&table, "codexbar_fallback_enabled")?;
+    let discord_guard_enabled =
+        optional_config_bool(&table, "discord_guard_enabled")?.unwrap_or(false);
+    let discord_webhook_url_env = optional_config_string(&table, "discord_webhook_url_env")?;
     if codexbar_fallback_enabled && !guard_enabled {
         return Err(AdapterError::Safety(
             "installed harness.toml cannot enable CodexBar fallback while the usage guard is disabled"
                 .to_owned(),
         ));
     }
+    if discord_guard_enabled && !guard_enabled {
+        return Err(AdapterError::Safety(
+            "installed harness.toml cannot enable Discord notification while the usage guard is disabled"
+                .to_owned(),
+        ));
+    }
+    match (discord_guard_enabled, discord_webhook_url_env.as_deref()) {
+        (true, Some(value)) if valid_environment_name(value) => {}
+        (true, _) => {
+            return Err(AdapterError::Safety(
+                "installed harness.toml Discord notification requires a valid webhook environment name"
+                    .to_owned(),
+            ));
+        }
+        (false, None) => {}
+        (false, Some(_)) => {
+            return Err(AdapterError::Safety(
+                "installed harness.toml Discord webhook environment must be absent while notification is disabled"
+                    .to_owned(),
+            ));
+        }
+    }
     Ok(InstalledUsageConfig {
+        project_name,
         threshold,
         primary_host,
         guard_enabled,
         codexbar_fallback_enabled,
+        discord_guard_enabled,
+        discord_webhook_url_env,
         bytes,
     })
 }
@@ -1340,6 +1411,35 @@ fn required_config_bool(table: &toml::Table, key: &str) -> Result<bool, AdapterE
         .ok_or_else(|| {
             AdapterError::Safety(format!("installed harness.toml {key} must be a boolean"))
         })
+}
+
+fn optional_config_bool(table: &toml::Table, key: &str) -> Result<Option<bool>, AdapterError> {
+    table
+        .get(key)
+        .map(|value| {
+            value.as_bool().ok_or_else(|| {
+                AdapterError::Safety(format!("installed harness.toml {key} must be a boolean"))
+            })
+        })
+        .transpose()
+}
+
+fn optional_config_string(table: &toml::Table, key: &str) -> Result<Option<String>, AdapterError> {
+    table
+        .get(key)
+        .map(|value| {
+            value.as_str().map(str::to_owned).ok_or_else(|| {
+                AdapterError::Safety(format!("installed harness.toml {key} must be a string"))
+            })
+        })
+        .transpose()
+}
+
+fn valid_environment_name(value: &str) -> bool {
+    let mut characters = value.chars();
+    matches!(characters.next(), Some('A'..='Z' | '_'))
+        && characters.all(|character| matches!(character, 'A'..='Z' | '0'..='9' | '_'))
+        && value.len() <= 128
 }
 
 fn validate_config(bytes: &[u8]) -> Result<(), AdapterError> {
@@ -1747,6 +1847,30 @@ mod tests {
                 "codexbar_fallback_enabled = \"false\"",
             );
         assert!(parse_installed_config(malformed.into_bytes()).is_err());
+    }
+
+    #[test]
+    fn installed_discord_notification_requires_a_guard_and_safe_environment_name() {
+        let enabled = String::from_utf8(installed_config("codex", true, false))
+            .expect("UTF-8 config")
+            .replace(
+                "usage_stop_remaining_percent = 20\n",
+                "usage_stop_remaining_percent = 20\ndiscord_guard_enabled = true\ndiscord_webhook_url_env = \"HIVE_DISCORD_WEBHOOK_URL\"\n",
+            );
+        let config = parse_installed_config(enabled.into_bytes()).expect("Discord config");
+        assert!(config.discord_guard_enabled);
+        assert_eq!(
+            config.discord_webhook_url_env.as_deref(),
+            Some("HIVE_DISCORD_WEBHOOK_URL")
+        );
+
+        let unsafe_name = String::from_utf8(installed_config("codex", true, false))
+            .expect("UTF-8 config")
+            .replace(
+                "usage_stop_remaining_percent = 20\n",
+                "usage_stop_remaining_percent = 20\ndiscord_guard_enabled = true\ndiscord_webhook_url_env = \"discord_webhook\"\n",
+            );
+        assert!(parse_installed_config(unsafe_name.into_bytes()).is_err());
     }
 
     #[test]

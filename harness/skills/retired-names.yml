@@ -1,0 +1,24 @@
+schema_version: 1
+retired_names:
+  ai-slop-cleaner: clean-ai-slop
+  auto-setup-harness: auto-setup-project
+  best-practice-research: research-practices
+  hive-judge-package: verify-package
+  hive-knowledge-capture: record-knowledge
+  hive-knowledge-maintenance: maintain-knowledge
+  hive-knowledge-promote: share-knowledge
+  hive-knowledge-query: search-knowledge
+  hive-knowledge-scan: import-repository-knowledge
+  hive-loop-engineering: engineer-run
+  hive-migrate: migrate-project
+  hive-project-upgrade: upgrade-project
+  hive-prompt-refine: refine-prompt
+  hive-role-handoff: handoff-role
+  hive-run-checkpoint: save-progress
+  hive-run-resume: resume-work
+  hive-simple-question: answer
+  hive-update: update-hive
+  hive-usage-guard: manage-usage
+  hive-wiki: manage-wiki
+  setup-harness: setup-project
+  setup-hive: configure

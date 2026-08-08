@@ -1,6 +1,6 @@
 ---
 name: hive-editless-question
-description: Answer repository-dependent read-only questions, explanations, audits, status reports, comparisons, and why/how-much inquiries about the Aigent Hive source without changing tracked files or external state. Use automatically when the user asks to inspect, explain, review, measure, compare, summarize, or report and does not explicitly request a mutation. Unlike hive-simple-question, this Skill may read repository files, Git history, tests, plans, and approved source Wiki data.
+description: Answer repository-dependent read-only questions, explanations, audits, status reports, comparisons, and why/how-much inquiries about the Aigent Hive source without changing tracked files or external state. Use automatically when the user asks to inspect, explain, review, measure, compare, summarize, or report and does not explicitly request a mutation. Unlike aigent-hive:answer, this Skill may read repository files, Git history, tests, plans, and approved source Wiki data.
 ---
 
 # Hive Editless Question
@@ -29,7 +29,7 @@ description: Answer repository-dependent read-only questions, explanations, audi
 
 ## Boundaries
 
-- Use `hive-simple-question` instead when the question is self-contained and requires no
+- Use `aigent-hive:answer` instead when the question is self-contained and requires no
   repository context or tools.
 - If the user explicitly requests a bounded mutation in the same prompt, preserve the
   read-only contract for the question and perform only that named mutation through the

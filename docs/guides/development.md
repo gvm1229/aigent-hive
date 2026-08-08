@@ -83,6 +83,21 @@ cargo test --workspace --all-targets --all-features --locked
 python -m unittest discover -s tests/conformance -v
 ```
 
+## Local developer binary
+
+공개 npm 시험판 없이 현재 source를 확인할 때:
+
+```console
+scripts/dev-install.sh --sandbox
+./target/release/hive -v
+```
+
+출력은 공개 시험판과 구분되는 `AIgent Hive vX.Y.Z-dev · local developer build (built
+YYYY-MM-DD)` 형식. 기존 전역 `hive`를 이 개발 binary로 임시 교체하려면
+`scripts/dev-install.sh --global`, 이전 실행 파일 복구는 `scripts/dev-install.sh --rollback`을
+사용. 세 mode 모두 `~/.hive`의 preference·knowledge·index와 user directive·Skill, project
+`.hive` 생성·변경·삭제 금지.
+
 ## CLI 진단 예시
 
 ```console

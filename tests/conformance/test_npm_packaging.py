@@ -121,6 +121,66 @@ class NpmPackagingContract(unittest.TestCase):
                     f"rendered aigent-hive 0.8.0 {name}\n",
                 )
 
+    def test_bare_and_numbered_test_versions_preserve_product_identity(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            work = Path(temporary)
+            binary = work / "native-binary"
+            binary.write_bytes(b"native-hive-test-binary")
+            for package_version in ("0.9.0-test", "0.9.0-test.1"):
+                output = work / package_version
+                run(
+                    "node",
+                    str(PACKAGER),
+                    "platform",
+                    "--product-version",
+                    "0.9.0",
+                    "--package-version",
+                    package_version,
+                    "--output",
+                    str(output),
+                    "--target",
+                    "x86_64-unknown-linux-musl",
+                    "--binary",
+                    str(binary),
+                )
+                manifest = json.loads(
+                    (output / "linux-x64" / "package.json").read_text("utf-8")
+                )
+                self.assertEqual(manifest["version"], package_version)
+                self.assertEqual(
+                    manifest["aigentHive"], {"productVersion": "0.9.0"}
+                )
+
+            for invalid_version in (
+                "0.9.0-test.0",
+                "0.9.0-test.01",
+                "0.9.0-preview.1",
+            ):
+                result = subprocess.run(
+                    [
+                        "node",
+                        str(PACKAGER),
+                        "platform",
+                        "--product-version",
+                        "0.9.0",
+                        "--package-version",
+                        invalid_version,
+                        "--output",
+                        str(work / "invalid"),
+                        "--target",
+                        "x86_64-unknown-linux-musl",
+                        "--binary",
+                        str(binary),
+                    ],
+                    cwd=ROOT,
+                    check=False,
+                    capture_output=True,
+                    text=True,
+                    encoding="utf-8",
+                )
+                self.assertNotEqual(result.returncode, 0, invalid_version)
+                self.assertIn("PRODUCT_VERSION-test[.N]", result.stderr)
+
     def test_npm_pack_and_global_install_launch_native_binary(self) -> None:
         node_path = Path(run("node", "-p", "process.execPath").stdout.strip())
         machine = platform.machine().lower()

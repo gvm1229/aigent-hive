@@ -1,6 +1,0 @@
-interface:
-  display_name: "Setup Hive"
-  short_description: "사용자 범위 Aigent Hive 설정 및 재구성"
-  default_prompt: "Use $setup-hive to configure or reconfigure my user-scope Aigent Hive preferences."
-policy:
-  allow_implicit_invocation: true

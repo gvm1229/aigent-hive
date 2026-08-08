@@ -1,7 +1,7 @@
 param(
     [ValidatePattern('^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$')]
     [string]$Version = "__AIGENT_HIVE_PRODUCT_VERSION__",
-    [ValidatePattern('^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-test\.[1-9][0-9]*)?$')]
+    [ValidatePattern('^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-test(\.[1-9][0-9]*)?)?$')]
     [string]$PackageVersion = "__AIGENT_HIVE_PACKAGE_VERSION__",
     [string]$Prefix = "$env:LOCALAPPDATA\AigentHive"
 )
@@ -26,9 +26,9 @@ if (-not [Environment]::Is64BitOperatingSystem) {
 }
 if (
     $PackageVersion -ne $Version -and
-    $PackageVersion -notmatch ('^' + [regex]::Escape($Version) + '-test\.[1-9][0-9]*$')
+    $PackageVersion -notmatch ('^' + [regex]::Escape($Version) + '-test(\.[1-9][0-9]*)?$')
 ) {
-    throw "PackageVersion must equal Version or use Version-test.N"
+    throw "PackageVersion must equal Version or use Version-test[.N]"
 }
 
 function Test-HiveVersionOutput {
@@ -36,12 +36,29 @@ function Test-HiveVersionOutput {
         [AllowEmptyString()]
         [string]$Output,
         [Parameter(Mandatory = $true)]
-        [string]$ExpectedVersion
+        [string]$ExpectedVersion,
+        [Parameter(Mandatory = $true)]
+        [string]$ExpectedPackageVersion
     )
 
-    $escapedVersion = [regex]::Escape($ExpectedVersion)
+    if ($ExpectedPackageVersion -eq $ExpectedVersion) {
+        $expected = "^AIgent Hive v" + [regex]::Escape($ExpectedVersion) +
+            " \(released [0-9]{4}-[0-9]{2}-[0-9]{2}\)$"
+    }
+    elseif ($ExpectedPackageVersion -eq "${ExpectedVersion}-test") {
+        $expected = "^AIgent Hive v" + [regex]::Escape($ExpectedVersion) +
+            "-test " + [regex]::Escape([char]0x00B7) +
+            " developer test build \(released [0-9]{4}-[0-9]{2}-[0-9]{2}\)$"
+    }
+    else {
+        $revision = $ExpectedPackageVersion.Substring(("${ExpectedVersion}-test.").Length)
+        $expected = "^AIgent Hive v" + [regex]::Escape($ExpectedVersion) +
+            "-test #" + [regex]::Escape($revision) +
+            " " + [regex]::Escape([char]0x00B7) +
+            " developer test build \(released [0-9]{4}-[0-9]{2}-[0-9]{2}\)$"
+    }
     return $Output -cmatch (
-        "^hive $escapedVersion \(released [0-9]{4}-[0-9]{2}-[0-9]{2}\)$"
+        $expected
     )
 }
 
@@ -141,7 +158,7 @@ function Get-ValidatedDirectReceipt {
         (
             $receipt.package_version -ne $receipt.version -and
             $receipt.package_version -notmatch (
-                '^' + [regex]::Escape($receipt.version) + '-test\.[1-9][0-9]*$'
+                '^' + [regex]::Escape($receipt.version) + '-test(\.[1-9][0-9]*)?$'
             )
         ) -or
         $receipt.artifact_sha256 -notmatch '^sha256:[0-9a-f]{64}$'
@@ -185,7 +202,8 @@ function Assert-ExistingDirectInstall {
     $priorVersionOutput = & $Destination --version
     if (-not (Test-HiveVersionOutput `
         -Output $priorVersionOutput `
-        -ExpectedVersion $priorReceipt.version
+        -ExpectedVersion $priorReceipt.version `
+        -ExpectedPackageVersion $priorReceipt.package_version
     )) {
         throw "existing hive binary is not owned by the direct installer"
     }
@@ -377,7 +395,8 @@ try {
     }
     if (-not (Test-HiveVersionOutput `
         -Output (& $binary --version) `
-        -ExpectedVersion $Version
+        -ExpectedVersion $Version `
+        -ExpectedPackageVersion $PackageVersion
     )) {
         throw "signed binary version differs from requested release"
     }

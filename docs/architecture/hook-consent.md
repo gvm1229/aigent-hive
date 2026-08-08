@@ -1,22 +1,28 @@
-# Fallback hook consent contract
+# Optional host-native hook consent contract
 
 ## 적용 조건
 
-Hive fallback hook의 제안·승인·projection 범위: active host의 compatible OMX/OMC가
-`absent`로 확정된 경우만.
+Hive hook의 목적: supported host-native event를 통한 선택적 data-integrity guard.
+Orchestration, subagent spawn, memory capture 또는 continuation 소유권 없음.
 
-| Detection | Hook 동작 |
+| Current owner·event evidence | Hook 동작 |
 | --- | --- |
-| `absent` | capability별 preview와 명시적 승인을 거쳐 선택적으로 projection |
-| `available` | 질문·승인·artifact 0개, 기존 Hive hook은 inert |
-| `incompatible` | 질문·승인·artifact 0개, 기존 Hive hook은 inert |
-| `unknown` | 질문·승인·artifact 0개, 기존 Hive hook은 inert |
+| `host-native` + exact event `supported` | capability별 preview와 명시적 승인 뒤 선택적 projection |
+| `host-native` + event `best-effort|unsupported|unverified` | 질문·승인·artifact 0건; 기존 artifact inert |
+| `host-native` + event claim 없음 | 질문·승인·artifact 0건; 기존 artifact inert |
+| 명시적 OMX·OMC owner | 질문·승인·artifact 0건; 기존 artifact inert |
+| 기존 external pinned owner | 질문·승인·artifact 0건; 기존 artifact inert |
 
-모든 hook을 거절해도 setup은 성공. 거절 상태는 host-native capability만 사용하는 완전한 지원 상태.
+모든 hook 거절 시에도 setup 성공. Hook 없이 verified host-native capability만 사용하는
+지원 상태 유지. `approved_fallback_hooks`, `approved_fallback_hooks_file` 같은 schema
+field는 0.8.x compatibility 이름; v0.9 activation authority는 exact supported
+host-native hook event.
 
 ## Descriptor와 content digest
 
-승인 화면은 exact capability, event, project-local path, executable command와 content digest를 표시. 설치 descriptor는 다음 field만 가진 RFC 8785 JCS object의 UTF-8 bytes 뒤에 LF 한 byte를 붙인 값.
+승인 화면의 exact 항목: capability, event, project-local path, executable command,
+content digest. 설치 descriptor: 다음 field만 포함한 RFC 8785 JCS object의 UTF-8 bytes와
+후행 LF 1 byte.
 
 ```json
 {
@@ -33,19 +39,19 @@ descriptor_bytes = UTF-8(RFC 8785 JCS(descriptor)) || LF
 content_digest = "sha256:" + lowercase_hex(SHA-256(descriptor_bytes))
 ```
 
-`content_digest`는 승인한 preview와 실제 설치 bytes를 결합.
+`content_digest`: 승인 preview와 실제 설치 bytes의 결합.
 
-모든 승인 command는 live capability evidence의 유일한 project-local 경로
-`.hive/runtime/current-capability-resolution.json`을 exact argument로 포함.
-Setup의 이 파일 또는 `.hive/runtime/` directory 생성 금지. Host adapter가
-각 non-Stop 호출 직전에 active host catalog와 public executable probe를 다시
-정규화하여 이 경로에 기록하고, 호출 뒤 제거. 이 파일은 `.hive/.gitignore`의
-`/runtime/` 규칙으로 항상 제외되며 commit, release bundle, backup 또는 setup
-artifact에서 제외.
+모든 승인 command의 live capability evidence 경로:
+`.hive/runtime/current-capability-resolution.json`. Setup의 이 파일 또는
+`.hive/runtime/` directory 생성·추적 0건. Host adapter의 non-Stop 호출 직전 active
+host catalog와 public executable probe 재정규화, 호출 뒤 제거. `.hive/.gitignore`의
+`/runtime/` 규칙에 따른 commit·release bundle·backup·setup artifact 제외.
 
-## Consent digest
+## Consent digest와 ledger
 
-Hook approval payload는 `consent_version`, `capability`, `event`, `path`, `command`, `content_digest`, UTC-seconds `approved_at`을 포함. `consent_digest` 자체를 제외한 전체 payload를 RFC 8785 JCS로 canonicalize.
+Hook approval payload: `consent_version`, `capability`, `event`, `path`, `command`,
+`content_digest`, UTC-seconds `approved_at`. `consent_digest` 제외 후 RFC 8785 JCS
+canonicalization.
 
 ```text
 consent_digest = "sha256:" + lowercase_hex(
@@ -53,25 +59,36 @@ consent_digest = "sha256:" + lowercase_hex(
 )
 ```
 
-Ledger는 `.hive/config/approved-hooks.yml`에 저장하며 `detection: absent`와 현재 capability resolution의 `resolution_evidence_digest`를 함께 고정. Field 하나라도 바뀌면 기존 승인은 무효.
+Ledger 위치: `.hive/config/approved-hooks.yml`. Current supported host-native resolution의
+`detection: available`과 full-object `resolution_evidence_digest` 고정. Field 하나의
+변경도 기존 승인 무효.
 
 ## Activation gate
 
-`hive hook` 실행 직전 재검증 항목:
+`hive hook`의 non-Stop 실행 직전 재검증:
 
-1. exact `.hive/runtime/current-capability-resolution.json` 경로, non-symlink regular file, 60초 이하 수정 시각
-2. installed consumer target과 ownership 경계; target-relative file은 symlink ancestor 검사 뒤 read-only 조회
-3. 현재 capability resolution object와 full-object evidence digest
-4. ledger의 `absent` detection과 resolution evidence 결합
-5. capability/event/path/command approval과 consent digest
-6. 설치 descriptor exact bytes와 content digest
+1. exact `.hive/runtime/current-capability-resolution.json`, non-symlink regular file,
+   60초 이하 수정 시각
+2. fresh resolution의 installed host 일치와 full-object evidence digest
+3. `resolved_owner: host-native`
+4. requested event의 exact `support: supported`
+5. installed consumer target과 ownership 경계, target-relative symlink ancestor 부재
+6. ledger의 `detection: available`, resolution digest와 approval binding
+7. capability·event·path·command·consent digest
+8. 설치 descriptor exact bytes와 content digest
 
-Runtime evidence가 없거나, 60초보다 오래되었거나, 미래 timestamp이거나,
-malformed이거나, exact 경로 밖이거나, detection이 `absent`가 아니면 installed
-approval 또는 hook input 조회 전에 `decision:allow`, `active:false`로 neutral 종료.
-Installed `.hive/config/capability-resolution.yml`은 setup/validation 기록이며 live
-activation evidence를 대체 불가. Detection이 더 이상 `absent`가 아니면
-기존 Hive hook은 neutral/inert 상태로 전환하여 external runtime과의 경쟁 차단.
+다음 상태는 hook event input 조회 전 `decision: allow`, `active: false`의 inert 종료:
+
+- external owner
+- exact event의 `best-effort|unsupported|unverified`
+- missing event claim
+- runtime capability surface의 `absent`
+- 승인 없는 compatibility entrypoint
+
+Missing·stale·future·malformed·unsafe live evidence: protected target mutation 없이 neutral
+allow 또는 verification diagnostic. Installed
+`.hive/config/capability-resolution.yml`: setup·validation 기록 전용; live activation
+evidence 대체 불가.
 
 ## Typed non-Stop 동작
 
@@ -79,45 +96,66 @@ activation evidence를 대체 불가. Detection이 더 이상 `absent`가 아니
 
 | Capability / event | 검증된 동작 |
 | --- | --- |
-| `protect-hive-owned-state` / `PreToolUse` | Hive protected path의 destructive operation은 `active:true` block, 그 외는 allow |
-| `update-integrity-guard` / `PreToolUse` | `update|migrate`의 dry-run, backup, staged validation을 확인하고 누락 시 block |
-| `derived-state-invalidation` / `PostToolUse` | canonical knowledge/team/run 변경 뒤 `.hive/index/.stale`을 멱등 생성 |
-| `checkpoint-reminder` / `PreCompact` | `.hive/runs/**/STATUS.md` checkpoint 유무를 non-blocking result로 보고 |
+| `protect-hive-owned-state` / `PreToolUse` | Hive protected path의 destructive operation만 `active:true` block |
+| `update-integrity-guard` / `PreToolUse` | `update|migrate`의 dry-run·backup·staged validation 누락만 block |
+| `derived-state-invalidation` / `PostToolUse` | canonical knowledge·team·run 변경 뒤 derived index stale marker의 멱등 생성 |
+| `checkpoint-reminder` / `PreCompact` | `.hive/runs/**/STATUS.md` checkpoint 유무의 non-blocking result |
 
-승인된 non-Stop hook의 malformed 또는 unsafe input과 실행 오류는 diagnostic을 남기고
-exit `0`, `decision:allow`, `active:false`의 neutral allow로 종료. 유효하게 검증된
-typed input에서 보호 대상 mutation 또는 update safety gate 누락을 확인한 경우에만
-`active:true`, `decision:block` 반환.
+승인된 non-Stop hook의 malformed·unsafe input 또는 실행 오류: diagnostic, exit `0`,
+`decision: allow`, `active: false`. 유효한 typed input에서 protected mutation 또는 update
+safety gate 누락 확인 시에만 `active: true`, `decision: block`.
 
-`Stop`은 별도 fast path. Runtime evidence file이 없더라도 approval, installed
-state, input, tamper 또는 detection을 읽지 않고 exit `0`, `decision:allow`,
-`active:false`를 반환.
+## Stop fast path
+
+`Stop` handler: runtime evidence, approval, installed state, input, tamper 또는 owner
+detection 조회 0건. 항상 exit `0`, `decision: allow`, `active: false`.
+
+금지 결과:
+
+- `decision: block`
+- `continue`
+- continuation prompt
+- host·model·subagent 재호출
+- recursive execution loop
+
+`checkpoint-reminder` / `Stop` descriptor의 역사적 schema compatibility와 무관한
+neutral handler 동작 불변.
 
 ## 철회와 installed validation
 
-새 setup answer가 기존 hook 승인을 제거하면:
+새 setup answer의 기존 hook 승인 제거:
 
-1. `--dry-run`은 제거할 Hive-owned ledger와 descriptor를 `changed_paths`에 표시하고 target 변경 없음
-2. `--apply`는 installed setup answer, absent resolution evidence, consent digest, exact ledger bytes와 descriptor bytes가 모두 이전 approval에 결합됨을 다시 검증한 뒤 그 artifact만 제거
-3. `.hive/hooks/`의 인접 user/foreign file은 byte-for-byte 보존
-4. 철회된 command의 이후 호출은 input을 읽지 않는 inactive allow
+1. `--dry-run`: 제거 대상 Hive-owned ledger와 descriptor를 `changed_paths`에 표시,
+   target 변경 0건
+2. `--apply`: installed answer, supported host-native resolution evidence, consent digest,
+   exact ledger·descriptor bytes의 prior approval binding 재검증 뒤 해당 artifact만 제거
+3. `.hive/hooks/` 인접 user·foreign file의 byte-for-byte 보존
+4. 철회 command의 이후 호출: input read 없는 inactive allow
 
-`--validate`는 version parity, setup answer와 capability schema, cross-file config, Skill/hook ledger와 digest, descriptor bytes, role definition, protected canonical seed와 shared marker를 함께 확인. Required artifact 누락, 변조 또는 supplied capability mismatch는 target mutation 없이 exit `5`의 verification failure.
+`--validate`: version parity, setup answer·capability schema, cross-file config,
+Skill/hook ledger·digest, descriptor bytes, role definition, protected canonical seed와 shared
+marker의 결합 검증. Required artifact 누락·변조 또는 supplied capability mismatch:
+target mutation 0건, exit `5` verification failure.
 
 ## Capability 경계
 
-허용 capability: `protect-hive-owned-state`, `update-integrity-guard`, `derived-state-invalidation`, `checkpoint-reminder`. Hook의 금지 기능:
+허용 capability:
+
+- `protect-hive-owned-state`
+- `update-integrity-guard`
+- `derived-state-invalidation`
+- `checkpoint-reminder`
+
+Hook 금지 기능:
 
 - `UserPromptSubmit` classification
 - prompt rewrite
 - Skill activation
 - orchestration 또는 subagent spawn
 - automatic memory ingestion
-- continuation decision
+- dispatch·retry·continuation decision
 
-`Stop` handler는 승인, 변조, malformed input, 재실행 또는 non-absent detection과 관계없이 항상 exit `0`과 neutral allow를 반환. `decision:block`, `continue`, continuation prompt 또는 재귀 실행 loop 생성 금지.
-
-Wiki enabled 상태의 agent-reviewed task-fact autocapture는 hook capability가 아닌 final
-response 전 completion gate. Current authorized task와 reviewed Git-suitable artifact의 bounded
-semantic fact만 사용. Raw transcript, hook payload, tool output, hidden prompt와 runtime state의
-자동 ingestion 금지 유지.
+Wiki-enabled turn의 agent-reviewed memory gate: hook capability가 아닌 final response 전
+Skill·CLI 계약. Current authorized task와 reviewed artifact의 bounded semantic claim만
+대상. Raw transcript, hook payload, tool output, hidden prompt, secret와 runtime state의
+automatic ingestion 0건.

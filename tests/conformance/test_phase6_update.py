@@ -24,7 +24,11 @@ from jsonschema.exceptions import ValidationError
 
 ROOT = Path(__file__).resolve().parents[2]
 SCHEMAS = ROOT / "schemas"
-RELEASE_FIXTURE = ROOT / "tests/fixtures/phase6/releases/valid-0.7.0"
+LATEST_PUBLISHED_VERSION = "0.8.0"
+RELEASE_FIXTURE = (
+    ROOT
+    / f"tests/fixtures/phase6/releases/valid-{LATEST_PUBLISHED_VERSION}"
+)
 WRONG_SIGNERS = ROOT / "tests/fixtures/phase6/platform-signers/wrong-valid-signers.json"
 DIGEST = "sha256:" + "0" * 64
 
@@ -90,7 +94,7 @@ case "$1" in
     done
     package="$destination/package"
     mkdir -p "$package/bin"
-    printf '%s\\n' '#!/bin/sh' 'printf "hive 0.7.0 (released 2026-07-24)\\\\n"' >"$package/bin/hive"
+    printf '%s\\n' '#!/bin/sh' 'printf "AIgent Hive v0.7.0-test #1 · developer test build (released 2026-07-24)\\\\n"' >"$package/bin/hive"
     chmod 0755 "$package/bin/hive"
     : >"$package/LICENSE"
     ;;
@@ -342,33 +346,83 @@ class Phase6StaticContracts(unittest.TestCase):
         candidate = (ROOT / ".github/workflows/release.yml").read_text(
             encoding="utf-8"
         )
-        publication = (
+        stable_publication = (
             ROOT / ".github/workflows/release-publish.yml"
         ).read_text(encoding="utf-8")
         test_publication = (
             ROOT / ".github/workflows/release-test-publish.yml"
         ).read_text(encoding="utf-8")
         candidate_workflow = yaml.safe_load(candidate)
-        publication_workflow = yaml.safe_load(publication)
-        test_publication_workflow = yaml.safe_load(test_publication)
+        stable_workflow = yaml.safe_load(stable_publication)
+        test_workflow = yaml.safe_load(test_publication)
         self.assertEqual(
             set(candidate_workflow["jobs"]),
             {"unix", "windows", "npm-umbrella"},
         )
-        self.assertEqual(set(publication_workflow["jobs"]), {"publish"})
-        self.assertEqual(set(test_publication_workflow["jobs"]), {"publish"})
+        self.assertEqual(set(stable_workflow["jobs"]), {"publish"})
+        self.assertEqual(set(test_workflow["jobs"]), {"publish"})
         expected_publication_environment = {
             "name": "release-publication",
             "deployment": False,
         }
         self.assertEqual(
-            publication_workflow["jobs"]["publish"]["environment"],
+            stable_workflow["jobs"]["publish"]["environment"],
             expected_publication_environment,
         )
         self.assertEqual(
-            test_publication_workflow["jobs"]["publish"]["environment"],
+            test_workflow["jobs"]["publish"]["environment"],
             expected_publication_environment,
         )
+        for workflow in (stable_workflow, test_workflow):
+            steps = workflow["jobs"]["publish"]["steps"]
+            app_token_index, app_token_step = next(
+                (index, step)
+                for index, step in enumerate(steps)
+                if step.get("id") == "release-token"
+            )
+            self.assertEqual(
+                app_token_step["uses"],
+                "actions/create-github-app-token@"
+                "bcd2ba49218906704ab6c1aa796996da409d3eb1",
+            )
+            self.assertEqual(
+                app_token_step["with"],
+                {
+                    "client-id": "${{ vars.RELEASE_APP_CLIENT_ID }}",
+                    "private-key": "${{ secrets.RELEASE_APP_PRIVATE_KEY }}",
+                    "owner": "${{ github.repository_owner }}",
+                    "repositories": "aigent-hive",
+                    "permission-contents": "write",
+                    "permission-workflows": "write",
+                },
+            )
+            checkout_step = next(
+                step
+                for step in steps
+                if step.get("uses", "").startswith("actions/checkout@")
+            )
+            self.assertFalse(checkout_step["with"]["persist-credentials"])
+            first_publish_index = next(
+                index
+                for index, step in enumerate(steps)
+                if step.get("name", "").startswith("Publish npm package family")
+            )
+            self.assertLess(app_token_index, first_publish_index)
+            release_step = next(
+                step
+                for step in steps
+                if step.get("name", "").startswith("Create annotated")
+            )
+            self.assertEqual(
+                release_step["env"]["GH_TOKEN"],
+                "${{ steps.release-token.outputs.token }}",
+            )
+            self.assertEqual(
+                release_step["env"]["RELEASE_GIT_TOKEN"],
+                "${{ steps.release-token.outputs.token }}",
+            )
+            self.assertIn('test -n "$RELEASE_GIT_TOKEN"', release_step["run"])
+            self.assertIn("http.https://github.com/.extraheader", release_step["run"])
         unix_matrix = candidate_workflow["jobs"]["unix"]["strategy"]["matrix"][
             "include"
         ]
@@ -384,6 +438,19 @@ class Phase6StaticContracts(unittest.TestCase):
         self.assertEqual(
             candidate_workflow["jobs"]["windows"]["runs-on"],
             "windows-2025",
+        )
+        candidate_triggers = candidate_workflow.get("on", candidate_workflow.get(True))
+        self.assertIsInstance(candidate_triggers, dict)
+        candidate_inputs = candidate_triggers["workflow_dispatch"]["inputs"]
+        self.assertEqual(
+            candidate_inputs["release_date"],
+            {
+                "description": (
+                    "Exact package release date embedded in the shipped CLI (YYYY-MM-DD)"
+                ),
+                "required": True,
+                "type": "string",
+            },
         )
         for required in (
             "Release candidate",
@@ -401,12 +468,19 @@ class Phase6StaticContracts(unittest.TestCase):
             "actions/attest@",
             "actions/upload-artifact@",
             "npm-umbrella",
-            "refs/heads/develop",
+            "expected_ref=develop",
+            "expected_ref=main",
+            "refs/heads/$expected_ref",
             "github.workflow_sha",
             "scripts/render-installers.py",
             "--installer-dir",
             "--product-version",
             "--package-version",
+            "AIGENT_HIVE_PACKAGE_RELEASE_DATE",
+            "PACKAGE_RELEASE_DATE",
+            '"$PRODUCT_VERSION"-test)',
+            "release-candidate.json",
+            "release_date",
             "statically linked",
             "static-pie linked",
         ):
@@ -423,9 +497,9 @@ class Phase6StaticContracts(unittest.TestCase):
             "--provenance",
             "--tag latest",
             "release-publication",
-            'test "$PRODUCT_VERSION" = "0.8.0"',
             'test "$PACKAGE_VERSION" = "$PRODUCT_VERSION"',
-            'head_branch <<<"$metadata")" = "develop"',
+            'head_branch <<<"$metadata")" = "main"',
+            'channel <<<"$metadata")" = "stable"',
             "bootstrap_with_token",
             "secrets.NPM_TOKEN",
             "NODE_AUTH_TOKEN",
@@ -439,20 +513,46 @@ class Phase6StaticContracts(unittest.TestCase):
             'HIVE_INSTALL_PACKAGE_VERSION=$PACKAGE_VERSION',
             "https://unpkg.com/aigent-hive@"
             "%HIVE_INSTALL_PACKAGE_VERSION%/install.ps1",
+            "gh release create",
+            "git tag -a",
         ):
-            self.assertIn(required, publication)
+            self.assertIn(required, stable_publication)
+        for required in (
+            "Publish test prerelease",
+            "release-publication",
+            'head_branch <<<"$metadata")" = "develop"',
+            'channel <<<"$metadata")" = "test"',
+            '"$PRODUCT_VERSION"-test)',
+            "--tag test",
+            "latest-before.tsv",
+            "dist-tags.latest",
+            "dist-tags.test",
+            "--prerelease",
+            "gh release create",
+            "git tag -a",
+            "bootstrap_with_token",
+            "secrets.NPM_TOKEN",
+        ):
+            self.assertIn(required, test_publication)
+        self.assertNotIn("--tag latest", test_publication)
+        self.assertNotIn("--prerelease", stable_publication)
         self.assertNotIn(
             'read -r digest name extra <"dist/$archive.sha256"',
-            publication,
+            stable_publication,
         )
         self.assertNotIn(
             "unpkg.com/aigent-hive@$PACKAGE_VERSION/install.ps1",
-            publication,
+            stable_publication,
         )
-        self.assertEqual(publication.count('npm publish "./dist/'), 12)
-        self.assertNotIn('npm publish "dist/', publication)
-        self.assertNotIn("npm dist-tag add", publication)
-        self.assertNotIn('npm dist-tag ls "$package" --json', publication)
+        self.assertEqual(stable_publication.count('npm publish "./dist/'), 12)
+        self.assertEqual(test_publication.count('npm publish "./$archive"'), 2)
+        self.assertNotIn('npm publish "$archive"', test_publication)
+        self.assertNotIn('npm publish "dist/', stable_publication + test_publication)
+        self.assertNotIn("npm dist-tag add", stable_publication + test_publication)
+        self.assertNotIn(
+            'npm dist-tag ls "$package" --json',
+            stable_publication + test_publication,
+        )
         for forbidden in (
             "gh release create",
             "npm publish",
@@ -471,11 +571,10 @@ class Phase6StaticContracts(unittest.TestCase):
             "platform-signing-evidence.canonical.json",
             "notarytool",
             "azure/artifact-signing-action@",
-            "gh release create",
             "gh release edit",
         ):
-            self.assertNotIn(forbidden, publication)
-        self.assertNotIn("eval ", candidate + publication)
+            self.assertNotIn(forbidden, stable_publication + test_publication)
+        self.assertNotIn("eval ", candidate + stable_publication + test_publication)
 
     def test_dispatch_inputs_are_never_interpolated_into_run_scripts(self) -> None:
         def run_scripts(value: object) -> list[str]:
@@ -498,7 +597,12 @@ class Phase6StaticContracts(unittest.TestCase):
                 ]
             return []
 
-        for name in ("release.yml", "release-publish.yml", "release-runtime.yml"):
+        for name in (
+            "release.yml",
+            "release-publish.yml",
+            "release-test-publish.yml",
+            "release-runtime.yml",
+        ):
             text = (ROOT / ".github/workflows" / name).read_text(encoding="utf-8")
             workflow = yaml.safe_load(text)
             scripts = run_scripts(workflow)
@@ -684,6 +788,72 @@ class Phase6StaticContracts(unittest.TestCase):
             )
             self.assertIn("DisableDelayedExpansion", cmd)
 
+    def test_direct_installer_renderer_accepts_bare_test_package_version(self) -> None:
+        package_version = "0.9.0-test"
+        targets = {
+            "aarch64-apple-darwin": f"aigent-hive-darwin-arm64-{package_version}.tgz",
+            "x86_64-apple-darwin": f"aigent-hive-darwin-x64-{package_version}.tgz",
+            "aarch64-unknown-linux-musl": f"aigent-hive-linux-arm64-{package_version}.tgz",
+            "x86_64-unknown-linux-musl": f"aigent-hive-linux-x64-{package_version}.tgz",
+            "x86_64-pc-windows-msvc": f"aigent-hive-win32-x64-{package_version}.tgz",
+        }
+        with tempfile.TemporaryDirectory(prefix="hive-test-installers-") as temporary:
+            root = Path(temporary)
+            dist = root / "dist"
+            output = root / "output"
+            dist.mkdir()
+            for target, name in targets.items():
+                (dist / name).write_bytes(f"artifact:{target}".encode())
+            subprocess.run(
+                [
+                    sys.executable,
+                    str(ROOT / "scripts/render-installers.py"),
+                    "--product-version",
+                    "0.9.0",
+                    "--package-version",
+                    package_version,
+                    "--dist",
+                    str(dist),
+                    "--output",
+                    str(output),
+                ],
+                cwd=ROOT,
+                check=True,
+            )
+            shell = (output / "install.sh").read_text(encoding="utf-8")
+            powershell = (output / "install.ps1").read_text(encoding="utf-8")
+            self.assertIn("embedded_package_version='0.9.0-test'", shell)
+            self.assertIn('[string]$PackageVersion = "0.9.0-test"', powershell)
+            subprocess.run(["sh", "-n", str(output / "install.sh")], check=True)
+
+            pwsh = shutil.which("pwsh") or shutil.which("powershell")
+            if pwsh is None:
+                self.skipTest("PowerShell is unavailable")
+            result = subprocess.run(
+                [
+                    pwsh,
+                    "-NoLogo",
+                    "-NoProfile",
+                    "-NonInteractive",
+                    "-File",
+                    str(output / "install.ps1"),
+                    "-Version",
+                    "0.9.0",
+                    "-PackageVersion",
+                    "0.9.1-test",
+                ],
+                cwd=ROOT,
+                check=False,
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+            )
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn(
+                "PackageVersion must equal Version or use Version-test[.N]",
+                result.stderr + result.stdout,
+            )
+
     def test_direct_homebrew_and_winget_paths_preserve_binary_ownership(self) -> None:
         shell = (ROOT / "scripts/install.sh").read_text(encoding="utf-8")
         powershell = (ROOT / "scripts/install.ps1").read_text(encoding="utf-8")
@@ -772,7 +942,7 @@ class Phase6StaticContracts(unittest.TestCase):
         self.assertIn("on_arm do", formula)
         self.assertIn("on_intel do", formula)
         self.assertIn("PortableCommandAlias: hive", winget)
-        for skill in ("hive-update", "hive-migrate"):
+        for skill in ("update-hive", "migrate-project"):
             text = (ROOT / f"harness/skills/{skill}/SKILL.md").read_text(
                 encoding="utf-8"
             )
@@ -1117,20 +1287,33 @@ try {
     if ([IO.File]::Exists($hashProbe)) { [IO.File]::Delete($hashProbe) }
 }
 if (-not (Test-HiveVersionOutput `
-    -Output "hive 0.7.0 (released 2026-07-24)" `
-    -ExpectedVersion "0.7.0"
+    -Output "AIgent Hive v0.7.0 (released 2026-07-24)" `
+    -ExpectedVersion "0.7.0" `
+    -ExpectedPackageVersion "0.7.0"
 )) {
     throw "dated version output was rejected"
 }
+$testVersionOutput = (
+    "AIgent Hive v0.9.0-test #2 " + [char]0x00B7 +
+    " developer test build (released 2026-08-06)"
+)
+if (-not (Test-HiveVersionOutput `
+    -Output $testVersionOutput `
+    -ExpectedVersion "0.9.0" `
+    -ExpectedPackageVersion "0.9.0-test.2"
+)) {
+    throw "test package version output was rejected"
+}
 foreach ($invalidOutput in @(
-    "hive 0.7.0",
-    "hive 0.7.1 (released 2026-07-24)",
-    "hive 0.7.0 (released 2026-7-24)",
-    "hive 0.7.0 (released 2026-07-24) trailing"
+    "AIgent Hive v0.7.0",
+    "AIgent Hive v0.7.1 (released 2026-07-24)",
+    "AIgent Hive v0.7.0 (released 2026-7-24)",
+    "AIgent Hive v0.7.0 (released 2026-07-24) trailing"
 )) {
     if (Test-HiveVersionOutput `
         -Output $invalidOutput `
-        -ExpectedVersion "0.7.0"
+        -ExpectedVersion "0.7.0" `
+        -ExpectedPackageVersion "0.7.0"
     ) {
         throw "invalid version output was accepted: $invalidOutput"
     }
@@ -1657,37 +1840,29 @@ try {
         self.assertEqual(installer.returncode, 2)
         self.assertIn("exact X.Y.Z", installer.stderr)
 
-    def test_product_version_matches_signed_feature_fixture(self) -> None:
+    def test_source_product_version_surfaces_match(self) -> None:
         cargo = (ROOT / "Cargo.toml").read_text(encoding="utf-8")
         version = re.search(
             r"\[workspace\.package\]\s+version = \"([^\"]+)\"",
             cargo,
         )
         self.assertIsNotNone(version)
-        current_fixture = (
-            ROOT
-            / f"tests/fixtures/phase6/releases/valid-{version.group(1)}"
-        )
-        manifest = read_json(current_fixture / "targets/bundle-manifest.json")
-        migration = read_json(current_fixture / "targets/migration-table.json")
-        self.assertEqual(version.group(1), "0.8.0")
-        self.assertEqual(manifest["release_version"], version.group(1))
-        self.assertEqual(migration["target_version"], version.group(1))
+        source_version = version.group(1)
         harness = (
             ROOT / "harness/template/.hive/config/harness.toml.jinja"
         ).read_text(encoding="utf-8")
-        self.assertIn(f'harness_version = "{version.group(1)}"', harness)
+        self.assertIn(f'harness_version = "{source_version}"', harness)
         self.assertIn(
-            f'source_release_version = "{version.group(1)}"',
+            f'source_release_version = "{source_version}"',
             harness,
         )
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
         self.assertIn(
-            f"version-{version.group(1)}-",
+            f"version-{source_version}-",
             readme,
         )
         self.assertIn(
-            f"- product version: `{version.group(1)}`",
+            f"- product version: `{source_version}`",
             (ROOT / "docs/state/CURRENT.md").read_text(encoding="utf-8"),
         )
         lock = tomllib.loads((ROOT / "Cargo.lock").read_text(encoding="utf-8"))
@@ -1698,8 +1873,31 @@ try {
         ]
         self.assertTrue(hive_packages)
         self.assertTrue(
-            all(package["version"] == version.group(1) for package in hive_packages)
+            all(package["version"] == source_version for package in hive_packages)
         )
+
+    def test_latest_published_fixture_matches_immutable_0_8_surface(self) -> None:
+        self.assertEqual(LATEST_PUBLISHED_VERSION, "0.8.0")
+        manifest = read_json(RELEASE_FIXTURE / "targets/bundle-manifest.json")
+        migration = read_json(RELEASE_FIXTURE / "targets/migration-table.json")
+        inventory = read_json(
+            RELEASE_FIXTURE / "targets/release-surface-inventory.json"
+        )
+        self.assertEqual(manifest["release_version"], LATEST_PUBLISHED_VERSION)
+        self.assertEqual(migration["target_version"], LATEST_PUBLISHED_VERSION)
+        self.assertEqual(inventory["product_version"], LATEST_PUBLISHED_VERSION)
+
+        registry = yaml.safe_load(
+            (ROOT / "harness/release/historical-surfaces.yml").read_text(
+                encoding="utf-8"
+            )
+        )
+        published = [
+            release
+            for release in registry["releases"]
+            if release["product_version"] == LATEST_PUBLISHED_VERSION
+        ]
+        self.assertEqual(published, [inventory])
 
 
 class Phase6CliContracts(unittest.TestCase):

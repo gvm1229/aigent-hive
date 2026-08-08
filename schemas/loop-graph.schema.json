@@ -1,0 +1,385 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/gvm1229/aigent-hive/schemas/loop-graph.schema.json",
+  "title": "Aigent Hive provider-neutral loop graph revision",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "run_id",
+    "revision",
+    "previous_revision_digest",
+    "state",
+    "terminal_reason",
+    "entry_nodes",
+    "required_criteria",
+    "passed_criteria",
+    "nodes",
+    "edges",
+    "evidence",
+    "attempts",
+    "capability_support",
+    "steering"
+  ],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "run_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]{1,126}$"
+    },
+    "revision": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 9007199254740991
+    },
+    "previous_revision_digest": {
+      "type": ["string", "null"],
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "state": { "enum": ["active", "blocked", "failed", "complete"] },
+    "terminal_reason": {
+      "type": ["string", "null"],
+      "minLength": 1,
+      "maxLength": 8192,
+      "pattern": "^[^\\u0000]+$"
+    },
+    "entry_nodes": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 512,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/id" }
+    },
+    "required_criteria": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 512,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/id" }
+    },
+    "passed_criteria": {
+      "type": "array",
+      "maxItems": 512,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/id" }
+    },
+    "nodes": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 512,
+      "items": { "$ref": "#/$defs/node" }
+    },
+    "edges": {
+      "type": "array",
+      "maxItems": 4096,
+      "items": { "$ref": "#/$defs/edge" }
+    },
+    "evidence": {
+      "type": "array",
+      "maxItems": 8192,
+      "items": { "$ref": "#/$defs/evidence" }
+    },
+    "attempts": {
+      "type": "array",
+      "maxItems": 32768,
+      "items": { "$ref": "#/$defs/attempt" }
+    },
+    "capability_support": {
+      "type": "array",
+      "maxItems": 256,
+      "items": { "$ref": "#/$defs/capabilitySupport" }
+    },
+    "steering": {
+      "type": "array",
+      "maxItems": 4096,
+      "items": { "$ref": "#/$defs/steering" }
+    }
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"
+    },
+    "roleId": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]{1,62}$"
+    },
+    "digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "capabilityRequirement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "minimum_support"],
+      "properties": {
+        "name": { "$ref": "#/$defs/id" },
+        "minimum_support": { "enum": ["supported", "best-effort"] }
+      }
+    },
+    "retryPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "max_attempts",
+        "initial_backoff_seconds",
+        "backoff_multiplier",
+        "max_backoff_seconds",
+        "identical_failure_limit"
+      ],
+      "properties": {
+        "max_attempts": { "type": "integer", "minimum": 1, "maximum": 64 },
+        "initial_backoff_seconds": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 86400
+        },
+        "backoff_multiplier": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 64
+        },
+        "max_backoff_seconds": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 86400
+        },
+        "identical_failure_limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 64
+        }
+      }
+    },
+    "node": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "executor_role_id",
+        "verifier_role_id",
+        "criterion_ids",
+        "completion_predicates",
+        "required_capabilities",
+        "retry_policy"
+      ],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "executor_role_id": { "$ref": "#/$defs/roleId" },
+        "verifier_role_id": { "$ref": "#/$defs/roleId" },
+        "criterion_ids": {
+          "type": "array",
+          "maxItems": 512,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/id" }
+        },
+        "completion_predicates": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 64,
+          "items": { "$ref": "#/$defs/predicate" }
+        },
+        "required_capabilities": {
+          "type": "array",
+          "maxItems": 64,
+          "items": { "$ref": "#/$defs/capabilityRequirement" }
+        },
+        "retry_policy": { "$ref": "#/$defs/retryPolicy" }
+      }
+    },
+    "predicate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["evidence_id", "kind", "result"],
+      "properties": {
+        "evidence_id": { "$ref": "#/$defs/id" },
+        "kind": {
+          "enum": [
+            "artifact",
+            "usage-authorization",
+            "independent-verification",
+            "steering-authorization"
+          ]
+        },
+        "result": {
+          "enum": ["present", "allowed", "passed", "failed", "indeterminate"]
+        }
+      }
+    },
+    "edge": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "from", "to", "predicates"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "from": { "$ref": "#/$defs/id" },
+        "to": { "$ref": "#/$defs/id" },
+        "predicates": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 64,
+          "items": { "$ref": "#/$defs/predicate" }
+        }
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "kind",
+        "result",
+        "graph_revision",
+        "subject_node_id",
+        "attempt",
+        "producer_role_id",
+        "verifier_role_id",
+        "verification_authority",
+        "locator",
+        "digest",
+        "authenticated"
+      ],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "kind": {
+          "enum": [
+            "artifact",
+            "usage-authorization",
+            "independent-verification",
+            "steering-authorization"
+          ]
+        },
+        "result": {
+          "enum": ["present", "allowed", "passed", "failed", "indeterminate"]
+        },
+        "graph_revision": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "subject_node_id": {
+          "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/id" }]
+        },
+        "attempt": {
+          "type": ["integer", "null"],
+          "minimum": 1,
+          "maximum": 64
+        },
+        "producer_role_id": {
+          "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/roleId" }]
+        },
+        "verifier_role_id": {
+          "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/roleId" }]
+        },
+        "verification_authority": {
+          "type": ["string", "null"],
+          "enum": ["deterministic", "judge", null]
+        },
+        "locator": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1024,
+          "pattern": "^[^\\u0000\\r\\n]+$"
+        },
+        "digest": { "$ref": "#/$defs/digest" },
+        "authenticated": { "type": "boolean" }
+      }
+    },
+    "attempt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "node_id",
+        "attempt",
+        "graph_revision",
+        "outcome",
+        "dispatch_digest",
+        "failure_fingerprint"
+      ],
+      "properties": {
+        "node_id": { "$ref": "#/$defs/id" },
+        "attempt": { "type": "integer", "minimum": 1, "maximum": 64 },
+        "graph_revision": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "outcome": { "enum": ["succeeded", "failed"] },
+        "dispatch_digest": { "$ref": "#/$defs/digest" },
+        "failure_fingerprint": {
+          "type": ["string", "null"],
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        }
+      }
+    },
+    "capabilitySupport": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "support", "evidence_digest"],
+      "properties": {
+        "name": { "$ref": "#/$defs/id" },
+        "support": {
+          "enum": ["supported", "best-effort", "unsupported", "unverified"]
+        },
+        "evidence_digest": { "$ref": "#/$defs/digest" }
+      }
+    },
+    "steering": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "base_revision",
+        "base_revision_digest",
+        "reason",
+        "affected_edges",
+        "user_boundary",
+        "authorization_evidence_id"
+      ],
+      "properties": {
+        "base_revision": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "base_revision_digest": { "$ref": "#/$defs/digest" },
+        "reason": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 8192,
+          "pattern": "^[^\\u0000]+$"
+        },
+        "affected_edges": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 4096,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/id" }
+        },
+        "user_boundary": {
+          "enum": ["within-approved-scope", "explicit-user-approval"]
+        },
+        "authorization_evidence_id": {
+          "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/id" }]
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": { "revision": { "const": 1 } },
+        "required": ["revision"]
+      },
+      "then": { "properties": { "previous_revision_digest": { "type": "null" } } },
+      "else": { "properties": { "previous_revision_digest": { "$ref": "#/$defs/digest" } } }
+    },
+    {
+      "if": {
+        "properties": { "state": { "enum": ["blocked", "failed"] } },
+        "required": ["state"]
+      },
+      "then": { "properties": { "terminal_reason": { "type": "string" } } },
+      "else": { "properties": { "terminal_reason": { "type": "null" } } }
+    }
+  ]
+}

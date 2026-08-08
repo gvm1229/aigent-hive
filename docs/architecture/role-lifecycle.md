@@ -79,7 +79,8 @@ byte-identical하게 보존. 중간 실패는 먼저 published한 HANDOFF를 rol
 동일 desired entry와 role assignment retry는 byte-identical no-op.
 
 이 action은 사용자가 명시한 existing role/run handoff만 기록. Role 자동 선택과
-plan/team/subagent/continuation 시작 금지.
+subagent process 시작 금지. 후속 team·multi-goal scheduling은 별도 orchestration event와
+single-action authority 사용.
 
 ## Migration
 

@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/gvm1229/aigent-hive/schemas/prompt-refinement-lifecycle.schema.json",
+  "title": "Aigent Hive prompt refinement lifecycle",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "state",
+    "refined_prompt_digest",
+    "target_host",
+    "execution_authorized",
+    "side_effects"
+  ],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "state": { "enum": ["awaiting-approval", "authorized"] },
+    "refined_prompt_digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "target_host": {
+      "type": ["string", "null"],
+      "enum": ["codex", "claude", "antigravity", null]
+    },
+    "execution_authorized": { "type": "boolean" },
+    "side_effects": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "project_write",
+        "network",
+        "subagent",
+        "memory_capture",
+        "run_creation",
+        "model_execution"
+      ],
+      "properties": {
+        "project_write": { "const": false },
+        "network": { "const": false },
+        "subagent": { "const": false },
+        "memory_capture": { "const": false },
+        "run_creation": { "const": false },
+        "model_execution": { "const": false }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "state": { "const": "awaiting-approval" } } },
+      "then": { "properties": { "execution_authorized": { "const": false } } }
+    },
+    {
+      "if": { "properties": { "state": { "const": "authorized" } } },
+      "then": { "properties": { "execution_authorized": { "const": true } } }
+    }
+  ]
+}

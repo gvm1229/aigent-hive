@@ -499,6 +499,36 @@ def validate_hook_approvals(answers: dict[str, object]) -> None:
             )
 
 
+def host_native_hook_approvals_supported(
+    capability_resolution: dict[str, object],
+    approvals: list[object],
+) -> bool:
+    if (
+        capability_resolution["detection"] != "available"
+        or capability_resolution["resolved_owner"] != "host-native"
+    ):
+        return False
+    hook_events = capability_resolution.get("hook_events", {})
+    if not isinstance(hook_events, dict):
+        return False
+    supported_events = {
+        "protect-hive-owned-state": {"PreToolUse"},
+        "update-integrity-guard": {"PreToolUse"},
+        "derived-state-invalidation": {"PostToolUse"},
+        "checkpoint-reminder": {"PreCompact", "Stop"},
+    }
+    for approval in approvals:
+        if not isinstance(approval, dict):
+            return False
+        event = approval.get("event")
+        if event not in supported_events.get(approval.get("capability"), set()):
+            return False
+        claim = hook_events.get(event)
+        if not isinstance(claim, dict) or claim.get("support") != "supported":
+            return False
+    return True
+
+
 def validate_consent_tamper_detection(approval: dict[str, object]) -> None:
     mutations = {
         "name": "changed-name",
@@ -687,9 +717,14 @@ def validate_render(render_root: Path, input_data_path: Path) -> None:
     hook_approvals = answers["approved_fallback_hooks"]
     assert isinstance(hook_approvals, list)
     approved_hooks_path = render_root / ".hive/config/approved-hooks.yml"
-    hook_eligible = capability_resolution["detection"] == "absent"
+    hook_eligible = host_native_hook_approvals_supported(
+        capability_resolution,
+        hook_approvals,
+    )
     if hook_approvals and not hook_eligible:
-        raise AssertionError("non-absent capability retained fallback hook approvals")
+        raise AssertionError(
+            "optional hook approval lacks an exact supported host-native event"
+        )
     if hook_approvals:
         if not approved_hooks_path.is_file():
             raise AssertionError("eligible fallback hook ledger was not rendered")
@@ -698,6 +733,8 @@ def validate_render(render_root: Path, input_data_path: Path) -> None:
         assert isinstance(approved_hooks, dict)
         if approved_hooks["hooks"] != hook_approvals:
             raise AssertionError("fallback hook ledger lost setup approval data")
+        if approved_hooks["detection"] != capability_resolution["detection"]:
+            raise AssertionError("fallback hook ledger lost capability detection binding")
         if (
             approved_hooks["resolution_evidence_digest"]
             != capability_resolution["evidence_digest"]
@@ -775,22 +812,27 @@ def validate_render(render_root: Path, input_data_path: Path) -> None:
     active_entries = active_skills["skills"]
     assert isinstance(active_entries, list)
     expected_skill_names = [
-        "auto-setup-harness",
-        "hive-judge-package",
-        "hive-knowledge-capture",
-        "hive-knowledge-maintenance",
-        "hive-knowledge-promote",
-        "hive-knowledge-query",
-        "hive-migrate",
-        "hive-project-upgrade",
-        "hive-prompt-refine",
-        "hive-role-handoff",
-        "hive-run-checkpoint",
-        "hive-run-resume",
-        "hive-simple-question",
-        "hive-update",
-        "hive-usage-guard",
-        "setup-harness",
+        "answer",
+        "auto-setup-project",
+        "clean-ai-slop",
+        "engineer-run",
+        "handoff-role",
+        "import-repository-knowledge",
+        "maintain-knowledge",
+        "manage-usage",
+        "manage-wiki",
+        "migrate-project",
+        "record-knowledge",
+        "refine-prompt",
+        "research-practices",
+        "resume-work",
+        "save-progress",
+        "search-knowledge",
+        "setup-project",
+        "share-knowledge",
+        "update-hive",
+        "upgrade-project",
+        "verify-package",
     ]
     if [entry["name"] for entry in active_entries] != expected_skill_names:
         raise AssertionError("Copier activated an unexpected Skill set")

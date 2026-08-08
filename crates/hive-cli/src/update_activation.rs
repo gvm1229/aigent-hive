@@ -18,7 +18,9 @@ const INSTALL_OUTPUT_LIMIT: usize = 4 * 1024 * 1024;
 
 #[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
 enum PackageChannel {
-    Test(u64),
+    /// Bare `-test` is the default prerelease; a number is only for a
+    /// follow-up immutable test publication.
+    Test(Option<u64>),
     Stable,
 }
 
@@ -262,7 +264,9 @@ fn target_package(bytes: &[u8]) -> Result<PackageVersion, String> {
 }
 
 fn parse_package_version(value: &str) -> Result<PackageVersion, String> {
-    let (product, channel) = if let Some((product, revision)) = value.split_once("-test.") {
+    let (product, channel) = if let Some(product) = value.strip_suffix("-test") {
+        (product, PackageChannel::Test(None))
+    } else if let Some((product, revision)) = value.split_once("-test.") {
         if revision.is_empty()
             || revision.starts_with('0')
             || !revision.bytes().all(|byte| byte.is_ascii_digit())
@@ -272,7 +276,7 @@ fn parse_package_version(value: &str) -> Result<PackageVersion, String> {
         let revision = revision
             .parse()
             .map_err(|_| "npm test package revision is out of range".to_owned())?;
-        (product, PackageChannel::Test(revision))
+        (product, PackageChannel::Test(Some(revision)))
     } else {
         (value, PackageChannel::Stable)
     };
@@ -688,7 +692,10 @@ mod tests {
     }
 
     fn metadata(version: &str) -> FakeRegistry {
-        let product = version.split("-test.").next().expect("package version");
+        let product = version
+            .strip_suffix("-test")
+            .or_else(|| version.split_once("-test.").map(|(product, _)| product))
+            .unwrap_or(version);
         FakeRegistry(
             format!(
                 r#"{{"dist-tags":{{"latest":"{version}"}},"versions":{{"{version}":{{"aigentHive":{{"productVersion":"{product}"}}}}}}}}"#
@@ -728,16 +735,29 @@ mod tests {
 
     #[test]
     fn package_versions_order_tests_before_stable_and_then_next_product() {
+        let bare = parse_package_version("0.8.0-test").expect("bare test");
         let first = parse_package_version("0.8.0-test.1").expect("first");
         let second = parse_package_version("0.8.0-test.2").expect("second");
         let stable = parse_package_version("0.8.0").expect("stable");
         let next = parse_package_version("0.8.1-test.1").expect("next");
+        assert!(bare < first);
         assert!(first < second);
         assert!(second < stable);
         assert!(stable < next);
         assert!(second < next);
         assert!(parse_package_version("0.8.0-test.0").is_err());
+        assert!(parse_package_version("0.8.0-test.01").is_err());
         assert!(parse_package_version("0.8.0-preview.1").is_err());
+    }
+
+    #[test]
+    fn npm_owner_accepts_the_default_bare_test_package_binding() {
+        let current = format!("{}-test", env!("CARGO_PKG_VERSION"));
+        let (_root, binary) = fake_npm_install(&current);
+        let product: SemVersion = env!("CARGO_PKG_VERSION").parse().expect("product");
+        let owner = discover_owner(&binary, product).expect("npm owner");
+        assert_eq!(owner.label(), "npm");
+        assert_eq!(owner.package_version().exact, current);
     }
 
     #[test]

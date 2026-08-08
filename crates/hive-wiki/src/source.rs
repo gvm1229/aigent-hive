@@ -823,11 +823,6 @@ fn validate_source(root: &SourceRoot, locator: &str) -> Result<(), WikiError> {
     }
     let (parent, name) = capability_parent(&root.dir, &relative, false)?;
     let bytes = read_capability_file(&parent, &name, &relative.to_string_lossy())?;
-    reject_likely_credentials(&bytes).map_err(|error| {
-        WikiError::Verification(format!(
-            "repository source contains likely sensitive material: {error}"
-        ))
-    })?;
     let actual = sha256_digest(&bytes);
     if actual.strip_prefix("sha256:") != Some(expected) {
         return Err(WikiError::Verification(format!(
@@ -1929,8 +1924,9 @@ mod tests {
 
     #[cfg(unix)]
     #[test]
-    fn symlinks_and_secret_candidates_are_refused() {
+    fn symlinks_are_refused_but_cited_source_content_is_not_ingested() {
         let temp = fixture();
+        let original_source = source_locator(temp.path());
         write_pair(temp.path(), "architecture", &[]);
         let external = temp.path().join("external.md");
         fs::write(&external, b"outside\n").expect("external");
@@ -1947,17 +1943,28 @@ mod tests {
             temp.path().join("docs/source.md"),
             b"token=abcdefghijklmnopqrstuvwxyz\n",
         )
-        .expect("secret");
+        .expect("credential-bearing cited source");
+        let digest = sha256_digest(b"token=abcdefghijklmnopqrstuvwxyz\n");
+        let digest = digest.strip_prefix("sha256:").expect("digest prefix");
+        let replacement_source = format!("repo:docs/source.md#sha256:{digest}");
+        for language in ["en", "ko"] {
+            let path = temp
+                .path()
+                .join(WIKI_ROOT)
+                .join(language)
+                .join("architecture.md");
+            let text = fs::read_to_string(&path).expect("read fact");
+            fs::write(&path, text.replace(&original_source, &replacement_source))
+                .expect("update citation");
+        }
+        rebuild_index(temp.path()).expect("rebuild source Wiki index");
         let outcome = lint(temp.path()).expect("lint");
-        assert!(outcome
-            .issues
-            .iter()
-            .any(|issue| issue.code == "invalid-source"));
+        assert!(outcome.issues.is_empty());
     }
 
     #[cfg(unix)]
     #[test]
-    fn llm_wiki_ancestor_symlink_is_refused() {
+    fn docs_facts_ancestor_symlink_is_refused() {
         let temp = fixture();
         write_pair(temp.path(), "architecture", &[]);
         let external = temp.path().join("external-wiki");

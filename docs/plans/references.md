@@ -24,7 +24,7 @@
 
 ### 지식·지침·Skill
 
-- [Andrej Karpathy — LLM Wiki](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f)
+- [Andrej Karpathy — Wiki reference](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f)
 - [multica-ai — andrej-karpathy-skills](https://github.com/multica-ai/andrej-karpathy-skills)
 - [Agent Skills specification](https://agentskills.io/specification)
 - [OpenAI Codex — ExecPlans](https://developers.openai.com/cookbook/articles/codex_exec_plans)

@@ -1,0 +1,14 @@
+{
+  "name": "aigent-hive",
+  "owner": {
+    "name": "Aigent Hive maintainers"
+  },
+  "plugins": [
+    {
+      "name": "aigent-hive",
+      "source": "./plugins/aigent-hive",
+      "description": "Initialize and maintain project-local Aigent Hive harnesses.",
+      "version": "0.8.0"
+    }
+  ]
+}

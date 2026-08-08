@@ -1,0 +1,240 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/gvm1229/aigent-hive/schemas/knowledge-import-result.schema.json",
+  "title": "Aigent Hive portable knowledge import result",
+  "description": "Deterministic inner data for a successful dry-run, no-op, or applied bundle import. Activation failures, including fully restored failures, return a nonzero error instead.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "mode",
+    "disposition",
+    "archive_sha256",
+    "manifest_sha256",
+    "source",
+    "scope",
+    "entry_count",
+    "added_count",
+    "unchanged_count",
+    "detached_collection_ids",
+    "changed_paths",
+    "canonical_mutation",
+    "index_rebuilt",
+    "rollback",
+    "collection_tables"
+  ],
+  "properties": {
+    "mode": { "enum": ["dry-run", "apply"] },
+    "disposition": { "enum": ["noop", "planned", "applied"] },
+    "archive_sha256": { "$ref": "#/$defs/sha256" },
+    "manifest_sha256": { "$ref": "#/$defs/sha256" },
+    "source": { "$ref": "#/$defs/source" },
+    "scope": { "$ref": "#/$defs/scope" },
+    "entry_count": { "type": "integer", "minimum": 0, "maximum": 10000 },
+    "added_count": { "type": "integer", "minimum": 0, "maximum": 10000 },
+    "unchanged_count": { "type": "integer", "minimum": 0, "maximum": 10000 },
+    "detached_collection_ids": {
+      "type": "array",
+      "maxItems": 10000,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^collection-[0-9a-f]{64}$"
+      }
+    },
+    "changed_paths": {
+      "type": "array",
+      "maxItems": 10000,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/portable_path" }
+    },
+    "canonical_mutation": { "type": "boolean" },
+    "index_rebuilt": { "type": "boolean" },
+    "rollback": { "$ref": "#/$defs/rollback" },
+    "collection_tables": { "$ref": "#/$defs/collection_tables" }
+  },
+  "x-countInvariant": "added_count + unchanged_count = entry_count",
+  "allOf": [
+    {
+      "if": { "properties": { "mode": { "const": "dry-run" } }, "required": ["mode"] },
+      "then": {
+        "properties": {
+          "disposition": { "enum": ["noop", "planned"] },
+          "changed_paths": { "maxItems": 0 },
+          "canonical_mutation": { "const": false },
+          "index_rebuilt": { "const": false },
+          "rollback": { "$ref": "#/$defs/no_rollback" }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "disposition": { "const": "noop" } }, "required": ["disposition"] },
+      "then": {
+        "properties": {
+          "added_count": { "const": 0 },
+          "changed_paths": { "maxItems": 0 },
+          "canonical_mutation": { "const": false },
+          "index_rebuilt": { "const": false },
+          "rollback": { "$ref": "#/$defs/no_rollback" }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "disposition": { "const": "planned" } }, "required": ["disposition"] },
+      "then": {
+        "properties": {
+          "mode": { "const": "dry-run" },
+          "changed_paths": { "maxItems": 0 },
+          "canonical_mutation": { "const": false },
+          "index_rebuilt": { "const": false },
+          "rollback": { "$ref": "#/$defs/no_rollback" }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "disposition": { "const": "applied" } }, "required": ["disposition"] },
+      "then": {
+        "properties": {
+          "mode": { "const": "apply" },
+          "added_count": { "minimum": 1 },
+          "changed_paths": { "minItems": 1 },
+          "canonical_mutation": { "const": true },
+          "rollback": { "$ref": "#/$defs/no_rollback" }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "identity": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+    },
+    "collection_id": {
+      "type": "string",
+      "pattern": "^(?:user-root|collection-[0-9a-f]{64})$"
+    },
+    "portable_path": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 240,
+      "pattern": "^(?!/)(?!\\.{1,2}(?:/|$))(?!.*\\/\\.{1,2}(?:/|$))(?![^/]*\\.(?:/|$))(?!.*\\/[^/]*\\.(?:/|$))[A-Za-z0-9._-]+(?:/[A-Za-z0-9._-]+)*$",
+      "not": {
+        "pattern": "(?:^|/)(?:[Cc][Oo][Nn]|[Pp][Rr][Nn]|[Aa][Uu][Xx]|[Nn][Uu][Ll]|[Cc][Oo][Mm][1-9]|[Ll][Pp][Tt][1-9])(?:\\.[^/]*)?(?:/|$)"
+      }
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "id", "logical_digest"],
+      "properties": {
+        "kind": { "enum": ["user-root", "project", "collection"] },
+        "id": { "$ref": "#/$defs/identity" },
+        "logical_digest": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "scope": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind"],
+          "properties": { "kind": { "const": "global" } }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind"],
+          "properties": { "kind": { "const": "shared" } }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind"],
+          "properties": { "kind": { "const": "all-portable" } }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "id"],
+          "properties": {
+            "kind": { "const": "project" },
+            "id": { "$ref": "#/$defs/identity" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "id"],
+          "properties": {
+            "kind": { "const": "collection" },
+            "id": { "$ref": "#/$defs/identity" }
+          }
+        }
+      ]
+    },
+    "rollback": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["attempted", "succeeded", "backup_digest", "restored_paths"],
+      "properties": {
+        "attempted": { "type": "boolean" },
+        "succeeded": { "type": "boolean" },
+        "backup_digest": {
+          "oneOf": [{ "$ref": "#/$defs/sha256" }, { "type": "null" }]
+        },
+        "restored_paths": {
+          "type": "array",
+          "maxItems": 10000,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/portable_path" }
+        }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "attempted": { "const": false } }, "required": ["attempted"] },
+          "then": {
+            "properties": {
+              "succeeded": { "const": false },
+              "backup_digest": { "type": "null" },
+              "restored_paths": { "maxItems": 0 }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "attempted": { "const": true } }, "required": ["attempted"] },
+          "then": {
+            "properties": { "backup_digest": { "$ref": "#/$defs/sha256" } }
+          }
+        }
+      ]
+    },
+    "no_rollback": {
+      "properties": {
+        "attempted": { "const": false },
+        "succeeded": { "const": false },
+        "backup_digest": { "type": "null" },
+        "restored_paths": { "maxItems": 0 }
+      }
+    },
+    "collection_tables": {
+      "type": "array",
+      "minItems": 7,
+      "maxItems": 7,
+      "prefixItems": [
+        { "const": "collections" },
+        { "const": "documents" },
+        { "const": "chunks" },
+        { "const": "claims" },
+        { "const": "sources" },
+        { "const": "links" },
+        { "const": "replacements" }
+      ],
+      "items": false
+    }
+  }
+}

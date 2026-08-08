@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/gvm1229/aigent-hive/schemas/hook-consent.schema.json",
-  "title": "Aigent Hive fallback hook consent ledger",
+  "title": "Aigent Hive optional hook consent ledger",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -12,7 +12,7 @@
   ],
   "properties": {
     "schema_version": { "const": 1 },
-    "detection": { "const": "absent" },
+    "detection": { "enum": ["available", "absent"] },
     "resolution_evidence_digest": {
       "type": "string",
       "pattern": "^sha256:[0-9a-f]{64}$"

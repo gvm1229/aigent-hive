@@ -4,8 +4,8 @@ use hive_core::{
     validate_project_relative,
 };
 use hive_projection::{
-    resolve_route, validate_prompt_refinement, LogicalAction, PromptRefinementInput,
-    PromptRefinementResult, Route, RoutingRequest,
+    prompt_refinement_lifecycle, resolve_route, validate_prompt_refinement, LogicalAction,
+    PromptRefinementInput, PromptRefinementResult, PromptRefinementState, Route, RoutingRequest,
 };
 use hive_render::{
     authorize_hook_with_resolution, execute_setup, execute_setup_with_post_apply,
@@ -21,9 +21,13 @@ use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 use std::time::{SystemTime, UNIX_EPOCH};
 
+mod discord;
 mod judge;
 mod knowledge;
+mod knowledge_scan;
+mod loop_engineering;
 mod project_upgrade;
+mod report;
 mod role;
 mod run;
 mod source_wiki;
@@ -50,11 +54,14 @@ USAGE:
     hive source-wiki query --target <source-root> --language en|ko (--text <query>|--tag <tag>) [--limit <1..100>] --output json
     hive update
     hive update --check --user-root <absolute-dir> --output json
-    hive knowledge ingest|query|promote|lint|delete|suppress --help
+    hive knowledge add|authorize-confidential|collection|delete|export|import|ingest|lint|list|promote|query|read|refresh|remember|retrieve|scan|suppress --help
+    hive discord inbound --host codex|claude|antigravity --output json
+    hive report preview|collect|export --help
     hive project upgrade --target <dir> (--scan|--dry-run|--apply|--validate|--recover) --output json
     hive index rebuild --target <dir> --output json
     hive route --request <json> --output json
     hive prompt validate --request <input.json> --result <result.json> --output json
+    hive prompt approve --request <input.json> --result <result.json> --digest <sha256:...> --target-host codex|claude|antigravity --confirm-refined-prompt --output json
     hive hook --capability <name> --event <event> [--capabilities <fresh-json>] [--input <json>] --output json
     hive usage check --account-digest <sha256:...> [--threshold <1..99>] --output json
     hive usage enforce --target <dir> --session-id <id> --process-id <positive-u32> [--account-digest <sha256:...>] --output json
@@ -67,6 +74,7 @@ USAGE:
     hive role handoff --target <dir> --request <request.json> --output json
     hive run checkpoint --target <dir> --request <request.json> --capabilities <fresh-json> --output json
     hive run resume --target <dir> --run <run-id> --capabilities <fresh-json> [--dispatch-intent manual|automatic] [--account-digest <sha256:...>] [--session-id <host-session-id>] [--role <role-id> [--threshold <1..99>]] --output json
+    hive loop initialize|validate|checkpoint|steer|prepare|recover --help
     hive judge package --target <dir> --request <json> --output json
     hive judge quorum --target <dir> --request <json> --output json
     hive release verify --bundle <release-dir> --trust-root <external-protected-root.json> --output json
@@ -179,6 +187,8 @@ fn main() -> ExitCode {
         Some("install") => user_install::run_install(&arguments[1..]),
         Some("source-wiki") => source_wiki::run(&arguments[1..]),
         Some("knowledge") => knowledge::run_knowledge(&arguments[1..]),
+        Some("discord") => discord::run(&arguments[1..]),
+        Some("report") => report::run(&arguments[1..]),
         Some("project") => project_upgrade::run(&arguments[1..]),
         Some("index") => knowledge::run_index(&arguments[1..]),
         Some("route") => run_route(&arguments[1..]),
@@ -187,6 +197,7 @@ fn main() -> ExitCode {
         Some("usage") => run_usage(&arguments[1..]),
         Some("role") => role::run_role(&arguments[1..]),
         Some("run") => run::run_run(&arguments[1..]),
+        Some("loop") => loop_engineering::run_loop(&arguments[1..]),
         Some("judge") => judge::run_judge(&arguments[1..]),
         Some("release") => update::run_release(&arguments[1..]),
         Some("update") if arguments.len() == 1 => update_activation::run(),
@@ -605,24 +616,37 @@ fn reconcile_project_registry(
             }
         }
         SetupMode::Apply => {
-            let registered = hive_wiki::shared::register_project_atomic(
-                user_root,
-                registration,
-                global_wiki_enabled,
-            )
-            .map_err(|error| RenderError::Verification(error.to_string()))?;
-            changed_paths.extend(
-                registered
-                    .registry
-                    .changed_paths
-                    .into_iter()
-                    .map(|path| format!("user-root:{path}")),
-            );
-            if let Some(rebuilt) = registered.shared_index {
+            if global_wiki_enabled {
+                let registered =
+                    hive_wiki::shared::register_project_atomic(user_root, registration, true)
+                        .map_err(|error| RenderError::Verification(error.to_string()))?;
                 changed_paths.extend(
-                    rebuilt
+                    registered
+                        .registry
                         .changed_paths
                         .into_iter()
+                        .map(|path| format!("user-root:{path}")),
+                );
+                if let Some(rebuilt) = registered.shared_index {
+                    changed_paths.extend(
+                        rebuilt
+                            .changed_paths
+                            .into_iter()
+                            .map(|path| format!("user-root:{path}")),
+                    );
+                }
+            } else {
+                let registered = hive_wiki::shared::register_project_with_shared_index_disabled(
+                    user_root,
+                    registration,
+                )
+                .map_err(|error| RenderError::Verification(error.to_string()))?;
+                changed_paths.extend(
+                    registered
+                        .registry
+                        .changed_paths
+                        .into_iter()
+                        .chain(registered.removed_derived_paths)
                         .map(|path| format!("user-root:{path}")),
                 );
             }
@@ -641,6 +665,9 @@ fn reconcile_project_registry(
             }
             if global_wiki_enabled {
                 hive_wiki::shared::validate_shared_index(user_root)
+                    .map_err(|error| RenderError::Verification(error.to_string()))?;
+            } else {
+                hive_wiki::shared::validate_shared_derived_state_absent(user_root)
                     .map_err(|error| RenderError::Verification(error.to_string()))?;
             }
         }
@@ -879,7 +906,18 @@ struct PromptContracts {
 }
 
 fn run_prompt(arguments: &[String]) -> ExitCode {
-    let result = match parse_prompt(arguments).and_then(read_prompt_contracts) {
+    match arguments.first().map(String::as_str) {
+        Some("validate") => run_prompt_validate(arguments),
+        Some("approve") => run_prompt_approve(arguments),
+        _ => emit_action_result(&invalid_input_result(
+            "RefinePrompt",
+            "prompt requires the validate or approve action".to_owned(),
+        )),
+    }
+}
+
+fn run_prompt_validate(arguments: &[String]) -> ExitCode {
+    let result = match parse_prompt_validate(arguments).and_then(read_prompt_contracts) {
         Ok(contracts) => {
             if contracts.input.mode == hive_projection::RefineMode::RefineAndRun
                 && !contracts.input.explicit_run_intent
@@ -895,15 +933,7 @@ fn run_prompt(arguments: &[String]) -> ExitCode {
                 )
             } else {
                 match validate_prompt_refinement(&contracts.input, &contracts.output) {
-                    Ok(()) => prompt_result(
-                        "success",
-                        0,
-                        "hive.prompt-refinement-valid",
-                        "prompt refinement preserves the normalized contract".to_owned(),
-                        &contracts.arguments,
-                        &contracts.input_bytes,
-                        &contracts.output_bytes,
-                    ),
+                    Ok(()) => prompt_validation_success(&contracts),
                     Err(error) if error.code() == "hive.refine-run-not-authorized" => {
                         prompt_result(
                             "blocked",
@@ -932,10 +962,7 @@ fn run_prompt(arguments: &[String]) -> ExitCode {
     emit_action_result(&result)
 }
 
-fn parse_prompt(arguments: &[String]) -> Result<PromptArguments, String> {
-    if arguments.first().map(String::as_str) != Some("validate") {
-        return Err("prompt requires the validate action".to_owned());
-    }
+fn parse_prompt_validate(arguments: &[String]) -> Result<PromptArguments, String> {
     let mut request = None;
     let mut result = None;
     let mut output = None;
@@ -963,6 +990,153 @@ fn parse_prompt(arguments: &[String]) -> Result<PromptArguments, String> {
     Ok(PromptArguments {
         request: request.ok_or_else(|| "missing required option --request".to_owned())?,
         result: result.ok_or_else(|| "missing required option --result".to_owned())?,
+    })
+}
+
+struct PromptApprovalArguments {
+    contracts: PromptArguments,
+    digest: String,
+    target_host: String,
+    confirmed: bool,
+}
+
+fn run_prompt_approve(arguments: &[String]) -> ExitCode {
+    let result = match parse_prompt_approval(arguments) {
+        Ok(arguments) if !arguments.confirmed => prompt_approval_confirmation_required_result(),
+        Ok(arguments) => {
+            let digest = arguments.digest.clone();
+            let target_host = arguments.target_host.clone();
+            match read_prompt_contracts(arguments.contracts) {
+                Ok(contracts) => {
+                    match validate_prompt_refinement(&contracts.input, &contracts.output) {
+                        Ok(()) => {
+                            let expected_digest =
+                                sha256_digest(contracts.output.refined_prompt.as_bytes());
+                            if contracts.input.mode != hive_projection::RefineMode::RefineOnly {
+                                prompt_result(
+                                "blocked",
+                                3,
+                                "hive.refine-approval-not-required",
+                                "only a refine-only result may enter a later approval lifecycle"
+                                    .to_owned(),
+                                &contracts.arguments,
+                                &contracts.input_bytes,
+                                &contracts.output_bytes,
+                            )
+                            } else if digest != expected_digest {
+                                prompt_result(
+                                    "blocked",
+                                    3,
+                                    "hive.refine-approval-stale",
+                                    "approval digest does not bind the current refined prompt"
+                                        .to_owned(),
+                                    &contracts.arguments,
+                                    &contracts.input_bytes,
+                                    &contracts.output_bytes,
+                                )
+                            } else if !matches!(
+                                target_host.as_str(),
+                                "codex" | "claude" | "antigravity"
+                            ) {
+                                invalid_input_result(
+                                    "RefinePrompt",
+                                    "target host must be codex, claude, or antigravity".to_owned(),
+                                )
+                            } else if contracts
+                                .input
+                                .target_host
+                                .is_some_and(|host| prompt_host_name(host) != target_host)
+                            {
+                                prompt_result(
+                                    "blocked",
+                                    3,
+                                    "hive.refine-approval-host-mismatch",
+                                    "approval target host differs from the refined prompt contract"
+                                        .to_owned(),
+                                    &contracts.arguments,
+                                    &contracts.input_bytes,
+                                    &contracts.output_bytes,
+                                )
+                            } else {
+                                prompt_approval_success(&contracts, &target_host, &expected_digest)
+                            }
+                        }
+                        Err(error) if error.code() == "hive.refine-run-not-authorized" => {
+                            prompt_result(
+                                "blocked",
+                                3,
+                                error.code(),
+                                error.message().to_owned(),
+                                &contracts.arguments,
+                                &contracts.input_bytes,
+                                &contracts.output_bytes,
+                            )
+                        }
+                        Err(error) => prompt_result(
+                            "verification-failed",
+                            5,
+                            error.code(),
+                            error.message().to_owned(),
+                            &contracts.arguments,
+                            &contracts.input_bytes,
+                            &contracts.output_bytes,
+                        ),
+                    }
+                }
+                Err(message) => invalid_input_result("RefinePrompt", message),
+            }
+        }
+        Err(message) => invalid_input_result("RefinePrompt", message),
+    };
+    emit_action_result(&result)
+}
+
+fn parse_prompt_approval(arguments: &[String]) -> Result<PromptApprovalArguments, String> {
+    let mut request = None;
+    let mut result = None;
+    let mut digest = None;
+    let mut target_host = None;
+    let mut output = None;
+    let mut confirmed = false;
+    let mut index = 1;
+    while index < arguments.len() {
+        let option = &arguments[index];
+        index += 1;
+        if option == "--confirm-refined-prompt" {
+            if confirmed {
+                return Err("duplicate prompt approval option: --confirm-refined-prompt".to_owned());
+            }
+            confirmed = true;
+            continue;
+        }
+        let value = arguments
+            .get(index)
+            .ok_or_else(|| format!("missing value for {option}"))?;
+        match option.as_str() {
+            "--request" if request.is_none() => request = Some(PathBuf::from(value)),
+            "--result" if result.is_none() => result = Some(PathBuf::from(value)),
+            "--digest" if digest.is_none() => digest = Some(value.clone()),
+            "--target-host" if target_host.is_none() => target_host = Some(value.clone()),
+            "--output" if output.is_none() => output = Some(value.clone()),
+            "--request" | "--result" | "--digest" | "--target-host" | "--output" => {
+                return Err(format!("duplicate prompt approval option: {option}"));
+            }
+            _ => return Err(format!("unknown prompt approval option: {option}")),
+        }
+        index += 1;
+    }
+    if output.as_deref() != Some("json") {
+        return Err("prompt approve requires --output json".to_owned());
+    }
+    Ok(PromptApprovalArguments {
+        contracts: PromptArguments {
+            request: request.ok_or_else(|| "missing required option --request".to_owned())?,
+            result: result.ok_or_else(|| "missing required option --result".to_owned())?,
+        },
+        digest: digest.ok_or_else(|| "missing required option --digest".to_owned())?,
+        target_host: target_host
+            .ok_or_else(|| "missing required option --target-host".to_owned())?,
+        confirmed,
     })
 }
 
@@ -1026,6 +1200,67 @@ fn validate_json_schema(
         .map_err(|error| format!("{label} violates the JSON Schema contract: {error}"))
 }
 
+fn prompt_validation_success(contracts: &PromptContracts) -> ActionResult {
+    let lifecycle = prompt_refinement_lifecycle(&contracts.input, &contracts.output);
+    let next_action = match lifecycle.state {
+        PromptRefinementState::AwaitingApproval => "awaiting-approval",
+        PromptRefinementState::Authorized => "host-owned-execution",
+    };
+    ActionResult {
+        schema_version: 1,
+        action: "RefinePrompt",
+        status: "success",
+        exit_code: 0,
+        code: "hive.prompt-refinement-valid",
+        message: "prompt refinement preserves the normalized contract".to_owned(),
+        changed_paths: Vec::new(),
+        evidence: vec![
+            file_evidence(&contracts.arguments.request, &contracts.input_bytes),
+            file_evidence(&contracts.arguments.result, &contracts.output_bytes),
+        ],
+        next_action: Some(next_action.to_owned()),
+        data: Some(
+            serde_json::to_value(lifecycle).expect("prompt refinement lifecycle must serialize"),
+        ),
+    }
+}
+
+fn prompt_approval_success(
+    contracts: &PromptContracts,
+    target_host: &str,
+    refined_prompt_digest: &str,
+) -> ActionResult {
+    ActionResult {
+        schema_version: 1,
+        action: "RefinePrompt",
+        status: "success",
+        exit_code: 0,
+        code: "hive.prompt-approved",
+        message: "exact refined prompt approval is bound for host-owned execution".to_owned(),
+        changed_paths: Vec::new(),
+        evidence: vec![
+            file_evidence(&contracts.arguments.request, &contracts.input_bytes),
+            file_evidence(&contracts.arguments.result, &contracts.output_bytes),
+        ],
+        next_action: Some("host-owned-execution".to_owned()),
+        data: Some(serde_json::json!({
+            "state": "authorized",
+            "refined_prompt_digest": refined_prompt_digest,
+            "target_host": target_host,
+            "execution_owner": "host-native",
+            "result_locator": contracts.arguments.result.display().to_string(),
+        })),
+    }
+}
+
+const fn prompt_host_name(host: hive_projection::Host) -> &'static str {
+    match host {
+        hive_projection::Host::Codex => "codex",
+        hive_projection::Host::Claude => "claude",
+        hive_projection::Host::Antigravity => "antigravity",
+    }
+}
+
 fn prompt_result(
     status: &'static str,
     exit_code: u8,
@@ -1048,6 +1283,21 @@ fn prompt_result(
             file_evidence(&arguments.result, output_bytes),
         ],
         next_action: None,
+        data: None,
+    }
+}
+
+fn prompt_approval_confirmation_required_result() -> ActionResult {
+    ActionResult {
+        schema_version: 1,
+        action: "RefinePrompt",
+        status: "blocked",
+        exit_code: 3,
+        code: "hive.refine-approval-confirmation-required",
+        message: "prompt approval requires --confirm-refined-prompt".to_owned(),
+        changed_paths: Vec::new(),
+        evidence: Vec::new(),
+        next_action: Some("awaiting-approval".to_owned()),
         data: None,
     }
 }
@@ -1577,11 +1827,7 @@ fn run_human(mut arguments: impl Iterator<Item = String>) -> Result<(), String> 
             check_target(Path::new(&target))
         }
         Some("-v" | "-V" | "--version") => {
-            println!(
-                "hive {} (released {})",
-                env!("CARGO_PKG_VERSION"),
-                env!("HIVE_RELEASE_DATE")
-            );
+            println!("{}", version_output());
             Ok(())
         }
         Some("-h" | "--help") | None => {
@@ -1589,6 +1835,31 @@ fn run_human(mut arguments: impl Iterator<Item = String>) -> Result<(), String> 
             Ok(())
         }
         Some(command) => Err(format!("unknown command: {command}\n\n{USAGE}")),
+    }
+}
+
+fn version_output() -> String {
+    version_output_for(
+        env!("CARGO_PKG_VERSION"),
+        env!("HIVE_PACKAGE_VERSION"),
+        env!("HIVE_PACKAGE_RELEASE_DATE"),
+    )
+}
+
+fn version_output_for(product: &str, package: &str, release_date: &str) -> String {
+    if package == product {
+        format!("AIgent Hive v{product} (released {release_date})")
+    } else if package == format!("{product}-dev") {
+        format!("AIgent Hive v{product}-dev · local developer build (built {release_date})")
+    } else if package == format!("{product}-test") {
+        format!("AIgent Hive v{product}-test · developer test build (released {release_date})")
+    } else {
+        let revision = package
+            .strip_prefix(&format!("{product}-test."))
+            .expect("embedded package version is validated by build.rs");
+        format!(
+            "AIgent Hive v{product}-test #{revision} · developer test build (released {release_date})"
+        )
     }
 }
 
@@ -1625,10 +1896,10 @@ fn check_target(target: &Path) -> Result<(), String> {
 mod tests {
     use super::{
         execute_hook_capability, failure_result_for, is_help_request, mark_derived_state_stale,
-        normalize_hook_path, parse_hook, parse_setup, run_human, wants_json, ActionResult,
-        HookInput, SETUP_USAGE, USAGE,
+        normalize_hook_path, parse_hook, parse_setup, reconcile_project_registry, run_human,
+        version_output_for, wants_json, ActionResult, HookInput, SETUP_USAGE, USAGE,
     };
-    use hive_render::RenderError;
+    use hive_render::{RenderError, ResolvedProjectPreferences, SetupMode};
     use std::fs;
     use std::path::{Path, PathBuf};
     use std::time::{SystemTime, UNIX_EPOCH};
@@ -1647,6 +1918,18 @@ mod tests {
     #[test]
     fn help_is_the_default_command() {
         assert_eq!(run_human(std::iter::empty()), Ok(()));
+    }
+
+    #[test]
+    fn version_output_surfaces_developer_build_kinds() {
+        assert_eq!(
+            version_output_for("0.9.0", "0.9.0-dev", "2026-08-07"),
+            "AIgent Hive v0.9.0-dev · local developer build (built 2026-08-07)"
+        );
+        assert_eq!(
+            version_output_for("0.9.0", "0.9.0-test.2", "2026-08-06"),
+            "AIgent Hive v0.9.0-test #2 · developer test build (released 2026-08-06)"
+        );
     }
 
     #[test]
@@ -1839,6 +2122,87 @@ mod tests {
         fs::remove_dir_all(&target).expect("temporary target should be removed");
         assert_eq!(first, second);
         assert_eq!(first, b"{\"schema_version\":1,\"stale\":true}\n");
+    }
+
+    #[test]
+    fn setup_disables_and_validates_complete_disposable_rag_cleanup() {
+        let temporary = temporary_directory("setup-wiki-disabled");
+        let user = temporary.join("user");
+        let project = temporary.join("project");
+        fs::create_dir_all(&user).expect("user root");
+        fs::create_dir_all(&project).expect("project root");
+        let preferences = ResolvedProjectPreferences {
+            setup_mode: "expedited".to_owned(),
+            provenance: "test".to_owned(),
+            interface_language: "en".to_owned(),
+            wiki_enabled: true,
+            wiki_backend: "markdown".to_owned(),
+            wiki_language: "both".to_owned(),
+            persona_id: "balanced".to_owned(),
+            persona_custom_description: None,
+            selected_project_skills: Vec::new(),
+            usage_guard_enabled: false,
+            codexbar_fallback_enabled: false,
+            discord_guard_enabled: false,
+            discord_webhook_url_env: None,
+            usage_stop_remaining_percent: 60,
+        };
+        let mut changed = Vec::new();
+        reconcile_project_registry(
+            &user,
+            &project,
+            &preferences,
+            SetupMode::Apply,
+            true,
+            &mut changed,
+        )
+        .expect("enable Global Wiki");
+        for relative in hive_wiki::shared::SHARED_DERIVED_RELATIVES {
+            let path = user.join(relative);
+            fs::create_dir_all(path.parent().expect("derived parent")).expect("derived parent");
+            if !path.exists() {
+                fs::write(path, b"derived\n").expect("derived artifact");
+            }
+        }
+
+        changed.clear();
+        reconcile_project_registry(
+            &user,
+            &project,
+            &preferences,
+            SetupMode::Apply,
+            false,
+            &mut changed,
+        )
+        .expect("disable Global Wiki");
+
+        for relative in hive_wiki::shared::SHARED_DERIVED_RELATIVES {
+            assert!(!user.join(relative).exists(), "{relative}");
+            assert!(changed.contains(&format!("user-root:{relative}")));
+        }
+        reconcile_project_registry(
+            &user,
+            &project,
+            &preferences,
+            SetupMode::Validate,
+            false,
+            &mut Vec::new(),
+        )
+        .expect("validate disabled Global Wiki");
+
+        fs::create_dir_all(user.join(".hive/index")).expect("index directory");
+        fs::write(user.join(".hive/index/.stale"), b"stale\n").expect("stale marker");
+        let error = reconcile_project_registry(
+            &user,
+            &project,
+            &preferences,
+            SetupMode::Validate,
+            false,
+            &mut Vec::new(),
+        )
+        .expect_err("disabled validation must reject derived residue");
+        assert!(matches!(error, RenderError::Verification(_)));
+        fs::remove_dir_all(temporary).expect("temporary target should be removed");
     }
 
     #[test]

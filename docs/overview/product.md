@@ -16,7 +16,7 @@ provider-neutral 로컬 agent harness.
 
 비소유 범위:
 
-- Model runtime·scheduler·provider API client
+- Model runtime·provider API client·model/subagent process launcher
 - Provider credential·subscription session
 - OMX·OMC runtime state와 foreign guidance
 - 미승인 optional third-party Skill
@@ -29,7 +29,7 @@ provider-neutral 로컬 agent harness.
 | Operating system | macOS arm64·Intel, Windows x86_64 candidate runtime 검증; Linux musl x86_64·arm64 qualification 진행 |
 | Agent host | Codex·Claude Code·Gemini Antigravity adapter |
 | Live evidence | Codex·Antigravity actual host; Claude subscription session 미검증 |
-| Orchestration | Compatible OMX·OMC 우선, 그 외 truthful host-native capability |
+| Orchestration | Hive-native iterative·team·multi-goal control plane 계획 활성; host가 declarative envelope 실행, OMX·OMC 신규 dependency 없음 |
 | Model access | 사용자의 subscription-authenticated host session |
 | Data | Local-first tracked text, disposable SQLite |
 | Consumer shell | Unix shell, Windows PowerShell 5.1, `cmd.exe`; PowerShell 7 불필요 |
@@ -39,7 +39,7 @@ provider-neutral 로컬 agent harness.
 ## 핵심 원칙
 
 - **Provider-neutral:** 공통 contract 우선, host별 파일은 projection
-- **재사용 우선:** OMX·OMC·host capability의 plan·team·loop 중복 구현 금지
+- **실행 경계:** Hive는 durable event·scheduler·lease·cancel·team·goal 판단 소유, host는 model·subagent 실행 소유
 - **Text 정본:** Markdown·YAML·TOML canonical, SQLite 재생성 가능
 - **사용자 data 보호:** ownership, staging, diff, backup, rollback, validation
 - **명시적 동의:** Optional Skill·fallback hook·외부 설치의 preview와 approval
@@ -54,10 +54,11 @@ provider-neutral 로컬 agent harness.
 | 결정적 setup | Typed answer·capability evidence 검증, manifest-owned path만 activation | [Source layout](../architecture/source-layout.md) |
 | User onboarding | Language-first setup, selected host·Skill projection, user-root preference | [ADR-0012](../decisions/ADR-0012-global-onboarding-shared-index.md) |
 | Project onboarding | Global preference 상속, unresolved essential question만 확인 | [ADR-0009](../decisions/ADR-0009-user-plugin-project-knowledge-boundary.md) |
-| Skill routing | Simple-question isolation 뒤 approved Skill 1개, OMX·OMC precedence | [Skill consent](../architecture/skill-consent.md) |
+| Skill routing | Bounded knowledge retrieval 뒤 simple-question isolation과 최소 approved Skill 선택 | [Skill consent](../architecture/skill-consent.md) |
 | Prompt refinement | Explicit prompt intent의 `refine-only`, ordinary prompt hidden rewrite 금지 | [Product decisions](../decisions/product-release-decisions.md) |
-| Knowledge | Canonical Markdown, shared disposable SQLite, cross-project provenance | [ADR-0003](../decisions/ADR-0003-markdown-sqlite-boundary.md) |
+| Knowledge | Canonical Markdown, shared disposable SQLite FTS5 RAG, cross-project provenance와 portable bundle | [ADR-0016](../decisions/ADR-0016-global-knowledge-rag.md) |
 | Persistent role·run | Role identity·handoff·criterion·owner pin과 fresh-session recovery | [Role](../architecture/role-lifecycle.md) · [Run](../architecture/run-lifecycle.md) |
+| 반복 실행 | Default-off Hive-native scheduler·receipt·cancel·team·multi-goal 계획 | [ADR-0019](../decisions/ADR-0019-hive-native-iterative-execution.md) |
 | Usage guard | Native-first sensor, session-first policy, automatic dispatch fail-closed | [Source guard](../guides/source-usage-guard.md) |
 | Judge quorum | Clean-context package와 detached Ed25519 verification | [Judge boundary](../architecture/judge-trust-boundary.md) |
 | Release·update | TUF-compatible verification, version gate, backup·journal·recovery | [Release boundary](../architecture/release-update-trust-boundary.md) |
@@ -69,19 +70,19 @@ provider-neutral 로컬 agent harness.
 flowchart LR
     A["Source workspace"] --> B["Release bundle"]
     B --> C["Installed consumer harness"]
-    C --> D{"Compatible OMX/OMC?"}
-    D -->|"yes"| E["External orchestration owner"]
-    D -->|"no"| F["Truthful host-native support"]
-    F --> G{"Conclusive absence + consent?"}
-    G -->|"yes"| H["Project-local integrity hook"]
-    G -->|"no"| I["No fallback hook"]
+    C --> D["Hive-native canonical control"]
+    D --> E["Declarative execution envelope"]
+    E --> F["Authenticated host-native executor"]
+    F --> G{"Supported exact hook event + scoped consent?"}
+    G -->|"yes"| I["Project-local lifecycle hook"]
+    G -->|"no"| J["Direct receipt path"]
 ```
 
 ## Version·release 상태
 
-- Current product version: `0.8.0`
-- Current target: exact `0.8.0` test distribution
-- `0.8.0`: npm `test`, GitHub Release 없음, npm `latest` 이동 없음
+- Current source version: `0.9.0` 구현 완료, 미배포
+- Latest published version: `0.8.0`
+- `0.8.0`: npm `latest=0.8.0` 게시 완료, GitHub Release·Git release tag 없음
 - Stable `0.8.x`: 사용자 별도 승인 뒤 결정
 - Major: exact 사용자 지시 전 자동 준비·추론 금지
 

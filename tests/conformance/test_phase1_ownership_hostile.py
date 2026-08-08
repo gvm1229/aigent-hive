@@ -33,7 +33,7 @@ class Phase1OwnershipHostile(Phase1CliTestCase):
         process, result = self.invoke_setup(
             target,
             answers=answer_path,
-            capabilities="capabilities-absent.json",
+            capabilities="capabilities-codex-host-native-hooks.json",
         )
 
         self.assertEqual(process.returncode, 2)

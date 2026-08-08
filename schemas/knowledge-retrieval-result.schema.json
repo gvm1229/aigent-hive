@@ -1,0 +1,243 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/gvm1229/aigent-hive/schemas/knowledge-retrieval-result.schema.json",
+  "title": "Aigent Hive knowledge retrieval result",
+  "description": "Bounded citation-bearing retrieval data. Retrieved project content is always marked as untrusted data.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "generation",
+    "manifest_digest",
+    "hits",
+    "returned_bytes",
+    "insufficient_budget"
+  ],
+  "properties": {
+    "generation": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 9007199254740991
+    },
+    "manifest_digest": { "$ref": "#/$defs/sha256" },
+    "hits": {
+      "type": "array",
+      "maxItems": 100,
+      "items": { "$ref": "#/$defs/hit" }
+    },
+    "returned_bytes": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 1048576
+    },
+    "insufficient_budget": { "type": "boolean" }
+  },
+  "x-returnedBytesEquals": "sum UTF-8 byte lengths of hits[*].text",
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "collection_id": {
+      "type": "string",
+      "pattern": "^(?:user-root|collection-[0-9a-f]{64})$"
+    },
+    "claim_kind": {
+      "enum": [
+        "project-profile",
+        "decision",
+        "convention",
+        "preference",
+        "workflow",
+        "dependency-evidence",
+        "outcome",
+        "question"
+      ]
+    },
+    "assertion_status": {
+      "enum": [
+        "user-stated",
+        "observed",
+        "verified",
+        "inferred",
+        "conflicted",
+        "superseded"
+      ]
+    },
+    "bounded_2048": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2048,
+      "pattern": "^(?!\\s)(?!.*\\s$)(?!.*\\u0000)[\\s\\S]+$"
+    },
+    "scan_evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["locator", "content_digest", "kind"],
+      "properties": {
+        "locator": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096,
+          "pattern": "^(?!/)(?![A-Za-z]:)(?!.*\\\\)(?!.*:)(?!\\.{1,2}(?:/|$))(?!.*\\/\\.{1,2}(?:/|$))(?!.*//)(?!.*[\\u0000-\\u001f\\u007f])[^/]+(?:/[^/]+)*$"
+        },
+        "content_digest": { "$ref": "#/$defs/sha256" },
+        "kind": {
+          "enum": ["document", "implementation", "test", "build", "user-intent"]
+        }
+      }
+    },
+    "scan_metadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "review_id",
+        "evidence",
+        "review_status",
+        "global_promotion_candidate",
+        "promotion_status"
+      ],
+      "properties": {
+        "review_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 96,
+          "pattern": "^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$"
+        },
+        "version": { "$ref": "#/$defs/bounded_2048", "maxLength": 128 },
+        "source_revision": { "$ref": "#/$defs/bounded_2048", "maxLength": 256 },
+        "applicability": { "$ref": "#/$defs/bounded_2048", "maxLength": 400 },
+        "evidence": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 16,
+          "x-uniqueBy": "locator",
+          "items": { "$ref": "#/$defs/scan_evidence" }
+        },
+        "review_status": { "enum": ["agent-reviewed", "source-invalidated"] },
+        "global_promotion_candidate": { "type": "boolean" },
+        "promotion_status": {
+          "enum": ["not-candidate", "pending-review", "promoted", "rejected"]
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "global_promotion_candidate": { "const": false } },
+            "required": ["global_promotion_candidate"]
+          },
+          "then": { "properties": { "promotion_status": { "const": "not-candidate" } } }
+        },
+        {
+          "if": {
+            "properties": { "global_promotion_candidate": { "const": true } },
+            "required": ["global_promotion_candidate"]
+          },
+          "then": {
+            "properties": {
+              "promotion_status": { "enum": ["pending-review", "promoted", "rejected"] }
+            }
+          }
+        }
+      ]
+    },
+    "hit": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "chunk_id",
+        "collection_id",
+        "item_id",
+        "item_kind",
+        "locator",
+        "title",
+        "text",
+        "digest",
+        "visibility",
+        "language",
+        "score",
+        "matched_field",
+        "sources",
+        "untrusted_content"
+      ],
+      "properties": {
+        "chunk_id": {
+          "type": "string",
+          "pattern": "^chunk-sha256:[0-9a-f]{64}$"
+        },
+        "collection_id": { "$ref": "#/$defs/collection_id" },
+        "item_id": {
+          "type": "string",
+          "pattern": "^(?:document|claim)-[0-9a-f]{64}$"
+        },
+        "item_kind": { "enum": ["document", "claim"] },
+        "locator": {
+          "type": "string",
+          "minLength": 9,
+          "maxLength": 2064,
+          "pattern": "^(?!/)(?!\\\\)(?![A-Za-z]:)(?!.*\\\\)(?!.*(?:^|/)\\.\\.(?:/|$)).+#chunk=[0-9]+$"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1024,
+          "pattern": "^(?!\\s)(?!.*\\s$)(?!.*\\u0000)[\\s\\S]+$"
+        },
+        "text": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1048576
+        },
+        "digest": { "$ref": "#/$defs/sha256" },
+        "visibility": {
+          "enum": ["shared", "project-private", "confidential"]
+        },
+        "language": { "enum": ["en", "ko", "both", "und"] },
+        "claim_kind": { "$ref": "#/$defs/claim_kind" },
+        "assertion_status": { "$ref": "#/$defs/assertion_status" },
+        "scan_metadata": { "$ref": "#/$defs/scan_metadata" },
+        "score": { "type": "number" },
+        "matched_field": { "enum": ["alias", "tag", "title", "text"] },
+        "sources": {
+          "type": "array",
+          "maxItems": 256,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/bounded_2048" }
+        },
+        "replacement": { "$ref": "#/$defs/bounded_2048" },
+        "untrusted_content": { "const": true }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "item_kind": { "const": "claim" } },
+            "required": ["item_kind"]
+          },
+          "then": {
+            "required": ["claim_kind", "assertion_status"],
+            "properties": {
+              "item_id": {
+                "type": "string",
+                "pattern": "^claim-[0-9a-f]{64}$"
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "item_id": {
+                "type": "string",
+                "pattern": "^document-[0-9a-f]{64}$"
+              }
+            },
+            "not": {
+              "anyOf": [
+                { "required": ["claim_kind"] },
+                { "required": ["assertion_status"] },
+                { "required": ["scan_metadata"] }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  }
+}

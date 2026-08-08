@@ -9,12 +9,12 @@ summary: "Hive reports whether each verification scope ran, why it did not run, 
 tags: [communication, reporting, verification]
 aliases: ["skip reporting", "verification qualifiers"]
 sources:
-  - "repo:.agents/directives/01-behavior.md#sha256:2532c785b59f23a099b9e4a6eb71798f696dc4b79103600cf7c245582afa9f26"
-  - "repo:crates/hive-cli/src/user_install.rs#sha256:c5cb31b7cf39c02be926e38ee529e023aabe45870b84a75b711f4f84c424e282"
-  - "repo:docs/guidance-schema.md#sha256:881e80dda2f29dbc6239177aa66f518eff5bfb67dd93db017d6c280d914a7452"
-  - "repo:harness/template/AGENTS.md.jinja#sha256:e9545c960f609ad7369e2d5e0cc9f48f79fdc7cd20836cf6199f19eb4ca4f301"
+  - "repo:.agents/directives/01-behavior.md#sha256:2418d9cad5ad54ff9fdad0f117c66336826bbd34c19fc0c131340fe64cb31f01"
+  - "repo:crates/hive-cli/src/user_install.rs#sha256:b70fedb14754fcb1d4c6d570381f845e5ae1be923d49f6ac929356add0e1777f"
+  - "repo:docs/guidance-schema.md#sha256:fd8fffda818038ee48b66b0581787e2fd741404b0a9253ca34c0d55f15ad4d15"
+  - "repo:harness/template/AGENTS.md.jinja#sha256:64f33fed294900badc58d8ff6b4f7144d0c43bf003884abdcae5c703a60cdd7a"
 links: [language-consistency, release-verification]
-reviewed_revision: "git:c5d7b90c0b2e126f73fdfd6da850d5eed07b4d61"
+reviewed_revision: "git:35e6b79a024350487f823780101a28be24a9f4c7"
 status: active
 ---
 

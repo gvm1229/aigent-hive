@@ -1,27 +1,25 @@
 # Aigent Hive active plan index
 
-> Revision: 1.81
-> 기준일: 2026-07-31
-> Product version: `0.8.0`
-> 현재 milestone: Phase 7 qualification + global onboarding·shared index `0.8.0`
+> Revision: 2.26
+> 기준일: 2026-08-08
+> Product version: `0.9.0`
+> 현재 milestone: `0.9.0` 정식 릴리스 준비
 > Entrypoint: `docs/plans/PLAN.md`
 
 ## Goal parameters
 
-- Objective: `Aigent Hive 0.8.0` 후보의 Linux·macOS·Windows native artifact,
-  npm 정식 `0.8.0`·직접 설치 검증, bilingual onboarding, update
-  discovery·activation과 provenance gate 완료
-- Success: Mandatory user setup, global preference 기반 expedited/custom project setup,
-  user-root 단일 SQLite, 세 host selected Skill projection, Wiki default-on opt-out,
-  usage guard opt-in `20%`, native-first·CodexBar fallback-only, consumer
-  PowerShell 5.1·`cmd.exe`, source-only PowerShell 7, Linux musl x86_64·arm64,
-  `aigent-hive@0.8.0`, SHA-256·GitHub attestation과 실제 Windows
-  acceptance
-- Stop boundary: GitHub Release·Git tag, protected credential, exact `1.0.0`
-  authority, 현재 source usage guard remaining `30%`
-- Invariants: provider-neutral, canonical Markdown 우선, OMX/OMC replaceable adapter,
-  ownership·consent·foreign byte 보존, provider API·credential 경로 없음, force-push 없음,
-  explicit-only major
+- Objective: Hive-native execution·custom subagent routing·Judge policy 안전 계약, Discord
+  end-to-end global setup·프로젝트별 usage-guard 알림, `0.9.0` Markdown Wiki 공개 범위,
+  Notion `0.10.0-test` 후보 준비, `0.9.0-test` 독립 시험 배포·수용,
+  별도 `0.9.0` 정식 GitHub·npm 릴리스와 public update 검증
+- Success: Active fragment evidence-backed completion. 시험판 핵심 gate: `MRA-*`, `PRF-*`,
+  `TST9-*`, `REL9-*` 독립 test·stable publication과 public acceptance
+- Stop boundary: protected `main` review, signing·TUF·npm credential,
+  exact `1.0.0` authority, source usage guard remaining threshold `30%`
+- Invariants: provider-neutral, backend별 canonical source 우선, SQLite 파생 상태,
+  Source Wiki·run·role·plan·orchestration event Markdown/TOML 정본,
+  ownership·consent·foreign byte 보존, provider API·credential·direct model process 경로 없음,
+  신규 OMX/OMC dependency 없음, pointer authority 없음, force-push 없음, explicit-only major
 - Native Goal compatibility: 변경 불가 objective의 “unchecked item in `docs/plans/PLAN.md`”는 `PLAN.md` 내부 checkbox가 아니라 아래 `Active fragments`의 unchecked item을 뜻함
 
 ## Completion index
@@ -35,50 +33,29 @@
 | User plugin/project lifecycle | 38 | 0 | 100% |
 | Host-native usage sensors | 24 | 0 | 100% |
 | Global onboarding·shared index | 19 | 0 | 100% |
-| Source docs Wiki | 11 | 0 | 100% |
+| Source docs Wiki | 12 | 0 | 100% |
 | Windows shell install boundary | 3 | 0 | 100% |
 | 문서 말투 | 6 | 0 | 100% |
 | Security review | 4 | 0 | 100% |
 | Docs Wiki migration | 4 | 0 | 100% |
-| **Canonical total** | **228** | **0** | **100.0%** |
+| v0.9 loop·Wiki·Skill suite | 25 | 0 | 100% |
+| v0.9 global knowledge RAG | 20 | 0 | 100% |
+| v0.9 knowledge portability·scan | 18 | 0 | 100% |
+| Hive-native 반복 실행 | 1 | 23 | 4.2% |
+| Model-routed custom subagent | 0 | 32 | 0% |
+| Prompt refine 자동 routing | 12 | 0 | 100% |
+| v0.9 test 기능 마감 | 18 | 0 | 100% |
+| v0.9 full release | 13 | 12 | 52% |
+| Test release setup routing | 4 | 0 | 100% |
+| Bootstrap·user projection recovery | 13 | 0 | 100% |
+| 한국어 setup 용어 복구 | 5 | 1 | 83.3% |
+| Global Skill 선택 단순화 | 8 | 0 | 100% |
+| Public Skill identity·localization | 6 | 0 | 100% |
+| Discord `v0.9` 연결 UX | 1 | 9 | 10% |
+| Notion `v0.10` 후보 | 1 | 10 | 9.1% |
+| **Canonical total** | **374** | **87** | **81.1%** |
 
 External production boundary 항목도 미완료 합계에 포함. Protected authority 없이 완료 처리 금지.
-
-## 최신 완료 증거
-
-- Local Windows: Rust workspace 전체 PASS, PowerShell 5.1·7.6.4 installer와
-  `cmd.exe` bootstrap 계약 PASS
-- Codex Skill metadata: project projection implicit owner 1개, 나머지 explicit-only,
-  fresh-session 중복 warning 0건
-- 실제 Windows 11 x86_64: Codex user install·global setup·project auto onboarding,
-  shared index 1개 project, repeat update·rollback·재검증 PASS
-- Current native candidate: exact `420e244` run `30657669889`, Linux musl
-  x86_64·arm64를 포함한 macOS·Linux·Windows 5/5와 npm umbrella PASS
-- Local npm packaging: current `0.8.0` Windows native binary의 platform·umbrella
-  tarball 생성, isolated global install, `hive --version`, source/package binary
-  SHA-256 byte identity PASS
-- Windows shell: WSI-001–003 완료, consumer PowerShell 7 dependency 0건,
-  source dependency helper의 exact WinGet preview·동의·재검증 PASS
-- Strict Clippy all targets·all features, format check PASS
-- Copier/Rust current projection parity `3/3`, Source Wiki lint finding·warning `0`
-- Shared index 동일 입력 재실행 byte-exact no-op, `changed_paths=[]`
-- Codex·Antigravity expedited/custom connected onboarding matrix `4/4`
-- Initial `Expedited — set everything to default`와 project zero-question inference contract
-- English·한국어 language-first setup과 선택 언어 global guidance, `hive-cli` 211개 PASS
-- 개발·소비자 질문과 응답의 선택 언어 통일, 대체 가능한 일반 영어 단어의 한영
-  혼용 금지, 전역·프로젝트 지침 회귀 시험 PASS
-- 개발·소비자 검증 결과 보고 규칙: 범위·이유·현재 환경·실행 여부·입증 범위·
-  미검증 범위 명시, 투영 시험 PASS
-- Opt-in daily update check의 24시간 success throttle, offline next-session retry,
-  fixed npm metadata endpoint와 no-install contract
-- Bare `hive update`의 npm `latest` 확인, legacy test·stable npm·direct owner 인증,
-  선택 언어 prompt,
-  명시적 수락 뒤 exact adapter 실행과 owner·version 재검증
-- 독립 final blocker review: critical·high·medium·low finding `0`건
-- npm publication `30658188721`: exact `0.8.0` 여섯 package·provenance·
-  `latest=0.8.0` PASS. 기존 `test=0.8.0-test.1` 보존
-- 실제 Windows npm·CMD clean install, repeat, pending receipt recovery PASS. npm·direct
-  native SHA-256 `330f4e0c8da5b6347400b9b16a9f76b2fb4f94406a2eacfe8c641367ca344ef9`
 
 ## Required load order
 
@@ -104,6 +81,21 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
 | [`active/security-review.md`](active/security-review.md) | `SEC-*` | 독립 code·security review finding completion gate |
 | [`active/docs-wiki-migration.md`](active/docs-wiki-migration.md) | `DWK-*` | 지식 보존과 `docs/` Wiki·atomic fact 전환 |
 | [`active/release-0.8.0.md`](active/release-0.8.0.md) | `P7-*` reference | `0.8.0` Linux·npm·직접 설치 실행 순서와 범위 |
+| [`active/v0.9.0-loop-wiki-skills.md`](active/v0.9.0-loop-wiki-skills.md) | `V9-*` | Host-native graph engineering·통합 Wiki·초기 Skill suite |
+| [`active/v0.9.0-global-knowledge-rag.md`](active/v0.9.0-global-knowledge-rag.md) | `RAG-*` | 전역 RAG |
+| [`active/v0.9.0-knowledge-portability-scan.md`](active/v0.9.0-knowledge-portability-scan.md) | `KPX-*` | Knowledge 이식·directory scan·automatic query |
+| [`active/native-iterative-execution.md`](active/native-iterative-execution.md) | `NAT-*` | Hive-native iterative·team·multi-goal execution |
+| [`active/model-routed-custom-subagents.md`](active/model-routed-custom-subagents.md) | `MRA-*` | Codex·Claude custom subagent·Judge 정책 |
+| [`active/prompt-refine-auto-routing.md`](active/prompt-refine-auto-routing.md) | `PRF-*` | Material ambiguity 자동 refine·승인 전 정지 |
+| [`active/v0.9.0-test-finalization.md`](active/v0.9.0-test-finalization.md) | `TST9-*` | Markdown Wiki, Discord outbound, 문제 보고와 시험판 기능 마감 |
+| [`active/release-0.9.0.md`](active/release-0.9.0.md) | `REL9-*` | 정식 GitHub·npm 릴리스와 public acceptance |
+| [`active/test-release-setup-routing.md`](active/test-release-setup-routing.md) | `TUR-*` | Global·project setup routing과 numbered test user projection 인증 |
+| [`active/bootstrap-global-setup-recovery.md`](active/bootstrap-global-setup-recovery.md) | `BGR-*` | 선택형 bootstrap, 쉬운 global setup 복구, user projection merge |
+| [`active/korean-setup-terminology.md`](active/korean-setup-terminology.md) | `KST-*` | 한국어 global setup product term·질문 표기 |
+| [`active/global-skill-selection.md`](active/global-skill-selection.md) | `GSS-*` | all-built-in 기본값·개별 토글·목록 표기 |
+| [`active/skill-identity-localization.md`](active/skill-identity-localization.md) | `SIL-*` | public Skill 이름·plugin namespace·선택 언어 descriptor |
+| [`active/discord-onboarding-v09.md`](active/discord-onboarding-v09.md) | `DIS9-*` | Discord global setup·프로젝트별 중단 알림·HTML 안내 |
+| [`active/v0.10.0-notion-candidate.md`](active/v0.10.0-notion-candidate.md) | `N10-*` | Notion 연결·freshness·write-through와 `0.10.0-test` 후보 |
 
 ## Reconciliation gate
 
@@ -124,21 +116,7 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
 
 ## Current execution order
 
-완료된 선행 조건: `release-publication` 필수 검토자 설정, 임시
-`codex/release-0.8.0` 브랜치·`develop` 대상 PR 사용자 승인, PR #8 병합,
-첫 candidate run 성공과 첫 publication run의 npm 게시 전 실패 원인 확인.
-
-완료: PR #13 병합, exact `420e244` candidate run `30657669889`, publication run
-`30658188721`, npm·Unix·PowerShell·CMD 계약과 실제 Windows clean install·repeat·
-recovery 검증.
-
-다음 작업: npm 배포 성공 commit의 `develop` → `main` PR 병합.
-
-## `0.8.0` 비차단 deferred boundary
-
-- macOS Developer ID signing·notarization
-- Windows Authenticode signing
-- 실제 Claude protected session E2E와 Pro/Max usage parity
-- Externally signed TUF production authorization
-- Exact `1.0.0` 사용자 authority
-- GitHub normal release와 Git tag
+완료 증거: [`CURRENT.md`](../state/CURRENT.md)와 owning active fragment.
+다음 작업: `DIS9-002–010` Discord 연결 UX와 `REL9-014–026` 정식 릴리스 준비. `REL9-011`
+실제 host 수용 확인은 유지보수자 요청으로 제외. Notion 연결은 `N10-002–011`과 함께
+`0.10.0-test`까지 보류.

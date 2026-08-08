@@ -1,8 +1,12 @@
 use super::{emit_action_result, ActionResult, Evidence};
 use cap_std::fs::Dir;
 use hive_core::sha256_digest;
-use hive_projection::{compile_user_projection, embedded_catalog, Host as ProjectionHost};
+use hive_projection::{
+    canonical_builtin_skill_name, compile_user_projection_localized, embedded_catalog,
+    DescriptorLanguage, Host as ProjectionHost,
+};
 use hive_render::GlobalProjectPreferences;
+use hive_update::{three_way_merge, MergeDisposition};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value as JsonValue};
 use std::collections::{BTreeMap, BTreeSet};
@@ -13,6 +17,7 @@ use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
 const USER_SETUP_RELATIVE: &str = ".hive/config/user-setup.yml";
+const USER_SETUP_PROGRESS_RELATIVE: &str = ".hive/config/user-setup-progress.yml";
 const USER_PROJECTION_MANIFEST_RELATIVE: &str = ".hive/install/user-projection.json";
 const LEGACY_USER_SETUP_REVIEW_RELATIVE: &str = ".hive/config/user-setup-review.yml";
 const LEGACY_USER_SETUP_REVIEW: &[u8] = b"schema_version: 1\nsource_version: 0.7.0\nsetup_required: true\nwiki_markdown_preserved: true\nlegacy_skill_projection: all-built-ins\n";
@@ -22,12 +27,16 @@ const USER_SETUP_CATALOG_SCHEMA: &str =
 const USER_SETUP_CATALOG: &str = include_str!("../../../harness/user-setup/catalog.yml");
 const MAX_ANSWERS_BYTES: u64 = 1024 * 1024;
 const MAX_USER_SETUP_BYTES: u64 = 1024 * 1024;
+const USER_PROJECTION_090_TEST3_SETUP_HIVE: &[u8] =
+    include_bytes!("../../../harness/user-bases/0.9.0-test.3/skills/setup-hive/SKILL.md");
 
 const USER_SETUP_USAGE: &str = "\
 Configure or validate Aigent Hive user preferences.
 
 USAGE:
     hive setup --scope user --answers <yml> (--dry-run|--apply|--validate) [--user-root <dir>] --output json
+    hive setup --progress save --scope user --step <step> --answers <yml> [--user-root <dir>] --output json
+    hive setup --progress status|clear --scope user [--user-root <dir>] --output json
 
 MODES:
     --dry-run    Validate answers and preview the owned user configuration change
@@ -82,6 +91,13 @@ impl InterfaceLanguage {
             Self::Ko => "ko",
         }
     }
+
+    const fn descriptor_language(self) -> DescriptorLanguage {
+        match self {
+            Self::En => DescriptorLanguage::En,
+            Self::Ko => DescriptorLanguage::Ko,
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Ord, PartialEq, PartialOrd, Serialize)]
@@ -90,6 +106,31 @@ pub(crate) enum WikiLanguage {
     En,
     Ko,
     Both,
+}
+
+#[derive(Clone, Copy, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub(crate) enum WikiBackend {
+    #[default]
+    Markdown,
+    Notion,
+}
+
+impl WikiBackend {
+    pub(crate) const fn as_str(self) -> &'static str {
+        match self {
+            Self::Markdown => "markdown",
+            Self::Notion => "notion",
+        }
+    }
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct NotionWikiPreferences {
+    pub(crate) workspace_id: String,
+    pub(crate) scope_id: String,
+    pub(crate) local_index_consent: bool,
 }
 
 impl WikiLanguage {
@@ -108,6 +149,10 @@ pub(crate) struct WikiPreferences {
     #[serde(default = "default_true")]
     pub(crate) enabled: bool,
     pub(crate) language: WikiLanguage,
+    #[serde(default)]
+    pub(crate) backend: WikiBackend,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(crate) notion: Option<NotionWikiPreferences>,
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -116,6 +161,14 @@ pub(crate) struct CatalogSelection {
     pub(crate) id: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub(crate) custom_description: Option<String>,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct UserProfile {
+    pub(crate) contexts: Vec<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(crate) description: Option<String>,
 }
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Ord, PartialEq, PartialOrd, Serialize)]
@@ -139,7 +192,7 @@ impl SelectedHost {
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "lowercase")]
 pub(crate) enum SkillSelectionMode {
-    Recommended,
+    All,
     Individual,
 }
 
@@ -147,10 +200,27 @@ pub(crate) enum SkillSelectionMode {
 #[serde(deny_unknown_fields)]
 pub(crate) struct SkillPreferences {
     pub(crate) mode: SkillSelectionMode,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub(crate) recommended_suite: Option<String>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub(crate) selected: Vec<String>,
+}
+
+#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct DiscordGuardPreferences {
+    #[serde(default)]
+    pub(crate) enabled: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(crate) webhook_url_env: Option<String>,
+    #[serde(default)]
+    pub(crate) request_privacy: DiscordRequestPrivacy,
+}
+
+#[derive(Clone, Copy, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "kebab-case")]
+pub(crate) enum DiscordRequestPrivacy {
+    #[default]
+    Summary,
+    RawPrompt,
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -162,6 +232,8 @@ pub(crate) struct UsageGuardPreferences {
     pub(crate) stop_remaining_percent: u8,
     #[serde(default)]
     pub(crate) codexbar_fallback_enabled: bool,
+    #[serde(default)]
+    pub(crate) discord: DiscordGuardPreferences,
 }
 
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
@@ -177,13 +249,21 @@ pub(crate) struct UserSetupConfig {
     pub(crate) schema_version: u32,
     pub(crate) interface_language: InterfaceLanguage,
     pub(crate) wiki: WikiPreferences,
-    pub(crate) profile: CatalogSelection,
+    pub(crate) profile: UserProfile,
     pub(crate) persona: CatalogSelection,
     pub(crate) selected_hosts: Vec<SelectedHost>,
     pub(crate) skills: SkillPreferences,
     #[serde(default)]
     pub(crate) update_check: UpdateCheckPreferences,
     pub(crate) usage_guard: UsageGuardPreferences,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+struct UserSetupProgress {
+    schema_version: u32,
+    step: String,
+    answers: UserSetupConfig,
 }
 
 #[derive(Debug, Deserialize)]
@@ -203,15 +283,6 @@ struct CatalogChoice {
 
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
-struct SkillSuite {
-    id: String,
-    display_name: LocalizedText,
-    description: LocalizedText,
-    skills: Vec<String>,
-}
-
-#[derive(Debug, Deserialize)]
-#[serde(deny_unknown_fields)]
 struct SkillDependency {
     skill: String,
     requires: Vec<String>,
@@ -223,7 +294,6 @@ struct UserSetupCatalog {
     schema_version: u32,
     profiles: Vec<CatalogChoice>,
     personas: Vec<CatalogChoice>,
-    recommended_skill_suites: Vec<SkillSuite>,
     mandatory_skills: Vec<String>,
     skill_dependencies: Vec<SkillDependency>,
     optional_third_party_skills: Vec<String>,
@@ -234,8 +304,12 @@ struct UserSetupCatalog {
 struct UserProjectionManifest {
     schema_version: u32,
     product_version: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    package_version: Option<String>,
     setup_digest: String,
     entries: Vec<UserProjectionEntry>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    base_entries: Vec<UserProjectionBaseEntry>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -245,15 +319,36 @@ struct UserProjectionEntry {
     digest: String,
 }
 
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+struct UserProjectionBaseEntry {
+    path: String,
+    digest: String,
+    content: String,
+}
+
 struct AppliedProjection {
     changes: Vec<ProjectionChange>,
     changed_paths: Vec<String>,
+    reports: Vec<UserProjectionPathReport>,
 }
 
 struct ProjectionChange {
     path: PathBuf,
     before: Option<Vec<u8>>,
     after: Option<Vec<u8>>,
+}
+
+#[derive(Debug, Serialize)]
+struct UserProjectionPathReport {
+    path: String,
+    base_digest: Option<String>,
+    local_digest: Option<String>,
+    incoming_digest: Option<String>,
+    final_digest: Option<String>,
+    disposition: MergeDisposition,
+    omitted_incoming_hunks: usize,
+    local_priority: bool,
 }
 
 const fn default_true() -> bool {
@@ -305,10 +400,248 @@ pub(crate) fn print_help() {
 }
 
 pub(crate) fn run(arguments: &[String]) -> ExitCode {
+    if arguments.first().map(String::as_str) == Some("--progress") {
+        return run_progress(&arguments[1..]);
+    }
     let result = parse(arguments)
         .and_then(|arguments| execute(&arguments))
         .unwrap_or_else(|error| failure(&error));
     emit_action_result(&result)
+}
+
+fn run_progress(arguments: &[String]) -> ExitCode {
+    let result = parse_progress(arguments)
+        .and_then(execute_progress)
+        .unwrap_or_else(|error| failure(&error));
+    emit_action_result(&result)
+}
+
+#[derive(Debug)]
+enum ProgressAction {
+    Save { step: String, answers: PathBuf },
+    Status,
+    Clear,
+}
+
+#[derive(Debug)]
+struct ProgressArguments {
+    action: ProgressAction,
+    root_cap: Dir,
+}
+
+fn parse_progress(arguments: &[String]) -> Result<ProgressArguments, SetupError> {
+    let action = arguments.first().ok_or_else(|| {
+        SetupError::Input("setup progress requires save, status, or clear".to_owned())
+    })?;
+    let mut scope = None;
+    let mut answers = None;
+    let mut step = None;
+    let mut output = None;
+    let mut user_root = None;
+    let mut index = 1;
+    while index < arguments.len() {
+        let option = arguments[index].as_str();
+        let value = arguments
+            .get(index + 1)
+            .filter(|value| !value.starts_with("--"))
+            .ok_or_else(|| SetupError::Input(format!("missing value for {option}")))?;
+        let slot = match option {
+            "--scope" => &mut scope,
+            "--answers" => &mut answers,
+            "--step" => &mut step,
+            "--output" => &mut output,
+            "--user-root" => &mut user_root,
+            _ => {
+                return Err(SetupError::Input(format!(
+                    "unknown setup progress option: {option}"
+                )))
+            }
+        };
+        if slot.replace(value.clone()).is_some() {
+            return Err(SetupError::Input(format!("duplicate option: {option}")));
+        }
+        index += 2;
+    }
+    if scope.as_deref() != Some("user") || output.as_deref() != Some("json") {
+        return Err(SetupError::Input(
+            "setup progress requires --scope user and --output json".to_owned(),
+        ));
+    }
+    let action = match action.as_str() {
+        "save" => {
+            let step = step.ok_or_else(|| {
+                SetupError::Input("setup progress save requires --step".to_owned())
+            })?;
+            if step.is_empty()
+                || step.len() > 80
+                || !step
+                    .bytes()
+                    .all(|byte| byte.is_ascii_lowercase() || byte.is_ascii_digit() || byte == b'-')
+            {
+                return Err(SetupError::Input(
+                    "setup progress step must use lowercase letters, digits, or hyphens".to_owned(),
+                ));
+            }
+            ProgressAction::Save {
+                step,
+                answers: PathBuf::from(answers.ok_or_else(|| {
+                    SetupError::Input("setup progress save requires --answers".to_owned())
+                })?),
+            }
+        }
+        "status" => {
+            if answers.is_some() || step.is_some() {
+                return Err(SetupError::Input(
+                    "setup progress status accepts no --answers or --step".to_owned(),
+                ));
+            }
+            ProgressAction::Status
+        }
+        "clear" => {
+            if answers.is_some() || step.is_some() {
+                return Err(SetupError::Input(
+                    "setup progress clear accepts no --answers or --step".to_owned(),
+                ));
+            }
+            ProgressAction::Clear
+        }
+        _ => {
+            return Err(SetupError::Input(
+                "setup progress requires save, status, or clear".to_owned(),
+            ))
+        }
+    };
+    let user_root = user_root.map_or_else(resolve_user_root, |value| Ok(PathBuf::from(value)))?;
+    let root_cap =
+        super::user_install::open_user_root_for_setup(&user_root).map_err(SetupError::Conflict)?;
+    Ok(ProgressArguments { action, root_cap })
+}
+
+fn execute_progress(arguments: ProgressArguments) -> Result<ActionResult, SetupError> {
+    let relative = Path::new(USER_SETUP_PROGRESS_RELATIVE);
+    let existing = super::user_install::read_user_setup_file(
+        &arguments.root_cap,
+        relative,
+        MAX_USER_SETUP_BYTES,
+    )
+    .map_err(SetupError::Conflict)?;
+    match arguments.action {
+        ProgressAction::Save { step, answers } => {
+            let answer_bytes = read_bounded_regular(&answers, MAX_ANSWERS_BYTES)?;
+            let config = parse_and_validate_config(&answer_bytes)?;
+            let progress = UserSetupProgress {
+                schema_version: 1,
+                step,
+                answers: config,
+            };
+            let desired = serde_yaml::to_string(&progress)
+                .map_err(|error| {
+                    SetupError::Internal(format!("cannot serialize setup progress: {error}"))
+                })?
+                .into_bytes();
+            super::user_install::replace_user_setup_file(
+                &arguments.root_cap,
+                relative,
+                existing.as_deref(),
+                Some(&desired),
+            )
+            .map_err(SetupError::Conflict)?;
+            Ok(progress_result(
+                "SaveUserSetupProgress",
+                "success",
+                0,
+                "hive.user-setup-progress-saved",
+                "user setup progress saved",
+                vec![USER_SETUP_PROGRESS_RELATIVE.to_owned()],
+                Some(&progress),
+            ))
+        }
+        ProgressAction::Status => {
+            let progress = existing.as_deref().map(parse_progress_file).transpose()?;
+            Ok(progress_result(
+                "InspectUserSetupProgress",
+                "success",
+                0,
+                "hive.user-setup-progress-status",
+                "user setup progress inspected",
+                Vec::new(),
+                progress.as_ref(),
+            ))
+        }
+        ProgressAction::Clear => {
+            if existing.is_some() {
+                super::user_install::replace_user_setup_file(
+                    &arguments.root_cap,
+                    relative,
+                    existing.as_deref(),
+                    None,
+                )
+                .map_err(SetupError::Conflict)?;
+            }
+            Ok(progress_result(
+                "ClearUserSetupProgress",
+                "success",
+                0,
+                "hive.user-setup-progress-cleared",
+                "user setup progress cleared",
+                existing
+                    .map(|_| vec![USER_SETUP_PROGRESS_RELATIVE.to_owned()])
+                    .unwrap_or_default(),
+                None,
+            ))
+        }
+    }
+}
+
+fn parse_progress_file(bytes: &[u8]) -> Result<UserSetupProgress, SetupError> {
+    let progress: UserSetupProgress = serde_yaml::from_slice(bytes).map_err(|error| {
+        SetupError::Verification(format!("invalid user setup progress: {error}"))
+    })?;
+    if progress.schema_version != 1 {
+        return Err(SetupError::Verification(
+            "unsupported user setup progress schema".to_owned(),
+        ));
+    }
+    if progress.step.is_empty()
+        || progress.step.len() > 80
+        || !progress
+            .step
+            .bytes()
+            .all(|byte| byte.is_ascii_lowercase() || byte.is_ascii_digit() || byte == b'-')
+    {
+        return Err(SetupError::Verification(
+            "invalid user setup progress step".to_owned(),
+        ));
+    }
+    validate_config_semantics(&progress.answers)?;
+    Ok(progress)
+}
+
+fn progress_result(
+    action: &'static str,
+    status: &'static str,
+    exit_code: u8,
+    code: &'static str,
+    message: &'static str,
+    changed_paths: Vec<String>,
+    progress: Option<&UserSetupProgress>,
+) -> ActionResult {
+    ActionResult {
+        schema_version: 1,
+        action,
+        status,
+        exit_code,
+        code,
+        message: message.to_owned(),
+        changed_paths,
+        evidence: Vec::new(),
+        next_action: None,
+        data: Some(json!({
+            "pending": progress.is_some(),
+            "step": progress.map(|value| value.step.as_str()),
+            "answers": progress.map(|value| &value.answers),
+        })),
+    }
 }
 
 fn parse(arguments: &[String]) -> Result<Arguments, SetupError> {
@@ -394,10 +727,6 @@ fn resolve_user_root() -> Result<PathBuf, SetupError> {
 #[allow(clippy::too_many_lines)]
 fn execute(arguments: &Arguments) -> Result<ActionResult, SetupError> {
     let answer_bytes = read_bounded_regular(&arguments.answers, MAX_ANSWERS_BYTES)?;
-    let config = parse_and_validate_config(&answer_bytes)?;
-    let catalog = parse_and_validate_catalog()?;
-    let resolved_skills = resolve_skills(&config, &catalog)?;
-    let desired = canonical_config(&config)?;
     let relative = Path::new(USER_SETUP_RELATIVE);
     let existing = super::user_install::read_user_setup_file(
         &arguments.root_cap,
@@ -405,6 +734,16 @@ fn execute(arguments: &Arguments) -> Result<ActionResult, SetupError> {
         MAX_USER_SETUP_BYTES,
     )
     .map_err(SetupError::Conflict)?;
+    let legacy_answers = existing.as_deref() == Some(answer_bytes.as_slice())
+        && has_legacy_recommended_skill_selection(&answer_bytes)?;
+    let config = if legacy_answers {
+        parse_and_validate_installed_config(&answer_bytes)?
+    } else {
+        parse_and_validate_config(&answer_bytes)?
+    };
+    let catalog = parse_and_validate_catalog()?;
+    let resolved_skills = resolve_skills(&config, &catalog)?;
+    let desired = canonical_config(&config)?;
     let before_state = detect_state(&arguments.root_cap)?;
     let changed = existing.as_deref() != Some(desired.as_slice());
     if matches!(arguments.mode, SetupMode::DryRun | SetupMode::Apply) {
@@ -446,24 +785,32 @@ fn execute(arguments: &Arguments) -> Result<ActionResult, SetupError> {
                 "user setup dry run completed",
                 &answer_bytes,
                 &desired,
+                &projection.reports,
             ))
         }
         SetupMode::Validate => {
             let installed = existing.ok_or_else(|| {
                 SetupError::Verification("user setup is required before validation".to_owned())
             })?;
-            let installed_config = parse_and_validate_config(&installed).map_err(|error| {
-                SetupError::Verification(format!(
-                    "installed user setup config is invalid: {}",
-                    error.message()
-                ))
-            })?;
+            let installed_config =
+                parse_and_validate_installed_config(&installed).map_err(|error| {
+                    SetupError::Verification(format!(
+                        "installed user setup config is invalid: {}",
+                        error.message()
+                    ))
+                })?;
             if installed_config != config {
                 return Err(SetupError::Verification(
                     "installed user setup differs from the supplied answers".to_owned(),
                 ));
             }
-            validate_user_projection(&arguments.root_cap, &config, &resolved_skills, &desired)?;
+            let validation_setup = if legacy_answers { &installed } else { &desired };
+            validate_user_projection(
+                &arguments.root_cap,
+                &config,
+                &resolved_skills,
+                validation_setup,
+            )?;
             for host in &config.selected_hosts {
                 super::user_install::validate_configured_host(
                     &arguments.user_root,
@@ -488,6 +835,7 @@ fn execute(arguments: &Arguments) -> Result<ActionResult, SetupError> {
                 "installed user setup is valid",
                 &answer_bytes,
                 &desired,
+                &[],
             ))
         }
         SetupMode::Apply => {
@@ -596,6 +944,7 @@ fn execute(arguments: &Arguments) -> Result<ActionResult, SetupError> {
                 "user setup completed",
                 &answer_bytes,
                 &desired,
+                &projection.reports,
             ))
         }
     }
@@ -711,13 +1060,197 @@ fn rollback_activated_hosts(
 }
 
 fn parse_and_validate_config(bytes: &[u8]) -> Result<UserSetupConfig, SetupError> {
-    let value: JsonValue = serde_yaml::from_slice(bytes)
+    parse_and_validate_config_inner(bytes, false)
+}
+
+fn parse_and_validate_installed_config(bytes: &[u8]) -> Result<UserSetupConfig, SetupError> {
+    parse_and_validate_config_inner(bytes, true)
+}
+
+fn parse_and_validate_config_inner(
+    bytes: &[u8],
+    allow_legacy_recommended: bool,
+) -> Result<UserSetupConfig, SetupError> {
+    let mut value: JsonValue = serde_yaml::from_slice(bytes)
         .map_err(|error| SetupError::Input(format!("invalid user setup YAML: {error}")))?;
+    let migrated_skills = migrate_legacy_recommended_skill_selection(&mut value)?;
+    if migrated_skills && !allow_legacy_recommended {
+        return Err(SetupError::Input(
+            "recommended Skill suites are no longer accepted; choose mode all or individual"
+                .to_owned(),
+        ));
+    }
+    migrate_legacy_skill_names(&mut value)?;
+    migrate_legacy_single_profile(&mut value);
     validate_schema(USER_SETUP_SCHEMA, &value, "user setup")?;
     let config: UserSetupConfig = serde_json::from_value(value)
         .map_err(|error| SetupError::Input(format!("invalid user setup values: {error}")))?;
     validate_config_semantics(&config)?;
     Ok(config)
+}
+
+fn migrate_legacy_skill_names(value: &mut JsonValue) -> Result<(), SetupError> {
+    let Some(selected) = value
+        .get_mut("skills")
+        .and_then(JsonValue::as_object_mut)
+        .and_then(|skills| skills.get_mut("selected"))
+        .and_then(JsonValue::as_array_mut)
+    else {
+        return Ok(());
+    };
+    let mut names = BTreeSet::new();
+    for item in selected {
+        let name = item.as_str().ok_or_else(|| {
+            SetupError::Input("selected Skills must contain only names".to_owned())
+        })?;
+        let canonical = canonical_builtin_skill_name(name)
+            .map_err(|error| SetupError::Internal(error.to_string()))?
+            .unwrap_or_else(|| name.to_owned());
+        if !names.insert(canonical.clone()) {
+            return Err(SetupError::Input(format!(
+                "legacy Skill migration creates a duplicate selection: {canonical}"
+            )));
+        }
+        *item = JsonValue::String(canonical);
+    }
+    Ok(())
+}
+
+fn has_legacy_recommended_skill_selection(bytes: &[u8]) -> Result<bool, SetupError> {
+    let value: JsonValue = serde_yaml::from_slice(bytes)
+        .map_err(|error| SetupError::Input(format!("invalid user setup YAML: {error}")))?;
+    Ok(value
+        .get("skills")
+        .and_then(JsonValue::as_object)
+        .and_then(|skills| skills.get("mode"))
+        .is_some_and(|mode| mode == "recommended"))
+}
+
+fn migrate_legacy_recommended_skill_selection(value: &mut JsonValue) -> Result<bool, SetupError> {
+    let Some(skills) = value.get_mut("skills").and_then(JsonValue::as_object_mut) else {
+        return Ok(false);
+    };
+    if skills.get("mode") != Some(&JsonValue::String("recommended".to_owned())) {
+        return Ok(false);
+    }
+    let suite = skills
+        .get("recommended_suite")
+        .and_then(JsonValue::as_str)
+        .ok_or_else(|| {
+            SetupError::Input(
+                "legacy recommended Skill selection requires recommended_suite".to_owned(),
+            )
+        })?;
+    if skills.contains_key("selected") {
+        return Err(SetupError::Input(
+            "legacy recommended Skill selection must not include selected".to_owned(),
+        ));
+    }
+    let selected = legacy_recommended_skill_set(suite).ok_or_else(|| {
+        SetupError::Input(format!("unknown legacy recommended Skill suite: {suite}"))
+    })?;
+    skills.insert(
+        "mode".to_owned(),
+        JsonValue::String("individual".to_owned()),
+    );
+    skills.remove("recommended_suite");
+    skills.insert(
+        "selected".to_owned(),
+        JsonValue::Array(
+            selected
+                .iter()
+                .map(|name| JsonValue::String((*name).to_owned()))
+                .collect(),
+        ),
+    );
+    Ok(true)
+}
+
+fn migrate_legacy_single_profile(value: &mut JsonValue) -> bool {
+    let Some(profile) = value.get_mut("profile").and_then(JsonValue::as_object_mut) else {
+        return false;
+    };
+    if profile.contains_key("contexts") {
+        return false;
+    }
+    let Some(id) = profile.get("id").and_then(JsonValue::as_str) else {
+        return false;
+    };
+    let description = profile.get("custom_description").cloned();
+    let contexts = match id {
+        "web-developer" | "game-developer" | "non-developer" => {
+            vec![JsonValue::String(id.to_owned())]
+        }
+        "custom" => Vec::new(),
+        _ => return false,
+    };
+    profile.clear();
+    profile.insert("contexts".to_owned(), JsonValue::Array(contexts));
+    if let Some(description) = description {
+        profile.insert("description".to_owned(), description);
+    }
+    true
+}
+
+fn legacy_recommended_skill_set(suite: &str) -> Option<&'static [&'static str]> {
+    match suite {
+        "web-developer" => Some(&[
+            "configure",
+            "setup-project",
+            "auto-setup-project",
+            "clean-ai-slop",
+            "research-practices",
+            "engineer-run",
+            "refine-prompt",
+            "manage-wiki",
+            "record-knowledge",
+            "search-knowledge",
+            "maintain-knowledge",
+            "import-repository-knowledge",
+            "save-progress",
+            "resume-work",
+            "manage-usage",
+            "update-hive",
+            "upgrade-project",
+        ]),
+        "game-developer" => Some(&[
+            "configure",
+            "setup-project",
+            "auto-setup-project",
+            "clean-ai-slop",
+            "research-practices",
+            "engineer-run",
+            "refine-prompt",
+            "manage-wiki",
+            "record-knowledge",
+            "search-knowledge",
+            "maintain-knowledge",
+            "import-repository-knowledge",
+            "save-progress",
+            "resume-work",
+            "handoff-role",
+            "verify-package",
+            "manage-usage",
+            "update-hive",
+            "upgrade-project",
+        ]),
+        "non-developer" => Some(&[
+            "configure",
+            "setup-project",
+            "auto-setup-project",
+            "research-practices",
+            "answer",
+            "refine-prompt",
+            "manage-wiki",
+            "record-knowledge",
+            "search-knowledge",
+            "maintain-knowledge",
+            "import-repository-knowledge",
+            "manage-usage",
+            "update-hive",
+        ]),
+        _ => None,
+    }
 }
 
 fn parse_and_validate_catalog() -> Result<UserSetupCatalog, SetupError> {
@@ -761,9 +1294,43 @@ fn validate_config_semantics(config: &UserSetupConfig) -> Result<(), SetupError>
             "user setup schema_version must be 1".to_owned(),
         ));
     }
-    validate_custom_selection(&config.profile, "profile")?;
+    validate_user_profile(&config.profile)?;
     validate_custom_selection(&config.persona, "persona")?;
     validate_sorted_unique_hosts(&config.selected_hosts)?;
+    match (
+        config.wiki.enabled,
+        config.wiki.backend,
+        config.wiki.notion.as_ref(),
+    ) {
+        (_, WikiBackend::Markdown, None) => {}
+        (true, WikiBackend::Notion, Some(notion)) => {
+            validate_notion_id("workspace_id", &notion.workspace_id)?;
+            validate_notion_id("scope_id", &notion.scope_id)?;
+            if !notion.local_index_consent {
+                return Err(SetupError::Input(
+                    "Notion Wiki requires explicit consent to store derived content in local SQLite"
+                        .to_owned(),
+                ));
+            }
+        }
+        (false, WikiBackend::Notion, _) => {
+            return Err(SetupError::Input(
+                "disabled Wiki must use the markdown backend without Notion configuration"
+                    .to_owned(),
+            ));
+        }
+        (_, WikiBackend::Markdown, Some(_)) => {
+            return Err(SetupError::Input(
+                "markdown Wiki backend must not include Notion configuration".to_owned(),
+            ));
+        }
+        (true, WikiBackend::Notion, None) => {
+            return Err(SetupError::Input(
+                "notion Wiki backend requires workspace_id, scope_id, and local_index_consent"
+                    .to_owned(),
+            ));
+        }
+    }
     if !(1..=99).contains(&config.usage_guard.stop_remaining_percent) {
         return Err(SetupError::Input(
             "usage guard stop_remaining_percent must be between 1 and 99".to_owned(),
@@ -773,6 +1340,52 @@ fn validate_config_semantics(config: &UserSetupConfig) -> Result<(), SetupError>
         return Err(SetupError::Input(
             "codexbar_fallback_enabled must be false when the usage guard is disabled".to_owned(),
         ));
+    }
+    let discord = &config.usage_guard.discord;
+    match (
+        config.usage_guard.enabled,
+        discord.enabled,
+        discord.webhook_url_env.as_deref(),
+    ) {
+        (false, true, _) => {
+            return Err(SetupError::Input(
+                "Discord usage notification requires the usage guard to be enabled".to_owned(),
+            ));
+        }
+        (_, true, Some(name)) if valid_environment_name(name) => {}
+        (_, true, _) => {
+            return Err(SetupError::Input(
+                "Discord usage notification requires a valid webhook_url_env name".to_owned(),
+            ));
+        }
+        (_, false, None) => {}
+        (_, false, Some(_)) => {
+            return Err(SetupError::Input(
+                "Discord webhook_url_env must be absent while Discord notification is disabled"
+                    .to_owned(),
+            ));
+        }
+    }
+    Ok(())
+}
+
+fn valid_environment_name(value: &str) -> bool {
+    let mut characters = value.chars();
+    matches!(characters.next(), Some('A'..='Z' | '_'))
+        && characters.all(|character| matches!(character, 'A'..='Z' | '0'..='9' | '_'))
+        && value.len() <= 128
+}
+
+fn validate_notion_id(label: &str, value: &str) -> Result<(), SetupError> {
+    if value.trim() != value
+        || value.is_empty()
+        || value.len() > 500
+        || value.chars().any(char::is_control)
+        || value.contains(['/', '\\'])
+        || value == "."
+        || value == ".."
+    {
+        return Err(SetupError::Input(format!("invalid Notion {label}")));
     }
     Ok(())
 }
@@ -803,6 +1416,41 @@ fn validate_custom_selection(selection: &CatalogSelection, label: &str) -> Resul
     }
 }
 
+fn validate_user_profile(profile: &UserProfile) -> Result<(), SetupError> {
+    let mut contexts = BTreeSet::new();
+    for context in &profile.contexts {
+        if !contexts.insert(context.as_str()) {
+            return Err(SetupError::Input(
+                "user profile contexts must not contain duplicates".to_owned(),
+            ));
+        }
+    }
+    match profile.description.as_deref() {
+        Some(value)
+            if !value.trim().is_empty()
+                && !value.contains('\r')
+                && !value.contains('\n')
+                && value.chars().count() <= 500 => {}
+        Some(value) if value.chars().count() > 500 => {
+            return Err(SetupError::Input(
+                "user profile description must not exceed 500 Unicode scalar values".to_owned(),
+            ));
+        }
+        Some(_) => {
+            return Err(SetupError::Input(
+                "user profile description must be a nonblank single line".to_owned(),
+            ));
+        }
+        None => {}
+    }
+    if profile.contexts.is_empty() && profile.description.is_none() {
+        return Err(SetupError::Input(
+            "user profile requires at least one context or a description".to_owned(),
+        ));
+    }
+    Ok(())
+}
+
 fn reject_host_deselection(
     installed: Option<&[u8]>,
     desired: &UserSetupConfig,
@@ -810,12 +1458,18 @@ fn reject_host_deselection(
     let Some(installed) = installed else {
         return Ok(());
     };
-    let installed = parse_and_validate_config(installed).map_err(|error| {
+    let installed = parse_and_validate_installed_config(installed).map_err(|error| {
         SetupError::Conflict(format!(
             "installed user setup is invalid: {}",
             error.message()
         ))
     })?;
+    if installed.wiki.backend != desired.wiki.backend {
+        return Err(SetupError::Conflict(
+            "Wiki backend changes require a separate previewed migration; user setup cannot switch backends"
+                .to_owned(),
+        ));
+    }
     let desired_hosts = desired
         .selected_hosts
         .iter()
@@ -863,8 +1517,8 @@ fn validate_catalog_semantics(catalog: &UserSetupCatalog) -> Result<(), SetupErr
     }
     validate_catalog_choices(
         &catalog.profiles,
-        &["custom", "game-developer", "non-developer", "web-developer"],
-        "profile",
+        &["game-developer", "non-developer", "web-developer"],
+        "user context",
     )?;
     validate_catalog_choices(
         &catalog.personas,
@@ -884,31 +1538,15 @@ fn validate_catalog_semantics(catalog: &UserSetupCatalog) -> Result<(), SetupErr
         })
         .map(|entry| entry.name.as_str())
         .collect();
-    if catalog.mandatory_skills != ["setup-hive"] {
+    if catalog.mandatory_skills != ["configure"] {
         return Err(SetupError::Internal(
-            "embedded mandatory skill set must be exactly setup-hive".to_owned(),
+            "embedded mandatory skill set must be exactly configure".to_owned(),
         ));
     }
     if !catalog.optional_third_party_skills.is_empty() {
         return Err(SetupError::Internal(
             "optional third-party Skills are unsupported until a signed consent contract is available"
                 .to_owned(),
-        ));
-    }
-    let mut suites = BTreeSet::new();
-    for suite in &catalog.recommended_skill_suites {
-        validate_localized(&suite.display_name, "suite display_name")?;
-        validate_localized(&suite.description, "suite description")?;
-        if !suites.insert(suite.id.as_str()) || suite.skills.is_empty() {
-            return Err(SetupError::Internal(
-                "embedded recommended suite identifiers and skills must be unique".to_owned(),
-            ));
-        }
-        validate_skill_names(&suite.skills, &built_ins, "recommended suite")?;
-    }
-    if suites != BTreeSet::from(["game-developer", "non-developer", "web-developer"]) {
-        return Err(SetupError::Internal(
-            "embedded recommended suite coverage is not exact".to_owned(),
         ));
     }
     validate_skill_names(&catalog.mandatory_skills, &built_ins, "mandatory skills")?;
@@ -922,6 +1560,11 @@ fn validate_catalog_semantics(catalog: &UserSetupCatalog) -> Result<(), SetupErr
             ));
         }
         validate_skill_names(&dependency.requires, &built_ins, "skill dependency")?;
+    }
+    if dependency_keys != built_ins {
+        return Err(SetupError::Internal(
+            "embedded Skill dependencies must cover every built-in Skill exactly".to_owned(),
+        ));
     }
     Ok(())
 }
@@ -978,15 +1621,12 @@ fn resolve_skills(
     config: &UserSetupConfig,
     catalog: &UserSetupCatalog,
 ) -> Result<Vec<String>, SetupError> {
-    if !catalog
-        .profiles
-        .iter()
-        .any(|entry| entry.id == config.profile.id)
-    {
-        return Err(SetupError::Input(format!(
-            "unknown user profile: {}",
-            config.profile.id
-        )));
+    for context in &config.profile.contexts {
+        if !catalog.profiles.iter().any(|entry| entry.id == *context) {
+            return Err(SetupError::Input(format!(
+                "unknown user context: {context}",
+            )));
+        }
     }
     if !catalog
         .personas
@@ -999,27 +1639,29 @@ fn resolve_skills(
         )));
     }
     let mut selected: BTreeSet<String> = match config.skills.mode {
-        SkillSelectionMode::Recommended => {
+        SkillSelectionMode::All => {
             if !config.skills.selected.is_empty() {
                 return Err(SetupError::Input(
-                    "recommended Skill mode must not include individual selections".to_owned(),
+                    "all Skill mode must not include individual selections".to_owned(),
                 ));
             }
-            let suite = config.skills.recommended_suite.as_deref().ok_or_else(|| {
-                SetupError::Input("recommended Skill mode requires recommended_suite".to_owned())
-            })?;
-            let entry = catalog
-                .recommended_skill_suites
-                .iter()
-                .find(|entry| entry.id == suite)
-                .ok_or_else(|| SetupError::Input(format!("unknown recommended suite: {suite}")))?;
-            entry.skills.iter().cloned().collect()
+            embedded_catalog()
+                .map_err(|error| SetupError::Internal(error.to_string()))?
+                .skills
+                .into_iter()
+                .filter(|entry| {
+                    matches!(
+                        entry.availability,
+                        hive_projection::Availability::Implemented
+                    )
+                })
+                .map(|entry| entry.name)
+                .collect()
         }
         SkillSelectionMode::Individual => {
-            if config.skills.recommended_suite.is_some() || config.skills.selected.is_empty() {
+            if config.skills.selected.is_empty() {
                 return Err(SetupError::Input(
-                    "individual Skill mode requires selected and forbids recommended_suite"
-                        .to_owned(),
+                    "individual Skill mode requires selected".to_owned(),
                 ));
             }
             config.skills.selected.iter().cloned().collect()
@@ -1027,10 +1669,20 @@ fn resolve_skills(
     };
     selected.extend(catalog.mandatory_skills.iter().cloned());
     if !config.wiki.enabled {
-        selected.retain(|name| !name.starts_with("hive-knowledge-"));
+        selected.retain(|name| {
+            !matches!(
+                name.as_str(),
+                "record-knowledge"
+                    | "search-knowledge"
+                    | "share-knowledge"
+                    | "maintain-knowledge"
+                    | "import-repository-knowledge"
+                    | "manage-wiki"
+            )
+        });
     }
     if config.usage_guard.enabled {
-        selected.insert("hive-usage-guard".to_owned());
+        selected.insert("manage-usage".to_owned());
     }
     let dependencies: BTreeMap<&str, &[String]> = catalog
         .skill_dependencies
@@ -1086,9 +1738,117 @@ fn plan_user_projection(
     resolved_skills: &[String],
     setup_bytes: &[u8],
 ) -> Result<AppliedProjection, SetupError> {
+    let files = user_projection_files(config, resolved_skills)?;
+    let manifest_relative = Path::new(USER_PROJECTION_MANIFEST_RELATIVE);
+    let prior_bytes =
+        super::user_install::read_user_setup_file(root, manifest_relative, MAX_USER_SETUP_BYTES)
+            .map_err(SetupError::Conflict)?;
+    let prior = prior_bytes
+        .as_deref()
+        .map(parse_projection_manifest)
+        .transpose()?;
+    let base_files = projection_base_files(root, prior.as_ref())?;
+    let prior_owned_paths = prior
+        .as_ref()
+        .map(|manifest| {
+            manifest
+                .entries
+                .iter()
+                .map(|entry| PathBuf::from(&entry.path))
+                .collect::<BTreeSet<_>>()
+        })
+        .unwrap_or_default();
+
+    let mut paths = base_files.keys().cloned().collect::<BTreeSet<_>>();
+    paths.extend(files.keys().cloned());
+    let mut planned = AppliedProjection {
+        changes: Vec::new(),
+        changed_paths: Vec::new(),
+        reports: Vec::new(),
+    };
+    for path in paths {
+        let before = super::user_install::read_user_setup_file(root, &path, MAX_USER_SETUP_BYTES)
+            .map_err(SetupError::Conflict)?;
+        let base = base_files.get(&path);
+        let incoming = files.get(&path);
+        if prior.is_some()
+            && base.is_none()
+            && before.is_some()
+            && before.as_deref() != incoming.map(Vec::as_slice)
+        {
+            return Err(SetupError::Conflict(format!(
+                "Hive cannot safely refresh this setup file because its release original is unavailable: {}. No files were changed.",
+                path.display()
+            )));
+        }
+        if before.is_some() && !prior_owned_paths.contains(&path) {
+            return Err(SetupError::Conflict(format!(
+                "user projection path exists without Hive ownership proof: {}",
+                path.display()
+            )));
+        }
+        let merged = three_way_merge(
+            &path,
+            base.map(Vec::as_slice),
+            before.as_deref(),
+            incoming.map(Vec::as_slice),
+        )
+        .map_err(|error| SetupError::Conflict(error.to_string()))?;
+        let after = merged.bytes;
+        planned.reports.push(UserProjectionPathReport {
+            path: portable(&path),
+            base_digest: base.map(|bytes| sha256_digest(bytes)),
+            local_digest: before.as_deref().map(sha256_digest),
+            incoming_digest: incoming.map(|bytes| sha256_digest(bytes)),
+            final_digest: after.as_deref().map(sha256_digest),
+            disposition: merged.disposition,
+            omitted_incoming_hunks: merged.omitted_incoming_hunks,
+            local_priority: merged.local_priority,
+        });
+        if before != after {
+            planned.changed_paths.push(portable(&path));
+            planned.changes.push(ProjectionChange {
+                path,
+                before,
+                after,
+            });
+        }
+    }
+
+    let manifest_bytes = render_projection_manifest(setup_bytes, &files)?;
+    let manifest_before =
+        super::user_install::read_user_setup_file(root, manifest_relative, MAX_USER_SETUP_BYTES)
+            .map_err(SetupError::Conflict)?;
+    if manifest_before.as_deref() != Some(manifest_bytes.as_slice()) {
+        planned
+            .changed_paths
+            .push(USER_PROJECTION_MANIFEST_RELATIVE.to_owned());
+        planned.changes.push(ProjectionChange {
+            path: manifest_relative.to_path_buf(),
+            before: manifest_before,
+            after: Some(manifest_bytes),
+        });
+    }
+    planned.changed_paths.sort();
+    planned.changed_paths.dedup();
+    planned
+        .reports
+        .sort_by(|left, right| left.path.cmp(&right.path));
+    Ok(planned)
+}
+
+fn user_projection_files(
+    config: &UserSetupConfig,
+    resolved_skills: &[String],
+) -> Result<BTreeMap<PathBuf, Vec<u8>>, SetupError> {
     let mut files = BTreeMap::<PathBuf, Vec<u8>>::new();
-    let projection = compile_user_projection(ProjectionHost::Codex, resolved_skills, &[])
-        .map_err(|error| SetupError::Internal(error.to_string()))?;
+    let projection = compile_user_projection_localized(
+        ProjectionHost::Codex,
+        resolved_skills,
+        &[],
+        config.interface_language.descriptor_language(),
+    )
+    .map_err(|error| SetupError::Internal(error.to_string()))?;
     for (path, bytes) in projection.files {
         if path.starts_with(".agents/skills/") {
             files.insert(PathBuf::from(path), bytes);
@@ -1100,17 +1860,23 @@ fn plan_user_projection(
         PathBuf::from(".agents/directives/00-hive-user.md"),
         render_user_directive(config, resolved_skills),
     );
+    Ok(files)
+}
 
-    let manifest_relative = Path::new(USER_PROJECTION_MANIFEST_RELATIVE);
-    let prior_bytes =
-        super::user_install::read_user_setup_file(root, manifest_relative, MAX_USER_SETUP_BYTES)
-            .map_err(SetupError::Conflict)?;
-    let prior = prior_bytes
-        .as_deref()
-        .map(parse_projection_manifest)
-        .transpose()?;
-    authenticate_projection(root, prior.as_ref())?;
+fn legacy_070_projection_files(
+    config: &UserSetupConfig,
+    resolved_skills: &[String],
+) -> Result<BTreeMap<PathBuf, Vec<u8>>, SetupError> {
+    Ok(user_projection_files(config, resolved_skills)?
+        .into_iter()
+        .filter(|(path, _)| !path.ends_with("agents/openai.yaml"))
+        .collect())
+}
 
+fn render_projection_manifest(
+    setup_bytes: &[u8],
+    files: &BTreeMap<PathBuf, Vec<u8>>,
+) -> Result<Vec<u8>, SetupError> {
     let entries = files
         .iter()
         .map(|(path, bytes)| UserProjectionEntry {
@@ -1118,11 +1884,26 @@ fn plan_user_projection(
             digest: sha256_digest(bytes),
         })
         .collect::<Vec<_>>();
+    let base_entries = files
+        .iter()
+        .map(|(path, bytes)| {
+            let content = String::from_utf8(bytes.clone()).map_err(|_| {
+                SetupError::Internal(format!("user projection must be UTF-8: {}", path.display()))
+            })?;
+            Ok(UserProjectionBaseEntry {
+                path: portable(path),
+                digest: sha256_digest(bytes),
+                content,
+            })
+        })
+        .collect::<Result<Vec<_>, SetupError>>()?;
     let manifest = UserProjectionManifest {
-        schema_version: 1,
+        schema_version: 2,
         product_version: env!("CARGO_PKG_VERSION").to_owned(),
+        package_version: Some(env!("HIVE_PACKAGE_VERSION").to_owned()),
         setup_digest: sha256_digest(setup_bytes),
         entries,
+        base_entries,
     };
     let mut manifest_bytes = serde_json::to_vec_pretty(&manifest).map_err(|error| {
         SetupError::Internal(format!(
@@ -1130,55 +1911,160 @@ fn plan_user_projection(
         ))
     })?;
     manifest_bytes.push(b'\n');
-    files.insert(manifest_relative.to_path_buf(), manifest_bytes);
+    Ok(manifest_bytes)
+}
 
-    let prior_paths = prior
-        .as_ref()
-        .map(|manifest| {
-            manifest
-                .entries
-                .iter()
-                .map(|entry| PathBuf::from(&entry.path))
-                .collect::<BTreeSet<_>>()
-        })
-        .unwrap_or_default();
-    let prior_owned_paths = prior_paths.clone();
-    let desired_paths = files.keys().cloned().collect::<BTreeSet<_>>();
-    let mut operations = Vec::new();
-    for path in prior_paths.difference(&desired_paths) {
-        operations.push((path.clone(), None));
-    }
-    for (path, bytes) in files {
-        operations.push((path, Some(bytes)));
-    }
-    operations.sort_by(|left, right| left.0.cmp(&right.0));
-
-    let mut planned = AppliedProjection {
-        changes: Vec::new(),
-        changed_paths: Vec::new(),
+fn projection_base_files(
+    root: &Dir,
+    prior: Option<&UserProjectionManifest>,
+) -> Result<BTreeMap<PathBuf, Vec<u8>>, SetupError> {
+    let Some(prior) = prior else {
+        return Ok(BTreeMap::new());
     };
-    for (path, after) in operations {
-        let before = super::user_install::read_user_setup_file(root, &path, MAX_USER_SETUP_BYTES)
-            .map_err(SetupError::Conflict)?;
-        if before == after {
-            continue;
-        }
-        if before.is_some() && path != manifest_relative && !prior_owned_paths.contains(&path) {
-            return Err(SetupError::Conflict(format!(
-                "user projection path exists without Hive ownership proof: {}",
-                path.display()
-            )));
-        }
-        planned.changed_paths.push(portable(&path));
-        planned.changes.push(ProjectionChange {
-            path,
-            before,
-            after,
-        });
+    if prior.schema_version == 2 {
+        return prior
+            .base_entries
+            .iter()
+            .map(|entry| {
+                Ok((
+                    PathBuf::from(&entry.path),
+                    entry.content.as_bytes().to_vec(),
+                ))
+            })
+            .collect();
     }
-    planned.changed_paths.sort();
-    planned.changed_paths.dedup();
-    Ok(planned)
+    if prior.product_version == "0.7.0" {
+        return legacy_070_projection_base(root, prior);
+    }
+    legacy_test3_projection_base(root, prior)
+}
+
+fn legacy_070_projection_base(
+    root: &Dir,
+    prior: &UserProjectionManifest,
+) -> Result<BTreeMap<PathBuf, Vec<u8>>, SetupError> {
+    let installed = super::user_install::read_user_setup_file(
+        root,
+        Path::new(USER_SETUP_RELATIVE),
+        MAX_USER_SETUP_BYTES,
+    )
+    .map_err(SetupError::Conflict)?
+    .ok_or_else(|| {
+        SetupError::Conflict(
+            "Hive cannot identify the release original because the saved global preferences are missing. No files were changed."
+                .to_owned(),
+        )
+    })?;
+    if sha256_digest(&installed) != prior.setup_digest {
+        return Err(SetupError::Conflict(
+            "Hive cannot identify the release original because the saved global preferences changed outside Hive. No files were changed."
+                .to_owned(),
+        ));
+    }
+    let config = parse_and_validate_installed_config(&installed).map_err(|_| {
+        SetupError::Conflict(
+            "Hive cannot read the saved global preferences needed for a safe refresh. No files were changed."
+                .to_owned(),
+        )
+    })?;
+    let catalog = parse_and_validate_catalog()
+        .map_err(|error| SetupError::Internal(error.message().to_owned()))?;
+    let skills = resolve_skills(&config, &catalog)?;
+    let expected_paths = legacy_070_projection_files(&config, &skills)?
+        .keys()
+        .map(|path| portable(path))
+        .collect::<Vec<_>>();
+    let recorded_paths = prior
+        .entries
+        .iter()
+        .map(|entry| entry.path.clone())
+        .collect::<Vec<_>>();
+    if expected_paths != recorded_paths {
+        return Err(SetupError::Conflict(
+            "Hive cannot safely refresh this older setup because its recorded Hive file list does not match the supported 0.7.0 installation. No files were changed."
+                .to_owned(),
+        ));
+    }
+    let mut base = BTreeMap::new();
+    for entry in &prior.entries {
+        let path = PathBuf::from(&entry.path);
+        let bytes = super::user_install::read_user_setup_file(root, &path, MAX_USER_SETUP_BYTES)
+            .map_err(SetupError::Conflict)?
+            .ok_or_else(|| {
+                SetupError::Conflict(
+                    "Hive cannot safely refresh this older setup because a recorded Hive file is missing. No files were changed."
+                        .to_owned(),
+                )
+            })?;
+        if sha256_digest(&bytes) != entry.digest {
+            return Err(SetupError::Conflict(
+                "Hive cannot safely refresh this older setup because some Hive files changed after that installation. No files were changed."
+                    .to_owned(),
+            ));
+        }
+        base.insert(path, bytes);
+    }
+    Ok(base)
+}
+
+fn legacy_test3_projection_base(
+    root: &Dir,
+    prior: &UserProjectionManifest,
+) -> Result<BTreeMap<PathBuf, Vec<u8>>, SetupError> {
+    if prior.product_version != "0.9.0" {
+        return Err(SetupError::Conflict(
+            "Hive cannot identify the release original for this setup. No files were changed."
+                .to_owned(),
+        ));
+    }
+    let installed = super::user_install::read_user_setup_file(
+        root,
+        Path::new(USER_SETUP_RELATIVE),
+        MAX_USER_SETUP_BYTES,
+    )
+    .map_err(SetupError::Conflict)?
+    .ok_or_else(|| {
+        SetupError::Conflict(
+            "Hive cannot identify the release original because the saved global preferences are missing. No files were changed."
+                .to_owned(),
+        )
+    })?;
+    if sha256_digest(&installed) != prior.setup_digest {
+        return Err(SetupError::Conflict(
+            "Hive cannot identify the release original because the saved global preferences changed outside Hive. No files were changed."
+                .to_owned(),
+        ));
+    }
+    let config = parse_and_validate_installed_config(&installed).map_err(|_| {
+        SetupError::Conflict(
+            "Hive cannot read the saved global preferences needed for a safe refresh. No files were changed."
+                .to_owned(),
+        )
+    })?;
+    let catalog = parse_and_validate_catalog()
+        .map_err(|error| SetupError::Internal(error.message().to_owned()))?;
+    let skills = resolve_skills(&config, &catalog)?;
+    let mut base = user_projection_files(&config, &skills)?;
+    base.insert(
+        PathBuf::from(".agents/skills/configure/SKILL.md"),
+        USER_PROJECTION_090_TEST3_SETUP_HIVE.to_vec(),
+    );
+    let expected = base
+        .iter()
+        .map(|(path, bytes)| (portable(path), sha256_digest(bytes)))
+        .collect::<Vec<_>>();
+    let recorded = prior
+        .entries
+        .iter()
+        .map(|entry| (entry.path.clone(), entry.digest.clone()))
+        .collect::<Vec<_>>();
+    if expected != recorded {
+        return Err(SetupError::Conflict(
+            "Hive cannot authenticate the release original for this older setup. No files were changed."
+                .to_owned(),
+        ));
+    }
+    Ok(base)
 }
 
 fn apply_user_projection(
@@ -1187,12 +2073,17 @@ fn apply_user_projection(
     resolved_skills: &[String],
     setup_bytes: &[u8],
 ) -> Result<AppliedProjection, SetupError> {
-    let planned = plan_user_projection(root, config, resolved_skills, setup_bytes)?;
+    let AppliedProjection {
+        changes,
+        changed_paths,
+        reports,
+    } = plan_user_projection(root, config, resolved_skills, setup_bytes)?;
     let mut applied = AppliedProjection {
         changes: Vec::new(),
-        changed_paths: planned.changed_paths,
+        changed_paths,
+        reports,
     };
-    for change in planned.changes {
+    for change in changes {
         if let Err(primary) = super::user_install::replace_user_setup_file(
             root,
             &change.path,
@@ -1221,12 +2112,21 @@ fn validate_user_projection(
     setup_bytes: &[u8],
 ) -> Result<(), SetupError> {
     let planned = plan_user_projection(root, config, resolved_skills, setup_bytes)?;
-    if planned.changed_paths.is_empty() {
+    let mut drifted_paths = planned
+        .reports
+        .iter()
+        .filter(|report| report.local_digest != report.incoming_digest)
+        .map(|report| report.path.clone())
+        .collect::<Vec<_>>();
+    drifted_paths.extend(planned.changed_paths);
+    drifted_paths.sort();
+    drifted_paths.dedup();
+    if drifted_paths.is_empty() {
         Ok(())
     } else {
-        Err(SetupError::Verification(format!(
+        Err(SetupError::Conflict(format!(
             "installed user projection differs at: {}",
-            planned.changed_paths.join(", ")
+            drifted_paths.join(", ")
         )))
     }
 }
@@ -1249,13 +2149,42 @@ fn parse_projection_manifest(bytes: &[u8]) -> Result<UserProjectionManifest, Set
             "installed user projection manifest is invalid: {error}"
         ))
     })?;
-    if manifest.schema_version != 1
+    if !matches!(manifest.schema_version, 1 | 2)
         || manifest.product_version.is_empty()
         || !valid_sha256(&manifest.setup_digest)
     {
         return Err(SetupError::Conflict(
             "installed user projection manifest binding is invalid".to_owned(),
         ));
+    }
+    if manifest.schema_version == 1
+        && (manifest.package_version.is_some() || !manifest.base_entries.is_empty())
+    {
+        return Err(SetupError::Conflict(
+            "installed user projection manifest binding is invalid".to_owned(),
+        ));
+    }
+    if manifest.schema_version == 2 {
+        if manifest
+            .package_version
+            .as_deref()
+            .is_none_or(str::is_empty)
+            || manifest.base_entries.len() != manifest.entries.len()
+        {
+            return Err(SetupError::Conflict(
+                "installed user projection manifest binding is invalid".to_owned(),
+            ));
+        }
+        for (entry, base) in manifest.entries.iter().zip(&manifest.base_entries) {
+            if entry.path != base.path
+                || entry.digest != base.digest
+                || sha256_digest(base.content.as_bytes()) != base.digest
+            {
+                return Err(SetupError::Conflict(
+                    "installed user projection base inventory is invalid".to_owned(),
+                ));
+            }
+        }
     }
     let mut previous = None;
     for entry in &manifest.entries {
@@ -1276,36 +2205,6 @@ fn parse_projection_manifest(bytes: &[u8]) -> Result<UserProjectionManifest, Set
     Ok(manifest)
 }
 
-fn authenticate_projection(
-    root: &Dir,
-    prior: Option<&UserProjectionManifest>,
-) -> Result<(), SetupError> {
-    let Some(prior) = prior else {
-        return Ok(());
-    };
-    for entry in &prior.entries {
-        let bytes = super::user_install::read_user_setup_file(
-            root,
-            Path::new(&entry.path),
-            MAX_USER_SETUP_BYTES,
-        )
-        .map_err(SetupError::Conflict)?
-        .ok_or_else(|| {
-            SetupError::Conflict(format!(
-                "owned user projection path is missing: {}",
-                entry.path
-            ))
-        })?;
-        if sha256_digest(&bytes) != entry.digest {
-            return Err(SetupError::Conflict(format!(
-                "owned user projection path has local modifications: {}",
-                entry.path
-            )));
-        }
-    }
-    Ok(())
-}
-
 fn render_user_directive(config: &UserSetupConfig, resolved_skills: &[String]) -> Vec<u8> {
     let hosts = config
         .selected_hosts
@@ -1314,11 +2213,15 @@ fn render_user_directive(config: &UserSetupConfig, resolved_skills: &[String]) -
         .collect::<Vec<_>>()
         .join(", ");
     let wiki = if config.wiki.enabled {
-        format!("enabled ({})", config.wiki.language.as_str())
+        format!(
+            "enabled (backend={}, language={})",
+            config.wiki.backend.as_str(),
+            config.wiki.language.as_str()
+        )
     } else {
         "disabled".to_owned()
     };
-    let profile = render_catalog_selection(&config.profile);
+    let profile = render_user_profile(&config.profile);
     let persona = render_catalog_selection(&config.persona);
     let update_check = if config.update_check.enabled {
         "enabled"
@@ -1337,7 +2240,7 @@ hook payload, tool output, hidden prompt, or runtime state.\n"
 preserve canonical Markdown until an explicit deletion request.\n"
             };
             format!(
-                "# Aigent Hive user preferences\n\n- Setup state: `operational`\n- Interface language: `en`\n- User profile: {profile}\n- Agent persona: {persona}\n- Selected hosts: `{hosts}`\n- Global Wiki: `{wiki}`\n- Daily update check: `{update_check}`\n- Active Skills: `{}`\n{capture}- When daily update check is enabled, run `hive update --check --user-root <user-root> --output json` before the first Hive task of each host session. A check may notify but must never install.\n- Ask and answer in English.\n- For ambiguous or detail-poor ordinary prompts, offer one concise optional refine suggestion without automatic rewrite.\n- Never request provider credentials or call model-provider APIs on Hive's behalf.\n",
+                "# Aigent Hive user preferences\n\n- Setup state: `operational`\n- Interface language: `en`\n- User contexts: {profile}\n- Agent persona: {persona}\n- Selected hosts: `{hosts}`\n- Global Wiki: `{wiki}`\n- Daily update check: `{update_check}`\n- Active Skills: `{}`\n{capture}- User contexts inform only the global background. They never select a project workflow, implementation approach, delivery priority, or active Skill set.\n- When daily update check is enabled, run `hive update --check --user-root <user-root> --output json` before the first Hive task of each host session. A check may notify but must never install.\n- Use English for every question and response unless the user explicitly requests another language for the current response. A message written in another language does not by itself change this preference.\n- For ambiguous or detail-poor ordinary prompts, offer one concise optional refine suggestion without automatic rewrite.\n- Never request provider credentials or call model-provider APIs on Hive's behalf.\n",
                 resolved_skills.join(", ")
             )
         }
@@ -1352,7 +2255,7 @@ summary만 사용하고 raw transcript, hook payload, tool output, hidden prompt
 knowledge index를 capture·refresh하지 않음.\n"
             };
             format!(
-                "# Aigent Hive 사용자 설정\n\n- 설정 상태: `operational`\n- Interface language: `ko`\n- 사용자 profile: {profile}\n- Agent persona: {persona}\n- 선택 host: `{hosts}`\n- Global Wiki: `{wiki}`\n- 일일 update 확인: `{update_check}`\n- 활성 Skill: `{}`\n{capture}- 일일 update 확인이 enabled이면 각 host session의 첫 Hive 작업 전에 `hive update --check --user-root <user-root> --output json` 실행. 확인은 알림만 가능하며 설치 금지.\n- 질문과 응답은 한국어 사용.\n- 모호하거나 핵심 세부가 부족한 일반 prompt에는 자동 rewrite 없이 간결한 optional refine 제안 1개만 제공.\n- Provider credential을 요청하거나 Hive를 대신해 model-provider API를 호출하지 않음.\n",
+                "# Aigent Hive 사용자 설정\n\n- 설정 상태: `operational`\n- Interface language: `ko`\n- 사용자 기본 맥락: {profile}\n- 에이전트 페르소나: {persona}\n- 선택 호스트: `{hosts}`\n- Global Wiki: `{wiki}`\n- 일일 update 확인: `{update_check}`\n- 활성 Skill: `{}`\n{capture}- 사용자 기본 맥락은 전역 배경 정보만 제공하며 프로젝트 작업 흐름, 구현 방식, 작업 우선순위, 활성 Skill을 정하지 않음.\n- 일일 update 확인이 enabled이면 각 host session의 첫 Hive 작업 전에 `hive update --check --user-root <user-root> --output json` 실행. 확인은 알림만 가능하며 설치 금지.\n- 현재 응답에 다른 언어를 사용하라는 명시적 요청이 없는 한 모든 질문과 응답에 한국어 사용. 다른 언어로 작성된 메시지만으로 이 선호를 변경하지 않음.\n- 모호하거나 핵심 세부가 부족한 일반 prompt에는 자동 rewrite 없이 간결한 optional refine 제안 1개만 제공.\n- Provider credential을 요청하거나 Hive를 대신해 model-provider API를 호출하지 않음.\n",
                 resolved_skills.join(", ")
             )
         }
@@ -1373,6 +2276,22 @@ fn render_catalog_selection(selection: &CatalogSelection) -> String {
         || format!("`{}`", selection.id),
         |description| format!("`{}` — {}", selection.id, markdown_code_span(description)),
     )
+}
+
+fn render_user_profile(profile: &UserProfile) -> String {
+    let contexts = profile
+        .contexts
+        .iter()
+        .map(|context| format!("`{context}`"))
+        .collect::<Vec<_>>()
+        .join(", ");
+    match (&contexts[..], profile.description.as_deref()) {
+        ("", Some(description)) => markdown_code_span(description),
+        (contexts, Some(description)) => {
+            format!("{contexts} — {}", markdown_code_span(description))
+        }
+        (contexts, None) => contexts.to_owned(),
+    }
 }
 
 fn markdown_code_span(value: &str) -> String {
@@ -1419,7 +2338,7 @@ pub(crate) fn load_operational_config(root: &Dir) -> Result<Option<UserSetupConf
     else {
         return Ok(None);
     };
-    parse_and_validate_config(&bytes)
+    parse_and_validate_installed_config(&bytes)
         .map(Some)
         .map_err(|error| {
             SetupError::Conflict(format!(
@@ -1440,11 +2359,12 @@ pub(crate) fn resolved_operational_skills(
     Ok(Some((config, skills)))
 }
 
-pub(crate) fn operational_wiki_enabled(user_root: &Path) -> Result<bool, String> {
+/// Return the validated global Wiki mode without exposing setup-file bytes.
+pub(crate) fn operational_wiki_preferences(user_root: &Path) -> Result<WikiPreferences, String> {
     let root = super::user_install::open_user_root_for_setup(user_root)?;
     load_operational_config(&root)
         .map_err(|error| error.message().to_owned())?
-        .map(|config| config.wiki.enabled)
+        .map(|config| config.wiki)
         .ok_or_else(|| "global Hive setup is required for shared knowledge operations".to_owned())
 }
 
@@ -1455,18 +2375,21 @@ pub(crate) fn project_preferences(user_root: &Path) -> Result<GlobalProjectPrefe
         .ok_or_else(|| {
             "global Hive setup is required before project expedited or custom setup".to_owned()
         })?;
-    selected_project_skills.retain(|name| name != "setup-hive");
+    selected_project_skills.retain(|name| name != "configure");
     selected_project_skills.sort();
     selected_project_skills.dedup();
     Ok(GlobalProjectPreferences {
         interface_language: config.interface_language.as_str().to_owned(),
         wiki_enabled: config.wiki.enabled,
+        wiki_backend: config.wiki.backend.as_str().to_owned(),
         wiki_language: config.wiki.language.as_str().to_owned(),
         persona_id: config.persona.id,
         persona_custom_description: config.persona.custom_description,
         selected_project_skills,
         usage_guard_enabled: config.usage_guard.enabled,
         codexbar_fallback_enabled: config.usage_guard.codexbar_fallback_enabled,
+        discord_guard_enabled: config.usage_guard.discord.enabled,
+        discord_webhook_url_env: config.usage_guard.discord.webhook_url_env,
         usage_stop_remaining_percent: config.usage_guard.stop_remaining_percent,
     })
 }
@@ -1545,6 +2468,7 @@ fn success(
     message: &'static str,
     answer_bytes: &[u8],
     desired: &[u8],
+    projection_reports: &[UserProjectionPathReport],
 ) -> ActionResult {
     ActionResult {
         schema_version: 1,
@@ -1583,6 +2507,9 @@ fn success(
             "resolved_skills": resolved_skills,
             "update_check": config.update_check,
             "usage_guard": config.usage_guard,
+            "user_projection": {
+                "paths": projection_reports,
+            },
         })),
     }
 }
@@ -1629,7 +2556,7 @@ selected_hosts:
 skills:
   mode: individual
   selected:
-    - setup-hive
+    - configure
 usage_guard:
   enabled: false
   stop_remaining_percent: 20
@@ -1637,6 +2564,95 @@ usage_guard:
 ",
         )
         .expect("valid config")
+    }
+
+    fn write_projection_manifest(root: &Path, manifest: &UserProjectionManifest) {
+        let path = root.join(USER_PROJECTION_MANIFEST_RELATIVE);
+        fs::create_dir_all(path.parent().expect("manifest parent")).expect("manifest parent");
+        let mut bytes = serde_json::to_vec_pretty(manifest).expect("manifest JSON");
+        bytes.push(b'\n');
+        fs::write(path, bytes).expect("projection manifest");
+    }
+
+    fn schema_two_manifest(path: &Path, base: &[u8]) -> UserProjectionManifest {
+        let entry = UserProjectionEntry {
+            path: portable(path),
+            digest: sha256_digest(base),
+        };
+        UserProjectionManifest {
+            schema_version: 2,
+            product_version: env!("CARGO_PKG_VERSION").to_owned(),
+            package_version: Some(env!("HIVE_PACKAGE_VERSION").to_owned()),
+            setup_digest: sha256_digest(b"fixture setup\n"),
+            entries: vec![entry.clone()],
+            base_entries: vec![UserProjectionBaseEntry {
+                path: entry.path,
+                digest: entry.digest,
+                content: String::from_utf8(base.to_vec()).expect("UTF-8 base"),
+            }],
+        }
+    }
+
+    fn seed_legacy_070_projection(
+        root: &Path,
+        config: &UserSetupConfig,
+    ) -> (Vec<String>, Vec<u8>, usize) {
+        let catalog = parse_and_validate_catalog().expect("catalog");
+        let skills = resolve_skills(config, &catalog).expect("skill closure");
+        let old_files = legacy_070_projection_files(config, &skills).expect("legacy files");
+        for (relative, bytes) in &old_files {
+            let full = root.join(relative);
+            fs::create_dir_all(full.parent().expect("projection parent"))
+                .expect("projection parent");
+            fs::write(full, bytes).expect("legacy projection bytes");
+        }
+        let answers = canonical_config(config).expect("answers");
+        let answer_path = root.join(USER_SETUP_RELATIVE);
+        fs::create_dir_all(answer_path.parent().expect("answers parent")).expect("answers parent");
+        fs::write(answer_path, &answers).expect("saved answers");
+        let manifest = UserProjectionManifest {
+            schema_version: 1,
+            product_version: "0.7.0".to_owned(),
+            package_version: None,
+            setup_digest: sha256_digest(&answers),
+            entries: old_files
+                .iter()
+                .map(|(relative, bytes)| UserProjectionEntry {
+                    path: portable(relative),
+                    digest: sha256_digest(bytes),
+                })
+                .collect(),
+            base_entries: Vec::new(),
+        };
+        write_projection_manifest(root, &manifest);
+        (skills, answers, old_files.len())
+    }
+
+    fn seeded_projection_plan(
+        base: &[u8],
+        local: Vec<u8>,
+    ) -> (AppliedProjection, Vec<u8>, PathBuf) {
+        let temporary = tempfile::tempdir().expect("temporary user root");
+        let config = valid_config();
+        let catalog = parse_and_validate_catalog().expect("catalog");
+        let skills = resolve_skills(&config, &catalog).expect("skill closure");
+        let files = user_projection_files(&config, &skills).expect("desired files");
+        let path = PathBuf::from(".agents/skills/configure/SKILL.md");
+        let incoming = files.get(&path).expect("configure source").clone();
+        let full = temporary.path().join(&path);
+        fs::create_dir_all(full.parent().expect("skill parent")).expect("skill parent");
+        fs::write(&full, local).expect("local Skill");
+        write_projection_manifest(temporary.path(), &schema_two_manifest(&path, base));
+        let root =
+            super::super::user_install::open_user_root_for_setup(temporary.path()).expect("root");
+        let planned = plan_user_projection(
+            &root,
+            &config,
+            &skills,
+            &canonical_config(&config).expect("answers"),
+        )
+        .expect("projection plan");
+        (planned, incoming, path)
     }
 
     #[test]
@@ -1647,11 +2663,430 @@ usage_guard:
     }
 
     #[test]
+    fn user_projection_replaces_an_authenticated_vanilla_base() {
+        let config = valid_config();
+        let catalog = parse_and_validate_catalog().expect("catalog");
+        let skills = resolve_skills(&config, &catalog).expect("skill closure");
+        let files = user_projection_files(&config, &skills).expect("desired files");
+        let path = PathBuf::from(".agents/skills/configure/SKILL.md");
+        let incoming = files.get(&path).expect("configure source").clone();
+        let mut base = incoming.clone();
+        let replaced = String::from_utf8(base.clone())
+            .expect("UTF-8 Skill")
+            .replace("# Setup Hive", "# Earlier Setup Hive");
+        base = replaced.into_bytes();
+
+        let (planned, expected, target) = seeded_projection_plan(&base, base.clone());
+        let report = planned
+            .reports
+            .iter()
+            .find(|report| report.path == portable(&target))
+            .expect("target report");
+
+        assert_eq!(expected, incoming);
+        assert_eq!(report.disposition, MergeDisposition::IncomingReplace);
+        assert!(!report.local_priority);
+        assert!(planned
+            .changes
+            .iter()
+            .any(|change| change.path == target
+                && change.after.as_deref() == Some(incoming.as_slice())));
+    }
+
+    #[test]
+    fn user_projection_merges_disjoint_local_edits_and_retains_overlaps() {
+        let config = valid_config();
+        let catalog = parse_and_validate_catalog().expect("catalog");
+        let skills = resolve_skills(&config, &catalog).expect("skill closure");
+        let files = user_projection_files(&config, &skills).expect("desired files");
+        let path = PathBuf::from(".agents/skills/configure/SKILL.md");
+        let incoming = files.get(&path).expect("configure source").clone();
+        let base = String::from_utf8(incoming)
+            .expect("UTF-8 Skill")
+            .replace("# Setup Hive", "# Earlier Setup Hive")
+            .into_bytes();
+
+        let mut disjoint_local = base.clone();
+        disjoint_local.extend_from_slice(b"\n<!-- local note -->\n");
+        let (merged, _, target) = seeded_projection_plan(&base, disjoint_local);
+        let merged_report = merged
+            .reports
+            .iter()
+            .find(|report| report.path == portable(&target))
+            .expect("merged report");
+        assert_eq!(merged_report.disposition, MergeDisposition::Merged);
+        assert!(merged_report.local_priority);
+        assert_eq!(merged_report.omitted_incoming_hunks, 0);
+        assert!(merged
+            .changes
+            .iter()
+            .find(|change| change.path == target)
+            .and_then(|change| change.after.as_deref())
+            .is_some_and(|bytes| bytes.ends_with(b"<!-- local note -->\n")));
+
+        let overlap_local = String::from_utf8(base.clone())
+            .expect("UTF-8 base")
+            .replace("# Earlier Setup Hive", "# Local Setup Hive")
+            .into_bytes();
+        let (overlap, _, target) = seeded_projection_plan(&base, overlap_local);
+        let overlap_report = overlap
+            .reports
+            .iter()
+            .find(|report| report.path == portable(&target))
+            .expect("overlap report");
+        assert!(overlap_report.local_priority);
+        assert!(overlap_report.omitted_incoming_hunks > 0);
+        assert!(!overlap.changes.iter().any(|change| change.path == target));
+    }
+
+    #[test]
+    fn legacy_user_projection_without_an_authenticated_base_stays_unchanged() {
+        let temporary = tempfile::tempdir().expect("temporary user root");
+        let path = PathBuf::from(".agents/skills/configure/SKILL.md");
+        let full = temporary.path().join(&path);
+        fs::create_dir_all(full.parent().expect("skill parent")).expect("skill parent");
+        let local = b"local-only setup instructions\n".to_vec();
+        fs::write(&full, &local).expect("local Skill");
+        let manifest = UserProjectionManifest {
+            schema_version: 1,
+            product_version: "0.8.0".to_owned(),
+            package_version: None,
+            setup_digest: sha256_digest(b"fixture setup\n"),
+            entries: vec![UserProjectionEntry {
+                path: portable(&path),
+                digest: sha256_digest(&local),
+            }],
+            base_entries: Vec::new(),
+        };
+        write_projection_manifest(temporary.path(), &manifest);
+        let root =
+            super::super::user_install::open_user_root_for_setup(temporary.path()).expect("root");
+        let config = valid_config();
+        let catalog = parse_and_validate_catalog().expect("catalog");
+        let skills = resolve_skills(&config, &catalog).expect("skill closure");
+
+        let Err(error) = plan_user_projection(
+            &root,
+            &config,
+            &skills,
+            &canonical_config(&config).expect("answers"),
+        ) else {
+            panic!("unknown base must stop before writes");
+        };
+
+        assert_eq!(error.status(), "conflict");
+        assert!(error.message().contains("No files were changed"));
+        assert_eq!(fs::read(full).expect("unchanged local Skill"), local);
+    }
+
+    #[test]
+    fn test_three_global_projection_has_an_authenticated_vanilla_upgrade_base() {
+        let temporary = tempfile::tempdir().expect("temporary user root");
+        let config = valid_config();
+        let catalog = parse_and_validate_catalog().expect("catalog");
+        let skills = resolve_skills(&config, &catalog).expect("skill closure");
+        let mut old_files = user_projection_files(&config, &skills).expect("old files");
+        let path = PathBuf::from(".agents/skills/configure/SKILL.md");
+        old_files.insert(path.clone(), USER_PROJECTION_090_TEST3_SETUP_HIVE.to_vec());
+        for (relative, bytes) in &old_files {
+            let full = temporary.path().join(relative);
+            fs::create_dir_all(full.parent().expect("projection parent"))
+                .expect("projection parent");
+            fs::write(full, bytes).expect("old projection bytes");
+        }
+        let answers = canonical_config(&config).expect("answers");
+        let answer_path = temporary.path().join(USER_SETUP_RELATIVE);
+        fs::create_dir_all(answer_path.parent().expect("answers parent")).expect("answers parent");
+        fs::write(answer_path, &answers).expect("saved answers");
+        let manifest = UserProjectionManifest {
+            schema_version: 1,
+            product_version: "0.9.0".to_owned(),
+            package_version: None,
+            setup_digest: sha256_digest(&answers),
+            entries: old_files
+                .iter()
+                .map(|(relative, bytes)| UserProjectionEntry {
+                    path: portable(relative),
+                    digest: sha256_digest(bytes),
+                })
+                .collect(),
+            base_entries: Vec::new(),
+        };
+        write_projection_manifest(temporary.path(), &manifest);
+        let root =
+            super::super::user_install::open_user_root_for_setup(temporary.path()).expect("root");
+
+        let planned = plan_user_projection(&root, &config, &skills, &answers)
+            .expect("test.3 vanilla upgrade preview");
+        let report = planned
+            .reports
+            .iter()
+            .find(|report| report.path == portable(&path))
+            .expect("configure report");
+
+        assert_eq!(report.disposition, MergeDisposition::IncomingReplace);
+        assert!(!report.local_priority);
+    }
+
+    #[test]
+    fn legacy_070_global_projection_has_an_authenticated_vanilla_upgrade_base() {
+        let temporary = tempfile::tempdir().expect("temporary user root");
+        let config = valid_config();
+        let (skills, answers, old_file_count) =
+            seed_legacy_070_projection(temporary.path(), &config);
+        let root =
+            super::super::user_install::open_user_root_for_setup(temporary.path()).expect("root");
+
+        let planned = plan_user_projection(&root, &config, &skills, &answers)
+            .expect("0.7.0 vanilla upgrade preview");
+        let manifest = planned
+            .changes
+            .iter()
+            .find(|change| change.path == Path::new(USER_PROJECTION_MANIFEST_RELATIVE))
+            .and_then(|change| change.after.as_deref())
+            .expect("schema-2 manifest update");
+        let upgraded: UserProjectionManifest =
+            serde_json::from_slice(manifest).expect("upgraded projection manifest");
+
+        assert_eq!(upgraded.schema_version, 2);
+        assert_eq!(upgraded.product_version, env!("CARGO_PKG_VERSION"));
+        assert!(upgraded.package_version.is_some());
+        let catalog = parse_and_validate_catalog().expect("catalog");
+        let current_skills = resolve_skills(&config, &catalog).expect("skill closure");
+        let current_files = user_projection_files(&config, &current_skills).expect("current files");
+        assert!(current_files.len() > old_file_count);
+        assert_eq!(upgraded.base_entries.len(), current_files.len());
+        assert!(planned.changes.iter().any(|change| {
+            change
+                .path
+                .to_string_lossy()
+                .ends_with("/agents/openai.yaml")
+                && change.before.is_none()
+                && change.after.is_some()
+        }));
+    }
+
+    #[test]
+    fn legacy_070_global_projection_rejects_a_local_edit_before_schema_two_upgrade() {
+        let temporary = tempfile::tempdir().expect("temporary user root");
+        let config = valid_config();
+        let (skills, answers, _) = seed_legacy_070_projection(temporary.path(), &config);
+        let path = PathBuf::from(".agents/skills/configure/SKILL.md");
+        let full = temporary.path().join(&path);
+        let mut local = fs::read(&full).expect("legacy configure");
+        local.extend_from_slice(b"\n<!-- local note -->\n");
+        fs::write(&full, &local).expect("local edit");
+        let root =
+            super::super::user_install::open_user_root_for_setup(temporary.path()).expect("root");
+
+        let Err(error) = plan_user_projection(&root, &config, &skills, &answers) else {
+            panic!("legacy local edit must stop before schema-2 upgrade");
+        };
+
+        assert_eq!(error.status(), "conflict");
+        assert!(error.message().contains("No files were changed"));
+        assert_eq!(fs::read(full).expect("local edit retained"), local);
+    }
+
+    #[test]
+    fn legacy_070_global_projection_rejects_an_unknown_inventory() {
+        let temporary = tempfile::tempdir().expect("temporary user root");
+        let config = valid_config();
+        let (skills, answers, _) = seed_legacy_070_projection(temporary.path(), &config);
+        let manifest_path = temporary.path().join(USER_PROJECTION_MANIFEST_RELATIVE);
+        let mut manifest: UserProjectionManifest =
+            serde_json::from_slice(&fs::read(&manifest_path).expect("legacy manifest"))
+                .expect("legacy manifest JSON");
+        manifest.entries.pop();
+        write_projection_manifest(temporary.path(), &manifest);
+        let root =
+            super::super::user_install::open_user_root_for_setup(temporary.path()).expect("root");
+
+        let Err(error) = plan_user_projection(&root, &config, &skills, &answers) else {
+            panic!("unknown 0.7.0 inventory must stop");
+        };
+
+        assert_eq!(error.status(), "conflict");
+        assert!(error.message().contains("No files were changed"));
+    }
+
+    #[test]
     fn embedded_user_setup_catalog_is_valid() {
         let catalog = parse_and_validate_catalog().expect("catalog");
         assert_eq!(catalog.schema_version, 1);
-        assert_eq!(catalog.mandatory_skills, ["setup-hive"]);
+        assert_eq!(catalog.mandatory_skills, ["configure"]);
         assert!(catalog.optional_third_party_skills.is_empty());
+    }
+
+    #[test]
+    fn all_skill_mode_resolves_every_implemented_builtin() {
+        let mut config = valid_config();
+        config.skills = SkillPreferences {
+            mode: SkillSelectionMode::All,
+            selected: Vec::new(),
+        };
+        let catalog = parse_and_validate_catalog().expect("catalog");
+        let expected = embedded_catalog()
+            .expect("built-in catalog")
+            .skills
+            .into_iter()
+            .filter(|entry| {
+                matches!(
+                    entry.availability,
+                    hive_projection::Availability::Implemented
+                )
+            })
+            .map(|entry| entry.name)
+            .collect::<BTreeSet<_>>();
+
+        assert_eq!(
+            resolve_skills(&config, &catalog)
+                .expect("all built-ins")
+                .into_iter()
+                .collect::<BTreeSet<_>>(),
+            expected
+        );
+    }
+
+    #[test]
+    fn legacy_recommended_selection_requires_saved_config_and_preserves_its_closure() {
+        let legacy = br"
+schema_version: 1
+interface_language: en
+wiki:
+  enabled: true
+  language: both
+profile:
+  id: web-developer
+persona:
+  id: balanced
+selected_hosts:
+  - codex
+skills:
+  mode: recommended
+  recommended_suite: web-developer
+usage_guard: {}
+";
+        let error = parse_and_validate_config(legacy).expect_err("new answer rejects suite");
+        assert!(error.message().contains("no longer accepted"));
+
+        let migrated =
+            parse_and_validate_installed_config(legacy).expect("existing setting migration");
+        assert_eq!(migrated.skills.mode, SkillSelectionMode::Individual);
+        assert!(migrated
+            .skills
+            .selected
+            .contains(&"manage-usage".to_owned()));
+        assert!(!migrated.skills.selected.contains(&"answer".to_owned()));
+        let canonical = String::from_utf8(canonical_config(&migrated).expect("new format"))
+            .expect("UTF-8 config");
+        assert!(canonical.contains("mode: individual"));
+        assert!(!canonical.contains("recommended_suite"));
+    }
+
+    #[test]
+    fn legacy_individual_skill_names_migrate_to_short_public_names() {
+        let legacy = br"
+schema_version: 1
+interface_language: en
+wiki:
+  enabled: true
+  language: both
+profile:
+  id: web-developer
+persona:
+  id: balanced
+selected_hosts:
+  - codex
+skills:
+  mode: individual
+  selected:
+    - setup-hive
+    - hive-knowledge-capture
+    - ai-slop-cleaner
+usage_guard: {}
+";
+        let config = parse_and_validate_config(legacy).expect("legacy individual selection");
+
+        assert_eq!(
+            config.skills.selected,
+            ["configure", "record-knowledge", "clean-ai-slop"]
+        );
+        let canonical = String::from_utf8(canonical_config(&config).expect("canonical config"))
+            .expect("UTF-8 canonical config");
+        assert!(canonical.contains("- clean-ai-slop"));
+        assert!(!canonical.contains("ai-slop-cleaner"));
+    }
+
+    #[test]
+    fn legacy_single_profile_migrates_to_user_contexts_without_losing_description() {
+        let migrated = parse_and_validate_config(
+            r"
+schema_version: 1
+interface_language: ko
+wiki:
+  language: both
+profile:
+  id: custom
+  custom_description: 웹과 게임을 함께 만듦
+persona:
+  id: balanced
+selected_hosts:
+  - codex
+skills:
+  mode: individual
+  selected:
+    - configure
+usage_guard: {}
+"
+            .as_bytes(),
+        )
+        .expect("legacy profile migration");
+
+        assert!(migrated.profile.contexts.is_empty());
+        assert_eq!(
+            migrated.profile.description.as_deref(),
+            Some("웹과 게임을 함께 만듦")
+        );
+        let canonical = String::from_utf8(canonical_config(&migrated).expect("canonical config"))
+            .expect("UTF-8 config");
+        assert!(canonical.contains("contexts: []"));
+        assert!(canonical.contains("description: 웹과 게임을 함께 만듦"));
+        assert!(!canonical.contains("custom_description"));
+    }
+
+    #[test]
+    fn user_profile_accepts_multiple_contexts_without_affecting_skill_resolution() {
+        let config = parse_and_validate_config(
+            r"
+schema_version: 1
+interface_language: ko
+wiki:
+  language: ko
+profile:
+  contexts:
+    - web-developer
+    - game-developer
+  description: 웹과 게임을 함께 만듦
+persona:
+  id: strict
+selected_hosts:
+  - codex
+skills:
+  mode: individual
+  selected:
+    - answer
+usage_guard: {}
+"
+            .as_bytes(),
+        )
+        .expect("multiple contexts");
+        let catalog = parse_and_validate_catalog().expect("catalog");
+
+        assert_eq!(
+            resolve_skills(&config, &catalog).expect("skill resolution"),
+            ["answer", "configure"]
+        );
     }
 
     #[test]
@@ -1671,7 +3106,7 @@ selected_hosts:
 skills:
   mode: individual
   selected:
-    - setup-hive
+    - configure
 usage_guard: {}
 ",
         )
@@ -1681,6 +3116,62 @@ usage_guard: {}
         assert!(!config.usage_guard.enabled);
         assert_eq!(config.usage_guard.stop_remaining_percent, 20);
         assert!(!config.usage_guard.codexbar_fallback_enabled);
+        assert!(!config.usage_guard.discord.enabled);
+        assert!(config.usage_guard.discord.webhook_url_env.is_none());
+        assert_eq!(
+            config.usage_guard.discord.request_privacy,
+            DiscordRequestPrivacy::Summary
+        );
+    }
+
+    #[test]
+    fn discord_usage_notification_requires_guard_and_environment_name() {
+        let mut config = valid_config();
+        config.usage_guard.enabled = true;
+        config.usage_guard.discord.enabled = true;
+        config.usage_guard.discord.webhook_url_env = Some("HIVE_DISCORD_WEBHOOK_URL".to_owned());
+        config.usage_guard.discord.request_privacy = DiscordRequestPrivacy::RawPrompt;
+        validate_config_semantics(&config).expect("enabled Discord notification");
+
+        config.usage_guard.discord.webhook_url_env = Some("discord_webhook".to_owned());
+        let error = validate_config_semantics(&config).expect_err("lowercase environment rejected");
+        assert!(error.message().contains("webhook_url_env"));
+
+        config.usage_guard.discord.webhook_url_env = Some("HIVE_DISCORD_WEBHOOK_URL".to_owned());
+        config.usage_guard.enabled = false;
+        let error = validate_config_semantics(&config).expect_err("guard dependency rejected");
+        assert!(error.message().contains("usage guard"));
+    }
+
+    #[test]
+    fn notion_wiki_is_rejected_by_the_v0_9_user_setup_schema() {
+        let error = parse_and_validate_config(
+            br"
+schema_version: 1
+interface_language: en
+wiki:
+  enabled: true
+  language: both
+  backend: notion
+  notion:
+    workspace_id: workspace-a
+    scope_id: scope-a
+    local_index_consent: true
+profile:
+  id: non-developer
+persona:
+  id: balanced
+selected_hosts:
+  - codex
+skills:
+  mode: individual
+  selected:
+    - configure
+usage_guard: {}
+",
+        )
+        .expect_err("v0.9 must not accept a Notion user setup");
+        assert!(error.message().contains("/wiki/backend"));
     }
 
     #[test]
@@ -1701,7 +3192,8 @@ selected_hosts:
 skills:
   mode: individual
   selected:
-    - hive-knowledge-capture
+    - record-knowledge
+    - manage-wiki
 usage_guard:
   enabled: true
 ",
@@ -1711,22 +3203,38 @@ usage_guard:
 
         assert_eq!(
             resolve_skills(&config, &catalog).expect("closure"),
-            ["hive-usage-guard", "setup-hive"]
+            ["configure", "manage-usage"]
         );
     }
 
     #[test]
     fn enabled_wiki_resolves_knowledge_skill_dependency_closure() {
         let mut config = valid_config();
-        config.skills.selected = vec!["hive-knowledge-capture".to_owned()];
+        config.skills.selected = vec!["record-knowledge".to_owned()];
+        let catalog = parse_and_validate_catalog().expect("catalog");
+
+        assert_eq!(
+            resolve_skills(&config, &catalog).expect("closure"),
+            ["configure", "record-knowledge", "search-knowledge",]
+        );
+    }
+
+    #[test]
+    fn enabled_wiki_skill_resolves_the_complete_reused_knowledge_stack() {
+        let mut config = valid_config();
+        config.skills.selected = vec!["manage-wiki".to_owned()];
         let catalog = parse_and_validate_catalog().expect("catalog");
 
         assert_eq!(
             resolve_skills(&config, &catalog).expect("closure"),
             [
-                "hive-knowledge-capture",
-                "hive-knowledge-query",
-                "setup-hive",
+                "configure",
+                "import-repository-knowledge",
+                "maintain-knowledge",
+                "manage-wiki",
+                "record-knowledge",
+                "search-knowledge",
+                "share-knowledge",
             ]
         );
     }
@@ -1734,12 +3242,12 @@ usage_guard:
     #[test]
     fn disabled_usage_guard_preserves_an_explicitly_selected_control_skill() {
         let mut config = valid_config();
-        config.skills.selected = vec!["hive-usage-guard".to_owned()];
+        config.skills.selected = vec!["manage-usage".to_owned()];
         let catalog = parse_and_validate_catalog().expect("catalog");
 
         assert_eq!(
             resolve_skills(&config, &catalog).expect("closure"),
-            ["hive-usage-guard", "setup-hive"]
+            ["configure", "manage-usage"]
         );
     }
 
@@ -1786,60 +3294,67 @@ usage_guard:
     }
 
     #[test]
-    fn custom_description_limit_counts_unicode_scalars() {
+    fn user_profile_description_limit_counts_unicode_scalars() {
         let accepted = CatalogSelection {
             id: "custom".to_owned(),
             custom_description: Some("한".repeat(500)),
         };
-        validate_custom_selection(&accepted, "profile").expect("500 Unicode scalars");
+        validate_custom_selection(&accepted, "persona").expect("500 Unicode scalars");
 
         let rejected = CatalogSelection {
             id: "custom".to_owned(),
             custom_description: Some("한".repeat(501)),
         };
         let error =
-            validate_custom_selection(&rejected, "profile").expect_err("501 Unicode scalars");
+            validate_custom_selection(&rejected, "persona").expect_err("501 Unicode scalars");
         assert_eq!(
             error.message(),
-            "custom profile custom_description must not exceed 500 Unicode scalar values"
+            "custom persona custom_description must not exceed 500 Unicode scalar values"
         );
     }
 
     #[test]
     fn generic_user_directive_safely_includes_custom_descriptions() {
         let mut config = valid_config();
-        config.profile = CatalogSelection {
-            id: "custom".to_owned(),
-            custom_description: Some("웹과 게임".to_owned()),
+        config.profile = UserProfile {
+            contexts: vec!["game-developer".to_owned(), "web-developer".to_owned()],
+            description: Some("웹과 게임".to_owned()),
         };
         config.persona = CatalogSelection {
             id: "custom".to_owned(),
             custom_description: Some("friendly `but strict`".to_owned()),
         };
 
-        let rendered =
-            String::from_utf8(render_user_directive(&config, &["setup-hive".to_owned()]))
-                .expect("UTF-8 guidance");
+        let rendered = String::from_utf8(render_user_directive(&config, &["configure".to_owned()]))
+            .expect("UTF-8 guidance");
 
-        assert!(rendered.contains("- User profile: `custom` — `웹과 게임`"));
+        assert!(
+            rendered.contains("- User contexts: `game-developer`, `web-developer` — `웹과 게임`")
+        );
         assert!(rendered.contains("- Agent persona: `custom` — `` friendly `but strict` ``"));
     }
 
     #[test]
     fn user_directive_uses_the_selected_interface_language() {
         let mut config = valid_config();
-        let english = String::from_utf8(render_user_directive(&config, &["setup-hive".to_owned()]))
+        let english = String::from_utf8(render_user_directive(&config, &["configure".to_owned()]))
             .expect("English guidance");
         assert!(english.contains("# Aigent Hive user preferences"));
-        assert!(english.contains("- Ask and answer in English."));
+        assert!(english.contains(
+            "Use English for every question and response unless the user explicitly requests another language for the current response"
+        ));
+        assert!(english.contains(
+            "A message written in another language does not by itself change this preference"
+        ));
         assert!(english.contains("For every passed, failed, skipped, deferred"));
         assert!(!english.contains("# Aigent Hive 사용자 설정"));
 
         config.interface_language = InterfaceLanguage::Ko;
-        let korean = String::from_utf8(render_user_directive(&config, &["setup-hive".to_owned()]))
+        let korean = String::from_utf8(render_user_directive(&config, &["configure".to_owned()]))
             .expect("Korean guidance");
         assert!(korean.contains("# Aigent Hive 사용자 설정"));
-        assert!(korean.contains("- 질문과 응답은 한국어 사용."));
+        assert!(korean.contains("명시적 요청이 없는 한 모든 질문과 응답에 한국어 사용"));
+        assert!(korean.contains("다른 언어로 작성된 메시지만으로 이 선호를 변경하지 않음"));
         assert!(korean.contains("통과·실패·건너뜀·연기·미검증·미지원"));
         assert!(!korean.contains("# Aigent Hive user preferences"));
     }
@@ -1850,9 +3365,8 @@ usage_guard:
         assert!(!config.update_check.enabled);
         config.update_check.enabled = true;
 
-        let rendered =
-            String::from_utf8(render_user_directive(&config, &["setup-hive".to_owned()]))
-                .expect("English guidance");
+        let rendered = String::from_utf8(render_user_directive(&config, &["configure".to_owned()]))
+            .expect("English guidance");
 
         assert!(rendered.contains("- Daily update check: `enabled`"));
         assert!(rendered.contains("hive update --check --user-root <user-root> --output json"));
@@ -1864,7 +3378,7 @@ usage_guard:
         let mut config = valid_config();
         let enabled = String::from_utf8(render_user_directive(
             &config,
-            &["hive-knowledge-capture".to_owned()],
+            &["record-knowledge".to_owned()],
         ))
         .expect("enabled guidance");
         assert!(enabled.contains("agent-reviewed task-fact autocapture"));
@@ -1874,7 +3388,7 @@ usage_guard:
         config.wiki.enabled = false;
         let disabled = String::from_utf8(render_user_directive(
             &config,
-            &["hive-knowledge-capture".to_owned()],
+            &["record-knowledge".to_owned()],
         ))
         .expect("disabled guidance");
         assert!(!disabled.contains("agent-reviewed task-fact autocapture"));
@@ -1940,6 +3454,7 @@ usage_guard:
                 after: Some(desired_projection.to_vec()),
             }],
             changed_paths: Vec::new(),
+            reports: Vec::new(),
         };
         let failures = [
             SetupError::Verification("injected operational config load failure".to_owned()),
@@ -1993,6 +3508,7 @@ usage_guard:
                 after: Some(b"desired projection\n".to_vec()),
             }],
             changed_paths: Vec::new(),
+            reports: Vec::new(),
         };
 
         let error = finish_applied_setup(

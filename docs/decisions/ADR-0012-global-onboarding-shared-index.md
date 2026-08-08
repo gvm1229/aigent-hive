@@ -21,14 +21,29 @@
 Global setup answer:
 
 - Interface language: `en|ko`
-- LLM Wiki language: `en|ko|both`
-- User profile: signed release catalog의 web developer, game developer,
-  non-developer와 `custom`
+- Wiki language: `en|ko|both`
+- User profile: 사용자 이해용 전역 기본 맥락. signed release catalog의 복수 context와 optional
+  사용자 설명 동시 선택·보존. workflow·작업 우선순위·project별 구현 방식 결정 금지
 - Agent persona: signed release catalog의 strict, balanced, friendly와 `custom`
 - Active host: `codex|claude|antigravity` 복수 선택
-- Skill selection: recommended suite 또는 개별 선택
-- LLM Wiki: 기본 `enabled`, 명시적 opt-out
+- Skill selection: 모든 built-in Skill 기본 활성화. 변경은 Skill별 on/off; profile·recommended suite
+  결합 없음. existing recommended closure 변경은 preview·명시 approval 이후
+  - typed user config: `all|individual`; legacy `recommended`는 저장된 config validate·preview
+    migration 전용
+  - project setup recommendation: global catalog와 분리된 project-only catalog
+- Wiki: 기본 `enabled`, 명시적 opt-out
 - Usage guard: 명시적 opt-in, enabled 상태의 기본 remaining threshold `20%`
+
+### Setup scope routing
+
+- Global·user-scope preference, language, host, Skill, Wiki, persona, usage guard 요청: `setup-hive`
+- Project·repository·folder·path의 local harness 요청: `setup-harness`
+- Bare Hive setup·reconfigure 요청: global user-scope 우선, ambient working directory inspection 없음
+- Global·project 동시 요청: global setup 완료 뒤 project setup의 별도 사용자 확인
+- Numbered test release의 user projection update: exact authenticated predecessor inventory만 허용
+- `0.9.0-test.3` Codex host inventory: frozen `setup-hive` digest와 current selected projection의
+  exact inventory 조합만 predecessor 인증
+- Unknown·변조 predecessor manifest: preview·apply 차단과 foreign byte 보존
 
 ### User projection
 
@@ -40,10 +55,59 @@ Global setup answer:
 - Foreign byte와 third-party marker 보존
 - Setup bootstrap·reconfigure Skill: 항상 설치
 - 선택 Skill dependency closure: preview와 사용자 승인 필수
+- Authenticated historical base와 live local·incoming digest 비교
+- Schema-1 `0.7.0`: saved preference digest·지원 legacy path inventory·모든 recorded live digest
+  일치 시에만 base 인증. later `agents/openai.yaml` metadata는 신규 파일로 추가하고 schema 2 full base 기록
+- `local == base`: incoming exact replacement
+- Disjoint local·incoming text 변경: 양쪽 hunk 결합
+- Overlap: local hunk 보존·omitted incoming hunk preview
+- Schema-2 전 legacy local edit: fabricated base·자동 merge 없이 conflict와 active byte 보존
+- Missing·unauthenticated base: active bytes 불변·conflict
+
+### Public Skill identity amendment (`0.9.0`)
+
+- Host-facing invocation: `aigent-hive:<short-name>`
+- Consumer built-in Skill: short action-oriented IDs만 신규 projection·catalog·preview에 출력
+- Legacy `hive-*`, `setup-hive`, `setup-harness`, `ai-slop-cleaner`,
+  `best-practice-research`: saved selection migration 입력 전용
+- Migration result: `configure`, `setup-project`, `record-knowledge`,
+  `import-repository-knowledge`, `clean-ai-slop`, `research-practices` 등 current public ID
+- Rename ledger: retired ID → current ID canonical mapping. saved selection migration, dependency
+  closure, collision reservation에 공통 사용. 삭제 권한 없음
+- Retired projection cleanup: frozen release inventory 또는 installed ownership manifest의 release byte
+  ·ownership proof 일치 때만 삭제. 변조·unknown·foreign path는 write 0건 conflict. Future rename: ledger와
+  authenticated historical-base cleanup regression 동시 추가
+- `en|ko` global interface language: Hive-owned user projection의 display name, short description,
+  `SKILL.md` frontmatter description에 적용
+- Workflow body: provider-neutral English contract 유지
+- Historical release inventory: frozen byte·old ID 보존, current rename 대상 제외
+
+### Global setup UX
+
+- Initial setup: interface language 질문 우선
+- Reconfigure: 부분 preference 변경 또는 전체 setup 재검토 선택 우선
+- Refresh 필요 상태: authenticated Hive-only install과 saved-answer user projection은 preview 뒤
+  자동 apply·revalidate. 별도 review-only yes/no 질문 없음
+- Internal path·digest·projection 용어: 기본 안내 제외, 요청 시 diagnostic 제공
+- 한국어 대화: `Skill`, `Wiki`, host·product name, command, path, schema key, Skill ID는 exact
+  term 유지. 일반 설명만 한국어화하며 `Skill → 기술` 같은 일반명사 직역 금지
+- 한국어 setup 질문: canonical `setup-hive`의 exact sample·용어표와 source-to-projection
+  regression으로 관리
+
+### Source developer binary
+
+- `scripts/dev-install.sh --sandbox`: source-local `product-dev` binary만 build
+- `--global`: active `hive` executable만 backup 뒤 atomic replacement; canonical user data 무변경
+- `--rollback`: developer binary digest가 아직 active target과 일치할 때만 saved executable 복구
+- `product-dev` version output은 local developer build로 표기하며 npm public `product-test[.N]`
+  release identity 미사용
+- Local `product-dev` binary: internally reproducible prior manifest와 live managed byte 일치 시
+  developer-only three-way base 허용. Public stable·test binary는 signed historical base 부재 시
+  계속 fail-closed
 
 ### Wiki lifecycle
 
-- Global LLM Wiki 기본 활성화
+- Global Wiki 기본 활성화
 - Setup 중 opt-out, 이후 setup rerun 또는 명백한 agent request로 disable·enable
 - Disable: capture·query·automatic retrieval·index refresh 중지
 - Existing canonical Markdown: 기본 보존
@@ -74,6 +138,7 @@ Global setup answer:
 공통 계약:
 
 - Project kind 질문 생략 금지
+- 현재 project의 workflow·기술 선택·delivery constraint·작업 우선순위: project scope 전용
 - Project별 `AGENTS.md`, `.agents/`, canonical `.hive/knowledge/`
 - Global Wiki disable 상태의 project Wiki: disable 상속
 - Custom project Wiki opt-in: global Wiki enable 또는 동일 action의 global re-enable 필요

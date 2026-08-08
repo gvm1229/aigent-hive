@@ -6,27 +6,54 @@ capability_resolution:
   host: codex
   host_version: fixture
   surface: cli
-  detection: absent
-  external_runtime: null
+  detection: available
+  external_runtime: omx
   resolved_owner: host-native
   capabilities:
     instructions: supported
-    simple-question-isolation: best-effort
-    subagents: best-effort
-    persistent-role-binding: best-effort
-    continuous-loop: unsupported
-    usage-sensor: unsupported
-    independent-judge: best-effort
-  evidence_digest: sha256:ff554b1b02ac93d7112f69022268466caed8d75229fc7bd0f672071f98c8376a
+    simple-question-isolation: supported
+    subagents: supported
+    persistent-role-binding: supported
+    continuous-loop: supported
+    usage-sensor: unverified
+    independent-judge: supported
+  hook_events:
+    UserPromptSubmit:
+      support: unsupported
+      evidence:
+        - source: qualification-fixture
+          locator: fixture:codex-user-prompt-submit
+          digest: sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1
+    PreToolUse:
+      support: supported
+      evidence:
+        - source: qualification-fixture
+          locator: fixture:codex-pre-tool-use
+          digest: sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1
+    PostToolUse:
+      support: supported
+      evidence:
+        - source: qualification-fixture
+          locator: fixture:codex-post-tool-use
+          digest: sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1
+    PreCompact:
+      support: supported
+      evidence:
+        - source: qualification-fixture
+          locator: fixture:codex-pre-compact
+          digest: sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1
+    Stop:
+      support: supported
+      evidence:
+        - source: qualification-fixture
+          locator: fixture:codex-stop
+          digest: sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1
+  evidence_digest: sha256:8b260a7698068a4ec113bb1f60dfc84147647f8b2bae6a5de1fd852a79eea833
   evidence:
     - source: host-catalog
-      locator: fixture:empty-catalog
-      outcome: absent
-      digest: sha256:c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1
-    - source: public-executable
-      locator: fixture:omx-not-found
-      outcome: absent
-      digest: sha256:c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2
+      locator: fixture:codex-catalog
+      outcome: compatible
+      digest: sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1
 usage_stop_remaining_percent: 20
 elevated_judge_quorum: "2/3"
 critical_judge_quorum: "3/3+human"

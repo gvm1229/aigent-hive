@@ -5,17 +5,23 @@ topic_slug: orchestration-ownership
 language: ko
 counterpart: ../en/orchestration-ownership.md
 title: "Orchestration ownership"
-summary: "Compatible OMX·OMC 우선, 그 외 host-native owner."
+summary: "Hive의 provider-neutral 반복 제어 소유, host의 model·subagent 실행 소유."
 tags: [orchestration, ownership]
 aliases: ["Orchestration owner"]
 sources:
-  - "repo:docs/decisions/ADR-0004-orchestration-ownership.md#sha256:0888b22473297bf6161141b508e7e276d5c8cc3bf5ffe9c43269b16c3fec347e"
-links: [product-non-goals, skill-routing]
-reviewed_revision: "git:722c8e46dbde5710155b394ef33820ebccd3b85c"
+  - "repo:docs/decisions/ADR-0004-orchestration-ownership.md#sha256:0400842448b5e73cedabe1d2eb941abf343a0e1564b2e161c8e54d6677af017e"
+  - "repo:docs/decisions/ADR-0015-host-native-skill-composition.md#sha256:003a95d576041a8dfd3035b448a970919a2cb547c65a14035e8c789025113fa1"
+  - "repo:docs/decisions/ADR-0019-hive-native-iterative-execution.md#sha256:8dcf64600bf77f630d6f601027ee02a5adf1255a49c4c852ff6006a46f203817"
+links: [judge-verification, model-routed-custom-subagents, product-non-goals, skill-routing, v0-9-skill-suite-plan]
+reviewed_revision: "git:ffdfb476d4e21dafe5d4dc896fa272f7244d0fe1"
 status: active
 ---
 
 # Orchestration ownership
 
-Owner 우선순위: Codex의 compatible OMX, Claude의 compatible OMC, 그 외 active
-host의 truthful native capability. Pinned run owner의 silent switch 금지.
+ADR-0019의 Hive 소유 범위: deterministic event, logical scheduler, lease, receipt,
+cancel, team coordination, multi-goal state. Host 소유 범위: model·subagent 실행.
+신규 workflow의 OMX·OMC dependency 없음. 기존 external-owner run: read-only
+provenance. 명시적 migration: in-place owner switch 대신 새 Hive-native run identity.
+Strict iterative·team·multi-goal terminal gate는 호출 mode와 무관하게 authenticated Judge 필수.
+Tick·retry별 Judge 호출 금지.

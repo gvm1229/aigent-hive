@@ -2,6 +2,7 @@
 
 - 상태: accepted
 - 날짜: 2026-07-23
+- 부분 대체: Consumer Notion mode의 정본·rebuild는 [`ADR-0018`](ADR-0018-notion-wiki-backend.md)
 
 ## 결정
 

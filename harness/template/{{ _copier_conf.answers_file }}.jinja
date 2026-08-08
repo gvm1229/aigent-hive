@@ -22,4 +22,4 @@ user_store_binding: {{ user_store_binding | to_json }}
 approved_optional_skills:
 {{ approved_optional_skills | to_nice_yaml | indent(2, true) -}}
 approved_fallback_hooks:
-{{ (approved_fallback_hooks if capability_resolution.detection == 'absent' else []) | to_nice_yaml(width=145) | indent(2, true) -}}
+{{ (approved_fallback_hooks if capability_resolution.detection == 'available' and capability_resolution.resolved_owner == 'host-native' else []) | to_nice_yaml(width=145) | indent(2, true) -}}

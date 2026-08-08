@@ -9,9 +9,9 @@ summary: "Role identity and handoff remain canonical Markdown across host sessio
 tags: [role, state]
 aliases: ["Role lifecycle"]
 sources:
-  - "repo:docs/architecture/role-lifecycle.md#sha256:da313136e7bc53c8cc85040cb4c8c028461154cb076c7a5a4f3741560d35be55"
+  - "repo:docs/architecture/role-lifecycle.md#sha256:a1bf8a20f8836822634c315f5cfed276232a99efb5346bae7fb3f15f593ab535"
 links: [run-recovery, skill-routing]
-reviewed_revision: "git:722c8e46dbde5710155b394ef33820ebccd3b85c"
+reviewed_revision: "git:a86bb5bc4aa01c9823fa670e83cb538b9f031cbf"
 status: active
 ---
 

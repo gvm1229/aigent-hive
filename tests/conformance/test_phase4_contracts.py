@@ -51,9 +51,9 @@ OWNER_KEYS = (
     "subagent_support",
 )
 DATA_SKILLS = {
-    "hive-role-handoff",
-    "hive-run-checkpoint",
-    "hive-run-resume",
+    "handoff-role",
+    "save-progress",
+    "resume-work",
 }
 RAW_USAGE_ACCOUNT = "usage-guard@example.invalid"
 USAGE_ACCOUNT_DIGEST = (
@@ -1086,7 +1086,7 @@ class Phase4Contracts(unittest.TestCase):
                     request["resolved_owner"] = "host-native"
                 else:
                     selected = json.loads(capability.read_text(encoding="utf-8"))
-                    selected["resolved_owner"] = "host-native"
+                    selected["resolved_owner"] = "omc"
                     selected["evidence_digest"] = canonical_digest(selected)
                     capability = self.write_json("selected-owner-capability.json", selected)
                 before = snapshot_tree(target)
@@ -2534,7 +2534,6 @@ class Phase4Contracts(unittest.TestCase):
                                     "hive plan ",
                                     "hive team ",
                                     "hive ralph ",
-                                    "hive loop ",
                                 )
                             ),
                             line,

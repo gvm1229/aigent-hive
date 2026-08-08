@@ -204,7 +204,7 @@
             "properties": {
               "host": { "const": "codex" },
               "external_runtime": { "const": "omx" },
-              "resolved_owner": { "const": "omx" }
+              "resolved_owner": { "enum": ["host-native", "omx"] }
             },
             "required": ["host", "external_runtime", "resolved_owner"]
           },
@@ -212,7 +212,7 @@
             "properties": {
               "host": { "const": "claude" },
               "external_runtime": { "const": "omc" },
-              "resolved_owner": { "const": "omc" }
+              "resolved_owner": { "enum": ["host-native", "omc"] }
             },
             "required": ["host", "external_runtime", "resolved_owner"]
           }

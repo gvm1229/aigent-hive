@@ -2,32 +2,25 @@ schema_version: 1
 profiles:
   - id: web-developer
     display_name:
-      en: Web developer
-      ko: 웹 개발자
+      en: Web development
+      ko: 웹 개발
     description:
-      en: Web application development, testing, review, and project maintenance
-      ko: 웹 애플리케이션 개발·테스트·리뷰·프로젝트 유지보수
+      en: Background or interest in web applications; it does not select a project workflow
+      ko: 웹 애플리케이션 관련 배경 또는 관심사이며 프로젝트 작업 흐름을 정하지 않음
   - id: game-developer
     display_name:
-      en: Game developer
-      ko: 게임 개발자
+      en: Game development
+      ko: 게임 개발
     description:
-      en: Game systems, content pipelines, testing, and project maintenance
-      ko: 게임 시스템·콘텐츠 파이프라인·테스트·프로젝트 유지보수
+      en: Background or interest in games; it does not select a project workflow
+      ko: 게임 관련 배경 또는 관심사이며 프로젝트 작업 흐름을 정하지 않음
   - id: non-developer
     display_name:
-      en: Non-developer
-      ko: 비개발자
+      en: General knowledge work
+      ko: 일반 지식 작업
     description:
-      en: General questions, writing, knowledge work, and guided project setup
-      ko: 일반 질문·글쓰기·지식 작업·안내형 프로젝트 설정
-  - id: custom
-    display_name:
-      en: Custom profile
-      ko: 사용자 정의 프로필
-    description:
-      en: User-supplied profile description without inferred domain rules
-      ko: 도메인 규칙 추론 없는 사용자 제공 프로필 설명
+      en: Background or interest outside software development; it does not select a project workflow
+      ko: 소프트웨어 개발 외 배경 또는 관심사이며 프로젝트 작업 흐름을 정하지 않음
 
 personas:
   - id: strict
@@ -59,114 +52,72 @@ personas:
       en: User-supplied interaction style without inferred behavior
       ko: 행동 추론 없는 사용자 제공 상호작용 방식
 
-recommended_skill_suites:
-  - id: web-developer
-    display_name:
-      en: Web developer suite
-      ko: 웹 개발자 모음
-    description:
-      en: Project setup, prompt refinement, knowledge, checkpoints, usage guard, and updates
-      ko: 프로젝트 설정·프롬프트 정리·지식·체크포인트·사용량 보호·업데이트
-    skills:
-      - setup-hive
-      - setup-harness
-      - auto-setup-harness
-      - hive-prompt-refine
-      - hive-knowledge-capture
-      - hive-knowledge-query
-      - hive-knowledge-maintenance
-      - hive-run-checkpoint
-      - hive-run-resume
-      - hive-usage-guard
-      - hive-update
-      - hive-project-upgrade
-  - id: game-developer
-    display_name:
-      en: Game developer suite
-      ko: 게임 개발자 모음
-    description:
-      en: Project setup, knowledge, roles, checkpoints, verification packaging, and updates
-      ko: 프로젝트 설정·지식·역할·체크포인트·검증 패키지·업데이트
-    skills:
-      - setup-hive
-      - setup-harness
-      - auto-setup-harness
-      - hive-prompt-refine
-      - hive-knowledge-capture
-      - hive-knowledge-query
-      - hive-knowledge-maintenance
-      - hive-run-checkpoint
-      - hive-run-resume
-      - hive-role-handoff
-      - hive-judge-package
-      - hive-usage-guard
-      - hive-update
-      - hive-project-upgrade
-  - id: non-developer
-    display_name:
-      en: Non-developer suite
-      ko: 비개발자 모음
-    description:
-      en: Simple questions, guided setup, prompt refinement, knowledge, usage guard, and updates
-      ko: 간단한 질문·안내형 설정·프롬프트 정리·지식·사용량 보호·업데이트
-    skills:
-      - setup-hive
-      - setup-harness
-      - auto-setup-harness
-      - hive-simple-question
-      - hive-prompt-refine
-      - hive-knowledge-capture
-      - hive-knowledge-query
-      - hive-knowledge-maintenance
-      - hive-usage-guard
-      - hive-update
-
 mandatory_skills:
-  - setup-hive
+  - configure
 
 skill_dependencies:
-  - skill: setup-hive
+  - skill: configure
     requires: []
-  - skill: setup-harness
+  - skill: setup-project
     requires: []
-  - skill: auto-setup-harness
+  - skill: auto-setup-project
     requires:
-      - setup-harness
-  - skill: hive-simple-question
+      - setup-project
+  - skill: answer
     requires: []
-  - skill: hive-prompt-refine
+  - skill: refine-prompt
     requires: []
-  - skill: hive-knowledge-capture
+  - skill: record-knowledge
     requires:
-      - hive-knowledge-query
-  - skill: hive-knowledge-query
+      - search-knowledge
+  - skill: search-knowledge
     requires: []
-  - skill: hive-knowledge-promote
+  - skill: share-knowledge
     requires:
-      - hive-knowledge-query
-      - hive-knowledge-capture
-  - skill: hive-knowledge-maintenance
+      - search-knowledge
+      - record-knowledge
+  - skill: maintain-knowledge
     requires:
-      - hive-knowledge-query
-  - skill: hive-run-checkpoint
+      - search-knowledge
+  - skill: save-progress
     requires: []
-  - skill: hive-run-resume
+  - skill: resume-work
     requires:
-      - hive-run-checkpoint
-  - skill: hive-usage-guard
+      - save-progress
+  - skill: manage-usage
     requires: []
-  - skill: hive-role-handoff
+  - skill: handoff-role
     requires: []
-  - skill: hive-judge-package
+  - skill: verify-package
     requires: []
-  - skill: hive-update
+  - skill: update-hive
     requires: []
-  - skill: hive-project-upgrade
+  - skill: upgrade-project
     requires:
-      - hive-update
-  - skill: hive-migrate
+      - update-hive
+  - skill: migrate-project
     requires:
-      - hive-update
+      - update-hive
+  - skill: engineer-run
+    requires:
+      - verify-package
+      - handoff-role
+      - save-progress
+      - resume-work
+      - manage-usage
+  - skill: manage-wiki
+    requires:
+      - record-knowledge
+      - maintain-knowledge
+      - search-knowledge
+      - import-repository-knowledge
+  - skill: clean-ai-slop
+    requires: []
+  - skill: research-practices
+    requires: []
+  - skill: import-repository-knowledge
+    requires:
+      - share-knowledge
 
 # Reserved for a future signed consent contract. This release supports built-in Skills only.
 optional_third_party_skills: []

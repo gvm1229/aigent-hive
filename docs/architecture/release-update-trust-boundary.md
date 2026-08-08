@@ -223,7 +223,7 @@ Malformed, future-dated, exact 7일 경계, active, symlinked 또는 foreign-ent
 
 `.github/workflows/release.yml` candidate 계약:
 
-- Protected `develop` exact commit, product version과 npm package version 결합
+- Remote `develop` exact commit, product version과 npm package version 결합
 - macOS arm64·x86_64, Linux musl arm64·x86_64, Windows MSVC x86_64 build
 - Native archive와 exact `@aigent-hive/*` npm platform tarball 생성
 - Artifact SHA-256, GitHub artifact attestation, native/npm binary byte identity
@@ -233,7 +233,7 @@ Malformed, future-dated, exact 7일 경계, active, symlinked 또는 foreign-ent
 `.github/workflows/release-publish.yml`의 `0.8.0` product candidate 계약:
 
 - 별도 `release-publication` approval
-- 성공한 protected `develop` candidate run과 exact commit 고정
+- 성공한 exact `develop` candidate run과 commit 고정
 - 5개 native archive·6개 npm tarball의 checksum·attestation·manifest·byte identity 검증
 - Umbrella 안의 exact product·package `0.8.0`
   `install.sh`·`install.ps1`·`install.cmd` 검증
