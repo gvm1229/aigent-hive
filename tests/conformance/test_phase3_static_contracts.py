@@ -226,6 +226,33 @@ class Phase3SkillSourceContract(unittest.TestCase):
             with self.subTest(required=required):
                 self.assertIn(required, skill)
 
+    def test_partial_global_reconfiguration_lists_every_setting_and_discord_children(self) -> None:
+        skill = (SKILL_ROOT / "configure/SKILL.md").read_text(encoding="utf-8")
+
+        for required in (
+            "partial-reconfiguration catalog",
+            "not an examples-only prompt",
+            "**Interface language**",
+            "**Daily update check**",
+            "**Wiki**",
+            "**User context**",
+            "**Agent persona**",
+            "**Active hosts**",
+            "**Built-in Skills**",
+            "**Usage guard**",
+            "Discord usage notification",
+            "Discord webhook environment variable",
+            "Discord request privacy",
+            "Do not ask\n  the user to rediscover a hidden Discord option",
+            "아래는 변경할 수 있는 모든 설정입니다",
+            "Discord 사용량 알림",
+            "Discord webhook 환경 변수",
+            "Discord 요청 공개 범위",
+            "single examples-only sentence",
+        ):
+            with self.subTest(required=required):
+                self.assertIn(required, skill)
+
     def test_global_skill_selection_defaults_to_all_without_profile_suites(self) -> None:
         setup_catalog = read_yaml(
             REPOSITORY_ROOT / "harness/user-setup/catalog.yml"

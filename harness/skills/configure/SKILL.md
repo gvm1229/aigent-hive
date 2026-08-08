@@ -49,8 +49,10 @@ Configure user-scope Hive preferences without modifying a project harness or pro
    - Start with this one question only: `Welcome to Aigent Hive. Would you like to continue in English or Korean?`
 4. For a valid reconfiguration without pending progress, start with this one question in the saved interface language:
    `Your Hive settings are ready. Would you like to change one setting or review everything from the beginning?`
-   - `Change one setting`: show the current answer for each requested setting, preserve every
-     other answer, and ask one question at a time.
+   - `Change one setting`: first show the full partial-reconfiguration catalog below in the saved
+     interface language. This required list is not an examples-only prompt: do not say `for
+     example`, use an ellipsis, or omit conditional children. Then show the current answer for
+     each requested setting, preserve every other answer, and ask one question at a time.
    - `Review everything`: ask the interface-language question first, using the saved language as
      the default, then ask every remaining setup question one at a time with saved answers as
      defaults.
@@ -160,6 +162,37 @@ consent and setup mode. Ask the remaining preference questions only for `Custom`
 - Without pending progress, start with `change one setting` or `review everything from the beginning`.
   With pending progress, offer `review everything`, `review selected settings`, or `continue from
   where I left off`; do not infer the choice.
+- `Change one setting` and `Review selected settings` must both begin with the full
+  partial-reconfiguration catalog. Translate descriptions into the saved interface language,
+  preserve product terms such as `Aigent Hive`, `Skill`, `Wiki`, `Discord`, and `CodexBar`, and
+  show every parent and child as a separate Markdown list entry.
+  1. **Interface language** — language for future Hive questions and summaries.
+     - Values: `English` or `한국어`.
+  2. **Daily update check** — checks for an update at most once every 24 hours and never installs it.
+     - Value: enabled or disabled.
+  3. **Wiki** — local Markdown knowledge Wiki and its writing language.
+     - Enablement: enabled or disabled; disabling preserves existing Markdown.
+     - Language: `en`, `ko`, or `both`.
+  4. **User context** — background for Hive; it never selects a project workflow or priority.
+     - Contexts: any combination of `web-developer`, `game-developer`, and `non-developer`.
+     - Description: optional one-line background, interest, or preference.
+  5. **Agent persona** — default communication style for Hive-assisted work.
+     - Values: `strict`, `balanced`, `friendly`, or `custom`.
+     - Custom description: required only when persona is `custom`.
+  6. **Active hosts** — subscription hosts that receive user-scope setup.
+     - Hosts: one or more of `codex`, `claude`, and `antigravity`.
+  7. **Built-in Skills** — active built-in Hive Skills.
+     - Selection mode: all built-in Skills or individually selected built-in Skills.
+     - Individual selection: one enabled/disabled decision per Skill; mandatory `configure` remains active.
+  8. **Usage guard** — stops new Hive work at a chosen remaining-usage limit.
+     - Enablement: enabled or disabled.
+     - Stop threshold: integer from `1` through `99` percent remaining.
+     - CodexBar fallback: enabled or disabled; available only when the native sensor is unavailable, unsupported, or malformed.
+     - Discord usage notification: enabled or disabled; available only when the usage guard is enabled and sends outbound-only notices.
+     - Discord webhook environment variable: uppercase variable name such as `HIVE_DISCORD_WEBHOOK_URL`; Hive records the name, never the URL.
+     - Discord request privacy: default `summary` or explicit `raw-prompt` opt-in after preview and redaction.
+- After this catalog, ask for exactly one numbered parent setting or named child setting. Do not ask
+  the user to rediscover a hidden Discord option through the usage-guard question.
 - During a full review, language remains the first question and all saved answers remain defaults.
 - Preserve canonical Wiki Markdown when Wiki is disabled.
 - Treat Wiki deletion, host uninstall, Skill data deletion, and provider configuration changes as separate destructive actions outside this Skill.
@@ -188,6 +221,39 @@ Use these host-independent question patterns, one question at a time:
    - `예, 시험 알림도 보내기`
 7. `Discord webhook URL을 환경 변수에 저장해 주세요. 예: HIVE_DISCORD_WEBHOOK_URL. URL 자체는
    보내지 말고 환경 변수 이름만 알려 주세요. Hive가 시험 알림을 보내 연결을 확인합니다.`
+
+For Korean partial reconfiguration, show this complete catalog before asking which setting to change:
+
+`변경할 전역 설정을 하나 선택해 주세요. 아래는 변경할 수 있는 모든 설정입니다.`
+
+1. **인터페이스 언어** — 이후 Hive 질문과 요약에 사용할 언어
+   - 선택: `English` 또는 `한국어`
+2. **일일 업데이트 확인** — 24시간에 한 번 업데이트 존재 여부만 확인하며 자동 설치 없음
+   - 선택: 켜기 또는 끄기
+3. **Wiki** — 이 컴퓨터의 Markdown 지식 Wiki와 작성 언어
+   - 사용 여부: 켜기 또는 끄기. 끄더라도 기존 Markdown 보존
+   - 작성 언어: `en`, `ko`, 또는 `both`
+4. **사용자 기본 맥락** — Hive가 사용자의 배경과 관심사를 이해하기 위한 정보. 프로젝트 작업 흐름·우선순위 결정 없음
+   - 맥락: `web-developer`, `game-developer`, `non-developer` 중 복수 선택 가능
+   - 추가 설명: 선택 사항인 한 줄 배경·관심사·선호
+5. **에이전트 페르소나** — Hive 지원 작업의 기본 대화 방식
+   - 선택: `strict`, `balanced`, `friendly`, 또는 `custom`
+   - 사용자 지정 설명: `custom` 선택 때만 필수
+6. **사용할 호스트** — 전역 Hive 설정을 적용할 subscription host
+   - 호스트: `codex`, `claude`, `antigravity` 중 하나 이상
+7. **내장 Skill** — 활성화할 내장 Hive Skill
+   - 선택 방식: 모든 내장 Skill 사용 또는 개별 내장 Skill 선택
+   - 개별 선택: 각 Skill의 켜기·끄기. 필수 `configure`는 계속 활성화
+8. **사용량 보호** — 남은 사용량이 정한 기준에 도달할 때 새 Hive 작업 중지
+   - 사용 여부: 켜기 또는 끄기
+   - 중단 기준: 남은 사용량 `1`%부터 `99`%까지
+   - CodexBar 대체 수단: 켜기 또는 끄기. 호스트 기본 감지기를 쓸 수 없을 때만 사용
+   - Discord 사용량 알림: 켜기 또는 끄기. 사용량 보호를 켠 경우에만 선택 가능하며 Hive에서 Discord로 보내는 알림만 지원
+   - Discord webhook 환경 변수: `HIVE_DISCORD_WEBHOOK_URL` 같은 대문자 환경 변수 이름. Hive는 URL 자체를 저장하지 않음
+   - Discord 요청 공개 범위: 기본 `summary` 또는 preview·redaction 뒤 명시적으로 선택한 `raw-prompt`
+
+Then ask for one numbered parent setting or named child setting. Do not replace this catalog with a
+single examples-only sentence.
 
 Do not describe a global user context as a role that prioritizes web, game, non-development, or
 any other project workflow. Project setup alone determines project-specific workflow, technical
