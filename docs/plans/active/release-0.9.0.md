@@ -21,6 +21,12 @@
 ## 현재 기준선
 
 - Product: `0.9.0`; notes: [`0.9.0.md`](../../releases/0.9.0.md)
+- 최신 공개 시험판: `0.9.0-test.5`; npm `test=0.9.0-test.5`, `latest=0.8.0`
+- `0.9.0-test.6` 후보: [run `31254605322`](https://github.com/gvm1229/aigent-hive/actions/runs/31254605322),
+  exact `9e08a48f7429d9dfaf8f9585aeb83c778536c253`, 5개 native target·npm 묶음·attestation PASS
+- `0.9.0-test.6` 게시: Trusted Publishing [run `31255061771`](https://github.com/gvm1229/aigent-hive/actions/runs/31255061771)와
+  bootstrap fallback [run `31255167232`](https://github.com/gvm1229/aigent-hive/actions/runs/31255167232)가 모두 첫 scoped package의 npm `404`로 중단.
+  각 run은 첫 게시 전 실패했으므로 `0.9.0-test.6` npm version·tag·GitHub prerelease 생성은 0건
 - Candidate `30771098518`, `6761f0b`: 5 targets·npm umbrella·fresh clone PASS
 - `0.9.0-test`: six npm package·annotated tag·prerelease 22 assets; `latest=0.8.0` 유지
 - [PR #18](https://github.com/gvm1229/aigent-hive/pull/18) CI 복구: Clippy → Skill 경로 → Copier fixture → 로컬 검증 → `develop` push·재검사
