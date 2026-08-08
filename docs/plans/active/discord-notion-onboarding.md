@@ -82,7 +82,7 @@
 
 - [ ] [DNI-005] `setup-hive` custom에 Markdown·Notion, 연결·scope·SQLite 동의 질문 추가.
   expedited 기본 Markdown 유지, Notion OAuth 안내·receipt 확인 전 다음 질문 진행 0건
-- [ ] [DNI-006] Notion 시험 read·create/update capability preview와 사용자 승인 후 제한된 시험,
+- [ ] [DNI-006] Notion 시험 read·create/update capability preview와 Notion 선택 동의에 포함한 제한 시험,
   실패 시 설정 미활성·비밀 없는 진행 기록·같은 단계 재개 진단 구현
 - [ ] [DNI-007] Usage guard opt-in 뒤 Discord 설정 선택, webhook 생성 안내, 환경변수 이름 검증,
   secret 비저장·단일 시험 알림 구현. 활성화 동의에 시험 알림 포함

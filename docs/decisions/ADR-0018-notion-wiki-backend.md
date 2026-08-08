@@ -30,7 +30,7 @@
 - Notion 선택 시 official host plugin/app → hosted MCP → consented REST 연결 탐지
 - Official host surface의 browser OAuth handoff와 완료 후 workspace·scope capability receipt 재검증
 - Hive 자체 OAuth callback server·token 저장·host-global config mutation 0건
-- 연결·scope·SQLite disclosure·시험 read/write의 한 질문씩 대화형 setup
+- 연결·scope·SQLite disclosure 질문, Notion 선택 동의에 포함한 제한 시험
 - 연결 시험 실패 또는 설정 종료: 적용 전 답변·현재 질문·안전한 오류 요약만 Hive 관리 진행 기록에
   보존. OAuth token·webhook URL·원문 prompt·절대 경로 보존 0건
 - 미완료 기록 재실행: `처음부터 전체 검토`, `선택 항목 검토`, `중단한 단계부터 계속` 제공. 계속 선택 시

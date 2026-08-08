@@ -10,9 +10,9 @@ tags: [knowledge, sqlite]
 aliases: ["Markdown SQLite boundary"]
 sources:
   - "repo:docs/decisions/ADR-0003-markdown-sqlite-boundary.md#sha256:9834a07f92cb41cb60c697f71aed30f8cc7874e338d51eff5a8a365a515a13e6"
-  - "repo:docs/decisions/ADR-0018-notion-wiki-backend.md#sha256:bf987da6a220df4aa4194f87928626ea8321438671c9d4369c8e097fd272c8ec"
+  - "repo:docs/decisions/ADR-0018-notion-wiki-backend.md#sha256:2e268d2a33c699c6b77a5c711df6a50eaf95624964dc616848bf29321de3624d"
 links: [docs-wiki-architecture, host-external-integrations, shared-index]
-reviewed_revision: "git:907817827a6733dd380aaedea2e7592bc10a7311"
+reviewed_revision: "git:2b819c1060972bb2416a751ff17e596094b00a6b"
 status: active
 ---
 
