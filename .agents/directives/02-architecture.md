@@ -44,13 +44,17 @@ Never import installed consumer state back into source, copy source-development 
 - Do not route new work to OMX/OMC Skills. A legacy external artifact may be inspected only through an explicit migration or recovery contract that preserves foreign bytes.
 - Keep Hive execution Skills declarative: they may reduce canonical state, issue bounded leases, validate receipts, and prepare host envelopes, but never call a model-provider API or launch a model/subagent process.
 - Permit bidirectional reuse only for Hive-owned Skill source after source/consumer scope, safety, consent, and conformance review. Never treat an installed consumer copy or consumer runtime state as source material.
-- Keep a shared Skill canonical under `harness/skills/<name>/` and project an exact source copy under `.agents/skills/<name>/`. Keep a source-only Skill under `.agents/skills/<name>/` until an explicit product-relevance review promotes it to `harness/skills/`.
+- Keep a reusable consumer workflow canonical under `harness/skills/<consumer-name>/`. Give its
+  source-development adapter a distinct ID under `.agents/skills/<source-name>/` so an installed
+  product Skill and a source Skill can coexist without ambiguous discovery. Verify shared workflow
+  semantics while allowing the source adapter's stricter source-root, usage-gate, and mutation
+  boundaries. Keep a source-only Skill under `.agents/skills/<source-name>/` until an explicit
+  product-relevance review promotes its workflow to `harness/skills/` under a different consumer ID.
 - Apply every approved Hive-owned Skill rename to the complete source and consumer inventory in one
-  reviewed migration. A shared Skill must use the same canonical short ID under `harness/skills/`
-  and `.agents/skills/`; source-only and consumer-only Skills remain on their proper surface but
-  follow the same short, action-oriented naming policy. Do not leave a source Skill on a retired
-  `hive-*` name merely because it is not shipped to consumers. Record all replaced source and
-  consumer IDs in the transitive rename ledger, and update routing metadata, references, and
+  reviewed migration. Source and consumer active IDs must be disjoint even when their workflows
+  overlap; use related name families instead of identical IDs. Do not leave a source Skill on a
+  retired `hive-*` name merely because it is not shipped to consumers. Record each replaced ID with
+  its scope in the transitive rename ledger, and update routing metadata, references, and
   conformance tests together. Historical release bases remain immutable.
 - A consumer Skill reused in source must not require consumer `.hive/` state, mutate an installed harness, weaken source-root refusal, or bypass the source usage guard. Adapt the provider-neutral workflow or core primitive instead of copying consumer state assumptions.
 - Load only the smallest approved Skill set needed for the task. The simple-question path loads no unrelated project Skill or memory.

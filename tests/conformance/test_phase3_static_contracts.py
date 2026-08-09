@@ -1394,7 +1394,19 @@ class Phase3SkillSourceContract(unittest.TestCase):
             architecture,
         )
         self.assertIn("reviewed migration", architecture)
-        self.assertIn("소스 개발용·소비자용 전체 목록을 한 번에 검토", guidance)
+        self.assertIn("소스·제품 전체 목록을 한 번에 검토", guidance)
+        self.assertIn("Source and consumer active IDs", architecture)
+        self.assertIn("must be disjoint", architecture)
+        catalog = (REPOSITORY_ROOT / "docs/skills.md").read_text(encoding="utf-8")
+        for approved_name in (
+            "prompt-refine",
+            "research-best-practices",
+            "amend-directive",
+            "source-ralph-loop",
+            "ralph-loop",
+        ):
+            self.assertIn(f"`{approved_name}`", catalog)
+        self.assertIn("hive-loop-engineering", catalog)
         self.assertIn("[SIL-007]", plan)
         self.assertIn("[SIL-008]", plan)
         self.assertNotIn(

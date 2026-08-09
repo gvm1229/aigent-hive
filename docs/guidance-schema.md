@@ -28,12 +28,12 @@ Consumer guidance에는 project/profile, primary host, resolved owner와 resolut
 
 ## Skill 이름
 
-- Hive 소유 Skill 이름 변경: 소스 개발용·소비자용 전체 목록을 한 번에 검토
-- 양쪽에 존재하는 Skill: 동일한 짧은 동작 이름 사용
-- 소스 전용·소비자 전용 Skill: 각 위치를 유지하되 같은 이름 작성 원칙 적용
+- Hive 소유 Skill 이름 변경: [스킬 모음](skills.md)의 소스·제품 전체 목록을 한 번에 검토
+- 같은 기능의 소스·제품 Skill: 관련 이름 계열과 서로 다른 active ID 사용
+- Combined host discovery의 source·product ID collision: `0건`
 - 소비자 host 호출: `aigent-hive:<name>` namespace 유지
 - 폐기 이름: 저장 설정·기존 설치 이관 입력으로만 허용, 새 안내·목록·설치 결과에서 출력 금지
-- 이름 변경 기록: 소스·소비자 old ID를 같은 transitive rename ledger에 추가
+- 이름 변경 기록: scope가 지정된 source·consumer old ID를 transitive rename ledger에 추가
 - Historical release base: byte 변경 금지
 
 ## Usage automatic-dispatch gate

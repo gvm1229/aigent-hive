@@ -1,6 +1,6 @@
 # Aigent Hive active plan index
 
-> Revision: 2.30
+> Revision: 2.31
 > 기준일: 2026-08-09
 > Product version: `0.9.0`
 > 현재 milestone: `0.9.0` 정식 릴리스 준비
@@ -47,11 +47,11 @@
 | Bootstrap·user projection recovery | 13 | 0 | 100% |
 | 한국어 setup 용어 복구 | 5 | 1 | 83.3% |
 | Global Skill 선택 단순화 | 8 | 0 | 100% |
-| Source·consumer Skill identity·localization | 6 | 2 | 75% |
+| Source·consumer Skill identity·localization | 7 | 1 | 87.5% |
 | Discord `v0.9` 연결 UX | 1 | 9 | 10% |
 | Windows global setup hardening | 1 | 10 | 9.1% |
 | Notion `v0.10` 후보 | 1 | 10 | 9.1% |
-| **Canonical total** | **377** | **100** | **79.0%** |
+| **Canonical total** | **378** | **99** | **79.2%** |
 
 External production boundary 항목도 미완료 합계에 포함. Protected authority 없이 완료 처리 금지.
 
@@ -116,5 +116,5 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
 ## Current execution order
 
 완료 증거: [`CURRENT.md`](../state/CURRENT.md)와 owning active fragment.
-다음: `SIL-007–008`, `WGS-002–011`, `REL9-011`, `DIS9-002–010`, `REL9-014–026`.
+다음: `SIL-008`, `WGS-002–011`, `REL9-011`, `DIS9-002–010`, `REL9-014–026`.
 Antigravity·Claude 공개 제외 유지. Notion: `N10-002–011`·`0.10.0-test` 보류.

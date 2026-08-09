@@ -67,16 +67,16 @@ Global setup answer:
 ### Skill identity amendment (`0.9.0`)
 
 - Host-facing invocation: `aigent-hive:<short-name>`
-- 이름 변경 범위: source·consumer Hive-owned Skill 합집합. Shared Skill은 양쪽 exact short ID,
-  source-only·consumer-only Skill은 각 surface를 유지하면서 같은 action-oriented naming policy 적용
+- 이름 변경 범위: source·consumer Hive-owned Skill 합집합. 승인 이름 정본: [`docs/skills.md`](../skills.md)
+- Shared workflow도 source·consumer active ID 분리. Related name family는 유지하고 exact collision 금지
 - Source-only Skill의 `hive-*` 예외 없음. Consumer host만 `aigent-hive:` namespace 부여
 - Consumer built-in Skill: short action-oriented IDs만 신규 projection·catalog·preview에 출력
 - Legacy `hive-*`, `setup-hive`, `setup-harness`, `ai-slop-cleaner`,
   `best-practice-research`: saved selection migration 입력 전용
 - Migration result: `configure`, `setup-project`, `record-knowledge`,
   `import-repository-knowledge`, `clean-ai-slop`, `research-practices` 등 current public ID
-- Rename ledger: source·consumer retired ID → current ID canonical mapping. saved selection migration,
-  dependency closure, source routing, collision reservation에 공통 사용. 삭제 권한 없음
+- Rename ledger: scope별 source·consumer retired ID → current ID canonical mapping. saved selection
+  migration, dependency closure, source routing, collision reservation에 공통 사용. 삭제 권한 없음
 - Retired projection cleanup: frozen release inventory 또는 installed ownership manifest의 release byte
   ·ownership proof 일치 때만 삭제. 변조·unknown·foreign path는 write 0건 conflict. Future rename: ledger와
   authenticated historical-base cleanup regression 동시 추가
