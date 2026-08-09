@@ -9,12 +9,12 @@ summary: "Hive-owned source and product Skills use related but distinct active I
 tags: [localization, migration, plugin, skill]
 aliases: ["Skill naming"]
 sources:
-  - "repo:docs/decisions/ADR-0012-global-onboarding-shared-index.md#sha256:87db5fb3f07e5a346d0060eee545bcd22135963c850afbf0e1fd737ba243b1d1"
+  - "repo:docs/decisions/ADR-0012-global-onboarding-shared-index.md#sha256:5a60d254c760db58049da72530895a981708d549700b02656c7ff51224140f5f"
   - "repo:docs/plans/PLAN.md#sha256:2182e5c3942543533f9ae4b0b07d60449c83c46cbe379f23f6372c77afc7326e"
   - "repo:docs/plans/active/skill-identity-localization.md#sha256:7e8bb78ea5a37b0d4748de54a5e5816b9d4529c6f68844c8c1054859c47d3b4c"
   - "repo:docs/skills.md#sha256:45ee795d93d82e255355090e972f413d6c842076a51594c94b226837ec0bf125"
 links: [global-onboarding, skill-routing]
-reviewed_revision: "git:a5dd671385c2a1e09d511fb1de6c737261210df7"
+reviewed_revision: "git:6ed32f63fa3c67bed31164b9d15259f48443341a"
 status: active
 ---
 

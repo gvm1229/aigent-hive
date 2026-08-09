@@ -5,21 +5,21 @@ topic_slug: usage-guard-thresholds
 language: en
 counterpart: ../ko/usage-guard-thresholds.md
 title: "Usage Guard Thresholds"
-summary: "Global setup owns the minimum safety threshold; a registered project may only set an earlier stop."
+summary: "The user selects the global safety threshold; a registered project may only set an earlier stop."
 tags: [guard, project, setup, usage]
 aliases: ["Early stop threshold", "Project usage cap"]
 sources:
-  - "repo:docs/decisions/ADR-0012-global-onboarding-shared-index.md#sha256:87db5fb3f07e5a346d0060eee545bcd22135963c850afbf0e1fd737ba243b1d1"
-  - "repo:docs/plans/active/usage-guard-policy.md#sha256:98b58ba14b69581de4035431ed0a970bd3188e4d8dd63a93e993ebc1d4263c55"
+  - "repo:docs/decisions/ADR-0012-global-onboarding-shared-index.md#sha256:5a60d254c760db58049da72530895a981708d549700b02656c7ff51224140f5f"
+  - "repo:docs/plans/active/usage-guard-policy.md#sha256:28bc5662cca5ecb730361d7e6519890c0f9db2f800720e9c75d90a854e3d0c80"
 links: [global-onboarding, source-usage-guard, usage-sensor-policy]
-reviewed_revision: "git:a5dd671385c2a1e09d511fb1de6c737261210df7"
+reviewed_revision: "git:6ed32f63fa3c67bed31164b9d15259f48443341a"
 status: active
 ---
 
 # Usage Guard Thresholds
 
-The global setup threshold is the user-wide safety floor. A registered project can only choose a
-higher remaining-usage threshold. The effective threshold is `max(global, project)`: global `20%`,
-web `50%`, and game `30%` stop the web project at `50%` and the game project at `30%`. Disabling
-the global guard disables every project guard. The planned migration preserves old single-threshold
-settings as the global value and rejects invalid or unauthenticated configuration without writes.
+The user selects the global safety floor during setup. A registered project can only choose a
+higher remaining-usage threshold. The effective threshold is `max(global, project)`. No project
+profile or document provides a fixed percentage. Disabling the global guard disables every project
+guard. Migration preserves the old single threshold as the global value and rejects invalid or
+unauthenticated configuration without writes.
