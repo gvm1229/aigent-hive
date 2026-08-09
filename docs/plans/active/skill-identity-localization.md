@@ -71,24 +71,24 @@ release policy.
   candidate `31183471023` all five native targets·npm umbrella PASS; publication `31184578205`
   PASS, `test=0.9.0-test.5`, `latest=0.8.0`, `v0.9.0-test.5` GitHub prerelease
 - [x] [SIL-007] Record the reviewed source·product Skill catalog and lineage in `docs/skills.md`
-- [ ] [SIL-008] Replace that interim catalog with the approved product-only 22-Skill catalog;
+- [x] [SIL-008] Replace that interim catalog with the approved product-only 22-Skill catalog;
   final `.agents/skills/` tracked Skill count `0`, source behavior retained in repository directives
-- [ ] [SIL-009] Add product `ship` with repository-rule discovery, concern map, scoped staging,
+- [x] [SIL-009] Add product `ship` with repository-rule discovery, concern map, scoped staging,
   nearest verification, commit inspection, explicit push authority, and no Aigent Hive hardcoding
-- [ ] [SIL-010] Add product `amend-directive` for global·project·Hive source scopes. Preview exact
+- [x] [SIL-010] Add product `amend-directive` for global·project·Hive source scopes. Preview exact
   owned paths·markers, preserve local edits, update canonical producer and projections together,
   move ordinary behavior constants from Rust into amendable directives or typed preferences, and
   refuse signed cache·foreign byte·compiled safety-boundary mutation
-- [ ] [SIL-011] Route source Wiki tasks through product knowledge Skills and `hive source-wiki` on
+- [x] [SIL-011] Route source Wiki tasks through product knowledge Skills and `hive source-wiki` on
   `hive-source.json`; remove `source-review` in favor of Wiki lookup plus ordinary read-only tools
-- [ ] [SIL-012] Move every reusable source workflow to its canonical product Skill, update source
+- [x] [SIL-012] Move every reusable source workflow to its canonical product Skill, update source
   AGENTS·directives to require the installed product plugin, then delete tracked `.agents/skills/`
   only after source setup·guard·Wiki·prompt·commit routes pass
-- [ ] [SIL-013] Extend the retired-name ledger for one-to-one, merge, split, and no-Skill routes;
+- [x] [SIL-013] Extend the retired-name ledger for one-to-one, merge, split, and no-Skill routes;
   migrate saved selections and remove only authenticated retired source projections
-- [ ] [SIL-014] Regenerate selected-language catalog, plugin packages, host projections, setup
+- [x] [SIL-014] Regenerate selected-language catalog, plugin packages, host projections, setup
   preview, README, dependency closure, and all references from the product-only canonical list
-- [ ] [SIL-015] Verify clean source bootstrap with installed product, missing-product guidance,
+- [x] [SIL-015] Verify clean source bootstrap with installed product, missing-product guidance,
   combined host discovery collision 0, local amendment preservation, historic upgrade cleanup,
   universal Git fixtures, source Wiki routing, and all three host projections
 

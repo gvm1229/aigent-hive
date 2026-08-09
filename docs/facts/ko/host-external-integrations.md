@@ -9,15 +9,15 @@ summary: "Discord v0.9은 현지화한 outbound 사용량 알림 항목을 안�
 tags: [discord, integration, notion]
 aliases: ["Host integration priority"]
 sources:
-  - "repo:crates/hive-cli/src/discord.rs#sha256:524edb6f4e70a64cef99ffdef0e8347275701836c49e5b8b155edd37242fa6bd"
-  - "repo:crates/hive-cli/src/usage_control.rs#sha256:ad1c22fbacbfab22bd4120a94bad5cb10ebc45936e39c5b0f586f5d9a2467a92"
-  - "repo:crates/hive-cli/src/user_setup.rs#sha256:48a76cd5503858a2327c7562879de259334b182687aace98ec1df06b71dd1600"
+  - "repo:crates/hive-cli/src/discord.rs#sha256:8084b804ff091920b2ed588c04d0fce46e617196f78a93ec2bdb01e358a0489c"
+  - "repo:crates/hive-cli/src/usage_control.rs#sha256:6c5524ce66035bf0f7cb7fd3a5d59780c1b17f3e33cbf09126534774228d077a"
+  - "repo:crates/hive-cli/src/user_setup.rs#sha256:3e05d7beb0322270572036bf73dac4854b5468d1092bb2d940baad4492ca0e55"
   - "repo:docs/decisions/ADR-0018-notion-wiki-backend.md#sha256:9ad86748e6144d65c143194538ba95369258ea0b00336f1b81d347fe1ce87245"
-  - "repo:docs/plans/active/discord-onboarding-v09.md#sha256:1ef1d3b61747f317ae1e7fced6e5dd60a6a1a09a6295fcb793d52634ba4098e9"
+  - "repo:docs/plans/active/discord-onboarding-v09.md#sha256:74902022f12fcd031e58603c5b1867268833e993dbf7624a5a3123a42b8c9d6f"
   - "repo:docs/plans/active/v0.10.0-notion-candidate.md#sha256:f863a6c59dde7c117e9b4b294cb0974e051ffca5970d830cfa75e50d9799dc4f"
   - "repo:docs/research/discord-notion-host-integrations.md#sha256:5b26108090c75343964f5452c3b7fd20a1df6300feda8561847bad6feb1748b9"
-  - "repo:harness/skills/user-setup/SKILL.md#sha256:246f1fa6c352c29a905d4e3981312a2288e701785fb9d95c450d4023a37a059b"
-  - "repo:schemas/user-setup.schema.json#sha256:46b360a9f91e154d1440e2997b56a964edd122383ccfc9b105b4e2ae4f8939f9"
+  - "repo:harness/skills/user-setup/SKILL.md#sha256:9ffa22cf14504ba7385135c1f62fdcb19bede32a0925ed72eb23fa8b96359eb5"
+  - "repo:schemas/user-setup.schema.json#sha256:e83e5f318a5b6ffcc08cfe0898a2b6138512c6bfb0eea99c6070b134f3712f47"
 links: [knowledge-storage, orchestration-ownership]
 reviewed_revision: "git:31f5c7616a14d63a68aee677a5b242ff5c5054e8"
 status: active
@@ -27,6 +27,7 @@ status: active
 
 Discord outbound 알림은 제한된 안전 항목을 원하는 순서로 고르고, 선택한 인터페이스 언어 하나만
 사용한다. 시험 알림은 실제 알림과 같은 renderer·항목·순서를 사용하며, 형식 변경을 요청할 수 있다는
-현지화된 첫 줄만 추가한다. 기본값에는 남은 사용량과 안전한 프로젝트 식별자가 포함된다. 요청 내용은
-이 컴퓨터에 유지하고 정본 진행 상태는 `DIS9-005–006` 완료 전까지 확인 불가로 표시한다. Notion은
-v0.10 내부 후보로 남으며 v0.9은 OAuth token·webhook URL·원문 prompt·절대 경로를 제외한다.
+현지화된 첫 줄만 추가한다. 실제 중단 알림은 원문 prompt·session ID·절대 경로·credential 없이 안전한
+프로젝트·run 제목·checklist 진행 상태·host·남은 사용량을 표시한다. 전역 설정은 webhook 환경 변수
+이름과 재개 가능한 비밀 없는 답변만 기록. Notion은 v0.10 내부 후보로 남으며 v0.9은 OAuth token·webhook
+URL·원문 prompt·절대 경로를 제외한다.

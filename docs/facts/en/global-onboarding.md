@@ -9,13 +9,13 @@ summary: "Global setup must verify and resolve the signed CLI before questions, 
 tags: [bootstrap, onboarding, setup]
 aliases: ["User setup"]
 sources:
-  - "repo:README.md#sha256:67c09e54e76df72ee9ac6acbde5b88fbb0a6653e1d7172e3f789a8d99c2434b7"
-  - "repo:crates/hive-cli/src/user_setup.rs#sha256:48a76cd5503858a2327c7562879de259334b182687aace98ec1df06b71dd1600"
+  - "repo:README.md#sha256:a03aae178a8c1060d3f4301d4ed592a24e8cf9e9e95a7b87afa434804ad4ecbb"
+  - "repo:crates/hive-cli/src/user_setup.rs#sha256:3e05d7beb0322270572036bf73dac4854b5468d1092bb2d940baad4492ca0e55"
   - "repo:docs/decisions/ADR-0012-global-onboarding-shared-index.md#sha256:d30564f33f2ead463cfe9e18aa68b697cb07b6c419ee42c9b583fcc11edaf966"
-  - "repo:docs/plans/active/windows-global-setup-hardening.md#sha256:59812ce78d64825be25dbb6576013869e4d334b82868f663281c42c0b1df4e16"
-  - "repo:harness/skills/user-setup/SKILL.md#sha256:246f1fa6c352c29a905d4e3981312a2288e701785fb9d95c450d4023a37a059b"
-  - "repo:harness/user-setup/catalog.yml#sha256:7dc82dbf559075ce4286e7dd19aec0ddc22e04f35ad4a8a60f43129a4dba2a1f"
-  - "repo:schemas/user-setup.schema.json#sha256:46b360a9f91e154d1440e2997b56a964edd122383ccfc9b105b4e2ae4f8939f9"
+  - "repo:docs/plans/active/windows-global-setup-hardening.md#sha256:bc5180991fddb1c2e4132fb0e6f23d4d4d06bd9d60311085d853481201e5c052"
+  - "repo:harness/skills/user-setup/SKILL.md#sha256:9ffa22cf14504ba7385135c1f62fdcb19bede32a0925ed72eb23fa8b96359eb5"
+  - "repo:harness/user-setup/catalog.yml#sha256:4926655a12591cae061e674d774557e96f000d149f8dec1c2b1b650ba235f494"
+  - "repo:schemas/user-setup.schema.json#sha256:e83e5f318a5b6ffcc08cfe0898a2b6138512c6bfb0eea99c6070b134f3712f47"
 links: [project-onboarding, test-distribution, usage-guard-thresholds]
 reviewed_revision: "git:35f5bce71814a3e874fe53a8730024f16013ad46"
 status: active

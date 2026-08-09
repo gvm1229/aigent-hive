@@ -24,19 +24,19 @@
 
 - [x] [DIS9-001] Discord·Notion integration gap 감사와 위협 모델 기록
   - Evidence: `DNI-001`, `ADR-0018`, `docs/research/discord-notion-host-integrations.md`
-- [ ] [DIS9-002] `user-setup` catalog·schema에 Discord opt-in·환경 변수 이름·prompt privacy mode의 typed migration 추가
-- [ ] [DIS9-003] usage guard opt-in 뒤 webhook 생성 안내·환경 변수 이름 검증·단일 시험 알림과 비밀 없는 중단 재개 기록 구현
-- [ ] [DIS9-004] 재설정의 Discord on/off·환경 변수 교체·`전체 검토|선택 항목 검토|중단한 단계부터 계속` 동작 구현
+- [x] [DIS9-002] `user-setup` catalog·schema에 Discord opt-in·환경 변수 이름·prompt privacy mode의 typed migration 추가
+- [x] [DIS9-003] usage guard opt-in 뒤 webhook 생성 안내·환경 변수 이름 검증·단일 시험 알림과 비밀 없는 중단 재개 기록 구현
+- [x] [DIS9-004] 재설정의 Discord on/off·환경 변수 교체·`전체 검토|선택 항목 검토|중단한 단계부터 계속` 동작 구현
   - `선택 항목 검토` 시작 시 모든 전역 설정과 각 하위 설정의 짧은 목적을 항목별 한 줄 목록으로 먼저 표시. `사용량 보호` 하위에는 사용 여부·중단 기준·CodexBar 대체 수단·Discord 알림 사용 여부·webhook 환경 변수 이름·요청 공개 범위 포함
-- [ ] [DIS9-005] usage halt snapshot에 안전한 project identity·run ID·요청 요약·checkpoint reference 결합과 cross-project binding 차단 구현
-- [ ] [DIS9-006] canonical plan/run 기반 진행 상태 reducer와 분모 없는 작업의 truthful unknown 표현 구현
-- [ ] [DIS9-007] Discord payload schema·human message에 project·request·progress·resume context, redaction·size limit 구현
+- [x] [DIS9-005] usage halt snapshot에 안전한 project identity·run ID·요청 요약·checkpoint reference 결합과 cross-project binding 차단 구현
+- [x] [DIS9-006] canonical plan/run 기반 진행 상태 reducer와 분모 없는 작업의 truthful unknown 표현 구현
+- [x] [DIS9-007] Discord payload schema·human message에 project·request·progress·resume context, redaction·size limit 구현
   - `interface_language`와 일치하는 English 또는 한국어만 사용. 같은 알림 안의 언어 혼합 금지
   - 사용자가 대화로 선택할 수 있는 안전한 필드·순서 설정: 남은 사용량, 프로젝트, 요청 요약, 진행 상태, host, 재개 안내, 측정 시각·검증 참조
   - 시험 알림: 실제 중단 알림과 같은 renderer·필드·언어 사용. 첫 줄에만 자유롭게 형식 변경을 요청할 수 있다는 현지화된 시험 고지 추가
   - 원문 prompt는 `raw-prompt`를 별도 승인한 경우에만 포함. 기본 `summary`는 요약 또는 비공개 표시 유지
-- [ ] [DIS9-008] 대화형 setup·README·release bundle HTML 안내와 `hive guide integrations --open` 또는 exact local locator 구현
-- [ ] [DIS9-009] fake webhook·두 프로젝트 halt·plan-backed/unplanned progress·redaction 회귀와 지원 host E2E 구현
+- [x] [DIS9-008] 대화형 setup·README·release bundle HTML 안내와 `hive guide integrations --open` 또는 exact local locator 구현
+- [x] [DIS9-009] fake webhook·두 프로젝트 halt·plan-backed/unplanned progress·redaction 회귀와 지원 host E2E 구현
 - [ ] [DIS9-010] 독립 numbered test candidate·clean install 수용. npm `latest` 불변과 stable feature parity 확인
 
 ## 완료 기준

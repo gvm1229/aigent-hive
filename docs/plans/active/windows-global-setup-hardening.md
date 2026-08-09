@@ -54,15 +54,15 @@
 ## 구현 순서
 
 - [x] [WGS-001] 첨부 기록을 명령·질문·파일 쓰기·실패 결과 단위로 감사하고 현재 소스와 차이를 분류한다.
-- [ ] [WGS-002] Windows에서 `Get-Command`, `where.exe`, `npm prefix -g` 순서로 `hive.cmd`를 찾고 exact version·package ownership을 확인하는 공통 resolver를 추가한다. 현재 process의 `PATH` 갱신이나 사용자의 수동 경로 전달을 요구하지 않는다.
-- [ ] [WGS-003] `hive setup --scope user --describe --output json`을 추가하여 embedded schema, canonical 답안 예시, 질문 순서·조건, localized option, built-in Skill catalog, contract digest를 읽기 전용으로 출력한다.
-- [ ] [WGS-004] canonical·plugin `configure` Skill이 `--describe` 결과만 사용하도록 바꾸고 binary byte 검색, npm 폴더 재귀 검색, 필드명·Skill ID 추측을 금지한다. CLI 확인 실패 전에는 질문을 시작하지 않는다.
-- [ ] [WGS-005] 모든 답변 뒤 non-secret partial answer와 다음 질문을 저장하도록 progress schema와 command를 확장한다. 실패·재실행 때 `전체 다시 보기`, `일부만 변경`, `중단한 곳부터 계속`을 제공한다.
-- [ ] [WGS-006] 답안 작업 파일은 운영체제 임시 폴더의 session별 단일 파일만 atomic 갱신하고 성공·실패·취소 시 삭제한다. user root의 기존 `.hive-user-setup-answers*.yml`은 Hive가 만든 것이 exact하게 증명될 때만 별도 cleanup preview에 포함한다.
-- [ ] [WGS-007] 질문 전 preflight를 구현한다. 사용량 보호가 켜지면 Discord를 물으며, native sensor가 unavailable·unsupported·malformed일 때만 `CodexBar`를 물고, 선택 host는 authenticated·deferred·unsupported로 구분한다.
-- [ ] [WGS-008] 명시적인 global setup 요청이 안전한 임시 파일·`dry-run`·conflict 없는 built-in apply를 승인한 것으로 처리한다. conflict, third-party Skill, 외부 설치, 비밀 접근, 파괴 작업만 별도 확인한다.
-- [ ] [WGS-009] 한국어 exact prompt fixture를 보강하여 한 문장 안 언어 혼합, 예상 밖 문자, `Skill` 오역, 한 줄에 여러 항목인 목록을 차단한다.
-- [ ] [WGS-010] Rust unit·CLI integration·Python static contract에 Windows PATH 불일치, individual Skill, 첫 YAML 검증 성공, 일반·Discord 단계 중단 재개, temp cleanup, conditional question 회귀를 추가한다.
+- [x] [WGS-002] Windows에서 `Get-Command`, `where.exe`, `npm prefix -g` 순서로 `hive.cmd`를 찾고 exact version·package ownership을 확인하는 공통 resolver를 추가한다. 현재 process의 `PATH` 갱신이나 사용자의 수동 경로 전달을 요구하지 않는다.
+- [x] [WGS-003] `hive setup --scope user --describe --output json`을 추가하여 embedded schema, canonical 답안 template, 질문 순서·조건, localized option, built-in Skill catalog, contract digest를 읽기 전용으로 출력한다. template의 사용량 한도는 사용자 입력 placeholder이며 기본값 없음.
+- [x] [WGS-004] canonical·plugin `configure` Skill이 `--describe` 결과만 사용하도록 바꾸고 binary byte 검색, npm 폴더 재귀 검색, 필드명·Skill ID 추측을 금지한다. CLI 확인 실패 전에는 질문을 시작하지 않는다.
+- [x] [WGS-005] 모든 답변 뒤 non-secret partial answer와 다음 질문을 저장하도록 progress schema와 command를 확장한다. 실패·재실행 때 `전체 다시 보기`, `일부만 변경`, `중단한 곳부터 계속`을 제공한다.
+- [x] [WGS-006] 답안 작업 파일은 운영체제 임시 폴더의 session별 단일 파일만 atomic 갱신하고 성공·실패·취소 시 삭제하는 host contract를 canonical·plugin Skill에 추가한다. persisted progress에는 비밀 없는 partial answer만 저장한다. user root의 기존 `.hive-user-setup-answers*.yml`은 Hive가 만든 것이 exact하게 증명될 때만 별도 cleanup preview에 포함한다.
+- [x] [WGS-007] 질문 전 preflight를 구현한다. 사용량 보호가 켜지면 Discord를 물으며, native sensor가 unavailable·unsupported·malformed일 때만 `CodexBar`를 물고, 선택 host는 authenticated·deferred·unsupported로 구분한다.
+- [x] [WGS-008] 명시적인 global setup 요청이 안전한 임시 파일·`dry-run`·conflict 없는 built-in apply를 승인한 것으로 처리한다. conflict, third-party Skill, 외부 설치, 비밀 접근, 파괴 작업만 별도 확인한다.
+- [x] [WGS-009] 한국어 exact prompt fixture를 보강하여 한 문장 안 언어 혼합, 예상 밖 문자, `Skill` 오역, 한 줄에 여러 항목인 목록을 차단한다.
+- [x] [WGS-010] Rust unit·CLI integration·Python static contract에 Windows PATH 불일치, individual Skill, 첫 YAML 검증 성공, 일반·Discord 단계 중단 재개, temp cleanup, conditional question 회귀를 추가한다.
 - [ ] [WGS-011] 다음 numbered 시험판을 게시한 뒤 maintainer의 실제 Windows 11 machine에서
   clean npm install·fresh Codex session·product-only Skill catalog·global/project usage guard를
   포함한 한 번의 setup으로 `dry-run → apply → validate` 완료. 사용자 수동 `where hive`, schema

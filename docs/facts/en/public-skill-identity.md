@@ -10,8 +10,8 @@ tags: [localization, migration, plugin, skill]
 aliases: ["Skill naming"]
 sources:
   - "repo:docs/decisions/ADR-0012-global-onboarding-shared-index.md#sha256:d30564f33f2ead463cfe9e18aa68b697cb07b6c419ee42c9b583fcc11edaf966"
-  - "repo:docs/plans/PLAN.md#sha256:d62a85f24b0c2a8a884dfafb917c6fa9df0ae762642d5f07dcdb17b56d1b8d71"
-  - "repo:docs/plans/active/skill-identity-localization.md#sha256:8f080cbf7902047256f1a8f789a7ba188817d4d86bbe5f57dfa9fa08484d31a8"
+  - "repo:docs/plans/PLAN.md#sha256:85a9602d7ead99568962b048af5448e13b699a80e29166000f3f5a5020fbaec2"
+  - "repo:docs/plans/active/skill-identity-localization.md#sha256:5ae5f5e9e3ac9f2d9891393a75820fd1adbe8293e467a452d9778cba7fcb0468"
   - "repo:docs/skills.md#sha256:3ac35c43bee2bd83980415464b852253f271e95794d17fa81074fb2db0f88ec7"
 links: [global-onboarding, skill-routing]
 reviewed_revision: "git:35f5bce71814a3e874fe53a8730024f16013ad46"

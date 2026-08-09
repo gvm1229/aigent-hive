@@ -9,8 +9,8 @@ summary: "Source execution boundary 검사를 유지하며 단일 product usage 
 tags: [guard, source, usage]
 aliases: ["Source quota safeguard"]
 sources:
-  - "repo:docs/guides/source-usage-guard.md#sha256:febe2420d8bd962cf11efaec3aa85df76bce57248e38068809acde71a3c80f8c"
-  - "repo:docs/plans/active/usage-guard-policy.md#sha256:fed21b2de4b06f8034974ea611ce0afb2c0b09244a57c16238a2a1c662a131f8"
+  - "repo:docs/guides/source-usage-guard.md#sha256:3feed99484282ad4265e82d2f831859993f8292b92c8369cb57ee7b7b7c04c9d"
+  - "repo:docs/plans/active/usage-guard-policy.md#sha256:97d33e84f001d7e456d24cd95b9712bbe8ef5c9133acd5a6f94ca6395981a066"
 links: [automatic-dispatch-guard, source-development, windows-watcher-identity]
 reviewed_revision: "git:7dd812e81a6e4e2771c783fc65835a3387bbd7ca"
 status: active
