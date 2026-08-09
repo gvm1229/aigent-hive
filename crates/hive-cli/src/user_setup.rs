@@ -316,7 +316,7 @@ pub(crate) struct UserSetupConfig {
 struct UserSetupProgress {
     schema_version: u32,
     step: String,
-    answers: UserSetupConfig,
+    answers: JsonValue,
 }
 
 #[derive(Debug, Deserialize)]
@@ -578,7 +578,7 @@ fn parse_progress(arguments: &[String]) -> Result<ProgressArguments, SetupError>
             .ok_or_else(|| SetupError::Input(format!("missing value for {option}")))?;
         let slot = match option {
             "--scope" => &mut scope,
-            "--answers" => &mut answers,
+            "--answers" | "--quick-answers" => &mut answers,
             "--step" => &mut step,
             "--output" => &mut output,
             "--user-root" => &mut user_root,
@@ -616,7 +616,9 @@ fn parse_progress(arguments: &[String]) -> Result<ProgressArguments, SetupError>
             ProgressAction::Save {
                 step,
                 answers: PathBuf::from(answers.ok_or_else(|| {
-                    SetupError::Input("setup progress save requires --answers".to_owned())
+                    SetupError::Input(
+                        "setup progress save requires --answers or --quick-answers".to_owned(),
+                    )
                 })?),
             }
         }
@@ -659,11 +661,14 @@ fn execute_progress(arguments: ProgressArguments) -> Result<ActionResult, SetupE
     match arguments.action {
         ProgressAction::Save { step, answers } => {
             let answer_bytes = read_bounded_regular(&answers, MAX_ANSWERS_BYTES)?;
-            let config = parse_and_validate_config(&answer_bytes)?;
+            let answers: JsonValue = serde_yaml::from_slice(&answer_bytes).map_err(|error| {
+                SetupError::Input(format!("invalid user setup progress YAML: {error}"))
+            })?;
+            validate_progress_answers(&answers)?;
             let progress = UserSetupProgress {
                 schema_version: 1,
                 step,
-                answers: config,
+                answers,
             };
             let desired = serde_yaml::to_string(&progress)
                 .map_err(|error| {
@@ -744,7 +749,7 @@ fn parse_progress_file(bytes: &[u8]) -> Result<UserSetupProgress, SetupError> {
             "invalid user setup progress step".to_owned(),
         ));
     }
-    validate_config_semantics(&progress.answers)?;
+    validate_progress_answers(&progress.answers)?;
     Ok(progress)
 }
 
@@ -775,6 +780,52 @@ fn progress_result(
     }
 }
 
+fn validate_progress_answers(answers: &JsonValue) -> Result<(), SetupError> {
+    let object = answers.as_object().ok_or_else(|| {
+        SetupError::Verification("user setup progress answers must be a YAML object".to_owned())
+    })?;
+    let allowed = [
+        "schema_version",
+        "interface_language",
+        "wiki",
+        "profile",
+        "persona",
+        "selected_hosts",
+        "skills",
+        "update_check",
+        "usage_guard",
+    ];
+    if object.keys().any(|key| !allowed.contains(&key.as_str())) {
+        return Err(SetupError::Verification(
+            "user setup progress contains an unknown setting".to_owned(),
+        ));
+    }
+    if progress_contains_secret(answers) {
+        return Err(SetupError::Verification(
+            "user setup progress cannot contain a webhook URL, token, or secret".to_owned(),
+        ));
+    }
+    Ok(())
+}
+
+fn progress_contains_secret(value: &JsonValue) -> bool {
+    match value {
+        JsonValue::Object(object) => object.iter().any(|(key, value)| {
+            let normalized = key.to_ascii_lowercase();
+            normalized.contains("token")
+                || normalized.contains("secret")
+                || (normalized == "webhook_url"
+                    || (normalized == "url" && key != "webhook_url_env"))
+                || progress_contains_secret(value)
+        }),
+        JsonValue::Array(values) => values.iter().any(progress_contains_secret),
+        JsonValue::String(value) => {
+            value.starts_with("https://") || value.starts_with("http://")
+        }
+        _ => false,
+    }
+}
+
 fn parse(arguments: &[String]) -> Result<Arguments, SetupError> {
     let mut scope = None;
     let mut answers = None;
@@ -801,14 +852,14 @@ fn parse(arguments: &[String]) -> Result<Arguments, SetupError> {
                     "choose exactly one of --dry-run, --apply, or --validate".to_owned(),
                 ));
             }
-            option @ ("--scope" | "--answers" | "--output" | "--user-root") => {
+            option @ ("--scope" | "--answers" | "--quick-answers" | "--output" | "--user-root") => {
                 let value = arguments
                     .get(index + 1)
                     .filter(|value| !value.starts_with("--"))
                     .ok_or_else(|| SetupError::Input(format!("missing value for {option}")))?;
                 let slot = match option {
                     "--scope" => &mut scope,
-                    "--answers" => &mut answers,
+                    "--answers" | "--quick-answers" => &mut answers,
                     "--output" => &mut output,
                     "--user-root" => &mut user_root,
                     _ => unreachable!(),

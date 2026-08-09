@@ -318,10 +318,10 @@ else:
         self.assertEqual(
             harness["selected_project_skills"],
             [
-                "manage-usage",
-                "refine-prompt",
-                "search-knowledge",
-                "setup-project",
+                "knowledge-recall",
+                "project-setup",
+                "prompt-refine",
+                "usage-guard",
             ],
         )
         agents = (target / "AGENTS.md").read_text(encoding="utf-8")
@@ -342,7 +342,7 @@ else:
                 "persona": {"id": "strict"},
                 "skills": {
                     "mode": "individual",
-                    "selected": ["setup-project"],
+                    "selected": ["project-setup"],
                 },
             }
         )
@@ -358,8 +358,8 @@ else:
         self.assertEqual(harness["wiki_language"], "en")
         self.assertEqual(harness["persona_id"], "strict")
         self.assertTrue(harness["usage_guard_enabled"])
-        self.assertEqual(harness["usage_stop_remaining_percent"], 17)
-        self.assertEqual(harness["selected_project_skills"], ["setup-project"])
+        self.assertEqual(harness["usage_stop_remaining_percent"], 20)
+        self.assertEqual(harness["selected_project_skills"], ["project-setup"])
         agents = (target / "AGENTS.md").read_text(encoding="utf-8")
         self.assertIn("selected interface language `en`", agents)
         self.assertIn(
