@@ -547,6 +547,7 @@ class Phase3SkillSourceContract(unittest.TestCase):
             "active/v0.9.0-loop-wiki-skills.md",
             "active/v0.9.0-test-finalization.md",
             "active/v0.10.0-notion-candidate.md",
+            "active/windows-global-setup-hardening.md",
             "active/windows-shell-install.md",
             "contracts/README.md",
             "phases/07-public-qualification.md",
@@ -583,6 +584,7 @@ class Phase3SkillSourceContract(unittest.TestCase):
             plan_root / "active/v0.9.0-loop-wiki-skills.md",
             plan_root / "active/v0.9.0-test-finalization.md",
             plan_root / "active/v0.10.0-notion-candidate.md",
+            plan_root / "active/windows-global-setup-hardening.md",
             plan_root / "active/windows-shell-install.md",
             plan_root / "phases/07-public-qualification.md",
         ]
@@ -612,6 +614,7 @@ class Phase3SkillSourceContract(unittest.TestCase):
                 "active/v0.9.0-loop-wiki-skills.md",
                 "active/v0.9.0-test-finalization.md",
                 "active/v0.10.0-notion-candidate.md",
+                "active/windows-global-setup-hardening.md",
                 "active/windows-shell-install.md",
                 "phases/07-public-qualification.md",
             },
@@ -717,6 +720,9 @@ class Phase3SkillSourceContract(unittest.TestCase):
         )
         v09_skill_path = plan_root / "active/v0.9.0-loop-wiki-skills.md"
         windows_shell_path = plan_root / "active/windows-shell-install.md"
+        windows_global_setup_path = (
+            plan_root / "active/windows-global-setup-hardening.md"
+        )
         progress_rows = (
             ("Phase 0–6", *checklist_counts(completed_phase_paths)),
             ("Phase 7", *checklist_counts([phase_7_path])),
@@ -798,6 +804,10 @@ class Phase3SkillSourceContract(unittest.TestCase):
             (
                 "Discord `v0.9` 연결 UX",
                 *checklist_counts([discord_path]),
+            ),
+            (
+                "Windows global setup hardening",
+                *checklist_counts([windows_global_setup_path]),
             ),
             (
                 "Notion `v0.10` 후보",

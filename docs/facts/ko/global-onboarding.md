@@ -5,13 +5,14 @@ topic_slug: global-onboarding
 language: ko
 counterpart: ../en/global-onboarding.md
 title: "Global onboarding"
-summary: "복수 사용자 맥락 저장과 project workflow 비결정, authenticated Hive-only refresh 자동 처리, v0.9 Markdown-only Wiki, 부분 변경의 전체 설정 목록·Discord 하위 항목, 한국어 product term·all built-in Skill 기본값 유지."
+summary: "Global setup은 질문 전에 signed CLI를 찾아 확인하고 machine-readable setup contract를 사용하며, 모든 답변 뒤 진행 상태를 보존하면서 기존 context·Wiki·Skill·한국어 규칙을 유지해야 함."
 tags: [bootstrap, onboarding, setup]
 aliases: ["User setup"]
 sources:
   - "repo:README.md#sha256:67c09e54e76df72ee9ac6acbde5b88fbb0a6653e1d7172e3f789a8d99c2434b7"
   - "repo:crates/hive-cli/src/user_setup.rs#sha256:48a76cd5503858a2327c7562879de259334b182687aace98ec1df06b71dd1600"
-  - "repo:docs/decisions/ADR-0012-global-onboarding-shared-index.md#sha256:315391aa3b280409c6c19185aff55bcd21af1fb724de89a7007fc84c73a44aa3"
+  - "repo:docs/decisions/ADR-0012-global-onboarding-shared-index.md#sha256:828eee194312563c9258f6a6aade0c0ec3e2893c11383b692dfadd062e35a38e"
+  - "repo:docs/plans/active/windows-global-setup-hardening.md#sha256:6742a157cb9665b6b3accffce536dd447642ec367c41fa06c7d5bc7ef6ca0910"
   - "repo:harness/skills/configure/SKILL.md#sha256:abeb032e21d2576366025465d54080966767fb7e17cca57848acf093eaa83eaf"
   - "repo:harness/user-setup/catalog.yml#sha256:7dc82dbf559075ce4286e7dd19aec0ddc22e04f35ad4a8a60f43129a4dba2a1f"
   - "repo:schemas/user-setup.schema.json#sha256:46b360a9f91e154d1440e2997b56a964edd122383ccfc9b105b4e2ae4f8939f9"
@@ -22,11 +23,9 @@ status: active
 
 # Global onboarding
 
-수동 첫 설정 순서: CLI 설치, host activation, global setup, 명시 project setup. v0.9 전역 Wiki:
-local Markdown 단일 사용자 공개 정본. 선택형 one-prompt 경로:
-project inspection 없는 global setup 시작.
+순서: CLI 설치, host 활성화, global setup, 명시 project setup. v0.9 전역 Wiki 정본은 local
+Markdown이며 global setup은 project를 검사하지 않음.
 
-지원 legacy 복구: saved preference·live file evidence 일치 조건. 그 외 active byte 보존. 명시 global
-setup 요청: authenticated Hive-only install 또는 saved-answer user projection refresh의 preview·apply·
-revalidate 자동 처리, review-only 질문 없음. 사용자 맥락, Skill 선택, 한국어 product term:
-`global-user-contexts` 참고.
+Windows 11 test.5 감사에서 npm CLI 탐색 실패, schema 추측, 임시 답안 17개 이상, 진행 손실,
+apply 실패 확인. 수정 조건: 질문 전 CLI·signed setup 설명 확인, 답변마다 진행 저장, OS 임시 파일
+하나와 cleanup, stable 0.9.0 전 fresh Windows numbered-test 통과. 인증 불가·사용자 수정 byte는 보존.

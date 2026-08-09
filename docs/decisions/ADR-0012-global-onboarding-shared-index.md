@@ -85,9 +85,19 @@ Global setup answer:
 ### Global setup UX
 
 - Initial setup: interface language 질문 우선
+- 질문 전 signed CLI 확인 필수. Windows의 ambient `PATH`에 `hive`가 없으면 `Get-Command`,
+  `where.exe`, `npm prefix -g`로 npm-owned `hive.cmd` absolute path를 찾아 version·ownership 확인.
+  확인 전 질문·answer 저장 시작 금지
+- Signed CLI는 `hive setup --scope user --describe --output json`으로 embedded schema,
+  canonical answer example, localized question contract, built-in Skill catalog·digest를 읽기 전용 제공.
+  Agent의 binary byte·npm tree 검색과 setup field·Skill ID 추측 금지
 - Reconfigure: 부분 preference 변경 또는 전체 setup 재검토 선택 우선
+- 모든 완료 질문 뒤 non-secret partial answer·next step 저장. webhook URL·raw prompt 저장 금지.
+  작업 answer는 OS temp의 session별 단일 파일로 제한하고 success·failure·cancel에 cleanup
 - Refresh 필요 상태: authenticated Hive-only install과 saved-answer user projection은 preview 뒤
   자동 apply·revalidate. 별도 review-only yes/no 질문 없음
+- 명시 global setup 요청은 safe temp write·dry-run·conflict 없는 built-in apply를 포함. 별도 질문은
+  conflict·third-party Skill·external install·secret access·destructive action처럼 권한이 달라질 때만 사용
 - Internal path·digest·projection 용어: 기본 안내 제외, 요청 시 diagnostic 제공
 - 한국어 대화: `Skill`, `Wiki`, host·product name, command, path, schema key, Skill ID는 exact
   term 유지. 일반 설명만 한국어화하며 `Skill → 기술` 같은 일반명사 직역 금지
