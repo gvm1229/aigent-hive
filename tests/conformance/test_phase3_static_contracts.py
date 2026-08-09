@@ -804,7 +804,7 @@ class Phase3SkillSourceContract(unittest.TestCase):
                 *checklist_counts([global_skill_selection_path]),
             ),
             (
-                "Source·consumer Skill identity·localization",
+                "Product-only Skill identity·localization",
                 *checklist_counts([skill_identity_localization_path]),
             ),
             (
@@ -1387,7 +1387,7 @@ class Phase3SkillSourceContract(unittest.TestCase):
                     (SKILL_ROOT / name / "SKILL.md").read_bytes(),
                 )
 
-    def test_skill_rename_policy_covers_source_and_consumer(self) -> None:
+    def test_skill_rename_policy_targets_product_only_catalog(self) -> None:
         architecture = (
             REPOSITORY_ROOT / ".agents/directives/02-architecture.md"
         ).read_text(encoding="utf-8")
@@ -1405,30 +1405,23 @@ class Phase3SkillSourceContract(unittest.TestCase):
         )
         self.assertIn("reviewed migration", architecture)
         self.assertIn("소스·제품 전체 목록을 한 번에 검토", guidance)
-        self.assertIn("Source and consumer active IDs", architecture)
-        self.assertIn("must be disjoint", architecture)
         catalog = (REPOSITORY_ROOT / "docs/skills.md").read_text(encoding="utf-8")
         for approved_name in (
             "prompt-refine",
             "research-best-practices",
-            "source-commit-work",
-            "source-amend-directive",
-            "source-ralph-loop",
+            "ship",
+            "amend-directive",
             "ralph-loop",
         ):
             self.assertIn(f"`{approved_name}`", catalog)
         self.assertIn("hive-loop-engineering", catalog)
-        source_cells = [
-            line.strip("|").split("|")[1].strip()
-            for line in catalog.splitlines()
-            if line.startswith("| `")
-        ]
-        for source_cell in source_cells:
-            if source_cell == "—":
-                continue
-            self.assertRegex(source_cell, r"^`source-[^`]+`$")
+        self.assertIn("Source 전용 Skill: `0건`", catalog)
+        self.assertIn("Final tracked source Skill count: `0`", plan)
+        self.assertIn("`source-commit-work` | `ship`", catalog)
+        self.assertIn("`source-amend-directive` | `amend-directive`", catalog)
         self.assertIn("[SIL-007]", plan)
         self.assertIn("[SIL-008]", plan)
+        self.assertIn("[SIL-015]", plan)
         self.assertNotIn(
             "Source-only developer Skills remain outside this public rename",
             plan,

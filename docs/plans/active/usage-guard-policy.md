@@ -2,7 +2,7 @@
 
 > Checklist owner: `UGP-*`
 > Target: `0.9.0`
-> Scope: global `usage-guard`, project별 조기 중지 한도, product 우선 Skill 구성
+> Scope: global `usage-guard`, project별 조기 중지 한도, 단일 product Skill
 
 ## 결정
 
@@ -14,7 +14,8 @@
 - 전역 보호 비활성화: 모든 project 보호 비활성화
 - 퍼센트 값: 문서·질문·코드의 고정값 없음. 사용자가 valid range 안에서 직접 선택
 - 사용자 호출 Skill: product `usage-guard` 하나
-- source의 guard: source directive·internal adapter 유지, 별도 active source Skill projection 제거
+- Aigent Hive source의 guard: 설치 product `usage-guard`와 같은 resolver·project override 사용
+- Source 전용 Skill·adapter·threshold state: `0건`
 
 ## 구현
 
@@ -28,9 +29,9 @@
   숫자는 사용자 입력·기존 설정만 표시하고 web·game 등 profile별 자동 제안 없음
 - [ ] [UGP-004] 기존 단일 `usage_stop_remaining_percent`를 global 값으로 이관하고 기존
   project는 override 없음으로 보존. 인증 불가·변조 config는 write 0건 conflict
-- [ ] [UGP-005] non-repo-specific source guard projection을 product `usage-guard`로 통합.
-  source guard 실행은 같은 resolver를 쓰는 internal enforcement adapter로만 유지. source
-  contributor bootstrap의 product plugin dependency·missing product 안내 추가
+- [ ] [UGP-005] source guard script·Skill·별도 threshold state를 product `usage-guard`와 CLI로
+  이관. Source AGENTS의 pre-task gate는 설치 product command를 호출하고 repository override를
+  사용. Contributor bootstrap의 product dependency·missing product 안내 뒤 source Skill 삭제
 - [ ] [UGP-006] 서로 다른 임의 global·project 값의 effective threshold, disabled global,
   lower project override 거부, update migration, source·consumer projection, host별 guard와
   Discord payload의 project·effective threshold 회귀 검증. profile별 hard-coded value 0건
@@ -41,4 +42,4 @@
 - project override로 특정 project의 조기 중지 설정 가능
 - 동일 session·project에서 매 guard 검사마다 동일 effective threshold 사용
 - 사용자에게 global 값, project 값, 실제 적용 값을 구분해 표시
-- source·product Skill 목록의 중복 usage guard 항목 0건
+- Source Skill·adapter·설정 복제 0건, product `usage-guard`만 활성

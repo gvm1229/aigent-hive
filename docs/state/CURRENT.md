@@ -2,21 +2,26 @@
 
 - 기준 branch: `develop`
 - product version: `0.9.0`
-- plan revision: `2.32`
+- plan revision: `2.33`
 - 현재 milestone: Windows 11 global setup 구조 보강과 fresh-session 재수용
 - `0.9.0` 예외: 실제 Antigravity host 수용과 Claude fixture 공개 제외. Codex 실제 plugin 활성화·global setup은 `REL9-011` 필수 gate. `develop → main` CI는 병합 gate 일시 면제이며 실패·미실행 범위 공개 유지
 - Codex 차단 문제: `0.9.0-test.5` 활성화 실패와 부분 상태 되돌리기 관찰. macOS의 Codex CLI `0.147.0` 격리 user root에서 `/tmp`와 host JSON의 `/private/tmp` 표기 불일치 재현. no-follow 확인 뒤 physical path 정규화 적용
 - Codex local 검증: 격리 `install → setup dry-run → setup apply → setup validate → install validate`와 structured marketplace·plugin 목록 PASS. rollback·foreign byte 보존 Rust 회귀 PASS. 현재 macOS 실행은 Windows clean install·fresh session 수용 증명 아님
 - 현재 작업: Codex plugin 활성화 차단 문제 복구 완료. 수정 numbered 시험판과 Windows fresh-session 수용 전 stable publication 중지. 단일 OIDC npm workflow 구현과 Copier·Rust Discord `message_fields` parity 복구 완료
 - Windows 11 setup 기록 감사: `0.9.0-test.5`에서 Codex process가 npm 전역 `hive.cmd`를 찾지 못한 채 질문을 시작했고, schema·Skill catalog를 조회하지 못해 user root에 최소 17개 답안 파일을 추측 생성한 뒤 setup이 실패. 일반 질문 진행 상태 미보존, 조건 밖 CodexBar 질문, Discord 질문 누락, 한국어 문자 혼입도 확인. 현재 `develop`의 후속 문구 개선은 별도 Windows 실행 증거가 없으며, CLI resolver·machine-readable setup contract·전 질문 progress·temp cleanup은 아직 구현되지 않음. owning plan: [`windows-global-setup-hardening.md`](../plans/active/windows-global-setup-hardening.md)
+- Windows 실행 경계: 이 Mac에서는 source unit·static·cross-platform 회귀만 실행. Global
+  install·setup과 `WGS-011` 수용은 maintainer의 Windows 11 machine에서만 실행
 - Discord 수용: 실제·시험 알림의 동일 renderer·선택 필드·선택 언어, 시험 알림 첫 줄의 변경 안내 고지, 첨부 화면의 webhook 전달
 - `0.9.0-test.6`: 후보 [run `31294665865`](https://github.com/gvm1229/aigent-hive/actions/runs/31294665865)의 5개 native target·npm 묶음·attestation PASS. 게시 [run `31295045199`](https://github.com/gvm1229/aigent-hive/actions/runs/31295045199)의 여섯 package OIDC publication, annotated `v0.9.0-test.6`, 22-asset GitHub prerelease, 여섯 package `test=0.9.0-test.6`, `latest=0.8.0` 유지 PASS. Windows clean install·fresh Codex session 수용 전 stable 미착수
 - `REL9-027`: six-package Trusted Publisher OIDC 실제 게시 PASS. `BGR-012–013` source 응답의 내부 용어 억제·사용자 영향 우선 설명과 local `-dev → 0.9.0-test.6` user-scope validation 완료. `SIL-001–006` public Skill identity·localization·retired-ID cleanup과 `0.9.0-test.5` 독립 시험 게시 완료. `N10-001` Notion 사용자 노출 차단 완료. `DIS9-004`의 부분 설정 전체 목록·Discord 하위 항목 표시 계약 구현. 다음 작업: `DIS9-002–010` Discord 연결 UX. Notion end-to-end 기능은 `0.10.0-test`까지 보류
-- Skill 이름 결정: [`docs/skills.md`](../skills.md)에 source·product 24개 identity, 기능·예시·병합 2건 기록. Source·product active ID는 의도적으로 분리하고 모든 source 이름에 `source-*` 적용. 유지보수자 수정 product `prompt-refine`·`research-best-practices`, source `source-amend-directive` 반영. `hive-loop-engineering` 계보: current `engineer-run`, target source `source-ralph-loop`·product `ralph-loop`. 실제 path·ID 이관은 `SIL-008` 대기
+- Skill 최종 결정: [`docs/skills.md`](../skills.md)의 product-only 22개. Source 개발도 설치 product
+  Skill과 repository directive 사용, tracked source Skill 최종 `0건`. 신규 product `ship`·
+  `amend-directive`; `source-review`는 Wiki 조회·기본 read-only 도구, `source-knowledge`는 세
+  knowledge Skill·`hive source-wiki` CLI로 분리. 실제 이관·삭제: `SIL-008–015` 대기
 - 사용량 보호 후속: [`usage-guard-policy.md`](../plans/active/usage-guard-policy.md)에 global의
   사용자 선택 한도·registered project별 더 보수적인 override·effective `max` 정책, project
-  profile별 고정값 0건, product `usage-guard` 단일 사용자 제어, source internal enforcement
-  adapter 유지 계획 추가
+  profile별 고정값 0건, product `usage-guard` 단일 사용자·source 제어, source Skill·adapter·
+  별도 threshold state 0건 계획 추가
 - 외부 중지 경계: `main` PR·review, signing·TUF,
   exact `1.0.0` 사용자 authority
 - Plan load: compact `docs/plans/PLAN.md` + `docs/plans/phases/07-public-qualification.md`
@@ -40,10 +45,12 @@
   + `docs/plans/active/bootstrap-global-setup-recovery.md`
   + `docs/plans/active/korean-setup-terminology.md`
   + `docs/plans/active/global-skill-selection.md`
+  + `docs/plans/active/skill-identity-localization.md`
+  + `docs/plans/active/usage-guard-policy.md`
   + `docs/plans/active/discord-onboarding-v09.md`
   + `docs/plans/active/windows-global-setup-hardening.md`
   + `docs/plans/active/v0.10.0-notion-candidate.md`
-- Plan completion: canonical checklist `378/483` 완료, `105`개 미완료, `78.3%`
+- Plan completion: canonical checklist `378/490` 완료, `112`개 미완료, `77.1%`
 - 출시 분리: `0.9.0`의 user-visible Wiki는 local Markdown 정본과 SQLite projection만 제공.
   Notion backend·host browser OAuth·freshness·write-through·사용자 문서는 `0.10.0-test`까지 보류.
   Discord webhook 대화·시험 알림, HTML 안내, project·run·요청·progress payload는 `DIS9-*` 후속 범위

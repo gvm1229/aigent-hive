@@ -68,16 +68,24 @@ Global setup answer:
 ### Skill identity amendment (`0.9.0`)
 
 - Host-facing invocation: `aigent-hive:<short-name>`
-- 이름 변경 범위: source·consumer Hive-owned Skill 합집합. 승인 이름 정본: [`docs/skills.md`](../skills.md)
-- Shared workflow도 source·consumer active ID 분리. Related name family는 유지하고 exact collision 금지
-- Source-only Skill의 `hive-*` 예외 없음. Consumer host만 `aigent-hive:` namespace 부여
-- Consumer built-in Skill: short action-oriented IDs만 신규 projection·catalog·preview에 출력
+- 이름 정본: product-only 22개 목록 [`docs/skills.md`](../skills.md)
+- Aigent Hive source 개발: 설치 product Skill과 tracked repository directive 사용
+- Source-only·source projection Skill: 최종 `0건`; `.agents/skills/`는 이관 완료 뒤 삭제
+- Built-in Skill: short action-oriented product ID만 신규 projection·catalog·preview에 출력
+- Universal `ship`: repository-local Git rule·검증 발견, concern별 commit, explicit push. Aigent Hive
+  branch·release rule hardcoding 없음
+- Product `amend-directive`: global·project·Hive source의 사용자 수정 가능 behavior 변경.
+  Signed release·plugin cache·foreign byte와 compiled security boundary 수정 금지
+- Source Wiki route: product knowledge Skill이 `hive-source.json`을 발견하면
+  `hive source-wiki` CLI 사용. `source-review`·`source-knowledge` 별도 Skill 없음
 - Legacy `hive-*`, `setup-hive`, `setup-harness`, `ai-slop-cleaner`,
-  `best-practice-research`: saved selection migration 입력 전용
+  `best-practice-research`, interim `source-*`: saved selection migration 입력 전용
 - Migration result: `configure`, `setup-project`, `record-knowledge`,
-  `import-repository-knowledge`, `clean-ai-slop`, `research-practices` 등 current public ID
-- Rename ledger: scope별 source·consumer retired ID → current ID canonical mapping. saved selection
-  migration, dependency closure, source routing, collision reservation에 공통 사용. 삭제 권한 없음
+  `import-repository-knowledge`, `clean-ai-slop`, `research-practices`와 source names에서 final
+  product ID만 출력
+- Rename ledger: one-to-one·merge·split replacement closure 또는 no-Skill base-tool route 지원.
+  saved selection migration, dependency closure, source routing, collision reservation에 공통 사용.
+  삭제 권한 없음
 - Retired projection cleanup: frozen release inventory 또는 installed ownership manifest의 release byte
   ·ownership proof 일치 때만 삭제. 변조·unknown·foreign path는 write 0건 conflict. Future rename: ledger와
   authenticated historical-base cleanup regression 동시 추가
@@ -141,8 +149,8 @@ Global setup answer:
 - Percentage: valid range 안의 사용자 입력 또는 기존 저장값만 사용. fixed default·web·game
   mapping 없음
 - Global guard disable: project override와 무관하게 guard 비활성화
-- User-facing control: product `usage-guard` 하나. source guard는 같은 policy resolver를 쓰는
-  internal enforcement adapter이며 별도 active source Skill 아님
+- User-facing·source-development control: product `usage-guard` 하나. Source repository는 같은
+  resolver와 project override 사용; source Skill·adapter·별도 threshold state 없음
 - Qualified native sensor 우선
 - CodexBar: native unavailable·unsupported·malformed 상태의 fallback-only
 - CodexBar 설치: 필요성·고정 command preview·current-action consent 이후

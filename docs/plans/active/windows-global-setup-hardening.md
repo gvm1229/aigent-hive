@@ -2,7 +2,7 @@
 
 - 상태: active
 - Target: 다음 `0.9.0-test` numbered build
-- 선행 조건: `BGR-*`, `GSS-*`, `SIL-*`
+- 선행 조건: `BGR-*`, `GSS-*`, `SIL-*`, `UGP-*`
 - 연결 gate: `KST-006`, `DIS9-002–010`, `REL9-011`
 - 입력 증거: maintainer가 제공한 Windows 11 Codex setup 기록, `0.9.0-test.5`
 
@@ -50,7 +50,11 @@ Windows에서 npm 전역 설치 경로가 Codex의 현재 `PATH`에 보이지 �
 - [ ] [WGS-008] 명시적인 global setup 요청이 안전한 임시 파일·`dry-run`·conflict 없는 built-in apply를 승인한 것으로 처리한다. conflict, third-party Skill, 외부 설치, 비밀 접근, 파괴 작업만 별도 확인한다.
 - [ ] [WGS-009] 한국어 exact prompt fixture를 보강하여 한 문장 안 언어 혼합, 예상 밖 문자, `Skill` 오역, 한 줄에 여러 항목인 목록을 차단한다.
 - [ ] [WGS-010] Rust unit·CLI integration·Python static contract에 Windows PATH 불일치, individual Skill, 첫 YAML 검증 성공, 일반·Discord 단계 중단 재개, temp cleanup, conditional question 회귀를 추가한다.
-- [ ] [WGS-011] 다음 numbered 시험판을 게시하고 실제 Windows 11의 clean npm install·fresh Codex session에서 한 번의 setup으로 `dry-run → apply → validate`를 완료한다. 사용자 수동 `where hive`, schema 추측, home 임시 파일, 조건 밖 질문이 모두 0건이어야 하며 이 증거 전 stable `0.9.0`은 중지한다.
+- [ ] [WGS-011] 다음 numbered 시험판을 게시한 뒤 maintainer의 실제 Windows 11 machine에서
+  clean npm install·fresh Codex session·product-only Skill catalog·global/project usage guard를
+  포함한 한 번의 setup으로 `dry-run → apply → validate` 완료. 사용자 수동 `where hive`, schema
+  추측, home 임시 파일, 조건 밖 질문 모두 0건. 이 Mac에서 Windows 설치·setup 실행 또는 대체
+  수용 판정 금지. 해당 Windows 증거 전 stable `0.9.0` 중지
 
 ## 수용 결과
 
@@ -59,7 +63,8 @@ Windows에서 npm 전역 설치 경로가 Codex의 현재 `PATH`에 보이지 �
 - 개별 Skill 선택은 설치된 release의 정확한 목록으로 동작한다.
 - Discord와 `CodexBar` 질문은 실제 조건에 맞을 때만 나온다.
 - 실패 뒤 진행 상태는 보존되지만 webhook URL·raw prompt 같은 비밀은 저장하지 않는다.
-- 이 컴퓨터의 macOS 검증은 구현 회귀만 증명한다. Windows 수용은 실제 Windows 11 fresh session에서 별도로 증명한다.
+- 이 Mac의 source unit·static·cross-platform 검증: 구현 회귀만 증명. Global install·setup과
+  Windows 수용: maintainer의 실제 Windows 11 fresh session에서만 실행·증명
 
 ## 범위 밖
 
