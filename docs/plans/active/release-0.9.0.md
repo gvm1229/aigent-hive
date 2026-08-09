@@ -17,9 +17,9 @@
 ## 현재 기준선
 
 - Product: `0.9.0`; notes: [`0.9.0.md`](../../releases/0.9.0.md)
-- 최신 공개 시험판: `0.9.0-test.5`; npm `test=0.9.0-test.5`, `latest=0.8.0`
-- `0.9.0-test.6` 후보 `31254605322`: exact `9e08a48`, 5개 native target·npm 묶음·attestation PASS
-- `0.9.0-test.6` 게시 2회: 첫 scoped package npm `404`, npm version·tag·GitHub prerelease 생성 0건
+- 최신 공개 시험판: `0.9.0-test.6`; 여섯 npm package `test=0.9.0-test.6`, `latest=0.8.0`
+- `0.9.0-test.6` 후보 [`31294665865`](https://github.com/gvm1229/aigent-hive/actions/runs/31294665865): exact `f356500`, 5개 native target·npm 묶음·attestation PASS
+- `0.9.0-test.6` 게시 [`31295045199`](https://github.com/gvm1229/aigent-hive/actions/runs/31295045199): 여섯 package OIDC 게시, annotated `v0.9.0-test.6`, 22-asset GitHub prerelease, `latest=0.8.0` 유지 PASS
 - 상세 run·failure·external signer evidence: [`CURRENT.md`](../../state/CURRENT.md)
 
 ## 이번 정식 릴리스의 명시적 제외와 면제
@@ -101,7 +101,7 @@
 - [ ] [REL9-024] GitHub·npm·direct binary byte identity·provenance와 public update discovery·consent PASS
 - [ ] [REL9-025] Release·registry·installer 관찰, critical 회귀 0건과 rollback 판정
 - [ ] [REL9-026] PLAN·CURRENT·release notes·ADR·bilingual fact에 run ID·SHA·digest·지원·미검증 범위 최종 반영
-- [ ] [REL9-027] `release-publish.yml` 단일 OIDC publication: `channel=test|stable`별 exact branch·candidate·tag·Release guard, `NPM_TOKEN` fallback 제거, six-package Trusted Publisher 설정 안내와 static contract 검증
+- [x] [REL9-027] `release-publish.yml` 단일 OIDC publication: `channel=test|stable`별 exact branch·candidate·tag·Release guard, `NPM_TOKEN` fallback 제거, six-package Trusted Publisher 설정 안내와 static contract 검증 — `0.9.0-test.6`의 six-package OIDC publication PASS
 - [x] [REL9-028] Copier와 Rust harness renderer가 Discord `message_fields` 기본값을 byte-exact하게 동일 출력하는 parity PASS — `Copier 9.17.0` 격리 검증에서 4개 parity PASS
 
 ## 실행 순서

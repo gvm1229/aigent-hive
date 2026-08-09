@@ -53,7 +53,7 @@
 | Public Skill identity·localization | 6 | 0 | 100% |
 | Discord `v0.9` 연결 UX | 1 | 9 | 10% |
 | Notion `v0.10` 후보 | 1 | 10 | 9.1% |
-| **Canonical total** | **375** | **89** | **80.8%** |
+| **Canonical total** | **376** | **88** | **81.0%** |
 
 External production boundary 항목도 미완료 합계에 포함. Protected authority 없이 완료 처리 금지.
 
