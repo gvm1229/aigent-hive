@@ -11,13 +11,13 @@ aliases: ["User setup"]
 sources:
   - "repo:README.md#sha256:67c09e54e76df72ee9ac6acbde5b88fbb0a6653e1d7172e3f789a8d99c2434b7"
   - "repo:crates/hive-cli/src/user_setup.rs#sha256:48a76cd5503858a2327c7562879de259334b182687aace98ec1df06b71dd1600"
-  - "repo:docs/decisions/ADR-0012-global-onboarding-shared-index.md#sha256:d6cc73ae1bd278e0e9b2e06468cfcade31c0f731ef543a8ca84a5356b4aaa905"
+  - "repo:docs/decisions/ADR-0012-global-onboarding-shared-index.md#sha256:fa37bbe1c62b968b8d76d56e6f094f48317f6d6cd3262056171f0518e9f468ea"
   - "repo:docs/plans/active/windows-global-setup-hardening.md#sha256:6742a157cb9665b6b3accffce536dd447642ec367c41fa06c7d5bc7ef6ca0910"
   - "repo:harness/skills/configure/SKILL.md#sha256:abeb032e21d2576366025465d54080966767fb7e17cca57848acf093eaa83eaf"
   - "repo:harness/user-setup/catalog.yml#sha256:7dc82dbf559075ce4286e7dd19aec0ddc22e04f35ad4a8a60f43129a4dba2a1f"
   - "repo:schemas/user-setup.schema.json#sha256:46b360a9f91e154d1440e2997b56a964edd122383ccfc9b105b4e2ae4f8939f9"
 links: [project-onboarding, test-distribution]
-reviewed_revision: "git:dbae17b5e5bb39d068891b823dcd14f42ae23e10"
+reviewed_revision: "git:536f5076534cedcdb9ea3d118830792fe61cd75e"
 status: active
 ---
 

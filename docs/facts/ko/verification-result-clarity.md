@@ -11,10 +11,10 @@ aliases: ["건너뜀 보고", "검증 한정 조건"]
 sources:
   - "repo:.agents/directives/01-behavior.md#sha256:2418d9cad5ad54ff9fdad0f117c66336826bbd34c19fc0c131340fe64cb31f01"
   - "repo:crates/hive-cli/src/user_install.rs#sha256:cf2e1af6e7476bd05ae20bec0abd3ffcfe1730de632b0967b275331b3c00b1e3"
-  - "repo:docs/guidance-schema.md#sha256:e425a649a04b1879fb6abe5ddea86d239f79bcd4c757be5191d7d20dfa1270e3"
+  - "repo:docs/guidance-schema.md#sha256:f5fc6aa2c36274d78d9703693a362c2f8d8eb81204d37f8a224434c14d1b196b"
   - "repo:harness/template/AGENTS.md.jinja#sha256:64f33fed294900badc58d8ff6b4f7144d0c43bf003884abdcae5c703a60cdd7a"
 links: [language-consistency, release-verification]
-reviewed_revision: "git:35e6b79a024350487f823780101a28be24a9f4c7"
+reviewed_revision: "git:536f5076534cedcdb9ea3d118830792fe61cd75e"
 status: active
 ---
 
