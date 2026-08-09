@@ -1,17 +1,30 @@
-# Windows global setup hardening
+# Global setup release recovery·Windows hardening
 
 - 상태: active
-- Target: 다음 `0.9.0-test` numbered build
-- 선행 조건: `BGR-*`, `GSS-*`, `SIL-*`, `UGP-*`
+- Target: 다음 `0.9.0-test` numbered build와 stable `0.9.0` 출시 gate
+- 완료된 선행 조건: Mac release 원본 복구 `BGR-008–013`
+- 미완료 선행 조건: `GSS-*`, `SIL-*`, `UGP-*`
 - 연결 gate: `KST-006`, `DIS9-002–010`, `REL9-011`
-- 입력 증거: maintainer가 제공한 Windows 11 Codex setup 기록, `0.9.0-test.5`
+- 입력 증거: 이 Mac의 과거 developer/public build 원본 불일치, 현재 local validation,
+  maintainer가 제공한 Windows 11 Codex setup 기록과 `0.9.0-test.5`
 
 ## 목표
 
-Windows에서 npm 전역 설치 경로가 Codex의 현재 `PATH`에 보이지 않아도 Hive가 설치된 실행
-파일을 직접 찾아야 한다. 질문을 시작하기 전에 CLI와 설정 규칙을 확인하고, 사용자의 답을 한
-번만 정확한 형식으로 저장하여 첫 `dry-run`에서 검증해야 한다. 중단 후에는 마지막 질문부터
-이어갈 수 있어야 하며 사용자 홈에 임시 답안 파일을 남기지 않는다.
+- Mac: 완료된 developer build·public 시험판 원본 복구의 회귀 방지와 사용자 데이터 보존 확인
+- Windows: npm 전역 설치 경로가 Codex의 현재 `PATH`에 없어도 설치된 실행 파일 자동 탐색
+- 공통 setup: 질문 전 CLI·설정 계약 확인, 답안 단일 저장, 첫 `dry-run` 검증, 중단 지점 재개
+- 사용자 홈의 임시 답안 파일: `0건`
+
+## 완료된 Mac 복구
+
+- 과거 문제: developer build와 공개 시험판의 설치 원본 기록 불일치, 오래된 `0.7.0` Hive 파일 잔존
+- 구현 정본: [`bootstrap-global-setup-recovery.md`](bootstrap-global-setup-recovery.md)의
+  `BGR-008–013`
+- 복구 계약: authenticated historical base·live byte 확인, vanilla 교체, local edit 보존 merge,
+  unknown·tampered byte의 write 없는 conflict, knowledge·preference 보존
+- 현재 증거: `/Users/hojin/.local/bin/hive`의 `AIgent Hive v0.9.0-dev`와
+  `hive install --scope user --host codex --validate --output json` 성공
+- 결론: 동일 기능 재구현 없음. Windows 수정 뒤 Mac 회귀검사만 재실행
 
 ## 확인된 문제
 
@@ -58,13 +71,15 @@ Windows에서 npm 전역 설치 경로가 Codex의 현재 `PATH`에 보이지 �
 
 ## 수용 결과
 
+- Mac developer build·public 시험판 전환: ownership 오류 없음, preference·knowledge 보존,
+  질문 모음 반복 0건
 - 처음 실행한 사용자는 질문을 다시 답하지 않고 setup을 끝낸다.
 - CLI를 찾는 과정과 설정 파일 형식은 Agent가 추측하지 않는다.
 - 개별 Skill 선택은 설치된 release의 정확한 목록으로 동작한다.
 - Discord와 `CodexBar` 질문은 실제 조건에 맞을 때만 나온다.
 - 실패 뒤 진행 상태는 보존되지만 webhook URL·raw prompt 같은 비밀은 저장하지 않는다.
-- 이 Mac의 source unit·static·cross-platform 검증: 구현 회귀만 증명. Global install·setup과
-  Windows 수용: maintainer의 실제 Windows 11 fresh session에서만 실행·증명
+- 이 Mac: 완료된 원본 복구와 새 source unit·static·cross-platform 회귀 실행
+- Windows global install·setup 수용: maintainer의 실제 Windows 11 fresh session에서만 실행·증명
 
 ## 범위 밖
 

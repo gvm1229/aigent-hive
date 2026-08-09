@@ -96,6 +96,8 @@ Global setup answer:
 
 ### Global setup UX
 
+- Mac developer/public build 원본 불일치: `BGR-008–013`의 authenticated base·live byte 복구와
+  user preference·knowledge 보존으로 완료. 새 복구 경로 추가 없이 Windows 변경 뒤 회귀 재검증
 - Initial setup: interface language 질문 우선
 - 질문 전 signed CLI 확인 필수. Windows의 ambient `PATH`에 `hive`가 없으면 `Get-Command`,
   `where.exe`, `npm prefix -g`로 npm-owned `hive.cmd` absolute path를 찾아 version·ownership 확인.

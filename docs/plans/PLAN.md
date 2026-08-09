@@ -1,6 +1,6 @@
 # Aigent Hive active plan index
 
-> Revision: 2.33
+> Revision: 2.34
 > 기준일: 2026-08-09
 > Product version: `0.9.0`
 > 현재 milestone: `0.9.0` 정식 릴리스 준비
@@ -95,7 +95,7 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
 | [`active/skill-identity-localization.md`](active/skill-identity-localization.md) | `SIL-*` | product-only Skill·source Skill 폐기·표시 언어 |
 | [`active/usage-guard-policy.md`](active/usage-guard-policy.md) | `UGP-*` | 전역·project 한도·product guard |
 | [`active/discord-onboarding-v09.md`](active/discord-onboarding-v09.md) | `DIS9-*` | Discord global setup·프로젝트별 중단 알림·HTML 안내 |
-| [`active/windows-global-setup-hardening.md`](active/windows-global-setup-hardening.md) | `WGS-*` | Windows CLI 자동 탐색·설정 계약·진행 저장·fresh-session 수용 |
+| [`active/windows-global-setup-hardening.md`](active/windows-global-setup-hardening.md) | `WGS-*` | Mac 원본 복구 유지·Windows CLI 탐색·설정·fresh-session 수용 |
 | [`active/v0.10.0-notion-candidate.md`](active/v0.10.0-notion-candidate.md) | `N10-*` | Notion 연결·freshness·write-through와 `0.10.0-test` 후보 |
 
 ## Reconciliation gate
