@@ -51,6 +51,7 @@
 | Role state | [en](en/role-state.md) | [ko](ko/role-state.md) |
 | Run recovery | [en](en/run-recovery.md) | [ko](ko/run-recovery.md) |
 | Usage sensor | [en](en/usage-sensor-policy.md) | [ko](ko/usage-sensor-policy.md) |
+| Usage guard thresholds | [en](en/usage-guard-thresholds.md) | [ko](ko/usage-guard-thresholds.md) |
 | Automatic dispatch guard | [en](en/automatic-dispatch-guard.md) | [ko](ko/automatic-dispatch-guard.md) |
 | Source usage guard | [en](en/source-usage-guard.md) | [ko](ko/source-usage-guard.md) |
 | Source watcher process replacement | [en](en/source-watcher-process-replacement.md) | [ko](ko/source-watcher-process-replacement.md) |

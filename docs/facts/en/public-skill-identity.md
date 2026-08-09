@@ -9,21 +9,22 @@ summary: "Hive-owned source and product Skills use related but distinct active I
 tags: [localization, migration, plugin, skill]
 aliases: ["Skill naming"]
 sources:
-  - "repo:docs/decisions/ADR-0012-global-onboarding-shared-index.md#sha256:fa37bbe1c62b968b8d76d56e6f094f48317f6d6cd3262056171f0518e9f468ea"
-  - "repo:docs/plans/PLAN.md#sha256:71445da99eafe5fbbd3186fef770509dbc59ba62cb0ffbfe39eb32de3d545d52"
-  - "repo:docs/plans/active/skill-identity-localization.md#sha256:a6b7ee8e9da874952ae51002fb0fa79f0642612cbd311a3dc5f0de168540044e"
+  - "repo:docs/decisions/ADR-0012-global-onboarding-shared-index.md#sha256:87db5fb3f07e5a346d0060eee545bcd22135963c850afbf0e1fd737ba243b1d1"
+  - "repo:docs/plans/PLAN.md#sha256:2182e5c3942543533f9ae4b0b07d60449c83c46cbe379f23f6372c77afc7326e"
+  - "repo:docs/plans/active/skill-identity-localization.md#sha256:7e8bb78ea5a37b0d4748de54a5e5816b9d4529c6f68844c8c1054859c47d3b4c"
   - "repo:docs/skills.md#sha256:45ee795d93d82e255355090e972f413d6c842076a51594c94b226837ec0bf125"
 links: [global-onboarding, skill-routing]
-reviewed_revision: "git:1e1cd88e59308bd5488275a3714f63c6c16cea52"
+reviewed_revision: "git:a5dd671385c2a1e09d511fb1de6c737261210df7"
 status: active
 ---
 
 # Skill Identity
 
-Every Hive-owned source and product Skill participates in one reviewed catalog, but active IDs are
-distinct across the two surfaces so the installed product and the source workspace remain
-unambiguous. Every approved source ID uses the `source-*` prefix; related workflows retain
-recognizable name families. Product host invocation remains `aigent-hive:<name>`. Historical
-`hive-loop-engineering` maps through current `engineer-run` to source `source-ralph-loop` and
-product `ralph-loop`. Retired IDs enter a scope-aware transitive migration ledger; historical
-release bytes remain immutable and unverified old paths fail closed.
+Hive-owned source and product Skills use distinct active IDs. Every approved source ID uses the
+`source-*` prefix; product host invocation is `aigent-hive:<name>`. Historical
+`hive-loop-engineering` maps through `engineer-run` to source `source-ralph-loop` and product
+`ralph-loop`. Retired IDs use a scope-aware migration ledger; historical release bytes stay
+immutable and unverified old paths fail closed.
+
+Non-repository-specific source duplicates move to product counterparts. The single user-facing
+guard is product `usage-guard`; source enforcement is an internal adapter.
