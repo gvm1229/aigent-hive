@@ -32,8 +32,8 @@ Global setup answer:
     migration 전용
   - project setup recommendation: global catalog와 분리된 project-only catalog
 - Wiki: 기본 `enabled`, 명시적 opt-out
-- Usage guard: 명시적 opt-in, enabled 상태의 global default remaining threshold `20%`,
-  등록 project별 더 보수적인 early-stop override
+- Usage guard: 명시적 opt-in, global setup의 사용자 선택 remaining threshold,
+  등록 project별 더 보수적인 early-stop override. profile별·문서상의 fixed percentage 없음
 
 ### Setup scope routing
 
@@ -135,10 +135,11 @@ Global setup answer:
 ### Usage guard
 
 - Global setup의 explicit opt-in
-- Enabled global threshold 기본값: remaining `20%`
-- Project override: registered project별 선택값, global보다 낮은 값 거부
-- Effective threshold: `max(global, project override)`; global `20%`, web `50%`, game `30%`의
-  effective threshold: web `50%`, game `30%`
+- Enabled global threshold: global setup에서 사용자 선택
+- Project override: registered project별 선택값, global보다 낮은 값 거부, project profile별 자동값 없음
+- Effective threshold: `max(global, project override)`
+- Percentage: valid range 안의 사용자 입력 또는 기존 저장값만 사용. fixed default·web·game
+  mapping 없음
 - Global guard disable: project override와 무관하게 guard 비활성화
 - User-facing control: product `usage-guard` 하나. source guard는 같은 policy resolver를 쓰는
   internal enforcement adapter이며 별도 active source Skill 아님

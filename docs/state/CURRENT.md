@@ -13,9 +13,10 @@
 - `0.9.0-test.6`: 후보 [run `31294665865`](https://github.com/gvm1229/aigent-hive/actions/runs/31294665865)의 5개 native target·npm 묶음·attestation PASS. 게시 [run `31295045199`](https://github.com/gvm1229/aigent-hive/actions/runs/31295045199)의 여섯 package OIDC publication, annotated `v0.9.0-test.6`, 22-asset GitHub prerelease, 여섯 package `test=0.9.0-test.6`, `latest=0.8.0` 유지 PASS. Windows clean install·fresh Codex session 수용 전 stable 미착수
 - `REL9-027`: six-package Trusted Publisher OIDC 실제 게시 PASS. `BGR-012–013` source 응답의 내부 용어 억제·사용자 영향 우선 설명과 local `-dev → 0.9.0-test.6` user-scope validation 완료. `SIL-001–006` public Skill identity·localization·retired-ID cleanup과 `0.9.0-test.5` 독립 시험 게시 완료. `N10-001` Notion 사용자 노출 차단 완료. `DIS9-004`의 부분 설정 전체 목록·Discord 하위 항목 표시 계약 구현. 다음 작업: `DIS9-002–010` Discord 연결 UX. Notion end-to-end 기능은 `0.10.0-test`까지 보류
 - Skill 이름 결정: [`docs/skills.md`](../skills.md)에 source·product 24개 identity, 기능·예시·병합 2건 기록. Source·product active ID는 의도적으로 분리하고 모든 source 이름에 `source-*` 적용. 유지보수자 수정 product `prompt-refine`·`research-best-practices`, source `source-amend-directive` 반영. `hive-loop-engineering` 계보: current `engineer-run`, target source `source-ralph-loop`·product `ralph-loop`. 실제 path·ID 이관은 `SIL-008` 대기
-- 사용량 보호 후속: [`usage-guard-policy.md`](../plans/active/usage-guard-policy.md)에 global
-  `20%` 기본 한도·registered project별 더 보수적인 override·effective `max` 정책, product
-  `usage-guard` 단일 사용자 제어, source internal enforcement adapter 유지 계획 추가
+- 사용량 보호 후속: [`usage-guard-policy.md`](../plans/active/usage-guard-policy.md)에 global의
+  사용자 선택 한도·registered project별 더 보수적인 override·effective `max` 정책, project
+  profile별 고정값 0건, product `usage-guard` 단일 사용자 제어, source internal enforcement
+  adapter 유지 계획 추가
 - 외부 중지 경계: `main` PR·review, signing·TUF,
   exact `1.0.0` 사용자 authority
 - Plan load: compact `docs/plans/PLAN.md` + `docs/plans/phases/07-public-qualification.md`
@@ -339,7 +340,7 @@ Target: `0.8.0`
 | Update 확인 | Explicit opt-in daily check, offline 뒤 다음 host session 재시도 |
 | Skill suite 선택 | Recommended 또는 individual, dependency closure preview |
 | Wiki opt-out | Default-on, 언제든 disable/enable, Markdown 보존 |
-| Usage guard 선택 | Explicit opt-in, enabled 기본 `20%`, fallback 별도 consent |
+| Usage guard 선택 | Explicit opt-in, 사용자 선택 한도, fallback 별도 consent |
 | User marker | `AIGENT-HIVE:USER:START|END` append·owned replace |
 | User `.agents` | Provider-neutral directive·selected Skill projection |
 | Root knowledge | `~/.hive/knowledge` + disposable root SQLite |
