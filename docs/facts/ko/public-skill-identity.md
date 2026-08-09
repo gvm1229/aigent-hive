@@ -9,7 +9,7 @@ summary: "Consumer Skill의 짧은 동작 이름, aigent-hive plugin namespace, 
 tags: [localization, migration, plugin, skill]
 aliases: ["Skill naming"]
 sources:
-  - "repo:docs/plans/PLAN.md#sha256:4d7459f629421d9aee54c4355503a5948e1edfff6ed889347fa793b4807ec356"
+  - "repo:docs/plans/PLAN.md#sha256:887543e8a6cd94dfb32c615c0c6cf9f3858eaf91102e6d14d499d0bca3c446c7"
   - "repo:docs/plans/active/skill-identity-localization.md#sha256:7a5ce0b43d26fe195dc2dd1f0bd2f4a8d578ae2115caa46f88856eb279e5c0e7"
 links: [global-onboarding, skill-routing]
 reviewed_revision: "git:27816088abbcfca7233e0e006f8b1e6cdec7aa55"
