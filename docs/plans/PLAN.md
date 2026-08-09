@@ -1,6 +1,6 @@
 # Aigent Hive active plan index
 
-> Revision: 2.29
+> Revision: 2.30
 > 기준일: 2026-08-09
 > Product version: `0.9.0`
 > 현재 milestone: `0.9.0` 정식 릴리스 준비
@@ -47,11 +47,11 @@
 | Bootstrap·user projection recovery | 13 | 0 | 100% |
 | 한국어 setup 용어 복구 | 5 | 1 | 83.3% |
 | Global Skill 선택 단순화 | 8 | 0 | 100% |
-| Public Skill identity·localization | 6 | 0 | 100% |
+| Source·consumer Skill identity·localization | 6 | 2 | 75% |
 | Discord `v0.9` 연결 UX | 1 | 9 | 10% |
 | Windows global setup hardening | 1 | 10 | 9.1% |
 | Notion `v0.10` 후보 | 1 | 10 | 9.1% |
-| **Canonical total** | **377** | **98** | **79.4%** |
+| **Canonical total** | **377** | **100** | **79.0%** |
 
 External production boundary 항목도 미완료 합계에 포함. Protected authority 없이 완료 처리 금지.
 
@@ -91,7 +91,7 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
 | [`active/bootstrap-global-setup-recovery.md`](active/bootstrap-global-setup-recovery.md) | `BGR-*` | 선택형 bootstrap, 쉬운 global setup 복구, user projection merge |
 | [`active/korean-setup-terminology.md`](active/korean-setup-terminology.md) | `KST-*` | 한국어 global setup product term·질문 표기 |
 | [`active/global-skill-selection.md`](active/global-skill-selection.md) | `GSS-*` | all-built-in 기본값·개별 토글·목록 표기 |
-| [`active/skill-identity-localization.md`](active/skill-identity-localization.md) | `SIL-*` | public Skill 이름·plugin namespace·선택 언어 descriptor |
+| [`active/skill-identity-localization.md`](active/skill-identity-localization.md) | `SIL-*` | source·consumer Skill 이름·plugin namespace·선택 언어 descriptor |
 | [`active/discord-onboarding-v09.md`](active/discord-onboarding-v09.md) | `DIS9-*` | Discord global setup·프로젝트별 중단 알림·HTML 안내 |
 | [`active/windows-global-setup-hardening.md`](active/windows-global-setup-hardening.md) | `WGS-*` | Windows CLI 자동 탐색·설정 계약·진행 저장·fresh-session 수용 |
 | [`active/v0.10.0-notion-candidate.md`](active/v0.10.0-notion-candidate.md) | `N10-*` | Notion 연결·freshness·write-through와 `0.10.0-test` 후보 |
@@ -116,6 +116,5 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
 ## Current execution order
 
 완료 증거: [`CURRENT.md`](../state/CURRENT.md)와 owning active fragment.
-다음 작업: `WGS-002–011` Windows global setup 구조 보강·fresh-session 수용,
-`REL9-011`, `DIS9-002–010`, `REL9-014–026`. Antigravity·Claude 공개 제외 유지, Notion은
-`N10-002–011`·`0.10.0-test`까지 보류.
+다음: `SIL-007–008`, `WGS-002–011`, `REL9-011`, `DIS9-002–010`, `REL9-014–026`.
+Antigravity·Claude 공개 제외 유지. Notion: `N10-002–011`·`0.10.0-test` 보류.

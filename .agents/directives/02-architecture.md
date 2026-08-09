@@ -45,6 +45,13 @@ Never import installed consumer state back into source, copy source-development 
 - Keep Hive execution Skills declarative: they may reduce canonical state, issue bounded leases, validate receipts, and prepare host envelopes, but never call a model-provider API or launch a model/subagent process.
 - Permit bidirectional reuse only for Hive-owned Skill source after source/consumer scope, safety, consent, and conformance review. Never treat an installed consumer copy or consumer runtime state as source material.
 - Keep a shared Skill canonical under `harness/skills/<name>/` and project an exact source copy under `.agents/skills/<name>/`. Keep a source-only Skill under `.agents/skills/<name>/` until an explicit product-relevance review promotes it to `harness/skills/`.
+- Apply every approved Hive-owned Skill rename to the complete source and consumer inventory in one
+  reviewed migration. A shared Skill must use the same canonical short ID under `harness/skills/`
+  and `.agents/skills/`; source-only and consumer-only Skills remain on their proper surface but
+  follow the same short, action-oriented naming policy. Do not leave a source Skill on a retired
+  `hive-*` name merely because it is not shipped to consumers. Record all replaced source and
+  consumer IDs in the transitive rename ledger, and update routing metadata, references, and
+  conformance tests together. Historical release bases remain immutable.
 - A consumer Skill reused in source must not require consumer `.hive/` state, mutate an installed harness, weaken source-root refusal, or bypass the source usage guard. Adapt the provider-neutral workflow or core primitive instead of copying consumer state assumptions.
 - Load only the smallest approved Skill set needed for the task. The simple-question path loads no unrelated project Skill or memory.
 

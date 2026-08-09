@@ -798,7 +798,7 @@ class Phase3SkillSourceContract(unittest.TestCase):
                 *checklist_counts([global_skill_selection_path]),
             ),
             (
-                "Public Skill identity·localization",
+                "Source·consumer Skill identity·localization",
                 *checklist_counts([skill_identity_localization_path]),
             ),
             (
@@ -1376,6 +1376,31 @@ class Phase3SkillSourceContract(unittest.TestCase):
                     (plugin_root / name / "SKILL.md").read_bytes(),
                     (SKILL_ROOT / name / "SKILL.md").read_bytes(),
                 )
+
+    def test_skill_rename_policy_covers_source_and_consumer(self) -> None:
+        architecture = (
+            REPOSITORY_ROOT / ".agents/directives/02-architecture.md"
+        ).read_text(encoding="utf-8")
+        guidance = (
+            REPOSITORY_ROOT / "docs/guidance-schema.md"
+        ).read_text(encoding="utf-8")
+        plan = (
+            REPOSITORY_ROOT
+            / "docs/plans/active/skill-identity-localization.md"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn(
+            "complete source and consumer inventory",
+            architecture,
+        )
+        self.assertIn("reviewed migration", architecture)
+        self.assertIn("소스 개발용·소비자용 전체 목록을 한 번에 검토", guidance)
+        self.assertIn("[SIL-007]", plan)
+        self.assertIn("[SIL-008]", plan)
+        self.assertNotIn(
+            "Source-only developer Skills remain outside this public rename",
+            plan,
+        )
 
     def test_codex_skill_metadata_has_one_bounded_implicit_projection(
         self,

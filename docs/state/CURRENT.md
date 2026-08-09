@@ -2,7 +2,7 @@
 
 - 기준 branch: `develop`
 - product version: `0.9.0`
-- plan revision: `2.29`
+- plan revision: `2.30`
 - 현재 milestone: Windows 11 global setup 구조 보강과 fresh-session 재수용
 - `0.9.0` 예외: 실제 Antigravity host 수용과 Claude fixture 공개 제외. Codex 실제 plugin 활성화·global setup은 `REL9-011` 필수 gate. `develop → main` CI는 병합 gate 일시 면제이며 실패·미실행 범위 공개 유지
 - Codex 차단 문제: `0.9.0-test.5` 활성화 실패와 부분 상태 되돌리기 관찰. macOS의 Codex CLI `0.147.0` 격리 user root에서 `/tmp`와 host JSON의 `/private/tmp` 표기 불일치 재현. no-follow 확인 뒤 physical path 정규화 적용
@@ -12,6 +12,7 @@
 - Discord 수용: 실제·시험 알림의 동일 renderer·선택 필드·선택 언어, 시험 알림 첫 줄의 변경 안내 고지, 첨부 화면의 webhook 전달
 - `0.9.0-test.6`: 후보 [run `31294665865`](https://github.com/gvm1229/aigent-hive/actions/runs/31294665865)의 5개 native target·npm 묶음·attestation PASS. 게시 [run `31295045199`](https://github.com/gvm1229/aigent-hive/actions/runs/31295045199)의 여섯 package OIDC publication, annotated `v0.9.0-test.6`, 22-asset GitHub prerelease, 여섯 package `test=0.9.0-test.6`, `latest=0.8.0` 유지 PASS. Windows clean install·fresh Codex session 수용 전 stable 미착수
 - `REL9-027`: six-package Trusted Publisher OIDC 실제 게시 PASS. `BGR-012–013` source 응답의 내부 용어 억제·사용자 영향 우선 설명과 local `-dev → 0.9.0-test.6` user-scope validation 완료. `SIL-001–006` public Skill identity·localization·retired-ID cleanup과 `0.9.0-test.5` 독립 시험 게시 완료. `N10-001` Notion 사용자 노출 차단 완료. `DIS9-004`의 부분 설정 전체 목록·Discord 하위 항목 표시 계약 구현. 다음 작업: `DIS9-002–010` Discord 연결 UX. Notion end-to-end 기능은 `0.10.0-test`까지 보류
+- Skill 이름 범위 변경: 이전 `SIL-001–006`은 consumer 22개와 공유 source projection만 변경하고 source-only 5개를 제외. 유지보수자 결정으로 제외 폐기. `SIL-007–008`에서 source·consumer 합집합 이름 검토 뒤 shared exact ID·source-only·consumer-only를 한 번에 이관하며, 새 이름 승인 전 실제 rename 보류
 - 외부 중지 경계: `main` PR·review, signing·TUF,
   exact `1.0.0` 사용자 authority
 - Plan load: compact `docs/plans/PLAN.md` + `docs/plans/phases/07-public-qualification.md`
@@ -38,7 +39,7 @@
   + `docs/plans/active/discord-onboarding-v09.md`
   + `docs/plans/active/windows-global-setup-hardening.md`
   + `docs/plans/active/v0.10.0-notion-candidate.md`
-- Plan completion: canonical checklist `377/475` 완료, `98`개 미완료, `79.4%`
+- Plan completion: canonical checklist `377/477` 완료, `100`개 미완료, `79.0%`
 - 출시 분리: `0.9.0`의 user-visible Wiki는 local Markdown 정본과 SQLite projection만 제공.
   Notion backend·host browser OAuth·freshness·write-through·사용자 문서는 `0.10.0-test`까지 보류.
   Discord webhook 대화·시험 알림, HTML 안내, project·run·요청·progress payload는 `DIS9-*` 후속 범위
@@ -51,7 +52,8 @@
   all built-in·개별 Skill toggle·one-entry-per-line 적용. 기존 recommended closure는 saved
   answer validate에서만 해석, 새 `all|individual` preview·approval 전 활성 Skill 추가 0건.
   project recommendation은 분리 catalog 유지
-- Public Skill identity·localization: 22개 consumer Skill의 public short name 적용. Host invocation:
+- Skill identity·localization: 22개 consumer Skill의 public short name 적용 완료. Source-only 5개까지
+  같은 naming policy로 포함하는 후속 `SIL-007–008`은 이름 검토 대기. Host invocation:
   `aigent-hive:<short-name>`. Canonical `retired-names.yml`: retired ID→current ID mapping·collision
   reservation·saved selection migration. 삭제 authority: frozen historical release inventory 또는 installed
   ownership manifest의 exact byte 검증만 허용. `0.8.0` 세 host의 historic Skill path 전체 삭제와 변조
