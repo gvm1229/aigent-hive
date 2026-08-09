@@ -3305,7 +3305,7 @@ mod tests {
         assert!(!consumer.join(JOURNAL_PATH).exists());
         assert!(!consumer.join(".hive/index/hive.sqlite3").exists());
         assert!(consumer
-            .join(".agents/skills/setup-project/SKILL.md")
+            .join(".agents/skills/project-setup/SKILL.md")
             .is_file());
         for retired in legacy_builtin_names("0.6.0") {
             assert!(
@@ -3315,7 +3315,7 @@ mod tests {
                 "authenticated retired Skill path must be removed: {retired}"
             );
         }
-        for unselected in ["update-hive", "migrate-project"] {
+        for unselected in ["product-update", "project-transition"] {
             assert!(!consumer
                 .join(format!(".agents/skills/{unselected}/SKILL.md"))
                 .exists());

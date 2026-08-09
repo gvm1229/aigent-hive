@@ -52,8 +52,8 @@ This directive governs agent behavior while developing Aigent Hive.
 - Answer simple questions directly after that retrieval without starting a planning workflow,
   spawning agents, or editing project files. A relevant cross-project or user-global fact is not
   unrelated memory.
-- Route explicit prompt authoring or refinement intent to the source `aigent-hive:refine-prompt` Skill in `refine-only` mode unless the same request explicitly authorizes `--run` execution.
-- For an ordinary work prompt whose goal, scope, constraints, acceptance criteria, or output contract have two or more reasonable interpretations that materially change the result, automatically load `aigent-hive:refine-prompt` in `refine-only` mode.
+- Route explicit prompt authoring or refinement intent to the installed product `aigent-hive:prompt-refine` Skill in `refine-only` mode unless the same request explicitly authorizes `--run` execution.
+- For an ordinary work prompt whose goal, scope, constraints, acceptance criteria, or output contract have two or more reasonable interpretations that materially change the result, automatically load `aigent-hive:prompt-refine` in `refine-only` mode.
 - Refine-only returns a refined-prompt digest and `awaiting-approval` state. Before exact digest-bound approval, project read, tool, write, network, subagent, run, memory capture, and execution remain forbidden.
 - Do not automatically refine a sufficiently clear ordinary task, simple or editless question, explicit unrelated Skill, explicit external workflow, or request whose missing locator is safely discoverable without changing the result.
 - For implementation, identify the requested outcome, constraints, touched ownership surfaces, verification, and stop condition before editing.

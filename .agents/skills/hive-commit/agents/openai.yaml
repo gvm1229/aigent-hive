@@ -1,6 +1,0 @@
-interface:
-  display_name: "Hive Commit"
-  short_description: "Split source changes into focused verified commits"
-  default_prompt: "Use $hive-commit to split and commit the current source changes by concern."
-policy:
-  allow_implicit_invocation: true

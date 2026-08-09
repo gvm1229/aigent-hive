@@ -1073,7 +1073,7 @@ fn build_desired_user_files(
     }
 
     let selected_skills = operational.map_or_else(
-        || vec!["update-hive".to_owned(), "configure".to_owned()],
+        || vec!["product-update".to_owned(), "user-setup".to_owned()],
         |(_, skills)| skills.clone(),
     );
     let language = operational.map_or(DescriptorLanguage::En, |(config, _)| {
@@ -1626,7 +1626,7 @@ fn render_user_guidance(
             (
                 "# Aigent Hive user directives / 사용자 지침",
                 "Active adapter / 활성 adapter",
-                "- State / 상태: `setup-required`\n- Ask the user to choose `English` or `한국어` first, then ask for daily update-check consent. / 먼저 `English` 또는 `한국어`를 선택하고 일일 update 확인 동의를 질문.\n- Use the installed `aigent-hive:configure` Skill before ordinary Hive Skills. / 일반 Hive Skill보다 설치된 `aigent-hive:configure` Skill을 먼저 사용.\n- Before setup completes, only setup, doctor, update, and recover operations are available. / 설정 완료 전 setup, doctor, update, recover만 사용 가능.\n"
+                "- State / 상태: `setup-required`\n- Ask the user to choose `English` or `한국어` first, then ask for daily update-check consent. / 먼저 `English` 또는 `한국어`를 선택하고 일일 update 확인 동의를 질문.\n- Use the installed `aigent-hive:user-setup` Skill before ordinary Hive Skills. / 일반 Hive Skill보다 설치된 `aigent-hive:user-setup` Skill을 먼저 사용.\n- Before setup completes, only setup, doctor, update, and recover operations are available. / 설정 완료 전 setup, doctor, update, recover만 사용 가능.\n"
                     .to_owned(),
                 "- Preserve foreign guidance bytes and modify only exact Hive marker blocks. / Foreign guidance bytes를 보존하고 exact Hive marker block만 변경.\n- Never request provider API credentials or call model-provider APIs on Hive's behalf. / Provider API credential을 요청하거나 Hive를 대신해 model-provider API를 호출하지 않음.\n",
             )
@@ -1653,7 +1653,7 @@ fn render_user_guidance(
                     "# Aigent Hive user directives",
                     "Active adapter",
                     format!(
-                        "- State: `operational`\n- Interface language: `en`; use English for every question and response unless the user explicitly requests another language for the current response. A message written in another language does not by itself change this preference. Keep Korean only for exact Korean names, literals, quotations, or text the user asks to preserve.\n- Selected hosts: `{hosts}`\n- Global Wiki: `{wiki}`\n- Daily update check: `{update_check}`.\n- When enabled, run `hive update --check --user-root <user-root> --output json` before the first Hive task of each host session; never install from a check.\n- Use `aigent-hive:setup-project` for project expedited or custom setup.\n- Project Markdown Wiki remains canonical; the user-root SQLite index is derived and shared.\n- Use `aigent-hive:upgrade-project` for project projection upgrades.\n- Offer one optional refinement suggestion for ambiguous or detail-poor ordinary requests; never rewrite automatically.\n- Unless the user explicitly opts out for the current request, write every plan to an appropriate project Markdown file before presenting or executing it. Never mirror the persisted plan one-for-one in the session; reference it with a concise summary and file path, or provide the file path alone for extensive review.\n- Before presenting pending actions, finish every safe, in-scope, automatable task. Present only the remaining user-owned steps as a concise ordered guide with the exact action, expected result, and reason user authority is required. Separate failures or impossible tasks with their causes and recovery paths.\n"
+                        "- State: `operational`\n- Interface language: `en`; use English for every question and response unless the user explicitly requests another language for the current response. A message written in another language does not by itself change this preference. Keep Korean only for exact Korean names, literals, quotations, or text the user asks to preserve.\n- Selected hosts: `{hosts}`\n- Global Wiki: `{wiki}`\n- Daily update check: `{update_check}`.\n- When enabled, run `hive update --check --user-root <user-root> --output json` before the first Hive task of each host session; never install from a check.\n- Use `aigent-hive:project-setup` for project expedited or custom setup.\n- Project Markdown Wiki remains canonical; the user-root SQLite index is derived and shared.\n- Use `aigent-hive:project-refresh` for project projection upgrades.\n- Offer one optional refinement suggestion for ambiguous or detail-poor ordinary requests; never rewrite automatically.\n- Unless the user explicitly opts out for the current request, write every plan to an appropriate project Markdown file before presenting or executing it. Never mirror the persisted plan one-for-one in the session; reference it with a concise summary and file path, or provide the file path alone for extensive review.\n- Before presenting pending actions, finish every safe, in-scope, automatable task. Present only the remaining user-owned steps as a concise ordered guide with the exact action, expected result, and reason user authority is required. Separate failures or impossible tasks with their causes and recovery paths.\n"
                     ),
                     "- Preserve foreign guidance bytes and modify only exact Hive marker blocks.\n- Never request provider API credentials or call model-provider APIs on Hive's behalf.\n",
                 ),
@@ -1661,7 +1661,7 @@ fn render_user_guidance(
                     "# Aigent Hive 사용자 지침",
                     "활성 어댑터",
                     format!(
-                        "- 상태: `operational`\n- 사용 언어: `ko`; 현재 응답에 다른 언어를 사용하라는 명시적 요청이 없는 한 모든 질문과 응답에 한국어 사용. 다른 언어로 작성된 메시지만으로 이 선호를 변경하지 않음. 고유명사, 제품·패키지 이름, 명령어, 코드 식별자, 경로, 스키마 키, 정확한 화면 문구, 뚜렷한 한국어 대체어가 없는 용어만 영어 유지. 대체 가능한 일반 영어 단어의 한영 혼용 금지.\n- 선택한 호스트: `{hosts}`\n- 전역 위키: `{wiki}`\n- 일일 갱신 확인: `{update_check}`.\n- 활성화한 경우 각 호스트 세션의 첫 Hive 작업 전에 `hive update --check --user-root <user-root> --output json` 실행. 확인만으로 설치 금지.\n- 프로젝트 빠른 설정 또는 사용자 지정 설정에는 `aigent-hive:setup-project` 사용.\n- 프로젝트 Markdown 위키가 정본이며 사용자 루트 SQLite 색인은 파생·공유 상태.\n- 프로젝트 투영 갱신에는 `aigent-hive:upgrade-project` 사용.\n- 모호하거나 핵심 세부가 부족한 일반 요청에는 자동 재작성 없이 선택적 개선 제안 1개만 제공.\n- 현재 요청에서 사용자의 명시적 제외 요청이 없는 모든 계획을 적절한 프로젝트 Markdown 파일에 제시·실행 전 기록. 저장한 계획 전문을 session에 일대일 복제하지 않고 간결한 요약과 파일 경로로 참조하며, 광범위한 검토에는 파일 경로만 제시.\n- 남은 작업 제시 전 범위 안에서 안전하게 자동 처리 가능한 작업을 모두 완료. 사용자 권한이 필요한 단계만 정확한 행동·예상 결과·권한 필요 이유를 포함한 간결한 순서 안내로 제시. 실패·불가능 작업은 원인과 해결 경로를 분리해 제시.\n"
+                        "- 상태: `operational`\n- 사용 언어: `ko`; 현재 응답에 다른 언어를 사용하라는 명시적 요청이 없는 한 모든 질문과 응답에 한국어 사용. 다른 언어로 작성된 메시지만으로 이 선호를 변경하지 않음. 고유명사, 제품·패키지 이름, 명령어, 코드 식별자, 경로, 스키마 키, 정확한 화면 문구, 뚜렷한 한국어 대체어가 없는 용어만 영어 유지. 대체 가능한 일반 영어 단어의 한영 혼용 금지.\n- 선택한 호스트: `{hosts}`\n- 전역 위키: `{wiki}`\n- 일일 갱신 확인: `{update_check}`.\n- 활성화한 경우 각 호스트 세션의 첫 Hive 작업 전에 `hive update --check --user-root <user-root> --output json` 실행. 확인만으로 설치 금지.\n- 프로젝트 빠른 설정 또는 사용자 지정 설정에는 `aigent-hive:project-setup` 사용.\n- 프로젝트 Markdown 위키가 정본이며 사용자 루트 SQLite 색인은 파생·공유 상태.\n- 프로젝트 투영 갱신에는 `aigent-hive:project-refresh` 사용.\n- 모호하거나 핵심 세부가 부족한 일반 요청에는 자동 재작성 없이 선택적 개선 제안 1개만 제공.\n- 현재 요청에서 사용자의 명시적 제외 요청이 없는 모든 계획을 적절한 프로젝트 Markdown 파일에 제시·실행 전 기록. 저장한 계획 전문을 session에 일대일 복제하지 않고 간결한 요약과 파일 경로로 참조하며, 광범위한 검토에는 파일 경로만 제시.\n- 남은 작업 제시 전 범위 안에서 안전하게 자동 처리 가능한 작업을 모두 완료. 사용자 권한이 필요한 단계만 정확한 행동·예상 결과·권한 필요 이유를 포함한 간결한 순서 안내로 제시. 실패·불가능 작업은 원인과 해결 경로를 분리해 제시.\n"
                     ),
                     "- 외부 지침 바이트 보존, 정확한 Hive 표시 블록만 변경.\n- 제공자 API 자격 증명 요청 금지, Hive를 대신한 모델 제공자 API 호출 금지.\n",
                 ),
@@ -2022,7 +2022,7 @@ fn test_three_user_inventory(
     let mut setup_hive = false;
     for entry in &mut entries {
         if is_managed_ownership(&entry.ownership)
-            && entry.path.ends_with("/skills/configure/SKILL.md")
+            && entry.path.ends_with("/skills/user-setup/SKILL.md")
         {
             TEST3_SETUP_HIVE_DIGEST.clone_into(&mut entry.digest);
             setup_hive = true;
@@ -2165,10 +2165,10 @@ fn pre_scope_routing_test_inventory(
         if !is_managed_ownership(&entry.ownership) {
             continue;
         }
-        if entry.path.ends_with("/skills/configure/SKILL.md") {
+        if entry.path.ends_with("/skills/user-setup/SKILL.md") {
             PRE_SCOPE_ROUTING_SETUP_HIVE_DIGEST.clone_into(&mut entry.digest);
             setup_hive = true;
-        } else if entry.path.ends_with("/skills/setup-project/SKILL.md") {
+        } else if entry.path.ends_with("/skills/project-setup/SKILL.md") {
             PRE_SCOPE_ROUTING_SETUP_HARNESS_DIGEST.clone_into(&mut entry.digest);
         }
     }
@@ -5609,7 +5609,7 @@ fn validate_plugin_package(arguments: &UserArguments, plan: &UserPlan) -> Result
         UserHost::Claude => ".claude-plugin/plugin.json",
         UserHost::Antigravity => "plugin.json",
     };
-    for relative in [manifest, "skills/configure/SKILL.md"] {
+    for relative in [manifest, "skills/user-setup/SKILL.md"] {
         let path = root.join(relative);
         if read_optional_regular(&arguments.root_cap, &path, MAX_USER_FILE_BYTES)?.is_none() {
             return Err(InstallError::Verification(format!(
@@ -6604,7 +6604,7 @@ mod tests {
                 | HostSabotage::CrashAfterPluginInverse
                 | HostSabotage::FailAfterPluginMutationAndCompensation => {
                     fs::remove_file(self.root.join(
-                        ".hive/marketplaces/codex/plugins/aigent-hive/skills/configure/SKILL.md",
+                        ".hive/marketplaces/codex/plugins/aigent-hive/skills/user-setup/SKILL.md",
                     ))
                     .expect("delete installed skill");
                 }
@@ -7399,7 +7399,7 @@ mod tests {
             let plan =
                 build_plan(&args(temporary.path(), host, UserMode::DryRun)).expect("host plan");
             let metadata = PathBuf::from(format!(
-                ".hive/marketplaces/{}/plugins/aigent-hive/skills/configure/agents/openai.yaml",
+                ".hive/marketplaces/{}/plugins/aigent-hive/skills/user-setup/agents/openai.yaml",
                 host.as_str()
             ));
             if host == UserHost::Claude {
@@ -7546,15 +7546,15 @@ mod tests {
         for (host, relative) in [
             (
                 UserHost::Codex,
-                ".hive/marketplaces/codex/plugins/aigent-hive/skills/configure/SKILL.md",
+                ".hive/marketplaces/codex/plugins/aigent-hive/skills/user-setup/SKILL.md",
             ),
             (
                 UserHost::Claude,
-                ".hive/marketplaces/claude/plugins/aigent-hive/skills/configure/SKILL.md",
+                ".hive/marketplaces/claude/plugins/aigent-hive/skills/user-setup/SKILL.md",
             ),
             (
                 UserHost::Antigravity,
-                ".hive/marketplaces/antigravity/plugins/aigent-hive/skills/configure/SKILL.md",
+                ".hive/marketplaces/antigravity/plugins/aigent-hive/skills/user-setup/SKILL.md",
             ),
         ] {
             let temporary = tempdir().expect("tempdir");
@@ -7846,8 +7846,8 @@ mod tests {
         let mut predecessor_entries = current.entries.clone();
         let setup_hive = predecessor_entries
             .iter_mut()
-            .find(|entry| entry.path.ends_with("/skills/configure/SKILL.md"))
-            .expect("configure projection");
+            .find(|entry| entry.path.ends_with("/skills/user-setup/SKILL.md"))
+            .expect("user-setup projection");
         setup_hive.digest = PRE_SCOPE_ROUTING_SETUP_HIVE_DIGEST.to_owned();
         let predecessor_digest = source_release_digest_from_entries(&predecessor_entries);
         let request = InventoryAuthentication {
@@ -7884,8 +7884,8 @@ mod tests {
         let mut predecessor_entries = current.entries.clone();
         let setup_hive = predecessor_entries
             .iter_mut()
-            .find(|entry| entry.path.ends_with("/skills/configure/SKILL.md"))
-            .expect("configure projection");
+            .find(|entry| entry.path.ends_with("/skills/user-setup/SKILL.md"))
+            .expect("user-setup projection");
         setup_hive.digest = TEST3_SETUP_HIVE_DIGEST.to_owned();
         let predecessor_digest = source_release_digest_from_entries(&predecessor_entries);
         let request = InventoryAuthentication {
@@ -8768,7 +8768,7 @@ mod tests {
             .is_file());
         assert!(temporary
             .path()
-            .join(".gemini/config/plugins/aigent-hive/skills/configure/SKILL.md")
+            .join(".gemini/config/plugins/aigent-hive/skills/user-setup/SKILL.md")
             .is_file());
         assert!(runner
             .calls
@@ -9003,14 +9003,14 @@ mod tests {
                 temporary
                     .path()
                     .join(ANTIGRAVITY_SOURCE_RELATIVE)
-                    .join("skills/configure/SKILL.md")
+                    .join("skills/user-setup/SKILL.md")
             )
             .expect("source Skill"),
             fs::read(
                 temporary
                     .path()
                     .join(ANTIGRAVITY_STAGE_RELATIVE)
-                    .join("skills/configure/SKILL.md")
+                    .join("skills/user-setup/SKILL.md")
             )
             .expect("staged Skill")
         );

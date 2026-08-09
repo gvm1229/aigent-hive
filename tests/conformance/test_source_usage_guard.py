@@ -16,14 +16,7 @@ from pathlib import Path
 from unittest import mock
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
-GUARD = (
-    REPOSITORY_ROOT
-    / ".agents"
-    / "skills"
-    / "hive-usage-guard"
-    / "scripts"
-    / "guard.py"
-)
+GUARD = REPOSITORY_ROOT / "scripts" / "source-usage-guard.py"
 
 
 def timestamp() -> str:
@@ -1479,55 +1472,38 @@ raise SystemExit(64)
         self.assertTrue(self.output(blocked_again)["halt_marker"])
 
     def test_skill_and_directive_require_implicit_session_wide_turn_gating(self) -> None:
-        skill = (
-            REPOSITORY_ROOT
-            / ".agents"
-            / "skills"
-            / "hive-usage-guard"
-            / "SKILL.md"
-        ).read_text(encoding="utf-8")
+        guide = (REPOSITORY_ROOT / "docs/guides/source-usage-guard.md").read_text(
+            encoding="utf-8"
+        )
         directive = (
             REPOSITORY_ROOT
             / ".agents"
             / "directives"
             / "07-source-usage-guard.md"
         ).read_text(encoding="utf-8")
-        interface = (
-            REPOSITORY_ROOT
-            / ".agents"
-            / "skills"
-            / "hive-usage-guard"
-            / "agents"
-            / "openai.yaml"
-        ).read_text(encoding="utf-8")
-
-        self.assertIn("even if the user does not name this Skill", skill)
-        self.assertIn("Before routing, answering, planning", skill)
-        self.assertIn("bare “continue”/“resume”", skill)
+        self.assertIn("일반 질문, 계획, Skill, tool, write와 후속 task", guide)
         self.assertIn("For every user turn", directive)
         self.assertIn("Only after exit `0`", directive)
         self.assertIn("including simple answers", directive)
-        self.assertIn("allow_implicit_invocation: false", interface)
 
     def test_source_and_shipping_guidance_match_fallback_consent_contract(
         self,
     ) -> None:
-        source_skill = (
-            REPOSITORY_ROOT
-            / ".agents/skills/hive-usage-guard/SKILL.md"
-        ).read_text(encoding="utf-8")
+        source_skill = (REPOSITORY_ROOT / "docs/guides/source-usage-guard.md").read_text(
+            encoding="utf-8"
+        )
         source_directive = (
             REPOSITORY_ROOT
             / ".agents/directives/07-source-usage-guard.md"
         ).read_text(encoding="utf-8")
         canonical = (
             REPOSITORY_ROOT
-            / "harness/skills/manage-usage/SKILL.md"
+            / "harness/skills/usage-guard/SKILL.md"
         ).read_bytes()
         projections = (
-            "harness/plugins/aigent-hive/skills/manage-usage/SKILL.md",
-            "harness/template/.agents/skills/manage-usage/SKILL.md",
-            "harness/template/.claude/skills/manage-usage/SKILL.md",
+            "harness/plugins/aigent-hive/skills/usage-guard/SKILL.md",
+            "harness/template/.agents/skills/usage-guard/SKILL.md",
+            "harness/template/.claude/skills/usage-guard/SKILL.md",
         )
 
         for projection in projections:
@@ -1536,18 +1512,12 @@ raise SystemExit(64)
                 canonical,
                 projection,
             )
-        for content in (
-            source_skill,
-            source_directive,
-            canonical.decode("utf-8"),
-        ):
+        for content in (source_directive, canonical.decode("utf-8")):
             self.assertIn("current-action", content)
             self.assertIn("silently", content)
             self.assertIn("provider CLI", content)
             self.assertIn("manual-cookie", content)
             self.assertIn("package-manager", content)
-        self.assertIn("fallback-install --host", source_skill)
-        self.assertIn("--apply --confirm-install", source_skill)
         self.assertIn("bounded transient-unknown continuation", source_directive)
         self.assertIn(
             "automatic dispatch `hive.usage-unknown`",

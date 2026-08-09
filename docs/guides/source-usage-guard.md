@@ -54,12 +54,12 @@ Skill 이름을 말하지 않아도 아래처럼 의도가 분명하면 자동�
 | 다시 활성화 | `session 우회를 해제하고 사용량 가드를 다시 켜 줘.` |
 | 중지선 변경 | `사용량 가드 중지선을 잔여 15%로 바꿔 줘.` |
 
-명시적인 `$hive-usage-guard` 호출도 같은 동작을 하지만 필수 요건에서 제외.
+명시적인 `사용량 보호` 호출도 같은 동작을 하지만 필수 요건에서 제외.
 
 ```text
-$hive-usage-guard 사용량 가드 상태를 보여 줘.
-$hive-usage-guard 이 session에서 가드를 우회해.
-$hive-usage-guard 가드를 다시 켜 줘.
+사용량 보호 사용량 가드 상태를 보여 줘.
+사용량 보호 이 session에서 가드를 우회해.
+사용량 보호 가드를 다시 켜 줘.
 ```
 
 중지선에 도달하면 같은 session의 일반 질문, 계획, Skill, tool, write와 후속 task를
@@ -80,33 +80,33 @@ Quota sensor가 잠시 unknown이면 3초 대기 뒤 1회 재시도. 반복 unkn
 상태 확인:
 
 ```bash
-python3 .agents/skills/hive-usage-guard/scripts/guard.py status --json
+python3 scripts/source-usage-guard.py status --json
 ```
 
 Watcher 시작:
 
 ```bash
-python3 .agents/skills/hive-usage-guard/scripts/guard.py watch-start --json
+python3 scripts/source-usage-guard.py watch-start --json
 ```
 
 중지선 변경:
 
 ```bash
-python3 .agents/skills/hive-usage-guard/scripts/guard.py set-threshold 15 --json
+python3 scripts/source-usage-guard.py set-threshold 15 --json
 ```
 
 현재 session에서만 guard 비활성화:
 
 ```bash
-python3 .agents/skills/hive-usage-guard/scripts/guard.py \
+python3 scripts/source-usage-guard.py \
   session-disable --confirm-session-disable --json
 ```
 
 다시 활성화:
 
 ```bash
-python3 .agents/skills/hive-usage-guard/scripts/guard.py session-enable --json
-python3 .agents/skills/hive-usage-guard/scripts/guard.py gate --json
+python3 scripts/source-usage-guard.py session-enable --json
+python3 scripts/source-usage-guard.py gate --json
 ```
 
 `session-toggle`도 제공하지만 off 방향은 동일한

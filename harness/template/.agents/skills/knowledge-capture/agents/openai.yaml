@@ -1,0 +1,6 @@
+interface:
+  display_name: "Record knowledge"
+  short_description: "Record reviewed facts and workflows as canonical knowledge."
+  default_prompt: "Use $aigent-hive:knowledge-capture to review this turn and remember any safe durable claim."
+policy:
+  allow_implicit_invocation: true

@@ -1,0 +1,6 @@
+interface:
+  display_name: "Configure Hive"
+  short_description: "Configure or reuser-setup global Aigent Hive preferences."
+  default_prompt: "Use $aigent-hive:user-setup to user-setup or reuser-setup my user-scope Aigent Hive preferences."
+policy:
+  allow_implicit_invocation: true

@@ -1,6 +1,0 @@
-interface:
-  display_name: "Hive Directive Amend"
-  short_description: "Amend source and consumer directive contracts"
-  default_prompt: "Use $hive-directive-amend to apply this directive amendment to both source and consumer contracts."
-policy:
-  allow_implicit_invocation: false

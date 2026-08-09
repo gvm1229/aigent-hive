@@ -1,6 +1,0 @@
-interface:
-  display_name: "Upgrade project"
-  short_description: "Upgrade Hive-generated project guidance while preserving local edits."
-  default_prompt: "Use $aigent-hive:upgrade-project to preview or apply this project upgrade explicitly."
-policy:
-  allow_implicit_invocation: false

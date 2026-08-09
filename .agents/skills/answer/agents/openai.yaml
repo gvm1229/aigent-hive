@@ -1,6 +1,0 @@
-interface:
-  display_name: "Answer"
-  short_description: "Answer a simple question without inspecting or changing a project."
-  default_prompt: "Use $aigent-hive:answer to answer this self-contained question after the required gates."
-policy:
-  allow_implicit_invocation: false

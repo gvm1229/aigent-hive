@@ -133,59 +133,24 @@ OMC_MERGE = frozenset(
     }
 )
 
-CURRENT_SOURCE_SKILLS = frozenset(
-    {
-        "clean-ai-slop",
-        "auto-setup-project",
-        "research-practices",
-        "hive-commit",
-        "hive-directive-amend",
-        "hive-editless-question",
-        "record-knowledge",
-        "search-knowledge",
-        "import-repository-knowledge",
-        "engineer-run",
-        "refine-prompt",
-        "answer",
-        "hive-source-wiki",
-        "hive-usage-guard",
-        "manage-wiki",
-    }
-)
+CURRENT_SOURCE_SKILLS = frozenset()
 CURRENT_CONSUMER_SKILLS = frozenset(
     {
-        "clean-ai-slop",
-        "auto-setup-project",
-        "research-practices",
-        "verify-package",
-        "record-knowledge",
-        "maintain-knowledge",
-        "share-knowledge",
-        "search-knowledge",
-        "import-repository-knowledge",
-        "engineer-run",
-        "migrate-project",
-        "upgrade-project",
-        "refine-prompt",
-        "handoff-role",
-        "save-progress",
-        "resume-work",
-        "answer",
-        "update-hive",
-        "manage-usage",
-        "manage-wiki",
-        "setup-project",
-        "configure",
+        "quick-answer", "project-setup", "code-polish", "ralph-loop", "knowledge-import",
+        "knowledge-maintain", "knowledge-capture", "prompt-refine", "research-best-practices",
+        "knowledge-recall", "usage-guard", "ship", "amend-directive", "user-setup",
+        "run-handoff", "project-transition", "run-resume", "run-checkpoint",
+        "knowledge-promote", "product-update", "project-refresh", "package-review",
     }
 )
 CURRENT_SHARED_SKILLS = CURRENT_SOURCE_SKILLS & CURRENT_CONSUMER_SKILLS
 
 V09_SKILL_NAMES = (
-    "clean-ai-slop",
-    "research-practices",
-    "import-repository-knowledge",
-    "engineer-run",
-    "manage-wiki",
+    "code-polish",
+    "research-best-practices",
+    "knowledge-import",
+    "ralph-loop",
+    "knowledge-maintain",
 )
 V09_RUNTIME_FILES = (
     "Cargo.toml",
@@ -205,10 +170,10 @@ V09_RUNTIME_FILES = (
     "crates/hive-wiki/src/shared.rs",
     "crates/hive-wiki/src/store.rs",
     "harness/skills/catalog.yml",
-    "harness/skills/record-knowledge/SKILL.md",
-    "harness/skills/maintain-knowledge/SKILL.md",
-    "harness/skills/share-knowledge/SKILL.md",
-    "harness/skills/search-knowledge/SKILL.md",
+    "harness/skills/knowledge-capture/SKILL.md",
+    "harness/skills/knowledge-maintain/SKILL.md",
+    "harness/skills/knowledge-promote/SKILL.md",
+    "harness/skills/knowledge-recall/SKILL.md",
     "schemas/host-capability.schema.json",
     "schemas/loop-dispatch.schema.json",
     "schemas/loop-graph.schema.json",
@@ -221,16 +186,16 @@ V09_DIRECTIVE_FILES = (
     ".agents/directives/05-security-safety.md",
 )
 V09_SKILL_GLOBS = (
-    "clean-ai-slop",
-    "research-practices",
-    "record-knowledge",
-    "maintain-knowledge",
-    "share-knowledge",
-    "search-knowledge",
-    "import-repository-knowledge",
-    "engineer-run",
-    "hive-source-wiki",
-    "manage-wiki",
+    "code-polish",
+    "research-best-practices",
+    "knowledge-capture",
+    "knowledge-maintain",
+    "knowledge-promote",
+    "knowledge-recall",
+    "knowledge-import",
+    "ralph-loop",
+    "knowledge-recall",
+    "knowledge-maintain",
 )
 TEXT_SUFFIXES = {
     ".json",
@@ -497,47 +462,19 @@ class V09SkillInventoryDocumentContract(unittest.TestCase):
         )
         self.assertEqual(actual_source, CURRENT_SOURCE_SKILLS)
         self.assertEqual(actual_consumer, CURRENT_CONSUMER_SKILLS)
-        self.assertEqual(len(CURRENT_SOURCE_SKILLS), 15)
+        self.assertEqual(len(CURRENT_SOURCE_SKILLS), 0)
         self.assertEqual(len(CURRENT_CONSUMER_SKILLS), 22)
-        self.assertEqual(len(CURRENT_SHARED_SKILLS), 10)
+        self.assertEqual(len(CURRENT_SHARED_SKILLS), 0)
 
-        sections = (
-            (
-                "### 현재 source Skill 15/15",
-                "### 현재 consumer Skill 22/22",
-                CURRENT_SOURCE_SKILLS,
-            ),
-            (
-                "### 현재 source↔consumer 교집합 10/10",
-                "### 게시된 0.8 기준선",
-                CURRENT_SHARED_SKILLS,
-            ),
-        )
-        for heading, next_heading, expected in sections:
-            values = re.findall(
-                r"`([a-z][a-z0-9-]+)`",
-                section(self.text, heading, next_heading),
-            )
-            with self.subTest(heading=heading):
-                self.assertEqual(len(values), len(expected))
-                self.assertEqual(set(values), expected)
-
+        catalog_text = (REPOSITORY_ROOT / "docs/skills.md").read_text(encoding="utf-8")
         consumer_values = re.findall(
-            r"`([a-z][a-z0-9-]+)`",
-            section(
-                self.text,
-                "### 현재 consumer Skill 22/22",
-                "### 현재 source↔consumer 교집합 10/10",
-            ),
+            r"^\| `([a-z][a-z0-9-]+)` \|",
+            section(catalog_text, "## 제품 Skill 목록", "## Source Skill 폐기 경로"),
+            flags=re.MULTILINE,
         )
         self.assertEqual(len(consumer_values), len(CURRENT_CONSUMER_SKILLS))
         self.assertEqual(set(consumer_values), CURRENT_CONSUMER_SKILLS)
-        for historical in (
-            "source Skill `7`",
-            "consumer Skill `17`",
-            "source↔consumer 교집합 `3`",
-        ):
-            self.assertIn(historical, self.text)
+        self.assertIn("Source 전용 Skill: `0건`", catalog_text)
 
     def test_source_provenance_and_license_states_are_digest_bound(self) -> None:
         required = (
@@ -651,10 +588,10 @@ class V09RuntimeBoundaryContract(unittest.TestCase):
             "crates/hive-wiki/src/scan.rs",
             "crates/hive-wiki/src/store.rs",
             "harness/skills/catalog.yml",
-            "harness/skills/record-knowledge/SKILL.md",
-            "harness/skills/maintain-knowledge/SKILL.md",
-            "harness/skills/share-knowledge/SKILL.md",
-            "harness/skills/search-knowledge/SKILL.md",
+            "harness/skills/knowledge-capture/SKILL.md",
+            "harness/skills/knowledge-maintain/SKILL.md",
+            "harness/skills/knowledge-promote/SKILL.md",
+            "harness/skills/knowledge-recall/SKILL.md",
             "schemas/knowledge-bundle-manifest.schema.json",
             "schemas/knowledge-scan-result.schema.json",
             "schemas/loop-dispatch.schema.json",

@@ -2181,6 +2181,12 @@ fn resolve_effective_project_preferences(
             usage_stop_remaining_percent: global.usage_stop_remaining_percent,
         },
         "custom" => {
+            if answers.usage_stop_remaining_percent < global.usage_stop_remaining_percent {
+                return Err(RenderError::Safety(format!(
+                    "project usage threshold {}% cannot be lower than the global {}% threshold",
+                    answers.usage_stop_remaining_percent, global.usage_stop_remaining_percent
+                )));
+            }
             let wiki = answers
                 .wiki
                 .as_ref()
@@ -2216,7 +2222,7 @@ fn resolve_effective_project_preferences(
                 discord_guard_enabled: global.discord_guard_enabled,
                 discord_webhook_url_env: global.discord_webhook_url_env.clone(),
                 discord_message_fields: global.discord_message_fields.clone(),
-                usage_stop_remaining_percent: global.usage_stop_remaining_percent,
+                usage_stop_remaining_percent: answers.usage_stop_remaining_percent,
             }
         }
         _ => unreachable!("setup mode was validated"),
@@ -2230,12 +2236,11 @@ fn resolve_effective_project_preferences(
                     .map_err(|error| RenderError::Internal(error.to_string()))?;
                 let is_knowledge_skill = matches!(
                     canonical.as_deref().unwrap_or(name.as_str()),
-                    "record-knowledge"
-                        | "search-knowledge"
-                        | "share-knowledge"
-                        | "maintain-knowledge"
-                        | "import-repository-knowledge"
-                        | "manage-wiki"
+                    "knowledge-capture"
+                        | "knowledge-recall"
+                        | "knowledge-promote"
+                        | "knowledge-maintain"
+                        | "knowledge-import"
                 );
                 Ok((!is_knowledge_skill).then_some(name))
             })
@@ -2276,7 +2281,7 @@ fn validate_global_project_preferences(
             .iter()
             .try_fold(false, |found, name| {
                 canonical_builtin_skill_name(name)
-                    .map(|canonical| found || canonical.as_deref() == Some("configure"))
+                    .map(|canonical| found || canonical.as_deref() == Some("user-setup"))
                     .map_err(|error| RenderError::Internal(error.to_string()))
             })?
         || (global.codexbar_fallback_enabled && !global.usage_guard_enabled)
@@ -2354,6 +2359,7 @@ fn resolve_project_skill_selection(
         .skills
         .into_iter()
         .filter(|entry| entry.availability == Availability::Implemented)
+        .filter(|entry| entry.name != "user-setup")
         .map(|entry| entry.name)
         .collect::<BTreeSet<_>>();
     validate_project_skill_catalog(&catalog, &available)?;
@@ -2389,10 +2395,10 @@ fn resolve_project_skill_selection(
         _ => unreachable!("Skill selection mode was schema-validated"),
     };
     if recommended {
-        selected.remove("configure");
-    } else if selected.contains("configure") {
+        selected.remove("user-setup");
+    } else if selected.contains("user-setup") {
         return Err(RenderError::Input(
-            "configure is user-scope only and cannot be selected for a project".to_owned(),
+            "user-setup is user-scope only and cannot be selected for a project".to_owned(),
         ));
     }
     let dependencies = catalog
@@ -2445,7 +2451,7 @@ fn validate_project_skill_catalog(
             && project_skill_names_are_valid(&dependency.requires, available)
     });
     if catalog.schema_version != 1
-        || catalog.mandatory_skills != ["configure"]
+        || !catalog.mandatory_skills.is_empty()
         || suite_ids != BTreeSet::from(["game-developer", "non-developer", "web-developer"])
         || !suites_valid
         || !dependencies_valid
@@ -7094,7 +7100,7 @@ mod tests {
             wiki_language: "both".to_owned(),
             persona_id: "friendly".to_owned(),
             persona_custom_description: None,
-            selected_project_skills: vec!["setup-project".to_owned(), "refine-prompt".to_owned()],
+            selected_project_skills: vec!["project-setup".to_owned(), "prompt-refine".to_owned()],
             usage_guard_enabled: true,
             codexbar_fallback_enabled: true,
             discord_guard_enabled: true,
@@ -7133,10 +7139,10 @@ mod tests {
         assert!(!target.join(".hive/knowledge/Wiki/index.md").exists());
         assert!(!target.join(".hive/knowledge/Wiki/log.md").exists());
         assert!(target
-            .join(".agents/skills/setup-project/SKILL.md")
+            .join(".agents/skills/project-setup/SKILL.md")
             .is_file());
         assert!(target
-            .join(".agents/skills/refine-prompt/SKILL.md")
+            .join(".agents/skills/prompt-refine/SKILL.md")
             .is_file());
         assert!(!target
             .join(".agents/skills/hive-knowledge-query/SKILL.md")
@@ -7150,7 +7156,7 @@ mod tests {
         assert!(harness.contains("discord_message_fields = [\"project\", \"remaining-usage\"]"));
         assert!(harness.contains("discord_webhook_url_env = \"HIVE_DISCORD_WEBHOOK_URL\""));
         assert!(
-            harness.contains("selected_project_skills = [\"refine-prompt\", \"setup-project\"]")
+            harness.contains("selected_project_skills = [\"project-setup\", \"prompt-refine\"]")
         );
 
         execute_setup(&SetupRequest {
@@ -7175,7 +7181,7 @@ mod tests {
             wiki_language: "both".to_owned(),
             persona_id: "balanced".to_owned(),
             persona_custom_description: None,
-            selected_project_skills: vec!["manage-wiki".to_owned()],
+            selected_project_skills: vec!["knowledge-maintain".to_owned()],
             usage_guard_enabled: true,
             codexbar_fallback_enabled: false,
             discord_guard_enabled: false,
@@ -7232,7 +7238,7 @@ mod tests {
                     wiki_language: "both".to_owned(),
                     persona_id: "friendly".to_owned(),
                     persona_custom_description: None,
-                    selected_project_skills: vec!["setup-project".to_owned()],
+                    selected_project_skills: vec!["project-setup".to_owned()],
                     usage_guard_enabled: false,
                     codexbar_fallback_enabled: false,
                     discord_guard_enabled: false,
@@ -7266,7 +7272,7 @@ mod tests {
             wiki_language: "both".to_owned(),
             persona_id: "friendly".to_owned(),
             persona_custom_description: None,
-            selected_project_skills: vec!["refine-prompt".to_owned(), "setup-project".to_owned()],
+            selected_project_skills: vec!["prompt-refine".to_owned(), "project-setup".to_owned()],
             usage_guard_enabled: false,
             codexbar_fallback_enabled: false,
             discord_guard_enabled: false,
@@ -7330,7 +7336,7 @@ mod tests {
             wiki_language: "both".to_owned(),
             persona_id: "friendly".to_owned(),
             persona_custom_description: None,
-            selected_project_skills: vec!["setup-project".to_owned()],
+            selected_project_skills: vec!["project-setup".to_owned()],
             usage_guard_enabled: true,
             codexbar_fallback_enabled: false,
             discord_guard_enabled: false,
@@ -7432,7 +7438,7 @@ mod tests {
             .expect("base answers")
             .replace(
                 "setup_mode: expedited\n",
-                "setup_mode: custom\ninterface_language: ko\nwiki:\n  enabled: true\n  language: both\npersona:\n  id: friendly\nskills:\n  mode: individual\n  selected:\n    - setup-project\n",
+                "setup_mode: custom\ninterface_language: ko\nwiki:\n  enabled: true\n  language: both\npersona:\n  id: friendly\nskills:\n  mode: individual\n  selected:\n    - project-setup\n",
             );
         fs::write(&answers_path, answers).expect("custom answers");
 
@@ -7449,7 +7455,7 @@ mod tests {
                 wiki_language: "both".to_owned(),
                 persona_id: "balanced".to_owned(),
                 persona_custom_description: None,
-                selected_project_skills: vec!["setup-project".to_owned()],
+                selected_project_skills: vec!["project-setup".to_owned()],
                 usage_guard_enabled: false,
                 codexbar_fallback_enabled: false,
                 discord_guard_enabled: false,
@@ -7472,7 +7478,7 @@ mod tests {
             .expect("base answers")
             .replace(
                 "setup_mode: expedited\n",
-                "setup_mode: custom\ninterface_language: ko\nwiki:\n  enabled: true\n  language: both\npersona:\n  id: friendly\nskills:\n  mode: individual\n  selected:\n    - share-knowledge\n",
+                "setup_mode: custom\ninterface_language: ko\nwiki:\n  enabled: true\n  language: both\npersona:\n  id: friendly\nskills:\n  mode: individual\n  selected:\n    - knowledge-promote\n",
             );
         fs::write(&answers_path, answers).expect("custom answers");
 
@@ -7489,7 +7495,7 @@ mod tests {
                 wiki_language: "both".to_owned(),
                 persona_id: "balanced".to_owned(),
                 persona_custom_description: None,
-                selected_project_skills: vec!["setup-project".to_owned()],
+                selected_project_skills: vec!["project-setup".to_owned()],
                 usage_guard_enabled: true,
                 codexbar_fallback_enabled: false,
                 discord_guard_enabled: false,
@@ -7505,9 +7511,9 @@ mod tests {
             .expect("effective preferences should be returned");
         assert_eq!(
             effective.selected_project_skills,
-            ["record-knowledge", "search-knowledge", "share-knowledge",]
+            ["knowledge-capture", "knowledge-promote", "knowledge-recall",]
         );
-        for skill in ["record-knowledge", "search-knowledge", "share-knowledge"] {
+        for skill in ["knowledge-capture", "knowledge-recall", "knowledge-promote"] {
             assert!(target
                 .join(format!(".agents/skills/{skill}/SKILL.md"))
                 .is_file());
@@ -7515,7 +7521,7 @@ mod tests {
         let harness =
             fs::read_to_string(target.join(".hive/config/harness.toml")).expect("harness config");
         assert!(harness.contains(
-            "selected_project_skills = [\"record-knowledge\", \"search-knowledge\", \"share-knowledge\"]"
+            "selected_project_skills = [\"knowledge-capture\", \"knowledge-promote\", \"knowledge-recall\"]"
         ));
         assert!(harness.contains("codexbar_fallback_enabled = false"));
     }
@@ -7525,14 +7531,14 @@ mod tests {
         let selection = ProjectSkillSelection {
             mode: "individual".to_owned(),
             recommended_suite: None,
-            selected: Some(vec!["configure".to_owned()]),
+            selected: Some(vec!["user-setup".to_owned()]),
         };
 
         let error = resolve_project_skill_selection(&selection)
-            .expect_err("configure must remain user-scope only");
+            .expect_err("user-setup must remain user-scope only");
 
         assert_eq!(error.code(), "hive.setup-invalid-input");
-        assert!(error.to_string().contains("configure is user-scope only"));
+        assert!(error.to_string().contains("user-setup is user-scope only"));
     }
 
     #[test]
@@ -7568,27 +7574,27 @@ mod tests {
 
     fn current_skill_paths_added_since_0_7(capabilities: &str) -> Vec<String> {
         let new_body_skills = [
-            "answer",
-            "auto-setup-project",
-            "clean-ai-slop",
-            "engineer-run",
-            "handoff-role",
-            "import-repository-knowledge",
-            "maintain-knowledge",
-            "manage-usage",
-            "manage-wiki",
-            "migrate-project",
-            "record-knowledge",
-            "refine-prompt",
-            "research-practices",
-            "resume-work",
-            "save-progress",
-            "search-knowledge",
-            "setup-project",
-            "share-knowledge",
-            "update-hive",
-            "upgrade-project",
-            "verify-package",
+            "quick-answer",
+            "project-setup",
+            "code-polish",
+            "ralph-loop",
+            "knowledge-import",
+            "knowledge-maintain",
+            "knowledge-capture",
+            "prompt-refine",
+            "research-best-practices",
+            "knowledge-recall",
+            "usage-guard",
+            "ship",
+            "amend-directive",
+            "run-handoff",
+            "project-transition",
+            "run-resume",
+            "run-checkpoint",
+            "knowledge-promote",
+            "product-update",
+            "project-refresh",
+            "package-review",
         ];
         let mut expected = new_body_skills
             .iter()
@@ -8678,7 +8684,7 @@ mod tests {
             .canonicalize()
             .expect("fixture target should have a stable path");
         apply_fixture(&target, "answers-base.yml", "capabilities-codex-omx.json");
-        let projected = target.join(".agents/skills/answer/SKILL.md");
+        let projected = target.join(".agents/skills/quick-answer/SKILL.md");
         fs::write(&projected, b"user collision bytes\x00\xff\n")
             .expect("projected fixture should be tampered");
 
@@ -8816,7 +8822,7 @@ mod tests {
             .expect("tree should render");
         let transition = prepare_projection_transition(&target_dir, &planned, &answers)
             .expect("first-install projection preflight should prove absence");
-        let projected = target.join(".agents/skills/answer/SKILL.md");
+        let projected = target.join(".agents/skills/quick-answer/SKILL.md");
         let create_foreign = || {
             fs::create_dir_all(projected.parent().expect("projection should have a parent"))
                 .expect("foreign projection parent should be created");
@@ -8909,7 +8915,7 @@ mod tests {
             .expect("changed tree should render");
         let transition = prepare_projection_transition(&target_dir, &planned, &answers)
             .expect("installed projection ownership should verify");
-        let projected = target.join(".agents/skills/answer/SKILL.md");
+        let projected = target.join(".agents/skills/quick-answer/SKILL.md");
         let tamper_projection = || {
             fs::write(&projected, b"tampered race bytes\x00\xff\n")
                 .expect("projected Skill should be tampered after preflight");
@@ -9413,8 +9419,10 @@ mod tests {
             fs::read(foreign).expect("foreign file should remain"),
             b"foreign discovery bytes\x00\xff\n"
         );
-        assert!(target.join(".agents/skills/answer/SKILL.md").is_file());
-        assert!(!target.join(".claude/skills/answer/SKILL.md").exists());
+        assert!(target
+            .join(".agents/skills/quick-answer/SKILL.md")
+            .is_file());
+        assert!(!target.join(".claude/skills/quick-answer/SKILL.md").exists());
     }
 
     #[test]

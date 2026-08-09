@@ -39,7 +39,7 @@ Do not use chat history, `.omx/`, `.agents/work/`, issue drafts, or generated SQ
 - Before the final response for a material source task, decide whether the completed work created
   or materially revised a reusable artifact, product fact, decision, workflow, criterion, or
   continuation context.
-- When it did, load `hive-source-wiki` and update the smallest current-truth English/Korean pair.
+- When it did, load `hive source-wiki` and update the smallest current-truth English/Korean pair.
 - Capture only facts from the current authorized task and its reviewed local artifacts: outcome,
   tool or external project used, creation or acceptance criteria, and a bounded originating
   request summary.

@@ -34,6 +34,7 @@ const USER_SETUP_USAGE: &str = "\
 Configure or validate Aigent Hive user preferences.
 
 USAGE:
+    hive setup --scope user --describe --output json
     hive setup --scope user --answers <yml> (--dry-run|--apply|--validate) [--user-root <dir>] --output json
     hive setup --progress save --scope user --step <step> --answers <yml> [--user-root <dir>] --output json
     hive setup --progress status|clear --scope user [--user-root <dir>] --output json
@@ -452,6 +453,9 @@ pub(crate) fn print_help() {
 }
 
 pub(crate) fn run(arguments: &[String]) -> ExitCode {
+    if arguments.iter().any(|argument| argument == "--describe") {
+        return run_describe(arguments);
+    }
     if arguments.first().map(String::as_str) == Some("--progress") {
         return run_progress(&arguments[1..]);
     }
@@ -459,6 +463,81 @@ pub(crate) fn run(arguments: &[String]) -> ExitCode {
         .and_then(|arguments| execute(&arguments))
         .unwrap_or_else(|error| failure(&error));
     emit_action_result(&result)
+}
+
+fn run_describe(arguments: &[String]) -> ExitCode {
+    let valid = arguments.len() == 5
+        && arguments.iter().any(|value| value == "--scope")
+        && arguments.iter().any(|value| value == "user")
+        && arguments.iter().any(|value| value == "--describe")
+        && arguments.iter().any(|value| value == "--output")
+        && arguments.iter().any(|value| value == "json");
+    let result = if !valid {
+        failure(&SetupError::Input(
+            "setup describe requires --scope user --describe --output json".to_owned(),
+        ))
+    } else {
+        describe_result().unwrap_or_else(|error| failure(&error))
+    };
+    emit_action_result(&result)
+}
+
+fn describe_result() -> Result<ActionResult, SetupError> {
+    let schema: JsonValue = serde_json::from_str(USER_SETUP_SCHEMA).map_err(|error| {
+        SetupError::Internal(format!("invalid embedded user setup schema: {error}"))
+    })?;
+    let catalog: JsonValue = serde_yaml::from_str(USER_SETUP_CATALOG).map_err(|error| {
+        SetupError::Internal(format!("invalid embedded user setup catalog: {error}"))
+    })?;
+    let question_order = json!([
+        "interface-language",
+        "daily-update-check",
+        "setup-mode",
+        "wiki",
+        "user-contexts",
+        "persona",
+        "hosts",
+        "skills",
+        "usage-guard",
+        "discord"
+    ]);
+    let example = json!({
+        "schema_version": 1,
+        "interface_language": "en",
+        "wiki": { "enabled": true, "language": "en", "backend": "markdown" },
+        "profile": { "contexts": ["non-developer"] },
+        "persona": { "id": "balanced" },
+        "selected_hosts": ["codex"],
+        "skills": { "mode": "all" },
+        "update_check": { "enabled": false },
+        "usage_guard": { "enabled": false, "stop_remaining_percent": 20,
+            "codexbar_fallback_enabled": false,
+            "discord": { "enabled": false, "request_privacy": "summary",
+                "message_fields": default_discord_message_fields().iter().map(|field| field.as_str()).collect::<Vec<_>>() }
+        }
+    });
+    Ok(ActionResult {
+        schema_version: 1,
+        action: "DescribeHiveUserSetup",
+        status: "success",
+        exit_code: 0,
+        code: "hive.user-setup-described",
+        message: "user setup contract described".to_owned(),
+        changed_paths: Vec::new(),
+        evidence: vec![Evidence {
+            kind: "user-setup-catalog",
+            locator: "harness/user-setup/catalog.yml".to_owned(),
+            digest: sha256_digest(USER_SETUP_CATALOG.as_bytes()),
+        }],
+        next_action: None,
+        data: Some(json!({
+            "contract_digest": sha256_digest(format!("{USER_SETUP_SCHEMA}\n{USER_SETUP_CATALOG}").as_bytes()),
+            "schema": schema,
+            "catalog": catalog,
+            "answer_example": example,
+            "question_order": question_order,
+        })),
+    })
 }
 
 fn run_progress(arguments: &[String]) -> ExitCode {
@@ -1153,20 +1232,16 @@ fn migrate_legacy_skill_names(value: &mut JsonValue) -> Result<(), SetupError> {
         return Ok(());
     };
     let mut names = BTreeSet::new();
-    for item in selected {
+    for item in selected.iter() {
         let name = item.as_str().ok_or_else(|| {
             SetupError::Input("selected Skills must contain only names".to_owned())
         })?;
         let canonical = canonical_builtin_skill_name(name)
             .map_err(|error| SetupError::Internal(error.to_string()))?
             .unwrap_or_else(|| name.to_owned());
-        if !names.insert(canonical.clone()) {
-            return Err(SetupError::Input(format!(
-                "legacy Skill migration creates a duplicate selection: {canonical}"
-            )));
-        }
-        *item = JsonValue::String(canonical);
+        names.insert(canonical);
     }
+    *selected = names.into_iter().map(JsonValue::String).collect();
     Ok(())
 }
 
@@ -1249,59 +1324,59 @@ fn migrate_legacy_single_profile(value: &mut JsonValue) -> bool {
 fn legacy_recommended_skill_set(suite: &str) -> Option<&'static [&'static str]> {
     match suite {
         "web-developer" => Some(&[
-            "configure",
-            "setup-project",
-            "auto-setup-project",
-            "clean-ai-slop",
-            "research-practices",
-            "engineer-run",
-            "refine-prompt",
-            "manage-wiki",
-            "record-knowledge",
-            "search-knowledge",
-            "maintain-knowledge",
-            "import-repository-knowledge",
-            "save-progress",
-            "resume-work",
-            "manage-usage",
-            "update-hive",
-            "upgrade-project",
+            "user-setup",
+            "project-setup",
+            "project-setup",
+            "code-polish",
+            "research-best-practices",
+            "ralph-loop",
+            "prompt-refine",
+            "knowledge-maintain",
+            "knowledge-capture",
+            "knowledge-recall",
+            "knowledge-maintain",
+            "knowledge-import",
+            "run-checkpoint",
+            "run-resume",
+            "usage-guard",
+            "product-update",
+            "project-refresh",
         ]),
         "game-developer" => Some(&[
-            "configure",
-            "setup-project",
-            "auto-setup-project",
-            "clean-ai-slop",
-            "research-practices",
-            "engineer-run",
-            "refine-prompt",
-            "manage-wiki",
-            "record-knowledge",
-            "search-knowledge",
-            "maintain-knowledge",
-            "import-repository-knowledge",
-            "save-progress",
-            "resume-work",
-            "handoff-role",
-            "verify-package",
-            "manage-usage",
-            "update-hive",
-            "upgrade-project",
+            "user-setup",
+            "project-setup",
+            "project-setup",
+            "code-polish",
+            "research-best-practices",
+            "ralph-loop",
+            "prompt-refine",
+            "knowledge-maintain",
+            "knowledge-capture",
+            "knowledge-recall",
+            "knowledge-maintain",
+            "knowledge-import",
+            "run-checkpoint",
+            "run-resume",
+            "run-handoff",
+            "package-review",
+            "usage-guard",
+            "product-update",
+            "project-refresh",
         ]),
         "non-developer" => Some(&[
-            "configure",
-            "setup-project",
-            "auto-setup-project",
-            "research-practices",
-            "answer",
-            "refine-prompt",
-            "manage-wiki",
-            "record-knowledge",
-            "search-knowledge",
-            "maintain-knowledge",
-            "import-repository-knowledge",
-            "manage-usage",
-            "update-hive",
+            "user-setup",
+            "project-setup",
+            "project-setup",
+            "research-best-practices",
+            "quick-answer",
+            "prompt-refine",
+            "knowledge-maintain",
+            "knowledge-capture",
+            "knowledge-recall",
+            "knowledge-maintain",
+            "knowledge-import",
+            "usage-guard",
+            "product-update",
         ]),
         _ => None,
     }
@@ -1605,9 +1680,9 @@ fn validate_catalog_semantics(catalog: &UserSetupCatalog) -> Result<(), SetupErr
         })
         .map(|entry| entry.name.as_str())
         .collect();
-    if catalog.mandatory_skills != ["configure"] {
+    if catalog.mandatory_skills != ["user-setup"] {
         return Err(SetupError::Internal(
-            "embedded mandatory skill set must be exactly configure".to_owned(),
+            "embedded mandatory skill set must be exactly user-setup".to_owned(),
         ));
     }
     if !catalog.optional_third_party_skills.is_empty() {
@@ -1739,17 +1814,16 @@ fn resolve_skills(
         selected.retain(|name| {
             !matches!(
                 name.as_str(),
-                "record-knowledge"
-                    | "search-knowledge"
-                    | "share-knowledge"
-                    | "maintain-knowledge"
-                    | "import-repository-knowledge"
-                    | "manage-wiki"
+                "knowledge-capture"
+                    | "knowledge-recall"
+                    | "knowledge-promote"
+                    | "knowledge-maintain"
+                    | "knowledge-import"
             )
         });
     }
     if config.usage_guard.enabled {
-        selected.insert("manage-usage".to_owned());
+        selected.insert("usage-guard".to_owned());
     }
     let dependencies: BTreeMap<&str, &[String]> = catalog
         .skill_dependencies
@@ -2113,7 +2187,7 @@ fn legacy_test3_projection_base(
     let skills = resolve_skills(&config, &catalog)?;
     let mut base = user_projection_files(&config, &skills)?;
     base.insert(
-        PathBuf::from(".agents/skills/configure/SKILL.md"),
+        PathBuf::from(".agents/skills/user-setup/SKILL.md"),
         USER_PROJECTION_090_TEST3_SETUP_HIVE.to_vec(),
     );
     let expected = base
@@ -2442,7 +2516,7 @@ pub(crate) fn project_preferences(user_root: &Path) -> Result<GlobalProjectPrefe
         .ok_or_else(|| {
             "global Hive setup is required before project expedited or custom setup".to_owned()
         })?;
-    selected_project_skills.retain(|name| name != "configure");
+    selected_project_skills.retain(|name| name != "user-setup");
     selected_project_skills.sort();
     selected_project_skills.dedup();
     Ok(GlobalProjectPreferences {
@@ -2631,7 +2705,7 @@ selected_hosts:
 skills:
   mode: individual
   selected:
-    - configure
+    - user-setup
 usage_guard:
   enabled: false
   stop_remaining_percent: 20
@@ -2735,8 +2809,8 @@ usage_guard:
         let catalog = parse_and_validate_catalog().expect("catalog");
         let skills = resolve_skills(&config, &catalog).expect("skill closure");
         let files = user_projection_files(&config, &skills).expect("desired files");
-        let path = PathBuf::from(".agents/skills/configure/SKILL.md");
-        let incoming = files.get(&path).expect("configure source").clone();
+        let path = PathBuf::from(".agents/skills/user-setup/SKILL.md");
+        let incoming = files.get(&path).expect("user-setup source").clone();
         let full = temporary.path().join(&path);
         fs::create_dir_all(full.parent().expect("skill parent")).expect("skill parent");
         fs::write(&full, local).expect("local Skill");
@@ -2766,8 +2840,8 @@ usage_guard:
         let catalog = parse_and_validate_catalog().expect("catalog");
         let skills = resolve_skills(&config, &catalog).expect("skill closure");
         let files = user_projection_files(&config, &skills).expect("desired files");
-        let path = PathBuf::from(".agents/skills/configure/SKILL.md");
-        let incoming = files.get(&path).expect("configure source").clone();
+        let path = PathBuf::from(".agents/skills/user-setup/SKILL.md");
+        let incoming = files.get(&path).expect("user-setup source").clone();
         let mut base = incoming.clone();
         let replaced = String::from_utf8(base.clone())
             .expect("UTF-8 Skill")
@@ -2797,8 +2871,8 @@ usage_guard:
         let catalog = parse_and_validate_catalog().expect("catalog");
         let skills = resolve_skills(&config, &catalog).expect("skill closure");
         let files = user_projection_files(&config, &skills).expect("desired files");
-        let path = PathBuf::from(".agents/skills/configure/SKILL.md");
-        let incoming = files.get(&path).expect("configure source").clone();
+        let path = PathBuf::from(".agents/skills/user-setup/SKILL.md");
+        let incoming = files.get(&path).expect("user-setup source").clone();
         let base = String::from_utf8(incoming)
             .expect("UTF-8 Skill")
             .replace("# Setup Hive", "# Earlier Setup Hive")
@@ -2840,7 +2914,7 @@ usage_guard:
     #[test]
     fn legacy_user_projection_without_an_authenticated_base_stays_unchanged() {
         let temporary = tempfile::tempdir().expect("temporary user root");
-        let path = PathBuf::from(".agents/skills/configure/SKILL.md");
+        let path = PathBuf::from(".agents/skills/user-setup/SKILL.md");
         let full = temporary.path().join(&path);
         fs::create_dir_all(full.parent().expect("skill parent")).expect("skill parent");
         let local = b"local-only setup instructions\n".to_vec();
@@ -2884,7 +2958,7 @@ usage_guard:
         let catalog = parse_and_validate_catalog().expect("catalog");
         let skills = resolve_skills(&config, &catalog).expect("skill closure");
         let mut old_files = user_projection_files(&config, &skills).expect("old files");
-        let path = PathBuf::from(".agents/skills/configure/SKILL.md");
+        let path = PathBuf::from(".agents/skills/user-setup/SKILL.md");
         old_files.insert(path.clone(), USER_PROJECTION_090_TEST3_SETUP_HIVE.to_vec());
         for (relative, bytes) in &old_files {
             let full = temporary.path().join(relative);
@@ -2920,7 +2994,7 @@ usage_guard:
             .reports
             .iter()
             .find(|report| report.path == portable(&path))
-            .expect("configure report");
+            .expect("user-setup report");
 
         assert_eq!(report.disposition, MergeDisposition::IncomingReplace);
         assert!(!report.local_priority);
@@ -2969,9 +3043,9 @@ usage_guard:
         let temporary = tempfile::tempdir().expect("temporary user root");
         let config = valid_config();
         let (skills, answers, _) = seed_legacy_070_projection(temporary.path(), &config);
-        let path = PathBuf::from(".agents/skills/configure/SKILL.md");
+        let path = PathBuf::from(".agents/skills/user-setup/SKILL.md");
         let full = temporary.path().join(&path);
-        let mut local = fs::read(&full).expect("legacy configure");
+        let mut local = fs::read(&full).expect("legacy user-setup");
         local.extend_from_slice(b"\n<!-- local note -->\n");
         fs::write(&full, &local).expect("local edit");
         let root =
@@ -3012,7 +3086,7 @@ usage_guard:
     fn embedded_user_setup_catalog_is_valid() {
         let catalog = parse_and_validate_catalog().expect("catalog");
         assert_eq!(catalog.schema_version, 1);
-        assert_eq!(catalog.mandatory_skills, ["configure"]);
+        assert_eq!(catalog.mandatory_skills, ["user-setup"]);
         assert!(catalog.optional_third_party_skills.is_empty());
     }
 
@@ -3065,17 +3139,17 @@ skills:
   recommended_suite: web-developer
 usage_guard: {}
 ";
-        let error = parse_and_validate_config(legacy).expect_err("new answer rejects suite");
+        let error = parse_and_validate_config(legacy).expect_err("new quick-answer rejects suite");
         assert!(error.message().contains("no longer accepted"));
 
         let migrated =
             parse_and_validate_installed_config(legacy).expect("existing setting migration");
         assert_eq!(migrated.skills.mode, SkillSelectionMode::Individual);
-        assert!(migrated
+        assert!(migrated.skills.selected.contains(&"usage-guard".to_owned()));
+        assert!(!migrated
             .skills
             .selected
-            .contains(&"manage-usage".to_owned()));
-        assert!(!migrated.skills.selected.contains(&"answer".to_owned()));
+            .contains(&"quick-answer".to_owned()));
         let canonical = String::from_utf8(canonical_config(&migrated).expect("new format"))
             .expect("UTF-8 config");
         assert!(canonical.contains("mode: individual"));
@@ -3108,11 +3182,11 @@ usage_guard: {}
 
         assert_eq!(
             config.skills.selected,
-            ["configure", "record-knowledge", "clean-ai-slop"]
+            ["code-polish", "knowledge-capture", "user-setup"]
         );
         let canonical = String::from_utf8(canonical_config(&config).expect("canonical config"))
             .expect("UTF-8 canonical config");
-        assert!(canonical.contains("- clean-ai-slop"));
+        assert!(canonical.contains("- code-polish"));
         assert!(!canonical.contains("ai-slop-cleaner"));
     }
 
@@ -3134,7 +3208,7 @@ selected_hosts:
 skills:
   mode: individual
   selected:
-    - configure
+    - user-setup
 usage_guard: {}
 "
             .as_bytes(),
@@ -3173,7 +3247,7 @@ selected_hosts:
 skills:
   mode: individual
   selected:
-    - answer
+    - quick-answer
 usage_guard: {}
 "
             .as_bytes(),
@@ -3183,7 +3257,7 @@ usage_guard: {}
 
         assert_eq!(
             resolve_skills(&config, &catalog).expect("skill resolution"),
-            ["answer", "configure"]
+            ["quick-answer", "user-setup"]
         );
     }
 
@@ -3204,7 +3278,7 @@ selected_hosts:
 skills:
   mode: individual
   selected:
-    - configure
+    - user-setup
 usage_guard: {}
 ",
         )
@@ -3282,7 +3356,7 @@ selected_hosts:
 skills:
   mode: individual
   selected:
-    - configure
+    - user-setup
 usage_guard: {}
 ",
         )
@@ -3308,8 +3382,8 @@ selected_hosts:
 skills:
   mode: individual
   selected:
-    - record-knowledge
-    - manage-wiki
+    - knowledge-capture
+    - knowledge-maintain
 usage_guard:
   enabled: true
 ",
@@ -3319,51 +3393,43 @@ usage_guard:
 
         assert_eq!(
             resolve_skills(&config, &catalog).expect("closure"),
-            ["configure", "manage-usage"]
+            ["usage-guard", "user-setup"]
         );
     }
 
     #[test]
     fn enabled_wiki_resolves_knowledge_skill_dependency_closure() {
         let mut config = valid_config();
-        config.skills.selected = vec!["record-knowledge".to_owned()];
+        config.skills.selected = vec!["knowledge-capture".to_owned()];
         let catalog = parse_and_validate_catalog().expect("catalog");
 
         assert_eq!(
             resolve_skills(&config, &catalog).expect("closure"),
-            ["configure", "record-knowledge", "search-knowledge",]
+            ["knowledge-capture", "knowledge-recall", "user-setup",]
         );
     }
 
     #[test]
     fn enabled_wiki_skill_resolves_the_complete_reused_knowledge_stack() {
         let mut config = valid_config();
-        config.skills.selected = vec!["manage-wiki".to_owned()];
+        config.skills.selected = vec!["knowledge-maintain".to_owned()];
         let catalog = parse_and_validate_catalog().expect("catalog");
 
         assert_eq!(
             resolve_skills(&config, &catalog).expect("closure"),
-            [
-                "configure",
-                "import-repository-knowledge",
-                "maintain-knowledge",
-                "manage-wiki",
-                "record-knowledge",
-                "search-knowledge",
-                "share-knowledge",
-            ]
+            ["knowledge-maintain", "knowledge-recall", "user-setup",]
         );
     }
 
     #[test]
     fn disabled_usage_guard_preserves_an_explicitly_selected_control_skill() {
         let mut config = valid_config();
-        config.skills.selected = vec!["manage-usage".to_owned()];
+        config.skills.selected = vec!["usage-guard".to_owned()];
         let catalog = parse_and_validate_catalog().expect("catalog");
 
         assert_eq!(
             resolve_skills(&config, &catalog).expect("closure"),
-            ["configure", "manage-usage"]
+            ["usage-guard", "user-setup"]
         );
     }
 
@@ -3441,8 +3507,9 @@ usage_guard:
             custom_description: Some("friendly `but strict`".to_owned()),
         };
 
-        let rendered = String::from_utf8(render_user_directive(&config, &["configure".to_owned()]))
-            .expect("UTF-8 guidance");
+        let rendered =
+            String::from_utf8(render_user_directive(&config, &["user-setup".to_owned()]))
+                .expect("UTF-8 guidance");
 
         assert!(
             rendered.contains("- User contexts: `game-developer`, `web-developer` — `웹과 게임`")
@@ -3453,7 +3520,7 @@ usage_guard:
     #[test]
     fn user_directive_uses_the_selected_interface_language() {
         let mut config = valid_config();
-        let english = String::from_utf8(render_user_directive(&config, &["configure".to_owned()]))
+        let english = String::from_utf8(render_user_directive(&config, &["user-setup".to_owned()]))
             .expect("English guidance");
         assert!(english.contains("# Aigent Hive user preferences"));
         assert!(english.contains(
@@ -3466,7 +3533,7 @@ usage_guard:
         assert!(!english.contains("# Aigent Hive 사용자 설정"));
 
         config.interface_language = InterfaceLanguage::Ko;
-        let korean = String::from_utf8(render_user_directive(&config, &["configure".to_owned()]))
+        let korean = String::from_utf8(render_user_directive(&config, &["user-setup".to_owned()]))
             .expect("Korean guidance");
         assert!(korean.contains("# Aigent Hive 사용자 설정"));
         assert!(korean.contains("명시적 요청이 없는 한 모든 질문과 응답에 한국어 사용"));
@@ -3481,8 +3548,9 @@ usage_guard:
         assert!(!config.update_check.enabled);
         config.update_check.enabled = true;
 
-        let rendered = String::from_utf8(render_user_directive(&config, &["configure".to_owned()]))
-            .expect("English guidance");
+        let rendered =
+            String::from_utf8(render_user_directive(&config, &["user-setup".to_owned()]))
+                .expect("English guidance");
 
         assert!(rendered.contains("- Daily update check: `enabled`"));
         assert!(rendered.contains("hive update --check --user-root <user-root> --output json"));
@@ -3494,7 +3562,7 @@ usage_guard:
         let mut config = valid_config();
         let enabled = String::from_utf8(render_user_directive(
             &config,
-            &["record-knowledge".to_owned()],
+            &["knowledge-capture".to_owned()],
         ))
         .expect("enabled guidance");
         assert!(enabled.contains("agent-reviewed task-fact autocapture"));
@@ -3504,7 +3572,7 @@ usage_guard:
         config.wiki.enabled = false;
         let disabled = String::from_utf8(render_user_directive(
             &config,
-            &["record-knowledge".to_owned()],
+            &["knowledge-capture".to_owned()],
         ))
         .expect("disabled guidance");
         assert!(!disabled.contains("agent-reviewed task-fact autocapture"));
