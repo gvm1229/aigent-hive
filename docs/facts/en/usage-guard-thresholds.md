@@ -9,10 +9,10 @@ summary: "The user selects the global safety threshold; a registered project may
 tags: [guard, project, setup, usage]
 aliases: ["Early stop threshold", "Project usage cap"]
 sources:
-  - "repo:docs/decisions/ADR-0012-global-onboarding-shared-index.md#sha256:2150681617bd1c2273780f0796609f27fc4815418428c0743ef11b88245deb38"
+  - "repo:docs/decisions/ADR-0012-global-onboarding-shared-index.md#sha256:d30564f33f2ead463cfe9e18aa68b697cb07b6c419ee42c9b583fcc11edaf966"
   - "repo:docs/plans/active/usage-guard-policy.md#sha256:fed21b2de4b06f8034974ea611ce0afb2c0b09244a57c16238a2a1c662a131f8"
 links: [global-onboarding, source-usage-guard, usage-sensor-policy]
-reviewed_revision: "git:7dd812e81a6e4e2771c783fc65835a3387bbd7ca"
+reviewed_revision: "git:35f5bce71814a3e874fe53a8730024f16013ad46"
 status: active
 ---
 
