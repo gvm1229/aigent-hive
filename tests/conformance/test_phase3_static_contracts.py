@@ -541,6 +541,7 @@ class Phase3SkillSourceContract(unittest.TestCase):
             "active/skill-identity-localization.md",
             "active/source-docs-wiki.md",
             "active/test-release-setup-routing.md",
+            "active/usage-guard-policy.md",
             "active/user-onboarding-shared-index.md",
             "active/v0.9.0-global-knowledge-rag.md",
             "active/v0.9.0-knowledge-portability-scan.md",
@@ -578,6 +579,7 @@ class Phase3SkillSourceContract(unittest.TestCase):
             plan_root / "active/skill-identity-localization.md",
             plan_root / "active/source-docs-wiki.md",
             plan_root / "active/test-release-setup-routing.md",
+            plan_root / "active/usage-guard-policy.md",
             plan_root / "active/user-onboarding-shared-index.md",
             plan_root / "active/v0.9.0-global-knowledge-rag.md",
             plan_root / "active/v0.9.0-knowledge-portability-scan.md",
@@ -608,6 +610,7 @@ class Phase3SkillSourceContract(unittest.TestCase):
                 "active/skill-identity-localization.md",
                 "active/source-docs-wiki.md",
                 "active/test-release-setup-routing.md",
+                "active/usage-guard-policy.md",
                 "active/user-onboarding-shared-index.md",
                 "active/v0.9.0-global-knowledge-rag.md",
                 "active/v0.9.0-knowledge-portability-scan.md",
@@ -713,6 +716,9 @@ class Phase3SkillSourceContract(unittest.TestCase):
             plan_root / "active/skill-identity-localization.md"
         )
         source_wiki_path = plan_root / "active/source-docs-wiki.md"
+        usage_guard_policy_path = (
+            plan_root / "active/usage-guard-policy.md"
+        )
         onboarding_path = plan_root / "active/user-onboarding-shared-index.md"
         v09_rag_path = plan_root / "active/v0.9.0-global-knowledge-rag.md"
         v09_portability_path = (
@@ -800,6 +806,10 @@ class Phase3SkillSourceContract(unittest.TestCase):
             (
                 "Source·consumer Skill identity·localization",
                 *checklist_counts([skill_identity_localization_path]),
+            ),
+            (
+                "전역·프로젝트 사용량 보호 정책",
+                *checklist_counts([usage_guard_policy_path]),
             ),
             (
                 "Discord `v0.9` 연결 UX",

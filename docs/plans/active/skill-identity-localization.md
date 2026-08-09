@@ -79,8 +79,10 @@ source `source-ralph-loop` and product `ralph-loop`.
 - [x] [SIL-007] Record one source·product Skill catalog with current ID, distinct approved names,
   function, examples, merge decisions, and `hive-loop-engineering` lineage in `docs/skills.md`
 - [ ] [SIL-008] Apply the approved names to source-only, shared, and consumer-only Skills in one
-  migration; merge project setup and knowledge maintenance Skills, keep source·product IDs
-  disjoint, and update scoped retired-name cleanup, routing, references, localization, and regressions
+  migration; merge project setup and knowledge maintenance Skills, retire non-repository-specific
+  source duplicates into installed product Skills, retire `source-usage-guard` as an active source
+  projection, keep source·product IDs disjoint, and update scoped retired-name cleanup, routing,
+  references, localization, and regressions
 
 ## Acceptance
 

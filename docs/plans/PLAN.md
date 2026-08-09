@@ -1,6 +1,6 @@
 # Aigent Hive active plan index
 
-> Revision: 2.31
+> Revision: 2.32
 > 기준일: 2026-08-09
 > Product version: `0.9.0`
 > 현재 milestone: `0.9.0` 정식 릴리스 준비
@@ -48,10 +48,11 @@
 | 한국어 setup 용어 복구 | 5 | 1 | 83.3% |
 | Global Skill 선택 단순화 | 8 | 0 | 100% |
 | Source·consumer Skill identity·localization | 7 | 1 | 87.5% |
+| 전역·프로젝트 사용량 보호 정책 | 0 | 6 | 0% |
 | Discord `v0.9` 연결 UX | 1 | 9 | 10% |
 | Windows global setup hardening | 1 | 10 | 9.1% |
 | Notion `v0.10` 후보 | 1 | 10 | 9.1% |
-| **Canonical total** | **378** | **99** | **79.2%** |
+| **Canonical total** | **378** | **105** | **78.3%** |
 
 External production boundary 항목도 미완료 합계에 포함. Protected authority 없이 완료 처리 금지.
 
@@ -91,18 +92,17 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
 | [`active/bootstrap-global-setup-recovery.md`](active/bootstrap-global-setup-recovery.md) | `BGR-*` | 선택형 bootstrap, 쉬운 global setup 복구, user projection merge |
 | [`active/korean-setup-terminology.md`](active/korean-setup-terminology.md) | `KST-*` | 한국어 global setup product term·질문 표기 |
 | [`active/global-skill-selection.md`](active/global-skill-selection.md) | `GSS-*` | all-built-in 기본값·개별 토글·목록 표기 |
-| [`active/skill-identity-localization.md`](active/skill-identity-localization.md) | `SIL-*` | source·consumer Skill 이름·plugin namespace·선택 언어 descriptor |
+| [`active/skill-identity-localization.md`](active/skill-identity-localization.md) | `SIL-*` | source·product Skill 이름·표시 언어 |
+| [`active/usage-guard-policy.md`](active/usage-guard-policy.md) | `UGP-*` | 전역·project 한도·product guard |
 | [`active/discord-onboarding-v09.md`](active/discord-onboarding-v09.md) | `DIS9-*` | Discord global setup·프로젝트별 중단 알림·HTML 안내 |
 | [`active/windows-global-setup-hardening.md`](active/windows-global-setup-hardening.md) | `WGS-*` | Windows CLI 자동 탐색·설정 계약·진행 저장·fresh-session 수용 |
 | [`active/v0.10.0-notion-candidate.md`](active/v0.10.0-notion-candidate.md) | `N10-*` | Notion 연결·freshness·write-through와 `0.10.0-test` 후보 |
 
 ## Reconciliation gate
 
-- Goal start·resume마다 active fragment의 모든 checklist를 current evidence와 대조
-- 이미 충족된 unchecked item의 owning fragment 우선 갱신
-- Evidence가 missing·stale·indirect·contradictory이면 unchecked 유지
-- Reconciliation 완료 전 새 구현 선택 금지
-- Checklist ID의 fragment 간 중복과 `PLAN.md` 내부 checklist 금지
+- 시작·재개 시 active checklist를 current evidence와 대조. 충족 항목만 owning fragment에서
+  갱신, missing·stale·indirect·contradictory evidence는 유지. 완료 전 새 구현 금지. ID 중복과
+  `PLAN.md` 내부 checklist 금지
 
 ## Fragment map
 
@@ -116,5 +116,5 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
 ## Current execution order
 
 완료 증거: [`CURRENT.md`](../state/CURRENT.md)와 owning active fragment.
-다음: `SIL-008`, `WGS-002–011`, `REL9-011`, `DIS9-002–010`, `REL9-014–026`.
+다음: `SIL-008`, `UGP-001–006`, `WGS-002–011`, `REL9-011`, `DIS9-002–010`, `REL9-014–026`.
 Antigravity·Claude 공개 제외 유지. Notion: `N10-002–011`·`0.10.0-test` 보류.
