@@ -25,13 +25,13 @@ CURRENT_REQUIRED = {
         "only when the user explicitly selects that external compatibility layer",
         "including a 0.8.x OMX/OMC owner",
     ),
-    "harness/skills/setup-harness/SKILL.md": (
+    "harness/skills/project-setup/SKILL.md": (
         "Default a new run to the active host's verified native capabilities",
         "Treat OMX and OMC as external compatibility options only",
         "including a 0.8.x OMX/OMC owner",
         "host_capability_unsupported",
     ),
-    "harness/skills/hive-judge-package/SKILL.md": (
+    "harness/skills/package-review/SKILL.md": (
         "host-native owner by default",
         "explicitly selected external compatibility owner",
         "legacy 0.8.x owner",
@@ -110,10 +110,10 @@ class V09HostNativeContractTests(unittest.TestCase):
 
     def test_run_data_skills_preserve_pinned_owner(self) -> None:
         for relative in (
-            "harness/skills/hive-run-checkpoint/SKILL.md",
-            "harness/skills/hive-run-resume/SKILL.md",
-            "harness/skills/hive-role-handoff/SKILL.md",
-            "harness/skills/hive-project-upgrade/SKILL.md",
+            "harness/skills/run-checkpoint/SKILL.md",
+            "harness/skills/run-resume/SKILL.md",
+            "harness/skills/run-handoff/SKILL.md",
+            "harness/skills/project-refresh/SKILL.md",
         ):
             text = (REPOSITORY_ROOT / relative).read_text(encoding="utf-8")
             with self.subTest(path=relative):

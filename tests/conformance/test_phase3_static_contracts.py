@@ -50,6 +50,14 @@ class Phase3SkillSourceContract(unittest.TestCase):
             self.assertEqual((PLUGIN_SKILLS / name / "SKILL.md").read_bytes(), canonical)
             self.assertEqual((TEMPLATE_SKILLS / name / "SKILL.md").read_bytes(), canonical)
 
+    def test_product_skill_text_does_not_contain_a_renamed_skill_as_prose(self) -> None:
+        """The global Skill ID must not leak into ordinary setup instructions."""
+        forbidden = ("reuser-setup", "user-setupd", "user-setuping")
+        for skill_path in SKILLS.glob("*/SKILL.md"):
+            text = skill_path.read_text(encoding="utf-8").lower()
+            for value in forbidden:
+                self.assertNotIn(value, text, skill_path)
+
     def test_source_has_directives_not_a_second_skill_inventory(self) -> None:
         source_skills = ROOT / ".agents/skills"
         self.assertFalse(source_skills.exists() and list(source_skills.rglob("SKILL.md")))
@@ -74,12 +82,31 @@ class Phase3SkillSourceContract(unittest.TestCase):
             "where.exe hive",
             "npm prefix -g",
             "hive setup --progress save --scope user",
+            "no default usage threshold",
             "Continue from where I left off",
             "Discord usage notification",
             "CodexBar fallback",
         ):
             self.assertIn(required, skill)
         self.assertIn("Do not translate `Skill` as `기술`", skill)
+        resolver = SKILLS / "user-setup/scripts/resolve-hive.ps1"
+        self.assertTrue(resolver.is_file())
+        resolver_text = resolver.read_text(encoding="utf-8")
+        for required in ("Get-Command hive", "where.exe hive", "npm prefix -g", "--version"):
+            self.assertIn(required, resolver_text)
+
+        copier = (ROOT / "copier.yml").read_text(encoding="utf-8")
+        threshold = copier.split("usage_stop_remaining_percent:", 1)[1].split(
+            "\nelevated_judge_quorum:", 1
+        )[0]
+        self.assertNotIn("default:", threshold)
+
+    def test_discord_visual_guide_is_shipped_with_the_user_template(self) -> None:
+        guide = ROOT / "harness/template/.hive/guides/discord-usage-notifications.html"
+        self.assertTrue(guide.is_file())
+        text = guide.read_text(encoding="utf-8")
+        self.assertIn("HIVE_DISCORD_WEBHOOK_URL", text)
+        self.assertIn("raw prompts", text)
 
     def test_rename_ledger_keeps_old_ids_out_of_live_products(self) -> None:
         ledger = yaml.safe_load((SKILLS / "retired-names.yml").read_text(encoding="utf-8"))

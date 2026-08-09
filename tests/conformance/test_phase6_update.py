@@ -931,7 +931,7 @@ class Phase6StaticContracts(unittest.TestCase):
         self.assertIn("on_arm do", formula)
         self.assertIn("on_intel do", formula)
         self.assertIn("PortableCommandAlias: hive", winget)
-        for skill in ("update-hive", "migrate-project"):
+        for skill in ("product-update", "project-transition"):
             text = (ROOT / f"harness/skills/{skill}/SKILL.md").read_text(
                 encoding="utf-8"
             )

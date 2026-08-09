@@ -152,10 +152,10 @@ it still refuses unknown or modified ownership manifests.
 Open Codex, Claude Code, or Gemini Antigravity and paste this shared prompt:
 
 ```text
-Configure or reuser-setup my global Aigent Hive preferences for this host. Do not inspect or user-setup a project, repository, folder, or current working directory. Start the interactive user-scope setup.
+Configure or reconfigure my global Aigent Hive preferences for this host. Do not inspect or configure a project, repository, folder, or current working directory. Start the interactive user-scope setup.
 ```
 
-Use this prompt for the first setup and later preference changes. It user-setups only your
+Use this prompt for the first setup and later preference changes. It configures only your
 user-scope language, Wiki, user contexts, persona, Skills, and update preferences; it never inspects the
 current folder or creates a project harness.
 

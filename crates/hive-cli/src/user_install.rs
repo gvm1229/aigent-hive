@@ -216,6 +216,8 @@ const ROOT_WIKI_LOG: &[u8] =
     include_bytes!("../../../harness/template/.hive/knowledge/Wiki/log.md");
 const ROOT_SUPPRESSION: &[u8] =
     include_bytes!("../../../harness/template/.hive/knowledge/suppression.yml");
+const ROOT_DISCORD_USAGE_GUIDE: &[u8] =
+    include_bytes!("../../../harness/template/.hive/guides/discord-usage-notifications.html");
 const USER_070_SETUP_REVIEW: &[u8] = b"schema_version: 1\nsource_version: 0.7.0\nsetup_required: true\nwiki_markdown_preserved: true\nlegacy_skill_projection: all-built-ins\n";
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -1746,6 +1748,10 @@ fn seed_root_knowledge(
         (".hive/knowledge/Wiki/index.md", ROOT_WIKI_INDEX),
         (".hive/knowledge/Wiki/log.md", ROOT_WIKI_LOG),
         (".hive/knowledge/suppression.yml", ROOT_SUPPRESSION),
+        (
+            ".hive/guides/discord-usage-notifications.html",
+            ROOT_DISCORD_USAGE_GUIDE,
+        ),
     ] {
         let relative = PathBuf::from(relative);
         let bytes = read_optional_regular(root, &relative, MAX_USER_FILE_BYTES)?
@@ -7315,6 +7321,7 @@ mod tests {
                 stop_remaining_percent: 20,
                 codexbar_fallback_enabled: false,
                 discord: DiscordGuardPreferences::default(),
+                project_overrides: BTreeMap::new(),
             },
         };
 

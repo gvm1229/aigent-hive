@@ -2,7 +2,7 @@
   "schema_version": 1,
   "host": "codex",
   "explicit_action": null,
-  "explicit_skill": "search-knowledge",
+  "explicit_skill": "knowledge-recall",
   "plain_answer": false,
   "simple_question": true,
   "project_context_required": true,
@@ -12,12 +12,12 @@
     "compatible": true,
     "explicit_selection": true
   },
-  "hive_candidate": "search-knowledge",
+  "hive_candidate": "knowledge-recall",
   "active_hive_skills": [
     {
-      "name": "search-knowledge",
+      "name": "knowledge-recall",
       "source_type": "built-in",
-      "content_digest": "sha256:e2d21cbebdecb62292d0fd0fdbea5b378769f525c3c8ed24cd2b129d1b8f04d9",
+      "content_digest": "sha256:9934fb19e2459d3482ecc85a8cb701e0601e3bdc73aa534c3c20fd3e315b778c",
       "side_effect_class": "read-only",
       "capabilities": ["filesystem-read", "memory-read", "shell"],
       "consent_digest": null,

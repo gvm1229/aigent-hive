@@ -1307,6 +1307,7 @@ pub struct RoutingRequest {
     pub host: Host,
     pub explicit_action: Option<LogicalAction>,
     pub explicit_skill: Option<String>,
+    #[serde(rename = "plain_answer")]
     pub plain_quick_answer: bool,
     pub simple_question: bool,
     pub project_context_required: bool,

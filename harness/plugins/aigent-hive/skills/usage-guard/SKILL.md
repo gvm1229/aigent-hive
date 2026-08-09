@@ -14,7 +14,7 @@ Enforce or control only the installed Hive usage policy and the current host ses
 3. Immediately before each new automatic dispatch, apply any explicitly requested threshold/off/on control, then run:
 
    ```text
-   hive usage enforce --target <project-root> --session-id <current-session-id> --process-id <current-process-id> [--account-digest <active-account-digest>] --output json
+   hive usage enforce --target <project-root> --session-id <current-session-id> --process-id <current-process-id> --user-root <user-root> [--run <canonical-run-id>] [--account-digest <active-account-digest>] --output json
    ```
 
    Supply the active account digest when the host exposes it. Omit it only when the qualified local sensor exposes exactly one unambiguous account. A current halt marker takes priority. Exit `3`, `hive.usage-limited`, or `hive.usage-unknown` blocks that automatic dispatch. Do not run `enforce` for ordinary quick-answers, manual work, or other non-dispatch actions. Non-Codex automatic dispatch fails closed until a qualified local sensor exists.
@@ -32,7 +32,11 @@ Enforce or control only the installed Hive usage policy and the current host ses
    ```
 
    Never infer consent, install silently, request credentials, reinstall a provider CLI, or suggest CodexBar API-key or manual-cookie setup.
-6. Perform at most the explicitly requested control mutation:
+6. The `--user-root` policy applies to every registered project. Its enabled state is global;
+   a project override may only raise the stop threshold. Hive calculates the active threshold as
+   the highest of the global threshold, the registered project override, and the installed
+   project compatibility value. A disabled global guard disables every project.
+7. Perform at most the explicitly requested control mutation:
    - Threshold requires an explicit integer from 1 through 99:
 
      ```text
@@ -53,15 +57,15 @@ Enforce or control only the installed Hive usage policy and the current host ses
 
    - Toggle uses the same command with `--action toggle`. Include
      `--confirm-session-disable` whenever the result would disable enforcement.
-7. Treat exit `0` from `enforce` as a session-bound preflight only; it never authorizes dispatch. Require a separate `hive run resume --dispatch-intent automatic` result with `data.usage_guard.enforced=true`, `outcome=authorized`, one authorization ID, and exactly one dispatch brief. A confirmed session disable bypasses the preflight but does not authorize dispatch.
-8. `status` is inspection only and never substitutes for an automatic-dispatch preflight. Run `enforce` after a mutation only when a new automatic dispatch is pending. Treat `session_override=absent` or `stale` as enabled. Never copy an override to another host, session, or process.
-9. Report the user-setupd threshold, selected window, effective current-session state, changed Hive-owned path, and exact CLI result code.
+8. Treat exit `0` from `enforce` as a session-bound preflight only; it never authorizes dispatch. Require a separate `hive run resume --dispatch-intent automatic` result with `data.usage_guard.enforced=true`, `outcome=authorized`, one authorization ID, and exactly one dispatch brief. A confirmed session disable bypasses the preflight but does not authorize dispatch.
+9. `status` is inspection only and never substitutes for an automatic-dispatch preflight. Run `enforce` after a mutation only when a new automatic dispatch is pending. Treat `session_override=absent` or `stale` as enabled. Never copy an override to another host, session, or process.
+10. When a canonical `--run` is available, Hive sends only the run title and checklist count to Discord. It never sends a raw prompt, session ID, absolute path, or credential. Report the saved global threshold, selected project override, active threshold, selected window, effective current-session state, changed Hive-owned path, and exact CLI result code.
 
 ## Intent rules
 
 - Recognize clear threshold, disable/bypass, enable/restore, and toggle intent semantically; the examples below are illustrative rather than a finite phrase allowlist.
-- Disable intent includes requests to turn off or bypass the usage guard, use quota below the stop line, or continue below the user-setupd threshold for the current session.
-- Enable intent includes requests to restore the guard, enforce the limit again, stop at the user-setupd threshold, or remove the bypass.
+- Disable intent includes requests to turn off or bypass the usage guard, use quota below the stop line, or continue below the configured threshold for the current session.
+- Enable intent includes requests to restore the guard, enforce the limit again, stop at the configured threshold, or remove the bypass.
 - Threshold mutation requires the requested percentage. Never guess a value.
 - A bare `continue`, `resume`, `finish`, urgency, or an active run does not authorize disable.
 
@@ -73,4 +77,4 @@ Enforce or control only the installed Hive usage policy and the current host ses
 - CodexBar installation is the sole optional fallback install action. It is allowed only through the exact consented CLI flow above and a qualified package-manager adapter.
 - Treat any independently produced OMX/OMC cancellation result as auxiliary evidence only. It never substitutes for the bound halt marker or durable goal/task state.
 - Never describe a disabled session as usage-enforced. Automatic dispatch still requires the independent `hive run resume` authorization contract.
-- Refuse source-workspace use. The source-only development guard has a separate contract.
+- Refuse source-workspace use. Source development uses its repository gate and does not create a second installed Skill or user policy file.

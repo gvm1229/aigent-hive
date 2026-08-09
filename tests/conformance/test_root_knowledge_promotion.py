@@ -666,7 +666,7 @@ else:
     def test_copy_ready_skill_commands_execute_with_bound_user_root(self) -> None:
         promote_skill = (
             REPOSITORY_ROOT
-            / "harness/skills/hive-knowledge-promote/SKILL.md"
+            / "harness/skills/knowledge-promote/SKILL.md"
         )
         replacements = {
             "<project-root>": str(self.project),
@@ -690,7 +690,7 @@ else:
         self.assertEqual(applied_result["code"], "hive.knowledge-promoted")
 
         query, query_result = self.invoke_skill_command(
-            REPOSITORY_ROOT / "harness/skills/hive-knowledge-query/SKILL.md",
+            REPOSITORY_ROOT / "harness/skills/knowledge-recall/SKILL.md",
             "--scope auto --query <query>",
             {
                 "<current-project-root>": str(self.project),

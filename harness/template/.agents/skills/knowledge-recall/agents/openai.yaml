@@ -3,4 +3,4 @@ interface:
   short_description: "Retrieve only the Hive knowledge needed for the current work."
   default_prompt: "Use $aigent-hive:knowledge-recall to run the single bounded knowledge lookup for this turn."
 policy:
-  allow_implicit_invocation: true
+  allow_implicit_invocation: false

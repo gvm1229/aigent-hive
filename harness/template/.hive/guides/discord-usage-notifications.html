@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Aigent Hive Discord usage notifications</title>
+  <style>body{font-family:system-ui,sans-serif;max-width:760px;margin:40px auto;padding:0 20px;line-height:1.55}code{background:#f2f2f2;padding:2px 4px;border-radius:4px}h1{line-height:1.2}</style>
+</head>
+<body>
+  <h1>Discord usage notifications</h1>
+  <p>Aigent Hive can send an outbound Discord message when the usage guard stops a workflow. It cannot read Discord replies or continue a Codex session from Discord.</p>
+  <h2>1. Create a webhook</h2>
+  <ol>
+    <li>Open the Discord channel settings, then <strong>Integrations</strong>.</li>
+    <li>Create an incoming webhook and copy its URL.</li>
+    <li>Store that URL only in a local environment variable, for example <code>HIVE_DISCORD_WEBHOOK_URL</code>.</li>
+  </ol>
+  <h2>2. Configure Hive</h2>
+  <p>Ask Hive to configure global preferences. Enable the usage guard, choose Discord notifications, provide only the environment-variable name, choose the message fields and their order, and send a test message.</p>
+  <h2>3. Verify the result</h2>
+  <p>The test message has the same language, fields, and order as a real stop message. Only its first line identifies it as a test. A real message can show remaining usage, the project, a canonical run title, completed checklist count, host, resume guidance, time, and verification reference.</p>
+  <h2>Privacy</h2>
+  <p>Webhook URLs, raw prompts, session identifiers, and absolute paths stay local. If no canonical run is available, Hive explicitly reports that request and progress details are unavailable.</p>
+</body>
+</html>

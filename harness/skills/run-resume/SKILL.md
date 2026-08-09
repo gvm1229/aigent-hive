@@ -13,9 +13,9 @@ Recover provider-neutral state only. This Skill never starts work or launches th
 2. Obtain a fresh normalized capability-resolution JSON from the active host adapter. Do not inspect `.omx/`, `.omc/`, plugin caches, session state, or host-global configuration.
 3. Choose one explicit dispatch intent:
    - Manual recovery is the default and does not claim usage enforcement.
-   - Automatic continuation requires the user-setupd account digest and exactly one active role.
+   - Automatic continuation requires the configured account digest and exactly one active role.
      The CLI reads the installed `.hive/config/harness.toml` threshold. Omit `--threshold`, or
-     pass only the identical user-setupd value; a caller cannot lower or replace it. Never pass
+     pass only the identical configured value; a caller cannot lower or replace it. Never pass
      or expose a raw account identity.
 4. Run exactly one bounded read.
 
@@ -61,5 +61,5 @@ Recover provider-neutral state only. This Skill never starts work or launches th
   manual mode writes nothing.
 - Never create a plan, Ralph loop, team workflow, retry loop, subagent, model call, provider API request, or runtime process.
 - Never perform automatic continuation from manual output or from automatic output lacking an authorized usage guard.
-- Never select, replace, install, user-setup, or invoke OMX/OMC.
+- Never select, replace, install, configure, or invoke OMX/OMC.
 - Never fall back to another owner when current capability evidence is missing, incompatible, unknown, or changed.

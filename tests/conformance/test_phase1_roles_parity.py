@@ -10,6 +10,7 @@ import json
 import os
 import shutil
 import subprocess
+import sysconfig
 from pathlib import Path
 
 from jsonschema import Draft202012Validator
@@ -35,6 +36,19 @@ def normalized_copier_tree(
         elif path == ".hive/index" or path.startswith(".hive/index/"):
             snapshot.pop(path)
     return snapshot
+
+
+def copier_binary() -> str | None:
+    """Resolve the pinned Copier console script in both activated and isolated venvs."""
+
+    configured = os.environ.get("COPIER_BIN")
+    if configured:
+        return configured
+    discovered = shutil.which("copier")
+    if discovered:
+        return discovered
+    candidate = Path(sysconfig.get_path("scripts")) / "copier"
+    return str(candidate) if candidate.is_file() else None
 
 
 class Phase1CopierParity(Phase1CliTestCase):
@@ -136,29 +150,11 @@ class Phase1CopierParity(Phase1CliTestCase):
         active_ledger = read_yaml(active_ledger_path)
         skills = active_ledger["skills"]
         self.assertIsInstance(skills, list)
-        expected_names = sorted([
-            "clean-ai-slop",
-            "auto-setup-project",
-            "research-practices",
-            "verify-package",
-            "record-knowledge",
-            "maintain-knowledge",
-            "share-knowledge",
-            "search-knowledge",
-            "import-repository-knowledge",
-            "engineer-run",
-            "migrate-project",
-            "upgrade-project",
-            "refine-prompt",
-            "handoff-role",
-            "save-progress",
-            "resume-work",
-            "answer",
-            "update-hive",
-            "manage-usage",
-            "manage-wiki",
-            "setup-project",
-        ])
+        expected_names = sorted(
+            path.name
+            for path in (REPOSITORY_ROOT / "harness/skills").iterdir()
+            if path.is_dir() and path.name != "user-setup"
+        )
         self.assertEqual([entry["name"] for entry in skills], expected_names)
         for projection_root in projection_roots:
             projected_skill_root = target / projection_root / "skills"
@@ -202,7 +198,7 @@ class Phase1CopierParity(Phase1CliTestCase):
     def test_copier_and_rust_no_role_no_hook_static_trees_are_byte_equal(
         self,
     ) -> None:
-        copier = os.environ.get("COPIER_BIN") or shutil.which("copier")
+        copier = copier_binary()
         self.assertIsNotNone(
             copier,
             "Copier 9.17.0 is required for the Phase 1 parity gate",
@@ -240,7 +236,7 @@ class Phase1CopierParity(Phase1CliTestCase):
     def test_copier_and_rust_approved_hook_conditional_trees_are_byte_equal(
         self,
     ) -> None:
-        copier = os.environ.get("COPIER_BIN") or shutil.which("copier")
+        copier = copier_binary()
         self.assertIsNotNone(
             copier,
             "Copier 9.17.0 is required for the Phase 1 parity gate",
@@ -278,7 +274,7 @@ class Phase1CopierParity(Phase1CliTestCase):
     def test_copier_rejects_hooks_without_exact_supported_host_native_events(
         self,
     ) -> None:
-        copier = os.environ.get("COPIER_BIN") or shutil.which("copier")
+        copier = copier_binary()
         self.assertIsNotNone(
             copier,
             "Copier 9.17.0 is required for the Phase 1 parity gate",
@@ -353,7 +349,7 @@ class Phase1CopierParity(Phase1CliTestCase):
     def test_copier_and_rust_builtin_skill_trees_match_for_each_host(
         self,
     ) -> None:
-        copier = os.environ.get("COPIER_BIN") or shutil.which("copier")
+        copier = copier_binary()
         self.assertIsNotNone(
             copier,
             "Copier 9.17.0 is required for the Phase 1 parity gate",

@@ -1,6 +1,6 @@
 ---
 name: project-setup
-description: Configure or reuser-setup a local Hive harness only for an explicitly identified project, repository, folder, or path. Route global user-scope setup, preference changes, and bare Hive setup to user-setup.
+description: Configure or reconfigure a local Hive harness only for an explicitly identified project, repository, folder, or path. Route global user-scope setup, preference changes, and bare Hive setup to user-setup.
 ---
 
 # Setup Harness
@@ -12,7 +12,7 @@ Configure a consumer project without copying Hive source-development instruction
 - Select this Skill only when the user identifies a project, repository, folder, path, or the
   current project as the target for a local harness.
 - Do not select it for global or user-scope preference changes, or for a bare request to set up,
-  install, user-setup, or reuser-setup Hive. Those requests belong to `user-setup`.
+  install, configure, or reconfigure Hive. Those requests belong to `user-setup`.
 - When the user explicitly requests both scopes, let `user-setup` finish first and wait for a
   separate confirmation before project inspection, preview, or apply.
 
@@ -32,19 +32,19 @@ Configure a consumer project without copying Hive source-development instruction
    - When `project-setup` supplies a schema-valid evidence record, accept only
      `explicit` or `strong` inferred facts and ask for every `unresolved` required field.
    - In `expedited` mode, tell the user that the signed CLI bridge inherits global language, Wiki, persona, and Skill preferences. Do not ask those preference questions.
-   - In `custom` mode, collect explicit project overrides for interface language, Wiki enablement and language, persona, and Skill selection.
+   - In `custom` mode, collect explicit project overrides for interface language, Wiki enablement and language, persona, Skill selection, and an equal-or-higher usage-guard threshold when the global guard is enabled.
    - Infer repository facts before asking the user.
    - Do not infer preference, risk tolerance, host choice, or optional Skill approval.
 4. Resolve the v0.9 owner and capabilities.
    - Default a new run to the active host's verified native capabilities without asking an owner question.
    - Treat OMX and OMC as external compatibility options only. Accept one only when the user explicitly requests and confirms it before the run starts; installation or capability evidence alone never changes the default.
-   - Preserve any owner already pinned by an existing run, including a 0.8.x OMX/OMC owner. Reuser-setup never migrates or replaces that owner implicitly.
+   - Preserve any owner already pinned by an existing run, including a 0.8.x OMX/OMC owner. Reconfiguration never migrates or replaces that owner implicitly.
    - Normalize host-native capability support to `supported`, `best-effort`, `unsupported`, or `unverified`. A required `unsupported` or `unverified` capability stops before writes with `host_capability_unsupported`.
    - Retain `available`, `absent`, `incompatible`, or `unknown` external detection only for an explicitly selected compatibility layer or validation of legacy 0.8.x state.
    - Compute `evidence_digest` as `sha256(RFC 8785 JCS(normalized capability-resolution object excluding only evidence_digest))`. This binds host, version, surface, detection, external runtime, resolved owner, capability claims, and evidence.
    - Positive evidence may come only from active-host Skill/plugin capability metadata or a public executable path with side-effect-free `--version`.
    - An explicitly selected external layer requires positive compatibility evidence. Missing, incompatible, or unknown evidence is unsupported and never triggers an automatic owner fallback.
-   - Never install, update, user-setup, or invoke OMX/OMC.
+   - Never install, update, configure, or invoke OMX/OMC.
    - Never infer state by reading `.omx/`, `.omc/`, plugin caches, session state, or host-global configuration.
    - Install Hive-native iterative, team, multi-goal, or scheduler capabilities only when the signed release implements them, the selected host passes the required capability checks, the feature is activated, and every optional Skill has explicit approval.
    - Never substitute an OMX/OMC runtime, namespace, command, or state tree for a missing Hive-native capability.
@@ -71,7 +71,7 @@ Configure a consumer project without copying Hive source-development instruction
    - Apply the same validated inputs with `--user-root <user-root> --apply`.
    - Preserve non-Hive text and third-party marker blocks byte-for-byte.
    - Materialize each approved role seed into `.hive/team/roles/<role-id>.md` in staging.
-   - On reuser-setup, preserve existing assignment, handoff, and Markdown body; require explicit approval for definition drift.
+   - On reconfiguration, preserve existing assignment, handoff, and Markdown body; require explicit approval for definition drift.
    - Do not commit or push unless the user explicitly requested the Git operation.
 9. Verify.
    - Run `hive setup --target <project-root> --quick-answers <setup-quick-answers.yml> --capabilities <capability-resolution.json> --user-root <user-root> --validate --output json` with the same validated inputs used for the dry run and apply.
@@ -87,7 +87,7 @@ Ask only questions whose quick-answers cannot be established from the repository
 1. **Setup mode**
    - Offer `expedited` or `custom`.
    - `expedited` inherits global interface language, Wiki enablement and language, persona, and selected Skills through the signed CLI bridge.
-   - `custom` records explicit project overrides for those preferences.
+   - `custom` records explicit project overrides for those preferences and, only when the global guard is enabled, a user-chosen equal-or-higher usage-guard threshold.
 2. **Project kind**
    - Ask this in both guided modes.
    - `project-setup` may infer `general` only from an explicit canonical project purpose;
@@ -102,6 +102,7 @@ Ask only questions whose quick-answers cannot be established from the repository
    - Wiki: explicit `enabled` state and `en`, `ko`, or `both`.
    - Persona: `strict`, `balanced`, `friendly`, or `custom`; require a non-empty custom description.
    - Skills: recommended suite or an explicit non-empty built-in Skill list.
+   - Usage guard: inherit the global threshold or choose a higher integer from `1` through `99`. Do not suggest or create a project-type default.
    - Do not silently enable a project Wiki when the global Wiki is disabled. The signed CLI must either keep it disabled or include a global re-enable in the same approved action.
 5. **Primary host**
    - `codex`, `claude`, or `antigravity`.

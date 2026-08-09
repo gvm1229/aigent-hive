@@ -152,10 +152,24 @@
         "stop_remaining_percent": {
           "type": "integer",
           "minimum": 1,
-          "maximum": 99,
-          "default": 20
+          "maximum": 99
         },
         "codexbar_fallback_enabled": { "type": "boolean", "default": false },
+        "project_overrides": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 160,
+            "pattern": "^[^\\r\\n\\u0000]+$"
+          },
+          "additionalProperties": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 99
+          },
+          "default": {}
+        },
         "discord": {
           "type": "object",
           "additionalProperties": false,
@@ -223,7 +237,8 @@
             "properties": { "codexbar_fallback_enabled": { "const": false } }
           }
         }
-      ]
+      ],
+      "required": ["stop_remaining_percent"]
     }
   }
 }

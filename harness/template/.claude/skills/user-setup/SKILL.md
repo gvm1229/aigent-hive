@@ -20,7 +20,10 @@ Configure user-scope Hive preferences without modifying a project harness or pro
 ## Workflow
 
 1. Resolve the installed signed CLI before asking any preference question.
-   - On Windows, try `Get-Command hive -ErrorAction SilentlyContinue`, then `where.exe hive`, then `(npm prefix -g) + '\\hive.cmd'`; verify the result with `hive --version`.
+   - On Windows, run this Skill's `scripts/resolve-hive.ps1`. It tries `Get-Command hive`, then
+     `where.exe hive`, then `(npm prefix -g) + '\\hive.cmd'`, and verifies the selected exact
+     executable with its own `--version` call. Use the returned absolute executable path for the
+     remaining commands; do not require a `PATH` refresh or a copied path from the user.
    - On other systems, use `command -v hive` and `hive --version`.
    - If no authenticated CLI is available, stop before questions and give the exact repair command. Never ask for a copied path, recursively search npm folders, or reproduce setup writes manually.
 2. Read `hive setup --scope user --describe --output json` and use only its schema, localized catalog, question order, and answer example. Never guess a YAML key, Skill ID, or default.
@@ -140,6 +143,10 @@ consent and setup mode. Ask the remaining preference questions only for `Custom`
    - The signed catalog's `optional_third_party_skills` list is empty in this release. Do not offer or activate a third-party Skill until a later release defines its explicit consent contract.
 10. **Usage guard** — explicit opt-in; default disabled.
    - When enabled, ask the user to choose an integer remaining threshold from `1` through `99`.
+   - Do not propose a percentage preset, use a percentage in a sample answer, or silently reuse a
+     profile-specific value. A new setup has no default usage threshold.
+   - A project may later choose its own registered project identity and an equal-or-higher threshold.
+     The global value remains the minimum protection for every project; no project category has a preset value.
 11. **Discord usage notification** — ask only when the usage guard is enabled.
    - Offer `No` by default and `Yes — send a test notification` as the opt-in choice.
    - When enabled, guide the user to create one Discord incoming webhook and set its URL in a
@@ -164,6 +171,8 @@ consent and setup mode. Ask the remaining preference questions only for `Custom`
      and explains that the user may freely ask to change the format.
    - A sent test permits the next question. A missing, invalid, offline, or rejected delivery
      keeps the integration disabled and preserves progress at `discord-test`.
+   - The installed visual guide is `<user-root>/.hive/guides/discord-usage-notifications.html`.
+     Open that exact local file only when the user asks for a visual guide; do not inspect a project.
 12. **CodexBar fallback** — ask only when the usage guard is enabled and the active-host native sensor is unavailable, unsupported, or malformed.
    - Explain that CodexBar is fallback-only and never overrides a native success or limited decision.
    - Record whether an already-qualified CodexBar fallback may be used.
@@ -210,6 +219,8 @@ consent and setup mode. Ask the remaining preference questions only for `Custom`
      - Discord request privacy: default `summary` or explicit `raw-prompt` opt-in after preview and redaction.
      - Discord notification format: safe field list and order. Fields: `remaining-usage`, `project`, `request`, `progress`, `host`, `resume`, `measured-at`, and `evidence`.
      - Discord notification language: always the interface language. A test message differs from a real alert only by its first-line test disclaimer.
+     - For a canonical run, the actual and test message show the run title and completed checklist
+       count. Raw prompts, absolute paths, session identifiers, and webhook values remain local.
 - After this catalog, ask for exactly one numbered parent setting or named child setting. Do not ask
   the user to rediscover a hidden Discord option through the usage-guard question.
 - During a full review, language remains the first question and all saved quick-answers remain defaults.

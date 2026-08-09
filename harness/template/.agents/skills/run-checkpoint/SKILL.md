@@ -31,7 +31,7 @@ Record state only. Execution and continuation remain owned by the run's pinned o
 ## Boundaries
 
 - Never create or execute a plan, Ralph loop, team workflow, retry loop, subagent, model call, provider API request, or runtime process.
-- Never select, replace, install, user-setup, or invoke OMX/OMC.
+- Never select, replace, install, configure, or invoke OMX/OMC.
 - Never switch owner when capability evidence changes mid-run.
 - Never mark success while any required criterion is failed, unchecked, or unverified.
 - Never rewrite role Markdown bodies, evidence, PLAN.md, foreign runtime state, or non-Hive-owned files.

@@ -31,5 +31,5 @@ Perform one explicit optimistic two-file mutation. Leave orchestration and dispa
 - Never assign a role implicitly or infer mutation consent from an ordinary work request.
 - Never write role frontmatter, role Markdown bodies, or `HANDOFF.md` directly.
 - Never create a plan, Ralph loop, team workflow, retry loop, subagent, model call, provider API request, runtime process, or automatic continuation.
-- Never select, replace, install, user-setup, invoke, or inspect private state for OMX/OMC.
+- Never select, replace, install, configure, invoke, or inspect private state for OMX/OMC.
 - Never modify another role's shared handoff entry, foreign runtime state, or non-Hive-owned files.

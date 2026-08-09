@@ -28,7 +28,7 @@ Engineer durable graph state while leaving execution to the active host.
    1. Run `$aigent-hive:usage-guard` for the current host session and stop unless it returns `allowed`.
    2. Resolve fresh host capabilities and retain the exact resolution path and
       `evidence_digest`.
-   3. Issue one automatic resume authorization for the exact run, role, user-setupd account
+   3. Issue one automatic resume authorization for the exact run, role, configured account
       digest, current qualified usage session, and fresh capability file. Never pass or expose a
       raw account identity. Omit `--threshold`, or pass only the installed identical value:
 

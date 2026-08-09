@@ -34,6 +34,10 @@ pub(crate) struct UsageHaltNotification<'a> {
     pub(crate) remaining_percent: Option<f64>,
     pub(crate) measured_at: u64,
     pub(crate) evidence_digest: &'a str,
+    pub(crate) run_id: Option<&'a str>,
+    pub(crate) request_summary: Option<&'a str>,
+    pub(crate) progress: Option<&'a str>,
+    pub(crate) request_privacy: &'a str,
     pub(crate) interface_language: &'a str,
     pub(crate) message_fields: &'a [String],
 }
@@ -179,6 +183,10 @@ fn test_result(arguments: &TestArguments) -> ActionResult {
                     remaining_percent: Some(20.0),
                     measured_at: 0,
                     evidence_digest: "sha256:test-notification",
+                    run_id: None,
+                    request_summary: None,
+                    progress: None,
+                    request_privacy: "summary",
                     interface_language: &arguments.language,
                     message_fields: &arguments.fields,
                 },
@@ -352,6 +360,9 @@ fn valid_environment_name(value: &str) -> bool {
 
 fn payload_for(halt: &UsageHaltNotification<'_>, test: bool) -> DiscordPayload {
     let korean = halt.interface_language == "ko";
+    let request_summary = matches!(halt.request_privacy, "summary" | "raw-prompt")
+        .then_some(halt.request_summary)
+        .flatten();
     let mut lines = Vec::<String>::new();
     if test {
         lines.push(
@@ -387,22 +398,36 @@ fn payload_for(halt: &UsageHaltNotification<'_>, test: bool) -> DiscordPayload {
                 if korean { "프로젝트" } else { "project" },
                 display_project_name(halt.project_name)
             ),
-            "request" if korean => "요청: 공유하지 않음(요청 내용은 이 컴퓨터에 유지)".to_owned(),
-            "request" => "request: not shared (request content stays local)".to_owned(),
-            "progress" if korean => {
-                "진행 상태: 알 수 없음(확인 가능한 작업 진행 정보 없음)".to_owned()
-            }
-            "progress" => "progress: unknown (no canonical run progress is available)".to_owned(),
+            "request" if korean => request_summary.map_or_else(
+                || "요청: 공유하지 않음(확인 가능한 작업 요약 없음)".to_owned(),
+                |summary| format!("요청: {summary}"),
+            ),
+            "request" => request_summary.map_or_else(
+                || "request: not shared (no canonical request summary is available)".to_owned(),
+                |summary| format!("request: {summary}"),
+            ),
+            "progress" if korean => halt.progress.map_or_else(
+                || "진행 상태: 알 수 없음(확인 가능한 작업 진행 정보 없음)".to_owned(),
+                |progress| format!("진행 상태: {progress} 완료 항목"),
+            ),
+            "progress" => halt.progress.map_or_else(
+                || "progress: unknown (no canonical run progress is available)".to_owned(),
+                |progress| format!("progress: {progress} checklist items complete"),
+            ),
             "host" => format!(
                 "{}: {} · {}",
                 if korean { "호스트" } else { "host" },
                 halt.host_scope,
                 halt.selected_window
             ),
-            "resume" if korean => {
-                "계속하기: 이 프로젝트로 돌아가 Hive에게 계속 진행을 요청".to_owned()
-            }
-            "resume" => "resume: return to this project and ask Hive to continue".to_owned(),
+            "resume" if korean => halt.run_id.map_or_else(
+                || "계속하기: 이 프로젝트로 돌아가 Hive에게 계속 진행을 요청".to_owned(),
+                |run_id| format!("계속하기: 이 프로젝트에서 run `{run_id}` 재개 요청"),
+            ),
+            "resume" => halt.run_id.map_or_else(
+                || "resume: return to this project and ask Hive to continue".to_owned(),
+                |run_id| format!("resume: return to this project and resume run `{run_id}`"),
+            ),
             "measured-at" => format!(
                 "{}: {}",
                 if korean {
@@ -512,6 +537,10 @@ mod tests {
             remaining_percent: Some(18.5),
             measured_at: 1_700_000_000,
             evidence_digest: "sha256:allowed-evidence",
+            run_id: None,
+            request_summary: None,
+            progress: None,
+            request_privacy: "summary",
             interface_language: "en",
             message_fields: fields,
         }
@@ -558,6 +587,24 @@ mod tests {
         assert!(payload.contains("프로젝트: aigent-hive"));
         assert!(!payload.contains("remaining usage:"));
         assert!(!payload.contains("project:"));
+    }
+
+    #[test]
+    fn payload_uses_only_canonical_run_summary_and_progress_when_available() {
+        let fields = vec![
+            "request".to_owned(),
+            "progress".to_owned(),
+            "resume".to_owned(),
+        ];
+        let mut notification = notification(&fields);
+        notification.run_id = Some("release-verify");
+        notification.request_summary = Some("Verify the release package");
+        notification.progress = Some("2/3");
+        let payload = payload_for(&notification, false).content;
+
+        assert!(payload.contains("request: Verify the release package"));
+        assert!(payload.contains("progress: 2/3 checklist items complete"));
+        assert!(payload.contains("resume run `release-verify`"));
     }
 
     #[test]

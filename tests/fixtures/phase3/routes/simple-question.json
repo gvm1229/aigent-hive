@@ -7,12 +7,12 @@
   "simple_question": true,
   "project_context_required": false,
   "external_candidate": null,
-  "hive_candidate": "search-knowledge",
+  "hive_candidate": "knowledge-recall",
   "active_hive_skills": [
     {
-      "name": "answer",
+      "name": "quick-answer",
       "source_type": "built-in",
-      "content_digest": "sha256:55ff588fb5a2ebb8f0ffcea48a917bbc522a1e68cd6ac6742c8fd2a3dd2ee243",
+      "content_digest": "sha256:5478d281f28b39ec968afa8c80ea8230c4432c21fe299a4b6471c8df898c2206",
       "side_effect_class": "none",
       "capabilities": [],
       "consent_digest": null,

@@ -27,6 +27,9 @@ const USER_SETUP_CATALOG_SCHEMA: &str =
 const USER_SETUP_CATALOG: &str = include_str!("../../../harness/user-setup/catalog.yml");
 const MAX_ANSWERS_BYTES: u64 = 1024 * 1024;
 const MAX_USER_SETUP_BYTES: u64 = 1024 * 1024;
+/// Historical 0.8.x preferences omitted this setting. This compatibility value is never offered
+/// as a new-setup default: every new setup answer selects its own threshold.
+const LEGACY_080_USAGE_THRESHOLD: u8 = 20;
 const USER_PROJECTION_090_TEST3_SETUP_HIVE: &[u8] =
     include_bytes!("../../../harness/user-bases/0.9.0-test.3/skills/setup-hive/SKILL.md");
 
@@ -35,8 +38,8 @@ Configure or validate Aigent Hive user preferences.
 
 USAGE:
     hive setup --scope user --describe --output json
-    hive setup --scope user --answers <yml> (--dry-run|--apply|--validate) [--user-root <dir>] --output json
-    hive setup --progress save --scope user --step <step> --answers <yml> [--user-root <dir>] --output json
+    hive setup --scope user (--answers|--quick-answers) <yml> (--dry-run|--apply|--validate) [--user-root <dir>] --output json
+    hive setup --progress save --scope user --step <step> (--answers|--quick-answers) <yml> [--user-root <dir>] --output json
     hive setup --progress status|clear --scope user [--user-root <dir>] --output json
 
 MODES:
@@ -281,12 +284,14 @@ fn default_discord_message_fields() -> Vec<DiscordMessageField> {
 pub(crate) struct UsageGuardPreferences {
     #[serde(default)]
     pub(crate) enabled: bool,
-    #[serde(default = "default_usage_threshold")]
     pub(crate) stop_remaining_percent: u8,
     #[serde(default)]
     pub(crate) codexbar_fallback_enabled: bool,
     #[serde(default)]
     pub(crate) discord: DiscordGuardPreferences,
+    /// Stable registered project identity to an earlier-stop threshold. The key is never a path.
+    #[serde(default)]
+    pub(crate) project_overrides: BTreeMap<String, u8>,
 }
 
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
@@ -408,10 +413,6 @@ const fn default_true() -> bool {
     true
 }
 
-const fn default_usage_threshold() -> u8 {
-    20
-}
-
 #[derive(Debug)]
 pub(crate) enum SetupError {
     Input(String),
@@ -472,12 +473,12 @@ fn run_describe(arguments: &[String]) -> ExitCode {
         && arguments.iter().any(|value| value == "--describe")
         && arguments.iter().any(|value| value == "--output")
         && arguments.iter().any(|value| value == "json");
-    let result = if !valid {
+    let result = if valid {
+        describe_result().unwrap_or_else(|error| failure(&error))
+    } else {
         failure(&SetupError::Input(
             "setup describe requires --scope user --describe --output json".to_owned(),
         ))
-    } else {
-        describe_result().unwrap_or_else(|error| failure(&error))
     };
     emit_action_result(&result)
 }
@@ -510,7 +511,8 @@ fn describe_result() -> Result<ActionResult, SetupError> {
         "selected_hosts": ["codex"],
         "skills": { "mode": "all" },
         "update_check": { "enabled": false },
-        "usage_guard": { "enabled": false, "stop_remaining_percent": 20,
+        "usage_guard": { "enabled": false,
+            "stop_remaining_percent": "<user-chosen-integer-1-to-99>",
             "codexbar_fallback_enabled": false,
             "discord": { "enabled": false, "request_privacy": "summary",
                 "message_fields": default_discord_message_fields().iter().map(|field| field.as_str()).collect::<Vec<_>>() }
@@ -534,7 +536,8 @@ fn describe_result() -> Result<ActionResult, SetupError> {
             "contract_digest": sha256_digest(format!("{USER_SETUP_SCHEMA}\n{USER_SETUP_CATALOG}").as_bytes()),
             "schema": schema,
             "catalog": catalog,
-            "answer_example": example,
+            "answer_template": example,
+            "answer_template_notice": "Replace <user-chosen-integer-1-to-99> with the user's own value before validation; Hive has no default usage threshold.",
             "question_order": question_order,
         })),
     })
@@ -819,9 +822,7 @@ fn progress_contains_secret(value: &JsonValue) -> bool {
                 || progress_contains_secret(value)
         }),
         JsonValue::Array(values) => values.iter().any(progress_contains_secret),
-        JsonValue::String(value) => {
-            value.starts_with("https://") || value.starts_with("http://")
-        }
+        JsonValue::String(value) => value.starts_with("https://") || value.starts_with("http://"),
         _ => false,
     }
 }
@@ -925,6 +926,7 @@ fn execute(arguments: &Arguments) -> Result<ActionResult, SetupError> {
     } else {
         parse_and_validate_config(&answer_bytes)?
     };
+    validate_registered_project_overrides(&config, &arguments.user_root)?;
     let catalog = parse_and_validate_catalog()?;
     let resolved_skills = resolve_skills(&config, &catalog)?;
     let desired = canonical_config(&config)?;
@@ -1266,11 +1268,26 @@ fn parse_and_validate_config_inner(
     }
     migrate_legacy_skill_names(&mut value)?;
     migrate_legacy_single_profile(&mut value);
+    if allow_legacy_recommended {
+        migrate_legacy_missing_usage_threshold(&mut value);
+    }
     validate_schema(USER_SETUP_SCHEMA, &value, "user setup")?;
     let config: UserSetupConfig = serde_json::from_value(value)
         .map_err(|error| SetupError::Input(format!("invalid user setup values: {error}")))?;
     validate_config_semantics(&config)?;
     Ok(config)
+}
+
+fn migrate_legacy_missing_usage_threshold(value: &mut JsonValue) {
+    let Some(usage_guard) = value
+        .get_mut("usage_guard")
+        .and_then(JsonValue::as_object_mut)
+    else {
+        return;
+    };
+    usage_guard
+        .entry("stop_remaining_percent".to_owned())
+        .or_insert_with(|| JsonValue::from(LEGACY_080_USAGE_THRESHOLD));
 }
 
 fn migrate_legacy_skill_names(value: &mut JsonValue) -> Result<(), SetupError> {
@@ -1468,6 +1485,7 @@ fn validate_schema(schema_source: &str, value: &JsonValue, label: &str) -> Resul
     Ok(())
 }
 
+#[allow(clippy::too_many_lines)]
 fn validate_config_semantics(config: &UserSetupConfig) -> Result<(), SetupError> {
     if config.schema_version != 1 {
         return Err(SetupError::Input(
@@ -1516,6 +1534,28 @@ fn validate_config_semantics(config: &UserSetupConfig) -> Result<(), SetupError>
             "usage guard stop_remaining_percent must be between 1 and 99".to_owned(),
         ));
     }
+    for (project_identity, threshold) in &config.usage_guard.project_overrides {
+        if project_identity.trim().is_empty()
+            || project_identity.trim() != project_identity
+            || project_identity.len() > 160
+            || project_identity.contains(['\r', '\n', '\0'])
+        {
+            return Err(SetupError::Input(
+                "usage guard project override requires a stable non-path project identity"
+                    .to_owned(),
+            ));
+        }
+        if !(1..=99).contains(threshold) {
+            return Err(SetupError::Input(
+                "usage guard project override must be between 1 and 99".to_owned(),
+            ));
+        }
+        if *threshold < config.usage_guard.stop_remaining_percent {
+            return Err(SetupError::Input(
+                "usage guard project override cannot be lower than the global threshold".to_owned(),
+            ));
+        }
+    }
     if !config.usage_guard.enabled && config.usage_guard.codexbar_fallback_enabled {
         return Err(SetupError::Input(
             "codexbar_fallback_enabled must be false when the usage guard is disabled".to_owned(),
@@ -1558,6 +1598,32 @@ fn validate_config_semantics(config: &UserSetupConfig) -> Result<(), SetupError>
         return Err(SetupError::Input(
             "Discord message_fields must be a non-empty list without duplicates".to_owned(),
         ));
+    }
+    Ok(())
+}
+
+fn validate_registered_project_overrides(
+    config: &UserSetupConfig,
+    user_root: &Path,
+) -> Result<(), SetupError> {
+    if config.usage_guard.project_overrides.is_empty() {
+        return Ok(());
+    }
+    let registry = hive_wiki::shared::load_project_registry(user_root).map_err(|error| {
+        SetupError::Input(format!(
+            "usage guard project overrides require a valid registered-project list: {error}"
+        ))
+    })?;
+    for project_identity in config.usage_guard.project_overrides.keys() {
+        if !registry
+            .projects
+            .iter()
+            .any(|project| project.id == *project_identity)
+        {
+            return Err(SetupError::Input(format!(
+                "usage guard project override is not a registered project identity: {project_identity}"
+            )));
+        }
     }
     Ok(())
 }
@@ -3188,7 +3254,8 @@ selected_hosts:
 skills:
   mode: recommended
   recommended_suite: web-developer
-usage_guard: {}
+usage_guard:
+  stop_remaining_percent: 20
 ";
         let error = parse_and_validate_config(legacy).expect_err("new quick-answer rejects suite");
         assert!(error.message().contains("no longer accepted"));
@@ -3227,7 +3294,8 @@ skills:
     - setup-hive
     - hive-knowledge-capture
     - ai-slop-cleaner
-usage_guard: {}
+usage_guard:
+  stop_remaining_percent: 20
 ";
         let config = parse_and_validate_config(legacy).expect("legacy individual selection");
 
@@ -3260,7 +3328,8 @@ skills:
   mode: individual
   selected:
     - user-setup
-usage_guard: {}
+usage_guard:
+  stop_remaining_percent: 20
 "
             .as_bytes(),
         )
@@ -3299,7 +3368,8 @@ skills:
   mode: individual
   selected:
     - quick-answer
-usage_guard: {}
+usage_guard:
+  stop_remaining_percent: 20
 "
             .as_bytes(),
         )
@@ -3313,8 +3383,8 @@ usage_guard: {}
     }
 
     #[test]
-    fn setup_defaults_enable_wiki_and_keep_guard_native_first() {
-        let config = parse_and_validate_config(
+    fn legacy_defaults_enable_wiki_and_keep_guard_native_first() {
+        let config = parse_and_validate_installed_config(
             br"
 schema_version: 1
 interface_language: en
@@ -3330,7 +3400,8 @@ skills:
   mode: individual
   selected:
     - user-setup
-usage_guard: {}
+usage_guard:
+  stop_remaining_percent: 20
 ",
         )
         .expect("defaults");
@@ -3349,6 +3420,113 @@ usage_guard: {}
             config.usage_guard.discord.message_fields,
             default_discord_message_fields()
         );
+    }
+
+    #[test]
+    fn new_setup_requires_a_user_selected_usage_threshold() {
+        let error = parse_and_validate_config(
+            br"
+schema_version: 1
+interface_language: en
+wiki:
+  language: both
+profile:
+  contexts:
+    - non-developer
+persona:
+  id: friendly
+selected_hosts:
+  - codex
+skills:
+  mode: individual
+  selected:
+    - user-setup
+usage_guard: {}
+",
+        )
+        .expect_err("new setup rejects an omitted threshold");
+
+        assert!(error.message().contains("stop_remaining_percent"));
+    }
+
+    #[test]
+    fn progress_preserves_only_nonsecret_answers_and_the_next_step() {
+        let user_root = tempfile::tempdir().expect("temporary user root");
+        let answers = user_root.path().join("answers.yml");
+        std::fs::write(
+            &answers,
+            "interface_language: ko\nusage_guard:\n  enabled: true\n  stop_remaining_percent: 37\n",
+        )
+        .expect("write answers");
+        let save = parse_progress(&[
+            "save".to_owned(),
+            "--scope".to_owned(),
+            "user".to_owned(),
+            "--step".to_owned(),
+            "discord-test".to_owned(),
+            "--answers".to_owned(),
+            answers.display().to_string(),
+            "--user-root".to_owned(),
+            user_root.path().display().to_string(),
+            "--output".to_owned(),
+            "json".to_owned(),
+        ])
+        .expect("progress save arguments");
+        let saved = execute_progress(save).expect("progress save");
+        assert_eq!(saved.code, "hive.user-setup-progress-saved");
+
+        let status = parse_progress(&[
+            "status".to_owned(),
+            "--scope".to_owned(),
+            "user".to_owned(),
+            "--user-root".to_owned(),
+            user_root.path().display().to_string(),
+            "--output".to_owned(),
+            "json".to_owned(),
+        ])
+        .expect("progress status arguments");
+        let inspected = execute_progress(status).expect("progress status");
+        assert_eq!(inspected.code, "hive.user-setup-progress-status");
+        assert_eq!(inspected.data.expect("status data")["step"], "discord-test");
+
+        std::fs::write(
+            &answers,
+            "usage_guard:\n  webhook_url: https://discord.example/webhook\n",
+        )
+        .expect("write forbidden answers");
+        let rejected = parse_progress(&[
+            "save".to_owned(),
+            "--scope".to_owned(),
+            "user".to_owned(),
+            "--step".to_owned(),
+            "discord-test".to_owned(),
+            "--answers".to_owned(),
+            answers.display().to_string(),
+            "--user-root".to_owned(),
+            user_root.path().display().to_string(),
+            "--output".to_owned(),
+            "json".to_owned(),
+        ])
+        .and_then(execute_progress);
+        let Err(rejected) = rejected else {
+            panic!("progress accepts a webhook URL");
+        };
+        assert!(rejected.message().contains("webhook URL"));
+    }
+
+    #[test]
+    fn project_override_requires_a_registered_project_identity() {
+        let temporary = tempfile::tempdir().expect("temporary user root");
+        let mut config = valid_config();
+        config
+            .usage_guard
+            .project_overrides
+            .insert("not-registered".to_owned(), 30);
+
+        let error = validate_registered_project_overrides(&config, temporary.path())
+            .expect_err("unregistered project override");
+
+        assert!(error.message().contains("registered-project"));
     }
 
     #[test]
@@ -3408,7 +3586,8 @@ skills:
   mode: individual
   selected:
     - user-setup
-usage_guard: {}
+usage_guard:
+  stop_remaining_percent: 20
 ",
         )
         .expect_err("v0.9 must not accept a Notion user setup");
@@ -3437,6 +3616,7 @@ skills:
     - knowledge-maintain
 usage_guard:
   enabled: true
+  stop_remaining_percent: 20
 ",
         )
         .expect("config");

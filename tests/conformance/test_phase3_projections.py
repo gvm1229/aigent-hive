@@ -26,28 +26,12 @@ HOST_PATHS = json.loads(
 LOCAL_SKILL_SOURCE = (
     PHASE3_FIXTURES / "optional/local-inspect/SKILL.md"
 )
-PROJECTED_BUILTINS = (
-    "answer",
-    "auto-setup-project",
-    "clean-ai-slop",
-    "engineer-run",
-    "handoff-role",
-    "import-repository-knowledge",
-    "maintain-knowledge",
-    "manage-usage",
-    "manage-wiki",
-    "migrate-project",
-    "record-knowledge",
-    "refine-prompt",
-    "research-practices",
-    "resume-work",
-    "save-progress",
-    "search-knowledge",
-    "setup-project",
-    "share-knowledge",
-    "update-hive",
-    "upgrade-project",
-    "verify-package",
+PROJECTED_BUILTINS = tuple(
+    sorted(
+        path.name
+        for path in (REPOSITORY_ROOT / "harness/skills").iterdir()
+        if path.is_dir() and path.name != "user-setup"
+    )
 )
 CATALOG_ONLY = ()
 
@@ -179,7 +163,7 @@ class Phase3HostProjection(Phase3ProjectionTestCase):
                 agents = (target / "AGENTS.md").read_text(encoding="utf-8")
                 skill = (
                     self.discovery_root(target, host)
-                    / "manage-usage/SKILL.md"
+                    / "usage-guard/SKILL.md"
                 ).read_text(encoding="utf-8")
                 for surface in (agents, skill):
                     self.assertIn("hive usage enforce", surface)
@@ -280,9 +264,9 @@ class Phase3HostProjection(Phase3ProjectionTestCase):
                 )
                 self.assertNotIn(b"UserPromptSubmit", discovery_bytes)
                 for skill in (
-                    "save-progress",
-                    "resume-work",
-                    "handoff-role",
+                    "run-checkpoint",
+                    "run-resume",
+                    "run-handoff",
                 ):
                     self.assertTrue(
                         (
@@ -571,7 +555,7 @@ class Phase3ProjectionHostile(Phase3ProjectionTestCase):
         target = self.work_root / "builtin-conflict"
         projected = (
             self.discovery_root(target, "codex")
-            / "answer/SKILL.md"
+            / "quick-answer/SKILL.md"
         )
         projected.parent.mkdir(parents=True)
         user_bytes = b"user-owned colliding Skill bytes\x00\xff\n"
