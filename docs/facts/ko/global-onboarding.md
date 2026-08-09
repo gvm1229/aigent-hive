@@ -11,7 +11,7 @@ aliases: ["User setup"]
 sources:
   - "repo:README.md#sha256:67c09e54e76df72ee9ac6acbde5b88fbb0a6653e1d7172e3f789a8d99c2434b7"
   - "repo:crates/hive-cli/src/user_setup.rs#sha256:48a76cd5503858a2327c7562879de259334b182687aace98ec1df06b71dd1600"
-  - "repo:docs/decisions/ADR-0012-global-onboarding-shared-index.md#sha256:828eee194312563c9258f6a6aade0c0ec3e2893c11383b692dfadd062e35a38e"
+  - "repo:docs/decisions/ADR-0012-global-onboarding-shared-index.md#sha256:d6cc73ae1bd278e0e9b2e06468cfcade31c0f731ef543a8ca84a5356b4aaa905"
   - "repo:docs/plans/active/windows-global-setup-hardening.md#sha256:6742a157cb9665b6b3accffce536dd447642ec367c41fa06c7d5bc7ef6ca0910"
   - "repo:harness/skills/configure/SKILL.md#sha256:abeb032e21d2576366025465d54080966767fb7e17cca57848acf093eaa83eaf"
   - "repo:harness/user-setup/catalog.yml#sha256:7dc82dbf559075ce4286e7dd19aec0ddc22e04f35ad4a8a60f43129a4dba2a1f"
