@@ -24,7 +24,8 @@ Canonical human catalog: [`docs/skills.md`](../../skills.md). Consumer invocatio
 `$aigent-hive:<product-name>`. Source and product active IDs are intentionally disjoint. Related
 workflows retain a recognizable name family without combined-host discovery collisions.
 
-Maintainer corrections: `prompt-refine`, `research-best-practices`, `amend-directive`. Historical
+Maintainer corrections: product `prompt-refine`·`research-best-practices`, source
+`source-amend-directive`. Every approved source ID uses the `source-*` prefix. Historical
 `hive-loop-engineering` remains current `engineer-run`; approved targets expose the behavior as
 source `source-ralph-loop` and product `ralph-loop`.
 

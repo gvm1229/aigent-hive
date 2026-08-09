@@ -1401,12 +1401,22 @@ class Phase3SkillSourceContract(unittest.TestCase):
         for approved_name in (
             "prompt-refine",
             "research-best-practices",
-            "amend-directive",
+            "source-commit-work",
+            "source-amend-directive",
             "source-ralph-loop",
             "ralph-loop",
         ):
             self.assertIn(f"`{approved_name}`", catalog)
         self.assertIn("hive-loop-engineering", catalog)
+        source_cells = [
+            line.strip("|").split("|")[1].strip()
+            for line in catalog.splitlines()
+            if line.startswith("| `")
+        ]
+        for source_cell in source_cells:
+            if source_cell == "—":
+                continue
+            self.assertRegex(source_cell, r"^`source-[^`]+`$")
         self.assertIn("[SIL-007]", plan)
         self.assertIn("[SIL-008]", plan)
         self.assertNotIn(

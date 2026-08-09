@@ -9,7 +9,7 @@
 - 소스와 제품의 active Skill ID 중복 `0건`
 - 같은 기능: 이름 계열 유지, exact 이름 분리
 - 제품 이름: 사용자가 인식할 기능 중심
-- 소스 이름: 제품과 구분 가능한 `source-*` 또는 개발 작업 이름
+- 소스 이름: 제품과 구분 가능한 `source-*` 접두사 필수
 - 폐기 ID: scope가 지정된 이관 입력으로만 허용
 - Historical release byte: 변경 금지
 
@@ -28,8 +28,8 @@
 | `research-practices` | `source-research-best-practices` | `research-best-practices` | 공식 자료 중심의 최신 모범 사례 조사 | Rust 자동 update 모범 사례 조사 |
 | `search-knowledge` | `source-knowledge-recall` | `knowledge-recall` | 기존 지식에서 관련 결정·규칙 회수 | 기존 release 결정 검색 |
 | `hive-usage-guard`, `manage-usage` | `source-usage-guard` | `usage-guard` | 현재 범위의 사용량 보호 상태·기준 관리 | 남은 사용량 20%의 자동 작업 중지 |
-| `hive-commit` | `commit-work` | — | 소스 변경의 관심사별 검증·커밋 | 현재 변경의 독립 commit 분리 |
-| `hive-directive-amend` | `amend-directive` | — | 소스·제품 agent directive 수정 | Setup의 사소한 승인 질문 금지 |
+| `hive-commit` | `source-commit-work` | — | 소스 변경의 관심사별 검증·커밋 | 현재 변경의 독립 commit 분리 |
+| `hive-directive-amend` | `source-amend-directive` | — | 소스·제품 agent directive 수정 | Setup의 사소한 승인 질문 금지 |
 | `hive-editless-question` | `source-review` | — | 소스 저장소의 변경 없는 조사·상태 검토 | `v0.9.0` 계획 완료도 조사 |
 | `hive-source-wiki` | `source-knowledge` | — | 소스 Wiki 조회·검사·색인·사실 기록 | Windows 설치 관련 source knowledge 검색 |
 | `configure` | — | `user-setup` | 언어·Wiki·host·Skill·사용량 보호 전역 설정 | 전역 Aigent Hive 설정 변경 |
