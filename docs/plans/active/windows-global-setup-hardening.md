@@ -74,7 +74,8 @@
   clean npm install·fresh Codex session·product-only Skill catalog·global/project usage guard를
   포함한 한 번의 setup으로 `dry-run → apply → validate` 완료. 사용자 수동 `where hive`, schema
   추측, home 임시 파일, 조건 밖 질문 모두 0건. 이 Mac에서 Windows 설치·setup 실행 또는 대체
-  수용 판정 금지. 해당 Windows 증거 전 stable `0.9.0` 중지
+  수용 판정 금지. `test.12` actual clean reinstall·saved preference 재사용·setup sequence·Skill·data
+  보존 증거 확보. 새 Codex session 자동 CLI 탐색만 미확인; 해당 증거 전 stable `0.9.0` 중지
 
 ## 수용 결과
 
@@ -90,6 +91,10 @@
 - dangling Hive Codex marketplace: Hive backup·pending transaction·canonical root 일치 시 자동 recovery,
   knowledge·저장 preference·foreign host entry 변경 0건
 - clean reinstall: `hive uninstall` 뒤 saved preference·knowledge 보존, 설치 재개 시 setup 질문 0건
+- `test.12` Windows actual: `hive uninstall → install → dry-run → apply → validate → install validate` PASS,
+  saved setup digest·knowledge file 5개 aggregate digest 동일, Hive active Skill 22개·retired ID `0건`,
+  home temporary answer `0건`, `--full` unknown-option rejection. Discord persisted 설정·usage guard `20%`
+  확인; current process의 webhook environment value 부재로 outbound 재시험 미공급
 
 ## 범위 밖
 

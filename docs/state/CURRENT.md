@@ -3,19 +3,20 @@
 - 기준 branch: `develop`
 - product version: `0.9.0`
 - plan revision: `2.40`
-- 현재 milestone: `0.9.0-test.12` 보존형 `hive uninstall` Windows clean reinstall·fresh Codex session 수용
+- 현재 milestone: `0.9.0-test.12` Windows 보존형 clean reinstall 완료, 새 Codex session 자동 CLI 탐색 증거 대기
 - `0.9.0` 예외: 실제 Antigravity host 수용과 Claude fixture 공개 제외. Codex 실제 plugin 활성화·global setup은 `REL9-011` 필수 gate. `develop → main` CI는 병합 gate 일시 면제이며 실패·미실행 범위 공개 유지
 - Codex marketplace 복구: `0.9.0-test.8`의 미완료 transaction으로 남은 manifest 없는 Hive marketplace entry를
   `hive install --recover`가 Hive-owned root 확인 뒤 조용히 정리·재설치. foreign host entry·knowledge·저장 preference 보존
-- Windows `0.9.0-test.11` actual user-root 수용: 격리 npm install, `dry-run → apply → validate`, stale marketplace·plugin
-  recovery, 22개 product-only Skill, Korean·bilingual Wiki, usage guard `20%`, Discord persisted 설정·outbound test,
-  home temporary answer `0건` PASS. `KST-006`·`DIS9-010` 완료
+- Windows `0.9.0-test.12` actual user-root 수용: 격리 npm install, `hive uninstall → install → dry-run → apply →
+  validate → install validate`, saved preference·knowledge digest 보존, Hive active Skill 22개·retired ID `0건`,
+  Korean·bilingual Wiki, usage guard `20%`, Discord persisted 설정, home temporary answer `0건`, `--full` 거부 PASS.
+  current process webhook environment value 부재로 Discord outbound 재시험 미공급. `KST-006`·`DIS9-010` 완료 유지
 - `hive uninstall`: Hive가 추가한 host activation·projection·package·derived index·backup·runtime만 제거.
   `.hive/knowledge/`와 저장 user preference는 항상 보존, `--full`·`-f` 삭제 경로 제공 없음. 저장 preference 재설치: setup 질문 `0건`
 - Agent 자율 실행 지속: 이전 시험판 작업에서 Agent 소유 회귀 정리·검증·push·후보·게시가
   남은 중간 보고 종료 판단 오류. [`agent-autonomous-continuation.md`](../plans/active/agent-autonomous-continuation.md)의
   `AAC-001–008`: source·소비자 프로젝트·전역 설정 지시문 terminal state·closure gate·session record·static regression 보강 완료
-- 남은 Windows 수용: `0.9.0-test.12`의 `hive uninstall` 뒤 clean reinstall과 새 Codex session의 자동 `hive` 발견.
+- 남은 Windows 수용: 새 Codex session의 자동 `hive` 발견. webhook environment value가 있는 Discord outbound 재시험.
   수동 `where hive`·schema 추측·사용자 홈 답안 파일·조건 밖 질문 `0건` 증거로 `WGS-011`·`REL9-011` 완료 가능
 - Discord 수용: 실제·시험 알림의 동일 renderer·선택 필드·선택 언어, 시험 알림 첫 줄의 변경 안내 고지, 첨부 화면의 webhook 전달
 - Discord 알림 형식: 사용자 승인 구역형 Markdown 적용 완료. 사용량·작업 정보·작업 계속 요청 구역, 빈 줄과 이모지·굵은 제목 적용. 밑줄 표기 `0건`
@@ -23,6 +24,10 @@
   exact `b0e41f58bd6b73b56cbe92c2b054fb5cefcc9f03`, 5개 native target·npm umbrella·direct installer·attestation PASS.
   publication [run `31373214154`](https://github.com/gvm1229/aigent-hive/actions/runs/31373214154)의 six-package OIDC `test`
   게시, annotated GitHub prerelease, `test=0.9.0-test.11`, `latest=0.8.0` 유지 PASS
+- `0.9.0-test.12`: candidate [run `31391084832`](https://github.com/gvm1229/aigent-hive/actions/runs/31391084832)의
+  exact `c98add01916fa278267d458329d20793dec4b7f4`, 5개 native target·npm umbrella·direct installer·attestation PASS.
+  publication [run `31392103115`](https://github.com/gvm1229/aigent-hive/actions/runs/31392103115)의 six-package OIDC
+  `test` 게시, annotated GitHub prerelease, `test=0.9.0-test.12`, `latest=0.8.0` 유지 PASS
 - `0.9.0-test.6`: 후보 [run `31294665865`](https://github.com/gvm1229/aigent-hive/actions/runs/31294665865)의 5개 native target·npm 묶음·attestation PASS. 게시 [run `31295045199`](https://github.com/gvm1229/aigent-hive/actions/runs/31295045199)의 여섯 package OIDC publication, annotated `v0.9.0-test.6`, 22-asset GitHub prerelease, 여섯 package `test=0.9.0-test.6`, `latest=0.8.0` 유지 PASS. Windows clean install·fresh Codex session 수용 전 stable 미착수
 - `REL9-027`: six-package Trusted Publisher OIDC 실제 게시 PASS. `BGR-012–013` source 응답의 내부 용어 억제·사용자 영향 우선 설명과 local `-dev → 0.9.0-test.6` user-scope validation 완료. `SIL-001–006` public Skill identity·localization·retired-ID cleanup과 `0.9.0-test.5` 독립 시험 게시 완료. `N10-001` Notion 사용자 노출 차단 완료. `DIS9-004`의 부분 설정 전체 목록·Discord 하위 항목 표시 계약 구현. 다음 작업: `DIS9-002–010` Discord 연결 UX. Notion end-to-end 기능은 `0.10.0-test`까지 보류
 - Skill 최종 결정: [`docs/skills.md`](../skills.md)의 product-only 22개. Source 개발도 설치 product

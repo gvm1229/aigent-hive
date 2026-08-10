@@ -17,14 +17,16 @@
 ## 현재 기준선
 
 - Product: `0.9.0`; notes: [`0.9.0.md`](../../releases/0.9.0.md)
-- 최신 공개 시험판: `0.9.0-test.11`; 여섯 npm package `test=0.9.0-test.11`, `latest=0.8.0`
-- `0.9.0-test.11` candidate [`31372510565`](https://github.com/gvm1229/aigent-hive/actions/runs/31372510565): exact `b0e41f58bd6b73b56cbe92c2b054fb5cefcc9f03`, 5개 native target·npm umbrella·direct installer·attestation PASS
-- `0.9.0-test.11` publication [`31373214154`](https://github.com/gvm1229/aigent-hive/actions/runs/31373214154): six-package OIDC `test` 게시, annotated `v0.9.0-test.11`, GitHub prerelease, `latest=0.8.0` 유지 PASS
-- Windows 격리 npm prefix local install: `AIgent Hive v0.9.0-test #11` 확인. actual user root의
-  `dry-run → apply → validate` PASS, Codex stale marketplace·plugin 자동 recovery, 22개 product-only Skill,
-  Korean·bilingual Wiki, usage guard `20%`, Discord persisted 설정·outbound test, home temporary answer `0건`
-- `0.9.0-test.12` 범위: 보존형 `hive uninstall` 뒤 clean reinstall. knowledge·saved preference 보존,
-  full purge flag 없음, saved preference 재사용 시 setup 질문 0건
+- 최신 공개 시험판: `0.9.0-test.12`; 여섯 npm package `test=0.9.0-test.12`, `latest=0.8.0`
+- `0.9.0-test.12` candidate [`31391084832`](https://github.com/gvm1229/aigent-hive/actions/runs/31391084832):
+  exact `c98add01916fa278267d458329d20793dec4b7f4`, 5개 native target·npm umbrella·direct installer·attestation PASS
+- `0.9.0-test.12` publication [`31392103115`](https://github.com/gvm1229/aigent-hive/actions/runs/31392103115):
+  six-package OIDC `test` 게시, annotated `v0.9.0-test.12`, GitHub prerelease, `latest=0.8.0` 유지 PASS
+- Windows 격리 npm prefix local install: `AIgent Hive v0.9.0-test #12` 확인. actual user root의
+  `hive uninstall → install → dry-run → apply → validate → install validate` PASS. knowledge·saved preference
+  digest 보존, Hive active Skill 22개·retired ID `0건`, usage guard `20%`, persisted Discord 설정, home temporary
+  answer `0건`, `--full` unknown-option rejection. current process의 webhook environment value 부재: Discord outbound
+  재시험 미공급; 설정·setup의 중단 원인 아님
 - 상세 run·failure·external signer evidence: [`CURRENT.md`](../../state/CURRENT.md)
 
 ## 이번 정식 릴리스의 명시적 제외와 면제
@@ -85,8 +87,9 @@
 - [x] [REL9-010] RAG 50,000 chunk와 `.hivekb` 100 collection·50,000 chunk release profile 재측정·threshold PASS
 - [ ] [REL9-011] Codex CLI `0.146.1`의 실제 marketplace·plugin 활성화, structured state
   검증, `hive setup --scope user` dry-run·apply·validate, 실패 되돌리기와 새 Codex session의 자동 CLI
-  탐색 회귀 통과. `0.9.0-test.11` actual host setup·Rust rollback evidence 완료; `test.12` clean reinstall
-  새 session evidence 미확보. 임시 bridge·호스트 전역 설정 수동 쓰기 0건
+  탐색 회귀 통과. `0.9.0-test.12` actual clean reinstall·setup·data preservation·Skill·usage guard·persisted
+  Discord 설정 완료; 새 Codex session 자동 CLI 탐색과 webhook environment가 있는 outbound 재시험 evidence 필요.
+  임시 bridge·호스트 전역 설정 수동 쓰기 0건
 
 ### C. 시험 배포와 수용
 

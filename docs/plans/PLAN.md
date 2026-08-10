@@ -118,7 +118,8 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
 ## Current execution order
 
 완료 증거: [`CURRENT.md`](../state/CURRENT.md)와 owning active fragment.
-현재: `0.9.0-test.11`의 Windows actual host `dry-run → apply → validate` 수용, `KST-006`·
-`DIS9-010` 완료. 다음: 보존형 `hive uninstall`이 포함된 `0.9.0-test.12` Windows clean reinstall와
-새 Codex session의 자동 CLI 탐색 수용으로 `WGS-011`·`REL9-011` 잔여 증거 보강.
+현재: `0.9.0-test.12` Windows actual의 `hive uninstall → clean reinstall → dry-run → apply → validate`
+수용. knowledge·saved preference digest 보존, Hive active Skill 22개·retired 이름 0개, home temporary
+answer 0개, `--full` 거부 확인. `WGS-011`·`REL9-011` 잔여: 새 Codex session 자동 CLI 탐색.
+Discord persisted 설정·usage guard `20%` 확인; current process의 webhook 환경값 부재로 outbound 재시험 미공급.
 Antigravity·Claude 공개 제외 유지. Notion: `N10-002–011`·`0.10.0-test` 보류.
