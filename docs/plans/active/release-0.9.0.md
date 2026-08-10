@@ -25,8 +25,7 @@
 - Windows 격리 npm prefix local install: `AIgent Hive v0.9.0-test #12` 확인. actual user root의
   `hive uninstall → install → dry-run → apply → validate → install validate` PASS. knowledge·saved preference
   digest 보존, Hive active Skill 22개·retired ID `0건`, usage guard `20%`, persisted Discord 설정, home temporary
-  answer `0건`, `--full` unknown-option rejection. current process의 webhook environment value 부재: Discord outbound
-  재시험 미공급; 설정·setup의 중단 원인 아님
+  answer `0건`, `--full` unknown-option rejection. 유지보수자 확인: 새 Codex session 자동 CLI 탐색·Discord 실제 전달
 - 상세 run·failure·external signer evidence: [`CURRENT.md`](../../state/CURRENT.md)
 
 ## 이번 정식 릴리스의 명시적 제외와 면제
@@ -85,10 +84,10 @@
 - [x] [REL9-009] 시험·정식 feature/default parity, `markdown|notion` backend,
   Discord outbound와 공통 `report to developer` preview·collect·보존·redaction·no-upload conformance
 - [x] [REL9-010] RAG 50,000 chunk와 `.hivekb` 100 collection·50,000 chunk release profile 재측정·threshold PASS
-- [ ] [REL9-011] Codex CLI `0.146.1`의 실제 marketplace·plugin 활성화, structured state
+- [x] [REL9-011] Codex CLI `0.146.1`의 실제 marketplace·plugin 활성화, structured state
   검증, `hive setup --scope user` dry-run·apply·validate, 실패 되돌리기와 새 Codex session의 자동 CLI
   탐색 회귀 통과. `0.9.0-test.12` actual clean reinstall·setup·data preservation·Skill·usage guard·persisted
-  Discord 설정 완료; 새 Codex session 자동 CLI 탐색과 webhook environment가 있는 outbound 재시험 evidence 필요.
+  Discord 설정 완료. 유지보수자 제공 Windows 증거: 새 Codex session 자동 `hive` 탐색·Discord 실제 전달.
   임시 bridge·호스트 전역 설정 수동 쓰기 0건
 
 ### C. 시험 배포와 수용
@@ -113,6 +112,18 @@
 - [ ] [REL9-026] PLAN·CURRENT·release notes·ADR·bilingual fact에 run ID·SHA·digest·지원·미검증 범위 최종 반영
 - [x] [REL9-027] `release-publish.yml` 단일 OIDC publication: `channel=test|stable`별 exact branch·candidate·tag·Release guard, `NPM_TOKEN` fallback 제거, six-package Trusted Publisher 설정 안내와 static contract 검증 — `0.9.0-test.6`의 six-package OIDC publication PASS
 - [x] [REL9-028] Copier와 Rust harness renderer가 Discord `message_fields` 기본값을 byte-exact하게 동일 출력하는 parity PASS — `Copier 9.17.0` 격리 검증에서 4개 parity PASS
+- [ ] [REL9-029] contributor 입력·`user-setup` Skill 대화 없이 product-owned 신속 기본값으로 disposable
+  user root의 설치 수용 자동화. signed catalog·`hive setup --describe`에서 유도한 단일 기본 profile은
+  `en` interface·Markdown English Wiki·general knowledge work·strict·current authenticated host·모든 built-in
+  Skill·daily update off·usage guard off를 사용. clean install → `dry-run → apply → validate` → install validate,
+  신규 설치·보존형 재설치 모두 실행. 수동 `where hive`, schema·답안 필드 추측, 사용자 홈 답안 파일, setup 질문,
+  user preference 의존 `0건`; profile drift와 install validation 실패는 release gate 실패
+- [ ] [REL9-030] 테스트 체계의 측정 기반 정리. 모든 Rust·Python test·fixture·CI job을 command, owner,
+  runtime, covered contract, release gate, duplicate 후보로 대장화. retain·consolidate·retire 판단은 replacement
+  coverage·baseline 결과·소유자 승인 뒤에만 적용하며 추정만으로 test 삭제 금지. named unit·contract·integration·host·release
+  lane과 단일 실행 manifest·시간 측정·병렬 안전 temp root로 재구성. 모든 disposable consumer fixture는
+  `tests/work/<suite>-<random>`의 ignore 작업 영역 사용; Phase 4의 `tests/hive-phase4-*` 생성 중단,
+  정상 종료 cleanup·중단 누수 격리·원인 표시 계약 추가. 전후 coverage·release gate 손실 `0건`과 measured runtime 개선 증거 필요
 
 ## 실행 순서
 
@@ -121,10 +132,11 @@
 3. `REL9-002–005` version grammar·분리 workflow 구현·독립 커밋
 4. `REL9-006–012` clean clone·cross-platform 시험 후보와 Codex 실제 활성화 검증
 5. `REL9-013–016` bare 시험판 독립 게시·수용·선택형 numbered 시험판
-6. `REL9-027` 단일 OIDC publication 구현·Trusted Publisher 설정
-7. `REL9-028` Copier·Rust Discord 설정 parity 복구
-8. `REL9-017–024` main 통합·stable candidate·signing·별도 정식 publication
-9. `REL9-025–026` 관찰·current-truth 완료 기록
+6. `REL9-029` product-owned 신속 기본값 무인 설치 수용
+7. `REL9-030` 테스트 대장·lane·fixture 작업 영역 정리
+8. `REL9-027–028` OIDC publication·Discord 설정 parity 유지 확인
+9. `REL9-017–024` main 통합·stable candidate·signing·별도 정식 publication
+10. `REL9-025–026` 관찰·current-truth 완료 기록
 
 ## 외부 권한 경계
 
@@ -140,4 +152,6 @@
 - GitHub tag·Release·npm `latest`의 exact `0.9.0`·main SHA 일치
 - 5개 platform artifact·6개 npm package·3개 direct installer 검증
 - `0.8.0` 사용자 데이터·설정·project harness의 non-breaking upgrade
+- contributor preference 입력 없는 기본 신속 설정의 clean install·재설치 자동 수용
+- 테스트 분류 대장·coverage replacement·ignore disposable fixture 경계와 release lane 증거
 - Signing·provenance·TUF·rollback·public acceptance의 미확인 항목 0건
