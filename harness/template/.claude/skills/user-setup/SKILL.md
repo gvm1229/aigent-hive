@@ -230,6 +230,18 @@ consent and setup mode. Ask the remaining preference questions only for `Custom`
 - Treat Wiki deletion, host uninstall, Skill data deletion, and provider configuration changes as separate destructive actions outside this Skill.
 - Re-run dry-run, apply, and validate with one consistent quick-answer file.
 
+## Clean reinstall
+
+- Use this route only for an explicit user request to remove and reinstall Hive's user-scope files.
+- Run `hive uninstall --user-root <user-root> --output json`. This removes Hive-managed host
+  activation, projections, packages, indexes, backups, and runtime state while preserving
+  `.hive/knowledge/` and saved user preferences.
+- Reinstall the selected saved host with `hive install --scope user --host <saved-host> --apply
+  --user-root <user-root> --output json`. A valid saved preference file is reused without setup
+  questions. Then run the saved-answer `dry-run`, `apply`, and `validate` sequence.
+- Hive provides no command to remove the knowledge base or saved preferences. Those files remain
+  manual user-owned deletion targets outside this Skill.
+
 ## Korean interaction contract
 
 When the selected interface language is Korean, retain product terms and identifiers exactly as
