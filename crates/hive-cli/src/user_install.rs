@@ -405,6 +405,8 @@ struct UserBackupManifest {
     host_owned_state: Option<HostStateSnapshot>,
     #[serde(default)]
     pending_host_transition: Option<PendingHostTransition>,
+    #[serde(default)]
+    codex_plugin_was_latent_before_marketplace_add: bool,
     entries: Vec<UserBackupEntry>,
 }
 
@@ -2960,6 +2962,7 @@ fn apply_plan(
         antigravity_state_before,
         host_owned_state: None,
         pending_host_transition: None,
+        codex_plugin_was_latent_before_marketplace_add: false,
         entries: backup_entries,
     };
     persist_backup(arguments, &backup_relative, &backup)?;
@@ -4589,6 +4592,7 @@ fn compensate_host_mutations(
     backup.host_mutations.clear();
     backup.host_owned_state = None;
     backup.pending_host_transition = None;
+    backup.codex_plugin_was_latent_before_marketplace_add = false;
     persist_backup(arguments, backup_relative, backup)?;
     Ok(())
 }
@@ -4643,6 +4647,7 @@ fn reconcile_codex_state(
             "Codex compensation received non-Codex state".to_owned(),
         ));
     };
+    let latent_plugin = backup.codex_plugin_was_latent_before_marketplace_add;
     let mut context = CompensationContext {
         arguments,
         backup_relative,
@@ -4651,7 +4656,7 @@ fn reconcile_codex_state(
         runner,
     };
     if current.marketplace != desired.marketplace {
-        if current.plugin.is_some() {
+        if current.plugin.is_some() && !latent_plugin {
             let mut after = current.clone();
             after.plugin = None;
             current = run_codex_reconciliation_step(
@@ -4665,6 +4670,9 @@ fn reconcile_codex_state(
         if current.marketplace.is_some() {
             let mut after = current.clone();
             after.marketplace = None;
+            if latent_plugin {
+                after.plugin = None;
+            }
             current = run_codex_reconciliation_step(
                 &mut context,
                 codex_compensation_command(HostMutation::CodexMarketplaceAdded),
@@ -5321,6 +5329,17 @@ fn activate_host(
     let command_sets = activation_commands(arguments.host, &transaction.backup, marketplace_text)?;
     for (command, mutation) in command_sets {
         if let Some(mutation) = mutation {
+            if arguments.host == UserHost::Codex
+                && matches!(
+                    mutation,
+                    HostMutation::CodexPluginAdded | HostMutation::CodexPluginRefreshed
+                )
+                && transaction
+                    .backup
+                    .codex_plugin_was_latent_before_marketplace_add
+            {
+                continue;
+            }
             execute_forward_host_transition(
                 arguments,
                 plan,
@@ -5386,9 +5405,25 @@ fn execute_forward_host_transition(
     persist_backup(arguments, &transaction.backup_relative, &transaction.backup)?;
     let command_result = runner.run(executable, command, COMMAND_TIMEOUT, COMMAND_OUTPUT_LIMIT);
     let observed_after = probe_host_snapshot(arguments.host, executable, runner)?;
-    if matches!(&command_result, Ok(output) if output.success) && observed_after == expected_after {
+    let codex_latent_plugin = matches!(mutation, HostMutation::CodexMarketplaceAdded)
+        && codex_marketplace_add_revealed_expected_plugin(
+            arguments,
+            &expected_after,
+            &observed_after,
+        )?;
+    if matches!(&command_result, Ok(output) if output.success)
+        && (observed_after == expected_after || codex_latent_plugin)
+    {
+        let owned_state = if codex_latent_plugin {
+            transaction
+                .backup
+                .codex_plugin_was_latent_before_marketplace_add = true;
+            observed_after.clone()
+        } else {
+            expected_after.clone()
+        };
         transaction.backup.host_mutations.push(mutation);
-        transaction.backup.host_owned_state = Some(expected_after);
+        transaction.backup.host_owned_state = Some(owned_state);
         transaction.backup.pending_host_transition = None;
         persist_backup(arguments, &transaction.backup_relative, &transaction.backup)?;
         return Ok(());
@@ -5410,6 +5445,29 @@ fn execute_forward_host_transition(
             command.join(" ")
         ))),
     }
+}
+
+fn codex_marketplace_add_revealed_expected_plugin(
+    arguments: &UserArguments,
+    expected_after: &HostStateSnapshot,
+    observed_after: &HostStateSnapshot,
+) -> Result<bool, InstallError> {
+    let (HostStateSnapshot::Codex(expected), HostStateSnapshot::Codex(observed)) =
+        (expected_after, observed_after)
+    else {
+        return Ok(false);
+    };
+    if expected.plugin.is_some() || observed.marketplace != expected.marketplace {
+        return Ok(false);
+    }
+    let HostStateSnapshot::Codex(expected_with_plugin) =
+        expected_host_state_after(arguments, HostMutation::CodexPluginAdded, expected_after)?
+    else {
+        return Err(InstallError::Internal(
+            "Codex plugin transition produced a non-Codex state".to_owned(),
+        ));
+    };
+    Ok(observed.plugin == expected_with_plugin.plugin)
 }
 
 fn initial_host_snapshot(backup: &UserBackupManifest) -> Option<HostStateSnapshot> {
@@ -6432,6 +6490,7 @@ mod tests {
     #[derive(Clone, Copy)]
     enum HostSabotage {
         None,
+        LatentCodexPluginActivation,
         FailBeforeMarketplaceMutation,
         FailAfterMarketplaceMutation,
         FailBeforePluginMutation,
@@ -6466,7 +6525,10 @@ mod tests {
                 calls: Mutex::new(Vec::new()),
                 qualified_host: Mutex::new(String::new()),
                 marketplace_installed: Mutex::new(false),
-                plugin_installed: Mutex::new(false),
+                plugin_installed: Mutex::new(matches!(
+                    sabotage,
+                    HostSabotage::LatentCodexPluginActivation
+                )),
                 plugin_enabled: Mutex::new(true),
                 marketplace_probe_count: Mutex::new(0),
                 compensation_failures: Mutex::new(usize::from(matches!(
@@ -6574,7 +6636,10 @@ mod tests {
                     })
                 }
                 ("plugin list --json", false) => {
-                    let entries = if *self.plugin_installed.lock().expect("plugin") {
+                    let plugin_visible = *self.plugin_installed.lock().expect("plugin")
+                        && (*self.marketplace_installed.lock().expect("marketplace")
+                            || !matches!(self.sabotage, HostSabotage::LatentCodexPluginActivation));
+                    let entries = if plugin_visible {
                         vec![json!({
                             "pluginId": "aigent-hive@aigent-hive",
                             "name": "aigent-hive",
@@ -6631,6 +6696,7 @@ mod tests {
                         .expect("tamper guidance");
                 }
                 HostSabotage::None
+                | HostSabotage::LatentCodexPluginActivation
                 | HostSabotage::FailBeforeMarketplaceMutation
                 | HostSabotage::FailAfterMarketplaceMutation
                 | HostSabotage::FailBeforePluginMutation
@@ -9109,6 +9175,35 @@ mod tests {
                 "plugin list --json".to_owned(),
             ]
         );
+    }
+
+    #[test]
+    fn codex_marketplace_add_preserves_a_valid_latent_plugin_activation() {
+        let temporary = tempdir().expect("tempdir");
+        let runner =
+            StatefulHostRunner::new(temporary.path(), HostSabotage::LatentCodexPluginActivation);
+        let arguments = args(temporary.path(), UserHost::Codex, UserMode::Apply);
+
+        execute(UserOperation::Install, &arguments, &runner).expect("install");
+        assert_eq!(runner.external_state(), (true, true));
+        let calls = runner.calls.lock().expect("calls");
+        assert!(calls
+            .iter()
+            .any(|call| call.starts_with("plugin marketplace add ")));
+        assert!(!calls
+            .iter()
+            .any(|call| call == "plugin add aigent-hive@aigent-hive --json"));
+        drop(calls);
+
+        recover(&arguments, &runner).expect("recover");
+        assert_eq!(runner.external_state(), (false, true));
+        let calls = runner.calls.lock().expect("calls");
+        assert!(!calls
+            .iter()
+            .any(|call| call == "plugin remove aigent-hive@aigent-hive --json"));
+        assert!(calls
+            .iter()
+            .any(|call| call == "plugin marketplace remove aigent-hive --json"));
     }
 
     #[test]
