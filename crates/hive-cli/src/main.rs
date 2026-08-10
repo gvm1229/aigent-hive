@@ -46,6 +46,7 @@ Aigent Hive
 USAGE:
     hive doctor
     hive install --scope user --host codex|claude|antigravity (--dry-run|--apply|--validate) [--user-root <dir>] --output json
+    hive uninstall [--full|-f] [--user-root <dir>] [--output json]
     hive check-target <path>
     hive setup --help
     hive setup --target <dir> --answers <yml> --capabilities <json> --user-root <dir> (--dry-run|--apply|--validate) [--reconfigure-role <role-id>]... --output json
@@ -185,6 +186,7 @@ fn main() -> ExitCode {
         }
         Some("setup") => run_setup(&arguments[1..]),
         Some("install") => user_install::run_install(&arguments[1..]),
+        Some("uninstall") => user_install::run_uninstall(&arguments[1..]),
         Some("source-wiki") => source_wiki::run(&arguments[1..]),
         Some("knowledge") => knowledge::run_knowledge(&arguments[1..]),
         Some("discord") => discord::run(&arguments[1..]),

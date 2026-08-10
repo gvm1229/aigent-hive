@@ -2463,6 +2463,29 @@ fn parse_projection_manifest(bytes: &[u8]) -> Result<UserProjectionManifest, Set
     Ok(manifest)
 }
 
+pub(crate) fn uninstall_projection_paths(root: &Dir) -> Result<Vec<PathBuf>, SetupError> {
+    let manifest_path = Path::new(USER_PROJECTION_MANIFEST_RELATIVE);
+    let Some(bytes) =
+        super::user_install::read_user_setup_file(root, manifest_path, MAX_USER_SETUP_BYTES)
+            .map_err(SetupError::Conflict)?
+    else {
+        return Ok(Vec::new());
+    };
+    let mut paths = parse_projection_manifest(&bytes)
+        .map(|manifest| {
+            manifest
+                .entries
+                .into_iter()
+                .map(|entry| PathBuf::from(entry.path))
+                .collect::<Vec<_>>()
+        })
+        .unwrap_or_default();
+    paths.push(manifest_path.to_path_buf());
+    paths.sort();
+    paths.dedup();
+    Ok(paths)
+}
+
 fn render_user_directive(config: &UserSetupConfig, resolved_skills: &[String]) -> Vec<u8> {
     let hosts = config
         .selected_hosts

@@ -580,6 +580,432 @@ pub(crate) fn run_update(arguments: &[String]) -> ExitCode {
     run(UserOperation::Update, arguments)
 }
 
+const USER_UNINSTALL_USAGE: &str = "\
+Remove the user-scope Aigent Hive installation while preserving saved preferences and knowledge by default.
+
+USAGE:
+    hive uninstall [--full|-f] [--user-root <absolute-dir>] [--output json]
+
+MODES:
+    default       Remove Hive-managed host activation, projections, packages, indexes, backups, and runtime state. Preserve `.hive/knowledge/` and saved user preferences.
+    --full, -f    Also remove `.hive/knowledge/` and saved user preferences.
+";
+
+struct UserUninstallArguments {
+    root_cap: Dir,
+    full: bool,
+}
+
+pub(crate) fn run_uninstall(arguments: &[String]) -> ExitCode {
+    if arguments.len() == 1 && arguments[0] == "--help" {
+        print!("{USER_UNINSTALL_USAGE}");
+        return ExitCode::SUCCESS;
+    }
+    let result = parse_uninstall(arguments)
+        .and_then(|arguments| execute_uninstall(&arguments, &SystemCommandRunner))
+        .unwrap_or_else(|error| failure("UninstallHiveUser", &error));
+    emit_action_result(&result)
+}
+
+fn parse_uninstall(arguments: &[String]) -> Result<UserUninstallArguments, InstallError> {
+    let mut full = false;
+    let mut user_root = None;
+    let mut index = 0;
+    while index < arguments.len() {
+        match arguments[index].as_str() {
+            "--full" | "-f" if !full => {
+                full = true;
+                index += 1;
+            }
+            "--full" | "-f" => {
+                return Err(InstallError::Input("duplicate option: --full".to_owned()));
+            }
+            "--output" => {
+                let value = arguments
+                    .get(index + 1)
+                    .ok_or_else(|| InstallError::Input("missing value for --output".to_owned()))?;
+                if value != "json" {
+                    return Err(InstallError::Input(
+                        "uninstall --output must be json".to_owned(),
+                    ));
+                }
+                index += 2;
+            }
+            "--user-root" => {
+                let value = arguments.get(index + 1).ok_or_else(|| {
+                    InstallError::Input("missing value for --user-root".to_owned())
+                })?;
+                if user_root.replace(value.clone()).is_some() {
+                    return Err(InstallError::Input(
+                        "duplicate option: --user-root".to_owned(),
+                    ));
+                }
+                index += 2;
+            }
+            option => return Err(InstallError::Input(format!("unknown option: {option}"))),
+        }
+    }
+    let requested_user_root =
+        user_root.map_or_else(resolve_user_root, |value| Ok(PathBuf::from(value)))?;
+    let (_, root_cap) = open_canonical_user_root(&requested_user_root)?;
+    Ok(UserUninstallArguments { root_cap, full })
+}
+
+fn execute_uninstall(
+    arguments: &UserUninstallArguments,
+    runner: &impl CommandRunner,
+) -> Result<ActionResult, InstallError> {
+    let mut changed_paths = Vec::new();
+    let mut removed_hosts = Vec::new();
+    for host in [UserHost::Codex, UserHost::Claude, UserHost::Antigravity] {
+        let manifest_relative = PathBuf::from(format!(".hive/install/{}.json", host.as_str()));
+        let manifest = read_installed_manifest(&arguments.root_cap, &manifest_relative, host)?;
+        let host_evidence = manifest.is_some()
+            || owned_path_exists(&arguments.root_cap, host_uninstall_root(host))?;
+        if host_evidence {
+            remove_host_activation(host, runner)?;
+            removed_hosts.push(host.as_str());
+        }
+        if let Some(manifest) = manifest {
+            for entry in manifest.entries {
+                let path = PathBuf::from(entry.path);
+                if path.starts_with(".hive/knowledge") {
+                    continue;
+                }
+                if entry.ownership == "shared-marker" {
+                    remove_hive_guidance_marker(&arguments.root_cap, &path, &mut changed_paths)?;
+                } else {
+                    remove_owned_regular(&arguments.root_cap, &path, &mut changed_paths)?;
+                }
+            }
+        }
+        remove_owned_regular(&arguments.root_cap, &manifest_relative, &mut changed_paths)?;
+    }
+    for path in crate::user_setup::uninstall_projection_paths(&arguments.root_cap)
+        .map_err(|error| InstallError::Conflict(error.message().to_owned()))?
+    {
+        remove_owned_regular(&arguments.root_cap, &path, &mut changed_paths)?;
+    }
+    for relative in [
+        ".hive/install",
+        ".hive/install-transactions",
+        ".hive/backups",
+        ".hive/marketplaces",
+        ".hive/plugins",
+        ".hive/index",
+        ".hive/runtime",
+        ".hive/claims",
+        ".hive/guides",
+    ] {
+        remove_owned_tree(&arguments.root_cap, Path::new(relative), &mut changed_paths)?;
+    }
+    for relative in [
+        ROOT_INDEX_RELATIVE,
+        ".hive/config/user-active-skills.yml",
+        ".hive/config/user-setup-progress.yml",
+        ".hive/config/user-setup-review.yml",
+        ".hive/config/projects.yml",
+    ] {
+        remove_owned_regular(&arguments.root_cap, Path::new(relative), &mut changed_paths)?;
+    }
+    if arguments.full {
+        remove_owned_tree(
+            &arguments.root_cap,
+            Path::new(".hive/knowledge"),
+            &mut changed_paths,
+        )?;
+        for relative in [
+            ".hive/config/user-setup.yml",
+            ".hive/config/user-preferences.json",
+        ] {
+            remove_owned_regular(&arguments.root_cap, Path::new(relative), &mut changed_paths)?;
+        }
+    }
+    for relative in [
+        ".hive/config",
+        ".hive",
+        ".agents/skills",
+        ".agents/directives",
+        ".agents",
+    ] {
+        remove_owned_empty_dir(&arguments.root_cap, Path::new(relative))?;
+    }
+    changed_paths.sort();
+    changed_paths.dedup();
+    Ok(ActionResult {
+        schema_version: 1,
+        action: "UninstallHiveUser",
+        status: "success",
+        exit_code: 0,
+        code: if arguments.full {
+            "hive.user-uninstall-full-complete"
+        } else {
+            "hive.user-uninstall-complete"
+        },
+        message: if arguments.full {
+            "user-scope Hive installation, knowledge, and saved preferences removed".to_owned()
+        } else {
+            "user-scope Hive installation removed; saved preferences and knowledge preserved"
+                .to_owned()
+        },
+        changed_paths,
+        evidence: Vec::new(),
+        next_action: (!arguments.full).then_some(
+            "run hive install --scope user --host <saved-host> --apply --output json; saved preferences are reused without setup questions".to_owned(),
+        ),
+        data: Some(json!({
+            "full": arguments.full,
+            "removed_hosts": removed_hosts,
+            "preserved": if arguments.full {
+                Vec::<&str>::new()
+            } else {
+                vec![".hive/knowledge", ".hive/config/user-setup.yml", ".hive/config/user-preferences.json"]
+            },
+        })),
+    })
+}
+
+fn host_uninstall_root(host: UserHost) -> &'static Path {
+    match host {
+        UserHost::Codex => Path::new(".hive/marketplaces/codex"),
+        UserHost::Claude => Path::new(".hive/marketplaces/claude"),
+        UserHost::Antigravity => Path::new(ANTIGRAVITY_SOURCE_RELATIVE),
+    }
+}
+
+fn owned_path_exists(root: &Dir, relative: &Path) -> Result<bool, InstallError> {
+    let Some((parent, name)) = capability_parent(root, relative, false)? else {
+        return Ok(false);
+    };
+    match parent.symlink_metadata(&name) {
+        Ok(metadata) if metadata.file_type().is_symlink() => Err(InstallError::Conflict(format!(
+            "Hive-owned uninstall path is a symlink: {}",
+            relative.display()
+        ))),
+        Ok(_) => Ok(true),
+        Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(false),
+        Err(error) => Err(io_internal("inspect uninstall path", relative, error)),
+    }
+}
+
+fn remove_host_activation(host: UserHost, runner: &impl CommandRunner) -> Result<(), InstallError> {
+    let program = match host {
+        UserHost::Codex => "codex",
+        UserHost::Claude => "claude",
+        UserHost::Antigravity => "agy",
+    };
+    let executable = runner.qualify(program).map_err(|_| {
+        InstallError::Unsupported(format!(
+            "{program} executable is unavailable; Hive host activation was not removed"
+        ))
+    })?;
+    probe_supported_host_version(host, &executable, runner)?;
+    let commands: &[&[&str]] = match host {
+        UserHost::Codex => &[
+            &["plugin", "remove", "aigent-hive@aigent-hive", "--json"],
+            &["plugin", "marketplace", "remove", "aigent-hive", "--json"],
+        ],
+        UserHost::Claude => &[
+            &[
+                "plugin",
+                "uninstall",
+                "aigent-hive@aigent-hive",
+                "--scope",
+                "user",
+            ],
+            &[
+                "plugin",
+                "marketplace",
+                "remove",
+                "aigent-hive",
+                "--scope",
+                "user",
+            ],
+        ],
+        UserHost::Antigravity => &[&["plugin", "uninstall", "aigent-hive"]],
+    };
+    for command in commands {
+        let _ = runner.run(&executable, command, COMMAND_TIMEOUT, COMMAND_OUTPUT_LIMIT);
+    }
+    let state = probe_host_snapshot(host, &executable, runner)?;
+    let absent = match state {
+        HostStateSnapshot::Codex(state) => state.marketplace.is_none() && state.plugin.is_none(),
+        HostStateSnapshot::Claude(state) => state.marketplace.is_none() && state.plugin.is_none(),
+        HostStateSnapshot::Antigravity(state) => state.plugin.is_none(),
+    };
+    if absent {
+        Ok(())
+    } else {
+        Err(InstallError::Verification(format!(
+            "{} still reports a Hive-owned activation after uninstall",
+            host.as_str()
+        )))
+    }
+}
+
+fn remove_hive_guidance_marker(
+    root: &Dir,
+    relative: &Path,
+    changed_paths: &mut Vec<String>,
+) -> Result<(), InstallError> {
+    let Some(existing) = read_optional_regular(root, relative, MAX_USER_FILE_BYTES)? else {
+        return Ok(());
+    };
+    let starts = find_all(&existing, USER_MARKER_START);
+    let ends = find_all(&existing, USER_MARKER_END);
+    let replacement = match (starts.as_slice(), ends.as_slice()) {
+        ([], []) => return Ok(()),
+        ([start], [end]) if start < end => {
+            let mut end = end + USER_MARKER_END.len();
+            if existing.get(end) == Some(&b'\n') {
+                end += 1;
+            }
+            let mut bytes = Vec::with_capacity(existing.len());
+            bytes.extend_from_slice(&existing[..*start]);
+            bytes.extend_from_slice(&existing[end..]);
+            bytes
+        }
+        _ => {
+            return Err(InstallError::Conflict(format!(
+                "Hive guidance marker is malformed: {}",
+                relative.display()
+            )))
+        }
+    };
+    let permissions = file_permissions(root, relative)?;
+    if replacement.is_empty() {
+        remove_regular_if_exists(root, relative, Some(&existing), Some(permissions))?;
+    } else {
+        write_atomic(
+            root,
+            relative,
+            &replacement,
+            false,
+            Some(&existing),
+            Some(permissions),
+        )?;
+    }
+    changed_paths.push(portable(relative));
+    Ok(())
+}
+
+fn remove_owned_regular(
+    root: &Dir,
+    relative: &Path,
+    changed_paths: &mut Vec<String>,
+) -> Result<(), InstallError> {
+    let Some(existing) = read_optional_regular(root, relative, MAX_USER_FILE_BYTES)? else {
+        return Ok(());
+    };
+    let permissions = file_permissions(root, relative)?;
+    remove_regular_if_exists(root, relative, Some(&existing), Some(permissions))?;
+    changed_paths.push(portable(relative));
+    Ok(())
+}
+
+fn remove_owned_tree(
+    root: &Dir,
+    relative: &Path,
+    changed_paths: &mut Vec<String>,
+) -> Result<(), InstallError> {
+    let Some((parent, name)) = capability_parent(root, relative, false)? else {
+        return Ok(());
+    };
+    let metadata = match parent.symlink_metadata(&name) {
+        Ok(metadata) => metadata,
+        Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(()),
+        Err(error) => return Err(io_internal("inspect uninstall tree", relative, error)),
+    };
+    if metadata.file_type().is_symlink() || !metadata.is_dir() {
+        return Err(InstallError::Conflict(format!(
+            "Hive-owned uninstall path is not a no-follow directory: {}",
+            relative.display()
+        )));
+    }
+    let directory = parent.open_dir_nofollow(&name).map_err(|error| {
+        InstallError::Conflict(format!(
+            "cannot pin Hive-owned uninstall directory {}: {error}",
+            relative.display()
+        ))
+    })?;
+    remove_owned_dir_contents(&directory, relative, changed_paths)?;
+    drop(directory);
+    parent
+        .remove_dir(&name)
+        .map_err(|error| io_internal("remove uninstall directory", relative, error))?;
+    Ok(())
+}
+
+fn remove_owned_dir_contents(
+    directory: &Dir,
+    prefix: &Path,
+    changed_paths: &mut Vec<String>,
+) -> Result<(), InstallError> {
+    let entries = directory.entries().map_err(|error| {
+        InstallError::Internal(format!(
+            "cannot enumerate Hive-owned uninstall directory: {error}"
+        ))
+    })?;
+    for entry in entries {
+        let name = entry
+            .map_err(|error| {
+                InstallError::Internal(format!("cannot read uninstall entry: {error}"))
+            })?
+            .file_name();
+        let relative = prefix.join(&name);
+        let metadata = directory
+            .symlink_metadata(&name)
+            .map_err(|error| io_internal("inspect uninstall entry", &relative, error))?;
+        if metadata.is_dir() && !metadata.file_type().is_symlink() {
+            let child = directory.open_dir_nofollow(&name).map_err(|error| {
+                InstallError::Conflict(format!(
+                    "cannot pin Hive-owned uninstall directory {}: {error}",
+                    relative.display()
+                ))
+            })?;
+            remove_owned_dir_contents(&child, &relative, changed_paths)?;
+            drop(child);
+            directory
+                .remove_dir(&name)
+                .map_err(|error| io_internal("remove uninstall directory", &relative, error))?;
+        } else if metadata.is_file() && !metadata.file_type().is_symlink() {
+            directory
+                .remove_file(&name)
+                .map_err(|error| io_internal("remove uninstall file", &relative, error))?;
+            changed_paths.push(portable(&relative));
+        } else {
+            return Err(InstallError::Conflict(format!(
+                "Hive-owned uninstall directory contains a non-regular entry: {}",
+                relative.display()
+            )));
+        }
+    }
+    Ok(())
+}
+
+fn remove_owned_empty_dir(root: &Dir, relative: &Path) -> Result<(), InstallError> {
+    let Some((parent, name)) = capability_parent(root, relative, false)? else {
+        return Ok(());
+    };
+    let directory = match parent.open_dir_nofollow(&name) {
+        Ok(directory) => directory,
+        Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(()),
+        Err(error) => return Err(io_internal("open uninstall directory", relative, error)),
+    };
+    if directory
+        .entries()
+        .map_err(|error| io_internal("enumerate uninstall directory", relative, error))?
+        .next()
+        .is_none()
+    {
+        drop(directory);
+        parent
+            .remove_dir(&name)
+            .map_err(|error| io_internal("remove empty uninstall directory", relative, error))?;
+    }
+    Ok(())
+}
+
 pub(crate) fn apply_configured_host(
     user_root: &Path,
     selected_host: crate::user_setup::SelectedHost,
@@ -7297,6 +7723,14 @@ mod tests {
         }
     }
 
+    fn uninstall_args(root: &Path, full: bool) -> UserUninstallArguments {
+        let user_root = root.canonicalize().expect("canonical user root");
+        UserUninstallArguments {
+            root_cap: open_user_root(&user_root).expect("pinned user root"),
+            full,
+        }
+    }
+
     #[test]
     fn cli_parse_uses_the_physical_user_root_after_no_follow_validation() {
         let temporary = tempdir().expect("tempdir");
@@ -7317,6 +7751,68 @@ mod tests {
         let parsed = parse(&arguments).expect("parse user installation arguments");
 
         assert_eq!(parsed.user_root, expected);
+    }
+
+    #[test]
+    fn uninstall_preserves_saved_setup_and_knowledge_then_reinstalls_without_setup_questions() {
+        let temporary = tempdir().expect("tempdir");
+        write_operational_setup(temporary.path(), &["codex"]);
+        let setup = temporary.path().join(".hive/config/user-setup.yml");
+        let saved_setup = fs::read(&setup).expect("saved setup");
+        let runner = StatefulHostRunner::new(temporary.path(), HostSabotage::None);
+        let install = args(temporary.path(), UserHost::Codex, UserMode::Apply);
+        execute(UserOperation::Install, &install, &runner).expect("install");
+        let knowledge = temporary.path().join(".hive/knowledge/Wiki/user-note.md");
+        fs::write(
+            &knowledge,
+            b"---\nschema_version: 1\nid: user-note\nkind: concept\nsummary: user note\ntags: [test]\naliases: []\nsources: []\nlinks: []\ncontradictions: []\nstatus: active\ncreated_at: 2026-08-10T00:00:00Z\nupdated_at: 2026-08-10T00:00:00Z\n---\n\nUser knowledge\n",
+        )
+        .expect("knowledge note");
+
+        let removed = execute_uninstall(&uninstall_args(temporary.path(), false), &runner)
+            .expect("preserving uninstall");
+
+        assert_eq!(removed.code, "hive.user-uninstall-complete");
+        assert_eq!(fs::read(&setup).expect("saved setup retained"), saved_setup);
+        assert!(knowledge.is_file());
+        assert!(!temporary.path().join(".hive/install/codex.json").exists());
+        assert!(!temporary.path().join(".hive/marketplaces/codex").exists());
+        assert!(!temporary.path().join(".codex/AGENTS.md").exists());
+        assert_eq!(runner.external_state(), (false, false));
+
+        execute(UserOperation::Install, &install, &runner).expect("saved preference reinstall");
+        assert_eq!(
+            fs::read(&setup).expect("saved setup unchanged"),
+            saved_setup
+        );
+        assert!(temporary.path().join(".hive/install/codex.json").is_file());
+        assert_eq!(runner.external_state(), (true, true));
+    }
+
+    #[test]
+    fn full_uninstall_removes_saved_setup_and_knowledge() {
+        let temporary = tempdir().expect("tempdir");
+        write_operational_setup(temporary.path(), &["codex"]);
+        let runner = StatefulHostRunner::new(temporary.path(), HostSabotage::None);
+        let install = args(temporary.path(), UserHost::Codex, UserMode::Apply);
+        execute(UserOperation::Install, &install, &runner).expect("install");
+        let knowledge = temporary.path().join(".hive/knowledge/Wiki/user-note.md");
+        fs::write(
+            &knowledge,
+            b"---\nschema_version: 1\nid: user-note\nkind: concept\nsummary: user note\ntags: [test]\naliases: []\nsources: []\nlinks: []\ncontradictions: []\nstatus: active\ncreated_at: 2026-08-10T00:00:00Z\nupdated_at: 2026-08-10T00:00:00Z\n---\n\nUser knowledge\n",
+        )
+        .expect("knowledge note");
+
+        let removed = execute_uninstall(&uninstall_args(temporary.path(), true), &runner)
+            .expect("full uninstall");
+
+        assert_eq!(removed.code, "hive.user-uninstall-full-complete");
+        assert!(!temporary
+            .path()
+            .join(".hive/config/user-setup.yml")
+            .exists());
+        assert!(!knowledge.exists());
+        assert_eq!(runner.external_state(), (false, false));
     }
 
     fn write_operational_setup(root: &Path, selected_hosts: &[&str]) {
