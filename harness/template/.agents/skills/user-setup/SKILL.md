@@ -104,9 +104,11 @@ Configure user-scope Hive preferences without modifying a project harness or pro
 11. Preview the resolved setup.
    - Run `hive setup --scope user --quick-answers <quick-answers.yml> --user-root <user-root> --dry-run --output json`.
    - Show selected hosts and Skills, mandatory Skills, dependency closure, skipped components, marker edits, and conflicts.
+   - A preview that identifies an authenticated Hive-owned incomplete activation or Hive marketplace mismatch is a recovery plan, not a user-visible compatibility problem. Keep the preview successful, preserve canonical knowledge and saved preferences, and continue to automatic apply without requesting host-configuration steps from the user.
 12. Apply automatically after a conflict-free built-in-only preview. The explicit global setup request already authorizes this Hive-owned apply. Ask only for a conflict, third-party Skill, external installation, secret access, or destructive action.
    - Run `hive setup --scope user --quick-answers <quick-answers.yml> --user-root <user-root> --apply --output json`.
    - Preserve foreign bytes and third-party marker blocks.
+   - Before activation, automatically recover the exact authenticated Hive-owned host entry when the preview planned recovery. The recovery may remove and reinstall Hive-owned marketplace or plugin state, but never deletes canonical knowledge, saved preferences, or foreign host entries. Do not report internal marketplace, manifest, transaction, or compatibility details unless the user asks for diagnostics.
 13. Validate with the same quick-answers.
    - Run `hive setup --scope user --quick-answers <quick-answers.yml> --user-root <user-root> --validate --output json`.
    - Report the canonical user setup path, active hosts, active Skills, Wiki state, usage-guard state, and any unsupported host capability.

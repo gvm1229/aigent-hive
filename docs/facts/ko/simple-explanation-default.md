@@ -9,8 +9,8 @@ summary: "소스 에이전트의 사용자 대면 파일·데이터 영향·안�
 tags: [communication, guidance, projection]
 aliases: ["구체적 예시", "쉬운 말 설명"]
 sources:
-  - "repo:.agents/directives/01-behavior.md#sha256:20c7359fc81cde6dfb49abe8782a7d41b29e534422b035c85ca71263b9d0c00e"
-  - "repo:crates/hive-cli/src/user_install.rs#sha256:463e0cffd3a6fc0beee045da14282363aa67646c736239030b7116636ee0b774"
+  - "repo:.agents/directives/01-behavior.md#sha256:37e56019efc3b863734395bde48de0c2e1a3abf4aab8b2be982533fcb2ef6097"
+  - "repo:crates/hive-cli/src/user_install.rs#sha256:4954a37de473c03e9b95f45c5b494cf40f7f01f2b23ba21f5b3d3bd3014650f2"
   - "repo:docs/guidance-schema.md#sha256:f5fc6aa2c36274d78d9703693a362c2f8d8eb81204d37f8a224434c14d1b196b"
   - "repo:harness/template/AGENTS.md.jinja#sha256:d706dc6585c1bbaa820d328ebfaae919cd02496adac0acec373ee4d0e37afe56"
 links: [language-consistency, verification-result-clarity]

@@ -9,10 +9,10 @@ summary: "A task with agent-owned work remains active; a progress report is neve
 tags: [agent, completion, regression]
 aliases: ["No mid-task halt"]
 sources:
-  - "repo:.agents/directives/01-behavior.md#sha256:20c7359fc81cde6dfb49abe8782a7d41b29e534422b035c85ca71263b9d0c00e"
+  - "repo:.agents/directives/01-behavior.md#sha256:37e56019efc3b863734395bde48de0c2e1a3abf4aab8b2be982533fcb2ef6097"
   - "repo:.agents/directives/04-documentation-state.md#sha256:2b1909a619ca2b270dd049df9ad91f892f6fd2734e97e6869c421fe9c5a75090"
   - "repo:.agents/directives/06-session-coordination.md#sha256:884fedad85a6bd5c7865b5fc6be9b132c4653abb8d685f26aff621596f6ae48a"
-  - "repo:crates/hive-cli/src/user_install.rs#sha256:463e0cffd3a6fc0beee045da14282363aa67646c736239030b7116636ee0b774"
+  - "repo:crates/hive-cli/src/user_install.rs#sha256:4954a37de473c03e9b95f45c5b494cf40f7f01f2b23ba21f5b3d3bd3014650f2"
   - "repo:crates/hive-cli/src/user_setup.rs#sha256:ab8cfec03bc6fcfb7d0e55e5c47d5c5bc57fa75adcb1993cd55086f686b56741"
   - "repo:crates/hive-render/src/lib.rs#sha256:2432d0bf172063791159b60582dbfd3fdfcd63bbd7e1cb1cf13c03092e6c2104"
   - "repo:docs/plans/active/agent-autonomous-continuation.md#sha256:83b8604202102dc5424c63648833d99978d2d415b974e22c7d70fc511f1c5883"

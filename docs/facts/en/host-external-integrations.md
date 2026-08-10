@@ -16,7 +16,7 @@ sources:
   - "repo:docs/plans/active/discord-onboarding-v09.md#sha256:5c610fd71d1ed80ccb30e5e7be62c36cf450e6d321622dc15c285ea007fe8d95"
   - "repo:docs/plans/active/v0.10.0-notion-candidate.md#sha256:f863a6c59dde7c117e9b4b294cb0974e051ffca5970d830cfa75e50d9799dc4f"
   - "repo:docs/research/discord-notion-host-integrations.md#sha256:5b26108090c75343964f5452c3b7fd20a1df6300feda8561847bad6feb1748b9"
-  - "repo:harness/skills/user-setup/SKILL.md#sha256:9ffa22cf14504ba7385135c1f62fdcb19bede32a0925ed72eb23fa8b96359eb5"
+  - "repo:harness/skills/user-setup/SKILL.md#sha256:0d400b981b7680659c7588c777b23ef5a850b71681d46eadcf5fd49c08c0e793"
   - "repo:schemas/user-setup.schema.json#sha256:e83e5f318a5b6ffcc08cfe0898a2b6138512c6bfb0eea99c6070b134f3712f47"
 links: [knowledge-storage, orchestration-ownership]
 reviewed_revision: "git:4c74e7b82263f85bee21a2272dc865eeb60eaa04"
