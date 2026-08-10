@@ -15,7 +15,7 @@
 - 퍼센트 값: 문서·질문·코드의 고정값 없음. 사용자가 valid range 안에서 직접 선택
 - 사용자 호출 Skill: product `usage-guard` 하나
 - Aigent Hive source의 pre-task gate: repository directive가 소유. 설치 product `usage-guard`와
-  별개 user policy를 만들지 않음
+  별개 user policy 미생성
 - Source 전용 Skill·adapter·user threshold state: `0건`
 
 ## 구현
@@ -31,8 +31,8 @@
 - [x] [UGP-004] 기존 단일 `usage_stop_remaining_percent`를 global 값으로 이관하고 기존
   project는 override 없음으로 보존. 인증 불가·변조 config는 write 0건 conflict
 - [x] [UGP-005] source의 mandatory pre-task gate를 repository directive·script로 유지하되,
-  source Skill·adapter·user threshold state를 만들지 않음. 소비자에게 보이는 guard는 product
-  `usage-guard` 하나이며 source gate는 project 설정이나 user policy를 생성하지 않음
+  source Skill·adapter·user threshold state 생성 금지. 소비자 노출 guard: product
+  `usage-guard` 하나. source gate: project 설정·user policy 미생성
 - [x] [UGP-006] 서로 다른 임의 global·project 값의 effective threshold, disabled global,
   lower project override 거부, update migration, source·consumer projection, host별 guard와
   Discord payload의 project·effective threshold 회귀 검증. profile별 hard-coded value 0건

@@ -323,4 +323,293 @@
     "reason": "Exact fallback-hook consent prompt preserves approved user-facing UI bytes.",
     "text_sha256": "64f376ad77a0744e6d2725ac086387c1c82208e41bda2b22bd73f84dda48c8e8"
   }
+,
+{
+  "path": "docs/guides/source-usage-guard.md",
+  "line": 60,
+  "reason": "Exact source usage-guard user control prompt sample.",
+  "text_sha256": "084623edd8fc3ff5c2b28ceaff86cb1cec8fde14b860675e4699b48113a05a5f"
+},
+{
+  "path": "docs/guides/source-usage-guard.md",
+  "line": 61,
+  "reason": "Exact source usage-guard user control prompt sample.",
+  "text_sha256": "6d24e1432688dc028e6008166d74ea4ad8a0480609dcd9e5e9ccc105644b5a0e"
+},
+{
+  "path": "docs/guides/source-usage-guard.md",
+  "line": 62,
+  "reason": "Exact source usage-guard user control prompt sample.",
+  "text_sha256": "3fea94e452a4b13c176427cf532e789cc489cfbaafbe7f904e9867219f575646"
+},
+{
+  "path": "harness/plugins/aigent-hive/skills/user-setup/SKILL.md",
+  "line": 253,
+  "reason": "Exact Korean user-setup prompt sample retained for host-independent product parity.",
+  "text_sha256": "6a48c748a1d7ad94caa1eeacf4f3ebf8c5f32296d9ffee6f141bec5619533e6b"
+},
+{
+  "path": "harness/plugins/aigent-hive/skills/user-setup/SKILL.md",
+  "line": 254,
+  "reason": "Exact Korean user-setup prompt sample retained for host-independent product parity.",
+  "text_sha256": "0e658b3551af9d1c4219a9dab28ab13e7959fb8bbfc368d604712c28b4dd00db"
+},
+{
+  "path": "harness/plugins/aigent-hive/skills/user-setup/SKILL.md",
+  "line": 258,
+  "reason": "Exact Korean user-setup prompt sample retained for host-independent product parity.",
+  "text_sha256": "287bc3bfb43959e1673f453a05d6ebd4d5dcabcb51d47ddb675500dbb1ae396d"
+},
+{
+  "path": "harness/plugins/aigent-hive/skills/user-setup/SKILL.md",
+  "line": 259,
+  "reason": "Exact Korean user-setup prompt sample retained for host-independent product parity.",
+  "text_sha256": "7951805fd073b27d796a83b6e270b820d52e17cb9e4058df0f74b9198c4f9942"
+},
+{
+  "path": "harness/plugins/aigent-hive/skills/user-setup/SKILL.md",
+  "line": 262,
+  "reason": "Exact Korean user-setup prompt sample retained for host-independent product parity.",
+  "text_sha256": "188685695e7199d8c47dba4c22e9876aaf3ccbd5dfbaf727caa03f38449ab225"
+},
+{
+  "path": "harness/plugins/aigent-hive/skills/user-setup/SKILL.md",
+  "line": 266,
+  "reason": "Exact Korean user-setup prompt sample retained for host-independent product parity.",
+  "text_sha256": "146f7e625a4341616178e88f6e3b0a12a574fa8673780742b46d61a7a3f2a6aa"
+},
+{
+  "path": "harness/plugins/aigent-hive/skills/user-setup/SKILL.md",
+  "line": 267,
+  "reason": "Exact Korean user-setup prompt sample retained for host-independent product parity.",
+  "text_sha256": "dba7ed1f1440b5648c2f99780bc68e1a65c55759e03ae5e3e2becf033513ee51"
+},
+{
+  "path": "harness/plugins/aigent-hive/skills/user-setup/SKILL.md",
+  "line": 268,
+  "reason": "Exact Korean user-setup prompt sample retained for host-independent product parity.",
+  "text_sha256": "410f87d32b0479aeddb969548fa6c50df7f6d4c4e3170cf347d1ed2fbf37b13b"
+},
+{
+  "path": "harness/plugins/aigent-hive/skills/user-setup/SKILL.md",
+  "line": 272,
+  "reason": "Exact Korean user-setup prompt sample retained for host-independent product parity.",
+  "text_sha256": "4832835a8130fa80e9a7817fc1cfb8cc04964196053a771f9314c7083e6796b5"
+},
+{
+  "path": "harness/plugins/aigent-hive/skills/user-setup/SKILL.md",
+  "line": 297,
+  "reason": "Exact Korean user-setup prompt sample retained for host-independent product parity.",
+  "text_sha256": "e47f25f64d704a5c5701ad7d123f7a54b9febd4fa5f6066f2b811cc387dd523b"
+},
+{
+  "path": "harness/skills/user-setup/SKILL.md",
+  "line": 253,
+  "reason": "Exact Korean user-setup prompt sample retained for host-independent product parity.",
+  "text_sha256": "6a48c748a1d7ad94caa1eeacf4f3ebf8c5f32296d9ffee6f141bec5619533e6b"
+},
+{
+  "path": "harness/skills/user-setup/SKILL.md",
+  "line": 254,
+  "reason": "Exact Korean user-setup prompt sample retained for host-independent product parity.",
+  "text_sha256": "0e658b3551af9d1c4219a9dab28ab13e7959fb8bbfc368d604712c28b4dd00db"
+},
+{
+  "path": "harness/skills/user-setup/SKILL.md",
+  "line": 258,
+  "reason": "Exact Korean user-setup prompt sample retained for host-independent product parity.",
+  "text_sha256": "287bc3bfb43959e1673f453a05d6ebd4d5dcabcb51d47ddb675500dbb1ae396d"
+},
+{
+  "path": "harness/skills/user-setup/SKILL.md",
+  "line": 259,
+  "reason": "Exact Korean user-setup prompt sample retained for host-independent product parity.",
+  "text_sha256": "7951805fd073b27d796a83b6e270b820d52e17cb9e4058df0f74b9198c4f9942"
+},
+{
+  "path": "harness/skills/user-setup/SKILL.md",
+  "line": 262,
+  "reason": "Exact Korean user-setup prompt sample retained for host-independent product parity.",
+  "text_sha256": "188685695e7199d8c47dba4c22e9876aaf3ccbd5dfbaf727caa03f38449ab225"
+},
+{
+  "path": "harness/skills/user-setup/SKILL.md",
+  "line": 266,
+  "reason": "Exact Korean user-setup prompt sample retained for host-independent product parity.",
+  "text_sha256": "146f7e625a4341616178e88f6e3b0a12a574fa8673780742b46d61a7a3f2a6aa"
+},
+{
+  "path": "harness/skills/user-setup/SKILL.md",
+  "line": 267,
+  "reason": "Exact Korean user-setup prompt sample retained for host-independent product parity.",
+  "text_sha256": "dba7ed1f1440b5648c2f99780bc68e1a65c55759e03ae5e3e2becf033513ee51"
+},
+{
+  "path": "harness/skills/user-setup/SKILL.md",
+  "line": 268,
+  "reason": "Exact Korean user-setup prompt sample retained for host-independent product parity.",
+  "text_sha256": "410f87d32b0479aeddb969548fa6c50df7f6d4c4e3170cf347d1ed2fbf37b13b"
+},
+{
+  "path": "harness/skills/user-setup/SKILL.md",
+  "line": 272,
+  "reason": "Exact Korean user-setup prompt sample retained for host-independent product parity.",
+  "text_sha256": "4832835a8130fa80e9a7817fc1cfb8cc04964196053a771f9314c7083e6796b5"
+},
+{
+  "path": "harness/skills/user-setup/SKILL.md",
+  "line": 297,
+  "reason": "Exact Korean user-setup prompt sample retained for host-independent product parity.",
+  "text_sha256": "e47f25f64d704a5c5701ad7d123f7a54b9febd4fa5f6066f2b811cc387dd523b"
+},
+{
+  "path": "harness/template/.agents/skills/user-setup/SKILL.md",
+  "line": 253,
+  "reason": "Exact Korean user-setup prompt sample retained for host-independent product parity.",
+  "text_sha256": "6a48c748a1d7ad94caa1eeacf4f3ebf8c5f32296d9ffee6f141bec5619533e6b"
+},
+{
+  "path": "harness/template/.agents/skills/user-setup/SKILL.md",
+  "line": 254,
+  "reason": "Exact Korean user-setup prompt sample retained for host-independent product parity.",
+  "text_sha256": "0e658b3551af9d1c4219a9dab28ab13e7959fb8bbfc368d604712c28b4dd00db"
+},
+{
+  "path": "harness/template/.agents/skills/user-setup/SKILL.md",
+  "line": 258,
+  "reason": "Exact Korean user-setup prompt sample retained for host-independent product parity.",
+  "text_sha256": "287bc3bfb43959e1673f453a05d6ebd4d5dcabcb51d47ddb675500dbb1ae396d"
+},
+{
+  "path": "harness/template/.agents/skills/user-setup/SKILL.md",
+  "line": 259,
+  "reason": "Exact Korean user-setup prompt sample retained for host-independent product parity.",
+  "text_sha256": "7951805fd073b27d796a83b6e270b820d52e17cb9e4058df0f74b9198c4f9942"
+},
+{
+  "path": "harness/template/.agents/skills/user-setup/SKILL.md",
+  "line": 262,
+  "reason": "Exact Korean user-setup prompt sample retained for host-independent product parity.",
+  "text_sha256": "188685695e7199d8c47dba4c22e9876aaf3ccbd5dfbaf727caa03f38449ab225"
+},
+{
+  "path": "harness/template/.agents/skills/user-setup/SKILL.md",
+  "line": 266,
+  "reason": "Exact Korean user-setup prompt sample retained for host-independent product parity.",
+  "text_sha256": "146f7e625a4341616178e88f6e3b0a12a574fa8673780742b46d61a7a3f2a6aa"
+},
+{
+  "path": "harness/template/.agents/skills/user-setup/SKILL.md",
+  "line": 267,
+  "reason": "Exact Korean user-setup prompt sample retained for host-independent product parity.",
+  "text_sha256": "dba7ed1f1440b5648c2f99780bc68e1a65c55759e03ae5e3e2becf033513ee51"
+},
+{
+  "path": "harness/template/.agents/skills/user-setup/SKILL.md",
+  "line": 268,
+  "reason": "Exact Korean user-setup prompt sample retained for host-independent product parity.",
+  "text_sha256": "410f87d32b0479aeddb969548fa6c50df7f6d4c4e3170cf347d1ed2fbf37b13b"
+},
+{
+  "path": "harness/template/.agents/skills/user-setup/SKILL.md",
+  "line": 272,
+  "reason": "Exact Korean user-setup prompt sample retained for host-independent product parity.",
+  "text_sha256": "4832835a8130fa80e9a7817fc1cfb8cc04964196053a771f9314c7083e6796b5"
+},
+{
+  "path": "harness/template/.agents/skills/user-setup/SKILL.md",
+  "line": 297,
+  "reason": "Exact Korean user-setup prompt sample retained for host-independent product parity.",
+  "text_sha256": "e47f25f64d704a5c5701ad7d123f7a54b9febd4fa5f6066f2b811cc387dd523b"
+},
+{
+  "path": "harness/template/.claude/skills/user-setup/SKILL.md",
+  "line": 253,
+  "reason": "Exact Korean user-setup prompt sample retained for host-independent product parity.",
+  "text_sha256": "6a48c748a1d7ad94caa1eeacf4f3ebf8c5f32296d9ffee6f141bec5619533e6b"
+},
+{
+  "path": "harness/template/.claude/skills/user-setup/SKILL.md",
+  "line": 254,
+  "reason": "Exact Korean user-setup prompt sample retained for host-independent product parity.",
+  "text_sha256": "0e658b3551af9d1c4219a9dab28ab13e7959fb8bbfc368d604712c28b4dd00db"
+},
+{
+  "path": "harness/template/.claude/skills/user-setup/SKILL.md",
+  "line": 258,
+  "reason": "Exact Korean user-setup prompt sample retained for host-independent product parity.",
+  "text_sha256": "287bc3bfb43959e1673f453a05d6ebd4d5dcabcb51d47ddb675500dbb1ae396d"
+},
+{
+  "path": "harness/template/.claude/skills/user-setup/SKILL.md",
+  "line": 259,
+  "reason": "Exact Korean user-setup prompt sample retained for host-independent product parity.",
+  "text_sha256": "7951805fd073b27d796a83b6e270b820d52e17cb9e4058df0f74b9198c4f9942"
+},
+{
+  "path": "harness/template/.claude/skills/user-setup/SKILL.md",
+  "line": 262,
+  "reason": "Exact Korean user-setup prompt sample retained for host-independent product parity.",
+  "text_sha256": "188685695e7199d8c47dba4c22e9876aaf3ccbd5dfbaf727caa03f38449ab225"
+},
+{
+  "path": "harness/template/.claude/skills/user-setup/SKILL.md",
+  "line": 266,
+  "reason": "Exact Korean user-setup prompt sample retained for host-independent product parity.",
+  "text_sha256": "146f7e625a4341616178e88f6e3b0a12a574fa8673780742b46d61a7a3f2a6aa"
+},
+{
+  "path": "harness/template/.claude/skills/user-setup/SKILL.md",
+  "line": 267,
+  "reason": "Exact Korean user-setup prompt sample retained for host-independent product parity.",
+  "text_sha256": "dba7ed1f1440b5648c2f99780bc68e1a65c55759e03ae5e3e2becf033513ee51"
+},
+{
+  "path": "harness/template/.claude/skills/user-setup/SKILL.md",
+  "line": 268,
+  "reason": "Exact Korean user-setup prompt sample retained for host-independent product parity.",
+  "text_sha256": "410f87d32b0479aeddb969548fa6c50df7f6d4c4e3170cf347d1ed2fbf37b13b"
+},
+{
+  "path": "harness/template/.claude/skills/user-setup/SKILL.md",
+  "line": 272,
+  "reason": "Exact Korean user-setup prompt sample retained for host-independent product parity.",
+  "text_sha256": "4832835a8130fa80e9a7817fc1cfb8cc04964196053a771f9314c7083e6796b5"
+},
+{
+  "path": "harness/template/.claude/skills/user-setup/SKILL.md",
+  "line": 297,
+  "reason": "Exact Korean user-setup prompt sample retained for host-independent product parity.",
+  "text_sha256": "e47f25f64d704a5c5701ad7d123f7a54b9febd4fa5f6066f2b811cc387dd523b"
+},
+{
+  "path": "harness/template/AGENTS.md.jinja",
+  "line": 33,
+  "reason": "Template directive negative example required to teach the prohibited Korean style.",
+  "text_sha256": "852b68fa9714876863a3de5c85007bd0a3ecd5a6b2b559a2b1ccbbdc4889f292"
+},
+{
+  "path": "harness/template/AGENTS.md.jinja",
+  "line": 34,
+  "reason": "Template directive negative example required to teach the prohibited Korean style.",
+  "text_sha256": "76ae48da3eafdde3f9f144ebde74cd5c2be705d086a16e45ff7d0866ce435dbe"
+},
+{
+  "path": "harness/template/AGENTS.md.jinja",
+  "line": 35,
+  "reason": "Template directive negative example required to teach the prohibited Korean style.",
+  "text_sha256": "b4fa698cf99467dd74432d464d0eb9e71e27ffa5eea3d6f518c679bce10688c2"
+},
+{
+  "path": "harness/template/AGENTS.md.jinja",
+  "line": 36,
+  "reason": "Template directive negative example required to teach the prohibited Korean style.",
+  "text_sha256": "748d55956ffabf313a6c4235e2964eff7f770a29344e6feeab15f58e2fca73e1"
+},
+{
+  "path": "harness/template/AGENTS.md.jinja",
+  "line": 37,
+  "reason": "Template directive negative example required to teach the prohibited Korean style.",
+  "text_sha256": "251095d746fcd08aa58f2b9a70fbd18a6bd007bc2854c121208c9b720aeca4a9"
+}
 ]

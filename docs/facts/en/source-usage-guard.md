@@ -10,7 +10,7 @@ tags: [guard, source, usage]
 aliases: ["Source quota safeguard"]
 sources:
   - "repo:docs/guides/source-usage-guard.md#sha256:3feed99484282ad4265e82d2f831859993f8292b92c8369cb57ee7b7b7c04c9d"
-  - "repo:docs/plans/active/usage-guard-policy.md#sha256:97d33e84f001d7e456d24cd95b9712bbe8ef5c9133acd5a6f94ca6395981a066"
+  - "repo:docs/plans/active/usage-guard-policy.md#sha256:720a92c5a642a85082fafd152766b0bdc34afe12758c9887c39fd552113d002e"
 links: [automatic-dispatch-guard, source-development, windows-watcher-identity]
 reviewed_revision: "git:7dd812e81a6e4e2771c783fc65835a3387bbd7ca"
 status: active

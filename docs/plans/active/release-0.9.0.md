@@ -42,7 +42,7 @@
 - 해결 범위: 현재 Codex JSON 계약에 맞춘 adapter·parser·version qualification, 임시
   `plugin → codex plugin` bridge와 호스트 전역 설정 수동 쓰기 제거
 - local 재현·수정 증거: Codex CLI `0.147.0`, macOS 격리 user root에서 `/tmp`가 host JSON의
-  `/private/tmp`와 달라 activation이 중단됨. no-follow user root 확인 뒤 physical path 정규화 적용,
+  `/private/tmp`와의 physical path 불일치로 인한 activation 중단. no-follow user root 확인 뒤 physical path 정규화 적용,
   `install → setup dry-run → setup apply → setup validate → install validate`와 structured list PASS
 - 회귀 흐름: 격리 user root의 marketplace add → plugin add → 구조화 목록 검증 →
   `hive setup --scope user` dry-run·apply·validate → 실패 되돌리기·foreign byte 보존

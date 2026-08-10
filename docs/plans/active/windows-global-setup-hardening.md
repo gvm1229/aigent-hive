@@ -28,45 +28,45 @@
 
 ## 확인된 문제
 
-1. Codex PowerShell이 `hive`를 찾지 못했는데도 설정 질문을 먼저 시작했다.
-2. 사용자가 별도 `cmd.exe`에서 `where hive`를 실행해 경로를 전달해야 했다.
-3. CLI가 설정 schema·정확한 답안 예시·내장 Skill catalog를 읽기 전용 명령으로 제공하지 않았다.
-4. Agent가 실행 파일 byte와 npm package 폴더를 검색하고 답안 YAML을 추측했다.
-5. 사용자 홈에 이름을 바꾼 임시 답안 파일을 최소 17개 만들고도 첫 검증에 성공하지 못했다.
-6. 일반 질문의 진행 상황을 저장하지 않아 실패 뒤 처음부터 다시 답해야 하는 상태였다.
-7. 기본 사용량 감지기의 실패 증거 없이 `CodexBar`를 물었고, 사용량 보호를 켰는데 Discord 질문은 하지 않았다.
-8. 임시 파일 생성과 안전한 `dry-run` 전에 불필요한 승인을 요청했다.
-9. 한국어 질문 끝에 다른 문자(`ર`)가 섞였고 일부 안내가 영어와 혼합됐다.
-10. Codex에서 선택한 Antigravity가 실제로 쓸 수 있는지 확인하지 않은 채 최종 설정처럼 요약했다.
+1. Codex PowerShell CLI 탐색 전 설정 질문 시작
+2. 별도 `cmd.exe`의 수동 `where hive` 실행·경로 전달 요구
+3. 설정 schema·정확한 답안 예시·내장 Skill catalog의 읽기 전용 CLI 부재
+4. 실행 파일 byte·npm package 폴더 검색과 답안 YAML 추측
+5. 사용자 홈 임시 답안 파일 최소 17개 생성 뒤 첫 검증 실패
+6. 일반 질문 진행 상태 미보존과 실패 뒤 처음부터 재답변
+7. 기본 감지기 실패 증거 없는 `CodexBar` 질문과 Discord 질문 누락
+8. 임시 파일 생성·안전한 `dry-run` 전 불필요 승인 요청
+9. 한국어 질문의 예기치 않은 문자(`ર`)와 영어 혼합
+10. Codex Antigravity 가용성 확인 없는 최종 설정 요약
 
 ## 현재 소스와의 차이
 
-현재 `develop`의 `configure` Skill에는 언어 우선 질문, 모든 내장 Skill 기본값, 한 줄에 하나인
-목록, Discord 조건부 설정, `CodexBar` fallback 조건, 중단 재개 문구가 이미 있다. 첨부 기록만으로
-이 후속 변경이 실패했다고 단정하지 않는다. 그러나 아래 구조적 결함은 현재 소스에도 남아 있다.
+현재 `develop`의 `configure` Skill: 언어 우선 질문, 모든 내장 Skill 기본값, 한 줄당 하나의
+목록, Discord 조건부 설정, `CodexBar` fallback 조건, 중단 재개 문구 보유. 첨부 기록만으로
+후속 변경 실패 단정 불가. 아래 구조적 결함의 당시 소스 잔존
 
-- 설치된 CLI의 Windows npm 경로를 자동으로 찾는 절차가 없다.
-- CLI가 서명된 설정 계약과 canonical 답안 예시를 한 번에 출력하지 않는다.
-- Discord 단계 외 일반 질문은 진행 상황 저장 대상이 아니다.
-- 임시 답안 파일의 위치·단일 파일 사용·실패 시 정리 계약이 없다.
-- host 가용성과 기본 사용량 감지기를 질문 전에 검증한 증거를 강제하지 않는다.
+- 설치된 CLI의 Windows npm 경로 자동 탐색 절차 부재
+- 서명된 설정 계약·canonical 답안 예시 일괄 출력 부재
+- Discord 외 일반 질문의 진행 상태 저장 부재
+- 임시 답안 파일 위치·단일 파일 사용·실패 시 정리 계약 부재
+- 질문 전 host 가용성·기본 사용량 감지기 검증 증거 강제 부재
 
 ## 구현 순서
 
-- [x] [WGS-001] 첨부 기록을 명령·질문·파일 쓰기·실패 결과 단위로 감사하고 현재 소스와 차이를 분류한다.
-- [x] [WGS-002] Windows에서 `Get-Command`, `where.exe`, `npm prefix -g` 순서로 `hive.cmd`를 찾고 exact version·package ownership을 확인하는 공통 resolver를 추가한다. 현재 process의 `PATH` 갱신이나 사용자의 수동 경로 전달을 요구하지 않는다.
-- [x] [WGS-003] `hive setup --scope user --describe --output json`을 추가하여 embedded schema, canonical 답안 template, 질문 순서·조건, localized option, built-in Skill catalog, contract digest를 읽기 전용으로 출력한다. template의 사용량 한도는 사용자 입력 placeholder이며 기본값 없음.
-- [x] [WGS-004] canonical·plugin `configure` Skill이 `--describe` 결과만 사용하도록 바꾸고 binary byte 검색, npm 폴더 재귀 검색, 필드명·Skill ID 추측을 금지한다. CLI 확인 실패 전에는 질문을 시작하지 않는다.
-- [x] [WGS-005] 모든 답변 뒤 non-secret partial answer와 다음 질문을 저장하도록 progress schema와 command를 확장한다. 실패·재실행 때 `전체 다시 보기`, `일부만 변경`, `중단한 곳부터 계속`을 제공한다.
-- [x] [WGS-006] 답안 작업 파일은 운영체제 임시 폴더의 session별 단일 파일만 atomic 갱신하고 성공·실패·취소 시 삭제하는 host contract를 canonical·plugin Skill에 추가한다. persisted progress에는 비밀 없는 partial answer만 저장한다. user root의 기존 `.hive-user-setup-answers*.yml`은 Hive가 만든 것이 exact하게 증명될 때만 별도 cleanup preview에 포함한다.
-- [x] [WGS-007] 질문 전 preflight를 구현한다. 사용량 보호가 켜지면 Discord를 물으며, native sensor가 unavailable·unsupported·malformed일 때만 `CodexBar`를 물고, 선택 host는 authenticated·deferred·unsupported로 구분한다.
-- [x] [WGS-008] 명시적인 global setup 요청이 안전한 임시 파일·`dry-run`·conflict 없는 built-in apply를 승인한 것으로 처리한다. conflict, third-party Skill, 외부 설치, 비밀 접근, 파괴 작업만 별도 확인한다.
-- [x] [WGS-009] 한국어 exact prompt fixture를 보강하여 한 문장 안 언어 혼합, 예상 밖 문자, `Skill` 오역, 한 줄에 여러 항목인 목록을 차단한다.
-- [x] [WGS-010] Rust unit·CLI integration·Python static contract에 Windows PATH 불일치, individual Skill, 첫 YAML 검증 성공, 일반·Discord 단계 중단 재개, temp cleanup, conditional question 회귀를 추가한다.
+- [x] [WGS-001] 첨부 기록의 명령·질문·파일 쓰기·실패 결과 감사와 현행 소스 차이 분류 완료
+- [x] [WGS-002] Windows `Get-Command` → `where.exe` → `npm prefix -g` 기반 `hive.cmd` resolver, exact version·package ownership 확인, process `PATH` 갱신·사용자 수동 경로 전달 요구 없음
+- [x] [WGS-003] `hive setup --scope user --describe --output json`의 embedded schema·canonical 답안 template·질문 순서·조건·localized option·built-in Skill catalog·contract digest 읽기 전용 출력. 사용량 한도: 사용자 입력 placeholder, 기본값 없음
+- [x] [WGS-004] canonical·plugin `configure`의 `--describe` 전용 입력, binary byte·npm 재귀 검색·필드명·Skill ID 추측 금지, CLI 확인 실패 전 질문 시작 금지
+- [x] [WGS-005] non-secret partial answer·다음 질문 progress 저장과 재실행 시 `전체 다시 보기`·`일부만 변경`·`중단한 곳부터 계속` 제공
+- [x] [WGS-006] 운영체제 임시 폴더의 session별 단일 답안 파일 atomic 갱신·성공/실패/취소 시 삭제, persisted progress의 비밀 없는 partial answer 한정, Hive 생성 입증 파일만 cleanup preview 대상
+- [x] [WGS-007] 질문 전 preflight, 조건부 Discord·`CodexBar` 질문, host 상태 authenticated·deferred·unsupported 구분
+- [x] [WGS-008] 명시 global setup 요청의 안전한 임시 파일·`dry-run`·무충돌 built-in apply 승인 처리, conflict·third-party Skill·외부 설치·비밀 접근·파괴 작업만 별도 확인
+- [x] [WGS-009] 한국어 exact prompt fixture의 언어 혼합·예기치 않은 문자·`Skill` 오역·다중 항목 목록 차단
+- [x] [WGS-010] Windows PATH 불일치·individual Skill·첫 YAML 검증·일반/Discord 중단 재개·temp cleanup·조건부 질문의 Rust unit·CLI integration·Python static 회귀 추가
 - [x] [WGS-012] authenticated pending Codex marketplace transaction이 Hive-owned canonical root를
   가리키지만 host manifest가 사라져 structured probe가 실패할 때, `hive install --recover`가
   knowledge·저장 preference·foreign host entry를 보존하고 exact Hive marketplace entry만 제거한 뒤
-  재설치를 허용한다. source·product workflow는 이 deterministic recovery를 사용자 handoff보다 먼저 실행한다.
+  재설치 허용. source·product workflow의 deterministic recovery 우선 실행
 - [x] [WGS-013] `hive uninstall`이 Hive-managed host activation·projection·package·index·backup·runtime만
   제거하고 `.hive/knowledge/`·saved user preferences를 항상 보존. `--full`·`-f` 파괴 경로 제공 없음.
   저장 preference를 읽은 재설치의 setup 질문 0건, Rust unit·product Skill projection static regression 통과
@@ -81,11 +81,11 @@
 
 - Mac developer build·public 시험판 전환: ownership 오류 없음, preference·knowledge 보존,
   질문 모음 반복 0건
-- 처음 실행한 사용자는 질문을 다시 답하지 않고 setup을 끝낸다.
-- CLI를 찾는 과정과 설정 파일 형식은 Agent가 추측하지 않는다.
-- 개별 Skill 선택은 설치된 release의 정확한 목록으로 동작한다.
-- Discord와 `CodexBar` 질문은 실제 조건에 맞을 때만 나온다.
-- 실패 뒤 진행 상태는 보존되지만 webhook URL·raw prompt 같은 비밀은 저장하지 않는다.
+- 첫 실행 사용자: 재답변 없는 setup 완료
+- CLI 탐색 과정·설정 파일 형식: Agent 추측 없음
+- 개별 Skill 선택: 설치 release의 정확한 목록 기반
+- Discord·`CodexBar` 질문: 실제 조건 충족 시에만 표시
+- 실패 뒤 진행 상태 보존, webhook URL·raw prompt 비밀 저장 없음
 - 이 Mac: 완료된 원본 복구와 새 source unit·static·cross-platform 회귀 실행
 - Windows global install·setup 수용: maintainer의 실제 Windows 11 fresh session에서만 실행·증명
 - dangling Hive Codex marketplace: Hive backup·pending transaction·canonical root 일치 시 자동 recovery,
@@ -98,6 +98,6 @@
 
 ## 범위 밖
 
-- Notion은 `0.10.0-test` 전까지 설정·도움말·질문에 노출하지 않는다.
-- provider API key·Discord webhook URL 원문을 Hive 설정이나 진행 상태에 저장하지 않는다.
-- stable `0.9.0` 게시 자체는 이 fragment가 아니라 `REL9-*`가 소유한다.
+- Notion: `0.10.0-test` 전까지 설정·도움말·질문 노출 없음
+- provider API key·Discord webhook URL 원문: Hive 설정·진행 상태 저장 없음
+- stable `0.9.0` 게시 소유: 이 fragment가 아닌 `REL9-*`

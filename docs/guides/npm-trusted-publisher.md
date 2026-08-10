@@ -1,7 +1,7 @@
 # npm Trusted Publisher 연결
 
 `aigent-hive`의 npm publication은 GitHub Actions OIDC Trusted Publishing만 사용.
-`NPM_TOKEN`·개인 access token·로컬 `npm login`은 필요하지 않음.
+`NPM_TOKEN`·개인 access token·로컬 `npm login` 사용 불필요
 
 ## 최초 연결
 
@@ -23,7 +23,7 @@ npm 계정 `gvm1229`로 로그인한 뒤 아래 여섯 package 각각에 같은 
 - Allowed action: `npm publish`
 
 저장 후 여섯 package가 모두 같은 workflow를 가리키는지 다시 확인. npm은 package마다
-Trusted Publisher 설정을 하나만 보유하므로, test와 stable을 서로 다른 workflow로 분리하지 않음.
+Trusted Publisher 설정 1개 제한: test·stable workflow 분리 금지
 
 ## 시험판 게시
 
@@ -55,6 +55,6 @@ workflow는 `main` candidate, stable 버전 형식, artifact·attestation·commi
 
 첫 test publication이 성공한 뒤 npm의 각 package `Publishing access`에서
 `Require two-factor authentication and disallow tokens`를 활성화. 그 다음 GitHub repository의
-`NPM_TOKEN` secret을 삭제. OIDC Trusted Publishing은 계속 동작하지만 token publication은 차단됨.
+`NPM_TOKEN` secret 삭제 뒤 OIDC Trusted Publishing 유지, token publication 차단
 
 공식 설정 화면·제약 조건: <https://docs.npmjs.com/trusted-publishers/>.
