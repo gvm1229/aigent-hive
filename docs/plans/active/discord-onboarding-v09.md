@@ -38,7 +38,8 @@
 - [x] [DIS9-008] 대화형 setup·README·release bundle HTML 안내와 `hive guide integrations --open` 또는 exact local locator 구현
 - [x] [DIS9-009] fake webhook·두 프로젝트 halt·plan-backed/unplanned progress·redaction 회귀와 지원 host E2E 구현
 - [ ] [DIS9-010] 독립 numbered test candidate·clean install 수용. npm `latest` 불변과 stable feature parity 확인
-- [ ] [DIS9-011] 사용자가 승인한 구역형 Discord Markdown 알림 적용: 시험·실제 공통 renderer에 빈 줄, 이모지·굵은 구역 제목, 사용량·작업 정보·작업 계속 요청 안내 추가. 밑줄 표기 없음
+- [x] [DIS9-011] 사용자가 승인한 구역형 Discord Markdown 알림 적용: 시험·실제 공통 renderer에 빈 줄, 이모지·굵은 구역 제목, 사용량·작업 정보·작업 계속 요청 안내 추가. 밑줄 표기 없음
+  - Evidence: `4c74e7b`, `hive-cli` 328/328, Discord tests 9/9, strict Clippy, format check
 
 ## 완료 기준
 
