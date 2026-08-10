@@ -182,7 +182,12 @@ class NpmPackagingContract(unittest.TestCase):
                 self.assertIn("PRODUCT_VERSION-test[.N]", result.stderr)
 
     def test_npm_pack_and_global_install_launch_native_binary(self) -> None:
-        node_path = Path(run("node", "-p", "process.execPath").stdout.strip())
+        native_binary = Path(
+            os.environ.get(
+                "HIVE_BIN",
+                run("node", "-p", "process.execPath").stdout.strip(),
+            )
+        )
         machine = platform.machine().lower()
         current = {
             ("win32", "amd64"): "x86_64-pc-windows-msvc",
@@ -215,7 +220,7 @@ class NpmPackagingContract(unittest.TestCase):
                 "--target",
                 current,
                 "--binary",
-                str(node_path),
+                str(native_binary),
             )
             run(
                 "node",
@@ -284,7 +289,7 @@ class NpmPackagingContract(unittest.TestCase):
             )
             command = prefix / ("hive.cmd" if os.name == "nt" else "bin/hive")
             result = run(str(command), "--version")
-            self.assertRegex(result.stdout.strip(), r"^v[0-9]+\.[0-9]+\.[0-9]+")
+            self.assertRegex(result.stdout.strip(), r"v[0-9]+\.[0-9]+\.[0-9]+")
 
 
 if __name__ == "__main__":

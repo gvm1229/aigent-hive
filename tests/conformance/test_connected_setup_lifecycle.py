@@ -215,6 +215,7 @@ else:
             cwd=REPOSITORY_ROOT,
             check=False,
             text=True,
+            encoding="utf-8",
             capture_output=True,
             env={**os.environ, **self.environment, **(environment or {})},
         )
