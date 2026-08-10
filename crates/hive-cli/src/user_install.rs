@@ -5583,7 +5583,36 @@ fn execute_forward_host_transition(
     });
     persist_backup(arguments, &transaction.backup_relative, &transaction.backup)?;
     let command_result = runner.run(executable, command, COMMAND_TIMEOUT, COMMAND_OUTPUT_LIMIT);
-    let observed_after = probe_host_snapshot(arguments.host, executable, runner)?;
+    let mut observed_after = probe_host_snapshot(arguments.host, executable, runner)?;
+    if matches!(mutation, HostMutation::CodexMarketplaceAdded)
+        && codex_marketplace_add_revealed_stale_hive_plugin(
+            arguments,
+            &expected_after,
+            &observed_after,
+        )?
+    {
+        let remove = codex_compensation_command(HostMutation::CodexPluginAdded);
+        let output = runner
+            .run(executable, remove, COMMAND_TIMEOUT, COMMAND_OUTPUT_LIMIT)
+            .map_err(|error| {
+                InstallError::Unsupported(format!(
+                    "Codex Hive stale plugin recovery command failed: {error}"
+                ))
+            })?;
+        if !output.success {
+            return Err(InstallError::Unsupported(format!(
+                "Codex Hive stale plugin recovery command exited unsuccessfully: {}",
+                sanitized_command_diagnostic(remove, &output.stdout)
+            )));
+        }
+        observed_after = probe_host_snapshot(arguments.host, executable, runner)?;
+        if observed_after != expected_after {
+            return Err(InstallError::Verification(
+                "Codex Hive stale plugin recovery did not restore the exact marketplace transition"
+                    .to_owned(),
+            ));
+        }
+    }
     let codex_latent_plugin = matches!(mutation, HostMutation::CodexMarketplaceAdded)
         && codex_marketplace_add_revealed_expected_plugin(
             arguments,
@@ -5647,6 +5676,40 @@ fn codex_marketplace_add_revealed_expected_plugin(
         ));
     };
     Ok(observed.plugin == expected_with_plugin.plugin)
+}
+
+fn codex_marketplace_add_revealed_stale_hive_plugin(
+    arguments: &UserArguments,
+    expected_after: &HostStateSnapshot,
+    observed_after: &HostStateSnapshot,
+) -> Result<bool, InstallError> {
+    let (HostStateSnapshot::Codex(expected), HostStateSnapshot::Codex(observed)) =
+        (expected_after, observed_after)
+    else {
+        return Ok(false);
+    };
+    let Some(observed_plugin) = observed.plugin.as_ref() else {
+        return Ok(false);
+    };
+    if expected.plugin.is_some() || observed.marketplace != expected.marketplace {
+        return Ok(false);
+    }
+    let HostStateSnapshot::Codex(expected_with_plugin) =
+        expected_host_state_after(arguments, HostMutation::CodexPluginAdded, expected_after)?
+    else {
+        return Err(InstallError::Internal(
+            "Codex plugin transition produced a non-Codex state".to_owned(),
+        ));
+    };
+    let Some(expected_plugin) = expected_with_plugin.plugin.as_ref() else {
+        return Err(InstallError::Internal(
+            "Codex plugin transition did not produce a plugin state".to_owned(),
+        ));
+    };
+    Ok(observed_plugin.enabled
+        && observed_plugin.source_path == expected_plugin.source_path
+        && observed_plugin.marketplace_source == expected_plugin.marketplace_source
+        && observed_plugin.version != expected_plugin.version)
 }
 
 fn initial_host_snapshot(backup: &UserBackupManifest) -> Option<HostStateSnapshot> {
@@ -6670,6 +6733,7 @@ mod tests {
     enum HostSabotage {
         None,
         LatentCodexPluginActivation,
+        StaleCodexHivePluginActivation,
         FailBeforeMarketplaceMutation,
         FailAfterMarketplaceMutation,
         FailBeforePluginMutation,
@@ -6692,6 +6756,7 @@ mod tests {
         qualified_host: Mutex<String>,
         marketplace_installed: Mutex<bool>,
         plugin_installed: Mutex<bool>,
+        plugin_stale: Mutex<bool>,
         plugin_enabled: Mutex<bool>,
         marketplace_probe_count: Mutex<usize>,
         compensation_failures: Mutex<usize>,
@@ -6708,6 +6773,11 @@ mod tests {
                 plugin_installed: Mutex::new(matches!(
                     sabotage,
                     HostSabotage::LatentCodexPluginActivation
+                        | HostSabotage::StaleCodexHivePluginActivation
+                )),
+                plugin_stale: Mutex::new(matches!(
+                    sabotage,
+                    HostSabotage::StaleCodexHivePluginActivation
                 )),
                 plugin_enabled: Mutex::new(true),
                 marketplace_probe_count: Mutex::new(0),
@@ -6828,13 +6898,21 @@ mod tests {
                 ("plugin list --json", false) => {
                     let plugin_visible = *self.plugin_installed.lock().expect("plugin")
                         && (*self.marketplace_installed.lock().expect("marketplace")
-                            || !matches!(self.sabotage, HostSabotage::LatentCodexPluginActivation));
+                            || !matches!(
+                                self.sabotage,
+                                HostSabotage::LatentCodexPluginActivation
+                                    | HostSabotage::StaleCodexHivePluginActivation
+                            ));
                     let entries = if plugin_visible {
                         vec![json!({
                             "pluginId": "aigent-hive@aigent-hive",
                             "name": "aigent-hive",
                             "marketplaceName": "aigent-hive",
-                            "version": env!("CARGO_PKG_VERSION"),
+                            "version": if *self.plugin_stale.lock().expect("stale plugin") {
+                                "0.7.0"
+                            } else {
+                                env!("CARGO_PKG_VERSION")
+                            },
                             "installed": true,
                             "enabled": true,
                             "source": {
@@ -6887,6 +6965,7 @@ mod tests {
                 }
                 HostSabotage::None
                 | HostSabotage::LatentCodexPluginActivation
+                | HostSabotage::StaleCodexHivePluginActivation
                 | HostSabotage::FailBeforeMarketplaceMutation
                 | HostSabotage::FailAfterMarketplaceMutation
                 | HostSabotage::FailBeforePluginMutation
@@ -6920,6 +6999,7 @@ mod tests {
                 });
             }
             *installed = false;
+            *self.plugin_stale.lock().expect("stale plugin") = false;
             if matches!(
                 self.sabotage,
                 HostSabotage::CrashAfterPluginInverse
@@ -9395,6 +9475,35 @@ mod tests {
         assert!(calls
             .iter()
             .any(|call| call == "plugin marketplace remove aigent-hive --json"));
+    }
+
+    #[test]
+    fn codex_marketplace_add_reinstalls_an_exact_stale_hive_plugin() {
+        let temporary = tempdir().expect("tempdir");
+        let runner = StatefulHostRunner::new(
+            temporary.path(),
+            HostSabotage::StaleCodexHivePluginActivation,
+        );
+        let arguments = args(temporary.path(), UserHost::Codex, UserMode::Apply);
+
+        execute(UserOperation::Install, &arguments, &runner)
+            .expect("reinstall exact stale Hive plugin");
+
+        assert_eq!(runner.external_state(), (true, true));
+        let calls = runner.calls.lock().expect("calls");
+        let marketplace_add = calls
+            .iter()
+            .position(|call| call.starts_with("plugin marketplace add "))
+            .expect("marketplace add");
+        let stale_remove = calls
+            .iter()
+            .position(|call| call == "plugin remove aigent-hive@aigent-hive --json")
+            .expect("stale plugin removal");
+        let plugin_add = calls
+            .iter()
+            .position(|call| call == "plugin add aigent-hive@aigent-hive --json")
+            .expect("plugin reinstall");
+        assert!(marketplace_add < stale_remove && stale_remove < plugin_add);
     }
 
     #[test]
