@@ -27,7 +27,7 @@ SignPath Foundation의 무료 open-source code signing 승인 시 Windows Authen
 - Hive runtime의 telemetry·automatic crash upload·provider credential 수집 없음
 - 설치·update 확인·Discord test·명시적 problem report export 등 사용자가 시작한 기능만 해당 endpoint 접근
 - Release workflow의 GitHub·npm·optional SignPath 접근은 release automation 범위
-- SignPath 사용 시 서명 대상 Windows binary와 build provenance가 SignPath service로 전달될 수 있음
+- SignPath 사용 시 SignPath service 전달 대상: 서명 대상 Windows binary와 build provenance
 - Knowledge Base·user preference·agent session·prompt의 code-signing service 전송 금지
 
 ## Verification boundary
