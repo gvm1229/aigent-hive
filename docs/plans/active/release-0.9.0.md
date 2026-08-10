@@ -17,11 +17,11 @@
 ## 현재 기준선
 
 - Product: `0.9.0`; notes: [`0.9.0.md`](../../releases/0.9.0.md)
-- 최신 공개 시험판: `0.9.0-test.13`; 여섯 npm package `test=0.9.0-test.13`, `latest=0.8.0`
-- `0.9.0-test.13` candidate [`31403054797`](https://github.com/gvm1229/aigent-hive/actions/runs/31403054797):
-  exact `03a16676ebe8873493b85b717befc68983825cdd`, 5개 native target·npm umbrella·direct installer·attestation PASS
-- `0.9.0-test.13` publication [`31404195752`](https://github.com/gvm1229/aigent-hive/actions/runs/31404195752):
-  six-package OIDC `test` 게시, annotated `v0.9.0-test.13`, GitHub prerelease, `latest=0.8.0` 유지 PASS
+- 최신 공개 시험판: `0.9.0-test.15`; 여섯 npm package `test=0.9.0-test.15`, `latest=0.8.0`
+- `0.9.0-test.15` candidate [`31407585364`](https://github.com/gvm1229/aigent-hive/actions/runs/31407585364):
+  exact `6f809a27dae78589a8b69b23a855b982f2ede728`, 5개 native target·npm umbrella·direct installer·attestation PASS
+- `0.9.0-test.15` publication [`31409030152`](https://github.com/gvm1229/aigent-hive/actions/runs/31409030152):
+  six-package OIDC `test` 게시, annotated `v0.9.0-test.15`, GitHub prerelease, `latest=0.8.0` 유지 PASS
 - Windows global npm local install: `AIgent Hive v0.9.0-test #13` 확인. actual user root의
   `hive uninstall → install → dry-run → apply → validate → install validate` PASS. knowledge·saved preference
   digest 보존, Hive active Skill 22개·retired ID `0건`, usage guard `20%`, persisted Discord 설정, home temporary
@@ -127,6 +127,26 @@
   contract 262.03초·integration 141.19초·release 12.73초, 순차 477.77초 대비 matrix Python critical path 262.03초
   모델 45.2% 단축. Phase 4 fixture: ignored `tests/work/hive-phase4-<random>`만 사용; tracked `tests/` 인접
   `hive-phase4-*` 생성 0건. 시험 삭제 0건·release gate 손실 0건
+- [ ] [REL9-031] 무료 배포 신뢰 정책 확정. Apple Developer Program·Microsoft Artifact Signing 유료 필수 gate
+  제외, macOS ad-hoc·Windows unsigned 상태의 정확한 공개, SignPath Foundation 무료 승인 시에만 Windows
+  Authenticode 추가, SHA-256·GitHub attestation·npm OIDC provenance·external TUF 유지
+- [ ] [REL9-032] platform signing evidence schema·verifier·candidate workflow가 macOS ad-hoc과 Windows
+  signed 또는 unsigned 상태를 엄격한 조합으로 검증. Linux artifact는 provenance 대상이며 platform signing
+  evidence 강제 대상 아님
+- [ ] [REL9-033] stable candidate의 5개 archive·checksum·provenance·platform evidence·migration table·release surface를
+  private key 없이 deterministic external TUF authorization request로 생성. key 생성·서명·custody 경로 0건
+- [ ] [REL9-034] stable publication이 HTTPS TUF repository URL·SHA-256·agent-write-denied public root를 입력받아
+  안전 추출·production verifier·candidate byte identity·rollback receipt 검증 뒤에만 tag·GitHub Release·npm 게시
+- [ ] [REL9-035] 공개 code-signing/privacy policy와 SignPath 무료 신청 조건, external TUF offline ceremony·publication
+  입력 절차 문서화. SignPath 신청·private-key ceremony·protected environment 승인은 유지보수자 수동 경계
+
+## 무료 배포 신뢰 정책
+
+- 유료 Apple Developer ID·Microsoft Artifact Signing 구독은 `0.9.0` 필수 조건에서 제외
+- macOS archive: release workflow의 명시적 ad-hoc signing과 검증, Apple publisher trust·notarization 미제공 공개
+- Windows archive: SignPath Foundation 무료 승인 전 unsigned 상태 공개; 승인 뒤 동일 artifact 계보의 Authenticode 허용
+- 모든 platform: archive SHA-256, GitHub artifact attestation, npm OIDC provenance, external TUF authorization 필수
+- Hive source·workflow의 private key 생성·저장·서명 금지. 외부 signer는 공개 metadata와 receipt만 반환
 
 ## 실행 순서
 
@@ -138,13 +158,14 @@
 6. `REL9-029` product-owned 신속 기본값 무인 설치 수용
 7. `REL9-030` 테스트 대장·lane·fixture 작업 영역 정리
 8. `REL9-027–028` OIDC publication·Discord 설정 parity 유지 확인
-9. `REL9-017–024` main 통합·stable candidate·signing·별도 정식 publication
-10. `REL9-025–026` 관찰·current-truth 완료 기록
+9. `REL9-031–035` 무료 배포 신뢰·platform evidence·external TUF handoff 구현
+10. `REL9-017–024` main 통합·stable candidate·authorization·별도 정식 publication
+11. `REL9-025–026` 관찰·current-truth 완료 기록
 
 ## 외부 권한 경계
 
 - `main` PR review·merge와 protected `release-publication` approval
-- Apple·Windows signing identity와 external TUF threshold signer
+- Optional SignPath Foundation 승인과 external TUF threshold signer
 - GitHub App write 권한·npm Trusted Publisher·test workflow 등록 권한
 - Credential·private key·2FA material 노출 금지와 외부 mutation 직전 exact 대상 재확인
 

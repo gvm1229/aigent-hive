@@ -2,15 +2,16 @@
 
 - 기준 branch: `develop`
 - product version: `0.9.0`
-- plan revision: `2.42`
+- plan revision: `2.43`
 - 현재 milestone: `0.9.0` `main` stable candidate·production publication
 - `develop` CI [run `31410354787`](https://github.com/gvm1229/aigent-hive/actions/runs/31410354787):
   exact `a39b88112f5582a836e0c5848668407190d4a616`, 19개 작업 전체 PASS. Copier·문서 스타일·Rust·Ubuntu/macOS/Windows 적합성 PASS
 - `0.9.0-test.15`: candidate [run `31407585364`](https://github.com/gvm1229/aigent-hive/actions/runs/31407585364),
   exact `6f809a27dae78589a8b69b23a855b982f2ede728`; publication [run `31409030152`](https://github.com/gvm1229/aigent-hive/actions/runs/31409030152),
   `test=0.9.0-test.15`, `latest=0.8.0` 유지
-- Stable publication 보안 차단: `release.yml`·`release-publish.yml`의 macOS Developer ID/notarization, Windows Authenticode/Azure,
-  external TUF production authorization·rollback floor 검증 단계 부재. `release-publication` environment 보호 규칙 `0건`
+- Stable publication 남은 자동화: macOS ad-hoc·Windows signed/unsigned platform evidence, private-key-free TUF
+  authorization request, external production repository의 안전 추출·rollback floor·candidate byte identity 검증.
+  유료 Apple Developer ID·Microsoft Artifact Signing은 필수 gate에서 제외. SignPath Foundation은 무료 승인 시 선택 적용
 - `0.9.0` 예외: 실제 Antigravity host 수용과 Claude fixture 공개 제외. Codex 실제 plugin 활성화·global setup은 `REL9-011` 필수 gate. `develop → main` CI는 병합 gate 일시 면제이며 실패·미실행 범위 공개 유지
 - Codex marketplace 복구: `0.9.0-test.8`의 미완료 transaction으로 남은 manifest 없는 Hive marketplace entry를
   `hive install --recover`가 Hive-owned root 확인 뒤 조용히 정리·재설치. foreign host entry·knowledge·저장 preference 보존
@@ -49,7 +50,7 @@
 - 사용량 보호: [`usage-guard-policy.md`](../plans/active/usage-guard-policy.md)의 global 사용자 선택
   한도·등록 project별 더 보수적인 override·effective `max`·project profile 고정값 0건 구현. 소비자
   product `usage-guard` 하나, source에는 repository pre-task gate만 유지하며 별도 user policy·Skill·adapter·threshold state 0건
-- 외부 중지 경계: `main` PR·review, signing·TUF,
+- 외부 중지 경계: `main` PR·review, external TUF authorization·protected publication approval,
   exact `1.0.0` 사용자 authority
 - Plan load: compact `docs/plans/PLAN.md` + `docs/plans/phases/07-public-qualification.md`
   + `docs/plans/active/plugin-project-lifecycle.md`

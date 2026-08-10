@@ -37,6 +37,7 @@
 | judge | verdict 전 digest-bound assignment, exact roster/slot/instance/evidence/timestamp, requester/task-agent 배제, verdict 후 별도 human approval; elevated 2/3, critical 3/3+human |
 | judge 신뢰 | consumer target 밖의 agent-write-denied TOML public-key trust root, purpose-bound detached Ed25519 signature와 aggregate-only output; Hive는 strict verification만 수행하고 private-key custody/signing은 외부 authority가 소유 |
 | release 신뢰 | TUF 1.0.31-compatible offline root 2-of-3와 분리된 targets/snapshot/timestamp, 전역 unique role key, strict Ed25519 verification, old+new root rotation, semantic in-toto/SLSA·platform evidence; signing/private key는 Hive 밖의 external authority |
+| 무료 배포 신뢰 | 유료 Apple Developer ID·Microsoft Artifact Signing은 `0.9.0` 필수 gate에서 제외. macOS ad-hoc·Windows unsigned 상태를 정확히 공개하고 SignPath Foundation 무료 승인 시 Windows Authenticode 추가. SHA-256·GitHub attestation·npm OIDC provenance·external TUF는 필수 |
 | backup | update 전 canonical config/team/run/knowledge와 changed path snapshot, SQLite/runtime/backup/foreign orchestration 제외, exact 7일 경계 이후 validated unreferenced backup만 정리 |
 | 저장소 | 비기밀 canonical source와 data는 Git 추적, runtime/cache/SQLite 제외 |
 | 배포 정본 | `0.8.0` npm 시험 배포 이력 보존. `0.9.0` 정식 릴리스는 protected `main` exact final candidate·annotated tag·GitHub Release·npm·direct installer를 동일 native binary와 digest로 결합 |
@@ -76,7 +77,7 @@ Hive-native iterative·team·multi-goal execution과 OMX·OMC 신규 dependency 
 ## 미확정 항목
 
 - Antigravity의 official machine-readable structured quota surface
-- Apple/Azure/external TUF signer credential이 provision된 첫 production release 실행
+- Optional SignPath Foundation 승인과 external TUF signer가 authorization한 첫 production release 실행
 
 Judge identity authentication은
 [`ADR-0007`](ADR-0007-ed25519-judge-trust.md)의 external protected trust root와
