@@ -19,7 +19,7 @@ status: active
 # Aigent Hive 0.9.0 Test and Stable Release
 
 Stable `v0.9.0` remains absent. Candidate `31372510565` and OIDC publication `31373214154`
-released `0.9.0-test.11` from `b0e41f58bd6b73b56cbe92c2b054fb5cefcc9f03`; all six npm packages
+released `0.9.0-test.11` from `b0e41f5`; all six npm packages
 have `test=0.9.0-test.11` and `latest=0.8.0`, with an annotated GitHub prerelease. Its isolated
 Windows installation and actual user-root `dry-run → apply → validate` passed, including silent
 Codex marketplace recovery, the product-only Skill catalog, Korean/bilingual Wiki, usage guard,

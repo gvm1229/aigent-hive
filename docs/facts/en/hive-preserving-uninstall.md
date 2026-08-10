@@ -14,7 +14,7 @@ sources:
   - "repo:docs/plans/active/windows-global-setup-hardening.md#sha256:c28e40cf7e976d0b4455a73c2ddb6d598af448cd549569097784e9a26b2d678e"
   - "repo:harness/skills/user-setup/SKILL.md#sha256:4f3676378fafac75f9c6376210c760a2e0200e843ead0825d1b34d7446864e34"
 links: [global-onboarding, knowledge-preservation, release-verification]
-reviewed_revision: "git:4a30456"
+reviewed_revision: "git:4a30456eb0ff07336ec2996a0c562d0a7d7651d9"
 status: active
 ---
 

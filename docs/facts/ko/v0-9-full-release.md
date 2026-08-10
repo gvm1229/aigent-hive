@@ -19,7 +19,7 @@ status: active
 # Aigent Hive 0.9.0 시험·정식 릴리스
 
 Stable `v0.9.0`: 미게시. `0.9.0-test.11`: candidate `31372510565`, OIDC publication
-`31373214154`, exact `b0e41f58bd6b73b56cbe92c2b054fb5cefcc9f03`, 여섯 npm package의
+`31373214154`, exact `b0e41f5`, 여섯 npm package의
 `test=0.9.0-test.11`, `latest=0.8.0` 유지, annotated GitHub prerelease. Windows 격리 install·actual
 user root `dry-run → apply → validate` PASS, 조용한 Codex marketplace recovery, product-only Skill,
 Korean·bilingual Wiki, usage guard, persisted Discord test delivery 확인.
