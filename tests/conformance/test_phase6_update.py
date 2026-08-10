@@ -813,7 +813,9 @@ class Phase6StaticContracts(unittest.TestCase):
             powershell = (output / "install.ps1").read_text(encoding="utf-8")
             self.assertIn("embedded_package_version='0.9.0-test'", shell)
             self.assertIn('[string]$PackageVersion = "0.9.0-test"', powershell)
-            subprocess.run(["sh", "-n", str(output / "install.sh")], check=True)
+            shell_parser = shutil.which("sh")
+            if shell_parser is not None:
+                subprocess.run([shell_parser, "-n", str(output / "install.sh")], check=True)
 
             pwsh = shutil.which("pwsh") or shutil.which("powershell")
             if pwsh is None:
