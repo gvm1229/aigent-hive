@@ -5,7 +5,7 @@ topic_slug: v0-9-full-release
 language: ko
 counterpart: ../en/v0-9-full-release.md
 title: "Aigent Hive 0.9.0 시험·정식 릴리스"
-summary: "test.15 수용 유지. Stable source의 무료 platform evidence·external TUF 승인 요청·production 검증 구현 완료, protected main 통합·외부 authorization 대기."
+summary: "test.15 수용과 develop CI·5-target native runtime 검증 완료. Stable source의 무료 platform evidence·external TUF 승인 요청·production 검증 구현 완료, protected main 통합·외부 authorization 대기."
 tags: [distribution, release, signing, v0-9]
 aliases: ["0.9.0 release plan", "full release"]
 sources:
@@ -14,13 +14,14 @@ sources:
   - "repo:docs/guides/signed-update-and-release.md#sha256:aa570e405dc1e568a79fe6291e30807db9e96b7805e570aede152fed4120f5a5"
   - "repo:docs/plans/active/release-0.9.0.md#sha256:01ba525115912b67409e88d9ca73c4021b908f94562df3821dd2bf6a3aeb4d76"
 links: [host-external-integrations, release-verification, test-distribution, version-policy]
-reviewed_revision: "git:daa4ab56b05f7403bc1f5f2b44d8471fb99866af"
+reviewed_revision: "git:1b7ea99554fcf2e475cc77dcb1a3452a7805315f"
 status: active
 ---
 
 # Aigent Hive 0.9.0 시험·정식 릴리스
 
-Stable `v0.9.0`: 미게시. 수용된 `test.15`: `latest=0.8.0` 유지, Windows 보존형 재설치·develop CI PASS.
+Stable `v0.9.0`: 미게시. 수용된 `test.15`: `latest=0.8.0` 유지, Windows 보존형 재설치 PASS.
+Develop CI run `31430181535`의 19개 작업과 native runtime run `31428720884`의 5개 target PASS.
 Stable source: macOS ad-hoc·Windows unsigned evidence, deterministic TUF 요청, safe extraction,
 protected rollback floor, production verifier·exact target byte 결합. 유료 platform certificate: gate 제외.
 남은 경계: protected `main`, stable candidate, external 2-of-3 authorization, publication approval.
