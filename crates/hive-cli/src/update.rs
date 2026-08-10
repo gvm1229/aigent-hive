@@ -4,7 +4,7 @@ use crate::run::{AdapterError, PinnedTarget};
 use hive_core::{sha256_digest, validate_project_relative};
 use hive_update::{
     execute_update_in, recover_update_in, verify_release_repository_for_publication, MajorApproval,
-    SemVersion, UpdateError, UpdateMode, UpdateRequest,
+    RollbackState, SemVersion, UpdateError, UpdateMode, UpdateRequest,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::json;
@@ -13,6 +13,7 @@ use std::process::ExitCode;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 const MAX_RELEASE_ROOT_BYTES: usize = 1024 * 1024;
+const MAX_ROLLBACK_STATE_BYTES: usize = 256 * 1024;
 const MAX_CONFIRMATION_BYTES: usize = 256 * 1024;
 
 const UPDATE_USAGE: &str = "\
@@ -31,7 +32,8 @@ Verify a complete offline signed Aigent Hive release without mutation.
 
 USAGE:
     hive release verify --bundle <release-dir> \
-        --trust-root <external-protected-root.json> --output json
+        --trust-root <external-protected-root.json> \
+        [--rollback-state <external-protected-state.json>] --output json
 ";
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -72,12 +74,16 @@ pub(crate) fn run_release(arguments: &[String]) -> ExitCode {
         return ExitCode::SUCCESS;
     }
     let result = parse_release_arguments(arguments)
-        .and_then(|(bundle, trust_root)| verify_release(&bundle, &trust_root))
+        .and_then(|(bundle, trust_root, rollback_state)| {
+            verify_release(&bundle, &trust_root, rollback_state.as_deref())
+        })
         .unwrap_or_else(|error| release_failure_result(&error));
     emit_action_result(&result)
 }
 
-fn parse_release_arguments(arguments: &[String]) -> Result<(PathBuf, PathBuf), AdapterError> {
+fn parse_release_arguments(
+    arguments: &[String],
+) -> Result<(PathBuf, PathBuf, Option<PathBuf>), AdapterError> {
     if arguments.first().map(String::as_str) != Some("verify") {
         return Err(AdapterError::Input(
             "release requires the verify action".to_owned(),
@@ -85,12 +91,16 @@ fn parse_release_arguments(arguments: &[String]) -> Result<(PathBuf, PathBuf), A
     }
     let mut bundle = None;
     let mut trust_root = None;
+    let mut rollback_state = None;
     let mut output = None;
     let mut index = 1;
     while index < arguments.len() {
         let option = arguments[index].as_str();
         index += 1;
-        if !matches!(option, "--bundle" | "--trust-root" | "--output") {
+        if !matches!(
+            option,
+            "--bundle" | "--trust-root" | "--rollback-state" | "--output"
+        ) {
             return Err(AdapterError::Input(format!(
                 "unknown release option: {option}"
             )));
@@ -102,6 +112,7 @@ fn parse_release_arguments(arguments: &[String]) -> Result<(PathBuf, PathBuf), A
         let slot = match option {
             "--bundle" => &mut bundle,
             "--trust-root" => &mut trust_root,
+            "--rollback-state" => &mut rollback_state,
             "--output" => &mut output,
             _ => unreachable!(),
         };
@@ -121,10 +132,15 @@ fn parse_release_arguments(arguments: &[String]) -> Result<(PathBuf, PathBuf), A
         PathBuf::from(
             trust_root.ok_or_else(|| AdapterError::Input("missing --trust-root".to_owned()))?,
         ),
+        rollback_state.map(PathBuf::from),
     ))
 }
 
-fn verify_release(bundle: &Path, trust_root: &Path) -> Result<ActionResult, AdapterError> {
+fn verify_release(
+    bundle: &Path,
+    trust_root: &Path,
+    rollback_state: Option<&Path>,
+) -> Result<ActionResult, AdapterError> {
     let trust_root = read_protected_file(
         trust_root,
         MAX_RELEASE_ROOT_BYTES,
@@ -132,8 +148,26 @@ fn verify_release(bundle: &Path, trust_root: &Path) -> Result<ActionResult, Adap
         "release trust root",
     )?;
     let now_unix = current_unix_time()?;
-    let verified = verify_release_repository_for_publication(&trust_root, bundle, now_unix, None)
-        .map_err(map_update_error)?;
+    let rollback_state = rollback_state
+        .map(|path| {
+            let bytes = read_protected_file(
+                path,
+                MAX_ROLLBACK_STATE_BYTES,
+                None,
+                "release rollback state",
+            )?;
+            serde_json::from_slice::<RollbackState>(&bytes).map_err(|error| {
+                AdapterError::Input(format!("invalid release rollback state JSON: {error}"))
+            })
+        })
+        .transpose()?;
+    let verified = verify_release_repository_for_publication(
+        &trust_root,
+        bundle,
+        now_unix,
+        rollback_state.as_ref(),
+    )
+    .map_err(map_update_error)?;
     Ok(ActionResult {
         schema_version: 1,
         action: "VerifyWork",
@@ -153,6 +187,7 @@ fn verify_release(bundle: &Path, trust_root: &Path) -> Result<ActionResult, Adap
             "release_sequence": verified.manifest.release_sequence,
             "source_commit": verified.manifest.source.commit,
             "manifest_digest": verified.manifest_digest,
+            "rollback_state": verified.next_rollback_state,
             "verified_target_count": verified.targets.len()
         })),
     })
@@ -592,6 +627,20 @@ mod tests {
             "json".to_owned(),
         ];
         assert!(parse_release_arguments(&valid).is_ok());
+        let mut with_floor = valid.clone();
+        with_floor.splice(
+            5..5,
+            [
+                "--rollback-state".to_owned(),
+                "/rollback-state.json".to_owned(),
+            ],
+        );
+        assert_eq!(
+            parse_release_arguments(&with_floor)
+                .expect("release parser with rollback floor")
+                .2,
+            Some(PathBuf::from("/rollback-state.json"))
+        );
         assert!(parse_release_arguments(&valid[1..]).is_err());
         let failure = release_failure_result(&AdapterError::Verification("tampered".to_owned()));
         assert_eq!(failure.action, "VerifyWork");

@@ -22,6 +22,16 @@ on:
         options:
           - test
           - stable
+      tuf_repository_url:
+        description: HTTPS URL of the externally authorized TUF repository tar.gz; stable only
+        required: false
+        default: ""
+        type: string
+      tuf_repository_sha256:
+        description: Exact lowercase SHA-256 of the external TUF repository tar.gz; stable only
+        required: false
+        default: ""
+        type: string
 
 permissions:
   contents: write
@@ -42,6 +52,8 @@ jobs:
       PACKAGE_VERSION: ${{ inputs.package_version }}
       RUN_ID: ${{ inputs.candidate_run_id }}
       CHANNEL: ${{ inputs.channel }}
+      TUF_REPOSITORY_URL: ${{ inputs.tuf_repository_url }}
+      TUF_REPOSITORY_SHA256: ${{ inputs.tuf_repository_sha256 }}
     permissions:
       actions: read
       contents: write
@@ -56,6 +68,8 @@ jobs:
           [[ "$RUN_ID" =~ ^[1-9][0-9]*$ ]]
           case "$CHANNEL" in
             test)
+              test -z "$TUF_REPOSITORY_URL"
+              test -z "$TUF_REPOSITORY_SHA256"
               case "$PACKAGE_VERSION" in
                 "$PRODUCT_VERSION"-test) ;;
                 "$PRODUCT_VERSION"-test.[1-9]*)
@@ -73,6 +87,8 @@ jobs:
               branch=main
               npm_tag=latest
               prerelease=false
+              [[ "$TUF_REPOSITORY_URL" =~ ^https://[^[:space:]]+$ ]]
+              [[ "$TUF_REPOSITORY_SHA256" =~ ^[0-9a-f]{64}$ ]]
               ;;
             *) exit 2 ;;
           esac
@@ -260,6 +276,86 @@ jobs:
           verify_identity \
             "dist/aigent-hive-$PRODUCT_VERSION-x86_64-pc-windows-msvc.zip" \
             "dist/aigent-hive-win32-x64-$PACKAGE_VERSION.tgz" hive.exe
+      - name: Download and safely extract externally authorized TUF repository
+        if: ${{ inputs.channel == 'stable' }}
+        run: |
+          archive="$RUNNER_TEMP/tuf-repository.tar.gz"
+          curl --proto '=https' --tlsv1.2 --fail --location --silent --show-error \
+            --output "$archive" "$TUF_REPOSITORY_URL"
+          actual=$(sha256sum "$archive" | cut -d' ' -f1)
+          test "$actual" = "$TUF_REPOSITORY_SHA256"
+          python3 scripts/extract-release-repository.py \
+            --archive "$archive" \
+            --output "$RUNNER_TEMP/tuf-repository"
+          cp "$archive" dist/tuf-repository.tar.gz
+          printf '%s  %s\n' "$actual" tuf-repository.tar.gz \
+            >dist/tuf-repository.tar.gz.sha256
+      - name: Install protected public TUF root and rollback floor
+        if: ${{ inputs.channel == 'stable' }}
+        env:
+          TUF_PRODUCTION_ROOT_B64: ${{ secrets.TUF_PRODUCTION_ROOT_B64 }}
+          TUF_PRODUCTION_ROLLBACK_STATE_B64: ${{ secrets.TUF_PRODUCTION_ROLLBACK_STATE_B64 }}
+        run: |
+          test -n "$TUF_PRODUCTION_ROOT_B64"
+          test -n "$TUF_PRODUCTION_ROLLBACK_STATE_B64"
+          umask 077
+          printf '%s' "$TUF_PRODUCTION_ROOT_B64" | base64 --decode \
+            >"$RUNNER_TEMP/release-root.json"
+          printf '%s' "$TUF_PRODUCTION_ROLLBACK_STATE_B64" | base64 --decode \
+            >"$RUNNER_TEMP/release-rollback-state.json"
+          jq -e . "$RUNNER_TEMP/release-root.json" >/dev/null
+          jq -e . "$RUNNER_TEMP/release-rollback-state.json" >/dev/null
+          sudo install -d -o root -g root -m 0755 /usr/local/share/aigent-hive
+          sudo install -o root -g root -m 0444 "$RUNNER_TEMP/release-root.json" \
+            /usr/local/share/aigent-hive/release-root.json
+          sudo install -o root -g root -m 0444 "$RUNNER_TEMP/release-rollback-state.json" \
+            /usr/local/share/aigent-hive/release-rollback-state.json
+          sudo chmod 0555 /usr/local/share/aigent-hive
+      - name: Verify production TUF authorization, rollback floor, and candidate identity
+        if: ${{ inputs.channel == 'stable' }}
+        env:
+          CANDIDATE_SHA: ${{ steps.candidate.outputs.sha }}
+        run: |
+          test -f dist/signing-request.json
+          request=$(cat dist/signing-request.json)
+          test "$(jq -r .product_version <<<"$request")" = "$PRODUCT_VERSION"
+          test "$(jq -r .package_version <<<"$request")" = "$PACKAGE_VERSION"
+          test "$(jq -r .candidate.sha <<<"$request")" = "$CANDIDATE_SHA"
+          test "$(jq -r .candidate.run_id <<<"$request")" = "$RUN_ID"
+          for name in \
+            "aigent-hive-$PRODUCT_VERSION-aarch64-apple-darwin.tar.gz" \
+            "aigent-hive-$PRODUCT_VERSION-x86_64-apple-darwin.tar.gz" \
+            "aigent-hive-$PRODUCT_VERSION-aarch64-unknown-linux-musl.tar.gz" \
+            "aigent-hive-$PRODUCT_VERSION-x86_64-unknown-linux-musl.tar.gz" \
+            "aigent-hive-$PRODUCT_VERSION-x86_64-pc-windows-msvc.zip"; do
+            cmp "dist/$name" "$RUNNER_TEMP/tuf-repository/targets/$name"
+          done
+          for name in \
+            bundle-manifest.json \
+            migration-table.json \
+            platform-signing-evidence.json \
+            provenance.intoto.json \
+            release-surface-inventory.json; do
+            cmp "dist/targets/$name" "$RUNNER_TEMP/tuf-repository/targets/$name"
+          done
+          mkdir "$RUNNER_TEMP/stable-verifier"
+          tar -xzf "dist/aigent-hive-$PRODUCT_VERSION-x86_64-unknown-linux-musl.tar.gz" \
+            -C "$RUNNER_TEMP/stable-verifier"
+          verifier="$RUNNER_TEMP/stable-verifier/aigent-hive-$PRODUCT_VERSION-x86_64-unknown-linux-musl/hive"
+          test -x "$verifier"
+          "$verifier" release verify \
+            --bundle "$RUNNER_TEMP/tuf-repository" \
+            --trust-root /usr/local/share/aigent-hive/release-root.json \
+            --rollback-state /usr/local/share/aigent-hive/release-rollback-state.json \
+            --output json >dist/tuf-publication-receipt.json
+          receipt=$(cat dist/tuf-publication-receipt.json)
+          test "$(jq -r .status <<<"$receipt")" = success
+          test "$(jq -r .code <<<"$receipt")" = hive.release-verified
+          test "$(jq -r .data.release_version <<<"$receipt")" = "$PRODUCT_VERSION"
+          test "$(jq -r .data.source_commit <<<"$receipt")" = "$CANDIDATE_SHA"
+          test "$(jq -r .data.release_sequence <<<"$receipt")" = 9
+          jq -e '.data.rollback_state.root_version >= 1 and .data.rollback_state.release_sequence == 9' \
+            <<<"$receipt" >/dev/null
       - name: Refuse existing npm versions
         run: |
           packages=(
@@ -383,5 +479,6 @@ jobs:
               --target "$CANDIDATE_SHA" \
               --title "Aigent Hive $PRODUCT_VERSION" \
               --notes-file "docs/releases/$PRODUCT_VERSION.md" \
-              dist/*.tar.gz dist/*.zip dist/*.sha256 dist/*.tgz dist/*.attestation.jsonl
+              dist/*.tar.gz dist/*.zip dist/*.sha256 dist/*.tgz dist/*.attestation.jsonl \
+              dist/tuf-publication-receipt.json
           fi

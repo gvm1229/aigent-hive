@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import hashlib
+import io
 import json
 import os
 import re
@@ -11,6 +12,7 @@ import shutil
 import stat
 import subprocess
 import sys
+import tarfile
 import tempfile
 import tomllib
 import unittest
@@ -396,6 +398,10 @@ class Phase6StaticContracts(unittest.TestCase):
                 "options": ["test", "stable"],
             },
         )
+        for name in ("tuf_repository_url", "tuf_repository_sha256"):
+            self.assertFalse(publication_inputs[name]["required"])
+            self.assertEqual(publication_inputs[name]["default"], "")
+            self.assertEqual(publication_inputs[name]["type"], "string")
         expected_publication_environment = {
             "name": "release-publication",
             "deployment": False,
@@ -555,6 +561,13 @@ class Phase6StaticContracts(unittest.TestCase):
             "%HIVE_INSTALL_PACKAGE_VERSION%/install.ps1",
             "gh release create",
             "git tag -a",
+            "scripts/extract-release-repository.py",
+            "TUF_PRODUCTION_ROOT_B64",
+            "TUF_PRODUCTION_ROLLBACK_STATE_B64",
+            "hive.release-verified",
+            "--rollback-state",
+            "tuf-publication-receipt.json",
+            'cmp "dist/$name" "$RUNNER_TEMP/tuf-repository/targets/$name"',
         ):
             self.assertIn(required, publication)
         for forbidden in ("bootstrap_with_token", "secrets.NPM_TOKEN", "NODE_AUTH_TOKEN"):
@@ -589,7 +602,6 @@ class Phase6StaticContracts(unittest.TestCase):
         for forbidden in (
             "signed_tuf_repository_url",
             "HIVE_RELEASE_ROOT_JSON_BASE64",
-            "hive release verify",
             "platform-signing-evidence.canonical.json",
             "notarytool",
             "azure/artifact-signing-action@",
@@ -759,6 +771,72 @@ class Phase6StaticContracts(unittest.TestCase):
             )
             self.assertNotEqual(wrong_sha.returncode, 0)
             self.assertFalse((root / "wrong-sha").exists())
+
+    def test_external_release_repository_extraction_rejects_links_and_path_escape(self) -> None:
+        script = ROOT / "scripts/extract-release-repository.py"
+
+        def make_archive(path: Path, hostile: tuple[str, str] | None = None) -> None:
+            with tarfile.open(path, "w:gz") as archive:
+                for name in (
+                    "metadata/root.json",
+                    "metadata/snapshot.json",
+                    "metadata/targets.json",
+                    "metadata/timestamp.json",
+                    "targets/bundle-manifest.json",
+                ):
+                    payload = b"{}\n"
+                    member = tarfile.TarInfo(name)
+                    member.size = len(payload)
+                    archive.addfile(member, io.BytesIO(payload))
+                if hostile is not None:
+                    kind, name = hostile
+                    member = tarfile.TarInfo(name)
+                    if kind == "symlink":
+                        member.type = tarfile.SYMTYPE
+                        member.linkname = "metadata/root.json"
+                    else:
+                        member.size = 0
+                    archive.addfile(member, io.BytesIO(b""))
+
+        with tempfile.TemporaryDirectory(prefix="hive-tuf-extract-") as temporary:
+            root = Path(temporary)
+            valid = root / "valid.tar.gz"
+            make_archive(valid)
+            output = root / "repository"
+            result = subprocess.run(
+                [sys.executable, str(script), "--archive", str(valid), "--output", str(output)],
+                cwd=ROOT,
+                check=False,
+                text=True,
+                capture_output=True,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertTrue((output / "metadata/root.json").is_file())
+
+            for label, hostile in (
+                ("escape", ("file", "../outside.json")),
+                ("symlink", ("symlink", "targets/link")),
+                ("foreign", ("file", "other/file.json")),
+            ):
+                archive = root / f"{label}.tar.gz"
+                make_archive(archive, hostile)
+                destination = root / label
+                failed = subprocess.run(
+                    [
+                        sys.executable,
+                        str(script),
+                        "--archive",
+                        str(archive),
+                        "--output",
+                        str(destination),
+                    ],
+                    cwd=ROOT,
+                    check=False,
+                    text=True,
+                    capture_output=True,
+                )
+                self.assertNotEqual(failed.returncode, 0, label)
+                self.assertFalse(destination.exists(), label)
 
     def test_dispatch_inputs_are_never_interpolated_into_run_scripts(self) -> None:
         def run_scripts(value: object) -> list[str]:
