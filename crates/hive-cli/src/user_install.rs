@@ -581,19 +581,17 @@ pub(crate) fn run_update(arguments: &[String]) -> ExitCode {
 }
 
 const USER_UNINSTALL_USAGE: &str = "\
-Remove the user-scope Aigent Hive installation while preserving saved preferences and knowledge by default.
+Remove the user-scope Aigent Hive installation while preserving saved preferences and knowledge.
 
 USAGE:
-    hive uninstall [--full|-f] [--user-root <absolute-dir>] [--output json]
+    hive uninstall [--user-root <absolute-dir>] [--output json]
 
-MODES:
-    default       Remove Hive-managed host activation, projections, packages, indexes, backups, and runtime state. Preserve `.hive/knowledge/` and saved user preferences.
-    --full, -f    Also remove `.hive/knowledge/` and saved user preferences.
+RESULT:
+    Remove Hive-managed host activation, projections, packages, indexes, backups, and runtime state. Always preserve `.hive/knowledge/` and saved user preferences.
 ";
 
 struct UserUninstallArguments {
     root_cap: Dir,
-    full: bool,
 }
 
 pub(crate) fn run_uninstall(arguments: &[String]) -> ExitCode {
@@ -608,18 +606,10 @@ pub(crate) fn run_uninstall(arguments: &[String]) -> ExitCode {
 }
 
 fn parse_uninstall(arguments: &[String]) -> Result<UserUninstallArguments, InstallError> {
-    let mut full = false;
     let mut user_root = None;
     let mut index = 0;
     while index < arguments.len() {
         match arguments[index].as_str() {
-            "--full" | "-f" if !full => {
-                full = true;
-                index += 1;
-            }
-            "--full" | "-f" => {
-                return Err(InstallError::Input("duplicate option: --full".to_owned()));
-            }
             "--output" => {
                 let value = arguments
                     .get(index + 1)
@@ -648,7 +638,7 @@ fn parse_uninstall(arguments: &[String]) -> Result<UserUninstallArguments, Insta
     let requested_user_root =
         user_root.map_or_else(resolve_user_root, |value| Ok(PathBuf::from(value)))?;
     let (_, root_cap) = open_canonical_user_root(&requested_user_root)?;
-    Ok(UserUninstallArguments { root_cap, full })
+    Ok(UserUninstallArguments { root_cap })
 }
 
 fn execute_uninstall(
@@ -708,19 +698,6 @@ fn execute_uninstall(
     ] {
         remove_owned_regular(&arguments.root_cap, Path::new(relative), &mut changed_paths)?;
     }
-    if arguments.full {
-        remove_owned_tree(
-            &arguments.root_cap,
-            Path::new(".hive/knowledge"),
-            &mut changed_paths,
-        )?;
-        for relative in [
-            ".hive/config/user-setup.yml",
-            ".hive/config/user-preferences.json",
-        ] {
-            remove_owned_regular(&arguments.root_cap, Path::new(relative), &mut changed_paths)?;
-        }
-    }
     for relative in [
         ".hive/config",
         ".hive",
@@ -737,30 +714,17 @@ fn execute_uninstall(
         action: "UninstallHiveUser",
         status: "success",
         exit_code: 0,
-        code: if arguments.full {
-            "hive.user-uninstall-full-complete"
-        } else {
-            "hive.user-uninstall-complete"
-        },
-        message: if arguments.full {
-            "user-scope Hive installation, knowledge, and saved preferences removed".to_owned()
-        } else {
-            "user-scope Hive installation removed; saved preferences and knowledge preserved"
-                .to_owned()
-        },
+        code: "hive.user-uninstall-complete",
+        message: "user-scope Hive installation removed; saved preferences and knowledge preserved"
+            .to_owned(),
         changed_paths,
         evidence: Vec::new(),
-        next_action: (!arguments.full).then_some(
+        next_action: Some(
             "run hive install --scope user --host <saved-host> --apply --output json; saved preferences are reused without setup questions".to_owned(),
         ),
         data: Some(json!({
-            "full": arguments.full,
             "removed_hosts": removed_hosts,
-            "preserved": if arguments.full {
-                Vec::<&str>::new()
-            } else {
-                vec![".hive/knowledge", ".hive/config/user-setup.yml", ".hive/config/user-preferences.json"]
-            },
+            "preserved": [".hive/knowledge", ".hive/config/user-setup.yml", ".hive/config/user-preferences.json"],
         })),
     })
 }
@@ -7723,11 +7687,10 @@ mod tests {
         }
     }
 
-    fn uninstall_args(root: &Path, full: bool) -> UserUninstallArguments {
+    fn uninstall_args(root: &Path) -> UserUninstallArguments {
         let user_root = root.canonicalize().expect("canonical user root");
         UserUninstallArguments {
             root_cap: open_user_root(&user_root).expect("pinned user root"),
-            full,
         }
     }
 
@@ -7754,6 +7717,16 @@ mod tests {
     }
 
     #[test]
+    fn uninstall_refuses_removed_destructive_flags() {
+        for flag in ["--full", "-f"] {
+            assert!(matches!(
+                parse_uninstall(&[flag.to_owned()]),
+                Err(InstallError::Input(_))
+            ));
+        }
+    }
+
+    #[test]
     fn uninstall_preserves_saved_setup_and_knowledge_then_reinstalls_without_setup_questions() {
         let temporary = tempdir().expect("tempdir");
         write_operational_setup(temporary.path(), &["codex"]);
@@ -7769,7 +7742,7 @@ mod tests {
         )
         .expect("knowledge note");
 
-        let removed = execute_uninstall(&uninstall_args(temporary.path(), false), &runner)
+        let removed = execute_uninstall(&uninstall_args(temporary.path()), &runner)
             .expect("preserving uninstall");
 
         assert_eq!(removed.code, "hive.user-uninstall-complete");
@@ -7787,32 +7760,6 @@ mod tests {
         );
         assert!(temporary.path().join(".hive/install/codex.json").is_file());
         assert_eq!(runner.external_state(), (true, true));
-    }
-
-    #[test]
-    fn full_uninstall_removes_saved_setup_and_knowledge() {
-        let temporary = tempdir().expect("tempdir");
-        write_operational_setup(temporary.path(), &["codex"]);
-        let runner = StatefulHostRunner::new(temporary.path(), HostSabotage::None);
-        let install = args(temporary.path(), UserHost::Codex, UserMode::Apply);
-        execute(UserOperation::Install, &install, &runner).expect("install");
-        let knowledge = temporary.path().join(".hive/knowledge/Wiki/user-note.md");
-        fs::write(
-            &knowledge,
-            b"---\nschema_version: 1\nid: user-note\nkind: concept\nsummary: user note\ntags: [test]\naliases: []\nsources: []\nlinks: []\ncontradictions: []\nstatus: active\ncreated_at: 2026-08-10T00:00:00Z\nupdated_at: 2026-08-10T00:00:00Z\n---\n\nUser knowledge\n",
-        )
-        .expect("knowledge note");
-
-        let removed = execute_uninstall(&uninstall_args(temporary.path(), true), &runner)
-            .expect("full uninstall");
-
-        assert_eq!(removed.code, "hive.user-uninstall-full-complete");
-        assert!(!temporary
-            .path()
-            .join(".hive/config/user-setup.yml")
-            .exists());
-        assert!(!knowledge.exists());
-        assert_eq!(runner.external_state(), (false, false));
     }
 
     fn write_operational_setup(root: &Path, selected_hosts: &[&str]) {

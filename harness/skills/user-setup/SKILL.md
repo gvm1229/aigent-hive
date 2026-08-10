@@ -239,9 +239,8 @@ consent and setup mode. Ask the remaining preference questions only for `Custom`
 - Reinstall the selected saved host with `hive install --scope user --host <saved-host> --apply
   --user-root <user-root> --output json`. A valid saved preference file is reused without setup
   questions. Then run the saved-answer `dry-run`, `apply`, and `validate` sequence.
-- Run `hive uninstall --full --user-root <user-root> --output json` only when the user explicitly
-  requests removal of both the knowledge base and saved preferences. Never infer full removal from
-  a reinstall request.
+- Hive provides no command to remove the knowledge base or saved preferences. Those files remain
+  manual user-owned deletion targets outside this Skill.
 
 ## Korean interaction contract
 
