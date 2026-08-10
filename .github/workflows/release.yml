@@ -275,6 +275,10 @@ jobs:
           if ([BitConverter]::ToUInt16($bytes, $peOffset + 4) -ne 0x8664) {
             throw "release binary is not x86_64 PE"
           }
+          $signature = Get-AuthenticodeSignature -LiteralPath $binary
+          if ($signature.Status -ne [Management.Automation.SignatureStatus]::NotSigned) {
+            throw "cost-waived Windows release must be explicitly unsigned"
+          }
           if ($env:PACKAGE_VERSION -eq $env:PRODUCT_VERSION) {
             $expectedVersion = "AIgent Hive v$($env:PRODUCT_VERSION) (released $env:PACKAGE_RELEASE_DATE)"
           } elseif ($env:PACKAGE_VERSION -eq "$($env:PRODUCT_VERSION)-test") {

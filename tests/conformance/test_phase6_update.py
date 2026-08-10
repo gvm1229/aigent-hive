@@ -522,6 +522,8 @@ class Phase6StaticContracts(unittest.TestCase):
             "codesign --force --sign -",
             "Signature=adhoc",
             "TeamIdentifier=not set",
+            "Get-AuthenticodeSignature",
+            "SignatureStatus]::NotSigned",
             "scripts/prepare-release-authorization.py",
             "release-authorization-request",
             "inputs.channel == 'stable'",
