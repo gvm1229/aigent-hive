@@ -66,6 +66,7 @@ current catalog.
 | [Source usage guard](guides/source-usage-guard.md) | Source quota safeguard |
 | [Judge attestation](guides/ed25519-judge-attestations.md) | External signature ceremony |
 | [Signed update·release](guides/signed-update-and-release.md) | Update·candidate·publication procedure |
+| [Code signing policy](guides/code-signing-policy.md) | 무료 platform signing 상태·privacy·검증 경계 |
 | [npm Trusted Publisher](guides/npm-trusted-publisher.md) | six npm package OIDC 연결·test·stable publication |
 
 ## Releases

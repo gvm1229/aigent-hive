@@ -14,7 +14,7 @@ It never asks for model-provider API keys, calls model-provider APIs, or replace
 host's own model runtime.
 
 Stable `0.8.0` is the current npm `latest` release. Developer test build
-`0.9.0-test.5` remains available only on npm `test` and as a GitHub prerelease.
+`0.9.0-test.15` remains available only on npm `test` and as a GitHub prerelease.
 Stable `0.9.0` is being prepared and is not published yet.
 
 ## Install the current stable release
@@ -40,19 +40,19 @@ Expected stable version label:
 AIgent Hive v0.8.0
 ```
 
-### Developer test build 0.9.0-test.5
+### Developer test build 0.9.0-test.15
 
 For developers and contributors testing the next release:
 
 ```console
-npm install -g aigent-hive@0.9.0-test.5
+npm install -g aigent-hive@0.9.0-test.15
 hive --version
 ```
 
 Expected version label:
 
 ```text
-AIgent Hive v0.9.0-test #5 · developer test build
+AIgent Hive v0.9.0-test #15 · developer test build
 ```
 
 This explicit version never changes npm `latest`.
@@ -91,8 +91,8 @@ I want the optional one-prompt Aigent Hive setup. Work only at user scope; do no
 initialize, or change any project, repository, folder, or current working directory.
 
 First ask whether I want the current stable release 0.8.0 (recommended) or the developer test build
-0.9.0-test.5. The stable install guidance is https://github.com/gvm1229/aigent-hive#install-the-current-stable-release
-and the test-build release notes are https://github.com/gvm1229/aigent-hive/releases/tag/v0.9.0-test.5.
+0.9.0-test.15. The stable install guidance is https://github.com/gvm1229/aigent-hive#install-the-current-stable-release
+and the test-build release notes are https://github.com/gvm1229/aigent-hive/releases/tag/v0.9.0-test.15.
 Detect my operating system and active host (Codex, Claude Code, or Gemini Antigravity), asking
 me if either is unclear. Check whether Node.js and npm are available. If they are missing,
 give me the official OS-specific Node.js installation command and request any approval the host
@@ -122,8 +122,9 @@ not change `latest`.
 
 Codex and Antigravity have real-host qualification evidence. Claude Code packaging and
 projection are covered by fixtures, but a real subscription-backed session remains
-unverified. macOS notarization and Windows code signing are deferred until a later
-stability release.
+unverified. Stable `0.9.0` uses explicit macOS ad-hoc signing and publishes Windows as
+unsigned unless free SignPath Foundation signing is approved. See the
+[code signing policy](./docs/guides/code-signing-policy.md) for the exact trust boundary.
 
 ## First setup
 
@@ -245,6 +246,7 @@ approval.
 - [Current project state](./docs/state/CURRENT.md)
 - [Source layout](./docs/architecture/source-layout.md)
 - [Release and update trust boundary](./docs/architecture/release-update-trust-boundary.md)
+- [Code signing policy](./docs/guides/code-signing-policy.md)
 - [Product decisions](./docs/decisions/product-release-decisions.md)
 
 Development requires Rust stable, Python 3.13 for conformance tests, and PowerShell 7
