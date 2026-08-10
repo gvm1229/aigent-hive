@@ -113,6 +113,15 @@ jobs:
           AIGENT_HIVE_PACKAGE_VERSION="$PACKAGE_VERSION" \
             AIGENT_HIVE_PACKAGE_RELEASE_DATE="$PACKAGE_RELEASE_DATE" \
             cargo build --release --locked --target "$TARGET" --bin hive
+      - name: Apply and verify explicit macOS ad-hoc signature
+        if: runner.os == 'macOS'
+        run: |
+          binary="target/$TARGET/release/hive"
+          codesign --force --sign - "$binary"
+          codesign --verify --strict --verbose=2 "$binary"
+          details=$(codesign --display --verbose=4 "$binary" 2>&1)
+          grep -F "Signature=adhoc" <<<"$details"
+          grep -F "TeamIdentifier=not set" <<<"$details"
       - name: Verify native architecture and runtime
         run: |
           binary="target/$TARGET/release/hive"

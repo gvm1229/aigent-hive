@@ -242,6 +242,32 @@ class Phase6StaticContracts(unittest.TestCase):
         }
         with self.assertRaises(ValidationError):
             validate("platform-signing-evidence.schema.json", wrong_signer)
+        cost_waived = {
+            "schema_version": 1,
+            "evidence": [
+                {
+                    "platform": "macos",
+                    "artifact_path": "targets/aigent-hive-0.9.0-aarch64-apple-darwin.tar.gz",
+                    "artifact_digest": DIGEST,
+                    "scheme": "ad-hoc",
+                    "signer": {"kind": "no-publisher", "value": ""},
+                    "status": "cost-waived",
+                },
+                {
+                    "platform": "windows",
+                    "artifact_path": "targets/aigent-hive-0.9.0-x86_64-pc-windows-msvc.zip",
+                    "artifact_digest": DIGEST,
+                    "scheme": "unsigned",
+                    "signer": {"kind": "no-publisher", "value": ""},
+                    "status": "cost-waived",
+                },
+            ],
+        }
+        validate("platform-signing-evidence.schema.json", cost_waived)
+        forged_cost_waived = json.loads(json.dumps(cost_waived))
+        forged_cost_waived["evidence"][0]["scheme"] = "developer-id"
+        with self.assertRaises(ValidationError):
+            validate("platform-signing-evidence.schema.json", forged_cost_waived)
         validate(
             "backup-manifest.schema.json",
             {
@@ -487,6 +513,9 @@ class Phase6StaticContracts(unittest.TestCase):
             "release_date",
             "statically linked",
             "static-pie linked",
+            "codesign --force --sign -",
+            "Signature=adhoc",
+            "TeamIdentifier=not set",
         ):
             self.assertIn(required, candidate)
         for required in (
