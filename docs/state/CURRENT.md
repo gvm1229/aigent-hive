@@ -2,15 +2,15 @@
 
 - 기준 branch: `develop`
 - product version: `0.9.0`
-- plan revision: `2.37`
-- 현재 milestone: Codex 잠복 plugin activation 보존 수정의 `0.9.0-test.9` Windows 11 local install·setup dry-run, 이후 fresh-session 수용
+- plan revision: `2.38`
+- 현재 milestone: `0.9.0-test.9` 게시·Windows 격리 설치 완료, 보존된 test.8 dangling Codex marketplace 상태의 Hive-managed recovery 또는 clean user host state 뒤 fresh-session 수용
 - `0.9.0` 예외: 실제 Antigravity host 수용과 Claude fixture 공개 제외. Codex 실제 plugin 활성화·global setup은 `REL9-011` 필수 gate. `develop → main` CI는 병합 gate 일시 면제이며 실패·미실행 범위 공개 유지
 - Codex 차단 문제: `0.9.0-test.5` 활성화 실패와 부분 상태 되돌리기 관찰. macOS의 Codex CLI `0.147.0` 격리 user root에서 `/tmp`와 host JSON의 `/private/tmp` 표기 불일치 재현. no-follow 확인 뒤 physical path 정규화 적용
 - Codex local 검증: 격리 `install → setup dry-run → setup apply → setup validate → install validate`와 structured marketplace·plugin 목록 PASS. rollback·foreign byte 보존 Rust 회귀 PASS. 현재 macOS 실행은 Windows clean install·fresh session 수용 증명 아님
 - Mac 원본 불일치 재검토: `BGR-008–013`에서 developer/public build 원본·`0.7.0` 잔존 복구 완료.
   현재 `/Users/hojin/.local/bin/hive`는 `AIgent Hive v0.9.0-dev`; Codex user install validation
   PASS. 신규 복구 구현 없음. Windows 수정 뒤 동일 Mac 회귀만 재실행
-- 현재 작업: `0.9.0-test.8`의 Windows `setup apply`에서 Codex `0.146.1` 기존 plugin activation이 marketplace 등록 뒤 나타나 exact transition 불일치. Hive는 미확정 host transition과 외부 Codex 설정을 보존하고 filesystem rollback 수행. 잠복 activation 보존 수정 뒤 `0.9.0-test.9` candidate·publication, Windows 격리 설치·저장된 setup dry-run 예정. stable publication 중지
+- 현재 작업: `0.9.0-test.8`의 Windows `setup apply`에서 Codex `0.146.1` 기존 plugin activation이 marketplace 등록 뒤 나타나 exact transition 불일치. Hive는 미확정 host transition과 외부 Codex 설정을 보존하고 filesystem rollback 수행. 잠복 activation 보존 수정 `19b918b`의 `0.9.0-test.9` candidate [`31367482147`](https://github.com/gvm1229/aigent-hive/actions/runs/31367482147)·OIDC publication [`31368361218`](https://github.com/gvm1229/aigent-hive/actions/runs/31368361218)·6 package `test=0.9.0-test.9`, `latest=0.8.0`·annotated prerelease PASS. Windows 격리 prefix `hive.cmd --version` PASS. 저장된 답안 dry-run은 test.8 pending transaction의 manifest 없는 Codex marketplace entry 때문에 `plugin marketplace list --json` exit `1`; Hive commit·수동 host 설정 변경 0건. `WGS-011`·`KST-006`·`DIS9-010`·`REL9-011` 증거 없음, stable publication 중지
 - Agent 자율 실행 지속: 이전 시험판 작업에서 Agent 소유 회귀 정리·검증·push·후보·게시가
   남은 중간 보고 종료 판단 오류. [`agent-autonomous-continuation.md`](../plans/active/agent-autonomous-continuation.md)의
   `AAC-001–008`: source·소비자 프로젝트·전역 설정 지시문 terminal state·closure gate·session record·static regression 보강 완료
