@@ -127,18 +127,20 @@
   contract 262.03초·integration 141.19초·release 12.73초, 순차 477.77초 대비 matrix Python critical path 262.03초
   모델 45.2% 단축. Phase 4 fixture: ignored `tests/work/hive-phase4-<random>`만 사용; tracked `tests/` 인접
   `hive-phase4-*` 생성 0건. 시험 삭제 0건·release gate 손실 0건
-- [ ] [REL9-031] 무료 배포 신뢰 정책 확정. Apple Developer Program·Microsoft Artifact Signing 유료 필수 gate
+- [x] [REL9-031] 무료 배포 신뢰 정책 확정. Apple Developer Program·Microsoft Artifact Signing 유료 필수 gate
   제외, macOS ad-hoc·Windows unsigned 상태의 정확한 공개, SignPath Foundation 무료 승인 시에만 Windows
   Authenticode 추가, SHA-256·GitHub attestation·npm OIDC provenance·external TUF 유지
-- [ ] [REL9-032] platform signing evidence schema·verifier·candidate workflow가 macOS ad-hoc과 Windows
+- [x] [REL9-032] platform signing evidence schema·verifier·candidate workflow가 macOS ad-hoc과 Windows
   signed 또는 unsigned 상태를 엄격한 조합으로 검증. Linux artifact는 provenance 대상이며 platform signing
   evidence 강제 대상 아님
-- [ ] [REL9-033] stable candidate의 5개 archive·checksum·provenance·platform evidence·migration table·release surface를
+- [x] [REL9-033] stable candidate의 5개 archive·checksum·provenance·platform evidence·migration table·release surface를
   private key 없이 deterministic external TUF authorization request로 생성. key 생성·서명·custody 경로 0건
-- [ ] [REL9-034] stable publication이 HTTPS TUF repository URL·SHA-256·agent-write-denied public root를 입력받아
+- [x] [REL9-034] stable publication이 HTTPS TUF repository URL·SHA-256·agent-write-denied public root를 입력받아
   안전 추출·production verifier·candidate byte identity·rollback receipt 검증 뒤에만 tag·GitHub Release·npm 게시
-- [ ] [REL9-035] 공개 code-signing/privacy policy와 SignPath 무료 신청 조건, external TUF offline ceremony·publication
-  입력 절차 문서화. SignPath 신청·private-key ceremony·protected environment 승인은 유지보수자 수동 경계
+- [x] [REL9-035] 공개 code-signing/privacy policy와 SignPath 무료 신청 조건, external TUF offline ceremony·publication
+  입력 절차 문서화. SignPath 신청·private-key ceremony·protected environment 승인은 유지보수자 수동 경계.
+  `575ab42` platform evidence, `5da1b49` authorization request, `1b6536e` publication gate와
+  safe extraction·rollback receipt 검증 PASS
 
 ## 무료 배포 신뢰 정책
 

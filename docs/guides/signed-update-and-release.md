@@ -9,8 +9,9 @@ administrator가 agent가 쓸 수 없는 path에 설치.
 
 ```bash
 hive release verify \
-  --bundle /absolute/releases/aigent-hive-0.7.0 \
+  --bundle /absolute/releases/aigent-hive-0.9.0 \
   --trust-root /usr/local/share/aigent-hive/release-root.json \
+  --rollback-state /usr/local/share/aigent-hive/release-rollback-state.json \
   --output json
 ```
 
@@ -124,58 +125,95 @@ Root 교체와 signing ceremony는 Hive 밖에서 수행.
 
 ## Release candidate 생성
 
-`Signed release candidate` workflow는 exact version이 이미 source/Cargo/template에
-반영된 reviewed main commit에서만 실행.
+`Release candidate` workflow는 exact version이 이미 source/Cargo/template에 반영된
+reviewed `main` commit에서만 stable 실행.
 
-필수 protected authority:
+필수 workflow authority: GitHub Actions artifact-attestation permission.
 
-- Apple Developer ID certificate, identity와 notarization credential
-- Azure OIDC app와 Artifact Signing account/profile
-- GitHub Actions artifact-attestation permission
-
-Workflow는 macOS arm64/x86_64 tarball, Windows x86_64 zip, SHA-256 sidecar, offline
-GitHub Sigstore bundle과 platform-evidence fragment를 생성. Tag와 GitHub Release
-생성은 제외.
+Workflow는 macOS arm64/x86_64 tarball, Windows x86_64 zip, Linux 2개 tarball, SHA-256
+sidecar와 GitHub attestation 생성. macOS binary는 explicit ad-hoc signing과 no-team identity,
+Windows binary는 SignPath 승인 전 `NotSigned`를 검증. Stable channel은 추가로
+`release-authorization-request` artifact 생성. Tag·GitHub Release·npm publication 권한 0건.
 
 ## External TUF authorization
 
-External signer는 candidate workflow artifact를 받아 다음 항목 생성.
+External signer는 candidate workflow의 `release-authorization-request` artifact를 받아
+`signing-request.json`의 exact path·length·SHA-256을 검토. `targets/` byte 변경 금지.
+
+External signer 출력 archive의 top-level allowlist:
+
+```text
+metadata/root.json
+metadata/targets.json
+metadata/snapshot.json
+metadata/timestamp.json
+targets/<authorization-request의 exact target 전체>
+```
+
+필수 authorization:
 
 - offline root 2-of-3와 분리된 targets/snapshot/timestamp signatures
 - exact archive path/length/SHA-256 target
-- bundle manifest, migration table와 release surface inventory
-- GitHub provenance와 Apple/Windows public signing evidence
+- authorization request가 제공한 bundle manifest, migration table, release surface inventory,
+  provenance, platform evidence와 5개 archive의 byte-exact target
 
-Merged `platform-signing-evidence.json`의 entry는 candidate fragment와 byte-equivalent
-canonical JSON 필수. `artifact_path`는 `targets/<archive>`이고 digest는 exact
-candidate archive SHA-256. Production status는 전부 `verified` 필수.
+`platform-signing-evidence.json`의 `artifact_path`: `targets/<archive>`, digest: exact
+candidate archive SHA-256. Production 허용 조합: Developer ID·Authenticode의 `verified`,
+또는 macOS ad-hoc·Windows unsigned의 `no-publisher/cost-waived`. Linux archive는 platform
+evidence 대상이 아니라 provenance subject와 TUF target으로 검증.
 
 Private signing material과 signer runtime은 source tree, workflow artifact, consumer
 project와 Hive process에 포함 금지.
 
+### 무료 external signer 준비
+
+권장 출발점: Apache-2.0 [TUF-on-CI](https://github.com/theupdateframework/tuf-on-ci)의
+별도 signing repository 또는 network-disconnected workstation. Hive repository 내부 signer
+설치·key 생성 금지. 사용 도구가 아래 exact profile을 만들 수 없으면 다른 TUF 도구 선택.
+
+1. 서로 다른 3개 root Ed25519 authority 준비, root threshold `2` 설정.
+2. Root와 중복되지 않는 targets·snapshot·timestamp role key 준비.
+3. `consistent_snapshot=true`, TUF spec `1.0.31`, 미래 expiry와 monotonic metadata version 설정.
+4. Candidate의 `release-authorization-request/targets/`를 byte 변경 없이 external repository
+   `targets/`에 배치.
+5. `signing-request.json`의 10개 target path·length·SHA-256과 external repository를 대조.
+6. Targets·snapshot·timestamp 서명, root 2-of-3 threshold와 role/key 전역 unique 여부 확인.
+7. Top-level `metadata/`·`targets/`만 포함한 `tar.gz` 생성 후 lowercase SHA-256 계산.
+8. Archive를 public HTTPS URL에 올리고 URL·SHA-256을 stable publication 입력으로 사용.
+
+첫 stable release의 protected rollback floor:
+
+```json
+{"root_version":0,"timestamp_version":0,"snapshot_version":0,"targets_version":0,"release_sequence":0,"manifest_digest":""}
+```
+
+첫 성공 뒤 `tuf-publication-receipt.json`의 `data.rollback_state`가 다음 publication의 floor.
+과거 floor 재사용·수동 version 감소 금지.
+
 ## Publication
 
-`Publish authorized release` workflow에 exact version, successful candidate run ID,
-externally signed TUF repository HTTPS URL과 exact lowercase SHA-256을 입력.
-별도 `release-publication` environment approval이 필요.
+`release-publish.yml`에 exact version, successful candidate run ID, channel `stable`,
+externally authorized TUF repository HTTPS URL과 exact lowercase SHA-256 입력.
+`release-publication` environment의 `TUF_PRODUCTION_ROOT_B64`와
+`TUF_PRODUCTION_ROLLBACK_STATE_B64`, publication approval 필요.
 
 Publication job은:
 
-1. candidate run이 main의 successful `Signed release candidate`인지 확인.
+1. candidate run이 `main`의 successful `Release candidate`인지 확인.
 2. exact candidate artifact 재수신.
 3. TUF repository archive SHA-256을 확인.
-4. protected environment secret의 public root를 root-owned read-only path에 설치.
-5. `hive release verify`의 production evidence gate를 실행.
+4. protected environment의 public root·rollback floor를 root-owned read-only path에 설치.
+5. candidate Linux x86_64 binary로 `hive release verify` production gate 실행.
 6. Verified signed bundle manifest의 `source.commit`을 selected candidate run SHA와
    exact comparison.
 7. 각 offline Sigstore bundle을 `gh attestation verify`로 확인.
-8. TUF repository의 platform archive와 candidate artifact를 byte-compare하고 merged
-   platform evidence의 canonical JSON exact comparison.
-9. 기존 tag/release가 없을 때만 candidate commit을 tag하고 asset을 공개.
+8. TUF repository의 5개 archive·5개 release payload와 authorization request를 byte-compare.
+9. 다음 rollback state를 `tuf-publication-receipt.json`에 기록.
+10. 기존 tag/release가 없을 때만 candidate commit을 tag하고 asset을 공개.
 
-Apple, Azure, external TUF signer 또는 GitHub publication credential 부재 시
-production action 실행 불가. Local fixture PASS의 production signing 성공 표시는
-금지.
+External TUF authorization·protected root/floor·GitHub publication authority 부재 시
+stable action 실행 불가. Optional SignPath 승인 부재는 차단 사유가 아니며 Windows
+unsigned 상태 공개 필수. Local fixture PASS의 production authorization 성공 표시는 금지.
 
 ## Install path
 
@@ -199,9 +237,10 @@ sh "$installer"
 ```
 
 Bootstrap은 fixed official GitHub Release URL에서 archive와 checksum을 받고 exact
-archive entry allowlist, SHA-256, Developer ID signature, Gatekeeper assessment와
-`hive --version`을 확인한 뒤 installed binary SHA-256과 version을 결합한 closed direct
-install receipt를 기록. 기존 binary와 receipt의 symlink를 거부하고 receipt의
+archive entry allowlist, SHA-256과 `hive --version`을 확인. Apple Team ID가 release에
+구성된 경우에만 Developer ID·Gatekeeper 추가 검증. `0.9.0` ad-hoc 배포는 Apple publisher
+trust·notarization 제공 없음. Installed binary SHA-256과 version을 결합한 closed direct
+install receipt 기록. 기존 binary와 receipt의 symlink를 거부하고 receipt의
 exact property set, binary digest와 reported version을 재검증. Stale receipt,
 package-manager replacement 또는 foreign binary는 중단.
 
@@ -223,8 +262,9 @@ try {
 }
 ```
 
-PowerShell bootstrap은 zip entry allowlist/traversal, SHA-256, Authenticode `Valid`
-status와 binary version을 확인. 기존 binary에 valid direct receipt가 없으면
+PowerShell bootstrap은 zip entry allowlist/traversal, SHA-256과 binary version을 확인.
+Certificate thumbprint가 release에 구성된 경우에만 Authenticode `Valid` 추가 검증.
+`0.9.0` SignPath 미승인 배포는 Windows publisher identity 제공 없음. 기존 binary에 valid direct receipt가 없으면
 중단. Receipt property set, current `hive.exe` SHA-256과 reported version은 모두
 exact 일치 필수. Reparse point는 허용 대상에서 제외.
 
