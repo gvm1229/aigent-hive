@@ -811,29 +811,13 @@ def validate_render(render_root: Path, input_data_path: Path) -> None:
     assert isinstance(active_skills, dict)
     active_entries = active_skills["skills"]
     assert isinstance(active_entries, list)
-    expected_skill_names = [
-        "answer",
-        "auto-setup-project",
-        "clean-ai-slop",
-        "engineer-run",
-        "handoff-role",
-        "import-repository-knowledge",
-        "maintain-knowledge",
-        "manage-usage",
-        "manage-wiki",
-        "migrate-project",
-        "record-knowledge",
-        "refine-prompt",
-        "research-practices",
-        "resume-work",
-        "save-progress",
-        "search-knowledge",
-        "setup-project",
-        "share-knowledge",
-        "update-hive",
-        "upgrade-project",
-        "verify-package",
-    ]
+    source_active_skills = read_yaml(
+        REPOSITORY_ROOT / "harness/template/.hive/config/active-skills.yml"
+    )
+    assert isinstance(source_active_skills, dict)
+    source_entries = source_active_skills["skills"]
+    assert isinstance(source_entries, list)
+    expected_skill_names = [entry["name"] for entry in source_entries]
     if [entry["name"] for entry in active_entries] != expected_skill_names:
         raise AssertionError("Copier activated an unexpected Skill set")
     if active_skills_path.read_bytes() != (

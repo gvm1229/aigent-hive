@@ -206,6 +206,7 @@ class SourceWikiConformance(unittest.TestCase):
             [str(self.hive), *arguments, "--output", "json"],
             cwd=ROOT,
             text=True,
+            encoding="utf-8",
             capture_output=True,
             check=False,
         )
