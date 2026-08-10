@@ -2,7 +2,7 @@
 
 - 기준 branch: `develop`
 - product version: `0.9.0`
-- plan revision: `2.34`
+- plan revision: `2.35`
 - 현재 milestone: `0.9.0-test.7` Windows 11 fresh-session 수용과 stable release gate 유지
 - `0.9.0` 예외: 실제 Antigravity host 수용과 Claude fixture 공개 제외. Codex 실제 plugin 활성화·global setup은 `REL9-011` 필수 gate. `develop → main` CI는 병합 gate 일시 면제이며 실패·미실행 범위 공개 유지
 - Codex 차단 문제: `0.9.0-test.5` 활성화 실패와 부분 상태 되돌리기 관찰. macOS의 Codex CLI `0.147.0` 격리 user root에서 `/tmp`와 host JSON의 `/private/tmp` 표기 불일치 재현. no-follow 확인 뒤 physical path 정규화 적용
@@ -11,6 +11,9 @@
   현재 `/Users/hojin/.local/bin/hive`는 `AIgent Hive v0.9.0-dev`; Codex user install validation
   PASS. 신규 복구 구현 없음. Windows 수정 뒤 동일 Mac 회귀만 재실행
 - 현재 작업: Codex plugin 활성화 차단 문제 복구 완료. `0.9.0-test.7` candidate·publication과 Windows fresh-session 수용 전 stable publication 중지. 단일 OIDC npm workflow 구현과 Copier·Rust Discord `message_fields` parity 복구 완료
+- Agent 자율 실행 지속: 이전 시험판 작업에서 Agent 소유 회귀 정리·검증·push·후보·게시가
+  남은 중간 보고 종료 판단 오류. [`agent-autonomous-continuation.md`](../plans/active/agent-autonomous-continuation.md)의
+  `AAC-001–005`로 terminal state·closure gate·session record·static regression 보강 완료
 - Windows 11 setup 기록 감사: `0.9.0-test.5`의 CLI 탐색·schema 추측·사용자 홈 답안 파일·진행 손실·조건 밖 질문 문제를 resolver, machine-readable setup contract, non-secret progress, OS temporary-file host contract, conditional Discord·CodexBar 질문으로 보강. 이 Mac에서는 resolver PowerShell parser·macOS path 결과, Rust·Python 회귀만 실행. 실제 Windows `where.exe` 경로와 clean npm install·fresh Codex session은 `WGS-011`에서 maintainer가 수용. owning plan: [`windows-global-setup-hardening.md`](../plans/active/windows-global-setup-hardening.md)
 - Windows 실행 경계: 이 Mac에서는 source unit·static·cross-platform 회귀만 실행. Global
   install·setup과 `WGS-011` 수용은 maintainer의 Windows 11 machine에서만 실행
@@ -52,7 +55,7 @@
   + `docs/plans/active/discord-onboarding-v09.md`
   + `docs/plans/active/windows-global-setup-hardening.md`
   + `docs/plans/active/v0.10.0-notion-candidate.md`
-- Plan completion: canonical checklist `410/490` 완료, `80`개 미완료, `83.7%`
+- Plan completion: canonical checklist `415/495` 완료, `80`개 미완료, `83.8%`
 - 출시 분리: `0.9.0`의 user-visible Wiki는 local Markdown 정본과 SQLite projection만 제공.
   Notion backend·host browser OAuth·freshness·write-through·사용자 문서는 `0.10.0-test`까지 보류.
   Discord webhook 대화·시험 알림, HTML 안내, project·run·요청·progress payload는 `DIS9-*` 후속 범위

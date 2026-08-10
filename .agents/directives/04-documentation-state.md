@@ -108,6 +108,22 @@ Before starting or resuming any goal backed by `docs/plans/PLAN.md`:
 
 This gate is mandatory on every PLAN-backed goal start or resume and after material project-state changes. An unchecked box is not proof that work remains. Legacy native goal wording that refers to unchecked items in `docs/plans/PLAN.md` must resolve to the documents listed under `Active fragments`; the intentional absence of checkboxes in the compact index is not completion evidence. Chat history, native goal plans, `.omx/`, and `.agents/work/` never override the canonical index plus active fragments.
 
+## Final Response Closure Gate
+
+Before a final response for a material source task:
+
+1. Reconcile the current request, its owning plan items, current worktree, verification results,
+   and authorized remote actions.
+2. Classify every known remaining item as `agent-owned`, `awaiting-user-authority`,
+   `awaiting-external-evidence`, or `blocked`.
+3. Continue execution when any `agent-owned` item remains. A prose progress report, test failure,
+   CI observation, or release milestone does not satisfy this gate.
+4. For every non-agent-owned item, record the exact scope, action or evidence required, owner,
+   and reason the agent cannot obtain it in the active-session manifest. Update `CURRENT.md` when
+   the state is a material source handoff.
+5. Use `complete` only when no scoped item remains. Otherwise state the exact non-complete status
+   and never describe the task as finished.
+
 ## Language
 
 - Human-readable project documents use concise Korean.

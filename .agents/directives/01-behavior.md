@@ -70,6 +70,26 @@ This directive governs agent behavior while developing Aigent Hive.
 - Do not copy external project rules unless they are explicitly selected and project-neutral.
 - Keep changes surgical: every touched artifact must map to a requirement, defect, decision, or verification need.
 
+## Autonomous Completion
+
+- For a request that says “all todos”, “until completion”, “do not stop”, or an equivalent
+  terminal instruction, continue while any in-scope action remains agent-owned. Agent-owned
+  actions include inspection, diagnosis, source edits, tests, commits, permitted pushes, CI
+  observation, release qualification, and authorized publication.
+- A progress report that identifies a remaining agent-owned action must not end the task. Do the
+  next bounded action instead. A failed test, stale reference, incomplete CI qualification, or
+  unpublished authorized release is work to continue, not a user handoff.
+- Before a final task response, classify every known remaining item as `agent-owned`,
+  `awaiting-user-authority`, `awaiting-external-evidence`, or `blocked`. Any `agent-owned` item
+  requires continued execution. Do not ask the user to perform it or describe it as a next step.
+- Use `complete` only when the requested in-scope outcome and its required evidence are present.
+  Use `awaiting-user-authority` only for an exact protected action the user must authorize or
+  perform. Use `awaiting-external-evidence` only when a named external person, host, or system
+  must produce evidence that this agent cannot obtain. Use `blocked` only with the exact repeated
+  condition and recovery path.
+- Never use a successful intermediate command, candidate build, publication, or elapsed time as a
+  task completion substitute. The task remains active until its scoped closure conditions hold.
+
 ## Evidence
 
 - Separate verified facts from inference.

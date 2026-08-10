@@ -74,6 +74,36 @@ class Phase3SkillSourceContract(unittest.TestCase):
         self.assertIn("scripts/source-usage-guard.py gate --json", agents)
         self.assertNotIn("Run the source `hive-usage-guard`", agents)
 
+    def test_source_directives_continue_agent_owned_work_until_closure(self) -> None:
+        behavior = (ROOT / ".agents/directives/01-behavior.md").read_text(encoding="utf-8")
+        state = (ROOT / ".agents/directives/04-documentation-state.md").read_text(encoding="utf-8")
+        session = (ROOT / ".agents/directives/06-session-coordination.md").read_text(encoding="utf-8")
+        fixture = json.loads(
+            (ROOT / "tests/fixtures/agent-autonomous-continuation.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        for required in (
+            "all todos",
+            "until completion",
+            "A progress report that identifies a remaining agent-owned action must not end the task.",
+            "unpublished authorized release is work to continue",
+            "awaiting-user-authority",
+            "awaiting-external-evidence",
+        ):
+            self.assertIn(required, behavior)
+        self.assertIn("Final Response Closure Gate", state)
+        self.assertIn("Continue execution when any `agent-owned` item remains", state)
+        self.assertIn("Remaining Agent-Owned Actions", session)
+        self.assertIn("An `active` manifest prohibits a final completion claim", session)
+        self.assertEqual(fixture["terminal_instruction"], "Proceed until all todos are complete.")
+        self.assertEqual(fixture["expected_state_before_actions"], "active")
+        self.assertEqual(
+            fixture["agent_owned_actions"],
+            ["fix", "verify", "push", "candidate", "publish"],
+        )
+        self.assertEqual(fixture["allowed_final_status_before_actions"], None)
+
     def test_global_setup_contract_uses_describe_progress_and_conditional_integrations(self) -> None:
         skill = (SKILLS / "user-setup/SKILL.md").read_text(encoding="utf-8")
         for required in (

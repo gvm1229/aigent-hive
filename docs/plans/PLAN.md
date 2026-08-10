@@ -1,7 +1,7 @@
 # Aigent Hive active plan index
 
-> Revision: 2.34
-> 기준일: 2026-08-09
+> Revision: 2.35
+> 기준일: 2026-08-10
 > Product version: `0.9.0`
 > 현재 milestone: `0.9.0` 정식 릴리스 준비
 > Entrypoint: `docs/plans/PLAN.md`
@@ -51,8 +51,9 @@
 | 전역·프로젝트 사용량 보호 정책 | 6 | 0 | 100% |
 | Discord `v0.9` 연결 UX | 10 | 0 | 100% |
 | Windows global setup hardening | 10 | 1 | 90.9% |
+| Agent 자율 실행 지속 | 5 | 0 | 100% |
 | Notion `v0.10` 후보 | 1 | 10 | 9.1% |
-| **Canonical total** | **410** | **80** | **83.7%** |
+| **Canonical total** | **415** | **80** | **83.8%** |
 
 External production boundary 항목도 미완료 합계에 포함. Protected authority 없이 완료 처리 금지.
 
@@ -96,6 +97,7 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
 | [`active/usage-guard-policy.md`](active/usage-guard-policy.md) | `UGP-*` | 전역·project 한도·product guard |
 | [`active/discord-onboarding-v09.md`](active/discord-onboarding-v09.md) | `DIS9-*` | Discord global setup·프로젝트별 중단 알림·HTML 안내 |
 | [`active/windows-global-setup-hardening.md`](active/windows-global-setup-hardening.md) | `WGS-*` | Mac 원본 복구 유지·Windows CLI 탐색·설정·fresh-session 수용 |
+| [`active/agent-autonomous-continuation.md`](active/agent-autonomous-continuation.md) | `AAC-*` | Agent 소유 작업 지속·terminal state·중간 종료 회귀 |
 | [`active/v0.10.0-notion-candidate.md`](active/v0.10.0-notion-candidate.md) | `N10-*` | Notion 연결·freshness·write-through와 `0.10.0-test` 후보 |
 
 ## Reconciliation gate

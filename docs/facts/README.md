@@ -32,6 +32,7 @@
 | 쉬운 설명 기본값 | [en](en/simple-explanation-default.md) | [ko](ko/simple-explanation-default.md) |
 | 검증 결과 명확성 | [en](en/verification-result-clarity.md) | [ko](ko/verification-result-clarity.md) |
 | 사용자 인계 전 자동 처리 | [en](en/automated-user-handoff.md) | [ko](ko/automated-user-handoff.md) |
+| Agent 자율 실행 지속 | [en](en/agent-autonomous-continuation.md) | [ko](ko/agent-autonomous-continuation.md) |
 | 계획 Markdown 정본 | [en](en/plan-persistence.md) | [ko](ko/plan-persistence.md) |
 | Knowledge preservation | [en](en/knowledge-preservation.md) | [ko](ko/knowledge-preservation.md) |
 | Knowledge storage | [en](en/knowledge-storage.md) | [ko](ko/knowledge-storage.md) |
