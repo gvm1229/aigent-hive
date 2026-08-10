@@ -3344,6 +3344,12 @@ fn render_agents_marker(
         1,
     );
     let marker = marker.replacen(
+        "- Keep durable role identity in `.hive/team/roles/`; the active host owns sessions and subagents.\n",
+        "- For `all todos`, `until completion`, `do not stop`, or an equivalent terminal request, continue while any in-scope agent-owned inspection, fix, verification, commit, permitted push, CI observation, or authorized publication remains. A progress report naming such work must not end the task. Before a final response, classify every remaining item as `agent-owned`, `awaiting-user-authority`, `awaiting-external-evidence`, or `blocked`; only no `agent-owned` work permits completion.\n\\
+- Keep durable role identity in `.hive/team/roles/`; the active host owns sessions and subagents.\n",
+        1,
+    );
+    let marker = marker.replacen(
         "- Keep durable knowledge in Markdown. Treat `.hive/index/*.sqlite*` as disposable.\n",
         "- Keep durable knowledge in Markdown. Treat `.hive/index/*.sqlite*` as disposable.\n\
 - Before the final response on every Wiki-enabled turn, perform agent-reviewed classification of current authorized user statements and outcomes as a reusable task fact, preference, or workflow. Record the bounded outcome, tool or project, criteria, and originating request summary. When reusable, run `hive knowledge remember`, require its canonical-write receipt, and only then finish. Never write raw transcripts, secrets, ambiguous or ephemeral content, or confidential content without its exact authorized scope.\n",

@@ -10,7 +10,7 @@ tags: [bootstrap, onboarding, setup]
 aliases: ["User setup"]
 sources:
   - "repo:README.md#sha256:a03aae178a8c1060d3f4301d4ed592a24e8cf9e9e95a7b87afa434804ad4ecbb"
-  - "repo:crates/hive-cli/src/user_setup.rs#sha256:dc14d336b41cdb4e717abdfab7dd47c921e09618616d5d5e2559ea1b166f4964"
+  - "repo:crates/hive-cli/src/user_setup.rs#sha256:ab8cfec03bc6fcfb7d0e55e5c47d5c5bc57fa75adcb1993cd55086f686b56741"
   - "repo:docs/decisions/ADR-0012-global-onboarding-shared-index.md#sha256:d30564f33f2ead463cfe9e18aa68b697cb07b6c419ee42c9b583fcc11edaf966"
   - "repo:docs/plans/active/windows-global-setup-hardening.md#sha256:bc5180991fddb1c2e4132fb0e6f23d4d4d06bd9d60311085d853481201e5c052"
   - "repo:harness/skills/user-setup/SKILL.md#sha256:9ffa22cf14504ba7385135c1f62fdcb19bede32a0925ed72eb23fa8b96359eb5"

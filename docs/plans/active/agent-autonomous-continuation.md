@@ -22,13 +22,24 @@
   evidence 요구 기록 추가. `active` 상태의 final completion 금지
 - [x] [AAC-005] static contract에 “old Skill regression 발견 → fix → verify → push → candidate →
   publication” fixture와 terminal-state directive 필수 문구 추가
+- [x] [AAC-006] 소비자 프로젝트 `AGENTS.md` 템플릿과 Rust 렌더링 결과에 같은 Agent 소유 작업
+  지속·중간 보고 종료 금지 계약 추가. Codex·Claude·Antigravity alias 동일 적용
+- [x] [AAC-007] 소비자 전역 설정의 영어·한국어 Hive 지침에 같은 종료 상태 분류·자동 수행 지속
+  계약 추가
+- [x] [AAC-008] template·Rust 렌더러·전역 설치 지침의 계약 일치 정적 회귀와 Source Wiki 사실 갱신
 
 ## 완료 기준
 
 - Agent 소유 action이 남은 진행 보고의 종료 0건
 - 사용자 action만 남은 경우에만 정확한 권한·행동·기대 증거 인계
 - `engineer-run` 호출 여부와 무관한 source directive 적용
-- directive static contract·Source Wiki lint 통과
+- source·consumer directive static contract·Source Wiki lint 통과
+
+## Evidence
+
+- `cargo test -p hive-render --no-fail-fast`: 66 tests PASS
+- `cargo test -p hive-cli --bin hive --no-fail-fast`: 328 tests PASS
+- `python3 -m unittest tests.conformance.test_phase3_static_contracts -q`: PASS
 
 ## 범위 밖
 

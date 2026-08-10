@@ -13,7 +13,7 @@
 - 현재 작업: Codex plugin 활성화 차단 문제 복구 완료. `0.9.0-test.7` candidate·publication과 Windows fresh-session 수용 전 stable publication 중지. 단일 OIDC npm workflow 구현과 Copier·Rust Discord `message_fields` parity 복구 완료
 - Agent 자율 실행 지속: 이전 시험판 작업에서 Agent 소유 회귀 정리·검증·push·후보·게시가
   남은 중간 보고 종료 판단 오류. [`agent-autonomous-continuation.md`](../plans/active/agent-autonomous-continuation.md)의
-  `AAC-001–005`로 terminal state·closure gate·session record·static regression 보강 완료
+  `AAC-001–008`: source·소비자 프로젝트·전역 설정 지시문 terminal state·closure gate·session record·static regression 보강 완료
 - Windows 11 setup 기록 감사: `0.9.0-test.5`의 CLI 탐색·schema 추측·사용자 홈 답안 파일·진행 손실·조건 밖 질문 문제를 resolver, machine-readable setup contract, non-secret progress, OS temporary-file host contract, conditional Discord·CodexBar 질문으로 보강. 이 Mac에서는 resolver PowerShell parser·macOS path 결과, Rust·Python 회귀만 실행. 실제 Windows `where.exe` 경로와 clean npm install·fresh Codex session은 `WGS-011`에서 maintainer가 수용. owning plan: [`windows-global-setup-hardening.md`](../plans/active/windows-global-setup-hardening.md)
 - Windows 실행 경계: 이 Mac에서는 source unit·static·cross-platform 회귀만 실행. Global
   install·setup과 `WGS-011` 수용은 maintainer의 Windows 11 machine에서만 실행

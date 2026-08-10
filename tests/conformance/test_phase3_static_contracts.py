@@ -104,6 +104,33 @@ class Phase3SkillSourceContract(unittest.TestCase):
         )
         self.assertEqual(fixture["allowed_final_status_before_actions"], None)
 
+    def test_consumer_directives_continue_agent_owned_work_until_closure(self) -> None:
+        template = (ROOT / "harness/template/AGENTS.md.jinja").read_text(encoding="utf-8")
+        harness = (ROOT / "harness/directives/00-project-harness.md").read_text(
+            encoding="utf-8"
+        )
+        renderer = (ROOT / "crates/hive-render/src/lib.rs").read_text(encoding="utf-8")
+        user_install = (ROOT / "crates/hive-cli/src/user_install.rs").read_text(
+            encoding="utf-8"
+        )
+        user_setup = (ROOT / "crates/hive-cli/src/user_setup.rs").read_text(encoding="utf-8")
+        for text in (template, harness, renderer):
+            for required in (
+                "all todos",
+                "until completion",
+                "A progress report naming such work must not end the task.",
+                "awaiting-user-authority",
+                "awaiting-external-evidence",
+            ):
+                self.assertIn(required, text)
+        for required in (
+            "Before a final response, classify every remaining item",
+            "`all todos`, `until completion`, `do not stop` 또는 같은 완료 요청",
+            "`agent-owned` 작업 `0건`일 때만 완료 표기",
+        ):
+            self.assertIn(required, user_install)
+            self.assertIn(required, user_setup)
+
     def test_global_setup_contract_uses_describe_progress_and_conditional_integrations(self) -> None:
         skill = (SKILLS / "user-setup/SKILL.md").read_text(encoding="utf-8")
         for required in (
