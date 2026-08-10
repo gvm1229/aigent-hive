@@ -379,7 +379,7 @@ class Phase6StaticContracts(unittest.TestCase):
         publication_workflow = yaml.safe_load(publication)
         self.assertEqual(
             set(candidate_workflow["jobs"]),
-            {"unix", "windows", "npm-umbrella"},
+            {"unix", "windows", "npm-umbrella", "authorization-request"},
         )
         self.assertEqual(set(publication_workflow["jobs"]), {"publish"})
         publication_triggers = publication_workflow.get(
@@ -516,6 +516,9 @@ class Phase6StaticContracts(unittest.TestCase):
             "codesign --force --sign -",
             "Signature=adhoc",
             "TeamIdentifier=not set",
+            "scripts/prepare-release-authorization.py",
+            "release-authorization-request",
+            "inputs.channel == 'stable'",
         ):
             self.assertIn(required, candidate)
         for required in (
@@ -594,6 +597,168 @@ class Phase6StaticContracts(unittest.TestCase):
         ):
             self.assertNotIn(forbidden, publication)
         self.assertNotIn("eval ", candidate + publication)
+
+    def test_release_authorization_request_is_deterministic_public_and_candidate_bound(self) -> None:
+        script = ROOT / "scripts/prepare-release-authorization.py"
+        version = "0.9.0"
+        sha = "a" * 40
+        archives = (
+            f"aigent-hive-{version}-aarch64-apple-darwin.tar.gz",
+            f"aigent-hive-{version}-aarch64-unknown-linux-musl.tar.gz",
+            f"aigent-hive-{version}-x86_64-apple-darwin.tar.gz",
+            f"aigent-hive-{version}-x86_64-pc-windows-msvc.zip",
+            f"aigent-hive-{version}-x86_64-unknown-linux-musl.tar.gz",
+        )
+        with tempfile.TemporaryDirectory(prefix="hive-release-authorization-") as temporary:
+            root = Path(temporary)
+            dist = root / "dist"
+            dist.mkdir()
+            for index, name in enumerate(archives):
+                payload = f"archive-{index}\n".encode()
+                (dist / name).write_bytes(payload)
+                checksum = hashlib.sha256(payload).hexdigest()
+                (dist / f"{name}.sha256").write_text(
+                    f"{checksum}  {name}\n", encoding="ascii"
+                )
+            (dist / "release-candidate.json").write_text(
+                json.dumps(
+                    {
+                        "schema_version": 1,
+                        "channel": "stable",
+                        "product_version": version,
+                        "package_version": version,
+                        "release_date": "2026-08-11",
+                        "ref": "refs/heads/main",
+                        "sha": sha,
+                    }
+                ),
+                encoding="utf-8",
+            )
+            base = [
+                sys.executable,
+                str(script),
+                "--product-version",
+                version,
+                "--package-version",
+                version,
+                "--candidate-sha",
+                sha,
+                "--candidate-run-id",
+                "12345",
+                "--candidate-ref",
+                "refs/heads/main",
+                "--repository",
+                "gvm1229/aigent-hive",
+                "--started-on",
+                "2026-08-11T00:00:00Z",
+                "--finished-on",
+                "2026-08-11T00:01:00Z",
+                "--dist",
+                str(dist),
+            ]
+            outputs = (root / "one", root / "two")
+            for output in outputs:
+                result = subprocess.run(
+                    [*base, "--output", str(output)],
+                    cwd=ROOT,
+                    check=False,
+                    text=True,
+                    capture_output=True,
+                )
+                self.assertEqual(result.returncode, 0, result.stderr)
+
+            first = {
+                path.relative_to(outputs[0]).as_posix(): path.read_bytes()
+                for path in outputs[0].rglob("*")
+                if path.is_file()
+            }
+            second = {
+                path.relative_to(outputs[1]).as_posix(): path.read_bytes()
+                for path in outputs[1].rglob("*")
+                if path.is_file()
+            }
+            self.assertEqual(first, second)
+            request = read_json(outputs[0] / "signing-request.json")
+            self.assertEqual(len(request["targets"]), 10)
+            evidence = read_json(
+                outputs[0] / "targets/platform-signing-evidence.json"
+            )
+            self.assertEqual(len(evidence["evidence"]), 3)
+            self.assertEqual(
+                {entry["scheme"] for entry in evidence["evidence"]},
+                {"ad-hoc", "unsigned"},
+            )
+            validate("platform-signing-evidence.schema.json", evidence)
+            validate(
+                "migration-table.schema.json",
+                read_json(outputs[0] / "targets/migration-table.json"),
+            )
+            validate(
+                "release-surface-inventory.schema.json",
+                read_json(outputs[0] / "targets/release-surface-inventory.json"),
+            )
+            validate(
+                "release-bundle-manifest.schema.json",
+                read_json(outputs[0] / "targets/bundle-manifest.json"),
+            )
+            inventory = read_json(
+                outputs[0] / "targets/release-surface-inventory.json"
+            )
+            for key in (
+                "capabilities",
+                "migrations",
+                "ownership",
+                "projections",
+                "schemas",
+                "skills",
+                "templates",
+            ):
+                self.assertEqual(inventory[key], sorted(set(inventory[key])), key)
+            catalog = yaml.safe_load(
+                (ROOT / "harness/skills/catalog.yml").read_text(encoding="utf-8")
+            )
+            current_skills = {entry["name"] for entry in catalog["skills"]}
+            self.assertTrue(current_skills.issubset(set(inventory["skills"])))
+            self.assertTrue(
+                {
+                    f".agents/skills/{name}/SKILL.md"
+                    for name in current_skills
+                }.issubset(set(inventory["projections"]))
+            )
+            for relative, payload in first.items():
+                self.assertNotRegex(relative.casefold(), r"(^|/)(secret|private|.*\.pem|.*\.key)")
+                if relative.endswith(".json"):
+                    lowered = payload.decode("utf-8").casefold()
+                    self.assertNotIn("secret_key", lowered)
+                    self.assertNotIn("private_key", lowered)
+
+            tampered = dist / f"{archives[0]}.sha256"
+            original = tampered.read_text(encoding="ascii")
+            tampered.write_text(f"{'0' * 64}  {archives[0]}\n", encoding="ascii")
+            failed = subprocess.run(
+                [*base, "--output", str(root / "tampered")],
+                cwd=ROOT,
+                check=False,
+                text=True,
+                capture_output=True,
+            )
+            self.assertNotEqual(failed.returncode, 0)
+            self.assertFalse((root / "tampered").exists())
+            tampered.write_text(original, encoding="ascii")
+
+            wrong_sha = subprocess.run(
+                [
+                    *("b" * 40 if value == sha else value for value in base),
+                    "--output",
+                    str(root / "wrong-sha"),
+                ],
+                cwd=ROOT,
+                check=False,
+                text=True,
+                capture_output=True,
+            )
+            self.assertNotEqual(wrong_sha.returncode, 0)
+            self.assertFalse((root / "wrong-sha").exists())
 
     def test_dispatch_inputs_are_never_interpolated_into_run_scripts(self) -> None:
         def run_scripts(value: object) -> list[str]:
