@@ -21,6 +21,7 @@
 - `0.9.0-test.8` candidate [`31359482328`](https://github.com/gvm1229/aigent-hive/actions/runs/31359482328): exact `f7debf496832ae7b18c78985c4ba064602a35a89`, 5개 native target·npm umbrella·direct installer·attestation PASS
 - `0.9.0-test.8` publication [`31360092061`](https://github.com/gvm1229/aigent-hive/actions/runs/31360092061): six-package OIDC `test` 게시, annotated `v0.9.0-test.8`, GitHub prerelease, `latest=0.8.0` 유지 PASS
 - Windows 격리 npm prefix local install: `AIgent Hive v0.9.0-test #8 · developer test build (released 2026-08-10)` 확인. fresh Codex session 수용은 미실행
+- Windows `0.9.0-test.8` setup apply: Codex `0.146.1`에서 기존 `aigent-hive` plugin activation이 marketplace 등록 뒤 구조화 목록에 나타나 exact transition 불일치. Hive 파일 rollback과 미확정 host transition 보존. 수정된 `0.9.0-test.9` 필요
 - 상세 run·failure·external signer evidence: [`CURRENT.md`](../../state/CURRENT.md)
 
 ## 이번 정식 릴리스의 명시적 제외와 면제
@@ -41,7 +42,8 @@
   `install → setup dry-run → setup apply → setup validate → install validate`와 structured list PASS
 - 회귀 흐름: 격리 user root의 marketplace add → plugin add → 구조화 목록 검증 →
   `hive setup --scope user` dry-run·apply·validate → 실패 되돌리기·foreign byte 보존
-- 출시 조건: 수정된 numbered 시험판의 Windows clean install·fresh Codex session 수용 뒤 stable 진행.
+- 출시 조건: 잠복 Codex plugin activation 보존 수정이 포함된 numbered 시험판의 Windows clean
+  install·fresh Codex session 수용 뒤 stable 진행.
   macOS local evidence는 구현 회귀 증거이며 Windows 수용의 대체 근거 아님
 
 ## Version·channel 계약

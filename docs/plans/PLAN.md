@@ -1,6 +1,6 @@
 # Aigent Hive active plan index
 
-> Revision: 2.36
+> Revision: 2.37
 > 기준일: 2026-08-10
 > Product version: `0.9.0`
 > 현재 milestone: `0.9.0` 정식 릴리스 준비
@@ -118,6 +118,6 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
 ## Current execution order
 
 완료 증거: [`CURRENT.md`](../state/CURRENT.md)와 owning active fragment.
-다음: `0978a6e` 기반 `0.9.0-test.8` candidate·`test` 게시, Windows local clean npm install,
-`WGS-011`·`KST-006`·`DIS9-010`·`REL9-011` fresh-session 수용.
+다음: Codex 잠복 plugin 활성화 보존 수정의 `0.9.0-test.9` candidate·`test` 게시, Windows local
+install·저장된 global setup dry-run, 이후 `WGS-011`·`KST-006`·`DIS9-010`·`REL9-011` fresh-session 수용.
 Antigravity·Claude 공개 제외 유지. Notion: `N10-002–011`·`0.10.0-test` 보류.
