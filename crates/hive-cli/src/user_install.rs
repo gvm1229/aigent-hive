@@ -646,6 +646,40 @@ fn configured_host(
         root_cap,
         setup_override: Some((config.clone(), resolved_skills.to_vec())),
     };
+    if mode == UserMode::DryRun
+        && has_recoverable_dangling_codex_marketplace(&arguments)
+            .map_err(|error| error.message().to_owned())?
+    {
+        let plan = build_plan(&arguments).map_err(|error| error.message().to_owned())?;
+        let mut result = success_result(
+            UserOperation::Install,
+            &arguments,
+            &plan,
+            "hive.user-install-dry-run-recovery-planned",
+            "user installation dry run completed with Hive-owned recovery planned",
+            None,
+        );
+        result.next_action = Some(format!(
+            "run with --host {} --apply; Hive will recover its incomplete marketplace activation before setup",
+            arguments.host.as_str()
+        ));
+        return Ok(result);
+    }
+    if mode == UserMode::Apply
+        && has_open_transaction(&arguments).map_err(|error| error.message().to_owned())?
+    {
+        let (recovery_root, recovery_cap) = open_canonical_user_root(&arguments.user_root)
+            .map_err(|error| error.message().to_owned())?;
+        let recovery = UserArguments {
+            host: arguments.host,
+            mode: UserMode::Recover,
+            user_root: recovery_root,
+            root_cap: recovery_cap,
+            setup_override: None,
+        };
+        execute(UserOperation::Install, &recovery, &SystemCommandRunner)
+            .map_err(|error| error.message().to_owned())?;
+    }
     execute(UserOperation::Install, &arguments, &SystemCommandRunner)
         .map_err(|error| error.message().to_owned())
 }
@@ -3122,6 +3156,42 @@ fn ensure_no_open_transaction(
     Ok(())
 }
 
+fn has_open_transaction(arguments: &UserArguments) -> Result<bool, InstallError> {
+    read_optional_regular(
+        &arguments.root_cap,
+        &transaction_journal_relative(arguments.host),
+        MAX_USER_FILE_BYTES,
+    )
+    .map(|journal| journal.is_some())
+}
+
+fn has_recoverable_dangling_codex_marketplace(
+    arguments: &UserArguments,
+) -> Result<bool, InstallError> {
+    if arguments.host != UserHost::Codex || !has_open_transaction(arguments)? {
+        return Ok(false);
+    }
+    let journal_relative = transaction_journal_relative(arguments.host);
+    let Some(journal) = read_transaction_journal(arguments, &journal_relative)? else {
+        return Ok(false);
+    };
+    let backup_relative = PathBuf::from(journal.backup);
+    let backup_bytes = read_optional_regular(
+        &arguments.root_cap,
+        &backup_relative.join("manifest.json"),
+        MAX_USER_FILE_BYTES,
+    )?
+    .ok_or_else(|| InstallError::Verification("user backup manifest is missing".to_owned()))?;
+    let backup: UserBackupManifest = serde_json::from_slice(&backup_bytes)
+        .map_err(|_| InstallError::Verification("user backup manifest is malformed".to_owned()))?;
+    if journal.plan_digest != backup.plan_digest {
+        return Err(InstallError::Verification(
+            "user transaction journal does not match its backup".to_owned(),
+        ));
+    }
+    is_recoverable_dangling_codex_marketplace(arguments, &backup)
+}
+
 fn rollback_snapshots(
     root: &Dir,
     snapshots: &[(PathBuf, Option<Vec<u8>>, FilePermissions)],
@@ -3233,6 +3303,19 @@ fn recover(
             None,
         )?;
     }
+    if backup.pending_host_transition.is_some() {
+        let executable = executable.as_ref().ok_or_else(|| {
+            InstallError::Internal("qualified recovery host executable is missing".to_owned())
+        })?;
+        resolve_pending_host_transition(
+            arguments,
+            &backup_relative,
+            &mut backup,
+            executable,
+            runner,
+            true,
+        )?;
+    }
     let changed = restore_backup_files(arguments, &backup_relative, &backup)?;
     reconcile_root_index_after_rollback(arguments, backup.index_existed)?;
     compensate_host_mutations(
@@ -3241,6 +3324,7 @@ fn recover(
         &mut backup,
         executable.as_ref(),
         runner,
+        true,
     )?;
     let recovered_backup_bytes = read_optional_regular(
         &arguments.root_cap,
@@ -4527,12 +4611,20 @@ fn compensate_host_mutations(
     backup: &mut UserBackupManifest,
     executable: Option<&QualifiedExecutable>,
     runner: &impl CommandRunner,
+    allow_dangling_codex_recovery: bool,
 ) -> Result<(), InstallError> {
     if backup.pending_host_transition.is_some() {
         let executable = executable.ok_or_else(|| {
             InstallError::Internal("qualified recovery host executable is missing".to_owned())
         })?;
-        resolve_pending_host_transition(arguments, backup_relative, backup, executable, runner)?;
+        resolve_pending_host_transition(
+            arguments,
+            backup_relative,
+            backup,
+            executable,
+            runner,
+            allow_dangling_codex_recovery,
+        )?;
     }
     if backup.host_mutations.is_empty() {
         return Ok(());
@@ -4598,20 +4690,106 @@ fn compensate_host_mutations(
 }
 
 fn resolve_pending_host_transition(
-    _arguments: &UserArguments,
-    _backup_relative: &Path,
+    arguments: &UserArguments,
+    backup_relative: &Path,
     backup: &mut UserBackupManifest,
-    _executable: &QualifiedExecutable,
-    _runner: &impl CommandRunner,
+    executable: &QualifiedExecutable,
+    runner: &impl CommandRunner,
+    allow_dangling_codex_recovery: bool,
 ) -> Result<(), InstallError> {
     let pending = backup
         .pending_host_transition
         .as_ref()
         .ok_or_else(|| InstallError::Internal("pending host transition is missing".to_owned()))?;
+    if allow_dangling_codex_recovery
+        && is_recoverable_dangling_codex_marketplace(arguments, backup)?
+    {
+        let probe_error = probe_host_snapshot(arguments.host, executable, runner)
+            .err()
+            .ok_or_else(|| {
+                InstallError::Conflict(
+                    "pending Codex marketplace transition still has a structured host state; external state was preserved"
+                        .to_owned(),
+                )
+            })?;
+        if !is_dangling_codex_marketplace_probe(&probe_error) {
+            return Err(InstallError::Conflict(format!(
+                "unresolved {:?} host transition {:?} cannot be attributed during recovery; external state was preserved",
+                pending.phase, pending.mutation
+            )));
+        }
+        let command = codex_compensation_command(HostMutation::CodexMarketplaceAdded);
+        let output = runner
+            .run(executable, command, COMMAND_TIMEOUT, COMMAND_OUTPUT_LIMIT)
+            .map_err(|error| {
+                InstallError::Unsupported(format!(
+                    "Codex Hive marketplace recovery command failed: {error}"
+                ))
+            })?;
+        if !output.success {
+            return Err(InstallError::Unsupported(format!(
+                "Codex Hive marketplace recovery command exited unsuccessfully: {}",
+                sanitized_command_diagnostic(command, &output.stdout)
+            )));
+        }
+        let observed = probe_host_snapshot(arguments.host, executable, runner)?;
+        if observed != pending.before {
+            return Err(InstallError::Conflict(
+                "Codex Hive marketplace recovery did not restore the authenticated pre-transaction state; external state was preserved"
+                    .to_owned(),
+            ));
+        }
+        backup.host_mutations.clear();
+        backup.host_owned_state = None;
+        backup.pending_host_transition = None;
+        backup.codex_plugin_was_latent_before_marketplace_add = false;
+        persist_backup(arguments, backup_relative, backup)?;
+        return Ok(());
+    }
     Err(InstallError::Conflict(format!(
         "unresolved {:?} host transition {:?} cannot be attributed during recovery; external state was preserved",
         pending.phase, pending.mutation
     )))
+}
+
+fn is_recoverable_dangling_codex_marketplace(
+    arguments: &UserArguments,
+    backup: &UserBackupManifest,
+) -> Result<bool, InstallError> {
+    let Some(pending) = backup.pending_host_transition.as_ref() else {
+        return Ok(false);
+    };
+    if arguments.host != UserHost::Codex
+        || pending.phase != HostTransitionPhase::Forward
+        || pending.mutation != HostMutation::CodexMarketplaceAdded
+        || !backup.host_mutations.is_empty()
+        || backup.host_owned_state.is_some()
+    {
+        return Ok(false);
+    }
+    let Some(before) = backup.codex_state_before.as_ref() else {
+        return Ok(false);
+    };
+    if before.marketplace.is_some() || before.plugin.is_some() {
+        return Ok(false);
+    }
+    let expected_before = HostStateSnapshot::Codex(before.clone());
+    let expected_after = expected_host_state_after(
+        arguments,
+        HostMutation::CodexMarketplaceAdded,
+        &expected_before,
+    )?;
+    if pending.before != expected_before || pending.after != expected_after {
+        return Ok(false);
+    }
+    let manifest = Path::new(".hive/marketplaces/codex/.agents/plugins/marketplace.json");
+    Ok(read_optional_regular(&arguments.root_cap, manifest, MAX_USER_FILE_BYTES)?.is_none())
+}
+
+fn is_dangling_codex_marketplace_probe(error: &InstallError) -> bool {
+    matches!(error, InstallError::Unsupported(message)
+        if message.starts_with("Codex structured state probe exited unsuccessfully:")
+            && message.contains("argv=`plugin marketplace list --json`"))
 }
 
 struct CompensationContext<'a, R: CommandRunner> {
@@ -5190,6 +5368,7 @@ fn rollback_after_failure(
         &mut transaction.backup,
         executable,
         runner,
+        false,
     ) {
         return InstallError::Internal(format!("{}; {}", primary.message(), error.message()));
     }
@@ -6504,6 +6683,7 @@ mod tests {
         DriftBeforeLaterCompensation,
         ForeignAfterFailedForward,
         ForeignAfterFailedCompensation,
+        DanglingCodexMarketplace,
     }
 
     struct StatefulHostRunner {
@@ -6582,6 +6762,16 @@ mod tests {
         fn probe_output(&self, command: &str) -> Option<CommandOutput> {
             let claude = self.qualified_host.lock().expect("host").as_str() == "claude";
             self.inject_probe_drift(command);
+            if command == "plugin marketplace list --json"
+                && !claude
+                && matches!(self.sabotage, HostSabotage::DanglingCodexMarketplace)
+                && *self.marketplace_installed.lock().expect("marketplace")
+            {
+                return Some(CommandOutput {
+                    success: false,
+                    stdout: Vec::new(),
+                });
+            }
             match (command, claude) {
                 ("plugin marketplace list --json", true) => {
                     let entries = if *self.marketplace_installed.lock().expect("marketplace") {
@@ -6704,7 +6894,8 @@ mod tests {
                 | HostSabotage::DriftBeforeSecondMutation
                 | HostSabotage::DriftBeforeLaterCompensation
                 | HostSabotage::ForeignAfterFailedForward
-                | HostSabotage::ForeignAfterFailedCompensation => {}
+                | HostSabotage::ForeignAfterFailedCompensation
+                | HostSabotage::DanglingCodexMarketplace => {}
             }
             Ok(CommandOutput {
                 success: true,
@@ -9681,6 +9872,57 @@ mod tests {
             assert!(backup.host_owned_state.is_none());
             assert!(backup.pending_host_transition.is_some());
         }
+    }
+
+    #[test]
+    fn recover_removes_only_a_dangling_hive_codex_marketplace_after_a_failed_probe() {
+        let temporary = tempdir().expect("tempdir");
+        let knowledge = temporary.path().join(".hive/knowledge/Wiki/user-note.md");
+        let preferences = temporary.path().join(".hive/config/user-preferences.json");
+        fs::create_dir_all(knowledge.parent().expect("knowledge parent"))
+            .expect("knowledge parent");
+        fs::create_dir_all(preferences.parent().expect("preferences parent"))
+            .expect("preferences parent");
+        fs::write(&knowledge, b"# user knowledge\n").expect("knowledge");
+        fs::write(&preferences, b"{\"persona\":\"strict\"}\n").expect("preferences");
+        let runner =
+            StatefulHostRunner::new(temporary.path(), HostSabotage::DanglingCodexMarketplace);
+        let arguments = args(temporary.path(), UserHost::Codex, UserMode::Apply);
+
+        let error = execute(UserOperation::Install, &arguments, &runner)
+            .err()
+            .expect("failed Codex probe");
+        assert!(matches!(error, InstallError::Internal(_)));
+        let journal = temporary
+            .path()
+            .join(".hive/install-transactions/codex.json");
+        assert!(journal.is_file());
+        assert_eq!(runner.external_state(), (true, false));
+        assert!(!temporary
+            .path()
+            .join(".hive/marketplaces/codex/.agents/plugins/marketplace.json")
+            .exists());
+
+        let recovered = recover(&arguments, &runner).expect("recover dangling marketplace");
+
+        assert_eq!(recovered.code, "hive.user-install-recovered");
+        assert_eq!(runner.external_state(), (false, false));
+        assert!(!journal.exists());
+        assert_eq!(
+            fs::read(&knowledge).expect("knowledge retained"),
+            b"# user knowledge\n"
+        );
+        assert_eq!(
+            fs::read(&preferences).expect("preferences retained"),
+            b"{\"persona\":\"strict\"}\n"
+        );
+        let calls = runner.calls.lock().expect("calls");
+        assert!(calls
+            .iter()
+            .any(|call| call == "plugin marketplace remove aigent-hive --json"));
+        assert!(!calls
+            .iter()
+            .any(|call| call == "plugin remove aigent-hive@aigent-hive --json"));
     }
 
     #[test]
