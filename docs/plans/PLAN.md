@@ -42,7 +42,7 @@
 | Model-routed custom subagent | 0 | 32 | 0% |
 | Prompt refine 자동 routing | 12 | 0 | 100% |
 | v0.9 test 기능 마감 | 18 | 0 | 100% |
-| v0.9 full release | 18 | 12 | 60.0% |
+| v0.9 full release | 20 | 10 | 66.7% |
 | Test release setup routing | 4 | 0 | 100% |
 | Bootstrap·user projection recovery | 13 | 0 | 100% |
 | 한국어 setup 용어 복구 | 6 | 0 | 100% |
@@ -53,7 +53,7 @@
 | Windows global setup hardening | 13 | 0 | 100% |
 | Agent 자율 실행 지속 | 8 | 0 | 100% |
 | Notion `v0.10` 후보 | 1 | 10 | 9.1% |
-| **Canonical total** | **426** | **76** | **84.9%** |
+| **Canonical total** | **428** | **74** | **85.3%** |
 
 External production boundary 항목도 미완료 합계에 포함. Protected authority 없이 완료 처리 금지.
 
@@ -118,7 +118,6 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
 ## Current execution order
 
 완료 증거: [`CURRENT.md`](../state/CURRENT.md)와 owning active fragment.
-현재: `REL9-029`·`REL9-030` local completion. 보존형 재설치의 user projection 자동 복원·무인 default
-acceptance, Python 전수 lane 대장·CI matrix·fixture 경계 완료. 다음: exact `develop` SHA의 numbered test candidate,
-Windows clean local install, public test acceptance, `main` stable candidate·signing·publication. Antigravity·Claude 공개
-제외 유지. Notion: `N10-002–011`·`0.10.0-test` 보류.
+현재: `REL9-029`·`REL9-030`·`REL9-014`·`REL9-015` 완료. `0.9.0-test.13`의 exact `develop` SHA,
+Windows 보존형 재설치와 public test 수용까지 완료. 다음: `develop → main` non-force merge, exact main stable
+candidate, signing·TUF·publication. Antigravity·Claude 공개 제외 유지. Notion: `N10-002–011`·`0.10.0-test` 보류.

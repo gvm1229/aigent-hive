@@ -3,12 +3,13 @@
 - 기준 branch: `develop`
 - product version: `0.9.0`
 - plan revision: `2.42`
-- 현재 milestone: `0.9.0` numbered test candidate·public acceptance·stable publication
+- 현재 milestone: `0.9.0` `main` stable candidate·production publication
 - `0.9.0` 예외: 실제 Antigravity host 수용과 Claude fixture 공개 제외. Codex 실제 plugin 활성화·global setup은 `REL9-011` 필수 gate. `develop → main` CI는 병합 gate 일시 면제이며 실패·미실행 범위 공개 유지
 - Codex marketplace 복구: `0.9.0-test.8`의 미완료 transaction으로 남은 manifest 없는 Hive marketplace entry를
   `hive install --recover`가 Hive-owned root 확인 뒤 조용히 정리·재설치. foreign host entry·knowledge·저장 preference 보존
-- Windows `0.9.0-test.12` actual user-root 수용: 격리 npm install, `hive uninstall → install → dry-run → apply →
-  validate → install validate`, saved preference·knowledge digest 보존, Hive active Skill 22개·retired ID `0건`,
+- Windows `0.9.0-test.13` actual user-root 수용: global npm install, `hive uninstall → install → dry-run → apply →
+  validate → install validate`, saved preference SHA-256 `1cb6031da4492e20398eae9dad4e4153ab854c38c6270616084a99e9764b0faf`와
+  knowledge 5개 파일 digest 보존, Hive active Skill 22개·retired ID `0건`,
   Korean·bilingual Wiki, usage guard `20%`, Discord persisted 설정, home temporary answer `0건`, `--full` 거부 PASS.
   유지보수자 확인: 새 Codex session 자동 `hive` 탐색·Discord 실제 전달. `KST-006`·`DIS9-010`·`WGS-011`·`REL9-011` 완료
 - `hive uninstall`: Hive가 추가한 host activation·projection·package·derived index·backup·runtime만 제거.
@@ -28,10 +29,10 @@
   exact `b0e41f58bd6b73b56cbe92c2b054fb5cefcc9f03`, 5개 native target·npm umbrella·direct installer·attestation PASS.
   publication [run `31373214154`](https://github.com/gvm1229/aigent-hive/actions/runs/31373214154)의 six-package OIDC `test`
   게시, annotated GitHub prerelease, `test=0.9.0-test.11`, `latest=0.8.0` 유지 PASS
-- `0.9.0-test.12`: candidate [run `31391084832`](https://github.com/gvm1229/aigent-hive/actions/runs/31391084832)의
-  exact `c98add01916fa278267d458329d20793dec4b7f4`, 5개 native target·npm umbrella·direct installer·attestation PASS.
-  publication [run `31392103115`](https://github.com/gvm1229/aigent-hive/actions/runs/31392103115)의 six-package OIDC
-  `test` 게시, annotated GitHub prerelease, `test=0.9.0-test.12`, `latest=0.8.0` 유지 PASS
+- `0.9.0-test.13`: candidate [run `31403054797`](https://github.com/gvm1229/aigent-hive/actions/runs/31403054797)의
+  exact `03a16676ebe8873493b85b717befc68983825cdd`, 5개 native target·npm umbrella·direct installer·attestation PASS.
+  publication [run `31404195752`](https://github.com/gvm1229/aigent-hive/actions/runs/31404195752)의 six-package OIDC
+  `test` 게시, annotated GitHub prerelease, `test=0.9.0-test.13`, `latest=0.8.0` 유지 PASS
 - `0.9.0-test.6`: 후보 [run `31294665865`](https://github.com/gvm1229/aigent-hive/actions/runs/31294665865)의 5개 native target·npm 묶음·attestation PASS. 게시 [run `31295045199`](https://github.com/gvm1229/aigent-hive/actions/runs/31295045199)의 여섯 package OIDC publication, annotated `v0.9.0-test.6`, 22-asset GitHub prerelease, 여섯 package `test=0.9.0-test.6`, `latest=0.8.0` 유지 PASS. Windows clean install·fresh Codex session 수용 전 stable 미착수
 - `REL9-027`: six-package Trusted Publisher OIDC 실제 게시 PASS. `BGR-012–013` source 응답의 내부 용어 억제·사용자 영향 우선 설명과 local `-dev → 0.9.0-test.6` user-scope validation 완료. `SIL-001–006` public Skill identity·localization·retired-ID cleanup과 `0.9.0-test.5` 독립 시험 게시 완료. `N10-001` Notion 사용자 노출 차단 완료. `DIS9-004`의 부분 설정 전체 목록·Discord 하위 항목 표시 계약 구현. 다음 작업: `DIS9-002–010` Discord 연결 UX. Notion end-to-end 기능은 `0.10.0-test`까지 보류
 - Skill 최종 결정: [`docs/skills.md`](../skills.md)의 product-only 22개. Source 개발도 설치 product
@@ -69,7 +70,7 @@
   + `docs/plans/active/discord-onboarding-v09.md`
   + `docs/plans/active/windows-global-setup-hardening.md`
   + `docs/plans/active/v0.10.0-notion-candidate.md`
-- Plan completion: canonical checklist `424/502` 완료, `78`개 미완료, `84.5%`
+- Plan completion: canonical checklist `428/502` 완료, `74`개 미완료, `85.3%`
 - 출시 분리: `0.9.0`의 user-visible Wiki는 local Markdown 정본과 SQLite projection만 제공.
   Notion backend·host browser OAuth·freshness·write-through·사용자 문서는 `0.10.0-test`까지 보류.
   Discord webhook 대화·시험 알림, HTML 안내, project·run·요청·progress payload는 `DIS9-*` 후속 범위

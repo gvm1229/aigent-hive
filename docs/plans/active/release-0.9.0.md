@@ -17,12 +17,12 @@
 ## 현재 기준선
 
 - Product: `0.9.0`; notes: [`0.9.0.md`](../../releases/0.9.0.md)
-- 최신 공개 시험판: `0.9.0-test.12`; 여섯 npm package `test=0.9.0-test.12`, `latest=0.8.0`
-- `0.9.0-test.12` candidate [`31391084832`](https://github.com/gvm1229/aigent-hive/actions/runs/31391084832):
-  exact `c98add01916fa278267d458329d20793dec4b7f4`, 5개 native target·npm umbrella·direct installer·attestation PASS
-- `0.9.0-test.12` publication [`31392103115`](https://github.com/gvm1229/aigent-hive/actions/runs/31392103115):
-  six-package OIDC `test` 게시, annotated `v0.9.0-test.12`, GitHub prerelease, `latest=0.8.0` 유지 PASS
-- Windows 격리 npm prefix local install: `AIgent Hive v0.9.0-test #12` 확인. actual user root의
+- 최신 공개 시험판: `0.9.0-test.13`; 여섯 npm package `test=0.9.0-test.13`, `latest=0.8.0`
+- `0.9.0-test.13` candidate [`31403054797`](https://github.com/gvm1229/aigent-hive/actions/runs/31403054797):
+  exact `03a16676ebe8873493b85b717befc68983825cdd`, 5개 native target·npm umbrella·direct installer·attestation PASS
+- `0.9.0-test.13` publication [`31404195752`](https://github.com/gvm1229/aigent-hive/actions/runs/31404195752):
+  six-package OIDC `test` 게시, annotated `v0.9.0-test.13`, GitHub prerelease, `latest=0.8.0` 유지 PASS
+- Windows global npm local install: `AIgent Hive v0.9.0-test #13` 확인. actual user root의
   `hive uninstall → install → dry-run → apply → validate → install validate` PASS. knowledge·saved preference
   digest 보존, Hive active Skill 22개·retired ID `0건`, usage guard `20%`, persisted Discord 설정, home temporary
   answer `0건`, `--full` unknown-option rejection. 유지보수자 확인: 새 Codex session 자동 CLI 탐색·Discord 실제 전달
@@ -94,8 +94,13 @@
 
 - [x] [REL9-012] Remote `develop` exact SHA의 `0.9.0-test` candidate 5 target·6 npm·installer·byte identity PASS
 - [x] [REL9-013] 기본 시험판의 GitHub prerelease·npm `0.9.0-test|test` 독립 게시와 기존 `latest` snapshot 불변 확인
-- [ ] [REL9-014] Public test install·update·문제 보고 기능과 stable parity acceptance
-- [ ] [REL9-015] 수용 기간의 blocker triage·privacy·disk retention 검증, bare 시험판 재게시 금지 확인
+- [x] [REL9-014] Public test install·update·문제 보고 기능과 stable parity acceptance. `0.9.0-test.13`
+  candidate·OIDC prerelease와 Windows actual preserving uninstall·global reinstall·`dry-run → apply → validate`·install
+  validate PASS. 기존 public update·문제 보고 privacy/no-upload·stable parity regression과 유지보수자 새 Codex session
+  탐색·Discord actual 전달 증거 결합
+- [x] [REL9-015] 수용 기간의 blocker triage·privacy·disk retention 검증, bare 시험판 재게시 금지 확인.
+  test.8 marketplace dangling 상태 복구·test.13 보존형 재설치 수용, problem report의 preview·collect·export와
+  raw prompt·자동 upload·knowledge 자동 수집 `0건` regression, `test=0.9.0-test.13`·`latest=0.8.0` 확인
 - [x] [REL9-016] 추가 시험판 필요 시에만 `0.9.0-test.N|test` 생성·검증·이전 시험판 계보 보존
 - [ ] [REL9-017] 시험 수용 뒤 `develop → main` PR·non-force merge와 exact main SHA 고정. CI 결과 기록은 유지하되 이번 `0.9.0` 병합 gate 제외
 
