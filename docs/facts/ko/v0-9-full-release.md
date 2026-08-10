@@ -5,24 +5,20 @@ topic_slug: v0-9-full-release
 language: ko
 counterpart: ../en/v0-9-full-release.md
 title: "Aigent Hive 0.9.0 시험·정식 릴리스"
-summary: "test.13 Windows 보존형 재설치 수용 완료. 무인 기본 profile 수용·측정 기반 test lane 대장 완료, main stable candidate 대기."
+summary: "test.15 최신 공개 수용 build. Windows 보존형 재설치 수용·develop 전체 CI 통과, 정식 서명·external TUF authorization 필요."
 tags: [distribution, release, signing, v0-9]
 aliases: ["0.9.0 release plan", "full release"]
 sources:
   - "repo:docs/decisions/ADR-0017-0.9-full-release.md#sha256:5c00353f7683e586ada9ccfec9e80dd7504d2f464d88309ea8d9786f916219d5"
   - "repo:docs/plans/active/release-0.9.0.md#sha256:00aacb0a11b5595075096985ce3872bda492799b24ecbc726025e3b558a75080"
 links: [host-external-integrations, release-verification, test-distribution, version-policy]
-reviewed_revision: "git:3e960b5185f637d7606eb01126d2543519138608"
+reviewed_revision: "git:a39b88112f5582a836e0c5848668407190d4a616"
 status: active
 ---
 
 # Aigent Hive 0.9.0 시험·정식 릴리스
 
-Stable `v0.9.0`: 미게시. `0.9.0-test.13`: candidate `31403054797`, OIDC publication
-`31404195752`, exact `03a16676`, 여섯 npm package의 `test=0.9.0-test.13`, `latest=0.8.0` 유지.
-Windows actual user root 보존형 제거·clean reinstall·`dry-run → apply → validate`·install validate,
-새 Codex session `hive` 탐색, Discord 실제 전달 수용 완료.
-
-product-owned 신속 기본 profile: contributor preference·setup 대화 없는 clean install·보존형 재설치 수용,
-Hive-owned user projection 자동 복원. 모든 Python 적합성 module: 측정된 하나의 lane 배정. CI: lane 분리 실행.
-다음 gate: non-force `develop → main` merge와 exact main stable candidate.
+Stable `v0.9.0`: 미게시. `0.9.0-test.15`: candidate `31407585364`, OIDC publication `31409030152`,
+exact `6f809a27`, 여섯 npm package의 `test=0.9.0-test.15`, `latest=0.8.0` 유지. Windows 보존형 재설치·
+setup 검증·새 Codex session 탐색·Discord 실제 전달, `develop` CI `31410354787` 19개 작업 전체 PASS.
+Stable publication 선행 조건: macOS·Windows 서명과 external TUF authorization·rollback floor 검증. 두 release workflow의 해당 단계 부재.
