@@ -1,7 +1,7 @@
 # Discord `v0.9` 연결 계획
 
 > Checklist owner: `DIS9-*`
-> Target: `0.9.0-test.9`
+> Target: `0.9.0-test.11`
 > Decision: [`ADR-0018`](../../decisions/ADR-0018-notion-wiki-backend.md)
 
 ## 목표
@@ -37,7 +37,8 @@
   - 원문 prompt는 `raw-prompt`를 별도 승인한 경우에만 포함. 기본 `summary`는 요약 또는 비공개 표시 유지
 - [x] [DIS9-008] 대화형 setup·README·release bundle HTML 안내와 `hive guide integrations --open` 또는 exact local locator 구현
 - [x] [DIS9-009] fake webhook·두 프로젝트 halt·plan-backed/unplanned progress·redaction 회귀와 지원 host E2E 구현
-- [ ] [DIS9-010] 독립 numbered test candidate·clean install 수용. npm `latest` 불변과 stable feature parity 확인
+- [x] [DIS9-010] `0.9.0-test.11` Windows actual user root clean install 수용. Discord persisted 설정·
+  `hive discord test` outbound receipt, npm `latest=0.8.0` 불변 확인
 - [x] [DIS9-011] 사용자가 승인한 구역형 Discord Markdown 알림 적용: 시험·실제 공통 renderer에 빈 줄, 이모지·굵은 구역 제목, 사용량·작업 정보·작업 계속 요청 안내 추가. 밑줄 표기 없음
   - Evidence: `4c74e7b`, `hive-cli` 328/328, Discord tests 9/9, strict Clippy, format check
 

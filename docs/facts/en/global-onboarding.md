@@ -5,15 +5,15 @@ topic_slug: global-onboarding
 language: en
 counterpart: ../ko/global-onboarding.md
 title: "Global Onboarding"
-summary: "Global setup must verify and resolve the signed CLI before questions, preserve every answer, and own the user-selected usage-guard threshold while projects may request only earlier stops."
+summary: "Global setup verifies and resolves the signed CLI before questions, preserves answers, and reuses saved preferences after a preserving Hive uninstall."
 tags: [bootstrap, onboarding, setup]
 aliases: ["User setup"]
 sources:
   - "repo:README.md#sha256:a03aae178a8c1060d3f4301d4ed592a24e8cf9e9e95a7b87afa434804ad4ecbb"
-  - "repo:crates/hive-cli/src/user_setup.rs#sha256:ab8cfec03bc6fcfb7d0e55e5c47d5c5bc57fa75adcb1993cd55086f686b56741"
+  - "repo:crates/hive-cli/src/user_setup.rs#sha256:cb42f6c3bd643bc236f3af89f4388ffdbc08db66af88123a38267b904d7b9d01"
   - "repo:docs/decisions/ADR-0012-global-onboarding-shared-index.md#sha256:d30564f33f2ead463cfe9e18aa68b697cb07b6c419ee42c9b583fcc11edaf966"
-  - "repo:docs/plans/active/windows-global-setup-hardening.md#sha256:0e688585dd2322a10687edcf5902ee99a9871728c251a52ca574f8aaf8105934"
-  - "repo:harness/skills/user-setup/SKILL.md#sha256:0d400b981b7680659c7588c777b23ef5a850b71681d46eadcf5fd49c08c0e793"
+  - "repo:docs/plans/active/windows-global-setup-hardening.md#sha256:c28e40cf7e976d0b4455a73c2ddb6d598af448cd549569097784e9a26b2d678e"
+  - "repo:harness/skills/user-setup/SKILL.md#sha256:4f3676378fafac75f9c6376210c760a2e0200e843ead0825d1b34d7446864e34"
   - "repo:harness/user-setup/catalog.yml#sha256:4926655a12591cae061e674d774557e96f000d149f8dec1c2b1b650ba235f494"
   - "repo:schemas/user-setup.schema.json#sha256:e83e5f318a5b6ffcc08cfe0898a2b6138512c6bfb0eea99c6070b134f3712f47"
 links: [project-onboarding, test-distribution, usage-guard-thresholds]
@@ -23,9 +23,12 @@ status: active
 
 # Global Onboarding
 
-Order: install CLI, activate host, global setup, then project setup. Global setup never inspects
-projects; users choose its usage threshold and projects may only stop earlier. Windows recovery
-requires verified CLI metadata, saved progress, one cleaned OS-temp file, product-only Skills, and
-the shared guard. An authenticated incomplete Hive marketplace activation is repaired silently
-before setup resumes; canonical knowledge, saved preferences, and foreign host entries stay intact.
-Stable 0.9.0 still requires a fresh Windows 11 test; source regressions do not replace it.
+Order: install CLI, activate host, global setup, then project setup. Global setup does not inspect
+projects; users choose its usage threshold and projects only stop earlier. Windows recovery uses
+verified CLI metadata, saved progress, one cleaned OS-temp file, product-only Skills, and the
+shared guard. An incomplete Hive marketplace activation is repaired silently; knowledge, saved
+preferences, and foreign host entries stay intact.
+
+`hive uninstall` removes only Hive-managed setup state. It preserves the knowledge base and saved
+preferences, with no full-purge flag. Later user-scope install reuses preferences without setup
+questions. Stable 0.9.0 still requires test.12 Windows reinstall and new-session evidence.

@@ -1,7 +1,7 @@
 # 한국어 global setup 용어 복구 계획
 
 > Checklist owner: `KST-*`
-> Target: `0.9.0-test.9`
+> Target: `0.9.0-test.11`
 > Scope: global user-scope setup의 한국어 질문·설명·projection 용어
 
 ## 조사 결과
@@ -60,8 +60,8 @@
   교체; workflow·우선순위·project별 작업 방식 문구 제거와 project scope 분리
 - [x] [KST-005] canonical Skill → plugin·host projection parity와 Korean sample static regression;
   `기술`·전역 workflow 우선순위 회귀 차단과 세 host human smoke prompt 기록
-- [ ] [KST-006] 새 numbered test candidate·publication으로 설치된 global setup Korean flow 수용;
-  stable `latest` mutation 없음
+- [x] [KST-006] `0.9.0-test.11` Windows actual user root의 Korean·bilingual global setup 수용;
+  22개 product-only Skill, usage guard `20%`, Discord 설정, `latest=0.8.0` 유지
 
 ## 수용 기준
 

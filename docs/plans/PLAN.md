@@ -1,6 +1,6 @@
 # Aigent Hive active plan index
 
-> Revision: 2.39
+> Revision: 2.40
 > 기준일: 2026-08-10
 > Product version: `0.9.0`
 > 현재 milestone: `0.9.0` 정식 릴리스 준비
@@ -45,15 +45,15 @@
 | v0.9 full release | 15 | 13 | 53.6% |
 | Test release setup routing | 4 | 0 | 100% |
 | Bootstrap·user projection recovery | 13 | 0 | 100% |
-| 한국어 setup 용어 복구 | 5 | 1 | 83.3% |
+| 한국어 setup 용어 복구 | 6 | 0 | 100% |
 | Global Skill 선택 단순화 | 8 | 0 | 100% |
 | Product-only Skill identity·localization | 15 | 0 | 100% |
 | 전역·프로젝트 사용량 보호 정책 | 6 | 0 | 100% |
-| Discord `v0.9` 연결 UX | 10 | 1 | 90.9% |
-| Windows global setup hardening | 10 | 2 | 83.3% |
+| Discord `v0.9` 연결 UX | 11 | 0 | 100% |
+| Windows global setup hardening | 12 | 1 | 92.3% |
 | Agent 자율 실행 지속 | 8 | 0 | 100% |
 | Notion `v0.10` 후보 | 1 | 10 | 9.1% |
-| **Canonical total** | **418** | **81** | **83.8%** |
+| **Canonical total** | **422** | **78** | **84.4%** |
 
 External production boundary 항목도 미완료 합계에 포함. Protected authority 없이 완료 처리 금지.
 
@@ -118,7 +118,7 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
 ## Current execution order
 
 완료 증거: [`CURRENT.md`](../state/CURRENT.md)와 owning active fragment.
-다음: `WGS-012`의 Hive-owned dangling Codex marketplace recovery와 source·product workflow
-directive 보강. 이후 새 numbered test의 Windows fresh-session `dry-run → apply → validate`로
-`WGS-011`·`KST-006`·`DIS9-010`·`REL9-011` 수용.
+현재: `0.9.0-test.11`의 Windows actual host `dry-run → apply → validate` 수용, `KST-006`·
+`DIS9-010` 완료. 다음: 보존형 `hive uninstall`이 포함된 `0.9.0-test.12` Windows clean reinstall와
+새 Codex session의 자동 CLI 탐색 수용으로 `WGS-011`·`REL9-011` 잔여 증거 보강.
 Antigravity·Claude 공개 제외 유지. Notion: `N10-002–011`·`0.10.0-test` 보류.

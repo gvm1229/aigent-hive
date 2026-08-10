@@ -41,6 +41,7 @@
 | Knowledge portability·scan | [en](en/knowledge-portability-scan.md) | [ko](ko/knowledge-portability-scan.md) |
 | 공유 색인 대상 경로 안전 | [en](en/shared-index-target-safety.md) | [ko](ko/shared-index-target-safety.md) |
 | Global onboarding | [en](en/global-onboarding.md) | [ko](ko/global-onboarding.md) |
+| Hive preserving uninstall | [en](en/hive-preserving-uninstall.md) | [ko](ko/hive-preserving-uninstall.md) |
 | 전역 사용자 맥락 | [en](en/global-user-contexts.md) | [ko](ko/global-user-contexts.md) |
 | Project onboarding | [en](en/project-onboarding.md) | [ko](ko/project-onboarding.md) |
 | Plugin update merge | [en](en/plugin-update-merge.md) | [ko](ko/plugin-update-merge.md) |

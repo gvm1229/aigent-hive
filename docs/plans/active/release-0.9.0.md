@@ -17,12 +17,14 @@
 ## 현재 기준선
 
 - Product: `0.9.0`; notes: [`0.9.0.md`](../../releases/0.9.0.md)
-- 최신 공개 시험판: `0.9.0-test.9`; 여섯 npm package `test=0.9.0-test.9`, `latest=0.8.0`
-- `0.9.0-test.9` candidate [`31367482147`](https://github.com/gvm1229/aigent-hive/actions/runs/31367482147): exact `f88b0e5680e20469047a6c28637ff5e7350cc71a`, 5개 native target·npm umbrella·direct installer·attestation PASS
-- `0.9.0-test.9` publication [`31368361218`](https://github.com/gvm1229/aigent-hive/actions/runs/31368361218): six-package OIDC `test` 게시, annotated `v0.9.0-test.9`, GitHub prerelease, `latest=0.8.0` 유지 PASS
-- Windows 격리 npm prefix `C:\\Users\\hojin\\AppData\\Local\\Temp\\aigent-hive-0.9.0-test.9-31368361218` local install: `AIgent Hive v0.9.0-test #9 · developer test build (released 2026-08-10)` 확인
-- 저장된 `user-setup.yml`의 test.9 user-scope dry-run: 실패. test.8 apply가 보존한 pending transaction과 Codex `aigent-hive` marketplace entry의 manifest 부재로 `codex plugin marketplace list --json` exit `1`; answer 검증·수동 host 설정 변경·Hive setup commit 0건
-- Windows `0.9.0-test.8` setup apply: Codex `0.146.1`에서 기존 `aigent-hive` plugin activation이 marketplace 등록 뒤 구조화 목록에 나타나 exact transition 불일치. test.9는 검증 가능한 잠복 activation을 보존하도록 수정. 그러나 보존된 test.8 실패 상태는 clean-install·fresh-session 수용 환경이 아니므로 별도 Hive-managed recovery 또는 깨끗한 user host state 필요
+- 최신 공개 시험판: `0.9.0-test.11`; 여섯 npm package `test=0.9.0-test.11`, `latest=0.8.0`
+- `0.9.0-test.11` candidate [`31372510565`](https://github.com/gvm1229/aigent-hive/actions/runs/31372510565): exact `b0e41f58bd6b73b56cbe92c2b054fb5cefcc9f03`, 5개 native target·npm umbrella·direct installer·attestation PASS
+- `0.9.0-test.11` publication [`31373214154`](https://github.com/gvm1229/aigent-hive/actions/runs/31373214154): six-package OIDC `test` 게시, annotated `v0.9.0-test.11`, GitHub prerelease, `latest=0.8.0` 유지 PASS
+- Windows 격리 npm prefix local install: `AIgent Hive v0.9.0-test #11` 확인. actual user root의
+  `dry-run → apply → validate` PASS, Codex stale marketplace·plugin 자동 recovery, 22개 product-only Skill,
+  Korean·bilingual Wiki, usage guard `20%`, Discord persisted 설정·outbound test, home temporary answer `0건`
+- `0.9.0-test.12` 범위: 보존형 `hive uninstall` 뒤 clean reinstall. knowledge·saved preference 보존,
+  full purge flag 없음, saved preference 재사용 시 setup 질문 0건
 - 상세 run·failure·external signer evidence: [`CURRENT.md`](../../state/CURRENT.md)
 
 ## 이번 정식 릴리스의 명시적 제외와 면제
@@ -82,8 +84,9 @@
   Discord outbound와 공통 `report to developer` preview·collect·보존·redaction·no-upload conformance
 - [x] [REL9-010] RAG 50,000 chunk와 `.hivekb` 100 collection·50,000 chunk release profile 재측정·threshold PASS
 - [ ] [REL9-011] Codex CLI `0.146.1`의 실제 marketplace·plugin 활성화, structured state
-  검증, `hive setup --scope user` dry-run·apply·validate, 실패 되돌리기와 fresh-session
-  discovery 회귀 통과. 임시 bridge·호스트 전역 설정 수동 쓰기 0건
+  검증, `hive setup --scope user` dry-run·apply·validate, 실패 되돌리기와 새 Codex session의 자동 CLI
+  탐색 회귀 통과. `0.9.0-test.11` actual host setup·Rust rollback evidence 완료; `test.12` clean reinstall
+  새 session evidence 미확보. 임시 bridge·호스트 전역 설정 수동 쓰기 0건
 
 ### C. 시험 배포와 수용
 

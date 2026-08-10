@@ -2,24 +2,27 @@
 
 - 기준 branch: `develop`
 - product version: `0.9.0`
-- plan revision: `2.39`
-- 현재 milestone: `WGS-012` Hive-owned dangling Codex marketplace recovery·source/product workflow directive 보강, 다음 numbered test의 Windows fresh-session 수용
+- plan revision: `2.40`
+- 현재 milestone: `0.9.0-test.12` 보존형 `hive uninstall` Windows clean reinstall·fresh Codex session 수용
 - `0.9.0` 예외: 실제 Antigravity host 수용과 Claude fixture 공개 제외. Codex 실제 plugin 활성화·global setup은 `REL9-011` 필수 gate. `develop → main` CI는 병합 gate 일시 면제이며 실패·미실행 범위 공개 유지
-- Codex 차단 문제: `0.9.0-test.5` 활성화 실패와 부분 상태 되돌리기 관찰. macOS의 Codex CLI `0.147.0` 격리 user root에서 `/tmp`와 host JSON의 `/private/tmp` 표기 불일치 재현. no-follow 확인 뒤 physical path 정규화 적용
-- Codex local 검증: 격리 `install → setup dry-run → setup apply → setup validate → install validate`와 structured marketplace·plugin 목록 PASS. rollback·foreign byte 보존 Rust 회귀 PASS. 현재 macOS 실행은 Windows clean install·fresh session 수용 증명 아님
-- Mac 원본 불일치 재검토: `BGR-008–013`에서 developer/public build 원본·`0.7.0` 잔존 복구 완료.
-  현재 `/Users/hojin/.local/bin/hive`는 `AIgent Hive v0.9.0-dev`; Codex user install validation
-  PASS. 신규 복구 구현 없음. Windows 수정 뒤 동일 Mac 회귀만 재실행
-- 현재 작업: `0.9.0-test.8`의 Windows `setup apply`에서 Codex `0.146.1` 기존 plugin activation이 marketplace 등록 뒤 나타나 exact transition 불일치. Hive는 미확정 host transition과 외부 Codex 설정을 보존하고 filesystem rollback 수행. `0.9.0-test.9`의 저장 답안 dry-run은 pending transaction의 manifest 없는 Codex marketplace entry 때문에 `plugin marketplace list --json` exit `1`. 사용자 지식·저장 preference를 보존할 수 있는 Hive-owned dangling state는 자동 recovery 대상이라는 사용자 결정 반영: `WGS-012` 구현·새 numbered test 필요. stable publication 중지
+- Codex marketplace 복구: `0.9.0-test.8`의 미완료 transaction으로 남은 manifest 없는 Hive marketplace entry를
+  `hive install --recover`가 Hive-owned root 확인 뒤 조용히 정리·재설치. foreign host entry·knowledge·저장 preference 보존
+- Windows `0.9.0-test.11` actual user-root 수용: 격리 npm install, `dry-run → apply → validate`, stale marketplace·plugin
+  recovery, 22개 product-only Skill, Korean·bilingual Wiki, usage guard `20%`, Discord persisted 설정·outbound test,
+  home temporary answer `0건` PASS. `KST-006`·`DIS9-010` 완료
+- `hive uninstall`: Hive가 추가한 host activation·projection·package·derived index·backup·runtime만 제거.
+  `.hive/knowledge/`와 저장 user preference는 항상 보존, `--full`·`-f` 삭제 경로 제공 없음. 저장 preference 재설치: setup 질문 `0건`
 - Agent 자율 실행 지속: 이전 시험판 작업에서 Agent 소유 회귀 정리·검증·push·후보·게시가
   남은 중간 보고 종료 판단 오류. [`agent-autonomous-continuation.md`](../plans/active/agent-autonomous-continuation.md)의
   `AAC-001–008`: source·소비자 프로젝트·전역 설정 지시문 terminal state·closure gate·session record·static regression 보강 완료
-- Windows 11 setup 기록 감사: `0.9.0-test.5`의 CLI 탐색·schema 추측·사용자 홈 답안 파일·진행 손실·조건 밖 질문 문제를 resolver, machine-readable setup contract, non-secret progress, OS temporary-file host contract, conditional Discord·CodexBar 질문으로 보강. 이 Mac에서는 resolver PowerShell parser·macOS path 결과, Rust·Python 회귀만 실행. 실제 Windows `where.exe` 경로와 clean npm install·fresh Codex session은 `WGS-011`에서 maintainer가 수용. owning plan: [`windows-global-setup-hardening.md`](../plans/active/windows-global-setup-hardening.md)
-- Windows 실행 경계: 이 Mac에서는 source unit·static·cross-platform 회귀만 실행. Global
-  install·setup과 `WGS-011` 수용은 maintainer의 Windows 11 machine에서만 실행
+- 남은 Windows 수용: `0.9.0-test.12`의 `hive uninstall` 뒤 clean reinstall과 새 Codex session의 자동 `hive` 발견.
+  수동 `where hive`·schema 추측·사용자 홈 답안 파일·조건 밖 질문 `0건` 증거로 `WGS-011`·`REL9-011` 완료 가능
 - Discord 수용: 실제·시험 알림의 동일 renderer·선택 필드·선택 언어, 시험 알림 첫 줄의 변경 안내 고지, 첨부 화면의 webhook 전달
 - Discord 알림 형식: 사용자 승인 구역형 Markdown 적용 완료. 사용량·작업 정보·작업 계속 요청 구역, 빈 줄과 이모지·굵은 제목 적용. 밑줄 표기 `0건`
-- `0.9.0-test.8`: candidate [run `31359482328`](https://github.com/gvm1229/aigent-hive/actions/runs/31359482328)의 5개 native target·npm umbrella·direct installer·attestation PASS. publication [run `31360092061`](https://github.com/gvm1229/aigent-hive/actions/runs/31360092061)의 six-package OIDC `test` 게시, annotated `v0.9.0-test.8`, GitHub prerelease, six package `test=0.9.0-test.8`, `latest=0.8.0` 유지 PASS. Windows 격리 npm prefix clean install의 `hive --version` 확인. Windows `setup apply`는 Codex 잠복 plugin activation과 marketplace 등록의 exact transition 불일치로 실패. `WGS-011`·`KST-006`·`DIS9-010`·`REL9-011` 수용 증거 없음
+- `0.9.0-test.11`: candidate [run `31372510565`](https://github.com/gvm1229/aigent-hive/actions/runs/31372510565)의
+  exact `b0e41f58bd6b73b56cbe92c2b054fb5cefcc9f03`, 5개 native target·npm umbrella·direct installer·attestation PASS.
+  publication [run `31373214154`](https://github.com/gvm1229/aigent-hive/actions/runs/31373214154)의 six-package OIDC `test`
+  게시, annotated GitHub prerelease, `test=0.9.0-test.11`, `latest=0.8.0` 유지 PASS
 - `0.9.0-test.6`: 후보 [run `31294665865`](https://github.com/gvm1229/aigent-hive/actions/runs/31294665865)의 5개 native target·npm 묶음·attestation PASS. 게시 [run `31295045199`](https://github.com/gvm1229/aigent-hive/actions/runs/31295045199)의 여섯 package OIDC publication, annotated `v0.9.0-test.6`, 22-asset GitHub prerelease, 여섯 package `test=0.9.0-test.6`, `latest=0.8.0` 유지 PASS. Windows clean install·fresh Codex session 수용 전 stable 미착수
 - `REL9-027`: six-package Trusted Publisher OIDC 실제 게시 PASS. `BGR-012–013` source 응답의 내부 용어 억제·사용자 영향 우선 설명과 local `-dev → 0.9.0-test.6` user-scope validation 완료. `SIL-001–006` public Skill identity·localization·retired-ID cleanup과 `0.9.0-test.5` 독립 시험 게시 완료. `N10-001` Notion 사용자 노출 차단 완료. `DIS9-004`의 부분 설정 전체 목록·Discord 하위 항목 표시 계약 구현. 다음 작업: `DIS9-002–010` Discord 연결 UX. Notion end-to-end 기능은 `0.10.0-test`까지 보류
 - Skill 최종 결정: [`docs/skills.md`](../skills.md)의 product-only 22개. Source 개발도 설치 product
@@ -57,15 +60,12 @@
   + `docs/plans/active/discord-onboarding-v09.md`
   + `docs/plans/active/windows-global-setup-hardening.md`
   + `docs/plans/active/v0.10.0-notion-candidate.md`
-- Plan completion: canonical checklist `415/495` 완료, `80`개 미완료, `83.8%`
+- Plan completion: canonical checklist `422/500` 완료, `78`개 미완료, `84.4%`
 - 출시 분리: `0.9.0`의 user-visible Wiki는 local Markdown 정본과 SQLite projection만 제공.
   Notion backend·host browser OAuth·freshness·write-through·사용자 문서는 `0.10.0-test`까지 보류.
   Discord webhook 대화·시험 알림, HTML 안내, project·run·요청·progress payload는 `DIS9-*` 후속 범위
-- Korean setup 용어: `setup-hive` Korean interaction contract·exact sample 추가. `Skill → 기술`
-  번역 차단, `UserProfile`의 복수 context·선택 description과 legacy single-profile 무손실
-  migration 적용. Global user context의 project workflow·구현 방식·작업 우선순위·Skill 선택 영향
-  없음. canonical·plugin projection byte 동일, Rust 32개·Python 70개 통과. 다음 작업: 독립
-  numbered test release `KST-006`
+- Korean setup 용어: `KST-006` Windows actual 수용 완료. `Skill → 기술` 번역 차단,
+  product-only 22개 Skill·global user context 보존·canonical/plugin projection parity 유지
 - Global Skill selection: `a30eb47`로 profile-bound recommended suite 제거, 새 setup 기본
   all built-in·개별 Skill toggle·one-entry-per-line 적용. 기존 recommended closure는 saved
   answer validate에서만 해석, 새 `all|individual` preview·approval 전 활성 Skill 추가 0건.

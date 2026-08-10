@@ -63,11 +63,14 @@
 - [x] [WGS-008] 명시적인 global setup 요청이 안전한 임시 파일·`dry-run`·conflict 없는 built-in apply를 승인한 것으로 처리한다. conflict, third-party Skill, 외부 설치, 비밀 접근, 파괴 작업만 별도 확인한다.
 - [x] [WGS-009] 한국어 exact prompt fixture를 보강하여 한 문장 안 언어 혼합, 예상 밖 문자, `Skill` 오역, 한 줄에 여러 항목인 목록을 차단한다.
 - [x] [WGS-010] Rust unit·CLI integration·Python static contract에 Windows PATH 불일치, individual Skill, 첫 YAML 검증 성공, 일반·Discord 단계 중단 재개, temp cleanup, conditional question 회귀를 추가한다.
-- [ ] [WGS-012] authenticated pending Codex marketplace transaction이 Hive-owned canonical root를
+- [x] [WGS-012] authenticated pending Codex marketplace transaction이 Hive-owned canonical root를
   가리키지만 host manifest가 사라져 structured probe가 실패할 때, `hive install --recover`가
   knowledge·저장 preference·foreign host entry를 보존하고 exact Hive marketplace entry만 제거한 뒤
   재설치를 허용한다. source·product workflow는 이 deterministic recovery를 사용자 handoff보다 먼저 실행한다.
-- [ ] [WGS-011] `0.9.0-test.10` 시험판을 게시한 뒤 maintainer의 실제 Windows 11 machine에서
+- [x] [WGS-013] `hive uninstall`이 Hive-managed host activation·projection·package·index·backup·runtime만
+  제거하고 `.hive/knowledge/`·saved user preferences를 항상 보존. `--full`·`-f` 파괴 경로 제공 없음.
+  저장 preference를 읽은 재설치의 setup 질문 0건, Rust unit·product Skill projection static regression 통과
+- [ ] [WGS-011] `0.9.0-test.12` 시험판을 게시한 뒤 maintainer의 실제 Windows 11 machine에서
   clean npm install·fresh Codex session·product-only Skill catalog·global/project usage guard를
   포함한 한 번의 setup으로 `dry-run → apply → validate` 완료. 사용자 수동 `where hive`, schema
   추측, home 임시 파일, 조건 밖 질문 모두 0건. 이 Mac에서 Windows 설치·setup 실행 또는 대체
@@ -86,6 +89,7 @@
 - Windows global install·setup 수용: maintainer의 실제 Windows 11 fresh session에서만 실행·증명
 - dangling Hive Codex marketplace: Hive backup·pending transaction·canonical root 일치 시 자동 recovery,
   knowledge·저장 preference·foreign host entry 변경 0건
+- clean reinstall: `hive uninstall` 뒤 saved preference·knowledge 보존, 설치 재개 시 setup 질문 0건
 
 ## 범위 밖
 
