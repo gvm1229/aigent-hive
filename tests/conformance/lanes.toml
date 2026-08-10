@@ -1,0 +1,76 @@
+# Canonical Python conformance inventory. Every test_*.py module belongs to
+# exactly one lane so a removal, rename, or unclassified addition is visible.
+
+[lanes.documentation]
+owner = "documentation"
+contract = "human documentation, local verification command, and developer-install guidance"
+release_gate = true
+modules = [
+  "tests.conformance.test_dev_check",
+  "tests.conformance.test_dev_install_script",
+  "tests.conformance.test_docs_wiki",
+  "tests.conformance.test_human_documentation_style",
+  "tests.conformance.test_markdown_links",
+  "tests.conformance.test_test_lanes",
+]
+
+[lanes.security]
+owner = "platform-safety"
+contract = "source usage guard, shipped usage guard, and hostile ownership boundaries"
+release_gate = true
+modules = [
+  "tests.conformance.test_phase1_ownership_hostile",
+  "tests.conformance.test_phase1_security",
+  "tests.conformance.test_source_usage_guard",
+  "tests.conformance.test_usage_guard",
+]
+
+[lanes.contract]
+owner = "harness-core"
+contract = "CLI capabilities, setup schema, Skills, projections, roles, scheduling, and result contracts"
+release_gate = true
+modules = [
+  "tests.conformance.test_phase1_capabilities",
+  "tests.conformance.test_phase1_exit_contract",
+  "tests.conformance.test_phase1_fixtures",
+  "tests.conformance.test_phase1_regressions",
+  "tests.conformance.test_phase1_roles_parity",
+  "tests.conformance.test_phase1_setup",
+  "tests.conformance.test_phase1_stage2_gates",
+  "tests.conformance.test_phase3_projections",
+  "tests.conformance.test_phase3_prompt_refine",
+  "tests.conformance.test_phase3_routing",
+  "tests.conformance.test_phase3_static_contracts",
+  "tests.conformance.test_phase4_contracts",
+  "tests.conformance.test_phase5_judge",
+  "tests.conformance.test_phase7_usage_control",
+  "tests.conformance.test_v09_action_result_actions",
+  "tests.conformance.test_v09_hive_skills",
+  "tests.conformance.test_v09_host_native_contract",
+  "tests.conformance.test_v09_knowledge_schemas",
+  "tests.conformance.test_v09_skill_inventory",
+]
+
+[lanes.integration]
+owner = "consumer-lifecycle"
+contract = "clean user lifecycle, setup preservation, knowledge, project lifecycle, and source Wiki behavior"
+release_gate = true
+modules = [
+  "tests.conformance.test_connected_setup_lifecycle",
+  "tests.conformance.test_phase2_wiki",
+  "tests.conformance.test_project_lifecycle",
+  "tests.conformance.test_root_knowledge_promotion",
+  "tests.conformance.test_shared_knowledge_index",
+  "tests.conformance.test_source_wiki",
+  "tests.conformance.test_v09_wiki_cli_e2e",
+]
+
+[lanes.release]
+owner = "release-engineering"
+contract = "package layout, signed update behavior, and public update discovery"
+release_gate = true
+modules = [
+  "tests.conformance.test_npm_packaging",
+  "tests.conformance.test_phase6_update",
+  "tests.conformance.test_update_discovery",
+]

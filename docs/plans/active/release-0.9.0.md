@@ -112,18 +112,16 @@
 - [ ] [REL9-026] PLAN·CURRENT·release notes·ADR·bilingual fact에 run ID·SHA·digest·지원·미검증 범위 최종 반영
 - [x] [REL9-027] `release-publish.yml` 단일 OIDC publication: `channel=test|stable`별 exact branch·candidate·tag·Release guard, `NPM_TOKEN` fallback 제거, six-package Trusted Publisher 설정 안내와 static contract 검증 — `0.9.0-test.6`의 six-package OIDC publication PASS
 - [x] [REL9-028] Copier와 Rust harness renderer가 Discord `message_fields` 기본값을 byte-exact하게 동일 출력하는 parity PASS — `Copier 9.17.0` 격리 검증에서 4개 parity PASS
-- [ ] [REL9-029] contributor 입력·`user-setup` Skill 대화 없이 product-owned 신속 기본값으로 disposable
-  user root의 설치 수용 자동화. signed catalog·`hive setup --describe`에서 유도한 단일 기본 profile은
-  `en` interface·Markdown English Wiki·general knowledge work·strict·current authenticated host·모든 built-in
-  Skill·daily update off·usage guard off를 사용. clean install → `dry-run → apply → validate` → install validate,
-  신규 설치·보존형 재설치 모두 실행. 수동 `where hive`, schema·답안 필드 추측, 사용자 홈 답안 파일, setup 질문,
-  user preference 의존 `0건`; profile drift와 install validation 실패는 release gate 실패
-- [ ] [REL9-030] 테스트 체계의 측정 기반 정리. 모든 Rust·Python test·fixture·CI job을 command, owner,
-  runtime, covered contract, release gate, duplicate 후보로 대장화. retain·consolidate·retire 판단은 replacement
-  coverage·baseline 결과·소유자 승인 뒤에만 적용하며 추정만으로 test 삭제 금지. named unit·contract·integration·host·release
-  lane과 단일 실행 manifest·시간 측정·병렬 안전 temp root로 재구성. 모든 disposable consumer fixture는
-  `tests/work/<suite>-<random>`의 ignore 작업 영역 사용; Phase 4의 `tests/hive-phase4-*` 생성 중단,
-  정상 종료 cleanup·중단 누수 격리·원인 표시 계약 추가. 전후 coverage·release gate 손실 `0건`과 measured runtime 개선 증거 필요
+- [x] [REL9-029] `hive setup --describe`의 product-owned Codex expedited default와 disposable user-root
+  connected acceptance 추가. `en`·Markdown English Wiki·general knowledge work·strict·all built-in Skill·update off·
+  usage guard off profile의 clean install → `dry-run → apply → validate` → install validate, `hive uninstall` 뒤
+  knowledge·preference 보존 재설치 → projection 자동 복원 → validate PASS. 수동 `where hive`·schema 답안 추측·
+  사용자 홈 답안 파일·setup 질문 0건
+- [x] [REL9-030] Python `test_*.py` 전수 단일 lane manifest·owner·contract·release gate 대장, Rust unit·static
+  command와 CI job 대장, `os × lane` CI matrix, Windows runtime 기록 추가. documentation 1.01초·security 60.81초·
+  contract 262.03초·integration 141.19초·release 12.73초, 순차 477.77초 대비 matrix Python critical path 262.03초
+  모델 45.2% 단축. Phase 4 fixture: ignored `tests/work/hive-phase4-<random>`만 사용; tracked `tests/` 인접
+  `hive-phase4-*` 생성 0건. 시험 삭제 0건·release gate 손실 0건
 
 ## 실행 순서
 

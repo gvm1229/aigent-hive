@@ -5,6 +5,7 @@
 | 문서 | 용도 |
 | --- | --- |
 | [Development](development.md) | Source dependency·build·test |
+| [Test lanes](test-lanes.md) | Python test 대장·lane·fixture 경계 |
 | [Branching](branching-rules.md) | `develop`·`main` integration |
 | [Commit](commit-rules.md) | Task별 독립 commit |
 | [Source usage guard](source-usage-guard.md) | Source session quota safeguard |

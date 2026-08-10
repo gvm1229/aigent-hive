@@ -1,7 +1,7 @@
 # Aigent Hive active plan index
 
-> Revision: 2.41
-> 기준일: 2026-08-10
+> Revision: 2.42
+> 기준일: 2026-08-11
 > Product version: `0.9.0`
 > 현재 milestone: `0.9.0` 무인 설치 수용·테스트 체계 정리 후 정식 릴리스 준비
 > Entrypoint: `docs/plans/PLAN.md`
@@ -42,7 +42,7 @@
 | Model-routed custom subagent | 0 | 32 | 0% |
 | Prompt refine 자동 routing | 12 | 0 | 100% |
 | v0.9 test 기능 마감 | 18 | 0 | 100% |
-| v0.9 full release | 16 | 14 | 53.3% |
+| v0.9 full release | 18 | 12 | 60.0% |
 | Test release setup routing | 4 | 0 | 100% |
 | Bootstrap·user projection recovery | 13 | 0 | 100% |
 | 한국어 setup 용어 복구 | 6 | 0 | 100% |
@@ -53,7 +53,7 @@
 | Windows global setup hardening | 13 | 0 | 100% |
 | Agent 자율 실행 지속 | 8 | 0 | 100% |
 | Notion `v0.10` 후보 | 1 | 10 | 9.1% |
-| **Canonical total** | **424** | **78** | **84.5%** |
+| **Canonical total** | **426** | **76** | **84.9%** |
 
 External production boundary 항목도 미완료 합계에 포함. Protected authority 없이 완료 처리 금지.
 
@@ -118,9 +118,7 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
 ## Current execution order
 
 완료 증거: [`CURRENT.md`](../state/CURRENT.md)와 owning active fragment.
-현재: `0.9.0-test.12` Windows actual의 `hive uninstall → clean reinstall → dry-run → apply → validate`
-수용. knowledge·saved preference digest 보존, Hive active Skill 22개·retired 이름 0개, home temporary
-answer 0개, `--full` 거부 확인. 유지보수자 확인: 새 Codex session 자동 `hive` 탐색·Discord 실제 전달.
-남은 내부 출시 준비: product-owned 신속 기본값의 무인 설치 수용(`REL9-029`)과 측정 기반 테스트
-체계 정리(`REL9-030`). Phase 4 disposable consumer fixture: `tests/work/`의 ignore 작업 영역 통일.
-Antigravity·Claude 공개 제외 유지. Notion: `N10-002–011`·`0.10.0-test` 보류.
+현재: `REL9-029`·`REL9-030` local completion. 보존형 재설치의 user projection 자동 복원·무인 default
+acceptance, Python 전수 lane 대장·CI matrix·fixture 경계 완료. 다음: exact `develop` SHA의 numbered test candidate,
+Windows clean local install, public test acceptance, `main` stable candidate·signing·publication. Antigravity·Claude 공개
+제외 유지. Notion: `N10-002–011`·`0.10.0-test` 보류.

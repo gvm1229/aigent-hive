@@ -1393,7 +1393,17 @@ fn execute_apply(
     })
     .and_then(|()| validate_plugin_package(arguments, plan))
     .and_then(|()| rebuild_root_index(arguments))
-    .and_then(|()| validate_applied_bytes(arguments));
+    .and_then(|()| {
+        crate::user_setup::restore_saved_projection_after_uninstall(&arguments.root_cap).map_err(
+            |error| {
+                InstallError::Verification(format!(
+                    "saved user preferences could not be restored after installation: {}",
+                    error.message()
+                ))
+            },
+        )
+    })
+    .and_then(|_| validate_applied_bytes(arguments));
     let mut refreshed = activated.map_err(|primary| {
         rollback_after_failure(
             arguments,
@@ -3628,6 +3638,7 @@ fn rollback_snapshots(
     Ok(())
 }
 
+#[allow(clippy::too_many_lines)]
 fn recover(
     arguments: &UserArguments,
     runner: &impl CommandRunner,
@@ -7219,6 +7230,7 @@ mod tests {
             }
         }
 
+        #[allow(clippy::too_many_lines)]
         fn probe_output(&self, command: &str) -> Option<CommandOutput> {
             let claude = self.qualified_host.lock().expect("host").as_str() == "claude";
             self.inject_probe_drift(command);
@@ -7759,6 +7771,10 @@ mod tests {
             saved_setup
         );
         assert!(temporary.path().join(".hive/install/codex.json").is_file());
+        assert!(temporary
+            .path()
+            .join(".hive/install/user-projection.json")
+            .is_file());
         assert_eq!(runner.external_state(), (true, true));
     }
 

@@ -21,6 +21,7 @@ from tests.conformance.phase1_support import write_operational_user_setup
 
 
 ROOT = Path(__file__).resolve().parents[2]
+WORK_ROOT = ROOT / "tests" / "work"
 SCHEMAS = ROOT / "schemas"
 PHASE1 = ROOT / "tests/fixtures/phase1"
 FIXTURES = ROOT / "tests/fixtures/phase4"
@@ -169,9 +170,10 @@ class Phase4Contracts(unittest.TestCase):
         }
 
     def setUp(self) -> None:
+        WORK_ROOT.mkdir(parents=True, exist_ok=True)
         self.temporary = tempfile.TemporaryDirectory(
             prefix="hive-phase4-",
-            dir=str(ROOT / "tests"),
+            dir=str(WORK_ROOT),
         )
         self.work = Path(self.temporary.name).resolve()
         self.input_root = self.work / "inputs"

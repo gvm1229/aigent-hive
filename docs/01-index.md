@@ -60,6 +60,7 @@ current catalog.
 | --- | --- |
 | [Guide 안내](guides/README.md) | Guide MOC |
 | [Development](guides/development.md) | Dependency·build·test |
+| [Test lanes](guides/test-lanes.md) | Python 대장·실행 lane·fixture 경계 |
 | [Branching](guides/branching-rules.md) | `develop`·`main` integration |
 | [Commit](guides/commit-rules.md) | Task별 independent commit |
 | [Source usage guard](guides/source-usage-guard.md) | Source quota safeguard |

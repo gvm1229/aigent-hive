@@ -27,6 +27,7 @@ const USER_SETUP_CATALOG_SCHEMA: &str =
 const USER_SETUP_CATALOG: &str = include_str!("../../../harness/user-setup/catalog.yml");
 const MAX_ANSWERS_BYTES: u64 = 1024 * 1024;
 const MAX_USER_SETUP_BYTES: u64 = 1024 * 1024;
+const EXPEDITED_DEFAULT_USAGE_THRESHOLD: u8 = 20;
 /// Historical 0.8.x preferences omitted this setting. This compatibility value is never offered
 /// as a new-setup default: every new setup answer selects its own threshold.
 const LEGACY_080_USAGE_THRESHOLD: u8 = 20;
@@ -518,6 +519,22 @@ fn describe_result() -> Result<ActionResult, SetupError> {
                 "message_fields": default_discord_message_fields().iter().map(|field| field.as_str()).collect::<Vec<_>>() }
         }
     });
+    let expedited_defaults = json!({
+        "schema_version": 1,
+        "interface_language": "en",
+        "wiki": { "enabled": true, "language": "en", "backend": "markdown" },
+        "profile": { "contexts": ["non-developer"] },
+        "persona": { "id": "strict" },
+        "selected_hosts": ["codex"],
+        "skills": { "mode": "all" },
+        "update_check": { "enabled": false },
+        "usage_guard": { "enabled": false,
+            "stop_remaining_percent": EXPEDITED_DEFAULT_USAGE_THRESHOLD,
+            "codexbar_fallback_enabled": false,
+            "discord": { "enabled": false, "request_privacy": "summary",
+                "message_fields": default_discord_message_fields().iter().map(|field| field.as_str()).collect::<Vec<_>>() }
+        }
+    });
     Ok(ActionResult {
         schema_version: 1,
         action: "DescribeHiveUserSetup",
@@ -538,6 +555,7 @@ fn describe_result() -> Result<ActionResult, SetupError> {
             "catalog": catalog,
             "answer_template": example,
             "answer_template_notice": "Replace <user-chosen-integer-1-to-99> with the user's own value before validation; Hive has no default usage threshold.",
+            "expedited_defaults": expedited_defaults,
             "question_order": question_order,
         })),
     })
@@ -2361,6 +2379,34 @@ fn apply_user_projection(
         applied.changes.push(change);
     }
     Ok(applied)
+}
+
+/// Recreate the Hive-owned global projection when a preserving uninstall kept
+/// the validated preferences but removed the projection files. This is an
+/// internal reinstall path: it never asks for preferences and refuses to
+/// replace a path that cannot be proven Hive-owned.
+pub(crate) fn restore_saved_projection_after_uninstall(root: &Dir) -> Result<bool, SetupError> {
+    let manifest_relative = Path::new(USER_PROJECTION_MANIFEST_RELATIVE);
+    if super::user_install::read_user_setup_file(root, manifest_relative, MAX_USER_SETUP_BYTES)
+        .map_err(SetupError::Conflict)?
+        .is_some()
+    {
+        return Ok(false);
+    }
+    let Some(setup_bytes) = super::user_install::read_user_setup_file(
+        root,
+        Path::new(USER_SETUP_RELATIVE),
+        MAX_USER_SETUP_BYTES,
+    )
+    .map_err(SetupError::Conflict)?
+    else {
+        return Ok(false);
+    };
+    let Some((config, resolved_skills)) = resolved_operational_skills(root)? else {
+        return Ok(false);
+    };
+    let projection = apply_user_projection(root, &config, &resolved_skills, &setup_bytes)?;
+    Ok(!projection.changed_paths.is_empty())
 }
 
 fn validate_user_projection(

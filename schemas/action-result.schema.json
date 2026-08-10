@@ -21,7 +21,9 @@
         "UnknownAction",
         "SetupHarness",
         "SetupHiveUser",
+        "DescribeHiveUserSetup",
         "InstallHiveUser",
+        "UninstallHiveUser",
         "UpdateHiveUser",
         "ValidateHiveUser",
         "RecoverHiveUser",
@@ -127,7 +129,8 @@
               "usage-authorization",
               "capability-resolution",
               "run-status",
-              "prepared-dispatch"
+              "prepared-dispatch",
+              "user-setup-catalog"
             ]
           },
           "locator": { "type": "string", "minLength": 1 },

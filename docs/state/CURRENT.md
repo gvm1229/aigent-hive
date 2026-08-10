@@ -2,8 +2,8 @@
 
 - 기준 branch: `develop`
 - product version: `0.9.0`
-- plan revision: `2.41`
-- 현재 milestone: `0.9.0` 무인 기본 설정 설치 수용·테스트 체계 정리
+- plan revision: `2.42`
+- 현재 milestone: `0.9.0` numbered test candidate·public acceptance·stable publication
 - `0.9.0` 예외: 실제 Antigravity host 수용과 Claude fixture 공개 제외. Codex 실제 plugin 활성화·global setup은 `REL9-011` 필수 gate. `develop → main` CI는 병합 gate 일시 면제이며 실패·미실행 범위 공개 유지
 - Codex marketplace 복구: `0.9.0-test.8`의 미완료 transaction으로 남은 manifest 없는 Hive marketplace entry를
   `hive install --recover`가 Hive-owned root 확인 뒤 조용히 정리·재설치. foreign host entry·knowledge·저장 preference 보존
@@ -16,8 +16,12 @@
 - Agent 자율 실행 지속: 이전 시험판 작업에서 Agent 소유 회귀 정리·검증·push·후보·게시가
   남은 중간 보고 종료 판단 오류. [`agent-autonomous-continuation.md`](../plans/active/agent-autonomous-continuation.md)의
   `AAC-001–008`: source·소비자 프로젝트·전역 설정 지시문 terminal state·closure gate·session record·static regression 보강 완료
-- 남은 내부 출시 준비: `REL9-029` product-owned 신속 기본값의 contributor-free 설치 수용 자동화,
-  `REL9-030` 측정 기반 테스트 대장·lane 정리·Phase 4 disposable fixture의 `tests/work/` 이동
+- `REL9-029`: product-owned Codex expedited default의 clean install·`dry-run → apply → validate`·install validate,
+  preserving uninstall 뒤 saved preference·knowledge 보존과 user projection 자동 복원·revalidate PASS. setup 질문·
+  사용자 홈 답안·manual `where hive`·schema 답안 추측 0건
+- `REL9-030`: Python 전수 module의 단일 lane manifest·owner·contract·release gate, Rust command·CI job 대장,
+  `os × lane` CI matrix·Windows 시간 기록 완료. Python 순차 477.77초 대비 matrix critical path 262.03초 모델,
+  45.2% 단축. Phase 4 repository fixture: ignored `tests/work/hive-phase4-<random>`만 사용
 - Discord 수용: 실제·시험 알림의 동일 renderer·선택 필드·선택 언어, 시험 알림 첫 줄의 변경 안내 고지, 첨부 화면의 webhook 전달
 - Discord 알림 형식: 사용자 승인 구역형 Markdown 적용 완료. 사용량·작업 정보·작업 계속 요청 구역, 빈 줄과 이모지·굵은 제목 적용. 밑줄 표기 `0건`
 - `0.9.0-test.11`: candidate [run `31372510565`](https://github.com/gvm1229/aigent-hive/actions/runs/31372510565)의
