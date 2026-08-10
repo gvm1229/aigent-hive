@@ -367,93 +367,152 @@ fn payload_for(halt: &UsageHaltNotification<'_>, test: bool) -> DiscordPayload {
     if test {
         lines.push(
             if korean {
-                "이 알림은 시험 메시지입니다. 이 메시지 형식은 자유롭게 변경을 요청할 수 있습니다."
+                "🧪 **시험 알림**"
             } else {
-                "This is a test message. You can freely ask to change this message's format."
+                "🧪 **Test notification**"
             }
             .to_owned(),
         );
+        lines.push(
+            if korean {
+                "이 형식은 자유롭게 변경을 요청할 수 있습니다."
+            } else {
+                "You can freely ask to change this format."
+            }
+            .to_owned(),
+        );
+        lines.push(String::new());
     }
     lines.push(
         if korean {
-            "Aigent Hive 사용량 보호가 작업을 중단했습니다."
+            "🚨 **Aigent Hive 사용량 보호 알림**"
         } else {
-            "Aigent Hive usage guard stopped a workflow."
+            "🚨 **Aigent Hive usage guard alert**"
         }
         .to_owned(),
     );
+    lines.push(
+        if korean {
+            "작업이 중단되었습니다."
+        } else {
+            "Workflow stopped."
+        }
+        .to_owned(),
+    );
+    let mut previous_section = None;
     for field in halt.message_fields {
-        let line = match field.as_str() {
-            "remaining-usage" => format!(
-                "{}: {}",
-                if korean {
-                    "남은 사용량"
-                } else {
-                    "remaining usage"
-                },
-                display_remaining_usage(halt.remaining_percent, korean)
-            ),
-            "project" => format!(
-                "{}: {}",
-                if korean { "프로젝트" } else { "project" },
-                display_project_name(halt.project_name)
-            ),
-            "request" if korean => request_summary.map_or_else(
-                || "요청: 공유하지 않음(확인 가능한 작업 요약 없음)".to_owned(),
-                |summary| format!("요청: {summary}"),
-            ),
-            "request" => request_summary.map_or_else(
-                || "request: not shared (no canonical request summary is available)".to_owned(),
-                |summary| format!("request: {summary}"),
-            ),
-            "progress" if korean => halt.progress.map_or_else(
-                || "진행 상태: 알 수 없음(확인 가능한 작업 진행 정보 없음)".to_owned(),
-                |progress| format!("진행 상태: {progress} 완료 항목"),
-            ),
-            "progress" => halt.progress.map_or_else(
-                || "progress: unknown (no canonical run progress is available)".to_owned(),
-                |progress| format!("progress: {progress} checklist items complete"),
-            ),
-            "host" => format!(
-                "{}: {} · {}",
-                if korean { "호스트" } else { "host" },
-                halt.host_scope,
-                halt.selected_window
-            ),
-            "resume" if korean => halt.run_id.map_or_else(
-                || "계속하기: 이 프로젝트로 돌아가 Hive에게 계속 진행을 요청".to_owned(),
-                |run_id| format!("계속하기: 이 프로젝트에서 run `{run_id}` 재개 요청"),
-            ),
-            "resume" => halt.run_id.map_or_else(
-                || "resume: return to this project and ask Hive to continue".to_owned(),
-                |run_id| format!("resume: return to this project and resume run `{run_id}`"),
-            ),
-            "measured-at" => format!(
-                "{}: {}",
-                if korean {
-                    "측정 시각"
-                } else {
-                    "measured at"
-                },
-                halt.measured_at
-            ),
-            "evidence" => format!(
-                "{}: {}",
-                if korean {
-                    "검증 참조"
-                } else {
-                    "evidence reference"
-                },
-                halt.evidence_digest
-            ),
-            _ => continue,
+        let Some(line) = notification_field_line(halt, request_summary, field, korean) else {
+            continue;
         };
+        let section = match field.as_str() {
+            "remaining-usage" => "usage",
+            "resume" => "resume",
+            _ => "task",
+        };
+        if previous_section != Some(section) {
+            lines.push(String::new());
+            lines.push(
+                match (section, korean) {
+                    ("usage", true) => "📊 **사용량**",
+                    ("usage", false) => "📊 **Usage**",
+                    ("resume", true) => "▶️ **작업을 계속하려면**",
+                    ("resume", false) => "▶️ **To continue this task**",
+                    (_, true) => "📋 **작업 정보**",
+                    (_, false) => "📋 **Task details**",
+                }
+                .to_owned(),
+            );
+            previous_section = Some(section);
+        }
         lines.push(line);
     }
     DiscordPayload {
         content: lines.join("\n"),
         allowed_mentions: AllowedMentions { parse: Vec::new() },
     }
+}
+
+fn notification_field_line(
+    halt: &UsageHaltNotification<'_>,
+    request_summary: Option<&str>,
+    field: &str,
+    korean: bool,
+) -> Option<String> {
+    Some(match field {
+        "remaining-usage" => format!(
+            "{}: {}",
+            if korean {
+                "남은 사용량"
+            } else {
+                "remaining usage"
+            },
+            display_remaining_usage(halt.remaining_percent, korean)
+        ),
+        "project" => format!(
+            "{}: {}",
+            if korean { "프로젝트" } else { "project" },
+            display_project_name(halt.project_name)
+        ),
+        "request" if korean => request_summary.map_or_else(
+            || "요청: 공유하지 않음(확인 가능한 작업 요약 없음)".to_owned(),
+            |summary| format!("요청: {summary}"),
+        ),
+        "request" => request_summary.map_or_else(
+            || "request: not shared (no canonical request summary is available)".to_owned(),
+            |summary| format!("request: {summary}"),
+        ),
+        "progress" if korean => halt.progress.map_or_else(
+            || "진행 상태: 알 수 없음(확인 가능한 작업 진행 정보 없음)".to_owned(),
+            |progress| format!("진행 상태: {progress} 완료 항목"),
+        ),
+        "progress" => halt.progress.map_or_else(
+            || "progress: unknown (no canonical run progress is available)".to_owned(),
+            |progress| format!("progress: {progress} checklist items complete"),
+        ),
+        "host" => format!(
+            "{}: {} · {}",
+            if korean { "호스트" } else { "host" },
+            halt.host_scope,
+            halt.selected_window
+        ),
+        "resume" if korean => halt.run_id.map_or_else(
+            || "이 프로젝트의 Hive 대화에서 \"작업을 계속 진행해 주세요.\"라고 요청하세요."
+                .to_owned(),
+            |run_id| {
+                format!(
+                    "이 프로젝트의 Hive 대화에서 run `{run_id}` 작업을 계속 진행해 달라고 요청하세요."
+                )
+            },
+        ),
+        "resume" => halt.run_id.map_or_else(
+            || "Return to this project's Hive conversation and ask to continue the task."
+                .to_owned(),
+            |run_id| {
+                format!(
+                    "Return to this project's Hive conversation and ask to continue run `{run_id}`."
+                )
+            },
+        ),
+        "measured-at" => format!(
+            "{}: {}",
+            if korean {
+                "측정 시각"
+            } else {
+                "measured at"
+            },
+            halt.measured_at
+        ),
+        "evidence" => format!(
+            "{}: {}",
+            if korean {
+                "검증 참조"
+            } else {
+                "evidence reference"
+            },
+            halt.evidence_digest
+        ),
+        _ => return None,
+    })
 }
 
 fn display_remaining_usage(remaining_percent: Option<f64>, korean: bool) -> String {
@@ -568,10 +627,20 @@ mod tests {
         let actual = payload_for(&notification(&fields), false).content;
         let test = payload_for(&notification(&fields), true).content;
 
-        assert!(test.starts_with("This is a test message."));
+        assert!(actual.starts_with(
+            "🚨 **Aigent Hive usage guard alert**\nWorkflow stopped.\n\n📊 **Usage**"
+        ));
+        assert!(actual.contains("\n\n📋 **Task details**"));
+        assert!(actual.contains("\n\n▶️ **To continue this task**"));
+        assert!(!actual.contains("__"));
+        assert!(test.starts_with(
+            "🧪 **Test notification**\nYou can freely ask to change this format.\n\n"
+        ));
         assert_eq!(
-            test.lines().skip(1).collect::<Vec<_>>(),
-            actual.lines().collect::<Vec<_>>()
+            test.strip_prefix(
+                "🧪 **Test notification**\nYou can freely ask to change this format.\n\n"
+            ),
+            Some(actual.as_str())
         );
     }
 
@@ -582,7 +651,10 @@ mod tests {
         notification.interface_language = "ko";
         let payload = payload_for(&notification, true).content;
 
-        assert!(payload.starts_with("이 알림은 시험 메시지입니다."));
+        assert!(payload
+            .starts_with("🧪 **시험 알림**\n이 형식은 자유롭게 변경을 요청할 수 있습니다.\n\n"));
+        assert!(payload.contains("📊 **사용량**"));
+        assert!(payload.contains("📋 **작업 정보**"));
         assert!(payload.contains("남은 사용량: 18.50%"));
         assert!(payload.contains("프로젝트: aigent-hive"));
         assert!(!payload.contains("remaining usage:"));
@@ -604,7 +676,7 @@ mod tests {
 
         assert!(payload.contains("request: Verify the release package"));
         assert!(payload.contains("progress: 2/3 checklist items complete"));
-        assert!(payload.contains("resume run `release-verify`"));
+        assert!(payload.contains("ask to continue run `release-verify`"));
     }
 
     #[test]
