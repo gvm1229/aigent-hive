@@ -49,7 +49,7 @@
 | Global Skill 선택 단순화 | 8 | 0 | 100% |
 | Product-only Skill identity·localization | 15 | 0 | 100% |
 | 전역·프로젝트 사용량 보호 정책 | 6 | 0 | 100% |
-| Discord `v0.9` 연결 UX | 10 | 0 | 100% |
+| Discord `v0.9` 연결 UX | 10 | 1 | 90.9% |
 | Windows global setup hardening | 10 | 1 | 90.9% |
 | Agent 자율 실행 지속 | 8 | 0 | 100% |
 | Notion `v0.10` 후보 | 1 | 10 | 9.1% |
