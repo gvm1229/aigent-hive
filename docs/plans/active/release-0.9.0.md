@@ -17,10 +17,10 @@
 ## 현재 기준선
 
 - Product: `0.9.0`; notes: [`0.9.0.md`](../../releases/0.9.0.md)
-- 최신 공개 시험판: `0.9.0-test.7`; 여섯 npm package `test=0.9.0-test.7`, `latest=0.8.0`
-- `0.9.0-test.7`: exact `567cce0` 기반 GitHub prerelease와 npm `test` 게시 확인
-- 다음 시험판: 소비자 자율 실행 규칙 `0978a6e`를 포함한 `0.9.0-test.8`; `test`만 변경,
-  `latest=0.8.0` 유지
+- 최신 공개 시험판: `0.9.0-test.8`; 여섯 npm package `test=0.9.0-test.8`, `latest=0.8.0`
+- `0.9.0-test.8` candidate [`31359482328`](https://github.com/gvm1229/aigent-hive/actions/runs/31359482328): exact `f7debf496832ae7b18c78985c4ba064602a35a89`, 5개 native target·npm umbrella·direct installer·attestation PASS
+- `0.9.0-test.8` publication [`31360092061`](https://github.com/gvm1229/aigent-hive/actions/runs/31360092061): six-package OIDC `test` 게시, annotated `v0.9.0-test.8`, GitHub prerelease, `latest=0.8.0` 유지 PASS
+- Windows 격리 npm prefix local install: `AIgent Hive v0.9.0-test #8 · developer test build (released 2026-08-10)` 확인. fresh Codex session 수용은 미실행
 - 상세 run·failure·external signer evidence: [`CURRENT.md`](../../state/CURRENT.md)
 
 ## 이번 정식 릴리스의 명시적 제외와 면제
