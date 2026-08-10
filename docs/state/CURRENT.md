@@ -4,8 +4,10 @@
 - product version: `0.9.0`
 - plan revision: `2.44`
 - 현재 milestone: `0.9.0` `main` stable candidate·production publication
-- `develop` CI [run `31410354787`](https://github.com/gvm1229/aigent-hive/actions/runs/31410354787):
-  exact `a39b88112f5582a836e0c5848668407190d4a616`, 19개 작업 전체 PASS. Copier·문서 스타일·Rust·Ubuntu/macOS/Windows 적합성 PASS
+- `develop` CI [run `31430181535`](https://github.com/gvm1229/aigent-hive/actions/runs/31430181535):
+  exact `5ffff764bc2aa832863a10d9c01543474b300b51`, 19개 작업 전체 PASS. Copier·문서 스타일·Rust·Ubuntu/macOS/Windows 적합성 PASS
+- Native release runtime [run `31428720884`](https://github.com/gvm1229/aigent-hive/actions/runs/31428720884):
+  exact `c0ca51aae005cd9f494fd7ef3d2c205e472e610b`, Linux musl x86_64·arm64, macOS x86_64·arm64, Windows x86_64 전체 PASS
 - `0.9.0-test.15`: candidate [run `31407585364`](https://github.com/gvm1229/aigent-hive/actions/runs/31407585364),
   exact `6f809a27dae78589a8b69b23a855b982f2ede728`; publication [run `31409030152`](https://github.com/gvm1229/aigent-hive/actions/runs/31409030152),
   `test=0.9.0-test.15`, `latest=0.8.0` 유지
@@ -13,7 +15,7 @@
   strict platform evidence, deterministic public-only TUF authorization request, HTTPS archive digest·safe extraction,
   protected public root·rollback floor, production verifier·10개 target byte identity·publication receipt gate.
   유료 Apple Developer ID·Microsoft Artifact Signing은 필수 gate에서 제외. SignPath Foundation은 무료 승인 시 선택 적용
-- 다음 외부 경계: 변경 commit의 `develop` push·CI, `develop → main` PR review/merge, stable candidate 실행,
+- 다음 외부 경계: `develop → main` PR review/merge, stable candidate 실행,
   external TUF 2-of-3 authorization, protected environment public root·rollback floor와 publication approval
 - `0.9.0` 예외: 실제 Antigravity host 수용과 Claude fixture 공개 제외. Codex 실제 plugin 활성화·global setup은 `REL9-011` 필수 gate. `develop → main` CI는 병합 gate 일시 면제이며 실패·미실행 범위 공개 유지
 - Codex marketplace 복구: `0.9.0-test.8`의 미완료 transaction으로 남은 manifest 없는 Hive marketplace entry를
