@@ -17,9 +17,10 @@
 ## 현재 기준선
 
 - Product: `0.9.0`; notes: [`0.9.0.md`](../../releases/0.9.0.md)
-- 최신 공개 시험판: `0.9.0-test.6`; 여섯 npm package `test=0.9.0-test.6`, `latest=0.8.0`
-- `0.9.0-test.6` 후보 [`31294665865`](https://github.com/gvm1229/aigent-hive/actions/runs/31294665865): exact `f356500`, 5개 native target·npm 묶음·attestation PASS
-- `0.9.0-test.6` 게시 [`31295045199`](https://github.com/gvm1229/aigent-hive/actions/runs/31295045199): 여섯 package OIDC 게시, annotated `v0.9.0-test.6`, 22-asset GitHub prerelease, `latest=0.8.0` 유지 PASS
+- 최신 공개 시험판: `0.9.0-test.7`; 여섯 npm package `test=0.9.0-test.7`, `latest=0.8.0`
+- `0.9.0-test.7`: exact `567cce0` 기반 GitHub prerelease와 npm `test` 게시 확인
+- 다음 시험판: 소비자 자율 실행 규칙 `0978a6e`를 포함한 `0.9.0-test.8`; `test`만 변경,
+  `latest=0.8.0` 유지
 - 상세 run·failure·external signer evidence: [`CURRENT.md`](../../state/CURRENT.md)
 
 ## 이번 정식 릴리스의 명시적 제외와 면제

@@ -2,15 +2,15 @@
 
 - 기준 branch: `develop`
 - product version: `0.9.0`
-- plan revision: `2.35`
-- 현재 milestone: `0.9.0-test.7` Windows 11 fresh-session 수용과 stable release gate 유지
+- plan revision: `2.36`
+- 현재 milestone: `0978a6e` 기반 `0.9.0-test.8` publication·Windows 11 fresh-session 수용과 stable release gate 유지
 - `0.9.0` 예외: 실제 Antigravity host 수용과 Claude fixture 공개 제외. Codex 실제 plugin 활성화·global setup은 `REL9-011` 필수 gate. `develop → main` CI는 병합 gate 일시 면제이며 실패·미실행 범위 공개 유지
 - Codex 차단 문제: `0.9.0-test.5` 활성화 실패와 부분 상태 되돌리기 관찰. macOS의 Codex CLI `0.147.0` 격리 user root에서 `/tmp`와 host JSON의 `/private/tmp` 표기 불일치 재현. no-follow 확인 뒤 physical path 정규화 적용
 - Codex local 검증: 격리 `install → setup dry-run → setup apply → setup validate → install validate`와 structured marketplace·plugin 목록 PASS. rollback·foreign byte 보존 Rust 회귀 PASS. 현재 macOS 실행은 Windows clean install·fresh session 수용 증명 아님
 - Mac 원본 불일치 재검토: `BGR-008–013`에서 developer/public build 원본·`0.7.0` 잔존 복구 완료.
   현재 `/Users/hojin/.local/bin/hive`는 `AIgent Hive v0.9.0-dev`; Codex user install validation
   PASS. 신규 복구 구현 없음. Windows 수정 뒤 동일 Mac 회귀만 재실행
-- 현재 작업: Codex plugin 활성화 차단 문제 복구 완료. `0.9.0-test.7` candidate·publication과 Windows fresh-session 수용 전 stable publication 중지. 단일 OIDC npm workflow 구현과 Copier·Rust Discord `message_fields` parity 복구 완료
+- 현재 작업: Codex plugin 활성화 차단 문제 복구 완료. `0.9.0-test.7`은 `567cce0` 기반이므로 소비자 자율 실행 규칙 `0978a6e` 포함 `0.9.0-test.8` candidate·publication 필요. Windows fresh-session 수용 전 stable publication 중지. 단일 OIDC npm workflow 구현과 Copier·Rust Discord `message_fields` parity 복구 완료
 - Agent 자율 실행 지속: 이전 시험판 작업에서 Agent 소유 회귀 정리·검증·push·후보·게시가
   남은 중간 보고 종료 판단 오류. [`agent-autonomous-continuation.md`](../plans/active/agent-autonomous-continuation.md)의
   `AAC-001–008`: source·소비자 프로젝트·전역 설정 지시문 terminal state·closure gate·session record·static regression 보강 완료

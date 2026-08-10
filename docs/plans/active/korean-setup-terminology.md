@@ -1,7 +1,7 @@
 # 한국어 global setup 용어 복구 계획
 
 > Checklist owner: `KST-*`
-> Target: 다음 독립 test release
+> Target: `0.9.0-test.8`
 > Scope: global user-scope setup의 한국어 질문·설명·projection 용어
 
 ## 조사 결과

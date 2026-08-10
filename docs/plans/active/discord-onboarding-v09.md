@@ -1,7 +1,7 @@
 # Discord `v0.9` 연결 계획
 
 > Checklist owner: `DIS9-*`
-> Target: 다음 독립 `0.9.0-test.N`
+> Target: `0.9.0-test.8`
 > Decision: [`ADR-0018`](../../decisions/ADR-0018-notion-wiki-backend.md)
 
 ## 목표
