@@ -20,10 +20,12 @@
 - [x] [MHI-002] 복수 host dry-run·apply·validate·update의 순차 실행과 성공·부분 실패 aggregate result 구현
 - [x] [MHI-003] 단일 host 호환·두 입력형·선행 preflight·부분 실패·문서 예시 회귀 검증
 - [x] [MHI-004] 설치 HTML·디자인 원칙·Source Wiki fact·current state 동기화와 `develop` push
+- [ ] [MHI-005] `--hosts` 쉼표 주변 공백 허용·따옴표 요구를 parser 회귀와 설치 HTML·Source Wiki에 명시하고 `develop` push
 
 ## 완료 기준
 
 - `--hosts codex,claude`와 `--host codex --host claude`의 동일 host 순서·결과
+- `--hosts "codex, claude"`의 쉼표 주변 공백 허용과 공백 포함 argument의 따옴표 예시
 - 중복·빈 CSV 항목·지원 밖 host의 mutation 전 exit 2
 - 복수 apply 전 전체 host dry-run preflight
 - 단일 host ActionResult 계약 변경 0건
