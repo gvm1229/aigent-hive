@@ -76,6 +76,7 @@
 | Developer binary lifecycle | [en](en/developer-binary-lifecycle.md) | [ko](ko/developer-binary-lifecycle.md) |
 | Temporary Git worktree lifecycle | [en](en/git-worktree-lifecycle.md) | [ko](ko/git-worktree-lifecycle.md) |
 | Marketing deck record | [en](en/marketing-deck-record.md) | [ko](ko/marketing-deck-record.md) |
+| Public Korean HTML guides | [en](en/public-html-guides.md) | [ko](ko/public-html-guides.md) |
 | v0.9 Skill suite | [en](en/v0-9-skill-suite-plan.md) | [ko](ko/v0-9-skill-suite-plan.md) |
 | v0.9 full release | [en](en/v0-9-full-release.md) | [ko](ko/v0-9-full-release.md) |
 

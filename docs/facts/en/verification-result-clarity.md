@@ -9,8 +9,8 @@ summary: "Hive reports whether each verification scope ran, why it did not run, 
 tags: [communication, reporting, verification]
 aliases: ["skip reporting", "verification qualifiers"]
 sources:
-  - "repo:.agents/directives/01-behavior.md#sha256:37e56019efc3b863734395bde48de0c2e1a3abf4aab8b2be982533fcb2ef6097"
-  - "repo:crates/hive-cli/src/user_install.rs#sha256:8a2fc46f070b2d093b5826cf59b19a718a6ffbcb71d1516212f1b9a584f42c50"
+  - "repo:.agents/directives/01-behavior.md#sha256:8ca3714e63a836e9099119cf2ead0913698c95e3473298afd00aab072d4ab0c6"
+  - "repo:crates/hive-cli/src/user_install.rs#sha256:b31b041d147e54b8c771e8f89b4dab62282474a5c2761aa3eb41402d5cfda7ff"
   - "repo:docs/guidance-schema.md#sha256:f5fc6aa2c36274d78d9703693a362c2f8d8eb81204d37f8a224434c14d1b196b"
   - "repo:harness/template/AGENTS.md.jinja#sha256:d706dc6585c1bbaa820d328ebfaae919cd02496adac0acec373ee4d0e37afe56"
 links: [language-consistency, release-verification]

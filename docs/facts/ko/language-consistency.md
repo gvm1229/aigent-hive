@@ -9,9 +9,9 @@ summary: "현재 응답에 다른 언어를 사용하라는 명시적 요청이 
 tags: [communication, documentation, projection]
 aliases: ["언어 일관성", "한영 혼용 방지"]
 sources:
-  - "repo:.agents/directives/01-behavior.md#sha256:37e56019efc3b863734395bde48de0c2e1a3abf4aab8b2be982533fcb2ef6097"
+  - "repo:.agents/directives/01-behavior.md#sha256:8ca3714e63a836e9099119cf2ead0913698c95e3473298afd00aab072d4ab0c6"
   - "repo:AGENTS.md#sha256:f83b69080a2580ec60feda02ecdb43833b9b43709b2da18dce76c8dd214a0b01"
-  - "repo:crates/hive-cli/src/user_install.rs#sha256:8a2fc46f070b2d093b5826cf59b19a718a6ffbcb71d1516212f1b9a584f42c50"
+  - "repo:crates/hive-cli/src/user_install.rs#sha256:b31b041d147e54b8c771e8f89b4dab62282474a5c2761aa3eb41402d5cfda7ff"
   - "repo:harness/template/AGENTS.md.jinja#sha256:d706dc6585c1bbaa820d328ebfaae919cd02496adac0acec373ee4d0e37afe56"
 links: [global-onboarding, source-development]
 reviewed_revision: "git:35e6b79a024350487f823780101a28be24a9f4c7"
