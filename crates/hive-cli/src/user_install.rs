@@ -8115,11 +8115,14 @@ mod tests {
         let temporary = tempdir().expect("tempdir");
         let csv = parse_host_selection(temporary.path(), &["--hosts", "codex,claude"])
             .expect("CSV hosts");
+        let spaced_csv = parse_host_selection(temporary.path(), &["--hosts", "codex, claude"])
+            .expect("CSV hosts with whitespace");
         let repeated =
             parse_host_selection(temporary.path(), &["--host", "codex", "--host", "claude"])
                 .expect("repeated hosts");
 
         assert_eq!(csv.hosts, vec![UserHost::Codex, UserHost::Claude]);
+        assert_eq!(spaced_csv.hosts, csv.hosts);
         assert_eq!(repeated.hosts, csv.hosts);
     }
 
