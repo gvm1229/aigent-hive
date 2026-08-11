@@ -21,13 +21,14 @@
 - [x] [PHG-003] 설치·host 활성화·전역 설정·project 설정·update 순서의 간단 설치 HTML 작성
 - [x] [PHG-004] 지정 로고의 두 HTML 반영, 기존 README branding 확인과 HTML·link·명령·문서 말투 검증
 - [x] [PHG-005] 공개 HTML 디자인 원칙 문서화와 설치 안내 3단계의 복수 호스트 CLI 계약·예시 보강
+- [ ] [PHG-006] 두 HTML의 원본 logo 내장·system font 전환·file-relative link 제거와 독립 파일 offline·responsive 검증
 
 ## 완료 기준
 
 - UTF-8 한국어 독립 HTML 2개
 - desktop·mobile 반응형 layout
 - 빨강 accent 0건, 벌집 금색 accent 사용
-- 외부 image dependency 0건과 지정 repository logo 경로 사용
+- 외부 resource dependency 0건과 지정 repository logo 원본 byte의 HTML 내부 내장
 - 현재 stable 설치 명령과 host별 대체값 정확성
 - README의 기존 영문·한국어 branding 표시 확인
 
