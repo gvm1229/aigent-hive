@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Aigent Hive stable 버전을 설치하고 host와 project를 설정하는 간단한 한국어 안내">
+  <title>Aigent Hive 간단 설치 안내</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+  <style>
+    :root {
+      --gold: #F5A623;
+      --gold-dark: #D98A00;
+      --gold-tint: #FFF6DF;
+      --navy: #0B1B31;
+      --ink: #15171B;
+      --charcoal: #30343B;
+      --gray: #626873;
+      --light-gray: #9AA1AC;
+      --line: #E4E6EA;
+      --soft: #F6F7F9;
+      --white: #FFFFFF;
+      --code: #111C2B;
+      --wrap: 960px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: "Pretendard", "Malgun Gothic", sans-serif;
+      color: var(--ink);
+      background: var(--white);
+      line-height: 1.72;
+      letter-spacing: -0.01em;
+      word-break: keep-all;
+      overflow-wrap: break-word;
+      -webkit-font-smoothing: antialiased;
+    }
+    a { color: inherit; }
+    .brandbar { display: flex; height: 6px; }
+    .brandbar span:first-child { width: 160px; background: var(--gold); }
+    .brandbar span:last-child { flex: 1; background: var(--navy); }
+
+    .hero {
+      max-width: var(--wrap);
+      margin: 0 auto;
+      padding: 48px 28px 32px;
+      display: grid;
+      grid-template-columns: 1fr 154px;
+      gap: 38px;
+      align-items: center;
+    }
+    .brand-lockup { display: flex; align-items: center; gap: 10px; margin-bottom: 18px; }
+    .brand-lockup img { width: 34px; height: 34px; object-fit: contain; }
+    .brand-lockup span {
+      color: var(--navy);
+      font-size: 12px;
+      font-weight: 850;
+      letter-spacing: 0.16em;
+    }
+    .eyebrow { color: var(--gold-dark); font-size: 12.5px; font-weight: 850; letter-spacing: 0.14em; margin-bottom: 11px; }
+    h1 { font-size: 39px; font-weight: 850; line-height: 1.28; letter-spacing: -0.035em; }
+    .lede { margin-top: 14px; color: var(--gray); font-size: 17px; }
+    .hero-mark {
+      width: 154px;
+      height: 154px;
+      padding: 15px;
+      border: 1px solid #F2D292;
+      border-radius: 24px;
+      background: radial-gradient(circle at 50% 42%, #FFFFFF 0 42%, var(--gold-tint) 72%);
+      box-shadow: 0 18px 44px rgba(11, 27, 49, 0.10);
+    }
+    .hero-mark img { display: block; width: 100%; height: 100%; object-fit: contain; }
+
+    .glance { max-width: var(--wrap); margin: 0 auto; padding: 0 28px 8px; }
+    .glance table { width: 100%; border-collapse: collapse; }
+    .glance tr { border-top: 1px solid var(--line); }
+    .glance tr:last-child { border-bottom: 1px solid var(--line); }
+    .glance th {
+      width: 148px;
+      padding: 13px 0;
+      text-align: left;
+      vertical-align: top;
+      color: var(--gold-dark);
+      font-size: 14px;
+      font-weight: 850;
+      white-space: nowrap;
+    }
+    .glance td { padding: 13px 0 13px 10px; color: var(--charcoal); font-size: 15px; }
+
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      margin-top: 34px;
+      border-bottom: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: saturate(180%) blur(12px);
+    }
+    nav .inner {
+      max-width: var(--wrap);
+      margin: 0 auto;
+      padding: 0 28px;
+      display: flex;
+      gap: 4px;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    nav .inner::-webkit-scrollbar { display: none; }
+    nav a {
+      flex: 0 0 auto;
+      padding: 13px 12px;
+      border-bottom: 2px solid transparent;
+      color: var(--gray);
+      font-size: 13.5px;
+      font-weight: 750;
+      text-decoration: none;
+    }
+    nav a:hover, nav a:focus-visible { color: var(--gold-dark); border-bottom-color: var(--gold); }
+
+    main { max-width: var(--wrap); margin: 0 auto; padding: 0 28px 84px; }
+    section { padding-top: 46px; }
+    .section-head {
+      display: flex;
+      align-items: baseline;
+      gap: 14px;
+      padding-bottom: 10px;
+      margin-bottom: 21px;
+      border-bottom: 2px solid var(--gold);
+    }
+    .section-number { color: var(--gold-dark); font-size: 14px; font-weight: 850; letter-spacing: 0.1em; }
+    h2 { font-size: 23px; font-weight: 850; letter-spacing: -0.03em; }
+    h3 { font-size: 16px; font-weight: 820; }
+    p { color: #343840; font-size: 15.5px; margin-bottom: 12px; }
+    p:last-child { margin-bottom: 0; }
+
+    .callout {
+      margin: 20px 0;
+      padding: 18px 22px;
+      border-left: 4px solid var(--gold);
+      border-radius: 0 8px 8px 0;
+      background: var(--gold-tint);
+    }
+    .callout.plain { border-left-color: var(--navy); background: var(--soft); }
+    .callout strong { color: var(--navy); }
+
+    .steps { counter-reset: install-step; display: grid; gap: 14px; }
+    .step {
+      counter-increment: install-step;
+      display: grid;
+      grid-template-columns: 52px 1fr;
+      gap: 18px;
+      padding: 21px 22px;
+      border: 1px solid var(--line);
+      border-radius: 11px;
+      background: var(--white);
+    }
+    .step::before {
+      content: counter(install-step);
+      display: grid;
+      place-items: center;
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: var(--gold);
+      color: var(--navy);
+      font-size: 18px;
+      font-weight: 900;
+    }
+    .step h3 { margin: 2px 0 7px; }
+    .step p { color: var(--gray); font-size: 14.5px; }
+
+    .code {
+      position: relative;
+      margin: 12px 0 4px;
+      overflow-x: auto;
+      border-radius: 9px;
+      background: var(--code);
+      color: #F8FAFC;
+    }
+    .code .label {
+      display: block;
+      padding: 8px 14px 7px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.11);
+      color: #F7C969;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.09em;
+    }
+    pre {
+      padding: 15px 16px 17px;
+      font-family: "Cascadia Code", "SFMono-Regular", Consolas, monospace;
+      font-size: 13.5px;
+      line-height: 1.65;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    code { font-family: "Cascadia Code", "SFMono-Regular", Consolas, monospace; }
+
+    .host-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 12px; }
+    .host {
+      padding: 14px 15px;
+      border: 1px solid var(--line);
+      border-radius: 9px;
+      background: var(--soft);
+    }
+    .host strong { display: block; color: var(--navy); font-size: 13px; margin-bottom: 5px; }
+    .host code { color: var(--gold-dark); font-size: 12px; font-weight: 750; }
+
+    details {
+      margin-bottom: 12px;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: var(--white);
+    }
+    summary {
+      padding: 15px 18px;
+      cursor: pointer;
+      color: var(--navy);
+      font-size: 14.5px;
+      font-weight: 800;
+      list-style-position: inside;
+    }
+    details[open] summary { border-bottom: 1px solid var(--line); background: var(--gold-tint); }
+    details .detail-body { padding: 4px 18px 18px; }
+
+    .checklist {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 8px;
+    }
+    .check {
+      position: relative;
+      min-height: 74px;
+      padding: 15px 16px 15px 46px;
+      border: 1px solid var(--line);
+      border-radius: 9px;
+      color: var(--charcoal);
+      font-size: 14px;
+    }
+    .check::before {
+      content: "✓";
+      position: absolute;
+      left: 16px;
+      top: 15px;
+      display: grid;
+      place-items: center;
+      width: 21px;
+      height: 21px;
+      border-radius: 50%;
+      background: var(--gold);
+      color: var(--navy);
+      font-size: 13px;
+      font-weight: 900;
+    }
+
+    footer {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-top: 52px;
+      padding: 22px 0 4px;
+      border-top: 1px solid var(--line);
+      color: var(--light-gray);
+      font-size: 13px;
+    }
+
+    @media (max-width: 760px) {
+      .hero { grid-template-columns: 1fr; padding: 36px 20px 26px; }
+      .hero-mark { width: 112px; height: 112px; grid-row: 1; }
+      h1 { font-size: 29px; }
+      .lede { font-size: 15.5px; }
+      .glance { padding: 0 20px 8px; }
+      .glance th { width: auto; display: block; padding: 12px 0 0; }
+      .glance td { display: block; padding: 2px 0 12px; }
+      nav .inner { padding: 0 20px; }
+      main { padding: 0 20px 60px; }
+      .host-grid { grid-template-columns: 1fr; }
+      .checklist { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 520px) {
+      .step { grid-template-columns: 1fr; gap: 8px; }
+      .hero-mark { width: 96px; height: 96px; border-radius: 18px; }
+      h2 { font-size: 20px; }
+    }
+    @media print {
+      nav { position: static; }
+      details { break-inside: avoid; }
+      details > * { display: block; }
+      .step, .check { break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+  <div class="brandbar" aria-hidden="true"><span></span><span></span></div>
+
+  <header class="hero">
+    <div>
+      <div class="brand-lockup">
+        <img src="assets/branding/hive-logo-mark.png" alt="">
+        <span>AIGENT HIVE</span>
+      </div>
+      <div class="eyebrow">QUICK INSTALL · 간단 설치</div>
+      <h1>5단계로 끝내는<br>Aigent Hive 설치</h1>
+      <p class="lede">Stable CLI 설치부터 host 연결, 전역 선호, project 설정까지 한 번에 확인하는 최소 경로</p>
+    </div>
+    <div class="hero-mark">
+      <img src="assets/branding/hive-logo-mark.png" alt="Aigent Hive 벌집 로고">
+    </div>
+  </header>
+
+  <div class="glance">
+    <table aria-label="설치 안내 한눈에 보기">
+      <tr><th>권장 release</th><td>Stable <code>0.8.0</code> · npm <code>latest</code></td></tr>
+      <tr><th>기본 설치</th><td>Node.js와 npm을 사용하는 전역 package 설치</td></tr>
+      <tr><th>지원 host</th><td>Codex · Claude Code · Gemini Antigravity</td></tr>
+      <tr><th>필요 없는 것</th><td>Model-provider API key · provider API 직접 설정</td></tr>
+    </table>
+  </div>
+
+  <nav aria-label="페이지 목차">
+    <div class="inner">
+      <a href="#before">준비</a>
+      <a href="#install">5단계 설치</a>
+      <a href="#alternatives">다른 설치 방법</a>
+      <a href="#update">Update</a>
+      <a href="#done">완료 확인</a>
+    </div>
+  </nav>
+
+  <main>
+    <section id="before">
+      <div class="section-head"><span class="section-number">00</span><h2>시작 전 준비</h2></div>
+      <div class="callout">
+        <p><strong>가장 간단한 경로:</strong> Node.js·npm 확인 → stable package 설치 → 현재 host 활성화 → 전역 설정 → project 설정</p>
+      </div>
+      <p>아래 명령으로 Node.js와 npm 확인. 둘 중 하나라도 인식되지 않으면 공식 Node.js LTS 설치 뒤 새 terminal에서 다시 확인.</p>
+      <div class="code">
+        <span class="label">TERMINAL</span>
+        <pre><code>node --version
+npm --version</code></pre>
+      </div>
+    </section>
+
+    <section id="install">
+      <div class="section-head"><span class="section-number">01</span><h2>5단계 설치</h2></div>
+      <div class="steps">
+        <article class="step">
+          <div>
+            <h3>Stable CLI 설치</h3>
+            <p>npm <code>latest</code>의 현재 stable release 설치</p>
+            <div class="code">
+              <span class="label">TERMINAL</span>
+              <pre><code>npm install -g aigent-hive</code></pre>
+            </div>
+          </div>
+        </article>
+
+        <article class="step">
+          <div>
+            <h3>Version 확인</h3>
+            <p>명령 인식과 stable version label 확인. 현재 예상값: <code>AIgent Hive v0.8.0</code></p>
+            <div class="code">
+              <span class="label">TERMINAL</span>
+              <pre><code>hive --version</code></pre>
+            </div>
+          </div>
+        </article>
+
+        <article class="step">
+          <div>
+            <h3>현재 host에 Hive 연결</h3>
+            <p>사용 중인 host 이름 하나를 선택해 user scope에 활성화</p>
+            <div class="code">
+              <span class="label">CODEX 예시</span>
+              <pre><code>hive install --scope user --host codex --apply --output json</code></pre>
+            </div>
+            <div class="host-grid">
+              <div class="host"><strong>Codex</strong><code>--host codex</code></div>
+              <div class="host"><strong>Claude Code</strong><code>--host claude</code></div>
+              <div class="host"><strong>Gemini Antigravity</strong><code>--host antigravity</code></div>
+            </div>
+          </div>
+        </article>
+
+        <article class="step">
+          <div>
+            <h3>전역 선호 설정</h3>
+            <p>연결한 host를 열고 아래 요청 입력. 현재 project를 검사하지 않고 사용자 범위만 설정.</p>
+            <div class="code">
+              <span class="label">HOST 대화창</span>
+              <pre><code>이 host의 전역 Aigent Hive 환경을 설정하거나 다시 설정해 줘.
+현재 project, repository, folder는 검사하거나 변경하지 말고
+사용자 범위 설정을 대화형으로 시작해 줘.</code></pre>
+            </div>
+          </div>
+        </article>
+
+        <article class="step">
+          <div>
+            <h3>Project 한 개 설정</h3>
+            <p>대상 repository를 host에서 연 뒤 아래 요청 입력. Exact write preview 확인 뒤 project 범위만 변경.</p>
+            <div class="code">
+              <span class="label">PROJECT 대화창</span>
+              <pre><code>이 project의 로컬 Aigent Hive harness를 설정해 줘.
+기존 전역 Hive 선호를 사용하고 이 project만 검사한 뒤
+정확한 쓰기 미리 보기를 먼저 보여 줘.</code></pre>
+            </div>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section id="alternatives">
+      <div class="section-head"><span class="section-number">02</span><h2>Node.js 없는 직접 설치</h2></div>
+      <p>직접 installer도 npm의 동일 native package byte와 exact-version SHA-256 검증 사용. 설치 뒤 2–5단계는 동일.</p>
+
+      <details>
+        <summary>macOS · Linux</summary>
+        <div class="detail-body">
+          <div class="code">
+            <span class="label">SHELL</span>
+            <pre><code>curl --proto '=https' --tlsv1.2 -LsSf \
+  https://unpkg.com/aigent-hive@0.8.0/install.sh | sh</code></pre>
+          </div>
+        </div>
+      </details>
+
+      <details>
+        <summary>Windows PowerShell 5.1+</summary>
+        <div class="detail-body">
+          <div class="code">
+            <span class="label">POWERSHELL</span>
+            <pre><code>irm https://unpkg.com/aigent-hive@0.8.0/install.ps1 | iex</code></pre>
+          </div>
+        </div>
+      </details>
+
+      <details>
+        <summary>Windows 명령 프롬프트</summary>
+        <div class="detail-body">
+          <div class="code">
+            <span class="label">CMD</span>
+            <pre><code>curl.exe -fLo install-aigent-hive.cmd https://unpkg.com/aigent-hive@0.8.0/install.cmd &amp;&amp; install-aigent-hive.cmd</code></pre>
+          </div>
+        </div>
+      </details>
+    </section>
+
+    <section id="update">
+      <div class="section-head"><span class="section-number">03</span><h2>Update</h2></div>
+      <p>새 version 확인과 설치 제안. Hive가 설명과 확인 없이 update를 자동 설치하는 경로 없음.</p>
+      <div class="code">
+        <span class="label">TERMINAL</span>
+        <pre><code>hive update</code></pre>
+      </div>
+      <div class="callout plain">
+        <p><strong>안전 원칙:</strong> 거절·입력 종료·비대화형 실행에서는 설치 변경 0건. 기존 install owner와 exact update 내용 확인 뒤에만 진행.</p>
+      </div>
+    </section>
+
+    <section id="done">
+      <div class="section-head"><span class="section-number">04</span><h2>완료 확인</h2></div>
+      <div class="checklist">
+        <div class="check"><code>hive --version</code>에서 stable version 확인</div>
+        <div class="check">현재 host의 user-scope 활성화 결과 <code>success</code> 확인</div>
+        <div class="check">전역 언어·Wiki·Skill·update 선호 저장 확인</div>
+        <div class="check">대상 project의 preview 검토 뒤 로컬 harness 생성 확인</div>
+      </div>
+      <div class="callout">
+        <p><strong>기능 설명:</strong> 설치 뒤 제공되는 범위는 <a href="hive-core-features.ko.html">Aigent Hive 핵심 기능</a> 참고</p>
+      </div>
+    </section>
+
+    <footer>
+      <span>Aigent Hive · Quick Install</span>
+      <span>Stable 0.8.0 · npm latest</span>
+    </footer>
+  </main>
+</body>
+</html>
