@@ -2,7 +2,7 @@
 
 - 기준 branch: `develop`
 - product version: `0.9.0`
-- plan revision: `2.55`
+- plan revision: `2.56`
 - 현재 milestone: `0.9.0` mandatory knowledge autocapture 회귀 보정·재수용
 - Mandatory memory regression: `0.9.0-test.13` operational user guidance의 every-turn
   `hive knowledge remember`·receipt 규칙 부재, localized `knowledge-capture` route 의미 축소.
@@ -115,7 +115,9 @@
   `a9224cc`, 벌집 금색 accent, 기존 logo, 상호 link·local asset·LXML parse PASS.
   디자인 원칙 `docs/guides/public-html-design-principles.md`, 설치 3단계의 host별 `--host`
   반복 예시·복수 `selected_hosts` 계약 확인. README branding: 기존 commit `245ae80`
-- Plan completion: canonical checklist `442/521` 완료, `79`개 미완료, `84.8%`
+- 복수 호스트 사용자 설치: `MHI-001–004` 진행. `--hosts codex,claude`·반복
+  `--host codex --host claude` CLI 계약, aggregate result·preflight·문서 동기화 범위
+- Plan completion: canonical checklist `442/525` 완료, `83`개 미완료, `84.2%`
 - 출시 분리: `0.9.0`의 user-visible Wiki는 local Markdown 정본과 SQLite projection만 제공.
   Notion backend·host browser OAuth·freshness·write-through·사용자 문서는 `0.10.0-test`까지 보류.
   Discord webhook 대화·시험 알림, HTML 안내, project·run·요청·progress payload는 `DIS9-*` 후속 범위
