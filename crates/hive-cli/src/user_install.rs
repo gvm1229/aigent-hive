@@ -277,6 +277,13 @@ struct UserArguments {
 }
 
 #[derive(Debug)]
+struct UserCommandArguments {
+    hosts: Vec<UserHost>,
+    mode: UserMode,
+    user_root: PathBuf,
+}
+
+#[derive(Debug)]
 enum InstallError {
     Input(String),
     Conflict(String),
@@ -1101,15 +1108,209 @@ fn run(operation: UserOperation, arguments: &[String]) -> ExitCode {
         UserOperation::Install => "InstallHiveUser",
         UserOperation::Update => "UpdateHiveUser",
     };
-    let result = parse(arguments)
-        .and_then(|arguments| execute(operation, &arguments, &SystemCommandRunner))
-        .unwrap_or_else(|error| failure(action, &error));
+    let result = match parse(arguments) {
+        Ok(arguments) => execute_command(operation, &arguments, &SystemCommandRunner),
+        Err(error) => failure(action, &error),
+    };
     emit_action_result(&result)
 }
 
-fn parse(arguments: &[String]) -> Result<UserArguments, InstallError> {
+fn execute_command(
+    operation: UserOperation,
+    command: &UserCommandArguments,
+    runner: &impl CommandRunner,
+) -> ActionResult {
+    if command.hosts.len() == 1 {
+        return host_arguments(command, command.hosts[0], command.mode)
+            .and_then(|arguments| execute(operation, &arguments, runner))
+            .unwrap_or_else(|error| failure(action_name(operation, command.mode), &error));
+    }
+
+    let requested_hosts = command
+        .hosts
+        .iter()
+        .map(|host| host.as_str())
+        .collect::<Vec<_>>();
+    if command.mode == UserMode::Apply {
+        for host in &command.hosts {
+            let result = host_arguments(command, *host, UserMode::DryRun)
+                .and_then(|arguments| execute(operation, &arguments, runner));
+            if let Err(error) = result {
+                return multi_host_failure(
+                    operation,
+                    command.mode,
+                    &error,
+                    &requested_hosts,
+                    &[],
+                    *host,
+                    true,
+                    Vec::new(),
+                    Vec::new(),
+                );
+            }
+        }
+    }
+
+    let mut completed_hosts = Vec::new();
+    let mut changed_paths = Vec::new();
+    let mut evidence = Vec::new();
+    let mut host_results = Vec::new();
+    for host in &command.hosts {
+        let result = host_arguments(command, *host, command.mode)
+            .and_then(|arguments| execute(operation, &arguments, runner));
+        let result = match result {
+            Ok(result) => result,
+            Err(error) => {
+                return multi_host_failure(
+                    operation,
+                    command.mode,
+                    &error,
+                    &requested_hosts,
+                    &completed_hosts,
+                    *host,
+                    false,
+                    changed_paths,
+                    evidence,
+                );
+            }
+        };
+        completed_hosts.push(host.as_str());
+        changed_paths.extend(result.changed_paths);
+        evidence.extend(result.evidence);
+        host_results.push(json!({
+            "host": host.as_str(),
+            "code": result.code,
+            "data": result.data
+        }));
+    }
+    changed_paths.sort();
+    changed_paths.dedup();
+    ActionResult {
+        schema_version: 1,
+        action: action_name(operation, command.mode),
+        status: "success",
+        exit_code: 0,
+        code: multi_host_success_code(operation, command.mode),
+        message: multi_host_success_message(operation, command.mode).to_owned(),
+        changed_paths,
+        evidence,
+        next_action: (command.mode == UserMode::DryRun).then(|| {
+            format!(
+                "run with --hosts {} --apply to activate these exact user installation plans",
+                requested_hosts.join(",")
+            )
+        }),
+        data: Some(json!({
+            "hosts": requested_hosts,
+            "scope": "user",
+            "results": host_results,
+            "preflight_completed": command.mode == UserMode::Apply
+        })),
+    }
+}
+
+fn host_arguments(
+    command: &UserCommandArguments,
+    host: UserHost,
+    mode: UserMode,
+) -> Result<UserArguments, InstallError> {
+    let (user_root, root_cap) = open_canonical_user_root(&command.user_root)?;
+    Ok(UserArguments {
+        host,
+        mode,
+        user_root,
+        root_cap,
+        setup_override: None,
+    })
+}
+
+fn action_name(operation: UserOperation, mode: UserMode) -> &'static str {
+    if mode == UserMode::Validate {
+        "ValidateHiveUser"
+    } else {
+        match operation {
+            UserOperation::Install => "InstallHiveUser",
+            UserOperation::Update => "UpdateHiveUser",
+        }
+    }
+}
+
+fn multi_host_success_code(operation: UserOperation, mode: UserMode) -> &'static str {
+    match (operation, mode) {
+        (UserOperation::Install, UserMode::DryRun) => {
+            "hive.user-install-multi-host-dry-run-complete"
+        }
+        (UserOperation::Install, UserMode::Apply) => "hive.user-install-multi-host-complete",
+        (UserOperation::Install, UserMode::Validate) => "hive.user-install-multi-host-valid",
+        (UserOperation::Install, UserMode::Recover) => "hive.user-install-multi-host-recovered",
+        (UserOperation::Update, UserMode::DryRun) => "hive.user-update-multi-host-dry-run-complete",
+        (UserOperation::Update, UserMode::Apply) => "hive.user-update-multi-host-complete",
+        (UserOperation::Update, UserMode::Validate) => "hive.user-update-multi-host-valid",
+        (UserOperation::Update, UserMode::Recover) => "hive.user-update-multi-host-recovered",
+    }
+}
+
+fn multi_host_success_message(operation: UserOperation, mode: UserMode) -> &'static str {
+    match (operation, mode) {
+        (UserOperation::Install, UserMode::DryRun) => {
+            "multi-host user installation dry run completed"
+        }
+        (UserOperation::Install, UserMode::Apply) => "multi-host user installation completed",
+        (UserOperation::Install, UserMode::Validate) => "multi-host user installation is valid",
+        (UserOperation::Install, UserMode::Recover) => {
+            "multi-host user installation recovery completed"
+        }
+        (UserOperation::Update, UserMode::DryRun) => "multi-host user update dry run completed",
+        (UserOperation::Update, UserMode::Apply) => "multi-host user update completed",
+        (UserOperation::Update, UserMode::Validate) => "multi-host user update is valid",
+        (UserOperation::Update, UserMode::Recover) => "multi-host user update recovery completed",
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
+fn multi_host_failure(
+    operation: UserOperation,
+    mode: UserMode,
+    error: &InstallError,
+    requested_hosts: &[&str],
+    completed_hosts: &[&str],
+    failed_host: UserHost,
+    preflight: bool,
+    mut changed_paths: Vec<String>,
+    evidence: Vec<Evidence>,
+) -> ActionResult {
+    changed_paths.sort();
+    changed_paths.dedup();
+    let mut result = failure(action_name(operation, mode), error);
+    result.message = if preflight {
+        format!(
+            "multi-host preflight failed for {} before mutation: {}",
+            failed_host.as_str(),
+            error.message()
+        )
+    } else {
+        format!(
+            "multi-host operation failed for {} after completed hosts [{}]: {}",
+            failed_host.as_str(),
+            completed_hosts.join(","),
+            error.message()
+        )
+    };
+    result.changed_paths = changed_paths;
+    result.evidence = evidence;
+    result.data = Some(json!({
+        "requested_hosts": requested_hosts,
+        "completed_hosts": completed_hosts,
+        "failed_host": failed_host.as_str(),
+        "preflight": preflight
+    }));
+    result
+}
+
+fn parse(arguments: &[String]) -> Result<UserCommandArguments, InstallError> {
     let mut scope = None;
-    let mut host = None;
+    let mut hosts = Vec::new();
+    let mut hosts_option_seen = false;
     let mut mode = None;
     let mut output = None;
     let mut user_root = None;
@@ -1137,13 +1338,39 @@ fn parse(arguments: &[String]) -> Result<UserArguments, InstallError> {
                     "exactly one install/update mode is required".to_owned(),
                 ));
             }
-            option @ ("--scope" | "--host" | "--output" | "--user-root") => {
+            "--host" => {
+                let value = arguments
+                    .get(index + 1)
+                    .ok_or_else(|| InstallError::Input("missing value for --host".to_owned()))?;
+                push_user_host(&mut hosts, value, "--host")?;
+                index += 2;
+            }
+            "--hosts" => {
+                let value = arguments
+                    .get(index + 1)
+                    .ok_or_else(|| InstallError::Input("missing value for --hosts".to_owned()))?;
+                if hosts_option_seen {
+                    return Err(InstallError::Input("duplicate option: --hosts".to_owned()));
+                }
+                hosts_option_seen = true;
+                let values = value.split(',').collect::<Vec<_>>();
+                if values.is_empty() || values.iter().any(|value| value.trim().is_empty()) {
+                    return Err(InstallError::Input(
+                        "--hosts must contain a comma-separated list without empty entries"
+                            .to_owned(),
+                    ));
+                }
+                for value in values {
+                    push_user_host(&mut hosts, value.trim(), "--hosts")?;
+                }
+                index += 2;
+            }
+            option @ ("--scope" | "--output" | "--user-root") => {
                 let value = arguments
                     .get(index + 1)
                     .ok_or_else(|| InstallError::Input(format!("missing value for {option}")))?;
                 let slot = match option {
                     "--scope" => &mut scope,
-                    "--host" => &mut host,
                     "--output" => &mut output,
                     "--user-root" => &mut user_root,
                     _ => unreachable!(),
@@ -1166,32 +1393,45 @@ fn parse(arguments: &[String]) -> Result<UserArguments, InstallError> {
             "user installation requires --output json".to_owned(),
         ));
     }
-    let host = match host.as_deref() {
-        Some("codex") => UserHost::Codex,
-        Some("claude") => UserHost::Claude,
-        Some("antigravity") => UserHost::Antigravity,
-        Some(_) => {
-            return Err(InstallError::Input(
-                "--host must be codex, claude, or antigravity".to_owned(),
-            ));
-        }
-        None => {
-            return Err(InstallError::Input(
-                "missing required option --host".to_owned(),
-            ))
-        }
-    };
+    if hosts.is_empty() {
+        return Err(InstallError::Input(
+            "missing required option --host or --hosts".to_owned(),
+        ));
+    }
     let mode = mode.ok_or_else(|| InstallError::Input("missing install/update mode".to_owned()))?;
     let requested_user_root =
         user_root.map_or_else(resolve_user_root, |value| Ok(PathBuf::from(value)))?;
-    let (user_root, root_cap) = open_canonical_user_root(&requested_user_root)?;
-    Ok(UserArguments {
-        host,
+    let (user_root, _root_cap) = open_canonical_user_root(&requested_user_root)?;
+    Ok(UserCommandArguments {
+        hosts,
         mode,
         user_root,
-        root_cap,
-        setup_override: None,
     })
+}
+
+fn push_user_host(
+    hosts: &mut Vec<UserHost>,
+    value: &str,
+    option: &str,
+) -> Result<(), InstallError> {
+    let host = match value {
+        "codex" => UserHost::Codex,
+        "claude" => UserHost::Claude,
+        "antigravity" => UserHost::Antigravity,
+        _ => {
+            return Err(InstallError::Input(format!(
+                "{option} values must be codex, claude, or antigravity"
+            )));
+        }
+    };
+    if hosts.contains(&host) {
+        return Err(InstallError::Input(format!(
+            "duplicate host selection: {}",
+            host.as_str()
+        )));
+    }
+    hosts.push(host);
+    Ok(())
 }
 
 fn resolve_user_root() -> Result<PathBuf, InstallError> {
@@ -7852,6 +8092,174 @@ mod tests {
         let parsed = parse(&arguments).expect("parse user installation arguments");
 
         assert_eq!(parsed.user_root, expected);
+    }
+
+    fn parse_host_selection(
+        root: &Path,
+        selection: &[&str],
+    ) -> Result<UserCommandArguments, InstallError> {
+        let mut arguments = vec!["--scope".to_owned(), "user".to_owned()];
+        arguments.extend(selection.iter().map(ToString::to_string));
+        arguments.extend([
+            "--user-root".to_owned(),
+            root.display().to_string(),
+            "--dry-run".to_owned(),
+            "--output".to_owned(),
+            "json".to_owned(),
+        ]);
+        parse(&arguments)
+    }
+
+    #[test]
+    fn cli_parse_accepts_csv_and_repeated_multi_host_forms_in_request_order() {
+        let temporary = tempdir().expect("tempdir");
+        let csv = parse_host_selection(temporary.path(), &["--hosts", "codex,claude"])
+            .expect("CSV hosts");
+        let repeated =
+            parse_host_selection(temporary.path(), &["--host", "codex", "--host", "claude"])
+                .expect("repeated hosts");
+
+        assert_eq!(csv.hosts, vec![UserHost::Codex, UserHost::Claude]);
+        assert_eq!(repeated.hosts, csv.hosts);
+    }
+
+    #[test]
+    fn cli_parse_allows_mixed_multi_host_forms_and_rejects_duplicate_hosts() {
+        let temporary = tempdir().expect("tempdir");
+        let mixed = parse_host_selection(
+            temporary.path(),
+            &["--hosts", "codex,claude", "--host", "antigravity"],
+        )
+        .expect("mixed hosts");
+        assert_eq!(
+            mixed.hosts,
+            vec![UserHost::Codex, UserHost::Claude, UserHost::Antigravity]
+        );
+
+        let duplicate = parse_host_selection(
+            temporary.path(),
+            &["--hosts", "codex,claude", "--host", "codex"],
+        )
+        .expect_err("duplicate host");
+        assert_eq!(duplicate.message(), "duplicate host selection: codex");
+    }
+
+    #[test]
+    fn cli_parse_rejects_empty_unknown_and_repeated_hosts_options() {
+        let temporary = tempdir().expect("tempdir");
+        for (selection, expected) in [
+            (
+                vec!["--hosts", "codex,,claude"],
+                "--hosts must contain a comma-separated list without empty entries",
+            ),
+            (
+                vec!["--hosts", "codex,other"],
+                "--hosts values must be codex, claude, or antigravity",
+            ),
+            (
+                vec!["--hosts", "codex", "--hosts", "claude"],
+                "duplicate option: --hosts",
+            ),
+        ] {
+            let error = parse_host_selection(temporary.path(), &selection)
+                .expect_err("invalid host selection");
+            assert_eq!(error.message(), expected);
+        }
+    }
+
+    #[test]
+    fn multi_host_dry_run_aggregates_results_in_request_order() {
+        let temporary = tempdir().expect("tempdir");
+        write_operational_setup(temporary.path(), &["codex", "claude"]);
+        let command = UserCommandArguments {
+            hosts: vec![UserHost::Codex, UserHost::Claude],
+            mode: UserMode::DryRun,
+            user_root: temporary.path().canonicalize().expect("canonical root"),
+        };
+        let runner = StatefulHostRunner::new(temporary.path(), HostSabotage::None);
+
+        let result = execute_command(UserOperation::Install, &command, &runner);
+
+        assert_eq!(result.status, "success");
+        assert_eq!(result.code, "hive.user-install-multi-host-dry-run-complete");
+        assert_eq!(
+            result.data.expect("aggregate data")["hosts"],
+            json!(["codex", "claude"])
+        );
+        assert!(!temporary.path().join(".hive/install/codex.json").exists());
+        assert!(!temporary.path().join(".hive/install/claude.json").exists());
+    }
+
+    #[test]
+    fn multi_host_apply_preflights_every_host_before_mutation() {
+        let temporary = tempdir().expect("tempdir");
+        write_operational_setup(temporary.path(), &["codex"]);
+        let command = UserCommandArguments {
+            hosts: vec![UserHost::Codex, UserHost::Claude],
+            mode: UserMode::Apply,
+            user_root: temporary.path().canonicalize().expect("canonical root"),
+        };
+        let runner = StatefulHostRunner::new(temporary.path(), HostSabotage::None);
+
+        let result = execute_command(UserOperation::Install, &command, &runner);
+
+        assert_eq!(result.status, "conflict");
+        assert!(result
+            .message
+            .contains("multi-host preflight failed for claude before mutation"));
+        let data = result.data.expect("failure data");
+        assert_eq!(data["preflight"], json!(true));
+        assert_eq!(data["completed_hosts"], json!([]));
+        assert!(!temporary.path().join(".hive/install/codex.json").exists());
+    }
+
+    #[test]
+    fn multi_host_apply_activates_every_selected_host_after_preflight() {
+        let temporary = tempdir().expect("tempdir");
+        write_operational_setup(temporary.path(), &["codex", "claude"]);
+        let command = UserCommandArguments {
+            hosts: vec![UserHost::Codex, UserHost::Claude],
+            mode: UserMode::Apply,
+            user_root: temporary.path().canonicalize().expect("canonical root"),
+        };
+        let runner = StatefulHostRunner::new(temporary.path(), HostSabotage::None);
+
+        let result = execute_command(UserOperation::Install, &command, &runner);
+
+        assert_eq!(result.status, "success", "{}", result.message);
+        assert_eq!(result.code, "hive.user-install-multi-host-complete");
+        assert!(temporary.path().join(".hive/install/codex.json").is_file());
+        assert!(temporary.path().join(".hive/install/claude.json").is_file());
+        assert_eq!(
+            result.data.expect("aggregate data")["preflight_completed"],
+            json!(true)
+        );
+    }
+
+    #[test]
+    fn multi_host_failure_reports_completed_and_failed_hosts() {
+        let result = multi_host_failure(
+            UserOperation::Install,
+            UserMode::Apply,
+            &InstallError::Verification("simulated second-host failure".to_owned()),
+            &["codex", "claude"],
+            &["codex"],
+            UserHost::Claude,
+            false,
+            vec![".hive/install/codex.json".to_owned()],
+            Vec::new(),
+        );
+
+        assert_eq!(result.status, "verification-failed");
+        assert!(result.message.contains("after completed hosts [codex]"));
+        assert_eq!(
+            result.changed_paths,
+            vec![".hive/install/codex.json".to_owned()]
+        );
+        let data = result.data.expect("failure data");
+        assert_eq!(data["completed_hosts"], json!(["codex"]));
+        assert_eq!(data["failed_host"], json!("claude"));
+        assert_eq!(data["preflight"], json!(false));
     }
 
     #[test]

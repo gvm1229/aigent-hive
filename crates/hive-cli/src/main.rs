@@ -45,7 +45,7 @@ Aigent Hive
 
 USAGE:
     hive doctor
-    hive install --scope user --host codex|claude|antigravity (--dry-run|--apply|--validate) [--user-root <dir>] --output json
+    hive install --scope user (--host codex|claude|antigravity)...|--hosts <comma-separated-hosts> (--dry-run|--apply|--validate) [--user-root <dir>] --output json
     hive uninstall [--user-root <dir>] [--output json]
     hive check-target <path>
     hive setup --help
