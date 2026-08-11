@@ -10,7 +10,7 @@ tags: [guard, project, setup, usage]
 aliases: ["Early stop threshold", "Project usage cap"]
 sources:
   - "repo:docs/decisions/ADR-0012-global-onboarding-shared-index.md#sha256:dea6123b7b193eb760a37b198566f9318d868fd7035491ac10756de0d4315530"
-  - "repo:docs/plans/active/usage-guard-policy.md#sha256:720a92c5a642a85082fafd152766b0bdc34afe12758c9887c39fd552113d002e"
+  - "repo:docs/plans/active/usage-guard-policy.md#sha256:24f84ff3eeb32ba7d5ee5c449d34cf0bb80e300a6123742f22664797402ab219"
 links: [global-onboarding, source-usage-guard, usage-sensor-policy]
 reviewed_revision: "git:35f5bce71814a3e874fe53a8730024f16013ad46"
 status: active
