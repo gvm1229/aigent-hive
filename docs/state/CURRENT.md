@@ -2,7 +2,7 @@
 
 - 기준 branch: `develop`
 - product version: `0.9.0`
-- plan revision: `2.51`
+- plan revision: `2.52`
 - 현재 milestone: `0.9.0` mandatory knowledge autocapture 회귀 보정·재수용
 - Mandatory memory regression: `0.9.0-test.13` operational user guidance의 every-turn
   `hive knowledge remember`·receipt 규칙 부재, localized `knowledge-capture` route 의미 축소.
@@ -103,8 +103,9 @@
   + `docs/plans/active/discord-onboarding-v09.md`
   + `docs/plans/active/windows-global-setup-hardening.md`
   + `docs/plans/active/v0.10.0-notion-candidate.md`
-- 공개 한국어 HTML 안내: `PHG-001–004` 계획 등록. Hive 핵심 기능·간단 설치 페이지,
-  벌집 금색 accent, 기존 logo, README branding 완료 증거와 정적 검증 범위
+- 공개 한국어 HTML 안내: `PHG-001–004` 완료. 핵심 기능·간단 설치 HTML commit
+  `a9224cc`, 벌집 금색 accent, 기존 logo, 상호 link·local asset·LXML parse PASS.
+  README branding: 기존 commit `245ae80`
 - Plan completion: canonical checklist `436/516` 완료, `80`개 미완료, `84.5%`
 - 출시 분리: `0.9.0`의 user-visible Wiki는 local Markdown 정본과 SQLite projection만 제공.
   Notion backend·host browser OAuth·freshness·write-through·사용자 문서는 `0.10.0-test`까지 보류.

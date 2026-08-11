@@ -16,10 +16,10 @@
 
 ## Checklist
 
-- [ ] [PHG-001] 참조 HTML의 핵심 visual contract와 벌집 금색 token 확정
-- [ ] [PHG-002] provider-neutral 경계·설정·지식·Skill·상태·안전 기능을 담은 핵심 기능 HTML 작성
-- [ ] [PHG-003] 설치·host 활성화·전역 설정·project 설정·update 순서의 간단 설치 HTML 작성
-- [ ] [PHG-004] 지정 로고의 두 HTML 반영, 기존 README branding 확인과 HTML·link·명령·문서 말투 검증
+- [x] [PHG-001] 참조 HTML의 핵심 visual contract와 벌집 금색 token 확정
+- [x] [PHG-002] provider-neutral 경계·설정·지식·Skill·상태·안전 기능을 담은 핵심 기능 HTML 작성
+- [x] [PHG-003] 설치·host 활성화·전역 설정·project 설정·update 순서의 간단 설치 HTML 작성
+- [x] [PHG-004] 지정 로고의 두 HTML 반영, 기존 README branding 확인과 HTML·link·명령·문서 말투 검증
 
 ## 완료 기준
 
@@ -29,3 +29,12 @@
 - 외부 image dependency 0건과 지정 repository logo 경로 사용
 - 현재 stable 설치 명령과 host별 대체값 정확성
 - README의 기존 영문·한국어 branding 표시 확인
+
+## 완료 증거
+
+- 계획 commit: `9d32b24`
+- HTML commit: `a9224cc`
+- 두 HTML LXML parse·anchor·local asset·상호 link PASS
+- 벌집 금색 `#F5A623`·responsive CSS·지정 logo 경로 확인
+- Stable install·version·host 활성화·update 명령 확인
+- README branding commit `245ae80`의 영문·한국어 banner 확인
