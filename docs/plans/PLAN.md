@@ -1,6 +1,6 @@
 # Aigent Hive active plan index
 
-> Revision: 2.49
+> Revision: 2.50
 > 기준일: 2026-08-11
 > Product version: `0.9.0`
 > 현재 milestone: `0.9.0` mandatory knowledge autocapture 회귀 보정·재수용 뒤 정식 릴리스 준비

@@ -17,15 +17,17 @@
 ## 현재 기준선
 
 - Product: `0.9.0`; notes: [`0.9.0.md`](../../releases/0.9.0.md)
-- 최신 공개 시험판: `0.9.0-test.15`; 여섯 npm package `test=0.9.0-test.15`, `latest=0.8.0`
-- `0.9.0-test.15` candidate [`31407585364`](https://github.com/gvm1229/aigent-hive/actions/runs/31407585364):
-  exact `6f809a27dae78589a8b69b23a855b982f2ede728`, 5개 native target·npm umbrella·direct installer·attestation PASS
-- `0.9.0-test.15` publication [`31409030152`](https://github.com/gvm1229/aigent-hive/actions/runs/31409030152):
-  six-package OIDC `test` 게시, annotated `v0.9.0-test.15`, GitHub prerelease, `latest=0.8.0` 유지 PASS
-- Windows global npm local install: `AIgent Hive v0.9.0-test #13` 확인. actual user root의
-  `hive uninstall → install → dry-run → apply → validate → install validate` PASS. knowledge·saved preference
-  digest 보존, Hive active Skill 22개·retired ID `0건`, usage guard `20%`, persisted Discord 설정, home temporary
-  answer `0건`, `--full` unknown-option rejection. 유지보수자 확인: 새 Codex session 자동 CLI 탐색·Discord 실제 전달
+- 최신 공개 시험판: `0.9.0-test.16`; 여섯 npm package `test=0.9.0-test.16`, `latest=0.8.0`
+- `0.9.0-test.16` candidate [`31514244763`](https://github.com/gvm1229/aigent-hive/actions/runs/31514244763):
+  exact `d4ffa337586733fabdecf6a8e0eeca309091de1e`, 5개 native target·npm umbrella·direct installer·attestation PASS
+- `0.9.0-test.16` publication [`31515563254`](https://github.com/gvm1229/aigent-hive/actions/runs/31515563254):
+  six-package OIDC `test` 게시, annotated `v0.9.0-test.16`, GitHub prerelease, `latest=0.8.0` 유지 PASS
+- Windows global npm install: `AIgent Hive v0.9.0-test #16` 확인. `test.13` ownership manifest 충돌의
+  Hive 보존형 uninstall→saved-preference reinstall→`hive install --validate` PASS. knowledge·saved preference
+  보존, Codex 매 턴 `remember`·receipt 안내와 automatic `knowledge-capture` 표시 확인. Fresh Codex session
+  write·다음 session recall은 `KAC-007` 미수용
+- `test.16` embedded release date `2026-08-01`: historical input 오류. 기존 byte·tag 불변, 별도 테스트
+  배포 없이 다음 정상 배포에서 actual UTC date 입력·표시 검증 필요
 - 상세 run·failure·external signer evidence: [`CURRENT.md`](../../state/CURRENT.md)
 
 ## 이번 정식 릴리스의 명시적 제외와 면제

@@ -2,7 +2,7 @@
 
 - 기준 branch: `develop`
 - product version: `0.9.0`
-- plan revision: `2.49`
+- plan revision: `2.50`
 - 현재 milestone: `0.9.0` mandatory knowledge autocapture 회귀 보정·재수용
 - Mandatory memory regression: `0.9.0-test.13` operational user guidance의 every-turn
   `hive knowledge remember`·receipt 규칙 부재, localized `knowledge-capture` route 의미 축소.
@@ -15,9 +15,15 @@
   exact `5ffff764bc2aa832863a10d9c01543474b300b51`, 19개 작업 전체 PASS. Copier·문서 스타일·Rust·Ubuntu/macOS/Windows 적합성 PASS
 - Native release runtime [run `31428720884`](https://github.com/gvm1229/aigent-hive/actions/runs/31428720884):
   exact `c0ca51aae005cd9f494fd7ef3d2c205e472e610b`, Linux musl x86_64·arm64, macOS x86_64·arm64, Windows x86_64 전체 PASS
-- `0.9.0-test.15`: candidate [run `31407585364`](https://github.com/gvm1229/aigent-hive/actions/runs/31407585364),
-  exact `6f809a27dae78589a8b69b23a855b982f2ede728`; publication [run `31409030152`](https://github.com/gvm1229/aigent-hive/actions/runs/31409030152),
-  `test=0.9.0-test.15`, `latest=0.8.0` 유지
+- `0.9.0-test.16`: candidate [run `31514244763`](https://github.com/gvm1229/aigent-hive/actions/runs/31514244763),
+  exact `d4ffa337586733fabdecf6a8e0eeca309091de1e`; publication [run `31515563254`](https://github.com/gvm1229/aigent-hive/actions/runs/31515563254),
+  six npm package `test=0.9.0-test.16`, annotated prerelease, `latest=0.8.0` 유지
+- Windows global user install: `test.13` ownership-manifest conflict의 Hive-owned preserving
+  uninstall→saved-preference reinstall→`hive install --validate` PASS. `AIgent Hive v0.9.0-test #16`,
+  Codex every-turn `remember`·canonical Markdown/derived-index receipt 안내, automatic `knowledge-capture` 표시 확인.
+  Fresh Codex session write→next-session recall은 `KAC-007` 대기
+- `test.16` embedded release date `2026-08-01`: historical input 오류. published tag·package byte 유지,
+  별도 테스트 배포 없이 다음 정상 배포에서 actual UTC date 입력·표시 검증 예정
 - Stable publication source 자동화 완료: macOS explicit ad-hoc·Windows explicit unsigned 또는 승인된 signer의
   strict platform evidence, deterministic public-only TUF authorization request, HTTPS archive digest·safe extraction,
   protected public root·rollback floor, production verifier·10개 target byte identity·publication receipt gate.
