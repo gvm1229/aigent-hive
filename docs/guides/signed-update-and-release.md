@@ -167,19 +167,95 @@ project와 Hive process에 포함 금지.
 
 ### 무료 external signer 준비
 
-권장 출발점: Apache-2.0 [TUF-on-CI](https://github.com/theupdateframework/tuf-on-ci)의
-별도 signing repository 또는 network-disconnected workstation. Hive repository 내부 signer
-설치·key 생성 금지. 사용 도구가 아래 exact profile을 만들 수 없으면 다른 TUF 도구 선택.
+#### 실행 host와 비용
 
-1. 서로 다른 3개 root Ed25519 authority 준비, root threshold `2` 설정.
-2. Root와 중복되지 않는 targets·snapshot·timestamp role key 준비.
-3. `consistent_snapshot=true`, TUF spec `1.0.31`, 미래 expiry와 monotonic metadata version 설정.
+현재 `0.9.0` ceremony 실행 host: **Mac**. 현재 Windows PC는 Hive source 개발과 정식 게시 뒤
+Windows clean install 수용 범위. TUF private key·signer runtime·작업공간의 Windows 수용 호스트 배치 금지.
+
+유료 Apple Developer Program·Microsoft Artifact Signing·YubiKey 구매 요구 없음. 공개 TUF archive는
+별도 공개 GitHub repository의 Release asset으로 제공 가능. 공개 repository의 standard GitHub-hosted
+Actions는 무료이며 GitHub Pages도 무료 범위이나, 이 절차는 Pages 구성 없이 Release asset 사용.
+
+`TUF-on-CI`: Apache-2.0 운영 reference. 다만 공식 signer 안내의 PIV hardware key와 experimental
+Sigstore 선택지만으로 Hive의 raw Ed25519 TUF profile 충족 근거 부족. Hive 검증 범위:
+`keytype`·`scheme`·public key·signature 모두 `ed25519:` raw lowercase hex. exact raw Ed25519
+output 검증 전 `tuf-on-ci-sign`의 final signer 선택·초기화·key 생성 금지.
+
+#### Mac 사전 준비
+
+1. Mac browser에서 공개 repository `gvm1229/aigent-hive-tuf` 생성. Hive source repository와 별도
+   위치, 공개 `metadata/`·`targets/` archive 배포 전용. private key·seed·PEM·PKCS#8·서명자 설정 commit 금지
+2. Mac Terminal에서 Hive checkout 밖의 전용 directory 생성
+
+   ```zsh
+   umask 077
+   mkdir -p ~/aigent-hive-release-authority/{candidate,keys,output}
+   chmod 700 ~/aigent-hive-release-authority
+   cd ~/aigent-hive-release-authority
+   ```
+
+3. Mac browser에서 stable candidate [run `31482918509`](https://github.com/gvm1229/aigent-hive/actions/runs/31482918509)의
+   `release-authorization-request` artifact download. zip을 `candidate/`에 extract
+
+   ```zsh
+   cd ~/aigent-hive-release-authority
+   unzip ~/Downloads/<release-authorization-request.zip> -d candidate
+   ```
+
+4. 다음 read-only check 실행. output `candidate verified: v0.9.0 / 4b3d585f / 10 targets`가
+   Mac 준비 완료 증거. 출력 전 key 생성·GitHub environment secret 설정·target rename·target rewrite 금지
+
+   ```zsh
+   cd ~/aigent-hive-release-authority
+   python3 - <<'PY'
+   from pathlib import Path
+   import hashlib
+   import json
+   import sys
+
+   requests = list(Path("candidate").rglob("signing-request.json"))
+   if len(requests) != 1:
+       sys.exit(f"signing-request.json count: {len(requests)}")
+
+   request_path = requests[0]
+   data = json.loads(request_path.read_text())
+   candidate = data["candidate"]
+   if candidate != {
+       "ref": "refs/heads/main",
+       "run_id": "31482918509",
+       "sha": "4b3d585f8e5d014a4b282cfeb6f9b2e9f8fb0f84",
+   }:
+       sys.exit("unexpected candidate identity")
+   if data["product_version"] != "0.9.0" or data["package_version"] != "0.9.0":
+       sys.exit("unexpected release version")
+   policy = data["tuf_policy"]
+   if policy["root_threshold"] != 2 or policy["root_total_authorities"] != 3:
+       sys.exit("unexpected root threshold")
+
+   for target in data["targets"]:
+       path = request_path.parent / target["path"]
+       if not path.is_file():
+           sys.exit(f"missing target: {target['path']}")
+       digest = hashlib.sha256(path.read_bytes()).hexdigest()
+       if path.stat().st_size != target["length"] or digest != target["sha256"]:
+           sys.exit(f"target mismatch: {target['path']}")
+   print("candidate verified: v0.9.0 / 4b3d585f / 10 targets")
+   PY
+   ```
+
+#### Authorization output
+
+Mac preparation receipt 뒤 external Ed25519 signer가 아래 profile의 metadata와 archive를 생성.
+
+1. 서로 다른 3개 root Ed25519 authority 준비, root threshold `2` 설정
+2. Root와 중복되지 않는 targets·snapshot·timestamp role key 준비
+3. `consistent_snapshot=true`, TUF spec `1.0.31`, 미래 expiry와 monotonic metadata version 설정
 4. Candidate의 `release-authorization-request/targets/`를 byte 변경 없이 external repository
-   `targets/`에 배치.
-5. `signing-request.json`의 10개 target path·length·SHA-256과 external repository를 대조.
-6. Targets·snapshot·timestamp 서명, root 2-of-3 threshold와 role/key 전역 unique 여부 확인.
-7. Top-level `metadata/`·`targets/`만 포함한 `tar.gz` 생성 후 lowercase SHA-256 계산.
-8. Archive를 public HTTPS URL에 올리고 URL·SHA-256을 stable publication 입력으로 사용.
+   `targets/`에 배치
+5. `signing-request.json`의 10개 target path·length·SHA-256과 external repository를 대조
+6. Targets·snapshot·timestamp 서명, root 2-of-3 threshold와 role/key 전역 unique 여부 확인
+7. Top-level `metadata/`·`targets/`만 포함한 `tar.gz` 생성 후 lowercase SHA-256 계산
+8. Archive를 public HTTPS URL에 올리고 URL·SHA-256을 stable publication 입력으로 사용
 
 첫 stable release의 protected rollback floor:
 

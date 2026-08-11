@@ -1,6 +1,6 @@
 # Aigent Hive active plan index
 
-> Revision: 2.46
+> Revision: 2.47
 > 기준일: 2026-08-11
 > Product version: `0.9.0`
 > 현재 milestone: `0.9.0` 무인 설치 수용·테스트 체계 정리 후 정식 릴리스 준비
@@ -88,7 +88,8 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
 | [`active/model-routed-custom-subagents.md`](active/model-routed-custom-subagents.md) | `MRA-*` | Codex·Claude custom subagent·Judge 정책 |
 | [`active/prompt-refine-auto-routing.md`](active/prompt-refine-auto-routing.md) | `PRF-*` | Material ambiguity 자동 refine·승인 전 정지 |
 | [`active/v0.9.0-test-finalization.md`](active/v0.9.0-test-finalization.md) | `TST9-*` | Markdown Wiki, Discord outbound, 문제 보고와 시험판 기능 마감 |
-| [`active/release-0.9.0.md`](active/release-0.9.0.md) | `REL9-*` | 정식 GitHub·npm 릴리스와 public acceptance |
+| [`active/release-0.9.0.md`](active/release-0.9.0.md) | `REL9-001–017` | 시험 수용·main 통합 |
+| [`active/release-0.9.0-stable-publication.md`](active/release-0.9.0-stable-publication.md) | `REL9-018–035` | stable candidate·Mac 외부 TUF·정식 게시·public acceptance |
 | [`active/test-release-setup-routing.md`](active/test-release-setup-routing.md) | `TUR-*` | Global·project setup routing과 numbered test user projection 인증 |
 | [`active/bootstrap-global-setup-recovery.md`](active/bootstrap-global-setup-recovery.md) | `BGR-*` | 선택형 bootstrap, 쉬운 global setup 복구, user projection merge |
 | [`active/korean-setup-terminology.md`](active/korean-setup-terminology.md) | `KST-*` | 한국어 global setup product term·질문 표기 |
@@ -118,6 +119,6 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
 ## Current execution order
 
 완료 증거: [`CURRENT.md`](../state/CURRENT.md)와 owning active fragment.
-현재: `REL9-018` stable candidate run `31482918509`가 exact main `4b3d585`에서 PASS. external TUF
-authorization·protected publication approval 뒤 정식 게시 진행. Antigravity·Claude 공개 제외 유지.
+현재: `REL9-018` stable candidate run `31482918509`가 exact main `4b3d585`에서 PASS. Mac의 분리된
+외부 TUF 준비·candidate 무결성 확인 뒤 authorization·protected publication approval 진행. Antigravity·Claude 공개 제외 유지.
 Notion: `N10-002–011`·`0.10.0-test` 보류.

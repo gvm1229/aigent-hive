@@ -21,8 +21,8 @@
   tag·GitHub Release·npm mutation `0건`
 - 현재 Skill 이름: [`docs/skills.md`](../skills.md)의 product-only 22개. retired 이름은
   release·plan·fact의 historical evidence와 rename ledger에만 보존, current guidance 출력 금지
-- 다음 경계: external TUF 2-of-3 authorization,
-  protected environment public root·rollback floor와 publication approval
+- 다음 경계: Mac 분리 작업공간의 candidate 무결성 확인, external TUF 2-of-3 authorization,
+  protected environment public root·rollback floor와 publication approval. Windows 수용 호스트의 TUF key·signer 사용 0건
 - `0.9.0` 예외: 실제 Antigravity host 수용과 Claude fixture 공개 제외. Codex 실제 plugin 활성화·global setup은 `REL9-011` 필수 gate. `develop → main` CI는 병합 gate 일시 면제이며 실패·미실행 범위 공개 유지
 - Codex marketplace 복구: `0.9.0-test.8`의 미완료 transaction으로 남은 manifest 없는 Hive marketplace entry를
   `hive install --recover`가 Hive-owned root 확인 뒤 조용히 정리·재설치. foreign host entry·knowledge·저장 preference 보존
