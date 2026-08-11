@@ -20,7 +20,7 @@
 - [x] [MHI-002] 복수 host dry-run·apply·validate·update의 순차 실행과 성공·부분 실패 aggregate result 구현
 - [x] [MHI-003] 단일 host 호환·두 입력형·선행 preflight·부분 실패·문서 예시 회귀 검증
 - [x] [MHI-004] 설치 HTML·디자인 원칙·Source Wiki fact·current state 동기화와 `develop` push
-- [ ] [MHI-005] `--hosts` 쉼표 주변 공백 허용·따옴표 요구를 parser 회귀와 설치 HTML·Source Wiki에 명시하고 `develop` push
+- [x] [MHI-005] `--hosts` 쉼표 주변 공백 허용·따옴표 요구를 parser 회귀와 설치 HTML·Source Wiki에 명시하고 `develop` push
 
 ## 완료 기준
 
@@ -38,3 +38,4 @@
 - 복수 dry-run aggregate·apply preflight·두 host activation·부분 실패 result 회귀 통과
 - `cargo clippy -p hive-cli --all-targets -- -D warnings` 통과
 - 구현·문서 commits `4f97787`·`6bab86b`, `develop` push `3a2f967..6bab86b`
+- 공백 포함 CSV parser 회귀 commit `ff1a28a`, 설치 HTML·Source Wiki 보강 commit `565b41f`, `develop` push `16ac99c..565b41f`
