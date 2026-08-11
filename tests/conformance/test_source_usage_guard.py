@@ -750,7 +750,7 @@ raise SystemExit(64)
         self.assertFalse(result["halt_marker"])
         self.assertEqual(result["fallback_install"]["provider"], "codex")
         preview = (
-            "python3 .agents/skills/hive-usage-guard/scripts/guard.py "
+            "python3 scripts/source-usage-guard.py "
             "fallback-install --host codex --dry-run --json"
         )
         self.assertEqual(result["next_action"], preview)
