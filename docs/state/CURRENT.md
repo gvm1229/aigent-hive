@@ -2,7 +2,7 @@
 
 - 기준 branch: `develop`
 - product version: `0.9.0`
-- plan revision: `2.44`
+- plan revision: `2.45`
 - 현재 milestone: `0.9.0` `main` stable candidate·production publication
 - `develop` CI [run `31430181535`](https://github.com/gvm1229/aigent-hive/actions/runs/31430181535):
   exact `5ffff764bc2aa832863a10d9c01543474b300b51`, 19개 작업 전체 PASS. Copier·문서 스타일·Rust·Ubuntu/macOS/Windows 적합성 PASS
@@ -15,8 +15,12 @@
   strict platform evidence, deterministic public-only TUF authorization request, HTTPS archive digest·safe extraction,
   protected public root·rollback floor, production verifier·10개 target byte identity·publication receipt gate.
   유료 Apple Developer ID·Microsoft Artifact Signing은 필수 gate에서 제외. SignPath Foundation은 무료 승인 시 선택 적용
-- 다음 외부 경계: `develop → main` PR review/merge, stable candidate 실행,
-  external TUF 2-of-3 authorization, protected environment public root·rollback floor와 publication approval
+- `main` stable 기준: PR #19 non-force merge `c6f8a283260c2cd38f37a39b4fa3af38fbb2c61e`.
+  head `afd6380` CI 2건 PASS; current `main` candidate 실행 대기
+- 현재 Skill 이름: [`docs/skills.md`](../skills.md)의 product-only 22개. retired 이름은
+  release·plan·fact의 historical evidence와 rename ledger에만 보존, current guidance 출력 금지
+- 다음 경계: stable candidate 실행, external TUF 2-of-3 authorization,
+  protected environment public root·rollback floor와 publication approval
 - `0.9.0` 예외: 실제 Antigravity host 수용과 Claude fixture 공개 제외. Codex 실제 plugin 활성화·global setup은 `REL9-011` 필수 gate. `develop → main` CI는 병합 gate 일시 면제이며 실패·미실행 범위 공개 유지
 - Codex marketplace 복구: `0.9.0-test.8`의 미완료 transaction으로 남은 manifest 없는 Hive marketplace entry를
   `hive install --recover`가 Hive-owned root 확인 뒤 조용히 정리·재설치. foreign host entry·knowledge·저장 preference 보존
@@ -83,7 +87,7 @@
   + `docs/plans/active/discord-onboarding-v09.md`
   + `docs/plans/active/windows-global-setup-hardening.md`
   + `docs/plans/active/v0.10.0-notion-candidate.md`
-- Plan completion: canonical checklist `428/502` 완료, `74`개 미완료, `85.3%`
+- Plan completion: canonical checklist `434/508` 완료, `74`개 미완료, `85.4%`
 - 출시 분리: `0.9.0`의 user-visible Wiki는 local Markdown 정본과 SQLite projection만 제공.
   Notion backend·host browser OAuth·freshness·write-through·사용자 문서는 `0.10.0-test`까지 보류.
   Discord webhook 대화·시험 알림, HTML 안내, project·run·요청·progress payload는 `DIS9-*` 후속 범위

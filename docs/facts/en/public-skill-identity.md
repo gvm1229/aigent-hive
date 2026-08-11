@@ -9,8 +9,8 @@ summary: "Aigent Hive uses one product-only 22-Skill catalog; source development
 tags: [localization, migration, plugin, skill]
 aliases: ["Skill naming"]
 sources:
-  - "repo:docs/decisions/ADR-0012-global-onboarding-shared-index.md#sha256:d30564f33f2ead463cfe9e18aa68b697cb07b6c419ee42c9b583fcc11edaf966"
-  - "repo:docs/plans/PLAN.md#sha256:eb1f64384cb74f35e411365f26520c8b8334838afe276f38e98c767f0de7e203"
+  - "repo:docs/decisions/ADR-0012-global-onboarding-shared-index.md#sha256:dea6123b7b193eb760a37b198566f9318d868fd7035491ac10756de0d4315530"
+  - "repo:docs/plans/PLAN.md#sha256:f202b8089fbd5898ede2cda2eb382b42333d6acdd9c5d2e8396534f03e65104c"
   - "repo:docs/plans/active/skill-identity-localization.md#sha256:5ae5f5e9e3ac9f2d9891393a75820fd1adbe8293e467a452d9778cba7fcb0468"
   - "repo:docs/skills.md#sha256:3ac35c43bee2bd83980415464b852253f271e95794d17fa81074fb2db0f88ec7"
 links: [global-onboarding, skill-routing]

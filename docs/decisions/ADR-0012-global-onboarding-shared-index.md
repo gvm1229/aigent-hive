@@ -14,7 +14,7 @@
 | --- | --- |
 | User install | Host-native minimal bootstrap package와 Hive marker 설치 |
 | 설치 직후 | `setup-required`; global setup 외 operational Hive route 차단 |
-| Global setup | `setup-hive` Skill + `hive setup --scope user` typed CLI |
+| Global setup | `user-setup` Skill + `hive setup --scope user` typed CLI |
 | Reconfigure | 동일 setup workflow의 기존 answer preview·변경·검증 |
 | 정본 | `~/.hive/config/user-setup.yml` |
 
@@ -37,12 +37,12 @@ Global setup answer:
 
 ### Setup scope routing
 
-- Global·user-scope preference, language, host, Skill, Wiki, persona, usage guard 요청: `setup-hive`
-- Project·repository·folder·path의 local harness 요청: `setup-harness`
+- Global·user-scope preference, language, host, Skill, Wiki, persona, usage guard 요청: `user-setup`
+- Project·repository·folder·path의 local harness 요청: `project-setup`
 - Bare Hive setup·reconfigure 요청: global user-scope 우선, ambient working directory inspection 없음
 - Global·project 동시 요청: global setup 완료 뒤 project setup의 별도 사용자 확인
 - Numbered test release의 user projection update: exact authenticated predecessor inventory만 허용
-- `0.9.0-test.3` Codex host inventory: frozen `setup-hive` digest와 current selected projection의
+- `0.9.0-test.3` Codex host inventory: frozen historical setup digest와 current selected projection의
   exact inventory 조합만 predecessor 인증
 - Unknown·변조 predecessor manifest: preview·apply 차단과 foreign byte 보존
 
@@ -115,7 +115,7 @@ Global setup answer:
 - Internal path·digest·projection 용어: 기본 안내 제외, 요청 시 diagnostic 제공
 - 한국어 대화: `Skill`, `Wiki`, host·product name, command, path, schema key, Skill ID는 exact
   term 유지. 일반 설명만 한국어화하며 `Skill → 기술` 같은 일반명사 직역 금지
-- 한국어 setup 질문: canonical `setup-hive`의 exact sample·용어표와 source-to-projection
+- 한국어 setup 질문: canonical `user-setup`의 exact sample·용어표와 source-to-projection
   regression으로 관리
 
 ### Source developer binary

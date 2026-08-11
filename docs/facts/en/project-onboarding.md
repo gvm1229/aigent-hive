@@ -9,7 +9,7 @@ summary: "Project setup inherits global preferences and asks only unresolved ess
 tags: [onboarding, project]
 aliases: ["Project setup"]
 sources:
-  - "repo:docs/decisions/ADR-0009-user-plugin-project-knowledge-boundary.md#sha256:59129f4216306b3c095ab64574700135da0f289df4aab6554f0213e24c40c6f3"
+  - "repo:docs/decisions/ADR-0009-user-plugin-project-knowledge-boundary.md#sha256:da1f8b5e6323b945a0a85740f32a8e4332cb3c9e9d446c6a1d5acc9846653454"
 links: [global-onboarding, shared-index]
 reviewed_revision: "git:722c8e46dbde5710155b394ef33820ebccd3b85c"
 status: active

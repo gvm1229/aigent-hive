@@ -27,12 +27,12 @@ provider-neutral Skill·Markdown 상태 계약 조합. 외부 계층 없이도 �
 
 ## Graph engineering 경계
 
-- `hive-loop-engineering`: host-native capability를 조합하는 얇은 Skill
+- `ralph-loop`: host-native capability를 조합하는 얇은 Skill
 - DAG node·edge, cycle detection, bounded retry, evidence-based transition,
   `blocked|failed|complete` terminal outcome, dynamic steering의 typed 계약
-- 매 node·retry·steering dispatch 전 `hive-usage-guard` gate
+- 매 node·retry·steering dispatch 전 `usage-guard` gate
 - 독립 verification role과 evidence locator 없는 success edge 금지
-- 기존 `hive-run-checkpoint`, `hive-run-resume`, `hive-role-handoff` 재사용
+- 기존 `run-checkpoint`, `run-resume`, `run-handoff` 재사용
 - 구현 완료 기준선: scheduler·model runtime·session daemon·provider API client·tmux·`omx|omc` command dependency 0개
 - 당시 범위: Stop hook continuation·Ralph·team/swarm runtime 제외
 - 후속 범위: provider-neutral scheduler·iterative·team·multi-goal 구현 허용, provider runtime·direct process spawn 금지
@@ -40,17 +40,17 @@ provider-neutral Skill·Markdown 상태 계약 조합. 외부 계층 없이도 �
 
 ## Wiki와 Skill 조합
 
-- `hive-wiki`: 기존 knowledge capture·query·maintenance와 source-wiki의 얇은 통합 진입점
+- `knowledge-maintain`: 기존 knowledge capture·query·maintenance와 source-wiki의 얇은 통합 진입점
 - 공개 동사: `add|query|lint|list|read|delete|refresh`
 - Keyword·tag·category query, 안정 category taxonomy, `[[wikilink]]`, 검토 기반 quick-add
 - Markdown 정본·SQLite 파생·secret safety·current-truth 유지
 - `omx_wiki` path·`omx` command·raw session 자동 수집 금지
-- 초기 suite: `hive-loop-engineering`, `hive-wiki`, `ai-slop-cleaner`,
-  `best-practice-research`와 기존 필수 Hive Skill
+- 초기 suite: `ralph-loop`, `knowledge-maintain`, `code-polish`,
+  `research-best-practices`와 기존 필수 Hive Skill
 - 중복 기능: 하나의 정본 구현 또는 얇은 router로 통합
-- `ai-slop-cleaner`: 회귀 시험 우선, 동작 보존, fallback 분류, smell별 pass,
+- `code-polish`: 회귀 시험 우선, 동작 보존, fallback 분류, smell별 pass,
   변경 파일 한정과 pass별 품질 gate
-- `best-practice-research`: 읽기 전용 bounded 연구, 공식·upstream 우선, 날짜·version,
+- `research-best-practices`: 읽기 전용 bounded 연구, 공식·upstream 우선, 날짜·version,
   저장소 사실 분리, 최소 evidence set, 인용과 명시적 handoff
 - 전체 OMX·OMC Skill·adapter: 기능 영역·owner·격차·`adopt|merge|exclude` 근거표 작성
 - Hive 승격 조건: 비중복, 사용자 승인, license·보안·source↔consumer conformance 검토
