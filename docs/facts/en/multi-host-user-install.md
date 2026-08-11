@@ -10,18 +10,20 @@ tags: [installation, multi-host, user-setup]
 aliases: ["multi-host Hive install", "repeatable host flag"]
 sources:
   - "repo:crates/hive-cli/src/main.rs#sha256:f8ea20501bfcc0226a8f720c7e18c5b772389aa423d3796ed8c440d1759bc671"
-  - "repo:crates/hive-cli/src/user_install.rs#sha256:6e7acffee805aea9462b9f350be5d99b9220f719894a19d384e4a5f4756822d9"
-  - "repo:docs/hive-install-guide.ko.html#sha256:1e7113e8769a0f2cc6e0c1b8848144ff51be8a46b0605e48454a7359fed24e93"
-  - "repo:docs/plans/active/multi-host-user-install.md#sha256:be31244b9e9a39b4cba728765245a02cd0ad2868612827e9d74e7bba3bff0ca8"
+  - "repo:crates/hive-cli/src/user_install.rs#sha256:d24cc8e55c8706144ac684cb7ccce3bfa9119c4bd0e20a3e6e36222d9d731eea"
+  - "repo:docs/hive-install-guide.ko.html#sha256:bf1124b8259e33c56fa3d070a69f1fa1be0f1f3ae8873bb25bd8fe3a5b99418a"
+  - "repo:docs/plans/active/multi-host-user-install.md#sha256:93af9392378e32f5f6423df86db77b706c9da89c311228ec01656e9600465ce3"
 links: [global-onboarding, supported-hosts]
-reviewed_revision: "git:6bab86b8421b50154967cec080c430ab05704bd8"
+reviewed_revision: "git:ff1a28ae30369e839bfc8a1933b8283da7abab3a"
 status: active
 ---
 
 # Multi-host User Install
 
 `hive install` and user-scope `hive update` retain single `--host` compatibility and add
-`--hosts codex,claude` plus repeated `--host codex --host claude`. Host order follows the request.
+`--hosts codex,claude` plus repeated `--host codex --host claude`. Whitespace around commas is
+accepted inside one argument; shell input containing that whitespace uses a quoted value such as
+`--hosts "codex, claude"`. Host order follows the request.
 Duplicate, empty, and unknown selections fail before mutation. Multi-host apply dry-runs every
 host first, then executes sequentially. Aggregate JSON reports per-host results; a later failure
 reports completed and failed hosts plus retained changed paths.

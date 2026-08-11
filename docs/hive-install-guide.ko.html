@@ -372,14 +372,14 @@ npm --version</code></pre>
         <article class="step">
           <div>
             <h3>사용할 host에 Hive 연결</h3>
-            <p>한 host는 <code>--host</code>, 여러 host는 쉼표 구분 <code>--hosts</code> 또는 반복 <code>--host</code>로 지정. 다음 단계의 전역 설정에서도 같은 host를 모두 선택.</p>
+            <p>한 host는 <code>--host</code>, 여러 host는 쉼표 구분 <code>--hosts</code> 또는 반복 <code>--host</code>로 지정. <code>--hosts</code> 값의 쉼표 앞뒤 공백 허용. 공백 포함 시 전체 값을 따옴표로 묶고 빈 항목은 금지. 다음 단계의 전역 설정에서도 같은 host를 모두 선택.</p>
             <div class="code">
               <span class="label">HOST 한 개 · CODEX 예시</span>
               <pre><code>hive install --scope user --host codex --apply --output json</code></pre>
             </div>
             <div class="code">
-              <span class="label">HOST 여러 개 · 쉼표 구분 예시</span>
-              <pre><code>hive install --scope user --hosts codex,claude --apply --output json</code></pre>
+              <span class="label">HOST 여러 개 · 쉼표와 공백 예시</span>
+              <pre><code>hive install --scope user --hosts "codex, claude" --apply --output json</code></pre>
             </div>
             <div class="code">
               <span class="label">HOST 여러 개 · 반복 FLAG 예시</span>

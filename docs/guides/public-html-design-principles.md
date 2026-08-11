@@ -72,6 +72,7 @@
 - 링크·이미지·anchor의 repository 상대 경로 사용과 정적 검증
 - 설치 명령은 실제 CLI parser와 현재 release 계약 확인 뒤 표기
 - `hive install`의 단일 `--host`, 쉼표 구분 `--hosts`, 반복 `--host` 계약 표기
+- `--hosts` 쉼표 주변 공백 허용과 공백 포함 argument의 전체 따옴표 표기
 - 복수 host apply의 전체 dry-run preflight·입력 순서 실행·부분 실패 JSON 경계 표기
 - 중복·빈 항목·지원 밖 host를 정상 예시로 쓰는 오류 금지
 
