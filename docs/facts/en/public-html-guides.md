@@ -12,9 +12,9 @@ sources:
   - "repo:docs/guides/public-html-design-principles.md#sha256:6aae9ab9808ca927fe3736f3c4bde3e91a0e25a9700ae75f98592e1577ab01ec"
   - "repo:docs/hive-core-features.ko.html#sha256:8f77210359186752205a0b4dcffcefd5d1a0bb8530d3620463be073c81b33abf"
   - "repo:docs/hive-install-guide.ko.html#sha256:9338f3f1f23e99bfef5f0788ab14051789414cc7cffb6c10eb1b2e9bd8c982c2"
-  - "repo:docs/plans/active/public-html-guides.md#sha256:efc1acbefb797798ba2deeec0653da3409599b91904b5fc8d7a1d12e92ebc9e8"
+  - "repo:docs/plans/active/public-html-guides.md#sha256:ef7818fd4550419c585f2fae43c569fa2d1541fe4508e622f9ad738317e371bf"
 links: [global-onboarding, product-purpose]
-reviewed_revision: "git:6f861b14f3a4931e89cb290504f94da311ec0339"
+reviewed_revision: "git:0b3bbbbfcb5904262c5281a0415851b96779ab9e"
 status: active
 ---
 

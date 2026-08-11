@@ -1,6 +1,6 @@
 # Aigent Hive active plan index
 
-> Revision: 2.61
+> Revision: 2.62
 > 기준일: 2026-08-11
 > Product version: `0.9.0`
 > 현재 milestone: `0.9.0` 최소 release trust 정리·usage onboarding·user projection purge 보정
@@ -33,7 +33,7 @@
 | Source docs Wiki | 13 | 0 | 100% |
 | Windows shell install boundary | 3 | 0 | 100% |
 | 문서 말투 | 6 | 0 | 100% |
-| 공개 한국어 HTML 안내 | 5 | 1 | 83.3% |
+| 공개 한국어 HTML 안내 | 6 | 0 | 100% |
 | 복수 호스트 사용자 설치 | 5 | 0 | 100% |
 | Security review | 4 | 0 | 100% |
 | Docs Wiki migration | 4 | 0 | 100% |
@@ -56,7 +56,7 @@
 | Windows global setup hardening | 13 | 0 | 100% |
 | Agent 자율 실행 지속 | 8 | 0 | 100% |
 | Notion `v0.10` 후보 | 1 | 10 | 9.1% |
-| **Canonical total** | **440** | **88** | **83.3%** |
+| **Canonical total** | **441** | **87** | **83.5%** |
 
 External production boundary 항목도 미완료 합계에 포함. Protected authority 없이 완료 처리 금지.
 

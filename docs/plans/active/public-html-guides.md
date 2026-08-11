@@ -21,7 +21,7 @@
 - [x] [PHG-003] 설치·host 활성화·전역 설정·project 설정·update 순서의 간단 설치 HTML 작성
 - [x] [PHG-004] 지정 로고의 두 HTML 반영, 기존 README branding 확인과 HTML·link·명령·문서 말투 검증
 - [x] [PHG-005] 공개 HTML 디자인 원칙 문서화와 설치 안내 3단계의 복수 호스트 CLI 계약·예시 보강
-- [ ] [PHG-006] 두 HTML의 원본 logo 내장·system font 전환·file-relative link 제거와 독립 파일 offline·responsive 검증
+- [x] [PHG-006] 두 HTML의 원본 logo 내장·system font 전환·file-relative link 제거와 독립 파일 offline·responsive 검증
 
 ## 완료 기준
 
@@ -42,3 +42,6 @@
 - README branding commit `245ae80`의 영문·한국어 banner 확인
 - 디자인 원칙: `docs/guides/public-html-design-principles.md`
 - `hive install --host` 단일 값 parser·복수 `selected_hosts` 추가 단위 test와 host별 명령 예시 확인
+- HTML별 정본 PNG SHA-256 일치, network·file-relative resource 0건, 내부 anchor 전체 유효
+- 프로젝트 밖 임시 폴더의 Edge offline desktop `1440×1200`·mobile `390×844` render PASS
+- 독립 공유 commit `6f861b1`, Source Wiki fact commit `0b3bbbb`
