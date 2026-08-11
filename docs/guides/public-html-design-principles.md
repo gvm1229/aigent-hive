@@ -39,7 +39,7 @@
 
 ## 타이포그래피와 간격
 
-- 기본 글꼴: `Pretendard`, 실패 시 `Malgun Gothic`, 마지막 대체 `sans-serif`
+- 기본 글꼴: 운영체제 기본 UI 글꼴, 한국어 대체 `Apple SD Gothic Neo`·`Noto Sans KR`·`Malgun Gothic`
 - 명령 글꼴: `Cascadia Code`, `SFMono-Regular`, `Consolas`, `monospace`
 - 본문 행간 `1.72`, 긴 한국어 낱말의 안전한 줄바꿈과 문장 단위 유지
 - Hero 제목 약 `39px`, 본문 구역 제목 약 `23px`, 본문 약 `15.5px`
@@ -66,10 +66,11 @@
 ## 접근성과 정확성
 
 - 문서 언어 `lang="ko"`, UTF-8, viewport, 문서별 description 필수
-- 의미 있는 로고 `alt` 제공, 장식 전용 요소 `aria-hidden="true"` 적용
+- 의미 있는 로고의 접근 가능한 이름 제공, 장식 전용 요소 `aria-hidden="true"` 적용
 - 탐색 링크의 `hover`와 `focus-visible` 상태 동등 제공
 - 색상만으로 순서·상태를 전달하지 않고 번호·제목·문구 병행
-- 링크·이미지·anchor의 repository 상대 경로 사용과 정적 검증
+- 문서 내 anchor만 사용하고 file-relative·network resource reference 금지
+- 지정 PNG 원본 byte의 `data:image/png;base64` 내장과 source SHA-256 일치 검증
 - 설치 명령은 실제 CLI parser와 현재 release 계약 확인 뒤 표기
 - `hive install`의 단일 `--host`, 쉼표 구분 `--hosts`, 반복 `--host` 계약 표기
 - `--hosts` 쉼표 주변 공백 허용과 공백 포함 argument의 전체 따옴표 표기
@@ -80,8 +81,8 @@
 
 - [ ] 두 HTML의 공통 token과 최대 폭 일치
 - [ ] 벌집 금색 외 보조 강조색 0건
-- [ ] 지정 로고 외 이미지 dependency 0건
-- [ ] 제목 계층·탐색 anchor·상호 문서 링크 유효
+- [ ] 지정 로고 원본 byte 내장과 외부 resource dependency 0건
+- [ ] 제목 계층·문서 내 탐색 anchor 유효
 - [ ] desktop `960px`, tablet `760px`, mobile `520px` 경계 확인
 - [ ] 명령·버전·host 선택 방식의 현재 CLI 계약 일치
-- [ ] HTML 구문·local asset·Markdown link·문서 말투 검사 통과
+- [ ] 독립 임시 폴더의 offline HTML 구문·desktop/mobile render·Markdown link·문서 말투 검사 통과
