@@ -68,6 +68,7 @@ current catalog.
 | [Signed update·release](guides/signed-update-and-release.md) | Update·candidate·publication procedure |
 | [Code signing policy](guides/code-signing-policy.md) | 무료 platform signing 상태·privacy·검증 경계 |
 | [npm Trusted Publisher](guides/npm-trusted-publisher.md) | six npm package OIDC 연결·test·stable publication |
+| [공개 HTML 디자인 원칙](guides/public-html-design-principles.md) | Hive 안내 HTML의 브랜드·정보 구조·반응형·명령 정확성 기준 |
 
 ## Releases
 

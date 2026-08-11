@@ -371,12 +371,18 @@ npm --version</code></pre>
 
         <article class="step">
           <div>
-            <h3>현재 host에 Hive 연결</h3>
-            <p>사용 중인 host 이름 하나를 선택해 user scope에 활성화</p>
+            <h3>사용할 host에 Hive 연결</h3>
+            <p><code>--host</code>는 명령 한 번에 하나만 지정. 여러 host를 쓰려면 host별 명령을 한 번씩 실행하고, 다음 단계의 전역 설정에서도 같은 host를 모두 선택.</p>
             <div class="code">
-              <span class="label">CODEX 예시</span>
+              <span class="label">HOST 한 개 · CODEX 예시</span>
               <pre><code>hive install --scope user --host codex --apply --output json</code></pre>
             </div>
+            <div class="code">
+              <span class="label">HOST 여러 개 · CODEX + CLAUDE CODE 예시</span>
+              <pre><code>hive install --scope user --host codex --apply --output json
+hive install --scope user --host claude --apply --output json</code></pre>
+            </div>
+            <p><code>--hosts</code>나 한 명령 안의 반복 <code>--host</code>는 미지원. 각 host CLI의 설치·로그인 완료 상태 필요.</p>
             <div class="host-grid">
               <div class="host"><strong>Codex</strong><code>--host codex</code></div>
               <div class="host"><strong>Claude Code</strong><code>--host claude</code></div>
