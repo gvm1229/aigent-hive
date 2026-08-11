@@ -17,12 +17,17 @@ Run the mandatory memory gate, then preserve the existing explicit source-ingest
 3. For consumer knowledge, reject secret, credential, confidential, ephemeral, ambiguous,
    speculative, private-path, raw transcript, complete conversation, hook payload, tool output,
    cache, database, and runtime content with canonical write count zero.
-4. Normalize one atomic claim. Bind `collection_id`, stable `claim_key`, portable `locator`, kind,
-   status, visibility, normalized fact, and reviewed provenance exactly as required by
-   `knowledge-remember-request.schema.json`. Use `user-stated` only for explicit user intent,
-   `observed` only for a reviewed artifact, and `verified` only with acceptance evidence. Do not
-   retain the raw turn.
-5. Run exactly one strict write-through request:
+4. For a safe explicit `user-root` user statement, normalize one atomic fact and use a stable
+   `claim_key` plus `project-profile|decision|convention|preference|workflow`; do not create a
+   request JSON or a provenance digest. Use the strict request schema only for reviewed artifacts,
+   verified outcomes, replacements, or another supported scope. Do not retain the raw turn.
+5. Run exactly one write-through request. Prefer the simple user-statement route:
+
+   ```text
+   hive knowledge remember --user-root <user-root> --user-statement <normalized-fact> --claim-key <stable-key> --kind <preference|workflow|decision|convention|project-profile> --output json
+   ```
+
+   For a reviewed artifact or another supported scope, use:
 
    ```text
    hive knowledge remember --user-root <user-root> --request <request.json> --output json

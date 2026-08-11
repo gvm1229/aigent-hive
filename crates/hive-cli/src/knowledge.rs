@@ -19,8 +19,8 @@ use hive_wiki::notion::{
 };
 use hive_wiki::portable::{BundleLimits, BundleScope};
 use hive_wiki::rag::{
-    plan_remember, CanonicalClaim, ClaimProvenance, RagError, RagVisibility, RememberRequest,
-    RememberSourceKind, RetrievalRequest, RetrievalScope,
+    plan_remember, AssertionStatus, CanonicalClaim, ClaimKind, ClaimProvenance, RagError,
+    RagVisibility, RememberRequest, RememberSourceKind, RetrievalRequest, RetrievalScope,
 };
 use hive_wiki::scan::{validate_claims, ReviewedClaim, ScanInventory};
 use hive_wiki::shared::{
@@ -61,7 +61,7 @@ USAGE:
     hive knowledge lint --target <dir> [--user-root <dir>] --output json
     hive knowledge delete --target <dir> --page-id <id> --reason <text> [--replacement <locator>] --timestamp <RFC3339> [--user-root <dir>] --output json
     hive knowledge suppress --target <dir> --fingerprint <sha256:...> --source-locator <locator> --reason <text> [--replacement <locator>] --timestamp <RFC3339> [--user-root <dir>] --output json
-    hive knowledge remember --user-root <dir> --request <request.json> --output json
+    hive knowledge remember --user-root <dir> (--request <request.json>|--user-statement <normalized-fact> --claim-key <stable-key> [--kind project-profile|decision|convention|preference|workflow]) --output json
     hive knowledge retrieve --user-root <dir> --target <current-dir> (--request <request.json>|--query <text> [--scope <scope>] [--top-k <1..100>] [--byte-budget <bytes>]) [--authorization-id <id> --authorization-token <token> --capabilities <json> --usage <json>] --output json
     hive knowledge authorize-confidential --user-root <dir> --target <current-dir> --collection <id-or-alias> --query <text> --capabilities <json> --usage <json> --expires-at <unix-seconds> --nonce <nonce> --confirm-current-action --output json
     hive knowledge authorize-collection --user-root <dir> --operation attach|map|detach --collection <id-or-alias> [--target <dir>] --expires-at <unix-seconds> --nonce <nonce> --confirm-current-action --output json
@@ -780,12 +780,43 @@ pub(crate) fn run_index(arguments: &[String]) -> ExitCode {
 }
 
 fn run_remember(arguments: &[String]) -> Result<KnowledgeResult, WikiError> {
-    let options = parse_options(arguments, &["--user-root", "--request"])?;
-    let user_root = PathBuf::from(required(&options, "--user-root")?);
-    let request = read_json_bounded::<RememberRequest>(
-        Path::new(required(&options, "--request")?),
-        "remember request",
+    let options = parse_options(
+        arguments,
+        &[
+            "--user-root",
+            "--request",
+            "--user-statement",
+            "--claim-key",
+            "--kind",
+        ],
     )?;
+    let user_root = PathBuf::from(required(&options, "--user-root")?);
+    let request = match (
+        optional(&options, "--request"),
+        optional(&options, "--user-statement"),
+    ) {
+        (Some(request), None) => {
+            for option in ["--claim-key", "--kind"] {
+                if optional(&options, option).is_some() {
+                    return Err(WikiError::InvalidInput(format!(
+                        "{option} requires --user-statement, not --request"
+                    )));
+                }
+            }
+            read_json_bounded::<RememberRequest>(Path::new(request), "remember request")?
+        }
+        (None, Some(statement)) => user_statement_remember_request(&options, statement)?,
+        (Some(_), Some(_)) => {
+            return Err(WikiError::InvalidInput(
+                "remember accepts exactly one of --request or --user-statement".to_owned(),
+            ));
+        }
+        (None, None) => {
+            return Err(WikiError::InvalidInput(
+                "remember requires --request or --user-statement".to_owned(),
+            ));
+        }
+    };
     require_shared_wiki_enabled(&user_root)?;
 
     // Independent inserts can finish shape and secret validation before initialization.
@@ -813,6 +844,47 @@ fn run_remember(arguments: &[String]) -> Result<KnowledgeResult, WikiError> {
         &committed.manifest_digest,
         json!({"plan": plan, "store": committed}),
     ))
+}
+
+fn user_statement_remember_request(
+    options: &[(&str, &str)],
+    normalized_fact: &str,
+) -> Result<RememberRequest, WikiError> {
+    let claim_key = required(options, "--claim-key")?;
+    let kind = match optional(options, "--kind").unwrap_or("preference") {
+        "project-profile" => ClaimKind::ProjectProfile,
+        "decision" => ClaimKind::Decision,
+        "convention" => ClaimKind::Convention,
+        "preference" => ClaimKind::Preference,
+        "workflow" => ClaimKind::Workflow,
+        value => {
+            return Err(WikiError::InvalidInput(format!(
+                "--kind must be project-profile, decision, convention, preference, or workflow; got {value}"
+            )));
+        }
+    };
+    let source = format!("request:{claim_key}");
+    Ok(RememberRequest {
+        collection_id: USER_ROOT_COLLECTION_ID.to_owned(),
+        claim_key: claim_key.to_owned(),
+        claim_id: None,
+        locator: format!("user-root/{claim_key}"),
+        kind,
+        status: AssertionStatus::UserStated,
+        visibility: RagVisibility::Shared,
+        normalized_fact: normalized_fact.to_owned(),
+        provenance: ClaimProvenance {
+            source_kind: RememberSourceKind::UserStatement,
+            summary: "Bounded automatic user-statement capture".to_owned(),
+            locator: source.clone(),
+            digest: sha256_digest(normalized_fact.as_bytes()),
+        },
+        sources: vec![source],
+        supersedes: Vec::new(),
+        expected_active_digest: None,
+        observed_at: None,
+        verified_at: None,
+    })
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
@@ -4304,6 +4376,80 @@ mod tests {
         assert_eq!(hits.len(), 1);
         assert_eq!(hits[0]["collection_id"], "user-root");
         assert_eq!(hits[0]["untrusted_content"], true);
+    }
+
+    #[test]
+    fn user_statement_remember_needs_no_request_json_and_is_idempotent() {
+        let user = temp_root();
+        write_user_setup(user.path(), true);
+        write_empty_knowledge(user.path());
+        let arguments = vec![
+            "--user-root".to_owned(),
+            user.path().to_string_lossy().into_owned(),
+            "--user-statement".to_owned(),
+            "The user has a web background and is transitioning into game development.".to_owned(),
+            "--claim-key".to_owned(),
+            "career-background-web-to-game".to_owned(),
+            "--kind".to_owned(),
+            "project-profile".to_owned(),
+            "--output".to_owned(),
+            "json".to_owned(),
+        ];
+
+        let inserted = run_remember(&arguments).expect("user statement insert");
+        assert_eq!(inserted.status, "success");
+        let data = inserted.data.expect("insert data");
+        assert_eq!(data["plan"]["new_claim"]["collection_id"], "user-root");
+        assert_eq!(data["plan"]["new_claim"]["status"], "user-stated");
+        assert_eq!(data["plan"]["new_claim"]["visibility"], "shared");
+        assert!(data["plan"]["new_claim"]["locator"]
+            .as_str()
+            .expect("canonical locator")
+            .starts_with(".hive/knowledge/Claims/user-root/claim-"));
+
+        let repeated = run_remember(&arguments).expect("user statement no-op");
+        assert!(repeated.changed_paths.is_empty());
+    }
+
+    #[test]
+    fn user_statement_remember_rejects_unsupported_kind_and_mixed_request() {
+        let user = temp_root();
+        write_user_setup(user.path(), true);
+        write_empty_knowledge(user.path());
+        let invalid_kind = vec![
+            "--user-root".to_owned(),
+            user.path().to_string_lossy().into_owned(),
+            "--user-statement".to_owned(),
+            "A verified result.".to_owned(),
+            "--claim-key".to_owned(),
+            "result".to_owned(),
+            "--kind".to_owned(),
+            "outcome".to_owned(),
+            "--output".to_owned(),
+            "json".to_owned(),
+        ];
+        let Err(error) = run_remember(&invalid_kind) else {
+            panic!("unsupported user-statement kind must fail");
+        };
+        assert_eq!(error.code(), "hive.knowledge-invalid-input");
+
+        let request = write_remember_request(user.path());
+        let mixed = vec![
+            "--user-root".to_owned(),
+            user.path().to_string_lossy().into_owned(),
+            "--request".to_owned(),
+            request.to_string_lossy().into_owned(),
+            "--user-statement".to_owned(),
+            "A preference.".to_owned(),
+            "--claim-key".to_owned(),
+            "preference".to_owned(),
+            "--output".to_owned(),
+            "json".to_owned(),
+        ];
+        let Err(error) = run_remember(&mixed) else {
+            panic!("mixed remember inputs must fail");
+        };
+        assert_eq!(error.code(), "hive.knowledge-invalid-input");
     }
 
     #[test]

@@ -2086,12 +2086,12 @@ fn render_user_guidance(
                 "disabled"
             };
             let memory_gate_en = if config.wiki.enabled {
-                "- Before every final response, review the current user statement and completed outcome for one safe reusable fact, preference, workflow, decision, convention, project profile, or verified outcome. Resolve `user-root|current-project|named-project` scope explicitly. An unregistered repository's user-global fact stays at `user-root`; ambiguous project-specific scope fails closed.\n- For one safe normalized atomic claim, run `hive knowledge remember --user-root <user-root> --request <request.json> --output json` exactly once. Require the canonical Markdown and derived-index receipt before the final response; identical current truth is a no-op.\n- Never record a secret, credential, confidential item without current-action authorization, ephemeral status, ambiguous inference, private path, raw transcript, complete conversation, hook payload, tool output, hidden prompt, cache, database, or runtime state.\n"
+                "- Before every final response, review the current user statement and completed outcome for one safe reusable fact, preference, workflow, decision, convention, project profile, or verified outcome. Resolve `user-root|current-project|named-project` scope explicitly. An unregistered repository's user-global fact stays at `user-root`; ambiguous project-specific scope fails closed.\n- For an explicit safe user-root statement, prefer `hive knowledge remember --user-root <user-root> --user-statement <normalized-fact> --claim-key <stable-key> --kind <preference|workflow|decision|convention|project-profile> --output json` exactly once; use `--request <request.json>` only for reviewed artifacts or another supported scope. Require the canonical Markdown and derived-index receipt before the final response; identical current truth is a no-op.\n- Never record a secret, credential, confidential item without current-action authorization, ephemeral status, ambiguous inference, private path, raw transcript, complete conversation, hook payload, tool output, hidden prompt, cache, database, or runtime state.\n"
             } else {
                 "- Global Wiki is disabled: do not write or refresh knowledge.\n"
             };
             let memory_gate_ko = if config.wiki.enabled {
-                "- 모든 최종 응답 전 현재 사용자 발화와 완료 결과에서 안전하고 재사용 가능한 사실·선호·작업 방식·결정·규약·프로젝트 특성·검증된 결과 1개를 검토. `user-root|current-project|named-project` 범위를 명시적으로 결정. 미등록 repository의 사용자 전역 사실은 `user-root`에 유지하고, 모호한 project 범위는 안전하게 중단.\n- 안전한 정규화 원자 claim 1개에는 `hive knowledge remember --user-root <user-root> --request <request.json> --output json`을 정확히 1회 실행. 최종 응답 전 canonical Markdown과 derived-index receipt를 확인하며, 동일한 현재 truth는 no-op.\n- 현재 action 승인 없는 secret·credential·confidential 항목, ephemeral 상태, 모호한 추론, private path, raw transcript, complete conversation, hook payload, tool output, hidden prompt, cache, database, runtime state는 기록 금지.\n"
+                "- 모든 최종 응답 전 현재 사용자 발화와 완료 결과에서 안전하고 재사용 가능한 사실·선호·작업 방식·결정·규약·프로젝트 특성·검증된 결과 1개를 검토. `user-root|current-project|named-project` 범위를 명시적으로 결정. 미등록 repository의 사용자 전역 사실은 `user-root`에 유지하고, 모호한 project 범위는 안전하게 중단.\n- 안전한 명시적 user-root 사용자 발화에는 `hive knowledge remember --user-root <user-root> --user-statement <normalized-fact> --claim-key <stable-key> --kind <preference|workflow|decision|convention|project-profile> --output json`을 정확히 1회 우선 실행. 검토 artifact 또는 다른 지원 범위에는 `--request <request.json>` 사용. 최종 응답 전 canonical Markdown과 derived-index receipt를 확인하며, 동일한 현재 truth는 no-op.\n- 현재 action 승인 없는 secret·credential·confidential 항목, ephemeral 상태, 모호한 추론, private path, raw transcript, complete conversation, hook payload, tool output, hidden prompt, cache, database, runtime state는 기록 금지.\n"
             } else {
                 "- 전역 위키 비활성: knowledge 기록·갱신 금지.\n"
             };
@@ -2170,8 +2170,7 @@ fn validate_operational_guidance(
     let guidance = std::str::from_utf8(guidance).map_err(|_| {
         InstallError::Verification("generated user guidance is not UTF-8".to_owned())
     })?;
-    let command =
-        "hive knowledge remember --user-root <user-root> --request <request.json> --output json";
+    let command = "hive knowledge remember --user-root <user-root> --user-statement <normalized-fact> --claim-key <stable-key>";
     if !config.wiki.enabled {
         return (!guidance.contains(command)).then_some(()).ok_or_else(|| {
             InstallError::Verification(
@@ -8207,7 +8206,7 @@ mod tests {
         assert!(english.contains("do not force irrelevant examples or weaken technical precision"));
         assert!(english.contains("For every passed, failed, skipped, deferred"));
         assert!(english.contains("Before every final response, review the current user statement"));
-        assert!(english.contains("hive knowledge remember --user-root <user-root> --request <request.json> --output json"));
+        assert!(english.contains("--user-statement <normalized-fact> --claim-key <stable-key>"));
         assert!(english.contains("canonical Markdown and derived-index receipt"));
         assert!(!english.contains("질문과 응답"));
 
@@ -8223,7 +8222,7 @@ mod tests {
         assert!(korean.contains("관련 없는 예시 강제 또는 기술적 정확성 약화 금지"));
         assert!(korean.contains("통과·실패·건너뜀·연기·미검증·미지원"));
         assert!(korean.contains("모든 최종 응답 전 현재 사용자 발화와 완료 결과"));
-        assert!(korean.contains("hive knowledge remember --user-root <user-root> --request <request.json> --output json"));
+        assert!(korean.contains("--user-statement <normalized-fact> --claim-key <stable-key>"));
         assert!(korean.contains("canonical Markdown과 derived-index receipt"));
         for avoidable_mixture in [
             "활성 adapter",
@@ -8247,7 +8246,7 @@ mod tests {
         assert!(!disabled.contains("hive knowledge remember --user-root"));
 
         let broken = english.replacen(
-            "hive knowledge remember --user-root <user-root> --request <request.json> --output json",
+            "--user-statement <normalized-fact> --claim-key <stable-key>",
             "knowledge write removed",
             1,
         );

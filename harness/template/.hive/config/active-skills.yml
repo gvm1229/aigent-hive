@@ -20,7 +20,7 @@ skills:
   consent_digest: null
 - name: knowledge-capture
   source_type: built-in
-  content_digest: sha256:4c5b273615d8cf89dac82a7d78c825b15e37a3f8ab145cc6cb7b0687a689973c
+  content_digest: sha256:11c67cae3789474793b3da3f1467fcd866309a4788c6d9e199a3472b817af88f
   side_effect_class: project-write
   capabilities:
   - filesystem-read
