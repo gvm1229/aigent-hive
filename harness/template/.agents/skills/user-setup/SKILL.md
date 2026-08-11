@@ -256,26 +256,25 @@ paths, schema keys, Skill IDs, and versions. Do not translate `Skill` as `기술
 
 Use these host-independent question patterns, one question at a time:
 
-1. `계속 사용할 언어를 선택해 주세요: English 또는 한국어.`
-2. `사용자 기본 맥락을 선택해 주세요. 여러 항목을 함께 선택할 수 있으며, 이 선택은 프로젝트의 작업 흐름이나 우선순위를 정하지 않습니다.`
+1. `사용 언어 선택: English 또는 한국어.`
+2. `사용자 기본 맥락 선택. 복수 선택 가능. 프로젝트 작업 흐름·우선순위 결정 없음.`
    - `웹 개발`: 웹 애플리케이션 관련 배경 또는 관심사
    - `게임 개발`: 게임 관련 배경 또는 관심사
    - `일반 지식 작업`: 소프트웨어 개발 외 배경 또는 관심사
-3. `추가로 알려 줄 배경, 관심사, 선호가 있나요? 없으면 건너뛸 수 있습니다.`
-4. `Skill 선택 방식을 골라 주세요.`
+3. `추가 배경·관심사·선호 입력. 없으면 건너뛰기.`
+4. `Skill 선택 방식 선택.`
    - `모든 내장 Skill 사용`
    - `개별 내장 Skill 선택`
-5. `Wiki는 이 컴퓨터의 Markdown 파일에 저장합니다. Obsidian 같은 앱으로 열 수 있습니다.`
-6. `사용량 한도에 도달했을 때 Discord 알림을 받을까요?`
+5. `Wiki 저장 위치: 이 컴퓨터의 Markdown 파일. Obsidian 같은 앱 열기 가능.`
+6. `사용량 한도 도달 시 Discord 알림 수신 여부.`
    - `아니요`
    - `예, 시험 알림도 보내기`
-7. `Discord webhook URL을 환경 변수에 저장해 주세요. 예: HIVE_DISCORD_WEBHOOK_URL. URL 자체는
-   보내지 말고 환경 변수 이름만 알려 주세요. Hive가 시험 알림을 보내 연결을 확인합니다.`
-8. `Discord 알림에 넣을 항목과 순서를 알려 주세요. 기본값은 남은 사용량, 프로젝트, 요청, 진행 상태, 호스트, 계속하기입니다. 시험 알림은 실제 알림과 같은 형식이며 첫 줄에만 시험 안내가 추가됩니다.`
+7. `Discord webhook URL 저장: 환경 변수. 예: HIVE_DISCORD_WEBHOOK_URL. URL 자체 대신 환경 변수 이름 사용. Hive 시험 알림으로 연결 확인.`
+8. `Discord 알림 항목·순서 선택. 기본값: 남은 사용량, 프로젝트, 요청, 진행 상태, 호스트, 계속하기. 시험 알림: 실제 알림과 같은 형식, 첫 줄 시험 안내 추가.`
 
 For Korean partial reconfiguration, show this complete catalog before asking which setting to change:
 
-`변경할 전역 설정을 하나 선택해 주세요. 아래는 변경할 수 있는 모든 설정입니다.`
+`변경할 전역 설정 1개 선택. 아래: 전체 변경 가능 설정.`
 
 1. **인터페이스 언어** — 이후 Hive 질문과 요약에 사용할 언어
    - 선택: `English` 또는 `한국어`
@@ -300,10 +299,10 @@ For Korean partial reconfiguration, show this complete catalog before asking whi
    - 중단 기준: 남은 사용량 `1`%부터 `99`%까지
    - CodexBar 대체 수단: 켜기 또는 끄기. 호스트 기본 감지기를 쓸 수 없을 때만 사용
    - Discord 사용량 알림: 켜기 또는 끄기. 사용량 보호를 켠 경우에만 선택 가능하며 Hive에서 Discord로 보내는 알림만 지원
-   - Discord webhook 환경 변수: `HIVE_DISCORD_WEBHOOK_URL` 같은 대문자 환경 변수 이름. Hive는 URL 자체를 저장하지 않음
+   - Discord webhook 환경 변수: `HIVE_DISCORD_WEBHOOK_URL` 같은 대문자 환경 변수 이름. Hive의 URL 자체 저장 금지
    - Discord 요청 공개 범위: 기본 `summary` 또는 preview·redaction 뒤 명시적으로 선택한 `raw-prompt`
    - Discord 알림 형식: 안전한 항목의 포함 여부와 순서. `remaining-usage`, `project`, `request`, `progress`, `host`, `resume`, `measured-at`, `evidence` 중 선택
-   - Discord 알림 언어: 인터페이스 언어와 동일. 시험 알림은 실제 중단 알림과 같은 항목·순서·언어이며 첫 줄에만 시험 안내 추가
+   - Discord 알림 언어: 인터페이스 언어 기준. 시험 알림: 실제 중단 알림과 같은 항목·순서·언어. 첫 줄: 시험 안내.
 
 Then ask for one numbered parent setting or named child setting. Do not replace this catalog with a
 single examples-only sentence.
