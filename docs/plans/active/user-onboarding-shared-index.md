@@ -14,7 +14,7 @@
 | Language·identity·persona·multi-host 질문 | Global catalog 기반 one-question sequence | 충족 |
 | Recommended 또는 개별 Skill 선택 | Dependency closure preview와 selected projection | 충족 |
 | Wiki default-on opt-out | 기본 활성화, setup·agent intent disable, Markdown 보존 | 충족 |
-| Usage guard opt-in·20% | 명시적 opt-in, enabled 기본 `20%`, fallback 별도 consent | 충족 |
+| Usage guard 권장·20% | 활성화 권장과 신속 기본 `20%`, fallback은 실제 native 실패 뒤 별도 consent | 보정 필요 |
 | User guidance marker | `AIGENT-HIVE:USER:START|END` append·own-block replace | 충족 |
 | User `.agents` projection | Provider-neutral directive·selected Skill과 host mirror | 충족 |
 | User Wiki + SQLite | `~/.hive/knowledge` + disposable root SQLite 구현 | 충족 |
@@ -68,13 +68,24 @@
   결과·사용 도구 또는 project·작성 기준·원 요청 요약의 bounded 기록, user-root·project
   범위 분리, disable 시 capture 0건, raw transcript·hook·tool output·runtime ingestion 금지.
   Operational user guidance 회귀로 재개방; 보정 owner: `KAC-*`
+- [ ] [UOS-020] Current projection과 authenticated historical inventory·`retired-names.yml`을
+  대조해 폐기·개명된 Hive-owned Skill file과 중첩 빈 directory를 setup·update 때 수렴 제거.
+  Modified·foreign path: 보존과 conflict
+- [ ] [UOS-021] `hive uninstall`의 Hive-owned transient tree 정리를 leaf-to-root 반복 prune로
+  보정. Empty install transaction·backup·marketplace·projection shell 제거, knowledge·saved
+  preference·foreign byte 보존. `dev-install` rollback state: 별도 developer lifecycle 유지
+- [ ] [UOS-022] `0.9.0-test.19` Mac 증거 재현 fixture와 actual user-root acceptance. 현재 관찰값
+  22개 active Skill·44개 active file·44개 retired empty leaf를 보정 전 fixture로 고정하고,
+  setup·uninstall·reinstall 뒤 retired Skill·owned empty shell `0건`
 
 ## 완료 evidence
 
 - Minimal bootstrap 뒤 operational route 차단과 재실행 가능한 global setup
 - 복수 host native qualification, selected Skill projection, foreign marker byte 보존
 - Wiki disable 시 knowledge Skill 제거·shared operation 차단·Markdown 보존
-- Usage guard disable 시 sensor·CodexBar 호출 0회, fallback 별도 consent
+- Usage guard 기본 활성화·신속 threshold `20%`, explicit disable 시 sensor·CodexBar 호출 0회
+- 정상 native sensor에서 CodexBar 이름·질문·호출 `0회`
+- Retired Skill·Hive-owned empty shell `0건`, knowledge·saved preference·foreign byte 보존
 - Project activation과 user-root registry·index의 연결 실패 rollback
 - 인증된 `0.7.0` 이하에만 허용되는 legacy project SQLite 호환 경로
 - 동결 `0.7.0` unconnected install의 `0.8.0` 전환 거부와 전체 install tree 무변경

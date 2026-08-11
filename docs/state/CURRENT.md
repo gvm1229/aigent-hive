@@ -2,8 +2,8 @@
 
 - 기준 branch: `develop`
 - product version: `0.9.0`
-- plan revision: `2.58`
-- 현재 milestone: `0.9.0` mandatory knowledge autocapture 회귀 보정·재수용
+- plan revision: `2.61`
+- 현재 milestone: `0.9.0` 최소 release trust 정리·usage onboarding·user projection purge 보정
 - Mandatory memory regression: `0.9.0-test.13` operational user guidance의 every-turn
   `hive knowledge remember`·receipt 규칙 부재, localized `knowledge-capture` route 의미 축소.
   `KAC-002–005` 전역 안내·세 host 공통 투영·localized 설명·의미 검증 보정 완료.
@@ -32,18 +32,17 @@
   Fresh Codex session write→next-session recall은 `KAC-007` 대기
 - `test.16` embedded release date `2026-08-01`: historical input 오류. published tag·package byte 유지,
   별도 테스트 배포 없이 다음 정상 배포에서 actual UTC date 입력·표시 검증 예정
-- Stable publication source 자동화 완료: macOS explicit ad-hoc·Windows explicit unsigned 또는 승인된 signer의
-  strict platform evidence, deterministic public-only TUF authorization request, HTTPS archive digest·safe extraction,
-  protected public root·rollback floor, production verifier·10개 target byte identity·publication receipt gate.
-  유료 Apple Developer ID·Microsoft Artifact Signing은 필수 gate에서 제외. SignPath Foundation은 무료 승인 시 선택 적용
+- Stable publication trust 개정: protected `main` exact tag, same-candidate GitHub Release,
+  SHA-256·GitHub attestation, npm OIDC provenance만 필수. macOS ad-hoc·Windows unsigned 공개.
+  외부 release trust ceremony·platform certificate gate 제거 작업: `REL9-019–022`
 - `main` stable candidate: PR #20 merge `4b3d585f8e5d014a4b282cfeb6f9b2e9f8fb0f84`의
   [run `31482918509`](https://github.com/gvm1229/aigent-hive/actions/runs/31482918509) PASS. 5개 native archive,
-  npm 6개 package·direct installer·attestation·platform evidence와 public-only external TUF request 생성,
+  npm 6개 package·direct installer·attestation과 폐기 예정 legacy authorization bundle 생성,
   tag·GitHub Release·npm mutation `0건`
 - 현재 Skill 이름: [`docs/skills.md`](../skills.md)의 product-only 22개. retired 이름은
   release·plan·fact의 historical evidence와 rename ledger에만 보존, current guidance 출력 금지
-- 다음 경계: Mac 분리 작업공간의 candidate 무결성 확인, external TUF 2-of-3 authorization,
-  protected environment public root·rollback floor와 publication approval. Windows 수용 호스트의 TUF key·signer 사용 0건
+- 다음 경계: Active/current legacy release trust 제거, usage guard·CodexBar·projection purge 보정,
+  replacement candidate, protected stable environment의 publication approval 한 번
 - `0.9.0` 예외: 실제 Antigravity host 수용과 Claude fixture 공개 제외. Codex 실제 plugin 활성화·global setup은 `REL9-011` 필수 gate. `develop → main` CI는 병합 gate 일시 면제이며 실패·미실행 범위 공개 유지
 - Codex marketplace 복구: `0.9.0-test.8`의 미완료 transaction으로 남은 manifest 없는 Hive marketplace entry를
   `hive install --recover`가 Hive-owned root 확인 뒤 조용히 정리·재설치. foreign host entry·knowledge·저장 preference 보존
@@ -52,14 +51,16 @@
   knowledge 5개 파일 digest 보존, Hive active Skill 22개·retired ID `0건`,
   Korean·bilingual Wiki, usage guard `20%`, Discord persisted 설정, home temporary answer `0건`, `--full` 거부 PASS.
   유지보수자 확인: 새 Codex session 자동 `hive` 탐색·Discord 실제 전달. `KST-006`·`DIS9-010`·`WGS-011`·`REL9-011` 완료
-- `hive uninstall`: Hive가 추가한 host activation·projection·package·derived index·backup·runtime만 제거.
+- `hive uninstall`: Hive가 추가한 host activation·projection·package·derived index·backup·runtime 제거 계약.
   `.hive/knowledge/`와 저장 user preference는 항상 보존, `--full`·`-f` 삭제 경로 제공 없음. 저장 preference 재설치: setup 질문 `0건`
+- Mac `0.9.0-test.19` audit: 22개 active Skill·44개 active file과 별도로 retired empty
+  `agents/` leaf 44개 잔존, empty `.hive/install-transactions` 잔존. Current manifest file cleanup 뒤
+  parent prune 비수렴 결함. `.hive/dev-install`: 별도 developer rollback state로 일반 purge 제외
 - Agent 자율 실행 지속: 이전 시험판 작업에서 Agent 소유 회귀 정리·검증·push·후보·게시가
   남은 중간 보고 종료 판단 오류. [`agent-autonomous-continuation.md`](../plans/active/agent-autonomous-continuation.md)의
   `AAC-001–008`: source·소비자 프로젝트·전역 설정 지시문 terminal state·closure gate·session record·static regression 보강 완료
-- `REL9-029`: product-owned Codex expedited default의 clean install·`dry-run → apply → validate`·install validate,
-  preserving uninstall 뒤 saved preference·knowledge 보존과 user projection 자동 복원·revalidate PASS. setup 질문·
-  사용자 홈 답안·manual `where hive`·schema 답안 추측 0건
+- 이전 expedited acceptance: usage guard disabled 기본으로 통과했으나 새 제품 결정으로 superseded.
+  새 gate: 활성화 권장·신속 기본 `20%`, normal setup의 CodexBar 노출 `0건`
 - `REL9-030`: Python 전수 module의 단일 lane manifest·owner·contract·release gate, Rust command·CI job 대장,
   `os × lane` CI matrix·Windows 시간 기록 완료. Python 순차 477.77초 대비 matrix critical path 262.03초 모델,
   45.2% 단축. Phase 4 repository fixture: ignored `tests/work/hive-phase4-<random>`만 사용
@@ -79,10 +80,9 @@
   Skill과 repository directive 사용, tracked source Skill 최종 `0건`. 신규 product `ship`·
   `amend-directive`; `source-review`는 Wiki 조회·기본 read-only 도구, `source-knowledge`는 세
   knowledge Skill·`hive source-wiki` CLI로 분리. retired-ID ledger·all-host projection·Copier ledger 회귀 완료
-- 사용량 보호: [`usage-guard-policy.md`](../plans/active/usage-guard-policy.md)의 global 사용자 선택
-  한도·등록 project별 더 보수적인 override·effective `max`·project profile 고정값 0건 구현. 소비자
-  product `usage-guard` 하나, source에는 repository pre-task gate만 유지하며 별도 user policy·Skill·adapter·threshold state 0건
-- 외부 중지 경계: `main` PR·review, external TUF authorization·protected publication approval,
+- 사용량 보호: 활성화 권장·신속 기본 `20%`로 보정 예정. Custom threshold·등록 project별 더
+  보수적인 override·effective `max` 유지. CodexBar: post-init native 실제 실패 뒤에만 별도 동의
+- 외부 중지 경계: `main` PR·review, protected stable publication approval,
   exact `1.0.0` 사용자 authority
 - Plan load: compact `docs/plans/PLAN.md` + `docs/plans/phases/07-public-qualification.md`
   + `docs/plans/active/plugin-project-lifecycle.md`
@@ -118,8 +118,9 @@
 - 복수 호스트 사용자 설치: `MHI-001–005` 완료.
   `--hosts codex,claude`·반복 `--host codex --host claude`, 전체 dry-run preflight,
   입력 순서 실행과 부분 실패 aggregate JSON 구현·Rust 전체 328개·strict clippy 통과,
-  commits `4f97787`·`6bab86b`·`ff1a28a`·`565b41f`; 공백 포함 CSV는 전체 argument 따옴표 표기
-- Plan completion: canonical checklist `447/526` 완료, `79`개 미완료, `85.0%`
+  commits `4f97787`·`6bab86b`·`ff1a28a`·`565b41f`; 공백 포함 CSV는 전체 argument 따옴표 표기,
+  `develop` push 완료
+- Plan completion: canonical checklist `440/527` 완료, `87`개 미완료, `83.5%`
 - 출시 분리: `0.9.0`의 user-visible Wiki는 local Markdown 정본과 SQLite projection만 제공.
   Notion backend·host browser OAuth·freshness·write-through·사용자 문서는 `0.10.0-test`까지 보류.
   Discord webhook 대화·시험 알림, HTML 안내, project·run·요청·progress payload는 `DIS9-*` 후속 범위
@@ -308,8 +309,8 @@
   PASS. `dc4466d42f4d3c4b71472e1ee8e6f27b58b2212a`, 여섯 package `test=0.9.0-test.4`,
   `latest=0.8.0`, annotated `v0.9.0-test.4`·22-asset prerelease와 isolated CLI #4 확인
 - `staging`: 현재 release flow에 불필요하여 생성 0건
-- Production gate: 5개 native target·6개 npm package, OS signing·notarization,
-  external TUF, public install·`0.8.0 → 0.9.0` update
+- Production gate: 5개 native target·6개 npm package·3개 installer, SHA-256·GitHub attestation·
+  npm OIDC provenance, public install·`0.8.0 → 0.9.0` update
 - 다음 작업: `REL9-014–015` public acceptance·retention 관찰; stable은 별도 main 후보까지 시작 금지
 
 ## Prompt refine 자동 routing
@@ -548,7 +549,7 @@ Pre-1.0 비차단 deferred:
 
 - 실제 Claude Code install/update E2E
 - 실제 Claude Pro/Max quota usage parity
-- macOS·Windows signing·notarization과 external TUF production authorization
+- Optional macOS·Windows publisher signing 실제 도입
 
 실제 current-host evidence:
 
@@ -627,7 +628,7 @@ Pre-1.0 비차단 deferred:
 
 - 실제 Claude app session E2E
 - 실제 Claude Pro/Max qualified subscription usage sensor
-- macOS·Windows platform signing과 external TUF production authorization
+- Optional macOS·Windows publisher signing 실제 도입
 
 ## Source 개발 usage safeguard
 
@@ -669,15 +670,10 @@ Source guard는 개발 workspace 전용. Shipping 제품은 watcher 없이 one-s
 
 ## Phase 6 release·update truth
 
-### Verifier-only trust
-
-- Agent-write-denied public root에서 시작하는 TUF-compatible Ed25519 검증
-- Offline root exact 2-of-3, role별 unique key material, duplicate·unassigned signature 거부
-- Root rotation의 old+new threshold, expiry, version, rollback, target length·SHA-256 검증
-- in-toto/SLSA source·builder·subject와 platform signing evidence semantic 검증
-- Production publication에서 exact archive subject·target·candidate/source commit·Sigstore
-  bundle 결합
-- Product signing/private-key/downloader/provider-network API 없음
+- Legacy release verifier·authorization path: 삭제 대기 `REL9-019–022`
+- 유지: local bundle version·length·SHA-256, transactional backup·atomic activation·failure
+  rollback·crash recovery, same-major migration
+- Distribution trust: GitHub attestation 또는 npm registry integrity·OIDC provenance
 
 ### Version·migration
 
@@ -833,9 +829,8 @@ Current remote qualification evidence:
 
 Pre-1.0 비차단 deferred:
 
-- macOS arm64/x86_64 Developer ID signing·notarization
-- Windows Authenticode 또는 Azure Artifact Signing
-- External TUF production authorization
+- Optional macOS Developer ID signing·notarization
+- Optional Windows Authenticode
 - 실제 Claude subscription-backed install·usage parity
 - GitHub normal release와 Git tag
 - Exact `1.0.0` 사용자 지시 전 stable major preparation 금지
