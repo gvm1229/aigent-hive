@@ -2558,13 +2558,9 @@ fn render_user_directive(config: &UserSetupConfig, resolved_skills: &[String]) -
     let mut rendered = match config.interface_language {
         InterfaceLanguage::En => {
             let capture = if config.wiki.enabled {
-                "- Before the final response for material work, run agent-reviewed task-fact \
-autocapture into the enabled global Wiki. Record the bounded outcome, tool or project, criteria, \
-and originating request summary from current authorized artifacts; never ingest a raw transcript, \
-hook payload, tool output, hidden prompt, or runtime state.\n"
+                "- Before every final response, review the current user statement and completed outcome for one safe reusable fact, preference, workflow, decision, convention, project profile, or verified outcome. Resolve `user-root|current-project|named-project` scope explicitly; an unregistered repository's user-global fact stays at `user-root`, and ambiguous project-specific scope fails closed.\n- For one safe normalized atomic claim, run `hive knowledge remember --user-root <user-root> --request <request.json> --output json` exactly once. Require the canonical Markdown and derived-index receipt before the final response; identical current truth is a no-op.\n- Never record a secret, credential, confidential item without current-action authorization, ephemeral status, ambiguous inference, private path, raw transcript, complete conversation, hook payload, tool output, hidden prompt, cache, database, or runtime state.\n"
             } else {
-                "- Wiki capture is disabled. Do not capture or refresh the knowledge index; \
-preserve canonical Markdown until an explicit deletion request.\n"
+                "- Global Wiki is disabled: do not write or refresh knowledge; preserve canonical Markdown until an explicit deletion request.\n"
             };
             format!(
                 "# Aigent Hive user preferences\n\n- Setup state: `operational`\n- Interface language: `en`\n- User contexts: {profile}\n- Agent persona: {persona}\n- Selected hosts: `{hosts}`\n- Global Wiki: `{wiki}`\n- Daily update check: `{update_check}`\n- Active Skills: `{}`\n{capture}- User contexts inform only the global background. They never select a project workflow, implementation approach, delivery priority, or active Skill set.\n- When daily update check is enabled, run `hive update --check --user-root <user-root> --output json` before the first Hive task of each host session. A check may notify but must never install.\n- Use English for every question and response unless the user explicitly requests another language for the current response. A message written in another language does not by itself change this preference.\n- For ambiguous or detail-poor ordinary prompts, offer one concise optional refine suggestion without automatic rewrite.\n- Never request provider credentials or call model-provider APIs on Hive's behalf.\n",
@@ -2573,13 +2569,9 @@ preserve canonical Markdown until an explicit deletion request.\n"
         }
         InterfaceLanguage::Ko => {
             let capture = if config.wiki.enabled {
-                "- 중요한 작업의 최종 응답 전 enabled global Wiki에 agent-reviewed task-fact를 \
-기록. 현재 승인된 artifact에서 bounded outcome, tool·project, criteria, originating request \
-summary만 사용하고 raw transcript, hook payload, tool output, hidden prompt, runtime state는 \
-수집하지 않음.\n"
+                "- 모든 최종 응답 전 현재 사용자 발화와 완료 결과에서 안전하고 재사용 가능한 사실·선호·작업 방식·결정·규약·프로젝트 특성·검증된 결과 1개를 검토. `user-root|current-project|named-project` 범위를 명시적으로 결정. 미등록 repository의 사용자 전역 사실은 `user-root`에 유지하고, 모호한 project 범위는 안전하게 중단.\n- 안전한 정규화 원자 claim 1개에는 `hive knowledge remember --user-root <user-root> --request <request.json> --output json`을 정확히 1회 실행. 최종 응답 전 canonical Markdown과 derived-index receipt를 확인하며, 동일한 현재 truth는 no-op.\n- 현재 action 승인 없는 secret·credential·confidential 항목, ephemeral 상태, 모호한 추론, private path, raw transcript, complete conversation, hook payload, tool output, hidden prompt, cache, database, runtime state는 기록 금지.\n"
             } else {
-                "- Wiki capture 비활성. 명시적 삭제 요청 전까지 canonical Markdown을 보존하고 \
-knowledge index를 capture·refresh하지 않음.\n"
+                "- 전역 위키 비활성: knowledge 기록·갱신 금지. 명시적 삭제 요청 전까지 canonical Markdown을 보존.\n"
             };
             format!(
                 "# Aigent Hive 사용자 설정\n\n- 설정 상태: `operational`\n- Interface language: `ko`\n- 사용자 기본 맥락: {profile}\n- 에이전트 페르소나: {persona}\n- 선택 호스트: `{hosts}`\n- Global Wiki: `{wiki}`\n- 일일 update 확인: `{update_check}`\n- 활성 Skill: `{}`\n{capture}- 사용자 기본 맥락은 전역 배경 정보만 제공하며 프로젝트 작업 흐름, 구현 방식, 작업 우선순위, 활성 Skill을 정하지 않음.\n- 일일 update 확인이 enabled이면 각 host session의 첫 Hive 작업 전에 `hive update --check --user-root <user-root> --output json` 실행. 확인은 알림만 가능하며 설치 금지.\n- 현재 응답에 다른 언어를 사용하라는 명시적 요청이 없는 한 모든 질문과 응답에 한국어 사용. 다른 언어로 작성된 메시지만으로 이 선호를 변경하지 않음.\n- 모호하거나 핵심 세부가 부족한 일반 prompt에는 자동 rewrite 없이 간결한 optional refine 제안 1개만 제공.\n- Provider credential을 요청하거나 Hive를 대신해 model-provider API를 호출하지 않음.\n",
@@ -3867,18 +3859,30 @@ usage_guard:
             &["knowledge-capture".to_owned()],
         ))
         .expect("enabled guidance");
-        assert!(enabled.contains("agent-reviewed task-fact autocapture"));
-        assert!(enabled.contains("originating request"));
+        assert!(enabled.contains("Before every final response, review the current user statement"));
+        assert!(enabled.contains("hive knowledge remember --user-root <user-root> --request <request.json> --output json"));
+        assert!(enabled.contains("canonical Markdown and derived-index receipt"));
         assert!(enabled.contains("raw transcript"));
 
+        config.interface_language = InterfaceLanguage::Ko;
+        let korean = String::from_utf8(render_user_directive(
+            &config,
+            &["knowledge-capture".to_owned()],
+        ))
+        .expect("Korean enabled guidance");
+        assert!(korean.contains("모든 최종 응답 전 현재 사용자 발화와 완료 결과"));
+        assert!(korean.contains("hive knowledge remember --user-root <user-root> --request <request.json> --output json"));
+        assert!(korean.contains("canonical Markdown과 derived-index receipt"));
+
+        config.interface_language = InterfaceLanguage::En;
         config.wiki.enabled = false;
         let disabled = String::from_utf8(render_user_directive(
             &config,
             &["knowledge-capture".to_owned()],
         ))
         .expect("disabled guidance");
-        assert!(!disabled.contains("agent-reviewed task-fact autocapture"));
-        assert!(disabled.contains("Wiki capture is disabled"));
+        assert!(!disabled.contains("hive knowledge remember --user-root"));
+        assert!(disabled.contains("Global Wiki is disabled: do not write or refresh knowledge"));
     }
 
     #[test]

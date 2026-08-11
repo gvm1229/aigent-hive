@@ -9,8 +9,8 @@ summary: "hive uninstall: Hive가 추가한 사용자 범위 설정만 제거, k
 tags: [bootstrap, onboarding, preservation, uninstall]
 aliases: ["clean reinstall", "hive uninstall"]
 sources:
-  - "repo:crates/hive-cli/src/user_install.rs#sha256:4790c9666065f4bc49ebf0eaee4c50fce384a2fd44a69cd16670b9c9d6d7f39a"
-  - "repo:crates/hive-cli/src/user_setup.rs#sha256:2dbd0f956fea6c6e258a275bc89565c48a7bf211819ea8816512215dc2582213"
+  - "repo:crates/hive-cli/src/user_install.rs#sha256:fa36d9c4df52461d8044fcf2c89332385138ee69f91664fe62a0175339d33527"
+  - "repo:crates/hive-cli/src/user_setup.rs#sha256:70e578f0b5c75e10c77332e87a6a083d590e1fc3fc265627dbe985a37bec4ab1"
   - "repo:docs/plans/active/windows-global-setup-hardening.md#sha256:422649ef3ca475aca9e3a86a2ddd2bbbb3895221d7bc39fe4417010664dee47f"
   - "repo:harness/skills/user-setup/SKILL.md#sha256:4f3676378fafac75f9c6376210c760a2e0200e843ead0825d1b34d7446864e34"
 links: [global-onboarding, knowledge-preservation, release-verification]

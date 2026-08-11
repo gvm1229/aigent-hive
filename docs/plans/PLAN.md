@@ -1,6 +1,6 @@
 # Aigent Hive active plan index
 
-> Revision: 2.48
+> Revision: 2.49
 > 기준일: 2026-08-11
 > Product version: `0.9.0`
 > 현재 milestone: `0.9.0` mandatory knowledge autocapture 회귀 보정·재수용 뒤 정식 릴리스 준비
@@ -37,7 +37,7 @@
 | Docs Wiki migration | 4 | 0 | 100% |
 | v0.9 loop·Wiki·Skill suite | 25 | 0 | 100% |
 | v0.9 global knowledge RAG | 18 | 2 | 90.0% |
-| v0.9 knowledge autocapture 회귀 | 0 | 8 | 0% |
+| v0.9 knowledge autocapture 회귀 | 4 | 4 | 50.0% |
 | v0.9 knowledge portability·scan | 18 | 0 | 100% |
 | Hive-native 반복 실행 | 1 | 23 | 4.2% |
 | Model-routed custom subagent | 0 | 32 | 0% |
@@ -54,7 +54,7 @@
 | Windows global setup hardening | 13 | 0 | 100% |
 | Agent 자율 실행 지속 | 8 | 0 | 100% |
 | Notion `v0.10` 후보 | 1 | 10 | 9.1% |
-| **Canonical total** | **432** | **84** | **83.7%** |
+| **Canonical total** | **436** | **80** | **84.5%** |
 
 External production boundary 항목도 미완료 합계에 포함. Protected authority 없이 완료 처리 금지.
 

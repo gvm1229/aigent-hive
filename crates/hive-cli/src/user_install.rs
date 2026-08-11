@@ -1493,13 +1493,12 @@ fn build_desired_user_files(
     let guidance_existing =
         read_optional_regular(&arguments.root_cap, &guidance_relative, MAX_USER_FILE_BYTES)?
             .unwrap_or_default();
+    let guidance = render_user_guidance(arguments.host, operational.map(|(config, _)| config));
+    validate_operational_guidance(&guidance, operational.map(|(config, _)| config))?;
     files.insert(
         guidance_relative.clone(),
         PlannedFile {
-            bytes: merge_user_marker(
-                &guidance_existing,
-                &render_user_guidance(arguments.host, operational.map(|(config, _)| config)),
-            )?,
+            bytes: merge_user_marker(&guidance_existing, &guidance)?,
             executable: false,
             ownership: "shared-marker",
         },
@@ -2086,12 +2085,26 @@ fn render_user_guidance(
             } else {
                 "disabled"
             };
+            let memory_gate_en = if config.wiki.enabled {
+                "- Before every final response, review the current user statement and completed outcome for one safe reusable fact, preference, workflow, decision, convention, project profile, or verified outcome. Resolve `user-root|current-project|named-project` scope explicitly. An unregistered repository's user-global fact stays at `user-root`; ambiguous project-specific scope fails closed.\n- For one safe normalized atomic claim, run `hive knowledge remember --user-root <user-root> --request <request.json> --output json` exactly once. Require the canonical Markdown and derived-index receipt before the final response; identical current truth is a no-op.\n- Never record a secret, credential, confidential item without current-action authorization, ephemeral status, ambiguous inference, private path, raw transcript, complete conversation, hook payload, tool output, hidden prompt, cache, database, or runtime state.\n"
+            } else {
+                "- Global Wiki is disabled: do not write or refresh knowledge.\n"
+            };
+            let memory_gate_ko = if config.wiki.enabled {
+                "- 모든 최종 응답 전 현재 사용자 발화와 완료 결과에서 안전하고 재사용 가능한 사실·선호·작업 방식·결정·규약·프로젝트 특성·검증된 결과 1개를 검토. `user-root|current-project|named-project` 범위를 명시적으로 결정. 미등록 repository의 사용자 전역 사실은 `user-root`에 유지하고, 모호한 project 범위는 안전하게 중단.\n- 안전한 정규화 원자 claim 1개에는 `hive knowledge remember --user-root <user-root> --request <request.json> --output json`을 정확히 1회 실행. 최종 응답 전 canonical Markdown과 derived-index receipt를 확인하며, 동일한 현재 truth는 no-op.\n- 현재 action 승인 없는 secret·credential·confidential 항목, ephemeral 상태, 모호한 추론, private path, raw transcript, complete conversation, hook payload, tool output, hidden prompt, cache, database, runtime state는 기록 금지.\n"
+            } else {
+                "- 전역 위키 비활성: knowledge 기록·갱신 금지.\n"
+            };
+            let memory_gate = match config.interface_language {
+                crate::user_setup::InterfaceLanguage::En => memory_gate_en,
+                crate::user_setup::InterfaceLanguage::Ko => memory_gate_ko,
+            };
             match config.interface_language {
                 crate::user_setup::InterfaceLanguage::En => (
                     "# Aigent Hive user directives",
                     "Active adapter",
                     format!(
-                        "- State: `operational`\n- Interface language: `en`; use English for every question and response unless the user explicitly requests another language for the current response. A message written in another language does not by itself change this preference. Keep Korean only for exact Korean names, literals, quotations, or text the user asks to preserve.\n- Selected hosts: `{hosts}`\n- Global Wiki: `{wiki}`\n- Daily update check: `{update_check}`.\n- When enabled, run `hive update --check --user-root <user-root> --output json` before the first Hive task of each host session; never install from a check.\n- Use `aigent-hive:project-setup` for project expedited or custom setup.\n- Project Markdown Wiki remains canonical; the user-root SQLite index is derived and shared.\n- Use `aigent-hive:project-refresh` for project projection upgrades.\n- Offer one optional refinement suggestion for ambiguous or detail-poor ordinary requests; never rewrite automatically.\n- Unless the user explicitly opts out for the current request, write every plan to an appropriate project Markdown file before presenting or executing it. Never mirror the persisted plan one-for-one in the session; reference it with a concise summary and file path, or provide the file path alone for extensive review.\n- Before presenting pending actions, finish every safe, in-scope, automatable task. Present only the remaining user-owned steps as a concise ordered guide with the exact action, expected result, and reason user authority is required. Separate failures or impossible tasks with their causes and recovery paths.\n"
+                        "- State: `operational`\n- Interface language: `en`; use English for every question and response unless the user explicitly requests another language for the current response. A message written in another language does not by itself change this preference. Keep Korean only for exact Korean names, literals, quotations, or text the user asks to preserve.\n- Selected hosts: `{hosts}`\n- Global Wiki: `{wiki}`\n- Daily update check: `{update_check}`.\n{memory_gate}- When enabled, run `hive update --check --user-root <user-root> --output json` before the first Hive task of each host session; never install from a check.\n- Use `aigent-hive:project-setup` for project expedited or custom setup.\n- Project Markdown Wiki remains canonical; the user-root SQLite index is derived and shared.\n- Use `aigent-hive:project-refresh` for project projection upgrades.\n- Offer one optional refinement suggestion for ambiguous or detail-poor ordinary requests; never rewrite automatically.\n- Unless the user explicitly opts out for the current request, write every plan to an appropriate project Markdown file before presenting or executing it. Never mirror the persisted plan one-for-one in the session; reference it with a concise summary and file path, or provide the file path alone for extensive review.\n- Before presenting pending actions, finish every safe, in-scope, automatable task. Present only the remaining user-owned steps as a concise ordered guide with the exact action, expected result, and reason user authority is required. Separate failures or impossible tasks with their causes and recovery paths.\n"
                     ),
                     "- Preserve foreign guidance bytes and modify only exact Hive marker blocks.\n- Never request provider API credentials or call model-provider APIs on Hive's behalf.\n",
                 ),
@@ -2099,7 +2112,7 @@ fn render_user_guidance(
                     "# Aigent Hive 사용자 지침",
                     "활성 어댑터",
                     format!(
-                        "- 상태: `operational`\n- 사용 언어: `ko`; 현재 응답에 다른 언어를 사용하라는 명시적 요청이 없는 한 모든 질문과 응답에 한국어 사용. 다른 언어로 작성된 메시지만으로 이 선호를 변경하지 않음. 고유명사, 제품·패키지 이름, 명령어, 코드 식별자, 경로, 스키마 키, 정확한 화면 문구, 뚜렷한 한국어 대체어가 없는 용어만 영어 유지. 대체 가능한 일반 영어 단어의 한영 혼용 금지.\n- 선택한 호스트: `{hosts}`\n- 전역 위키: `{wiki}`\n- 일일 갱신 확인: `{update_check}`.\n- 활성화한 경우 각 호스트 세션의 첫 Hive 작업 전에 `hive update --check --user-root <user-root> --output json` 실행. 확인만으로 설치 금지.\n- 프로젝트 빠른 설정 또는 사용자 지정 설정에는 `aigent-hive:project-setup` 사용.\n- 프로젝트 Markdown 위키가 정본이며 사용자 루트 SQLite 색인은 파생·공유 상태.\n- 프로젝트 투영 갱신에는 `aigent-hive:project-refresh` 사용.\n- 모호하거나 핵심 세부가 부족한 일반 요청에는 자동 재작성 없이 선택적 개선 제안 1개만 제공.\n- 현재 요청에서 사용자의 명시적 제외 요청이 없는 모든 계획을 적절한 프로젝트 Markdown 파일에 제시·실행 전 기록. 저장한 계획 전문을 session에 일대일 복제하지 않고 간결한 요약과 파일 경로로 참조하며, 광범위한 검토에는 파일 경로만 제시.\n- 남은 작업 제시 전 범위 안에서 안전하게 자동 처리 가능한 작업을 모두 완료. 사용자 권한이 필요한 단계만 정확한 행동·예상 결과·권한 필요 이유를 포함한 간결한 순서 안내로 제시. 실패·불가능 작업은 원인과 해결 경로를 분리해 제시.\n"
+                        "- 상태: `operational`\n- 사용 언어: `ko`; 현재 응답에 다른 언어를 사용하라는 명시적 요청이 없는 한 모든 질문과 응답에 한국어 사용. 다른 언어로 작성된 메시지만으로 이 선호를 변경하지 않음. 고유명사, 제품·패키지 이름, 명령어, 코드 식별자, 경로, 스키마 키, 정확한 화면 문구, 뚜렷한 한국어 대체어가 없는 용어만 영어 유지. 대체 가능한 일반 영어 단어의 한영 혼용 금지.\n- 선택한 호스트: `{hosts}`\n- 전역 위키: `{wiki}`\n- 일일 갱신 확인: `{update_check}`.\n{memory_gate}- 활성화한 경우 각 호스트 세션의 첫 Hive 작업 전에 `hive update --check --user-root <user-root> --output json` 실행. 확인만으로 설치 금지.\n- 프로젝트 빠른 설정 또는 사용자 지정 설정에는 `aigent-hive:project-setup` 사용.\n- 프로젝트 Markdown 위키가 정본이며 사용자 루트 SQLite 색인은 파생·공유 상태.\n- 프로젝트 투영 갱신에는 `aigent-hive:project-refresh` 사용.\n- 모호하거나 핵심 세부가 부족한 일반 요청에는 자동 재작성 없이 선택적 개선 제안 1개만 제공.\n- 현재 요청에서 사용자의 명시적 제외 요청이 없는 모든 계획을 적절한 프로젝트 Markdown 파일에 제시·실행 전 기록. 저장한 계획 전문을 session에 일대일 복제하지 않고 간결한 요약과 파일 경로로 참조하며, 광범위한 검토에는 파일 경로만 제시.\n- 남은 작업 제시 전 범위 안에서 안전하게 자동 처리 가능한 작업을 모두 완료. 사용자 권한이 필요한 단계만 정확한 행동·예상 결과·권한 필요 이유를 포함한 간결한 순서 안내로 제시. 실패·불가능 작업은 원인과 해결 경로를 분리해 제시.\n"
                     ),
                     "- 외부 지침 바이트 보존, 정확한 Hive 표시 블록만 변경.\n- 제공자 API 자격 증명 요청 금지, Hive를 대신한 모델 제공자 API 호출 금지.\n",
                 ),
@@ -2145,6 +2158,51 @@ fn render_user_guidance(
         host.as_str()
     )
     .into_bytes()
+}
+
+fn validate_operational_guidance(
+    guidance: &[u8],
+    setup: Option<&crate::user_setup::UserSetupConfig>,
+) -> Result<(), InstallError> {
+    let Some(config) = setup else {
+        return Ok(());
+    };
+    let guidance = std::str::from_utf8(guidance).map_err(|_| {
+        InstallError::Verification("generated user guidance is not UTF-8".to_owned())
+    })?;
+    let command =
+        "hive knowledge remember --user-root <user-root> --request <request.json> --output json";
+    if !config.wiki.enabled {
+        return (!guidance.contains(command)).then_some(()).ok_or_else(|| {
+            InstallError::Verification(
+                "Wiki-disabled user guidance must not contain a knowledge write command".to_owned(),
+            )
+        });
+    }
+    let required = match config.interface_language {
+        crate::user_setup::InterfaceLanguage::En => [
+            "Before every final response, review the current user statement",
+            command,
+            "canonical Markdown and derived-index receipt",
+            "ambiguous project-specific scope fails closed",
+        ],
+        crate::user_setup::InterfaceLanguage::Ko => [
+            "모든 최종 응답 전 현재 사용자 발화와 완료 결과",
+            command,
+            "canonical Markdown과 derived-index receipt",
+            "모호한 project 범위는 안전하게 중단",
+        ],
+    };
+    required
+        .iter()
+        .all(|fragment| guidance.contains(fragment))
+        .then_some(())
+        .ok_or_else(|| {
+            InstallError::Verification(
+                "Wiki-enabled user guidance omitted the mandatory knowledge capture contract"
+                    .to_owned(),
+            )
+        })
 }
 
 fn merge_user_marker(existing: &[u8], marker: &[u8]) -> Result<Vec<u8>, InstallError> {
@@ -8094,6 +8152,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::too_many_lines)]
     fn operational_user_guidance_keeps_the_selected_language_consistent() {
         use crate::user_setup::{
             CatalogSelection, InterfaceLanguage, SelectedHost, SkillPreferences,
@@ -8147,6 +8206,9 @@ mod tests {
         assert!(english.contains("Explain in simple terms by default"));
         assert!(english.contains("do not force irrelevant examples or weaken technical precision"));
         assert!(english.contains("For every passed, failed, skipped, deferred"));
+        assert!(english.contains("Before every final response, review the current user statement"));
+        assert!(english.contains("hive knowledge remember --user-root <user-root> --request <request.json> --output json"));
+        assert!(english.contains("canonical Markdown and derived-index receipt"));
         assert!(!english.contains("질문과 응답"));
 
         let korean = String::from_utf8(render_user_guidance(
@@ -8160,6 +8222,9 @@ mod tests {
         assert!(korean.contains("기본 설명은 쉬운 말로 작성"));
         assert!(korean.contains("관련 없는 예시 강제 또는 기술적 정확성 약화 금지"));
         assert!(korean.contains("통과·실패·건너뜀·연기·미검증·미지원"));
+        assert!(korean.contains("모든 최종 응답 전 현재 사용자 발화와 완료 결과"));
+        assert!(korean.contains("hive knowledge remember --user-root <user-root> --request <request.json> --output json"));
+        assert!(korean.contains("canonical Markdown과 derived-index receipt"));
         for avoidable_mixture in [
             "활성 adapter",
             "Interface language",
@@ -8172,6 +8237,29 @@ mod tests {
             "Foreign guidance bytes",
         ] {
             assert!(!korean.contains(avoidable_mixture));
+        }
+
+        let mut disabled = config(InterfaceLanguage::En);
+        disabled.wiki.enabled = false;
+        let disabled = String::from_utf8(render_user_guidance(UserHost::Codex, Some(&disabled)))
+            .expect("disabled guidance");
+        assert!(disabled.contains("Global Wiki is disabled: do not write or refresh knowledge"));
+        assert!(!disabled.contains("hive knowledge remember --user-root"));
+
+        let broken = english.replacen(
+            "hive knowledge remember --user-root <user-root> --request <request.json> --output json",
+            "knowledge write removed",
+            1,
+        );
+        assert!(matches!(
+            validate_operational_guidance(broken.as_bytes(), Some(&config(InterfaceLanguage::En))),
+            Err(InstallError::Verification(_))
+        ));
+
+        for host in [UserHost::Codex, UserHost::Claude, UserHost::Antigravity] {
+            let guidance = render_user_guidance(host, Some(&config(InterfaceLanguage::En)));
+            validate_operational_guidance(&guidance, Some(&config(InterfaceLanguage::En)))
+                .expect("every host must retain the mandatory capture contract");
         }
     }
 

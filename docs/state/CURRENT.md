@@ -2,11 +2,12 @@
 
 - 기준 branch: `develop`
 - product version: `0.9.0`
-- plan revision: `2.48`
+- plan revision: `2.49`
 - 현재 milestone: `0.9.0` mandatory knowledge autocapture 회귀 보정·재수용
 - Mandatory memory regression: `0.9.0-test.13` operational user guidance의 every-turn
   `hive knowledge remember`·receipt 규칙 부재, localized `knowledge-capture` route 의미 축소.
-  [`KAC-001–008`](../plans/active/v0.9.0-knowledge-autocapture-regression.md) 완료 전 stable publication 차단
+  `KAC-002–005` 전역 안내·세 host 공통 투영·localized 설명·의미 검증 보정 완료.
+  [`KAC-001·006–008`](../plans/active/v0.9.0-knowledge-autocapture-regression.md) 수용·출시 전 stable publication 차단
 - Existing stable candidate run `31482918509`: 회귀 보정 미포함 historical qualification,
   tag·GitHub Release·npm `latest` publication authority 없음
 - `develop` CI [run `31430181535`](https://github.com/gvm1229/aigent-hive/actions/runs/31430181535):
@@ -95,7 +96,7 @@
   + `docs/plans/active/discord-onboarding-v09.md`
   + `docs/plans/active/windows-global-setup-hardening.md`
   + `docs/plans/active/v0.10.0-notion-candidate.md`
-- Plan completion: canonical checklist `432/516` 완료, `84`개 미완료, `83.7%`
+- Plan completion: canonical checklist `436/516` 완료, `80`개 미완료, `84.5%`
 - 출시 분리: `0.9.0`의 user-visible Wiki는 local Markdown 정본과 SQLite projection만 제공.
   Notion backend·host browser OAuth·freshness·write-through·사용자 문서는 `0.10.0-test`까지 보류.
   Discord webhook 대화·시험 알림, HTML 안내, project·run·요청·progress payload는 `DIS9-*` 후속 범위

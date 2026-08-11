@@ -5,13 +5,13 @@ topic_slug: global-knowledge-rag
 language: ko
 counterpart: ../en/global-knowledge-rag.md
 title: "전역 knowledge RAG"
-summary: "v0.9 durable-memory 저장은 동작하지만 operational user guidance의 every-turn 필수 기록 gate 누락."
+summary: "v0.9 operational guidance의 매 턴 자동 기록 보정 완료. Windows Codex 새 세션 수용과 출시 검증 대기."
 tags: [knowledge, rag, retrieval, v0-9]
 aliases: ["Cross-project RAG", "Mandatory memory"]
 sources:
   - "repo:docs/decisions/ADR-0016-global-knowledge-rag.md#sha256:2dece311aef55de6a52b9f3f8f79fbf928009f312a98d7ab0c3cb09cfa9db741"
   - "repo:docs/plans/active/v0.9.0-global-knowledge-rag.md#sha256:6763857d275d0a35065e27f744e4a7d2c83d77b876abcdb5343f37be01ffe35e"
-  - "repo:docs/plans/active/v0.9.0-knowledge-autocapture-regression.md#sha256:5cddc7bd9f4ab4c1b868d8a6a86cf155503d008ff901276158e64afc447c841a"
+  - "repo:docs/plans/active/v0.9.0-knowledge-autocapture-regression.md#sha256:a16b22e6e68c99b04d3499a7b9b5e6b448ff625908502ad8785360c0795aa649"
 links: [knowledge-portability-scan, knowledge-storage, shared-index, v0-9-skill-suite-plan]
 reviewed_revision: "git:2234885542a2c3e82514121b890e129b89e5e563"
 status: active
@@ -19,8 +19,7 @@ status: active
 
 # 전역 knowledge RAG
 
-정본 기록·검색·멱등성: 정상. `0.9.0-test.13` Windows Codex user guidance: every-turn
-명령·receipt 누락. Localized Skill metadata: mandatory route 의미 소실. 결과: 미등록
-repository의 reusable fact 누락 가능. 기존 validate는 byte 일치만 증명. `KAC-001–008`:
-guidance·routing·semantic test와 수동 호출 없는 Windows 새 세션 기록·검색이 통과할 때까지
-stable 게시 차단.
+정본 기록·검색·멱등성: 정상. 생성 English·Korean user guidance: 범위 판정, 안전한 `remember`
+1회, Markdown·index receipt 필수. Wiki 비활성 guidance: 기록 거부. 세 host 투영·localized
+Skill metadata: 자동 경로 보존. Windows Codex 새 세션 기록·검색 수용과 replacement stable
+qualification: 출시 gate 유지.

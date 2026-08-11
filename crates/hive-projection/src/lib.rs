@@ -1025,9 +1025,9 @@ fn localized_skill_text(
         ),
         "knowledge-capture" => (
             "Record knowledge",
-            "Record reviewed facts and workflows as canonical knowledge.",
+            "Automatically review every Wiki-enabled turn and record one safe durable claim.",
             "지식 기록",
-            "검토한 사실과 작업 방식을 정본 지식으로 기록합니다.",
+            "위키 활성 매 턴의 안전한 재사용 지식 1개를 자동 검토·기록합니다.",
         ),
         "knowledge-recall" => (
             "Search knowledge",
@@ -2607,6 +2607,36 @@ description: Inspect one local file without changing it.
         assert_ne!(
             english.active_skills.skills[0].content_digest,
             korean.active_skills.skills[0].content_digest
+        );
+    }
+
+    #[test]
+    fn knowledge_capture_descriptor_preserves_the_automatic_turn_route() {
+        let selected = ["knowledge-capture".to_owned()];
+        let english =
+            compile_user_projection_localized(Host::Codex, &selected, &[], DescriptorLanguage::En)
+                .expect("English projection");
+        let korean =
+            compile_user_projection_localized(Host::Codex, &selected, &[], DescriptorLanguage::Ko)
+                .expect("Korean projection");
+        let english_metadata = std::str::from_utf8(
+            english
+                .files
+                .get(".agents/skills/knowledge-capture/agents/openai.yaml")
+                .expect("English metadata"),
+        )
+        .expect("UTF-8 English metadata");
+        let korean_metadata = std::str::from_utf8(
+            korean
+                .files
+                .get(".agents/skills/knowledge-capture/agents/openai.yaml")
+                .expect("Korean metadata"),
+        )
+        .expect("UTF-8 Korean metadata");
+
+        assert!(english_metadata.contains("Automatically review every Wiki-enabled turn"));
+        assert!(
+            korean_metadata.contains("위키 활성 매 턴의 안전한 재사용 지식 1개를 자동 검토·기록")
         );
     }
 
