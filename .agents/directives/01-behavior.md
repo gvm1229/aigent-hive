@@ -36,6 +36,13 @@ This directive governs agent behavior while developing Aigent Hive.
   apply automatically, then state the result before the next meaningful preference question. Ask
   only when authentication fails, local edits require a material choice, or another authority
   boundary applies.
+- Treat an authenticated Hive-owned incomplete installation, stale transaction, or incompatible
+  Hive marketplace entry as a deterministic setup-recovery branch, not as a user blocker. Preserve
+  canonical knowledge and saved user preferences, remove or reinstall only exact Hive-owned host
+  entries, then resume the fixed `dry-run → apply → validate` flow without asking the user to
+  inspect, edit, or diagnose host configuration. Surface internal compatibility details only on an
+  explicit diagnostic request; foreign bytes, failed ownership authentication, or a material choice
+  remain the only recovery stop conditions.
 
 ## Work Selection
 
@@ -52,8 +59,8 @@ This directive governs agent behavior while developing Aigent Hive.
 - Answer simple questions directly after that retrieval without starting a planning workflow,
   spawning agents, or editing project files. A relevant cross-project or user-global fact is not
   unrelated memory.
-- Route explicit prompt authoring or refinement intent to the source `aigent-hive:refine-prompt` Skill in `refine-only` mode unless the same request explicitly authorizes `--run` execution.
-- For an ordinary work prompt whose goal, scope, constraints, acceptance criteria, or output contract have two or more reasonable interpretations that materially change the result, automatically load `aigent-hive:refine-prompt` in `refine-only` mode.
+- Route explicit prompt authoring or refinement intent to the installed product `aigent-hive:prompt-refine` Skill in `refine-only` mode unless the same request explicitly authorizes `--run` execution.
+- For an ordinary work prompt whose goal, scope, constraints, acceptance criteria, or output contract have two or more reasonable interpretations that materially change the result, automatically load `aigent-hive:prompt-refine` in `refine-only` mode.
 - Refine-only returns a refined-prompt digest and `awaiting-approval` state. Before exact digest-bound approval, project read, tool, write, network, subagent, run, memory capture, and execution remain forbidden.
 - Do not automatically refine a sufficiently clear ordinary task, simple or editless question, explicit unrelated Skill, explicit external workflow, or request whose missing locator is safely discoverable without changing the result.
 - For implementation, identify the requested outcome, constraints, touched ownership surfaces, verification, and stop condition before editing.
@@ -69,6 +76,26 @@ This directive governs agent behavior while developing Aigent Hive.
 - Prefer deletion, an existing dependency, or an existing host capability over a new abstraction.
 - Do not copy external project rules unless they are explicitly selected and project-neutral.
 - Keep changes surgical: every touched artifact must map to a requirement, defect, decision, or verification need.
+
+## Autonomous Completion
+
+- For a request that says “all todos”, “until completion”, “do not stop”, or an equivalent
+  terminal instruction, continue while any in-scope action remains agent-owned. Agent-owned
+  actions include inspection, diagnosis, source edits, tests, commits, permitted pushes, CI
+  observation, release qualification, and authorized publication.
+- A progress report that identifies a remaining agent-owned action must not end the task. Do the
+  next bounded action instead. A failed test, stale reference, incomplete CI qualification, or
+  unpublished authorized release is work to continue, not a user handoff.
+- Before a final task response, classify every known remaining item as `agent-owned`,
+  `awaiting-user-authority`, `awaiting-external-evidence`, or `blocked`. Any `agent-owned` item
+  requires continued execution. Do not ask the user to perform it or describe it as a next step.
+- Use `complete` only when the requested in-scope outcome and its required evidence are present.
+  Use `awaiting-user-authority` only for an exact protected action the user must authorize or
+  perform. Use `awaiting-external-evidence` only when a named external person, host, or system
+  must produce evidence that this agent cannot obtain. Use `blocked` only with the exact repeated
+  condition and recovery path.
+- Never use a successful intermediate command, candidate build, publication, or elapsed time as a
+  task completion substitute. The task remains active until its scoped closure conditions hold.
 
 ## Evidence
 

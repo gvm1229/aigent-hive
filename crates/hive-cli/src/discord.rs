@@ -19,7 +19,7 @@ Inspect the host-owned Discord inbound continuation boundary.
 
 USAGE:
     hive discord inbound --host codex|claude|antigravity --output json
-    hive discord test --webhook-env <ENVIRONMENT_NAME> --output json
+    hive discord test --webhook-env <ENVIRONMENT_NAME> [--language en|ko] [--fields <field,...>] --output json
 
 Discord notification delivery remains outbound-only. Claude inbound handling is
 delegated to the official Claude Discord Channel plugin. Codex continuation is
@@ -29,12 +29,54 @@ unsupported until an official compatible capability is verified.
 /// Non-sensitive halt fields allowed in an outbound notification.
 pub(crate) struct UsageHaltNotification<'a> {
     pub(crate) project_name: &'a str,
-    pub(crate) decision: &'a str,
     pub(crate) host_scope: &'a str,
     pub(crate) selected_window: &'a str,
-    pub(crate) threshold_remaining_percent: u8,
+    pub(crate) remaining_percent: Option<f64>,
     pub(crate) measured_at: u64,
     pub(crate) evidence_digest: &'a str,
+    pub(crate) run_id: Option<&'a str>,
+    pub(crate) request_summary: Option<&'a str>,
+    pub(crate) progress: Option<&'a str>,
+    pub(crate) request_privacy: &'a str,
+    pub(crate) interface_language: &'a str,
+    pub(crate) message_fields: &'a [String],
+}
+
+pub(crate) fn default_message_fields() -> Vec<String> {
+    [
+        "remaining-usage",
+        "project",
+        "request",
+        "progress",
+        "host",
+        "resume",
+    ]
+    .into_iter()
+    .map(str::to_owned)
+    .collect()
+}
+
+pub(crate) fn valid_message_fields(fields: &[String]) -> bool {
+    !fields.is_empty()
+        && fields.len() <= 8
+        && fields.iter().all(|field| {
+            matches!(
+                field.as_str(),
+                "remaining-usage"
+                    | "project"
+                    | "request"
+                    | "progress"
+                    | "host"
+                    | "resume"
+                    | "measured-at"
+                    | "evidence"
+            )
+        })
+        && fields
+            .iter()
+            .collect::<std::collections::BTreeSet<_>>()
+            .len()
+            == fields.len()
 }
 
 /// Opaque delivery outcome intentionally excluding URL and environment values.
@@ -67,7 +109,7 @@ pub(crate) fn run(arguments: &[String]) -> ExitCode {
     }
     let result = match arguments.first().map(String::as_str) {
         Some("inbound") => parse_inbound(&arguments[1..]).map(inbound_result),
-        Some("test") => parse_test(&arguments[1..]).map(test_result),
+        Some("test") => parse_test(&arguments[1..]).map(|parsed| test_result(&parsed)),
         Some(action) => Err(format!("unknown Discord action: {action}")),
         None => unreachable!("empty arguments returned above"),
     };
@@ -86,31 +128,70 @@ pub(crate) fn run(arguments: &[String]) -> ExitCode {
     emit_action_result(&result)
 }
 
-fn parse_test(arguments: &[String]) -> Result<&str, String> {
-    if arguments.len() != 4
-        || arguments.first().map(String::as_str) != Some("--webhook-env")
-        || arguments.get(2).map(String::as_str) != Some("--output")
-        || arguments.get(3).map(String::as_str) != Some("json")
-    {
-        return Err(
-            "Discord test requires --webhook-env <ENVIRONMENT_NAME> --output json".to_owned(),
-        );
-    }
-    let name = arguments[1].as_str();
-    if valid_environment_name(name) {
-        Ok(name)
-    } else {
-        Err("Discord webhook environment name is invalid".to_owned())
-    }
+struct TestArguments {
+    webhook_env: String,
+    language: String,
+    fields: Vec<String>,
 }
 
-fn test_result(environment_name: &str) -> ActionResult {
-    let outcome = match env::var(environment_name) {
+fn parse_test(arguments: &[String]) -> Result<TestArguments, String> {
+    let mut webhook_env = None;
+    let mut language = "en".to_owned();
+    let mut fields = default_message_fields();
+    let mut output_json = false;
+    let mut index = 0;
+    while index < arguments.len() {
+        let value = arguments
+            .get(index + 1)
+            .ok_or_else(|| "Discord test option requires a value".to_owned())?;
+        match arguments[index].as_str() {
+            "--webhook-env" => webhook_env = Some(value.clone()),
+            "--language" if matches!(value.as_str(), "en" | "ko") => language.clone_from(value),
+            "--fields" => fields = value.split(',').map(str::to_owned).collect(),
+            "--output" if value == "json" => output_json = true,
+            _ => {
+                return Err(
+                    "Discord test requires --webhook-env <ENVIRONMENT_NAME> [--language en|ko] [--fields <field,...>] --output json".to_owned(),
+                )
+            }
+        }
+        index += 2;
+    }
+    let webhook_env = webhook_env.ok_or_else(|| {
+        "Discord test requires --webhook-env <ENVIRONMENT_NAME> [--language en|ko] [--fields <field,...>] --output json".to_owned()
+    })?;
+    if !output_json || !valid_environment_name(&webhook_env) || !valid_message_fields(&fields) {
+        return Err(
+            "Discord test requires a valid environment name, language, non-empty unique fields, and --output json".to_owned(),
+        );
+    }
+    Ok(TestArguments {
+        webhook_env,
+        language,
+        fields,
+    })
+}
+
+fn test_result(arguments: &TestArguments) -> ActionResult {
+    let outcome = match env::var(&arguments.webhook_env) {
         Ok(url) => {
-            let payload = DiscordPayload {
-                content: "Aigent Hive Discord connection test.".to_owned(),
-                allowed_mentions: AllowedMentions { parse: Vec::new() },
-            };
+            let payload = payload_for(
+                &UsageHaltNotification {
+                    project_name: "example-project",
+                    host_scope: "codex",
+                    selected_window: "session",
+                    remaining_percent: Some(20.0),
+                    measured_at: 0,
+                    evidence_digest: "sha256:test-notification",
+                    run_id: None,
+                    request_summary: None,
+                    progress: None,
+                    request_privacy: "summary",
+                    interface_language: &arguments.language,
+                    message_fields: &arguments.fields,
+                },
+                true,
+            );
             notify_payload_with_url(&url, &payload, deliver_https)
         }
         Err(_) => NotificationOutcome::MissingWebhookEnvironment,
@@ -245,7 +326,7 @@ fn notify_with_url<F>(
 where
     F: FnMut(&str, &[u8]) -> Result<(), ()>,
 {
-    notify_payload_with_url(url, &payload_for(halt), deliver)
+    notify_payload_with_url(url, &payload_for(halt, false), deliver)
 }
 
 fn notify_payload_with_url<F>(
@@ -277,24 +358,176 @@ fn valid_environment_name(value: &str) -> bool {
         && characters.all(|character| matches!(character, 'A'..='Z' | '0'..='9' | '_'))
 }
 
-fn payload_for(halt: &UsageHaltNotification<'_>) -> DiscordPayload {
-    let state = if halt.decision == "halted" {
-        "limited"
-    } else {
-        "unknown"
-    };
+fn payload_for(halt: &UsageHaltNotification<'_>, test: bool) -> DiscordPayload {
+    let korean = halt.interface_language == "ko";
+    let request_summary = matches!(halt.request_privacy, "summary" | "raw-prompt")
+        .then_some(halt.request_summary)
+        .flatten();
+    let mut lines = Vec::<String>::new();
+    if test {
+        lines.push(
+            if korean {
+                "🧪 **시험 알림**"
+            } else {
+                "🧪 **Test notification**"
+            }
+            .to_owned(),
+        );
+        lines.push(
+            if korean {
+                "이 형식은 자유롭게 변경을 요청할 수 있습니다."
+            } else {
+                "You can freely ask to change this format."
+            }
+            .to_owned(),
+        );
+        lines.push(String::new());
+    }
+    lines.push(
+        if korean {
+            "🚨 **Aigent Hive 사용량 보호 알림**"
+        } else {
+            "🚨 **Aigent Hive usage guard alert**"
+        }
+        .to_owned(),
+    );
+    lines.push(
+        if korean {
+            "작업이 중단되었습니다."
+        } else {
+            "Workflow stopped."
+        }
+        .to_owned(),
+    );
+    let mut previous_section = None;
+    for field in halt.message_fields {
+        let Some(line) = notification_field_line(halt, request_summary, field, korean) else {
+            continue;
+        };
+        let section = match field.as_str() {
+            "remaining-usage" => "usage",
+            "resume" => "resume",
+            _ => "task",
+        };
+        if previous_section != Some(section) {
+            lines.push(String::new());
+            lines.push(
+                match (section, korean) {
+                    ("usage", true) => "📊 **사용량**",
+                    ("usage", false) => "📊 **Usage**",
+                    ("resume", true) => "▶️ **작업을 계속하려면**",
+                    ("resume", false) => "▶️ **To continue this task**",
+                    (_, true) => "📋 **작업 정보**",
+                    (_, false) => "📋 **Task details**",
+                }
+                .to_owned(),
+            );
+            previous_section = Some(section);
+        }
+        lines.push(line);
+    }
     DiscordPayload {
-        content: format!(
-            "Aigent Hive usage guard stopped a workflow.\\nproject: {}\\nstate: {state}\\nhost: {}\\nwindow: {}\\nthreshold_remaining_percent: {}\\nrequest: not shared (request content stays local)\\nprogress: unknown (no canonical run progress is available)\\nresume: return to this project and ask Hive to continue\\nmeasured_at: {}\\nevidence_digest: {}",
-            display_project_name(halt.project_name),
-            halt.host_scope,
-            halt.selected_window,
-            halt.threshold_remaining_percent,
-            halt.measured_at,
-            halt.evidence_digest,
-        ),
+        content: lines.join("\n"),
         allowed_mentions: AllowedMentions { parse: Vec::new() },
     }
+}
+
+fn notification_field_line(
+    halt: &UsageHaltNotification<'_>,
+    request_summary: Option<&str>,
+    field: &str,
+    korean: bool,
+) -> Option<String> {
+    Some(match field {
+        "remaining-usage" => format!(
+            "{}: {}",
+            if korean {
+                "남은 사용량"
+            } else {
+                "remaining usage"
+            },
+            display_remaining_usage(halt.remaining_percent, korean)
+        ),
+        "project" => format!(
+            "{}: {}",
+            if korean { "프로젝트" } else { "project" },
+            display_project_name(halt.project_name)
+        ),
+        "request" if korean => request_summary.map_or_else(
+            || "요청: 공유하지 않음(확인 가능한 작업 요약 없음)".to_owned(),
+            |summary| format!("요청: {summary}"),
+        ),
+        "request" => request_summary.map_or_else(
+            || "request: not shared (no canonical request summary is available)".to_owned(),
+            |summary| format!("request: {summary}"),
+        ),
+        "progress" if korean => halt.progress.map_or_else(
+            || "진행 상태: 알 수 없음(확인 가능한 작업 진행 정보 없음)".to_owned(),
+            |progress| format!("진행 상태: {progress} 완료 항목"),
+        ),
+        "progress" => halt.progress.map_or_else(
+            || "progress: unknown (no canonical run progress is available)".to_owned(),
+            |progress| format!("progress: {progress} checklist items complete"),
+        ),
+        "host" => format!(
+            "{}: {} · {}",
+            if korean { "호스트" } else { "host" },
+            halt.host_scope,
+            halt.selected_window
+        ),
+        "resume" if korean => halt.run_id.map_or_else(
+            || "이 프로젝트의 Hive 대화에서 \"작업을 계속 진행해 주세요.\"라고 요청하세요."
+                .to_owned(),
+            |run_id| {
+                format!(
+                    "이 프로젝트의 Hive 대화에서 run `{run_id}` 작업을 계속 진행해 달라고 요청하세요."
+                )
+            },
+        ),
+        "resume" => halt.run_id.map_or_else(
+            || "Return to this project's Hive conversation and ask to continue the task."
+                .to_owned(),
+            |run_id| {
+                format!(
+                    "Return to this project's Hive conversation and ask to continue run `{run_id}`."
+                )
+            },
+        ),
+        "measured-at" => format!(
+            "{}: {}",
+            if korean {
+                "측정 시각"
+            } else {
+                "measured at"
+            },
+            halt.measured_at
+        ),
+        "evidence" => format!(
+            "{}: {}",
+            if korean {
+                "검증 참조"
+            } else {
+                "evidence reference"
+            },
+            halt.evidence_digest
+        ),
+        _ => return None,
+    })
+}
+
+fn display_remaining_usage(remaining_percent: Option<f64>, korean: bool) -> String {
+    remaining_percent
+        .filter(|value| value.is_finite() && (0.0..=100.0).contains(value))
+        .map_or_else(
+            || {
+                if korean {
+                    "알 수 없음".to_owned()
+                } else {
+                    "unknown".to_owned()
+                }
+            },
+            |value| format!("{value:.2}%"),
+        )
 }
 
 fn display_project_name(value: &str) -> String {
@@ -351,25 +584,32 @@ fn deliver_https(url: &str, payload: &[u8]) -> Result<(), ()> {
 #[cfg(test)]
 mod tests {
     use super::{
-        display_project_name, inbound_result, notify_with_url, payload_for, valid_webhook_url,
-        NotificationOutcome, UsageHaltNotification,
+        default_message_fields, display_project_name, inbound_result, notify_with_url, parse_test,
+        payload_for, valid_webhook_url, NotificationOutcome, UsageHaltNotification,
     };
 
-    fn notification<'a>() -> UsageHaltNotification<'a> {
+    fn notification(fields: &[String]) -> UsageHaltNotification<'_> {
         UsageHaltNotification {
             project_name: "aigent-hive",
-            decision: "halted",
             host_scope: "codex",
             selected_window: "weekly",
-            threshold_remaining_percent: 20,
+            remaining_percent: Some(18.5),
             measured_at: 1_700_000_000,
             evidence_digest: "sha256:allowed-evidence",
+            run_id: None,
+            request_summary: None,
+            progress: None,
+            request_privacy: "summary",
+            interface_language: "en",
+            message_fields: fields,
         }
     }
 
     #[test]
     fn payload_excludes_session_prompt_and_credentials() {
-        let payload = serde_json::to_string(&payload_for(&notification())).expect("payload");
+        let fields = default_message_fields();
+        let payload =
+            serde_json::to_string(&payload_for(&notification(&fields), false)).expect("payload");
 
         assert!(payload.contains("allowed_mentions"));
         assert!(!payload.contains("session"));
@@ -378,6 +618,86 @@ mod tests {
         assert!(!payload.contains("webhook"));
         assert!(payload.contains("project: aigent-hive"));
         assert!(payload.contains("progress: unknown"));
+        assert!(payload.contains("remaining usage: 18.50%"));
+    }
+
+    #[test]
+    fn test_payload_matches_the_actual_payload_except_for_the_disclaimer() {
+        let fields = default_message_fields();
+        let actual = payload_for(&notification(&fields), false).content;
+        let test = payload_for(&notification(&fields), true).content;
+
+        assert!(actual.starts_with(
+            "🚨 **Aigent Hive usage guard alert**\nWorkflow stopped.\n\n📊 **Usage**"
+        ));
+        assert!(actual.contains("\n\n📋 **Task details**"));
+        assert!(actual.contains("\n\n▶️ **To continue this task**"));
+        assert!(!actual.contains("__"));
+        assert!(test.starts_with(
+            "🧪 **Test notification**\nYou can freely ask to change this format.\n\n"
+        ));
+        assert_eq!(
+            test.strip_prefix(
+                "🧪 **Test notification**\nYou can freely ask to change this format.\n\n"
+            ),
+            Some(actual.as_str())
+        );
+    }
+
+    #[test]
+    fn korean_payload_uses_korean_labels_without_english_label_mixup() {
+        let fields = vec!["remaining-usage".to_owned(), "project".to_owned()];
+        let mut notification = notification(&fields);
+        notification.interface_language = "ko";
+        let payload = payload_for(&notification, true).content;
+
+        assert!(payload
+            .starts_with("🧪 **시험 알림**\n이 형식은 자유롭게 변경을 요청할 수 있습니다.\n\n"));
+        assert!(payload.contains("📊 **사용량**"));
+        assert!(payload.contains("📋 **작업 정보**"));
+        assert!(payload.contains("남은 사용량: 18.50%"));
+        assert!(payload.contains("프로젝트: aigent-hive"));
+        assert!(!payload.contains("remaining usage:"));
+        assert!(!payload.contains("project:"));
+    }
+
+    #[test]
+    fn payload_uses_only_canonical_run_summary_and_progress_when_available() {
+        let fields = vec![
+            "request".to_owned(),
+            "progress".to_owned(),
+            "resume".to_owned(),
+        ];
+        let mut notification = notification(&fields);
+        notification.run_id = Some("release-verify");
+        notification.request_summary = Some("Verify the release package");
+        notification.progress = Some("2/3");
+        let payload = payload_for(&notification, false).content;
+
+        assert!(payload.contains("request: Verify the release package"));
+        assert!(payload.contains("progress: 2/3 checklist items complete"));
+        assert!(payload.contains("ask to continue run `release-verify`"));
+    }
+
+    #[test]
+    fn test_command_accepts_the_same_language_and_ordered_fields_as_the_alert() {
+        let arguments = [
+            "--webhook-env",
+            "HIVE_DISCORD_WEBHOOK_URL",
+            "--language",
+            "ko",
+            "--fields",
+            "project,remaining-usage",
+            "--output",
+            "json",
+        ]
+        .into_iter()
+        .map(str::to_owned)
+        .collect::<Vec<_>>();
+        let parsed = parse_test(&arguments).expect("test command arguments");
+
+        assert_eq!(parsed.language, "ko");
+        assert_eq!(parsed.fields, ["project", "remaining-usage"]);
     }
 
     #[test]
@@ -402,7 +722,7 @@ mod tests {
         let mut calls = 0;
         let outcome = notify_with_url(
             "https://discord.com/api/webhooks/1234567890/a-valid-token",
-            &notification(),
+            &notification(&default_message_fields()),
             |_, _| {
                 calls += 1;
                 Err(())

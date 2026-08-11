@@ -5,28 +5,29 @@ topic_slug: global-onboarding
 language: ko
 counterpart: ../en/global-onboarding.md
 title: "Global onboarding"
-summary: "복수 사용자 맥락 저장과 project workflow 비결정, authenticated Hive-only refresh 자동 처리, v0.9 Markdown-only Wiki, 부분 변경의 전체 설정 목록·Discord 하위 항목, 한국어 product term·all built-in Skill 기본값 유지."
+summary: "전역 설정: 질문 전 signed CLI 확인, 답변별 진행 상태 보존, 보존형 Hive 제거 뒤 저장 preference 재사용."
 tags: [bootstrap, onboarding, setup]
 aliases: ["User setup"]
 sources:
-  - "repo:README.md#sha256:413ed120770591773c5efab11aa1bc3587687b411eff47a665802b5bf0f5ea2b"
-  - "repo:crates/hive-cli/src/user_setup.rs#sha256:fcbdc8566036c3c7601b661baed7380a5cb27412f22f5d3c2961dce0daa80c3d"
-  - "repo:docs/decisions/ADR-0012-global-onboarding-shared-index.md#sha256:be6e9fd0b94f9cf8a994cce4bb1e8f5b0e8396420968832e285de366dc8e16f9"
-  - "repo:harness/skills/configure/SKILL.md#sha256:6d298591b98e8da50fc9cfb40696562bde8a2d18d2d9e58204f40e44e15f4d19"
-  - "repo:harness/user-setup/catalog.yml#sha256:7dc82dbf559075ce4286e7dd19aec0ddc22e04f35ad4a8a60f43129a4dba2a1f"
-  - "repo:schemas/user-setup.schema.json#sha256:34cfb17b238af67733c1250f5de6306cf6c75ef9df41f1934d6f1edc46d4a2da"
-links: [project-onboarding, test-distribution]
-reviewed_revision: "git:dbae17b5e5bb39d068891b823dcd14f42ae23e10"
+  - "repo:README.md#sha256:dbccfb9a0a4920baef62329aa1027751f9bebc5893fdcecdccd5b2cb3237e932"
+  - "repo:crates/hive-cli/src/user_setup.rs#sha256:2dbd0f956fea6c6e258a275bc89565c48a7bf211819ea8816512215dc2582213"
+  - "repo:docs/decisions/ADR-0012-global-onboarding-shared-index.md#sha256:d30564f33f2ead463cfe9e18aa68b697cb07b6c419ee42c9b583fcc11edaf966"
+  - "repo:docs/plans/active/windows-global-setup-hardening.md#sha256:422649ef3ca475aca9e3a86a2ddd2bbbb3895221d7bc39fe4417010664dee47f"
+  - "repo:harness/skills/user-setup/SKILL.md#sha256:4f3676378fafac75f9c6376210c760a2e0200e843ead0825d1b34d7446864e34"
+  - "repo:harness/user-setup/catalog.yml#sha256:4926655a12591cae061e674d774557e96f000d149f8dec1c2b1b650ba235f494"
+  - "repo:schemas/user-setup.schema.json#sha256:e83e5f318a5b6ffcc08cfe0898a2b6138512c6bfb0eea99c6070b134f3712f47"
+links: [project-onboarding, test-distribution, usage-guard-thresholds]
+reviewed_revision: "git:01df1d580d987e7fb0f34978076cd000263fd99f"
 status: active
 ---
 
 # Global onboarding
 
-수동 첫 설정 순서: CLI 설치, host activation, global setup, 명시 project setup. v0.9 전역 Wiki:
-local Markdown 단일 사용자 공개 정본. 선택형 one-prompt 경로:
-project inspection 없는 global setup 시작.
+순서: CLI 설치·host 활성화·global setup·project setup. Global setup의 project 검사: `0건`.
+전역 한도: 사용자 선택, project 한도: 더 이른 중지만 허용. Windows 복구: 질문 전 CLI 확인,
+답변별 진행 저장·OS 임시 파일 하나·product-only Skill·공통 사용량 보호·미완료 marketplace 조용한 복구,
+knowledge·저장 preference 보존.
 
-지원 legacy 복구: saved preference·live file evidence 일치 조건. 그 외 active byte 보존. 명시 global
-setup 요청: authenticated Hive-only install 또는 saved-answer user projection refresh의 preview·apply·
-revalidate 자동 처리, review-only 질문 없음. 사용자 맥락, Skill 선택, 한국어 product term:
-`global-user-contexts` 참고.
+`hive uninstall`: Hive-managed setup 상태만 제거, knowledge base·저장 preference 보존. full-purge
+flag 없음. 이후 user-scope install: 저장 preference 재사용, setup 질문 생략. Windows test.12 수용:
+새 session 탐색·Discord 실제 전달 포함. 다음 출시 수용: contributor 입력 없는 product-owned 신속 기본 profile.

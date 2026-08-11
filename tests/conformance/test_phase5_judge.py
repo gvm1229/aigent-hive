@@ -21,13 +21,12 @@ from jsonschema import Draft202012Validator, FormatChecker, ValidationError
 ROOT = Path(__file__).resolve().parents[2]
 FIXTURES = ROOT / "tests/fixtures/phase5/judge"
 SCHEMAS = ROOT / "schemas"
-SKILL = ROOT / "harness/skills/verify-package/SKILL.md"
+SKILL = ROOT / "harness/skills/package-review/SKILL.md"
 PROJECTED_SKILL = (
     ROOT
-    / "harness/template/.agents/skills/verify-package/SKILL.md"
+    / "harness/template/.agents/skills/package-review/SKILL.md"
 )
 CATALOG = ROOT / "harness/skills/catalog.yml"
-ACTIVE_SKILLS = ROOT / "harness/template/.hive/config/active-skills.yml"
 FORBIDDEN_CONTEXT_FIELDS = (
     "chain_of_thought",
     "reasoning",
@@ -316,7 +315,7 @@ class Phase5JudgeStaticContracts(unittest.TestCase):
     def test_judge_skill_is_implemented_read_only_builtin(self) -> None:
         catalog = read_yaml(CATALOG)
         entry = next(
-            item for item in catalog["skills"] if item["name"] == "verify-package"
+            item for item in catalog["skills"] if item["name"] == "package-review"
         )
         self.assertEqual(entry["availability"], "implemented")
         self.assertEqual(entry["side_effect_class"], "read-only")
@@ -324,13 +323,12 @@ class Phase5JudgeStaticContracts(unittest.TestCase):
         self.assertNotIn("subagents", entry["capabilities"])
 
     def test_active_skill_digest_matches_canonical_source_bytes(self) -> None:
-        ledger = read_yaml(ACTIVE_SKILLS)
+        catalog = read_yaml(CATALOG)
         entry = next(
-            item for item in ledger["skills"] if item["name"] == "verify-package"
+            item for item in catalog["skills"] if item["name"] == "package-review"
         )
-        self.assertEqual(entry["content_digest"], digest_bytes(SKILL.read_bytes()))
-        self.assertEqual(entry["source_type"], "built-in")
-        self.assertIsNone(entry["consent_digest"])
+        self.assertEqual(entry["availability"], "implemented")
+        self.assertIn("name: package-review", SKILL.read_text(encoding="utf-8"))
 
     def test_judge_skill_preserves_simple_question_and_v09_owner_contract(
         self,

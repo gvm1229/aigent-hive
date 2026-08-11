@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import os
+import shutil
 import subprocess
 import tempfile
 import unittest
@@ -29,9 +31,14 @@ class DevInstallScriptTests(unittest.TestCase):
             self.assertIn(required, text)
 
     def test_script_parses_with_posix_shell(self) -> None:
-        subprocess.run(["sh", "-n", str(SCRIPT)], check=True)
+        shell = shutil.which("sh")
+        if shell is None:
+            self.skipTest("POSIX shell parser is unavailable on this host")
+        subprocess.run([shell, "-n", str(SCRIPT)], check=True)
 
     def test_global_activation_and_rollback_preserve_user_data(self) -> None:
+        if os.name == "nt":
+            self.skipTest("POSIX developer-install lifecycle is unavailable on Windows")
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             home = root / "home"

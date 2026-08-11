@@ -1,32 +1,48 @@
-name: Publish stable npm distribution
+name: Publish npm distribution
 
 on:
   workflow_dispatch:
     inputs:
       product_version:
-        description: Exact product version
+        description: Exact product version in the candidate source
         required: true
         type: string
       package_version:
-        description: Exact stable npm package version; must equal product version
+        description: Exact npm package version for the selected channel
         required: true
         type: string
       candidate_run_id:
-        description: Successful Release candidate workflow run id
+        description: Successful Release candidate workflow run id for the selected channel
         required: true
         type: string
-      bootstrap_with_token:
-        description: First publication only; use the temporary NPM_TOKEN secret
+      channel:
+        description: Publication channel and candidate branch
         required: true
-        default: false
-        type: boolean
+        type: choice
+        options:
+          - test
+          - stable
+      tuf_repository_url:
+        description: HTTPS URL of the externally authorized TUF repository tar.gz; stable only
+        required: false
+        default: ""
+        type: string
+      tuf_repository_sha256:
+        description: Exact lowercase SHA-256 of the external TUF repository tar.gz; stable only
+        required: false
+        default: ""
+        type: string
 
 permissions:
   contents: write
 
+concurrency:
+  group: release-${{ inputs.channel }}-${{ inputs.package_version }}
+  cancel-in-progress: false
+
 jobs:
   publish:
-    name: Verify and publish npm distribution
+    name: Verify and publish channel-bound npm distribution
     environment:
       name: release-publication
       deployment: false
@@ -35,35 +51,60 @@ jobs:
       PRODUCT_VERSION: ${{ inputs.product_version }}
       PACKAGE_VERSION: ${{ inputs.package_version }}
       RUN_ID: ${{ inputs.candidate_run_id }}
-      BOOTSTRAP_WITH_TOKEN: ${{ inputs.bootstrap_with_token }}
+      CHANNEL: ${{ inputs.channel }}
+      TUF_REPOSITORY_URL: ${{ inputs.tuf_repository_url }}
+      TUF_REPOSITORY_SHA256: ${{ inputs.tuf_repository_sha256 }}
     permissions:
       actions: read
       contents: write
       id-token: write
     steps:
-      - name: Validate untrusted dispatch inputs
+      - name: Validate untrusted dispatch inputs and bind the channel contract
+        id: contract
         run: |
           if [[ ! "$PRODUCT_VERSION" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
             exit 2
           fi
-          if [[ ! "$PACKAGE_VERSION" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
-            exit 2
-          fi
-          test "$PACKAGE_VERSION" = "$PRODUCT_VERSION"
-          if [[ ! "$RUN_ID" =~ ^[1-9][0-9]*$ ]]; then
-            exit 2
-          fi
-          test "$BOOTSTRAP_WITH_TOKEN" = "true" \
-            || test "$BOOTSTRAP_WITH_TOKEN" = "false"
-      - name: Resolve the exact successful candidate commit
+          [[ "$RUN_ID" =~ ^[1-9][0-9]*$ ]]
+          case "$CHANNEL" in
+            test)
+              test -z "$TUF_REPOSITORY_URL"
+              test -z "$TUF_REPOSITORY_SHA256"
+              case "$PACKAGE_VERSION" in
+                "$PRODUCT_VERSION"-test) ;;
+                "$PRODUCT_VERSION"-test.[1-9]*)
+                  [[ "${PACKAGE_VERSION#"$PRODUCT_VERSION-test."}" =~ ^[1-9][0-9]*$ ]]
+                  ;;
+                *) exit 2 ;;
+              esac
+              branch=develop
+              npm_tag=test
+              prerelease=true
+              ;;
+            stable)
+              [[ "$PACKAGE_VERSION" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]
+              test "$PACKAGE_VERSION" = "$PRODUCT_VERSION"
+              branch=main
+              npm_tag=latest
+              prerelease=false
+              [[ "$TUF_REPOSITORY_URL" =~ ^https://[^[:space:]]+$ ]]
+              [[ "$TUF_REPOSITORY_SHA256" =~ ^[0-9a-f]{64}$ ]]
+              ;;
+            *) exit 2 ;;
+          esac
+          printf 'branch=%s\n' "$branch" >>"$GITHUB_OUTPUT"
+          printf 'npm_tag=%s\n' "$npm_tag" >>"$GITHUB_OUTPUT"
+          printf 'prerelease=%s\n' "$prerelease" >>"$GITHUB_OUTPUT"
+      - name: Resolve the exact successful channel candidate
         id: candidate
         env:
           GH_TOKEN: ${{ github.token }}
+          EXPECTED_BRANCH: ${{ steps.contract.outputs.branch }}
         run: |
           metadata=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RUN_ID")
           test "$(jq -r .name <<<"$metadata")" = "Release candidate"
           test "$(jq -r .event <<<"$metadata")" = "workflow_dispatch"
-          test "$(jq -r .head_branch <<<"$metadata")" = "main"
+          test "$(jq -r .head_branch <<<"$metadata")" = "$EXPECTED_BRANCH"
           test "$(jq -r .conclusion <<<"$metadata")" = "success"
           echo "sha=$(jq -r .head_sha <<<"$metadata")" >>"$GITHUB_OUTPUT"
       - name: Create release GitHub App token
@@ -106,17 +147,18 @@ jobs:
           pattern: release-*
           path: dist
           merge-multiple: true
-      - name: Bind stable publication to the exact stable candidate
+      - name: Bind publication to the exact channel candidate
         env:
           CANDIDATE_SHA: ${{ steps.candidate.outputs.sha }}
+          EXPECTED_BRANCH: ${{ steps.contract.outputs.branch }}
         run: |
           metadata=$(cat dist/release-candidate.json)
           test "$(jq -r .schema_version <<<"$metadata")" = "1"
-          test "$(jq -r .channel <<<"$metadata")" = "stable"
+          test "$(jq -r .channel <<<"$metadata")" = "$CHANNEL"
           test "$(jq -r .product_version <<<"$metadata")" = "$PRODUCT_VERSION"
           test "$(jq -r .package_version <<<"$metadata")" = "$PACKAGE_VERSION"
           [[ "$(jq -r .release_date <<<"$metadata")" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]
-          test "$(jq -r .ref <<<"$metadata")" = "refs/heads/main"
+          test "$(jq -r .ref <<<"$metadata")" = "refs/heads/$EXPECTED_BRANCH"
           test "$(jq -r .sha <<<"$metadata")" = "$CANDIDATE_SHA"
       - name: Verify required artifacts, checksums, and GitHub attestations
         env:
@@ -234,6 +276,86 @@ jobs:
           verify_identity \
             "dist/aigent-hive-$PRODUCT_VERSION-x86_64-pc-windows-msvc.zip" \
             "dist/aigent-hive-win32-x64-$PACKAGE_VERSION.tgz" hive.exe
+      - name: Download and safely extract externally authorized TUF repository
+        if: ${{ inputs.channel == 'stable' }}
+        run: |
+          archive="$RUNNER_TEMP/tuf-repository.tar.gz"
+          curl --proto '=https' --tlsv1.2 --fail --location --silent --show-error \
+            --output "$archive" "$TUF_REPOSITORY_URL"
+          actual=$(sha256sum "$archive" | cut -d' ' -f1)
+          test "$actual" = "$TUF_REPOSITORY_SHA256"
+          python3 scripts/extract-release-repository.py \
+            --archive "$archive" \
+            --output "$RUNNER_TEMP/tuf-repository"
+          cp "$archive" dist/tuf-repository.tar.gz
+          printf '%s  %s\n' "$actual" tuf-repository.tar.gz \
+            >dist/tuf-repository.tar.gz.sha256
+      - name: Install protected public TUF root and rollback floor
+        if: ${{ inputs.channel == 'stable' }}
+        env:
+          TUF_PRODUCTION_ROOT_B64: ${{ secrets.TUF_PRODUCTION_ROOT_B64 }}
+          TUF_PRODUCTION_ROLLBACK_STATE_B64: ${{ secrets.TUF_PRODUCTION_ROLLBACK_STATE_B64 }}
+        run: |
+          test -n "$TUF_PRODUCTION_ROOT_B64"
+          test -n "$TUF_PRODUCTION_ROLLBACK_STATE_B64"
+          umask 077
+          printf '%s' "$TUF_PRODUCTION_ROOT_B64" | base64 --decode \
+            >"$RUNNER_TEMP/release-root.json"
+          printf '%s' "$TUF_PRODUCTION_ROLLBACK_STATE_B64" | base64 --decode \
+            >"$RUNNER_TEMP/release-rollback-state.json"
+          jq -e . "$RUNNER_TEMP/release-root.json" >/dev/null
+          jq -e . "$RUNNER_TEMP/release-rollback-state.json" >/dev/null
+          sudo install -d -o root -g root -m 0755 /usr/local/share/aigent-hive
+          sudo install -o root -g root -m 0444 "$RUNNER_TEMP/release-root.json" \
+            /usr/local/share/aigent-hive/release-root.json
+          sudo install -o root -g root -m 0444 "$RUNNER_TEMP/release-rollback-state.json" \
+            /usr/local/share/aigent-hive/release-rollback-state.json
+          sudo chmod 0555 /usr/local/share/aigent-hive
+      - name: Verify production TUF authorization, rollback floor, and candidate identity
+        if: ${{ inputs.channel == 'stable' }}
+        env:
+          CANDIDATE_SHA: ${{ steps.candidate.outputs.sha }}
+        run: |
+          test -f dist/signing-request.json
+          request=$(cat dist/signing-request.json)
+          test "$(jq -r .product_version <<<"$request")" = "$PRODUCT_VERSION"
+          test "$(jq -r .package_version <<<"$request")" = "$PACKAGE_VERSION"
+          test "$(jq -r .candidate.sha <<<"$request")" = "$CANDIDATE_SHA"
+          test "$(jq -r .candidate.run_id <<<"$request")" = "$RUN_ID"
+          for name in \
+            "aigent-hive-$PRODUCT_VERSION-aarch64-apple-darwin.tar.gz" \
+            "aigent-hive-$PRODUCT_VERSION-x86_64-apple-darwin.tar.gz" \
+            "aigent-hive-$PRODUCT_VERSION-aarch64-unknown-linux-musl.tar.gz" \
+            "aigent-hive-$PRODUCT_VERSION-x86_64-unknown-linux-musl.tar.gz" \
+            "aigent-hive-$PRODUCT_VERSION-x86_64-pc-windows-msvc.zip"; do
+            cmp "dist/$name" "$RUNNER_TEMP/tuf-repository/targets/$name"
+          done
+          for name in \
+            bundle-manifest.json \
+            migration-table.json \
+            platform-signing-evidence.json \
+            provenance.intoto.json \
+            release-surface-inventory.json; do
+            cmp "dist/targets/$name" "$RUNNER_TEMP/tuf-repository/targets/$name"
+          done
+          mkdir "$RUNNER_TEMP/stable-verifier"
+          tar -xzf "dist/aigent-hive-$PRODUCT_VERSION-x86_64-unknown-linux-musl.tar.gz" \
+            -C "$RUNNER_TEMP/stable-verifier"
+          verifier="$RUNNER_TEMP/stable-verifier/aigent-hive-$PRODUCT_VERSION-x86_64-unknown-linux-musl/hive"
+          test -x "$verifier"
+          "$verifier" release verify \
+            --bundle "$RUNNER_TEMP/tuf-repository" \
+            --trust-root /usr/local/share/aigent-hive/release-root.json \
+            --rollback-state /usr/local/share/aigent-hive/release-rollback-state.json \
+            --output json >dist/tuf-publication-receipt.json
+          receipt=$(cat dist/tuf-publication-receipt.json)
+          test "$(jq -r .status <<<"$receipt")" = success
+          test "$(jq -r .code <<<"$receipt")" = hive.release-verified
+          test "$(jq -r .data.release_version <<<"$receipt")" = "$PRODUCT_VERSION"
+          test "$(jq -r .data.source_commit <<<"$receipt")" = "$CANDIDATE_SHA"
+          test "$(jq -r .data.release_sequence <<<"$receipt")" = 9
+          jq -e '.data.rollback_state.root_version >= 1 and .data.rollback_state.release_sequence == 9' \
+            <<<"$receipt" >/dev/null
       - name: Refuse existing npm versions
         run: |
           packages=(
@@ -250,12 +372,12 @@ jobs:
               exit 3
             fi
           done
-      - name: Refuse an existing stable tag or release
+      - name: Refuse an existing channel tag or release
         env:
           GH_TOKEN: ${{ github.token }}
           CANDIDATE_SHA: ${{ steps.candidate.outputs.sha }}
         run: |
-          tag="v$PRODUCT_VERSION"
+          tag="v$PACKAGE_VERSION"
           if git ls-remote --exit-code --tags origin "refs/tags/$tag" >/dev/null 2>&1; then
             echo "$tag already exists" >&2
             exit 3
@@ -265,40 +387,37 @@ jobs:
             exit 3
           fi
           test "$CANDIDATE_SHA" = "$(git rev-parse HEAD)"
-      - name: Publish npm package family with the bootstrap token
-        if: inputs.bootstrap_with_token
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: Snapshot stable tags before test publication
+        if: ${{ inputs.channel == 'test' }}
         run: |
-          test -n "$NODE_AUTH_TOKEN"
-          npm publish "./dist/aigent-hive-darwin-arm64-$PACKAGE_VERSION.tgz" \
-            --access public --provenance --tag latest
-          npm publish "./dist/aigent-hive-darwin-x64-$PACKAGE_VERSION.tgz" \
-            --access public --provenance --tag latest
-          npm publish "./dist/aigent-hive-linux-arm64-$PACKAGE_VERSION.tgz" \
-            --access public --provenance --tag latest
-          npm publish "./dist/aigent-hive-linux-x64-$PACKAGE_VERSION.tgz" \
-            --access public --provenance --tag latest
-          npm publish "./dist/aigent-hive-win32-x64-$PACKAGE_VERSION.tgz" \
-            --access public --provenance --tag latest
-          npm publish "./dist/aigent-hive-$PACKAGE_VERSION.tgz" \
-            --access public --provenance --tag latest
+          : >"$RUNNER_TEMP/latest-before.tsv"
+          for package in \
+            "@aigent-hive/darwin-arm64" \
+            "@aigent-hive/darwin-x64" \
+            "@aigent-hive/linux-arm64" \
+            "@aigent-hive/linux-x64" \
+            "@aigent-hive/win32-x64" \
+            "aigent-hive"; do
+            latest=$(npm view "$package" 'dist-tags.latest')
+            test -n "$latest"
+            printf '%s\t%s\n' "$package" "$latest" >>"$RUNNER_TEMP/latest-before.tsv"
+          done
       - name: Publish npm package family through trusted publishing
-        if: ${{ !inputs.bootstrap_with_token }}
+        env:
+          NPM_TAG: ${{ steps.contract.outputs.npm_tag }}
         run: |
-          npm publish "./dist/aigent-hive-darwin-arm64-$PACKAGE_VERSION.tgz" \
-            --access public --provenance --tag latest
-          npm publish "./dist/aigent-hive-darwin-x64-$PACKAGE_VERSION.tgz" \
-            --access public --provenance --tag latest
-          npm publish "./dist/aigent-hive-linux-arm64-$PACKAGE_VERSION.tgz" \
-            --access public --provenance --tag latest
-          npm publish "./dist/aigent-hive-linux-x64-$PACKAGE_VERSION.tgz" \
-            --access public --provenance --tag latest
-          npm publish "./dist/aigent-hive-win32-x64-$PACKAGE_VERSION.tgz" \
-            --access public --provenance --tag latest
-          npm publish "./dist/aigent-hive-$PACKAGE_VERSION.tgz" \
-            --access public --provenance --tag latest
-      - name: Verify npm latest tags
+          for archive in \
+            "dist/aigent-hive-darwin-arm64-$PACKAGE_VERSION.tgz" \
+            "dist/aigent-hive-darwin-x64-$PACKAGE_VERSION.tgz" \
+            "dist/aigent-hive-linux-arm64-$PACKAGE_VERSION.tgz" \
+            "dist/aigent-hive-linux-x64-$PACKAGE_VERSION.tgz" \
+            "dist/aigent-hive-win32-x64-$PACKAGE_VERSION.tgz" \
+            "dist/aigent-hive-$PACKAGE_VERSION.tgz"; do
+            npm publish "./$archive" --access public --provenance --tag "$NPM_TAG"
+          done
+      - name: Verify npm channel tags
+        env:
+          NPM_TAG: ${{ steps.contract.outputs.npm_tag }}
         run: |
           packages=(
             "@aigent-hive/darwin-arm64"
@@ -315,33 +434,51 @@ jobs:
           }
           for package in "${packages[@]}"; do
             for attempt in 1 2 3 4 5 6 7 8 9 10 11 12; do
-              if [ "$(read_tag "$package" latest)" = "$PACKAGE_VERSION" ]; then
+              if [ "$(read_tag "$package" "$NPM_TAG")" = "$PACKAGE_VERSION" ]; then
                 break
               fi
               if [ "$attempt" = 12 ]; then
-                echo "::error::$package latest tag did not reach $PACKAGE_VERSION" >&2
+                echo "::error::$package $NPM_TAG tag did not reach $PACKAGE_VERSION" >&2
                 exit 6
               fi
               sleep 5
             done
           done
-      - name: Create annotated stable tag and normal GitHub Release
+      - name: Verify stable tags remain unchanged for test publication
+        if: ${{ inputs.channel == 'test' }}
+        run: |
+          while IFS="$(printf '\t')" read -r package latest_before; do
+            latest_after=$(npm view "$package" 'dist-tags.latest')
+            test "$latest_after" = "$latest_before"
+          done <"$RUNNER_TEMP/latest-before.tsv"
+      - name: Create annotated channel tag and GitHub Release
         env:
           GH_TOKEN: ${{ steps.release-token.outputs.token }}
           RELEASE_GIT_TOKEN: ${{ steps.release-token.outputs.token }}
           CANDIDATE_SHA: ${{ steps.candidate.outputs.sha }}
+          PRERELEASE: ${{ steps.contract.outputs.prerelease }}
         run: |
           test -n "$RELEASE_GIT_TOKEN"
-          tag="v$PRODUCT_VERSION"
+          tag="v$PACKAGE_VERSION"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git tag -a "$tag" "$CANDIDATE_SHA" -m "Aigent Hive $PRODUCT_VERSION"
+          git tag -a "$tag" "$CANDIDATE_SHA" -m "Aigent Hive $PACKAGE_VERSION $CHANNEL"
           auth_header="$(printf 'x-access-token:%s' "$RELEASE_GIT_TOKEN" | base64 -w 0)"
           git -c http.https://github.com/.extraheader="AUTHORIZATION: basic $auth_header" \
             push origin "refs/tags/$tag"
           unset auth_header
-          gh release create "$tag" \
-            --target "$CANDIDATE_SHA" \
-            --title "Aigent Hive $PRODUCT_VERSION" \
-            --notes-file "docs/releases/$PRODUCT_VERSION.md" \
-            dist/*.tar.gz dist/*.zip dist/*.sha256 dist/*.tgz dist/*.attestation.jsonl
+          if [ "$PRERELEASE" = "true" ]; then
+            gh release create "$tag" \
+              --target "$CANDIDATE_SHA" \
+              --prerelease \
+              --title "Aigent Hive $PACKAGE_VERSION test" \
+              --notes-file "docs/releases/$PRODUCT_VERSION.md" \
+              dist/*.tar.gz dist/*.zip dist/*.sha256 dist/*.tgz dist/*.attestation.jsonl
+          else
+            gh release create "$tag" \
+              --target "$CANDIDATE_SHA" \
+              --title "Aigent Hive $PRODUCT_VERSION" \
+              --notes-file "docs/releases/$PRODUCT_VERSION.md" \
+              dist/*.tar.gz dist/*.zip dist/*.sha256 dist/*.tgz dist/*.attestation.jsonl \
+              dist/tuf-publication-receipt.json
+          fi

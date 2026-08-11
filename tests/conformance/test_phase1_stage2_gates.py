@@ -37,28 +37,12 @@ CANONICAL_VISIBLE_PATHS = (
     ".hive/team/roles/README.md",
     ".hive/team/roles/reviewer.md",
 )
-BUILTIN_SKILL_NAMES = (
-    "clean-ai-slop",
-    "auto-setup-project",
-    "research-practices",
-    "verify-package",
-    "record-knowledge",
-    "maintain-knowledge",
-    "share-knowledge",
-    "search-knowledge",
-    "import-repository-knowledge",
-    "engineer-run",
-    "migrate-project",
-    "upgrade-project",
-    "refine-prompt",
-    "handoff-role",
-    "save-progress",
-    "resume-work",
-    "answer",
-    "update-hive",
-    "manage-usage",
-    "manage-wiki",
-    "setup-project",
+BUILTIN_SKILL_NAMES = tuple(
+    sorted(
+        path.name
+        for path in (REPOSITORY_ROOT / "harness/skills").iterdir()
+        if path.is_dir() and path.name != "user-setup"
+    )
 )
 CODEX_HIVE_PROJECTION_PATHS = {
     "directives",

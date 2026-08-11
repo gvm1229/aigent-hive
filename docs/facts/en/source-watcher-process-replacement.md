@@ -9,7 +9,7 @@ summary: "A continued Codex thread safely replaces a watcher whose recorded owne
 tags: [guard, process, source]
 aliases: ["Stale watcher owner recovery"]
 sources:
-  - "repo:tests/conformance/test_source_usage_guard.py#sha256:e6d29a38db42c18e49763da9013171caf990bad1c054590ada8a939a699f36bf"
+  - "repo:tests/conformance/test_source_usage_guard.py#sha256:d04c6f79bf134151f10829166a837f303f1fbf078d75568e60942f364be5f458"
 links: [source-usage-guard, windows-watcher-identity]
 reviewed_revision: "git:a1fb6e848117b83354144540df01474e68d25aa8"
 status: active

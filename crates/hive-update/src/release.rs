@@ -543,7 +543,7 @@ pub struct PlatformSigningEvidenceEntry {
     pub artifact_path: String,
     /// Exact artifact digest.
     pub artifact_digest: String,
-    /// `developer-id` or `authenticode`.
+    /// `developer-id`, `authenticode`, `ad-hoc`, or `unsigned`.
     pub scheme: String,
     /// Public signer identity authorized by the release metadata.
     pub signer: PlatformSignerIdentity,
@@ -555,7 +555,7 @@ pub struct PlatformSigningEvidenceEntry {
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct PlatformSignerIdentity {
-    /// `apple-team-id` or `authenticode-certificate-thumbprint`.
+    /// `apple-team-id`, `authenticode-certificate-thumbprint`, or `no-publisher`.
     pub kind: String,
     /// Exact public identity emitted by the protected platform verifier.
     pub value: String,
@@ -1316,11 +1316,9 @@ fn validate_platform_signing_evidence(
     let entries_valid = evidence.schema_version == 1
         && evidence.evidence.len() >= 2
         && evidence.evidence.iter().all(|entry| {
-            let expected_scheme = match entry.platform.as_str() {
-                "macos" => "developer-id",
-                "windows" => "authenticode",
-                _ => return false,
-            };
+            if !matches!(entry.platform.as_str(), "macos" | "windows") {
+                return false;
+            }
             platforms.insert(entry.platform.as_str());
             let path = Path::new(&entry.artifact_path);
             let path_valid = validate_project_relative(path).is_ok()
@@ -1330,13 +1328,19 @@ fn validate_platform_signing_evidence(
                 EvidenceRequirement::Integrity => {
                     matches!(
                         entry.status.as_str(),
-                        "verified" | "fixture-public-evidence"
+                        "verified" | "fixture-public-evidence" | "cost-waived"
                     )
                 }
-                EvidenceRequirement::Production => entry.status == "verified",
+                EvidenceRequirement::Production => {
+                    matches!(entry.status.as_str(), "verified" | "cost-waived")
+                }
             };
-            let signer_valid = match entry.platform.as_str() {
-                "macos" => {
+            let signer_valid = match (
+                entry.platform.as_str(),
+                entry.scheme.as_str(),
+                entry.status.as_str(),
+            ) {
+                ("macos", "developer-id", "verified" | "fixture-public-evidence") => {
                     entry.signer.kind == "apple-team-id"
                         && entry.signer.value.len() == 10
                         && entry
@@ -1345,7 +1349,7 @@ fn validate_platform_signing_evidence(
                             .bytes()
                             .all(|byte| byte.is_ascii_uppercase() || byte.is_ascii_digit())
                 }
-                "windows" => {
+                ("windows", "authenticode", "verified" | "fixture-public-evidence") => {
                     entry.signer.kind == "authenticode-certificate-thumbprint"
                         && entry.signer.value.len() == 40
                         && entry
@@ -1354,13 +1358,15 @@ fn validate_platform_signing_evidence(
                             .bytes()
                             .all(|byte| byte.is_ascii_digit() || (b'A'..=b'F').contains(&byte))
                 }
+                ("macos", "ad-hoc", "cost-waived") | ("windows", "unsigned", "cost-waived") => {
+                    entry.signer.kind == "no-publisher" && entry.signer.value.is_empty()
+                }
                 _ => false,
             };
             let signer_consistent = signers
                 .insert(entry.platform.as_str(), entry.signer.value.as_str())
                 .is_none_or(|prior| prior == entry.signer.value);
-            expected_scheme == entry.scheme
-                && path_valid
+            path_valid
                 && is_sha256_digest(&entry.artifact_digest)
                 && signer_valid
                 && signer_consistent
@@ -1368,16 +1374,26 @@ fn validate_platform_signing_evidence(
         });
     let production_artifacts_valid = requirement != EvidenceRequirement::Production
         || release_artifact_targets(verified_targets).is_some_and(|artifacts| {
+            let platform_artifacts: Vec<_> = artifacts
+                .into_iter()
+                .filter(|artifact| platform_for_release_artifact(&artifact.path).is_some())
+                .collect();
             let declared: BTreeMap<&str, &str> = evidence
                 .evidence
                 .iter()
                 .map(|entry| (entry.artifact_path.as_str(), entry.artifact_digest.as_str()))
                 .collect();
-            declared.len() == artifacts.len()
-                && artifacts.iter().all(|artifact| {
+            declared.len() == platform_artifacts.len()
+                && platform_artifacts.len() == 3
+                && platform_artifacts.iter().all(|artifact| {
                     declared
                         .get(artifact.path.as_str())
                         .is_some_and(|digest| **digest == artifact.digest)
+                        && evidence.evidence.iter().any(|entry| {
+                            entry.artifact_path == artifact.path
+                                && Some(entry.platform.as_str())
+                                    == platform_for_release_artifact(&artifact.path)
+                        })
                 })
         });
     if !entries_valid
@@ -1390,6 +1406,18 @@ fn validate_platform_signing_evidence(
         ));
     }
     Ok(())
+}
+
+fn platform_for_release_artifact(path: &str) -> Option<&'static str> {
+    if path.ends_with("-aarch64-apple-darwin.tar.gz")
+        || path.ends_with("-x86_64-apple-darwin.tar.gz")
+    {
+        Some("macos")
+    } else if path.ends_with("-x86_64-pc-windows-msvc.zip") {
+        Some("windows")
+    } else {
+        None
+    }
 }
 
 fn release_artifact_targets(targets: &[VerifiedTarget]) -> Option<Vec<&VerifiedTarget>> {
@@ -2185,6 +2213,84 @@ mod tests {
             validate_platform_signing_evidence(&evidence, &[], EvidenceRequirement::Integrity)
                 .is_err()
         );
+    }
+
+    #[test]
+    fn production_accepts_cost_waived_platform_state_and_excludes_linux_from_signing_evidence() {
+        fn target(path: &str, digit: char) -> VerifiedTarget {
+            VerifiedTarget {
+                path: format!("targets/{path}"),
+                digest: format!("sha256:{}", digit.to_string().repeat(64)),
+                length: 1,
+            }
+        }
+
+        let targets = vec![
+            target("aigent-hive-0.9.0-aarch64-apple-darwin.tar.gz", '1'),
+            target("aigent-hive-0.9.0-x86_64-apple-darwin.tar.gz", '2'),
+            target("aigent-hive-0.9.0-aarch64-unknown-linux-musl.tar.gz", '3'),
+            target("aigent-hive-0.9.0-x86_64-unknown-linux-musl.tar.gz", '4'),
+            target("aigent-hive-0.9.0-x86_64-pc-windows-msvc.zip", '5'),
+        ];
+        let evidence = PlatformSigningEvidence {
+            schema_version: 1,
+            evidence: vec![
+                PlatformSigningEvidenceEntry {
+                    platform: "macos".to_owned(),
+                    artifact_path: targets[0].path.clone(),
+                    artifact_digest: targets[0].digest.clone(),
+                    scheme: "ad-hoc".to_owned(),
+                    signer: PlatformSignerIdentity {
+                        kind: "no-publisher".to_owned(),
+                        value: String::new(),
+                    },
+                    status: "cost-waived".to_owned(),
+                },
+                PlatformSigningEvidenceEntry {
+                    platform: "macos".to_owned(),
+                    artifact_path: targets[1].path.clone(),
+                    artifact_digest: targets[1].digest.clone(),
+                    scheme: "ad-hoc".to_owned(),
+                    signer: PlatformSignerIdentity {
+                        kind: "no-publisher".to_owned(),
+                        value: String::new(),
+                    },
+                    status: "cost-waived".to_owned(),
+                },
+                PlatformSigningEvidenceEntry {
+                    platform: "windows".to_owned(),
+                    artifact_path: targets[4].path.clone(),
+                    artifact_digest: targets[4].digest.clone(),
+                    scheme: "unsigned".to_owned(),
+                    signer: PlatformSignerIdentity {
+                        kind: "no-publisher".to_owned(),
+                        value: String::new(),
+                    },
+                    status: "cost-waived".to_owned(),
+                },
+            ],
+        };
+
+        validate_platform_signing_evidence(&evidence, &targets, EvidenceRequirement::Production)
+            .expect("truthful cost-waived production evidence");
+
+        let mut forged = evidence.clone();
+        forged.evidence[0].scheme = "developer-id".to_owned();
+        assert!(validate_platform_signing_evidence(
+            &forged,
+            &targets,
+            EvidenceRequirement::Production
+        )
+        .is_err());
+
+        let mut wrong_platform = evidence;
+        wrong_platform.evidence[2].platform = "macos".to_owned();
+        assert!(validate_platform_signing_evidence(
+            &wrong_platform,
+            &targets,
+            EvidenceRequirement::Production
+        )
+        .is_err());
     }
 
     #[test]

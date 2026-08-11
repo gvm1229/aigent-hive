@@ -15,33 +15,33 @@ const CATALOG_YAML: &str = include_str!("../../../harness/skills/catalog.yml");
 const RETIRED_SKILL_NAMES_YAML: &str = include_str!("../../../harness/skills/retired-names.yml");
 const HISTORICAL_BUILTINS_YAML: &str =
     include_str!("../../../harness/skills/historical-builtins.yml");
-const SETUP_HIVE: &[u8] = include_bytes!("../../../harness/skills/configure/SKILL.md");
-const SETUP_HARNESS: &[u8] = include_bytes!("../../../harness/skills/setup-project/SKILL.md");
-const AUTO_SETUP_HARNESS: &[u8] =
-    include_bytes!("../../../harness/skills/auto-setup-project/SKILL.md");
-const SIMPLE_QUESTION: &[u8] = include_bytes!("../../../harness/skills/answer/SKILL.md");
-const PROMPT_REFINE: &[u8] = include_bytes!("../../../harness/skills/refine-prompt/SKILL.md");
+const SETUP_HIVE: &[u8] = include_bytes!("../../../harness/skills/user-setup/SKILL.md");
+const SETUP_HARNESS: &[u8] = include_bytes!("../../../harness/skills/project-setup/SKILL.md");
+const SIMPLE_QUESTION: &[u8] = include_bytes!("../../../harness/skills/quick-answer/SKILL.md");
+const PROMPT_REFINE: &[u8] = include_bytes!("../../../harness/skills/prompt-refine/SKILL.md");
 const KNOWLEDGE_CAPTURE: &[u8] =
-    include_bytes!("../../../harness/skills/record-knowledge/SKILL.md");
-const KNOWLEDGE_QUERY: &[u8] = include_bytes!("../../../harness/skills/search-knowledge/SKILL.md");
-const KNOWLEDGE_PROMOTE: &[u8] = include_bytes!("../../../harness/skills/share-knowledge/SKILL.md");
+    include_bytes!("../../../harness/skills/knowledge-capture/SKILL.md");
+const KNOWLEDGE_QUERY: &[u8] = include_bytes!("../../../harness/skills/knowledge-recall/SKILL.md");
+const KNOWLEDGE_PROMOTE: &[u8] =
+    include_bytes!("../../../harness/skills/knowledge-promote/SKILL.md");
 const KNOWLEDGE_MAINTENANCE: &[u8] =
-    include_bytes!("../../../harness/skills/maintain-knowledge/SKILL.md");
-const RUN_CHECKPOINT: &[u8] = include_bytes!("../../../harness/skills/save-progress/SKILL.md");
-const RUN_RESUME: &[u8] = include_bytes!("../../../harness/skills/resume-work/SKILL.md");
-const USAGE_GUARD: &[u8] = include_bytes!("../../../harness/skills/manage-usage/SKILL.md");
-const ROLE_HANDOFF: &[u8] = include_bytes!("../../../harness/skills/handoff-role/SKILL.md");
-const JUDGE_PACKAGE: &[u8] = include_bytes!("../../../harness/skills/verify-package/SKILL.md");
-const UPDATE_HARNESS: &[u8] = include_bytes!("../../../harness/skills/update-hive/SKILL.md");
-const MIGRATE_HARNESS: &[u8] = include_bytes!("../../../harness/skills/migrate-project/SKILL.md");
-const PROJECT_UPGRADE: &[u8] = include_bytes!("../../../harness/skills/upgrade-project/SKILL.md");
-const LOOP_ENGINEERING: &[u8] = include_bytes!("../../../harness/skills/engineer-run/SKILL.md");
-const HIVE_WIKI: &[u8] = include_bytes!("../../../harness/skills/manage-wiki/SKILL.md");
-const AI_SLOP_CLEANER: &[u8] = include_bytes!("../../../harness/skills/clean-ai-slop/SKILL.md");
+    include_bytes!("../../../harness/skills/knowledge-maintain/SKILL.md");
+const RUN_CHECKPOINT: &[u8] = include_bytes!("../../../harness/skills/run-checkpoint/SKILL.md");
+const RUN_RESUME: &[u8] = include_bytes!("../../../harness/skills/run-resume/SKILL.md");
+const USAGE_GUARD: &[u8] = include_bytes!("../../../harness/skills/usage-guard/SKILL.md");
+const ROLE_HANDOFF: &[u8] = include_bytes!("../../../harness/skills/run-handoff/SKILL.md");
+const JUDGE_PACKAGE: &[u8] = include_bytes!("../../../harness/skills/package-review/SKILL.md");
+const UPDATE_HARNESS: &[u8] = include_bytes!("../../../harness/skills/product-update/SKILL.md");
+const MIGRATE_HARNESS: &[u8] =
+    include_bytes!("../../../harness/skills/project-transition/SKILL.md");
+const PROJECT_UPGRADE: &[u8] = include_bytes!("../../../harness/skills/project-refresh/SKILL.md");
+const LOOP_ENGINEERING: &[u8] = include_bytes!("../../../harness/skills/ralph-loop/SKILL.md");
+const AI_SLOP_CLEANER: &[u8] = include_bytes!("../../../harness/skills/code-polish/SKILL.md");
 const BEST_PRACTICE_RESEARCH: &[u8] =
-    include_bytes!("../../../harness/skills/research-practices/SKILL.md");
-const KNOWLEDGE_SCAN: &[u8] =
-    include_bytes!("../../../harness/skills/import-repository-knowledge/SKILL.md");
+    include_bytes!("../../../harness/skills/research-best-practices/SKILL.md");
+const KNOWLEDGE_SCAN: &[u8] = include_bytes!("../../../harness/skills/knowledge-import/SKILL.md");
+const SHIP: &[u8] = include_bytes!("../../../harness/skills/ship/SKILL.md");
+const AMEND_DIRECTIVE: &[u8] = include_bytes!("../../../harness/skills/amend-directive/SKILL.md");
 
 /// A stable validation or compilation failure.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -514,7 +514,7 @@ pub fn compile_projection(
         .skills
         .iter()
         .filter(|entry| {
-            entry.availability == Availability::Implemented && entry.name != "configure"
+            entry.availability == Availability::Implemented && entry.name != "user-setup"
         })
         .map(|entry| entry.name.clone())
         .collect();
@@ -531,7 +531,7 @@ pub fn compile_projection(
 /// Compiles an exact selected user-scope built-in set plus verified optional
 /// source proofs.
 ///
-/// `configure` is intentionally user-scope only and remains absent from
+/// `user-setup` is intentionally user-scope only and remains absent from
 /// project projections compiled by [`compile_projection`].
 ///
 /// # Errors
@@ -570,7 +570,7 @@ pub fn compile_user_projection_localized(
 /// Compiles an exact selected project-scope built-in set plus verified
 /// optional source proofs.
 ///
-/// The user-only `configure` Skill is rejected. Callers must resolve and
+/// The user-only `user-setup` Skill is rejected. Callers must resolve and
 /// preview dependency closure before invoking this deterministic projection.
 ///
 /// # Errors
@@ -629,10 +629,10 @@ fn compile_named_projection(
                 format!("selected user Skill is unavailable: {name}"),
             ));
         }
-        if !allow_user_only && name == "configure" {
+        if !allow_user_only && name == "user-setup" {
             return Err(ProjectionError::new(
                 "hive.skill-selection-invalid",
-                "configure is user-scope only",
+                "user-setup is user-scope only",
             ));
         }
     }
@@ -999,137 +999,137 @@ fn localized_skill_text(
     language: DescriptorLanguage,
 ) -> Option<(&'static str, &'static str)> {
     let (en_name, en_description, ko_name, ko_description) = match name {
-        "configure" => (
-            "Configure Hive",
+        "user-setup" => (
+            "Set up Hive",
             "Configure or reconfigure global Aigent Hive preferences.",
             "Hive 설정",
             "전역 Aigent Hive 환경 설정과 재설정을 진행합니다.",
         ),
-        "setup-project" => (
+        "project-setup" => (
             "Set up project",
             "Configure or reconfigure Aigent Hive for one project.",
             "프로젝트 설정",
             "프로젝트별 Aigent Hive 환경을 설정하거나 다시 설정합니다.",
         ),
-        "auto-setup-project" => (
-            "Automatically set up project",
-            "Set up a project from repository evidence with minimal questions.",
-            "프로젝트 자동 설정",
-            "저장소 근거를 바탕으로 프로젝트 환경을 자동 설정합니다.",
-        ),
-        "answer" => (
+        "quick-answer" => (
             "Answer",
             "Answer a simple question without inspecting or changing a project.",
             "간단히 답하기",
             "프로젝트를 검사하거나 변경하지 않고 간단한 질문에 답합니다.",
         ),
-        "refine-prompt" => (
+        "prompt-refine" => (
             "Refine prompt",
             "Turn a request into an approval-ready prompt before execution.",
             "프롬프트 다듬기",
             "실행 전 승인받을 수 있도록 요청을 명확한 프롬프트로 다듬습니다.",
         ),
-        "record-knowledge" => (
+        "knowledge-capture" => (
             "Record knowledge",
             "Record reviewed facts and workflows as canonical knowledge.",
             "지식 기록",
             "검토한 사실과 작업 방식을 정본 지식으로 기록합니다.",
         ),
-        "search-knowledge" => (
+        "knowledge-recall" => (
             "Search knowledge",
             "Retrieve only the Hive knowledge needed for the current work.",
             "지식 검색",
             "작업에 필요한 Hive 지식을 제한된 범위에서 검색합니다.",
         ),
-        "share-knowledge" => (
+        "knowledge-promote" => (
             "Share knowledge",
             "Promote reviewed project knowledge to global Hive knowledge.",
             "지식 공유",
             "검토한 프로젝트 지식을 전역 Hive 지식으로 승격합니다.",
         ),
-        "maintain-knowledge" => (
+        "knowledge-maintain" => (
             "Maintain knowledge",
             "Check, maintain, and rebuild the derived knowledge index.",
             "지식 관리",
             "정본 지식을 검사·정리하고 파생 색인을 다시 만듭니다.",
         ),
-        "save-progress" => (
+        "run-checkpoint" => (
             "Save progress",
             "Save durable, resumable work progress in canonical Markdown.",
             "진행 상황 저장",
             "재개 가능한 작업 진행 상황을 정본 Markdown에 저장합니다.",
         ),
-        "resume-work" => (
+        "run-resume" => (
             "Resume work",
             "Validate a work handoff and read safe resume context.",
             "작업 재개",
             "저장한 작업 인계를 검증하고 새 세션의 재개 정보를 읽습니다.",
         ),
-        "manage-usage" => (
+        "usage-guard" => (
             "Manage usage",
             "Inspect or adjust usage safeguards for the current session.",
             "사용량 보호 관리",
             "사용량 보호 기준과 현재 세션의 안전 상태를 확인하거나 바꿉니다.",
         ),
-        "handoff-role" => (
+        "run-handoff" => (
             "Hand off role",
             "Update canonical role assignment and handoff records safely.",
             "역할 인계",
             "역할 배정과 인계 기록을 정본 Markdown에 안전하게 갱신합니다.",
         ),
-        "verify-package" => (
+        "package-review" => (
             "Verify package",
             "Verify a work package and its signed attestations.",
             "패키지 검증",
             "검증용 작업 패키지와 서명된 확인 정보를 검사합니다.",
         ),
-        "update-hive" => (
+        "product-update" => (
             "Update Hive",
             "Preview, verify, and safely apply a signed Hive update.",
             "Hive 업데이트",
             "서명된 Hive 업데이트를 미리 보기·검증·안전 적용합니다.",
         ),
-        "upgrade-project" => (
+        "project-refresh" => (
             "Upgrade project",
             "Upgrade Hive-generated project guidance while preserving local edits.",
             "프로젝트 업그레이드",
             "Hive가 생성한 프로젝트 지침과 Skill을 충돌 보존 방식으로 올립니다.",
         ),
-        "migrate-project" => (
+        "project-transition" => (
             "Migrate project",
             "Migrate a supported Hive project format with backup and validation.",
             "프로젝트 이전",
             "지원되는 Hive 프로젝트 형식을 백업과 검증을 거쳐 이전합니다.",
         ),
-        "engineer-run" => (
+        "ralph-loop" => (
             "Engineer run",
             "Prepare a Hive work run with planning, verification, and handoff.",
             "작업 실행 설계",
             "계획·검증·인계를 연결한 Hive 작업 실행을 준비합니다.",
         ),
-        "manage-wiki" => (
-            "Manage Wiki",
-            "Manage records, search, and checks for the Hive Markdown Wiki.",
-            "Wiki 관리",
-            "Hive Markdown Wiki의 기록·검색·검사를 관리합니다.",
-        ),
-        "import-repository-knowledge" => (
+        "knowledge-import" => (
             "Import repository knowledge",
             "Import reviewed repository content as Hive knowledge.",
             "저장소 지식 가져오기",
             "저장소의 검토된 내용을 Hive 지식으로 가져옵니다.",
         ),
-        "clean-ai-slop" => (
+        "code-polish" => (
             "Clean AI slop",
             "Review and clean unnecessary AI-generated wording and structure.",
             "AI 군더더기 정리",
             "AI가 만든 불필요한 표현과 구조를 검토해 정리합니다.",
         ),
-        "research-practices" => (
+        "research-best-practices" => (
             "Research practices",
             "Research implementation practices from reliable current sources.",
             "관행 조사",
             "신뢰할 수 있는 최신 자료를 바탕으로 구현 관행을 조사합니다.",
+        ),
+        "ship" => (
+            "Ship changes",
+            "Create focused verified commits using this repository's rules.",
+            "변경 사항 반영",
+            "현재 저장소 규칙으로 검증된 작은 단위의 커밋을 만듭니다.",
+        ),
+        "amend-directive" => (
+            "Amend directives",
+            "Change Hive behavior directives while preserving safety boundaries.",
+            "지침 수정",
+            "안전 경계를 유지하며 Hive 동작 지침을 수정합니다.",
         ),
         _ => return None,
     };
@@ -1147,71 +1147,71 @@ fn embedded_skill_source(name: &str) -> Option<&'static [u8]> {
 
 fn embedded_skill_metadata(name: &str) -> Option<&'static [u8]> {
     match name {
-        "configure" => Some(include_bytes!(
-            "../../../harness/skills/configure/agents/openai.yaml"
+        "user-setup" => Some(include_bytes!(
+            "../../../harness/skills/user-setup/agents/openai.yaml"
         )),
-        "setup-project" => Some(include_bytes!(
-            "../../../harness/skills/setup-project/agents/openai.yaml"
+        "project-setup" => Some(include_bytes!(
+            "../../../harness/skills/project-setup/agents/openai.yaml"
         )),
-        "auto-setup-project" => Some(include_bytes!(
-            "../../../harness/skills/auto-setup-project/agents/openai.yaml"
+        "quick-answer" => Some(include_bytes!(
+            "../../../harness/skills/quick-answer/agents/openai.yaml"
         )),
-        "answer" => Some(include_bytes!(
-            "../../../harness/skills/answer/agents/openai.yaml"
+        "prompt-refine" => Some(include_bytes!(
+            "../../../harness/skills/prompt-refine/agents/openai.yaml"
         )),
-        "refine-prompt" => Some(include_bytes!(
-            "../../../harness/skills/refine-prompt/agents/openai.yaml"
+        "knowledge-capture" => Some(include_bytes!(
+            "../../../harness/skills/knowledge-capture/agents/openai.yaml"
         )),
-        "record-knowledge" => Some(include_bytes!(
-            "../../../harness/skills/record-knowledge/agents/openai.yaml"
+        "knowledge-recall" => Some(include_bytes!(
+            "../../../harness/skills/knowledge-recall/agents/openai.yaml"
         )),
-        "search-knowledge" => Some(include_bytes!(
-            "../../../harness/skills/search-knowledge/agents/openai.yaml"
+        "knowledge-promote" => Some(include_bytes!(
+            "../../../harness/skills/knowledge-promote/agents/openai.yaml"
         )),
-        "share-knowledge" => Some(include_bytes!(
-            "../../../harness/skills/share-knowledge/agents/openai.yaml"
+        "knowledge-maintain" => Some(include_bytes!(
+            "../../../harness/skills/knowledge-maintain/agents/openai.yaml"
         )),
-        "maintain-knowledge" => Some(include_bytes!(
-            "../../../harness/skills/maintain-knowledge/agents/openai.yaml"
+        "run-checkpoint" => Some(include_bytes!(
+            "../../../harness/skills/run-checkpoint/agents/openai.yaml"
         )),
-        "save-progress" => Some(include_bytes!(
-            "../../../harness/skills/save-progress/agents/openai.yaml"
+        "run-resume" => Some(include_bytes!(
+            "../../../harness/skills/run-resume/agents/openai.yaml"
         )),
-        "resume-work" => Some(include_bytes!(
-            "../../../harness/skills/resume-work/agents/openai.yaml"
+        "usage-guard" => Some(include_bytes!(
+            "../../../harness/skills/usage-guard/agents/openai.yaml"
         )),
-        "manage-usage" => Some(include_bytes!(
-            "../../../harness/skills/manage-usage/agents/openai.yaml"
+        "run-handoff" => Some(include_bytes!(
+            "../../../harness/skills/run-handoff/agents/openai.yaml"
         )),
-        "handoff-role" => Some(include_bytes!(
-            "../../../harness/skills/handoff-role/agents/openai.yaml"
+        "package-review" => Some(include_bytes!(
+            "../../../harness/skills/package-review/agents/openai.yaml"
         )),
-        "verify-package" => Some(include_bytes!(
-            "../../../harness/skills/verify-package/agents/openai.yaml"
+        "product-update" => Some(include_bytes!(
+            "../../../harness/skills/product-update/agents/openai.yaml"
         )),
-        "update-hive" => Some(include_bytes!(
-            "../../../harness/skills/update-hive/agents/openai.yaml"
+        "project-transition" => Some(include_bytes!(
+            "../../../harness/skills/project-transition/agents/openai.yaml"
         )),
-        "migrate-project" => Some(include_bytes!(
-            "../../../harness/skills/migrate-project/agents/openai.yaml"
+        "project-refresh" => Some(include_bytes!(
+            "../../../harness/skills/project-refresh/agents/openai.yaml"
         )),
-        "upgrade-project" => Some(include_bytes!(
-            "../../../harness/skills/upgrade-project/agents/openai.yaml"
+        "ralph-loop" => Some(include_bytes!(
+            "../../../harness/skills/ralph-loop/agents/openai.yaml"
         )),
-        "engineer-run" => Some(include_bytes!(
-            "../../../harness/skills/engineer-run/agents/openai.yaml"
+        "code-polish" => Some(include_bytes!(
+            "../../../harness/skills/code-polish/agents/openai.yaml"
         )),
-        "manage-wiki" => Some(include_bytes!(
-            "../../../harness/skills/manage-wiki/agents/openai.yaml"
+        "research-best-practices" => Some(include_bytes!(
+            "../../../harness/skills/research-best-practices/agents/openai.yaml"
         )),
-        "clean-ai-slop" => Some(include_bytes!(
-            "../../../harness/skills/clean-ai-slop/agents/openai.yaml"
+        "knowledge-import" => Some(include_bytes!(
+            "../../../harness/skills/knowledge-import/agents/openai.yaml"
         )),
-        "research-practices" => Some(include_bytes!(
-            "../../../harness/skills/research-practices/agents/openai.yaml"
+        "ship" => Some(include_bytes!(
+            "../../../harness/skills/ship/agents/openai.yaml"
         )),
-        "import-repository-knowledge" => Some(include_bytes!(
-            "../../../harness/skills/import-repository-knowledge/agents/openai.yaml"
+        "amend-directive" => Some(include_bytes!(
+            "../../../harness/skills/amend-directive/agents/openai.yaml"
         )),
         _ => None,
     }
@@ -1219,28 +1219,28 @@ fn embedded_skill_metadata(name: &str) -> Option<&'static [u8]> {
 
 fn embedded_skill_sources() -> [(&'static str, &'static [u8]); 22] {
     [
-        ("configure", SETUP_HIVE),
-        ("setup-project", SETUP_HARNESS),
-        ("auto-setup-project", AUTO_SETUP_HARNESS),
-        ("answer", SIMPLE_QUESTION),
-        ("refine-prompt", PROMPT_REFINE),
-        ("record-knowledge", KNOWLEDGE_CAPTURE),
-        ("search-knowledge", KNOWLEDGE_QUERY),
-        ("share-knowledge", KNOWLEDGE_PROMOTE),
-        ("maintain-knowledge", KNOWLEDGE_MAINTENANCE),
-        ("save-progress", RUN_CHECKPOINT),
-        ("resume-work", RUN_RESUME),
-        ("manage-usage", USAGE_GUARD),
-        ("handoff-role", ROLE_HANDOFF),
-        ("verify-package", JUDGE_PACKAGE),
-        ("update-hive", UPDATE_HARNESS),
-        ("migrate-project", MIGRATE_HARNESS),
-        ("upgrade-project", PROJECT_UPGRADE),
-        ("engineer-run", LOOP_ENGINEERING),
-        ("manage-wiki", HIVE_WIKI),
-        ("clean-ai-slop", AI_SLOP_CLEANER),
-        ("research-practices", BEST_PRACTICE_RESEARCH),
-        ("import-repository-knowledge", KNOWLEDGE_SCAN),
+        ("user-setup", SETUP_HIVE),
+        ("project-setup", SETUP_HARNESS),
+        ("quick-answer", SIMPLE_QUESTION),
+        ("prompt-refine", PROMPT_REFINE),
+        ("knowledge-capture", KNOWLEDGE_CAPTURE),
+        ("knowledge-recall", KNOWLEDGE_QUERY),
+        ("knowledge-promote", KNOWLEDGE_PROMOTE),
+        ("knowledge-maintain", KNOWLEDGE_MAINTENANCE),
+        ("run-checkpoint", RUN_CHECKPOINT),
+        ("run-resume", RUN_RESUME),
+        ("usage-guard", USAGE_GUARD),
+        ("run-handoff", ROLE_HANDOFF),
+        ("package-review", JUDGE_PACKAGE),
+        ("product-update", UPDATE_HARNESS),
+        ("project-transition", MIGRATE_HARNESS),
+        ("project-refresh", PROJECT_UPGRADE),
+        ("ralph-loop", LOOP_ENGINEERING),
+        ("code-polish", AI_SLOP_CLEANER),
+        ("research-best-practices", BEST_PRACTICE_RESEARCH),
+        ("knowledge-import", KNOWLEDGE_SCAN),
+        ("ship", SHIP),
+        ("amend-directive", AMEND_DIRECTIVE),
     ]
 }
 
@@ -1307,7 +1307,8 @@ pub struct RoutingRequest {
     pub host: Host,
     pub explicit_action: Option<LogicalAction>,
     pub explicit_skill: Option<String>,
-    pub plain_answer: bool,
+    #[serde(rename = "plain_answer")]
+    pub plain_quick_answer: bool,
     pub simple_question: bool,
     pub project_context_required: bool,
     pub external_candidate: Option<ExternalCandidate>,
@@ -1386,7 +1387,7 @@ pub fn resolve_route(request: &RoutingRequest) -> Result<RoutingDecision, Projec
     let fallback_action = request.explicit_action.unwrap_or(LogicalAction::RunWork);
 
     // Explicit direct/plain intent is the highest-precedence no-workflow lane.
-    let resolved = if request.plain_answer {
+    let resolved = if request.plain_quick_answer {
         decision(
             Route::Direct,
             LogicalAction::AnswerSimpleQuestion,
@@ -1401,7 +1402,7 @@ pub fn resolve_route(request: &RoutingRequest) -> Result<RoutingDecision, Projec
     if should_automatically_refine(request, &resolved) {
         return resolve_hive_skill(
             request,
-            "refine-prompt",
+            "prompt-refine",
             LogicalAction::RefinePrompt,
             Route::HiveSkill,
         );
@@ -1413,7 +1414,7 @@ fn should_automatically_refine(request: &RoutingRequest, resolved: &RoutingDecis
     matches!(
         request.prompt_quality,
         PromptQuality::Ambiguous | PromptQuality::MissingCoreDetails
-    ) && !request.plain_answer
+    ) && !request.plain_quick_answer
         && !request.simple_question
         && resolved.route == Route::HostNative
         && resolved.logical_action == LogicalAction::RunWork
@@ -1435,7 +1436,7 @@ fn resolve_non_plain_route(
     }
     let explicit_refinement_requested = request.explicit_action
         == Some(LogicalAction::RefinePrompt)
-        || request.explicit_skill.as_deref() == Some("refine-prompt");
+        || request.explicit_skill.as_deref() == Some("prompt-refine");
     if explicit_refinement_requested
         && request.refine_mode == Some(RefineMode::RefineAndRun)
         && !request.explicit_run_intent
@@ -1454,7 +1455,7 @@ fn resolve_non_plain_route(
     {
         return resolve_hive_skill(
             request,
-            "refine-prompt",
+            "prompt-refine",
             LogicalAction::RefinePrompt,
             Route::HiveSkill,
         );
@@ -1546,7 +1547,7 @@ fn resolve_simple_question_route(
     }
     Ok(Some(resolve_hive_skill(
         request,
-        "answer",
+        "quick-answer",
         LogicalAction::AnswerSimpleQuestion,
         Route::SimpleQuestion,
     )?))
@@ -1757,23 +1758,30 @@ fn refinement_mode(action: LogicalAction, request: &RoutingRequest) -> Option<Re
 
 fn action_for_skill(skill: &str) -> Option<LogicalAction> {
     match skill {
-        "answer" => Some(LogicalAction::AnswerSimpleQuestion),
-        "refine-prompt" => Some(LogicalAction::RefinePrompt),
-        "record-knowledge"
-        | "maintain-knowledge"
-        | "share-knowledge"
-        | "import-repository-knowledge" => Some(LogicalAction::IngestKnowledge),
-        "search-knowledge" | "manage-wiki" => Some(LogicalAction::QueryKnowledge),
-        "clean-ai-slop" | "research-practices" | "engineer-run" | "save-progress"
-        | "handoff-role" | "manage-usage" => Some(LogicalAction::RunWork),
-        "resume-work" => Some(LogicalAction::ResumeWork),
-        "update-hive" | "migrate-project" | "upgrade-project" => Some(LogicalAction::UpdateHarness),
+        "quick-answer" => Some(LogicalAction::AnswerSimpleQuestion),
+        "prompt-refine" => Some(LogicalAction::RefinePrompt),
+        "knowledge-capture" | "knowledge-maintain" | "knowledge-promote" | "knowledge-import" => {
+            Some(LogicalAction::IngestKnowledge)
+        }
+        "knowledge-recall" => Some(LogicalAction::QueryKnowledge),
+        "code-polish"
+        | "research-best-practices"
+        | "ralph-loop"
+        | "run-checkpoint"
+        | "run-handoff"
+        | "usage-guard"
+        | "ship"
+        | "amend-directive" => Some(LogicalAction::RunWork),
+        "run-resume" => Some(LogicalAction::ResumeWork),
+        "product-update" | "project-transition" | "project-refresh" => {
+            Some(LogicalAction::UpdateHarness)
+        }
         _ => None,
     }
 }
 
 fn is_phase_four_data_contract_skill(skill: &str) -> bool {
-    matches!(skill, "save-progress" | "resume-work" | "handoff-role")
+    matches!(skill, "run-checkpoint" | "run-resume" | "run-handoff")
 }
 
 fn explicit_skill_provider(skill: &str, host: Host) -> Result<RouteProvider, ProjectionError> {
@@ -1889,7 +1897,7 @@ pub struct PromptRefinementResult {
     pub side_effects: RefinementSideEffects,
 }
 
-/// Validates a `refine-prompt` envelope without refining or executing it.
+/// Validates a `prompt-refine` envelope without refining or executing it.
 ///
 /// # Errors
 ///
@@ -2228,7 +2236,7 @@ mod tests {
             host: Host::Codex,
             explicit_action: Some(LogicalAction::RunWork),
             explicit_skill: None,
-            plain_answer: false,
+            plain_quick_answer: false,
             simple_question: false,
             project_context_required: false,
             external_candidate: None,
@@ -2245,15 +2253,15 @@ mod tests {
         let mut request = routing_request();
         request.explicit_action = None;
         request.prompt_quality = PromptQuality::Ambiguous;
-        request.active_hive_skills = vec![builtin_proof("refine-prompt")];
+        request.active_hive_skills = vec![builtin_proof("prompt-refine")];
 
         let resolved = resolve_route(&request).expect("routing succeeds");
 
         assert_eq!(resolved.route, Route::HiveSkill);
         assert_eq!(resolved.logical_action, LogicalAction::RefinePrompt);
         assert!(!resolved.refine_suggestion);
-        assert_eq!(resolved.selected_skill.as_deref(), Some("refine-prompt"));
-        assert_eq!(resolved.load_skill_bodies, ["refine-prompt"]);
+        assert_eq!(resolved.selected_skill.as_deref(), Some("prompt-refine"));
+        assert_eq!(resolved.load_skill_bodies, ["prompt-refine"]);
         assert_eq!(resolved.mode, Some(RefineMode::RefineOnly));
     }
 
@@ -2267,8 +2275,8 @@ mod tests {
         simple.explicit_action = Some(LogicalAction::AnswerSimpleQuestion);
         simple.simple_question = true;
         simple.prompt_quality = PromptQuality::MissingCoreDetails;
-        simple.hive_candidate = Some("answer".to_owned());
-        simple.active_hive_skills = vec![builtin_proof("answer")];
+        simple.hive_candidate = Some("quick-answer".to_owned());
+        simple.active_hive_skills = vec![builtin_proof("quick-answer")];
         let simple = resolve_route(&simple).expect("simple question routes");
         assert!(!simple.refine_suggestion);
         assert_eq!(simple.route, Route::SimpleQuestion);
@@ -2278,12 +2286,12 @@ mod tests {
     fn explicit_refinement_action_loads_the_hive_skill_without_a_host_candidate() {
         let mut request = routing_request();
         request.explicit_action = Some(LogicalAction::RefinePrompt);
-        request.active_hive_skills = vec![builtin_proof("refine-prompt")];
+        request.active_hive_skills = vec![builtin_proof("prompt-refine")];
 
         let resolved = resolve_route(&request).expect("explicit refine route");
 
         assert_eq!(resolved.route, Route::HiveSkill);
-        assert_eq!(resolved.selected_skill.as_deref(), Some("refine-prompt"));
+        assert_eq!(resolved.selected_skill.as_deref(), Some("prompt-refine"));
         assert_eq!(resolved.mode, Some(RefineMode::RefineOnly));
     }
 
@@ -2423,20 +2431,20 @@ description: Inspect one local file without changing it.
             let expected_file_count = if host == Host::Claude { 22 } else { 43 };
             assert_eq!(first.files.len(), expected_file_count);
             for skill in [
-                "clean-ai-slop",
-                "auto-setup-project",
-                "research-practices",
-                "verify-package",
-                "import-repository-knowledge",
-                "engineer-run",
-                "refine-prompt",
-                "save-progress",
-                "resume-work",
-                "handoff-role",
-                "update-hive",
-                "manage-usage",
-                "manage-wiki",
-                "migrate-project",
+                "code-polish",
+                "project-setup",
+                "research-best-practices",
+                "package-review",
+                "knowledge-import",
+                "ralph-loop",
+                "prompt-refine",
+                "run-checkpoint",
+                "run-resume",
+                "run-handoff",
+                "product-update",
+                "usage-guard",
+                "knowledge-maintain",
+                "project-transition",
             ] {
                 assert!(first
                     .files
@@ -2448,21 +2456,21 @@ description: Inspect one local file without changing it.
     #[test]
     fn user_projection_contains_exact_caller_resolved_skill_selection() {
         let selected = vec![
-            "configure".to_owned(),
-            "update-hive".to_owned(),
-            "manage-usage".to_owned(),
+            "user-setup".to_owned(),
+            "product-update".to_owned(),
+            "usage-guard".to_owned(),
         ];
 
         let projection =
             compile_user_projection(Host::Codex, &selected, &[]).expect("user projection");
 
         let expected_files = BTreeSet::from([
-            ".agents/skills/configure/SKILL.md",
-            ".agents/skills/configure/agents/openai.yaml",
-            ".agents/skills/update-hive/SKILL.md",
-            ".agents/skills/update-hive/agents/openai.yaml",
-            ".agents/skills/manage-usage/SKILL.md",
-            ".agents/skills/manage-usage/agents/openai.yaml",
+            ".agents/skills/user-setup/SKILL.md",
+            ".agents/skills/user-setup/agents/openai.yaml",
+            ".agents/skills/product-update/SKILL.md",
+            ".agents/skills/product-update/agents/openai.yaml",
+            ".agents/skills/usage-guard/SKILL.md",
+            ".agents/skills/usage-guard/agents/openai.yaml",
             ".hive/config/active-skills.yml",
         ]);
         assert_eq!(
@@ -2480,12 +2488,12 @@ description: Inspect one local file without changing it.
                 .iter()
                 .map(|skill| skill.name.as_str())
                 .collect::<Vec<_>>(),
-            ["configure", "manage-usage", "update-hive"]
+            ["product-update", "usage-guard", "user-setup"]
         );
         for (name, expected_implicit) in [
-            ("configure", true),
-            ("update-hive", false),
-            ("manage-usage", true),
+            ("user-setup", true),
+            ("product-update", false),
+            ("usage-guard", true),
         ] {
             let metadata = std::str::from_utf8(
                 projection
@@ -2521,10 +2529,10 @@ description: Inspect one local file without changing it.
             .iter()
             .map(|skill| skill.name.as_str())
             .collect::<Vec<_>>();
-        assert_eq!(names, ["clean-ai-slop", "configure", "record-knowledge"]);
+        assert_eq!(names, ["code-polish", "knowledge-capture", "user-setup"]);
         assert!(projection
             .files
-            .contains_key(".agents/skills/clean-ai-slop/SKILL.md"));
+            .contains_key(".agents/skills/code-polish/SKILL.md"));
         assert!(!projection
             .files
             .contains_key(".agents/skills/ai-slop-cleaner/SKILL.md"));
@@ -2540,7 +2548,7 @@ description: Inspect one local file without changing it.
             .collect::<BTreeSet<_>>();
         let retired = retired_builtin_skill_names().expect("retired name ledger");
 
-        assert_eq!(retired.len(), 22);
+        assert!(retired.len() >= 44);
         for (old_name, current_name) in retired {
             assert!(
                 !current.contains(old_name.as_str()),
@@ -2559,7 +2567,7 @@ description: Inspect one local file without changing it.
 
     #[test]
     fn localized_user_projection_renders_skill_descriptors_in_selected_language() {
-        let selected = ["configure".to_owned()];
+        let selected = ["user-setup".to_owned()];
         let english =
             compile_user_projection_localized(Host::Codex, &selected, &[], DescriptorLanguage::En)
                 .expect("English projection");
@@ -2570,26 +2578,26 @@ description: Inspect one local file without changing it.
         let english_skill = std::str::from_utf8(
             english
                 .files
-                .get(".agents/skills/configure/SKILL.md")
+                .get(".agents/skills/user-setup/SKILL.md")
                 .expect("English Skill source"),
         )
         .expect("UTF-8 English Skill source");
         let korean_skill = std::str::from_utf8(
             korean
                 .files
-                .get(".agents/skills/configure/SKILL.md")
+                .get(".agents/skills/user-setup/SKILL.md")
                 .expect("Korean Skill source"),
         )
         .expect("UTF-8 Korean Skill source");
         let korean_metadata = std::str::from_utf8(
             korean
                 .files
-                .get(".agents/skills/configure/agents/openai.yaml")
+                .get(".agents/skills/user-setup/agents/openai.yaml")
                 .expect("Korean Skill metadata"),
         )
         .expect("UTF-8 Korean Skill metadata");
 
-        assert!(english_skill.contains("description: Configure or reconfigure global user-scope"));
+        assert!(english_skill.contains("Aigent Hive"));
         assert!(
             korean_skill.contains("description: 전역 Aigent Hive 환경 설정과 재설정을 진행합니다.")
         );
@@ -2604,15 +2612,15 @@ description: Inspect one local file without changing it.
 
     #[test]
     fn setup_hive_is_available_in_user_projection() {
-        let projection = compile_user_projection(Host::Claude, &["configure".to_owned()], &[])
-            .expect("configure user projection");
+        let projection = compile_user_projection(Host::Claude, &["user-setup".to_owned()], &[])
+            .expect("user-setup user projection");
 
         assert!(projection
             .files
-            .contains_key(".claude/skills/configure/SKILL.md"));
+            .contains_key(".claude/skills/user-setup/SKILL.md"));
         assert!(!projection
             .files
-            .contains_key(".claude/skills/configure/agents/openai.yaml"));
+            .contains_key(".claude/skills/user-setup/agents/openai.yaml"));
     }
 
     #[test]
@@ -2621,16 +2629,16 @@ description: Inspect one local file without changing it.
 
         assert!(!projection
             .files
-            .contains_key(".agents/skills/configure/SKILL.md"));
+            .contains_key(".agents/skills/user-setup/SKILL.md"));
         assert!(projection
             .active_skills
             .skills
             .iter()
-            .all(|skill| skill.name != "configure"));
+            .all(|skill| skill.name != "user-setup"));
         let metadata = std::str::from_utf8(
             projection
                 .files
-                .get(".agents/skills/auto-setup-project/agents/openai.yaml")
+                .get(".agents/skills/project-setup/agents/openai.yaml")
                 .expect("project Skill metadata"),
         )
         .expect("project Skill metadata should be UTF-8");
@@ -2702,38 +2710,25 @@ description: Inspect one local file without changing it.
     fn v09_skill_sources_templates_embeddings_and_digests_match() {
         let expected = [
             (
-                "clean-ai-slop",
+                "code-polish",
                 AI_SLOP_CLEANER,
-                include_bytes!("../../../harness/template/.agents/skills/clean-ai-slop/SKILL.md")
-                    .as_slice(),
+                include_bytes!("../../../harness/skills/code-polish/SKILL.md").as_slice(),
             ),
             (
-                "research-practices",
+                "research-best-practices",
                 BEST_PRACTICE_RESEARCH,
-                include_bytes!(
-                    "../../../harness/template/.agents/skills/research-practices/SKILL.md"
-                )
-                .as_slice(),
+                include_bytes!("../../../harness/skills/research-best-practices/SKILL.md")
+                    .as_slice(),
             ),
             (
-                "import-repository-knowledge",
+                "knowledge-import",
                 KNOWLEDGE_SCAN,
-                include_bytes!(
-                    "../../../harness/template/.agents/skills/import-repository-knowledge/SKILL.md"
-                )
-                .as_slice(),
+                include_bytes!("../../../harness/skills/knowledge-import/SKILL.md").as_slice(),
             ),
             (
-                "engineer-run",
+                "ralph-loop",
                 LOOP_ENGINEERING,
-                include_bytes!("../../../harness/template/.agents/skills/engineer-run/SKILL.md")
-                    .as_slice(),
-            ),
-            (
-                "manage-wiki",
-                HIVE_WIKI,
-                include_bytes!("../../../harness/template/.agents/skills/manage-wiki/SKILL.md")
-                    .as_slice(),
+                include_bytes!("../../../harness/skills/ralph-loop/SKILL.md").as_slice(),
             ),
         ];
         assert_projected_builtin_sources(expected);
@@ -2743,46 +2738,39 @@ description: Inspect one local file without changing it.
     fn data_skill_sources_templates_embeddings_and_digests_match() {
         let expected = [
             (
-                "verify-package",
+                "package-review",
                 JUDGE_PACKAGE,
-                include_bytes!("../../../harness/template/.agents/skills/verify-package/SKILL.md")
-                    .as_slice(),
+                include_bytes!("../../../harness/skills/package-review/SKILL.md").as_slice(),
             ),
             (
-                "save-progress",
+                "run-checkpoint",
                 RUN_CHECKPOINT,
-                include_bytes!("../../../harness/template/.agents/skills/save-progress/SKILL.md")
-                    .as_slice(),
+                include_bytes!("../../../harness/skills/run-checkpoint/SKILL.md").as_slice(),
             ),
             (
-                "resume-work",
+                "run-resume",
                 RUN_RESUME,
-                include_bytes!("../../../harness/template/.agents/skills/resume-work/SKILL.md")
-                    .as_slice(),
+                include_bytes!("../../../harness/skills/run-resume/SKILL.md").as_slice(),
             ),
             (
-                "handoff-role",
+                "run-handoff",
                 ROLE_HANDOFF,
-                include_bytes!("../../../harness/template/.agents/skills/handoff-role/SKILL.md")
-                    .as_slice(),
+                include_bytes!("../../../harness/skills/run-handoff/SKILL.md").as_slice(),
             ),
             (
-                "update-hive",
+                "product-update",
                 UPDATE_HARNESS,
-                include_bytes!("../../../harness/template/.agents/skills/update-hive/SKILL.md")
-                    .as_slice(),
+                include_bytes!("../../../harness/skills/product-update/SKILL.md").as_slice(),
             ),
             (
-                "migrate-project",
+                "project-transition",
                 MIGRATE_HARNESS,
-                include_bytes!("../../../harness/template/.agents/skills/migrate-project/SKILL.md")
-                    .as_slice(),
+                include_bytes!("../../../harness/skills/project-transition/SKILL.md").as_slice(),
             ),
             (
-                "manage-usage",
+                "usage-guard",
                 USAGE_GUARD,
-                include_bytes!("../../../harness/template/.agents/skills/manage-usage/SKILL.md")
-                    .as_slice(),
+                include_bytes!("../../../harness/skills/usage-guard/SKILL.md").as_slice(),
             ),
         ];
         assert_projected_builtin_sources(expected);
@@ -2838,11 +2826,11 @@ description: Inspect one local file without changing it.
     }
 
     #[test]
-    fn plain_answer_precedes_explicit_and_candidate_skills() {
+    fn plain_quick_answer_precedes_explicit_and_candidate_skills() {
         let mut request = routing_request();
-        request.plain_answer = true;
-        request.explicit_skill = Some("refine-prompt".to_owned());
-        request.hive_candidate = Some("search-knowledge".to_owned());
+        request.plain_quick_answer = true;
+        request.explicit_skill = Some("prompt-refine".to_owned());
+        request.hive_candidate = Some("knowledge-recall".to_owned());
 
         let result = resolve_route(&request).expect("route");
 
@@ -2853,8 +2841,8 @@ description: Inspect one local file without changing it.
     #[test]
     fn explicit_skill_precedes_simple_and_external_candidates() {
         let mut request = routing_request();
-        request.explicit_skill = Some("search-knowledge".to_owned());
-        request.active_hive_skills = vec![builtin_proof("search-knowledge")];
+        request.explicit_skill = Some("knowledge-recall".to_owned());
+        request.active_hive_skills = vec![builtin_proof("knowledge-recall")];
         request.simple_question = true;
         request.external_candidate = Some(ExternalCandidate {
             name: "analyze".to_owned(),
@@ -2866,7 +2854,7 @@ description: Inspect one local file without changing it.
         let result = resolve_route(&request).expect("route");
 
         assert_eq!(result.route, Route::HiveSkill);
-        assert_eq!(result.selected_skill.as_deref(), Some("search-knowledge"));
+        assert_eq!(result.selected_skill.as_deref(), Some("knowledge-recall"));
         assert_eq!(result.load_skill_bodies.len(), 1);
     }
 
@@ -2888,8 +2876,8 @@ description: Inspect one local file without changing it.
     #[test]
     fn forged_or_unapproved_hive_skill_proofs_are_rejected() {
         let mut forged = routing_request();
-        forged.hive_candidate = Some("search-knowledge".to_owned());
-        let mut proof = builtin_proof("search-knowledge");
+        forged.hive_candidate = Some("knowledge-recall".to_owned());
+        let mut proof = builtin_proof("knowledge-recall");
         proof.content_digest = format!("sha256:{}", "0".repeat(64));
         forged.active_hive_skills = vec![proof];
         assert_eq!(
@@ -2944,27 +2932,27 @@ description: Inspect one local file without changing it.
 
     #[test]
     fn simple_question_gate_precedes_automatic_data_candidates() {
-        for skill in ["resume-work", "verify-package"] {
+        for skill in ["run-resume", "package-review"] {
             let mut request = routing_request();
             request.explicit_action = None;
             request.simple_question = true;
             request.hive_candidate = Some(skill.to_owned());
-            request.active_hive_skills = vec![builtin_proof("answer"), builtin_proof(skill)];
+            request.active_hive_skills = vec![builtin_proof("quick-answer"), builtin_proof(skill)];
 
             let result = resolve_route(&request).expect("simple route");
 
             assert_eq!(result.route, Route::SimpleQuestion);
-            assert_eq!(result.selected_skill.as_deref(), Some("answer"));
-            assert_eq!(result.load_skill_bodies, vec!["answer".to_owned()]);
+            assert_eq!(result.selected_skill.as_deref(), Some("quick-answer"));
+            assert_eq!(result.load_skill_bodies, vec!["quick-answer".to_owned()]);
         }
     }
 
     #[test]
     fn phase_four_data_contract_skills_precede_unrelated_external_workflows() {
         for (skill, action) in [
-            ("save-progress", LogicalAction::RunWork),
-            ("resume-work", LogicalAction::ResumeWork),
-            ("handoff-role", LogicalAction::RunWork),
+            ("run-checkpoint", LogicalAction::RunWork),
+            ("run-resume", LogicalAction::ResumeWork),
+            ("run-handoff", LogicalAction::RunWork),
         ] {
             let mut request = routing_request();
             request.external_candidate = Some(ExternalCandidate {
@@ -2991,7 +2979,7 @@ description: Inspect one local file without changing it.
             (Host::Codex, ExternalProvider::Omx),
             (Host::Claude, ExternalProvider::Omc),
         ] {
-            for skill in ["search-knowledge", "verify-package"] {
+            for skill in ["knowledge-recall", "package-review"] {
                 let mut request = routing_request();
                 request.host = host;
                 request.external_candidate = Some(ExternalCandidate {
@@ -3021,13 +3009,13 @@ description: Inspect one local file without changing it.
             compatible: true,
             explicit_selection: false,
         });
-        request.hive_candidate = Some("search-knowledge".to_owned());
-        request.active_hive_skills = vec![builtin_proof("search-knowledge")];
+        request.hive_candidate = Some("knowledge-recall".to_owned());
+        request.active_hive_skills = vec![builtin_proof("knowledge-recall")];
 
         let result = resolve_route(&request).expect("host-native default route");
 
         assert_eq!(result.route, Route::HiveSkill);
-        assert_eq!(result.selected_skill.as_deref(), Some("search-knowledge"));
+        assert_eq!(result.selected_skill.as_deref(), Some("knowledge-recall"));
         assert_eq!(result.provided_by, Some(RouteProvider::Hive));
     }
 
@@ -3035,7 +3023,7 @@ description: Inspect one local file without changing it.
     fn refine_and_run_requires_explicit_execution_intent() {
         let mut request = routing_request();
         request.explicit_action = Some(LogicalAction::RefinePrompt);
-        request.hive_candidate = Some("refine-prompt".to_owned());
+        request.hive_candidate = Some("prompt-refine".to_owned());
         request.refine_mode = Some(RefineMode::RefineAndRun);
 
         let decision = resolve_route(&request).expect("blocked route");

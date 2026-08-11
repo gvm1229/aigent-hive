@@ -5,28 +5,29 @@ topic_slug: global-onboarding
 language: en
 counterpart: ../ko/global-onboarding.md
 title: "Global Onboarding"
-summary: "Global setup stores multiple user contexts without choosing project workflows, refreshes authenticated Hive-only drift automatically, keeps the v0.9 Wiki Markdown-only, lists all partial-reconfiguration settings including Discord children, and retains Korean product terms and all built-in Skill defaults."
+summary: "Global setup verifies and resolves the signed CLI before questions, preserves answers, and reuses saved preferences after a preserving Hive uninstall."
 tags: [bootstrap, onboarding, setup]
 aliases: ["User setup"]
 sources:
-  - "repo:README.md#sha256:413ed120770591773c5efab11aa1bc3587687b411eff47a665802b5bf0f5ea2b"
-  - "repo:crates/hive-cli/src/user_setup.rs#sha256:fcbdc8566036c3c7601b661baed7380a5cb27412f22f5d3c2961dce0daa80c3d"
-  - "repo:docs/decisions/ADR-0012-global-onboarding-shared-index.md#sha256:be6e9fd0b94f9cf8a994cce4bb1e8f5b0e8396420968832e285de366dc8e16f9"
-  - "repo:harness/skills/configure/SKILL.md#sha256:6d298591b98e8da50fc9cfb40696562bde8a2d18d2d9e58204f40e44e15f4d19"
-  - "repo:harness/user-setup/catalog.yml#sha256:7dc82dbf559075ce4286e7dd19aec0ddc22e04f35ad4a8a60f43129a4dba2a1f"
-  - "repo:schemas/user-setup.schema.json#sha256:34cfb17b238af67733c1250f5de6306cf6c75ef9df41f1934d6f1edc46d4a2da"
-links: [project-onboarding, test-distribution]
-reviewed_revision: "git:dbae17b5e5bb39d068891b823dcd14f42ae23e10"
+  - "repo:README.md#sha256:dbccfb9a0a4920baef62329aa1027751f9bebc5893fdcecdccd5b2cb3237e932"
+  - "repo:crates/hive-cli/src/user_setup.rs#sha256:2dbd0f956fea6c6e258a275bc89565c48a7bf211819ea8816512215dc2582213"
+  - "repo:docs/decisions/ADR-0012-global-onboarding-shared-index.md#sha256:d30564f33f2ead463cfe9e18aa68b697cb07b6c419ee42c9b583fcc11edaf966"
+  - "repo:docs/plans/active/windows-global-setup-hardening.md#sha256:422649ef3ca475aca9e3a86a2ddd2bbbb3895221d7bc39fe4417010664dee47f"
+  - "repo:harness/skills/user-setup/SKILL.md#sha256:4f3676378fafac75f9c6376210c760a2e0200e843ead0825d1b34d7446864e34"
+  - "repo:harness/user-setup/catalog.yml#sha256:4926655a12591cae061e674d774557e96f000d149f8dec1c2b1b650ba235f494"
+  - "repo:schemas/user-setup.schema.json#sha256:e83e5f318a5b6ffcc08cfe0898a2b6138512c6bfb0eea99c6070b134f3712f47"
+links: [project-onboarding, test-distribution, usage-guard-thresholds]
+reviewed_revision: "git:01df1d580d987e7fb0f34978076cd000263fd99f"
 status: active
 ---
 
 # Global Onboarding
 
-Manual order: CLI installation, host activation, global setup, explicit project setup. In v0.9,
-the global Wiki uses local Markdown as its only user-visible source of truth. The optional
-one-prompt path starts global setup without project inspection.
+Order: CLI, host activation, global setup, project setup. Global setup skips projects; user thresholds
+only stop projects earlier. Windows recovery: verified CLI metadata, saved progress, one OS-temp file,
+product-only Skills, shared guard, silent incomplete-marketplace repair, knowledge and preference preservation.
 
-Supported legacy recovery requires matching saved-preference and live-file evidence; other bytes
-remain unchanged. An explicit global setup request automatically previews, applies, and revalidates
-an authenticated Hive-only install or saved-answer user-projection refresh without a review-only
-question. See `global-user-contexts` for contexts, Skill selection, and Korean product terms.
+`hive uninstall` removes only Hive-managed setup state. It preserves the knowledge base and saved
+preferences, with no full-purge flag. Later user-scope install reuses preferences without setup
+questions. Windows test.12 acceptance includes new-session discovery and Discord delivery. The next
+release qualification uses a product-owned expedited default profile without contributor input.

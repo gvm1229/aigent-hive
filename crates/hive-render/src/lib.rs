@@ -163,6 +163,7 @@ pub struct ResolvedProjectPreferences {
     pub codexbar_fallback_enabled: bool,
     pub discord_guard_enabled: bool,
     pub discord_webhook_url_env: Option<String>,
+    pub discord_message_fields: Vec<String>,
     pub usage_stop_remaining_percent: u8,
 }
 
@@ -270,6 +271,8 @@ pub struct GlobalProjectPreferences {
     ///
     /// This is only the environment-variable name, never a webhook secret.
     pub discord_webhook_url_env: Option<String>,
+    /// Ordered safe fields rendered into a Discord usage notification.
+    pub discord_message_fields: Vec<String>,
     /// Remaining-usage stop threshold inherited by every project.
     pub usage_stop_remaining_percent: u8,
 }
@@ -290,6 +293,7 @@ struct EffectiveProjectPreferences {
     codexbar_fallback_enabled: bool,
     discord_guard_enabled: bool,
     discord_webhook_url_env: Option<String>,
+    discord_message_fields: Vec<String>,
     usage_stop_remaining_percent: u8,
 }
 
@@ -447,6 +451,8 @@ struct InstalledHarness {
     discord_guard_enabled: bool,
     #[serde(default)]
     discord_webhook_url_env: Option<String>,
+    #[serde(default)]
+    discord_message_fields: Vec<String>,
     primary_host: String,
     external_capability_detection: String,
     resolved_owner: String,
@@ -1674,6 +1680,7 @@ fn execute_release_update_for_target_in(
             codexbar_fallback_enabled: preferences.codexbar_fallback_enabled,
             discord_guard_enabled: preferences.discord_guard_enabled,
             discord_webhook_url_env: preferences.discord_webhook_url_env,
+            discord_message_fields: preferences.discord_message_fields,
             usage_stop_remaining_percent: preferences.usage_stop_remaining_percent,
         }
     });
@@ -1871,6 +1878,7 @@ fn resolved_preferences(
         codexbar_fallback_enabled: preferences.codexbar_fallback_enabled,
         discord_guard_enabled: preferences.discord_guard_enabled,
         discord_webhook_url_env: preferences.discord_webhook_url_env.clone(),
+        discord_message_fields: preferences.discord_message_fields.clone(),
         usage_stop_remaining_percent: preferences.usage_stop_remaining_percent,
     })
 }
@@ -2169,9 +2177,16 @@ fn resolve_effective_project_preferences(
             codexbar_fallback_enabled: global.codexbar_fallback_enabled,
             discord_guard_enabled: global.discord_guard_enabled,
             discord_webhook_url_env: global.discord_webhook_url_env.clone(),
+            discord_message_fields: global.discord_message_fields.clone(),
             usage_stop_remaining_percent: global.usage_stop_remaining_percent,
         },
         "custom" => {
+            if answers.usage_stop_remaining_percent < global.usage_stop_remaining_percent {
+                return Err(RenderError::Safety(format!(
+                    "project usage threshold {}% cannot be lower than the global {}% threshold",
+                    answers.usage_stop_remaining_percent, global.usage_stop_remaining_percent
+                )));
+            }
             let wiki = answers
                 .wiki
                 .as_ref()
@@ -2206,7 +2221,8 @@ fn resolve_effective_project_preferences(
                 codexbar_fallback_enabled: global.codexbar_fallback_enabled,
                 discord_guard_enabled: global.discord_guard_enabled,
                 discord_webhook_url_env: global.discord_webhook_url_env.clone(),
-                usage_stop_remaining_percent: global.usage_stop_remaining_percent,
+                discord_message_fields: global.discord_message_fields.clone(),
+                usage_stop_remaining_percent: answers.usage_stop_remaining_percent,
             }
         }
         _ => unreachable!("setup mode was validated"),
@@ -2220,12 +2236,11 @@ fn resolve_effective_project_preferences(
                     .map_err(|error| RenderError::Internal(error.to_string()))?;
                 let is_knowledge_skill = matches!(
                     canonical.as_deref().unwrap_or(name.as_str()),
-                    "record-knowledge"
-                        | "search-knowledge"
-                        | "share-knowledge"
-                        | "maintain-knowledge"
-                        | "import-repository-knowledge"
-                        | "manage-wiki"
+                    "knowledge-capture"
+                        | "knowledge-recall"
+                        | "knowledge-promote"
+                        | "knowledge-maintain"
+                        | "knowledge-import"
                 );
                 Ok((!is_knowledge_skill).then_some(name))
             })
@@ -2266,7 +2281,7 @@ fn validate_global_project_preferences(
             .iter()
             .try_fold(false, |found, name| {
                 canonical_builtin_skill_name(name)
-                    .map(|canonical| found || canonical.as_deref() == Some("configure"))
+                    .map(|canonical| found || canonical.as_deref() == Some("user-setup"))
                     .map_err(|error| RenderError::Internal(error.to_string()))
             })?
         || (global.codexbar_fallback_enabled && !global.usage_guard_enabled)
@@ -2277,6 +2292,7 @@ fn validate_global_project_preferences(
                 .as_deref()
                 .is_some_and(valid_environment_name))
         || (!global.discord_guard_enabled && global.discord_webhook_url_env.is_some())
+        || !valid_discord_message_fields(&global.discord_message_fields)
         || !(1..=99).contains(&global.usage_stop_remaining_percent)
     {
         return Err(RenderError::Input(
@@ -2293,6 +2309,47 @@ fn valid_environment_name(value: &str) -> bool {
         && value.len() <= 128
 }
 
+fn default_discord_message_fields() -> Vec<String> {
+    [
+        "remaining-usage",
+        "project",
+        "request",
+        "progress",
+        "host",
+        "resume",
+    ]
+    .into_iter()
+    .map(str::to_owned)
+    .collect()
+}
+
+fn valid_discord_message_fields(fields: &[String]) -> bool {
+    !fields.is_empty()
+        && fields.len() <= 8
+        && fields.iter().all(|field| {
+            matches!(
+                field.as_str(),
+                "remaining-usage"
+                    | "project"
+                    | "request"
+                    | "progress"
+                    | "host"
+                    | "resume"
+                    | "measured-at"
+                    | "evidence"
+            )
+        })
+        && fields.iter().collect::<BTreeSet<_>>().len() == fields.len()
+}
+
+fn normalized_discord_message_fields(fields: &[String]) -> Vec<String> {
+    if fields.is_empty() {
+        default_discord_message_fields()
+    } else {
+        fields.to_vec()
+    }
+}
+
 fn resolve_project_skill_selection(
     selection: &ProjectSkillSelection,
 ) -> Result<Vec<String>, RenderError> {
@@ -2302,6 +2359,7 @@ fn resolve_project_skill_selection(
         .skills
         .into_iter()
         .filter(|entry| entry.availability == Availability::Implemented)
+        .filter(|entry| entry.name != "user-setup")
         .map(|entry| entry.name)
         .collect::<BTreeSet<_>>();
     validate_project_skill_catalog(&catalog, &available)?;
@@ -2337,10 +2395,10 @@ fn resolve_project_skill_selection(
         _ => unreachable!("Skill selection mode was schema-validated"),
     };
     if recommended {
-        selected.remove("configure");
-    } else if selected.contains("configure") {
+        selected.remove("user-setup");
+    } else if selected.contains("user-setup") {
         return Err(RenderError::Input(
-            "configure is user-scope only and cannot be selected for a project".to_owned(),
+            "user-setup is user-scope only and cannot be selected for a project".to_owned(),
         ));
     }
     let dependencies = catalog
@@ -2393,7 +2451,7 @@ fn validate_project_skill_catalog(
             && project_skill_names_are_valid(&dependency.requires, available)
     });
     if catalog.schema_version != 1
-        || catalog.mandatory_skills != ["configure"]
+        || !catalog.mandatory_skills.is_empty()
         || suite_ids != BTreeSet::from(["game-developer", "non-developer", "web-developer"])
         || !suites_valid
         || !dependencies_valid
@@ -3150,7 +3208,7 @@ fn render_harness_toml(
             .join(", ");
         write!(
             &mut output,
-            "setup_mode = {}\npreference_provenance = {}\ninterface_language = {}\nwiki_enabled = {}\nwiki_backend = {}\nwiki_language = {}\npersona_id = {}\nusage_guard_enabled = {}\ncodexbar_fallback_enabled = {}\ndiscord_guard_enabled = {}\nselected_project_skills = [{selected}]\n",
+            "setup_mode = {}\npreference_provenance = {}\ninterface_language = {}\nwiki_enabled = {}\nwiki_backend = {}\nwiki_language = {}\npersona_id = {}\nusage_guard_enabled = {}\ncodexbar_fallback_enabled = {}\ndiscord_guard_enabled = {}\ndiscord_message_fields = [{}]\nselected_project_skills = [{selected}]\n",
             quoted(&answers.setup_mode),
             quoted(preferences.provenance),
             quoted(&preferences.interface_language),
@@ -3161,6 +3219,12 @@ fn render_harness_toml(
             preferences.usage_guard_enabled,
             preferences.codexbar_fallback_enabled,
             preferences.discord_guard_enabled,
+            preferences
+                .discord_message_fields
+                .iter()
+                .map(|field| quoted(field))
+                .collect::<Vec<_>>()
+                .join(", "),
         )
         .expect("writing to String cannot fail");
         if let Some(environment_name) = &preferences.discord_webhook_url_env {
@@ -3277,6 +3341,12 @@ fn render_agents_marker(
     let marker = marker.replacen(
         "- For a simple question, do not load project memory, spawn agents, or edit files.",
         "- For a simple question, do not spawn agents or edit files. Load canonical memory only through that bounded retrieval preflight when the question needs project or user context.",
+        1,
+    );
+    let marker = marker.replacen(
+        "- Keep durable role identity in `.hive/team/roles/`; the active host owns sessions and subagents.\n",
+        "- For `all todos`, `until completion`, `do not stop`, or an equivalent terminal request, continue while any in-scope agent-owned inspection, fix, verification, commit, permitted push, CI observation, or authorized publication remains. A progress report naming such work must not end the task. Before a final response, classify every remaining item as `agent-owned`, `awaiting-user-authority`, `awaiting-external-evidence`, or `blocked`; only no `agent-owned` work permits completion.\n\\
+- Keep durable role identity in `.hive/team/roles/`; the active host owns sessions and subagents.\n",
         1,
     );
     let marker = marker.replacen(
@@ -6068,6 +6138,7 @@ fn effective_preferences_from_harness(
         codexbar_fallback_enabled: harness.codexbar_fallback_enabled,
         discord_guard_enabled: harness.discord_guard_enabled,
         discord_webhook_url_env: harness.discord_webhook_url_env.clone(),
+        discord_message_fields: normalized_discord_message_fields(&harness.discord_message_fields),
         usage_stop_remaining_percent: harness.usage_stop_remaining_percent,
     };
     validate_global_project_preferences(&global).map_err(as_verification)?;
@@ -6088,6 +6159,7 @@ fn effective_preferences_from_harness(
         codexbar_fallback_enabled: harness.codexbar_fallback_enabled,
         discord_guard_enabled: harness.discord_guard_enabled,
         discord_webhook_url_env: harness.discord_webhook_url_env.clone(),
+        discord_message_fields: normalized_discord_message_fields(&harness.discord_message_fields),
         usage_stop_remaining_percent: harness.usage_stop_remaining_percent,
     }))
 }
@@ -6884,23 +6956,23 @@ mod tests {
     use super::{
         activate_staged_impl, activation_fault_from_value, authorize_hook,
         authorize_hook_with_resolution, calculate_consent_digest, capability_detection,
-        derive_resolution, encode_role, execute_release_update_for_target_in,
-        execute_release_update_in, execute_setup, execute_setup_with_post_apply,
-        expected_external_runtime, historical_project_upgrade_candidate_in, hook_descriptor_bytes,
-        installed_tree_digest, load_answers, load_resolution, merge_shared_marker,
-        mutate_exact_projection_claimed, open_target_capability, parse_role,
-        prepare_projection_transition, project_upgrade_candidate_in, render_agents_marker,
-        render_project_base, render_setup_answers, render_tree, render_tree_with_preferences,
-        render_yaml_projection, replace_capability_file_impl,
-        require_operational_update_preferences, resolve_effective_project_preferences,
-        resolve_project_skill_selection, shared_marker_foreign_digest, update_path_is_owned,
-        valid_digest, valid_role_id, valid_timestamp, validate_hook_approvals,
-        validate_owned_paths, validate_skill_approvals, ActivationFault, ActiveSkills,
-        CapabilityEvidence, CapabilityResolution, ExactProjectionMutation,
-        GlobalProjectPreferences, HookApproval, HookAuthorization, ProjectSkillSelection,
-        ProjectionCleanupFault, RenderError, ReplacePolicy, RoleProfile, RoleSeed, SetupAnswers,
-        SetupMode, SetupRequest, SkillApproval, ValidatedProjectionOwnership,
-        FRESH_CAPABILITY_RESOLUTION_PATH, MARKER_END, MARKER_START,
+        default_discord_message_fields, derive_resolution, encode_role,
+        execute_release_update_for_target_in, execute_release_update_in, execute_setup,
+        execute_setup_with_post_apply, expected_external_runtime,
+        historical_project_upgrade_candidate_in, hook_descriptor_bytes, installed_tree_digest,
+        load_answers, load_resolution, merge_shared_marker, mutate_exact_projection_claimed,
+        open_target_capability, parse_role, prepare_projection_transition,
+        project_upgrade_candidate_in, render_agents_marker, render_project_base,
+        render_setup_answers, render_tree, render_tree_with_preferences, render_yaml_projection,
+        replace_capability_file_impl, require_operational_update_preferences,
+        resolve_effective_project_preferences, resolve_project_skill_selection,
+        shared_marker_foreign_digest, update_path_is_owned, valid_digest, valid_role_id,
+        valid_timestamp, validate_hook_approvals, validate_owned_paths, validate_skill_approvals,
+        ActivationFault, ActiveSkills, CapabilityEvidence, CapabilityResolution,
+        ExactProjectionMutation, GlobalProjectPreferences, HookApproval, HookAuthorization,
+        ProjectSkillSelection, ProjectionCleanupFault, RenderError, ReplacePolicy, RoleProfile,
+        RoleSeed, SetupAnswers, SetupMode, SetupRequest, SkillApproval,
+        ValidatedProjectionOwnership, FRESH_CAPABILITY_RESOLUTION_PATH, MARKER_END, MARKER_START,
     };
     use hive_core::{sha256_digest, validate_project_relative};
     use serde_json::Value as JsonValue;
@@ -7034,11 +7106,12 @@ mod tests {
             wiki_language: "both".to_owned(),
             persona_id: "friendly".to_owned(),
             persona_custom_description: None,
-            selected_project_skills: vec!["setup-project".to_owned(), "refine-prompt".to_owned()],
+            selected_project_skills: vec!["project-setup".to_owned(), "prompt-refine".to_owned()],
             usage_guard_enabled: true,
             codexbar_fallback_enabled: true,
             discord_guard_enabled: true,
             discord_webhook_url_env: Some("HIVE_DISCORD_WEBHOOK_URL".to_owned()),
+            discord_message_fields: vec!["project".to_owned(), "remaining-usage".to_owned()],
             usage_stop_remaining_percent: 17,
         };
 
@@ -7064,14 +7137,18 @@ mod tests {
             effective.discord_webhook_url_env.as_deref(),
             Some("HIVE_DISCORD_WEBHOOK_URL")
         );
+        assert_eq!(
+            effective.discord_message_fields,
+            ["project", "remaining-usage"]
+        );
         assert_eq!(effective.usage_stop_remaining_percent, 17);
         assert!(!target.join(".hive/knowledge/Wiki/index.md").exists());
         assert!(!target.join(".hive/knowledge/Wiki/log.md").exists());
         assert!(target
-            .join(".agents/skills/setup-project/SKILL.md")
+            .join(".agents/skills/project-setup/SKILL.md")
             .is_file());
         assert!(target
-            .join(".agents/skills/refine-prompt/SKILL.md")
+            .join(".agents/skills/prompt-refine/SKILL.md")
             .is_file());
         assert!(!target
             .join(".agents/skills/hive-knowledge-query/SKILL.md")
@@ -7082,9 +7159,10 @@ mod tests {
         assert!(harness.contains("usage_stop_remaining_percent = 17"));
         assert!(harness.contains("codexbar_fallback_enabled = true"));
         assert!(harness.contains("discord_guard_enabled = true"));
+        assert!(harness.contains("discord_message_fields = [\"project\", \"remaining-usage\"]"));
         assert!(harness.contains("discord_webhook_url_env = \"HIVE_DISCORD_WEBHOOK_URL\""));
         assert!(
-            harness.contains("selected_project_skills = [\"refine-prompt\", \"setup-project\"]")
+            harness.contains("selected_project_skills = [\"project-setup\", \"prompt-refine\"]")
         );
 
         execute_setup(&SetupRequest {
@@ -7109,11 +7187,12 @@ mod tests {
             wiki_language: "both".to_owned(),
             persona_id: "balanced".to_owned(),
             persona_custom_description: None,
-            selected_project_skills: vec!["manage-wiki".to_owned()],
+            selected_project_skills: vec!["knowledge-maintain".to_owned()],
             usage_guard_enabled: true,
             codexbar_fallback_enabled: false,
             discord_guard_enabled: false,
             discord_webhook_url_env: None,
+            discord_message_fields: default_discord_message_fields(),
             usage_stop_remaining_percent: 20,
         };
 
@@ -7165,11 +7244,12 @@ mod tests {
                     wiki_language: "both".to_owned(),
                     persona_id: "friendly".to_owned(),
                     persona_custom_description: None,
-                    selected_project_skills: vec!["setup-project".to_owned()],
+                    selected_project_skills: vec!["project-setup".to_owned()],
                     usage_guard_enabled: false,
                     codexbar_fallback_enabled: false,
                     discord_guard_enabled: false,
                     discord_webhook_url_env: None,
+                    discord_message_fields: default_discord_message_fields(),
                     usage_stop_remaining_percent: 20,
                 }),
             },
@@ -7198,11 +7278,12 @@ mod tests {
             wiki_language: "both".to_owned(),
             persona_id: "friendly".to_owned(),
             persona_custom_description: None,
-            selected_project_skills: vec!["refine-prompt".to_owned(), "setup-project".to_owned()],
+            selected_project_skills: vec!["prompt-refine".to_owned(), "project-setup".to_owned()],
             usage_guard_enabled: false,
             codexbar_fallback_enabled: false,
             discord_guard_enabled: false,
             discord_webhook_url_env: None,
+            discord_message_fields: default_discord_message_fields(),
             usage_stop_remaining_percent: 17,
         };
         let installed = execute_setup(&SetupRequest {
@@ -7261,11 +7342,12 @@ mod tests {
             wiki_language: "both".to_owned(),
             persona_id: "friendly".to_owned(),
             persona_custom_description: None,
-            selected_project_skills: vec!["setup-project".to_owned()],
+            selected_project_skills: vec!["project-setup".to_owned()],
             usage_guard_enabled: true,
             codexbar_fallback_enabled: false,
             discord_guard_enabled: false,
             discord_webhook_url_env: None,
+            discord_message_fields: default_discord_message_fields(),
             usage_stop_remaining_percent: 20,
         };
         let error = require_operational_update_preferences("0.8.0", None)
@@ -7362,7 +7444,7 @@ mod tests {
             .expect("base answers")
             .replace(
                 "setup_mode: expedited\n",
-                "setup_mode: custom\ninterface_language: ko\nwiki:\n  enabled: true\n  language: both\npersona:\n  id: friendly\nskills:\n  mode: individual\n  selected:\n    - setup-project\n",
+                "setup_mode: custom\ninterface_language: ko\nwiki:\n  enabled: true\n  language: both\npersona:\n  id: friendly\nskills:\n  mode: individual\n  selected:\n    - project-setup\n",
             );
         fs::write(&answers_path, answers).expect("custom answers");
 
@@ -7379,11 +7461,12 @@ mod tests {
                 wiki_language: "both".to_owned(),
                 persona_id: "balanced".to_owned(),
                 persona_custom_description: None,
-                selected_project_skills: vec!["setup-project".to_owned()],
+                selected_project_skills: vec!["project-setup".to_owned()],
                 usage_guard_enabled: false,
                 codexbar_fallback_enabled: false,
                 discord_guard_enabled: false,
                 discord_webhook_url_env: None,
+                discord_message_fields: default_discord_message_fields(),
                 usage_stop_remaining_percent: 20,
             }),
         })
@@ -7401,7 +7484,7 @@ mod tests {
             .expect("base answers")
             .replace(
                 "setup_mode: expedited\n",
-                "setup_mode: custom\ninterface_language: ko\nwiki:\n  enabled: true\n  language: both\npersona:\n  id: friendly\nskills:\n  mode: individual\n  selected:\n    - share-knowledge\n",
+                "setup_mode: custom\ninterface_language: ko\nwiki:\n  enabled: true\n  language: both\npersona:\n  id: friendly\nskills:\n  mode: individual\n  selected:\n    - knowledge-promote\n",
             );
         fs::write(&answers_path, answers).expect("custom answers");
 
@@ -7418,11 +7501,12 @@ mod tests {
                 wiki_language: "both".to_owned(),
                 persona_id: "balanced".to_owned(),
                 persona_custom_description: None,
-                selected_project_skills: vec!["setup-project".to_owned()],
+                selected_project_skills: vec!["project-setup".to_owned()],
                 usage_guard_enabled: true,
                 codexbar_fallback_enabled: false,
                 discord_guard_enabled: false,
                 discord_webhook_url_env: None,
+                discord_message_fields: default_discord_message_fields(),
                 usage_stop_remaining_percent: 20,
             }),
         })
@@ -7433,9 +7517,9 @@ mod tests {
             .expect("effective preferences should be returned");
         assert_eq!(
             effective.selected_project_skills,
-            ["record-knowledge", "search-knowledge", "share-knowledge",]
+            ["knowledge-capture", "knowledge-promote", "knowledge-recall",]
         );
-        for skill in ["record-knowledge", "search-knowledge", "share-knowledge"] {
+        for skill in ["knowledge-capture", "knowledge-recall", "knowledge-promote"] {
             assert!(target
                 .join(format!(".agents/skills/{skill}/SKILL.md"))
                 .is_file());
@@ -7443,7 +7527,7 @@ mod tests {
         let harness =
             fs::read_to_string(target.join(".hive/config/harness.toml")).expect("harness config");
         assert!(harness.contains(
-            "selected_project_skills = [\"record-knowledge\", \"search-knowledge\", \"share-knowledge\"]"
+            "selected_project_skills = [\"knowledge-capture\", \"knowledge-promote\", \"knowledge-recall\"]"
         ));
         assert!(harness.contains("codexbar_fallback_enabled = false"));
     }
@@ -7453,14 +7537,14 @@ mod tests {
         let selection = ProjectSkillSelection {
             mode: "individual".to_owned(),
             recommended_suite: None,
-            selected: Some(vec!["configure".to_owned()]),
+            selected: Some(vec!["user-setup".to_owned()]),
         };
 
         let error = resolve_project_skill_selection(&selection)
-            .expect_err("configure must remain user-scope only");
+            .expect_err("user-setup must remain user-scope only");
 
         assert_eq!(error.code(), "hive.setup-invalid-input");
-        assert!(error.to_string().contains("configure is user-scope only"));
+        assert!(error.to_string().contains("user-setup is user-scope only"));
     }
 
     #[test]
@@ -7496,27 +7580,27 @@ mod tests {
 
     fn current_skill_paths_added_since_0_7(capabilities: &str) -> Vec<String> {
         let new_body_skills = [
-            "answer",
-            "auto-setup-project",
-            "clean-ai-slop",
-            "engineer-run",
-            "handoff-role",
-            "import-repository-knowledge",
-            "maintain-knowledge",
-            "manage-usage",
-            "manage-wiki",
-            "migrate-project",
-            "record-knowledge",
-            "refine-prompt",
-            "research-practices",
-            "resume-work",
-            "save-progress",
-            "search-knowledge",
-            "setup-project",
-            "share-knowledge",
-            "update-hive",
-            "upgrade-project",
-            "verify-package",
+            "quick-answer",
+            "project-setup",
+            "code-polish",
+            "ralph-loop",
+            "knowledge-import",
+            "knowledge-maintain",
+            "knowledge-capture",
+            "prompt-refine",
+            "research-best-practices",
+            "knowledge-recall",
+            "usage-guard",
+            "ship",
+            "amend-directive",
+            "run-handoff",
+            "project-transition",
+            "run-resume",
+            "run-checkpoint",
+            "knowledge-promote",
+            "product-update",
+            "project-refresh",
+            "package-review",
         ];
         let mut expected = new_body_skills
             .iter()
@@ -7650,6 +7734,7 @@ mod tests {
                     codexbar_fallback_enabled: false,
                     discord_guard_enabled: false,
                     discord_webhook_url_env: None,
+                    discord_message_fields: default_discord_message_fields(),
                     usage_stop_remaining_percent: 19,
                 }),
             })
@@ -8048,6 +8133,7 @@ mod tests {
             codexbar_fallback_enabled: true,
             discord_guard_enabled: false,
             discord_webhook_url_env: None,
+            discord_message_fields: default_discord_message_fields(),
             usage_stop_remaining_percent: 20,
         };
         let effective = resolve_effective_project_preferences(&answers, Some(&global))
@@ -8229,6 +8315,7 @@ mod tests {
             codexbar_fallback_enabled: false,
             discord_guard_enabled: false,
             discord_webhook_url_env: None,
+            discord_message_fields: default_discord_message_fields(),
             usage_stop_remaining_percent: 60,
         }
     }
@@ -8603,7 +8690,7 @@ mod tests {
             .canonicalize()
             .expect("fixture target should have a stable path");
         apply_fixture(&target, "answers-base.yml", "capabilities-codex-omx.json");
-        let projected = target.join(".agents/skills/answer/SKILL.md");
+        let projected = target.join(".agents/skills/quick-answer/SKILL.md");
         fs::write(&projected, b"user collision bytes\x00\xff\n")
             .expect("projected fixture should be tampered");
 
@@ -8741,7 +8828,7 @@ mod tests {
             .expect("tree should render");
         let transition = prepare_projection_transition(&target_dir, &planned, &answers)
             .expect("first-install projection preflight should prove absence");
-        let projected = target.join(".agents/skills/answer/SKILL.md");
+        let projected = target.join(".agents/skills/quick-answer/SKILL.md");
         let create_foreign = || {
             fs::create_dir_all(projected.parent().expect("projection should have a parent"))
                 .expect("foreign projection parent should be created");
@@ -8834,7 +8921,7 @@ mod tests {
             .expect("changed tree should render");
         let transition = prepare_projection_transition(&target_dir, &planned, &answers)
             .expect("installed projection ownership should verify");
-        let projected = target.join(".agents/skills/answer/SKILL.md");
+        let projected = target.join(".agents/skills/quick-answer/SKILL.md");
         let tamper_projection = || {
             fs::write(&projected, b"tampered race bytes\x00\xff\n")
                 .expect("projected Skill should be tampered after preflight");
@@ -9338,8 +9425,10 @@ mod tests {
             fs::read(foreign).expect("foreign file should remain"),
             b"foreign discovery bytes\x00\xff\n"
         );
-        assert!(target.join(".agents/skills/answer/SKILL.md").is_file());
-        assert!(!target.join(".claude/skills/answer/SKILL.md").exists());
+        assert!(target
+            .join(".agents/skills/quick-answer/SKILL.md")
+            .is_file());
+        assert!(!target.join(".claude/skills/quick-answer/SKILL.md").exists());
     }
 
     #[test]

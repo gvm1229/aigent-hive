@@ -44,7 +44,12 @@ Never import installed consumer state back into source, copy source-development 
 - Do not route new work to OMX/OMC Skills. A legacy external artifact may be inspected only through an explicit migration or recovery contract that preserves foreign bytes.
 - Keep Hive execution Skills declarative: they may reduce canonical state, issue bounded leases, validate receipts, and prepare host envelopes, but never call a model-provider API or launch a model/subagent process.
 - Permit bidirectional reuse only for Hive-owned Skill source after source/consumer scope, safety, consent, and conformance review. Never treat an installed consumer copy or consumer runtime state as source material.
-- Keep a shared Skill canonical under `harness/skills/<name>/` and project an exact source copy under `.agents/skills/<name>/`. Keep a source-only Skill under `.agents/skills/<name>/` until an explicit product-relevance review promotes it to `harness/skills/`.
+- Keep every reusable workflow canonical under `harness/skills/<consumer-name>/` and use the installed product namespace in source development. Source-root, usage-gate, and mutation boundaries belong in repository directives, not a second source Skill inventory.
+- Apply every approved Hive-owned Skill rename to the complete installed-product inventory in one
+  reviewed migration. The source workspace has no active Skill IDs; repository directives own its
+  additional constraints. Record each replaced product ID and its scope in the transitive rename
+  ledger, and update routing metadata, references, and conformance tests together. Historical
+  release bases remain immutable.
 - A consumer Skill reused in source must not require consumer `.hive/` state, mutate an installed harness, weaken source-root refusal, or bypass the source usage guard. Adapt the provider-neutral workflow or core primitive instead of copying consumer state assumptions.
 - Load only the smallest approved Skill set needed for the task. The simple-question path loads no unrelated project Skill or memory.
 

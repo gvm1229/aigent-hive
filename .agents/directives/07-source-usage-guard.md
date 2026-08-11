@@ -7,14 +7,14 @@ consumer harness behavior.
 
 For every user turn in this source workspace:
 
-1. Read [`.agents/skills/hive-usage-guard/SKILL.md`](../skills/hive-usage-guard/SKILL.md).
+1. Use `python3 scripts/source-usage-guard.py <command> --json` from the source root.
 2. Resolve only obvious usage-guard control intent before ordinary task routing:
    - turn off: explicit natural-language intent to disable/bypass the usage guard, use remaining
      quota, continue below the threshold, or ignore the usage limit for this session;
    - turn on: explicit natural-language intent to enable/restore the guard, enforce the threshold,
      stop at the configured limit, or remove the current bypass;
    - threshold: an explicit new percentage for the usage guard.
-3. Apply that control even when the user does not write `$hive-usage-guard`.
+3. Apply that control even when the user does not write `사용량 보호`.
 4. Run `gate`. It starts the watcher when needed and evaluates the current session.
 5. Only after exit `0` may simple-question routing or any other task execution begin.
 

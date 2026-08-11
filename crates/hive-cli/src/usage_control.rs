@@ -19,8 +19,8 @@ const USAGE_CONTROL: &str = "\
 Inspect or change the installed usage safeguard.
 
 USAGE:
-    hive usage enforce --target <dir> --session-id <id> --process-id <positive-u32> [--account-digest <sha256:...>] --output json
-    hive usage status --target <dir> --session-id <id> --process-id <positive-u32> --output json
+    hive usage enforce --target <dir> --session-id <id> --process-id <positive-u32> [--account-digest <sha256:...>] [--user-root <dir>] --output json
+    hive usage status --target <dir> --session-id <id> --process-id <positive-u32> [--user-root <dir>] --output json
     hive usage threshold --target <dir> --remaining-percent <1..99> --output json
     hive usage session --target <dir> --session-id <id> --process-id <positive-u32> --action enable|disable|toggle [--confirm-session-disable] --output json
     hive usage capture --host claude (--target <dir>|--target-from-stdin) --stdin-json --output json
@@ -30,6 +30,7 @@ USAGE:
 struct StatusArguments {
     target: PathBuf,
     binding: ParsedBinding,
+    user_root: Option<PathBuf>,
 }
 
 #[derive(Debug)]
@@ -37,6 +38,8 @@ struct EnforceArguments {
     target: PathBuf,
     binding: ParsedBinding,
     account_digest: Option<String>,
+    user_root: Option<PathBuf>,
+    run_id: Option<String>,
 }
 
 #[derive(Debug)]
@@ -74,12 +77,16 @@ struct ParsedBinding {
 
 pub(crate) struct InstalledUsageConfig {
     pub(crate) project_name: String,
+    pub(crate) project_identity: String,
+    pub(crate) interface_language: String,
     pub(crate) threshold: u8,
     pub(crate) primary_host: String,
     pub(crate) guard_enabled: bool,
     pub(crate) codexbar_fallback_enabled: bool,
     pub(crate) discord_guard_enabled: bool,
     pub(crate) discord_webhook_url_env: Option<String>,
+    pub(crate) discord_request_privacy: String,
+    pub(crate) discord_message_fields: Vec<String>,
     pub(crate) bytes: Vec<u8>,
 }
 
@@ -88,7 +95,15 @@ struct TurnObservation {
     selected_window: &'static str,
     measured_at: u64,
     evidence_digest: String,
+    remaining_percent: Option<f64>,
     next_action: Option<String>,
+}
+
+#[derive(Default)]
+struct RunNotificationContext {
+    run_id: Option<String>,
+    request_summary: Option<String>,
+    progress: Option<String>,
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -173,8 +188,16 @@ struct HaltMarker {
     decision: String,
     selected_window: String,
     threshold_remaining_percent: u8,
+    #[serde(default)]
+    remaining_percent: Option<f64>,
     measured_at: u64,
     evidence_digest: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    run_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    request_summary: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    progress: Option<String>,
     revision: u64,
 }
 
@@ -535,12 +558,13 @@ fn claude_capture_path(session_digest: &str) -> Result<PathBuf, AdapterError> {
 fn parse_status(arguments: &[String]) -> Result<StatusArguments, AdapterError> {
     let options = parse_key_value_options(
         arguments,
-        &["--target", "--session-id", "--process-id"],
+        &["--target", "--session-id", "--process-id", "--user-root"],
         false,
     )?;
     Ok(StatusArguments {
         target: PathBuf::from(required(&options, "--target")?),
         binding: parse_binding(&options)?,
+        user_root: optional(&options, "--user-root").map(PathBuf::from),
     })
 }
 
@@ -552,6 +576,8 @@ fn parse_enforce(arguments: &[String]) -> Result<EnforceArguments, AdapterError>
             "--session-id",
             "--process-id",
             "--account-digest",
+            "--user-root",
+            "--run",
         ],
         false,
     )?;
@@ -568,6 +594,8 @@ fn parse_enforce(arguments: &[String]) -> Result<EnforceArguments, AdapterError>
         target: PathBuf::from(required(&options, "--target")?),
         binding: parse_binding(&options)?,
         account_digest,
+        user_root: optional(&options, "--user-root").map(PathBuf::from),
+        run_id: optional(&options, "--run").map(str::to_owned),
     })
 }
 
@@ -714,7 +742,7 @@ fn optional<'a>(options: &[(&'a str, &'a str)], name: &str) -> Option<&'a str> {
 
 fn status(arguments: &StatusArguments) -> Result<ActionResult, AdapterError> {
     let target = PinnedTarget::open(&arguments.target)?;
-    let config = read_installed_config(&target)?;
+    let config = read_effective_config(&target, arguments.user_root.as_deref())?;
     let binding = bind_session(&arguments.binding, &config.primary_host);
     let loaded = load_control(&target, &binding)?;
     let halt = load_halt(&target, &binding)?;
@@ -766,7 +794,7 @@ fn status(arguments: &StatusArguments) -> Result<ActionResult, AdapterError> {
 
 fn enforce(arguments: &EnforceArguments) -> Result<ActionResult, AdapterError> {
     let target = PinnedTarget::open(&arguments.target)?;
-    let config = read_installed_config(&target)?;
+    let config = read_effective_config(&target, arguments.user_root.as_deref())?;
     let binding = bind_session(&arguments.binding, &config.primary_host);
     let loaded = load_control(&target, &binding)?;
     if !effective_enabled(&loaded, config.guard_enabled) {
@@ -817,6 +845,7 @@ fn enforce(arguments: &EnforceArguments) -> Result<ActionResult, AdapterError> {
     };
 
     let next_action = observation.next_action.clone();
+    let context = read_run_notification_context(&target, arguments.run_id.as_deref())?;
     let marker = HaltMarker {
         schema_version: 1,
         host_scope: binding.host_scope.clone(),
@@ -825,8 +854,12 @@ fn enforce(arguments: &EnforceArguments) -> Result<ActionResult, AdapterError> {
         decision: decision.to_owned(),
         selected_window: observation.selected_window.to_owned(),
         threshold_remaining_percent: config.threshold,
+        remaining_percent: observation.remaining_percent,
         measured_at: observation.measured_at,
         evidence_digest: observation.evidence_digest,
+        run_id: context.run_id,
+        request_summary: context.request_summary,
+        progress: context.progress,
         revision: 1,
     };
     let desired = serde_json::to_vec(&marker)
@@ -853,6 +886,49 @@ fn enforce(arguments: &EnforceArguments) -> Result<ActionResult, AdapterError> {
     Ok(result)
 }
 
+/// Extract only display-safe, canonical run metadata. The caller may select a run, but never
+/// inject text into an outbound alert: Hive reads the run's own bounded PLAN.md instead.
+fn read_run_notification_context(
+    target: &PinnedTarget,
+    run_id: Option<&str>,
+) -> Result<RunNotificationContext, AdapterError> {
+    let Some(run_id) = run_id else {
+        return Ok(RunNotificationContext::default());
+    };
+    let plan_path = crate::run::run_path(run_id, "PLAN.md")?;
+    let bytes = target
+        .read_optional(&plan_path, MAX_CONFIG_BYTES)?
+        .ok_or_else(|| {
+            AdapterError::Safety("selected run does not have a canonical PLAN.md".to_owned())
+        })?;
+    let plan = std::str::from_utf8(&bytes)
+        .map_err(|_| AdapterError::Safety("canonical run PLAN.md must be UTF-8".to_owned()))?;
+    let request_summary = plan
+        .lines()
+        .find_map(|line| line.strip_prefix("# "))
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(|value| {
+            value
+                .chars()
+                .filter(|character| !character.is_control())
+                .take(160)
+                .collect::<String>()
+        })
+        .filter(|value| !value.is_empty());
+    let completed = plan
+        .lines()
+        .filter(|line| line.contains("[x]") || line.contains("[X]"))
+        .count();
+    let total = completed + plan.lines().filter(|line| line.contains("[ ]")).count();
+    let progress = (total > 0).then(|| format!("{completed}/{total}"));
+    Ok(RunNotificationContext {
+        run_id: Some(run_id.to_owned()),
+        request_summary,
+        progress,
+    })
+}
+
 fn record_discord_notification(
     result: &mut ActionResult,
     config: &InstalledUsageConfig,
@@ -863,12 +939,17 @@ fn record_discord_notification(
         config.discord_webhook_url_env.as_deref(),
         &crate::discord::UsageHaltNotification {
             project_name: &config.project_name,
-            decision: &marker.decision,
             host_scope: &marker.host_scope,
             selected_window: &marker.selected_window,
-            threshold_remaining_percent: marker.threshold_remaining_percent,
+            remaining_percent: marker.remaining_percent,
             measured_at: marker.measured_at,
             evidence_digest: &marker.evidence_digest,
+            run_id: marker.run_id.as_deref(),
+            request_summary: marker.request_summary.as_deref(),
+            progress: marker.progress.as_deref(),
+            request_privacy: &config.discord_request_privacy,
+            interface_language: &config.interface_language,
+            message_fields: &config.discord_message_fields,
         },
     );
     if let Some(data) = result
@@ -912,10 +993,11 @@ fn observe_usage(
             evidence_digest: sha256_digest(
                 format!("usage-sensor-error:{}:{error}", config.primary_host).as_bytes(),
             ),
+            remaining_percent: None,
             next_action,
         };
     };
-    let decision = match sampled_at_unix.and_then(|now| {
+    let (decision, remaining_percent) = match sampled_at_unix.and_then(|now| {
         UsagePolicy::new(
             &snapshot.sensor_id,
             &snapshot.sensor_version,
@@ -926,15 +1008,16 @@ fn observe_usage(
         .ok()
         .map(|policy| evaluate_usage(&policy, &snapshot.core_snapshots(), &[], now))
     }) {
-        Some(UsageDecision::Allow(_)) => None,
-        Some(UsageDecision::Block(_)) => Some("halted"),
-        Some(UsageDecision::Unknown(_)) | None => Some("usage-unknown"),
+        Some(UsageDecision::Allow(_)) => (None, None),
+        Some(UsageDecision::Block(block)) => (Some("halted"), Some(block.remaining_percent)),
+        Some(UsageDecision::Unknown(_)) | None => (Some("usage-unknown"), None),
     };
     TurnObservation {
         decision,
         selected_window: snapshot.selected_window_label(),
         measured_at: snapshot.measured_at,
         evidence_digest: snapshot.evidence_digest(),
+        remaining_percent,
         next_action: None,
     }
 }
@@ -1337,6 +1420,60 @@ pub(crate) fn read_installed_config(
     parse_installed_config(bytes)
 }
 
+/// Resolve one policy for a project. The project harness remains the compatibility fallback when
+/// no authenticated user root was supplied; with one, current global settings always win and a
+/// project may only choose an earlier stop.
+fn read_effective_config(
+    target: &PinnedTarget,
+    user_root: Option<&Path>,
+) -> Result<InstalledUsageConfig, AdapterError> {
+    let mut installed = read_installed_config(target)?;
+    let Some(user_root) = user_root else {
+        return Ok(installed);
+    };
+    let root =
+        crate::user_install::open_user_root_for_setup(user_root).map_err(AdapterError::Safety)?;
+    let Some(global) = crate::user_setup::load_operational_config(&root)
+        .map_err(|error| AdapterError::Safety(error.message().to_owned()))?
+    else {
+        return Err(AdapterError::Safety(
+            "global Hive setup is required when --user-root is supplied".to_owned(),
+        ));
+    };
+    let guard = &global.usage_guard;
+    let configured_project_threshold = guard
+        .project_overrides
+        .get(&installed.project_identity)
+        .copied();
+    installed.threshold = configured_project_threshold
+        .unwrap_or(installed.threshold)
+        .max(guard.stop_remaining_percent);
+    installed.guard_enabled = guard.enabled;
+    installed.codexbar_fallback_enabled = guard.enabled && guard.codexbar_fallback_enabled;
+    installed.discord_guard_enabled = guard.enabled && guard.discord.enabled;
+    installed
+        .discord_webhook_url_env
+        .clone_from(&guard.discord.webhook_url_env);
+    installed.discord_request_privacy = match guard.discord.request_privacy {
+        crate::user_setup::DiscordRequestPrivacy::Summary => "summary".to_owned(),
+        crate::user_setup::DiscordRequestPrivacy::RawPrompt => "raw-prompt".to_owned(),
+    };
+    installed.discord_message_fields = guard
+        .discord
+        .message_fields
+        .iter()
+        .copied()
+        .map(crate::user_setup::DiscordMessageField::as_str)
+        .map(str::to_owned)
+        .collect();
+    installed.interface_language = match global.interface_language {
+        crate::user_setup::InterfaceLanguage::En => "en".to_owned(),
+        crate::user_setup::InterfaceLanguage::Ko => "ko".to_owned(),
+    };
+    Ok(installed)
+}
+
+#[allow(clippy::too_many_lines)]
 fn parse_installed_config(bytes: Vec<u8>) -> Result<InstalledUsageConfig, AdapterError> {
     validate_config(&bytes)?;
     let (threshold, _) = threshold_range(&bytes)?;
@@ -1348,6 +1485,26 @@ fn parse_installed_config(bytes: Vec<u8>) -> Result<InstalledUsageConfig, Adapte
     let project_name = optional_config_string(&table, "project_name")?
         .filter(|value| !value.is_empty() && value.len() <= 512)
         .unwrap_or_else(|| "unknown-project".to_owned());
+    let project_identity = optional_config_string(&table, "project_identity")?
+        .filter(|value| {
+            !value.trim().is_empty()
+                && value.trim() == value
+                && value.len() <= 160
+                && !value.contains(['\r', '\n', '\0'])
+        })
+        .unwrap_or_else(|| project_name.clone());
+    let interface_language = match table.get("interface_language") {
+        None => "en".to_owned(),
+        Some(value) => value
+            .as_str()
+            .filter(|language| matches!(*language, "en" | "ko"))
+            .ok_or_else(|| {
+                AdapterError::Safety(
+                    "installed harness.toml interface_language must be en or ko".to_owned(),
+                )
+            })?
+            .to_owned(),
+    };
     let primary_host = table
         .get("primary_host")
         .and_then(toml::Value::as_str)
@@ -1364,6 +1521,10 @@ fn parse_installed_config(bytes: Vec<u8>) -> Result<InstalledUsageConfig, Adapte
     let discord_guard_enabled =
         optional_config_bool(&table, "discord_guard_enabled")?.unwrap_or(false);
     let discord_webhook_url_env = optional_config_string(&table, "discord_webhook_url_env")?;
+    let discord_request_privacy = optional_config_string(&table, "discord_request_privacy")?
+        .unwrap_or_else(|| "summary".to_owned());
+    let discord_message_fields = optional_config_string_array(&table, "discord_message_fields")?
+        .unwrap_or_else(crate::discord::default_message_fields);
     if codexbar_fallback_enabled && !guard_enabled {
         return Err(AdapterError::Safety(
             "installed harness.toml cannot enable CodexBar fallback while the usage guard is disabled"
@@ -1392,14 +1553,28 @@ fn parse_installed_config(bytes: Vec<u8>) -> Result<InstalledUsageConfig, Adapte
             ));
         }
     }
+    if !crate::discord::valid_message_fields(&discord_message_fields) {
+        return Err(AdapterError::Safety(
+            "installed harness.toml Discord message fields are invalid".to_owned(),
+        ));
+    }
+    if !matches!(discord_request_privacy.as_str(), "summary" | "raw-prompt") {
+        return Err(AdapterError::Safety(
+            "installed harness.toml Discord request privacy is invalid".to_owned(),
+        ));
+    }
     Ok(InstalledUsageConfig {
         project_name,
+        project_identity,
+        interface_language,
         threshold,
         primary_host,
         guard_enabled,
         codexbar_fallback_enabled,
         discord_guard_enabled,
         discord_webhook_url_env,
+        discord_request_privacy,
+        discord_message_fields,
         bytes,
     })
 }
@@ -1422,6 +1597,27 @@ fn optional_config_bool(table: &toml::Table, key: &str) -> Result<Option<bool>, 
             })
         })
         .transpose()
+}
+
+fn optional_config_string_array(
+    table: &toml::Table,
+    key: &str,
+) -> Result<Option<Vec<String>>, AdapterError> {
+    let Some(value) = table.get(key) else {
+        return Ok(None);
+    };
+    let array = value.as_array().ok_or_else(|| {
+        AdapterError::Safety(format!("installed harness.toml {key} must be an array"))
+    })?;
+    array
+        .iter()
+        .map(|entry| {
+            entry.as_str().map(str::to_owned).ok_or_else(|| {
+                AdapterError::Safety(format!("installed harness.toml {key} must contain strings"))
+            })
+        })
+        .collect::<Result<Vec<_>, _>>()
+        .map(Some)
 }
 
 fn optional_config_string(table: &toml::Table, key: &str) -> Result<Option<String>, AdapterError> {
@@ -1641,6 +1837,9 @@ fn load_halt(target: &PinnedTarget, binding: &SessionBinding) -> Result<LoadedHa
             "session" | "weekly" | "multiple" | "unknown"
         )
         || !(1..=99).contains(&marker.threshold_remaining_percent)
+        || marker
+            .remaining_percent
+            .is_some_and(|value| !value.is_finite() || !(0.0..=100.0).contains(&value))
         || marker.revision == 0
     {
         return Err(AdapterError::Safety(
@@ -1736,8 +1935,8 @@ mod tests {
     use super::{
         bind_session, claude_capture_path, effective_enabled, enforce,
         native_then_consented_fallback, parse_installed_config, read_claude_capture_snapshot,
-        EnforceArguments, FileSnapshot, LoadedControl, OverrideState, ParsedBinding,
-        SessionBinding, SessionControl, MAX_CONTROL_BYTES,
+        read_effective_config, EnforceArguments, FileSnapshot, LoadedControl, OverrideState,
+        ParsedBinding, SessionBinding, SessionControl, MAX_CONTROL_BYTES,
     };
     use crate::run::PinnedTarget;
     use crate::usage::{native_then_fallback, NormalizedSnapshot, SensorError, UsageHost};
@@ -1815,7 +2014,7 @@ mod tests {
     fn installed_config(host: &str, enabled: bool, fallback_enabled: bool) -> Vec<u8> {
         let version = env!("CARGO_PKG_VERSION");
         format!(
-            "schema_version = 1\nharness_version = \"{version}\"\nsource_release_version = \"{version}\"\nprimary_host = \"{host}\"\nusage_guard_enabled = {enabled}\ncodexbar_fallback_enabled = {fallback_enabled}\nusage_stop_remaining_percent = 20\n"
+            "schema_version = 1\nharness_version = \"{version}\"\nsource_release_version = \"{version}\"\ninterface_language = \"en\"\nprimary_host = \"{host}\"\nusage_guard_enabled = {enabled}\ncodexbar_fallback_enabled = {fallback_enabled}\nusage_stop_remaining_percent = 20\n"
         )
         .into_bytes()
     }
@@ -1891,6 +2090,8 @@ mod tests {
                     process_id: 7,
                 },
                 account_digest: None,
+                user_root: None,
+                run_id: None,
             })
             .expect("installed disable should bypass enforcement");
 
@@ -1922,6 +2123,64 @@ mod tests {
         };
         assert!(!effective_enabled(&loaded, false));
         assert!(effective_enabled(&loaded, true));
+    }
+
+    #[test]
+    fn user_policy_uses_global_switch_and_only_raises_a_project_threshold() {
+        let project = temporary_target();
+        let config_dir = project.path().join(".hive/config");
+        fs::create_dir_all(&config_dir).expect("project config directory");
+        let installed = String::from_utf8(installed_config("codex", true, false))
+            .expect("UTF-8 config")
+            .replace(
+                "interface_language = \"en\"\n",
+                "interface_language = \"en\"\nproject_identity = \"project-a\"\n",
+            );
+        fs::write(config_dir.join("harness.toml"), installed).expect("project config");
+        let user = temporary_target();
+        let user_config = user.path().join(".hive/config");
+        fs::create_dir_all(&user_config).expect("user config directory");
+        fs::write(
+            user_config.join("user-setup.yml"),
+            br"schema_version: 1
+interface_language: ko
+wiki:
+  enabled: true
+  language: ko
+  backend: markdown
+profile:
+  contexts:
+    - non-developer
+persona:
+  id: balanced
+selected_hosts:
+  - codex
+skills:
+  mode: all
+update_check:
+  enabled: false
+usage_guard:
+  enabled: true
+  stop_remaining_percent: 23
+  codexbar_fallback_enabled: false
+  project_overrides:
+    project-a: 61
+  discord:
+    enabled: false
+    request_privacy: summary
+    message_fields:
+      - project
+      - remaining-usage
+",
+        )
+        .expect("user setup");
+        let target = PinnedTarget::open(project.path()).expect("project target");
+        let effective =
+            read_effective_config(&target, Some(user.path())).expect("effective policy");
+
+        assert!(effective.guard_enabled);
+        assert_eq!(effective.threshold, 61);
+        assert_eq!(effective.interface_language, "ko");
     }
 
     #[test]

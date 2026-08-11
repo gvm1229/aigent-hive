@@ -1,20 +1,17 @@
 # Aigent Hive active plan index
 
-> Revision: 2.26
-> 기준일: 2026-08-08
+> Revision: 2.44
+> 기준일: 2026-08-11
 > Product version: `0.9.0`
-> 현재 milestone: `0.9.0` 정식 릴리스 준비
+> 현재 milestone: `0.9.0` 무인 설치 수용·테스트 체계 정리 후 정식 릴리스 준비
 > Entrypoint: `docs/plans/PLAN.md`
 
 ## Goal parameters
 
-- Objective: Hive-native execution·custom subagent routing·Judge policy 안전 계약, Discord
-  end-to-end global setup·프로젝트별 usage-guard 알림, `0.9.0` Markdown Wiki 공개 범위,
-  Notion `0.10.0-test` 후보 준비, `0.9.0-test` 독립 시험 배포·수용,
-  별도 `0.9.0` 정식 GitHub·npm 릴리스와 public update 검증
-- Success: Active fragment evidence-backed completion. 시험판 핵심 gate: `MRA-*`, `PRF-*`,
-  `TST9-*`, `REL9-*` 독립 test·stable publication과 public acceptance
-- Stop boundary: protected `main` review, signing·TUF·npm credential,
+- Objective: Hive-native 실행·custom subagent·Discord·Markdown Wiki와 `0.9.0` 시험·정식
+  릴리스 수용. Notion은 `0.10.0-test` 후보로 분리
+- Success: Active fragment의 증거 기반 완료와 `MRA-*`, `REL9-*` 핵심 gate 충족
+- Stop boundary: protected `main` review, external TUF authorization·npm publication approval,
   exact `1.0.0` authority, source usage guard remaining threshold `30%`
 - Invariants: provider-neutral, backend별 canonical source 우선, SQLite 파생 상태,
   Source Wiki·run·role·plan·orchestration event Markdown/TOML 정본,
@@ -45,15 +42,18 @@
 | Model-routed custom subagent | 0 | 32 | 0% |
 | Prompt refine 자동 routing | 12 | 0 | 100% |
 | v0.9 test 기능 마감 | 18 | 0 | 100% |
-| v0.9 full release | 13 | 12 | 52% |
+| v0.9 full release | 25 | 10 | 71.4% |
 | Test release setup routing | 4 | 0 | 100% |
 | Bootstrap·user projection recovery | 13 | 0 | 100% |
-| 한국어 setup 용어 복구 | 5 | 1 | 83.3% |
+| 한국어 setup 용어 복구 | 6 | 0 | 100% |
 | Global Skill 선택 단순화 | 8 | 0 | 100% |
-| Public Skill identity·localization | 6 | 0 | 100% |
-| Discord `v0.9` 연결 UX | 1 | 9 | 10% |
+| Product-only Skill identity·localization | 15 | 0 | 100% |
+| 전역·프로젝트 사용량 보호 정책 | 6 | 0 | 100% |
+| Discord `v0.9` 연결 UX | 11 | 0 | 100% |
+| Windows global setup hardening | 13 | 0 | 100% |
+| Agent 자율 실행 지속 | 8 | 0 | 100% |
 | Notion `v0.10` 후보 | 1 | 10 | 9.1% |
-| **Canonical total** | **374** | **87** | **81.1%** |
+| **Canonical total** | **433** | **74** | **85.4%** |
 
 External production boundary 항목도 미완료 합계에 포함. Protected authority 없이 완료 처리 금지.
 
@@ -93,17 +93,18 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
 | [`active/bootstrap-global-setup-recovery.md`](active/bootstrap-global-setup-recovery.md) | `BGR-*` | 선택형 bootstrap, 쉬운 global setup 복구, user projection merge |
 | [`active/korean-setup-terminology.md`](active/korean-setup-terminology.md) | `KST-*` | 한국어 global setup product term·질문 표기 |
 | [`active/global-skill-selection.md`](active/global-skill-selection.md) | `GSS-*` | all-built-in 기본값·개별 토글·목록 표기 |
-| [`active/skill-identity-localization.md`](active/skill-identity-localization.md) | `SIL-*` | public Skill 이름·plugin namespace·선택 언어 descriptor |
+| [`active/skill-identity-localization.md`](active/skill-identity-localization.md) | `SIL-*` | product-only Skill·source Skill 폐기·표시 언어 |
+| [`active/usage-guard-policy.md`](active/usage-guard-policy.md) | `UGP-*` | 전역·project 한도·product guard |
 | [`active/discord-onboarding-v09.md`](active/discord-onboarding-v09.md) | `DIS9-*` | Discord global setup·프로젝트별 중단 알림·HTML 안내 |
+| [`active/windows-global-setup-hardening.md`](active/windows-global-setup-hardening.md) | `WGS-*` | Mac 원본 복구 유지·Windows CLI 탐색·설정·fresh-session 수용 |
+| [`active/agent-autonomous-continuation.md`](active/agent-autonomous-continuation.md) | `AAC-*` | Agent 소유 작업 지속·terminal state·중간 종료 회귀 |
 | [`active/v0.10.0-notion-candidate.md`](active/v0.10.0-notion-candidate.md) | `N10-*` | Notion 연결·freshness·write-through와 `0.10.0-test` 후보 |
 
 ## Reconciliation gate
 
-- Goal start·resume마다 active fragment의 모든 checklist를 current evidence와 대조
-- 이미 충족된 unchecked item의 owning fragment 우선 갱신
-- Evidence가 missing·stale·indirect·contradictory이면 unchecked 유지
-- Reconciliation 완료 전 새 구현 선택 금지
-- Checklist ID의 fragment 간 중복과 `PLAN.md` 내부 checklist 금지
+- 시작·재개 시 active checklist를 current evidence와 대조. 충족 항목만 owning fragment에서
+  갱신, missing·stale·indirect·contradictory evidence는 유지. 완료 전 새 구현 금지. ID 중복과
+  `PLAN.md` 내부 checklist 금지
 
 ## Fragment map
 
@@ -117,6 +118,6 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
 ## Current execution order
 
 완료 증거: [`CURRENT.md`](../state/CURRENT.md)와 owning active fragment.
-다음 작업: `DIS9-002–010` Discord 연결 UX와 `REL9-014–026` 정식 릴리스 준비. `REL9-011`
-실제 host 수용 확인은 유지보수자 요청으로 제외. Notion 연결은 `N10-002–011`과 함께
-`0.10.0-test`까지 보류.
+현재: `REL9-029`·`REL9-030`·`REL9-014`·`REL9-015` 완료. `0.9.0-test.13`의 exact `develop` SHA,
+Windows 보존형 재설치와 public test 수용까지 완료. 다음: `develop → main` non-force merge, exact main stable
+candidate, signing·TUF·publication. Antigravity·Claude 공개 제외 유지. Notion: `N10-002–011`·`0.10.0-test` 보류.

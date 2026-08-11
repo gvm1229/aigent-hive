@@ -18,45 +18,69 @@
           "platform": { "enum": ["macos", "windows"] },
           "artifact_path": { "type": "string", "minLength": 1, "not": { "pattern": "(^/|(^|/)\\.\\.(/|$)|\\\\)" } },
           "artifact_digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
-          "scheme": { "enum": ["developer-id", "authenticode"] },
+          "scheme": { "enum": ["developer-id", "authenticode", "ad-hoc", "unsigned"] },
           "signer": {
             "type": "object",
             "additionalProperties": false,
             "required": ["kind", "value"],
             "properties": {
-              "kind": { "enum": ["apple-team-id", "authenticode-certificate-thumbprint"] },
+              "kind": { "enum": ["apple-team-id", "authenticode-certificate-thumbprint", "no-publisher"] },
               "value": { "type": "string" }
             }
           },
-          "status": { "enum": ["verified", "fixture-public-evidence", "external-production-required"] }
+          "status": { "enum": ["verified", "fixture-public-evidence", "cost-waived"] }
         },
-        "allOf": [
+        "oneOf": [
           {
-            "if": { "properties": { "platform": { "const": "macos" } }, "required": ["platform"] },
-            "then": {
-              "properties": {
-                "scheme": { "const": "developer-id" },
-                "signer": {
-                  "properties": {
-                    "kind": { "const": "apple-team-id" },
-                    "value": { "pattern": "^[A-Z0-9]{10}$" }
-                  }
+            "properties": {
+              "platform": { "const": "macos" },
+              "scheme": { "const": "developer-id" },
+              "signer": {
+                "properties": {
+                  "kind": { "const": "apple-team-id" },
+                  "value": { "pattern": "^[A-Z0-9]{10}$" }
                 }
-              }
+              },
+              "status": { "enum": ["verified", "fixture-public-evidence"] }
             }
           },
           {
-            "if": { "properties": { "platform": { "const": "windows" } }, "required": ["platform"] },
-            "then": {
-              "properties": {
-                "scheme": { "const": "authenticode" },
-                "signer": {
-                  "properties": {
-                    "kind": { "const": "authenticode-certificate-thumbprint" },
-                    "value": { "pattern": "^[0-9A-F]{40}$" }
-                  }
+            "properties": {
+              "platform": { "const": "macos" },
+              "scheme": { "const": "ad-hoc" },
+              "signer": {
+                "properties": {
+                  "kind": { "const": "no-publisher" },
+                  "value": { "const": "" }
                 }
-              }
+              },
+              "status": { "const": "cost-waived" }
+            }
+          },
+          {
+            "properties": {
+              "platform": { "const": "windows" },
+              "scheme": { "const": "authenticode" },
+              "signer": {
+                "properties": {
+                  "kind": { "const": "authenticode-certificate-thumbprint" },
+                  "value": { "pattern": "^[0-9A-F]{40}$" }
+                }
+              },
+              "status": { "enum": ["verified", "fixture-public-evidence"] }
+            }
+          },
+          {
+            "properties": {
+              "platform": { "const": "windows" },
+              "scheme": { "const": "unsigned" },
+              "signer": {
+                "properties": {
+                  "kind": { "const": "no-publisher" },
+                  "value": { "const": "" }
+                }
+              },
+              "status": { "const": "cost-waived" }
             }
           }
         ]

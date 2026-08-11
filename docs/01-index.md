@@ -9,6 +9,7 @@ current catalog.
 | --- | --- |
 | [Overview 안내](overview/README.md) | 제품 설명 영역 MOC |
 | [제품 개요](overview/product.md) | 목적·지원 범위·원칙·기능 |
+| [스킬 모음](skills.md) | Source·product Skill 이름·기능·사용 예시 |
 | [English README](../README.md) | 간결한 English 입구 |
 | [한국어 README](readme/README.ko.md) | 간결한 한국어 입구 |
 | [License](licensing.md) | Apache-2.0 적용 범위 |
@@ -59,11 +60,14 @@ current catalog.
 | --- | --- |
 | [Guide 안내](guides/README.md) | Guide MOC |
 | [Development](guides/development.md) | Dependency·build·test |
+| [Test lanes](guides/test-lanes.md) | Python 대장·실행 lane·fixture 경계 |
 | [Branching](guides/branching-rules.md) | `develop`·`main` integration |
 | [Commit](guides/commit-rules.md) | Task별 independent commit |
 | [Source usage guard](guides/source-usage-guard.md) | Source quota safeguard |
 | [Judge attestation](guides/ed25519-judge-attestations.md) | External signature ceremony |
 | [Signed update·release](guides/signed-update-and-release.md) | Update·candidate·publication procedure |
+| [Code signing policy](guides/code-signing-policy.md) | 무료 platform signing 상태·privacy·검증 경계 |
+| [npm Trusted Publisher](guides/npm-trusted-publisher.md) | six npm package OIDC 연결·test·stable publication |
 
 ## Releases
 

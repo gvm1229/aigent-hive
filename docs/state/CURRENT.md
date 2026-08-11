@@ -2,14 +2,60 @@
 
 - 기준 branch: `develop`
 - product version: `0.9.0`
-- plan revision: `2.26`
-- 현재 milestone: `0.9.0-test` public acceptance·retention
-- `0.9.0` 예외: `REL9-011` 실제 Codex·Antigravity host 수용과 Claude fixture 공개 제외. `develop → main` CI는 병합 gate 일시 면제이며 실패·미실행 범위 공개 유지
-- 현재 작업: `BGR-012–013` source 응답의 내부 용어 억제·사용자 영향 우선 설명과 local
-  `-dev → 0.9.0-test.6` user-scope validation 완료. Public release 미게시. `SIL-001–006` public Skill identity·localization·retired-ID cleanup과
-  `0.9.0-test.5` 독립 시험 게시 완료. `N10-001` Notion 사용자 노출 차단 완료. `DIS9-004`의 부분 설정 전체 목록·Discord 하위 항목 표시 계약 구현. 다음 작업:
-  `DIS9-002–010` Discord 연결 UX. Notion end-to-end 기능은 `0.10.0-test`까지 보류
-- 외부 중지 경계: `main` PR·review, signing·TUF,
+- plan revision: `2.44`
+- 현재 milestone: `0.9.0` `main` stable candidate·production publication
+- `develop` CI [run `31430181535`](https://github.com/gvm1229/aigent-hive/actions/runs/31430181535):
+  exact `5ffff764bc2aa832863a10d9c01543474b300b51`, 19개 작업 전체 PASS. Copier·문서 스타일·Rust·Ubuntu/macOS/Windows 적합성 PASS
+- Native release runtime [run `31428720884`](https://github.com/gvm1229/aigent-hive/actions/runs/31428720884):
+  exact `c0ca51aae005cd9f494fd7ef3d2c205e472e610b`, Linux musl x86_64·arm64, macOS x86_64·arm64, Windows x86_64 전체 PASS
+- `0.9.0-test.15`: candidate [run `31407585364`](https://github.com/gvm1229/aigent-hive/actions/runs/31407585364),
+  exact `6f809a27dae78589a8b69b23a855b982f2ede728`; publication [run `31409030152`](https://github.com/gvm1229/aigent-hive/actions/runs/31409030152),
+  `test=0.9.0-test.15`, `latest=0.8.0` 유지
+- Stable publication source 자동화 완료: macOS explicit ad-hoc·Windows explicit unsigned 또는 승인된 signer의
+  strict platform evidence, deterministic public-only TUF authorization request, HTTPS archive digest·safe extraction,
+  protected public root·rollback floor, production verifier·10개 target byte identity·publication receipt gate.
+  유료 Apple Developer ID·Microsoft Artifact Signing은 필수 gate에서 제외. SignPath Foundation은 무료 승인 시 선택 적용
+- 다음 외부 경계: `develop → main` PR review/merge, stable candidate 실행,
+  external TUF 2-of-3 authorization, protected environment public root·rollback floor와 publication approval
+- `0.9.0` 예외: 실제 Antigravity host 수용과 Claude fixture 공개 제외. Codex 실제 plugin 활성화·global setup은 `REL9-011` 필수 gate. `develop → main` CI는 병합 gate 일시 면제이며 실패·미실행 범위 공개 유지
+- Codex marketplace 복구: `0.9.0-test.8`의 미완료 transaction으로 남은 manifest 없는 Hive marketplace entry를
+  `hive install --recover`가 Hive-owned root 확인 뒤 조용히 정리·재설치. foreign host entry·knowledge·저장 preference 보존
+- Windows `0.9.0-test.13` actual user-root 수용: global npm install, `hive uninstall → install → dry-run → apply →
+  validate → install validate`, saved preference SHA-256 `1cb6031da4492e20398eae9dad4e4153ab854c38c6270616084a99e9764b0faf`와
+  knowledge 5개 파일 digest 보존, Hive active Skill 22개·retired ID `0건`,
+  Korean·bilingual Wiki, usage guard `20%`, Discord persisted 설정, home temporary answer `0건`, `--full` 거부 PASS.
+  유지보수자 확인: 새 Codex session 자동 `hive` 탐색·Discord 실제 전달. `KST-006`·`DIS9-010`·`WGS-011`·`REL9-011` 완료
+- `hive uninstall`: Hive가 추가한 host activation·projection·package·derived index·backup·runtime만 제거.
+  `.hive/knowledge/`와 저장 user preference는 항상 보존, `--full`·`-f` 삭제 경로 제공 없음. 저장 preference 재설치: setup 질문 `0건`
+- Agent 자율 실행 지속: 이전 시험판 작업에서 Agent 소유 회귀 정리·검증·push·후보·게시가
+  남은 중간 보고 종료 판단 오류. [`agent-autonomous-continuation.md`](../plans/active/agent-autonomous-continuation.md)의
+  `AAC-001–008`: source·소비자 프로젝트·전역 설정 지시문 terminal state·closure gate·session record·static regression 보강 완료
+- `REL9-029`: product-owned Codex expedited default의 clean install·`dry-run → apply → validate`·install validate,
+  preserving uninstall 뒤 saved preference·knowledge 보존과 user projection 자동 복원·revalidate PASS. setup 질문·
+  사용자 홈 답안·manual `where hive`·schema 답안 추측 0건
+- `REL9-030`: Python 전수 module의 단일 lane manifest·owner·contract·release gate, Rust command·CI job 대장,
+  `os × lane` CI matrix·Windows 시간 기록 완료. Python 순차 477.77초 대비 matrix critical path 262.03초 모델,
+  45.2% 단축. Phase 4 repository fixture: ignored `tests/work/hive-phase4-<random>`만 사용
+- Discord 수용: 실제·시험 알림의 동일 renderer·선택 필드·선택 언어, 시험 알림 첫 줄의 변경 안내 고지, 첨부 화면의 webhook 전달
+- Discord 알림 형식: 사용자 승인 구역형 Markdown 적용 완료. 사용량·작업 정보·작업 계속 요청 구역, 빈 줄과 이모지·굵은 제목 적용. 밑줄 표기 `0건`
+- `0.9.0-test.11`: candidate [run `31372510565`](https://github.com/gvm1229/aigent-hive/actions/runs/31372510565)의
+  exact `b0e41f58bd6b73b56cbe92c2b054fb5cefcc9f03`, 5개 native target·npm umbrella·direct installer·attestation PASS.
+  publication [run `31373214154`](https://github.com/gvm1229/aigent-hive/actions/runs/31373214154)의 six-package OIDC `test`
+  게시, annotated GitHub prerelease, `test=0.9.0-test.11`, `latest=0.8.0` 유지 PASS
+- `0.9.0-test.13`: candidate [run `31403054797`](https://github.com/gvm1229/aigent-hive/actions/runs/31403054797)의
+  exact `03a16676ebe8873493b85b717befc68983825cdd`, 5개 native target·npm umbrella·direct installer·attestation PASS.
+  publication [run `31404195752`](https://github.com/gvm1229/aigent-hive/actions/runs/31404195752)의 six-package OIDC
+  `test` 게시, annotated GitHub prerelease, `test=0.9.0-test.13`, `latest=0.8.0` 유지 PASS
+- `0.9.0-test.6`: 후보 [run `31294665865`](https://github.com/gvm1229/aigent-hive/actions/runs/31294665865)의 5개 native target·npm 묶음·attestation PASS. 게시 [run `31295045199`](https://github.com/gvm1229/aigent-hive/actions/runs/31295045199)의 여섯 package OIDC publication, annotated `v0.9.0-test.6`, 22-asset GitHub prerelease, 여섯 package `test=0.9.0-test.6`, `latest=0.8.0` 유지 PASS. Windows clean install·fresh Codex session 수용 전 stable 미착수
+- `REL9-027`: six-package Trusted Publisher OIDC 실제 게시 PASS. `BGR-012–013` source 응답의 내부 용어 억제·사용자 영향 우선 설명과 local `-dev → 0.9.0-test.6` user-scope validation 완료. `SIL-001–006` public Skill identity·localization·retired-ID cleanup과 `0.9.0-test.5` 독립 시험 게시 완료. `N10-001` Notion 사용자 노출 차단 완료. `DIS9-004`의 부분 설정 전체 목록·Discord 하위 항목 표시 계약 구현. 다음 작업: `DIS9-002–010` Discord 연결 UX. Notion end-to-end 기능은 `0.10.0-test`까지 보류
+- Skill 최종 결정: [`docs/skills.md`](../skills.md)의 product-only 22개. Source 개발도 설치 product
+  Skill과 repository directive 사용, tracked source Skill 최종 `0건`. 신규 product `ship`·
+  `amend-directive`; `source-review`는 Wiki 조회·기본 read-only 도구, `source-knowledge`는 세
+  knowledge Skill·`hive source-wiki` CLI로 분리. retired-ID ledger·all-host projection·Copier ledger 회귀 완료
+- 사용량 보호: [`usage-guard-policy.md`](../plans/active/usage-guard-policy.md)의 global 사용자 선택
+  한도·등록 project별 더 보수적인 override·effective `max`·project profile 고정값 0건 구현. 소비자
+  product `usage-guard` 하나, source에는 repository pre-task gate만 유지하며 별도 user policy·Skill·adapter·threshold state 0건
+- 외부 중지 경계: `main` PR·review, external TUF authorization·protected publication approval,
   exact `1.0.0` 사용자 authority
 - Plan load: compact `docs/plans/PLAN.md` + `docs/plans/phases/07-public-qualification.md`
   + `docs/plans/active/plugin-project-lifecycle.md`
@@ -32,22 +78,23 @@
   + `docs/plans/active/bootstrap-global-setup-recovery.md`
   + `docs/plans/active/korean-setup-terminology.md`
   + `docs/plans/active/global-skill-selection.md`
+  + `docs/plans/active/skill-identity-localization.md`
+  + `docs/plans/active/usage-guard-policy.md`
   + `docs/plans/active/discord-onboarding-v09.md`
+  + `docs/plans/active/windows-global-setup-hardening.md`
   + `docs/plans/active/v0.10.0-notion-candidate.md`
-- Plan completion: canonical checklist `374/462` 완료, `88`개 미완료, `81.0%`
+- Plan completion: canonical checklist `428/502` 완료, `74`개 미완료, `85.3%`
 - 출시 분리: `0.9.0`의 user-visible Wiki는 local Markdown 정본과 SQLite projection만 제공.
   Notion backend·host browser OAuth·freshness·write-through·사용자 문서는 `0.10.0-test`까지 보류.
   Discord webhook 대화·시험 알림, HTML 안내, project·run·요청·progress payload는 `DIS9-*` 후속 범위
-- Korean setup 용어: `setup-hive` Korean interaction contract·exact sample 추가. `Skill → 기술`
-  번역 차단, `UserProfile`의 복수 context·선택 description과 legacy single-profile 무손실
-  migration 적용. Global user context의 project workflow·구현 방식·작업 우선순위·Skill 선택 영향
-  없음. canonical·plugin projection byte 동일, Rust 32개·Python 70개 통과. 다음 작업: 독립
-  numbered test release `KST-006`
+- Korean setup 용어: `KST-006` Windows actual 수용 완료. `Skill → 기술` 번역 차단,
+  product-only 22개 Skill·global user context 보존·canonical/plugin projection parity 유지
 - Global Skill selection: `a30eb47`로 profile-bound recommended suite 제거, 새 setup 기본
   all built-in·개별 Skill toggle·one-entry-per-line 적용. 기존 recommended closure는 saved
   answer validate에서만 해석, 새 `all|individual` preview·approval 전 활성 Skill 추가 0건.
   project recommendation은 분리 catalog 유지
-- Public Skill identity·localization: 22개 consumer Skill의 public short name 적용. Host invocation:
+- Skill identity·localization: 22개 consumer Skill의 public short name 적용 완료. 후속 catalog는
+  source·product 이름 분리와 24개 target identity 승인 완료, `SIL-008` 실제 이관 대기. Host invocation:
   `aigent-hive:<short-name>`. Canonical `retired-names.yml`: retired ID→current ID mapping·collision
   reservation·saved selection migration. 삭제 authority: frozen historical release inventory 또는 installed
   ownership manifest의 exact byte 검증만 허용. `0.8.0` 세 host의 historic Skill path 전체 삭제와 변조
@@ -330,7 +377,7 @@ Target: `0.8.0`
 | Update 확인 | Explicit opt-in daily check, offline 뒤 다음 host session 재시도 |
 | Skill suite 선택 | Recommended 또는 individual, dependency closure preview |
 | Wiki opt-out | Default-on, 언제든 disable/enable, Markdown 보존 |
-| Usage guard 선택 | Explicit opt-in, enabled 기본 `20%`, fallback 별도 consent |
+| Usage guard 선택 | Explicit opt-in, 사용자 선택 한도, fallback 별도 consent |
 | User marker | `AIGENT-HIVE:USER:START|END` append·owned replace |
 | User `.agents` | Provider-neutral directive·selected Skill projection |
 | Root knowledge | `~/.hive/knowledge` + disposable root SQLite |

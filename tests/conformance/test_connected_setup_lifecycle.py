@@ -205,14 +205,19 @@ else:
         )
         executable.chmod(executable.stat().st_mode | stat.S_IXUSR)
 
-    def invoke(self, *arguments: str) -> tuple[subprocess.CompletedProcess[str], dict]:
+    def invoke(
+        self,
+        *arguments: str,
+        environment: dict[str, str] | None = None,
+    ) -> tuple[subprocess.CompletedProcess[str], dict]:
         process = subprocess.run(
             [str(self.hive_binary), *arguments, "--output", "json"],
             cwd=REPOSITORY_ROOT,
             check=False,
             text=True,
+            encoding="utf-8",
             capture_output=True,
-            env={**os.environ, **self.environment},
+            env={**os.environ, **self.environment, **(environment or {})},
         )
         try:
             result = json.loads(process.stdout)
@@ -228,6 +233,117 @@ else:
         self.assertEqual(process.returncode, result["exit_code"], process.stderr)
         self.assertEqual(process.returncode, 0, process.stderr)
         return process, result
+
+    def test_product_owned_expedited_defaults_cover_clean_and_preserving_reinstall(self) -> None:
+        if self.host != "codex":
+            self.skipTest(
+                "the v0.9 release default profile is the authenticated Codex acceptance path"
+            )
+        user_root = self.work_root / "default-profile-user-root"
+        user_root.mkdir()
+        host_state = self.work_root / "default-profile-host-state.json"
+        environment = {
+            "HIVE_TEST_USER_ROOT": str(user_root),
+            "HIVE_TEST_HOST_STATE": str(host_state),
+        }
+
+        _, description = self.invoke(
+            "setup",
+            "--scope",
+            "user",
+            "--describe",
+            environment=environment,
+        )
+        defaults = description["data"]["expedited_defaults"]
+        self.assertIsInstance(defaults, dict)
+        self.assertEqual(defaults["interface_language"], "en")
+        self.assertEqual(defaults["persona"], {"id": "strict"})
+        self.assertEqual(defaults["skills"], {"mode": "all"})
+        self.assertEqual(defaults["usage_guard"]["enabled"], False)
+        answers = self.work_root / "product-owned-expedited-defaults.yml"
+        write_yaml(answers, defaults)
+
+        _, installed = self.invoke(
+            "install",
+            "--scope",
+            "user",
+            "--host",
+            self.host,
+            "--user-root",
+            str(user_root),
+            "--apply",
+            environment=environment,
+        )
+        self.assertEqual(installed["code"], "hive.user-install-complete")
+        for mode, expected_code in (
+            ("--dry-run", "hive.user-setup-dry-run-complete"),
+            ("--apply", "hive.user-setup-complete"),
+            ("--validate", "hive.user-setup-valid"),
+        ):
+            _, setup = self.invoke(
+                "setup",
+                "--scope",
+                "user",
+                "--quick-answers",
+                str(answers),
+                "--user-root",
+                str(user_root),
+                mode,
+                environment=environment,
+            )
+            self.assertEqual(setup["code"], expected_code)
+
+        _, validation = self.invoke(
+            "install",
+            "--scope",
+            "user",
+            "--host",
+            self.host,
+            "--user-root",
+            str(user_root),
+            "--validate",
+            environment=environment,
+        )
+        self.assertEqual(validation["code"], "hive.user-install-valid")
+
+        knowledge = user_root / ".hive/knowledge/Wiki/alpha.md"
+        knowledge.parent.mkdir(parents=True, exist_ok=True)
+        knowledge.write_bytes(
+            (REPOSITORY_ROOT / "tests/fixtures/phase2/wiki/alpha.md").read_bytes()
+        )
+        saved_answers = user_root / ".hive/config/user-setup.yml"
+        before = saved_answers.read_bytes()
+        self.invoke("uninstall", "--user-root", str(user_root), environment=environment)
+        self.assertEqual(saved_answers.read_bytes(), before)
+        self.assertEqual(
+            knowledge.read_bytes(),
+            (REPOSITORY_ROOT / "tests/fixtures/phase2/wiki/alpha.md").read_bytes(),
+        )
+
+        _, reinstalled = self.invoke(
+            "install",
+            "--scope",
+            "user",
+            "--host",
+            self.host,
+            "--user-root",
+            str(user_root),
+            "--apply",
+            environment=environment,
+        )
+        self.assertEqual(reinstalled["code"], "hive.user-install-complete")
+        _, revalidated = self.invoke(
+            "setup",
+            "--scope",
+            "user",
+            "--quick-answers",
+            str(saved_answers),
+            "--user-root",
+            str(user_root),
+            "--validate",
+            environment=environment,
+        )
+        self.assertEqual(revalidated["code"], "hive.user-setup-valid")
 
     def setup_project(self, name: str, answers: dict) -> Path:
         target = self.work_root / name
@@ -318,10 +434,10 @@ else:
         self.assertEqual(
             harness["selected_project_skills"],
             [
-                "manage-usage",
-                "refine-prompt",
-                "search-knowledge",
-                "setup-project",
+                "knowledge-recall",
+                "project-setup",
+                "prompt-refine",
+                "usage-guard",
             ],
         )
         agents = (target / "AGENTS.md").read_text(encoding="utf-8")
@@ -342,7 +458,7 @@ else:
                 "persona": {"id": "strict"},
                 "skills": {
                     "mode": "individual",
-                    "selected": ["setup-project"],
+                    "selected": ["project-setup"],
                 },
             }
         )
@@ -358,8 +474,8 @@ else:
         self.assertEqual(harness["wiki_language"], "en")
         self.assertEqual(harness["persona_id"], "strict")
         self.assertTrue(harness["usage_guard_enabled"])
-        self.assertEqual(harness["usage_stop_remaining_percent"], 17)
-        self.assertEqual(harness["selected_project_skills"], ["setup-project"])
+        self.assertEqual(harness["usage_stop_remaining_percent"], 20)
+        self.assertEqual(harness["selected_project_skills"], ["project-setup"])
         agents = (target / "AGENTS.md").read_text(encoding="utf-8")
         self.assertIn("selected interface language `en`", agents)
         self.assertIn(

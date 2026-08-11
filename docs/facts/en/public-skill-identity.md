@@ -4,22 +4,29 @@ pair_id: public-skill-identity
 topic_slug: public-skill-identity
 language: en
 counterpart: ../ko/public-skill-identity.md
-title: "Public Skill Identity"
-summary: "Consumer Skills use short action-oriented names under the aigent-hive plugin namespace, with selected-language descriptors and a fail-closed legacy migration."
+title: "Skill Identity"
+summary: "Aigent Hive uses one product-only 22-Skill catalog; source development reuses those Skills with repository directives, and retired source IDs migrate fail closed."
 tags: [localization, migration, plugin, skill]
 aliases: ["Skill naming"]
 sources:
-  - "repo:docs/plans/PLAN.md#sha256:37356e95e5e40a224ad211d787aabae0894739f30ba7378fe615a2968646368f"
-  - "repo:docs/plans/active/skill-identity-localization.md#sha256:7a5ce0b43d26fe195dc2dd1f0bd2f4a8d578ae2115caa46f88856eb279e5c0e7"
+  - "repo:docs/decisions/ADR-0012-global-onboarding-shared-index.md#sha256:d30564f33f2ead463cfe9e18aa68b697cb07b6c419ee42c9b583fcc11edaf966"
+  - "repo:docs/plans/PLAN.md#sha256:eb1f64384cb74f35e411365f26520c8b8334838afe276f38e98c767f0de7e203"
+  - "repo:docs/plans/active/skill-identity-localization.md#sha256:5ae5f5e9e3ac9f2d9891393a75820fd1adbe8293e467a452d9778cba7fcb0468"
+  - "repo:docs/skills.md#sha256:3ac35c43bee2bd83980415464b852253f271e95794d17fa81074fb2db0f88ec7"
 links: [global-onboarding, skill-routing]
-reviewed_revision: "git:90624108d8774fea2ed71efe64a5263cbb14fbe5"
+reviewed_revision: "git:daa4ab56b05f7403bc1f5f2b44d8471fb99866af"
 status: active
 ---
 
-# Public Skill Identity
+# Skill Identity
 
-Consumer Skills use short action-oriented names in the `aigent-hive:<name>` namespace. Saved
-retired IDs migrate to current IDs; new projections emit current IDs only. The canonical retired-ID
-ledger resolves and reserves names, but a frozen historical release inventory or installed ownership
-manifest is the only deletion authority. Changed, unknown, or foreign old paths fail closed without
-writes. Hive-owned display names and descriptions use the selected `en|ko` interface language.
+Aigent Hive has one product-only catalog of 22 Skills. Source development uses those installed
+product Skills plus repository-owned directives; the final tracked source Skill count is zero.
+Historical `hive-loop-engineering` maps to product `ralph-loop`. Product `ship` discovers each
+repository's Git rules, while `amend-directive` changes user-owned behavior without weakening
+compiled security and integrity boundaries.
+
+Retired IDs support one-to-one, merge, split, or no-Skill routes. Source Wiki work routes through
+the three product knowledge Skills and `hive source-wiki`; read-only code or Git inspection uses
+the host's ordinary repository tools. Historical release bytes stay immutable, and unverified old
+paths fail closed.

@@ -32,6 +32,7 @@
 | 쉬운 설명 기본값 | [en](en/simple-explanation-default.md) | [ko](ko/simple-explanation-default.md) |
 | 검증 결과 명확성 | [en](en/verification-result-clarity.md) | [ko](ko/verification-result-clarity.md) |
 | 사용자 인계 전 자동 처리 | [en](en/automated-user-handoff.md) | [ko](ko/automated-user-handoff.md) |
+| Agent 자율 실행 지속 | [en](en/agent-autonomous-continuation.md) | [ko](ko/agent-autonomous-continuation.md) |
 | 계획 Markdown 정본 | [en](en/plan-persistence.md) | [ko](ko/plan-persistence.md) |
 | Knowledge preservation | [en](en/knowledge-preservation.md) | [ko](ko/knowledge-preservation.md) |
 | Knowledge storage | [en](en/knowledge-storage.md) | [ko](ko/knowledge-storage.md) |
@@ -40,6 +41,7 @@
 | Knowledge portability·scan | [en](en/knowledge-portability-scan.md) | [ko](ko/knowledge-portability-scan.md) |
 | 공유 색인 대상 경로 안전 | [en](en/shared-index-target-safety.md) | [ko](ko/shared-index-target-safety.md) |
 | Global onboarding | [en](en/global-onboarding.md) | [ko](ko/global-onboarding.md) |
+| Hive preserving uninstall | [en](en/hive-preserving-uninstall.md) | [ko](ko/hive-preserving-uninstall.md) |
 | 전역 사용자 맥락 | [en](en/global-user-contexts.md) | [ko](ko/global-user-contexts.md) |
 | Project onboarding | [en](en/project-onboarding.md) | [ko](ko/project-onboarding.md) |
 | Plugin update merge | [en](en/plugin-update-merge.md) | [ko](ko/plugin-update-merge.md) |
@@ -51,6 +53,7 @@
 | Role state | [en](en/role-state.md) | [ko](ko/role-state.md) |
 | Run recovery | [en](en/run-recovery.md) | [ko](ko/run-recovery.md) |
 | Usage sensor | [en](en/usage-sensor-policy.md) | [ko](ko/usage-sensor-policy.md) |
+| Usage guard thresholds | [en](en/usage-guard-thresholds.md) | [ko](ko/usage-guard-thresholds.md) |
 | Automatic dispatch guard | [en](en/automatic-dispatch-guard.md) | [ko](ko/automatic-dispatch-guard.md) |
 | Source usage guard | [en](en/source-usage-guard.md) | [ko](ko/source-usage-guard.md) |
 | Source watcher process replacement | [en](en/source-watcher-process-replacement.md) | [ko](ko/source-watcher-process-replacement.md) |
@@ -60,6 +63,7 @@
 | `dev-check` 플랫폼 PATH | [en](en/dev-check-platform-path.md) | [ko](ko/dev-check-platform-path.md) |
 | Linux musl qualification | [en](en/linux-musl-qualification.md) | [ko](ko/linux-musl-qualification.md) |
 | Test fault isolation | [en](en/test-fault-isolation.md) | [ko](ko/test-fault-isolation.md) |
+| Test lane inventory | [en](en/test-lane-inventory.md) | [ko](ko/test-lane-inventory.md) |
 | Windows namespace gate timeout | [en](en/windows-namespace-gate-timeout.md) | [ko](ko/windows-namespace-gate-timeout.md) |
 | Update transaction | [en](en/update-transaction.md) | [ko](ko/update-transaction.md) |
 | Update discovery | [en](en/update-discovery.md) | [ko](ko/update-discovery.md) |

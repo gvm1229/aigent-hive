@@ -14,6 +14,7 @@ from typing import Sequence
 
 ROOT = Path(__file__).resolve().parents[1]
 REQUIREMENTS = ROOT / "requirements-conformance.txt"
+TEST_LANES = ROOT / "scripts" / "test-lanes.py"
 WINDOWS_SOURCE_GUARD_TESTS = (
     "tests.conformance.test_source_usage_guard.SourceUsageGuardTests."
     "test_write_json_skips_unavailable_fchmod",
@@ -128,16 +129,7 @@ def run_python(arguments: Sequence[str]) -> None:
     environment = tool_environment(uv, cargo, rustc)
     environment["RUSTC"] = str(rustc)
     environment.pop("HIVE_WINDOWS_SOURCE_USAGE_GUARD_SUBSET", None)
-    unittest_arguments = list(arguments) or [
-        "discover",
-        "-s",
-        "tests/conformance",
-        "-t",
-        ".",
-        "-p",
-        "test_*.py",
-        "-v",
-    ]
+    unittest_arguments = list(arguments)
     prefix = [
         str(uv),
         "run",
@@ -157,7 +149,10 @@ def run_python(arguments: Sequence[str]) -> None:
             environment=environment,
         )
         environment["HIVE_WINDOWS_SOURCE_USAGE_GUARD_SUBSET"] = "skip"
-    run([*prefix, *unittest_arguments], environment=environment)
+    if unittest_arguments:
+        run([*prefix, *unittest_arguments], environment=environment)
+    else:
+        run([*prefix[:-2], str(TEST_LANES), "--all"], environment=environment)
 
 
 def parser() -> argparse.ArgumentParser:

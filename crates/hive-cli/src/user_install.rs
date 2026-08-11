@@ -216,6 +216,8 @@ const ROOT_WIKI_LOG: &[u8] =
     include_bytes!("../../../harness/template/.hive/knowledge/Wiki/log.md");
 const ROOT_SUPPRESSION: &[u8] =
     include_bytes!("../../../harness/template/.hive/knowledge/suppression.yml");
+const ROOT_DISCORD_USAGE_GUIDE: &[u8] =
+    include_bytes!("../../../harness/template/.hive/guides/discord-usage-notifications.html");
 const USER_070_SETUP_REVIEW: &[u8] = b"schema_version: 1\nsource_version: 0.7.0\nsetup_required: true\nwiki_markdown_preserved: true\nlegacy_skill_projection: all-built-ins\n";
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -403,6 +405,8 @@ struct UserBackupManifest {
     host_owned_state: Option<HostStateSnapshot>,
     #[serde(default)]
     pending_host_transition: Option<PendingHostTransition>,
+    #[serde(default)]
+    codex_plugin_was_latent_before_marketplace_add: bool,
     entries: Vec<UserBackupEntry>,
 }
 
@@ -576,6 +580,396 @@ pub(crate) fn run_update(arguments: &[String]) -> ExitCode {
     run(UserOperation::Update, arguments)
 }
 
+const USER_UNINSTALL_USAGE: &str = "\
+Remove the user-scope Aigent Hive installation while preserving saved preferences and knowledge.
+
+USAGE:
+    hive uninstall [--user-root <absolute-dir>] [--output json]
+
+RESULT:
+    Remove Hive-managed host activation, projections, packages, indexes, backups, and runtime state. Always preserve `.hive/knowledge/` and saved user preferences.
+";
+
+struct UserUninstallArguments {
+    root_cap: Dir,
+}
+
+pub(crate) fn run_uninstall(arguments: &[String]) -> ExitCode {
+    if arguments.len() == 1 && arguments[0] == "--help" {
+        print!("{USER_UNINSTALL_USAGE}");
+        return ExitCode::SUCCESS;
+    }
+    let result = parse_uninstall(arguments)
+        .and_then(|arguments| execute_uninstall(&arguments, &SystemCommandRunner))
+        .unwrap_or_else(|error| failure("UninstallHiveUser", &error));
+    emit_action_result(&result)
+}
+
+fn parse_uninstall(arguments: &[String]) -> Result<UserUninstallArguments, InstallError> {
+    let mut user_root = None;
+    let mut index = 0;
+    while index < arguments.len() {
+        match arguments[index].as_str() {
+            "--output" => {
+                let value = arguments
+                    .get(index + 1)
+                    .ok_or_else(|| InstallError::Input("missing value for --output".to_owned()))?;
+                if value != "json" {
+                    return Err(InstallError::Input(
+                        "uninstall --output must be json".to_owned(),
+                    ));
+                }
+                index += 2;
+            }
+            "--user-root" => {
+                let value = arguments.get(index + 1).ok_or_else(|| {
+                    InstallError::Input("missing value for --user-root".to_owned())
+                })?;
+                if user_root.replace(value.clone()).is_some() {
+                    return Err(InstallError::Input(
+                        "duplicate option: --user-root".to_owned(),
+                    ));
+                }
+                index += 2;
+            }
+            option => return Err(InstallError::Input(format!("unknown option: {option}"))),
+        }
+    }
+    let requested_user_root =
+        user_root.map_or_else(resolve_user_root, |value| Ok(PathBuf::from(value)))?;
+    let (_, root_cap) = open_canonical_user_root(&requested_user_root)?;
+    Ok(UserUninstallArguments { root_cap })
+}
+
+fn execute_uninstall(
+    arguments: &UserUninstallArguments,
+    runner: &impl CommandRunner,
+) -> Result<ActionResult, InstallError> {
+    let mut changed_paths = Vec::new();
+    let mut removed_hosts = Vec::new();
+    for host in [UserHost::Codex, UserHost::Claude, UserHost::Antigravity] {
+        let manifest_relative = PathBuf::from(format!(".hive/install/{}.json", host.as_str()));
+        let manifest = read_installed_manifest(&arguments.root_cap, &manifest_relative, host)?;
+        let host_evidence = manifest.is_some()
+            || owned_path_exists(&arguments.root_cap, host_uninstall_root(host))?;
+        if host_evidence {
+            remove_host_activation(host, runner)?;
+            removed_hosts.push(host.as_str());
+        }
+        if let Some(manifest) = manifest {
+            for entry in manifest.entries {
+                let path = PathBuf::from(entry.path);
+                if path.starts_with(".hive/knowledge") {
+                    continue;
+                }
+                if entry.ownership == "shared-marker" {
+                    remove_hive_guidance_marker(&arguments.root_cap, &path, &mut changed_paths)?;
+                } else {
+                    remove_owned_regular(&arguments.root_cap, &path, &mut changed_paths)?;
+                }
+            }
+        }
+        remove_owned_regular(&arguments.root_cap, &manifest_relative, &mut changed_paths)?;
+    }
+    for path in crate::user_setup::uninstall_projection_paths(&arguments.root_cap)
+        .map_err(|error| InstallError::Conflict(error.message().to_owned()))?
+    {
+        remove_owned_regular(&arguments.root_cap, &path, &mut changed_paths)?;
+    }
+    for relative in [
+        ".hive/install",
+        ".hive/install-transactions",
+        ".hive/backups",
+        ".hive/marketplaces",
+        ".hive/plugins",
+        ".hive/index",
+        ".hive/runtime",
+        ".hive/claims",
+        ".hive/guides",
+    ] {
+        remove_owned_tree(&arguments.root_cap, Path::new(relative), &mut changed_paths)?;
+    }
+    for relative in [
+        ROOT_INDEX_RELATIVE,
+        ".hive/config/user-active-skills.yml",
+        ".hive/config/user-setup-progress.yml",
+        ".hive/config/user-setup-review.yml",
+        ".hive/config/projects.yml",
+    ] {
+        remove_owned_regular(&arguments.root_cap, Path::new(relative), &mut changed_paths)?;
+    }
+    for relative in [
+        ".hive/config",
+        ".hive",
+        ".agents/skills",
+        ".agents/directives",
+        ".agents",
+    ] {
+        remove_owned_empty_dir(&arguments.root_cap, Path::new(relative))?;
+    }
+    changed_paths.sort();
+    changed_paths.dedup();
+    Ok(ActionResult {
+        schema_version: 1,
+        action: "UninstallHiveUser",
+        status: "success",
+        exit_code: 0,
+        code: "hive.user-uninstall-complete",
+        message: "user-scope Hive installation removed; saved preferences and knowledge preserved"
+            .to_owned(),
+        changed_paths,
+        evidence: Vec::new(),
+        next_action: Some(
+            "run hive install --scope user --host <saved-host> --apply --output json; saved preferences are reused without setup questions".to_owned(),
+        ),
+        data: Some(json!({
+            "removed_hosts": removed_hosts,
+            "preserved": [".hive/knowledge", ".hive/config/user-setup.yml", ".hive/config/user-preferences.json"],
+        })),
+    })
+}
+
+fn host_uninstall_root(host: UserHost) -> &'static Path {
+    match host {
+        UserHost::Codex => Path::new(".hive/marketplaces/codex"),
+        UserHost::Claude => Path::new(".hive/marketplaces/claude"),
+        UserHost::Antigravity => Path::new(ANTIGRAVITY_SOURCE_RELATIVE),
+    }
+}
+
+fn owned_path_exists(root: &Dir, relative: &Path) -> Result<bool, InstallError> {
+    let Some((parent, name)) = capability_parent(root, relative, false)? else {
+        return Ok(false);
+    };
+    match parent.symlink_metadata(&name) {
+        Ok(metadata) if metadata.file_type().is_symlink() => Err(InstallError::Conflict(format!(
+            "Hive-owned uninstall path is a symlink: {}",
+            relative.display()
+        ))),
+        Ok(_) => Ok(true),
+        Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(false),
+        Err(error) => Err(io_internal("inspect uninstall path", relative, error)),
+    }
+}
+
+fn remove_host_activation(host: UserHost, runner: &impl CommandRunner) -> Result<(), InstallError> {
+    let program = match host {
+        UserHost::Codex => "codex",
+        UserHost::Claude => "claude",
+        UserHost::Antigravity => "agy",
+    };
+    let executable = runner.qualify(program).map_err(|_| {
+        InstallError::Unsupported(format!(
+            "{program} executable is unavailable; Hive host activation was not removed"
+        ))
+    })?;
+    probe_supported_host_version(host, &executable, runner)?;
+    let commands: &[&[&str]] = match host {
+        UserHost::Codex => &[
+            &["plugin", "remove", "aigent-hive@aigent-hive", "--json"],
+            &["plugin", "marketplace", "remove", "aigent-hive", "--json"],
+        ],
+        UserHost::Claude => &[
+            &[
+                "plugin",
+                "uninstall",
+                "aigent-hive@aigent-hive",
+                "--scope",
+                "user",
+            ],
+            &[
+                "plugin",
+                "marketplace",
+                "remove",
+                "aigent-hive",
+                "--scope",
+                "user",
+            ],
+        ],
+        UserHost::Antigravity => &[&["plugin", "uninstall", "aigent-hive"]],
+    };
+    for command in commands {
+        let _ = runner.run(&executable, command, COMMAND_TIMEOUT, COMMAND_OUTPUT_LIMIT);
+    }
+    let state = probe_host_snapshot(host, &executable, runner)?;
+    let absent = match state {
+        HostStateSnapshot::Codex(state) => state.marketplace.is_none() && state.plugin.is_none(),
+        HostStateSnapshot::Claude(state) => state.marketplace.is_none() && state.plugin.is_none(),
+        HostStateSnapshot::Antigravity(state) => state.plugin.is_none(),
+    };
+    if absent {
+        Ok(())
+    } else {
+        Err(InstallError::Verification(format!(
+            "{} still reports a Hive-owned activation after uninstall",
+            host.as_str()
+        )))
+    }
+}
+
+fn remove_hive_guidance_marker(
+    root: &Dir,
+    relative: &Path,
+    changed_paths: &mut Vec<String>,
+) -> Result<(), InstallError> {
+    let Some(existing) = read_optional_regular(root, relative, MAX_USER_FILE_BYTES)? else {
+        return Ok(());
+    };
+    let starts = find_all(&existing, USER_MARKER_START);
+    let ends = find_all(&existing, USER_MARKER_END);
+    let replacement = match (starts.as_slice(), ends.as_slice()) {
+        ([], []) => return Ok(()),
+        ([start], [end]) if start < end => {
+            let mut end = end + USER_MARKER_END.len();
+            if existing.get(end) == Some(&b'\n') {
+                end += 1;
+            }
+            let mut bytes = Vec::with_capacity(existing.len());
+            bytes.extend_from_slice(&existing[..*start]);
+            bytes.extend_from_slice(&existing[end..]);
+            bytes
+        }
+        _ => {
+            return Err(InstallError::Conflict(format!(
+                "Hive guidance marker is malformed: {}",
+                relative.display()
+            )))
+        }
+    };
+    let permissions = file_permissions(root, relative)?;
+    if replacement.is_empty() {
+        remove_regular_if_exists(root, relative, Some(&existing), Some(permissions))?;
+    } else {
+        write_atomic(
+            root,
+            relative,
+            &replacement,
+            false,
+            Some(&existing),
+            Some(permissions),
+        )?;
+    }
+    changed_paths.push(portable(relative));
+    Ok(())
+}
+
+fn remove_owned_regular(
+    root: &Dir,
+    relative: &Path,
+    changed_paths: &mut Vec<String>,
+) -> Result<(), InstallError> {
+    let Some(existing) = read_optional_regular(root, relative, MAX_USER_FILE_BYTES)? else {
+        return Ok(());
+    };
+    let permissions = file_permissions(root, relative)?;
+    remove_regular_if_exists(root, relative, Some(&existing), Some(permissions))?;
+    changed_paths.push(portable(relative));
+    Ok(())
+}
+
+fn remove_owned_tree(
+    root: &Dir,
+    relative: &Path,
+    changed_paths: &mut Vec<String>,
+) -> Result<(), InstallError> {
+    let Some((parent, name)) = capability_parent(root, relative, false)? else {
+        return Ok(());
+    };
+    let metadata = match parent.symlink_metadata(&name) {
+        Ok(metadata) => metadata,
+        Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(()),
+        Err(error) => return Err(io_internal("inspect uninstall tree", relative, error)),
+    };
+    if metadata.file_type().is_symlink() || !metadata.is_dir() {
+        return Err(InstallError::Conflict(format!(
+            "Hive-owned uninstall path is not a no-follow directory: {}",
+            relative.display()
+        )));
+    }
+    let directory = parent.open_dir_nofollow(&name).map_err(|error| {
+        InstallError::Conflict(format!(
+            "cannot pin Hive-owned uninstall directory {}: {error}",
+            relative.display()
+        ))
+    })?;
+    remove_owned_dir_contents(&directory, relative, changed_paths)?;
+    drop(directory);
+    parent
+        .remove_dir(&name)
+        .map_err(|error| io_internal("remove uninstall directory", relative, error))?;
+    Ok(())
+}
+
+fn remove_owned_dir_contents(
+    directory: &Dir,
+    prefix: &Path,
+    changed_paths: &mut Vec<String>,
+) -> Result<(), InstallError> {
+    let entries = directory.entries().map_err(|error| {
+        InstallError::Internal(format!(
+            "cannot enumerate Hive-owned uninstall directory: {error}"
+        ))
+    })?;
+    for entry in entries {
+        let name = entry
+            .map_err(|error| {
+                InstallError::Internal(format!("cannot read uninstall entry: {error}"))
+            })?
+            .file_name();
+        let relative = prefix.join(&name);
+        let metadata = directory
+            .symlink_metadata(&name)
+            .map_err(|error| io_internal("inspect uninstall entry", &relative, error))?;
+        if metadata.is_dir() && !metadata.file_type().is_symlink() {
+            let child = directory.open_dir_nofollow(&name).map_err(|error| {
+                InstallError::Conflict(format!(
+                    "cannot pin Hive-owned uninstall directory {}: {error}",
+                    relative.display()
+                ))
+            })?;
+            remove_owned_dir_contents(&child, &relative, changed_paths)?;
+            drop(child);
+            directory
+                .remove_dir(&name)
+                .map_err(|error| io_internal("remove uninstall directory", &relative, error))?;
+        } else if metadata.is_file() && !metadata.file_type().is_symlink() {
+            directory
+                .remove_file(&name)
+                .map_err(|error| io_internal("remove uninstall file", &relative, error))?;
+            changed_paths.push(portable(&relative));
+        } else {
+            return Err(InstallError::Conflict(format!(
+                "Hive-owned uninstall directory contains a non-regular entry: {}",
+                relative.display()
+            )));
+        }
+    }
+    Ok(())
+}
+
+fn remove_owned_empty_dir(root: &Dir, relative: &Path) -> Result<(), InstallError> {
+    let Some((parent, name)) = capability_parent(root, relative, false)? else {
+        return Ok(());
+    };
+    let directory = match parent.open_dir_nofollow(&name) {
+        Ok(directory) => directory,
+        Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(()),
+        Err(error) => return Err(io_internal("open uninstall directory", relative, error)),
+    };
+    if directory
+        .entries()
+        .map_err(|error| io_internal("enumerate uninstall directory", relative, error))?
+        .next()
+        .is_none()
+    {
+        drop(directory);
+        parent
+            .remove_dir(&name)
+            .map_err(|error| io_internal("remove empty uninstall directory", relative, error))?;
+    }
+    Ok(())
+}
+
 pub(crate) fn apply_configured_host(
     user_root: &Path,
     selected_host: crate::user_setup::SelectedHost,
@@ -633,14 +1027,49 @@ fn configured_host(
         crate::user_setup::SelectedHost::Claude => UserHost::Claude,
         crate::user_setup::SelectedHost::Antigravity => UserHost::Antigravity,
     };
-    let root_cap = open_user_root(user_root).map_err(|error| error.message().to_owned())?;
+    let (user_root, root_cap) =
+        open_canonical_user_root(user_root).map_err(|error| error.message().to_owned())?;
     let arguments = UserArguments {
         host,
         mode,
-        user_root: user_root.to_path_buf(),
+        user_root,
         root_cap,
         setup_override: Some((config.clone(), resolved_skills.to_vec())),
     };
+    if mode == UserMode::DryRun
+        && has_recoverable_dangling_codex_marketplace(&arguments)
+            .map_err(|error| error.message().to_owned())?
+    {
+        let plan = build_plan(&arguments).map_err(|error| error.message().to_owned())?;
+        let mut result = success_result(
+            UserOperation::Install,
+            &arguments,
+            &plan,
+            "hive.user-install-dry-run-recovery-planned",
+            "user installation dry run completed with Hive-owned recovery planned",
+            None,
+        );
+        result.next_action = Some(format!(
+            "run with --host {} --apply; Hive will recover its incomplete marketplace activation before setup",
+            arguments.host.as_str()
+        ));
+        return Ok(result);
+    }
+    if mode == UserMode::Apply
+        && has_open_transaction(&arguments).map_err(|error| error.message().to_owned())?
+    {
+        let (recovery_root, recovery_cap) = open_canonical_user_root(&arguments.user_root)
+            .map_err(|error| error.message().to_owned())?;
+        let recovery = UserArguments {
+            host: arguments.host,
+            mode: UserMode::Recover,
+            user_root: recovery_root,
+            root_cap: recovery_cap,
+            setup_override: None,
+        };
+        execute(UserOperation::Install, &recovery, &SystemCommandRunner)
+            .map_err(|error| error.message().to_owned())?;
+    }
     execute(UserOperation::Install, &arguments, &SystemCommandRunner)
         .map_err(|error| error.message().to_owned())
 }
@@ -654,11 +1083,12 @@ pub(crate) fn recover_configured_host(
         crate::user_setup::SelectedHost::Claude => UserHost::Claude,
         crate::user_setup::SelectedHost::Antigravity => UserHost::Antigravity,
     };
-    let root_cap = open_user_root(user_root).map_err(|error| error.message().to_owned())?;
+    let (user_root, root_cap) =
+        open_canonical_user_root(user_root).map_err(|error| error.message().to_owned())?;
     let arguments = UserArguments {
         host,
         mode: UserMode::Recover,
-        user_root: user_root.to_path_buf(),
+        user_root,
         root_cap,
         setup_override: None,
     };
@@ -752,8 +1182,9 @@ fn parse(arguments: &[String]) -> Result<UserArguments, InstallError> {
         }
     };
     let mode = mode.ok_or_else(|| InstallError::Input("missing install/update mode".to_owned()))?;
-    let user_root = user_root.map_or_else(resolve_user_root, |value| Ok(PathBuf::from(value)))?;
-    let root_cap = open_user_root(&user_root)?;
+    let requested_user_root =
+        user_root.map_or_else(resolve_user_root, |value| Ok(PathBuf::from(value)))?;
+    let (user_root, root_cap) = open_canonical_user_root(&requested_user_root)?;
     Ok(UserArguments {
         host,
         mode,
@@ -803,8 +1234,23 @@ fn open_user_root(root: &Path) -> Result<Dir, InstallError> {
     })
 }
 
+fn open_canonical_user_root(root: &Path) -> Result<(PathBuf, Dir), InstallError> {
+    let root_cap = open_user_root(root)?;
+    let canonical = root.canonicalize().map_err(|error| {
+        InstallError::Conflict(format!(
+            "cannot resolve user root {} after no-follow validation: {error}",
+            root.display()
+        ))
+    })?;
+    Ok((canonical, root_cap))
+}
+
 pub(crate) fn open_user_root_for_setup(root: &Path) -> Result<Dir, String> {
     open_user_root(root).map_err(|error| error.message().to_owned())
+}
+
+pub(crate) fn open_canonical_user_root_for_setup(root: &Path) -> Result<(PathBuf, Dir), String> {
+    open_canonical_user_root(root).map_err(|error| error.message().to_owned())
 }
 
 pub(crate) fn read_user_setup_file(
@@ -947,7 +1393,17 @@ fn execute_apply(
     })
     .and_then(|()| validate_plugin_package(arguments, plan))
     .and_then(|()| rebuild_root_index(arguments))
-    .and_then(|()| validate_applied_bytes(arguments));
+    .and_then(|()| {
+        crate::user_setup::restore_saved_projection_after_uninstall(&arguments.root_cap).map_err(
+            |error| {
+                InstallError::Verification(format!(
+                    "saved user preferences could not be restored after installation: {}",
+                    error.message()
+                ))
+            },
+        )
+    })
+    .and_then(|_| validate_applied_bytes(arguments));
     let mut refreshed = activated.map_err(|primary| {
         rollback_after_failure(
             arguments,
@@ -1055,7 +1511,7 @@ fn build_desired_user_files(
     }
 
     let selected_skills = operational.map_or_else(
-        || vec!["update-hive".to_owned(), "configure".to_owned()],
+        || vec!["product-update".to_owned(), "user-setup".to_owned()],
         |(_, skills)| skills.clone(),
     );
     let language = operational.map_or(DescriptorLanguage::En, |(config, _)| {
@@ -1608,7 +2064,7 @@ fn render_user_guidance(
             (
                 "# Aigent Hive user directives / 사용자 지침",
                 "Active adapter / 활성 adapter",
-                "- State / 상태: `setup-required`\n- Ask the user to choose `English` or `한국어` first, then ask for daily update-check consent. / 먼저 `English` 또는 `한국어`를 선택하고 일일 update 확인 동의를 질문.\n- Use the installed `aigent-hive:configure` Skill before ordinary Hive Skills. / 일반 Hive Skill보다 설치된 `aigent-hive:configure` Skill을 먼저 사용.\n- Before setup completes, only setup, doctor, update, and recover operations are available. / 설정 완료 전 setup, doctor, update, recover만 사용 가능.\n"
+                "- State / 상태: `setup-required`\n- Ask the user to choose `English` or `한국어` first, then ask for daily update-check consent. / 먼저 `English` 또는 `한국어`를 선택하고 일일 update 확인 동의를 질문.\n- Use the installed `aigent-hive:user-setup` Skill before ordinary Hive Skills. / 일반 Hive Skill보다 설치된 `aigent-hive:user-setup` Skill을 먼저 사용.\n- Before setup completes, only setup, doctor, update, and recover operations are available. / 설정 완료 전 setup, doctor, update, recover만 사용 가능.\n"
                     .to_owned(),
                 "- Preserve foreign guidance bytes and modify only exact Hive marker blocks. / Foreign guidance bytes를 보존하고 exact Hive marker block만 변경.\n- Never request provider API credentials or call model-provider APIs on Hive's behalf. / Provider API credential을 요청하거나 Hive를 대신해 model-provider API를 호출하지 않음.\n",
             )
@@ -1635,7 +2091,7 @@ fn render_user_guidance(
                     "# Aigent Hive user directives",
                     "Active adapter",
                     format!(
-                        "- State: `operational`\n- Interface language: `en`; use English for every question and response unless the user explicitly requests another language for the current response. A message written in another language does not by itself change this preference. Keep Korean only for exact Korean names, literals, quotations, or text the user asks to preserve.\n- Selected hosts: `{hosts}`\n- Global Wiki: `{wiki}`\n- Daily update check: `{update_check}`.\n- When enabled, run `hive update --check --user-root <user-root> --output json` before the first Hive task of each host session; never install from a check.\n- Use `aigent-hive:setup-project` for project expedited or custom setup.\n- Project Markdown Wiki remains canonical; the user-root SQLite index is derived and shared.\n- Use `aigent-hive:upgrade-project` for project projection upgrades.\n- Offer one optional refinement suggestion for ambiguous or detail-poor ordinary requests; never rewrite automatically.\n- Unless the user explicitly opts out for the current request, write every plan to an appropriate project Markdown file before presenting or executing it. Never mirror the persisted plan one-for-one in the session; reference it with a concise summary and file path, or provide the file path alone for extensive review.\n- Before presenting pending actions, finish every safe, in-scope, automatable task. Present only the remaining user-owned steps as a concise ordered guide with the exact action, expected result, and reason user authority is required. Separate failures or impossible tasks with their causes and recovery paths.\n"
+                        "- State: `operational`\n- Interface language: `en`; use English for every question and response unless the user explicitly requests another language for the current response. A message written in another language does not by itself change this preference. Keep Korean only for exact Korean names, literals, quotations, or text the user asks to preserve.\n- Selected hosts: `{hosts}`\n- Global Wiki: `{wiki}`\n- Daily update check: `{update_check}`.\n- When enabled, run `hive update --check --user-root <user-root> --output json` before the first Hive task of each host session; never install from a check.\n- Use `aigent-hive:project-setup` for project expedited or custom setup.\n- Project Markdown Wiki remains canonical; the user-root SQLite index is derived and shared.\n- Use `aigent-hive:project-refresh` for project projection upgrades.\n- Offer one optional refinement suggestion for ambiguous or detail-poor ordinary requests; never rewrite automatically.\n- Unless the user explicitly opts out for the current request, write every plan to an appropriate project Markdown file before presenting or executing it. Never mirror the persisted plan one-for-one in the session; reference it with a concise summary and file path, or provide the file path alone for extensive review.\n- Before presenting pending actions, finish every safe, in-scope, automatable task. Present only the remaining user-owned steps as a concise ordered guide with the exact action, expected result, and reason user authority is required. Separate failures or impossible tasks with their causes and recovery paths.\n"
                     ),
                     "- Preserve foreign guidance bytes and modify only exact Hive marker blocks.\n- Never request provider API credentials or call model-provider APIs on Hive's behalf.\n",
                 ),
@@ -1643,12 +2099,24 @@ fn render_user_guidance(
                     "# Aigent Hive 사용자 지침",
                     "활성 어댑터",
                     format!(
-                        "- 상태: `operational`\n- 사용 언어: `ko`; 현재 응답에 다른 언어를 사용하라는 명시적 요청이 없는 한 모든 질문과 응답에 한국어 사용. 다른 언어로 작성된 메시지만으로 이 선호를 변경하지 않음. 고유명사, 제품·패키지 이름, 명령어, 코드 식별자, 경로, 스키마 키, 정확한 화면 문구, 뚜렷한 한국어 대체어가 없는 용어만 영어 유지. 대체 가능한 일반 영어 단어의 한영 혼용 금지.\n- 선택한 호스트: `{hosts}`\n- 전역 위키: `{wiki}`\n- 일일 갱신 확인: `{update_check}`.\n- 활성화한 경우 각 호스트 세션의 첫 Hive 작업 전에 `hive update --check --user-root <user-root> --output json` 실행. 확인만으로 설치 금지.\n- 프로젝트 빠른 설정 또는 사용자 지정 설정에는 `aigent-hive:setup-project` 사용.\n- 프로젝트 Markdown 위키가 정본이며 사용자 루트 SQLite 색인은 파생·공유 상태.\n- 프로젝트 투영 갱신에는 `aigent-hive:upgrade-project` 사용.\n- 모호하거나 핵심 세부가 부족한 일반 요청에는 자동 재작성 없이 선택적 개선 제안 1개만 제공.\n- 현재 요청에서 사용자의 명시적 제외 요청이 없는 모든 계획을 적절한 프로젝트 Markdown 파일에 제시·실행 전 기록. 저장한 계획 전문을 session에 일대일 복제하지 않고 간결한 요약과 파일 경로로 참조하며, 광범위한 검토에는 파일 경로만 제시.\n- 남은 작업 제시 전 범위 안에서 안전하게 자동 처리 가능한 작업을 모두 완료. 사용자 권한이 필요한 단계만 정확한 행동·예상 결과·권한 필요 이유를 포함한 간결한 순서 안내로 제시. 실패·불가능 작업은 원인과 해결 경로를 분리해 제시.\n"
+                        "- 상태: `operational`\n- 사용 언어: `ko`; 현재 응답에 다른 언어를 사용하라는 명시적 요청이 없는 한 모든 질문과 응답에 한국어 사용. 다른 언어로 작성된 메시지만으로 이 선호를 변경하지 않음. 고유명사, 제품·패키지 이름, 명령어, 코드 식별자, 경로, 스키마 키, 정확한 화면 문구, 뚜렷한 한국어 대체어가 없는 용어만 영어 유지. 대체 가능한 일반 영어 단어의 한영 혼용 금지.\n- 선택한 호스트: `{hosts}`\n- 전역 위키: `{wiki}`\n- 일일 갱신 확인: `{update_check}`.\n- 활성화한 경우 각 호스트 세션의 첫 Hive 작업 전에 `hive update --check --user-root <user-root> --output json` 실행. 확인만으로 설치 금지.\n- 프로젝트 빠른 설정 또는 사용자 지정 설정에는 `aigent-hive:project-setup` 사용.\n- 프로젝트 Markdown 위키가 정본이며 사용자 루트 SQLite 색인은 파생·공유 상태.\n- 프로젝트 투영 갱신에는 `aigent-hive:project-refresh` 사용.\n- 모호하거나 핵심 세부가 부족한 일반 요청에는 자동 재작성 없이 선택적 개선 제안 1개만 제공.\n- 현재 요청에서 사용자의 명시적 제외 요청이 없는 모든 계획을 적절한 프로젝트 Markdown 파일에 제시·실행 전 기록. 저장한 계획 전문을 session에 일대일 복제하지 않고 간결한 요약과 파일 경로로 참조하며, 광범위한 검토에는 파일 경로만 제시.\n- 남은 작업 제시 전 범위 안에서 안전하게 자동 처리 가능한 작업을 모두 완료. 사용자 권한이 필요한 단계만 정확한 행동·예상 결과·권한 필요 이유를 포함한 간결한 순서 안내로 제시. 실패·불가능 작업은 원인과 해결 경로를 분리해 제시.\n"
                     ),
                     "- 외부 지침 바이트 보존, 정확한 Hive 표시 블록만 변경.\n- 제공자 API 자격 증명 요청 금지, Hive를 대신한 모델 제공자 API 호출 금지.\n",
                 ),
             }
         },
+    );
+    let body = body.replacen(
+        "- Before presenting pending actions, finish every safe, in-scope, automatable task. Present only the remaining user-owned steps as a concise ordered guide with the exact action, expected result, and reason user authority is required. Separate failures or impossible tasks with their causes and recovery paths.\n",
+        "- Before presenting pending actions, finish every safe, in-scope, automatable task. Present only the remaining user-owned steps as a concise ordered guide with the exact action, expected result, and reason user authority is required. Separate failures or impossible tasks with their causes and recovery paths.\n\\
+- For `all todos`, `until completion`, `do not stop`, or an equivalent terminal request, continue while any in-scope agent-owned inspection, fix, verification, commit, permitted push, CI observation, or authorized publication remains. A progress report naming such work must not end the task. Before a final response, classify every remaining item as `agent-owned`, `awaiting-user-authority`, `awaiting-external-evidence`, or `blocked`; only no `agent-owned` work permits completion.\n",
+        1,
+    );
+    let body = body.replacen(
+        "- 남은 작업 제시 전 범위 안에서 안전하게 자동 처리 가능한 작업을 모두 완료. 사용자 권한이 필요한 단계만 정확한 행동·예상 결과·권한 필요 이유를 포함한 간결한 순서 안내로 제시. 실패·불가능 작업은 원인과 해결 경로를 분리해 제시.\n",
+        "- 남은 작업 제시 전 범위 안에서 안전하게 자동 처리 가능한 작업을 모두 완료. 사용자 권한이 필요한 단계만 정확한 행동·예상 결과·권한 필요 이유를 포함한 간결한 순서 안내로 제시. 실패·불가능 작업은 원인과 해결 경로를 분리해 제시.\n\\
+- `all todos`, `until completion`, `do not stop` 또는 같은 완료 요청: 범위 안 Agent 소유 조사·수정·검증·commit·허용된 push·CI 관찰·승인된 게시 작업이 남은 동안 계속 진행. 해당 작업이 남았다는 진행 보고로 task 종료 금지. 최종 응답 전 남은 항목을 `agent-owned`, `awaiting-user-authority`, `awaiting-external-evidence`, `blocked`로 분류. `agent-owned` 작업 `0건`일 때만 완료 표기.\n",
+        1,
     );
     let explanation_style = setup.map_or(
         "- Explain in simple terms by default. Use concrete examples when they materially improve understanding, but do not force irrelevant examples or weaken technical precision. / 기본 설명은 쉬운 말로 작성. 이해에 도움이 될 때 구체적 예시 사용. 관련 없는 예시 강제 또는 기술적 정확성 약화 금지.\n",
@@ -1728,6 +2196,10 @@ fn seed_root_knowledge(
         (".hive/knowledge/Wiki/index.md", ROOT_WIKI_INDEX),
         (".hive/knowledge/Wiki/log.md", ROOT_WIKI_LOG),
         (".hive/knowledge/suppression.yml", ROOT_SUPPRESSION),
+        (
+            ".hive/guides/discord-usage-notifications.html",
+            ROOT_DISCORD_USAGE_GUIDE,
+        ),
     ] {
         let relative = PathBuf::from(relative);
         let bytes = read_optional_regular(root, &relative, MAX_USER_FILE_BYTES)?
@@ -2004,7 +2476,7 @@ fn test_three_user_inventory(
     let mut setup_hive = false;
     for entry in &mut entries {
         if is_managed_ownership(&entry.ownership)
-            && entry.path.ends_with("/skills/configure/SKILL.md")
+            && entry.path.ends_with("/skills/user-setup/SKILL.md")
         {
             TEST3_SETUP_HIVE_DIGEST.clone_into(&mut entry.digest);
             setup_hive = true;
@@ -2147,10 +2619,10 @@ fn pre_scope_routing_test_inventory(
         if !is_managed_ownership(&entry.ownership) {
             continue;
         }
-        if entry.path.ends_with("/skills/configure/SKILL.md") {
+        if entry.path.ends_with("/skills/user-setup/SKILL.md") {
             PRE_SCOPE_ROUTING_SETUP_HIVE_DIGEST.clone_into(&mut entry.digest);
             setup_hive = true;
-        } else if entry.path.ends_with("/skills/setup-project/SKILL.md") {
+        } else if entry.path.ends_with("/skills/project-setup/SKILL.md") {
             PRE_SCOPE_ROUTING_SETUP_HARNESS_DIGEST.clone_into(&mut entry.digest);
         }
     }
@@ -2924,6 +3396,7 @@ fn apply_plan(
         antigravity_state_before,
         host_owned_state: None,
         pending_host_transition: None,
+        codex_plugin_was_latent_before_marketplace_add: false,
         entries: backup_entries,
     };
     persist_backup(arguments, &backup_relative, &backup)?;
@@ -3083,6 +3556,42 @@ fn ensure_no_open_transaction(
     Ok(())
 }
 
+fn has_open_transaction(arguments: &UserArguments) -> Result<bool, InstallError> {
+    read_optional_regular(
+        &arguments.root_cap,
+        &transaction_journal_relative(arguments.host),
+        MAX_USER_FILE_BYTES,
+    )
+    .map(|journal| journal.is_some())
+}
+
+fn has_recoverable_dangling_codex_marketplace(
+    arguments: &UserArguments,
+) -> Result<bool, InstallError> {
+    if arguments.host != UserHost::Codex || !has_open_transaction(arguments)? {
+        return Ok(false);
+    }
+    let journal_relative = transaction_journal_relative(arguments.host);
+    let Some(journal) = read_transaction_journal(arguments, &journal_relative)? else {
+        return Ok(false);
+    };
+    let backup_relative = PathBuf::from(journal.backup);
+    let backup_bytes = read_optional_regular(
+        &arguments.root_cap,
+        &backup_relative.join("manifest.json"),
+        MAX_USER_FILE_BYTES,
+    )?
+    .ok_or_else(|| InstallError::Verification("user backup manifest is missing".to_owned()))?;
+    let backup: UserBackupManifest = serde_json::from_slice(&backup_bytes)
+        .map_err(|_| InstallError::Verification("user backup manifest is malformed".to_owned()))?;
+    if journal.plan_digest != backup.plan_digest {
+        return Err(InstallError::Verification(
+            "user transaction journal does not match its backup".to_owned(),
+        ));
+    }
+    is_recoverable_dangling_codex_marketplace(arguments, &backup)
+}
+
 fn rollback_snapshots(
     root: &Dir,
     snapshots: &[(PathBuf, Option<Vec<u8>>, FilePermissions)],
@@ -3129,6 +3638,7 @@ fn rollback_snapshots(
     Ok(())
 }
 
+#[allow(clippy::too_many_lines)]
 fn recover(
     arguments: &UserArguments,
     runner: &impl CommandRunner,
@@ -3194,6 +3704,19 @@ fn recover(
             None,
         )?;
     }
+    if backup.pending_host_transition.is_some() {
+        let executable = executable.as_ref().ok_or_else(|| {
+            InstallError::Internal("qualified recovery host executable is missing".to_owned())
+        })?;
+        resolve_pending_host_transition(
+            arguments,
+            &backup_relative,
+            &mut backup,
+            executable,
+            runner,
+            true,
+        )?;
+    }
     let changed = restore_backup_files(arguments, &backup_relative, &backup)?;
     reconcile_root_index_after_rollback(arguments, backup.index_existed)?;
     compensate_host_mutations(
@@ -3202,6 +3725,7 @@ fn recover(
         &mut backup,
         executable.as_ref(),
         runner,
+        true,
     )?;
     let recovered_backup_bytes = read_optional_regular(
         &arguments.root_cap,
@@ -4488,12 +5012,20 @@ fn compensate_host_mutations(
     backup: &mut UserBackupManifest,
     executable: Option<&QualifiedExecutable>,
     runner: &impl CommandRunner,
+    allow_dangling_codex_recovery: bool,
 ) -> Result<(), InstallError> {
     if backup.pending_host_transition.is_some() {
         let executable = executable.ok_or_else(|| {
             InstallError::Internal("qualified recovery host executable is missing".to_owned())
         })?;
-        resolve_pending_host_transition(arguments, backup_relative, backup, executable, runner)?;
+        resolve_pending_host_transition(
+            arguments,
+            backup_relative,
+            backup,
+            executable,
+            runner,
+            allow_dangling_codex_recovery,
+        )?;
     }
     if backup.host_mutations.is_empty() {
         return Ok(());
@@ -4553,25 +5085,112 @@ fn compensate_host_mutations(
     backup.host_mutations.clear();
     backup.host_owned_state = None;
     backup.pending_host_transition = None;
+    backup.codex_plugin_was_latent_before_marketplace_add = false;
     persist_backup(arguments, backup_relative, backup)?;
     Ok(())
 }
 
 fn resolve_pending_host_transition(
-    _arguments: &UserArguments,
-    _backup_relative: &Path,
+    arguments: &UserArguments,
+    backup_relative: &Path,
     backup: &mut UserBackupManifest,
-    _executable: &QualifiedExecutable,
-    _runner: &impl CommandRunner,
+    executable: &QualifiedExecutable,
+    runner: &impl CommandRunner,
+    allow_dangling_codex_recovery: bool,
 ) -> Result<(), InstallError> {
     let pending = backup
         .pending_host_transition
         .as_ref()
         .ok_or_else(|| InstallError::Internal("pending host transition is missing".to_owned()))?;
+    if allow_dangling_codex_recovery
+        && is_recoverable_dangling_codex_marketplace(arguments, backup)?
+    {
+        let probe_error = probe_host_snapshot(arguments.host, executable, runner)
+            .err()
+            .ok_or_else(|| {
+                InstallError::Conflict(
+                    "pending Codex marketplace transition still has a structured host state; external state was preserved"
+                        .to_owned(),
+                )
+            })?;
+        if !is_dangling_codex_marketplace_probe(&probe_error) {
+            return Err(InstallError::Conflict(format!(
+                "unresolved {:?} host transition {:?} cannot be attributed during recovery; external state was preserved",
+                pending.phase, pending.mutation
+            )));
+        }
+        let command = codex_compensation_command(HostMutation::CodexMarketplaceAdded);
+        let output = runner
+            .run(executable, command, COMMAND_TIMEOUT, COMMAND_OUTPUT_LIMIT)
+            .map_err(|error| {
+                InstallError::Unsupported(format!(
+                    "Codex Hive marketplace recovery command failed: {error}"
+                ))
+            })?;
+        if !output.success {
+            return Err(InstallError::Unsupported(format!(
+                "Codex Hive marketplace recovery command exited unsuccessfully: {}",
+                sanitized_command_diagnostic(command, &output.stdout)
+            )));
+        }
+        let observed = probe_host_snapshot(arguments.host, executable, runner)?;
+        if observed != pending.before {
+            return Err(InstallError::Conflict(
+                "Codex Hive marketplace recovery did not restore the authenticated pre-transaction state; external state was preserved"
+                    .to_owned(),
+            ));
+        }
+        backup.host_mutations.clear();
+        backup.host_owned_state = None;
+        backup.pending_host_transition = None;
+        backup.codex_plugin_was_latent_before_marketplace_add = false;
+        persist_backup(arguments, backup_relative, backup)?;
+        return Ok(());
+    }
     Err(InstallError::Conflict(format!(
         "unresolved {:?} host transition {:?} cannot be attributed during recovery; external state was preserved",
         pending.phase, pending.mutation
     )))
+}
+
+fn is_recoverable_dangling_codex_marketplace(
+    arguments: &UserArguments,
+    backup: &UserBackupManifest,
+) -> Result<bool, InstallError> {
+    let Some(pending) = backup.pending_host_transition.as_ref() else {
+        return Ok(false);
+    };
+    if arguments.host != UserHost::Codex
+        || pending.phase != HostTransitionPhase::Forward
+        || pending.mutation != HostMutation::CodexMarketplaceAdded
+        || !backup.host_mutations.is_empty()
+        || backup.host_owned_state.is_some()
+    {
+        return Ok(false);
+    }
+    let Some(before) = backup.codex_state_before.as_ref() else {
+        return Ok(false);
+    };
+    if before.marketplace.is_some() || before.plugin.is_some() {
+        return Ok(false);
+    }
+    let expected_before = HostStateSnapshot::Codex(before.clone());
+    let expected_after = expected_host_state_after(
+        arguments,
+        HostMutation::CodexMarketplaceAdded,
+        &expected_before,
+    )?;
+    if pending.before != expected_before || pending.after != expected_after {
+        return Ok(false);
+    }
+    let manifest = Path::new(".hive/marketplaces/codex/.agents/plugins/marketplace.json");
+    Ok(read_optional_regular(&arguments.root_cap, manifest, MAX_USER_FILE_BYTES)?.is_none())
+}
+
+fn is_dangling_codex_marketplace_probe(error: &InstallError) -> bool {
+    matches!(error, InstallError::Unsupported(message)
+        if message.starts_with("Codex structured state probe exited unsuccessfully:")
+            && message.contains("argv=`plugin marketplace list --json`"))
 }
 
 struct CompensationContext<'a, R: CommandRunner> {
@@ -4607,6 +5226,7 @@ fn reconcile_codex_state(
             "Codex compensation received non-Codex state".to_owned(),
         ));
     };
+    let latent_plugin = backup.codex_plugin_was_latent_before_marketplace_add;
     let mut context = CompensationContext {
         arguments,
         backup_relative,
@@ -4615,7 +5235,7 @@ fn reconcile_codex_state(
         runner,
     };
     if current.marketplace != desired.marketplace {
-        if current.plugin.is_some() {
+        if current.plugin.is_some() && !latent_plugin {
             let mut after = current.clone();
             after.plugin = None;
             current = run_codex_reconciliation_step(
@@ -4629,6 +5249,9 @@ fn reconcile_codex_state(
         if current.marketplace.is_some() {
             let mut after = current.clone();
             after.marketplace = None;
+            if latent_plugin {
+                after.plugin = None;
+            }
             current = run_codex_reconciliation_step(
                 &mut context,
                 codex_compensation_command(HostMutation::CodexMarketplaceAdded),
@@ -5146,6 +5769,7 @@ fn rollback_after_failure(
         &mut transaction.backup,
         executable,
         runner,
+        false,
     ) {
         return InstallError::Internal(format!("{}; {}", primary.message(), error.message()));
     }
@@ -5285,6 +5909,17 @@ fn activate_host(
     let command_sets = activation_commands(arguments.host, &transaction.backup, marketplace_text)?;
     for (command, mutation) in command_sets {
         if let Some(mutation) = mutation {
+            if arguments.host == UserHost::Codex
+                && matches!(
+                    mutation,
+                    HostMutation::CodexPluginAdded | HostMutation::CodexPluginRefreshed
+                )
+                && transaction
+                    .backup
+                    .codex_plugin_was_latent_before_marketplace_add
+            {
+                continue;
+            }
             execute_forward_host_transition(
                 arguments,
                 plan,
@@ -5349,10 +5984,55 @@ fn execute_forward_host_transition(
     });
     persist_backup(arguments, &transaction.backup_relative, &transaction.backup)?;
     let command_result = runner.run(executable, command, COMMAND_TIMEOUT, COMMAND_OUTPUT_LIMIT);
-    let observed_after = probe_host_snapshot(arguments.host, executable, runner)?;
-    if matches!(&command_result, Ok(output) if output.success) && observed_after == expected_after {
+    let mut observed_after = probe_host_snapshot(arguments.host, executable, runner)?;
+    if matches!(mutation, HostMutation::CodexMarketplaceAdded)
+        && codex_marketplace_add_revealed_stale_hive_plugin(
+            arguments,
+            &expected_after,
+            &observed_after,
+        )?
+    {
+        let remove = codex_compensation_command(HostMutation::CodexPluginAdded);
+        let output = runner
+            .run(executable, remove, COMMAND_TIMEOUT, COMMAND_OUTPUT_LIMIT)
+            .map_err(|error| {
+                InstallError::Unsupported(format!(
+                    "Codex Hive stale plugin recovery command failed: {error}"
+                ))
+            })?;
+        if !output.success {
+            return Err(InstallError::Unsupported(format!(
+                "Codex Hive stale plugin recovery command exited unsuccessfully: {}",
+                sanitized_command_diagnostic(remove, &output.stdout)
+            )));
+        }
+        observed_after = probe_host_snapshot(arguments.host, executable, runner)?;
+        if observed_after != expected_after {
+            return Err(InstallError::Verification(
+                "Codex Hive stale plugin recovery did not restore the exact marketplace transition"
+                    .to_owned(),
+            ));
+        }
+    }
+    let codex_latent_plugin = matches!(mutation, HostMutation::CodexMarketplaceAdded)
+        && codex_marketplace_add_revealed_expected_plugin(
+            arguments,
+            &expected_after,
+            &observed_after,
+        )?;
+    if matches!(&command_result, Ok(output) if output.success)
+        && (observed_after == expected_after || codex_latent_plugin)
+    {
+        let owned_state = if codex_latent_plugin {
+            transaction
+                .backup
+                .codex_plugin_was_latent_before_marketplace_add = true;
+            observed_after.clone()
+        } else {
+            expected_after.clone()
+        };
         transaction.backup.host_mutations.push(mutation);
-        transaction.backup.host_owned_state = Some(expected_after);
+        transaction.backup.host_owned_state = Some(owned_state);
         transaction.backup.pending_host_transition = None;
         persist_backup(arguments, &transaction.backup_relative, &transaction.backup)?;
         return Ok(());
@@ -5374,6 +6054,63 @@ fn execute_forward_host_transition(
             command.join(" ")
         ))),
     }
+}
+
+fn codex_marketplace_add_revealed_expected_plugin(
+    arguments: &UserArguments,
+    expected_after: &HostStateSnapshot,
+    observed_after: &HostStateSnapshot,
+) -> Result<bool, InstallError> {
+    let (HostStateSnapshot::Codex(expected), HostStateSnapshot::Codex(observed)) =
+        (expected_after, observed_after)
+    else {
+        return Ok(false);
+    };
+    if expected.plugin.is_some() || observed.marketplace != expected.marketplace {
+        return Ok(false);
+    }
+    let HostStateSnapshot::Codex(expected_with_plugin) =
+        expected_host_state_after(arguments, HostMutation::CodexPluginAdded, expected_after)?
+    else {
+        return Err(InstallError::Internal(
+            "Codex plugin transition produced a non-Codex state".to_owned(),
+        ));
+    };
+    Ok(observed.plugin == expected_with_plugin.plugin)
+}
+
+fn codex_marketplace_add_revealed_stale_hive_plugin(
+    arguments: &UserArguments,
+    expected_after: &HostStateSnapshot,
+    observed_after: &HostStateSnapshot,
+) -> Result<bool, InstallError> {
+    let (HostStateSnapshot::Codex(expected), HostStateSnapshot::Codex(observed)) =
+        (expected_after, observed_after)
+    else {
+        return Ok(false);
+    };
+    let Some(observed_plugin) = observed.plugin.as_ref() else {
+        return Ok(false);
+    };
+    if expected.plugin.is_some() || observed.marketplace != expected.marketplace {
+        return Ok(false);
+    }
+    let HostStateSnapshot::Codex(expected_with_plugin) =
+        expected_host_state_after(arguments, HostMutation::CodexPluginAdded, expected_after)?
+    else {
+        return Err(InstallError::Internal(
+            "Codex plugin transition produced a non-Codex state".to_owned(),
+        ));
+    };
+    let Some(expected_plugin) = expected_with_plugin.plugin.as_ref() else {
+        return Err(InstallError::Internal(
+            "Codex plugin transition did not produce a plugin state".to_owned(),
+        ));
+    };
+    Ok(observed_plugin.enabled
+        && observed_plugin.source_path == expected_plugin.source_path
+        && observed_plugin.marketplace_source == expected_plugin.marketplace_source
+        && observed_plugin.version != expected_plugin.version)
 }
 
 fn initial_host_snapshot(backup: &UserBackupManifest) -> Option<HostStateSnapshot> {
@@ -5591,7 +6328,7 @@ fn validate_plugin_package(arguments: &UserArguments, plan: &UserPlan) -> Result
         UserHost::Claude => ".claude-plugin/plugin.json",
         UserHost::Antigravity => "plugin.json",
     };
-    for relative in [manifest, "skills/configure/SKILL.md"] {
+    for relative in [manifest, "skills/user-setup/SKILL.md"] {
         let path = root.join(relative);
         if read_optional_regular(&arguments.root_cap, &path, MAX_USER_FILE_BYTES)?.is_none() {
             return Err(InstallError::Verification(format!(
@@ -6396,6 +7133,8 @@ mod tests {
     #[derive(Clone, Copy)]
     enum HostSabotage {
         None,
+        LatentCodexPluginActivation,
+        StaleCodexHivePluginActivation,
         FailBeforeMarketplaceMutation,
         FailAfterMarketplaceMutation,
         FailBeforePluginMutation,
@@ -6409,6 +7148,7 @@ mod tests {
         DriftBeforeLaterCompensation,
         ForeignAfterFailedForward,
         ForeignAfterFailedCompensation,
+        DanglingCodexMarketplace,
     }
 
     struct StatefulHostRunner {
@@ -6417,6 +7157,7 @@ mod tests {
         qualified_host: Mutex<String>,
         marketplace_installed: Mutex<bool>,
         plugin_installed: Mutex<bool>,
+        plugin_stale: Mutex<bool>,
         plugin_enabled: Mutex<bool>,
         marketplace_probe_count: Mutex<usize>,
         compensation_failures: Mutex<usize>,
@@ -6430,7 +7171,15 @@ mod tests {
                 calls: Mutex::new(Vec::new()),
                 qualified_host: Mutex::new(String::new()),
                 marketplace_installed: Mutex::new(false),
-                plugin_installed: Mutex::new(false),
+                plugin_installed: Mutex::new(matches!(
+                    sabotage,
+                    HostSabotage::LatentCodexPluginActivation
+                        | HostSabotage::StaleCodexHivePluginActivation
+                )),
+                plugin_stale: Mutex::new(matches!(
+                    sabotage,
+                    HostSabotage::StaleCodexHivePluginActivation
+                )),
                 plugin_enabled: Mutex::new(true),
                 marketplace_probe_count: Mutex::new(0),
                 compensation_failures: Mutex::new(usize::from(matches!(
@@ -6481,9 +7230,20 @@ mod tests {
             }
         }
 
+        #[allow(clippy::too_many_lines)]
         fn probe_output(&self, command: &str) -> Option<CommandOutput> {
             let claude = self.qualified_host.lock().expect("host").as_str() == "claude";
             self.inject_probe_drift(command);
+            if command == "plugin marketplace list --json"
+                && !claude
+                && matches!(self.sabotage, HostSabotage::DanglingCodexMarketplace)
+                && *self.marketplace_installed.lock().expect("marketplace")
+            {
+                return Some(CommandOutput {
+                    success: false,
+                    stdout: Vec::new(),
+                });
+            }
             match (command, claude) {
                 ("plugin marketplace list --json", true) => {
                     let entries = if *self.marketplace_installed.lock().expect("marketplace") {
@@ -6538,12 +7298,23 @@ mod tests {
                     })
                 }
                 ("plugin list --json", false) => {
-                    let entries = if *self.plugin_installed.lock().expect("plugin") {
+                    let plugin_visible = *self.plugin_installed.lock().expect("plugin")
+                        && (*self.marketplace_installed.lock().expect("marketplace")
+                            || !matches!(
+                                self.sabotage,
+                                HostSabotage::LatentCodexPluginActivation
+                                    | HostSabotage::StaleCodexHivePluginActivation
+                            ));
+                    let entries = if plugin_visible {
                         vec![json!({
                             "pluginId": "aigent-hive@aigent-hive",
                             "name": "aigent-hive",
                             "marketplaceName": "aigent-hive",
-                            "version": env!("CARGO_PKG_VERSION"),
+                            "version": if *self.plugin_stale.lock().expect("stale plugin") {
+                                "0.7.0"
+                            } else {
+                                env!("CARGO_PKG_VERSION")
+                            },
                             "installed": true,
                             "enabled": true,
                             "source": {
@@ -6586,7 +7357,7 @@ mod tests {
                 | HostSabotage::CrashAfterPluginInverse
                 | HostSabotage::FailAfterPluginMutationAndCompensation => {
                     fs::remove_file(self.root.join(
-                        ".hive/marketplaces/codex/plugins/aigent-hive/skills/configure/SKILL.md",
+                        ".hive/marketplaces/codex/plugins/aigent-hive/skills/user-setup/SKILL.md",
                     ))
                     .expect("delete installed skill");
                 }
@@ -6595,6 +7366,8 @@ mod tests {
                         .expect("tamper guidance");
                 }
                 HostSabotage::None
+                | HostSabotage::LatentCodexPluginActivation
+                | HostSabotage::StaleCodexHivePluginActivation
                 | HostSabotage::FailBeforeMarketplaceMutation
                 | HostSabotage::FailAfterMarketplaceMutation
                 | HostSabotage::FailBeforePluginMutation
@@ -6602,7 +7375,8 @@ mod tests {
                 | HostSabotage::DriftBeforeSecondMutation
                 | HostSabotage::DriftBeforeLaterCompensation
                 | HostSabotage::ForeignAfterFailedForward
-                | HostSabotage::ForeignAfterFailedCompensation => {}
+                | HostSabotage::ForeignAfterFailedCompensation
+                | HostSabotage::DanglingCodexMarketplace => {}
             }
             Ok(CommandOutput {
                 success: true,
@@ -6627,6 +7401,7 @@ mod tests {
                 });
             }
             *installed = false;
+            *self.plugin_stale.lock().expect("stale plugin") = false;
             if matches!(
                 self.sabotage,
                 HostSabotage::CrashAfterPluginInverse
@@ -6922,6 +7697,85 @@ mod tests {
             user_root,
             setup_override: None,
         }
+    }
+
+    fn uninstall_args(root: &Path) -> UserUninstallArguments {
+        let user_root = root.canonicalize().expect("canonical user root");
+        UserUninstallArguments {
+            root_cap: open_user_root(&user_root).expect("pinned user root"),
+        }
+    }
+
+    #[test]
+    fn cli_parse_uses_the_physical_user_root_after_no_follow_validation() {
+        let temporary = tempdir().expect("tempdir");
+        let requested = temporary.path().to_path_buf();
+        let expected = requested.canonicalize().expect("canonical user root");
+        let arguments = vec![
+            "--scope".to_owned(),
+            "user".to_owned(),
+            "--host".to_owned(),
+            "codex".to_owned(),
+            "--user-root".to_owned(),
+            requested.display().to_string(),
+            "--dry-run".to_owned(),
+            "--output".to_owned(),
+            "json".to_owned(),
+        ];
+
+        let parsed = parse(&arguments).expect("parse user installation arguments");
+
+        assert_eq!(parsed.user_root, expected);
+    }
+
+    #[test]
+    fn uninstall_refuses_removed_destructive_flags() {
+        for flag in ["--full", "-f"] {
+            assert!(matches!(
+                parse_uninstall(&[flag.to_owned()]),
+                Err(InstallError::Input(_))
+            ));
+        }
+    }
+
+    #[test]
+    fn uninstall_preserves_saved_setup_and_knowledge_then_reinstalls_without_setup_questions() {
+        let temporary = tempdir().expect("tempdir");
+        write_operational_setup(temporary.path(), &["codex"]);
+        let setup = temporary.path().join(".hive/config/user-setup.yml");
+        let saved_setup = fs::read(&setup).expect("saved setup");
+        let runner = StatefulHostRunner::new(temporary.path(), HostSabotage::None);
+        let install = args(temporary.path(), UserHost::Codex, UserMode::Apply);
+        execute(UserOperation::Install, &install, &runner).expect("install");
+        let knowledge = temporary.path().join(".hive/knowledge/Wiki/user-note.md");
+        fs::write(
+            &knowledge,
+            b"---\nschema_version: 1\nid: user-note\nkind: concept\nsummary: user note\ntags: [test]\naliases: []\nsources: []\nlinks: []\ncontradictions: []\nstatus: active\ncreated_at: 2026-08-10T00:00:00Z\nupdated_at: 2026-08-10T00:00:00Z\n---\n\nUser knowledge\n",
+        )
+        .expect("knowledge note");
+
+        let removed = execute_uninstall(&uninstall_args(temporary.path()), &runner)
+            .expect("preserving uninstall");
+
+        assert_eq!(removed.code, "hive.user-uninstall-complete");
+        assert_eq!(fs::read(&setup).expect("saved setup retained"), saved_setup);
+        assert!(knowledge.is_file());
+        assert!(!temporary.path().join(".hive/install/codex.json").exists());
+        assert!(!temporary.path().join(".hive/marketplaces/codex").exists());
+        assert!(!temporary.path().join(".codex/AGENTS.md").exists());
+        assert_eq!(runner.external_state(), (false, false));
+
+        execute(UserOperation::Install, &install, &runner).expect("saved preference reinstall");
+        assert_eq!(
+            fs::read(&setup).expect("saved setup unchanged"),
+            saved_setup
+        );
+        assert!(temporary.path().join(".hive/install/codex.json").is_file());
+        assert!(temporary
+            .path()
+            .join(".hive/install/user-projection.json")
+            .is_file());
+        assert_eq!(runner.external_state(), (true, true));
     }
 
     fn write_operational_setup(root: &Path, selected_hosts: &[&str]) {
@@ -7275,6 +8129,7 @@ mod tests {
                 stop_remaining_percent: 20,
                 codexbar_fallback_enabled: false,
                 discord: DiscordGuardPreferences::default(),
+                project_overrides: BTreeMap::new(),
             },
         };
 
@@ -7359,7 +8214,7 @@ mod tests {
             let plan =
                 build_plan(&args(temporary.path(), host, UserMode::DryRun)).expect("host plan");
             let metadata = PathBuf::from(format!(
-                ".hive/marketplaces/{}/plugins/aigent-hive/skills/configure/agents/openai.yaml",
+                ".hive/marketplaces/{}/plugins/aigent-hive/skills/user-setup/agents/openai.yaml",
                 host.as_str()
             ));
             if host == UserHost::Claude {
@@ -7506,15 +8361,15 @@ mod tests {
         for (host, relative) in [
             (
                 UserHost::Codex,
-                ".hive/marketplaces/codex/plugins/aigent-hive/skills/configure/SKILL.md",
+                ".hive/marketplaces/codex/plugins/aigent-hive/skills/user-setup/SKILL.md",
             ),
             (
                 UserHost::Claude,
-                ".hive/marketplaces/claude/plugins/aigent-hive/skills/configure/SKILL.md",
+                ".hive/marketplaces/claude/plugins/aigent-hive/skills/user-setup/SKILL.md",
             ),
             (
                 UserHost::Antigravity,
-                ".hive/marketplaces/antigravity/plugins/aigent-hive/skills/configure/SKILL.md",
+                ".hive/marketplaces/antigravity/plugins/aigent-hive/skills/user-setup/SKILL.md",
             ),
         ] {
             let temporary = tempdir().expect("tempdir");
@@ -7806,8 +8661,8 @@ mod tests {
         let mut predecessor_entries = current.entries.clone();
         let setup_hive = predecessor_entries
             .iter_mut()
-            .find(|entry| entry.path.ends_with("/skills/configure/SKILL.md"))
-            .expect("configure projection");
+            .find(|entry| entry.path.ends_with("/skills/user-setup/SKILL.md"))
+            .expect("user-setup projection");
         setup_hive.digest = PRE_SCOPE_ROUTING_SETUP_HIVE_DIGEST.to_owned();
         let predecessor_digest = source_release_digest_from_entries(&predecessor_entries);
         let request = InventoryAuthentication {
@@ -7844,8 +8699,8 @@ mod tests {
         let mut predecessor_entries = current.entries.clone();
         let setup_hive = predecessor_entries
             .iter_mut()
-            .find(|entry| entry.path.ends_with("/skills/configure/SKILL.md"))
-            .expect("configure projection");
+            .find(|entry| entry.path.ends_with("/skills/user-setup/SKILL.md"))
+            .expect("user-setup projection");
         setup_hive.digest = TEST3_SETUP_HIVE_DIGEST.to_owned();
         let predecessor_digest = source_release_digest_from_entries(&predecessor_entries);
         let request = InventoryAuthentication {
@@ -8728,7 +9583,7 @@ mod tests {
             .is_file());
         assert!(temporary
             .path()
-            .join(".gemini/config/plugins/aigent-hive/skills/configure/SKILL.md")
+            .join(".gemini/config/plugins/aigent-hive/skills/user-setup/SKILL.md")
             .is_file());
         assert!(runner
             .calls
@@ -8963,14 +9818,14 @@ mod tests {
                 temporary
                     .path()
                     .join(ANTIGRAVITY_SOURCE_RELATIVE)
-                    .join("skills/configure/SKILL.md")
+                    .join("skills/user-setup/SKILL.md")
             )
             .expect("source Skill"),
             fs::read(
                 temporary
                     .path()
                     .join(ANTIGRAVITY_STAGE_RELATIVE)
-                    .join("skills/configure/SKILL.md")
+                    .join("skills/user-setup/SKILL.md")
             )
             .expect("staged Skill")
         );
@@ -9050,6 +9905,64 @@ mod tests {
                 "plugin list --json".to_owned(),
             ]
         );
+    }
+
+    #[test]
+    fn codex_marketplace_add_preserves_a_valid_latent_plugin_activation() {
+        let temporary = tempdir().expect("tempdir");
+        let runner =
+            StatefulHostRunner::new(temporary.path(), HostSabotage::LatentCodexPluginActivation);
+        let arguments = args(temporary.path(), UserHost::Codex, UserMode::Apply);
+
+        execute(UserOperation::Install, &arguments, &runner).expect("install");
+        assert_eq!(runner.external_state(), (true, true));
+        let calls = runner.calls.lock().expect("calls");
+        assert!(calls
+            .iter()
+            .any(|call| call.starts_with("plugin marketplace add ")));
+        assert!(!calls
+            .iter()
+            .any(|call| call == "plugin add aigent-hive@aigent-hive --json"));
+        drop(calls);
+
+        recover(&arguments, &runner).expect("recover");
+        assert_eq!(runner.external_state(), (false, true));
+        let calls = runner.calls.lock().expect("calls");
+        assert!(!calls
+            .iter()
+            .any(|call| call == "plugin remove aigent-hive@aigent-hive --json"));
+        assert!(calls
+            .iter()
+            .any(|call| call == "plugin marketplace remove aigent-hive --json"));
+    }
+
+    #[test]
+    fn codex_marketplace_add_reinstalls_an_exact_stale_hive_plugin() {
+        let temporary = tempdir().expect("tempdir");
+        let runner = StatefulHostRunner::new(
+            temporary.path(),
+            HostSabotage::StaleCodexHivePluginActivation,
+        );
+        let arguments = args(temporary.path(), UserHost::Codex, UserMode::Apply);
+
+        execute(UserOperation::Install, &arguments, &runner)
+            .expect("reinstall exact stale Hive plugin");
+
+        assert_eq!(runner.external_state(), (true, true));
+        let calls = runner.calls.lock().expect("calls");
+        let marketplace_add = calls
+            .iter()
+            .position(|call| call.starts_with("plugin marketplace add "))
+            .expect("marketplace add");
+        let stale_remove = calls
+            .iter()
+            .position(|call| call == "plugin remove aigent-hive@aigent-hive --json")
+            .expect("stale plugin removal");
+        let plugin_add = calls
+            .iter()
+            .position(|call| call == "plugin add aigent-hive@aigent-hive --json")
+            .expect("plugin reinstall");
+        assert!(marketplace_add < stale_remove && stale_remove < plugin_add);
     }
 
     #[test]
@@ -9527,6 +10440,57 @@ mod tests {
             assert!(backup.host_owned_state.is_none());
             assert!(backup.pending_host_transition.is_some());
         }
+    }
+
+    #[test]
+    fn recover_removes_only_a_dangling_hive_codex_marketplace_after_a_failed_probe() {
+        let temporary = tempdir().expect("tempdir");
+        let knowledge = temporary.path().join(".hive/knowledge/Wiki/user-note.md");
+        let preferences = temporary.path().join(".hive/config/user-preferences.json");
+        fs::create_dir_all(knowledge.parent().expect("knowledge parent"))
+            .expect("knowledge parent");
+        fs::create_dir_all(preferences.parent().expect("preferences parent"))
+            .expect("preferences parent");
+        fs::write(&knowledge, b"# user knowledge\n").expect("knowledge");
+        fs::write(&preferences, b"{\"persona\":\"strict\"}\n").expect("preferences");
+        let runner =
+            StatefulHostRunner::new(temporary.path(), HostSabotage::DanglingCodexMarketplace);
+        let arguments = args(temporary.path(), UserHost::Codex, UserMode::Apply);
+
+        let error = execute(UserOperation::Install, &arguments, &runner)
+            .err()
+            .expect("failed Codex probe");
+        assert!(matches!(error, InstallError::Internal(_)));
+        let journal = temporary
+            .path()
+            .join(".hive/install-transactions/codex.json");
+        assert!(journal.is_file());
+        assert_eq!(runner.external_state(), (true, false));
+        assert!(!temporary
+            .path()
+            .join(".hive/marketplaces/codex/.agents/plugins/marketplace.json")
+            .exists());
+
+        let recovered = recover(&arguments, &runner).expect("recover dangling marketplace");
+
+        assert_eq!(recovered.code, "hive.user-install-recovered");
+        assert_eq!(runner.external_state(), (false, false));
+        assert!(!journal.exists());
+        assert_eq!(
+            fs::read(&knowledge).expect("knowledge retained"),
+            b"# user knowledge\n"
+        );
+        assert_eq!(
+            fs::read(&preferences).expect("preferences retained"),
+            b"{\"persona\":\"strict\"}\n"
+        );
+        let calls = runner.calls.lock().expect("calls");
+        assert!(calls
+            .iter()
+            .any(|call| call == "plugin marketplace remove aigent-hive --json"));
+        assert!(!calls
+            .iter()
+            .any(|call| call == "plugin remove aigent-hive@aigent-hive --json"));
     }
 
     #[test]

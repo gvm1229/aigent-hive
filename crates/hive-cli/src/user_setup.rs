@@ -27,6 +27,10 @@ const USER_SETUP_CATALOG_SCHEMA: &str =
 const USER_SETUP_CATALOG: &str = include_str!("../../../harness/user-setup/catalog.yml");
 const MAX_ANSWERS_BYTES: u64 = 1024 * 1024;
 const MAX_USER_SETUP_BYTES: u64 = 1024 * 1024;
+const EXPEDITED_DEFAULT_USAGE_THRESHOLD: u8 = 20;
+/// Historical 0.8.x preferences omitted this setting. This compatibility value is never offered
+/// as a new-setup default: every new setup answer selects its own threshold.
+const LEGACY_080_USAGE_THRESHOLD: u8 = 20;
 const USER_PROJECTION_090_TEST3_SETUP_HIVE: &[u8] =
     include_bytes!("../../../harness/user-bases/0.9.0-test.3/skills/setup-hive/SKILL.md");
 
@@ -34,8 +38,9 @@ const USER_SETUP_USAGE: &str = "\
 Configure or validate Aigent Hive user preferences.
 
 USAGE:
-    hive setup --scope user --answers <yml> (--dry-run|--apply|--validate) [--user-root <dir>] --output json
-    hive setup --progress save --scope user --step <step> --answers <yml> [--user-root <dir>] --output json
+    hive setup --scope user --describe --output json
+    hive setup --scope user (--answers|--quick-answers) <yml> (--dry-run|--apply|--validate) [--user-root <dir>] --output json
+    hive setup --progress save --scope user --step <step> (--answers|--quick-answers) <yml> [--user-root <dir>] --output json
     hive setup --progress status|clear --scope user [--user-root <dir>] --output json
 
 MODES:
@@ -204,7 +209,7 @@ pub(crate) struct SkillPreferences {
     pub(crate) selected: Vec<String>,
 }
 
-#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(deny_unknown_fields)]
 pub(crate) struct DiscordGuardPreferences {
     #[serde(default)]
@@ -213,6 +218,19 @@ pub(crate) struct DiscordGuardPreferences {
     pub(crate) webhook_url_env: Option<String>,
     #[serde(default)]
     pub(crate) request_privacy: DiscordRequestPrivacy,
+    #[serde(default = "default_discord_message_fields")]
+    pub(crate) message_fields: Vec<DiscordMessageField>,
+}
+
+impl Default for DiscordGuardPreferences {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            webhook_url_env: None,
+            request_privacy: DiscordRequestPrivacy::Summary,
+            message_fields: default_discord_message_fields(),
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
@@ -223,17 +241,58 @@ pub(crate) enum DiscordRequestPrivacy {
     RawPrompt,
 }
 
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "kebab-case")]
+pub(crate) enum DiscordMessageField {
+    RemainingUsage,
+    Project,
+    Request,
+    Progress,
+    Host,
+    Resume,
+    MeasuredAt,
+    Evidence,
+}
+
+impl DiscordMessageField {
+    pub(crate) const fn as_str(self) -> &'static str {
+        match self {
+            Self::RemainingUsage => "remaining-usage",
+            Self::Project => "project",
+            Self::Request => "request",
+            Self::Progress => "progress",
+            Self::Host => "host",
+            Self::Resume => "resume",
+            Self::MeasuredAt => "measured-at",
+            Self::Evidence => "evidence",
+        }
+    }
+}
+
+fn default_discord_message_fields() -> Vec<DiscordMessageField> {
+    vec![
+        DiscordMessageField::RemainingUsage,
+        DiscordMessageField::Project,
+        DiscordMessageField::Request,
+        DiscordMessageField::Progress,
+        DiscordMessageField::Host,
+        DiscordMessageField::Resume,
+    ]
+}
+
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(deny_unknown_fields)]
 pub(crate) struct UsageGuardPreferences {
     #[serde(default)]
     pub(crate) enabled: bool,
-    #[serde(default = "default_usage_threshold")]
     pub(crate) stop_remaining_percent: u8,
     #[serde(default)]
     pub(crate) codexbar_fallback_enabled: bool,
     #[serde(default)]
     pub(crate) discord: DiscordGuardPreferences,
+    /// Stable registered project identity to an earlier-stop threshold. The key is never a path.
+    #[serde(default)]
+    pub(crate) project_overrides: BTreeMap<String, u8>,
 }
 
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
@@ -263,7 +322,7 @@ pub(crate) struct UserSetupConfig {
 struct UserSetupProgress {
     schema_version: u32,
     step: String,
-    answers: UserSetupConfig,
+    answers: JsonValue,
 }
 
 #[derive(Debug, Deserialize)]
@@ -355,10 +414,6 @@ const fn default_true() -> bool {
     true
 }
 
-const fn default_usage_threshold() -> u8 {
-    20
-}
-
 #[derive(Debug)]
 pub(crate) enum SetupError {
     Input(String),
@@ -400,6 +455,9 @@ pub(crate) fn print_help() {
 }
 
 pub(crate) fn run(arguments: &[String]) -> ExitCode {
+    if arguments.iter().any(|argument| argument == "--describe") {
+        return run_describe(arguments);
+    }
     if arguments.first().map(String::as_str) == Some("--progress") {
         return run_progress(&arguments[1..]);
     }
@@ -407,6 +465,100 @@ pub(crate) fn run(arguments: &[String]) -> ExitCode {
         .and_then(|arguments| execute(&arguments))
         .unwrap_or_else(|error| failure(&error));
     emit_action_result(&result)
+}
+
+fn run_describe(arguments: &[String]) -> ExitCode {
+    let valid = arguments.len() == 5
+        && arguments.iter().any(|value| value == "--scope")
+        && arguments.iter().any(|value| value == "user")
+        && arguments.iter().any(|value| value == "--describe")
+        && arguments.iter().any(|value| value == "--output")
+        && arguments.iter().any(|value| value == "json");
+    let result = if valid {
+        describe_result().unwrap_or_else(|error| failure(&error))
+    } else {
+        failure(&SetupError::Input(
+            "setup describe requires --scope user --describe --output json".to_owned(),
+        ))
+    };
+    emit_action_result(&result)
+}
+
+fn describe_result() -> Result<ActionResult, SetupError> {
+    let schema: JsonValue = serde_json::from_str(USER_SETUP_SCHEMA).map_err(|error| {
+        SetupError::Internal(format!("invalid embedded user setup schema: {error}"))
+    })?;
+    let catalog: JsonValue = serde_yaml::from_str(USER_SETUP_CATALOG).map_err(|error| {
+        SetupError::Internal(format!("invalid embedded user setup catalog: {error}"))
+    })?;
+    let question_order = json!([
+        "interface-language",
+        "daily-update-check",
+        "setup-mode",
+        "wiki",
+        "user-contexts",
+        "persona",
+        "hosts",
+        "skills",
+        "usage-guard",
+        "discord"
+    ]);
+    let example = json!({
+        "schema_version": 1,
+        "interface_language": "en",
+        "wiki": { "enabled": true, "language": "en", "backend": "markdown" },
+        "profile": { "contexts": ["non-developer"] },
+        "persona": { "id": "balanced" },
+        "selected_hosts": ["codex"],
+        "skills": { "mode": "all" },
+        "update_check": { "enabled": false },
+        "usage_guard": { "enabled": false,
+            "stop_remaining_percent": "<user-chosen-integer-1-to-99>",
+            "codexbar_fallback_enabled": false,
+            "discord": { "enabled": false, "request_privacy": "summary",
+                "message_fields": default_discord_message_fields().iter().map(|field| field.as_str()).collect::<Vec<_>>() }
+        }
+    });
+    let expedited_defaults = json!({
+        "schema_version": 1,
+        "interface_language": "en",
+        "wiki": { "enabled": true, "language": "en", "backend": "markdown" },
+        "profile": { "contexts": ["non-developer"] },
+        "persona": { "id": "strict" },
+        "selected_hosts": ["codex"],
+        "skills": { "mode": "all" },
+        "update_check": { "enabled": false },
+        "usage_guard": { "enabled": false,
+            "stop_remaining_percent": EXPEDITED_DEFAULT_USAGE_THRESHOLD,
+            "codexbar_fallback_enabled": false,
+            "discord": { "enabled": false, "request_privacy": "summary",
+                "message_fields": default_discord_message_fields().iter().map(|field| field.as_str()).collect::<Vec<_>>() }
+        }
+    });
+    Ok(ActionResult {
+        schema_version: 1,
+        action: "DescribeHiveUserSetup",
+        status: "success",
+        exit_code: 0,
+        code: "hive.user-setup-described",
+        message: "user setup contract described".to_owned(),
+        changed_paths: Vec::new(),
+        evidence: vec![Evidence {
+            kind: "user-setup-catalog",
+            locator: "harness/user-setup/catalog.yml".to_owned(),
+            digest: sha256_digest(USER_SETUP_CATALOG.as_bytes()),
+        }],
+        next_action: None,
+        data: Some(json!({
+            "contract_digest": sha256_digest(format!("{USER_SETUP_SCHEMA}\n{USER_SETUP_CATALOG}").as_bytes()),
+            "schema": schema,
+            "catalog": catalog,
+            "answer_template": example,
+            "answer_template_notice": "Replace <user-chosen-integer-1-to-99> with the user's own value before validation; Hive has no default usage threshold.",
+            "expedited_defaults": expedited_defaults,
+            "question_order": question_order,
+        })),
+    })
 }
 
 fn run_progress(arguments: &[String]) -> ExitCode {
@@ -447,7 +599,7 @@ fn parse_progress(arguments: &[String]) -> Result<ProgressArguments, SetupError>
             .ok_or_else(|| SetupError::Input(format!("missing value for {option}")))?;
         let slot = match option {
             "--scope" => &mut scope,
-            "--answers" => &mut answers,
+            "--answers" | "--quick-answers" => &mut answers,
             "--step" => &mut step,
             "--output" => &mut output,
             "--user-root" => &mut user_root,
@@ -485,7 +637,9 @@ fn parse_progress(arguments: &[String]) -> Result<ProgressArguments, SetupError>
             ProgressAction::Save {
                 step,
                 answers: PathBuf::from(answers.ok_or_else(|| {
-                    SetupError::Input("setup progress save requires --answers".to_owned())
+                    SetupError::Input(
+                        "setup progress save requires --answers or --quick-answers".to_owned(),
+                    )
                 })?),
             }
         }
@@ -528,11 +682,14 @@ fn execute_progress(arguments: ProgressArguments) -> Result<ActionResult, SetupE
     match arguments.action {
         ProgressAction::Save { step, answers } => {
             let answer_bytes = read_bounded_regular(&answers, MAX_ANSWERS_BYTES)?;
-            let config = parse_and_validate_config(&answer_bytes)?;
+            let answers: JsonValue = serde_yaml::from_slice(&answer_bytes).map_err(|error| {
+                SetupError::Input(format!("invalid user setup progress YAML: {error}"))
+            })?;
+            validate_progress_answers(&answers)?;
             let progress = UserSetupProgress {
                 schema_version: 1,
                 step,
-                answers: config,
+                answers,
             };
             let desired = serde_yaml::to_string(&progress)
                 .map_err(|error| {
@@ -613,7 +770,7 @@ fn parse_progress_file(bytes: &[u8]) -> Result<UserSetupProgress, SetupError> {
             "invalid user setup progress step".to_owned(),
         ));
     }
-    validate_config_semantics(&progress.answers)?;
+    validate_progress_answers(&progress.answers)?;
     Ok(progress)
 }
 
@@ -644,6 +801,50 @@ fn progress_result(
     }
 }
 
+fn validate_progress_answers(answers: &JsonValue) -> Result<(), SetupError> {
+    let object = answers.as_object().ok_or_else(|| {
+        SetupError::Verification("user setup progress answers must be a YAML object".to_owned())
+    })?;
+    let allowed = [
+        "schema_version",
+        "interface_language",
+        "wiki",
+        "profile",
+        "persona",
+        "selected_hosts",
+        "skills",
+        "update_check",
+        "usage_guard",
+    ];
+    if object.keys().any(|key| !allowed.contains(&key.as_str())) {
+        return Err(SetupError::Verification(
+            "user setup progress contains an unknown setting".to_owned(),
+        ));
+    }
+    if progress_contains_secret(answers) {
+        return Err(SetupError::Verification(
+            "user setup progress cannot contain a webhook URL, token, or secret".to_owned(),
+        ));
+    }
+    Ok(())
+}
+
+fn progress_contains_secret(value: &JsonValue) -> bool {
+    match value {
+        JsonValue::Object(object) => object.iter().any(|(key, value)| {
+            let normalized = key.to_ascii_lowercase();
+            normalized.contains("token")
+                || normalized.contains("secret")
+                || (normalized == "webhook_url"
+                    || (normalized == "url" && key != "webhook_url_env"))
+                || progress_contains_secret(value)
+        }),
+        JsonValue::Array(values) => values.iter().any(progress_contains_secret),
+        JsonValue::String(value) => value.starts_with("https://") || value.starts_with("http://"),
+        _ => false,
+    }
+}
+
 fn parse(arguments: &[String]) -> Result<Arguments, SetupError> {
     let mut scope = None;
     let mut answers = None;
@@ -670,14 +871,14 @@ fn parse(arguments: &[String]) -> Result<Arguments, SetupError> {
                     "choose exactly one of --dry-run, --apply, or --validate".to_owned(),
                 ));
             }
-            option @ ("--scope" | "--answers" | "--output" | "--user-root") => {
+            option @ ("--scope" | "--answers" | "--quick-answers" | "--output" | "--user-root") => {
                 let value = arguments
                     .get(index + 1)
                     .filter(|value| !value.starts_with("--"))
                     .ok_or_else(|| SetupError::Input(format!("missing value for {option}")))?;
                 let slot = match option {
                     "--scope" => &mut scope,
-                    "--answers" => &mut answers,
+                    "--answers" | "--quick-answers" => &mut answers,
                     "--output" => &mut output,
                     "--user-root" => &mut user_root,
                     _ => unreachable!(),
@@ -700,9 +901,11 @@ fn parse(arguments: &[String]) -> Result<Arguments, SetupError> {
             "user setup requires --output json".to_owned(),
         ));
     }
-    let user_root = user_root.map_or_else(resolve_user_root, |value| Ok(PathBuf::from(value)))?;
-    let root_cap =
-        super::user_install::open_user_root_for_setup(&user_root).map_err(SetupError::Conflict)?;
+    let requested_user_root =
+        user_root.map_or_else(resolve_user_root, |value| Ok(PathBuf::from(value)))?;
+    let (user_root, root_cap) =
+        super::user_install::open_canonical_user_root_for_setup(&requested_user_root)
+            .map_err(SetupError::Conflict)?;
     Ok(Arguments {
         answers: PathBuf::from(
             answers.ok_or_else(|| SetupError::Input("missing --answers".to_owned()))?,
@@ -741,6 +944,7 @@ fn execute(arguments: &Arguments) -> Result<ActionResult, SetupError> {
     } else {
         parse_and_validate_config(&answer_bytes)?
     };
+    validate_registered_project_overrides(&config, &arguments.user_root)?;
     let catalog = parse_and_validate_catalog()?;
     let resolved_skills = resolve_skills(&config, &catalog)?;
     let desired = canonical_config(&config)?;
@@ -1082,11 +1286,26 @@ fn parse_and_validate_config_inner(
     }
     migrate_legacy_skill_names(&mut value)?;
     migrate_legacy_single_profile(&mut value);
+    if allow_legacy_recommended {
+        migrate_legacy_missing_usage_threshold(&mut value);
+    }
     validate_schema(USER_SETUP_SCHEMA, &value, "user setup")?;
     let config: UserSetupConfig = serde_json::from_value(value)
         .map_err(|error| SetupError::Input(format!("invalid user setup values: {error}")))?;
     validate_config_semantics(&config)?;
     Ok(config)
+}
+
+fn migrate_legacy_missing_usage_threshold(value: &mut JsonValue) {
+    let Some(usage_guard) = value
+        .get_mut("usage_guard")
+        .and_then(JsonValue::as_object_mut)
+    else {
+        return;
+    };
+    usage_guard
+        .entry("stop_remaining_percent".to_owned())
+        .or_insert_with(|| JsonValue::from(LEGACY_080_USAGE_THRESHOLD));
 }
 
 fn migrate_legacy_skill_names(value: &mut JsonValue) -> Result<(), SetupError> {
@@ -1099,20 +1318,16 @@ fn migrate_legacy_skill_names(value: &mut JsonValue) -> Result<(), SetupError> {
         return Ok(());
     };
     let mut names = BTreeSet::new();
-    for item in selected {
+    for item in selected.iter() {
         let name = item.as_str().ok_or_else(|| {
             SetupError::Input("selected Skills must contain only names".to_owned())
         })?;
         let canonical = canonical_builtin_skill_name(name)
             .map_err(|error| SetupError::Internal(error.to_string()))?
             .unwrap_or_else(|| name.to_owned());
-        if !names.insert(canonical.clone()) {
-            return Err(SetupError::Input(format!(
-                "legacy Skill migration creates a duplicate selection: {canonical}"
-            )));
-        }
-        *item = JsonValue::String(canonical);
+        names.insert(canonical);
     }
+    *selected = names.into_iter().map(JsonValue::String).collect();
     Ok(())
 }
 
@@ -1195,59 +1410,59 @@ fn migrate_legacy_single_profile(value: &mut JsonValue) -> bool {
 fn legacy_recommended_skill_set(suite: &str) -> Option<&'static [&'static str]> {
     match suite {
         "web-developer" => Some(&[
-            "configure",
-            "setup-project",
-            "auto-setup-project",
-            "clean-ai-slop",
-            "research-practices",
-            "engineer-run",
-            "refine-prompt",
-            "manage-wiki",
-            "record-knowledge",
-            "search-knowledge",
-            "maintain-knowledge",
-            "import-repository-knowledge",
-            "save-progress",
-            "resume-work",
-            "manage-usage",
-            "update-hive",
-            "upgrade-project",
+            "user-setup",
+            "project-setup",
+            "project-setup",
+            "code-polish",
+            "research-best-practices",
+            "ralph-loop",
+            "prompt-refine",
+            "knowledge-maintain",
+            "knowledge-capture",
+            "knowledge-recall",
+            "knowledge-maintain",
+            "knowledge-import",
+            "run-checkpoint",
+            "run-resume",
+            "usage-guard",
+            "product-update",
+            "project-refresh",
         ]),
         "game-developer" => Some(&[
-            "configure",
-            "setup-project",
-            "auto-setup-project",
-            "clean-ai-slop",
-            "research-practices",
-            "engineer-run",
-            "refine-prompt",
-            "manage-wiki",
-            "record-knowledge",
-            "search-knowledge",
-            "maintain-knowledge",
-            "import-repository-knowledge",
-            "save-progress",
-            "resume-work",
-            "handoff-role",
-            "verify-package",
-            "manage-usage",
-            "update-hive",
-            "upgrade-project",
+            "user-setup",
+            "project-setup",
+            "project-setup",
+            "code-polish",
+            "research-best-practices",
+            "ralph-loop",
+            "prompt-refine",
+            "knowledge-maintain",
+            "knowledge-capture",
+            "knowledge-recall",
+            "knowledge-maintain",
+            "knowledge-import",
+            "run-checkpoint",
+            "run-resume",
+            "run-handoff",
+            "package-review",
+            "usage-guard",
+            "product-update",
+            "project-refresh",
         ]),
         "non-developer" => Some(&[
-            "configure",
-            "setup-project",
-            "auto-setup-project",
-            "research-practices",
-            "answer",
-            "refine-prompt",
-            "manage-wiki",
-            "record-knowledge",
-            "search-knowledge",
-            "maintain-knowledge",
-            "import-repository-knowledge",
-            "manage-usage",
-            "update-hive",
+            "user-setup",
+            "project-setup",
+            "project-setup",
+            "research-best-practices",
+            "quick-answer",
+            "prompt-refine",
+            "knowledge-maintain",
+            "knowledge-capture",
+            "knowledge-recall",
+            "knowledge-maintain",
+            "knowledge-import",
+            "usage-guard",
+            "product-update",
         ]),
         _ => None,
     }
@@ -1288,6 +1503,7 @@ fn validate_schema(schema_source: &str, value: &JsonValue, label: &str) -> Resul
     Ok(())
 }
 
+#[allow(clippy::too_many_lines)]
 fn validate_config_semantics(config: &UserSetupConfig) -> Result<(), SetupError> {
     if config.schema_version != 1 {
         return Err(SetupError::Input(
@@ -1336,6 +1552,28 @@ fn validate_config_semantics(config: &UserSetupConfig) -> Result<(), SetupError>
             "usage guard stop_remaining_percent must be between 1 and 99".to_owned(),
         ));
     }
+    for (project_identity, threshold) in &config.usage_guard.project_overrides {
+        if project_identity.trim().is_empty()
+            || project_identity.trim() != project_identity
+            || project_identity.len() > 160
+            || project_identity.contains(['\r', '\n', '\0'])
+        {
+            return Err(SetupError::Input(
+                "usage guard project override requires a stable non-path project identity"
+                    .to_owned(),
+            ));
+        }
+        if !(1..=99).contains(threshold) {
+            return Err(SetupError::Input(
+                "usage guard project override must be between 1 and 99".to_owned(),
+            ));
+        }
+        if *threshold < config.usage_guard.stop_remaining_percent {
+            return Err(SetupError::Input(
+                "usage guard project override cannot be lower than the global threshold".to_owned(),
+            ));
+        }
+    }
     if !config.usage_guard.enabled && config.usage_guard.codexbar_fallback_enabled {
         return Err(SetupError::Input(
             "codexbar_fallback_enabled must be false when the usage guard is disabled".to_owned(),
@@ -1364,6 +1602,45 @@ fn validate_config_semantics(config: &UserSetupConfig) -> Result<(), SetupError>
                 "Discord webhook_url_env must be absent while Discord notification is disabled"
                     .to_owned(),
             ));
+        }
+    }
+    if discord.message_fields.is_empty()
+        || discord
+            .message_fields
+            .iter()
+            .map(|field| field.as_str())
+            .collect::<BTreeSet<_>>()
+            .len()
+            != discord.message_fields.len()
+    {
+        return Err(SetupError::Input(
+            "Discord message_fields must be a non-empty list without duplicates".to_owned(),
+        ));
+    }
+    Ok(())
+}
+
+fn validate_registered_project_overrides(
+    config: &UserSetupConfig,
+    user_root: &Path,
+) -> Result<(), SetupError> {
+    if config.usage_guard.project_overrides.is_empty() {
+        return Ok(());
+    }
+    let registry = hive_wiki::shared::load_project_registry(user_root).map_err(|error| {
+        SetupError::Input(format!(
+            "usage guard project overrides require a valid registered-project list: {error}"
+        ))
+    })?;
+    for project_identity in config.usage_guard.project_overrides.keys() {
+        if !registry
+            .projects
+            .iter()
+            .any(|project| project.id == *project_identity)
+        {
+            return Err(SetupError::Input(format!(
+                "usage guard project override is not a registered project identity: {project_identity}"
+            )));
         }
     }
     Ok(())
@@ -1538,9 +1815,9 @@ fn validate_catalog_semantics(catalog: &UserSetupCatalog) -> Result<(), SetupErr
         })
         .map(|entry| entry.name.as_str())
         .collect();
-    if catalog.mandatory_skills != ["configure"] {
+    if catalog.mandatory_skills != ["user-setup"] {
         return Err(SetupError::Internal(
-            "embedded mandatory skill set must be exactly configure".to_owned(),
+            "embedded mandatory skill set must be exactly user-setup".to_owned(),
         ));
     }
     if !catalog.optional_third_party_skills.is_empty() {
@@ -1672,17 +1949,16 @@ fn resolve_skills(
         selected.retain(|name| {
             !matches!(
                 name.as_str(),
-                "record-knowledge"
-                    | "search-knowledge"
-                    | "share-knowledge"
-                    | "maintain-knowledge"
-                    | "import-repository-knowledge"
-                    | "manage-wiki"
+                "knowledge-capture"
+                    | "knowledge-recall"
+                    | "knowledge-promote"
+                    | "knowledge-maintain"
+                    | "knowledge-import"
             )
         });
     }
     if config.usage_guard.enabled {
-        selected.insert("manage-usage".to_owned());
+        selected.insert("usage-guard".to_owned());
     }
     let dependencies: BTreeMap<&str, &[String]> = catalog
         .skill_dependencies
@@ -2046,7 +2322,7 @@ fn legacy_test3_projection_base(
     let skills = resolve_skills(&config, &catalog)?;
     let mut base = user_projection_files(&config, &skills)?;
     base.insert(
-        PathBuf::from(".agents/skills/configure/SKILL.md"),
+        PathBuf::from(".agents/skills/user-setup/SKILL.md"),
         USER_PROJECTION_090_TEST3_SETUP_HIVE.to_vec(),
     );
     let expected = base
@@ -2103,6 +2379,34 @@ fn apply_user_projection(
         applied.changes.push(change);
     }
     Ok(applied)
+}
+
+/// Recreate the Hive-owned global projection when a preserving uninstall kept
+/// the validated preferences but removed the projection files. This is an
+/// internal reinstall path: it never asks for preferences and refuses to
+/// replace a path that cannot be proven Hive-owned.
+pub(crate) fn restore_saved_projection_after_uninstall(root: &Dir) -> Result<bool, SetupError> {
+    let manifest_relative = Path::new(USER_PROJECTION_MANIFEST_RELATIVE);
+    if super::user_install::read_user_setup_file(root, manifest_relative, MAX_USER_SETUP_BYTES)
+        .map_err(SetupError::Conflict)?
+        .is_some()
+    {
+        return Ok(false);
+    }
+    let Some(setup_bytes) = super::user_install::read_user_setup_file(
+        root,
+        Path::new(USER_SETUP_RELATIVE),
+        MAX_USER_SETUP_BYTES,
+    )
+    .map_err(SetupError::Conflict)?
+    else {
+        return Ok(false);
+    };
+    let Some((config, resolved_skills)) = resolved_operational_skills(root)? else {
+        return Ok(false);
+    };
+    let projection = apply_user_projection(root, &config, &resolved_skills, &setup_bytes)?;
+    Ok(!projection.changed_paths.is_empty())
 }
 
 fn validate_user_projection(
@@ -2205,6 +2509,29 @@ fn parse_projection_manifest(bytes: &[u8]) -> Result<UserProjectionManifest, Set
     Ok(manifest)
 }
 
+pub(crate) fn uninstall_projection_paths(root: &Dir) -> Result<Vec<PathBuf>, SetupError> {
+    let manifest_path = Path::new(USER_PROJECTION_MANIFEST_RELATIVE);
+    let Some(bytes) =
+        super::user_install::read_user_setup_file(root, manifest_path, MAX_USER_SETUP_BYTES)
+            .map_err(SetupError::Conflict)?
+    else {
+        return Ok(Vec::new());
+    };
+    let mut paths = parse_projection_manifest(&bytes)
+        .map(|manifest| {
+            manifest
+                .entries
+                .into_iter()
+                .map(|entry| PathBuf::from(entry.path))
+                .collect::<Vec<_>>()
+        })
+        .unwrap_or_default();
+    paths.push(manifest_path.to_path_buf());
+    paths.sort();
+    paths.dedup();
+    Ok(paths)
+}
+
 fn render_user_directive(config: &UserSetupConfig, resolved_skills: &[String]) -> Vec<u8> {
     let hosts = config
         .selected_hosts
@@ -2262,10 +2589,10 @@ knowledge index를 capture·refresh하지 않음.\n"
     };
     rendered.push_str(match config.interface_language {
         InterfaceLanguage::En => {
-            "- For every passed, failed, skipped, deferred, unverified, or unsupported item, state the affected scope, exact reason, current host or platform relationship, whether it ran, and what the result does and does not prove. Never trade those qualifiers for brevity.\n"
+            "- For `all todos`, `until completion`, `do not stop`, or an equivalent terminal request, continue while any in-scope agent-owned inspection, fix, verification, commit, permitted push, CI observation, or authorized publication remains. A progress report naming such work must not end the task. Before a final response, classify every remaining item as `agent-owned`, `awaiting-user-authority`, `awaiting-external-evidence`, or `blocked`; only no `agent-owned` work permits completion.\n- For every passed, failed, skipped, deferred, unverified, or unsupported item, state the affected scope, exact reason, current host or platform relationship, whether it ran, and what the result does and does not prove. Never trade those qualifiers for brevity.\n"
         }
         InterfaceLanguage::Ko => {
-            "- 통과·실패·건너뜀·연기·미검증·미지원 항목마다 대상 범위, 정확한 이유, 현재 호스트·운영체제와의 관계, 실제 실행 여부, 증명하는 범위와 증명하지 못한 범위를 모두 명시. 해석에 필요한 한정어를 간결함을 이유로 생략 금지.\n"
+            "- `all todos`, `until completion`, `do not stop` 또는 같은 완료 요청: 범위 안 Agent 소유 조사·수정·검증·commit·허용된 push·CI 관찰·승인된 게시 작업이 남은 동안 계속 진행. 해당 작업이 남았다는 진행 보고로 task 종료 금지. 최종 응답 전 남은 항목을 `agent-owned`, `awaiting-user-authority`, `awaiting-external-evidence`, `blocked`로 분류. `agent-owned` 작업 `0건`일 때만 완료 표기.\n- 통과·실패·건너뜀·연기·미검증·미지원 항목마다 대상 범위, 정확한 이유, 현재 호스트·운영체제와의 관계, 실제 실행 여부, 증명하는 범위와 증명하지 못한 범위를 모두 명시. 해석에 필요한 한정어를 간결함을 이유로 생략 금지.\n"
         }
     });
     rendered.into_bytes()
@@ -2375,7 +2702,7 @@ pub(crate) fn project_preferences(user_root: &Path) -> Result<GlobalProjectPrefe
         .ok_or_else(|| {
             "global Hive setup is required before project expedited or custom setup".to_owned()
         })?;
-    selected_project_skills.retain(|name| name != "configure");
+    selected_project_skills.retain(|name| name != "user-setup");
     selected_project_skills.sort();
     selected_project_skills.dedup();
     Ok(GlobalProjectPreferences {
@@ -2390,6 +2717,14 @@ pub(crate) fn project_preferences(user_root: &Path) -> Result<GlobalProjectPrefe
         codexbar_fallback_enabled: config.usage_guard.codexbar_fallback_enabled,
         discord_guard_enabled: config.usage_guard.discord.enabled,
         discord_webhook_url_env: config.usage_guard.discord.webhook_url_env,
+        discord_message_fields: config
+            .usage_guard
+            .discord
+            .message_fields
+            .into_iter()
+            .map(DiscordMessageField::as_str)
+            .map(str::to_owned)
+            .collect(),
         usage_stop_remaining_percent: config.usage_guard.stop_remaining_percent,
     })
 }
@@ -2556,7 +2891,7 @@ selected_hosts:
 skills:
   mode: individual
   selected:
-    - configure
+    - user-setup
 usage_guard:
   enabled: false
   stop_remaining_percent: 20
@@ -2564,6 +2899,29 @@ usage_guard:
 ",
         )
         .expect("valid config")
+    }
+
+    #[test]
+    fn cli_parse_uses_the_physical_user_root_after_no_follow_validation() {
+        let temporary = tempfile::tempdir().expect("tempdir");
+        let requested = temporary.path().to_path_buf();
+        let expected = requested.canonicalize().expect("canonical user root");
+        let answers = requested.join("answers.yml");
+        let arguments = vec![
+            "--scope".to_owned(),
+            "user".to_owned(),
+            "--answers".to_owned(),
+            answers.display().to_string(),
+            "--user-root".to_owned(),
+            requested.display().to_string(),
+            "--dry-run".to_owned(),
+            "--output".to_owned(),
+            "json".to_owned(),
+        ];
+
+        let parsed = parse(&arguments).expect("parse user setup arguments");
+
+        assert_eq!(parsed.user_root, expected);
     }
 
     fn write_projection_manifest(root: &Path, manifest: &UserProjectionManifest) {
@@ -2637,8 +2995,8 @@ usage_guard:
         let catalog = parse_and_validate_catalog().expect("catalog");
         let skills = resolve_skills(&config, &catalog).expect("skill closure");
         let files = user_projection_files(&config, &skills).expect("desired files");
-        let path = PathBuf::from(".agents/skills/configure/SKILL.md");
-        let incoming = files.get(&path).expect("configure source").clone();
+        let path = PathBuf::from(".agents/skills/user-setup/SKILL.md");
+        let incoming = files.get(&path).expect("user-setup source").clone();
         let full = temporary.path().join(&path);
         fs::create_dir_all(full.parent().expect("skill parent")).expect("skill parent");
         fs::write(&full, local).expect("local Skill");
@@ -2668,8 +3026,8 @@ usage_guard:
         let catalog = parse_and_validate_catalog().expect("catalog");
         let skills = resolve_skills(&config, &catalog).expect("skill closure");
         let files = user_projection_files(&config, &skills).expect("desired files");
-        let path = PathBuf::from(".agents/skills/configure/SKILL.md");
-        let incoming = files.get(&path).expect("configure source").clone();
+        let path = PathBuf::from(".agents/skills/user-setup/SKILL.md");
+        let incoming = files.get(&path).expect("user-setup source").clone();
         let mut base = incoming.clone();
         let replaced = String::from_utf8(base.clone())
             .expect("UTF-8 Skill")
@@ -2699,8 +3057,8 @@ usage_guard:
         let catalog = parse_and_validate_catalog().expect("catalog");
         let skills = resolve_skills(&config, &catalog).expect("skill closure");
         let files = user_projection_files(&config, &skills).expect("desired files");
-        let path = PathBuf::from(".agents/skills/configure/SKILL.md");
-        let incoming = files.get(&path).expect("configure source").clone();
+        let path = PathBuf::from(".agents/skills/user-setup/SKILL.md");
+        let incoming = files.get(&path).expect("user-setup source").clone();
         let base = String::from_utf8(incoming)
             .expect("UTF-8 Skill")
             .replace("# Setup Hive", "# Earlier Setup Hive")
@@ -2742,7 +3100,7 @@ usage_guard:
     #[test]
     fn legacy_user_projection_without_an_authenticated_base_stays_unchanged() {
         let temporary = tempfile::tempdir().expect("temporary user root");
-        let path = PathBuf::from(".agents/skills/configure/SKILL.md");
+        let path = PathBuf::from(".agents/skills/user-setup/SKILL.md");
         let full = temporary.path().join(&path);
         fs::create_dir_all(full.parent().expect("skill parent")).expect("skill parent");
         let local = b"local-only setup instructions\n".to_vec();
@@ -2786,7 +3144,7 @@ usage_guard:
         let catalog = parse_and_validate_catalog().expect("catalog");
         let skills = resolve_skills(&config, &catalog).expect("skill closure");
         let mut old_files = user_projection_files(&config, &skills).expect("old files");
-        let path = PathBuf::from(".agents/skills/configure/SKILL.md");
+        let path = PathBuf::from(".agents/skills/user-setup/SKILL.md");
         old_files.insert(path.clone(), USER_PROJECTION_090_TEST3_SETUP_HIVE.to_vec());
         for (relative, bytes) in &old_files {
             let full = temporary.path().join(relative);
@@ -2822,7 +3180,7 @@ usage_guard:
             .reports
             .iter()
             .find(|report| report.path == portable(&path))
-            .expect("configure report");
+            .expect("user-setup report");
 
         assert_eq!(report.disposition, MergeDisposition::IncomingReplace);
         assert!(!report.local_priority);
@@ -2871,9 +3229,9 @@ usage_guard:
         let temporary = tempfile::tempdir().expect("temporary user root");
         let config = valid_config();
         let (skills, answers, _) = seed_legacy_070_projection(temporary.path(), &config);
-        let path = PathBuf::from(".agents/skills/configure/SKILL.md");
+        let path = PathBuf::from(".agents/skills/user-setup/SKILL.md");
         let full = temporary.path().join(&path);
-        let mut local = fs::read(&full).expect("legacy configure");
+        let mut local = fs::read(&full).expect("legacy user-setup");
         local.extend_from_slice(b"\n<!-- local note -->\n");
         fs::write(&full, &local).expect("local edit");
         let root =
@@ -2914,7 +3272,7 @@ usage_guard:
     fn embedded_user_setup_catalog_is_valid() {
         let catalog = parse_and_validate_catalog().expect("catalog");
         assert_eq!(catalog.schema_version, 1);
-        assert_eq!(catalog.mandatory_skills, ["configure"]);
+        assert_eq!(catalog.mandatory_skills, ["user-setup"]);
         assert!(catalog.optional_third_party_skills.is_empty());
     }
 
@@ -2965,19 +3323,20 @@ selected_hosts:
 skills:
   mode: recommended
   recommended_suite: web-developer
-usage_guard: {}
+usage_guard:
+  stop_remaining_percent: 20
 ";
-        let error = parse_and_validate_config(legacy).expect_err("new answer rejects suite");
+        let error = parse_and_validate_config(legacy).expect_err("new quick-answer rejects suite");
         assert!(error.message().contains("no longer accepted"));
 
         let migrated =
             parse_and_validate_installed_config(legacy).expect("existing setting migration");
         assert_eq!(migrated.skills.mode, SkillSelectionMode::Individual);
-        assert!(migrated
+        assert!(migrated.skills.selected.contains(&"usage-guard".to_owned()));
+        assert!(!migrated
             .skills
             .selected
-            .contains(&"manage-usage".to_owned()));
-        assert!(!migrated.skills.selected.contains(&"answer".to_owned()));
+            .contains(&"quick-answer".to_owned()));
         let canonical = String::from_utf8(canonical_config(&migrated).expect("new format"))
             .expect("UTF-8 config");
         assert!(canonical.contains("mode: individual"));
@@ -3004,17 +3363,18 @@ skills:
     - setup-hive
     - hive-knowledge-capture
     - ai-slop-cleaner
-usage_guard: {}
+usage_guard:
+  stop_remaining_percent: 20
 ";
         let config = parse_and_validate_config(legacy).expect("legacy individual selection");
 
         assert_eq!(
             config.skills.selected,
-            ["configure", "record-knowledge", "clean-ai-slop"]
+            ["code-polish", "knowledge-capture", "user-setup"]
         );
         let canonical = String::from_utf8(canonical_config(&config).expect("canonical config"))
             .expect("UTF-8 canonical config");
-        assert!(canonical.contains("- clean-ai-slop"));
+        assert!(canonical.contains("- code-polish"));
         assert!(!canonical.contains("ai-slop-cleaner"));
     }
 
@@ -3036,8 +3396,9 @@ selected_hosts:
 skills:
   mode: individual
   selected:
-    - configure
-usage_guard: {}
+    - user-setup
+usage_guard:
+  stop_remaining_percent: 20
 "
             .as_bytes(),
         )
@@ -3075,8 +3436,9 @@ selected_hosts:
 skills:
   mode: individual
   selected:
-    - answer
-usage_guard: {}
+    - quick-answer
+usage_guard:
+  stop_remaining_percent: 20
 "
             .as_bytes(),
         )
@@ -3085,13 +3447,13 @@ usage_guard: {}
 
         assert_eq!(
             resolve_skills(&config, &catalog).expect("skill resolution"),
-            ["answer", "configure"]
+            ["quick-answer", "user-setup"]
         );
     }
 
     #[test]
-    fn setup_defaults_enable_wiki_and_keep_guard_native_first() {
-        let config = parse_and_validate_config(
+    fn legacy_defaults_enable_wiki_and_keep_guard_native_first() {
+        let config = parse_and_validate_installed_config(
             br"
 schema_version: 1
 interface_language: en
@@ -3106,8 +3468,9 @@ selected_hosts:
 skills:
   mode: individual
   selected:
-    - configure
-usage_guard: {}
+    - user-setup
+usage_guard:
+  stop_remaining_percent: 20
 ",
         )
         .expect("defaults");
@@ -3122,6 +3485,117 @@ usage_guard: {}
             config.usage_guard.discord.request_privacy,
             DiscordRequestPrivacy::Summary
         );
+        assert_eq!(
+            config.usage_guard.discord.message_fields,
+            default_discord_message_fields()
+        );
+    }
+
+    #[test]
+    fn new_setup_requires_a_user_selected_usage_threshold() {
+        let error = parse_and_validate_config(
+            br"
+schema_version: 1
+interface_language: en
+wiki:
+  language: both
+profile:
+  contexts:
+    - non-developer
+persona:
+  id: friendly
+selected_hosts:
+  - codex
+skills:
+  mode: individual
+  selected:
+    - user-setup
+usage_guard: {}
+",
+        )
+        .expect_err("new setup rejects an omitted threshold");
+
+        assert!(error.message().contains("stop_remaining_percent"));
+    }
+
+    #[test]
+    fn progress_preserves_only_nonsecret_answers_and_the_next_step() {
+        let user_root = tempfile::tempdir().expect("temporary user root");
+        let answers = user_root.path().join("answers.yml");
+        std::fs::write(
+            &answers,
+            "interface_language: ko\nusage_guard:\n  enabled: true\n  stop_remaining_percent: 37\n",
+        )
+        .expect("write answers");
+        let save = parse_progress(&[
+            "save".to_owned(),
+            "--scope".to_owned(),
+            "user".to_owned(),
+            "--step".to_owned(),
+            "discord-test".to_owned(),
+            "--answers".to_owned(),
+            answers.display().to_string(),
+            "--user-root".to_owned(),
+            user_root.path().display().to_string(),
+            "--output".to_owned(),
+            "json".to_owned(),
+        ])
+        .expect("progress save arguments");
+        let saved = execute_progress(save).expect("progress save");
+        assert_eq!(saved.code, "hive.user-setup-progress-saved");
+
+        let status = parse_progress(&[
+            "status".to_owned(),
+            "--scope".to_owned(),
+            "user".to_owned(),
+            "--user-root".to_owned(),
+            user_root.path().display().to_string(),
+            "--output".to_owned(),
+            "json".to_owned(),
+        ])
+        .expect("progress status arguments");
+        let inspected = execute_progress(status).expect("progress status");
+        assert_eq!(inspected.code, "hive.user-setup-progress-status");
+        assert_eq!(inspected.data.expect("status data")["step"], "discord-test");
+
+        std::fs::write(
+            &answers,
+            "usage_guard:\n  webhook_url: https://discord.example/webhook\n",
+        )
+        .expect("write forbidden answers");
+        let rejected = parse_progress(&[
+            "save".to_owned(),
+            "--scope".to_owned(),
+            "user".to_owned(),
+            "--step".to_owned(),
+            "discord-test".to_owned(),
+            "--answers".to_owned(),
+            answers.display().to_string(),
+            "--user-root".to_owned(),
+            user_root.path().display().to_string(),
+            "--output".to_owned(),
+            "json".to_owned(),
+        ])
+        .and_then(execute_progress);
+        let Err(rejected) = rejected else {
+            panic!("progress accepts a webhook URL");
+        };
+        assert!(rejected.message().contains("webhook URL"));
+    }
+
+    #[test]
+    fn project_override_requires_a_registered_project_identity() {
+        let temporary = tempfile::tempdir().expect("temporary user root");
+        let mut config = valid_config();
+        config
+            .usage_guard
+            .project_overrides
+            .insert("not-registered".to_owned(), 30);
+
+        let error = validate_registered_project_overrides(&config, temporary.path())
+            .expect_err("unregistered project override");
+
+        assert!(error.message().contains("registered-project"));
     }
 
     #[test]
@@ -3141,6 +3615,20 @@ usage_guard: {}
         config.usage_guard.enabled = false;
         let error = validate_config_semantics(&config).expect_err("guard dependency rejected");
         assert!(error.message().contains("usage guard"));
+
+        config.usage_guard.enabled = true;
+        config.usage_guard.discord.message_fields = vec![
+            DiscordMessageField::Project,
+            DiscordMessageField::RemainingUsage,
+        ];
+        validate_config_semantics(&config).expect("ordered Discord fields accepted");
+        let canonical = String::from_utf8(canonical_config(&config).expect("canonical config"))
+            .expect("UTF-8 config");
+        assert!(canonical.contains("message_fields:\n    - project\n    - remaining-usage"));
+
+        config.usage_guard.discord.message_fields.clear();
+        let error = validate_config_semantics(&config).expect_err("empty fields rejected");
+        assert!(error.message().contains("message_fields"));
     }
 
     #[test]
@@ -3166,8 +3654,9 @@ selected_hosts:
 skills:
   mode: individual
   selected:
-    - configure
-usage_guard: {}
+    - user-setup
+usage_guard:
+  stop_remaining_percent: 20
 ",
         )
         .expect_err("v0.9 must not accept a Notion user setup");
@@ -3192,10 +3681,11 @@ selected_hosts:
 skills:
   mode: individual
   selected:
-    - record-knowledge
-    - manage-wiki
+    - knowledge-capture
+    - knowledge-maintain
 usage_guard:
   enabled: true
+  stop_remaining_percent: 20
 ",
         )
         .expect("config");
@@ -3203,51 +3693,43 @@ usage_guard:
 
         assert_eq!(
             resolve_skills(&config, &catalog).expect("closure"),
-            ["configure", "manage-usage"]
+            ["usage-guard", "user-setup"]
         );
     }
 
     #[test]
     fn enabled_wiki_resolves_knowledge_skill_dependency_closure() {
         let mut config = valid_config();
-        config.skills.selected = vec!["record-knowledge".to_owned()];
+        config.skills.selected = vec!["knowledge-capture".to_owned()];
         let catalog = parse_and_validate_catalog().expect("catalog");
 
         assert_eq!(
             resolve_skills(&config, &catalog).expect("closure"),
-            ["configure", "record-knowledge", "search-knowledge",]
+            ["knowledge-capture", "knowledge-recall", "user-setup",]
         );
     }
 
     #[test]
     fn enabled_wiki_skill_resolves_the_complete_reused_knowledge_stack() {
         let mut config = valid_config();
-        config.skills.selected = vec!["manage-wiki".to_owned()];
+        config.skills.selected = vec!["knowledge-maintain".to_owned()];
         let catalog = parse_and_validate_catalog().expect("catalog");
 
         assert_eq!(
             resolve_skills(&config, &catalog).expect("closure"),
-            [
-                "configure",
-                "import-repository-knowledge",
-                "maintain-knowledge",
-                "manage-wiki",
-                "record-knowledge",
-                "search-knowledge",
-                "share-knowledge",
-            ]
+            ["knowledge-maintain", "knowledge-recall", "user-setup",]
         );
     }
 
     #[test]
     fn disabled_usage_guard_preserves_an_explicitly_selected_control_skill() {
         let mut config = valid_config();
-        config.skills.selected = vec!["manage-usage".to_owned()];
+        config.skills.selected = vec!["usage-guard".to_owned()];
         let catalog = parse_and_validate_catalog().expect("catalog");
 
         assert_eq!(
             resolve_skills(&config, &catalog).expect("closure"),
-            ["configure", "manage-usage"]
+            ["usage-guard", "user-setup"]
         );
     }
 
@@ -3325,8 +3807,9 @@ usage_guard:
             custom_description: Some("friendly `but strict`".to_owned()),
         };
 
-        let rendered = String::from_utf8(render_user_directive(&config, &["configure".to_owned()]))
-            .expect("UTF-8 guidance");
+        let rendered =
+            String::from_utf8(render_user_directive(&config, &["user-setup".to_owned()]))
+                .expect("UTF-8 guidance");
 
         assert!(
             rendered.contains("- User contexts: `game-developer`, `web-developer` — `웹과 게임`")
@@ -3337,7 +3820,7 @@ usage_guard:
     #[test]
     fn user_directive_uses_the_selected_interface_language() {
         let mut config = valid_config();
-        let english = String::from_utf8(render_user_directive(&config, &["configure".to_owned()]))
+        let english = String::from_utf8(render_user_directive(&config, &["user-setup".to_owned()]))
             .expect("English guidance");
         assert!(english.contains("# Aigent Hive user preferences"));
         assert!(english.contains(
@@ -3347,15 +3830,17 @@ usage_guard:
             "A message written in another language does not by itself change this preference"
         ));
         assert!(english.contains("For every passed, failed, skipped, deferred"));
+        assert!(english.contains("A progress report naming such work must not end the task"));
         assert!(!english.contains("# Aigent Hive 사용자 설정"));
 
         config.interface_language = InterfaceLanguage::Ko;
-        let korean = String::from_utf8(render_user_directive(&config, &["configure".to_owned()]))
+        let korean = String::from_utf8(render_user_directive(&config, &["user-setup".to_owned()]))
             .expect("Korean guidance");
         assert!(korean.contains("# Aigent Hive 사용자 설정"));
         assert!(korean.contains("명시적 요청이 없는 한 모든 질문과 응답에 한국어 사용"));
         assert!(korean.contains("다른 언어로 작성된 메시지만으로 이 선호를 변경하지 않음"));
         assert!(korean.contains("통과·실패·건너뜀·연기·미검증·미지원"));
+        assert!(korean.contains("`agent-owned` 작업 `0건`일 때만 완료 표기"));
         assert!(!korean.contains("# Aigent Hive user preferences"));
     }
 
@@ -3365,8 +3850,9 @@ usage_guard:
         assert!(!config.update_check.enabled);
         config.update_check.enabled = true;
 
-        let rendered = String::from_utf8(render_user_directive(&config, &["configure".to_owned()]))
-            .expect("English guidance");
+        let rendered =
+            String::from_utf8(render_user_directive(&config, &["user-setup".to_owned()]))
+                .expect("English guidance");
 
         assert!(rendered.contains("- Daily update check: `enabled`"));
         assert!(rendered.contains("hive update --check --user-root <user-root> --output json"));
@@ -3378,7 +3864,7 @@ usage_guard:
         let mut config = valid_config();
         let enabled = String::from_utf8(render_user_directive(
             &config,
-            &["record-knowledge".to_owned()],
+            &["knowledge-capture".to_owned()],
         ))
         .expect("enabled guidance");
         assert!(enabled.contains("agent-reviewed task-fact autocapture"));
@@ -3388,7 +3874,7 @@ usage_guard:
         config.wiki.enabled = false;
         let disabled = String::from_utf8(render_user_directive(
             &config,
-            &["record-knowledge".to_owned()],
+            &["knowledge-capture".to_owned()],
         ))
         .expect("disabled guidance");
         assert!(!disabled.contains("agent-reviewed task-fact autocapture"));

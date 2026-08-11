@@ -22,7 +22,9 @@ EXPECTED_ACTIONS = {
     "UnknownAction",
     "SetupHarness",
     "SetupHiveUser",
+    "DescribeHiveUserSetup",
     "InstallHiveUser",
+    "UninstallHiveUser",
     "UpdateHiveUser",
     "ValidateHiveUser",
     "RecoverHiveUser",
@@ -92,7 +94,15 @@ EXPECTED_LOOP_ACTIONS = {
     "PrepareLoopDispatch",
     "RecoverLoop",
 }
-GENERIC_EVIDENCE_KINDS = {"command", "file", "test", "verdict", "report", "release"}
+GENERIC_EVIDENCE_KINDS = {
+    "command",
+    "file",
+    "test",
+    "verdict",
+    "report",
+    "release",
+    "user-setup-catalog",
+}
 EXPECTED_LOOP_EVIDENCE_KINDS = {
     "loop-graph",
     "loop-evidence",
@@ -166,7 +176,7 @@ class ActionResultActionTests(unittest.TestCase):
             list(validator.iter_errors({**base, "action": "ForgeKnowledgeAuthority"}))
         )
 
-    def test_schema_covers_only_the_loop_evidence_kinds_the_adapter_emits(self) -> None:
+    def test_schema_covers_generic_and_loop_evidence_kinds(self) -> None:
         loop = LOOP_SOURCE.read_text(encoding="utf-8")
         emitted_kinds = set(
             re.findall(r'(?<![A-Za-z])Evidence\s*\{\s*kind:\s*"([a-z-]+)"', loop)

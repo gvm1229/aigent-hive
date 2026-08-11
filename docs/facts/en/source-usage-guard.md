@@ -5,18 +5,21 @@ topic_slug: source-usage-guard
 language: en
 counterpart: ../ko/source-usage-guard.md
 title: "Source Session Usage Guard"
-summary: "Source development checks the active session quota at every execution boundary."
+summary: "Source development keeps every execution-boundary check while migrating to the single product usage guard."
 tags: [guard, source, usage]
 aliases: ["Source quota safeguard"]
 sources:
-  - "repo:docs/guides/source-usage-guard.md#sha256:febe2420d8bd962cf11efaec3aa85df76bce57248e38068809acde71a3c80f8c"
+  - "repo:docs/guides/source-usage-guard.md#sha256:3feed99484282ad4265e82d2f831859993f8292b92c8369cb57ee7b7b7c04c9d"
+  - "repo:docs/plans/active/usage-guard-policy.md#sha256:720a92c5a642a85082fafd152766b0bdc34afe12758c9887c39fd552113d002e"
 links: [automatic-dispatch-guard, source-development, windows-watcher-identity]
-reviewed_revision: "git:722c8e46dbde5710155b394ef33820ebccd3b85c"
+reviewed_revision: "git:7dd812e81a6e4e2771c783fc65835a3387bbd7ca"
 status: active
 ---
 
 # Source Session Usage Guard
 
-The source-only guard checks the current development session before each tool,
-mutation, external write, push, and final answer. A bypass requires explicit intent
-and is bound only to the current session and process.
+The current source guard checks the development session before each tool, mutation, external write,
+push, and final answer. The planned migration preserves those boundaries in the single product
+`usage-guard`, using the user's global threshold and the repository's optional earlier-stop
+override. The source-only Skill, adapter, and threshold state are then removed. A bypass still
+requires explicit intent and remains bound to the current session and process.

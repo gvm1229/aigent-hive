@@ -19,10 +19,18 @@ Required fields:
 
 - Agent: <agent or host>
 - Branch: <branch>
-- Status: planning | editing | blocked | done
+- Status: active | awaiting-user-authority | awaiting-external-evidence | blocked | complete
 - Task: <summary>
 - Started: <ISO-8601>
 - Last updated: <ISO-8601>
+
+## Remaining Agent-Owned Actions
+
+- <action or none>
+
+## Closure Evidence
+
+- <required evidence, external owner, or none>
 
 ## Intended Edit Paths
 
@@ -68,5 +76,17 @@ Required fields:
 6. Before the final response, resolve every active-session `Temporary Worktrees` entry. Verify
    owned cleanup with `git worktree list --porcelain`; record an exact retained path and reason
    when cleanup cannot safely proceed.
+
+## Task Closure
+
+1. Keep the manifest `active` while an in-scope agent-owned action remains. A progress update is
+   not a transition out of `active`.
+2. Before a final task response, update `Remaining Agent-Owned Actions` and `Closure Evidence`.
+   An `active` manifest prohibits a final completion claim.
+3. Use `awaiting-user-authority` only for a protected action requiring the maintainer. Use
+   `awaiting-external-evidence` only when the named external actor must provide evidence. Both
+   states require exact action, expected evidence, and owner in the manifest.
+4. Use `blocked` only for a repeated condition with a recovery path. Use `complete` only after
+   every scoped action and evidence condition is satisfied.
 
 This is advisory coordination. Serialize overlapping edits under the default two-branch policy. Use another branch or worktree only when the user explicitly authorizes that exception.

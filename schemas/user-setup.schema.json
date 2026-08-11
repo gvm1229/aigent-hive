@@ -87,28 +87,28 @@
     },
     "skill_name": {
       "enum": [
-        "configure",
-        "setup-project",
-        "auto-setup-project",
-        "clean-ai-slop",
-        "research-practices",
-        "engineer-run",
-        "manage-wiki",
-        "answer",
-        "refine-prompt",
-        "record-knowledge",
-        "search-knowledge",
-        "import-repository-knowledge",
-        "share-knowledge",
-        "maintain-knowledge",
-        "save-progress",
-        "resume-work",
-        "manage-usage",
-        "handoff-role",
-        "verify-package",
-        "update-hive",
-        "upgrade-project",
-        "migrate-project"
+        "quick-answer",
+        "project-setup",
+        "code-polish",
+        "ralph-loop",
+        "knowledge-import",
+        "knowledge-maintain",
+        "knowledge-capture",
+        "prompt-refine",
+        "research-best-practices",
+        "knowledge-recall",
+        "usage-guard",
+        "ship",
+        "amend-directive",
+        "user-setup",
+        "run-handoff",
+        "project-transition",
+        "run-resume",
+        "run-checkpoint",
+        "knowledge-promote",
+        "product-update",
+        "project-refresh",
+        "package-review"
       ]
     },
     "skill_selection": {
@@ -152,10 +152,24 @@
         "stop_remaining_percent": {
           "type": "integer",
           "minimum": 1,
-          "maximum": 99,
-          "default": 20
+          "maximum": 99
         },
         "codexbar_fallback_enabled": { "type": "boolean", "default": false },
+        "project_overrides": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 160,
+            "pattern": "^[^\\r\\n\\u0000]+$"
+          },
+          "additionalProperties": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 99
+          },
+          "default": {}
+        },
         "discord": {
           "type": "object",
           "additionalProperties": false,
@@ -168,6 +182,31 @@
             "request_privacy": {
               "enum": ["summary", "raw-prompt"],
               "default": "summary"
+            },
+            "message_fields": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": {
+                "enum": [
+                  "remaining-usage",
+                  "project",
+                  "request",
+                  "progress",
+                  "host",
+                  "resume",
+                  "measured-at",
+                  "evidence"
+                ]
+              },
+              "default": [
+                "remaining-usage",
+                "project",
+                "request",
+                "progress",
+                "host",
+                "resume"
+              ]
             }
           },
           "allOf": [
@@ -198,7 +237,8 @@
             "properties": { "codexbar_fallback_enabled": { "const": false } }
           }
         }
-      ]
+      ],
+      "required": ["stop_remaining_percent"]
     }
   }
 }

@@ -98,10 +98,10 @@ class Phase3RoutingContract(Phase1CliTestCase):
                 "schema_version": 1,
                 "route": "simple-question",
                 "logical_action": "AnswerSimpleQuestion",
-                "selected_skill": "answer",
+                "selected_skill": "quick-answer",
                 "provided_by": "hive",
                 "mode": None,
-                "load_skill_bodies": ["answer"],
+                "load_skill_bodies": ["quick-answer"],
                 "next_action": None,
             },
         )
@@ -122,8 +122,8 @@ class Phase3RoutingContract(Phase1CliTestCase):
         self.assertEqual(decision["route"], "hive-skill")
         self.assertEqual(decision["logical_action"], "RefinePrompt")
         self.assertFalse(decision.get("refine_suggestion", False))
-        self.assertEqual(decision["selected_skill"], "refine-prompt")
-        self.assertEqual(decision["load_skill_bodies"], ["refine-prompt"])
+        self.assertEqual(decision["selected_skill"], "prompt-refine")
+        self.assertEqual(decision["load_skill_bodies"], ["prompt-refine"])
         self.assertEqual(decision["mode"], "refine-only")
 
     def test_prompt_refine_defaults_to_refine_only(self) -> None:
@@ -132,11 +132,11 @@ class Phase3RoutingContract(Phase1CliTestCase):
         decision = self.decision(result)
         self.assertEqual(decision["route"], "hive-skill")
         self.assertEqual(decision["logical_action"], "RefinePrompt")
-        self.assertEqual(decision["selected_skill"], "refine-prompt")
+        self.assertEqual(decision["selected_skill"], "prompt-refine")
         self.assertEqual(decision["mode"], "refine-only")
         self.assertEqual(
             decision["load_skill_bodies"],
-            ["refine-prompt"],
+            ["prompt-refine"],
         )
 
     def test_explicitly_selected_compatible_omx_skill_precedes_hive_candidate(self) -> None:
@@ -165,11 +165,11 @@ class Phase3RoutingContract(Phase1CliTestCase):
         self.assertEqual(decision["logical_action"], "QueryKnowledge")
         self.assertEqual(
             decision["selected_skill"],
-            "search-knowledge",
+            "knowledge-recall",
         )
         self.assertEqual(
             decision["load_skill_bodies"],
-            ["search-knowledge"],
+            ["knowledge-recall"],
         )
 
     def test_project_dependent_simple_question_is_not_auto_transitioned(
@@ -199,7 +199,7 @@ class Phase3RoutingContract(Phase1CliTestCase):
         self.assertEqual(process.returncode, 0, process.stderr)
         decision = self.decision(result)
         self.assertEqual(decision["logical_action"], "RefinePrompt")
-        self.assertEqual(decision["selected_skill"], "refine-prompt")
+        self.assertEqual(decision["selected_skill"], "prompt-refine")
         self.assertEqual(decision["mode"], "refine-and-run")
 
     def test_host_native_is_last_precedence_fallback(self) -> None:

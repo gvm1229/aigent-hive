@@ -206,6 +206,7 @@ class SourceWikiConformance(unittest.TestCase):
             [str(self.hive), *arguments, "--output", "json"],
             cwd=ROOT,
             text=True,
+            encoding="utf-8",
             capture_output=True,
             check=False,
         )
@@ -950,23 +951,18 @@ class SourceWikiConformance(unittest.TestCase):
         documentation_directive = (
             ROOT / ".agents/directives/04-documentation-state.md"
         ).read_text(encoding="utf-8")
-        source_skill = (
-            ROOT / ".agents/skills/hive-source-wiki/SKILL.md"
-        ).read_text(encoding="utf-8")
         decision = (
             ROOT / "docs/decisions/ADR-0011-source-wiki-independence.md"
         ).read_text(encoding="utf-8")
         for surface in (
             source_manifest,
             documentation_directive,
-            source_skill,
             decision,
         ):
             self.assertIn("agent-reviewed", surface.lower())
             self.assertIn("task fact", surface.lower().replace("-", " "))
             self.assertIn("raw transcript", surface.lower())
         self.assertIn("originating request", documentation_directive)
-        self.assertIn("current authorized task", source_skill)
         self.assertIn("hook", decision.lower())
 
     def test_hive_marketing_deck_has_bilingual_resume_memory(self) -> None:
@@ -982,7 +978,10 @@ class SourceWikiConformance(unittest.TestCase):
         for surface in (english, korean, task_record):
             self.assertIn("LumaDeck", surface)
             self.assertIn("aigent-hive-overview", surface)
-            self.assertIn("What our Hive harness is about", surface)
+        self.assertIn("91-slide", english)
+        self.assertIn("91장", korean)
+        for surface in (task_record,):
+            self.assertIn("What our hive harness is about", surface)
             self.assertIn("optimization strategy", surface)
         self.assertIn("Initial request", task_record)
         self.assertIn("8", english)

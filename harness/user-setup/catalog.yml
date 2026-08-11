@@ -53,71 +53,31 @@ personas:
       ko: 행동 추론 없는 사용자 제공 상호작용 방식
 
 mandatory_skills:
-  - configure
+  - user-setup
 
 skill_dependencies:
-  - skill: configure
-    requires: []
-  - skill: setup-project
-    requires: []
-  - skill: auto-setup-project
-    requires:
-      - setup-project
-  - skill: answer
-    requires: []
-  - skill: refine-prompt
-    requires: []
-  - skill: record-knowledge
-    requires:
-      - search-knowledge
-  - skill: search-knowledge
-    requires: []
-  - skill: share-knowledge
-    requires:
-      - search-knowledge
-      - record-knowledge
-  - skill: maintain-knowledge
-    requires:
-      - search-knowledge
-  - skill: save-progress
-    requires: []
-  - skill: resume-work
-    requires:
-      - save-progress
-  - skill: manage-usage
-    requires: []
-  - skill: handoff-role
-    requires: []
-  - skill: verify-package
-    requires: []
-  - skill: update-hive
-    requires: []
-  - skill: upgrade-project
-    requires:
-      - update-hive
-  - skill: migrate-project
-    requires:
-      - update-hive
-  - skill: engineer-run
-    requires:
-      - verify-package
-      - handoff-role
-      - save-progress
-      - resume-work
-      - manage-usage
-  - skill: manage-wiki
-    requires:
-      - record-knowledge
-      - maintain-knowledge
-      - search-knowledge
-      - import-repository-knowledge
-  - skill: clean-ai-slop
-    requires: []
-  - skill: research-practices
-    requires: []
-  - skill: import-repository-knowledge
-    requires:
-      - share-knowledge
+  - { skill: quick-answer, requires: [] }
+  - { skill: project-setup, requires: [] }
+  - { skill: code-polish, requires: [] }
+  - { skill: ralph-loop, requires: [package-review, run-handoff, run-checkpoint, run-resume, usage-guard] }
+  - { skill: knowledge-import, requires: [knowledge-promote] }
+  - { skill: knowledge-maintain, requires: [knowledge-recall] }
+  - { skill: knowledge-capture, requires: [knowledge-recall] }
+  - { skill: prompt-refine, requires: [] }
+  - { skill: research-best-practices, requires: [] }
+  - { skill: knowledge-recall, requires: [] }
+  - { skill: usage-guard, requires: [] }
+  - { skill: ship, requires: [] }
+  - { skill: amend-directive, requires: [] }
+  - { skill: user-setup, requires: [] }
+  - { skill: run-handoff, requires: [] }
+  - { skill: project-transition, requires: [product-update] }
+  - { skill: run-resume, requires: [run-checkpoint] }
+  - { skill: run-checkpoint, requires: [] }
+  - { skill: knowledge-promote, requires: [knowledge-recall, knowledge-capture] }
+  - { skill: product-update, requires: [] }
+  - { skill: project-refresh, requires: [product-update] }
+  - { skill: package-review, requires: [] }
 
 # Reserved for a future signed consent contract. This release supports built-in Skills only.
 optional_third_party_skills: []

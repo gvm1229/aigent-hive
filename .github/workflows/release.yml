@@ -113,6 +113,15 @@ jobs:
           AIGENT_HIVE_PACKAGE_VERSION="$PACKAGE_VERSION" \
             AIGENT_HIVE_PACKAGE_RELEASE_DATE="$PACKAGE_RELEASE_DATE" \
             cargo build --release --locked --target "$TARGET" --bin hive
+      - name: Apply and verify explicit macOS ad-hoc signature
+        if: runner.os == 'macOS'
+        run: |
+          binary="target/$TARGET/release/hive"
+          codesign --force --sign - "$binary"
+          codesign --verify --strict --verbose=2 "$binary"
+          details=$(codesign --display --verbose=4 "$binary" 2>&1)
+          grep -F "Signature=adhoc" <<<"$details"
+          grep -F "TeamIdentifier=not set" <<<"$details"
       - name: Verify native architecture and runtime
         run: |
           binary="target/$TARGET/release/hive"
@@ -265,6 +274,10 @@ jobs:
           $peOffset = [BitConverter]::ToInt32($bytes, 0x3c)
           if ([BitConverter]::ToUInt16($bytes, $peOffset + 4) -ne 0x8664) {
             throw "release binary is not x86_64 PE"
+          }
+          $signature = Get-AuthenticodeSignature -LiteralPath $binary
+          if ($signature.Status -ne [Management.Automation.SignatureStatus]::NotSigned) {
+            throw "cost-waived Windows release must be explicitly unsigned"
           }
           if ($env:PACKAGE_VERSION -eq $env:PRODUCT_VERSION) {
             $expectedVersion = "AIgent Hive v$($env:PRODUCT_VERSION) (released $env:PACKAGE_RELEASE_DATE)"
@@ -425,4 +438,54 @@ jobs:
             aigent-hive-${{ env.PACKAGE_VERSION }}.tgz
             aigent-hive-${{ env.PACKAGE_VERSION }}-npm-umbrella.attestation.jsonl
             release-candidate.json
+          if-no-files-found: error
+
+  authorization-request:
+    name: Stable external TUF authorization request
+    if: ${{ inputs.channel == 'stable' }}
+    needs: [unix, windows, npm-umbrella]
+    runs-on: ubuntu-24.04
+    env:
+      PRODUCT_VERSION: ${{ inputs.product_version }}
+      PACKAGE_VERSION: ${{ inputs.package_version }}
+      CANDIDATE_SHA: ${{ github.sha }}
+      CANDIDATE_REF: ${{ github.ref }}
+    permissions:
+      actions: read
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
+        with:
+          pattern: release-*
+          path: dist
+          merge-multiple: true
+      - name: Resolve protected workflow timing
+        id: timing
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          metadata=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID")
+          printf 'started_on=%s\n' "$(jq -er .run_started_at <<<"$metadata")" >>"$GITHUB_OUTPUT"
+          printf 'finished_on=%s\n' "$(jq -er .updated_at <<<"$metadata")" >>"$GITHUB_OUTPUT"
+      - name: Prepare public-only authorization request
+        env:
+          STARTED_ON: ${{ steps.timing.outputs.started_on }}
+          FINISHED_ON: ${{ steps.timing.outputs.finished_on }}
+        run: |
+          python3 scripts/prepare-release-authorization.py \
+            --product-version "$PRODUCT_VERSION" \
+            --package-version "$PACKAGE_VERSION" \
+            --candidate-sha "$CANDIDATE_SHA" \
+            --candidate-run-id "$GITHUB_RUN_ID" \
+            --candidate-ref "$CANDIDATE_REF" \
+            --repository "$GITHUB_REPOSITORY" \
+            --started-on "$STARTED_ON" \
+            --finished-on "$FINISHED_ON" \
+            --dist dist \
+            --output "$RUNNER_TEMP/release-authorization-request"
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: release-authorization-request
+          path: ${{ runner.temp }}/release-authorization-request
           if-no-files-found: error

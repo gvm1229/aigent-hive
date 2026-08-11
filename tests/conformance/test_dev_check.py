@@ -146,7 +146,39 @@ class DevCheckTest(unittest.TestCase):
             environments[1]["HIVE_WINDOWS_SOURCE_USAGE_GUARD_SUBSET"],
             "skip",
         )
-        self.assertIn("discover", commands[1])
+        self.assertEqual(
+            commands[1][7:],
+            [
+                str(ROOT / "requirements-conformance.txt"),
+                "python",
+                str(ROOT / "scripts" / "test-lanes.py"),
+                "--all",
+            ],
+        )
+
+    def test_default_python_mode_uses_the_complete_named_lane_inventory(self) -> None:
+        commands: list[list[str]] = []
+        with (
+            mock.patch.object(MODULE.os, "name", "posix"),
+            mock.patch.object(MODULE, "resolve_tool", return_value=Path("/tools/uv")),
+            mock.patch.object(
+                MODULE,
+                "run",
+                side_effect=lambda command, **_options: commands.append(list(command)),
+            ),
+        ):
+            MODULE.run_python(())
+
+        self.assertEqual(len(commands), 1)
+        self.assertEqual(
+            commands[0][7:],
+            [
+                str(ROOT / "requirements-conformance.txt"),
+                "python",
+                str(ROOT / "scripts" / "test-lanes.py"),
+                "--all",
+            ],
+        )
 
     def test_main_supports_targeted_rust_and_pre_push_modes(self) -> None:
         with (

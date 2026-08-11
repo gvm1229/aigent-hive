@@ -9,7 +9,7 @@ summary: "The Windows foreign-namespace gate allows loaded CI setup up to 30 sec
 tags: [ci, test, windows]
 aliases: ["Windows setup timeout"]
 sources:
-  - "repo:tests/conformance/test_phase1_stage2_gates.py#sha256:5ba158f873d116b45c04a0e85f8799c7ee6c62458a6ae26d158a63140f7e880c"
+  - "repo:tests/conformance/test_phase1_stage2_gates.py#sha256:0e9fab73fe193063dd4f3f661ea70682f0137c35680661a5441f903b16ef07d4"
 links: [test-fault-isolation]
 reviewed_revision: "git:5f50bcde8a96782e95023486232992cc41b9abc1"
 status: active

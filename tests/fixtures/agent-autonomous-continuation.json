@@ -1,0 +1,8 @@
+{
+  "scenario": "old-skill-regression-before-test-release",
+  "terminal_instruction": "Proceed until all todos are complete.",
+  "discovery": "A regression still expects a retired Skill name.",
+  "agent_owned_actions": ["fix", "verify", "push", "candidate", "publish"],
+  "expected_state_before_actions": "active",
+  "allowed_final_status_before_actions": null
+}

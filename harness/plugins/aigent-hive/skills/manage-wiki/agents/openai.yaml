@@ -1,6 +1,0 @@
-interface:
-  display_name: "Manage Wiki"
-  short_description: "Manage records, search, and checks for the Hive Markdown Wiki."
-  default_prompt: "Use $aigent-hive:manage-wiki to route this explicit Wiki operation to its canonical owner."
-policy:
-  allow_implicit_invocation: false

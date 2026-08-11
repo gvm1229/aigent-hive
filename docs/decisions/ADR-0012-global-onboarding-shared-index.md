@@ -32,7 +32,8 @@ Global setup answer:
     migration 전용
   - project setup recommendation: global catalog와 분리된 project-only catalog
 - Wiki: 기본 `enabled`, 명시적 opt-out
-- Usage guard: 명시적 opt-in, enabled 상태의 기본 remaining threshold `20%`
+- Usage guard: 명시적 opt-in, global setup의 사용자 선택 remaining threshold,
+  등록 project별 더 보수적인 early-stop override. profile별·문서상의 fixed percentage 없음
 
 ### Setup scope routing
 
@@ -64,16 +65,27 @@ Global setup answer:
 - Schema-2 전 legacy local edit: fabricated base·자동 merge 없이 conflict와 active byte 보존
 - Missing·unauthenticated base: active bytes 불변·conflict
 
-### Public Skill identity amendment (`0.9.0`)
+### Skill identity amendment (`0.9.0`)
 
 - Host-facing invocation: `aigent-hive:<short-name>`
-- Consumer built-in Skill: short action-oriented IDs만 신규 projection·catalog·preview에 출력
+- 이름 정본: product-only 22개 목록 [`docs/skills.md`](../skills.md)
+- Aigent Hive source 개발: 설치 product Skill과 tracked repository directive 사용
+- Source-only·source projection Skill: 최종 `0건`; `.agents/skills/`는 이관 완료 뒤 삭제
+- Built-in Skill: short action-oriented product ID만 신규 projection·catalog·preview에 출력
+- Universal `ship`: repository-local Git rule·검증 발견, concern별 commit, explicit push. Aigent Hive
+  branch·release rule hardcoding 없음
+- Product `amend-directive`: global·project·Hive source의 사용자 수정 가능 behavior 변경.
+  Signed release·plugin cache·foreign byte와 compiled security boundary 수정 금지
+- Source Wiki route: product knowledge Skill이 `hive-source.json`을 발견하면
+  `hive source-wiki` CLI 사용. `source-review`·`source-knowledge` 별도 Skill 없음
 - Legacy `hive-*`, `setup-hive`, `setup-harness`, `ai-slop-cleaner`,
-  `best-practice-research`: saved selection migration 입력 전용
+  `best-practice-research`, interim `source-*`: saved selection migration 입력 전용
 - Migration result: `configure`, `setup-project`, `record-knowledge`,
-  `import-repository-knowledge`, `clean-ai-slop`, `research-practices` 등 current public ID
-- Rename ledger: retired ID → current ID canonical mapping. saved selection migration, dependency
-  closure, collision reservation에 공통 사용. 삭제 권한 없음
+  `import-repository-knowledge`, `clean-ai-slop`, `research-practices`와 source names에서 final
+  product ID만 출력
+- Rename ledger: one-to-one·merge·split replacement closure 또는 no-Skill base-tool route 지원.
+  saved selection migration, dependency closure, source routing, collision reservation에 공통 사용.
+  삭제 권한 없음
 - Retired projection cleanup: frozen release inventory 또는 installed ownership manifest의 release byte
   ·ownership proof 일치 때만 삭제. 변조·unknown·foreign path는 write 0건 conflict. Future rename: ledger와
   authenticated historical-base cleanup regression 동시 추가
@@ -84,10 +96,22 @@ Global setup answer:
 
 ### Global setup UX
 
+- Mac developer/public build 원본 불일치: `BGR-008–013`의 authenticated base·live byte 복구와
+  user preference·knowledge 보존으로 완료. 새 복구 경로 추가 없이 Windows 변경 뒤 회귀 재검증
 - Initial setup: interface language 질문 우선
+- 질문 전 signed CLI 확인 필수. Windows의 ambient `PATH`에 `hive`가 없으면 `Get-Command`,
+  `where.exe`, `npm prefix -g`로 npm-owned `hive.cmd` absolute path를 찾아 version·ownership 확인.
+  확인 전 질문·answer 저장 시작 금지
+- Signed CLI는 `hive setup --scope user --describe --output json`으로 embedded schema,
+  canonical answer example, localized question contract, built-in Skill catalog·digest를 읽기 전용 제공.
+  Agent의 binary byte·npm tree 검색과 setup field·Skill ID 추측 금지
 - Reconfigure: 부분 preference 변경 또는 전체 setup 재검토 선택 우선
+- 모든 완료 질문 뒤 non-secret partial answer·next step 저장. webhook URL·raw prompt 저장 금지.
+  작업 answer는 OS temp의 session별 단일 파일로 제한하고 success·failure·cancel에 cleanup
 - Refresh 필요 상태: authenticated Hive-only install과 saved-answer user projection은 preview 뒤
   자동 apply·revalidate. 별도 review-only yes/no 질문 없음
+- 명시 global setup 요청은 safe temp write·dry-run·conflict 없는 built-in apply를 포함. 별도 질문은
+  conflict·third-party Skill·external install·secret access·destructive action처럼 권한이 달라질 때만 사용
 - Internal path·digest·projection 용어: 기본 안내 제외, 요청 시 diagnostic 제공
 - 한국어 대화: `Skill`, `Wiki`, host·product name, command, path, schema key, Skill ID는 exact
   term 유지. 일반 설명만 한국어화하며 `Skill → 기술` 같은 일반명사 직역 금지
@@ -121,7 +145,14 @@ Global setup answer:
 ### Usage guard
 
 - Global setup의 explicit opt-in
-- Enabled threshold 기본값: remaining `20%`
+- Enabled global threshold: global setup에서 사용자 선택
+- Project override: registered project별 선택값, global보다 낮은 값 거부, project profile별 자동값 없음
+- Effective threshold: `max(global, project override)`
+- Percentage: valid range 안의 사용자 입력 또는 기존 저장값만 사용. fixed default·web·game
+  mapping 없음
+- Global guard disable: project override와 무관하게 guard 비활성화
+- User-facing·source-development control: product `usage-guard` 하나. Source repository는 같은
+  resolver와 project override 사용; source Skill·adapter·별도 threshold state 없음
 - Qualified native sensor 우선
 - CodexBar: native unavailable·unsupported·malformed 상태의 fallback-only
 - CodexBar 설치: 필요성·고정 command preview·current-action consent 이후

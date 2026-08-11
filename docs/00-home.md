@@ -7,6 +7,7 @@ Source 개발자와 agent를 위한 공통 문서 진입점.
 | 목적 | 시작 문서 |
 | --- | --- |
 | 제품 이해 | [제품 개요](overview/product.md) |
+| Skill 이름·기능 확인 | [스킬 모음](skills.md) |
 | 전체 문서 탐색 | [전체 색인](01-index.md) |
 | 현재 상태 확인 | [CURRENT](state/CURRENT.md) |
 | 다음 작업 확인 | [Active plan](plans/PLAN.md) |

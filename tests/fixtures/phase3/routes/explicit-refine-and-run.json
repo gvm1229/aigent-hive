@@ -7,12 +7,12 @@
   "simple_question": false,
   "project_context_required": false,
   "external_candidate": null,
-  "hive_candidate": "refine-prompt",
+  "hive_candidate": "prompt-refine",
   "active_hive_skills": [
     {
-      "name": "refine-prompt",
+      "name": "prompt-refine",
       "source_type": "built-in",
-      "content_digest": "sha256:ee2de1307fbe22889b190a42e94ad38be9dd151d46ecc15c7928da91d0f287d2",
+      "content_digest": "sha256:b7b0c46fe528f2b9b9ec28aaf39eeaf0de3973644719f6fee08149d828f4bcb8",
       "side_effect_class": "none",
       "capabilities": [],
       "consent_digest": null,

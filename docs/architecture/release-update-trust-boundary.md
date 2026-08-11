@@ -8,7 +8,7 @@ Release 획득, release 승인, OS code signing, GitHub provenance와 consumer a
 
 ```text
 source commit
-  └─ candidate workflow ──> OS-signed platform artifacts + GitHub attestation
+  └─ candidate workflow ──> verified platform state + GitHub attestation
                               └─ external release signer ──> signed TUF repository
                                                            └─ Hive verifier
                                                                 └─ staged consumer update
@@ -98,14 +98,18 @@ license와 다음 target digest를 결합.
 
 Hive는 provenance를 단순 blob이 아닌 검증 대상 구조로 취급. in-toto statement type, SLSA
 predicate, exact source repository/commit, locked build, release workflow builder,
-invocation time 순서와 artifact subject digest를 semantic 검증. Platform evidence는
-macOS=`developer-id`, Windows=`authenticode`, unique artifact path, SHA-256과 status를
-검증.
+invocation time 순서와 artifact subject digest를 semantic 검증. Platform evidence 허용 조합:
 
-Update integrity mode는 public-only crypto fixture의
-`fixture-public-evidence`를 허용하지만 `external-production-required`는 허용 불가.
-Publication mode는 모든 status가 `verified`여야 하고 provenance subject와 platform
-evidence의 signed repository 전체 archive target exact 열거가 필수. Protected
+- macOS `developer-id/apple-team-id/verified` 또는 `ad-hoc/no-publisher/cost-waived`
+- Windows `authenticode/certificate-thumbprint/verified` 또는 `unsigned/no-publisher/cost-waived`
+- Signed fixture의 `fixture-public-evidence`: integrity mode 한정
+
+Unique artifact path·SHA-256·platform archive suffix 결합 필수. Production platform evidence는
+macOS 2개·Windows 1개 archive만 exact 열거. Linux 2개 archive는 provenance와 TUF target의 exact 열거 대상.
+
+Update integrity mode는 signed public-only crypto fixture의 `fixture-public-evidence` 허용.
+Publication mode는 `verified|cost-waived`의 위 platform별 exact 조합만 허용. Provenance는
+signed repository의 전체 archive target exact 열거 필수. Protected
 publication workflow는 각 archive의 offline GitHub Sigstore bundle을
 `gh attestation verify`로 별도 검증. 따라서 TUF evidence binding과 외부
 PKI/Sigstore identity verification은 분리되어 있으면서 exact artifact digest로
@@ -228,6 +232,8 @@ Malformed, future-dated, exact 7일 경계, active, symlinked 또는 foreign-ent
 - Native archive와 exact `@aigent-hive/*` npm platform tarball 생성
 - Artifact SHA-256, GitHub artifact attestation, native/npm binary byte identity
 - Platform artifact digest 기반 direct installer 렌더 후 `aigent-hive` umbrella에 포함
+- macOS explicit ad-hoc signing·Windows explicit unsigned 상태 검증
+- Stable candidate의 deterministic public-only external TUF authorization request
 - Tag·GitHub Release·npm publication 권한 0건
 
 `.github/workflows/release-publish.yml`의 `0.8.0` product candidate 계약:
@@ -259,9 +265,9 @@ npm global install의 binary owner는 npm. Homebrew·WinGet binary owner는 각 
 manager. Hive의 직접 binary overwrite와 owner 추측 금지. Bare `hive update`는 명시적
 수락 뒤 authenticated owner의 exact adapter에만 위임.
 
-macOS Developer ID·notarization, Windows Authenticode·Azure Artifact Signing,
-external TUF production authorization은 후속 hardened gate이며 npm `0.8.0`
-배포의 dependency가 아님.
+`0.9.0` stable: 유료 Apple Developer ID·Microsoft Artifact Signing 필수 gate 제외.
+SignPath Foundation 무료 승인 시 Windows Authenticode 선택 적용. External TUF production
+authorization·protected rollback floor·candidate byte identity는 필수 gate.
 
 ## 보장하지 않는 것
 

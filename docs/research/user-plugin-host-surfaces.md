@@ -9,7 +9,7 @@
 
 | Host | Native plugin package | User install·discovery | Global guidance | Global Skill | Project Skill | Qualification |
 | --- | --- | --- | --- | --- | --- | --- |
-| Codex CLI | `.codex-plugin/plugin.json`, `skills/` | local marketplace 등록 후 `codex plugin add` | `~/.codex/AGENTS.override.md` 우선, 없으면 `~/.codex/AGENTS.md` | `$HOME/.agents/skills/` | `<repo>/.agents/skills/` | local `0.145.0` fixed argv 성공 |
+| Codex CLI | `.codex-plugin/plugin.json`, `skills/` | local marketplace 등록 후 `codex plugin add` | `~/.codex/AGENTS.override.md` 우선, 없으면 `~/.codex/AGENTS.md` | `$HOME/.agents/skills/` | `<repo>/.agents/skills/` | local `0.147.0` 격리 install·setup E2E 성공 |
 | Claude Code | `.claude-plugin/plugin.json`, `skills/` | marketplace 등록·`--scope user` install | `~/.claude/CLAUDE.md` | `~/.claude/skills/` | `<repo>/.claude/skills/` | 공식 CLI contract 확인, local executable 부재 |
 | Antigravity | root `plugin.json`, `skills/` | `agy plugin validate`·`agy plugin install`·registry import | `~/.gemini/GEMINI.md` | `~/.gemini/config/skills/` | `<repo>/.agents/skills/` | local authenticated `agy 1.1.7` install·repeat update 성공 |
 
@@ -65,7 +65,9 @@
 
 ## Local qualification
 
-- 실제 사용자 설치 migration dry-run·apply·validate 성공
+- Codex CLI `0.147.0`, macOS 격리 user root의 `install → setup dry-run → setup apply → setup validate → install validate` 성공
+- Codex JSON 목록의 marketplace root·plugin source가 물리 경로를 반환하는 계약 확인. macOS `/tmp`와 `/private/tmp`의 같은 경로 표기 차이는 Hive의 no-follow 확인 뒤 physical path 정규화로 일치
+- Codex 실제 Windows clean install·fresh session: 수정 numbered 시험판 공개 뒤 별도 수용 필요. 이 macOS 실행은 Windows 수용 증명이 아님
 - `agy plugin list`: `source=antigravity`, `components=["skills"]`
 - Source package 16개와 host staging 16개 exact path·byte parity
 - 동일 `0.7.0` repeat update와 validate 성공

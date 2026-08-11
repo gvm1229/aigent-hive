@@ -24,6 +24,7 @@ persona_id = {{ persona_id | to_json }}
 usage_guard_enabled = {{ usage_guard_enabled | to_json }}
 codexbar_fallback_enabled = {{ codexbar_fallback_enabled | to_json }}
 discord_guard_enabled = {{ discord_guard_enabled | to_json }}
+discord_message_fields = {{ discord_message_fields | to_json }}
 {% if discord_webhook_url_env -%}
 discord_webhook_url_env = {{ discord_webhook_url_env | to_json }}
 {% endif -%}

@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import hashlib
+import io
 import json
 import os
 import re
@@ -11,6 +12,7 @@ import shutil
 import stat
 import subprocess
 import sys
+import tarfile
 import tempfile
 import tomllib
 import unittest
@@ -242,6 +244,32 @@ class Phase6StaticContracts(unittest.TestCase):
         }
         with self.assertRaises(ValidationError):
             validate("platform-signing-evidence.schema.json", wrong_signer)
+        cost_waived = {
+            "schema_version": 1,
+            "evidence": [
+                {
+                    "platform": "macos",
+                    "artifact_path": "targets/aigent-hive-0.9.0-aarch64-apple-darwin.tar.gz",
+                    "artifact_digest": DIGEST,
+                    "scheme": "ad-hoc",
+                    "signer": {"kind": "no-publisher", "value": ""},
+                    "status": "cost-waived",
+                },
+                {
+                    "platform": "windows",
+                    "artifact_path": "targets/aigent-hive-0.9.0-x86_64-pc-windows-msvc.zip",
+                    "artifact_digest": DIGEST,
+                    "scheme": "unsigned",
+                    "signer": {"kind": "no-publisher", "value": ""},
+                    "status": "cost-waived",
+                },
+            ],
+        }
+        validate("platform-signing-evidence.schema.json", cost_waived)
+        forged_cost_waived = json.loads(json.dumps(cost_waived))
+        forged_cost_waived["evidence"][0]["scheme"] = "developer-id"
+        with self.assertRaises(ValidationError):
+            validate("platform-signing-evidence.schema.json", forged_cost_waived)
         validate(
             "backup-manifest.schema.json",
             {
@@ -342,87 +370,95 @@ class Phase6StaticContracts(unittest.TestCase):
         )
         self.assertNotIn("SigningKey", update_source)
 
-    def test_release_workflows_separate_candidate_and_publication(self) -> None:
+    def test_release_workflow_separates_candidate_and_channel_publication(self) -> None:
         candidate = (ROOT / ".github/workflows/release.yml").read_text(
             encoding="utf-8"
         )
-        stable_publication = (
+        publication = (
             ROOT / ".github/workflows/release-publish.yml"
         ).read_text(encoding="utf-8")
-        test_publication = (
-            ROOT / ".github/workflows/release-test-publish.yml"
-        ).read_text(encoding="utf-8")
         candidate_workflow = yaml.safe_load(candidate)
-        stable_workflow = yaml.safe_load(stable_publication)
-        test_workflow = yaml.safe_load(test_publication)
+        publication_workflow = yaml.safe_load(publication)
         self.assertEqual(
             set(candidate_workflow["jobs"]),
-            {"unix", "windows", "npm-umbrella"},
+            {"unix", "windows", "npm-umbrella", "authorization-request"},
         )
-        self.assertEqual(set(stable_workflow["jobs"]), {"publish"})
-        self.assertEqual(set(test_workflow["jobs"]), {"publish"})
+        self.assertEqual(set(publication_workflow["jobs"]), {"publish"})
+        publication_triggers = publication_workflow.get(
+            "on", publication_workflow.get(True)
+        )
+        self.assertIsInstance(publication_triggers, dict)
+        publication_inputs = publication_triggers["workflow_dispatch"]["inputs"]
+        self.assertEqual(
+            publication_inputs["channel"],
+            {
+                "description": "Publication channel and candidate branch",
+                "required": True,
+                "type": "choice",
+                "options": ["test", "stable"],
+            },
+        )
+        for name in ("tuf_repository_url", "tuf_repository_sha256"):
+            self.assertFalse(publication_inputs[name]["required"])
+            self.assertEqual(publication_inputs[name]["default"], "")
+            self.assertEqual(publication_inputs[name]["type"], "string")
         expected_publication_environment = {
             "name": "release-publication",
             "deployment": False,
         }
         self.assertEqual(
-            stable_workflow["jobs"]["publish"]["environment"],
+            publication_workflow["jobs"]["publish"]["environment"],
             expected_publication_environment,
+        )
+        steps = publication_workflow["jobs"]["publish"]["steps"]
+        app_token_index, app_token_step = next(
+            (index, step)
+            for index, step in enumerate(steps)
+            if step.get("id") == "release-token"
         )
         self.assertEqual(
-            test_workflow["jobs"]["publish"]["environment"],
-            expected_publication_environment,
+            app_token_step["uses"],
+            "actions/create-github-app-token@"
+            "bcd2ba49218906704ab6c1aa796996da409d3eb1",
         )
-        for workflow in (stable_workflow, test_workflow):
-            steps = workflow["jobs"]["publish"]["steps"]
-            app_token_index, app_token_step = next(
-                (index, step)
-                for index, step in enumerate(steps)
-                if step.get("id") == "release-token"
-            )
-            self.assertEqual(
-                app_token_step["uses"],
-                "actions/create-github-app-token@"
-                "bcd2ba49218906704ab6c1aa796996da409d3eb1",
-            )
-            self.assertEqual(
-                app_token_step["with"],
-                {
-                    "client-id": "${{ vars.RELEASE_APP_CLIENT_ID }}",
-                    "private-key": "${{ secrets.RELEASE_APP_PRIVATE_KEY }}",
-                    "owner": "${{ github.repository_owner }}",
-                    "repositories": "aigent-hive",
-                    "permission-contents": "write",
-                    "permission-workflows": "write",
-                },
-            )
-            checkout_step = next(
-                step
-                for step in steps
-                if step.get("uses", "").startswith("actions/checkout@")
-            )
-            self.assertFalse(checkout_step["with"]["persist-credentials"])
-            first_publish_index = next(
-                index
-                for index, step in enumerate(steps)
-                if step.get("name", "").startswith("Publish npm package family")
-            )
-            self.assertLess(app_token_index, first_publish_index)
-            release_step = next(
-                step
-                for step in steps
-                if step.get("name", "").startswith("Create annotated")
-            )
-            self.assertEqual(
-                release_step["env"]["GH_TOKEN"],
-                "${{ steps.release-token.outputs.token }}",
-            )
-            self.assertEqual(
-                release_step["env"]["RELEASE_GIT_TOKEN"],
-                "${{ steps.release-token.outputs.token }}",
-            )
-            self.assertIn('test -n "$RELEASE_GIT_TOKEN"', release_step["run"])
-            self.assertIn("http.https://github.com/.extraheader", release_step["run"])
+        self.assertEqual(
+            app_token_step["with"],
+            {
+                "client-id": "${{ vars.RELEASE_APP_CLIENT_ID }}",
+                "private-key": "${{ secrets.RELEASE_APP_PRIVATE_KEY }}",
+                "owner": "${{ github.repository_owner }}",
+                "repositories": "aigent-hive",
+                "permission-contents": "write",
+                "permission-workflows": "write",
+            },
+        )
+        checkout_step = next(
+            step
+            for step in steps
+            if step.get("uses", "").startswith("actions/checkout@")
+        )
+        self.assertFalse(checkout_step["with"]["persist-credentials"])
+        first_publish_index = next(
+            index
+            for index, step in enumerate(steps)
+            if step.get("name", "").startswith("Publish npm package family")
+        )
+        self.assertLess(app_token_index, first_publish_index)
+        release_step = next(
+            step
+            for step in steps
+            if step.get("name", "").startswith("Create annotated")
+        )
+        self.assertEqual(
+            release_step["env"]["GH_TOKEN"],
+            "${{ steps.release-token.outputs.token }}",
+        )
+        self.assertEqual(
+            release_step["env"]["RELEASE_GIT_TOKEN"],
+            "${{ steps.release-token.outputs.token }}",
+        )
+        self.assertIn('test -n "$RELEASE_GIT_TOKEN"', release_step["run"])
+        self.assertIn("http.https://github.com/.extraheader", release_step["run"])
         unix_matrix = candidate_workflow["jobs"]["unix"]["strategy"]["matrix"][
             "include"
         ]
@@ -483,29 +519,41 @@ class Phase6StaticContracts(unittest.TestCase):
             "release_date",
             "statically linked",
             "static-pie linked",
+            "codesign --force --sign -",
+            "Signature=adhoc",
+            "TeamIdentifier=not set",
+            "Get-AuthenticodeSignature",
+            "SignatureStatus]::NotSigned",
+            "scripts/prepare-release-authorization.py",
+            "release-authorization-request",
+            "inputs.channel == 'stable'",
         ):
             self.assertIn(required, candidate)
         for required in (
-            "candidate_run_id",
+            "channel",
+            "test)",
+            "stable)",
+            "branch=develop",
+            "branch=main",
+            "npm_tag=test",
+            "npm_tag=latest",
+            "prerelease=true",
+            "prerelease=false",
             "Release candidate",
             "CANDIDATE_SHA",
+            "EXPECTED_BRANCH",
             "gh attestation verify",
             "dist/install.sh",
             "dist/install.ps1",
             "dist/install.cmd",
             "npm publish",
             "--provenance",
-            "--tag latest",
+            '--tag "$NPM_TAG"',
             "release-publication",
             'test "$PACKAGE_VERSION" = "$PRODUCT_VERSION"',
-            'head_branch <<<"$metadata")" = "main"',
-            'channel <<<"$metadata")" = "stable"',
-            "bootstrap_with_token",
-            "secrets.NPM_TOKEN",
-            "NODE_AUTH_TOKEN",
-            "!inputs.bootstrap_with_token",
-            'npm view "$package" "dist-tags.$tag"',
-            'read_tag "$package" latest',
+            'channel <<<"$metadata")" = "$CHANNEL"',
+            "latest-before.tsv",
+            "--prerelease",
             "differs from approved candidate",
             "required release notes are missing",
             'sha256sum --check --strict "$archive.sha256"',
@@ -515,43 +563,32 @@ class Phase6StaticContracts(unittest.TestCase):
             "%HIVE_INSTALL_PACKAGE_VERSION%/install.ps1",
             "gh release create",
             "git tag -a",
+            "scripts/extract-release-repository.py",
+            "TUF_PRODUCTION_ROOT_B64",
+            "TUF_PRODUCTION_ROLLBACK_STATE_B64",
+            "hive.release-verified",
+            "--rollback-state",
+            "tuf-publication-receipt.json",
+            'cmp "dist/$name" "$RUNNER_TEMP/tuf-repository/targets/$name"',
         ):
-            self.assertIn(required, stable_publication)
-        for required in (
-            "Publish test prerelease",
-            "release-publication",
-            'head_branch <<<"$metadata")" = "develop"',
-            'channel <<<"$metadata")" = "test"',
-            '"$PRODUCT_VERSION"-test)',
-            "--tag test",
-            "latest-before.tsv",
-            "dist-tags.latest",
-            "dist-tags.test",
-            "--prerelease",
-            "gh release create",
-            "git tag -a",
-            "bootstrap_with_token",
-            "secrets.NPM_TOKEN",
-        ):
-            self.assertIn(required, test_publication)
-        self.assertNotIn("--tag latest", test_publication)
-        self.assertNotIn("--prerelease", stable_publication)
+            self.assertIn(required, publication)
+        for forbidden in ("bootstrap_with_token", "secrets.NPM_TOKEN", "NODE_AUTH_TOKEN"):
+            self.assertNotIn(forbidden, publication)
         self.assertNotIn(
             'read -r digest name extra <"dist/$archive.sha256"',
-            stable_publication,
+            publication,
         )
         self.assertNotIn(
             "unpkg.com/aigent-hive@$PACKAGE_VERSION/install.ps1",
-            stable_publication,
+            publication,
         )
-        self.assertEqual(stable_publication.count('npm publish "./dist/'), 12)
-        self.assertEqual(test_publication.count('npm publish "./$archive"'), 2)
-        self.assertNotIn('npm publish "$archive"', test_publication)
-        self.assertNotIn('npm publish "dist/', stable_publication + test_publication)
-        self.assertNotIn("npm dist-tag add", stable_publication + test_publication)
+        self.assertEqual(publication.count('npm publish "./$archive"'), 1)
+        self.assertNotIn('npm publish "$archive"', publication)
+        self.assertNotIn('npm publish "dist/', publication)
+        self.assertNotIn("npm dist-tag add", publication)
         self.assertNotIn(
             'npm dist-tag ls "$package" --json',
-            stable_publication + test_publication,
+            publication,
         )
         for forbidden in (
             "gh release create",
@@ -567,14 +604,241 @@ class Phase6StaticContracts(unittest.TestCase):
         for forbidden in (
             "signed_tuf_repository_url",
             "HIVE_RELEASE_ROOT_JSON_BASE64",
-            "hive release verify",
             "platform-signing-evidence.canonical.json",
             "notarytool",
             "azure/artifact-signing-action@",
             "gh release edit",
         ):
-            self.assertNotIn(forbidden, stable_publication + test_publication)
-        self.assertNotIn("eval ", candidate + stable_publication + test_publication)
+            self.assertNotIn(forbidden, publication)
+        self.assertNotIn("eval ", candidate + publication)
+
+    def test_release_authorization_request_is_deterministic_public_and_candidate_bound(self) -> None:
+        script = ROOT / "scripts/prepare-release-authorization.py"
+        version = "0.9.0"
+        sha = "a" * 40
+        archives = (
+            f"aigent-hive-{version}-aarch64-apple-darwin.tar.gz",
+            f"aigent-hive-{version}-aarch64-unknown-linux-musl.tar.gz",
+            f"aigent-hive-{version}-x86_64-apple-darwin.tar.gz",
+            f"aigent-hive-{version}-x86_64-pc-windows-msvc.zip",
+            f"aigent-hive-{version}-x86_64-unknown-linux-musl.tar.gz",
+        )
+        with tempfile.TemporaryDirectory(prefix="hive-release-authorization-") as temporary:
+            root = Path(temporary)
+            dist = root / "dist"
+            dist.mkdir()
+            for index, name in enumerate(archives):
+                payload = f"archive-{index}\n".encode()
+                (dist / name).write_bytes(payload)
+                checksum = hashlib.sha256(payload).hexdigest()
+                (dist / f"{name}.sha256").write_text(
+                    f"{checksum}  {name}\n", encoding="ascii"
+                )
+            (dist / "release-candidate.json").write_text(
+                json.dumps(
+                    {
+                        "schema_version": 1,
+                        "channel": "stable",
+                        "product_version": version,
+                        "package_version": version,
+                        "release_date": "2026-08-11",
+                        "ref": "refs/heads/main",
+                        "sha": sha,
+                    }
+                ),
+                encoding="utf-8",
+            )
+            base = [
+                sys.executable,
+                str(script),
+                "--product-version",
+                version,
+                "--package-version",
+                version,
+                "--candidate-sha",
+                sha,
+                "--candidate-run-id",
+                "12345",
+                "--candidate-ref",
+                "refs/heads/main",
+                "--repository",
+                "gvm1229/aigent-hive",
+                "--started-on",
+                "2026-08-11T00:00:00Z",
+                "--finished-on",
+                "2026-08-11T00:01:00Z",
+                "--dist",
+                str(dist),
+            ]
+            outputs = (root / "one", root / "two")
+            for output in outputs:
+                result = subprocess.run(
+                    [*base, "--output", str(output)],
+                    cwd=ROOT,
+                    check=False,
+                    text=True,
+                    capture_output=True,
+                )
+                self.assertEqual(result.returncode, 0, result.stderr)
+
+            first = {
+                path.relative_to(outputs[0]).as_posix(): path.read_bytes()
+                for path in outputs[0].rglob("*")
+                if path.is_file()
+            }
+            second = {
+                path.relative_to(outputs[1]).as_posix(): path.read_bytes()
+                for path in outputs[1].rglob("*")
+                if path.is_file()
+            }
+            self.assertEqual(first, second)
+            request = read_json(outputs[0] / "signing-request.json")
+            self.assertEqual(len(request["targets"]), 10)
+            evidence = read_json(
+                outputs[0] / "targets/platform-signing-evidence.json"
+            )
+            self.assertEqual(len(evidence["evidence"]), 3)
+            self.assertEqual(
+                {entry["scheme"] for entry in evidence["evidence"]},
+                {"ad-hoc", "unsigned"},
+            )
+            validate("platform-signing-evidence.schema.json", evidence)
+            validate(
+                "migration-table.schema.json",
+                read_json(outputs[0] / "targets/migration-table.json"),
+            )
+            validate(
+                "release-surface-inventory.schema.json",
+                read_json(outputs[0] / "targets/release-surface-inventory.json"),
+            )
+            validate(
+                "release-bundle-manifest.schema.json",
+                read_json(outputs[0] / "targets/bundle-manifest.json"),
+            )
+            inventory = read_json(
+                outputs[0] / "targets/release-surface-inventory.json"
+            )
+            for key in (
+                "capabilities",
+                "migrations",
+                "ownership",
+                "projections",
+                "schemas",
+                "skills",
+                "templates",
+            ):
+                self.assertEqual(inventory[key], sorted(set(inventory[key])), key)
+            catalog = yaml.safe_load(
+                (ROOT / "harness/skills/catalog.yml").read_text(encoding="utf-8")
+            )
+            current_skills = {entry["name"] for entry in catalog["skills"]}
+            self.assertTrue(current_skills.issubset(set(inventory["skills"])))
+            self.assertTrue(
+                {
+                    f".agents/skills/{name}/SKILL.md"
+                    for name in current_skills
+                }.issubset(set(inventory["projections"]))
+            )
+            for relative, payload in first.items():
+                self.assertNotRegex(relative.casefold(), r"(^|/)(secret|private|.*\.pem|.*\.key)")
+                if relative.endswith(".json"):
+                    lowered = payload.decode("utf-8").casefold()
+                    self.assertNotIn("secret_key", lowered)
+                    self.assertNotIn("private_key", lowered)
+
+            tampered = dist / f"{archives[0]}.sha256"
+            original = tampered.read_text(encoding="ascii")
+            tampered.write_text(f"{'0' * 64}  {archives[0]}\n", encoding="ascii")
+            failed = subprocess.run(
+                [*base, "--output", str(root / "tampered")],
+                cwd=ROOT,
+                check=False,
+                text=True,
+                capture_output=True,
+            )
+            self.assertNotEqual(failed.returncode, 0)
+            self.assertFalse((root / "tampered").exists())
+            tampered.write_text(original, encoding="ascii")
+
+            wrong_sha = subprocess.run(
+                [
+                    *("b" * 40 if value == sha else value for value in base),
+                    "--output",
+                    str(root / "wrong-sha"),
+                ],
+                cwd=ROOT,
+                check=False,
+                text=True,
+                capture_output=True,
+            )
+            self.assertNotEqual(wrong_sha.returncode, 0)
+            self.assertFalse((root / "wrong-sha").exists())
+
+    def test_external_release_repository_extraction_rejects_links_and_path_escape(self) -> None:
+        script = ROOT / "scripts/extract-release-repository.py"
+
+        def make_archive(path: Path, hostile: tuple[str, str] | None = None) -> None:
+            with tarfile.open(path, "w:gz") as archive:
+                for name in (
+                    "metadata/root.json",
+                    "metadata/snapshot.json",
+                    "metadata/targets.json",
+                    "metadata/timestamp.json",
+                    "targets/bundle-manifest.json",
+                ):
+                    payload = b"{}\n"
+                    member = tarfile.TarInfo(name)
+                    member.size = len(payload)
+                    archive.addfile(member, io.BytesIO(payload))
+                if hostile is not None:
+                    kind, name = hostile
+                    member = tarfile.TarInfo(name)
+                    if kind == "symlink":
+                        member.type = tarfile.SYMTYPE
+                        member.linkname = "metadata/root.json"
+                    else:
+                        member.size = 0
+                    archive.addfile(member, io.BytesIO(b""))
+
+        with tempfile.TemporaryDirectory(prefix="hive-tuf-extract-") as temporary:
+            root = Path(temporary)
+            valid = root / "valid.tar.gz"
+            make_archive(valid)
+            output = root / "repository"
+            result = subprocess.run(
+                [sys.executable, str(script), "--archive", str(valid), "--output", str(output)],
+                cwd=ROOT,
+                check=False,
+                text=True,
+                capture_output=True,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertTrue((output / "metadata/root.json").is_file())
+
+            for label, hostile in (
+                ("escape", ("file", "../outside.json")),
+                ("symlink", ("symlink", "targets/link")),
+                ("foreign", ("file", "other/file.json")),
+            ):
+                archive = root / f"{label}.tar.gz"
+                make_archive(archive, hostile)
+                destination = root / label
+                failed = subprocess.run(
+                    [
+                        sys.executable,
+                        str(script),
+                        "--archive",
+                        str(archive),
+                        "--output",
+                        str(destination),
+                    ],
+                    cwd=ROOT,
+                    check=False,
+                    text=True,
+                    capture_output=True,
+                )
+                self.assertNotEqual(failed.returncode, 0, label)
+                self.assertFalse(destination.exists(), label)
 
     def test_dispatch_inputs_are_never_interpolated_into_run_scripts(self) -> None:
         def run_scripts(value: object) -> list[str]:
@@ -600,7 +864,6 @@ class Phase6StaticContracts(unittest.TestCase):
         for name in (
             "release.yml",
             "release-publish.yml",
-            "release-test-publish.yml",
             "release-runtime.yml",
         ):
             text = (ROOT / ".github/workflows" / name).read_text(encoding="utf-8")
@@ -824,7 +1087,9 @@ class Phase6StaticContracts(unittest.TestCase):
             powershell = (output / "install.ps1").read_text(encoding="utf-8")
             self.assertIn("embedded_package_version='0.9.0-test'", shell)
             self.assertIn('[string]$PackageVersion = "0.9.0-test"', powershell)
-            subprocess.run(["sh", "-n", str(output / "install.sh")], check=True)
+            shell_parser = shutil.which("sh")
+            if shell_parser is not None:
+                subprocess.run([shell_parser, "-n", str(output / "install.sh")], check=True)
 
             pwsh = shutil.which("pwsh") or shutil.which("powershell")
             if pwsh is None:
@@ -942,7 +1207,7 @@ class Phase6StaticContracts(unittest.TestCase):
         self.assertIn("on_arm do", formula)
         self.assertIn("on_intel do", formula)
         self.assertIn("PortableCommandAlias: hive", winget)
-        for skill in ("update-hive", "migrate-project"):
+        for skill in ("product-update", "project-transition"):
             text = (ROOT / f"harness/skills/{skill}/SKILL.md").read_text(
                 encoding="utf-8"
             )

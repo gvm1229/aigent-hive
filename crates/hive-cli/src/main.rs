@@ -46,6 +46,7 @@ Aigent Hive
 USAGE:
     hive doctor
     hive install --scope user --host codex|claude|antigravity (--dry-run|--apply|--validate) [--user-root <dir>] --output json
+    hive uninstall [--user-root <dir>] [--output json]
     hive check-target <path>
     hive setup --help
     hive setup --target <dir> --answers <yml> --capabilities <json> --user-root <dir> (--dry-run|--apply|--validate) [--reconfigure-role <role-id>]... --output json
@@ -77,7 +78,7 @@ USAGE:
     hive loop initialize|validate|checkpoint|steer|prepare|recover --help
     hive judge package --target <dir> --request <json> --output json
     hive judge quorum --target <dir> --request <json> --output json
-    hive release verify --bundle <release-dir> --trust-root <external-protected-root.json> --output json
+    hive release verify --bundle <release-dir> --trust-root <external-protected-root.json> [--rollback-state <external-protected-state.json>] --output json
     hive update --help
 ";
 
@@ -185,6 +186,7 @@ fn main() -> ExitCode {
         }
         Some("setup") => run_setup(&arguments[1..]),
         Some("install") => user_install::run_install(&arguments[1..]),
+        Some("uninstall") => user_install::run_uninstall(&arguments[1..]),
         Some("source-wiki") => source_wiki::run(&arguments[1..]),
         Some("knowledge") => knowledge::run_knowledge(&arguments[1..]),
         Some("discord") => discord::run(&arguments[1..]),
@@ -2145,6 +2147,14 @@ mod tests {
             codexbar_fallback_enabled: false,
             discord_guard_enabled: false,
             discord_webhook_url_env: None,
+            discord_message_fields: vec![
+                "remaining-usage".to_owned(),
+                "project".to_owned(),
+                "request".to_owned(),
+                "progress".to_owned(),
+                "host".to_owned(),
+                "resume".to_owned(),
+            ],
             usage_stop_remaining_percent: 60,
         };
         let mut changed = Vec::new();

@@ -5,20 +5,23 @@ topic_slug: v0-9-full-release
 language: ko
 counterpart: ../en/v0-9-full-release.md
 title: "Aigent Hive 0.9.0 시험·정식 릴리스"
-summary: "0.9.0 시험 prerelease의 protected 독립 채널과 별도 승인 정식 publication 계약."
+summary: "test.15 수용과 develop CI·5-target native runtime 검증 완료. Stable source의 무료 platform evidence·external TUF 승인 요청·production 검증 구현 완료, protected main 통합·외부 authorization 대기."
 tags: [distribution, release, signing, v0-9]
 aliases: ["0.9.0 release plan", "full release"]
 sources:
-  - "repo:docs/decisions/ADR-0017-0.9-full-release.md#sha256:9172a8fa815052211dac6f561775f47852f4fe86bd629cb02004bbf5e0e30acb"
-  - "repo:docs/plans/active/release-0.9.0.md#sha256:72924a588ff5b37e8ef76a19da3449096939599d5b3e1e2dc03ab44ec3281bd3"
+  - "repo:.github/workflows/release-publish.yml#sha256:505cc48a16b2ccc7ca7fe39fdaf47d7b851a19810cb75c784fdfe5a6717c5823"
+  - "repo:docs/decisions/ADR-0017-0.9-full-release.md#sha256:2691a98d452eac2b566e97dcd34982c7ef283bf14b01cd8b76508e1c82782403"
+  - "repo:docs/guides/signed-update-and-release.md#sha256:aa570e405dc1e568a79fe6291e30807db9e96b7805e570aede152fed4120f5a5"
+  - "repo:docs/plans/active/release-0.9.0.md#sha256:01ba525115912b67409e88d9ca73c4021b908f94562df3821dd2bf6a3aeb4d76"
 links: [host-external-integrations, release-verification, test-distribution, version-policy]
-reviewed_revision: "git:a78aed2efcf96d34ef020addc30ebdd70f035286"
+reviewed_revision: "git:1b7ea99554fcf2e475cc77dcb1a3452a7805315f"
 status: active
 ---
 
 # Aigent Hive 0.9.0 시험·정식 릴리스
 
-시험 prerelease: npm `test`·GitHub prerelease, stable `v0.9.0` 부재. `dc4466d`의 candidate
-`31134306991`, publication `31135040224`으로 `v0.9.0-test.4` 22-asset prerelease 생성. 여섯
-package `test=0.9.0-test.4`, `latest=0.8.0`; annotated prerelease tag `v0.9.0-test.4` 확인.
-격리 설치 CLI label `AIgent Hive v0.9.0-test #4 · developer test build (released 2026-08-07)` 출력 확인.
+Stable `v0.9.0`: 미게시. 수용된 `test.15`: `latest=0.8.0` 유지, Windows 보존형 재설치 PASS.
+Develop CI run `31430181535`의 19개 작업과 native runtime run `31428720884`의 5개 target PASS.
+Stable source: macOS ad-hoc·Windows unsigned evidence, deterministic TUF 요청, safe extraction,
+protected rollback floor, production verifier·exact target byte 결합. 유료 platform certificate: gate 제외.
+남은 경계: protected `main`, stable candidate, external 2-of-3 authorization, publication approval.

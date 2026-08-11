@@ -13,13 +13,13 @@ project knowledge, durable role/run state, usage safeguards, and safe update con
 It never asks for model-provider API keys, calls model-provider APIs, or replaces the
 host's own model runtime.
 
-Stable `0.8.0` remains the npm `latest` release. Developer test build `0.9.0-test.4`
-is published only on npm `test` and as a GitHub prerelease.
+Stable `0.8.0` is the current npm `latest` release. Developer test build
+`0.9.0-test.15` remains available only on npm `test` and as a GitHub prerelease.
+Stable `0.9.0` is being prepared and is not published yet.
 
-## Install 0.8.0
+## Install the current stable release
 
-`0.8.0` is published on npm as `latest` for installation validation. This publication
-does not create a GitHub Release or Git release tag.
+`0.8.0` is published on npm as `latest`, with a normal GitHub Release and annotated Git tag.
 
 ```console
 npm install -g aigent-hive
@@ -34,19 +34,25 @@ npm install -g aigent-hive@0.8.0
 The npm installer requires Node.js and npm. The installed `hive` runtime is a native
 Rust binary and does not require Node.js.
 
-### Developer test build 0.9.0-test.4
+Expected stable version label:
+
+```text
+AIgent Hive v0.8.0
+```
+
+### Developer test build 0.9.0-test.15
 
 For developers and contributors testing the next release:
 
 ```console
-npm install -g aigent-hive@0.9.0-test.4
+npm install -g aigent-hive@0.9.0-test.15
 hive --version
 ```
 
 Expected version label:
 
 ```text
-AIgent Hive v0.9.0-test #4 · developer test build (released 2026-08-07)
+AIgent Hive v0.9.0-test #15 · developer test build
 ```
 
 This explicit version never changes npm `latest`.
@@ -84,9 +90,9 @@ setup steps below. It is optional: the four-step setup remains the predictable m
 I want the optional one-prompt Aigent Hive setup. Work only at user scope; do not inspect,
 initialize, or change any project, repository, folder, or current working directory.
 
-First ask whether I want the stable release 0.8.0 (recommended) or the developer test build
-0.9.0-test.4. The stable install guidance is https://github.com/gvm1229/aigent-hive#install-080
-and the test-build release notes are https://github.com/gvm1229/aigent-hive/releases/tag/v0.9.0-test.4.
+First ask whether I want the current stable release 0.8.0 (recommended) or the developer test build
+0.9.0-test.15. The stable install guidance is https://github.com/gvm1229/aigent-hive#install-the-current-stable-release
+and the test-build release notes are https://github.com/gvm1229/aigent-hive/releases/tag/v0.9.0-test.15.
 Detect my operating system and active host (Codex, Claude Code, or Gemini Antigravity), asking
 me if either is unclear. Check whether Node.js and npm are available. If they are missing,
 give me the official OS-specific Node.js installation command and request any approval the host
@@ -106,7 +112,7 @@ not change `latest`.
 
 ## Supported targets
 
-| Platform | Native target | 0.8.0 gate |
+| Platform | Native target | 0.9.0 gate |
 | --- | --- | --- |
 | macOS Apple Silicon | `aarch64-apple-darwin` | Candidate runtime qualified |
 | macOS Intel | `x86_64-apple-darwin` | Candidate runtime qualified |
@@ -116,8 +122,9 @@ not change `latest`.
 
 Codex and Antigravity have real-host qualification evidence. Claude Code packaging and
 projection are covered by fixtures, but a real subscription-backed session remains
-unverified. macOS notarization and Windows code signing are deferred until a later
-stability release.
+unverified. Stable `0.9.0` uses explicit macOS ad-hoc signing and publishes Windows as
+unsigned unless free SignPath Foundation signing is approved. See the
+[code signing policy](./docs/guides/code-signing-policy.md) for the exact trust boundary.
 
 ## First setup
 
@@ -126,7 +133,7 @@ and step 3 whenever global preferences change.
 
 ### 1. Install the Hive CLI
 
-Use one command from [Install 0.8.0](#install-080) above. The npm installation provides the
+Use one command from [Install the current stable release](#install-the-current-stable-release) above. The npm installation provides the
 `hive` command; it does not yet activate Hive inside a host.
 
 ### 2. Activate Hive for this host
@@ -215,7 +222,7 @@ hive run resume --dispatch-intent automatic --target <project> --run <run-id> --
 
 The first command is only a preflight; it never authorizes dispatch by itself. External
 runtime cancellation is auxiliary evidence and never replaces durable goal/task state.
-Ordinary answers and manual work do not run this automatic-dispatch gate.
+Ordinary quick-answers and manual work do not run this automatic-dispatch gate.
 
 ## What Hive owns
 
@@ -239,6 +246,7 @@ approval.
 - [Current project state](./docs/state/CURRENT.md)
 - [Source layout](./docs/architecture/source-layout.md)
 - [Release and update trust boundary](./docs/architecture/release-update-trust-boundary.md)
+- [Code signing policy](./docs/guides/code-signing-policy.md)
 - [Product decisions](./docs/decisions/product-release-decisions.md)
 
 Development requires Rust stable, Python 3.13 for conformance tests, and PowerShell 7
