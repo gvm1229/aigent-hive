@@ -1,5 +1,9 @@
 # Aigent Hive
 
+<p align="center">
+  <img src="../assets/branding/hive-readme-banner-ko.png" alt="hive — 모든 프로젝트를 위한 지속적 맥락" width="100%">
+</p>
+
 > Codex, Claude Code, Gemini Antigravity를 위한 provider-neutral 로컬 harness.
 
 [![Version](https://img.shields.io/badge/version-0.9.0-4C1)](../../Cargo.toml)

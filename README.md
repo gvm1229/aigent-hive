@@ -1,5 +1,9 @@
 # Aigent Hive
 
+<p align="center">
+  <img src="docs/assets/branding/hive-readme-banner-en.png" alt="hive — persistent context for every project" width="100%">
+</p>
+
 > A provider-neutral local harness for Codex, Claude Code, and Gemini Antigravity.
 
 [![Version](https://img.shields.io/badge/version-0.9.0-4C1)](Cargo.toml)
