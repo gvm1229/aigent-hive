@@ -37,7 +37,7 @@ FTS5·tag·alias·BM25와 visibility-aware shared query.
 ### Retrieval before routing
 
 - 질문·research·knowledge-dependent task: routing 전 bounded retrieval 1회
-- Single owner: 기존 `hive-knowledge-query`; 새 find Skill 생성 금지
+- Single owner: 기존 `knowledge-recall`; 새 find Skill 생성 금지
 - Automatic default top 5·byte budget, explicit query만 확대
 - Retrieval 종료 뒤 next Skill sequential handoff, 동시 Skill body load 최대 1개
 - No-hit: 기존 simple 또는 task route 유지
@@ -80,7 +80,7 @@ FTS5·tag·alias·BM25와 visibility-aware shared query.
 
 ### Directory scan
 
-- 새 `hive-knowledge-scan`: explicit bulk inventory·claim review Skill
+- 새 `knowledge-import`: explicit bulk inventory·claim review Skill
 - Git tracked-first, optional untracked nonignored, non-Git allowlist와 size·count budget
 - Claim kind와 assertion status로 project-specific decision·observation도 안전하게 보존
 - Dependency 존재와 successful convention 분리; version·revision·test/build evidence 필수

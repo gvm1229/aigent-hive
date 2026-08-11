@@ -1,8 +1,8 @@
 # Source 개발 usage guard
 
-이 문서는 Aigent Hive source workspace에서 장시간 Codex 작업을 수행할 때 사용하는
-개발 전용 `hive-usage-guard` Skill을 설명. Consumer harness에 출하되는 제품
-기능은 아니며 product version 변경 없음.
+이 문서는 Aigent Hive source workspace의 `scripts/source-usage-guard.py`와 제품
+`usage-guard` Skill의 source 개발 경계 설명. Source watcher·중지선은 출하 기능이 아니며
+product version 변경 없음.
 
 ## 문제와 보장 범위
 
@@ -135,7 +135,7 @@ process만 종료.
 
 ## Consumer 제품 상태
 
-구현 완료: shipping `hive-usage-guard` Skill, typed one-shot `hive usage enforce`,
+구현 완료: shipping `usage-guard` Skill, typed one-shot `hive usage enforce`,
 installed threshold ownership, host/session/PID binding, ignored runtime marker와
 session-first·weekly-fallback sensor 선택.
 

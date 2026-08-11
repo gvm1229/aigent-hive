@@ -12,7 +12,7 @@ sources:
   - "repo:crates/hive-cli/src/knowledge.rs#sha256:414f31832132c3ad26fae00fb400f972c47edeb4aa9c91c1aaf26c28089edbb9"
   - "repo:crates/hive-wiki/src/lib.rs#sha256:414e18a2b7f3576e7d63a7b34aa287ff4e1eb3031c32b5f9aa31ade73170d1ca"
   - "repo:crates/hive-wiki/src/store.rs#sha256:44fdcfac539a78839200855c73b46a391ead6ce5b34514c53b76c5ea762d5c7c"
-  - "repo:docs/decisions/ADR-0012-global-onboarding-shared-index.md#sha256:d30564f33f2ead463cfe9e18aa68b697cb07b6c419ee42c9b583fcc11edaf966"
+  - "repo:docs/decisions/ADR-0012-global-onboarding-shared-index.md#sha256:dea6123b7b193eb760a37b198566f9318d868fd7035491ac10756de0d4315530"
 links: [knowledge-storage, project-onboarding]
 reviewed_revision: "git:35f5bce71814a3e874fe53a8730024f16013ad46"
 status: active

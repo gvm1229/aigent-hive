@@ -822,7 +822,7 @@ def qualify_package_manager(
 def source_guard_command(host: str, *, apply: bool) -> str:
     mode = "--apply --confirm-install" if apply else "--dry-run"
     return (
-        "python3 .agents/skills/hive-usage-guard/scripts/guard.py "
+        "python3 scripts/source-usage-guard.py "
         f"fallback-install --host {host} {mode} --json"
     )
 

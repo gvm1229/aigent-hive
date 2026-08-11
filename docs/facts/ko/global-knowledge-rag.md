@@ -9,7 +9,7 @@ summary: "질문·research·knowledge task의 자동 검색과 durable memory �
 tags: [knowledge, rag, retrieval, v0-9]
 aliases: ["Cross-project RAG", "Mandatory memory"]
 sources:
-  - "repo:docs/decisions/ADR-0016-global-knowledge-rag.md#sha256:fb5917be58cbfad73a01a2c587b7773c6775d1bbd1f6aa3c8286a50b69999d3b"
+  - "repo:docs/decisions/ADR-0016-global-knowledge-rag.md#sha256:24822777fdee6dec2272b659009913e69929aba5046d0858a9b745dec0e350c5"
   - "repo:docs/plans/active/v0.9.0-global-knowledge-rag.md#sha256:2b7b1132b276dc59c0a00076d8aca13aebcb75eefb2dd66a3e1f9d51494fbba9"
 links: [knowledge-portability-scan, knowledge-storage, shared-index, v0-9-skill-suite-plan]
 reviewed_revision: "git:fc1e23854bf6cbc09a2dc7704d8185ae247212a0"
@@ -18,7 +18,7 @@ status: active
 
 # 전역 knowledge RAG
 
-v0.9 구현: `hive-knowledge-query`의 bounded automatic retrieval, reusable user
+v0.9 구현: `knowledge-recall`의 bounded automatic retrieval, reusable user
 fact·preference·workflow의 Markdown canonical 기록. Named project·collection scope,
 citation-ready chunk, fresh-session recall, derived-only repair. 50,000 chunk qualification:
 cold p95 `163.3569ms`, prepared-resident warm p95 `0.1178ms`. Notion backend: 첫 v0.10 시험판 보류.

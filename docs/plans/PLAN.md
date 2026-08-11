@@ -1,6 +1,6 @@
 # Aigent Hive active plan index
 
-> Revision: 2.44
+> Revision: 2.45
 > 기준일: 2026-08-11
 > Product version: `0.9.0`
 > 현재 milestone: `0.9.0` 무인 설치 수용·테스트 체계 정리 후 정식 릴리스 준비
@@ -30,7 +30,7 @@
 | User plugin/project lifecycle | 38 | 0 | 100% |
 | Host-native usage sensors | 24 | 0 | 100% |
 | Global onboarding·shared index | 19 | 0 | 100% |
-| Source docs Wiki | 12 | 0 | 100% |
+| Source docs Wiki | 13 | 0 | 100% |
 | Windows shell install boundary | 3 | 0 | 100% |
 | 문서 말투 | 6 | 0 | 100% |
 | Security review | 4 | 0 | 100% |
@@ -42,7 +42,7 @@
 | Model-routed custom subagent | 0 | 32 | 0% |
 | Prompt refine 자동 routing | 12 | 0 | 100% |
 | v0.9 test 기능 마감 | 18 | 0 | 100% |
-| v0.9 full release | 25 | 10 | 71.4% |
+| v0.9 full release | 26 | 9 | 74.3% |
 | Test release setup routing | 4 | 0 | 100% |
 | Bootstrap·user projection recovery | 13 | 0 | 100% |
 | 한국어 setup 용어 복구 | 6 | 0 | 100% |
@@ -53,7 +53,7 @@
 | Windows global setup hardening | 13 | 0 | 100% |
 | Agent 자율 실행 지속 | 8 | 0 | 100% |
 | Notion `v0.10` 후보 | 1 | 10 | 9.1% |
-| **Canonical total** | **433** | **74** | **85.4%** |
+| **Canonical total** | **434** | **74** | **85.4%** |
 
 External production boundary 항목도 미완료 합계에 포함. Protected authority 없이 완료 처리 금지.
 
@@ -118,6 +118,5 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
 ## Current execution order
 
 완료 증거: [`CURRENT.md`](../state/CURRENT.md)와 owning active fragment.
-현재: `REL9-029`·`REL9-030`·`REL9-014`·`REL9-015` 완료. `0.9.0-test.13`의 exact `develop` SHA,
-Windows 보존형 재설치와 public test 수용까지 완료. 다음: `develop → main` non-force merge, exact main stable
-candidate, signing·TUF·publication. Antigravity·Claude 공개 제외 유지. Notion: `N10-002–011`·`0.10.0-test` 보류.
+현재: `REL9-017` protected `main` 병합과 `SLW-013` current-truth audit 완료. exact main stable candidate,
+signing·TUF·publication 진행. Antigravity·Claude 공개 제외 유지. Notion: `N10-002–011`·`0.10.0-test` 보류.

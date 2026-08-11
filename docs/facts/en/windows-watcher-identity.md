@@ -9,7 +9,7 @@ summary: "Windows source watchers bypass virtual-environment launchers so PID ow
 tags: [guard, source, windows]
 aliases: ["Windows watcher PID"]
 sources:
-  - "repo:tests/conformance/test_source_usage_guard.py#sha256:d04c6f79bf134151f10829166a837f303f1fbf078d75568e60942f364be5f458"
+  - "repo:tests/conformance/test_source_usage_guard.py#sha256:b173d0c654e77a675f45f5b14e6950ed92ab5230368761ccac9fa472c356ca79"
 links: [source-usage-guard]
 reviewed_revision: "git:a1fb6e848117b83354144540df01474e68d25aa8"
 status: active

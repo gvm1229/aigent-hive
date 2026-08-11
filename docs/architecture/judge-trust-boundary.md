@@ -1,7 +1,7 @@
 # Judge Ed25519 신뢰 경계
 
 Hive의 judge 기능: 모델 실행기나 signing agent가 아닌 로컬 검증기.
-`hive-judge-package`와 Hive CLI의 judge, model, process, subagent 생성·직접 호출 금지.
+`package-review`와 Hive CLI의 judge, model, process, subagent 생성·직접 호출 금지.
 실제 독립 judge 실행과 private-key signing은 이미 resolve된
 host/OMX/OMC owner와 사용자가 승인한 외부 signer가 소유.
 

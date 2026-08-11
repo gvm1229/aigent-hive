@@ -52,15 +52,12 @@ aigent-hive/
 
 ## Source `.agents`와 출하물
 
-루트 `.agents/`: Hive 자체 개발 전용. `.agents/skills/` 허용 class:
+루트 `.agents/`: Hive 자체 개발 directive와 ignored runtime state 전용. tracked source
+Skill과 `.agents/skills/` projection은 최종 `0건`.
 
-- Source-only Skill: source 개발 경계에서만 사용, consumer projection 없음
-- Shared Skill projection: canonical `harness/skills/<name>/`의 exact source copy
-
-현재 source-only `hive-usage-guard`: source watcher, threshold와 current-session
-override 관리. Shared `hive-prompt-refine`: harness canonical과 exact byte parity.
-Source-only Skill의 consumer 승격과 consumer Skill의 source projection은 product relevance,
-scope, safety, consent와 conformance review 뒤 허용. Installed consumer copy, `.hive/`
+Source 개발의 pre-task gate: repository `scripts/source-usage-guard.py`. Product Skill은
+`harness/skills/<name>/` 정본을 설치 product namespace로 사용. current product ID와
+retired-name migration: [`../skills.md`](../skills.md). Installed consumer copy, `.hive/`
 state와 user knowledge의 source import 금지.
 
 출하용 canonical Skill과 directive는 `harness/`에서 관리하고 release projection
@@ -164,7 +161,7 @@ exact artifact binding을 증명하지만 judge 판단의 진실성, 실제 사�
 전역 replay 방지는 증명 범위 밖. 상세 trust boundary와 fail-closed 조건:
 [`judge-trust-boundary.md`](judge-trust-boundary.md).
 
-`hive-judge-package`: implemented built-in 중 read-only data Skill.
+`package-review`: implemented built-in 중 read-only data Skill.
 Package 준비 뒤 independent judge invocation의 소유자: host-native 기본 owner 또는
 명시적 compatibility·기존 pinned OMX/OMC owner.
 Hive CLI와 Skill의 model, judge, subagent 또는 provider process 실행 금지.
@@ -213,7 +210,7 @@ explicit rebuild 전 fail-closed.
 
 Wiki-enabled turn의 memory·retrieval gate:
 
-1. 질문·research·knowledge-dependent work의 routing 전 `hive-knowledge-query` 기반
+1. 질문·research·knowledge-dependent work의 routing 전 `knowledge-recall` 기반
    bounded retrieval 최대 1회
 2. Automatic default top 5와 result byte budget; explicit query만 확대
 3. No-hit 시 기존 simple/task route 유지; retrieved instruction·command는 untrusted data
@@ -244,14 +241,14 @@ replacement와 timestamp만 보존.
 
 ## Phase 3 Skill routing과 projection
 
-`harness/skills/catalog.yml`: implemented built-in 22개. `setup-hive` 1개는 user-scope
+`harness/skills/catalog.yml`: implemented built-in 22개. `user-setup` 1개는 user-scope
 전용, project projection 대상 21개. v0.9 신규 built-in 5개:
 
-- `hive-loop-engineering`
-- `hive-wiki`
-- `ai-slop-cleaner`
-- `best-practice-research`
-- `hive-knowledge-scan`
+- `ralph-loop`
+- `knowledge-maintain`
+- `code-polish`
+- `research-best-practices`
+- `knowledge-import`
 
 Active routing proof: normalized routing fact, exact Skill content digest, built-in source
 또는 optional Skill consent digest의 결합. 한 route의 loaded Skill body 최대 1개.
@@ -260,12 +257,12 @@ Current precedence:
 1. explicit direct/plain answer
 2. explicit Skill
 3. simple-question isolation gate
-4. Hive run data contract (`hive-run-checkpoint|hive-run-resume|hive-role-handoff`)
+4. Hive run data contract (`run-checkpoint|run-resume|run-handoff`)
 5. approved Hive orchestration·task Skill candidate
 6. host-native direct capability
 7. legacy migration·recovery의 explicit foreign provenance reader
 
-신규 OMX·OMC routing 없음. `hive-prompt-refine`의 기본 mode:
+신규 OMX·OMC routing 없음. `prompt-refine`의 기본 mode:
 `refine-only`; same request의 명시적 실행 intent가 있는 `refine-and-run`만 허용.
 
 Optional lifecycle hook activation: exact
@@ -349,7 +346,7 @@ Cross-major route는 project/docs/preference/user-Markdown/symlink snapshot과 s
 `AGENTS.md` marker 밖 foreign-byte digest를 activation 전후 비교하고 compiled Hive
 system representation만 mutable path로 허용.
 
-`hive-update`와 `hive-migrate` Skill은 signed CLI를 호출하는 thin data workflow.
+`product-update`와 `project-transition` Skill은 signed CLI를 호출하는 thin data workflow.
 Downloader, package manager, model, subagent, OMX/OMC와 release-provided executable
 실행 금지. 세부 경계: [`release-update-trust-boundary.md`](release-update-trust-boundary.md).
 

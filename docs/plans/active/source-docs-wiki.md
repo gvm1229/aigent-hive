@@ -41,6 +41,10 @@
 - [x] [SLW-012] `hive-source.json` source root의 automatic knowledge 조회를
   `hive source-wiki query`로 고정하고 consumer `hive knowledge retrieve` 호출 금지,
   source·consumer route의 static regression
+- [x] [SLW-013] Product `usage-guard`와 retired-name ledger, current `main` release evidence를
+  기준으로 `docs/`의 현재형 Skill·릴리스 설명 전수 대조·갱신. 과거 release 기록·exact literal 보존,
+  문서 style·link·Source Wiki lint 검증. Current guidance의 22개 product ID와 source repository
+  gate 대조 완료, 2026-08-11
 
 ## Authority
 

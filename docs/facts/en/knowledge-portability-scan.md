@@ -9,7 +9,7 @@ summary: "v0.9 implements checksummed canonical bundles, normalized collections,
 tags: [collection, knowledge, portability, scan, v0-9]
 aliases: ["Directory knowledge scan", "Hive knowledge bundle"]
 sources:
-  - "repo:docs/decisions/ADR-0016-global-knowledge-rag.md#sha256:fb5917be58cbfad73a01a2c587b7773c6775d1bbd1f6aa3c8286a50b69999d3b"
+  - "repo:docs/decisions/ADR-0016-global-knowledge-rag.md#sha256:24822777fdee6dec2272b659009913e69929aba5046d0858a9b745dec0e350c5"
   - "repo:docs/plans/active/v0.9.0-knowledge-portability-scan.md#sha256:976150863fbb552b17b456b5bdaf4f6ce2780dcd7ed9af45ebcf565aae709e05"
   - "repo:docs/research/knowledge-portability-ingestion-retrieval.md#sha256:983844189f92fca165ed1c85eadf975dc404b46ddea4111ab956823448b15de6"
 links: [global-knowledge-rag, knowledge-storage, shared-index, v0-9-skill-suite-plan]

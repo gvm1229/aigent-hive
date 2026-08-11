@@ -102,7 +102,9 @@
   test.8 marketplace dangling 상태 복구·test.13 보존형 재설치 수용, problem report의 preview·collect·export와
   raw prompt·자동 upload·knowledge 자동 수집 `0건` regression, `test=0.9.0-test.13`·`latest=0.8.0` 확인
 - [x] [REL9-016] 추가 시험판 필요 시에만 `0.9.0-test.N|test` 생성·검증·이전 시험판 계보 보존
-- [ ] [REL9-017] 시험 수용 뒤 `develop → main` PR·non-force merge와 exact main SHA 고정. CI 결과 기록은 유지하되 이번 `0.9.0` 병합 gate 제외
+- [x] [REL9-017] 시험 수용 뒤 `develop → main` PR #19 non-force merge와 exact main
+  `c6f8a283260c2cd38f37a39b4fa3af38fbb2c61e` 고정. head `afd6380` CI 2건 PASS;
+  병합 gate 면제 기록 유지
 
 ### D. 정식 candidate·publication·public acceptance
 

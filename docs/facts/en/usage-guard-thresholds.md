@@ -9,7 +9,7 @@ summary: "The user selects the global safety threshold; a registered project may
 tags: [guard, project, setup, usage]
 aliases: ["Early stop threshold", "Project usage cap"]
 sources:
-  - "repo:docs/decisions/ADR-0012-global-onboarding-shared-index.md#sha256:d30564f33f2ead463cfe9e18aa68b697cb07b6c419ee42c9b583fcc11edaf966"
+  - "repo:docs/decisions/ADR-0012-global-onboarding-shared-index.md#sha256:dea6123b7b193eb760a37b198566f9318d868fd7035491ac10756de0d4315530"
   - "repo:docs/plans/active/usage-guard-policy.md#sha256:720a92c5a642a85082fafd152766b0bdc34afe12758c9887c39fd552113d002e"
 links: [global-onboarding, source-usage-guard, usage-sensor-policy]
 reviewed_revision: "git:35f5bce71814a3e874fe53a8730024f16013ad46"
@@ -22,6 +22,6 @@ The user selects the global safety floor during setup. A registered project can 
 higher remaining-usage threshold. The effective threshold is `max(global, project)`. No project
 profile or document provides a fixed percentage. Disabling the global guard disables every project
 guard. Migration preserves the old single threshold as the global value and rejects invalid or
-unauthenticated configuration without writes. Source development uses this same product guard,
-resolver, and project override; no source-only guard Skill, adapter, or threshold state remains
-after the planned migration.
+unauthenticated configuration without writes. Source development uses the repository source gate and
+the same product resolver and project override; no source-only guard Skill, adapter, or threshold
+state remains.

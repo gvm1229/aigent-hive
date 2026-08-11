@@ -33,8 +33,8 @@ Project harness:
 
 Prompt refinement:
 
-- Explicit `$hive-prompt-refine`와 prompt 작성·개선 intent: `refine-only` 기본
-- Materially ambiguous ordinary work: automatic `hive-prompt-refine` 선택
+- Explicit `$aigent-hive:prompt-refine`와 prompt 작성·개선 intent: `refine-only` 기본
+- Materially ambiguous ordinary work: automatic `prompt-refine` 선택
 - Refined prompt 제시 뒤 상태: `awaiting-approval`
 - Same-request 실행: explicit `--run`에만 허용
 - 후속 실행: exact refined prompt digest를 특정한 사용자 승인 필수
@@ -64,8 +64,8 @@ Upgrade merge:
 ## 결과
 
 - Existing OMX·OMC·user guidance byte 보존
-- Source `hive-prompt-refine`: `harness/skills` canonical contract의 source-only
-  `.agents/skills` projection, consumer shipping source로 사용 금지
+- Source development: 설치 product `prompt-refine`와 repository directive 사용.
+  source-only `.agents/skills` projection과 consumer shipping source 사용 금지
 - Prompt quality gate: 명시적 작성·개선 intent와 material ambiguity는 automatic
   `refine-only`, refined prompt 제시 뒤 승인 대기
 - 승인 대기에서 project read·tool·write·memory capture·run·execution 0회,
