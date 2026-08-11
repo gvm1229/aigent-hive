@@ -34,7 +34,13 @@ Configure user-scope Hive preferences without modifying a project harness or pro
    - Do not show raw path, hash, manifest, projection, or drift diagnostics by default.
    - If validation finds an authenticated Hive-file refresh, run the smallest matching
      `hive install --scope user --host <host> --dry-run --output json`, then apply that exact
-     safe Hive-owned refresh automatically. If the saved-quick-answer validation reports an outdated
+     safe Hive-owned refresh automatically. If that preview reports a structurally valid installed
+     ownership manifest that no longer matches an authenticated Hive release, run
+     `hive uninstall --user-root <user-root> --output json` followed by
+     `hive install --scope user --host <host> --apply --user-root <user-root> --output json`
+     automatically. This preserving reinstall is an authorized setup or update recovery: it removes
+     only Hive-managed activation, projections, packages, indexes, backups, and runtime state, while
+     preserving canonical knowledge and saved preferences. If the saved-quick-answer validation reports an outdated
      user projection, run `hive setup --scope user --quick-answers <saved-quick-answers> --user-root
      <user-root> --dry-run --output json`, then apply that exact projection refresh automatically.
      Rerun both validations. The explicit global setup request already authorizes these
@@ -104,7 +110,7 @@ Configure user-scope Hive preferences without modifying a project harness or pro
 11. Preview the resolved setup.
    - Run `hive setup --scope user --quick-answers <quick-answers.yml> --user-root <user-root> --dry-run --output json`.
    - Show selected hosts and Skills, mandatory Skills, dependency closure, skipped components, marker edits, and conflicts.
-   - A preview that identifies an authenticated Hive-owned incomplete activation or Hive marketplace mismatch is a recovery plan, not a user-visible compatibility problem. Keep the preview successful, preserve canonical knowledge and saved preferences, and continue to automatic apply without requesting host-configuration steps from the user.
+   - A preview that identifies an authenticated Hive-owned incomplete activation, Hive marketplace mismatch, or structurally valid ownership manifest that lacks an authenticated release match is a recovery plan, not a user-visible compatibility problem. For the manifest-mismatch case, automatically use the preserving uninstall then reinstall path above. Keep the preview successful, preserve canonical knowledge and saved preferences, and continue to automatic apply without requesting host-configuration steps from the user.
 12. Apply automatically after a conflict-free built-in-only preview. The explicit global setup request already authorizes this Hive-owned apply. Ask only for a conflict, third-party Skill, external installation, secret access, or destructive action.
    - Run `hive setup --scope user --quick-answers <quick-answers.yml> --user-root <user-root> --apply --output json`.
    - Preserve foreign bytes and third-party marker blocks.
@@ -232,7 +238,7 @@ consent and setup mode. Ask the remaining preference questions only for `Custom`
 
 ## Clean reinstall
 
-- Use this route only for an explicit user request to remove and reinstall Hive's user-scope files.
+- Use this route for an explicit user request to remove and reinstall Hive's user-scope files, or automatically when an authorized user setup, install, or update detects a structurally valid ownership manifest without an authenticated Hive release match.
 - Run `hive uninstall --user-root <user-root> --output json`. This removes Hive-managed host
   activation, projections, packages, indexes, backups, and runtime state while preserving
   `.hive/knowledge/` and saved user preferences.

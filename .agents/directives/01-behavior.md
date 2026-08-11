@@ -36,13 +36,16 @@ This directive governs agent behavior while developing Aigent Hive.
   apply automatically, then state the result before the next meaningful preference question. Ask
   only when authentication fails, local edits require a material choice, or another authority
   boundary applies.
-- Treat an authenticated Hive-owned incomplete installation, stale transaction, or incompatible
-  Hive marketplace entry as a deterministic setup-recovery branch, not as a user blocker. Preserve
-  canonical knowledge and saved user preferences, remove or reinstall only exact Hive-owned host
-  entries, then resume the fixed `dry-run → apply → validate` flow without asking the user to
-  inspect, edit, or diagnose host configuration. Surface internal compatibility details only on an
-  explicit diagnostic request; foreign bytes, failed ownership authentication, or a material choice
-  remain the only recovery stop conditions.
+- Treat an authenticated Hive-owned incomplete installation, stale transaction, incompatible Hive
+  marketplace entry, or structurally valid installed ownership manifest that no longer matches an
+  authenticated Hive release as a deterministic setup-recovery branch, not as a user blocker. For
+  the manifest-mismatch branch, run the preserving user-scope uninstall and reinstall automatically:
+  it removes only Hive-managed activation, projections, packages, indexes, backups, and runtime
+  state while preserving canonical knowledge and saved user preferences. Resume the fixed
+  `dry-run → apply → validate` flow without asking the user to inspect, edit, or diagnose host
+  configuration. Surface internal compatibility details only on an explicit diagnostic request;
+  malformed or path-unsafe ownership data, foreign bytes that would be overwritten, or a material
+  choice remain the only recovery stop conditions.
 
 ## Work Selection
 

@@ -1296,7 +1296,18 @@ fn execute(
     if arguments.mode == UserMode::Recover {
         return recover(arguments, runner);
     }
-    let mut plan = build_plan(arguments)?;
+    let mut plan = match build_plan(arguments) {
+        Ok(plan) => plan,
+        Err(error) if requires_preserving_reinstall(&error) => match arguments.mode {
+            UserMode::DryRun => return Ok(preserving_reinstall_dry_run(operation, arguments)),
+            UserMode::Apply => {
+                return execute_preserving_reinstall(operation, arguments, runner);
+            }
+            UserMode::Validate => return Err(error),
+            UserMode::Recover => unreachable!("recovery returns before plan construction"),
+        },
+        Err(error) => return Err(error),
+    };
     match arguments.mode {
         UserMode::DryRun => {
             let executable = qualify_host(arguments, &plan, runner)?;
@@ -1347,6 +1358,64 @@ fn execute(
         UserMode::Apply => execute_apply(operation, arguments, runner, &mut plan),
         UserMode::Recover => unreachable!("recovery returns before plan construction"),
     }
+}
+
+fn requires_preserving_reinstall(error: &InstallError) -> bool {
+    matches!(
+        error,
+        InstallError::Conflict(message)
+            if message == "installed ownership manifest does not match an authenticated Hive release"
+    )
+}
+
+fn preserving_reinstall_dry_run(
+    operation: UserOperation,
+    arguments: &UserArguments,
+) -> ActionResult {
+    ActionResult {
+        schema_version: 1,
+        action: match operation {
+            UserOperation::Install => "InstallHiveUser",
+            UserOperation::Update => "UpdateHiveUser",
+        },
+        status: "success",
+        exit_code: 0,
+        code: "hive.user-install-dry-run-preserving-reinstall-planned",
+        message: "user installation dry run completed with preserving Hive recovery planned"
+            .to_owned(),
+        changed_paths: Vec::new(),
+        evidence: Vec::new(),
+        next_action: Some(format!(
+            "run with --host {} --apply; Hive will preserve knowledge and saved preferences while reinstalling its user-scope files",
+            arguments.host.as_str()
+        )),
+        data: Some(json!({
+            "host": arguments.host.as_str(),
+            "scope": "user",
+            "recovery": "preserving-reinstall",
+            "preserved": [".hive/knowledge", ".hive/config/user-setup.yml", ".hive/config/user-preferences.json"],
+        })),
+    }
+}
+
+fn execute_preserving_reinstall(
+    operation: UserOperation,
+    arguments: &UserArguments,
+    runner: &impl CommandRunner,
+) -> Result<ActionResult, InstallError> {
+    let (_, root_cap) = open_canonical_user_root(&arguments.user_root)?;
+    let removed = execute_uninstall(&UserUninstallArguments { root_cap }, runner)?;
+    let mut reinstalled = execute(operation, arguments, runner)?;
+    reinstalled.code = match operation {
+        UserOperation::Install => "hive.user-install-complete-after-preserving-reinstall",
+        UserOperation::Update => "hive.user-update-complete-after-preserving-reinstall",
+    };
+    "user-scope Hive installation completed after preserving knowledge and saved preferences"
+        .clone_into(&mut reinstalled.message);
+    reinstalled.changed_paths.extend(removed.changed_paths);
+    reinstalled.changed_paths.sort();
+    reinstalled.changed_paths.dedup();
+    Ok(reinstalled)
 }
 
 fn execute_apply(
@@ -7833,6 +7902,67 @@ mod tests {
             .join(".hive/install/user-projection.json")
             .is_file());
         assert_eq!(runner.external_state(), (true, true));
+    }
+
+    #[test]
+    fn authenticated_release_mismatch_automatically_preserves_and_reinstalls_user_scope() {
+        let temporary = tempdir().expect("tempdir");
+        write_operational_setup(temporary.path(), &["codex"]);
+        let setup = temporary.path().join(".hive/config/user-setup.yml");
+        let saved_setup = fs::read(&setup).expect("saved setup");
+        let runner = StatefulHostRunner::new(temporary.path(), HostSabotage::None);
+        let install = args(temporary.path(), UserHost::Codex, UserMode::Apply);
+        execute(UserOperation::Install, &install, &runner).expect("initial install");
+        let knowledge = temporary.path().join(".hive/knowledge/Wiki/user-note.md");
+        let knowledge_bytes = b"---\nschema_version: 1\nid: user-note\nkind: concept\nsummary: user note\ntags: [test]\naliases: []\nsources: []\nlinks: []\ncontradictions: []\nstatus: active\ncreated_at: 2026-08-10T00:00:00Z\nupdated_at: 2026-08-10T00:00:00Z\n---\n\nUser knowledge\n";
+        fs::write(&knowledge, knowledge_bytes).expect("knowledge note");
+
+        let manifest_path = temporary.path().join(".hive/install/codex.json");
+        let mut manifest: UserOwnershipManifest =
+            serde_json::from_slice(&fs::read(&manifest_path).expect("ownership manifest"))
+                .expect("ownership manifest JSON");
+        manifest.product_version = "0.9.1".to_owned();
+        manifest.plan_digest = inventory_digest(
+            manifest.host,
+            &manifest.product_version,
+            &manifest.host_version_range,
+            Path::new(&manifest.guidance_path),
+            &manifest.source_release_digest,
+            &manifest.entries,
+        );
+        fs::write(&manifest_path, json_line(&manifest).expect("manifest JSON"))
+            .expect("replace ownership manifest");
+
+        let dry_run = args(temporary.path(), UserHost::Codex, UserMode::DryRun);
+        let preview = execute(UserOperation::Install, &dry_run, &runner)
+            .expect("preserving reinstall preview");
+        assert_eq!(
+            preview.code,
+            "hive.user-install-dry-run-preserving-reinstall-planned"
+        );
+        assert!(knowledge.is_file());
+        assert_eq!(fs::read(&setup).expect("saved setup retained"), saved_setup);
+
+        let repaired = execute(UserOperation::Install, &install, &runner)
+            .expect("automatic preserving reinstall");
+        assert_eq!(
+            repaired.code,
+            "hive.user-install-complete-after-preserving-reinstall"
+        );
+        assert_eq!(fs::read(&setup).expect("saved setup retained"), saved_setup);
+        assert_eq!(
+            fs::read(&knowledge).expect("knowledge retained"),
+            knowledge_bytes
+        );
+        assert!(temporary.path().join(".hive/install/codex.json").is_file());
+        assert!(temporary
+            .path()
+            .join(".hive/install/user-projection.json")
+            .is_file());
+        assert_eq!(runner.external_state(), (true, true));
+
+        let validate = args(temporary.path(), UserHost::Codex, UserMode::Validate);
+        execute(UserOperation::Install, &validate, &runner).expect("reinstalled user scope valid");
     }
 
     fn write_operational_setup(root: &Path, selected_hosts: &[&str]) {
