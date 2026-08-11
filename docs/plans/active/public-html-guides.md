@@ -20,7 +20,7 @@
 - [x] [PHG-002] provider-neutral 경계·설정·지식·Skill·상태·안전 기능을 담은 핵심 기능 HTML 작성
 - [x] [PHG-003] 설치·host 활성화·전역 설정·project 설정·update 순서의 간단 설치 HTML 작성
 - [x] [PHG-004] 지정 로고의 두 HTML 반영, 기존 README branding 확인과 HTML·link·명령·문서 말투 검증
-- [ ] [PHG-005] 공개 HTML 디자인 원칙 문서화와 설치 안내 3단계의 복수 호스트 CLI 계약·예시 보강
+- [x] [PHG-005] 공개 HTML 디자인 원칙 문서화와 설치 안내 3단계의 복수 호스트 CLI 계약·예시 보강
 
 ## 완료 기준
 
@@ -39,3 +39,5 @@
 - 벌집 금색 `#F5A623`·responsive CSS·지정 logo 경로 확인
 - Stable install·version·host 활성화·update 명령 확인
 - README branding commit `245ae80`의 영문·한국어 banner 확인
+- 디자인 원칙: `docs/guides/public-html-design-principles.md`
+- `hive install --host` 단일 값 parser·복수 `selected_hosts` 추가 단위 test와 host별 명령 예시 확인

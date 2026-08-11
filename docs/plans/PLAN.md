@@ -1,6 +1,6 @@
 # Aigent Hive active plan index
 
-> Revision: 2.54
+> Revision: 2.55
 > 기준일: 2026-08-11
 > Product version: `0.9.0`
 > 현재 milestone: `0.9.0` mandatory knowledge autocapture 회귀 보정·재수용 뒤 정식 릴리스 준비
@@ -33,7 +33,7 @@
 | Source docs Wiki | 13 | 0 | 100% |
 | Windows shell install boundary | 3 | 0 | 100% |
 | 문서 말투 | 6 | 0 | 100% |
-| 공개 한국어 HTML 안내 | 4 | 1 | 80.0% |
+| 공개 한국어 HTML 안내 | 5 | 0 | 100% |
 | Security review | 4 | 0 | 100% |
 | Docs Wiki migration | 4 | 0 | 100% |
 | v0.9 loop·Wiki·Skill suite | 25 | 0 | 100% |
@@ -55,7 +55,7 @@
 | Windows global setup hardening | 13 | 0 | 100% |
 | Agent 자율 실행 지속 | 8 | 0 | 100% |
 | Notion `v0.10` 후보 | 1 | 10 | 9.1% |
-| **Canonical total** | **441** | **80** | **84.6%** |
+| **Canonical total** | **442** | **79** | **84.8%** |
 
 External production boundary 항목도 미완료 합계에 포함. Protected authority 없이 완료 처리 금지.
 
@@ -127,4 +127,4 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
 Existing `REL9-018` run `31482918509`: historical qualification only, publication 금지.
 이후 Mac 외부 TUF authorization·protected publication approval 진행. Antigravity·Claude 공개 제외 유지.
 Notion: `N10-002–011`·`0.10.0-test` 보류.
-병행 문서 작업: `PHG-001–004` 완료, `PHG-005` 디자인 원칙·복수 호스트 안내 보강 진행.
+병행 문서 작업: `PHG-001–005` 공개 한국어 HTML·디자인 원칙·복수 호스트 안내 완료.
