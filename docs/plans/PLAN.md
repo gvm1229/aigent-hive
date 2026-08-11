@@ -37,7 +37,7 @@
 | Docs Wiki migration | 4 | 0 | 100% |
 | v0.9 loop·Wiki·Skill suite | 25 | 0 | 100% |
 | v0.9 global knowledge RAG | 18 | 2 | 90.0% |
-| v0.9 knowledge autocapture 회귀 | 4 | 4 | 50.0% |
+| v0.9 knowledge autocapture 회귀 | 5 | 3 | 62.5% |
 | v0.9 knowledge portability·scan | 18 | 0 | 100% |
 | Hive-native 반복 실행 | 1 | 23 | 4.2% |
 | Model-routed custom subagent | 0 | 32 | 0% |
@@ -54,7 +54,7 @@
 | Windows global setup hardening | 13 | 0 | 100% |
 | Agent 자율 실행 지속 | 8 | 0 | 100% |
 | Notion `v0.10` 후보 | 1 | 10 | 9.1% |
-| **Canonical total** | **436** | **80** | **84.5%** |
+| **Canonical total** | **437** | **79** | **84.7%** |
 
 External production boundary 항목도 미완료 합계에 포함. Protected authority 없이 완료 처리 금지.
 

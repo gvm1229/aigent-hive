@@ -7,7 +7,8 @@
 - Mandatory memory regression: `0.9.0-test.13` operational user guidance의 every-turn
   `hive knowledge remember`·receipt 규칙 부재, localized `knowledge-capture` route 의미 축소.
   `KAC-002–005` 전역 안내·세 host 공통 투영·localized 설명·의미 검증 보정 완료.
-  [`KAC-001·006–008`](../plans/active/v0.9.0-knowledge-autocapture-regression.md) 수용·출시 전 stable publication 차단
+  `KAC-006` 격리 user-root 기록·검색 E2E 통과.
+  [`KAC-001·007–008`](../plans/active/v0.9.0-knowledge-autocapture-regression.md) 수용·출시 전 stable publication 차단
 - Existing stable candidate run `31482918509`: 회귀 보정 미포함 historical qualification,
   tag·GitHub Release·npm `latest` publication authority 없음
 - `develop` CI [run `31430181535`](https://github.com/gvm1229/aigent-hive/actions/runs/31430181535):
