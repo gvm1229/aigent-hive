@@ -372,17 +372,20 @@ npm --version</code></pre>
         <article class="step">
           <div>
             <h3>사용할 host에 Hive 연결</h3>
-            <p><code>--host</code>는 명령 한 번에 하나만 지정. 여러 host를 쓰려면 host별 명령을 한 번씩 실행하고, 다음 단계의 전역 설정에서도 같은 host를 모두 선택.</p>
+            <p>한 host는 <code>--host</code>, 여러 host는 쉼표 구분 <code>--hosts</code> 또는 반복 <code>--host</code>로 지정. 다음 단계의 전역 설정에서도 같은 host를 모두 선택.</p>
             <div class="code">
               <span class="label">HOST 한 개 · CODEX 예시</span>
               <pre><code>hive install --scope user --host codex --apply --output json</code></pre>
             </div>
             <div class="code">
-              <span class="label">HOST 여러 개 · CODEX + CLAUDE CODE 예시</span>
-              <pre><code>hive install --scope user --host codex --apply --output json
-hive install --scope user --host claude --apply --output json</code></pre>
+              <span class="label">HOST 여러 개 · 쉼표 구분 예시</span>
+              <pre><code>hive install --scope user --hosts codex,claude --apply --output json</code></pre>
             </div>
-            <p><code>--hosts</code>나 한 명령 안의 반복 <code>--host</code>는 미지원. 각 host CLI의 설치·로그인 완료 상태 필요.</p>
+            <div class="code">
+              <span class="label">HOST 여러 개 · 반복 FLAG 예시</span>
+              <pre><code>hive install --scope user --host codex --host claude --apply --output json</code></pre>
+            </div>
+            <p>복수 host apply 전 전체 dry-run 점검. 이후 입력 순서대로 활성화하며, 실패 시 완료·실패 host와 변경 경로를 JSON으로 보고. 각 host CLI의 설치·로그인 완료 상태 필요.</p>
             <div class="host-grid">
               <div class="host"><strong>Codex</strong><code>--host codex</code></div>
               <div class="host"><strong>Claude Code</strong><code>--host claude</code></div>

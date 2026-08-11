@@ -71,9 +71,9 @@
 - 색상만으로 순서·상태를 전달하지 않고 번호·제목·문구 병행
 - 링크·이미지·anchor의 repository 상대 경로 사용과 정적 검증
 - 설치 명령은 실제 CLI parser와 현재 release 계약 확인 뒤 표기
-- `hive install`의 `--host`는 명령당 하나만 허용, 복수 호스트는 host별 명령 반복과
-  전역 설정의 `selected_hosts` 복수 선택으로 구성
-- `--hosts` 또는 반복 `--host`를 한 명령에 넣는 미지원 예시 금지
+- `hive install`의 단일 `--host`, 쉼표 구분 `--hosts`, 반복 `--host` 계약 표기
+- 복수 host apply의 전체 dry-run preflight·입력 순서 실행·부분 실패 JSON 경계 표기
+- 중복·빈 항목·지원 밖 host를 정상 예시로 쓰는 오류 금지
 
 ## 완료 확인
 
