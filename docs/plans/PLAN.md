@@ -1,9 +1,9 @@
 # Aigent Hive active plan index
 
-> Revision: 2.47
+> Revision: 2.48
 > 기준일: 2026-08-11
 > Product version: `0.9.0`
-> 현재 milestone: `0.9.0` 무인 설치 수용·테스트 체계 정리 후 정식 릴리스 준비
+> 현재 milestone: `0.9.0` mandatory knowledge autocapture 회귀 보정·재수용 뒤 정식 릴리스 준비
 > Entrypoint: `docs/plans/PLAN.md`
 
 ## Goal parameters
@@ -29,14 +29,15 @@
 | Phase 7 | 49 | 0 | 100% |
 | User plugin/project lifecycle | 38 | 0 | 100% |
 | Host-native usage sensors | 24 | 0 | 100% |
-| Global onboarding·shared index | 19 | 0 | 100% |
+| Global onboarding·shared index | 18 | 1 | 94.7% |
 | Source docs Wiki | 13 | 0 | 100% |
 | Windows shell install boundary | 3 | 0 | 100% |
 | 문서 말투 | 6 | 0 | 100% |
 | Security review | 4 | 0 | 100% |
 | Docs Wiki migration | 4 | 0 | 100% |
 | v0.9 loop·Wiki·Skill suite | 25 | 0 | 100% |
-| v0.9 global knowledge RAG | 20 | 0 | 100% |
+| v0.9 global knowledge RAG | 18 | 2 | 90.0% |
+| v0.9 knowledge autocapture 회귀 | 0 | 8 | 0% |
 | v0.9 knowledge portability·scan | 18 | 0 | 100% |
 | Hive-native 반복 실행 | 1 | 23 | 4.2% |
 | Model-routed custom subagent | 0 | 32 | 0% |
@@ -53,7 +54,7 @@
 | Windows global setup hardening | 13 | 0 | 100% |
 | Agent 자율 실행 지속 | 8 | 0 | 100% |
 | Notion `v0.10` 후보 | 1 | 10 | 9.1% |
-| **Canonical total** | **435** | **73** | **85.6%** |
+| **Canonical total** | **432** | **84** | **83.7%** |
 
 External production boundary 항목도 미완료 합계에 포함. Protected authority 없이 완료 처리 금지.
 
@@ -83,6 +84,7 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
 | [`active/release-0.8.0.md`](active/release-0.8.0.md) | `P7-*` reference | `0.8.0` Linux·npm·직접 설치 실행 순서와 범위 |
 | [`active/v0.9.0-loop-wiki-skills.md`](active/v0.9.0-loop-wiki-skills.md) | `V9-*` | Host-native graph engineering·통합 Wiki·초기 Skill suite |
 | [`active/v0.9.0-global-knowledge-rag.md`](active/v0.9.0-global-knowledge-rag.md) | `RAG-*` | 전역 RAG |
+| [`active/v0.9.0-knowledge-autocapture-regression.md`](active/v0.9.0-knowledge-autocapture-regression.md) | `KAC-*` | 모든 Wiki 활성 turn의 mandatory canonical write 회귀 보정 |
 | [`active/v0.9.0-knowledge-portability-scan.md`](active/v0.9.0-knowledge-portability-scan.md) | `KPX-*` | Knowledge 이식·directory scan·automatic query |
 | [`active/native-iterative-execution.md`](active/native-iterative-execution.md) | `NAT-*` | Hive-native iterative·team·multi-goal execution |
 | [`active/model-routed-custom-subagents.md`](active/model-routed-custom-subagents.md) | `MRA-*` | Codex·Claude custom subagent·Judge 정책 |
@@ -119,6 +121,7 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
 ## Current execution order
 
 완료 증거: [`CURRENT.md`](../state/CURRENT.md)와 owning active fragment.
-현재: `REL9-018` stable candidate run `31482918509`가 exact main `4b3d585`에서 PASS. Mac의 분리된
-외부 TUF 준비·candidate 무결성 확인 뒤 authorization·protected publication approval 진행. Antigravity·Claude 공개 제외 유지.
+현재: `KAC-001–008` 보정·Windows Codex fresh-session 수용·replacement stable candidate 우선.
+Existing `REL9-018` run `31482918509`: historical qualification only, publication 금지.
+이후 Mac 외부 TUF authorization·protected publication approval 진행. Antigravity·Claude 공개 제외 유지.
 Notion: `N10-002–011`·`0.10.0-test` 보류.

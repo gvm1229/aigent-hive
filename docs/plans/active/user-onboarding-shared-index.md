@@ -64,9 +64,10 @@
 - [x] [UOS-018] `auto-setup-harness`의 global preference 상속, canonical project
   evidence와 confidence record, unresolved-only one-question sequence, zero-question apply gate,
   promotion·third-party Skill·fallback hook의 추론 승인 금지
-- [x] [UOS-019] Wiki enabled 상태의 agent-reviewed task-fact autocapture completion gate:
+- [ ] [UOS-019] Wiki enabled 상태의 agent-reviewed task-fact autocapture completion gate:
   결과·사용 도구 또는 project·작성 기준·원 요청 요약의 bounded 기록, user-root·project
-  범위 분리, disable 시 capture 0건, raw transcript·hook·tool output·runtime ingestion 금지
+  범위 분리, disable 시 capture 0건, raw transcript·hook·tool output·runtime ingestion 금지.
+  Operational user guidance 회귀로 재개방; 보정 owner: `KAC-*`
 
 ## 완료 evidence
 

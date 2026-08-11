@@ -9,8 +9,9 @@ summary: "v0.9 implements the durable-memory store, but the operational user gui
 tags: [knowledge, rag, retrieval, v0-9]
 aliases: ["Cross-project RAG", "Mandatory memory"]
 sources:
-  - "repo:docs/decisions/ADR-0016-global-knowledge-rag.md#sha256:24822777fdee6dec2272b659009913e69929aba5046d0858a9b745dec0e350c5"
-  - "repo:docs/plans/active/v0.9.0-global-knowledge-rag.md#sha256:dbeb3ee4cd8fbc2ca363c2d32aaa092e7dc1d0f884851925811ed1d580b48f1f"
+  - "repo:docs/decisions/ADR-0016-global-knowledge-rag.md#sha256:2dece311aef55de6a52b9f3f8f79fbf928009f312a98d7ab0c3cb09cfa9db741"
+  - "repo:docs/plans/active/v0.9.0-global-knowledge-rag.md#sha256:6763857d275d0a35065e27f744e4a7d2c83d77b876abcdb5343f37be01ffe35e"
+  - "repo:docs/plans/active/v0.9.0-knowledge-autocapture-regression.md#sha256:5cddc7bd9f4ab4c1b868d8a6a86cf155503d008ff901276158e64afc447c841a"
 links: [knowledge-portability-scan, knowledge-storage, shared-index, v0-9-skill-suite-plan]
 reviewed_revision: "git:2234885542a2c3e82514121b890e129b89e5e563"
 status: active
@@ -18,10 +19,9 @@ status: active
 
 # Global Knowledge RAG
 
-The canonical `hive knowledge remember` write, derived retrieval, and idempotency
-work. The `0.9.0-test.13` Windows Codex installation nevertheless omits the
-every-turn classification, command, and receipt rule from operational user guidance;
-its localized `knowledge-capture` description also loses the mandatory-route meaning.
-Project guidance contains the rule, so unregistered projects and ordinary global
-turns can silently skip reusable user facts. Existing validation proves expected-byte
-integrity, not this semantic gate.
+Canonical remember, retrieval, and idempotency work. The `0.9.0-test.13` Windows Codex
+user guidance nevertheless omits the every-turn command and receipt, while localized
+Skill metadata loses mandatory routing. Unregistered repositories can therefore skip
+reusable facts. Existing validation proves byte equality, not this semantic gate.
+`KAC-001–008` blocks stable publication until guidance, routing, semantic tests, and a
+fresh Windows Codex write-and-recall pass without manual knowledge invocation.

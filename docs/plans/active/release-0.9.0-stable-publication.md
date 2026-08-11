@@ -4,6 +4,12 @@
 > Checklist owner: `REL9-019–035`
 > Target: `0.9.0`
 
+## Mandatory knowledge gate
+
+- `KAC-001–008` 완료와 보정 commit을 포함한 replacement stable candidate 전
+  `REL9-019–026` 실행 금지
+- Existing stable candidate run `31482918509`: historical qualification only, publication authority 없음
+
 ## 정식 candidate·publication·public acceptance
 
 - [x] [REL9-018] Protected `main` exact SHA `4b3d585f8e5d014a4b282cfeb6f9b2e9f8fb0f84`의 stable candidate

@@ -2,8 +2,13 @@
 
 - 기준 branch: `develop`
 - product version: `0.9.0`
-- plan revision: `2.46`
-- 현재 milestone: `0.9.0` `main` stable candidate·production publication
+- plan revision: `2.48`
+- 현재 milestone: `0.9.0` mandatory knowledge autocapture 회귀 보정·재수용
+- Mandatory memory regression: `0.9.0-test.13` operational user guidance의 every-turn
+  `hive knowledge remember`·receipt 규칙 부재, localized `knowledge-capture` route 의미 축소.
+  [`KAC-001–008`](../plans/active/v0.9.0-knowledge-autocapture-regression.md) 완료 전 stable publication 차단
+- Existing stable candidate run `31482918509`: 회귀 보정 미포함 historical qualification,
+  tag·GitHub Release·npm `latest` publication authority 없음
 - `develop` CI [run `31430181535`](https://github.com/gvm1229/aigent-hive/actions/runs/31430181535):
   exact `5ffff764bc2aa832863a10d9c01543474b300b51`, 19개 작업 전체 PASS. Copier·문서 스타일·Rust·Ubuntu/macOS/Windows 적합성 PASS
 - Native release runtime [run `31428720884`](https://github.com/gvm1229/aigent-hive/actions/runs/31428720884):
@@ -74,6 +79,7 @@
   + `docs/plans/active/release-0.8.0.md`
   + `docs/plans/active/v0.9.0-loop-wiki-skills.md`
   + `docs/plans/active/v0.9.0-global-knowledge-rag.md`
+  + `docs/plans/active/v0.9.0-knowledge-autocapture-regression.md`
   + `docs/plans/active/v0.9.0-knowledge-portability-scan.md`
   + `docs/plans/active/native-iterative-execution.md`
   + `docs/plans/active/model-routed-custom-subagents.md`
@@ -89,7 +95,7 @@
   + `docs/plans/active/discord-onboarding-v09.md`
   + `docs/plans/active/windows-global-setup-hardening.md`
   + `docs/plans/active/v0.10.0-notion-candidate.md`
-- Plan completion: canonical checklist `435/508` 완료, `73`개 미완료, `85.6%`
+- Plan completion: canonical checklist `432/516` 완료, `84`개 미완료, `83.7%`
 - 출시 분리: `0.9.0`의 user-visible Wiki는 local Markdown 정본과 SQLite projection만 제공.
   Notion backend·host browser OAuth·freshness·write-through·사용자 문서는 `0.10.0-test`까지 보류.
   Discord webhook 대화·시험 알림, HTML 안내, project·run·요청·progress payload는 `DIS9-*` 후속 범위
