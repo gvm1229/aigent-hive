@@ -19,7 +19,7 @@
 - [x] [MHI-001] `--hosts` CSV·반복 `--host` parser와 empty·unknown·duplicate 입력 거부
 - [x] [MHI-002] 복수 host dry-run·apply·validate·update의 순차 실행과 성공·부분 실패 aggregate result 구현
 - [x] [MHI-003] 단일 host 호환·두 입력형·선행 preflight·부분 실패·문서 예시 회귀 검증
-- [ ] [MHI-004] 설치 HTML·디자인 원칙·Source Wiki fact·current state 동기화와 `develop` push
+- [x] [MHI-004] 설치 HTML·디자인 원칙·Source Wiki fact·current state 동기화와 `develop` push
 
 ## 완료 기준
 
@@ -35,3 +35,4 @@
 - CSV·반복·혼합 host 순서와 duplicate·empty·unknown 입력 회귀 통과
 - 복수 dry-run aggregate·apply preflight·두 host activation·부분 실패 result 회귀 통과
 - `cargo clippy -p hive-cli --all-targets -- -D warnings` 통과
+- 구현·문서 commits `4f97787`·`6bab86b`, `develop` push `3a2f967..6bab86b`
