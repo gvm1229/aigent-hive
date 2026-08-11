@@ -9,12 +9,12 @@ summary: "Hive 기능·설치·브랜드 기준을 담은 한국어 HTML 2개와
 tags: [branding, documentation, onboarding]
 aliases: ["Hive 간단 설치 안내", "Hive 핵심 기능 안내"]
 sources:
-  - "repo:docs/guides/public-html-design-principles.md#sha256:e7a60f611bd80581b5852d17a9ef58e050504188b9551fe1533e1fdbc8b365b2"
-  - "repo:docs/hive-core-features.ko.html#sha256:99c818208dcdda45552a0f4962f7853222a57706463c2dd13a70f2f49863177e"
-  - "repo:docs/hive-install-guide.ko.html#sha256:bf1124b8259e33c56fa3d070a69f1fa1be0f1f3ae8873bb25bd8fe3a5b99418a"
-  - "repo:docs/plans/active/public-html-guides.md#sha256:8bddcbc123282fba063c067a0fe869775eb69417fca6d95f138da1d2421cb167"
+  - "repo:docs/guides/public-html-design-principles.md#sha256:6aae9ab9808ca927fe3736f3c4bde3e91a0e25a9700ae75f98592e1577ab01ec"
+  - "repo:docs/hive-core-features.ko.html#sha256:8f77210359186752205a0b4dcffcefd5d1a0bb8530d3620463be073c81b33abf"
+  - "repo:docs/hive-install-guide.ko.html#sha256:9338f3f1f23e99bfef5f0788ab14051789414cc7cffb6c10eb1b2e9bd8c982c2"
+  - "repo:docs/plans/active/public-html-guides.md#sha256:efc1acbefb797798ba2deeec0653da3409599b91904b5fc8d7a1d12e92ebc9e8"
 links: [global-onboarding, product-purpose]
-reviewed_revision: "git:ff1a28ae30369e839bfc8a1933b8283da7abab3a"
+reviewed_revision: "git:6f861b14f3a4931e89cb290504f94da311ec0339"
 status: active
 ---
 
@@ -22,6 +22,7 @@ status: active
 
 Repository의 독립 한국어 페이지 2개: Hive 핵심 기능과 간단한 stable 설치 경로.
 공통 기준: 정본 logo, 960 px 정보 구조, 벌집 금색 `#F5A623`.
+독립 공유: 각 HTML에 정본 PNG 원본 byte 1회 내장, system font 사용, network·file-relative resource reference 0건.
 디자인 원칙 범위: 브랜드 token·정보 계층·구성 요소·반응형 경계·접근성·명령 정확성.
 설치 3단계: 단일 `--host`, 쉼표 구분 `--hosts`, 반복 `--host`, 따옴표로 묶은 CSV 공백, 전체 preflight와 부분 실패 JSON.
 README branding: 기존 commit `245ae80`에서 완료.
