@@ -5,7 +5,7 @@ topic_slug: hive-preserving-uninstall
 language: ko
 counterpart: ../en/hive-preserving-uninstall.md
 title: "Hive 보존형 제거"
-summary: "hive uninstall: Hive가 추가한 사용자 범위 설정만 제거, knowledge base·저장 user preference 항상 보존."
+summary: "구조상 유효하지만 인증된 release와 불일치한 user-scope ownership manifest: 별도 승인 없이 보존형 재설치, knowledge base·저장 user preference 항상 보존."
 tags: [bootstrap, onboarding, preservation, uninstall]
 aliases: ["clean reinstall", "hive uninstall"]
 sources:
@@ -14,15 +14,17 @@ sources:
   - "repo:docs/plans/active/windows-global-setup-hardening.md#sha256:422649ef3ca475aca9e3a86a2ddd2bbbb3895221d7bc39fe4417010664dee47f"
   - "repo:harness/skills/user-setup/SKILL.md#sha256:6b2a26d1285073e6796f683abfc190bd6d74a05d57b83900412da37aa5d53849"
 links: [global-onboarding, knowledge-preservation, release-verification]
-reviewed_revision: "git:3e960b5185f637d7606eb01126d2543519138608"
+reviewed_revision: "git:089b0717e24c368a1725774aaca0c85ab596df10"
 status: active
 ---
 
 # Hive 보존형 제거
 
-`hive uninstall`: Hive host activation·projection·package·derived index·backup·transaction·runtime 제거.
-`.hive/knowledge/`, 저장 user preference, foreign host entry, 비-Hive 사용자 파일 보존.
-`--full`·`-f` mode 제공 없음. knowledge·preference 삭제: 사용자 수동 작업.
+`hive uninstall`: Hive activation·projection·package·index·backup·transaction·runtime 제거.
+`.hive/knowledge/`, 저장 preference, foreign entry, 비-Hive 파일 보존. `--full`·`-f` 없음.
+knowledge·preference 삭제: 사용자 수동 작업.
 
-이후 `hive install --scope user --apply`: 보존된 preference 감지·Hive-owned user projection 복원·setup 질문
-재표시 없는 user-scope setup 완료.
+`hive install --scope user --apply`: 저장 preference 기반 projection 복원, setup 질문 재표시 없음.
+인증된 release와 불일치한 구조상 유효 manifest: 이미 승인된 install·update·setup의 preserving
+reinstall 자동 실행, 추가 승인 없음. malformed·path-unsafe manifest, foreign overwrite, material choice:
+사용자 결정.

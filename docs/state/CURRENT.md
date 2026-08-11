@@ -2,13 +2,21 @@
 
 - 기준 branch: `develop`
 - product version: `0.9.0`
-- plan revision: `2.52`
+- plan revision: `2.53`
 - 현재 milestone: `0.9.0` mandatory knowledge autocapture 회귀 보정·재수용
 - Mandatory memory regression: `0.9.0-test.13` operational user guidance의 every-turn
   `hive knowledge remember`·receipt 규칙 부재, localized `knowledge-capture` route 의미 축소.
   `KAC-002–005` 전역 안내·세 host 공통 투영·localized 설명·의미 검증 보정 완료.
   `KAC-006` 격리 user-root 기록·검색 E2E 통과.
-  [`KAC-001·007–008`](../plans/active/v0.9.0-knowledge-autocapture-regression.md) 수용·출시 전 stable publication 차단
+  `0.9.0-test.17`의 schema-free `--user-statement` canonical write·derived-index receipt와 Windows preserving
+  uninstall→reinstall→`hive install --validate` PASS. authenticated release와 불일치한 구조상 유효 ownership
+  manifest: 이미 승인된 user-scope install/update/setup의 자동 preserving reinstall, 추가 승인 질문 없음.
+  malformed·path-unsafe manifest, foreign overwrite, material choice: 사용자 결정 유지.
+  [`KAC-001·007–009`](../plans/active/v0.9.0-knowledge-autocapture-regression.md) 수용·출시 전 stable publication 차단
+- `0.9.0-test.18` candidate [run `31525743736`](https://github.com/gvm1229/aigent-hive/actions/runs/31525743736):
+  `e8fe91e` 기반, 이후 user-setup 문체·투영 정리 누락으로 취소, publication 0건
+- `0.9.0-test.19` candidate [run `31526591402`](https://github.com/gvm1229/aigent-hive/actions/runs/31526591402):
+  exact `089b0717e24c368a1725774aaca0c85ab596df10`, 후보 대기열. 성공 뒤 test publication·Windows install·version date·automatic recovery 수용 필요
 - Existing stable candidate run `31482918509`: 회귀 보정 전 historical qualification,
   tag·GitHub Release·npm `latest` publication authority 없음
 - `develop` CI [run `31430181535`](https://github.com/gvm1229/aigent-hive/actions/runs/31430181535):

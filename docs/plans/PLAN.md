@@ -1,6 +1,6 @@
 # Aigent Hive active plan index
 
-> Revision: 2.52
+> Revision: 2.53
 > 기준일: 2026-08-11
 > Product version: `0.9.0`
 > 현재 milestone: `0.9.0` mandatory knowledge autocapture 회귀 보정·재수용 뒤 정식 릴리스 준비
@@ -38,7 +38,7 @@
 | Docs Wiki migration | 4 | 0 | 100% |
 | v0.9 loop·Wiki·Skill suite | 25 | 0 | 100% |
 | v0.9 global knowledge RAG | 18 | 2 | 90.0% |
-| v0.9 knowledge autocapture 회귀 | 5 | 3 | 62.5% |
+| v0.9 knowledge autocapture 회귀 | 5 | 4 | 55.6% |
 | v0.9 knowledge portability·scan | 18 | 0 | 100% |
 | Hive-native 반복 실행 | 1 | 23 | 4.2% |
 | Model-routed custom subagent | 0 | 32 | 0% |
@@ -123,7 +123,7 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
 ## Current execution order
 
 완료 증거: [`CURRENT.md`](../state/CURRENT.md)와 owning active fragment.
-현재: `KAC-001–008` 보정·Windows Codex fresh-session 수용·replacement stable candidate 우선.
+현재: `KAC-001·007–009` 보정·Windows Codex fresh-session 수용·`0.9.0-test.19` replacement test release 우선.
 Existing `REL9-018` run `31482918509`: historical qualification only, publication 금지.
 이후 Mac 외부 TUF authorization·protected publication approval 진행. Antigravity·Claude 공개 제외 유지.
 Notion: `N10-002–011`·`0.10.0-test` 보류.
