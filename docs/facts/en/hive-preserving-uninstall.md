@@ -9,8 +9,8 @@ summary: "hive uninstall removes only Hive-managed user-scope setup state and al
 tags: [bootstrap, onboarding, preservation, uninstall]
 aliases: ["clean reinstall", "hive uninstall"]
 sources:
-  - "repo:crates/hive-cli/src/user_install.rs#sha256:fa36d9c4df52461d8044fcf2c89332385138ee69f91664fe62a0175339d33527"
-  - "repo:crates/hive-cli/src/user_setup.rs#sha256:70e578f0b5c75e10c77332e87a6a083d590e1fc3fc265627dbe985a37bec4ab1"
+  - "repo:crates/hive-cli/src/user_install.rs#sha256:8a2fc46f070b2d093b5826cf59b19a718a6ffbcb71d1516212f1b9a584f42c50"
+  - "repo:crates/hive-cli/src/user_setup.rs#sha256:0bfd9117a0d835da5f19bc02b82959a5630a4955a81ee3efda0a6ba5246dfaad"
   - "repo:docs/plans/active/windows-global-setup-hardening.md#sha256:422649ef3ca475aca9e3a86a2ddd2bbbb3895221d7bc39fe4417010664dee47f"
   - "repo:harness/skills/user-setup/SKILL.md#sha256:4f3676378fafac75f9c6376210c760a2e0200e843ead0825d1b34d7446864e34"
 links: [global-onboarding, knowledge-preservation, release-verification]
