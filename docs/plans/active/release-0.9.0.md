@@ -108,7 +108,10 @@
 
 ### D. 정식 candidate·publication·public acceptance
 
-- [ ] [REL9-018] Protected `main` exact SHA의 stable candidate 재빌드·attestation·artifact inventory PASS
+- [x] [REL9-018] Protected `main` exact SHA `4b3d585f8e5d014a4b282cfeb6f9b2e9f8fb0f84`의 stable candidate
+  [run `31482918509`](https://github.com/gvm1229/aigent-hive/actions/runs/31482918509) PASS. 5개 native archive·
+  6개 npm package·direct installer·GitHub attestation·macOS ad-hoc·Windows unsigned evidence와
+  public-only external TUF authorization request 생성, tag·GitHub Release·npm mutation `0건`
 - [ ] [REL9-019] macOS·Windows signing과 external TUF production authorization·rollback floor 검증
 - [ ] [REL9-020] Final main SHA의 annotated `v0.9.0`과 GitHub normal Release·signed artifact 게시
 - [ ] [REL9-021] npm platform 5개 선행·umbrella 최종 OIDC publication과 `latest=0.9.0`, `test` 보존 확인

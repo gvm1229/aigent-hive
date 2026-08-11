@@ -1,6 +1,6 @@
 # Aigent Hive active plan index
 
-> Revision: 2.45
+> Revision: 2.46
 > 기준일: 2026-08-11
 > Product version: `0.9.0`
 > 현재 milestone: `0.9.0` 무인 설치 수용·테스트 체계 정리 후 정식 릴리스 준비
@@ -42,7 +42,7 @@
 | Model-routed custom subagent | 0 | 32 | 0% |
 | Prompt refine 자동 routing | 12 | 0 | 100% |
 | v0.9 test 기능 마감 | 18 | 0 | 100% |
-| v0.9 full release | 26 | 9 | 74.3% |
+| v0.9 full release | 27 | 8 | 77.1% |
 | Test release setup routing | 4 | 0 | 100% |
 | Bootstrap·user projection recovery | 13 | 0 | 100% |
 | 한국어 setup 용어 복구 | 6 | 0 | 100% |
@@ -53,7 +53,7 @@
 | Windows global setup hardening | 13 | 0 | 100% |
 | Agent 자율 실행 지속 | 8 | 0 | 100% |
 | Notion `v0.10` 후보 | 1 | 10 | 9.1% |
-| **Canonical total** | **434** | **74** | **85.4%** |
+| **Canonical total** | **435** | **73** | **85.6%** |
 
 External production boundary 항목도 미완료 합계에 포함. Protected authority 없이 완료 처리 금지.
 
@@ -118,5 +118,6 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
 ## Current execution order
 
 완료 증거: [`CURRENT.md`](../state/CURRENT.md)와 owning active fragment.
-현재: `REL9-017` protected `main` 병합과 `SLW-013` current-truth audit 완료. exact main stable candidate,
-signing·TUF·publication 진행. Antigravity·Claude 공개 제외 유지. Notion: `N10-002–011`·`0.10.0-test` 보류.
+현재: `REL9-018` stable candidate run `31482918509`가 exact main `4b3d585`에서 PASS. external TUF
+authorization·protected publication approval 뒤 정식 게시 진행. Antigravity·Claude 공개 제외 유지.
+Notion: `N10-002–011`·`0.10.0-test` 보류.
