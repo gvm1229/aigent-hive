@@ -11,7 +11,7 @@ aliases: ["0.9.2 scope", "0.9.3 scope", "0.9.x release plan", "full release"]
 sources:
   - "repo:.github/workflows/release-publish.yml#sha256:903c4fd819d0d09afdbc379ac874a22d592274b495aab6de82ee15166381bcbb"
   - "repo:docs/decisions/ADR-0017-0.9-full-release.md#sha256:53314be9705bd61590992cae77cfcf96a9d823e7142821399e6411492de76e00"
-  - "repo:docs/guides/release-update.md#sha256:785e83d497c4f39ea683ac280adf8e071b27fda02b19c4c086573782a70bcadb"
+  - "repo:docs/guides/release-update.md#sha256:f046e838fa7f44c6fa336fd089d4740c6f3f2a8ab8fb8a010e748f7b1d4bcd10"
   - "repo:docs/plans/active/release-0.9.2-test-qualification.md#sha256:eb421d375292f8a1eccc4b3193bceda337719ba1d4ae1b649456c07344f344cc"
 links: [host-external-integrations, release-verification, test-distribution, version-policy]
 reviewed_revision: "git:d08ec9aa109b55c30ca9d3c455185c6e5cb3f08e"
