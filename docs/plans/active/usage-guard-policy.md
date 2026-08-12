@@ -44,9 +44,10 @@
 - [ ] [UGP-009] Source workspace의 Python gate·15초 watcher·별도 scratch policy를 제거하고,
   repository directive가 설치된 `hive usage`의 session-bound one-shot 보호만 호출. VS Code를
   방해하는 background watcher·tool 경계별 중복 gate `0건`
-- [ ] [UGP-010] Project `harness.toml`이 없는 설치 직후에도 명시적 global threshold 변경 지원.
-  이번 사용자 설정 `5%` 저장, source workspace와 미등록 project에서 같은 전역값·native sensor 사용,
-  project override는 조기 중지 값만 추가
+- [ ] [UGP-010] Global과 project threshold mutation을 분리. 명시적 global 변경만 `--user-root`에
+  저장하고 이번 사용자 설정 `5%` 적용. Project `harness.toml`이 있는 target의 변경은
+  `max(global, project)`로 적용. 자체 `AGENTS.md`만 있거나 빈 folder인 미등록 target의 project
+  threshold 변경은 무변경으로 거부하고, enforce·status는 global threshold와 선택 host sensor 사용
 
 ## 완료 기준
 

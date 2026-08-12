@@ -669,7 +669,8 @@ Pre-1.0 비차단 deferred:
   매 tool 경계의 중복 gate
 - 유지 경계: automatic dispatch 직전 session-bound one-shot enforce, native sensor 우선,
   명시적 session control, raw account·session identifier 저장 금지
-- 구현 중: project `harness.toml` 없는 설치 직후 global threshold 저장과 source workspace 적용
+- 구현 중: 명시적 global threshold 저장과 registered project override 분리. Project harness가 없는
+  자체 `AGENTS.md`·빈 folder의 project threshold 변경은 무변경 거부, enforce·status는 global 값 사용
 
 ## 사람용 문서 style
 
