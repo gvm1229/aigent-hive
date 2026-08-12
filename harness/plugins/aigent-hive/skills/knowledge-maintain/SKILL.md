@@ -8,15 +8,22 @@ description: Lint, rebuild, delete, or suppress canonical Hive knowledge through
 Use the narrowest explicit maintenance action.
 
 First route by target class. A valid `hive-source.json` selects `hive source-wiki lint --target
-<source-root> --output json`. Its absence selects the consumer command below and is never a reason
-to skip Wiki lint.
+<source-root> --output json`. Its absence selects consumer lint and is never a reason to skip Wiki
+lint. Use the project target only for an enabled registered project. For an unregistered project,
+use the user root as both `--target` and `--user-root`.
 
 ## Actions
 
-- Validate without mutation:
+- Validate an enabled registered project without mutation:
 
   ```text
   hive knowledge lint --target <project-root> --user-root <user-root> --output json
+  ```
+
+- Validate user-root knowledge from an unregistered project without mutation:
+
+  ```text
+  hive knowledge lint --target <user-root> --user-root <user-root> --output json
   ```
 
 - Rebuild the disposable index from tracked sources:

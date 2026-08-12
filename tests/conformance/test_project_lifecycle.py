@@ -6,6 +6,7 @@ import json
 import os
 import stat
 import subprocess
+import tomllib
 from pathlib import Path
 
 from jsonschema import Draft202012Validator, FormatChecker
@@ -19,6 +20,10 @@ from tests.conformance.phase1_support import (
     snapshot_tree,
     write_yaml,
 )
+
+PRODUCT_VERSION = tomllib.loads(
+    (REPOSITORY_ROOT / "Cargo.toml").read_text(encoding="utf-8")
+)["workspace"]["package"]["version"]
 
 
 class ProjectLifecycleConformance(Phase1CliTestCase):
@@ -109,14 +114,14 @@ elif command == "plugin list --json":
         plugin_root = os.path.join(user_root, ".hive/marketplaces/codex") if user_root else os.path.join(root, "user-codex/.hive/marketplaces/codex")
         entries = [{{
             "pluginId": "aigent-hive@aigent-hive",
-            "version": "0.9.0",
+            "version": {PRODUCT_VERSION!r},
             "enabled": True,
             "source": {{"path": os.path.join(plugin_root, "plugins/aigent-hive")}},
             "marketplaceSource": {{"source": plugin_root}},
         }}] if state["plugin"] else []
         print(json.dumps({{"installed": entries, "available": []}}))
     else:
-        entries = [{{"id": "aigent-hive@aigent-hive", "version": "0.9.0", "enabled": True, "scope": "user"}}] if state["plugin"] else []
+        entries = [{{"id": "aigent-hive@aigent-hive", "version": {PRODUCT_VERSION!r}, "enabled": True, "scope": "user"}}] if state["plugin"] else []
         print(json.dumps(entries))
 else:
     print("{{}}")

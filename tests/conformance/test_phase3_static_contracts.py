@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import struct
 import unittest
 from pathlib import Path
 
@@ -28,6 +29,24 @@ def skill_paths(root: Path) -> set[str]:
 
 
 class Phase3SchemaContract(unittest.TestCase):
+    def test_codex_plugin_uses_named_developer_and_cropped_hive_logo(self) -> None:
+        plugin_root = ROOT / "harness/plugins/aigent-hive"
+        manifest = json.loads(
+            (plugin_root / ".codex-plugin/plugin.json").read_text(encoding="utf-8")
+        )
+        self.assertEqual(manifest["author"]["name"], "Hojin (Tom) Jeong")
+        self.assertEqual(
+            manifest["interface"]["developerName"], "Hojin (Tom) Jeong"
+        )
+        self.assertEqual(manifest["interface"]["brandColor"], "#FFB52E")
+
+        expected_path = "./assets/hive-logo-plugin.png"
+        self.assertEqual(manifest["interface"]["logo"], expected_path)
+        self.assertEqual(manifest["interface"]["composerIcon"], expected_path)
+        logo = (plugin_root / expected_path.removeprefix("./")).read_bytes()
+        self.assertEqual(logo[:8], b"\x89PNG\r\n\x1a\n")
+        self.assertEqual(struct.unpack(">II", logo[16:24]), (512, 512))
+
     def test_current_catalog_is_machine_readable_and_exact(self) -> None:
         catalog = yaml.safe_load((SKILLS / "catalog.yml").read_text(encoding="utf-8"))
         self.assertEqual(catalog["schema_version"], 1)
@@ -64,9 +83,14 @@ class Phase3SkillSourceContract(unittest.TestCase):
         for text in (capture, maintain):
             normalized = " ".join(text.split())
             self.assertIn("hive knowledge lint --target", normalized)
+            self.assertIn(
+                "hive knowledge lint --target <user-root> --user-root <user-root>",
+                normalized,
+            )
             self.assertIn("hive source-wiki lint", normalized)
             self.assertIn("hive-source.json", normalized)
-        self.assertIn("it never skips lint", " ".join(capture.split()))
+            self.assertIn("unregistered", normalized)
+        self.assertIn("never skips lint", " ".join(capture.split()))
         self.assertIn("never a reason to skip Wiki lint", " ".join(maintain.split()))
 
     def test_source_has_directives_not_a_second_skill_inventory(self) -> None:

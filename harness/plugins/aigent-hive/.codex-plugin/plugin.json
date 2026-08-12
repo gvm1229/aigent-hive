@@ -1,9 +1,9 @@
 {
   "name": "aigent-hive",
-  "version": "0.9.0",
+  "version": "0.9.1",
   "description": "Install and maintain project-local Aigent Hive harnesses without provider API credentials.",
   "author": {
-    "name": "Aigent Hive maintainers",
+    "name": "Hojin (Tom) Jeong",
     "url": "https://github.com/gvm1229/aigent-hive"
   },
   "homepage": "https://github.com/gvm1229/aigent-hive",
@@ -15,10 +15,13 @@
     "displayName": "Aigent Hive",
     "shortDescription": "Initialize and upgrade local agent harnesses.",
     "longDescription": "Aigent Hive adds portable setup, project upgrade, knowledge, run, and usage-guard skills backed by the local Hive CLI.",
-    "developerName": "Aigent Hive maintainers",
+    "developerName": "Hojin (Tom) Jeong",
     "category": "Productivity",
     "capabilities": ["Read", "Write"],
     "websiteURL": "https://github.com/gvm1229/aigent-hive",
+    "composerIcon": "./assets/hive-logo-plugin.png",
+    "logo": "./assets/hive-logo-plugin.png",
+    "brandColor": "#FFB52E",
     "defaultPrompt": [
       "Set up Aigent Hive for this project.",
       "Scan this project for Hive upgrades.",

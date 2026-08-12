@@ -26,7 +26,7 @@ from jsonschema.exceptions import ValidationError
 
 ROOT = Path(__file__).resolve().parents[2]
 SCHEMAS = ROOT / "schemas"
-LATEST_PUBLISHED_VERSION = "0.8.0"
+LATEST_PUBLISHED_VERSION = "0.9.0"
 RELEASE_FIXTURE = (
     ROOT
     / f"tests/fixtures/phase6/releases/valid-{LATEST_PUBLISHED_VERSION}"
@@ -566,7 +566,7 @@ class Phase6StaticContracts(unittest.TestCase):
 
     def test_release_integrity_bundle_is_deterministic_and_candidate_bound(self) -> None:
         script = ROOT / "scripts/prepare-release-integrity.py"
-        version = "0.9.0"
+        version = "0.9.1"
         sha = "a" * 40
         archives = (
             f"aigent-hive-{version}-aarch64-apple-darwin.tar.gz",
@@ -613,7 +613,7 @@ class Phase6StaticContracts(unittest.TestCase):
                         "channel": "stable",
                         "product_version": version,
                         "package_version": version,
-                        "release_date": "2026-08-11",
+                        "release_date": "2026-08-12",
                         "ref": "refs/heads/main",
                         "sha": sha,
                     }
@@ -661,6 +661,8 @@ class Phase6StaticContracts(unittest.TestCase):
             }
             self.assertEqual(first, second)
             manifest = read_json(outputs[0] / "bundle-manifest.json")
+            self.assertEqual(manifest["classification"], "bugfix")
+            self.assertEqual(manifest["release_sequence"], 10)
             self.assertEqual(len(manifest["artifacts"]), 16)
             self.assertEqual(
                 [artifact["path"] for artifact in manifest["artifacts"]],
@@ -2102,9 +2104,9 @@ try {
             all(package["version"] == source_version for package in hive_packages)
         )
 
-    def test_latest_published_fixture_matches_immutable_0_8_surface(self) -> None:
-        self.assertEqual(LATEST_PUBLISHED_VERSION, "0.8.0")
-        manifest = read_json(RELEASE_FIXTURE / "targets/bundle-manifest.json")
+    def test_latest_published_fixture_matches_immutable_0_9_surface(self) -> None:
+        self.assertEqual(LATEST_PUBLISHED_VERSION, "0.9.0")
+        manifest = read_json(RELEASE_FIXTURE / "bundle-manifest.json")
         migration = read_json(RELEASE_FIXTURE / "targets/migration-table.json")
         inventory = read_json(
             RELEASE_FIXTURE / "targets/release-surface-inventory.json"

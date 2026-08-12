@@ -11,7 +11,7 @@ aliases: ["Hive 간단 설치 안내", "Hive 핵심 기능 안내"]
 sources:
   - "repo:docs/guides/public-html-design-principles.md#sha256:6aae9ab9808ca927fe3736f3c4bde3e91a0e25a9700ae75f98592e1577ab01ec"
   - "repo:docs/hive-core-features.ko.html#sha256:8f77210359186752205a0b4dcffcefd5d1a0bb8530d3620463be073c81b33abf"
-  - "repo:docs/hive-install-guide.ko.html#sha256:9338f3f1f23e99bfef5f0788ab14051789414cc7cffb6c10eb1b2e9bd8c982c2"
+  - "repo:docs/hive-install-guide.ko.html#sha256:d4b0a063d3595b4af46b67f7ac1f6bd85b0b72652d85679fd25c1243c42bd1fe"
   - "repo:docs/plans/active/public-html-guides.md#sha256:ef7818fd4550419c585f2fae43c569fa2d1541fe4508e622f9ad738317e371bf"
 links: [global-onboarding, product-purpose]
 reviewed_revision: "git:0b3bbbbfcb5904262c5281a0415851b96779ab9e"

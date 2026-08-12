@@ -288,9 +288,10 @@ jobs:
           test "$(jq -r .code <<<"$receipt")" = hive.release-verified
           test "$(jq -r .data.release_version <<<"$receipt")" = "$PRODUCT_VERSION"
           test "$(jq -r .data.source_commit <<<"$receipt")" = "$CANDIDATE_SHA"
-          test "$(jq -r .data.release_sequence <<<"$receipt")" = 9
-          jq -e '.data.accepted_release.release_sequence == 9' \
-            <<<"$receipt" >/dev/null
+          release_sequence=$(jq -r .data.release_sequence <<<"$receipt")
+          test "$release_sequence" -gt 0
+          test "$(jq -r .data.accepted_release.release_sequence <<<"$receipt")" = \
+            "$release_sequence"
       - name: Refuse existing npm versions
         run: |
           packages=(

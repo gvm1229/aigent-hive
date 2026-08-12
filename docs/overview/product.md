@@ -62,7 +62,7 @@ provider-neutral 로컬 agent harness.
 | Usage guard | Native-first sensor, session-first policy, automatic dispatch fail-closed | [Source guard](../guides/source-usage-guard.md) |
 | Judge quorum | Clean-context package와 detached Ed25519 verification | [Judge boundary](../architecture/judge-trust-boundary.md) |
 | Release·update | Attestation·local integrity, version gate, backup·journal·recovery | [Release boundary](../architecture/release-update-trust-boundary.md) |
-| Direct install | npm과 digest-pinned curl·PowerShell·CMD channel | [`0.8.0` plan](../plans/active/release-0.8.0.md) |
+| Direct install | npm과 digest-pinned curl·PowerShell·CMD channel | [`0.9.1` release](../releases/0.9.1.md) |
 
 ## Artifact 흐름
 
@@ -80,10 +80,10 @@ flowchart LR
 
 ## Version·release 상태
 
-- Current source version: `0.9.0` 구현 완료, 미배포
-- Latest published version: `0.8.0`
-- `0.8.0`: npm `latest=0.8.0` 게시 완료, GitHub Release·Git release tag 없음
-- Stable `0.8.x`: 사용자 별도 승인 뒤 결정
+- Current source version: `0.9.1` 호환 patch 후보
+- Latest published version: `0.9.0`
+- `0.9.0`: npm `latest=0.9.0`, normal GitHub Release, annotated Git tag 게시 완료
+- `0.9.1`: 미등록 project Wiki lint의 user-root 폴백과 전체 `v0.9` 수용 재검증 뒤 게시
 - Major: exact 사용자 지시 전 자동 준비·추론 금지
 
 관련 문서:

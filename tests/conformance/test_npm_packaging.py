@@ -115,6 +115,20 @@ class NpmPackagingContract(unittest.TestCase):
                 {"productVersion": "0.8.0"},
             )
             self.assertNotIn("scripts", umbrella)
+            umbrella_readme = (output / "aigent-hive/README.md").read_text("utf-8")
+            self.assertIn("## Install the current stable release", umbrella_readme)
+            self.assertIn("## Automatic dispatch safeguard", umbrella_readme)
+            self.assertIn("## License", umbrella_readme)
+            self.assertNotIn("## QA Contributors", umbrella_readme)
+            self.assertIn(
+                "https://raw.githubusercontent.com/gvm1229/aigent-hive/main/docs/assets/branding/hive-readme-banner-en.png",
+                umbrella_readme,
+            )
+            self.assertIn(
+                "https://github.com/gvm1229/aigent-hive/blob/main/docs/guides/code-signing-policy.md",
+                umbrella_readme,
+            )
+            self.assertNotIn("](./", umbrella_readme)
             for name in ("install.sh", "install.ps1", "install.cmd"):
                 self.assertEqual(
                     (output / "aigent-hive" / name).read_text("utf-8"),
@@ -278,6 +292,13 @@ class NpmPackagingContract(unittest.TestCase):
                     cwd=packages / "aigent-hive",
                 ).stdout
             )[0]["filename"]
+            with tarfile.open(dist / umbrella_pack, mode="r:gz") as archive:
+                packaged_readme = archive.extractfile("package/README.md")
+                self.assertIsNotNone(packaged_readme)
+                readme_text = packaged_readme.read().decode("utf-8")
+                self.assertIn("## First setup", readme_text)
+                self.assertNotIn("## QA Contributors", readme_text)
+                self.assertNotIn("](./", readme_text)
             run(
                 NPM,
                 "install",

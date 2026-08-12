@@ -3080,12 +3080,16 @@ fn run_lint(arguments: &[String]) -> Result<KnowledgeResult, WikiError> {
     let options = parse_options(arguments, &["--target", "--user-root"])?;
     let target = PathBuf::from(required(&options, "--target")?);
     let shared = optional(&options, "--user-root")
-        .map(|root| shared_mutation_target(&target, Path::new(root), true))
+        .map(|root| shared_lint_target(&target, Path::new(root)))
         .transpose()?;
     if shared.is_none() {
         authorize_legacy_target(&target)?;
     }
-    let mut issues = lint(&target)?;
+    let lint_target = shared
+        .as_ref()
+        .filter(|shared| shared.target_kind == SharedTargetKind::UserRoot)
+        .map_or(target.as_path(), |shared| shared.user_root.as_path());
+    let mut issues = lint(lint_target)?;
     let shared_digest = if let Some(shared) = &shared {
         issues
             .retain(|issue| issue.code != "stale-index" || issue.locator != SHARED_INDEX_RELATIVE);
@@ -3335,6 +3339,31 @@ fn shared_mutation_target(
         return Err(WikiError::InvalidInput(
             "knowledge target is not enabled in the project registry".to_owned(),
         ));
+    };
+    Ok(SharedMutationTarget {
+        user_root: canonical_user,
+        target_kind,
+        namespace,
+    })
+}
+
+fn shared_lint_target(target: &Path, user_root: &Path) -> Result<SharedMutationTarget, WikiError> {
+    ensure_consumer_target(target).map_err(|error| WikiError::Conflict(error.to_string()))?;
+    require_shared_wiki_enabled(user_root)?;
+    let canonical_user = hive_wiki::shared::canonical_root(user_root)?;
+    let canonical_target = hive_wiki::shared::canonical_root(target)?;
+    let registry = load_project_registry(&canonical_user)?;
+    let registered = registry.projects.iter().find(|project| {
+        project.enabled
+            && hive_wiki::shared::canonical_root(&project.root)
+                .is_ok_and(|registered| registered == canonical_target)
+    });
+    let (target_kind, namespace) = if canonical_target == canonical_user {
+        (SharedTargetKind::UserRoot, "user-root".to_owned())
+    } else if let Some(project) = registered {
+        (SharedTargetKind::RegisteredProject, project.id.clone())
+    } else {
+        (SharedTargetKind::UserRoot, "user-root".to_owned())
     };
     Ok(SharedMutationTarget {
         user_root: canonical_user,
@@ -4373,6 +4402,41 @@ mod tests {
             .iter()
             .any(|issue| issue["code"] == "stale-index"));
         assert!(!project.path().join(SHARED_INDEX_RELATIVE).exists());
+    }
+
+    #[test]
+    fn shared_lint_falls_back_to_user_root_for_an_unregistered_project() {
+        let user = temp_root();
+        write_user_setup(user.path(), true);
+        write_empty_knowledge(user.path());
+        let project = temp_root();
+        register_project(
+            user.path(),
+            RegisteredProject {
+                id: "disabled-project".to_owned(),
+                root: hive_wiki::shared::canonical_root(project.path()).expect("canonical project"),
+                enabled: false,
+                language: KnowledgeLanguage::En,
+                visibility: KnowledgeVisibility::ProjectPrivate,
+            },
+        )
+        .expect("disabled project registry entry");
+        let rebuilt = rebuild_shared_index(user.path()).expect("shared rebuild");
+        let arguments = vec![
+            "--target".to_owned(),
+            project.path().to_string_lossy().into_owned(),
+            "--user-root".to_owned(),
+            user.path().to_string_lossy().into_owned(),
+            "--output".to_owned(),
+            "json".to_owned(),
+        ];
+
+        let result = run_lint(&arguments).expect("unregistered shared lint");
+
+        assert_eq!(result.status, "success");
+        assert_eq!(result.evidence[0].locator, SHARED_INDEX_RELATIVE);
+        assert_eq!(result.evidence[0].digest, rebuilt.logical_digest);
+        assert!(!project.path().join(".hive").exists());
     }
 
     #[test]

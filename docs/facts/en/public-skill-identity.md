@@ -5,14 +5,15 @@ topic_slug: public-skill-identity
 language: en
 counterpart: ../ko/public-skill-identity.md
 title: "Skill Identity"
-summary: "Aigent Hive uses one product-only 22-Skill catalog; source development reuses those Skills with repository directives, and retired source IDs migrate fail closed."
+summary: "Aigent Hive uses one product-only 22-Skill catalog, and its Codex plugin identifies Hojin (Tom) Jeong and the official Hive mark."
 tags: [localization, migration, plugin, skill]
 aliases: ["Skill naming"]
 sources:
   - "repo:docs/decisions/ADR-0012-global-onboarding-shared-index.md#sha256:dea6123b7b193eb760a37b198566f9318d868fd7035491ac10756de0d4315530"
-  - "repo:docs/plans/PLAN.md#sha256:546c515482a7790f307cd3d522a871377dad65fa5e61962b9d243eed3058d7e4"
+  - "repo:docs/plans/PLAN.md#sha256:ac04ae788e89958b3b4901433e5e05023d4c5bd64ceb274726ab4b1fe4befd4e"
   - "repo:docs/plans/active/skill-identity-localization.md#sha256:5ae5f5e9e3ac9f2d9891393a75820fd1adbe8293e467a452d9778cba7fcb0468"
   - "repo:docs/skills.md#sha256:3ac35c43bee2bd83980415464b852253f271e95794d17fa81074fb2db0f88ec7"
+  - "repo:harness/plugins/aigent-hive/.codex-plugin/plugin.json#sha256:5701b2380c96d72245e21ef04aad028bb24b3f2d58c93d1581463ea21d230b6a"
 links: [global-onboarding, skill-routing]
 reviewed_revision: "git:daa4ab56b05f7403bc1f5f2b44d8471fb99866af"
 status: active
@@ -20,13 +21,10 @@ status: active
 
 # Skill Identity
 
-Aigent Hive has one product-only catalog of 22 Skills. Source development uses those installed
-product Skills plus repository-owned directives; the final tracked source Skill count is zero.
-Historical `hive-loop-engineering` maps to product `ralph-loop`. Product `ship` discovers each
-repository's Git rules, while `amend-directive` changes user-owned behavior without weakening
-compiled security and integrity boundaries.
+Aigent Hive has one product-only catalog of 22 Skills. Source development combines the installed
+Skills with repository directives; tracked source Skills remain zero. Retired IDs migrate through
+reviewed routes, historical release bytes stay immutable, and unverified paths fail closed.
 
-Retired IDs support one-to-one, merge, split, or no-Skill routes. Source Wiki work routes through
-the three product knowledge Skills and `hive source-wiki`; read-only code or Git inspection uses
-the host's ordinary repository tools. Historical release bytes stay immutable, and unverified old
-paths fail closed.
+The Codex plugin identifies `Hojin (Tom) Jeong` as author and developer. Its `logo` and
+`composerIcon` use a centered 512 px crop of the official colored Hive mark and Hive gold. Request
+context: replace the anonymous attribution and compass icon in `0.9.1`.

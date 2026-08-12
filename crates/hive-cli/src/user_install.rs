@@ -145,6 +145,8 @@ const LEGACY_ANTIGRAVITY_070_SKILLS: &[(&str, &str)] = &[
 ];
 const CODEX_PLUGIN_MANIFEST: &[u8] =
     include_bytes!("../../../harness/plugins/aigent-hive/.codex-plugin/plugin.json");
+const CODEX_PLUGIN_LOGO: &[u8] =
+    include_bytes!("../../../harness/plugins/aigent-hive/assets/hive-logo-plugin.png");
 const CLAUDE_PLUGIN_MANIFEST: &[u8] =
     include_bytes!("../../../harness/plugins/aigent-hive/.claude-plugin/plugin.json");
 const ANTIGRAVITY_PLUGIN_MANIFEST: &[u8] =
@@ -1914,6 +1916,14 @@ fn build_desired_user_files(
                 },
             );
             files.insert(
+                plugin_relative.join("assets/hive-logo-plugin.png"),
+                PlannedFile {
+                    bytes: CODEX_PLUGIN_LOGO.to_vec(),
+                    executable: false,
+                    ownership: "immutable-plugin-package",
+                },
+            );
+            files.insert(
                 plugin_relative.join("bin/hive-claude-usage-capture"),
                 PlannedFile {
                     bytes: CLAUDE_USAGE_CAPTURE.to_vec(),
@@ -2440,12 +2450,12 @@ fn render_user_guidance(
                 "disabled"
             };
             let memory_gate_en = if config.wiki.enabled {
-                "- Before every final response, review the current user statement and completed outcome for one safe reusable fact, preference, workflow, decision, convention, project profile, or verified outcome. This user-level gate applies immediately after installation in every selected-host folder; project setup, a Hive harness, a project marker, or an attached collection is not required. Resolve `user-root|current-project|named-project` scope explicitly. An unregistered repository's user-global fact stays at `user-root`; ambiguous project-specific scope fails closed.\n- For an explicit safe user-root statement, prefer `hive knowledge remember --user-root <user-root> --user-statement <normalized-fact> --claim-key <stable-key> --kind <preference|workflow|decision|convention|project-profile> --output json` exactly once; use `--request <request.json>` only for reviewed artifacts or another supported scope. Require the canonical Markdown and derived-index receipt before the final response; identical current truth is a no-op.\n- Before knowledge-dependent work, run one bounded `hive knowledge retrieve --user-root <user-root> --target <current-project-root> --scope auto --query <query> --top-k 5 --byte-budget 16384 --output json`. An unregistered target falls back to user-root and shared knowledge while excluding project-private knowledge; missing project setup or collection is not a reason to skip retrieval.\n- Never record a secret, credential, confidential item without current-action authorization, ephemeral status, ambiguous inference, private path, raw transcript, complete conversation, hook payload, tool output, hidden prompt, cache, database, or runtime state.\n"
+                "- Before every final response, review the current user statement and completed outcome for one safe reusable fact, preference, workflow, decision, convention, project profile, or verified outcome. This user-level gate applies immediately after installation in every selected-host folder; project setup, a Hive harness, a project marker, or an attached collection is not required. Resolve `user-root|current-project|named-project` scope explicitly. An unregistered repository's user-global fact stays at `user-root`; ambiguous project-specific scope fails closed.\n- For an explicit safe user-root statement, prefer `hive knowledge remember --user-root <user-root> --user-statement <normalized-fact> --claim-key <stable-key> --kind <preference|workflow|decision|convention|project-profile> --output json` exactly once; use `--request <request.json>` only for reviewed artifacts or another supported scope. Require the canonical Markdown and derived-index receipt before the final response; identical current truth is a no-op.\n- After a successful knowledge write, use `hive source-wiki lint --target <source-root> --output json` only for a valid source workspace. Otherwise use `hive knowledge lint --target <current-project-root> --user-root <user-root> --output json` for an enabled registered project, or `hive knowledge lint --target <user-root> --user-root <user-root> --output json` when the current project is unregistered. Missing project setup, a project marker, or an attached collection never skips lint.\n- Before knowledge-dependent work, run one bounded `hive knowledge retrieve --user-root <user-root> --target <current-project-root> --scope auto --query <query> --top-k 5 --byte-budget 16384 --output json`. An unregistered target falls back to user-root and shared knowledge while excluding project-private knowledge; missing project setup or collection is not a reason to skip retrieval.\n- Never record a secret, credential, confidential item without current-action authorization, ephemeral status, ambiguous inference, private path, raw transcript, complete conversation, hook payload, tool output, hidden prompt, cache, database, or runtime state.\n"
             } else {
                 "- Global Wiki is disabled: do not write or refresh knowledge.\n"
             };
             let memory_gate_ko = if config.wiki.enabled {
-                "- 모든 최종 응답 전 현재 사용자 발화와 완료 결과에서 안전하고 재사용 가능한 사실·선호·작업 방식·결정·규약·프로젝트 특성·검증된 결과 1개를 검토. 이 사용자 범위 절차는 설치 직후 선택 호스트의 모든 폴더에 적용하며 프로젝트 설정·Hive harness·project marker·연결 collection을 전제하지 않음. `user-root|current-project|named-project` 범위를 명시적으로 결정. 미등록 repository의 사용자 전역 사실은 `user-root`에 유지하고, 모호한 project 범위는 안전하게 중단.\n- 안전한 명시적 user-root 사용자 발화에는 `hive knowledge remember --user-root <user-root> --user-statement <normalized-fact> --claim-key <stable-key> --kind <preference|workflow|decision|convention|project-profile> --output json`을 정확히 1회 우선 실행. 검토 artifact 또는 다른 지원 범위에는 `--request <request.json>` 사용. 최종 응답 전 canonical Markdown과 derived-index receipt를 확인하며, 동일한 현재 truth는 no-op.\n- 지식이 필요한 작업 전 `hive knowledge retrieve --user-root <user-root> --target <current-project-root> --scope auto --query <query> --top-k 5 --byte-budget 16384 --output json`을 제한된 범위에서 1회 실행. 미등록 target은 project-private 지식을 제외한 user-root·shared 지식으로 폴백하며, 프로젝트 설정 또는 collection 부재만으로 조회를 건너뛰지 않음.\n- 현재 action 승인 없는 secret·credential·confidential 항목, ephemeral 상태, 모호한 추론, private path, raw transcript, complete conversation, hook payload, tool output, hidden prompt, cache, database, runtime state는 기록 금지.\n"
+                "- 모든 최종 응답 전 현재 사용자 발화와 완료 결과에서 안전하고 재사용 가능한 사실·선호·작업 방식·결정·규약·프로젝트 특성·검증된 결과 1개를 검토. 이 사용자 범위 절차는 설치 직후 선택 호스트의 모든 폴더에 적용하며 프로젝트 설정·Hive harness·project marker·연결 collection을 전제하지 않음. `user-root|current-project|named-project` 범위를 명시적으로 결정. 미등록 repository의 사용자 전역 사실은 `user-root`에 유지하고, 모호한 project 범위는 안전하게 중단.\n- 안전한 명시적 user-root 사용자 발화에는 `hive knowledge remember --user-root <user-root> --user-statement <normalized-fact> --claim-key <stable-key> --kind <preference|workflow|decision|convention|project-profile> --output json`을 정확히 1회 우선 실행. 검토 artifact 또는 다른 지원 범위에는 `--request <request.json>` 사용. 최종 응답 전 canonical Markdown과 derived-index receipt를 확인하며, 동일한 현재 truth는 no-op.\n- 지식 기록 성공 뒤 유효한 source workspace에서만 `hive source-wiki lint --target <source-root> --output json` 실행. 그 밖에는 등록된 project에서 `hive knowledge lint --target <current-project-root> --user-root <user-root> --output json`, 미등록 project에서 `hive knowledge lint --target <user-root> --user-root <user-root> --output json` 실행. 프로젝트 설정·project marker·연결 collection 부재를 lint 건너뜀 사유로 사용 금지.\n- 지식이 필요한 작업 전 `hive knowledge retrieve --user-root <user-root> --target <current-project-root> --scope auto --query <query> --top-k 5 --byte-budget 16384 --output json`을 제한된 범위에서 1회 실행. 미등록 target은 project-private 지식을 제외한 user-root·shared 지식으로 폴백하며, 프로젝트 설정 또는 collection 부재만으로 조회를 건너뛰지 않음.\n- 현재 action 승인 없는 secret·credential·confidential 항목, ephemeral 상태, 모호한 추론, private path, raw transcript, complete conversation, hook payload, tool output, hidden prompt, cache, database, runtime state는 기록 금지.\n"
             } else {
                 "- 전역 위키 비활성: knowledge 기록·갱신 금지.\n"
             };
@@ -2664,7 +2674,7 @@ fn render_codex_marketplace() -> Vec<u8> {
 
 fn render_claude_marketplace() -> Vec<u8> {
     format!(
-        "{{\n  \"name\": \"aigent-hive\",\n  \"owner\": {{\n    \"name\": \"Aigent Hive maintainers\"\n  }},\n  \"plugins\": [\n    {{\n      \"name\": \"aigent-hive\",\n      \"source\": \"./plugins/aigent-hive\",\n      \"description\": \"Initialize and maintain project-local Aigent Hive harnesses.\",\n      \"version\": \"{}\"\n    }}\n  ]\n}}\n",
+        "{{\n  \"name\": \"aigent-hive\",\n  \"owner\": {{\n    \"name\": \"Hojin (Tom) Jeong\"\n  }},\n  \"plugins\": [\n    {{\n      \"name\": \"aigent-hive\",\n      \"source\": \"./plugins/aigent-hive\",\n      \"description\": \"Initialize and maintain project-local Aigent Hive harnesses.\",\n      \"version\": \"{}\"\n    }}\n  ]\n}}\n",
         env!("CARGO_PKG_VERSION")
     )
     .into_bytes()
@@ -8374,7 +8384,7 @@ mod tests {
         let mut manifest: UserOwnershipManifest =
             serde_json::from_slice(&fs::read(&manifest_path).expect("ownership manifest"))
                 .expect("ownership manifest JSON");
-        manifest.product_version = "0.9.1".to_owned();
+        manifest.product_version = "0.9.0".to_owned();
         manifest.plan_digest = inventory_digest(
             manifest.host,
             &manifest.product_version,
@@ -8796,6 +8806,12 @@ mod tests {
         );
         assert!(english.contains("--user-statement <normalized-fact> --claim-key <stable-key>"));
         assert!(english.contains("canonical Markdown and derived-index receipt"));
+        assert!(english.contains(
+            "hive knowledge lint --target <user-root> --user-root <user-root> --output json"
+        ));
+        assert!(english.contains(
+            "Missing project setup, a project marker, or an attached collection never skips lint"
+        ));
         assert!(!english.contains("질문과 응답"));
 
         let korean = String::from_utf8(render_user_guidance(
@@ -8816,6 +8832,10 @@ mod tests {
         ));
         assert!(korean.contains("--user-statement <normalized-fact> --claim-key <stable-key>"));
         assert!(korean.contains("canonical Markdown과 derived-index receipt"));
+        assert!(korean.contains(
+            "hive knowledge lint --target <user-root> --user-root <user-root> --output json"
+        ));
+        assert!(korean.contains("lint 건너뜀 사유로 사용 금지"));
         for avoidable_mixture in [
             "활성 adapter",
             "Interface language",
@@ -8884,6 +8904,31 @@ mod tests {
         assert!(!plan
             .files
             .contains_key(Path::new(".hive/marketplaces/codex/marketplace.json")));
+
+        let plugin_root = Path::new(".hive/marketplaces/codex/plugins/aigent-hive");
+        let plugin: serde_json::Value = serde_json::from_slice(
+            &plan
+                .files
+                .get(&plugin_root.join(".codex-plugin/plugin.json"))
+                .expect("Codex plugin manifest")
+                .bytes,
+        )
+        .expect("Codex plugin JSON");
+        assert_eq!(plugin["version"], env!("CARGO_PKG_VERSION"));
+        assert_eq!(plugin["author"]["name"], "Hojin (Tom) Jeong");
+        assert_eq!(plugin["interface"]["developerName"], "Hojin (Tom) Jeong");
+        assert_eq!(plugin["interface"]["logo"], "./assets/hive-logo-plugin.png");
+        assert_eq!(
+            plugin["interface"]["composerIcon"],
+            "./assets/hive-logo-plugin.png"
+        );
+        assert_eq!(
+            plan.files
+                .get(&plugin_root.join("assets/hive-logo-plugin.png"))
+                .expect("Codex plugin logo")
+                .bytes,
+            CODEX_PLUGIN_LOGO
+        );
     }
 
     #[test]
@@ -9413,7 +9458,7 @@ mod tests {
         let desired = build_desired_user_files(&arguments, None).expect("current desired files");
         let current = authenticated_current_inventory(&arguments, &desired);
         let request = InventoryAuthentication {
-            product_version: "0.9.0",
+            product_version: env!("CARGO_PKG_VERSION"),
             installed_host_version_range: UserHost::Codex.version_range(),
             source_release_digest: &current.source_release_digest,
             installed_entries: &current.entries,
@@ -9425,23 +9470,30 @@ mod tests {
             authenticated_prior: None,
         };
 
+        let developer_version = format!("{}-dev", env!("CARGO_PKG_VERSION"));
         let authenticated =
-            developer_authenticated_user_inventory(UserHost::Codex, &request, "0.9.0-dev")
+            developer_authenticated_user_inventory(UserHost::Codex, &request, &developer_version)
                 .expect("developer base");
         assert_user_entries_equal(&authenticated.entries, &current.entries);
-        assert!(
-            developer_authenticated_user_inventory(UserHost::Codex, &request, "0.9.0-test.4")
-                .is_none()
-        );
+        let public_test_version = format!("{}-test.4", env!("CARGO_PKG_VERSION"));
+        assert!(developer_authenticated_user_inventory(
+            UserHost::Codex,
+            &request,
+            &public_test_version,
+        )
+        .is_none());
 
         let forged_digest = format!("sha256:{}", "0".repeat(64));
         let forged = InventoryAuthentication {
             source_release_digest: &forged_digest,
             ..request
         };
-        assert!(
-            developer_authenticated_user_inventory(UserHost::Codex, &forged, "0.9.0-dev").is_none()
-        );
+        assert!(developer_authenticated_user_inventory(
+            UserHost::Codex,
+            &forged,
+            &developer_version,
+        )
+        .is_none());
     }
 
     #[test]
