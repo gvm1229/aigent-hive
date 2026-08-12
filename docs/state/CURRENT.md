@@ -12,6 +12,9 @@
   설치·fresh-session·성능·복구 수용 → 수정 시 다음 번호 시험판 → 결함 `0건` 뒤 protected
   `main` stable publication
 - `0.9.3` 동결: QA contributor 추가 지시와 유지보수자의 후속 명시적 승인 전 구현·검증·출시 mutation `0건`
+- `0.9.2-test.1` 수용 거부: candidate run `31596919466`·publication run `31597939956`는
+  통과했으나 GitHub prerelease에 direct installer 자산 3개가 누락되어 공개 설치 URL이 `404`를
+  반환. 게시 workflow·회귀 보정 뒤 `0.9.2-test.2`부터 전체 공개 설치 수용 재수행
 - `0.9.0` stable publication: candidate run `31561636239`, publication run `31562280178`,
   annotated `v0.9.0`, normal GitHub Release, npm `latest=0.9.0`, Windows 전역 설치·validate·
   release date `2026-08-12` 표시 PASS

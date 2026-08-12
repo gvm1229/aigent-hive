@@ -41,6 +41,9 @@
   fresh-session·성능·지식·preference 보존 수용
 - [ ] [REL92-009] 시험판 결함 수정마다 다음 numbered test 게시와 영향 수용 반복,
   최신 시험판 결함 `0건` 확인
+  - `0.9.2-test.1`: candidate run `31596919466`·publication run `31597939956`는 통과했으나,
+    게시 workflow가 생성한 `install.sh`·`install.ps1`·`install.cmd`를 GitHub Release 자산에
+    첨부하지 않아 공개 설치 URL `404`. 수용 거부·`test.2` 재검증 대상으로 전환
 - [ ] [REL92-010] Accepted test exact source의 protected `main` PR·stable candidate 검증 뒤
   `v0.9.2` GitHub Release·npm `latest` 게시
 - [ ] [REL92-011] 공개 `0.9.2` clean install·upgrade·version·build date·plugin 표시·npm README와
