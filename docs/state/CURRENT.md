@@ -678,6 +678,10 @@ Pre-1.0 비차단 deferred:
   계약 39개 통과, Windows 조건부 1개 예상 건너뜀
 - UX 경계: non-Hive guard 비활성과 setup-free Hive Skill 사용 가능 여부 분리. Project state
   workflow만 한 번의 활성화 승인과 자동 capability·run bootstrap 소유
+- 전체 검증: Rust workspace·format·strict Clippy PASS. Python 적합성 602개 중 562개 PASS,
+  Windows 조건부 40개 예상 건너뜀
+- 현재 Windows 설치: `0.9.1-dev` build date `2026-08-12`, global threshold `5%`, user
+  projection validate PASS. 공개 `0.9.1` native binary는 `.hive/dev-install/original`에 복구용 보존
 
 ## 사람용 문서 style
 
