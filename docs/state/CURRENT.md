@@ -2,10 +2,10 @@
 
 - 기준 branch: `develop`
 - product version: `0.9.1`
-- plan revision: `2.78`
+- plan revision: `2.79`
 - 현재 milestone: 비-`0.10.0` 계획 전수 완료와 `0.9.2` numbered test 수용
-- `0.9.2` stable 차단: 활성 계획 전수 대조 결과 `N10-002–011` 외 실제 미완료 48개.
-  Native 잔여 9개, model-routed 잔여 29개, `REL92-003–012` 10개의 구현·실기 증거 전까지
+- `0.9.2` stable 차단: 활성 계획 전수 대조 결과 `N10-002–011` 외 실제 미완료 38개.
+  Native 잔여 9개, model-routed 잔여 19개, `REL92-003–012` 10개의 구현·실기 증거 전까지
   candidate 생성 금지
 - 출시 순서: source directive·ADR의 stable-as-test 금지 → 비-0.10 구현 완료 → full candidate →
   public `0.9.2-test.N` → Windows 실제 설치·fresh-session·성능·복구 수용 → 수정 시 다음 번호
@@ -26,6 +26,9 @@
 - Native workflow suite: commit `b6679a6`, `NAT-017–019` 완료. 제품 Skill 25개로 확장하고
   persistent criterion loop, bounded mailbox·barrier·shared-path overlap, AND·OR·quorum goal,
   nested budget·single refund·terminal-only Judge core 시험 PASS. Host adapter·실제 lifecycle은 잔여
+- Custom agent typed profile: commit `ed21b87`, `MRA-007–008`·`MRA-013–020` 완료.
+  양쪽 exact mapping·trigger/negative route·scope precedence·reserved Judge·definition digest·
+  runtime attestation과 6개 built-in fixture projection PASS. 실제 설치·fresh-session lifecycle은 잔여
 - `0.9.0` stable publication: candidate run `31561636239`, publication run `31562280178`,
   annotated `v0.9.0`, normal GitHub Release, npm `latest=0.9.0`, Windows 전역 설치·validate·
   release date `2026-08-12` 표시 PASS

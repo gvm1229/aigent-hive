@@ -74,23 +74,32 @@
 
 ### B. Canonical role·projection
 
-- [ ] [MRA-007] 양쪽 host mapping·exact model/effort·trigger·negative route·permission·scope·digest 필수 typed schema
-- [ ] [MRA-008] User/project layered scope·project precedence·collision·role/name normalization
+- [x] [MRA-007] 양쪽 host mapping·exact model/effort·trigger·negative route·permission·scope·digest 필수 typed schema
+  - Evidence: commit `ed21b87`, closed profile schema·JCS definition digest·floating alias 거부와
+    Codex TOML·Claude Markdown deterministic rendering 시험
+- [x] [MRA-008] User/project layered scope·project precedence·collision·role/name normalization
+  - Evidence: commit `ed21b87`, project precedence·same-scope collision·reserved user Judge shadow 거부
 - [ ] [MRA-009] Projection preview·명시적 동의·ownership ledger·non-clobber·recover 계약
 - [ ] [MRA-010] Codex TOML projection·installed-version validation·fresh-session discovery
 - [ ] [MRA-011] Claude Markdown projection·installed-version validation·environment/allowlist conflict detection
 - [ ] [MRA-012] Capability preflight와 unsupported·silent fallback·unverified alias fail-closed
-- [ ] [MRA-013] Exact role·model·effort·scope·definition digest runtime attestation receipt
+- [x] [MRA-013] Exact role·model·effort·scope·definition digest runtime attestation receipt
+  - Evidence: commit `ed21b87`, closed attestation schema와 exact host·role·scope·model·effort·
+    definition digest 결합, silent fallback mismatch 거부 시험
 
 ### C. Built-in role·자동 route
 
-- [ ] [MRA-014] `hive-routine-implementer` role·fixture·host projections
-- [ ] [MRA-015] `hive-complex-implementer` role·fixture·host projections
-- [ ] [MRA-016] Reserved `hive-independent-judge`·Sol High/Claude exact profile·fresh read-only·shadow 거부
-- [ ] [MRA-017] `hive-design-specialist` role·design task fixture
-- [ ] [MRA-018] `hive-article-writer` role·article task fixture
-- [ ] [MRA-019] `hive-research-specialist` role·citation/read-only fixture
-- [ ] [MRA-020] Deterministic verifier evidence layer·model review authority `0건`·fixture
+- [x] [MRA-014] `hive-routine-implementer` role·fixture·host projections
+- [x] [MRA-015] `hive-complex-implementer` role·fixture·host projections
+- [x] [MRA-016] Reserved `hive-independent-judge`·Sol High/Claude exact profile·fresh read-only·shadow 거부
+- [x] [MRA-017] `hive-design-specialist` role·design task fixture
+- [x] [MRA-018] `hive-article-writer` role·article task fixture
+- [x] [MRA-019] `hive-research-specialist` role·citation/read-only fixture
+  - Evidence: commit `ed21b87`, 6개 canonical JSON fixture의 closed-schema 검증과 양쪽 host
+    projection, Judge user-only·read-only·reserved enforcement
+- [x] [MRA-020] Deterministic verifier evidence layer·model review authority `0건`·fixture
+  - Evidence: commits `09700a0`·`b6679a6`·`ed21b87`, evidence reducer와 terminal Judge gate를
+    분리하고 model attestation을 verdict provenance로만 처리
 - [ ] [MRA-021] Spec→route→implement→verify→Judge→Ed25519 quorum→accept workflow·외부 signer 경계
 - [ ] [MRA-022] `explicit|implicit` setup·자연어 변경·strict terminal Judge·일반 task false-positive exclusion
 
