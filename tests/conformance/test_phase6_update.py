@@ -189,7 +189,6 @@ class Phase6StaticContracts(unittest.TestCase):
             "historical-surfaces.schema.json",
             "major-release-confirmation.schema.json",
             "migration-table.schema.json",
-            "platform-signing-evidence.schema.json",
             "release-bundle-manifest.schema.json",
             "release-surface-inventory.schema.json",
             "update-journal.schema.json",
@@ -217,7 +216,7 @@ class Phase6StaticContracts(unittest.TestCase):
         )
         validate(
             "release-bundle-manifest.schema.json",
-            read_json(RELEASE_FIXTURE / "targets/bundle-manifest.json"),
+            read_json(RELEASE_FIXTURE / "bundle-manifest.json"),
         )
         validate(
             "migration-table.schema.json",
@@ -229,47 +228,6 @@ class Phase6StaticContracts(unittest.TestCase):
                 RELEASE_FIXTURE / "targets/release-surface-inventory.json"
             ),
         )
-        validate(
-            "platform-signing-evidence.schema.json",
-            read_json(
-                RELEASE_FIXTURE / "targets/platform-signing-evidence.json"
-            ),
-        )
-        wrong_signer = read_json(
-            RELEASE_FIXTURE / "targets/platform-signing-evidence.json"
-        )
-        wrong_signer["evidence"][0]["signer"] = {
-            "kind": "authenticode-certificate-thumbprint",
-            "value": "A" * 40,
-        }
-        with self.assertRaises(ValidationError):
-            validate("platform-signing-evidence.schema.json", wrong_signer)
-        cost_waived = {
-            "schema_version": 1,
-            "evidence": [
-                {
-                    "platform": "macos",
-                    "artifact_path": "targets/aigent-hive-0.9.0-aarch64-apple-darwin.tar.gz",
-                    "artifact_digest": DIGEST,
-                    "scheme": "ad-hoc",
-                    "signer": {"kind": "no-publisher", "value": ""},
-                    "status": "cost-waived",
-                },
-                {
-                    "platform": "windows",
-                    "artifact_path": "targets/aigent-hive-0.9.0-x86_64-pc-windows-msvc.zip",
-                    "artifact_digest": DIGEST,
-                    "scheme": "unsigned",
-                    "signer": {"kind": "no-publisher", "value": ""},
-                    "status": "cost-waived",
-                },
-            ],
-        }
-        validate("platform-signing-evidence.schema.json", cost_waived)
-        forged_cost_waived = json.loads(json.dumps(cost_waived))
-        forged_cost_waived["evidence"][0]["scheme"] = "developer-id"
-        with self.assertRaises(ValidationError):
-            validate("platform-signing-evidence.schema.json", forged_cost_waived)
         validate(
             "backup-manifest.schema.json",
             {
@@ -317,11 +275,8 @@ class Phase6StaticContracts(unittest.TestCase):
                     "schema_version": 1,
                     "product_version": "0.7.0",
                     "release_manifest_digest": DIGEST,
-                    "rollback": {
-                        "root_version": 1,
-                        "timestamp_version": 1,
-                        "snapshot_version": 1,
-                        "targets_version": 1,
+                    "accepted_release": {
+                        "release_version": "0.7.0",
                         "release_sequence": 7,
                         "manifest_digest": DIGEST,
                     },
@@ -335,11 +290,8 @@ class Phase6StaticContracts(unittest.TestCase):
                 "schema_version": 1,
                 "product_version": "0.7.0",
                 "release_manifest_digest": DIGEST,
-                "rollback": {
-                    "root_version": 1,
-                    "timestamp_version": 1,
-                    "snapshot_version": 1,
-                    "targets_version": 1,
+                "accepted_release": {
+                    "release_version": "0.7.0",
                     "release_sequence": 7,
                     "manifest_digest": DIGEST,
                 },
@@ -381,7 +333,7 @@ class Phase6StaticContracts(unittest.TestCase):
         publication_workflow = yaml.safe_load(publication)
         self.assertEqual(
             set(candidate_workflow["jobs"]),
-            {"unix", "windows", "npm-umbrella", "authorization-request"},
+            {"unix", "windows", "npm-umbrella", "integrity-bundle"},
         )
         self.assertEqual(set(publication_workflow["jobs"]), {"publish"})
         publication_triggers = publication_workflow.get(
@@ -398,10 +350,8 @@ class Phase6StaticContracts(unittest.TestCase):
                 "options": ["test", "stable"],
             },
         )
-        for name in ("tuf_repository_url", "tuf_repository_sha256"):
-            self.assertFalse(publication_inputs[name]["required"])
-            self.assertEqual(publication_inputs[name]["default"], "")
-            self.assertEqual(publication_inputs[name]["type"], "string")
+        self.assertNotIn("tuf_repository_url", publication_inputs)
+        self.assertNotIn("tuf_repository_sha256", publication_inputs)
         expected_publication_environment = {
             "name": "release-publication",
             "deployment": False,
@@ -524,8 +474,8 @@ class Phase6StaticContracts(unittest.TestCase):
             "TeamIdentifier=not set",
             "Get-AuthenticodeSignature",
             "SignatureStatus]::NotSigned",
-            "scripts/prepare-release-authorization.py",
-            "release-authorization-request",
+            "scripts/prepare-release-integrity.py",
+            "release-integrity-bundle",
             "inputs.channel == 'stable'",
         ):
             self.assertIn(required, candidate)
@@ -563,13 +513,11 @@ class Phase6StaticContracts(unittest.TestCase):
             "%HIVE_INSTALL_PACKAGE_VERSION%/install.ps1",
             "gh release create",
             "git tag -a",
-            "scripts/extract-release-repository.py",
-            "TUF_PRODUCTION_ROOT_B64",
-            "TUF_PRODUCTION_ROLLBACK_STATE_B64",
+            "scripts/extract-release-bundle.py",
+            "release-bundle.tar.gz",
             "hive.release-verified",
-            "--rollback-state",
-            "tuf-publication-receipt.json",
-            'cmp "dist/$name" "$RUNNER_TEMP/tuf-repository/targets/$name"',
+            "release-integrity-receipt.json",
+            "accepted_release.release_sequence",
         ):
             self.assertIn(required, publication)
         for forbidden in ("bootstrap_with_token", "secrets.NPM_TOKEN", "NODE_AUTH_TOKEN"):
@@ -603,6 +551,10 @@ class Phase6StaticContracts(unittest.TestCase):
             self.assertNotIn(forbidden, candidate)
         for forbidden in (
             "signed_tuf_repository_url",
+            "TUF_PRODUCTION_ROOT_B64",
+            "TUF_PRODUCTION_ROLLBACK_STATE_B64",
+            "--trust-root",
+            "--rollback-state",
             "HIVE_RELEASE_ROOT_JSON_BASE64",
             "platform-signing-evidence.canonical.json",
             "notarytool",
@@ -612,8 +564,8 @@ class Phase6StaticContracts(unittest.TestCase):
             self.assertNotIn(forbidden, publication)
         self.assertNotIn("eval ", candidate + publication)
 
-    def test_release_authorization_request_is_deterministic_public_and_candidate_bound(self) -> None:
-        script = ROOT / "scripts/prepare-release-authorization.py"
+    def test_release_integrity_bundle_is_deterministic_and_candidate_bound(self) -> None:
+        script = ROOT / "scripts/prepare-release-integrity.py"
         version = "0.9.0"
         sha = "a" * 40
         archives = (
@@ -623,7 +575,15 @@ class Phase6StaticContracts(unittest.TestCase):
             f"aigent-hive-{version}-x86_64-pc-windows-msvc.zip",
             f"aigent-hive-{version}-x86_64-unknown-linux-musl.tar.gz",
         )
-        with tempfile.TemporaryDirectory(prefix="hive-release-authorization-") as temporary:
+        npm_archives = (
+            f"aigent-hive-darwin-arm64-{version}.tgz",
+            f"aigent-hive-darwin-x64-{version}.tgz",
+            f"aigent-hive-linux-arm64-{version}.tgz",
+            f"aigent-hive-linux-x64-{version}.tgz",
+            f"aigent-hive-win32-x64-{version}.tgz",
+            f"aigent-hive-{version}.tgz",
+        )
+        with tempfile.TemporaryDirectory(prefix="hive-release-integrity-") as temporary:
             root = Path(temporary)
             dist = root / "dist"
             dist.mkdir()
@@ -634,6 +594,18 @@ class Phase6StaticContracts(unittest.TestCase):
                 (dist / f"{name}.sha256").write_text(
                     f"{checksum}  {name}\n", encoding="ascii"
                 )
+            for name in npm_archives:
+                with tarfile.open(dist / name, "w:gz") as archive:
+                    payload = b"{}\n"
+                    member = tarfile.TarInfo("package/package.json")
+                    member.size = len(payload)
+                    archive.addfile(member, io.BytesIO(payload))
+                    if name == f"aigent-hive-{version}.tgz":
+                        for installer in ("install.sh", "install.ps1", "install.cmd"):
+                            installer_payload = f"{installer}\n".encode()
+                            member = tarfile.TarInfo(f"package/{installer}")
+                            member.size = len(installer_payload)
+                            archive.addfile(member, io.BytesIO(installer_payload))
             (dist / "release-candidate.json").write_text(
                 json.dumps(
                     {
@@ -663,10 +635,6 @@ class Phase6StaticContracts(unittest.TestCase):
                 "refs/heads/main",
                 "--repository",
                 "gvm1229/aigent-hive",
-                "--started-on",
-                "2026-08-11T00:00:00Z",
-                "--finished-on",
-                "2026-08-11T00:01:00Z",
                 "--dist",
                 str(dist),
             ]
@@ -692,17 +660,12 @@ class Phase6StaticContracts(unittest.TestCase):
                 if path.is_file()
             }
             self.assertEqual(first, second)
-            request = read_json(outputs[0] / "signing-request.json")
-            self.assertEqual(len(request["targets"]), 10)
-            evidence = read_json(
-                outputs[0] / "targets/platform-signing-evidence.json"
-            )
-            self.assertEqual(len(evidence["evidence"]), 3)
+            manifest = read_json(outputs[0] / "bundle-manifest.json")
+            self.assertEqual(len(manifest["artifacts"]), 16)
             self.assertEqual(
-                {entry["scheme"] for entry in evidence["evidence"]},
-                {"ad-hoc", "unsigned"},
+                [artifact["path"] for artifact in manifest["artifacts"]],
+                sorted(artifact["path"] for artifact in manifest["artifacts"]),
             )
-            validate("platform-signing-evidence.schema.json", evidence)
             validate(
                 "migration-table.schema.json",
                 read_json(outputs[0] / "targets/migration-table.json"),
@@ -713,7 +676,7 @@ class Phase6StaticContracts(unittest.TestCase):
             )
             validate(
                 "release-bundle-manifest.schema.json",
-                read_json(outputs[0] / "targets/bundle-manifest.json"),
+                manifest,
             )
             inventory = read_json(
                 outputs[0] / "targets/release-surface-inventory.json"
@@ -774,17 +737,15 @@ class Phase6StaticContracts(unittest.TestCase):
             self.assertNotEqual(wrong_sha.returncode, 0)
             self.assertFalse((root / "wrong-sha").exists())
 
-    def test_external_release_repository_extraction_rejects_links_and_path_escape(self) -> None:
-        script = ROOT / "scripts/extract-release-repository.py"
+    def test_release_bundle_extraction_rejects_links_and_path_escape(self) -> None:
+        script = ROOT / "scripts/extract-release-bundle.py"
 
         def make_archive(path: Path, hostile: tuple[str, str] | None = None) -> None:
             with tarfile.open(path, "w:gz") as archive:
                 for name in (
-                    "metadata/root.json",
-                    "metadata/snapshot.json",
-                    "metadata/targets.json",
-                    "metadata/timestamp.json",
-                    "targets/bundle-manifest.json",
+                    "bundle-manifest.json",
+                    "targets/migration-table.json",
+                    "targets/release-surface-inventory.json",
                 ):
                     payload = b"{}\n"
                     member = tarfile.TarInfo(name)
@@ -795,16 +756,16 @@ class Phase6StaticContracts(unittest.TestCase):
                     member = tarfile.TarInfo(name)
                     if kind == "symlink":
                         member.type = tarfile.SYMTYPE
-                        member.linkname = "metadata/root.json"
+                        member.linkname = "bundle-manifest.json"
                     else:
                         member.size = 0
                     archive.addfile(member, io.BytesIO(b""))
 
-        with tempfile.TemporaryDirectory(prefix="hive-tuf-extract-") as temporary:
+        with tempfile.TemporaryDirectory(prefix="hive-release-extract-") as temporary:
             root = Path(temporary)
             valid = root / "valid.tar.gz"
             make_archive(valid)
-            output = root / "repository"
+            output = root / "bundle"
             result = subprocess.run(
                 [sys.executable, str(script), "--archive", str(valid), "--output", str(output)],
                 cwd=ROOT,
@@ -813,7 +774,7 @@ class Phase6StaticContracts(unittest.TestCase):
                 capture_output=True,
             )
             self.assertEqual(result.returncode, 0, result.stderr)
-            self.assertTrue((output / "metadata/root.json").is_file())
+            self.assertTrue((output / "bundle-manifest.json").is_file())
 
             for label, hostile in (
                 ("escape", ("file", "../outside.json")),
@@ -1916,7 +1877,7 @@ try {
             ROOT / "scripts/setup-windows-dependencies.ps1"
         ).read_text(encoding="utf-8")
         guide = (
-            ROOT / "docs/guides/signed-update-and-release.md"
+            ROOT / "docs/guides/release-update.md"
         ).read_text(encoding="utf-8")
         for forbidden in ("pwsh", "winget", "Microsoft.PowerShell"):
             self.assertNotIn(forbidden, installer)
@@ -1931,7 +1892,7 @@ try {
         ):
             self.assertIn(required, dependency_setup)
         self.assertIn("powershell.exe -NoLogo -NoProfile -NonInteractive", guide)
-        self.assertIn('set "HIVE_VERSION=0.7.0"', guide)
+        self.assertIn('set "HIVE_VERSION=0.9.0"', guide)
         self.assertIn('set "HIVE_PREFIX=%LOCALAPPDATA%\\AigentHive"', guide)
         self.assertIn("$env:HIVE_VERSION", guide)
         self.assertIn("$env:HIVE_PREFIX", guide)
@@ -2194,20 +2155,42 @@ class Phase6CliContracts(unittest.TestCase):
         self.assertEqual(process.returncode, value["exit_code"])
         return process, value
 
-    def test_release_verify_requires_an_external_protected_absolute_root(self) -> None:
+    def test_release_verify_uses_the_local_integrity_manifest(self) -> None:
         process, result = self.invoke(
             "release",
             "verify",
             "--bundle",
             str(RELEASE_FIXTURE),
-            "--trust-root",
-            "metadata/root.json",
             "--output",
             "json",
         )
-        self.assertEqual(process.returncode, 3)
-        self.assertEqual(result["status"], "blocked")
+        self.assertEqual(process.returncode, 0)
+        self.assertEqual(result["status"], "success")
+        self.assertEqual(
+            result["data"]["accepted_release"]["release_version"],
+            LATEST_PUBLISHED_VERSION,
+        )
         self.assertEqual(result["changed_paths"], [])
+
+        process = subprocess.run(
+            [
+                str(self.binary),
+                "release",
+                "verify",
+                "--bundle",
+                str(RELEASE_FIXTURE),
+                "--trust-root",
+                "metadata/root.json",
+                "--output",
+                "json",
+            ],
+            cwd=ROOT,
+            check=False,
+            text=True,
+            capture_output=True,
+        )
+        self.assertNotEqual(process.returncode, 0)
+        self.assertIn("unknown release option: --trust-root", process.stderr)
 
     def test_update_parser_refuses_partial_and_conflicting_authority(self) -> None:
         process, result = self.invoke(

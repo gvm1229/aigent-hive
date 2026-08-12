@@ -1,7 +1,8 @@
-//! Offline release verification, compatibility, migration, and update safety.
+//! Local release-integrity verification, compatibility, migration, and update safety.
 //!
-//! This crate is verifier-only. It contains no network client, signing API,
-//! model runtime, provider SDK, or package-manager execution.
+//! Distribution authenticity stays with npm registry integrity or GitHub artifact attestations.
+//! This crate contains no network client, signing API, model runtime, provider SDK, or
+//! package-manager execution.
 
 mod backup;
 mod merge;
@@ -20,10 +21,8 @@ pub use migration::{
     MigrationKind, MigrationRoute, MigrationTable, PreservationDigest,
 };
 pub use release::{
-    observe_surface_delta, verify_release_repository, verify_release_repository_for_publication,
-    verify_root_rotation, PlatformSigningEvidence, PlatformSigningEvidenceEntry,
-    ProvenanceStatement, ReleaseManifest, ReleaseVerification, RollbackState, SurfaceInventory,
-    TufRoot, VerifiedTarget,
+    observe_surface_delta, verify_release_bundle, ReleaseArtifact, ReleaseManifest, ReleaseState,
+    ReleaseVerification, SurfaceInventory, VerifiedTarget,
 };
 pub use transaction::{
     execute_update, execute_update_in, recover_update, recover_update_in, UpdateMode,

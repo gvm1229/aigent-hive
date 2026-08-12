@@ -515,7 +515,6 @@ version = "0.9.0"
 dependencies = [
  "cap-fs-ext",
  "cap-std",
- "ed25519-dalek",
  "hive-core",
  "hive-projection",
  "hive-render",

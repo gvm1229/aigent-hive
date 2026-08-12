@@ -34,6 +34,16 @@ FTS5·tag·alias·BM25와 visibility-aware shared query.
 - Unsafe·ambiguous·ephemeral input: write 0건과 이유 표시
 - Raw transcript·complete conversation·hook·tool output·runtime state 저장 금지
 
+Operational enforcement:
+
+- User·project guidance 모두에 every-turn 판정, exact `hive knowledge remember`, canonical receipt 규칙 포함
+- Localized Skill description도 every-turn mandatory route 의미 보존
+- Project setup 부재: user-global fact의 `user-root` 기록 유지, project-specific scope 추론·자동 등록 금지
+- 선택 host의 사용자 범위 지침은 설치 직후 모든 folder에 적용. Project setup·Hive harness·project marker는
+  user-root capture의 전제 조건 아님
+- Expected-byte install validation과 별도로 command·receipt·Wiki disabled negative semantic assertion 필수
+- Manual Skill 호출 없는 fresh-session write·recall 수용 전 기능 완료·stable publication 주장 금지
+
 ### Retrieval before routing
 
 - 질문·research·knowledge-dependent task: routing 전 bounded retrieval 1회
@@ -48,12 +58,14 @@ FTS5·tag·alias·BM25와 visibility-aware shared query.
 ### Scope와 visibility
 
 - `auto`: current project + user-root + shared projects
+- 미등록 current target의 `auto`: user-root + shared projects. Project-private 지식 포함 금지
 - `global`: user-root + shared projects
 - `project:<id>`: 사용자가 명시한 등록 project private·shared + user-root
 - `collection:<id>`: 등록 또는 detached collection의 승인된 범위 + user-root
 - `all-visible`: user-root + shared projects
 - `confidential`: current project 또는 별도 current-action 승인
 - Unknown·ambiguous project identity: private retrieval·write fail-closed
+- Background daemon·raw prompt recorder 없이 foreground agent-reviewed capture만 허용
 
 ### Derived RAG index
 

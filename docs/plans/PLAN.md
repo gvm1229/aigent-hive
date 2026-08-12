@@ -1,9 +1,9 @@
 # Aigent Hive active plan index
 
-> Revision: 2.45
-> 기준일: 2026-08-11
+> Revision: 2.64
+> 기준일: 2026-08-12
 > Product version: `0.9.0`
-> 현재 milestone: `0.9.0` 무인 설치 수용·테스트 체계 정리 후 정식 릴리스 준비
+> 현재 milestone: `0.9.0` 최소 release trust 정리·usage onboarding·user projection purge 보정
 > Entrypoint: `docs/plans/PLAN.md`
 
 ## Goal parameters
@@ -11,7 +11,7 @@
 - Objective: Hive-native 실행·custom subagent·Discord·Markdown Wiki와 `0.9.0` 시험·정식
   릴리스 수용. Notion은 `0.10.0-test` 후보로 분리
 - Success: Active fragment의 증거 기반 완료와 `MRA-*`, `REL9-*` 핵심 gate 충족
-- Stop boundary: protected `main` review, external TUF authorization·npm publication approval,
+- Stop boundary: protected `main` review, stable publication environment approval,
   exact `1.0.0` authority, source usage guard remaining threshold `30%`
 - Invariants: provider-neutral, backend별 canonical source 우선, SQLite 파생 상태,
   Source Wiki·run·role·plan·orchestration event Markdown/TOML 정본,
@@ -28,32 +28,35 @@
 | Phase 0–6 | 70 | 0 | 100% |
 | Phase 7 | 49 | 0 | 100% |
 | User plugin/project lifecycle | 38 | 0 | 100% |
-| Host-native usage sensors | 24 | 0 | 100% |
-| Global onboarding·shared index | 19 | 0 | 100% |
+| Host-native usage sensors | 24 | 3 | 88.9% |
+| Global onboarding·shared index | 18 | 4 | 81.8% |
 | Source docs Wiki | 13 | 0 | 100% |
 | Windows shell install boundary | 3 | 0 | 100% |
 | 문서 말투 | 6 | 0 | 100% |
+| 공개 한국어 HTML 안내 | 6 | 0 | 100% |
+| 복수 호스트 사용자 설치 | 5 | 0 | 100% |
 | Security review | 4 | 0 | 100% |
 | Docs Wiki migration | 4 | 0 | 100% |
 | v0.9 loop·Wiki·Skill suite | 25 | 0 | 100% |
-| v0.9 global knowledge RAG | 20 | 0 | 100% |
+| v0.9 global knowledge RAG | 18 | 2 | 90.0% |
+| v0.9 knowledge autocapture 회귀 | 7 | 3 | 70.0% |
 | v0.9 knowledge portability·scan | 18 | 0 | 100% |
 | Hive-native 반복 실행 | 1 | 23 | 4.2% |
 | Model-routed custom subagent | 0 | 32 | 0% |
 | Prompt refine 자동 routing | 12 | 0 | 100% |
 | v0.9 test 기능 마감 | 18 | 0 | 100% |
-| v0.9 full release | 26 | 9 | 74.3% |
+| v0.9 full release | 20 | 8 | 71.4% |
 | Test release setup routing | 4 | 0 | 100% |
 | Bootstrap·user projection recovery | 13 | 0 | 100% |
 | 한국어 setup 용어 복구 | 6 | 0 | 100% |
 | Global Skill 선택 단순화 | 8 | 0 | 100% |
 | Product-only Skill identity·localization | 15 | 0 | 100% |
-| 전역·프로젝트 사용량 보호 정책 | 6 | 0 | 100% |
+| 전역·프로젝트 사용량 보호 정책 | 6 | 2 | 75.0% |
 | Discord `v0.9` 연결 UX | 11 | 0 | 100% |
 | Windows global setup hardening | 13 | 0 | 100% |
 | Agent 자율 실행 지속 | 8 | 0 | 100% |
 | Notion `v0.10` 후보 | 1 | 10 | 9.1% |
-| **Canonical total** | **434** | **74** | **85.4%** |
+| **Canonical total** | **443** | **86** | **83.7%** |
 
 External production boundary 항목도 미완료 합계에 포함. Protected authority 없이 완료 처리 금지.
 
@@ -78,17 +81,21 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
 | [`active/source-docs-wiki.md`](active/source-docs-wiki.md) | `SLW-*` | `docs/` graph와 bilingual atomic fact·Skill reuse |
 | [`active/windows-shell-install.md`](active/windows-shell-install.md) | `WSI-*` | Consumer PowerShell 5.1·`cmd.exe`와 source-only PowerShell 7 |
 | [`active/documentation-style.md`](active/documentation-style.md) | `DOC-*` | 사람용 문서 style completion gate |
+| [`active/public-html-guides.md`](active/public-html-guides.md) | `PHG-*` | Hive 핵심 기능·간단 설치 한국어 HTML과 기존 README branding 확인 |
+| [`active/multi-host-user-install.md`](active/multi-host-user-install.md) | `MHI-*` | `--hosts`·반복 `--host` 사용자 설치·update와 문서 계약 |
 | [`active/security-review.md`](active/security-review.md) | `SEC-*` | 독립 code·security review finding completion gate |
 | [`active/docs-wiki-migration.md`](active/docs-wiki-migration.md) | `DWK-*` | 지식 보존과 `docs/` Wiki·atomic fact 전환 |
 | [`active/release-0.8.0.md`](active/release-0.8.0.md) | `P7-*` reference | `0.8.0` Linux·npm·직접 설치 실행 순서와 범위 |
 | [`active/v0.9.0-loop-wiki-skills.md`](active/v0.9.0-loop-wiki-skills.md) | `V9-*` | Host-native graph engineering·통합 Wiki·초기 Skill suite |
 | [`active/v0.9.0-global-knowledge-rag.md`](active/v0.9.0-global-knowledge-rag.md) | `RAG-*` | 전역 RAG |
+| [`active/v0.9.0-knowledge-autocapture-regression.md`](active/v0.9.0-knowledge-autocapture-regression.md) | `KAC-*` | 모든 Wiki 활성 turn의 mandatory canonical write 회귀 보정 |
 | [`active/v0.9.0-knowledge-portability-scan.md`](active/v0.9.0-knowledge-portability-scan.md) | `KPX-*` | Knowledge 이식·directory scan·automatic query |
 | [`active/native-iterative-execution.md`](active/native-iterative-execution.md) | `NAT-*` | Hive-native iterative·team·multi-goal execution |
 | [`active/model-routed-custom-subagents.md`](active/model-routed-custom-subagents.md) | `MRA-*` | Codex·Claude custom subagent·Judge 정책 |
 | [`active/prompt-refine-auto-routing.md`](active/prompt-refine-auto-routing.md) | `PRF-*` | Material ambiguity 자동 refine·승인 전 정지 |
 | [`active/v0.9.0-test-finalization.md`](active/v0.9.0-test-finalization.md) | `TST9-*` | Markdown Wiki, Discord outbound, 문제 보고와 시험판 기능 마감 |
-| [`active/release-0.9.0.md`](active/release-0.9.0.md) | `REL9-*` | 정식 GitHub·npm 릴리스와 public acceptance |
+| [`active/release-0.9.0.md`](active/release-0.9.0.md) | `REL9-001–017` | 시험 수용·main 통합 |
+| [`active/release-0.9.0-stable-publication.md`](active/release-0.9.0-stable-publication.md) | `REL9-019–030` | 최소 release trust 정리·stable publication·public acceptance |
 | [`active/test-release-setup-routing.md`](active/test-release-setup-routing.md) | `TUR-*` | Global·project setup routing과 numbered test user projection 인증 |
 | [`active/bootstrap-global-setup-recovery.md`](active/bootstrap-global-setup-recovery.md) | `BGR-*` | 선택형 bootstrap, 쉬운 global setup 복구, user projection merge |
 | [`active/korean-setup-terminology.md`](active/korean-setup-terminology.md) | `KST-*` | 한국어 global setup product term·질문 표기 |
@@ -118,5 +125,10 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
 ## Current execution order
 
 완료 증거: [`CURRENT.md`](../state/CURRENT.md)와 owning active fragment.
-현재: `REL9-017` protected `main` 병합과 `SLW-013` current-truth audit 완료. exact main stable candidate,
-signing·TUF·publication 진행. Antigravity·Claude 공개 제외 유지. Notion: `N10-002–011`·`0.10.0-test` 보류.
+현재: Active/current TUF·external signer·platform certificate gate 제거와 usage guard·CodexBar·projection purge 보정 우선.
+기존 stable candidate run `31482918509`: historical qualification only, publication 금지.
+이후 `KAC-*` 보정·replacement candidate·protected stable publication 진행. Antigravity·Claude 공개 제외 유지.
+병행: `KAC-001·007–008` 보정·Windows Codex fresh-session 수용과 replacement stable candidate 준비.
+Notion: `N10-002–011`·`0.10.0-test` 보류.
+병행 문서 작업: `PHG-001–005` 공개 한국어 HTML·디자인 원칙·복수 호스트 안내 완료.
+복수 호스트 CLI: `MHI-001–004` 구현·검증·문서 동기화·`develop` push 완료.

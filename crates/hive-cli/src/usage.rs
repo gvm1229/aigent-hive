@@ -117,7 +117,7 @@ impl Display for SensorError {
 }
 
 impl SensorError {
-    const fn allows_native_fallback(&self) -> bool {
+    pub(crate) const fn allows_native_fallback(&self) -> bool {
         matches!(
             self,
             Self::Unavailable | Self::Unsupported | Self::UnsupportedVersion | Self::Malformed

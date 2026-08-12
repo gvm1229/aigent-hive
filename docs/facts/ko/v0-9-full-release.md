@@ -5,14 +5,15 @@ topic_slug: v0-9-full-release
 language: ko
 counterpart: ../en/v0-9-full-release.md
 title: "Aigent Hive 0.9.0 시험·정식 릴리스"
-summary: "test.15 수용과 develop CI·5-target native runtime 검증 완료. PR #19의 protected main 병합 완료, stable candidate·external TUF 승인·게시 대기."
+summary: "v0.9.0: GitHub attestation·SHA-256·npm OIDC provenance의 최소 trust와 same-byte publication."
 tags: [distribution, release, signing, v0-9]
 aliases: ["0.9.0 release plan", "full release"]
 sources:
-  - "repo:.github/workflows/release-publish.yml#sha256:505cc48a16b2ccc7ca7fe39fdaf47d7b851a19810cb75c784fdfe5a6717c5823"
-  - "repo:docs/decisions/ADR-0017-0.9-full-release.md#sha256:2691a98d452eac2b566e97dcd34982c7ef283bf14b01cd8b76508e1c82782403"
-  - "repo:docs/guides/signed-update-and-release.md#sha256:aa570e405dc1e568a79fe6291e30807db9e96b7805e570aede152fed4120f5a5"
-  - "repo:docs/plans/active/release-0.9.0.md#sha256:1e0cc991893bc5e2d87a145e81217e29157be155ccfcfb8a4589d9d87779186c"
+  - "repo:.github/workflows/release-publish.yml#sha256:408a3d89919dd426901d16db0b1c0f15fa31567474d37e779fdb45b9475f0411"
+  - "repo:docs/decisions/ADR-0017-0.9-full-release.md#sha256:f8c457200b2d02aafd77e71981e82af120aa2b91e3a23e877c2011fed38eabef"
+  - "repo:docs/guides/release-update.md#sha256:785e83d497c4f39ea683ac280adf8e071b27fda02b19c4c086573782a70bcadb"
+  - "repo:docs/plans/active/release-0.9.0-stable-publication.md#sha256:e58b8e70332dc8bd53bab8153da42545bdb6ffba3aeaac27ccd7bf09a4d8f252"
+  - "repo:docs/plans/active/release-0.9.0.md#sha256:085ecd5d61f590106f651f929c33c21ac4b87d296f4a603f430f605dba6d1805"
 links: [host-external-integrations, release-verification, test-distribution, version-policy]
 reviewed_revision: "git:1b7ea99554fcf2e475cc77dcb1a3452a7805315f"
 status: active
@@ -20,9 +21,8 @@ status: active
 
 # Aigent Hive 0.9.0 시험·정식 릴리스
 
-Stable `v0.9.0`: 미게시. 수용된 `test.15`: `latest=0.8.0` 유지, Windows 보존형 재설치 PASS.
-Develop CI run `31430181535`의 19개 작업과 native runtime run `31428720884`의 5개 target PASS.
-Stable source: macOS ad-hoc·Windows unsigned evidence, deterministic TUF 요청, safe extraction,
-protected rollback floor, production verifier·exact target byte 결합. 유료 platform certificate: gate 제외.
-PR #19: protected `main` 병합 완료.
-남은 경계: stable candidate, external 2-of-3 authorization, publication approval.
+Stable `v0.9.0`: 미게시. 필수 trust: protected `main` exact tag, same-candidate GitHub Release,
+SHA-256 sidecar, GitHub artifact attestation, npm Trusted Publishing OIDC·provenance. Human gate:
+GitHub stable environment 한 번. macOS ad-hoc·Windows unsigned 상태 공개. 외부 release trust
+ceremony·platform certificate gate: 제거 대상. Transactional backup·rollback·recovery 유지.
+Replacement candidate 전 usage guard 권장 기본·failure-only CodexBar·projection purge 보정 필수.

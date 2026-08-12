@@ -1,11 +1,15 @@
 ---
 name: knowledge-maintain
-description: Lint, rebuild, delete, or suppress canonical Hive knowledge through explicit signed CLI actions while preserving the disposable-index boundary. Use for requested knowledge repair, index rebuild, deletion, or re-ingest suppression; never combine knowledge deletion or garbage collection with a harness update transaction.
+description: Lint, rebuild, delete, or suppress canonical Hive knowledge through explicit CLI actions while preserving the disposable-index boundary. Use for requested knowledge repair, index rebuild, deletion, or re-ingest suppression; never combine knowledge deletion or garbage collection with a harness update transaction.
 ---
 
 # Hive Knowledge Maintenance
 
 Use the narrowest explicit maintenance action.
+
+First route by target class. A valid `hive-source.json` selects `hive source-wiki lint --target
+<source-root> --output json`. Its absence selects the consumer command below and is never a reason
+to skip Wiki lint.
 
 ## Actions
 

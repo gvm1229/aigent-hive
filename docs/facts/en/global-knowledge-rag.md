@@ -5,22 +5,22 @@ topic_slug: global-knowledge-rag
 language: en
 counterpart: ../ko/global-knowledge-rag.md
 title: "Global Knowledge RAG"
-summary: "v0.9 implements mandatory durable-memory writes and automatic retrieval for questions, research, and knowledge-dependent tasks."
+summary: "v0.9.0-test.16 now ships automatic every-turn capture and is installed on Windows; fresh Windows Codex acceptance and stable qualification remain pending."
 tags: [knowledge, rag, retrieval, v0-9]
 aliases: ["Cross-project RAG", "Mandatory memory"]
 sources:
-  - "repo:docs/decisions/ADR-0016-global-knowledge-rag.md#sha256:24822777fdee6dec2272b659009913e69929aba5046d0858a9b745dec0e350c5"
-  - "repo:docs/plans/active/v0.9.0-global-knowledge-rag.md#sha256:2b7b1132b276dc59c0a00076d8aca13aebcb75eefb2dd66a3e1f9d51494fbba9"
+  - "repo:docs/decisions/ADR-0016-global-knowledge-rag.md#sha256:196117cadc85737e0dbe35c8fcc6699e5180632d919782c2312453f588b3ab7a"
+  - "repo:docs/plans/active/v0.9.0-global-knowledge-rag.md#sha256:6763857d275d0a35065e27f744e4a7d2c83d77b876abcdb5343f37be01ffe35e"
+  - "repo:docs/plans/active/v0.9.0-knowledge-autocapture-regression.md#sha256:a1bd5359ae88e90db3281c159e21fe3d4d6e20ff811c41503ce64fe3554a2519"
 links: [knowledge-portability-scan, knowledge-storage, shared-index, v0-9-skill-suite-plan]
-reviewed_revision: "git:fc1e23854bf6cbc09a2dc7704d8185ae247212a0"
+reviewed_revision: "git:2234885542a2c3e82514121b890e129b89e5e563"
 status: active
 ---
 
 # Global Knowledge RAG
 
-v0.9 expands `knowledge-recall` into the bounded automatic retrieval owner
-and requires Markdown canonical writes for reusable user facts, preferences, and
-workflows. Named project and collection scope, citation-ready chunks,
-fresh-session recall, and derived-only repair are implemented. The 50,000-chunk
-qualification measured 163.3569ms cold p95 and 0.1178ms prepared-resident warm p95.
-Notion backend work is deferred to the first v0.10 test release.
+Canonical remember, retrieval, and idempotency work. `0.9.0-test.16` ships the generated English
+and Korean guidance, Copier projection, plugin metadata, and catalog description requiring scope
+classification, exactly one safe `remember` call, and a Markdown/index receipt; disabled Wiki
+guidance rejects writes. Windows user installation and static installed guidance passed. Fresh
+Windows Codex write-and-recall acceptance and replacement stable qualification remain release gates.

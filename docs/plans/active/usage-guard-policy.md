@@ -6,13 +6,14 @@
 
 ## 결정
 
-- 사용량 보호 설정: global setup의 기본 항목
+- 사용량 보호 설정: global setup의 핵심 기본 항목, 활성화 권장
 - 전역 한도: global setup에서 사용자가 선택
 - 프로젝트 한도: 등록된 project별 선택 설정, project 유형별 자동값 없음
 - 적용 한도: `max(global, project override)`
 - 프로젝트 한도: 전역 한도보다 낮은 값 설정 불가
 - 전역 보호 비활성화: 모든 project 보호 비활성화
-- 퍼센트 값: 문서·질문·코드의 고정값 없음. 사용자가 valid range 안에서 직접 선택
+- Custom setup threshold: 사용자가 valid range 안에서 직접 선택
+- 신속 기본 profile: 활성화, 남은 사용량 `20%`
 - 사용자 호출 Skill: product `usage-guard` 하나
 - Aigent Hive source의 pre-task gate: repository directive가 소유. 설치 product `usage-guard`와
   별개 user policy 미생성
@@ -36,6 +37,11 @@
 - [x] [UGP-006] 서로 다른 임의 global·project 값의 effective threshold, disabled global,
   lower project override 거부, update migration, source·consumer projection, host별 guard와
   Discord payload의 project·effective threshold 회귀 검증. profile별 hard-coded value 0건
+- [x] [UGP-007] Custom setup의 사용량 보호 선택을 `활성화 (권장)`·`비활성화`로 변경하고,
+  신속 기본 profile을 enabled·remaining `20%`로 변경. 기존 명시적 사용자 선택 보존과
+  disable 경로 회귀 추가
+- [x] [UGP-008] Setup 설명·preview·summary·schema fixture·saved preference migration을 새
+  기본값과 일치시키고 clean install·reconfigure·preserving reinstall 수용
 
 ## 완료 기준
 

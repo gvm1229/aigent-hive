@@ -277,6 +277,13 @@ struct UserArguments {
 }
 
 #[derive(Debug)]
+struct UserCommandArguments {
+    hosts: Vec<UserHost>,
+    mode: UserMode,
+    user_root: PathBuf,
+}
+
+#[derive(Debug)]
 enum InstallError {
     Input(String),
     Conflict(String),
@@ -864,6 +871,51 @@ fn remove_owned_regular(
     let permissions = file_permissions(root, relative)?;
     remove_regular_if_exists(root, relative, Some(&existing), Some(permissions))?;
     changed_paths.push(portable(relative));
+    prune_empty_owned_ancestors(root, std::iter::once(relative))?;
+    Ok(())
+}
+
+fn owned_prune_boundary(relative: &Path) -> Option<&'static Path> {
+    [
+        Path::new(".hive"),
+        Path::new(".agents"),
+        Path::new(".codex"),
+        Path::new(".claude"),
+        Path::new(".gemini/config"),
+    ]
+    .into_iter()
+    .find(|boundary| relative.starts_with(boundary))
+}
+
+fn prune_empty_owned_ancestors<'a>(
+    root: &Dir,
+    paths: impl IntoIterator<Item = &'a Path>,
+) -> Result<(), InstallError> {
+    let mut directories = BTreeSet::new();
+    for path in paths {
+        let Some(boundary) = owned_prune_boundary(path) else {
+            continue;
+        };
+        let mut parent = path.parent();
+        while let Some(directory) = parent.filter(|directory| *directory != boundary) {
+            if !directory.starts_with(boundary) {
+                break;
+            }
+            directories.insert(directory.to_path_buf());
+            parent = directory.parent();
+        }
+    }
+    let mut directories = directories.into_iter().collect::<Vec<_>>();
+    directories.sort_by(|left, right| {
+        right
+            .components()
+            .count()
+            .cmp(&left.components().count())
+            .then_with(|| right.cmp(left))
+    });
+    for directory in directories {
+        remove_owned_empty_dir(root, &directory)?;
+    }
     Ok(())
 }
 
@@ -1101,15 +1153,209 @@ fn run(operation: UserOperation, arguments: &[String]) -> ExitCode {
         UserOperation::Install => "InstallHiveUser",
         UserOperation::Update => "UpdateHiveUser",
     };
-    let result = parse(arguments)
-        .and_then(|arguments| execute(operation, &arguments, &SystemCommandRunner))
-        .unwrap_or_else(|error| failure(action, &error));
+    let result = match parse(arguments) {
+        Ok(arguments) => execute_command(operation, &arguments, &SystemCommandRunner),
+        Err(error) => failure(action, &error),
+    };
     emit_action_result(&result)
 }
 
-fn parse(arguments: &[String]) -> Result<UserArguments, InstallError> {
+fn execute_command(
+    operation: UserOperation,
+    command: &UserCommandArguments,
+    runner: &impl CommandRunner,
+) -> ActionResult {
+    if command.hosts.len() == 1 {
+        return host_arguments(command, command.hosts[0], command.mode)
+            .and_then(|arguments| execute(operation, &arguments, runner))
+            .unwrap_or_else(|error| failure(action_name(operation, command.mode), &error));
+    }
+
+    let requested_hosts = command
+        .hosts
+        .iter()
+        .map(|host| host.as_str())
+        .collect::<Vec<_>>();
+    if command.mode == UserMode::Apply {
+        for host in &command.hosts {
+            let result = host_arguments(command, *host, UserMode::DryRun)
+                .and_then(|arguments| execute(operation, &arguments, runner));
+            if let Err(error) = result {
+                return multi_host_failure(
+                    operation,
+                    command.mode,
+                    &error,
+                    &requested_hosts,
+                    &[],
+                    *host,
+                    true,
+                    Vec::new(),
+                    Vec::new(),
+                );
+            }
+        }
+    }
+
+    let mut completed_hosts = Vec::new();
+    let mut changed_paths = Vec::new();
+    let mut evidence = Vec::new();
+    let mut host_results = Vec::new();
+    for host in &command.hosts {
+        let result = host_arguments(command, *host, command.mode)
+            .and_then(|arguments| execute(operation, &arguments, runner));
+        let result = match result {
+            Ok(result) => result,
+            Err(error) => {
+                return multi_host_failure(
+                    operation,
+                    command.mode,
+                    &error,
+                    &requested_hosts,
+                    &completed_hosts,
+                    *host,
+                    false,
+                    changed_paths,
+                    evidence,
+                );
+            }
+        };
+        completed_hosts.push(host.as_str());
+        changed_paths.extend(result.changed_paths);
+        evidence.extend(result.evidence);
+        host_results.push(json!({
+            "host": host.as_str(),
+            "code": result.code,
+            "data": result.data
+        }));
+    }
+    changed_paths.sort();
+    changed_paths.dedup();
+    ActionResult {
+        schema_version: 1,
+        action: action_name(operation, command.mode),
+        status: "success",
+        exit_code: 0,
+        code: multi_host_success_code(operation, command.mode),
+        message: multi_host_success_message(operation, command.mode).to_owned(),
+        changed_paths,
+        evidence,
+        next_action: (command.mode == UserMode::DryRun).then(|| {
+            format!(
+                "run with --hosts {} --apply to activate these exact user installation plans",
+                requested_hosts.join(",")
+            )
+        }),
+        data: Some(json!({
+            "hosts": requested_hosts,
+            "scope": "user",
+            "results": host_results,
+            "preflight_completed": command.mode == UserMode::Apply
+        })),
+    }
+}
+
+fn host_arguments(
+    command: &UserCommandArguments,
+    host: UserHost,
+    mode: UserMode,
+) -> Result<UserArguments, InstallError> {
+    let (user_root, root_cap) = open_canonical_user_root(&command.user_root)?;
+    Ok(UserArguments {
+        host,
+        mode,
+        user_root,
+        root_cap,
+        setup_override: None,
+    })
+}
+
+fn action_name(operation: UserOperation, mode: UserMode) -> &'static str {
+    if mode == UserMode::Validate {
+        "ValidateHiveUser"
+    } else {
+        match operation {
+            UserOperation::Install => "InstallHiveUser",
+            UserOperation::Update => "UpdateHiveUser",
+        }
+    }
+}
+
+fn multi_host_success_code(operation: UserOperation, mode: UserMode) -> &'static str {
+    match (operation, mode) {
+        (UserOperation::Install, UserMode::DryRun) => {
+            "hive.user-install-multi-host-dry-run-complete"
+        }
+        (UserOperation::Install, UserMode::Apply) => "hive.user-install-multi-host-complete",
+        (UserOperation::Install, UserMode::Validate) => "hive.user-install-multi-host-valid",
+        (UserOperation::Install, UserMode::Recover) => "hive.user-install-multi-host-recovered",
+        (UserOperation::Update, UserMode::DryRun) => "hive.user-update-multi-host-dry-run-complete",
+        (UserOperation::Update, UserMode::Apply) => "hive.user-update-multi-host-complete",
+        (UserOperation::Update, UserMode::Validate) => "hive.user-update-multi-host-valid",
+        (UserOperation::Update, UserMode::Recover) => "hive.user-update-multi-host-recovered",
+    }
+}
+
+fn multi_host_success_message(operation: UserOperation, mode: UserMode) -> &'static str {
+    match (operation, mode) {
+        (UserOperation::Install, UserMode::DryRun) => {
+            "multi-host user installation dry run completed"
+        }
+        (UserOperation::Install, UserMode::Apply) => "multi-host user installation completed",
+        (UserOperation::Install, UserMode::Validate) => "multi-host user installation is valid",
+        (UserOperation::Install, UserMode::Recover) => {
+            "multi-host user installation recovery completed"
+        }
+        (UserOperation::Update, UserMode::DryRun) => "multi-host user update dry run completed",
+        (UserOperation::Update, UserMode::Apply) => "multi-host user update completed",
+        (UserOperation::Update, UserMode::Validate) => "multi-host user update is valid",
+        (UserOperation::Update, UserMode::Recover) => "multi-host user update recovery completed",
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
+fn multi_host_failure(
+    operation: UserOperation,
+    mode: UserMode,
+    error: &InstallError,
+    requested_hosts: &[&str],
+    completed_hosts: &[&str],
+    failed_host: UserHost,
+    preflight: bool,
+    mut changed_paths: Vec<String>,
+    evidence: Vec<Evidence>,
+) -> ActionResult {
+    changed_paths.sort();
+    changed_paths.dedup();
+    let mut result = failure(action_name(operation, mode), error);
+    result.message = if preflight {
+        format!(
+            "multi-host preflight failed for {} before mutation: {}",
+            failed_host.as_str(),
+            error.message()
+        )
+    } else {
+        format!(
+            "multi-host operation failed for {} after completed hosts [{}]: {}",
+            failed_host.as_str(),
+            completed_hosts.join(","),
+            error.message()
+        )
+    };
+    result.changed_paths = changed_paths;
+    result.evidence = evidence;
+    result.data = Some(json!({
+        "requested_hosts": requested_hosts,
+        "completed_hosts": completed_hosts,
+        "failed_host": failed_host.as_str(),
+        "preflight": preflight
+    }));
+    result
+}
+
+fn parse(arguments: &[String]) -> Result<UserCommandArguments, InstallError> {
     let mut scope = None;
-    let mut host = None;
+    let mut hosts = Vec::new();
+    let mut hosts_option_seen = false;
     let mut mode = None;
     let mut output = None;
     let mut user_root = None;
@@ -1137,13 +1383,39 @@ fn parse(arguments: &[String]) -> Result<UserArguments, InstallError> {
                     "exactly one install/update mode is required".to_owned(),
                 ));
             }
-            option @ ("--scope" | "--host" | "--output" | "--user-root") => {
+            "--host" => {
+                let value = arguments
+                    .get(index + 1)
+                    .ok_or_else(|| InstallError::Input("missing value for --host".to_owned()))?;
+                push_user_host(&mut hosts, value, "--host")?;
+                index += 2;
+            }
+            "--hosts" => {
+                let value = arguments
+                    .get(index + 1)
+                    .ok_or_else(|| InstallError::Input("missing value for --hosts".to_owned()))?;
+                if hosts_option_seen {
+                    return Err(InstallError::Input("duplicate option: --hosts".to_owned()));
+                }
+                hosts_option_seen = true;
+                let values = value.split(',').collect::<Vec<_>>();
+                if values.is_empty() || values.iter().any(|value| value.trim().is_empty()) {
+                    return Err(InstallError::Input(
+                        "--hosts must contain a comma-separated list without empty entries"
+                            .to_owned(),
+                    ));
+                }
+                for value in values {
+                    push_user_host(&mut hosts, value.trim(), "--hosts")?;
+                }
+                index += 2;
+            }
+            option @ ("--scope" | "--output" | "--user-root") => {
                 let value = arguments
                     .get(index + 1)
                     .ok_or_else(|| InstallError::Input(format!("missing value for {option}")))?;
                 let slot = match option {
                     "--scope" => &mut scope,
-                    "--host" => &mut host,
                     "--output" => &mut output,
                     "--user-root" => &mut user_root,
                     _ => unreachable!(),
@@ -1166,32 +1438,45 @@ fn parse(arguments: &[String]) -> Result<UserArguments, InstallError> {
             "user installation requires --output json".to_owned(),
         ));
     }
-    let host = match host.as_deref() {
-        Some("codex") => UserHost::Codex,
-        Some("claude") => UserHost::Claude,
-        Some("antigravity") => UserHost::Antigravity,
-        Some(_) => {
-            return Err(InstallError::Input(
-                "--host must be codex, claude, or antigravity".to_owned(),
-            ));
-        }
-        None => {
-            return Err(InstallError::Input(
-                "missing required option --host".to_owned(),
-            ))
-        }
-    };
+    if hosts.is_empty() {
+        return Err(InstallError::Input(
+            "missing required option --host or --hosts".to_owned(),
+        ));
+    }
     let mode = mode.ok_or_else(|| InstallError::Input("missing install/update mode".to_owned()))?;
     let requested_user_root =
         user_root.map_or_else(resolve_user_root, |value| Ok(PathBuf::from(value)))?;
-    let (user_root, root_cap) = open_canonical_user_root(&requested_user_root)?;
-    Ok(UserArguments {
-        host,
+    let (user_root, _root_cap) = open_canonical_user_root(&requested_user_root)?;
+    Ok(UserCommandArguments {
+        hosts,
         mode,
         user_root,
-        root_cap,
-        setup_override: None,
     })
+}
+
+fn push_user_host(
+    hosts: &mut Vec<UserHost>,
+    value: &str,
+    option: &str,
+) -> Result<(), InstallError> {
+    let host = match value {
+        "codex" => UserHost::Codex,
+        "claude" => UserHost::Claude,
+        "antigravity" => UserHost::Antigravity,
+        _ => {
+            return Err(InstallError::Input(format!(
+                "{option} values must be codex, claude, or antigravity"
+            )));
+        }
+    };
+    if hosts.contains(&host) {
+        return Err(InstallError::Input(format!(
+            "duplicate host selection: {}",
+            host.as_str()
+        )));
+    }
+    hosts.push(host);
+    Ok(())
 }
 
 fn resolve_user_root() -> Result<PathBuf, InstallError> {
@@ -1296,7 +1581,18 @@ fn execute(
     if arguments.mode == UserMode::Recover {
         return recover(arguments, runner);
     }
-    let mut plan = build_plan(arguments)?;
+    let mut plan = match build_plan(arguments) {
+        Ok(plan) => plan,
+        Err(error) if requires_preserving_reinstall(&error) => match arguments.mode {
+            UserMode::DryRun => return Ok(preserving_reinstall_dry_run(operation, arguments)),
+            UserMode::Apply => {
+                return execute_preserving_reinstall(operation, arguments, runner);
+            }
+            UserMode::Validate => return Err(error),
+            UserMode::Recover => unreachable!("recovery returns before plan construction"),
+        },
+        Err(error) => return Err(error),
+    };
     match arguments.mode {
         UserMode::DryRun => {
             let executable = qualify_host(arguments, &plan, runner)?;
@@ -1347,6 +1643,64 @@ fn execute(
         UserMode::Apply => execute_apply(operation, arguments, runner, &mut plan),
         UserMode::Recover => unreachable!("recovery returns before plan construction"),
     }
+}
+
+fn requires_preserving_reinstall(error: &InstallError) -> bool {
+    matches!(
+        error,
+        InstallError::Conflict(message)
+            if message == "installed ownership manifest does not match an authenticated Hive release"
+    )
+}
+
+fn preserving_reinstall_dry_run(
+    operation: UserOperation,
+    arguments: &UserArguments,
+) -> ActionResult {
+    ActionResult {
+        schema_version: 1,
+        action: match operation {
+            UserOperation::Install => "InstallHiveUser",
+            UserOperation::Update => "UpdateHiveUser",
+        },
+        status: "success",
+        exit_code: 0,
+        code: "hive.user-install-dry-run-preserving-reinstall-planned",
+        message: "user installation dry run completed with preserving Hive recovery planned"
+            .to_owned(),
+        changed_paths: Vec::new(),
+        evidence: Vec::new(),
+        next_action: Some(format!(
+            "run with --host {} --apply; Hive will preserve knowledge and saved preferences while reinstalling its user-scope files",
+            arguments.host.as_str()
+        )),
+        data: Some(json!({
+            "host": arguments.host.as_str(),
+            "scope": "user",
+            "recovery": "preserving-reinstall",
+            "preserved": [".hive/knowledge", ".hive/config/user-setup.yml", ".hive/config/user-preferences.json"],
+        })),
+    }
+}
+
+fn execute_preserving_reinstall(
+    operation: UserOperation,
+    arguments: &UserArguments,
+    runner: &impl CommandRunner,
+) -> Result<ActionResult, InstallError> {
+    let (_, root_cap) = open_canonical_user_root(&arguments.user_root)?;
+    let removed = execute_uninstall(&UserUninstallArguments { root_cap }, runner)?;
+    let mut reinstalled = execute(operation, arguments, runner)?;
+    reinstalled.code = match operation {
+        UserOperation::Install => "hive.user-install-complete-after-preserving-reinstall",
+        UserOperation::Update => "hive.user-update-complete-after-preserving-reinstall",
+    };
+    "user-scope Hive installation completed after preserving knowledge and saved preferences"
+        .clone_into(&mut reinstalled.message);
+    reinstalled.changed_paths.extend(removed.changed_paths);
+    reinstalled.changed_paths.sort();
+    reinstalled.changed_paths.dedup();
+    Ok(reinstalled)
 }
 
 fn execute_apply(
@@ -1493,13 +1847,12 @@ fn build_desired_user_files(
     let guidance_existing =
         read_optional_regular(&arguments.root_cap, &guidance_relative, MAX_USER_FILE_BYTES)?
             .unwrap_or_default();
+    let guidance = render_user_guidance(arguments.host, operational.map(|(config, _)| config));
+    validate_operational_guidance(&guidance, operational.map(|(config, _)| config))?;
     files.insert(
         guidance_relative.clone(),
         PlannedFile {
-            bytes: merge_user_marker(
-                &guidance_existing,
-                &render_user_guidance(arguments.host, operational.map(|(config, _)| config)),
-            )?,
+            bytes: merge_user_marker(&guidance_existing, &guidance)?,
             executable: false,
             ownership: "shared-marker",
         },
@@ -2086,12 +2439,26 @@ fn render_user_guidance(
             } else {
                 "disabled"
             };
+            let memory_gate_en = if config.wiki.enabled {
+                "- Before every final response, review the current user statement and completed outcome for one safe reusable fact, preference, workflow, decision, convention, project profile, or verified outcome. This user-level gate applies immediately after installation in every selected-host folder; project setup, a Hive harness, a project marker, or an attached collection is not required. Resolve `user-root|current-project|named-project` scope explicitly. An unregistered repository's user-global fact stays at `user-root`; ambiguous project-specific scope fails closed.\n- For an explicit safe user-root statement, prefer `hive knowledge remember --user-root <user-root> --user-statement <normalized-fact> --claim-key <stable-key> --kind <preference|workflow|decision|convention|project-profile> --output json` exactly once; use `--request <request.json>` only for reviewed artifacts or another supported scope. Require the canonical Markdown and derived-index receipt before the final response; identical current truth is a no-op.\n- Before knowledge-dependent work, run one bounded `hive knowledge retrieve --user-root <user-root> --target <current-project-root> --scope auto --query <query> --top-k 5 --byte-budget 16384 --output json`. An unregistered target falls back to user-root and shared knowledge while excluding project-private knowledge; missing project setup or collection is not a reason to skip retrieval.\n- Never record a secret, credential, confidential item without current-action authorization, ephemeral status, ambiguous inference, private path, raw transcript, complete conversation, hook payload, tool output, hidden prompt, cache, database, or runtime state.\n"
+            } else {
+                "- Global Wiki is disabled: do not write or refresh knowledge.\n"
+            };
+            let memory_gate_ko = if config.wiki.enabled {
+                "- 모든 최종 응답 전 현재 사용자 발화와 완료 결과에서 안전하고 재사용 가능한 사실·선호·작업 방식·결정·규약·프로젝트 특성·검증된 결과 1개를 검토. 이 사용자 범위 절차는 설치 직후 선택 호스트의 모든 폴더에 적용하며 프로젝트 설정·Hive harness·project marker·연결 collection을 전제하지 않음. `user-root|current-project|named-project` 범위를 명시적으로 결정. 미등록 repository의 사용자 전역 사실은 `user-root`에 유지하고, 모호한 project 범위는 안전하게 중단.\n- 안전한 명시적 user-root 사용자 발화에는 `hive knowledge remember --user-root <user-root> --user-statement <normalized-fact> --claim-key <stable-key> --kind <preference|workflow|decision|convention|project-profile> --output json`을 정확히 1회 우선 실행. 검토 artifact 또는 다른 지원 범위에는 `--request <request.json>` 사용. 최종 응답 전 canonical Markdown과 derived-index receipt를 확인하며, 동일한 현재 truth는 no-op.\n- 지식이 필요한 작업 전 `hive knowledge retrieve --user-root <user-root> --target <current-project-root> --scope auto --query <query> --top-k 5 --byte-budget 16384 --output json`을 제한된 범위에서 1회 실행. 미등록 target은 project-private 지식을 제외한 user-root·shared 지식으로 폴백하며, 프로젝트 설정 또는 collection 부재만으로 조회를 건너뛰지 않음.\n- 현재 action 승인 없는 secret·credential·confidential 항목, ephemeral 상태, 모호한 추론, private path, raw transcript, complete conversation, hook payload, tool output, hidden prompt, cache, database, runtime state는 기록 금지.\n"
+            } else {
+                "- 전역 위키 비활성: knowledge 기록·갱신 금지.\n"
+            };
+            let memory_gate = match config.interface_language {
+                crate::user_setup::InterfaceLanguage::En => memory_gate_en,
+                crate::user_setup::InterfaceLanguage::Ko => memory_gate_ko,
+            };
             match config.interface_language {
                 crate::user_setup::InterfaceLanguage::En => (
                     "# Aigent Hive user directives",
                     "Active adapter",
                     format!(
-                        "- State: `operational`\n- Interface language: `en`; use English for every question and response unless the user explicitly requests another language for the current response. A message written in another language does not by itself change this preference. Keep Korean only for exact Korean names, literals, quotations, or text the user asks to preserve.\n- Selected hosts: `{hosts}`\n- Global Wiki: `{wiki}`\n- Daily update check: `{update_check}`.\n- When enabled, run `hive update --check --user-root <user-root> --output json` before the first Hive task of each host session; never install from a check.\n- Use `aigent-hive:project-setup` for project expedited or custom setup.\n- Project Markdown Wiki remains canonical; the user-root SQLite index is derived and shared.\n- Use `aigent-hive:project-refresh` for project projection upgrades.\n- Offer one optional refinement suggestion for ambiguous or detail-poor ordinary requests; never rewrite automatically.\n- Unless the user explicitly opts out for the current request, write every plan to an appropriate project Markdown file before presenting or executing it. Never mirror the persisted plan one-for-one in the session; reference it with a concise summary and file path, or provide the file path alone for extensive review.\n- Before presenting pending actions, finish every safe, in-scope, automatable task. Present only the remaining user-owned steps as a concise ordered guide with the exact action, expected result, and reason user authority is required. Separate failures or impossible tasks with their causes and recovery paths.\n"
+                        "- State: `operational`\n- Interface language: `en`; use English for every question and response unless the user explicitly requests another language for the current response. A message written in another language does not by itself change this preference. Keep Korean only for exact Korean names, literals, quotations, or text the user asks to preserve.\n- Selected hosts: `{hosts}`\n- Global Wiki: `{wiki}`\n- Daily update check: `{update_check}`.\n{memory_gate}- When enabled, run `hive update --check --user-root <user-root> --output json` before the first Hive task of each host session; never install from a check.\n- Use `aigent-hive:project-setup` for project expedited or custom setup.\n- Project Markdown Wiki remains canonical; the user-root SQLite index is derived and shared.\n- Use `aigent-hive:project-refresh` for project projection upgrades.\n- Offer one optional refinement suggestion for ambiguous or detail-poor ordinary requests; never rewrite automatically.\n- Unless the user explicitly opts out for the current request, write every plan to an appropriate project Markdown file before presenting or executing it. Never mirror the persisted plan one-for-one in the session; reference it with a concise summary and file path, or provide the file path alone for extensive review.\n- Before presenting pending actions, finish every safe, in-scope, automatable task. Present only the remaining user-owned steps as a concise ordered guide with the exact action, expected result, and reason user authority is required. Separate failures or impossible tasks with their causes and recovery paths.\n"
                     ),
                     "- Preserve foreign guidance bytes and modify only exact Hive marker blocks.\n- Never request provider API credentials or call model-provider APIs on Hive's behalf.\n",
                 ),
@@ -2099,7 +2466,7 @@ fn render_user_guidance(
                     "# Aigent Hive 사용자 지침",
                     "활성 어댑터",
                     format!(
-                        "- 상태: `operational`\n- 사용 언어: `ko`; 현재 응답에 다른 언어를 사용하라는 명시적 요청이 없는 한 모든 질문과 응답에 한국어 사용. 다른 언어로 작성된 메시지만으로 이 선호를 변경하지 않음. 고유명사, 제품·패키지 이름, 명령어, 코드 식별자, 경로, 스키마 키, 정확한 화면 문구, 뚜렷한 한국어 대체어가 없는 용어만 영어 유지. 대체 가능한 일반 영어 단어의 한영 혼용 금지.\n- 선택한 호스트: `{hosts}`\n- 전역 위키: `{wiki}`\n- 일일 갱신 확인: `{update_check}`.\n- 활성화한 경우 각 호스트 세션의 첫 Hive 작업 전에 `hive update --check --user-root <user-root> --output json` 실행. 확인만으로 설치 금지.\n- 프로젝트 빠른 설정 또는 사용자 지정 설정에는 `aigent-hive:project-setup` 사용.\n- 프로젝트 Markdown 위키가 정본이며 사용자 루트 SQLite 색인은 파생·공유 상태.\n- 프로젝트 투영 갱신에는 `aigent-hive:project-refresh` 사용.\n- 모호하거나 핵심 세부가 부족한 일반 요청에는 자동 재작성 없이 선택적 개선 제안 1개만 제공.\n- 현재 요청에서 사용자의 명시적 제외 요청이 없는 모든 계획을 적절한 프로젝트 Markdown 파일에 제시·실행 전 기록. 저장한 계획 전문을 session에 일대일 복제하지 않고 간결한 요약과 파일 경로로 참조하며, 광범위한 검토에는 파일 경로만 제시.\n- 남은 작업 제시 전 범위 안에서 안전하게 자동 처리 가능한 작업을 모두 완료. 사용자 권한이 필요한 단계만 정확한 행동·예상 결과·권한 필요 이유를 포함한 간결한 순서 안내로 제시. 실패·불가능 작업은 원인과 해결 경로를 분리해 제시.\n"
+                        "- 상태: `operational`\n- 사용 언어: `ko`; 현재 응답에 다른 언어를 사용하라는 명시적 요청이 없는 한 모든 질문과 응답에 한국어 사용. 다른 언어로 작성된 메시지만으로 이 선호를 변경하지 않음. 고유명사, 제품·패키지 이름, 명령어, 코드 식별자, 경로, 스키마 키, 정확한 화면 문구, 뚜렷한 한국어 대체어가 없는 용어만 영어 유지. 대체 가능한 일반 영어 단어의 한영 혼용 금지.\n- 선택한 호스트: `{hosts}`\n- 전역 위키: `{wiki}`\n- 일일 갱신 확인: `{update_check}`.\n{memory_gate}- 활성화한 경우 각 호스트 세션의 첫 Hive 작업 전에 `hive update --check --user-root <user-root> --output json` 실행. 확인만으로 설치 금지.\n- 프로젝트 빠른 설정 또는 사용자 지정 설정에는 `aigent-hive:project-setup` 사용.\n- 프로젝트 Markdown 위키가 정본이며 사용자 루트 SQLite 색인은 파생·공유 상태.\n- 프로젝트 투영 갱신에는 `aigent-hive:project-refresh` 사용.\n- 모호하거나 핵심 세부가 부족한 일반 요청에는 자동 재작성 없이 선택적 개선 제안 1개만 제공.\n- 현재 요청에서 사용자의 명시적 제외 요청이 없는 모든 계획을 적절한 프로젝트 Markdown 파일에 제시·실행 전 기록. 저장한 계획 전문을 session에 일대일 복제하지 않고 간결한 요약과 파일 경로로 참조하며, 광범위한 검토에는 파일 경로만 제시.\n- 남은 작업 제시 전 범위 안에서 안전하게 자동 처리 가능한 작업을 모두 완료. 사용자 권한이 필요한 단계만 정확한 행동·예상 결과·권한 필요 이유를 포함한 간결한 순서 안내로 제시. 실패·불가능 작업은 원인과 해결 경로를 분리해 제시.\n"
                     ),
                     "- 외부 지침 바이트 보존, 정확한 Hive 표시 블록만 변경.\n- 제공자 API 자격 증명 요청 금지, Hive를 대신한 모델 제공자 API 호출 금지.\n",
                 ),
@@ -2145,6 +2512,54 @@ fn render_user_guidance(
         host.as_str()
     )
     .into_bytes()
+}
+
+fn validate_operational_guidance(
+    guidance: &[u8],
+    setup: Option<&crate::user_setup::UserSetupConfig>,
+) -> Result<(), InstallError> {
+    let Some(config) = setup else {
+        return Ok(());
+    };
+    let guidance = std::str::from_utf8(guidance).map_err(|_| {
+        InstallError::Verification("generated user guidance is not UTF-8".to_owned())
+    })?;
+    let command = "hive knowledge remember --user-root <user-root> --user-statement <normalized-fact> --claim-key <stable-key>";
+    if !config.wiki.enabled {
+        return (!guidance.contains(command)).then_some(()).ok_or_else(|| {
+            InstallError::Verification(
+                "Wiki-disabled user guidance must not contain a knowledge write command".to_owned(),
+            )
+        });
+    }
+    let required = match config.interface_language {
+        crate::user_setup::InterfaceLanguage::En => [
+            "Before every final response, review the current user statement",
+            "applies immediately after installation in every selected-host folder",
+            command,
+            "canonical Markdown and derived-index receipt",
+            "An unregistered target falls back to user-root and shared knowledge",
+            "ambiguous project-specific scope fails closed",
+        ],
+        crate::user_setup::InterfaceLanguage::Ko => [
+            "모든 최종 응답 전 현재 사용자 발화와 완료 결과",
+            "설치 직후 선택 호스트의 모든 폴더에 적용",
+            command,
+            "canonical Markdown과 derived-index receipt",
+            "미등록 target은 project-private 지식을 제외한 user-root·shared 지식으로 폴백",
+            "모호한 project 범위는 안전하게 중단",
+        ],
+    };
+    required
+        .iter()
+        .all(|fragment| guidance.contains(fragment))
+        .then_some(())
+        .ok_or_else(|| {
+            InstallError::Verification(
+                "Wiki-enabled user guidance omitted the mandatory knowledge capture contract"
+                    .to_owned(),
+            )
+        })
 }
 
 fn merge_user_marker(existing: &[u8], marker: &[u8]) -> Result<Vec<u8>, InstallError> {
@@ -3483,41 +3898,31 @@ fn apply_plan(
         }
         activated_snapshots.push((relative.clone(), existing.clone(), *permissions));
     }
-    prune_retired_antigravity_source_directories(arguments, plan);
+    if let Err(error) = prune_empty_owned_ancestors(
+        &arguments.root_cap,
+        plan.retired_files.keys().map(PathBuf::as_path),
+    ) {
+        if let Err(rollback) = rollback_snapshots(&arguments.root_cap, &snapshots, &plan.files) {
+            return Err(InstallError::Internal(format!(
+                "{}; filesystem rollback also failed: {}",
+                error.message(),
+                rollback.message()
+            )));
+        }
+        if let Err(cleanup) = remove_transaction_journal(arguments, &journal_relative) {
+            return Err(InstallError::Internal(format!(
+                "{}; rollback journal cleanup failed: {}",
+                error.message(),
+                cleanup.message()
+            )));
+        }
+        return Err(error);
+    }
     Ok(UserTransaction {
         backup_relative,
         journal_relative,
         backup,
     })
-}
-
-fn prune_retired_antigravity_source_directories(arguments: &UserArguments, plan: &UserPlan) {
-    if arguments.host != UserHost::Antigravity {
-        return;
-    }
-    let source = Path::new(ANTIGRAVITY_SOURCE_RELATIVE);
-    let mut directories = BTreeSet::new();
-    for path in plan.retired_files.keys() {
-        let Ok(relative) = path.strip_prefix(source) else {
-            continue;
-        };
-        let mut parent = relative.parent();
-        while let Some(directory) = parent.filter(|directory| !directory.as_os_str().is_empty()) {
-            directories.insert(source.join(directory));
-            parent = directory.parent();
-        }
-    }
-    let mut directories = directories.into_iter().collect::<Vec<_>>();
-    directories.sort_by(|left, right| {
-        right
-            .components()
-            .count()
-            .cmp(&left.components().count())
-            .then_with(|| right.cmp(left))
-    });
-    for directory in directories {
-        let _ = arguments.root_cap.remove_dir(&directory);
-    }
 }
 
 fn preflight_plan(root: &Dir, plan: &UserPlan) -> Result<Vec<PlannedSnapshot>, InstallError> {
@@ -5735,7 +6140,8 @@ fn remove_transaction_journal(
         journal_relative,
         expected.as_deref(),
         expected_permissions,
-    )
+    )?;
+    remove_owned_empty_dir(&arguments.root_cap, Path::new(".hive/install-transactions"))
 }
 
 fn rollback_after_failure(
@@ -7728,6 +8134,177 @@ mod tests {
         assert_eq!(parsed.user_root, expected);
     }
 
+    fn parse_host_selection(
+        root: &Path,
+        selection: &[&str],
+    ) -> Result<UserCommandArguments, InstallError> {
+        let mut arguments = vec!["--scope".to_owned(), "user".to_owned()];
+        arguments.extend(selection.iter().map(ToString::to_string));
+        arguments.extend([
+            "--user-root".to_owned(),
+            root.display().to_string(),
+            "--dry-run".to_owned(),
+            "--output".to_owned(),
+            "json".to_owned(),
+        ]);
+        parse(&arguments)
+    }
+
+    #[test]
+    fn cli_parse_accepts_csv_and_repeated_multi_host_forms_in_request_order() {
+        let temporary = tempdir().expect("tempdir");
+        let csv = parse_host_selection(temporary.path(), &["--hosts", "codex,claude"])
+            .expect("CSV hosts");
+        let spaced_csv = parse_host_selection(temporary.path(), &["--hosts", "codex, claude"])
+            .expect("CSV hosts with whitespace");
+        let repeated =
+            parse_host_selection(temporary.path(), &["--host", "codex", "--host", "claude"])
+                .expect("repeated hosts");
+
+        assert_eq!(csv.hosts, vec![UserHost::Codex, UserHost::Claude]);
+        assert_eq!(spaced_csv.hosts, csv.hosts);
+        assert_eq!(repeated.hosts, csv.hosts);
+    }
+
+    #[test]
+    fn cli_parse_allows_mixed_multi_host_forms_and_rejects_duplicate_hosts() {
+        let temporary = tempdir().expect("tempdir");
+        let mixed = parse_host_selection(
+            temporary.path(),
+            &["--hosts", "codex,claude", "--host", "antigravity"],
+        )
+        .expect("mixed hosts");
+        assert_eq!(
+            mixed.hosts,
+            vec![UserHost::Codex, UserHost::Claude, UserHost::Antigravity]
+        );
+
+        let duplicate = parse_host_selection(
+            temporary.path(),
+            &["--hosts", "codex,claude", "--host", "codex"],
+        )
+        .expect_err("duplicate host");
+        assert_eq!(duplicate.message(), "duplicate host selection: codex");
+    }
+
+    #[test]
+    fn cli_parse_rejects_empty_unknown_and_repeated_hosts_options() {
+        let temporary = tempdir().expect("tempdir");
+        for (selection, expected) in [
+            (
+                vec!["--hosts", "codex,,claude"],
+                "--hosts must contain a comma-separated list without empty entries",
+            ),
+            (
+                vec!["--hosts", "codex,other"],
+                "--hosts values must be codex, claude, or antigravity",
+            ),
+            (
+                vec!["--hosts", "codex", "--hosts", "claude"],
+                "duplicate option: --hosts",
+            ),
+        ] {
+            let error = parse_host_selection(temporary.path(), &selection)
+                .expect_err("invalid host selection");
+            assert_eq!(error.message(), expected);
+        }
+    }
+
+    #[test]
+    fn multi_host_dry_run_aggregates_results_in_request_order() {
+        let temporary = tempdir().expect("tempdir");
+        write_operational_setup(temporary.path(), &["codex", "claude"]);
+        let command = UserCommandArguments {
+            hosts: vec![UserHost::Codex, UserHost::Claude],
+            mode: UserMode::DryRun,
+            user_root: temporary.path().canonicalize().expect("canonical root"),
+        };
+        let runner = StatefulHostRunner::new(temporary.path(), HostSabotage::None);
+
+        let result = execute_command(UserOperation::Install, &command, &runner);
+
+        assert_eq!(result.status, "success");
+        assert_eq!(result.code, "hive.user-install-multi-host-dry-run-complete");
+        assert_eq!(
+            result.data.expect("aggregate data")["hosts"],
+            json!(["codex", "claude"])
+        );
+        assert!(!temporary.path().join(".hive/install/codex.json").exists());
+        assert!(!temporary.path().join(".hive/install/claude.json").exists());
+    }
+
+    #[test]
+    fn multi_host_apply_preflights_every_host_before_mutation() {
+        let temporary = tempdir().expect("tempdir");
+        write_operational_setup(temporary.path(), &["codex"]);
+        let command = UserCommandArguments {
+            hosts: vec![UserHost::Codex, UserHost::Claude],
+            mode: UserMode::Apply,
+            user_root: temporary.path().canonicalize().expect("canonical root"),
+        };
+        let runner = StatefulHostRunner::new(temporary.path(), HostSabotage::None);
+
+        let result = execute_command(UserOperation::Install, &command, &runner);
+
+        assert_eq!(result.status, "conflict");
+        assert!(result
+            .message
+            .contains("multi-host preflight failed for claude before mutation"));
+        let data = result.data.expect("failure data");
+        assert_eq!(data["preflight"], json!(true));
+        assert_eq!(data["completed_hosts"], json!([]));
+        assert!(!temporary.path().join(".hive/install/codex.json").exists());
+    }
+
+    #[test]
+    fn multi_host_apply_activates_every_selected_host_after_preflight() {
+        let temporary = tempdir().expect("tempdir");
+        write_operational_setup(temporary.path(), &["codex", "claude"]);
+        let command = UserCommandArguments {
+            hosts: vec![UserHost::Codex, UserHost::Claude],
+            mode: UserMode::Apply,
+            user_root: temporary.path().canonicalize().expect("canonical root"),
+        };
+        let runner = StatefulHostRunner::new(temporary.path(), HostSabotage::None);
+
+        let result = execute_command(UserOperation::Install, &command, &runner);
+
+        assert_eq!(result.status, "success", "{}", result.message);
+        assert_eq!(result.code, "hive.user-install-multi-host-complete");
+        assert!(temporary.path().join(".hive/install/codex.json").is_file());
+        assert!(temporary.path().join(".hive/install/claude.json").is_file());
+        assert_eq!(
+            result.data.expect("aggregate data")["preflight_completed"],
+            json!(true)
+        );
+    }
+
+    #[test]
+    fn multi_host_failure_reports_completed_and_failed_hosts() {
+        let result = multi_host_failure(
+            UserOperation::Install,
+            UserMode::Apply,
+            &InstallError::Verification("simulated second-host failure".to_owned()),
+            &["codex", "claude"],
+            &["codex"],
+            UserHost::Claude,
+            false,
+            vec![".hive/install/codex.json".to_owned()],
+            Vec::new(),
+        );
+
+        assert_eq!(result.status, "verification-failed");
+        assert!(result.message.contains("after completed hosts [codex]"));
+        assert_eq!(
+            result.changed_paths,
+            vec![".hive/install/codex.json".to_owned()]
+        );
+        let data = result.data.expect("failure data");
+        assert_eq!(data["completed_hosts"], json!(["codex"]));
+        assert_eq!(data["failed_host"], json!("claude"));
+        assert_eq!(data["preflight"], json!(false));
+    }
+
     #[test]
     fn uninstall_refuses_removed_destructive_flags() {
         for flag in ["--full", "-f"] {
@@ -7763,6 +8340,8 @@ mod tests {
         assert!(!temporary.path().join(".hive/install/codex.json").exists());
         assert!(!temporary.path().join(".hive/marketplaces/codex").exists());
         assert!(!temporary.path().join(".codex/AGENTS.md").exists());
+        assert!(!temporary.path().join(".agents/skills").exists());
+        assert!(!temporary.path().join(".hive/install-transactions").exists());
         assert_eq!(runner.external_state(), (false, false));
 
         execute(UserOperation::Install, &install, &runner).expect("saved preference reinstall");
@@ -7776,6 +8355,67 @@ mod tests {
             .join(".hive/install/user-projection.json")
             .is_file());
         assert_eq!(runner.external_state(), (true, true));
+    }
+
+    #[test]
+    fn authenticated_release_mismatch_automatically_preserves_and_reinstalls_user_scope() {
+        let temporary = tempdir().expect("tempdir");
+        write_operational_setup(temporary.path(), &["codex"]);
+        let setup = temporary.path().join(".hive/config/user-setup.yml");
+        let saved_setup = fs::read(&setup).expect("saved setup");
+        let runner = StatefulHostRunner::new(temporary.path(), HostSabotage::None);
+        let install = args(temporary.path(), UserHost::Codex, UserMode::Apply);
+        execute(UserOperation::Install, &install, &runner).expect("initial install");
+        let knowledge = temporary.path().join(".hive/knowledge/Wiki/user-note.md");
+        let knowledge_bytes = b"---\nschema_version: 1\nid: user-note\nkind: concept\nsummary: user note\ntags: [test]\naliases: []\nsources: []\nlinks: []\ncontradictions: []\nstatus: active\ncreated_at: 2026-08-10T00:00:00Z\nupdated_at: 2026-08-10T00:00:00Z\n---\n\nUser knowledge\n";
+        fs::write(&knowledge, knowledge_bytes).expect("knowledge note");
+
+        let manifest_path = temporary.path().join(".hive/install/codex.json");
+        let mut manifest: UserOwnershipManifest =
+            serde_json::from_slice(&fs::read(&manifest_path).expect("ownership manifest"))
+                .expect("ownership manifest JSON");
+        manifest.product_version = "0.9.1".to_owned();
+        manifest.plan_digest = inventory_digest(
+            manifest.host,
+            &manifest.product_version,
+            &manifest.host_version_range,
+            Path::new(&manifest.guidance_path),
+            &manifest.source_release_digest,
+            &manifest.entries,
+        );
+        fs::write(&manifest_path, json_line(&manifest).expect("manifest JSON"))
+            .expect("replace ownership manifest");
+
+        let dry_run = args(temporary.path(), UserHost::Codex, UserMode::DryRun);
+        let preview = execute(UserOperation::Install, &dry_run, &runner)
+            .expect("preserving reinstall preview");
+        assert_eq!(
+            preview.code,
+            "hive.user-install-dry-run-preserving-reinstall-planned"
+        );
+        assert!(knowledge.is_file());
+        assert_eq!(fs::read(&setup).expect("saved setup retained"), saved_setup);
+
+        let repaired = execute(UserOperation::Install, &install, &runner)
+            .expect("automatic preserving reinstall");
+        assert_eq!(
+            repaired.code,
+            "hive.user-install-complete-after-preserving-reinstall"
+        );
+        assert_eq!(fs::read(&setup).expect("saved setup retained"), saved_setup);
+        assert_eq!(
+            fs::read(&knowledge).expect("knowledge retained"),
+            knowledge_bytes
+        );
+        assert!(temporary.path().join(".hive/install/codex.json").is_file());
+        assert!(temporary
+            .path()
+            .join(".hive/install/user-projection.json")
+            .is_file());
+        assert_eq!(runner.external_state(), (true, true));
+
+        let validate = args(temporary.path(), UserHost::Codex, UserMode::Validate);
+        execute(UserOperation::Install, &validate, &runner).expect("reinstalled user scope valid");
     }
 
     fn write_operational_setup(root: &Path, selected_hosts: &[&str]) {
@@ -8094,6 +8734,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::too_many_lines)]
     fn operational_user_guidance_keeps_the_selected_language_consistent() {
         use crate::user_setup::{
             CatalogSelection, InterfaceLanguage, SelectedHost, SkillPreferences,
@@ -8147,6 +8788,14 @@ mod tests {
         assert!(english.contains("Explain in simple terms by default"));
         assert!(english.contains("do not force irrelevant examples or weaken technical precision"));
         assert!(english.contains("For every passed, failed, skipped, deferred"));
+        assert!(english.contains("Before every final response, review the current user statement"));
+        assert!(english
+            .contains("applies immediately after installation in every selected-host folder"));
+        assert!(
+            english.contains("An unregistered target falls back to user-root and shared knowledge")
+        );
+        assert!(english.contains("--user-statement <normalized-fact> --claim-key <stable-key>"));
+        assert!(english.contains("canonical Markdown and derived-index receipt"));
         assert!(!english.contains("질문과 응답"));
 
         let korean = String::from_utf8(render_user_guidance(
@@ -8160,6 +8809,13 @@ mod tests {
         assert!(korean.contains("기본 설명은 쉬운 말로 작성"));
         assert!(korean.contains("관련 없는 예시 강제 또는 기술적 정확성 약화 금지"));
         assert!(korean.contains("통과·실패·건너뜀·연기·미검증·미지원"));
+        assert!(korean.contains("모든 최종 응답 전 현재 사용자 발화와 완료 결과"));
+        assert!(korean.contains("설치 직후 선택 호스트의 모든 폴더에 적용"));
+        assert!(korean.contains(
+            "미등록 target은 project-private 지식을 제외한 user-root·shared 지식으로 폴백"
+        ));
+        assert!(korean.contains("--user-statement <normalized-fact> --claim-key <stable-key>"));
+        assert!(korean.contains("canonical Markdown과 derived-index receipt"));
         for avoidable_mixture in [
             "활성 adapter",
             "Interface language",
@@ -8172,6 +8828,29 @@ mod tests {
             "Foreign guidance bytes",
         ] {
             assert!(!korean.contains(avoidable_mixture));
+        }
+
+        let mut disabled = config(InterfaceLanguage::En);
+        disabled.wiki.enabled = false;
+        let disabled = String::from_utf8(render_user_guidance(UserHost::Codex, Some(&disabled)))
+            .expect("disabled guidance");
+        assert!(disabled.contains("Global Wiki is disabled: do not write or refresh knowledge"));
+        assert!(!disabled.contains("hive knowledge remember --user-root"));
+
+        let broken = english.replacen(
+            "--user-statement <normalized-fact> --claim-key <stable-key>",
+            "knowledge write removed",
+            1,
+        );
+        assert!(matches!(
+            validate_operational_guidance(broken.as_bytes(), Some(&config(InterfaceLanguage::En))),
+            Err(InstallError::Verification(_))
+        ));
+
+        for host in [UserHost::Codex, UserHost::Claude, UserHost::Antigravity] {
+            let guidance = render_user_guidance(host, Some(&config(InterfaceLanguage::En)));
+            validate_operational_guidance(&guidance, Some(&config(InterfaceLanguage::En)))
+                .expect("every host must retain the mandatory capture contract");
         }
     }
 
@@ -8838,11 +9517,21 @@ mod tests {
             for (name, _, _) in USER_080_SKILLS {
                 for path in historical_080_skill_paths(host, name) {
                     assert!(
-                        !temporary.path().join(path).exists(),
+                        !temporary.path().join(&path).exists(),
                         "authenticated retired Skill path must be removed"
+                    );
+                    assert!(
+                        !temporary
+                            .path()
+                            .join(&path)
+                            .parent()
+                            .expect("retired path parent")
+                            .exists(),
+                        "authenticated retired Skill directory must converge away"
                     );
                 }
             }
+            assert!(!temporary.path().join(".hive/install-transactions").exists());
 
             let tampered = tempdir().expect("tampered tempdir");
             let manifest = seed_historical_080_user_install(tampered.path(), host);

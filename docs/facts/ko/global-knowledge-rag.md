@@ -5,20 +5,21 @@ topic_slug: global-knowledge-rag
 language: ko
 counterpart: ../en/global-knowledge-rag.md
 title: "전역 knowledge RAG"
-summary: "질문·research·knowledge task의 자동 검색과 durable memory 필수 기록을 구현한 v0.9 결과."
+summary: "v0.9.0-test.16의 매 턴 자동 기록 배포·Windows 설치 완료. Codex 새 세션 수용과 정식 출시 검증 대기."
 tags: [knowledge, rag, retrieval, v0-9]
 aliases: ["Cross-project RAG", "Mandatory memory"]
 sources:
-  - "repo:docs/decisions/ADR-0016-global-knowledge-rag.md#sha256:24822777fdee6dec2272b659009913e69929aba5046d0858a9b745dec0e350c5"
-  - "repo:docs/plans/active/v0.9.0-global-knowledge-rag.md#sha256:2b7b1132b276dc59c0a00076d8aca13aebcb75eefb2dd66a3e1f9d51494fbba9"
+  - "repo:docs/decisions/ADR-0016-global-knowledge-rag.md#sha256:196117cadc85737e0dbe35c8fcc6699e5180632d919782c2312453f588b3ab7a"
+  - "repo:docs/plans/active/v0.9.0-global-knowledge-rag.md#sha256:6763857d275d0a35065e27f744e4a7d2c83d77b876abcdb5343f37be01ffe35e"
+  - "repo:docs/plans/active/v0.9.0-knowledge-autocapture-regression.md#sha256:a1bd5359ae88e90db3281c159e21fe3d4d6e20ff811c41503ce64fe3554a2519"
 links: [knowledge-portability-scan, knowledge-storage, shared-index, v0-9-skill-suite-plan]
-reviewed_revision: "git:fc1e23854bf6cbc09a2dc7704d8185ae247212a0"
+reviewed_revision: "git:2234885542a2c3e82514121b890e129b89e5e563"
 status: active
 ---
 
 # 전역 knowledge RAG
 
-v0.9 구현: `knowledge-recall`의 bounded automatic retrieval, reusable user
-fact·preference·workflow의 Markdown canonical 기록. Named project·collection scope,
-citation-ready chunk, fresh-session recall, derived-only repair. 50,000 chunk qualification:
-cold p95 `163.3569ms`, prepared-resident warm p95 `0.1178ms`. Notion backend: 첫 v0.10 시험판 보류.
+정본 기록·검색·멱등성: 정상. `0.9.0-test.16`: 생성 English·Korean user guidance, Copier 투영,
+plugin metadata·catalog의 범위 판정, 안전한 `remember` 1회, Markdown·index receipt 계약 배포.
+Wiki 비활성 guidance: 기록 거부. Windows user install·설치 안내 검증 완료. Windows Codex 새 세션
+기록·검색 수용과 replacement stable qualification: 출시 gate 유지.

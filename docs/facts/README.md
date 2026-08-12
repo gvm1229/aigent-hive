@@ -38,6 +38,7 @@
 | Knowledge storage | [en](en/knowledge-storage.md) | [ko](ko/knowledge-storage.md) |
 | Shared index | [en](en/shared-index.md) | [ko](ko/shared-index.md) |
 | Global knowledge RAG | [en](en/global-knowledge-rag.md) | [ko](ko/global-knowledge-rag.md) |
+| Install-wide knowledge capture | [en](en/install-wide-knowledge-capture.md) | [ko](ko/install-wide-knowledge-capture.md) |
 | Knowledge portability·scan | [en](en/knowledge-portability-scan.md) | [ko](ko/knowledge-portability-scan.md) |
 | 공유 색인 대상 경로 안전 | [en](en/shared-index-target-safety.md) | [ko](ko/shared-index-target-safety.md) |
 | Global onboarding | [en](en/global-onboarding.md) | [ko](ko/global-onboarding.md) |
@@ -47,6 +48,7 @@
 | Plugin update merge | [en](en/plugin-update-merge.md) | [ko](ko/plugin-update-merge.md) |
 | Skill routing | [en](en/skill-routing.md) | [ko](ko/skill-routing.md) |
 | Public Skill identity | [en](en/public-skill-identity.md) | [ko](ko/public-skill-identity.md) |
+| Ship commit granularity | [en](en/ship-commit-granularity.md) | [ko](ko/ship-commit-granularity.md) |
 | Model-routed custom subagent | [en](en/model-routed-custom-subagents.md) | [ko](ko/model-routed-custom-subagents.md) |
 | Prompt refine 승인 routing | [en](en/prompt-refine-routing.md) | [ko](ko/prompt-refine-routing.md) |
 | Discord·Notion host integration | [en](en/host-external-integrations.md) | [ko](ko/host-external-integrations.md) |
@@ -75,6 +77,8 @@
 | Developer binary lifecycle | [en](en/developer-binary-lifecycle.md) | [ko](ko/developer-binary-lifecycle.md) |
 | Temporary Git worktree lifecycle | [en](en/git-worktree-lifecycle.md) | [ko](ko/git-worktree-lifecycle.md) |
 | Marketing deck record | [en](en/marketing-deck-record.md) | [ko](ko/marketing-deck-record.md) |
+| Public Korean HTML guides | [en](en/public-html-guides.md) | [ko](ko/public-html-guides.md) |
+| Multi-host user install | [en](en/multi-host-user-install.md) | [ko](ko/multi-host-user-install.md) |
 | v0.9 Skill suite | [en](en/v0-9-skill-suite-plan.md) | [ko](ko/v0-9-skill-suite-plan.md) |
 | v0.9 full release | [en](en/v0-9-full-release.md) | [ko](ko/v0-9-full-release.md) |
 

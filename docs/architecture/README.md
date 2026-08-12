@@ -10,6 +10,6 @@
 | [Skill consent](skill-consent.md) | Optional Skill approval·activation |
 | [Hook consent](hook-consent.md) | Fallback hook preview·consent·inert state |
 | [Judge trust boundary](judge-trust-boundary.md) | Clean-context package·Ed25519 quorum |
-| [Release·update trust boundary](release-update-trust-boundary.md) | TUF verification·migration·backup·recovery |
+| [Release·update trust boundary](release-update-trust-boundary.md) | Attestation·local integrity·migration·recovery |
 
 관련 결정: [Decision 안내](../decisions/README.md).

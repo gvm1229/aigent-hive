@@ -1,10 +1,9 @@
 use super::{emit_action_result, ActionResult, Evidence};
-use crate::judge::{read_protected_external_file, read_protected_file};
 use crate::run::{AdapterError, PinnedTarget};
 use hive_core::{sha256_digest, validate_project_relative};
 use hive_update::{
-    execute_update_in, recover_update_in, verify_release_repository_for_publication, MajorApproval,
-    RollbackState, SemVersion, UpdateError, UpdateMode, UpdateRequest,
+    execute_update_in, recover_update_in, verify_release_bundle, MajorApproval, SemVersion,
+    UpdateError, UpdateMode, UpdateRequest,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::json;
@@ -12,28 +11,23 @@ use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-const MAX_RELEASE_ROOT_BYTES: usize = 1024 * 1024;
-const MAX_ROLLBACK_STATE_BYTES: usize = 256 * 1024;
 const MAX_CONFIRMATION_BYTES: usize = 256 * 1024;
 
 const UPDATE_USAGE: &str = "\
-Verify and activate an offline signed Aigent Hive release.
+Verify and activate a local Aigent Hive release bundle.
 
 USAGE:
-    hive update --target <dir> --bundle <release-dir> \
-        --trust-root <external-protected-root.json> (--dry-run|--apply) --output json
+    hive update --target <dir> --bundle <release-dir> (--dry-run|--apply) --output json
     hive update --target <dir> --recover --output json
 
 BREAKING RELEASES:
     --exact-major-target <X.Y.Z> --major-confirmation <confirmation.json>
 ";
 const RELEASE_USAGE: &str = "\
-Verify a complete offline signed Aigent Hive release without mutation.
+Verify a local Aigent Hive release bundle without mutation.
 
 USAGE:
-    hive release verify --bundle <release-dir> \
-        --trust-root <external-protected-root.json> \
-        [--rollback-state <external-protected-state.json>] --output json
+    hive release verify --bundle <release-dir> --output json
 ";
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -51,7 +45,6 @@ struct MajorConfirmation {
 struct UpdateArguments {
     target: PathBuf,
     bundle: Option<PathBuf>,
-    trust_root: Option<PathBuf>,
     mode: Option<UpdateMode>,
     recover: bool,
     exact_major_target: Option<String>,
@@ -74,33 +67,24 @@ pub(crate) fn run_release(arguments: &[String]) -> ExitCode {
         return ExitCode::SUCCESS;
     }
     let result = parse_release_arguments(arguments)
-        .and_then(|(bundle, trust_root, rollback_state)| {
-            verify_release(&bundle, &trust_root, rollback_state.as_deref())
-        })
+        .and_then(|bundle| verify_release(&bundle))
         .unwrap_or_else(|error| release_failure_result(&error));
     emit_action_result(&result)
 }
 
-fn parse_release_arguments(
-    arguments: &[String],
-) -> Result<(PathBuf, PathBuf, Option<PathBuf>), AdapterError> {
+fn parse_release_arguments(arguments: &[String]) -> Result<PathBuf, AdapterError> {
     if arguments.first().map(String::as_str) != Some("verify") {
         return Err(AdapterError::Input(
             "release requires the verify action".to_owned(),
         ));
     }
     let mut bundle = None;
-    let mut trust_root = None;
-    let mut rollback_state = None;
     let mut output = None;
     let mut index = 1;
     while index < arguments.len() {
         let option = arguments[index].as_str();
         index += 1;
-        if !matches!(
-            option,
-            "--bundle" | "--trust-root" | "--rollback-state" | "--output"
-        ) {
+        if !matches!(option, "--bundle" | "--output") {
             return Err(AdapterError::Input(format!(
                 "unknown release option: {option}"
             )));
@@ -111,8 +95,6 @@ fn parse_release_arguments(
         index += 1;
         let slot = match option {
             "--bundle" => &mut bundle,
-            "--trust-root" => &mut trust_root,
-            "--rollback-state" => &mut rollback_state,
             "--output" => &mut output,
             _ => unreachable!(),
         };
@@ -127,54 +109,20 @@ fn parse_release_arguments(
             "release verify requires --output json".to_owned(),
         ));
     }
-    Ok((
-        PathBuf::from(bundle.ok_or_else(|| AdapterError::Input("missing --bundle".to_owned()))?),
-        PathBuf::from(
-            trust_root.ok_or_else(|| AdapterError::Input("missing --trust-root".to_owned()))?,
-        ),
-        rollback_state.map(PathBuf::from),
-    ))
+    Ok(PathBuf::from(bundle.ok_or_else(|| {
+        AdapterError::Input("missing --bundle".to_owned())
+    })?))
 }
 
-fn verify_release(
-    bundle: &Path,
-    trust_root: &Path,
-    rollback_state: Option<&Path>,
-) -> Result<ActionResult, AdapterError> {
-    let trust_root = read_protected_file(
-        trust_root,
-        MAX_RELEASE_ROOT_BYTES,
-        None,
-        "release trust root",
-    )?;
-    let now_unix = current_unix_time()?;
-    let rollback_state = rollback_state
-        .map(|path| {
-            let bytes = read_protected_file(
-                path,
-                MAX_ROLLBACK_STATE_BYTES,
-                None,
-                "release rollback state",
-            )?;
-            serde_json::from_slice::<RollbackState>(&bytes).map_err(|error| {
-                AdapterError::Input(format!("invalid release rollback state JSON: {error}"))
-            })
-        })
-        .transpose()?;
-    let verified = verify_release_repository_for_publication(
-        &trust_root,
-        bundle,
-        now_unix,
-        rollback_state.as_ref(),
-    )
-    .map_err(map_update_error)?;
+fn verify_release(bundle: &Path) -> Result<ActionResult, AdapterError> {
+    let verified = verify_release_bundle(bundle, None).map_err(map_update_error)?;
     Ok(ActionResult {
         schema_version: 1,
         action: "VerifyWork",
         status: "success",
         exit_code: 0,
         code: "hive.release-verified",
-        message: "offline signed release verification completed".to_owned(),
+        message: "local release bundle integrity verification completed".to_owned(),
         changed_paths: Vec::new(),
         evidence: vec![Evidence {
             kind: "release",
@@ -187,7 +135,7 @@ fn verify_release(
             "release_sequence": verified.manifest.release_sequence,
             "source_commit": verified.manifest.source.commit,
             "manifest_digest": verified.manifest_digest,
-            "rollback_state": verified.next_rollback_state,
+            "accepted_release": verified.next_release_state,
             "verified_target_count": verified.targets.len()
         })),
     })
@@ -196,7 +144,6 @@ fn verify_release(
 fn parse_arguments(arguments: &[String]) -> Result<UpdateArguments, AdapterError> {
     let mut target = None;
     let mut bundle = None;
-    let mut trust_root = None;
     let mut mode = None;
     let mut recover = false;
     let mut exact_major_target = None;
@@ -212,7 +159,6 @@ fn parse_arguments(arguments: &[String]) -> Result<UpdateArguments, AdapterError
             "--recover" if !recover => recover = true,
             "--target"
             | "--bundle"
-            | "--trust-root"
             | "--exact-major-target"
             | "--major-confirmation"
             | "--output" => {
@@ -223,7 +169,6 @@ fn parse_arguments(arguments: &[String]) -> Result<UpdateArguments, AdapterError
                 let slot = match option {
                     "--target" => &mut target,
                     "--bundle" => &mut bundle,
-                    "--trust-root" => &mut trust_root,
                     "--exact-major-target" => &mut exact_major_target,
                     "--major-confirmation" => &mut major_confirmation,
                     "--output" => &mut output,
@@ -256,7 +201,6 @@ fn parse_arguments(arguments: &[String]) -> Result<UpdateArguments, AdapterError
     if recover {
         if mode.is_some()
             || bundle.is_some()
-            || trust_root.is_some()
             || exact_major_target.is_some()
             || major_confirmation.is_some()
         {
@@ -264,10 +208,9 @@ fn parse_arguments(arguments: &[String]) -> Result<UpdateArguments, AdapterError
                 "--recover cannot be combined with release activation options".to_owned(),
             ));
         }
-    } else if mode.is_none() || bundle.is_none() || trust_root.is_none() {
+    } else if mode.is_none() || bundle.is_none() {
         return Err(AdapterError::Input(
-            "update requires --bundle, --trust-root, and exactly one of --dry-run or --apply"
-                .to_owned(),
+            "update requires --bundle and exactly one of --dry-run or --apply".to_owned(),
         ));
     }
     if major_confirmation.is_some() && exact_major_target.is_none() {
@@ -286,7 +229,6 @@ fn parse_arguments(arguments: &[String]) -> Result<UpdateArguments, AdapterError
     Ok(UpdateArguments {
         target: PathBuf::from(target),
         bundle: bundle.map(PathBuf::from),
-        trust_root: trust_root.map(PathBuf::from),
         mode,
         recover,
         exact_major_target,
@@ -311,16 +253,6 @@ fn update(arguments: &UpdateArguments) -> Result<ActionResult, AdapterError> {
             data: None,
         });
     }
-    let trust_root_path = arguments
-        .trust_root
-        .as_deref()
-        .ok_or_else(|| AdapterError::Input("missing update trust root".to_owned()))?;
-    let trust_root = read_protected_external_file(
-        &target,
-        trust_root_path,
-        MAX_RELEASE_ROOT_BYTES,
-        "release trust root",
-    )?;
     let (exact_major_target, major_approval) = load_major_authority(
         &target,
         arguments.exact_major_target.as_deref(),
@@ -339,7 +271,6 @@ fn update(arguments: &UpdateArguments) -> Result<ActionResult, AdapterError> {
         &UpdateRequest {
             target: target.requested_path(),
             repository: bundle,
-            trusted_root_bytes: &trust_root,
             now_unix,
             mode,
             exact_major_target,
@@ -350,12 +281,12 @@ fn update(arguments: &UpdateArguments) -> Result<ActionResult, AdapterError> {
     let (code, message, changed_paths) = match mode {
         UpdateMode::DryRun => (
             "hive.update-dry-run-complete",
-            "signed update dry-run completed without target mutation",
+            "release update dry-run completed without target mutation",
             Vec::new(),
         ),
         UpdateMode::Apply => (
             "hive.update-complete",
-            "signed update activated and the disposable index was rebuilt",
+            "release update activated and the disposable index was rebuilt",
             outcome.changed_paths.clone(),
         ),
     };
@@ -524,9 +455,7 @@ fn release_failure_result(error: &AdapterError) -> ActionResult {
     result.action = "VerifyWork";
     result.code = match error {
         AdapterError::Input(_) => "hive.release-invalid-input",
-        AdapterError::Safety(_) | AdapterError::OwnerBlocked(_) => {
-            "hive.release-trust-root-blocked"
-        }
+        AdapterError::Safety(_) | AdapterError::OwnerBlocked(_) => "hive.release-safety-blocked",
         AdapterError::Conflict(_) | AdapterError::UpdateRecoveryRequired(_) => {
             "hive.release-conflict"
         }
@@ -558,8 +487,6 @@ mod tests {
                 "fixture".to_owned(),
                 "--bundle".to_owned(),
                 "bundle".to_owned(),
-                "--trust-root".to_owned(),
-                "/root.json".to_owned(),
                 "--dry-run".to_owned(),
                 "--apply".to_owned(),
                 "--output".to_owned(),
@@ -588,8 +515,6 @@ mod tests {
             "fixture".to_owned(),
             "--bundle".to_owned(),
             "bundle".to_owned(),
-            "--trust-root".to_owned(),
-            "/root.json".to_owned(),
             "--dry-run".to_owned(),
             "--exact-major-target".to_owned(),
             "1.0.0".to_owned(),
@@ -621,25 +546,13 @@ mod tests {
             "verify".to_owned(),
             "--bundle".to_owned(),
             "bundle".to_owned(),
-            "--trust-root".to_owned(),
-            "/root.json".to_owned(),
             "--output".to_owned(),
             "json".to_owned(),
         ];
         assert!(parse_release_arguments(&valid).is_ok());
-        let mut with_floor = valid.clone();
-        with_floor.splice(
-            5..5,
-            [
-                "--rollback-state".to_owned(),
-                "/rollback-state.json".to_owned(),
-            ],
-        );
         assert_eq!(
-            parse_release_arguments(&with_floor)
-                .expect("release parser with rollback floor")
-                .2,
-            Some(PathBuf::from("/rollback-state.json"))
+            parse_release_arguments(&valid).expect("release parser"),
+            PathBuf::from("bundle")
         );
         assert!(parse_release_arguments(&valid[1..]).is_err());
         let failure = release_failure_result(&AdapterError::Verification("tampered".to_owned()));

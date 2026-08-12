@@ -1,6 +1,6 @@
 ---
 name: knowledge-recall
-description: Run one bounded Hive knowledge retrieval before questions or knowledge-dependent work when Wiki is enabled. Skip guard control, setup-required state, acknowledgements, context-free commands, Wiki-disabled state, and already-queried turns.
+description: Run one bounded Hive knowledge retrieval before questions or knowledge-dependent work in every project when Wiki is enabled. Project setup is not required; unregistered targets fall back to user-root and shared knowledge.
 ---
 
 # Hive Knowledge Query
@@ -24,6 +24,9 @@ Run the single mandatory memory lookup, then hand off sequentially to the owning
    supply or accept a caller-asserted current collection identifier. Use `project:<id>` or
    `collection:<id>` only for an explicit named scope. Only an explicit query may raise `top-k`
    or the byte budget within CLI bounds.
+   If the target has no attached collection, the same `auto` request searches `user-root` and
+   shared collections while excluding project-private knowledge. Never report retrieval as skipped
+   solely because project setup, a Hive harness, a project marker, or a collection is absent.
 4. For every confidential collection, including the current collection, require the user's
    approval for this exact query, then issue a short-lived authorization bound to fresh
    capability and usage snapshots. Target identity alone never authorizes confidential data:

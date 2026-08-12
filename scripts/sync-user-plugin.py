@@ -3,6 +3,8 @@
 
 from __future__ import annotations
 
+import hashlib
+import re
 import shutil
 from pathlib import Path
 
@@ -33,6 +35,7 @@ DIRECTIVE_SOURCE = ROOT / "harness" / "directives"
 DIRECTIVE_DESTINATION = (
     ROOT / "harness" / "template" / ".agents" / "directives"
 )
+ACTIVE_SKILLS_LEDGER = ROOT / "harness" / "template" / ".hive" / "config" / "active-skills.yml"
 
 
 def sync_directories(
@@ -80,6 +83,7 @@ def sync_directories(
             destination_metadata.write_text(
                 metadata.replace(policy_true, policy_false),
                 encoding="utf-8",
+                newline="\n",
             )
 
 
@@ -93,6 +97,30 @@ def sync_files(source_root: Path, destination_root: Path) -> None:
             child.unlink()
     for name in sorted(expected):
         shutil.copy2(source_root / name, destination_root / name)
+
+
+def sync_active_skill_digests() -> None:
+    text = ACTIVE_SKILLS_LEDGER.read_text(encoding="utf-8")
+    pattern = re.compile(
+        r"(?m)^(?P<prefix>- name: (?P<name>[a-z0-9-]+)\n"
+        r"  source_type: built-in\n"
+        r"  content_digest: sha256:)[0-9a-f]{64}$"
+    )
+    seen: set[str] = set()
+
+    def replace(match: re.Match[str]) -> str:
+        name = match.group("name")
+        source = SOURCE / name / "SKILL.md"
+        if not source.is_file():
+            raise ValueError(f"active Skill ledger names missing source: {name}")
+        seen.add(name)
+        digest = hashlib.sha256(source.read_bytes()).hexdigest()
+        return f"{match.group('prefix')}{digest}"
+
+    updated = pattern.sub(replace, text)
+    if not seen:
+        raise ValueError("active Skill ledger has no built-in entries")
+    ACTIVE_SKILLS_LEDGER.write_text(updated, encoding="utf-8", newline="\n")
 
 
 def main() -> int:
@@ -112,6 +140,7 @@ def main() -> int:
             excluded_names=excluded_names,
         )
     sync_files(DIRECTIVE_SOURCE, DIRECTIVE_DESTINATION)
+    sync_active_skill_digests()
     return 0
 
 

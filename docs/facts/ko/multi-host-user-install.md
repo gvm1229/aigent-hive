@@ -1,0 +1,28 @@
+---
+schema_version: 1
+pair_id: multi-host-user-install
+topic_slug: multi-host-user-install
+language: ko
+counterpart: ../en/multi-host-user-install.md
+title: "복수 호스트 사용자 설치"
+summary: "Hive 사용자 설치·update의 CSV·반복 host 선택과 aggregate 결과 지원."
+tags: [installation, multi-host, user-setup]
+aliases: ["복수 호스트 설치", "여러 호스트 설치"]
+sources:
+  - "repo:crates/hive-cli/src/main.rs#sha256:5ed0876b70a7119d51ce26af9c64b82f341864ac44207278a2961b806a4cf6c7"
+  - "repo:crates/hive-cli/src/user_install.rs#sha256:2960ab32ce7831e993fee381e664d20eb5f673a62f006582a8e601476ccdb0fa"
+  - "repo:docs/hive-install-guide.ko.html#sha256:9338f3f1f23e99bfef5f0788ab14051789414cc7cffb6c10eb1b2e9bd8c982c2"
+  - "repo:docs/plans/active/multi-host-user-install.md#sha256:048a38d199eb35e838d0772e8162537708f0a006de50614992cd88be49bbb820"
+links: [global-onboarding, supported-hosts]
+reviewed_revision: "git:565b41f08d02db2308356f1cb5ed35d901337a4b"
+status: active
+---
+
+# 복수 호스트 사용자 설치
+
+`hive install`·사용자 범위 `hive update`: 기존 단일 `--host` 호환과
+`--hosts codex,claude`·반복 `--host codex --host claude` 지원.
+쉼표 주변 공백: 단일 argument 안에서 허용. Shell 입력 예시: `--hosts "codex, claude"`.
+Host 순서: 요청 순서. Duplicate·empty·unknown 선택: mutation 전 거부.
+복수 apply: 모든 host dry-run 뒤 순차 실행.
+Aggregate JSON: host별 결과, 후속 실패 시 완료·실패 host와 유지된 변경 경로.

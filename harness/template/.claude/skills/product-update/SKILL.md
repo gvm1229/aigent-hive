@@ -1,11 +1,11 @@
 ---
 name: product-update
-description: Run the authenticated interactive Hive binary updater or verify, dry-run, and activate an offline signed project release when the user explicitly requests a Hive update; never use for ordinary dependency updates, publication, or knowledge deletion.
+description: Run the authenticated interactive Hive binary updater or verify, dry-run, and activate a local integrity-bound project release when the user explicitly requests a Hive update; never use for ordinary dependency updates, publication, or knowledge deletion.
 ---
 
 # Hive Update
 
-Use only the signed Hive CLI. Do not recreate release verification, migration, backup, or
+Use only the installed Hive CLI. Do not recreate release verification, migration, backup, or
 activation logic in shell or host instructions.
 
 ## Workflow
@@ -16,12 +16,12 @@ activation logic in shell or host instructions.
    Do not quick-answer the confirmation on the user's behalf.
 2. For a project harness update, run `hive update --help`. If unavailable, report the installed
    release as unsupported.
-3. Require a local extracted release repository and an independently protected TUF root.
-   Do not download, trust, or execute a release script inside this Skill.
+3. Require a local extracted release bundle obtained through npm registry integrity or a verified
+   GitHub artifact attestation. Do not download, trust, or execute a release script inside this Skill.
 4. Run a dry-run first:
 
    ```text
-   hive update --target <project-root> --bundle <release-dir> --trust-root <protected-root.json> --dry-run --output json
+   hive update --target <project-root> --bundle <release-dir> --dry-run --output json
    ```
 
 5. Show the exact source/target version, release manifest digest, plan digest, planned
@@ -29,10 +29,10 @@ activation logic in shell or host instructions.
 6. Apply only after the requested update and exact dry-run plan remain current:
 
    ```text
-   hive update --target <project-root> --bundle <release-dir> --trust-root <protected-root.json> --apply --output json
+   hive update --target <project-root> --bundle <release-dir> --apply --output json
    ```
 
-7. Accept success only when release thresholds, expiry, rollback floor, artifact digests,
+7. Accept success only when local artifact lengths and SHA-256 values, downgrade refusal,
    version/classification policy, migration route, backup, staged validation, activation,
    installed parity, and disposable-index rebuild all pass.
 8. On an interrupted transaction, run only:

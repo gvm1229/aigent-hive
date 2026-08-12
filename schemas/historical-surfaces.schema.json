@@ -4,9 +4,10 @@
   "title": "Aigent Hive compiled historical release surfaces",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema_version", "releases"],
+  "required": ["schema_version", "migration_inert_retired_surfaces", "releases"],
   "properties": {
     "schema_version": { "const": 1 },
+    "migration_inert_retired_surfaces": { "$ref": "#/$defs/strings" },
     "releases": {
       "type": "array",
       "minItems": 1,

@@ -5,18 +5,19 @@ topic_slug: release-verification
 language: en
 counterpart: ../ko/release-verification.md
 title: "Release Verification"
-summary: "Hive verifies TUF-compatible metadata, provenance, signing evidence, and artifact bytes."
+summary: "Hive separates registry or GitHub provenance from local bundle integrity and transactional activation."
 tags: [release, security, verification]
-aliases: ["Verifier-only release"]
+aliases: ["Release integrity"]
 sources:
-  - "repo:docs/decisions/ADR-0008-verifier-only-tuf-updates.md#sha256:97989993dba9959f24117f0e4917954a3e67b215cfe659942172e9f22c6ff709"
+  - "repo:docs/decisions/ADR-0008-release-integrity.md#sha256:bace760d9be892a1e4f1f0554d2d55bbbaae85065125e9fae19a994f60f27410"
 links: [judge-verification, update-transaction]
-reviewed_revision: "git:722c8e46dbde5710155b394ef33820ebccd3b85c"
+reviewed_revision: "git:567c7000e56699b7fa82163164e0cc4a9dc1bd0b"
 status: active
 ---
 
 # Release Verification
 
-Hive verifies an external TUF-compatible Ed25519 trust chain, target length and
-SHA-256, rollback floors, provenance, platform-signing evidence, and exact candidate
-bytes. Private keys, signing, and publication authority remain external.
+Npm registry integrity or GitHub exact-tag attestation establishes acquisition provenance. Hive
+then verifies every local bundle artifact by path, length, and SHA-256 before transactional update.
+Accepted release state rejects downgrade and same-sequence substitution. Release private keys and
+platform certificates are not stable publication requirements.

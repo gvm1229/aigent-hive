@@ -5,25 +5,25 @@ topic_slug: hive-preserving-uninstall
 language: en
 counterpart: ../ko/hive-preserving-uninstall.md
 title: "Hive Preserving Uninstall"
-summary: "hive uninstall removes only Hive-managed user-scope setup state and always retains the knowledge base and saved user preferences."
+summary: "A preserving uninstall removes Hive-owned transient and retired projection state while retaining knowledge, preferences, and foreign bytes."
 tags: [bootstrap, onboarding, preservation, uninstall]
 aliases: ["clean reinstall", "hive uninstall"]
 sources:
-  - "repo:crates/hive-cli/src/user_install.rs#sha256:4790c9666065f4bc49ebf0eaee4c50fce384a2fd44a69cd16670b9c9d6d7f39a"
-  - "repo:crates/hive-cli/src/user_setup.rs#sha256:2dbd0f956fea6c6e258a275bc89565c48a7bf211819ea8816512215dc2582213"
+  - "repo:crates/hive-cli/src/user_install.rs#sha256:2960ab32ce7831e993fee381e664d20eb5f673a62f006582a8e601476ccdb0fa"
+  - "repo:crates/hive-cli/src/user_setup.rs#sha256:6606c09b03b9a0b3896a8b9242a937aec0a25a644ffbf873a3117e6c47410ccf"
+  - "repo:docs/plans/active/user-onboarding-shared-index.md#sha256:889f7b0e5f374b1c78117486dcd24bd02df5d96b00c340402f2c672eb54b3b61"
   - "repo:docs/plans/active/windows-global-setup-hardening.md#sha256:422649ef3ca475aca9e3a86a2ddd2bbbb3895221d7bc39fe4417010664dee47f"
-  - "repo:harness/skills/user-setup/SKILL.md#sha256:4f3676378fafac75f9c6376210c760a2e0200e843ead0825d1b34d7446864e34"
+  - "repo:docs/state/CURRENT.md#sha256:81cb7cd99a4ce99a08f66326f0cf436a3dec1a75361e4eb44c3f2e614190c26f"
+  - "repo:harness/skills/user-setup/SKILL.md#sha256:90a8ecca713a1b1963b5f1863f76d32d5c5b9532ca72922c2705ee9b63520307"
 links: [global-onboarding, knowledge-preservation, release-verification]
-reviewed_revision: "git:3e960b5185f637d7606eb01126d2543519138608"
+reviewed_revision: "git:089b0717e24c368a1725774aaca0c85ab596df10"
 status: active
 ---
 
 # Hive Preserving Uninstall
 
-`hive uninstall` removes the exact Hive host activation, Hive projections, Hive package state,
-derived index, backups, transactions, and runtime state. It preserves `.hive/knowledge/`, saved
-user preferences, foreign host entries, and non-Hive user files. The command has no `--full` or
-`-f` mode. Removing knowledge or preferences is a manual, user-owned action.
-
-A later `hive install --scope user --apply` detects the preserved preferences, restores the
-Hive-owned user projection, and completes the user-scope setup without setup questions.
+- Remove Hive activation, projections, package state, indexes, backups, transactions, and runtime.
+- Preserve knowledge, saved preferences, and foreign bytes.
+- The `test.19` Mac audit found 44 retired empty `agents/` leaves and an empty transaction directory.
+- Install, update, and uninstall now prune authenticated Hive-owned empty ancestors leaf-to-root.
+- Keep `.hive/dev-install` as separate developer rollback state.

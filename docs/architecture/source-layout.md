@@ -25,7 +25,7 @@ aigent-hive/
 │   ├── hive-render/            # 결정적 staging, ownership, consent와 role materialization
 │   ├── hive-wiki/              # Markdown ingest/lint와 disposable SQLite FTS5 projection
 │   ├── hive-projection/        # portable Skill routing, prompt 검증과 thin host projection
-│   ├── hive-update/            # TUF/Ed25519, version/migration, backup/journal/recovery
+│   ├── hive-update/            # local integrity, version/migration, backup/journal/recovery
 │   └── hive-cli/               # setup/knowledge/index/hook/usage/role/run/judge/update adapter
 ├── packaging/                  # Homebrew·WinGet source manifest template
 ├── scripts/                    # release version gate와 direct signed bootstrap
@@ -317,21 +317,19 @@ role, fresh capability와 전체 evidence의 optimistic validation 뒤 data-only
 후속 native logical scheduler는 direct process spawn 없이 host envelope 사용. 세부 state와
 exit contract: [`run-lifecycle.md`](run-lifecycle.md).
 
-## Phase 6 signed release와 update
+## Phase 6 attested release와 update
 
-`hive-update`는 local extracted TUF repository를 protected external public root로
-검증. Root/targets/snapshot/timestamp role은 strict Ed25519 threshold, expiry,
-metadata version, target length·SHA-256과 release rollback floor를 결합. Root
-rotation은 이전 threshold와 candidate self-threshold를 모두 요구. Production
-crate에는 signing/private-key API나 network downloader가 없음.
+`hive-update`는 이미 받은 local bundle의 manifest, artifact length와 SHA-256을 검증.
+Npm registry integrity·OIDC provenance 또는 GitHub exact tag·SHA-256·artifact attestation이
+획득 출처를 증명하고 local verifier가 다운로드 뒤 byte 변경을 차단. Production crate에는
+signing/private-key API나 network downloader가 없음.
 
-Release manifest는 exact version/classification, source commit/tag, surface inventory,
-compiled migration table, provenance와 platform-signing evidence digest를 결합.
-Signed classification은 `harness/release/historical-surfaces.yml`의 compiled baseline과
-signed cumulative inventory의 observed delta와 일치 필수. Feature는 exact next
+Release manifest는 exact version·sequence, source commit/tag와 path별 length·SHA-256을 결합.
+Classification은 `harness/release/historical-surfaces.yml`의 compiled baseline과
+cumulative inventory의 observed delta와 일치 필수. Feature는 exact next
 minor, compatible fix는 exact next patch만 허용. Same-major breaking change는
 거부하고 major는 user-supplied exact target과 current plan,
-compatibility/preservation report, signed migration-table digest를 결합한 별도 human
+compatibility/preservation report, migration-table digest를 결합한 별도 human
 confirmation 없이는 진행 없음.
 
 Update는 verification과 renderer dry-run 뒤 canonical config/team/run/knowledge 및
@@ -346,7 +344,7 @@ Cross-major route는 project/docs/preference/user-Markdown/symlink snapshot과 s
 `AGENTS.md` marker 밖 foreign-byte digest를 activation 전후 비교하고 compiled Hive
 system representation만 mutable path로 허용.
 
-`product-update`와 `project-transition` Skill은 signed CLI를 호출하는 thin data workflow.
+`product-update`와 `project-transition` Skill은 verified CLI를 호출하는 thin data workflow.
 Downloader, package manager, model, subagent, OMX/OMC와 release-provided executable
 실행 금지. 세부 경계: [`release-update-trust-boundary.md`](release-update-trust-boundary.md).
 

@@ -1,6 +1,6 @@
 # 제품·배포 결정
 
-기준일: 2026-08-02
+기준일: 2026-08-12
 
 | 영역 | 결정 |
 | --- | --- |
@@ -27,17 +27,19 @@
 | Wiki autocapture | Wiki enabled 상태의 material task 종료 전 agent-reviewed task fact 기록. Outcome·tool/project·criteria·originating request summary만 bounded capture, exact request는 explicit retention intent 필요, raw transcript·hook·tool output·runtime ingestion 금지 |
 | prompt refine | `prompt-refine`; 명시적 작성·정제 intent와 materially ambiguous ordinary work에서 자동 선택, `refine-only` 기본. Refined prompt 제시 뒤 exact 사용자 승인까지 정지. Same-request 실행은 explicit `--run`만 허용, simple/editless question·clear work·hidden rewrite·prompt-classifier hook 제외 |
 | optional hooks | host가 exact integrity event를 지원하고 사용자가 capability/event/path/digest를 승인한 경우에만 project-local hook 허용 |
-| 사용량 | Global setup explicit opt-in과 사용자 선택 한도, registered project별 더 이른 중지 override, 단일 product `usage-guard`; Codex app-server JSON-RPC, Claude Code status-line JSON capture, 향후 qualified Antigravity structured surface를 native primary로 사용; CodexBar는 세 provider 모두 explicit-consent fallback-only |
+| 사용량 | Global setup 핵심 기능, 활성화 권장. 신속 기본 profile은 남은 사용량 `20%`, custom setup은 사용자 선택 한도. Registered project별 더 이른 중지 override와 단일 product `usage-guard`; Codex app-server JSON-RPC, Claude Code status-line JSON capture, 향후 qualified Antigravity structured surface를 native primary로 사용 |
 | Claude sensor ownership | Plugin executable만 제공; user가 Claude host의 `/statusline`으로 opt-in하며 Hive의 `~/.claude/settings.json` mutation 없음, existing status line non-clobber |
 | Antigravity sensor truth | Official structured surface 확인 전 `native=unsupported`; interactive TUI·private LSP/HTTP·credential·browser state parsing 금지 |
-| sensor fallback 설치 | Active-host native sensor 불가와 CodexBar 미설치 때만 필요성·대상·command preview 제공 후 current action explicit consent 요청; 수락 시 supported package manager 사용, 거절 시 core 유지와 automatic dispatch fail-closed |
+| sensor fallback 설치 | Normal setup·reconfigure의 CodexBar 노출 `0건`. Setup 후 또는 첫 실제 guard check의 native-only probe가 unavailable·unsupported·malformed를 확정한 때만 필요성·대상·command preview 제공 후 current-action explicit consent 요청. Native success·limited: 질문·호출 `0건`; integrity failure: fallback 없이 fail-closed |
 | dispatch replay | Hive는 같은 authorization 재발급을 거부하지만 capture된 JSON의 외부 replay는 차단하지 못함; host/orchestration owner가 authorization ID를 한 번만 소비 |
 | orchestration authority | Selected session pointer는 selector only. Mutation은 exact target·event head·control epoch·request digest·external trust root의 one-time authority 필수 |
 | orchestration uncertainty | Host idempotency·receipt proof 부재 시 automatic reclaim 금지와 `dispatch-uncertain` 중지 |
 | judge | verdict 전 digest-bound assignment, exact roster/slot/instance/evidence/timestamp, requester/task-agent 배제, verdict 후 별도 human approval; elevated 2/3, critical 3/3+human |
 | judge 신뢰 | consumer target 밖의 agent-write-denied TOML public-key trust root, purpose-bound detached Ed25519 signature와 aggregate-only output; Hive는 strict verification만 수행하고 private-key custody/signing은 외부 authority가 소유 |
-| release 신뢰 | TUF 1.0.31-compatible offline root 2-of-3와 분리된 targets/snapshot/timestamp, 전역 unique role key, strict Ed25519 verification, old+new root rotation, semantic in-toto/SLSA·platform evidence; signing/private key는 Hive 밖의 external authority |
-| 무료 배포 신뢰 | 유료 Apple Developer ID·Microsoft Artifact Signing은 `0.9.0` 필수 gate에서 제외. macOS ad-hoc·Windows unsigned 상태를 정확히 공개하고 SignPath Foundation 무료 승인 시 Windows Authenticode 추가. SHA-256·GitHub attestation·npm OIDC provenance·external TUF는 필수 |
+| release 신뢰 | Protected `main` exact tag, same-candidate GitHub Release, SHA-256 sidecar, GitHub artifact attestation, npm Trusted Publishing OIDC·registry provenance. GitHub stable environment의 human approval 한 번, npm 별도 승인 없음 |
+| platform signing | macOS explicit ad-hoc seal은 publisher identity·notarization 아님을 공개. Windows unsigned 공개. Developer ID·notarization, Authenticode·SignPath는 optional enhancement이며 stable gate 아님 |
+| release trust 폐기 | Release TUF·offline root·threshold signer·external authorization ceremony·platform certificate evidence gate 삭제. Judge external trust root와 frozen historical release base는 별도 경계 |
+| user projection purge | Setup·update·uninstall은 authenticated inventory와 retired-name ledger로 Hive-owned projection을 current closure에 수렴. 중첩 빈 directory·owned transient state 제거, knowledge·saved preference·foreign byte·developer rollback state 보존 |
 | backup | update 전 canonical config/team/run/knowledge와 changed path snapshot, SQLite/runtime/backup/foreign orchestration 제외, exact 7일 경계 이후 validated unreferenced backup만 정리 |
 | 저장소 | 비기밀 canonical source와 data는 Git 추적, runtime/cache/SQLite 제외 |
 | 배포 정본 | `0.8.0` npm 시험 배포 이력 보존. `0.9.0` 정식 릴리스는 protected `main` exact final candidate·annotated tag·GitHub Release·npm·direct installer를 동일 native binary와 digest로 결합 |
@@ -50,7 +52,7 @@
 | 버전 증가 | feature는 원칙적으로 `Y`, compatible quick bugfix는 `Z`; `X`는 exact target을 사용자가 명시하고 human confirmation한 경우에만 |
 | 호환성 | major `0`을 포함해 같은 major만 non-breaking upgrade 보장 |
 | cross-major | 사전 경고, 자동 migration, project/docs/preferences 보존, SQLite rebuild |
-| release workflow | `develop` 사전 후보 뒤 `main` final candidate 재빌드. 5개 target·6개 npm·digest·attestation·OS signing·TUF 검증 뒤 annotated `v0.9.0`·GitHub Release·npm `latest` publication |
+| release workflow | `develop` 사전 후보 뒤 protected `main` final candidate를 한 번 build. 5개 target·6개 npm·3개 installer의 digest·attestation·byte identity 검증 뒤 rebuild 없이 annotated `v0.9.0`·GitHub Release·npm `latest` publication |
 | install ownership | Direct receipt binary만 Hive-owned. npm binary는 npm 소유이며 Hive의 직접 덮어쓰기 금지; bare update의 사용자 승인 뒤 exact npm command 위임만 허용. Homebrew·WinGet은 기존 owner 경계 유지 |
 | Antigravity plugin ownership | Hive는 `~/.hive/marketplaces/antigravity/` source package만 소유. `agy` staging·import manifest는 host 소유이며 Hive ledger에서 제외. Mutation 전 staging 전체를 authenticated prior와 exact 비교하고 foreign entry는 보존. 신규 rollback은 uninstall, refresh rollback은 prior source 재설치 |
 | Git | `develop` 일반 fast-forward direct push, `main` production PR·required checks. `staging`은 명시적 release 필요·승인 때만 생성하고 strict ruleset 적용 |
@@ -65,7 +67,7 @@ Global onboarding, Wiki opt-out, selected Skill projection과 user-root 단일 s
 v0.9 cross-project retrieval, mandatory durable memory, portable bundle·directory scan과 derived RAG index:
 [`ADR-0016`](ADR-0016-global-knowledge-rag.md).
 
-`0.9.0` 정식 GitHub·npm release identity, final candidate와 production signing:
+`0.9.0` 정식 GitHub·npm release identity와 minimal trust:
 [`ADR-0017`](ADR-0017-0.9-full-release.md).
 
 Notion canonical backend·SQLite projection·Discord outbound 경계:
@@ -77,12 +79,11 @@ Hive-native iterative·team·multi-goal execution과 OMX·OMC 신규 dependency 
 ## 미확정 항목
 
 - Antigravity의 official machine-readable structured quota surface
-- Optional SignPath Foundation 승인과 external TUF signer가 authorization한 첫 production release 실행
+- Optional Developer ID·notarization 또는 Authenticode 도입 시점
 
 Judge identity authentication은
 [`ADR-0007`](ADR-0007-ed25519-judge-trust.md)의 external protected trust root와
 detached Ed25519 attestation으로 확정. Hive는 judge private key를 소유하지
-않으며 release artifact signing key 선택과도 분리. Release authorization은
-[`ADR-0008`](ADR-0008-verifier-only-tuf-updates.md)의 verifier-only TUF/Ed25519
-contract로 확정. Production signing/publication은 protected external credential이
-실제 provision 전 완료 표시 금지.
+않으며 release artifact trust와도 분리. Release publication은
+[`ADR-0017`](ADR-0017-0.9-full-release.md)의 protected main·same-byte GitHub Release·
+npm OIDC 최소 계약 적용.

@@ -5,17 +5,21 @@ topic_slug: global-onboarding
 language: ko
 counterpart: ../en/global-onboarding.md
 title: "Global onboarding"
-summary: "전역 설정: 질문 전 signed CLI 확인, 답변별 진행 상태 보존, 보존형 Hive 제거 뒤 저장 preference 재사용."
+summary: "전역 설정: 사용량 보호 활성화 권장, native 실패 전 CodexBar 비노출, 보존형 재설치."
 tags: [bootstrap, onboarding, setup]
 aliases: ["User setup"]
 sources:
-  - "repo:README.md#sha256:dbccfb9a0a4920baef62329aa1027751f9bebc5893fdcecdccd5b2cb3237e932"
-  - "repo:crates/hive-cli/src/user_setup.rs#sha256:2dbd0f956fea6c6e258a275bc89565c48a7bf211819ea8816512215dc2582213"
+  - "repo:README.md#sha256:e42b36f0bfd2629b0abbbeb2010d8aae5bac3086982f1a714bb6888aef1a3364"
+  - "repo:crates/hive-cli/src/user_setup.rs#sha256:6606c09b03b9a0b3896a8b9242a937aec0a25a644ffbf873a3117e6c47410ccf"
   - "repo:docs/decisions/ADR-0012-global-onboarding-shared-index.md#sha256:dea6123b7b193eb760a37b198566f9318d868fd7035491ac10756de0d4315530"
+  - "repo:docs/decisions/product-release-decisions.md#sha256:7e6acd0973f56e3a15e4aad766a907c76a1511f6f5931c36f71ba8d979e90beb"
+  - "repo:docs/plans/active/native-usage-sensor.md#sha256:8131d6eba753cae4bfc38ec30013a44385c92b50ed29a57de8a96c8b7395c246"
+  - "repo:docs/plans/active/usage-guard-policy.md#sha256:7b64cee13b39806a519ee9d8387972a1e69da108e1075b8b0b873581d46c439b"
+  - "repo:docs/plans/active/user-onboarding-shared-index.md#sha256:889f7b0e5f374b1c78117486dcd24bd02df5d96b00c340402f2c672eb54b3b61"
   - "repo:docs/plans/active/windows-global-setup-hardening.md#sha256:422649ef3ca475aca9e3a86a2ddd2bbbb3895221d7bc39fe4417010664dee47f"
-  - "repo:harness/skills/user-setup/SKILL.md#sha256:4f3676378fafac75f9c6376210c760a2e0200e843ead0825d1b34d7446864e34"
+  - "repo:harness/skills/user-setup/SKILL.md#sha256:90a8ecca713a1b1963b5f1863f76d32d5c5b9532ca72922c2705ee9b63520307"
   - "repo:harness/user-setup/catalog.yml#sha256:4926655a12591cae061e674d774557e96f000d149f8dec1c2b1b650ba235f494"
-  - "repo:schemas/user-setup.schema.json#sha256:e83e5f318a5b6ffcc08cfe0898a2b6138512c6bfb0eea99c6070b134f3712f47"
+  - "repo:schemas/user-setup.schema.json#sha256:57a426a58c822271f1c6297c2c607e532e83c5652ca92ef68bdbcd8b95d357fd"
 links: [project-onboarding, test-distribution, usage-guard-thresholds]
 reviewed_revision: "git:01df1d580d987e7fb0f34978076cd000263fd99f"
 status: active
@@ -23,11 +27,7 @@ status: active
 
 # Global onboarding
 
-순서: CLI 설치·host 활성화·global setup·project setup. Global setup의 project 검사: `0건`.
-전역 한도: 사용자 선택, project 한도: 더 이른 중지만 허용. Windows 복구: 질문 전 CLI 확인,
-답변별 진행 저장·OS 임시 파일 하나·product-only Skill·공통 사용량 보호·미완료 marketplace 조용한 복구,
-knowledge·저장 preference 보존.
-
-`hive uninstall`: Hive-managed setup 상태만 제거, knowledge base·저장 preference 보존. full-purge
-flag 없음. 이후 user-scope install: 저장 preference 재사용, setup 질문 생략. Windows test.12 수용:
-새 session 탐색·Discord 실제 전달 포함. 다음 출시 수용: contributor 입력 없는 product-owned 신속 기본 profile.
+- 사용량 보호: 활성화 권장. 신속 기본 남은 사용량 `20%`; custom 한도는 사용자 입력
+- CodexBar: 정상 setup 비노출. Post-init native 실패 확정 뒤만 별도 동의
+- Setup·update·uninstall: current Skill closure 수렴, retired empty shell 제거,
+  knowledge·saved preference·foreign byte 보존

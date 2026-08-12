@@ -4,19 +4,21 @@ pair_id: release-verification
 topic_slug: release-verification
 language: ko
 counterpart: ../en/release-verification.md
-title: "Release verification"
-summary: "TUF metadata·provenance·signing evidence·artifact byte 검증."
+title: "Release 검증"
+summary: "Npm·GitHub 출처 증거와 local bundle 무결성·transactional activation의 분리 검증."
 tags: [release, security, verification]
-aliases: ["Verifier-only release"]
+aliases: ["Release integrity"]
 sources:
-  - "repo:docs/decisions/ADR-0008-verifier-only-tuf-updates.md#sha256:97989993dba9959f24117f0e4917954a3e67b215cfe659942172e9f22c6ff709"
+  - "repo:docs/decisions/ADR-0008-release-integrity.md#sha256:bace760d9be892a1e4f1f0554d2d55bbbaae85065125e9fae19a994f60f27410"
 links: [judge-verification, update-transaction]
-reviewed_revision: "git:722c8e46dbde5710155b394ef33820ebccd3b85c"
+reviewed_revision: "git:567c7000e56699b7fa82163164e0cc4a9dc1bd0b"
 status: active
 ---
 
-# Release verification
+# Release 검증
 
-Hive 검증 범위: external TUF-compatible Ed25519 trust chain, target length·SHA-256,
-rollback floor, provenance, platform-signing evidence, exact candidate bytes.
-Private key·signing·publication authority: external owner.
+- 획득 출처: npm registry integrity 또는 GitHub exact tag attestation
+- Local 검증: artifact path·length·SHA-256
+- Update: transactional activation
+- 거부: downgrade·같은 sequence의 다른 manifest
+- Stable 비필수 항목: release private key·platform certificate

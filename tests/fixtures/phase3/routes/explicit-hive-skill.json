@@ -17,7 +17,7 @@
     {
       "name": "knowledge-recall",
       "source_type": "built-in",
-      "content_digest": "sha256:9934fb19e2459d3482ecc85a8cb701e0601e3bdc73aa534c3c20fd3e315b778c",
+      "content_digest": "sha256:f06146778f6faf907e402462008e970bc82cf134f9e8cb9c31a3b727b20e66ec",
       "side_effect_class": "read-only",
       "capabilities": ["filesystem-read", "memory-read", "shell"],
       "consent_digest": null,

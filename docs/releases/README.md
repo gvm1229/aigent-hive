@@ -16,4 +16,4 @@
 - [시험 배포 실행 계획](../plans/active/release-0.8.0.md)
 - [`0.9.0` 정식 릴리스 범위](../decisions/ADR-0017-0.9-full-release.md)
 - [`0.9.0` 정식 릴리스 계획](../plans/active/release-0.9.0.md)
-- [서명된 업데이트·출시 절차](../guides/signed-update-and-release.md)
+- [Release·update 절차](../guides/release-update.md)

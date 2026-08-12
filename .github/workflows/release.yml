@@ -440,8 +440,8 @@ jobs:
             release-candidate.json
           if-no-files-found: error
 
-  authorization-request:
-    name: Stable external TUF authorization request
+  integrity-bundle:
+    name: Stable local integrity bundle
     if: ${{ inputs.channel == 'stable' }}
     needs: [unix, windows, npm-umbrella]
     runs-on: ubuntu-24.04
@@ -452,7 +452,9 @@ jobs:
       CANDIDATE_REF: ${{ github.ref }}
     permissions:
       actions: read
+      attestations: write
       contents: read
+      id-token: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
@@ -460,32 +462,37 @@ jobs:
           pattern: release-*
           path: dist
           merge-multiple: true
-      - name: Resolve protected workflow timing
-        id: timing
-        env:
-          GH_TOKEN: ${{ github.token }}
+      - name: Prepare candidate-bound local integrity bundle
         run: |
-          metadata=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID")
-          printf 'started_on=%s\n' "$(jq -er .run_started_at <<<"$metadata")" >>"$GITHUB_OUTPUT"
-          printf 'finished_on=%s\n' "$(jq -er .updated_at <<<"$metadata")" >>"$GITHUB_OUTPUT"
-      - name: Prepare public-only authorization request
-        env:
-          STARTED_ON: ${{ steps.timing.outputs.started_on }}
-          FINISHED_ON: ${{ steps.timing.outputs.finished_on }}
-        run: |
-          python3 scripts/prepare-release-authorization.py \
+          python3 scripts/prepare-release-integrity.py \
             --product-version "$PRODUCT_VERSION" \
             --package-version "$PACKAGE_VERSION" \
             --candidate-sha "$CANDIDATE_SHA" \
             --candidate-run-id "$GITHUB_RUN_ID" \
             --candidate-ref "$CANDIDATE_REF" \
             --repository "$GITHUB_REPOSITORY" \
-            --started-on "$STARTED_ON" \
-            --finished-on "$FINISHED_ON" \
             --dist dist \
-            --output "$RUNNER_TEMP/release-authorization-request"
+            --output "$RUNNER_TEMP/release-bundle"
+          tar --sort=name --mtime='UTC 1970-01-01' --owner=0 --group=0 \
+            --numeric-owner -C "$RUNNER_TEMP/release-bundle" -cf - \
+            bundle-manifest.json targets \
+            | gzip -n >"aigent-hive-$PRODUCT_VERSION-release-bundle.tar.gz"
+          sha256sum "aigent-hive-$PRODUCT_VERSION-release-bundle.tar.gz" \
+            >"aigent-hive-$PRODUCT_VERSION-release-bundle.tar.gz.sha256"
+      - name: Generate integrity bundle attestation
+        id: integrity-attestation
+        uses: actions/attest@f7c74d28b9d84cb8768d0b8ca14a4bac6ef463e6 # v4.1.0
+        with:
+          subject-path: aigent-hive-${{ env.PRODUCT_VERSION }}-release-bundle.tar.gz
+      - name: Preserve integrity bundle attestation
+        run: |
+          cp "${{ steps.integrity-attestation.outputs.bundle-path }}" \
+            "aigent-hive-$PRODUCT_VERSION-release-bundle.attestation.jsonl"
       - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
-          name: release-authorization-request
-          path: ${{ runner.temp }}/release-authorization-request
+          name: release-integrity-bundle
+          path: |
+            aigent-hive-${{ env.PRODUCT_VERSION }}-release-bundle.tar.gz
+            aigent-hive-${{ env.PRODUCT_VERSION }}-release-bundle.tar.gz.sha256
+            aigent-hive-${{ env.PRODUCT_VERSION }}-release-bundle.attestation.jsonl
           if-no-files-found: error

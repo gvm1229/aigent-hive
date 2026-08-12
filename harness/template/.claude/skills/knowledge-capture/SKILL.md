@@ -1,6 +1,6 @@
 ---
 name: knowledge-capture
-description: Review every Wiki-enabled user turn for one durable fact, preference, or workflow and write only an agent-reviewed canonical claim; also ingest reviewed sources. Reject secret, confidential, ephemeral, ambiguous, and raw-session content.
+description: From every project immediately after Hive installation, review each Wiki-enabled user turn for one durable fact, preference, or workflow and write only an agent-reviewed canonical claim; also ingest reviewed sources. Project setup is not required. Reject secret, confidential, ephemeral, ambiguous, and raw-session content.
 ---
 
 # Hive Knowledge Capture
@@ -12,25 +12,38 @@ Run the mandatory memory gate, then preserve the existing explicit source-ingest
 1. When Wiki is enabled, review every user turn and completed task before the final response.
    Select only a durable, reusable `preference`, `workflow`, `decision`, `convention`,
    `project-profile`, or verified `outcome`. A normal question or quick-answer is not a fact candidate.
+   The selected host's user-level guidance applies in every folder immediately after Hive
+   installation. Project setup, a Hive harness, a project marker, or an attached collection is not
+   a prerequisite. Never skip this gate only because the current project is unregistered. Store a
+   safe user-global fact at `user-root`; keep ambiguous project-specific scope fail-closed.
 2. If the target contains `hive-source.json`, use `hive source-wiki` for the material
    source-task fact. Never use consumer knowledge paths in the source workspace.
 3. For consumer knowledge, reject secret, credential, confidential, ephemeral, ambiguous,
    speculative, private-path, raw transcript, complete conversation, hook payload, tool output,
    cache, database, and runtime content with canonical write count zero.
-4. Normalize one atomic claim. Bind `collection_id`, stable `claim_key`, portable `locator`, kind,
-   status, visibility, normalized fact, and reviewed provenance exactly as required by
-   `knowledge-remember-request.schema.json`. Use `user-stated` only for explicit user intent,
-   `observed` only for a reviewed artifact, and `verified` only with acceptance evidence. Do not
-   retain the raw turn.
-5. Run exactly one strict write-through request:
+4. For a safe explicit `user-root` user statement, normalize one atomic fact and use a stable
+   `claim_key` plus `project-profile|decision|convention|preference|workflow`; do not create a
+   request JSON or a provenance digest. Use the strict request schema only for reviewed artifacts,
+   verified outcomes, replacements, or another supported scope. Do not retain the raw turn.
+5. Run exactly one write-through request. Prefer the simple user-statement route:
+
+   ```text
+   hive knowledge remember --user-root <user-root> --user-statement <normalized-fact> --claim-key <stable-key> --kind <preference|workflow|decision|convention|project-profile> --output json
+   ```
+
+   For a reviewed artifact or another supported scope, use:
 
    ```text
    hive knowledge remember --user-root <user-root> --request <request.json> --output json
    ```
 
 6. Require a schema-valid canonical Markdown and derived-index receipt before the final response.
-   Identical input is a no-op. A contradiction, ambiguous scope, failed secret gate, or stale
-   replacement digest stops the write and preserves current truth.
+   After a successful consumer write, validate with `hive knowledge lint --target
+   <current-project-root> --user-root <user-root> --output json`. The absence of
+   `hive-source.json` selects this consumer command; it never skips lint. Use `hive source-wiki
+   lint` only when the marker exists and identifies a source workspace. Identical input is a
+   no-op. A contradiction, ambiguous scope, failed secret gate, or stale replacement digest stops
+   the write and preserves current truth.
 
 ## Explicit source ingest
 
