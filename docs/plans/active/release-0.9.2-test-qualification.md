@@ -17,8 +17,7 @@
 - [x] [REL92-001] 활성 계획 전수 대조와 비-`0.10.0` 미완료 55개 확정
   - Evidence: `develop` `2cec0377748874748d126b6b55e59975a3f20a02`, `NAT-002–024` 23개,
     `MRA-001–032` 32개, 제외 `N10-002–011` 10개
-- [x] [REL92-002] stable-as-test 금지와 numbered-test-first 순서를 source directive·ADR·정적 회귀에 고정
-  - Evidence: commit `c777da1`, 전용 conformance 3개·문서 style·Markdown link 검사 PASS
+- [ ] [REL92-002] stable-as-test 금지와 numbered-test-first 순서를 source directive·ADR·정적 회귀에 고정
 - [ ] [REL92-003] `NAT-002–005`·`MRA-001–006` host feasibility와 지원 경계 확정
 - [ ] [REL92-004] `NAT-006–015` canonical protocol·scheduler·authority·CLI·migration 구현과 hostile 검증
 - [ ] [REL92-005] `NAT-016–024`·`MRA-007–032` host adapter·Skill·role·Judge·생성·수용 구현과 검증
