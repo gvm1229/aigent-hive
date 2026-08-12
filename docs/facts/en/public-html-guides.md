@@ -11,7 +11,7 @@ aliases: ["Hive core features guide", "Hive quick install guide"]
 sources:
   - "repo:docs/guides/public-html-design-principles.md#sha256:6aae9ab9808ca927fe3736f3c4bde3e91a0e25a9700ae75f98592e1577ab01ec"
   - "repo:docs/hive-core-features.ko.html#sha256:8f77210359186752205a0b4dcffcefd5d1a0bb8530d3620463be073c81b33abf"
-  - "repo:docs/hive-install-guide.ko.html#sha256:d4b0a063d3595b4af46b67f7ac1f6bd85b0b72652d85679fd25c1243c42bd1fe"
+  - "repo:docs/hive-install-guide.ko.html#sha256:08b5ac46102f4415ed5ca2899c01c3c7979240e1f32da978afd8c976ea31ff6d"
   - "repo:docs/plans/active/public-html-guides.md#sha256:ef7818fd4550419c585f2fae43c569fa2d1541fe4508e622f9ad738317e371bf"
 links: [global-onboarding, product-purpose]
 reviewed_revision: "git:0b3bbbbfcb5904262c5281a0415851b96779ab9e"
