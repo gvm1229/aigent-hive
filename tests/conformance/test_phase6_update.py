@@ -1894,7 +1894,7 @@ try {
         ):
             self.assertIn(required, dependency_setup)
         self.assertIn("powershell.exe -NoLogo -NoProfile -NonInteractive", guide)
-        self.assertIn('set "HIVE_VERSION=0.9.0"', guide)
+        self.assertIn('set "HIVE_VERSION=0.9.2"', guide)
         self.assertIn('set "HIVE_PREFIX=%LOCALAPPDATA%\\AigentHive"', guide)
         self.assertIn("$env:HIVE_VERSION", guide)
         self.assertIn("$env:HIVE_PREFIX", guide)
