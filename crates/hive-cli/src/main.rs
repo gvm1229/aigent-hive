@@ -79,7 +79,7 @@ USAGE:
     hive loop initialize|validate|checkpoint|steer|prepare|recover --help
     hive judge package --target <dir> --request <json> --output json
     hive judge quorum --target <dir> --request <json> --output json
-    hive release verify --bundle <release-dir> --trust-root <external-protected-root.json> [--rollback-state <external-protected-state.json>] --output json
+    hive release verify --bundle <release-dir> --output json
     hive update --help
 ";
 
