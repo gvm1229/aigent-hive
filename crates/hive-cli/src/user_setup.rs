@@ -2526,6 +2526,18 @@ pub(crate) fn uninstall_projection_paths(root: &Dir) -> Result<Vec<PathBuf>, Set
                 .collect::<Vec<_>>()
         })
         .unwrap_or_default();
+    let absent_codex_metadata = paths
+        .iter()
+        .filter(|path| {
+            path.starts_with(".agents/skills/")
+                && path.file_name().is_some_and(|name| name == "SKILL.md")
+        })
+        .filter_map(|path| {
+            path.parent()
+                .map(|parent| parent.join("agents/openai.yaml"))
+        })
+        .collect::<Vec<_>>();
+    paths.extend(absent_codex_metadata);
     paths.push(manifest_path.to_path_buf());
     paths.sort();
     paths.dedup();
