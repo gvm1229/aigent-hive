@@ -96,8 +96,24 @@ pub(crate) struct InstalledUsageConfig {
     pub(crate) discord_message_fields: Vec<String>,
     pub(crate) bytes: Vec<u8>,
     pub(crate) config_locator: String,
-    pub(crate) configured: bool,
-    pub(crate) runtime_at_user_root: bool,
+    target_class: UsageTargetClass,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum UsageTargetClass {
+    Project,
+    Source,
+    NonHive,
+}
+
+impl UsageTargetClass {
+    const fn is_configured(self) -> bool {
+        !matches!(self, Self::NonHive)
+    }
+
+    const fn uses_global_runtime(self) -> bool {
+        matches!(self, Self::Source)
+    }
 }
 
 struct TurnObservation {
@@ -815,7 +831,7 @@ fn status(arguments: &StatusArguments) -> Result<ActionResult, AdapterError> {
         arguments.user_root.as_deref(),
         arguments.host.as_deref(),
     )?;
-    if !config.configured {
+    if !config.target_class.is_configured() {
         return Ok(inactive_target_result("ShowUsageStatus"));
     }
     let global_runtime = open_global_runtime(&config, arguments.user_root.as_deref())?;
@@ -874,6 +890,7 @@ fn status(arguments: &StatusArguments) -> Result<ActionResult, AdapterError> {
     })
 }
 
+#[allow(clippy::too_many_lines)]
 fn enforce(arguments: &EnforceArguments) -> Result<ActionResult, AdapterError> {
     let target = PinnedTarget::open_usage(&arguments.target)?;
     let config = read_effective_config(
@@ -881,7 +898,7 @@ fn enforce(arguments: &EnforceArguments) -> Result<ActionResult, AdapterError> {
         arguments.user_root.as_deref(),
         arguments.host.as_deref(),
     )?;
-    if !config.configured {
+    if !config.target_class.is_configured() {
         return Ok(inactive_target_result("CheckUsage"));
     }
     let global_runtime = open_global_runtime(&config, arguments.user_root.as_deref())?;
@@ -986,7 +1003,7 @@ fn open_global_runtime(
     config: &InstalledUsageConfig,
     user_root: Option<&Path>,
 ) -> Result<Option<PinnedTarget>, AdapterError> {
-    if !config.runtime_at_user_root {
+    if !config.target_class.uses_global_runtime() {
         return Ok(None);
     }
     let user_root = user_root.ok_or_else(|| {
@@ -1509,7 +1526,7 @@ fn control_session(arguments: &SessionArguments) -> Result<ActionResult, Adapter
         arguments.user_root.as_deref(),
         arguments.host.as_deref(),
     )?;
-    if !config.configured {
+    if !config.target_class.is_configured() {
         return Err(AdapterError::Safety(
             "usage session control is unavailable because the target is not a Hive project"
                 .to_owned(),
@@ -1609,6 +1626,7 @@ pub(crate) fn read_installed_config(
 
 /// Resolve one policy for a configured Hive project or the Hive source workspace. Other folders
 /// are deliberately inactive even when global preferences exist.
+#[allow(clippy::too_many_lines)]
 fn read_effective_config(
     target: &PinnedTarget,
     user_root: Option<&Path>,
@@ -1639,8 +1657,7 @@ fn read_effective_config(
             discord_message_fields: Vec::new(),
             bytes: Vec::new(),
             config_locator: "usage-guard:not-configured".to_owned(),
-            configured: false,
-            runtime_at_user_root: false,
+            target_class: UsageTargetClass::NonHive,
         });
     }
     if let (Some(config), Some(host)) = (installed.as_ref(), requested_host) {
@@ -1715,8 +1732,7 @@ fn read_effective_config(
         discord_message_fields: Vec::new(),
         bytes: global_bytes.clone(),
         config_locator: USER_CONFIG_PATH.to_owned(),
-        configured: true,
-        runtime_at_user_root: true,
+        target_class: UsageTargetClass::Source,
     });
     let configured_project_threshold = (!effective.project_identity.is_empty())
         .then(|| {
@@ -1752,9 +1768,12 @@ fn read_effective_config(
         crate::user_setup::InterfaceLanguage::Ko => "ko".to_owned(),
     };
     effective.bytes = global_bytes;
-    effective.config_locator = USER_CONFIG_PATH.to_owned();
-    effective.configured = true;
-    effective.runtime_at_user_root = source_workspace;
+    USER_CONFIG_PATH.clone_into(&mut effective.config_locator);
+    effective.target_class = if source_workspace {
+        UsageTargetClass::Source
+    } else {
+        UsageTargetClass::Project
+    };
     Ok(effective)
 }
 
@@ -1862,8 +1881,7 @@ fn parse_installed_config(bytes: Vec<u8>) -> Result<InstalledUsageConfig, Adapte
         discord_message_fields,
         bytes,
         config_locator: CONFIG_PATH.to_owned(),
-        configured: true,
-        runtime_at_user_root: false,
+        target_class: UsageTargetClass::Project,
     })
 }
 
@@ -2514,7 +2532,7 @@ usage_guard:
         let effective = read_effective_config(&configured, Some(user.path()), None)
             .expect("configured effective threshold");
         assert_eq!(effective.threshold, 40);
-        assert!(effective.configured);
+        assert!(effective.target_class.is_configured());
 
         for with_agents in [false, true] {
             let target = temporary_target();
