@@ -1,15 +1,16 @@
 # Aigent Hive active plan index
 
-> Revision: 2.65
+> Revision: 2.66
 > 기준일: 2026-08-12
-> Product version: `0.9.0`
-> 현재 milestone: `0.9.0` 공개 뒤 미등록 project Wiki lint 호환 patch
+> Product version: `0.9.1`
+> 현재 milestone: `0.9.1` 최종 호환 patch 검증·공개
 > Entrypoint: `docs/plans/PLAN.md`
 
 ## Goal parameters
 
 - Objective: Hive-native 실행·custom subagent·Discord·Markdown Wiki와 `0.9.0` 시험·정식
-  릴리스 수용. Notion은 `0.10.0-test` 후보로 분리
+  릴리스 수용, 남은 호환 결함과 npm README 동기화를 `0.9.1`에서 마감. Notion은
+  `0.10.0-test` 후보로 분리
 - Success: Active fragment의 증거 기반 완료와 `MRA-*`, `REL9-*` 핵심 gate 충족
 - Stop boundary: protected `main` review, stable publication environment approval,
   exact `1.0.0` authority, source usage guard remaining threshold `30%`
@@ -39,7 +40,7 @@
 | Docs Wiki migration | 4 | 0 | 100% |
 | v0.9 loop·Wiki·Skill suite | 25 | 0 | 100% |
 | v0.9 global knowledge RAG | 18 | 2 | 90.0% |
-| v0.9 knowledge autocapture 회귀 | 7 | 5 | 58.3% |
+| v0.9 knowledge autocapture 회귀 | 8 | 4 | 66.7% |
 | v0.9 knowledge portability·scan | 18 | 0 | 100% |
 | Hive-native 반복 실행 | 1 | 23 | 4.2% |
 | Model-routed custom subagent | 0 | 32 | 0% |
@@ -56,7 +57,7 @@
 | Windows global setup hardening | 13 | 0 | 100% |
 | Agent 자율 실행 지속 | 8 | 0 | 100% |
 | Notion `v0.10` 후보 | 1 | 10 | 9.1% |
-| **Canonical total** | **443** | **88** | **83.4%** |
+| **Canonical total** | **444** | **87** | **83.6%** |
 
 External production boundary 항목도 미완료 합계에 포함. Protected authority 없이 완료 처리 금지.
 
@@ -125,7 +126,8 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
 ## Current execution order
 
 완료 증거: [`CURRENT.md`](../state/CURRENT.md)와 owning active fragment.
-현재: `0.9.0` 공개 완료 뒤 `KAC-011–012` 미등록 project의 user-root Wiki lint 분기와 immutable patch 게시 우선.
+현재: `0.9.0` 공개 완료 뒤 `KAC-011–012` 미등록 project의 user-root Wiki lint 분기,
+설치·지식·정리 회귀, npm README 동기화를 포함한 `0.9.1` 최종 호환 patch 게시 우선.
 기존 stable candidate run `31482918509`: historical qualification only, publication 금지.
 이후 호환 patch candidate·protected stable publication 진행. Antigravity·Claude 공개 제외 유지.
 병행: `KAC-001·007–008` 보정·Windows Codex fresh-session 수용과 replacement stable candidate 준비.

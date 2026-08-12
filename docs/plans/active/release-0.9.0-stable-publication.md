@@ -1,8 +1,8 @@
-# `0.9.0` stable publication 계획
+# `0.9.1` 최종 호환 patch 공개 계획
 
 > Parent: [`release-0.9.0.md`](release-0.9.0.md)
 > Checklist owner: `REL9-019–030`
-> Target: `0.9.0`
+> Target: `0.9.1`
 
 ## 확정 결정
 
@@ -45,7 +45,10 @@
 - [ ] [REL9-025] Replacement stable candidate와 public acceptance. `0.8.x`·numbered test upgrade,
   npm·Unix·PowerShell 5.1·CMD clean/repeat install, setup·uninstall·reinstall, usage sensor,
   source date·version·byte identity 검증. Consumer·user-root Wiki lint는 `hive-source.json`
-  없이 실행. Source-workspace lint 혼동·건너뜀 `0건`
+  없이 실행. Source-workspace lint 혼동·건너뜀 `0건`. `0.9.1` 게시 전 모든 `KAC-*`,
+  `RAG-005·020`, `UOS-019·022`의 증거 기반 마감. Root English `README.md` 기반 npm
+  umbrella package README 생성·tarball 수록·link와 asset 변환 검증 포함. Codex 설치 화면의
+  developer `Hojin (Tom) Jeong`과 중앙 확대 공식 Hive logo 표시 검증 포함
 - [ ] [REL9-026] Protected stable publication·관찰. Annotated tag·normal GitHub Release·six-package
   OIDC `latest`, installer·update 확인, critical 회귀 `0건`, PLAN·CURRENT·release notes·ADR·fact 마감
 
@@ -65,16 +68,18 @@
 5. Protected environment 1회 승인, GitHub Release·npm `latest` 연속 승격
 6. Public install·update 관찰과 current-truth 마감
 
-## npm README 동기화 후속 작업
+## npm README 동기화 출시 범위
 
 1. Root English `README.md`를 public umbrella package `README.md`의 정본으로 사용
 2. `QA Contributors` 구간 제거와 npm에서 동작하는 절대 GitHub link·asset 변환
 3. 생성 package와 tarball에서 본문 포함·QA 표 제외·상대 link 부재 회귀 검증
 
-범위: package generator와 conformance test만 변경. npm registry, version, release tag,
-GitHub Release, dist-tag mutation은 현재 작업 범위 밖.
+범위: package generator와 conformance test 변경을 `0.9.1` 후보·실제 npm tarball 수용에 포함.
+Registry·version·release tag·GitHub Release·dist-tag mutation은 `REL9-026`의 동일 후보 공개
+경계에서만 실행.
 
-검증: `python3 -m unittest tests.conformance.test_npm_packaging` 3개 PASS.
+현재 로컬 검증: `python -m unittest tests.conformance.test_npm_packaging` 3개 PASS.
+출시 검증: candidate artifact와 npm registry의 `aigent-hive@0.9.1` tarball README 동일성 PASS.
 
 ## 외부 권한 경계
 

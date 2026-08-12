@@ -1,18 +1,26 @@
 # 현재 상태
 
 - 기준 branch: `develop`
-- product version: `0.9.0`
-- plan revision: `2.65`
-- 현재 milestone: `0.9.0` 공개 뒤 미등록 project Wiki lint 호환 patch
+- product version: `0.9.1`
+- plan revision: `2.66`
+- 현재 milestone: `0.9.1` 최종 호환 patch 검증·공개
 - `0.9.0` stable publication: candidate run `31561636239`, publication run `31562280178`,
   annotated `v0.9.0`, normal GitHub Release, npm `latest=0.9.0`, Windows 전역 설치·validate·
   release date `2026-08-12` 표시 PASS
 - 추가 회귀: 미등록 project의 `hive knowledge lint --target <project-root> --user-root <user-root>`는
   project registry 거부. Global Wiki 자체는 `<target>=<user-root>`에서 PASS. `KAC-011–012`의
   registered project·unregistered project·source workspace 분기와 immutable patch 게시 필요
-- npm README 동기화 완료: root English `README.md` 기반 umbrella package README 생성,
-  `QA Contributors` 제외와 npm link·asset 변환. `test_npm_packaging` 3개 PASS;
-  npm registry·version·release mutation 0건
+- npm README 동기화: root English `README.md` 기반 umbrella package README 생성,
+  `QA Contributors` 제외와 npm link·asset 변환. `test_npm_packaging` 3개 PASS. `0.9.1`
+  candidate tarball·실제 npm registry README 동일성은 `REL9-025–026` 출시 gate에 포함
+- Codex plugin 표시 보정: developer `Hojin (Tom) Jeong`, 공식 colored Hive mark의 중앙
+  900 px crop→512 px plugin logo, `logo`·`composerIcon`·`brandColor` manifest 계약을
+  `REL9-025–026` 출시 gate에 포함
+- `KAC-011` 구현 완료: commit `4311cbe`, 미등록 project CLI 자동 user-root 폴백과 전역·project
+  지침·두 knowledge Skill 분기 보강. focused Rust 237·Python static 13·strict Clippy PASS
+- `0.9.0` 게시 순서 오류: `KAC-001·007–008`, `RAG-005·020`, `UOS-019·022`, `REL9-025–026`
+  증거 마감 전에 publication 실행. `0.9.1`은 이 항목 전체를 재대조하는 최종 호환 patch이며,
+  실제 사용의 critical 문제 외 추가 patch 금지
 - Mandatory memory regression: `0.9.0-test.13` operational user guidance의 every-turn
   `hive knowledge remember`·receipt 규칙 부재, localized `knowledge-capture` route 의미 축소.
   `KAC-002–005` 전역 안내·세 host 공통 투영·localized 설명·의미 검증 보정 완료.

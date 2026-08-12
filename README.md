@@ -6,7 +6,7 @@
 
 > A provider-neutral local harness for Codex, Claude Code, and Gemini Antigravity.
 
-[![Version](https://img.shields.io/badge/version-0.9.0-4C1)](Cargo.toml)
+[![Version](https://img.shields.io/badge/version-0.9.1-4C1)](Cargo.toml)
 [![Rust](https://img.shields.io/badge/Rust-stable-000000?logo=rust)](rust-toolchain.toml)
 [![License](https://img.shields.io/badge/license-Apache--2.0-green)](LICENSE)
 
@@ -17,13 +17,12 @@ project knowledge, durable role/run state, usage safeguards, and safe update con
 It never asks for model-provider API keys, calls model-provider APIs, or replaces the
 host's own model runtime.
 
-Stable `0.8.0` is the current npm `latest` release. Developer test build
-`0.9.0-test.15` remains available only on npm `test` and as a GitHub prerelease.
-Stable `0.9.0` is being prepared and is not published yet.
+Stable `0.9.1` is the current release for this source. Developer test build
+`0.9.0-test.19` remains available only on npm `test` and as a GitHub prerelease.
 
 ## Install the current stable release
 
-`0.8.0` is published on npm as `latest`, with a normal GitHub Release and annotated Git tag.
+`0.9.1` is published on npm as `latest`, with a normal GitHub Release and annotated Git tag.
 
 ```console
 npm install -g aigent-hive
@@ -32,7 +31,7 @@ npm install -g aigent-hive
 Or pin the exact version:
 
 ```console
-npm install -g aigent-hive@0.8.0
+npm install -g aigent-hive@0.9.1
 ```
 
 The npm installer requires Node.js and npm. The installed `hive` runtime is a native
@@ -41,22 +40,22 @@ Rust binary and does not require Node.js.
 Expected stable version label:
 
 ```text
-AIgent Hive v0.8.0
+AIgent Hive v0.9.1 (released 2026-08-12)
 ```
 
-### Developer test build 0.9.0-test.15
+### Developer test build 0.9.0-test.19
 
 For developers and contributors testing the next release:
 
 ```console
-npm install -g aigent-hive@0.9.0-test.15
+npm install -g aigent-hive@0.9.0-test.19
 hive --version
 ```
 
 Expected version label:
 
 ```text
-AIgent Hive v0.9.0-test #15 · developer test build
+AIgent Hive v0.9.0-test #19 · developer test build
 ```
 
 This explicit version never changes npm `latest`.
@@ -65,19 +64,19 @@ This explicit version never changes npm `latest`.
 
 ```sh
 curl --proto '=https' --tlsv1.2 -LsSf \
-  https://unpkg.com/aigent-hive@0.8.0/install.sh | sh
+  https://unpkg.com/aigent-hive@0.9.1/install.sh | sh
 ```
 
 ### Windows PowerShell 5.1+
 
 ```powershell
-irm https://unpkg.com/aigent-hive@0.8.0/install.ps1 | iex
+irm https://unpkg.com/aigent-hive@0.9.1/install.ps1 | iex
 ```
 
 ### Windows Command Prompt
 
 ```bat
-curl.exe -fLo install-aigent-hive.cmd https://unpkg.com/aigent-hive@0.8.0/install.cmd && install-aigent-hive.cmd
+curl.exe -fLo install-aigent-hive.cmd https://unpkg.com/aigent-hive@0.9.1/install.cmd && install-aigent-hive.cmd
 ```
 
 The direct installers fetch the same native package bytes from npm, verify the
@@ -94,9 +93,9 @@ setup steps below. It is optional: the four-step setup remains the predictable m
 I want the optional one-prompt Aigent Hive setup. Work only at user scope; do not inspect,
 initialize, or change any project, repository, folder, or current working directory.
 
-First ask whether I want the current stable release 0.8.0 (recommended) or the developer test build
-0.9.0-test.15. The stable install guidance is https://github.com/gvm1229/aigent-hive#install-the-current-stable-release
-and the test-build release notes are https://github.com/gvm1229/aigent-hive/releases/tag/v0.9.0-test.15.
+First ask whether I want the current stable release 0.9.1 (recommended) or the developer test build
+0.9.0-test.19. The stable install guidance is https://github.com/gvm1229/aigent-hive#install-the-current-stable-release
+and the test-build release notes are https://github.com/gvm1229/aigent-hive/releases/tag/v0.9.0-test.19.
 Detect my operating system and active host (Codex, Claude Code, or Gemini Antigravity), asking
 me if either is unclear. Check whether Node.js and npm are available. If they are missing,
 give me the official OS-specific Node.js installation command and request any approval the host
@@ -116,7 +115,7 @@ not change `latest`.
 
 ## Supported targets
 
-| Platform | Native target | 0.9.0 gate |
+| Platform | Native target | 0.9.1 gate |
 | --- | --- | --- |
 | macOS Apple Silicon | `aarch64-apple-darwin` | Candidate runtime qualified |
 | macOS Intel | `x86_64-apple-darwin` | Candidate runtime qualified |
@@ -126,7 +125,7 @@ not change `latest`.
 
 Codex and Antigravity have real-host qualification evidence. Claude Code packaging and
 projection are covered by fixtures, but a real subscription-backed session remains
-unverified. Stable `0.9.0` uses explicit macOS ad-hoc signing and publishes Windows as
+unverified. Stable `0.9.1` uses explicit macOS ad-hoc signing and publishes Windows as
 unsigned unless free SignPath Foundation signing is approved. See the
 [code signing policy](./docs/guides/code-signing-policy.md) for the exact trust boundary.
 
@@ -205,8 +204,8 @@ hive update
 This performs an immediate version check. If a newer version exists, Hive explains the
 exact update and asks before invoking the authenticated install owner. Declining,
 closing stdin, or running non-interactively causes no installation.
-An existing `0.9.0-test.N` installation keeps its owner evidence and may update to exact
-stable `0.9.0` through the same confirmation flow when that stable release is published.
+An existing `0.9.0-test.N` or `0.9.0` installation keeps its owner evidence and may update to
+exact stable `0.9.1` through the same confirmation flow.
 
 When daily checks are enabled, a successful check is throttled for 24 hours. An offline
 or failed check is not recorded as successful, so the next Codex, Claude Code, or
