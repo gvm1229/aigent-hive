@@ -11,6 +11,7 @@ aliases: ["Setup-independent knowledge", "Unregistered project recall"]
 sources:
   - "repo:crates/hive-cli/src/knowledge.rs#sha256:a00d240fa71fecf28877a43253cdc20190279d9e3d5d0b63bf0ad8a47ab9b7de"
   - "repo:crates/hive-cli/src/user_install.rs#sha256:4aecfd684f8c07326a639e92061de5f2ea52050cddc352a3b2f4b6b4adb1d3c2"
+  - "repo:docs/plans/active/v0.9.0-knowledge-autocapture-regression.md#sha256:7fe35e6b1bdba462121104d9db09874ee755aa5c7ad65c85031353e35a172f0d"
   - "repo:harness/skills/knowledge-capture/SKILL.md#sha256:d2e23636ac998bf0b8cca29cf2466e761ab6abe6f20313ad0c9b4d2c6cf71459"
   - "repo:harness/skills/knowledge-recall/SKILL.md#sha256:f06146778f6faf907e402462008e970bc82cf134f9e8cb9c31a3b727b20e66ec"
 links: [global-knowledge-rag, knowledge-storage, shared-index]
@@ -20,9 +21,11 @@ status: active
 
 # Install-wide knowledge capture
 
-When the global Wiki is enabled, Hive's selected-host user guidance reviews every turn in every
-folder immediately after installation. Project setup, a Hive harness, a project marker, and an
-attached collection are not prerequisites for safe user-root capture. Automatic retrieval from an
-unregistered target searches user-root and shared collections while excluding project-private and
-confidential knowledge. Capture remains foreground, agent-reviewed, normalized, and bounded; Hive
-does not run a background raw-prompt recorder.
+- Global Wiki user guidance reviews every turn in every selected-host folder after installation.
+- Project setup, a Hive harness, a marker, and an attached collection are not user-root capture
+  prerequisites.
+- Unregistered-target retrieval searches user-root and shared knowledge while excluding private
+  and confidential knowledge.
+- Capture is foreground, agent-reviewed, normalized, and bounded; no raw-prompt recorder.
+- `0.9.1` Windows acceptance: an ordinary PortareFolium career statement created a user-root claim
+  and receipt; a separate fresh Codex session recalled it automatically.

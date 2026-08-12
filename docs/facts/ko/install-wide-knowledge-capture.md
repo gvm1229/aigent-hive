@@ -11,6 +11,7 @@ aliases: ["미등록 프로젝트 조회", "설정 독립 지식"]
 sources:
   - "repo:crates/hive-cli/src/knowledge.rs#sha256:a00d240fa71fecf28877a43253cdc20190279d9e3d5d0b63bf0ad8a47ab9b7de"
   - "repo:crates/hive-cli/src/user_install.rs#sha256:4aecfd684f8c07326a639e92061de5f2ea52050cddc352a3b2f4b6b4adb1d3c2"
+  - "repo:docs/plans/active/v0.9.0-knowledge-autocapture-regression.md#sha256:7fe35e6b1bdba462121104d9db09874ee755aa5c7ad65c85031353e35a172f0d"
   - "repo:harness/skills/knowledge-capture/SKILL.md#sha256:d2e23636ac998bf0b8cca29cf2466e761ab6abe6f20313ad0c9b4d2c6cf71459"
   - "repo:harness/skills/knowledge-recall/SKILL.md#sha256:f06146778f6faf907e402462008e970bc82cf134f9e8cb9c31a3b727b20e66ec"
 links: [global-knowledge-rag, knowledge-storage, shared-index]
@@ -24,3 +25,7 @@ status: active
 Hive harness, project marker, 연결 collection: 안전한 user-root 수집의 전제 조건 아님. 미등록 target의
 자동 조회: project-private·confidential 지식을 제외한 user-root·shared collection 검색. 수집 방식:
 foreground agent 검토, 정규화, 제한된 범위. Background raw-prompt recorder: 미사용.
+
+`0.9.1` Windows 수용: knowledge 명령·Skill 요청이 아닌 PortareFolium 경력 배경 일반 발화 사용.
+동일 session의 user-root claim·index receipt 자동 생성과 별도 fresh Codex session의 미등록
+project 자동 회수 PASS.
