@@ -38,8 +38,12 @@ Run the mandatory memory gate, then preserve the existing explicit source-ingest
    ```
 
 6. Require a schema-valid canonical Markdown and derived-index receipt before the final response.
-   Identical input is a no-op. A contradiction, ambiguous scope, failed secret gate, or stale
-   replacement digest stops the write and preserves current truth.
+   After a successful consumer write, validate with `hive knowledge lint --target
+   <current-project-root> --user-root <user-root> --output json`. The absence of
+   `hive-source.json` selects this consumer command; it never skips lint. Use `hive source-wiki
+   lint` only when the marker exists and identifies a source workspace. Identical input is a
+   no-op. A contradiction, ambiguous scope, failed secret gate, or stale replacement digest stops
+   the write and preserves current truth.
 
 ## Explicit source ingest
 

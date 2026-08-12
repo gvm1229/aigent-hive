@@ -58,6 +58,17 @@ class Phase3SkillSourceContract(unittest.TestCase):
             for value in forbidden:
                 self.assertNotIn(value, text, skill_path)
 
+    def test_wiki_lint_routes_source_and_consumer_targets_without_skipping(self) -> None:
+        capture = (SKILLS / "knowledge-capture/SKILL.md").read_text(encoding="utf-8")
+        maintain = (SKILLS / "knowledge-maintain/SKILL.md").read_text(encoding="utf-8")
+        for text in (capture, maintain):
+            normalized = " ".join(text.split())
+            self.assertIn("hive knowledge lint --target", normalized)
+            self.assertIn("hive source-wiki lint", normalized)
+            self.assertIn("hive-source.json", normalized)
+        self.assertIn("it never skips lint", " ".join(capture.split()))
+        self.assertIn("never a reason to skip Wiki lint", " ".join(maintain.split()))
+
     def test_source_has_directives_not_a_second_skill_inventory(self) -> None:
         source_skills = ROOT / ".agents/skills"
         self.assertFalse(source_skills.exists() and list(source_skills.rglob("SKILL.md")))
