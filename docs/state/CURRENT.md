@@ -2,13 +2,14 @@
 
 - 기준 branch: `develop`
 - product version: `0.9.1`
-- plan revision: `2.67`
+- plan revision: `2.68`
 - 현재 milestone: `0.9.1` 최종 호환 patch 검증·공개
 - `0.9.0` stable publication: candidate run `31561636239`, publication run `31562280178`,
   annotated `v0.9.0`, normal GitHub Release, npm `latest=0.9.0`, Windows 전역 설치·validate·
   release date `2026-08-12` 표시 PASS
-- 미등록 project Wiki lint 분기 보정 완료. Consumer·user-root lint는 source marker 없이 실행하고,
-  source workspace만 `hive source-wiki lint` 사용. Immutable `0.9.1` patch 게시 대기
+- `0.9.1` stable publication·Windows 공개 설치 완료. Release candidate run `31578314040`,
+  publication run `31579447825`, protected `main` exact `1e5e7b39c17545f8b997f71cdee39e4cd77d2ef2`,
+  annotated `v0.9.1`, normal GitHub Release, 여섯 npm package `latest=0.9.1` PASS
 - npm README 동기화: root English `README.md` 기반 umbrella package README 생성,
   `QA Contributors` 제외와 npm link·asset 변환. `test_npm_packaging` 3개 PASS. `0.9.1`
   candidate tarball·실제 npm registry README 동일성은 `REL9-025–026` 출시 gate에 포함
@@ -17,9 +18,10 @@
   `REL9-025–026` 출시 gate에 포함
 - `KAC-011` 구현 완료: commit `4311cbe`, 미등록 project CLI 자동 user-root 폴백과 전역·project
   지침·두 knowledge Skill 분기 보강. focused Rust 237·Python static 13·strict Clippy PASS
-- `0.9.0` 게시 순서 오류의 publication 전 항목 `KAC-001·007–008`, `RAG-005·020`,
-  `UOS-019·022`, `REL9-025` 마감. `KAC-012`·`REL9-026`의 동일 후보 publication·실제 설치·
-  문서 마감만 대기. `0.9.1` 뒤 실제 사용의 critical 문제 외 추가 patch 금지 원칙
+- `0.9.0` 게시 순서 오류의 최종 patch gate `KAC-012`·`REL9-026` 포함 마감.
+  이 Windows의 public npm install·user-scope apply·validate, release date `2026-08-12`,
+  knowledge 24개·saved preference 보존, retired empty directory·transaction entry `0건` PASS.
+  `0.9.1` 뒤 실제 사용의 critical 문제 외 추가 patch 금지 원칙
 - Mandatory memory regression: `0.9.0-test.13` operational user guidance의 every-turn
   `hive knowledge remember`·receipt 규칙 부재, localized `knowledge-capture` route 의미 축소.
   `KAC-002–005` 전역 안내·세 host 공통 투영·localized 설명·의미 검증 보정 완료.
@@ -661,20 +663,13 @@ Pre-1.0 비차단 deferred:
 
 ## Source 개발 usage safeguard
 
-- Source-only `hive-usage-guard` Skill과 15초 native Codex app-server primary·CodexBar
-  fallback-only watcher
-- 현재 session threshold: remaining `60%` inclusive
-- Session window 우선, session 부재 시 weekly fallback
-- Quota sensor unknown: 3초 뒤 1회 재시도, 반복 unknown은 observation 보존과
-  `transient_unknown_ignored` 진행, confirmed-limited marker 유지
-- 매 user turn과 tool·mutation·delegation·external write·push·final-answer 경계의 fresh
-  `gate`
-- Explicit current-session disable만 우회 허용; bare `continue`·`resume` 우회 해석 금지
-- New session default-enable, raw account·session identifier 저장 없음
-- Watcher의 Codex App process kill·signal과 `.omx/` 수정 금지
-
-Source guard는 개발 workspace 전용. Shipping 제품은 watcher 없이 one-shot
-`hive usage enforce` 사용.
+- 정본 결정: 설치된 `hive usage` 단일 사용
+- 사용자 선택 global threshold: remaining `5%`
+- 제거 대상: `scripts/source-usage-guard.py`, 15초 background watcher, source 전용 scratch policy,
+  매 tool 경계의 중복 gate
+- 유지 경계: automatic dispatch 직전 session-bound one-shot enforce, native sensor 우선,
+  명시적 session control, raw account·session identifier 저장 금지
+- 구현 중: project `harness.toml` 없는 설치 직후 global threshold 저장과 source workspace 적용
 
 ## 사람용 문서 style
 

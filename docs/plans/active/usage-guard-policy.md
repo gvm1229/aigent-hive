@@ -1,8 +1,8 @@
 # 전역·프로젝트 사용량 보호 정책 계획
 
 > Checklist owner: `UGP-*`
-> Target: `0.9.0`
-> Scope: global `usage-guard`, project별 조기 중지 한도, 단일 product Skill
+> Target: `0.9.1` 이후 source 정본 수렴
+> Scope: global `usage-guard`, project별 조기 중지 한도, 설치 product 단일 정본
 
 ## 결정
 
@@ -15,9 +15,8 @@
 - Custom setup threshold: 사용자가 valid range 안에서 직접 선택
 - 신속 기본 profile: 활성화, 남은 사용량 `20%`
 - 사용자 호출 Skill: product `usage-guard` 하나
-- Aigent Hive source의 pre-task gate: repository directive가 소유. 설치 product `usage-guard`와
-  별개 user policy 미생성
-- Source 전용 Skill·adapter·user threshold state: `0건`
+- Aigent Hive source의 pre-task gate: 설치된 `hive usage`가 단일 정본
+- Source 전용 Python gate·watcher·Skill·adapter·threshold state: `0건`
 
 ## 구현
 
@@ -42,6 +41,12 @@
   disable 경로 회귀 추가
 - [x] [UGP-008] Setup 설명·preview·summary·schema fixture·saved preference migration을 새
   기본값과 일치시키고 clean install·reconfigure·preserving reinstall 수용
+- [ ] [UGP-009] Source workspace의 Python gate·15초 watcher·별도 scratch policy를 제거하고,
+  repository directive가 설치된 `hive usage`의 session-bound one-shot 보호만 호출. VS Code를
+  방해하는 background watcher·tool 경계별 중복 gate `0건`
+- [ ] [UGP-010] Project `harness.toml`이 없는 설치 직후에도 명시적 global threshold 변경 지원.
+  이번 사용자 설정 `5%` 저장, source workspace와 미등록 project에서 같은 전역값·native sensor 사용,
+  project override는 조기 중지 값만 추가
 
 ## 완료 기준
 
@@ -49,4 +54,4 @@
 - project override로 특정 project의 조기 중지 설정 가능
 - 동일 session·project에서 매 guard 검사마다 동일 effective threshold 사용
 - 사용자에게 global 값, project 값, 실제 적용 값을 구분해 표시
-- Source Skill·adapter·설정 복제 0건, product `usage-guard`만 활성
+- Source Python gate·watcher·별도 설정 복제 0건, 설치 product `usage-guard`만 활성

@@ -1,6 +1,6 @@
 # Aigent Hive active plan index
 
-> Revision: 2.67
+> Revision: 2.68
 > 기준일: 2026-08-12
 > Product version: `0.9.1`
 > 현재 milestone: `0.9.1` 최종 호환 patch 검증·공개
@@ -13,7 +13,7 @@
   `0.10.0-test` 후보로 분리
 - Success: Active fragment의 증거 기반 완료와 `MRA-*`, `REL9-*` 핵심 gate 충족
 - Stop boundary: protected `main` review, stable publication environment approval,
-  exact `1.0.0` authority, source usage guard remaining threshold `30%`
+  exact `1.0.0` authority, 설치 product usage guard remaining threshold `5%`
 - Invariants: provider-neutral, backend별 canonical source 우선, SQLite 파생 상태,
   Source Wiki·run·role·plan·orchestration event Markdown/TOML 정본,
   ownership·consent·foreign byte 보존, provider API·credential·direct model process 경로 없음,
@@ -40,30 +40,30 @@
 | Docs Wiki migration | 4 | 0 | 100% |
 | v0.9 loop·Wiki·Skill suite | 25 | 0 | 100% |
 | v0.9 global knowledge RAG | 20 | 0 | 100% |
-| v0.9 knowledge autocapture 회귀 | 11 | 1 | 91.7% |
+| v0.9 knowledge autocapture 회귀 | 12 | 0 | 100% |
 | v0.9 knowledge portability·scan | 18 | 0 | 100% |
 | Hive-native 반복 실행 | 1 | 23 | 4.2% |
 | Model-routed custom subagent | 0 | 32 | 0% |
 | Prompt refine 자동 routing | 12 | 0 | 100% |
 | v0.9 test 기능 마감 | 18 | 0 | 100% |
-| v0.9 full release | 27 | 1 | 96.4% |
+| v0.9 full release | 28 | 0 | 100% |
 | Test release setup routing | 4 | 0 | 100% |
 | Bootstrap·user projection recovery | 13 | 0 | 100% |
 | 한국어 setup 용어 복구 | 6 | 0 | 100% |
 | Global Skill 선택 단순화 | 8 | 0 | 100% |
 | Product-only Skill identity·localization | 15 | 0 | 100% |
-| 전역·프로젝트 사용량 보호 정책 | 8 | 0 | 100% |
+| 전역·프로젝트 사용량 보호 정책 | 8 | 2 | 80% |
 | Discord `v0.9` 연결 UX | 11 | 0 | 100% |
 | Windows global setup hardening | 13 | 0 | 100% |
 | Agent 자율 실행 지속 | 8 | 0 | 100% |
 | Notion `v0.10` 후보 | 1 | 10 | 9.1% |
-| **Canonical total** | **466** | **67** | **87.4%** |
+| **Canonical total** | **468** | **67** | **87.5%** |
 
 External production boundary 항목도 미완료 합계에 포함. Protected authority 없이 완료 처리 금지.
 
 ## Required load order
 
-1. Source usage gate
+1. 설치 product usage guard
 2. `docs/plans/PLAN.md`
 3. `docs/state/CURRENT.md`
 4. 아래 active fragment의 checklist reconciliation
@@ -126,8 +126,8 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
 ## Current execution order
 
 완료 증거: [`CURRENT.md`](../state/CURRENT.md)와 owning active fragment.
-현재: `0.9.1` publication 전 acceptance와 replacement candidate 완료. 남은 `KAC-012`·
-`REL9-026`의 protected publication·Windows public install·문서 마감 우선.
+현재: `0.9.1` protected publication·Windows public install 완료. 설치 product 사용량 보호를
+source 개발의 단일 정본으로 수렴하고 source Python watcher·별도 threshold state 제거 우선.
 기존 stable candidate run `31482918509`: historical qualification only, publication 금지.
 이후 호환 patch candidate·protected stable publication 진행. Antigravity·Claude 공개 제외 유지.
 완료: `KAC-001·007–008` 보정·Windows Codex fresh-session 기록→회수·replacement candidate 수용.
