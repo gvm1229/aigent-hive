@@ -1,14 +1,17 @@
 # 현재 상태
 
-- 기준 branch: `develop`
+- 기준 branch: `codex/release-0.9.2`
 - product version: `0.9.1`
-- plan revision: `2.73`
-- 현재 milestone: 비-`0.10.0` 계획 전수 완료와 `0.9.2` numbered test 수용
-- `0.9.2` stable 차단: 활성 계획 전수 대조 결과 `N10-002–011` 외 실제 미완료 55개.
-  `NAT-002–024` 23개와 `MRA-001–032` 32개의 구현·실기 증거 전까지 candidate 생성 금지
-- 출시 순서: source directive·ADR의 stable-as-test 금지 → 비-0.10 구현 완료 → full candidate →
-  public `0.9.2-test.N` → Windows 실제 설치·fresh-session·성능·복구 수용 → 수정 시 다음 번호
-  시험판 → 결함 `0건` 뒤 protected `main` stable publication
+- plan revision: `2.74`
+- 현재 milestone: 완료된 usage guard와 공개 문서의 `0.9.2` numbered test 수용
+- 기능 기준: `2cec0377748874748d126b6b55e59975a3f20a02`; release discipline base `c777da1`
+- 제외: `NAT-002–024`·`MRA-001–032`의 `0.9.3`, `N10-002–011`의 `0.10.0-test`
+- 문서 gate: root·번역 README, 설치 안내, 공개 HTML, npm README, plugin metadata,
+  문서 색인·명령·version 예시 전수 최신화와 공개 artifact 재검증
+- 출시 순서: release-only 변경 → full candidate → public `0.9.2-test.N` → Windows 실제
+  설치·fresh-session·성능·복구 수용 → 수정 시 다음 번호 시험판 → 결함 `0건` 뒤 protected
+  `main` stable publication
+- `0.9.3` 동결: QA contributor 추가 지시와 유지보수자의 후속 명시적 승인 전 구현·검증·출시 mutation `0건`
 - `0.9.0` stable publication: candidate run `31561636239`, publication run `31562280178`,
   annotated `v0.9.0`, normal GitHub Release, npm `latest=0.9.0`, Windows 전역 설치·validate·
   release date `2026-08-12` 표시 PASS
