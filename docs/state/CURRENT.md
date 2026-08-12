@@ -665,13 +665,17 @@ Pre-1.0 비차단 deferred:
 
 - 정본 결정: 설치된 `hive usage` 단일 사용
 - 사용자 선택 global threshold: remaining `5%`
-- 제거 대상: `scripts/source-usage-guard.py`, 15초 background watcher, source 전용 scratch policy,
+- 제거 완료: `scripts/source-usage-guard.py`, 15초 background watcher, source 전용 scratch policy,
   매 tool 경계의 중복 gate
 - 유지 경계: automatic dispatch 직전 session-bound one-shot enforce, native sensor 우선,
   명시적 session control, raw account·session identifier 저장 금지
-- 구현 중: 명시적 global threshold 저장과 registered project override 분리. `hive-source.json`
+- 구현 완료: 명시적 global threshold 저장과 registered project override 분리. `hive-source.json`
   source workspace만 설치 product global guard 사용. Project harness 없는 자체 `AGENTS.md`·빈 folder는
   guard 전체 비활성, halt·threshold mutation·session override·runtime file `0건`
+- Windows 실제 수용: global `20% → 5%` 원자 갱신, source `status`·native `enforce`
+  threshold `5%` PASS, source `.hive/` 생성 `0건`
+- 회귀 증거: Rust usage control 10개·global projection binding 1개, Python 대상 분류·정적
+  계약 39개 통과, Windows 조건부 1개 예상 건너뜀
 
 ## 사람용 문서 style
 

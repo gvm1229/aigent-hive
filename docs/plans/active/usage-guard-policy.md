@@ -41,10 +41,10 @@
   disable 경로 회귀 추가
 - [x] [UGP-008] Setup 설명·preview·summary·schema fixture·saved preference migration을 새
   기본값과 일치시키고 clean install·reconfigure·preserving reinstall 수용
-- [ ] [UGP-009] Source workspace의 Python gate·15초 watcher·별도 scratch policy를 제거하고,
+- [x] [UGP-009] Source workspace의 Python gate·15초 watcher·별도 scratch policy를 제거하고,
   repository directive가 설치된 `hive usage`의 session-bound one-shot 보호만 호출. VS Code를
   방해하는 background watcher·tool 경계별 중복 gate `0건`
-- [ ] [UGP-010] Global과 project threshold mutation을 분리. 명시적 global 변경만 `--user-root`에
+- [x] [UGP-010] Global과 project threshold mutation을 분리. 명시적 global 변경만 `--user-root`에
   저장하고 이번 사용자 설정 `5%` 적용. Project `harness.toml`이 있는 target의 변경은
   `max(global, project)`로 적용. `hive-source.json` source workspace는 별도 구현 없이 설치 product의
   global threshold 사용. 자체 `AGENTS.md`만 있거나 빈 folder인 non-Hive target은 guard 전체 비활성:
