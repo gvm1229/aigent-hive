@@ -868,6 +868,7 @@ fn remove_owned_regular(
     changed_paths: &mut Vec<String>,
 ) -> Result<(), InstallError> {
     let Some(existing) = read_optional_regular(root, relative, MAX_USER_FILE_BYTES)? else {
+        prune_empty_owned_ancestors(root, std::iter::once(relative))?;
         return Ok(());
     };
     let permissions = file_permissions(root, relative)?;
@@ -8325,11 +8326,91 @@ mod tests {
         }
     }
 
+    fn seed_test19_retired_empty_agent_dirs(root: &Path) -> Vec<PathBuf> {
+        let projection_manifest: serde_json::Value = serde_json::from_slice(
+            &fs::read(root.join(".hive/install/user-projection.json"))
+                .expect("user projection manifest"),
+        )
+        .expect("user projection manifest JSON");
+        let projected_plugin_agents = projection_manifest["entries"]
+            .as_array()
+            .expect("projection entries")
+            .iter()
+            .filter_map(|entry| entry["path"].as_str())
+            .filter(|path| path.ends_with("/agents/openai.yaml"))
+            .map(PathBuf::from)
+            .collect::<Vec<_>>();
+        assert_eq!(projected_plugin_agents.len(), 22);
+        let mut retired_empty_agents = projected_plugin_agents
+            .iter()
+            .filter_map(|relative| {
+                relative
+                    .components()
+                    .skip_while(|component| component.as_os_str() != "skills")
+                    .nth(1)
+                    .map(|name| {
+                        PathBuf::from(".agents/skills")
+                            .join(name)
+                            .join("agents/openai.yaml")
+                    })
+            })
+            .collect::<Vec<_>>();
+        retired_empty_agents.extend(projected_plugin_agents);
+        assert_eq!(retired_empty_agents.len(), 44);
+        for relative in &retired_empty_agents {
+            if relative.starts_with(".agents/skills/") {
+                fs::create_dir_all(
+                    root.join(relative)
+                        .parent()
+                        .expect("generic projected agent parent"),
+                )
+                .expect("generic projected agent parent");
+            }
+            if root.join(relative).is_file() {
+                fs::remove_file(root.join(relative)).expect("remove projected agent file");
+            }
+            let empty_leaf = root
+                .join(relative)
+                .parent()
+                .expect("projected agent parent")
+                .to_path_buf();
+            assert!(empty_leaf.is_dir());
+            assert_eq!(
+                fs::read_dir(&empty_leaf)
+                    .expect("empty projected agent directory")
+                    .count(),
+                0
+            );
+        }
+        retired_empty_agents
+    }
+
+    fn assert_retired_empty_agent_dirs_removed(root: &Path, paths: &[PathBuf]) {
+        for relative in paths {
+            assert!(
+                !root
+                    .join(relative)
+                    .parent()
+                    .expect("retired projected agent parent")
+                    .exists(),
+                "retired empty agent directory must converge away: {}",
+                relative.display()
+            );
+        }
+    }
+
     #[test]
     fn uninstall_preserves_saved_setup_and_knowledge_then_reinstalls_without_setup_questions() {
         let temporary = tempdir().expect("tempdir");
         write_operational_setup(temporary.path(), &["codex"]);
         let setup = temporary.path().join(".hive/config/user-setup.yml");
+        let all_skills_setup = fs::read_to_string(&setup)
+            .expect("operational setup")
+            .replace(
+                "skills:\n  mode: individual\n  selected:\n    - setup-hive\n    - hive-update\n",
+                "skills:\n  mode: all\n",
+            );
+        fs::write(&setup, all_skills_setup).expect("all-Skill operational setup");
         let saved_setup = fs::read(&setup).expect("saved setup");
         let runner = StatefulHostRunner::new(temporary.path(), HostSabotage::None);
         let install = args(temporary.path(), UserHost::Codex, UserMode::Apply);
@@ -8340,6 +8421,8 @@ mod tests {
             b"---\nschema_version: 1\nid: user-note\nkind: concept\nsummary: user note\ntags: [test]\naliases: []\nsources: []\nlinks: []\ncontradictions: []\nstatus: active\ncreated_at: 2026-08-10T00:00:00Z\nupdated_at: 2026-08-10T00:00:00Z\n---\n\nUser knowledge\n",
         )
         .expect("knowledge note");
+
+        let retired_empty_agents = seed_test19_retired_empty_agent_dirs(temporary.path());
 
         let removed = execute_uninstall(&uninstall_args(temporary.path()), &runner)
             .expect("preserving uninstall");
@@ -8352,6 +8435,7 @@ mod tests {
         assert!(!temporary.path().join(".codex/AGENTS.md").exists());
         assert!(!temporary.path().join(".agents/skills").exists());
         assert!(!temporary.path().join(".hive/install-transactions").exists());
+        assert_retired_empty_agent_dirs_removed(temporary.path(), &retired_empty_agents);
         assert_eq!(runner.external_state(), (false, false));
 
         execute(UserOperation::Install, &install, &runner).expect("saved preference reinstall");
