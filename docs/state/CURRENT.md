@@ -2,7 +2,7 @@
 
 - 기준 branch: `develop`
 - product version: `0.9.1`
-- plan revision: `2.68`
+- plan revision: `2.71`
 - 현재 milestone: `0.9.1` 최종 호환 patch 검증·공개
 - `0.9.0` stable publication: candidate run `31561636239`, publication run `31562280178`,
   annotated `v0.9.0`, normal GitHub Release, npm `latest=0.9.0`, Windows 전역 설치·validate·
@@ -10,6 +10,9 @@
 - `0.9.1` stable publication·Windows 공개 설치 완료. Release candidate run `31578314040`,
   publication run `31579447825`, protected `main` exact `1e5e7b39c17545f8b997f71cdee39e4cd77d2ef2`,
   annotated `v0.9.1`, normal GitHub Release, 여섯 npm package `latest=0.9.1` PASS
+- Usage guard 정본 전환 후 첫 `develop` CI run `31585438721`: 삭제된
+  `tests.conformance.test_source_usage_guard` 호출 잔존으로 계약 작업 실패. `UGP-012`에서 CI
+  호출 제거·exact SHA 재검증
 - npm README 동기화: root English `README.md` 기반 umbrella package README 생성,
   `QA Contributors` 제외와 npm link·asset 변환. `test_npm_packaging` 3개 PASS. `0.9.1`
   candidate tarball·실제 npm registry README 동일성은 `REL9-025–026` 출시 gate에 포함
