@@ -871,6 +871,54 @@ fn remove_owned_regular(
     let permissions = file_permissions(root, relative)?;
     remove_regular_if_exists(root, relative, Some(&existing), Some(permissions))?;
     changed_paths.push(portable(relative));
+    prune_empty_owned_ancestors(root, std::iter::once(relative))?;
+    Ok(())
+}
+
+fn owned_prune_boundary(relative: &Path) -> Option<&'static Path> {
+    for boundary in [
+        Path::new(".hive"),
+        Path::new(".agents"),
+        Path::new(".codex"),
+        Path::new(".claude"),
+        Path::new(".gemini/config"),
+    ] {
+        if relative.starts_with(boundary) {
+            return Some(boundary);
+        }
+    }
+    None
+}
+
+fn prune_empty_owned_ancestors<'a>(
+    root: &Dir,
+    paths: impl IntoIterator<Item = &'a Path>,
+) -> Result<(), InstallError> {
+    let mut directories = BTreeSet::new();
+    for path in paths {
+        let Some(boundary) = owned_prune_boundary(path) else {
+            continue;
+        };
+        let mut parent = path.parent();
+        while let Some(directory) = parent.filter(|directory| *directory != boundary) {
+            if !directory.starts_with(boundary) {
+                break;
+            }
+            directories.insert(directory.to_path_buf());
+            parent = directory.parent();
+        }
+    }
+    let mut directories = directories.into_iter().collect::<Vec<_>>();
+    directories.sort_by(|left, right| {
+        right
+            .components()
+            .count()
+            .cmp(&left.components().count())
+            .then_with(|| right.cmp(left))
+    });
+    for directory in directories {
+        remove_owned_empty_dir(root, &directory)?;
+    }
     Ok(())
 }
 
@@ -3853,41 +3901,31 @@ fn apply_plan(
         }
         activated_snapshots.push((relative.clone(), existing.clone(), *permissions));
     }
-    prune_retired_antigravity_source_directories(arguments, plan);
+    if let Err(error) = prune_empty_owned_ancestors(
+        &arguments.root_cap,
+        plan.retired_files.keys().map(PathBuf::as_path),
+    ) {
+        if let Err(rollback) = rollback_snapshots(&arguments.root_cap, &snapshots, &plan.files) {
+            return Err(InstallError::Internal(format!(
+                "{}; filesystem rollback also failed: {}",
+                error.message(),
+                rollback.message()
+            )));
+        }
+        if let Err(cleanup) = remove_transaction_journal(arguments, &journal_relative) {
+            return Err(InstallError::Internal(format!(
+                "{}; rollback journal cleanup failed: {}",
+                error.message(),
+                cleanup.message()
+            )));
+        }
+        return Err(error);
+    }
     Ok(UserTransaction {
         backup_relative,
         journal_relative,
         backup,
     })
-}
-
-fn prune_retired_antigravity_source_directories(arguments: &UserArguments, plan: &UserPlan) {
-    if arguments.host != UserHost::Antigravity {
-        return;
-    }
-    let source = Path::new(ANTIGRAVITY_SOURCE_RELATIVE);
-    let mut directories = BTreeSet::new();
-    for path in plan.retired_files.keys() {
-        let Ok(relative) = path.strip_prefix(source) else {
-            continue;
-        };
-        let mut parent = relative.parent();
-        while let Some(directory) = parent.filter(|directory| !directory.as_os_str().is_empty()) {
-            directories.insert(source.join(directory));
-            parent = directory.parent();
-        }
-    }
-    let mut directories = directories.into_iter().collect::<Vec<_>>();
-    directories.sort_by(|left, right| {
-        right
-            .components()
-            .count()
-            .cmp(&left.components().count())
-            .then_with(|| right.cmp(left))
-    });
-    for directory in directories {
-        let _ = arguments.root_cap.remove_dir(&directory);
-    }
 }
 
 fn preflight_plan(root: &Dir, plan: &UserPlan) -> Result<Vec<PlannedSnapshot>, InstallError> {
@@ -6105,7 +6143,8 @@ fn remove_transaction_journal(
         journal_relative,
         expected.as_deref(),
         expected_permissions,
-    )
+    )?;
+    remove_owned_empty_dir(&arguments.root_cap, Path::new(".hive/install-transactions"))
 }
 
 fn rollback_after_failure(
@@ -8304,6 +8343,8 @@ mod tests {
         assert!(!temporary.path().join(".hive/install/codex.json").exists());
         assert!(!temporary.path().join(".hive/marketplaces/codex").exists());
         assert!(!temporary.path().join(".codex/AGENTS.md").exists());
+        assert!(!temporary.path().join(".agents/skills").exists());
+        assert!(!temporary.path().join(".hive/install-transactions").exists());
         assert_eq!(runner.external_state(), (false, false));
 
         execute(UserOperation::Install, &install, &runner).expect("saved preference reinstall");
@@ -9479,11 +9520,21 @@ mod tests {
             for (name, _, _) in USER_080_SKILLS {
                 for path in historical_080_skill_paths(host, name) {
                     assert!(
-                        !temporary.path().join(path).exists(),
+                        !temporary.path().join(&path).exists(),
                         "authenticated retired Skill path must be removed"
+                    );
+                    assert!(
+                        !temporary
+                            .path()
+                            .join(&path)
+                            .parent()
+                            .expect("retired path parent")
+                            .exists(),
+                        "authenticated retired Skill directory must converge away"
                     );
                 }
             }
+            assert!(!temporary.path().join(".hive/install-transactions").exists());
 
             let tampered = tempdir().expect("tampered tempdir");
             let manifest = seed_historical_080_user_install(tampered.path(), host);
