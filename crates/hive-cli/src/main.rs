@@ -66,10 +66,10 @@ USAGE:
     hive hook --capability <name> --event <event> [--capabilities <fresh-json>] [--input <json>] --output json
     hive usage check --account-digest <sha256:...> [--threshold <1..99>] --output json
     hive usage probe-native --host codex|claude|antigravity --output json
-    hive usage enforce --target <dir> --session-id <id> --process-id <positive-u32> [--account-digest <sha256:...>] --output json
-    hive usage status --target <dir> --session-id <id> --process-id <positive-u32> --output json
-    hive usage threshold --target <dir> --remaining-percent <1..99> --output json
-    hive usage session --target <dir> --session-id <id> --process-id <positive-u32> --action enable|disable|toggle [--confirm-session-disable] --output json
+    hive usage enforce --target <dir> --session-id <id> --process-id <positive-u32> [--host codex|claude|antigravity] [--account-digest <sha256:...>] [--user-root <dir>] --output json
+    hive usage status --target <dir> --session-id <id> --process-id <positive-u32> [--host codex|claude|antigravity] [--user-root <dir>] --output json
+    hive usage threshold (--target <configured-project>|--user-root <user-root>) --remaining-percent <1..99> --output json
+    hive usage session --target <dir> --session-id <id> --process-id <positive-u32> [--host codex|claude|antigravity] [--user-root <dir>] --action enable|disable|toggle [--confirm-session-disable] --output json
     hive usage capture --host claude (--target <dir>|--target-from-stdin) --stdin-json --output json
     hive usage fallback-install --host codex|claude|antigravity (--dry-run|--apply) [--confirm-install] --output json
     hive role validate --target <dir> --role <role-id> --output json

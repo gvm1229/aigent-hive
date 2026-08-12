@@ -15,14 +15,15 @@ const MAX_CONTROL_BYTES: usize = 16 * 1024;
 const MAX_CAPTURE_BYTES: usize = 1024 * 1024;
 const CLAUDE_CAPTURE_MAX_AGE_SECONDS: u64 = 120;
 const CONFIG_PATH: &str = ".hive/config/harness.toml";
+const USER_CONFIG_PATH: &str = ".hive/config/user-setup.yml";
 const USAGE_CONTROL: &str = "\
 Inspect or change the installed usage safeguard.
 
 USAGE:
-    hive usage enforce --target <dir> --session-id <id> --process-id <positive-u32> [--account-digest <sha256:...>] [--user-root <dir>] --output json
-    hive usage status --target <dir> --session-id <id> --process-id <positive-u32> [--user-root <dir>] --output json
-    hive usage threshold --target <dir> --remaining-percent <1..99> --output json
-    hive usage session --target <dir> --session-id <id> --process-id <positive-u32> --action enable|disable|toggle [--confirm-session-disable] --output json
+    hive usage enforce --target <dir> --session-id <id> --process-id <positive-u32> [--host codex|claude|antigravity] [--account-digest <sha256:...>] [--user-root <dir>] --output json
+    hive usage status --target <dir> --session-id <id> --process-id <positive-u32> [--host codex|claude|antigravity] [--user-root <dir>] --output json
+    hive usage threshold (--target <configured-project>|--user-root <user-root>) --remaining-percent <1..99> --output json
+    hive usage session --target <dir> --session-id <id> --process-id <positive-u32> [--host codex|claude|antigravity] [--user-root <dir>] --action enable|disable|toggle [--confirm-session-disable] --output json
     hive usage capture --host claude (--target <dir>|--target-from-stdin) --stdin-json --output json
 ";
 
@@ -31,6 +32,7 @@ struct StatusArguments {
     target: PathBuf,
     binding: ParsedBinding,
     user_root: Option<PathBuf>,
+    host: Option<String>,
 }
 
 #[derive(Debug)]
@@ -39,12 +41,14 @@ struct EnforceArguments {
     binding: ParsedBinding,
     account_digest: Option<String>,
     user_root: Option<PathBuf>,
+    host: Option<String>,
     run_id: Option<String>,
 }
 
 #[derive(Debug)]
 struct ThresholdArguments {
-    target: PathBuf,
+    target: Option<PathBuf>,
+    user_root: Option<PathBuf>,
     remaining_percent: u8,
 }
 
@@ -52,6 +56,8 @@ struct ThresholdArguments {
 struct SessionArguments {
     target: PathBuf,
     binding: ParsedBinding,
+    user_root: Option<PathBuf>,
+    host: Option<String>,
     action: SessionAction,
     confirm_disable: bool,
 }
@@ -67,6 +73,7 @@ struct SessionBinding {
     host_scope: String,
     session_digest: String,
     process_id: u32,
+    runtime_scope: Option<String>,
 }
 
 #[derive(Clone, Debug)]
@@ -88,6 +95,9 @@ pub(crate) struct InstalledUsageConfig {
     pub(crate) discord_request_privacy: String,
     pub(crate) discord_message_fields: Vec<String>,
     pub(crate) bytes: Vec<u8>,
+    pub(crate) config_locator: String,
+    pub(crate) configured: bool,
+    pub(crate) runtime_at_user_root: bool,
 }
 
 struct TurnObservation {
@@ -558,13 +568,20 @@ fn claude_capture_path(session_digest: &str) -> Result<PathBuf, AdapterError> {
 fn parse_status(arguments: &[String]) -> Result<StatusArguments, AdapterError> {
     let options = parse_key_value_options(
         arguments,
-        &["--target", "--session-id", "--process-id", "--user-root"],
+        &[
+            "--target",
+            "--session-id",
+            "--process-id",
+            "--user-root",
+            "--host",
+        ],
         false,
     )?;
     Ok(StatusArguments {
         target: PathBuf::from(required(&options, "--target")?),
         binding: parse_binding(&options)?,
         user_root: optional(&options, "--user-root").map(PathBuf::from),
+        host: parse_optional_host(&options)?,
     })
 }
 
@@ -577,6 +594,7 @@ fn parse_enforce(arguments: &[String]) -> Result<EnforceArguments, AdapterError>
             "--process-id",
             "--account-digest",
             "--user-root",
+            "--host",
             "--run",
         ],
         false,
@@ -595,12 +613,17 @@ fn parse_enforce(arguments: &[String]) -> Result<EnforceArguments, AdapterError>
         binding: parse_binding(&options)?,
         account_digest,
         user_root: optional(&options, "--user-root").map(PathBuf::from),
+        host: parse_optional_host(&options)?,
         run_id: optional(&options, "--run").map(str::to_owned),
     })
 }
 
 fn parse_threshold(arguments: &[String]) -> Result<ThresholdArguments, AdapterError> {
-    let options = parse_key_value_options(arguments, &["--target", "--remaining-percent"], false)?;
+    let options = parse_key_value_options(
+        arguments,
+        &["--target", "--user-root", "--remaining-percent"],
+        false,
+    )?;
     let raw = required(&options, "--remaining-percent")?;
     let remaining_percent = raw
         .parse::<u8>()
@@ -611,16 +634,43 @@ fn parse_threshold(arguments: &[String]) -> Result<ThresholdArguments, AdapterEr
                 "--remaining-percent must be an integer from 1 through 99".to_owned(),
             )
         })?;
+    let target = optional(&options, "--target").map(PathBuf::from);
+    let user_root = optional(&options, "--user-root").map(PathBuf::from);
+    if target.is_some() == user_root.is_some() {
+        return Err(AdapterError::Input(
+            "usage threshold requires exactly one of --target or --user-root".to_owned(),
+        ));
+    }
     Ok(ThresholdArguments {
-        target: PathBuf::from(required(&options, "--target")?),
+        target,
+        user_root,
         remaining_percent,
     })
+}
+
+fn parse_optional_host(options: &[(&str, &str)]) -> Result<Option<String>, AdapterError> {
+    let Some(host) = optional(options, "--host") else {
+        return Ok(None);
+    };
+    if !matches!(host, "codex" | "claude" | "antigravity") {
+        return Err(AdapterError::Input(
+            "--host must be codex, claude, or antigravity".to_owned(),
+        ));
+    }
+    Ok(Some(host.to_owned()))
 }
 
 fn parse_session(arguments: &[String]) -> Result<SessionArguments, AdapterError> {
     let options = parse_key_value_options(
         arguments,
-        &["--target", "--session-id", "--process-id", "--action"],
+        &[
+            "--target",
+            "--session-id",
+            "--process-id",
+            "--user-root",
+            "--host",
+            "--action",
+        ],
         true,
     )?;
     let action = match required(&options, "--action")? {
@@ -645,6 +695,8 @@ fn parse_session(arguments: &[String]) -> Result<SessionArguments, AdapterError>
     Ok(SessionArguments {
         target: PathBuf::from(required(&options, "--target")?),
         binding: parse_binding(&options)?,
+        user_root: optional(&options, "--user-root").map(PathBuf::from),
+        host: parse_optional_host(&options)?,
         action,
         confirm_disable,
     })
@@ -726,7 +778,23 @@ fn bind_session(parsed: &ParsedBinding, primary_host: &str) -> SessionBinding {
         host_scope: primary_host.to_owned(),
         session_digest: sha256_digest(&scoped),
         process_id: parsed.process_id,
+        runtime_scope: None,
     }
+}
+
+fn bind_runtime_session(
+    parsed: &ParsedBinding,
+    primary_host: &str,
+    target: &PinnedTarget,
+    global_runtime: bool,
+) -> SessionBinding {
+    let mut binding = bind_session(parsed, primary_host);
+    if global_runtime {
+        binding.runtime_scope = Some(sha256_digest(
+            target.requested_path().to_string_lossy().as_bytes(),
+        ));
+    }
+    binding
 }
 
 fn required<'a>(options: &[(&'a str, &'a str)], name: &str) -> Result<&'a str, AdapterError> {
@@ -741,17 +809,31 @@ fn optional<'a>(options: &[(&'a str, &'a str)], name: &str) -> Option<&'a str> {
 }
 
 fn status(arguments: &StatusArguments) -> Result<ActionResult, AdapterError> {
-    let target = PinnedTarget::open(&arguments.target)?;
-    let config = read_effective_config(&target, arguments.user_root.as_deref())?;
-    let binding = bind_session(&arguments.binding, &config.primary_host);
-    let loaded = load_control(&target, &binding)?;
-    let halt = load_halt(&target, &binding)?;
+    let target = PinnedTarget::open_usage(&arguments.target)?;
+    let config = read_effective_config(
+        &target,
+        arguments.user_root.as_deref(),
+        arguments.host.as_deref(),
+    )?;
+    if !config.configured {
+        return Ok(inactive_target_result("ShowUsageStatus"));
+    }
+    let global_runtime = open_global_runtime(&config, arguments.user_root.as_deref())?;
+    let runtime = global_runtime.as_ref().unwrap_or(&target);
+    let binding = bind_runtime_session(
+        &arguments.binding,
+        &config.primary_host,
+        &target,
+        global_runtime.is_some(),
+    );
+    let loaded = load_control(runtime, &binding)?;
+    let halt = load_halt(runtime, &binding)?;
     let guard_enabled = effective_enabled(&loaded, config.guard_enabled);
     let override_state_name = override_name(loaded.state);
     let halted = guard_enabled && halt.state == OverrideState::Current;
     let mut evidence = vec![Evidence {
         kind: "file",
-        locator: CONFIG_PATH.to_owned(),
+        locator: config.config_locator.clone(),
         digest: sha256_digest(&config.bytes),
     }];
     if let Some(bytes) = halt.bytes.as_deref() {
@@ -793,10 +875,24 @@ fn status(arguments: &StatusArguments) -> Result<ActionResult, AdapterError> {
 }
 
 fn enforce(arguments: &EnforceArguments) -> Result<ActionResult, AdapterError> {
-    let target = PinnedTarget::open(&arguments.target)?;
-    let config = read_effective_config(&target, arguments.user_root.as_deref())?;
-    let binding = bind_session(&arguments.binding, &config.primary_host);
-    let loaded = load_control(&target, &binding)?;
+    let target = PinnedTarget::open_usage(&arguments.target)?;
+    let config = read_effective_config(
+        &target,
+        arguments.user_root.as_deref(),
+        arguments.host.as_deref(),
+    )?;
+    if !config.configured {
+        return Ok(inactive_target_result("CheckUsage"));
+    }
+    let global_runtime = open_global_runtime(&config, arguments.user_root.as_deref())?;
+    let runtime = global_runtime.as_ref().unwrap_or(&target);
+    let binding = bind_runtime_session(
+        &arguments.binding,
+        &config.primary_host,
+        &target,
+        global_runtime.is_some(),
+    );
+    let loaded = load_control(runtime, &binding)?;
     if !effective_enabled(&loaded, config.guard_enabled) {
         return Ok(ActionResult {
             schema_version: 1,
@@ -808,7 +904,7 @@ fn enforce(arguments: &EnforceArguments) -> Result<ActionResult, AdapterError> {
             changed_paths: Vec::new(),
             evidence: vec![Evidence {
                 kind: "file",
-                locator: CONFIG_PATH.to_owned(),
+                locator: config.config_locator.clone(),
                 digest: sha256_digest(&config.bytes),
             }],
             next_action: None,
@@ -824,7 +920,7 @@ fn enforce(arguments: &EnforceArguments) -> Result<ActionResult, AdapterError> {
         });
     }
 
-    let halt = load_halt(&target, &binding)?;
+    let halt = load_halt(runtime, &binding)?;
     if halt.state == OverrideState::Current {
         return Ok(halted_result(&binding, &halt, false));
     }
@@ -835,7 +931,7 @@ fn enforce(arguments: &EnforceArguments) -> Result<ActionResult, AdapterError> {
     }
 
     let observation = observe_usage(
-        &target,
+        runtime,
         &config,
         &binding,
         arguments.account_digest.as_deref(),
@@ -867,8 +963,8 @@ fn enforce(arguments: &EnforceArguments) -> Result<ActionResult, AdapterError> {
         .into_iter()
         .chain(std::iter::once(b'\n'))
         .collect::<Vec<_>>();
-    let changed = target.publish_runtime(&halt.relative, &halt.snapshot, &desired)?;
-    let published = load_halt(&target, &binding)?;
+    let changed = runtime.publish_runtime(&halt.relative, &halt.snapshot, &desired)?;
+    let published = load_halt(runtime, &binding)?;
     if published.state != OverrideState::Current {
         return Err(AdapterError::Verification(
             "published halt marker did not bind to the current session".to_owned(),
@@ -884,6 +980,40 @@ fn enforce(arguments: &EnforceArguments) -> Result<ActionResult, AdapterError> {
         record_discord_notification(&mut result, &config, marker);
     }
     Ok(result)
+}
+
+fn open_global_runtime(
+    config: &InstalledUsageConfig,
+    user_root: Option<&Path>,
+) -> Result<Option<PinnedTarget>, AdapterError> {
+    if !config.runtime_at_user_root {
+        return Ok(None);
+    }
+    let user_root = user_root.ok_or_else(|| {
+        AdapterError::Safety("global usage runtime requires --user-root".to_owned())
+    })?;
+    PinnedTarget::open(user_root).map(Some)
+}
+
+fn inactive_target_result(action: &'static str) -> ActionResult {
+    ActionResult {
+        schema_version: 1,
+        action,
+        status: "success",
+        exit_code: 0,
+        code: "hive.usage-not-configured",
+        message: "usage safeguard is inactive because the target is not a Hive project".to_owned(),
+        changed_paths: Vec::new(),
+        evidence: Vec::new(),
+        next_action: None,
+        data: Some(json!({
+            "guard_enabled": false,
+            "target_class": "non-hive",
+            "threshold_remaining_percent": null,
+            "runtime_state_created": false,
+            "authorizes_dispatch": false,
+        })),
+    }
 }
 
 /// Extract only display-safe, canonical run metadata. The caller may select a run, but never
@@ -1204,7 +1334,7 @@ fn allowed_result(
         evidence: vec![
             Evidence {
                 kind: "file",
-                locator: CONFIG_PATH.to_owned(),
+                locator: config.config_locator.clone(),
                 digest: sha256_digest(&config.bytes),
             },
             Evidence {
@@ -1280,7 +1410,46 @@ fn halted_result(binding: &SessionBinding, halt: &LoadedHalt, changed: bool) -> 
 }
 
 fn set_threshold(arguments: &ThresholdArguments) -> Result<ActionResult, AdapterError> {
-    let target = PinnedTarget::open(&arguments.target)?;
+    if let Some(user_root) = arguments.user_root.as_deref() {
+        let update = crate::user_setup::set_operational_usage_threshold(
+            user_root,
+            arguments.remaining_percent,
+        )
+        .map_err(AdapterError::Safety)?;
+        let changed = !update.changed_paths.is_empty();
+        return Ok(ActionResult {
+            schema_version: 1,
+            action: "SetUsageThreshold",
+            status: "success",
+            exit_code: 0,
+            code: if changed {
+                "hive.usage-global-threshold-updated"
+            } else {
+                "hive.usage-global-threshold-unchanged"
+            },
+            message: if changed {
+                "global usage threshold was updated atomically".to_owned()
+            } else {
+                "global usage threshold already matched the requested value".to_owned()
+            },
+            changed_paths: update.changed_paths,
+            evidence: vec![Evidence {
+                kind: "file",
+                locator: USER_CONFIG_PATH.to_owned(),
+                digest: sha256_digest(&update.config_bytes),
+            }],
+            next_action: None,
+            data: Some(json!({
+                "scope": "global",
+                "previous_remaining_percent": update.previous,
+                "threshold_remaining_percent": update.current,
+            })),
+        });
+    }
+    let project = arguments.target.as_deref().ok_or_else(|| {
+        AdapterError::Input("project usage threshold target is missing".to_owned())
+    })?;
+    let target = PinnedTarget::open(project)?;
     let relative = Path::new(CONFIG_PATH);
     let snapshot = target.snapshot_bounded(relative, MAX_CONFIG_BYTES)?;
     let bytes = snapshot.bytes().ok_or_else(|| {
@@ -1326,6 +1495,7 @@ fn set_threshold(arguments: &ThresholdArguments) -> Result<ActionResult, Adapter
         }],
         next_action: None,
         data: Some(json!({
+            "scope": "project",
             "previous_remaining_percent": current,
             "threshold_remaining_percent": arguments.remaining_percent,
         })),
@@ -1333,10 +1503,27 @@ fn set_threshold(arguments: &ThresholdArguments) -> Result<ActionResult, Adapter
 }
 
 fn control_session(arguments: &SessionArguments) -> Result<ActionResult, AdapterError> {
-    let target = PinnedTarget::open(&arguments.target)?;
-    let config = read_installed_config(&target)?;
-    let binding = bind_session(&arguments.binding, &config.primary_host);
-    let loaded = load_control(&target, &binding)?;
+    let target = PinnedTarget::open_usage(&arguments.target)?;
+    let config = read_effective_config(
+        &target,
+        arguments.user_root.as_deref(),
+        arguments.host.as_deref(),
+    )?;
+    if !config.configured {
+        return Err(AdapterError::Safety(
+            "usage session control is unavailable because the target is not a Hive project"
+                .to_owned(),
+        ));
+    }
+    let global_runtime = open_global_runtime(&config, arguments.user_root.as_deref())?;
+    let runtime = global_runtime.as_ref().unwrap_or(&target);
+    let binding = bind_runtime_session(
+        &arguments.binding,
+        &config.primary_host,
+        &target,
+        global_runtime.is_some(),
+    );
+    let loaded = load_control(runtime, &binding)?;
     let currently_enabled = effective_enabled(&loaded, config.guard_enabled);
     let desired_enabled = match arguments.action {
         SessionAction::Enable => true,
@@ -1373,7 +1560,7 @@ fn control_session(arguments: &SessionArguments) -> Result<ActionResult, Adapter
         .into_iter()
         .chain(std::iter::once(b'\n'))
         .collect::<Vec<_>>();
-    let changed = target.publish_runtime(&loaded.relative, &loaded.snapshot, &desired_bytes)?;
+    let changed = runtime.publish_runtime(&loaded.relative, &loaded.snapshot, &desired_bytes)?;
     let code = if desired_enabled {
         "hive.usage-session-enabled"
     } else {
@@ -1420,16 +1607,56 @@ pub(crate) fn read_installed_config(
     parse_installed_config(bytes)
 }
 
-/// Resolve one policy for a project. The project harness remains the compatibility fallback when
-/// no authenticated user root was supplied; with one, current global settings always win and a
-/// project may only choose an earlier stop.
+/// Resolve one policy for a configured Hive project or the Hive source workspace. Other folders
+/// are deliberately inactive even when global preferences exist.
 fn read_effective_config(
     target: &PinnedTarget,
     user_root: Option<&Path>,
+    requested_host: Option<&str>,
 ) -> Result<InstalledUsageConfig, AdapterError> {
-    let mut installed = read_installed_config(target)?;
+    let source_workspace = target
+        .read_optional(Path::new("hive-source.json"), 4096)?
+        .is_some();
+    let installed_bytes = target.read_optional(Path::new(CONFIG_PATH), MAX_CONFIG_BYTES)?;
+    let mut installed = installed_bytes.map(parse_installed_config).transpose()?;
+    if installed.is_none() && !source_workspace {
+        return Ok(InstalledUsageConfig {
+            project_name: target
+                .requested_path()
+                .file_name()
+                .and_then(|name| name.to_str())
+                .unwrap_or("non-hive-target")
+                .to_owned(),
+            project_identity: String::new(),
+            interface_language: "en".to_owned(),
+            threshold: 0,
+            primary_host: requested_host.unwrap_or("unconfigured").to_owned(),
+            guard_enabled: false,
+            codexbar_fallback_enabled: false,
+            discord_guard_enabled: false,
+            discord_webhook_url_env: None,
+            discord_request_privacy: "summary".to_owned(),
+            discord_message_fields: Vec::new(),
+            bytes: Vec::new(),
+            config_locator: "usage-guard:not-configured".to_owned(),
+            configured: false,
+            runtime_at_user_root: false,
+        });
+    }
+    if let (Some(config), Some(host)) = (installed.as_ref(), requested_host) {
+        if config.primary_host != host {
+            return Err(AdapterError::Safety(format!(
+                "requested host {host} does not match the installed project host {}",
+                config.primary_host
+            )));
+        }
+    }
     let Some(user_root) = user_root else {
-        return Ok(installed);
+        return installed.ok_or_else(|| {
+            AdapterError::Safety(
+                "Hive source usage requires the authenticated global --user-root".to_owned(),
+            )
+        });
     };
     let root =
         crate::user_install::open_user_root_for_setup(user_root).map_err(AdapterError::Safety)?;
@@ -1440,25 +1667,79 @@ fn read_effective_config(
             "global Hive setup is required when --user-root is supplied".to_owned(),
         ));
     };
+    let global_bytes = crate::user_install::read_user_setup_file(
+        &root,
+        Path::new(USER_CONFIG_PATH),
+        MAX_CONFIG_BYTES as u64,
+    )
+    .map_err(AdapterError::Safety)?
+    .ok_or_else(|| AdapterError::Safety("global Hive setup is required".to_owned()))?;
     let guard = &global.usage_guard;
-    let configured_project_threshold = guard
-        .project_overrides
-        .get(&installed.project_identity)
-        .copied();
-    installed.threshold = configured_project_threshold
-        .unwrap_or(installed.threshold)
+    let host = match installed.as_ref() {
+        Some(config) => config.primary_host.clone(),
+        None => requested_host
+            .ok_or_else(|| {
+                AdapterError::Input(
+                    "--host is required for Hive source usage protection".to_owned(),
+                )
+            })?
+            .to_owned(),
+    };
+    if !global
+        .selected_hosts
+        .iter()
+        .any(|selected| selected.as_str() == host)
+    {
+        return Err(AdapterError::Safety(format!(
+            "host {host} is not enabled by the global Hive setup"
+        )));
+    }
+    let project_name = target
+        .requested_path()
+        .file_name()
+        .and_then(|name| name.to_str())
+        .filter(|name| !name.is_empty() && name.len() <= 512)
+        .unwrap_or("unregistered-project")
+        .to_owned();
+    let mut effective = installed.take().unwrap_or_else(|| InstalledUsageConfig {
+        project_name,
+        project_identity: String::new(),
+        interface_language: "en".to_owned(),
+        threshold: guard.stop_remaining_percent,
+        primary_host: host,
+        guard_enabled: guard.enabled,
+        codexbar_fallback_enabled: guard.enabled && guard.codexbar_fallback_enabled,
+        discord_guard_enabled: guard.enabled && guard.discord.enabled,
+        discord_webhook_url_env: guard.discord.webhook_url_env.clone(),
+        discord_request_privacy: "summary".to_owned(),
+        discord_message_fields: Vec::new(),
+        bytes: global_bytes.clone(),
+        config_locator: USER_CONFIG_PATH.to_owned(),
+        configured: true,
+        runtime_at_user_root: true,
+    });
+    let configured_project_threshold = (!effective.project_identity.is_empty())
+        .then(|| {
+            guard
+                .project_overrides
+                .get(&effective.project_identity)
+                .copied()
+        })
+        .flatten();
+    effective.threshold = configured_project_threshold
+        .unwrap_or(effective.threshold)
         .max(guard.stop_remaining_percent);
-    installed.guard_enabled = guard.enabled;
-    installed.codexbar_fallback_enabled = guard.enabled && guard.codexbar_fallback_enabled;
-    installed.discord_guard_enabled = guard.enabled && guard.discord.enabled;
-    installed
+    effective.guard_enabled = guard.enabled;
+    effective.codexbar_fallback_enabled = guard.enabled && guard.codexbar_fallback_enabled;
+    effective.discord_guard_enabled = guard.enabled && guard.discord.enabled;
+    effective
         .discord_webhook_url_env
         .clone_from(&guard.discord.webhook_url_env);
-    installed.discord_request_privacy = match guard.discord.request_privacy {
+    effective.discord_request_privacy = match guard.discord.request_privacy {
         crate::user_setup::DiscordRequestPrivacy::Summary => "summary".to_owned(),
         crate::user_setup::DiscordRequestPrivacy::RawPrompt => "raw-prompt".to_owned(),
     };
-    installed.discord_message_fields = guard
+    effective.discord_message_fields = guard
         .discord
         .message_fields
         .iter()
@@ -1466,11 +1747,15 @@ fn read_effective_config(
         .map(crate::user_setup::DiscordMessageField::as_str)
         .map(str::to_owned)
         .collect();
-    installed.interface_language = match global.interface_language {
+    effective.interface_language = match global.interface_language {
         crate::user_setup::InterfaceLanguage::En => "en".to_owned(),
         crate::user_setup::InterfaceLanguage::Ko => "ko".to_owned(),
     };
-    Ok(installed)
+    effective.bytes = global_bytes;
+    effective.config_locator = USER_CONFIG_PATH.to_owned();
+    effective.configured = true;
+    effective.runtime_at_user_root = source_workspace;
+    Ok(effective)
 }
 
 #[allow(clippy::too_many_lines)]
@@ -1576,6 +1861,9 @@ fn parse_installed_config(bytes: Vec<u8>) -> Result<InstalledUsageConfig, Adapte
         discord_request_privacy,
         discord_message_fields,
         bytes,
+        config_locator: CONFIG_PATH.to_owned(),
+        configured: true,
+        runtime_at_user_root: false,
     })
 }
 
@@ -1755,9 +2043,14 @@ fn control_path(binding: &SessionBinding) -> PathBuf {
         .session_digest
         .strip_prefix("sha256:")
         .unwrap_or(&binding.session_digest);
-    Path::new(".hive/runtime/usage-guard/sessions")
-        .join(digest)
-        .join("control.json")
+    let base = binding.runtime_scope.as_deref().map_or_else(
+        || PathBuf::from(".hive/runtime/usage-guard"),
+        |scope| {
+            Path::new(".hive/runtime/usage-guard/targets")
+                .join(scope.strip_prefix("sha256:").unwrap_or(scope))
+        },
+    );
+    base.join("sessions").join(digest).join("control.json")
 }
 
 fn halt_path(binding: &SessionBinding) -> PathBuf {
@@ -1933,10 +2226,11 @@ fn failure_result(action: &'static str, error: &AdapterError) -> ActionResult {
 #[cfg(test)]
 mod tests {
     use super::{
-        bind_session, claude_capture_path, effective_enabled, enforce,
+        bind_session, claude_capture_path, control_session, effective_enabled, enforce,
         native_then_consented_fallback, parse_installed_config, read_claude_capture_snapshot,
-        read_effective_config, EnforceArguments, FileSnapshot, LoadedControl, OverrideState,
-        ParsedBinding, SessionBinding, SessionControl, MAX_CONTROL_BYTES,
+        read_effective_config, set_threshold, status, EnforceArguments, FileSnapshot,
+        LoadedControl, OverrideState, ParsedBinding, SessionAction, SessionArguments,
+        SessionBinding, SessionControl, StatusArguments, ThresholdArguments, MAX_CONTROL_BYTES,
     };
     use crate::run::PinnedTarget;
     use crate::usage::{native_then_fallback, NormalizedSnapshot, SensorError, UsageHost};
@@ -2019,6 +2313,18 @@ mod tests {
         .into_bytes()
     }
 
+    fn write_global_config(root: &std::path::Path, threshold: u8) {
+        let config = root.join(".hive/config");
+        fs::create_dir_all(&config).expect("global config directory");
+        fs::write(
+            config.join("user-setup.yml"),
+            format!(
+                "schema_version: 1\ninterface_language: en\nwiki:\n  enabled: true\n  language: both\n  backend: markdown\nprofile:\n  contexts:\n    - non-developer\npersona:\n  id: balanced\nselected_hosts:\n  - codex\nskills:\n  mode: all\nupdate_check:\n  enabled: false\nusage_guard:\n  enabled: true\n  stop_remaining_percent: {threshold}\n  codexbar_fallback_enabled: false\n  project_overrides: {{}}\n  discord:\n    enabled: false\n    request_privacy: summary\n    message_fields:\n      - remaining-usage\n      - project\n"
+            ),
+        )
+        .expect("global setup");
+    }
+
     #[test]
     fn installed_usage_consent_is_required_and_validated_for_every_host() {
         for host in ["codex", "claude", "antigravity"] {
@@ -2091,6 +2397,7 @@ mod tests {
                 },
                 account_digest: None,
                 user_root: None,
+                host: None,
                 run_id: None,
             })
             .expect("installed disable should bypass enforcement");
@@ -2176,11 +2483,116 @@ usage_guard:
         .expect("user setup");
         let target = PinnedTarget::open(project.path()).expect("project target");
         let effective =
-            read_effective_config(&target, Some(user.path())).expect("effective policy");
+            read_effective_config(&target, Some(user.path()), None).expect("effective policy");
 
         assert!(effective.guard_enabled);
         assert_eq!(effective.threshold, 61);
         assert_eq!(effective.interface_language, "ko");
+    }
+
+    #[test]
+    fn configured_project_accepts_an_earlier_threshold_but_non_hive_targets_stay_inactive() {
+        let user = temporary_target();
+        write_global_config(user.path(), 20);
+
+        let project = temporary_target();
+        let config_dir = project.path().join(".hive/config");
+        fs::create_dir_all(&config_dir).expect("project config directory");
+        fs::write(
+            config_dir.join("harness.toml"),
+            installed_config("codex", true, false),
+        )
+        .expect("project config");
+        let changed = set_threshold(&ThresholdArguments {
+            target: Some(project.path().to_owned()),
+            user_root: None,
+            remaining_percent: 40,
+        })
+        .expect("configured project threshold");
+        assert_eq!(changed.code, "hive.usage-threshold-updated");
+        let configured = PinnedTarget::open(project.path()).expect("configured project");
+        let effective = read_effective_config(&configured, Some(user.path()), None)
+            .expect("configured effective threshold");
+        assert_eq!(effective.threshold, 40);
+        assert!(effective.configured);
+
+        for with_agents in [false, true] {
+            let target = temporary_target();
+            if with_agents {
+                fs::write(target.path().join("AGENTS.md"), b"# Custom project\n")
+                    .expect("custom AGENTS");
+            }
+            let binding = ParsedBinding {
+                session_id: format!("non-hive-{with_agents}"),
+                process_id: 7,
+            };
+            let shown = status(&StatusArguments {
+                target: target.path().to_owned(),
+                binding: binding.clone(),
+                user_root: Some(user.path().to_owned()),
+                host: Some("codex".to_owned()),
+            })
+            .expect("inactive status");
+            assert_eq!(shown.code, "hive.usage-not-configured");
+            assert_eq!(
+                shown.data.as_ref().map(|data| &data["guard_enabled"]),
+                Some(&json!(false))
+            );
+            let checked = enforce(&EnforceArguments {
+                target: target.path().to_owned(),
+                binding: binding.clone(),
+                account_digest: None,
+                user_root: Some(user.path().to_owned()),
+                host: Some("codex".to_owned()),
+                run_id: None,
+            })
+            .expect("inactive enforce");
+            assert_eq!(checked.code, "hive.usage-not-configured");
+            assert!(control_session(&SessionArguments {
+                target: target.path().to_owned(),
+                binding,
+                user_root: Some(user.path().to_owned()),
+                host: Some("codex".to_owned()),
+                action: SessionAction::Disable,
+                confirm_disable: true,
+            })
+            .is_err());
+            assert!(set_threshold(&ThresholdArguments {
+                target: Some(target.path().to_owned()),
+                user_root: None,
+                remaining_percent: 40,
+            })
+            .is_err());
+            assert!(!target.path().join(".hive").exists());
+        }
+        assert!(!user.path().join(".hive/runtime").exists());
+    }
+
+    #[test]
+    fn source_workspace_uses_the_global_policy_without_source_runtime_files() {
+        let user = temporary_target();
+        write_global_config(user.path(), 5);
+        let source = temporary_target();
+        fs::write(source.path().join("hive-source.json"), b"{}\n").expect("source marker");
+        let shown = status(&StatusArguments {
+            target: source.path().to_owned(),
+            binding: ParsedBinding {
+                session_id: "source-session".to_owned(),
+                process_id: 9,
+            },
+            user_root: Some(user.path().to_owned()),
+            host: Some("codex".to_owned()),
+        })
+        .expect("source global status");
+        assert_eq!(shown.code, "hive.usage-status");
+        assert_eq!(
+            shown
+                .data
+                .as_ref()
+                .map(|data| &data["threshold_remaining_percent"]),
+            Some(&json!(5))
+        );
+        assert!(!source.path().join(".hive").exists());
     }
 
     #[test]

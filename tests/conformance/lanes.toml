@@ -16,12 +16,11 @@ modules = [
 
 [lanes.security]
 owner = "platform-safety"
-contract = "source usage guard, shipped usage guard, and hostile ownership boundaries"
+contract = "installed usage guard and hostile ownership boundaries"
 release_gate = true
 modules = [
   "tests.conformance.test_phase1_ownership_hostile",
   "tests.conformance.test_phase1_security",
-  "tests.conformance.test_source_usage_guard",
   "tests.conformance.test_usage_guard",
 ]
 

@@ -14,7 +14,7 @@ Enforce or control only the installed Hive usage policy and the current host ses
 3. Immediately before each new automatic dispatch, apply any explicitly requested threshold/off/on control, then run:
 
    ```text
-   hive usage enforce --target <project-root> --session-id <current-session-id> --process-id <current-process-id> --user-root <user-root> [--run <canonical-run-id>] [--account-digest <active-account-digest>] --output json
+   hive usage enforce --target <project-root> --session-id <current-session-id> --process-id <current-process-id> --user-root <user-root> [--host codex|claude|antigravity] [--run <canonical-run-id>] [--account-digest <active-account-digest>] --output json
    ```
 
    Supply the active account digest when the host exposes it. Omit it only when the qualified local sensor exposes exactly one unambiguous account. A current halt marker takes priority. Exit `3`, `hive.usage-limited`, or `hive.usage-unknown` blocks that automatic dispatch. Do not run `enforce` for ordinary quick-answers, manual work, or other non-dispatch actions. Non-Codex automatic dispatch fails closed until a qualified local sensor exists.
@@ -32,12 +32,24 @@ Enforce or control only the installed Hive usage policy and the current host ses
    ```
 
    Never infer consent, install silently, request credentials, reinstall a provider CLI, or suggest CodexBar API-key or manual-cookie setup.
-6. The `--user-root` policy applies to every registered project. Its enabled state is global;
+6. Classify the target before any control. A valid installed project harness uses the global policy
+   plus its registered project override. A Hive source workspace uses the installed global policy
+   with an explicit `--host` and stores runtime state only under the user root. Every other folder,
+   including one with only its own `AGENTS.md` or no files, is non-Hive: do not invoke threshold,
+   session, status, or enforce, and create no halt or runtime state. The global policy applies only
+   to configured Hive projects and the Hive source workspace. Its enabled state is global;
    a project override may only raise the stop threshold. Hive calculates the active threshold as
    the highest of the global threshold, the registered project override, and the installed
    project compatibility value. A disabled global guard disables every project.
 7. Perform at most the explicitly requested control mutation:
-   - Threshold requires an explicit integer from 1 through 99:
+   - A global threshold requires explicit global intent and an integer from 1 through 99:
+
+     ```text
+     hive usage threshold --user-root <user-root> --remaining-percent <percent> --output json
+     ```
+
+   - A project threshold requires an explicit integer and a valid installed project harness.
+     Never reinterpret a non-Hive target request as a global change:
 
      ```text
      hive usage threshold --target <project-root> --remaining-percent <percent> --output json
@@ -71,10 +83,10 @@ Enforce or control only the installed Hive usage policy and the current host ses
 
 ## Boundaries
 
-- Mutate only `.hive/config/harness.toml` through `hive usage threshold` and the current binding under ignored `.hive/runtime/usage-guard/` through `hive usage enforce` or `hive usage session`.
+- Mutate global `.hive/config/user-setup.yml` only through explicit `hive usage threshold --user-root`, a configured project's `.hive/config/harness.toml` only through project threshold control, and the current binding under ignored `.hive/runtime/usage-guard/` only for a configured Hive target.
 - Never edit those files directly or persist the raw session identifier.
 - Never install a fallback hook, rewrite a prompt, activate another Skill, start a watcher, spawn a subagent, create an orchestration loop, continue a stopped task, or invoke OMX/OMC.
 - CodexBar installation is the sole optional fallback install action. It is allowed only through the exact consented CLI flow above and a qualified package-manager adapter.
 - Treat any independently produced OMX/OMC cancellation result as auxiliary evidence only. It never substitutes for the bound halt marker or durable goal/task state.
 - Never describe a disabled session as usage-enforced. Automatic dispatch still requires the independent `hive run resume` authorization contract.
-- Refuse source-workspace use. Source development uses its repository gate and does not create a second installed Skill or user policy file.
+- Source development uses this installed product contract and global threshold. Never create a second source Skill, Python guard, watcher, or source-local threshold state.
