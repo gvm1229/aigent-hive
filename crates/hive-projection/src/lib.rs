@@ -36,6 +36,10 @@ const MIGRATE_HARNESS: &[u8] =
     include_bytes!("../../../harness/skills/project-transition/SKILL.md");
 const PROJECT_UPGRADE: &[u8] = include_bytes!("../../../harness/skills/project-refresh/SKILL.md");
 const LOOP_ENGINEERING: &[u8] = include_bytes!("../../../harness/skills/ralph-loop/SKILL.md");
+const ITERATIVE_EXECUTION: &[u8] =
+    include_bytes!("../../../harness/skills/iterative-execution/SKILL.md");
+const TEAM_EXECUTION: &[u8] = include_bytes!("../../../harness/skills/team-execution/SKILL.md");
+const MULTI_GOAL: &[u8] = include_bytes!("../../../harness/skills/multi-goal/SKILL.md");
 const AI_SLOP_CLEANER: &[u8] = include_bytes!("../../../harness/skills/code-polish/SKILL.md");
 const BEST_PRACTICE_RESEARCH: &[u8] =
     include_bytes!("../../../harness/skills/research-best-practices/SKILL.md");
@@ -1133,6 +1137,24 @@ fn localized_skill_text(
             "지침 수정",
             "안전 경계를 유지하며 Hive 동작 지침을 수정합니다.",
         ),
+        "iterative-execution" => (
+            "Run iterative work",
+            "Execute a bounded criterion loop with terminal independent verification.",
+            "반복 작업 실행",
+            "종료 전 독립 검증이 필요한 제한된 기준 반복을 실행합니다.",
+        ),
+        "team-execution" => (
+            "Coordinate a Hive team",
+            "Coordinate bounded signed lanes with barriers and terminal verification.",
+            "Hive 팀 조율",
+            "장벽과 종료 검증을 적용한 제한된 서명 lane을 조율합니다.",
+        ),
+        "multi-goal" => (
+            "Run multiple goals",
+            "Execute a bounded goal graph with budgets and terminal verification.",
+            "복수 목표 실행",
+            "예산과 종료 검증을 적용한 제한된 목표 graph를 실행합니다.",
+        ),
         _ => return None,
     };
     Some(match language {
@@ -1200,6 +1222,15 @@ fn embedded_skill_metadata(name: &str) -> Option<&'static [u8]> {
         "ralph-loop" => Some(include_bytes!(
             "../../../harness/skills/ralph-loop/agents/openai.yaml"
         )),
+        "iterative-execution" => Some(include_bytes!(
+            "../../../harness/skills/iterative-execution/agents/openai.yaml"
+        )),
+        "team-execution" => Some(include_bytes!(
+            "../../../harness/skills/team-execution/agents/openai.yaml"
+        )),
+        "multi-goal" => Some(include_bytes!(
+            "../../../harness/skills/multi-goal/agents/openai.yaml"
+        )),
         "code-polish" => Some(include_bytes!(
             "../../../harness/skills/code-polish/agents/openai.yaml"
         )),
@@ -1219,7 +1250,7 @@ fn embedded_skill_metadata(name: &str) -> Option<&'static [u8]> {
     }
 }
 
-fn embedded_skill_sources() -> [(&'static str, &'static [u8]); 22] {
+fn embedded_skill_sources() -> [(&'static str, &'static [u8]); 25] {
     [
         ("user-setup", SETUP_HIVE),
         ("project-setup", SETUP_HARNESS),
@@ -1238,6 +1269,9 @@ fn embedded_skill_sources() -> [(&'static str, &'static [u8]); 22] {
         ("project-transition", MIGRATE_HARNESS),
         ("project-refresh", PROJECT_UPGRADE),
         ("ralph-loop", LOOP_ENGINEERING),
+        ("iterative-execution", ITERATIVE_EXECUTION),
+        ("team-execution", TEAM_EXECUTION),
+        ("multi-goal", MULTI_GOAL),
         ("code-polish", AI_SLOP_CLEANER),
         ("research-best-practices", BEST_PRACTICE_RESEARCH),
         ("knowledge-import", KNOWLEDGE_SCAN),
@@ -2429,8 +2463,8 @@ description: Inspect one local file without changing it.
             let first = compile_projection(host, &[]).expect("projection");
             let second = compile_projection(host, &[]).expect("projection");
             assert_eq!(first, second);
-            assert_eq!(first.active_skills.skills.len(), 21);
-            let expected_file_count = if host == Host::Claude { 22 } else { 43 };
+            assert_eq!(first.active_skills.skills.len(), 24);
+            let expected_file_count = if host == Host::Claude { 25 } else { 49 };
             assert_eq!(first.files.len(), expected_file_count);
             for skill in [
                 "code-polish",
