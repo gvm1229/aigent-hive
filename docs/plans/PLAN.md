@@ -2,7 +2,7 @@
 
 > Revision: 2.74
 > 기준일: 2026-08-12
-> Product version: `0.9.1`
+> Product version: `0.9.2`
 > 현재 milestone: 완료된 usage guard와 공개 문서의 `0.9.2` numbered test 수용
 > Entrypoint: `docs/plans/PLAN.md`
 

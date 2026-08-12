@@ -1,7 +1,7 @@
 # 현재 상태
 
 - 기준 branch: `codex/release-0.9.2`
-- product version: `0.9.1`
+- product version: `0.9.2`
 - plan revision: `2.74`
 - 현재 milestone: 완료된 usage guard와 공개 문서의 `0.9.2` numbered test 수용
 - 기능 기준: `2cec0377748874748d126b6b55e59975a3f20a02`; release discipline base `c777da1`
