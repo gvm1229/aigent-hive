@@ -9,8 +9,8 @@ summary: "보존형 제거: Hive-owned transient·retired projection 완전 정�
 tags: [bootstrap, onboarding, preservation, uninstall]
 aliases: ["clean reinstall", "hive uninstall"]
 sources:
-  - "repo:crates/hive-cli/src/user_install.rs#sha256:d24cc8e55c8706144ac684cb7ccce3bfa9119c4bd0e20a3e6e36222d9d731eea"
-  - "repo:crates/hive-cli/src/user_setup.rs#sha256:0bfd9117a0d835da5f19bc02b82959a5630a4955a81ee3efda0a6ba5246dfaad"
+  - "repo:crates/hive-cli/src/user_install.rs#sha256:2ac47f0ba3f6a05f76c1e524ad9945d695e150c5665ed77dfb496e86ebab82d9"
+  - "repo:crates/hive-cli/src/user_setup.rs#sha256:3164f766afc6f15b3203a96240d7d75f47d95dad9a4d938c73a8866fc4f6f66e"
   - "repo:docs/plans/active/user-onboarding-shared-index.md#sha256:aafc3f1fb28a8e43939309d0dfb21586305759e2326d61fce444189f7acc79d1"
   - "repo:docs/plans/active/windows-global-setup-hardening.md#sha256:422649ef3ca475aca9e3a86a2ddd2bbbb3895221d7bc39fe4417010664dee47f"
   - "repo:docs/state/CURRENT.md#sha256:2a541e1d5843a67fa8835adf7efaaef6dc7bd13409e603903789378d3eb84e07"

@@ -9,9 +9,9 @@ summary: "Source agents and consumer harnesses use the selected language unless 
 tags: [communication, documentation, projection]
 aliases: ["language consistency", "mixed-language response"]
 sources:
-  - "repo:.agents/directives/01-behavior.md#sha256:8ca3714e63a836e9099119cf2ead0913698c95e3473298afd00aab072d4ab0c6"
+  - "repo:.agents/directives/01-behavior.md#sha256:9d8adb7c75015fd24df8cb226a16180548c600dc963ee154c0a4af408e9fa48c"
   - "repo:AGENTS.md#sha256:f83b69080a2580ec60feda02ecdb43833b9b43709b2da18dce76c8dd214a0b01"
-  - "repo:crates/hive-cli/src/user_install.rs#sha256:d24cc8e55c8706144ac684cb7ccce3bfa9119c4bd0e20a3e6e36222d9d731eea"
+  - "repo:crates/hive-cli/src/user_install.rs#sha256:2ac47f0ba3f6a05f76c1e524ad9945d695e150c5665ed77dfb496e86ebab82d9"
   - "repo:harness/template/AGENTS.md.jinja#sha256:d706dc6585c1bbaa820d328ebfaae919cd02496adac0acec373ee4d0e37afe56"
 links: [global-onboarding, source-development]
 reviewed_revision: "git:35e6b79a024350487f823780101a28be24a9f4c7"

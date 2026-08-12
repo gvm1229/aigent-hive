@@ -10,7 +10,7 @@ tags: [bootstrap, onboarding, setup]
 aliases: ["User setup"]
 sources:
   - "repo:README.md#sha256:e42b36f0bfd2629b0abbbeb2010d8aae5bac3086982f1a714bb6888aef1a3364"
-  - "repo:crates/hive-cli/src/user_setup.rs#sha256:0bfd9117a0d835da5f19bc02b82959a5630a4955a81ee3efda0a6ba5246dfaad"
+  - "repo:crates/hive-cli/src/user_setup.rs#sha256:3164f766afc6f15b3203a96240d7d75f47d95dad9a4d938c73a8866fc4f6f66e"
   - "repo:docs/decisions/ADR-0012-global-onboarding-shared-index.md#sha256:dea6123b7b193eb760a37b198566f9318d868fd7035491ac10756de0d4315530"
   - "repo:docs/decisions/product-release-decisions.md#sha256:7e6acd0973f56e3a15e4aad766a907c76a1511f6f5931c36f71ba8d979e90beb"
   - "repo:docs/plans/active/native-usage-sensor.md#sha256:0482703078d8876e4324383eea4865b1f0fbdea7495bd283c89147ed2e34d85d"

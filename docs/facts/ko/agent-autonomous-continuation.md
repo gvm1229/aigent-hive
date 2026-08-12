@@ -9,11 +9,11 @@ summary: "Agent 소유 작업 잔존 상태: 진행 보고 종료 금지"
 tags: [agent, completion, regression]
 aliases: ["중간 종료 방지"]
 sources:
-  - "repo:.agents/directives/01-behavior.md#sha256:8ca3714e63a836e9099119cf2ead0913698c95e3473298afd00aab072d4ab0c6"
+  - "repo:.agents/directives/01-behavior.md#sha256:9d8adb7c75015fd24df8cb226a16180548c600dc963ee154c0a4af408e9fa48c"
   - "repo:.agents/directives/04-documentation-state.md#sha256:2b1909a619ca2b270dd049df9ad91f892f6fd2734e97e6869c421fe9c5a75090"
   - "repo:.agents/directives/06-session-coordination.md#sha256:884fedad85a6bd5c7865b5fc6be9b132c4653abb8d685f26aff621596f6ae48a"
-  - "repo:crates/hive-cli/src/user_install.rs#sha256:d24cc8e55c8706144ac684cb7ccce3bfa9119c4bd0e20a3e6e36222d9d731eea"
-  - "repo:crates/hive-cli/src/user_setup.rs#sha256:0bfd9117a0d835da5f19bc02b82959a5630a4955a81ee3efda0a6ba5246dfaad"
+  - "repo:crates/hive-cli/src/user_install.rs#sha256:2ac47f0ba3f6a05f76c1e524ad9945d695e150c5665ed77dfb496e86ebab82d9"
+  - "repo:crates/hive-cli/src/user_setup.rs#sha256:3164f766afc6f15b3203a96240d7d75f47d95dad9a4d938c73a8866fc4f6f66e"
   - "repo:crates/hive-render/src/lib.rs#sha256:2432d0bf172063791159b60582dbfd3fdfcd63bbd7e1cb1cf13c03092e6c2104"
   - "repo:docs/plans/active/agent-autonomous-continuation.md#sha256:83b8604202102dc5424c63648833d99978d2d415b974e22c7d70fc511f1c5883"
   - "repo:harness/directives/00-project-harness.md#sha256:da0203d47899f2e045560b3ac718c9f22775ab6edf638315e9b2e535ac27e9b4"
