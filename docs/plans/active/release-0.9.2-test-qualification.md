@@ -17,7 +17,8 @@
 
 - 정식판의 탐색·회귀·성능·설치·최종 수용 시험 사용 금지
 - 실제 공개 numbered test artifact와 exact release branch commit·digest 결합
-- 시험판 뒤 제품·package·installer·metadata·공개 문서 수정 시 다음 번호 시험판 재수용
+- 시험판 뒤 제품·package·installer·실행 metadata 수정 시 다음 번호 시험판 재수용. 기능·설치 byte를
+  바꾸지 않는 README 노출 정리는 문서·npm pack·stable candidate 검증으로 마감
 - Source Wiki lint·index 오류와 stale source digest `0건` 후 후보 생성
 - 공개 문서의 stale version·명령·링크·표시 metadata `0건` 후 후보 생성
 - `0.9.3` 구현·검증·출시: QA contributor 추가 지시 뒤 유지보수자의 별도 명시적 승인 전 금지
@@ -51,6 +52,9 @@
   - `0.9.2-test.3`: candidate run `31602608609`·publication run `31603511607`, 25개 GitHub
     자산·npm `test`·npm tarball README·Windows 공개 설치·plugin 표시·user-scope validate·5% usage
     guard·지식과 preference 보존 PASS. 결함 `0건`; 완료 checklist exact tree를 `test.4`로 최종 고정
+  - `0.9.2-test.5`: candidate run `31605647532`·publication run `31606685534`, main history
+    동기화 뒤 동일 tree의 exact commit identity·25개 자산·npm channel 검증 PASS. README의 일반
+    사용자 표면에서는 시험판을 숨기고 중립 링크 1개로 분리 안내. 기능·설치 byte 변경 없음
 - [ ] [REL92-010] Accepted test exact source의 protected `main` PR·stable candidate 검증 뒤
   `v0.9.2` GitHub Release·npm `latest` 게시
 - [ ] [REL92-011] 공개 `0.9.2` clean install·upgrade·version·build date·plugin 표시·npm README와

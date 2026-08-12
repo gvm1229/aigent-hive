@@ -23,6 +23,10 @@
   `31603511607`, GitHub 자산 25개·npm `test`·npm README·Windows 공개 설치·plugin 표시·
   user-scope validate·5% usage guard·지식과 preference 보존 PASS. 완료 checklist exact tree의
   최종 `0.9.2-test.4` 뒤 source mutation 없이 protected `main`·stable candidate 진행
+- `0.9.2-test.5` 최종 기능 수용 완료: candidate run `31605647532`·publication run
+  `31606685534`, main history 동기화 뒤 동일 tree·25개 자산·npm `test` PASS. README 두 언어는
+  stable 설치만 노출하고 유지보수자용 중립 링크 1개만 별도 출시 검증 문서로 연결. 기능·설치
+  byte 변경 없음; 새 시험판 없이 문서·npm pack·PR CI 뒤 stable 진행
 - `0.9.0` stable publication: candidate run `31561636239`, publication run `31562280178`,
   annotated `v0.9.0`, normal GitHub Release, npm `latest=0.9.0`, Windows 전역 설치·validate·
   release date `2026-08-12` 표시 PASS
