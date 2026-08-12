@@ -3822,6 +3822,27 @@ mod tests {
         path
     }
 
+    fn auto_retrieval_hits(user_root: &Path, target: &Path, query: &str) -> Vec<Value> {
+        run_retrieve(&[
+            "--user-root".to_owned(),
+            user_root.to_string_lossy().into_owned(),
+            "--target".to_owned(),
+            target.to_string_lossy().into_owned(),
+            "--scope".to_owned(),
+            "auto".to_owned(),
+            "--query".to_owned(),
+            query.to_owned(),
+            "--output".to_owned(),
+            "json".to_owned(),
+        ])
+        .expect("automatic retrieval")
+        .data
+        .expect("retrieval data")["hits"]
+            .as_array()
+            .expect("hits")
+            .clone()
+    }
+
     fn registered_roots(enabled: bool) -> (TempDir, TempDir) {
         let user = temp_root();
         let project = temp_root();
@@ -4455,41 +4476,29 @@ mod tests {
             .expect("project claim");
         }
 
-        let retrieve = |query: &str| {
-            run_retrieve(&[
-                "--user-root".to_owned(),
-                user.path().to_string_lossy().into_owned(),
-                "--target".to_owned(),
-                unregistered.path().to_string_lossy().into_owned(),
-                "--scope".to_owned(),
-                "auto".to_owned(),
-                "--query".to_owned(),
-                query.to_owned(),
-                "--output".to_owned(),
-                "json".to_owned(),
-            ])
-            .expect("unregistered auto retrieval")
-            .data
-            .expect("retrieval data")["hits"]
-                .as_array()
-                .expect("hits")
-                .clone()
-        };
-
-        let root_hits = retrieve("installwide user beacon");
+        let root_hits =
+            auto_retrieval_hits(user.path(), unregistered.path(), "installwide user beacon");
         assert!(root_hits
             .iter()
             .any(|hit| hit["collection_id"] == "user-root"));
-        let shared_hits = retrieve("installwide shared beacon");
+        let shared_hits = auto_retrieval_hits(
+            user.path(),
+            unregistered.path(),
+            "installwide shared beacon",
+        );
         assert!(shared_hits
             .iter()
             .any(|hit| hit["collection_id"] == project_collection));
-        assert!(retrieve("installwide private beacon")
-            .iter()
-            .all(|hit| !hit["text"]
-                .as_str()
-                .expect("hit text")
-                .contains("private beacon")));
+        assert!(auto_retrieval_hits(
+            user.path(),
+            unregistered.path(),
+            "installwide private beacon"
+        )
+        .iter()
+        .all(|hit| !hit["text"]
+            .as_str()
+            .expect("hit text")
+            .contains("private beacon")));
 
         let Err(error) = run_retrieve(&[
             "--user-root".to_owned(),
