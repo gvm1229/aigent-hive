@@ -1329,8 +1329,10 @@ fn run_retrieve(arguments: &[String]) -> Result<KnowledgeResult, WikiError> {
     let store = RagStore::open(&user_root)?;
     let registry = store.load_registry()?;
     let (canonical_target, current_collection_id) =
-        derive_current_collection_authority(&registry, &target)?;
-    request.current_collection_id = Some(current_collection_id.clone());
+        derive_optional_current_collection_authority(&registry, &target)?;
+    request
+        .current_collection_id
+        .clone_from(&current_collection_id);
     let authorization_fields = [
         "--authorization-id",
         "--authorization-token",
@@ -1349,13 +1351,18 @@ fn run_retrieve(arguments: &[String]) -> Result<KnowledgeResult, WikiError> {
     }
     let mut changed_paths = Vec::new();
     if authorization_count == authorization_fields.len() {
+        let current_collection_id = current_collection_id.as_deref().ok_or_else(|| {
+            WikiError::InvalidInput(
+                "confidential retrieval requires an attached current project collection".to_owned(),
+            )
+        })?;
         let consumption = verify_and_consume_authorization(
             &user_root,
             &store,
             &registry,
             &request,
             &canonical_target,
-            &current_collection_id,
+            current_collection_id,
             required(&options, "--authorization-id")?,
             required(&options, "--authorization-token")?,
             Path::new(required(&options, "--capabilities")?),
@@ -1539,6 +1546,22 @@ fn derive_current_collection_authority(
     registry: &hive_wiki::collection::CollectionRegistry,
     target: &Path,
 ) -> Result<(PathBuf, String), WikiError> {
+    let (canonical_target, collection_id) =
+        derive_optional_current_collection_authority(registry, target)?;
+    collection_id.map_or_else(
+        || {
+            Err(WikiError::InvalidInput(
+                "current target is not attached to exactly one knowledge collection".to_owned(),
+            ))
+        },
+        |collection_id| Ok((canonical_target, collection_id)),
+    )
+}
+
+fn derive_optional_current_collection_authority(
+    registry: &hive_wiki::collection::CollectionRegistry,
+    target: &Path,
+) -> Result<(PathBuf, Option<String>), WikiError> {
     ensure_consumer_target(target).map_err(|error| WikiError::Conflict(error.to_string()))?;
     let canonical_target = hive_wiki::shared::canonical_root(target)?;
     let mut matches = registry
@@ -1555,10 +1578,8 @@ fn derive_current_collection_authority(
     matches.sort();
     matches.dedup();
     match matches.as_slice() {
-        [collection_id] => Ok((canonical_target, collection_id.clone())),
-        [] => Err(WikiError::InvalidInput(
-            "current target is not attached to exactly one knowledge collection".to_owned(),
-        )),
+        [collection_id] => Ok((canonical_target, Some(collection_id.clone()))),
+        [] => Ok((canonical_target, None)),
         _ => Err(WikiError::Conflict(
             "current target maps to multiple knowledge collections".to_owned(),
         )),
@@ -4376,6 +4397,119 @@ mod tests {
         assert_eq!(hits.len(), 1);
         assert_eq!(hits[0]["collection_id"], "user-root");
         assert_eq!(hits[0]["untrusted_content"], true);
+    }
+
+    #[test]
+    fn unregistered_target_auto_retrieves_user_root_and_shared_only() {
+        let (user, _project) = registered_roots(true);
+        let unregistered = temp_root();
+        let store = RagStore::open(user.path()).expect("store");
+        ensure_rag_registry(user.path(), &store).expect("normalized registry");
+        let registry = store.load_registry().expect("collection registry");
+        let CollectionResolution::Resolved(project_collection) =
+            registry.resolve_project("project-test")
+        else {
+            panic!("project collection");
+        };
+
+        run_remember(&[
+            "--user-root".to_owned(),
+            user.path().to_string_lossy().into_owned(),
+            "--user-statement".to_owned(),
+            "Installwide user beacon remains available without project setup.".to_owned(),
+            "--claim-key".to_owned(),
+            "installwide-user-beacon".to_owned(),
+            "--kind".to_owned(),
+            "workflow".to_owned(),
+            "--output".to_owned(),
+            "json".to_owned(),
+        ])
+        .expect("user-root claim");
+        for (file_name, fact, visibility) in [
+            (
+                "installwide-shared.json",
+                "Installwide shared beacon is visible across projects.",
+                RagVisibility::Shared,
+            ),
+            (
+                "installwide-private.json",
+                "Installwide private beacon stays inside its project.",
+                RagVisibility::ProjectPrivate,
+            ),
+        ] {
+            let request = write_collection_claim_request(
+                user.path(),
+                file_name,
+                &project_collection,
+                fact,
+                visibility,
+            );
+            run_remember(&[
+                "--user-root".to_owned(),
+                user.path().to_string_lossy().into_owned(),
+                "--request".to_owned(),
+                request.to_string_lossy().into_owned(),
+                "--output".to_owned(),
+                "json".to_owned(),
+            ])
+            .expect("project claim");
+        }
+
+        let retrieve = |query: &str| {
+            run_retrieve(&[
+                "--user-root".to_owned(),
+                user.path().to_string_lossy().into_owned(),
+                "--target".to_owned(),
+                unregistered.path().to_string_lossy().into_owned(),
+                "--scope".to_owned(),
+                "auto".to_owned(),
+                "--query".to_owned(),
+                query.to_owned(),
+                "--output".to_owned(),
+                "json".to_owned(),
+            ])
+            .expect("unregistered auto retrieval")
+            .data
+            .expect("retrieval data")["hits"]
+                .as_array()
+                .expect("hits")
+                .clone()
+        };
+
+        let root_hits = retrieve("installwide user beacon");
+        assert!(root_hits
+            .iter()
+            .any(|hit| hit["collection_id"] == "user-root"));
+        let shared_hits = retrieve("installwide shared beacon");
+        assert!(shared_hits
+            .iter()
+            .any(|hit| hit["collection_id"] == project_collection));
+        assert!(retrieve("installwide private beacon")
+            .iter()
+            .all(|hit| !hit["text"]
+                .as_str()
+                .expect("hit text")
+                .contains("private beacon")));
+
+        let Err(error) = run_retrieve(&[
+            "--user-root".to_owned(),
+            user.path().to_string_lossy().into_owned(),
+            "--target".to_owned(),
+            unregistered.path().to_string_lossy().into_owned(),
+            "--query".to_owned(),
+            "installwide private beacon".to_owned(),
+            "--authorization-id".to_owned(),
+            "unused".to_owned(),
+            "--authorization-token".to_owned(),
+            "unused".to_owned(),
+            "--capabilities".to_owned(),
+            "unused".to_owned(),
+            "--usage".to_owned(),
+            "unused".to_owned(),
+        ]) else {
+            panic!("unregistered confidential retrieval must fail closed");
+        };
+        assert_eq!(error.code(), "hive.knowledge-invalid-input");
     }
 
     #[test]
