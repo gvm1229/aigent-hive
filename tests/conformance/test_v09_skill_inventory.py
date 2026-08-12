@@ -67,14 +67,11 @@ OMX_SKILLS = frozenset(
 OMX_ADOPT = frozenset({"ai-slop-cleaner", "best-practice-research"})
 OMX_MERGE = frozenset(
     {
-        "autopilot",
         "autoresearch",
         "autoresearch-goal",
         "performance-goal",
         "pipeline",
-        "plan",
         "ralph",
-        "team",
         "ultragoal",
         "ultraqa",
         "wiki",
@@ -126,13 +123,10 @@ OMC_SKILLS = frozenset(
 OMC_ADOPT = frozenset({"ai-slop-cleaner"})
 OMC_MERGE = frozenset(
     {
-        "autopilot",
         "autoresearch",
         "external-context",
-        "plan",
         "ralph",
         "remember",
-        "team",
         "ultraqa",
         "verify",
         "wiki",
