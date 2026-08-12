@@ -4,26 +4,25 @@ pair_id: v0-9-full-release
 topic_slug: v0-9-full-release
 language: en
 counterpart: ../ko/v0-9-full-release.md
-title: "Aigent Hive 0.9.0 Test and Stable Release"
-summary: "v0.9.0 uses minimal trust from GitHub attestations, SHA-256, npm OIDC provenance, and same-byte publication."
+title: "Aigent Hive 0.9.x Test and Stable Releases"
+summary: "v0.9.2 releases completed usage-guard work with all public docs updated; v0.9.3 requires later explicit approval."
 tags: [distribution, release, signing, v0-9]
-aliases: ["0.9.0 release plan", "full release"]
+aliases: ["0.9.2 scope", "0.9.3 scope", "0.9.x release plan", "full release"]
 sources:
   - "repo:.github/workflows/release-publish.yml#sha256:903c4fd819d0d09afdbc379ac874a22d592274b495aab6de82ee15166381bcbb"
-  - "repo:docs/decisions/ADR-0017-0.9-full-release.md#sha256:f8c457200b2d02aafd77e71981e82af120aa2b91e3a23e877c2011fed38eabef"
+  - "repo:docs/decisions/ADR-0017-0.9-full-release.md#sha256:53314be9705bd61590992cae77cfcf96a9d823e7142821399e6411492de76e00"
   - "repo:docs/guides/release-update.md#sha256:785e83d497c4f39ea683ac280adf8e071b27fda02b19c4c086573782a70bcadb"
-  - "repo:docs/plans/active/release-0.9.0-stable-publication.md#sha256:d23a7b3f290e1cf2d3b7e7e484dbdc063df3005af7580a48d9769700ee74e183"
-  - "repo:docs/plans/active/release-0.9.0.md#sha256:085ecd5d61f590106f651f929c33c21ac4b87d296f4a603f430f605dba6d1805"
+  - "repo:docs/plans/active/release-0.9.2-test-qualification.md#sha256:eb421d375292f8a1eccc4b3193bceda337719ba1d4ae1b649456c07344f344cc"
 links: [host-external-integrations, release-verification, test-distribution, version-policy]
-reviewed_revision: "git:1b7ea99554fcf2e475cc77dcb1a3452a7805315f"
+reviewed_revision: "git:d08ec9aa109b55c30ca9d3c455185c6e5cb3f08e"
 status: active
 ---
 
-# Aigent Hive 0.9.0 Test and Stable Release
+# Aigent Hive 0.9.x Test and Stable Releases
 
-Stable `v0.9.0` is not published. Required trust is a protected-main exact tag, a same-candidate
-GitHub Release, SHA-256 sidecars, GitHub artifact attestations, and npm Trusted Publishing OIDC
-provenance. The single human gate is the GitHub stable environment. macOS ad-hoc and Windows
-unsigned status are disclosed. External release-trust ceremonies and platform-certificate gates
-are removal targets; transactional backup, rollback, and recovery remain. The replacement candidate
-also requires the usage-guard default, failure-only CodexBar, and projection purge corrections.
+Stable `v0.9.1` is published from exact source `1e5e7b3`. Version `0.9.2` releases the completed
+installed usage-guard convergence through `2cec037`, plus release-only metadata and qualification.
+Every public README, installation guide, HTML guide, npm README, plugin metadata, documentation
+index, command, and version example is updated before publication. Native orchestration and
+custom-subagent work is excluded. Version `0.9.3` stays frozen until the QA-contributor instruction
+and a later explicit maintainer approval.
