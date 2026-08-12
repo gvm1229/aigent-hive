@@ -2,7 +2,7 @@
 
 - 기준 branch: `develop`
 - product version: `0.9.0`
-- plan revision: `2.63`
+- plan revision: `2.64`
 - 현재 milestone: `0.9.0` 최소 release trust 정리·usage onboarding·user projection purge 보정
 - Mandatory memory regression: `0.9.0-test.13` operational user guidance의 every-turn
   `hive knowledge remember`·receipt 규칙 부재, localized `knowledge-capture` route 의미 축소.
@@ -14,7 +14,9 @@
   malformed·path-unsafe manifest, foreign overwrite, material choice: 사용자 결정 유지.
   `0.9.0-test.19` candidate·publication·Windows preserving reinstall·`hive install --validate`,
   embedded release date `2026-08-11` 표시 PASS.
-  [`KAC-001·007–008·010`](../plans/active/v0.9.0-knowledge-autocapture-regression.md) 수용·출시 전 stable publication 차단
+  설치 직후 선택 host의 모든 folder에서 project setup·Hive harness·project marker·collection 없이
+  user-root capture 적용. 미등록 target `auto`: user-root·shared 폴백, project-private·confidential 제외.
+  [`KAC-001·007–008`](../plans/active/v0.9.0-knowledge-autocapture-regression.md) 수용·출시 전 stable publication 차단
 - `0.9.0-test.18` candidate [run `31525743736`](https://github.com/gvm1229/aigent-hive/actions/runs/31525743736):
   `e8fe91e` 기반, 이후 user-setup 문체·투영 정리 누락으로 취소, publication 0건
 - `0.9.0-test.19` candidate [run `31526591402`](https://github.com/gvm1229/aigent-hive/actions/runs/31526591402),
