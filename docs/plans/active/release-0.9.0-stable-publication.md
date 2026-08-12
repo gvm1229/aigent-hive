@@ -65,6 +65,17 @@
 5. Protected environment 1회 승인, GitHub Release·npm `latest` 연속 승격
 6. Public install·update 관찰과 current-truth 마감
 
+## npm README 동기화 후속 작업
+
+1. Root English `README.md`를 public umbrella package `README.md`의 정본으로 사용
+2. `QA Contributors` 구간 제거와 npm에서 동작하는 절대 GitHub link·asset 변환
+3. 생성 package와 tarball에서 본문 포함·QA 표 제외·상대 link 부재 회귀 검증
+
+범위: package generator와 conformance test만 변경. npm registry, version, release tag,
+GitHub Release, dist-tag mutation은 현재 작업 범위 밖.
+
+검증: `python3 -m unittest tests.conformance.test_npm_packaging` 3개 PASS.
+
 ## 외부 권한 경계
 
 - `main` PR review·merge

@@ -4,6 +4,9 @@
 - product version: `0.9.0`
 - plan revision: `2.64`
 - 현재 milestone: `0.9.0` 최소 release trust 정리·usage onboarding·user projection purge 보정
+- npm README 동기화 완료: root English `README.md` 기반 umbrella package README 생성,
+  `QA Contributors` 제외와 npm link·asset 변환. `test_npm_packaging` 3개 PASS;
+  npm registry·version·release mutation 0건
 - Mandatory memory regression: `0.9.0-test.13` operational user guidance의 every-turn
   `hive knowledge remember`·receipt 규칙 부재, localized `knowledge-capture` route 의미 축소.
   `KAC-002–005` 전역 안내·세 host 공통 투영·localized 설명·의미 검증 보정 완료.
