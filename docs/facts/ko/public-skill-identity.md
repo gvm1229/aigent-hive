@@ -10,9 +10,9 @@ tags: [localization, migration, plugin, skill]
 aliases: ["Skill naming"]
 sources:
   - "repo:docs/decisions/ADR-0012-global-onboarding-shared-index.md#sha256:dea6123b7b193eb760a37b198566f9318d868fd7035491ac10756de0d4315530"
-  - "repo:docs/plans/PLAN.md#sha256:be7b58b214d5eb9864f274551dbac27f2198543f2a4f128d8a6bc613eb4ebfb9"
+  - "repo:docs/plans/PLAN.md#sha256:9e6bde6abaa9c89f60735bda8a5458321571f9fd4e16c24450da4e0f8a638176"
   - "repo:docs/plans/active/skill-identity-localization.md#sha256:5ae5f5e9e3ac9f2d9891393a75820fd1adbe8293e467a452d9778cba7fcb0468"
-  - "repo:docs/skills.md#sha256:3ac35c43bee2bd83980415464b852253f271e95794d17fa81074fb2db0f88ec7"
+  - "repo:docs/skills.md#sha256:e472e29b807d09b86cf291821b1f75532c8c05d7f9359ba7bb2f6ebfb1fb7a93"
   - "repo:harness/plugins/aigent-hive/.codex-plugin/plugin.json#sha256:5701b2380c96d72245e21ef04aad028bb24b3f2d58c93d1581463ea21d230b6a"
 links: [global-onboarding, skill-routing]
 reviewed_revision: "git:daa4ab56b05f7403bc1f5f2b44d8471fb99866af"

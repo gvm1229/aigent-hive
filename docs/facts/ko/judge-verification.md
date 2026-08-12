@@ -11,7 +11,7 @@ aliases: ["Ed25519 judge quorum"]
 sources:
   - "repo:docs/decisions/ADR-0007-ed25519-judge-trust.md#sha256:5a17bcd8f6869437a9e37c025c4fa2da285ff03af16a7144552162bac5a09a1a"
   - "repo:docs/decisions/ADR-0019-hive-native-iterative-execution.md#sha256:8dcf64600bf77f630d6f601027ee02a5adf1255a49c4c852ff6006a46f203817"
-  - "repo:docs/plans/active/model-routed-custom-subagents.md#sha256:088e759fd1613b35634b965e592a0361d9b82eed0c3a8d084d103c70069c4a78"
+  - "repo:docs/plans/active/model-routed-custom-subagents.md#sha256:6b2eb3faafe345678008fe225dd941026c8eab10911fa19530c2785c8b644f57"
 links: [model-routed-custom-subagents, orchestration-ownership, product-non-goals, release-verification]
 reviewed_revision: "git:ffdfb476d4e21dafe5d4dc896fa272f7244d0fe1"
 status: active
