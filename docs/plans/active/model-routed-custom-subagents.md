@@ -1,7 +1,7 @@
 # v0.9.0 model-routed custom subagent 계획
 
-> 대상: `0.9.2`
-> 상태: schema·scope feasibility 완료, fresh-session lifecycle·구현 대기
+> 대상: `0.9.0`
+> 상태: 실행 계획 활성, 구현 미착수
 > 결정: [`ADR-0019`](../../decisions/ADR-0019-hive-native-iterative-execution.md)
 > 선행: `NAT-002–005`, 연계: `NAT-016`
 > 지원 host: OpenAI Codex, Claude Code
@@ -62,12 +62,9 @@
 
 ### A. Feasibility·결정
 
-- [x] [MRA-001] Sol Advisor의 orchestrator·routine·complex·review·attestation 기능 동등성 표와 clean-room 증거 확정
-  - Evidence: commit `61b03a6`, parent host·bounded role·reserved Judge·external signer 분리표
-- [x] [MRA-002] Codex user/project agent schema·precedence·discovery·model/effort·runtime metadata matrix 검증
-  - Evidence: commit `61b03a6`, official Subagents 계약·`codex-cli 0.147.0`·실제 user agent 발견
-- [x] [MRA-003] Claude user/project agent schema·precedence·environment override·allowlist·fallback matrix 검증
-  - Evidence: commit `61b03a6`, official subagent 계약·Claude Code `2.1.163` CLI·실제 user definition 확인
+- [ ] [MRA-001] Sol Advisor의 orchestrator·routine·complex·review·attestation 기능 동등성 표와 clean-room 증거 확정
+- [ ] [MRA-002] Codex user/project agent schema·precedence·discovery·model/effort·runtime metadata matrix 검증
+- [ ] [MRA-003] Claude user/project agent schema·precedence·environment override·allowlist·fallback matrix 검증
 - [ ] [MRA-004] 실제 Codex Luna·Terra·Sol install→fresh session→dispatch→attestation lifecycle spike
 - [ ] [MRA-005] 실제 Claude exact model·effort install→fresh session→dispatch→override/fallback lifecycle spike
 - [ ] [MRA-006] Codex·Claude 한정, Antigravity unsupported, default-off, host-file consent의 ADR·security acceptance

@@ -1,7 +1,7 @@
 # Hive-native 반복 실행 계획
 
 > Checklist owner: `NAT-*`
-> 상태: capability matrix·inventory 완료, host lifecycle 실기 수용 대기
+> 상태: 정책·계획 정본화 완료, host feasibility 미착수
 > Decision: [`ADR-0019`](../../decisions/ADR-0019-hive-native-iterative-execution.md)
 > State contract: [`06-native-orchestration-state.md`](../contracts/06-native-orchestration-state.md)
 > Workflow contract: [`07-native-orchestration-workflows.md`](../contracts/07-native-orchestration-workflows.md)
@@ -31,10 +31,8 @@
 ### A. 정본·feasibility
 
 - [x] [NAT-001] 사용자 결정, RALPLAN-DR, Architect·Critic 승인 결과의 정본 plan·proposed ADR·source directive 반영
-- [x] [NAT-002] OMX·OMC 전체 기능 inventory 재개방과 clean-room `adopt|merge|exclude` 재분류
-  - Evidence: commit `61b03a6`, OMX 46개 `2/11/33`, OMC 38개 `1/10/27`, 누락·중복 `0건`
-- [x] [NAT-003] Codex·Claude Code·Antigravity의 envelope consume·claim·launch ack·result·cancel·lookup·idempotency capability matrix
-  - Evidence: commit `61b03a6`, official docs·local CLI·typed 3-host fixture와 schema conformance
+- [ ] [NAT-002] OMX·OMC 전체 기능 inventory 재개방과 clean-room `adopt|merge|exclude` 재분류
+- [ ] [NAT-003] Codex·Claude Code·Antigravity의 envelope consume·claim·launch ack·result·cancel·lookup·idempotency capability matrix
 - [ ] [NAT-004] 세 host fixture와 최소 한 host 실제 lifecycle spike, unsupported capability의 정직한 판정
 - [ ] [NAT-005] Feasibility 결과 기반 ADR-0019 acceptance·default-off 유지·중단 조건 확정
 
