@@ -71,9 +71,15 @@
 ### D. Host·Skill
 
 - [ ] [NAT-016] 세 host declarative envelope adapter, exact role receipt와 reserved Judge profile 소비
-- [ ] [NAT-017] Ralph급 persistent criterion loop와 criterion terminal Judge gate의 `hive-iterative-execution` Skill
-- [ ] [NAT-018] Mailbox·barrier·shared-path lease·lane cancel·goal terminal Judge 기반 `hive-team-execution` Skill
-- [ ] [NAT-019] AND·OR·quorum criterion·budget·terminal lattice·nested cancel·goal/aggregate Judge gate 기반 `hive-multi-goal` Skill
+- [x] [NAT-017] Ralph급 persistent criterion loop와 criterion terminal Judge gate의 `iterative-execution` Skill
+  - Evidence: commit `b6679a6`, usage gate→event/receipt→criterion evidence→terminal-only
+    independent Judge 흐름과 direct spawn·provider API·OMX/OMC 금지 제품 Skill
+- [x] [NAT-018] Mailbox·barrier·shared-path lease·lane cancel·goal terminal Judge 기반 `team-execution` Skill
+  - Evidence: commit `b6679a6`, immutable message dedupe/conflict·sender sequence·bounded bytes,
+    exact membership barrier·ASCII casefold/path overlap·failed lane 정책 core 시험
+- [x] [NAT-019] AND·OR·quorum criterion·budget·terminal lattice·nested cancel·goal/aggregate Judge gate 기반 `multi-goal` Skill
+  - Evidence: commit `b6679a6`, aggregation·verified evidence·terminal Judge, parent allocation·single
+    refund·nested cancel 규칙 core 시험과 제품 Skill projection
 - [ ] [NAT-020] Planning·review·QA·research·performance loop parity와 explicit/implicit 무관 strict Judge 정책 통합
 
 ### E. Qualification·activation
