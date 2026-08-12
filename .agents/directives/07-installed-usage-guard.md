@@ -1,4 +1,4 @@
-# 07. Installed Usage Guard Directive
+# 07. Installed Product Usage Guard Directive
 
 This directive applies the installed product usage policy while developing Aigent Hive. The
 repository owns no second sensor, threshold file, watcher, or halt implementation.

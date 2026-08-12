@@ -59,7 +59,7 @@ provider-neutral 로컬 agent harness.
 | Knowledge | Canonical Markdown, shared disposable SQLite FTS5 RAG, cross-project provenance와 portable bundle | [ADR-0016](../decisions/ADR-0016-global-knowledge-rag.md) |
 | Persistent role·run | Role identity·handoff·criterion·owner pin과 fresh-session recovery | [Role](../architecture/role-lifecycle.md) · [Run](../architecture/run-lifecycle.md) |
 | 반복 실행 | Default-off Hive-native scheduler·receipt·cancel·team·multi-goal 계획 | [ADR-0019](../decisions/ADR-0019-hive-native-iterative-execution.md) |
-| Usage guard | Native-first sensor, configured Hive target only, automatic dispatch fail-closed | [Source integration](../guides/source-usage-guard.md) |
+| Usage guard | Native-first sensor, configured Hive target only, automatic dispatch fail-closed | [Installed policy](../guides/installed-usage-guard.md) |
 | Judge quorum | Clean-context package와 detached Ed25519 verification | [Judge boundary](../architecture/judge-trust-boundary.md) |
 | Release·update | Attestation·local integrity, version gate, backup·journal·recovery | [Release boundary](../architecture/release-update-trust-boundary.md) |
 | Direct install | npm과 digest-pinned curl·PowerShell·CMD channel | [`0.9.2` release](../releases/0.9.2.md) |

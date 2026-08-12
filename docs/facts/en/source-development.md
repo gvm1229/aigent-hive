@@ -10,7 +10,7 @@ tags: [development, toolchain]
 aliases: ["Development dependencies"]
 sources:
   - "repo:docs/guides/development.md#sha256:2577c64e180264e8f43d7995106c45a05fcda70afb31c71ea82e3185773dd3fc"
-links: [crate-ownership, source-usage-guard]
+links: [crate-ownership, installed-usage-guard]
 reviewed_revision: "git:e72e2f95883ad4503335123d487405d064fb36ac"
 status: active
 ---

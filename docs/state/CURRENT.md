@@ -685,7 +685,7 @@ Pre-1.0 비차단 deferred:
   `hive-cli` 185, `hive-core` 62, `hive-projection` 22, `hive-render` 51,
   `hive-update` 63, `hive-wiki` 7
 - Python conformance 524개 실행, 523 PASS, Windows `pwsh` 전용 1개 expected skip
-- Native hostile sensor·fallback, Phase 3 projection과 source usage guard regression PASS
+- Native hostile sensor·fallback, Phase 3 projection과 설치본 usage guard source-target regression PASS
 - 독립 Antigravity code·test review: PASS, actionable finding 0건
 
 Pre-1.0 비차단 deferred:
@@ -698,7 +698,7 @@ Pre-1.0 비차단 deferred:
 
 - 정본 결정: 설치된 `hive usage` 단일 사용
 - 사용자 선택 global threshold: remaining `5%`
-- 제거 완료: `scripts/source-usage-guard.py`, 15초 background watcher, source 전용 scratch policy,
+- 제거 완료: source 전용 Python gate·15초 background watcher·source 전용 scratch policy,
   매 tool 경계의 중복 gate
 - 유지 경계: automatic dispatch 직전 session-bound one-shot enforce, native sensor 우선,
   명시적 session control, raw account·session identifier 저장 금지

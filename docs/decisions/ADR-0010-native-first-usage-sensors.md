@@ -2,7 +2,7 @@
 
 - 상태: Accepted
 - 기준일: 2026-07-26
-- 범위: Source guard와 installed consumer automatic-dispatch guard
+- 범위: 설치본 guard의 source 적용과 consumer automatic-dispatch guard
 
 ## Context
 

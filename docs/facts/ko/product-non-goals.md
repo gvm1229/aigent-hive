@@ -9,7 +9,7 @@ summary: "Model 실행·provider credential·provider session engine·direct pro
 tags: [boundary, product]
 aliases: ["Hive non-goal"]
 sources:
-  - "repo:docs/overview/product.md#sha256:c9da047bf940d1eb3507c2e8eccc15eee5c96c36708fa28018aef71be2b50a1c"
+  - "repo:docs/overview/product.md#sha256:891c3585d3377e779af75b0533eef3815eb411d47433f31bec2e5b7e12f0a7de"
 links: [orchestration-ownership, product-purpose]
 reviewed_revision: "git:a86bb5bc4aa01c9823fa670e83cb538b9f031cbf"
 status: active

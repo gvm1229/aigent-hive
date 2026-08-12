@@ -63,7 +63,7 @@ current catalog.
 | [Test lanes](guides/test-lanes.md) | Python 대장·실행 lane·fixture 경계 |
 | [Branching](guides/branching-rules.md) | `develop`·`main` integration |
 | [Commit](guides/commit-rules.md) | Task별 independent commit |
-| [Source usage guard](guides/source-usage-guard.md) | Source quota safeguard |
+| [Installed usage guard](guides/installed-usage-guard.md) | 설치본 단일 정책의 source 적용 |
 | [Judge attestation](guides/ed25519-judge-attestations.md) | External signature ceremony |
 | [Release·update](guides/release-update.md) | Update·candidate·publication procedure |
 | [Code signing policy](guides/code-signing-policy.md) | 무료 platform signing 상태·privacy·검증 경계 |

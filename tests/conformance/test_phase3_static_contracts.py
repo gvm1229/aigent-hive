@@ -107,8 +107,8 @@ class Phase3SkillSourceContract(unittest.TestCase):
         self.assertIn("automatically load `aigent-hive:prompt-refine`", behavior)
         self.assertIn("hive source-wiki query --target <source-root>", behavior)
         self.assertIn("installed product `hive usage`", agents)
-        self.assertNotIn("scripts/source-usage-guard.py", agents)
-        self.assertNotIn("Run the source `hive-usage-guard`", agents)
+        self.assertIn("sole usage-policy authority", agents)
+        self.assertIn("Never start a source watcher", agents)
 
     def test_source_directives_continue_agent_owned_work_until_closure(self) -> None:
         behavior = (ROOT / ".agents/directives/01-behavior.md").read_text(encoding="utf-8")
