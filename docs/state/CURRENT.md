@@ -2,14 +2,13 @@
 
 - 기준 branch: `develop`
 - product version: `0.9.1`
-- plan revision: `2.66`
+- plan revision: `2.67`
 - 현재 milestone: `0.9.1` 최종 호환 patch 검증·공개
 - `0.9.0` stable publication: candidate run `31561636239`, publication run `31562280178`,
   annotated `v0.9.0`, normal GitHub Release, npm `latest=0.9.0`, Windows 전역 설치·validate·
   release date `2026-08-12` 표시 PASS
-- 추가 회귀: 미등록 project의 `hive knowledge lint --target <project-root> --user-root <user-root>`는
-  project registry 거부. Global Wiki 자체는 `<target>=<user-root>`에서 PASS. `KAC-011–012`의
-  registered project·unregistered project·source workspace 분기와 immutable patch 게시 필요
+- 미등록 project Wiki lint 분기 보정 완료. Consumer·user-root lint는 source marker 없이 실행하고,
+  source workspace만 `hive source-wiki lint` 사용. Immutable `0.9.1` patch 게시 대기
 - npm README 동기화: root English `README.md` 기반 umbrella package README 생성,
   `QA Contributors` 제외와 npm link·asset 변환. `test_npm_packaging` 3개 PASS. `0.9.1`
   candidate tarball·실제 npm registry README 동일성은 `REL9-025–026` 출시 gate에 포함
@@ -18,9 +17,9 @@
   `REL9-025–026` 출시 gate에 포함
 - `KAC-011` 구현 완료: commit `4311cbe`, 미등록 project CLI 자동 user-root 폴백과 전역·project
   지침·두 knowledge Skill 분기 보강. focused Rust 237·Python static 13·strict Clippy PASS
-- `0.9.0` 게시 순서 오류: `KAC-001·007–008`, `RAG-005·020`, `UOS-019·022`, `REL9-025–026`
-  증거 마감 전에 publication 실행. `0.9.1`은 이 항목 전체를 재대조하는 최종 호환 patch이며,
-  실제 사용의 critical 문제 외 추가 patch 금지
+- `0.9.0` 게시 순서 오류의 publication 전 항목 `KAC-001·007–008`, `RAG-005·020`,
+  `UOS-019·022`, `REL9-025` 마감. `KAC-012`·`REL9-026`의 동일 후보 publication·실제 설치·
+  문서 마감만 대기. `0.9.1` 뒤 실제 사용의 critical 문제 외 추가 patch 금지 원칙
 - Mandatory memory regression: `0.9.0-test.13` operational user guidance의 every-turn
   `hive knowledge remember`·receipt 규칙 부재, localized `knowledge-capture` route 의미 축소.
   `KAC-002–005` 전역 안내·세 host 공통 투영·localized 설명·의미 검증 보정 완료.
@@ -33,7 +32,12 @@
   embedded release date `2026-08-11` 표시 PASS.
   설치 직후 선택 host의 모든 folder에서 project setup·Hive harness·project marker·collection 없이
   user-root capture 적용. 미등록 target `auto`: user-root·shared 폴백, project-private·confidential 제외.
-  [`KAC-001·007–008`](../plans/active/v0.9.0-knowledge-autocapture-regression.md) 수용·출시 전 stable publication 차단
+  [`KAC-001·007–008`](../plans/active/v0.9.0-knowledge-autocapture-regression.md) 수용 완료
+  - protected `main` exact `3ebdd57ca4b90539b5de9ec51105d5e2a401dbbb` candidate run
+    `31574492371` 7개 작업 PASS
+  - Windows user-root preserving reinstall·validate, release date `2026-08-12`, retired empty
+    `agents/`·empty transaction `0건`, knowledge 23개·saved preference SHA-256 보존
+  - fresh Codex ordinary prompt의 user-root claim·receipt 자동 생성과 별도 session 자동 recall PASS
 - `0.9.0-test.18` candidate [run `31525743736`](https://github.com/gvm1229/aigent-hive/actions/runs/31525743736):
   `e8fe91e` 기반, 이후 user-setup 문체·투영 정리 누락으로 취소, publication 0건
 - `0.9.0-test.19` candidate [run `31526591402`](https://github.com/gvm1229/aigent-hive/actions/runs/31526591402),

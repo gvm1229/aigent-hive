@@ -42,11 +42,12 @@
 - [x] [REL9-024] User projection·uninstall 수렴 보정 완료. 폐기·개명 Skill file과 중첩 빈
   directory, Hive-owned transient `.hive` artifact 정리. Knowledge·saved preference·foreign byte와
   별도 developer rollback state 보존
-- [ ] [REL9-025] Replacement stable candidate와 public acceptance. `0.8.x`·numbered test upgrade,
+- [x] [REL9-025] Replacement stable candidate와 publication 전 acceptance. `0.8.x`·numbered test upgrade,
   npm·Unix·PowerShell 5.1·CMD clean/repeat install, setup·uninstall·reinstall, usage sensor,
   source date·version·byte identity 검증. Consumer·user-root Wiki lint는 `hive-source.json`
-  없이 실행. Source-workspace lint 혼동·건너뜀 `0건`. `0.9.1` 게시 전 모든 `KAC-*`,
-  `RAG-005·020`, `UOS-019·022`의 증거 기반 마감. Root English `README.md` 기반 npm
+  없이 실행. Source-workspace lint 혼동·건너뜀 `0건`. `0.9.1` 게시 전 `KAC-001·007–008`,
+  `RAG-005·020`, `UOS-019·022`의 증거 기반 마감. Publication 자체를 소유한 `KAC-012`는
+  `REL9-026`과 함께 게시 뒤 마감. Root English `README.md` 기반 npm
   umbrella package README 생성·tarball 수록·link와 asset 변환 검증 포함. Codex 설치 화면의
   developer `Hojin (Tom) Jeong`과 중앙 확대 공식 Hive logo 표시 검증 포함
 - [ ] [REL9-026] Protected stable publication·관찰. Annotated tag·normal GitHub Release·six-package
@@ -80,6 +81,12 @@ Registry·version·release tag·GitHub Release·dist-tag mutation은 `REL9-026`�
 
 현재 로컬 검증: `python -m unittest tests.conformance.test_npm_packaging` 3개 PASS.
 출시 검증: candidate artifact와 npm registry의 `aigent-hive@0.9.1` tarball README 동일성 PASS.
+
+Publication 전 수용 증거: candidate run `31574492371`의 7개 작업 PASS, Windows user-root
+preserving reinstall·validate·release date `2026-08-12`·retired empty shell `0건`, npm candidate
+README와 root English README 동기화, plugin author·logo manifest·asset byte 검증, fresh Codex
+ordinary prompt의 자동 기록과 다음 session 자동 회수 PASS. Codex 설치 화면의 app-level 재표시는
+게시 뒤 실제 npm `latest` 재설치 수용에서 확인.
 
 ## 외부 권한 경계
 

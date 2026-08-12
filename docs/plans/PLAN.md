@@ -1,6 +1,6 @@
 # Aigent Hive active plan index
 
-> Revision: 2.66
+> Revision: 2.67
 > 기준일: 2026-08-12
 > Product version: `0.9.1`
 > 현재 milestone: `0.9.1` 최종 호환 patch 검증·공개
@@ -29,8 +29,8 @@
 | Phase 0–6 | 70 | 0 | 100% |
 | Phase 7 | 49 | 0 | 100% |
 | User plugin/project lifecycle | 38 | 0 | 100% |
-| Host-native usage sensors | 24 | 3 | 88.9% |
-| Global onboarding·shared index | 18 | 4 | 81.8% |
+| Host-native usage sensors | 27 | 0 | 100% |
+| Global onboarding·shared index | 22 | 0 | 100% |
 | Source docs Wiki | 13 | 0 | 100% |
 | Windows shell install boundary | 3 | 0 | 100% |
 | 문서 말투 | 6 | 0 | 100% |
@@ -39,25 +39,25 @@
 | Security review | 4 | 0 | 100% |
 | Docs Wiki migration | 4 | 0 | 100% |
 | v0.9 loop·Wiki·Skill suite | 25 | 0 | 100% |
-| v0.9 global knowledge RAG | 18 | 2 | 90.0% |
-| v0.9 knowledge autocapture 회귀 | 8 | 4 | 66.7% |
+| v0.9 global knowledge RAG | 20 | 0 | 100% |
+| v0.9 knowledge autocapture 회귀 | 11 | 1 | 91.7% |
 | v0.9 knowledge portability·scan | 18 | 0 | 100% |
 | Hive-native 반복 실행 | 1 | 23 | 4.2% |
 | Model-routed custom subagent | 0 | 32 | 0% |
 | Prompt refine 자동 routing | 12 | 0 | 100% |
 | v0.9 test 기능 마감 | 18 | 0 | 100% |
-| v0.9 full release | 20 | 8 | 71.4% |
+| v0.9 full release | 27 | 1 | 96.4% |
 | Test release setup routing | 4 | 0 | 100% |
 | Bootstrap·user projection recovery | 13 | 0 | 100% |
 | 한국어 setup 용어 복구 | 6 | 0 | 100% |
 | Global Skill 선택 단순화 | 8 | 0 | 100% |
 | Product-only Skill identity·localization | 15 | 0 | 100% |
-| 전역·프로젝트 사용량 보호 정책 | 6 | 2 | 75.0% |
+| 전역·프로젝트 사용량 보호 정책 | 8 | 0 | 100% |
 | Discord `v0.9` 연결 UX | 11 | 0 | 100% |
 | Windows global setup hardening | 13 | 0 | 100% |
 | Agent 자율 실행 지속 | 8 | 0 | 100% |
 | Notion `v0.10` 후보 | 1 | 10 | 9.1% |
-| **Canonical total** | **444** | **87** | **83.6%** |
+| **Canonical total** | **466** | **67** | **87.4%** |
 
 External production boundary 항목도 미완료 합계에 포함. Protected authority 없이 완료 처리 금지.
 
@@ -126,11 +126,11 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
 ## Current execution order
 
 완료 증거: [`CURRENT.md`](../state/CURRENT.md)와 owning active fragment.
-현재: `0.9.0` 공개 완료 뒤 `KAC-011–012` 미등록 project의 user-root Wiki lint 분기,
-설치·지식·정리 회귀, npm README 동기화를 포함한 `0.9.1` 최종 호환 patch 게시 우선.
+현재: `0.9.1` publication 전 acceptance와 replacement candidate 완료. 남은 `KAC-012`·
+`REL9-026`의 protected publication·Windows public install·문서 마감 우선.
 기존 stable candidate run `31482918509`: historical qualification only, publication 금지.
 이후 호환 patch candidate·protected stable publication 진행. Antigravity·Claude 공개 제외 유지.
-병행: `KAC-001·007–008` 보정·Windows Codex fresh-session 수용과 replacement stable candidate 준비.
+완료: `KAC-001·007–008` 보정·Windows Codex fresh-session 기록→회수·replacement candidate 수용.
 Notion: `N10-002–011`·`0.10.0-test` 보류.
 병행 문서 작업: `PHG-001–005` 공개 한국어 HTML·디자인 원칙·복수 호스트 안내 완료.
 복수 호스트 CLI: `MHI-001–004` 구현·검증·문서 동기화·`develop` push 완료.
