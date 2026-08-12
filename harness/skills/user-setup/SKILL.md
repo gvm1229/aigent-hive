@@ -89,12 +89,12 @@ Configure user-scope Hive preferences without modifying a project harness or pro
    - Agent persona: `strict`.
    - Active hosts: the current authenticated host only.
    - Skills: `all` mode with every built-in Skill in the signed catalog.
-   - Usage guard: disabled. A remaining-usage threshold is requested only when the user enables it.
+   - Usage guard: enabled with a `20%` remaining threshold.
    - Selecting expedited authorizes the displayed built-in dependency closure only. It never
      approves a third-party Skill, CodexBar installation, credential access, or destructive action.
 8. Ask exactly one custom-setup question at a time in the required order below.
    - Explain the available values from the signed user-setup catalog.
-   - Do not infer a preference, host selection, custom description, Skill approval, usage-guard opt-in, or fallback consent.
+   - Do not infer a preference, host selection, custom description, Skill approval, usage-guard disablement, or fallback consent.
    - Present every user-facing choice, Skill list, dependency list, and write list as one complete
      Markdown list or table entry per line. Never combine independently selectable items into a
      comma-separated paragraph.
@@ -120,6 +120,19 @@ Configure user-scope Hive preferences without modifying a project harness or pro
    - Report the canonical user setup path, active hosts, active Skills, Wiki state, usage-guard state, and any unsupported host capability.
    - Clear completed progress only after successful apply and validation with `hive setup --progress
      clear --scope user --user-root <user-root> --output json`.
+14. When the usage guard is enabled, probe native usage availability without invoking a fallback.
+   - For an active Codex host, run `hive usage probe-native --host codex --output json` after
+     successful apply and validation. Do not mention, ask about, inspect, or invoke CodexBar before
+     this command reports `hive.usage-native-fallback-eligible`.
+   - `hive.usage-native-available` and all native limited decisions complete setup with no
+     CodexBar question or invocation.
+   - For Claude and Antigravity, defer the native probe until the first active-host usage check.
+     Do not turn the lack of an initialization-time host session into fallback consent.
+   - After `hive.usage-native-fallback-eligible`, explain the exact native failure and separately
+     ask whether the qualified CodexBar fallback may be used. Installation still requires a second,
+     current-action consent for the exact fixed `hive usage fallback-install` command.
+   - `hive.usage-native-failed-closed` is an integrity or safety failure. Do not offer or invoke a
+     fallback for that result.
 
 ## Question Order
 
@@ -149,10 +162,10 @@ consent and setup mode. Ask the remaining preference questions only for `Custom`
    - Never derive active Skills from the user profile, persona, or host selection.
    - Existing `recommended` configuration is a legacy saved value. Preserve its exact recorded closure until the user reviews and approves a new `all` or `individual` preview.
    - The signed catalog's `optional_third_party_skills` list is empty in this release. Do not offer or activate a third-party Skill until a later release defines its explicit consent contract.
-10. **Usage guard** — explicit opt-in; default disabled.
-   - When enabled, ask the user to choose an integer remaining threshold from `1` through `99`.
-   - Do not propose a percentage preset, use a percentage in a sample answer, or silently reuse a
-     profile-specific value. A new setup has no default usage threshold.
+10. **Usage guard** — offer `Enabled (recommended)` first and `Disabled` second.
+   - Expedited setup enables protection at `20%` remaining without another question.
+   - In Custom setup, when enabled, ask the user to choose an integer remaining threshold from `1`
+     through `99`; do not silently replace that choice with the expedited default.
    - A project may later choose its own registered project identity and an equal-or-higher threshold.
      The global value remains the minimum protection for every project; no project category has a preset value.
 11. **Discord usage notification** — ask only when the usage guard is enabled.
@@ -181,11 +194,7 @@ consent and setup mode. Ask the remaining preference questions only for `Custom`
      keeps the integration disabled and preserves progress at `discord-test`.
    - The installed visual guide is `<user-root>/.hive/guides/discord-usage-notifications.html`.
      Open that exact local file only when the user asks for a visual guide; do not inspect a project.
-12. **CodexBar fallback** — ask only when the usage guard is enabled and the active-host native sensor is unavailable, unsupported, or malformed.
-   - Explain that CodexBar is fallback-only and never overrides a native success or limited decision.
-   - Record whether an already-qualified CodexBar fallback may be used.
-   - If installation is needed, show the exact fixed command and request separate current-action consent. Never persist installation consent or infer it from the setup quick-answer.
-13. **Preview and automatic apply** — show the exact write set and dependency closure, then apply
+12. **Preview and automatic apply** — show the exact write set and dependency closure, then apply
     a conflict-free built-in-only result without another approval question.
 
 ## Reconfiguration
@@ -221,7 +230,6 @@ consent and setup mode. Ask the remaining preference questions only for `Custom`
   8. **Usage guard** — stops new Hive work at a chosen remaining-usage limit.
      - Enablement: enabled or disabled.
      - Stop threshold: integer from `1` through `99` percent remaining.
-     - CodexBar fallback: enabled or disabled; available only when the native sensor is unavailable, unsupported, or malformed.
      - Discord usage notification: enabled or disabled; available only when the usage guard is enabled and sends outbound-only notices.
      - Discord webhook environment variable: uppercase variable name such as `HIVE_DISCORD_WEBHOOK_URL`; Hive records the name, never the URL.
      - Discord request privacy: default `summary` or explicit `raw-prompt` opt-in after preview and redaction.
@@ -266,11 +274,12 @@ Use these host-independent question patterns, one question at a time:
    - `모든 내장 Skill 사용`
    - `개별 내장 Skill 선택`
 5. `Wiki 저장 위치: 이 컴퓨터의 Markdown 파일. Obsidian 같은 앱 열기 가능.`
-6. `사용량 한도 도달 시 Discord 알림 수신 여부.`
+6. `사용량 보호 선택: 활성화 (권장) 또는 비활성화. 신속 설정은 남은 사용량 20%에서 중지.`
+7. `사용량 한도 도달 시 Discord 알림 수신 여부.`
    - `아니요`
    - `예, 시험 알림도 보내기`
-7. `Discord webhook URL 저장: 환경 변수. 예: HIVE_DISCORD_WEBHOOK_URL. URL 자체 대신 환경 변수 이름 사용. Hive 시험 알림으로 연결 확인.`
-8. `Discord 알림 항목·순서 선택. 기본값: 남은 사용량, 프로젝트, 요청, 진행 상태, 호스트, 계속하기. 시험 알림: 실제 알림과 같은 형식, 첫 줄 시험 안내 추가.`
+8. `Discord webhook URL 저장: 환경 변수. 예: HIVE_DISCORD_WEBHOOK_URL. URL 자체 대신 환경 변수 이름 사용. Hive 시험 알림으로 연결 확인.`
+9. `Discord 알림 항목·순서 선택. 기본값: 남은 사용량, 프로젝트, 요청, 진행 상태, 호스트, 계속하기. 시험 알림: 실제 알림과 같은 형식, 첫 줄 시험 안내 추가.`
 
 For Korean partial reconfiguration, show this complete catalog before asking which setting to change:
 
@@ -295,9 +304,8 @@ For Korean partial reconfiguration, show this complete catalog before asking whi
    - 선택 방식: 모든 내장 Skill 사용 또는 개별 내장 Skill 선택
    - 개별 선택: 각 Skill의 켜기·끄기. 필수 `user-setup`는 계속 활성화
 8. **사용량 보호** — 남은 사용량이 정한 기준에 도달할 때 새 Hive 작업 중지
-   - 사용 여부: 켜기 또는 끄기
+   - 사용 여부: `활성화 (권장)` 또는 `비활성화`
    - 중단 기준: 남은 사용량 `1`%부터 `99`%까지
-   - CodexBar 대체 수단: 켜기 또는 끄기. 호스트 기본 감지기를 쓸 수 없을 때만 사용
    - Discord 사용량 알림: 켜기 또는 끄기. 사용량 보호를 켠 경우에만 선택 가능하며 Hive에서 Discord로 보내는 알림만 지원
    - Discord webhook 환경 변수: `HIVE_DISCORD_WEBHOOK_URL` 같은 대문자 환경 변수 이름. Hive의 URL 자체 저장 금지
    - Discord 요청 공개 범위: 기본 `summary` 또는 preview·redaction 뒤 명시적으로 선택한 `raw-prompt`

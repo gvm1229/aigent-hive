@@ -65,6 +65,7 @@ USAGE:
     hive prompt approve --request <input.json> --result <result.json> --digest <sha256:...> --target-host codex|claude|antigravity --confirm-refined-prompt --output json
     hive hook --capability <name> --event <event> [--capabilities <fresh-json>] [--input <json>] --output json
     hive usage check --account-digest <sha256:...> [--threshold <1..99>] --output json
+    hive usage probe-native --host codex|claude|antigravity --output json
     hive usage enforce --target <dir> --session-id <id> --process-id <positive-u32> [--account-digest <sha256:...>] --output json
     hive usage status --target <dir> --session-id <id> --process-id <positive-u32> --output json
     hive usage threshold --target <dir> --remaining-percent <1..99> --output json
@@ -243,6 +244,11 @@ struct UsageArguments {
     threshold: u8,
 }
 
+enum ParsedUsageArguments {
+    Check(UsageArguments),
+    ProbeNative(usage::UsageHost),
+}
+
 fn run_usage(arguments: &[String]) -> ExitCode {
     if matches!(
         arguments.first().map(String::as_str),
@@ -254,7 +260,8 @@ fn run_usage(arguments: &[String]) -> ExitCode {
         return usage_install::run(arguments);
     }
     let result = match parse_usage(arguments) {
-        Ok(arguments) => check_usage(&arguments),
+        Ok(ParsedUsageArguments::Check(arguments)) => check_usage(&arguments),
+        Ok(ParsedUsageArguments::ProbeNative(host)) => probe_native_usage(host),
         Err(message) => ActionResult {
             schema_version: 1,
             action: "CheckUsage",
@@ -275,9 +282,44 @@ fn run_usage(arguments: &[String]) -> ExitCode {
     ExitCode::from(result.exit_code)
 }
 
-fn parse_usage(arguments: &[String]) -> Result<UsageArguments, String> {
+fn parse_usage(arguments: &[String]) -> Result<ParsedUsageArguments, String> {
+    if arguments.first().map(String::as_str) == Some("probe-native") {
+        let mut host = None;
+        let mut output = None;
+        let mut index = 1;
+        while index < arguments.len() {
+            let option = arguments[index].as_str();
+            let value = arguments
+                .get(index + 1)
+                .ok_or_else(|| format!("missing value for {option}"))?;
+            match option {
+                "--host" if host.is_none() => host = Some(value.clone()),
+                "--output" if output.is_none() => output = Some(value.clone()),
+                "--host" | "--output" => {
+                    return Err(format!("duplicate usage option: {option}"));
+                }
+                _ => return Err(format!("unknown usage option: {option}")),
+            }
+            index += 2;
+        }
+        if output.as_deref() != Some("json") {
+            return Err("usage probe-native requires --output json".to_owned());
+        }
+        let host = match host.as_deref() {
+            Some("codex") => usage::UsageHost::Codex,
+            Some("claude") => usage::UsageHost::Claude,
+            Some("antigravity") => usage::UsageHost::Antigravity,
+            Some(_) => {
+                return Err(
+                    "usage probe-native --host must be codex, claude, or antigravity".to_owned(),
+                );
+            }
+            None => return Err("missing required option --host".to_owned()),
+        };
+        return Ok(ParsedUsageArguments::ProbeNative(host));
+    }
     if arguments.first().map(String::as_str) != Some("check") {
-        return Err("usage requires the check action".to_owned());
+        return Err("usage requires the check or probe-native action".to_owned());
     }
     let mut account_digest = None;
     let mut threshold = 10_u8;
@@ -318,10 +360,74 @@ fn parse_usage(arguments: &[String]) -> Result<UsageArguments, String> {
     if !is_sha256_digest(&account_digest) {
         return Err("account digest must be sha256 followed by 64 lowercase hex digits".to_owned());
     }
-    Ok(UsageArguments {
+    Ok(ParsedUsageArguments::Check(UsageArguments {
         account_digest,
         threshold,
-    })
+    }))
+}
+
+fn probe_native_usage(host: usage::UsageHost) -> ActionResult {
+    if host != usage::UsageHost::Codex {
+        return ActionResult {
+            schema_version: 1,
+            action: "ProbeNativeUsage",
+            status: "success",
+            exit_code: 0,
+            code: "hive.usage-native-probe-deferred",
+            message: format!(
+                "the {} native usage sensor is checked only from an active host session",
+                host.as_str()
+            ),
+            changed_paths: Vec::new(),
+            evidence: Vec::new(),
+            next_action: None,
+            data: Some(serde_json::json!({ "host": host.as_str(), "probe": "deferred" })),
+        };
+    }
+    let sampled_at = SystemTime::now();
+    match usage::NativeUsageRunner::read_codex_native(&usage::SystemCommandRunner, None, sampled_at)
+    {
+        Ok(snapshot) => ActionResult {
+            schema_version: 1,
+            action: "ProbeNativeUsage",
+            status: "success",
+            exit_code: 0,
+            code: "hive.usage-native-available",
+            message: "the Codex native usage sensor is available".to_owned(),
+            changed_paths: Vec::new(),
+            evidence: vec![Evidence {
+                kind: "report",
+                locator: "usage-snapshots:native".to_owned(),
+                digest: snapshot.evidence_digest(),
+            }],
+            next_action: None,
+            data: Some(serde_json::json!({ "host": host.as_str(), "probe": "available" })),
+        },
+        Err(error) if error.allows_native_fallback() => ActionResult {
+            schema_version: 1,
+            action: "ProbeNativeUsage",
+            status: "blocked",
+            exit_code: 3,
+            code: "hive.usage-native-fallback-eligible",
+            message: error.to_string(),
+            changed_paths: Vec::new(),
+            evidence: Vec::new(),
+            next_action: Some(usage::fallback_install_next_action(host)),
+            data: Some(serde_json::json!({ "host": host.as_str(), "probe": "fallback-eligible" })),
+        },
+        Err(error) => ActionResult {
+            schema_version: 1,
+            action: "ProbeNativeUsage",
+            status: "blocked",
+            exit_code: 3,
+            code: "hive.usage-native-failed-closed",
+            message: error.to_string(),
+            changed_paths: Vec::new(),
+            evidence: Vec::new(),
+            next_action: None,
+            data: Some(serde_json::json!({ "host": host.as_str(), "probe": "failed-closed" })),
+        },
+    }
 }
 
 fn is_sha256_digest(value: &str) -> bool {
@@ -1898,8 +2004,9 @@ fn check_target(target: &Path) -> Result<(), String> {
 mod tests {
     use super::{
         execute_hook_capability, failure_result_for, is_help_request, mark_derived_state_stale,
-        normalize_hook_path, parse_hook, parse_setup, reconcile_project_registry, run_human,
-        version_output_for, wants_json, ActionResult, HookInput, SETUP_USAGE, USAGE,
+        normalize_hook_path, parse_hook, parse_setup, parse_usage, probe_native_usage,
+        reconcile_project_registry, run_human, version_output_for, wants_json, ActionResult,
+        HookInput, ParsedUsageArguments, SETUP_USAGE, USAGE,
     };
     use hive_render::{RenderError, ResolvedProjectPreferences, SetupMode};
     use std::fs;
@@ -1915,6 +2022,44 @@ mod tests {
             "aigent-hive-cli-{name}-{}-{nonce}",
             std::process::id()
         ))
+    }
+
+    #[test]
+    fn native_usage_probe_parses_every_host_without_fallback_consent() {
+        for (name, expected) in [
+            ("codex", crate::usage::UsageHost::Codex),
+            ("claude", crate::usage::UsageHost::Claude),
+            ("antigravity", crate::usage::UsageHost::Antigravity),
+        ] {
+            let parsed = parse_usage(&[
+                "probe-native".to_owned(),
+                "--host".to_owned(),
+                name.to_owned(),
+                "--output".to_owned(),
+                "json".to_owned(),
+            ])
+            .expect("native probe arguments");
+            assert!(matches!(
+                parsed,
+                ParsedUsageArguments::ProbeNative(host) if host == expected
+            ));
+        }
+    }
+
+    #[test]
+    fn inactive_host_native_probe_defers_without_naming_or_invoking_codexbar() {
+        for host in [
+            crate::usage::UsageHost::Claude,
+            crate::usage::UsageHost::Antigravity,
+        ] {
+            let result = probe_native_usage(host);
+            assert_eq!(result.code, "hive.usage-native-probe-deferred");
+            assert_eq!(result.exit_code, 0);
+            assert!(result.next_action.is_none());
+            assert!(!serde_json::to_string(&result)
+                .expect("probe result JSON")
+                .contains("CodexBar"));
+        }
     }
 
     #[test]

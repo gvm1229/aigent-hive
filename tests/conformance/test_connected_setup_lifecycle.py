@@ -259,7 +259,8 @@ else:
         self.assertEqual(defaults["interface_language"], "en")
         self.assertEqual(defaults["persona"], {"id": "strict"})
         self.assertEqual(defaults["skills"], {"mode": "all"})
-        self.assertEqual(defaults["usage_guard"]["enabled"], False)
+        self.assertEqual(defaults["usage_guard"]["enabled"], True)
+        self.assertEqual(defaults["usage_guard"]["stop_remaining_percent"], 20)
         answers = self.work_root / "product-owned-expedited-defaults.yml"
         write_yaml(answers, defaults)
 

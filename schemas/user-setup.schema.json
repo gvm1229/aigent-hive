@@ -148,7 +148,7 @@
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "enabled": { "type": "boolean", "default": false },
+        "enabled": { "type": "boolean", "default": true },
         "stop_remaining_percent": {
           "type": "integer",
           "minimum": 1,
