@@ -10,13 +10,13 @@ members = [
 resolver = "2"
 
 [workspace.package]
-version = "0.9.0"
+version = "0.9.1"
 edition = "2021"
 repository = "https://github.com/gvm1229/aigent-hive"
 license = "Apache-2.0"
 
 [workspace.metadata.hive]
-release-date = "2026-08-01"
+release-date = "2026-08-12"
 
 [workspace.dependencies]
 cap-fs-ext = "=4.0.2"

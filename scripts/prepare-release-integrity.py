@@ -39,6 +39,34 @@ def load_json(path: Path) -> object:
         return json.load(stream)
 
 
+def load_release_contract(source: Path, product_version: str) -> dict[str, object]:
+    path = source / "release-contract.json"
+    if not path.is_file():
+        if product_version == "0.9.0":
+            return {"classification": "feature", "release_sequence": 9}
+        raise ValueError("canonical release contract is missing")
+    contract = load_json(path)
+    if not isinstance(contract, dict) or set(contract) != {
+        "classification",
+        "release_sequence",
+        "schema_version",
+    }:
+        raise ValueError("canonical release contract has an invalid shape")
+    if contract.get("schema_version") != 1:
+        raise ValueError("canonical release contract schema is unsupported")
+    if contract.get("classification") not in {
+        "feature",
+        "bugfix",
+        "documentation-only",
+        "breaking",
+    }:
+        raise ValueError("canonical release classification is invalid")
+    sequence = contract.get("release_sequence")
+    if not isinstance(sequence, int) or isinstance(sequence, bool) or sequence < 1:
+        raise ValueError("canonical release sequence is invalid")
+    return contract
+
+
 def write_json(path: Path, value: object) -> None:
     path.write_bytes(canonical_bytes(value))
 
@@ -130,6 +158,7 @@ def prepare(args: argparse.Namespace) -> None:
     names = native_names(args.product_version) + npm_names(args.package_version)
     require_candidate_files(args.dist, names)
     source = ROOT / "harness" / "release" / args.product_version
+    contract = load_release_contract(source, args.product_version)
     migration = load_json(source / "migration-table.json")
     inventory = load_json(source / "release-surface-inventory.json")
     if not isinstance(migration, dict) or migration.get("target_version") != args.product_version:
@@ -160,7 +189,7 @@ def prepare(args: argparse.Namespace) -> None:
         ]
         manifest = {
             "artifacts": artifacts,
-            "classification": "feature",
+            "classification": contract["classification"],
             "license": "Apache-2.0",
             "migration_table_digest": (
                 f"sha256:{digest(targets / 'migration-table.json')}"
@@ -168,7 +197,7 @@ def prepare(args: argparse.Namespace) -> None:
             "minimum_supported_harness_version": "0.8.0",
             "minimum_updater_version": "0.9.0",
             "product": "aigent-hive",
-            "release_sequence": 9,
+            "release_sequence": contract["release_sequence"],
             "release_version": args.product_version,
             "schema_version": 1,
             "source": {
