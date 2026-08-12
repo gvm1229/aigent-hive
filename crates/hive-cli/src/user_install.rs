@@ -2395,12 +2395,12 @@ fn render_user_guidance(
                 "disabled"
             };
             let memory_gate_en = if config.wiki.enabled {
-                "- Before every final response, review the current user statement and completed outcome for one safe reusable fact, preference, workflow, decision, convention, project profile, or verified outcome. Resolve `user-root|current-project|named-project` scope explicitly. An unregistered repository's user-global fact stays at `user-root`; ambiguous project-specific scope fails closed.\n- For an explicit safe user-root statement, prefer `hive knowledge remember --user-root <user-root> --user-statement <normalized-fact> --claim-key <stable-key> --kind <preference|workflow|decision|convention|project-profile> --output json` exactly once; use `--request <request.json>` only for reviewed artifacts or another supported scope. Require the canonical Markdown and derived-index receipt before the final response; identical current truth is a no-op.\n- Never record a secret, credential, confidential item without current-action authorization, ephemeral status, ambiguous inference, private path, raw transcript, complete conversation, hook payload, tool output, hidden prompt, cache, database, or runtime state.\n"
+                "- Before every final response, review the current user statement and completed outcome for one safe reusable fact, preference, workflow, decision, convention, project profile, or verified outcome. This user-level gate applies immediately after installation in every selected-host folder; project setup, a Hive harness, a project marker, or an attached collection is not required. Resolve `user-root|current-project|named-project` scope explicitly. An unregistered repository's user-global fact stays at `user-root`; ambiguous project-specific scope fails closed.\n- For an explicit safe user-root statement, prefer `hive knowledge remember --user-root <user-root> --user-statement <normalized-fact> --claim-key <stable-key> --kind <preference|workflow|decision|convention|project-profile> --output json` exactly once; use `--request <request.json>` only for reviewed artifacts or another supported scope. Require the canonical Markdown and derived-index receipt before the final response; identical current truth is a no-op.\n- Before knowledge-dependent work, run one bounded `hive knowledge retrieve --user-root <user-root> --target <current-project-root> --scope auto --query <query> --top-k 5 --byte-budget 16384 --output json`. An unregistered target falls back to user-root and shared knowledge while excluding project-private knowledge; missing project setup or collection is not a reason to skip retrieval.\n- Never record a secret, credential, confidential item without current-action authorization, ephemeral status, ambiguous inference, private path, raw transcript, complete conversation, hook payload, tool output, hidden prompt, cache, database, or runtime state.\n"
             } else {
                 "- Global Wiki is disabled: do not write or refresh knowledge.\n"
             };
             let memory_gate_ko = if config.wiki.enabled {
-                "- 모든 최종 응답 전 현재 사용자 발화와 완료 결과에서 안전하고 재사용 가능한 사실·선호·작업 방식·결정·규약·프로젝트 특성·검증된 결과 1개를 검토. `user-root|current-project|named-project` 범위를 명시적으로 결정. 미등록 repository의 사용자 전역 사실은 `user-root`에 유지하고, 모호한 project 범위는 안전하게 중단.\n- 안전한 명시적 user-root 사용자 발화에는 `hive knowledge remember --user-root <user-root> --user-statement <normalized-fact> --claim-key <stable-key> --kind <preference|workflow|decision|convention|project-profile> --output json`을 정확히 1회 우선 실행. 검토 artifact 또는 다른 지원 범위에는 `--request <request.json>` 사용. 최종 응답 전 canonical Markdown과 derived-index receipt를 확인하며, 동일한 현재 truth는 no-op.\n- 현재 action 승인 없는 secret·credential·confidential 항목, ephemeral 상태, 모호한 추론, private path, raw transcript, complete conversation, hook payload, tool output, hidden prompt, cache, database, runtime state는 기록 금지.\n"
+                "- 모든 최종 응답 전 현재 사용자 발화와 완료 결과에서 안전하고 재사용 가능한 사실·선호·작업 방식·결정·규약·프로젝트 특성·검증된 결과 1개를 검토. 이 사용자 범위 절차는 설치 직후 선택 호스트의 모든 폴더에 적용하며 프로젝트 설정·Hive harness·project marker·연결 collection을 전제하지 않음. `user-root|current-project|named-project` 범위를 명시적으로 결정. 미등록 repository의 사용자 전역 사실은 `user-root`에 유지하고, 모호한 project 범위는 안전하게 중단.\n- 안전한 명시적 user-root 사용자 발화에는 `hive knowledge remember --user-root <user-root> --user-statement <normalized-fact> --claim-key <stable-key> --kind <preference|workflow|decision|convention|project-profile> --output json`을 정확히 1회 우선 실행. 검토 artifact 또는 다른 지원 범위에는 `--request <request.json>` 사용. 최종 응답 전 canonical Markdown과 derived-index receipt를 확인하며, 동일한 현재 truth는 no-op.\n- 지식이 필요한 작업 전 `hive knowledge retrieve --user-root <user-root> --target <current-project-root> --scope auto --query <query> --top-k 5 --byte-budget 16384 --output json`을 제한된 범위에서 1회 실행. 미등록 target은 project-private 지식을 제외한 user-root·shared 지식으로 폴백하며, 프로젝트 설정 또는 collection 부재만으로 조회를 건너뛰지 않음.\n- 현재 action 승인 없는 secret·credential·confidential 항목, ephemeral 상태, 모호한 추론, private path, raw transcript, complete conversation, hook payload, tool output, hidden prompt, cache, database, runtime state는 기록 금지.\n"
             } else {
                 "- 전역 위키 비활성: knowledge 기록·갱신 금지.\n"
             };
@@ -2490,14 +2490,18 @@ fn validate_operational_guidance(
     let required = match config.interface_language {
         crate::user_setup::InterfaceLanguage::En => [
             "Before every final response, review the current user statement",
+            "applies immediately after installation in every selected-host folder",
             command,
             "canonical Markdown and derived-index receipt",
+            "An unregistered target falls back to user-root and shared knowledge",
             "ambiguous project-specific scope fails closed",
         ],
         crate::user_setup::InterfaceLanguage::Ko => [
             "모든 최종 응답 전 현재 사용자 발화와 완료 결과",
+            "설치 직후 선택 호스트의 모든 폴더에 적용",
             command,
             "canonical Markdown과 derived-index receipt",
+            "미등록 target은 project-private 지식을 제외한 user-root·shared 지식으로 폴백",
             "모호한 project 범위는 안전하게 중단",
         ],
     };
@@ -8747,6 +8751,11 @@ mod tests {
         assert!(english.contains("do not force irrelevant examples or weaken technical precision"));
         assert!(english.contains("For every passed, failed, skipped, deferred"));
         assert!(english.contains("Before every final response, review the current user statement"));
+        assert!(english
+            .contains("applies immediately after installation in every selected-host folder"));
+        assert!(
+            english.contains("An unregistered target falls back to user-root and shared knowledge")
+        );
         assert!(english.contains("--user-statement <normalized-fact> --claim-key <stable-key>"));
         assert!(english.contains("canonical Markdown and derived-index receipt"));
         assert!(!english.contains("질문과 응답"));
@@ -8763,6 +8772,10 @@ mod tests {
         assert!(korean.contains("관련 없는 예시 강제 또는 기술적 정확성 약화 금지"));
         assert!(korean.contains("통과·실패·건너뜀·연기·미검증·미지원"));
         assert!(korean.contains("모든 최종 응답 전 현재 사용자 발화와 완료 결과"));
+        assert!(korean.contains("설치 직후 선택 호스트의 모든 폴더에 적용"));
+        assert!(korean.contains(
+            "미등록 target은 project-private 지식을 제외한 user-root·shared 지식으로 폴백"
+        ));
         assert!(korean.contains("--user-statement <normalized-fact> --claim-key <stable-key>"));
         assert!(korean.contains("canonical Markdown과 derived-index receipt"));
         for avoidable_mixture in [

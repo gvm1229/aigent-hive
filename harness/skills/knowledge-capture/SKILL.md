@@ -1,6 +1,6 @@
 ---
 name: knowledge-capture
-description: Review every Wiki-enabled user turn for one durable fact, preference, or workflow and write only an agent-reviewed canonical claim; also ingest reviewed sources. Reject secret, confidential, ephemeral, ambiguous, and raw-session content.
+description: From every project immediately after Hive installation, review each Wiki-enabled user turn for one durable fact, preference, or workflow and write only an agent-reviewed canonical claim; also ingest reviewed sources. Project setup is not required. Reject secret, confidential, ephemeral, ambiguous, and raw-session content.
 ---
 
 # Hive Knowledge Capture
@@ -12,6 +12,10 @@ Run the mandatory memory gate, then preserve the existing explicit source-ingest
 1. When Wiki is enabled, review every user turn and completed task before the final response.
    Select only a durable, reusable `preference`, `workflow`, `decision`, `convention`,
    `project-profile`, or verified `outcome`. A normal question or quick-answer is not a fact candidate.
+   The selected host's user-level guidance applies in every folder immediately after Hive
+   installation. Project setup, a Hive harness, a project marker, or an attached collection is not
+   a prerequisite. Never skip this gate only because the current project is unregistered. Store a
+   safe user-global fact at `user-root`; keep ambiguous project-specific scope fail-closed.
 2. If the target contains `hive-source.json`, use `hive source-wiki` for the material
    source-task fact. Never use consumer knowledge paths in the source workspace.
 3. For consumer knowledge, reject secret, credential, confidential, ephemeral, ambiguous,

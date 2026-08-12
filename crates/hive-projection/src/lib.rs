@@ -1025,15 +1025,15 @@ fn localized_skill_text(
         ),
         "knowledge-capture" => (
             "Record knowledge",
-            "Automatically review every Wiki-enabled turn and record one safe durable claim.",
+            "Automatically review every Wiki-enabled turn and record one safe durable claim in every project after installation without requiring project setup.",
             "지식 기록",
-            "위키 활성 매 턴의 안전한 재사용 지식 1개를 자동 검토·기록합니다.",
+            "위키 활성 매 턴의 안전한 재사용 지식 1개를 자동 검토·기록하며 설치 직후 모든 프로젝트에서 프로젝트 설정 없이 적용합니다.",
         ),
         "knowledge-recall" => (
             "Search knowledge",
-            "Retrieve only the Hive knowledge needed for the current work.",
+            "Retrieve only the Hive knowledge needed for the current work, with user-root and shared fallback for unregistered projects.",
             "지식 검색",
-            "작업에 필요한 Hive 지식을 제한된 범위에서 검색합니다.",
+            "미등록 프로젝트에서는 사용자 전역·공유 범위로 폴백해 작업에 필요한 Hive 지식만 검색합니다.",
         ),
         "knowledge-promote" => (
             "Share knowledge",
