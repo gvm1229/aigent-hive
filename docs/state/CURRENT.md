@@ -2,7 +2,7 @@
 
 - 기준 branch: `codex/0.9.3-native-agents`
 - product version: `0.9.1`
-- plan revision: `2.80`
+- plan revision: `2.81`
 - 현재 milestone: `0.9.2` 완료 기능 안정판과 `0.9.3` Native·custom subagent 분리
 - 공개 `v0.9.1`: exact `1e5e7b39c17545f8b997f71cdee39e4cd77d2ef2`. Merge parent
   `0a61c74`와 tree byte 동일
@@ -14,6 +14,10 @@
   `codex/release-0.9.2` 생성 → `0.9.2-test.N` 공개 수용 → protected `main` stable publication
 - Version 이관: `NAT-002–024`·`MRA-001–032`는 `0.9.3`, `N10-002–011`은
   `0.10.0-test`. `0.9.2` release tree의 해당 제품 구현 유입 금지
+- `0.9.2` 문서 gate: root·번역 README, 설치 안내, 공개 HTML, npm README, plugin metadata,
+  문서 색인·명령·version 예시 전수 최신화와 공개 artifact 재검증
+- `0.9.3` 동결: QA contributor 추가 지시 뒤 유지보수자의 별도 명시적 재개 승인 전
+  Native·custom subagent 구현·검증·출시 mutation `0건`
 - History 정책: 기존 `develop` reset·rebase·force-push·대량 revert 없음. 안정판 시험 사용 금지
 - Source Wiki 조회 현재 차단: `docs/facts/{en,ko}/agent-autonomous-continuation.md`의
   `.agents/directives/04-documentation-state.md` source digest 불일치. 후보 전 정합성 복구 필요

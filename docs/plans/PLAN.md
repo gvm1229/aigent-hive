@@ -1,6 +1,6 @@
 # Aigent Hive active plan index
 
-> Revision: 2.80
+> Revision: 2.81
 > 기준일: 2026-08-12
 > Product version: `0.9.1`
 > 현재 milestone: `0.9.2` 완료 기능 안정판과 `0.9.3` Native·custom subagent 분리
@@ -13,9 +13,11 @@
   `0.9.3`, `N10-002–011`은 `0.10.0-test`로 분리
 - Success: `0.9.2` release tree의 Native·custom subagent 유입 `0건`, 최신 numbered test
   실제 수용 결함 `0건`, 그 exact source의 protected stable publication, 현재 Native·custom
-  subagent work의 별도 `0.9.3` branch 보존
+  subagent work의 별도 `0.9.3` branch 보존, README·설치 안내·공개 HTML·npm README·plugin
+  metadata·version 예시를 포함한 공개 문서 전수 최신화
 - Stop boundary: protected `main` review, stable publication environment approval,
-  exact `1.0.0` authority, 설치 product usage guard remaining threshold `5%`
+  exact `1.0.0` authority, 설치 product usage guard remaining threshold `5%`, QA contributor
+  추가 지시 뒤 유지보수자의 별도 `0.9.3` 재개 승인
 - Invariants: provider-neutral, backend별 canonical source 우선, SQLite 파생 상태,
   Source Wiki·run·role·plan·orchestration event Markdown/TOML 정본,
   ownership·consent·foreign byte 보존, provider API·credential·direct model process 경로 없음,
@@ -134,5 +136,7 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
 고정하고, `603668f` 현재 work를 `codex/0.9.3-native-agents`에 먼저 보존. 이후
 `2cec037`의 `codex/release-0.9.2`에서 release-only 변경·full candidate·공개
 `0.9.2-test.N`·Windows 수용을 진행. 최신 시험판 결함 `0건` 뒤 protected `main`의
-`0.9.2`·npm `latest` 게시. `NAT-002–024`·`MRA-001–032`: `0.9.3` 전용.
+`0.9.2`·npm `latest` 게시. 모든 README·설치 안내·공개 HTML·npm README·plugin metadata·
+version 예시를 정식판 기준으로 재검증. `NAT-002–024`·`MRA-001–032`: `0.9.3` 전용이며
+QA contributor 추가 지시와 이후 별도 재개 승인 전 실행 금지.
 `N10-002–011`: `0.10.0-test` 유지. Branch reset·force-push·정식판 시험 lane 사용 금지.

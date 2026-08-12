@@ -55,6 +55,8 @@ class ReleaseQualificationOrderContract(unittest.TestCase):
             "`codex/0.9.3-native-agents`",
             "`codex/release-0.9.2`",
             "`0.9.2-test.N`",
+            "Root·번역 README, 설치 안내, 공개 HTML",
+            "QA contributor 추가 지시 뒤 유지보수자의 별도 명시적 승인 전 금지",
         ):
             with self.subTest(required=required):
                 self.assertIn(required, text)

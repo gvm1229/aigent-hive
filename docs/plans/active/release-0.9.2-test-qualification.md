@@ -9,6 +9,8 @@
 - `0.9.2` 기능 기준: `2cec0377748874748d126b6b55e59975a3f20a02`
 - `0.9.2` 포함: 공개 `v0.9.1` 뒤 완료된 설치 product usage guard 단일 정본 전환과 CI 보정
 - `0.9.2` 추가 허용: version·release note·historical base·package metadata·시험·게시 계약
+- `0.9.2` 필수 문서: root·번역 README, 설치 안내, 공개 HTML, npm README, plugin metadata,
+  문서 색인·명령·version 예시
 - `0.9.3` 이관: `c777da1` 이후 Native orchestration·workflow·custom subagent 구현
 - `0.10.0` 유지: `N10-002–011`
 
@@ -27,6 +29,8 @@
 - 실제 공개 numbered test artifact와 exact source commit·digest 결합
 - 시험판 뒤 제품·package·installer·metadata 수정 시 다음 번호 시험판 재수용
 - Source Wiki lint·index 오류와 stale source digest `0건` 후 후보 생성
+- `0.9.2` 공개 문서의 stale version·명령·링크·표시 metadata `0건` 후 후보 생성
+- `0.9.3` 구현·검증·출시: QA contributor 추가 지시 뒤 유지보수자의 별도 명시적 승인 전 금지
 
 ## Checklist
 
@@ -40,7 +44,8 @@
 - [ ] [REL92-004] Release branch에 `0.9.2` 한정 계획과 stable-as-test 금지 규칙을 clean 적용하고
   `NAT-002–024`·`MRA-001–032`·`N10-002–011` 제외·Source Wiki 정합성 확인
 - [ ] [REL92-005] `0.9.2` version·build date·release note·npm README·Codex plugin metadata·
-  `0.9.1` historical base와 update 경로 동기화
+  `0.9.1` historical base와 update 경로 동기화. Root·번역 README, 설치 안내, 공개 HTML,
+  문서 색인·명령·version 예시 전수 최신화와 stale public reference `0건` 확인
 - [ ] [REL92-006] Release branch full Rust·Python·문서·보안 검사와 Native·custom subagent
   유입 `0건`, 5개 native target clean candidate·exact SHA 검증
 - [ ] [REL92-007] Release branch exact source에서 다음 빈 `0.9.2-test.N` GitHub prerelease·
@@ -52,14 +57,16 @@
 - [ ] [REL92-010] Accepted test exact source의 protected `main` PR·stable candidate 검증 뒤
   `v0.9.2` GitHub Release·npm `latest` 게시
 - [ ] [REL92-011] 공개 `0.9.2` clean install·upgrade·version·build date·plugin 표시·npm README와
-  rollback·recovery 최종 재검증
+  모든 README·설치 안내·공개 HTML·링크·명령·version 예시, rollback·recovery 최종 재검증
 - [ ] [REL92-012] `0.9.2` exact `main`을 `codex/0.9.3-native-agents`에 통합하고
-  `NAT-002–024`·`MRA-001–032` target을 `0.9.3`으로 고정한 별도 release plan 활성화
+  `NAT-002–024`·`MRA-001–032` target을 `0.9.3`으로 고정. QA contributor 추가 지시와
+  유지보수자의 후속 명시적 승인 전 branch 상태 `awaiting-user-authority`·구현 mutation `0건`
 
 ## 중단 경계
 
 - 공개 시험판·정식판의 GitHub `release-publication` environment 승인
 - protected `main` 검토
 - 실제 fresh-session 수용에 필요한 설치 host와 로그인 상태
+- QA contributor 추가 뒤 `0.9.3` 재개에 필요한 유지보수자의 별도 명시적 승인
 
 위 경계 전까지 Agent 소유 branch 준비·검증·candidate 실행 지속.
