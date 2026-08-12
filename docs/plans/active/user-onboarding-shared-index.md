@@ -64,19 +64,21 @@
 - [x] [UOS-018] `auto-setup-harness`의 global preference 상속, canonical project
   evidence와 confidence record, unresolved-only one-question sequence, zero-question apply gate,
   promotion·third-party Skill·fallback hook의 추론 승인 금지
-- [ ] [UOS-019] Wiki enabled 상태의 agent-reviewed task-fact autocapture completion gate:
+- [x] [UOS-019] Wiki enabled 상태의 agent-reviewed task-fact autocapture completion gate:
   결과·사용 도구 또는 project·작성 기준·원 요청 요약의 bounded 기록, user-root·project
   범위 분리, disable 시 capture 0건, raw transcript·hook·tool output·runtime ingestion 금지.
-  Operational user guidance 회귀로 재개방; 보정 owner: `KAC-*`
+  `0.9.1` Windows fresh Codex session의 ordinary prompt 자동 기록·canonical Markdown·derived
+  receipt와 다음 session 자동 회수로 확인; 보정 owner: `KAC-*`
 - [x] [UOS-020] Current projection과 authenticated historical inventory·`retired-names.yml`을
   대조해 폐기·개명된 Hive-owned Skill file과 중첩 빈 directory를 setup·update 때 수렴 제거.
   Modified·foreign path: 보존과 conflict
 - [x] [UOS-021] `hive uninstall`의 Hive-owned transient tree 정리를 leaf-to-root 반복 prune로
   보정. Empty install transaction·backup·marketplace·projection shell 제거, knowledge·saved
   preference·foreign byte 보존. `dev-install` rollback state: 별도 developer lifecycle 유지
-- [ ] [UOS-022] `0.9.0-test.19` Mac 증거 재현 fixture와 actual user-root acceptance. 현재 관찰값
+- [x] [UOS-022] `0.9.0-test.19` Mac 증거 재현 fixture와 actual user-root acceptance. 현재 관찰값
   22개 active Skill·44개 active file·44개 retired empty leaf를 보정 전 fixture로 고정하고,
-  setup·uninstall·reinstall 뒤 retired Skill·owned empty shell `0건`
+  setup·uninstall·reinstall 뒤 retired Skill·owned empty shell `0건`. Exact 44-leaf 회귀 fixture와
+  `0.9.1` Windows user-root preserving reinstall에서 retired empty `agents/`·empty transaction `0건`
 
 ## 완료 evidence
 
