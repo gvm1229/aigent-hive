@@ -1,14 +1,41 @@
 # 현재 상태
 
-- 기준 branch: `develop`
-- product version: `0.9.1`
-- plan revision: `2.67`
-- 현재 milestone: `0.9.1` 최종 호환 patch 검증·공개
+- 기준 branch: `codex/release-0.9.2`
+- product version: `0.9.2`
+- plan revision: `2.74`
+- 현재 milestone: 완료된 usage guard와 공개 문서의 `0.9.2` numbered test 수용
+- 기능 기준: `2cec0377748874748d126b6b55e59975a3f20a02`; release discipline base `c777da1`
+- 제외: `NAT-002–024`·`MRA-001–032`의 `0.9.3`, `N10-002–011`의 `0.10.0-test`
+- 문서 gate: root·번역 README, 설치 안내, 공개 HTML, npm README, plugin metadata,
+  문서 색인·명령·version 예시 전수 최신화와 공개 artifact 재검증
+- 출시 순서: release-only 변경 → full candidate → public `0.9.2-test.N` → Windows 실제
+  설치·fresh-session·성능·복구 수용 → 수정 시 다음 번호 시험판 → 결함 `0건` 뒤 protected
+  `main` stable publication
+- `0.9.3` 동결: QA contributor 추가 지시와 유지보수자의 후속 명시적 승인 전 구현·검증·출시 mutation `0건`
+- `0.9.2-test.1` 수용 거부: candidate run `31596919466`·publication run `31597939956`는
+  통과했으나 GitHub prerelease에 direct installer 자산 3개가 누락되어 공개 설치 URL이 `404`를
+  반환. 게시 workflow·회귀 보정 뒤 `0.9.2-test.2`부터 전체 공개 설치 수용 재수행
+- `0.9.2-test.2` 수용 보류: candidate run `31599834995`·publication run `31600929652`,
+  GitHub 자산 25개와 npm `test`, Windows clean install·upgrade·recovery·성능·보존 PASS.
+  README 두 언어의 stale `test.1` 고정 안내 발견으로 번호 독립 npm `test` 안내 보정 뒤
+  `0.9.2-test.3` 전체 문서·배포 수용 대상으로 전환
+- `0.9.2-test.3` 기능·문서 수용 완료: candidate run `31602608609`·publication run
+  `31603511607`, GitHub 자산 25개·npm `test`·npm README·Windows 공개 설치·plugin 표시·
+  user-scope validate·5% usage guard·지식과 preference 보존 PASS. 완료 checklist exact tree의
+  최종 `0.9.2-test.4` 뒤 source mutation 없이 protected `main`·stable candidate 진행
+- `0.9.2-test.5` 최종 기능 수용 완료: candidate run `31605647532`·publication run
+  `31606685534`, main history 동기화 뒤 동일 tree·25개 자산·npm `test` PASS. README 두 언어는
+  stable 설치만 노출하고 유지보수자용 중립 링크 1개만 별도 출시 검증 문서로 연결. 기능·설치
+  byte 변경 없음; 새 시험판 없이 문서·npm pack·PR CI 뒤 stable 진행
 - `0.9.0` stable publication: candidate run `31561636239`, publication run `31562280178`,
   annotated `v0.9.0`, normal GitHub Release, npm `latest=0.9.0`, Windows 전역 설치·validate·
   release date `2026-08-12` 표시 PASS
-- 미등록 project Wiki lint 분기 보정 완료. Consumer·user-root lint는 source marker 없이 실행하고,
-  source workspace만 `hive source-wiki lint` 사용. Immutable `0.9.1` patch 게시 대기
+- `0.9.1` stable publication·Windows 공개 설치 완료. Release candidate run `31578314040`,
+  publication run `31579447825`, protected `main` exact `1e5e7b39c17545f8b997f71cdee39e4cd77d2ef2`,
+  annotated `v0.9.1`, normal GitHub Release, 여섯 npm package `latest=0.9.1` PASS
+- Usage guard 정본 전환 CI 보정 완료: 삭제된 `tests.conformance.test_source_usage_guard`
+  호출을 CI·local pre-push에서 제거. exact `1227e95243374757c8d5dc51dd6348da15ec09fe`,
+  CI run `31586404076`의 Linux·macOS·Windows 19개 작업 PASS
 - npm README 동기화: root English `README.md` 기반 umbrella package README 생성,
   `QA Contributors` 제외와 npm link·asset 변환. `test_npm_packaging` 3개 PASS. `0.9.1`
   candidate tarball·실제 npm registry README 동일성은 `REL9-025–026` 출시 gate에 포함
@@ -17,9 +44,10 @@
   `REL9-025–026` 출시 gate에 포함
 - `KAC-011` 구현 완료: commit `4311cbe`, 미등록 project CLI 자동 user-root 폴백과 전역·project
   지침·두 knowledge Skill 분기 보강. focused Rust 237·Python static 13·strict Clippy PASS
-- `0.9.0` 게시 순서 오류의 publication 전 항목 `KAC-001·007–008`, `RAG-005·020`,
-  `UOS-019·022`, `REL9-025` 마감. `KAC-012`·`REL9-026`의 동일 후보 publication·실제 설치·
-  문서 마감만 대기. `0.9.1` 뒤 실제 사용의 critical 문제 외 추가 patch 금지 원칙
+- `0.9.0` 게시 순서 오류의 최종 patch gate `KAC-012`·`REL9-026` 포함 마감.
+  이 Windows의 public npm install·user-scope apply·validate, release date `2026-08-12`,
+  knowledge 24개·saved preference 보존, retired empty directory·transaction entry `0건` PASS.
+  `0.9.1` 뒤 실제 사용의 critical 문제 외 추가 patch 금지 원칙
 - Mandatory memory regression: `0.9.0-test.13` operational user guidance의 every-turn
   `hive knowledge remember`·receipt 규칙 부재, localized `knowledge-capture` route 의미 축소.
   `KAC-002–005` 전역 안내·세 host 공통 투영·localized 설명·의미 검증 보정 완료.
@@ -661,20 +689,25 @@ Pre-1.0 비차단 deferred:
 
 ## Source 개발 usage safeguard
 
-- Source-only `hive-usage-guard` Skill과 15초 native Codex app-server primary·CodexBar
-  fallback-only watcher
-- 현재 session threshold: remaining `60%` inclusive
-- Session window 우선, session 부재 시 weekly fallback
-- Quota sensor unknown: 3초 뒤 1회 재시도, 반복 unknown은 observation 보존과
-  `transient_unknown_ignored` 진행, confirmed-limited marker 유지
-- 매 user turn과 tool·mutation·delegation·external write·push·final-answer 경계의 fresh
-  `gate`
-- Explicit current-session disable만 우회 허용; bare `continue`·`resume` 우회 해석 금지
-- New session default-enable, raw account·session identifier 저장 없음
-- Watcher의 Codex App process kill·signal과 `.omx/` 수정 금지
-
-Source guard는 개발 workspace 전용. Shipping 제품은 watcher 없이 one-shot
-`hive usage enforce` 사용.
+- 정본 결정: 설치된 `hive usage` 단일 사용
+- 사용자 선택 global threshold: remaining `5%`
+- 제거 완료: `scripts/source-usage-guard.py`, 15초 background watcher, source 전용 scratch policy,
+  매 tool 경계의 중복 gate
+- 유지 경계: automatic dispatch 직전 session-bound one-shot enforce, native sensor 우선,
+  명시적 session control, raw account·session identifier 저장 금지
+- 구현 완료: 명시적 global threshold 저장과 registered project override 분리. `hive-source.json`
+  source workspace만 설치 product global guard 사용. Project harness 없는 자체 `AGENTS.md`·빈 folder는
+  guard 전체 비활성, halt·threshold mutation·session override·runtime file `0건`
+- Windows 실제 수용: global `20% → 5%` 원자 갱신, source `status`·native `enforce`
+  threshold `5%` PASS, source `.hive/` 생성 `0건`
+- 회귀 증거: Rust usage control 10개·global projection binding 1개, Python 대상 분류·정적
+  계약 39개 통과, Windows 조건부 1개 예상 건너뜀
+- UX 경계: non-Hive guard 비활성과 setup-free Hive Skill 사용 가능 여부 분리. Project state
+  workflow만 한 번의 활성화 승인과 자동 capability·run bootstrap 소유
+- 전체 검증: Rust workspace·format·strict Clippy PASS. Python 적합성 602개 중 562개 PASS,
+  Windows 조건부 40개 예상 건너뜀
+- 현재 Windows 설치: `0.9.1-dev` build date `2026-08-12`, global threshold `5%`, user
+  projection validate PASS. 공개 `0.9.1` native binary는 `.hive/dev-install/original`에 복구용 보존
 
 ## 사람용 문서 style
 

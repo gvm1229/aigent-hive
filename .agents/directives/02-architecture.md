@@ -50,7 +50,7 @@ Never import installed consumer state back into source, copy source-development 
   additional constraints. Record each replaced product ID and its scope in the transitive rename
   ledger, and update routing metadata, references, and conformance tests together. Historical
   release bases remain immutable.
-- A consumer Skill reused in source must not require consumer `.hive/` state, mutate an installed harness, weaken source-root refusal, or bypass the source usage guard. Adapt the provider-neutral workflow or core primitive instead of copying consumer state assumptions.
+- A consumer Skill reused in source must not require project `.hive/` state, mutate an installed project harness, weaken source-root refusal, or bypass the installed product usage guard. Adapt the provider-neutral workflow or core primitive instead of copying project state assumptions.
 - Load only the smallest approved Skill set needed for the task. The simple-question path loads no unrelated project Skill or memory.
 
 ## Canonical Data

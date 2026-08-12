@@ -11,7 +11,7 @@ aliases: ["미등록 프로젝트 조회", "설정 독립 지식"]
 sources:
   - "repo:crates/hive-cli/src/knowledge.rs#sha256:a00d240fa71fecf28877a43253cdc20190279d9e3d5d0b63bf0ad8a47ab9b7de"
   - "repo:crates/hive-cli/src/user_install.rs#sha256:4aecfd684f8c07326a639e92061de5f2ea52050cddc352a3b2f4b6b4adb1d3c2"
-  - "repo:docs/plans/active/v0.9.0-knowledge-autocapture-regression.md#sha256:7fe35e6b1bdba462121104d9db09874ee755aa5c7ad65c85031353e35a172f0d"
+  - "repo:docs/plans/active/v0.9.0-knowledge-autocapture-regression.md#sha256:44fcfa9e2c19c626eb8a7885afcaeb6405b454748e62349c1459958d4180236c"
   - "repo:harness/skills/knowledge-capture/SKILL.md#sha256:d2e23636ac998bf0b8cca29cf2466e761ab6abe6f20313ad0c9b4d2c6cf71459"
   - "repo:harness/skills/knowledge-recall/SKILL.md#sha256:f06146778f6faf907e402462008e970bc82cf134f9e8cb9c31a3b727b20e66ec"
 links: [global-knowledge-rag, knowledge-storage, shared-index]

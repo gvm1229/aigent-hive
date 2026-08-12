@@ -4,8 +4,8 @@
 
 | Crate | 책임 | 금지 |
 | --- | --- | --- |
-| `hive-core` | source guard, ownership, schema-neutral invariant, orchestration reducer·scheduler | host SDK, model process launch |
-| `hive-cli` | command parsing, user-facing result, port wiring | model API |
+| `hive-core` | usage policy, ownership, schema-neutral invariant, orchestration reducer·scheduler | host SDK, model process launch |
+| `hive-cli` | command parsing, target classification, user-facing result, port wiring | model API |
 | `hive-render` | answer validation, template render, staging manifest | live uncontrolled write |
 | `hive-wiki` | Markdown parse/lint, SQLite index/rebuild | canonical fact를 DB에만 저장 |
 | `hive-projection` | host capability matrix, declarative envelope와 thin file projection | model/session runtime·host execution |

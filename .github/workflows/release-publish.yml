@@ -409,12 +409,14 @@ jobs:
               --prerelease \
               --title "Aigent Hive $PACKAGE_VERSION test" \
               --notes-file "docs/releases/$PRODUCT_VERSION.md" \
+              dist/install.sh dist/install.ps1 dist/install.cmd \
               dist/*.tar.gz dist/*.zip dist/*.sha256 dist/*.tgz dist/*.attestation.jsonl
           else
             gh release create "$tag" \
               --target "$CANDIDATE_SHA" \
               --title "Aigent Hive $PRODUCT_VERSION" \
               --notes-file "docs/releases/$PRODUCT_VERSION.md" \
+              dist/install.sh dist/install.ps1 dist/install.cmd \
               dist/*.tar.gz dist/*.zip dist/*.sha256 dist/*.tgz dist/*.attestation.jsonl \
               dist/release-integrity-receipt.json
           fi

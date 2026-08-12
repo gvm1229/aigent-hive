@@ -282,66 +282,11 @@
     "text_sha256": "67b3e5dd7ebdb2ab4a748917047a280145d6ea927421246fce2408f4ac525267"
   },
   {
-    "path": "docs/guides/source-usage-guard.md",
-    "line": 51,
-    "reason": "Exact source usage-guard prompt sample preserves user-facing control intent.",
-    "text_sha256": "92954c1f256ec3b2fbe7c47b383dd8b0a1f2a04d5f953083ff3f0c7d4e4954e8"
-  },
-  {
-    "path": "docs/guides/source-usage-guard.md",
-    "line": 52,
-    "reason": "Exact source usage-guard prompt sample preserves user-facing control intent.",
-    "text_sha256": "fb766daf6702fa197d7c2960ed1725012bd2fb11b449dcb95b43f377d290453e"
-  },
-  {
-    "path": "docs/guides/source-usage-guard.md",
-    "line": 53,
-    "reason": "Exact source usage-guard prompt sample preserves user-facing control intent.",
-    "text_sha256": "6c26ec9c6b0046b398139cabbdaac7df8a2ce42ef5e450b90fece92158a52692"
-  },
-  {
-    "path": "docs/guides/source-usage-guard.md",
-    "line": 54,
-    "reason": "Exact source usage-guard prompt sample preserves user-facing control intent.",
-    "text_sha256": "f09e935a369983fb2414145ffc4f9ef5de3a3cf4e313123c77e952bc8ff98459"
-  },
-  {
-    "path": "docs/guides/source-usage-guard.md",
-    "line": 55,
-    "reason": "Exact source usage-guard prompt sample preserves user-facing control intent.",
-    "text_sha256": "a83a9bdc7c4d1248de305c61046750f90f33693c3dee7b133372b92a4a13b74c"
-  },
-  {
-    "path": "docs/guides/source-usage-guard.md",
-    "line": 68,
-    "reason": "Exact source usage-guard prompt sample preserves user-facing control intent.",
-    "text_sha256": "868e226c3fc21158b9e86b8f6901300533090ed9d3f60068cbc0b278b0c94cc1"
-  },
-  {
     "path": "docs/plans/stages/01a-setup-discovery-consent.md",
     "line": 48,
     "reason": "Exact fallback-hook consent prompt preserves approved user-facing UI bytes.",
     "text_sha256": "64f376ad77a0744e6d2725ac086387c1c82208e41bda2b22bd73f84dda48c8e8"
-  }
-,
-{
-  "path": "docs/guides/source-usage-guard.md",
-  "line": 60,
-  "reason": "Exact source usage-guard user control prompt sample.",
-  "text_sha256": "084623edd8fc3ff5c2b28ceaff86cb1cec8fde14b860675e4699b48113a05a5f"
-},
-{
-  "path": "docs/guides/source-usage-guard.md",
-  "line": 61,
-  "reason": "Exact source usage-guard user control prompt sample.",
-  "text_sha256": "6d24e1432688dc028e6008166d74ea4ad8a0480609dcd9e5e9ccc105644b5a0e"
-},
-{
-  "path": "docs/guides/source-usage-guard.md",
-  "line": 62,
-  "reason": "Exact source usage-guard user control prompt sample.",
-  "text_sha256": "3fea94e452a4b13c176427cf532e789cc489cfbaafbe7f904e9867219f575646"
-},
+  },
 {
   "path": "harness/template/AGENTS.md.jinja",
   "line": 33,

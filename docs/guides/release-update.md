@@ -6,7 +6,7 @@
 
 ```bash
 hive release verify \
-  --bundle /absolute/releases/aigent-hive-0.9.0 \
+  --bundle /absolute/releases/aigent-hive-0.9.2 \
   --output json
 ```
 
@@ -23,7 +23,7 @@ hive release verify \
 ```bash
 hive update \
   --target /absolute/consumer-project \
-  --bundle /absolute/releases/aigent-hive-0.9.0 \
+  --bundle /absolute/releases/aigent-hive-0.9.2 \
   --dry-run \
   --output json
 ```
@@ -40,7 +40,7 @@ ledger 단독 신뢰 금지
 ```bash
 hive update \
   --target /absolute/consumer-project \
-  --bundle /absolute/releases/aigent-hive-0.9.0 \
+  --bundle /absolute/releases/aigent-hive-0.9.2 \
   --apply \
   --output json
 ```
@@ -125,7 +125,7 @@ Paid code signing: publication 선행 조건 아님
 ### macOS·Linux
 
 ```bash
-version=0.9.0
+version=0.9.2
 installer=$(mktemp "${TMPDIR:-/tmp}/aigent-hive-install.XXXXXX")
 trap 'rm -f "$installer"' EXIT HUP INT TERM
 curl --fail --location --proto '=https' --tlsv1.2 \
@@ -137,7 +137,7 @@ AIGENT_HIVE_VERSION="$version" sh "$installer"
 ### Windows PowerShell 5.1
 
 ```powershell
-$Version = "0.9.0"
+$Version = "0.9.2"
 $Installer = Join-Path ([IO.Path]::GetTempPath()) (
     "aigent-hive-install-{0}.ps1" -f [Guid]::NewGuid().ToString("N")
 )
@@ -154,7 +154,7 @@ try {
 ### Windows `cmd.exe`
 
 ```bat
-set "HIVE_VERSION=0.9.0" && set "HIVE_PREFIX=%LOCALAPPDATA%\AigentHive" && powershell.exe -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command "$ErrorActionPreference='Stop'; $repository='https://github.com/gvm1229/aigent-hive'; $installer=Join-Path ([IO.Path]::GetTempPath()) ('aigent-hive-install-{0}.ps1' -f [Guid]::NewGuid().ToString('N')); try { Invoke-WebRequest -UseBasicParsing -Uri ($repository + '/releases/download/v' + $env:HIVE_VERSION + '/install.ps1') -OutFile $installer; & $installer -Version $env:HIVE_VERSION -Prefix $env:HIVE_PREFIX } finally { Remove-Item -LiteralPath $installer -Force -ErrorAction SilentlyContinue }"
+set "HIVE_VERSION=0.9.2" && set "HIVE_PREFIX=%LOCALAPPDATA%\AigentHive" && powershell.exe -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command "$ErrorActionPreference='Stop'; $repository='https://github.com/gvm1229/aigent-hive'; $installer=Join-Path ([IO.Path]::GetTempPath()) ('aigent-hive-install-{0}.ps1' -f [Guid]::NewGuid().ToString('N')); try { Invoke-WebRequest -UseBasicParsing -Uri ($repository + '/releases/download/v' + $env:HIVE_VERSION + '/install.ps1') -OutFile $installer; & $installer -Version $env:HIVE_VERSION -Prefix $env:HIVE_PREFIX } finally { Remove-Item -LiteralPath $installer -Force -ErrorAction SilentlyContinue }"
 ```
 
 Installer 검증:

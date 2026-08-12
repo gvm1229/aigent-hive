@@ -9,7 +9,7 @@ summary: "Workspace crate별 provider-neutral 구현 경계."
 tags: [architecture, rust]
 aliases: ["Crate map"]
 sources:
-  - "repo:docs/plans/contracts/05-rust-boundaries.md#sha256:b947e72402f5d858ed31f71cc95dba653fc915a5b96ea7fc338c87d418a9ec2c"
+  - "repo:docs/plans/contracts/05-rust-boundaries.md#sha256:ad974c7d93341ff4e8cde0fbc0801b155e6530bdc690f86bcec5679d18acfae9"
 links: [artifact-boundaries, source-development]
 reviewed_revision: "git:a86bb5bc4aa01c9823fa670e83cb538b9f031cbf"
 status: active

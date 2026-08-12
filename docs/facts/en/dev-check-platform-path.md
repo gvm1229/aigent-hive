@@ -9,9 +9,9 @@ summary: "The pre-push runner composes tool PATH entries without instantiating h
 tags: [development, portability, verification]
 aliases: ["dev-check PATH portability"]
 sources:
-  - "repo:scripts/dev-check.py#sha256:8078227723acce5d1f0795e55a0088e972a15facd8dbf624ab1a3cc0baadfa60"
+  - "repo:scripts/dev-check.py#sha256:493791a3d48bda48345c6a9af34e1ac47d241f03d2eb48347d9fd1afea3b1b0f"
 links: [release-verification]
-reviewed_revision: "git:3feac3e33cd2c7080eb04d1c87e31b354d4dde5c"
+reviewed_revision: "git:39569b7a2a7c67f8ab19010db8c4df32da470f86"
 status: active
 ---
 

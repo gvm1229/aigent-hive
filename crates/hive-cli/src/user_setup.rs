@@ -2679,6 +2679,116 @@ pub(crate) fn load_operational_config(root: &Dir) -> Result<Option<UserSetupConf
         })
 }
 
+pub(crate) struct UsageThresholdUpdate {
+    pub(crate) previous: u8,
+    pub(crate) current: u8,
+    pub(crate) changed_paths: Vec<String>,
+    pub(crate) config_bytes: Vec<u8>,
+}
+
+/// Update only the authenticated global usage threshold while keeping the user projection
+/// manifest bound to the new canonical preferences. Project-local thresholds are intentionally
+/// outside this path.
+pub(crate) fn set_operational_usage_threshold(
+    user_root: &Path,
+    remaining_percent: u8,
+) -> Result<UsageThresholdUpdate, String> {
+    if !(1..=99).contains(&remaining_percent) {
+        return Err("global usage threshold must be between 1 and 99".to_owned());
+    }
+    let (_canonical_root, root) =
+        super::user_install::open_canonical_user_root_for_setup(user_root)?;
+    let prior_bytes = super::user_install::read_user_setup_file(
+        &root,
+        Path::new(USER_SETUP_RELATIVE),
+        MAX_USER_SETUP_BYTES,
+    )?
+    .ok_or_else(|| {
+        "global Hive setup is required before changing its usage threshold".to_owned()
+    })?;
+    let mut config = parse_and_validate_installed_config(&prior_bytes)
+        .map_err(|error| error.message().to_owned())?;
+    let previous = config.usage_guard.stop_remaining_percent;
+    if previous == remaining_percent {
+        return Ok(UsageThresholdUpdate {
+            previous,
+            current: remaining_percent,
+            changed_paths: Vec::new(),
+            config_bytes: prior_bytes,
+        });
+    }
+    if let Some((project, threshold)) = config
+        .usage_guard
+        .project_overrides
+        .iter()
+        .find(|(_, threshold)| **threshold < remaining_percent)
+    {
+        return Err(format!(
+            "global threshold {remaining_percent} would exceed the saved project override for {project} ({threshold})"
+        ));
+    }
+    config.usage_guard.stop_remaining_percent = remaining_percent;
+    validate_config_semantics(&config).map_err(|error| error.message().to_owned())?;
+    let catalog = parse_and_validate_catalog().map_err(|error| error.message().to_owned())?;
+    let resolved_skills =
+        resolve_skills(&config, &catalog).map_err(|error| error.message().to_owned())?;
+    let desired = canonical_config(&config).map_err(|error| error.message().to_owned())?;
+    let projection = apply_user_projection(&root, &config, &resolved_skills, &desired)
+        .map_err(|error| error.message().to_owned())?;
+    if let Err(primary) = super::user_install::replace_user_setup_file(
+        &root,
+        Path::new(USER_SETUP_RELATIVE),
+        Some(&prior_bytes),
+        Some(&desired),
+    ) {
+        let rollback = rollback_user_projection(&root, &projection);
+        return Err(match rollback {
+            Ok(()) => format!("global threshold activation failed: {primary}"),
+            Err(rollback) => format!(
+                "global threshold activation failed ({primary}); projection rollback failed ({rollback})"
+            ),
+        });
+    }
+    let validation = load_operational_config(&root)
+        .map_err(|error| error.message().to_owned())?
+        .ok_or_else(|| "global Hive setup disappeared after threshold activation".to_owned())
+        .and_then(|installed| {
+            if installed == config {
+                validate_user_projection(&root, &config, &resolved_skills, &desired)
+                    .map_err(|error| error.message().to_owned())
+            } else {
+                Err("global Hive setup changed after threshold activation".to_owned())
+            }
+        });
+    if let Err(primary) = validation {
+        let config_rollback = super::user_install::replace_user_setup_file(
+            &root,
+            Path::new(USER_SETUP_RELATIVE),
+            Some(&desired),
+            Some(&prior_bytes),
+        );
+        let projection_rollback = rollback_user_projection(&root, &projection);
+        return Err(match (config_rollback, projection_rollback) {
+            (Ok(()), Ok(())) => primary,
+            (config, projection) => format!(
+                "global threshold validation failed ({primary}); rollback failed (config: {}; projection: {})",
+                config.err().unwrap_or_else(|| "ok".to_owned()),
+                projection.err().unwrap_or_else(|| "ok".to_owned())
+            ),
+        });
+    }
+    let mut changed_paths = projection.changed_paths;
+    changed_paths.push(USER_SETUP_RELATIVE.to_owned());
+    changed_paths.sort();
+    changed_paths.dedup();
+    Ok(UsageThresholdUpdate {
+        previous,
+        current: remaining_percent,
+        changed_paths,
+        config_bytes: desired,
+    })
+}
+
 pub(crate) fn resolved_operational_skills(
     root: &Dir,
 ) -> Result<Option<(UserSetupConfig, Vec<String>)>, SetupError> {
@@ -3931,6 +4041,39 @@ usage_guard:
 
         assert!(preferences.usage_guard_enabled);
         assert!(preferences.codexbar_fallback_enabled);
+    }
+
+    #[test]
+    fn global_usage_threshold_update_keeps_projection_binding_current() {
+        let temporary = tempfile::tempdir().expect("temporary user root");
+        let mut config = valid_config();
+        config.usage_guard.enabled = true;
+        config.usage_guard.stop_remaining_percent = 20;
+        let bytes = canonical_config(&config).expect("config bytes");
+        let config_path = temporary.path().join(USER_SETUP_RELATIVE);
+        fs::create_dir_all(config_path.parent().expect("config parent")).expect("config directory");
+        fs::write(&config_path, &bytes).expect("operational config");
+        let root = super::super::user_install::open_user_root_for_setup(temporary.path())
+            .expect("user root");
+        let catalog = parse_and_validate_catalog().expect("catalog");
+        let skills = resolve_skills(&config, &catalog).expect("resolved skills");
+        apply_user_projection(&root, &config, &skills, &bytes).expect("initial projection");
+
+        let update =
+            set_operational_usage_threshold(temporary.path(), 5).expect("global threshold update");
+
+        assert_eq!(update.previous, 20);
+        assert_eq!(update.current, 5);
+        assert!(update
+            .changed_paths
+            .iter()
+            .any(|path| path == USER_SETUP_RELATIVE));
+        let installed = load_operational_config(&root)
+            .expect("load updated config")
+            .expect("updated config");
+        assert_eq!(installed.usage_guard.stop_remaining_percent, 5);
+        validate_user_projection(&root, &installed, &skills, &update.config_bytes)
+            .expect("updated projection binding");
     }
 
     #[test]

@@ -58,8 +58,6 @@
 | Usage guard thresholds | [en](en/usage-guard-thresholds.md) | [ko](ko/usage-guard-thresholds.md) |
 | Automatic dispatch guard | [en](en/automatic-dispatch-guard.md) | [ko](ko/automatic-dispatch-guard.md) |
 | Source usage guard | [en](en/source-usage-guard.md) | [ko](ko/source-usage-guard.md) |
-| Source watcher process replacement | [en](en/source-watcher-process-replacement.md) | [ko](ko/source-watcher-process-replacement.md) |
-| Windows source watcher identity | [en](en/windows-watcher-identity.md) | [ko](ko/windows-watcher-identity.md) |
 | Judge verification | [en](en/judge-verification.md) | [ko](ko/judge-verification.md) |
 | Release verification | [en](en/release-verification.md) | [ko](ko/release-verification.md) |
 | `dev-check` 플랫폼 PATH | [en](en/dev-check-platform-path.md) | [ko](ko/dev-check-platform-path.md) |

@@ -50,7 +50,7 @@
   `REL9-026`과 함께 게시 뒤 마감. Root English `README.md` 기반 npm
   umbrella package README 생성·tarball 수록·link와 asset 변환 검증 포함. Codex 설치 화면의
   developer `Hojin (Tom) Jeong`과 중앙 확대 공식 Hive logo 표시 검증 포함
-- [ ] [REL9-026] Protected stable publication·관찰. Annotated tag·normal GitHub Release·six-package
+- [x] [REL9-026] Protected stable publication·관찰. Annotated tag·normal GitHub Release·six-package
   OIDC `latest`, installer·update 확인, critical 회귀 `0건`, PLAN·CURRENT·release notes·ADR·fact 마감
 
 ## 보존된 완료 증거

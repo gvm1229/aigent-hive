@@ -4,22 +4,25 @@ pair_id: source-usage-guard
 topic_slug: source-usage-guard
 language: en
 counterpart: ../ko/source-usage-guard.md
-title: "Source Session Usage Guard"
-summary: "Source development keeps every execution-boundary check through its repository gate and the single product usage guard."
+title: "Installed Guard Target Boundary"
+summary: "The installed guard applies only to configured Hive projects and the Hive source workspace; non-Hive folders remain entirely inactive."
 tags: [guard, source, usage]
 aliases: ["Source quota safeguard"]
 sources:
-  - "repo:docs/guides/source-usage-guard.md#sha256:5f3fb38548cc8c96cdf9cfe273b77dd4b11c3bea4e0d379c1fefdf40193a0213"
-  - "repo:docs/plans/active/usage-guard-policy.md#sha256:7b64cee13b39806a519ee9d8387972a1e69da108e1075b8b0b873581d46c439b"
-links: [automatic-dispatch-guard, source-development, windows-watcher-identity]
-reviewed_revision: "git:7dd812e81a6e4e2771c783fc65835a3387bbd7ca"
+  - "repo:.github/workflows/ci.yml#sha256:bcba0d0f834f9e1e0dca81f465bb0337c5c4db83299c25d357f132f5a4cefd4d"
+  - "repo:crates/hive-cli/src/usage_control.rs#sha256:06ce162411217587acab322726a197507bb179e318fc2b6157146e287ae3c15d"
+  - "repo:docs/guides/source-usage-guard.md#sha256:c4c7f5f717627becc0636d1c7320eb227df844dc2ea5d837a79080c07c673197"
+links: [automatic-dispatch-guard, source-development, usage-guard-thresholds]
+reviewed_revision: "git:39569b7a2a7c67f8ab19010db8c4df32da470f86"
 status: active
 ---
 
-# Source Session Usage Guard
+# Installed Guard Target Boundary
 
-The repository source guard checks the development session before each tool, mutation, external
-write, push, and final answer. Product `usage-guard` owns user-facing usage controls, using the
-user's global threshold and the repository's optional earlier-stop override. No source-only Skill,
-adapter, or threshold state remains. A bypass still requires explicit intent and remains bound to
-the current session and process.
+The installed product is the sole usage-guard implementation. A configured Hive project uses
+`max(global, project)` and may keep project-local session state. The Aigent Hive source workspace
+uses the global threshold with user-root runtime state and no source `.hive/` files. A folder with
+only its own `AGENTS.md`, or an empty folder, is non-Hive: no enforcement, threshold mutation,
+session override, halt marker, or runtime file. Setup-free Hive Skills remain available there.
+Source development uses one task-start preflight and no Python watcher, repeated tool-boundary
+gate, or CI call to the removed source-guard test corpus.

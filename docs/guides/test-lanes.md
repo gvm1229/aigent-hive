@@ -37,5 +37,5 @@ critical path: 262.03초, 순차 실행 대비 45.2% 단축 모델. checkout·de
 - `conformance`: `os × lane` matrix, selected lane만 실행
 - `copier`: Copier render·schema·문서 gate
 
-Windows source usage guard의 잠금 파일 회귀: security lane 전용 compatibility subset 선행. 전체 lane 실행 시
-`HIVE_WINDOWS_SOURCE_USAGE_GUARD_SUBSET=skip`으로 중복 fixture만 제외.
+설치 product usage guard 회귀: `test_phase7_usage_control.py`에서 configured project,
+`hive-source.json` source workspace, non-Hive folder 대상 분류 검증.

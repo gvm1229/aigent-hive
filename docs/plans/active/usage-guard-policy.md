@@ -1,8 +1,8 @@
 # 전역·프로젝트 사용량 보호 정책 계획
 
 > Checklist owner: `UGP-*`
-> Target: `0.9.0`
-> Scope: global `usage-guard`, project별 조기 중지 한도, 단일 product Skill
+> Target: `0.9.1` 이후 source 정본 수렴
+> Scope: global `usage-guard`, project별 조기 중지 한도, 설치 product 단일 정본
 
 ## 결정
 
@@ -15,9 +15,9 @@
 - Custom setup threshold: 사용자가 valid range 안에서 직접 선택
 - 신속 기본 profile: 활성화, 남은 사용량 `20%`
 - 사용자 호출 Skill: product `usage-guard` 하나
-- Aigent Hive source의 pre-task gate: repository directive가 소유. 설치 product `usage-guard`와
-  별개 user policy 미생성
-- Source 전용 Skill·adapter·user threshold state: `0건`
+- Aigent Hive source의 pre-task gate: 설치된 `hive usage`가 단일 정본
+- Source 전용 Python gate·watcher·Skill·adapter·threshold state: `0건`
+- Non-Hive guard 비활성: setup-free Hive Skill 비활성과 무관
 
 ## 구현
 
@@ -42,6 +42,21 @@
   disable 경로 회귀 추가
 - [x] [UGP-008] Setup 설명·preview·summary·schema fixture·saved preference migration을 새
   기본값과 일치시키고 clean install·reconfigure·preserving reinstall 수용
+- [x] [UGP-009] Source workspace의 Python gate·15초 watcher·별도 scratch policy를 제거하고,
+  repository directive가 설치된 `hive usage`의 session-bound one-shot 보호만 호출. VS Code를
+  방해하는 background watcher·tool 경계별 중복 gate `0건`
+- [x] [UGP-010] Global과 project threshold mutation을 분리. 명시적 global 변경만 `--user-root`에
+  저장하고 이번 사용자 설정 `5%` 적용. Project `harness.toml`이 있는 target의 변경은
+  `max(global, project)`로 적용. `hive-source.json` source workspace는 별도 구현 없이 설치 product의
+  global threshold 사용. 자체 `AGENTS.md`만 있거나 빈 folder인 non-Hive target은 guard 전체 비활성:
+  halt·threshold 변경·session override·runtime file `0건`
+- [x] [UGP-011] Non-Hive guard 비활성과 Hive 기능 사용 가능 여부를 분리. `quick-answer`, prompt
+  개선, user-root 지식은 project setup·usage preflight 없이 사용. Project state가 필요한 별도
+  workflow만 한 번의 활성화 승인과 자동 capability·run bootstrap 소유. 내부 실행 전제를
+  usage guard 오류로 노출하는 경로 `0건`
+- [x] [UGP-012] Source 전용 Python guard 제거와 함께 CI의 삭제된
+  `tests.conformance.test_source_usage_guard` 호출 제거. Linux·macOS·Windows 적합성 작업에서
+  stale module 호출 `0건`, exact `develop` CI 재검증
 
 ## 완료 기준
 
@@ -49,4 +64,4 @@
 - project override로 특정 project의 조기 중지 설정 가능
 - 동일 session·project에서 매 guard 검사마다 동일 effective threshold 사용
 - 사용자에게 global 값, project 값, 실제 적용 값을 구분해 표시
-- Source Skill·adapter·설정 복제 0건, product `usage-guard`만 활성
+- Source Python gate·watcher·별도 설정 복제 0건, 설치 product `usage-guard`만 활성

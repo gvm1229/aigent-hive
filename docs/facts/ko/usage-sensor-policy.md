@@ -9,8 +9,8 @@ summary: "Qualified host-native sensor 우선과 optional CodexBar fallback."
 tags: [sensor, usage]
 aliases: ["Native-first usage"]
 sources:
-  - "repo:crates/hive-cli/src/main.rs#sha256:5ed0876b70a7119d51ce26af9c64b82f341864ac44207278a2961b806a4cf6c7"
-  - "repo:crates/hive-cli/src/user_setup.rs#sha256:756a903f18f96a554c05fdc72b76e0bc515446e3046bea1de6632087e99370aa"
+  - "repo:crates/hive-cli/src/main.rs#sha256:c450fea38404d374024d407dadd559b4f847cc13a7c9ed54e21aac50d931a787"
+  - "repo:crates/hive-cli/src/user_setup.rs#sha256:5200ab01acbf0c0577e27de976b91c5a697dd83437a25ed94de3ec93c510dcf3"
   - "repo:docs/decisions/ADR-0010-native-first-usage-sensors.md#sha256:141e8070b475ee2b0d81e93a69217093e07af9a9ca61c16dcbb31f111ea1d0f4"
   - "repo:harness/skills/user-setup/SKILL.md#sha256:90a8ecca713a1b1963b5f1863f76d32d5c5b9532ca72922c2705ee9b63520307"
 links: [automatic-dispatch-guard, supported-hosts]

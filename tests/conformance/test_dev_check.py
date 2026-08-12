@@ -120,7 +120,7 @@ class DevCheckTest(unittest.TestCase):
             environments[0],
         )
 
-    def test_windows_default_python_mode_isolates_watcher_tests(self) -> None:
+    def test_windows_default_python_mode_uses_complete_named_inventory(self) -> None:
         commands: list[list[str]] = []
         environments: list[dict[str, str]] = []
         with (
@@ -139,15 +139,13 @@ class DevCheckTest(unittest.TestCase):
         ):
             MODULE.run_python(())
 
-        self.assertEqual(len(commands), 2)
-        for test in MODULE.WINDOWS_SOURCE_GUARD_TESTS:
-            self.assertIn(test, commands[0])
-        self.assertEqual(
-            environments[1]["HIVE_WINDOWS_SOURCE_USAGE_GUARD_SUBSET"],
-            "skip",
+        self.assertEqual(len(commands), 1)
+        self.assertNotIn(
+            "HIVE_WINDOWS_SOURCE_USAGE_GUARD_SUBSET",
+            environments[0],
         )
         self.assertEqual(
-            commands[1][7:],
+            commands[0][7:],
             [
                 str(ROOT / "requirements-conformance.txt"),
                 "python",

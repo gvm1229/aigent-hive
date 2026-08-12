@@ -42,6 +42,37 @@ usage_stop_remaining_percent = 10
 foreign_preserved = "exact bytes"
 """
 
+USER_CONFIG = """\
+schema_version: 1
+interface_language: en
+wiki:
+  enabled: true
+  language: both
+  backend: markdown
+profile:
+  contexts:
+    - non-developer
+persona:
+  id: balanced
+selected_hosts:
+  - codex
+skills:
+  mode: all
+update_check:
+  enabled: false
+usage_guard:
+  enabled: true
+  stop_remaining_percent: 20
+  codexbar_fallback_enabled: false
+  project_overrides: {}
+  discord:
+    enabled: false
+    request_privacy: summary
+    message_fields:
+      - remaining-usage
+      - project
+"""
+
 
 class ShippingUsageControlConformance(Phase1CliTestCase):
     def setUp(self) -> None:
@@ -272,6 +303,112 @@ class ShippingUsageControlConformance(Phase1CliTestCase):
             code="hive.usage-threshold-unchanged",
         )
         self.assertEqual(repeated_result["changed_paths"], [])
+
+    def test_non_hive_targets_have_no_guard_control_or_runtime_state(self) -> None:
+        user_root = self.work_root / "usage-non-hive-user"
+        user_config = user_root / ".hive/config"
+        user_config.mkdir(parents=True, exist_ok=True)
+        (user_config / "user-setup.yml").write_text(USER_CONFIG, encoding="utf-8")
+        targets = [self.work_root / "empty", self.work_root / "custom-agents"]
+        for target in targets:
+            target.mkdir()
+        (targets[1] / "AGENTS.md").write_text("# Custom project\n", encoding="utf-8")
+
+        for index, target in enumerate(targets):
+            process, result = self.invoke(
+                "usage",
+                "enforce",
+                "--target",
+                str(target),
+                "--host",
+                "codex",
+                "--session-id",
+                f"non-hive-{index}",
+                "--process-id",
+                "900",
+                "--user-root",
+                str(user_root),
+            )
+            self.assert_result(
+                process,
+                result,
+                action="CheckUsage",
+                exit_code=0,
+                status="success",
+                code="hive.usage-not-configured",
+            )
+            self.assertIs(result["data"]["guard_enabled"], False)
+            self.assertIsNone(result["data"]["threshold_remaining_percent"])
+            threshold, threshold_result = self.invoke(
+                "usage",
+                "threshold",
+                "--target",
+                str(target),
+                "--remaining-percent",
+                "40",
+            )
+            self.assert_result(
+                threshold,
+                threshold_result,
+                action="SetUsageThreshold",
+                exit_code=3,
+                status="blocked",
+                code="hive.usage-control-blocked",
+            )
+            self.assertFalse((target / ".hive").exists())
+        self.assertFalse((user_root / ".hive/runtime").exists())
+
+    def test_source_uses_explicit_global_threshold_without_source_runtime(self) -> None:
+        user_root = self.work_root / "source-user"
+        user_config = user_root / ".hive/config"
+        user_config.mkdir(parents=True, exist_ok=True)
+        (user_config / "user-setup.yml").write_text(USER_CONFIG, encoding="utf-8")
+        source = self.work_root / "source"
+        source.mkdir()
+        (source / "hive-source.json").write_text("{}\n", encoding="utf-8")
+
+        changed, changed_result = self.invoke(
+            "usage",
+            "threshold",
+            "--user-root",
+            str(user_root),
+            "--remaining-percent",
+            "5",
+        )
+        self.assert_result(
+            changed,
+            changed_result,
+            action="SetUsageThreshold",
+            exit_code=0,
+            status="success",
+            code="hive.usage-global-threshold-updated",
+        )
+        self.assertEqual(changed_result["data"]["scope"], "global")
+
+        status, status_result = self.invoke(
+            "usage",
+            "status",
+            "--target",
+            str(source),
+            "--host",
+            "codex",
+            "--session-id",
+            "source-session",
+            "--process-id",
+            "901",
+            "--user-root",
+            str(user_root),
+        )
+        self.assert_result(
+            status,
+            status_result,
+            action="ShowUsageStatus",
+            exit_code=0,
+            status="success",
+            code="hive.usage-status",
+        )
+        self.assertEqual(status_result["data"]["threshold_remaining_percent"], 5)
+        self.assertFalse((source / ".hive").exists())
 
     def test_threshold_rejects_invalid_primary_host_without_mutation(self) -> None:
         config = self.consumer / ".hive/config/harness.toml"

@@ -59,10 +59,10 @@ provider-neutral 로컬 agent harness.
 | Knowledge | Canonical Markdown, shared disposable SQLite FTS5 RAG, cross-project provenance와 portable bundle | [ADR-0016](../decisions/ADR-0016-global-knowledge-rag.md) |
 | Persistent role·run | Role identity·handoff·criterion·owner pin과 fresh-session recovery | [Role](../architecture/role-lifecycle.md) · [Run](../architecture/run-lifecycle.md) |
 | 반복 실행 | Default-off Hive-native scheduler·receipt·cancel·team·multi-goal 계획 | [ADR-0019](../decisions/ADR-0019-hive-native-iterative-execution.md) |
-| Usage guard | Native-first sensor, session-first policy, automatic dispatch fail-closed | [Source guard](../guides/source-usage-guard.md) |
+| Usage guard | Native-first sensor, configured Hive target only, automatic dispatch fail-closed | [Source integration](../guides/source-usage-guard.md) |
 | Judge quorum | Clean-context package와 detached Ed25519 verification | [Judge boundary](../architecture/judge-trust-boundary.md) |
 | Release·update | Attestation·local integrity, version gate, backup·journal·recovery | [Release boundary](../architecture/release-update-trust-boundary.md) |
-| Direct install | npm과 digest-pinned curl·PowerShell·CMD channel | [`0.9.1` release](../releases/0.9.1.md) |
+| Direct install | npm과 digest-pinned curl·PowerShell·CMD channel | [`0.9.2` release](../releases/0.9.2.md) |
 
 ## Artifact 흐름
 
@@ -80,10 +80,11 @@ flowchart LR
 
 ## Version·release 상태
 
-- Current source version: `0.9.1` 호환 patch 후보
+- Current source version: `0.9.2` 완료 기능 안정판
 - Latest published version: `0.9.0`
 - `0.9.0`: npm `latest=0.9.0`, normal GitHub Release, annotated Git tag 게시 완료
 - `0.9.1`: 미등록 project Wiki lint의 user-root 폴백과 전체 `v0.9` 수용 재검증 뒤 게시
+- `0.9.2`: 설치 product usage guard 단일 정본 전환과 공개 문서·package metadata 동기화
 - Major: exact 사용자 지시 전 자동 준비·추론 금지
 
 관련 문서:

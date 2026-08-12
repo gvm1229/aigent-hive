@@ -53,7 +53,7 @@ delete: 폐기된 projection 문서 제거
 build: Hive source workspace 기반 구성
 
 - crates/, Cargo.toml:
-  Rust workspace와 source guard 추가
+  Rust workspace와 usage guard core 추가
 - .agents/, AGENTS.md:
   개발 지침과 Git 계약 추가
 ```

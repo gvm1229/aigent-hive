@@ -164,6 +164,17 @@ impl PinnedTarget {
         Ok(pinned)
     }
 
+    /// Pin a usage-inspection target. Unlike consumer run state, usage inspection may identify
+    /// the Hive source workspace; callers must keep all runtime writes outside that workspace.
+    pub(crate) fn open_usage(target: &Path) -> Result<Self, AdapterError> {
+        let absolute = absolute_lexical(target)?;
+        let dir = open_directory_nofollow_path(&absolute)?;
+        Ok(Self {
+            requested: absolute,
+            dir,
+        })
+    }
+
     pub(crate) fn read_required(
         &self,
         relative: &Path,

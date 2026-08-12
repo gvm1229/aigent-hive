@@ -15,20 +15,6 @@ from typing import Sequence
 ROOT = Path(__file__).resolve().parents[1]
 REQUIREMENTS = ROOT / "requirements-conformance.txt"
 TEST_LANES = ROOT / "scripts" / "test-lanes.py"
-WINDOWS_SOURCE_GUARD_TESTS = (
-    "tests.conformance.test_source_usage_guard.SourceUsageGuardTests."
-    "test_write_json_skips_unavailable_fchmod",
-    "tests.conformance.test_source_usage_guard.SourceUsageGuardTests."
-    "test_write_json_closes_descriptor_before_failed_write_cleanup",
-    "tests.conformance.test_source_usage_guard.SourceUsageGuardTests."
-    "test_windows_watcher_lease_read_skips_locked_first_byte",
-    "tests.conformance.test_source_usage_guard.SourceUsageGuardTests."
-    "test_gate_allows_clean_clone_without_omx_state",
-    "tests.conformance.test_source_usage_guard.SourceUsageGuardTests."
-    "test_disabled_gate_does_not_initialize_quota_sensor",
-)
-
-
 class DevCheckError(RuntimeError):
     """An actionable local verification setup error."""
 
@@ -128,7 +114,6 @@ def run_python(arguments: Sequence[str]) -> None:
     rustc = resolve_tool("rustc", rust_tool=True)
     environment = tool_environment(uv, cargo, rustc)
     environment["RUSTC"] = str(rustc)
-    environment.pop("HIVE_WINDOWS_SOURCE_USAGE_GUARD_SUBSET", None)
     unittest_arguments = list(arguments)
     prefix = [
         str(uv),
@@ -143,12 +128,6 @@ def run_python(arguments: Sequence[str]) -> None:
         "-m",
         "unittest",
     ]
-    if os.name == "nt" and not arguments:
-        run(
-            [*prefix, *WINDOWS_SOURCE_GUARD_TESTS, "-v"],
-            environment=environment,
-        )
-        environment["HIVE_WINDOWS_SOURCE_USAGE_GUARD_SUBSET"] = "skip"
     if unittest_arguments:
         run([*prefix, *unittest_arguments], environment=environment)
     else:
