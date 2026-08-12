@@ -46,8 +46,9 @@
   방해하는 background watcher·tool 경계별 중복 gate `0건`
 - [ ] [UGP-010] Global과 project threshold mutation을 분리. 명시적 global 변경만 `--user-root`에
   저장하고 이번 사용자 설정 `5%` 적용. Project `harness.toml`이 있는 target의 변경은
-  `max(global, project)`로 적용. 자체 `AGENTS.md`만 있거나 빈 folder인 미등록 target의 project
-  threshold 변경은 무변경으로 거부하고, enforce·status는 global threshold와 선택 host sensor 사용
+  `max(global, project)`로 적용. `hive-source.json` source workspace는 별도 구현 없이 설치 product의
+  global threshold 사용. 자체 `AGENTS.md`만 있거나 빈 folder인 non-Hive target은 guard 전체 비활성:
+  halt·threshold 변경·session override·runtime file `0건`
 
 ## 완료 기준
 

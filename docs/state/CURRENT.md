@@ -669,8 +669,9 @@ Pre-1.0 비차단 deferred:
   매 tool 경계의 중복 gate
 - 유지 경계: automatic dispatch 직전 session-bound one-shot enforce, native sensor 우선,
   명시적 session control, raw account·session identifier 저장 금지
-- 구현 중: 명시적 global threshold 저장과 registered project override 분리. Project harness가 없는
-  자체 `AGENTS.md`·빈 folder의 project threshold 변경은 무변경 거부, enforce·status는 global 값 사용
+- 구현 중: 명시적 global threshold 저장과 registered project override 분리. `hive-source.json`
+  source workspace만 설치 product global guard 사용. Project harness 없는 자체 `AGENTS.md`·빈 folder는
+  guard 전체 비활성, halt·threshold mutation·session override·runtime file `0건`
 
 ## 사람용 문서 style
 
