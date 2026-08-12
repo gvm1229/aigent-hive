@@ -349,6 +349,11 @@ pub struct ReleaseVerification {
 /// Distribution authenticity is established before download by npm registry integrity or GitHub
 /// artifact attestations. This verifier deliberately contains no signing key, trust-root, or
 /// network path.
+///
+/// # Errors
+///
+/// Returns [`UpdateError`] when the bundle layout, manifest, release sequence, artifact bytes,
+/// migration table, or cumulative surface inventory fails validation.
 pub fn verify_release_bundle(
     bundle_root: &Path,
     previous: Option<&ReleaseState>,
@@ -595,6 +600,11 @@ fn validate_inventory_migrations(
 }
 
 /// Compare a cumulative surface inventory with the compiled migration baseline.
+///
+/// # Errors
+///
+/// Returns [`UpdateError`] when the compiled historical registry is invalid or the target
+/// inventory removes or changes a protected surface without a declared inert retirement.
 pub fn observe_surface_delta(
     baseline_version: SemVersion,
     target: &SurfaceInventory,

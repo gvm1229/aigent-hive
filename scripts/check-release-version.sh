@@ -69,12 +69,12 @@ for package in lock["package"]:
             f"Cargo.lock package {package['name']} differs from {requested}"
         )
 
-fixture = root / f"tests/fixtures/phase6/releases/valid-{requested}/targets"
+fixture = root / f"tests/fixtures/phase6/releases/valid-{requested}"
 manifest = json.loads(
     (fixture / "bundle-manifest.json").read_text(encoding="utf-8")
 )
 migration = json.loads(
-    (fixture / "migration-table.json").read_text(encoding="utf-8")
+    (fixture / "targets/migration-table.json").read_text(encoding="utf-8")
 )
 if manifest["release_version"] != requested:
     raise SystemExit("release bundle manifest version differs")

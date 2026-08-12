@@ -876,18 +876,15 @@ fn remove_owned_regular(
 }
 
 fn owned_prune_boundary(relative: &Path) -> Option<&'static Path> {
-    for boundary in [
+    [
         Path::new(".hive"),
         Path::new(".agents"),
         Path::new(".codex"),
         Path::new(".claude"),
         Path::new(".gemini/config"),
-    ] {
-        if relative.starts_with(boundary) {
-            return Some(boundary);
-        }
-    }
-    None
+    ]
+    .into_iter()
+    .find(|boundary| relative.starts_with(boundary))
 }
 
 fn prune_empty_owned_ancestors<'a>(
