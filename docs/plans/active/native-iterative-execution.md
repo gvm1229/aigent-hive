@@ -42,14 +42,18 @@
 
 - [ ] [NAT-006] Immutable event revision과 `EVENT-CURRENT.toml` 단일 linearization point
 - [ ] [NAT-007] Run ACL·role assignment·single-action authority의 external trust root·Ed25519 발급·회수·one-time consume
-- [ ] [NAT-008] `claim|launch-ack|heartbeat|lookup|non-launch-proof|cancel-ack|final-result` typed receipt schema
-- [ ] [NAT-009] `reserved|prepared|claimed|dispatch-uncertain|acknowledged|running|cancel-requested|result-received|expired|quarantined` 전이 reducer
+- [x] [NAT-008] `claim|launch-ack|heartbeat|lookup|non-launch-proof|cancel-ack|final-result` typed receipt schema
+  - Evidence: commit `09700a0`, closed JSON Schema·semantic validation·duplicate/conflict/late receipt 시험
+- [x] [NAT-009] `reserved|prepared|claimed|dispatch-uncertain|acknowledged|running|cancel-requested|result-received|expired|quarantined` 전이 reducer
+  - Evidence: commit `09700a0`, exact predecessor·epoch·authority consume·deterministic replay core 시험
 - [ ] [NAT-010] Normal cancel event commit과 corrupt-head `EMERGENCY-CANCEL.toml` 승격·복구
 
 ### C. Core·CLI
 
-- [ ] [NAT-011] Deterministic priority·tie-break·aging·starvation bound·quota·backpressure scheduler core
-- [ ] [NAT-012] Lease fencing epoch·clock skew·not-before·budget reservation/refund·safe reclaim
+- [x] [NAT-011] Deterministic priority·tie-break·aging·starvation bound·quota·backpressure scheduler core
+  - Evidence: commit `09700a0`, priority·aging cap·not-before·budget·global backpressure·stable ID tie-break 시험
+- [x] [NAT-012] Lease fencing epoch·clock skew·not-before·budget reservation/refund·safe reclaim
+  - Evidence: commit `09700a0`, fencing·rollback·expiry·atomic reserve·single refund core 시험
 - [ ] [NAT-013] Event replay·snapshot·bounded segment·crash recovery와 derived projection rebuild
 - [ ] [NAT-014] `hive orchestration` status·plan·dispatch·receipt·cancel·recover·authority CLI
 - [ ] [NAT-015] Legacy `hive orchestration migrate --from-run ... --dry-run|--apply|--recover`와 원본 byte 불변
