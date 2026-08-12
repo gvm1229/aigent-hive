@@ -11,7 +11,7 @@ aliases: ["언어 일관성", "한영 혼용 방지"]
 sources:
   - "repo:.agents/directives/01-behavior.md#sha256:9d8adb7c75015fd24df8cb226a16180548c600dc963ee154c0a4af408e9fa48c"
   - "repo:AGENTS.md#sha256:f83b69080a2580ec60feda02ecdb43833b9b43709b2da18dce76c8dd214a0b01"
-  - "repo:crates/hive-cli/src/user_install.rs#sha256:05172fea58222e2997dd3eae60ba34e1d252346ff9850b149967d80ece6b8888"
+  - "repo:crates/hive-cli/src/user_install.rs#sha256:2960ab32ce7831e993fee381e664d20eb5f673a62f006582a8e601476ccdb0fa"
   - "repo:harness/template/AGENTS.md.jinja#sha256:d706dc6585c1bbaa820d328ebfaae919cd02496adac0acec373ee4d0e37afe56"
 links: [global-onboarding, source-development]
 reviewed_revision: "git:35e6b79a024350487f823780101a28be24a9f4c7"

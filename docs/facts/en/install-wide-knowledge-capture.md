@@ -10,7 +10,7 @@ tags: [capture, knowledge, retrieval, user-root]
 aliases: ["Setup-independent knowledge", "Unregistered project recall"]
 sources:
   - "repo:crates/hive-cli/src/knowledge.rs#sha256:7861ff887f1d831bde68add39190f2678969e08d9fbf4a25c0f74cea04c13077"
-  - "repo:crates/hive-cli/src/user_install.rs#sha256:05172fea58222e2997dd3eae60ba34e1d252346ff9850b149967d80ece6b8888"
+  - "repo:crates/hive-cli/src/user_install.rs#sha256:2960ab32ce7831e993fee381e664d20eb5f673a62f006582a8e601476ccdb0fa"
   - "repo:harness/skills/knowledge-capture/SKILL.md#sha256:60c981780511f464a5009fe6268fbf30c8857be18c9aa9c3f88bd958dcca6077"
   - "repo:harness/skills/knowledge-recall/SKILL.md#sha256:f06146778f6faf907e402462008e970bc82cf134f9e8cb9c31a3b727b20e66ec"
 links: [global-knowledge-rag, knowledge-storage, shared-index]
