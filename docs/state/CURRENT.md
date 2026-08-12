@@ -19,6 +19,10 @@
   GitHub 자산 25개와 npm `test`, Windows clean install·upgrade·recovery·성능·보존 PASS.
   README 두 언어의 stale `test.1` 고정 안내 발견으로 번호 독립 npm `test` 안내 보정 뒤
   `0.9.2-test.3` 전체 문서·배포 수용 대상으로 전환
+- `0.9.2-test.3` 기능·문서 수용 완료: candidate run `31602608609`·publication run
+  `31603511607`, GitHub 자산 25개·npm `test`·npm README·Windows 공개 설치·plugin 표시·
+  user-scope validate·5% usage guard·지식과 preference 보존 PASS. 완료 checklist exact tree의
+  최종 `0.9.2-test.4` 뒤 source mutation 없이 protected `main`·stable candidate 진행
 - `0.9.0` stable publication: candidate run `31561636239`, publication run `31562280178`,
   annotated `v0.9.0`, normal GitHub Release, npm `latest=0.9.0`, Windows 전역 설치·validate·
   release date `2026-08-12` 표시 PASS

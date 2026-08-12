@@ -29,17 +29,17 @@
     `2cec037`까지 17 commits·79 files, `c777da1`까지 18 commits·84 files
 - [x] [REL92-002] stable-as-test 금지·numbered-test-first와 version 제외 범위의 source
   directive·ADR·plan·정적 회귀 고정
-- [ ] [REL92-003] `codex/release-0.9.2` exact ref의 원격 보존과 candidate workflow 허용 branch 검증
-- [ ] [REL92-004] Release tree의 `NAT-002–024`·`MRA-001–032` 제품 구현 유입 `0건`, Source Wiki 정합성 확인
-- [ ] [REL92-005] `0.9.2` version·build date·release note·npm README·Codex plugin metadata·
+- [x] [REL92-003] `codex/release-0.9.2` exact ref의 원격 보존과 candidate workflow 허용 branch 검증
+- [x] [REL92-004] Release tree의 `NAT-002–024`·`MRA-001–032` 제품 구현 유입 `0건`, Source Wiki 정합성 확인
+- [x] [REL92-005] `0.9.2` version·build date·release note·npm README·Codex plugin metadata·
   `0.9.1` historical base와 update 경로 동기화. Root·번역 README, 설치 안내, 공개 HTML,
   문서 색인·명령·version 예시 전수 최신화와 stale public reference `0건` 확인
-- [ ] [REL92-006] Full Rust·Python·문서·보안 검사와 5개 native target clean candidate·exact SHA 검증
-- [ ] [REL92-007] Release branch exact source에서 다음 빈 `0.9.2-test.N` GitHub prerelease·
+- [x] [REL92-006] Full Rust·Python·문서·보안 검사와 5개 native target clean candidate·exact SHA 검증
+- [x] [REL92-007] Release branch exact source에서 다음 빈 `0.9.2-test.N` GitHub prerelease·
   npm `test` 게시, npm `latest` mutation `0건` 확인
-- [ ] [REL92-008] 이 Windows의 공개 시험판 clean install·upgrade·rollback·recovery·
+- [x] [REL92-008] 이 Windows의 공개 시험판 clean install·upgrade·rollback·recovery·
   fresh-session·성능·지식·preference 보존 수용
-- [ ] [REL92-009] 시험판 결함 수정마다 다음 numbered test 게시와 영향 수용 반복,
+- [x] [REL92-009] 시험판 결함 수정마다 다음 numbered test 게시와 영향 수용 반복,
   최신 시험판 결함 `0건` 확인
   - `0.9.2-test.1`: candidate run `31596919466`·publication run `31597939956`는 통과했으나,
     게시 workflow가 생성한 `install.sh`·`install.ps1`·`install.cmd`를 GitHub Release 자산에
@@ -48,6 +48,9 @@
     자산·npm `test`·Windows clean install·`0.9.1` upgrade·pending receipt recovery·성능·지식·
     preference 보존 PASS. README 두 언어의 선택형 시험판 안내가 `test.1`에 고정된 stale
     reference 발견으로 수용 보류·번호 독립 npm `test` 안내 보정·`test.3` 재검증 대상으로 전환
+  - `0.9.2-test.3`: candidate run `31602608609`·publication run `31603511607`, 25개 GitHub
+    자산·npm `test`·npm tarball README·Windows 공개 설치·plugin 표시·user-scope validate·5% usage
+    guard·지식과 preference 보존 PASS. 결함 `0건`; 완료 checklist exact tree를 `test.4`로 최종 고정
 - [ ] [REL92-010] Accepted test exact source의 protected `main` PR·stable candidate 검증 뒤
   `v0.9.2` GitHub Release·npm `latest` 게시
 - [ ] [REL92-011] 공개 `0.9.2` clean install·upgrade·version·build date·plugin 표시·npm README와
