@@ -17,7 +17,7 @@ Hive: subscription 인증 agent host에 일관된 setup, Skill routing, project 
 Model-provider API key 요청·provider API 호출·host model runtime 대체 없음.
 
 현재 stable `0.9.2`: npm `latest`, normal GitHub Release, annotated Git tag 배포.
-Developer test build `0.9.2-test.1`: npm `test`와 GitHub prerelease 전용 유지.
+최신 numbered developer test build: npm `test`와 GitHub prerelease 전용 유지.
 
 ## 현재 stable 설치
 
@@ -44,19 +44,19 @@ Node.js dependency 없음.
 AIgent Hive v0.9.2 (released 2026-08-12)
 ```
 
-### Developer test build 0.9.2-test.1
+### 최신 developer test build
 
 다음 release 검증용 developer·contributor 설치:
 
 ```console
-npm install -g aigent-hive@0.9.2-test.1
+npm install -g aigent-hive@test
 hive --version
 ```
 
 예상 version label:
 
 ```text
-AIgent Hive v0.9.2-test #1 · developer test build (released 2026-08-12)
+AIgent Hive v0.9.2-test #N · developer test build (released YYYY-MM-DD)
 ```
 
 Exact version 설치: npm `latest` 변경 없음.
@@ -93,9 +93,9 @@ prompt 사용. 선택 사항이며, 아래 4단계 설정은 예측 가능한 �
 I want the optional one-prompt Aigent Hive setup. Work only at user scope; do not inspect,
 initialize, or change any project, repository, folder, or current working directory.
 
-First ask whether I want the current stable release 0.9.2 (recommended) or the developer test build
-0.9.2-test.1. The stable install guidance is https://github.com/gvm1229/aigent-hive#install-the-current-stable-release
-and the test-build release notes are https://github.com/gvm1229/aigent-hive/releases/tag/v0.9.2-test.1.
+First ask whether I want the current stable release 0.9.2 (recommended) or the latest developer test
+build from npm's test channel. The stable install guidance is https://github.com/gvm1229/aigent-hive#install-the-current-stable-release
+and the numbered test-build release notes are https://github.com/gvm1229/aigent-hive/releases.
 Detect my operating system and active host (Codex, Claude Code, or Gemini Antigravity), asking
 me if either is unclear. Check whether Node.js and npm are available. If they are missing,
 give me the official OS-specific Node.js installation command and request any approval the host

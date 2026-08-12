@@ -17,8 +17,8 @@ project knowledge, durable role/run state, usage safeguards, and safe update con
 It never asks for model-provider API keys, calls model-provider APIs, or replaces the
 host's own model runtime.
 
-Stable `0.9.2` is the current release for this source. Developer test build
-`0.9.2-test.1` remains available only on npm `test` and as a GitHub prerelease.
+Stable `0.9.2` is the current release for this source. The latest numbered developer test build
+remains available only on npm `test` and as a GitHub prerelease.
 
 ## Install the current stable release
 
@@ -43,19 +43,19 @@ Expected stable version label:
 AIgent Hive v0.9.2 (released 2026-08-12)
 ```
 
-### Developer test build 0.9.2-test.1
+### Latest developer test build
 
 For developers and contributors testing the next release:
 
 ```console
-npm install -g aigent-hive@0.9.2-test.1
+npm install -g aigent-hive@test
 hive --version
 ```
 
 Expected version label:
 
 ```text
-AIgent Hive v0.9.2-test #1 · developer test build (released 2026-08-12)
+AIgent Hive v0.9.2-test #N · developer test build (released YYYY-MM-DD)
 ```
 
 This explicit version never changes npm `latest`.
@@ -93,9 +93,9 @@ setup steps below. It is optional: the four-step setup remains the predictable m
 I want the optional one-prompt Aigent Hive setup. Work only at user scope; do not inspect,
 initialize, or change any project, repository, folder, or current working directory.
 
-First ask whether I want the current stable release 0.9.2 (recommended) or the developer test build
-0.9.2-test.1. The stable install guidance is https://github.com/gvm1229/aigent-hive#install-the-current-stable-release
-and the test-build release notes are https://github.com/gvm1229/aigent-hive/releases/tag/v0.9.2-test.1.
+First ask whether I want the current stable release 0.9.2 (recommended) or the latest developer test
+build from npm's test channel. The stable install guidance is https://github.com/gvm1229/aigent-hive#install-the-current-stable-release
+and the numbered test-build release notes are https://github.com/gvm1229/aigent-hive/releases.
 Detect my operating system and active host (Codex, Claude Code, or Gemini Antigravity), asking
 me if either is unclear. Check whether Node.js and npm are available. If they are missing,
 give me the official OS-specific Node.js installation command and request any approval the host

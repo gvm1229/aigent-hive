@@ -15,6 +15,10 @@
 - `0.9.2-test.1` 수용 거부: candidate run `31596919466`·publication run `31597939956`는
   통과했으나 GitHub prerelease에 direct installer 자산 3개가 누락되어 공개 설치 URL이 `404`를
   반환. 게시 workflow·회귀 보정 뒤 `0.9.2-test.2`부터 전체 공개 설치 수용 재수행
+- `0.9.2-test.2` 수용 보류: candidate run `31599834995`·publication run `31600929652`,
+  GitHub 자산 25개와 npm `test`, Windows clean install·upgrade·recovery·성능·보존 PASS.
+  README 두 언어의 stale `test.1` 고정 안내 발견으로 번호 독립 npm `test` 안내 보정 뒤
+  `0.9.2-test.3` 전체 문서·배포 수용 대상으로 전환
 - `0.9.0` stable publication: candidate run `31561636239`, publication run `31562280178`,
   annotated `v0.9.0`, normal GitHub Release, npm `latest=0.9.0`, Windows 전역 설치·validate·
   release date `2026-08-12` 표시 PASS
