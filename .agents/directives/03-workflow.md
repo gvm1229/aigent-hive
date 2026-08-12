@@ -135,6 +135,26 @@ Match verification cost to the current boundary:
 4. **Release** — run clean-clone CI, every supported OS/architecture, hostile and security
    suites, installer/update recovery, signing, provenance, and publication qualification.
 
+## Release Qualification Ordering
+
+- Never publish or install a stable version as exploratory, regression, acceptance, performance,
+  or final release testing. Stable publication is a terminal distribution action, not a test lane.
+- Before creating a stable candidate, reconcile every active plan item. Complete every item in the
+  release scope except a future-version candidate that the active plan explicitly defers by ID.
+- Publish a uniquely numbered public test version from the qualified `develop` commit before the
+  stable candidate. A local dev build, candidate artifact, CI result, or prior stable installation
+  does not replace the numbered public test.
+- Install the exact public test artifact on every required acceptance host and run the active
+  plan's clean-install, upgrade, rollback, recovery, fresh-session, data-preservation, and
+  performance checks. Bind the evidence to the test version, source commit, artifact digest,
+  operating system, and actual execution result.
+- Any product, packaging, installer, metadata, or acceptance fix invalidates earlier test evidence.
+  Publish the next numbered test version and repeat affected acceptance checks; never repair the
+  candidate by silently reusing a version or by testing through the stable channel.
+- Create the protected `main` stable candidate only after the latest numbered test is accepted and
+  the active plan reports zero incomplete in-scope items. Stable publication cannot create missing
+  qualification evidence or be described as testing.
+
 Keep existing hostile and security tests. Until the first public release, do not add a new
 hostile edge-case implementation or test unless it directly protects installation, canonical
 data, credentials, external-path confinement, update rollback/recovery, or a regression found

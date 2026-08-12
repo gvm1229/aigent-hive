@@ -2,8 +2,13 @@
 
 - 기준 branch: `develop`
 - product version: `0.9.1`
-- plan revision: `2.72`
-- 현재 milestone: `0.9.1` 최종 호환 patch 검증·공개
+- plan revision: `2.73`
+- 현재 milestone: 비-`0.10.0` 계획 전수 완료와 `0.9.2` numbered test 수용
+- `0.9.2` stable 차단: 활성 계획 전수 대조 결과 `N10-002–011` 외 실제 미완료 55개.
+  `NAT-002–024` 23개와 `MRA-001–032` 32개의 구현·실기 증거 전까지 candidate 생성 금지
+- 출시 순서: source directive·ADR의 stable-as-test 금지 → 비-0.10 구현 완료 → full candidate →
+  public `0.9.2-test.N` → Windows 실제 설치·fresh-session·성능·복구 수용 → 수정 시 다음 번호
+  시험판 → 결함 `0건` 뒤 protected `main` stable publication
 - `0.9.0` stable publication: candidate run `31561636239`, publication run `31562280178`,
   annotated `v0.9.0`, normal GitHub Release, npm `latest=0.9.0`, Windows 전역 설치·validate·
   release date `2026-08-12` 표시 PASS

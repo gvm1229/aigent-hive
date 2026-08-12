@@ -124,6 +124,18 @@ Before a final response for a material source task:
 5. Use `complete` only when no scoped item remains. Otherwise state the exact non-complete status
    and never describe the task as finished.
 
+## Stable Release Plan Gate
+
+- Keep stable publication blocked while any active in-scope checklist item is incomplete. A
+  future-version candidate may be excluded only when `PLAN.md` names its exact checklist IDs and
+  target version as deferred.
+- Require evidence from a uniquely numbered public test version before stable publication. Bind
+  acceptance to the exact source commit and public artifact; a dev build, CI-only candidate, or
+  stable installation is not substitute evidence.
+- A post-test change resets the affected acceptance item and requires the next numbered public
+  test. Never mark a stable publication complete when the stable channel supplied the first or
+  only evidence for product behavior, packaging, installation, performance, or recovery.
+
 ## Language
 
 - Human-readable project documents use concise Korean.
