@@ -139,6 +139,31 @@ function writePackageReadme(destination, packageName, productVersion, packageVer
   );
 }
 
+function writeUmbrellaPackageReadme(destination) {
+  const source = fs.readFileSync(path.join(repositoryRoot, "README.md"), "utf8");
+  const withoutQaContributors = source.replace(
+    /\n## QA Contributors\n[\s\S]*?(?=\n## License\n)/,
+    "\n",
+  );
+  const publicReadme = withoutQaContributors
+    .replace(
+      /src="docs\/assets\/([^\"]+)"/g,
+      "src=\"https://raw.githubusercontent.com/gvm1229/aigent-hive/main/docs/assets/$1\"",
+    )
+    .replace(
+      /\]\((?!https?:|#|mailto:)(\.?\/?[^)]+)\)/g,
+      (_, target) => {
+        const normalized = target.replace(/^\.\//, "");
+        return `](https://github.com/gvm1229/aigent-hive/blob/main/${normalized})`;
+      },
+    );
+  fs.writeFileSync(path.join(destination, "README.md"), publicReadme, {
+    encoding: "utf8",
+    flag: "wx",
+    mode: 0o644,
+  });
+}
+
 function commonManifest(name, productVersion, packageVersion) {
   return {
     name,
@@ -234,12 +259,7 @@ function packageUmbrella(options) {
     optionalDependencies,
   };
   writeJson(path.join(destination, "package.json"), manifest);
-  writePackageReadme(
-    destination,
-    "aigent-hive",
-    options["product-version"],
-    options["package-version"],
-  );
+  writeUmbrellaPackageReadme(destination);
   fs.copyFileSync(path.join(repositoryRoot, "LICENSE"), path.join(destination, "LICENSE"));
   const sourceShim = path.join(repositoryRoot, "packaging", "npm", "bin", "hive.cjs");
   const packagedShim = path.join(destination, "bin", "hive.cjs");

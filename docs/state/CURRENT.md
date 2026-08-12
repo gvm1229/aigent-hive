@@ -10,6 +10,9 @@
 - 추가 회귀: 미등록 project의 `hive knowledge lint --target <project-root> --user-root <user-root>`는
   project registry 거부. Global Wiki 자체는 `<target>=<user-root>`에서 PASS. `KAC-011–012`의
   registered project·unregistered project·source workspace 분기와 immutable patch 게시 필요
+- npm README 동기화 완료: root English `README.md` 기반 umbrella package README 생성,
+  `QA Contributors` 제외와 npm link·asset 변환. `test_npm_packaging` 3개 PASS;
+  npm registry·version·release mutation 0건
 - Mandatory memory regression: `0.9.0-test.13` operational user guidance의 every-turn
   `hive knowledge remember`·receipt 규칙 부재, localized `knowledge-capture` route 의미 축소.
   `KAC-002–005` 전역 안내·세 host 공통 투영·localized 설명·의미 검증 보정 완료.
