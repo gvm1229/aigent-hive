@@ -1,17 +1,17 @@
 ---
 schema_version: 1
-pair_id: source-usage-guard
-topic_slug: source-usage-guard
+pair_id: installed-usage-guard
+topic_slug: installed-usage-guard
 language: ko
-counterpart: ../en/source-usage-guard.md
+counterpart: ../en/installed-usage-guard.md
 title: "설치 guard 대상 경계"
 summary: "설정 완료 Hive project와 Hive source에만 설치 guard 적용, non-Hive folder 전체 비활성."
 tags: [guard, source, usage]
-aliases: ["Source quota safeguard"]
+aliases: ["Installed usage policy"]
 sources:
   - "repo:.github/workflows/ci.yml#sha256:bcba0d0f834f9e1e0dca81f465bb0337c5c4db83299c25d357f132f5a4cefd4d"
   - "repo:crates/hive-cli/src/usage_control.rs#sha256:06ce162411217587acab322726a197507bb179e318fc2b6157146e287ae3c15d"
-  - "repo:docs/guides/source-usage-guard.md#sha256:c4c7f5f717627becc0636d1c7320eb227df844dc2ea5d837a79080c07c673197"
+  - "repo:docs/guides/installed-usage-guard.md#sha256:3224f7e04c9025cd788e14506295a723f1d87c97d59f9e629dcfe9bddcb1a302"
 links: [automatic-dispatch-guard, source-development, usage-guard-thresholds]
 reviewed_revision: "git:39569b7a2a7c67f8ab19010db8c4df32da470f86"
 status: active

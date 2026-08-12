@@ -1,16 +1,23 @@
 # 현재 상태
 
-- 기준 branch: `codex/release-0.9.2`
+- 기준 branch: `develop`
 - product version: `0.9.2`
-- plan revision: `2.74`
-- 현재 milestone: 완료된 usage guard와 공개 문서의 `0.9.2` numbered test 수용
+- plan revision: `2.75`
+- 현재 milestone: `0.9.2` 안정판 게시·설치 마감, QA contributor 추가 지시 대기
 - 기능 기준: `2cec0377748874748d126b6b55e59975a3f20a02`; release discipline base `c777da1`
 - 제외: `NAT-002–024`·`MRA-001–032`의 `0.9.3`, `N10-002–011`의 `0.10.0-test`
 - 문서 gate: root·번역 README, 설치 안내, 공개 HTML, npm README, plugin metadata,
   문서 색인·명령·version 예시 전수 최신화와 공개 artifact 재검증
-- 출시 순서: release-only 변경 → full candidate → public `0.9.2-test.N` → Windows 실제
-  설치·fresh-session·성능·복구 수용 → 수정 시 다음 번호 시험판 → 결함 `0건` 뒤 protected
-  `main` stable publication
+- `0.9.2` 안정판 완료: PR #25 전체 CI PASS·merge exact `a502867e6b20e8f22bc014af05ca678f211f40ed`.
+  Candidate run `31609928346`·publication run `31611457288`, normal GitHub Release 26개 자산,
+  npm `latest=0.9.2` PASS. 이 Windows의 전역 npm 설치와 공개 `install.ps1` 빈 경로 설치에서
+  `AIgent Hive v0.9.2 (released 2026-08-13)` 확인. User-scope apply·validate·doctor PASS
+- 공개 문서 마감: root·번역 README의 시험판 직접 언급 `0건`, 별도 검증 안내 중립 링크 각
+  `1건`. npm `0.9.2` tarball README도 직접 언급 `0건`·링크 `1건`; plugin developer
+  `Hojin (Tom) Jeong`·공식 512 px logo 계약 PASS
+- Markdown 전용 후속 통합: Source Wiki·문체·링크·가장 가까운 packaging·directive 검사 PASS
+  뒤 관련 없는 전체 플랫폼 CI 대기 생략. 완료되지 않은 CI를 통과로 보고하지 않으며 새 시험판·
+  안정판 후보·tag·package publication 생성 없음
 - `0.9.3` 동결: QA contributor 추가 지시와 유지보수자의 후속 명시적 승인 전 구현·검증·출시 mutation `0건`
 - `0.9.2-test.1` 수용 거부: candidate run `31596919466`·publication run `31597939956`는
   통과했으나 GitHub prerelease에 direct installer 자산 3개가 누락되어 공개 설치 URL이 `404`를
@@ -678,7 +685,7 @@ Pre-1.0 비차단 deferred:
   `hive-cli` 185, `hive-core` 62, `hive-projection` 22, `hive-render` 51,
   `hive-update` 63, `hive-wiki` 7
 - Python conformance 524개 실행, 523 PASS, Windows `pwsh` 전용 1개 expected skip
-- Native hostile sensor·fallback, Phase 3 projection과 source usage guard regression PASS
+- Native hostile sensor·fallback, Phase 3 projection과 설치본 usage guard source-target regression PASS
 - 독립 Antigravity code·test review: PASS, actionable finding 0건
 
 Pre-1.0 비차단 deferred:
@@ -691,7 +698,7 @@ Pre-1.0 비차단 deferred:
 
 - 정본 결정: 설치된 `hive usage` 단일 사용
 - 사용자 선택 global threshold: remaining `5%`
-- 제거 완료: `scripts/source-usage-guard.py`, 15초 background watcher, source 전용 scratch policy,
+- 제거 완료: source 전용 Python gate·15초 background watcher·source 전용 scratch policy,
   매 tool 경계의 중복 gate
 - 유지 경계: automatic dispatch 직전 session-bound one-shot enforce, native sensor 우선,
   명시적 session control, raw account·session identifier 저장 금지

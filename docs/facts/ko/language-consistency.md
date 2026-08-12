@@ -10,7 +10,7 @@ tags: [communication, documentation, projection]
 aliases: ["언어 일관성", "한영 혼용 방지"]
 sources:
   - "repo:.agents/directives/01-behavior.md#sha256:9d8adb7c75015fd24df8cb226a16180548c600dc963ee154c0a4af408e9fa48c"
-  - "repo:AGENTS.md#sha256:f7bdef9c14ab53d384452001e2c18c381f0db93a13352250f11f7ddd640433bc"
+  - "repo:AGENTS.md#sha256:e200aeee1a58fe9224e6e7a0a5a915cde8ac666e4421ea9c6696f0f1cb142fee"
   - "repo:crates/hive-cli/src/user_install.rs#sha256:4aecfd684f8c07326a639e92061de5f2ea52050cddc352a3b2f4b6b4adb1d3c2"
   - "repo:harness/template/AGENTS.md.jinja#sha256:7192160dcbc3ef7b093a2e781860381a3205d7cd44af692f24d0b5f587255927"
 links: [global-onboarding, source-development]

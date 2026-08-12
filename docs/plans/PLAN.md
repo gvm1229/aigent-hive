@@ -1,9 +1,9 @@
 # Aigent Hive active plan index
 
-> Revision: 2.74
-> 기준일: 2026-08-12
+> Revision: 2.75
+> 기준일: 2026-08-13
 > Product version: `0.9.2`
-> 현재 milestone: 완료된 usage guard와 공개 문서의 `0.9.2` numbered test 수용
+> 현재 milestone: `0.9.2` 안정판 게시·설치 마감, `0.9.3` 승인 대기
 > Entrypoint: `docs/plans/PLAN.md`
 
 ## Goal parameters
@@ -59,9 +59,9 @@
 | Discord `v0.9` 연결 UX | 11 | 0 | 100% |
 | Windows global setup hardening | 13 | 0 | 100% |
 | Agent 자율 실행 지속 | 8 | 0 | 100% |
-| `0.9.2` 완료 기능·공개 문서 출시 | 2 | 10 | 16.7% |
+| `0.9.2` 완료 기능·공개 문서 출시 | 12 | 0 | 100% |
 | Notion `v0.10` 후보 | 1 | 10 | 9.1% |
-| **Canonical total** | **474** | **75** | **86.3%** |
+| **Canonical total** | **484** | **65** | **88.2%** |
 
 External production boundary 항목도 미완료 합계에 포함. Protected authority 없이 완료 처리 금지.
 
@@ -131,9 +131,7 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
 ## Current execution order
 
 완료 증거: [`CURRENT.md`](../state/CURRENT.md)와 owning active fragment.
-현재: `0.9.1` 공개 완료. `2cec037`의 완료된 usage guard를 기능 기준으로 고정하고 모든
-README·설치 안내·공개 HTML·npm README·plugin metadata·version 예시를 `0.9.2`에 동기화.
-Exact `codex/release-0.9.2`의 `0.9.2-test.N`을 공개 수용하고 결함 `0건` 뒤에만 protected
-`main` stable candidate·`0.9.2`·npm `latest` 진행. `NAT-002–024`·`MRA-001–032`:
-`0.9.3` 제외. QA contributor 추가 지시와 후속 명시적 승인 전 `0.9.3` 실행 금지.
+현재: `0.9.2`를 exact source `a502867`에서 공개하고 npm `latest`·Windows 전역 및 공개
+설치·문서 노출을 검증해 마감. `NAT-002–024`·`MRA-001–032`: `0.9.3` 제외. QA contributor
+추가 지시와 후속 명시적 승인 전 `0.9.3` 실행 금지.
 `N10-002–011`: `0.10.0-test` 유지. 정식판 시험 lane 사용 금지.

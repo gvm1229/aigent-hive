@@ -55,12 +55,22 @@
   - `0.9.2-test.5`: candidate run `31605647532`·publication run `31606685534`, main history
     동기화 뒤 동일 tree의 exact commit identity·25개 자산·npm channel 검증 PASS. README의 일반
     사용자 표면에서는 시험판을 숨기고 중립 링크 1개로 분리 안내. 기능·설치 byte 변경 없음
-- [ ] [REL92-010] Accepted test exact source의 protected `main` PR·stable candidate 검증 뒤
+- [x] [REL92-010] Accepted test exact source의 protected `main` PR·stable candidate 검증 뒤
   `v0.9.2` GitHub Release·npm `latest` 게시
-- [ ] [REL92-011] 공개 `0.9.2` clean install·upgrade·version·build date·plugin 표시·npm README와
+  - Evidence: PR #25 전체 CI 통과·merge `a502867`; candidate run `31609928346`, publication
+    run `31611457288`, normal GitHub Release 26개 자산, npm `latest=0.9.2`
+- [x] [REL92-011] 공개 `0.9.2` clean install·upgrade·version·build date·plugin 표시·npm README와
   모든 README·설치 안내·공개 HTML·링크·명령·version 예시, rollback·recovery 최종 재검증
-- [ ] [REL92-012] `0.9.2` 완료 상태·정확한 공개 증거 기록. QA contributor 추가와
+  - Evidence: Windows 전역 npm 설치와 공개 `install.ps1` 빈 경로 설치에서
+    `AIgent Hive v0.9.2 (released 2026-08-13)` 확인. User-scope apply·validate·doctor PASS.
+    npm tarball README 시험판 직접 언급 `0건`·중립 안내 링크 `1건`, plugin developer·512 px
+    logo 계약 PASS. Upgrade·rollback·recovery는 accepted `test.2`와 stable candidate의 동일
+    실행 byte 결합으로 승계, 안정판 재시험 lane 비사용
+- [x] [REL92-012] `0.9.2` 완료 상태·정확한 공개 증거 기록. QA contributor 추가와
   유지보수자의 후속 명시적 승인 전 `0.9.3` 상태 `awaiting-user-authority`·구현 mutation `0건`
+  - Evidence: `v0.9.2` exact source `a502867e6b20e8f22bc014af05ca678f211f40ed`, release
+    `https://github.com/gvm1229/aigent-hive/releases/tag/v0.9.2`; `0.9.3` 작업tree·branch mutation `0건`.
+    게시 후 Markdown 전용 마감은 관련 로컬 문서 gate 통과 뒤 전체 플랫폼 CI 대기 없이 통합
 
 ## 중단 경계
 
