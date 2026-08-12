@@ -15,6 +15,14 @@ source-local threshold·halt state 없음.
 Non-Hive target의 `status`, `enforce`, threshold 변경, session override, halt marker와 runtime
 file 생성 없음. Project threshold 요청의 global 변경 재해석 금지.
 
+## Hive 기능과 guard 분리
+
+Non-Hive의 guard 비활성은 Hive 전체 비활성과 별개. `quick-answer`, prompt 개선, user-root
+지식처럼 project state가 불필요한 Skill은 setup·usage preflight 없이 사용. Project plan,
+run, file ownership이 필요한 workflow만 한 번의 명확한 project 활성화 승인 대상으로 분리.
+승인 뒤 capability 확인과 run bootstrap은 해당 workflow가 자동 처리하며 usage guard 오류로
+내부 전제 노출 금지.
+
 ## Source task preflight
 
 Source task 시작 시 active host의 정확한 session ID·process ID 사용:

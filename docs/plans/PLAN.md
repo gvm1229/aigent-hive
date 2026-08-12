@@ -1,6 +1,6 @@
 # Aigent Hive active plan index
 
-> Revision: 2.69
+> Revision: 2.70
 > 기준일: 2026-08-12
 > Product version: `0.9.1`
 > 현재 milestone: `0.9.1` 최종 호환 patch 검증·공개
@@ -52,12 +52,12 @@
 | 한국어 setup 용어 복구 | 6 | 0 | 100% |
 | Global Skill 선택 단순화 | 8 | 0 | 100% |
 | Product-only Skill identity·localization | 15 | 0 | 100% |
-| 전역·프로젝트 사용량 보호 정책 | 10 | 0 | 100% |
+| 전역·프로젝트 사용량 보호 정책 | 11 | 0 | 100% |
 | Discord `v0.9` 연결 UX | 11 | 0 | 100% |
 | Windows global setup hardening | 13 | 0 | 100% |
 | Agent 자율 실행 지속 | 8 | 0 | 100% |
 | Notion `v0.10` 후보 | 1 | 10 | 9.1% |
-| **Canonical total** | **470** | **65** | **87.9%** |
+| **Canonical total** | **471** | **65** | **87.9%** |
 
 External production boundary 항목도 미완료 합계에 포함. Protected authority 없이 완료 처리 금지.
 

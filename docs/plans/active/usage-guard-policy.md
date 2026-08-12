@@ -17,6 +17,7 @@
 - 사용자 호출 Skill: product `usage-guard` 하나
 - Aigent Hive source의 pre-task gate: 설치된 `hive usage`가 단일 정본
 - Source 전용 Python gate·watcher·Skill·adapter·threshold state: `0건`
+- Non-Hive guard 비활성: setup-free Hive Skill 비활성과 무관
 
 ## 구현
 
@@ -49,6 +50,10 @@
   `max(global, project)`로 적용. `hive-source.json` source workspace는 별도 구현 없이 설치 product의
   global threshold 사용. 자체 `AGENTS.md`만 있거나 빈 folder인 non-Hive target은 guard 전체 비활성:
   halt·threshold 변경·session override·runtime file `0건`
+- [x] [UGP-011] Non-Hive guard 비활성과 Hive 기능 사용 가능 여부를 분리. `quick-answer`, prompt
+  개선, user-root 지식은 project setup·usage preflight 없이 사용. Project state가 필요한 별도
+  workflow만 한 번의 활성화 승인과 자동 capability·run bootstrap 소유. 내부 실행 전제를
+  usage guard 오류로 노출하는 경로 `0건`
 
 ## 완료 기준
 

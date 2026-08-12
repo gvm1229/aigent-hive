@@ -676,6 +676,8 @@ Pre-1.0 비차단 deferred:
   threshold `5%` PASS, source `.hive/` 생성 `0건`
 - 회귀 증거: Rust usage control 10개·global projection binding 1개, Python 대상 분류·정적
   계약 39개 통과, Windows 조건부 1개 예상 건너뜀
+- UX 경계: non-Hive guard 비활성과 setup-free Hive Skill 사용 가능 여부 분리. Project state
+  workflow만 한 번의 활성화 승인과 자동 capability·run bootstrap 소유
 
 ## 사람용 문서 style
 
