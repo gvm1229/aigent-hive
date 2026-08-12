@@ -39,6 +39,10 @@ pub enum DispatchState {
 #[serde(rename_all = "kebab-case")]
 pub enum EventKind {
     Reserve,
+    IssueAuthority,
+    RevokeAuthority,
+    RebuildProjection,
+    Migrate,
     Prepare,
     Claim,
     MarkDispatchUncertain,
@@ -179,6 +183,15 @@ impl ReducerState {
 }
 
 impl OrchestrationEvent {
+    /// Return the canonical digest used by the event head.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when canonical serialization fails.
+    pub fn digest(&self) -> Result<String, OrchestrationError> {
+        digest_value(self)
+    }
+
     /// Validate bounded event identifiers and digest syntax.
     ///
     /// # Errors
@@ -208,9 +221,15 @@ impl OrchestrationEvent {
 fn allowed_transition(kind: EventKind, from: Option<DispatchState>, to: DispatchState) -> bool {
     use DispatchState as S;
     use EventKind as E;
+    if matches!(
+        kind,
+        E::IssueAuthority | E::RevokeAuthority | E::RebuildProjection
+    ) {
+        return from == Some(to);
+    }
     matches!(
         (kind, from, to),
-        (E::Reserve, None, S::Reserved)
+        (E::Reserve | E::Migrate, None, S::Reserved)
             | (E::Prepare, Some(S::Reserved | S::Expired), S::Prepared)
             | (E::Claim, Some(S::Prepared), S::Claimed)
             | (
@@ -935,6 +954,56 @@ mod tests {
         state.apply_event(&prepare).expect("prepare");
         assert_eq!(state.state, Some(DispatchState::Prepared));
         assert_eq!(replay_events(&[reserve, prepare]).expect("replay"), state);
+    }
+
+    #[test]
+    fn authority_ledger_events_preserve_dispatch_state() {
+        let mut state = ReducerState::default();
+        let reserve = event(
+            1,
+            EventKind::Reserve,
+            None,
+            DispatchState::Reserved,
+            None,
+            0,
+        );
+        let head = state.apply_event(&reserve).expect("reserve");
+        let issue = event(
+            2,
+            EventKind::IssueAuthority,
+            Some(DispatchState::Reserved),
+            DispatchState::Reserved,
+            Some(head),
+            0,
+        );
+        let head = state.apply_event(&issue).expect("issue");
+        let revoke = event(
+            3,
+            EventKind::RevokeAuthority,
+            Some(DispatchState::Reserved),
+            DispatchState::Reserved,
+            Some(head),
+            0,
+        );
+        state.apply_event(&revoke).expect("revoke");
+        assert_eq!(state.state, Some(DispatchState::Reserved));
+        assert_eq!(state.sequence, 3);
+    }
+
+    #[test]
+    fn migration_bootstraps_a_separate_native_chain() {
+        let mut migration = event(
+            1,
+            EventKind::Migrate,
+            None,
+            DispatchState::Reserved,
+            None,
+            0,
+        );
+        migration.run_id = "native-migration-1".to_owned();
+        let state = replay_events(&[migration]).expect("migration");
+        assert_eq!(state.state, Some(DispatchState::Reserved));
+        assert_eq!(state.sequence, 1);
     }
 
     #[test]
