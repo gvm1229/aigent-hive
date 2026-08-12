@@ -1,23 +1,20 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://aigent-hive.local/schemas/update-state.schema.json",
-  "title": "Aigent Hive installed update rollback state",
+  "title": "Aigent Hive installed release state",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema_version", "product_version", "release_manifest_digest", "rollback"],
+  "required": ["schema_version", "product_version", "release_manifest_digest", "accepted_release"],
   "properties": {
     "schema_version": { "const": 1 },
     "product_version": { "$ref": "#/$defs/version" },
     "release_manifest_digest": { "$ref": "#/$defs/digest" },
-    "rollback": {
+    "accepted_release": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["root_version", "timestamp_version", "snapshot_version", "targets_version", "release_sequence", "manifest_digest"],
+      "required": ["release_version", "release_sequence", "manifest_digest"],
       "properties": {
-        "root_version": { "type": "integer", "minimum": 1 },
-        "timestamp_version": { "type": "integer", "minimum": 1 },
-        "snapshot_version": { "type": "integer", "minimum": 1 },
-        "targets_version": { "type": "integer", "minimum": 1 },
+        "release_version": { "$ref": "#/$defs/version" },
         "release_sequence": { "type": "integer", "minimum": 1 },
         "manifest_digest": { "$ref": "#/$defs/digest" }
       }

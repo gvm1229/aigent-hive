@@ -1,7 +1,7 @@
 use crate::{
     classify_release, observe_surface_delta, select_migration_route,
-    validate_cross_major_preservation, verify_release_repository, BackupEntry, BackupManifest,
-    MajorApproval, MigrationKind, PreservationDigest, ReleaseVerification, RollbackState,
+    validate_cross_major_preservation, verify_release_bundle, BackupEntry, BackupManifest,
+    MajorApproval, MigrationKind, PreservationDigest, ReleaseState, ReleaseVerification,
     SemVersion, SurfaceDelta, UpdateError,
 };
 use cap_fs_ext::{DirExt, FollowSymlinks, OpenOptionsFollowExt};
@@ -79,10 +79,8 @@ pub enum UpdateMode {
 pub struct UpdateRequest<'a> {
     /// Installed consumer project.
     pub target: &'a Path,
-    /// Extracted local TUF repository.
+    /// Extracted local release bundle.
     pub repository: &'a Path,
-    /// Independently protected trusted-root bytes.
-    pub trusted_root_bytes: &'a [u8],
     /// Verification clock supplied by the CLI.
     pub now_unix: i64,
     /// Dry-run or apply.
@@ -93,7 +91,7 @@ pub struct UpdateRequest<'a> {
     pub major_approval: Option<&'a MajorApproval>,
 }
 
-/// Persisted release rollback state.
+/// Persisted accepted release identity.
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct UpdateState {
@@ -103,8 +101,8 @@ pub struct UpdateState {
     pub product_version: String,
     /// Last accepted release manifest digest.
     pub release_manifest_digest: String,
-    /// TUF/release rollback floor.
-    pub rollback: RollbackState,
+    /// Last accepted release used for local downgrade refusal.
+    pub accepted_release: ReleaseState,
 }
 
 /// Successful update result.
@@ -280,11 +278,9 @@ fn prepare_update(
     request: &UpdateRequest<'_>,
 ) -> Result<PreparedUpdate, UpdateError> {
     let previous_state = read_update_state(target)?;
-    let verified = verify_release_repository(
-        request.trusted_root_bytes,
+    let verified = verify_release_bundle(
         request.repository,
-        request.now_unix,
-        previous_state.as_ref().map(|state| &state.rollback),
+        previous_state.as_ref().map(|state| &state.accepted_release),
     )?;
     let installed = read_installed_harness(target)?;
     if installed.harness_version != installed.source_release_version {
@@ -805,7 +801,7 @@ fn activate_update(
         schema_version: 1,
         product_version: verified.manifest.release_version.clone(),
         release_manifest_digest: verified.manifest_digest.clone(),
-        rollback: verified.next_rollback_state.clone(),
+        accepted_release: verified.next_release_state.clone(),
     };
     let mut journal = create_journal(
         &transaction_id,
@@ -988,12 +984,9 @@ fn validate_recovery_journal(
         || journal.next_state.schema_version != 1
         || journal.next_state.product_version != journal.target_version
         || journal.next_state.release_manifest_digest != journal.release_manifest_digest
-        || journal.next_state.rollback.manifest_digest != journal.release_manifest_digest
-        || journal.next_state.rollback.root_version == 0
-        || journal.next_state.rollback.timestamp_version == 0
-        || journal.next_state.rollback.snapshot_version == 0
-        || journal.next_state.rollback.targets_version == 0
-        || journal.next_state.rollback.release_sequence == 0
+        || journal.next_state.accepted_release.manifest_digest != journal.release_manifest_digest
+        || journal.next_state.accepted_release.release_sequence == 0
+        || journal.next_state.accepted_release.release_version != journal.target_version
         || journal.changes.is_empty()
         || journal.source_version.parse::<SemVersion>().is_err()
         || journal.target_version.parse::<SemVersion>().is_err()
@@ -2383,13 +2376,11 @@ mod tests {
     fn update_request<'a>(
         target: &'a Path,
         fixture: &'a Path,
-        root: &'a [u8],
         mode: UpdateMode,
     ) -> UpdateRequest<'a> {
         UpdateRequest {
             target,
             repository: fixture,
-            trusted_root_bytes: root,
             now_unix: 1_800_000_000,
             mode,
             exact_major_target: None,
@@ -2397,12 +2388,9 @@ mod tests {
         }
     }
 
-    fn rollback_state() -> RollbackState {
-        RollbackState {
-            root_version: 1,
-            timestamp_version: 1,
-            snapshot_version: 1,
-            targets_version: 1,
+    fn release_state() -> ReleaseState {
+        ReleaseState {
+            release_version: "0.7.0".to_owned(),
             release_sequence: 7,
             manifest_digest: format!("sha256:{}", "c".repeat(64)),
         }
@@ -2461,7 +2449,7 @@ mod tests {
                 schema_version: 1,
                 product_version: "0.7.0".to_owned(),
                 release_manifest_digest: format!("sha256:{}", "c".repeat(64)),
-                rollback: rollback_state(),
+                accepted_release: release_state(),
             },
             journal_digest: String::new(),
         };
@@ -2492,6 +2480,7 @@ mod tests {
         journal.state = JournalState::Committed;
         journal.target_version = target_version.to_owned();
         journal.next_state.product_version = target_version.to_owned();
+        journal.next_state.accepted_release.release_version = target_version.to_owned();
         journal.journal_digest = journal_digest(&journal).expect("journal digest");
         write_atomic(
             &target.join(JOURNAL_PATH),
@@ -2548,15 +2537,9 @@ mod tests {
         assert!(!harness.contains("preference_provenance"));
         let before = snapshot_regular_files(&consumer);
         let fixture = release_fixture();
-        let root = fs::read(fixture.join("metadata/root.json")).expect("trusted root");
 
-        let error = execute_update(&update_request(
-            &consumer,
-            &fixture,
-            &root,
-            UpdateMode::Apply,
-        ))
-        .expect_err("unconnected historical install must require setup");
+        let error = execute_update(&update_request(&consumer, &fixture, UpdateMode::Apply))
+            .expect_err("unconnected historical install must require setup");
 
         assert!(matches!(error, UpdateError::Unsupported(_)), "{error:?}");
         assert_eq!(error.code(), "hive.update-migration-unsupported");
@@ -2571,14 +2554,13 @@ mod tests {
     #[test]
     fn current_updater_rejects_published_0_8_release_without_target_mutation() {
         let fixture = published_release_fixture();
-        let root = fs::read(fixture.join("metadata/root.json")).expect("trusted root");
         for mode in [UpdateMode::DryRun, UpdateMode::Apply] {
             let target = tempfile::tempdir().expect("target");
             let consumer = target.path().canonicalize().expect("consumer");
             install_legacy_consumer(&consumer, "0.6.0");
             let before = snapshot_regular_files(&consumer);
 
-            let error = execute_update(&update_request(&consumer, &fixture, &root, mode))
+            let error = execute_update(&update_request(&consumer, &fixture, mode))
                 .expect_err("running updater must reject another exact release version");
 
             assert!(matches!(error, UpdateError::Verification(_)));
@@ -2600,15 +2582,11 @@ mod tests {
         assert!(marker.contains("Synthetic test fixture"));
         assert!(marker.contains("must never be published"));
         assert!(marker_lowered.contains("private signing material is intentionally absent"));
-        let provenance = fs::read_to_string(fixture.join("targets/provenance.intoto.json"))
-            .expect("synthetic signed provenance");
-        assert!(provenance.contains(r#""target":"test""#));
-        assert!(provenance.contains(r#""invocationId":"fixture""#));
-        assert!(provenance.contains("aigent-hive-0.9.0-test"));
-        let platform_evidence =
-            fs::read_to_string(fixture.join("targets/platform-signing-evidence.json"))
-                .expect("synthetic platform evidence");
-        assert!(platform_evidence.contains("fixture-public-evidence"));
+        let manifest = fs::read_to_string(fixture.join("bundle-manifest.json"))
+            .expect("synthetic integrity manifest");
+        assert!(manifest.contains(r#""release_version":"0.9.0""#));
+        assert!(manifest.contains("migration-table.json"));
+        assert!(manifest.contains("release-surface-inventory.json"));
 
         for (path, bytes) in snapshot_regular_files(&fixture) {
             let path_lowered = path.to_ascii_lowercase();
@@ -2675,9 +2653,7 @@ mod tests {
     #[test]
     fn major_confirmation_binds_every_real_update_report_field() {
         let fixture = historical_release_fixture();
-        let root = fs::read(fixture.join("metadata/root.json")).expect("root");
-        let verified =
-            verify_release_repository(&root, &fixture, 1_800_000_000, None).expect("release");
+        let verified = verify_release_bundle(&fixture, None).expect("release");
         let source: SemVersion = "0.6.0".parse().expect("source");
         let target: SemVersion = "0.7.0".parse().expect("target");
         let plan = format!("sha256:{}", "1".repeat(64));
@@ -2956,15 +2932,9 @@ mod tests {
         .expect("index");
         let before = snapshot_regular_files(&target_path);
         let fixture = release_fixture();
-        let root = fs::read(fixture.join("metadata/root.json")).expect("root");
 
-        let error = execute_update(&update_request(
-            &target_path,
-            &fixture,
-            &root,
-            UpdateMode::DryRun,
-        ))
-        .expect_err("dry-run must not recover");
+        let error = execute_update(&update_request(&target_path, &fixture, UpdateMode::DryRun))
+            .expect_err("dry-run must not recover");
 
         assert!(matches!(error, UpdateError::RecoveryRequired(_)));
         assert!(error.to_string().contains("recovery required"));
@@ -3046,8 +3016,7 @@ mod tests {
         fs::write(target.path().join("hive-source.json"), b"{}\n").expect("source marker");
         let target_dir = open_target_capability(target.path()).expect("target capability");
         let fixture = release_fixture();
-        let root = fs::read(fixture.join("metadata/root.json")).expect("root");
-        let request = update_request(target.path(), &fixture, &root, UpdateMode::DryRun);
+        let request = update_request(target.path(), &fixture, UpdateMode::DryRun);
 
         let update_error =
             execute_update_in(&target_dir, &request).expect_err("pinned source update");
@@ -3075,11 +3044,10 @@ mod tests {
         fs::create_dir(&target).expect("replacement target");
         fs::write(target.join("sentinel"), b"replacement").expect("replacement sentinel");
         let fixture = release_fixture();
-        let root = fs::read(fixture.join("metadata/root.json")).expect("root");
 
         execute_update_in(
             &target_dir,
-            &update_request(&target, &fixture, &root, UpdateMode::Apply),
+            &update_request(&target, &fixture, UpdateMode::Apply),
         )
         .expect("pinned apply");
 
@@ -3121,11 +3089,10 @@ mod tests {
                 symlink(&outside, &config).expect("replace config");
             }
             let fixture = release_fixture();
-            let root = fs::read(fixture.join("metadata/root.json")).expect("root");
 
             let result = execute_update_in(
                 &target_dir,
-                &update_request(&target, &fixture, &root, UpdateMode::DryRun),
+                &update_request(&target, &fixture, UpdateMode::DryRun),
             );
 
             assert!(matches!(result, Err(UpdateError::Conflict(_))));
@@ -3213,7 +3180,6 @@ mod tests {
     fn every_supported_same_major_generation_dry_runs_and_applies_without_foreign_drift() {
         let _environment = UPDATE_ENVIRONMENT.lock().expect("environment lock");
         let fixture = release_fixture();
-        let root = fs::read(fixture.join("metadata/root.json")).expect("root");
         for source_version in ["0.1.0", "0.2.0", "0.3.0", "0.4.0", "0.5.0", "0.6.0"] {
             let target = tempfile::tempdir().expect("target");
             let consumer = target.path().canonicalize().expect("consumer");
@@ -3227,24 +3193,14 @@ mod tests {
             let before_readme = fs::read(consumer.join("README.md")).expect("readme");
             let before_omx = fs::read(consumer.join(".omx/state.json")).expect("omx");
 
-            let dry_run = execute_update(&update_request(
-                &consumer,
-                &fixture,
-                &root,
-                UpdateMode::DryRun,
-            ))
-            .unwrap_or_else(|error| panic!("{source_version} dry-run failed: {error}"));
+            let dry_run = execute_update(&update_request(&consumer, &fixture, UpdateMode::DryRun))
+                .unwrap_or_else(|error| panic!("{source_version} dry-run failed: {error}"));
             assert_eq!(dry_run.source_version, source_version);
             assert_eq!(dry_run.target_version, "0.9.0");
             assert_eq!(dry_run.migration_id, "same-major-render-v1");
 
-            let applied = execute_update(&update_request(
-                &consumer,
-                &fixture,
-                &root,
-                UpdateMode::Apply,
-            ))
-            .unwrap_or_else(|error| panic!("{source_version} apply failed: {error}"));
+            let applied = execute_update(&update_request(&consumer, &fixture, UpdateMode::Apply))
+                .unwrap_or_else(|error| panic!("{source_version} apply failed: {error}"));
             assert_eq!(applied.source_version, source_version);
             assert_eq!(applied.target_version, "0.9.0");
             assert_eq!(
@@ -3270,17 +3226,11 @@ mod tests {
         let consumer = target.path().canonicalize().expect("consumer");
         install_legacy_consumer(&consumer, "0.6.0");
         let fixture = release_fixture();
-        let root = fs::read(fixture.join("metadata/root.json")).expect("root");
         let before_readme = fs::read(consumer.join("README.md")).expect("readme");
         let before_omx = fs::read(consumer.join(".omx/state.json")).expect("omx");
 
-        let dry_run = execute_update(&update_request(
-            &consumer,
-            &fixture,
-            &root,
-            UpdateMode::DryRun,
-        ))
-        .expect("dry-run");
+        let dry_run = execute_update(&update_request(&consumer, &fixture, UpdateMode::DryRun))
+            .expect("dry-run");
         assert_eq!(dry_run.source_version, "0.6.0");
         assert_eq!(dry_run.target_version, "0.9.0");
         assert_eq!(dry_run.migration_id, "same-major-render-v1");
@@ -3291,13 +3241,8 @@ mod tests {
             .expect("harness")
             .contains("0.6.0"));
 
-        let applied = execute_update(&update_request(
-            &consumer,
-            &fixture,
-            &root,
-            UpdateMode::Apply,
-        ))
-        .expect("apply");
+        let applied =
+            execute_update(&update_request(&consumer, &fixture, UpdateMode::Apply)).expect("apply");
         assert_eq!(applied.migration_id, "same-major-render-v1");
         assert!(applied.backup_id.is_some());
         assert!(applied.index_digest.is_none());
@@ -3370,12 +3315,10 @@ mod tests {
         .expect("forged active ledger");
 
         let fixture = release_fixture();
-        let root = fs::read(fixture.join("metadata/root.json")).expect("root");
         assert!(matches!(
             execute_update(&update_request(
                 &consumer,
                 &fixture,
-                &root,
                 UpdateMode::DryRun,
             )),
             Err(UpdateError::Conflict(message))
@@ -3400,15 +3343,9 @@ mod tests {
         let foreign = b"foreign directive bytes\x00\xff\n";
         fs::write(&directive, foreign).expect("foreign directive");
         let fixture = release_fixture();
-        let root = fs::read(fixture.join("metadata/root.json")).expect("root");
 
-        let error = execute_update(&update_request(
-            &consumer,
-            &fixture,
-            &root,
-            UpdateMode::DryRun,
-        ))
-        .expect_err("legacy absence proof must not authorize an occupied directive path");
+        let error = execute_update(&update_request(&consumer, &fixture, UpdateMode::DryRun))
+            .expect_err("legacy absence proof must not authorize an occupied directive path");
 
         assert!(matches!(error, UpdateError::Conflict(_)));
         assert!(error.to_string().contains("collides with a foreign file"));
@@ -3424,16 +3361,10 @@ mod tests {
         let consumer = target.path().canonicalize().expect("consumer");
         install_legacy_consumer(&consumer, "0.6.0");
         let fixture = release_fixture();
-        let root = fs::read(fixture.join("metadata/root.json")).expect("root");
         let before_readme = fs::read(consumer.join("README.md")).expect("readme");
         let activation_fault = format!("{:?}@1", std::thread::current().id());
         std::env::set_var("HIVE_TEST_ACTIVATION_FAIL_AFTER", activation_fault);
-        let result = execute_update(&update_request(
-            &consumer,
-            &fixture,
-            &root,
-            UpdateMode::Apply,
-        ));
+        let result = execute_update(&update_request(&consumer, &fixture, UpdateMode::Apply));
         std::env::remove_var("HIVE_TEST_ACTIVATION_FAIL_AFTER");
 
         assert!(result.is_err());

@@ -77,7 +77,6 @@
     "loop-graph.schema.json",
     "major-release-confirmation.schema.json",
     "migration-table.schema.json",
-    "platform-signing-evidence.schema.json",
     "project-registry.schema.json",
     "prompt-refinement-input.schema.json",
     "prompt-refinement-lifecycle.schema.json",

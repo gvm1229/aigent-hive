@@ -1,10 +1,10 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://aigent-hive.local/schemas/release-bundle-manifest.schema.json",
-  "title": "Aigent Hive release bundle manifest",
+  "title": "Aigent Hive local release integrity manifest",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema_version", "product", "release_version", "release_sequence", "classification", "source", "minimum_updater_version", "minimum_supported_harness_version", "license", "surface_inventory_digest", "migration_table_digest", "provenance_digest", "platform_signing_evidence_digest"],
+  "required": ["schema_version", "product", "release_version", "release_sequence", "classification", "source", "minimum_updater_version", "minimum_supported_harness_version", "license", "surface_inventory_digest", "migration_table_digest", "artifacts"],
   "properties": {
     "schema_version": { "const": 1 },
     "product": { "const": "aigent-hive" },
@@ -26,8 +26,21 @@
     "license": { "const": "Apache-2.0" },
     "surface_inventory_digest": { "$ref": "#/$defs/digest" },
     "migration_table_digest": { "$ref": "#/$defs/digest" },
-    "provenance_digest": { "$ref": "#/$defs/digest" },
-    "platform_signing_evidence_digest": { "$ref": "#/$defs/digest" }
+    "artifacts": {
+      "type": "array",
+      "minItems": 2,
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "length", "sha256"],
+        "properties": {
+          "path": { "type": "string", "pattern": "^targets/[A-Za-z0-9][A-Za-z0-9._/-]*$" },
+          "length": { "type": "integer", "minimum": 1, "maximum": 536870912 },
+          "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+        }
+      }
+    }
   },
   "$defs": {
     "version": { "type": "string", "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$" },

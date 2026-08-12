@@ -87,28 +87,22 @@
         "schema_version",
         "product_version",
         "release_manifest_digest",
-        "rollback"
+        "accepted_release"
       ],
       "properties": {
         "schema_version": { "const": 1 },
         "product_version": { "$ref": "#/$defs/version" },
         "release_manifest_digest": { "$ref": "#/$defs/digest" },
-        "rollback": {
+        "accepted_release": {
           "type": "object",
           "additionalProperties": false,
           "required": [
-            "root_version",
-            "timestamp_version",
-            "snapshot_version",
-            "targets_version",
+            "release_version",
             "release_sequence",
             "manifest_digest"
           ],
           "properties": {
-            "root_version": { "type": "integer", "minimum": 1 },
-            "timestamp_version": { "type": "integer", "minimum": 1 },
-            "snapshot_version": { "type": "integer", "minimum": 1 },
-            "targets_version": { "type": "integer", "minimum": 1 },
+            "release_version": { "$ref": "#/$defs/version" },
             "release_sequence": { "type": "integer", "minimum": 1 },
             "manifest_digest": { "$ref": "#/$defs/digest" }
           }
