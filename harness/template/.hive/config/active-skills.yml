@@ -20,7 +20,7 @@ skills:
   consent_digest: null
 - name: knowledge-capture
   source_type: built-in
-  content_digest: sha256:7af3911e970abf824597259c041a7c1dda5216cc335a5057e0a7626b9062c2f9
+  content_digest: sha256:60c981780511f464a5009fe6268fbf30c8857be18c9aa9c3f88bd958dcca6077
   side_effect_class: project-write
   capabilities:
   - filesystem-read
@@ -41,7 +41,7 @@ skills:
   consent_digest: null
 - name: knowledge-maintain
   source_type: built-in
-  content_digest: sha256:4387ac78abd7bbecaa3e7c888c95a389802615cc6d6f618ba5007f2b16228c6a
+  content_digest: sha256:7f407f1ffd9e4741ed889f2713a467ae91e68453eb3ce572226e01bf49f5da15
   side_effect_class: project-write
   capabilities:
   - filesystem-read
@@ -80,7 +80,7 @@ skills:
   consent_digest: null
 - name: product-update
   source_type: built-in
-  content_digest: sha256:97bca1103a5eb625b9b74fdd61af88ff7e38d096664ee1a270e2bdc5507736d3
+  content_digest: sha256:38a51c5f1cc24dd791448c54cbb53abe0cb657106d4168b9ef23530dfb960ac6
   side_effect_class: project-write
   capabilities:
   - filesystem-read
@@ -107,7 +107,7 @@ skills:
   consent_digest: null
 - name: project-transition
   source_type: built-in
-  content_digest: sha256:b9b24f7f36707f66f8e39885b333df3d4f956d402c9838ba0594dc9a39690047
+  content_digest: sha256:4008880963d88080a103e96d76d576fe7feb336857d921a49b3bf947e949ad5b
   side_effect_class: project-write
   capabilities:
   - filesystem-read
