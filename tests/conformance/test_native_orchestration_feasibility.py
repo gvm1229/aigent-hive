@@ -20,6 +20,17 @@ FIXTURES = ROOT / "tests/fixtures/native-orchestration"
 
 
 class NativeOrchestrationFeasibilityContract(unittest.TestCase):
+    def test_orchestration_schemas_are_valid_draft_2020_12(self) -> None:
+        for name in (
+            "host-orchestration-capability.schema.json",
+            "host-orchestration-receipt.schema.json",
+            "orchestration-authority.schema.json",
+            "orchestration-trust-root.schema.json",
+        ):
+            schema = json.loads((ROOT / "schemas" / name).read_text(encoding="utf-8"))
+            with self.subTest(name=name):
+                Draft202012Validator.check_schema(schema)
+
     def test_all_host_snapshots_validate(self) -> None:
         validator = Draft202012Validator(SCHEMA, format_checker=FormatChecker())
         hosts = set()
