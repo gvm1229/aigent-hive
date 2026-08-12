@@ -54,7 +54,7 @@
   개선, user-root 지식은 project setup·usage preflight 없이 사용. Project state가 필요한 별도
   workflow만 한 번의 활성화 승인과 자동 capability·run bootstrap 소유. 내부 실행 전제를
   usage guard 오류로 노출하는 경로 `0건`
-- [ ] [UGP-012] Source 전용 Python guard 제거와 함께 CI의 삭제된
+- [x] [UGP-012] Source 전용 Python guard 제거와 함께 CI의 삭제된
   `tests.conformance.test_source_usage_guard` 호출 제거. Linux·macOS·Windows 적합성 작업에서
   stale module 호출 `0건`, exact `develop` CI 재검증
 
