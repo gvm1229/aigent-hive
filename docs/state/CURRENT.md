@@ -2,7 +2,7 @@
 
 - 기준 branch: `develop`
 - product version: `0.9.1`
-- plan revision: `2.76`
+- plan revision: `2.75`
 - 현재 milestone: 비-`0.10.0` 계획 전수 완료와 `0.9.2` numbered test 수용
 - `0.9.2` stable 차단: 활성 계획 전수 대조 결과 `N10-002–011` 외 실제 미완료 55개.
   `NAT-002–024` 23개와 `MRA-001–032` 32개의 구현·실기 증거 전까지 candidate 생성 금지
@@ -14,9 +14,6 @@
 - Native feasibility 1차 완료: commit `61b03a6`, `NAT-002–003`·`MRA-001–003` 완료.
   Codex·Claude agent scope·model/effort·native lifecycle surface 지원, Hive idempotency·signed runtime
   attestation 부재, Antigravity unsupported. Fresh-session dispatch 전 activation은 default-off 유지
-- Native orchestration core 1차 완료: commit `09700a0`, `NAT-008–009`·`NAT-011–012` 완료.
-  Typed receipt·deterministic reducer·priority/aging scheduler·fenced lease/budget와 Ed25519 authority
-  검증 기반 추가. Event CAS persistence·authority issue/revoke·emergency cancel·CLI는 다음 concern
 - `0.9.0` stable publication: candidate run `31561636239`, publication run `31562280178`,
   annotated `v0.9.0`, normal GitHub Release, npm `latest=0.9.0`, Windows 전역 설치·validate·
   release date `2026-08-12` 표시 PASS
