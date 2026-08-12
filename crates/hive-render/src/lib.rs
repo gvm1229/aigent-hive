@@ -3352,7 +3352,7 @@ fn render_agents_marker(
     let marker = marker.replacen(
         "- Keep durable knowledge in Markdown. Treat `.hive/index/*.sqlite*` as disposable.\n",
         "- Keep durable knowledge in Markdown. Treat `.hive/index/*.sqlite*` as disposable.\n\
-- Before the final response on every Wiki-enabled turn, perform agent-reviewed classification of current authorized user statements and outcomes as a reusable task fact, preference, or workflow. Record the bounded outcome, tool or project, criteria, and originating request summary. When reusable, run `hive knowledge remember`, require its canonical-write receipt, and only then finish. Never write raw transcripts, secrets, ambiguous or ephemeral content, or confidential content without its exact authorized scope.\n",
+- Before the final response on every Wiki-enabled turn, perform agent-reviewed classification of current authorized user statements and outcomes as a reusable task fact, preference, or workflow. Record the bounded outcome, tool or project, criteria, and originating request summary. When reusable, run `hive knowledge remember`, require its canonical-write receipt, and only then finish. After a successful write, use `hive source-wiki lint` only for a valid source workspace; otherwise use `hive knowledge lint` against the enabled registered project, or against `user-root` when the current project is unregistered. Missing project setup, a project marker, or an attached collection never skips lint. Never write raw transcripts, secrets, ambiguous or ephemeral content, or confidential content without its exact authorized scope.\n",
         1,
     );
     let marker = marker.replacen(

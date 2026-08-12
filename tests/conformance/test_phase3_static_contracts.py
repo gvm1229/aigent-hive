@@ -64,9 +64,14 @@ class Phase3SkillSourceContract(unittest.TestCase):
         for text in (capture, maintain):
             normalized = " ".join(text.split())
             self.assertIn("hive knowledge lint --target", normalized)
+            self.assertIn(
+                "hive knowledge lint --target <user-root> --user-root <user-root>",
+                normalized,
+            )
             self.assertIn("hive source-wiki lint", normalized)
             self.assertIn("hive-source.json", normalized)
-        self.assertIn("it never skips lint", " ".join(capture.split()))
+            self.assertIn("unregistered", normalized)
+        self.assertIn("never skips lint", " ".join(capture.split()))
         self.assertIn("never a reason to skip Wiki lint", " ".join(maintain.split()))
 
     def test_source_has_directives_not_a_second_skill_inventory(self) -> None:
