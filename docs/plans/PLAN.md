@@ -1,17 +1,19 @@
 # Aigent Hive active plan index
 
-> Revision: 2.79
+> Revision: 2.80
 > 기준일: 2026-08-12
 > Product version: `0.9.1`
-> 현재 milestone: 비-`0.10.0` 계획 전수 완료와 `0.9.2` numbered test 수용
+> 현재 milestone: `0.9.2` 완료 기능 안정판과 `0.9.3` Native·custom subagent 분리
 > Entrypoint: `docs/plans/PLAN.md`
 
 ## Goal parameters
 
-- Objective: `N10-002–011`만 `0.10.0-test`로 유예하고 모든 활성 Hive-native 실행·custom
-  subagent·호환 계획을 완료한 뒤 `0.9.2-test.N` 공개 수용을 거쳐 `0.9.2` 정식판 마감
-- Success: 비-`0.10.0` active item 미완료 `0건`, 최신 numbered test 실제 수용 결함 `0건`,
-  그 exact source의 protected stable publication
+- Objective: 공개 `v0.9.1` 뒤 `2cec037`까지 완료된 usage guard 정본 전환을
+  `0.9.2-test.N` 공개 수용 뒤 `0.9.2` 정식판으로 마감. `NAT-002–024`·`MRA-001–032`는
+  `0.9.3`, `N10-002–011`은 `0.10.0-test`로 분리
+- Success: `0.9.2` release tree의 Native·custom subagent 유입 `0건`, 최신 numbered test
+  실제 수용 결함 `0건`, 그 exact source의 protected stable publication, 현재 Native·custom
+  subagent work의 별도 `0.9.3` branch 보존
 - Stop boundary: protected `main` review, stable publication environment approval,
   exact `1.0.0` authority, 설치 product usage guard remaining threshold `5%`
 - Invariants: provider-neutral, backend별 canonical source 우선, SQLite 파생 상태,
@@ -56,7 +58,7 @@
 | Discord `v0.9` 연결 UX | 11 | 0 | 100% |
 | Windows global setup hardening | 13 | 0 | 100% |
 | Agent 자율 실행 지속 | 8 | 0 | 100% |
-| `0.9.2` 시험판 선행 출시 자격 | 2 | 10 | 16.7% |
+| `0.9.2` 완료 기능 출시·`0.9.3` 분리 | 2 | 10 | 16.7% |
 | Notion `v0.10` 후보 | 1 | 10 | 9.1% |
 | **Canonical total** | **501** | **48** | **91.3%** |
 
@@ -107,7 +109,7 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
 | [`active/discord-onboarding-v09.md`](active/discord-onboarding-v09.md) | `DIS9-*` | Discord global setup·프로젝트별 중단 알림·HTML 안내 |
 | [`active/windows-global-setup-hardening.md`](active/windows-global-setup-hardening.md) | `WGS-*` | Mac 원본 복구 유지·Windows CLI 탐색·설정·fresh-session 수용 |
 | [`active/agent-autonomous-continuation.md`](active/agent-autonomous-continuation.md) | `AAC-*` | Agent 소유 작업 지속·terminal state·중간 종료 회귀 |
-| [`active/release-0.9.2-test-qualification.md`](active/release-0.9.2-test-qualification.md) | `REL92-*` | 비-0.10 계획 전수 완료·numbered test 수용·stable 최종 게시 |
+| [`active/release-0.9.2-test-qualification.md`](active/release-0.9.2-test-qualification.md) | `REL92-*` | 완료 기능 `0.9.2` 출시·Native와 custom subagent의 `0.9.3` branch 분리 |
 | [`active/v0.10.0-notion-candidate.md`](active/v0.10.0-notion-candidate.md) | `N10-*` | Notion 연결·freshness·write-through와 `0.10.0-test` 후보 |
 
 ## Reconciliation gate
@@ -128,9 +130,9 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
 ## Current execution order
 
 완료 증거: [`CURRENT.md`](../state/CURRENT.md)와 owning active fragment.
-현재: `0.9.1` 공개 완료. `N10-002–011`만 `0.10.0-test`로 보류하고, 먼저
-`NAT-002–024`·`MRA-001–032`와 `REL92-002–008`을 완료. 이후 exact `develop`의
-`0.9.2-test.N`을 GitHub prerelease·npm `test`로 게시하고 Windows 실제 설치·fresh-session·
-성능·복구 수용. 수정 발생 시 다음 번호 시험판으로 반복. 최신 시험판 결함 `0건`과 비-0.10
-active item 미완료 `0건` 뒤에만 protected `main` stable candidate·`0.9.2`·npm `latest` 진행.
-정식판 시험 lane 사용 금지.
+현재: `0.9.1` 공개 완료. 공개 release tree 뒤 완료된 `2cec037`까지를 `0.9.2` 기능 기준으로
+고정하고, `603668f` 현재 work를 `codex/0.9.3-native-agents`에 먼저 보존. 이후
+`2cec037`의 `codex/release-0.9.2`에서 release-only 변경·full candidate·공개
+`0.9.2-test.N`·Windows 수용을 진행. 최신 시험판 결함 `0건` 뒤 protected `main`의
+`0.9.2`·npm `latest` 게시. `NAT-002–024`·`MRA-001–032`: `0.9.3` 전용.
+`N10-002–011`: `0.10.0-test` 유지. Branch reset·force-push·정식판 시험 lane 사용 금지.

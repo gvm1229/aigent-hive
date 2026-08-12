@@ -1,17 +1,22 @@
 # 현재 상태
 
-- 기준 branch: `develop`
+- 기준 branch: `codex/0.9.3-native-agents`
 - product version: `0.9.1`
-- plan revision: `2.79`
-- 현재 milestone: 비-`0.10.0` 계획 전수 완료와 `0.9.2` numbered test 수용
-- `0.9.2` stable 차단: 활성 계획 전수 대조 결과 `N10-002–011` 외 실제 미완료 38개.
-  Native 잔여 9개, model-routed 잔여 19개, `REL92-003–012` 10개의 구현·실기 증거 전까지
-  candidate 생성 금지
-- 출시 순서: source directive·ADR의 stable-as-test 금지 → 비-0.10 구현 완료 → full candidate →
-  public `0.9.2-test.N` → Windows 실제 설치·fresh-session·성능·복구 수용 → 수정 시 다음 번호
-  시험판 → 결함 `0건` 뒤 protected `main` stable publication
-- `REL92-002` 완료: commit `c777da1`, stable-as-test 금지와 numbered-test-first source
-  directive·plan gate·ADR·전용 conformance 3개 고정
+- plan revision: `2.80`
+- 현재 milestone: `0.9.2` 완료 기능 안정판과 `0.9.3` Native·custom subagent 분리
+- 공개 `v0.9.1`: exact `1e5e7b39c17545f8b997f71cdee39e4cd77d2ef2`. Merge parent
+  `0a61c74`와 tree byte 동일
+- `0.9.2` 기능 기준: `2cec0377748874748d126b6b55e59975a3f20a02`. 공개 release tree 뒤
+  usage guard 정본 전환·CI 보정 17 commits, 79 files, `+1116/-4433`
+- `c777da1`: `0.9.1` 범위의 마지막 commit이 아닌 첫 `0.9.2` qualification plan commit.
+  공개 release 대비 18 commits, 84 files, `+1270/-4446`
+- Branch 순서: 현재 `603668f`의 `codex/0.9.3-native-agents` 원격 보존 → `2cec037`의
+  `codex/release-0.9.2` 생성 → `0.9.2-test.N` 공개 수용 → protected `main` stable publication
+- Version 이관: `NAT-002–024`·`MRA-001–032`는 `0.9.3`, `N10-002–011`은
+  `0.10.0-test`. `0.9.2` release tree의 해당 제품 구현 유입 금지
+- History 정책: 기존 `develop` reset·rebase·force-push·대량 revert 없음. 안정판 시험 사용 금지
+- Source Wiki 조회 현재 차단: `docs/facts/{en,ko}/agent-autonomous-continuation.md`의
+  `.agents/directives/04-documentation-state.md` source digest 불일치. 후보 전 정합성 복구 필요
 - Native feasibility 1차 완료: commit `61b03a6`, `NAT-002–003`·`MRA-001–003` 완료.
   Codex·Claude agent scope·model/effort·native lifecycle surface 지원, Hive idempotency·signed runtime
   attestation 부재, Antigravity unsupported. Fresh-session dispatch 전 activation은 default-off 유지

@@ -44,13 +44,20 @@ class ReleaseQualificationOrderContract(unittest.TestCase):
             with self.subTest(required=required):
                 self.assertIn(required, text)
 
-    def test_v092_plan_defers_only_notion_candidate(self) -> None:
+    def test_v092_plan_separates_completed_release_from_future_work(self) -> None:
         text = (
             ROOT / "docs/plans/active/release-0.9.2-test-qualification.md"
         ).read_text(encoding="utf-8")
-        self.assertIn("제외: `N10-002–011`", text)
-        self.assertIn("`N10-002–011` 외 활성 계획 미완료 `0건`", text)
-        self.assertIn("`0.9.2-test.1`", text)
+        for required in (
+            "`0.9.2` 기능 기준: `2cec0377748874748d126b6b55e59975a3f20a02`",
+            "`NAT-002–024`·`MRA-001–032`의 `0.9.3` 전용 branch",
+            "`0.10.0` 유지: `N10-002–011`",
+            "`codex/0.9.3-native-agents`",
+            "`codex/release-0.9.2`",
+            "`0.9.2-test.N`",
+        ):
+            with self.subTest(required=required):
+                self.assertIn(required, text)
 
 
 if __name__ == "__main__":
