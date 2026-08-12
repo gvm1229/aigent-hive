@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/gvm1229/aigent-hive/schemas/custom-subagent-attestation.schema.json",
+  "title": "Aigent Hive custom subagent runtime attestation",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "attestation_id", "run_id", "action_id", "host", "role_id", "scope", "model", "effort", "definition_digest", "host_capability_digest", "native_task_id", "issued_at"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "attestation_id": { "$ref": "#/$defs/id" },
+    "run_id": { "$ref": "#/$defs/id" },
+    "action_id": { "$ref": "#/$defs/id" },
+    "host": { "enum": ["codex", "claude"] },
+    "role_id": { "$ref": "#/$defs/role" },
+    "scope": { "enum": ["user", "project"] },
+    "model": { "type": "string", "minLength": 3 },
+    "effort": { "enum": ["low", "medium", "high", "max"] },
+    "definition_digest": { "$ref": "#/$defs/digest" },
+    "host_capability_digest": { "$ref": "#/$defs/digest" },
+    "native_task_id": { "$ref": "#/$defs/id" },
+    "issued_at": { "type": "string", "format": "date-time" }
+  },
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{1,126}$" },
+    "role": { "type": "string", "pattern": "^[a-z][a-z0-9-]{1,62}$" },
+    "digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" }
+  }
+}

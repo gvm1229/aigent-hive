@@ -7,6 +7,7 @@ use std::path::{Component, Path, PathBuf};
 
 use sha2::{Digest, Sha256};
 
+pub mod custom_agent;
 pub mod judge;
 pub mod judge_auth;
 pub mod loop_graph;
