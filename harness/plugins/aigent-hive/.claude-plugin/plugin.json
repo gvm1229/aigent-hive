@@ -1,9 +1,9 @@
 {
   "name": "aigent-hive",
-  "version": "0.9.0",
+  "version": "0.9.1",
   "description": "Install and maintain project-local Aigent Hive harnesses without provider API credentials.",
   "author": {
-    "name": "Aigent Hive maintainers",
+    "name": "Hojin (Tom) Jeong",
     "url": "https://github.com/gvm1229/aigent-hive"
   },
   "homepage": "https://github.com/gvm1229/aigent-hive",

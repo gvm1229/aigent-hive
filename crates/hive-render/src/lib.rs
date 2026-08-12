@@ -873,6 +873,7 @@ pub fn historical_project_upgrade_candidate_in(
     let files = match version {
         "0.7.0" => frozen_project_base_0_7(target_dir)?,
         "0.8.0" => frozen_project_base_0_8(target_dir)?,
+        "0.9.0" => frozen_project_base_0_9(target_dir)?,
         _ => Err(RenderError::Unsupported(format!(
             "historical full project base is not embedded: {version}"
         )))?,
@@ -1149,8 +1150,145 @@ fn frozen_project_base_0_7(target_dir: &Dir) -> Result<BTreeMap<String, Vec<u8>>
     Ok(files)
 }
 
-#[allow(clippy::too_many_lines)]
 fn frozen_project_base_0_8(target_dir: &Dir) -> Result<BTreeMap<String, Vec<u8>>, RenderError> {
+    macro_rules! frozen_skill_0_8 {
+        ($name:literal) => {
+            (
+                $name,
+                include_bytes!(concat!(
+                    "../../../harness/project-bases/0.8.0/skills/",
+                    $name,
+                    "/SKILL.md"
+                ))
+                .as_slice(),
+                include_bytes!(concat!(
+                    "../../../harness/project-bases/0.8.0/skills/",
+                    $name,
+                    "/agents/openai.yaml"
+                ))
+                .as_slice(),
+            )
+        };
+    }
+    const DIRECTIVES: [(&str, &[u8]); 3] = [
+        (
+            "00-project-harness.md",
+            include_bytes!("../../../harness/project-bases/0.8.0/directives/00-project-harness.md"),
+        ),
+        (
+            "01-project-knowledge.md",
+            include_bytes!(
+                "../../../harness/project-bases/0.8.0/directives/01-project-knowledge.md"
+            ),
+        ),
+        (
+            "02-project-upgrade.md",
+            include_bytes!("../../../harness/project-bases/0.8.0/directives/02-project-upgrade.md"),
+        ),
+    ];
+    const SKILLS: [(&str, &[u8], &[u8]); 16] = [
+        frozen_skill_0_8!("auto-setup-harness"),
+        frozen_skill_0_8!("hive-judge-package"),
+        frozen_skill_0_8!("hive-knowledge-capture"),
+        frozen_skill_0_8!("hive-knowledge-maintenance"),
+        frozen_skill_0_8!("hive-knowledge-promote"),
+        frozen_skill_0_8!("hive-knowledge-query"),
+        frozen_skill_0_8!("hive-migrate"),
+        frozen_skill_0_8!("hive-project-upgrade"),
+        frozen_skill_0_8!("hive-prompt-refine"),
+        frozen_skill_0_8!("hive-role-handoff"),
+        frozen_skill_0_8!("hive-run-checkpoint"),
+        frozen_skill_0_8!("hive-run-resume"),
+        frozen_skill_0_8!("hive-simple-question"),
+        frozen_skill_0_8!("hive-update"),
+        frozen_skill_0_8!("hive-usage-guard"),
+        frozen_skill_0_8!("setup-harness"),
+    ];
+    frozen_project_base_0_8_or_0_9(
+        target_dir,
+        "0.8.0",
+        &DIRECTIVES,
+        &SKILLS,
+        include_str!("../../../harness/project-bases/0.8.0/AGENTS.md.template"),
+    )
+}
+
+fn frozen_project_base_0_9(target_dir: &Dir) -> Result<BTreeMap<String, Vec<u8>>, RenderError> {
+    macro_rules! frozen_skill_0_9 {
+        ($name:literal) => {
+            (
+                $name,
+                include_bytes!(concat!(
+                    "../../../harness/project-bases/0.9.0/skills/",
+                    $name,
+                    "/SKILL.md"
+                ))
+                .as_slice(),
+                include_bytes!(concat!(
+                    "../../../harness/project-bases/0.9.0/skills/",
+                    $name,
+                    "/agents/openai.yaml"
+                ))
+                .as_slice(),
+            )
+        };
+    }
+    const DIRECTIVES: [(&str, &[u8]); 3] = [
+        (
+            "00-project-harness.md",
+            include_bytes!("../../../harness/project-bases/0.9.0/directives/00-project-harness.md"),
+        ),
+        (
+            "01-project-knowledge.md",
+            include_bytes!(
+                "../../../harness/project-bases/0.9.0/directives/01-project-knowledge.md"
+            ),
+        ),
+        (
+            "02-project-upgrade.md",
+            include_bytes!("../../../harness/project-bases/0.9.0/directives/02-project-upgrade.md"),
+        ),
+    ];
+    const SKILLS: [(&str, &[u8], &[u8]); 21] = [
+        frozen_skill_0_9!("amend-directive"),
+        frozen_skill_0_9!("code-polish"),
+        frozen_skill_0_9!("knowledge-capture"),
+        frozen_skill_0_9!("knowledge-import"),
+        frozen_skill_0_9!("knowledge-maintain"),
+        frozen_skill_0_9!("knowledge-promote"),
+        frozen_skill_0_9!("knowledge-recall"),
+        frozen_skill_0_9!("package-review"),
+        frozen_skill_0_9!("product-update"),
+        frozen_skill_0_9!("project-refresh"),
+        frozen_skill_0_9!("project-setup"),
+        frozen_skill_0_9!("project-transition"),
+        frozen_skill_0_9!("prompt-refine"),
+        frozen_skill_0_9!("quick-answer"),
+        frozen_skill_0_9!("ralph-loop"),
+        frozen_skill_0_9!("research-best-practices"),
+        frozen_skill_0_9!("run-checkpoint"),
+        frozen_skill_0_9!("run-handoff"),
+        frozen_skill_0_9!("run-resume"),
+        frozen_skill_0_9!("ship"),
+        frozen_skill_0_9!("usage-guard"),
+    ];
+    frozen_project_base_0_8_or_0_9(
+        target_dir,
+        "0.9.0",
+        &DIRECTIVES,
+        &SKILLS,
+        include_str!("../../../harness/project-bases/0.9.0/AGENTS.md.template"),
+    )
+}
+
+#[allow(clippy::too_many_lines)]
+fn frozen_project_base_0_8_or_0_9(
+    target_dir: &Dir,
+    version: &str,
+    directives: &[(&str, &[u8])],
+    skills: &[(&str, &[u8], &[u8])],
+    agents_template: &str,
+) -> Result<BTreeMap<String, Vec<u8>>, RenderError> {
     #[derive(Deserialize)]
     struct Answers0_8 {
         schema_version: u32,
@@ -1190,87 +1328,34 @@ fn frozen_project_base_0_8(target_dir: &Dir) -> Result<BTreeMap<String, Vec<u8>>
         resolution_evidence_digest: String,
     }
 
-    macro_rules! frozen_skill_0_8 {
-        ($name:literal) => {
-            (
-                $name,
-                include_bytes!(concat!(
-                    "../../../harness/project-bases/0.8.0/skills/",
-                    $name,
-                    "/SKILL.md"
-                ))
-                .as_slice(),
-                include_bytes!(concat!(
-                    "../../../harness/project-bases/0.8.0/skills/",
-                    $name,
-                    "/agents/openai.yaml"
-                ))
-                .as_slice(),
-            )
-        };
-    }
-
-    const DIRECTIVES: [(&str, &[u8]); 3] = [
-        (
-            "00-project-harness.md",
-            include_bytes!("../../../harness/project-bases/0.8.0/directives/00-project-harness.md"),
-        ),
-        (
-            "01-project-knowledge.md",
-            include_bytes!(
-                "../../../harness/project-bases/0.8.0/directives/01-project-knowledge.md"
-            ),
-        ),
-        (
-            "02-project-upgrade.md",
-            include_bytes!("../../../harness/project-bases/0.8.0/directives/02-project-upgrade.md"),
-        ),
-    ];
-    const SKILLS: [(&str, &[u8], &[u8]); 16] = [
-        frozen_skill_0_8!("auto-setup-harness"),
-        frozen_skill_0_8!("hive-judge-package"),
-        frozen_skill_0_8!("hive-knowledge-capture"),
-        frozen_skill_0_8!("hive-knowledge-maintenance"),
-        frozen_skill_0_8!("hive-knowledge-promote"),
-        frozen_skill_0_8!("hive-knowledge-query"),
-        frozen_skill_0_8!("hive-migrate"),
-        frozen_skill_0_8!("hive-project-upgrade"),
-        frozen_skill_0_8!("hive-prompt-refine"),
-        frozen_skill_0_8!("hive-role-handoff"),
-        frozen_skill_0_8!("hive-run-checkpoint"),
-        frozen_skill_0_8!("hive-run-resume"),
-        frozen_skill_0_8!("hive-simple-question"),
-        frozen_skill_0_8!("hive-update"),
-        frozen_skill_0_8!("hive-usage-guard"),
-        frozen_skill_0_8!("setup-harness"),
-    ];
-
     let answers: Answers0_8 = serde_yaml::from_slice(&read_target_required(
         target_dir,
         Path::new(".hive/setup-answers.yml"),
-        "0.8 setup answers",
+        "historical setup answers",
     )?)
     .map_err(|error| {
-        RenderError::Verification(format!("invalid frozen 0.8 setup answers: {error}"))
+        RenderError::Verification(format!("invalid frozen {version} setup answers: {error}"))
     })?;
     let resolution: Resolution0_8 = serde_yaml::from_slice(&read_target_required(
         target_dir,
         Path::new(".hive/config/capability-resolution.yml"),
-        "0.8 capability resolution",
+        "historical capability resolution",
     )?)
     .map_err(|error| {
-        RenderError::Verification(format!("invalid frozen 0.8 capability resolution: {error}"))
+        RenderError::Verification(format!(
+            "invalid frozen {version} capability resolution: {error}"
+        ))
     })?;
     let harness_bytes = read_target_required(
         target_dir,
         Path::new(".hive/config/harness.toml"),
-        "0.8 harness config",
+        "historical harness config",
     )?;
     let harness_text = std::str::from_utf8(&harness_bytes).map_err(|_| {
-        RenderError::Verification("frozen 0.8 harness config is not UTF-8".to_owned())
+        RenderError::Verification(format!("frozen {version} harness config is not UTF-8"))
     })?;
     let harness: Harness0_8 = toml::from_str(harness_text).map_err(|error| {
-        RenderError::Verification(format!("invalid frozen 0.8 harness config: {error}"))
+        RenderError::Verification(format!("invalid frozen {version} harness config: {error}"))
     })?;
 
     let preference_provenance_matches = matches!(
@@ -1290,8 +1375,8 @@ fn frozen_project_base_0_8(target_dir: &Dir) -> Result<BTreeMap<String, Vec<u8>>
     };
     let inputs_match = answers.schema_version == 1
         && harness.schema_version == 1
-        && harness.harness_version == "0.8.0"
-        && harness.source_release_version == "0.8.0"
+        && harness.harness_version == version
+        && harness.source_release_version == version
         && resolution.schema_version == 1
         && answers.project_name == harness.project_name
         && answers.project_kind == harness.project_kind
@@ -1325,28 +1410,28 @@ fn frozen_project_base_0_8(target_dir: &Dir) -> Result<BTreeMap<String, Vec<u8>>
             .windows(2)
             .all(|pair| pair[0] < pair[1]);
     if !inputs_match {
-        return Err(RenderError::Verification(
-            "frozen 0.8 project-base inputs are invalid or inconsistent".to_owned(),
-        ));
+        return Err(RenderError::Verification(format!(
+            "frozen {version} project-base inputs are invalid or inconsistent"
+        )));
     }
     validate_skill_approvals(&answers.approved_optional_skills).map_err(as_verification)?;
     let approved_ledger: SkillLedger = serde_yaml::from_slice(&read_target_required(
         target_dir,
         Path::new(".hive/config/approved-skills.yml"),
-        "0.8 approved optional Skill ledger",
+        "historical approved optional Skill ledger",
     )?)
     .map_err(|error| {
         RenderError::Verification(format!(
-            "invalid frozen 0.8 approved optional Skill ledger: {error}"
+            "invalid frozen {version} approved optional Skill ledger: {error}"
         ))
     })?;
     if approved_ledger.skills != answers.approved_optional_skills {
-        return Err(RenderError::Verification(
-            "frozen 0.8 optional Skill ledger differs from setup approval authority".to_owned(),
-        ));
+        return Err(RenderError::Verification(format!(
+            "frozen {version} optional Skill ledger differs from setup approval authority"
+        )));
     }
 
-    let built_in_names = SKILLS
+    let built_in_names = skills
         .iter()
         .map(|(name, _, _)| *name)
         .collect::<BTreeSet<_>>();
@@ -1355,9 +1440,9 @@ fn frozen_project_base_0_8(target_dir: &Dir) -> Result<BTreeMap<String, Vec<u8>>
         .iter()
         .any(|name| !built_in_names.contains(name.as_str()))
     {
-        return Err(RenderError::Verification(
-            "frozen 0.8 selected project Skill is not in the embedded release".to_owned(),
-        ));
+        return Err(RenderError::Verification(format!(
+            "frozen {version} selected project Skill is not in the embedded release"
+        )));
     }
     let selected = harness
         .selected_project_skills
@@ -1365,10 +1450,10 @@ fn frozen_project_base_0_8(target_dir: &Dir) -> Result<BTreeMap<String, Vec<u8>>
         .map(String::as_str)
         .collect::<BTreeSet<_>>();
     let mut files = BTreeMap::new();
-    for (name, content) in DIRECTIVES {
+    for &(name, content) in directives {
         files.insert(format!(".agents/directives/{name}"), content.to_vec());
     }
-    for &(name, content, metadata) in &SKILLS {
+    for &(name, content, metadata) in skills {
         if !selected.contains(name) {
             continue;
         }
@@ -1396,7 +1481,7 @@ fn frozen_project_base_0_8(target_dir: &Dir) -> Result<BTreeMap<String, Vec<u8>>
             || !optional_names.insert(approval.name.as_str())
         {
             return Err(RenderError::Verification(format!(
-                "frozen 0.8 optional Skill name collides with another projection: {}",
+                "frozen {version} optional Skill name collides with another projection: {}",
                 approval.name
             )));
         }
@@ -1413,14 +1498,14 @@ fn frozen_project_base_0_8(target_dir: &Dir) -> Result<BTreeMap<String, Vec<u8>>
             )
         {
             return Err(RenderError::Verification(format!(
-                "frozen 0.8 optional Skill source is inside a Hive-managed namespace: {}",
+                "frozen {version} optional Skill source is inside a Hive-managed namespace: {}",
                 source.display()
             )));
         }
         let skill_md = read_target_required(
             target_dir,
             &source,
-            "0.8 approved project-local optional Skill source",
+            "historical approved project-local optional Skill source",
         )?;
         validate_frozen_0_8_optional_source(approval, &skill_md)?;
         files.insert(
@@ -1440,7 +1525,7 @@ fn frozen_project_base_0_8(target_dir: &Dir) -> Result<BTreeMap<String, Vec<u8>>
     } else {
         "disabled"
     };
-    let mut marker = include_str!("../../../harness/project-bases/0.8.0/AGENTS.md.template")
+    let mut marker = agents_template
         .replace("{{ project_name }}", &harness.project_name)
         .replace("{{ project_kind }}", &harness.project_kind)
         .replace("{{ setup_mode }}", &harness.setup_mode)
@@ -3991,7 +4076,8 @@ fn validate_release_projection_ownership<T: TargetRead + ?Sized>(
                 .to_owned(),
         ));
     }
-    let authenticate_directives = authenticated_source_version == env!("CARGO_PKG_VERSION");
+    let authenticate_directives = authenticated_source_version == env!("CARGO_PKG_VERSION")
+        || matches!(authenticated_source_version, "0.7.0" | "0.8.0" | "0.9.0");
     if !authenticate_directives {
         historical_builtin_skills(authenticated_source_version).map_err(|error| {
             RenderError::Verification(format!(
@@ -4126,25 +4212,38 @@ fn authenticate_projected_directive_files(
     read_projected: &mut impl FnMut(&Path, &str) -> Result<Vec<u8>, RenderError>,
     files: &mut BTreeMap<PathBuf, Vec<u8>>,
 ) -> Result<(), RenderError> {
-    if source_version != env!("CARGO_PKG_VERSION") {
-        return Err(RenderError::Verification(format!(
-            "historical directive projection cannot be authenticated for release {source_version}"
-        )));
+    macro_rules! directive_set {
+        ($root:literal) => {
+            [
+                (
+                    Path::new(".agents/directives/00-project-harness.md"),
+                    include_bytes!(concat!($root, "/00-project-harness.md")).as_slice(),
+                ),
+                (
+                    Path::new(".agents/directives/01-project-knowledge.md"),
+                    include_bytes!(concat!($root, "/01-project-knowledge.md")).as_slice(),
+                ),
+                (
+                    Path::new(".agents/directives/02-project-upgrade.md"),
+                    include_bytes!(concat!($root, "/02-project-upgrade.md")).as_slice(),
+                ),
+            ]
+        };
     }
-    for (relative, expected) in [
-        (
-            Path::new(".agents/directives/00-project-harness.md"),
-            include_bytes!("../../../harness/directives/00-project-harness.md").as_slice(),
-        ),
-        (
-            Path::new(".agents/directives/01-project-knowledge.md"),
-            include_bytes!("../../../harness/directives/01-project-knowledge.md").as_slice(),
-        ),
-        (
-            Path::new(".agents/directives/02-project-upgrade.md"),
-            include_bytes!("../../../harness/directives/02-project-upgrade.md").as_slice(),
-        ),
-    ] {
+    let directives = match source_version {
+        "0.7.0" => directive_set!("../../../harness/project-bases/0.7.0/directives"),
+        "0.8.0" => directive_set!("../../../harness/project-bases/0.8.0/directives"),
+        "0.9.0" => directive_set!("../../../harness/project-bases/0.9.0/directives"),
+        env!("CARGO_PKG_VERSION") => {
+            directive_set!("../../../harness/directives")
+        }
+        _ => {
+            return Err(RenderError::Verification(format!(
+            "historical directive projection cannot be authenticated for release {source_version}"
+        )))
+        }
+    };
+    for (relative, expected) in directives {
         validate_hive_directive_projection_relative(relative)
             .map_err(|error| RenderError::Verification(error.to_string()))?;
         let installed = read_projected(relative, "projected directive")?;
@@ -4247,8 +4346,86 @@ fn authenticate_projected_skill_files(
             }
             files.insert(relative.to_path_buf(), installed);
         }
+    } else if matches!(source_version, "0.8.0" | "0.9.0") {
+        for skill in expected_active
+            .skills
+            .iter()
+            .filter(|skill| skill.source_type == SkillSourceType::BuiltIn)
+        {
+            let relative =
+                PathBuf::from(format!(".agents/skills/{}/agents/openai.yaml", skill.name));
+            let expected = frozen_skill_metadata(source_version, &skill.name).ok_or_else(|| {
+                RenderError::Verification(format!(
+                    "historical Skill metadata is not embedded for {source_version}: {}",
+                    skill.name
+                ))
+            })?;
+            let installed = read_projected(&relative, "projected historical Skill metadata")?;
+            if installed != expected {
+                return Err(RenderError::Verification(format!(
+                    "projected historical Skill metadata bytes changed: {}",
+                    relative.display()
+                )));
+            }
+            files.insert(relative, installed);
+        }
     }
     Ok(files)
+}
+
+fn frozen_skill_metadata(source_version: &str, name: &str) -> Option<&'static [u8]> {
+    macro_rules! metadata {
+        ($version:literal, $name:literal) => {
+            include_bytes!(concat!(
+                "../../../harness/project-bases/",
+                $version,
+                "/skills/",
+                $name,
+                "/agents/openai.yaml"
+            ))
+            .as_slice()
+        };
+    }
+    Some(match (source_version, name) {
+        ("0.8.0", "auto-setup-harness") => metadata!("0.8.0", "auto-setup-harness"),
+        ("0.8.0", "hive-judge-package") => metadata!("0.8.0", "hive-judge-package"),
+        ("0.8.0", "hive-knowledge-capture") => metadata!("0.8.0", "hive-knowledge-capture"),
+        ("0.8.0", "hive-knowledge-maintenance") => metadata!("0.8.0", "hive-knowledge-maintenance"),
+        ("0.8.0", "hive-knowledge-promote") => metadata!("0.8.0", "hive-knowledge-promote"),
+        ("0.8.0", "hive-knowledge-query") => metadata!("0.8.0", "hive-knowledge-query"),
+        ("0.8.0", "hive-migrate") => metadata!("0.8.0", "hive-migrate"),
+        ("0.8.0", "hive-project-upgrade") => metadata!("0.8.0", "hive-project-upgrade"),
+        ("0.8.0", "hive-prompt-refine") => metadata!("0.8.0", "hive-prompt-refine"),
+        ("0.8.0", "hive-role-handoff") => metadata!("0.8.0", "hive-role-handoff"),
+        ("0.8.0", "hive-run-checkpoint") => metadata!("0.8.0", "hive-run-checkpoint"),
+        ("0.8.0", "hive-run-resume") => metadata!("0.8.0", "hive-run-resume"),
+        ("0.8.0", "hive-simple-question") => metadata!("0.8.0", "hive-simple-question"),
+        ("0.8.0", "hive-update") => metadata!("0.8.0", "hive-update"),
+        ("0.8.0", "hive-usage-guard") => metadata!("0.8.0", "hive-usage-guard"),
+        ("0.8.0", "setup-harness") => metadata!("0.8.0", "setup-harness"),
+        ("0.9.0", "amend-directive") => metadata!("0.9.0", "amend-directive"),
+        ("0.9.0", "code-polish") => metadata!("0.9.0", "code-polish"),
+        ("0.9.0", "knowledge-capture") => metadata!("0.9.0", "knowledge-capture"),
+        ("0.9.0", "knowledge-import") => metadata!("0.9.0", "knowledge-import"),
+        ("0.9.0", "knowledge-maintain") => metadata!("0.9.0", "knowledge-maintain"),
+        ("0.9.0", "knowledge-promote") => metadata!("0.9.0", "knowledge-promote"),
+        ("0.9.0", "knowledge-recall") => metadata!("0.9.0", "knowledge-recall"),
+        ("0.9.0", "package-review") => metadata!("0.9.0", "package-review"),
+        ("0.9.0", "product-update") => metadata!("0.9.0", "product-update"),
+        ("0.9.0", "project-refresh") => metadata!("0.9.0", "project-refresh"),
+        ("0.9.0", "project-setup") => metadata!("0.9.0", "project-setup"),
+        ("0.9.0", "project-transition") => metadata!("0.9.0", "project-transition"),
+        ("0.9.0", "prompt-refine") => metadata!("0.9.0", "prompt-refine"),
+        ("0.9.0", "quick-answer") => metadata!("0.9.0", "quick-answer"),
+        ("0.9.0", "ralph-loop") => metadata!("0.9.0", "ralph-loop"),
+        ("0.9.0", "research-best-practices") => metadata!("0.9.0", "research-best-practices"),
+        ("0.9.0", "run-checkpoint") => metadata!("0.9.0", "run-checkpoint"),
+        ("0.9.0", "run-handoff") => metadata!("0.9.0", "run-handoff"),
+        ("0.9.0", "run-resume") => metadata!("0.9.0", "run-resume"),
+        ("0.9.0", "ship") => metadata!("0.9.0", "ship"),
+        ("0.9.0", "usage-guard") => metadata!("0.9.0", "usage-guard"),
+        _ => return None,
+    })
 }
 
 fn projected_skill_path(host: ProjectionHost, name: &str) -> Result<PathBuf, RenderError> {
@@ -7795,7 +7972,7 @@ mod tests {
                 );
             }
             assert!(historical_project_upgrade_candidate_in(&target_dir, "0.8.1").is_err());
-            assert!(historical_project_upgrade_candidate_in(&target_dir, "0.9.0").is_err());
+            assert!(historical_project_upgrade_candidate_in(&target_dir, "0.9.1").is_err());
 
             let harness = fs::read_to_string(&harness_path).expect("0.8 harness config");
             fs::write(
@@ -7810,6 +7987,98 @@ mod tests {
                 historical_project_upgrade_candidate_in(&target_dir, "0.8.0"),
                 Err(RenderError::Verification(_))
             ));
+        }
+    }
+
+    #[test]
+    fn frozen_0_9_full_registry_preserves_public_project_projection_bytes() {
+        for (answers, capabilities, usage_guard_enabled, expected_files) in [
+            ("answers-base.yml", "capabilities-codex-omx.json", true, 12),
+            (
+                "answers-claude.yml",
+                "capabilities-claude-omc.json",
+                false,
+                15,
+            ),
+        ] {
+            let temporary = tempfile::tempdir().expect("temporary directory");
+            let target = temporary.path().canonicalize().expect("canonical target");
+            execute_setup(&SetupRequest {
+                target: &target,
+                answers: &fixture(answers),
+                capabilities: &fixture(capabilities),
+                mode: SetupMode::Apply,
+                reconfigure_roles: BTreeSet::new(),
+                global_preferences: Some(GlobalProjectPreferences {
+                    interface_language: "ko".to_owned(),
+                    wiki_enabled: true,
+                    wiki_backend: "markdown".to_owned(),
+                    wiki_language: "both".to_owned(),
+                    persona_id: "friendly".to_owned(),
+                    persona_custom_description: None,
+                    selected_project_skills: vec![
+                        "knowledge-capture".to_owned(),
+                        "prompt-refine".to_owned(),
+                        "ship".to_owned(),
+                    ],
+                    usage_guard_enabled,
+                    codexbar_fallback_enabled: false,
+                    discord_guard_enabled: false,
+                    discord_webhook_url_env: None,
+                    discord_message_fields: default_discord_message_fields(),
+                    usage_stop_remaining_percent: 19,
+                }),
+            })
+            .expect("operational project setup");
+            let target_dir = open_target_capability(&target).expect("target capability");
+            let harness_path = target.join(".hive/config/harness.toml");
+            let harness = fs::read_to_string(&harness_path)
+                .expect("harness config")
+                .replace(
+                    &format!("harness_version = \"{}\"", env!("CARGO_PKG_VERSION")),
+                    "harness_version = \"0.9.0\"",
+                )
+                .replace(
+                    &format!("source_release_version = \"{}\"", env!("CARGO_PKG_VERSION")),
+                    "source_release_version = \"0.9.0\"",
+                );
+            fs::write(&harness_path, harness).expect("pinned 0.9 harness config");
+
+            let historical = historical_project_upgrade_candidate_in(&target_dir, "0.9.0")
+                .expect("frozen 0.9 registry");
+            assert_eq!(historical.product_version, "0.9.0");
+            assert_eq!(historical.files.len(), expected_files);
+            assert!(historical
+                .files
+                .windows(2)
+                .all(|pair| pair[0].path < pair[1].path));
+            assert!(historical
+                .files
+                .iter()
+                .all(|entry| entry.content_digest == sha256_digest(&entry.content)));
+            let frozen = historical
+                .files
+                .iter()
+                .map(|entry| (entry.path.clone(), entry.content.clone()))
+                .collect::<BTreeMap<_, _>>();
+            for skill in ["knowledge-capture", "prompt-refine", "ship"] {
+                assert!(frozen.contains_key(&format!(".agents/skills/{skill}/SKILL.md")));
+                assert!(frozen.contains_key(&format!(".agents/skills/{skill}/agents/openai.yaml")));
+            }
+            assert!(
+                String::from_utf8_lossy(&frozen["AGENTS.md"]).contains("hive knowledge remember")
+            );
+            if capabilities == "capabilities-claude-omc.json" {
+                assert!(frozen.contains_key(".claude/skills/knowledge-capture/SKILL.md"));
+                assert!(String::from_utf8_lossy(&frozen["AGENTS.md"])
+                    .contains("Usage guard: disabled by installed preference"));
+            } else {
+                assert!(!frozen.contains_key(".claude/skills/knowledge-capture/SKILL.md"));
+                assert!(
+                    String::from_utf8_lossy(&frozen["AGENTS.md"]).contains("hive usage enforce")
+                );
+            }
+            assert!(historical_project_upgrade_candidate_in(&target_dir, "0.9.1").is_err());
         }
     }
 

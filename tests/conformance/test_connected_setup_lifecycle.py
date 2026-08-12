@@ -27,6 +27,9 @@ PROJECT_REGISTRY_SCHEMA = json.loads(
         encoding="utf-8"
     )
 )
+PRODUCT_VERSION = tomllib.loads(
+    (REPOSITORY_ROOT / "Cargo.toml").read_text(encoding="utf-8")
+)["workspace"]["package"]["version"]
 
 
 class ConnectedSetupLifecycleConformance(Phase1CliTestCase):
@@ -178,7 +181,7 @@ elif command == "plugin list --json":
     if state["plugin"]:
         installed.append({
             "pluginId": "aigent-hive@aigent-hive",
-            "version": "0.9.0",
+            "version": __HIVE_TEST_PRODUCT_VERSION__,
             "enabled": True,
             "source": {"path": str(marketplace / "plugins/aigent-hive")},
             "marketplaceSource": {"source": str(marketplace)},
@@ -186,7 +189,9 @@ elif command == "plugin list --json":
     print(json.dumps({"installed": installed, "available": []}))
 else:
     print("{}")
-""".replace("__HIVE_TEST_HOST__", repr(self.host))
+""".replace("__HIVE_TEST_HOST__", repr(self.host)).replace(
+            "__HIVE_TEST_PRODUCT_VERSION__", repr(PRODUCT_VERSION)
+        )
         if os.name == "nt":
             executable_name = "agy" if self.host == "antigravity" else "codex"
             python_path = self.fake_bin / f"{executable_name}.py"

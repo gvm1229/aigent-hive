@@ -145,6 +145,8 @@ const LEGACY_ANTIGRAVITY_070_SKILLS: &[(&str, &str)] = &[
 ];
 const CODEX_PLUGIN_MANIFEST: &[u8] =
     include_bytes!("../../../harness/plugins/aigent-hive/.codex-plugin/plugin.json");
+const CODEX_PLUGIN_LOGO: &[u8] =
+    include_bytes!("../../../harness/plugins/aigent-hive/assets/hive-logo-plugin.png");
 const CLAUDE_PLUGIN_MANIFEST: &[u8] =
     include_bytes!("../../../harness/plugins/aigent-hive/.claude-plugin/plugin.json");
 const ANTIGRAVITY_PLUGIN_MANIFEST: &[u8] =
@@ -1914,6 +1916,14 @@ fn build_desired_user_files(
                 },
             );
             files.insert(
+                plugin_relative.join("assets/hive-logo-plugin.png"),
+                PlannedFile {
+                    bytes: CODEX_PLUGIN_LOGO.to_vec(),
+                    executable: false,
+                    ownership: "immutable-plugin-package",
+                },
+            );
+            files.insert(
                 plugin_relative.join("bin/hive-claude-usage-capture"),
                 PlannedFile {
                     bytes: CLAUDE_USAGE_CAPTURE.to_vec(),
@@ -2664,7 +2674,7 @@ fn render_codex_marketplace() -> Vec<u8> {
 
 fn render_claude_marketplace() -> Vec<u8> {
     format!(
-        "{{\n  \"name\": \"aigent-hive\",\n  \"owner\": {{\n    \"name\": \"Aigent Hive maintainers\"\n  }},\n  \"plugins\": [\n    {{\n      \"name\": \"aigent-hive\",\n      \"source\": \"./plugins/aigent-hive\",\n      \"description\": \"Initialize and maintain project-local Aigent Hive harnesses.\",\n      \"version\": \"{}\"\n    }}\n  ]\n}}\n",
+        "{{\n  \"name\": \"aigent-hive\",\n  \"owner\": {{\n    \"name\": \"Hojin (Tom) Jeong\"\n  }},\n  \"plugins\": [\n    {{\n      \"name\": \"aigent-hive\",\n      \"source\": \"./plugins/aigent-hive\",\n      \"description\": \"Initialize and maintain project-local Aigent Hive harnesses.\",\n      \"version\": \"{}\"\n    }}\n  ]\n}}\n",
         env!("CARGO_PKG_VERSION")
     )
     .into_bytes()
@@ -8374,7 +8384,7 @@ mod tests {
         let mut manifest: UserOwnershipManifest =
             serde_json::from_slice(&fs::read(&manifest_path).expect("ownership manifest"))
                 .expect("ownership manifest JSON");
-        manifest.product_version = "0.9.1".to_owned();
+        manifest.product_version = "0.9.0".to_owned();
         manifest.plan_digest = inventory_digest(
             manifest.host,
             &manifest.product_version,
@@ -8894,6 +8904,31 @@ mod tests {
         assert!(!plan
             .files
             .contains_key(Path::new(".hive/marketplaces/codex/marketplace.json")));
+
+        let plugin_root = Path::new(".hive/marketplaces/codex/plugins/aigent-hive");
+        let plugin: serde_json::Value = serde_json::from_slice(
+            &plan
+                .files
+                .get(&plugin_root.join(".codex-plugin/plugin.json"))
+                .expect("Codex plugin manifest")
+                .bytes,
+        )
+        .expect("Codex plugin JSON");
+        assert_eq!(plugin["version"], env!("CARGO_PKG_VERSION"));
+        assert_eq!(plugin["author"]["name"], "Hojin (Tom) Jeong");
+        assert_eq!(plugin["interface"]["developerName"], "Hojin (Tom) Jeong");
+        assert_eq!(plugin["interface"]["logo"], "./assets/hive-logo-plugin.png");
+        assert_eq!(
+            plugin["interface"]["composerIcon"],
+            "./assets/hive-logo-plugin.png"
+        );
+        assert_eq!(
+            plan.files
+                .get(&plugin_root.join("assets/hive-logo-plugin.png"))
+                .expect("Codex plugin logo")
+                .bytes,
+            CODEX_PLUGIN_LOGO
+        );
     }
 
     #[test]
@@ -9423,7 +9458,7 @@ mod tests {
         let desired = build_desired_user_files(&arguments, None).expect("current desired files");
         let current = authenticated_current_inventory(&arguments, &desired);
         let request = InventoryAuthentication {
-            product_version: "0.9.0",
+            product_version: env!("CARGO_PKG_VERSION"),
             installed_host_version_range: UserHost::Codex.version_range(),
             source_release_digest: &current.source_release_digest,
             installed_entries: &current.entries,
@@ -9435,23 +9470,30 @@ mod tests {
             authenticated_prior: None,
         };
 
+        let developer_version = format!("{}-dev", env!("CARGO_PKG_VERSION"));
         let authenticated =
-            developer_authenticated_user_inventory(UserHost::Codex, &request, "0.9.0-dev")
+            developer_authenticated_user_inventory(UserHost::Codex, &request, &developer_version)
                 .expect("developer base");
         assert_user_entries_equal(&authenticated.entries, &current.entries);
-        assert!(
-            developer_authenticated_user_inventory(UserHost::Codex, &request, "0.9.0-test.4")
-                .is_none()
-        );
+        let public_test_version = format!("{}-test.4", env!("CARGO_PKG_VERSION"));
+        assert!(developer_authenticated_user_inventory(
+            UserHost::Codex,
+            &request,
+            &public_test_version,
+        )
+        .is_none());
 
         let forged_digest = format!("sha256:{}", "0".repeat(64));
         let forged = InventoryAuthentication {
             source_release_digest: &forged_digest,
             ..request
         };
-        assert!(
-            developer_authenticated_user_inventory(UserHost::Codex, &forged, "0.9.0-dev").is_none()
-        );
+        assert!(developer_authenticated_user_inventory(
+            UserHost::Codex,
+            &forged,
+            &developer_version,
+        )
+        .is_none());
     }
 
     #[test]

@@ -286,6 +286,65 @@ fn global_commit_guidance_preference_survives_a_fresh_store_instance() {
 }
 
 #[test]
+fn portarefolium_style_turn_keeps_global_background_and_rejects_unregistered_project_scope() {
+    let (root, store, mut generation) = initialized_store();
+    let global_fact = "The user has a web development background and is transitioning into the game development industry.";
+    let global_claim = remember(
+        &store,
+        &mut generation,
+        USER_ROOT_COLLECTION_ID,
+        "user.background.web-to-game",
+        global_fact,
+        ClaimKind::ProjectProfile,
+        RagVisibility::Shared,
+    );
+
+    let project_fact = "The web resume excludes the career timeline while the game resume includes phases one and two.";
+    let snapshot = store
+        .load_canonical_snapshot(generation)
+        .expect("load canonical state after user-root write");
+    let ambiguous_project_request = RememberRequest {
+        collection_id: "unregistered-portarefolium".to_owned(),
+        claim_key: "portarefolium.resume.timeline".to_owned(),
+        claim_id: None,
+        locator: "pending/portarefolium-resume-timeline.md".to_owned(),
+        kind: ClaimKind::Convention,
+        status: AssertionStatus::UserStated,
+        visibility: RagVisibility::ProjectPrivate,
+        normalized_fact: project_fact.to_owned(),
+        provenance: ClaimProvenance {
+            source_kind: RememberSourceKind::UserStatement,
+            summary: "Reviewed project-specific resume convention".to_owned(),
+            locator: "request:portarefolium-resume-timeline".to_owned(),
+            digest: sha256_digest(project_fact.as_bytes()),
+        },
+        sources: vec!["request:portarefolium-resume-timeline".to_owned()],
+        supersedes: Vec::new(),
+        expected_active_digest: None,
+        observed_at: None,
+        verified_at: None,
+    };
+    let plan = plan_remember(&snapshot.claims, &ambiguous_project_request, generation + 1)
+        .expect("plan remains structurally valid before registry authorization");
+    assert!(store.apply_remember_plan(&plan).is_err());
+
+    drop(store);
+    let fresh = RagStore::open(root.path()).expect("fresh-session RAG store");
+    let recalled = fresh
+        .retrieve(&retrieval(
+            RetrievalScope::Global,
+            None,
+            "web background transition to game development",
+        ))
+        .expect("automatic user-root recall without project setup");
+    assert!(recalled.hits.iter().any(|hit| hit.item_id == global_claim));
+    assert!(recalled
+        .hits
+        .iter()
+        .all(|hit| !hit.text.contains(project_fact)));
+}
+
+#[test]
 fn disabled_secret_and_ambiguous_paths_fail_closed_without_claim_mutation() {
     // The public core represents a caller-disabled Wiki as an uninitialized store:
     // retrieval cannot initialize, rebuild, or write canonical state on its own.

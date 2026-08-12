@@ -2139,12 +2139,12 @@ mod tests {
 
     fn release_fixture() -> PathBuf {
         Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("../../tests/fixtures/phase6/releases/valid-0.9.0")
+            .join("../../tests/fixtures/phase6/releases/valid-0.9.1")
     }
 
     fn published_release_fixture() -> PathBuf {
         Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("../../tests/fixtures/phase6/releases/valid-0.8.0")
+            .join("../../tests/fixtures/phase6/releases/valid-0.9.0")
     }
 
     fn legacy_builtin_names(version: &str) -> &'static [&'static str] {
@@ -2552,7 +2552,7 @@ mod tests {
     }
 
     #[test]
-    fn current_updater_rejects_published_0_8_release_without_target_mutation() {
+    fn current_updater_rejects_published_0_9_release_without_target_mutation() {
         let fixture = published_release_fixture();
         for mode in [UpdateMode::DryRun, UpdateMode::Apply] {
             let target = tempfile::tempdir().expect("target");
@@ -2564,9 +2564,10 @@ mod tests {
                 .expect_err("running updater must reject another exact release version");
 
             assert!(matches!(error, UpdateError::Verification(_)));
-            assert!(error
-                .to_string()
-                .contains("release target 0.8.0 differs from running updater 0.9.0"));
+            assert!(error.to_string().contains(&format!(
+                "release target 0.9.0 differs from running updater {}",
+                env!("CARGO_PKG_VERSION")
+            )));
             assert_eq!(snapshot_regular_files(&consumer), before);
             assert!(!consumer.join(JOURNAL_PATH).exists());
             assert!(!consumer.join(UPDATE_STATE_PATH).exists());
@@ -2584,7 +2585,10 @@ mod tests {
         assert!(marker_lowered.contains("private signing material is intentionally absent"));
         let manifest = fs::read_to_string(fixture.join("bundle-manifest.json"))
             .expect("synthetic integrity manifest");
-        assert!(manifest.contains(r#""release_version":"0.9.0""#));
+        assert!(manifest.contains(&format!(
+            r#""release_version":"{}""#,
+            env!("CARGO_PKG_VERSION")
+        )));
         assert!(manifest.contains("migration-table.json"));
         assert!(manifest.contains("release-surface-inventory.json"));
 
@@ -3061,7 +3065,7 @@ mod tests {
         );
         assert!(fs::read_to_string(displaced.join(HARNESS_PATH))
             .expect("updated harness")
-            .contains("0.9.0"));
+            .contains(env!("CARGO_PKG_VERSION")));
     }
 
     #[cfg(unix)]
@@ -3196,13 +3200,13 @@ mod tests {
             let dry_run = execute_update(&update_request(&consumer, &fixture, UpdateMode::DryRun))
                 .unwrap_or_else(|error| panic!("{source_version} dry-run failed: {error}"));
             assert_eq!(dry_run.source_version, source_version);
-            assert_eq!(dry_run.target_version, "0.9.0");
+            assert_eq!(dry_run.target_version, env!("CARGO_PKG_VERSION"));
             assert_eq!(dry_run.migration_id, "same-major-render-v1");
 
             let applied = execute_update(&update_request(&consumer, &fixture, UpdateMode::Apply))
                 .unwrap_or_else(|error| panic!("{source_version} apply failed: {error}"));
             assert_eq!(applied.source_version, source_version);
-            assert_eq!(applied.target_version, "0.9.0");
+            assert_eq!(applied.target_version, env!("CARGO_PKG_VERSION"));
             assert_eq!(
                 fs::read(consumer.join("README.md")).expect("readme"),
                 before_readme
@@ -3212,7 +3216,7 @@ mod tests {
                 before_omx
             );
             let migrated = fs::read_to_string(consumer.join(HARNESS_PATH)).expect("harness");
-            assert!(migrated.contains("0.9.0"));
+            assert!(migrated.contains(env!("CARGO_PKG_VERSION")));
             assert!(
                 migrated.contains("usage_stop_remaining_percent = 37"),
                 "{migrated}"
@@ -3232,7 +3236,7 @@ mod tests {
         let dry_run = execute_update(&update_request(&consumer, &fixture, UpdateMode::DryRun))
             .expect("dry-run");
         assert_eq!(dry_run.source_version, "0.6.0");
-        assert_eq!(dry_run.target_version, "0.9.0");
+        assert_eq!(dry_run.target_version, env!("CARGO_PKG_VERSION"));
         assert_eq!(dry_run.migration_id, "same-major-render-v1");
         assert!(dry_run.backup_id.is_none());
         assert!(!consumer.join(UPDATE_STATE_PATH).exists());
