@@ -10,9 +10,9 @@ tags: [guard, project, setup, usage]
 aliases: ["Early stop threshold", "Project usage cap"]
 sources:
   - "repo:docs/decisions/ADR-0012-global-onboarding-shared-index.md#sha256:dea6123b7b193eb760a37b198566f9318d868fd7035491ac10756de0d4315530"
-  - "repo:docs/plans/active/usage-guard-policy.md#sha256:7b64cee13b39806a519ee9d8387972a1e69da108e1075b8b0b873581d46c439b"
+  - "repo:docs/plans/active/usage-guard-policy.md#sha256:dbd573eccac9845d5112827a43c9fbf0e7538e0b6a186048c9afe041ab491e7e"
 links: [global-onboarding, source-usage-guard, usage-sensor-policy]
-reviewed_revision: "git:35f5bce71814a3e874fe53a8730024f16013ad46"
+reviewed_revision: "git:ced55f4d0b18b259c9b43e0f9622b6d617a65737"
 status: active
 ---
 
@@ -22,6 +22,6 @@ The user selects the global safety floor during setup. A registered project can 
 higher remaining-usage threshold. The effective threshold is `max(global, project)`. No project
 profile or document provides a fixed percentage. Disabling the global guard disables every project
 guard. Migration preserves the old single threshold as the global value and rejects invalid or
-unauthenticated configuration without writes. Source development uses the repository source gate and
-the same product resolver and project override; no source-only guard Skill, adapter, or threshold
-state remains.
+unauthenticated configuration without writes. The Hive source workspace uses the global threshold
+without a project override. Non-Hive folders do not inherit the global threshold and cannot mutate
+it through a project-target request. The maintainer's current global threshold is 5% remaining.

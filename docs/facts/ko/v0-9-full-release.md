@@ -12,7 +12,7 @@ sources:
   - "repo:.github/workflows/release-publish.yml#sha256:903c4fd819d0d09afdbc379ac874a22d592274b495aab6de82ee15166381bcbb"
   - "repo:docs/decisions/ADR-0017-0.9-full-release.md#sha256:f8c457200b2d02aafd77e71981e82af120aa2b91e3a23e877c2011fed38eabef"
   - "repo:docs/guides/release-update.md#sha256:785e83d497c4f39ea683ac280adf8e071b27fda02b19c4c086573782a70bcadb"
-  - "repo:docs/plans/active/release-0.9.0-stable-publication.md#sha256:f3f18d72aae7c914ebf43bfb5a9497a4af62a41dc1c690e35eeeb26db8d8d7e8"
+  - "repo:docs/plans/active/release-0.9.0-stable-publication.md#sha256:d23a7b3f290e1cf2d3b7e7e484dbdc063df3005af7580a48d9769700ee74e183"
   - "repo:docs/plans/active/release-0.9.0.md#sha256:085ecd5d61f590106f651f929c33c21ac4b87d296f4a603f430f605dba6d1805"
 links: [host-external-integrations, release-verification, test-distribution, version-policy]
 reviewed_revision: "git:1b7ea99554fcf2e475cc77dcb1a3452a7805315f"

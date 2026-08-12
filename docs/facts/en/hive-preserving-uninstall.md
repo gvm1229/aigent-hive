@@ -10,10 +10,10 @@ tags: [bootstrap, onboarding, preservation, uninstall]
 aliases: ["clean reinstall", "hive uninstall"]
 sources:
   - "repo:crates/hive-cli/src/user_install.rs#sha256:4aecfd684f8c07326a639e92061de5f2ea52050cddc352a3b2f4b6b4adb1d3c2"
-  - "repo:crates/hive-cli/src/user_setup.rs#sha256:756a903f18f96a554c05fdc72b76e0bc515446e3046bea1de6632087e99370aa"
+  - "repo:crates/hive-cli/src/user_setup.rs#sha256:5200ab01acbf0c0577e27de976b91c5a697dd83437a25ed94de3ec93c510dcf3"
   - "repo:docs/plans/active/user-onboarding-shared-index.md#sha256:2253508f42511c793d5e96739eb3316d149e8112736926e6c04199232cf7326a"
   - "repo:docs/plans/active/windows-global-setup-hardening.md#sha256:422649ef3ca475aca9e3a86a2ddd2bbbb3895221d7bc39fe4417010664dee47f"
-  - "repo:docs/state/CURRENT.md#sha256:2e46cb683c1f5da90d7c2d7d57ceb08df4492e4052bd51ff14b97e133ab237cc"
+  - "repo:docs/state/CURRENT.md#sha256:c6ba223c5b031ce142bc6f51a12f275350e0bc3448d2ca36f55804baeb6fab36"
   - "repo:harness/skills/user-setup/SKILL.md#sha256:90a8ecca713a1b1963b5f1863f76d32d5c5b9532ca72922c2705ee9b63520307"
 links: [global-onboarding, knowledge-preservation, release-verification]
 reviewed_revision: "git:089b0717e24c368a1725774aaca0c85ab596df10"
