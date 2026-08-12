@@ -44,7 +44,7 @@
   optional third-party capability consent와 deselection cleanup
 - [x] [UOS-009] Global Wiki default-on, `en|ko|both`, setup·agent intent 기반
   disable/enable, data preservation과 explicit delete 분리
-- [x] [UOS-010] Usage guard explicit opt-in, enabled 기본 threshold `20%`,
+- [x] [UOS-010] Usage guard 활성화 권장, 신속 기본 threshold `20%`,
   native-first sensor와 CodexBar fallback-only consent 연결
 - [x] [UOS-011] `setup-harness`의 `expedited|custom` mode와 mode 무관 필수
   project kind 질문
@@ -60,7 +60,7 @@
   Codex·Antigravity local install→global setup→project expedited/custom E2E
 - [x] [UOS-017] Initial `Expedited — set everything to default`: English interface,
   enabled English Wiki, general custom profile, strict persona, active host, all built-in Skills,
-  usage guard disabled·stored threshold 20·CodexBar fallback disabled
+  usage guard enabled·stored threshold 20·CodexBar fallback disabled
 - [x] [UOS-018] `auto-setup-harness`의 global preference 상속, canonical project
   evidence와 confidence record, unresolved-only one-question sequence, zero-question apply gate,
   promotion·third-party Skill·fallback hook의 추론 승인 금지
@@ -68,10 +68,10 @@
   결과·사용 도구 또는 project·작성 기준·원 요청 요약의 bounded 기록, user-root·project
   범위 분리, disable 시 capture 0건, raw transcript·hook·tool output·runtime ingestion 금지.
   Operational user guidance 회귀로 재개방; 보정 owner: `KAC-*`
-- [ ] [UOS-020] Current projection과 authenticated historical inventory·`retired-names.yml`을
+- [x] [UOS-020] Current projection과 authenticated historical inventory·`retired-names.yml`을
   대조해 폐기·개명된 Hive-owned Skill file과 중첩 빈 directory를 setup·update 때 수렴 제거.
   Modified·foreign path: 보존과 conflict
-- [ ] [UOS-021] `hive uninstall`의 Hive-owned transient tree 정리를 leaf-to-root 반복 prune로
+- [x] [UOS-021] `hive uninstall`의 Hive-owned transient tree 정리를 leaf-to-root 반복 prune로
   보정. Empty install transaction·backup·marketplace·projection shell 제거, knowledge·saved
   preference·foreign byte 보존. `dev-install` rollback state: 별도 developer lifecycle 유지
 - [ ] [UOS-022] `0.9.0-test.19` Mac 증거 재현 fixture와 actual user-root acceptance. 현재 관찰값

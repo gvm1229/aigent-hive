@@ -102,12 +102,12 @@ Pre-1.0 deferred `NUS-020`: 실제 Claude Pro/Max host의 5-hour·7-day parity,
 
 ## 6. Failure-only fallback onboarding
 
-- [ ] [NUS-026] Initial setup·신속 setup·정상 reconfigure catalog에서 CodexBar 질문·이름·
+- [x] [NUS-026] Initial setup·신속 setup·정상 reconfigure catalog에서 CodexBar 질문·이름·
   설치 선택 제거. 저장 fallback 값의 silent default: disabled
-- [ ] [NUS-027] Setup apply·validate 완료 뒤 active host native sensor를 credential 없는
+- [x] [NUS-027] Setup apply·validate 완료 뒤 active host native sensor를 credential 없는
   native-only probe로 검증. Success·limited: 추가 질문 `0건`. unavailable·unsupported·malformed:
   그 시점에만 CodexBar 사용·설치의 별도 동의 요청. Integrity failure: fallback 없이 fail-closed
-- [ ] [NUS-028] First response 전 sensor가 없는 Claude와 structured native surface가 없는
+- [x] [NUS-028] First response 전 sensor가 없는 Claude와 structured native surface가 없는
   Antigravity는 첫 실제 guard check까지 판정 연기. Codex success·failure, Claude delayed capture,
   Antigravity unsupported, installed·absent CodexBar의 질문 횟수·silent path 회귀
 

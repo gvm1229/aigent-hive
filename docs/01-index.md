@@ -26,7 +26,7 @@ current catalog.
 | [Skill consent](architecture/skill-consent.md) | Optional Skill approval |
 | [Hook consent](architecture/hook-consent.md) | Fallback hook approval |
 | [Judge trust](architecture/judge-trust-boundary.md) | Clean-context Ed25519 quorum |
-| [Release·update trust](architecture/release-update-trust-boundary.md) | TUF·migration·backup·recovery |
+| [Release·update trust](architecture/release-update-trust-boundary.md) | Attestation·local integrity·migration·recovery |
 
 ## Decisions
 
@@ -41,7 +41,7 @@ current catalog.
 | [ADR-0005](decisions/ADR-0005-license-boundary.md) | License boundary |
 | [ADR-0006](decisions/ADR-0006-version-lifecycle.md) | Version lifecycle |
 | [ADR-0007](decisions/ADR-0007-ed25519-judge-trust.md) | Judge trust |
-| [ADR-0008](decisions/ADR-0008-verifier-only-tuf-updates.md) | Verifier-only TUF update |
+| [ADR-0008](decisions/ADR-0008-release-integrity.md) | Release 출처·local 무결성 |
 | [ADR-0009](decisions/ADR-0009-user-plugin-project-knowledge-boundary.md) | User·project knowledge |
 | [ADR-0010](decisions/ADR-0010-native-first-usage-sensors.md) | Native-first usage sensor |
 | [ADR-0011](decisions/ADR-0011-source-wiki-independence.md) | Source Wiki independence |
@@ -65,7 +65,7 @@ current catalog.
 | [Commit](guides/commit-rules.md) | Task별 independent commit |
 | [Source usage guard](guides/source-usage-guard.md) | Source quota safeguard |
 | [Judge attestation](guides/ed25519-judge-attestations.md) | External signature ceremony |
-| [Signed update·release](guides/signed-update-and-release.md) | Update·candidate·publication procedure |
+| [Release·update](guides/release-update.md) | Update·candidate·publication procedure |
 | [Code signing policy](guides/code-signing-policy.md) | 무료 platform signing 상태·privacy·검증 경계 |
 | [npm Trusted Publisher](guides/npm-trusted-publisher.md) | six npm package OIDC 연결·test·stable publication |
 | [공개 HTML 디자인 원칙](guides/public-html-design-principles.md) | Hive 안내 HTML의 브랜드·정보 구조·반응형·명령 정확성 기준 |

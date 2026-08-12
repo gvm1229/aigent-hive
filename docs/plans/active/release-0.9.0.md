@@ -28,7 +28,7 @@
   write·다음 session recall은 `KAC-007` 미수용
 - `test.16` embedded release date `2026-08-01`: historical input 오류. 기존 byte·tag 불변, 별도 테스트
   배포 없이 다음 정상 배포에서 actual UTC date 입력·표시 검증 필요
-- 상세 run·failure·external signer evidence: [`CURRENT.md`](../../state/CURRENT.md)
+- 상세 run·failure·publication evidence: [`CURRENT.md`](../../state/CURRENT.md)
 
 ## 이번 정식 릴리스의 명시적 제외와 면제
 
@@ -64,7 +64,7 @@
 ## Artifact 계보
 
 - 흐름: `develop` 시험 후보 → prerelease·npm `test` → 수용 → protected `main` stable 후보 →
-  signing·TUF → `v0.9.0` normal Release·npm `latest`
+  integrity·attestation 검증 → `v0.9.0` normal Release·npm `latest`
 - `develop` artifact: 사전 검증 전용. `main` artifact: 정식 게시 전용
 - Channel별 candidate·tag·Release·npm exact commit 일치와 develop artifact 재사용 금지
 

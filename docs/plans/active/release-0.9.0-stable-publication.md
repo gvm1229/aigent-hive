@@ -25,26 +25,27 @@
 
 ## 선행 정리·구현·게시
 
-- [ ] [REL9-019] Active code·workflow·schema·fixture·guide·decision·plan·fact 전체 inventory와
+- [x] [REL9-019] Active code·workflow·schema·fixture·guide·decision·plan·fact 전체 inventory와
   allowlist 고정. Release TUF·external signer·platform certificate gate 참조 제거, judge trust와
   frozen historical base만 명시적 예외. Current public surface의 금지 참조 `0건`
-- [ ] [REL9-020] Release·update 구현 단순화. TUF CLI·metadata·authorization script·workflow input·
+- [x] [REL9-020] Release·update 구현 단순화. TUF CLI·metadata·authorization script·workflow input·
   schema·fixture 제거. `hive release verify`: local bundle version·length·SHA-256 검증만 유지.
   npm registry integrity 또는 GitHub attestation을 설치 출처 trust로 사용
-- [ ] [REL9-021] Candidate·publication workflow 단순화. Protected `main` exact SHA에서 한 번 build,
+- [x] [REL9-021] Candidate·publication workflow 단순화. Protected `main` exact SHA에서 한 번 build,
   5개 native archive·6개 npm package·3개 installer의 byte identity·sidecar·attestation 생성,
   stable environment 승인 뒤 rebuild 없는 GitHub Release·npm `latest` 승격
-- [ ] [REL9-022] Public install·update 계약 정리. macOS ad-hoc·Windows unsigned 상태 공개,
+- [x] [REL9-022] Public install·update 계약 정리. macOS ad-hoc·Windows unsigned 상태 공개,
   paid code signing을 optional enhancement로 분리. Transactional backup·rollback·recovery와
   same-major migration 보존
-- [ ] [REL9-023] Usage guard onboarding 보정 완료. 활성화 권장·신속 기본 `20%`, CodexBar의
+- [x] [REL9-023] Usage guard onboarding 보정 완료. 활성화 권장·신속 기본 `20%`, CodexBar의
   정상 setup 노출 `0건`, native 실제 실패 뒤에만 별도 fallback 동의
-- [ ] [REL9-024] User projection·uninstall 수렴 보정 완료. 폐기·개명 Skill file과 중첩 빈
+- [x] [REL9-024] User projection·uninstall 수렴 보정 완료. 폐기·개명 Skill file과 중첩 빈
   directory, Hive-owned transient `.hive` artifact 정리. Knowledge·saved preference·foreign byte와
   별도 developer rollback state 보존
 - [ ] [REL9-025] Replacement stable candidate와 public acceptance. `0.8.x`·numbered test upgrade,
   npm·Unix·PowerShell 5.1·CMD clean/repeat install, setup·uninstall·reinstall, usage sensor,
-  source date·version·byte identity 검증
+  source date·version·byte identity 검증. Consumer·user-root Wiki lint는 `hive-source.json`
+  없이 실행. Source-workspace lint 혼동·건너뜀 `0건`
 - [ ] [REL9-026] Protected stable publication·관찰. Annotated tag·normal GitHub Release·six-package
   OIDC `latest`, installer·update 확인, critical 회귀 `0건`, PLAN·CURRENT·release notes·ADR·fact 마감
 

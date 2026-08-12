@@ -17,12 +17,11 @@
 | `judge-approval.schema.json` | critical quorum 이후 별도로 고정하는 JCS digest human approval artifact |
 | `judge-attestation.schema.json` | assignment·verdict·approval의 detached Ed25519 signature sidecar |
 | `judge-trust-root.schema.json` | consumer target 밖에서 보호하는 purpose-bound public-key trust root |
-| `release-bundle-manifest.schema.json` | immutable release identity와 signed digest binding |
+| `release-bundle-manifest.schema.json` | immutable release identity와 artifact length·SHA-256 binding |
 | `migration-table.schema.json` | compiled Rust migration route |
 | `release-surface-inventory.schema.json` | shipped schema·Skill·template·projection inventory |
 | `historical-surfaces.schema.json` | updater에 compile되는 이전 release surface baseline |
-| `platform-signing-evidence.schema.json` | public macOS Developer ID·Windows Authenticode evidence |
-| `update-state.schema.json` | installed TUF metadata와 release rollback floor |
+| `update-state.schema.json` | 마지막 수락 release version·sequence·manifest digest |
 | `update-journal.schema.json` | crash recovery의 exact mutation·backup·next-state binding |
 | `backup-manifest.schema.json` | exact seven-day update recovery snapshot |
 | `major-release-confirmation.schema.json` | explicit exact-target breaking-release authority |
@@ -50,14 +49,13 @@ JSON Schema만으로 표현하기 어려운 cross-field invariant는 Rust semant
 - trust-root public key는 전역 unique이며 assignment/verdict/approval purpose를
   교차 사용 금지
 - unsigned quorum schema v1은 diagnostic compatibility만 제공하고 PASS 권한 없음
-- TUF role signature는 distinct Ed25519 key ID만 threshold에 포함하고 root rotation은
-  이전 root와 candidate root threshold를 모두 충족
-- release metadata version, expiry, target length·SHA-256, release sequence와
-  same-sequence manifest digest는 rollback/substitution floor를 형성
-- release classification은 compiled historical surface와 signed cumulative inventory의
+- release artifact는 normalized path, exact length·SHA-256으로 local manifest에 결합
+- accepted release version·sequence와 same-sequence manifest digest는
+  downgrade/substitution floor를 형성
+- release classification은 compiled historical surface와 cumulative inventory의
   observed set delta와 일치 필수
 - cross-major confirmation은 exact source/target, current dry-run plan,
-  compatibility/preservation report와 signed migration-table digest 전부에 결합
+  compatibility/preservation report와 migration-table digest 전부에 결합
 - migration metadata는 running Rust binary에 compile된 ID만 선택하며
   SQLite/runtime/backup 또는 executable payload의 input 사용 금지
 - backup expiry는 exact `created_at_unix + 604800`, canonical-protected와

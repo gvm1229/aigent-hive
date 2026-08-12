@@ -15,7 +15,7 @@
 | Obsidian integration | 유보 | local Markdown workflow 안정 후 실제 탐색 UX 수요 |
 | cloud DB/VPS | 제외 | multi-machine concurrent writer 요구가 확정 |
 | dashboard/desktop app | 유보 | CLI public release와 recovery gate 완료 |
-| Rust TUF/signing library | `ed25519-dalek` verifier-only 채택, signing은 external | Private-key custody를 product에 넣지 않고 verifier audit 결손이 확인될 때만 재검토 |
+| Release integrity | npm registry integrity·GitHub artifact attestation과 Rust local SHA-256 verifier | 출처 증거·local activation safety 분리, product release private key 제외 |
 | Antigravity projection surface | native global plugin·Skill path qualified | host major 또는 plugin manifest contract 변경 |
 | cargo-dist | `0.8.0` 즉시 채택 제외, fit-gap reference | Hive ownership receipt·atomic recovery·단일 artifact 계보를 생성 workflow가 보존할 때 |
 | web/unreal profile source | 아직 미이식 | 각 reference의 generic 부분을 별도 검토하고 domain fixture·precedence test 작성 |

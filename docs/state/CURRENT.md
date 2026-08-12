@@ -58,14 +58,16 @@
   유지보수자 확인: 새 Codex session 자동 `hive` 탐색·Discord 실제 전달. `KST-006`·`DIS9-010`·`WGS-011`·`REL9-011` 완료
 - `hive uninstall`: Hive가 추가한 host activation·projection·package·derived index·backup·runtime 제거 계약.
   `.hive/knowledge/`와 저장 user preference는 항상 보존, `--full`·`-f` 삭제 경로 제공 없음. 저장 preference 재설치: setup 질문 `0건`
-- Mac `0.9.0-test.19` audit: 22개 active Skill·44개 active file과 별도로 retired empty
-  `agents/` leaf 44개 잔존, empty `.hive/install-transactions` 잔존. Current manifest file cleanup 뒤
-  parent prune 비수렴 결함. `.hive/dev-install`: 별도 developer rollback state로 일반 purge 제외
+- Mac `0.9.0-test.19` audit에서 확인한 retired empty `agents/` leaf 44개와 empty
+  `.hive/install-transactions`의 원인을 보정. 인증된 retired file의 owned boundary 안 빈 조상을
+  leaf-to-root로 정리하고 transaction journal의 빈 parent를 제거. Knowledge·saved preference·
+  foreign byte 보존, `.hive/dev-install`은 별도 developer rollback state로 일반 purge 제외
 - Agent 자율 실행 지속: 이전 시험판 작업에서 Agent 소유 회귀 정리·검증·push·후보·게시가
   남은 중간 보고 종료 판단 오류. [`agent-autonomous-continuation.md`](../plans/active/agent-autonomous-continuation.md)의
   `AAC-001–008`: source·소비자 프로젝트·전역 설정 지시문 terminal state·closure gate·session record·static regression 보강 완료
-- 이전 expedited acceptance: usage guard disabled 기본으로 통과했으나 새 제품 결정으로 superseded.
-  새 gate: 활성화 권장·신속 기본 `20%`, normal setup의 CodexBar 노출 `0건`
+- 이전 expedited acceptance의 usage guard disabled 기본은 superseded. 현재 기본: 활성화 권장·
+  신속 `20%`. Normal setup의 CodexBar 노출 `0건`, Codex native-only probe의 allowlisted 실패 뒤에만
+  별도 사용·설치 동의
 - `REL9-030`: Python 전수 module의 단일 lane manifest·owner·contract·release gate, Rust command·CI job 대장,
   `os × lane` CI matrix·Windows 시간 기록 완료. Python 순차 477.77초 대비 matrix critical path 262.03초 모델,
   45.2% 단축. Phase 4 repository fixture: ignored `tests/work/hive-phase4-<random>`만 사용
@@ -85,7 +87,7 @@
   Skill과 repository directive 사용, tracked source Skill 최종 `0건`. 신규 product `ship`·
   `amend-directive`; `source-review`는 Wiki 조회·기본 read-only 도구, `source-knowledge`는 세
   knowledge Skill·`hive source-wiki` CLI로 분리. retired-ID ledger·all-host projection·Copier ledger 회귀 완료
-- 사용량 보호: 활성화 권장·신속 기본 `20%`로 보정 예정. Custom threshold·등록 project별 더
+- 사용량 보호: 활성화 권장·신속 기본 `20%`로 보정 완료. Custom threshold·등록 project별 더
   보수적인 override·effective `max` 유지. CodexBar: post-init native 실제 실패 뒤에만 별도 동의
 - 외부 중지 경계: `main` PR·review, protected stable publication approval,
   exact `1.0.0` 사용자 authority
@@ -420,7 +422,7 @@ Target: `0.8.0`
 | Update 확인 | Explicit opt-in daily check, offline 뒤 다음 host session 재시도 |
 | Skill suite 선택 | Recommended 또는 individual, dependency closure preview |
 | Wiki opt-out | Default-on, 언제든 disable/enable, Markdown 보존 |
-| Usage guard 선택 | Explicit opt-in, 사용자 선택 한도, fallback 별도 consent |
+| Usage guard 선택 | 활성화 권장, 신속 `20%`, Custom 사용자 선택 한도, failure-only fallback consent |
 | User marker | `AIGENT-HIVE:USER:START|END` append·owned replace |
 | User `.agents` | Provider-neutral directive·selected Skill projection |
 | Root knowledge | `~/.hive/knowledge` + disposable root SQLite |

@@ -11,7 +11,7 @@ provider-neutral 로컬 agent harness.
 - Approved Skill routing과 host별 thin projection
 - Canonical Markdown knowledge와 durable role·run state
 - Subscription usage safeguard
-- Verifier-only judge·release·update contract
+- Verifier-only judge와 attested release·transactional update contract
 - Ownership·backup·rollback 기반 안전한 mutation
 
 비소유 범위:
@@ -61,7 +61,7 @@ provider-neutral 로컬 agent harness.
 | 반복 실행 | Default-off Hive-native scheduler·receipt·cancel·team·multi-goal 계획 | [ADR-0019](../decisions/ADR-0019-hive-native-iterative-execution.md) |
 | Usage guard | Native-first sensor, session-first policy, automatic dispatch fail-closed | [Source guard](../guides/source-usage-guard.md) |
 | Judge quorum | Clean-context package와 detached Ed25519 verification | [Judge boundary](../architecture/judge-trust-boundary.md) |
-| Release·update | TUF-compatible verification, version gate, backup·journal·recovery | [Release boundary](../architecture/release-update-trust-boundary.md) |
+| Release·update | Attestation·local integrity, version gate, backup·journal·recovery | [Release boundary](../architecture/release-update-trust-boundary.md) |
 | Direct install | npm과 digest-pinned curl·PowerShell·CMD channel | [`0.8.0` plan](../plans/active/release-0.8.0.md) |
 
 ## Artifact 흐름

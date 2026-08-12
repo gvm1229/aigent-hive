@@ -11,7 +11,7 @@ aliases: ["Cross-project RAG", "Mandatory memory"]
 sources:
   - "repo:docs/decisions/ADR-0016-global-knowledge-rag.md#sha256:196117cadc85737e0dbe35c8fcc6699e5180632d919782c2312453f588b3ab7a"
   - "repo:docs/plans/active/v0.9.0-global-knowledge-rag.md#sha256:6763857d275d0a35065e27f744e4a7d2c83d77b876abcdb5343f37be01ffe35e"
-  - "repo:docs/plans/active/v0.9.0-knowledge-autocapture-regression.md#sha256:8e1bb4aa93ed62c1afc6a584a7f2372130cb2f8493de45a92e3b72dd7f284b4b"
+  - "repo:docs/plans/active/v0.9.0-knowledge-autocapture-regression.md#sha256:a1bd5359ae88e90db3281c159e21fe3d4d6e20ff811c41503ce64fe3554a2519"
 links: [knowledge-portability-scan, knowledge-storage, shared-index, v0-9-skill-suite-plan]
 reviewed_revision: "git:2234885542a2c3e82514121b890e129b89e5e563"
 status: active

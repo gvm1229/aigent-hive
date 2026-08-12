@@ -37,10 +37,10 @@
 - [x] [UGP-006] 서로 다른 임의 global·project 값의 effective threshold, disabled global,
   lower project override 거부, update migration, source·consumer projection, host별 guard와
   Discord payload의 project·effective threshold 회귀 검증. profile별 hard-coded value 0건
-- [ ] [UGP-007] Custom setup의 사용량 보호 선택을 `활성화 (권장)`·`비활성화`로 변경하고,
+- [x] [UGP-007] Custom setup의 사용량 보호 선택을 `활성화 (권장)`·`비활성화`로 변경하고,
   신속 기본 profile을 enabled·remaining `20%`로 변경. 기존 명시적 사용자 선택 보존과
   disable 경로 회귀 추가
-- [ ] [UGP-008] Setup 설명·preview·summary·schema fixture·saved preference migration을 새
+- [x] [UGP-008] Setup 설명·preview·summary·schema fixture·saved preference migration을 새
   기본값과 일치시키고 clean install·reconfigure·preserving reinstall 수용
 
 ## 완료 기준

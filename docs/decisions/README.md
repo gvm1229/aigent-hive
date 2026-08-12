@@ -12,7 +12,7 @@ Accepted product decision과 선택 근거의 정본.
 | License | [ADR-0005](ADR-0005-license-boundary.md) |
 | Version lifecycle | [ADR-0006](ADR-0006-version-lifecycle.md) |
 | Judge trust | [ADR-0007](ADR-0007-ed25519-judge-trust.md) |
-| Signed update | [ADR-0008](ADR-0008-verifier-only-tuf-updates.md) |
+| Release integrity | [ADR-0008](ADR-0008-release-integrity.md) |
 | User·project knowledge | [ADR-0009](ADR-0009-user-plugin-project-knowledge-boundary.md) |
 | Native usage sensor | [ADR-0010](ADR-0010-native-first-usage-sensors.md) |
 | Source Wiki independence | [ADR-0011](ADR-0011-source-wiki-independence.md) |

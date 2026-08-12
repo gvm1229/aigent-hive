@@ -4,12 +4,12 @@
 
 | Platform | `0.9.0` 상태 | 사용자 확인 수단 |
 | --- | --- | --- |
-| macOS | Release workflow에서 ad-hoc signing. Apple Developer ID·notarization 없음 | archive SHA-256, GitHub artifact attestation, TUF target digest |
-| Windows | SignPath Foundation 승인 전 unsigned. 승인 뒤 Authenticode 적용 가능 | archive SHA-256, GitHub artifact attestation, TUF target digest |
-| Linux | Platform code signing 대상 아님 | archive SHA-256, GitHub artifact attestation, TUF target digest |
+| macOS | Release workflow에서 ad-hoc signing. Apple Developer ID·notarization 없음 | archive SHA-256, GitHub artifact attestation |
+| Windows | SignPath Foundation 승인 전 unsigned. 승인 뒤 Authenticode 적용 가능 | archive SHA-256, GitHub artifact attestation |
+| Linux | Platform code signing 대상 아님 | archive SHA-256, GitHub artifact attestation |
 
 유료 Apple Developer Program·Microsoft Artifact Signing 구독은 `0.9.0` 필수 출시 조건에서 제외.
-운영체제 publisher trust 부재를 checksum·attestation·TUF로 오인하는 표현 금지.
+운영체제 publisher trust 부재를 checksum·attestation으로 오인하는 표현 금지.
 
 ## 무료 Windows signing
 
@@ -34,9 +34,9 @@ SignPath Foundation의 무료 open-source code signing 승인 시 Windows Authen
 
 - 모든 native archive: exact SHA-256와 GitHub artifact attestation
 - npm package: GitHub Actions Trusted Publisher와 npm OIDC provenance
-- Stable release: external TUF root·targets·snapshot·timestamp authorization과 rollback floor
-- Hive source·GitHub workflow의 release private key 생성·저장·서명 금지
-- Platform evidence의 허용 조합 외 상태는 stable publication 거부
+- Stable release: protected `main` exact tag·commit, SHA-256, GitHub artifact attestation
+- Hive source·GitHub workflow의 release private key·certificate 생성·저장 금지
+- macOS ad-hoc·Windows unsigned 상태 공개 누락 시 stable publication 거부
 
 ## English policy
 
@@ -44,10 +44,9 @@ Aigent Hive 0.9.0 does not require paid platform certificates. macOS binaries ar
 ad-hoc signed and are not Apple Developer ID signed or notarized. Windows binaries remain
 unsigned unless the project receives free SignPath Foundation approval. Linux archives do not
 use platform code signing. Every native archive is still bound by an exact SHA-256 digest,
-GitHub artifact attestation, npm OIDC provenance where applicable, and externally authorized TUF
-metadata for the stable release.
+GitHub artifact attestation, and npm OIDC provenance where applicable.
 
 Hive has no telemetry and does not automatically upload crash reports, prompts, Knowledge Base
 content, preferences, credentials, or agent sessions. A future SignPath integration may transmit
 only the Windows release binary and build provenance required for code signing. The repository
-and its workflows never create, store, or use TUF private signing keys.
+and its workflows never create, store, or use release private signing keys.

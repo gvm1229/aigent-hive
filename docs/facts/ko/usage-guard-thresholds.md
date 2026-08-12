@@ -10,7 +10,7 @@ tags: [guard, project, setup, usage]
 aliases: ["조기 중지 한도", "프로젝트 사용량 한도"]
 sources:
   - "repo:docs/decisions/ADR-0012-global-onboarding-shared-index.md#sha256:dea6123b7b193eb760a37b198566f9318d868fd7035491ac10756de0d4315530"
-  - "repo:docs/plans/active/usage-guard-policy.md#sha256:24f84ff3eeb32ba7d5ee5c449d34cf0bb80e300a6123742f22664797402ab219"
+  - "repo:docs/plans/active/usage-guard-policy.md#sha256:7b64cee13b39806a519ee9d8387972a1e69da108e1075b8b0b873581d46c439b"
 links: [global-onboarding, source-usage-guard, usage-sensor-policy]
 reviewed_revision: "git:35f5bce71814a3e874fe53a8730024f16013ad46"
 status: active

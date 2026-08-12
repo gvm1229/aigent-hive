@@ -9,12 +9,12 @@ summary: "보존형 제거: Hive-owned transient·retired projection 완전 정�
 tags: [bootstrap, onboarding, preservation, uninstall]
 aliases: ["clean reinstall", "hive uninstall"]
 sources:
-  - "repo:crates/hive-cli/src/user_install.rs#sha256:2ac47f0ba3f6a05f76c1e524ad9945d695e150c5665ed77dfb496e86ebab82d9"
-  - "repo:crates/hive-cli/src/user_setup.rs#sha256:3164f766afc6f15b3203a96240d7d75f47d95dad9a4d938c73a8866fc4f6f66e"
-  - "repo:docs/plans/active/user-onboarding-shared-index.md#sha256:aafc3f1fb28a8e43939309d0dfb21586305759e2326d61fce444189f7acc79d1"
+  - "repo:crates/hive-cli/src/user_install.rs#sha256:05172fea58222e2997dd3eae60ba34e1d252346ff9850b149967d80ece6b8888"
+  - "repo:crates/hive-cli/src/user_setup.rs#sha256:6606c09b03b9a0b3896a8b9242a937aec0a25a644ffbf873a3117e6c47410ccf"
+  - "repo:docs/plans/active/user-onboarding-shared-index.md#sha256:889f7b0e5f374b1c78117486dcd24bd02df5d96b00c340402f2c672eb54b3b61"
   - "repo:docs/plans/active/windows-global-setup-hardening.md#sha256:422649ef3ca475aca9e3a86a2ddd2bbbb3895221d7bc39fe4417010664dee47f"
-  - "repo:docs/state/CURRENT.md#sha256:c70966fc5c105b51284905879b1ba15b2ab75758fb660712f8b43d9568989006"
-  - "repo:harness/skills/user-setup/SKILL.md#sha256:6b2a26d1285073e6796f683abfc190bd6d74a05d57b83900412da37aa5d53849"
+  - "repo:docs/state/CURRENT.md#sha256:81cb7cd99a4ce99a08f66326f0cf436a3dec1a75361e4eb44c3f2e614190c26f"
+  - "repo:harness/skills/user-setup/SKILL.md#sha256:90a8ecca713a1b1963b5f1863f76d32d5c5b9532ca72922c2705ee9b63520307"
 links: [global-onboarding, knowledge-preservation, release-verification]
 reviewed_revision: "git:089b0717e24c368a1725774aaca0c85ab596df10"
 status: active
@@ -25,5 +25,5 @@ status: active
 - 제거: Hive activation·projection·package·index·backup·transaction·runtime
 - 보존: knowledge·saved preference·foreign byte
 - `test.19` Mac audit: retired empty `agents/` leaf 44개와 empty transaction directory 잔존
-- 보정: leaf-to-root prune, owned empty shell `0건`
+- 보정 완료: 설치·갱신·제거가 인증된 Hive-owned 빈 조상을 leaf-to-root로 정리
 - `.hive/dev-install`: 별도 developer rollback state

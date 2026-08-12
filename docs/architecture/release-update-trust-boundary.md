@@ -1,279 +1,166 @@
-# Release와 update trust boundary
+# Release와 update 신뢰 경계
 
 ## 목적
 
-Hive update는 이미 인증된 local release를 consumer harness에 안전하게 적용.
-Release 획득, release 승인, OS code signing, GitHub provenance와 consumer activation은
-서로 다른 authority.
+- Release: 검토된 source commit과 공개 artifact 출처 증거의 결합
+- Update: 이미 받은 local bundle의 무결성 확인과 consumer project 안전 적용
 
 ```text
-source commit
-  └─ candidate workflow ──> verified platform state + GitHub attestation
-                              └─ external release signer ──> signed TUF repository
-                                                           └─ Hive verifier
-                                                                └─ staged consumer update
+protected main commit
+  └─ candidate build ──> SHA-256 + GitHub artifact attestation
+                          └─ protected publication ──> GitHub Release + npm provenance
+                                                       └─ local bundle verification
+                                                            └─ transactional update
 ```
 
-Hive는 마지막 두 단계에서 **검증과 local activation만** 수행. Model-provider API,
-provider SDK, downloader, package-manager 실행, release signing과 private-key custody는
-제품 runtime에 포함 없음.
+경계 분리:
 
-## Choice 1: verifier-only Ed25519/TUF
+- Artifact 획득: npm registry 또는 GitHub Release
+- Local byte 검증·activation: Hive update core
+- Update core 비소유: network downloader, package-manager 실행, release signing key,
+  provider API client
 
-Release authorization은 TUF `1.0.31` wire metadata의 제한된 verifier subset을 사용.
-Crypto primitive는 `ed25519-dalek`의 strict verification이며
-`default-features=false`. Production crate에는 signing API, `SigningKey`, seed,
-PEM/PKCS#8 private material 또는 key generation이 없음.
+## 출처와 local 무결성
 
-| Role | 권장 key 경계 | 책임 |
-| --- | --- | --- |
-| `root` | offline Ed25519 2-of-3 | role/key/threshold와 rotation authority |
-| `targets` | root와 분리된 protected release role | exact target path, length, SHA-256 |
-| `snapshot` | 별도 online key | targets metadata version/hash 결합 |
-| `timestamp` | 별도 short-lived online key | snapshot freshness와 expiry 결합 |
+| 단계 | 증거 |
+| --- | --- |
+| npm 설치 | Registry integrity·Trusted Publishing OIDC provenance |
+| GitHub 설치 | Exact tag·commit, SHA-256 sidecar, GitHub artifact attestation |
+| Hive verifier | Local manifest, file length·SHA-256 |
 
-Hive는 distinct valid key ID만 threshold 계산에 포함. Public-key material은 root 전체에서
-unique하며 한 key의 두 role 배정 금지. Root role은 exact 2-of-3이며
-unassigned key도 거부. Unknown key, duplicate signature, wrong role, unsupported
-algorithm, malformed raw key/signature, threshold 미달은 모두 거부. Metadata
-expiry는 `now >= expires`에서 거부.
+보장 범위 분리:
 
-### Root rotation
+- Local manifest: network 출처 증명 불가
+- Registry·GitHub 증거: consumer update 중 local file 변경 허용 불가
 
-`verify_root_rotation`은 candidate root가 현재 root의 exact next version인지 확인한 뒤:
-
-1. 이전 root의 `root` threshold로 candidate의 `signed` bytes를 검증.
-2. candidate root 자체의 새 `root` threshold로 같은 bytes를 다시 검증.
-3. 새 role/key 집합, TUF version과 expiry를 검증.
-
-따라서 새 key만으로 과거 trust를 탈취할 수 없고, 탈취된 과거 key만으로 새 root를
-고정도 금지. Rotation file의 실제 교체는 Hive 자동 수행 범위 밖이며
-agent-write-denied 운영 경계 적용.
-
-## Protected public root
-
-`hive release verify`와 `hive update`는 absolute path의 외부 public root만 read-only 조회.
-Consumer target 안의 root, symlink/reparse point, writable file, replace 가능한
-ancestor와 read 도중 identity/length가 바뀐 file은 거부.
-
-- Unix/macOS: root-owned, non-writable, single-link regular file과 root-owned
-  non-group/world-writable ancestor를 요구하고 current process의 file/ancestor mutation
-  access가 실제로 거부되는지 확인.
-- Windows: 모든 path component의 reparse point를 거부하고 current token으로 file과
-  ancestor의 write/delete/ACL/owner mutation right open 차단 필수.
-
-Public key는 secret이 아니지만 agent가 자신이 만든 release를 스스로 승인하지 못하도록
-write authority를 분리.
-
-## Signed repository contract
+## Bundle 계약
 
 ```text
-metadata/
-├── root.json
-├── targets.json
-├── snapshot.json
-└── timestamp.json
+bundle-manifest.json
 targets/
-├── bundle-manifest.json
 ├── migration-table.json
 ├── release-surface-inventory.json
-├── provenance.intoto.json
-├── platform-signing-evidence.json
-└── aigent-hive-<version>-<target>.<archive>
+├── aigent-hive-<version>-<target>.<archive>
+├── aigent-hive-<version>-<target>.<archive>.sha256
+└── <npm-package>-<version>.tgz
 ```
 
-Verifier는 metadata와 target을 bounded no-follow regular file로 두 번 확인.
-`timestamp → snapshot → targets → target`의 version, length와 SHA-256 결합을 모두
-통과한 뒤에만 payload JSON을 해석. Target path는 `targets/` 아래의 normalized
-project-relative path만 허용.
+Manifest binding:
 
-`bundle-manifest.json`은 product, exact version, monotonic release sequence, release
-classification, source repository/commit/tag, minimum updater/harness version, Apache-2.0
-license와 다음 target digest를 결합.
+- Product·exact release version·monotonic release sequence
+- Source repository·commit·tag
+- Minimum updater·harness version
+- Artifact별 normalized relative path·exact length·lowercase SHA-256
 
-- deterministic surface inventory
-- compiled migration table
-- in-toto provenance statement
-- public platform-signing evidence
+Verifier 거부 조건:
 
-Hive는 provenance를 단순 blob이 아닌 검증 대상 구조로 취급. in-toto statement type, SLSA
-predicate, exact source repository/commit, locked build, release workflow builder,
-invocation time 순서와 artifact subject digest를 semantic 검증. Platform evidence 허용 조합:
+- Duplicate·정렬 위반·path traversal
+- Symlink·reparse point
+- Bounded no-follow read 중 file identity 변화
+- 더 낮은 version·sequence
+- 같은 sequence의 다른 manifest digest
 
-- macOS `developer-id/apple-team-id/verified` 또는 `ad-hoc/no-publisher/cost-waived`
-- Windows `authenticode/certificate-thumbprint/verified` 또는 `unsigned/no-publisher/cost-waived`
-- Signed fixture의 `fixture-public-evidence`: integrity mode 한정
-
-Unique artifact path·SHA-256·platform archive suffix 결합 필수. Production platform evidence는
-macOS 2개·Windows 1개 archive만 exact 열거. Linux 2개 archive는 provenance와 TUF target의 exact 열거 대상.
-
-Update integrity mode는 signed public-only crypto fixture의 `fixture-public-evidence` 허용.
-Publication mode는 `verified|cost-waived`의 위 platform별 exact 조합만 허용. Provenance는
-signed repository의 전체 archive target exact 열거 필수. Protected
-publication workflow는 각 archive의 offline GitHub Sigstore bundle을
-`gh attestation verify`로 별도 검증. 따라서 TUF evidence binding과 외부
-PKI/Sigstore identity verification은 분리되어 있으면서 exact artifact digest로
-결합 상태.
+Installed state: 마지막 수락 release version·sequence·manifest digest. 용도: transaction
+recovery와 downgrade 방지. 별도 release 서명 권한과 무관
 
 ## Version과 migration
 
-Version은 exact `X.Y.Z`만 허용.
+Version 형식: exact `X.Y.Z`
 
 | Surface change | 허용 transition |
 | --- | --- |
-| shipped feature 추가 | exact next minor, patch `0` |
-| 같은 public surface의 compatible fix | 같은 minor의 exact next patch |
-| shipped surface 변화 없음 | version 유지 |
-| removal/incompatible semantic change | same-major 거부 |
+| Shipped feature 추가 | Exact next minor, patch `0` |
+| Compatible fix | 같은 minor의 exact next patch |
+| Shipped surface 변화 없음 | Version 유지 |
+| Removal·incompatible semantic change | Same-major 거부 |
 
-Release class는 signed manifest가 선언하지만 updater는 그 선언에서 `SurfaceDelta`를
-생성 금지. `harness/release/historical-surfaces.yml`에 compile된 migration
-baseline과 signed cumulative inventory의 category-prefixed set을 비교.
+Surface 판정: `harness/release/historical-surfaces.yml`의 compiled baseline과 target
+inventory의 category-prefixed set 비교
 
-- baseline item이 target에서 사라지면 `breaking`
-- target item이 추가되면 `additive-feature`
-- set은 같고 version이 바뀌면 `compatible-fix`
-- set과 version이 모두 같으면 `none`
+Fail-closed 조건:
 
-따라서 공격자의 `classification=feature` 선언을 통한 minor bump 정당화와
-breaking removal의 compatible 표시는 불가. Historical registry 부재 또는
-정렬·unique contract 위반 시 update는 unsupported/internal failure로 fail-closed.
+- Historical registry 부재
+- 정렬·unique 위반
+- Same-major breaking removal
 
-Major target 자동 계산 없음. Cross-major는 user-supplied exact target과
-source/target, release plan, compatibility report와 migration table digest를 결합한
-별도 human confirmation 모두 필수.
+Cross-major apply authority:
 
-Cross-major dry-run은 confirmation 없이 exact target만 받아 plan과 report digest
-생성 허용. Apply는 confirmation의 source/target, exact plan digest,
-independently observed surface+preservation report digest와 signed migration-table
-digest가 현재 재검증 결과와 하나라도 다르면 거부. Digest 모양만 맞는 임의
-confirmation은 authority가 아닌 입력 증거.
+- 사용자가 지정한 exact target
+- Source·target, release plan, compatibility·preservation report
+- Migration table digest
+- 위 항목을 결합한 별도 human confirmation
 
-Signed metadata의 executable migration 제공 금지. `migration_id`는 running
-Rust binary에 compile된 allowlist 중 하나여야 하며 shell, DLL, dylib, WASM, script,
-argv 또는 downloaded code 실행 금지.
+실행 금지: release 제공 script, binary, DLL, WASM, shell migration. 허용 범위:
+running Rust binary의 compiled `migration_id` allowlist
 
-- `same-major-render-v1`: supported same-major source를 current deterministic renderer로
-  재구성.
-- `cross-major-system-representation-v1`: future explicit-major route가 system-owned
-  representation만 바꿀 수 있도록 preservation evidence를 검증.
+## Historical Skill ownership
 
-Cross-major preservation gate는 project file, docs, preference, user Markdown body와
-symlink identity를 recursive pre/post snapshot으로 비교. Shared `AGENTS.md`는
-Hive marker block을 제외한 exact foreign bytes를 별도로 digest해 marker 갱신이 user
-text를 숨긴 변경을 차단. Planned protected-path change는 mutation 전에
-거부하고 activation 뒤 snapshot을 다시 계산해 실제 drift도 거부·recovery 상태로
-전환. Mutable path는 compiled Hive system config/license representation과
-authenticated `.agents|.claude/skills/<safe-name>/SKILL.md` projection으로 제한.
-SQLite, runtime과 backup은 migration input에서 제외.
+소유권 증거:
 
-### Historical Skill ownership authentication
+- Running binary의 `harness/skills/historical-builtins.yml`
+- Release별 name·SHA-256·side-effect class
+- 실제 projection bytes
+- Optional Skill의 기존 consent·source·content proof
 
-0.1.0–0.3.0: host Skill projection 없음. 0.4.0–0.6.0: release별 built-in 집합과
-bytes 상이. Current renderer만으로 이전 installation을
-재생성하면 정상적인 update가 시작되기 전에 ownership 검증이 실패. 반대로
-consumer-local `active-skills.yml`의 digest를 그대로 신뢰하면 공격자의 ledger·projection
-동시 위조와 foreign bytes의 Hive-owned path 승격 위험.
-
-`harness/skills/historical-builtins.yml`은 지원하는 각 이전 release의 exact built-in
-name, SHA-256, side-effect class와 capability set만 담는 typed YAML 정본. Binary는
-이 registry를 compile하고 exact release coverage를 semantic 검증. Update 시:
-
-1. installed `harness_version`으로 historical generation 선택.
-2. ledger의 built-in metadata가 compiled historical entry와 exact하게 같은지 확인.
-3. host projection의 실제 bytes를 읽어 compiled SHA-256과 대조.
-4. approved optional Skill은 기존 consent/source/content proof로 별도 재검증.
-5. canonical ledger bytes까지 일치한 path만 backup, replace 또는 recovery 대상으로
-   인정.
-
-Registry에는 과거 Skill 본문, private key 또는 executable migration이 없음. Unknown
-version, 임의 patch version, forged digest, arbitrary `.agents`/`.claude` path는
-fail closed. Host namespace 예외 적용 대상은
-`.agents/skills/<safe-name>/SKILL.md`와
-`.claude/skills/<safe-name>/SKILL.md` exact file로 제한.
+거부·보존: unknown version, forged digest, 임의 host Skill path 거부와 foreign bytes 보존
 
 ## Backup, journal과 activation
 
-Update는 release verification, rollback floor, classification, migration route와 renderer
-dry-run이 끝나기 전 target에 쓰기 없음.
+Dry-run: release·installed baseline 검증과 exact plan 반환. Target mutation 없음
 
 Apply 순서:
 
-1. 기존 incomplete journal recovery.
-2. installed/source/running/release version과 signed route를 검증.
-3. renderer dry-run으로 exact before/after digest와 plan digest 생성.
-4. changed manifest-owned path와 canonical config/team/run/knowledge snapshot을
-   `.hive/backups/<transaction>/`에 fsync.
-5. SQLite, WAL/SHM/journal, runtime, backup, `.omx/`, `.omc/`는 snapshot에서 제외.
-6. 첫 live mutation 전에 ignored durable journal을 `prepared`로 기록.
-7. renderer의 ownership-protected atomic activation을 실행하고 dry-run과 exact하게
-   같은 plan/tree인지 재검증.
-8. 모든 live after digest를 확인한 뒤 journal을 `committed`로 기록.
-9. rollback floor/update state를 마지막 commit marker로 기록.
-10. canonical Markdown/YAML/TOML에서 disposable SQLite index rebuild.
-11. journal을 제거하고 valid·unreferenced·7일 초과 backup만 정리.
+1. Incomplete journal 복구
+2. Release·version·migration route·renderer dry-run 검증
+3. Changed manifest-owned path와 canonical config·team·run·knowledge backup
+4. 첫 live mutation 전 durable `prepared` journal 기록
+5. Ownership-protected atomic activation
+6. Exact after digest 확인과 `committed` journal 기록
+7. Accepted release state를 마지막 commit marker로 기록
+8. Canonical Markdown·YAML·TOML 기반 disposable SQLite index rebuild
+9. Journal 제거와 검증된 7일 초과 unreferenced backup 정리
 
-Prepared/needs-recovery journal은 live path가 기록된 before 또는 after digest일 때만
-rollback. 제3의 digest는 concurrent user edit로 보고 bytes와 journal을 보존.
-Committed journal은 after digest를 재확인한 뒤 update state와 index rebuild를
-forward completion.
+Migration input·canonical backup authority 제외: SQLite, runtime, backup, `.omx/`, `.omc/`
 
-Backup cleanup은 exact `txn-<24 lowercase hex>` directory, self-digested valid manifest,
-enumerated regular-file set와 모든 entry digest가 일치할 때만 file-by-file 삭제.
-Malformed, future-dated, exact 7일 경계, active, symlinked 또는 foreign-entry backup은
-보존.
+Recovery 규칙:
 
-## Release와 installer ownership
+- Live bytes = journal before 또는 after digest: recovery 허용
+- 어느 쪽도 아님: concurrent user edit 판정, bytes·journal 보존
 
-`.github/workflows/release.yml` candidate 계약:
+Cross-major preservation: project file, docs, preference, user Markdown, symlink identity와
+shared `AGENTS.md` marker 밖 foreign bytes의 activation 전후 비교. Mutable 범위:
+compiled Hive-owned system representation
 
-- Remote `develop` exact commit, product version과 npm package version 결합
-- macOS arm64·x86_64, Linux musl arm64·x86_64, Windows MSVC x86_64 build
-- Native archive와 exact `@aigent-hive/*` npm platform tarball 생성
-- Artifact SHA-256, GitHub artifact attestation, native/npm binary byte identity
-- Platform artifact digest 기반 direct installer 렌더 후 `aigent-hive` umbrella에 포함
-- macOS explicit ad-hoc signing·Windows explicit unsigned 상태 검증
-- Stable candidate의 deterministic public-only external TUF authorization request
-- Tag·GitHub Release·npm publication 권한 0건
+## Candidate와 publication
 
-`.github/workflows/release-publish.yml`의 `0.8.0` product candidate 계약:
+Candidate build:
 
-- 별도 `release-publication` approval
-- 성공한 exact `develop` candidate run과 commit 고정
-- 5개 native archive·6개 npm tarball의 checksum·attestation·manifest·byte identity 검증
-- Umbrella 안의 exact product·package `0.8.0`
-  `install.sh`·`install.ps1`·`install.cmd` 검증
-- 6개 npm package 모두 exact `0.8.0`과 `latest` dist-tag로 publication
-- Git tag·GitHub Release 생성 0건
+- Protected `main` exact commit
+- Native archive 5개·npm package 6개·installer 3개 한 번 build
+- 모든 artifact의 SHA-256·GitHub attestation
+- Native/npm binary byte identity
+- macOS ad-hoc seal·Windows unsigned 상태 검증
 
-Package가 아직 없는 최초 등록만 `bootstrap_with_token=true`와
-`release-publication` environment의 임시 `NPM_TOKEN` 사용. 이 단계도 같은
-candidate·attestation·manifest·byte identity 검증과 `--tag latest --provenance` 적용.
-등록 직후 secret 삭제, 6개 package 각각에 `release-publish.yml`과
-`release-publication`을 결합한 Trusted Publisher 설정, publishing access의 token
-차단 적용. 이후 `bootstrap_with_token=false` 경로에는 `NODE_AUTH_TOKEN`을 주입하지
-않고 GitHub OIDC만 사용.
+Publication:
 
-Direct bootstrap은 exact `aigent-hive@0.8.0` umbrella의 installer를 사용.
-Installer는 npm registry의 같은 package version scoped platform tarball을 내려받고
-embedded SHA-256, archive entry allowlist, optional OS signature, product binary
-`0.8.0`을 검증한 뒤 `owner=direct` receipt를 기록. Receipt는 closed exact field set,
-installed binary SHA-256, binary의 exact product version을 결합. Existing
-executable·receipt의 symlink/reparse 또는 digest/version 불일치 시 덮어쓰기 금지.
+- Protected `release-publication` environment 승인 한 번
+- Rebuild 없는 GitHub normal Release·npm `latest`
+- Npm Trusted Publishing OIDC·registry provenance
+- 장기 `NPM_TOKEN` 없음
+- Developer ID·notarization, Authenticode·SignPath: 선택 기능, stable gate 아님
 
-npm global install의 binary owner는 npm. Homebrew·WinGet binary owner는 각 package
-manager. Hive의 직접 binary overwrite와 owner 추측 금지. Bare `hive update`는 명시적
-수락 뒤 authenticated owner의 exact adapter에만 위임.
+Direct installer:
 
-`0.9.0` stable: 유료 Apple Developer ID·Microsoft Artifact Signing 필수 gate 제외.
-SignPath Foundation 무료 승인 시 Windows Authenticode 선택 적용. External TUF production
-authorization·protected rollback floor·candidate byte identity는 필수 gate.
+- Official versioned GitHub Release archive·checksum 사용
+- Entry allowlist·SHA-256·binary version 검증
+- Owner·binary digest·version receipt 기록
+- npm·Homebrew·WinGet 소유 binary overwrite 없음
 
-## 보장하지 않는 것
+## 보장 범위
 
-- Ed25519는 authorized private-key possession과 exact signed bytes를 증명하지만
-  signer의 판단이 옳다는 것은 증명 범위 밖.
-- Apple/Microsoft/GitHub account와 signing credential은 Hive 소유 범위 밖.
-- Production signing/notarization/publication success의 local test 기반 추론 금지.
-- Package acquisition network는 installer/package manager 소유. Hive update core
-  입력은 extracted local repository로 제한.
+- SHA-256·local manifest: exact bytes
+- GitHub attestation·npm provenance: build·publication identity
+- Transaction journal: 실패 rollback·crash recovery
+- macOS ad-hoc seal: publisher identity·notarization 제공 없음
+- Windows unsigned release: publisher identity 제공 없음
+- Package acquisition network·account 보안: GitHub·npm·package manager 경계
