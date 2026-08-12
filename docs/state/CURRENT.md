@@ -3,7 +3,7 @@
 - 기준 branch: `develop`
 - product version: `0.9.2`
 - plan revision: `2.75`
-- 현재 milestone: `0.9.2` 안정판 게시·설치 마감, QA contributor 추가 지시 대기
+- 현재 milestone: `0.9.2` 안정판 게시·설치 마감, `0.9.3` 명시적 승인 대기
 - 기능 기준: `2cec0377748874748d126b6b55e59975a3f20a02`; release discipline base `c777da1`
 - 제외: `NAT-002–024`·`MRA-001–032`의 `0.9.3`, `N10-002–011`의 `0.10.0-test`
 - 문서 gate: root·번역 README, 설치 안내, 공개 HTML, npm README, plugin metadata,
@@ -18,7 +18,8 @@
 - Markdown 전용 후속 통합: Source Wiki·문체·링크·가장 가까운 packaging·directive 검사 PASS
   뒤 관련 없는 전체 플랫폼 CI 대기 생략. 완료되지 않은 CI를 통과로 보고하지 않으며 새 시험판·
   안정판 후보·tag·package publication 생성 없음
-- `0.9.3` 동결: QA contributor 추가 지시와 유지보수자의 후속 명시적 승인 전 구현·검증·출시 mutation `0건`
+- QA contributor 등록: 안희준([No-Jyun](https://github.com/No-Jyun)), Windows x64 설치·설정 검증
+- `0.9.3` 동결: QA contributor 등록 완료. 유지보수자의 후속 명시적 승인 전 구현·검증·출시 mutation `0건`
 - `0.9.2-test.1` 수용 거부: candidate run `31596919466`·publication run `31597939956`는
   통과했으나 GitHub prerelease에 direct installer 자산 3개가 누락되어 공개 설치 URL이 `404`를
   반환. 게시 workflow·회귀 보정 뒤 `0.9.2-test.2`부터 전체 공개 설치 수용 재수행

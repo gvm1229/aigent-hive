@@ -21,7 +21,7 @@
   바꾸지 않는 README 노출 정리는 문서·npm pack·stable candidate 검증으로 마감
 - Source Wiki lint·index 오류와 stale source digest `0건` 후 후보 생성
 - 공개 문서의 stale version·명령·링크·표시 metadata `0건` 후 후보 생성
-- `0.9.3` 구현·검증·출시: QA contributor 추가 지시 뒤 유지보수자의 별도 명시적 승인 전 금지
+- `0.9.3` 구현·검증·출시: QA contributor 등록 뒤 유지보수자의 별도 명시적 승인 전 금지
 
 ## Checklist
 
@@ -66,8 +66,9 @@
     npm tarball README 시험판 직접 언급 `0건`·중립 안내 링크 `1건`, plugin developer·512 px
     logo 계약 PASS. Upgrade·rollback·recovery는 accepted `test.2`와 stable candidate의 동일
     실행 byte 결합으로 승계, 안정판 재시험 lane 비사용
-- [x] [REL92-012] `0.9.2` 완료 상태·정확한 공개 증거 기록. QA contributor 추가와
-  유지보수자의 후속 명시적 승인 전 `0.9.3` 상태 `awaiting-user-authority`·구현 mutation `0건`
+- [x] [REL92-012] `0.9.2` 완료 상태·정확한 공개 증거 기록. QA contributor 안희준의 Windows x64
+  설치·설정 검증 역할 등록 뒤 유지보수자의 후속 명시적 승인 전 `0.9.3` 상태
+  `awaiting-user-authority`·구현 mutation `0건`
   - Evidence: `v0.9.2` exact source `a502867e6b20e8f22bc014af05ca678f211f40ed`, release
     `https://github.com/gvm1229/aigent-hive/releases/tag/v0.9.2`; `0.9.3` 작업tree·branch mutation `0건`.
     게시 후 Markdown 전용 마감은 관련 로컬 문서 gate 통과 뒤 전체 플랫폼 CI 대기 없이 통합
@@ -77,6 +78,6 @@
 - 공개 시험판·정식판의 GitHub `release-publication` environment 승인
 - protected `main` 검토
 - 실제 fresh-session 수용에 필요한 설치 host와 로그인 상태
-- QA contributor 추가 뒤 `0.9.3` 재개에 필요한 유지보수자의 별도 명시적 승인
+- QA contributor 안희준 등록 완료 뒤 `0.9.3` 재개에 필요한 유지보수자의 별도 명시적 승인
 
 위 경계 전까지 Agent 소유 release 준비·검증·candidate 실행 지속.

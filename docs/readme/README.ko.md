@@ -229,8 +229,9 @@ python scripts/dev-check.py pre-push
 
 ## QA Contributors
 
-| 이름 | GitHub | 검증 platform·영역 |
+| 이름 | GitHub | 검증 환경·영역 |
 | --- | --- | --- |
+| 안희준 | [No-Jyun](https://github.com/No-Jyun) | Windows x64 설치·설정 검증 |
 
 ## 라이선스
 

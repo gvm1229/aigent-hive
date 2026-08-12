@@ -3,7 +3,7 @@
 > Revision: 2.75
 > 기준일: 2026-08-13
 > Product version: `0.9.2`
-> 현재 milestone: `0.9.2` 안정판 게시·설치 마감, `0.9.3` 승인 대기
+> 현재 milestone: `0.9.2` 안정판 게시·설치 마감, `0.9.3` 명시적 승인 대기
 > Entrypoint: `docs/plans/PLAN.md`
 
 ## Goal parameters
@@ -15,8 +15,8 @@
   `0건`, 모든 README·설치 안내·공개 HTML·npm README·plugin metadata·version 예시 최신화,
   exact source의 protected stable publication
 - Stop boundary: protected `main` review, stable publication environment approval,
-  exact `1.0.0` authority, 설치 product usage guard remaining threshold `5%`, QA contributor
-  추가 지시 뒤 유지보수자의 별도 `0.9.3` 재개 승인
+  exact `1.0.0` authority, 설치 product usage guard remaining threshold `5%`, 등록된 QA contributor
+  뒤 유지보수자의 별도 `0.9.3` 재개 승인
 - Invariants: provider-neutral, backend별 canonical source 우선, SQLite 파생 상태,
   Source Wiki·run·role·plan·orchestration event Markdown/TOML 정본,
   ownership·consent·foreign byte 보존, provider API·credential·direct model process 경로 없음,
@@ -133,5 +133,5 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
 완료 증거: [`CURRENT.md`](../state/CURRENT.md)와 owning active fragment.
 현재: `0.9.2`를 exact source `a502867`에서 공개하고 npm `latest`·Windows 전역 및 공개
 설치·문서 노출을 검증해 마감. `NAT-002–024`·`MRA-001–032`: `0.9.3` 제외. QA contributor
-추가 지시와 후속 명시적 승인 전 `0.9.3` 실행 금지.
+안희준의 Windows x64 설치·설정 검증 역할 등록 완료. 유지보수자의 후속 명시적 승인 전 `0.9.3` 실행 금지.
 `N10-002–011`: `0.10.0-test` 유지. 정식판 시험 lane 사용 금지.
