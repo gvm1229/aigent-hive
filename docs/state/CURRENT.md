@@ -2,8 +2,14 @@
 
 - 기준 branch: `develop`
 - product version: `0.9.0`
-- plan revision: `2.64`
-- 현재 milestone: `0.9.0` 최소 release trust 정리·usage onboarding·user projection purge 보정
+- plan revision: `2.65`
+- 현재 milestone: `0.9.0` 공개 뒤 미등록 project Wiki lint 호환 patch
+- `0.9.0` stable publication: candidate run `31561636239`, publication run `31562280178`,
+  annotated `v0.9.0`, normal GitHub Release, npm `latest=0.9.0`, Windows 전역 설치·validate·
+  release date `2026-08-12` 표시 PASS
+- 추가 회귀: 미등록 project의 `hive knowledge lint --target <project-root> --user-root <user-root>`는
+  project registry 거부. Global Wiki 자체는 `<target>=<user-root>`에서 PASS. `KAC-011–012`의
+  registered project·unregistered project·source workspace 분기와 immutable patch 게시 필요
 - Mandatory memory regression: `0.9.0-test.13` operational user guidance의 every-turn
   `hive knowledge remember`·receipt 규칙 부재, localized `knowledge-capture` route 의미 축소.
   `KAC-002–005` 전역 안내·세 host 공통 투영·localized 설명·의미 검증 보정 완료.
