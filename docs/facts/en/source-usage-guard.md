@@ -9,10 +9,11 @@ summary: "The installed guard applies only to configured Hive projects and the H
 tags: [guard, source, usage]
 aliases: ["Source quota safeguard"]
 sources:
+  - "repo:.github/workflows/ci.yml#sha256:bcba0d0f834f9e1e0dca81f465bb0337c5c4db83299c25d357f132f5a4cefd4d"
   - "repo:crates/hive-cli/src/usage_control.rs#sha256:06ce162411217587acab322726a197507bb179e318fc2b6157146e287ae3c15d"
   - "repo:docs/guides/source-usage-guard.md#sha256:c4c7f5f717627becc0636d1c7320eb227df844dc2ea5d837a79080c07c673197"
 links: [automatic-dispatch-guard, source-development, usage-guard-thresholds]
-reviewed_revision: "git:907d4f3a0487bd7b0a8a0118b466eaf030064cc2"
+reviewed_revision: "git:39569b7a2a7c67f8ab19010db8c4df32da470f86"
 status: active
 ---
 
@@ -23,5 +24,5 @@ The installed product is the sole usage-guard implementation. A configured Hive 
 uses the global threshold with user-root runtime state and no source `.hive/` files. A folder with
 only its own `AGENTS.md`, or an empty folder, is non-Hive: no enforcement, threshold mutation,
 session override, halt marker, or runtime file. Setup-free Hive Skills remain available there.
-Source development uses one task-start preflight and no Python watcher or repeated tool-boundary
-gate.
+Source development uses one task-start preflight and no Python watcher, repeated tool-boundary
+gate, or CI call to the removed source-guard test corpus.
