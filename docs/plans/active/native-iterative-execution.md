@@ -40,17 +40,13 @@
 
 ### B. Canonical protocol
 
-- [x] [NAT-006] Immutable event revision과 `EVENT-CURRENT.toml` 단일 linearization point
-  - Evidence: commits `5775764`·`51335ba`, no-follow immutable Markdown event 선행 게시와
-    `EVENT-CURRENT.toml` optimistic CAS, deterministic replay·stale head 거부 시험
+- [ ] [NAT-006] Immutable event revision과 `EVENT-CURRENT.toml` 단일 linearization point
 - [ ] [NAT-007] Run ACL·role assignment·single-action authority의 external trust root·Ed25519 발급·회수·one-time consume
 - [x] [NAT-008] `claim|launch-ack|heartbeat|lookup|non-launch-proof|cancel-ack|final-result` typed receipt schema
   - Evidence: commit `09700a0`, closed JSON Schema·semantic validation·duplicate/conflict/late receipt 시험
 - [x] [NAT-009] `reserved|prepared|claimed|dispatch-uncertain|acknowledged|running|cancel-requested|result-received|expired|quarantined` 전이 reducer
   - Evidence: commit `09700a0`, exact predecessor·epoch·authority consume·deterministic replay core 시험
-- [x] [NAT-010] Normal cancel event commit과 corrupt-head `EMERGENCY-CANCEL.toml` 승격·복구
-  - Evidence: commit `51335ba`, 정상 cancel epoch CAS·late receipt 격리와 손상 head 전용
-    인증 intent→predecessor replay→정상 cancel 승격→exact cleanup 구현
+- [ ] [NAT-010] Normal cancel event commit과 corrupt-head `EMERGENCY-CANCEL.toml` 승격·복구
 
 ### C. Core·CLI
 
@@ -58,15 +54,9 @@
   - Evidence: commit `09700a0`, priority·aging cap·not-before·budget·global backpressure·stable ID tie-break 시험
 - [x] [NAT-012] Lease fencing epoch·clock skew·not-before·budget reservation/refund·safe reclaim
   - Evidence: commit `09700a0`, fencing·rollback·expiry·atomic reserve·single refund core 시험
-- [x] [NAT-013] Event replay·snapshot·bounded segment·crash recovery와 derived projection rebuild
-  - Evidence: commit `51335ba`, 4096 event replay 상한·64 event snapshot·256 event segment,
-    `rebuild-projection` event와 deterministic `CONTROL.md`·`AUTHORITY.md` rebuild
-- [x] [NAT-014] `hive orchestration` status·plan·dispatch·receipt·cancel·recover·authority CLI
-  - Evidence: commits `5775764`·`51335ba`, 모든 mutation의 exact target·head·epoch·authority·
-    request digest 결합과 provider process spawn `0건`, Rust 430 test·strict Clippy PASS
-- [x] [NAT-015] Legacy `hive orchestration migrate --from-run ... --dry-run|--apply|--recover`와 원본 byte 불변
-  - Evidence: commit `51335ba`, dry-run mutation `0건`, deterministic 새 native run ID,
-    `RECOVERY.toml` staged/committed 복구와 전후 source inventory digest 동일성 검증
+- [ ] [NAT-013] Event replay·snapshot·bounded segment·crash recovery와 derived projection rebuild
+- [ ] [NAT-014] `hive orchestration` status·plan·dispatch·receipt·cancel·recover·authority CLI
+- [ ] [NAT-015] Legacy `hive orchestration migrate --from-run ... --dry-run|--apply|--recover`와 원본 byte 불변
 
 ### D. Host·Skill
 

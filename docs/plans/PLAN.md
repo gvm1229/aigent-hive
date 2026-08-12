@@ -1,6 +1,6 @@
 # Aigent Hive active plan index
 
-> Revision: 2.77
+> Revision: 2.76
 > 기준일: 2026-08-12
 > Product version: `0.9.1`
 > 현재 milestone: 비-`0.10.0` 계획 전수 완료와 `0.9.2` numbered test 수용
@@ -42,7 +42,7 @@
 | v0.9 global knowledge RAG | 20 | 0 | 100% |
 | v0.9 knowledge autocapture 회귀 | 12 | 0 | 100% |
 | v0.9 knowledge portability·scan | 18 | 0 | 100% |
-| Hive-native 반복 실행 | 12 | 12 | 50.0% |
+| Hive-native 반복 실행 | 7 | 17 | 29.2% |
 | Model-routed custom subagent | 3 | 29 | 9.4% |
 | Prompt refine 자동 routing | 12 | 0 | 100% |
 | v0.9 test 기능 마감 | 18 | 0 | 100% |
@@ -58,7 +58,7 @@
 | Agent 자율 실행 지속 | 8 | 0 | 100% |
 | `0.9.2` 시험판 선행 출시 자격 | 2 | 10 | 16.7% |
 | Notion `v0.10` 후보 | 1 | 10 | 9.1% |
-| **Canonical total** | **488** | **61** | **88.9%** |
+| **Canonical total** | **483** | **66** | **88.0%** |
 
 External production boundary 항목도 미완료 합계에 포함. Protected authority 없이 완료 처리 금지.
 

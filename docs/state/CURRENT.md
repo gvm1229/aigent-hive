@@ -2,11 +2,10 @@
 
 - 기준 branch: `develop`
 - product version: `0.9.1`
-- plan revision: `2.77`
+- plan revision: `2.76`
 - 현재 milestone: 비-`0.10.0` 계획 전수 완료와 `0.9.2` numbered test 수용
-- `0.9.2` stable 차단: 활성 계획 전수 대조 결과 `N10-002–011` 외 실제 미완료 51개.
-  Native 잔여 12개, model-routed 잔여 29개, `REL92-003–012` 10개의 구현·실기 증거 전까지
-  candidate 생성 금지
+- `0.9.2` stable 차단: 활성 계획 전수 대조 결과 `N10-002–011` 외 실제 미완료 55개.
+  `NAT-002–024` 23개와 `MRA-001–032` 32개의 구현·실기 증거 전까지 candidate 생성 금지
 - 출시 순서: source directive·ADR의 stable-as-test 금지 → 비-0.10 구현 완료 → full candidate →
   public `0.9.2-test.N` → Windows 실제 설치·fresh-session·성능·복구 수용 → 수정 시 다음 번호
   시험판 → 결함 `0건` 뒤 protected `main` stable publication
@@ -18,11 +17,6 @@
 - Native orchestration core 1차 완료: commit `09700a0`, `NAT-008–009`·`NAT-011–012` 완료.
   Typed receipt·deterministic reducer·priority/aging scheduler·fenced lease/budget와 Ed25519 authority
   검증 기반 추가. Event CAS persistence·authority issue/revoke·emergency cancel·CLI는 다음 concern
-- Native orchestration canonical control 완료: commits `5775764`·`51335ba`,
-  `NAT-006`·`NAT-010`·`NAT-013–015` 완료. Immutable Markdown event→head CAS,
-  external read-only Ed25519 root·signed authority ledger, normal/emergency cancel, bounded
-  replay·snapshot·segment·projection rebuild, separate-identity legacy migration 구현.
-  `NAT-007`은 run ACL·role assignment가 남아 있어 미완료 유지
 - `0.9.0` stable publication: candidate run `31561636239`, publication run `31562280178`,
   annotated `v0.9.0`, normal GitHub Release, npm `latest=0.9.0`, Windows 전역 설치·validate·
   release date `2026-08-12` 표시 PASS
