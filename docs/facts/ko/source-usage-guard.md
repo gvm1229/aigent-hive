@@ -9,10 +9,10 @@ summary: "설정 완료 Hive project와 Hive source에만 설치 guard 적용, n
 tags: [guard, source, usage]
 aliases: ["Source quota safeguard"]
 sources:
-  - "repo:crates/hive-cli/src/usage_control.rs#sha256:b5072a86240d87679c63a28568e1af75928367d037ddaa6af4cb9210bc4c2880"
+  - "repo:crates/hive-cli/src/usage_control.rs#sha256:06ce162411217587acab322726a197507bb179e318fc2b6157146e287ae3c15d"
   - "repo:docs/guides/source-usage-guard.md#sha256:c4c7f5f717627becc0636d1c7320eb227df844dc2ea5d837a79080c07c673197"
 links: [automatic-dispatch-guard, source-development, usage-guard-thresholds]
-reviewed_revision: "git:ced55f4d0b18b259c9b43e0f9622b6d617a65737"
+reviewed_revision: "git:907d4f3a0487bd7b0a8a0118b466eaf030064cc2"
 status: active
 ---
 
