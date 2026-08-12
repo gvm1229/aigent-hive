@@ -69,27 +69,8 @@ jobs:
           else
             echo "HIVE_BIN=$GITHUB_WORKSPACE/target/debug/hive" >> "$GITHUB_ENV"
           fi
-      - name: Run source usage-guard conformance corpus
-        if: matrix.lane == 'security' && runner.os != 'Windows'
-        run: >-
-          python -m unittest
-          tests.conformance.test_source_usage_guard
-          -v
-      - name: Run Windows source usage-guard compatibility regressions
-        if: matrix.lane == 'security' && runner.os == 'Windows'
-        run: >-
-          python -m unittest
-          tests.conformance.test_source_usage_guard.SourceUsageGuardTests.test_write_json_skips_unavailable_fchmod
-          tests.conformance.test_source_usage_guard.SourceUsageGuardTests.test_write_json_closes_descriptor_before_failed_write_cleanup
-          tests.conformance.test_source_usage_guard.SourceUsageGuardTests.test_windows_watcher_lease_read_skips_locked_first_byte
-          tests.conformance.test_source_usage_guard.SourceUsageGuardTests.test_gate_allows_clean_clone_without_omx_state
-          tests.conformance.test_source_usage_guard.SourceUsageGuardTests.test_session_disable_requires_confirmation
-          tests.conformance.test_source_usage_guard.SourceUsageGuardTests.test_disabled_gate_does_not_initialize_quota_sensor
-          -v
       - name: Run complete named conformance inventory
         run: python scripts/test-lanes.py --lane ${{ matrix.lane }}
-        env:
-          HIVE_WINDOWS_SOURCE_USAGE_GUARD_SUBSET: skip
 
   copier:
     name: Contract and Copier conformance
@@ -142,7 +123,6 @@ jobs:
             tests/fixtures/copier-hostile-data.yml
       - name: Enforce human documentation style contract
         run: |
-          python -m unittest tests.conformance.test_source_usage_guard -v
           python -m unittest tests.conformance.test_human_documentation_style -v
           python -m unittest tests.conformance.test_markdown_links -v
           python scripts/check-human-documentation-style.py --all --output json
