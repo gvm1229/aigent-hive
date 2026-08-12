@@ -15,6 +15,9 @@
 - 공개 문서 마감: root·번역 README의 시험판 직접 언급 `0건`, 별도 검증 안내 중립 링크 각
   `1건`. npm `0.9.2` tarball README도 직접 언급 `0건`·링크 `1건`; plugin developer
   `Hojin (Tom) Jeong`·공식 512 px logo 계약 PASS
+- Markdown 전용 후속 통합: Source Wiki·문체·링크·가장 가까운 packaging·directive 검사 PASS
+  뒤 관련 없는 전체 플랫폼 CI 대기 생략. 완료되지 않은 CI를 통과로 보고하지 않으며 새 시험판·
+  안정판 후보·tag·package publication 생성 없음
 - `0.9.3` 동결: QA contributor 추가 지시와 유지보수자의 후속 명시적 승인 전 구현·검증·출시 mutation `0건`
 - `0.9.2-test.1` 수용 거부: candidate run `31596919466`·publication run `31597939956`는
   통과했으나 GitHub prerelease에 direct installer 자산 3개가 누락되어 공개 설치 URL이 `404`를

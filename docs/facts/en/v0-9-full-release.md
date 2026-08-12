@@ -14,7 +14,7 @@ sources:
   - "repo:docs/decisions/ADR-0017-0.9-full-release.md#sha256:53314be9705bd61590992cae77cfcf96a9d823e7142821399e6411492de76e00"
   - "repo:docs/guides/release-update.md#sha256:f046e838fa7f44c6fa336fd089d4740c6f3f2a8ab8fb8a010e748f7b1d4bcd10"
   - "repo:docs/guides/release-verification-builds.md#sha256:e9490fbcdd337f9935957e641d73f834bdf602030d28c8c0808699a1606eb9d9"
-  - "repo:docs/plans/active/release-0.9.2-test-qualification.md#sha256:4efec44f39d2eaf46b1e734323557e6d300899329d99016bba32b7ca05b6d003"
+  - "repo:docs/plans/active/release-0.9.2-test-qualification.md#sha256:4f2a70872f851e7d2a767081db3c43e936d4a1a1e5de551e80593750ab19e6ac"
 links: [host-external-integrations, release-verification, test-distribution, version-policy]
 reviewed_revision: "git:a502867e6b20e8f22bc014af05ca678f211f40ed"
 status: active

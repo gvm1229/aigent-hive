@@ -69,7 +69,8 @@
 - [x] [REL92-012] `0.9.2` 완료 상태·정확한 공개 증거 기록. QA contributor 추가와
   유지보수자의 후속 명시적 승인 전 `0.9.3` 상태 `awaiting-user-authority`·구현 mutation `0건`
   - Evidence: `v0.9.2` exact source `a502867e6b20e8f22bc014af05ca678f211f40ed`, release
-    `https://github.com/gvm1229/aigent-hive/releases/tag/v0.9.2`; `0.9.3` 작업tree·branch mutation `0건`
+    `https://github.com/gvm1229/aigent-hive/releases/tag/v0.9.2`; `0.9.3` 작업tree·branch mutation `0건`.
+    게시 후 Markdown 전용 마감은 관련 로컬 문서 gate 통과 뒤 전체 플랫폼 CI 대기 없이 통합
 
 ## 중단 경계
 
