@@ -41,6 +41,11 @@ Enforce or control only the installed Hive usage policy and the current host ses
    a project override may only raise the stop threshold. Hive calculates the active threshold as
    the highest of the global threshold, the registered project override, and the installed
    project compatibility value. A disabled global guard disables every project.
+   Guard inactivity never disables setup-free Hive Skills. A quick answer, prompt refinement, or
+   user-root knowledge workflow may still run in a non-Hive folder without project setup and
+   without a usage preflight. If a separately selected workflow requires project state, that
+   workflow owns one clear setup approval and automated bootstrap; do not expose capability or run
+   prerequisites as usage-guard errors.
 7. Perform at most the explicitly requested control mutation:
    - A global threshold requires explicit global intent and an integer from 1 through 99:
 
