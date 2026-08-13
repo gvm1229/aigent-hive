@@ -36,6 +36,9 @@
 - Custom agent decision lifecycle: `e659d87`, `accept` prior 없음·`manual|revise`의 prior digest와
   동일 scope·exact prior request 검증, `--previous-request` 재추천. CLI 14·Copier/Rust parity 22·
   strict Clippy PASS, `MRA-025` 완료
+- Custom profile qualification 보강: `3344b5d`·`a86e9e4`, 13개 host lifecycle capability 각각의
+  fail-closed activation, Judge `explicit|implicit` schema·default·persisted round-trip·describe
+  contract 검증. custom-agent core 6·user-setup 41·strict Clippy PASS, `MRA-029` 완료
 - `0.9.2-test.1` 수용 거부: candidate run `31596919466`·publication run `31597939956`는
   통과했으나 GitHub prerelease에 direct installer 자산 3개가 누락되어 공개 설치 URL이 `404`를
   반환. 게시 workflow·회귀 보정 뒤 `0.9.2-test.2`부터 전체 공개 설치 수용 재수행

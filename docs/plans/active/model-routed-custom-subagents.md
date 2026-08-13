@@ -83,9 +83,9 @@
 - [ ] [MRA-010] Codex TOML projection·installed-version validation·fresh-session discovery
 - [ ] [MRA-011] Claude Markdown projection·installed-version validation·environment/allowlist conflict detection
 - [x] [MRA-012] Capability preflight와 unsupported·silent fallback·unverified alias fail-closed
-  - Evidence: commits `1a37c0a`·`8fdbba4`, exact host·최소 version·모든 required capability와
-    fresh-session evidence가 `supported`일 때만 허용, runtime attestation model·effort·digest
-    mismatch 거부, Rust core·CLI focused PASS
+  - Evidence: commits `1a37c0a`·`8fdbba4`·`3344b5d`, exact host·최소 version·13개 required
+    lifecycle capability와 fresh-session evidence가 `supported`일 때만 허용, runtime attestation
+    model·effort·digest mismatch 거부, Rust core·CLI focused PASS
 - [x] [MRA-013] Exact role·model·effort·scope·definition digest runtime attestation receipt
   - Evidence: commit `ed21b87`, closed attestation schema와 exact host·role·scope·model·effort·
     definition digest 결합, silent fallback mismatch 거부 시험
@@ -129,7 +129,11 @@
 
 ### E. Qualification·release gate
 
-- [ ] [MRA-029] Schema·precedence·digest·추천 decision·Judge invocation setup state unit/property test
+- [x] [MRA-029] Schema·precedence·digest·추천 decision·Judge invocation setup state unit/property test
+  - Evidence: commits `3344b5d`·`a86e9e4`, 13개 capability fail-closed table regression,
+    creation decision lineage·scope·digest tests, Judge `explicit|implicit` schema·default·persisted
+    round-trip·describe contract tests, focused user-setup 41 PASS·custom-agent core 6 PASS·strict
+    Clippy PASS
 - [ ] [MRA-030] Collision·Judge shadow/downgrade·signer/model mismatch·symlink·stale host·fallback·missing receipt hostile test
 - [ ] [MRA-031] 두 host·두 scope fresh-session E2E와 두 Judge mode·strict workflow 강제 gate·model mismatch fail-closed
 - [ ] [MRA-032] 사용자 guide·release note·bilingual fact·full Rust/Python/security/static gate와 `REL9-*` handoff
