@@ -77,7 +77,13 @@
 ### E. Qualification·activation
 
 - [ ] [NAT-021] Stale pointer·wrong session·100회 Stop no-op·cancel/guard 독립 접근 회귀 시험
-- [ ] [NAT-022] Ack loss·duplicate/late receipt·two-scheduler race·cancel-vs-consume·clock rollback property 시험
+  - 구현 증거: stale checkpoint의 `CURRENT.md` no-mutation, wrong usage session의 prepare
+    no-mutation, `Stop` neutral payload 100회 반복 회귀. cancel/guard의 selected pointer 독립
+    control-plane E2E는 host lifecycle 수용과 함께 계속 확인
+- [x] [NAT-022] Ack loss·duplicate/late receipt·two-scheduler race·cancel-vs-consume·clock rollback property 시험
+  - Evidence: `dispatch-uncertain`에서 authenticated non-launch proof 전 reprepare·final result
+    거부, duplicate/conflict receipt·late result·clock rollback/refund replay, concurrent prepare의
+    단일 executable response. core 9·loop CLI 20·strict Clippy PASS
 - [ ] [NAT-023] Team barrier·mailbox dedupe·path overlap·multi-goal budget·migration partial publish E2E
 - [ ] [NAT-024] Clean clone·세 host·보안·관찰성 gate 뒤 default activation 결정과 신규 OMX·OMC 경로 제거
 

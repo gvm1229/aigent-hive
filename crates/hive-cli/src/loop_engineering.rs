@@ -3197,6 +3197,46 @@ mod tests {
     }
 
     #[test]
+    fn wrong_usage_session_blocks_prepare_without_mutation() {
+        let fixture = fixture(CapabilitySupportLevel::Supported);
+        let capability_bytes = fs::read(&fixture.capability_path).expect("capability bytes");
+        let capability =
+            CapabilityResolution::parse_json(&capability_bytes).expect("capability resolution");
+        let envelope = UsageAuthorizationEnvelope {
+            schema_version: 1,
+            evidence_id: "usage-a".to_owned(),
+            run_id: RUN_ID.to_owned(),
+            base_graph_revision: 1,
+            base_graph_digest: digest("base"),
+            authorized_graph_revision: 2,
+            dispatch_kind: LoopDispatchKind::Node,
+            subject_node_id: Some("A".to_owned()),
+            attempt: Some(1),
+            brief_digest: digest("brief"),
+            decision: EvidenceResult::Allowed,
+            authenticated: true,
+            dispatch_authorization_locator: ".hive/runtime/dispatch-authorizations/a.json"
+                .to_owned(),
+            dispatch_authorization_digest: digest("authorization"),
+            usage_evidence_digest: digest("usage"),
+            session_id: "loop-session".to_owned(),
+            session_id_digest: digest("another-session"),
+            process_id: 4242,
+        };
+        let error = verify_usage_session_state(
+            &PinnedTarget::open(&fixture.target).expect("pinned target"),
+            &envelope,
+            &capability,
+        )
+        .expect_err("wrong session must block loop preparation");
+        assert!(error.message().contains("session binding is invalid"));
+        assert!(!fixture
+            .target
+            .join(".hive/runs/demo-run/graph/prepared")
+            .exists());
+    }
+
+    #[test]
     fn fresh_capability_drift_blocks_prepare_without_mutation() {
         let fixture = fixture(CapabilitySupportLevel::Supported);
         initialize_fixture(&fixture);

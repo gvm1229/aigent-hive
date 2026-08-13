@@ -2,7 +2,7 @@
 
 - 기준 branch: `codex/0.9.3-native-agents` (`develop` 통합 기준)
 - product version: `0.9.3` 개발 기준
-- plan revision: `2.80`
+- plan revision: `2.81`
 - 현재 milestone: `0.9.3` native iterative·custom subagent 구현·numbered public test 수용·정식 출시
 - 기능 기준: `2cec0377748874748d126b6b55e59975a3f20a02`; release discipline base `c777da1`
 - 제외: `NAT-002–024`·`MRA-001–032`의 `0.9.3`, `N10-002–011`의 `0.10.0-test`
@@ -49,6 +49,10 @@
   protected trust root를 요구하며, checkpoint와 재검증에서 same v2 Ed25519 quorum authenticated PASS를
   다시 확인. boolean authentication claim은 mutation 전 거부. loop focused 19·strict Clippy PASS;
   실제 signer와 Codex·Claude fresh-session workflow evidence 전 `MRA-021` 유지
+- Native orchestration receipt 시험: ACK 유실 `dispatch-uncertain`은 authenticated non-launch proof 전
+  재prepare·final result 거부. duplicate/conflict·late receipt·clock rollback·two-scheduler prepare
+  경쟁 회귀 통과로 `NAT-022` 완료. stale pointer·wrong session·Stop 100회 중립 응답도 고정,
+  cancel/guard control-plane E2E는 host lifecycle 수용과 함께 `NAT-021` 유지
 - 지식 Skill 표시 정비: 정본 ID `knowledge-capture|recall|import|promote|maintain` 유지. 한국어
   표시명은 기능명과 ID 병기, 설명 첫머리는 항상 `(정본-ID)`; 자동 기록은 대화 종료 전 나중 작업에
   도움 되는 사실·선호·방식 하나의 안전한 기록, import는 명시 대상 저장소 스캔으로 표현. Codex·Claude·

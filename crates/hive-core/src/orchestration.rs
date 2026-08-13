@@ -1047,6 +1047,73 @@ mod tests {
     }
 
     #[test]
+    fn lost_ack_stays_dispatch_uncertain_until_non_launch_proof() {
+        let mut state = ReducerState::default();
+        let reserve = event(
+            1,
+            EventKind::Reserve,
+            None,
+            DispatchState::Reserved,
+            None,
+            0,
+        );
+        let head = state.apply_event(&reserve).expect("reserve");
+        let prepare = event(
+            2,
+            EventKind::Prepare,
+            Some(DispatchState::Reserved),
+            DispatchState::Prepared,
+            Some(head),
+            0,
+        );
+        let head = state.apply_event(&prepare).expect("prepare");
+        let claim = event(
+            3,
+            EventKind::Claim,
+            Some(DispatchState::Prepared),
+            DispatchState::Claimed,
+            Some(head),
+            0,
+        );
+        let head = state.apply_event(&claim).expect("claim");
+        let uncertain = event(
+            4,
+            EventKind::MarkDispatchUncertain,
+            Some(DispatchState::Claimed),
+            DispatchState::DispatchUncertain,
+            Some(head),
+            0,
+        );
+        let head = state.apply_event(&uncertain).expect("uncertain");
+
+        let reprepare = event(
+            5,
+            EventKind::Prepare,
+            Some(DispatchState::DispatchUncertain),
+            DispatchState::Prepared,
+            Some(head.clone()),
+            0,
+        );
+        assert_eq!(
+            state.apply_event(&reprepare),
+            Err(OrchestrationError::IllegalTransition)
+        );
+
+        let mut result = valid_receipt(ReceiptKind::FinalResult);
+        result.native_task_id = Some("native-1".to_owned());
+        result.outcome = Some("succeeded".to_owned());
+        result.evidence_locator = Some("evidence/result.json".to_owned());
+        assert_eq!(
+            state.bind_receipt(&result),
+            Err(OrchestrationError::IllegalTransition)
+        );
+
+        let proof = valid_receipt(ReceiptKind::NonLaunchProof);
+        assert_eq!(state.bind_receipt(&proof), Ok(ReceiptDisposition::Accepted));
+        assert_eq!(state.state, Some(DispatchState::DispatchUncertain));
+    }
+
+    #[test]
     fn exact_duplicate_receipt_is_noop_and_conflict_quarantines() {
         let mut state = ReducerState {
             state: Some(DispatchState::Prepared),

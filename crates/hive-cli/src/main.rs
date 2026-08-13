@@ -1477,7 +1477,7 @@ fn emit_action_result(result: &ActionResult) -> ExitCode {
 fn run_hook(arguments: &[String]) -> ExitCode {
     let stop_requested = requested_event(arguments).as_deref() == Some("Stop");
     if stop_requested {
-        println!("{{\"schema_version\":1,\"decision\":\"allow\",\"active\":false}}");
+        println!("{}", neutral_stop_hook_payload());
         return ExitCode::SUCCESS;
     }
     match parse_hook(arguments) {
@@ -1545,6 +1545,10 @@ fn run_hook(arguments: &[String]) -> ExitCode {
             ExitCode::SUCCESS
         }
     }
+}
+
+fn neutral_stop_hook_payload() -> &'static str {
+    "{\"schema_version\":1,\"decision\":\"allow\",\"active\":false}"
 }
 
 fn read_hook_input(path: Option<&Path>, event: &str) -> Result<HookInput, RenderError> {
@@ -2009,9 +2013,9 @@ fn check_target(target: &Path) -> Result<(), String> {
 mod tests {
     use super::{
         execute_hook_capability, failure_result_for, is_help_request, mark_derived_state_stale,
-        normalize_hook_path, parse_hook, parse_setup, parse_usage, probe_native_usage,
-        reconcile_project_registry, run_human, version_output_for, wants_json, ActionResult,
-        HookInput, ParsedUsageArguments, SETUP_USAGE, USAGE,
+        neutral_stop_hook_payload, normalize_hook_path, parse_hook, parse_setup, parse_usage,
+        probe_native_usage, reconcile_project_registry, run_human, version_output_for, wants_json,
+        ActionResult, HookInput, ParsedUsageArguments, SETUP_USAGE, USAGE,
     };
     use hive_render::{RenderError, ResolvedProjectPreferences, SetupMode};
     use std::fs;
@@ -2108,6 +2112,18 @@ mod tests {
         assert!(arguments.input.is_none());
         assert!(arguments.capabilities.is_none());
         assert!(USAGE.contains("[--capabilities <fresh-json>]"));
+    }
+
+    #[test]
+    fn stop_hook_is_neutral_for_one_hundred_repeated_calls() {
+        let before = neutral_stop_hook_payload();
+        for _ in 0..100 {
+            assert_eq!(neutral_stop_hook_payload(), before);
+        }
+        let payload: serde_json::Value = serde_json::from_str(before).expect("neutral JSON");
+        assert_eq!(payload["decision"], "allow");
+        assert_eq!(payload["active"], false);
+        assert!(payload.get("changed_paths").is_none());
     }
 
     #[test]
