@@ -5,6 +5,7 @@
 //! external runtime.
 
 use super::{emit_action_result, ActionResult, Evidence};
+use crate::judge::verify_authenticated_loop_quorum;
 use crate::run::{
     parse_options, portable_relative_path, read_explicit_file, required, run_path, AdapterError,
     FileSnapshot, PinnedTarget,
@@ -180,6 +181,12 @@ struct VerifierEnvelope {
     authority: VerificationAuthority,
     result: EvidenceResult,
     authenticated: bool,
+    #[serde(default)]
+    judge_quorum_request: Option<String>,
+    #[serde(default)]
+    judge_quorum_request_digest: Option<String>,
+    #[serde(default)]
+    judge_trust_root: Option<PathBuf>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -1174,7 +1181,7 @@ fn verify_new_evidence(
                 verify_usage_envelope(&bytes, item, previous, candidate, &previous_digest)?;
             }
             EvidenceKind::IndependentVerification => {
-                verify_verifier_envelope(&bytes, item, candidate)?;
+                verify_verifier_envelope(target, &bytes, item, candidate)?;
             }
             EvidenceKind::SteeringAuthorization => {
                 verify_steering_envelope(&bytes, item, previous, candidate, &previous_digest)?;
@@ -1237,7 +1244,7 @@ fn verify_current_evidence_files(
                 verify_usage_envelope(&bytes, evidence, previous, revision, &previous_digest)?;
             }
             EvidenceKind::IndependentVerification => {
-                verify_verifier_envelope(&bytes, evidence, current)?;
+                verify_verifier_envelope(target, &bytes, evidence, current)?;
             }
             EvidenceKind::SteeringAuthorization => {
                 let revision = chain.document_at(evidence.graph_revision).ok_or_else(|| {
@@ -1327,20 +1334,13 @@ fn verify_usage_envelope(
 }
 
 fn verify_verifier_envelope(
+    target: &PinnedTarget,
     bytes: &[u8],
     evidence: &hive_core::loop_graph::LoopEvidence,
     candidate: &LoopGraphDocument,
 ) -> Result<(), LoopCliError> {
     let envelope: VerifierEnvelope = parse_json(bytes, "independent verifier envelope")?;
-    if envelope.authority == VerificationAuthority::Judge {
-        return Err(AdapterError::Unsupported(
-            "judge loop evidence requires a reusable authenticated quorum artifact; a boolean authentication claim is insufficient"
-                .to_owned(),
-        )
-        .into());
-    }
-    if envelope.schema_version != 1
-        || envelope.evidence_id != evidence.id
+    if envelope.evidence_id != evidence.id
         || envelope.run_id != candidate.graph().run_id
         || envelope.graph_revision != evidence.graph_revision
         || Some(envelope.node_id.as_str()) != evidence.subject_node_id.as_deref()
@@ -1350,7 +1350,6 @@ fn verify_verifier_envelope(
         || Some(envelope.authority) != evidence.verification_authority
         || envelope.result != evidence.result
         || envelope.authenticated != evidence.authenticated
-        || envelope.authenticated
         || envelope.producer_role_id == envelope.verifier_role_id
     {
         return Err(AdapterError::Verification(format!(
@@ -1358,6 +1357,66 @@ fn verify_verifier_envelope(
             evidence.id
         ))
         .into());
+    }
+    match envelope.authority {
+        VerificationAuthority::Deterministic => {
+            if envelope.schema_version != 1
+                || envelope.authenticated
+                || envelope.judge_quorum_request.is_some()
+                || envelope.judge_quorum_request_digest.is_some()
+                || envelope.judge_trust_root.is_some()
+            {
+                return Err(AdapterError::Verification(format!(
+                    "deterministic verifier envelope has Judge-only fields: {}",
+                    evidence.id
+                ))
+                .into());
+            }
+        }
+        VerificationAuthority::Judge => {
+            let Some(request_locator) = envelope.judge_quorum_request.as_deref() else {
+                return Err(AdapterError::Verification(
+                    "judge verifier envelope is missing its quorum request".to_owned(),
+                )
+                .into());
+            };
+            let Some(request_digest) = envelope.judge_quorum_request_digest.as_deref() else {
+                return Err(AdapterError::Verification(
+                    "judge verifier envelope is missing its quorum request digest".to_owned(),
+                )
+                .into());
+            };
+            let Some(trust_root) = envelope.judge_trust_root.as_deref() else {
+                return Err(AdapterError::Verification(
+                    "judge verifier envelope is missing its external trust root".to_owned(),
+                )
+                .into());
+            };
+            if envelope.schema_version != 2 || !envelope.authenticated {
+                return Err(AdapterError::Verification(
+                    "judge verifier envelope must be schema version 2 and authenticated".to_owned(),
+                )
+                .into());
+            }
+            require_digest(request_digest, "judge quorum request digest")?;
+            let request_path = evidence_locator(&candidate.graph().run_id, request_locator)?;
+            let request_bytes = target.read_required(&request_path, MAX_EVIDENCE_FILE_BYTES)?;
+            if sha256_digest(&request_bytes) != request_digest {
+                return Err(AdapterError::Verification(
+                    "judge quorum request changed after verifier evidence was created".to_owned(),
+                )
+                .into());
+            }
+            let subject_id = format!(
+                "hive-loop:{}:{}:{}:{}:{}",
+                candidate.graph().run_id,
+                evidence.graph_revision,
+                envelope.node_id,
+                envelope.attempt,
+                evidence.id,
+            );
+            verify_authenticated_loop_quorum(target, &request_path, trust_root, &subject_id)?;
+        }
     }
     Ok(())
 }
@@ -3455,6 +3514,53 @@ mod tests {
             fs::read(current_path).expect("current after"),
             current_before
         );
+    }
+
+    #[test]
+    fn judge_verifier_boolean_claim_without_quorum_is_rejected_without_mutation() {
+        let fixture = fixture(CapabilitySupportLevel::Supported);
+        let evidence = LoopEvidence {
+            id: "judge-verify-a".to_owned(),
+            kind: EvidenceKind::IndependentVerification,
+            result: EvidenceResult::Passed,
+            graph_revision: 1,
+            subject_node_id: Some("A".to_owned()),
+            attempt: Some(1),
+            producer_role_id: Some("exec-a".to_owned()),
+            verifier_role_id: Some("verify-a".to_owned()),
+            verification_authority: Some(VerificationAuthority::Judge),
+            locator: format!(".hive/runs/{RUN_ID}/evidence/judge-verify-a.json"),
+            digest: digest("judge-verify-a"),
+            authenticated: true,
+        };
+        let envelope = serde_json::to_vec(&json!({
+            "schema_version": 2,
+            "evidence_id": evidence.id,
+            "run_id": RUN_ID,
+            "graph_revision": 1,
+            "node_id": "A",
+            "attempt": 1,
+            "producer_role_id": "exec-a",
+            "verifier_role_id": "verify-a",
+            "authority": "judge",
+            "result": "passed",
+            "authenticated": true,
+        }))
+        .expect("judge verifier envelope");
+        let error = verify_verifier_envelope(
+            &PinnedTarget::open(&fixture.target).expect("pinned target"),
+            &envelope,
+            &evidence,
+            &fixture.initial,
+        )
+        .expect_err("boolean Judge claim must not be accepted");
+        assert!(error
+            .message()
+            .contains("judge verifier envelope is missing its quorum request"));
+        assert!(!fixture
+            .target
+            .join(".hive/runs/demo-run/graph/CURRENT.md")
+            .exists());
     }
 
     #[test]

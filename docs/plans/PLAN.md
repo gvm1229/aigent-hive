@@ -1,6 +1,6 @@
 # Aigent Hive active plan index
 
-> Revision: 2.79
+> Revision: 2.80
 > 기준일: 2026-08-13
 > Product version: `0.9.3` 개발 기준
 > 현재 milestone: `0.9.3` native iterative·custom subagent 구현·numbered public test 수용·정식 출시

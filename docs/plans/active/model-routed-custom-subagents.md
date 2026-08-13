@@ -104,6 +104,11 @@
   - Evidence: commits `09700a0`·`b6679a6`·`ed21b87`, evidence reducer와 terminal Judge gate를
     분리하고 model attestation을 verdict provenance로만 처리
 - [ ] [MRA-021] Spec→route→implement→verify→Judge→Ed25519 quorum→accept workflow·외부 signer 경계
+  - 구현 증거: `judge.rs`의 재사용 quorum evaluator와 loop verifier schema v2 결합. exact
+    run·revision·node·attempt·evidence subject, quorum request digest, target 밖 protected trust
+    root, authenticated PASS를 모두 다시 검증하며 boolean authentication claim은 mutation 전 거부.
+  - 완료 전제: 실제 external signer의 authenticated PASS artifact와 Codex·Claude fresh-session
+    workflow acceptance
 - [x] [MRA-022] `explicit|implicit` setup·자연어 변경·strict terminal Judge·일반 task false-positive exclusion
   - Evidence: `JudgeInvocationPolicy`의 closed explicit·implicit 정책, strict terminal gate와 material-risk 허용 행렬, simple·read-only·format·scheduler·heartbeat·retry·deterministic failure·unsupported host 거부. user-setup persisted round-trip와 prompt projection, core 6·CLI 42 focused PASS
 

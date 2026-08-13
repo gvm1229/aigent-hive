@@ -2,7 +2,7 @@
 
 - 기준 branch: `codex/0.9.3-native-agents` (`develop` 통합 기준)
 - product version: `0.9.3` 개발 기준
-- plan revision: `2.79`
+- plan revision: `2.80`
 - 현재 milestone: `0.9.3` native iterative·custom subagent 구현·numbered public test 수용·정식 출시
 - 기능 기준: `2cec0377748874748d126b6b55e59975a3f20a02`; release discipline base `c777da1`
 - 제외: `NAT-002–024`·`MRA-001–032`의 `0.9.3`, `N10-002–011`의 `0.10.0-test`
@@ -45,6 +45,10 @@
 - Judge invocation policy: `explicit`은 strict terminal Judge만, `implicit`은 material-risk route만
   허용. simple·read-only·format·scheduler·heartbeat·retry·결정적 실패·unsupported host는 모두 거부.
   설정 persistence·natural-language projection과 core 6·user-setup 42 focused PASS, `MRA-022` 완료
+- Judge loop quorum 결합: verifier envelope v2는 exact loop subject·quorum request digest·target 밖
+  protected trust root를 요구하며, checkpoint와 재검증에서 same v2 Ed25519 quorum authenticated PASS를
+  다시 확인. boolean authentication claim은 mutation 전 거부. loop focused 19·strict Clippy PASS;
+  실제 signer와 Codex·Claude fresh-session workflow evidence 전 `MRA-021` 유지
 - 지식 Skill 표시 정비: 정본 ID `knowledge-capture|recall|import|promote|maintain` 유지. 한국어
   표시명은 기능명과 ID 병기, 설명 첫머리는 항상 `(정본-ID)`; 자동 기록은 대화 종료 전 나중 작업에
   도움 되는 사실·선호·방식 하나의 안전한 기록, import는 명시 대상 저장소 스캔으로 표현. Codex·Claude·
