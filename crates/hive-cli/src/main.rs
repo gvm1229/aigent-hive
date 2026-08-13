@@ -21,6 +21,7 @@ use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 use std::time::{SystemTime, UNIX_EPOCH};
 
+mod custom_agent_cli;
 mod discord;
 mod judge;
 mod knowledge;
@@ -201,6 +202,7 @@ fn main() -> ExitCode {
         Some("hook") => run_hook(&arguments[1..]),
         Some("usage") => run_usage(&arguments[1..]),
         Some("role") => role::run_role(&arguments[1..]),
+        Some("agent") => custom_agent_cli::run(&arguments[1..]),
         Some("run") => run::run_run(&arguments[1..]),
         Some("loop") => loop_engineering::run_loop(&arguments[1..]),
         Some("orchestration") => orchestration::run(&arguments[1..]),
