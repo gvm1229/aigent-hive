@@ -132,6 +132,12 @@ marker_start = "<!-- AIGENT-HIVE:START -->"
 marker_end = "<!-- AIGENT-HIVE:END -->"
 
 [[paths]]
+pattern = ".prettierignore"
+ownership = "shared-marker"
+marker_start = "# AIGENT-HIVE:FORMAT:START"
+marker_end = "# AIGENT-HIVE:FORMAT:END"
+
+[[paths]]
 pattern = ".agents/directives/*"
 ownership = "hive-directive-projection"
 source = "release-directive-projection"

@@ -131,7 +131,7 @@ skills:
   consent_digest: null
 - name: project-setup
   source_type: built-in
-  content_digest: sha256:376242cfffb02880c994804d608a176bfbdef3e57d2f40493a86cdf5405f798e
+  content_digest: sha256:03cffa6a854a243c94ae0f67b358b5049f68289ca0b0c1ee236f60788246c67a
   side_effect_class: project-write
   capabilities:
   - filesystem-read

@@ -26,6 +26,9 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 const BASE_PATH: &str = ".hive/config/project-base.json";
 const OVERRIDES_PATH: &str = ".hive/config/project-overrides.json";
+const FORMATTER_IGNORE_PATH: &str = ".prettierignore";
+const FORMATTER_MARKER_START: &str = "# AIGENT-HIVE:FORMAT:START";
+const FORMATTER_MARKER_END: &str = "# AIGENT-HIVE:FORMAT:END";
 const JOURNAL_PATH: &str = ".hive/runtime/project-upgrade-journal.json";
 const LEGACY_DERIVED_INDEX_PATHS: [&str; 4] = [
     ".hive/index/hive.sqlite3",
@@ -659,7 +662,7 @@ fn materialize_final(
         )));
     };
     let current = read_full_optional(target, Path::new(path))?.unwrap_or_default();
-    replace_marker(&current, marker).map(Some)
+    replace_marker(path, &current, marker).map(Some)
 }
 
 fn read_mergeable(target: &Dir, path: &str) -> Result<Option<Vec<u8>>, UpdateError> {
@@ -667,21 +670,28 @@ fn read_mergeable(target: &Dir, path: &str) -> Result<Option<Vec<u8>>, UpdateErr
         return Ok(None);
     };
     if is_shared(path) {
-        extract_marker(&bytes).map(Some)
+        if path == FORMATTER_IGNORE_PATH
+            && !bytes
+                .windows(FORMATTER_MARKER_START.len())
+                .any(|window| window == FORMATTER_MARKER_START.as_bytes())
+            && !bytes
+                .windows(FORMATTER_MARKER_END.len())
+                .any(|window| window == FORMATTER_MARKER_END.as_bytes())
+        {
+            return Ok(None);
+        }
+        extract_marker(path, &bytes).map(Some)
     } else {
         Ok(Some(bytes))
     }
 }
 
-fn extract_marker(bytes: &[u8]) -> Result<Vec<u8>, UpdateError> {
+fn extract_marker(path: &str, bytes: &[u8]) -> Result<Vec<u8>, UpdateError> {
+    let (start_marker, end_marker) = marker_bounds(path)?;
     let text = std::str::from_utf8(bytes)
         .map_err(|_| UpdateError::Conflict("shared guidance is not UTF-8".to_owned()))?;
-    let starts = text
-        .match_indices("<!-- AIGENT-HIVE:START -->")
-        .collect::<Vec<_>>();
-    let ends = text
-        .match_indices("<!-- AIGENT-HIVE:END -->")
-        .collect::<Vec<_>>();
+    let starts = text.match_indices(start_marker).collect::<Vec<_>>();
+    let ends = text.match_indices(end_marker).collect::<Vec<_>>();
     if starts.len() != 1 || ends.len() != 1 || starts[0].0 >= ends[0].0 {
         return Err(UpdateError::Conflict(
             "shared guidance has missing, duplicate, nested, or malformed Hive markers".to_owned(),
@@ -693,18 +703,15 @@ fn extract_marker(bytes: &[u8]) -> Result<Vec<u8>, UpdateError> {
     Ok(marker)
 }
 
-fn replace_marker(current: &[u8], marker: &[u8]) -> Result<Vec<u8>, UpdateError> {
+fn replace_marker(path: &str, current: &[u8], marker: &[u8]) -> Result<Vec<u8>, UpdateError> {
     if current.is_empty() {
         return Ok(marker.to_vec());
     }
     let text = std::str::from_utf8(current)
         .map_err(|_| UpdateError::Conflict("shared guidance is not UTF-8".to_owned()))?;
-    let starts = text
-        .match_indices("<!-- AIGENT-HIVE:START -->")
-        .collect::<Vec<_>>();
-    let ends = text
-        .match_indices("<!-- AIGENT-HIVE:END -->")
-        .collect::<Vec<_>>();
+    let (start_marker, end_marker) = marker_bounds(path)?;
+    let starts = text.match_indices(start_marker).collect::<Vec<_>>();
+    let ends = text.match_indices(end_marker).collect::<Vec<_>>();
     if starts.is_empty() && ends.is_empty() {
         let mut output = current.to_vec();
         if !output.ends_with(b"\n") {
@@ -728,7 +735,22 @@ fn replace_marker(current: &[u8], marker: &[u8]) -> Result<Vec<u8>, UpdateError>
 }
 
 fn is_shared(path: &str) -> bool {
-    matches!(path, "AGENTS.md" | "CLAUDE.md" | "GEMINI.md")
+    matches!(
+        path,
+        "AGENTS.md" | "CLAUDE.md" | "GEMINI.md" | FORMATTER_IGNORE_PATH
+    )
+}
+
+fn marker_bounds(path: &str) -> Result<(&'static str, &'static str), UpdateError> {
+    match path {
+        "AGENTS.md" | "CLAUDE.md" | "GEMINI.md" => {
+            Ok(("<!-- AIGENT-HIVE:START -->", "<!-- AIGENT-HIVE:END -->"))
+        }
+        FORMATTER_IGNORE_PATH => Ok((FORMATTER_MARKER_START, FORMATTER_MARKER_END)),
+        _ => Err(UpdateError::Verification(format!(
+            "unsupported shared marker path: {path}"
+        ))),
+    }
 }
 
 fn validate_merge_path(path: &Path) -> Result<(), UpdateError> {
@@ -3299,7 +3321,7 @@ mod tests {
     fn marker_free_shared_guidance_appends_without_changing_foreign_bytes() {
         let foreign = b"# Foreign\r\n<!-- omx:block -->\r\n";
         let marker = b"<!-- AIGENT-HIVE:START -->\n# Hive\n<!-- AIGENT-HIVE:END -->\n";
-        let merged = replace_marker(foreign, marker).expect("marker append");
+        let merged = replace_marker("AGENTS.md", foreign, marker).expect("marker append");
         assert!(merged.starts_with(foreign));
         assert!(merged.ends_with(marker));
         assert_eq!(
@@ -3372,7 +3394,7 @@ mod tests {
             b"<!-- AIGENT-HIVE:END --><!-- AIGENT-HIVE:START -->".as_slice(),
         ] {
             assert!(matches!(
-                extract_marker(bytes),
+                extract_marker("AGENTS.md", bytes),
                 Err(UpdateError::Conflict(_))
             ));
         }

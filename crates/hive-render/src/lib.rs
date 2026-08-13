@@ -29,6 +29,10 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 const MARKER_START: &str = "<!-- AIGENT-HIVE:START -->";
 const MARKER_END: &str = "<!-- AIGENT-HIVE:END -->";
+const FORMATTER_MARKER_START: &str = "# AIGENT-HIVE:FORMAT:START";
+const FORMATTER_MARKER_END: &str = "# AIGENT-HIVE:FORMAT:END";
+const FORMATTER_IGNORE: &str = "# AIGENT-HIVE:FORMAT:START\n.agents/skills/\n.agents/directives/\n.claude/skills/\n.hive/config/active-skills.yml\n.hive/config/approved-skills.yml\n.hive/config/capability-resolution.yml\n.hive/config/project-base.json\n.hive/config/project-overrides.json\n.hive/team/roles/\n# AIGENT-HIVE:FORMAT:END\n";
+const PROJECT_OVERRIDES_PATH: &str = ".hive/config/project-overrides.json";
 const SETUP_SCHEMA: &str = include_str!("../../../schemas/setup-answers.schema.json");
 const ROLE_SCHEMA: &str = include_str!("../../../schemas/role-profile.schema.json");
 const CAPABILITY_SCHEMA: &str = include_str!("../../../schemas/capability-matrix.schema.json");
@@ -758,6 +762,24 @@ struct OwnershipEntry {
     marker_start: Option<String>,
     #[serde(default)]
     marker_end: Option<String>,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+struct ProjectOverrideLedger {
+    schema_version: u32,
+    product_version: String,
+    files: Vec<ProjectOverrideFile>,
+    ledger_digest: String,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+struct ProjectOverrideFile {
+    path: String,
+    base_digest: String,
+    local_digest: String,
+    omitted_incoming_hunks: usize,
 }
 
 /// Execute deterministic setup or installed-tree validation.
@@ -3024,6 +3046,12 @@ fn render_tree_with_preferences<T: TargetRead + ?Sized>(
         let merged = merge_shared_marker(target, Path::new(adapter), marker.as_bytes())?;
         files.insert(PathBuf::from(adapter), merged);
     }
+    let formatter = merge_shared_marker(
+        target,
+        Path::new(".prettierignore"),
+        FORMATTER_IGNORE.as_bytes(),
+    )?;
+    files.insert(PathBuf::from(".prettierignore"), formatter);
     render_roles(target, answers, reconfigure_roles, &mut files)?;
     let base = render_project_base(&files)?;
     files.insert(PathBuf::from(".hive/config/project-base.json"), base);
@@ -3052,8 +3080,8 @@ fn project_upgrade_files(
         let content =
             if is_hive_skill_projection_path(path) || is_hive_directive_projection_path(path) {
                 bytes.clone()
-            } else if matches!(path.to_str(), Some("AGENTS.md" | "CLAUDE.md" | "GEMINI.md")) {
-                extract_exact_marker(bytes)?
+            } else if is_shared_marker_path(path) {
+                extract_exact_marker(path, bytes)?
             } else {
                 continue;
             };
@@ -3071,7 +3099,7 @@ fn render_project_base(files: &BTreeMap<PathBuf, Vec<u8>>) -> Result<Vec<u8>, Re
     for (path, bytes) in mergeable {
         let content = String::from_utf8(bytes.clone())
             .map_err(|_| RenderError::Internal(format!("project base is not UTF-8: {path}")))?;
-        let kind = if matches!(path.as_str(), "AGENTS.md" | "CLAUDE.md" | "GEMINI.md") {
+        let kind = if is_shared_marker_path(Path::new(&path)) {
             "shared-marker"
         } else if path.contains("/skills/") {
             "skill"
@@ -3105,18 +3133,19 @@ fn render_project_base(files: &BTreeMap<PathBuf, Vec<u8>>) -> Result<Vec<u8>, Re
     Ok(bytes)
 }
 
-fn extract_exact_marker(bytes: &[u8]) -> Result<Vec<u8>, RenderError> {
+fn extract_exact_marker(relative: &Path, bytes: &[u8]) -> Result<Vec<u8>, RenderError> {
+    let (marker_start, marker_end) = shared_marker_bounds(relative)?;
     let text = std::str::from_utf8(bytes)
         .map_err(|_| RenderError::Conflict("shared guidance is not UTF-8".to_owned()))?;
-    let start = text.find(MARKER_START).ok_or_else(|| {
+    let start = text.find(marker_start).ok_or_else(|| {
         RenderError::Conflict("shared guidance is missing Hive marker".to_owned())
     })?;
-    let rest = &text[start + MARKER_START.len()..];
-    let end_offset = rest.find(MARKER_END).ok_or_else(|| {
+    let rest = &text[start + marker_start.len()..];
+    let end_offset = rest.find(marker_end).ok_or_else(|| {
         RenderError::Conflict("shared guidance has an unterminated Hive marker".to_owned())
     })?;
-    if rest[end_offset + MARKER_END.len()..].contains(MARKER_START)
-        || text[..start].contains(MARKER_END)
+    if rest[end_offset + marker_end.len()..].contains(marker_start)
+        || text[..start].contains(marker_end)
     {
         return Err(RenderError::Conflict(
             "shared guidance contains malformed Hive markers".to_owned(),
@@ -3483,8 +3512,9 @@ fn merge_shared_marker<T: TargetRead + ?Sized>(
     let Some(existing) = read_target_optional(target, relative)? else {
         return Ok(marker.to_vec());
     };
-    let start = MARKER_START.as_bytes();
-    let end = MARKER_END.as_bytes();
+    let (marker_start, marker_end) = shared_marker_bounds(relative)?;
+    let start = marker_start.as_bytes();
+    let end = marker_end.as_bytes();
     let starts = find_all(&existing, start);
     let ends = find_all(&existing, end);
     if starts.is_empty() && ends.is_empty() {
@@ -3500,7 +3530,7 @@ fn merge_shared_marker<T: TargetRead + ?Sized>(
     }
     if starts.len() != 1 || ends.len() != 1 || starts[0] >= ends[0] {
         return Err(RenderError::Conflict(
-            "shared AGENTS.md contains malformed or nested Hive markers".to_owned(),
+            "shared Hive file contains malformed or nested Hive markers".to_owned(),
         ));
     }
     let end_offset = ends[0] + end.len();
@@ -3509,6 +3539,24 @@ fn merge_shared_marker<T: TargetRead + ?Sized>(
     merged.extend_from_slice(marker.strip_suffix(b"\n").unwrap_or(marker));
     merged.extend_from_slice(&existing[end_offset..]);
     Ok(merged)
+}
+
+fn is_shared_marker_path(relative: &Path) -> bool {
+    matches!(
+        relative.to_str(),
+        Some("AGENTS.md" | "CLAUDE.md" | "GEMINI.md" | ".prettierignore")
+    )
+}
+
+fn shared_marker_bounds(relative: &Path) -> Result<(&'static str, &'static str), RenderError> {
+    match relative.to_str() {
+        Some("AGENTS.md" | "CLAUDE.md" | "GEMINI.md") => Ok((MARKER_START, MARKER_END)),
+        Some(".prettierignore") => Ok((FORMATTER_MARKER_START, FORMATTER_MARKER_END)),
+        _ => Err(RenderError::Internal(format!(
+            "unsupported shared marker path: {}",
+            relative.display()
+        ))),
+    }
 }
 
 /// Return a digest of the bytes outside the single Hive-owned marker block.
@@ -3522,22 +3570,91 @@ fn merge_shared_marker<T: TargetRead + ?Sized>(
 /// Returns a conflict when the byte stream contains unmatched, duplicated, or
 /// nested Hive marker delimiters.
 pub fn shared_marker_foreign_digest(bytes: &[u8]) -> Result<String, RenderError> {
-    let start = MARKER_START.as_bytes();
-    let end = MARKER_END.as_bytes();
+    shared_marker_foreign_digest_for_path(Path::new("AGENTS.md"), bytes)
+}
+
+/// Return a digest of the bytes outside the exact Hive marker for a supported
+/// shared projection path.
+///
+/// # Errors
+///
+/// Returns an error for an unsupported shared path or malformed markers.
+pub fn shared_marker_foreign_digest_for_path(
+    relative: &Path,
+    bytes: &[u8],
+) -> Result<String, RenderError> {
+    shared_marker_foreign_digest_at(relative, bytes)
+}
+
+fn shared_marker_foreign_digest_at(relative: &Path, bytes: &[u8]) -> Result<String, RenderError> {
+    let (start_marker, end_marker) = shared_marker_bounds(relative)?;
+    let start = start_marker.as_bytes();
+    let end = end_marker.as_bytes();
     let starts = find_all(bytes, start);
     let ends = find_all(bytes, end);
     if starts.is_empty() && ends.is_empty() {
         return Ok(sha256_digest(bytes));
     }
     if starts.len() != 1 || ends.len() != 1 || starts[0] >= ends[0] {
-        return Err(RenderError::Conflict(
-            "shared AGENTS.md contains malformed or nested Hive markers".to_owned(),
-        ));
+        return Err(RenderError::Conflict(format!(
+            "shared Hive file contains malformed or nested markers: {}",
+            relative.display()
+        )));
     }
     let mut foreign = Vec::with_capacity(bytes.len());
     foreign.extend_from_slice(&bytes[..starts[0]]);
     foreign.extend_from_slice(&bytes[ends[0] + end.len()..]);
     Ok(sha256_digest(&foreign))
+}
+
+fn shared_marker_matches(
+    relative: &Path,
+    current: &[u8],
+    expected: &[u8],
+) -> Result<bool, RenderError> {
+    let (start_marker, end_marker) = shared_marker_bounds(relative)?;
+    let extract_owned = |bytes: &[u8]| -> Result<Option<Vec<u8>>, RenderError> {
+        let start = start_marker.as_bytes();
+        let end = end_marker.as_bytes();
+        let starts = find_all(bytes, start);
+        let ends = find_all(bytes, end);
+        if starts.is_empty() && ends.is_empty() {
+            return Ok(None);
+        }
+        if starts.len() != 1 || ends.len() != 1 || starts[0] >= ends[0] {
+            return Err(RenderError::Conflict(format!(
+                "shared Hive file contains malformed or nested markers: {}",
+                relative.display()
+            )));
+        }
+        Ok(Some(bytes[starts[0]..ends[0] + end.len()].to_vec()))
+    };
+    let foreign_matches = shared_marker_foreign_digest_at(relative, current)?
+        == shared_marker_foreign_digest_at(relative, expected)?;
+    let owned_matches = extract_owned(current)?.map_or_else(
+        || Ok(extract_owned(expected)?.is_none()),
+        |current_owned| {
+            Ok(extract_owned(expected)?.is_some_and(|expected_owned| {
+                normalize_line_endings(&current_owned) == normalize_line_endings(&expected_owned)
+            }))
+        },
+    )?;
+    Ok(foreign_matches && owned_matches)
+}
+
+fn normalize_line_endings(bytes: &[u8]) -> Vec<u8> {
+    let mut normalized = Vec::with_capacity(bytes.len());
+    let mut index = 0;
+    while index < bytes.len() {
+        if bytes[index] == b'\r' && bytes.get(index + 1) == Some(&b'\n') {
+            normalized.push(b'\n');
+            index += 2;
+        } else {
+            normalized.push(bytes[index]);
+            index += 1;
+        }
+    }
+    normalized
 }
 
 fn render_roles<T: TargetRead + ?Sized>(
@@ -3549,7 +3666,12 @@ fn render_roles<T: TargetRead + ?Sized>(
     for seed in &answers.persistent_roles {
         let relative = PathBuf::from(format!(".hive/team/roles/{}.md", seed.role_id));
         let bytes = if let Some(existing) = read_target_optional(target, &relative)? {
-            let (mut profile, body) = parse_role(&existing)?;
+            let (mut profile, body) = parse_role(&existing).map_err(|error| {
+                RenderError::Conflict(format!(
+                    "role profile is invalid at {}; restore valid JSON formatting, then run hive setup --validate: {error}",
+                    relative.display()
+                ))
+            })?;
             if profile.role_id != seed.role_id {
                 return Err(RenderError::Conflict(format!(
                     "role identity changed at {}",
@@ -3662,13 +3784,16 @@ fn validate_owned_paths<'a>(
             validate_project_relative(path)
                 .map_err(|error| RenderError::Input(error.to_string()))?;
         }
-        if entry.ownership == "shared-marker"
-            && (entry.marker_start.as_deref() != Some(MARKER_START)
-                || entry.marker_end.as_deref() != Some(MARKER_END))
-        {
-            return Err(RenderError::Internal(
-                "shared marker ownership does not match the compiled marker contract".to_owned(),
-            ));
+        if entry.ownership == "shared-marker" {
+            let (start, end) = shared_marker_bounds(path)?;
+            if entry.marker_start.as_deref() != Some(start)
+                || entry.marker_end.as_deref() != Some(end)
+            {
+                return Err(RenderError::Internal(
+                    "shared marker ownership does not match the compiled marker contract"
+                        .to_owned(),
+                ));
+            }
         }
     }
     Ok(())
@@ -3807,15 +3932,15 @@ fn setup_changes<T: TargetRead + ?Sized>(
             let before = read_target_optional(target, relative)?;
             let before_digest = before.as_ref().map(|bytes| sha256_digest(bytes));
             let after_digest = files.get(relative).map(|bytes| sha256_digest(bytes));
-            let (foreign_before_digest, foreign_after_digest) = if path == "AGENTS.md" {
+            let (foreign_before_digest, foreign_after_digest) = if is_shared_marker_path(relative) {
                 let empty_digest = sha256_digest(&[]);
                 (
                     Some(match before.as_deref() {
-                        Some(bytes) => shared_marker_foreign_digest(bytes)?,
+                        Some(bytes) => shared_marker_foreign_digest_for_path(relative, bytes)?,
                         None => empty_digest.clone(),
                     }),
                     Some(match files.get(relative) {
-                        Some(bytes) => shared_marker_foreign_digest(bytes)?,
+                        Some(bytes) => shared_marker_foreign_digest_for_path(relative, bytes)?,
                         None => empty_digest,
                     }),
                 )
@@ -4030,6 +4155,7 @@ fn validate_desired_projection_ownership(
         .map_err(|error| RenderError::Internal(format!("compiled harness is invalid: {error}")))?;
     let effective_preferences = effective_preferences_from_harness(&harness)?;
     reproduce_projection_ownership(
+        None::<&Path>,
         &active_bytes,
         answers,
         env!("CARGO_PKG_VERSION"),
@@ -4057,6 +4183,7 @@ fn validate_projection_ownership<T: TargetRead + ?Sized>(
     let harness = read_installed_harness(target)?;
     let effective_preferences = effective_preferences_from_harness(&harness)?;
     reproduce_projection_ownership(
+        Some(target),
         &active_bytes,
         answers,
         &harness.harness_version,
@@ -4093,6 +4220,7 @@ fn validate_release_projection_ownership<T: TargetRead + ?Sized>(
     let active_bytes = read_target_required(target, active_path, "active Skill projection ledger")?;
     let effective_preferences = effective_preferences_from_harness(&harness)?;
     reproduce_projection_ownership(
+        Some(target),
         &active_bytes,
         answers,
         authenticated_source_version,
@@ -4104,7 +4232,8 @@ fn validate_release_projection_ownership<T: TargetRead + ?Sized>(
     )
 }
 
-fn reproduce_projection_ownership(
+fn reproduce_projection_ownership<T: TargetRead + ?Sized>(
+    target: Option<&T>,
     active_bytes: &[u8],
     answers: &SetupAnswers,
     source_version: &str,
@@ -4198,6 +4327,7 @@ fn reproduce_projection_ownership(
     }
 
     let mut files = authenticate_projected_skill_files(
+        target,
         host,
         source_version,
         &expected_active,
@@ -4318,7 +4448,8 @@ fn expected_active_skills(
     })
 }
 
-fn authenticate_projected_skill_files(
+fn authenticate_projected_skill_files<T: TargetRead + ?Sized>(
+    target: Option<&T>,
     host: ProjectionHost,
     source_version: &str,
     expected_active: &ActiveSkills,
@@ -4327,6 +4458,21 @@ fn authenticate_projected_skill_files(
     read_projected: &mut impl FnMut(&Path, &str) -> Result<Vec<u8>, RenderError>,
 ) -> Result<BTreeMap<PathBuf, Vec<u8>>, RenderError> {
     let mut files = BTreeMap::new();
+    let mut expected_files = BTreeMap::new();
+    if source_version == env!("CARGO_PKG_VERSION") {
+        for projection in [current_projection, portable_projection] {
+            for (relative, expected) in &projection.files {
+                let relative = PathBuf::from(relative);
+                if is_hive_skill_projection_path(&relative) {
+                    expected_files.insert(relative, expected.clone());
+                }
+            }
+        }
+    }
+    let local_preserved = target
+        .map(|target| local_preserved_skill_paths(target, source_version, &expected_files))
+        .transpose()?
+        .unwrap_or_default();
     for skill in &expected_active.skills {
         let primary_relative = projected_skill_path(host, &skill.name)?;
         let current_expected = current_projection
@@ -4346,7 +4492,7 @@ fn authenticate_projected_skill_files(
                     current_expected.is_some_and(|expected| *expected == installed)
                 }
             };
-            if !authenticated {
+            if !authenticated && !local_preserved.contains(&relative) {
                 return Err(RenderError::Verification(format!(
                     "projected Skill bytes changed: {}",
                     relative.display()
@@ -4397,6 +4543,83 @@ fn authenticate_projected_skill_files(
         }
     }
     Ok(files)
+}
+
+fn local_preserved_skill_paths<T: TargetRead + ?Sized>(
+    target: &T,
+    source_version: &str,
+    expected_files: &BTreeMap<PathBuf, Vec<u8>>,
+) -> Result<BTreeSet<PathBuf>, RenderError> {
+    let relative = Path::new(PROJECT_OVERRIDES_PATH);
+    let Some(bytes) = read_target_optional(target, relative)? else {
+        return Ok(BTreeSet::new());
+    };
+    let ledger: ProjectOverrideLedger = serde_json::from_slice(&bytes).map_err(|error| {
+        RenderError::Verification(format!(
+            "invalid project override ledger; run hive project upgrade --apply after restoring valid Hive projection bytes: {error}"
+        ))
+    })?;
+    if ledger.schema_version != 1 || ledger.product_version != source_version {
+        return Err(RenderError::Verification(
+            "project override ledger does not match the installed Hive version; run hive project upgrade --apply"
+                .to_owned(),
+        ));
+    }
+    let mut unsigned =
+        serde_json::to_value(&ledger).map_err(|error| RenderError::Internal(error.to_string()))?;
+    unsigned
+        .as_object_mut()
+        .expect("override ledger serializes to an object")
+        .remove("ledger_digest");
+    let canonical_unsigned = serde_json_canonicalizer::to_vec(&unsigned)
+        .map_err(|error| RenderError::Internal(error.to_string()))?;
+    if ledger.ledger_digest != sha256_digest(&canonical_unsigned) {
+        return Err(RenderError::Verification(
+            "project override ledger digest is invalid; run hive project upgrade --apply"
+                .to_owned(),
+        ));
+    }
+    let mut canonical_full = serde_json_canonicalizer::to_vec(&ledger)
+        .map_err(|error| RenderError::Internal(error.to_string()))?;
+    canonical_full.push(b'\n');
+    if bytes != canonical_full {
+        return Err(RenderError::Verification(
+            "project override ledger bytes are not canonical; run hive project upgrade --apply"
+                .to_owned(),
+        ));
+    }
+
+    let mut preserved = BTreeSet::new();
+    for entry in ledger.files {
+        let path = PathBuf::from(&entry.path);
+        validate_hive_skill_projection_relative(&path)
+            .map_err(|error| RenderError::Verification(error.to_string()))?;
+        let expected = expected_files.get(&path).ok_or_else(|| {
+            RenderError::Verification(format!(
+                "project override path is not an active Hive Skill projection; run hive project upgrade --apply: {}",
+                path.display()
+            ))
+        })?;
+        if sha256_digest(expected) != entry.base_digest {
+            return Err(RenderError::Verification(format!(
+                "project override base digest is stale; run hive project upgrade --apply: {}",
+                path.display()
+            )));
+        }
+        let current = read_target_required(target, &path, "local-preserved Skill projection")?;
+        if sha256_digest(&current) != entry.local_digest {
+            return Err(RenderError::Verification(format!(
+                "local-preserved Skill bytes changed after project upgrade; run hive project upgrade --apply: {}",
+                path.display()
+            )));
+        }
+        if !preserved.insert(path) {
+            return Err(RenderError::Verification(
+                "project override ledger contains duplicate Skill paths".to_owned(),
+            ));
+        }
+    }
+    Ok(preserved)
 }
 
 fn frozen_skill_metadata(source_version: &str, name: &str) -> Option<&'static [u8]> {
@@ -6461,7 +6684,12 @@ fn validate_roles(target: &Path, seeds: &[RoleSeed]) -> Result<(), RenderError> 
         let relative = PathBuf::from(format!(".hive/team/roles/{}.md", seed.role_id));
         let bytes =
             read_target_required(target, &relative, "role profile").map_err(as_verification)?;
-        let (profile, _) = parse_role(&bytes).map_err(as_verification)?;
+        let (profile, _) = parse_role(&bytes).map_err(|error| {
+            RenderError::Verification(format!(
+                "role profile is invalid at {}; restore valid JSON formatting, then run hive setup --validate: {error}",
+                relative.display()
+            ))
+        })?;
         if !profile.definition_matches(seed) {
             return Err(RenderError::Verification(format!(
                 "installed role definition does not match role seed: {}",
@@ -6610,10 +6838,22 @@ fn validate_installed_against(
                 .to_owned(),
         ));
     }
+    let expected_skill_files = planned
+        .iter()
+        .filter(|(path, _)| is_hive_skill_projection_path(path))
+        .map(|(path, bytes)| (path.clone(), bytes.clone()))
+        .collect::<BTreeMap<_, _>>();
+    let local_preserved =
+        local_preserved_skill_paths(target, env!("CARGO_PKG_VERSION"), &expected_skill_files)?;
     for (relative, expected) in planned {
         let current =
             read_target_required(target, relative, "managed output").map_err(as_verification)?;
-        if current != *expected {
+        let matches_expected = if is_shared_marker_path(relative) {
+            shared_marker_matches(relative, &current, expected).map_err(as_verification)?
+        } else {
+            current == *expected
+        };
+        if !matches_expected && !local_preserved.contains(relative) {
             return Err(RenderError::Verification(format!(
                 "installed managed output differs from the supplied contract: {}",
                 relative.display()
@@ -7814,6 +8054,7 @@ mod tests {
             .map(|name| format!(".agents/skills/{name}/SKILL.md"))
             .collect::<Vec<_>>();
         expected.push(".agents/directives/03-session-coordination.md".to_owned());
+        expected.push(".prettierignore".to_owned());
         expected.extend(
             new_body_skills
                 .iter()
