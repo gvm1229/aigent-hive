@@ -3,8 +3,12 @@
 //! This adapter persists only Hive-owned profile and ledger files plus the two
 //! exact host-native agent definition paths. It never launches either host.
 
-use crate::run::AdapterError;
+use crate::run::{
+    open_directory_nofollow_path, publish_parent_file, read_parent_file, AdapterError, FileSnapshot,
+};
 use crate::{emit_action_result, ActionResult, Evidence};
+use cap_fs_ext::DirExt;
+use cap_std::fs::Dir;
 use hive_core::custom_agent::{
     resolve_profiles, route_profile, AgentPermission, AgentScope, CustomAgentProfile,
     HostAgentMapping, HostOrchestrationCapability, RuntimeAttestation,
@@ -13,8 +17,9 @@ use hive_core::{ensure_consumer_target, sha256_digest};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::collections::BTreeMap;
-use std::fs::{self, OpenOptions};
-use std::io::Write;
+use std::ffi::OsString;
+use std::fs;
+use std::io;
 use std::path::{Component, Path, PathBuf};
 use std::process::ExitCode;
 
@@ -1108,32 +1113,124 @@ fn validate_replacement(
 }
 
 fn write_if_changed(root: &Path, relative: &Path, bytes: &[u8]) -> Result<bool, AgentCliError> {
-    let path = safe_path(root, relative)?;
-    if fs::read(&path).ok().as_deref() == Some(bytes) {
+    let root = open_directory_nofollow_path(root)?;
+    let (parent, name) = custom_projection_parent(&root, relative)?;
+    let expected = match parent.symlink_metadata(&name) {
+        Ok(metadata) if metadata.is_file() => FileSnapshot::File(
+            read_parent_file(&parent, &name, 1024 * 1024).map_err(|error| {
+                AgentCliError::Conflict(format!(
+                    "cannot read existing custom agent projection {}: {error}",
+                    relative.display()
+                ))
+            })?,
+        ),
+        Ok(_) => {
+            return Err(AgentCliError::Conflict(format!(
+                "custom agent projection is not a regular file: {}",
+                relative.display()
+            )))
+        }
+        Err(error) if error.kind() == io::ErrorKind::NotFound => FileSnapshot::Missing,
+        Err(error) => {
+            return Err(AgentCliError::Conflict(format!(
+                "cannot inspect custom agent projection {}: {error}",
+                relative.display()
+            )))
+        }
+    };
+    if expected.bytes() == Some(bytes) {
         return Ok(false);
     }
-    let parent = path
-        .parent()
-        .ok_or_else(|| AgentCliError::Conflict("projection has no parent".to_owned()))?;
-    fs::create_dir_all(parent).map_err(|error| {
+    publish_parent_file(&parent, &name, &expected, bytes).map_err(|error| {
         AgentCliError::Conflict(format!(
-            "cannot create Hive-owned projection directory: {error}"
+            "cannot atomically publish custom agent projection {}: {error}",
+            relative.display()
         ))
     })?;
-    let temporary = path.with_extension(format!("{}.tmp", std::process::id()));
-    let mut file = OpenOptions::new()
-        .write(true)
-        .create_new(true)
-        .open(&temporary)
-        .map_err(|error| {
-            AgentCliError::Conflict(format!("cannot create projection temporary: {error}"))
-        })?;
-    file.write_all(bytes)
-        .and_then(|()| file.sync_all())
-        .map_err(|error| AgentCliError::Conflict(format!("cannot write projection: {error}")))?;
-    fs::rename(&temporary, &path)
-        .map_err(|error| AgentCliError::Conflict(format!("cannot publish projection: {error}")))?;
     Ok(true)
+}
+
+fn custom_projection_parent(root: &Dir, relative: &Path) -> Result<(Dir, OsString), AgentCliError> {
+    let components = relative
+        .components()
+        .map(|component| match component {
+            Component::Normal(name) => Ok(name.to_os_string()),
+            _ => Err(AgentCliError::Input(
+                "custom agent projection path is unsafe".to_owned(),
+            )),
+        })
+        .collect::<Result<Vec<_>, _>>()?;
+    let file_name = components.last().cloned().ok_or_else(|| {
+        AgentCliError::Input("custom agent projection has no file name".to_owned())
+    })?;
+    let allowed = match components.as_slice() {
+        [first, second, third, file]
+            if first == ".hive"
+                && second == "config"
+                && third == "custom-subagents"
+                && (file == "OWNERSHIP.json"
+                    || Path::new(file)
+                        .extension()
+                        .is_some_and(|value| value == "json")) =>
+        {
+            true
+        }
+        [first, second, file]
+            if first == ".codex"
+                && second == "agents"
+                && Path::new(file)
+                    .extension()
+                    .is_some_and(|value| value == "toml") =>
+        {
+            true
+        }
+        [first, second, file]
+            if first == ".claude"
+                && second == "agents"
+                && Path::new(file)
+                    .extension()
+                    .is_some_and(|value| value == "md") =>
+        {
+            true
+        }
+        _ => false,
+    };
+    if !allowed {
+        return Err(AgentCliError::Input(
+            "custom agent projection is outside its exact owned paths".to_owned(),
+        ));
+    }
+    let mut parent = root
+        .try_clone()
+        .map_err(|error| AgentCliError::Conflict(format!("cannot pin profile root: {error}")))?;
+    for component in &components[..components.len() - 1] {
+        match parent.symlink_metadata(component) {
+            Ok(metadata) if metadata.is_dir() => {}
+            Ok(_) => {
+                return Err(AgentCliError::Conflict(
+                    "custom agent projection ancestor is not a no-follow directory".to_owned(),
+                ))
+            }
+            Err(error) if error.kind() == io::ErrorKind::NotFound => {
+                parent.create_dir(component).map_err(|error| {
+                    AgentCliError::Conflict(format!(
+                        "cannot create custom agent owned directory: {error}"
+                    ))
+                })?
+            }
+            Err(error) => {
+                return Err(AgentCliError::Conflict(format!(
+                    "cannot inspect custom agent projection ancestor: {error}"
+                )))
+            }
+        }
+        parent = parent.open_dir_nofollow(component).map_err(|error| {
+            AgentCliError::Conflict(format!(
+                "cannot open custom agent projection ancestor without following links: {error}"
+            ))
+        })?;
+    }
+    Ok((parent, file_name))
 }
 
 fn safe_path(root: &Path, relative: &Path) -> Result<PathBuf, AgentCliError> {

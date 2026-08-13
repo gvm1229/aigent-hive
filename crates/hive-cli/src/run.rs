@@ -621,7 +621,7 @@ fn create_temporary(parent: &Dir, prefix: &str, bytes: &[u8]) -> io::Result<Temp
     ))
 }
 
-fn publish_parent_file(
+pub(crate) fn publish_parent_file(
     parent: &Dir,
     destination: &OsStr,
     expected: &FileSnapshot,
