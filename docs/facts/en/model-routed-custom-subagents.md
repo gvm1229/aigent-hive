@@ -10,9 +10,9 @@ tags: [claude, codex, model-routing, subagent, v0-9]
 aliases: ["Sol Advisor parity", "Task-appropriate model routing"]
 sources:
   - "repo:docs/decisions/ADR-0019-hive-native-iterative-execution.md#sha256:42506fc775e4a456f724c73fc71a2fb1fc80c12967606accb909de3ef323c888"
-  - "repo:docs/plans/active/model-routed-custom-subagents.md#sha256:9bfb375de4806e6ca2659ec17ac1062676cafb0a601c449570a230cbbc2dc3ca"
+  - "repo:docs/plans/active/model-routed-custom-subagents.md#sha256:616b6850533a66d89c369cf1660987ca3760468a74054fc35c3871a98dda464d"
 links: [judge-verification, orchestration-ownership, role-state, skill-routing]
-reviewed_revision: "git:1b7b2de509823ca3c66ac6f6c7a0ba5ab84a071f"
+reviewed_revision: "git:e659d878b301c03648849ad0fd73bf59e31730fd"
 status: active
 ---
 
@@ -23,3 +23,4 @@ implementer and specialist roles. `hive agent recommend` now requires a protecte
 externally signed host-model catalog, detached attestation, and trust root before it
 prepares a decision. A forged signature or an incomplete exact mapping is rejected.
 Fresh-host capability and lifecycle acceptance remain required before activation.
+Manual and revised requests bind the exact prior decision digest, prior request, and scope.
