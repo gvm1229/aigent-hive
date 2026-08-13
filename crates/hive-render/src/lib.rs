@@ -4619,9 +4619,9 @@ fn activate_staged(
 
 #[derive(Debug, Clone, Copy)]
 struct ActivationFault {
-    #[cfg(debug_assertions)]
+    #[cfg(any(debug_assertions, test))]
     fail_after_operations: usize,
-    #[cfg(debug_assertions)]
+    #[cfg(any(debug_assertions, test))]
     fail_rollback: bool,
     projection_cleanup: Option<ProjectionCleanupFault>,
 }
@@ -6082,9 +6082,9 @@ fn activation_failed(
     before_rollback: Option<&dyn Fn()>,
     fault: Option<ActivationFault>,
 ) -> Result<(), RenderError> {
-    #[cfg(not(debug_assertions))]
+    #[cfg(not(any(debug_assertions, test)))]
     let _ = fault;
-    #[cfg(debug_assertions)]
+    #[cfg(any(debug_assertions, test))]
     if fault.is_some_and(|value| value.fail_rollback) {
         return Err(RenderError::Rollback(
             "hive.activation-rollback-failed: injected rollback failure".to_owned(),
@@ -6117,11 +6117,11 @@ fn render_error_to_io(error: &RenderError) -> io::Error {
 }
 
 fn should_inject_activation_failure(fault: Option<ActivationFault>, count: usize) -> bool {
-    #[cfg(debug_assertions)]
+    #[cfg(any(debug_assertions, test))]
     {
         fault.is_some_and(|value| value.fail_after_operations == count)
     }
-    #[cfg(not(debug_assertions))]
+    #[cfg(not(any(debug_assertions, test)))]
     {
         let _ = (fault, count);
         false
@@ -6143,7 +6143,7 @@ fn activation_fault_from_environment() -> Option<ActivationFault> {
     }
 }
 
-#[cfg(debug_assertions)]
+#[cfg(any(debug_assertions, test))]
 fn activation_fault_from_value(
     value: &str,
     current_thread: &str,
