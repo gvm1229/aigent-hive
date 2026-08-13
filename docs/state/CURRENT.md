@@ -2,7 +2,7 @@
 
 - 기준 branch: `codex/0.9.3-native-agents` (`develop` 통합 기준)
 - product version: `0.9.3` 개발 기준
-- plan revision: `2.76`
+- plan revision: `2.77`
 - 현재 milestone: `0.9.3` native iterative·custom subagent 구현·numbered public test 수용·정식 출시
 - 기능 기준: `2cec0377748874748d126b6b55e59975a3f20a02`; release discipline base `c777da1`
 - 제외: `NAT-002–024`·`MRA-001–032`의 `0.9.3`, `N10-002–011`의 `0.10.0-test`
@@ -25,6 +25,10 @@
   digest consent·owned projection·foreign-byte 거부 구현. Ralph loop initialize·validate·recover PASS.
   Codex CLI `0.147.0`·Claude Code `2.1.163` 확인. Claude fresh-session probe: CLI 미로그인으로
   model 실행 `0회`, auth 전 MRA actual lifecycle 수용 보류
+- Custom agent lifecycle 보강: `8fdbba4`·`88bc18f`, no-follow parent handle의 exact-byte claim
+  삭제·foreign/symlink 거부·interrupted owned deletion retry 수렴, Judge invocation의 product
+  setup 질문·partial reconfiguration projection 동기화. Rust workspace local qualification과
+  strict Clippy PASS; host fresh-session evidence는 여전히 별도 수용 대기
 - `0.9.2-test.1` 수용 거부: candidate run `31596919466`·publication run `31597939956`는
   통과했으나 GitHub prerelease에 direct installer 자산 3개가 누락되어 공개 설치 URL이 `404`를
   반환. 게시 workflow·회귀 보정 뒤 `0.9.2-test.2`부터 전체 공개 설치 수용 재수행

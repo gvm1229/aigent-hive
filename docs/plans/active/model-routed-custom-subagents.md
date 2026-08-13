@@ -76,12 +76,16 @@
     Codex TOML·Claude Markdown deterministic rendering 시험
 - [x] [MRA-008] User/project layered scope·project precedence·collision·role/name normalization
   - Evidence: commit `ed21b87`, project precedence·same-scope collision·reserved user Judge shadow 거부
-- [ ] [MRA-009] Projection preview·명시적 동의·ownership ledger·non-clobber·recover 계약
-  - Current evidence: commit `47dd972`, `hive agent preview|apply|validate|remove`의 exact digest
-    동의·Hive ledger·foreign-byte 거부·symlink 차단과 Rust 2 PASS. Crash rollback·recovery 수용 대기
+- [x] [MRA-009] Projection preview·명시적 동의·ownership ledger·non-clobber·recover 계약
+  - Evidence: commits `47dd972`·`8fdbba4`·`88bc18f`, `hive agent preview|apply|validate|remove`의
+    exact digest 동의·Hive ledger·foreign byte 거부·no-follow parent claim·동일 요청 재시도 수렴,
+    Rust custom-agent CLI 12 PASS
 - [ ] [MRA-010] Codex TOML projection·installed-version validation·fresh-session discovery
 - [ ] [MRA-011] Claude Markdown projection·installed-version validation·environment/allowlist conflict detection
-- [ ] [MRA-012] Capability preflight와 unsupported·silent fallback·unverified alias fail-closed
+- [x] [MRA-012] Capability preflight와 unsupported·silent fallback·unverified alias fail-closed
+  - Evidence: commits `1a37c0a`·`8fdbba4`, exact host·최소 version·모든 required capability와
+    fresh-session evidence가 `supported`일 때만 허용, runtime attestation model·effort·digest
+    mismatch 거부, Rust core·CLI focused PASS
 - [x] [MRA-013] Exact role·model·effort·scope·definition digest runtime attestation receipt
   - Evidence: commit `ed21b87`, closed attestation schema와 exact host·role·scope·model·effort·
     definition digest 결합, silent fallback mismatch 거부 시험
@@ -104,14 +108,19 @@
 
 ### D. On-demand 생성 Skill
 
-- [ ] [MRA-023] `hive-custom-subagent-create` typed CLI·양쪽 projection·reserved Judge override 금지
-  - Current evidence: commit `47dd972`의 typed `hive agent` projection lifecycle. Purpose-first
-    생성 대화·reserved override hostile coverage 대기
+- [x] [MRA-023] `hive-custom-subagent-create` typed CLI·양쪽 projection·reserved Judge override 금지
+  - Evidence: commits `7272cba`·`b8b9a30`·`8fdbba4`, closed creation request·양쪽 projection·
+    exact decision digest·reserved Judge reject·product Skill projection, Rust custom-agent CLI 12 PASS
 - [ ] [MRA-024] Purpose-first recommendation과 signed host model catalog·capability 근거
 - [ ] [MRA-025] `1 수락 | 2 수동 | 3 수정` decision state·재추천·digest lifecycle
-- [ ] [MRA-026] 수동 설정의 이름·양쪽 exact model/effort·scope·permission·trigger field 검증
+- [x] [MRA-026] 수동 설정의 이름·양쪽 exact model/effort·scope·permission·trigger field 검증
+  - Evidence: commit `7272cba`, closed JSON schema의 양쪽 host mapping·exact model/effort·
+    scope·permission·trigger required field와 incomplete mapping hostile test PASS
 - [ ] [MRA-027] User/project preview·동의·apply·rollback·fresh-session activation
-- [ ] [MRA-028] 생성 role의 auto-route registry 통합·reserved route 격리·reconfigure·disable·delete·update byte 보존
+- [x] [MRA-028] 생성 role의 auto-route registry 통합·reserved route 격리·reconfigure·disable·delete·update byte 보존
+  - Evidence: commits `6d13681`·`758c168`·`8fdbba4`·`88bc18f`, user/project precedence·reserved
+    Judge isolation·disable·owned-only update/delete·foreign byte 보존·interrupted deletion retry
+    convergence, Rust custom-agent CLI 12 PASS
 
 ### E. Qualification·release gate
 
