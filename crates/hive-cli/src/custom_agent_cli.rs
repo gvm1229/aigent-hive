@@ -258,8 +258,26 @@ fn parse_profile(path: &Path) -> Result<CustomAgentProfile, AgentCliError> {
     let bytes = fs::read(path).map_err(|error| {
         AgentCliError::Input(format!("cannot read profile {}: {error}", path.display()))
     })?;
-    CustomAgentProfile::parse_json(&bytes)
-        .map_err(|error| AgentCliError::Verification(error.to_string()))
+    let profile = CustomAgentProfile::parse_json(&bytes)
+        .map_err(|error| AgentCliError::Verification(error.to_string()))?;
+    validate_reserved_authority(&profile)?;
+    Ok(profile)
+}
+
+fn validate_reserved_authority(profile: &CustomAgentProfile) -> Result<(), AgentCliError> {
+    if !profile.reserved {
+        return Ok(());
+    }
+    let canonical = CustomAgentProfile::parse_json(include_bytes!(
+        "../../../harness/roles/hive-independent-judge.json"
+    ))
+    .map_err(|error| AgentCliError::Verification(error.to_string()))?;
+    if profile != &canonical {
+        return Err(AgentCliError::Conflict(
+            "reserved Judge profile may only use the bundled authoritative definition".to_owned(),
+        ));
+    }
+    Ok(())
 }
 
 fn projection_files(
@@ -728,5 +746,52 @@ mod tests {
             .join(".codex/agents/hive-complex-implementer.toml")
             .exists());
         fs::remove_dir_all(root).expect("cleanup");
+    }
+
+    #[test]
+    fn apply_rejects_modified_reserved_judge_definition() {
+        let root = temporary_root();
+        let mut profile = CustomAgentProfile::parse_json(include_bytes!(
+            "../../../harness/roles/hive-independent-judge.json"
+        ))
+        .expect("judge");
+        profile.description =
+            "A changed Judge definition must never replace the authority.".to_owned();
+        profile.definition_digest = profile.computed_digest().expect("digest");
+        let input = root.join("input.json");
+        fs::write(&input, canonical_profile(&profile).expect("profile bytes")).expect("input");
+        assert!(apply(ProfileArguments {
+            profile: input,
+            root: root.clone(),
+            accepted_digest: Some(profile.definition_digest),
+        })
+        .is_err());
+        assert!(!root
+            .join(".codex/agents/hive-independent-judge.toml")
+            .exists());
+        fs::remove_dir_all(root).expect("cleanup");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn apply_rejects_symlinked_projection_ancestor() {
+        use std::os::unix::fs::symlink;
+
+        let root = temporary_root();
+        let outside = temporary_root();
+        fs::create_dir_all(root.join(".codex")).expect("codex parent");
+        symlink(&outside, root.join(".codex/agents")).expect("symlink");
+        let profile = profile();
+        let input = root.join("input.json");
+        fs::write(&input, canonical_profile(&profile).expect("profile bytes")).expect("input");
+        assert!(apply(ProfileArguments {
+            profile: input,
+            root: root.clone(),
+            accepted_digest: Some(profile.definition_digest),
+        })
+        .is_err());
+        assert!(!outside.join("hive-complex-implementer.toml").exists());
+        fs::remove_dir_all(root).expect("cleanup");
+        fs::remove_dir_all(outside).expect("cleanup");
     }
 }
