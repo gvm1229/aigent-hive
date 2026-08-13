@@ -320,6 +320,15 @@ def runtime_scan_apply_result(changed: bool = True) -> dict[str, Any]:
             "generation": 4,
             "manifest_digest": digest("b"),
         },
+        "automatic_promotion": {
+            "source_claims": [],
+            "promoted_claims": [],
+            "store": {
+                "changed_paths": [],
+                "generation": 4,
+                "manifest_digest": digest("b"),
+            },
+        },
         "target_mutated": False,
     }
 
