@@ -246,7 +246,7 @@ python scripts/dev-check.py pre-push
 
 | Name | GitHub | Tested platform or area |
 | --- | --- | --- |
-| John Doe | — | Placeholder |
+| 안희준 | [No-Jyun](https://github.com/No-Jyun) | Windows x64 installation and configuration verification |
 
 ## License
 
