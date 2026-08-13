@@ -9,7 +9,7 @@ summary: "Bare hive update의 인증된 현재 설치 소유자 위임과 명시
 tags: [installation, update]
 aliases: ["설치 소유자 갱신"]
 sources:
-  - "repo:README.md#sha256:eed56ae89f462fd2246afa0c1384d5016f152de995144a87e5ae5452f4bed903"
+  - "repo:README.md#sha256:206f1001bd6d97ce6de5342afc628c9256e84b11439d55b8b78bb3322d219979"
 links: [test-distribution, update-discovery, update-transaction]
 reviewed_revision: "git:01df1d580d987e7fb0f34978076cd000263fd99f"
 status: active

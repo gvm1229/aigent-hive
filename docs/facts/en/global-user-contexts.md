@@ -9,7 +9,7 @@ summary: "Global setup stores multiple user contexts as background only and pres
 tags: [bootstrap, communication, onboarding]
 aliases: ["User contexts", "User profile"]
 sources:
-  - "repo:README.md#sha256:eed56ae89f462fd2246afa0c1384d5016f152de995144a87e5ae5452f4bed903"
+  - "repo:README.md#sha256:206f1001bd6d97ce6de5342afc628c9256e84b11439d55b8b78bb3322d219979"
   - "repo:crates/hive-cli/src/user_setup.rs#sha256:cffd6c491ffd17dccefa84edb172bbfe64ae925f2fe9cf7c6efd07e6a896a9fd"
   - "repo:harness/skills/user-setup/SKILL.md#sha256:aa0e9102c6d4a08a2468f39abf66f2788844c28a989eace52f59f9d2ea919957"
   - "repo:harness/user-setup/catalog.yml#sha256:3f24914859e7bcbe9bb8c85aafeee4250bdc2da383d0480d000a967fcb3305c5"
