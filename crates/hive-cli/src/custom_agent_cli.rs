@@ -36,6 +36,7 @@ USAGE:\n\
     hive agent preflight --profile <profile.json> --host <codex|claude> --capabilities <capability.json> --output json\n\
     hive agent attest --profile <profile.json> --host <codex|claude> --receipt <attestation.json> --output json\n\
     hive agent route --user-root <dir> --project-root <dir> --request <text> --output json\n\
+    hive agent disable --role <role-id> --scope <user|project> --root <dir> --accept-definition-digest <sha256> --output json\n\
     hive agent remove --role <role-id> --scope <user|project> --root <dir> --accept-definition-digest <sha256> --output json\n";
 
 const PROFILE_DIRECTORY: &str = ".hive/config/custom-subagents";
@@ -102,6 +103,14 @@ struct ProfileArguments {
 
 #[derive(Debug)]
 struct RemoveArguments {
+    role_id: String,
+    scope: AgentScope,
+    root: PathBuf,
+    accepted_digest: String,
+}
+
+#[derive(Debug)]
+struct DisableArguments {
     role_id: String,
     scope: AgentScope,
     root: PathBuf,
@@ -179,6 +188,8 @@ struct OwnershipEntry {
     scope: AgentScope,
     definition_digest: String,
     files: BTreeMap<String, String>,
+    #[serde(default = "default_true")]
+    enabled: bool,
 }
 
 impl Default for OwnershipLedger {
@@ -188,6 +199,10 @@ impl Default for OwnershipLedger {
             entries: BTreeMap::new(),
         }
     }
+}
+
+const fn default_true() -> bool {
+    true
 }
 
 pub(crate) fn run(arguments: &[String]) -> ExitCode {
@@ -211,6 +226,7 @@ pub(crate) fn run(arguments: &[String]) -> ExitCode {
             "preflight" => "PreflightAgent",
             "attest" => "AttestAgent",
             "route" => "RouteAgent",
+            "disable" => "DisableAgent",
             "remove" => "RemoveAgent",
             _ => "Agent",
         },
@@ -236,6 +252,7 @@ fn execute(arguments: &[String]) -> Result<ActionResult, AgentCliError> {
         Some("preflight") => preflight(parse_preflight_arguments(&arguments[1..])?),
         Some("attest") => attest(parse_attestation_arguments(&arguments[1..])?),
         Some("route") => route(parse_route_arguments(&arguments[1..])?),
+        Some("disable") => disable(parse_disable_arguments(&arguments[1..])?),
         Some("remove") => remove(parse_remove_arguments(&arguments[1..])?),
         Some(other) => Err(AgentCliError::Input(format!(
             "unknown agent action: {other}"
@@ -378,6 +395,28 @@ fn parse_remove_arguments(arguments: &[String]) -> Result<RemoveArguments, Agent
     Ok(RemoveArguments {
         role_id: required(&options, "--role")?.to_owned(),
         scope,
+        root: PathBuf::from(required(&options, "--root")?),
+        accepted_digest: required(&options, "--accept-definition-digest")?.to_owned(),
+    })
+}
+
+fn parse_disable_arguments(arguments: &[String]) -> Result<DisableArguments, AgentCliError> {
+    let options = options(
+        arguments,
+        &[
+            "--role",
+            "--scope",
+            "--root",
+            "--accept-definition-digest",
+            "--output",
+        ],
+    )?;
+    if options.get("--output").is_some_and(|value| value != "json") {
+        return Err(AgentCliError::Input("output must be json".to_owned()));
+    }
+    Ok(DisableArguments {
+        role_id: required(&options, "--role")?.to_owned(),
+        scope: parse_scope(required(&options, "--scope")?)?,
         root: PathBuf::from(required(&options, "--root")?),
         accepted_digest: required(&options, "--accept-definition-digest")?.to_owned(),
     })
@@ -851,6 +890,7 @@ fn apply_profile(
             .iter()
             .map(|(path, bytes)| (portable(path), sha256_digest(bytes)))
             .collect(),
+        enabled: true,
     };
     ledger.entries.insert(profile.role_id.clone(), entry);
     let ledger_bytes = serde_json_canonicalizer::to_vec(&ledger)
@@ -930,6 +970,52 @@ fn remove(arguments: RemoveArguments) -> Result<ActionResult, AgentCliError> {
         evidence: Vec::new(),
         next_action: None,
         data: Some(json!({"role_id": arguments.role_id})),
+    })
+}
+
+fn disable(arguments: DisableArguments) -> Result<ActionResult, AgentCliError> {
+    let root = prepare_root(&arguments.root, arguments.scope)?;
+    let mut ledger = read_ledger(&root)?;
+    let entry = ledger.entries.get_mut(&arguments.role_id).ok_or_else(|| {
+        AgentCliError::Verification("profile has no Hive ownership ledger entry".to_owned())
+    })?;
+    if entry.scope != arguments.scope || entry.definition_digest != arguments.accepted_digest {
+        return Err(AgentCliError::Conflict(
+            "accepted digest does not authorize this profile disablement".to_owned(),
+        ));
+    }
+    if !entry.enabled {
+        return Ok(ActionResult {
+            schema_version: 1,
+            action: "DisableAgent",
+            status: "success",
+            exit_code: 0,
+            code: "hive.agent-already-disabled",
+            message: "custom agent is already disabled for automatic routing".to_owned(),
+            changed_paths: Vec::new(),
+            evidence: Vec::new(),
+            next_action: None,
+            data: Some(json!({"role_id": arguments.role_id, "enabled": false, "spawned": false})),
+        });
+    }
+    entry.enabled = false;
+    let ledger_bytes = serde_json_canonicalizer::to_vec(&ledger)
+        .map_err(|error| AgentCliError::Verification(error.to_string()))?;
+    let changed = write_if_changed(&root, Path::new(LEDGER_PATH), &ledger_bytes)?;
+    Ok(ActionResult {
+        schema_version: 1,
+        action: "DisableAgent",
+        status: "success",
+        exit_code: 0,
+        code: "hive.agent-disabled",
+        message: "custom agent remains installed but is disabled for automatic routing".to_owned(),
+        changed_paths: changed
+            .then(|| LEDGER_PATH.to_owned())
+            .into_iter()
+            .collect(),
+        evidence: Vec::new(),
+        next_action: None,
+        data: Some(json!({"role_id": arguments.role_id, "enabled": false, "spawned": false})),
     })
 }
 
@@ -1014,6 +1100,7 @@ fn read_profiles(
     root: &Path,
     expected_scope: AgentScope,
 ) -> Result<Vec<CustomAgentProfile>, AgentCliError> {
+    let ledger = read_ledger(root)?;
     let directory = safe_path(root, Path::new(PROFILE_DIRECTORY))?;
     let entries = match fs::read_dir(&directory) {
         Ok(entries) => entries,
@@ -1059,6 +1146,19 @@ fn read_profiles(
             return Err(AgentCliError::Verification(
                 "custom agent profile is stored in the wrong scope".to_owned(),
             ));
+        }
+        let entry = ledger.entries.get(&profile.role_id).ok_or_else(|| {
+            AgentCliError::Verification(
+                "custom agent profile is missing its Hive ownership ledger entry".to_owned(),
+            )
+        })?;
+        if entry.scope != profile.scope || entry.definition_digest != profile.definition_digest {
+            return Err(AgentCliError::Verification(
+                "custom agent profile is not bound by its ownership ledger".to_owned(),
+            ));
+        }
+        if !entry.enabled {
+            continue;
         }
         profiles.push(profile);
     }
@@ -1423,6 +1523,33 @@ mod tests {
         .expect("negative route");
         assert_eq!(
             excluded.data.expect("negative data")["role_id"],
+            serde_json::Value::Null
+        );
+        fs::remove_dir_all(user_root).expect("user cleanup");
+        fs::remove_dir_all(project_root).expect("project cleanup");
+    }
+
+    #[test]
+    fn disabled_profile_is_excluded_from_automatic_routing() {
+        let user_root = temporary_root();
+        let project_root = temporary_root();
+        let profile = profile();
+        apply_profile(&project_root, &profile, "project.json");
+        disable(DisableArguments {
+            role_id: profile.role_id.clone(),
+            scope: AgentScope::Project,
+            root: project_root.clone(),
+            accepted_digest: profile.definition_digest,
+        })
+        .expect("disable");
+        let result = route(RouteArguments {
+            user_root: user_root.clone(),
+            project_root: project_root.clone(),
+            request: "Please perform a complex implementation.".to_owned(),
+        })
+        .expect("route");
+        assert_eq!(
+            result.data.expect("data")["role_id"],
             serde_json::Value::Null
         );
         fs::remove_dir_all(user_root).expect("user cleanup");
