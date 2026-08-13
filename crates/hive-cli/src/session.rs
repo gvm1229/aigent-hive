@@ -753,14 +753,19 @@ fn process_liveness_platform(process_id: u32) -> Liveness {
     use std::process::Command;
 
     // macOS has no Linux-style `/proc` tree. Its system `ps` utility can make a
-    // bounded, read-only liveness check; an unavailable or unparseable result
-    // remains unknown so Hive never removes a possibly live reservation.
+    // bounded, read-only liveness check. With these fixed arguments, status 1
+    // and empty stdout mean the requested numeric PID does not exist; every
+    // other unavailable or unparseable result remains unknown so Hive never
+    // removes a possibly live reservation.
     let expected = process_id.to_string();
     let output = match Command::new("/bin/ps")
         .args(["-p", &expected, "-o", "pid="])
         .output()
     {
         Ok(output) if output.status.success() => output,
+        Ok(output) if output.status.code() == Some(1) && output.stdout.is_empty() => {
+            return Liveness::Dead;
+        }
         _ => return Liveness::Unknown,
     };
     let stdout = String::from_utf8(output.stdout).ok();
