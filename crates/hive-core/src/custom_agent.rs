@@ -631,6 +631,26 @@ mod tests {
     }
 
     #[test]
+    fn profile_resolution_rejects_duplicate_role_and_trigger_collisions() {
+        let duplicate = profile("hive-complex-implementer", AgentScope::User, false);
+        assert_eq!(
+            resolve_profiles(&[duplicate.clone(), duplicate], &[]),
+            Err(CustomAgentError::ScopeCollision)
+        );
+
+        let mut conflicting_triggers =
+            profile("hive-routine-implementer", AgentScope::Project, false);
+        conflicting_triggers.negative_triggers = conflicting_triggers.positive_triggers.clone();
+        conflicting_triggers.definition_digest = conflicting_triggers
+            .computed_digest()
+            .expect("conflicting trigger digest");
+        assert_eq!(
+            conflicting_triggers.validate(),
+            Err(CustomAgentError::InvalidProfile)
+        );
+    }
+
+    #[test]
     fn route_requires_one_positive_and_no_negative_match() {
         let profile = profile("hive-routine-implementer", AgentScope::Project, false);
         let profiles = BTreeMap::from([(profile.role_id.clone(), profile)]);

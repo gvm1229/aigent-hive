@@ -1993,6 +1993,28 @@ mod tests {
     }
 
     #[test]
+    fn attest_refuses_a_missing_receipt_without_mutating_the_profile_root() {
+        let root = temporary_root();
+        let profile = profile();
+        let profile_path = root.join("profile.json");
+        fs::write(
+            &profile_path,
+            canonical_profile(&profile).expect("profile bytes"),
+        )
+        .expect("profile");
+
+        assert!(attest(AttestationArguments {
+            profile: profile_path,
+            host: "codex".to_owned(),
+            receipt: root.join("missing-attestation.json"),
+        })
+        .is_err());
+        assert!(!root.join(".codex/agents").exists());
+        assert!(!root.join(".claude/agents").exists());
+        fs::remove_dir_all(root).expect("cleanup");
+    }
+
+    #[test]
     fn preflight_refuses_unverified_fresh_session_evidence() {
         let root = temporary_root();
         let profile = profile();
