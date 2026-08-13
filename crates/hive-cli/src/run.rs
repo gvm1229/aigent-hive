@@ -284,6 +284,80 @@ impl PinnedTarget {
         Ok(true)
     }
 
+    pub(crate) fn ensure_owned_parent(
+        &self,
+        relative: &Path,
+        owned_root: &Path,
+    ) -> Result<(), AdapterError> {
+        validate_project_relative(relative)
+            .map_err(|error| AdapterError::Safety(error.to_string()))?;
+        validate_project_relative(owned_root)
+            .map_err(|error| AdapterError::Safety(error.to_string()))?;
+        let parent = relative
+            .parent()
+            .ok_or_else(|| AdapterError::Safety("artifact path has no parent".to_owned()))?;
+        if !parent.starts_with(owned_root) {
+            return Err(AdapterError::Safety(format!(
+                "artifact parent escaped owned root {}: {}",
+                owned_root.display(),
+                parent.display()
+            )));
+        }
+        let mut current = self
+            .dir
+            .try_clone()
+            .map_err(|error| AdapterError::Internal(error.to_string()))?;
+        let mut walked = PathBuf::new();
+        for component in parent.components() {
+            let name = component.as_os_str();
+            walked.push(name);
+            match current.symlink_metadata(name) {
+                Ok(metadata) if metadata.is_dir() => {}
+                Ok(_) => {
+                    return Err(AdapterError::Safety(format!(
+                        "owned ancestor is not a no-follow directory: {}",
+                        walked.display()
+                    )));
+                }
+                Err(error)
+                    if error.kind() == io::ErrorKind::NotFound
+                        && walked.starts_with(owned_root) =>
+                {
+                    match current.create_dir(name) {
+                        Ok(()) => {}
+                        Err(create_error)
+                            if create_error.kind() == io::ErrorKind::AlreadyExists => {}
+                        Err(create_error) => {
+                            return Err(AdapterError::Safety(format!(
+                                "cannot create owned directory {}: {create_error}",
+                                walked.display()
+                            )));
+                        }
+                    }
+                }
+                Err(error) if error.kind() == io::ErrorKind::NotFound => {
+                    return Err(AdapterError::Safety(format!(
+                        "ancestor is missing before owned root: {}",
+                        walked.display()
+                    )));
+                }
+                Err(error) => {
+                    return Err(AdapterError::Safety(format!(
+                        "cannot inspect owned ancestor {}: {error}",
+                        walked.display()
+                    )));
+                }
+            }
+            current = current.open_dir_nofollow(name).map_err(|error| {
+                AdapterError::Safety(format!(
+                    "cannot open owned ancestor no-follow {}: {error}",
+                    walked.display()
+                ))
+            })?;
+        }
+        Ok(())
+    }
+
     fn ensure_runtime_parent(&self, relative: &Path) -> Result<(), AdapterError> {
         validate_project_relative(relative)
             .map_err(|error| AdapterError::Safety(error.to_string()))?;
