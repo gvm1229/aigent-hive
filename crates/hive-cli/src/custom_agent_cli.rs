@@ -5,7 +5,9 @@
 
 use crate::run::AdapterError;
 use crate::{emit_action_result, ActionResult, Evidence};
-use hive_core::custom_agent::{resolve_profiles, route_profile, AgentScope, CustomAgentProfile};
+use hive_core::custom_agent::{
+    resolve_profiles, route_profile, AgentScope, CustomAgentProfile, RuntimeAttestation,
+};
 use hive_core::{ensure_consumer_target, sha256_digest};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
@@ -16,12 +18,13 @@ use std::path::{Component, Path, PathBuf};
 use std::process::ExitCode;
 
 const USAGE: &str = "\
-Preview, apply, validate, route, or remove one consented Hive custom-agent profile.\n\
+Preview, apply, validate, attest, route, or remove one consented Hive custom-agent profile.\n\
 \n\
 USAGE:\n\
     hive agent preview --profile <profile.json> --root <dir> --output json\n\
     hive agent apply --profile <profile.json> --root <dir> --accept-definition-digest <sha256> --output json\n\
     hive agent validate --profile <profile.json> --root <dir> --output json\n\
+    hive agent attest --profile <profile.json> --host <codex|claude> --receipt <attestation.json> --output json\n\
     hive agent route --user-root <dir> --project-root <dir> --request <text> --output json\n\
     hive agent remove --role <role-id> --scope <user|project> --root <dir> --accept-definition-digest <sha256> --output json\n";
 
@@ -100,6 +103,13 @@ struct RouteArguments {
     request: String,
 }
 
+#[derive(Debug)]
+struct AttestationArguments {
+    profile: PathBuf,
+    host: String,
+    receipt: PathBuf,
+}
+
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 struct OwnershipLedger {
@@ -140,6 +150,7 @@ pub(crate) fn run(arguments: &[String]) -> ExitCode {
             "preview" => "PreviewAgent",
             "apply" => "ApplyAgent",
             "validate" => "ValidateAgent",
+            "attest" => "AttestAgent",
             "route" => "RouteAgent",
             "remove" => "RemoveAgent",
             _ => "Agent",
@@ -161,6 +172,7 @@ fn execute(arguments: &[String]) -> Result<ActionResult, AgentCliError> {
         Some("preview") => preview(parse_profile_arguments(&arguments[1..], false)?),
         Some("apply") => apply(parse_profile_arguments(&arguments[1..], true)?),
         Some("validate") => validate(parse_profile_arguments(&arguments[1..], false)?),
+        Some("attest") => attest(parse_attestation_arguments(&arguments[1..])?),
         Some("route") => route(parse_route_arguments(&arguments[1..])?),
         Some("remove") => remove(parse_remove_arguments(&arguments[1..])?),
         Some(other) => Err(AgentCliError::Input(format!(
@@ -168,6 +180,26 @@ fn execute(arguments: &[String]) -> Result<ActionResult, AgentCliError> {
         ))),
         None => Err(AgentCliError::Input("missing agent action".to_owned())),
     }
+}
+
+fn parse_attestation_arguments(
+    arguments: &[String],
+) -> Result<AttestationArguments, AgentCliError> {
+    let options = options(arguments, &["--profile", "--host", "--receipt", "--output"])?;
+    if options.get("--output").is_some_and(|value| value != "json") {
+        return Err(AgentCliError::Input("output must be json".to_owned()));
+    }
+    let host = required(&options, "--host")?;
+    if !matches!(host, "codex" | "claude") {
+        return Err(AgentCliError::Input(
+            "host must be codex or claude".to_owned(),
+        ));
+    }
+    Ok(AttestationArguments {
+        profile: PathBuf::from(required(&options, "--profile")?),
+        host: host.to_owned(),
+        receipt: PathBuf::from(required(&options, "--receipt")?),
+    })
 }
 
 fn parse_route_arguments(arguments: &[String]) -> Result<RouteArguments, AgentCliError> {
@@ -375,6 +407,43 @@ fn validate(arguments: ProfileArguments) -> Result<ActionResult, AgentCliError> 
         &files,
         None,
     ))
+}
+
+fn attest(arguments: AttestationArguments) -> Result<ActionResult, AgentCliError> {
+    let profile = parse_profile(&arguments.profile)?;
+    let receipt = fs::read(&arguments.receipt).map_err(|error| {
+        AgentCliError::Input(format!(
+            "cannot read runtime attestation {}: {error}",
+            arguments.receipt.display()
+        ))
+    })?;
+    let attestation = RuntimeAttestation::parse_and_verify(&receipt, &profile, &arguments.host)
+        .map_err(|error| AgentCliError::Verification(error.to_string()))?;
+    Ok(ActionResult {
+        schema_version: 1,
+        action: "AttestAgent",
+        status: "success",
+        exit_code: 0,
+        code: "hive.agent-attested",
+        message: "custom agent runtime attestation exactly matches its profile".to_owned(),
+        changed_paths: Vec::new(),
+        evidence: vec![Evidence {
+            kind: "custom-agent-attestation",
+            locator: attestation.attestation_id.clone(),
+            digest: profile.definition_digest.clone(),
+        }],
+        next_action: None,
+        data: Some(json!({
+            "host": attestation.host,
+            "role_id": attestation.role_id,
+            "scope": attestation.scope,
+            "model": attestation.model,
+            "effort": attestation.effort,
+            "definition_digest": attestation.definition_digest,
+            "native_task_id": attestation.native_task_id,
+            "spawned": false,
+        })),
+    })
 }
 
 fn route(arguments: RouteArguments) -> Result<ActionResult, AgentCliError> {
@@ -934,6 +1003,61 @@ mod tests {
         );
         fs::remove_dir_all(user_root).expect("user cleanup");
         fs::remove_dir_all(project_root).expect("project cleanup");
+    }
+
+    #[test]
+    fn attest_requires_exact_profile_model_effort_and_digest() {
+        let root = temporary_root();
+        let profile = profile();
+        let profile_path = root.join("profile.json");
+        fs::write(
+            &profile_path,
+            canonical_profile(&profile).expect("profile bytes"),
+        )
+        .expect("profile");
+        let receipt_path = root.join("receipt.json");
+        let receipt = json!({
+            "schema_version": 1,
+            "attestation_id": "attestation-1",
+            "run_id": "run-1",
+            "action_id": "action-1",
+            "host": "codex",
+            "role_id": profile.role_id,
+            "scope": "project",
+            "model": "gpt-5.6-terra",
+            "effort": "max",
+            "definition_digest": profile.definition_digest,
+            "host_capability_digest": format!("sha256:{}", "a".repeat(64)),
+            "native_task_id": "task-1",
+            "issued_at": "2026-08-13T00:00:00Z"
+        });
+        fs::write(
+            &receipt_path,
+            serde_json::to_vec(&receipt).expect("receipt bytes"),
+        )
+        .expect("receipt");
+        let result = attest(AttestationArguments {
+            profile: profile_path.clone(),
+            host: "codex".to_owned(),
+            receipt: receipt_path.clone(),
+        })
+        .expect("attest");
+        assert_eq!(result.data.expect("data")["model"], "gpt-5.6-terra");
+
+        let mut fallback = receipt;
+        fallback["model"] = json!("gpt-5.6-luna");
+        fs::write(
+            &receipt_path,
+            serde_json::to_vec(&fallback).expect("fallback bytes"),
+        )
+        .expect("fallback");
+        assert!(attest(AttestationArguments {
+            profile: profile_path,
+            host: "codex".to_owned(),
+            receipt: receipt_path,
+        })
+        .is_err());
+        fs::remove_dir_all(root).expect("cleanup");
     }
 
     #[cfg(unix)]
