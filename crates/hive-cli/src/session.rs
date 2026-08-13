@@ -70,6 +70,7 @@ struct Evidence {
 enum Liveness {
     Live,
     Dead,
+    #[cfg(not(target_os = "linux"))]
     Unknown,
 }
 
@@ -350,6 +351,7 @@ fn recover(sessions: &Dir) -> Result<SessionResult, String> {
                     .map_err(|error| format!("cannot remove stale session manifest: {error}"))?;
                 removed.push(session_locator(&name));
             }
+            #[cfg(not(target_os = "linux"))]
             Liveness::Unknown => unknown.push(session_locator(&name)),
             Liveness::Live => {}
         }
