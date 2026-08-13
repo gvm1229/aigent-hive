@@ -31,7 +31,7 @@ skills:
   consent_digest: null
 - name: iterative-execution
   source_type: built-in
-  content_digest: sha256:f90391e9cbb2d26a9340a6d401f7c339bac198a705dcb5ea0da5f4891975d8a1
+  content_digest: sha256:1f570f61b227b44698c53f1b548bb7c114fea4b3621b3cb9442dff125f0fb8e6
   side_effect_class: project-write
   capabilities:
   - filesystem-read

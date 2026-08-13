@@ -23,6 +23,16 @@ Run one bounded criterion loop while the active host retains task-launch ownersh
 6. Stop on repeated failure fingerprints, exhausted budget, cancellation, quarantine, or missing
    attestation. Recover only through `hive orchestration recover`.
 
+## Role coverage
+
+- Use this same bounded loop for planning after `$aigent-hive:ralph-loop`, independent review or
+  QA after `$aigent-hive:package-review`, evidence-backed research after
+  `$aigent-hive:research-best-practices`, and performance validation with declared measurements.
+- Every role shares the same canonical event, receipt, evidence, usage, cancellation, and recovery
+  path. Role labels never create a second scheduler or bypass the host-native envelope boundary.
+- Terminal acceptance always requires the reserved independent Judge. `explicit` and `implicit`
+  alter only the additional material-risk route; neither mode permits a terminal bypass.
+
 ## Boundaries
 
 - Do not accept a criterion from an implementation agent's self-review.
