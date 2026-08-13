@@ -3,7 +3,7 @@
 - 기준 branch: `codex/0.9.3-native-agents` (`develop` 통합 기준)
 - product version: `0.9.3`
 - 다음 release target: `0.9.3`
-- plan revision: `195`
+- plan revision: `196`
 - 현재 milestone: `0.9.3` validation 계약·출시 운영 최적화·source knowledge import·명시 collection access·자동 지식 최적화·numbered public test 수용·정식 출시
 - 기능 기준: `2cec0377748874748d126b6b55e59975a3f20a02`; release discipline base `c777da1`
 - 제외: `NHA10-001–012`·`N10-002–011`의 `0.10.0-test`
@@ -41,6 +41,12 @@
   source-private hit `0건`, explicit `collection:aigent-hive` retrieval의 source collection-only 확인.
   reviewed safe-general decision 2개: scan apply 중 user interruption 없는 `user-root` shared 승격.
   source evidence 무효화 시 파생 shared claim 동반 무효화 regression PASS
+
+- `0.9.3-test` public acceptance 완료: exact `114817677e83aae535bd1f8b47518bf9b6745432` candidate의
+  five-platform build·attestation PASS, [GitHub Release `v0.9.3-test`](https://github.com/gvm1229/aigent-hive/releases/tag/v0.9.3-test)
+  및 npm `test=0.9.3-test` 확인. 이 Windows x64 isolated prefix에서 public `0.9.2` clean install,
+  `0.9.3-test` upgrade, matching pending receipt recovery, version/date 출력과 receipt 수렴 PASS.
+  `latest=0.9.2` 유지. 다음 gate: protected `main` 통합과 stable candidate
 
 - `0.9.3` projection purge·directive 우선 갱신 완료: historical digest 또는 authenticated ownership으로
   증명되는 retired Hive Skill만 전역·project `.agents/skills`에서 제거. 새 Hive safety·ownership rule과

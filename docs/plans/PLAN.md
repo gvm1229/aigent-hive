@@ -1,6 +1,6 @@
 # Aigent Hive active plan index
 
-> Revision: 195
+> Revision: 196
 > 기준일: 2026-08-13
 > Product version: `0.9.3` 개발 기준
 > 현재 milestone: `0.9.3` validation 계약·출시 운영 최적화·source knowledge import·명시 collection access·자동 지식 최적화·numbered public test 수용·정식 출시
@@ -52,7 +52,7 @@
 | 0.9.3 지식 Skill 이름·표시 정비 | 4 | 0 | 100% |
 | 0.9.3 소비자 하네스 세션 조정·directive 갱신 | 5 | 0 | 100% |
 | `0.9.3` projection purge·directive 우선 갱신 | 4 | 0 | 100% |
-| `0.9.3` 시험·정식 출시 | 0 | 5 | 0% |
+| `0.9.3` 시험·정식 출시 | 1 | 4 | 20.0% |
 | Native host activation `0.10.0` 후보 | 0 | 12 | 0% |
 | Prompt refine 자동 routing | 12 | 0 | 100% |
 | v0.9 test 기능 마감 | 18 | 0 | 100% |
@@ -68,7 +68,7 @@
 | Agent 자율 실행 지속 | 8 | 0 | 100% |
 | `0.9.2` 완료 기능·공개 문서 출시 | 12 | 0 | 100% |
 | Notion `v0.10` 후보 | 1 | 10 | 9.1% |
-| **Canonical total** | **557** | **27** | **95.4%** |
+| **Canonical total** | **558** | **26** | **95.5%** |
 
 External production boundary 항목도 미완료 합계에 포함. Protected authority 없이 완료 처리 금지.
 
