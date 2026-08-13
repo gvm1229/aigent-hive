@@ -37,7 +37,7 @@ class DevCheckTest(unittest.TestCase):
         )
         self.assertEqual(
             workflow.count("-r requirements-conformance.txt"),
-            2,
+            3,
         )
         for pin in (
             "copier==9.17.0",

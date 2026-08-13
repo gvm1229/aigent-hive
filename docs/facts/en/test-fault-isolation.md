@@ -9,8 +9,8 @@ summary: "In-process activation faults are scoped to their owning Rust test thre
 tags: [release, test, update]
 aliases: ["activation fault scope"]
 sources:
-  - "repo:crates/hive-render/src/lib.rs#sha256:45cb895735677baf049a54e7875c0ce9eb31b79a044f4b1e78d68af844cde507"
-  - "repo:crates/hive-update/src/transaction.rs#sha256:dafa894790e297803c751883f58b19a37d730926f5ca3d6e37895478c5a98368"
+  - "repo:crates/hive-render/src/lib.rs#sha256:9d5ae48c8c77e11cc59db83c53a387d2e85329e4508b66558b40c55a419f0534"
+  - "repo:crates/hive-update/src/transaction.rs#sha256:f5413a85caa8894de16fb749c1b54d57d30834c47b18871e3b2fed51fa29fc91"
 links: [test-distribution]
 reviewed_revision: "git:9a125333ed070140b3773462d895684cba62fe6b"
 status: active

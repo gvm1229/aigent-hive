@@ -9,7 +9,7 @@ summary: "출시 검증·Markdown 전용 repository 통합·local bundle 무결�
 tags: [release, security, verification]
 aliases: ["Release integrity"]
 sources:
-  - "repo:.agents/directives/03-workflow.md#sha256:a96876118609c4f6b116dc666493c31335b0389c6129462fdbc021afe1b1d9d6"
+  - "repo:.agents/directives/03-workflow.md#sha256:7b677c92ed6d853248a3fc934969c6b0f69c98f0ce7a49134eed95f34bec4191"
   - "repo:docs/decisions/ADR-0008-release-integrity.md#sha256:bace760d9be892a1e4f1f0554d2d55bbbaae85065125e9fae19a994f60f27410"
 links: [judge-verification, update-transaction]
 reviewed_revision: "git:567c7000e56699b7fa82163164e0cc4a9dc1bd0b"

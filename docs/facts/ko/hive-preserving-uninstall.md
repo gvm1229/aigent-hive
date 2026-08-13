@@ -13,7 +13,7 @@ sources:
   - "repo:crates/hive-cli/src/user_setup.rs#sha256:9fa9e439ad15ea6a8b5ed7cf6d031595a8979b056dada55360cb32331d9e8355"
   - "repo:docs/plans/active/user-onboarding-shared-index.md#sha256:2253508f42511c793d5e96739eb3316d149e8112736926e6c04199232cf7326a"
   - "repo:docs/plans/active/windows-global-setup-hardening.md#sha256:422649ef3ca475aca9e3a86a2ddd2bbbb3895221d7bc39fe4417010664dee47f"
-  - "repo:docs/state/CURRENT.md#sha256:23190e657b79c1af0d9f4329be625ba31689d382aba388f9a839a83e42af1268"
+  - "repo:docs/state/CURRENT.md#sha256:98d73acb6592d4f5459daa6d612d76d88045d74f04fe702a4bfe9ff677f21d6c"
   - "repo:harness/skills/user-setup/SKILL.md#sha256:de84c29ec9221b5b0bd531e31f21d5317424ed8bdb3f1cfe019670d7f2e876c4"
 links: [global-onboarding, knowledge-preservation, release-verification]
 reviewed_revision: "git:089b0717e24c368a1725774aaca0c85ab596df10"

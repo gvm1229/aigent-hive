@@ -9,7 +9,7 @@ summary: "Hive removes retired Skills and replaces direct safety or ownership co
 tags: [consumer-harness, preservation, skills, upgrade]
 aliases: ["PUG93"]
 sources:
-  - "repo:crates/hive-cli/src/project_upgrade.rs#sha256:ceccb1021153bcc1a73c1b5f44ecb2ecee268a70db398412eaf75521ef83a337"
+  - "repo:crates/hive-cli/src/project_upgrade.rs#sha256:8943d5559309ea5b084f211a4bda523bc88e1e5f6afdd23b6b1226e85a652bf5"
   - "repo:crates/hive-cli/src/user_install.rs#sha256:db91b9841c057a3f9b964185fb2a2f3c2f8701908cf6439e26bf05d389a7243d"
   - "repo:crates/hive-cli/src/user_setup.rs#sha256:9fa9e439ad15ea6a8b5ed7cf6d031595a8979b056dada55360cb32331d9e8355"
   - "repo:crates/hive-update/src/merge.rs#sha256:4dc96d4c159d55be6664fa565dbb0eb77c1df532330f8a539f028ce51a9fcaaa"
