@@ -1,43 +1,40 @@
 # 현재 상태
 
-- 기준 branch: `codex/0.9.3-native-agents`
-- product version: `0.9.1`
-- plan revision: `2.81`
-- 현재 milestone: `0.9.2` 완료 기능 안정판과 `0.9.3` Native·custom subagent 분리
-- 공개 `v0.9.1`: exact `1e5e7b39c17545f8b997f71cdee39e4cd77d2ef2`. Merge parent
-  `0a61c74`와 tree byte 동일
-- `0.9.2` 기능 기준: `2cec0377748874748d126b6b55e59975a3f20a02`. 공개 release tree 뒤
-  usage guard 정본 전환·CI 보정 17 commits, 79 files, `+1116/-4433`
-- `c777da1`: `0.9.1` 범위의 마지막 commit이 아닌 첫 `0.9.2` qualification plan commit.
-  공개 release 대비 18 commits, 84 files, `+1270/-4446`
-- Branch 순서: 현재 `603668f`의 `codex/0.9.3-native-agents` 원격 보존 → `2cec037`의
-  `codex/release-0.9.2` 생성 → `0.9.2-test.N` 공개 수용 → protected `main` stable publication
-- Version 이관: `NAT-002–024`·`MRA-001–032`는 `0.9.3`, `N10-002–011`은
-  `0.10.0-test`. `0.9.2` release tree의 해당 제품 구현 유입 금지
-- `0.9.2` 문서 gate: root·번역 README, 설치 안내, 공개 HTML, npm README, plugin metadata,
+- 기준 branch: `develop`
+- product version: `0.9.2`
+- plan revision: `2.75`
+- 현재 milestone: `0.9.2` 안정판 게시·설치 마감, `0.9.3` 명시적 승인 대기
+- 기능 기준: `2cec0377748874748d126b6b55e59975a3f20a02`; release discipline base `c777da1`
+- 제외: `NAT-002–024`·`MRA-001–032`의 `0.9.3`, `N10-002–011`의 `0.10.0-test`
+- 문서 gate: root·번역 README, 설치 안내, 공개 HTML, npm README, plugin metadata,
   문서 색인·명령·version 예시 전수 최신화와 공개 artifact 재검증
-- `0.9.3` 동결: QA contributor 추가 지시 뒤 유지보수자의 별도 명시적 재개 승인 전
-  Native·custom subagent 구현·검증·출시 mutation `0건`
-- History 정책: 기존 `develop` reset·rebase·force-push·대량 revert 없음. 안정판 시험 사용 금지
-- Source Wiki 조회 현재 차단: `docs/facts/{en,ko}/agent-autonomous-continuation.md`의
-  `.agents/directives/04-documentation-state.md` source digest 불일치. 후보 전 정합성 복구 필요
-- Native feasibility 1차 완료: commit `61b03a6`, `NAT-002–003`·`MRA-001–003` 완료.
-  Codex·Claude agent scope·model/effort·native lifecycle surface 지원, Hive idempotency·signed runtime
-  attestation 부재, Antigravity unsupported. Fresh-session dispatch 전 activation은 default-off 유지
-- Native orchestration core 1차 완료: commit `09700a0`, `NAT-008–009`·`NAT-011–012` 완료.
-  Typed receipt·deterministic reducer·priority/aging scheduler·fenced lease/budget와 Ed25519 authority
-  검증 기반 추가. Event CAS persistence·authority issue/revoke·emergency cancel·CLI는 다음 concern
-- Native orchestration canonical control 완료: commits `5775764`·`51335ba`,
-  `NAT-006`·`NAT-010`·`NAT-013–015` 완료. Immutable Markdown event→head CAS,
-  external read-only Ed25519 root·signed authority ledger, normal/emergency cancel, bounded
-  replay·snapshot·segment·projection rebuild, separate-identity legacy migration 구현.
-  `NAT-007`은 run ACL·role assignment가 남아 있어 미완료 유지
-- Native workflow suite: commit `b6679a6`, `NAT-017–019` 완료. 제품 Skill 25개로 확장하고
-  persistent criterion loop, bounded mailbox·barrier·shared-path overlap, AND·OR·quorum goal,
-  nested budget·single refund·terminal-only Judge core 시험 PASS. Host adapter·실제 lifecycle은 잔여
-- Custom agent typed profile: commit `ed21b87`, `MRA-007–008`·`MRA-013–020` 완료.
-  양쪽 exact mapping·trigger/negative route·scope precedence·reserved Judge·definition digest·
-  runtime attestation과 6개 built-in fixture projection PASS. 실제 설치·fresh-session lifecycle은 잔여
+- `0.9.2` 안정판 완료: PR #25 전체 CI PASS·merge exact `a502867e6b20e8f22bc014af05ca678f211f40ed`.
+  Candidate run `31609928346`·publication run `31611457288`, normal GitHub Release 26개 자산,
+  npm `latest=0.9.2` PASS. 이 Windows의 전역 npm 설치와 공개 `install.ps1` 빈 경로 설치에서
+  `AIgent Hive v0.9.2 (released 2026-08-13)` 확인. User-scope apply·validate·doctor PASS
+- 공개 문서 마감: root·번역 README의 시험판 직접 언급 `0건`, 별도 검증 안내 중립 링크 각
+  `1건`. npm `0.9.2` tarball README도 직접 언급 `0건`·링크 `1건`; plugin developer
+  `Hojin (Tom) Jeong`·공식 512 px logo 계약 PASS
+- Markdown 전용 후속 통합: Source Wiki·문체·링크·가장 가까운 packaging·directive 검사 PASS
+  뒤 관련 없는 전체 플랫폼 CI 대기 생략. 완료되지 않은 CI를 통과로 보고하지 않으며 새 시험판·
+  안정판 후보·tag·package publication 생성 없음
+- QA contributor 등록: 안희준([No-Jyun](https://github.com/No-Jyun)), Windows x64 설치·설정 검증
+- `0.9.3` 동결: QA contributor 등록 완료. 유지보수자의 후속 명시적 승인 전 구현·검증·출시 mutation `0건`
+- `0.9.2-test.1` 수용 거부: candidate run `31596919466`·publication run `31597939956`는
+  통과했으나 GitHub prerelease에 direct installer 자산 3개가 누락되어 공개 설치 URL이 `404`를
+  반환. 게시 workflow·회귀 보정 뒤 `0.9.2-test.2`부터 전체 공개 설치 수용 재수행
+- `0.9.2-test.2` 수용 보류: candidate run `31599834995`·publication run `31600929652`,
+  GitHub 자산 25개와 npm `test`, Windows clean install·upgrade·recovery·성능·보존 PASS.
+  README 두 언어의 stale `test.1` 고정 안내 발견으로 번호 독립 npm `test` 안내 보정 뒤
+  `0.9.2-test.3` 전체 문서·배포 수용 대상으로 전환
+- `0.9.2-test.3` 기능·문서 수용 완료: candidate run `31602608609`·publication run
+  `31603511607`, GitHub 자산 25개·npm `test`·npm README·Windows 공개 설치·plugin 표시·
+  user-scope validate·5% usage guard·지식과 preference 보존 PASS. 완료 checklist exact tree의
+  최종 `0.9.2-test.4` 뒤 source mutation 없이 protected `main`·stable candidate 진행
+- `0.9.2-test.5` 최종 기능 수용 완료: candidate run `31605647532`·publication run
+  `31606685534`, main history 동기화 뒤 동일 tree·25개 자산·npm `test` PASS. README 두 언어는
+  stable 설치만 노출하고 유지보수자용 중립 링크 1개만 별도 출시 검증 문서로 연결. 기능·설치
+  byte 변경 없음; 새 시험판 없이 문서·npm pack·PR CI 뒤 stable 진행
 - `0.9.0` stable publication: candidate run `31561636239`, publication run `31562280178`,
   annotated `v0.9.0`, normal GitHub Release, npm `latest=0.9.0`, Windows 전역 설치·validate·
   release date `2026-08-12` 표시 PASS
@@ -689,7 +686,7 @@ Pre-1.0 비차단 deferred:
   `hive-cli` 185, `hive-core` 62, `hive-projection` 22, `hive-render` 51,
   `hive-update` 63, `hive-wiki` 7
 - Python conformance 524개 실행, 523 PASS, Windows `pwsh` 전용 1개 expected skip
-- Native hostile sensor·fallback, Phase 3 projection과 source usage guard regression PASS
+- Native hostile sensor·fallback, Phase 3 projection과 설치본 usage guard source-target regression PASS
 - 독립 Antigravity code·test review: PASS, actionable finding 0건
 
 Pre-1.0 비차단 deferred:
@@ -702,7 +699,7 @@ Pre-1.0 비차단 deferred:
 
 - 정본 결정: 설치된 `hive usage` 단일 사용
 - 사용자 선택 global threshold: remaining `5%`
-- 제거 완료: `scripts/source-usage-guard.py`, 15초 background watcher, source 전용 scratch policy,
+- 제거 완료: source 전용 Python gate·15초 background watcher·source 전용 scratch policy,
   매 tool 경계의 중복 gate
 - 유지 경계: automatic dispatch 직전 session-bound one-shot enforce, native sensor 우선,
   명시적 session control, raw account·session identifier 저장 금지

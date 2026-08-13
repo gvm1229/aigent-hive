@@ -1,4 +1,4 @@
-# Source 개발의 사용량 보호
+# 설치본 usage guard의 source 적용
 
 Source 개발도 설치된 `hive usage`를 단일 정본으로 사용. 별도 Python gate, 15초 watcher,
 source-local threshold·halt state 없음.

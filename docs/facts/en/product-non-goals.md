@@ -9,7 +9,7 @@ summary: "Hive does not own model execution, provider credentials, provider sess
 tags: [boundary, product]
 aliases: ["Hive non-goals"]
 sources:
-  - "repo:docs/overview/product.md#sha256:903c860c025a6cbf5c4a4df2bb11207fea9ed61fd8cf5f7eaf83c9c6f373732e"
+  - "repo:docs/overview/product.md#sha256:891c3585d3377e779af75b0533eef3815eb411d47433f31bec2e5b7e12f0a7de"
 links: [orchestration-ownership, product-purpose]
 reviewed_revision: "git:a86bb5bc4aa01c9823fa670e83cb538b9f031cbf"
 status: active

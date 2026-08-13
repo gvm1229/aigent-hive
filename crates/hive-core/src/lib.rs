@@ -7,12 +7,10 @@ use std::path::{Component, Path, PathBuf};
 
 use sha2::{Digest, Sha256};
 
-pub mod custom_agent;
 pub mod judge;
 pub mod judge_auth;
 pub mod loop_graph;
 pub mod native_workflow;
-pub mod orchestration;
 pub mod role;
 pub mod run;
 pub mod usage_guard;
@@ -35,7 +33,6 @@ pub(crate) fn validate_json_schema(
         .validate(instance)
         .map_err(|error| format!("{label} violates the JSON Schema contract: {error}"))
 }
-
 /// Marker that distinguishes the Hive source workspace from a consumer project.
 pub const SOURCE_MARKER_FILE: &str = "hive-source.json";
 
@@ -653,3 +650,4 @@ mod tests {
         );
     }
 }
+

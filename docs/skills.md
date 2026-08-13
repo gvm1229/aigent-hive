@@ -56,7 +56,6 @@
 | `source-prompt-refine` | `prompt-refine` |
 | `source-research-best-practices` | `research-best-practices` |
 | `source-knowledge-recall` | `knowledge-recall` |
-| `source-usage-guard` | `usage-guard` |
 | `source-commit-work` | `ship` |
 | `source-amend-directive` | `amend-directive` |
 | `source-review` | Wiki 질문은 `knowledge-recall`; code·Git 근거 확인은 기본 읽기 도구 |
@@ -66,7 +65,7 @@
 
 - `auto-setup-project` + `setup-project` → `project-setup`: 동일 목적의 질문 방식 통합
 - `manage-wiki` + `maintain-knowledge` → `knowledge-maintain`: thin router와 실제 관리 작업 통합
-- `hive-usage-guard` + `manage-usage` + `source-usage-guard` → `usage-guard`: 단일 설정·정책 resolver
+- `hive-usage-guard` + `manage-usage` → `usage-guard`: 단일 설정·정책 resolver
 - `hive-commit` + source Git workflow → `ship`: universal workflow와 저장소별 규칙 분리
 - `hive-directive-amend` → `amend-directive`: 사용자 수정 가능 behavior와 immutable safety 경계 분리
 - `source-review` 제거: Wiki 조회와 기본 read-only repository inspection으로 분리

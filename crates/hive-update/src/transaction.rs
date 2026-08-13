@@ -2139,7 +2139,7 @@ mod tests {
 
     fn release_fixture() -> PathBuf {
         Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("../../tests/fixtures/phase6/releases/valid-0.9.1")
+            .join("../../tests/fixtures/phase6/releases/valid-0.9.2")
     }
 
     fn published_release_fixture() -> PathBuf {

@@ -44,7 +44,7 @@ docs/
 | 기술 stack·dependency | `docs/guides/development.md`와 dependency fact |
 | 개발·검증 command | `docs/guides/development.md` |
 | Source Wiki | `docs/00-home.md`, `docs/facts/README.md`, ADR-0014 |
-| Source usage safeguard | 기존 `docs/guides/source-usage-guard.md` |
+| Installed usage safeguard | `docs/guides/installed-usage-guard.md` |
 | User onboarding·project harness | onboarding guide + atomic lifecycle fact |
 | Canonical knowledge·index | architecture document + atomic storage fact |
 | Subscription usage guard | usage guide + atomic policy fact |

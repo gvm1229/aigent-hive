@@ -409,6 +409,12 @@ class Phase6StaticContracts(unittest.TestCase):
         )
         self.assertIn('test -n "$RELEASE_GIT_TOKEN"', release_step["run"])
         self.assertIn("http.https://github.com/.extraheader", release_step["run"])
+        for installer in ("install.sh", "install.ps1", "install.cmd"):
+            self.assertEqual(
+                release_step["run"].count(f"dist/{installer}"),
+                2,
+                msg=f"both test and stable GitHub Releases must attach {installer}",
+            )
         unix_matrix = candidate_workflow["jobs"]["unix"]["strategy"]["matrix"][
             "include"
         ]
@@ -1894,7 +1900,7 @@ try {
         ):
             self.assertIn(required, dependency_setup)
         self.assertIn("powershell.exe -NoLogo -NoProfile -NonInteractive", guide)
-        self.assertIn('set "HIVE_VERSION=0.9.0"', guide)
+        self.assertIn('set "HIVE_VERSION=0.9.2"', guide)
         self.assertIn('set "HIVE_PREFIX=%LOCALAPPDATA%\\AigentHive"', guide)
         self.assertIn("$env:HIVE_VERSION", guide)
         self.assertIn("$env:HIVE_PREFIX", guide)

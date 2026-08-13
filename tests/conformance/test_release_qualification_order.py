@@ -44,19 +44,18 @@ class ReleaseQualificationOrderContract(unittest.TestCase):
             with self.subTest(required=required):
                 self.assertIn(required, text)
 
-    def test_v092_plan_separates_completed_release_from_future_work(self) -> None:
+    def test_v092_plan_releases_completed_scope_and_defers_future_work(self) -> None:
         text = (
             ROOT / "docs/plans/active/release-0.9.2-test-qualification.md"
         ).read_text(encoding="utf-8")
         for required in (
-            "`0.9.2` 기능 기준: `2cec0377748874748d126b6b55e59975a3f20a02`",
-            "`NAT-002–024`·`MRA-001–032`의 `0.9.3` 전용 branch",
-            "`0.10.0` 유지: `N10-002–011`",
-            "`codex/0.9.3-native-agents`",
+            "`2cec0377748874748d126b6b55e59975a3f20a02`",
+            "`NAT-002–024`·`MRA-001–032`의 `0.9.3`",
+            "`N10-002–011`의 `0.10.0-test`",
             "`codex/release-0.9.2`",
             "`0.9.2-test.N`",
-            "Root·번역 README, 설치 안내, 공개 HTML",
-            "QA contributor 추가 지시 뒤 유지보수자의 별도 명시적 승인 전 금지",
+            "root·번역 README, 설치 안내, 공개 HTML",
+            "QA contributor 등록 뒤 유지보수자의 별도 명시적 승인 전 금지",
         ):
             with self.subTest(required=required):
                 self.assertIn(required, text)

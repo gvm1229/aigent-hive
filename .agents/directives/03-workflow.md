@@ -135,6 +135,25 @@ Match verification cost to the current boundary:
 4. **Release** — run clean-clone CI, every supported OS/architecture, hostile and security
    suites, installer/update recovery, signing, provenance, and publication qualification.
 
+## Documentation-Only Integration
+
+- Classify a change as documentation-only when every changed tracked file is Markdown. The only
+  permitted non-Markdown companion is a static-contract test whose changed lines merely assert
+  those Markdown paths or exact guidance tokens and execute no product behavior. The diff must
+  contain no product source, workflow, package manifest, lockfile, schema, fixture, generated
+  source, release artifact, or binary asset.
+- Run every relevant local documentation gate before integration: Source Wiki index and lint for
+  source facts, human-documentation style for human prose, Markdown link validation, and the
+  nearest packaging or static-contract check when a shipped README or agent directive changes.
+- After those relevant gates pass, unrelated full Rust, cross-platform, integration, security,
+  and release CI may continue asynchronously and does not block merge. Record that it was not
+  awaited; never report an unfinished check as passed.
+- A completed failure in a relevant documentation, packaging, directive, secret, link, or allowed
+  static-contract check remains blocking. Any other non-Markdown tracked change removes this
+  exception and restores the ordinary verification tier.
+- A documentation-only follow-up after publication does not create a new test version, stable
+  candidate, tag, or package publication. It updates repository documentation only.
+
 ## Release Qualification Ordering
 
 - Never publish or install a stable version as exploratory, regression, acceptance, performance,

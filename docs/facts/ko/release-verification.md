@@ -5,10 +5,11 @@ topic_slug: release-verification
 language: ko
 counterpart: ../en/release-verification.md
 title: "Release 검증"
-summary: "Npm·GitHub 출처 증거와 local bundle 무결성·transactional activation의 분리 검증."
+summary: "출시 검증·Markdown 전용 repository 통합·local bundle 무결성의 분리."
 tags: [release, security, verification]
 aliases: ["Release integrity"]
 sources:
+  - "repo:.agents/directives/03-workflow.md#sha256:a96876118609c4f6b116dc666493c31335b0389c6129462fdbc021afe1b1d9d6"
   - "repo:docs/decisions/ADR-0008-release-integrity.md#sha256:bace760d9be892a1e4f1f0554d2d55bbbaae85065125e9fae19a994f60f27410"
 links: [judge-verification, update-transaction]
 reviewed_revision: "git:567c7000e56699b7fa82163164e0cc4a9dc1bd0b"
@@ -22,3 +23,6 @@ status: active
 - Update: transactional activation
 - 거부: downgrade·같은 sequence의 다른 manifest
 - Stable 비필수 항목: release private key·platform certificate
+- Markdown 전용 후속 변경: 관련 local 문서·packaging·directive·link gate PASS 뒤 전체 플랫폼
+  CI 대기 생략 가능
+- 후속 문서 통합의 새 test·stable release 생성 `0건`, 미완료 CI의 통과 보고 `0건`

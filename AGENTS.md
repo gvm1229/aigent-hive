@@ -45,7 +45,7 @@ After the source usage gate returns `allowed` and before any repository action t
 3. [`.agents/directives/02-architecture.md`](.agents/directives/02-architecture.md)
 4. [`.agents/directives/03-workflow.md`](.agents/directives/03-workflow.md)
 5. [`.agents/directives/06-session-coordination.md`](.agents/directives/06-session-coordination.md)
-6. [`.agents/directives/07-source-usage-guard.md`](.agents/directives/07-source-usage-guard.md)
+6. [`.agents/directives/07-installed-usage-guard.md`](.agents/directives/07-installed-usage-guard.md)
 
 Also read:
 

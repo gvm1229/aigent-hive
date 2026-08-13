@@ -37,7 +37,7 @@ Never import installed consumer state back into source, copy source-development 
 - Classify knowledge routes before tool selection. A root containing `hive-source.json` owns the
   tracked Source Wiki route, including `hive source-wiki query --target <source-root>`, and must
   never be supplied as the target of consumer `hive knowledge retrieve`. Consumer retrieval
-  requires a separate, attached consumer project. Do not convert a source guard conflict into a
+  requires a separate, attached consumer project. Do not convert a source-root refusal into a
   skipped or successful knowledge preflight.
 - Use Skill descriptions and compact routing directives for semantic task-to-Skill selection; do not build a duplicate prompt-classifier hook.
 - Let host-native discovery and narrow Hive Skill descriptions route work into Hive-owned iterative, team, multi-goal, planning, verification, setup, knowledge, migration, and update workflows.

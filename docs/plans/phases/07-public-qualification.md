@@ -87,7 +87,7 @@
 - [x] [P7-020] 5개 target archive·npm tarball SHA-256·attestation·byte identity
 - [x] [P7-021] Codex·Antigravity 실제 matrix와 Claude fixture·unverified 표시
 - [x] [P7-022] model-provider API dependency와 credential path 0개
-- [x] [P7-023] setup dry-run, ownership, conflict와 source guard
+- [x] [P7-023] setup dry-run, ownership, conflict와 설치본 guard source 적용
 - [x] [P7-024] action/role/run/judge/capability machine contract conformance
 - [x] [P7-025] simple-question negative capability test
 - [x] [P7-026] `hive-prompt-refine` automatic intent match, meaning preservation과 refine-only isolation
