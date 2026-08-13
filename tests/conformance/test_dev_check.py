@@ -27,6 +27,7 @@ class DevCheckTest(unittest.TestCase):
             [
                 "copier==9.17.0",
                 "jsonschema[format]==4.25.1",
+                "Pillow==12.3.0",
                 "PyYAML==6.0.2",
             ],
         )
@@ -42,6 +43,7 @@ class DevCheckTest(unittest.TestCase):
         for pin in (
             "copier==9.17.0",
             "jsonschema[format]==4.25.1",
+            "Pillow==12.3.0",
             "PyYAML==6.0.2",
         ):
             self.assertNotIn(pin, workflow)
