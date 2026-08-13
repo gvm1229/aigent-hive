@@ -81,8 +81,9 @@
 
 - [ ] [NAT-021] Stale pointer·wrong session·100회 Stop no-op·cancel/guard 독립 접근 회귀 시험
   - 구현 증거: stale checkpoint의 `CURRENT.md` no-mutation, wrong usage session의 prepare
-    no-mutation, `Stop` neutral payload 100회 반복 회귀. cancel/guard의 selected pointer 독립
-    control-plane E2E는 host lifecycle 수용과 함께 계속 확인
+    no-mutation, `Stop` neutral payload 100회 반복 회귀. 다른 run의 malformed graph `CURRENT.md`가
+    있어도 exact `--target` usage session disable·status 성공과 pointer byte 보존 회귀. cancel/guard의
+    selected pointer 독립 control-plane E2E는 host lifecycle 수용과 함께 계속 확인
 - [x] [NAT-022] Ack loss·duplicate/late receipt·two-scheduler race·cancel-vs-consume·clock rollback property 시험
   - Evidence: `dispatch-uncertain`에서 authenticated non-launch proof 전 reprepare·final result
     거부, duplicate/conflict receipt·late result·clock rollback/refund replay, concurrent prepare의

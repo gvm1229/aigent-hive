@@ -60,6 +60,9 @@
   event·receipt·evidence·usage·cancel·recover 경로 공유. `explicit|implicit` 모두 terminal Judge
   강제, `implicit`의 추가 material-risk route만 허용. 4개 product projection과 static contract 검증으로
   `NAT-020` 완료
+- Native control-plane 보강: 다른 run의 malformed graph `CURRENT.md`와 무관하게 exact `--target`
+  usage session disable·status 성공, stale pointer byte 보존 회귀 추가. cancel·recover의 host lifecycle
+  E2E는 NAT-004·016 수용 증거와 결합 필요
 - 지식 Skill 표시 정비: 정본 ID `knowledge-capture|recall|import|promote|maintain` 유지. 한국어
   표시명은 기능명과 ID 병기, 설명 첫머리는 항상 `(정본-ID)`; 자동 기록은 대화 종료 전 나중 작업에
   도움 되는 사실·선호·방식 하나의 안전한 기록, import는 명시 대상 저장소 스캔으로 표현. Codex·Claude·
