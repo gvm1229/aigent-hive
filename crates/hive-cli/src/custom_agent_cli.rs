@@ -6,7 +6,8 @@
 use crate::run::AdapterError;
 use crate::{emit_action_result, ActionResult, Evidence};
 use hive_core::custom_agent::{
-    resolve_profiles, route_profile, AgentScope, CustomAgentProfile, RuntimeAttestation,
+    resolve_profiles, route_profile, AgentPermission, AgentScope, CustomAgentProfile,
+    HostAgentMapping, RuntimeAttestation,
 };
 use hive_core::{ensure_consumer_target, sha256_digest};
 use serde::{Deserialize, Serialize};
@@ -18,10 +19,12 @@ use std::path::{Component, Path, PathBuf};
 use std::process::ExitCode;
 
 const USAGE: &str = "\
-Preview, apply, validate, attest, route, or remove one consented Hive custom-agent profile.\n\
+Preview, recommend, create, apply, validate, attest, route, or remove one consented Hive custom-agent profile.\n\
 \n\
 USAGE:\n\
     hive agent preview --profile <profile.json> --root <dir> --output json\n\
+    hive agent recommend --purpose <text> --scope <user|project> --output json\n\
+    hive agent create --request <creation.json> --root <dir> --accept-decision-digest <sha256> --output json\n\
     hive agent apply --profile <profile.json> --root <dir> --accept-definition-digest <sha256> --output json\n\
     hive agent validate --profile <profile.json> --root <dir> --output json\n\
     hive agent attest --profile <profile.json> --host <codex|claude> --receipt <attestation.json> --output json\n\
@@ -110,6 +113,43 @@ struct AttestationArguments {
     receipt: PathBuf,
 }
 
+#[derive(Debug)]
+struct RecommendArguments {
+    purpose: String,
+    scope: AgentScope,
+}
+
+#[derive(Debug)]
+struct CreateArguments {
+    request: PathBuf,
+    root: PathBuf,
+    accepted_digest: String,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "kebab-case")]
+enum CreationDecision {
+    Accept,
+    Manual,
+    Revise,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+struct CreationRequest {
+    schema_version: u32,
+    purpose: String,
+    decision: CreationDecision,
+    role_id: String,
+    display_name: String,
+    description: String,
+    scope: AgentScope,
+    permission: AgentPermission,
+    positive_triggers: Vec<String>,
+    negative_triggers: Vec<String>,
+    host_mappings: BTreeMap<String, HostAgentMapping>,
+}
+
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 struct OwnershipLedger {
@@ -148,6 +188,8 @@ pub(crate) fn run(arguments: &[String]) -> ExitCode {
         schema_version: 1,
         action: match action {
             "preview" => "PreviewAgent",
+            "recommend" => "RecommendAgent",
+            "create" => "CreateAgent",
             "apply" => "ApplyAgent",
             "validate" => "ValidateAgent",
             "attest" => "AttestAgent",
@@ -170,6 +212,8 @@ pub(crate) fn run(arguments: &[String]) -> ExitCode {
 fn execute(arguments: &[String]) -> Result<ActionResult, AgentCliError> {
     match arguments.first().map(String::as_str) {
         Some("preview") => preview(parse_profile_arguments(&arguments[1..], false)?),
+        Some("recommend") => recommend(parse_recommend_arguments(&arguments[1..])?),
+        Some("create") => create(parse_create_arguments(&arguments[1..])?),
         Some("apply") => apply(parse_profile_arguments(&arguments[1..], true)?),
         Some("validate") => validate(parse_profile_arguments(&arguments[1..], false)?),
         Some("attest") => attest(parse_attestation_arguments(&arguments[1..])?),
@@ -180,6 +224,37 @@ fn execute(arguments: &[String]) -> Result<ActionResult, AgentCliError> {
         ))),
         None => Err(AgentCliError::Input("missing agent action".to_owned())),
     }
+}
+
+fn parse_recommend_arguments(arguments: &[String]) -> Result<RecommendArguments, AgentCliError> {
+    let options = options(arguments, &["--purpose", "--scope", "--output"])?;
+    if options.get("--output").is_some_and(|value| value != "json") {
+        return Err(AgentCliError::Input("output must be json".to_owned()));
+    }
+    Ok(RecommendArguments {
+        purpose: required(&options, "--purpose")?.to_owned(),
+        scope: parse_scope(required(&options, "--scope")?)?,
+    })
+}
+
+fn parse_create_arguments(arguments: &[String]) -> Result<CreateArguments, AgentCliError> {
+    let options = options(
+        arguments,
+        &[
+            "--request",
+            "--root",
+            "--accept-decision-digest",
+            "--output",
+        ],
+    )?;
+    if options.get("--output").is_some_and(|value| value != "json") {
+        return Err(AgentCliError::Input("output must be json".to_owned()));
+    }
+    Ok(CreateArguments {
+        request: PathBuf::from(required(&options, "--request")?),
+        root: PathBuf::from(required(&options, "--root")?),
+        accepted_digest: required(&options, "--accept-decision-digest")?.to_owned(),
+    })
 }
 
 fn parse_attestation_arguments(
@@ -260,21 +335,25 @@ fn parse_remove_arguments(arguments: &[String]) -> Result<RemoveArguments, Agent
     if options.get("--output").is_some_and(|value| value != "json") {
         return Err(AgentCliError::Input("output must be json".to_owned()));
     }
-    let scope = match required(&options, "--scope")? {
-        "user" => AgentScope::User,
-        "project" => AgentScope::Project,
-        _ => {
-            return Err(AgentCliError::Input(
-                "scope must be user or project".to_owned(),
-            ))
-        }
-    };
+    let scope = parse_scope(required(&options, "--scope")?)?;
     Ok(RemoveArguments {
         role_id: required(&options, "--role")?.to_owned(),
         scope,
         root: PathBuf::from(required(&options, "--root")?),
         accepted_digest: required(&options, "--accept-definition-digest")?.to_owned(),
     })
+}
+
+fn parse_scope(value: &str) -> Result<AgentScope, AgentCliError> {
+    match value {
+        "user" => Ok(AgentScope::User),
+        "project" => Ok(AgentScope::Project),
+        _ => {
+            return Err(AgentCliError::Input(
+                "scope must be user or project".to_owned(),
+            ))
+        }
+    }
 }
 
 fn options(
@@ -315,10 +394,7 @@ fn parse_profile(path: &Path) -> Result<CustomAgentProfile, AgentCliError> {
     let bytes = fs::read(path).map_err(|error| {
         AgentCliError::Input(format!("cannot read profile {}: {error}", path.display()))
     })?;
-    let profile = CustomAgentProfile::parse_json(&bytes)
-        .map_err(|error| AgentCliError::Verification(error.to_string()))?;
-    validate_reserved_authority(&profile)?;
-    Ok(profile)
+    parse_profile_bytes(&bytes)
 }
 
 fn validate_reserved_authority(profile: &CustomAgentProfile) -> Result<(), AgentCliError> {
@@ -360,6 +436,102 @@ fn projection_files(
     Ok(files)
 }
 
+fn parse_creation_request(path: &Path) -> Result<CreationRequest, AgentCliError> {
+    let bytes = fs::read(path).map_err(|error| {
+        AgentCliError::Input(format!(
+            "cannot read custom agent creation request {}: {error}",
+            path.display()
+        ))
+    })?;
+    let request: CreationRequest = serde_json::from_slice(&bytes).map_err(|error| {
+        AgentCliError::Verification(format!("malformed custom agent creation request: {error}"))
+    })?;
+    if request.schema_version != 1 || request.purpose.trim().is_empty() {
+        return Err(AgentCliError::Verification(
+            "custom agent creation request has an unsupported schema or empty purpose".to_owned(),
+        ));
+    }
+    Ok(request)
+}
+
+fn recommended_request(purpose: &str, scope: AgentScope) -> Result<CreationRequest, AgentCliError> {
+    if purpose.trim().is_empty() {
+        return Err(AgentCliError::Input(
+            "custom agent purpose must not be empty".to_owned(),
+        ));
+    }
+    Ok(CreationRequest {
+        schema_version: 1,
+        purpose: purpose.to_owned(),
+        decision: CreationDecision::Accept,
+        role_id: "hive-custom-agent".to_owned(),
+        display_name: "Custom agent".to_owned(),
+        description: format!("Perform the user-approved purpose: {purpose}"),
+        scope,
+        permission: AgentPermission::BoundedWrite,
+        positive_triggers: vec![purpose.to_owned()],
+        negative_triggers: vec!["simple question".to_owned()],
+        host_mappings: BTreeMap::from([
+            (
+                "codex".to_owned(),
+                HostAgentMapping {
+                    model: "gpt-5.6-terra".to_owned(),
+                    effort: hive_core::custom_agent::AgentEffort::High,
+                    minimum_version: "0.147.0".to_owned(),
+                },
+            ),
+            (
+                "claude".to_owned(),
+                HostAgentMapping {
+                    model: "claude-sonnet-5".to_owned(),
+                    effort: hive_core::custom_agent::AgentEffort::High,
+                    minimum_version: "2.1.163".to_owned(),
+                },
+            ),
+        ]),
+    })
+}
+
+fn creation_digest(request: &CreationRequest) -> Result<String, AgentCliError> {
+    serde_json_canonicalizer::to_vec(request)
+        .map(|bytes| sha256_digest(&bytes))
+        .map_err(|error| AgentCliError::Verification(error.to_string()))
+}
+
+fn creation_profile(request: CreationRequest) -> Result<CustomAgentProfile, AgentCliError> {
+    if request.role_id == "hive-independent-judge" {
+        return Err(AgentCliError::Conflict(
+            "reserved Judge profile cannot be created or overridden".to_owned(),
+        ));
+    }
+    let mut profile = CustomAgentProfile {
+        schema_version: request.schema_version,
+        role_id: request.role_id,
+        display_name: request.display_name,
+        description: request.description,
+        scope: request.scope,
+        reserved: false,
+        permission: request.permission,
+        positive_triggers: request.positive_triggers,
+        negative_triggers: request.negative_triggers,
+        host_mappings: request.host_mappings,
+        definition_digest: String::new(),
+    };
+    profile.definition_digest = profile
+        .computed_digest()
+        .map_err(|error| AgentCliError::Verification(error.to_string()))?;
+    let canonical = serde_json::to_vec(&profile)
+        .map_err(|error| AgentCliError::Verification(error.to_string()))?;
+    parse_profile_bytes(&canonical)
+}
+
+fn parse_profile_bytes(bytes: &[u8]) -> Result<CustomAgentProfile, AgentCliError> {
+    let profile = CustomAgentProfile::parse_json(bytes)
+        .map_err(|error| AgentCliError::Verification(error.to_string()))?;
+    validate_reserved_authority(&profile)?;
+    Ok(profile)
+}
+
 fn canonical_profile(profile: &CustomAgentProfile) -> Result<Vec<u8>, AgentCliError> {
     serde_json_canonicalizer::to_vec(profile)
         .map(|mut bytes| {
@@ -382,6 +554,51 @@ fn preview(arguments: ProfileArguments) -> Result<ActionResult, AgentCliError> {
         &files,
         Some("apply requires the displayed definition digest".to_owned()),
     ))
+}
+
+fn recommend(arguments: RecommendArguments) -> Result<ActionResult, AgentCliError> {
+    let request = recommended_request(&arguments.purpose, arguments.scope)?;
+    let decision_digest = creation_digest(&request)?;
+    Ok(ActionResult {
+        schema_version: 1,
+        action: "RecommendAgent",
+        status: "success",
+        exit_code: 0,
+        code: "hive.agent-recommendation",
+        message: "purpose-first custom agent recommendation prepared".to_owned(),
+        changed_paths: Vec::new(),
+        evidence: Vec::new(),
+        next_action: Some(
+            "choose accept, manual, or revise and create with the displayed decision digest"
+                .to_owned(),
+        ),
+        data: Some(json!({
+            "purpose": arguments.purpose,
+            "choices": ["accept", "manual", "revise"],
+            "decision_digest": decision_digest,
+            "request": request,
+            "spawned": false,
+        })),
+    })
+}
+
+fn create(arguments: CreateArguments) -> Result<ActionResult, AgentCliError> {
+    let request = parse_creation_request(&arguments.request)?;
+    let decision_digest = creation_digest(&request)?;
+    if arguments.accepted_digest != decision_digest {
+        return Err(AgentCliError::Conflict(
+            "accepted decision digest does not match creation request".to_owned(),
+        ));
+    }
+    let profile = creation_profile(request)?;
+    apply_profile(
+        &profile,
+        &arguments.root,
+        "CreateAgent",
+        "hive.agent-created",
+        "consented custom agent creation applied",
+        Some(decision_digest),
+    )
 }
 
 fn validate(arguments: ProfileArguments) -> Result<ActionResult, AgentCliError> {
@@ -492,7 +709,25 @@ fn apply(arguments: ProfileArguments) -> Result<ActionResult, AgentCliError> {
             "accepted definition digest does not match profile".to_owned(),
         ));
     }
-    let root = prepare_root(&arguments.root, profile.scope)?;
+    apply_profile(
+        &profile,
+        &arguments.root,
+        "ApplyAgent",
+        "hive.agent-applied",
+        "consented custom agent profile projection applied",
+        None,
+    )
+}
+
+fn apply_profile(
+    profile: &CustomAgentProfile,
+    root_argument: &Path,
+    action: &'static str,
+    code: &'static str,
+    message: &'static str,
+    decision_digest: Option<String>,
+) -> Result<ActionResult, AgentCliError> {
+    let root = prepare_root(root_argument, profile.scope)?;
     let files = projection_files(&profile)?;
     let mut ledger = read_ledger(&root)?;
     let previous = ledger.entries.get(&profile.role_id).cloned();
@@ -527,13 +762,13 @@ fn apply(arguments: ProfileArguments) -> Result<ActionResult, AgentCliError> {
         changed.push(LEDGER_PATH.to_owned());
     }
     Ok(success(
-        "ApplyAgent",
-        "hive.agent-applied",
-        "consented custom agent profile projection applied",
+        action,
+        code,
+        message,
         changed,
-        &profile,
+        profile,
         &files,
-        None,
+        decision_digest.map(|digest| format!("creation decision accepted: {digest}")),
     ))
 }
 
@@ -1055,6 +1290,65 @@ mod tests {
             profile: profile_path,
             host: "codex".to_owned(),
             receipt: receipt_path,
+        })
+        .is_err());
+        fs::remove_dir_all(root).expect("cleanup");
+    }
+
+    #[test]
+    fn recommendation_acceptance_creates_a_profile_with_exact_decision_consent() {
+        let root = temporary_root();
+        let request = recommended_request("review accessibility contrast", AgentScope::Project)
+            .expect("recommendation");
+        let decision_digest = creation_digest(&request).expect("decision digest");
+        let request_path = root.join("creation.json");
+        fs::write(
+            &request_path,
+            serde_json::to_vec(&request).expect("request bytes"),
+        )
+        .expect("request");
+        let result = create(CreateArguments {
+            request: request_path.clone(),
+            root: root.clone(),
+            accepted_digest: decision_digest.clone(),
+        })
+        .expect("create");
+        assert_eq!(result.action, "CreateAgent");
+        assert_eq!(
+            result.data.expect("data")["definition_digest"]
+                .as_str()
+                .is_some(),
+            true
+        );
+        assert!(root
+            .join(".hive/config/custom-subagents/hive-custom-agent.json")
+            .is_file());
+        assert!(create(CreateArguments {
+            request: request_path,
+            root: root.clone(),
+            accepted_digest: "sha256:bad".to_owned(),
+        })
+        .is_err());
+        fs::remove_dir_all(root).expect("cleanup");
+    }
+
+    #[test]
+    fn creation_request_cannot_override_reserved_judge() {
+        let root = temporary_root();
+        let mut request = recommended_request("independent terminal review", AgentScope::User)
+            .expect("recommendation");
+        request.role_id = "hive-independent-judge".to_owned();
+        let digest = creation_digest(&request).expect("digest");
+        let request_path = root.join("judge.json");
+        fs::write(
+            &request_path,
+            serde_json::to_vec(&request).expect("request bytes"),
+        )
+        .expect("request");
+        assert!(create(CreateArguments {
+            request: request_path,
+            root: root.clone(),
+            accepted_digest: digest,
         })
         .is_err());
         fs::remove_dir_all(root).expect("cleanup");
