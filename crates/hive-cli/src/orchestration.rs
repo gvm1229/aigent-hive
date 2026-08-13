@@ -409,6 +409,14 @@ fn migration_inventory(
     })
 }
 
+fn orchestration_run_root(run_id: &str) -> Result<PathBuf, CliError> {
+    let child = run_path(run_id, "EVENT-CURRENT.toml")?;
+    child
+        .parent()
+        .map(Path::to_path_buf)
+        .ok_or_else(|| CliError::Core("orchestration run path has no parent".to_owned()))
+}
+
 fn apply_migration(
     target: &PinnedTarget,
     arguments: &MigrationArguments,
@@ -566,7 +574,7 @@ fn publish_or_validate_recovery(
     expected: &MigrationRecovery,
     bytes: &[u8],
 ) -> Result<(), CliError> {
-    target.ensure_owned_parent(relative, &run_path(run_id, "")?)?;
+    target.ensure_owned_parent(relative, &orchestration_run_root(run_id)?)?;
     match snapshot {
         FileSnapshot::Missing => {
             target.publish(relative, &FileSnapshot::Missing, bytes)?;
@@ -608,7 +616,7 @@ fn publish_migration_generation(
     let migration_bytes = markdown_toml("Legacy migration provenance", inventory)?;
     publish_immutable(
         target,
-        &run_path(&inventory.target_run_id, "")?,
+        &orchestration_run_root(&inventory.target_run_id)?,
         &migration_relative,
         &migration_bytes,
         "migration provenance",
@@ -1998,6 +2006,158 @@ mod tests {
             .join(".hive/runs")
             .join(&inventory.target_run_id)
             .exists());
+    }
+
+    #[test]
+    #[allow(clippy::too_many_lines)]
+    fn migration_recover_converges_after_partial_generation_publish() {
+        let temporary = tempfile::tempdir().expect("temporary directory");
+        let target_path = temporary.path().join("consumer");
+        let legacy_relative = Path::new(".hive/runs/legacy-run/PLAN.md");
+        let legacy_bytes = b"# Legacy plan\n";
+        std::fs::create_dir_all(target_path.join(".hive/runs/legacy-run"))
+            .expect("legacy run directory");
+        std::fs::write(target_path.join(legacy_relative), legacy_bytes).expect("legacy plan");
+        let target = PinnedTarget::open(&target_path).expect("target");
+        let inventory = migration_inventory(&target, "legacy-run").expect("inventory");
+
+        let signing_key = SigningKey::from_bytes(&[9_u8; 32]);
+        let mut root = OrchestrationTrustRoot {
+            schema_version: 1,
+            trust_root_id: "root-1".to_owned(),
+            revision: 1,
+            issued_at: "2026-08-12T00:00:00Z".to_owned(),
+            keys: vec![TrustedAuthorityKey {
+                key_id: "key-1".to_owned(),
+                principal_id: "principal-1".to_owned(),
+                algorithm: "ed25519".to_owned(),
+                public_key: format!(
+                    "ed25519:{}",
+                    hex_bytes(signing_key.verifying_key().as_bytes())
+                ),
+                status: AuthorityKeyStatus::Active,
+                valid_from: "2026-08-12T00:00:00Z".to_owned(),
+                valid_until: "2026-08-13T00:00:00Z".to_owned(),
+                allowed_actions: [AuthorityAction::Migrate].into_iter().collect(),
+            }],
+            root_digest: String::new(),
+        };
+        root.root_digest = root.computed_digest().expect("root digest");
+        let root_path = temporary.path().join("root.toml");
+        std::fs::write(&root_path, toml::to_string(&root).expect("root")).expect("write root");
+        let mut root_permissions = std::fs::metadata(&root_path)
+            .expect("root metadata")
+            .permissions();
+        root_permissions.set_readonly(true);
+        std::fs::set_permissions(&root_path, root_permissions).expect("readonly root");
+
+        let request_digest = format!("sha256:{}", "1".repeat(64));
+        let authority = signed_authority(
+            &signing_key,
+            "migration-authority",
+            AuthorityAction::Migrate,
+            target_digest(&target),
+            "none",
+            0,
+            &request_digest,
+        );
+        let authority_path = temporary.path().join("migration-authority.toml");
+        let authority_bytes = toml::to_string(&authority).expect("authority").into_bytes();
+        std::fs::write(&authority_path, &authority_bytes).expect("write authority");
+        let arguments = MigrationArguments {
+            target: target_path.clone(),
+            from_run: "legacy-run".to_owned(),
+            mode: MigrationMode::Recover,
+            expected_head: Some("none".to_owned()),
+            control_epoch: Some(0),
+            authority: Some(authority_path),
+            trust_root: Some(root_path),
+            request_digest: Some(request_digest.clone()),
+            now: Some("2026-08-12T00:00:01Z".to_owned()),
+        };
+
+        let event = OrchestrationEvent {
+            schema_version: 1,
+            event_id: format!("migration-{}", &inventory.source_digest[7..23]),
+            run_id: inventory.target_run_id.clone(),
+            action_id: format!("migration-{}", &inventory.source_digest[7..23]),
+            sequence: 1,
+            predecessor_digest: None,
+            control_epoch: 0,
+            kind: EventKind::Migrate,
+            from_state: None,
+            to_state: DispatchState::Reserved,
+            authority_id: authority.authority_id.clone(),
+            request_digest,
+            payload_digest: inventory.source_digest.clone(),
+            occurred_at: "2026-08-12T00:00:01Z".to_owned(),
+        };
+        let mut reducer = ReducerState::default();
+        let event_digest = reducer.apply_event(&event).expect("migration event");
+        let staged_recovery = MigrationRecovery {
+            schema_version: 1,
+            source_run_id: inventory.source_run_id.clone(),
+            source_digest: inventory.source_digest.clone(),
+            target_run_id: inventory.target_run_id.clone(),
+            request_digest: event.request_digest.clone(),
+            authority_digest: sha256_digest(&authority_bytes),
+            event_digest: event_digest.clone(),
+            state: "staged".to_owned(),
+        };
+        let recovery_relative =
+            run_path(&inventory.target_run_id, "RECOVERY.toml").expect("recovery path");
+        let staged_bytes = toml::to_string(&staged_recovery)
+            .expect("staged recovery")
+            .into_bytes();
+        publish_or_validate_recovery(
+            &target,
+            &inventory.target_run_id,
+            &recovery_relative,
+            &target
+                .snapshot(&recovery_relative)
+                .expect("recovery snapshot"),
+            &staged_recovery,
+            &staged_bytes,
+        )
+        .expect("stage recovery");
+        let migration_relative =
+            run_path(&inventory.target_run_id, "MIGRATION.md").expect("migration path");
+        let migration_bytes =
+            markdown_toml("Legacy migration provenance", &inventory).expect("migration provenance");
+        publish_immutable(
+            &target,
+            &orchestration_run_root(&inventory.target_run_id).expect("run root"),
+            &migration_relative,
+            &migration_bytes,
+            "migration provenance",
+        )
+        .expect("partially publish migration provenance");
+
+        let result = apply_migration(&target, &arguments, &inventory).expect("recover migration");
+        assert_eq!(result.status, "success");
+        assert!(matches!(
+            target
+                .snapshot(&recovery_relative)
+                .expect("recovery after converge"),
+            FileSnapshot::Missing
+        ));
+        assert!(target_path.join(migration_relative).is_file());
+        assert!(target_path
+            .join(
+                run_path(
+                    &inventory.target_run_id,
+                    "events/revisions/00000000000000000001.md"
+                )
+                .expect("event path")
+            )
+            .is_file());
+        assert!(target_path
+            .join(run_path(&inventory.target_run_id, "EVENT-CURRENT.toml").expect("head path"))
+            .is_file());
+        assert_eq!(
+            std::fs::read(target_path.join(legacy_relative)).expect("legacy after recover"),
+            legacy_bytes
+        );
     }
 
     #[test]
