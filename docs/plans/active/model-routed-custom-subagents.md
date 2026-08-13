@@ -62,12 +62,26 @@
 
 ### A. Feasibility·결정
 
-- [ ] [MRA-001] Sol Advisor의 orchestrator·routine·complex·review·attestation 기능 동등성 표와 clean-room 증거 확정
-- [ ] [MRA-002] Codex user/project agent schema·precedence·discovery·model/effort·runtime metadata matrix 검증
-- [ ] [MRA-003] Claude user/project agent schema·precedence·environment override·allowlist·fallback matrix 검증
+- [x] [MRA-001] Sol Advisor의 orchestrator·routine·complex·review·attestation 기능 동등성 표와 clean-room 증거 확정
+  - Evidence: `docs/research/native-host-feasibility-2026-08-12.md`의 owner·acceptance table과
+    Hive role fixture. 외부 prompt·runtime·namespace 복사 `0 bytes`, provider API·direct process
+    spawn `0건`
+- [x] [MRA-002] Codex user/project agent schema·precedence·discovery·model/effort·runtime metadata matrix 검증
+  - Evidence: current official Codex Subagents contract의 `.codex/agents/*.toml`, required
+    `name|description|developer_instructions`, file model/effort precedence와 local Codex
+    `0.147.0` project profile discovery. runtime metadata는 host-signed receipt 미제공으로
+    MRA-004에 계속 보류
+- [x] [MRA-003] Claude user/project agent schema·precedence·environment override·allowlist·fallback matrix 검증
+  - Evidence: current official Claude Code custom-subagent contract의 project·user scope priority,
+    `--agents` session override, model·effort·permission fields, environment override·allowlist
+    fallback order와 local `2.1.163` option inventory. 인증 부재의 model execution은 MRA-005에
+    계속 보류
 - [ ] [MRA-004] 실제 Codex Luna·Terra·Sol install→fresh session→dispatch→attestation lifecycle spike
 - [ ] [MRA-005] 실제 Claude exact model·effort install→fresh session→dispatch→override/fallback lifecycle spike
-- [ ] [MRA-006] Codex·Claude 한정, Antigravity unsupported, default-off, host-file consent의 ADR·security acceptance
+- [x] [MRA-006] Codex·Claude 한정, Antigravity unsupported, default-off, host-file consent의 ADR·security acceptance
+  - Evidence: ADR-0019와 three-host capability fixtures의 `default-off`, Antigravity
+    `unsupported`, exact preview digest·Hive ownership ledger·foreign projection reject regressions
+    (`custom_agent_cli` focused tests). Host runtime activation은 MRA-004–005 수용 전 계속 금지
 
 ### B. Canonical role·projection
 

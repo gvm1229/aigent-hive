@@ -38,7 +38,10 @@
   - Evidence: `schemas/host-orchestration-capability.schema.json`, 세 host fixture와
     `python tests/conformance/test_native_orchestration_feasibility.py -v` 4 PASS
 - [ ] [NAT-004] 세 host fixture와 최소 한 host 실제 lifecycle spike, unsupported capability의 정직한 판정
-- [ ] [NAT-005] Feasibility 결과 기반 ADR-0019 acceptance·default-off 유지·중단 조건 확정
+- [x] [NAT-005] Feasibility 결과 기반 ADR-0019 acceptance·default-off 유지·중단 조건 확정
+  - Evidence: `docs/research/native-host-feasibility-2026-08-12.md`, ADR-0019와 three-host
+    capability fixture. idempotency·host-signed attestation·fresh child lifecycle 미확인 상태의
+    activation `0건`, `dispatch-uncertain|unsupported` fail-closed 경계 유지
 
 ### B. Canonical protocol
 

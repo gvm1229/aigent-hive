@@ -42,6 +42,10 @@
   Luna·Terra·Sol marker invocation을 각각 실행. `preview→apply→validate`와 profile별 실행은
   PASS. Codex JSON result는 host-signed exact model/effort receipt를 제공하지 않아 MRA-004의
   attestation·NAT-016 envelope 소비 증거로는 사용 불가
+- Host feasibility 정본화: Sol Advisor clean-room owner table, Codex·Claude custom-agent
+  schema·scope·model/effort·fallback contract, Codex·Claude 한정과 Antigravity unsupported,
+  default-off·foreign host-file consent acceptance 완료. Native activation과 signed runtime
+  attestation은 Codex·Claude child lifecycle 증거 전 계속 차단
 - Custom agent lifecycle 보강: `8fdbba4`·`88bc18f`, no-follow parent handle의 exact-byte claim
   삭제·foreign/symlink 거부·interrupted owned deletion retry 수렴, Judge invocation의 product
   setup 질문·partial reconfiguration projection 동기화. Rust workspace local qualification과

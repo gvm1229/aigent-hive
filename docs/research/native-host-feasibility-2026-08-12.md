@@ -2,14 +2,17 @@
 
 > 기준일: 2026-08-12
 > 범위: `NAT-002–005`, `MRA-001–006`
-> 상태: schema·공식 계약·로컬 발견 검증 완료, 실제 fresh-session dispatch 수용 대기
+> 상태: schema·공식 계약·로컬 발견 검증 완료, 실제 fresh-session dispatch·attestation 수용 대기
 
 ## 근거
 
 - Codex 공식 문서: [Subagents](https://learn.chatgpt.com/docs/agent-configuration/subagents)
 - Claude Code 공식 문서: [Create custom subagents](https://code.claude.com/docs/en/sub-agents)
-- 로컬 Codex: `codex-cli 0.147.0`, `multi_agent=stable`, user custom agent 실제 발견
-- 로컬 Claude Code: `2.1.163`, `--agents`·`--agent`·`--model`·`--effort`·권한 mode 확인
+- 로컬 Codex: `codex-cli 0.147.0`, project `.codex/agents/*.toml` profile의 fresh ephemeral
+  `--profile` 발견·실행 확인. 이 경로는 profile configuration load 증거이며 parent→child native
+  delegation 또는 host-signed runtime receipt 증거와 분리
+- 로컬 Claude Code: `2.1.163`, `--agents`·`--agent`·`--model`·`--effort`·권한 mode·fallback option
+  확인. `claude auth status`는 `loggedIn=false`; fresh-session model 실행·attestation `0회`
 - Typed fixture: `tests/fixtures/native-orchestration/*-capability.json`
 
 ## Capability matrix
@@ -22,7 +25,8 @@
 | Thread/task lookup·cancel | 지원 | 지원 | 미지원 판정 |
 | Hive idempotency key | 미지원 | 미지원 | 미지원 |
 | Exact role·model·effort·digest 서명 receipt | 부분 | 부분 | 미지원 |
-| Fresh-session lifecycle 수용 | 대기 | 대기 | 제외 |
+| Fresh-session profile 발견 | 확인 | 인증 부재 | 제외 |
+| Fresh-session child dispatch·attestation 수용 | 대기 | 인증 부재 | 제외 |
 
 `partial`: host의 native 상태·result는 존재하지만 Hive typed receipt·서명·정의 digest 결합 부재.
 `unsupported`: 공개·로컬 증거로 필수 계약 부재. 숨은 fallback 금지.
