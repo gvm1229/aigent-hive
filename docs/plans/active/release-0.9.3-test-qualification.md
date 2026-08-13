@@ -2,7 +2,7 @@
 
 > Checklist owner: `REL93-*`
 > 대상: `0.9.3`
-> 선행: `VAL93-001–004`, `OPT93-001–005`
+> 선행: `VAL93-001–004`, `OPT93-001–005`, `SKI93-001–003`, `KBA93-001–005`
 > 정식판 전제: numbered public test 수용, protected `main` 검토, stable publication 환경 승인
 > 실행 graph: [`v0.9.3-release-loop.graph.md`](v0.9.3-release-loop.graph.md)
 
@@ -20,7 +20,7 @@
 - [ ] [REL93-012] test 수용 뒤 protected `main` 통합과 exact stable candidate 생성
 - [ ] [REL93-013] protected `main` 검토와 `release-publication` 환경 승인 뒤 GitHub Release·npm `latest=0.9.3` 연속 게시
 - [ ] [REL93-014] 이 Windows public stable 설치·version·release date·validate·public docs 최종 확인
-- [ ] [REL93-015] stable 수용 뒤 reviewed `knowledge-import`로 source architecture·intent·decision·fact 색인
+- [ ] [REL93-015] stable 수용 뒤 installed Hive의 source knowledge retrieval·citation 재확인
 
 ## 수락 기준
 
