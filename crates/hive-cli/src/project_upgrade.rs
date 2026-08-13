@@ -12,7 +12,7 @@ use hive_render::{
     historical_project_upgrade_candidate_in, project_upgrade_candidate_in, HistoricalProjectBase,
     RenderError,
 };
-use hive_update::{three_way_merge, MergeDisposition, UpdateError};
+use hive_update::{three_way_merge, three_way_merge_hive_directive, MergeDisposition, UpdateError};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::collections::{BTreeMap, BTreeSet};
@@ -309,7 +309,16 @@ fn prepare(target: &Dir) -> Result<UpgradePlan, UpdateError> {
             )));
         }
         let effective_base = if base.is_none() { incoming } else { base_bytes };
-        let merged = three_way_merge(Path::new(&path), effective_base, local.as_deref(), incoming)?;
+        let merged = if is_hive_directive_projection_path(Path::new(&path)) || is_shared(&path) {
+            three_way_merge_hive_directive(
+                Path::new(&path),
+                effective_base,
+                local.as_deref(),
+                incoming,
+            )?
+        } else {
+            three_way_merge(Path::new(&path), effective_base, local.as_deref(), incoming)?
+        };
         let final_full = materialize_final(target, &path, merged.bytes.as_deref())?;
         let local_full = read_full_optional(target, Path::new(&path))?;
         let changed = local_full.as_deref() != final_full.as_deref();
@@ -912,10 +921,109 @@ fn apply_with_failure_after(
         cleanup_transaction(target, &journal)?;
         return Err(error);
     }
+    let removed_skill_paths = plan
+        .final_files
+        .iter()
+        .filter(|(path, after)| after.is_none() && Path::new(path).starts_with(".agents/skills/"))
+        .map(|(path, _)| Path::new(path))
+        .collect::<Vec<_>>();
+    if let Err(error) = prune_empty_project_skill_ancestors(target, removed_skill_paths) {
+        rollback_applied(target, &journal, &applied)?;
+        cleanup_transaction(target, &journal)?;
+        return Err(error);
+    }
     remove_journal_cas(target, &journal)?;
     let mut result = plan_result(plan, CommandMode::Apply);
     "project harness upgrade applied with local-priority merge".clone_into(&mut result.message);
     Ok(result)
+}
+
+fn prune_empty_project_skill_ancestors<'a>(
+    target: &Dir,
+    paths: impl IntoIterator<Item = &'a Path>,
+) -> Result<(), UpdateError> {
+    let boundary = Path::new(".agents");
+    let mut directories = BTreeSet::new();
+    for path in paths {
+        let mut parent = path.parent();
+        while let Some(directory) = parent.filter(|directory| *directory != boundary) {
+            if !directory.starts_with(boundary) {
+                break;
+            }
+            directories.insert(directory.to_path_buf());
+            parent = directory.parent();
+        }
+    }
+    let mut directories = directories.into_iter().collect::<Vec<_>>();
+    directories.sort_by(|left, right| {
+        right
+            .components()
+            .count()
+            .cmp(&left.components().count())
+            .then_with(|| right.cmp(left))
+    });
+    for directory in directories {
+        remove_empty_project_owned_dir(target, &directory)?;
+    }
+    Ok(())
+}
+
+fn remove_empty_project_owned_dir(target: &Dir, relative: &Path) -> Result<(), UpdateError> {
+    let skills_root = Path::new(".agents/skills");
+    let (parent, name) = if relative == skills_root {
+        let agents = match target.open_dir_nofollow(".agents") {
+            Ok(agents) => agents,
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(()),
+            Err(error) => {
+                return Err(UpdateError::Conflict(format!(
+                    "cannot open project-owned .agents directory: {error}"
+                )))
+            }
+        };
+        (agents, OsString::from("skills"))
+    } else {
+        let skill_path = relative.join("SKILL.md");
+        validate_hive_skill_projection_relative(&skill_path)
+            .map_err(|error| UpdateError::Verification(error.to_string()))?;
+        let agents = match target.open_dir_nofollow(".agents") {
+            Ok(agents) => agents,
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(()),
+            Err(error) => {
+                return Err(UpdateError::Conflict(format!(
+                    "cannot open project-owned .agents directory: {error}"
+                )))
+            }
+        };
+        let skills = match agents.open_dir_nofollow("skills") {
+            Ok(skills) => skills,
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(()),
+            Err(error) => {
+                return Err(UpdateError::Conflict(format!(
+                    "cannot open project-owned .agents/skills directory: {error}"
+                )))
+            }
+        };
+        let name = relative
+            .file_name()
+            .ok_or_else(|| UpdateError::Internal("project Skill directory has no name".to_owned()))?
+            .to_os_string();
+        (skills, name)
+    };
+    let directory = match parent.open_dir_nofollow(&name) {
+        Ok(directory) => directory,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(()),
+        Err(error) => {
+            return Err(UpdateError::Conflict(format!(
+                "cannot open project-owned empty directory {}: {error}",
+                relative.display()
+            )))
+        }
+    };
+    if directory.entries().map_err(io_error)?.next().is_none() {
+        drop(directory);
+        parent.remove_dir(&name).map_err(io_error)?;
+    }
+    Ok(())
 }
 
 fn resolve_prejournal_failure(
@@ -2497,6 +2605,28 @@ mod tests {
         assert!(!temporary.path().join(".hive/backups").exists());
     }
 
+    #[test]
+    fn project_upgrade_prunes_empty_retired_skill_directories_after_deletion() {
+        let temporary = tempdir().expect("temporary target");
+        let target = target_dir(temporary.path());
+        let retired = ".agents/skills/hive-knowledge-capture/SKILL.md";
+        let retired_path = temporary.path().join(retired);
+        fs::create_dir_all(retired_path.parent().expect("retired Skill parent"))
+            .expect("retired Skill parent");
+        fs::write(&retired_path, b"historical Hive Skill\n").expect("retired Hive Skill");
+        let plan = deletion_plan(&target, BTreeMap::from([(retired.to_owned(), None)]));
+
+        apply_with_failure_after(&target, &plan, None).expect("apply retired Skill deletion");
+
+        assert!(!retired_path.exists());
+        assert!(!temporary
+            .path()
+            .join(".agents/skills/hive-knowledge-capture")
+            .exists());
+        assert!(!temporary.path().join(".agents/skills").exists());
+        assert!(temporary.path().join(".agents").exists());
+    }
+
     #[cfg(unix)]
     #[test]
     fn legacy_070_derived_index_cleanup_rejects_symlink_without_mutation() {
@@ -3514,7 +3644,7 @@ mod tests {
         local.extend_from_slice(b"- User-local upgrade note: preserve this exact line.\n");
         let incoming = include_bytes!("../../../harness/directives/02-project-upgrade.md");
 
-        let merged = three_way_merge(
+        let merged = three_way_merge_hive_directive(
             Path::new(".agents/directives/02-project-upgrade.md"),
             Some(base),
             Some(&local),
@@ -3527,6 +3657,47 @@ mod tests {
         assert!(final_text.contains("User-local upgrade note: preserve this exact line."));
         assert!(final_text.contains("directly contradicts an incoming safety or ownership rule"));
         assert_eq!(merged.omitted_incoming_hunks, 0);
+    }
+
+    #[test]
+    fn directive_upgrade_replaces_a_conflicting_hive_rule_but_keeps_user_text() {
+        let base = b"# Project directive\n- Never bypass ownership checks.\n";
+        let local = b"# Project directive\n- Allow bypasses.\n- User-local note.\n";
+        let incoming =
+            b"# Project directive\n- Never bypass ownership checks without authenticated proof.\n";
+
+        let merged = three_way_merge_hive_directive(
+            Path::new(".agents/directives/02-project-upgrade.md"),
+            Some(base),
+            Some(local),
+            Some(incoming),
+        )
+        .expect("directive merge");
+        let final_text = String::from_utf8(merged.bytes.expect("merged bytes")).expect("UTF-8");
+
+        assert!(final_text.contains("without authenticated proof"));
+        assert!(final_text.contains("User-local note."));
+        assert!(!final_text.contains("Allow bypasses."));
+    }
+
+    #[test]
+    fn shared_agents_marker_uses_the_same_direct_conflict_rule_policy() {
+        let base = b"<!-- AIGENT-HIVE:START -->\n- Never bypass ownership checks.\n<!-- AIGENT-HIVE:END -->\n";
+        let local = b"<!-- AIGENT-HIVE:START -->\n- Allow bypasses.\n- User-local note.\n<!-- AIGENT-HIVE:END -->\n";
+        let incoming = b"<!-- AIGENT-HIVE:START -->\n- Never bypass ownership checks without authenticated proof.\n<!-- AIGENT-HIVE:END -->\n";
+
+        let merged = three_way_merge_hive_directive(
+            Path::new("AGENTS.md"),
+            Some(base),
+            Some(local),
+            Some(incoming),
+        )
+        .expect("shared marker merge");
+        let final_text = String::from_utf8(merged.bytes.expect("merged bytes")).expect("UTF-8");
+
+        assert!(final_text.contains("without authenticated proof"));
+        assert!(final_text.contains("User-local note."));
+        assert!(!final_text.contains("Allow bypasses."));
     }
 
     #[test]

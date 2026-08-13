@@ -45,6 +45,9 @@ Configure user-scope Hive preferences without modifying a project harness or pro
      <user-root> --dry-run --output json`, then apply that exact projection refresh automatically.
      Rerun both validations. The explicit global setup request already authorizes these
      deterministic prerequisites; do not ask whether to review or continue.
+   - During that authenticated refresh, remove a retired Hive Skill only when its retired-name
+     ledger entry and historical Hive digest prove ownership. Preserve a same-named modified or
+     foreign Skill, and remove empty Hive-owned parent directories after a successful deletion.
    - State a short plain-language result, then begin the next meaningful setup question. If the
      preview preserves local edits, state that they were preserved; do not ask a review-only
      question. Ask only if authentication fails, the preview needs a material user choice, or a

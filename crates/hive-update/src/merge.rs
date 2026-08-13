@@ -106,6 +106,41 @@ pub fn three_way_merge(
     local: Option<&[u8]>,
     incoming: Option<&[u8]>,
 ) -> Result<MergeOutcome, UpdateError> {
+    three_way_merge_with_policy(path, base, local, incoming, MergePolicy::LocalPriority)
+}
+
+/// Merge an authenticated Hive directive while giving an incoming replacement
+/// priority only for an overlapping, pre-existing Hive rule clause.
+///
+/// New user text and disjoint local edits retain the normal local-first merge
+/// behavior. A changed existing rule is Hive-owned projection content, so an
+/// incoming safety or ownership replacement is authoritative for that clause.
+///
+/// # Errors
+///
+/// Returns the same bounded input and merge errors as [`three_way_merge`].
+pub fn three_way_merge_hive_directive(
+    path: &Path,
+    base: Option<&[u8]>,
+    local: Option<&[u8]>,
+    incoming: Option<&[u8]>,
+) -> Result<MergeOutcome, UpdateError> {
+    three_way_merge_with_policy(path, base, local, incoming, MergePolicy::HiveDirective)
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum MergePolicy {
+    LocalPriority,
+    HiveDirective,
+}
+
+fn three_way_merge_with_policy(
+    path: &Path,
+    base: Option<&[u8]>,
+    local: Option<&[u8]>,
+    incoming: Option<&[u8]>,
+    policy: MergePolicy,
+) -> Result<MergeOutcome, UpdateError> {
     let Some(base) = base else {
         return match (local, incoming) {
             (None, Some(incoming)) => Ok(MergeOutcome {
@@ -153,7 +188,7 @@ pub fn three_way_merge(
             local_priority: true,
         });
     };
-    merge_changed_text(path, base, local, incoming)
+    merge_changed_text(path, base, local, incoming, policy)
 }
 
 fn validate_merge_inputs(
@@ -227,6 +262,7 @@ fn merge_changed_text(
     base: &[u8],
     local: &[u8],
     incoming: &[u8],
+    policy: MergePolicy,
 ) -> Result<MergeOutcome, UpdateError> {
     let utf8_error = |_| {
         UpdateError::Conflict(format!(
@@ -245,16 +281,36 @@ fn merge_changed_text(
     let incoming_edits = diff_edits(&base_lines, &incoming_lines, false, path)?;
     let mut omitted = 0;
     for incoming_edit in incoming_edits {
-        if local_edits
+        let overlaps = local_edits
             .iter()
-            .any(|local_edit| edits_overlap(local_edit, &incoming_edit))
+            .any(|local_edit| edits_overlap(local_edit, &incoming_edit));
+        if !overlaps
+            || (incoming_edit.start == incoming_edit.end
+                && local_edits
+                    .iter()
+                    .filter(|local_edit| edits_overlap(local_edit, &incoming_edit))
+                    .all(|local_edit| local_edit.start == local_edit.end))
         {
-            omitted += 1;
-        } else {
             local_edits.push(incoming_edit);
+        } else if policy == MergePolicy::HiveDirective
+            && is_replaced_hive_rule_clause(&base_lines, &incoming_edit)
+        {
+            let retained_insertions = local_edits
+                .iter()
+                .filter(|local_edit| edits_overlap(local_edit, &incoming_edit))
+                .filter_map(|local_edit| {
+                    retained_local_addition_after_replaced_rule(local_edit, &incoming_edit)
+                })
+                .collect::<Vec<_>>();
+            local_edits.retain(|local_edit| !edits_overlap(local_edit, &incoming_edit));
+            local_edits.push(incoming_edit);
+            local_edits.extend(retained_insertions);
+        } else {
+            omitted += 1;
         }
     }
     local_edits.sort_by_key(|edit| (edit.start, edit.end, !edit.local));
+    let local_priority = local_edits.iter().any(|edit| edit.local);
     let mut merged = String::new();
     let mut cursor = 0;
     for edit in local_edits {
@@ -274,7 +330,54 @@ fn merge_changed_text(
         bytes: Some(merged.into_bytes()),
         disposition: MergeDisposition::Merged,
         omitted_incoming_hunks: omitted,
-        local_priority: true,
+        local_priority,
+    })
+}
+
+fn is_replaced_hive_rule_clause(base_lines: &[String], incoming: &Edit) -> bool {
+    incoming.start < incoming.end
+        && base_lines[incoming.start..incoming.end]
+            .iter()
+            .any(|line| is_hive_rule_line(line))
+        && incoming
+            .replacement
+            .iter()
+            .any(|line| is_authoritative_hive_rule_line(line))
+}
+
+fn is_hive_rule_line(line: &str) -> bool {
+    line.trim_start().starts_with("- ")
+}
+
+fn is_authoritative_hive_rule_line(line: &str) -> bool {
+    let normalized = line.to_ascii_lowercase();
+    is_hive_rule_line(line)
+        && [
+            "safety",
+            "ownership",
+            "preserve",
+            "never",
+            "must",
+            "forbid",
+            "require",
+            "credential",
+            "secret",
+            "foreign",
+        ]
+        .iter()
+        .any(|term| normalized.contains(term))
+}
+
+fn retained_local_addition_after_replaced_rule(local: &Edit, incoming: &Edit) -> Option<Edit> {
+    if local.start != incoming.start || local.end != incoming.end {
+        return None;
+    }
+    let replaced_line_count = incoming.end.checked_sub(incoming.start)?;
+    (local.replacement.len() > replaced_line_count).then(|| Edit {
+        start: incoming.end,
+        end: incoming.end,
+        replacement: local.replacement[replaced_line_count..].to_vec(),
+        local: true,
     })
 }
 
@@ -674,6 +777,69 @@ mod tests {
         );
         assert_eq!(result.omitted_incoming_hunks, 1);
         assert!(result.local_priority);
+    }
+
+    #[test]
+    fn hive_directive_replaces_only_an_overlapping_existing_rule() {
+        let base = b"# Hive directive\n- Keep foreign bytes.\n- Never bypass ownership checks.\n";
+        let local =
+            b"# Local title\n- Keep foreign bytes.\n- Allow bypasses.\n- User-local note.\n";
+        let incoming = b"# Hive directive\n- Keep foreign bytes.\n- Never bypass ownership checks without authenticated proof.\n";
+
+        let result = three_way_merge_hive_directive(
+            Path::new(".agents/directives/00-hive-user.md"),
+            Some(base),
+            Some(local),
+            Some(incoming),
+        )
+        .expect("directive merge");
+        let merged = String::from_utf8(result.bytes.expect("merged bytes")).expect("UTF-8");
+
+        assert!(merged.contains("# Local title"));
+        assert!(merged.contains("Never bypass ownership checks without authenticated proof"));
+        assert!(merged.contains("User-local note."));
+        assert!(!merged.contains("Allow bypasses."));
+        assert_eq!(result.omitted_incoming_hunks, 0);
+        assert!(result.local_priority);
+    }
+
+    #[test]
+    fn hive_directive_keeps_an_overlapping_user_insertion() {
+        let base = b"# Hive directive\n";
+        let local = b"# Hive directive\n- User-local note.\n";
+        let incoming = b"# Hive directive\n- Never bypass ownership checks.\n";
+
+        let result = three_way_merge_hive_directive(
+            Path::new(".agents/directives/00-hive-user.md"),
+            Some(base),
+            Some(local),
+            Some(incoming),
+        )
+        .expect("directive merge");
+        let merged = String::from_utf8(result.bytes.expect("merged bytes")).expect("UTF-8");
+
+        assert!(merged.contains("User-local note."));
+        assert!(merged.contains("Never bypass ownership checks."));
+    }
+
+    #[test]
+    fn hive_directive_keeps_an_overlapping_non_safety_rule() {
+        let base = b"# Hive directive\n- Prefer the compact table.\n";
+        let local = b"# Hive directive\n- Prefer the detailed table.\n";
+        let incoming = b"# Hive directive\n- Prefer the sortable table.\n";
+
+        let result = three_way_merge_hive_directive(
+            Path::new(".agents/directives/00-hive-user.md"),
+            Some(base),
+            Some(local),
+            Some(incoming),
+        )
+        .expect("directive merge");
+        let merged = String::from_utf8(result.bytes.expect("merged bytes")).expect("UTF-8");
+
+        assert!(merged.contains("Prefer the detailed table."));
+        assert!(!merged.contains("Prefer the sortable table."));
+        assert_eq!(result.omitted_incoming_hunks, 1);
     }
 
     #[test]

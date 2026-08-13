@@ -1576,6 +1576,13 @@ pub(crate) fn replace_user_setup_file(
     .map_err(|error| error.message().to_owned())
 }
 
+pub(crate) fn prune_user_setup_empty_ancestors<'a>(
+    root: &Dir,
+    paths: impl IntoIterator<Item = &'a Path>,
+) -> Result<(), String> {
+    prune_empty_owned_ancestors(root, paths).map_err(|error| error.message().to_owned())
+}
+
 fn execute(
     operation: UserOperation,
     arguments: &UserArguments,

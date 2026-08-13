@@ -4,10 +4,11 @@ use hive_core::native_workflow::{JudgeInvocationPolicy, JudgeRoute};
 use hive_core::sha256_digest;
 use hive_projection::{
     canonical_builtin_skill_name, compile_user_projection_localized, embedded_catalog,
-    DescriptorLanguage, Host as ProjectionHost,
+    historical_builtin_skills, retired_builtin_skill_names, DescriptorLanguage,
+    Host as ProjectionHost,
 };
 use hive_render::GlobalProjectPreferences;
-use hive_update::{three_way_merge, MergeDisposition};
+use hive_update::{three_way_merge, three_way_merge_hive_directive, MergeDisposition};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value as JsonValue};
 use std::collections::{BTreeMap, BTreeSet};
@@ -34,6 +35,9 @@ const EXPEDITED_DEFAULT_USAGE_THRESHOLD: u8 = 20;
 const LEGACY_080_USAGE_THRESHOLD: u8 = 20;
 const USER_PROJECTION_090_TEST3_SETUP_HIVE: &[u8] =
     include_bytes!("../../../harness/user-bases/0.9.0-test.3/skills/setup-hive/SKILL.md");
+const HISTORICAL_SKILL_RELEASES: [&str; 9] = [
+    "0.1.0", "0.2.0", "0.3.0", "0.4.0", "0.5.0", "0.6.0", "0.7.0", "0.8.0", "0.9.0",
+];
 
 const USER_SETUP_USAGE: &str = "\
 Configure or validate Aigent Hive user preferences.
@@ -2053,8 +2057,10 @@ fn plan_user_projection(
         .as_deref()
         .map(parse_projection_manifest)
         .transpose()?;
-    let base_files = projection_base_files(root, prior.as_ref())?;
-    let prior_owned_paths = prior
+    let mut base_files = projection_base_files(root, prior.as_ref())?;
+    let retired_files = authenticated_retired_user_skill_files(root)?;
+    base_files.extend(retired_files.clone());
+    let mut prior_owned_paths = prior
         .as_ref()
         .map(|manifest| {
             manifest
@@ -2064,6 +2070,7 @@ fn plan_user_projection(
                 .collect::<BTreeSet<_>>()
         })
         .unwrap_or_default();
+    prior_owned_paths.extend(retired_files.keys().cloned());
 
     let mut paths = base_files.keys().cloned().collect::<BTreeSet<_>>();
     paths.extend(files.keys().cloned());
@@ -2093,12 +2100,21 @@ fn plan_user_projection(
                 path.display()
             )));
         }
-        let merged = three_way_merge(
-            &path,
-            base.map(Vec::as_slice),
-            before.as_deref(),
-            incoming.map(Vec::as_slice),
-        )
+        let merged = if path.starts_with(".agents/directives/") {
+            three_way_merge_hive_directive(
+                &path,
+                base.map(Vec::as_slice),
+                before.as_deref(),
+                incoming.map(Vec::as_slice),
+            )
+        } else {
+            three_way_merge(
+                &path,
+                base.map(Vec::as_slice),
+                before.as_deref(),
+                incoming.map(Vec::as_slice),
+            )
+        }
         .map_err(|error| SetupError::Conflict(error.to_string()))?;
         let after = merged.bytes;
         planned.reports.push(UserProjectionPathReport {
@@ -2141,6 +2157,41 @@ fn plan_user_projection(
         .reports
         .sort_by(|left, right| left.path.cmp(&right.path));
     Ok(planned)
+}
+
+fn authenticated_retired_user_skill_files(
+    root: &Dir,
+) -> Result<BTreeMap<PathBuf, Vec<u8>>, SetupError> {
+    let retired = retired_builtin_skill_names()
+        .map_err(|error| SetupError::Internal(error.message().to_owned()))?;
+    let mut historical_digests = BTreeMap::<String, BTreeSet<String>>::new();
+    for version in HISTORICAL_SKILL_RELEASES {
+        for skill in historical_builtin_skills(version)
+            .map_err(|error| SetupError::Internal(error.message().to_owned()))?
+        {
+            if retired.contains_key(&skill.name) {
+                historical_digests
+                    .entry(skill.name)
+                    .or_default()
+                    .insert(skill.content_digest);
+            }
+        }
+    }
+
+    let mut files = BTreeMap::new();
+    for (name, digests) in historical_digests {
+        let path = PathBuf::from(".agents/skills").join(name).join("SKILL.md");
+        let Some(bytes) =
+            super::user_install::read_user_setup_file(root, &path, MAX_USER_SETUP_BYTES)
+                .map_err(SetupError::Conflict)?
+        else {
+            continue;
+        };
+        if digests.contains(&sha256_digest(&bytes)) {
+            files.insert(path, bytes);
+        }
+    }
+    Ok(files)
 }
 
 fn user_projection_files(
@@ -2407,6 +2458,26 @@ fn apply_user_projection(
             )));
         }
         applied.changes.push(change);
+    }
+    let removed_skill_paths = applied
+        .changes
+        .iter()
+        .filter(|change| change.after.is_none() && change.path.starts_with(".agents/skills/"))
+        .map(|change| change.path.as_path())
+        .collect::<Vec<_>>();
+    if let Err(primary) = super::user_install::prune_user_setup_empty_ancestors(
+        root,
+        removed_skill_paths.iter().copied(),
+    ) {
+        let rollback = rollback_user_projection(root, &applied);
+        return match rollback {
+            Ok(()) => Err(SetupError::Conflict(format!(
+                "user projection cleanup failed: {primary}"
+            ))),
+            Err(rollback) => Err(SetupError::Conflict(format!(
+                "user projection cleanup failed ({primary}); rollback failed ({rollback})"
+            ))),
+        };
     }
     Ok(applied)
 }
@@ -3338,6 +3409,61 @@ usage_guard:
         assert!(overlap_report.local_priority);
         assert!(overlap_report.omitted_incoming_hunks > 0);
         assert!(!overlap.changes.iter().any(|change| change.path == target));
+    }
+
+    #[test]
+    fn user_projection_removes_an_authenticated_retired_global_skill_and_empty_leaf() {
+        let temporary = tempfile::tempdir().expect("temporary user root");
+        let config = valid_config();
+        let catalog = parse_and_validate_catalog().expect("catalog");
+        let skills = resolve_skills(&config, &catalog).expect("skill closure");
+        let answers = canonical_config(&config).expect("answers");
+        let retired = PathBuf::from(".agents/skills/hive-knowledge-capture/SKILL.md");
+        let historical = include_bytes!(
+            "../../../harness/project-bases/0.7.0/skills/hive-knowledge-capture/SKILL.md"
+        );
+        let full = temporary.path().join(&retired);
+        fs::create_dir_all(full.parent().expect("retired parent")).expect("retired parent");
+        fs::write(&full, historical).expect("retired Hive Skill");
+        let root =
+            super::super::user_install::open_user_root_for_setup(temporary.path()).expect("root");
+
+        let planned = plan_user_projection(&root, &config, &skills, &answers)
+            .expect("authenticated retired cleanup preview");
+        assert!(planned.changes.iter().any(|change| {
+            change.path == retired
+                && change.before.as_deref() == Some(historical.as_slice())
+                && change.after.is_none()
+        }));
+
+        apply_user_projection(&root, &config, &skills, &answers)
+            .expect("authenticated retired cleanup apply");
+        assert!(!full.exists());
+        assert!(!temporary
+            .path()
+            .join(".agents/skills/hive-knowledge-capture")
+            .exists());
+    }
+
+    #[test]
+    fn user_projection_preserves_a_modified_or_foreign_retired_name() {
+        let temporary = tempfile::tempdir().expect("temporary user root");
+        let config = valid_config();
+        let catalog = parse_and_validate_catalog().expect("catalog");
+        let skills = resolve_skills(&config, &catalog).expect("skill closure");
+        let answers = canonical_config(&config).expect("answers");
+        let retired = PathBuf::from(".agents/skills/hive-knowledge-capture/SKILL.md");
+        let full = temporary.path().join(&retired);
+        fs::create_dir_all(full.parent().expect("retired parent")).expect("retired parent");
+        let foreign = b"---\nname: hive-knowledge-capture\n---\n# User Skill\n";
+        fs::write(&full, foreign).expect("foreign Skill");
+        let root =
+            super::super::user_install::open_user_root_for_setup(temporary.path()).expect("root");
+
+        let planned = plan_user_projection(&root, &config, &skills, &answers)
+            .expect("foreign retired-name preview");
+        assert!(!planned.changes.iter().any(|change| change.path == retired));
+        assert_eq!(fs::read(full).expect("foreign Skill retained"), foreign);
     }
 
     #[test]

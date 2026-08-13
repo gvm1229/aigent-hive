@@ -3,7 +3,7 @@
 - 기준 branch: `codex/0.9.3-native-agents` (`develop` 통합 기준)
 - product version: `0.9.2`
 - 다음 release target: `0.9.3`
-- plan revision: `185`
+- plan revision: `187`
 - 현재 milestone: `0.9.3` native iterative·custom subagent 구현·numbered public test 수용·정식 출시
 - 기능 기준: `2cec0377748874748d126b6b55e59975a3f20a02`; release discipline base `c777da1`
 - 제외: `NAT-002–024`·`MRA-001–032`의 `0.9.3`, `N10-002–011`의 `0.10.0-test`
@@ -24,6 +24,12 @@
 - `0.9.3` 재개: 유지보수자 명시 승인 뒤 `codex/0.9.3-native-agents`에서 `develop` 기준 통합.
   Native orchestration event·authority·CLI·feasibility baseline 복원, custom profile의 preview·exact
   digest consent·owned projection·foreign-byte 거부 구현. Ralph loop initialize·validate·recover PASS.
+
+- `0.9.3` projection purge·directive 우선 갱신 완료: historical digest 또는 authenticated ownership으로
+  증명되는 retired Hive Skill만 전역·project `.agents/skills`에서 제거. 새 Hive safety·ownership rule과
+  직접 충돌하는 Hive-owned directive clause만 incoming 우선으로 갱신. 사용자·foreign·비충돌 byte 보존.
+  workspace Rust 559·strict Clippy·Python projection parity와 global setup/project lifecycle 22개,
+  human documentation style·Markdown link·Source Wiki lint 통과
   Codex CLI `0.147.0`·Claude Code `2.1.163` 확인. Claude fresh-session probe: CLI 미로그인으로
   model 실행 `0회`, auth 전 MRA actual lifecycle 수용 보류
 - Custom agent lifecycle 보강: `8fdbba4`·`88bc18f`, no-follow parent handle의 exact-byte claim

@@ -210,6 +210,27 @@ class Phase3SkillSourceContract(unittest.TestCase):
         self.assertTrue(set(ledger["retired_names"].values()).issubset(CURRENT))
         self.assertTrue(retired.isdisjoint(skill_paths(SKILLS)))
 
+    def test_projection_refresh_purges_only_authenticated_retired_hive_skills(self) -> None:
+        user_setup = (ROOT / "crates/hive-cli/src/user_setup.rs").read_text(encoding="utf-8")
+        project_upgrade = (ROOT / "crates/hive-cli/src/project_upgrade.rs").read_text(
+            encoding="utf-8"
+        )
+        user_setup_skill = (SKILLS / "user-setup/SKILL.md").read_text(encoding="utf-8")
+        project_refresh = (SKILLS / "project-refresh/SKILL.md").read_text(
+            encoding="utf-8"
+        )
+        for required in (
+            "authenticated_retired_user_skill_files",
+            "retired_builtin_skill_names",
+            "historical_builtin_skills",
+            "prune_user_setup_empty_ancestors",
+            "three_way_merge_hive_directive",
+        ):
+            self.assertIn(required, user_setup)
+        self.assertIn("three_way_merge_hive_directive", project_upgrade)
+        self.assertIn("retired-name", user_setup_skill)
+        self.assertIn("retired Hive Skill", project_refresh)
+
     def test_new_universal_skill_boundaries_are_present(self) -> None:
         ship = (SKILLS / "ship/SKILL.md").read_text(encoding="utf-8")
         amend = (SKILLS / "amend-directive/SKILL.md").read_text(encoding="utf-8")
