@@ -699,17 +699,14 @@ class Phase6StaticContracts(unittest.TestCase):
                 "templates",
             ):
                 self.assertEqual(inventory[key], sorted(set(inventory[key])), key)
-            catalog = yaml.safe_load(
-                (ROOT / "harness/skills/catalog.yml").read_text(encoding="utf-8")
+            frozen_inventory = read_json(
+                ROOT
+                / "harness"
+                / "release"
+                / version
+                / "release-surface-inventory.json"
             )
-            current_skills = {entry["name"] for entry in catalog["skills"]}
-            self.assertTrue(current_skills.issubset(set(inventory["skills"])))
-            self.assertTrue(
-                {
-                    f".agents/skills/{name}/SKILL.md"
-                    for name in current_skills
-                }.issubset(set(inventory["projections"]))
-            )
+            self.assertEqual(inventory, frozen_inventory)
             for relative, payload in first.items():
                 self.assertNotRegex(relative.casefold(), r"(^|/)(secret|private|.*\.pem|.*\.key)")
                 if relative.endswith(".json"):

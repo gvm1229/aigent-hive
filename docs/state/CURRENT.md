@@ -1,7 +1,8 @@
 # 현재 상태
 
 - 기준 branch: `codex/0.9.3-native-agents` (`develop` 통합 기준)
-- product version: `0.9.3` 개발 기준
+- product version: `0.9.2`
+- 다음 release target: `0.9.3`
 - plan revision: `2.84`
 - 현재 milestone: `0.9.3` native iterative·custom subagent 구현·numbered public test 수용·정식 출시
 - 기능 기준: `2cec0377748874748d126b6b55e59975a3f20a02`; release discipline base `c777da1`
