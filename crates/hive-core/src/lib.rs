@@ -7,6 +7,7 @@ use std::path::{Component, Path, PathBuf};
 
 use sha2::{Digest, Sha256};
 
+pub mod custom_agent;
 pub mod judge;
 pub mod judge_auth;
 pub mod loop_graph;
@@ -52,7 +53,6 @@ pub fn normalize_platform_root(path: &Path) -> PathBuf {
     }
     path.to_owned()
 }
-
 /// Errors raised before a command is allowed to mutate a target project.
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum TargetGuardError {
