@@ -3045,6 +3045,35 @@ usage_guard:
     }
 
     #[test]
+    fn judge_invocation_accepts_only_the_two_persisted_modes() {
+        for (value, expected) in [
+            ("explicit", JudgeInvocation::Explicit),
+            ("implicit", JudgeInvocation::Implicit),
+        ] {
+            let answers =
+                String::from_utf8(canonical_config(&valid_config()).expect("config bytes"))
+                    .expect("UTF-8 config")
+                    .replace(
+                        "judge_invocation: explicit",
+                        &format!("judge_invocation: {value}"),
+                    );
+            let config =
+                parse_and_validate_config(answers.as_bytes()).expect("configured Judge invocation");
+            assert_eq!(config.judge_invocation, expected);
+            assert!(
+                String::from_utf8(canonical_config(&config).expect("config bytes"))
+                    .expect("UTF-8 config")
+                    .contains(&format!("judge_invocation: {value}\n"))
+            );
+        }
+
+        let invalid = String::from_utf8(canonical_config(&valid_config()).expect("config bytes"))
+            .expect("UTF-8 config")
+            .replace("judge_invocation: explicit", "judge_invocation: automatic");
+        assert!(parse_and_validate_config(invalid.as_bytes()).is_err());
+    }
+
+    #[test]
     fn describe_places_judge_invocation_before_skill_selection() {
         let described = describe_result().expect("describe result");
         let data = described.data.expect("describe data");
@@ -3070,6 +3099,11 @@ usage_guard:
                 "usage-guard",
                 "discord",
             ]
+        );
+        assert_eq!(data["answer_template"]["judge_invocation"], "explicit");
+        assert_eq!(
+            data["schema"]["$defs"]["judge_invocation"]["enum"],
+            serde_json::json!(["explicit", "implicit"])
         );
     }
 
