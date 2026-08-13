@@ -302,6 +302,23 @@ pub(crate) struct UpdateCheckPreferences {
     pub(crate) enabled: bool,
 }
 
+#[derive(Clone, Copy, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub(crate) enum JudgeInvocation {
+    #[default]
+    Explicit,
+    Implicit,
+}
+
+impl JudgeInvocation {
+    const fn as_str(self) -> &'static str {
+        match self {
+            Self::Explicit => "explicit",
+            Self::Implicit => "implicit",
+        }
+    }
+}
+
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(deny_unknown_fields)]
 pub(crate) struct UserSetupConfig {
@@ -314,6 +331,8 @@ pub(crate) struct UserSetupConfig {
     pub(crate) skills: SkillPreferences,
     #[serde(default)]
     pub(crate) update_check: UpdateCheckPreferences,
+    #[serde(default)]
+    pub(crate) judge_invocation: JudgeInvocation,
     pub(crate) usage_guard: UsageGuardPreferences,
 }
 
@@ -500,6 +519,7 @@ fn describe_result() -> Result<ActionResult, SetupError> {
         "persona",
         "hosts",
         "skills",
+        "judge-invocation",
         "usage-guard",
         "discord"
     ]);
@@ -512,6 +532,7 @@ fn describe_result() -> Result<ActionResult, SetupError> {
         "selected_hosts": ["codex"],
         "skills": { "mode": "all" },
         "update_check": { "enabled": false },
+        "judge_invocation": "explicit",
         "usage_guard": { "enabled": true,
             "stop_remaining_percent": "<user-chosen-integer-1-to-99>",
             "codexbar_fallback_enabled": false,
@@ -528,6 +549,7 @@ fn describe_result() -> Result<ActionResult, SetupError> {
         "selected_hosts": ["codex"],
         "skills": { "mode": "all" },
         "update_check": { "enabled": false },
+        "judge_invocation": "explicit",
         "usage_guard": { "enabled": true,
             "stop_remaining_percent": EXPEDITED_DEFAULT_USAGE_THRESHOLD,
             "codexbar_fallback_enabled": false,
@@ -2567,6 +2589,7 @@ fn render_user_directive(config: &UserSetupConfig, resolved_skills: &[String]) -
     } else {
         "disabled"
     };
+    let judge_invocation = config.judge_invocation.as_str();
     let mut rendered = match config.interface_language {
         InterfaceLanguage::En => {
             let capture = if config.wiki.enabled {
@@ -2575,7 +2598,7 @@ fn render_user_directive(config: &UserSetupConfig, resolved_skills: &[String]) -
                 "- Global Wiki is disabled: do not write or refresh knowledge; preserve canonical Markdown until an explicit deletion request.\n"
             };
             format!(
-                "# Aigent Hive user preferences\n\n- Setup state: `operational`\n- Interface language: `en`\n- User contexts: {profile}\n- Agent persona: {persona}\n- Selected hosts: `{hosts}`\n- Global Wiki: `{wiki}`\n- Daily update check: `{update_check}`\n- Active Skills: `{}`\n{capture}- User contexts inform only the global background. They never select a project workflow, implementation approach, delivery priority, or active Skill set.\n- When daily update check is enabled, run `hive update --check --user-root <user-root> --output json` before the first Hive task of each host session. A check may notify but must never install.\n- Use English for every question and response unless the user explicitly requests another language for the current response. A message written in another language does not by itself change this preference.\n- For ambiguous or detail-poor ordinary prompts, offer one concise optional refine suggestion without automatic rewrite.\n- Never request provider credentials or call model-provider APIs on Hive's behalf.\n",
+                "# Aigent Hive user preferences\n\n- Setup state: `operational`\n- Interface language: `en`\n- User contexts: {profile}\n- Agent persona: {persona}\n- Selected hosts: `{hosts}`\n- Global Wiki: `{wiki}`\n- Daily update check: `{update_check}`\n- Judge invocation: `{judge_invocation}`\n- Active Skills: `{}`\n{capture}- User contexts inform only the global background. They never select a project workflow, implementation approach, delivery priority, or active Skill set.\n- When daily update check is enabled, run `hive update --check --user-root <user-root> --output json` before the first Hive task of each host session. A check may notify but must never install.\n- `explicit` Judge invocation is limited to terminal acceptance of iterative, team, or multi-goal criteria. `implicit` additionally requires a strict, material-risk route. Never invoke a Judge for simple questions, read-only or format-only work, ticks, heartbeats, retries, deterministic failures, or an unsupported or unattested host.\n- Use English for every question and response unless the user explicitly requests another language for the current response. A message written in another language does not by itself change this preference.\n- For ambiguous or detail-poor ordinary prompts, offer one concise optional refine suggestion without automatic rewrite.\n- Never request provider credentials or call model-provider APIs on Hive's behalf.\n",
                 resolved_skills.join(", ")
             )
         }
@@ -2586,7 +2609,7 @@ fn render_user_directive(config: &UserSetupConfig, resolved_skills: &[String]) -
                 "- 전역 위키 비활성: knowledge 기록·갱신 금지. 명시적 삭제 요청 전까지 canonical Markdown을 보존.\n"
             };
             format!(
-                "# Aigent Hive 사용자 설정\n\n- 설정 상태: `operational`\n- Interface language: `ko`\n- 사용자 기본 맥락: {profile}\n- 에이전트 페르소나: {persona}\n- 선택 호스트: `{hosts}`\n- Global Wiki: `{wiki}`\n- 일일 update 확인: `{update_check}`\n- 활성 Skill: `{}`\n{capture}- 사용자 기본 맥락은 전역 배경 정보만 제공하며 프로젝트 작업 흐름, 구현 방식, 작업 우선순위, 활성 Skill을 정하지 않음.\n- 일일 update 확인이 enabled이면 각 host session의 첫 Hive 작업 전에 `hive update --check --user-root <user-root> --output json` 실행. 확인은 알림만 가능하며 설치 금지.\n- 현재 응답에 다른 언어를 사용하라는 명시적 요청이 없는 한 모든 질문과 응답에 한국어 사용. 다른 언어로 작성된 메시지만으로 이 선호를 변경하지 않음.\n- 모호하거나 핵심 세부가 부족한 일반 prompt에는 자동 rewrite 없이 간결한 optional refine 제안 1개만 제공.\n- Provider credential을 요청하거나 Hive를 대신해 model-provider API를 호출하지 않음.\n",
+                "# Aigent Hive 사용자 설정\n\n- 설정 상태: `operational`\n- Interface language: `ko`\n- 사용자 기본 맥락: {profile}\n- 에이전트 페르소나: {persona}\n- 선택 호스트: `{hosts}`\n- Global Wiki: `{wiki}`\n- 일일 update 확인: `{update_check}`\n- Judge 호출: `{judge_invocation}`\n- 활성 Skill: `{}`\n{capture}- 사용자 기본 맥락은 전역 배경 정보만 제공하며 프로젝트 작업 흐름, 구현 방식, 작업 우선순위, 활성 Skill을 정하지 않음.\n- 일일 update 확인이 enabled이면 각 host session의 첫 Hive 작업 전에 `hive update --check --user-root <user-root> --output json` 실행. 확인은 알림만 가능하며 설치 금지.\n- `explicit` Judge 호출은 iterative·team·multi-goal criterion의 terminal acceptance로 한정. `implicit`은 strict·material-risk route를 추가로 충족해야 함. 단순 질문, read-only·format-only 작업, tick, heartbeat, retry, 결정적 실패, unsupported 또는 attestation 없는 host에는 Judge 호출 금지.\n- 현재 응답에 다른 언어를 사용하라는 명시적 요청이 없는 한 모든 질문과 응답에 한국어 사용. 다른 언어로 작성된 메시지만으로 이 선호를 변경하지 않음.\n- 모호하거나 핵심 세부가 부족한 일반 prompt에는 자동 rewrite 없이 간결한 optional refine 제안 1개만 제공.\n- Provider credential을 요청하거나 Hive를 대신해 model-provider API를 호출하지 않음.\n",
                 resolved_skills.join(", ")
             )
         }
@@ -2955,6 +2978,7 @@ fn success(
             "selected_hosts": config.selected_hosts,
             "resolved_skills": resolved_skills,
             "update_check": config.update_check,
+            "judge_invocation": config.judge_invocation,
             "usage_guard": config.usage_guard,
             "user_projection": {
                 "paths": projection_reports,
@@ -3013,6 +3037,11 @@ usage_guard:
 ",
         )
         .expect("valid config")
+    }
+
+    #[test]
+    fn legacy_user_setup_defaults_to_explicit_judge_invocation() {
+        assert_eq!(valid_config().judge_invocation, JudgeInvocation::Explicit);
     }
 
     #[test]

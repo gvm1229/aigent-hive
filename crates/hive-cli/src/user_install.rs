@@ -8831,7 +8831,7 @@ mod tests {
     #[allow(clippy::too_many_lines)]
     fn operational_user_guidance_keeps_the_selected_language_consistent() {
         use crate::user_setup::{
-            CatalogSelection, InterfaceLanguage, SelectedHost, SkillPreferences,
+            CatalogSelection, InterfaceLanguage, JudgeInvocation, SelectedHost, SkillPreferences,
             SkillSelectionMode, UpdateCheckPreferences, UsageGuardPreferences, UserProfile,
             UserSetupConfig, WikiBackend, WikiLanguage, WikiPreferences,
         };
@@ -8859,6 +8859,7 @@ mod tests {
                 selected: vec!["setup-hive".to_owned()],
             },
             update_check: UpdateCheckPreferences::default(),
+            judge_invocation: JudgeInvocation::Explicit,
             usage_guard: UsageGuardPreferences {
                 enabled: false,
                 stop_remaining_percent: 20,
