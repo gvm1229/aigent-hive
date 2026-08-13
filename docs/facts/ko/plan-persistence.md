@@ -10,7 +10,6 @@ tags: [documentation, plan, state]
 aliases: ["Markdown plan authority"]
 sources:
   - "repo:.agents/directives/04-documentation-state.md#sha256:44913afc655f527245720594f16a92c87061abfc28280f1a2834ad328b336be5"
-  - "repo:docs/plans/PLAN.md#sha256:d6e37ec21aa6dd5c80f572172f6539c87bbc04a5bde2ccf5beb518f6fc8a3138"
   - "repo:docs/plans/README.md#sha256:7fca19e770b1b99b647a893517b50bcf6e6eb136e3c84ae52ba1258267087df0"
   - "repo:harness/template/AGENTS.md.jinja#sha256:9b45162b48b5d6eedcce0d0b6bc2d63613776fc1089a7d2878941897d0d506c5"
 links: [automated-user-handoff, source-development]
@@ -25,4 +24,4 @@ status: active
 간결한 요약·경로 또는 extensive review용 경로만 제공. 완료 기준: source·consumer
 guidance 일치와 projection 시험. 요청 배경: 긴 계획 전문의 session 중복 없는
 durable plan authority. `PLAN.md` revision: 단조 증가 정수 변경 횟수. 과거 `1.99` 뒤
-`2.00`: 새 계획 세대 아닌 99번째 뒤 100번째 변경 표기. 현재 정규화 값: `191`.
+`2.00`: 새 계획 세대 아닌 99번째 뒤 100번째 변경 표기.
