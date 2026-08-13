@@ -637,6 +637,84 @@ pub(crate) fn publish_parent_file(
     )
 }
 
+/// Removes an exact regular file through a no-follow parent handle.
+///
+/// The destination is first moved into a private same-parent quarantine. A changed or non-regular
+/// destination is restored and never removed.
+///
+/// # Errors
+///
+/// Returns an error when the destination cannot be exclusively claimed, does not contain the
+/// expected bytes, or cannot be safely removed. A `NotFound` destination is reported as `Ok(false)`.
+pub(crate) fn remove_parent_file(
+    parent: &Dir,
+    destination: &OsStr,
+    expected: &[u8],
+) -> io::Result<bool> {
+    match parent.symlink_metadata(destination) {
+        Ok(metadata) if metadata.is_file() => {}
+        Ok(_) => {
+            return Err(io::Error::other(
+                "refusing to remove a non-regular destination",
+            ));
+        }
+        Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(false),
+        Err(error) => return Err(error),
+    }
+
+    let (quarantine, quarantine_name) = create_quarantine(parent)?;
+    let claimed_name = OsStr::new("claimed");
+    if let Err(error) = parent.rename(destination, &quarantine, claimed_name) {
+        drop(quarantine);
+        let _ = parent.remove_dir(&quarantine_name);
+        return Err(error);
+    }
+
+    let claimed = quarantine.symlink_metadata(claimed_name);
+    if !matches!(claimed.as_ref(), Ok(metadata) if metadata.is_file()) {
+        return Err(restore_claim_error(
+            parent,
+            destination,
+            quarantine,
+            &quarantine_name,
+            "claimed destination is not a regular file",
+        ));
+    }
+    let bytes = match read_parent_file(&quarantine, claimed_name, MAX_EXPLICIT_FILE_BYTES) {
+        Ok(bytes) => bytes,
+        Err(error) => {
+            return Err(restore_claim_error(
+                parent,
+                destination,
+                quarantine,
+                &quarantine_name,
+                &format!("cannot verify claimed bytes: {error}"),
+            ));
+        }
+    };
+    if bytes != expected {
+        return Err(restore_claim_error(
+            parent,
+            destination,
+            quarantine,
+            &quarantine_name,
+            "claimed bytes changed during removal",
+        ));
+    }
+    if let Err(error) = quarantine.remove_file(claimed_name) {
+        return Err(restore_claim_error(
+            parent,
+            destination,
+            quarantine,
+            &quarantine_name,
+            &format!("cannot remove claimed destination: {error}"),
+        ));
+    }
+    drop(quarantine);
+    let _ = parent.remove_dir(&quarantine_name);
+    Ok(true)
+}
+
 #[cfg(test)]
 fn publish_parent_file_with_hook(
     parent: &Dir,

@@ -7778,6 +7778,10 @@ mod tests {
             "product-update",
             "project-refresh",
             "package-review",
+            "iterative-execution",
+            "team-execution",
+            "multi-goal",
+            "custom-subagent-create",
         ];
         let mut expected = new_body_skills
             .iter()
@@ -9669,7 +9673,7 @@ mod tests {
             .expect("old Claude projection ownership should verify");
         let deletions = &transition.deletions;
 
-        assert_eq!(deletions.len(), 21);
+        assert_eq!(deletions.len(), 25);
         assert!(deletions
             .iter()
             .all(|path| path.starts_with(".claude/skills")));

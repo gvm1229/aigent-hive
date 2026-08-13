@@ -518,8 +518,8 @@ fn describe_result() -> Result<ActionResult, SetupError> {
         "user-contexts",
         "persona",
         "hosts",
-        "skills",
         "judge-invocation",
+        "skills",
         "usage-guard",
         "discord"
     ]);
@@ -3042,6 +3042,35 @@ usage_guard:
     #[test]
     fn legacy_user_setup_defaults_to_explicit_judge_invocation() {
         assert_eq!(valid_config().judge_invocation, JudgeInvocation::Explicit);
+    }
+
+    #[test]
+    fn describe_places_judge_invocation_before_skill_selection() {
+        let described = describe_result().expect("describe result");
+        let data = described.data.expect("describe data");
+        let question_order = data["question_order"]
+            .as_array()
+            .expect("question order")
+            .iter()
+            .filter_map(serde_json::Value::as_str)
+            .collect::<Vec<_>>();
+
+        assert_eq!(
+            question_order,
+            vec![
+                "interface-language",
+                "daily-update-check",
+                "setup-mode",
+                "wiki",
+                "user-contexts",
+                "persona",
+                "hosts",
+                "judge-invocation",
+                "skills",
+                "usage-guard",
+                "discord",
+            ]
+        );
     }
 
     #[test]

@@ -88,6 +88,7 @@ Configure user-scope Hive preferences without modifying a project harness or pro
    - User contexts: `general knowledge work` with no additional description.
    - Agent persona: `strict`.
    - Active hosts: the current authenticated host only.
+   - Judge invocation: `explicit`.
    - Skills: `all` mode with every built-in Skill in the signed catalog.
    - Usage guard: enabled with a `20%` remaining threshold.
    - Selecting expedited authorizes the displayed built-in dependency closure only. It never
@@ -155,20 +156,25 @@ consent and setup mode. Ask the remaining preference questions only for `Custom`
 7. **Agent persona** — `strict`, `balanced`, `friendly`, or `custom`.
    - For `custom`, ask the next single question for a non-empty custom description.
 8. **Active hosts** — select one or more of `codex`, `claude`, and `antigravity`.
-9. **Skills** — every built-in Skill is active by default.
+9. **Judge invocation** — `explicit` (recommended) or `implicit`.
+   - `explicit` invokes the independent Judge only at an iterative, team, or multi-goal terminal
+     acceptance gate.
+   - `implicit` additionally permits a strict material-risk route; simple questions, read-only,
+     format-only, deterministic failure, tick, heartbeat, and retry routes remain excluded.
+10. **Skills** — every built-in Skill is active by default.
    - Ask whether to keep every built-in Skill active or choose Skills individually.
    - For individual choice, present every built-in Skill as one Markdown list item per line and collect each on/off decision independently.
    - Always include mandatory `user-setup` and preview the full dependency closure.
    - Never derive active Skills from the user profile, persona, or host selection.
    - Existing `recommended` configuration is a legacy saved value. Preserve its exact recorded closure until the user reviews and approves a new `all` or `individual` preview.
    - The signed catalog's `optional_third_party_skills` list is empty in this release. Do not offer or activate a third-party Skill until a later release defines its explicit consent contract.
-10. **Usage guard** — offer `Enabled (recommended)` first and `Disabled` second.
+11. **Usage guard** — offer `Enabled (recommended)` first and `Disabled` second.
    - Expedited setup enables protection at `20%` remaining without another question.
    - In Custom setup, when enabled, ask the user to choose an integer remaining threshold from `1`
      through `99`; do not silently replace that choice with the expedited default.
    - A project may later choose its own registered project identity and an equal-or-higher threshold.
      The global value remains the minimum protection for every project; no project category has a preset value.
-11. **Discord usage notification** — ask only when the usage guard is enabled.
+12. **Discord usage notification** — ask only when the usage guard is enabled.
    - Offer `No` by default and `Yes — send a test notification` as the opt-in choice.
    - When enabled, guide the user to create one Discord incoming webhook and set its URL in a
      local environment variable such as `HIVE_DISCORD_WEBHOOK_URL`. Hive records only the
@@ -194,7 +200,7 @@ consent and setup mode. Ask the remaining preference questions only for `Custom`
      keeps the integration disabled and preserves progress at `discord-test`.
    - The installed visual guide is `<user-root>/.hive/guides/discord-usage-notifications.html`.
      Open that exact local file only when the user asks for a visual guide; do not inspect a project.
-12. **Preview and automatic apply** — show the exact write set and dependency closure, then apply
+13. **Preview and automatic apply** — show the exact write set and dependency closure, then apply
     a conflict-free built-in-only result without another approval question.
 
 ## Reconfiguration
@@ -224,10 +230,15 @@ consent and setup mode. Ask the remaining preference questions only for `Custom`
      - Custom description: required only when persona is `custom`.
   6. **Active hosts** — subscription hosts that receive user-scope setup.
      - Hosts: one or more of `codex`, `claude`, and `antigravity`.
-  7. **Built-in Skills** — active built-in Hive Skills.
+  7. **Judge invocation** — independent acceptance-review policy.
+     - Values: `explicit` or `implicit`.
+     - `explicit`: iterative, team, and multi-goal terminal acceptance only.
+     - `implicit`: explicit routes plus strict material-risk routes; simple, read-only,
+       format-only, deterministic failure, tick, heartbeat, and retry routes remain excluded.
+  8. **Built-in Skills** — active built-in Hive Skills.
      - Selection mode: all built-in Skills or individually selected built-in Skills.
      - Individual selection: one enabled/disabled decision per Skill; mandatory `user-setup` remains active.
-  8. **Usage guard** — stops new Hive work at a chosen remaining-usage limit.
+  9. **Usage guard** — stops new Hive work at a chosen remaining-usage limit.
      - Enablement: enabled or disabled.
      - Stop threshold: integer from `1` through `99` percent remaining.
      - Discord usage notification: enabled or disabled; available only when the usage guard is enabled and sends outbound-only notices.
@@ -273,13 +284,14 @@ Use these host-independent question patterns, one question at a time:
 4. `Skill 선택 방식 선택.`
    - `모든 내장 Skill 사용`
    - `개별 내장 Skill 선택`
-5. `Wiki 저장 위치: 이 컴퓨터의 Markdown 파일. Obsidian 같은 앱 열기 가능.`
-6. `사용량 보호 선택: 활성화 (권장) 또는 비활성화. 신속 설정은 남은 사용량 20%에서 중지.`
-7. `사용량 한도 도달 시 Discord 알림 수신 여부.`
+5. `Judge 호출 정책 선택: explicit (권장) 또는 implicit. explicit: 반복·팀·다중 목표의 최종 수용만. implicit: 엄격한 중대한 위험 경로 추가. 단순 질문·읽기 전용·형식 전용·결정적 실패·tick·heartbeat·retry 제외.`
+6. `Wiki 저장 위치: 이 컴퓨터의 Markdown 파일. Obsidian 같은 앱 열기 가능.`
+7. `사용량 보호 선택: 활성화 (권장) 또는 비활성화. 신속 설정은 남은 사용량 20%에서 중지.`
+8. `사용량 한도 도달 시 Discord 알림 수신 여부.`
    - `아니요`
    - `예, 시험 알림도 보내기`
-8. `Discord webhook URL 저장: 환경 변수. 예: HIVE_DISCORD_WEBHOOK_URL. URL 자체 대신 환경 변수 이름 사용. Hive 시험 알림으로 연결 확인.`
-9. `Discord 알림 항목·순서 선택. 기본값: 남은 사용량, 프로젝트, 요청, 진행 상태, 호스트, 계속하기. 시험 알림: 실제 알림과 같은 형식, 첫 줄 시험 안내 추가.`
+9. `Discord webhook URL 저장: 환경 변수. 예: HIVE_DISCORD_WEBHOOK_URL. URL 자체 대신 환경 변수 이름 사용. Hive 시험 알림으로 연결 확인.`
+10. `Discord 알림 항목·순서 선택. 기본값: 남은 사용량, 프로젝트, 요청, 진행 상태, 호스트, 계속하기. 시험 알림: 실제 알림과 같은 형식, 첫 줄 시험 안내 추가.`
 
 For Korean partial reconfiguration, show this complete catalog before asking which setting to change:
 
@@ -298,12 +310,16 @@ For Korean partial reconfiguration, show this complete catalog before asking whi
 5. **에이전트 페르소나** — Hive 지원 작업의 기본 대화 방식
    - 선택: `strict`, `balanced`, `friendly`, 또는 `custom`
    - 사용자 지정 설명: `custom` 선택 때만 필수
-6. **사용할 호스트** — 전역 Hive 설정을 적용할 subscription host
+  6. **사용할 호스트** — 전역 Hive 설정을 적용할 subscription host
    - 호스트: `codex`, `claude`, `antigravity` 중 하나 이상
-7. **내장 Skill** — 활성화할 내장 Hive Skill
+7. **Judge 호출 정책** — 독립 수용 검토 호출 기준
+   - 선택: `explicit` 또는 `implicit`
+   - `explicit`: 반복·팀·다중 목표의 최종 수용만
+   - `implicit`: `explicit` 경로와 엄격한 중대한 위험 경로. 단순 질문·읽기 전용·형식 전용·결정적 실패·tick·heartbeat·retry 제외
+8. **내장 Skill** — 활성화할 내장 Hive Skill
    - 선택 방식: 모든 내장 Skill 사용 또는 개별 내장 Skill 선택
    - 개별 선택: 각 Skill의 켜기·끄기. 필수 `user-setup`는 계속 활성화
-8. **사용량 보호** — 남은 사용량이 정한 기준에 도달할 때 새 Hive 작업 중지
+9. **사용량 보호** — 남은 사용량이 정한 기준에 도달할 때 새 Hive 작업 중지
    - 사용 여부: `활성화 (권장)` 또는 `비활성화`
    - 중단 기준: 남은 사용량 `1`%부터 `99`%까지
    - Discord 사용량 알림: 켜기 또는 끄기. 사용량 보호를 켠 경우에만 선택 가능하며 Hive에서 Discord로 보내는 알림만 지원

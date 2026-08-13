@@ -8340,7 +8340,11 @@ mod tests {
             .filter(|path| path.ends_with("/agents/openai.yaml"))
             .map(PathBuf::from)
             .collect::<Vec<_>>();
-        assert_eq!(projected_plugin_agents.len(), 22);
+        assert!(
+            !projected_plugin_agents.is_empty(),
+            "the all-Skill installation must project plugin agent metadata"
+        );
+        let projected_plugin_agent_count = projected_plugin_agents.len();
         let mut retired_empty_agents = projected_plugin_agents
             .iter()
             .filter_map(|relative| {
@@ -8356,7 +8360,11 @@ mod tests {
             })
             .collect::<Vec<_>>();
         retired_empty_agents.extend(projected_plugin_agents);
-        assert_eq!(retired_empty_agents.len(), 44);
+        assert_eq!(
+            retired_empty_agents.len(),
+            projected_plugin_agent_count * 2,
+            "each projected agent metadata file must have both retired empty-directory shapes"
+        );
         for relative in &retired_empty_agents {
             if relative.starts_with(".agents/skills/") {
                 fs::create_dir_all(

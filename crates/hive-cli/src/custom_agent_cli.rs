@@ -4,7 +4,8 @@
 //! exact host-native agent definition paths. It never launches either host.
 
 use crate::run::{
-    open_directory_nofollow_path, publish_parent_file, read_parent_file, AdapterError, FileSnapshot,
+    open_directory_nofollow_path, publish_parent_file, read_parent_file, remove_parent_file,
+    AdapterError, FileSnapshot,
 };
 use crate::{emit_action_result, ActionResult, Evidence};
 use cap_fs_ext::DirExt;
@@ -932,30 +933,8 @@ fn remove(arguments: RemoveArguments) -> Result<ActionResult, AgentCliError> {
     let mut changed = Vec::new();
     for (path, expected_digest) in &entry.files {
         let path = Path::new(path);
-        let absolute = safe_path(&root, path)?;
-        match fs::read(&absolute) {
-            Ok(bytes) if sha256_digest(&bytes) == *expected_digest => {
-                fs::remove_file(&absolute).map_err(|error| {
-                    AgentCliError::Conflict(format!(
-                        "cannot remove owned projection {}: {error}",
-                        path.display()
-                    ))
-                })?;
-                changed.push(portable(path));
-            }
-            Ok(_) => {
-                return Err(AgentCliError::Conflict(format!(
-                    "refusing to remove changed or foreign projection {}",
-                    path.display()
-                )))
-            }
-            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
-            Err(error) => {
-                return Err(AgentCliError::Conflict(format!(
-                    "cannot inspect projection {}: {error}",
-                    path.display()
-                )))
-            }
+        if remove_if_owned(&root, path, expected_digest)? {
+            changed.push(portable(path));
         }
     }
     ledger.entries.remove(&arguments.role_id);
@@ -975,6 +954,49 @@ fn remove(arguments: RemoveArguments) -> Result<ActionResult, AgentCliError> {
         evidence: Vec::new(),
         next_action: None,
         data: Some(json!({"role_id": arguments.role_id})),
+    })
+}
+
+fn remove_if_owned(
+    root: &Path,
+    relative: &Path,
+    expected_digest: &str,
+) -> Result<bool, AgentCliError> {
+    let root = open_directory_nofollow_path(root)?;
+    let (parent, name) = custom_projection_parent(&root, relative)?;
+    let bytes = match parent.symlink_metadata(&name) {
+        Ok(metadata) if metadata.is_file() => read_parent_file(&parent, &name, 1024 * 1024)
+            .map_err(|error| {
+                AgentCliError::Conflict(format!(
+                    "cannot read owned projection {}: {error}",
+                    relative.display()
+                ))
+            })?,
+        Ok(_) => {
+            return Err(AgentCliError::Conflict(format!(
+                "refusing to remove a non-regular projection {}",
+                relative.display()
+            )))
+        }
+        Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(false),
+        Err(error) => {
+            return Err(AgentCliError::Conflict(format!(
+                "cannot inspect projection {}: {error}",
+                relative.display()
+            )))
+        }
+    };
+    if sha256_digest(&bytes) != expected_digest {
+        return Err(AgentCliError::Conflict(format!(
+            "refusing to remove changed or foreign projection {}",
+            relative.display()
+        )));
+    }
+    remove_parent_file(&parent, &name, &bytes).map_err(|error| {
+        AgentCliError::Conflict(format!(
+            "cannot atomically remove owned projection {}: {error}",
+            relative.display()
+        ))
     })
 }
 
@@ -1461,6 +1483,35 @@ mod tests {
     }
 
     #[test]
+    fn remove_uses_exact_no_follow_claim_for_every_owned_projection() {
+        let root = temporary_root();
+        let profile = profile();
+        apply_profile(&root, &profile, "input.json");
+
+        let result = remove(RemoveArguments {
+            role_id: profile.role_id.clone(),
+            scope: profile.scope,
+            root: root.clone(),
+            accepted_digest: profile.definition_digest,
+        })
+        .expect("remove");
+
+        assert_eq!(result.code, "hive.agent-removed");
+        for path in result
+            .changed_paths
+            .iter()
+            .filter(|path| path.as_str() != LEDGER_PATH)
+        {
+            assert!(
+                !root.join(path).exists(),
+                "owned projection must be removed through the parent claim"
+            );
+        }
+        assert!(root.join(LEDGER_PATH).is_file());
+        fs::remove_dir_all(root).expect("cleanup");
+    }
+
+    #[test]
     fn apply_requires_exact_consent_digest() {
         let root = temporary_root();
         let profile = profile();
@@ -1772,6 +1823,36 @@ mod tests {
         })
         .is_err());
         assert!(!outside.join("hive-complex-implementer.toml").exists());
+        fs::remove_dir_all(root).expect("cleanup");
+        fs::remove_dir_all(outside).expect("cleanup");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn remove_refuses_a_symlinked_owned_projection() {
+        use std::os::unix::fs::symlink;
+
+        let root = temporary_root();
+        let outside = temporary_root();
+        let profile = profile();
+        apply_profile(&root, &profile, "input.json");
+        let projection = root.join(".codex/agents/hive-complex-implementer.toml");
+        fs::remove_file(&projection).expect("remove owned projection");
+        let outside_projection = outside.join("foreign.toml");
+        fs::write(&outside_projection, b"foreign\n").expect("foreign bytes");
+        symlink(&outside_projection, &projection).expect("symlinked projection");
+
+        assert!(remove(RemoveArguments {
+            role_id: profile.role_id,
+            scope: profile.scope,
+            root: root.clone(),
+            accepted_digest: profile.definition_digest,
+        })
+        .is_err());
+        assert_eq!(
+            fs::read(&outside_projection).expect("foreign bytes"),
+            b"foreign\n"
+        );
         fs::remove_dir_all(root).expect("cleanup");
         fs::remove_dir_all(outside).expect("cleanup");
     }
