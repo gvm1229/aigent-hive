@@ -84,10 +84,17 @@ hive orchestration migrate --target <project-root> --from-run <legacy-id> --dry-
 | `hive-team-execution` | Lane·mailbox·barrier·shared-path lease·cancel |
 | `hive-multi-goal` | Goal decomposition·aggregation·budget·nested execution |
 | `hive-loop-engineering` | Existing graph authoring·validation의 thin compatibility route |
-| Planning·review·QA·research Skills | Clean-room parity 기능, canonical state owner 공유 |
+| Planning | `ralph-loop` 뒤 `iterative-execution`의 criterion·receipt·terminal Judge 경로 |
+| Review·QA | `package-review` 뒤 `iterative-execution`의 독립 검증·terminal Judge 경로 |
+| Research | `research-best-practices`의 근거 handoff 뒤 동일 evidence·terminal Judge 경로 |
+| Performance | 명시 measurement criterion의 `iterative-execution` 경로 |
 
 기능 inventory 제외 사유: `unsafe|provider-specific|redundant|non-useful`만 허용.
 `ownership-collision` 단독 제외 금지.
+
+- Strict terminal Judge: `explicit|implicit` 설정과 무관한 planning·review·QA·research·performance
+  criterion의 reserved independent Judge·외부 signature 요구
+- `implicit`: 그 밖의 strict material-risk route 추가 허용
 
 ## 검증
 

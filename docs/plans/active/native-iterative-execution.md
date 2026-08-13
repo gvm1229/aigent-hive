@@ -72,7 +72,10 @@
 - [x] [NAT-019] AND·OR·quorum criterion·budget·terminal lattice·nested cancel·goal/aggregate Judge gate 기반 `multi-goal` Skill
   - Evidence: commit `b6679a6`, aggregation·verified evidence·terminal Judge, parent allocation·single
     refund·nested cancel 규칙 core 시험과 제품 Skill projection
-- [ ] [NAT-020] Planning·review·QA·research·performance loop parity와 explicit/implicit 무관 strict Judge 정책 통합
+- [x] [NAT-020] Planning·review·QA·research·performance loop parity와 explicit/implicit 무관 strict Judge 정책 통합
+  - Evidence: `iterative-execution`의 planning·review·QA·research·performance shared event·receipt·
+    evidence·usage·cancel·recover path와 terminal Judge invariant, `native_workflow`의 explicit·implicit
+    strict terminal policy test 6 PASS, four product projection parity·static contract 42 PASS
 
 ### E. Qualification·activation
 
