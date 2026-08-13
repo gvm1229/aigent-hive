@@ -1,6 +1,6 @@
 # Aigent Hive active plan index
 
-> Revision: 2.83
+> Revision: 2.84
 > 기준일: 2026-08-13
 > Product version: `0.9.3` 개발 기준
 > 현재 milestone: `0.9.3` native iterative·custom subagent 구현·numbered public test 수용·정식 출시
@@ -45,6 +45,7 @@
 | Hive-native 반복 실행 | 19 | 5 | 79.2% |
 | Model-routed custom subagent | 19 | 13 | 59.4% |
 | 0.9.3 지식 Skill 이름·표시 정비 | 4 | 0 | 100% |
+| 0.9.3 소비자 하네스 세션 조정·directive 갱신 | 0 | 5 | 0% |
 | `0.9.3` 시험·정식 출시 | 0 | 14 | 0% |
 | Prompt refine 자동 routing | 12 | 0 | 100% |
 | v0.9 test 기능 마감 | 18 | 0 | 100% |
@@ -60,7 +61,7 @@
 | Agent 자율 실행 지속 | 8 | 0 | 100% |
 | `0.9.2` 완료 기능·공개 문서 출시 | 12 | 0 | 100% |
 | Notion `v0.10` 후보 | 1 | 10 | 9.1% |
-| **Canonical total** | **525** | **42** | **92.6%** |
+| **Canonical total** | **525** | **47** | **91.8%** |
 
 External production boundary 항목도 미완료 합계에 포함. Protected authority 없이 완료 처리 금지.
 
@@ -97,6 +98,7 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
 | [`active/native-iterative-execution.md`](active/native-iterative-execution.md) | `NAT-*` | Hive-native iterative·team·multi-goal execution |
 | [`active/model-routed-custom-subagents.md`](active/model-routed-custom-subagents.md) | `MRA-*` | Codex·Claude custom subagent·Judge 정책 |
 | [`active/knowledge-skill-naming-0.9.3.md`](active/knowledge-skill-naming-0.9.3.md) | `KNS93-*` | 지식 Skill 이름·한국어 표시·legacy migration |
+| [`active/consumer-harness-session-coordination.md`](active/consumer-harness-session-coordination.md) | `CHS93-*` | 소비자 세션 조정·기존 directive 최소 변경 갱신 |
 | [`active/release-0.9.3-test-qualification.md`](active/release-0.9.3-test-qualification.md) | `REL93-*` | `0.9.3` numbered public test 수용과 정식 출시 |
 | [`active/v0.9.3-release-loop.graph.md`](active/v0.9.3-release-loop.graph.md) | graph | `0.9.3` release loop checkpoint·recovery 계약 |
 | [`active/prompt-refine-auto-routing.md`](active/prompt-refine-auto-routing.md) | `PRF-*` | Material ambiguity 자동 refine·승인 전 정지 |
@@ -133,6 +135,7 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
 ## Current execution order
 
 완료 증거: [`CURRENT.md`](../state/CURRENT.md)와 owning active fragment.
-현재: 유지보수자 승인에 따른 `0.9.3` native iterative·custom subagent 범위 실행. `NAT-001–024`와
-`MRA-001–032`는 current-tree evidence 재조정 뒤 구현·검증. `REL93-001–014`의 numbered public test
+현재: 유지보수자 승인에 따른 `0.9.3` native iterative·custom subagent와 소비자 하네스 세션 조정·
+directive 최소 변경 갱신 범위 실행. `NAT-001–024`·`MRA-001–032`·`CHS93-001–005`는 current-tree evidence
+재조정 뒤 구현·검증. `REL93-001–014`의 numbered public test
 수용 전 stable publication 금지. `N10-002–011`: `0.10.0-test` 유지·`0.9.3` 범위 제외.
