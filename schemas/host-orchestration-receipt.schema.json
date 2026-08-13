@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/gvm1229/aigent-hive/schemas/host-orchestration-receipt.schema.json",
+  "title": "Aigent Hive host orchestration receipt",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "receipt_id", "kind", "run_id", "action_id",
+    "event_head", "control_epoch", "idempotency_key", "fencing_token",
+    "host", "host_capability_digest", "source_locator", "source_digest",
+    "issued_at", "received_at"
+  ],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "receipt_id": { "$ref": "#/$defs/id" },
+    "kind": { "enum": ["claim", "launch-ack", "heartbeat", "lookup", "non-launch-proof", "cancel-ack", "final-result"] },
+    "run_id": { "$ref": "#/$defs/id" },
+    "action_id": { "$ref": "#/$defs/id" },
+    "event_head": { "$ref": "#/$defs/head" },
+    "control_epoch": { "type": "integer", "minimum": 0 },
+    "idempotency_key": { "$ref": "#/$defs/id" },
+    "fencing_token": { "type": "integer", "minimum": 1 },
+    "host": { "enum": ["codex", "claude", "antigravity"] },
+    "native_task_id": { "type": ["string", "null"], "minLength": 1, "maxLength": 256 },
+    "progress_sequence": { "type": ["integer", "null"], "minimum": 0 },
+    "outcome": { "type": ["string", "null"], "enum": [null, "present", "absent", "cancelled", "not-found", "too-late", "succeeded", "failed", "blocked"] },
+    "evidence_locator": { "type": ["string", "null"], "minLength": 1, "maxLength": 1024 },
+    "host_capability_digest": { "$ref": "#/$defs/digest" },
+    "source_locator": { "type": "string", "minLength": 1, "maxLength": 1024 },
+    "source_digest": { "$ref": "#/$defs/digest" },
+    "issued_at": { "type": "string", "format": "date-time" },
+    "received_at": { "type": "string", "format": "date-time" },
+    "provenance": { "type": ["string", "null"], "maxLength": 2048 }
+  },
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,126}$" },
+    "digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "head": { "type": "string", "pattern": "^[0-9]+:sha256:[0-9a-f]{64}$" }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "kind": { "enum": ["launch-ack", "heartbeat", "cancel-ack", "final-result"] } }, "required": ["kind"] },
+      "then": { "required": ["native_task_id"] }
+    },
+    {
+      "if": { "properties": { "kind": { "const": "heartbeat" } }, "required": ["kind"] },
+      "then": { "required": ["progress_sequence"] }
+    },
+    {
+      "if": { "properties": { "kind": { "enum": ["lookup", "cancel-ack", "final-result"] } }, "required": ["kind"] },
+      "then": { "required": ["outcome"] }
+    },
+    {
+      "if": { "properties": { "kind": { "const": "final-result" } }, "required": ["kind"] },
+      "then": { "required": ["evidence_locator"] }
+    }
+  ]
+}
