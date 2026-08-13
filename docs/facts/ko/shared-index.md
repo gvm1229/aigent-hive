@@ -9,9 +9,9 @@ summary: "Enabled global·project Markdown의 user-root SQLite projection 1개."
 tags: [index, knowledge]
 aliases: ["Shared knowledge index"]
 sources:
-  - "repo:crates/hive-cli/src/knowledge.rs#sha256:a00d240fa71fecf28877a43253cdc20190279d9e3d5d0b63bf0ad8a47ab9b7de"
+  - "repo:crates/hive-cli/src/knowledge.rs#sha256:c61df64b6ae0367c4e146346472a108d22576e6f8eee07e8581b29d7ffe25784"
   - "repo:crates/hive-wiki/src/lib.rs#sha256:414e18a2b7f3576e7d63a7b34aa287ff4e1eb3031c32b5f9aa31ade73170d1ca"
-  - "repo:crates/hive-wiki/src/store.rs#sha256:44fdcfac539a78839200855c73b46a391ead6ce5b34514c53b76c5ea762d5c7c"
+  - "repo:crates/hive-wiki/src/store.rs#sha256:d2933a18fede81c05988727a07f5b9de019d4f488cce4d0d8876113d2be1d4b2"
   - "repo:docs/decisions/ADR-0012-global-onboarding-shared-index.md#sha256:dea6123b7b193eb760a37b198566f9318d868fd7035491ac10756de0d4315530"
 links: [knowledge-storage, project-onboarding]
 reviewed_revision: "git:35f5bce71814a3e874fe53a8730024f16013ad46"

@@ -9,11 +9,11 @@ summary: "Hive 사용자 범위 수집·조회는 프로젝트 설정 없이 설
 tags: [capture, knowledge, retrieval, user-root]
 aliases: ["미등록 프로젝트 조회", "설정 독립 지식"]
 sources:
-  - "repo:crates/hive-cli/src/knowledge.rs#sha256:a00d240fa71fecf28877a43253cdc20190279d9e3d5d0b63bf0ad8a47ab9b7de"
+  - "repo:crates/hive-cli/src/knowledge.rs#sha256:c61df64b6ae0367c4e146346472a108d22576e6f8eee07e8581b29d7ffe25784"
   - "repo:crates/hive-cli/src/user_install.rs#sha256:db91b9841c057a3f9b964185fb2a2f3c2f8701908cf6439e26bf05d389a7243d"
   - "repo:docs/plans/active/v0.9.0-knowledge-autocapture-regression.md#sha256:44fcfa9e2c19c626eb8a7885afcaeb6405b454748e62349c1459958d4180236c"
   - "repo:harness/skills/knowledge-capture/SKILL.md#sha256:3566b5cff1f866a11f2d3ce216759dd7d69cd268b61dc5e428e17703146b836c"
-  - "repo:harness/skills/knowledge-recall/SKILL.md#sha256:5090b4eeaddfd943f036ad1057bdeae4663421073cf3ddff03a72a19c7319d01"
+  - "repo:harness/skills/knowledge-recall/SKILL.md#sha256:7b5d334b67e9db1b981273f9fb134adca8129250f241d7359f6f1bc5bda88c1e"
 links: [global-knowledge-rag, knowledge-storage, shared-index]
 reviewed_revision: "git:527434f7364b6be38e7b6941bf48df207c58b32c"
 status: active

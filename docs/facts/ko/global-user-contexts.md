@@ -9,7 +9,7 @@ summary: "Global setup의 복수 사용자 맥락: 배경 정보 전용, 한국�
 tags: [bootstrap, communication, onboarding]
 aliases: ["사용자 맥락", "사용자 프로필"]
 sources:
-  - "repo:README.md#sha256:206f1001bd6d97ce6de5342afc628c9256e84b11439d55b8b78bb3322d219979"
+  - "repo:README.md#sha256:f82fd4b6fda33025116d6a26e7d7823affd75911e7c21ff8926b258518895d33"
   - "repo:crates/hive-cli/src/user_setup.rs#sha256:9fa9e439ad15ea6a8b5ed7cf6d031595a8979b056dada55360cb32331d9e8355"
   - "repo:harness/skills/user-setup/SKILL.md#sha256:de84c29ec9221b5b0bd531e31f21d5317424ed8bdb3f1cfe019670d7f2e876c4"
   - "repo:harness/user-setup/catalog.yml#sha256:3f24914859e7bcbe9bb8c85aafeee4250bdc2da383d0480d000a967fcb3305c5"

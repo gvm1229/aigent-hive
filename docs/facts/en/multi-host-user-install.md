@@ -11,7 +11,7 @@ aliases: ["multi-host Hive install", "repeatable host flag"]
 sources:
   - "repo:crates/hive-cli/src/main.rs#sha256:bd0a33c9ac1debb73761ff7f492b8d83f384d0ea6c1a5bdd4a42a71f0931b631"
   - "repo:crates/hive-cli/src/user_install.rs#sha256:db91b9841c057a3f9b964185fb2a2f3c2f8701908cf6439e26bf05d389a7243d"
-  - "repo:docs/hive-install-guide.ko.html#sha256:bb7f2db1393e7827b88a0d7977a992a5dbf68f50a8845fa0a13bb866ee34917d"
+  - "repo:docs/hive-install-guide.ko.html#sha256:31a0b8e07f218692402f9560423ee032874082deb54f17331a78cdf2ea454e73"
   - "repo:docs/plans/active/multi-host-user-install.md#sha256:048a38d199eb35e838d0772e8162537708f0a006de50614992cd88be49bbb820"
 links: [global-onboarding, supported-hosts]
 reviewed_revision: "git:565b41f08d02db2308356f1cb5ed35d901337a4b"

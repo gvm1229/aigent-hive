@@ -1,7 +1,7 @@
 # 현재 상태
 
 - 기준 branch: `codex/0.9.3-native-agents` (`develop` 통합 기준)
-- product version: `0.9.2`
+- product version: `0.9.3`
 - 다음 release target: `0.9.3`
 - plan revision: `195`
 - 현재 milestone: `0.9.3` validation 계약·출시 운영 최적화·source knowledge import·명시 collection access·자동 지식 최적화·numbered public test 수용·정식 출시
