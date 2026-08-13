@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+import base64
 import json
+import re
 import struct
 import unittest
 from pathlib import Path
 
 import yaml
+from PIL import Image
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -30,6 +33,47 @@ def skill_paths(root: Path) -> set[str]:
 
 
 class Phase3SchemaContract(unittest.TestCase):
+    def test_public_logo_marks_are_centered_without_canvas_changes(self) -> None:
+        """The visible mark may move, but each published canvas stays exactly centered."""
+        logo_paths = (
+            ROOT / "docs/assets/branding/hive-logo-mark.png",
+            ROOT / "docs/assets/branding/hive-logo-mark-colored.png",
+            ROOT / "harness/plugins/aigent-hive/assets/hive-logo-plugin.png",
+        )
+        for path in logo_paths:
+            with Image.open(path).convert("RGBA") as logo:
+                background = logo.getpixel((0, 0))
+                if background[3] == 0:
+                    bounds = logo.getchannel("A").getbbox()
+                else:
+                    mask = Image.new("L", logo.size)
+                    pixels = logo.load()
+                    for y in range(logo.height):
+                        for x in range(logo.width):
+                            if pixels[x, y] != background:
+                                mask.putpixel((x, y), 255)
+                    bounds = mask.getbbox()
+                self.assertIsNotNone(bounds, path)
+                left, top, right, bottom = bounds
+                mark_center = ((left + right - 1) / 2, (top + bottom - 1) / 2)
+                canvas_center = ((logo.width - 1) / 2, (logo.height - 1) / 2)
+                self.assertLessEqual(abs(mark_center[0] - canvas_center[0]), 0.5, path)
+                self.assertLessEqual(abs(mark_center[1] - canvas_center[1]), 0.5, path)
+
+    def test_public_html_guides_embed_the_current_logo_and_full_feature_cards(self) -> None:
+        logo = (ROOT / "docs/assets/branding/hive-logo-mark.png").read_bytes()
+        embedded_logo = re.compile(r'--hive-logo:\s*url\("data:image/png;base64,([^"]+)"\)')
+        for relative in ("docs/hive-core-features.ko.html", "docs/hive-install-guide.ko.html"):
+            html = (ROOT / relative).read_text(encoding="utf-8")
+            match = embedded_logo.search(html)
+            self.assertIsNotNone(match, relative)
+            self.assertEqual(base64.b64decode(match.group(1)), logo, relative)
+
+        core = (ROOT / "docs/hive-core-features.ko.html").read_text(encoding="utf-8")
+        self.assertIn("grid-template-columns: minmax(0, 1fr);", core)
+        self.assertEqual(core.count('<article class="card">'), 8)
+        self.assertEqual(core.count('<div class="use-case">'), 8)
+
     def test_codex_plugin_uses_named_developer_and_cropped_hive_logo(self) -> None:
         plugin_root = ROOT / "harness/plugins/aigent-hive"
         manifest = json.loads(

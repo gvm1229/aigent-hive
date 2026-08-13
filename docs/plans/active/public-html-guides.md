@@ -10,8 +10,8 @@
 ## 범위
 
 - 출력: `docs/hive-core-features.ko.html`, `docs/hive-install-guide.ko.html`
-- 로고: `docs/assets/branding/hive-logo-mark.png`
-- 설치 기준: npm `latest`의 stable `0.8.0`
+- 로고: `docs/assets/branding/hive-logo-mark.png`, `hive-logo-mark-colored.png`, plugin 512 px asset
+- 설치 기준: npm `latest`의 current stable
 - 배포·호스팅·새 이미지 생성 제외
 
 ## Checklist
@@ -22,6 +22,8 @@
 - [x] [PHG-004] 지정 로고의 두 HTML 반영, 기존 README branding 확인과 HTML·link·명령·문서 말투 검증
 - [x] [PHG-005] 공개 HTML 디자인 원칙 문서화와 설치 안내 3단계의 복수 호스트 CLI 계약·예시 보강
 - [x] [PHG-006] 두 HTML의 원본 logo 내장·system font 전환·file-relative link 제거와 독립 파일 offline·responsive 검증
+- [x] [PHG-007] 세 PNG의 기존 logo pixel·색·alpha·canvas 보존 중심 정렬과 bbox·visual 검증
+- [x] [PHG-008] 핵심 기능을 전폭 단일 설명 카드·use case·강조 typography로 재구성하고 PDF 재생성·desktop/mobile print render 검증
 
 ## 완료 기준
 
@@ -45,3 +47,6 @@
 - HTML별 정본 PNG SHA-256 일치, network·file-relative resource 0건, 내부 anchor 전체 유효
 - 프로젝트 밖 임시 폴더의 Edge offline desktop `1440×1200`·mobile `390×844` render PASS
 - 독립 공유 commit `6f861b1`, Source Wiki fact commit `0b3bbbb`
+- 세 자산의 non-background pixel exact translation, visible bbox 중심 오차 최대 0.5 px와 `Phase3SchemaContract` PASS
+- 두 HTML의 current centered logo base64 equality, 8개 full-width feature card·8개 use case static contract PASS
+- Chrome offline desktop·mobile HTML render, core PDF 6페이지 Poppler render와 feature page visual inspection PASS

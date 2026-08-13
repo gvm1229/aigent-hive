@@ -3,7 +3,7 @@
 - 기준 branch: `codex/0.9.3-native-agents` (`develop` 통합 기준)
 - product version: `0.9.2`
 - 다음 release target: `0.9.3`
-- plan revision: `187`
+- plan revision: `189`
 - 현재 milestone: `0.9.3` native iterative·custom subagent 구현·numbered public test 수용·정식 출시
 - 기능 기준: `2cec0377748874748d126b6b55e59975a3f20a02`; release discipline base `c777da1`
 - 제외: `NAT-002–024`·`MRA-001–032`의 `0.9.3`, `N10-002–011`의 `0.10.0-test`
@@ -30,6 +30,11 @@
   직접 충돌하는 Hive-owned directive clause만 incoming 우선으로 갱신. 사용자·foreign·비충돌 byte 보존.
   workspace Rust 559·strict Clippy·Python projection parity와 global setup/project lifecycle 22개,
   human documentation style·Markdown link·Source Wiki lint 통과
+
+- 공개 안내 보강 완료: 세 Hive logo PNG의 pixel-preserving 중심 정렬, `hive-core-features.ko.html`의
+  전폭 feature card·use case·강조 정보 구조, 두 HTML의 centered logo 내장과 PDF 재생성. static contract·Chrome
+  offline desktop/mobile·core PDF 6페이지 Poppler render PASS. `0.9.3` 출시 전 numbered public test와 remaining
+  native/custom-host evidence 필요
   Codex CLI `0.147.0`·Claude Code `2.1.163` 확인. Claude fresh-session probe: CLI 미로그인으로
   model 실행 `0회`, auth 전 MRA actual lifecycle 수용 보류
 - Custom agent lifecycle 보강: `8fdbba4`·`88bc18f`, no-follow parent handle의 exact-byte claim

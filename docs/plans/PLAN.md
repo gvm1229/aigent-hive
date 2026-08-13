@@ -1,6 +1,6 @@
 # Aigent Hive active plan index
 
-> Revision: 187
+> Revision: 189
 > 기준일: 2026-08-13
 > Product version: `0.9.3` 개발 기준
 > 현재 milestone: `0.9.3` native iterative·custom subagent 구현·numbered public test 수용·정식 출시
@@ -34,7 +34,7 @@
 | Source docs Wiki | 13 | 0 | 100% |
 | Windows shell install boundary | 3 | 0 | 100% |
 | 문서 말투 | 6 | 0 | 100% |
-| 공개 한국어 HTML 안내 | 6 | 0 | 100% |
+| 공개 한국어 HTML 안내 | 8 | 0 | 100% |
 | 복수 호스트 사용자 설치 | 5 | 0 | 100% |
 | Security review | 4 | 0 | 100% |
 | Docs Wiki migration | 4 | 0 | 100% |
@@ -138,6 +138,6 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
 
 완료 증거: [`CURRENT.md`](../state/CURRENT.md)와 owning active fragment.
 현재: 유지보수자 승인에 따른 `0.9.3` native iterative·custom subagent, 소비자 하네스 세션 조정,
-projection purge·directive 우선 갱신 범위 실행. `NAT-001–024`·`MRA-001–032`·`CHS93-001–005`·`PUG93-001–004`는 current-tree evidence
+projection purge·directive 우선 갱신과 공개 HTML·logo 중심 정렬 완료. `NAT-001–024`·`MRA-001–032`·`CHS93-001–005`·`PUG93-001–004`는 current-tree evidence
 재조정 뒤 구현·검증. `REL93-001–014`의 numbered public test
 수용 전 stable publication 금지. `N10-002–011`: `0.10.0-test` 유지·`0.9.3` 범위 제외.
