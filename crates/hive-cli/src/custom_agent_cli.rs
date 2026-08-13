@@ -5,7 +5,7 @@
 
 use crate::run::AdapterError;
 use crate::{emit_action_result, ActionResult, Evidence};
-use hive_core::custom_agent::{AgentScope, CustomAgentProfile};
+use hive_core::custom_agent::{resolve_profiles, route_profile, AgentScope, CustomAgentProfile};
 use hive_core::{ensure_consumer_target, sha256_digest};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
@@ -16,12 +16,13 @@ use std::path::{Component, Path, PathBuf};
 use std::process::ExitCode;
 
 const USAGE: &str = "\
-Preview, apply, validate, or remove one consented Hive custom-agent profile.\n\
+Preview, apply, validate, route, or remove one consented Hive custom-agent profile.\n\
 \n\
 USAGE:\n\
     hive agent preview --profile <profile.json> --root <dir> --output json\n\
     hive agent apply --profile <profile.json> --root <dir> --accept-definition-digest <sha256> --output json\n\
     hive agent validate --profile <profile.json> --root <dir> --output json\n\
+    hive agent route --user-root <dir> --project-root <dir> --request <text> --output json\n\
     hive agent remove --role <role-id> --scope <user|project> --root <dir> --accept-definition-digest <sha256> --output json\n";
 
 const PROFILE_DIRECTORY: &str = ".hive/config/custom-subagents";
@@ -92,6 +93,13 @@ struct RemoveArguments {
     accepted_digest: String,
 }
 
+#[derive(Debug)]
+struct RouteArguments {
+    user_root: PathBuf,
+    project_root: PathBuf,
+    request: String,
+}
+
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 struct OwnershipLedger {
@@ -132,6 +140,7 @@ pub(crate) fn run(arguments: &[String]) -> ExitCode {
             "preview" => "PreviewAgent",
             "apply" => "ApplyAgent",
             "validate" => "ValidateAgent",
+            "route" => "RouteAgent",
             "remove" => "RemoveAgent",
             _ => "Agent",
         },
@@ -152,12 +161,28 @@ fn execute(arguments: &[String]) -> Result<ActionResult, AgentCliError> {
         Some("preview") => preview(parse_profile_arguments(&arguments[1..], false)?),
         Some("apply") => apply(parse_profile_arguments(&arguments[1..], true)?),
         Some("validate") => validate(parse_profile_arguments(&arguments[1..], false)?),
+        Some("route") => route(parse_route_arguments(&arguments[1..])?),
         Some("remove") => remove(parse_remove_arguments(&arguments[1..])?),
         Some(other) => Err(AgentCliError::Input(format!(
             "unknown agent action: {other}"
         ))),
         None => Err(AgentCliError::Input("missing agent action".to_owned())),
     }
+}
+
+fn parse_route_arguments(arguments: &[String]) -> Result<RouteArguments, AgentCliError> {
+    let options = options(
+        arguments,
+        &["--user-root", "--project-root", "--request", "--output"],
+    )?;
+    if options.get("--output").is_some_and(|value| value != "json") {
+        return Err(AgentCliError::Input("output must be json".to_owned()));
+    }
+    Ok(RouteArguments {
+        user_root: PathBuf::from(required(&options, "--user-root")?),
+        project_root: PathBuf::from(required(&options, "--project-root")?),
+        request: required(&options, "--request")?.to_owned(),
+    })
 }
 
 fn parse_profile_arguments(
@@ -350,6 +375,42 @@ fn validate(arguments: ProfileArguments) -> Result<ActionResult, AgentCliError> 
         &files,
         None,
     ))
+}
+
+fn route(arguments: RouteArguments) -> Result<ActionResult, AgentCliError> {
+    let user_root = prepare_root(&arguments.user_root, AgentScope::User)?;
+    let project_root = prepare_root(&arguments.project_root, AgentScope::Project)?;
+    let profiles = resolve_profiles(
+        &read_profiles(&user_root, AgentScope::User)?,
+        &read_profiles(&project_root, AgentScope::Project)?,
+    )
+    .map_err(|error| AgentCliError::Verification(error.to_string()))?;
+    let selected = route_profile(&profiles, &arguments.request);
+    let evidence = selected.map_or_else(Vec::new, |profile| {
+        vec![Evidence {
+            kind: "custom-agent-profile",
+            locator: profile.role_id.clone(),
+            digest: profile.definition_digest.clone(),
+        }]
+    });
+    Ok(ActionResult {
+        schema_version: 1,
+        action: "RouteAgent",
+        status: "success",
+        exit_code: 0,
+        code: "hive.agent-route",
+        message: "custom agent route resolved without host launch".to_owned(),
+        changed_paths: Vec::new(),
+        evidence,
+        next_action: None,
+        data: Some(json!({
+            "role_id": selected.map(|profile| &profile.role_id),
+            "scope": selected.map(|profile| profile.scope),
+            "definition_digest": selected.map(|profile| &profile.definition_digest),
+            "host_mappings": selected.map(|profile| &profile.host_mappings),
+            "spawned": false,
+        })),
+    })
 }
 
 fn apply(arguments: ProfileArguments) -> Result<ActionResult, AgentCliError> {
@@ -548,6 +609,61 @@ fn read_ledger(root: &Path) -> Result<OwnershipLedger, AgentCliError> {
     }
 }
 
+fn read_profiles(
+    root: &Path,
+    expected_scope: AgentScope,
+) -> Result<Vec<CustomAgentProfile>, AgentCliError> {
+    let directory = safe_path(root, Path::new(PROFILE_DIRECTORY))?;
+    let entries = match fs::read_dir(&directory) {
+        Ok(entries) => entries,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(Vec::new()),
+        Err(error) => {
+            return Err(AgentCliError::Conflict(format!(
+                "cannot read custom agent profile directory: {error}"
+            )))
+        }
+    };
+    let mut profiles = Vec::new();
+    for entry in entries {
+        let entry = entry.map_err(|error| {
+            AgentCliError::Conflict(format!("cannot inspect custom agent profile: {error}"))
+        })?;
+        let file_type = entry.file_type().map_err(|error| {
+            AgentCliError::Conflict(format!("cannot inspect custom agent profile type: {error}"))
+        })?;
+        if entry.file_name() == "OWNERSHIP.json" {
+            if file_type.is_symlink() || !file_type.is_file() {
+                return Err(AgentCliError::Conflict(
+                    "custom agent ownership ledger is not a regular file".to_owned(),
+                ));
+            }
+            continue;
+        }
+        if file_type.is_symlink() || !file_type.is_file() {
+            return Err(AgentCliError::Conflict(
+                "custom agent profile directory contains a non-regular entry".to_owned(),
+            ));
+        }
+        if entry
+            .path()
+            .extension()
+            .is_none_or(|extension| extension != "json")
+        {
+            return Err(AgentCliError::Verification(
+                "custom agent profile directory contains a non-JSON definition".to_owned(),
+            ));
+        }
+        let profile = parse_profile(&entry.path())?;
+        if profile.scope != expected_scope {
+            return Err(AgentCliError::Verification(
+                "custom agent profile is stored in the wrong scope".to_owned(),
+            ));
+        }
+        profiles.push(profile);
+    }
+    Ok(profiles)
+}
+
 fn validate_owned_files(
     root: &Path,
     entry: &OwnershipEntry,
@@ -699,6 +815,17 @@ mod tests {
         .expect("profile")
     }
 
+    fn apply_profile(root: &Path, profile: &CustomAgentProfile, name: &str) {
+        let input = root.join(name);
+        fs::write(&input, canonical_profile(profile).expect("profile bytes")).expect("input");
+        apply(ProfileArguments {
+            profile: input,
+            root: root.to_path_buf(),
+            accepted_digest: Some(profile.definition_digest.clone()),
+        })
+        .expect("apply");
+    }
+
     #[test]
     fn apply_validate_and_remove_preserve_foreign_bytes() {
         let root = temporary_root();
@@ -770,6 +897,40 @@ mod tests {
             .join(".codex/agents/hive-independent-judge.toml")
             .exists());
         fs::remove_dir_all(root).expect("cleanup");
+    }
+
+    #[test]
+    fn route_uses_project_profile_before_user_profile_without_launching() {
+        let user_root = temporary_root();
+        let project_root = temporary_root();
+        let mut user_profile = profile();
+        user_profile.scope = AgentScope::User;
+        user_profile.description = "User scope complex implementation profile.".to_owned();
+        user_profile.definition_digest = user_profile.computed_digest().expect("user digest");
+        let project_profile = profile();
+        apply_profile(&user_root, &user_profile, "user.json");
+        apply_profile(&project_root, &project_profile, "project.json");
+
+        let result = route(RouteArguments {
+            user_root: user_root.clone(),
+            project_root: project_root.clone(),
+            request: "Please perform a complex implementation.".to_owned(),
+        })
+        .expect("route");
+        let data = result.data.expect("data");
+        assert_eq!(data["role_id"], project_profile.role_id);
+        assert_eq!(data["scope"], "project");
+        assert_eq!(data["definition_digest"], project_profile.definition_digest);
+        assert_eq!(data["spawned"], false);
+        let excluded = route(RouteArguments {
+            user_root: user_root.clone(),
+            project_root: project_root.clone(),
+            request: "format only complex implementation".to_owned(),
+        })
+        .expect("negative route");
+        assert_eq!(excluded.data.expect("negative data")["role_id"], serde_json::Value::Null);
+        fs::remove_dir_all(user_root).expect("user cleanup");
+        fs::remove_dir_all(project_root).expect("project cleanup");
     }
 
     #[cfg(unix)]
