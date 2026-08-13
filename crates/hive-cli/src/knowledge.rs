@@ -447,8 +447,10 @@ fn run_scan(arguments: &[String]) -> Result<KnowledgeResult, WikiError> {
                 ));
             }
             let validated = validate_claims(&outcome.inventory, &review.claims)?;
+            // Candidate review is a promise that the exact same review can be applied while the
+            // inventory remains current. Keep its storage-level safety checks identical to apply.
+            validate_reviewed_claims_for_apply(&validated)?;
             if arguments.phase == ScanPhase::Apply {
-                validate_reviewed_claims_for_apply(&validated)?;
                 let user_root = arguments.user_root.as_deref().ok_or_else(|| {
                     WikiError::InvalidInput("scan --apply requires --user-root".to_owned())
                 })?;
@@ -3635,10 +3637,7 @@ mod tests {
     }
 
     fn temp_root_outside_repository() -> TempDir {
-        let repository = fs::canonicalize(Path::new(env!("CARGO_MANIFEST_DIR")).join("../.."))
-            .expect("canonical repository root");
-        TempDir::new_in(repository.parent().expect("repository parent"))
-            .expect("external temporary root")
+        tempfile::tempdir().expect("external temporary root")
     }
 
     fn write_empty_knowledge(root: &Path) {
@@ -5245,7 +5244,27 @@ mod tests {
             "json".to_owned(),
         ];
 
-        assert!(run_scan(&arguments).is_err());
+        let candidate_arguments = vec![
+            "--target".to_owned(),
+            target.path().to_string_lossy().into_owned(),
+            "--candidates".to_owned(),
+            review.to_string_lossy().into_owned(),
+            "--output".to_owned(),
+            "json".to_owned(),
+        ];
+        let Err(candidate_error) = run_scan(&candidate_arguments) else {
+            panic!("candidate review must reject the credential before apply");
+        };
+        assert!(
+            candidate_error
+                .to_string()
+                .contains("reviewed scan claim `credential-claim`"),
+            "{candidate_error}"
+        );
+        let Err(apply_error) = run_scan(&arguments) else {
+            panic!("apply must reject the credential");
+        };
+        assert_eq!(candidate_error.to_string(), apply_error.to_string());
         for relative in [
             ".hive/config/collections.yml",
             ".hive/index/rag-generation.json",
