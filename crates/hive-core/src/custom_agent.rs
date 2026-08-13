@@ -9,6 +9,8 @@ use std::fmt::{self, Display, Formatter};
 const PROFILE_SCHEMA: &str = include_str!("../../../schemas/custom-subagent-profile.schema.json");
 const ATTESTATION_SCHEMA: &str =
     include_str!("../../../schemas/custom-subagent-attestation.schema.json");
+const HOST_CAPABILITY_SCHEMA: &str =
+    include_str!("../../../schemas/host-orchestration-capability.schema.json");
 
 #[derive(Debug, Clone, Copy, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "kebab-case")]
@@ -262,6 +264,98 @@ pub struct RuntimeAttestation {
     pub issued_at: String,
 }
 
+/// The closed, fresh host capability evidence needed before a profile can activate.
+#[derive(Debug, Clone, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct HostOrchestrationCapability {
+    pub schema_version: u32,
+    pub captured_at: String,
+    pub host: String,
+    pub host_version: String,
+    pub activation: String,
+    pub sources: Vec<String>,
+    pub capabilities: HostOrchestrationCapabilities,
+    pub limitations: Vec<String>,
+}
+
+/// Capability values are deliberately closed: partial and unverified evidence cannot activate.
+#[derive(Debug, Clone, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct HostOrchestrationCapabilities {
+    pub agent_discovery: HostCapabilityStatus,
+    pub user_scope: HostCapabilityStatus,
+    pub project_scope: HostCapabilityStatus,
+    pub model_pin: HostCapabilityStatus,
+    pub effort_pin: HostCapabilityStatus,
+    pub native_dispatch: HostCapabilityStatus,
+    pub launch_ack: HostCapabilityStatus,
+    pub result_return: HostCapabilityStatus,
+    pub cancel: HostCapabilityStatus,
+    pub lookup: HostCapabilityStatus,
+    pub idempotency: HostCapabilityStatus,
+    pub runtime_attestation: HostCapabilityStatus,
+    pub fresh_session: HostCapabilityStatus,
+}
+
+/// A host capability observation from its current session evidence.
+#[derive(Debug, Clone, Copy, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum HostCapabilityStatus {
+    Supported,
+    Partial,
+    Unsupported,
+    Unverified,
+}
+
+impl HostOrchestrationCapability {
+    /// Parse a schema-validated host snapshot and reject all non-activation modes.
+    pub fn parse_json(bytes: &[u8]) -> Result<Self, CustomAgentError> {
+        let value: serde_json::Value = serde_json::from_slice(bytes)
+            .map_err(|error| CustomAgentError::Malformed(error.to_string()))?;
+        validate_json_schema(
+            HOST_CAPABILITY_SCHEMA,
+            &value,
+            "host orchestration capability",
+        )
+        .map_err(CustomAgentError::Schema)?;
+        let capability: Self = serde_json::from_value(value)
+            .map_err(|error| CustomAgentError::Malformed(error.to_string()))?;
+        if capability.activation != "default-off" {
+            return Err(CustomAgentError::CapabilityUnsupported);
+        }
+        Ok(capability)
+    }
+
+    /// Require exact host identity, the profile's minimum version, and all activation evidence.
+    pub fn verify_profile_activation(
+        &self,
+        profile: &CustomAgentProfile,
+        expected_host: &str,
+    ) -> Result<(), CustomAgentError> {
+        let mapping = profile
+            .host_mappings
+            .get(expected_host)
+            .ok_or(CustomAgentError::UnsupportedHost)?;
+        if self.host != expected_host
+            || !version_at_least(&self.host_version, &mapping.minimum_version)
+            || ![
+                self.capabilities.agent_discovery,
+                self.capabilities.user_scope,
+                self.capabilities.project_scope,
+                self.capabilities.model_pin,
+                self.capabilities.effort_pin,
+                self.capabilities.runtime_attestation,
+                self.capabilities.fresh_session,
+            ]
+            .iter()
+            .all(|status| *status == HostCapabilityStatus::Supported)
+        {
+            return Err(CustomAgentError::CapabilityUnsupported);
+        }
+        Ok(())
+    }
+}
+
 impl RuntimeAttestation {
     /// Parse and validate one runtime attestation against an exact profile.
     ///
@@ -310,6 +404,27 @@ fn floating_alias(model: &str) -> bool {
     model.ends_with("-latest") || model == "sonnet" || model == "opus" || model == "default"
 }
 
+fn version_at_least(observed: &str, minimum: &str) -> bool {
+    fn parse(value: &str) -> Option<[u64; 3]> {
+        let mut words = value.split_ascii_whitespace();
+        let version = words.next_back()?;
+        if words.next_back().is_some_and(|word| {
+            word.chars()
+                .all(|character| character.is_ascii_digit() || character == '.')
+        }) {
+            return None;
+        }
+        let mut parts = version.split('.');
+        let parsed = [
+            parts.next()?.parse().ok()?,
+            parts.next()?.parse().ok()?,
+            parts.next()?.parse().ok()?,
+        ];
+        parts.next().is_none().then_some(parsed)
+    }
+    matches!((parse(observed), parse(minimum)), (Some(observed), Some(minimum)) if observed >= minimum)
+}
+
 fn effort_name(effort: AgentEffort) -> &'static str {
     match effort {
         AgentEffort::Low => "low",
@@ -332,6 +447,7 @@ pub enum CustomAgentError {
     ScopeCollision,
     UnsupportedHost,
     AttestationMismatch,
+    CapabilityUnsupported,
 }
 
 impl Display for CustomAgentError {
@@ -345,6 +461,9 @@ impl Display for CustomAgentError {
             Self::UnsupportedHost => formatter.write_str("custom agent host is unsupported"),
             Self::AttestationMismatch => {
                 formatter.write_str("custom agent runtime attestation mismatch")
+            }
+            Self::CapabilityUnsupported => {
+                formatter.write_str("host capability evidence cannot activate this custom agent")
             }
         }
     }
@@ -457,6 +576,44 @@ mod tests {
                 "codex"
             ),
             Err(CustomAgentError::AttestationMismatch)
+        );
+    }
+
+    #[test]
+    fn capability_preflight_requires_exact_version_and_supported_evidence() {
+        let profile = profile("hive-complex-implementer", AgentScope::Project, false);
+        let value = serde_json::json!({
+            "schema_version": 1,
+            "captured_at": "2026-08-13T00:00:00Z",
+            "host": "codex",
+            "host_version": "codex-cli 0.147.0",
+            "activation": "default-off",
+            "sources": ["test:capability"],
+            "capabilities": {
+                "agent_discovery": "supported", "user_scope": "supported",
+                "project_scope": "supported", "model_pin": "supported",
+                "effort_pin": "supported", "native_dispatch": "supported",
+                "launch_ack": "supported", "result_return": "supported",
+                "cancel": "supported", "lookup": "supported", "idempotency": "supported",
+                "runtime_attestation": "supported", "fresh_session": "supported"
+            },
+            "limitations": []
+        });
+        let capability =
+            HostOrchestrationCapability::parse_json(&serde_json::to_vec(&value).expect("json"))
+                .expect("capability");
+        assert!(capability
+            .verify_profile_activation(&profile, "codex")
+            .is_ok());
+
+        let mut stale = value;
+        stale["capabilities"]["fresh_session"] = serde_json::json!("unverified");
+        let stale =
+            HostOrchestrationCapability::parse_json(&serde_json::to_vec(&stale).expect("json"))
+                .expect("capability");
+        assert_eq!(
+            stale.verify_profile_activation(&profile, "codex"),
+            Err(CustomAgentError::CapabilityUnsupported)
         );
     }
 

@@ -17,7 +17,7 @@ pub mod role;
 pub mod run;
 pub mod usage_guard;
 
-pub(crate) fn validate_json_schema(
+pub fn validate_json_schema(
     schema: &str,
     instance: &serde_json::Value,
     label: &str,

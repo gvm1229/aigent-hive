@@ -7,7 +7,7 @@ use crate::run::AdapterError;
 use crate::{emit_action_result, ActionResult, Evidence};
 use hive_core::custom_agent::{
     resolve_profiles, route_profile, AgentPermission, AgentScope, CustomAgentProfile,
-    HostAgentMapping, RuntimeAttestation,
+    HostAgentMapping, HostOrchestrationCapability, RuntimeAttestation,
 };
 use hive_core::{ensure_consumer_target, sha256_digest};
 use serde::{Deserialize, Serialize};
@@ -27,6 +27,7 @@ USAGE:\n\
     hive agent create --request <creation.json> --root <dir> --accept-decision-digest <sha256> --output json\n\
     hive agent apply --profile <profile.json> --root <dir> --accept-definition-digest <sha256> --output json\n\
     hive agent validate --profile <profile.json> --root <dir> --output json\n\
+    hive agent preflight --profile <profile.json> --host <codex|claude> --capabilities <capability.json> --output json\n\
     hive agent attest --profile <profile.json> --host <codex|claude> --receipt <attestation.json> --output json\n\
     hive agent route --user-root <dir> --project-root <dir> --request <text> --output json\n\
     hive agent remove --role <role-id> --scope <user|project> --root <dir> --accept-definition-digest <sha256> --output json\n";
@@ -114,6 +115,13 @@ struct AttestationArguments {
 }
 
 #[derive(Debug)]
+struct PreflightArguments {
+    profile: PathBuf,
+    host: String,
+    capabilities: PathBuf,
+}
+
+#[derive(Debug)]
 struct RecommendArguments {
     purpose: String,
     scope: AgentScope,
@@ -192,6 +200,7 @@ pub(crate) fn run(arguments: &[String]) -> ExitCode {
             "create" => "CreateAgent",
             "apply" => "ApplyAgent",
             "validate" => "ValidateAgent",
+            "preflight" => "PreflightAgent",
             "attest" => "AttestAgent",
             "route" => "RouteAgent",
             "remove" => "RemoveAgent",
@@ -216,6 +225,7 @@ fn execute(arguments: &[String]) -> Result<ActionResult, AgentCliError> {
         Some("create") => create(parse_create_arguments(&arguments[1..])?),
         Some("apply") => apply(parse_profile_arguments(&arguments[1..], true)?),
         Some("validate") => validate(parse_profile_arguments(&arguments[1..], false)?),
+        Some("preflight") => preflight(parse_preflight_arguments(&arguments[1..])?),
         Some("attest") => attest(parse_attestation_arguments(&arguments[1..])?),
         Some("route") => route(parse_route_arguments(&arguments[1..])?),
         Some("remove") => remove(parse_remove_arguments(&arguments[1..])?),
@@ -274,6 +284,27 @@ fn parse_attestation_arguments(
         profile: PathBuf::from(required(&options, "--profile")?),
         host: host.to_owned(),
         receipt: PathBuf::from(required(&options, "--receipt")?),
+    })
+}
+
+fn parse_preflight_arguments(arguments: &[String]) -> Result<PreflightArguments, AgentCliError> {
+    let options = options(
+        arguments,
+        &["--profile", "--host", "--capabilities", "--output"],
+    )?;
+    if options.get("--output").is_some_and(|value| value != "json") {
+        return Err(AgentCliError::Input("output must be json".to_owned()));
+    }
+    let host = required(&options, "--host")?;
+    if !matches!(host, "codex" | "claude") {
+        return Err(AgentCliError::Input(
+            "host must be codex or claude".to_owned(),
+        ));
+    }
+    Ok(PreflightArguments {
+        profile: PathBuf::from(required(&options, "--profile")?),
+        host: host.to_owned(),
+        capabilities: PathBuf::from(required(&options, "--capabilities")?),
     })
 }
 
@@ -658,6 +689,55 @@ fn attest(arguments: AttestationArguments) -> Result<ActionResult, AgentCliError
             "effort": attestation.effort,
             "definition_digest": attestation.definition_digest,
             "native_task_id": attestation.native_task_id,
+            "spawned": false,
+        })),
+    })
+}
+
+fn preflight(arguments: PreflightArguments) -> Result<ActionResult, AgentCliError> {
+    let profile = parse_profile(&arguments.profile)?;
+    let capability_bytes = fs::read(&arguments.capabilities).map_err(|error| {
+        AgentCliError::Input(format!(
+            "cannot read host capability evidence {}: {error}",
+            arguments.capabilities.display()
+        ))
+    })?;
+    let capability = HostOrchestrationCapability::parse_json(&capability_bytes)
+        .map_err(|error| AgentCliError::Verification(error.to_string()))?;
+    capability
+        .verify_profile_activation(&profile, &arguments.host)
+        .map_err(|error| AgentCliError::Verification(error.to_string()))?;
+    let capability_digest = sha256_digest(&capability_bytes);
+    Ok(ActionResult {
+        schema_version: 1,
+        action: "PreflightAgent",
+        status: "success",
+        exit_code: 0,
+        code: "hive.agent-preflight",
+        message: "fresh host capability evidence permits custom agent activation".to_owned(),
+        changed_paths: Vec::new(),
+        evidence: vec![
+            Evidence {
+                kind: "custom-agent-profile",
+                locator: profile.role_id.clone(),
+                digest: profile.definition_digest.clone(),
+            },
+            Evidence {
+                kind: "host-orchestration-capability",
+                locator: arguments.host,
+                digest: capability_digest.clone(),
+            },
+        ],
+        next_action: Some(
+            "project the consented profile, then collect an exact runtime attestation after a fresh host session".to_owned(),
+        ),
+        data: Some(json!({
+            "role_id": profile.role_id,
+            "scope": profile.scope,
+            "host": capability.host,
+            "host_version": capability.host_version,
+            "host_capability_digest": capability_digest,
+            "activation": "default-off",
             "spawned": false,
         })),
     })
@@ -1290,6 +1370,62 @@ mod tests {
             profile: profile_path,
             host: "codex".to_owned(),
             receipt: receipt_path,
+        })
+        .is_err());
+        fs::remove_dir_all(root).expect("cleanup");
+    }
+
+    #[test]
+    fn preflight_refuses_unverified_fresh_session_evidence() {
+        let root = temporary_root();
+        let profile = profile();
+        let profile_path = root.join("profile.json");
+        fs::write(
+            &profile_path,
+            canonical_profile(&profile).expect("profile bytes"),
+        )
+        .expect("profile");
+        let capability_path = root.join("capability.json");
+        let capability = json!({
+            "schema_version": 1,
+            "captured_at": "2026-08-13T00:00:00Z",
+            "host": "codex",
+            "host_version": "0.147.0",
+            "activation": "default-off",
+            "sources": ["test:capability"],
+            "capabilities": {
+                "agent_discovery": "supported", "user_scope": "supported",
+                "project_scope": "supported", "model_pin": "supported",
+                "effort_pin": "supported", "native_dispatch": "supported",
+                "launch_ack": "supported", "result_return": "supported",
+                "cancel": "supported", "lookup": "supported", "idempotency": "supported",
+                "runtime_attestation": "supported", "fresh_session": "supported"
+            },
+            "limitations": []
+        });
+        fs::write(
+            &capability_path,
+            serde_json::to_vec(&capability).expect("capability bytes"),
+        )
+        .expect("capability");
+        assert!(preflight(PreflightArguments {
+            profile: profile_path.clone(),
+            host: "codex".to_owned(),
+            capabilities: capability_path.clone(),
+        })
+        .is_ok());
+
+        let mut unverified = capability;
+        unverified["capabilities"]["fresh_session"] = json!("unverified");
+        fs::write(
+            &capability_path,
+            serde_json::to_vec(&unverified).expect("capability bytes"),
+        )
+        .expect("capability");
+        assert!(preflight(PreflightArguments {
+            profile: profile_path,
+            host: "codex".to_owned(),
+            capabilities: capability_path,
         })
         .is_err());
         fs::remove_dir_all(root).expect("cleanup");
