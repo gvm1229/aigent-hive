@@ -309,6 +309,10 @@ pub enum HostCapabilityStatus {
 
 impl HostOrchestrationCapability {
     /// Parse a schema-validated host snapshot and reject all non-activation modes.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error for malformed evidence, schema violations, or a non-default-off mode.
     pub fn parse_json(bytes: &[u8]) -> Result<Self, CustomAgentError> {
         let value: serde_json::Value = serde_json::from_slice(bytes)
             .map_err(|error| CustomAgentError::Malformed(error.to_string()))?;
@@ -327,6 +331,10 @@ impl HostOrchestrationCapability {
     }
 
     /// Require exact host identity, the profile's minimum version, and all activation evidence.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error for a mismatched host, insufficient version, or any non-supported gate.
     pub fn verify_profile_activation(
         &self,
         profile: &CustomAgentProfile,

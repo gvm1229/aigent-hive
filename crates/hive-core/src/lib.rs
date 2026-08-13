@@ -17,6 +17,11 @@ pub mod role;
 pub mod run;
 pub mod usage_guard;
 
+/// Validate a JSON value against one embedded Draft 2020-12 schema.
+///
+/// # Errors
+///
+/// Returns a bounded diagnostic when the embedded schema is invalid or the value violates it.
 pub fn validate_json_schema(
     schema: &str,
     instance: &serde_json::Value,

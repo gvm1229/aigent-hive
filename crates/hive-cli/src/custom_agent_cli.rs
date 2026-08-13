@@ -426,11 +426,9 @@ fn parse_scope(value: &str) -> Result<AgentScope, AgentCliError> {
     match value {
         "user" => Ok(AgentScope::User),
         "project" => Ok(AgentScope::Project),
-        _ => {
-            return Err(AgentCliError::Input(
-                "scope must be user or project".to_owned(),
-            ))
-        }
+        _ => Err(AgentCliError::Input(
+            "scope must be user or project".to_owned(),
+        )),
     }
 }
 
@@ -438,7 +436,7 @@ fn options(
     arguments: &[String],
     allowed: &[&str],
 ) -> Result<BTreeMap<String, String>, AgentCliError> {
-    if arguments.len() % 2 != 0 {
+    if !arguments.len().is_multiple_of(2) {
         return Err(AgentCliError::Input(
             "options require one value each".to_owned(),
         ));
@@ -628,6 +626,7 @@ fn canonical_profile(profile: &CustomAgentProfile) -> Result<Vec<u8>, AgentCliEr
         .map_err(|error| AgentCliError::Verification(error.to_string()))
 }
 
+#[allow(clippy::needless_pass_by_value)]
 fn preview(arguments: ProfileArguments) -> Result<ActionResult, AgentCliError> {
     let profile = parse_profile(&arguments.profile)?;
     prepare_root(&arguments.root, profile.scope)?;
@@ -643,6 +642,7 @@ fn preview(arguments: ProfileArguments) -> Result<ActionResult, AgentCliError> {
     ))
 }
 
+#[allow(clippy::needless_pass_by_value)]
 fn recommend(arguments: RecommendArguments) -> Result<ActionResult, AgentCliError> {
     let request = recommended_request(&arguments.purpose, arguments.scope)?;
     let decision_digest = creation_digest(&request)?;
@@ -669,6 +669,7 @@ fn recommend(arguments: RecommendArguments) -> Result<ActionResult, AgentCliErro
     })
 }
 
+#[allow(clippy::needless_pass_by_value)]
 fn create(arguments: CreateArguments) -> Result<ActionResult, AgentCliError> {
     let request = parse_creation_request(&arguments.request)?;
     let decision_digest = creation_digest(&request)?;
@@ -688,6 +689,7 @@ fn create(arguments: CreateArguments) -> Result<ActionResult, AgentCliError> {
     )
 }
 
+#[allow(clippy::needless_pass_by_value)]
 fn validate(arguments: ProfileArguments) -> Result<ActionResult, AgentCliError> {
     let profile = parse_profile(&arguments.profile)?;
     let root = prepare_root(&arguments.root, profile.scope)?;
@@ -713,6 +715,7 @@ fn validate(arguments: ProfileArguments) -> Result<ActionResult, AgentCliError> 
     ))
 }
 
+#[allow(clippy::needless_pass_by_value)]
 fn attest(arguments: AttestationArguments) -> Result<ActionResult, AgentCliError> {
     let profile = parse_profile(&arguments.profile)?;
     let receipt = fs::read(&arguments.receipt).map_err(|error| {
@@ -799,6 +802,7 @@ fn preflight(arguments: PreflightArguments) -> Result<ActionResult, AgentCliErro
     })
 }
 
+#[allow(clippy::needless_pass_by_value)]
 fn route(arguments: RouteArguments) -> Result<ActionResult, AgentCliError> {
     let user_root = prepare_root(&arguments.user_root, AgentScope::User)?;
     let project_root = prepare_root(&arguments.project_root, AgentScope::Project)?;
@@ -864,7 +868,7 @@ fn apply_profile(
     decision_digest: Option<String>,
 ) -> Result<ActionResult, AgentCliError> {
     let root = prepare_root(root_argument, profile.scope)?;
-    let files = projection_files(&profile)?;
+    let files = projection_files(profile)?;
     let mut ledger = read_ledger(&root)?;
     let previous = ledger.entries.get(&profile.role_id).cloned();
     if let Some(previous) = previous.as_ref() {
@@ -909,6 +913,7 @@ fn apply_profile(
     ))
 }
 
+#[allow(clippy::needless_pass_by_value)]
 fn remove(arguments: RemoveArguments) -> Result<ActionResult, AgentCliError> {
     let root = prepare_root(&arguments.root, arguments.scope)?;
     let mut ledger = read_ledger(&root)?;
@@ -973,6 +978,7 @@ fn remove(arguments: RemoveArguments) -> Result<ActionResult, AgentCliError> {
     })
 }
 
+#[allow(clippy::needless_pass_by_value)]
 fn disable(arguments: DisableArguments) -> Result<ActionResult, AgentCliError> {
     let root = prepare_root(&arguments.root, arguments.scope)?;
     let mut ledger = read_ledger(&root)?;
@@ -1328,7 +1334,7 @@ fn custom_projection_parent(root: &Dir, relative: &Path) -> Result<(Dir, OsStrin
                     AgentCliError::Conflict(format!(
                         "cannot create custom agent owned directory: {error}"
                     ))
-                })?
+                })?;
             }
             Err(error) => {
                 return Err(AgentCliError::Conflict(format!(
@@ -1387,15 +1393,19 @@ fn portable(path: &Path) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::atomic::{AtomicU64, Ordering};
     use std::time::{SystemTime, UNIX_EPOCH};
+
+    static TEMPORARY_ROOT_SEQUENCE: AtomicU64 = AtomicU64::new(0);
 
     fn temporary_root() -> PathBuf {
         let path = std::env::temp_dir().join(format!(
-            "hive-agent-cli-{}",
+            "hive-agent-cli-{}-{}",
             SystemTime::now()
                 .duration_since(UNIX_EPOCH)
                 .expect("time")
-                .as_nanos()
+                .as_nanos(),
+            TEMPORARY_ROOT_SEQUENCE.fetch_add(1, Ordering::Relaxed),
         ));
         fs::create_dir_all(&path).expect("root");
         path
@@ -1686,12 +1696,9 @@ mod tests {
         })
         .expect("create");
         assert_eq!(result.action, "CreateAgent");
-        assert_eq!(
-            result.data.expect("data")["definition_digest"]
-                .as_str()
-                .is_some(),
-            true
-        );
+        assert!(result.data.expect("data")["definition_digest"]
+            .as_str()
+            .is_some());
         assert!(root
             .join(".hive/config/custom-subagents/hive-custom-agent.json")
             .is_file());
