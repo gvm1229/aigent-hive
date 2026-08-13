@@ -11,7 +11,7 @@ aliases: ["v0.9 loop and Wiki plan"]
 sources:
   - "repo:docs/decisions/ADR-0015-host-native-skill-composition.md#sha256:c122052f10778e4c0e3c56c9511c2fdb6fc48528ba3d0dba599f91d3be77a5b5"
   - "repo:docs/decisions/ADR-0016-global-knowledge-rag.md#sha256:196117cadc85737e0dbe35c8fcc6699e5180632d919782c2312453f588b3ab7a"
-  - "repo:docs/plans/active/native-iterative-execution.md#sha256:4c8e9d19e1e15776e2192ffdd3c4cfa14459fc1980c60650abf1fa315f75802e"
+  - "repo:docs/plans/active/native-iterative-execution.md#sha256:2dc1da426ba606aff7b16e978b624e9fb1c63dc5dd7c1e52dab7ab5a39e1c5b3"
   - "repo:docs/plans/active/v0.9.0-global-knowledge-rag.md#sha256:6049186f49dae584b981a8bb888ba15f43e7f61e085247f04b546ef368f7f6ce"
   - "repo:docs/plans/active/v0.9.0-knowledge-portability-scan.md#sha256:976150863fbb552b17b456b5bdaf4f6ce2780dcd7ed9af45ebcf565aae709e05"
   - "repo:docs/plans/active/v0.9.0-loop-wiki-skills.md#sha256:22df31e4312c84eeb17fdbe490a39223034b6a67e46f573148ea6132aea1e8e0"
