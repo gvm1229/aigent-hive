@@ -13,6 +13,7 @@ use hive_core::custom_agent::{
     resolve_profiles, route_profile, AgentPermission, AgentScope, CustomAgentProfile,
     HostAgentMapping, HostOrchestrationCapability, RuntimeAttestation,
 };
+use hive_core::validate_json_schema;
 use hive_core::{ensure_consumer_target, sha256_digest};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
@@ -39,6 +40,8 @@ USAGE:\n\
 
 const PROFILE_DIRECTORY: &str = ".hive/config/custom-subagents";
 const LEDGER_PATH: &str = ".hive/config/custom-subagents/OWNERSHIP.json";
+const CREATION_REQUEST_SCHEMA: &str =
+    include_str!("../../../schemas/custom-subagent-creation-request.schema.json");
 
 #[derive(Debug)]
 enum AgentCliError {
@@ -479,7 +482,16 @@ fn parse_creation_request(path: &Path) -> Result<CreationRequest, AgentCliError>
             path.display()
         ))
     })?;
-    let request: CreationRequest = serde_json::from_slice(&bytes).map_err(|error| {
+    let value: serde_json::Value = serde_json::from_slice(&bytes).map_err(|error| {
+        AgentCliError::Verification(format!("malformed custom agent creation request: {error}"))
+    })?;
+    validate_json_schema(
+        CREATION_REQUEST_SCHEMA,
+        &value,
+        "custom subagent creation request",
+    )
+    .map_err(AgentCliError::Verification)?;
+    let request: CreationRequest = serde_json::from_value(value).map_err(|error| {
         AgentCliError::Verification(format!("malformed custom agent creation request: {error}"))
     })?;
     if request.schema_version != 1 || request.purpose.trim().is_empty() {
@@ -1562,6 +1574,26 @@ mod tests {
             accepted_digest: "sha256:bad".to_owned(),
         })
         .is_err());
+        fs::remove_dir_all(root).expect("cleanup");
+    }
+
+    #[test]
+    fn creation_request_schema_rejects_incomplete_manual_definition() {
+        let root = temporary_root();
+        let request = recommended_request("review accessibility contrast", AgentScope::Project)
+            .expect("recommendation");
+        let mut invalid = serde_json::to_value(request).expect("request value");
+        invalid["host_mappings"]
+            .as_object_mut()
+            .expect("mappings")
+            .remove("claude");
+        let request_path = root.join("invalid-creation.json");
+        fs::write(
+            &request_path,
+            serde_json::to_vec(&invalid).expect("request bytes"),
+        )
+        .expect("request");
+        assert!(parse_creation_request(&request_path).is_err());
         fs::remove_dir_all(root).expect("cleanup");
     }
 
