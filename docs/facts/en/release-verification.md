@@ -9,7 +9,7 @@ summary: "Hive separates release qualification from documentation-only repositor
 tags: [release, security, verification]
 aliases: ["Release integrity"]
 sources:
-  - "repo:.agents/directives/03-workflow.md#sha256:7b677c92ed6d853248a3fc934969c6b0f69c98f0ce7a49134eed95f34bec4191"
+  - "repo:.agents/directives/03-workflow.md#sha256:ca49b448c75cd5d8bee15f300b5aaa5f6a6f4b1b437d280cb0f891141c80812c"
   - "repo:docs/decisions/ADR-0008-release-integrity.md#sha256:bace760d9be892a1e4f1f0554d2d55bbbaae85065125e9fae19a994f60f27410"
 links: [judge-verification, update-transaction]
 reviewed_revision: "git:567c7000e56699b7fa82163164e0cc4a9dc1bd0b"

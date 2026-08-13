@@ -9,7 +9,7 @@ summary: "허가된 temporary worktree·clean clone의 소유 기록과 task-bou
 tags: [git, workflow, worktree]
 aliases: ["temporary clone cleanup", "worktree cleanup"]
 sources:
-  - "repo:.agents/directives/03-workflow.md#sha256:7b677c92ed6d853248a3fc934969c6b0f69c98f0ce7a49134eed95f34bec4191"
+  - "repo:.agents/directives/03-workflow.md#sha256:ca49b448c75cd5d8bee15f300b5aaa5f6a6f4b1b437d280cb0f891141c80812c"
   - "repo:.agents/directives/06-session-coordination.md#sha256:884fedad85a6bd5c7865b5fc6be9b132c4653abb8d685f26aff621596f6ae48a"
 links: [source-development]
 reviewed_revision: "git:02e8bfc95913b1d88c4324dbb997d19fc55ef767"

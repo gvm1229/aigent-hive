@@ -197,6 +197,18 @@ class Phase6StaticContracts(unittest.TestCase):
         self.assertEqual(jobs["conformance"]["runs-on"], "ubuntu-latest")
         self.assertEqual(jobs["platform-smoke"]["strategy"]["matrix"]["os"], ["macos-latest", "windows-latest"])
         self.assertEqual(
+            jobs["protected-merge-gate"]["needs"],
+            ["changes", "documentation", "rust", "conformance", "copier", "platform-smoke"],
+        )
+        self.assertIn(
+            'test "$DOCUMENTATION_RESULT" = success',
+            jobs["protected-merge-gate"]["steps"][0]["run"],
+        )
+        self.assertIn(
+            'test "$PLATFORM_RESULT" = success',
+            jobs["protected-merge-gate"]["steps"][0]["run"],
+        )
+        self.assertEqual(
             yaml.safe_load(
                 (ROOT / ".github/workflows/release-publish.yml").read_text(
                     encoding="utf-8"
