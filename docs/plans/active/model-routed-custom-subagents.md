@@ -1,7 +1,7 @@
-# v0.9.0 model-routed custom subagent 계획
+# v0.9.3 model-routed custom subagent 계획
 
-> 대상: `0.9.0`
-> 상태: 실행 계획 활성, 구현 미착수
+> 대상: `0.9.3`
+> 상태: current-tree evidence 재조정·구현 진행
 > 결정: [`ADR-0019`](../../decisions/ADR-0019-hive-native-iterative-execution.md)
 > 선행: `NAT-002–005`, 연계: `NAT-016`
 > 지원 host: OpenAI Codex, Claude Code

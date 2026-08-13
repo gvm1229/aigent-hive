@@ -1,9 +1,9 @@
 # 현재 상태
 
-- 기준 branch: `develop`
-- product version: `0.9.2`
-- plan revision: `2.75`
-- 현재 milestone: `0.9.2` 안정판 게시·설치 마감, `0.9.3` 명시적 승인 대기
+- 기준 branch: `codex/0.9.3-native-agents` (`develop` 통합 기준)
+- product version: `0.9.3` 개발 기준
+- plan revision: `2.76`
+- 현재 milestone: `0.9.3` native iterative·custom subagent 구현·numbered public test 수용·정식 출시
 - 기능 기준: `2cec0377748874748d126b6b55e59975a3f20a02`; release discipline base `c777da1`
 - 제외: `NAT-002–024`·`MRA-001–032`의 `0.9.3`, `N10-002–011`의 `0.10.0-test`
 - 문서 gate: root·번역 README, 설치 안내, 공개 HTML, npm README, plugin metadata,
