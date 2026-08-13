@@ -213,3 +213,40 @@ jobs:
         with:
           toolchain: stable
       - run: cargo test -p hive-cli --locked
+
+  protected-merge-gate:
+    name: Protected merge gate
+    if: always()
+    needs:
+      - changes
+      - documentation
+      - rust
+      - conformance
+      - copier
+      - platform-smoke
+    runs-on: ubuntu-latest
+    env:
+      SCOPE: ${{ needs.changes.outputs.scope }}
+      DOCUMENTATION_RESULT: ${{ needs.documentation.result }}
+      RUST_RESULT: ${{ needs.rust.result }}
+      CONFORMANCE_RESULT: ${{ needs.conformance.result }}
+      COPIER_RESULT: ${{ needs.copier.result }}
+      PLATFORM_RESULT: ${{ needs.platform-smoke.result }}
+    steps:
+      - name: Require the risk-matched verification result
+        shell: bash
+        run: |
+          case "$SCOPE" in
+            documentation)
+              test "$DOCUMENTATION_RESULT" = success
+              ;;
+            product)
+              test "$RUST_RESULT" = success
+              test "$CONFORMANCE_RESULT" = success
+              test "$COPIER_RESULT" = success
+              test "$PLATFORM_RESULT" = success
+              ;;
+            *)
+              exit 2
+              ;;
+          esac

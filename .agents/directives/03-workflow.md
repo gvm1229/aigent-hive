@@ -154,6 +154,10 @@ Match verification cost to the current boundary:
   another candidate for a plan, state, fact, Markdown-only, or identical-tree change. A product,
   packaging, installer, metadata, or acceptance fix reopens only its affected acceptance and
   requires the next numbered public test.
+- Keep protected-branch required checks scope-neutral. Require one always-run merge gate that
+  verifies the risk-matched jobs: documentation-only conformance for Markdown-only changes and
+  the product verification set for every product change. Never list a conditionally skipped
+  product job as a static required check.
 
 ## Documentation-Only Integration
 
