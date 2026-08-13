@@ -9,12 +9,12 @@ summary: "보존형 제거: Hive-owned transient·retired projection 완전 정�
 tags: [bootstrap, onboarding, preservation, uninstall]
 aliases: ["clean reinstall", "hive uninstall"]
 sources:
-  - "repo:crates/hive-cli/src/user_install.rs#sha256:4aecfd684f8c07326a639e92061de5f2ea52050cddc352a3b2f4b6b4adb1d3c2"
-  - "repo:crates/hive-cli/src/user_setup.rs#sha256:5200ab01acbf0c0577e27de976b91c5a697dd83437a25ed94de3ec93c510dcf3"
+  - "repo:crates/hive-cli/src/user_install.rs#sha256:8a834763d385e30a51f764fdf185bec8cc93a3ecccc22241131c0effc464227c"
+  - "repo:crates/hive-cli/src/user_setup.rs#sha256:cffd6c491ffd17dccefa84edb172bbfe64ae925f2fe9cf7c6efd07e6a896a9fd"
   - "repo:docs/plans/active/user-onboarding-shared-index.md#sha256:2253508f42511c793d5e96739eb3316d149e8112736926e6c04199232cf7326a"
   - "repo:docs/plans/active/windows-global-setup-hardening.md#sha256:422649ef3ca475aca9e3a86a2ddd2bbbb3895221d7bc39fe4417010664dee47f"
-  - "repo:docs/state/CURRENT.md#sha256:20923d93043d83224257ae823d8c77aadc8d9ab18f2207a4f1bcf5246a41cfeb"
-  - "repo:harness/skills/user-setup/SKILL.md#sha256:90a8ecca713a1b1963b5f1863f76d32d5c5b9532ca72922c2705ee9b63520307"
+  - "repo:docs/state/CURRENT.md#sha256:bb342d0b8ccde8adb9b20596423bdd4e28dbdbb188e8c390b0a3f8e24322c909"
+  - "repo:harness/skills/user-setup/SKILL.md#sha256:aa0e9102c6d4a08a2468f39abf66f2788844c28a989eace52f59f9d2ea919957"
 links: [global-onboarding, knowledge-preservation, release-verification]
 reviewed_revision: "git:089b0717e24c368a1725774aaca0c85ab596df10"
 status: active

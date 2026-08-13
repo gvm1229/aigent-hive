@@ -10,7 +10,7 @@ tags: [communication, guidance, projection]
 aliases: ["concrete examples", "plain-language explanation"]
 sources:
   - "repo:.agents/directives/01-behavior.md#sha256:9d8adb7c75015fd24df8cb226a16180548c600dc963ee154c0a4af408e9fa48c"
-  - "repo:crates/hive-cli/src/user_install.rs#sha256:4aecfd684f8c07326a639e92061de5f2ea52050cddc352a3b2f4b6b4adb1d3c2"
+  - "repo:crates/hive-cli/src/user_install.rs#sha256:8a834763d385e30a51f764fdf185bec8cc93a3ecccc22241131c0effc464227c"
   - "repo:docs/guidance-schema.md#sha256:f5fc6aa2c36274d78d9703693a362c2f8d8eb81204d37f8a224434c14d1b196b"
   - "repo:harness/template/AGENTS.md.jinja#sha256:7192160dcbc3ef7b093a2e781860381a3205d7cd44af692f24d0b5f587255927"
 links: [language-consistency, verification-result-clarity]

@@ -10,10 +10,10 @@ tags: [capture, knowledge, retrieval, user-root]
 aliases: ["Setup-independent knowledge", "Unregistered project recall"]
 sources:
   - "repo:crates/hive-cli/src/knowledge.rs#sha256:a00d240fa71fecf28877a43253cdc20190279d9e3d5d0b63bf0ad8a47ab9b7de"
-  - "repo:crates/hive-cli/src/user_install.rs#sha256:4aecfd684f8c07326a639e92061de5f2ea52050cddc352a3b2f4b6b4adb1d3c2"
+  - "repo:crates/hive-cli/src/user_install.rs#sha256:8a834763d385e30a51f764fdf185bec8cc93a3ecccc22241131c0effc464227c"
   - "repo:docs/plans/active/v0.9.0-knowledge-autocapture-regression.md#sha256:44fcfa9e2c19c626eb8a7885afcaeb6405b454748e62349c1459958d4180236c"
-  - "repo:harness/skills/knowledge-capture/SKILL.md#sha256:d2e23636ac998bf0b8cca29cf2466e761ab6abe6f20313ad0c9b4d2c6cf71459"
-  - "repo:harness/skills/knowledge-recall/SKILL.md#sha256:f06146778f6faf907e402462008e970bc82cf134f9e8cb9c31a3b727b20e66ec"
+  - "repo:harness/skills/knowledge-capture/SKILL.md#sha256:3566b5cff1f866a11f2d3ce216759dd7d69cd268b61dc5e428e17703146b836c"
+  - "repo:harness/skills/knowledge-recall/SKILL.md#sha256:5090b4eeaddfd943f036ad1057bdeae4663421073cf3ddff03a72a19c7319d01"
 links: [global-knowledge-rag, knowledge-storage, shared-index]
 reviewed_revision: "git:527434f7364b6be38e7b6941bf48df207c58b32c"
 status: active
