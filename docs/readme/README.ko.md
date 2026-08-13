@@ -227,7 +227,7 @@ workflow용 PowerShell 7. Consumer install dependency: Python·PowerShell 7 없�
 python scripts/dev-check.py pre-push
 ```
 
-## QA Contributors
+## QA 기여자
 
 | 이름 | GitHub | 검증 환경·영역 |
 | --- | --- | --- |

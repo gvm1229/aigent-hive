@@ -9,6 +9,7 @@
 - Active Skill: 설치 제품의 단일 목록만 유지
 - Source 전용 Skill: `0건`; 저장소별 규칙은 `AGENTS.md`·`.agents/directives/`에 유지
 - 제품 이름: 사용자가 인식할 기능 중심
+- 지식 Skill: 한국어 표시 설명 첫머리에 `(정본 영문 ID)` 표기
 - 폐기 ID: scope가 지정된 one-to-one·merge·split 이관 입력으로만 허용
 - Historical release byte: 변경 금지
 
@@ -23,12 +24,12 @@
 | `iterative-execution` | Host-native receipt와 독립 종료 검증을 적용한 제한된 기준 반복 실행 | 여러 구현 시도 뒤 기준별 Judge 검증 |
 | `team-execution` | Mailbox·장벽·경로 lease·취소를 적용한 제한된 팀 조율 | 분리된 구현·검증 lane 실행 |
 | `multi-goal` | 집계 규칙·중첩 예산·종료 검증을 적용한 목표 graph 실행 | AND 기준을 가진 복수 목표 실행 |
-| `knowledge-import` | 저장소의 검토된 지식 후보 일괄 반입 | 저장소 규칙·결정의 Wiki 반입 |
-| `knowledge-maintain` | Wiki 검사·목록·색인·삭제·억제 관리 | Wiki link 검사와 색인 재구축 |
-| `knowledge-capture` | 하나의 검토된 사실·선호·작업 방식 기록 | PR 전 Clippy 실행 규칙 기록 |
+| `knowledge-import` | 사용자가 고른 저장소·폴더 지식 스캔 뒤 검토 완료 항목 반입 | 저장소 규칙·결정의 Wiki 반입 |
+| `knowledge-maintain` | 신뢰 가능한 Hive 지식 검사·검색 색인 재생성·명시 정리 | Wiki link 검사와 색인 재구축 |
+| `knowledge-capture` | 대화 종료 전 후속 작업에 도움 되는 사실·선호·방식 하나의 안전한 기록 | PR 전 Clippy 실행 규칙 기록 |
 | `prompt-refine` | 실행 전 승인용 prompt 정리·개선 | Codex 실행용 prompt 개선 |
 | `research-best-practices` | 공식 자료 중심의 최신 모범 사례 조사 | Rust 자동 update 모범 사례 조사 |
-| `knowledge-recall` | 기존 지식에서 관련 결정·규칙 회수 | 기존 release 결정 검색 |
+| `knowledge-recall` | 현재 질문·작업에 도움 되는 Hive 지식의 제한 조회 | 기존 release 결정 검색 |
 | `usage-guard` | 전역·project별 사용량 보호 상태·사용자 선택 기준 관리 | 특정 project의 조기 중지 한도 설정 |
 | `ship` | 저장소 규칙을 읽고 변경을 독립 관심사별로 검증·commit·선택적 push | 큰 변경을 기능·문서·release commit으로 분리 |
 | `amend-directive` | 전역·project·Hive source의 사용자 수정 가능 agent behavior 변경 | Setup의 사소한 승인 질문 금지 |
@@ -37,7 +38,7 @@
 | `project-transition` | 구조·major version이 다른 프로젝트 이관 | Project의 다음 major 형식 이관 |
 | `run-resume` | 저장된 실행의 새 session 재개 | `RUN-42`의 마지막 checkpoint 재개 |
 | `run-checkpoint` | 현재 실행 상태와 다음 단계 저장 | Context 정리 전 진행 상태 저장 |
-| `knowledge-promote` | project 지식의 전역 재사용 지식 승격 | Deployment rule의 전역 knowledge 승격 |
+| `knowledge-promote` | 다른 작업에도 도움 되는 검토된 사실·선호·방식의 전역 공유 | Deployment rule의 전역 knowledge 승격 |
 | `product-update` | 설치된 Aigent Hive 자체 갱신 | Aigent Hive 최신 stable update |
 | `project-refresh` | 사용자 수정을 보존하는 project Hive 파일 갱신 | Project의 current Hive format refresh |
 | `package-review` | package 출처·무결성·독립 검토 준비 확인 | Release candidate의 독립 review 준비 확인 |
@@ -73,7 +74,7 @@
 
 ## 유지할 분리
 
-- `knowledge-capture` / `knowledge-import` / `knowledge-promote`: 기록 규모·승격 권한 차이
+- `knowledge-capture` / `knowledge-import` / `knowledge-promote`: 대화 종료 전 1건 기록·선택 저장소 스캔·전역 공유의 범위와 권한 차이
 - `run-checkpoint` / `run-resume` / `run-handoff`: 저장·복구·인계 상태 변경 차이
 - `project-refresh` / `project-transition`: 일반 갱신과 구조 이관의 복구 위험 차이
 

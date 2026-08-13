@@ -287,6 +287,7 @@
     }
     @media print {
       nav { position: static; }
+      main { padding-bottom: 0; }
       .card, .stat, .boundary article, .flow article { break-inside: avoid; }
     }
   </style>
@@ -358,7 +359,7 @@
         <article class="card">
           <span class="tag">DURABLE WIKI</span>
           <h3>지속 가능한 지식</h3>
-          <p>재사용 지식을 Markdown 정본으로 보존하고, 검색용 SQLite는 언제든 같은 원문에서 재생성</p>
+          <p>작업을 마칠 때 나중에도 도움이 될 사실·선호·방식 하나를 안전하게 남기고, 필요한 지식만 다시 찾아봄</p>
         </article>
         <article class="card">
           <span class="tag">SKILL ROUTING</span>
@@ -385,6 +386,9 @@
           <h3>선택형 Discord 알림</h3>
           <p>사용량 중단·재개 정보처럼 안전하게 요약된 상태만 전송하고 webhook 값과 confidential data는 메시지에서 제외</p>
         </article>
+      </div>
+      <div class="callout">
+        <p><strong>지식 기능:</strong> <code>(knowledge-capture)</code> 유용한 지식 남기기, <code>(knowledge-recall)</code> 지식 찾아보기, <code>(knowledge-import)</code> 저장소 지식 스캔, <code>(knowledge-promote)</code> 지식 공유하기, <code>(knowledge-maintain)</code> 지식 정비하기. 영문 ID는 모든 host에서 같은 기능을 가리키며, 비밀·대화 원문·확실하지 않은 추측은 기록하지 않음</p>
       </div>
     </section>
 

@@ -2,7 +2,7 @@
 
 - 기준 branch: `codex/0.9.3-native-agents` (`develop` 통합 기준)
 - product version: `0.9.3` 개발 기준
-- plan revision: `2.77`
+- plan revision: `2.79`
 - 현재 milestone: `0.9.3` native iterative·custom subagent 구현·numbered public test 수용·정식 출시
 - 기능 기준: `2cec0377748874748d126b6b55e59975a3f20a02`; release discipline base `c777da1`
 - 제외: `NAT-002–024`·`MRA-001–032`의 `0.9.3`, `N10-002–011`의 `0.10.0-test`
@@ -42,6 +42,14 @@
 - Custom profile hostile matrix: `271ad81`, duplicate role·trigger collision과 missing receipt의
   no-mutation, Judge shadow/downgrade·forged signer·model fallback·stale capability·symlink 거부.
   custom-agent core 7·CLI 15·strict Clippy PASS, `MRA-030` 완료
+- Judge invocation policy: `explicit`은 strict terminal Judge만, `implicit`은 material-risk route만
+  허용. simple·read-only·format·scheduler·heartbeat·retry·결정적 실패·unsupported host는 모두 거부.
+  설정 persistence·natural-language projection과 core 6·user-setup 42 focused PASS, `MRA-022` 완료
+- 지식 Skill 표시 정비: 정본 ID `knowledge-capture|recall|import|promote|maintain` 유지. 한국어
+  표시명은 기능명과 ID 병기, 설명 첫머리는 항상 `(정본-ID)`; 자동 기록은 대화 종료 전 나중 작업에
+  도움 되는 사실·선호·방식 하나의 안전한 기록, import는 명시 대상 저장소 스캔으로 표현. Codex·Claude·
+  Antigravity projection·plugin/template·26개 inventory 수렴, core features HTML·PDF도 같은 지식
+  흐름으로 갱신. Rust 34·Copier/Rust parity 22·Python static/inventory 19·문서·Source Wiki gate PASS
 - `0.9.2-test.1` 수용 거부: candidate run `31596919466`·publication run `31597939956`는
   통과했으나 GitHub prerelease에 direct installer 자산 3개가 누락되어 공개 설치 URL이 `404`를
   반환. 게시 workflow·회귀 보정 뒤 `0.9.2-test.2`부터 전체 공개 설치 수용 재수행
