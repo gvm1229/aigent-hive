@@ -75,7 +75,7 @@ enum Liveness {
 
 pub(crate) fn run(arguments: &[String]) -> ExitCode {
     let result = match parse(arguments) {
-        Ok(arguments) => execute(arguments).unwrap_or_else(|message| {
+        Ok(arguments) => execute(&arguments).unwrap_or_else(|message| {
             failure(message, "hive.session-coordination-blocked", "conflict", 3)
         }),
         Err(message) => failure(message, "hive.invalid-input", "error", 2),
@@ -149,7 +149,7 @@ fn parse(arguments: &[String]) -> Result<Arguments, String> {
             }
         }
         Action::Begin | Action::Check | Action::Update => {
-            require_identity(&host, &session_id, process_id)?;
+            require_identity(host.as_ref(), session_id.as_ref(), process_id)?;
             if paths.is_empty() {
                 return Err(
                     "session begin, check, and update require at least one --path".to_owned(),
@@ -173,8 +173,8 @@ fn parse(arguments: &[String]) -> Result<Arguments, String> {
 }
 
 fn require_identity(
-    host: &Option<String>,
-    session_id: &Option<String>,
+    host: Option<&String>,
+    session_id: Option<&String>,
     process_id: Option<u32>,
 ) -> Result<(), String> {
     if host.is_none() {
@@ -221,17 +221,17 @@ fn normalize_path(value: &str) -> Result<String, String> {
     Ok(portable)
 }
 
-fn execute(arguments: Arguments) -> Result<SessionResult, String> {
+fn execute(arguments: &Arguments) -> Result<SessionResult, String> {
     ensure_consumer_target(&arguments.target).map_err(|error| error.to_string())?;
     let root = Dir::open_ambient_dir(&arguments.target, ambient_authority())
         .map_err(|error| format!("cannot open consumer target: {error}"))?;
     let sessions = open_session_directory(&root)?;
     let _lock = acquire_lock(&sessions)?;
     match arguments.action {
-        Action::Begin => begin(&sessions, &arguments),
-        Action::Check => check(&sessions, &arguments),
-        Action::Update => update(&sessions, &arguments),
-        Action::Close => close(&sessions, &arguments),
+        Action::Begin => begin(&sessions, arguments),
+        Action::Check => check(&sessions, arguments),
+        Action::Update => update(&sessions, arguments),
+        Action::Close => close(&sessions, arguments),
         Action::Recover => recover(&sessions),
     }
 }
@@ -541,7 +541,10 @@ fn read_manifests(sessions: &Dir) -> Result<Vec<(String, SessionManifest)>, Stri
             .to_str()
             .ok_or_else(|| "session manifest file name is not UTF-8".to_owned())?
             .to_owned();
-        if !name.ends_with(".md") {
+        if !Path::new(&name)
+            .extension()
+            .is_some_and(|extension| extension.eq_ignore_ascii_case("md"))
+        {
             return Err(format!("unexpected session coordination entry: {name}"));
         }
         let metadata = sessions
