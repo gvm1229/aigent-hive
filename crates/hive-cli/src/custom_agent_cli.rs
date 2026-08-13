@@ -1512,6 +1512,30 @@ mod tests {
     }
 
     #[test]
+    fn remove_recovers_from_an_interrupted_prior_owned_file_removal() {
+        let root = temporary_root();
+        let profile = profile();
+        apply_profile(&root, &profile, "input.json");
+        let profile_path = Path::new(PROFILE_DIRECTORY).join(format!("{}.json", profile.role_id));
+        let owned_bytes = fs::read(root.join(&profile_path)).expect("owned profile bytes");
+        assert!(
+            remove_if_owned(&root, &profile_path, &sha256_digest(&owned_bytes))
+                .expect("simulate completed first removal")
+        );
+
+        let result = remove(RemoveArguments {
+            role_id: profile.role_id,
+            scope: profile.scope,
+            root: root.clone(),
+            accepted_digest: profile.definition_digest,
+        })
+        .expect("retry removal must converge after interruption");
+        assert_eq!(result.code, "hive.agent-removed");
+        assert!(root.join(LEDGER_PATH).is_file());
+        fs::remove_dir_all(root).expect("cleanup");
+    }
+
+    #[test]
     fn apply_requires_exact_consent_digest() {
         let root = temporary_root();
         let profile = profile();
