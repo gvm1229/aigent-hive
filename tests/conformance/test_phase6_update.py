@@ -187,7 +187,7 @@ class Phase6StaticContracts(unittest.TestCase):
         self.assertEqual(
             workflow["concurrency"],
             {
-                "group": "ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref_name }}",
+                "group": "ci-${{ github.workflow }}-${{ github.head_ref || github.ref_name }}",
                 "cancel-in-progress": True,
             },
         )
