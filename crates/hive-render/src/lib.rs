@@ -3227,6 +3227,10 @@ fn insert_static_files(files: &mut BTreeMap<PathBuf, Vec<u8>>) {
             include_bytes!("../../../harness/directives/02-project-upgrade.md"),
         ),
         (
+            ".agents/directives/03-session-coordination.md",
+            include_bytes!("../../../harness/directives/03-session-coordination.md"),
+        ),
+        (
             ".hive/knowledge/Raw/README.md",
             include_bytes!("../../../harness/template/.hive/knowledge/Raw/README.md"),
         ),
@@ -4212,9 +4216,9 @@ fn authenticate_projected_directive_files(
     read_projected: &mut impl FnMut(&Path, &str) -> Result<Vec<u8>, RenderError>,
     files: &mut BTreeMap<PathBuf, Vec<u8>>,
 ) -> Result<(), RenderError> {
-    macro_rules! directive_set {
+    macro_rules! historical_directive_set {
         ($root:literal) => {
-            [
+            vec![
                 (
                     Path::new(".agents/directives/00-project-harness.md"),
                     include_bytes!(concat!($root, "/00-project-harness.md")).as_slice(),
@@ -4230,13 +4234,35 @@ fn authenticate_projected_directive_files(
             ]
         };
     }
+    macro_rules! current_directive_set {
+        () => {
+            vec![
+                (
+                    Path::new(".agents/directives/00-project-harness.md"),
+                    include_bytes!("../../../harness/directives/00-project-harness.md").as_slice(),
+                ),
+                (
+                    Path::new(".agents/directives/01-project-knowledge.md"),
+                    include_bytes!("../../../harness/directives/01-project-knowledge.md")
+                        .as_slice(),
+                ),
+                (
+                    Path::new(".agents/directives/02-project-upgrade.md"),
+                    include_bytes!("../../../harness/directives/02-project-upgrade.md").as_slice(),
+                ),
+                (
+                    Path::new(".agents/directives/03-session-coordination.md"),
+                    include_bytes!("../../../harness/directives/03-session-coordination.md")
+                        .as_slice(),
+                ),
+            ]
+        };
+    }
     let directives = match source_version {
-        "0.7.0" => directive_set!("../../../harness/project-bases/0.7.0/directives"),
-        "0.8.0" => directive_set!("../../../harness/project-bases/0.8.0/directives"),
-        "0.9.0" => directive_set!("../../../harness/project-bases/0.9.0/directives"),
-        env!("CARGO_PKG_VERSION") => {
-            directive_set!("../../../harness/directives")
-        }
+        "0.7.0" => historical_directive_set!("../../../harness/project-bases/0.7.0/directives"),
+        "0.8.0" => historical_directive_set!("../../../harness/project-bases/0.8.0/directives"),
+        "0.9.0" => historical_directive_set!("../../../harness/project-bases/0.9.0/directives"),
+        env!("CARGO_PKG_VERSION") => current_directive_set!(),
         _ => {
             return Err(RenderError::Verification(format!(
             "historical directive projection cannot be authenticated for release {source_version}"
@@ -7787,6 +7813,7 @@ mod tests {
             .iter()
             .map(|name| format!(".agents/skills/{name}/SKILL.md"))
             .collect::<Vec<_>>();
+        expected.push(".agents/directives/03-session-coordination.md".to_owned());
         expected.extend(
             new_body_skills
                 .iter()
@@ -7832,6 +7859,7 @@ mod tests {
                 "AGENTS.md",
                 "/directives/00-project-harness.md",
                 "/directives/01-project-knowledge.md",
+                "/directives/02-project-upgrade.md",
                 "/hive-judge-package/SKILL.md",
                 "/hive-knowledge-capture/SKILL.md",
                 "/hive-knowledge-maintenance/SKILL.md",

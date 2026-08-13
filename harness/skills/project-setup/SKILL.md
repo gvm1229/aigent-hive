@@ -72,6 +72,8 @@ Configure a consumer project without copying Hive source-development instruction
    - Preserve non-Hive text and third-party marker blocks byte-for-byte.
    - Materialize each approved role seed into `.hive/team/roles/<role-id>.md` in staging.
    - On reconfiguration, preserve existing assignment, handoff, and Markdown body; require explicit approval for definition drift.
+   - When an existing Hive harness has an authenticated older project base, run `hive project upgrade --target <project-root> --scan --output json` before reconfiguration. Show the surgical directive preview: base, local, incoming, final digests, and every preserved local overlap count.
+   - Apply an outdated Hive directive only through `hive project upgrade --dry-run` followed by the exact reviewed `--apply`. Replace only a Hive-owned clause that directly contradicts the incoming Hive safety or ownership rule. Preserve all user-authored text, third-party blocks, and non-conflicting local Hive clauses byte-for-byte.
    - Do not commit or push unless the user explicitly requested the Git operation.
 9. Verify.
    - Run `hive setup --target <project-root> --quick-answers <setup-quick-answers.yml> --capabilities <capability-resolution.json> --user-root <user-root> --validate --output json` with the same validated inputs used for the dry run and apply.

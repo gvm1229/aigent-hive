@@ -757,6 +757,7 @@ else:
                     "00-project-harness.md",
                     "01-project-knowledge.md",
                     "02-project-upgrade.md",
+                    "03-session-coordination.md",
                 ):
                     self.assertTrue(
                         (target / ".agents/directives" / directive).is_file()
@@ -792,6 +793,131 @@ else:
                     )
                 else:
                     self.assertFalse((target / ".claude/skills").exists())
+
+    def test_consumer_session_reserves_exact_paths_and_releases_them(self) -> None:
+        target = self.setup_project("session-consumer")
+        process_id = str(os.getpid())
+        begun, begun_result = self.invoke(
+            "session",
+            "begin",
+            "--target",
+            str(target),
+            "--host",
+            "codex",
+            "--session-id",
+            "primary",
+            "--process-id",
+            process_id,
+            "--path",
+            "src",
+        )
+        self.assertEqual(begun.returncode, 0, begun.stderr)
+        self.assertEqual(begun_result["code"], "hive.session-begun")
+        manifest = target / ".hive/runtime/active-sessions/codex-primary.md"
+        self.assertTrue(manifest.is_file())
+        self.assertIn("src", manifest.read_text(encoding="utf-8"))
+
+        blocked, blocked_result = self.invoke(
+            "session",
+            "begin",
+            "--target",
+            str(target),
+            "--host",
+            "claude",
+            "--session-id",
+            "secondary",
+            "--process-id",
+            process_id,
+            "--path",
+            "src/lib.rs",
+        )
+        self.assertEqual(blocked.returncode, 3, blocked.stderr)
+        self.assertEqual(
+            blocked_result["code"], "hive.session-coordination-blocked"
+        )
+        self.assertFalse(
+            (target / ".hive/runtime/active-sessions/claude-secondary.md").exists()
+        )
+
+        clear, clear_result = self.invoke(
+            "session",
+            "check",
+            "--target",
+            str(target),
+            "--host",
+            "claude",
+            "--session-id",
+            "secondary",
+            "--process-id",
+            process_id,
+            "--path",
+            "docs",
+        )
+        self.assertEqual(clear.returncode, 0, clear.stderr)
+        self.assertEqual(clear_result["code"], "hive.session-clear")
+
+        closed, closed_result = self.invoke(
+            "session",
+            "close",
+            "--target",
+            str(target),
+            "--host",
+            "codex",
+            "--session-id",
+            "primary",
+        )
+        self.assertEqual(closed.returncode, 0, closed.stderr)
+        self.assertEqual(closed_result["code"], "hive.session-closed")
+        self.assertFalse(manifest.exists())
+
+        retry, retry_result = self.invoke(
+            "session",
+            "begin",
+            "--target",
+            str(target),
+            "--host",
+            "claude",
+            "--session-id",
+            "secondary",
+            "--process-id",
+            process_id,
+            "--path",
+            "src/lib.rs",
+        )
+        self.assertEqual(retry.returncode, 0, retry.stderr)
+        self.assertEqual(retry_result["code"], "hive.session-begun")
+
+        stale, stale_result = self.invoke(
+            "session",
+            "begin",
+            "--target",
+            str(target),
+            "--host",
+            "antigravity",
+            "--session-id",
+            "interrupted",
+            "--process-id",
+            "999999",
+            "--path",
+            "stale-work",
+        )
+        self.assertEqual(stale.returncode, 0, stale.stderr)
+        self.assertEqual(stale_result["code"], "hive.session-begun")
+        stale_manifest = (
+            target / ".hive/runtime/active-sessions/antigravity-interrupted.md"
+        )
+        self.assertTrue(stale_manifest.exists())
+        recovered, recovered_result = self.invoke(
+            "session",
+            "recover",
+            "--target",
+            str(target),
+        )
+        self.assertEqual(recovered.returncode, 0, recovered.stderr)
+        self.assertEqual(
+            recovered_result["code"], "hive.session-recovered-stale-state"
+        )
+        self.assertFalse(stale_manifest.exists())
 
     def test_upgrade_preserves_local_skill_and_recovers_injected_failure(self) -> None:
         target = self.setup_project("upgrade-consumer")

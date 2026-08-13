@@ -2,7 +2,7 @@
 
 > Checklist owner: `CHS93-*`
 > 대상: `0.9.3`
-> 상태: 구현 대기
+> 상태: CHS93-001–005 구현·full qualification 완료
 > 근거: 소비자 하네스와 전역 설치에 동시 세션 충돌 검사가 없다는 2026-08-13 검토
 
 ## 목표
@@ -14,7 +14,7 @@
 
 ## 제품 경계
 
-- 소비자 세션 상태: Git 제외 `.hive/runtime/active-sessions/` 아래 Hive-owned Markdown·TOML
+- 소비자 세션 상태: Git 제외 `.hive/runtime/active-sessions/` 아래 Hive-owned Markdown manifest
 - Hive CLI: begin·check·update·close의 exact target·경로 범위·원자적 점유 판단만 담당
 - host hook: 지원·명시 동의·정확한 event가 모두 확인될 때만 편집 전 검사 연결. 그 밖의 host는 CLI와 directive 계약 유지
 - Hive 외 editor·사용자·외부 도구의 직접 편집 절대 차단 주장 없음
@@ -23,11 +23,11 @@
 
 ## Checklist
 
-- [ ] [CHS93-001] `.hive/directives/03-session-coordination.md`와 AGENTS Hive marker의 소비자 공통 계약·Git 제외 runtime 경로·상태 전이 정의
-- [ ] [CHS93-002] `hive session begin|check|update|close` exact target control plane, path canonicalization·parent/child overlap·atomic contention·stale session recovery 구현
-- [ ] [CHS93-003] Codex·Claude·Antigravity projection과 host capability/consent 조건의 pre-edit 검사 연결. 미지원·비동의 host의 truthful fallback 검증
-- [ ] [CHS93-004] `project-setup` preview·apply의 outdated Hive directive surgical upgrade 구현. 새 규칙과 직접 모순되는 Hive-owned clause만 갱신하고 사용자 작성·foreign·비충돌 bytes 보존
-- [ ] [CHS93-005] 신규·기존 프로젝트 fixture의 session collision·close/recover·user-authored directive 보존·rollback·세 host projection·full static/installer qualification
+- [x] [CHS93-001] `.agents/directives/03-session-coordination.md`와 AGENTS Hive marker의 소비자 공통 계약·Git 제외 runtime 경로·상태 전이 정의
+- [x] [CHS93-002] `hive session begin|check|update|close` exact target control plane, path canonicalization·parent/child overlap·atomic contention·stale session recovery 구현. Windows: portable `/proc` 대체 부재로 절대 System `tasklist.exe` liveness query 필요; 미구현 시 중단 host session 영구 미확인 위험
+- [x] [CHS93-003] Codex·Claude·Antigravity의 shared `AGENTS.md` entrypoint와 projection 연결. session coordination은 hook consent allowlist 밖이므로 pre-edit hook 자동 실행 없음; 지원·동의 불문 portable CLI·directive fallback과 세 host projection 검증
+- [x] [CHS93-004] `project-setup` preview·apply의 outdated Hive directive surgical upgrade 구현. 새 규칙과 직접 모순되는 Hive-owned clause만 갱신하고 사용자 작성·foreign·비충돌 bytes 보존
+- [x] [CHS93-005] 신규·기존 프로젝트 fixture의 session collision·close/recover·user-authored directive 보존·rollback·세 host projection·full static/installer qualification. 2026-08-13 current tree: Rust workspace 전체, Python 적합성 611개 통과·40개 의도적 skip, Copier/Rust parity, Source Wiki·문서 style·링크 검사 통과
 
 ## 수락 기준
 

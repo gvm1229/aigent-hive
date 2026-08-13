@@ -32,6 +32,7 @@ mod project_upgrade;
 mod report;
 mod role;
 mod run;
+mod session;
 mod source_wiki;
 mod update;
 mod update_activation;
@@ -61,6 +62,9 @@ USAGE:
     hive discord inbound --host codex|claude|antigravity --output json
     hive report preview|collect|export --help
     hive project upgrade --target <dir> (--scan|--dry-run|--apply|--validate|--recover) --output json
+    hive session begin|check|update --target <dir> --host codex|claude|antigravity --session-id <id> --process-id <positive-u32> --path <project-relative-path> [--path <project-relative-path>]... --output json
+    hive session close --target <dir> --host codex|claude|antigravity --session-id <id> --output json
+    hive session recover --target <dir> --output json
     hive index rebuild --target <dir> --output json
     hive route --request <json> --output json
     hive prompt validate --request <input.json> --result <result.json> --output json
@@ -196,6 +200,7 @@ fn main() -> ExitCode {
         Some("discord") => discord::run(&arguments[1..]),
         Some("report") => report::run(&arguments[1..]),
         Some("project") => project_upgrade::run(&arguments[1..]),
+        Some("session") => session::run(&arguments[1..]),
         Some("index") => knowledge::run_index(&arguments[1..]),
         Some("route") => run_route(&arguments[1..]),
         Some("prompt") => run_prompt(&arguments[1..]),

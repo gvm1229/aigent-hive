@@ -3,7 +3,7 @@
 - 기준 branch: `codex/0.9.3-native-agents` (`develop` 통합 기준)
 - product version: `0.9.2`
 - 다음 release target: `0.9.3`
-- plan revision: `2.84`
+- plan revision: `2.85`
 - 현재 milestone: `0.9.3` native iterative·custom subagent 구현·numbered public test 수용·정식 출시
 - 기능 기준: `2cec0377748874748d126b6b55e59975a3f20a02`; release discipline base `c777da1`
 - 제외: `NAT-002–024`·`MRA-001–032`의 `0.9.3`, `N10-002–011`의 `0.10.0-test`
@@ -69,9 +69,11 @@
   도움 되는 사실·선호·방식 하나의 안전한 기록, import는 명시 대상 저장소 스캔으로 표현. Codex·Claude·
   Antigravity projection·plugin/template·26개 inventory 수렴, core features HTML·PDF도 같은 지식
   흐름으로 갱신. Rust 34·Copier/Rust parity 22·Python static/inventory 19·문서·Source Wiki gate PASS
-- 소비자 하네스 세션 조정 범위 추가: 현재 제품·전역 설치의 동시 세션 충돌 검사는 부재. `CHS93-001–005`에서
-  Git 제외 `.hive/runtime/active-sessions/` 계약, exact target CLI 점유·충돌 판단, 동의된 host pre-edit
-  검사, 기존 프로젝트의 user-authored directive 보존 surgical upgrade를 `0.9.3` 출시 전제에 추가
+- 소비자 하네스 세션 조정 완료: Git 제외 `.hive/runtime/active-sessions/`의 exact target·path 점유,
+  parent/child 충돌 거부, close·검증 가능한 stale PID recover, 세 host projection·portable directive
+  fallback 구현. `project-setup`·`project-refresh`는 인증된 older base의 directive를 preview·dry-run·exact
+  apply로 갱신하며, 직접 모순되는 Hive-owned clause 외 user-authored·foreign·비충돌 bytes 보존. Rust workspace,
+  Python 611개 통과·40개 의도적 skip, Copier/Rust parity, Source Wiki·문서 style·링크 검사 PASS
 - `0.9.2-test.1` 수용 거부: candidate run `31596919466`·publication run `31597939956`는
   통과했으나 GitHub prerelease에 direct installer 자산 3개가 누락되어 공개 설치 URL이 `404`를
   반환. 게시 workflow·회귀 보정 뒤 `0.9.2-test.2`부터 전체 공개 설치 수용 재수행

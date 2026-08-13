@@ -66,6 +66,12 @@
         "UpdateProjectHarness",
         "ValidateProjectUpgrade",
         "RecoverProjectUpgrade",
+        "BeginSession",
+        "CheckSession",
+        "UpdateSession",
+        "CloseSession",
+        "RecoverSession",
+        "CoordinateSession",
         "LintKnowledge",
         "DeleteKnowledge",
         "SuppressKnowledge",
@@ -130,7 +136,8 @@
               "capability-resolution",
               "run-status",
               "prepared-dispatch",
-              "user-setup-catalog"
+              "user-setup-catalog",
+              "session-manifest"
             ]
           },
           "locator": { "type": "string", "minLength": 1 },

@@ -67,6 +67,12 @@ EXPECTED_ACTIONS = {
     "UpdateProjectHarness",
     "ValidateProjectUpgrade",
     "RecoverProjectUpgrade",
+    "BeginSession",
+    "CheckSession",
+    "UpdateSession",
+    "CloseSession",
+    "RecoverSession",
+    "CoordinateSession",
     "LintKnowledge",
     "DeleteKnowledge",
     "SuppressKnowledge",
@@ -102,6 +108,7 @@ GENERIC_EVIDENCE_KINDS = {
     "report",
     "release",
     "user-setup-catalog",
+    "session-manifest",
 }
 EXPECTED_LOOP_EVIDENCE_KINDS = {
     "loop-graph",

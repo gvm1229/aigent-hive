@@ -3507,6 +3507,29 @@ mod tests {
     }
 
     #[test]
+    fn directive_upgrade_adds_new_hive_clause_without_rewriting_user_local_text() {
+        let base =
+            include_bytes!("../../../harness/project-bases/0.9.0/directives/02-project-upgrade.md");
+        let mut local = base.to_vec();
+        local.extend_from_slice(b"- User-local upgrade note: preserve this exact line.\n");
+        let incoming = include_bytes!("../../../harness/directives/02-project-upgrade.md");
+
+        let merged = three_way_merge(
+            Path::new(".agents/directives/02-project-upgrade.md"),
+            Some(base),
+            Some(&local),
+            Some(incoming),
+        )
+        .expect("surgical directive merge");
+        let final_text =
+            String::from_utf8(merged.bytes.expect("merged directive")).expect("UTF-8 directive");
+
+        assert!(final_text.contains("User-local upgrade note: preserve this exact line."));
+        assert!(final_text.contains("directly contradicts an incoming safety or ownership rule"));
+        assert_eq!(merged.omitted_incoming_hunks, 0);
+    }
+
+    #[test]
     fn missing_or_duplicate_historical_entries_are_rejected() {
         for files in [
             Vec::new(),
