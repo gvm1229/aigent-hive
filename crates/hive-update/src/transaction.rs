@@ -13,8 +13,8 @@ use hive_core::{
     validate_project_relative, SOURCE_MARKER_FILE,
 };
 use hive_render::{
-    execute_release_update_in, shared_marker_foreign_digest, update_path_is_owned, RenderError,
-    SetupChange, SetupMode, SetupOutcome, SetupRequest,
+    execute_release_update_in, shared_marker_foreign_digest_for_path, update_path_is_owned,
+    RenderError, SetupChange, SetupMode, SetupOutcome, SetupRequest,
 };
 #[cfg(test)]
 use hive_render::{execute_setup, GlobalProjectPreferences};
@@ -687,9 +687,13 @@ fn snapshot_directory(
             })?;
             sha256_digest(format!("symlink\0{}", destination.to_string_lossy()).as_bytes())
         } else if metadata.is_file() {
-            if relative_string == "AGENTS.md" {
+            if matches!(
+                relative_string.as_str(),
+                "AGENTS.md" | "CLAUDE.md" | "GEMINI.md" | ".prettierignore"
+            ) {
                 let bytes = read_parent_file(directory, &file_name, MAX_BACKUP_FILE_BYTES)?;
-                shared_marker_foreign_digest(&bytes).map_err(map_render_error)?
+                shared_marker_foreign_digest_for_path(Path::new(&relative_string), &bytes)
+                    .map_err(map_render_error)?
             } else {
                 hash_regular_file(directory, &file_name)?
             }
@@ -2139,7 +2143,8 @@ mod tests {
 
     fn release_fixture() -> PathBuf {
         Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("../../tests/fixtures/phase6/releases/valid-0.9.2")
+            .join("../../tests/fixtures/phase6/releases")
+            .join(format!("valid-{}", env!("CARGO_PKG_VERSION")))
     }
 
     fn published_release_fixture() -> PathBuf {

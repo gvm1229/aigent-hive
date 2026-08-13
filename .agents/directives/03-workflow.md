@@ -135,6 +135,26 @@ Match verification cost to the current boundary:
 4. **Release** — run clean-clone CI, every supported OS/architecture, hostile and security
    suites, installer/update recovery, signing, provenance, and publication qualification.
 
+## Risk-Tier CI and Candidate Economy
+
+- Classify every pushed concern from its tracked diff before choosing CI. A Markdown-only diff uses
+  the documentation-only integration path; it must not start Rust, cross-platform, native package,
+  release-runtime, or public-candidate work.
+- A product diff runs its affected named test lane plus one Linux full conformance lane and the
+  smallest macOS/Windows smoke that can cover the changed host or installer boundary. Cross-platform
+  full suites remain nightly and release-candidate evidence, not an ordinary-push default.
+- CI for a superseded PR or branch commit must cancel when a newer commit for that same PR or ref
+  starts. Never apply cancellation to release publication, accepted public tests, or protected
+  stable candidate workflows.
+- Cache pinned Rust and Python dependencies per operating system. A cache may reduce setup time;
+  it must never substitute a test, alter a lockfile contract, or supply a release artifact.
+- Run multi-platform release-runtime qualification only on its scheduled or explicit manual path.
+  The exact numbered test candidate remains the release package authority.
+- Freeze an exact product tree and package input before a numbered public candidate. Do not create
+  another candidate for a plan, state, fact, Markdown-only, or identical-tree change. A product,
+  packaging, installer, metadata, or acceptance fix reopens only its affected acceptance and
+  requires the next numbered public test.
+
 ## Documentation-Only Integration
 
 - Classify a change as documentation-only when every changed tracked file is Markdown. The only

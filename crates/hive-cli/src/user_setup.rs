@@ -1,12 +1,14 @@
 use super::{emit_action_result, ActionResult, Evidence};
 use cap_std::fs::Dir;
+use hive_core::native_workflow::{JudgeInvocationPolicy, JudgeRoute};
 use hive_core::sha256_digest;
 use hive_projection::{
     canonical_builtin_skill_name, compile_user_projection_localized, embedded_catalog,
-    DescriptorLanguage, Host as ProjectionHost,
+    historical_builtin_skills, retired_builtin_skill_names, DescriptorLanguage,
+    Host as ProjectionHost,
 };
 use hive_render::GlobalProjectPreferences;
-use hive_update::{three_way_merge, MergeDisposition};
+use hive_update::{three_way_merge, three_way_merge_hive_directive, MergeDisposition};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value as JsonValue};
 use std::collections::{BTreeMap, BTreeSet};
@@ -33,6 +35,9 @@ const EXPEDITED_DEFAULT_USAGE_THRESHOLD: u8 = 20;
 const LEGACY_080_USAGE_THRESHOLD: u8 = 20;
 const USER_PROJECTION_090_TEST3_SETUP_HIVE: &[u8] =
     include_bytes!("../../../harness/user-bases/0.9.0-test.3/skills/setup-hive/SKILL.md");
+const HISTORICAL_SKILL_RELEASES: [&str; 9] = [
+    "0.1.0", "0.2.0", "0.3.0", "0.4.0", "0.5.0", "0.6.0", "0.7.0", "0.8.0", "0.9.0",
+];
 
 const USER_SETUP_USAGE: &str = "\
 Configure or validate Aigent Hive user preferences.
@@ -302,6 +307,30 @@ pub(crate) struct UpdateCheckPreferences {
     pub(crate) enabled: bool,
 }
 
+#[derive(Clone, Copy, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub(crate) enum JudgeInvocation {
+    #[default]
+    Explicit,
+    Implicit,
+}
+
+impl JudgeInvocation {
+    const fn as_str(self) -> &'static str {
+        match self {
+            Self::Explicit => "explicit",
+            Self::Implicit => "implicit",
+        }
+    }
+
+    const fn policy(self) -> JudgeInvocationPolicy {
+        match self {
+            Self::Explicit => JudgeInvocationPolicy::Explicit,
+            Self::Implicit => JudgeInvocationPolicy::Implicit,
+        }
+    }
+}
+
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(deny_unknown_fields)]
 pub(crate) struct UserSetupConfig {
@@ -314,6 +343,8 @@ pub(crate) struct UserSetupConfig {
     pub(crate) skills: SkillPreferences,
     #[serde(default)]
     pub(crate) update_check: UpdateCheckPreferences,
+    #[serde(default)]
+    pub(crate) judge_invocation: JudgeInvocation,
     pub(crate) usage_guard: UsageGuardPreferences,
 }
 
@@ -499,6 +530,7 @@ fn describe_result() -> Result<ActionResult, SetupError> {
         "user-contexts",
         "persona",
         "hosts",
+        "judge-invocation",
         "skills",
         "usage-guard",
         "discord"
@@ -512,6 +544,7 @@ fn describe_result() -> Result<ActionResult, SetupError> {
         "selected_hosts": ["codex"],
         "skills": { "mode": "all" },
         "update_check": { "enabled": false },
+        "judge_invocation": "explicit",
         "usage_guard": { "enabled": true,
             "stop_remaining_percent": "<user-chosen-integer-1-to-99>",
             "codexbar_fallback_enabled": false,
@@ -528,6 +561,7 @@ fn describe_result() -> Result<ActionResult, SetupError> {
         "selected_hosts": ["codex"],
         "skills": { "mode": "all" },
         "update_check": { "enabled": false },
+        "judge_invocation": "explicit",
         "usage_guard": { "enabled": true,
             "stop_remaining_percent": EXPEDITED_DEFAULT_USAGE_THRESHOLD,
             "codexbar_fallback_enabled": false,
@@ -2023,8 +2057,10 @@ fn plan_user_projection(
         .as_deref()
         .map(parse_projection_manifest)
         .transpose()?;
-    let base_files = projection_base_files(root, prior.as_ref())?;
-    let prior_owned_paths = prior
+    let mut base_files = projection_base_files(root, prior.as_ref())?;
+    let retired_files = authenticated_retired_user_skill_files(root)?;
+    base_files.extend(retired_files.clone());
+    let mut prior_owned_paths = prior
         .as_ref()
         .map(|manifest| {
             manifest
@@ -2034,6 +2070,7 @@ fn plan_user_projection(
                 .collect::<BTreeSet<_>>()
         })
         .unwrap_or_default();
+    prior_owned_paths.extend(retired_files.keys().cloned());
 
     let mut paths = base_files.keys().cloned().collect::<BTreeSet<_>>();
     paths.extend(files.keys().cloned());
@@ -2063,12 +2100,21 @@ fn plan_user_projection(
                 path.display()
             )));
         }
-        let merged = three_way_merge(
-            &path,
-            base.map(Vec::as_slice),
-            before.as_deref(),
-            incoming.map(Vec::as_slice),
-        )
+        let merged = if path.starts_with(".agents/directives/") {
+            three_way_merge_hive_directive(
+                &path,
+                base.map(Vec::as_slice),
+                before.as_deref(),
+                incoming.map(Vec::as_slice),
+            )
+        } else {
+            three_way_merge(
+                &path,
+                base.map(Vec::as_slice),
+                before.as_deref(),
+                incoming.map(Vec::as_slice),
+            )
+        }
         .map_err(|error| SetupError::Conflict(error.to_string()))?;
         let after = merged.bytes;
         planned.reports.push(UserProjectionPathReport {
@@ -2111,6 +2157,41 @@ fn plan_user_projection(
         .reports
         .sort_by(|left, right| left.path.cmp(&right.path));
     Ok(planned)
+}
+
+fn authenticated_retired_user_skill_files(
+    root: &Dir,
+) -> Result<BTreeMap<PathBuf, Vec<u8>>, SetupError> {
+    let retired = retired_builtin_skill_names()
+        .map_err(|error| SetupError::Internal(error.message().to_owned()))?;
+    let mut historical_digests = BTreeMap::<String, BTreeSet<String>>::new();
+    for version in HISTORICAL_SKILL_RELEASES {
+        for skill in historical_builtin_skills(version)
+            .map_err(|error| SetupError::Internal(error.message().to_owned()))?
+        {
+            if retired.contains_key(&skill.name) {
+                historical_digests
+                    .entry(skill.name)
+                    .or_default()
+                    .insert(skill.content_digest);
+            }
+        }
+    }
+
+    let mut files = BTreeMap::new();
+    for (name, digests) in historical_digests {
+        let path = PathBuf::from(".agents/skills").join(name).join("SKILL.md");
+        let Some(bytes) =
+            super::user_install::read_user_setup_file(root, &path, MAX_USER_SETUP_BYTES)
+                .map_err(SetupError::Conflict)?
+        else {
+            continue;
+        };
+        if digests.contains(&sha256_digest(&bytes)) {
+            files.insert(path, bytes);
+        }
+    }
+    Ok(files)
 }
 
 fn user_projection_files(
@@ -2378,6 +2459,26 @@ fn apply_user_projection(
         }
         applied.changes.push(change);
     }
+    let removed_skill_paths = applied
+        .changes
+        .iter()
+        .filter(|change| change.after.is_none() && change.path.starts_with(".agents/skills/"))
+        .map(|change| change.path.as_path())
+        .collect::<Vec<_>>();
+    if let Err(primary) = super::user_install::prune_user_setup_empty_ancestors(
+        root,
+        removed_skill_paths.iter().copied(),
+    ) {
+        let rollback = rollback_user_projection(root, &applied);
+        return match rollback {
+            Ok(()) => Err(SetupError::Conflict(format!(
+                "user projection cleanup failed: {primary}"
+            ))),
+            Err(rollback) => Err(SetupError::Conflict(format!(
+                "user projection cleanup failed ({primary}); rollback failed ({rollback})"
+            ))),
+        };
+    }
     Ok(applied)
 }
 
@@ -2567,6 +2668,24 @@ fn render_user_directive(config: &UserSetupConfig, resolved_skills: &[String]) -
     } else {
         "disabled"
     };
+    let judge_invocation = config.judge_invocation.as_str();
+    let judge_policy = config.judge_invocation.policy();
+    let judge_policy_line = match judge_policy {
+        JudgeInvocationPolicy::Explicit => {
+            debug_assert!(!judge_policy.permits(JudgeRoute::MaterialRisk));
+            (
+            "- The configured `explicit` Judge policy requires a Judge only for terminal acceptance of iterative, team, or multi-goal criteria. Never invoke a Judge for material-risk work unless the policy is explicitly reconfigured to `implicit`, or for simple questions, read-only or format-only work, ticks, heartbeats, retries, deterministic failures, or an unsupported or unattested host.\n",
+            "- 설정된 `explicit` Judge 정책은 iterative·team·multi-goal criterion의 terminal acceptance에만 Judge를 요구. 정책을 `implicit`으로 명시 재설정하지 않은 material-risk 작업, 단순 질문, read-only·format-only 작업, tick, heartbeat, retry, 결정적 실패, unsupported 또는 attestation 없는 host에는 Judge 호출 금지.\n",
+            )
+        }
+        JudgeInvocationPolicy::Implicit => {
+            debug_assert!(judge_policy.permits(JudgeRoute::MaterialRisk));
+            (
+            "- The configured `implicit` Judge policy requires a Judge for terminal acceptance of iterative, team, or multi-goal criteria and permits an additional strict material-risk route. Never invoke a Judge for simple questions, read-only or format-only work, ticks, heartbeats, retries, deterministic failures, or an unsupported or unattested host.\n",
+            "- 설정된 `implicit` Judge 정책은 iterative·team·multi-goal criterion의 terminal acceptance에 Judge를 요구하고 strict material-risk route를 추가 허용. 단순 질문, read-only·format-only 작업, tick, heartbeat, retry, 결정적 실패, unsupported 또는 attestation 없는 host에는 Judge 호출 금지.\n",
+            )
+        }
+    };
     let mut rendered = match config.interface_language {
         InterfaceLanguage::En => {
             let capture = if config.wiki.enabled {
@@ -2575,8 +2694,8 @@ fn render_user_directive(config: &UserSetupConfig, resolved_skills: &[String]) -
                 "- Global Wiki is disabled: do not write or refresh knowledge; preserve canonical Markdown until an explicit deletion request.\n"
             };
             format!(
-                "# Aigent Hive user preferences\n\n- Setup state: `operational`\n- Interface language: `en`\n- User contexts: {profile}\n- Agent persona: {persona}\n- Selected hosts: `{hosts}`\n- Global Wiki: `{wiki}`\n- Daily update check: `{update_check}`\n- Active Skills: `{}`\n{capture}- User contexts inform only the global background. They never select a project workflow, implementation approach, delivery priority, or active Skill set.\n- When daily update check is enabled, run `hive update --check --user-root <user-root> --output json` before the first Hive task of each host session. A check may notify but must never install.\n- Use English for every question and response unless the user explicitly requests another language for the current response. A message written in another language does not by itself change this preference.\n- For ambiguous or detail-poor ordinary prompts, offer one concise optional refine suggestion without automatic rewrite.\n- Never request provider credentials or call model-provider APIs on Hive's behalf.\n",
-                resolved_skills.join(", ")
+                "# Aigent Hive user preferences\n\n- Setup state: `operational`\n- Interface language: `en`\n- User contexts: {profile}\n- Agent persona: {persona}\n- Selected hosts: `{hosts}`\n- Global Wiki: `{wiki}`\n- Daily update check: `{update_check}`\n- Judge invocation: `{judge_invocation}`\n- Active Skills: `{}`\n{capture}- User contexts inform only the global background. They never select a project workflow, implementation approach, delivery priority, or active Skill set.\n- When daily update check is enabled, run `hive update --check --user-root <user-root> --output json` before the first Hive task of each host session. A check may notify but must never install.\n{}- Use English for every question and response unless the user explicitly requests another language for the current response. A message written in another language does not by itself change this preference.\n- For ambiguous or detail-poor ordinary prompts, offer one concise optional refine suggestion without automatic rewrite.\n- Never request provider credentials or call model-provider APIs on Hive's behalf.\n",
+                resolved_skills.join(", "), judge_policy_line.0
             )
         }
         InterfaceLanguage::Ko => {
@@ -2586,8 +2705,8 @@ fn render_user_directive(config: &UserSetupConfig, resolved_skills: &[String]) -
                 "- 전역 위키 비활성: knowledge 기록·갱신 금지. 명시적 삭제 요청 전까지 canonical Markdown을 보존.\n"
             };
             format!(
-                "# Aigent Hive 사용자 설정\n\n- 설정 상태: `operational`\n- Interface language: `ko`\n- 사용자 기본 맥락: {profile}\n- 에이전트 페르소나: {persona}\n- 선택 호스트: `{hosts}`\n- Global Wiki: `{wiki}`\n- 일일 update 확인: `{update_check}`\n- 활성 Skill: `{}`\n{capture}- 사용자 기본 맥락은 전역 배경 정보만 제공하며 프로젝트 작업 흐름, 구현 방식, 작업 우선순위, 활성 Skill을 정하지 않음.\n- 일일 update 확인이 enabled이면 각 host session의 첫 Hive 작업 전에 `hive update --check --user-root <user-root> --output json` 실행. 확인은 알림만 가능하며 설치 금지.\n- 현재 응답에 다른 언어를 사용하라는 명시적 요청이 없는 한 모든 질문과 응답에 한국어 사용. 다른 언어로 작성된 메시지만으로 이 선호를 변경하지 않음.\n- 모호하거나 핵심 세부가 부족한 일반 prompt에는 자동 rewrite 없이 간결한 optional refine 제안 1개만 제공.\n- Provider credential을 요청하거나 Hive를 대신해 model-provider API를 호출하지 않음.\n",
-                resolved_skills.join(", ")
+                "# Aigent Hive 사용자 설정\n\n- 설정 상태: `operational`\n- Interface language: `ko`\n- 사용자 기본 맥락: {profile}\n- 에이전트 페르소나: {persona}\n- 선택 호스트: `{hosts}`\n- Global Wiki: `{wiki}`\n- 일일 update 확인: `{update_check}`\n- Judge 호출: `{judge_invocation}`\n- 활성 Skill: `{}`\n{capture}- 사용자 기본 맥락은 전역 배경 정보만 제공하며 프로젝트 작업 흐름, 구현 방식, 작업 우선순위, 활성 Skill을 정하지 않음.\n- 일일 update 확인이 enabled이면 각 host session의 첫 Hive 작업 전에 `hive update --check --user-root <user-root> --output json` 실행. 확인은 알림만 가능하며 설치 금지.\n{}- 현재 응답에 다른 언어를 사용하라는 명시적 요청이 없는 한 모든 질문과 응답에 한국어 사용. 다른 언어로 작성된 메시지만으로 이 선호를 변경하지 않음.\n- 모호하거나 핵심 세부가 부족한 일반 prompt에는 자동 rewrite 없이 간결한 optional refine 제안 1개만 제공.\n- Provider credential을 요청하거나 Hive를 대신해 model-provider API를 호출하지 않음.\n",
+                resolved_skills.join(", "), judge_policy_line.1
             )
         }
     };
@@ -2955,6 +3074,7 @@ fn success(
             "selected_hosts": config.selected_hosts,
             "resolved_skills": resolved_skills,
             "update_check": config.update_check,
+            "judge_invocation": config.judge_invocation,
             "usage_guard": config.usage_guard,
             "user_projection": {
                 "paths": projection_reports,
@@ -3013,6 +3133,86 @@ usage_guard:
 ",
         )
         .expect("valid config")
+    }
+
+    #[test]
+    fn legacy_user_setup_defaults_to_explicit_judge_invocation() {
+        assert_eq!(valid_config().judge_invocation, JudgeInvocation::Explicit);
+    }
+
+    #[test]
+    fn judge_invocation_accepts_only_the_two_persisted_modes() {
+        for (value, expected) in [
+            ("explicit", JudgeInvocation::Explicit),
+            ("implicit", JudgeInvocation::Implicit),
+        ] {
+            let answers =
+                String::from_utf8(canonical_config(&valid_config()).expect("config bytes"))
+                    .expect("UTF-8 config")
+                    .replace(
+                        "judge_invocation: explicit",
+                        &format!("judge_invocation: {value}"),
+                    );
+            let config =
+                parse_and_validate_config(answers.as_bytes()).expect("configured Judge invocation");
+            assert_eq!(config.judge_invocation, expected);
+            assert!(
+                String::from_utf8(canonical_config(&config).expect("config bytes"))
+                    .expect("UTF-8 config")
+                    .contains(&format!("judge_invocation: {value}\n"))
+            );
+        }
+
+        let invalid = String::from_utf8(canonical_config(&valid_config()).expect("config bytes"))
+            .expect("UTF-8 config")
+            .replace("judge_invocation: explicit", "judge_invocation: automatic");
+        assert!(parse_and_validate_config(invalid.as_bytes()).is_err());
+    }
+
+    #[test]
+    fn persisted_judge_invocation_maps_to_the_closed_core_policy() {
+        assert_eq!(
+            JudgeInvocation::Explicit.policy(),
+            JudgeInvocationPolicy::Explicit
+        );
+        assert_eq!(
+            JudgeInvocation::Implicit.policy(),
+            JudgeInvocationPolicy::Implicit
+        );
+    }
+
+    #[test]
+    fn describe_places_judge_invocation_before_skill_selection() {
+        let described = describe_result().expect("describe result");
+        let data = described.data.expect("describe data");
+        let question_order = data["question_order"]
+            .as_array()
+            .expect("question order")
+            .iter()
+            .filter_map(serde_json::Value::as_str)
+            .collect::<Vec<_>>();
+
+        assert_eq!(
+            question_order,
+            vec![
+                "interface-language",
+                "daily-update-check",
+                "setup-mode",
+                "wiki",
+                "user-contexts",
+                "persona",
+                "hosts",
+                "judge-invocation",
+                "skills",
+                "usage-guard",
+                "discord",
+            ]
+        );
+        assert_eq!(data["answer_template"]["judge_invocation"], "explicit");
+        assert_eq!(
+            data["schema"]["$defs"]["judge_invocation"]["enum"],
+            serde_json::json!(["explicit", "implicit"])
+        );
     }
 
     #[test]
@@ -3209,6 +3409,61 @@ usage_guard:
         assert!(overlap_report.local_priority);
         assert!(overlap_report.omitted_incoming_hunks > 0);
         assert!(!overlap.changes.iter().any(|change| change.path == target));
+    }
+
+    #[test]
+    fn user_projection_removes_an_authenticated_retired_global_skill_and_empty_leaf() {
+        let temporary = tempfile::tempdir().expect("temporary user root");
+        let config = valid_config();
+        let catalog = parse_and_validate_catalog().expect("catalog");
+        let skills = resolve_skills(&config, &catalog).expect("skill closure");
+        let answers = canonical_config(&config).expect("answers");
+        let retired = PathBuf::from(".agents/skills/hive-knowledge-capture/SKILL.md");
+        let historical = include_bytes!(
+            "../../../harness/project-bases/0.7.0/skills/hive-knowledge-capture/SKILL.md"
+        );
+        let full = temporary.path().join(&retired);
+        fs::create_dir_all(full.parent().expect("retired parent")).expect("retired parent");
+        fs::write(&full, historical).expect("retired Hive Skill");
+        let root =
+            super::super::user_install::open_user_root_for_setup(temporary.path()).expect("root");
+
+        let planned = plan_user_projection(&root, &config, &skills, &answers)
+            .expect("authenticated retired cleanup preview");
+        assert!(planned.changes.iter().any(|change| {
+            change.path == retired
+                && change.before.as_deref() == Some(historical.as_slice())
+                && change.after.is_none()
+        }));
+
+        apply_user_projection(&root, &config, &skills, &answers)
+            .expect("authenticated retired cleanup apply");
+        assert!(!full.exists());
+        assert!(!temporary
+            .path()
+            .join(".agents/skills/hive-knowledge-capture")
+            .exists());
+    }
+
+    #[test]
+    fn user_projection_preserves_a_modified_or_foreign_retired_name() {
+        let temporary = tempfile::tempdir().expect("temporary user root");
+        let config = valid_config();
+        let catalog = parse_and_validate_catalog().expect("catalog");
+        let skills = resolve_skills(&config, &catalog).expect("skill closure");
+        let answers = canonical_config(&config).expect("answers");
+        let retired = PathBuf::from(".agents/skills/hive-knowledge-capture/SKILL.md");
+        let full = temporary.path().join(&retired);
+        fs::create_dir_all(full.parent().expect("retired parent")).expect("retired parent");
+        let foreign = b"---\nname: hive-knowledge-capture\n---\n# User Skill\n";
+        fs::write(&full, foreign).expect("foreign Skill");
+        let root =
+            super::super::user_install::open_user_root_for_setup(temporary.path()).expect("root");
+
+        let planned = plan_user_projection(&root, &config, &skills, &answers)
+            .expect("foreign retired-name preview");
+        assert!(!planned.changes.iter().any(|change| change.path == retired));
+        assert_eq!(fs::read(full).expect("foreign Skill retained"), foreign);
     }
 
     #[test]

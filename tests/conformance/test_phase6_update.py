@@ -182,6 +182,29 @@ PY
 
 
 class Phase6StaticContracts(unittest.TestCase):
+    def test_ci_uses_risk_tiers_without_cancelling_publication(self) -> None:
+        workflow = yaml.safe_load((ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8"))
+        self.assertEqual(
+            workflow["concurrency"],
+            {
+                "group": "ci-${{ github.workflow }}-${{ github.head_ref || github.ref_name }}",
+                "cancel-in-progress": True,
+            },
+        )
+        jobs = workflow["jobs"]
+        self.assertEqual(jobs["documentation"]["if"], "needs.changes.outputs.scope == 'documentation'")
+        self.assertEqual(jobs["rust"]["runs-on"], "ubuntu-latest")
+        self.assertEqual(jobs["conformance"]["runs-on"], "ubuntu-latest")
+        self.assertEqual(jobs["platform-smoke"]["strategy"]["matrix"]["os"], ["macos-latest", "windows-latest"])
+        self.assertEqual(
+            yaml.safe_load(
+                (ROOT / ".github/workflows/release-publish.yml").read_text(
+                    encoding="utf-8"
+                )
+            )["concurrency"]["cancel-in-progress"],
+            False,
+        )
+
     def test_every_new_schema_is_valid_and_representative_instances_pass(self) -> None:
         names = (
             "backup-manifest.schema.json",
@@ -699,17 +722,14 @@ class Phase6StaticContracts(unittest.TestCase):
                 "templates",
             ):
                 self.assertEqual(inventory[key], sorted(set(inventory[key])), key)
-            catalog = yaml.safe_load(
-                (ROOT / "harness/skills/catalog.yml").read_text(encoding="utf-8")
+            frozen_inventory = read_json(
+                ROOT
+                / "harness"
+                / "release"
+                / version
+                / "release-surface-inventory.json"
             )
-            current_skills = {entry["name"] for entry in catalog["skills"]}
-            self.assertTrue(current_skills.issubset(set(inventory["skills"])))
-            self.assertTrue(
-                {
-                    f".agents/skills/{name}/SKILL.md"
-                    for name in current_skills
-                }.issubset(set(inventory["projections"]))
-            )
+            self.assertEqual(inventory, frozen_inventory)
             for relative, payload in first.items():
                 self.assertNotRegex(relative.casefold(), r"(^|/)(secret|private|.*\.pem|.*\.key)")
                 if relative.endswith(".json"):
@@ -850,15 +870,8 @@ class Phase6StaticContracts(unittest.TestCase):
         triggers = workflow.get("on", workflow.get(True))
         self.assertIsInstance(triggers, dict)
         self.assertIn("workflow_dispatch", triggers)
-        self.assertEqual(triggers["push"]["branches"], ["develop", "main"])
-        self.assertIn(
-            ".github/workflows/release-runtime.yml",
-            triggers["push"]["paths"],
-        )
-        self.assertIn(
-            "tests/fixtures/agy-stub.py",
-            triggers["push"]["paths"],
-        )
+        self.assertNotIn("push", triggers)
+        self.assertEqual(triggers["schedule"], [{"cron": "23 2 * * 1"}])
         self.assertEqual(workflow["permissions"], {"contents": "read"})
         self.assertEqual(set(workflow["jobs"]), {"macos", "linux", "windows"})
         macos_matrix = workflow["jobs"]["macos"]["strategy"]["matrix"]["include"]
@@ -879,10 +892,9 @@ class Phase6StaticContracts(unittest.TestCase):
         )
         self.assertEqual(workflow["jobs"]["windows"]["runs-on"], "windows-2025")
         for required in (
-            "push:",
+            "schedule:",
+            'cron: "23 2 * * 1"',
             "workflow_dispatch:",
-            "develop",
-            "main",
             "permissions:",
             "contents: read",
             "macos-15",

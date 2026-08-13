@@ -333,11 +333,11 @@ This temporary page has no backlinks and can be deleted explicitly.
                         {
                             "schema_version": 1,
                             "claim_id": "cobalt-retrieval-anchor",
-                            "kind": "project-profile",
-                            "statement": "The fixture documents cobalt retrieval anchors for bounded recall.",
+                            "kind": "decision",
+                            "statement": "Use cobalt retrieval anchors for bounded recall in every compatible knowledge collection.",
                             "version": None,
                             "revision": None,
-                            "applicability": None,
+                            "applicability": "Any compatible knowledge collection using bounded retrieval.",
                             "evidence": [
                                 {
                                     "locator": "README.md",
@@ -428,57 +428,15 @@ This temporary page has no backlinks and can be deleted explicitly.
         self.assertEqual(bounded["hits"][0]["item_kind"], "claim")
         self.assertTrue(bounded["hits"][0]["untrusted_content"])
 
-        before_promotion_preview = snapshot_tree(self.setup_user_root)
-        promotion_preview = self.assert_success(
-            self.invoke_knowledge(
-                "promote",
-                "--collection",
-                collection_id,
-                "--review-id",
-                "cobalt-retrieval-anchor",
-                "--dry-run",
-            )[1]
-        )
-        self.assertEqual(snapshot_tree(self.setup_user_root), before_promotion_preview)
-        self.assertFalse(promotion_preview["canonical_mutation"])
-        self.assertTrue(promotion_preview["approval_required"])
-        promotion_candidate = promotion_preview["candidates"][0]
-        source_digest = promotion_candidate["expected_source_digest"]
-        self.assertRegex(source_digest, r"^sha256:[0-9a-f]{64}$")
-        for field in ("redaction", "deduplication", "contradiction", "replacement"):
-            self.assertIn(field, promotion_candidate)
-
-        before_missing_consent = snapshot_tree(self.setup_user_root)
-        missing_consent, missing_consent_result = self.invoke_knowledge(
-            "promote",
-            "--collection",
-            collection_id,
-            "--review-id",
-            "cobalt-retrieval-anchor",
-            "--expected-source-digest",
-            source_digest,
-            "--apply",
-        )
-        self.assertNotEqual(missing_consent.returncode, 0)
-        self.assertEqual(missing_consent_result["status"], "error")
-        self.assertEqual(snapshot_tree(self.setup_user_root), before_missing_consent)
-
-        promoted = self.assert_success(
-            self.invoke_knowledge(
-                "promote",
-                "--collection",
-                collection_id,
-                "--review-id",
-                "cobalt-retrieval-anchor",
-                "--expected-source-digest",
-                source_digest,
-                "--confirm-global-promotion",
-                "--apply",
-            )[1]
-        )
-        self.assertEqual(promoted["approval"], "explicit-global-promotion")
+        automatic_promotion = applied["automatic_promotion"]
+        self.assertEqual(len(automatic_promotion["source_claims"]), 1)
+        self.assertEqual(len(automatic_promotion["promoted_claims"]), 1)
         self.assertEqual(
-            promoted["commit"]["promoted_claim"]["collection_id"], "user-root"
+            automatic_promotion["promoted_claims"][0]["collection_id"], "user-root"
+        )
+        self.assertEqual(
+            automatic_promotion["source_claims"][0]["scan_metadata"]["promotion_status"],
+            "promoted",
         )
 
         unrelated = self.work_root / "fresh-unrelated-project"

@@ -13,5 +13,10 @@ hive knowledge query --target . --text "<terms>" --output json
 hive knowledge lint --target . --output json
 ```
 
+Hive-aware automated edits coordinate only their own exact project paths through the ignored
+`.hive/runtime/active-sessions/` directory. Before an automated edit, follow
+`.agents/directives/03-session-coordination.md` and use `hive session`; direct user or editor
+writes remain outside that best-effort boundary.
+
 Do not edit an existing Raw revision. Ingest a changed source as a new
 content-addressed revision. Deleted prose is not copied into `suppression.yml`.

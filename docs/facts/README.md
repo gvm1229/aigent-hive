@@ -40,9 +40,12 @@
 | Global knowledge RAG | [en](en/global-knowledge-rag.md) | [ko](ko/global-knowledge-rag.md) |
 | Install-wide knowledge capture | [en](en/install-wide-knowledge-capture.md) | [ko](ko/install-wide-knowledge-capture.md) |
 | Knowledge portability·scan | [en](en/knowledge-portability-scan.md) | [ko](ko/knowledge-portability-scan.md) |
+| 명시 프로젝트 간 지식 접근 | [en](en/knowledge-cross-project-access.md) | [ko](ko/knowledge-cross-project-access.md) |
 | 공유 색인 대상 경로 안전 | [en](en/shared-index-target-safety.md) | [ko](ko/shared-index-target-safety.md) |
 | Global onboarding | [en](en/global-onboarding.md) | [ko](ko/global-onboarding.md) |
 | Hive preserving uninstall | [en](en/hive-preserving-uninstall.md) | [ko](ko/hive-preserving-uninstall.md) |
+| 소비자 세션 조정 | [en](en/consumer-session-coordination.md) | [ko](ko/consumer-session-coordination.md) |
+| Projection 갱신 정리 | [en](en/projection-upgrade-purge.md) | [ko](ko/projection-upgrade-purge.md) |
 | 전역 사용자 맥락 | [en](en/global-user-contexts.md) | [ko](ko/global-user-contexts.md) |
 | Project onboarding | [en](en/project-onboarding.md) | [ko](ko/project-onboarding.md) |
 | Plugin update merge | [en](en/plugin-update-merge.md) | [ko](ko/plugin-update-merge.md) |

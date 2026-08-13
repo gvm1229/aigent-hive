@@ -21,15 +21,18 @@ use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 use std::time::{SystemTime, UNIX_EPOCH};
 
+mod custom_agent_cli;
 mod discord;
 mod judge;
 mod knowledge;
 mod knowledge_scan;
 mod loop_engineering;
+mod orchestration;
 mod project_upgrade;
 mod report;
 mod role;
 mod run;
+mod session;
 mod source_wiki;
 mod update;
 mod update_activation;
@@ -59,6 +62,9 @@ USAGE:
     hive discord inbound --host codex|claude|antigravity --output json
     hive report preview|collect|export --help
     hive project upgrade --target <dir> (--scan|--dry-run|--apply|--validate|--recover) --output json
+    hive session begin|check|update --target <dir> --host codex|claude|antigravity --session-id <id> --process-id <positive-u32> --path <project-relative-path> [--path <project-relative-path>]... --output json
+    hive session close --target <dir> --host codex|claude|antigravity --session-id <id> --output json
+    hive session recover --target <dir> --output json
     hive index rebuild --target <dir> --output json
     hive route --request <json> --output json
     hive prompt validate --request <input.json> --result <result.json> --output json
@@ -77,6 +83,7 @@ USAGE:
     hive run checkpoint --target <dir> --request <request.json> --capabilities <fresh-json> --output json
     hive run resume --target <dir> --run <run-id> --capabilities <fresh-json> [--dispatch-intent manual|automatic] [--account-digest <sha256:...>] [--session-id <host-session-id>] [--role <role-id> [--threshold <1..99>]] --output json
     hive loop initialize|validate|checkpoint|steer|prepare|recover --help
+    hive orchestration status|plan|dispatch|receipt|cancel|recover|authority|migrate --help
     hive judge package --target <dir> --request <json> --output json
     hive judge quorum --target <dir> --request <json> --output json
     hive release verify --bundle <release-dir> --output json
@@ -193,14 +200,17 @@ fn main() -> ExitCode {
         Some("discord") => discord::run(&arguments[1..]),
         Some("report") => report::run(&arguments[1..]),
         Some("project") => project_upgrade::run(&arguments[1..]),
+        Some("session") => session::run(&arguments[1..]),
         Some("index") => knowledge::run_index(&arguments[1..]),
         Some("route") => run_route(&arguments[1..]),
         Some("prompt") => run_prompt(&arguments[1..]),
         Some("hook") => run_hook(&arguments[1..]),
         Some("usage") => run_usage(&arguments[1..]),
         Some("role") => role::run_role(&arguments[1..]),
+        Some("agent") => custom_agent_cli::run(&arguments[1..]),
         Some("run") => run::run_run(&arguments[1..]),
         Some("loop") => loop_engineering::run_loop(&arguments[1..]),
+        Some("orchestration") => orchestration::run(&arguments[1..]),
         Some("judge") => judge::run_judge(&arguments[1..]),
         Some("release") => update::run_release(&arguments[1..]),
         Some("update") if arguments.len() == 1 => update_activation::run(),
@@ -1472,7 +1482,7 @@ fn emit_action_result(result: &ActionResult) -> ExitCode {
 fn run_hook(arguments: &[String]) -> ExitCode {
     let stop_requested = requested_event(arguments).as_deref() == Some("Stop");
     if stop_requested {
-        println!("{{\"schema_version\":1,\"decision\":\"allow\",\"active\":false}}");
+        println!("{}", neutral_stop_hook_payload());
         return ExitCode::SUCCESS;
     }
     match parse_hook(arguments) {
@@ -1540,6 +1550,10 @@ fn run_hook(arguments: &[String]) -> ExitCode {
             ExitCode::SUCCESS
         }
     }
+}
+
+fn neutral_stop_hook_payload() -> &'static str {
+    "{\"schema_version\":1,\"decision\":\"allow\",\"active\":false}"
 }
 
 fn read_hook_input(path: Option<&Path>, event: &str) -> Result<HookInput, RenderError> {
@@ -2004,9 +2018,9 @@ fn check_target(target: &Path) -> Result<(), String> {
 mod tests {
     use super::{
         execute_hook_capability, failure_result_for, is_help_request, mark_derived_state_stale,
-        normalize_hook_path, parse_hook, parse_setup, parse_usage, probe_native_usage,
-        reconcile_project_registry, run_human, version_output_for, wants_json, ActionResult,
-        HookInput, ParsedUsageArguments, SETUP_USAGE, USAGE,
+        neutral_stop_hook_payload, normalize_hook_path, parse_hook, parse_setup, parse_usage,
+        probe_native_usage, reconcile_project_registry, run_human, version_output_for, wants_json,
+        ActionResult, HookInput, ParsedUsageArguments, SETUP_USAGE, USAGE,
     };
     use hive_render::{RenderError, ResolvedProjectPreferences, SetupMode};
     use std::fs;
@@ -2103,6 +2117,18 @@ mod tests {
         assert!(arguments.input.is_none());
         assert!(arguments.capabilities.is_none());
         assert!(USAGE.contains("[--capabilities <fresh-json>]"));
+    }
+
+    #[test]
+    fn stop_hook_is_neutral_for_one_hundred_repeated_calls() {
+        let before = neutral_stop_hook_payload();
+        for _ in 0..100 {
+            assert_eq!(neutral_stop_hook_payload(), before);
+        }
+        let payload: serde_json::Value = serde_json::from_str(before).expect("neutral JSON");
+        assert_eq!(payload["decision"], "allow");
+        assert_eq!(payload["active"], false);
+        assert!(payload.get("changed_paths").is_none());
     }
 
     #[test]

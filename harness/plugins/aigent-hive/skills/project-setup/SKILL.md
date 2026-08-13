@@ -72,10 +72,15 @@ Configure a consumer project without copying Hive source-development instruction
    - Preserve non-Hive text and third-party marker blocks byte-for-byte.
    - Materialize each approved role seed into `.hive/team/roles/<role-id>.md` in staging.
    - On reconfiguration, preserve existing assignment, handoff, and Markdown body; require explicit approval for definition drift.
+   - When an existing Hive harness has an authenticated older project base, run `hive project upgrade --target <project-root> --scan --output json` before reconfiguration. Show the surgical directive preview: base, local, incoming, final digests, and every preserved local overlap count.
+   - Apply an outdated Hive directive only through `hive project upgrade --dry-run` followed by the exact reviewed `--apply`. Replace only a Hive-owned clause that directly contradicts the incoming Hive safety or ownership rule. Preserve all user-authored text, third-party blocks, and non-conflicting local Hive clauses byte-for-byte.
+   - A `local-preserved` projected Skill recorded by `hive project upgrade --apply` is a supported, validated state. Keep the signed override ledger intact; do not replace that Skill merely to make its bytes match the incoming projection.
+   - Let setup maintain only its exact `AIGENT-HIVE:FORMAT` block in a root `.prettierignore`. That block excludes Hive-managed projections from generic formatting while preserving all existing user formatter rules byte-for-byte. If a managed JSON or role profile has already become invalid, restore valid JSON first, then run `hive project upgrade --dry-run` and review the result before applying it.
    - Do not commit or push unless the user explicitly requested the Git operation.
 9. Verify.
    - Run `hive setup --target <project-root> --quick-answers <setup-quick-answers.yml> --capabilities <capability-resolution.json> --user-root <user-root> --validate --output json` with the same validated inputs used for the dry run and apply.
    - Confirm role seeds have schema-valid canonical role documents, Markdown canonical files exist, no project-local SQLite exists, the user-root project registry and shared index are valid, setup quick-answers are tracked, and the selected host can discover the generated entrypoint.
+   - Treat a verified `local-preserved` Skill override as valid. Reject a stale, forged, malformed, or mismatched override ledger and explain that the reviewed `hive project upgrade --dry-run` / `--apply` path is the remediation.
    - Report generated paths, skipped optional components, detected limitations, and exact recovery steps.
 
 ## Setup Question Sequence

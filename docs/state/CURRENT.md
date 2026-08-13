@@ -1,11 +1,12 @@
 # 현재 상태
 
-- 기준 branch: `develop`
-- product version: `0.9.2`
-- plan revision: `2.75`
-- 현재 milestone: `0.9.2` 안정판 게시·설치 마감, `0.9.3` 명시적 승인 대기
+- 기준 branch: `codex/0.9.3-native-agents` (`develop` 통합 기준)
+- product version: `0.9.3`
+- 다음 release target: `0.9.3`
+- plan revision: `196`
+- 현재 milestone: `0.9.3` validation 계약·출시 운영 최적화·source knowledge import·명시 collection access·자동 지식 최적화·numbered public test 수용·정식 출시
 - 기능 기준: `2cec0377748874748d126b6b55e59975a3f20a02`; release discipline base `c777da1`
-- 제외: `NAT-002–024`·`MRA-001–032`의 `0.9.3`, `N10-002–011`의 `0.10.0-test`
+- 제외: `NHA10-001–012`·`N10-002–011`의 `0.10.0-test`
 - 문서 gate: root·번역 README, 설치 안내, 공개 HTML, npm README, plugin metadata,
   문서 색인·명령·version 예시 전수 최신화와 공개 artifact 재검증
 - `0.9.2` 안정판 완료: PR #25 전체 CI PASS·merge exact `a502867e6b20e8f22bc014af05ca678f211f40ed`.
@@ -20,6 +21,102 @@
   안정판 후보·tag·package publication 생성 없음
 - QA contributor 등록: 안희준([No-Jyun](https://github.com/No-Jyun)), Windows x64 설치·설정 검증
 - `0.9.3` 동결: QA contributor 등록 완료. 유지보수자의 후속 명시적 승인 전 구현·검증·출시 mutation `0건`
+- `0.9.3` 재개: 유지보수자 명시 승인 뒤 `codex/0.9.3-native-agents`에서 `develop` 기준 통합.
+  Native orchestration event·authority·CLI·feasibility baseline 복원, custom profile의 preview·exact
+  digest consent·owned projection·foreign-byte 거부 구현. Ralph loop initialize·validate·recover PASS.
+- `0.9.3` 범위 최적화: actual native host child lifecycle·attestation은 default-off `NHA10-001–012`의
+  `0.10.0-test` 후보로 이관. `VAL93-*`가 `local-preserved`·formatter validation 계약을, `OPT93-*`가
+  risk-tier CI·candidate economy를 단독 소유. release fragment는 public transition만 소유하며 선행
+  evidence checklist 재열거 금지.
+- `0.9.3` validation·출시 운영 최적화 완료: authenticated `local-preserved` Skill ledger는
+  `project upgrade --validate`와 `setup --validate`에서 같은 valid 상태로 수용. stale·forged ledger와
+  malformed role JSON은 remediation과 함께 fail-closed. marker-owned `.prettierignore`는 foreign bytes를
+  보존하고 CRLF/LF formatter 변환만 정규화. CI는 Markdown-only 단일 lane·product Linux full와
+  macOS/Windows smoke로 분리, 최신 branch CI만 취소, release runtime은 weekly/manual로 한정.
+  renderer 61·update 54·project lifecycle 9·release contract 26 focused PASS, projection parity·문서 style PASS.
+
+- `0.9.3` source knowledge import·access optimization 완료: source scan의 `.agents/` 등 foreign host
+  namespace는 content read 없이 receipt skip. Windows source inventory 824 included·236 skipped 뒤
+  reviewed claim 19개를 private source collection에 저장. PortareFolium ordinary `auto` retrieval의
+  source-private hit `0건`, explicit `collection:aigent-hive` retrieval의 source collection-only 확인.
+  reviewed safe-general decision 2개: scan apply 중 user interruption 없는 `user-root` shared 승격.
+  source evidence 무효화 시 파생 shared claim 동반 무효화 regression PASS
+
+- `0.9.3-test` public acceptance 완료: exact `114817677e83aae535bd1f8b47518bf9b6745432` candidate의
+  five-platform build·attestation PASS, [GitHub Release `v0.9.3-test`](https://github.com/gvm1229/aigent-hive/releases/tag/v0.9.3-test)
+  및 npm `test=0.9.3-test` 확인. 이 Windows x64 isolated prefix에서 public `0.9.2` clean install,
+  `0.9.3-test` upgrade, matching pending receipt recovery, version/date 출력과 receipt 수렴 PASS.
+  `latest=0.9.2` 유지. 다음 gate: protected `main` 통합과 stable candidate
+
+- `0.9.3` projection purge·directive 우선 갱신 완료: historical digest 또는 authenticated ownership으로
+  증명되는 retired Hive Skill만 전역·project `.agents/skills`에서 제거. 새 Hive safety·ownership rule과
+  직접 충돌하는 Hive-owned directive clause만 incoming 우선으로 갱신. 사용자·foreign·비충돌 byte 보존.
+  workspace Rust 559·strict Clippy·Python projection parity와 global setup/project lifecycle 22개,
+  human documentation style·Markdown link·Source Wiki lint 통과
+
+- 공개 안내 보강 완료: 세 Hive logo PNG의 pixel-preserving 중심 정렬, `hive-core-features.ko.html`의
+  전폭 feature card·use case·강조 정보 구조, 두 HTML의 centered logo 내장과 PDF 재생성. static contract·Chrome
+  offline desktop/mobile·core PDF 6페이지 Poppler render PASS. `0.9.3` 출시 전 numbered public test와 remaining
+  native/custom-host evidence 필요
+  Codex CLI `0.147.0`·Claude Code `2.1.163` 확인. Claude fresh-session probe: CLI 미로그인으로
+  model 실행 `0회`, auth 전 MRA actual lifecycle 수용 보류
+- Codex custom profile 실제 수용: Windows x64 isolated project에서 Codex `0.147.0`의 fresh
+  ephemeral session이 Hive의 `.codex/agents/*.toml` profile을 `--profile`로 발견하고
+  Luna·Terra·Sol marker invocation을 각각 실행. `preview→apply→validate`와 profile별 실행은
+  PASS. Codex JSON result는 host-signed exact model/effort receipt를 제공하지 않아 MRA-004의
+  attestation·NAT-016 envelope 소비 증거로는 사용 불가
+- Host feasibility 정본화: Sol Advisor clean-room owner table, Codex·Claude custom-agent
+  schema·scope·model/effort·fallback contract, Codex·Claude 한정과 Antigravity unsupported,
+  default-off·foreign host-file consent acceptance 완료. Native activation과 signed runtime
+  attestation은 Codex·Claude child lifecycle 증거 전 계속 차단
+- Custom agent lifecycle 보강: `8fdbba4`·`88bc18f`, no-follow parent handle의 exact-byte claim
+  삭제·foreign/symlink 거부·interrupted owned deletion retry 수렴, Judge invocation의 product
+  setup 질문·partial reconfiguration projection 동기화. Rust workspace local qualification과
+  strict Clippy PASS; host fresh-session evidence는 여전히 별도 수용 대기
+- Signed host model catalog 추천 보강: `804fc80`·`1b7b2de`, `hive agent recommend`의 외부 보호
+  catalog·분리 attestation·trust root 검증과 exact model/effort/minimum version mapping 결합,
+  위조 서명·mapping 누락 실패 폐쇄. CLI 13·core 6·Copier/Rust parity 22·strict Clippy PASS.
+  실제 발급 catalog·Codex·Claude fresh-session capability 수용 전 `MRA-024` 유지
+- Custom agent decision lifecycle: `e659d87`, `accept` prior 없음·`manual|revise`의 prior digest와
+  동일 scope·exact prior request 검증, `--previous-request` 재추천. CLI 14·Copier/Rust parity 22·
+  strict Clippy PASS, `MRA-025` 완료
+- Custom profile qualification 보강: `3344b5d`·`a86e9e4`, 13개 host lifecycle capability 각각의
+  fail-closed activation, Judge `explicit|implicit` schema·default·persisted round-trip·describe
+  contract 검증. custom-agent core 6·user-setup 41·strict Clippy PASS, `MRA-029` 완료
+- Custom profile hostile matrix: `271ad81`, duplicate role·trigger collision과 missing receipt의
+  no-mutation, Judge shadow/downgrade·forged signer·model fallback·stale capability·symlink 거부.
+  custom-agent core 7·CLI 15·strict Clippy PASS, `MRA-030` 완료
+- Judge invocation policy: `explicit`은 strict terminal Judge만, `implicit`은 material-risk route만
+  허용. simple·read-only·format·scheduler·heartbeat·retry·결정적 실패·unsupported host는 모두 거부.
+  설정 persistence·natural-language projection과 core 6·user-setup 42 focused PASS, `MRA-022` 완료
+- Judge loop quorum 결합: verifier envelope v2는 exact loop subject·quorum request digest·target 밖
+  protected trust root를 요구하며, checkpoint와 재검증에서 same v2 Ed25519 quorum authenticated PASS를
+  다시 확인. boolean authentication claim은 mutation 전 거부. loop focused 19·strict Clippy PASS;
+  실제 signer와 Codex·Claude fresh-session workflow evidence 전 `MRA-021` 유지
+- Native orchestration receipt 시험: ACK 유실 `dispatch-uncertain`은 authenticated non-launch proof 전
+  재prepare·final result 거부. duplicate/conflict·late receipt·clock rollback·two-scheduler prepare
+  경쟁 회귀 통과로 `NAT-022` 완료. stale pointer·wrong session·Stop 100회 중립 응답도 고정,
+  cancel/guard control-plane E2E는 host lifecycle 수용과 함께 `NAT-021` 유지
+- Native migration 부분 게시 복구: staged `RECOVERY.toml`과 부분 `MIGRATION.md` 뒤 동일 signed
+  migration `--recover` 수렴, native event·head 완성·recovery marker 제거·legacy byte 보존. Windows의
+  빈 file-name run root 경로 조립 결함 수정과 직접 회귀로 `NAT-023` 완료
+- Native role parity: planning·review·QA·research·performance는 하나의 `iterative-execution`
+  event·receipt·evidence·usage·cancel·recover 경로 공유. `explicit|implicit` 모두 terminal Judge
+  강제, `implicit`의 추가 material-risk route만 허용. 4개 product projection과 static contract 검증으로
+  `NAT-020` 완료
+- Native control-plane 보강: 다른 run의 malformed graph `CURRENT.md`와 무관하게 exact `--target`
+  usage session disable·status 성공, stale pointer byte 보존 회귀 추가. cancel·recover의 host lifecycle
+  E2E는 NAT-004·016 수용 증거와 결합 필요
+- 지식 Skill 표시 정비: 정본 ID `knowledge-capture|recall|import|promote|maintain` 유지. 한국어
+  표시명은 기능명과 ID 병기, 설명 첫머리는 항상 `(정본-ID)`; 자동 기록은 대화 종료 전 나중 작업에
+  도움 되는 사실·선호·방식 하나의 안전한 기록, import는 명시 대상 저장소 스캔으로 표현. Codex·Claude·
+  Antigravity projection·plugin/template·26개 inventory 수렴, core features HTML·PDF도 같은 지식
+  흐름으로 갱신. Rust 34·Copier/Rust parity 22·Python static/inventory 19·문서·Source Wiki gate PASS
+- 소비자 하네스 세션 조정 완료: Git 제외 `.hive/runtime/active-sessions/`의 exact target·path 점유,
+  parent/child 충돌 거부, close·검증 가능한 stale PID recover, 세 host projection·portable directive
+  fallback 구현. `project-setup`·`project-refresh`는 인증된 older base의 directive를 preview·dry-run·exact
+  apply로 갱신하며, 직접 모순되는 Hive-owned clause 외 user-authored·foreign·비충돌 bytes 보존. Rust workspace,
+  Python 611개 통과·40개 의도적 skip, Copier/Rust parity, Source Wiki·문서 style·링크 검사 PASS
 - `0.9.2-test.1` 수용 거부: candidate run `31596919466`·publication run `31597939956`는
   통과했으나 GitHub prerelease에 direct installer 자산 3개가 누락되어 공개 설치 URL이 `404`를
   반환. 게시 workflow·회귀 보정 뒤 `0.9.2-test.2`부터 전체 공개 설치 수용 재수행

@@ -27,6 +27,8 @@ pub enum KeyPurpose {
     JudgeAssignment,
     JudgeVerdict,
     JudgeApproval,
+    /// External signed host-model catalog.
+    HostModelCatalog,
 }
 
 /// Revocation state recorded by the external authority.
@@ -134,6 +136,9 @@ pub enum ArtifactKind {
     Assignment,
     Verdict,
     Approval,
+    /// Signed host-model catalog used for custom-agent recommendations.
+    #[serde(rename = "host-model-catalog")]
+    HostModelCatalog,
 }
 
 impl ArtifactKind {
@@ -142,6 +147,7 @@ impl ArtifactKind {
             Self::Assignment => KeyPurpose::JudgeAssignment,
             Self::Verdict => KeyPurpose::JudgeVerdict,
             Self::Approval => KeyPurpose::JudgeApproval,
+            Self::HostModelCatalog => KeyPurpose::HostModelCatalog,
         }
     }
 }

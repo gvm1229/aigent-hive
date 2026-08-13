@@ -65,6 +65,8 @@ class Phase1CopierParity(Phase1CliTestCase):
                     ignored.update({".claude", ".git", "target"})
                 elif directory_path == REPOSITORY_ROOT / ".agents":
                     ignored.add("work")
+                elif directory_path == REPOSITORY_ROOT / "tests":
+                    ignored.add("work")
                 elif directory_path == REPOSITORY_ROOT / "harness/template/.claude/skills":
                     user_only_directory = directory_path / "configure"
                     if user_only_directory.is_dir() and not any(

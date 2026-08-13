@@ -1,6 +1,6 @@
 interface:
-  display_name: "Import repository knowledge"
-  short_description: "Import reviewed repository content as Hive knowledge."
+  display_name: "Scan repository knowledge (knowledge-import)"
+  short_description: "(knowledge-import) Scan one repository or folder that the user explicitly selected, then import only the reviewed knowledge that is useful beyond that source."
   default_prompt: "Use $aigent-hive:knowledge-import to inventory this directory and prepare reviewed facts."
 policy:
   allow_implicit_invocation: false

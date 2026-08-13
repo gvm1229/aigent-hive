@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "captured_at": "2026-08-12T11:40:00Z",
+  "host": "antigravity",
+  "host_version": "unverified",
+  "activation": "default-off",
+  "sources": [
+    "local:no qualified host lifecycle evidence"
+  ],
+  "capabilities": {
+    "agent_discovery": "unverified",
+    "user_scope": "unverified",
+    "project_scope": "unverified",
+    "model_pin": "unverified",
+    "effort_pin": "unverified",
+    "native_dispatch": "unverified",
+    "launch_ack": "unsupported",
+    "result_return": "unsupported",
+    "cancel": "unsupported",
+    "lookup": "unsupported",
+    "idempotency": "unsupported",
+    "runtime_attestation": "unsupported",
+    "fresh_session": "unverified"
+  },
+  "limitations": [
+    "No qualified declarative lifecycle evidence",
+    "Custom subagent feature remains unsupported"
+  ]
+}

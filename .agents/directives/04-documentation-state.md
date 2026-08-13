@@ -90,6 +90,17 @@ Do not use chat history, `.omx/`, `.agents/work/`, issue drafts, or generated SQ
 - Derive the `PLAN.md` completion index only from Phase milestone checklists and non-phase documents listed under `Active fragments`. Exclude Stage checklists because they restate workflow acceptance and would double-count implementation.
 - Update the completion index in the same edit as any counted checklist state change. The completed and remaining counts, percentage, and per-scope rows must match the linked fragments.
 - Give every active checklist item a unique stable ID and exactly one owning fragment.
+- Give each acceptance assertion one evidence owner. A release fragment owns only a distinct
+  delivery transition such as candidate creation, public-test acceptance, protected integration,
+  publication, or installed-artifact confirmation. It may name prerequisite IDs, but must not
+  restate their implementation, test, documentation, or security assertion as another checkbox.
+- Use a reference table or prerequisite line for evidence owned by another fragment. Do not count
+  referenced evidence twice in `PLAN.md`, completion percentages, release gates, or a new test
+  candidate decision.
+- When a default-off or unsupported capability needs external runtime proof, move its remaining
+  acceptance IDs intact to an explicitly named future-version candidate. Preserve the fail-closed
+  implementation evidence and exclusion decision; do not leave a release blocked by a duplicate
+  shadow checklist.
 - Mark a checkbox complete only with evidence.
 - Put references and review-only candidates at the bottom, outside the normative workflow.
 - When the plan changes materially, update `docs/state/CURRENT.md` and the relevant ADR in the same concern.

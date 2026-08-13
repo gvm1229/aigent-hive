@@ -62,6 +62,17 @@ Consumer guidance에는 project/profile, primary host, resolved owner와 resolut
 - 원문의 `# CLAUDE.md` heading은 Claude 전용 범위가 아니며 Codex·Claude·Gemini Antigravity에 동일 적용
 - 상위 instruction과 Hive security·ownership·credential·production 경계 우선
 
+## 소비자 세션 조정
+
+- 자동 편집 전 `.agents/directives/03-session-coordination.md` 확인
+- `hive session begin`과 exact host session ID·process ID·최소 project-relative path 예약
+- 동일·상위·하위 path의 검증된 live foreign reservation: automated write 중지
+- 추가 path 확인: `hive session check`, caller 자체 path set 교체: `hive session update`, bounded 작업 종료: `hive session close`
+- 중단된 host session recovery: `hive session recover`; liveness 미확인 manifest 삭제·추측 없음
+- 상태 위치: Git 제외 `.hive/runtime/active-sessions/*.md`; canonical knowledge·plan·raw host session·대화·credential 저장소 아님
+- 사용자·외부 editor의 직접 write 강제 차단 주장 없음
+- 지원·명시 동의된 data-integrity hook의 pre-edit check 연결 가능. 미지원·비동의 host: portable CLI·directive 절차 유지
+
 ## 남은 작업 안내
 
 - 남은 작업 목록·인계 전: 범위 안에서 안전하게 자동 처리 가능한 작업 선행 완료

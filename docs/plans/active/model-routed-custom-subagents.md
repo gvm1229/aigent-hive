@@ -1,7 +1,7 @@
-# v0.9.0 model-routed custom subagent 계획
+# v0.9.3 model-routed custom subagent 계획
 
-> 대상: `0.9.0`
-> 상태: 실행 계획 활성, 구현 미착수
+> 대상: `0.9.3`
+> 상태: current-tree evidence 재조정·구현 진행
 > 결정: [`ADR-0019`](../../decisions/ADR-0019-hive-native-iterative-execution.md)
 > 선행: `NAT-002–005`, 연계: `NAT-016`
 > 지원 host: OpenAI Codex, Claude Code
@@ -62,50 +62,110 @@
 
 ### A. Feasibility·결정
 
-- [ ] [MRA-001] Sol Advisor의 orchestrator·routine·complex·review·attestation 기능 동등성 표와 clean-room 증거 확정
-- [ ] [MRA-002] Codex user/project agent schema·precedence·discovery·model/effort·runtime metadata matrix 검증
-- [ ] [MRA-003] Claude user/project agent schema·precedence·environment override·allowlist·fallback matrix 검증
-- [ ] [MRA-004] 실제 Codex Luna·Terra·Sol install→fresh session→dispatch→attestation lifecycle spike
-- [ ] [MRA-005] 실제 Claude exact model·effort install→fresh session→dispatch→override/fallback lifecycle spike
-- [ ] [MRA-006] Codex·Claude 한정, Antigravity unsupported, default-off, host-file consent의 ADR·security acceptance
+- [x] [MRA-001] Sol Advisor의 orchestrator·routine·complex·review·attestation 기능 동등성 표와 clean-room 증거 확정
+  - Evidence: `docs/research/native-host-feasibility-2026-08-12.md`의 owner·acceptance table과
+    Hive role fixture. 외부 prompt·runtime·namespace 복사 `0 bytes`, provider API·direct process
+    spawn `0건`
+- [x] [MRA-002] Codex user/project agent schema·precedence·discovery·model/effort·runtime metadata matrix 검증
+  - Evidence: current official Codex Subagents contract의 `.codex/agents/*.toml`, required
+    `name|description|developer_instructions`, file model/effort precedence와 local Codex
+    `0.147.0` project profile discovery. runtime metadata는 host-signed receipt 미제공으로
+    MRA-004에 계속 보류
+- [x] [MRA-003] Claude user/project agent schema·precedence·environment override·allowlist·fallback matrix 검증
+  - Evidence: current official Claude Code custom-subagent contract의 project·user scope priority,
+    `--agents` session override, model·effort·permission fields, environment override·allowlist
+    fallback order와 local `2.1.163` option inventory. 인증 부재의 model execution은 MRA-005에
+    계속 보류
+- `MRA-004` Codex fresh child lifecycle → [`NHA10-001`](v0.10.0-native-host-activation-candidate.md)
+- `MRA-005` Claude fresh child lifecycle → [`NHA10-002`](v0.10.0-native-host-activation-candidate.md)
+- [x] [MRA-006] Codex·Claude 한정, Antigravity unsupported, default-off, host-file consent의 ADR·security acceptance
+  - Evidence: ADR-0019와 three-host capability fixtures의 `default-off`, Antigravity
+    `unsupported`, exact preview digest·Hive ownership ledger·foreign projection reject regressions
+    (`custom_agent_cli` focused tests). Host runtime activation은 MRA-004–005 수용 전 계속 금지
 
 ### B. Canonical role·projection
 
-- [ ] [MRA-007] 양쪽 host mapping·exact model/effort·trigger·negative route·permission·scope·digest 필수 typed schema
-- [ ] [MRA-008] User/project layered scope·project precedence·collision·role/name normalization
-- [ ] [MRA-009] Projection preview·명시적 동의·ownership ledger·non-clobber·recover 계약
-- [ ] [MRA-010] Codex TOML projection·installed-version validation·fresh-session discovery
-- [ ] [MRA-011] Claude Markdown projection·installed-version validation·environment/allowlist conflict detection
-- [ ] [MRA-012] Capability preflight와 unsupported·silent fallback·unverified alias fail-closed
-- [ ] [MRA-013] Exact role·model·effort·scope·definition digest runtime attestation receipt
+- [x] [MRA-007] 양쪽 host mapping·exact model/effort·trigger·negative route·permission·scope·digest 필수 typed schema
+  - Evidence: commit `ed21b87`, closed profile schema·JCS definition digest·floating alias 거부와
+    Codex TOML·Claude Markdown deterministic rendering 시험
+- [x] [MRA-008] User/project layered scope·project precedence·collision·role/name normalization
+  - Evidence: commit `ed21b87`, project precedence·same-scope collision·reserved user Judge shadow 거부
+- [x] [MRA-009] Projection preview·명시적 동의·ownership ledger·non-clobber·recover 계약
+  - Evidence: commits `47dd972`·`8fdbba4`·`88bc18f`, `hive agent preview|apply|validate|remove`의
+    exact digest 동의·Hive ledger·foreign byte 거부·no-follow parent claim·동일 요청 재시도 수렴,
+    Rust custom-agent CLI 12 PASS
+- [x] [MRA-010] Codex TOML projection·installed-version validation·fresh-session discovery
+  - Evidence: 2026-08-14 Windows x64 isolated project에서 Codex `0.147.0` 확인 뒤
+    `hive agent preview|apply|validate`로 생성한 `.codex/agents/*.toml` profile을 fresh
+    ephemeral session의 `--profile`로 발견. `hive-routine-implementer`·
+    `hive-complex-implementer`·`hive-independent-judge`의 Luna·Terra·Sol invocation 모두
+    marker response PASS. Codex JSON은 host-signed exact model/effort receipt를 제공하지 않아
+    MRA-004의 runtime attestation 수용 근거는 아님
+- `MRA-011` Claude installed projection lifecycle → [`NHA10-003`](v0.10.0-native-host-activation-candidate.md)
+- [x] [MRA-012] Capability preflight와 unsupported·silent fallback·unverified alias fail-closed
+  - Evidence: commits `1a37c0a`·`8fdbba4`·`3344b5d`, exact host·최소 version·13개 required
+    lifecycle capability와 fresh-session evidence가 `supported`일 때만 허용, runtime attestation
+    model·effort·digest mismatch 거부, Rust core·CLI focused PASS
+- [x] [MRA-013] Exact role·model·effort·scope·definition digest runtime attestation receipt
+  - Evidence: commit `ed21b87`, closed attestation schema와 exact host·role·scope·model·effort·
+    definition digest 결합, silent fallback mismatch 거부 시험
 
 ### C. Built-in role·자동 route
 
-- [ ] [MRA-014] `hive-routine-implementer` role·fixture·host projections
-- [ ] [MRA-015] `hive-complex-implementer` role·fixture·host projections
-- [ ] [MRA-016] Reserved `hive-independent-judge`·Sol High/Claude exact profile·fresh read-only·shadow 거부
-- [ ] [MRA-017] `hive-design-specialist` role·design task fixture
-- [ ] [MRA-018] `hive-article-writer` role·article task fixture
-- [ ] [MRA-019] `hive-research-specialist` role·citation/read-only fixture
-- [ ] [MRA-020] Deterministic verifier evidence layer·model review authority `0건`·fixture
-- [ ] [MRA-021] Spec→route→implement→verify→Judge→Ed25519 quorum→accept workflow·외부 signer 경계
-- [ ] [MRA-022] `explicit|implicit` setup·자연어 변경·strict terminal Judge·일반 task false-positive exclusion
+- [x] [MRA-014] `hive-routine-implementer` role·fixture·host projections
+- [x] [MRA-015] `hive-complex-implementer` role·fixture·host projections
+- [x] [MRA-016] Reserved `hive-independent-judge`·Sol High/Claude exact profile·fresh read-only·shadow 거부
+- [x] [MRA-017] `hive-design-specialist` role·design task fixture
+- [x] [MRA-018] `hive-article-writer` role·article task fixture
+- [x] [MRA-019] `hive-research-specialist` role·citation/read-only fixture
+  - Evidence: commit `ed21b87`, 6개 canonical JSON fixture의 closed-schema 검증과 양쪽 host
+    projection, Judge user-only·read-only·reserved enforcement
+- [x] [MRA-020] Deterministic verifier evidence layer·model review authority `0건`·fixture
+  - Evidence: commits `09700a0`·`b6679a6`·`ed21b87`, evidence reducer와 terminal Judge gate를
+    분리하고 model attestation을 verdict provenance로만 처리
+- `MRA-021` external signer actual acceptance → [`NHA10-007`](v0.10.0-native-host-activation-candidate.md)
+  - 구현 증거: `judge.rs`의 재사용 quorum evaluator와 loop verifier schema v2 결합. exact
+    run·revision·node·attempt·evidence subject, quorum request digest, target 밖 protected trust
+    root, authenticated PASS를 모두 다시 검증하며 boolean authentication claim은 mutation 전 거부.
+  - 완료 전제: 실제 external signer의 authenticated PASS artifact와 Codex·Claude fresh-session
+    workflow acceptance
+- [x] [MRA-022] `explicit|implicit` setup·자연어 변경·strict terminal Judge·일반 task false-positive exclusion
+  - Evidence: `JudgeInvocationPolicy`의 closed explicit·implicit 정책, strict terminal gate와 material-risk 허용 행렬, simple·read-only·format·scheduler·heartbeat·retry·deterministic failure·unsupported host 거부. user-setup persisted round-trip와 prompt projection, core 6·CLI 42 focused PASS
 
 ### D. On-demand 생성 Skill
 
-- [ ] [MRA-023] `hive-custom-subagent-create` typed CLI·양쪽 projection·reserved Judge override 금지
-- [ ] [MRA-024] Purpose-first recommendation과 signed host model catalog·capability 근거
-- [ ] [MRA-025] `1 수락 | 2 수동 | 3 수정` decision state·재추천·digest lifecycle
-- [ ] [MRA-026] 수동 설정의 이름·양쪽 exact model/effort·scope·permission·trigger field 검증
-- [ ] [MRA-027] User/project preview·동의·apply·rollback·fresh-session activation
-- [ ] [MRA-028] 생성 role의 auto-route registry 통합·reserved route 격리·reconfigure·disable·delete·update byte 보존
+- [x] [MRA-023] `hive-custom-subagent-create` typed CLI·양쪽 projection·reserved Judge override 금지
+  - Evidence: commits `7272cba`·`b8b9a30`·`8fdbba4`, closed creation request·양쪽 projection·
+    exact decision digest·reserved Judge reject·product Skill projection, Rust custom-agent CLI 12 PASS
+- `MRA-024` issued catalog·host capability acceptance → [`NHA10-008`](v0.10.0-native-host-activation-candidate.md)
+  - 구현 증거: `804fc80`·`1b7b2de`, 외부 보호 catalog·분리 attestation·trust root의 exact mapping 검증,
+    위조 서명·mapping 누락 거부, custom-agent CLI 13·core 6·Copier/Rust parity 22·strict Clippy 통과
+  - 완료 전제: 실제 발급 catalog와 Codex·Claude fresh-session capability 수용
+- [x] [MRA-025] `1 수락 | 2 수동 | 3 수정` decision state·재추천·digest lifecycle
+  - Evidence: commit `e659d87`, `accept`의 prior 없음, `manual|revise`의 prior digest·동일 scope·
+    exact prior request 검증, `--previous-request` 재추천, custom-agent CLI 14·Copier/Rust parity 22·strict Clippy 통과
+- [x] [MRA-026] 수동 설정의 이름·양쪽 exact model/effort·scope·permission·trigger field 검증
+  - Evidence: commit `7272cba`, closed JSON schema의 양쪽 host mapping·exact model/effort·
+    scope·permission·trigger required field와 incomplete mapping hostile test PASS
+- `MRA-027` user/project fresh activation → [`NHA10-009`](v0.10.0-native-host-activation-candidate.md)
+- [x] [MRA-028] 생성 role의 auto-route registry 통합·reserved route 격리·reconfigure·disable·delete·update byte 보존
+  - Evidence: commits `6d13681`·`758c168`·`8fdbba4`·`88bc18f`, user/project precedence·reserved
+    Judge isolation·disable·owned-only update/delete·foreign byte 보존·interrupted deletion retry
+    convergence, Rust custom-agent CLI 12 PASS
 
 ### E. Qualification·release gate
 
-- [ ] [MRA-029] Schema·precedence·digest·추천 decision·Judge invocation setup state unit/property test
-- [ ] [MRA-030] Collision·Judge shadow/downgrade·signer/model mismatch·symlink·stale host·fallback·missing receipt hostile test
-- [ ] [MRA-031] 두 host·두 scope fresh-session E2E와 두 Judge mode·strict workflow 강제 gate·model mismatch fail-closed
-- [ ] [MRA-032] 사용자 guide·release note·bilingual fact·full Rust/Python/security/static gate와 `REL9-*` handoff
+- [x] [MRA-029] Schema·precedence·digest·추천 decision·Judge invocation setup state unit/property test
+  - Evidence: commits `3344b5d`·`a86e9e4`, 13개 capability fail-closed table regression,
+    creation decision lineage·scope·digest tests, Judge `explicit|implicit` schema·default·persisted
+    round-trip·describe contract tests, focused user-setup 41 PASS·custom-agent core 6 PASS·strict
+    Clippy PASS
+- [x] [MRA-030] Collision·Judge shadow/downgrade·signer/model mismatch·symlink·stale host·fallback·missing receipt hostile test
+  - Evidence: commit `271ad81`, duplicate role·trigger collision, missing receipt no-mutation,
+    reserved Judge shadow/downgrade·forged signer·model fallback·unsupported capability·foreign
+    symlink hostile regression. custom-agent core 7 PASS·CLI 15 PASS·strict Clippy PASS
+- `MRA-031` two-host fresh E2E → [`NHA10-010`](v0.10.0-native-host-activation-candidate.md)
+- `MRA-032` native activation guide·gate → [`NHA10-011`](v0.10.0-native-host-activation-candidate.md)
 
 ## Acceptance
 

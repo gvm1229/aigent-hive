@@ -139,6 +139,22 @@ optional approval과 approval attestation을 target-relative path로 참조. Mis
 invalid, unknown, revoked, expired, role-mismatched 또는 duplicate key의 결과:
 PASS가 아닌 `INDETERMINATE`.
 
+## 네이티브 루프 Judge 증거 결합
+
+루프의 `IndependentVerification` evidence가 `authority = "judge"`인 경우에는 단순한
+`authenticated: true` 표기만으로 completion 허용 불가. Verifier envelope schema
+version 2의 다음 결합 정보 필수.
+
+- `.hive/runs/<run-id>/evidence/` 아래의 quorum request locator와 그 exact SHA-256 digest
+- consumer target 밖의 absolute·agent-write-denied trust root path
+- `hive-loop:<run-id>:<graph-revision>:<node-id>:<attempt>:<evidence-id>` exact subject ID
+
+Hive는 evidence를 checkpoint 또는 재검증할 때 request digest를 다시 확인하고, 동일한
+externally protected trust root로 v2 Ed25519 quorum을 재계산. authenticated PASS와 exact
+subject ID가 모두 일치할 때만 Judge evidence를 terminal acceptance에 사용. 누락한 quorum
+request, 바뀐 request bytes, relative·target-contained trust root, unsigned v1 request,
+indeterminate·FAIL quorum과 다른 loop subject는 모두 mutation 전 거부.
+
 ## Private-key custody
 
 Hive의 private key 생성·질문·읽기·저장·전달·backup·migration·logging 금지.

@@ -15,6 +15,7 @@
 - [Knowledge 이식·directory 수집·검색 조사](knowledge-portability-ingestion-retrieval.md)
 - [v0.9 OMX·OMC·Hive capability inventory](v0.9-omx-omc-capability-inventory.md)
 - [Discord·Notion host integration 조사](discord-notion-host-integrations.md)
+- [Native host·custom subagent feasibility](native-host-feasibility-2026-08-12.md)
 - `netwaif/usage-coach`
 - `netwaif/multi-agent-starter`
 - `Yeachan-Heo/oh-my-codex`

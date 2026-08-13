@@ -49,6 +49,7 @@ CODEX_HIVE_PROJECTION_PATHS = {
     "directives/00-project-harness.md",
     "directives/01-project-knowledge.md",
     "directives/02-project-upgrade.md",
+    "directives/03-session-coordination.md",
     "skills",
     *{
         relative

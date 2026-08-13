@@ -757,6 +757,7 @@ else:
                     "00-project-harness.md",
                     "01-project-knowledge.md",
                     "02-project-upgrade.md",
+                    "03-session-coordination.md",
                 ):
                     self.assertTrue(
                         (target / ".agents/directives" / directive).is_file()
@@ -792,6 +793,131 @@ else:
                     )
                 else:
                     self.assertFalse((target / ".claude/skills").exists())
+
+    def test_consumer_session_reserves_exact_paths_and_releases_them(self) -> None:
+        target = self.setup_project("session-consumer")
+        process_id = str(os.getpid())
+        begun, begun_result = self.invoke(
+            "session",
+            "begin",
+            "--target",
+            str(target),
+            "--host",
+            "codex",
+            "--session-id",
+            "primary",
+            "--process-id",
+            process_id,
+            "--path",
+            "src",
+        )
+        self.assertEqual(begun.returncode, 0, begun.stderr)
+        self.assertEqual(begun_result["code"], "hive.session-begun")
+        manifest = target / ".hive/runtime/active-sessions/codex-primary.md"
+        self.assertTrue(manifest.is_file())
+        self.assertIn("src", manifest.read_text(encoding="utf-8"))
+
+        blocked, blocked_result = self.invoke(
+            "session",
+            "begin",
+            "--target",
+            str(target),
+            "--host",
+            "claude",
+            "--session-id",
+            "secondary",
+            "--process-id",
+            process_id,
+            "--path",
+            "src/lib.rs",
+        )
+        self.assertEqual(blocked.returncode, 3, blocked.stderr)
+        self.assertEqual(
+            blocked_result["code"], "hive.session-coordination-blocked"
+        )
+        self.assertFalse(
+            (target / ".hive/runtime/active-sessions/claude-secondary.md").exists()
+        )
+
+        clear, clear_result = self.invoke(
+            "session",
+            "check",
+            "--target",
+            str(target),
+            "--host",
+            "claude",
+            "--session-id",
+            "secondary",
+            "--process-id",
+            process_id,
+            "--path",
+            "docs",
+        )
+        self.assertEqual(clear.returncode, 0, clear.stderr)
+        self.assertEqual(clear_result["code"], "hive.session-clear")
+
+        closed, closed_result = self.invoke(
+            "session",
+            "close",
+            "--target",
+            str(target),
+            "--host",
+            "codex",
+            "--session-id",
+            "primary",
+        )
+        self.assertEqual(closed.returncode, 0, closed.stderr)
+        self.assertEqual(closed_result["code"], "hive.session-closed")
+        self.assertFalse(manifest.exists())
+
+        retry, retry_result = self.invoke(
+            "session",
+            "begin",
+            "--target",
+            str(target),
+            "--host",
+            "claude",
+            "--session-id",
+            "secondary",
+            "--process-id",
+            process_id,
+            "--path",
+            "src/lib.rs",
+        )
+        self.assertEqual(retry.returncode, 0, retry.stderr)
+        self.assertEqual(retry_result["code"], "hive.session-begun")
+
+        stale, stale_result = self.invoke(
+            "session",
+            "begin",
+            "--target",
+            str(target),
+            "--host",
+            "antigravity",
+            "--session-id",
+            "interrupted",
+            "--process-id",
+            "999999",
+            "--path",
+            "stale-work",
+        )
+        self.assertEqual(stale.returncode, 0, stale.stderr)
+        self.assertEqual(stale_result["code"], "hive.session-begun")
+        stale_manifest = (
+            target / ".hive/runtime/active-sessions/antigravity-interrupted.md"
+        )
+        self.assertTrue(stale_manifest.exists())
+        recovered, recovered_result = self.invoke(
+            "session",
+            "recover",
+            "--target",
+            str(target),
+        )
+        self.assertEqual(recovered.returncode, 0, recovered.stderr)
+        self.assertEqual(
+            recovered_result["code"], "hive.session-recovered-stale-state"
+        )
+        self.assertFalse(stale_manifest.exists())
 
     def test_upgrade_preserves_local_skill_and_recovers_injected_failure(self) -> None:
         target = self.setup_project("upgrade-consumer")
@@ -877,6 +1003,14 @@ else:
             [".agents/skills/quick-answer/SKILL.md"],
         )
 
+        setup_valid, setup_valid_result = self.invoke_setup(
+            target,
+            mode="--validate",
+            capabilities="capabilities-codex-omx.json",
+        )
+        self.assertEqual(setup_valid.returncode, 0, setup_valid.stderr)
+        self.assertEqual(setup_valid_result["code"], "hive.setup-valid")
+
         valid, valid_result = self.invoke(
             "project",
             "upgrade",
@@ -886,6 +1020,20 @@ else:
         )
         self.assertEqual(valid.returncode, 0, valid.stderr)
         self.assertEqual(valid_result["code"], "hive.project-upgrade-current")
+
+        overrides["files"][0]["local_digest"] = "sha256:" + "0" * 64
+        (target / ".hive/config/project-overrides.json").write_text(
+            json.dumps(overrides, separators=(",", ":"), sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+        forged, forged_result = self.invoke_setup(
+            target,
+            mode="--validate",
+            capabilities="capabilities-codex-omx.json",
+        )
+        self.assertNotEqual(forged.returncode, 0, forged.stderr)
+        self.assertEqual(forged_result["status"], "verification-failed")
+        self.assertIn("override ledger digest is invalid", forged_result["message"])
 
     def test_missing_or_tampered_base_and_source_root_fail_without_mutation(self) -> None:
         for case in ("missing", "tampered"):
@@ -940,3 +1088,62 @@ else:
             {path: path.read_bytes() for path in protected_source},
             before_source,
         )
+
+    def test_setup_validate_rejects_formatter_broken_role_profile(self) -> None:
+        target = self.setup_project("formatter-broken-role")
+        role = target / ".hive/team/roles/reviewer.md"
+        role.write_text(
+            role.read_text(encoding="utf-8").replace("\n---\n", ",\n---\n", 1),
+            encoding="utf-8",
+        )
+
+        invalid, invalid_result = self.invoke_setup(
+            target,
+            mode="--validate",
+            capabilities="capabilities-codex-omx.json",
+        )
+        self.assertNotEqual(invalid.returncode, 0, invalid.stderr)
+        self.assertEqual(invalid_result["status"], "verification-failed")
+        self.assertIn("role profile is invalid", invalid_result["message"])
+        self.assertIn("restore valid JSON formatting", invalid_result["message"])
+
+    def test_setup_owns_only_its_prettierignore_marker(self) -> None:
+        target = self.work_root / "formatter-ignore"
+        target.mkdir()
+        ignore = target / ".prettierignore"
+        ignore.write_text("dist/\n# user rule\n", encoding="utf-8")
+
+        applied, applied_result = self.invoke_setup(
+            target,
+            capabilities="capabilities-codex-omx.json",
+        )
+        self.assertEqual(applied.returncode, 0, applied.stderr)
+        self.assertEqual(applied_result["code"], "hive.setup-complete")
+        rendered = ignore.read_text(encoding="utf-8")
+        self.assertTrue(rendered.startswith("dist/\n# user rule\n"))
+        self.assertIn("# AIGENT-HIVE:FORMAT:START", rendered)
+        self.assertIn(".hive/team/roles/", rendered)
+
+        ignore.write_text(rendered + "coverage/\n", encoding="utf-8")
+        valid, valid_result = self.invoke_setup(
+            target,
+            mode="--validate",
+            capabilities="capabilities-codex-omx.json",
+        )
+        self.assertEqual(valid.returncode, 0, valid.stderr)
+        self.assertEqual(valid_result["code"], "hive.setup-valid")
+
+        ignore.write_text(
+            ignore.read_text(encoding="utf-8").replace(
+                ".hive/team/roles/", "# formatter override", 1
+            ),
+            encoding="utf-8",
+        )
+        altered, altered_result = self.invoke_setup(
+            target,
+            mode="--validate",
+            capabilities="capabilities-codex-omx.json",
+        )
+        self.assertNotEqual(altered.returncode, 0, altered.stderr)
+        self.assertEqual(altered_result["status"], "verification-failed")
+        self.assertIn(".prettierignore", altered_result["message"])

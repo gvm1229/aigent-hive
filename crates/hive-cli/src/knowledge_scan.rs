@@ -1,7 +1,7 @@
 use cap_fs_ext::{FollowSymlinks, OpenOptionsFollowExt};
 use cap_std::ambient_authority;
 use cap_std::fs::{Dir, OpenOptions as CapOpenOptions};
-use hive_core::{ensure_no_symlink_ancestors, sha256_digest, validate_project_relative};
+use hive_core::{ensure_no_symlink_ancestors, sha256_digest};
 use hive_wiki::scan::{
     build_inventory, diff_inventory, ScanDecision, ScanDelta, ScanEntry, ScanFileKind,
     ScanInputFile, ScanInventory, ScanLimits, ScanOptions, ScanRootKind, SCAN_SCHEMA_VERSION,
@@ -184,15 +184,26 @@ fn qualify_git_executable(executable: &Path) -> Result<(), WikiError> {
 }
 
 fn hardened_git_arguments(arguments: &[OsString]) -> Vec<OsString> {
-    let insertion_index = usize::from(
-        arguments.first().is_some_and(|argument| argument == "-C") && arguments.len() >= 2,
-    ) * 2;
-    let mut hardened =
-        Vec::with_capacity(arguments.len() + GIT_SECURITY_CONFIG_OVERRIDES.len().saturating_mul(2));
+    let scan_target = arguments
+        .get(1)
+        .filter(|_| arguments.first().is_some_and(|argument| argument == "-C"));
+    let insertion_index = usize::from(scan_target.is_some()) * 2;
+    let mut hardened = Vec::with_capacity(
+        arguments.len()
+            + GIT_SECURITY_CONFIG_OVERRIDES.len().saturating_mul(2)
+            + usize::from(scan_target.is_some()).saturating_mul(2),
+    );
     hardened.extend_from_slice(&arguments[..insertion_index]);
     for override_value in GIT_SECURITY_CONFIG_OVERRIDES {
         hardened.push(OsString::from("-c"));
         hardened.push(OsString::from(override_value));
+    }
+    if let Some(target) = scan_target {
+        hardened.push(OsString::from("-c"));
+        hardened.push(OsString::from(format!(
+            "safe.directory={}",
+            target.to_string_lossy().replace('\\', "/")
+        )));
     }
     hardened.extend_from_slice(&arguments[insertion_index..]);
     hardened
@@ -463,7 +474,22 @@ fn canonical_scan_target(target: &Path) -> Result<PathBuf, WikiError> {
             "scan target must be a directory".to_owned(),
         ));
     }
-    Ok(canonical_target)
+    Ok(normalize_windows_canonical_path(canonical_target))
+}
+
+#[cfg(windows)]
+fn normalize_windows_canonical_path(path: PathBuf) -> PathBuf {
+    let normalized = path.to_str().and_then(|text| {
+        text.strip_prefix(r"\\?\UNC\")
+            .map(|unc| PathBuf::from(format!(r"\\{unc}")))
+            .or_else(|| text.strip_prefix(r"\\?\").map(PathBuf::from))
+    });
+    normalized.unwrap_or(path)
+}
+
+#[cfg(not(windows))]
+fn normalize_windows_canonical_path(path: PathBuf) -> PathBuf {
+    path
 }
 
 fn scan_canonical_directory_with_runner(
@@ -533,14 +559,21 @@ fn discover_git_paths(
     ]);
     let root = match runner.run(&root_arguments) {
         Ok(output) if output.success => output,
-        Ok(_) | Err(WikiError::Io(_)) => return Ok(None),
+        Ok(output) if output.stderr.is_empty() || is_not_git_repository(&output.stderr) => {
+            return Ok(None)
+        }
+        Ok(output) => return Err(git_failure("repository-root discovery", &output.stderr)),
+        Err(WikiError::Io(message))
+            if message == "Git executable is unavailable outside the scan target" =>
+        {
+            return Ok(None)
+        }
         Err(error) => return Err(error),
     };
     let root_text = std::str::from_utf8(&root.stdout)
         .map_err(|_| WikiError::Verification("Git root output is not UTF-8".to_owned()))?
         .trim();
-    let git_root = fs::canonicalize(root_text)
-        .map_err(|error| WikiError::Io(format!("cannot resolve Git root: {error}")))?;
+    let git_root = canonical_scan_target(Path::new(root_text))?;
     if git_root != target {
         return Err(WikiError::InvalidInput(
             "Git scans must target the repository root to prevent out-of-scope discovery"
@@ -588,6 +621,13 @@ fn discover_git_paths(
     Ok(Some(paths.into_iter().collect()))
 }
 
+fn is_not_git_repository(stderr: &[u8]) -> bool {
+    let detail = String::from_utf8_lossy(stderr).to_ascii_lowercase();
+    detail.contains("not a git repository")
+        || detail.contains("not a git work tree")
+        || detail.contains("must be run in a work tree")
+}
+
 fn git_failure(action: &str, stderr: &[u8]) -> WikiError {
     let detail = String::from_utf8_lossy(stderr);
     let bounded = detail.trim().chars().take(240).collect::<String>();
@@ -616,8 +656,7 @@ fn parse_nul_paths(bytes: &[u8], max_discovered_paths: usize) -> Result<Vec<Stri
         }
         let path = std::str::from_utf8(raw)
             .map_err(|_| WikiError::Verification("Git path is not UTF-8".to_owned()))?;
-        validate_project_relative(Path::new(path))
-            .map_err(|error| WikiError::InvalidInput(error.to_string()))?;
+        validate_scan_relative(path)?;
         if path.contains('\\') || path.contains(':') {
             return Err(WikiError::InvalidInput(
                 "Git inventory path is not slash-normalized".to_owned(),
@@ -690,7 +729,7 @@ fn read_discovered_files_with_observer(
     Ok(entries)
 }
 
-#[allow(clippy::too_many_arguments)]
+#[allow(clippy::too_many_arguments, clippy::too_many_lines)]
 fn classify_one_discovered_file(
     root: &Dir,
     target: &Path,
@@ -702,8 +741,23 @@ fn classify_one_discovered_file(
     observe_read: &mut dyn FnMut(&str),
 ) -> Result<ScanEntry, WikiError> {
     let limits = options.limits;
-    validate_project_relative(Path::new(relative))
-        .map_err(|error| WikiError::InvalidInput(error.to_string()))?;
+    validate_scan_relative(relative)?;
+    if is_foreign_host_namespace(relative) {
+        let metadata = root.symlink_metadata(relative).map_err(|error| {
+            WikiError::Io(format!("cannot inspect scan path {relative}: {error}"))
+        })?;
+        let byte_len = usize::try_from(metadata.len()).map_err(|_| {
+            WikiError::InvalidInput(format!("scan path byte length is unsupported: {relative}"))
+        })?;
+        return Ok(ScanEntry {
+            relative_path: relative.to_owned(),
+            content_digest: None,
+            byte_len,
+            tracked,
+            decision: ScanDecision::Skipped,
+            reason: "foreign-host-namespace".to_owned(),
+        });
+    }
     let relative_path = Path::new(relative);
     if let Some(parent) = relative_path
         .parent()
@@ -790,6 +844,38 @@ fn classify_one_discovered_file(
         }
         Err(error) => Err(error),
     }
+}
+
+fn validate_scan_relative(path: &str) -> Result<(), WikiError> {
+    if path.is_empty()
+        || path.starts_with('/')
+        || path.starts_with("//")
+        || path.contains('\\')
+        || path.contains(':')
+        || path.chars().any(char::is_control)
+    {
+        return Err(WikiError::InvalidInput(
+            "scan paths must be normalized project-relative UTF-8 paths".to_owned(),
+        ));
+    }
+    if path
+        .split('/')
+        .any(|part| part.is_empty() || matches!(part, "." | ".."))
+    {
+        return Err(WikiError::InvalidInput(format!(
+            "scan path contains a non-normalized segment: {path}"
+        )));
+    }
+    Ok(())
+}
+
+fn is_foreign_host_namespace(path: &str) -> bool {
+    path.split('/').any(|part| {
+        matches!(
+            part.to_ascii_lowercase().as_str(),
+            ".agents" | ".claude" | ".codex" | ".omc" | ".omx"
+        )
+    })
 }
 
 fn classify_single_input(
@@ -1132,12 +1218,84 @@ mod tests {
     }
 
     #[test]
+    fn foreign_host_namespace_is_receipted_without_content_read() {
+        let temporary = tempfile::tempdir().expect("temporary directory");
+        fs::create_dir_all(temporary.path().join(".agents/directives")).expect("foreign namespace");
+        fs::write(
+            temporary.path().join(".agents/directives/foreign.md"),
+            b"foreign instruction\n",
+        )
+        .expect("foreign fixture");
+        fs::write(temporary.path().join("README.md"), b"project purpose\n")
+            .expect("readme fixture");
+        let canonical = temporary.path().canonicalize().expect("canonical target");
+        let mut reads = Vec::new();
+        let entries = read_discovered_files_with_observer(
+            &canonical,
+            vec![
+                (".agents/directives/foreign.md".to_owned(), true),
+                ("README.md".to_owned(), true),
+            ],
+            ScanOptions {
+                root_kind: ScanRootKind::Git,
+                include_untracked: false,
+                limits: ScanLimits::default(),
+            },
+            &mut |path| reads.push(path.to_owned()),
+        )
+        .expect("scan foreign namespace safely");
+        assert_eq!(reads, vec!["README.md"]);
+        assert!(entries.iter().any(|entry| {
+            entry.relative_path == ".agents/directives/foreign.md"
+                && entry.decision == ScanDecision::Skipped
+                && entry.reason == "foreign-host-namespace"
+                && entry.content_digest.is_none()
+        }));
+        assert!(entries.iter().any(|entry| {
+            entry.relative_path == "README.md" && entry.decision == ScanDecision::Included
+        }));
+    }
+
+    #[test]
+    fn git_path_parser_accepts_foreign_namespace_for_safe_skip() {
+        assert_eq!(
+            parse_nul_paths(b".agents/directives/foreign.md\0README.md\0", 2)
+                .expect("foreign namespace must reach classification"),
+            vec![".agents/directives/foreign.md", "README.md"]
+        );
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn windows_scan_target_removes_extended_length_prefix() {
+        assert_eq!(
+            normalize_windows_canonical_path(PathBuf::from(r"\\?\C:\work\source")),
+            PathBuf::from(r"C:\work\source")
+        );
+        assert_eq!(
+            normalize_windows_canonical_path(PathBuf::from(r"\\?\UNC\server\share\source")),
+            PathBuf::from(r"\\server\share\source")
+        );
+    }
+
+    #[test]
     fn git_path_parser_rejects_count_budget_during_stream_classification() {
         let error = parse_nul_paths(b"a.md\0b.md\0c.md\0", 2)
             .expect_err("third path must exceed the parser budget");
         assert!(
             matches!(error, WikiError::InvalidInput(message) if message.contains("path budget"))
         );
+    }
+
+    #[test]
+    fn git_root_non_repository_failure_is_the_only_non_git_fallback() {
+        assert!(is_not_git_repository(b"fatal: not a git repository"));
+        assert!(is_not_git_repository(
+            b"fatal: this operation must be run in a work tree"
+        ));
+        assert!(!is_not_git_repository(
+            b"fatal: unsafe repository ownership"
+        ));
     }
 
     #[test]
@@ -1300,6 +1458,15 @@ mod tests {
                 .expect("security override");
             assert!(position < subcommand);
         }
+        assert!(hardened.windows(2).any(|pair| {
+            pair[0] == "-c" && pair[1].to_string_lossy().starts_with("safe.directory=")
+        }));
+        #[cfg(windows)]
+        assert!(hardened.windows(2).any(|pair| {
+            pair[0] == "-c"
+                && pair[1].to_string_lossy().starts_with("safe.directory=")
+                && !pair[1].to_string_lossy().contains('\\')
+        }));
 
         let output = runner
             .run(&arguments)

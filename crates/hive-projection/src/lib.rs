@@ -36,6 +36,12 @@ const MIGRATE_HARNESS: &[u8] =
     include_bytes!("../../../harness/skills/project-transition/SKILL.md");
 const PROJECT_UPGRADE: &[u8] = include_bytes!("../../../harness/skills/project-refresh/SKILL.md");
 const LOOP_ENGINEERING: &[u8] = include_bytes!("../../../harness/skills/ralph-loop/SKILL.md");
+const ITERATIVE_EXECUTION: &[u8] =
+    include_bytes!("../../../harness/skills/iterative-execution/SKILL.md");
+const TEAM_EXECUTION: &[u8] = include_bytes!("../../../harness/skills/team-execution/SKILL.md");
+const MULTI_GOAL: &[u8] = include_bytes!("../../../harness/skills/multi-goal/SKILL.md");
+const CUSTOM_SUBAGENT_CREATE: &[u8] =
+    include_bytes!("../../../harness/skills/custom-subagent-create/SKILL.md");
 const AI_SLOP_CLEANER: &[u8] = include_bytes!("../../../harness/skills/code-polish/SKILL.md");
 const BEST_PRACTICE_RESEARCH: &[u8] =
     include_bytes!("../../../harness/skills/research-best-practices/SKILL.md");
@@ -1026,28 +1032,28 @@ fn localized_skill_text(
             "실행 전 승인받을 수 있도록 요청을 명확한 프롬프트로 다듬습니다.",
         ),
         "knowledge-capture" => (
-            "Record knowledge",
-            "Automatically review every Wiki-enabled turn and record one safe durable claim in every project after installation without requiring project setup.",
-            "지식 기록",
-            "위키 활성 매 턴의 안전한 재사용 지식 1개를 자동 검토·기록하며 설치 직후 모든 프로젝트에서 프로젝트 설정 없이 적용합니다.",
+            "Remember useful knowledge (knowledge-capture)",
+            "(knowledge-capture) At the end of a Wiki-enabled turn, keep one useful fact, preference, or workflow that will help later work; never save secrets, raw conversations, or uncertain guesses.",
+            "유용한 지식 남기기 (knowledge-capture)",
+            "(knowledge-capture) 대화를 마칠 때 나중 작업에 도움이 될 만한 사실·선호·방식 하나를 골라 안전하게 남김. 비밀·대화 원문·확실하지 않은 추측 기록 금지.",
         ),
         "knowledge-recall" => (
-            "Search knowledge",
-            "Retrieve only the Hive knowledge needed for the current work, with user-root and shared fallback for unregistered projects.",
-            "지식 검색",
-            "미등록 프로젝트에서는 사용자 전역·공유 범위로 폴백해 작업에 필요한 Hive 지식만 검색합니다.",
+            "Search knowledge (knowledge-recall)",
+            "(knowledge-recall) Before a knowledge-dependent question or task, find only the Hive knowledge that can help with the work at hand. Unregistered folders safely use user-root and shared knowledge.",
+            "지식 찾아보기 (knowledge-recall)",
+            "(knowledge-recall) 지금 하는 질문이나 작업에 도움이 될 Hive 지식만 찾아봄. 미등록 폴더도 사용자 전역·공유 지식을 안전하게 사용.",
         ),
         "knowledge-promote" => (
-            "Share knowledge",
-            "Promote reviewed project knowledge to global Hive knowledge.",
-            "지식 공유",
-            "검토한 프로젝트 지식을 전역 Hive 지식으로 승격합니다.",
+            "Share knowledge (knowledge-promote)",
+            "(knowledge-promote) Share a reviewed fact, preference, or workflow from one project when it can genuinely help the user's other work.",
+            "지식 공유하기 (knowledge-promote)",
+            "(knowledge-promote) 한 프로젝트에서 확인한 사실·선호·방식이 다른 작업에도 도움이 될 때 전역 Hive 지식으로 공유.",
         ),
         "knowledge-maintain" => (
-            "Maintain knowledge",
-            "Check, maintain, and rebuild the derived knowledge index.",
-            "지식 관리",
-            "정본 지식을 검사·정리하고 파생 색인을 다시 만듭니다.",
+            "Maintain knowledge (knowledge-maintain)",
+            "(knowledge-maintain) Keep Hive knowledge trustworthy by checking it, rebuilding its search index, or carrying out an explicitly requested cleanup.",
+            "지식 정비하기 (knowledge-maintain)",
+            "(knowledge-maintain) Hive 지식을 믿을 수 있게 검사하고, 필요하면 검색 색인을 다시 만들거나 명시 요청된 정리를 수행.",
         ),
         "run-checkpoint" => (
             "Save progress",
@@ -1104,10 +1110,10 @@ fn localized_skill_text(
             "계획·검증·인계를 연결한 Hive 작업 실행을 준비합니다.",
         ),
         "knowledge-import" => (
-            "Import repository knowledge",
-            "Import reviewed repository content as Hive knowledge.",
-            "저장소 지식 가져오기",
-            "저장소의 검토된 내용을 Hive 지식으로 가져옵니다.",
+            "Scan repository knowledge (knowledge-import)",
+            "(knowledge-import) Scan one repository or folder that the user explicitly selected, then import only the reviewed knowledge that is useful beyond that source.",
+            "저장소 지식 스캔 (knowledge-import)",
+            "(knowledge-import) 사용자가 고른 저장소나 폴더를 훑어보고, 그 밖의 작업에도 쓸 만한 검토 완료 지식만 가져오기.",
         ),
         "code-polish" => (
             "Clean AI slop",
@@ -1132,6 +1138,30 @@ fn localized_skill_text(
             "Change Hive behavior directives while preserving safety boundaries.",
             "지침 수정",
             "안전 경계를 유지하며 Hive 동작 지침을 수정합니다.",
+        ),
+        "iterative-execution" => (
+            "Run iterative work",
+            "Execute a bounded criterion loop with terminal independent verification.",
+            "반복 작업 실행",
+            "종료 전 독립 검증이 필요한 제한된 기준 반복을 실행합니다.",
+        ),
+        "team-execution" => (
+            "Coordinate a Hive team",
+            "Coordinate bounded signed lanes with barriers and terminal verification.",
+            "Hive 팀 조율",
+            "장벽과 종료 검증을 적용한 제한된 서명 lane을 조율합니다.",
+        ),
+        "multi-goal" => (
+            "Run multiple goals",
+            "Execute a bounded goal graph with budgets and terminal verification.",
+            "복수 목표 실행",
+            "예산과 종료 검증을 적용한 제한된 목표 graph를 실행합니다.",
+        ),
+        "custom-subagent-create" => (
+            "Create custom agent",
+            "Recommend and create one consented Hive custom agent.",
+            "사용자 정의 에이전트 생성",
+            "동의한 사용자 정의 에이전트 profile을 추천·생성합니다.",
         ),
         _ => return None,
     };
@@ -1200,6 +1230,18 @@ fn embedded_skill_metadata(name: &str) -> Option<&'static [u8]> {
         "ralph-loop" => Some(include_bytes!(
             "../../../harness/skills/ralph-loop/agents/openai.yaml"
         )),
+        "iterative-execution" => Some(include_bytes!(
+            "../../../harness/skills/iterative-execution/agents/openai.yaml"
+        )),
+        "team-execution" => Some(include_bytes!(
+            "../../../harness/skills/team-execution/agents/openai.yaml"
+        )),
+        "multi-goal" => Some(include_bytes!(
+            "../../../harness/skills/multi-goal/agents/openai.yaml"
+        )),
+        "custom-subagent-create" => Some(include_bytes!(
+            "../../../harness/skills/custom-subagent-create/agents/openai.yaml"
+        )),
         "code-polish" => Some(include_bytes!(
             "../../../harness/skills/code-polish/agents/openai.yaml"
         )),
@@ -1219,7 +1261,7 @@ fn embedded_skill_metadata(name: &str) -> Option<&'static [u8]> {
     }
 }
 
-fn embedded_skill_sources() -> [(&'static str, &'static [u8]); 22] {
+fn embedded_skill_sources() -> [(&'static str, &'static [u8]); 26] {
     [
         ("user-setup", SETUP_HIVE),
         ("project-setup", SETUP_HARNESS),
@@ -1238,6 +1280,10 @@ fn embedded_skill_sources() -> [(&'static str, &'static [u8]); 22] {
         ("project-transition", MIGRATE_HARNESS),
         ("project-refresh", PROJECT_UPGRADE),
         ("ralph-loop", LOOP_ENGINEERING),
+        ("iterative-execution", ITERATIVE_EXECUTION),
+        ("team-execution", TEAM_EXECUTION),
+        ("multi-goal", MULTI_GOAL),
+        ("custom-subagent-create", CUSTOM_SUBAGENT_CREATE),
         ("code-polish", AI_SLOP_CLEANER),
         ("research-best-practices", BEST_PRACTICE_RESEARCH),
         ("knowledge-import", KNOWLEDGE_SCAN),
@@ -2429,8 +2475,8 @@ description: Inspect one local file without changing it.
             let first = compile_projection(host, &[]).expect("projection");
             let second = compile_projection(host, &[]).expect("projection");
             assert_eq!(first, second);
-            assert_eq!(first.active_skills.skills.len(), 21);
-            let expected_file_count = if host == Host::Claude { 22 } else { 43 };
+            assert_eq!(first.active_skills.skills.len(), 25);
+            let expected_file_count = if host == Host::Claude { 26 } else { 51 };
             assert_eq!(first.files.len(), expected_file_count);
             for skill in [
                 "code-polish",
@@ -2636,10 +2682,60 @@ description: Inspect one local file without changing it.
         )
         .expect("UTF-8 Korean metadata");
 
-        assert!(english_metadata.contains("Automatically review every Wiki-enabled turn"));
-        assert!(
-            korean_metadata.contains("위키 활성 매 턴의 안전한 재사용 지식 1개를 자동 검토·기록")
-        );
+        assert!(english_metadata.contains("Remember useful knowledge (knowledge-capture)"));
+        assert!(english_metadata.contains("(knowledge-capture) At the end of a Wiki-enabled turn"));
+        assert!(korean_metadata.contains("유용한 지식 남기기 (knowledge-capture)"));
+        assert!(korean_metadata.contains("(knowledge-capture) 대화를 마칠 때"));
+        assert!(korean_metadata.contains("사실·선호·방식 하나를 골라"));
+    }
+
+    #[test]
+    fn korean_knowledge_skill_labels_keep_the_canonical_english_id_on_every_host() {
+        let selected = [
+            "knowledge-capture".to_owned(),
+            "knowledge-recall".to_owned(),
+            "knowledge-promote".to_owned(),
+            "knowledge-maintain".to_owned(),
+            "knowledge-import".to_owned(),
+        ];
+        let labels = [
+            (
+                "knowledge-capture",
+                "유용한 지식 남기기 (knowledge-capture)",
+            ),
+            ("knowledge-recall", "지식 찾아보기 (knowledge-recall)"),
+            ("knowledge-promote", "지식 공유하기 (knowledge-promote)"),
+            ("knowledge-maintain", "지식 정비하기 (knowledge-maintain)"),
+            ("knowledge-import", "저장소 지식 스캔 (knowledge-import)"),
+        ];
+
+        for host in [Host::Codex, Host::Claude, Host::Antigravity] {
+            let projection =
+                compile_user_projection_localized(host, &selected, &[], DescriptorLanguage::Ko)
+                    .expect("Korean projection");
+            for (name, label) in labels {
+                let skill = std::str::from_utf8(
+                    projection
+                        .files
+                        .get(&skill_path(host, name))
+                        .expect("localized Skill source"),
+                )
+                .expect("UTF-8 Skill source");
+                assert!(skill.contains(&format!("name: {name}")));
+                assert!(skill.contains(&format!("({name})")));
+                if matches!(host, Host::Codex | Host::Antigravity) {
+                    let metadata = std::str::from_utf8(
+                        projection
+                            .files
+                            .get(&skill_metadata_path(host, name))
+                            .expect("localized Skill metadata"),
+                    )
+                    .expect("UTF-8 Skill metadata");
+                    assert!(metadata.contains(label));
+                    assert!(metadata.contains(&format!("({name})")));
+                }
+            }
+        }
     }
 
     #[test]

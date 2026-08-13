@@ -572,7 +572,10 @@ fn scan_valid_pages(
     let mut issues = scan.issues;
     validate_pairs_and_graph(&scan.pages, &mut issues);
     sort_issues(&mut issues);
-    if let Some(first) = issues.first() {
+    if let Some(first) = issues
+        .iter()
+        .find(|issue| issue.severity == LintSeverity::Error)
+    {
         return Err(WikiError::Verification(format!(
             "source Wiki lint failed [{}] {}: {}",
             first.code, first.locator, first.message
@@ -798,16 +801,17 @@ fn validate_citations(
                 value
             };
             if let Err(message) = result {
-                let code = if message.contains("digest mismatch") {
-                    "source-digest-mismatch"
+                let (code, severity) = if message.contains("digest mismatch") {
+                    ("source-digest-mismatch", LintSeverity::Warning)
                 } else {
-                    "invalid-source"
+                    ("invalid-source", LintSeverity::Error)
                 };
-                issues.push(issue(
-                    code,
-                    &page.relative_path,
-                    &format!("{locator}: {message}"),
-                ));
+                issues.push(LintIssue {
+                    code: code.to_owned(),
+                    severity,
+                    locator: page.relative_path.clone(),
+                    message: format!("{locator}: {message}"),
+                });
             }
         }
     }
@@ -1911,7 +1915,13 @@ mod tests {
         assert!(outcome
             .issues
             .iter()
-            .any(|issue| issue.code == "source-digest-mismatch"));
+            .any(|issue| issue.code == "source-digest-mismatch"
+                && issue.severity == LintSeverity::Warning));
+
+        let digest_only = fixture();
+        write_pair(digest_only.path(), "architecture", &[]);
+        fs::write(digest_only.path().join("docs/source.md"), b"changed\n").expect("mutate source");
+        assert!(rebuild_index(digest_only.path()).is_ok());
     }
 
     #[test]

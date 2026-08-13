@@ -18,9 +18,31 @@ skills:
   - filesystem-write
   - shell
   consent_digest: null
+- name: custom-subagent-create
+  source_type: built-in
+  content_digest: sha256:2ea4b3122371dc247f61f5dc8720a6cb2e5da5cde71c2a9f12bc1fdffe59b58a
+  side_effect_class: project-write
+  capabilities:
+  - filesystem-read
+  - filesystem-write
+  - run-state
+  - shell
+  - subagents
+  consent_digest: null
+- name: iterative-execution
+  source_type: built-in
+  content_digest: sha256:1f570f61b227b44698c53f1b548bb7c114fea4b3621b3cb9442dff125f0fb8e6
+  side_effect_class: project-write
+  capabilities:
+  - filesystem-read
+  - filesystem-write
+  - run-state
+  - shell
+  - subagents
+  consent_digest: null
 - name: knowledge-capture
   source_type: built-in
-  content_digest: sha256:d2e23636ac998bf0b8cca29cf2466e761ab6abe6f20313ad0c9b4d2c6cf71459
+  content_digest: sha256:3566b5cff1f866a11f2d3ce216759dd7d69cd268b61dc5e428e17703146b836c
   side_effect_class: project-write
   capabilities:
   - filesystem-read
@@ -30,7 +52,7 @@ skills:
   consent_digest: null
 - name: knowledge-import
   source_type: built-in
-  content_digest: sha256:3fa9549fb4f2a62c04c839f8b00fe0551fc5ed42355a30e22bfb2341b0b0c770
+  content_digest: sha256:c20be7748412c966c9fe87d6a97281ac7eb00381607b4443d2cfe555c07e01f3
   side_effect_class: external-write
   capabilities:
   - filesystem-read
@@ -41,7 +63,7 @@ skills:
   consent_digest: null
 - name: knowledge-maintain
   source_type: built-in
-  content_digest: sha256:56ff170fd050d57f03ba90214771059aab3bc04ce71634f0c83ca5bdbfbf8eb3
+  content_digest: sha256:0428c1d1c917ae845737121912d67b15709fccfa8b5bbbf04c3e41e5f1de6020
   side_effect_class: project-write
   capabilities:
   - filesystem-read
@@ -52,7 +74,7 @@ skills:
   consent_digest: null
 - name: knowledge-promote
   source_type: built-in
-  content_digest: sha256:7aed1cdc07c1de860983b80b2fba453b3567dd0161c03122c1b887519c55efa7
+  content_digest: sha256:5ec16f6aa1dab31f014362b3140f9f716468675c30a8fc6f7eb24ee9b6efcbbb
   side_effect_class: external-write
   capabilities:
   - filesystem-read
@@ -63,12 +85,23 @@ skills:
   consent_digest: null
 - name: knowledge-recall
   source_type: built-in
-  content_digest: sha256:f06146778f6faf907e402462008e970bc82cf134f9e8cb9c31a3b727b20e66ec
+  content_digest: sha256:7b5d334b67e9db1b981273f9fb134adca8129250f241d7359f6f1bc5bda88c1e
   side_effect_class: read-only
   capabilities:
   - filesystem-read
   - memory-read
   - shell
+  consent_digest: null
+- name: multi-goal
+  source_type: built-in
+  content_digest: sha256:e7fae41d1efde25797dd13ae34e326d198ffafcf7693a4e9b446a994aee4fff6
+  side_effect_class: project-write
+  capabilities:
+  - filesystem-read
+  - filesystem-write
+  - run-state
+  - shell
+  - subagents
   consent_digest: null
 - name: package-review
   source_type: built-in
@@ -89,7 +122,7 @@ skills:
   consent_digest: null
 - name: project-refresh
   source_type: built-in
-  content_digest: sha256:30ad01528ef2c89c1a909270d887cdff24ce4fcf9520868a746ac19ec4ec2532
+  content_digest: sha256:3810a0ce4919ccbcfd02961a1cefdd5f6329d938eed1b411d839edeac3b3a86b
   side_effect_class: project-write
   capabilities:
   - filesystem-read
@@ -98,7 +131,7 @@ skills:
   consent_digest: null
 - name: project-setup
   source_type: built-in
-  content_digest: sha256:99aaa331b812305cf0713985107aadb9527fcfa1a32dae34a738a650c69d9de4
+  content_digest: sha256:03cffa6a854a243c94ae0f67b358b5049f68289ca0b0c1ee236f60788246c67a
   side_effect_class: project-write
   capabilities:
   - filesystem-read
@@ -179,6 +212,17 @@ skills:
   - filesystem-read
   - filesystem-write
   - shell
+  consent_digest: null
+- name: team-execution
+  source_type: built-in
+  content_digest: sha256:7f30d2e3603169180384ebf0d9a368b5cc02a83763c2e81feca79b3b4e67dae3
+  side_effect_class: project-write
+  capabilities:
+  - filesystem-read
+  - filesystem-write
+  - run-state
+  - shell
+  - subagents
   consent_digest: null
 - name: usage-guard
   source_type: built-in

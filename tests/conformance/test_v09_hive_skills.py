@@ -21,6 +21,8 @@ EXPECTED_SKILLS = frozenset(
         "quick-answer",
         "project-setup",
         "code-polish",
+        "custom-subagent-create",
+        "iterative-execution",
         "ralph-loop",
         "knowledge-import",
         "knowledge-maintain",
@@ -37,9 +39,11 @@ EXPECTED_SKILLS = frozenset(
         "run-resume",
         "run-checkpoint",
         "knowledge-promote",
+        "multi-goal",
         "product-update",
         "project-refresh",
         "package-review",
+        "team-execution",
     }
 )
 
@@ -93,6 +97,19 @@ class V09HiveSkillProjectionTests(unittest.TestCase):
             self.assertNotIn("name: hive-", text)
         catalog = (ROOT / "docs/skills.md").read_text(encoding="utf-8")
         self.assertIn("$aigent-hive:<Skill 이름>", catalog)
+
+    def test_iterative_execution_keeps_role_parity_on_one_strict_judge_path(self) -> None:
+        text = (SKILL_ROOT / "iterative-execution" / "SKILL.md").read_text(
+            encoding="utf-8"
+        )
+        for route in (
+            "planning after `$aigent-hive:ralph-loop`",
+            "independent review or\n  QA after `$aigent-hive:package-review`",
+            "evidence-backed research after\n  `$aigent-hive:research-best-practices`",
+            "performance validation with declared measurements",
+            "Terminal acceptance always requires the reserved independent Judge.",
+        ):
+            self.assertIn(route, text)
 
     def test_rename_ledger_is_stable_and_complete_for_the_last_public_inventory(self) -> None:
         ledger = yaml.safe_load((SKILL_ROOT / "retired-names.yml").read_text(encoding="utf-8"))

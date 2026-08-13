@@ -47,6 +47,7 @@ modules = [
   "tests.conformance.test_v09_hive_skills",
   "tests.conformance.test_v09_host_native_contract",
   "tests.conformance.test_v09_knowledge_schemas",
+  "tests.conformance.test_native_orchestration_feasibility",
   "tests.conformance.test_v09_skill_inventory",
 ]
 

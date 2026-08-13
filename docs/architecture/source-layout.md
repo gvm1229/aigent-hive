@@ -279,6 +279,15 @@ claim해 검증한 뒤 destination-exclusive publication을 수행. Replace/dele
 occupant를 overwrite하거나 삭제 없음. 자동 복원이 안전하지 않으면 prior
 bytes의 recovery path를 diagnostic으로 보존.
 
+소비자 자동 편집 조정과 host Skill 발견: 분리. 현재 소비자 projection: 모두
+`.agents/directives/03-session-coordination.md`. `AGENTS.md`: Codex·Claude Code·
+Antigravity 공통 계약 연결. `hive session`: Git 제외
+`.hive/runtime/active-sessions/*.md`의 bounded host/session ID·process ID·project-relative
+reservation path 전용 저장. 검증된 live foreign session의 동일·상위·하위 reservation:
+원자적 거부. 직접 사용자·editor write: best-effort 경계 제외.
+`project-setup`과 `project-refresh`: 인증된 three-way directive update preview,
+user·foreign·비충돌 local byte 보존. 변경 대상: 직접 모순 Hive-owned rule만.
+
 ## Phase 4 role/run과 recovery
 
 `hive-core::role`은 persistent role frontmatter/body를, `hive-core::run`은 PLAN

@@ -5,23 +5,25 @@ topic_slug: model-routed-custom-subagents
 language: en
 counterpart: ../ko/model-routed-custom-subagents.md
 title: "Model-Routed Custom Subagents"
-summary: "Hive 0.9.0 plans exact-model Codex and Claude roles with a configurable authenticated Judge."
+summary: "Hive 0.9.3 custom-agent activation requires every host lifecycle capability and a closed Judge invocation policy."
 tags: [claude, codex, model-routing, subagent, v0-9]
 aliases: ["Sol Advisor parity", "Task-appropriate model routing"]
 sources:
-  - "repo:docs/decisions/ADR-0019-hive-native-iterative-execution.md#sha256:8dcf64600bf77f630d6f601027ee02a5adf1255a49c4c852ff6006a46f203817"
-  - "repo:docs/plans/active/model-routed-custom-subagents.md#sha256:088e759fd1613b35634b965e592a0361d9b82eed0c3a8d084d103c70069c4a78"
+  - "repo:crates/hive-cli/src/custom_agent_cli.rs#sha256:5726ce3e28f3198b267fc017cba94d53c4a8703efa74544e5499be7c9488d9dd"
+  - "repo:crates/hive-cli/src/user_setup.rs#sha256:9fa9e439ad15ea6a8b5ed7cf6d031595a8979b056dada55360cb32331d9e8355"
+  - "repo:crates/hive-core/src/native_workflow.rs#sha256:246f845d21fe73c070abdfa4ffa78d28e829d84b3da498dcc1530355a54a0900"
+  - "repo:docs/plans/active/model-routed-custom-subagents.md#sha256:9fe4b79c4f4e0be1706600e06b74ab93ee8bbce01e767a38790bbf8bdd21b251"
 links: [judge-verification, orchestration-ownership, role-state, skill-routing]
-reviewed_revision: "git:ffdfb476d4e21dafe5d4dc896fa272f7244d0fe1"
+reviewed_revision: "git:9c9bdb1bfc49e06110fe3e1d0f931b03ab2c3b57"
 status: active
 ---
 
 # Model-Routed Custom Subagents
 
-The `MRA-*` plan fixes exact Codex and Claude model/effort mappings for bounded
-implementer and specialist roles. A reserved user-scope Judge uses Sol High on Codex;
-the Claude profile awaits lifecycle proof. User setup selects `explicit` or `implicit`.
-Strict iterative, team, and multi-goal workflows always judge terminal acceptance,
-never each tick. The agent returns a verdict, an external signer holds the Ed25519
-private key, and Hive verifies bound receipts and quorum. The creator Skill cannot
-override the reserved Judge.
+`hive agent recommend` requires a protected signed host-model catalog, detached attestation, and
+trust root. Forged signatures, incomplete mappings, and unsupported lifecycle capability fail
+before activation. Manual and revised requests bind the exact prior digest, request, and scope.
+Strict terminal acceptance is permitted in both Judge policies; material risk requires `implicit`.
+Simple, read-only, format-only, scheduler, heartbeat, retry, deterministic-failure, and
+unsupported-host routes are always rejected. Hostile regressions preserve foreign bytes when a
+receipt is absent, a role collides, or a projection path crosses a symlink.

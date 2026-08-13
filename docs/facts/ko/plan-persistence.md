@@ -9,10 +9,11 @@ summary: "계획 기본값은 canonical Markdown, session 참조는 간결한 �
 tags: [documentation, plan, state]
 aliases: ["Markdown plan authority"]
 sources:
-  - "repo:.agents/directives/04-documentation-state.md#sha256:5660c7d72b0bb89f8d105a50d7d3768bcf93d3728d855704df5bfad815744d02"
-  - "repo:harness/template/AGENTS.md.jinja#sha256:7192160dcbc3ef7b093a2e781860381a3205d7cd44af692f24d0b5f587255927"
+  - "repo:.agents/directives/04-documentation-state.md#sha256:44913afc655f527245720594f16a92c87061abfc28280f1a2834ad328b336be5"
+  - "repo:docs/plans/README.md#sha256:7fca19e770b1b99b647a893517b50bcf6e6eb136e3c84ae52ba1258267087df0"
+  - "repo:harness/template/AGENTS.md.jinja#sha256:9b45162b48b5d6eedcce0d0b6bc2d63613776fc1089a7d2878941897d0d506c5"
 links: [automated-user-handoff, source-development]
-reviewed_revision: "git:19eda4d7ef87fe3122c14c455df07758c3dc6ff1"
+reviewed_revision: "git:a833ba22d805fedce23cd74aa326b574b77280f4"
 status: active
 ---
 
@@ -22,4 +23,5 @@ status: active
 적절한 canonical Markdown 기록. Session 출력: 저장 계획의 일대일 복제 금지,
 간결한 요약·경로 또는 extensive review용 경로만 제공. 완료 기준: source·consumer
 guidance 일치와 projection 시험. 요청 배경: 긴 계획 전문의 session 중복 없는
-durable plan authority.
+durable plan authority. `PLAN.md` revision: 단조 증가 정수 변경 횟수. 과거 `1.99` 뒤
+`2.00`: 새 계획 세대 아닌 99번째 뒤 100번째 변경 표기.

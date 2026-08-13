@@ -46,7 +46,8 @@
             "enum": [
               "judge-assignment",
               "judge-verdict",
-              "judge-approval"
+              "judge-approval",
+              "host-model-catalog"
             ]
           },
           "algorithm": { "const": "ed25519" },

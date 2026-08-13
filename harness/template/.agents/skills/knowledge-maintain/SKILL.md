@@ -1,9 +1,9 @@
 ---
 name: knowledge-maintain
-description: Lint, rebuild, delete, or suppress canonical Hive knowledge through explicit CLI actions while preserving the disposable-index boundary. Use for requested knowledge repair, index rebuild, deletion, or re-ingest suppression; never combine knowledge deletion or garbage collection with a harness update transaction.
+description: "(knowledge-maintain) Keep Hive knowledge trustworthy by checking it, rebuilding its search index, or carrying out an explicitly requested cleanup."
 ---
 
-# Hive Knowledge Maintenance
+# Maintain Knowledge (`knowledge-maintain`)
 
 Use the narrowest explicit maintenance action.
 
@@ -32,6 +32,14 @@ use the user root as both `--target` and `--user-root`.
   hive index rebuild --user-root <user-root> --output json
   ```
 
+- Rescan a previously imported repository with a new digest-bound review. The apply flow updates
+  source claims, automatically promotes reviewed safe-general claims, and invalidates a promoted
+  derivative when its exact source claim no longer applies:
+
+  ```text
+  hive knowledge scan --target <directory> --apply <review.json> --user-root <user-root> --output json
+  ```
+
 - Delete a canonical Wiki page and record minimal suppression metadata:
 
   ```text
@@ -52,4 +60,6 @@ use the user root as both `--target` and `--user-root`.
 - Treat `hive index rebuild --target <legacy-project>` as a `0.7.x` compatibility action only,
   never as the operational shared-index route.
 - Keep update/migration activation and knowledge deletion or garbage collection in separate transactions.
+- Never use retrieval to trigger promotion; automatic promotion belongs only to reviewed scan,
+  rescan, and maintenance apply flows.
 - Report changed paths, evidence digests, and recovery guidance from the CLI result.

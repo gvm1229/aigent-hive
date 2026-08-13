@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+import base64
 import json
+import re
 import struct
 import unittest
 from pathlib import Path
 
 import yaml
+from PIL import Image
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -21,6 +24,7 @@ CURRENT = {
     "knowledge-recall", "usage-guard", "ship", "amend-directive", "user-setup",
     "run-handoff", "project-transition", "run-resume", "run-checkpoint",
     "knowledge-promote", "product-update", "project-refresh", "package-review",
+    "iterative-execution", "team-execution", "multi-goal", "custom-subagent-create",
 }
 
 
@@ -29,6 +33,47 @@ def skill_paths(root: Path) -> set[str]:
 
 
 class Phase3SchemaContract(unittest.TestCase):
+    def test_public_logo_marks_are_centered_without_canvas_changes(self) -> None:
+        """The visible mark may move, but each published canvas stays exactly centered."""
+        logo_paths = (
+            ROOT / "docs/assets/branding/hive-logo-mark.png",
+            ROOT / "docs/assets/branding/hive-logo-mark-colored.png",
+            ROOT / "harness/plugins/aigent-hive/assets/hive-logo-plugin.png",
+        )
+        for path in logo_paths:
+            with Image.open(path).convert("RGBA") as logo:
+                background = logo.getpixel((0, 0))
+                if background[3] == 0:
+                    bounds = logo.getchannel("A").getbbox()
+                else:
+                    mask = Image.new("L", logo.size)
+                    pixels = logo.load()
+                    for y in range(logo.height):
+                        for x in range(logo.width):
+                            if pixels[x, y] != background:
+                                mask.putpixel((x, y), 255)
+                    bounds = mask.getbbox()
+                self.assertIsNotNone(bounds, path)
+                left, top, right, bottom = bounds
+                mark_center = ((left + right - 1) / 2, (top + bottom - 1) / 2)
+                canvas_center = ((logo.width - 1) / 2, (logo.height - 1) / 2)
+                self.assertLessEqual(abs(mark_center[0] - canvas_center[0]), 0.5, path)
+                self.assertLessEqual(abs(mark_center[1] - canvas_center[1]), 0.5, path)
+
+    def test_public_html_guides_embed_the_current_logo_and_full_feature_cards(self) -> None:
+        logo = (ROOT / "docs/assets/branding/hive-logo-mark.png").read_bytes()
+        embedded_logo = re.compile(r'--hive-logo:\s*url\("data:image/png;base64,([^"]+)"\)')
+        for relative in ("docs/hive-core-features.ko.html", "docs/hive-install-guide.ko.html"):
+            html = (ROOT / relative).read_text(encoding="utf-8")
+            match = embedded_logo.search(html)
+            self.assertIsNotNone(match, relative)
+            self.assertEqual(base64.b64decode(match.group(1)), logo, relative)
+
+        core = (ROOT / "docs/hive-core-features.ko.html").read_text(encoding="utf-8")
+        self.assertIn("grid-template-columns: minmax(0, 1fr);", core)
+        self.assertEqual(core.count('<article class="card">'), 8)
+        self.assertEqual(core.count('<div class="use-case">'), 8)
+
     def test_codex_plugin_uses_named_developer_and_cropped_hive_logo(self) -> None:
         plugin_root = ROOT / "harness/plugins/aigent-hive"
         manifest = json.loads(
@@ -208,6 +253,27 @@ class Phase3SkillSourceContract(unittest.TestCase):
         self.assertTrue(retired.isdisjoint(CURRENT))
         self.assertTrue(set(ledger["retired_names"].values()).issubset(CURRENT))
         self.assertTrue(retired.isdisjoint(skill_paths(SKILLS)))
+
+    def test_projection_refresh_purges_only_authenticated_retired_hive_skills(self) -> None:
+        user_setup = (ROOT / "crates/hive-cli/src/user_setup.rs").read_text(encoding="utf-8")
+        project_upgrade = (ROOT / "crates/hive-cli/src/project_upgrade.rs").read_text(
+            encoding="utf-8"
+        )
+        user_setup_skill = (SKILLS / "user-setup/SKILL.md").read_text(encoding="utf-8")
+        project_refresh = (SKILLS / "project-refresh/SKILL.md").read_text(
+            encoding="utf-8"
+        )
+        for required in (
+            "authenticated_retired_user_skill_files",
+            "retired_builtin_skill_names",
+            "historical_builtin_skills",
+            "prune_user_setup_empty_ancestors",
+            "three_way_merge_hive_directive",
+        ):
+            self.assertIn(required, user_setup)
+        self.assertIn("three_way_merge_hive_directive", project_upgrade)
+        self.assertIn("retired-name", user_setup_skill)
+        self.assertIn("retired Hive Skill", project_refresh)
 
     def test_new_universal_skill_boundaries_are_present(self) -> None:
         ship = (SKILLS / "ship/SKILL.md").read_text(encoding="utf-8")

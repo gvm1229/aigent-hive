@@ -371,6 +371,126 @@
       },
       "x-noopWhen": "changed_paths is empty"
     },
+    "scan_claim_metadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "review_id",
+        "evidence",
+        "review_status",
+        "global_promotion_candidate",
+        "promotion_status"
+      ],
+      "properties": {
+        "review_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 96,
+          "pattern": "^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$"
+        },
+        "version": { "$ref": "#/$defs/nullable_bounded_400" },
+        "source_revision": { "$ref": "#/$defs/nullable_bounded_400" },
+        "applicability": { "$ref": "#/$defs/nullable_bounded_400" },
+        "evidence": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 16,
+          "x-uniqueBy": "locator",
+          "items": { "$ref": "#/$defs/claim_evidence" }
+        },
+        "review_status": { "enum": ["agent-reviewed", "source-invalidated"] },
+        "global_promotion_candidate": { "type": "boolean" },
+        "promotion_status": {
+          "enum": ["not-candidate", "pending-review", "promoted", "rejected"]
+        }
+      }
+    },
+    "canonical_claim": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "claim_id",
+        "claim_key",
+        "collection_id",
+        "locator",
+        "kind",
+        "status",
+        "visibility",
+        "normalized_fact",
+        "provenance",
+        "revision",
+        "sources",
+        "supersedes",
+        "digest"
+      ],
+      "properties": {
+        "claim_id": { "type": "string", "pattern": "^claim-[0-9a-f]{64}$" },
+        "claim_key": { "type": "string", "minLength": 1, "maxLength": 256 },
+        "collection_id": { "$ref": "#/$defs/collection_id" },
+        "document_id": { "type": "string", "minLength": 1, "maxLength": 256 },
+        "locator": { "$ref": "#/$defs/portable_path" },
+        "kind": { "$ref": "#/$defs/claim_kind" },
+        "status": {
+          "enum": ["user-stated", "observed", "verified", "inferred", "conflicted", "superseded"]
+        },
+        "visibility": { "enum": ["shared", "project-private", "confidential"] },
+        "normalized_fact": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 800,
+          "pattern": "^(?!\\s)(?!.*\\s$)(?!.*\\u0000)[\\s\\S]+$"
+        },
+        "provenance": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["source_kind", "summary", "locator", "digest"],
+          "properties": {
+            "source_kind": { "enum": ["user-statement", "reviewed-artifact"] },
+            "summary": { "type": "string", "minLength": 1, "maxLength": 800 },
+            "locator": { "type": "string", "minLength": 1, "maxLength": 4096 },
+            "digest": { "$ref": "#/$defs/sha256" }
+          }
+        },
+        "scan_metadata": { "$ref": "#/$defs/scan_claim_metadata" },
+        "revision": { "type": "integer", "minimum": 1, "maximum": 9007199254740991 },
+        "sources": {
+          "type": "array",
+          "maxItems": 256,
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1, "maxLength": 4096 }
+        },
+        "supersedes": {
+          "type": "array",
+          "maxItems": 256,
+          "uniqueItems": true,
+          "items": { "type": "string", "pattern": "^claim-[0-9a-f]{64}$" }
+        },
+        "replacement": { "type": "string", "pattern": "^claim-[0-9a-f]{64}$" },
+        "observed_at": { "type": "string", "format": "date-time" },
+        "verified_at": { "type": "string", "format": "date-time" },
+        "digest": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "automatic_promotion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source_claims", "promoted_claims", "store"],
+      "properties": {
+        "source_claims": {
+          "type": "array",
+          "maxItems": 2000,
+          "x-uniqueBy": "claim_id",
+          "items": { "$ref": "#/$defs/canonical_claim" }
+        },
+        "promoted_claims": {
+          "type": "array",
+          "maxItems": 2000,
+          "x-uniqueBy": "claim_id",
+          "items": { "$ref": "#/$defs/canonical_claim" }
+        },
+        "store": { "$ref": "#/$defs/store_commit" }
+      }
+    },
     "runtime_apply_result": {
       "type": "object",
       "additionalProperties": false,
@@ -380,6 +500,7 @@
         "validated_claims",
         "collection",
         "store",
+        "automatic_promotion",
         "target_mutated"
       ],
       "properties": {
@@ -388,6 +509,7 @@
         "validated_claims": { "$ref": "#/$defs/validated_claims" },
         "collection": { "$ref": "#/$defs/scan_collection" },
         "store": { "$ref": "#/$defs/store_commit" },
+        "automatic_promotion": { "$ref": "#/$defs/automatic_promotion" },
         "target_mutated": { "const": false }
       }
     },

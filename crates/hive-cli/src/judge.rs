@@ -87,6 +87,13 @@ struct QuorumSummary {
     message: &'static str,
 }
 
+#[derive(Debug, Clone, Copy)]
+struct QuorumEvaluation {
+    aggregate: hive_core::judge::AggregateOutcome,
+    authenticated: bool,
+    authentication: &'static str,
+}
+
 pub(crate) fn run_judge(arguments: &[String]) -> ExitCode {
     if arguments == ["package", "--help"] {
         print!("{PACKAGE_USAGE}");
@@ -190,6 +197,84 @@ fn package(arguments: &JudgeArguments) -> Result<ActionResult, AdapterError> {
 fn quorum(arguments: &JudgeArguments) -> Result<ActionResult, AdapterError> {
     let target = PinnedTarget::open(&arguments.target)?;
     let request_path = validate_target_relative(&arguments.request)?;
+    let evaluation = evaluate_quorum(&target, request_path, arguments.trust_root.as_deref())?;
+    let summary = quorum_summary(evaluation.aggregate.status);
+    Ok(ActionResult {
+        schema_version: 1,
+        action: "VerifyWork",
+        status: summary.status,
+        exit_code: summary.exit_code,
+        code: summary.code,
+        message: summary.message.to_owned(),
+        changed_paths: Vec::new(),
+        evidence: Vec::new(),
+        next_action: None,
+        data: Some(json!({
+            "quorum": {
+                "result": summary.result,
+                "pass_count": evaluation.aggregate.pass_count,
+                "eligible_count": evaluation.aggregate.eligible_count,
+                "indeterminate_count": evaluation.aggregate.indeterminate_count,
+                "excluded_count": evaluation.aggregate.excluded_count,
+                "approval_valid": evaluation.aggregate.approval_valid,
+                "authenticated": evaluation.authenticated,
+                "authentication": evaluation.authentication
+            }
+        })),
+    })
+}
+
+/// Re-evaluate an externally authenticated quorum for one exact loop subject.
+///
+/// The loop adapter owns no signer and writes no judge state.  It only binds a
+/// pre-existing, digest-addressed request to the active loop evidence before
+/// accepting a terminal Judge result.
+pub(crate) fn verify_authenticated_loop_quorum(
+    target: &PinnedTarget,
+    request_path: &Path,
+    trust_root_path: &Path,
+    expected_subject_id: &str,
+) -> Result<(), AdapterError> {
+    let evaluation = evaluate_quorum(target, request_path, Some(trust_root_path))?;
+    if evaluation.authentication != "ed25519"
+        || !evaluation.authenticated
+        || evaluation.aggregate.status != AggregateStatus::Pass
+    {
+        return Err(AdapterError::Verification(
+            "judge loop quorum is not an authenticated PASS".to_owned(),
+        ));
+    }
+
+    let request_bytes = target.read_required(request_path, MAX_QUORUM_DOCUMENT_BYTES)?;
+    let request = parse_json_bytes::<QuorumRequest>(
+        &request_bytes,
+        QUORUM_REQUEST_SCHEMA,
+        "judge quorum request",
+    )?;
+    if request.schema_version != 2 {
+        return Err(AdapterError::Verification(
+            "judge loop quorum must use authenticated request version 2".to_owned(),
+        ));
+    }
+    let mut total_bytes = request_bytes.len();
+    let package_bytes = read_target_document(target, &request.package, &mut total_bytes)?;
+    let package = JudgePackage::parse_json(&package_bytes).map_err(|_| {
+        AdapterError::Verification("judge loop quorum package is invalid".to_owned())
+    })?;
+    if package.subject_id != expected_subject_id {
+        return Err(AdapterError::Verification(
+            "judge loop quorum subject is not bound to this evidence".to_owned(),
+        ));
+    }
+    Ok(())
+}
+
+#[allow(clippy::too_many_lines)]
+fn evaluate_quorum(
+    target: &PinnedTarget,
+    request_path: &Path,
+    trust_root_path: Option<&Path>,
+) -> Result<QuorumEvaluation, AdapterError> {
     let request_bytes = target.read_required(request_path, MAX_QUORUM_DOCUMENT_BYTES)?;
     let request = parse_json_bytes::<QuorumRequest>(
         &request_bytes,
@@ -202,35 +287,33 @@ fn quorum(arguments: &JudgeArguments) -> Result<ActionResult, AdapterError> {
         ));
     }
     let mut total_bytes = request_bytes.len();
-    let package_bytes = read_target_document(&target, &request.package, &mut total_bytes)?;
+    let package_bytes = read_target_document(target, &request.package, &mut total_bytes)?;
     let Ok(package) = JudgePackage::parse_json(&package_bytes) else {
         let authentication = if request.schema_version == 2 {
             "ed25519"
         } else {
             "none"
         };
-        return Ok(indeterminate_quorum(
+        return Ok(indeterminate_evaluation(
             request.verdicts.len(),
-            false,
             authentication,
         ));
     };
-    let assignment_bytes = read_target_document(&target, &request.assignment, &mut total_bytes)?;
+    let assignment_bytes = read_target_document(target, &request.assignment, &mut total_bytes)?;
     let Ok(assignment) = JudgeAssignment::parse_json(&assignment_bytes, &package) else {
         let authentication = if request.schema_version == 2 {
             "ed25519"
         } else {
             "none"
         };
-        return Ok(indeterminate_quorum(
+        return Ok(indeterminate_evaluation(
             request.verdicts.len(),
-            false,
             authentication,
         ));
     };
-    let verdicts = load_verdicts(&target, &request.verdicts, &mut total_bytes)?;
+    let verdicts = load_verdicts(target, &request.verdicts, &mut total_bytes)?;
     let approval = if let Some(relative) = request.approval.as_deref() {
-        let bytes = read_target_document(&target, relative, &mut total_bytes)?;
+        let bytes = read_target_document(target, relative, &mut total_bytes)?;
         HumanApproval::parse_json(&bytes).ok()
     } else {
         None
@@ -242,23 +325,23 @@ fn quorum(arguments: &JudgeArguments) -> Result<ActionResult, AdapterError> {
             "none",
         )
     } else {
-        let trust_root_path = arguments.trust_root.as_deref().ok_or_else(|| {
+        let trust_root_path = trust_root_path.ok_or_else(|| {
             AdapterError::Safety(
                 "authenticated judge quorum requires an external protected trust root".to_owned(),
             )
         })?;
-        let trust_root = load_protected_trust_root(&target, trust_root_path)?;
+        let trust_root = load_protected_trust_root(target, trust_root_path)?;
         let assignment_attestation = match request.assignment_attestation.as_deref() {
-            Some(relative) => load_optional_attestation(&target, relative, &mut total_bytes)?,
+            Some(relative) => load_optional_attestation(target, relative, &mut total_bytes)?,
             None => None,
         };
         let Some(assignment_attestation) = assignment_attestation else {
-            return Ok(indeterminate_quorum(verdicts.len(), false, "ed25519"));
+            return Ok(indeterminate_evaluation(verdicts.len(), "ed25519"));
         };
         let verdict_attestations =
-            load_attestations(&target, &request.verdict_attestations, &mut total_bytes)?;
+            load_attestations(target, &request.verdict_attestations, &mut total_bytes)?;
         let approval_attestation = if let Some(relative) = request.approval_attestation.as_deref() {
-            load_optional_attestation(&target, relative, &mut total_bytes)?
+            load_optional_attestation(target, relative, &mut total_bytes)?
         } else {
             None
         };
@@ -275,29 +358,10 @@ fn quorum(arguments: &JudgeArguments) -> Result<ActionResult, AdapterError> {
         });
         (outcome.aggregate, outcome.authenticated, "ed25519")
     };
-    let summary = quorum_summary(aggregate.status);
-    Ok(ActionResult {
-        schema_version: 1,
-        action: "VerifyWork",
-        status: summary.status,
-        exit_code: summary.exit_code,
-        code: summary.code,
-        message: summary.message.to_owned(),
-        changed_paths: Vec::new(),
-        evidence: Vec::new(),
-        next_action: None,
-        data: Some(json!({
-            "quorum": {
-                "result": summary.result,
-                "pass_count": aggregate.pass_count,
-                "eligible_count": aggregate.eligible_count,
-                "indeterminate_count": aggregate.indeterminate_count,
-                "excluded_count": aggregate.excluded_count,
-                "approval_valid": aggregate.approval_valid,
-                "authenticated": authenticated,
-                "authentication": authentication
-            }
-        })),
+    Ok(QuorumEvaluation {
+        aggregate,
+        authenticated,
+        authentication,
     })
 }
 
@@ -365,34 +429,21 @@ fn legacy_unsigned_outcome(
     aggregate
 }
 
-fn indeterminate_quorum(
+fn indeterminate_evaluation(
     excluded_count: usize,
-    authenticated: bool,
-    authentication: &str,
-) -> ActionResult {
-    let summary = quorum_summary(AggregateStatus::Indeterminate);
-    ActionResult {
-        schema_version: 1,
-        action: "VerifyWork",
-        status: summary.status,
-        exit_code: summary.exit_code,
-        code: summary.code,
-        message: summary.message.to_owned(),
-        changed_paths: Vec::new(),
-        evidence: Vec::new(),
-        next_action: None,
-        data: Some(json!({
-            "quorum": {
-                "result": summary.result,
-                "pass_count": 0,
-                "eligible_count": 0,
-                "indeterminate_count": 0,
-                "excluded_count": excluded_count,
-                "approval_valid": false,
-                "authenticated": authenticated,
-                "authentication": authentication
-            }
-        })),
+    authentication: &'static str,
+) -> QuorumEvaluation {
+    QuorumEvaluation {
+        aggregate: hive_core::judge::AggregateOutcome {
+            status: AggregateStatus::Indeterminate,
+            eligible_count: 0,
+            pass_count: 0,
+            indeterminate_count: 0,
+            excluded_count,
+            approval_valid: false,
+        },
+        authenticated: false,
+        authentication,
     }
 }
 

@@ -5,22 +5,24 @@ topic_slug: model-routed-custom-subagents
 language: ko
 counterpart: ../en/model-routed-custom-subagents.md
 title: "Model-routed custom subagent"
-summary: "Exact-model Codex·Claude role과 설정 가능한 authenticated Judge의 Hive 0.9.0 계획."
+summary: "Hive 0.9.3 사용자 정의 에이전트 activation의 전체 host lifecycle capability와 Judge 호출 범위의 closed policy"
 tags: [claude, codex, model-routing, subagent, v0-9]
 aliases: ["Sol Advisor 기능 동등성", "Task별 model routing"]
 sources:
-  - "repo:docs/decisions/ADR-0019-hive-native-iterative-execution.md#sha256:8dcf64600bf77f630d6f601027ee02a5adf1255a49c4c852ff6006a46f203817"
-  - "repo:docs/plans/active/model-routed-custom-subagents.md#sha256:088e759fd1613b35634b965e592a0361d9b82eed0c3a8d084d103c70069c4a78"
+  - "repo:crates/hive-cli/src/custom_agent_cli.rs#sha256:5726ce3e28f3198b267fc017cba94d53c4a8703efa74544e5499be7c9488d9dd"
+  - "repo:crates/hive-cli/src/user_setup.rs#sha256:9fa9e439ad15ea6a8b5ed7cf6d031595a8979b056dada55360cb32331d9e8355"
+  - "repo:crates/hive-core/src/native_workflow.rs#sha256:246f845d21fe73c070abdfa4ffa78d28e829d84b3da498dcc1530355a54a0900"
+  - "repo:docs/plans/active/model-routed-custom-subagents.md#sha256:9fe4b79c4f4e0be1706600e06b74ab93ee8bbce01e767a38790bbf8bdd21b251"
 links: [judge-verification, orchestration-ownership, role-state, skill-routing]
-reviewed_revision: "git:ffdfb476d4e21dafe5d4dc896fa272f7244d0fe1"
+reviewed_revision: "git:9c9bdb1bfc49e06110fe3e1d0f931b03ab2c3b57"
 status: active
 ---
 
 # Model-routed custom subagent
 
-`MRA-*` 계획: bounded implementer·specialist의 Codex·Claude exact model/effort 고정.
-User-scope reserved Judge의 Codex 후보는 Sol High, Claude profile은 lifecycle 검증 대기.
-Setup 선택: `explicit`은 strict workflow terminal gate만, `implicit`은 material-risk route 추가.
-Iterative·team·multi-goal은 선택과 무관하게 terminal acceptance 판정 필수, tick별 호출 금지.
-Agent는 verdict만 생성, 외부 signer가 Ed25519 private key 소유, Hive는 bound receipt·quorum 검증.
-생성 Skill의 reserved Judge override 금지.
+`hive agent recommend`: 외부 보호 host model catalog·분리 attestation·trust root 필수.
+위조 서명·exact mapping 누락·지원 밖 lifecycle capability는 activation 전 거부.
+`manual|revise` request: exact prior digest·request·scope 결합 검증.
+Judge: strict terminal acceptance는 두 정책에서 허용, material-risk는 `implicit`만 허용.
+simple·read-only·format-only·scheduler·heartbeat·retry·결정적 실패·unsupported host는 항상 거부.
+receipt 부재·role collision·symlink projection path의 foreign byte 보존 hostile regression.

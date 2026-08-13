@@ -28,6 +28,7 @@
     },
     "skills": { "$ref": "#/$defs/skill_selection" },
     "update_check": { "$ref": "#/$defs/update_check" },
+    "judge_invocation": { "$ref": "#/$defs/judge_invocation" },
     "usage_guard": { "$ref": "#/$defs/usage_guard" }
   },
   "$defs": {
@@ -108,7 +109,11 @@
         "knowledge-promote",
         "product-update",
         "project-refresh",
-        "package-review"
+        "package-review",
+        "iterative-execution",
+        "team-execution",
+        "multi-goal",
+        "custom-subagent-create"
       ]
     },
     "skill_selection": {
@@ -143,6 +148,10 @@
       "properties": {
         "enabled": { "type": "boolean", "default": false }
       }
+    },
+    "judge_invocation": {
+      "enum": ["explicit", "implicit"],
+      "default": "explicit"
     },
     "usage_guard": {
       "type": "object",
