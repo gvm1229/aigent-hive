@@ -376,6 +376,12 @@ impl HostOrchestrationCapability {
                 self.capabilities.project_scope,
                 self.capabilities.model_pin,
                 self.capabilities.effort_pin,
+                self.capabilities.native_dispatch,
+                self.capabilities.launch_ack,
+                self.capabilities.result_return,
+                self.capabilities.cancel,
+                self.capabilities.lookup,
+                self.capabilities.idempotency,
                 self.capabilities.runtime_attestation,
                 self.capabilities.fresh_session,
             ]
@@ -689,15 +695,33 @@ mod tests {
             .verify_profile_activation(&profile, "codex")
             .is_ok());
 
-        let mut stale = value;
-        stale["capabilities"]["fresh_session"] = serde_json::json!("unverified");
-        let stale =
-            HostOrchestrationCapability::parse_json(&serde_json::to_vec(&stale).expect("json"))
-                .expect("capability");
-        assert_eq!(
-            stale.verify_profile_activation(&profile, "codex"),
-            Err(CustomAgentError::CapabilityUnsupported)
-        );
+        for required_capability in [
+            "agent_discovery",
+            "user_scope",
+            "project_scope",
+            "model_pin",
+            "effort_pin",
+            "native_dispatch",
+            "launch_ack",
+            "result_return",
+            "cancel",
+            "lookup",
+            "idempotency",
+            "runtime_attestation",
+            "fresh_session",
+        ] {
+            let mut incomplete = value.clone();
+            incomplete["capabilities"][required_capability] = serde_json::json!("unverified");
+            let incomplete = HostOrchestrationCapability::parse_json(
+                &serde_json::to_vec(&incomplete).expect("json"),
+            )
+            .expect("capability");
+            assert_eq!(
+                incomplete.verify_profile_activation(&profile, "codex"),
+                Err(CustomAgentError::CapabilityUnsupported),
+                "{required_capability} must block activation"
+            );
+        }
     }
 
     #[test]
