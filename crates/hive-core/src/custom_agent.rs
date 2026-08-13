@@ -1,5 +1,6 @@
 //! Provider-neutral custom-agent profiles, routing, projection, and attestation.
 
+use crate::judge_auth::{ArtifactKind, JudgeAttestation, JudgeTrustRoot};
 use crate::{sha256_digest, validate_json_schema};
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
@@ -11,6 +12,8 @@ const ATTESTATION_SCHEMA: &str =
     include_str!("../../../schemas/custom-subagent-attestation.schema.json");
 const HOST_CAPABILITY_SCHEMA: &str =
     include_str!("../../../schemas/host-orchestration-capability.schema.json");
+const HOST_MODEL_CATALOG_SCHEMA: &str =
+    include_str!("../../../schemas/host-model-catalog.schema.json");
 
 #[derive(Debug, Clone, Copy, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "kebab-case")]
@@ -278,6 +281,27 @@ pub struct HostOrchestrationCapability {
     pub limitations: Vec<String>,
 }
 
+/// Externally signed model availability catalog for one or more supported hosts.
+#[derive(Debug, Clone, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct HostModelCatalog {
+    pub schema_version: u32,
+    pub catalog_id: String,
+    pub principal_id: String,
+    pub issued_at: String,
+    pub models: Vec<HostModelCatalogEntry>,
+}
+
+/// One exact host model and effort availability declaration.
+#[derive(Debug, Clone, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct HostModelCatalogEntry {
+    pub host: String,
+    pub model: String,
+    pub efforts: Vec<AgentEffort>,
+    pub minimum_version: String,
+}
+
 /// Capability values are deliberately closed: partial and unverified evidence cannot activate.
 #[derive(Debug, Clone, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(deny_unknown_fields)]
@@ -361,6 +385,57 @@ impl HostOrchestrationCapability {
             return Err(CustomAgentError::CapabilityUnsupported);
         }
         Ok(())
+    }
+}
+
+impl HostModelCatalog {
+    /// Parse the closed host-model catalog without trusting it.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error for malformed or schema-invalid catalog bytes.
+    pub fn parse_json(bytes: &[u8]) -> Result<Self, CustomAgentError> {
+        let value: serde_json::Value = serde_json::from_slice(bytes)
+            .map_err(|error| CustomAgentError::Malformed(error.to_string()))?;
+        validate_json_schema(HOST_MODEL_CATALOG_SCHEMA, &value, "host model catalog")
+            .map_err(CustomAgentError::Schema)?;
+        serde_json::from_value(value)
+            .map_err(|error| CustomAgentError::Malformed(error.to_string()))
+    }
+
+    /// Verify a detached external catalog attestation and every exact profile mapping.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the catalog signature, signer, lifecycle, host model, effort, or
+    /// minimum-version binding does not match.
+    pub fn verify_profile(
+        &self,
+        attestation: &JudgeAttestation,
+        trust_root: &JudgeTrustRoot,
+        profile: &CustomAgentProfile,
+    ) -> Result<(), CustomAgentError> {
+        attestation
+            .verify(
+                trust_root,
+                ArtifactKind::HostModelCatalog,
+                self,
+                &self.principal_id,
+                &self.issued_at,
+            )
+            .map_err(|_| CustomAgentError::CapabilityUnsupported)?;
+        if profile.host_mappings.iter().all(|(host, mapping)| {
+            self.models.iter().any(|entry| {
+                entry.host == *host
+                    && entry.model == mapping.model
+                    && entry.efforts.contains(&mapping.effort)
+                    && entry.minimum_version == mapping.minimum_version
+            })
+        }) {
+            Ok(())
+        } else {
+            Err(CustomAgentError::CapabilityUnsupported)
+        }
     }
 }
 

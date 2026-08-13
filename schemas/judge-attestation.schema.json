@@ -17,7 +17,7 @@
   "properties": {
     "schema_version": { "const": 1 },
     "trust_root_id": { "type": "string", "minLength": 1, "maxLength": 128 },
-    "artifact_kind": { "enum": ["assignment", "verdict", "approval"] },
+    "artifact_kind": { "enum": ["assignment", "verdict", "approval", "host-model-catalog"] },
     "artifact_digest": {
       "type": "string",
       "pattern": "^sha256:[0-9a-f]{64}$"
