@@ -32,8 +32,8 @@ Preview, recommend, create, apply, validate, attest, route, or remove one consen
 \n\
 USAGE:\n\
     hive agent preview --profile <profile.json> --root <dir> --output json\n\
-    hive agent recommend --purpose <text> --scope <user|project> --catalog <catalog.json> --catalog-attestation <attestation.json> --trust-root <trust-root.toml> --output json\n\
-    hive agent create --request <creation.json> --root <dir> --accept-decision-digest <sha256> --output json\n\
+    hive agent recommend --purpose <text> --scope <user|project> --catalog <catalog.json> --catalog-attestation <attestation.json> --trust-root <trust-root.toml> [--previous-request <creation.json>] --output json\n\
+    hive agent create --request <creation.json> --root <dir> --accept-decision-digest <sha256> [--prior-decision <creation.json>] --output json\n\
     hive agent apply --profile <profile.json> --root <dir> --accept-definition-digest <sha256> --output json\n\
     hive agent validate --profile <profile.json> --root <dir> --output json\n\
     hive agent preflight --profile <profile.json> --host <codex|claude> --capabilities <capability.json> --output json\n\
@@ -151,6 +151,7 @@ struct RecommendArguments {
     catalog: PathBuf,
     catalog_attestation: PathBuf,
     trust_root: PathBuf,
+    previous_request: Option<PathBuf>,
 }
 
 #[derive(Debug)]
@@ -164,6 +165,7 @@ struct CreateArguments {
     request: PathBuf,
     root: PathBuf,
     accepted_digest: String,
+    prior_decision: Option<PathBuf>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -180,6 +182,8 @@ struct CreationRequest {
     schema_version: u32,
     purpose: String,
     decision: CreationDecision,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    prior_decision_digest: Option<String>,
     role_id: String,
     display_name: String,
     description: String,
@@ -285,6 +289,7 @@ fn parse_recommend_arguments(arguments: &[String]) -> Result<RecommendArguments,
             "--catalog",
             "--catalog-attestation",
             "--trust-root",
+            "--previous-request",
             "--output",
         ],
     )?;
@@ -297,6 +302,7 @@ fn parse_recommend_arguments(arguments: &[String]) -> Result<RecommendArguments,
         catalog: PathBuf::from(required(&options, "--catalog")?),
         catalog_attestation: PathBuf::from(required(&options, "--catalog-attestation")?),
         trust_root: PathBuf::from(required(&options, "--trust-root")?),
+        previous_request: options.get("--previous-request").map(PathBuf::from),
     })
 }
 
@@ -307,6 +313,7 @@ fn parse_create_arguments(arguments: &[String]) -> Result<CreateArguments, Agent
             "--request",
             "--root",
             "--accept-decision-digest",
+            "--prior-decision",
             "--output",
         ],
     )?;
@@ -317,6 +324,7 @@ fn parse_create_arguments(arguments: &[String]) -> Result<CreateArguments, Agent
         request: PathBuf::from(required(&options, "--request")?),
         root: PathBuf::from(required(&options, "--root")?),
         accepted_digest: required(&options, "--accept-decision-digest")?.to_owned(),
+        prior_decision: options.get("--prior-decision").map(PathBuf::from),
     })
 }
 
@@ -564,7 +572,52 @@ fn parse_creation_request(path: &Path) -> Result<CreationRequest, AgentCliError>
             "custom agent creation request has an unsupported schema or empty purpose".to_owned(),
         ));
     }
+    validate_decision_shape(&request)?;
     Ok(request)
+}
+
+fn validate_decision_shape(request: &CreationRequest) -> Result<(), AgentCliError> {
+    match (&request.decision, &request.prior_decision_digest) {
+        (CreationDecision::Accept, None)
+        | (CreationDecision::Manual | CreationDecision::Revise, Some(_)) => Ok(()),
+        (CreationDecision::Accept, Some(_)) => Err(AgentCliError::Verification(
+            "accepted recommendation must not name a prior decision".to_owned(),
+        )),
+        (CreationDecision::Manual | CreationDecision::Revise, None) => {
+            Err(AgentCliError::Verification(
+                "manual or revised creation requires a prior decision digest".to_owned(),
+            ))
+        }
+    }
+}
+
+fn validate_decision_lineage(
+    request: &CreationRequest,
+    prior_request: Option<&CreationRequest>,
+) -> Result<(), AgentCliError> {
+    validate_decision_shape(request)?;
+    match (&request.decision, prior_request) {
+        (CreationDecision::Accept, None) => Ok(()),
+        (CreationDecision::Accept, Some(_)) => Err(AgentCliError::Conflict(
+            "accepted recommendation must not supply a prior decision file".to_owned(),
+        )),
+        (CreationDecision::Manual | CreationDecision::Revise, Some(prior))
+            if request.prior_decision_digest.as_deref() == Some(&creation_digest(prior)?)
+                && prior.scope == request.scope =>
+        {
+            Ok(())
+        }
+        (CreationDecision::Manual | CreationDecision::Revise, Some(_)) => {
+            Err(AgentCliError::Conflict(
+                "prior decision digest or scope does not match the creation request".to_owned(),
+            ))
+        }
+        (CreationDecision::Manual | CreationDecision::Revise, None) => {
+            Err(AgentCliError::Conflict(
+                "manual or revised creation requires the exact prior decision file".to_owned(),
+            ))
+        }
+    }
 }
 
 fn recommended_request(purpose: &str, scope: AgentScope) -> Result<CreationRequest, AgentCliError> {
@@ -577,6 +630,7 @@ fn recommended_request(purpose: &str, scope: AgentScope) -> Result<CreationReque
         schema_version: 1,
         purpose: purpose.to_owned(),
         decision: CreationDecision::Accept,
+        prior_decision_digest: None,
         role_id: "hive-custom-agent".to_owned(),
         display_name: "Custom agent".to_owned(),
         description: format!("Perform the user-approved purpose: {purpose}"),
@@ -603,6 +657,26 @@ fn recommended_request(purpose: &str, scope: AgentScope) -> Result<CreationReque
             ),
         ]),
     })
+}
+
+fn revised_recommendation_request(
+    purpose: &str,
+    scope: AgentScope,
+    prior_path: Option<&Path>,
+) -> Result<CreationRequest, AgentCliError> {
+    let mut request = recommended_request(purpose, scope)?;
+    let Some(prior_path) = prior_path else {
+        return Ok(request);
+    };
+    let prior = parse_creation_request(prior_path)?;
+    if prior.scope != scope {
+        return Err(AgentCliError::Conflict(
+            "revised recommendation must retain the prior decision scope".to_owned(),
+        ));
+    }
+    request.decision = CreationDecision::Revise;
+    request.prior_decision_digest = Some(creation_digest(&prior)?);
+    Ok(request)
 }
 
 fn creation_digest(request: &CreationRequest) -> Result<String, AgentCliError> {
@@ -727,7 +801,11 @@ fn preview(arguments: ProfileArguments) -> Result<ActionResult, AgentCliError> {
 
 #[allow(clippy::needless_pass_by_value)]
 fn recommend(arguments: RecommendArguments) -> Result<ActionResult, AgentCliError> {
-    let request = recommended_request(&arguments.purpose, arguments.scope)?;
+    let request = revised_recommendation_request(
+        &arguments.purpose,
+        arguments.scope,
+        arguments.previous_request.as_deref(),
+    )?;
     let profile = creation_profile(request.clone())?;
     let catalog = read_verified_recommendation_catalog(&arguments, &profile)?;
     let decision_digest = creation_digest(&request)?;
@@ -765,6 +843,12 @@ fn recommend(arguments: RecommendArguments) -> Result<ActionResult, AgentCliErro
 #[allow(clippy::needless_pass_by_value)]
 fn create(arguments: CreateArguments) -> Result<ActionResult, AgentCliError> {
     let request = parse_creation_request(&arguments.request)?;
+    let prior_request = arguments
+        .prior_decision
+        .as_deref()
+        .map(parse_creation_request)
+        .transpose()?;
+    validate_decision_lineage(&request, prior_request.as_ref())?;
     let decision_digest = creation_digest(&request)?;
     if arguments.accepted_digest != decision_digest {
         return Err(AgentCliError::Conflict(
@@ -1980,6 +2064,7 @@ mod tests {
             request: request_path.clone(),
             root: root.clone(),
             accepted_digest: decision_digest.clone(),
+            prior_decision: None,
         })
         .expect("create");
         assert_eq!(result.action, "CreateAgent");
@@ -1993,6 +2078,81 @@ mod tests {
             request: request_path,
             root: root.clone(),
             accepted_digest: "sha256:bad".to_owned(),
+            prior_decision: None,
+        })
+        .is_err());
+        fs::remove_dir_all(root).expect("cleanup");
+    }
+
+    #[test]
+    fn manual_and_revised_creation_require_the_exact_prior_decision() {
+        let root = temporary_root();
+        let prior = recommended_request("review accessibility contrast", AgentScope::Project)
+            .expect("recommendation");
+        let prior_digest = creation_digest(&prior).expect("prior digest");
+        let prior_path = root.join("prior.json");
+        fs::write(
+            &prior_path,
+            serde_json::to_vec(&prior).expect("prior bytes"),
+        )
+        .expect("prior request");
+
+        let revised_recommendation = revised_recommendation_request(
+            "review a revised accessibility contrast",
+            AgentScope::Project,
+            Some(&prior_path),
+        )
+        .expect("revised recommendation");
+        assert!(matches!(
+            revised_recommendation.decision,
+            CreationDecision::Revise
+        ));
+        assert_eq!(
+            revised_recommendation.prior_decision_digest.as_deref(),
+            Some(prior_digest.as_str())
+        );
+
+        let mut manual = prior.clone();
+        manual.decision = CreationDecision::Manual;
+        manual.prior_decision_digest = Some(prior_digest);
+        manual.display_name = "Manual custom agent".to_owned();
+        let manual_path = root.join("manual.json");
+        fs::write(
+            &manual_path,
+            serde_json::to_vec(&manual).expect("manual bytes"),
+        )
+        .expect("manual request");
+        let manual_digest = creation_digest(&manual).expect("manual digest");
+        assert!(create(CreateArguments {
+            request: manual_path.clone(),
+            root: root.clone(),
+            accepted_digest: manual_digest,
+            prior_decision: Some(prior_path.clone()),
+        })
+        .is_ok());
+
+        assert!(create(CreateArguments {
+            request: manual_path,
+            root: root.clone(),
+            accepted_digest: creation_digest(&manual).expect("manual digest"),
+            prior_decision: None,
+        })
+        .is_err());
+
+        let mut revised = manual;
+        revised.decision = CreationDecision::Revise;
+        revised.prior_decision_digest = Some("sha256:bad".to_owned());
+        let revised_path = root.join("revised.json");
+        fs::write(
+            &revised_path,
+            serde_json::to_vec(&revised).expect("revised bytes"),
+        )
+        .expect("revised request");
+        assert!(create(CreateArguments {
+            request: revised_path,
+            root: root.clone(),
+            accepted_digest: creation_digest(&revised).expect("revised digest"),
+            prior_decision: Some(prior_path),
         })
         .is_err());
         fs::remove_dir_all(root).expect("cleanup");
@@ -2035,6 +2195,7 @@ mod tests {
             request: request_path,
             root: root.clone(),
             accepted_digest: digest,
+            prior_decision: None,
         })
         .is_err());
         fs::remove_dir_all(root).expect("cleanup");

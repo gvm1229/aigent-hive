@@ -20,7 +20,7 @@ skills:
   consent_digest: null
 - name: custom-subagent-create
   source_type: built-in
-  content_digest: sha256:51c955fd4169af2e9ccf3f513a9812de11a70ede7e7c1b70bc779d118c8d6bcd
+  content_digest: sha256:2ea4b3122371dc247f61f5dc8720a6cb2e5da5cde71c2a9f12bc1fdffe59b58a
   side_effect_class: project-write
   capabilities:
   - filesystem-read
