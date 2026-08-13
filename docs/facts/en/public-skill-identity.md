@@ -11,7 +11,7 @@ aliases: ["Skill naming"]
 sources:
   - "repo:crates/hive-projection/src/lib.rs#sha256:7b06c12e607a3e6ef8cf547fe8d6d2be67abf70edadfbb45b0612432a2a7b1ff"
   - "repo:docs/plans/active/knowledge-skill-naming-0.9.3.md#sha256:395a33fa2bbab8440265570dd1802605d2157ed0029b86fdc326a825ac1771d8"
-  - "repo:docs/skills.md#sha256:39f8bb324ef372dccc9e1cd68330163a3eccee5202dd2f90c1d0394109770a0a"
+  - "repo:docs/skills.md#sha256:89909ed6df13cf089302e226e4df2a27322dfcc0007292302434df18b7a85ae0"
   - "repo:harness/skills/catalog.yml#sha256:640f2ded6bb90de6c8c0797d21028091512569549478400b4721245c47ce3fae"
 links: [global-onboarding, skill-routing]
 reviewed_revision: "git:da8ff786068c1cf28b0e40862494767ddeffe9c0"

@@ -24,12 +24,13 @@
 | `iterative-execution` | Host-native receipt와 독립 종료 검증을 적용한 제한된 기준 반복 실행 | 여러 구현 시도 뒤 기준별 Judge 검증 |
 | `team-execution` | Mailbox·장벽·경로 lease·취소를 적용한 제한된 팀 조율 | 분리된 구현·검증 lane 실행 |
 | `multi-goal` | 집계 규칙·중첩 예산·종료 검증을 적용한 목표 graph 실행 | AND 기준을 가진 복수 목표 실행 |
+| `custom-subagent-create` | Codex·Claude custom subagent profile 추천·동의·생성 | 구현·검증 역할의 제한된 profile 생성 |
 | `knowledge-import` | 사용자가 고른 저장소·폴더 지식 스캔 뒤 검토 완료 항목 반입 | 저장소 규칙·결정의 Wiki 반입 |
 | `knowledge-maintain` | 신뢰 가능한 Hive 지식 검사·검색 색인 재생성·명시 정리 | Wiki link 검사와 색인 재구축 |
-| `knowledge-capture` | 대화 종료 전 후속 작업에 도움 되는 사실·선호·방식 하나의 안전한 기록 | PR 전 Clippy 실행 규칙 기록 |
+| `knowledge-capture` | 대화 종료 전 나중 작업에 도움이 되는 사실·선호·방식 1건의 안전한 기록 | PR 전 Clippy 실행 규칙 기록 |
 | `prompt-refine` | 실행 전 승인용 prompt 정리·개선 | Codex 실행용 prompt 개선 |
 | `research-best-practices` | 공식 자료 중심의 최신 모범 사례 조사 | Rust 자동 update 모범 사례 조사 |
-| `knowledge-recall` | 현재 질문·작업에 도움 되는 Hive 지식의 제한 조회 | 기존 release 결정 검색 |
+| `knowledge-recall` | 현재 질문·작업에 도움 되는 Hive 지식의 제한 조회 | 기존 출시 결정 검색 |
 | `usage-guard` | 전역·project별 사용량 보호 상태·사용자 선택 기준 관리 | 특정 project의 조기 중지 한도 설정 |
 | `ship` | 저장소 규칙을 읽고 변경을 독립 관심사별로 검증·commit·선택적 push | 큰 변경을 기능·문서·release commit으로 분리 |
 | `amend-directive` | 전역·project·Hive source의 사용자 수정 가능 agent behavior 변경 | Setup의 사소한 승인 질문 금지 |
