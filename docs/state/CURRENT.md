@@ -37,6 +37,11 @@
   native/custom-host evidence 필요
   Codex CLI `0.147.0`·Claude Code `2.1.163` 확인. Claude fresh-session probe: CLI 미로그인으로
   model 실행 `0회`, auth 전 MRA actual lifecycle 수용 보류
+- Codex custom profile 실제 수용: Windows x64 isolated project에서 Codex `0.147.0`의 fresh
+  ephemeral session이 Hive의 `.codex/agents/*.toml` profile을 `--profile`로 발견하고
+  Luna·Terra·Sol marker invocation을 각각 실행. `preview→apply→validate`와 profile별 실행은
+  PASS. Codex JSON result는 host-signed exact model/effort receipt를 제공하지 않아 MRA-004의
+  attestation·NAT-016 envelope 소비 증거로는 사용 불가
 - Custom agent lifecycle 보강: `8fdbba4`·`88bc18f`, no-follow parent handle의 exact-byte claim
   삭제·foreign/symlink 거부·interrupted owned deletion retry 수렴, Judge invocation의 product
   setup 질문·partial reconfiguration projection 동기화. Rust workspace local qualification과

@@ -80,7 +80,13 @@
   - Evidence: commits `47dd972`·`8fdbba4`·`88bc18f`, `hive agent preview|apply|validate|remove`의
     exact digest 동의·Hive ledger·foreign byte 거부·no-follow parent claim·동일 요청 재시도 수렴,
     Rust custom-agent CLI 12 PASS
-- [ ] [MRA-010] Codex TOML projection·installed-version validation·fresh-session discovery
+- [x] [MRA-010] Codex TOML projection·installed-version validation·fresh-session discovery
+  - Evidence: 2026-08-14 Windows x64 isolated project에서 Codex `0.147.0` 확인 뒤
+    `hive agent preview|apply|validate`로 생성한 `.codex/agents/*.toml` profile을 fresh
+    ephemeral session의 `--profile`로 발견. `hive-routine-implementer`·
+    `hive-complex-implementer`·`hive-independent-judge`의 Luna·Terra·Sol invocation 모두
+    marker response PASS. Codex JSON은 host-signed exact model/effort receipt를 제공하지 않아
+    MRA-004의 runtime attestation 수용 근거는 아님
 - [ ] [MRA-011] Claude Markdown projection·installed-version validation·environment/allowlist conflict detection
 - [x] [MRA-012] Capability preflight와 unsupported·silent fallback·unverified alias fail-closed
   - Evidence: commits `1a37c0a`·`8fdbba4`·`3344b5d`, exact host·최소 version·13개 required
