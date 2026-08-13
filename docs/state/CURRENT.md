@@ -3,8 +3,8 @@
 - 기준 branch: `codex/0.9.3-native-agents` (`develop` 통합 기준)
 - product version: `0.9.2`
 - 다음 release target: `0.9.3`
-- plan revision: `192`
-- 현재 milestone: `0.9.3` validation 계약·출시 운영 최적화·numbered public test 수용·정식 출시
+- plan revision: `195`
+- 현재 milestone: `0.9.3` validation 계약·출시 운영 최적화·source knowledge import·명시 collection access·자동 지식 최적화·numbered public test 수용·정식 출시
 - 기능 기준: `2cec0377748874748d126b6b55e59975a3f20a02`; release discipline base `c777da1`
 - 제외: `NHA10-001–012`·`N10-002–011`의 `0.10.0-test`
 - 문서 gate: root·번역 README, 설치 안내, 공개 HTML, npm README, plugin metadata,
@@ -34,6 +34,13 @@
   보존하고 CRLF/LF formatter 변환만 정규화. CI는 Markdown-only 단일 lane·product Linux full와
   macOS/Windows smoke로 분리, 최신 branch CI만 취소, release runtime은 weekly/manual로 한정.
   renderer 61·update 54·project lifecycle 9·release contract 26 focused PASS, projection parity·문서 style PASS.
+
+- `0.9.3` source knowledge import·access optimization 완료: source scan의 `.agents/` 등 foreign host
+  namespace는 content read 없이 receipt skip. Windows source inventory 824 included·236 skipped 뒤
+  reviewed claim 19개를 private source collection에 저장. PortareFolium ordinary `auto` retrieval의
+  source-private hit `0건`, explicit `collection:aigent-hive` retrieval의 source collection-only 확인.
+  reviewed safe-general decision 2개: scan apply 중 user interruption 없는 `user-root` shared 승격.
+  source evidence 무효화 시 파생 shared claim 동반 무효화 regression PASS
 
 - `0.9.3` projection purge·directive 우선 갱신 완료: historical digest 또는 authenticated ownership으로
   증명되는 retired Hive Skill만 전역·project `.agents/skills`에서 제거. 새 Hive safety·ownership rule과

@@ -1,17 +1,18 @@
 # Aigent Hive active plan index
 
-> Revision: 192
+> Revision: 195
 > 기준일: 2026-08-13
 > Product version: `0.9.3` 개발 기준
-> 현재 milestone: `0.9.3` validation 계약·출시 운영 최적화·numbered public test 수용·정식 출시
+> 현재 milestone: `0.9.3` validation 계약·출시 운영 최적화·source knowledge import·명시 collection access·자동 지식 최적화·numbered public test 수용·정식 출시
 > Entrypoint: `docs/plans/PLAN.md`
 
 ## Goal parameters
 
-- Objective: `VAL93-*` validation-contract 정합성·formatter 보호와 `OPT93-*` risk-tier release
-  운영 적용, numbered public `0.9.3-test.N` 수용 뒤 `0.9.3` 정식판 게시
-- Success: local-preserved validation 계약 일치, 중복 CI·candidate 제거, 최신 numbered public test
-  수용 결함 `0건`, 공개 문서·npm README·plugin metadata 최신화, exact source의 protected stable publication
+- Objective: `VAL93-*` validation-contract 정합성·formatter 보호, `OPT93-*` risk-tier release
+  운영, `SKI93-*` source knowledge import와 `KBA93-*` explicit collection access·자동 승격 적용,
+  numbered public `0.9.3-test.N` 수용 뒤 `0.9.3` 정식판 게시
+- Success: local-preserved validation 계약 일치, 중복 CI·candidate 제거, source workspace의 검토된
+  architecture·intent·decision·fact collection, 최신 numbered public test 수용 결함 `0건`, 공개 문서·npm README·plugin metadata 최신화, exact source의 protected stable publication
 - Stop boundary: protected `main` review, stable publication environment approval, exact `1.0.0`
   authority, 설치 product usage guard remaining threshold `5%`
 - Invariants: provider-neutral, backend별 canonical source 우선, SQLite 파생 상태,
@@ -46,6 +47,8 @@
 | Model-routed custom subagent | 24 | 0 | 100% |
 | `0.9.3` projection validation 정합성 | 4 | 0 | 100% |
 | `0.9.3` 출시 운영 최적화 | 5 | 0 | 100% |
+| `0.9.3` source knowledge import | 3 | 0 | 100% |
+| `0.9.3` knowledge access·자동 최적화 | 5 | 0 | 100% |
 | 0.9.3 지식 Skill 이름·표시 정비 | 4 | 0 | 100% |
 | 0.9.3 소비자 하네스 세션 조정·directive 갱신 | 5 | 0 | 100% |
 | `0.9.3` projection purge·directive 우선 갱신 | 4 | 0 | 100% |
@@ -65,7 +68,7 @@
 | Agent 자율 실행 지속 | 8 | 0 | 100% |
 | `0.9.2` 완료 기능·공개 문서 출시 | 12 | 0 | 100% |
 | Notion `v0.10` 후보 | 1 | 10 | 9.1% |
-| **Canonical total** | **549** | **27** | **95.3%** |
+| **Canonical total** | **557** | **27** | **95.4%** |
 
 External production boundary 항목도 미완료 합계에 포함. Protected authority 없이 완료 처리 금지.
 
@@ -107,6 +110,8 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
 | [`active/release-0.9.3-test-qualification.md`](active/release-0.9.3-test-qualification.md) | `REL93-*` | `0.9.3` numbered public test 수용과 정식 출시 |
 | [`active/projection-validation-consistency-0.9.3.md`](active/projection-validation-consistency-0.9.3.md) | `VAL93-*` | local-preserved validation·formatter 보호 |
 | [`active/release-engineering-optimization-0.9.3.md`](active/release-engineering-optimization-0.9.3.md) | `OPT93-*` | risk-tier CI·candidate reuse·single-owner release evidence |
+| [`active/source-knowledge-import-0.9.3.md`](active/source-knowledge-import-0.9.3.md) | `SKI93-*` | source workspace 안전 scan·reviewed user-root collection |
+| [`active/knowledge-access-optimization-0.9.3.md`](active/knowledge-access-optimization-0.9.3.md) | `KBA93-*` | explicit collection access·index-time automatic promotion |
 | [`active/v0.10.0-native-host-activation-candidate.md`](active/v0.10.0-native-host-activation-candidate.md) | `NHA10-*` | default-off native host activation·actual lifecycle evidence |
 | [`active/v0.9.3-release-loop.graph.md`](active/v0.9.3-release-loop.graph.md) | graph | `0.9.3` release loop checkpoint·recovery 계약 |
 | [`active/prompt-refine-auto-routing.md`](active/prompt-refine-auto-routing.md) | `PRF-*` | Material ambiguity 자동 refine·승인 전 정지 |
@@ -145,5 +150,6 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
 완료 증거: [`CURRENT.md`](../state/CURRENT.md)와 owning active fragment.
 현재: `NAT-001–024`·`MRA-001–032`의 구현 정본과 local evidence 완료. default-off native
 host activation의 fresh child lifecycle·attestation은 `NHA10-001–012`로 이관, `0.9.3` 범위 제외.
-`VAL93-001–004`와 `OPT93-001–005` 완료 뒤 `REL93-011–015` numbered public test 수용과
-stable publication 진행. `N10-002–011`·`NHA10-001–012`: `0.10.0-test` 후보 유지.
+`VAL93-001–004`·`OPT93-001–005`·`SKI93-001–003`·`KBA93-001–005` 완료. 다음 단계:
+`REL93-011–015` numbered public test 수용·stable publication. `N10-002–011`·`NHA10-001–012`:
+`0.10.0-test` 후보 유지.
