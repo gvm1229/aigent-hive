@@ -104,7 +104,8 @@
   - Evidence: commits `09700a0`·`b6679a6`·`ed21b87`, evidence reducer와 terminal Judge gate를
     분리하고 model attestation을 verdict provenance로만 처리
 - [ ] [MRA-021] Spec→route→implement→verify→Judge→Ed25519 quorum→accept workflow·외부 signer 경계
-- [ ] [MRA-022] `explicit|implicit` setup·자연어 변경·strict terminal Judge·일반 task false-positive exclusion
+- [x] [MRA-022] `explicit|implicit` setup·자연어 변경·strict terminal Judge·일반 task false-positive exclusion
+  - Evidence: `JudgeInvocationPolicy`의 closed explicit·implicit 정책, strict terminal gate와 material-risk 허용 행렬, simple·read-only·format·scheduler·heartbeat·retry·deterministic failure·unsupported host 거부. user-setup persisted round-trip와 prompt projection, core 6·CLI 42 focused PASS
 
 ### D. On-demand 생성 Skill
 

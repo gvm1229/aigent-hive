@@ -218,6 +218,56 @@ pub enum GoalState {
     Quarantined,
 }
 
+/// User-selected boundary for routing an independent Judge.
+///
+/// This is deliberately a narrow routing decision, not an execution request.
+/// The active host remains responsible for any native dispatch after Hive has
+/// verified the exact role, capability, and attestation contracts.
+#[derive(Debug, Clone, Copy, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum JudgeInvocationPolicy {
+    Explicit,
+    Implicit,
+}
+
+/// Closed work categories used when deciding whether a Judge is eligible.
+///
+/// Strict terminal acceptance cannot be downgraded by user preference. All
+/// non-terminal maintenance and low-risk routes remain excluded in both modes.
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
+pub enum JudgeRoute {
+    StrictTerminalAcceptance,
+    MaterialRisk,
+    SimpleQuestion,
+    ReadOnly,
+    FormatOnly,
+    SchedulerTick,
+    Heartbeat,
+    Retry,
+    DeterministicFailure,
+    UnsupportedOrUnattestedHost,
+}
+
+impl JudgeInvocationPolicy {
+    /// Return whether the policy permits routing the exact work category to a
+    /// Judge. This does not authorize host execution.
+    #[must_use]
+    pub const fn permits(self, route: JudgeRoute) -> bool {
+        match route {
+            JudgeRoute::StrictTerminalAcceptance => true,
+            JudgeRoute::MaterialRisk => matches!(self, Self::Implicit),
+            JudgeRoute::SimpleQuestion
+            | JudgeRoute::ReadOnly
+            | JudgeRoute::FormatOnly
+            | JudgeRoute::SchedulerTick
+            | JudgeRoute::Heartbeat
+            | JudgeRoute::Retry
+            | JudgeRoute::DeterministicFailure
+            | JudgeRoute::UnsupportedOrUnattestedHost => false,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Goal {
     pub goal_id: String,
@@ -470,6 +520,32 @@ mod tests {
         assert_eq!(goal.evaluate(), GoalState::Verifying);
         goal.judge_verified = true;
         assert_eq!(goal.evaluate(), GoalState::Complete);
+    }
+
+    #[test]
+    fn judge_invocation_policy_is_closed_and_strict_terminal_is_not_optional() {
+        use super::{JudgeInvocationPolicy, JudgeRoute};
+
+        for policy in [
+            JudgeInvocationPolicy::Explicit,
+            JudgeInvocationPolicy::Implicit,
+        ] {
+            assert!(policy.permits(JudgeRoute::StrictTerminalAcceptance));
+            for excluded in [
+                JudgeRoute::SimpleQuestion,
+                JudgeRoute::ReadOnly,
+                JudgeRoute::FormatOnly,
+                JudgeRoute::SchedulerTick,
+                JudgeRoute::Heartbeat,
+                JudgeRoute::Retry,
+                JudgeRoute::DeterministicFailure,
+                JudgeRoute::UnsupportedOrUnattestedHost,
+            ] {
+                assert!(!policy.permits(excluded));
+            }
+        }
+        assert!(!JudgeInvocationPolicy::Explicit.permits(JudgeRoute::MaterialRisk));
+        assert!(JudgeInvocationPolicy::Implicit.permits(JudgeRoute::MaterialRisk));
     }
 
     #[test]
