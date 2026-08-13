@@ -37,7 +37,7 @@
 - [x] [NAT-003] Codex·Claude Code·Antigravity의 envelope consume·claim·launch ack·result·cancel·lookup·idempotency capability matrix
   - Evidence: `schemas/host-orchestration-capability.schema.json`, 세 host fixture와
     `python tests/conformance/test_native_orchestration_feasibility.py -v` 4 PASS
-- [ ] [NAT-004] 세 host fixture와 최소 한 host 실제 lifecycle spike, unsupported capability의 정직한 판정
+- `NAT-004` actual lifecycle acceptance → [`NHA10-001–006`](v0.10.0-native-host-activation-candidate.md)
 - [x] [NAT-005] Feasibility 결과 기반 ADR-0019 acceptance·default-off 유지·중단 조건 확정
   - Evidence: `docs/research/native-host-feasibility-2026-08-12.md`, ADR-0019와 three-host
     capability fixture. idempotency·host-signed attestation·fresh child lifecycle 미확인 상태의
@@ -65,7 +65,7 @@
 
 ### D. Host·Skill
 
-- [ ] [NAT-016] 세 host declarative envelope adapter, exact role receipt와 reserved Judge profile 소비
+- `NAT-016` host envelope consumption·Judge receipt → [`NHA10-004`](v0.10.0-native-host-activation-candidate.md)
 - [x] [NAT-017] Ralph급 persistent criterion loop와 criterion terminal Judge gate의 `iterative-execution` Skill
   - Evidence: commit `b6679a6`, usage gate→event/receipt→criterion evidence→terminal-only
     independent Judge 흐름과 direct spawn·provider API·OMX/OMC 금지 제품 Skill
@@ -82,7 +82,7 @@
 
 ### E. Qualification·activation
 
-- [ ] [NAT-021] Stale pointer·wrong session·100회 Stop no-op·cancel/guard 독립 접근 회귀 시험
+- `NAT-021` host cancel·guard control-plane E2E → [`NHA10-005`](v0.10.0-native-host-activation-candidate.md)
   - 구현 증거: stale checkpoint의 `CURRENT.md` no-mutation, wrong usage session의 prepare
     no-mutation, `Stop` neutral payload 100회 반복 회귀. 다른 run의 malformed graph `CURRENT.md`가
     있어도 exact `--target` usage session disable·status 성공과 pointer byte 보존 회귀. cancel/guard의
@@ -95,7 +95,7 @@
   - Evidence: `native_workflow`의 exact barrier·mailbox conflict 격리·casefold 경로 충돌·nested budget
     single refund 6 PASS와 `migration_recover_converges_after_partial_generation_publish`의 staged
     `RECOVERY.toml`·부분 `MIGRATION.md` 뒤 signed `--recover` 수렴, legacy byte 보존 회귀 PASS
-- [ ] [NAT-024] Clean clone·세 host·보안·관찰성 gate 뒤 default activation 결정과 신규 OMX·OMC 경로 제거
+- `NAT-024` clean-clone activation decision → [`NHA10-006`](v0.10.0-native-host-activation-candidate.md)
 
 ## 수락 기준
 

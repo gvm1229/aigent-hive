@@ -32,7 +32,7 @@
 
 ## 출시 연결
 
-- `PUG93-001–004` 완료와 current-tree evidence 전 `REL93-001`, `REL93-004–010` 완료 처리 금지
+- `PUG93-001–004` 완료와 current-tree evidence 전 release fragment의 public qualification 완료 처리 금지
 - 제품 byte 변경 뒤 numbered public `0.9.3-test.N`에서 전역 setup·project upgrade·clean install
   수용 필요
 

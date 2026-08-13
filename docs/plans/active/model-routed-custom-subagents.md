@@ -76,8 +76,8 @@
     `--agents` session override, model·effort·permission fields, environment override·allowlist
     fallback order와 local `2.1.163` option inventory. 인증 부재의 model execution은 MRA-005에
     계속 보류
-- [ ] [MRA-004] 실제 Codex Luna·Terra·Sol install→fresh session→dispatch→attestation lifecycle spike
-- [ ] [MRA-005] 실제 Claude exact model·effort install→fresh session→dispatch→override/fallback lifecycle spike
+- `MRA-004` Codex fresh child lifecycle → [`NHA10-001`](v0.10.0-native-host-activation-candidate.md)
+- `MRA-005` Claude fresh child lifecycle → [`NHA10-002`](v0.10.0-native-host-activation-candidate.md)
 - [x] [MRA-006] Codex·Claude 한정, Antigravity unsupported, default-off, host-file consent의 ADR·security acceptance
   - Evidence: ADR-0019와 three-host capability fixtures의 `default-off`, Antigravity
     `unsupported`, exact preview digest·Hive ownership ledger·foreign projection reject regressions
@@ -101,7 +101,7 @@
     `hive-complex-implementer`·`hive-independent-judge`의 Luna·Terra·Sol invocation 모두
     marker response PASS. Codex JSON은 host-signed exact model/effort receipt를 제공하지 않아
     MRA-004의 runtime attestation 수용 근거는 아님
-- [ ] [MRA-011] Claude Markdown projection·installed-version validation·environment/allowlist conflict detection
+- `MRA-011` Claude installed projection lifecycle → [`NHA10-003`](v0.10.0-native-host-activation-candidate.md)
 - [x] [MRA-012] Capability preflight와 unsupported·silent fallback·unverified alias fail-closed
   - Evidence: commits `1a37c0a`·`8fdbba4`·`3344b5d`, exact host·최소 version·13개 required
     lifecycle capability와 fresh-session evidence가 `supported`일 때만 허용, runtime attestation
@@ -123,7 +123,7 @@
 - [x] [MRA-020] Deterministic verifier evidence layer·model review authority `0건`·fixture
   - Evidence: commits `09700a0`·`b6679a6`·`ed21b87`, evidence reducer와 terminal Judge gate를
     분리하고 model attestation을 verdict provenance로만 처리
-- [ ] [MRA-021] Spec→route→implement→verify→Judge→Ed25519 quorum→accept workflow·외부 signer 경계
+- `MRA-021` external signer actual acceptance → [`NHA10-007`](v0.10.0-native-host-activation-candidate.md)
   - 구현 증거: `judge.rs`의 재사용 quorum evaluator와 loop verifier schema v2 결합. exact
     run·revision·node·attempt·evidence subject, quorum request digest, target 밖 protected trust
     root, authenticated PASS를 모두 다시 검증하며 boolean authentication claim은 mutation 전 거부.
@@ -137,7 +137,7 @@
 - [x] [MRA-023] `hive-custom-subagent-create` typed CLI·양쪽 projection·reserved Judge override 금지
   - Evidence: commits `7272cba`·`b8b9a30`·`8fdbba4`, closed creation request·양쪽 projection·
     exact decision digest·reserved Judge reject·product Skill projection, Rust custom-agent CLI 12 PASS
-- [ ] [MRA-024] Purpose-first recommendation과 signed host model catalog·capability 근거
+- `MRA-024` issued catalog·host capability acceptance → [`NHA10-008`](v0.10.0-native-host-activation-candidate.md)
   - 구현 증거: `804fc80`·`1b7b2de`, 외부 보호 catalog·분리 attestation·trust root의 exact mapping 검증,
     위조 서명·mapping 누락 거부, custom-agent CLI 13·core 6·Copier/Rust parity 22·strict Clippy 통과
   - 완료 전제: 실제 발급 catalog와 Codex·Claude fresh-session capability 수용
@@ -147,7 +147,7 @@
 - [x] [MRA-026] 수동 설정의 이름·양쪽 exact model/effort·scope·permission·trigger field 검증
   - Evidence: commit `7272cba`, closed JSON schema의 양쪽 host mapping·exact model/effort·
     scope·permission·trigger required field와 incomplete mapping hostile test PASS
-- [ ] [MRA-027] User/project preview·동의·apply·rollback·fresh-session activation
+- `MRA-027` user/project fresh activation → [`NHA10-009`](v0.10.0-native-host-activation-candidate.md)
 - [x] [MRA-028] 생성 role의 auto-route registry 통합·reserved route 격리·reconfigure·disable·delete·update byte 보존
   - Evidence: commits `6d13681`·`758c168`·`8fdbba4`·`88bc18f`, user/project precedence·reserved
     Judge isolation·disable·owned-only update/delete·foreign byte 보존·interrupted deletion retry
@@ -164,8 +164,8 @@
   - Evidence: commit `271ad81`, duplicate role·trigger collision, missing receipt no-mutation,
     reserved Judge shadow/downgrade·forged signer·model fallback·unsupported capability·foreign
     symlink hostile regression. custom-agent core 7 PASS·CLI 15 PASS·strict Clippy PASS
-- [ ] [MRA-031] 두 host·두 scope fresh-session E2E와 두 Judge mode·strict workflow 강제 gate·model mismatch fail-closed
-- [ ] [MRA-032] 사용자 guide·release note·bilingual fact·full Rust/Python/security/static gate와 `REL9-*` handoff
+- `MRA-031` two-host fresh E2E → [`NHA10-010`](v0.10.0-native-host-activation-candidate.md)
+- `MRA-032` native activation guide·gate → [`NHA10-011`](v0.10.0-native-host-activation-candidate.md)
 
 ## Acceptance
 

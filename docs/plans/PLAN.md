@@ -1,17 +1,17 @@
 # Aigent Hive active plan index
 
-> Revision: 191
+> Revision: 192
 > 기준일: 2026-08-13
 > Product version: `0.9.3` 개발 기준
-> 현재 milestone: `0.9.3` native iterative·custom subagent 구현·numbered public test 수용·정식 출시
+> 현재 milestone: `0.9.3` validation 계약·출시 운영 최적화·numbered public test 수용·정식 출시
 > Entrypoint: `docs/plans/PLAN.md`
 
 ## Goal parameters
 
-- Objective: `NAT-002–024`·`MRA-001–032` 구현과 current-tree qualification, numbered public
-  `0.9.3-test.N` 수용 뒤 `0.9.3` 정식판 게시
-- Success: native·custom subagent 기능의 evidence-backed 완료, 최신 numbered public test 수용 결함
-  `0건`, 공개 문서·npm README·plugin metadata 최신화, exact source의 protected stable publication
+- Objective: `VAL93-*` validation-contract 정합성·formatter 보호와 `OPT93-*` risk-tier release
+  운영 적용, numbered public `0.9.3-test.N` 수용 뒤 `0.9.3` 정식판 게시
+- Success: local-preserved validation 계약 일치, 중복 CI·candidate 제거, 최신 numbered public test
+  수용 결함 `0건`, 공개 문서·npm README·plugin metadata 최신화, exact source의 protected stable publication
 - Stop boundary: protected `main` review, stable publication environment approval, exact `1.0.0`
   authority, 설치 product usage guard remaining threshold `5%`
 - Invariants: provider-neutral, backend별 canonical source 우선, SQLite 파생 상태,
@@ -42,12 +42,15 @@
 | v0.9 global knowledge RAG | 20 | 0 | 100% |
 | v0.9 knowledge autocapture 회귀 | 12 | 0 | 100% |
 | v0.9 knowledge portability·scan | 18 | 0 | 100% |
-| Hive-native 반복 실행 | 20 | 4 | 83.3% |
-| Model-routed custom subagent | 24 | 8 | 75.0% |
+| Hive-native 반복 실행 | 20 | 0 | 100% |
+| Model-routed custom subagent | 24 | 0 | 100% |
+| `0.9.3` projection validation 정합성 | 4 | 0 | 100% |
+| `0.9.3` 출시 운영 최적화 | 5 | 0 | 100% |
 | 0.9.3 지식 Skill 이름·표시 정비 | 4 | 0 | 100% |
 | 0.9.3 소비자 하네스 세션 조정·directive 갱신 | 5 | 0 | 100% |
 | `0.9.3` projection purge·directive 우선 갱신 | 4 | 0 | 100% |
-| `0.9.3` 시험·정식 출시 | 0 | 14 | 0% |
+| `0.9.3` 시험·정식 출시 | 0 | 5 | 0% |
+| Native host activation `0.10.0` 후보 | 0 | 12 | 0% |
 | Prompt refine 자동 routing | 12 | 0 | 100% |
 | v0.9 test 기능 마감 | 18 | 0 | 100% |
 | v0.9 full release | 28 | 0 | 100% |
@@ -62,7 +65,7 @@
 | Agent 자율 실행 지속 | 8 | 0 | 100% |
 | `0.9.2` 완료 기능·공개 문서 출시 | 12 | 0 | 100% |
 | Notion `v0.10` 후보 | 1 | 10 | 9.1% |
-| **Canonical total** | **540** | **36** | **93.8%** |
+| **Canonical total** | **549** | **27** | **95.3%** |
 
 External production boundary 항목도 미완료 합계에 포함. Protected authority 없이 완료 처리 금지.
 
@@ -102,6 +105,9 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
 | [`active/consumer-harness-session-coordination.md`](active/consumer-harness-session-coordination.md) | `CHS93-*` | 소비자 세션 조정·기존 directive 최소 변경 갱신 |
 | [`active/projection-upgrade-purge-0.9.3.md`](active/projection-upgrade-purge-0.9.3.md) | `PUG93-*` | retired Skill purge·directive direct-conflict 갱신 |
 | [`active/release-0.9.3-test-qualification.md`](active/release-0.9.3-test-qualification.md) | `REL93-*` | `0.9.3` numbered public test 수용과 정식 출시 |
+| [`active/projection-validation-consistency-0.9.3.md`](active/projection-validation-consistency-0.9.3.md) | `VAL93-*` | local-preserved validation·formatter 보호 |
+| [`active/release-engineering-optimization-0.9.3.md`](active/release-engineering-optimization-0.9.3.md) | `OPT93-*` | risk-tier CI·candidate reuse·single-owner release evidence |
+| [`active/v0.10.0-native-host-activation-candidate.md`](active/v0.10.0-native-host-activation-candidate.md) | `NHA10-*` | default-off native host activation·actual lifecycle evidence |
 | [`active/v0.9.3-release-loop.graph.md`](active/v0.9.3-release-loop.graph.md) | graph | `0.9.3` release loop checkpoint·recovery 계약 |
 | [`active/prompt-refine-auto-routing.md`](active/prompt-refine-auto-routing.md) | `PRF-*` | Material ambiguity 자동 refine·승인 전 정지 |
 | [`active/v0.9.0-test-finalization.md`](active/v0.9.0-test-finalization.md) | `TST9-*` | Markdown Wiki, Discord outbound, 문제 보고와 시험판 기능 마감 |
@@ -137,7 +143,7 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
 ## Current execution order
 
 완료 증거: [`CURRENT.md`](../state/CURRENT.md)와 owning active fragment.
-현재: 유지보수자 승인에 따른 `0.9.3` native iterative·custom subagent, 소비자 하네스 세션 조정,
-projection purge·directive 우선 갱신과 공개 HTML·logo 중심 정렬 완료. `NAT-001–024`·`MRA-001–032`·`CHS93-001–005`·`PUG93-001–004`는 current-tree evidence
-재조정 뒤 구현·검증. `REL93-001–014`의 numbered public test
-수용 전 stable publication 금지. `N10-002–011`: `0.10.0-test` 유지·`0.9.3` 범위 제외.
+현재: `NAT-001–024`·`MRA-001–032`의 구현 정본과 local evidence 완료. default-off native
+host activation의 fresh child lifecycle·attestation은 `NHA10-001–012`로 이관, `0.9.3` 범위 제외.
+`VAL93-001–004`와 `OPT93-001–005` 완료 뒤 `REL93-011–015` numbered public test 수용과
+stable publication 진행. `N10-002–011`·`NHA10-001–012`: `0.10.0-test` 후보 유지.

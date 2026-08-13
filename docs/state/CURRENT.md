@@ -3,10 +3,10 @@
 - 기준 branch: `codex/0.9.3-native-agents` (`develop` 통합 기준)
 - product version: `0.9.2`
 - 다음 release target: `0.9.3`
-- plan revision: `189`
-- 현재 milestone: `0.9.3` native iterative·custom subagent 구현·numbered public test 수용·정식 출시
+- plan revision: `192`
+- 현재 milestone: `0.9.3` validation 계약·출시 운영 최적화·numbered public test 수용·정식 출시
 - 기능 기준: `2cec0377748874748d126b6b55e59975a3f20a02`; release discipline base `c777da1`
-- 제외: `NAT-002–024`·`MRA-001–032`의 `0.9.3`, `N10-002–011`의 `0.10.0-test`
+- 제외: `NHA10-001–012`·`N10-002–011`의 `0.10.0-test`
 - 문서 gate: root·번역 README, 설치 안내, 공개 HTML, npm README, plugin metadata,
   문서 색인·명령·version 예시 전수 최신화와 공개 artifact 재검증
 - `0.9.2` 안정판 완료: PR #25 전체 CI PASS·merge exact `a502867e6b20e8f22bc014af05ca678f211f40ed`.
@@ -24,6 +24,16 @@
 - `0.9.3` 재개: 유지보수자 명시 승인 뒤 `codex/0.9.3-native-agents`에서 `develop` 기준 통합.
   Native orchestration event·authority·CLI·feasibility baseline 복원, custom profile의 preview·exact
   digest consent·owned projection·foreign-byte 거부 구현. Ralph loop initialize·validate·recover PASS.
+- `0.9.3` 범위 최적화: actual native host child lifecycle·attestation은 default-off `NHA10-001–012`의
+  `0.10.0-test` 후보로 이관. `VAL93-*`가 `local-preserved`·formatter validation 계약을, `OPT93-*`가
+  risk-tier CI·candidate economy를 단독 소유. release fragment는 public transition만 소유하며 선행
+  evidence checklist 재열거 금지.
+- `0.9.3` validation·출시 운영 최적화 완료: authenticated `local-preserved` Skill ledger는
+  `project upgrade --validate`와 `setup --validate`에서 같은 valid 상태로 수용. stale·forged ledger와
+  malformed role JSON은 remediation과 함께 fail-closed. marker-owned `.prettierignore`는 foreign bytes를
+  보존하고 CRLF/LF formatter 변환만 정규화. CI는 Markdown-only 단일 lane·product Linux full와
+  macOS/Windows smoke로 분리, 최신 branch CI만 취소, release runtime은 weekly/manual로 한정.
+  renderer 61·update 54·project lifecycle 9·release contract 26 focused PASS, projection parity·문서 style PASS.
 
 - `0.9.3` projection purge·directive 우선 갱신 완료: historical digest 또는 authenticated ownership으로
   증명되는 retired Hive Skill만 전역·project `.agents/skills`에서 제거. 새 Hive safety·ownership rule과

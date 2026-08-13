@@ -40,5 +40,5 @@
 
 ## 출시 연결
 
-- `REL93-001`과 `REL93-005–010`의 current-tree·설치·세 host·문서 qualification에 포함
+- current-tree·설치·세 host·문서 evidence는 release fragment의 고유 public qualification으로 참조
 - `CHS93-001–005` 완료 전 `0.9.3-test.N` 및 stable publication 금지

@@ -1,20 +1,8 @@
 name: Native release runtime qualification
 
 on:
-  push:
-    branches:
-      - develop
-      - main
-    paths:
-      - Cargo.lock
-      - Cargo.toml
-      - crates/**
-      - harness/**
-      - schemas/**
-      - scripts/check-release-version.sh
-      - tests/fixtures/agy-stub.py
-      - LICENSE
-      - .github/workflows/release-runtime.yml
+  schedule:
+    - cron: "23 2 * * 1"
   workflow_dispatch:
 
 permissions:
