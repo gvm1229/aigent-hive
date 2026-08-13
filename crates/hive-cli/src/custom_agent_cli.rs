@@ -928,7 +928,10 @@ mod tests {
             request: "format only complex implementation".to_owned(),
         })
         .expect("negative route");
-        assert_eq!(excluded.data.expect("negative data")["role_id"], serde_json::Value::Null);
+        assert_eq!(
+            excluded.data.expect("negative data")["role_id"],
+            serde_json::Value::Null
+        );
         fs::remove_dir_all(user_root).expect("user cleanup");
         fs::remove_dir_all(project_root).expect("project cleanup");
     }
