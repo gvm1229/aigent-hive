@@ -19,6 +19,26 @@ host's own model runtime.
 
 Stable `0.9.2` is the current release for this source.
 
+## Load-tested for large knowledge bases
+
+A chunk is a retrieval-sized piece of a Wiki page, not one complete document. To make
+the scale concrete, the qualification fixture splits 25 deliberately long Wiki pages
+into 2,000 chunks each: 50,000 search-ready pieces in total. Its portable-bundle
+scenario also carries a registry of 100 portable collections. This is a deliberately
+large test fixture, rather than a claim that an ordinary user has 50,000 documents.
+
+| Qualification | Scenario | Latest p95 | Acceptance limit |
+| --- | --- | ---: | ---: |
+| Fresh local retrieval | 50,000 chunks | 170 ms | 500 ms |
+| Warm repeat retrieval | 50,000 chunks | 0.14 ms | 100 ms |
+| Portable bundle export | 100 collections, 50,000 chunks | 1.04 s | 5 s |
+| Bundle import and index rebuild | 100 collections, 50,000 chunks | 3.27 s | 15 s |
+
+These release-build, local-SSD measurements are qualification evidence; real timing
+varies with hardware and the shape of the knowledge. See the
+[qualification record](docs/facts/en/knowledge-portability-scan.md) for the method and
+limits.
+
 ## Install the current stable release
 
 `0.9.2` is published on npm as `latest`, with a normal GitHub Release and annotated Git tag.

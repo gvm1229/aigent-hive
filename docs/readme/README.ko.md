@@ -18,6 +18,23 @@ Model-provider API key 요청·provider API 호출·host model runtime 대체 �
 
 현재 stable `0.9.2`: npm `latest`, normal GitHub Release, annotated Git tag 배포.
 
+## 대규모 지식 기반 부하 검증
+
+`chunk`: 전체 문서가 아닌 검색에 알맞은 크기로 나눈 지식 조각. 규모 예시: 의도적으로 길게
+만든 Wiki page 25개를 각 2,000 chunk로 분할한 검색 대상 50,000개. Portable bundle 시험에는
+portable collection registry 100개도 함께 포함. 50,000개 문서 수와의 동일시 금지; 일반 사용자
+지식량 산정이 아닌 대규모 조건 안정성 확인용 fixture.
+
+| 검증 항목 | 가정한 규모 | 이번 p95 | 통과 기준 |
+| --- | --- | ---: | ---: |
+| 처음 local 검색 | 50,000 chunk | 170 ms | 500 ms 이하 |
+| 같은 내용 재검색 | 50,000 chunk | 0.14 ms | 100 ms 이하 |
+| portable bundle export | collection 100개, chunk 50,000개 | 1.04 s | 5 s 이하 |
+| bundle import·index rebuild | collection 100개, chunk 50,000개 | 3.27 s | 15 s 이하 |
+
+배포용 build·local SSD 기준 시험. 실제 시간: hardware·지식 구성에 따른 차이 가능. 방법과
+기준: [부하 검증 기록](../facts/ko/knowledge-portability-scan.md).
+
 ## 현재 stable 설치
 
 npm `0.9.2|latest`, GitHub normal Release, annotated Git tag 배포.
