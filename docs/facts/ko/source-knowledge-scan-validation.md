@@ -1,0 +1,25 @@
+---
+schema_version: 1
+pair_id: source-knowledge-scan-validation
+topic_slug: source-knowledge-scan-validation
+language: ko
+counterpart: ../en/source-knowledge-scan-validation.md
+title: "검토 지식 스캔 검증 정합성"
+summary: "candidate·apply 공통 credential 검증과 사람용 review ID 오인 방지"
+tags: [knowledge, scan, source, v0-9-4, validation]
+aliases: ["검토 source 가져오기", "스캔 검증 정합성"]
+sources:
+  - "repo:crates/hive-cli/src/knowledge.rs#sha256:32986c94309e87a9d4f78c6398c601426490b9172da9e344955a205eafab38d5"
+  - "repo:crates/hive-wiki/src/store.rs#sha256:39f62b339764e470446c61bfb392b2f8637908738261c8fe5bc9b711da0bb40d"
+links: [knowledge-cross-project-access, knowledge-portability-scan, source-development]
+reviewed_revision: "git:bd525f15a1cb2e96eef3e90d7bec1441c52a136c"
+status: active
+---
+
+# 검토 지식 스캔 검증 정합성
+
+`hive knowledge scan --candidates`와 `--apply`의 검토 claim credential 검증 공통화. registry·index
+mutation 전 거부, 오류에는 raw source 대신 reviewed claim ID와 statement field 표시.
+
+canonical scan provenance의 사람용 요약에서 review ID 제거, typed metadata 유지. 일반 설명형 ID의
+opaque credential 오인 방지. source claim: project-private 유지, explicit collection 조회 필요.

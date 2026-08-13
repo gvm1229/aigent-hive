@@ -9,9 +9,9 @@ summary: "자동 조회 격리, 명시 collection 직접 조회, 검토된 일�
 tags: [collection, knowledge, promotion, retrieval, v0-9-3]
 aliases: ["자동 지식 승격", "프로젝트 간 지식"]
 sources:
-  - "repo:crates/hive-cli/src/knowledge.rs#sha256:c61df64b6ae0367c4e146346472a108d22576e6f8eee07e8581b29d7ffe25784"
+  - "repo:crates/hive-cli/src/knowledge.rs#sha256:32986c94309e87a9d4f78c6398c601426490b9172da9e344955a205eafab38d5"
   - "repo:crates/hive-wiki/src/rag.rs#sha256:15a09e0b770055a0cdab1191048d53c0323a892e2ba8eb374d4bf30cb5491c13"
-  - "repo:crates/hive-wiki/src/store.rs#sha256:d2933a18fede81c05988727a07f5b9de019d4f488cce4d0d8876113d2be1d4b2"
+  - "repo:crates/hive-wiki/src/store.rs#sha256:39f62b339764e470446c61bfb392b2f8637908738261c8fe5bc9b711da0bb40d"
   - "repo:harness/skills/knowledge-import/SKILL.md#sha256:c20be7748412c966c9fe87d6a97281ac7eb00381607b4443d2cfe555c07e01f3"
   - "repo:harness/skills/knowledge-recall/SKILL.md#sha256:7b5d334b67e9db1b981273f9fb134adca8129250f241d7359f6f1bc5bda88c1e"
 links: [global-knowledge-rag, knowledge-portability-scan, shared-index]

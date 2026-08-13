@@ -9,7 +9,7 @@ summary: "Hive user-level capture and recall apply in every selected-host projec
 tags: [capture, knowledge, retrieval, user-root]
 aliases: ["Setup-independent knowledge", "Unregistered project recall"]
 sources:
-  - "repo:crates/hive-cli/src/knowledge.rs#sha256:c61df64b6ae0367c4e146346472a108d22576e6f8eee07e8581b29d7ffe25784"
+  - "repo:crates/hive-cli/src/knowledge.rs#sha256:32986c94309e87a9d4f78c6398c601426490b9172da9e344955a205eafab38d5"
   - "repo:crates/hive-cli/src/user_install.rs#sha256:db91b9841c057a3f9b964185fb2a2f3c2f8701908cf6439e26bf05d389a7243d"
   - "repo:docs/plans/active/v0.9.0-knowledge-autocapture-regression.md#sha256:44fcfa9e2c19c626eb8a7885afcaeb6405b454748e62349c1459958d4180236c"
   - "repo:harness/skills/knowledge-capture/SKILL.md#sha256:3566b5cff1f866a11f2d3ce216759dd7d69cd268b61dc5e428e17703146b836c"
