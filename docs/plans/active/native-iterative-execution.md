@@ -31,26 +31,34 @@
 ### A. 정본·feasibility
 
 - [x] [NAT-001] 사용자 결정, RALPLAN-DR, Architect·Critic 승인 결과의 정본 plan·proposed ADR·source directive 반영
-- [ ] [NAT-002] OMX·OMC 전체 기능 inventory 재개방과 clean-room `adopt|merge|exclude` 재분류
-- [ ] [NAT-003] Codex·Claude Code·Antigravity의 envelope consume·claim·launch ack·result·cancel·lookup·idempotency capability matrix
+- [x] [NAT-002] OMX·OMC 전체 기능 inventory 재개방과 clean-room `adopt|merge|exclude` 재분류
+  - Evidence: `docs/research/v0.9-omx-omc-capability-inventory.md`, reapply commit `1f8c1b3`,
+    external runtime·provider credential·copied byte exclusion contract
+- [x] [NAT-003] Codex·Claude Code·Antigravity의 envelope consume·claim·launch ack·result·cancel·lookup·idempotency capability matrix
+  - Evidence: `schemas/host-orchestration-capability.schema.json`, 세 host fixture와
+    `python tests/conformance/test_native_orchestration_feasibility.py -v` 4 PASS
 - [ ] [NAT-004] 세 host fixture와 최소 한 host 실제 lifecycle spike, unsupported capability의 정직한 판정
 - [ ] [NAT-005] Feasibility 결과 기반 ADR-0019 acceptance·default-off 유지·중단 조건 확정
 
 ### B. Canonical protocol
 
-- [ ] [NAT-006] Immutable event revision과 `EVENT-CURRENT.toml` 단일 linearization point
-- [ ] [NAT-007] Run ACL·role assignment·single-action authority의 external trust root·Ed25519 발급·회수·one-time consume
-- [ ] [NAT-008] `claim|launch-ack|heartbeat|lookup|non-launch-proof|cancel-ack|final-result` typed receipt schema
-- [ ] [NAT-009] `reserved|prepared|claimed|dispatch-uncertain|acknowledged|running|cancel-requested|result-received|expired|quarantined` 전이 reducer
-- [ ] [NAT-010] Normal cancel event commit과 corrupt-head `EMERGENCY-CANCEL.toml` 승격·복구
+- [x] [NAT-006] Immutable event revision과 `EVENT-CURRENT.toml` 단일 linearization point
+- [x] [NAT-007] Run ACL·role assignment·single-action authority의 external trust root·Ed25519 발급·회수·one-time consume
+- [x] [NAT-008] `claim|launch-ack|heartbeat|lookup|non-launch-proof|cancel-ack|final-result` typed receipt schema
+- [x] [NAT-009] `reserved|prepared|claimed|dispatch-uncertain|acknowledged|running|cancel-requested|result-received|expired|quarantined` 전이 reducer
+- [x] [NAT-010] Normal cancel event commit과 corrupt-head `EMERGENCY-CANCEL.toml` 승격·복구
+  - Evidence: reapply commits `a0d86aa`·`22d88bc`·`c11ea2a`; core reducer·authority 8 PASS,
+    CLI authority·head·emergency·migration 5 PASS
 
 ### C. Core·CLI
 
-- [ ] [NAT-011] Deterministic priority·tie-break·aging·starvation bound·quota·backpressure scheduler core
-- [ ] [NAT-012] Lease fencing epoch·clock skew·not-before·budget reservation/refund·safe reclaim
-- [ ] [NAT-013] Event replay·snapshot·bounded segment·crash recovery와 derived projection rebuild
-- [ ] [NAT-014] `hive orchestration` status·plan·dispatch·receipt·cancel·recover·authority CLI
-- [ ] [NAT-015] Legacy `hive orchestration migrate --from-run ... --dry-run|--apply|--recover`와 원본 byte 불변
+- [x] [NAT-011] Deterministic priority·tie-break·aging·starvation bound·quota·backpressure scheduler core
+- [x] [NAT-012] Lease fencing epoch·clock skew·not-before·budget reservation/refund·safe reclaim
+- [x] [NAT-013] Event replay·snapshot·bounded segment·crash recovery와 derived projection rebuild
+- [x] [NAT-014] `hive orchestration` status·plan·dispatch·receipt·cancel·recover·authority CLI
+- [x] [NAT-015] Legacy `hive orchestration migrate --from-run ... --dry-run|--apply|--recover`와 원본 byte 불변
+  - Evidence: reapply commits `a0d86aa`·`22d88bc`·`c11ea2a`; `cargo check -p hive-cli` PASS,
+    core scheduler·lease·migration·receipt tests 8 PASS, CLI mutation tests 5 PASS
 
 ### D. Host·Skill
 

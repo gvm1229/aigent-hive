@@ -1,8 +1,8 @@
 # ADR-0019: Hive-native 반복 실행 소유권
 
-- 상태: proposed
-- 날짜: 2026-08-03
-- 대상: `0.9.0`
+- 상태: 구현 진행·activation default-off
+- 날짜: 2026-08-13
+- 대상: `0.9.3`
 - 정책 전환: ADR-0015의 scheduler·Ralph·team 재구현 금지
 - Historical provenance: [`ADR-0004`](ADR-0004-orchestration-ownership.md), [`ADR-0015`](ADR-0015-host-native-skill-composition.md)
 
@@ -11,7 +11,7 @@
 - 기존 비구현 이유: 핵심 기술 불가능보다 외부 orchestration owner와의 의도 충돌
 - 새 사용자 결정: OMX·OMC 의존성 완전 제거와 유용 기능의 Hive clean-room 구현
 - 추가 사용자 결정: Sol Advisor 기능 동등성, Codex·Claude task별 custom subagent와
-  exact model·thinking level 사전 고정, 목적 기반 custom-agent 생성·자동 route를 `0.9.0`에 포함
+  exact model·thinking level 사전 고정, 목적 기반 custom-agent 생성·자동 route를 `0.9.3`에 포함
 - 추가 사용자 결정: Ed25519 Judge를 Sol/Claude exact-model reserved custom agent로 전환하고,
   setup에서 `explicit|implicit` 호출 정책 선택. Strict workflow는 선택값과 무관하게 Judge 강제
 - 직접 계기: selected session pointer와 실제 session ID 불일치로 Stop 권한 실패,

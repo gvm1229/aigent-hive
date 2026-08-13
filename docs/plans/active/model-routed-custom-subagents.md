@@ -77,6 +77,8 @@
 - [x] [MRA-008] User/project layered scope·project precedence·collision·role/name normalization
   - Evidence: commit `ed21b87`, project precedence·same-scope collision·reserved user Judge shadow 거부
 - [ ] [MRA-009] Projection preview·명시적 동의·ownership ledger·non-clobber·recover 계약
+  - Current evidence: commit `47dd972`, `hive agent preview|apply|validate|remove`의 exact digest
+    동의·Hive ledger·foreign-byte 거부·symlink 차단과 Rust 2 PASS. Crash rollback·recovery 수용 대기
 - [ ] [MRA-010] Codex TOML projection·installed-version validation·fresh-session discovery
 - [ ] [MRA-011] Claude Markdown projection·installed-version validation·environment/allowlist conflict detection
 - [ ] [MRA-012] Capability preflight와 unsupported·silent fallback·unverified alias fail-closed
@@ -103,6 +105,8 @@
 ### D. On-demand 생성 Skill
 
 - [ ] [MRA-023] `hive-custom-subagent-create` typed CLI·양쪽 projection·reserved Judge override 금지
+  - Current evidence: commit `47dd972`의 typed `hive agent` projection lifecycle. Purpose-first
+    생성 대화·reserved override hostile coverage 대기
 - [ ] [MRA-024] Purpose-first recommendation과 signed host model catalog·capability 근거
 - [ ] [MRA-025] `1 수락 | 2 수동 | 3 수정` decision state·재추천·digest lifecycle
 - [ ] [MRA-026] 수동 설정의 이름·양쪽 exact model/effort·scope·permission·trigger field 검증

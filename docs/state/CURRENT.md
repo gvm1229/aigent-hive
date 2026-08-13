@@ -20,6 +20,11 @@
   안정판 후보·tag·package publication 생성 없음
 - QA contributor 등록: 안희준([No-Jyun](https://github.com/No-Jyun)), Windows x64 설치·설정 검증
 - `0.9.3` 동결: QA contributor 등록 완료. 유지보수자의 후속 명시적 승인 전 구현·검증·출시 mutation `0건`
+- `0.9.3` 재개: 유지보수자 명시 승인 뒤 `codex/0.9.3-native-agents`에서 `develop` 기준 통합.
+  Native orchestration event·authority·CLI·feasibility baseline 복원, custom profile의 preview·exact
+  digest consent·owned projection·foreign-byte 거부 구현. Ralph loop initialize·validate·recover PASS.
+  Codex CLI `0.147.0`·Claude Code `2.1.163` 확인. Claude fresh-session probe: CLI 미로그인으로
+  model 실행 `0회`, auth 전 MRA actual lifecycle 수용 보류
 - `0.9.2-test.1` 수용 거부: candidate run `31596919466`·publication run `31597939956`는
   통과했으나 GitHub prerelease에 direct installer 자산 3개가 누락되어 공개 설치 URL이 `404`를
   반환. 게시 workflow·회귀 보정 뒤 `0.9.2-test.2`부터 전체 공개 설치 수용 재수행
