@@ -43,7 +43,7 @@
 | v0.9 knowledge autocapture 회귀 | 12 | 0 | 100% |
 | v0.9 knowledge portability·scan | 18 | 0 | 100% |
 | Hive-native 반복 실행 | 16 | 8 | 66.7% |
-| Model-routed custom subagent | 17 | 15 | 53.1% |
+| Model-routed custom subagent | 18 | 14 | 56.2% |
 | `0.9.3` 시험·정식 출시 | 0 | 14 | 0% |
 | Prompt refine 자동 routing | 12 | 0 | 100% |
 | v0.9 test 기능 마감 | 18 | 0 | 100% |
@@ -59,7 +59,7 @@
 | Agent 자율 실행 지속 | 8 | 0 | 100% |
 | `0.9.2` 완료 기능·공개 문서 출시 | 12 | 0 | 100% |
 | Notion `v0.10` 후보 | 1 | 10 | 9.1% |
-| **Canonical total** | **516** | **47** | **91.7%** |
+| **Canonical total** | **517** | **46** | **91.8%** |
 
 External production boundary 항목도 미완료 합계에 포함. Protected authority 없이 완료 처리 금지.
 

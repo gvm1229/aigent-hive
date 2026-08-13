@@ -134,7 +134,10 @@
     creation decision lineage·scope·digest tests, Judge `explicit|implicit` schema·default·persisted
     round-trip·describe contract tests, focused user-setup 41 PASS·custom-agent core 6 PASS·strict
     Clippy PASS
-- [ ] [MRA-030] Collision·Judge shadow/downgrade·signer/model mismatch·symlink·stale host·fallback·missing receipt hostile test
+- [x] [MRA-030] Collision·Judge shadow/downgrade·signer/model mismatch·symlink·stale host·fallback·missing receipt hostile test
+  - Evidence: commit `271ad81`, duplicate role·trigger collision, missing receipt no-mutation,
+    reserved Judge shadow/downgrade·forged signer·model fallback·unsupported capability·foreign
+    symlink hostile regression. custom-agent core 7 PASS·CLI 15 PASS·strict Clippy PASS
 - [ ] [MRA-031] 두 host·두 scope fresh-session E2E와 두 Judge mode·strict workflow 강제 gate·model mismatch fail-closed
 - [ ] [MRA-032] 사용자 guide·release note·bilingual fact·full Rust/Python/security/static gate와 `REL9-*` handoff
 

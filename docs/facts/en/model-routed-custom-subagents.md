@@ -10,9 +10,9 @@ tags: [claude, codex, model-routing, subagent, v0-9]
 aliases: ["Sol Advisor parity", "Task-appropriate model routing"]
 sources:
   - "repo:docs/decisions/ADR-0019-hive-native-iterative-execution.md#sha256:42506fc775e4a456f724c73fc71a2fb1fc80c12967606accb909de3ef323c888"
-  - "repo:docs/plans/active/model-routed-custom-subagents.md#sha256:63c4f696ebbf85aa2e2bf7ecf28529f37651a095f3c1f55cb9cac7d71107cb24"
+  - "repo:docs/plans/active/model-routed-custom-subagents.md#sha256:c713d13630d17bb216771b6e18b9efb0f4fb38bb0f9de312b3220e5b48ae1282"
 links: [judge-verification, orchestration-ownership, role-state, skill-routing]
-reviewed_revision: "git:a86e9e42121f357973ced2c02c1049663a4429b1"
+reviewed_revision: "git:271ad81dbf3389ba8932c5617738cf5f9022c5c9"
 status: active
 ---
 
@@ -23,3 +23,5 @@ detached attestation, and trust root. Incomplete mappings and forged signatures 
 Activation requires every supported host lifecycle capability. Manual and revised requests bind
 the exact prior decision digest, request, and scope. User setup persists only `explicit` or
 `implicit` Judge invocation, with the same public default and enum.
+Hostile regressions preserve foreign bytes when a receipt is absent, a role collides, or a
+projection path crosses a symlink.

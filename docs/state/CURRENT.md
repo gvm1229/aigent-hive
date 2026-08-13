@@ -39,6 +39,9 @@
 - Custom profile qualification 보강: `3344b5d`·`a86e9e4`, 13개 host lifecycle capability 각각의
   fail-closed activation, Judge `explicit|implicit` schema·default·persisted round-trip·describe
   contract 검증. custom-agent core 6·user-setup 41·strict Clippy PASS, `MRA-029` 완료
+- Custom profile hostile matrix: `271ad81`, duplicate role·trigger collision과 missing receipt의
+  no-mutation, Judge shadow/downgrade·forged signer·model fallback·stale capability·symlink 거부.
+  custom-agent core 7·CLI 15·strict Clippy PASS, `MRA-030` 완료
 - `0.9.2-test.1` 수용 거부: candidate run `31596919466`·publication run `31597939956`는
   통과했으나 GitHub prerelease에 direct installer 자산 3개가 누락되어 공개 설치 URL이 `404`를
   반환. 게시 workflow·회귀 보정 뒤 `0.9.2-test.2`부터 전체 공개 설치 수용 재수행
