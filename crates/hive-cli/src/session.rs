@@ -342,7 +342,10 @@ fn close(sessions: &Dir, arguments: &Arguments) -> Result<SessionResult, String>
 fn recover(sessions: &Dir) -> Result<SessionResult, String> {
     let manifests = read_manifests(sessions)?;
     let mut removed = Vec::new();
-    let mut unknown = Vec::new();
+    #[cfg(target_os = "linux")]
+    let unknown: Vec<String> = Vec::new();
+    #[cfg(not(target_os = "linux"))]
+    let mut unknown: Vec<String> = Vec::new();
     for (name, manifest) in manifests {
         match process_liveness(manifest.process_id) {
             Liveness::Dead => {
