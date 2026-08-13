@@ -748,7 +748,30 @@ fn process_liveness_platform(process_id: u32) -> Liveness {
     }
 }
 
-#[cfg(all(not(windows), not(target_os = "linux")))]
+#[cfg(target_os = "macos")]
+fn process_liveness_platform(process_id: u32) -> Liveness {
+    use std::process::Command;
+
+    // macOS has no Linux-style `/proc` tree. Its system `ps` utility can make a
+    // bounded, read-only liveness check; an unavailable or unparseable result
+    // remains unknown so Hive never removes a possibly live reservation.
+    let expected = process_id.to_string();
+    let output = match Command::new("/bin/ps")
+        .args(["-p", &expected, "-o", "pid="])
+        .output()
+    {
+        Ok(output) if output.status.success() => output,
+        _ => return Liveness::Unknown,
+    };
+    let stdout = String::from_utf8(output.stdout).ok();
+    match stdout {
+        Some(stdout) if stdout.split_whitespace().any(|value| value == expected) => Liveness::Live,
+        Some(_) => Liveness::Dead,
+        None => Liveness::Unknown,
+    }
+}
+
+#[cfg(all(not(windows), not(target_os = "linux"), not(target_os = "macos")))]
 fn process_liveness_platform(_process_id: u32) -> Liveness {
     Liveness::Unknown
 }

@@ -1608,7 +1608,7 @@ mod tests {
             TEMPORARY_ROOT_SEQUENCE.fetch_add(1, Ordering::Relaxed),
         ));
         fs::create_dir_all(&path).expect("root");
-        path
+        fs::canonicalize(path).expect("canonical root")
     }
 
     fn profile() -> CustomAgentProfile {
