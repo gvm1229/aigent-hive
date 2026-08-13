@@ -137,6 +137,7 @@ pub enum ArtifactKind {
     Verdict,
     Approval,
     /// Signed host-model catalog used for custom-agent recommendations.
+    #[serde(rename = "host-model-catalog")]
     HostModelCatalog,
 }
 

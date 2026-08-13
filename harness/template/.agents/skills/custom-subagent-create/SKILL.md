@@ -13,7 +13,7 @@ description: 목적부터 확인해 Codex와 Claude 양쪽에서 같은 정의�
 2. 추천 준비
 
    ```text
-   hive agent recommend --purpose <목적> --scope <user|project> --output json
+   hive agent recommend --purpose <목적> --scope <user|project> --catalog <외부-서명-카탈로그.json> --catalog-attestation <분리-서명.json> --trust-root <보호된-신뢰-루트.toml> --output json
    ```
 
 3. 표시된 선택지 중 하나 수용
@@ -33,6 +33,8 @@ description: 목적부터 확인해 Codex와 Claude 양쪽에서 같은 정의�
 ## 경계
 
 - Codex·Claude mapping 모두 없는 request 거부
+- 외부 보호 경로의 서명된 호스트 모델 카탈로그·분리 attestation·trust root 없이는 추천 없음
+- 카탈로그 서명 또는 exact model/effort/minimum version mapping 불일치 시 실패 폐쇄
 - `hive-independent-judge` 생성·변경·project shadow 금지
 - Hive는 recommendation·정본 저장·projection·검증만 수행. provider API·credential·model 또는 subagent process 실행 없음
 - preview·digest 동의·Hive ownership ledger 없는 host 파일 변경 없음

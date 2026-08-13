@@ -3,6 +3,7 @@
 //! This adapter persists only Hive-owned profile and ledger files plus the two
 //! exact host-native agent definition paths. It never launches either host.
 
+use crate::judge::read_protected_file;
 use crate::run::{
     open_directory_nofollow_path, publish_parent_file, read_parent_file, remove_parent_file,
     AdapterError, FileSnapshot,
@@ -12,8 +13,9 @@ use cap_fs_ext::DirExt;
 use cap_std::fs::Dir;
 use hive_core::custom_agent::{
     resolve_profiles, route_profile, AgentPermission, AgentScope, CustomAgentProfile,
-    HostAgentMapping, HostOrchestrationCapability, RuntimeAttestation,
+    HostAgentMapping, HostModelCatalog, HostOrchestrationCapability, RuntimeAttestation,
 };
+use hive_core::judge_auth::{JudgeAttestation, JudgeTrustRoot};
 use hive_core::validate_json_schema;
 use hive_core::{ensure_consumer_target, sha256_digest};
 use serde::{Deserialize, Serialize};
@@ -30,7 +32,7 @@ Preview, recommend, create, apply, validate, attest, route, or remove one consen
 \n\
 USAGE:\n\
     hive agent preview --profile <profile.json> --root <dir> --output json\n\
-    hive agent recommend --purpose <text> --scope <user|project> --output json\n\
+    hive agent recommend --purpose <text> --scope <user|project> --catalog <catalog.json> --catalog-attestation <attestation.json> --trust-root <trust-root.toml> --output json\n\
     hive agent create --request <creation.json> --root <dir> --accept-decision-digest <sha256> --output json\n\
     hive agent apply --profile <profile.json> --root <dir> --accept-definition-digest <sha256> --output json\n\
     hive agent validate --profile <profile.json> --root <dir> --output json\n\
@@ -44,6 +46,9 @@ const PROFILE_DIRECTORY: &str = ".hive/config/custom-subagents";
 const LEDGER_PATH: &str = ".hive/config/custom-subagents/OWNERSHIP.json";
 const CREATION_REQUEST_SCHEMA: &str =
     include_str!("../../../schemas/custom-subagent-creation-request.schema.json");
+const MAXIMUM_HOST_MODEL_CATALOG_BYTES: usize = 256 * 1024;
+const MAXIMUM_CATALOG_ATTESTATION_BYTES: usize = 32 * 1024;
+const MAXIMUM_CATALOG_TRUST_ROOT_BYTES: usize = 128 * 1024;
 
 #[derive(Debug)]
 enum AgentCliError {
@@ -143,6 +148,15 @@ struct PreflightArguments {
 struct RecommendArguments {
     purpose: String,
     scope: AgentScope,
+    catalog: PathBuf,
+    catalog_attestation: PathBuf,
+    trust_root: PathBuf,
+}
+
+#[derive(Debug)]
+struct VerifiedModelCatalog {
+    catalog_id: String,
+    digest: String,
 }
 
 #[derive(Debug)]
@@ -263,13 +277,26 @@ fn execute(arguments: &[String]) -> Result<ActionResult, AgentCliError> {
 }
 
 fn parse_recommend_arguments(arguments: &[String]) -> Result<RecommendArguments, AgentCliError> {
-    let options = options(arguments, &["--purpose", "--scope", "--output"])?;
+    let options = options(
+        arguments,
+        &[
+            "--purpose",
+            "--scope",
+            "--catalog",
+            "--catalog-attestation",
+            "--trust-root",
+            "--output",
+        ],
+    )?;
     if options.get("--output").is_some_and(|value| value != "json") {
         return Err(AgentCliError::Input("output must be json".to_owned()));
     }
     Ok(RecommendArguments {
         purpose: required(&options, "--purpose")?.to_owned(),
         scope: parse_scope(required(&options, "--scope")?)?,
+        catalog: PathBuf::from(required(&options, "--catalog")?),
+        catalog_attestation: PathBuf::from(required(&options, "--catalog-attestation")?),
+        trust_root: PathBuf::from(required(&options, "--trust-root")?),
     })
 }
 
@@ -627,6 +654,61 @@ fn canonical_profile(profile: &CustomAgentProfile) -> Result<Vec<u8>, AgentCliEr
         .map_err(|error| AgentCliError::Verification(error.to_string()))
 }
 
+fn verify_recommendation_catalog(
+    catalog_bytes: &[u8],
+    attestation_bytes: &[u8],
+    trust_root_bytes: &[u8],
+    profile: &CustomAgentProfile,
+) -> Result<VerifiedModelCatalog, AgentCliError> {
+    let catalog = HostModelCatalog::parse_json(catalog_bytes)
+        .map_err(|_| AgentCliError::Verification("host model catalog is invalid".to_owned()))?;
+    let attestation = JudgeAttestation::parse_json(attestation_bytes).map_err(|_| {
+        AgentCliError::Verification("host model catalog attestation is invalid".to_owned())
+    })?;
+    let trust_root_text = std::str::from_utf8(trust_root_bytes).map_err(|_| {
+        AgentCliError::Verification("host model catalog trust root is not UTF-8 TOML".to_owned())
+    })?;
+    let trust_root: JudgeTrustRoot = toml::from_str(trust_root_text).map_err(|_| {
+        AgentCliError::Verification("host model catalog trust root is invalid".to_owned())
+    })?;
+    catalog
+        .verify_profile(&attestation, &trust_root, profile)
+        .map_err(|_| {
+            AgentCliError::Verification(
+                "host model catalog does not authenticate every recommended mapping".to_owned(),
+            )
+        })?;
+    Ok(VerifiedModelCatalog {
+        catalog_id: catalog.catalog_id,
+        digest: sha256_digest(catalog_bytes),
+    })
+}
+
+fn read_verified_recommendation_catalog(
+    arguments: &RecommendArguments,
+    profile: &CustomAgentProfile,
+) -> Result<VerifiedModelCatalog, AgentCliError> {
+    let catalog = read_protected_file(
+        &arguments.catalog,
+        MAXIMUM_HOST_MODEL_CATALOG_BYTES,
+        None,
+        "host model catalog",
+    )?;
+    let attestation = read_protected_file(
+        &arguments.catalog_attestation,
+        MAXIMUM_CATALOG_ATTESTATION_BYTES,
+        None,
+        "host model catalog attestation",
+    )?;
+    let trust_root = read_protected_file(
+        &arguments.trust_root,
+        MAXIMUM_CATALOG_TRUST_ROOT_BYTES,
+        None,
+        "host model catalog trust root",
+    )?;
+    verify_recommendation_catalog(&catalog, &attestation, &trust_root, profile)
+}
+
 #[allow(clippy::needless_pass_by_value)]
 fn preview(arguments: ProfileArguments) -> Result<ActionResult, AgentCliError> {
     let profile = parse_profile(&arguments.profile)?;
@@ -646,6 +728,8 @@ fn preview(arguments: ProfileArguments) -> Result<ActionResult, AgentCliError> {
 #[allow(clippy::needless_pass_by_value)]
 fn recommend(arguments: RecommendArguments) -> Result<ActionResult, AgentCliError> {
     let request = recommended_request(&arguments.purpose, arguments.scope)?;
+    let profile = creation_profile(request.clone())?;
+    let catalog = read_verified_recommendation_catalog(&arguments, &profile)?;
     let decision_digest = creation_digest(&request)?;
     Ok(ActionResult {
         schema_version: 1,
@@ -655,7 +739,11 @@ fn recommend(arguments: RecommendArguments) -> Result<ActionResult, AgentCliErro
         code: "hive.agent-recommendation",
         message: "purpose-first custom agent recommendation prepared".to_owned(),
         changed_paths: Vec::new(),
-        evidence: Vec::new(),
+        evidence: vec![Evidence {
+            kind: "host-model-catalog",
+            locator: catalog.catalog_id.clone(),
+            digest: catalog.digest.clone(),
+        }],
         next_action: Some(
             "choose accept, manual, or revise and create with the displayed decision digest"
                 .to_owned(),
@@ -664,6 +752,10 @@ fn recommend(arguments: RecommendArguments) -> Result<ActionResult, AgentCliErro
             "purpose": arguments.purpose,
             "choices": ["accept", "manual", "revise"],
             "decision_digest": decision_digest,
+            "host_model_catalog": {
+                "catalog_id": catalog.catalog_id,
+                "digest": catalog.digest,
+            },
             "request": request,
             "spawned": false,
         })),
@@ -1415,6 +1507,8 @@ fn portable(path: &Path) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use ed25519_dalek::{Signer, SigningKey};
+    use std::fmt::Write as _;
     use std::sync::atomic::{AtomicU64, Ordering};
     use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -1440,6 +1534,91 @@ mod tests {
         .expect("profile")
     }
 
+    fn lowercase_hex(bytes: &[u8]) -> String {
+        let mut value = String::with_capacity(bytes.len() * 2);
+        for byte in bytes {
+            write!(&mut value, "{byte:02x}").expect("write to string");
+        }
+        value
+    }
+
+    fn signed_catalog_bytes(
+        profile: &CustomAgentProfile,
+        omit_one_mapping: bool,
+    ) -> (Vec<u8>, Vec<u8>, Vec<u8>) {
+        let mut models = profile
+            .host_mappings
+            .iter()
+            .map(
+                |(host, mapping)| hive_core::custom_agent::HostModelCatalogEntry {
+                    host: host.clone(),
+                    model: mapping.model.clone(),
+                    efforts: vec![mapping.effort],
+                    minimum_version: mapping.minimum_version.clone(),
+                },
+            )
+            .collect::<Vec<_>>();
+        if omit_one_mapping {
+            models.pop();
+        }
+        let catalog = HostModelCatalog {
+            schema_version: 1,
+            catalog_id: "catalog-2026-08-13".to_owned(),
+            principal_id: "host-catalog-authority".to_owned(),
+            issued_at: "2026-08-13T00:00:00Z".to_owned(),
+            models,
+        };
+        let signing_key = SigningKey::from_bytes(&[7_u8; 32]);
+        let mut trust_root = JudgeTrustRoot {
+            schema_version: 1,
+            trust_root_id: "host-catalog-root".to_owned(),
+            revision: 1,
+            issued_at: "2026-08-13T00:00:00Z".to_owned(),
+            keys: vec![hive_core::judge_auth::TrustedJudgeKey {
+                key_id: "catalog-key-1".to_owned(),
+                principal_id: catalog.principal_id.clone(),
+                purpose: hive_core::judge_auth::KeyPurpose::HostModelCatalog,
+                algorithm: "ed25519".to_owned(),
+                public_key: format!(
+                    "ed25519:{}",
+                    lowercase_hex(&signing_key.verifying_key().to_bytes())
+                ),
+                status: hive_core::judge_auth::KeyStatus::Active,
+                valid_from: "2026-08-01T00:00:00Z".to_owned(),
+                valid_until: "2026-09-01T00:00:00Z".to_owned(),
+            }],
+            root_digest: String::new(),
+        };
+        trust_root.root_digest = trust_root.computed_digest().expect("trust root digest");
+        let catalog_digest = sha256_digest(
+            &serde_json_canonicalizer::to_vec(&catalog).expect("catalog canonical bytes"),
+        );
+        let mut attestation = JudgeAttestation {
+            schema_version: 1,
+            trust_root_id: trust_root.trust_root_id.clone(),
+            artifact_kind: hive_core::judge_auth::ArtifactKind::HostModelCatalog,
+            artifact_digest: catalog_digest,
+            principal_id: catalog.principal_id.clone(),
+            key_id: "catalog-key-1".to_owned(),
+            signature: String::new(),
+        };
+        attestation.signature = format!(
+            "ed25519:{}",
+            lowercase_hex(
+                &signing_key
+                    .sign(&attestation.signing_message().expect("signing message"))
+                    .to_bytes(),
+            )
+        );
+        (
+            serde_json::to_vec(&catalog).expect("catalog bytes"),
+            serde_json::to_vec(&attestation).expect("attestation bytes"),
+            toml::to_string(&trust_root)
+                .expect("trust root TOML")
+                .into_bytes(),
+        )
+    }
+
     fn apply_profile(root: &Path, profile: &CustomAgentProfile, name: &str) {
         let input = root.join(name);
         fs::write(&input, canonical_profile(profile).expect("profile bytes")).expect("input");
@@ -1449,6 +1628,39 @@ mod tests {
             accepted_digest: Some(profile.definition_digest.clone()),
         })
         .expect("apply");
+    }
+
+    #[test]
+    fn recommendation_catalog_requires_a_valid_signature_and_exact_mappings() {
+        let request = recommended_request("review accessibility contrast", AgentScope::Project)
+            .expect("recommendation");
+        let profile = creation_profile(request).expect("profile");
+        let (catalog, attestation, trust_root) = signed_catalog_bytes(&profile, false);
+
+        let verified = verify_recommendation_catalog(&catalog, &attestation, &trust_root, &profile)
+            .expect("signed catalog");
+        assert_eq!(verified.catalog_id, "catalog-2026-08-13");
+
+        let mut unsigned =
+            serde_json::from_slice::<serde_json::Value>(&attestation).expect("attestation value");
+        unsigned["signature"] = json!(format!("ed25519:{}", "0".repeat(128)));
+        assert!(verify_recommendation_catalog(
+            &catalog,
+            &serde_json::to_vec(&unsigned).expect("unsigned bytes"),
+            &trust_root,
+            &profile,
+        )
+        .is_err());
+
+        let (incomplete, incomplete_attestation, incomplete_trust_root) =
+            signed_catalog_bytes(&profile, true);
+        assert!(verify_recommendation_catalog(
+            &incomplete,
+            &incomplete_attestation,
+            &incomplete_trust_root,
+            &profile,
+        )
+        .is_err());
     }
 
     #[test]
