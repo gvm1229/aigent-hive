@@ -10,12 +10,12 @@ tags: [consumer-harness, preservation, session, upgrade]
 aliases: ["CHS93"]
 sources:
   - "repo:crates/hive-cli/src/project_upgrade.rs#sha256:4213e512a4d14323b92f0fef7f4ae77055c441c064b84da17f9b883dbb38ff3c"
-  - "repo:crates/hive-cli/src/session.rs#sha256:520866cc8d2d40a41e14a5b4b7fa8c63e354601001f81a6526d4fb7954234c8a"
+  - "repo:crates/hive-cli/src/session.rs#sha256:1a6fd68e66a00f5f3343b801479f564f4667a7123793b43f9d2d2c94648f0b9d"
   - "repo:harness/directives/03-session-coordination.md#sha256:06736ffa5a1619bc238a39ecad068ae85b2136a8e33ccb0829badf932d8c19f3"
   - "repo:harness/skills/project-setup/SKILL.md#sha256:376242cfffb02880c994804d608a176bfbdef3e57d2f40493a86cdf5405f798e"
   - "repo:tests/conformance/test_project_lifecycle.py#sha256:7862526b5478758639c55e6ac966e0e24e1f7d9b6d5ef26e99109a33c7abca49"
 links: [knowledge-preservation, project-onboarding]
-reviewed_revision: "git:9c9bdb1bfc49e06110fe3e1d0f931b03ab2c3b57"
+reviewed_revision: "git:a52362971c8fa646b428449dd85681491eaeb184"
 status: active
 ---
 
