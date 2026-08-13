@@ -2587,6 +2587,54 @@ usage_guard:
     }
 
     #[test]
+    fn session_control_uses_the_exact_target_despite_an_unrelated_graph_pointer() {
+        let project = temporary_target();
+        let config_dir = project.path().join(".hive/config");
+        fs::create_dir_all(&config_dir).expect("project config directory");
+        fs::write(
+            config_dir.join("harness.toml"),
+            installed_config("codex", true, false),
+        )
+        .expect("project config");
+        let stale_pointer = project.path().join(".hive/runs/other-run/graph/CURRENT.md");
+        fs::create_dir_all(stale_pointer.parent().expect("graph parent"))
+            .expect("graph parent directory");
+        fs::write(&stale_pointer, b"foreign stale graph pointer\n").expect("stale pointer");
+
+        let binding = ParsedBinding {
+            session_id: "current-session".to_owned(),
+            process_id: 7,
+        };
+        let result = control_session(&SessionArguments {
+            target: project.path().to_owned(),
+            binding: binding.clone(),
+            user_root: None,
+            host: Some("codex".to_owned()),
+            action: SessionAction::Disable,
+            confirm_disable: true,
+        })
+        .expect("exact target session control");
+        assert_eq!(result.code, "hive.usage-session-disabled");
+        assert_eq!(
+            status(&StatusArguments {
+                target: project.path().to_owned(),
+                binding,
+                user_root: None,
+                host: Some("codex".to_owned()),
+            })
+            .expect("exact target status")
+            .data
+            .as_ref()
+            .map(|data| &data["guard_enabled"]),
+            Some(&json!(false))
+        );
+        assert_eq!(
+            fs::read(&stale_pointer).expect("stale pointer after control"),
+            b"foreign stale graph pointer\n"
+        );
+    }
+
+    #[test]
     fn source_workspace_uses_the_global_policy_without_source_runtime_files() {
         let user = temporary_target();
         write_global_config(user.path(), 5);
