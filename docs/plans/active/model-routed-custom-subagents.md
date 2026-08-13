@@ -112,6 +112,9 @@
   - Evidence: commits `7272cba`·`b8b9a30`·`8fdbba4`, closed creation request·양쪽 projection·
     exact decision digest·reserved Judge reject·product Skill projection, Rust custom-agent CLI 12 PASS
 - [ ] [MRA-024] Purpose-first recommendation과 signed host model catalog·capability 근거
+  - 구현 증거: `804fc80`·`1b7b2de`, 외부 보호 catalog·분리 attestation·trust root의 exact mapping 검증,
+    위조 서명·mapping 누락 거부, custom-agent CLI 13·core 6·Copier/Rust parity 22·strict Clippy 통과
+  - 완료 전제: 실제 발급 catalog와 Codex·Claude fresh-session capability 수용
 - [ ] [MRA-025] `1 수락 | 2 수동 | 3 수정` decision state·재추천·digest lifecycle
 - [x] [MRA-026] 수동 설정의 이름·양쪽 exact model/effort·scope·permission·trigger field 검증
   - Evidence: commit `7272cba`, closed JSON schema의 양쪽 host mapping·exact model/effort·

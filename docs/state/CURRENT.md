@@ -29,6 +29,10 @@
   삭제·foreign/symlink 거부·interrupted owned deletion retry 수렴, Judge invocation의 product
   setup 질문·partial reconfiguration projection 동기화. Rust workspace local qualification과
   strict Clippy PASS; host fresh-session evidence는 여전히 별도 수용 대기
+- Signed host model catalog 추천 보강: `804fc80`·`1b7b2de`, `hive agent recommend`의 외부 보호
+  catalog·분리 attestation·trust root 검증과 exact model/effort/minimum version mapping 결합,
+  위조 서명·mapping 누락 실패 폐쇄. CLI 13·core 6·Copier/Rust parity 22·strict Clippy PASS.
+  실제 발급 catalog·Codex·Claude fresh-session capability 수용 전 `MRA-024` 유지
 - `0.9.2-test.1` 수용 거부: candidate run `31596919466`·publication run `31597939956`는
   통과했으나 GitHub prerelease에 direct installer 자산 3개가 누락되어 공개 설치 URL이 `404`를
   반환. 게시 workflow·회귀 보정 뒤 `0.9.2-test.2`부터 전체 공개 설치 수용 재수행
