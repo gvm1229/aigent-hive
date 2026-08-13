@@ -1,0 +1,6 @@
+interface:
+  display_name: "Run iterative work"
+  short_description: "Execute a bounded criterion loop with terminal independent verification."
+  default_prompt: "Use $aigent-hive:iterative-execution for this bounded iterative task."
+policy:
+  allow_implicit_invocation: false

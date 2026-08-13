@@ -40,6 +40,8 @@ const ITERATIVE_EXECUTION: &[u8] =
     include_bytes!("../../../harness/skills/iterative-execution/SKILL.md");
 const TEAM_EXECUTION: &[u8] = include_bytes!("../../../harness/skills/team-execution/SKILL.md");
 const MULTI_GOAL: &[u8] = include_bytes!("../../../harness/skills/multi-goal/SKILL.md");
+const CUSTOM_SUBAGENT_CREATE: &[u8] =
+    include_bytes!("../../../harness/skills/custom-subagent-create/SKILL.md");
 const AI_SLOP_CLEANER: &[u8] = include_bytes!("../../../harness/skills/code-polish/SKILL.md");
 const BEST_PRACTICE_RESEARCH: &[u8] =
     include_bytes!("../../../harness/skills/research-best-practices/SKILL.md");
@@ -1155,6 +1157,12 @@ fn localized_skill_text(
             "복수 목표 실행",
             "예산과 종료 검증을 적용한 제한된 목표 graph를 실행합니다.",
         ),
+        "custom-subagent-create" => (
+            "Create custom agent",
+            "Recommend and create one consented custom agent profile.",
+            "사용자 정의 에이전트 생성",
+            "동의한 사용자 정의 에이전트 profile을 추천·생성합니다.",
+        ),
         _ => return None,
     };
     Some(match language {
@@ -1231,6 +1239,9 @@ fn embedded_skill_metadata(name: &str) -> Option<&'static [u8]> {
         "multi-goal" => Some(include_bytes!(
             "../../../harness/skills/multi-goal/agents/openai.yaml"
         )),
+        "custom-subagent-create" => Some(include_bytes!(
+            "../../../harness/skills/custom-subagent-create/agents/openai.yaml"
+        )),
         "code-polish" => Some(include_bytes!(
             "../../../harness/skills/code-polish/agents/openai.yaml"
         )),
@@ -1250,7 +1261,7 @@ fn embedded_skill_metadata(name: &str) -> Option<&'static [u8]> {
     }
 }
 
-fn embedded_skill_sources() -> [(&'static str, &'static [u8]); 25] {
+fn embedded_skill_sources() -> [(&'static str, &'static [u8]); 26] {
     [
         ("user-setup", SETUP_HIVE),
         ("project-setup", SETUP_HARNESS),
@@ -1272,6 +1283,7 @@ fn embedded_skill_sources() -> [(&'static str, &'static [u8]); 25] {
         ("iterative-execution", ITERATIVE_EXECUTION),
         ("team-execution", TEAM_EXECUTION),
         ("multi-goal", MULTI_GOAL),
+        ("custom-subagent-create", CUSTOM_SUBAGENT_CREATE),
         ("code-polish", AI_SLOP_CLEANER),
         ("research-best-practices", BEST_PRACTICE_RESEARCH),
         ("knowledge-import", KNOWLEDGE_SCAN),
@@ -2463,8 +2475,8 @@ description: Inspect one local file without changing it.
             let first = compile_projection(host, &[]).expect("projection");
             let second = compile_projection(host, &[]).expect("projection");
             assert_eq!(first, second);
-            assert_eq!(first.active_skills.skills.len(), 24);
-            let expected_file_count = if host == Host::Claude { 25 } else { 49 };
+            assert_eq!(first.active_skills.skills.len(), 25);
+            let expected_file_count = if host == Host::Claude { 26 } else { 51 };
             assert_eq!(first.files.len(), expected_file_count);
             for skill in [
                 "code-polish",

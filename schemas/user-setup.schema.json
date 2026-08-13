@@ -108,7 +108,11 @@
         "knowledge-promote",
         "product-update",
         "project-refresh",
-        "package-review"
+        "package-review",
+        "iterative-execution",
+        "team-execution",
+        "multi-goal",
+        "custom-subagent-create"
       ]
     },
     "skill_selection": {

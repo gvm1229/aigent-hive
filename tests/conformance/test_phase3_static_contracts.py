@@ -21,6 +21,7 @@ CURRENT = {
     "knowledge-recall", "usage-guard", "ship", "amend-directive", "user-setup",
     "run-handoff", "project-transition", "run-resume", "run-checkpoint",
     "knowledge-promote", "product-update", "project-refresh", "package-review",
+    "iterative-execution", "team-execution", "multi-goal", "custom-subagent-create",
 }
 
 

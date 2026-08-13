@@ -232,11 +232,14 @@ selected_project_skills:
   default:
     - amend-directive
     - code-polish
+    - custom-subagent-create
+    - iterative-execution
     - knowledge-capture
     - knowledge-import
     - knowledge-maintain
     - knowledge-promote
     - knowledge-recall
+    - multi-goal
     - package-review
     - product-update
     - project-refresh
@@ -250,4 +253,5 @@ selected_project_skills:
     - run-handoff
     - run-resume
     - ship
+    - team-execution
     - usage-guard
