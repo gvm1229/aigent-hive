@@ -135,6 +135,18 @@ pub struct ScanPromotionCommit {
     pub store: StoreCommit,
 }
 
+/// Atomic automatic promotion batch derived from one reviewed source collection.
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
+#[serde(deny_unknown_fields)]
+pub struct AutomaticScanPromotionCommit {
+    /// Source claims whose automatic-promotion lifecycle advanced.
+    pub source_claims: Vec<CanonicalClaim>,
+    /// User-root shared claims created or matched without user interruption.
+    pub promoted_claims: Vec<CanonicalClaim>,
+    /// One atomic store commit covering all recorded promotion decisions.
+    pub store: StoreCommit,
+}
+
 /// Canonical project ledger plus the atomic normalized-store commit derived from it.
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
 #[serde(deny_unknown_fields)]
@@ -765,6 +777,148 @@ impl RagStore {
             return self.current_commit();
         }
         self.commit_canonical_writes_locked(writes.into_iter().collect())
+    }
+
+    /// Automatically promote every reviewed safe-general claim from one collection.
+    ///
+    /// The reviewed candidate flag is necessary but not sufficient: the claim must also satisfy
+    /// the deterministic safe-general policy. Contradictory candidates are recorded as rejected
+    /// rather than widening retrieval or leaving a repeated pending state.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error for an unknown source collection, invalid reviewed policy, dirty state,
+    /// failed canonical publication, or incomplete rollback.
+    #[allow(clippy::too_many_lines)]
+    pub fn auto_promote_reviewed_scan_claims_atomic(
+        &self,
+        source_collection_id: &str,
+    ) -> Result<AutomaticScanPromotionCommit, WikiError> {
+        let _lock = crate::CapabilityKnowledgeLock::acquire(&self.root)?;
+        self.reject_dirty_mutation()?;
+        let registry = self.load_registry()?;
+        let source_collection = registry
+            .collections
+            .iter()
+            .find(|collection| collection.collection_id == source_collection_id)
+            .ok_or_else(|| {
+                WikiError::InvalidInput(format!("unknown collection `{source_collection_id}`"))
+            })?;
+        if source_collection.kind == CollectionKind::UserRoot {
+            return Err(WikiError::InvalidInput(
+                "user-root claims cannot be scan promotion sources".to_owned(),
+            ));
+        }
+        let target_generation = self.next_generation()?;
+        let mut claims = self.load_claims(&registry)?;
+        let candidates = claims
+            .iter()
+            .filter(|claim| is_pending_automatic_promotion(claim, source_collection_id))
+            .cloned()
+            .collect::<Vec<_>>();
+        let reconciliation_sources = claims
+            .iter()
+            .filter(|claim| is_promoted_automatic_source(claim, source_collection_id))
+            .cloned()
+            .collect::<Vec<_>>();
+        if candidates.is_empty() && reconciliation_sources.is_empty() {
+            return Ok(AutomaticScanPromotionCommit {
+                source_claims: Vec::new(),
+                promoted_claims: Vec::new(),
+                store: self.current_commit()?,
+            });
+        }
+        let known = registry
+            .collections
+            .iter()
+            .map(|collection| collection.collection_id.as_str())
+            .collect::<BTreeSet<_>>();
+        let mut writes = BTreeMap::new();
+        let mut source_claims = Vec::new();
+        let mut promoted_claims = Vec::new();
+        for source in candidates {
+            validate_automatic_promotion_source(&source)?;
+            let request = automatic_scan_promotion_request(&source)?;
+            match plan_remember(&claims, &request, target_generation) {
+                Ok(plan) => {
+                    let promoted_source = advance_scan_promotion_status(
+                        source,
+                        ScanPromotionStatus::Promoted,
+                        target_generation,
+                    )?;
+                    let mut promoted = promoted_claim_from_plan(&plan, &claims, &request)?;
+                    writes.extend(remember_plan_writes(&plan, &known)?);
+                    apply_remember_plan_to_claims(&mut claims, &plan);
+                    if plan.new_claim.is_some() {
+                        promoted
+                            .scan_metadata
+                            .clone_from(&promoted_source.scan_metadata);
+                        promoted.revision = target_generation;
+                        promoted.digest = claim_digest(&promoted);
+                        writes.remove(&PathBuf::from(&promoted.locator));
+                        insert_claim_write(&mut writes, &promoted)?;
+                        replace_loaded_claim(&mut claims, promoted.clone());
+                    }
+                    promoted_claims.push(promoted);
+                    insert_claim_write(&mut writes, &promoted_source)?;
+                    replace_loaded_claim(&mut claims, promoted_source.clone());
+                    source_claims.push(promoted_source);
+                }
+                Err(RagError::Conflict(_)) => {
+                    let rejected_source = advance_scan_promotion_status(
+                        source,
+                        ScanPromotionStatus::Rejected,
+                        target_generation,
+                    )?;
+                    insert_claim_write(&mut writes, &rejected_source)?;
+                    replace_loaded_claim(&mut claims, rejected_source.clone());
+                    source_claims.push(rejected_source);
+                }
+                Err(error) => return Err(rag_error(error)),
+            }
+        }
+        // Earlier development builds wrote the derived user-root claim before copying the
+        // source's final promotion metadata. Repair that harmless projection drift during the
+        // same silent scan-maintenance path; retrieval remains strictly read-only.
+        for source in reconciliation_sources {
+            let source_metadata = source.scan_metadata.as_ref().ok_or_else(|| {
+                WikiError::Verification("promoted automatic source lost typed metadata".to_owned())
+            })?;
+            let stale_derivatives = claims
+                .iter()
+                .filter(|claim| {
+                    claim.collection_id == USER_ROOT_COLLECTION_ID
+                        && claim.status != AssertionStatus::Superseded
+                        && claim.provenance.source_kind == RememberSourceKind::ReviewedArtifact
+                        && claim.provenance.locator == source.locator
+                        && claim.scan_metadata.as_ref().is_some_and(|metadata| {
+                            metadata.review_id == source_metadata.review_id
+                                && metadata.promotion_status != ScanPromotionStatus::Promoted
+                        })
+                })
+                .cloned()
+                .collect::<Vec<_>>();
+            for mut derivative in stale_derivatives {
+                derivative.scan_metadata = Some(source_metadata.clone());
+                derivative.revision = target_generation;
+                derivative.digest = claim_digest(&derivative);
+                insert_claim_write(&mut writes, &derivative)?;
+                replace_loaded_claim(&mut claims, derivative);
+            }
+        }
+        if writes.is_empty() {
+            return Ok(AutomaticScanPromotionCommit {
+                source_claims,
+                promoted_claims,
+                store: self.current_commit()?,
+            });
+        }
+        let store = self.commit_canonical_writes_locked(writes.into_iter().collect())?;
+        Ok(AutomaticScanPromotionCommit {
+            source_claims,
+            promoted_claims,
+            store,
+        })
     }
 
     fn plan_reviewed_claim_writes_locked(
@@ -2441,16 +2595,30 @@ fn plan_reviewed_claim_upserts(
                 .iter()
                 .filter(|existing| existing.claim_id != current_id)
             {
+                let source_locator = existing.locator.clone();
                 let rewritten = superseded_scan_claim(existing, &current_id, target_generation);
                 insert_claim_write(writes, &rewritten)?;
                 replace_loaded_claim(claims, rewritten);
+                invalidate_promoted_claims_for_source(
+                    &source_locator,
+                    target_generation,
+                    claims,
+                    writes,
+                )?;
             }
             continue;
         }
         for existing in &active {
+            let source_locator = existing.locator.clone();
             let rewritten = superseded_scan_claim(existing, &candidate.claim_id, target_generation);
             insert_claim_write(writes, &rewritten)?;
             replace_loaded_claim(claims, rewritten);
+            invalidate_promoted_claims_for_source(
+                &source_locator,
+                target_generation,
+                claims,
+                writes,
+            )?;
         }
         candidate.supersedes = active.iter().map(|claim| claim.claim_id.clone()).collect();
         candidate.digest = claim_digest(&candidate);
@@ -2478,6 +2646,7 @@ fn plan_source_invalidations(
         .cloned()
         .collect::<Vec<_>>();
     for mut rewritten in invalidated {
+        let source_locator = rewritten.locator.clone();
         let review_id = scan_review_id(&rewritten)
             .ok_or_else(|| {
                 WikiError::Verification(
@@ -2496,6 +2665,37 @@ fn plan_source_invalidations(
             locator: format!("scan-inventory:{inventory_digest}"),
             digest: inventory_digest.to_owned(),
         };
+        if let Some(metadata) = &mut rewritten.scan_metadata {
+            metadata.review_status = ScanReviewStatus::SourceInvalidated;
+        }
+        rewritten.digest = claim_digest(&rewritten);
+        insert_claim_write(writes, &rewritten)?;
+        replace_loaded_claim(claims, rewritten);
+        invalidate_promoted_claims_for_source(&source_locator, target_generation, claims, writes)?;
+    }
+    Ok(())
+}
+
+fn invalidate_promoted_claims_for_source(
+    source_locator: &str,
+    target_generation: u64,
+    claims: &mut [CanonicalClaim],
+    writes: &mut BTreeMap<PathBuf, Vec<u8>>,
+) -> Result<(), WikiError> {
+    let invalidated = claims
+        .iter()
+        .filter(|claim| {
+            claim.collection_id == USER_ROOT_COLLECTION_ID
+                && claim.status != AssertionStatus::Superseded
+                && claim.provenance.source_kind == RememberSourceKind::ReviewedArtifact
+                && claim.provenance.locator == source_locator
+        })
+        .cloned()
+        .collect::<Vec<_>>();
+    for mut rewritten in invalidated {
+        rewritten.status = AssertionStatus::Superseded;
+        rewritten.replacement = None;
+        rewritten.revision = target_generation;
         if let Some(metadata) = &mut rewritten.scan_metadata {
             metadata.review_status = ScanReviewStatus::SourceInvalidated;
         }
@@ -2544,6 +2744,7 @@ fn reviewed_to_claim(
         &reviewed.revision,
         &reviewed.applicability,
         &reviewed.evidence,
+        reviewed.global_promotion_candidate,
     ))
     .map_err(|error| WikiError::Io(format!("cannot derive reviewed claim ID: {error}")))?;
     let claim_id = format!("claim-{}", raw_sha256(&sha256_digest(&id_material)));
@@ -2740,7 +2941,122 @@ fn validate_reviewed_claim_basics(claim: &ReviewedClaim) -> Result<(), WikiError
         }
     }
     crate::reject_likely_credentials(claim.statement.as_bytes())?;
+    if claim.global_promotion_candidate
+        && (!matches!(
+            claim.kind,
+            ScanClaimKind::Decision | ScanClaimKind::Convention | ScanClaimKind::Workflow
+        ) || claim.applicability.is_none())
+    {
+        return Err(WikiError::InvalidInput(
+            "automatic promotion candidates require a reusable decision, convention, or workflow with explicit applicability"
+                .to_owned(),
+        ));
+    }
     Ok(())
+}
+
+fn is_pending_automatic_promotion(claim: &CanonicalClaim, source_collection_id: &str) -> bool {
+    claim.collection_id == source_collection_id
+        && claim.status != AssertionStatus::Superseded
+        && claim.scan_metadata.as_ref().is_some_and(|metadata| {
+            metadata.review_status == ScanReviewStatus::AgentReviewed
+                && metadata.global_promotion_candidate
+                && metadata.promotion_status == ScanPromotionStatus::PendingReview
+        })
+}
+
+fn is_promoted_automatic_source(claim: &CanonicalClaim, source_collection_id: &str) -> bool {
+    claim.collection_id == source_collection_id
+        && claim.status != AssertionStatus::Superseded
+        && claim.scan_metadata.as_ref().is_some_and(|metadata| {
+            metadata.review_status == ScanReviewStatus::AgentReviewed
+                && metadata.global_promotion_candidate
+                && metadata.promotion_status == ScanPromotionStatus::Promoted
+        })
+}
+
+fn validate_automatic_promotion_source(source: &CanonicalClaim) -> Result<(), WikiError> {
+    let metadata = source.scan_metadata.as_ref().ok_or_else(|| {
+        WikiError::Verification("automatic promotion source lacks typed metadata".to_owned())
+    })?;
+    if metadata.review_status != ScanReviewStatus::AgentReviewed
+        || !metadata.global_promotion_candidate
+        || metadata.promotion_status != ScanPromotionStatus::PendingReview
+        || metadata.applicability.is_none()
+        || !matches!(
+            source.kind,
+            ClaimKind::Decision | ClaimKind::Convention | ClaimKind::Workflow
+        )
+    {
+        return Err(WikiError::Conflict(
+            "reviewed scan claim is not eligible for automatic user-root promotion".to_owned(),
+        ));
+    }
+    Ok(())
+}
+
+fn automatic_scan_promotion_request(source: &CanonicalClaim) -> Result<RememberRequest, WikiError> {
+    let key_material = serde_json::to_vec(&(
+        "reviewed-scan-promotion-v1",
+        source.kind,
+        source.normalized_fact.as_str(),
+    ))
+    .map_err(|error| WikiError::Io(error.to_string()))?;
+    let key_digest = sha256_digest(&key_material);
+    let key_suffix = key_digest
+        .strip_prefix("sha256:")
+        .ok_or_else(|| WikiError::Io("promotion digest lost its algorithm prefix".to_owned()))?;
+    Ok(RememberRequest {
+        collection_id: USER_ROOT_COLLECTION_ID.to_owned(),
+        claim_key: format!("promoted.{key_suffix}"),
+        claim_id: None,
+        locator: format!(".hive/knowledge/Claims/user-root/pending-{key_suffix}.md"),
+        kind: source.kind,
+        status: source.status,
+        visibility: RagVisibility::Shared,
+        normalized_fact: source.normalized_fact.clone(),
+        provenance: ClaimProvenance {
+            source_kind: RememberSourceKind::ReviewedArtifact,
+            summary: "Automatically promoted reviewed scan claim".to_owned(),
+            locator: source.locator.clone(),
+            digest: source.provenance.digest.clone(),
+        },
+        sources: vec![source.locator.clone()],
+        supersedes: Vec::new(),
+        expected_active_digest: None,
+        observed_at: source.observed_at.clone(),
+        verified_at: source.verified_at.clone(),
+    })
+}
+
+fn advance_scan_promotion_status(
+    mut source: CanonicalClaim,
+    status: ScanPromotionStatus,
+    revision: u64,
+) -> Result<CanonicalClaim, WikiError> {
+    let metadata = source.scan_metadata.as_mut().ok_or_else(|| {
+        WikiError::Verification("automatic promotion source lost typed metadata".to_owned())
+    })?;
+    metadata.promotion_status = status;
+    source.revision = revision;
+    source.digest = claim_digest(&source);
+    Ok(source)
+}
+
+fn apply_remember_plan_to_claims(claims: &mut Vec<CanonicalClaim>, plan: &RememberPlan) {
+    for rewritten in &plan.superseded_claims {
+        replace_loaded_claim(claims, rewritten.clone());
+    }
+    if let Some(new_claim) = &plan.new_claim {
+        if claims
+            .iter()
+            .any(|claim| claim.claim_id == new_claim.claim_id)
+        {
+            replace_loaded_claim(claims, new_claim.clone());
+        } else {
+            claims.push(new_claim.clone());
+        }
+    }
 }
 
 fn validate_remember_plan_shape(plan: &RememberPlan) -> Result<(), WikiError> {
@@ -4044,6 +4360,8 @@ mod tests {
             "README.md",
             &inventory,
         );
+        reviewed.kind = ScanClaimKind::Decision;
+        reviewed.applicability = Some("Any Hive-managed repository knowledge scan".to_owned());
         reviewed.global_promotion_candidate = true;
         let validated = validate_claims(&inventory, &[reviewed]).expect("promotion candidate");
         let mut registration = registration(scanned.path(), "ignored");
@@ -4115,6 +4433,71 @@ mod tests {
             replay.promoted_claim.claim_id,
             promoted.promoted_claim.claim_id
         );
+    }
+
+    #[test]
+    fn scan_apply_auto_promotes_safe_general_claims_and_invalidates_their_derivatives() {
+        let (_temporary, store) = store();
+        let scanned = tempfile::tempdir().expect("scanned root");
+        let inventory = scan_inventory(&[("README.md", b"promotion evidence\n")]);
+        let mut reviewed = reviewed_scan_claim(
+            "automatic-decision",
+            "Hive keeps automatic promotion separate from retrieval.",
+            "README.md",
+            &inventory,
+        );
+        reviewed.kind = ScanClaimKind::Decision;
+        reviewed.applicability = Some("All scanned Hive knowledge collections".to_owned());
+        reviewed.global_promotion_candidate = true;
+        let validated = validate_claims(&inventory, &[reviewed]).expect("automatic candidate");
+        let mut registration = registration(scanned.path(), "ignored");
+        registration.reviewed_inventory_digest = Some(validated.inventory_digest.clone());
+        let collection = store
+            .register_scanned_collection_atomic(registration, &validated)
+            .expect("scan registration")
+            .collection;
+
+        let promoted = store
+            .auto_promote_reviewed_scan_claims_atomic(&collection.collection_id)
+            .expect("automatic promotion");
+        assert_eq!(promoted.source_claims.len(), 1);
+        assert_eq!(promoted.promoted_claims.len(), 1);
+        assert_eq!(
+            promoted.promoted_claims[0].collection_id,
+            USER_ROOT_COLLECTION_ID
+        );
+        assert_eq!(
+            promoted.source_claims[0]
+                .scan_metadata
+                .as_ref()
+                .map(|metadata| metadata.promotion_status),
+            Some(ScanPromotionStatus::Promoted)
+        );
+        assert_eq!(
+            promoted.promoted_claims[0]
+                .scan_metadata
+                .as_ref()
+                .map(|metadata| metadata.promotion_status),
+            Some(ScanPromotionStatus::Promoted)
+        );
+        assert!(store
+            .auto_promote_reviewed_scan_claims_atomic(&collection.collection_id)
+            .expect("automatic promotion replay")
+            .store
+            .changed_paths
+            .is_empty());
+
+        let empty = validate_claims(&inventory, &[]).expect("empty rescan");
+        store
+            .apply_reviewed_claims(&collection.collection_id, &empty)
+            .expect("source invalidation");
+        let registry = store.load_registry().expect("registry");
+        assert!(store
+            .load_claims(&registry)
+            .expect("claims")
+            .iter()
+            .filter(|claim| claim.collection_id == USER_ROOT_COLLECTION_ID)
+            .all(|claim| claim.status == AssertionStatus::Superseded));
     }
 
     #[test]

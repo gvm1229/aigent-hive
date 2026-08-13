@@ -606,17 +606,17 @@ pub enum ScanReviewStatus {
     SourceInvalidated,
 }
 
-/// Explicit global-promotion lifecycle for a reviewed scan claim.
+/// User-root promotion lifecycle for a reviewed scan claim.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, Eq, PartialEq)]
 #[serde(rename_all = "kebab-case")]
 pub enum ScanPromotionStatus {
     /// The reviewed claim was not proposed for user-root promotion.
     NotCandidate,
-    /// Promotion requires a separate explicit review and approval.
+    /// The reviewed candidate awaits the next automatic scan-maintenance promotion.
     PendingReview,
-    /// A separately approved user-root fact was created from this claim.
+    /// A reviewed user-root fact was created from this claim.
     Promoted,
-    /// A separate promotion review rejected the candidate.
+    /// Automatic promotion rejected the candidate because it contradicted active knowledge.
     Rejected,
 }
 
@@ -639,9 +639,9 @@ pub struct ScanClaimMetadata {
     pub evidence: Vec<ClaimEvidence>,
     /// Current review state.
     pub review_status: ScanReviewStatus,
-    /// Whether the review proposed later user-root promotion.
+    /// Whether the review proposed user-root promotion during scan maintenance.
     pub global_promotion_candidate: bool,
-    /// Current explicit promotion state.
+    /// Current user-root promotion state.
     pub promotion_status: ScanPromotionStatus,
 }
 

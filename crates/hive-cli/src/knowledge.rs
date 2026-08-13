@@ -475,19 +475,32 @@ fn run_scan(arguments: &[String]) -> Result<KnowledgeResult, WikiError> {
                     },
                     &validated,
                 )?;
+                let automatic_promotion = store.auto_promote_reviewed_scan_claims_atomic(
+                    &committed.collection.collection_id,
+                )?;
+                let changed_paths = committed
+                    .store
+                    .changed_paths
+                    .iter()
+                    .chain(automatic_promotion.store.changed_paths.iter())
+                    .cloned()
+                    .collect::<BTreeSet<_>>()
+                    .into_iter()
+                    .collect::<Vec<_>>();
                 return Ok(success(
                     "ScanKnowledge",
                     "hive.knowledge-scan-applied",
-                    "agent-reviewed directory claims were stored without target mutation",
-                    committed.store.changed_paths.clone(),
+                    "agent-reviewed directory claims were stored and safe-general claims promoted without target mutation",
+                    changed_paths,
                     SHARED_INDEX_RELATIVE,
-                    &committed.store.manifest_digest,
+                    &automatic_promotion.store.manifest_digest,
                     json!({
                         "phase": "apply",
                         "scan": outcome,
                         "validated_claims": validated,
                         "collection": committed.collection,
-                        "store": committed.store,
+                        "store": automatic_promotion.store.clone(),
+                        "automatic_promotion": automatic_promotion,
                         "target_mutated": false,
                     }),
                 ));

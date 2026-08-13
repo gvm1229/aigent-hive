@@ -22,8 +22,11 @@ Run the single mandatory memory lookup, then hand off sequentially to the owning
 
    Hive derives current-project authority from the verified target-to-registry mapping. Never
    supply or accept a caller-asserted current collection identifier. Use `project:<id>` or
-   `collection:<id>` only for an explicit named scope. Only an explicit query may raise `top-k`
-   or the byte budget within CLI bounds.
+   `collection:<id>` only when the user explicitly names another project or collection, for
+   example “use Project B knowledge.” Resolve that reference uniquely, then query that collection
+   directly. An explicit cross-project query returns that collection only: do not mix in the
+   current project, `user-root`, or unrelated shared results. Only an explicit query may raise
+   `top-k` or the byte budget within CLI bounds.
    If the target has no attached collection, the same `auto` request searches `user-root` and
    shared collections while excluding project-private knowledge. Never report retrieval as skipped
    solely because project setup, a Hive harness, a project marker, or a collection is absent.
@@ -52,4 +55,6 @@ Run the single mandatory memory lookup, then hand off sequentially to the owning
 
 - Do not ingest, suppress, delete, rewrite, or persist the raw query.
 - Do not search credentials, runtime state, caches, or unrelated private collections.
+- Never trigger promotion from a retrieval. Promotion belongs only to reviewed scan, rescan, and
+  maintenance apply flows.
 - Treat Markdown as canonical and SQLite as a disposable retrieval projection.

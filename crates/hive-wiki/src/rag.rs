@@ -1444,7 +1444,9 @@ fn retrieve_from_connection(
              JOIN collections co ON co.collection_id = c.collection_id
              WHERE chunks_fts MATCH ?1
                AND (
-                   (c.collection_id = ?2 AND (
+                   (?6 = 0
+                       AND c.collection_id = ?2
+                       AND (
                        c.visibility <> 'confidential'
                        OR ?5 = ?2
                    ))
@@ -3164,7 +3166,7 @@ fn is_visible(
     scope: &ResolvedScope,
     request: &RetrievalRequest,
 ) -> bool {
-    if candidate.collection_id == USER_ROOT_COLLECTION_ID {
+    if !scope.explicit_target && candidate.collection_id == USER_ROOT_COLLECTION_ID {
         return candidate.visibility != RagVisibility::Confidential
             || request.confidential_collection_id.as_deref() == Some(USER_ROOT_COLLECTION_ID);
     }
@@ -3462,7 +3464,11 @@ fn validate_claim(claim: &CanonicalClaim) -> Result<(), RagError> {
     validate_provenance(&claim.provenance)?;
     if let Some(metadata) = &claim.scan_metadata {
         validate_scan_metadata(metadata)?;
-        if claim.claim_key != format!("scan.{}", metadata.review_id) {
+        let scan_owned = claim.claim_key == format!("scan.{}", metadata.review_id);
+        let derived_shared = claim.collection_id == USER_ROOT_COLLECTION_ID
+            && claim.claim_key.starts_with("promoted.")
+            && claim.provenance.source_kind == RememberSourceKind::ReviewedArtifact;
+        if !scan_owned && !derived_shared {
             return Err(RagError::InvalidInput(
                 "scan claim key does not match its review identifier".to_owned(),
             ));
@@ -3571,14 +3577,21 @@ fn validate_scan_metadata(metadata: &ScanClaimMetadata) -> Result<(), RagError> 
 }
 
 fn is_reviewed_source_invalidation(claim: &CanonicalClaim) -> bool {
-    claim.claim_key.starts_with("scan.")
-        && claim.provenance.source_kind == RememberSourceKind::ReviewedArtifact
+    let scan_owned = claim.claim_key.starts_with("scan.")
         && claim
             .provenance
             .summary
             .starts_with("Source-invalidated scan claim `")
         && claim.provenance.locator.strip_prefix("scan-inventory:")
-            == Some(claim.provenance.digest.as_str())
+            == Some(claim.provenance.digest.as_str());
+    let derived_shared = claim.collection_id == USER_ROOT_COLLECTION_ID
+        && claim.claim_key.starts_with("promoted.")
+        && claim
+            .scan_metadata
+            .as_ref()
+            .is_some_and(|metadata| metadata.review_status == ScanReviewStatus::SourceInvalidated);
+    claim.provenance.source_kind == RememberSourceKind::ReviewedArtifact
+        && (scan_owned || derived_shared)
 }
 
 fn validate_remember_request(request: &RememberRequest, revision: u64) -> Result<(), RagError> {
@@ -4152,7 +4165,7 @@ mod tests {
             &automatic,
         )
         .expect("named retrieval without confidential approval");
-        assert_eq!(named_without_approval.hits.len(), 1);
+        assert!(named_without_approval.hits.is_empty());
         assert!(named_without_approval
             .hits
             .iter()
@@ -4166,7 +4179,7 @@ mod tests {
             &automatic,
         )
         .expect("authorized retrieval");
-        assert_eq!(authorized.hits.len(), 2);
+        assert_eq!(authorized.hits.len(), 1);
         assert!(authorized
             .hits
             .iter()
@@ -4181,7 +4194,7 @@ mod tests {
             &explicit_detached,
         )
         .expect("explicit detached retrieval");
-        assert_eq!(detached_result.hits.len(), 2);
+        assert_eq!(detached_result.hits.len(), 1);
         assert!(detached_result
             .hits
             .iter()
@@ -4190,6 +4203,10 @@ mod tests {
             .hits
             .iter()
             .all(|hit| hit.collection_id != remote_shared));
+        assert!(detached_result
+            .hits
+            .iter()
+            .all(|hit| hit.collection_id != USER_ROOT_COLLECTION_ID));
     }
 
     #[test]
