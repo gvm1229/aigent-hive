@@ -1,9 +1,9 @@
 ---
 name: knowledge-maintain
-description: Lint, rebuild, delete, or suppress canonical Hive knowledge through explicit CLI actions while preserving the disposable-index boundary. Use for requested knowledge repair, index rebuild, deletion, or re-ingest suppression; never combine knowledge deletion or garbage collection with a harness update transaction.
+description: "(knowledge-maintain) Keep Hive knowledge trustworthy by checking it, rebuilding its search index, or carrying out an explicitly requested cleanup."
 ---
 
-# Hive Knowledge Maintenance
+# Maintain Knowledge (`knowledge-maintain`)
 
 Use the narrowest explicit maintenance action.
 

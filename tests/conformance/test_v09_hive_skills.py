@@ -21,6 +21,8 @@ EXPECTED_SKILLS = frozenset(
         "quick-answer",
         "project-setup",
         "code-polish",
+        "custom-subagent-create",
+        "iterative-execution",
         "ralph-loop",
         "knowledge-import",
         "knowledge-maintain",
@@ -37,9 +39,11 @@ EXPECTED_SKILLS = frozenset(
         "run-resume",
         "run-checkpoint",
         "knowledge-promote",
+        "multi-goal",
         "product-update",
         "project-refresh",
         "package-review",
+        "team-execution",
     }
 )
 

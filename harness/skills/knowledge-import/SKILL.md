@@ -1,9 +1,9 @@
 ---
 name: knowledge-import
-description: Inventory an explicitly selected directory, review bounded claim candidates, and apply approved facts to canonical Hive knowledge without mutating the scanned target. Use only for explicit bulk knowledge-scan requests.
+description: "(knowledge-import) Scan one repository or folder that the user explicitly selected, then import only the reviewed knowledge that is useful beyond that source."
 ---
 
-# Hive Knowledge Scan
+# Scan Repository Knowledge (`knowledge-import`)
 
 Run three explicit, digest-bound phases. Never infer an apply request.
 

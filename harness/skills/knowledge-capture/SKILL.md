@@ -1,11 +1,11 @@
 ---
 name: knowledge-capture
-description: From every project immediately after Hive installation, review each Wiki-enabled user turn for one durable fact, preference, or workflow and write only an agent-reviewed canonical claim; also ingest reviewed sources. Project setup is not required. Reject secret, confidential, ephemeral, ambiguous, and raw-session content.
+description: "(knowledge-capture) At the end of a Wiki-enabled turn, keep one useful fact, preference, or workflow that will help later work; never save secrets, raw conversations, or uncertain guesses."
 ---
 
-# Hive Knowledge Capture
+# Capture One Knowledge Claim (`knowledge-capture`)
 
-Run the mandatory memory gate, then preserve the existing explicit source-ingest path.
+For each eligible turn, write at most one atomic knowledge claim. Then preserve the existing explicit source-ingest path.
 
 ## Mandatory memory gate
 

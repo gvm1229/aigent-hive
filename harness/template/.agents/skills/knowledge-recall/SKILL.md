@@ -1,9 +1,9 @@
 ---
 name: knowledge-recall
-description: Run one bounded Hive knowledge retrieval before questions or knowledge-dependent work in every project when Wiki is enabled. Project setup is not required; unregistered targets fall back to user-root and shared knowledge.
+description: "(knowledge-recall) Before a knowledge-dependent question or task, find only the Hive knowledge that can help with the work at hand. Unregistered folders safely use user-root and shared knowledge."
 ---
 
-# Hive Knowledge Query
+# Search Knowledge (`knowledge-recall`)
 
 Run the single mandatory memory lookup, then hand off sequentially to the owning task route.
 
