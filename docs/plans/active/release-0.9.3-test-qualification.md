@@ -17,10 +17,10 @@
 ## Checklist
 
 - [x] [REL93-011] exact candidate `114817677e83aae535bd1f8b47518bf9b6745432`에서 public `0.9.3-test` build·publish·artifact attestation·Windows clean install·`0.9.2 → 0.9.3-test` upgrade·pending receipt recovery 수용
-- [ ] [REL93-012] test 수용 뒤 protected `main` 통합과 exact stable candidate 생성
-- [ ] [REL93-013] protected `main` 검토와 `release-publication` 환경 승인 뒤 GitHub Release·npm `latest=0.9.3` 연속 게시
-- [ ] [REL93-014] 이 Windows public stable 설치·version·release date·validate·public docs 최종 확인
-- [ ] [REL93-015] stable 수용 뒤 installed Hive의 source knowledge retrieval·citation 재확인
+- [x] [REL93-012] PR #30의 protected `main` 통합 `e4c5b5eec8b24b0e4815f515eb26bda66e99c73c`과 exact stable candidate run `31741922500` 생성
+- [x] [REL93-013] stable candidate 수용 뒤 publication run `31742946016`으로 GitHub Release·npm `latest=0.9.3` 연속 게시
+- [x] [REL93-014] 이 Windows x64 public stable direct install·global npm install·preserving user reinstall·version·release date·`install --validate`·public docs 확인
+- [x] [REL93-015] stable installed Hive에서 PortareFolium target의 explicit `collection:aigent-hive` source knowledge retrieval·canonical citation 재확인
 
 ## 수락 기준
 
@@ -35,3 +35,11 @@
 - Public test: [GitHub Release `v0.9.3-test`](https://github.com/gvm1229/aigent-hive/releases/tag/v0.9.3-test), npm `test=0.9.3-test`, `latest=0.9.2` 유지
 - Local Windows x64: isolated direct install `0.9.2`, public test upgrade, matching pending receipt recovery, `AIgent Hive v0.9.3-test · developer test build (released 2026-08-14)`, pending receipt `0건`
 - Performance: release RAG 50,000 chunks cold p95 `170.8967 ms`, warm p95 `0.1452 ms`; bundle 100 collections·50,000 chunks export p95 `1008.4492 ms`, import/rebuild p95 `3713.0145 ms`
+
+## Stable evidence
+
+- Protected integration: [PR #30](https://github.com/gvm1229/aigent-hive/pull/30), current CI names로 갱신한 `Protect main` rule과 merge commit `e4c5b5e`
+- Stable candidate: [run 31741922500](https://github.com/gvm1229/aigent-hive/actions/runs/31741922500), 5 native targets·npm umbrella·direct installers·integrity bundle PASS
+- Publication: [run 31742946016](https://github.com/gvm1229/aigent-hive/actions/runs/31742946016), [GitHub Release `v0.9.3`](https://github.com/gvm1229/aigent-hive/releases/tag/v0.9.3), npm `latest=0.9.3`
+- Actual Windows x64: direct installer receipt `0.9.3`, global npm `0.9.3`, preserving user reinstall과 `hive install --validate` PASS, `AIgent Hive v0.9.3 (released 2026-08-14)`
+- Installed retrieval: PortareFolium에서 `collection:aigent-hive`를 명시해 source-private citation 5건 반환, 자동 cross-project 혼입 없음

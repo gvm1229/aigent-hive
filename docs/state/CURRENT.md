@@ -1,10 +1,10 @@
 # 현재 상태
 
-- 기준 branch: `codex/0.9.3-native-agents` (`develop` 통합 기준)
+- 기준 branch: `main` stable `e4c5b5e`, `develop` release handoff 기준
 - product version: `0.9.3`
-- 다음 release target: `0.9.3`
-- plan revision: `196`
-- 현재 milestone: `0.9.3` validation 계약·출시 운영 최적화·source knowledge import·명시 collection access·자동 지식 최적화·numbered public test 수용·정식 출시
+- 다음 release target: `0.10.0-test` 후보 검토 전 유지보수자 명시 승인
+- plan revision: `197`
+- 현재 milestone: `0.9.3` 정식 출시·Windows 수용 완료, `0.10.0-test` 후보 대기
 - 기능 기준: `2cec0377748874748d126b6b55e59975a3f20a02`; release discipline base `c777da1`
 - 제외: `NHA10-001–012`·`N10-002–011`의 `0.10.0-test`
 - 문서 gate: root·번역 README, 설치 안내, 공개 HTML, npm README, plugin metadata,
@@ -47,6 +47,13 @@
   및 npm `test=0.9.3-test` 확인. 이 Windows x64 isolated prefix에서 public `0.9.2` clean install,
   `0.9.3-test` upgrade, matching pending receipt recovery, version/date 출력과 receipt 수렴 PASS.
   `latest=0.9.2` 유지. 다음 gate: protected `main` 통합과 stable candidate
+
+- `0.9.3` 안정판 완료: PR #30 merge `e4c5b5e`와 candidate run `31741922500`의 5 native target·
+  npm umbrella·direct installer·integrity bundle PASS. publication run `31742946016` 뒤
+  [GitHub Release `v0.9.3`](https://github.com/gvm1229/aigent-hive/releases/tag/v0.9.3)·npm `latest=0.9.3` 확인.
+  이 Windows x64의 public direct installer receipt, global npm install, preserving user reinstall,
+  `hive install --validate`, `AIgent Hive v0.9.3 (released 2026-08-14)` PASS. PortareFolium target의
+  explicit `collection:aigent-hive` installed retrieval에서 source-private canonical citation 5건 반환
 
 - `0.9.3` projection purge·directive 우선 갱신 완료: historical digest 또는 authenticated ownership으로
   증명되는 retired Hive Skill만 전역·project `.agents/skills`에서 제거. 새 Hive safety·ownership rule과
