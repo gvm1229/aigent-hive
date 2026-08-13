@@ -84,7 +84,10 @@
   - Evidence: `dispatch-uncertain`에서 authenticated non-launch proof 전 reprepare·final result
     거부, duplicate/conflict receipt·late result·clock rollback/refund replay, concurrent prepare의
     단일 executable response. core 9·loop CLI 20·strict Clippy PASS
-- [ ] [NAT-023] Team barrier·mailbox dedupe·path overlap·multi-goal budget·migration partial publish E2E
+- [x] [NAT-023] Team barrier·mailbox dedupe·path overlap·multi-goal budget·migration partial publish E2E
+  - Evidence: `native_workflow`의 exact barrier·mailbox conflict 격리·casefold 경로 충돌·nested budget
+    single refund 6 PASS와 `migration_recover_converges_after_partial_generation_publish`의 staged
+    `RECOVERY.toml`·부분 `MIGRATION.md` 뒤 signed `--recover` 수렴, legacy byte 보존 회귀 PASS
 - [ ] [NAT-024] Clean clone·세 host·보안·관찰성 gate 뒤 default activation 결정과 신규 OMX·OMC 경로 제거
 
 ## 수락 기준
