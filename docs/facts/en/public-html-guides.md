@@ -9,9 +9,9 @@ summary: "Two Korean HTML pages and their design guide cover Hive features, inst
 tags: [branding, documentation, onboarding]
 aliases: ["Hive core features guide", "Hive quick install guide"]
 sources:
-  - "repo:docs/guides/public-html-design-principles.md#sha256:6aae9ab9808ca927fe3736f3c4bde3e91a0e25a9700ae75f98592e1577ab01ec"
-  - "repo:docs/hive-core-features.ko.html#sha256:861c364e8e91206bec6e6b343a155a97948c3d3e5ff46aba8274022915e10dae"
-  - "repo:docs/hive-install-guide.ko.html#sha256:31a0b8e07f218692402f9560423ee032874082deb54f17331a78cdf2ea454e73"
+  - "repo:docs/guides/public-html-design-principles.md#sha256:fad1cc025bcc709cb98ffa0a066146fcc7d2d9c775b30eed1e74df1d0a348ea8"
+  - "repo:docs/hive-core-features.ko.html#sha256:e66b9bd31b7c87829a0c5d4c016e28b9b7511c7b16f88045dbeba8f39e8f5c67"
+  - "repo:docs/hive-install-guide.ko.html#sha256:01dfde6fb78dcf7938db8bd58332481bab378bbbc658ba0fb5320907d4b78aa9"
   - "repo:docs/plans/active/public-html-guides.md#sha256:983c430ae31f6a9913554a5e646b1eb8f989b52e5d71cd994f1529fdf756918c"
 links: [global-onboarding, product-purpose]
 reviewed_revision: "git:0b3bbbbfcb5904262c5281a0415851b96779ab9e"

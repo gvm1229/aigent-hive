@@ -9,7 +9,7 @@ summary: "Subscription-authenticated agent host를 둘러싼 local harness 제�
 tags: [product, purpose]
 aliases: ["Hive 목적"]
 sources:
-  - "repo:docs/overview/product.md#sha256:be4709ed04f220d59cd559cb579e87feed9de534470fdcc7b17925d8f0175809"
+  - "repo:docs/overview/product.md#sha256:af03ed24207be9c918dfaf12758d321f3ec5b77ed1d8850ee300faa16b9ffb7d"
 links: [product-non-goals, supported-hosts]
 reviewed_revision: "git:a86bb5bc4aa01c9823fa670e83cb538b9f031cbf"
 status: active
