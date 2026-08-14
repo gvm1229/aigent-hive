@@ -4631,6 +4631,55 @@ mod tests {
     }
 
     #[test]
+    fn user_statement_remember_accepts_safe_release_claim_key_and_blocks_credentials() {
+        let user = temp_root();
+        write_user_setup(user.path(), true);
+        write_empty_knowledge(user.path());
+        let safe = run_remember(&[
+            "--user-root".to_owned(),
+            user.path().to_string_lossy().into_owned(),
+            "--user-statement".to_owned(),
+            "Every Hive Skill description starts with its canonical English identifier.".to_owned(),
+            "--claim-key".to_owned(),
+            "v094-skill-description-and-projection-validation".to_owned(),
+            "--kind".to_owned(),
+            "convention".to_owned(),
+            "--output".to_owned(),
+            "json".to_owned(),
+        ])
+        .expect("safe release claim");
+        assert_eq!(safe.status, "success");
+        RagStore::open(user.path())
+            .expect("store")
+            .validate_current()
+            .expect("canonical Markdown and derived index");
+
+        let blocked = temp_root();
+        write_user_setup(blocked.path(), true);
+        write_empty_knowledge(blocked.path());
+        let Err(error) = run_remember(&[
+            "--user-root".to_owned(),
+            blocked.path().to_string_lossy().into_owned(),
+            "--user-statement".to_owned(),
+            "The access token is ghp_abcdefghijklmnopqrstuvwxyz012345.".to_owned(),
+            "--claim-key".to_owned(),
+            "release-credential".to_owned(),
+            "--kind".to_owned(),
+            "decision".to_owned(),
+            "--output".to_owned(),
+            "json".to_owned(),
+        ]) else {
+            panic!("credential must fail before user-root mutation");
+        };
+        assert_eq!(error.code(), "hive.knowledge-invalid-input");
+        assert!(!blocked
+            .path()
+            .join(".hive/knowledge/Claims/user-root")
+            .exists());
+        assert!(!blocked.path().join(SHARED_INDEX_RELATIVE).exists());
+    }
+
+    #[test]
     fn user_statement_remember_rejects_unsupported_kind_and_mixed_request() {
         let user = temp_root();
         write_user_setup(user.path(), true);
