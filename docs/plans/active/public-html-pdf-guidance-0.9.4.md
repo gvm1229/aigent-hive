@@ -22,13 +22,26 @@
 
 ## Checklist
 
-- [ ] [HGD94-001] `hive-core-features.ko.html` 지식 기능 강조 상자 제거와 다섯 Skill 비교표 추가
-- [ ] [HGD94-002] 비교표 각 행의 정본 ID·사람 중심 기능명·적합한 사용 시점·작업 범위·구체적
+- [x] [HGD94-001] `hive-core-features.ko.html` 지식 기능 강조 상자 제거와 다섯 Skill 비교표 추가
+- [x] [HGD94-002] 비교표 각 행의 정본 ID·사람 중심 기능명·적합한 사용 시점·작업 범위·구체적
   사용 예시·비밀 값과 원문 기록 금지 경계 추가
-- [ ] [HGD94-003] 인쇄 CSS의 section title 단독 page 방지. title과 content 일부 동시 배치 가능 시
+- [x] [HGD94-003] 인쇄 CSS의 section title 단독 page 방지. title과 content 일부 동시 배치 가능 시
   현 page 유지 regression 추가
-- [ ] [HGD94-004] HTML static·desktop/mobile render, 재생성 PDF Poppler page render와 title/content
+- [x] [HGD94-004] HTML static·desktop/mobile render, 재생성 PDF Poppler page render와 title/content
   page adjacency visual inspection
+
+## 완료 증거
+
+- `knowledge-capture`, `knowledge-recall`, `knowledge-import`, `knowledge-promote`,
+  `knowledge-maintain`의 정본 ID·용도·범위·안전 경계·예시를 HTML 표와 좁은 화면의 항목별 읽기
+  레이아웃으로 구현
+- print CSS는 `.section-head`에만 `break-after: avoid-page` 적용, section·표 전체 강제 page 이동
+  미적용
+- `python -m unittest tests.conformance.test_phase3_static_contracts.Phase3SchemaContract.test_public_core_features_compares_knowledge_skills_and_keeps_print_heading_with_content -v` 통과
+- Chrome headless에서 HTML 정본으로 PDF 재생성. Poppler `pdfinfo` 8쪽과 144 dpi 8쪽 PNG
+  확인, 02·03·04 section title과 각각 뒤따르는 content의 같은 page 배치
+- Chrome headless desktop 1280 px·mobile 500 px render에서 표의 넓은 화면 열과 좁은 화면
+  항목별 레이아웃을 확인
 
 ## 수락 기준
 
