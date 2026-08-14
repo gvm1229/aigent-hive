@@ -5,25 +5,31 @@ topic_slug: language-consistency
 language: en
 counterpart: ../ko/language-consistency.md
 title: "Response Language Consistency"
-summary: "Source agents and consumer harnesses use the selected language unless the user explicitly requests another language for the current response."
-tags: [communication, documentation, projection]
-aliases: ["language consistency", "mixed-language response"]
+summary: "English responses use ASD-STE100. Korean responses use Korean unless an exact English literal is necessary."
+tags: [communication, documentation, harness, language]
+aliases: ["Korean response", "controlled English", "language consistency"]
 sources:
-  - "repo:.agents/directives/01-behavior.md#sha256:9d8adb7c75015fd24df8cb226a16180548c600dc963ee154c0a4af408e9fa48c"
-  - "repo:AGENTS.md#sha256:e200aeee1a58fe9224e6e7a0a5a915cde8ac666e4421ea9c6696f0f1cb142fee"
-  - "repo:crates/hive-cli/src/user_install.rs#sha256:db91b9841c057a3f9b964185fb2a2f3c2f8701908cf6439e26bf05d389a7243d"
-  - "repo:harness/template/AGENTS.md.jinja#sha256:9b45162b48b5d6eedcce0d0b6bc2d63613776fc1089a7d2878941897d0d506c5"
+  - "repo:.agents/directives/01-behavior.md#sha256:6587e8fa5aa274f2c981ad28c062d3c8c388e351440c04663a50122570986976"
+  - "repo:.agents/directives/08-human-documentation-style.md#sha256:c5e0f385ab0bdb17979eee241bc77ad8531d5fb4e29198654bb28b9185164884"
+  - "repo:harness/project-bases/0.9.0/AGENTS.md.template#sha256:0d3c02bcd6269879b635b83d7ed22a0e4a9fd6e1b15f75a0b2a1e496f808e57d"
+  - "repo:harness/skills/user-setup/SKILL.md#sha256:640be28ec7f75444a52544b0d36c45363696dcbd0281f9c5aabd0768d185784e"
+  - "repo:harness/template/AGENTS.md.jinja#sha256:63e361ae2218f00f6a22f5e192c25a5c3bcddc21d51f61006f74a0459b636a38"
 links: [global-onboarding, source-development]
-reviewed_revision: "git:35e6b79a024350487f823780101a28be24a9f4c7"
+reviewed_revision: "git:721f888e97222d8c32e67eb5c546dc070189090a"
 status: active
 ---
 
 # Response Language Consistency
 
-Source-development agents and installed consumer harnesses use the selected
-language for every question and response. Only an explicit request for the
-current response permits another language; message language alone does not
-change the preference. User-scope and project guidance bind the exact `en|ko`
-value. Acceptance: an always-loaded source rule plus passing unit,
-static-contract, and connected lifecycle tests. Origin: maintainer request to
-enforce the installation-selected language across source and product sessions.
+Source agents and consumer harnesses use the selected language. Only an
+explicit request for the current response can change it.
+
+English responses use ASD-STE100 Simplified Technical English. Use short
+direct sentences, concrete verbs, and one main point per sentence. Do not use
+idiom, filler, vague pronouns, stacked clauses, or unnecessary synonyms.
+
+Korean responses use Korean vocabulary and sentence structure. Keep English
+only for a necessary exact literal or technical term. Do not use mixed
+Korean-English compounds or emphasis-only English parentheticals. Translate
+meaning, not English word order. Acceptance: source and consumer contracts,
+four matching user-setup projections, and rendered lifecycle tests.

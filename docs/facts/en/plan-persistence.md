@@ -11,7 +11,7 @@ aliases: ["Markdown plan authority"]
 sources:
   - "repo:.agents/directives/04-documentation-state.md#sha256:44913afc655f527245720594f16a92c87061abfc28280f1a2834ad328b336be5"
   - "repo:docs/plans/README.md#sha256:7fca19e770b1b99b647a893517b50bcf6e6eb136e3c84ae52ba1258267087df0"
-  - "repo:harness/template/AGENTS.md.jinja#sha256:9b45162b48b5d6eedcce0d0b6bc2d63613776fc1089a7d2878941897d0d506c5"
+  - "repo:harness/template/AGENTS.md.jinja#sha256:63e361ae2218f00f6a22f5e192c25a5c3bcddc21d51f61006f74a0459b636a38"
 links: [automated-user-handoff, source-development]
 reviewed_revision: "git:a833ba22d805fedce23cd74aa326b574b77280f4"
 status: active

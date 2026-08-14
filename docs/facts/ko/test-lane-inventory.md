@@ -11,7 +11,7 @@ aliases: ["conformance lanes", "test inventory"]
 sources:
   - "repo:scripts/test-lanes.py#sha256:a5733a0e84b484c06f89b7a5f55d09053de3153a38e444bbf0188ff4c319fa4d"
   - "repo:tests/conformance/lanes.toml#sha256:2cf119af77b27aa4f8bb644381eac96101833c388080c2fa41dafada65fa16cc"
-  - "repo:tests/conformance/test_connected_setup_lifecycle.py#sha256:8198b05b080e122a89e783a28918aa76282b3025ced1d2a8d84ee2f464062681"
+  - "repo:tests/conformance/test_connected_setup_lifecycle.py#sha256:79ef3059c6ac62952e74f5e8f0032c5ec253bc0daa869d14c95d7c31fe1552c9"
   - "repo:tests/conformance/test_phase4_contracts.py#sha256:931a18a69a2f065109133c25ad954e8214f4635ee2685f412343354a8f34e396"
 links: [release-verification, test-fault-isolation]
 reviewed_revision: "git:3b4d6d23c679eec9e23f334dc60a2678b657345e"

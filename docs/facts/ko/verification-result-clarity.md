@@ -9,10 +9,10 @@ summary: "Hive 검증 결과에 실제 실행 여부, 미실행 이유, 입증 �
 tags: [communication, reporting, verification]
 aliases: ["건너뜀 보고", "검증 한정 조건"]
 sources:
-  - "repo:.agents/directives/01-behavior.md#sha256:9d8adb7c75015fd24df8cb226a16180548c600dc963ee154c0a4af408e9fa48c"
+  - "repo:.agents/directives/01-behavior.md#sha256:6587e8fa5aa274f2c981ad28c062d3c8c388e351440c04663a50122570986976"
   - "repo:crates/hive-cli/src/user_install.rs#sha256:db91b9841c057a3f9b964185fb2a2f3c2f8701908cf6439e26bf05d389a7243d"
   - "repo:docs/guidance-schema.md#sha256:eae385d284f448a27a5243d8e7846aa69d9568e0849d3457147fb814229416ad"
-  - "repo:harness/template/AGENTS.md.jinja#sha256:9b45162b48b5d6eedcce0d0b6bc2d63613776fc1089a7d2878941897d0d506c5"
+  - "repo:harness/template/AGENTS.md.jinja#sha256:63e361ae2218f00f6a22f5e192c25a5c3bcddc21d51f61006f74a0459b636a38"
 links: [language-consistency, release-verification]
 reviewed_revision: "git:536f5076534cedcdb9ea3d118830792fe61cd75e"
 status: active
