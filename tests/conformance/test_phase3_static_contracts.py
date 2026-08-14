@@ -126,6 +126,14 @@ class Phase3SkillSourceContract(unittest.TestCase):
                 "Translate meaning rather than English word order.", normalized
             )
             self.assertIn("mixed Korean-English compounds", normalized)
+            self.assertIn(
+                "benign한 source claim ID",
+                text,
+            )
+            self.assertIn(
+                "원본 지식 항목 식별자",
+                text,
+            )
 
     def test_product_skill_projections_are_current_and_exact(self) -> None:
         self.assertEqual(skill_paths(SKILLS), CURRENT)

@@ -12,8 +12,15 @@ This directive governs agent behavior while developing Aigent Hive.
   product or package names, commands, code identifiers, paths, schema keys, exact UI labels,
   and terms without a clear Korean equivalent. Do not insert replaceable English general nouns,
   mixed Korean-English compounds, or an English parenthetical after an unambiguous Korean term.
-  Translate meaning rather than English word order. Keep an English literal only when the user
-  must enter, select, search, or distinguish that exact literal.
+  Do not translate English word order. Translate meaning rather than English word order. Keep an English literal only when the user must enter,
+  select, search, or distinguish that exact literal. Do not use an English word to signal
+  expertise, shorten an ordinary Korean word, or make a sentence sound technical.
+- In Korean, do not write `benign한 source claim ID가 credential로 오인되던 문제를 제거했고`.
+  Write `비밀 값으로 오인되던 일반 원본 지식 항목 식별자 문제 제거` instead. Do not write
+  `safe한 default 적용`, `global setting을 update`, `fallback으로 처리`, or
+  `사용자 설정(user configuration) 확인`. Write `안전한 기본값 적용`, `전역 설정 갱신`,
+  `대체 경로 처리`, or `사용자 설정 확인` instead. These examples are mandatory patterns,
+  not a closed list.
 - When writing in English, use ASD-STE100 Simplified Technical English. Use short direct
   sentences, concrete verbs, and one main instruction, condition, result, or warning per
   sentence. Use an approved dictionary word when known. Do not use idiom, figurative language,

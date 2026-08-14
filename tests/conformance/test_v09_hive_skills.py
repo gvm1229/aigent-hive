@@ -105,6 +105,8 @@ class V09HiveSkillProjectionTests(unittest.TestCase):
             "ASD-STE100 Simplified Technical English",
             "Translate meaning rather than English word order.",
             "mixed Korean-English compounds",
+            "benign한 source claim ID",
+            "원본 지식 항목 식별자",
         ):
             self.assertIn(expected, text)
 

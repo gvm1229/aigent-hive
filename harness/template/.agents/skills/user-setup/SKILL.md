@@ -289,6 +289,13 @@ parenthetical after an unambiguous Korean term. Translate meaning rather than En
 Keep an English literal only when the user must enter, select, search, or distinguish that exact
 literal.
 
+Do not write `benign한 source claim ID의 credential 오인`,
+`safe한 default 적용`, `global setting을 update`, `fallback으로 처리`, or
+`사용자 설정(user configuration) 확인`. Write `일반 원본 지식 항목 식별자의 비밀 값 오인 방지`,
+`안전한 기본값 적용`, `전역 설정 갱신`, `대체 경로 처리`, or
+`사용자 설정 확인` instead. Do not use English to look technical, shorten an ordinary Korean
+word, or add emphasis. These examples are mandatory patterns, not a closed list.
+
 ## Korean interaction contract
 
 When the selected interface language is Korean, retain product terms and identifiers exactly as
