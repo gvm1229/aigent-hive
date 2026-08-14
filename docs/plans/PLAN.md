@@ -1,6 +1,6 @@
 # Aigent Hive active plan index
 
-> Revision: 211
+> Revision: 212
 > 기준일: 2026-08-14
 > Product version: `0.9.4` patch 개발 기준
 > 현재 milestone: `0.9.4` GitHub Release 이중 언어 설명·공개 HTML·PDF 지식 기능 안내·Skill 표시 식별자·전역 설치 검증·완료한 source 지식 색인·응답 언어·프롬프트 영어 기본값·작업 폴더 수명주기
@@ -68,12 +68,12 @@
 | `0.9.4` 응답 언어 계약 | 8 | 0 | 100% |
 | `0.9.4` 작업 폴더 수명주기 | 4 | 0 | 100% |
 | `0.9.4` 전체 Skill 식별자 표시 | 3 | 0 | 100% |
-| `0.9.4` 전역 projection validation 정합성 | 3 | 1 | 75% |
-| `0.9.4` 전역 지식 기록 credential 오탐 | 2 | 1 | 66.7% |
+| `0.9.4` 전역 projection validation 정합성 | 4 | 0 | 100% |
+| `0.9.4` 전역 지식 기록 credential 오탐 | 3 | 0 | 100% |
 | `0.9.4` 공개 HTML·PDF 지식 기능 안내 | 4 | 0 | 100% |
-| `0.9.4` GitHub Release 이중 언어 설명 | 2 | 1 | 66.7% |
-| `0.9.4` 프롬프트 영어 기본값 | 3 | 1 | 75% |
-| `0.9.4` 시험·정식 출시 | 0 | 6 | 0% |
+| `0.9.4` GitHub Release 이중 언어 설명 | 3 | 0 | 100% |
+| `0.9.4` 프롬프트 영어 기본값 | 4 | 0 | 100% |
+| `0.9.4` 시험·정식 출시 | 4 | 2 | 66.7% |
 | Native host activation `0.10.0` 후보 | 0 | 12 | 0% |
 | Prompt refine 자동 routing | 12 | 0 | 100% |
 | v0.9 test 기능 마감 | 18 | 0 | 100% |
@@ -89,7 +89,7 @@
 | Agent 자율 실행 지속 | 8 | 0 | 100% |
 | `0.9.2` 완료 기능·공개 문서 출시 | 12 | 0 | 100% |
 | Notion `v0.10` 후보 | 1 | 10 | 9.1% |
-| **Canonical total** | **594** | **32** | **94.9%** |
+| **Canonical total** | **602** | **24** | **96.2%** |
 
 External production boundary 항목도 미완료 합계에 포함. Protected authority 없이 완료 처리 금지.
 
@@ -182,15 +182,9 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
 현재: 공개된 `0.9.3` artifact는 immutable. `SKI94-001–003` 구현·local source collection
 reimport 완료. `LGC94-001–008`의 원본·소비자 응답 언어 계약·금지 규칙·예시 보강 완료.
 완료: `PML94-001–003` 원본·Skill·전역 네 투영·프로젝트 렌더러의 응답 언어와 분리한 영어 기본값 프롬프트 계약.
-완료: `SID94-001–003` 모든 Hive Skill 설명의 정본 영문 ID-first 표시와 `UPV94-001–003` 설치된
-projection receipt 결속 검증 수렴. `UPV94-004`는 번호 공개 시험판의 Windows x64 수용으로 보류.
-완료: `KRV94-001–002` 안전한 user-root 지식 기록의 긴 claim key 오탐 제거와 실제 비밀 값의
-필드별 fail-closed 오류 표시. `KRV94-003`은 번호 공개 시험판 수용으로 보류. 다음 구현:
-`HGD94-001–004` 공개 HTML 지식 기능 비교표·PDF page title 수용. 다음 구현:
-`RNL94-001–002` GitHub Release 이중 언어 설명과 language contract 완료. `RNL94-003`은
-`0.9.4-test` GitHub prerelease rendering 수용으로 보류. `PML94-004`와
-`RNL94-001–003`을 포함한 모든 `0.9.4` 구현·문서·local gate 완료 뒤 `REL94-001`의 exact source
-freeze 진행. 이후 `REL94-002–006`: 번호 공개 시험판, Windows x64 실제 설치·업그레이드와 전 범위
-수용, protected `main` 통합, 동일 artifact stable publication, 게시 뒤 의존 검사 순서. `0.10.0` 후보
-항목은 제외 유지.
+완료: `SID94-*`·`UPV94-*`·`KRV94-*`·`HGD94-*`·`RNL94-*`·`PML94-*` 전체와
+`REL94-001–004`. exact `cc50bcbe28c771d9f176b27791086b7d05ea3b3d` public
+`v0.9.4-test.1` Windows x64 direct install·npm upgrade·validation·update path와 전 범위 수용 완료.
+다음: `REL94-005–006` protected `main` 통합, 동일 product bytes stable publication, 게시 뒤 의존 검사.
+`0.10.0` 후보 항목은 제외 유지.
 `N10-002–011`·`NHA10-001–012`: `0.10.0-test` 후보 유지.

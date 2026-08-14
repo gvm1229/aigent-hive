@@ -13,13 +13,13 @@
 
 ## Checklist
 
-- [ ] [REL94-001] 모든 `0.9.4` 구현·문서·정적·Rust·Python local gate 완료, exact `develop` source
+- [x] [REL94-001] 모든 `0.9.4` 구현·문서·정적·Rust·Python local gate 완료, exact `develop` source
   commit·release input·artifact digest 고정
-- [ ] [REL94-002] 고정 source에서 번호가 붙은 public `0.9.4-test.N` GitHub prerelease 1회 게시.
+- [x] [REL94-002] 고정 source에서 번호가 붙은 public `0.9.4-test.N` GitHub prerelease 1회 게시.
   stable·`latest` mutation과 rebuild `0회`
-- [ ] [REL94-003] Windows x64 실제 host에서 exact public test artifact의 clean install·preserving
+- [x] [REL94-003] Windows x64 실제 host에서 exact public test artifact의 clean install·preserving
   upgrade·validate·update path 수용. `UPV94`·`KRV94`·`PML94` installed acceptance 포함
-- [ ] [REL94-004] exact public test artifact로 `SID94`·`HGD94`·`RNL94` 전 범위 수용과 artifact
+- [x] [REL94-004] exact public test artifact로 `SID94`·`HGD94`·`RNL94` 전 범위 수용과 artifact
   version·commit·digest·실행 결과 기록
 - [ ] [REL94-005] latest accepted test source만 protected `main` workflow로 통합. stable input과
   test input의 product bytes·release note·artifact digest 동등성 확인
@@ -32,6 +32,14 @@
 - stable은 accepted test artifact와 다른 제품 byte `0건`
 - public artifact로만 설치·업그레이드와 complete scope 수용
 - stable publication 뒤 의존 검증 성공
+
+## Public test acceptance evidence
+
+- source: `cc50bcbe28c771d9f176b27791086b7d05ea3b3d`; candidate run `31765987540`; publication run `31766521620`
+- public prerelease: [`v0.9.4-test.1`](https://github.com/gvm1229/aigent-hive/releases/tag/v0.9.4-test.1), Windows zip SHA-256 `e9fd97fd11535fad9d4ddaac0551f68a2fb23f3d86e1a6f5313667bf0760f411`
+- Windows x64: public direct installer clean install, npm `0.9.3 → 0.9.4-test.1` upgrade, preserving reinstall, install/setup validation, enabled `hive update --check` current receipt 확인
+- installed scope: safe knowledge receipt 성공·credential-shaped input mutation-free rejection, 26 Skill description ID-first, Korean response directive와 English-default·explicit-Korean prompt contract 확인
+- public tag source: HTML·PDF·release note blob과 accepted source 일치; PDF pagination visual inspection, English-first bilingual Release body와 fact ID parity 확인
 
 ## 범위 제외
 

@@ -23,7 +23,7 @@ validation 정합성 결정. credential·secret·private source 입력 `0건`.
   regression 고정. scanner·request construction·claim key 경계 원인 식별
 - [x] [KRV94-002] safe statement·claim key·canonical metadata 기록 수용. 실제 credential fixture는
   user-root Markdown·SQLite mutation 전 fail-closed 유지
-- [ ] [KRV94-003] unit·CLI integration과 Windows x64 installed `0.9.4-test` automatic capture
+- [x] [KRV94-003] unit·CLI integration과 Windows x64 installed `0.9.4-test` automatic capture
   receipt 수용 확인
 
 ## 수락 기준
@@ -42,7 +42,9 @@ validation 정합성 결정. credential·secret·private source 입력 `0건`.
   canonical Markdown·derived SQLite 수용과 실제 GitHub token의 변경 전 거부 회귀
 - 이 Windows x64 source workspace의 `cargo test -p hive-wiki --locked` 113개,
   `cargo test -p hive-cli knowledge --locked` 49개 통과. `KRV94-003`의 public
-  `0.9.4-test` automatic capture receipt 수용은 출시 artifact 뒤 별도 확인
+  `0.9.4-test.1` automatic capture receipt 수용 완료: safe user-root statement는
+  `hive.knowledge-remembered`, credential-shaped input은 canonical Markdown·SQLite 변경 없이
+  exact field·reason 오류 확인
 
 ## 범위 제외
 

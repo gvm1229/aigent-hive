@@ -28,7 +28,7 @@ receipt의 `setup_digest`만 변경, 정상 설치 invalid 판정.
   사용해 정상 projection receipt를 수용
 - [x] [UPV94-003] setup·install·update·validate가 user projection의 local change, ownership
   mismatch, malformed receipt와 실제 structured configuration 손상은 계속 거부
-- [ ] [UPV94-004] Rust unit·CLI integration과 Windows x64 설치본 fresh setup·preserving
+- [x] [UPV94-004] Rust unit·CLI integration과 Windows x64 설치본 fresh setup·preserving
   reinstall·validate 수용에서 결과 수렴 확인
 
 ## 수락 기준
@@ -46,7 +46,8 @@ receipt의 `setup_digest`만 변경, 정상 설치 invalid 판정.
   각각 conflict 유지. 이 Windows x64 source workspace의 `cargo test -p hive-cli user_setup --locked`
   46개와 `cargo test -p hive-cli user_install --locked` 84개 통과
 - `UPV94-004`: public `0.9.4-test` Windows x64 fresh setup·preserving reinstall·validate의
-  release artifact 뒤 별도 수용 증거
+  release artifact 수용 완료. 공개 npm `0.9.3 → 0.9.4-test.1` upgrade 뒤 dry-run·preserving
+  reinstall·`hive install --validate`·`hive setup --validate` 수렴 확인
 
 ## 범위 제외
 
