@@ -1042,13 +1042,7 @@ fn execute(arguments: &Arguments) -> Result<ActionResult, SetupError> {
                     "installed user setup differs from the supplied answers".to_owned(),
                 ));
             }
-            let validation_setup = if legacy_answers { &installed } else { &desired };
-            validate_user_projection(
-                &arguments.root_cap,
-                &config,
-                &resolved_skills,
-                validation_setup,
-            )?;
+            validate_user_projection(&arguments.root_cap, &config, &resolved_skills, &installed)?;
             for host in &config.selected_hosts {
                 super::user_install::validate_configured_host(
                     &arguments.user_root,
@@ -3335,6 +3329,113 @@ usage_guard:
     }
 
     #[test]
+    fn validation_uses_installed_projection_binding_for_equivalent_answers() {
+        let temporary = tempfile::tempdir().expect("temporary user root");
+        let config = valid_config();
+        let catalog = parse_and_validate_catalog().expect("catalog");
+        let skills = resolve_skills(&config, &catalog).expect("skill closure");
+        let answers = canonical_config(&config).expect("canonical answers");
+        let installed = [b"# locally preserved formatting\n".as_slice(), &answers].concat();
+        let setup_path = temporary.path().join(USER_SETUP_RELATIVE);
+        fs::create_dir_all(setup_path.parent().expect("setup parent")).expect("setup parent");
+        fs::write(&setup_path, &installed).expect("installed setup");
+        let root =
+            super::super::user_install::open_user_root_for_setup(temporary.path()).expect("root");
+        apply_user_projection(&root, &config, &skills, &installed).expect("installed projection");
+        let manifest_path = temporary.path().join(USER_PROJECTION_MANIFEST_RELATIVE);
+        let manifest_before = fs::read(&manifest_path).expect("installed manifest");
+
+        assert!(validate_user_projection(&root, &config, &skills, &answers).is_err());
+        validate_user_projection(&root, &config, &skills, &installed)
+            .expect("installed binding validates without rewriting the receipt");
+        assert_eq!(
+            fs::read(&manifest_path).expect("manifest after validation"),
+            manifest_before
+        );
+    }
+
+    #[test]
+    fn validation_keeps_modified_or_malformed_projection_fail_closed() {
+        let temporary = tempfile::tempdir().expect("temporary user root");
+        let config = valid_config();
+        let catalog = parse_and_validate_catalog().expect("catalog");
+        let skills = resolve_skills(&config, &catalog).expect("skill closure");
+        let answers = canonical_config(&config).expect("answers");
+        let setup_path = temporary.path().join(USER_SETUP_RELATIVE);
+        fs::create_dir_all(setup_path.parent().expect("setup parent")).expect("setup parent");
+        fs::write(&setup_path, &answers).expect("installed setup");
+        let root =
+            super::super::user_install::open_user_root_for_setup(temporary.path()).expect("root");
+        apply_user_projection(&root, &config, &skills, &answers).expect("installed projection");
+        let answer_path = temporary.path().join("answers.yml");
+        fs::write(&answer_path, &answers).expect("answers");
+        let manifest_path = temporary.path().join(USER_PROJECTION_MANIFEST_RELATIVE);
+        let manifest = fs::read(&manifest_path).expect("installed manifest");
+        let projection_path = temporary.path().join(".agents/skills/user-setup/SKILL.md");
+        let projection = fs::read(&projection_path).expect("installed projection");
+        fs::write(&projection_path, b"foreign local change\n").expect("local change");
+
+        let arguments = Arguments {
+            answers: answer_path.clone(),
+            mode: SetupMode::Validate,
+            user_root: temporary
+                .path()
+                .canonicalize()
+                .expect("canonical user root"),
+            root_cap: super::super::user_install::open_user_root_for_setup(temporary.path())
+                .expect("validation root"),
+        };
+        let Err(error) = execute(&arguments) else {
+            panic!("local projection change must fail");
+        };
+        assert_eq!(error.status(), "conflict");
+        assert!(error
+            .message()
+            .contains(".agents/skills/user-setup/SKILL.md"));
+
+        fs::write(
+            temporary.path().join(USER_PROJECTION_MANIFEST_RELATIVE),
+            b"not a projection manifest\n",
+        )
+        .expect("malformed manifest");
+        let arguments = Arguments {
+            answers: answer_path.clone(),
+            mode: SetupMode::Validate,
+            user_root: temporary
+                .path()
+                .canonicalize()
+                .expect("canonical user root"),
+            root_cap: super::super::user_install::open_user_root_for_setup(temporary.path())
+                .expect("validation root"),
+        };
+        let Err(error) = execute(&arguments) else {
+            panic!("malformed receipt must fail");
+        };
+        assert_eq!(error.status(), "conflict");
+        assert!(error.message().contains("manifest is invalid"));
+
+        fs::write(&manifest_path, manifest).expect("restore manifest");
+        fs::write(&projection_path, projection).expect("restore projection");
+        fs::write(&setup_path, b"schema_version: not-a-number\n")
+            .expect("corrupted installed setup");
+        let arguments = Arguments {
+            answers: answer_path,
+            mode: SetupMode::Validate,
+            user_root: temporary
+                .path()
+                .canonicalize()
+                .expect("canonical user root"),
+            root_cap: super::super::user_install::open_user_root_for_setup(temporary.path())
+                .expect("validation root"),
+        };
+        let Err(error) = execute(&arguments) else {
+            panic!("corrupted installed setup must fail");
+        };
+        assert_eq!(error.status(), "conflict");
+        assert!(error.message().contains("installed user setup is invalid"));
+    }
+
+    #[test]
     fn user_projection_replaces_an_authenticated_vanilla_base() {
         let config = valid_config();
         let catalog = parse_and_validate_catalog().expect("catalog");
@@ -4211,7 +4312,8 @@ usage_guard:
         assert!(korean.contains("# Aigent Hive 사용자 설정"));
         assert!(korean.contains("명시적 요청이 없는 한 모든 질문과 응답에 한국어 사용"));
         assert!(korean.contains("다른 언어로 작성된 메시지만으로 이 선호를 변경하지 않음"));
-        assert!(korean.contains("현재 프롬프트 언어를 사용자가 명시하지 않은 경우 프롬프트는 영어로 작성"));
+        assert!(korean
+            .contains("현재 프롬프트 언어를 사용자가 명시하지 않은 경우 프롬프트는 영어로 작성"));
         assert!(korean.contains("통과·실패·건너뜀·연기·미검증·미지원"));
         assert!(korean.contains("`agent-owned` 작업 `0건`일 때만 완료 표기"));
         assert!(!korean.contains("# Aigent Hive user preferences"));
