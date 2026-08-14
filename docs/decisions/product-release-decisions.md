@@ -37,6 +37,7 @@
 | judge | verdict 전 digest-bound assignment, exact roster/slot/instance/evidence/timestamp, requester/task-agent 배제, verdict 후 별도 human approval; elevated 2/3, critical 3/3+human |
 | judge 신뢰 | consumer target 밖의 agent-write-denied TOML public-key trust root, purpose-bound detached Ed25519 signature와 aggregate-only output; Hive는 strict verification만 수행하고 private-key custody/signing은 외부 authority가 소유 |
 | release 신뢰 | Protected `main` exact tag, same-candidate GitHub Release, SHA-256 sidecar, GitHub artifact attestation, npm Trusted Publishing OIDC·registry provenance. GitHub stable environment의 human approval 한 번, npm 별도 승인 없음 |
+| GitHub Release 설명 | `docs/releases/<product-version>.md` 정본의 English-first·Korean-second 이중 언어 설명. 영어는 ASD-STE100 Simplified Technical English, 한국어는 한국어 언어 계약 적용. 두 section의 기능·호환성·검증 경계 동등성 필수 |
 | platform signing | macOS explicit ad-hoc seal은 publisher identity·notarization 아님을 공개. Windows unsigned 공개. Developer ID·notarization, Authenticode·SignPath는 optional enhancement이며 stable gate 아님 |
 | release trust 폐기 | Release TUF·offline root·threshold signer·external authorization ceremony·platform certificate evidence gate 삭제. Judge external trust root와 frozen historical release base는 별도 경계 |
 | user projection purge | Setup·update·uninstall은 authenticated inventory와 retired-name ledger로 Hive-owned projection을 current closure에 수렴. 중첩 빈 directory·owned transient state 제거, knowledge·saved preference·foreign byte·developer rollback state 보존 |
