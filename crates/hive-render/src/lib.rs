@@ -896,6 +896,9 @@ pub fn historical_project_upgrade_candidate_in(
         "0.7.0" => frozen_project_base_0_7(target_dir)?,
         "0.8.0" => frozen_project_base_0_8(target_dir)?,
         "0.9.0" => frozen_project_base_0_9(target_dir)?,
+        "0.9.1" => frozen_project_base_0_9_1(target_dir)?,
+        "0.9.2" => frozen_project_base_0_9_2(target_dir)?,
+        "0.9.3" => frozen_project_base_0_9_3(target_dir)?,
         _ => Err(RenderError::Unsupported(format!(
             "historical full project base is not embedded: {version}"
         )))?,
@@ -1302,6 +1305,143 @@ fn frozen_project_base_0_9(target_dir: &Dir) -> Result<BTreeMap<String, Vec<u8>>
         include_str!("../../../harness/project-bases/0.9.0/AGENTS.md.template"),
     )
 }
+
+macro_rules! frozen_project_base_0_9_release {
+    ($function:ident, $version:literal, [$($directive:literal),+ $(,)?], [$($skill:literal),+ $(,)?]) => {
+        fn $function(target_dir: &Dir) -> Result<BTreeMap<String, Vec<u8>>, RenderError> {
+            const DIRECTIVES: &[(&str, &[u8])] = &[
+                $(($directive, include_bytes!(concat!(
+                    "../../../harness/project-bases/", $version, "/directives/", $directive
+                )).as_slice())),+
+            ];
+            const SKILLS: &[(&str, &[u8], &[u8])] = &[
+                $(($skill,
+                    include_bytes!(concat!(
+                        "../../../harness/project-bases/", $version, "/skills/", $skill, "/SKILL.md"
+                    )).as_slice(),
+                    include_bytes!(concat!(
+                        "../../../harness/project-bases/", $version, "/skills/", $skill, "/agents/openai.yaml"
+                    )).as_slice())),+
+            ];
+            frozen_project_base_0_8_or_0_9(
+                target_dir,
+                $version,
+                DIRECTIVES,
+                SKILLS,
+                include_str!(concat!(
+                    "../../../harness/project-bases/", $version, "/AGENTS.md.template"
+                )),
+            )
+        }
+    };
+}
+
+frozen_project_base_0_9_release!(
+    frozen_project_base_0_9_1,
+    "0.9.1",
+    [
+        "00-project-harness.md",
+        "01-project-knowledge.md",
+        "02-project-upgrade.md"
+    ],
+    [
+        "amend-directive",
+        "code-polish",
+        "knowledge-capture",
+        "knowledge-import",
+        "knowledge-maintain",
+        "knowledge-promote",
+        "knowledge-recall",
+        "package-review",
+        "product-update",
+        "project-refresh",
+        "project-setup",
+        "project-transition",
+        "prompt-refine",
+        "quick-answer",
+        "ralph-loop",
+        "research-best-practices",
+        "run-checkpoint",
+        "run-handoff",
+        "run-resume",
+        "ship",
+        "usage-guard",
+        "user-setup"
+    ]
+);
+
+frozen_project_base_0_9_release!(
+    frozen_project_base_0_9_2,
+    "0.9.2",
+    [
+        "00-project-harness.md",
+        "01-project-knowledge.md",
+        "02-project-upgrade.md"
+    ],
+    [
+        "amend-directive",
+        "code-polish",
+        "knowledge-capture",
+        "knowledge-import",
+        "knowledge-maintain",
+        "knowledge-promote",
+        "knowledge-recall",
+        "package-review",
+        "product-update",
+        "project-refresh",
+        "project-setup",
+        "project-transition",
+        "prompt-refine",
+        "quick-answer",
+        "ralph-loop",
+        "research-best-practices",
+        "run-checkpoint",
+        "run-handoff",
+        "run-resume",
+        "ship",
+        "usage-guard",
+        "user-setup"
+    ]
+);
+
+frozen_project_base_0_9_release!(
+    frozen_project_base_0_9_3,
+    "0.9.3",
+    [
+        "00-project-harness.md",
+        "01-project-knowledge.md",
+        "02-project-upgrade.md",
+        "03-session-coordination.md"
+    ],
+    [
+        "amend-directive",
+        "code-polish",
+        "custom-subagent-create",
+        "iterative-execution",
+        "knowledge-capture",
+        "knowledge-import",
+        "knowledge-maintain",
+        "knowledge-promote",
+        "knowledge-recall",
+        "multi-goal",
+        "package-review",
+        "product-update",
+        "project-refresh",
+        "project-setup",
+        "project-transition",
+        "prompt-refine",
+        "quick-answer",
+        "ralph-loop",
+        "research-best-practices",
+        "run-checkpoint",
+        "run-handoff",
+        "run-resume",
+        "ship",
+        "team-execution",
+        "usage-guard",
+        "user-setup"
+    ]
+);
 
 #[allow(clippy::too_many_lines)]
 fn frozen_project_base_0_8_or_0_9(
@@ -8245,7 +8385,16 @@ mod tests {
                 );
             }
             assert!(historical_project_upgrade_candidate_in(&target_dir, "0.8.1").is_err());
-            assert!(historical_project_upgrade_candidate_in(&target_dir, "0.9.1").is_err());
+            for version in ["0.9.1", "0.9.2", "0.9.3"] {
+                let historical = historical_project_upgrade_candidate_in(&target_dir, version)
+                    .expect("embedded post-0.9.0 full registry");
+                assert_eq!(historical.product_version, version);
+                assert!(!historical.files.is_empty());
+                assert!(historical
+                    .files
+                    .iter()
+                    .all(|entry| entry.content_digest == sha256_digest(&entry.content)));
+            }
 
             let harness = fs::read_to_string(&harness_path).expect("0.8 harness config");
             fs::write(

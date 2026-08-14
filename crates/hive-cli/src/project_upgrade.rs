@@ -532,7 +532,10 @@ fn expected_base_kind(path: &str) -> Result<&'static str, UpdateError> {
 }
 
 fn authenticate_historical_base(target: &Dir, ledger: &BaseLedger) -> Result<(), UpdateError> {
-    if matches!(ledger.product_version.as_str(), "0.7.0" | "0.8.0" | "0.9.0") {
+    if matches!(
+        ledger.product_version.as_str(),
+        "0.7.0" | "0.8.0" | "0.9.0" | "0.9.1" | "0.9.2" | "0.9.3"
+    ) {
         let expected = historical_project_upgrade_candidate_in(target, &ledger.product_version)
             .map_err(render_error)?;
         return authenticate_full_historical_base(ledger, &expected);
