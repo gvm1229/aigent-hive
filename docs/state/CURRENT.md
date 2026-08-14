@@ -2,12 +2,12 @@
 
 - 기준 branch: `main` stable `8b37323`, `develop` patch handoff `4dcc9a7`
 - product version: `0.9.4`
-- 다음 release target: `0.9.4` stable publication 완료; 다음 version 미정 지식 Skill 표시 이름 개선. `0.10.0` 후보 작업 시작 제외
+- 다음 release target: `0.9.4` stable publication 완료; 다음 version 미정 지식 Skill 표시 이름 개선 완료, release·tag·package 변경 없음. `0.10.0` 후보 작업 시작 제외
 - plan revision: `220`
 - 현재 milestone: `0.9.3` 정식 출시·Windows 수용 완료, `0.9.4` GitHub Release 이중 언어 설명·공개 HTML·PDF 지식 기능 안내·전체 Skill 식별자 표시·전역 projection validation·지식 기록 credential 오탐·완료한 source knowledge scan·응답 언어·프롬프트 영어 기본값·작업 폴더 수명주기
 - 기능 기준: `8b37323daa33b96918933ad629d7c709c3cb6679`; release discipline base `c777da1`
 - 제외: `NHA10-001–012`·`N10-002–011`의 `0.10.0-test`
-- 진행: 다음 version 미정 지식 Skill 다섯 개의 한국어 표시 이름에서 영문 정본 ID 제거. ID는 설명 첫머리 유지. `v0.9.4` release·tag·package 변경 없음
+- 완료: 다음 version 미정 지식 Skill 다섯 개의 한국어 표시 이름에서 영문 정본 ID 제거. ID는 설명 첫머리 유지. `v0.9.4` release·tag·package 변경 없음
 - `0.9.4` source knowledge scan correction 완료: `--candidates`와 `--apply`의 store-level validation parity, claim-bound credential diagnostic, canonical provenance summary의 human review ID false-positive 제거. source build로 61개 current-truth fact·architecture claim을 source-private `aigent-hive` collection에 재적용, automatic shared promotion `0건`, generation 115와 PortareFolium explicit retrieval 확인. published `0.9.3` stable artifact 변경 없음; installed `0.9.3` binary의 correction은 `0.9.4-test` publication 뒤 검증 필요
 - `0.9.4` 응답 언어 계약 완료: 원본 `.agents`와 소비자 하네스에 ASD-STE100 영어·한국어 의미 중심 문장 기준 반영. `user-setup` 4개 투영 byte 일치, 렌더된 소비자 `AGENTS.md`·31개 focused 시험·문서 말투·Markdown 링크·Source Wiki 색인 재생성·lint 검사 통과
 - `0.9.4` 응답 언어 보강 완료: 치환 가능한 영어 혼용·혼합 합성어·강조용 영어 괄호·영어 어순 직역 금지와 자연스러운 한국어 대체 예시를 원본·소비자 계약에 반영. 정적 계약·네 Skill 투영 byte 일치·렌더된 소비자 `AGENTS.md` 수명주기 31개 시험 통과, 문서 말투 finding `0`
