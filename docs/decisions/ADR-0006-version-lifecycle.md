@@ -40,6 +40,14 @@ Release gate는 다음 version이 모두 같지 않으면 실패.
 - generated consumer `.hive/config/harness.toml`
 - README와 `docs/state/CURRENT.md`
 
+## Project upgrade baseline coverage
+
+Project migration table의 source range는 release bundle에 exact full historical project base가
+포함되고 binary가 mutation 전 이를 인증할 수 있는 release만 선언 가능. Release gate는 declared
+source release마다 packaged binary의 scan·dry-run·apply·validate matrix evidence를 요구.
+기준본 부재·digest 불일치: apply 전 no-mutation failure. 이 coverage defect의 correction은
+compatible quick bugfix이므로 `Z` patch 범위.
+
 ## 결과
 
 - 현재 source version: `0.9.0`

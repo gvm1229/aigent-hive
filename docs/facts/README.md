@@ -47,6 +47,8 @@
 | Hive preserving uninstall | [en](en/hive-preserving-uninstall.md) | [ko](ko/hive-preserving-uninstall.md) |
 | 소비자 세션 조정 | [en](en/consumer-session-coordination.md) | [ko](ko/consumer-session-coordination.md) |
 | Projection 갱신 정리 | [en](en/projection-upgrade-purge.md) | [ko](ko/projection-upgrade-purge.md) |
+| 과거 프로젝트 기준본 수용 범위 | [en](en/historical-project-base-coverage.md) | [ko](ko/historical-project-base-coverage.md) |
+| 사용자 투영 자동 갱신 | [en](en/automatic-user-projection-refresh.md) | [ko](ko/automatic-user-projection-refresh.md) |
 | 전역 사용자 맥락 | [en](en/global-user-contexts.md) | [ko](ko/global-user-contexts.md) |
 | Project onboarding | [en](en/project-onboarding.md) | [ko](ko/project-onboarding.md) |
 | Plugin update merge | [en](en/plugin-update-merge.md) | [ko](ko/plugin-update-merge.md) |
