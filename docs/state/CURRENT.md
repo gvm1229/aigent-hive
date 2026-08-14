@@ -3,7 +3,7 @@
 - 기준 branch: `main` stable `8b37323`, `develop` patch handoff `4dcc9a7`
 - product version: `0.9.4`
 - 다음 release target: `0.9.4` stable publication 완료; `0.10.0` 후보 작업 시작 제외
-- plan revision: `213`
+- plan revision: `219`
 - 현재 milestone: `0.9.3` 정식 출시·Windows 수용 완료, `0.9.4` GitHub Release 이중 언어 설명·공개 HTML·PDF 지식 기능 안내·전체 Skill 식별자 표시·전역 projection validation·지식 기록 credential 오탐·완료한 source knowledge scan·응답 언어·프롬프트 영어 기본값·작업 폴더 수명주기
 - 기능 기준: `8b37323daa33b96918933ad629d7c709c3cb6679`; release discipline base `c777da1`
 - 제외: `NHA10-001–012`·`N10-002–011`의 `0.10.0-test`
@@ -18,6 +18,10 @@
 - `0.9.4` GitHub Release 이중 언어 설명 수용 완료: public `v0.9.4-test.1` description과 canonical release note text 일치. English-first 순서, scope 5건·compatibility 2건·verification 2건 fact ID parity 확인
 - `0.9.4` 프롬프트 영어 기본값 수용 완료: public `0.9.4-test.1` Korean response environment의 installed directive와 `prompt-refine` 확인. default English·explicit Korean prompt contract 각각 `hive.prompt-refinement-valid`, 설명·질문 언어는 Korean directive 유지
 - `0.9.4` 정식 출시 완료: `v0.9.4-test.1` 수용 source `cc50bcb` 뒤 PR #33 merge `8b37323`, stable candidate `31767805733`, publication `31768342121`. [GitHub Release `v0.9.4`](https://github.com/gvm1229/aigent-hive/releases/tag/v0.9.4)와 여섯 npm package `latest=0.9.4` 확인. Windows x64 public direct installer·npm latest·released zip·integrity bundle `hive.release-verified` source `8b37323`·sequence `13`, release lane 40 pass·Windows 미지원 macOS 7건·POSIX 1건 skip
+- 완료: 제품 harness·release와 분리한 source workspace 전용 `update-summary` Skill의 구독자 관점 필터. 설치 product 또는 사용자 작업 방식에 영향이 없는 개발자·기여자 전용 변경은 요약에서 제외
+- 완료: 안정판 GitHub Release 뒤 Discord 배너 1건과 `update-summary` 한국어 구독자 요약 1건 전송. 배너 성공 뒤 요약 전송, 시험판 제외, webhook URL은 `release-publication` 환경 비밀 값 한정
+- 실제 Discord 전달 시험·표시 수용 완료: `0.9.3` [run `31775328374`](https://github.com/gvm1229/aigent-hive/actions/runs/31775328374)·`0.9.4` [run `31775377264`](https://github.com/gvm1229/aigent-hive/actions/runs/31775377264) 각각 배너 뒤 한국어 요약 전송 성공. 유지보수자 실제 Discord 화면에서 `0.9.3` 뒤 `0.9.4`, 각 배너 아래 해당 요약 표시 확인. 안정판·npm 게시·GitHub Release 생성 `0건`
+- npm publication: Trusted Publisher OIDC 유지, `release-publication` 환경의 historical `NPM_TOKEN` 삭제 완료
 - 문서 gate: root·번역 README, 설치 안내, 공개 HTML, npm README, plugin metadata,
   문서 색인·명령·version 예시 전수 최신화와 공개 artifact 재검증
 - `0.9.2` 안정판 완료: PR #25 전체 CI PASS·merge exact `a502867e6b20e8f22bc014af05ca678f211f40ed`.

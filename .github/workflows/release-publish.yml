@@ -295,6 +295,16 @@ jobs:
           test "$release_sequence" -gt 0
           test "$(jq -r .data.accepted_release.release_sequence <<<"$receipt")" = \
             "$release_sequence"
+      - name: Validate stable Discord subscriber update
+        if: ${{ inputs.channel == 'stable' }}
+        env:
+          AIGENT_HIVE_RELEASE_DISCORD_WEBHOOK_URL: ${{ secrets.AIGENT_HIVE_RELEASE_DISCORD_WEBHOOK_URL }}
+        run: |
+          python3 scripts/publish-stable-discord-update.py \
+            --product-version "$PRODUCT_VERSION" \
+            --summary "docs/releases/$PRODUCT_VERSION.subscriber.ko.md" \
+            --banner "docs/assets/branding/hive-readme-banner-ko.png" \
+            --validate-only
       - name: Refuse existing npm versions
         run: |
           packages=(
@@ -423,3 +433,12 @@ jobs:
               dist/*.tar.gz dist/*.zip dist/*.sha256 dist/*.tgz dist/*.attestation.jsonl \
               dist/release-integrity-receipt.json
           fi
+      - name: Send stable Discord banner and subscriber update
+        if: ${{ inputs.channel == 'stable' }}
+        env:
+          AIGENT_HIVE_RELEASE_DISCORD_WEBHOOK_URL: ${{ secrets.AIGENT_HIVE_RELEASE_DISCORD_WEBHOOK_URL }}
+        run: |
+          python3 scripts/publish-stable-discord-update.py \
+            --product-version "$PRODUCT_VERSION" \
+            --summary "docs/releases/$PRODUCT_VERSION.subscriber.ko.md" \
+            --banner "docs/assets/branding/hive-readme-banner-ko.png"

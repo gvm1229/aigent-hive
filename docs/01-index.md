@@ -78,6 +78,8 @@ current catalog.
 | [Release 안내](releases/README.md) | 제품 버전별 출시 안내 MOC |
 | [`0.8.0`](releases/0.8.0.md) | npm 시험 배포용 제품 후보 |
 | [`0.9.0`](releases/0.9.0.md) | `0.8.0` 대비 변경점·정식 출시 gate |
+| [`0.9.3`](releases/0.9.3.md) | 프로젝트 간 지식 접근·자동 공유 정식 출시 |
+| [`0.9.4`](releases/0.9.4.md) | Skill 표시·전역 검증·지식 안내·프롬프트 기본값 정식 출시 |
 
 ## Research
 

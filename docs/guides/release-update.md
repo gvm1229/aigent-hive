@@ -106,7 +106,12 @@ Apply: 모든 digest 재계산. Drift 시 중단. Release-provided executable mi
 5. `release-integrity-bundle` manifest·migration·surface inventory 검증
 6. `release-publication` environment 승인 한 번
 7. 같은 bytes의 GitHub Release·npm `latest` 게시
-8. Public checksum·attestation·npm registry provenance 재확인
+8. 안정판 GitHub Release 생성 성공 뒤 Discord 배너 PNG 전송
+9. 배너 전송 성공 뒤 `docs/releases/<version>.subscriber.ko.md` 한국어 구독자 요약 전송
+10. Public checksum·attestation·npm registry provenance 재확인
+
+Discord 알림은 `release-publication` 환경의 `AIGENT_HIVE_RELEASE_DISCORD_WEBHOOK_URL` 비밀 값만 사용.
+시험판 알림 없음. 배너 전송 실패 시 요약 전송 없음.
 
 Publication workflow 입력 금지: 장기 npm token, signing key, certificate, provider credential
 

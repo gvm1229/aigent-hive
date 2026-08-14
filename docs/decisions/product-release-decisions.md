@@ -22,7 +22,7 @@
 | runtime 관찰 | active host capability metadata, side-effect-free public `--version`, pinned-qualified usage sensor의 fixed-argv·JSON-RPC read만 허용; foreign state·provider credential read 금지 |
 | runtime 경계 | Hive-native plan·Ralph급 loop·team·multi-goal 구현 허용. Provider session engine·model runtime·direct process launcher 금지 |
 | Skill | `0.8.0` target은 setup/reconfigure core + recommended suite 또는 개별 selected built-in; optional third-party는 이름·source·revision·content digest·권한의 개별 수동 승인 |
-| Skill 정본 | Product-only built-in Skill은 `harness/skills/` 정본. Source 개발도 설치 product Skill과 tracked repository directive 사용, tracked source Skill `0건` |
+| Skill 정본 | Product-only built-in Skill은 `harness/skills/` 정본. Source 개발은 설치 product Skill·tracked repository directive와 명시 유지보수자 요청의 비출하 `update-summary` source-project Skill 1건 사용 |
 | Source docs Wiki | `docs/` human graph와 tracked `docs/facts/en/`·`ko/` atomic pair 정본, `omx_wiki/`·`.omx/wiki/`·consumer `.hive/knowledge/` 금지, SQLite는 ignored source projection, OMX/OMC retirement 시 knowledge migration 0건 |
 | Wiki autocapture | Wiki enabled 상태의 material task 종료 전 agent-reviewed task fact 기록. Outcome·tool/project·criteria·originating request summary만 bounded capture, exact request는 explicit retention intent 필요, raw transcript·hook·tool output·runtime ingestion 금지 |
 | prompt refine | `prompt-refine`; 명시적 작성·정제 intent와 materially ambiguous ordinary work에서 자동 선택, `refine-only` 기본. Refined prompt 제시 뒤 exact 사용자 승인까지 정지. Same-request 실행은 explicit `--run`만 허용, simple/editless question·clear work·hidden rewrite·prompt-classifier hook 제외 |
@@ -38,6 +38,7 @@
 | judge | verdict 전 digest-bound assignment, exact roster/slot/instance/evidence/timestamp, requester/task-agent 배제, verdict 후 별도 human approval; elevated 2/3, critical 3/3+human |
 | judge 신뢰 | consumer target 밖의 agent-write-denied TOML public-key trust root, purpose-bound detached Ed25519 signature와 aggregate-only output; Hive는 strict verification만 수행하고 private-key custody/signing은 외부 authority가 소유 |
 | release 신뢰 | Protected `main` exact tag, same-candidate GitHub Release, SHA-256 sidecar, GitHub artifact attestation, npm Trusted Publishing OIDC·registry provenance. GitHub stable environment의 human approval 한 번, npm 별도 승인 없음 |
+| 안정판 Discord 구독자 알림 | GitHub Release 생성 성공 뒤 `release-publication` 환경 비밀 값으로 Discord webhook 두 번 전송. 한국어 배너 PNG 성공 뒤 `update-summary` 결과 전송, 시험판 전송 없음 |
 | GitHub Release 설명 | `docs/releases/<product-version>.md` 정본의 English-first·Korean-second 이중 언어 설명. 영어는 ASD-STE100 Simplified Technical English, 한국어는 한국어 언어 계약 적용. 두 section의 기능·호환성·검증 경계 동등성 필수 |
 | platform signing | macOS explicit ad-hoc seal은 publisher identity·notarization 아님을 공개. Windows unsigned 공개. Developer ID·notarization, Authenticode·SignPath는 optional enhancement이며 stable gate 아님 |
 | release trust 폐기 | Release TUF·offline root·threshold signer·external authorization ceremony·platform certificate evidence gate 삭제. Judge external trust root와 frozen historical release base는 별도 경계 |
