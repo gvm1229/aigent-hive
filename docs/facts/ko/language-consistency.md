@@ -9,13 +9,13 @@ summary: "영어 응답은 ASD-STE100, 한국어 응답은 불필요한 영어 �
 tags: [communication, documentation, harness, language]
 aliases: ["언어 일관성", "영어 통제 언어", "한국어 응답"]
 sources:
-  - "repo:.agents/directives/01-behavior.md#sha256:6587e8fa5aa274f2c981ad28c062d3c8c388e351440c04663a50122570986976"
-  - "repo:.agents/directives/08-human-documentation-style.md#sha256:c5e0f385ab0bdb17979eee241bc77ad8531d5fb4e29198654bb28b9185164884"
-  - "repo:harness/project-bases/0.9.0/AGENTS.md.template#sha256:0d3c02bcd6269879b635b83d7ed22a0e4a9fd6e1b15f75a0b2a1e496f808e57d"
-  - "repo:harness/skills/user-setup/SKILL.md#sha256:640be28ec7f75444a52544b0d36c45363696dcbd0281f9c5aabd0768d185784e"
-  - "repo:harness/template/AGENTS.md.jinja#sha256:63e361ae2218f00f6a22f5e192c25a5c3bcddc21d51f61006f74a0459b636a38"
+  - "repo:.agents/directives/01-behavior.md#sha256:53b809a61225b5d860c37c8c61459960d26306aaf19e550fe79ce50984eebf9e"
+  - "repo:.agents/directives/08-human-documentation-style.md#sha256:f1c700565caf1c448cfa0a7d58db549d5c3d466b264737233fe255c67663acd6"
+  - "repo:harness/project-bases/0.9.0/AGENTS.md.template#sha256:1aefece59d56d610227b64cfcfff8c634e47202f8e224916b248a8e8ecd9de51"
+  - "repo:harness/skills/user-setup/SKILL.md#sha256:f5d9b13356fb64171213e98b41045955760247c6f5e1ce420c991afe450063de"
+  - "repo:harness/template/AGENTS.md.jinja#sha256:3d14ecded34d198d08e5aba138239e933fc2670888db4bc3c4637984572076e6"
 links: [global-onboarding, source-development]
-reviewed_revision: "git:721f888e97222d8c32e67eb5c546dc070189090a"
+reviewed_revision: "git:3410f70938d664269f10f39c50028e57498fd248"
 status: active
 ---
 
@@ -28,7 +28,6 @@ status: active
 동사, 문장당 핵심 하나. 관용 표현·군더더기·모호한 대명사·복잡한 종속절·불필요한 동의어
 사용 금지.
 
-한국어 응답: 한국어 어휘·문장 구조 사용. 정확한 영어 표기·대체어 없는 용어만 영어
-유지. 한글·영어 혼합 합성어와 강조용 영어 괄호 표기 금지. 영어 어순 직역 대신 의미
-중심 재작성. 완료 기준: 원본·소비자 계약, 같은 사용자 설정 파일 4개, 생성된
-`AGENTS.md` 수명주기 시험 통과.
+한국어 응답: 한국어 어휘·문장 구조 우선. 치환 가능한 영어·혼합 합성어·강조용 영어
+괄호 표기 금지. 금지 표현마다 자연스러운 한국어 대체 표현 제시. 완료 기준: 원본·소비자
+계약, 사용자 설정 네 투영, 생성된 `AGENTS.md` 수명주기 시험 통과.
