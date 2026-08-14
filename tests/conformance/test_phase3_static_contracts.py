@@ -215,11 +215,21 @@ class Phase3SkillSourceContract(unittest.TestCase):
 
     def test_source_has_directives_not_a_second_skill_inventory(self) -> None:
         source_skills = ROOT / ".agents/skills"
-        self.assertFalse(source_skills.exists() and list(source_skills.rglob("SKILL.md")))
+        self.assertEqual(
+            {
+                path.relative_to(source_skills).as_posix()
+                for path in source_skills.rglob("SKILL.md")
+            },
+            {"update-summary/SKILL.md"},
+        )
         agents = (ROOT / "AGENTS.md").read_text(encoding="utf-8")
         architecture = (ROOT / ".agents/directives/02-architecture.md").read_text(encoding="utf-8")
         self.assertIn("no separate tracked Skill inventory", agents)
-        self.assertIn("Source-root, usage-gate, and mutation boundaries belong in repository directives", architecture)
+        self.assertIn("source-project-only exception", architecture)
+        self.assertIn(
+            "Source-root, usage-gate, and mutation boundaries otherwise belong in repository directives",
+            architecture,
+        )
 
     def test_source_routes_prompt_and_wiki_work_to_current_product_contracts(self) -> None:
         behavior = (ROOT / ".agents/directives/01-behavior.md").read_text(encoding="utf-8")
