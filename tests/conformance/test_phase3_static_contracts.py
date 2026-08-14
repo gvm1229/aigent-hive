@@ -74,6 +74,21 @@ class Phase3SchemaContract(unittest.TestCase):
         self.assertEqual(core.count('<article class="card">'), 8)
         self.assertEqual(core.count('<div class="use-case">'), 8)
 
+    def test_public_core_features_compares_knowledge_skills_and_keeps_print_heading_with_content(self) -> None:
+        core = (ROOT / "docs/hive-core-features.ko.html").read_text(encoding="utf-8")
+        self.assertIn('<table class="knowledge-comparison"', core)
+        self.assertNotIn('<strong>지식 기능:</strong>', core)
+        for skill in (
+            "knowledge-capture",
+            "knowledge-recall",
+            "knowledge-import",
+            "knowledge-promote",
+            "knowledge-maintain",
+        ):
+            self.assertIn(f"<code>({skill})</code>", core)
+        self.assertIn(".section-head { break-after: avoid-page; }", core)
+        self.assertIn(".knowledge-comparison { break-inside: auto; }", core)
+
     def test_codex_plugin_uses_named_developer_and_cropped_hive_logo(self) -> None:
         plugin_root = ROOT / "harness/plugins/aigent-hive"
         manifest = json.loads(
