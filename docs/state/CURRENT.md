@@ -3,14 +3,17 @@
 - 기준 branch: `main` stable `179c909`, `develop` patch handoff 기준
 - product version: `0.9.4` patch 개발 기준
 - 다음 release target: `0.9.4-test` 수용 뒤 정식판 여부 유지보수자 결정
-- plan revision: `202`
-- 현재 milestone: `0.9.3` 정식 출시·Windows 수용 완료, `0.9.4` source knowledge scan validation 정합성·응답 언어 금지 규칙 보강·작업 폴더 수명주기
+- plan revision: `203`
+- 현재 milestone: `0.9.3` 정식 출시·Windows 수용 완료, `0.9.4` 전체 Skill 식별자 표시·전역 projection validation·지식 기록 credential 오탐·완료한 source knowledge scan·응답 언어·작업 폴더 수명주기
 - 기능 기준: `2cec0377748874748d126b6b55e59975a3f20a02`; release discipline base `c777da1`
 - 제외: `NHA10-001–012`·`N10-002–011`의 `0.10.0-test`
 - `0.9.4` source knowledge scan correction 완료: `--candidates`와 `--apply`의 store-level validation parity, claim-bound credential diagnostic, canonical provenance summary의 human review ID false-positive 제거. source build로 61개 current-truth fact·architecture claim을 source-private `aigent-hive` collection에 재적용, automatic shared promotion `0건`, generation 115와 PortareFolium explicit retrieval 확인. published `0.9.3` stable artifact 변경 없음; installed `0.9.3` binary의 correction은 `0.9.4-test` publication 뒤 검증 필요
 - `0.9.4` 응답 언어 계약 완료: 원본 `.agents`와 소비자 하네스에 ASD-STE100 영어·한국어 의미 중심 문장 기준 반영. `user-setup` 4개 투영 byte 일치, 렌더된 소비자 `AGENTS.md`·31개 focused 시험·문서 말투·Markdown 링크·Source Wiki 색인 재생성·lint 검사 통과
 - `0.9.4` 응답 언어 보강 완료: 치환 가능한 영어 혼용·혼합 합성어·강조용 영어 괄호·영어 어순 직역 금지와 자연스러운 한국어 대체 예시를 원본·소비자 계약에 반영. 정적 계약·네 Skill 투영 byte 일치·렌더된 소비자 `AGENTS.md` 수명주기 31개 시험 통과, 문서 말투 finding `0`
 - `0.9.4` 작업 폴더 수명주기 완료: 일반 작업의 단일 기준 작업 폴더 우선, 안전한 순차 처리 불가한 병렬 독립 변경 때만 추가 작업 폴더 허용, 원격 도달성·미반영 작업 없음 확인 뒤 즉시 제거 규칙·정적 계약 반영. `develop` 원격 반영·기준 작업 폴더 전환·`develop-release-integration` 임시 작업 폴더 제거 확인
+- `0.9.4` 전체 Skill 식별자 표시 예정: `0.9.3`의 지식 Skill 다섯 개만 표시한 `(knowledge-*)` 범위를 모든 Hive Skill 설명 첫머리의 `(skill-id)`로 확대. 화면의 일반 Skill 누락은 cache·Codex 재시작·purge failure가 아닌 이전 범위 결과. Hive-owned catalog·세 host projection·install/update/purge regression만 변경 대상
+- `0.9.4` 전역 projection validation 정합성 예정: 이 Windows의 installed `0.9.3`에서 Hive-managed projection 54개는 모두 receipt와 일치했으나 `hive setup --scope user --validate`는 `.hive/install/user-projection.json`만 충돌로 보고. 동일 입력 dry-run은 모든 projection `unchanged`를 보고. user setup의 재직렬화 바이트가 receipt `setup_digest`만 바꾸는 validation-contract 결함으로 분류; actual corruption·ownership mismatch fail-closed는 유지
+- `0.9.4` 전역 지식 기록 credential 오탐 예정: 안전한 사용자 결정의 `hive knowledge remember --user-root` 1회가 `hive.knowledge-verification-failed`로 거부. credential·secret·private source 입력은 없었고 재시도 `0회`. request field·claim key·scanner 경계 조사와 safe user-root capture 수용, 실제 secret fail-closed 회귀가 필요
 - 문서 gate: root·번역 README, 설치 안내, 공개 HTML, npm README, plugin metadata,
   문서 색인·명령·version 예시 전수 최신화와 공개 artifact 재검증
 - `0.9.2` 안정판 완료: PR #25 전체 CI PASS·merge exact `a502867e6b20e8f22bc014af05ca678f211f40ed`.
