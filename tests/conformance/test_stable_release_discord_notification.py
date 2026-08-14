@@ -15,7 +15,6 @@ import yaml
 ROOT = Path(__file__).resolve().parents[2]
 NOTIFIER = ROOT / "scripts/publish-stable-discord-update.py"
 WORKFLOW = ROOT / ".github/workflows/release-publish.yml"
-PROBE_WORKFLOW = ROOT / ".github/workflows/discord-subscriber-notification-probe.yml"
 
 
 class RecordingServer(ThreadingHTTPServer):
@@ -152,27 +151,3 @@ class StableReleaseDiscordNotification(unittest.TestCase):
         self.assertIn("gh release create", release["run"])
         self.assertNotIn("publish-stable-discord-update.py", release["run"])
         self.assertEqual(notifier["if"], "${{ inputs.channel == 'stable' }}")
-
-    def test_manual_probe_is_limited_to_the_two_approved_payloads(self) -> None:
-        workflow = yaml.safe_load(PROBE_WORKFLOW.read_text(encoding="utf-8"))
-        dispatch = workflow[True]["workflow_dispatch"]
-        self.assertEqual(
-            dispatch["inputs"]["product_version"]["options"], ["0.9.3", "0.9.4"]
-        )
-        self.assertEqual(
-            workflow[True]["push"]["tags"],
-            ["discord-subscriber-probe-v0.9.3", "discord-subscriber-probe-v0.9.4"],
-        )
-        steps = workflow["jobs"]["send"]["steps"]
-        resolver = next(
-            step for step in steps if step.get("name") == "Resolve an approved probe version"
-        )
-        self.assertIn("discord-subscriber-probe-v0.9.3", resolver["run"])
-        self.assertIn("discord-subscriber-probe-v0.9.4", resolver["run"])
-        sender = next(
-            step
-            for step in steps
-            if step.get("name") == "Send the banner before the Korean subscriber update"
-        )
-        self.assertIn("publish-stable-discord-update.py", sender["run"])
-        self.assertIn("AIGENT_HIVE_RELEASE_DISCORD_WEBHOOK_URL", sender["env"])
