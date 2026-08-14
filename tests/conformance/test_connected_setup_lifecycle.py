@@ -452,6 +452,8 @@ else:
             "A message written in another language does not by itself change this preference.",
             agents,
         )
+        self.assertIn("ASD-STE100 Simplified Technical English", agents)
+        self.assertIn("Translate meaning rather than English word order.", agents)
         self.assert_shared_user_store(target)
 
     def test_custom_project_preserves_explicit_project_preferences(self) -> None:
@@ -488,6 +490,8 @@ else:
             "A message written in another language does not by itself change this preference.",
             agents,
         )
+        self.assertIn("ASD-STE100 Simplified Technical English", agents)
+        self.assertIn("Translate meaning rather than English word order.", agents)
         self.assert_shared_user_store(target)
 
 

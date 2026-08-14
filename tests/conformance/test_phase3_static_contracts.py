@@ -105,6 +105,28 @@ class Phase3SchemaContract(unittest.TestCase):
 
 
 class Phase3SkillSourceContract(unittest.TestCase):
+    def test_source_and_consumer_language_contracts_keep_the_same_rules(self) -> None:
+        source_behavior = (ROOT / ".agents/directives/01-behavior.md").read_text(
+            encoding="utf-8"
+        )
+        source_style = (ROOT / ".agents/directives/08-human-documentation-style.md").read_text(
+            encoding="utf-8"
+        )
+        consumer_template = (ROOT / "harness/template/AGENTS.md.jinja").read_text(
+            encoding="utf-8"
+        )
+        project_base = (
+            ROOT / "harness/project-bases/0.9.0/AGENTS.md.template"
+        ).read_text(encoding="utf-8")
+
+        for text in (source_behavior, source_style, consumer_template, project_base):
+            normalized = " ".join(text.split())
+            self.assertIn("ASD-STE100 Simplified Technical English", text)
+            self.assertIn(
+                "Translate meaning rather than English word order.", normalized
+            )
+            self.assertIn("mixed Korean-English compounds", normalized)
+
     def test_product_skill_projections_are_current_and_exact(self) -> None:
         self.assertEqual(skill_paths(SKILLS), CURRENT)
         self.assertEqual(skill_paths(PLUGIN_SKILLS), CURRENT)

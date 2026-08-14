@@ -98,6 +98,16 @@ class V09HiveSkillProjectionTests(unittest.TestCase):
         catalog = (ROOT / "docs/skills.md").read_text(encoding="utf-8")
         self.assertIn("$aigent-hive:<Skill 이름>", catalog)
 
+    def test_user_setup_keeps_the_bilingual_response_language_contract(self) -> None:
+        text = (SKILL_ROOT / "user-setup/SKILL.md").read_text(encoding="utf-8")
+        for expected in (
+            "## Response language contract",
+            "ASD-STE100 Simplified Technical English",
+            "Translate meaning rather than English word order.",
+            "mixed Korean-English compounds",
+        ):
+            self.assertIn(expected, text)
+
     def test_iterative_execution_keeps_role_parity_on_one_strict_judge_path(self) -> None:
         text = (SKILL_ROOT / "iterative-execution" / "SKILL.md").read_text(
             encoding="utf-8"

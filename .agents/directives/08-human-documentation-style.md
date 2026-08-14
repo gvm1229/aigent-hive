@@ -11,10 +11,15 @@ document.
 
 - Keep each passage in one base language. In Korean prose, keep English only for proper nouns,
   product or package names, commands, code identifiers, paths, schema keys, exact UI labels, and
-  terms without a clear Korean equivalent. Replace ordinary English nouns when a clear Korean
-  expression exists.
-- In an English passage, use English throughout except for exact Korean names, literals,
-  quotations, or text the user explicitly asks to preserve.
+  terms without a clear Korean equivalent. Replace ordinary English nouns and mixed
+  Korean-English compounds when a clear Korean expression exists. Do not add an English
+  parenthetical after an unambiguous Korean term. Translate meaning rather than English word
+  order. Retain an English literal only when it is required for an action or distinction.
+- In an English passage, use ASD-STE100 Simplified Technical English throughout except for exact
+  Korean names, literals, quotations, or text the user explicitly asks to preserve. Use short
+  direct sentences, concrete verbs, one main instruction, condition, result, or warning per
+  sentence, and an approved dictionary word when known. Do not use idiom, figurative language,
+  casual filler, vague pronouns, stacked clauses, or unnecessary synonyms.
 - Prefer short headings, bullets, tables, and checklists over long prose.
 - Prefer noun phrases or concise verb-noun endings such as `추가`, `정리`, `검증`, `확인`,
   `보강`, `제거`, and `적용`.

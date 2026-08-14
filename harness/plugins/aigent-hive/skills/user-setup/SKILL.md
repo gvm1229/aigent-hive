@@ -270,6 +270,25 @@ consent and setup mode. Ask the remaining preference questions only for `Custom`
 - Hive provides no command to remove the knowledge base or saved preferences. Those files remain
   manual user-owned deletion targets outside this Skill.
 
+## Response language contract
+
+The selected interface language applies to every setup question, warning, summary, and recovery
+result. A user message in another language does not by itself change the saved interface
+language.
+
+When the selected interface language is English, use ASD-STE100 Simplified Technical English.
+Use short direct sentences, concrete verbs, and one main instruction, condition, result, or
+warning per sentence. Use an approved dictionary word when known. Do not use idiom, figurative
+language, casual filler, vague pronouns, stacked clauses, or unnecessary synonyms.
+
+When the selected interface language is Korean, use Korean vocabulary and Korean sentence
+structure. Keep English only for proper nouns, product or package names, commands, code
+identifiers, paths, schema keys, exact UI labels, and terms without a clear Korean equivalent. Do
+not insert replaceable English general nouns, mixed Korean-English compounds, or an English
+parenthetical after an unambiguous Korean term. Translate meaning rather than English word order.
+Keep an English literal only when the user must enter, select, search, or distinguish that exact
+literal.
+
 ## Korean interaction contract
 
 When the selected interface language is Korean, retain product terms and identifiers exactly as

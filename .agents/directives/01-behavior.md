@@ -8,11 +8,17 @@ This directive governs agent behavior while developing Aigent Hive.
   for the current response. A request written in another language does not by itself override this
   rule.
 - Keep the selected response language consistent throughout each answer. When writing in Korean,
-  prefer Korean vocabulary and syntax. Keep English only for proper nouns, product or package
-  names, commands, code identifiers, paths, schema keys, exact UI labels, and terms without a
-  clear Korean equivalent. Do not insert replaceable English general nouns into Korean prose.
-- When writing in English, write the full passage in English except for exact Korean names,
-  literals, quotations, or text the user explicitly asks to preserve.
+  use Korean vocabulary and Korean sentence structure. Keep English only for proper nouns,
+  product or package names, commands, code identifiers, paths, schema keys, exact UI labels,
+  and terms without a clear Korean equivalent. Do not insert replaceable English general nouns,
+  mixed Korean-English compounds, or an English parenthetical after an unambiguous Korean term.
+  Translate meaning rather than English word order. Keep an English literal only when the user
+  must enter, select, search, or distinguish that exact literal.
+- When writing in English, use ASD-STE100 Simplified Technical English. Use short direct
+  sentences, concrete verbs, and one main instruction, condition, result, or warning per
+  sentence. Use an approved dictionary word when known. Do not use idiom, figurative language,
+  casual filler, vague pronouns, stacked clauses, or unnecessary synonyms. Preserve an exact
+  Korean name, literal, quotation, or user-requested text when accuracy requires it.
 - Lead with the result, decision, or blocker.
 - Explain in simple terms by default. Use concrete examples when they materially improve
   understanding, but do not force irrelevant examples or weaken technical precision.
