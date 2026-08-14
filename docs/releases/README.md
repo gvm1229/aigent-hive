@@ -9,11 +9,17 @@
 짧고 직접적인 문장, 한국어는 자연스러운 한국어 문장. `scripts/check-release-notes.py`: 순서·필수
 field·동등성·언어 계약 검사.
 
+## 안정판 Discord 구독자 알림
+
+다음 안정판의 `update-summary` 결과: `docs/releases/<version>.subscriber.ko.md`. 제목과 사용자 체감 개선
+항목만 포함. `release-publish.yml`의 안정판 GitHub Release 생성 성공 뒤 배너 PNG와 이 파일 본문을 각각 한 번 전송.
+배너 전송 실패 시 요약 전송 없음. 시험판 전송 없음. webhook URL은 GitHub `release-publication` 환경 비밀 값 한정.
+
 ## 제품 후보
 
 | 제품 버전 | 상태 | 문서 |
 | --- | --- | --- |
-| `0.9.4` | Skill 식별자·전역 검증·지식 기록·공개 안내 patch | [`0.9.4`](0.9.4.md) |
+| `0.9.4` | Skill 식별자·전역 검증·지식 기록·공개 안내 patch | [`Release`](0.9.4.md) · [`구독자 요약`](0.9.4.subscriber.ko.md) |
 | `0.9.2` | usage guard 정본 전환과 공개 문서 동기화 patch | [`0.9.2`](0.9.2.md) |
 | `0.9.3` | 명시 프로젝트 지식 조회와 색인 시 자동 일반화 | [`0.9.3`](0.9.3.md) |
 | `0.9.2` 베타 | 공개 설치·설정 피드백 수집 | [`베타 안내`](0.9.2-beta-newsletter.md) |
