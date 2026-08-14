@@ -73,6 +73,108 @@ enum FlowOutcome {
     Installed,
 }
 
+struct UpdateFlowContext<'a> {
+    executable: &'a Path,
+    user_root: &'a Path,
+    language: Language,
+}
+
+trait ProjectionRefresher {
+    fn authenticated_hosts(&self, user_root: &Path) -> Result<Vec<String>, String>;
+
+    fn refresh_and_validate(
+        &self,
+        executable: &Path,
+        user_root: &Path,
+        hosts: &[String],
+    ) -> Result<(), String>;
+}
+
+struct LiveProjectionRefresher;
+
+impl ProjectionRefresher for LiveProjectionRefresher {
+    fn authenticated_hosts(&self, user_root: &Path) -> Result<Vec<String>, String> {
+        crate::user_install::authenticated_saved_projection_hosts(user_root)
+    }
+
+    fn refresh_and_validate(
+        &self,
+        executable: &Path,
+        user_root: &Path,
+        hosts: &[String],
+    ) -> Result<(), String> {
+        let executable = executable.to_string_lossy();
+        let program = SystemCommandRunner
+            .qualify(&executable)
+            .map_err(|error| format!("cannot qualify the activated Hive executable: {error}"))?;
+        let hosts = hosts.join(",");
+        let user_root = user_root.to_string_lossy();
+        for mode in ["--apply", "--validate"] {
+            let output = SystemCommandRunner
+                .run(
+                    &program,
+                    &[
+                        "install",
+                        "--scope",
+                        "user",
+                        "--hosts",
+                        &hosts,
+                        mode,
+                        "--user-root",
+                        &user_root,
+                        "--output",
+                        "json",
+                    ],
+                    INSTALL_TIMEOUT,
+                    INSTALL_OUTPUT_LIMIT,
+                )
+                .map_err(|error| {
+                    format!("activated Hive user projection {mode} command failed: {error}")
+                })?;
+            let result: ChildActionResult =
+                serde_json::from_slice(&output.stdout).map_err(|_| {
+                    format!("activated Hive user projection {mode} command returned malformed JSON")
+                })?;
+            if !output.success
+                || result.status != "success"
+                || result.exit_code != 0
+                || result.action != "InstallHiveUser"
+            {
+                return Err(format!(
+                    "activated Hive user projection {mode} command did not report success"
+                ));
+            }
+        }
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+struct NoopProjectionRefresher;
+
+#[cfg(test)]
+impl ProjectionRefresher for NoopProjectionRefresher {
+    fn authenticated_hosts(&self, _user_root: &Path) -> Result<Vec<String>, String> {
+        Ok(Vec::new())
+    }
+
+    fn refresh_and_validate(
+        &self,
+        _executable: &Path,
+        _user_root: &Path,
+        _hosts: &[String],
+    ) -> Result<(), String> {
+        Ok(())
+    }
+}
+
+#[derive(Deserialize)]
+struct ChildActionResult {
+    action: String,
+    status: String,
+    exit_code: u8,
+}
+
 trait RegistrySource {
     fn fetch(&self) -> Result<Vec<u8>, String>;
 }
@@ -176,11 +278,15 @@ pub(crate) fn run() -> ExitCode {
     };
     let mut input = io::stdin().lock();
     let mut output = io::stderr().lock();
-    match update_flow(
-        &executable,
-        language,
+    match update_flow_with_projection(
+        &UpdateFlowContext {
+            executable: &executable,
+            user_root: &user_root,
+            language,
+        },
         &LiveRegistry,
         &LiveInstaller,
+        &LiveProjectionRefresher,
         &mut input,
         &mut output,
     ) {
@@ -203,6 +309,7 @@ fn selected_language(user_root: &Path) -> Result<Language, String> {
     })
 }
 
+#[cfg(test)]
 fn update_flow(
     executable: &Path,
     language: Language,
@@ -211,10 +318,32 @@ fn update_flow(
     input: &mut impl BufRead,
     output: &mut impl Write,
 ) -> Result<FlowOutcome, String> {
+    update_flow_with_projection(
+        &UpdateFlowContext {
+            executable,
+            user_root: Path::new(""),
+            language,
+        },
+        registry,
+        installer,
+        &NoopProjectionRefresher,
+        input,
+        output,
+    )
+}
+
+fn update_flow_with_projection(
+    context: &UpdateFlowContext<'_>,
+    registry: &impl RegistrySource,
+    installer: &impl Installer,
+    refresher: &impl ProjectionRefresher,
+    input: &mut impl BufRead,
+    output: &mut impl Write,
+) -> Result<FlowOutcome, String> {
     let current_product: SemVersion = env!("CARGO_PKG_VERSION")
         .parse()
         .map_err(|error| format!("compiled Hive version is invalid: {error}"))?;
-    let owner = discover_owner(executable, current_product)?;
+    let owner = discover_owner(context.executable, current_product)?;
     let metadata = registry.fetch()?;
     let target = target_package(&metadata)?;
     if target.product.major != current_product.major {
@@ -224,24 +353,34 @@ fn update_flow(
         ));
     }
     if target <= *owner.package_version() {
-        write_current(output, language, owner.package_version())?;
+        write_current(output, context.language, owner.package_version())?;
         return Ok(FlowOutcome::Current);
     }
-    write_prompt(output, language, &owner, &target)?;
+    let hosts = refresher.authenticated_hosts(context.user_root)?;
+    write_prompt(output, context.language, &owner, &target, &hosts)?;
     let mut answer = String::new();
     let read = input
         .read_line(&mut answer)
         .map_err(|error| format!("cannot read update confirmation: {error}"))?;
-    if read == 0 || !accepted(language, &answer) {
-        write_declined(output, language)?;
+    if read == 0 || !accepted(context.language, &answer) {
+        write_declined(output, context.language)?;
         return Ok(FlowOutcome::Declined);
     }
     installer.install(&owner, &target)?;
-    let refreshed = discover_owner(executable, target.product)?;
-    if refreshed.label() != owner.label() || refreshed.package_version() != &target {
+    let activated_owner = discover_owner(context.executable, target.product)?;
+    if activated_owner.label() != owner.label() || activated_owner.package_version() != &target {
         return Err("the install owner did not activate the exact requested package".to_owned());
     }
-    write_installed(output, language, &target)?;
+    if !hosts.is_empty() {
+        refresher
+            .refresh_and_validate(context.executable, context.user_root, &hosts)
+            .map_err(|error| {
+                format!(
+                    "Aigent Hive binary update completed, but the authenticated user projection refresh failed: {error}"
+                )
+            })?;
+    }
+    write_installed(output, context.language, &target, &hosts)?;
     Ok(FlowOutcome::Installed)
 }
 
@@ -571,6 +710,7 @@ fn write_prompt(
     language: Language,
     owner: &InstallOwner,
     target: &PackageVersion,
+    hosts: &[String],
 ) -> Result<(), String> {
     let command = match owner {
         InstallOwner::Npm { .. } => format!("npm install -g aigent-hive@{}", target.exact),
@@ -586,19 +726,21 @@ fn write_prompt(
     match language {
         Language::En => write!(
             output,
-            "Aigent Hive update available: {} -> {}\nInstall owner: {}\nExact operation: {}\nProceed? [y/N]: ",
+            "Aigent Hive update available: {} -> {}\nInstall owner: {}\nExact operation: {}\nUser projection refresh: {}\nProceed? [y/N]: ",
             owner.package_version().exact,
             target.exact,
             owner.label(),
-            command
+            command,
+            projection_scope_message(Language::En, hosts),
         ),
         Language::Ko => write!(
             output,
-            "Aigent Hive 갱신 가능: {} -> {}\n설치 소유자: {}\n정확한 작업: {}\n진행할까요? [y/N]: ",
+            "Aigent Hive 갱신 가능: {} -> {}\n설치 소유자: {}\n정확한 작업: {}\n사용자 투영 갱신: {}\n진행할까요? [y/N]: ",
             owner.package_version().exact,
             target.exact,
             owner.label(),
-            command
+            command,
+            projection_scope_message(Language::Ko, hosts),
         ),
     }
     .and_then(|()| output.flush())
@@ -633,14 +775,41 @@ fn write_installed(
     output: &mut impl Write,
     language: Language,
     target: &PackageVersion,
+    hosts: &[String],
 ) -> Result<(), String> {
     let message = match language {
-        Language::En => format!("Aigent Hive update complete: {}.\n", target.exact),
-        Language::Ko => format!("Aigent Hive 갱신 완료: {}.\n", target.exact),
+        Language::En if hosts.is_empty() => format!(
+            "Aigent Hive update complete: {}. No authenticated user projection was present; no user files were changed.\n",
+            target.exact
+        ),
+        Language::Ko if hosts.is_empty() => format!(
+            "Aigent Hive 갱신 완료: {}. 인증된 사용자 투영이 없어 사용자 파일은 변경하지 않았습니다.\n",
+            target.exact
+        ),
+        Language::En => format!(
+            "Aigent Hive update complete: {}. Refreshed and validated user projection hosts: {}.\n",
+            target.exact,
+            hosts.join(", ")
+        ),
+        Language::Ko => format!(
+            "Aigent Hive 갱신 완료: {}. 갱신·검증한 사용자 투영 호스트: {}.\n",
+            target.exact,
+            hosts.join(", ")
+        ),
     };
     output
         .write_all(message.as_bytes())
         .map_err(|error| format!("cannot display update status: {error}"))
+}
+
+fn projection_scope_message(language: Language, hosts: &[String]) -> String {
+    if hosts.is_empty() {
+        return match language {
+            Language::En => "none (binary-only update)".to_owned(),
+            Language::Ko => "없음(바이너리만 갱신)".to_owned(),
+        };
+    }
+    hosts.join(", ")
 }
 
 #[cfg(test)]
@@ -688,6 +857,42 @@ mod tests {
                 .map_err(|error| error.to_string())?;
             }
             Ok(())
+        }
+    }
+
+    struct FakeProjectionRefresher {
+        hosts: Result<Vec<String>, String>,
+        refresh: Result<(), String>,
+        calls: RefCell<Vec<(PathBuf, PathBuf, Vec<String>)>>,
+    }
+
+    impl FakeProjectionRefresher {
+        fn ready(hosts: &[&str]) -> Self {
+            Self {
+                hosts: Ok(hosts.iter().map(|host| (*host).to_owned()).collect()),
+                refresh: Ok(()),
+                calls: RefCell::new(Vec::new()),
+            }
+        }
+    }
+
+    impl ProjectionRefresher for FakeProjectionRefresher {
+        fn authenticated_hosts(&self, _user_root: &Path) -> Result<Vec<String>, String> {
+            self.hosts.clone()
+        }
+
+        fn refresh_and_validate(
+            &self,
+            executable: &Path,
+            user_root: &Path,
+            hosts: &[String],
+        ) -> Result<(), String> {
+            self.calls.borrow_mut().push((
+                executable.to_path_buf(),
+                user_root.to_path_buf(),
+                hosts.to_vec(),
+            ));
+            self.refresh.clone()
         }
     }
 
@@ -842,6 +1047,162 @@ mod tests {
         assert!(String::from_utf8(output)
             .expect("output")
             .contains("갱신 완료"));
+    }
+
+    #[test]
+    fn accepted_update_refreshes_and_validates_only_the_authenticated_saved_hosts() {
+        let current = package(1);
+        let target = stable_package();
+        let (root, binary) = fake_npm_install(&current);
+        let installer = FakeInstaller {
+            calls: RefCell::new(Vec::new()),
+            manifest: Some(root.path().join("package.json")),
+        };
+        let user_root = tempdir().expect("user root");
+        let refresher = FakeProjectionRefresher::ready(&["claude", "codex"]);
+        let mut input = Cursor::new(b"y\n");
+        let mut output = Vec::new();
+
+        let outcome = update_flow_with_projection(
+            &UpdateFlowContext {
+                executable: &binary,
+                user_root: user_root.path(),
+                language: Language::En,
+            },
+            &metadata(&target),
+            &installer,
+            &refresher,
+            &mut input,
+            &mut output,
+        )
+        .expect("installed and refreshed");
+
+        assert_eq!(outcome, FlowOutcome::Installed);
+        assert_eq!(installer.calls.borrow().as_slice(), [target]);
+        assert_eq!(
+            refresher.calls.borrow().as_slice(),
+            [(
+                binary.clone(),
+                user_root.path().to_path_buf(),
+                vec!["claude".to_owned(), "codex".to_owned()]
+            )]
+        );
+        let text = String::from_utf8(output).expect("output");
+        assert!(text.contains("User projection refresh: claude, codex"));
+        assert!(text.contains("Refreshed and validated user projection hosts: claude, codex"));
+    }
+
+    #[test]
+    fn absent_saved_projection_scope_keeps_the_update_binary_only() {
+        let current = package(1);
+        let target = stable_package();
+        let (root, binary) = fake_npm_install(&current);
+        let installer = FakeInstaller {
+            calls: RefCell::new(Vec::new()),
+            manifest: Some(root.path().join("package.json")),
+        };
+        let user_root = tempdir().expect("user root");
+        let refresher = FakeProjectionRefresher::ready(&[]);
+        let mut input = Cursor::new(b"y\n");
+        let mut output = Vec::new();
+
+        update_flow_with_projection(
+            &UpdateFlowContext {
+                executable: &binary,
+                user_root: user_root.path(),
+                language: Language::En,
+            },
+            &metadata(&target),
+            &installer,
+            &refresher,
+            &mut input,
+            &mut output,
+        )
+        .expect("binary-only update");
+
+        assert!(refresher.calls.borrow().is_empty());
+        assert!(String::from_utf8(output)
+            .expect("output")
+            .contains("No authenticated user projection was present"));
+    }
+
+    #[test]
+    fn invalid_saved_projection_scope_blocks_the_binary_update_before_confirmation() {
+        let current = package(1);
+        let target = stable_package();
+        let (_root, binary) = fake_npm_install(&current);
+        let installer = FakeInstaller::default();
+        let user_root = tempdir().expect("user root");
+        let refresher = FakeProjectionRefresher {
+            hosts: Err(
+                "installed ownership manifest is malformed: .hive/install/codex.json".to_owned(),
+            ),
+            refresh: Ok(()),
+            calls: RefCell::new(Vec::new()),
+        };
+        let mut input = Cursor::new(b"y\n");
+        let mut output = Vec::new();
+
+        let error = update_flow_with_projection(
+            &UpdateFlowContext {
+                executable: &binary,
+                user_root: user_root.path(),
+                language: Language::En,
+            },
+            &metadata(&target),
+            &installer,
+            &refresher,
+            &mut input,
+            &mut output,
+        )
+        .expect_err("invalid scope blocks update");
+
+        assert!(error.contains("ownership manifest is malformed"));
+        assert!(installer.calls.borrow().is_empty());
+        assert!(refresher.calls.borrow().is_empty());
+    }
+
+    #[test]
+    fn post_install_projection_refresh_failure_is_reported_without_claiming_success() {
+        let current = package(1);
+        let target = stable_package();
+        let (root, binary) = fake_npm_install(&current);
+        let installer = FakeInstaller {
+            calls: RefCell::new(Vec::new()),
+            manifest: Some(root.path().join("package.json")),
+        };
+        let user_root = tempdir().expect("user root");
+        let refresher = FakeProjectionRefresher {
+            hosts: Ok(vec!["codex".to_owned()]),
+            refresh: Err(
+                "activated Hive user projection --validate command did not report success"
+                    .to_owned(),
+            ),
+            calls: RefCell::new(Vec::new()),
+        };
+        let mut input = Cursor::new(b"y\n");
+        let mut output = Vec::new();
+
+        let error = update_flow_with_projection(
+            &UpdateFlowContext {
+                executable: &binary,
+                user_root: user_root.path(),
+                language: Language::En,
+            },
+            &metadata(&target),
+            &installer,
+            &refresher,
+            &mut input,
+            &mut output,
+        )
+        .expect_err("refresh failure");
+
+        assert!(error.contains("binary update completed"));
+        assert_eq!(installer.calls.borrow().as_slice(), [target]);
+        assert_eq!(refresher.calls.borrow().len(), 1);
+        assert!(!String::from_utf8(output)
+            .expect("prompt output")
+            .contains("update complete"));
     }
 
     #[test]

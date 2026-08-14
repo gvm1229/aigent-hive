@@ -1496,6 +1496,146 @@ pub(crate) fn resolve_user_root_path() -> Result<PathBuf, String> {
     resolve_user_root().map_err(|error| error.message().to_owned())
 }
 
+/// Return the configured hosts whose installed user projections are provably owned by the
+/// currently running Hive product. This deliberately has no default-host behavior: a missing
+/// host manifest produces no refresh scope, while a malformed, forged, or drifted manifest is a
+/// hard error before an updater can mutate anything.
+pub(crate) fn authenticated_saved_projection_hosts(
+    user_root: &Path,
+) -> Result<Vec<String>, String> {
+    let (canonical_root, root_cap) =
+        open_canonical_user_root(user_root).map_err(|error| error.message().to_owned())?;
+    let Some(operational) = crate::user_setup::resolved_operational_skills(&root_cap)
+        .map_err(|error| error.message().to_owned())?
+    else {
+        return Ok(Vec::new());
+    };
+
+    let mut hosts = Vec::new();
+    for selected in &operational.0.selected_hosts {
+        let host = match selected {
+            crate::user_setup::SelectedHost::Codex => UserHost::Codex,
+            crate::user_setup::SelectedHost::Claude => UserHost::Claude,
+            crate::user_setup::SelectedHost::Antigravity => UserHost::Antigravity,
+        };
+        let manifest_relative = PathBuf::from(format!(".hive/install/{}.json", host.as_str()));
+        let Some(manifest) = read_installed_manifest(&root_cap, &manifest_relative, host)
+            .map_err(|error| error.message().to_owned())?
+        else {
+            continue;
+        };
+        let (_, host_root_cap) = open_canonical_user_root(&canonical_root)
+            .map_err(|error| error.message().to_owned())?;
+        let arguments = UserArguments {
+            host,
+            mode: UserMode::Validate,
+            user_root: canonical_root.clone(),
+            root_cap: host_root_cap,
+            setup_override: Some(operational.clone()),
+        };
+        authenticate_saved_projection_host(&arguments, &manifest)
+            .map_err(|error| error.message().to_owned())?;
+        hosts.push(host.as_str().to_owned());
+    }
+    Ok(hosts)
+}
+
+fn authenticate_saved_projection_host(
+    arguments: &UserArguments,
+    manifest: &UserOwnershipManifest,
+) -> Result<(), InstallError> {
+    if manifest.product_version != env!("CARGO_PKG_VERSION") {
+        return Err(InstallError::Conflict(format!(
+            "installed ownership manifest is not bound to the running Hive product: {}",
+            arguments.host.as_str()
+        )));
+    }
+    if manifest.plan_digest
+        != inventory_digest(
+            manifest.host,
+            &manifest.product_version,
+            &manifest.host_version_range,
+            Path::new(&manifest.guidance_path),
+            &manifest.source_release_digest,
+            &manifest.entries,
+        )
+    {
+        return Err(InstallError::Conflict(format!(
+            "installed ownership manifest is not internally reproducible: {}",
+            arguments.host.as_str()
+        )));
+    }
+
+    let desired = build_desired_user_files(arguments, arguments.setup_override.as_ref())?;
+    let expected_entries = ownership_entries(&desired.files);
+    if manifest.host != arguments.host
+        || manifest.host_version_range != arguments.host.version_range()
+        || manifest.guidance_path != portable(&desired.guidance_relative)
+        || manifest.entries.len() != expected_entries.len()
+    {
+        return Err(InstallError::Conflict(format!(
+            "installed ownership manifest differs from the running Hive product: {}",
+            arguments.host.as_str()
+        )));
+    }
+
+    for (installed, expected) in manifest.entries.iter().zip(&expected_entries) {
+        if installed.path != expected.path
+            || installed.executable != expected.executable
+            || installed.unix_mode != expected.unix_mode
+            || installed.ownership != expected.ownership
+        {
+            return Err(InstallError::Conflict(format!(
+                "installed ownership entry differs from the running Hive product: {}",
+                installed.path
+            )));
+        }
+        let relative = Path::new(&installed.path);
+        let actual = read_optional_regular(&arguments.root_cap, relative, MAX_USER_FILE_BYTES)?
+            .ok_or_else(|| {
+                InstallError::Conflict(format!(
+                    "installed Hive projection is missing: {}",
+                    installed.path
+                ))
+            })?;
+        if matches!(installed.ownership.as_str(), "shared-marker") {
+            // The exact Hive block is owned, but bytes outside the block are user-authored and
+            // may legitimately differ. `build_desired_user_files` above verifies one well-formed
+            // marker before this point.
+            continue;
+        }
+        if matches!(
+            installed.ownership.as_str(),
+            "shared-migration-state" | "canonical-data-protected"
+        ) {
+            continue;
+        }
+        let expected_bytes = desired
+            .files
+            .get(relative)
+            .expect("expected ownership entry has desired bytes");
+        if installed.digest != expected.digest
+            || sha256_digest(&actual) != expected.digest
+            || !permissions_match_managed_mode(
+                file_permissions(&arguments.root_cap, relative)?,
+                installed.executable,
+            )
+        {
+            return Err(InstallError::Conflict(format!(
+                "installed Hive projection is not an authenticated current product file: {}",
+                installed.path
+            )));
+        }
+        if actual != expected_bytes.bytes {
+            return Err(InstallError::Conflict(format!(
+                "installed Hive projection differs from its authenticated current product file: {}",
+                installed.path
+            )));
+        }
+    }
+    Ok(())
+}
+
 fn open_user_root(root: &Path) -> Result<Dir, InstallError> {
     if !root.is_absolute() {
         return Err(InstallError::Input(
@@ -8542,6 +8682,46 @@ mod tests {
             ),
         )
         .expect("user setup");
+    }
+
+    #[test]
+    fn authenticated_saved_projection_scope_uses_only_selected_exact_current_hosts() {
+        let temporary = tempdir().expect("tempdir");
+        write_operational_setup(temporary.path(), &["codex", "claude"]);
+        let runner = StatefulHostRunner::new(temporary.path(), HostSabotage::None);
+        for host in [UserHost::Codex, UserHost::Claude] {
+            let install = args(temporary.path(), host, UserMode::Apply);
+            execute(UserOperation::Install, &install, &runner).expect("install selected host");
+        }
+
+        let hosts = authenticated_saved_projection_hosts(temporary.path()).expect("scope");
+
+        assert_eq!(hosts, ["codex", "claude"]);
+    }
+
+    #[test]
+    fn authenticated_saved_projection_scope_fails_closed_for_tampered_or_malformed_manifest() {
+        let temporary = tempdir().expect("tempdir");
+        write_operational_setup(temporary.path(), &["codex"]);
+        let runner = StatefulHostRunner::new(temporary.path(), HostSabotage::None);
+        let install = args(temporary.path(), UserHost::Codex, UserMode::Apply);
+        execute(UserOperation::Install, &install, &runner).expect("install selected host");
+
+        let manifest_path = temporary.path().join(".hive/install/codex.json");
+        let manifest: UserOwnershipManifest =
+            serde_json::from_slice(&fs::read(&manifest_path).expect("manifest")).expect("JSON");
+        let protected = manifest
+            .entries
+            .iter()
+            .find(|entry| is_managed_ownership(&entry.ownership))
+            .expect("managed entry");
+        fs::write(temporary.path().join(&protected.path), b"tampered\n").expect("tamper");
+        let error = authenticated_saved_projection_hosts(temporary.path()).expect_err("tamper");
+        assert!(error.contains("not an authenticated current product file"));
+
+        fs::write(&manifest_path, b"not JSON\n").expect("malformed manifest");
+        let error = authenticated_saved_projection_hosts(temporary.path()).expect_err("malformed");
+        assert!(error.contains("installed ownership manifest is malformed"));
     }
 
     fn seed_historical_user_install(root: &Path, host: UserHost) -> UserOwnershipManifest {
