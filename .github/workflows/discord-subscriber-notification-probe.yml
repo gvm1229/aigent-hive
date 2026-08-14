@@ -10,6 +10,10 @@ on:
         options:
           - 0.9.3
           - 0.9.4
+  push:
+    tags:
+      - discord-subscriber-probe-v0.9.3
+      - discord-subscriber-probe-v0.9.4
 
 permissions:
   contents: read
@@ -25,16 +29,27 @@ jobs:
       name: release-publication
       deployment: false
     runs-on: ubuntu-24.04
-    env:
-      PRODUCT_VERSION: ${{ inputs.product_version }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - name: Refuse any version outside the approved probe set
+      - name: Resolve an approved probe version
+        env:
+          REQUESTED_VERSION: ${{ inputs.product_version }}
+          REF_NAME: ${{ github.ref_name }}
         run: |
-          case "$PRODUCT_VERSION" in
+          if [ "$GITHUB_EVENT_NAME" = workflow_dispatch ]; then
+            selected="$REQUESTED_VERSION"
+          else
+            case "$REF_NAME" in
+              discord-subscriber-probe-v0.9.3) selected=0.9.3 ;;
+              discord-subscriber-probe-v0.9.4) selected=0.9.4 ;;
+              *) exit 2 ;;
+            esac
+          fi
+          case "$selected" in
             0.9.3|0.9.4) ;;
             *) exit 2 ;;
           esac
+          echo "PRODUCT_VERSION=$selected" >>"$GITHUB_ENV"
       - name: Send the banner before the Korean subscriber update
         env:
           AIGENT_HIVE_RELEASE_DISCORD_WEBHOOK_URL: ${{ secrets.AIGENT_HIVE_RELEASE_DISCORD_WEBHOOK_URL }}

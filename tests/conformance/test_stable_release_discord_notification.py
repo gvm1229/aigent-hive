@@ -159,7 +159,16 @@ class StableReleaseDiscordNotification(unittest.TestCase):
         self.assertEqual(
             dispatch["inputs"]["product_version"]["options"], ["0.9.3", "0.9.4"]
         )
+        self.assertEqual(
+            workflow[True]["push"]["tags"],
+            ["discord-subscriber-probe-v0.9.3", "discord-subscriber-probe-v0.9.4"],
+        )
         steps = workflow["jobs"]["send"]["steps"]
+        resolver = next(
+            step for step in steps if step.get("name") == "Resolve an approved probe version"
+        )
+        self.assertIn("discord-subscriber-probe-v0.9.3", resolver["run"])
+        self.assertIn("discord-subscriber-probe-v0.9.4", resolver["run"])
         sender = next(
             step
             for step in steps
