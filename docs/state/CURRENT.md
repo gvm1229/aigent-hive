@@ -1,11 +1,11 @@
 # 현재 상태
 
-- 기준 branch: `main` stable `179c909`, `develop` patch handoff 기준
+- 기준 branch: `main` stable `8b37323`, `develop` patch handoff `4dcc9a7`
 - product version: `0.9.4`
-- 다음 release target: accepted `0.9.4-test.1` source의 protected `main` 통합 뒤 동일 product bytes `0.9.4` stable publication
-- plan revision: `212`
+- 다음 release target: `0.9.4` stable publication 완료; `0.10.0` 후보 작업 시작 제외
+- plan revision: `213`
 - 현재 milestone: `0.9.3` 정식 출시·Windows 수용 완료, `0.9.4` GitHub Release 이중 언어 설명·공개 HTML·PDF 지식 기능 안내·전체 Skill 식별자 표시·전역 projection validation·지식 기록 credential 오탐·완료한 source knowledge scan·응답 언어·프롬프트 영어 기본값·작업 폴더 수명주기
-- 기능 기준: `cc50bcbe28c771d9f176b27791086b7d05ea3b3d`; release discipline base `c777da1`
+- 기능 기준: `8b37323daa33b96918933ad629d7c709c3cb6679`; release discipline base `c777da1`
 - 제외: `NHA10-001–012`·`N10-002–011`의 `0.10.0-test`
 - `0.9.4` source knowledge scan correction 완료: `--candidates`와 `--apply`의 store-level validation parity, claim-bound credential diagnostic, canonical provenance summary의 human review ID false-positive 제거. source build로 61개 current-truth fact·architecture claim을 source-private `aigent-hive` collection에 재적용, automatic shared promotion `0건`, generation 115와 PortareFolium explicit retrieval 확인. published `0.9.3` stable artifact 변경 없음; installed `0.9.3` binary의 correction은 `0.9.4-test` publication 뒤 검증 필요
 - `0.9.4` 응답 언어 계약 완료: 원본 `.agents`와 소비자 하네스에 ASD-STE100 영어·한국어 의미 중심 문장 기준 반영. `user-setup` 4개 투영 byte 일치, 렌더된 소비자 `AGENTS.md`·31개 focused 시험·문서 말투·Markdown 링크·Source Wiki 색인 재생성·lint 검사 통과
@@ -17,7 +17,7 @@
 - `0.9.4` 공개 HTML·PDF 지식 기능 안내 완료: `hive-core-features.ko.html`의 지식 기능 한 줄 강조 상자를 다섯 Skill의 정본 ID·사람 중심 기능명·사용 시점·범위·안전 경계·예시 비교표로 교체. 좁은 화면은 항목명과 내용을 짝지은 세로 레이아웃. print CSS는 `.section-head`에만 `break-after: avoid-page` 적용, title 단독 page 방지와 section 전체 이동 없음. HTML에서 PDF 재생성, Poppler 144 dpi 8쪽 render와 desktop·mobile 화면 확인. `HGD94-001–004` 완료
 - `0.9.4` GitHub Release 이중 언어 설명 수용 완료: public `v0.9.4-test.1` description과 canonical release note text 일치. English-first 순서, scope 5건·compatibility 2건·verification 2건 fact ID parity 확인
 - `0.9.4` 프롬프트 영어 기본값 수용 완료: public `0.9.4-test.1` Korean response environment의 installed directive와 `prompt-refine` 확인. default English·explicit Korean prompt contract 각각 `hive.prompt-refinement-valid`, 설명·질문 언어는 Korean directive 유지
-- `0.9.4` public test acceptance 완료: source `cc50bcbe28c771d9f176b27791086b7d05ea3b3d`, candidate run `31765987540`, publication run `31766521620`, public `v0.9.4-test.1`. Windows x64 direct installer clean install·npm upgrade·preserving reinstall·validation·enabled update check와 `SID94`·`HGD94`·`RNL94` public scope 수용. Windows zip SHA-256 `e9fd97fd11535fad9d4ddaac0551f68a2fb23f3d86e1a6f5313667bf0760f411`. 남은 `REL94-005–006`: protected `main` 통합·stable publication·게시 뒤 의존 검사
+- `0.9.4` 정식 출시 완료: `v0.9.4-test.1` 수용 source `cc50bcb` 뒤 PR #33 merge `8b37323`, stable candidate `31767805733`, publication `31768342121`. [GitHub Release `v0.9.4`](https://github.com/gvm1229/aigent-hive/releases/tag/v0.9.4)와 여섯 npm package `latest=0.9.4` 확인. Windows x64 public direct installer·npm latest·released zip·integrity bundle `hive.release-verified` source `8b37323`·sequence `13`, release lane 40 pass·Windows 미지원 macOS 7건·POSIX 1건 skip
 - 문서 gate: root·번역 README, 설치 안내, 공개 HTML, npm README, plugin metadata,
   문서 색인·명령·version 예시 전수 최신화와 공개 artifact 재검증
 - `0.9.2` 안정판 완료: PR #25 전체 CI PASS·merge exact `a502867e6b20e8f22bc014af05ca678f211f40ed`.
