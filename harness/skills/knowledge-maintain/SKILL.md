@@ -1,6 +1,6 @@
 ---
 name: knowledge-maintain
-description: "(knowledge-maintain) Keep Hive knowledge trustworthy by checking it, rebuilding its search index, or carrying out an explicitly requested cleanup."
+description: (knowledge-maintain) Keep Hive knowledge trustworthy by checking it, rebuilding its search index, or carrying out an explicitly requested cleanup.
 ---
 
 # Maintain Knowledge (`knowledge-maintain`)

@@ -1,6 +1,6 @@
 interface:
   display_name: "Create custom agent"
-  short_description: "Recommend and create one consented Hive custom agent."
+  short_description: "(custom-subagent-create) Recommend and create one consented Hive custom agent."
   default_prompt: "Use $aigent-hive:custom-subagent-create to recommend and create a custom agent after I approve its exact definition."
 policy:
   allow_implicit_invocation: false

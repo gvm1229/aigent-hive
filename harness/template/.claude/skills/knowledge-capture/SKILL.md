@@ -1,6 +1,6 @@
 ---
 name: knowledge-capture
-description: "(knowledge-capture) At the end of a Wiki-enabled turn, keep one useful fact, preference, or workflow that will help later work; never save secrets, raw conversations, or uncertain guesses."
+description: (knowledge-capture) At the end of a Wiki-enabled turn, keep one useful fact, preference, or workflow that will help later work; never save secrets, raw conversations, or uncertain guesses.
 ---
 
 # Capture One Knowledge Claim (`knowledge-capture`)

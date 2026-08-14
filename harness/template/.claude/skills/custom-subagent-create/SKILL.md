@@ -1,6 +1,6 @@
 ---
 name: custom-subagent-create
-description: 목적부터 확인해 Codex와 Claude 양쪽에서 같은 정의로 동작하는 Hive 사용자 정의 에이전트 추천·동의·생성
+description: (custom-subagent-create) 목적부터 확인해 Codex와 Claude 양쪽에서 같은 정의로 동작하는 Hive 사용자 정의 에이전트 추천·동의·생성
 ---
 
 # Hive 사용자 정의 에이전트 생성

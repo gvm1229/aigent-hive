@@ -1,6 +1,6 @@
 ---
 name: quick-answer
-description: Answer a self-contained question after required usage and knowledge gates, without project inspection, external research, multi-step work, or mutation. Preserve reusable user statements only through the separate memory gate.
+description: (quick-answer) Answer a self-contained question after required usage and knowledge gates, without project inspection, external research, multi-step work, or mutation. Preserve reusable user statements only through the separate memory gate.
 ---
 
 # Hive Simple Question

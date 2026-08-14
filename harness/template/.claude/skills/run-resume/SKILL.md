@@ -1,6 +1,6 @@
 ---
 name: run-resume
-description: Read and validate a durable Hive run through the signed Hive CLI and prepare bounded manual recovery or one-role usage-guarded automatic dispatch data. Automatic mode may update only Hive-owned, Git-ignored `.hive/runtime/` usage history and authorization claims. Use when resuming a specific `.hive/runs/RUN_ID/` after compaction, handoff, or a new session; do not use for simple questions, plan creation, runtime spawning, or persistent execution loops.
+description: (run-resume) Read and validate a durable Hive run through the signed Hive CLI and prepare bounded manual recovery or one-role usage-guarded automatic dispatch data. Automatic mode may update only Hive-owned, Git-ignored `.hive/runtime/` usage history and authorization claims. Use when resuming a specific `.hive/runs/RUN_ID/` after compaction, handoff, or a new session; do not use for simple questions, plan creation, runtime spawning, or persistent execution loops.
 ---
 
 # Hive Run Resume

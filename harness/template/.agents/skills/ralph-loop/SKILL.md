@@ -1,6 +1,6 @@
 ---
 name: ralph-loop
-description: Engineer and validate bounded evidence-gated Hive run graphs, checkpoints, retries, steering, and recovery while leaving every task launch to the active host. Use only for explicit graph or loop-engineering work.
+description: (ralph-loop) Engineer and validate bounded evidence-gated Hive run graphs, checkpoints, retries, steering, and recovery while leaving every task launch to the active host. Use only for explicit graph or loop-engineering work.
 ---
 
 # Hive Loop Engineering

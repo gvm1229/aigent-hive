@@ -1,6 +1,6 @@
 ---
 name: amend-directive
-description: Preview and amend user-owned Hive behavior directives without weakening compiled safety boundaries.
+description: (amend-directive) Preview and amend user-owned Hive behavior directives without weakening compiled safety boundaries.
 ---
 
 # Amend Hive behavior

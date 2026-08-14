@@ -1,6 +1,6 @@
 ---
 name: iterative-execution
-description: Execute a bounded persistent criterion loop through Hive orchestration events and host-native task receipts. Use for explicit iterative implementation whose terminal criteria require independent Judge evidence.
+description: (iterative-execution) Execute a bounded persistent criterion loop through Hive orchestration events and host-native task receipts. Use for explicit iterative implementation whose terminal criteria require independent Judge evidence.
 ---
 
 # Hive Iterative Execution

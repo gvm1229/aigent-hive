@@ -1,6 +1,6 @@
 ---
 name: prompt-refine
-description: Create or refine a copy-ready prompt for explicit prompt intent or materially ambiguous ordinary work; default to refine-only and stop for exact approval before execution.
+description: (prompt-refine) Create or refine a copy-ready prompt for explicit prompt intent or materially ambiguous ordinary work; default to refine-only and stop for exact approval before execution.
 ---
 
 # Hive Prompt Refine

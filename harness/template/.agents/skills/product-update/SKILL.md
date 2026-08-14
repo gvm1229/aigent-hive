@@ -1,6 +1,6 @@
 ---
 name: product-update
-description: Run the authenticated interactive Hive binary updater or verify, dry-run, and activate a local integrity-bound project release when the user explicitly requests a Hive update; never use for ordinary dependency updates, publication, or knowledge deletion.
+description: (product-update) Run the authenticated interactive Hive binary updater or verify, dry-run, and activate a local integrity-bound project release when the user explicitly requests a Hive update; never use for ordinary dependency updates, publication, or knowledge deletion.
 ---
 
 # Hive Update
