@@ -72,6 +72,7 @@ release_gate = true
 modules = [
   "tests.conformance.test_npm_packaging",
   "tests.conformance.test_phase6_update",
+  "tests.conformance.test_release_notes",
   "tests.conformance.test_release_qualification_order",
   "tests.conformance.test_update_discovery",
 ]
