@@ -44,6 +44,12 @@ Required fields:
 
 - /absolute/path | branch-or-ref | purpose | removal boundary | status: active | removed | retained (reason)
 
+Use one primary worktree unless the workload needs genuinely parallel independent changes that
+cannot safely run in sequence. Do not create another worktree for convenience, visual separation,
+or routine concern splitting. Remove every completed temporary worktree immediately after its
+commits are reachable from the intended remote or primary ref, its verification passes, and no
+uncommitted or unpushed required work remains.
+
 ## Notes / Blockers
 
 - <optional note>

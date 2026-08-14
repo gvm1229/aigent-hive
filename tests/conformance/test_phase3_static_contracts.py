@@ -105,6 +105,20 @@ class Phase3SchemaContract(unittest.TestCase):
 
 
 class Phase3SkillSourceContract(unittest.TestCase):
+    def test_source_worktree_lifecycle_prioritizes_one_primary_worktree(self) -> None:
+        workflow = (ROOT / ".agents/directives/03-workflow.md").read_text(encoding="utf-8")
+        coordination = (ROOT / ".agents/directives/06-session-coordination.md").read_text(
+            encoding="utf-8"
+        )
+        for text in (workflow, coordination):
+            normalized = " ".join(text.split())
+            self.assertIn("one primary worktree", normalized)
+            self.assertIn("convenience", normalized)
+            self.assertIn("parallel independent changes", normalized)
+            self.assertIn("immediately after", normalized)
+            self.assertIn("uncommitted", normalized)
+            self.assertIn("unpushed", normalized)
+
     def test_source_and_consumer_language_contracts_keep_the_same_rules(self) -> None:
         source_behavior = (ROOT / ".agents/directives/01-behavior.md").read_text(
             encoding="utf-8"
