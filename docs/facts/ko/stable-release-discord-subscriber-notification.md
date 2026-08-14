@@ -11,7 +11,7 @@ aliases: [stable-release-discord]
 sources:
   - "repo:.github/workflows/release-publish.yml#sha256:40594864c88b2ab2ddce13ee5f858167f717ad9649ba2e447bd75236d0494247"
   - "repo:docs/plans/active/stable-release-discord-notification.md#sha256:32b1f926bb693400586240a9821f1c870036e3e9944be1f98616e3c00dc41c07"
-  - "repo:docs/releases/0.9.4.subscriber.ko.md#sha256:2a6028b7458cda020547a959d573ce3d355b49fa64685efc2a36d005a584fa46"
+  - "repo:docs/releases/0.9.4.subscriber.ko.md#sha256:6c8e438046a01dd5882040fbd9216cb8ebce68ba83bedb1c28b70cb58b559be8"
   - "repo:scripts/publish-stable-discord-update.py#sha256:9b1fe57e0141e59523edae80e910ad537ade2a0b105678b608ad0101b47c9da9"
 links: [source-development, v0-9-full-release]
 reviewed_revision: "git:e1af8adfa30cd07e45496fb2491b7018e14b3ad9"

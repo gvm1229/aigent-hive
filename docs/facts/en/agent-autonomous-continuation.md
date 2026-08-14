@@ -18,7 +18,7 @@ sources:
   - "repo:docs/plans/active/agent-autonomous-continuation.md#sha256:83b8604202102dc5424c63648833d99978d2d415b974e22c7d70fc511f1c5883"
   - "repo:harness/directives/00-project-harness.md#sha256:fb6cb8107a38aa3fe70040d4e730e53190a66ed6047a8e40f55acf811425d87d"
   - "repo:harness/template/AGENTS.md.jinja#sha256:33c0da7ba5156ea1aa0ccc08a8e4f88343cf5f6f896994a7d8b830ac0ad6bb74"
-  - "repo:tests/conformance/test_phase3_static_contracts.py#sha256:817159015348378befeca4653a6c2bc4f8b9c4eb06a2504975e33a253955dbfa"
+  - "repo:tests/conformance/test_phase3_static_contracts.py#sha256:649c12bd367917808f69ad28355a054481d30f06ca84f3a44b984cd339f176db"
   - "repo:tests/fixtures/agent-autonomous-continuation.json#sha256:168eb72b79508187e841e5caf25d88f15a86a43b10f0327d7c1ce5a8226aa934"
 links: [automated-user-handoff, source-development]
 reviewed_revision: "git:9a125333ed070140b3773462d895684cba62fe6b"
