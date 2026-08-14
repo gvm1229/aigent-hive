@@ -4672,6 +4672,9 @@ mod tests {
             panic!("credential must fail before user-root mutation");
         };
         assert_eq!(error.code(), "hive.knowledge-invalid-input");
+        assert!(error
+            .to_string()
+            .contains("normalized_fact contains likely credential material"));
         assert!(!blocked
             .path()
             .join(".hive/knowledge/Claims/user-root")
