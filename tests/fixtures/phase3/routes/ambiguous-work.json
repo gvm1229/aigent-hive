@@ -12,7 +12,7 @@
     {
       "name": "prompt-refine",
       "source_type": "built-in",
-      "content_digest": "sha256:b7b0c46fe528f2b9b9ec28aaf39eeaf0de3973644719f6fee08149d828f4bcb8",
+      "content_digest": "sha256:3848758e0725a7b9b990d3055f22942ec6aededee7d3c8255d0162c8633c6fc5",
       "side_effect_class": "none",
       "capabilities": [],
       "consent_digest": null,

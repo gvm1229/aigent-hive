@@ -12,7 +12,7 @@
     {
       "name": "quick-answer",
       "source_type": "built-in",
-      "content_digest": "sha256:5478d281f28b39ec968afa8c80ea8230c4432c21fe299a4b6471c8df898c2206",
+      "content_digest": "sha256:1634215b51e454807b4c12271d38d02f55443150f7d3ee233a65f8a7dbec3999",
       "side_effect_class": "none",
       "capabilities": [],
       "consent_digest": null,
