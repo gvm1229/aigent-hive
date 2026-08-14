@@ -67,7 +67,7 @@
 | `0.9.4` source knowledge scan 정합성 | 3 | 0 | 100% |
 | `0.9.4` 응답 언어 계약 | 8 | 0 | 100% |
 | `0.9.4` 작업 폴더 수명주기 | 4 | 0 | 100% |
-| `0.9.4` 전체 Skill 식별자 표시 | 0 | 3 | 0% |
+| `0.9.4` 전체 Skill 식별자 표시 | 3 | 0 | 100% |
 | `0.9.4` 전역 projection validation 정합성 | 0 | 4 | 0% |
 | `0.9.4` 전역 지식 기록 credential 오탐 | 0 | 3 | 0% |
 | `0.9.4` 공개 HTML·PDF 지식 기능 안내 | 0 | 4 | 0% |
@@ -89,7 +89,7 @@
 | Agent 자율 실행 지속 | 8 | 0 | 100% |
 | `0.9.2` 완료 기능·공개 문서 출시 | 12 | 0 | 100% |
 | Notion `v0.10` 후보 | 1 | 10 | 9.1% |
-| **Canonical total** | **580** | **46** | **92.6%** |
+| **Canonical total** | **583** | **43** | **93.1%** |
 
 External production boundary 항목도 미완료 합계에 포함. Protected authority 없이 완료 처리 금지.
 
@@ -182,7 +182,7 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
 현재: 공개된 `0.9.3` artifact는 immutable. `SKI94-001–003` 구현·local source collection
 reimport 완료. `LGC94-001–008`의 원본·소비자 응답 언어 계약·금지 규칙·예시 보강 완료.
 완료: `PML94-001–003` 원본·Skill·전역 네 투영·프로젝트 렌더러의 응답 언어와 분리한 영어 기본값 프롬프트 계약.
-다음 구현: `SID94-001–003` 모든 Hive Skill 설명의 정본 영문 ID 표시, `UPV94-001–004` 전역
+완료: `SID94-001–003` 모든 Hive Skill 설명의 정본 영문 ID-first 표시. 다음 구현: `UPV94-001–004` 전역
 setup·install validation receipt 정합성, `KRV94-001–003` 안전한 전역 지식 기록의 credential
 오탐 제거, `HGD94-001–004` 공개 HTML 지식 기능 비교표·PDF page title 수용. `PML94-004`와
 `RNL94-001–003`을 포함한 모든 `0.9.4` 구현·문서·local gate 완료 뒤 `REL94-001`의 exact source

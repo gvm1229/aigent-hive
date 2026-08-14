@@ -18,12 +18,14 @@
 
 ## Checklist
 
-- [ ] [SID94-001] 모든 활성 Hive Skill의 canonical catalog·source front matter 설명 첫머리에
-  정확한 `(skill-id)` 표시
-- [ ] [SID94-002] Codex·Claude·Antigravity user·project projection에서 선택 언어별 설명과
-  `(skill-id)`가 byte parity로 수렴하고, 기존 호출·설정 ID 유지
-- [ ] [SID94-003] 전체 Hive Skill inventory regression과 user install·update·purge 수용으로
-  Hive-owned Skill만 변경, third-party·사용자 작성 Skill 변경 `0건` 확인
+- [x] [SID94-001] 모든 활성 Hive Skill의 canonical catalog·source front matter 설명 첫머리에
+  정확한 `(skill-id)` 표시 — current 26개 catalog·Skill front matter·Codex metadata 검사 PASS
+- [x] [SID94-002] Codex·Claude·Antigravity user·project projection에서 선택 언어별 설명과
+  `(skill-id)`가 byte parity로 수렴하고, 기존 호출·설정 ID 유지 — canonical source→plugin·Copier
+  projection 동기화와 localized descriptor regression PASS
+- [x] [SID94-003] 전체 Hive Skill inventory regression과 user install·update·purge 수용으로
+  Hive-owned Skill만 변경, third-party·사용자 작성 Skill 변경 `0건` 확인 — `hive-projection` 34개,
+  `hive-cli user_install` 84개, Skill·setup Python conformance PASS
 
 ## 수락 기준
 
