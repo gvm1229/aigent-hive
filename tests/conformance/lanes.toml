@@ -70,6 +70,8 @@ owner = "release-engineering"
 contract = "package layout, signed update behavior, and public update discovery"
 release_gate = true
 modules = [
+  "tests.conformance.test_historical_project_bases",
+  "tests.conformance.test_project_base_coverage",
   "tests.conformance.test_npm_packaging",
   "tests.conformance.test_phase6_update",
   "tests.conformance.test_release_notes",

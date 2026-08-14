@@ -45,6 +45,19 @@ const FRESH_CAPABILITY_RESOLUTION_MAX_AGE: Duration = Duration::from_mins(1);
 const OPERATIONAL_USER_SETUP_VERSION: (u64, u64, u64) = (0, 8, 0);
 static ACTIVATION_TEMP_COUNTER: AtomicU64 = AtomicU64::new(0);
 
+/// Historical releases whose complete project-base ledger is embedded in the binary.
+/// Earlier releases retain the separately authenticated legacy Skill-only contract.
+pub const FULL_HISTORICAL_PROJECT_BASE_VERSIONS: &[&str] = &[
+    "0.7.0", "0.8.0", "0.9.0", "0.9.1", "0.9.2", "0.9.3", "0.9.4",
+];
+
+/// Report whether a historical release must authenticate against its complete
+/// embedded project-base ledger instead of the legacy Skill-only inventory.
+#[must_use]
+pub fn requires_full_historical_project_base(version: &str) -> bool {
+    FULL_HISTORICAL_PROJECT_BASE_VERSIONS.contains(&version)
+}
+
 /// Setup operation selected by the CLI.
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub enum SetupMode {
@@ -892,6 +905,11 @@ pub fn historical_project_upgrade_candidate_in(
     target_dir: &Dir,
     version: &str,
 ) -> Result<HistoricalProjectBase, RenderError> {
+    if !requires_full_historical_project_base(version) {
+        return Err(RenderError::Unsupported(format!(
+            "historical full project base is not embedded: {version}"
+        )));
+    }
     let files = match version {
         "0.7.0" => frozen_project_base_0_7(target_dir)?,
         "0.8.0" => frozen_project_base_0_8(target_dir)?,
@@ -899,9 +917,8 @@ pub fn historical_project_upgrade_candidate_in(
         "0.9.1" => frozen_project_base_0_9_1(target_dir)?,
         "0.9.2" => frozen_project_base_0_9_2(target_dir)?,
         "0.9.3" => frozen_project_base_0_9_3(target_dir)?,
-        _ => Err(RenderError::Unsupported(format!(
-            "historical full project base is not embedded: {version}"
-        )))?,
+        "0.9.4" => frozen_project_base_0_9_4(target_dir)?,
+        _ => unreachable!("full historical project-base registry is exhaustive"),
     };
     let files = files
         .into_iter()
@@ -1407,6 +1424,45 @@ frozen_project_base_0_9_release!(
 frozen_project_base_0_9_release!(
     frozen_project_base_0_9_3,
     "0.9.3",
+    [
+        "00-project-harness.md",
+        "01-project-knowledge.md",
+        "02-project-upgrade.md",
+        "03-session-coordination.md"
+    ],
+    [
+        "amend-directive",
+        "code-polish",
+        "custom-subagent-create",
+        "iterative-execution",
+        "knowledge-capture",
+        "knowledge-import",
+        "knowledge-maintain",
+        "knowledge-promote",
+        "knowledge-recall",
+        "multi-goal",
+        "package-review",
+        "product-update",
+        "project-refresh",
+        "project-setup",
+        "project-transition",
+        "prompt-refine",
+        "quick-answer",
+        "ralph-loop",
+        "research-best-practices",
+        "run-checkpoint",
+        "run-handoff",
+        "run-resume",
+        "ship",
+        "team-execution",
+        "usage-guard",
+        "user-setup"
+    ]
+);
+
+frozen_project_base_0_9_release!(
+    frozen_project_base_0_9_4,
+    "0.9.4",
     [
         "00-project-harness.md",
         "01-project-knowledge.md",
@@ -8385,16 +8441,6 @@ mod tests {
                 );
             }
             assert!(historical_project_upgrade_candidate_in(&target_dir, "0.8.1").is_err());
-            for version in ["0.9.1", "0.9.2", "0.9.3"] {
-                let historical = historical_project_upgrade_candidate_in(&target_dir, version)
-                    .expect("embedded post-0.9.0 full registry");
-                assert_eq!(historical.product_version, version);
-                assert!(!historical.files.is_empty());
-                assert!(historical
-                    .files
-                    .iter()
-                    .all(|entry| entry.content_digest == sha256_digest(&entry.content)));
-            }
 
             let harness = fs::read_to_string(&harness_path).expect("0.8 harness config");
             fs::write(
@@ -8409,6 +8455,36 @@ mod tests {
                 historical_project_upgrade_candidate_in(&target_dir, "0.8.0"),
                 Err(RenderError::Verification(_))
             ));
+        }
+    }
+
+    fn assert_post_090_full_historical_candidates(
+        target_dir: &cap_std::fs::Dir,
+        harness_path: &Path,
+        historical_harness: &str,
+    ) {
+        for version in ["0.9.1", "0.9.2", "0.9.3", "0.9.4"] {
+            fs::write(
+                harness_path,
+                historical_harness
+                    .replace(
+                        "harness_version = \"0.9.0\"",
+                        &format!("harness_version = \"{version}\""),
+                    )
+                    .replace(
+                        "source_release_version = \"0.9.0\"",
+                        &format!("source_release_version = \"{version}\""),
+                    ),
+            )
+            .expect("pinned historical 0.9 harness config");
+            let historical = historical_project_upgrade_candidate_in(target_dir, version)
+                .expect("embedded post-0.9.0 full registry");
+            assert_eq!(historical.product_version, version);
+            assert!(!historical.files.is_empty());
+            assert!(historical
+                .files
+                .iter()
+                .all(|entry| entry.content_digest == sha256_digest(&entry.content)));
         }
     }
 
@@ -8500,7 +8576,12 @@ mod tests {
                     String::from_utf8_lossy(&frozen["AGENTS.md"]).contains("hive usage enforce")
                 );
             }
-            assert!(historical_project_upgrade_candidate_in(&target_dir, "0.9.1").is_err());
+            let historical_harness = fs::read_to_string(&harness_path).expect("0.9 harness config");
+            assert_post_090_full_historical_candidates(
+                &target_dir,
+                &harness_path,
+                &historical_harness,
+            );
         }
     }
 

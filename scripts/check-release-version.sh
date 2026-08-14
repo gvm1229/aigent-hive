@@ -97,4 +97,38 @@ current = (root / "docs/state/CURRENT.md").read_text(encoding="utf-8")
 match = re.search(r"(?m)^- product version: `([^`]+)`$", current)
 if match is None or match.group(1) != requested:
     raise SystemExit("CURRENT.md product version differs")
+
+major, minor, patch = map(int, requested.split("."))
+if patch:
+    previous = f"{major}.{minor}.{patch - 1}"
+    base = root / "harness/project-bases" / previous
+    if not base.is_dir():
+        raise SystemExit(
+            f"missing frozen full project base for prior patch release {previous}"
+        )
+    import subprocess
+
+    template_paths = subprocess.check_output(
+        ["git", "ls-tree", "-r", "--name-only", f"v{previous}", "harness/template"],
+        cwd=root,
+        text=True,
+    ).splitlines()
+    mapped = {}
+    for source in template_paths:
+        suffix = source.removeprefix("harness/template/")
+        if suffix == "AGENTS.md.jinja":
+            destination = base / "AGENTS.md.template"
+        elif suffix.startswith(".agents/directives/"):
+            destination = base / "directives" / suffix.removeprefix(".agents/directives/")
+        elif suffix.startswith(".agents/skills/"):
+            destination = base / "skills" / suffix.removeprefix(".agents/skills/")
+        else:
+            continue
+        mapped[source] = destination
+    if not mapped or {path for path in base.rglob("*") if path.is_file()} != set(mapped.values()):
+        raise SystemExit(f"prior patch base inventory differs from v{previous} template")
+    for source, destination in mapped.items():
+        release_bytes = subprocess.check_output(["git", "show", f"v{previous}:{source}"], cwd=root)
+        if destination.read_bytes() != release_bytes:
+            raise SystemExit(f"prior patch base bytes differ from v{previous}: {source}")
 PY

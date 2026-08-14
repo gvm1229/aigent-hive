@@ -395,6 +395,13 @@ jobs:
           pattern: release-*
           path: dist
           merge-multiple: true
+      - name: Generate digest-bound project upgrade coverage report
+        run: |
+          table="harness/release/$PRODUCT_VERSION/migration-table.json"
+          test -f "$table"
+          python3 scripts/check-project-base-coverage.py \
+            --migration-table "$table" \
+            --output release-project-base-coverage.json
       - name: Render digest-pinned npm direct installers
         run: |
           python3 scripts/render-installers.py \
@@ -437,6 +444,7 @@ jobs:
           path: |
             aigent-hive-${{ env.PACKAGE_VERSION }}.tgz
             aigent-hive-${{ env.PACKAGE_VERSION }}-npm-umbrella.attestation.jsonl
+            release-project-base-coverage.json
             release-candidate.json
           if-no-files-found: error
 

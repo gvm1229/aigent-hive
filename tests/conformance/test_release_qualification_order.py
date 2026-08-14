@@ -44,6 +44,40 @@ class ReleaseQualificationOrderContract(unittest.TestCase):
             with self.subTest(required=required):
                 self.assertIn(required, text)
 
+    def test_release_gate_requires_the_exact_prior_patch_project_base(self) -> None:
+        text = (ROOT / "scripts/check-release-version.sh").read_text(encoding="utf-8")
+        for required in (
+            "missing frozen full project base for prior patch release",
+            "prior patch base inventory differs",
+            "prior patch base bytes differ",
+            "git", "ls-tree", "v{previous}", "harness/template",
+        ):
+            with self.subTest(required=required):
+                self.assertIn(required, text)
+
+    def test_candidate_workflow_binds_project_base_coverage_to_the_artifact_set(self) -> None:
+        text = (ROOT / ".github/workflows/release.yml").read_text(encoding="utf-8")
+        for required in (
+            "Generate digest-bound project upgrade coverage report",
+            "scripts/check-project-base-coverage.py",
+            "harness/release/$PRODUCT_VERSION/migration-table.json",
+            "release-project-base-coverage.json",
+        ):
+            with self.subTest(required=required):
+                self.assertIn(required, text)
+
+    def test_product_changes_remain_bound_to_the_full_risk_verification_path(self) -> None:
+        text = (ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8")
+        for required in (
+            "Classify tracked change risk",
+            "scope=product",
+            "cargo test --workspace --all-targets --all-features --locked",
+            "Run complete named conformance inventory",
+            "Require the risk-matched verification result",
+        ):
+            with self.subTest(required=required):
+                self.assertIn(required, text)
+
     def test_v092_plan_releases_completed_scope_and_defers_future_work(self) -> None:
         text = (
             ROOT / "docs/plans/active/release-0.9.2-test-qualification.md"
