@@ -20,7 +20,7 @@
 - `0.9.4` 정식 출시 완료: `v0.9.4-test.1` 수용 source `cc50bcb` 뒤 PR #33 merge `8b37323`, stable candidate `31767805733`, publication `31768342121`. [GitHub Release `v0.9.4`](https://github.com/gvm1229/aigent-hive/releases/tag/v0.9.4)와 여섯 npm package `latest=0.9.4` 확인. Windows x64 public direct installer·npm latest·released zip·integrity bundle `hive.release-verified` source `8b37323`·sequence `13`, release lane 40 pass·Windows 미지원 macOS 7건·POSIX 1건 skip
 - 완료: 제품 harness·release와 분리한 source workspace 전용 `update-summary` Skill의 구독자 관점 필터. 설치 product 또는 사용자 작업 방식에 영향이 없는 개발자·기여자 전용 변경은 요약에서 제외
 - 완료: 안정판 GitHub Release 뒤 Discord 배너 1건과 `update-summary` 한국어 구독자 요약 1건 전송. 배너 성공 뒤 요약 전송, 시험판 제외, webhook URL은 `release-publication` 환경 비밀 값 한정
-- 실제 Discord 전달 시험 완료: `0.9.3` [run `31775328374`](https://github.com/gvm1229/aigent-hive/actions/runs/31775328374)·`0.9.4` [run `31775377264`](https://github.com/gvm1229/aigent-hive/actions/runs/31775377264) 각각 배너 뒤 한국어 요약 전송 성공. 안정판·npm 게시·GitHub Release 생성 `0건`
+- 실제 Discord 전달 시험·표시 수용 완료: `0.9.3` [run `31775328374`](https://github.com/gvm1229/aigent-hive/actions/runs/31775328374)·`0.9.4` [run `31775377264`](https://github.com/gvm1229/aigent-hive/actions/runs/31775377264) 각각 배너 뒤 한국어 요약 전송 성공. 유지보수자 실제 Discord 화면에서 `0.9.3` 뒤 `0.9.4`, 각 배너 아래 해당 요약 표시 확인. 안정판·npm 게시·GitHub Release 생성 `0건`
 - npm publication: Trusted Publisher OIDC 유지, `release-publication` 환경의 historical `NPM_TOKEN` 삭제 완료
 - 문서 gate: root·번역 README, 설치 안내, 공개 HTML, npm README, plugin metadata,
   문서 색인·명령·version 예시 전수 최신화와 공개 artifact 재검증
