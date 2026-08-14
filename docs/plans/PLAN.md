@@ -1,9 +1,9 @@
 # Aigent Hive active plan index
 
-> Revision: 222
+> Revision: 223
 > 기준일: 2026-08-14
 > Product version: `0.9.4` stable 기준, 다음 target `0.9.5` compatible patch
-> 현재 milestone: historical project base 수용 범위·bare binary update 뒤 사용자 투영 자동 갱신
+> 현재 milestone: historical project base 수용 범위·bare binary update 뒤 사용자 투영 자동 갱신·`0.9.5` 시험·정식 출시
 > Entrypoint: `docs/plans/PLAN.md`
 
 ## Goal parameters
@@ -17,6 +17,8 @@
   `PML94-*` 응답 언어와 분리한 프롬프트 영어 기본값·명시 언어 우선 계약,
   `HBC95-*` declared project migration range와 exact historical full project-base registry·matrix 수용,
   `AUP95-*` authenticated saved multi-host scope 기반 bare binary update 뒤 user projection 자동 갱신,
+  `REL95-*` local gate·번호 공개 시험판·Windows x64 설치/업그레이드 수용·protected `main`
+  통합·동일 artifact stable publication·현재 Windows 안정판 설치·게시 뒤 의존 검사,
   `REL94-*` local gate·번호 공개 시험판·Windows x64 설치/업그레이드 수용·protected `main`
   통합·동일 artifact stable publication·게시 뒤 의존 검사
 - Success: 동일 reviewed scan 파일의 candidate·apply 보안 수용 결과 일치, credential 거부의
@@ -27,7 +29,8 @@
   설명 우선·한국어 설명 후속·두 언어 규칙 위반 `0건`, 선택 응답 언어와 무관한 default English
   prompt·명시 prompt 언어 우선, declared migration source release의 exact full base 인증·packaged
   binary matrix parity, bare binary update 뒤 authenticated saved multi-host projection refresh와
-  safe binary-only fallback
+  safe binary-only fallback, exact public test artifact와 stable artifact의 product byte 동일성,
+  현재 Windows x64 컴퓨터의 stable install·validate
 - Stop boundary: protected `main` review, stable publication environment approval, exact `1.0.0`
   authority, 설치 product usage guard remaining threshold `5%`
 - Invariants: provider-neutral, backend별 canonical source 우선, SQLite 파생 상태,
@@ -98,7 +101,8 @@
 | Notion `v0.10` 후보 | 1 | 10 | 9.1% |
 | `0.9.5` 과거 project 기준본 수용 범위 | 0 | 6 | 0% |
 | `0.9.5` 사용자 투영 자동 갱신 | 0 | 7 | 0% |
-| **Canonical total** | **616** | **35** | **94.6%** |
+| `0.9.5` 시험·정식 출시 | 0 | 6 | 0% |
+| **Canonical total** | **616** | **41** | **93.8%** |
 
 External production boundary 항목도 미완료 합계에 포함. Protected authority 없이 완료 처리 금지.
 
@@ -139,6 +143,7 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
 | [`active/projection-upgrade-purge-0.9.3.md`](active/projection-upgrade-purge-0.9.3.md) | `PUG93-*` | retired Skill purge·directive direct-conflict 갱신 |
 | [`active/historical-project-base-coverage.md`](active/historical-project-base-coverage.md) | `HBC95-*` | declared migration range·exact full historical project-base registry·matrix parity |
 | [`active/automatic-user-projection-refresh-0.9.5.md`](active/automatic-user-projection-refresh-0.9.5.md) | `AUP95-*` | authenticated saved multi-host scope·bare binary update 뒤 user projection refresh |
+| [`active/release-0.9.5-stable-publication.md`](active/release-0.9.5-stable-publication.md) | `REL95-*` | 번호 공개 시험판·Windows x64 수용·protected 통합·stable publication·현재 Windows 설치 |
 | [`active/release-0.9.3-test-qualification.md`](active/release-0.9.3-test-qualification.md) | `REL93-*` | `0.9.3` numbered public test 수용과 정식 출시 |
 | [`active/projection-validation-consistency-0.9.3.md`](active/projection-validation-consistency-0.9.3.md) | `VAL93-*` | local-preserved validation·formatter 보호 |
 | [`active/release-engineering-optimization-0.9.3.md`](active/release-engineering-optimization-0.9.3.md) | `OPT93-*` | risk-tier CI·candidate reuse·single-owner release evidence |
@@ -203,3 +208,5 @@ observation, stable-release-dependent release lane 완료. `0.10.0` 후보 항�
 완료: 제품 harness·release에 포함하지 않는 source workspace 전용 `update-summary` Skill의 구독자 관점 필터 보강·구조 검증.
 완료: 안정판 GitHub Release 뒤 Discord 배너 전송 성공 후에만 `update-summary` 한국어 구독자 요약 전송·회귀 검증.
 완료: 다음 version 미정 지식 Skill 다섯 개 한국어 표시 이름의 영문 ID 제거, 설명 첫머리 ID 유지. `v0.9.4` release·tag·package 변경 없음.
+현재: `HBC95-*`·`AUP95-*` 구현과 `REL95-*` 수용 준비. Ralph graph는 `v095-stable-release`이며
+host-native dispatch 준비만 허용, 실제 출시·게시 경계는 public test 수용 뒤 유지.
