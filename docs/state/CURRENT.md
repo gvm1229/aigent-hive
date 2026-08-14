@@ -3,7 +3,7 @@
 - 기준 branch: `main` stable `179c909`, `develop` patch handoff 기준
 - product version: `0.9.4` patch 개발 기준
 - 다음 release target: 번호 공개 `0.9.4-test` 수용 뒤 동일 artifact `0.9.4` stable publication
-- plan revision: `210`
+- plan revision: `211`
 - 현재 milestone: `0.9.3` 정식 출시·Windows 수용 완료, `0.9.4` GitHub Release 이중 언어 설명·공개 HTML·PDF 지식 기능 안내·전체 Skill 식별자 표시·전역 projection validation·지식 기록 credential 오탐·완료한 source knowledge scan·응답 언어·프롬프트 영어 기본값·작업 폴더 수명주기
 - 기능 기준: `2cec0377748874748d126b6b55e59975a3f20a02`; release discipline base `c777da1`
 - 제외: `NHA10-001–012`·`N10-002–011`의 `0.10.0-test`
@@ -15,7 +15,7 @@
 - `0.9.4` 전역 projection validation 정합성 구현 완료: `hive setup --scope user --validate`의 supplied answers 재직렬화 바이트 대신 설치된 user setup 바이트 기준 `.hive/install/user-projection.json` receipt 검증. 의미가 같은 answers·사용자 보존 서식의 write 없는 수용, local managed file edit·malformed receipt·structured config corruption의 conflict 유지. 이 Windows x64 source workspace의 `hive-cli user_setup` 46개·`user_install` 84개 통과. 남은 `UPV94-004`: public `0.9.4-test` artifact의 실제 fresh setup·preserving reinstall·validate 수용
 - `0.9.4` 전역 지식 기록 credential 오탐 구현 완료: 긴 `claim_key`와 자동 user-statement source 식별자는 안전한 메타데이터로 수용. token prefix·assignment·opaque value 탐지는 유지하고 실제 비밀 값은 user-root Markdown·SQLite 변경 전 차단. 거부 결과에 `normalized_fact` 또는 `provenance.summary` field와 이유 표시. 이 Windows x64 source workspace의 `hive-wiki` 113개·`hive-cli knowledge` 49개 통과. 남은 `KRV94-003`: public `0.9.4-test` automatic capture receipt 수용
 - `0.9.4` 공개 HTML·PDF 지식 기능 안내 완료: `hive-core-features.ko.html`의 지식 기능 한 줄 강조 상자를 다섯 Skill의 정본 ID·사람 중심 기능명·사용 시점·범위·안전 경계·예시 비교표로 교체. 좁은 화면은 항목명과 내용을 짝지은 세로 레이아웃. print CSS는 `.section-head`에만 `break-after: avoid-page` 적용, title 단독 page 방지와 section 전체 이동 없음. HTML에서 PDF 재생성, Poppler 144 dpi 8쪽 render와 desktop·mobile 화면 확인. `HGD94-001–004` 완료
-- `0.9.4` GitHub Release 이중 언어 설명 예정: `release-publish.yml`은 `docs/releases/<product-version>.md`를 description으로 그대로 게시. 해당 정본의 English-first·Korean-second section, 동일 사실·호환성·검증 경계, ASD-STE100 English와 한국어 언어 계약 검사를 release workflow·`0.9.4-test` GitHub prerelease rendering으로 수용 필요
+- `0.9.4` GitHub Release 이중 언어 설명 구현 완료: `docs/releases/<product-version>.md`의 English-first `## English`·`## 한국어` section과 범위·호환성·검증·게시의 같은 fact ID 계약 정의. `check-release-notes.py`가 section 순서·필수 field·영어 ASD-STE100 제약·한국어 설명·field 동등성을 검사하고, `release-publish.yml`은 GitHub Release 생성 전 정본 note를 검사. `RNL94-003`: public `0.9.4-test` rendering 수용 보류
 - `0.9.4` 프롬프트 영어 기본값 구현 완료: 한국어 응답 환경에서도 Hive 작성·개선·복사용 프롬프트는 현재 프롬프트 언어의 명시 요청이 없으면 영어. 설명·질문은 선택 응답 언어 유지. 원본 지침·`prompt-refine`·전역 네 투영·프로젝트 렌더러·Rust 62개·Python 32개 회귀 통과. 남은 `PML94-004`: `0.9.4-test` 설치 수용
 - `0.9.4` 출시 절차 추가: 모든 patch 구현·문서·local gate 완료 뒤 exact `develop` source와 artifact digest 고정, 번호 공개 시험판 1회, Windows x64 실제 clean install·preserving upgrade·전 범위 수용, protected `main` 통합, 동일 artifact stable publication, 게시 뒤 의존 검사 순서. `REL94-001–006` owner: `release-0.9.4-stable-publication.md`
 - 문서 gate: root·번역 README, 설치 안내, 공개 HTML, npm README, plugin metadata,

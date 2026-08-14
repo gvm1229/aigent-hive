@@ -20,12 +20,21 @@
 
 ## Checklist
 
-- [ ] [RNL94-001] release note 정본 형식의 English-first section과 Korean section 정의. 현재·신규
+- [x] [RNL94-001] release note 정본 형식의 English-first section과 Korean section 정의. 현재·신규
   release note의 version·scope·compatibility·verification·publication field 동등성
-- [ ] [RNL94-002] release workflow의 release note structure·순서·두 언어 필수 field·ASD-STE100
+- [x] [RNL94-002] release workflow의 release note structure·순서·두 언어 필수 field·ASD-STE100
   English·Korean language contract 검사와 명확한 failure receipt
 - [ ] [RNL94-003] `0.9.4-test` GitHub prerelease description의 English-first bilingual rendering
   확인. stable publication 전 같은 source note·순서·내용 재검증
+
+## 완료 증거
+
+- `docs/releases/README.md`에 `0.9.4`부터의 정본 note 형식: English-first, 네 field, 같은 fact ID
+- `scripts/check-release-notes.py`: title·section 순서·필수 bullet·ASD-STE100 English 제약·한국어
+  설명·동일 fact ID 검사와 field별 failure receipt
+- `release-publish.yml`: GitHub Release 생성 전 정본 `docs/releases/$PRODUCT_VERSION.md` 검사
+- `tests/conformance/test_release_notes.py`: 정상 형식, fact ID 불일치, 영어 금지어, 한국어 일반 영어
+  혼용, workflow 연결 회귀
 
 ## 수락 기준
 
