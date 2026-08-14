@@ -1,9 +1,9 @@
 # Aigent Hive active plan index
 
-> Revision: 219
+> Revision: 220
 > 기준일: 2026-08-14
-> Product version: `0.9.4` patch 개발 기준
-> 현재 milestone: `0.9.4` GitHub Release 이중 언어 설명·공개 HTML·PDF 지식 기능 안내·Skill 표시 식별자·전역 설치 검증·완료한 source 지식 색인·응답 언어·프롬프트 영어 기본값·작업 폴더 수명주기
+> Product version: `0.9.4` stable 기준, 다음 version 미정
+> 현재 milestone: 다음 version 미정 지식 Skill 한국어 표시 이름·설명 정본 ID 분리
 > Entrypoint: `docs/plans/PLAN.md`
 
 ## Goal parameters
@@ -76,6 +76,7 @@
 | `0.9.4` 시험·정식 출시 | 6 | 0 | 100% |
 | Source project-only `update-summary` Skill | 4 | 0 | 100% |
 | Stable release Discord 구독자 알림 | 5 | 0 | 100% |
+| 다음 version 지식 Skill 표시 이름 | 0 | 3 | 0% |
 | Native host activation `0.10.0` 후보 | 0 | 12 | 0% |
 | Prompt refine 자동 routing | 12 | 0 | 100% |
 | v0.9 test 기능 마감 | 18 | 0 | 100% |
@@ -91,7 +92,7 @@
 | Agent 자율 실행 지속 | 8 | 0 | 100% |
 | `0.9.2` 완료 기능·공개 문서 출시 | 12 | 0 | 100% |
 | Notion `v0.10` 후보 | 1 | 10 | 9.1% |
-| **Canonical total** | **613** | **22** | **96.5%** |
+| **Canonical total** | **613** | **25** | **96.1%** |
 
 External production boundary 항목도 미완료 합계에 포함. Protected authority 없이 완료 처리 금지.
 
@@ -146,6 +147,7 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
 | [`active/release-0.9.4-stable-publication.md`](active/release-0.9.4-stable-publication.md) | `REL94-*` | 번호 공개 시험판 수용·protected `main` 통합·동일 artifact stable publication |
 | [`active/source-update-summary-skill.md`](active/source-update-summary-skill.md) | `SUS-*` | source workspace 전용 구독자 업데이트 요약 Skill |
 | [`active/stable-release-discord-notification.md`](active/stable-release-discord-notification.md) | `RDN-*` | 안정판 배너·구독자 업데이트 Discord 알림 |
+| [`active/knowledge-skill-display-names-next-release.md`](active/knowledge-skill-display-names-next-release.md) | `KDN-*` | 다음 version 지식 Skill 한국어 표시 이름·설명 정본 ID 분리 |
 | [`active/knowledge-access-optimization-0.9.3.md`](active/knowledge-access-optimization-0.9.3.md) | `KBA93-*` | explicit collection access·index-time automatic promotion |
 | [`active/v0.10.0-native-host-activation-candidate.md`](active/v0.10.0-native-host-activation-candidate.md) | `NHA10-*` | default-off native host activation·actual lifecycle evidence |
 | [`active/v0.9.3-release-loop.graph.md`](active/v0.9.3-release-loop.graph.md) | graph | `0.9.3` release loop checkpoint·recovery 계약 |
@@ -192,3 +194,4 @@ observation, stable-release-dependent release lane 완료. `0.10.0` 후보 항�
 `N10-002–011`·`NHA10-001–012`: `0.10.0-test` 후보 유지.
 완료: 제품 harness·release에 포함하지 않는 source workspace 전용 `update-summary` Skill의 구독자 관점 필터 보강·구조 검증.
 완료: 안정판 GitHub Release 뒤 Discord 배너 전송 성공 후에만 `update-summary` 한국어 구독자 요약 전송·회귀 검증.
+진행: 다음 version 미정 지식 Skill 다섯 개 한국어 표시 이름의 영문 ID 제거, 설명 첫머리 ID 유지. `v0.9.4` release·tag·package 변경 없음.
