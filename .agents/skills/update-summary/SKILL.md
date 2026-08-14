@@ -14,6 +14,7 @@ Create subscriber-facing Korean release summaries for this source workspace only
 3. Write a Korean Markdown title in this form: `# Aigent Hive v<current> 업데이트 내역:`.
 4. Write one concise Korean bullet per improvement. State the observable improvement first. Retain exact identifiers only when they help subscribers act or distinguish a feature.
 5. Compare only the two stable versions requested. Do not claim a future release, rebuild an artifact, publish a release, or change product harness files.
+6. When preparing a stable release, save the exact Korean title and bullets to `docs/releases/<current>.subscriber.ko.md`. This is the canonical Discord message payload for that stable release.
 
 ## End-user relevance
 
@@ -27,6 +28,7 @@ Create subscriber-facing Korean release summaries for this source workspace only
 - Use Korean for the title and bullets unless the requester explicitly selects another output language.
 - Match the concise subscriber format already used for version update notices.
 - Every bullet must state the subscriber benefit or changed capability; do not expose implementation, process, or publication details as an improvement.
+- Do not place the banner image or a webhook URL in the subscriber summary file.
 - Preserve security boundaries. Describe blocked secrets or credentials only as a safety outcome; never include a secret-shaped example or value.
 - State uncertainty when release evidence is missing or contradictory instead of inferring a claim.
 
