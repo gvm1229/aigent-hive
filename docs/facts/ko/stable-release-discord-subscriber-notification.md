@@ -10,7 +10,7 @@ tags: [discord, release, subscriber]
 aliases: [stable-release-discord]
 sources:
   - "repo:.github/workflows/release-publish.yml#sha256:40594864c88b2ab2ddce13ee5f858167f717ad9649ba2e447bd75236d0494247"
-  - "repo:docs/plans/active/stable-release-discord-notification.md#sha256:32b1f926bb693400586240a9821f1c870036e3e9944be1f98616e3c00dc41c07"
+  - "repo:docs/plans/active/stable-release-discord-notification.md#sha256:a8043f697402c222c6ebd37fe2800fa5cf3bcf3b856abd29f195bc4ed1ce2883"
   - "repo:docs/releases/0.9.4.subscriber.ko.md#sha256:6c8e438046a01dd5882040fbd9216cb8ebce68ba83bedb1c28b70cb58b559be8"
   - "repo:scripts/publish-stable-discord-update.py#sha256:9b1fe57e0141e59523edae80e910ad537ade2a0b105678b608ad0101b47c9da9"
 links: [source-development, v0-9-full-release]
@@ -22,4 +22,5 @@ status: active
 
 안정판 전용 출시 흐름에서 `update-summary` 한국어 메시지·배너·보호된 환경 비밀 값 사전 검사. GitHub
 Release 성공 뒤 배너 먼저 전송. 이 요청 성공 뒤에만 한국어 구독자 요약 전송. 시험판 Discord 요청 없음.
-알림 도구의 webhook URL 출력 없음.
+알림 도구의 webhook URL 출력 없음. 보호된 환경의 `0.9.3`·`0.9.4` 실제 전달 시험 성공,
+안정판·npm 게시 없음.

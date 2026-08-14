@@ -13,7 +13,10 @@
 - [x] [RDN-003] `release-publish.yml` stable 분기에서 GitHub Release 생성 성공 뒤 `release-publication` 환경 비밀 값을 notifier에 한정 전달
   - Evidence: stable-only preflight before npm publication, stable-only notifier after `gh release create`
 - [x] [RDN-004] 안정판 전용·이미지 우선·첫 요청 실패 뒤 요약 미전송·비밀 값 출력 금지 회귀 검증
-  - Evidence: local mock Discord `unittest` 6개 PASS, no real webhook request
+  - Evidence: local mock Discord `unittest` 7개 PASS. 보호된 GitHub 환경 실제 전달 시험
+    `0.9.3` [run `31775328374`](https://github.com/gvm1229/aigent-hive/actions/runs/31775328374)·`0.9.4`
+    [run `31775377264`](https://github.com/gvm1229/aigent-hive/actions/runs/31775377264) 각각 성공. 각 실행의
+    배너 우선·한국어 요약 후속 단계 성공, 안정판·npm 게시 `0건`
 - [x] [RDN-005] 출시 운영 안내·결정·현재 상태·bilingual fact·Source Wiki 갱신과 문서 검증
   - Evidence: release guide·decision·current state·fact pair, human documentation·Markdown link·Source Wiki gates
 

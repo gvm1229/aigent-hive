@@ -10,7 +10,7 @@ tags: [discord, release, subscriber]
 aliases: [stable-release-discord]
 sources:
   - "repo:.github/workflows/release-publish.yml#sha256:40594864c88b2ab2ddce13ee5f858167f717ad9649ba2e447bd75236d0494247"
-  - "repo:docs/plans/active/stable-release-discord-notification.md#sha256:32b1f926bb693400586240a9821f1c870036e3e9944be1f98616e3c00dc41c07"
+  - "repo:docs/plans/active/stable-release-discord-notification.md#sha256:a8043f697402c222c6ebd37fe2800fa5cf3bcf3b856abd29f195bc4ed1ce2883"
   - "repo:docs/releases/0.9.4.subscriber.ko.md#sha256:6c8e438046a01dd5882040fbd9216cb8ebce68ba83bedb1c28b70cb58b559be8"
   - "repo:scripts/publish-stable-discord-update.py#sha256:9b1fe57e0141e59523edae80e910ad537ade2a0b105678b608ad0101b47c9da9"
 links: [source-development, v0-9-full-release]
@@ -23,4 +23,5 @@ status: active
 The stable-only release workflow validates the Korean `update-summary` payload, the banner, and
 the protected environment secret before publication. After the GitHub Release succeeds, it sends
 the banner first. It sends the Korean subscriber summary only after that request succeeds. Test
-releases send no Discord request. The notifier never print the webhook URL.
+releases send no Discord request. The notifier never print the webhook URL. Protected-environment
+delivery tests for `0.9.3` and `0.9.4` succeeded without a stable release or npm publication.
