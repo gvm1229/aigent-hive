@@ -149,6 +149,22 @@ class Phase3SkillSourceContract(unittest.TestCase):
                 text,
             )
 
+        for text in (source_behavior, consumer_template):
+            self.assertIn(
+                "Unless the maintainer explicitly requests another\n  language for the current prompt"
+                if text is source_behavior
+                else "Unless the user explicitly requests another language for the current prompt",
+                text,
+            )
+
+        prompt_refine = (ROOT / "harness/skills/prompt-refine/SKILL.md").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn(
+            "Write the refined prompt in English unless the user explicitly requests another language",
+            prompt_refine,
+        )
+
     def test_product_skill_projections_are_current_and_exact(self) -> None:
         self.assertEqual(skill_paths(SKILLS), CURRENT)
         self.assertEqual(skill_paths(PLUGIN_SKILLS), CURRENT)

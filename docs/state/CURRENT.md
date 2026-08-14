@@ -3,8 +3,8 @@
 - 기준 branch: `main` stable `179c909`, `develop` patch handoff 기준
 - product version: `0.9.4` patch 개발 기준
 - 다음 release target: `0.9.4-test` 수용 뒤 정식판 여부 유지보수자 결정
-- plan revision: `205`
-- 현재 milestone: `0.9.3` 정식 출시·Windows 수용 완료, `0.9.4` GitHub Release 이중 언어 설명·공개 HTML·PDF 지식 기능 안내·전체 Skill 식별자 표시·전역 projection validation·지식 기록 credential 오탐·완료한 source knowledge scan·응답 언어·작업 폴더 수명주기
+- plan revision: `206`
+- 현재 milestone: `0.9.3` 정식 출시·Windows 수용 완료, `0.9.4` GitHub Release 이중 언어 설명·공개 HTML·PDF 지식 기능 안내·전체 Skill 식별자 표시·전역 projection validation·지식 기록 credential 오탐·완료한 source knowledge scan·응답 언어·프롬프트 영어 기본값·작업 폴더 수명주기
 - 기능 기준: `2cec0377748874748d126b6b55e59975a3f20a02`; release discipline base `c777da1`
 - 제외: `NHA10-001–012`·`N10-002–011`의 `0.10.0-test`
 - `0.9.4` source knowledge scan correction 완료: `--candidates`와 `--apply`의 store-level validation parity, claim-bound credential diagnostic, canonical provenance summary의 human review ID false-positive 제거. source build로 61개 current-truth fact·architecture claim을 source-private `aigent-hive` collection에 재적용, automatic shared promotion `0건`, generation 115와 PortareFolium explicit retrieval 확인. published `0.9.3` stable artifact 변경 없음; installed `0.9.3` binary의 correction은 `0.9.4-test` publication 뒤 검증 필요
@@ -16,6 +16,7 @@
 - `0.9.4` 전역 지식 기록 credential 오탐 예정: 안전한 사용자 결정의 `hive knowledge remember --user-root` 1회가 `hive.knowledge-verification-failed`로 거부. credential·secret·private source 입력은 없었고 재시도 `0회`. request field·claim key·scanner 경계 조사와 safe user-root capture 수용, 실제 secret fail-closed 회귀가 필요
 - `0.9.4` 공개 HTML·PDF 지식 기능 안내 예정: `hive-core-features.ko.html`의 지식 기능 한 줄 강조 상자를 다섯 Skill의 정본 ID·사용 시점·범위·예시·안전 경계 비교표로 교체. 파생 PDF의 section title 단독 page는 다음 page 이동, title과 content 일부 동시 배치 가능 시 현 page 유지. HTML 정본·재생성 PDF·desktop/mobile render·Poppler visual inspection 수용 필요
 - `0.9.4` GitHub Release 이중 언어 설명 예정: `release-publish.yml`은 `docs/releases/<product-version>.md`를 description으로 그대로 게시. 해당 정본의 English-first·Korean-second section, 동일 사실·호환성·검증 경계, ASD-STE100 English와 한국어 언어 계약 검사를 release workflow·`0.9.4-test` GitHub prerelease rendering으로 수용 필요
+- `0.9.4` 프롬프트 영어 기본값 구현 완료: 한국어 응답 환경에서도 Hive 작성·개선·복사용 프롬프트는 현재 프롬프트 언어의 명시 요청이 없으면 영어. 설명·질문은 선택 응답 언어 유지. 원본 지침·`prompt-refine`·전역 네 투영·프로젝트 렌더러·Rust 62개·Python 32개 회귀 통과. 남은 `PML94-004`: `0.9.4-test` 설치 수용
 - 문서 gate: root·번역 README, 설치 안내, 공개 HTML, npm README, plugin metadata,
   문서 색인·명령·version 예시 전수 최신화와 공개 artifact 재검증
 - `0.9.2` 안정판 완료: PR #25 전체 CI PASS·merge exact `a502867e6b20e8f22bc014af05ca678f211f40ed`.

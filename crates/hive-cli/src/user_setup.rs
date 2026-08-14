@@ -2694,7 +2694,7 @@ fn render_user_directive(config: &UserSetupConfig, resolved_skills: &[String]) -
                 "- Global Wiki is disabled: do not write or refresh knowledge; preserve canonical Markdown until an explicit deletion request.\n"
             };
             format!(
-                "# Aigent Hive user preferences\n\n- Setup state: `operational`\n- Interface language: `en`\n- User contexts: {profile}\n- Agent persona: {persona}\n- Selected hosts: `{hosts}`\n- Global Wiki: `{wiki}`\n- Daily update check: `{update_check}`\n- Judge invocation: `{judge_invocation}`\n- Active Skills: `{}`\n{capture}- User contexts inform only the global background. They never select a project workflow, implementation approach, delivery priority, or active Skill set.\n- When daily update check is enabled, run `hive update --check --user-root <user-root> --output json` before the first Hive task of each host session. A check may notify but must never install.\n{}- Use English for every question and response unless the user explicitly requests another language for the current response. A message written in another language does not by itself change this preference.\n- For ambiguous or detail-poor ordinary prompts, offer one concise optional refine suggestion without automatic rewrite.\n- Never request provider credentials or call model-provider APIs on Hive's behalf.\n",
+                "# Aigent Hive user preferences\n\n- Setup state: `operational`\n- Interface language: `en`\n- User contexts: {profile}\n- Agent persona: {persona}\n- Selected hosts: `{hosts}`\n- Global Wiki: `{wiki}`\n- Daily update check: `{update_check}`\n- Judge invocation: `{judge_invocation}`\n- Active Skills: `{}`\n{capture}- User contexts inform only the global background. They never select a project workflow, implementation approach, delivery priority, or active Skill set.\n- When daily update check is enabled, run `hive update --check --user-root <user-root> --output json` before the first Hive task of each host session. A check may notify but must never install.\n{}- Use English for every question and response unless the user explicitly requests another language for the current response. A message written in another language does not by itself change this preference.\n- The response-language rule does not control a prompt that Hive authors or refines. Unless the user explicitly requests another language for the current prompt, write the prompt in English.\n- For ambiguous or detail-poor ordinary prompts, offer one concise optional refine suggestion without automatic rewrite.\n- Never request provider credentials or call model-provider APIs on Hive's behalf.\n",
                 resolved_skills.join(", "), judge_policy_line.0
             )
         }
@@ -2705,7 +2705,7 @@ fn render_user_directive(config: &UserSetupConfig, resolved_skills: &[String]) -
                 "- 전역 위키 비활성: knowledge 기록·갱신 금지. 명시적 삭제 요청 전까지 canonical Markdown을 보존.\n"
             };
             format!(
-                "# Aigent Hive 사용자 설정\n\n- 설정 상태: `operational`\n- Interface language: `ko`\n- 사용자 기본 맥락: {profile}\n- 에이전트 페르소나: {persona}\n- 선택 호스트: `{hosts}`\n- Global Wiki: `{wiki}`\n- 일일 update 확인: `{update_check}`\n- Judge 호출: `{judge_invocation}`\n- 활성 Skill: `{}`\n{capture}- 사용자 기본 맥락은 전역 배경 정보만 제공하며 프로젝트 작업 흐름, 구현 방식, 작업 우선순위, 활성 Skill을 정하지 않음.\n- 일일 update 확인이 enabled이면 각 host session의 첫 Hive 작업 전에 `hive update --check --user-root <user-root> --output json` 실행. 확인은 알림만 가능하며 설치 금지.\n{}- 현재 응답에 다른 언어를 사용하라는 명시적 요청이 없는 한 모든 질문과 응답에 한국어 사용. 다른 언어로 작성된 메시지만으로 이 선호를 변경하지 않음.\n- 모호하거나 핵심 세부가 부족한 일반 prompt에는 자동 rewrite 없이 간결한 optional refine 제안 1개만 제공.\n- Provider credential을 요청하거나 Hive를 대신해 model-provider API를 호출하지 않음.\n",
+                "# Aigent Hive 사용자 설정\n\n- 설정 상태: `operational`\n- Interface language: `ko`\n- 사용자 기본 맥락: {profile}\n- 에이전트 페르소나: {persona}\n- 선택 호스트: `{hosts}`\n- Global Wiki: `{wiki}`\n- 일일 update 확인: `{update_check}`\n- Judge 호출: `{judge_invocation}`\n- 활성 Skill: `{}`\n{capture}- 사용자 기본 맥락은 전역 배경 정보만 제공하며 프로젝트 작업 흐름, 구현 방식, 작업 우선순위, 활성 Skill을 정하지 않음.\n- 일일 update 확인이 enabled이면 각 host session의 첫 Hive 작업 전에 `hive update --check --user-root <user-root> --output json` 실행. 확인은 알림만 가능하며 설치 금지.\n{}- 현재 응답에 다른 언어를 사용하라는 명시적 요청이 없는 한 모든 질문과 응답에 한국어 사용. 다른 언어로 작성된 메시지만으로 이 선호를 변경하지 않음.\n- 응답 언어 규칙은 Hive가 작성·개선하는 프롬프트에 적용하지 않음. 현재 프롬프트 언어를 사용자가 명시하지 않은 경우 프롬프트는 영어로 작성.\n- 모호하거나 핵심 세부가 부족한 일반 prompt에는 자동 rewrite 없이 간결한 optional refine 제안 1개만 제공.\n- Provider credential을 요청하거나 Hive를 대신해 model-provider API를 호출하지 않음.\n",
                 resolved_skills.join(", "), judge_policy_line.1
             )
         }
@@ -4198,6 +4198,9 @@ usage_guard:
         assert!(english.contains(
             "A message written in another language does not by itself change this preference"
         ));
+        assert!(english.contains(
+            "Unless the user explicitly requests another language for the current prompt, write the prompt in English"
+        ));
         assert!(english.contains("For every passed, failed, skipped, deferred"));
         assert!(english.contains("A progress report naming such work must not end the task"));
         assert!(!english.contains("# Aigent Hive 사용자 설정"));
@@ -4208,6 +4211,7 @@ usage_guard:
         assert!(korean.contains("# Aigent Hive 사용자 설정"));
         assert!(korean.contains("명시적 요청이 없는 한 모든 질문과 응답에 한국어 사용"));
         assert!(korean.contains("다른 언어로 작성된 메시지만으로 이 선호를 변경하지 않음"));
+        assert!(korean.contains("현재 프롬프트 언어를 사용자가 명시하지 않은 경우 프롬프트는 영어로 작성"));
         assert!(korean.contains("통과·실패·건너뜀·연기·미검증·미지원"));
         assert!(korean.contains("`agent-owned` 작업 `0건`일 때만 완료 표기"));
         assert!(!korean.contains("# Aigent Hive user preferences"));

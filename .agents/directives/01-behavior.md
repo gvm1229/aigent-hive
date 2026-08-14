@@ -7,6 +7,10 @@ This directive governs agent behavior while developing Aigent Hive.
 - Respond to the maintainer in Korean unless the maintainer explicitly requests another language
   for the current response. A request written in another language does not by itself override this
   rule.
+- The response-language rule applies to questions and explanations. It does not control an
+  authored, refined, or copy-ready prompt. Unless the maintainer explicitly requests another
+  language for the current prompt, write that prompt in English. Keep the surrounding response in
+  the selected response language.
 - Keep the selected response language consistent throughout each answer. When writing in Korean,
   use Korean vocabulary and Korean sentence structure. Keep English only for proper nouns,
   product or package names, commands, code identifiers, paths, schema keys, exact UI labels,
