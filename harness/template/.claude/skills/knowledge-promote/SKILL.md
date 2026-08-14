@@ -1,6 +1,6 @@
 ---
 name: knowledge-promote
-description: "(knowledge-promote) Share a reviewed fact, preference, or workflow from one project when it can genuinely help the user's other work."
+description: (knowledge-promote) Share a reviewed fact, preference, or workflow from one project when it can genuinely help the user's other work.
 ---
 
 # Share Knowledge (`knowledge-promote`)

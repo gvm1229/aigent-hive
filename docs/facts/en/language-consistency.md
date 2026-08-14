@@ -5,25 +5,33 @@ topic_slug: language-consistency
 language: en
 counterpart: ../ko/language-consistency.md
 title: "Response Language Consistency"
-summary: "Source agents and consumer harnesses use the selected language unless the user explicitly requests another language for the current response."
-tags: [communication, documentation, projection]
-aliases: ["language consistency", "mixed-language response"]
+summary: "English responses use ASD-STE100. Korean responses use Korean. Hive prompts default to English unless the user specifies the current prompt language."
+tags: [communication, documentation, harness, language]
+aliases: ["Korean response", "controlled English", "language consistency"]
 sources:
-  - "repo:.agents/directives/01-behavior.md#sha256:9d8adb7c75015fd24df8cb226a16180548c600dc963ee154c0a4af408e9fa48c"
-  - "repo:AGENTS.md#sha256:e200aeee1a58fe9224e6e7a0a5a915cde8ac666e4421ea9c6696f0f1cb142fee"
-  - "repo:crates/hive-cli/src/user_install.rs#sha256:db91b9841c057a3f9b964185fb2a2f3c2f8701908cf6439e26bf05d389a7243d"
-  - "repo:harness/template/AGENTS.md.jinja#sha256:9b45162b48b5d6eedcce0d0b6bc2d63613776fc1089a7d2878941897d0d506c5"
+  - "repo:.agents/directives/01-behavior.md#sha256:42bbd59e702cdce48ac6396d4c5a2f3a9b7574cd99272e22f3279c00b041cba4"
+  - "repo:.agents/directives/08-human-documentation-style.md#sha256:f1c700565caf1c448cfa0a7d58db549d5c3d466b264737233fe255c67663acd6"
+  - "repo:crates/hive-cli/src/user_setup.rs#sha256:73d95136c28b6742d76d7aca0874144808500168a67fc97accdee9bc2b387481"
+  - "repo:harness/project-bases/0.9.0/AGENTS.md.template#sha256:1aefece59d56d610227b64cfcfff8c634e47202f8e224916b248a8e8ecd9de51"
+  - "repo:harness/skills/prompt-refine/SKILL.md#sha256:3848758e0725a7b9b990d3055f22942ec6aededee7d3c8255d0162c8633c6fc5"
+  - "repo:harness/skills/user-setup/SKILL.md#sha256:1fcbb2b9b2db6d57bd40682f80db2a0a916ebbffb3434431038b609b6b743c11"
+  - "repo:harness/template/AGENTS.md.jinja#sha256:33c0da7ba5156ea1aa0ccc08a8e4f88343cf5f6f896994a7d8b830ac0ad6bb74"
 links: [global-onboarding, source-development]
-reviewed_revision: "git:35e6b79a024350487f823780101a28be24a9f4c7"
+reviewed_revision: "git:3410f70938d664269f10f39c50028e57498fd248"
 status: active
 ---
 
 # Response Language Consistency
 
-Source-development agents and installed consumer harnesses use the selected
-language for every question and response. Only an explicit request for the
-current response permits another language; message language alone does not
-change the preference. User-scope and project guidance bind the exact `en|ko`
-value. Acceptance: an always-loaded source rule plus passing unit,
-static-contract, and connected lifecycle tests. Origin: maintainer request to
-enforce the installation-selected language across source and product sessions.
+Source agents and consumer harnesses use the selected response language. Only
+an explicit request for the current response can change it.
+
+A Hive-authored, refined, or copy-ready prompt uses English by default. An
+explicit request for the current prompt language has priority. The surrounding
+response keeps the selected response language.
+
+English responses and default prompts use ASD-STE100 Simplified Technical
+English. Korean responses use Korean vocabulary and sentence structure. Do not
+use replaceable English, mixed Korean-English compounds, technical-sounding
+English, or emphasis-only English parentheticals. Source and consumer contracts
+contain the required examples and projection tests.

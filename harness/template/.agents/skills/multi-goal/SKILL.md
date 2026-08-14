@@ -1,6 +1,6 @@
 ---
 name: multi-goal
-description: Execute an explicit bounded Hive goal graph with AND, OR, or quorum aggregation, nested budgets, cancellation, evidence, and terminal independent Judge gates.
+description: (multi-goal) Execute an explicit bounded Hive goal graph with AND, OR, or quorum aggregation, nested budgets, cancellation, evidence, and terminal independent Judge gates.
 ---
 
 # Hive Multi-Goal Execution

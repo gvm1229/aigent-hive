@@ -11,10 +11,15 @@ document.
 
 - Keep each passage in one base language. In Korean prose, keep English only for proper nouns,
   product or package names, commands, code identifiers, paths, schema keys, exact UI labels, and
-  terms without a clear Korean equivalent. Replace ordinary English nouns when a clear Korean
-  expression exists.
-- In an English passage, use English throughout except for exact Korean names, literals,
-  quotations, or text the user explicitly asks to preserve.
+  terms without a clear Korean equivalent. Replace ordinary English nouns and mixed
+  Korean-English compounds when a clear Korean expression exists. Do not add an English
+  parenthetical after an unambiguous Korean term. Translate meaning rather than English word
+  order. Retain an English literal only when it is required for an action or distinction.
+- In an English passage, use ASD-STE100 Simplified Technical English throughout except for exact
+  Korean names, literals, quotations, or text the user explicitly asks to preserve. Use short
+  direct sentences, concrete verbs, one main instruction, condition, result, or warning per
+  sentence, and an approved dictionary word when known. Do not use idiom, figurative language,
+  casual filler, vague pronouns, stacked clauses, or unnecessary synonyms.
 - Prefer short headings, bullets, tables, and checklists over long prose.
 - Prefer noun phrases or concise verb-noun endings such as `추가`, `정리`, `검증`, `확인`,
   `보강`, `제거`, and `적용`.
@@ -28,6 +33,22 @@ document.
 - Keep code identifiers, schema keys, paths, commands, product names, and exact UI labels in
   their original form when clearer.
 - Do not force awkward Korean transliterations for technical identifiers.
+
+## Korean mixed-language prohibitions
+
+- Do not use English to make an ordinary Korean sentence look technical, concise, or expert.
+- Do not join an English adjective, noun, verb, or state label directly to Korean grammar.
+- Do not add an English parenthetical after a clear Korean term unless the reader must use that
+  exact literal in an action, command, search, selection, or distinction.
+- Do not translate English word order. Rewrite the meaning as natural Korean.
+
+| Avoid | Use |
+| --- | --- |
+| `benign한 source claim ID가 credential로 오인되던 문제를 제거했고` | `비밀 값으로 오인되던 일반 원본 지식 항목 식별자 문제 제거` |
+| `safe한 default 적용` | `안전한 기본값 적용` |
+| `global setting을 update` | `전역 설정 갱신` |
+| `fallback으로 처리` | `대체 경로 처리` |
+| `사용자 설정(user configuration) 확인` | `사용자 설정 확인` |
 
 ## Exact bad and good examples
 

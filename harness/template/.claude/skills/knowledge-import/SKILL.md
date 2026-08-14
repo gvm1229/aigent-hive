@@ -1,6 +1,6 @@
 ---
 name: knowledge-import
-description: "(knowledge-import) Scan one repository or folder that the user explicitly selected, then import only the reviewed knowledge that is useful beyond that source."
+description: (knowledge-import) Scan one repository or folder that the user explicitly selected, then import only the reviewed knowledge that is useful beyond that source.
 ---
 
 # Scan Repository Knowledge (`knowledge-import`)

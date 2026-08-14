@@ -2959,13 +2959,15 @@ fn exact_nonsecret_opaque_span(line: &str) -> Option<(usize, usize)> {
     let value_end = value_start + value.len();
     let identifier_context = matches!(
         key,
-        "id" | "locator"
+        "id" | "claim_key"
+            | "locator"
             | "source"
             | "sources"
             | "supersedes"
             | "replacement"
             | "project_pseudonym"
-    ) || key.ends_with("_id");
+    ) || key.ends_with("_id")
+        || key == "request";
     let digest_context = matches!(
         key,
         "sha256"
@@ -4765,6 +4767,22 @@ mod tests {
         ] {
             assert!(reject_likely_credentials(text.as_bytes()).is_ok(), "{text}");
         }
+    }
+
+    #[test]
+    fn credential_detector_accepts_claim_key_metadata_but_blocks_credential_values() {
+        assert!(reject_likely_credentials(
+            b"claim_key: v094-skill-description-and-projection-validation\n"
+        )
+        .is_ok());
+        assert!(reject_likely_credentials(
+            b"- request:v094-skill-description-and-projection-validation\n"
+        )
+        .is_ok());
+        assert!(
+            reject_likely_credentials(b"claim_key: ghp_abcdefghijklmnopqrstuvwxyz012345\n")
+                .is_err()
+        );
     }
 
     #[test]

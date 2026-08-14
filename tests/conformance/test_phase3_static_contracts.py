@@ -74,6 +74,21 @@ class Phase3SchemaContract(unittest.TestCase):
         self.assertEqual(core.count('<article class="card">'), 8)
         self.assertEqual(core.count('<div class="use-case">'), 8)
 
+    def test_public_core_features_compares_knowledge_skills_and_keeps_print_heading_with_content(self) -> None:
+        core = (ROOT / "docs/hive-core-features.ko.html").read_text(encoding="utf-8")
+        self.assertIn('<table class="knowledge-comparison"', core)
+        self.assertNotIn('<strong>지식 기능:</strong>', core)
+        for skill in (
+            "knowledge-capture",
+            "knowledge-recall",
+            "knowledge-import",
+            "knowledge-promote",
+            "knowledge-maintain",
+        ):
+            self.assertIn(f"<code>({skill})</code>", core)
+        self.assertIn(".section-head { break-after: avoid-page; }", core)
+        self.assertIn(".knowledge-comparison { break-inside: auto; }", core)
+
     def test_codex_plugin_uses_named_developer_and_cropped_hive_logo(self) -> None:
         plugin_root = ROOT / "harness/plugins/aigent-hive"
         manifest = json.loads(
@@ -105,6 +120,66 @@ class Phase3SchemaContract(unittest.TestCase):
 
 
 class Phase3SkillSourceContract(unittest.TestCase):
+    def test_source_worktree_lifecycle_prioritizes_one_primary_worktree(self) -> None:
+        workflow = (ROOT / ".agents/directives/03-workflow.md").read_text(encoding="utf-8")
+        coordination = (ROOT / ".agents/directives/06-session-coordination.md").read_text(
+            encoding="utf-8"
+        )
+        for text in (workflow, coordination):
+            normalized = " ".join(text.split())
+            self.assertIn("one primary worktree", normalized)
+            self.assertIn("convenience", normalized)
+            self.assertIn("parallel independent changes", normalized)
+            self.assertIn("immediately after", normalized)
+            self.assertIn("uncommitted", normalized)
+            self.assertIn("unpushed", normalized)
+
+    def test_source_and_consumer_language_contracts_keep_the_same_rules(self) -> None:
+        source_behavior = (ROOT / ".agents/directives/01-behavior.md").read_text(
+            encoding="utf-8"
+        )
+        source_style = (ROOT / ".agents/directives/08-human-documentation-style.md").read_text(
+            encoding="utf-8"
+        )
+        consumer_template = (ROOT / "harness/template/AGENTS.md.jinja").read_text(
+            encoding="utf-8"
+        )
+        project_base = (
+            ROOT / "harness/project-bases/0.9.0/AGENTS.md.template"
+        ).read_text(encoding="utf-8")
+
+        for text in (source_behavior, source_style, consumer_template, project_base):
+            normalized = " ".join(text.split())
+            self.assertIn("ASD-STE100 Simplified Technical English", text)
+            self.assertIn(
+                "Translate meaning rather than English word order.", normalized
+            )
+            self.assertIn("mixed Korean-English compounds", normalized)
+            self.assertIn(
+                "benign한 source claim ID",
+                text,
+            )
+            self.assertIn(
+                "원본 지식 항목 식별자",
+                text,
+            )
+
+        for text in (source_behavior, consumer_template):
+            self.assertIn(
+                "Unless the maintainer explicitly requests another\n  language for the current prompt"
+                if text is source_behavior
+                else "Unless the user explicitly requests another language for the current prompt",
+                text,
+            )
+
+        prompt_refine = (ROOT / "harness/skills/prompt-refine/SKILL.md").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn(
+            "Write the refined prompt in English unless the user explicitly requests another language",
+            prompt_refine,
+        )
+
     def test_product_skill_projections_are_current_and_exact(self) -> None:
         self.assertEqual(skill_paths(SKILLS), CURRENT)
         self.assertEqual(skill_paths(PLUGIN_SKILLS), CURRENT)

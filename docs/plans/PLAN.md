@@ -1,18 +1,29 @@
 # Aigent Hive active plan index
 
-> Revision: 197
-> 기준일: 2026-08-13
-> Product version: `0.9.3` 개발 기준
-> 현재 milestone: `0.9.3` validation 계약·출시 운영 최적화·source knowledge import·명시 collection access·자동 지식 최적화·numbered public test 수용·정식 출시
+> Revision: 212
+> 기준일: 2026-08-14
+> Product version: `0.9.4` patch 개발 기준
+> 현재 milestone: `0.9.4` GitHub Release 이중 언어 설명·공개 HTML·PDF 지식 기능 안내·Skill 표시 식별자·전역 설치 검증·완료한 source 지식 색인·응답 언어·프롬프트 영어 기본값·작업 폴더 수명주기
 > Entrypoint: `docs/plans/PLAN.md`
 
 ## Goal parameters
 
-- Objective: `VAL93-*` validation-contract 정합성·formatter 보호, `OPT93-*` risk-tier release
-  운영, `SKI93-*` source knowledge import와 `KBA93-*` explicit collection access·자동 승격 적용,
-  numbered public `0.9.3-test.N` 수용 뒤 `0.9.3` 정식판 게시
-- Success: local-preserved validation 계약 일치, 중복 CI·candidate 제거, source workspace의 검토된
-  architecture·intent·decision·fact collection, 최신 numbered public test 수용 결함 `0건`, 공개 문서·npm README·plugin metadata 최신화, exact source의 protected stable publication
+- Objective: `SKI94-*` reviewed scan candidate·apply validation parity, claim-bound security diagnostic,
+  source canonical fact reimport와 explicit collection retrieval 재수용, `LGC94-*` ASD-STE100 영어·한국어 응답 언어 금지 규칙·예시 계약, `WTR94-*` 단일 기준 작업 폴더·임시 작업 폴더 정리 계약,
+  `SID94-*` 모든 Hive Skill 설명의 정본 영문 ID 첫머리 표시, `UPV94-*` 전역 setup·install validation의
+  projection receipt 정합성, `KRV94-*` 안전한 user-root knowledge remember의 credential 오탐 제거,
+  `HGD94-*` 공개 한국어 HTML 지식 기능 비교표와 PDF section title pagination,
+  `RNL94-*` GitHub Release English-first bilingual description과 language contract,
+  `PML94-*` 응답 언어와 분리한 프롬프트 영어 기본값·명시 언어 우선 계약,
+  `REL94-*` local gate·번호 공개 시험판·Windows x64 설치/업그레이드 수용·protected `main`
+  통합·동일 artifact stable publication·게시 뒤 의존 검사
+- Success: 동일 reviewed scan 파일의 candidate·apply 보안 수용 결과 일치, credential 거부의
+  claim-bound remediation, source workspace의 current-truth architecture·intent·decision·fact private collection,
+  shared 자동 승격 `0건`, exact direct retrieval 확인, 모든 Hive Skill 설명의 `(skill-id)` 첫머리 표시,
+  실제 Hive-managed projection이 일치하는 전역 설치의 validation 성공, 안전한 사용자 결정 기록 성공,
+  지식 Skill별 목적·사용 시점·예시를 비교한 표와 제목 단독 PDF page `0건`, GitHub Release 영어
+  설명 우선·한국어 설명 후속·두 언어 규칙 위반 `0건`, 선택 응답 언어와 무관한 default English
+  prompt·명시 prompt 언어 우선
 - Stop boundary: protected `main` review, stable publication environment approval, exact `1.0.0`
   authority, 설치 product usage guard remaining threshold `5%`
 - Invariants: provider-neutral, backend별 canonical source 우선, SQLite 파생 상태,
@@ -53,6 +64,16 @@
 | 0.9.3 소비자 하네스 세션 조정·directive 갱신 | 5 | 0 | 100% |
 | `0.9.3` projection purge·directive 우선 갱신 | 4 | 0 | 100% |
 | `0.9.3` 시험·정식 출시 | 5 | 0 | 100% |
+| `0.9.4` source knowledge scan 정합성 | 3 | 0 | 100% |
+| `0.9.4` 응답 언어 계약 | 8 | 0 | 100% |
+| `0.9.4` 작업 폴더 수명주기 | 4 | 0 | 100% |
+| `0.9.4` 전체 Skill 식별자 표시 | 3 | 0 | 100% |
+| `0.9.4` 전역 projection validation 정합성 | 4 | 0 | 100% |
+| `0.9.4` 전역 지식 기록 credential 오탐 | 3 | 0 | 100% |
+| `0.9.4` 공개 HTML·PDF 지식 기능 안내 | 4 | 0 | 100% |
+| `0.9.4` GitHub Release 이중 언어 설명 | 3 | 0 | 100% |
+| `0.9.4` 프롬프트 영어 기본값 | 4 | 0 | 100% |
+| `0.9.4` 시험·정식 출시 | 4 | 2 | 66.7% |
 | Native host activation `0.10.0` 후보 | 0 | 12 | 0% |
 | Prompt refine 자동 routing | 12 | 0 | 100% |
 | v0.9 test 기능 마감 | 18 | 0 | 100% |
@@ -68,7 +89,7 @@
 | Agent 자율 실행 지속 | 8 | 0 | 100% |
 | `0.9.2` 완료 기능·공개 문서 출시 | 12 | 0 | 100% |
 | Notion `v0.10` 후보 | 1 | 10 | 9.1% |
-| **Canonical total** | **562** | **22** | **96.2%** |
+| **Canonical total** | **602** | **24** | **96.2%** |
 
 External production boundary 항목도 미완료 합계에 포함. Protected authority 없이 완료 처리 금지.
 
@@ -111,6 +132,16 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
 | [`active/projection-validation-consistency-0.9.3.md`](active/projection-validation-consistency-0.9.3.md) | `VAL93-*` | local-preserved validation·formatter 보호 |
 | [`active/release-engineering-optimization-0.9.3.md`](active/release-engineering-optimization-0.9.3.md) | `OPT93-*` | risk-tier CI·candidate reuse·single-owner release evidence |
 | [`active/source-knowledge-import-0.9.3.md`](active/source-knowledge-import-0.9.3.md) | `SKI93-*` | source workspace 안전 scan·reviewed user-root collection |
+| [`active/source-knowledge-import-0.9.4.md`](active/source-knowledge-import-0.9.4.md) | `SKI94-*` | scan preview/apply validation parity·source current-truth reimport |
+| [`active/language-contract-0.9.4.md`](active/language-contract-0.9.4.md) | `LGC94-*` | ASD-STE100 영어·한국어 응답 언어 계약 |
+| [`active/worktree-lifecycle-0.9.4.md`](active/worktree-lifecycle-0.9.4.md) | `WTR94-*` | 단일 기준 작업 폴더·임시 작업 폴더 즉시 정리 |
+| [`active/skill-description-identity-0.9.4.md`](active/skill-description-identity-0.9.4.md) | `SID94-*` | 모든 Hive Skill 설명의 정본 영문 ID 첫머리 표시 |
+| [`active/user-projection-validation-0.9.4.md`](active/user-projection-validation-0.9.4.md) | `UPV94-*` | 전역 setup·install validation과 Hive-managed receipt 수렴 |
+| [`active/knowledge-remember-validation-0.9.4.md`](active/knowledge-remember-validation-0.9.4.md) | `KRV94-*` | 안전한 전역 지식 기록의 credential 오탐 제거 |
+| [`active/public-html-pdf-guidance-0.9.4.md`](active/public-html-pdf-guidance-0.9.4.md) | `HGD94-*` | 지식 기능 비교표·PDF section title pagination |
+| [`active/release-note-language-0.9.4.md`](active/release-note-language-0.9.4.md) | `RNL94-*` | GitHub Release English-first bilingual description |
+| [`active/prompt-language-default-0.9.4.md`](active/prompt-language-default-0.9.4.md) | `PML94-*` | 응답 언어와 분리한 프롬프트 영어 기본값 |
+| [`active/release-0.9.4-stable-publication.md`](active/release-0.9.4-stable-publication.md) | `REL94-*` | 번호 공개 시험판 수용·protected `main` 통합·동일 artifact stable publication |
 | [`active/knowledge-access-optimization-0.9.3.md`](active/knowledge-access-optimization-0.9.3.md) | `KBA93-*` | explicit collection access·index-time automatic promotion |
 | [`active/v0.10.0-native-host-activation-candidate.md`](active/v0.10.0-native-host-activation-candidate.md) | `NHA10-*` | default-off native host activation·actual lifecycle evidence |
 | [`active/v0.9.3-release-loop.graph.md`](active/v0.9.3-release-loop.graph.md) | graph | `0.9.3` release loop checkpoint·recovery 계약 |
@@ -148,8 +179,12 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
 ## Current execution order
 
 완료 증거: [`CURRENT.md`](../state/CURRENT.md)와 owning active fragment.
-현재: `NAT-001–024`·`MRA-001–032`의 구현 정본과 local evidence 완료. default-off native
-host activation의 fresh child lifecycle·attestation은 `NHA10-001–012`로 이관, `0.9.3` 범위 제외.
-`VAL93-001–004`·`OPT93-001–005`·`SKI93-001–003`·`KBA93-001–005` 완료. 다음 단계:
-`REL93-011–015` numbered public test 수용·stable publication. `N10-002–011`·`NHA10-001–012`:
-`0.10.0-test` 후보 유지.
+현재: 공개된 `0.9.3` artifact는 immutable. `SKI94-001–003` 구현·local source collection
+reimport 완료. `LGC94-001–008`의 원본·소비자 응답 언어 계약·금지 규칙·예시 보강 완료.
+완료: `PML94-001–003` 원본·Skill·전역 네 투영·프로젝트 렌더러의 응답 언어와 분리한 영어 기본값 프롬프트 계약.
+완료: `SID94-*`·`UPV94-*`·`KRV94-*`·`HGD94-*`·`RNL94-*`·`PML94-*` 전체와
+`REL94-001–004`. exact `cc50bcbe28c771d9f176b27791086b7d05ea3b3d` public
+`v0.9.4-test.1` Windows x64 direct install·npm upgrade·validation·update path와 전 범위 수용 완료.
+다음: `REL94-005–006` protected `main` 통합, 동일 product bytes stable publication, 게시 뒤 의존 검사.
+`0.10.0` 후보 항목은 제외 유지.
+`N10-002–011`·`NHA10-001–012`: `0.10.0-test` 후보 유지.

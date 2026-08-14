@@ -124,6 +124,9 @@ jobs:
             exit 1
           fi
           scripts/check-release-version.sh "$PRODUCT_VERSION"
+          python3 scripts/check-release-notes.py \
+            --version "$PRODUCT_VERSION" \
+            --path "$release_notes"
       - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
         with:
           github-token: ${{ github.token }}

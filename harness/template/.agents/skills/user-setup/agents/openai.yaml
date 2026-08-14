@@ -1,6 +1,6 @@
 interface:
   display_name: "Configure Hive"
-  short_description: "Configure or reconfigure global Aigent Hive preferences."
+  short_description: "(user-setup) Configure or reconfigure global Aigent Hive preferences."
   default_prompt: "Use $aigent-hive:user-setup to configure or reconfigure my user-scope Aigent Hive preferences."
 policy:
   allow_implicit_invocation: false

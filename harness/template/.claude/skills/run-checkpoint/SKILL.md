@@ -1,6 +1,6 @@
 ---
 name: run-checkpoint
-description: Record the current durable Hive run state in canonical STATUS.md through the signed Hive CLI. Use when explicitly checkpointing an existing `.hive/runs/RUN_ID/PLAN.md` before compaction, handoff, verification, blocking, or session exit; do not use to create a plan, run work, retry tasks, select an orchestration owner, or start a persistence loop.
+description: (run-checkpoint) Record the current durable Hive run state in canonical STATUS.md through the signed Hive CLI. Use when explicitly checkpointing an existing `.hive/runs/RUN_ID/PLAN.md` before compaction, handoff, verification, blocking, or session exit; do not use to create a plan, run work, retry tasks, select an orchestration owner, or start a persistence loop.
 ---
 
 # Hive Run Checkpoint

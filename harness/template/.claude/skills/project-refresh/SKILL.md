@@ -1,6 +1,6 @@
 ---
 name: project-refresh
-description: Scan, preview, apply, validate, or recover release-generated Aigent Hive project directives and Skills with a local-priority three-way merge and a direct Hive safety-rule exception.
+description: (project-refresh) Scan, preview, apply, validate, or recover release-generated Aigent Hive project directives and Skills with a local-priority three-way merge and a direct Hive safety-rule exception.
 ---
 
 # Hive project upgrade

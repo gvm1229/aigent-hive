@@ -1,6 +1,6 @@
 ---
 name: project-transition
-description: Apply a local integrity-bound, compiled Aigent Hive migration route when the user explicitly requests a version migration, especially a cross-major transition; never infer a major target or run release-provided scripts.
+description: (project-transition) Apply a local integrity-bound, compiled Aigent Hive migration route when the user explicitly requests a version migration, especially a cross-major transition; never infer a major target or run release-provided scripts.
 ---
 
 # Hive Migrate

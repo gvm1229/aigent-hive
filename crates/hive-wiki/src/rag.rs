@@ -3619,10 +3619,16 @@ fn validate_remember_request(request: &RememberRequest, revision: u64) -> Result
     }
     validate_optional_timestamp("observed_at", request.observed_at.as_deref())?;
     validate_optional_timestamp("verified_at", request.verified_at.as_deref())?;
-    super::reject_likely_credentials(request.normalized_fact.as_bytes())
-        .map_err(|error| RagError::InvalidInput(error.to_string()))?;
-    super::reject_likely_credentials(request.provenance.summary.as_bytes())
-        .map_err(|error| RagError::InvalidInput(error.to_string()))?;
+    super::reject_likely_credentials(request.normalized_fact.as_bytes()).map_err(|error| {
+        RagError::InvalidInput(format!(
+            "normalized_fact contains likely credential material: {error}"
+        ))
+    })?;
+    super::reject_likely_credentials(request.provenance.summary.as_bytes()).map_err(|error| {
+        RagError::InvalidInput(format!(
+            "provenance.summary contains likely credential material: {error}"
+        ))
+    })?;
     Ok(())
 }
 

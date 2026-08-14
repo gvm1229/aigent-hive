@@ -452,6 +452,20 @@ else:
             "A message written in another language does not by itself change this preference.",
             agents,
         )
+        self.assertIn(
+            "Unless the user explicitly requests another language for the current prompt, write that prompt in English.",
+            agents,
+        )
+        self.assertIn("ASD-STE100 Simplified Technical English", agents)
+        self.assertIn("Translate meaning rather than English word order.", agents)
+        self.assertIn(
+            "benign한 source claim ID",
+            agents,
+        )
+        self.assertIn(
+            "원본 지식 항목 식별자",
+            agents,
+        )
         self.assert_shared_user_store(target)
 
     def test_custom_project_preserves_explicit_project_preferences(self) -> None:
@@ -486,6 +500,20 @@ else:
         self.assertIn("selected interface language `en`", agents)
         self.assertIn(
             "A message written in another language does not by itself change this preference.",
+            agents,
+        )
+        self.assertIn(
+            "Unless the user explicitly requests another language for the current prompt, write that prompt in English.",
+            agents,
+        )
+        self.assertIn("ASD-STE100 Simplified Technical English", agents)
+        self.assertIn("Translate meaning rather than English word order.", agents)
+        self.assertIn(
+            "benign한 source claim ID",
+            agents,
+        )
+        self.assertIn(
+            "원본 지식 항목 식별자",
             agents,
         )
         self.assert_shared_user_store(target)

@@ -1,11 +1,18 @@
 ---
 name: prompt-refine
-description: Create or refine a copy-ready prompt for explicit prompt intent or materially ambiguous ordinary work; default to refine-only and stop for exact approval before execution.
+description: (prompt-refine) Create or refine a copy-ready prompt for explicit prompt intent or materially ambiguous ordinary work; default to refine-only and stop for exact approval before execution.
 ---
 
 # Hive Prompt Refine
 
 Preserve the user's meaning while producing a concise, copy-ready prompt.
+
+## Prompt language
+
+- Write the refined prompt in English unless the user explicitly requests another language for
+  the current prompt.
+- This rule applies only to the prompt. Use the selected interface language for surrounding
+  questions, explanations, and approval state.
 
 ## Mode
 

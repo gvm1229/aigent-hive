@@ -1,6 +1,6 @@
 ---
 name: knowledge-recall
-description: "(knowledge-recall) Before a knowledge-dependent question or task, find only the Hive knowledge that can help with the work at hand. Unregistered folders safely use user-root and shared knowledge."
+description: (knowledge-recall) Before a knowledge-dependent question or task, find only the Hive knowledge that can help with the work at hand. Unregistered folders safely use user-root and shared knowledge.
 ---
 
 # Search Knowledge (`knowledge-recall`)

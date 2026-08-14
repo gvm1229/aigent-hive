@@ -2761,10 +2761,7 @@ fn reviewed_to_claim(
     } else {
         AssertionStatus::Observed
     };
-    let summary = format!(
-        "Agent-reviewed scan claim `{}` bound to inventory {}",
-        reviewed.claim_id, inventory_digest
-    );
+    let summary = reviewed_claim_provenance_summary(inventory_digest);
     let mut claim = CanonicalClaim {
         claim_id,
         claim_key: format!("scan.{}", reviewed.claim_id),
@@ -2793,6 +2790,10 @@ fn reviewed_to_claim(
     claim.digest = claim_digest(&claim);
     render_claim_markdown(&claim).map_err(rag_error)?;
     Ok(claim)
+}
+
+fn reviewed_claim_provenance_summary(inventory_digest: &str) -> String {
+    format!("Agent-reviewed source claim bound to inventory {inventory_digest}")
 }
 
 fn scan_review_id(claim: &CanonicalClaim) -> Option<&str> {
@@ -2846,6 +2847,14 @@ const fn scan_claim_kind(kind: ScanClaimKind) -> ClaimKind {
 /// duplicate claim IDs, unsafe evidence locators, or likely credentials.
 pub fn validate_reviewed_claims_for_apply(validated: &ValidatedClaims) -> Result<(), WikiError> {
     validate_prefixed_sha256("scan inventory digest", &validated.inventory_digest)?;
+    crate::reject_likely_credentials(
+        reviewed_claim_provenance_summary(&validated.inventory_digest).as_bytes(),
+    )
+    .map_err(|_| {
+        WikiError::Verification(
+            "reviewed scan provenance renderer produced likely credential material".to_owned(),
+        )
+    })?;
     let mut claim_ids = BTreeSet::new();
     let mut expected_promotion_candidates = BTreeSet::new();
     for claim in &validated.collection_claims {
@@ -2940,7 +2949,12 @@ fn validate_reviewed_claim_basics(claim: &ReviewedClaim) -> Result<(), WikiError
             return Err(WikiError::InvalidInput(format!("invalid {label}")));
         }
     }
-    crate::reject_likely_credentials(claim.statement.as_bytes())?;
+    crate::reject_likely_credentials(claim.statement.as_bytes()).map_err(|_| {
+        WikiError::InvalidInput(format!(
+            "reviewed scan claim `{}` statement contains likely credential material",
+            claim.claim_id
+        ))
+    })?;
     if claim.global_promotion_candidate
         && (!matches!(
             claim.kind,
@@ -4236,6 +4250,39 @@ mod tests {
             .changed_paths
             .iter()
             .any(|path| path.starts_with(CLAIMS_RELATIVE)));
+    }
+
+    #[test]
+    fn scan_claim_human_review_id_is_not_misclassified_as_a_credential() {
+        let (_temporary, store) = store();
+        let scanned = tempfile::tempdir().expect("scanned root");
+        let inventory = scan_inventory(&[(
+            "docs/facts/en/v0-9-skill-suite-plan.md",
+            b"reviewed source fact\n",
+        )]);
+        let validated = validate_claims(
+            &inventory,
+            &[reviewed_scan_claim(
+                "source-fact-v0-9-skill-suite-plan",
+                "Aigent Hive source fact — v0.9 Skill Suite: The completed v0.9 Skill baseline now feeds a separate default-off Hive-native iterative execution plan.",
+                "docs/facts/en/v0-9-skill-suite-plan.md",
+                &inventory,
+            )],
+        )
+        .expect("reviewed source claim");
+        validate_reviewed_claims_for_apply(&validated).expect("storage preflight");
+        let mut request = registration(scanned.path(), "source-fact-inventory");
+        request.reviewed_inventory_digest = Some(validated.inventory_digest.clone());
+
+        let committed = store
+            .register_scanned_collection_atomic(request, &validated)
+            .expect("source claim registration");
+        let registry = store.load_registry().expect("stored registry");
+        let claims = store.load_claims(&registry).expect("stored scan claim");
+        assert!(claims.iter().any(|claim| {
+            claim.collection_id == committed.collection.collection_id
+                && claim.claim_key == "scan.source-fact-v0-9-skill-suite-plan"
+        }));
     }
 
     #[test]

@@ -940,6 +940,7 @@ fn localized_skill_source(
             format!("implemented Skill {name} has no localized description"),
         )
     })?;
+    let description = canonical_skill_description(name, description);
     replace_metadata_line(
         source,
         "description:",
@@ -958,6 +959,7 @@ fn localized_skill_metadata(
             format!("implemented Skill {name} has no localized metadata"),
         )
     })?;
+    let description = canonical_skill_description(name, description);
     let metadata = replace_metadata_line(
         metadata,
         "  display_name:",
@@ -968,6 +970,15 @@ fn localized_skill_metadata(
         "  short_description:",
         &format!("  short_description: {description:?}"),
     )
+}
+
+fn canonical_skill_description(name: &str, description: &str) -> String {
+    let prefix = format!("({name})");
+    if description.starts_with(&prefix) {
+        description.to_owned()
+    } else {
+        format!("{prefix} {description}")
+    }
 }
 
 fn replace_metadata_line(
@@ -2646,12 +2657,13 @@ description: Inspect one local file without changing it.
         .expect("UTF-8 Korean Skill metadata");
 
         assert!(english_skill.contains("Aigent Hive"));
-        assert!(
-            korean_skill.contains("description: 전역 Aigent Hive 환경 설정과 재설정을 진행합니다.")
-        );
+        assert!(korean_skill.contains(
+            "description: (user-setup) 전역 Aigent Hive 환경 설정과 재설정을 진행합니다."
+        ));
         assert!(korean_metadata.contains("display_name: \"Hive 설정\""));
-        assert!(korean_metadata
-            .contains("short_description: \"전역 Aigent Hive 환경 설정과 재설정을 진행합니다.\""));
+        assert!(korean_metadata.contains(
+            "short_description: \"(user-setup) 전역 Aigent Hive 환경 설정과 재설정을 진행합니다.\""
+        ));
         assert_ne!(
             english.active_skills.skills[0].content_digest,
             korean.active_skills.skills[0].content_digest

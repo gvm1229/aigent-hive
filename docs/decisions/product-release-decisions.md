@@ -26,6 +26,7 @@
 | Source docs Wiki | `docs/` human graph와 tracked `docs/facts/en/`·`ko/` atomic pair 정본, `omx_wiki/`·`.omx/wiki/`·consumer `.hive/knowledge/` 금지, SQLite는 ignored source projection, OMX/OMC retirement 시 knowledge migration 0건 |
 | Wiki autocapture | Wiki enabled 상태의 material task 종료 전 agent-reviewed task fact 기록. Outcome·tool/project·criteria·originating request summary만 bounded capture, exact request는 explicit retention intent 필요, raw transcript·hook·tool output·runtime ingestion 금지 |
 | prompt refine | `prompt-refine`; 명시적 작성·정제 intent와 materially ambiguous ordinary work에서 자동 선택, `refine-only` 기본. Refined prompt 제시 뒤 exact 사용자 승인까지 정지. Same-request 실행은 explicit `--run`만 허용, simple/editless question·clear work·hidden rewrite·prompt-classifier hook 제외 |
+| 프롬프트 언어 | 응답 언어와 분리. Hive 작성·개선·복사용 프롬프트는 현재 프롬프트 언어의 명시 요청이 없으면 영어. 명시 언어는 기본값보다 우선. 설명·질문은 선택 응답 언어 유지 |
 | optional hooks | host가 exact integrity event를 지원하고 사용자가 capability/event/path/digest를 승인한 경우에만 project-local hook 허용 |
 | 사용량 | Global setup 핵심 기능, 활성화 권장. 신속 기본 profile은 남은 사용량 `20%`, custom setup은 사용자 선택 한도. Registered project별 더 이른 중지 override와 단일 product `usage-guard`; Codex app-server JSON-RPC, Claude Code status-line JSON capture, 향후 qualified Antigravity structured surface를 native primary로 사용 |
 | Claude sensor ownership | Plugin executable만 제공; user가 Claude host의 `/statusline`으로 opt-in하며 Hive의 `~/.claude/settings.json` mutation 없음, existing status line non-clobber |
@@ -37,6 +38,7 @@
 | judge | verdict 전 digest-bound assignment, exact roster/slot/instance/evidence/timestamp, requester/task-agent 배제, verdict 후 별도 human approval; elevated 2/3, critical 3/3+human |
 | judge 신뢰 | consumer target 밖의 agent-write-denied TOML public-key trust root, purpose-bound detached Ed25519 signature와 aggregate-only output; Hive는 strict verification만 수행하고 private-key custody/signing은 외부 authority가 소유 |
 | release 신뢰 | Protected `main` exact tag, same-candidate GitHub Release, SHA-256 sidecar, GitHub artifact attestation, npm Trusted Publishing OIDC·registry provenance. GitHub stable environment의 human approval 한 번, npm 별도 승인 없음 |
+| GitHub Release 설명 | `docs/releases/<product-version>.md` 정본의 English-first·Korean-second 이중 언어 설명. 영어는 ASD-STE100 Simplified Technical English, 한국어는 한국어 언어 계약 적용. 두 section의 기능·호환성·검증 경계 동등성 필수 |
 | platform signing | macOS explicit ad-hoc seal은 publisher identity·notarization 아님을 공개. Windows unsigned 공개. Developer ID·notarization, Authenticode·SignPath는 optional enhancement이며 stable gate 아님 |
 | release trust 폐기 | Release TUF·offline root·threshold signer·external authorization ceremony·platform certificate evidence gate 삭제. Judge external trust root와 frozen historical release base는 별도 경계 |
 | user projection purge | Setup·update·uninstall은 authenticated inventory와 retired-name ledger로 Hive-owned projection을 current closure에 수렴. 중첩 빈 directory·owned transient state 제거, knowledge·saved preference·foreign byte·developer rollback state 보존 |

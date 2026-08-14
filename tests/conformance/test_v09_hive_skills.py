@@ -73,6 +73,30 @@ class V09HiveSkillProjectionTests(unittest.TestCase):
                 (CLAUDE_TEMPLATE_ROOT / name / "SKILL.md").read_bytes(), canonical, name
             )
 
+    def test_all_hive_skill_descriptions_start_with_the_canonical_id(self) -> None:
+        catalog = yaml.safe_load((SKILL_ROOT / "catalog.yml").read_text(encoding="utf-8"))
+        descriptions = {entry["name"]: entry["description"] for entry in catalog["skills"]}
+        self.assertEqual(set(descriptions), EXPECTED_SKILLS)
+        for name in EXPECTED_SKILLS:
+            expected = f"({name})"
+            with self.subTest(name=name):
+                self.assertTrue(descriptions[name].startswith(expected))
+                text = (SKILL_ROOT / name / "SKILL.md").read_text(encoding="utf-8")
+                description = next(
+                    line.removeprefix("description: ")
+                    for line in text.splitlines()
+                    if line.startswith("description: ")
+                )
+                self.assertTrue(description.strip('"').startswith(expected))
+                metadata = yaml.safe_load(
+                    (SKILL_ROOT / name / "agents" / "openai.yaml").read_text(
+                        encoding="utf-8"
+                    )
+                )
+                self.assertTrue(
+                    metadata["interface"]["short_description"].startswith(expected)
+                )
+
     def test_catalog_schema_and_ledger_emit_current_names_only(self) -> None:
         catalog = yaml.safe_load((SKILL_ROOT / "catalog.yml").read_text(encoding="utf-8"))
         self.assertEqual({item["name"] for item in catalog["skills"]}, EXPECTED_SKILLS)
@@ -97,6 +121,18 @@ class V09HiveSkillProjectionTests(unittest.TestCase):
             self.assertNotIn("name: hive-", text)
         catalog = (ROOT / "docs/skills.md").read_text(encoding="utf-8")
         self.assertIn("$aigent-hive:<Skill 이름>", catalog)
+
+    def test_user_setup_keeps_the_bilingual_response_language_contract(self) -> None:
+        text = (SKILL_ROOT / "user-setup/SKILL.md").read_text(encoding="utf-8")
+        for expected in (
+            "## Response language contract",
+            "ASD-STE100 Simplified Technical English",
+            "Translate meaning rather than English word order.",
+            "mixed Korean-English compounds",
+            "benign한 source claim ID",
+            "원본 지식 항목 식별자",
+        ):
+            self.assertIn(expected, text)
 
     def test_iterative_execution_keeps_role_parity_on_one_strict_judge_path(self) -> None:
         text = (SKILL_ROOT / "iterative-execution" / "SKILL.md").read_text(

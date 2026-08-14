@@ -5,21 +5,20 @@ topic_slug: git-worktree-lifecycle
 language: en
 counterpart: ../ko/git-worktree-lifecycle.md
 title: "Temporary Git Worktree Lifecycle"
-summary: "Authorized temporary worktrees and clean clones require recorded ownership and task-bound cleanup."
+summary: "Ordinary work uses one primary worktree; authorized temporary worktrees require immediate verified cleanup."
 tags: [git, workflow, worktree]
 aliases: ["temporary clone cleanup", "worktree cleanup"]
 sources:
-  - "repo:.agents/directives/03-workflow.md#sha256:ca49b448c75cd5d8bee15f300b5aaa5f6a6f4b1b437d280cb0f891141c80812c"
-  - "repo:.agents/directives/06-session-coordination.md#sha256:884fedad85a6bd5c7865b5fc6be9b132c4653abb8d685f26aff621596f6ae48a"
+  - "repo:.agents/directives/03-workflow.md#sha256:31a2964fbf51845ad3510b7e64010b1c9c7e7718535902a7035d6d78bda5ba74"
+  - "repo:.agents/directives/06-session-coordination.md#sha256:a24536201b77619549620d88612c186b769e90a774043895370a064779d8d758"
 links: [source-development]
-reviewed_revision: "git:02e8bfc95913b1d88c4324dbb997d19fc55ef767"
+reviewed_revision: "git:f6139fe4aabe5237bb1da5cb85364da7c978e698"
 status: active
 ---
 
 # Temporary Git Worktree Lifecycle
 
-An authorized temporary worktree or clean-context clone records its absolute path, ref, purpose,
-owner, and removal boundary in the active-session manifest. After its concern is committed,
-pushed, and verified, its owner removes a clean worktree, prunes the registry, and verifies the
-registry before the final response. A dirty path must be committed and pushed when authorized, or
-be retained with its exact reason. Force removal and primary-worktree removal are prohibited.
+Ordinary work uses one primary worktree. Create another only for a workload that needs parallel
+independent changes and cannot safely run in sequence. Record its ownership and removal boundary.
+Remove it immediately after its commits are reachable, verification passes, and no uncommitted or
+unpushed required work remains. Force removal and primary-worktree removal are prohibited.

@@ -1,6 +1,6 @@
 ---
 name: project-setup
-description: Configure or reconfigure a local Hive harness only for an explicitly identified project, repository, folder, or path. Route global user-scope setup, preference changes, and bare Hive setup to user-setup.
+description: (project-setup) Configure or reconfigure a local Hive harness only for an explicitly identified project, repository, folder, or path. Route global user-scope setup, preference changes, and bare Hive setup to user-setup.
 ---
 
 # Setup Harness

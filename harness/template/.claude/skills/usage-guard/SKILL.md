@@ -1,6 +1,6 @@
 ---
 name: usage-guard
-description: Control the installed Hive usage guard and run its automatic-dispatch preflight; infer only explicit threshold or session control intent. Never infer bypass from urgency or a bare continue or resume request.
+description: (usage-guard) Control the installed Hive usage guard and run its automatic-dispatch preflight; infer only explicit threshold or session control intent. Never infer bypass from urgency or a bare continue or resume request.
 ---
 
 # Hive Usage Guard

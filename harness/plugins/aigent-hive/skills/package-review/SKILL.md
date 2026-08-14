@@ -1,6 +1,6 @@
 ---
 name: package-review
-description: Validate a clean-context package and prepare authenticated Ed25519 judge-quorum inputs through the signed Hive CLI. Use when independent judging is explicitly required for existing artifacts; do not use for simple questions, judge execution, signing, verdict production, self-approval, or orchestration.
+description: (package-review) Validate a clean-context package and prepare authenticated Ed25519 judge-quorum inputs through the signed Hive CLI. Use when independent judging is explicitly required for existing artifacts; do not use for simple questions, judge execution, signing, verdict production, self-approval, or orchestration.
 ---
 
 # Hive Judge Package

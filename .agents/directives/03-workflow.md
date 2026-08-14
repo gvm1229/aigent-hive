@@ -41,6 +41,11 @@ After bootstrap:
 
 ## Temporary Worktree and Clone Lifecycle
 
+- Use one primary worktree for ordinary work. Do not create a second worktree for convenience,
+  visual separation, a separate concern, or a routine branch change.
+- Create additional worktrees only when a workload is too large to complete safely in sequence and
+  needs genuinely parallel independent changes. Record why one primary worktree cannot safely
+  complete the workload before creation.
 - A temporary worktree or clean-context clone is an isolation boundary for an authorized branch,
   protected-target PR, or exact-ref qualification. It is not a default organization mechanism or
   a substitute for ordinary commit splitting.
@@ -60,6 +65,9 @@ After bootstrap:
 - Before the final response, resolve every temporary path owned by the session as `removed` or
   `retained` with an exact reason. A failed cleanup remains an incomplete task boundary and must
   name the path and recovery action.
+- Remove a completed temporary worktree immediately after its commits are reachable from the
+  intended remote or retained primary ref and its required verification passes. Before removal,
+  confirm that no uncommitted file, unreachable commit, or unpushed required commit remains.
 
 ## Commit Rules
 

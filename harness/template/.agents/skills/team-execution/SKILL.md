@@ -1,6 +1,6 @@
 ---
 name: team-execution
-description: Coordinate an explicit bounded Hive team through signed lanes, immutable mailbox messages, barriers, shared-path leases, cancellation, and terminal Judge evidence.
+description: (team-execution) Coordinate an explicit bounded Hive team through signed lanes, immutable mailbox messages, barriers, shared-path leases, cancellation, and terminal Judge evidence.
 ---
 
 # Hive Team Execution
