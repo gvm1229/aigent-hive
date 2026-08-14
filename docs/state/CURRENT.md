@@ -1,7 +1,7 @@
 # 현재 상태
 
 - 기준 branch: `main` stable `179c909`, `develop` patch handoff 기준
-- product version: `0.9.4` patch 개발 기준
+- product version: `0.9.4`
 - 다음 release target: 번호 공개 `0.9.4-test` 수용 뒤 동일 artifact `0.9.4` stable publication
 - plan revision: `211`
 - 현재 milestone: `0.9.3` 정식 출시·Windows 수용 완료, `0.9.4` GitHub Release 이중 언어 설명·공개 HTML·PDF 지식 기능 안내·전체 Skill 식별자 표시·전역 projection validation·지식 기록 credential 오탐·완료한 source knowledge scan·응답 언어·프롬프트 영어 기본값·작업 폴더 수명주기

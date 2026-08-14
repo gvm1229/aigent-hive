@@ -6,7 +6,7 @@
 
 > Codex, Claude Code, Gemini Antigravity를 위한 provider-neutral 로컬 harness.
 
-[![Version](https://img.shields.io/badge/version-0.9.3-4C1)](../../Cargo.toml)
+[![Version](https://img.shields.io/badge/version-0.9.4-4C1)](../../Cargo.toml)
 [![Rust](https://img.shields.io/badge/Rust-stable-000000?logo=rust)](../../rust-toolchain.toml)
 [![License](https://img.shields.io/badge/license-Apache--2.0-green)](../../LICENSE)
 
@@ -16,11 +16,11 @@ Hive: subscription 인증 agent host에 일관된 setup, Skill routing, project 
 지속 가능한 role/run 상태, usage safeguard와 안전한 update 계약 제공.
 Model-provider API key 요청·provider API 호출·host model runtime 대체 없음.
 
-현재 stable `0.9.3`: npm `latest`, normal GitHub Release, annotated Git tag 배포.
+현재 stable `0.9.4`: npm `latest`, normal GitHub Release, annotated Git tag 배포.
 
 ## 현재 stable 설치
 
-npm `0.9.3|latest`, GitHub normal Release, annotated Git tag 배포.
+npm `0.9.4|latest`, GitHub normal Release, annotated Git tag 배포.
 
 기본 설치:
 
@@ -31,7 +31,7 @@ npm install -g aigent-hive
 또는 exact version 고정:
 
 ```console
-npm install -g aigent-hive@0.9.3
+npm install -g aigent-hive@0.9.4
 ```
 
 npm 설치 dependency: Node.js·npm. 설치된 `hive` runtime: native Rust binary,
@@ -40,26 +40,26 @@ Node.js dependency 없음.
 예상 stable version label:
 
 ```text
-AIgent Hive v0.9.3 (released 2026-08-14)
+AIgent Hive v0.9.4 (released 2026-08-14)
 ```
 
 ### macOS·Linux curl
 
 ```sh
 curl --proto '=https' --tlsv1.2 -LsSf \
-  https://unpkg.com/aigent-hive@0.9.3/install.sh | sh
+  https://unpkg.com/aigent-hive@0.9.4/install.sh | sh
 ```
 
 ### Windows PowerShell 5.1+
 
 ```powershell
-irm https://unpkg.com/aigent-hive@0.9.3/install.ps1 | iex
+irm https://unpkg.com/aigent-hive@0.9.4/install.ps1 | iex
 ```
 
 ### Windows 명령 프롬프트
 
 ```bat
-curl.exe -fLo install-aigent-hive.cmd https://unpkg.com/aigent-hive@0.9.3/install.cmd && install-aigent-hive.cmd
+curl.exe -fLo install-aigent-hive.cmd https://unpkg.com/aigent-hive@0.9.4/install.cmd && install-aigent-hive.cmd
 ```
 
 직접 installer: npm의 동일 native package bytes 수신, embedded exact-version
@@ -75,7 +75,7 @@ prompt 사용. 선택 사항이며, 아래 4단계 설정은 예측 가능한 �
 I want the optional one-prompt Aigent Hive setup. Work only at user scope; do not inspect,
 initialize, or change any project, repository, folder, or current working directory.
 
-Install the current stable release 0.9.3. The stable install guidance is
+Install the current stable release 0.9.4. The stable install guidance is
 https://github.com/gvm1229/aigent-hive#install-the-current-stable-release.
 Detect my operating system and active host (Codex, Claude Code, or Gemini Antigravity), asking
 me if either is unclear. Check whether Node.js and npm are available. If they are missing,
@@ -97,7 +97,7 @@ an optional third-party Skill.
 
 ## 지원 target
 
-| Platform | Native target | 0.9.3 gate |
+| Platform | Native target | 0.9.4 gate |
 | --- | --- | --- |
 | macOS Apple Silicon | `aarch64-apple-darwin` | Candidate runtime 검증 |
 | macOS Intel | `x86_64-apple-darwin` | Candidate runtime 검증 |
@@ -106,7 +106,7 @@ an optional third-party Skill.
 | Windows x86_64 | `x86_64-pc-windows-msvc` | Candidate runtime 검증 |
 
 Codex·Antigravity는 실제 host 증거가 있음. Claude Code package·projection은 fixture로
-검증했지만 실제 subscription-backed session은 미검증. Stable `0.9.3`: macOS ad-hoc signing,
+검증했지만 실제 subscription-backed session은 미검증. Stable `0.9.4`: macOS ad-hoc signing,
 SignPath Foundation 무료 승인 전 Windows unsigned 공개. 정확한 경계는
 [code signing policy](../guides/code-signing-policy.md) 참고.
 
@@ -176,7 +176,7 @@ hive update
 install owner를 실행하기 전에 질문. 거절·stdin 종료·noninteractive 실행에서는 설치
 mutation 0건.
 기존 `0.9.0-test.N` 또는 `0.9.0` 설치의 소유권 증거 유지. 같은 확인 절차로 exact stable
-`0.9.3` 갱신 가능.
+`0.9.4` 갱신 가능.
 
 Daily check: 마지막 성공 확인부터 24시간 throttle. Offline·failed check는 성공
 기록 제외; 다음 Codex·Claude Code·Antigravity session에서 재시도.
