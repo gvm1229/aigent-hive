@@ -15,6 +15,7 @@ import yaml
 ROOT = Path(__file__).resolve().parents[2]
 NOTIFIER = ROOT / "scripts/publish-stable-discord-update.py"
 WORKFLOW = ROOT / ".github/workflows/release-publish.yml"
+PROBE_WORKFLOW = ROOT / ".github/workflows/discord-subscriber-notification-probe.yml"
 
 
 class RecordingServer(ThreadingHTTPServer):
@@ -131,6 +132,12 @@ class StableReleaseDiscordNotification(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(len(self.server.requests), 2)
 
+    def test_accepts_the_v093_subscriber_payload(self) -> None:
+        summary = (ROOT / "docs/releases/0.9.3.subscriber.ko.md").read_text(encoding="utf-8")
+        result = self.run_notifier("0.9.3", summary)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(len(self.server.requests), 2)
+
     def test_publication_workflow_invokes_the_notifier_only_after_release_creation(self) -> None:
         workflow = WORKFLOW.read_text(encoding="utf-8")
         self.assertIn("AIGENT_HIVE_RELEASE_DISCORD_WEBHOOK_URL", workflow)
@@ -145,3 +152,18 @@ class StableReleaseDiscordNotification(unittest.TestCase):
         self.assertIn("gh release create", release["run"])
         self.assertNotIn("publish-stable-discord-update.py", release["run"])
         self.assertEqual(notifier["if"], "${{ inputs.channel == 'stable' }}")
+
+    def test_manual_probe_is_limited_to_the_two_approved_payloads(self) -> None:
+        workflow = yaml.safe_load(PROBE_WORKFLOW.read_text(encoding="utf-8"))
+        dispatch = workflow[True]["workflow_dispatch"]
+        self.assertEqual(
+            dispatch["inputs"]["product_version"]["options"], ["0.9.3", "0.9.4"]
+        )
+        steps = workflow["jobs"]["send"]["steps"]
+        sender = next(
+            step
+            for step in steps
+            if step.get("name") == "Send the banner before the Korean subscriber update"
+        )
+        self.assertIn("publish-stable-discord-update.py", sender["run"])
+        self.assertIn("AIGENT_HIVE_RELEASE_DISCORD_WEBHOOK_URL", sender["env"])
