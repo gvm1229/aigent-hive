@@ -22,11 +22,11 @@ receipt의 `setup_digest`만 변경, 정상 설치 invalid 판정.
 
 ## Checklist
 
-- [ ] [UPV94-001] 기존 `0.9.3` 설치 형태를 재현해 managed projection 전부 일치·
+- [x] [UPV94-001] 기존 `0.9.3` 설치 형태를 재현해 managed projection 전부 일치·
   `hive setup --validate` 충돌·dry-run unchanged의 불일치 regression 고정
-- [ ] [UPV94-002] validation이 설치된 canonical setup binding 또는 동등한 정규화 binding을
+- [x] [UPV94-002] validation이 설치된 canonical setup binding 또는 동등한 정규화 binding을
   사용해 정상 projection receipt를 수용
-- [ ] [UPV94-003] setup·install·update·validate가 user projection의 local change, ownership
+- [x] [UPV94-003] setup·install·update·validate가 user projection의 local change, ownership
   mismatch, malformed receipt와 실제 structured configuration 손상은 계속 거부
 - [ ] [UPV94-004] Rust unit·CLI integration과 Windows x64 설치본 fresh setup·preserving
   reinstall·validate 수용에서 결과 수렴 확인
@@ -36,6 +36,17 @@ receipt의 `setup_digest`만 변경, 정상 설치 invalid 판정.
 - 설치된 Hive-managed file이 모두 일치한 전역 setup validation 성공
 - 같은 상태의 dry-run·validate·install validation 결과 모순 `0건`
 - 오류 시 실제 변경·손상 경로와 안전한 복구 경로 표시
+
+## 구현 증거
+
+- `crates/hive-cli/src/user_setup.rs`: `--validate`의 supplied answers 재직렬화 바이트 대신
+  설치된 `.hive/config/user-setup.yml` 바이트 기준 projection receipt 검증. 의미가 같은
+  answers와 사용자 보존 서식의 receipt 재생성 없는 수용
+- Rust 회귀: 로컬 managed Skill 편집, malformed receipt, structured config corruption의
+  각각 conflict 유지. 이 Windows x64 source workspace의 `cargo test -p hive-cli user_setup --locked`
+  46개와 `cargo test -p hive-cli user_install --locked` 84개 통과
+- `UPV94-004`: public `0.9.4-test` Windows x64 fresh setup·preserving reinstall·validate의
+  release artifact 뒤 별도 수용 증거
 
 ## 범위 제외
 

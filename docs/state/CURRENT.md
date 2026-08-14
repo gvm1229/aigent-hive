@@ -3,7 +3,7 @@
 - 기준 branch: `main` stable `179c909`, `develop` patch handoff 기준
 - product version: `0.9.4` patch 개발 기준
 - 다음 release target: 번호 공개 `0.9.4-test` 수용 뒤 동일 artifact `0.9.4` stable publication
-- plan revision: `207`
+- plan revision: `208`
 - 현재 milestone: `0.9.3` 정식 출시·Windows 수용 완료, `0.9.4` GitHub Release 이중 언어 설명·공개 HTML·PDF 지식 기능 안내·전체 Skill 식별자 표시·전역 projection validation·지식 기록 credential 오탐·완료한 source knowledge scan·응답 언어·프롬프트 영어 기본값·작업 폴더 수명주기
 - 기능 기준: `2cec0377748874748d126b6b55e59975a3f20a02`; release discipline base `c777da1`
 - 제외: `NHA10-001–012`·`N10-002–011`의 `0.10.0-test`
@@ -12,7 +12,7 @@
 - `0.9.4` 응답 언어 보강 완료: 치환 가능한 영어 혼용·혼합 합성어·강조용 영어 괄호·영어 어순 직역 금지와 자연스러운 한국어 대체 예시를 원본·소비자 계약에 반영. 정적 계약·네 Skill 투영 byte 일치·렌더된 소비자 `AGENTS.md` 수명주기 31개 시험 통과, 문서 말투 finding `0`
 - `0.9.4` 작업 폴더 수명주기 완료: 일반 작업의 단일 기준 작업 폴더 우선, 안전한 순차 처리 불가한 병렬 독립 변경 때만 추가 작업 폴더 허용, 원격 도달성·미반영 작업 없음 확인 뒤 즉시 제거 규칙·정적 계약 반영. `develop` 원격 반영·기준 작업 폴더 전환·`develop-release-integration` 임시 작업 폴더 제거 확인
 - `0.9.4` 전체 Skill 식별자 표시 완료: current 26개 Hive Skill의 catalog·front matter·Codex metadata·plugin·Copier projection 설명 첫머리를 `(skill-id)`로 통일. `hive-projection` 34개, `hive-cli user_install` 84개, Skill·setup 적합성 검사 통과. third-party·사용자 작성 Skill 변경 `0건`
-- `0.9.4` 전역 projection validation 정합성 예정: 이 Windows의 installed `0.9.3`에서 Hive-managed projection 54개는 모두 receipt와 일치했으나 `hive setup --scope user --validate`는 `.hive/install/user-projection.json`만 충돌로 보고. 동일 입력 dry-run은 모든 projection `unchanged`를 보고. user setup의 재직렬화 바이트가 receipt `setup_digest`만 바꾸는 validation-contract 결함으로 분류; actual corruption·ownership mismatch fail-closed는 유지
+- `0.9.4` 전역 projection validation 정합성 구현 완료: `hive setup --scope user --validate`의 supplied answers 재직렬화 바이트 대신 설치된 user setup 바이트 기준 `.hive/install/user-projection.json` receipt 검증. 의미가 같은 answers·사용자 보존 서식의 write 없는 수용, local managed file edit·malformed receipt·structured config corruption의 conflict 유지. 이 Windows x64 source workspace의 `hive-cli user_setup` 46개·`user_install` 84개 통과. 남은 `UPV94-004`: public `0.9.4-test` artifact의 실제 fresh setup·preserving reinstall·validate 수용
 - `0.9.4` 전역 지식 기록 credential 오탐 예정: 안전한 사용자 결정의 `hive knowledge remember --user-root` 1회가 `hive.knowledge-verification-failed`로 거부. credential·secret·private source 입력은 없었고 재시도 `0회`. request field·claim key·scanner 경계 조사와 safe user-root capture 수용, 실제 secret fail-closed 회귀가 필요
 - `0.9.4` 공개 HTML·PDF 지식 기능 안내 예정: `hive-core-features.ko.html`의 지식 기능 한 줄 강조 상자를 다섯 Skill의 정본 ID·사용 시점·범위·예시·안전 경계 비교표로 교체. 파생 PDF의 section title 단독 page는 다음 page 이동, title과 content 일부 동시 배치 가능 시 현 page 유지. HTML 정본·재생성 PDF·desktop/mobile render·Poppler visual inspection 수용 필요
 - `0.9.4` GitHub Release 이중 언어 설명 예정: `release-publish.yml`은 `docs/releases/<product-version>.md`를 description으로 그대로 게시. 해당 정본의 English-first·Korean-second section, 동일 사실·호환성·검증 경계, ASD-STE100 English와 한국어 언어 계약 검사를 release workflow·`0.9.4-test` GitHub prerelease rendering으로 수용 필요
