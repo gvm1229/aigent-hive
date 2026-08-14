@@ -1,6 +1,6 @@
 # Aigent Hive active plan index
 
-> Revision: 206
+> Revision: 207
 > 기준일: 2026-08-14
 > Product version: `0.9.4` patch 개발 기준
 > 현재 milestone: `0.9.4` GitHub Release 이중 언어 설명·공개 HTML·PDF 지식 기능 안내·Skill 표시 식별자·전역 설치 검증·완료한 source 지식 색인·응답 언어·프롬프트 영어 기본값·작업 폴더 수명주기
@@ -14,7 +14,9 @@
   projection receipt 정합성, `KRV94-*` 안전한 user-root knowledge remember의 credential 오탐 제거,
   `HGD94-*` 공개 한국어 HTML 지식 기능 비교표와 PDF section title pagination,
   `RNL94-*` GitHub Release English-first bilingual description과 language contract,
-  `PML94-*` 응답 언어와 분리한 프롬프트 영어 기본값·명시 언어 우선 계약
+  `PML94-*` 응답 언어와 분리한 프롬프트 영어 기본값·명시 언어 우선 계약,
+  `REL94-*` local gate·번호 공개 시험판·Windows x64 설치/업그레이드 수용·protected `main`
+  통합·동일 artifact stable publication·게시 뒤 의존 검사
 - Success: 동일 reviewed scan 파일의 candidate·apply 보안 수용 결과 일치, credential 거부의
   claim-bound remediation, source workspace의 current-truth architecture·intent·decision·fact private collection,
   shared 자동 승격 `0건`, exact direct retrieval 확인, 모든 Hive Skill 설명의 `(skill-id)` 첫머리 표시,
@@ -71,6 +73,7 @@
 | `0.9.4` 공개 HTML·PDF 지식 기능 안내 | 0 | 4 | 0% |
 | `0.9.4` GitHub Release 이중 언어 설명 | 0 | 3 | 0% |
 | `0.9.4` 프롬프트 영어 기본값 | 3 | 1 | 75% |
+| `0.9.4` 시험·정식 출시 | 0 | 6 | 0% |
 | Native host activation `0.10.0` 후보 | 0 | 12 | 0% |
 | Prompt refine 자동 routing | 12 | 0 | 100% |
 | v0.9 test 기능 마감 | 18 | 0 | 100% |
@@ -86,7 +89,7 @@
 | Agent 자율 실행 지속 | 8 | 0 | 100% |
 | `0.9.2` 완료 기능·공개 문서 출시 | 12 | 0 | 100% |
 | Notion `v0.10` 후보 | 1 | 10 | 9.1% |
-| **Canonical total** | **580** | **40** | **93.5%** |
+| **Canonical total** | **580** | **46** | **92.6%** |
 
 External production boundary 항목도 미완료 합계에 포함. Protected authority 없이 완료 처리 금지.
 
@@ -138,6 +141,7 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
 | [`active/public-html-pdf-guidance-0.9.4.md`](active/public-html-pdf-guidance-0.9.4.md) | `HGD94-*` | 지식 기능 비교표·PDF section title pagination |
 | [`active/release-note-language-0.9.4.md`](active/release-note-language-0.9.4.md) | `RNL94-*` | GitHub Release English-first bilingual description |
 | [`active/prompt-language-default-0.9.4.md`](active/prompt-language-default-0.9.4.md) | `PML94-*` | 응답 언어와 분리한 프롬프트 영어 기본값 |
+| [`active/release-0.9.4-stable-publication.md`](active/release-0.9.4-stable-publication.md) | `REL94-*` | 번호 공개 시험판 수용·protected `main` 통합·동일 artifact stable publication |
 | [`active/knowledge-access-optimization-0.9.3.md`](active/knowledge-access-optimization-0.9.3.md) | `KBA93-*` | explicit collection access·index-time automatic promotion |
 | [`active/v0.10.0-native-host-activation-candidate.md`](active/v0.10.0-native-host-activation-candidate.md) | `NHA10-*` | default-off native host activation·actual lifecycle evidence |
 | [`active/v0.9.3-release-loop.graph.md`](active/v0.9.3-release-loop.graph.md) | graph | `0.9.3` release loop checkpoint·recovery 계약 |
@@ -180,7 +184,9 @@ reimport 완료. `LGC94-001–008`의 원본·소비자 응답 언어 계약·�
 완료: `PML94-001–003` 원본·Skill·전역 네 투영·프로젝트 렌더러의 응답 언어와 분리한 영어 기본값 프롬프트 계약.
 다음 구현: `SID94-001–003` 모든 Hive Skill 설명의 정본 영문 ID 표시, `UPV94-001–004` 전역
 setup·install validation receipt 정합성, `KRV94-001–003` 안전한 전역 지식 기록의 credential
-오탐 제거, `HGD94-001–004` 공개 HTML 지식 기능 비교표·PDF page title 수용. 네 항목의
-source build·설치본 수용이 끝난 뒤에만 `0.9.4-test` publication을 검토. `PML94-004`와 `RNL94-001–003`
-GitHub Release English-first bilingual description도 해당 test release 전에 완료 필요.
+오탐 제거, `HGD94-001–004` 공개 HTML 지식 기능 비교표·PDF page title 수용. `PML94-004`와
+`RNL94-001–003`을 포함한 모든 `0.9.4` 구현·문서·local gate 완료 뒤 `REL94-001`의 exact source
+freeze 진행. 이후 `REL94-002–006`: 번호 공개 시험판, Windows x64 실제 설치·업그레이드와 전 범위
+수용, protected `main` 통합, 동일 artifact stable publication, 게시 뒤 의존 검사 순서. `0.10.0` 후보
+항목은 제외 유지.
 `N10-002–011`·`NHA10-001–012`: `0.10.0-test` 후보 유지.
