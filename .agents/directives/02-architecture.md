@@ -44,9 +44,10 @@ Never import installed consumer state back into source, copy source-development 
 - Do not route new work to OMX/OMC Skills. A legacy external artifact may be inspected only through an explicit migration or recovery contract that preserves foreign bytes.
 - Keep Hive execution Skills declarative: they may reduce canonical state, issue bounded leases, validate receipts, and prepare host envelopes, but never call a model-provider API or launch a model/subagent process.
 - Permit bidirectional reuse only for Hive-owned Skill source after source/consumer scope, safety, consent, and conformance review. Never treat an installed consumer copy or consumer runtime state as source material.
-- Keep every reusable workflow canonical under `harness/skills/<consumer-name>/` and use the installed product namespace in source development. Source-root, usage-gate, and mutation boundaries belong in repository directives, not a second source Skill inventory.
+- Keep every reusable product workflow canonical under `harness/skills/<consumer-name>/` and use the installed product namespace in source development. The explicit maintainer-authorized source-project-only exception is `.agents/skills/update-summary/`; it is nonshipping and must not enter a product catalog, release bundle, or consumer projection. Source-root, usage-gate, and mutation boundaries otherwise belong in repository directives, not a second source Skill inventory.
 - Apply every approved Hive-owned Skill rename to the complete installed-product inventory in one
-  reviewed migration. The source workspace has no active Skill IDs; repository directives own its
+  reviewed migration. The source workspace has no active product Skill IDs; the nonshipping
+  `update-summary` source-project Skill is an explicit maintainer exception. Repository directives own its
   additional constraints. Record each replaced product ID and its scope in the transitive rename
   ledger, and update routing metadata, references, and conformance tests together. Historical
   release bases remain immutable.

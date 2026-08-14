@@ -65,7 +65,8 @@ Upgrade merge:
 
 - Existing OMX·OMC·user guidance byte 보존
 - Source development: 설치 product `prompt-refine`와 repository directive 사용.
-  source-only `.agents/skills` projection과 consumer shipping source 사용 금지
+  Consumer projection으로서의 source-only `.agents/skills`와 consumer shipping source 사용 금지.
+  명시 유지보수자 요청의 비출하 source-project `update-summary`는 단일 예외
 - Prompt quality gate: 명시적 작성·개선 intent와 material ambiguity는 automatic
   `refine-only`, refined prompt 제시 뒤 승인 대기
 - 승인 대기에서 project read·tool·write·memory capture·run·execution 0회,

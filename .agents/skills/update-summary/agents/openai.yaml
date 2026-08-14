@@ -1,0 +1,4 @@
+interface:
+  display_name: "업데이트 요약"
+  short_description: "Aigent Hive 구독자용 버전 개선 내역 작성"
+  default_prompt: "Use $update-summary to draft a Korean subscriber update for the current stable release."
