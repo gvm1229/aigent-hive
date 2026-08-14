@@ -22,21 +22,26 @@ plugin projection은 별도 `hive install --scope user ... --apply` 전까지 �
 
 ## 실행 checklist
 
-- [ ] `AUP95-001` trusted refresh-scope resolver 구현: canonical user root·operational `selected_hosts`·per-host
+- [x] `AUP95-001` trusted refresh-scope resolver 구현: canonical user root·operational `selected_hosts`·per-host
   install manifest의 schema·ownership·release authentication 검증과 stable ordered intersection 반환
-- [ ] `AUP95-002` interactive prompt 보강: package owner·exact target·resolved host list·post-update
+- [x] `AUP95-002` interactive prompt 보강: package owner·exact target·resolved host list·post-update
   projection refresh 범위 표시. safe scope 부재 시 binary-only outcome과 이유·manual command preview 표시
-- [ ] `AUP95-003` owner install 뒤 exact refreshed executable handoff 구현: target binding 재검증 뒤
+- [x] `AUP95-003` owner install 뒤 exact refreshed executable handoff 구현: target binding 재검증 뒤
   new executable로 `install --scope user --hosts <resolved> --apply --output json` 실행, old process 사용 금지
-- [ ] `AUP95-004` projection apply 뒤 same resolved scope `--validate` 실행과 structured child result 검증.
+- [x] `AUP95-004` projection apply 뒤 same resolved scope `--validate` 실행과 structured child result 검증.
   host별 transactional preflight·backup·foreign byte 보존은 existing user-install contract 재사용
-- [ ] `AUP95-005` outcome contract 구현: binary·projection 모두 성공, binary-only safe skip, binary 성공 뒤
+- [x] `AUP95-005` outcome contract 구현: binary·projection 모두 성공, binary-only safe skip, binary 성공 뒤
   projection 실패의 세 상태 분리. 실패 상태: binary rollback 주장 금지·exact recovery command·changed-host evidence 표시
-- [ ] `AUP95-006` unit·integration matrix 추가: `codex,claude` saved scope 보존, single host, missing
+- [x] `AUP95-006` unit·integration matrix 추가: `codex,claude` saved scope 보존, single host, missing
   manifest, malformed/tampered setup·manifest, empty intersection, child exit/invalid JSON, npm·direct owner,
   old-executable rejection, no default-host fallback
-- [ ] `AUP95-007` `0.9.5-test.N` public acceptance: prior multi-host user install → bare update → new
-  projection version·host manifests·`--validate` confirmation. binary-only safe skip과 partial failure recovery 증거 포함
+
+## 명시 보류 배포 수용
+
+`AUP95-007` public `0.9.5-test.N` multi-host bare update 수용은 현재 유지보수자 경계에 따라
+공개 시험판·정식 배포와 함께 보류. 완료·통과 주장 금지. 재승인 뒤
+[`release-0.9.5-stable-publication.md`](release-0.9.5-stable-publication.md)의 `REL95-*`와 함께
+수행.
 
 ## 완료 기준
 
@@ -45,10 +50,10 @@ plugin projection은 별도 `hive install --scope user ... --apply` 전까지 �
 - trusted scope 결정을 못 하는 상태: binary만 authenticated owner로 갱신 가능, host projection mutation `0건`,
   결과에 정확한 skipped reason·recovery command
 - package owner·target binary·child executable 불일치 또는 child failure: success 오표시 금지, foreign byte 보존
-- release artifact의 npm·direct owner와 public test에서 같은 contract evidence
+- release artifact의 npm·direct owner와 public test contract evidence는 공개 배포 재승인 뒤 수행
 
 ## 출시 경계
 
-`AUP95-001`–`AUP95-006`: source implementation·local verification 범위. `AUP95-007`: external public
-test evidence와 stable publication authority 필요. 과거 literal install flag 기록 부재는 blocker 아님;
+`AUP95-001`–`AUP95-006`: source implementation·local verification 범위. `AUP95-007`: 현재 명시 보류,
+재승인 뒤 external public test evidence와 stable publication authority 필요. 과거 literal install flag 기록 부재는 blocker 아님;
 authenticated semantic scope 부재만 automatic projection refresh blocker.

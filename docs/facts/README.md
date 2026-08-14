@@ -49,6 +49,7 @@
 | Projection 갱신 정리 | [en](en/projection-upgrade-purge.md) | [ko](ko/projection-upgrade-purge.md) |
 | 과거 프로젝트 기준본 수용 범위 | [en](en/historical-project-base-coverage.md) | [ko](ko/historical-project-base-coverage.md) |
 | 사용자 투영 자동 갱신 | [en](en/automatic-user-projection-refresh.md) | [ko](ko/automatic-user-projection-refresh.md) |
+| 출시 호환성 수용 | [en](en/release-compatibility-qualification.md) | [ko](ko/release-compatibility-qualification.md) |
 | 전역 사용자 맥락 | [en](en/global-user-contexts.md) | [ko](ko/global-user-contexts.md) |
 | Project onboarding | [en](en/project-onboarding.md) | [ko](ko/project-onboarding.md) |
 | Plugin update merge | [en](en/plugin-update-merge.md) | [ko](ko/plugin-update-merge.md) |

@@ -10,7 +10,7 @@ tags: [capture, knowledge, retrieval, user-root]
 aliases: ["미등록 프로젝트 조회", "설정 독립 지식"]
 sources:
   - "repo:crates/hive-cli/src/knowledge.rs#sha256:f3f69d5fcea2bd8fb6383b29ae97d490e79ff794345826c0f68c550fb5881db4"
-  - "repo:crates/hive-cli/src/user_install.rs#sha256:db91b9841c057a3f9b964185fb2a2f3c2f8701908cf6439e26bf05d389a7243d"
+  - "repo:crates/hive-cli/src/user_install.rs#sha256:b8bb2ace9f509cf8f48cf703971069e7ca73ada3704a8c7dc18adfd03a27e9ef"
   - "repo:docs/plans/active/v0.9.0-knowledge-autocapture-regression.md#sha256:44fcfa9e2c19c626eb8a7885afcaeb6405b454748e62349c1459958d4180236c"
   - "repo:harness/skills/knowledge-capture/SKILL.md#sha256:9e86075240574d1e589329ae724c97fac32dab2e2d367b7d878bd84e69d4b483"
   - "repo:harness/skills/knowledge-recall/SKILL.md#sha256:531437bfcb9786cd5221de32eb5ad536bfd07973db159ca0b15a5df858ffa923"

@@ -56,6 +56,8 @@
 | 호환성 | major `0`을 포함해 같은 major만 non-breaking upgrade 보장 |
 | cross-major | 사전 경고, 자동 migration, project/docs/preferences 보존, SQLite rebuild |
 | release workflow | `develop` 사전 후보 뒤 protected `main` final candidate를 한 번 build. 5개 target·6개 npm·3개 installer의 digest·attestation·byte identity 검증 뒤 rebuild 없이 annotated `v0.9.0`·GitHub Release·npm `latest` publication |
+| release compatibility qualification | Release metadata의 declared compatibility range: executable contract. Candidate build 전 compiled CLI·release bundle·npm/direct package matrix, exact historical base·preservation·negative recovery evidence와 digest-bound coverage report 필수. Public test: prior stable·oldest distinct full-ledger project·선택 host state의 representative acceptance. Stable promotion: accepted public test·coverage report·artifact digest 동일성 전제 |
+| `0.9.5` 현 작업 경계 | 유지보수자 명시 지시에 따라 local implementation·compiled/package qualification까지만 수행. `HBC95-006`·`AUP95-007`·`REL95-001–006` public test·protected `main` 통합·stable publication·stable 설치는 재승인 전 보류. macOS source qualification은 `MAC95-001`로 유지보수자 external evidence 대기 |
 | install ownership | Direct receipt binary만 Hive-owned. npm binary는 npm 소유이며 Hive의 직접 덮어쓰기 금지; bare update의 사용자 승인 뒤 exact npm command 위임만 허용. Homebrew·WinGet은 기존 owner 경계 유지 |
 | Antigravity plugin ownership | Hive는 `~/.hive/marketplaces/antigravity/` source package만 소유. `agy` staging·import manifest는 host 소유이며 Hive ledger에서 제외. Mutation 전 staging 전체를 authenticated prior와 exact 비교하고 foreign entry는 보존. 신규 rollback은 uninstall, refresh rollback은 prior source 재설치 |
 | Git | `develop` 일반 fast-forward direct push, `main` production PR·required checks. `staging`은 명시적 release 필요·승인 때만 생성하고 strict ruleset 적용 |
