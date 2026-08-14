@@ -1,15 +1,15 @@
 # Aigent Hive active plan index
 
-> Revision: 201
+> Revision: 202
 > 기준일: 2026-08-14
 > Product version: `0.9.4` patch 개발 기준
-> 현재 milestone: `0.9.4` reviewed source knowledge scan validation 정합성·정본 지식 import 재수용·응답 언어 금지 규칙 보강
+> 현재 milestone: `0.9.4` reviewed source knowledge scan validation 정합성·정본 지식 import 재수용·응답 언어 금지 규칙 보강·작업 폴더 수명주기
 > Entrypoint: `docs/plans/PLAN.md`
 
 ## Goal parameters
 
 - Objective: `SKI94-*` reviewed scan candidate·apply validation parity, claim-bound security diagnostic,
-  source canonical fact reimport와 explicit collection retrieval 재수용, `LGC94-*` ASD-STE100 영어·한국어 응답 언어 금지 규칙·예시 계약
+  source canonical fact reimport와 explicit collection retrieval 재수용, `LGC94-*` ASD-STE100 영어·한국어 응답 언어 금지 규칙·예시 계약, `WTR94-*` 단일 기준 작업 폴더·임시 작업 폴더 정리 계약
 - Success: 동일 reviewed scan 파일의 candidate·apply 보안 수용 결과 일치, credential 거부의
   claim-bound remediation, source workspace의 current-truth architecture·intent·decision·fact private collection,
   shared 자동 승격 `0건`, exact direct retrieval 확인
@@ -55,6 +55,7 @@
 | `0.9.3` 시험·정식 출시 | 5 | 0 | 100% |
 | `0.9.4` source knowledge scan 정합성 | 3 | 0 | 100% |
 | `0.9.4` 응답 언어 계약 | 8 | 0 | 100% |
+| `0.9.4` 작업 폴더 수명주기 | 3 | 1 | 75% |
 | Native host activation `0.10.0` 후보 | 0 | 12 | 0% |
 | Prompt refine 자동 routing | 12 | 0 | 100% |
 | v0.9 test 기능 마감 | 18 | 0 | 100% |
@@ -70,7 +71,7 @@
 | Agent 자율 실행 지속 | 8 | 0 | 100% |
 | `0.9.2` 완료 기능·공개 문서 출시 | 12 | 0 | 100% |
 | Notion `v0.10` 후보 | 1 | 10 | 9.1% |
-| **Canonical total** | **573** | **22** | **96.3%** |
+| **Canonical total** | **576** | **23** | **96.2%** |
 
 External production boundary 항목도 미완료 합계에 포함. Protected authority 없이 완료 처리 금지.
 
@@ -115,6 +116,7 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
 | [`active/source-knowledge-import-0.9.3.md`](active/source-knowledge-import-0.9.3.md) | `SKI93-*` | source workspace 안전 scan·reviewed user-root collection |
 | [`active/source-knowledge-import-0.9.4.md`](active/source-knowledge-import-0.9.4.md) | `SKI94-*` | scan preview/apply validation parity·source current-truth reimport |
 | [`active/language-contract-0.9.4.md`](active/language-contract-0.9.4.md) | `LGC94-*` | ASD-STE100 영어·한국어 응답 언어 계약 |
+| [`active/worktree-lifecycle-0.9.4.md`](active/worktree-lifecycle-0.9.4.md) | `WTR94-*` | 단일 기준 작업 폴더·임시 작업 폴더 즉시 정리 |
 | [`active/knowledge-access-optimization-0.9.3.md`](active/knowledge-access-optimization-0.9.3.md) | `KBA93-*` | explicit collection access·index-time automatic promotion |
 | [`active/v0.10.0-native-host-activation-candidate.md`](active/v0.10.0-native-host-activation-candidate.md) | `NHA10-*` | default-off native host activation·actual lifecycle evidence |
 | [`active/v0.9.3-release-loop.graph.md`](active/v0.9.3-release-loop.graph.md) | graph | `0.9.3` release loop checkpoint·recovery 계약 |

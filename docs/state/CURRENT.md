@@ -3,13 +3,14 @@
 - 기준 branch: `main` stable `179c909`, `develop` patch handoff 기준
 - product version: `0.9.4` patch 개발 기준
 - 다음 release target: `0.9.4-test` 수용 뒤 정식판 여부 유지보수자 결정
-- plan revision: `201`
-- 현재 milestone: `0.9.3` 정식 출시·Windows 수용 완료, `0.9.4` source knowledge scan validation 정합성·응답 언어 금지 규칙 보강
+- plan revision: `202`
+- 현재 milestone: `0.9.3` 정식 출시·Windows 수용 완료, `0.9.4` source knowledge scan validation 정합성·응답 언어 금지 규칙 보강·작업 폴더 수명주기
 - 기능 기준: `2cec0377748874748d126b6b55e59975a3f20a02`; release discipline base `c777da1`
 - 제외: `NHA10-001–012`·`N10-002–011`의 `0.10.0-test`
 - `0.9.4` source knowledge scan correction 완료: `--candidates`와 `--apply`의 store-level validation parity, claim-bound credential diagnostic, canonical provenance summary의 human review ID false-positive 제거. source build로 61개 current-truth fact·architecture claim을 source-private `aigent-hive` collection에 재적용, automatic shared promotion `0건`, generation 115와 PortareFolium explicit retrieval 확인. published `0.9.3` stable artifact 변경 없음; installed `0.9.3` binary의 correction은 `0.9.4-test` publication 뒤 검증 필요
 - `0.9.4` 응답 언어 계약 완료: 원본 `.agents`와 소비자 하네스에 ASD-STE100 영어·한국어 의미 중심 문장 기준 반영. `user-setup` 4개 투영 byte 일치, 렌더된 소비자 `AGENTS.md`·31개 focused 시험·문서 말투·Markdown 링크·Source Wiki 색인 재생성·lint 검사 통과
 - `0.9.4` 응답 언어 보강 완료: 치환 가능한 영어 혼용·혼합 합성어·강조용 영어 괄호·영어 어순 직역 금지와 자연스러운 한국어 대체 예시를 원본·소비자 계약에 반영. 정적 계약·네 Skill 투영 byte 일치·렌더된 소비자 `AGENTS.md` 수명주기 31개 시험 통과, 문서 말투 finding `0`
+- `0.9.4` 작업 폴더 수명주기 진행: 일반 작업의 단일 기준 작업 폴더 우선, 안전한 순차 처리 불가한 병렬 독립 변경 때만 추가 작업 폴더 허용, 원격 도달성·미반영 작업 없음 확인 뒤 즉시 제거 규칙·정적 계약 반영. 남은 항목: `develop` 원격 반영·기준 작업 폴더 전환·현재 임시 작업 폴더 제거
 - 문서 gate: root·번역 README, 설치 안내, 공개 HTML, npm README, plugin metadata,
   문서 색인·명령·version 예시 전수 최신화와 공개 artifact 재검증
 - `0.9.2` 안정판 완료: PR #25 전체 CI PASS·merge exact `a502867e6b20e8f22bc014af05ca678f211f40ed`.
