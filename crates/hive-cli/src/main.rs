@@ -480,7 +480,7 @@ fn check_usage(arguments: &UsageArguments) -> ActionResult {
         &snapshot.sensor_id,
         &snapshot.sensor_version,
         &snapshot.provider,
-        &arguments.account_digest,
+        &snapshot.account_digest,
     )
     .with_stop_remaining_percent(arguments.threshold) else {
         return usage_unknown_result("usage threshold policy is invalid", None);

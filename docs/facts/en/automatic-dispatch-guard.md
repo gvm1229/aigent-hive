@@ -9,7 +9,7 @@ summary: "A usage preflight blocks unsafe automatic dispatch but never authorize
 tags: [dispatch, guard, usage]
 aliases: ["One-shot usage gate"]
 sources:
-  - "repo:docs/decisions/ADR-0010-native-first-usage-sensors.md#sha256:5602025a4eb182cc6e51cc816cab74983f10ee2bdd2f6324649de63fdbddef1f"
+  - "repo:docs/decisions/ADR-0010-native-first-usage-sensors.md#sha256:4e753ff25c9c2c604b59b60d27cace205a8e5f7cf377538db6dd6156835f0408"
 links: [run-recovery, usage-sensor-policy]
 reviewed_revision: "git:722c8e46dbde5710155b394ef33820ebccd3b85c"
 status: active

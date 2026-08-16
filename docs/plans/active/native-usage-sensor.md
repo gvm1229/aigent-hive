@@ -113,10 +113,10 @@ Pre-1.0 deferred `NUS-020`: 실제 Claude Pro/Max host의 5-hour·7-day parity,
 
 ## 7. Codex native account recovery
 
-- [ ] [NUS-029] Codex native sensor가 supplied account digest를 찾지 못해도 현재 app-server 응답의
+- [x] [NUS-029] Codex native sensor가 supplied account digest를 찾지 못해도 현재 app-server 응답의
   authenticated account가 정확히 하나면 native-only unbound 재시도 후 새 digest로 측정 계속. 복수·누락
   identity·malformed·stale·quota 제한은 기존 fail-closed 유지, CodexBar 호출 `0회`
-- [ ] [NUS-030] invalid supplied digest의 단일 native account recovery, 복수 account 거부, malformed
+- [x] [NUS-030] invalid supplied digest의 단일 native account recovery, 복수 account 거부, malformed
   response·native limited 보존과 session halt 회귀를 Rust·CLI 적합성 시험으로 고정
 
 ## 해석

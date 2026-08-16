@@ -807,9 +807,22 @@ fn check_preferred_for_account(
 ) -> Result<NormalizedSnapshot, SensorError> {
     native_then_fallback(
         UsageHost::Codex,
-        native.read_codex_native(account_digest, now),
+        read_codex_native_with_account_recovery(native, account_digest, now),
         || check_with_runner_for_account(fallback, account_digest, now),
     )
+}
+
+pub(crate) fn read_codex_native_with_account_recovery(
+    native: &impl NativeUsageRunner,
+    account_digest: Option<&str>,
+    now: SystemTime,
+) -> Result<NormalizedSnapshot, SensorError> {
+    match native.read_codex_native(account_digest, now) {
+        Err(SensorError::AccountNotFound) if account_digest.is_some() => {
+            native.read_codex_native(None, now)
+        }
+        result => result,
+    }
 }
 
 pub(crate) fn native_then_fallback<T>(
@@ -963,7 +976,7 @@ where
         .map_err(AutomaticDispatchError::Sensor)?;
     qualify_and_dispatch_snapshot(
         &snapshot,
-        account_digest,
+        &snapshot.account_digest,
         threshold_percent,
         previous_snapshots,
         sampled_at,
@@ -1559,9 +1572,9 @@ mod tests {
         check_unique_with_runner, check_with_runner, consume_for_automatic_dispatch,
         native_then_fallback, normalize_output, normalize_output_for_account, parse_iso8601_z,
         qualify_and_dispatch_with_runner, resolve_program_in_path, AutomaticDispatchError,
-        CommandOutput, CommandRunner, NativeUsageRunner, NormalizedSnapshot, QualifiedExecutable,
-        SensorError, UsageHost, ANTIGRAVITY_USAGE_ARGUMENTS, CODEX_USAGE_ARGUMENTS, USAGE_TIMEOUT,
-        VERSION_TIMEOUT,
+        CommandOutput, CommandRunner, NativeUsageRunner, NormalizedSnapshot, NormalizedWindow,
+        QualifiedExecutable, SensorError, UsageHost, ANTIGRAVITY_USAGE_ARGUMENTS,
+        CODEX_USAGE_ARGUMENTS, USAGE_TIMEOUT, VERSION_TIMEOUT,
     };
     #[cfg(unix)]
     use super::{qualify_program, SystemCommandRunner};
@@ -1607,6 +1620,38 @@ mod tests {
         ) -> Result<NormalizedSnapshot, SensorError> {
             *self.invocations.borrow_mut() += 1;
             Err(self.error.clone())
+        }
+    }
+
+    struct SequencedNativeRunner {
+        responses: RefCell<VecDeque<Result<NormalizedSnapshot, SensorError>>>,
+        requested_accounts: RefCell<Vec<Option<String>>>,
+    }
+
+    impl SequencedNativeRunner {
+        fn new(
+            responses: impl IntoIterator<Item = Result<NormalizedSnapshot, SensorError>>,
+        ) -> Self {
+            Self {
+                responses: RefCell::new(responses.into_iter().collect()),
+                requested_accounts: RefCell::new(Vec::new()),
+            }
+        }
+    }
+
+    impl NativeUsageRunner for SequencedNativeRunner {
+        fn read_codex_native(
+            &self,
+            account_digest: Option<&str>,
+            _now: std::time::SystemTime,
+        ) -> Result<NormalizedSnapshot, SensorError> {
+            self.requested_accounts
+                .borrow_mut()
+                .push(account_digest.map(str::to_owned));
+            self.responses
+                .borrow_mut()
+                .pop_front()
+                .expect("sequenced native response should exist")
         }
     }
 
@@ -1688,6 +1733,25 @@ mod tests {
         CommandOutput {
             success: true,
             stdout: stdout.into(),
+        }
+    }
+
+    fn native_snapshot() -> NormalizedSnapshot {
+        NormalizedSnapshot {
+            sensor_id: "codex-app-server".to_owned(),
+            sensor_version: "0.145.0".to_owned(),
+            provider: "codex".to_owned(),
+            account_digest: account_digest(),
+            measured_at: 1_000,
+            expires_at: 1_060,
+            source_confidence: "local".to_owned(),
+            windows: vec![NormalizedWindow {
+                name: "session",
+                remaining_percent: 80.0,
+                window_minutes: Some(300),
+                resets_at: 1_300,
+                quota_pool: None,
+            }],
         }
     }
 
@@ -2288,6 +2352,50 @@ mod tests {
     }
 
     #[test]
+    fn invalid_native_account_digest_recovers_once_from_one_authenticated_account() {
+        let invalid_digest = format!("sha256:{}", "0".repeat(64));
+        let native =
+            SequencedNativeRunner::new([Err(SensorError::AccountNotFound), Ok(native_snapshot())]);
+        let fallback = FakeRunner::new([]);
+
+        let snapshot = check_preferred_with_runners(
+            &native,
+            &fallback,
+            &invalid_digest,
+            now("2026-07-23T12:00:30Z"),
+        )
+        .expect("one authenticated native account should recover the stale digest");
+
+        assert_eq!(snapshot.account_digest, account_digest());
+        assert_eq!(
+            native.requested_accounts.borrow().as_slice(),
+            &[Some(invalid_digest), None]
+        );
+        assert!(fallback.invocations.borrow().is_empty());
+    }
+
+    #[test]
+    fn invalid_native_account_digest_keeps_integrity_failure_closed() {
+        let native = SequencedNativeRunner::new([
+            Err(SensorError::AccountNotFound),
+            Err(SensorError::MissingIdentity),
+        ]);
+        let fallback = FakeRunner::new([]);
+
+        assert_eq!(
+            check_preferred_with_runners(
+                &native,
+                &fallback,
+                &account_digest(),
+                now("2026-07-23T12:00:30Z"),
+            ),
+            Err(SensorError::MissingIdentity)
+        );
+        assert_eq!(native.requested_accounts.borrow().len(), 2);
+        assert!(fallback.invocations.borrow().is_empty());
+    }
+
+    #[test]
     fn every_native_integrity_error_fails_closed_without_codexbar() {
         for error in [
             SensorError::Timeout,
@@ -2300,7 +2408,6 @@ mod tests {
             SensorError::AmbiguousData,
             SensorError::RowError,
             SensorError::MissingIdentity,
-            SensorError::AccountNotFound,
             SensorError::DuplicateAccount,
             SensorError::WrongProvider,
             SensorError::NonLocalSource,

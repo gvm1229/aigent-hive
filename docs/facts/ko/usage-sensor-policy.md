@@ -9,9 +9,11 @@ summary: "Qualified host-native sensor 우선과 optional CodexBar fallback."
 tags: [sensor, usage]
 aliases: ["Native-first usage"]
 sources:
-  - "repo:crates/hive-cli/src/main.rs#sha256:bd0a33c9ac1debb73761ff7f492b8d83f384d0ea6c1a5bdd4a42a71f0931b631"
+  - "repo:crates/hive-cli/src/main.rs#sha256:28b52a2fc376974b84b9d27cc83a8adecc2e2e221c75ef80ac2bfd325eb13627"
+  - "repo:crates/hive-cli/src/usage.rs#sha256:c60a6eecaa243ef0528c292303baca85f0bf4c4c4f654612bf97d15fa52ffe69"
+  - "repo:crates/hive-cli/src/usage_control.rs#sha256:6c5febe7ae1ac1a892f7ac412c40d1b8d9ae339fe73fa8153faf9bb22051e1c0"
   - "repo:crates/hive-cli/src/user_setup.rs#sha256:73d95136c28b6742d76d7aca0874144808500168a67fc97accdee9bc2b387481"
-  - "repo:docs/decisions/ADR-0010-native-first-usage-sensors.md#sha256:5602025a4eb182cc6e51cc816cab74983f10ee2bdd2f6324649de63fdbddef1f"
+  - "repo:docs/decisions/ADR-0010-native-first-usage-sensors.md#sha256:4e753ff25c9c2c604b59b60d27cace205a8e5f7cf377538db6dd6156835f0408"
   - "repo:harness/skills/user-setup/SKILL.md#sha256:1fcbb2b9b2db6d57bd40682f80db2a0a916ebbffb3434431038b609b6b743c11"
 links: [automatic-dispatch-guard, supported-hosts]
 reviewed_revision: "git:722c8e46dbde5710155b394ef33820ebccd3b85c"
@@ -23,6 +25,10 @@ status: active
 Host별 우선 surface: qualified native machine sensor. CodexBar: allowlisted native
 unavailable·unsupported 결과에서만 explicit consent로 사용하는 optional fallback.
 Native limited 판정 우회 금지.
+
+supplied Codex account digest를 찾지 못하면 native sensor가 완전한 authenticated account
+하나를 반환할 때만 digest 없이 한 번 재측정. identity 누락·복수·malformed·stale·limited는
+계속 fail-closed이며 CodexBar 호출 없음.
 
 신속 설정은 남은 사용량 `20%`에서 보호를 활성화. 정상 설정은 native-only probe가
 allowlisted 실패를 반환한 뒤에만 CodexBar를 설명하고 동의를 요청.
