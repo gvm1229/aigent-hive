@@ -1,7 +1,7 @@
 # 현재 상태
 
 - 기준 branch: `main` stable `8b37323`, `develop` patch handoff `e44b949`
-- product version: `0.9.4`
+- product version: `0.9.5`
 - 다음 release target: `0.9.5` compatible patch. `0.9.2` project base의 historical full-base 부재·declared migration range 불일치, bare binary update 뒤 user projection 미갱신, declared compatibility claim의 release qualification 부재 보강. `0.10.0` 후보 작업 시작 제외
 - plan revision: `226`
 - 현재 milestone: `HBC95-001`–`HBC95-005`, `AUP95-001`–`AUP95-006`, `RQC95-001`–`RQC95-007`, `NUS-029–030`, `KBP95-001–003` local gate 완료. 유지보수자 승인 범위: `MAC95-001` macOS qualification, `REL95-001–006` public test·protected integration·stable publication. `0.10.0` 후보 작업 제외 유지
