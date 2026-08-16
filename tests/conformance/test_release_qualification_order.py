@@ -66,6 +66,28 @@ class ReleaseQualificationOrderContract(unittest.TestCase):
             with self.subTest(required=required):
                 self.assertIn(required, text)
 
+    def test_public_test_requires_separate_publication_and_full_tag_history(self) -> None:
+        directive = re.sub(
+            r"\s+",
+            " ",
+            (ROOT / ".agents/directives/03-workflow.md").read_text(encoding="utf-8"),
+        )
+        candidate = (ROOT / ".github/workflows/release.yml").read_text(encoding="utf-8")
+        publication = (ROOT / ".github/workflows/release-publish.yml").read_text(
+            encoding="utf-8"
+        )
+        for required in (
+            "private artifact-generation result only",
+            "separate publication workflow succeeds",
+            "independent registry and GitHub Release checks",
+            "fetch-depth: 0",
+        ):
+            with self.subTest(required=required):
+                self.assertIn(required, directive)
+        self.assertIn("fetch-depth: 0", candidate)
+        self.assertIn("fetch-depth: 0", publication)
+        self.assertIn("candidate_run_id", publication)
+
     def test_product_changes_remain_bound_to_the_full_risk_verification_path(self) -> None:
         text = (ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8")
         for required in (

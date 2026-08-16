@@ -40,6 +40,14 @@
 - 현재 Windows x64: stable artifact 설치와 validation 성공
 - stable publication 뒤 의존 검사 성공
 
+## 공개 시험판 증거 규약
+
+- `Release candidate` 성공은 private artifact 생성만 의미. 공개 시험판 완료 표기 금지
+- 공개 시험판은 exact candidate run ID를 받는 별도 게시 작업 성공, npm exact version·`test`
+  tag, GitHub prerelease tag를 각각 외부 조회한 뒤에만 완료 처리
+- historical Git tag 또는 commit을 읽는 두 출시 작업은 full checkout history 필수. `latest`
+  태그는 test publication 뒤 이전 stable version과 동일 확인
+
 ## 호환성 인계
 
 - candidate artifact의 `release-project-base-coverage.json`과 `coverage_digest`를 public test·stable
