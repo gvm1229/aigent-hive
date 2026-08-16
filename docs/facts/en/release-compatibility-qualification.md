@@ -9,7 +9,7 @@ summary: "The 0.9.5 plan makes every declared compatibility source an executable
 tags: [compatibility, migration, release, testing]
 aliases: ["Compatibility matrix gate"]
 sources:
-  - "repo:.github/workflows/release.yml#sha256:3f92bd0fb18bf5519493389af3edcaf44a6d81e0c1c9fdc0382cf4a6931c7f6c"
+  - "repo:.github/workflows/release.yml#sha256:53f1b3c4284326ae392594d1135ad600ddbd8035ec2caf16ed9ea0e52dc2efd4"
   - "repo:crates/hive-cli/tests/historical_project_upgrade.rs#sha256:c5dba7810327a88235025ea62ba2b77387a072c8e76b044b661ddb911aa26220"
   - "repo:docs/plans/active/release-compatibility-qualification-0.9.5.md#sha256:edb53b6054f7d0f17a09e7331ff15e15aa02d630a1adbf483b954b400d83f247"
   - "repo:scripts/check-project-base-coverage.py#sha256:b7d0887ccd3e3a9019383c3cea283189361c17fa62d806f44096cd6825b67579"

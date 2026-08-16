@@ -9,7 +9,7 @@ summary: "After a successful stable GitHub Release, Aigent Hive sends its Korean
 tags: [discord, release, subscriber]
 aliases: [stable-release-discord]
 sources:
-  - "repo:.github/workflows/release-publish.yml#sha256:40594864c88b2ab2ddce13ee5f858167f717ad9649ba2e447bd75236d0494247"
+  - "repo:.github/workflows/release-publish.yml#sha256:b10bd374eea19774dcaab4c0bc8375f70aeeeb2a5c977ca531487619448b4c6c"
   - "repo:docs/plans/active/stable-release-discord-notification.md#sha256:a502d4265210ff29e64b25364381c6ad17aecf1ce4bf90f35e08ac240efb6f63"
   - "repo:docs/releases/0.9.4.subscriber.ko.md#sha256:6c8e438046a01dd5882040fbd9216cb8ebce68ba83bedb1c28b70cb58b559be8"
   - "repo:scripts/publish-stable-discord-update.py#sha256:9b1fe57e0141e59523edae80e910ad537ade2a0b105678b608ad0101b47c9da9"
