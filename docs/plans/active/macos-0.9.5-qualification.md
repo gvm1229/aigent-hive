@@ -12,9 +12,9 @@ release build·archive·설치 수용을 같은 source commit에 결합. 이전 
 
 ## Checklist
 
-- [ ] `MAC95-001` macOS arm64와 x86_64에서 current `develop` source의 locked release build·format·workspace
+- [x] `MAC95-001` macOS arm64와 x86_64에서 current `develop` source의 locked release build·format·workspace
   test·macOS 조건부 conformance·archive direct-install·`project upgrade --validate`·`install --scope user --validate`
-  실행. exact commit·명령·pass/skip/fail·artifact digest를 `CURRENT.md`에 기록
+  실행. source `7ad1e58` product bytes, 명령·pass/skip/fail·artifact digest는 `CURRENT.md`에 기록
 
 ## 인계 기준
 

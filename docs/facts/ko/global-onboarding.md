@@ -9,7 +9,7 @@ summary: "전역 설정: 사용량 보호 활성화 권장, native 실패 전 Co
 tags: [bootstrap, onboarding, setup]
 aliases: ["User setup"]
 sources:
-  - "repo:README.md#sha256:ccbceb561eaf933b62b3a88c52a0cc8636efe7f67366aba44b71a6fb539c02f0"
+  - "repo:README.md#sha256:362f1c802d9f436ffc33682d07709ed9655ce8fa098085f8d930fba93a84888e"
   - "repo:crates/hive-cli/src/user_setup.rs#sha256:73d95136c28b6742d76d7aca0874144808500168a67fc97accdee9bc2b387481"
   - "repo:docs/decisions/ADR-0012-global-onboarding-shared-index.md#sha256:dea6123b7b193eb760a37b198566f9318d868fd7035491ac10756de0d4315530"
   - "repo:docs/decisions/product-release-decisions.md#sha256:247789edbe3b2bef73bc7a192a9d0ef44b204a3195b7dfc9e4ed7aa95926237a"
