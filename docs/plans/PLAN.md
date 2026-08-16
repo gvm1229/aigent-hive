@@ -107,9 +107,9 @@
 | `0.9.5` 출시 호환성 수용 게이트 | 7 | 0 | 100% |
 | `0.9.5` macOS 외부 검증 | 0 | 1 | 0% |
 | `0.9.5` native sensor 복구 | 2 | 0 | 100% |
-| `0.9.5` 지식 번들 이식 안내 | 0 | 3 | 0% |
+| `0.9.5` 지식 번들 이식 안내 | 3 | 0 | 100% |
 | `0.9.5` 공개 시험·정식 출시 | 0 | 6 | 0% |
-| **Canonical total** | **636** | **32** | **95.2%** |
+| **Canonical total** | **639** | **29** | **95.7%** |
 
 External production boundary 항목도 미완료 합계에 포함. Protected authority 없이 완료 처리 금지.
 
@@ -219,7 +219,7 @@ observation, stable-release-dependent release lane 완료. `0.10.0` 후보 항�
 완료: 안정판 GitHub Release 뒤 Discord 배너 전송 성공 후에만 `update-summary` 한국어 구독자 요약 전송·회귀 검증.
 완료: 다음 version 미정 지식 Skill 다섯 개 한국어 표시 이름의 영문 ID 제거, 설명 첫머리 ID 유지. `v0.9.4` release·tag·package 변경 없음.
 현재: `HBC95-001–005`·`AUP95-001–006`·`RQC95-*`의 로컬 구현·검증 완료. 유지보수자 명시 승인에
-따라 `MAC95-001` macOS qualification, `KBP95-*` knowledge-bundle portability, `REL95-001–006`
-numbered public test·protected `main` integration·stable publication 재개. `NUS-029–030`은 native-only
-account recovery 구현·Rust/CLI/macOS actual sensor 수용 완료. Ralph graph는
+따라 `MAC95-001` macOS qualification과 `REL95-001–006` numbered public test·protected `main`
+integration·stable publication 재개. `NUS-029–030` native-only account recovery와 `KBP95-*`
+platform-specific knowledge-bundle guidance·macOS acceptance 완료. Ralph graph는
 `v095-local-qualification` 뒤 `v095-stable-release` 순서.

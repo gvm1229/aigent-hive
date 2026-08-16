@@ -336,6 +336,7 @@
       <a href="#install">5단계 설치</a>
       <a href="#alternatives">다른 설치 방법</a>
       <a href="#update">Update</a>
+      <a href="#knowledge">지식 이전</a>
       <a href="#done">완료 확인</a>
     </div>
   </nav>
@@ -480,8 +481,59 @@ npm --version</code></pre>
       </div>
     </section>
 
+    <section id="knowledge">
+      <div class="section-head"><span class="section-number">04</span><h2>다른 컴퓨터로 전역 지식 이전</h2></div>
+      <p><code>.hivekb</code> bundle로 전역 지식 이전. <code>--user-root</code> 값은 <code>.hive</code> 폴더가 아닌 사용자 홈 디렉터리.</p>
+      <div class="callout plain">
+        <p><strong>포함 범위:</strong> 전역 정본 Markdown 지식. SQLite 색인·runtime 상태·project-private 지식·비밀 값·절대 경로 복사 없음.</p>
+      </div>
+      <p>현재 운영체제의 셸 예시만 사용. macOS·Linux의 <code>$HOME</code>과 Windows PowerShell의 <code>$env:USERPROFILE</code> 교차 사용 금지.</p>
+      <details open>
+        <summary>macOS · Linux 셸</summary>
+        <div class="detail-body">
+          <p>내보내기와 SHA-256 확인</p>
+          <div class="code">
+            <span class="label">SHELL</span>
+            <pre><code>bundle="$HOME/Downloads/aigent-hive-knowledge-YYYY-MM-DD.hivekb"
+hive knowledge export --user-root "$HOME" --scope global --bundle "$bundle" --output json
+shasum -a 256 "$bundle"</code></pre>
+          </div>
+          <p>대상 컴퓨터: bundle 경로와 기대 SHA-256 값 교체 후 dry-run 우선 실행. 파일 존재·SHA-256 일치·충돌과 검증 오류 0건 뒤에만 apply.</p>
+          <div class="code">
+            <span class="label">SHELL</span>
+            <pre><code>bundle="$HOME/Downloads/aigent-hive-knowledge-YYYY-MM-DD.hivekb"
+shasum -a 256 "$bundle"
+hive knowledge import --user-root "$HOME" --bundle "$bundle" --dry-run --output json
+hive knowledge import --user-root "$HOME" --bundle "$bundle" --apply --output json
+hive knowledge lint --target "$HOME" --user-root "$HOME" --output json</code></pre>
+          </div>
+        </div>
+      </details>
+      <details>
+        <summary>Windows PowerShell</summary>
+        <div class="detail-body">
+          <p>내보내기와 SHA-256 확인</p>
+          <div class="code">
+            <span class="label">POWERSHELL</span>
+            <pre><code>$bundle = "$env:USERPROFILE\Downloads\aigent-hive-knowledge-YYYY-MM-DD.hivekb"
+hive knowledge export --user-root $env:USERPROFILE --scope global --bundle $bundle --output json
+Get-FileHash -Algorithm SHA256 $bundle</code></pre>
+          </div>
+          <p>대상 컴퓨터: <code>Hash</code> 값과 bundle 검증 뒤 dry-run 우선 실행. 충돌과 검증 오류 0건 뒤에만 apply.</p>
+          <div class="code">
+            <span class="label">POWERSHELL</span>
+            <pre><code>$bundle = "$env:USERPROFILE\Downloads\aigent-hive-knowledge-YYYY-MM-DD.hivekb"
+Get-FileHash -Algorithm SHA256 $bundle
+hive knowledge import --user-root $env:USERPROFILE --bundle $bundle --dry-run --output json
+hive knowledge import --user-root $env:USERPROFILE --bundle $bundle --apply --output json
+hive knowledge lint --target $env:USERPROFILE --user-root $env:USERPROFILE --output json</code></pre>
+          </div>
+        </div>
+      </details>
+    </section>
+
     <section id="done">
-      <div class="section-head"><span class="section-number">04</span><h2>완료 확인</h2></div>
+      <div class="section-head"><span class="section-number">05</span><h2>완료 확인</h2></div>
       <div class="checklist">
         <div class="check"><code>hive --version</code>에서 stable version 확인</div>
         <div class="check">현재 host의 user-scope 활성화 결과 <code>success</code> 확인</div>

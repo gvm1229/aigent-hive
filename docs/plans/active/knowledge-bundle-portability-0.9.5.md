@@ -12,9 +12,9 @@
 
 ## Checklist
 
-- [ ] `KBP95-001` `README.md`와 `docs/hive-install-guide.ko.html`에 macOS/Linux 셸과 Windows PowerShell의 독립 명령 예시, 사용자 루트 의미, 절대 bundle 경로, SHA-256 확인과 dry-run 선행 조건 추가
-- [ ] `KBP95-002` 문서·패키지 정적 검증에 Windows 전용 `$env:USERPROFILE`과 macOS/Linux `$HOME`의 교차 사용 금지, 정확한 `hive knowledge export|import` 계약 추가
-- [ ] `KBP95-003` 현재 macOS의 격리 사용자 루트에서 전역 지식 내보내기 → SHA-256 확인 → dry-run import → apply import → lint 수용. 원본 사용자 루트·소스 저장소·SQLite 번들 복사 없음 확인
+- [x] `KBP95-001` `README.md`와 `docs/hive-install-guide.ko.html`에 macOS/Linux 셸과 Windows PowerShell의 독립 명령 예시, 사용자 루트 의미, 절대 bundle 경로, SHA-256 확인과 dry-run 선행 조건 추가
+- [x] `KBP95-002` 문서·패키지 정적 검증에 Windows 전용 `$env:USERPROFILE`과 macOS/Linux `$HOME`의 교차 사용 금지, 정확한 `hive knowledge export|import` 계약 추가
+- [x] `KBP95-003` 현재 macOS의 격리 사용자 루트에서 전역 지식 내보내기 → SHA-256 확인 → dry-run import → apply import → lint 수용. 원본 사용자 루트·소스 저장소·SQLite 번들 복사 없음 확인
 
 ## 수락 기준
 

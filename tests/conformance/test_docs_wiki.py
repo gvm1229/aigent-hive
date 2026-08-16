@@ -49,6 +49,23 @@ class DocsWikiConformance(unittest.TestCase):
             self.assertIn("docs/00-home.md", readme.replace("../", "docs/"))
             self.assertIn("docs/01-index.md", readme.replace("../", "docs/"))
 
+    def test_global_knowledge_bundle_guidance_keeps_shell_roots_separate(self) -> None:
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        install_guide = (DOCS / "hive-install-guide.ko.html").read_text(encoding="utf-8")
+
+        for text in (readme, install_guide):
+            self.assertIn("hive knowledge export --user-root", text)
+            self.assertIn("hive knowledge import --user-root", text)
+            self.assertIn("--scope global", text)
+            self.assertIn("--dry-run --output json", text)
+            self.assertIn("--apply --output json", text)
+            self.assertIn("$HOME", text)
+            self.assertIn("$env:USERPROFILE", text)
+
+        self.assertIn('"$HOME" --scope global', readme)
+        self.assertIn('$env:USERPROFILE --scope global', readme)
+        self.assertIn("$HOME</code>과 Windows PowerShell", install_guide)
+
     def test_old_readme_knowledge_has_current_topic_documents(self) -> None:
         product = (DOCS / "overview/product.md").read_text(encoding="utf-8")
         development = (DOCS / "guides/development.md").read_text(encoding="utf-8")

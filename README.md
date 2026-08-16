@@ -195,6 +195,60 @@ Antigravity session retries it.
 
 Hive never installs an update silently.
 
+## Move global knowledge to another computer
+
+Use a `.hivekb` bundle to move global knowledge between computers. `--user-root` is the
+user home directory, not its `.hive` subdirectory. Use the command block for the shell
+that is running it; do not copy a Windows environment variable into a macOS or Linux
+shell, or the reverse.
+
+The bundle contains portable canonical knowledge. It does not copy SQLite indexes,
+runtime state, project-private knowledge, credentials, or absolute local paths.
+
+### macOS and Linux shell
+
+Export the global bundle:
+
+```sh
+bundle="$HOME/Downloads/aigent-hive-knowledge-YYYY-MM-DD.hivekb"
+hive knowledge export --user-root "$HOME" --scope global --bundle "$bundle" --output json
+shasum -a 256 "$bundle"
+```
+
+On the destination computer, replace the bundle path and expected checksum with the values
+you received. Run the dry run first. Run `--apply` only after the file exists, the checksum
+matches, and the dry run reports no conflict or validation error.
+
+```sh
+bundle="$HOME/Downloads/aigent-hive-knowledge-YYYY-MM-DD.hivekb"
+shasum -a 256 "$bundle"
+hive knowledge import --user-root "$HOME" --bundle "$bundle" --dry-run --output json
+hive knowledge import --user-root "$HOME" --bundle "$bundle" --apply --output json
+hive knowledge lint --target "$HOME" --user-root "$HOME" --output json
+```
+
+### Windows PowerShell
+
+Export the global bundle:
+
+```powershell
+$bundle = "$env:USERPROFILE\Downloads\aigent-hive-knowledge-YYYY-MM-DD.hivekb"
+hive knowledge export --user-root $env:USERPROFILE --scope global --bundle $bundle --output json
+Get-FileHash -Algorithm SHA256 $bundle
+```
+
+On the destination computer, use the returned `Hash` value to verify the received bundle.
+Run `--apply` only after the file exists, the hash matches, and the dry run reports no
+conflict or validation error.
+
+```powershell
+$bundle = "$env:USERPROFILE\Downloads\aigent-hive-knowledge-YYYY-MM-DD.hivekb"
+Get-FileHash -Algorithm SHA256 $bundle
+hive knowledge import --user-root $env:USERPROFILE --bundle $bundle --dry-run --output json
+hive knowledge import --user-root $env:USERPROFILE --bundle $bundle --apply --output json
+hive knowledge lint --target $env:USERPROFILE --user-root $env:USERPROFILE --output json
+```
+
 ## Automatic dispatch safeguard
 
 When enabled, Hive checks subscription usage immediately before a new automatic
