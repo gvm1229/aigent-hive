@@ -6,7 +6,7 @@ use serde_json::{json, Value};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
-use tempfile::tempdir;
+use tempfile::{tempdir_in, TempDir};
 
 fn root() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR"))
@@ -14,6 +14,11 @@ fn root() -> PathBuf {
         .nth(2)
         .expect("workspace root")
         .to_path_buf()
+}
+
+fn secure_tempdir() -> TempDir {
+    let root = fs::canonicalize(std::env::temp_dir()).expect("canonical temporary root");
+    tempdir_in(root).expect("temporary consumer")
 }
 
 fn run_hive(arguments: &[&str]) -> std::process::Output {
@@ -125,7 +130,7 @@ fn seed_historical_project(target: &Path, version: &str) {
 #[test]
 fn compiled_cli_upgrades_each_full_historical_project_and_preserves_local_and_foreign_bytes() {
     for version in ["0.9.1", "0.9.2", "0.9.3"] {
-        let temporary = tempdir().expect("temporary consumer");
+        let temporary = secure_tempdir();
         let target = temporary.path().join("consumer");
         fs::create_dir_all(&target).expect("consumer directory");
         seed_historical_project(&target, version);
@@ -200,7 +205,7 @@ fn compiled_cli_upgrades_each_full_historical_project_and_preserves_local_and_fo
 
 #[test]
 fn compiled_cli_rejects_a_tampered_092_base_without_mutation() {
-    let temporary = tempdir().expect("temporary consumer");
+    let temporary = secure_tempdir();
     let target = temporary.path().join("consumer");
     fs::create_dir_all(&target).expect("consumer directory");
     seed_historical_project(&target, "0.9.2");

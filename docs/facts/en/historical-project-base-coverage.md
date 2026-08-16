@@ -10,7 +10,7 @@ tags: [migration, project-upgrade, regression, release]
 aliases: ["Historical base parity"]
 sources:
   - "repo:crates/hive-cli/src/project_upgrade.rs#sha256:162954ace665a9f30166cf241abe18b5e1168ebd8e862c106819a142d496bd46"
-  - "repo:crates/hive-cli/tests/historical_project_upgrade.rs#sha256:0aa8c272002f64443b8204e80f5744c02474e4621ca807d28cfe36ff3bdb49f6"
+  - "repo:crates/hive-cli/tests/historical_project_upgrade.rs#sha256:c5dba7810327a88235025ea62ba2b77387a072c8e76b044b661ddb911aa26220"
   - "repo:crates/hive-render/src/lib.rs#sha256:9ac7b87b5dde4f582027a219d4695c9158115e99041f10e304089cce4f55a30e"
   - "repo:scripts/check-project-base-coverage.py#sha256:b7d0887ccd3e3a9019383c3cea283189361c17fa62d806f44096cd6825b67579"
 links: [projection-upgrade-purge, update-transaction, version-policy]
