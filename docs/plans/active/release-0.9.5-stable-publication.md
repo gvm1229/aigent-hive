@@ -1,16 +1,15 @@
-# `0.9.5` 공개 시험·정식 출시 보류 프로토콜
+# `0.9.5` 공개 시험·정식 출시
 
 > Checklist owner: `REL95-*`
-> 대상: `0.9.5` patch, 현재 활성 목표 제외
+> 대상: `0.9.5` patch, 현재 활성 목표
 > 선행: `HBC95-001–005`, `AUP95-001–006`, `RQC95-001–007` 완료
 
-## 보류 결정
+## 출시 결정
 
-유지보수자 지시: `0.9.5`의 로컬 구현·검증만 진행. 번호 공개 시험판·정식 출시·protected `main`
-통합·현재 Windows 안정판 설치는 수행 금지. 이 문서는 다음 명시 재승인 때 사용할 배포 프로토콜이며
-`PLAN.md`의 active fragment·completion index에 포함하지 않음.
+유지보수자 명시 승인: `0.9.5` 번호 공개 시험판·정식 출시·protected `main` 통합·현재 Windows
+안정판 설치 진행. 이 문서는 `PLAN.md` active fragment·completion index의 release owner.
 
-## 재개 시 원칙
+## 원칙
 
 - Stable 채널: 탐색·회귀·수용 시험 경로 제외
 - 번호 public test: exact `develop` commit·artifact digest·Windows x64 실제 수용의 유일한 제품 수용 근거
@@ -18,7 +17,7 @@
 - protected `main` 통합·stable publication: accepted test와 동일 product bytes 사용
 - stable publication 뒤 현재 Windows x64 컴퓨터에 public stable artifact 설치·`hive --version`·user projection validate 확인
 
-## 재개 시 checklist
+## Checklist
 
 - [ ] `REL95-001` 모든 `0.9.5` 구현·문서·정적·Rust·Python local gate 완료. exact `develop` source
   commit·release input·artifact digest 고정
@@ -33,7 +32,7 @@
 - [ ] `REL95-006` `0.9.5` stable publication 뒤 stable-release-dependent test 전체 실행. current Windows x64에서
   exact public stable artifact 설치·`hive --version`·user projection `--validate`·public release/package 확인
 
-## 재개 시 수락 기준
+## 수락 기준
 
 - `0.9.5-test.N`: 공개·고유 번호·시험판 표기
 - stable: accepted test artifact와 다른 제품 byte `0건`
@@ -41,7 +40,7 @@
 - 현재 Windows x64: stable artifact 설치와 validation 성공
 - stable publication 뒤 의존 검사 성공
 
-## 재개 시 호환성 인계
+## 호환성 인계
 
 - candidate artifact의 `release-project-base-coverage.json`과 `coverage_digest`를 public test·stable
   handoff에 같은 값으로 인용
@@ -49,10 +48,10 @@
 - release 뒤 호환성 결함은 smallest compiled CLI reproducer·coverage category·다음 patch checklist ID를
   함께 기록한 뒤에만 후속 후보 준비
 
-## 이전 Ralph loop
+## Ralph loop
 
 - graph: [`v0.9.5-release-loop.graph.md`](v0.9.5-release-loop.graph.md)
-- run ID: `v095-stable-release` (현재 비활성)
+- run ID: `v095-stable-release`
 - retry: node별 최대 `3`회, 동일 failure 최대 `2`회
 - dispatch: active host 소유. `prepared_only=true`, `spawned=false` 외 Hive 실행 경로 없음
 
