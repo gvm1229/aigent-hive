@@ -1988,7 +1988,9 @@ fn execute_release_update_for_target_in(
         }
     });
     require_operational_update_preferences(target_version, replay_preferences.as_ref())?;
-    if authenticated_source_version != target_version {
+    if authenticated_source_version != target_version
+        && !requires_full_historical_project_base(authenticated_source_version)
+    {
         historical_builtin_skills(authenticated_source_version).map_err(|error| {
             RenderError::Verification(format!(
                 "authenticated release-update source is not covered by embedded history: {error}"
@@ -2216,6 +2218,8 @@ fn read_bytes(path: &Path, label: &str) -> Result<Vec<u8>, RenderError> {
 
 trait TargetRead {
     fn read_optional(&self, relative: &Path) -> Result<Option<Vec<u8>>, RenderError>;
+
+    fn open_target_dir(&self) -> Result<Dir, RenderError>;
 }
 
 impl TargetRead for Path {
@@ -2234,17 +2238,29 @@ impl TargetRead for Path {
             Err(error) => Err(io_internal(error)),
         }
     }
+
+    fn open_target_dir(&self) -> Result<Dir, RenderError> {
+        Dir::open_ambient_dir(self, ambient_authority()).map_err(io_internal)
+    }
 }
 
 impl TargetRead for PathBuf {
     fn read_optional(&self, relative: &Path) -> Result<Option<Vec<u8>>, RenderError> {
         self.as_path().read_optional(relative)
     }
+
+    fn open_target_dir(&self) -> Result<Dir, RenderError> {
+        self.as_path().open_target_dir()
+    }
 }
 
 impl TargetRead for Dir {
     fn read_optional(&self, relative: &Path) -> Result<Option<Vec<u8>>, RenderError> {
         read_capability_optional(self, relative)
+    }
+
+    fn open_target_dir(&self) -> Result<Dir, RenderError> {
+        self.try_clone().map_err(io_internal)
     }
 }
 
@@ -4403,6 +4419,9 @@ fn validate_release_projection_ownership<T: TargetRead + ?Sized>(
                 .to_owned(),
         ));
     }
+    if requires_full_historical_project_base(authenticated_source_version) {
+        return validate_full_historical_projection_ownership(target, authenticated_source_version);
+    }
     let authenticate_directives = authenticated_source_version == env!("CARGO_PKG_VERSION")
         || matches!(authenticated_source_version, "0.7.0" | "0.8.0" | "0.9.0");
     if !authenticate_directives {
@@ -4426,6 +4445,30 @@ fn validate_release_projection_ownership<T: TargetRead + ?Sized>(
             .map(|preferences| preferences.selected_project_skills.as_slice()),
         |relative, label| read_target_required(target, relative, label),
     )
+}
+
+fn validate_full_historical_projection_ownership<T: TargetRead + ?Sized>(
+    target: &T,
+    authenticated_source_version: &str,
+) -> Result<ValidatedProjectionOwnership, RenderError> {
+    let target_dir = target.open_target_dir()?;
+    let historical =
+        historical_project_upgrade_candidate_in(&target_dir, authenticated_source_version)?;
+    let mut files = BTreeMap::new();
+    for expected in historical.files {
+        let relative = PathBuf::from(&expected.path);
+        let installed = read_target_required(target, &relative, "projected historical file")?;
+        if installed != expected.content {
+            return Err(RenderError::Verification(format!(
+                "projected historical bytes changed: {}",
+                relative.display()
+            )));
+        }
+        if is_exact_projection_path(&relative) {
+            files.insert(relative, installed);
+        }
+    }
+    Ok(ValidatedProjectionOwnership { files })
 }
 
 fn reproduce_projection_ownership<T: TargetRead + ?Sized>(
@@ -6220,7 +6263,7 @@ fn stage_projection_recovery(
     relative: &Path,
     bytes: &[u8],
 ) -> Result<ProjectionRecovery, RenderError> {
-    validate_hive_skill_projection_relative(relative)
+    validate_exact_projection_relative(relative)
         .map_err(|error| RenderError::Rollback(error.to_string()))?;
     let mut created = Vec::new();
     let (parent, destination_name) = capability_parent(target, relative, false, &mut created)?

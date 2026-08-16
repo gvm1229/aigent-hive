@@ -55,6 +55,7 @@
     "hook-consent.schema.json",
     "judge-approval.schema.json",
     "judge-assignment.schema.json",
+    "judge-attestation.schema.json",
     "judge-package-request.schema.json",
     "judge-package.schema.json",
     "judge-quorum-request.schema.json",
