@@ -1,6 +1,6 @@
 # Aigent Hive active plan index
 
-> Revision: 225
+> Revision: 226
 > 기준일: 2026-08-15
 > Product version: `0.9.4` stable 기준, 다음 target `0.9.5` compatible patch
 > 현재 milestone: historical project base 수용 범위·사용자 투영 자동 갱신·출시 호환성 수용 게이트의 로컬 완료
@@ -18,8 +18,9 @@
   `HBC95-*` declared project migration range와 exact historical full project-base registry·matrix 수용,
   `AUP95-*` authenticated saved multi-host scope 기반 bare binary update 뒤 user projection 자동 갱신,
   `RQC95-*` declared compatibility contract·compiled/package artifact·local qualification gate,
-  `MAC95-001` macOS source qualification external evidence,
-  `REL94-*` local gate·번호 공개 시험판·Windows x64 설치/업그레이드 수용·protected `main`
+  `MAC95-001` macOS source qualification external evidence, `NUS-029–030` Codex native account
+  recovery, `KBP95-*` cross-platform knowledge-bundle guidance and macOS acceptance,
+  `REL95-*` local gate·번호 공개 시험판·Windows x64 설치/업그레이드 수용·protected `main`
   통합·동일 artifact stable publication·게시 뒤 의존 검사
 - Success: 동일 reviewed scan 파일의 candidate·apply 보안 수용 결과 일치, credential 거부의
   claim-bound remediation, source workspace의 current-truth architecture·intent·decision·fact private collection,
@@ -30,8 +31,9 @@
   prompt·명시 prompt 언어 우선, declared migration source release의 exact full base 인증·packaged
   binary matrix parity, bare binary update 뒤 authenticated saved multi-host projection refresh와
   safe binary-only fallback, declared compatibility contract의 compiled/package artifact matrix와
-  digest-bound local evidence. `HBC95-006`·`AUP95-007`·`REL95-001–006`의 public test·stable
-  publication은 현재 목표에서 명시 제외
+  digest-bound local evidence, current Codex native account recovery without CodexBar,
+  platform-specific knowledge-bundle guidance and macOS acceptance, numbered public test and
+  same-byte stable publication
 - Stop boundary: protected `main` review, stable publication environment approval, exact `1.0.0`
   authority, 설치 product usage guard remaining threshold `5%`
 - Invariants: provider-neutral, backend별 canonical source 우선, SQLite 파생 상태,
@@ -104,7 +106,10 @@
 | `0.9.5` 사용자 투영 자동 갱신 | 6 | 0 | 100% |
 | `0.9.5` 출시 호환성 수용 게이트 | 7 | 0 | 100% |
 | `0.9.5` macOS 외부 검증 | 0 | 1 | 0% |
-| **Canonical total** | **634** | **23** | **96.5%** |
+| `0.9.5` native sensor 복구 | 0 | 2 | 0% |
+| `0.9.5` 지식 번들 이식 안내 | 0 | 3 | 0% |
+| `0.9.5` 공개 시험·정식 출시 | 0 | 6 | 0% |
+| **Canonical total** | **634** | **34** | **94.9%** |
 
 External production boundary 항목도 미완료 합계에 포함. Protected authority 없이 완료 처리 금지.
 
@@ -147,6 +152,8 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
 | [`active/automatic-user-projection-refresh-0.9.5.md`](active/automatic-user-projection-refresh-0.9.5.md) | `AUP95-*` | authenticated saved multi-host scope·bare binary update 뒤 user projection refresh |
 | [`active/release-compatibility-qualification-0.9.5.md`](active/release-compatibility-qualification-0.9.5.md) | `RQC95-*` | declared compatibility contract·compiled/package artifact·public test evidence gate |
 | [`active/macos-0.9.5-qualification.md`](active/macos-0.9.5-qualification.md) | `MAC95-*` | 현재 Windows에서 실행 불가한 macOS source qualification |
+| [`active/knowledge-bundle-portability-0.9.5.md`](active/knowledge-bundle-portability-0.9.5.md) | `KBP95-*` | cross-platform global knowledge-bundle guidance and macOS acceptance |
+| [`active/release-0.9.5-stable-publication.md`](active/release-0.9.5-stable-publication.md) | `REL95-*` | numbered public test, protected integration, and stable publication |
 | [`active/release-0.9.3-test-qualification.md`](active/release-0.9.3-test-qualification.md) | `REL93-*` | `0.9.3` numbered public test 수용과 정식 출시 |
 | [`active/projection-validation-consistency-0.9.3.md`](active/projection-validation-consistency-0.9.3.md) | `VAL93-*` | local-preserved validation·formatter 보호 |
 | [`active/release-engineering-optimization-0.9.3.md`](active/release-engineering-optimization-0.9.3.md) | `OPT93-*` | risk-tier CI·candidate reuse·single-owner release evidence |
@@ -211,7 +218,7 @@ observation, stable-release-dependent release lane 완료. `0.10.0` 후보 항�
 완료: 제품 harness·release에 포함하지 않는 source workspace 전용 `update-summary` Skill의 구독자 관점 필터 보강·구조 검증.
 완료: 안정판 GitHub Release 뒤 Discord 배너 전송 성공 후에만 `update-summary` 한국어 구독자 요약 전송·회귀 검증.
 완료: 다음 version 미정 지식 Skill 다섯 개 한국어 표시 이름의 영문 ID 제거, 설명 첫머리 ID 유지. `v0.9.4` release·tag·package 변경 없음.
-현재: `HBC95-001–005`·`AUP95-001–006`·`RQC95-*`의 로컬 구현·검증. Ralph graph는
-`v095-local-qualification`. `HBC95-006`·`AUP95-007`·`REL95-001–006`의 공개 시험판·정식
-배포와 현재 Windows 안정판 설치는 유지보수자 명시 재승인 전 제외. `MAC95-001`은 macOS에서만
-유지보수자가 수행할 외부 증거.
+현재: `HBC95-001–005`·`AUP95-001–006`·`RQC95-*`의 로컬 구현·검증 완료. 유지보수자 명시 승인에
+따라 `MAC95-001` macOS qualification, `NUS-029–030` native account recovery, `KBP95-*`
+knowledge-bundle portability, `REL95-001–006` numbered public test·protected `main` integration·stable
+publication 재개. Ralph graph는 `v095-local-qualification` 뒤 `v095-stable-release` 순서.
