@@ -819,7 +819,7 @@ fn install_direct(
 fn validate_direct_installer(bytes: &[u8], target: &PackageVersion) -> Result<(), String> {
     let text =
         std::str::from_utf8(bytes).map_err(|_| "direct installer is not valid UTF-8".to_owned())?;
-    if text.contains("__AIGENT_HIVE_") {
+    if text.lines().any(|line| line.contains("= \"__AIGENT_HIVE_")) {
         return Err("direct installer contains unresolved release markers".to_owned());
     }
     let expected_product = if cfg!(windows) {
@@ -1293,6 +1293,22 @@ mod tests {
         assert!(parse_arguments(&["--channel".to_owned(), "preview".to_owned()]).is_err());
         assert!(parse_arguments(&["--user-root".to_owned(), "relative".to_owned()]).is_err());
         assert!(parse_arguments(&["--confirm".to_owned(), "--confirm".to_owned()]).is_err());
+    }
+
+    #[test]
+    fn direct_installer_allows_the_optional_signer_fallback_but_not_bound_markers() {
+        let product = env!("CARGO_PKG_VERSION");
+        let package = format!("{product}-test.2");
+        let installer = format!(
+            "[string]$Version = \"{product}\"\n[string]$PackageVersion = \"{package}\"\n$ExpectedArchiveSha256 = \"abc\"\nif ($AuthorizedSignerThumbprint -like \"__AIGENT_HIVE_*\") {{ }}\n"
+        );
+        let target = parse_package_version(&package).expect("test package");
+        validate_direct_installer(installer.as_bytes(), &target).expect("optional signer fallback");
+        let unresolved = installer.replace(
+            "$ExpectedArchiveSha256 = \"abc\"",
+            "$ExpectedArchiveSha256 = \"__AIGENT_HIVE_ARCHIVE__\"",
+        );
+        assert!(validate_direct_installer(unresolved.as_bytes(), &target).is_err());
     }
 
     #[test]
