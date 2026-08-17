@@ -10,6 +10,7 @@ import os
 import shutil
 import subprocess
 import sys
+import time
 import uuid
 from pathlib import Path
 from typing import Any
@@ -249,7 +250,16 @@ usage_guard:
     if completed.returncode != 0:
         raise RuntimeError(f"test-channel update failed: {completed.stderr}")
     results.append({"command": "update", "stderr": completed.stderr})
-    results.append(run(commands[5], environment, test_root))
+    for _ in range(60):
+        validation = subprocess.run(
+            commands[5], cwd=test_root, env=environment, check=False, text=True, capture_output=True
+        )
+        if validation.returncode == 0:
+            results.append({"command": "validate", "code": validation.returncode})
+            break
+        time.sleep(0.5)
+    else:
+        raise RuntimeError("test-channel update handoff did not complete its user projection validation")
     return {
         "mode": "user",
         "result_codes": [result["code"] for result in results],

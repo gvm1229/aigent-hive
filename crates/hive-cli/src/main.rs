@@ -218,7 +218,7 @@ fn main() -> ExitCode {
                 || arguments.get(1).is_some_and(|argument| {
                     matches!(
                         argument.as_str(),
-                        "--channel" | "--user-root" | "--confirm" | "--help"
+                        "--channel" | "--user-root" | "--confirm" | "--direct-handoff" | "--help"
                     )
                 }) =>
         {

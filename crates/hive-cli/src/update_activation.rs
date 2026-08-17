@@ -7,14 +7,16 @@ use std::env;
 use std::fs;
 use std::io::{self, BufRead, IsTerminal, Write};
 use std::path::{Path, PathBuf};
-use std::process::ExitCode;
-use std::time::Duration;
+use std::process::{Command, ExitCode};
+use std::thread;
+use std::time::{Duration, Instant};
 
 const MAX_MANIFEST_BYTES: u64 = 1024 * 1024;
 const MAX_BINARY_BYTES: u64 = 128 * 1024 * 1024;
 const MAX_INSTALLER_BYTES: usize = 1024 * 1024;
 const INSTALL_TIMEOUT: Duration = Duration::from_mins(10);
 const INSTALL_OUTPUT_LIMIT: usize = 4 * 1024 * 1024;
+const DIRECT_HANDOFF_HELPER: &str = ".hive/runtime/update/hive-direct-update-helper.exe";
 
 #[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
 enum PackageChannel {
@@ -33,6 +35,7 @@ enum UpdateChannel {
 struct UpdateArguments {
     channel: UpdateChannel,
     confirm: bool,
+    handoff_executable: Option<PathBuf>,
     user_root: Option<PathBuf>,
 }
 
@@ -276,6 +279,7 @@ struct NpmManifest {
     aigent_hive: ProductBinding,
 }
 
+#[allow(clippy::too_many_lines)]
 pub(crate) fn run(arguments: &[String]) -> ExitCode {
     if arguments == ["--help"] {
         print!("{UPDATE_USAGE}");
@@ -297,7 +301,8 @@ pub(crate) fn run(arguments: &[String]) -> ExitCode {
     }
     let user_root = match arguments
         .user_root
-        .map_or_else(crate::user_install::resolve_user_root_path, Ok)
+        .as_deref()
+        .map_or_else(crate::user_install::resolve_user_root_path, |path| Ok(path.to_path_buf()))
     {
         Ok(root) => root,
         Err(message) => {
@@ -312,19 +317,37 @@ pub(crate) fn run(arguments: &[String]) -> ExitCode {
             return ExitCode::from(2);
         }
     };
-    let executable = match env::current_exe() {
+    let current_executable = match env::current_exe() {
         Ok(path) => path,
         Err(error) => {
             eprintln!("error: cannot resolve the running Hive executable: {error}");
             return ExitCode::from(2);
         }
     };
+    let executable = arguments
+        .handoff_executable
+        .as_deref()
+        .unwrap_or(&current_executable);
+    if cfg!(windows) && arguments.handoff_executable.is_none() && is_direct_owner(executable) {
+        if let Err(error) = spawn_windows_direct_handoff(&current_executable, &user_root, &arguments) {
+            eprintln!("error: cannot start Windows direct update handoff: {error}");
+            return ExitCode::from(2);
+        }
+        eprintln!("Windows direct update handoff started; completion continues in the child process.");
+        return ExitCode::SUCCESS;
+    }
+    if arguments.handoff_executable.is_some() {
+        if let Err(error) = wait_for_windows_direct_unlock(executable) {
+            eprintln!("error: {error}");
+            return ExitCode::from(2);
+        }
+    }
     let mut output = io::stderr().lock();
     let outcome = if arguments.confirm {
         let mut input = io::Cursor::new(b"y\n".as_slice());
         update_flow_with_projection_channel(
             &UpdateFlowContext {
-                executable: &executable,
+                executable,
                 user_root: &user_root,
                 language,
             },
@@ -342,7 +365,7 @@ pub(crate) fn run(arguments: &[String]) -> ExitCode {
         let mut input = io::stdin().lock();
         update_flow_with_projection_channel(
             &UpdateFlowContext {
-                executable: &executable,
+                executable,
                 user_root: &user_root,
                 language,
             },
@@ -370,6 +393,7 @@ fn parse_arguments(arguments: &[String]) -> Result<UpdateArguments, String> {
     let mut channel = UpdateChannel::Stable;
     let mut channel_seen = false;
     let mut confirm = false;
+    let mut handoff_executable = None;
     let mut user_root = None;
     let mut index = 0;
     while index < arguments.len() {
@@ -390,6 +414,17 @@ fn parse_arguments(arguments: &[String]) -> Result<UpdateArguments, String> {
                 confirm = true;
                 index += 1;
             }
+            "--direct-handoff" if handoff_executable.is_none() => {
+                let value = arguments
+                    .get(index + 1)
+                    .ok_or_else(|| "missing value for --direct-handoff".to_owned())?;
+                let path = PathBuf::from(value);
+                if !path.is_absolute() {
+                    return Err("--direct-handoff must be an absolute executable path".to_owned());
+                }
+                handoff_executable = Some(path);
+                index += 2;
+            }
             "--user-root" if user_root.is_none() => {
                 let value = arguments
                     .get(index + 1)
@@ -407,8 +442,49 @@ fn parse_arguments(arguments: &[String]) -> Result<UpdateArguments, String> {
     Ok(UpdateArguments {
         channel,
         confirm,
+        handoff_executable,
         user_root,
     })
+}
+
+fn is_direct_owner(executable: &Path) -> bool {
+    let Ok(expected) = env!("CARGO_PKG_VERSION").parse() else {
+        return false;
+    };
+    matches!(discover_owner(executable, expected), Ok(InstallOwner::Direct { .. }))
+}
+
+fn spawn_windows_direct_handoff(executable: &Path, user_root: &Path, arguments: &UpdateArguments) -> Result<(), String> {
+    if !cfg!(windows) {
+        return Err("Windows direct update handoff is unavailable on this platform".to_owned());
+    }
+    let helper = user_root.join(DIRECT_HANDOFF_HELPER);
+    let parent = helper.parent().ok_or_else(|| "direct update helper has no parent directory".to_owned())?;
+    fs::create_dir_all(parent).map_err(|error| format!("cannot create direct update helper directory: {error}"))?;
+    if helper.exists() {
+        fs::remove_file(&helper).map_err(|error| format!("cannot replace prior direct update helper: {error}"))?;
+    }
+    fs::copy(executable, &helper).map_err(|error| format!("cannot copy direct update helper: {error}"))?;
+    let channel = match arguments.channel { UpdateChannel::Stable => "stable", UpdateChannel::Test => "test" };
+    let user_root = user_root.to_str().ok_or_else(|| "Hive user root is not UTF-8".to_owned())?;
+    let executable = executable.to_str().ok_or_else(|| "Hive executable path is not UTF-8".to_owned())?;
+    let mut command = Command::new(&helper);
+    command.args(["update", "--direct-handoff", executable, "--channel", channel, "--user-root", user_root]);
+    if arguments.confirm { command.arg("--confirm"); }
+    command.spawn().map_err(|error| format!("cannot launch direct update helper: {error}"))?;
+    Ok(())
+}
+
+fn wait_for_windows_direct_unlock(executable: &Path) -> Result<(), String> {
+    if !cfg!(windows) { return Ok(()); }
+    let deadline = Instant::now() + Duration::from_secs(30);
+    loop {
+        match fs::OpenOptions::new().write(true).open(executable) {
+            Ok(file) => { drop(file); return Ok(()); }
+            Err(error) if error.kind() == io::ErrorKind::PermissionDenied && Instant::now() < deadline => thread::sleep(Duration::from_millis(50)),
+            Err(error) => return Err(format!("direct update executable remained locked: {error}")),
+        }
+    }
 }
 
 fn selected_language(user_root: &Path) -> Result<Language, String> {
