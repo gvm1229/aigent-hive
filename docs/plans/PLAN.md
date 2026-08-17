@@ -1,6 +1,6 @@
 # Aigent Hive active plan index
 
-> Revision: 229
+> Revision: 230
 > 기준일: 2026-08-15
 > Product version: `0.9.4` stable 기준, 다음 target `0.9.5` compatible patch
 > 현재 milestone: historical project base 수용 범위·사용자 투영 자동 갱신·출시 호환성 수용 게이트의 로컬 완료
@@ -221,6 +221,7 @@ observation, stable-release-dependent release lane 완료. `0.10.0` 후보 항�
 완료: 다음 version 미정 지식 Skill 다섯 개 한국어 표시 이름의 영문 ID 제거, 설명 첫머리 ID 유지. `v0.9.4` release·tag·package 변경 없음.
 현재: `HBC95-001–005`·`AUP95-001–006`·`RQC95-*`의 로컬 구현·검증 완료. `REL95-001–002`는
 `develop@224170e`의 `0.9.5-test.3` 공개 시험으로 완료. `REL95-003–004`는 현재 Codex host
-marketplace ownership conflict로 안전 중단, `REL95-005–006`은 수용 뒤 순서 유지. `NUS-029–030`
+marketplace ownership conflict로 안전 중단. `REL95-004`: PortareFolium `0.9.2` consumer의 Hive-owned
+subset copy와 public test artifact 실행 계획 우선. `REL95-005–006`은 수용 뒤 순서 유지. `NUS-029–030`
 native-only account recovery와 `KBP95-*` platform-specific knowledge-bundle guidance·macOS acceptance 완료.
 Ralph graph는 `v095-local-qualification` 뒤 `v095-stable-release` 순서.

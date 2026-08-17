@@ -11,7 +11,7 @@ aliases: ["Compatibility matrix gate"]
 sources:
   - "repo:.github/workflows/release.yml#sha256:53f1b3c4284326ae392594d1135ad600ddbd8035ec2caf16ed9ea0e52dc2efd4"
   - "repo:crates/hive-cli/tests/historical_project_upgrade.rs#sha256:c5dba7810327a88235025ea62ba2b77387a072c8e76b044b661ddb911aa26220"
-  - "repo:docs/plans/active/release-0.9.5-stable-publication.md#sha256:d9f9822da183e33fd431a33983504884a429cb4712442555c8dc5388c1da35c0"
+  - "repo:docs/plans/active/release-0.9.5-stable-publication.md#sha256:eb745caa379f293cfb71acb07a680a840765d1c3d803e70473110a8e3f3f9c22"
   - "repo:docs/plans/active/release-compatibility-qualification-0.9.5.md#sha256:fde4ef5a0a738761093a40f84f93d0a6eb4e6a5e64449f606b71ef6619cb20da"
   - "repo:scripts/check-project-base-coverage.py#sha256:b7d0887ccd3e3a9019383c3cea283189361c17fa62d806f44096cd6825b67579"
 links: [historical-project-base-coverage, release-verification, test-lane-inventory]

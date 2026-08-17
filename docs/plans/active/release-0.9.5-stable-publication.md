@@ -42,6 +42,23 @@
 - Windows isolated acceptance: public direct installer와 npm `0.9.4 → 0.9.5-test.3` upgrade의 version identity 성공
 - blocked: existing Codex marketplace ownership과 user installation manifest가 authenticated Hive release와 불일치. public test binary의 user projection validate·bare update 및 public `0.9.2` project setup은 mutation 없이 중단
 
+## PortareFolium `0.9.2` fixture 수용 계획
+
+대상: 실제 PortareFolium consumer의 `harness_version`·`project-base.json` `0.9.2` 확인. 원본 project와
+Codex host configuration 변경 금지. 이 계획은 `REL95-004` 수용 증거 전용이며 `REL95-003` 사용자
+projection·bare update 수용의 대체 근거 아님.
+
+1. 원본 read-only preflight: canonical project root·`hive-source.json` 부재·48개 full-ledger entry·ledger digest·필수 support config 다이제스트 기록
+2. 새 `tests/work/` fixture: ledger가 열거한 48개 Hive-owned projection과 `.hive/setup-answers.yml`, `harness.toml`, `capability-resolution.yml`, `active-skills.yml`, `approved-skills.yml`, `knowledge-scope.yml`, `project-overrides.json`, `role-seeds.yml`만 exact byte copy
+3. 제외: project source·`.git`·`node_modules`·`.env*`·`.auth`·`.local`·`.omx`·`.omc`·`.hive/runtime`·`.hive/index`·knowledge·backup·host-global configuration. Fixture 전용 foreign sentinel 생성
+4. source와 fixture의 allowlist manifest·SHA-256 비교 뒤 public npm `aigent-hive@0.9.5-test.3` binary로 `project upgrade --scan`, `--dry-run`, `--apply`, `--validate` 실행
+5. fixture 별도 copy에서 shared-marker local addition 보존·foreign sentinel byte 불변·tampered ledger no-mutation 검증. debug-only fault injection은 public release 수용 근거 제외
+6. 종료 조건: 원본 snapshot 변화 `0건`, public artifact 결과·source commit·Windows package digest·fixture manifest digest를 `REL95-004` evidence에 결속. 실패 시 stable promotion 중단
+
+Codex plugin marketplace: fixture 경로 미사용. `project upgrade`에는 project-local ledger·setup
+answers·capability resolution·harness만 필요. 기존 Codex marketplace ownership conflict: `REL95-003`
+전역 user projection 검증의 별도 문제.
+
 ## 수락 기준
 
 - `0.9.5-test.N`: 공개·고유 번호·시험판 표기
