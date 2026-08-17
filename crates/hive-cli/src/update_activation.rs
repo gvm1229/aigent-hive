@@ -24,6 +24,34 @@ enum PackageChannel {
     Stable,
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum UpdateChannel {
+    Stable,
+    Test,
+}
+
+struct UpdateArguments {
+    channel: UpdateChannel,
+    confirm: bool,
+    user_root: Option<PathBuf>,
+}
+
+#[derive(Clone, Copy)]
+struct UpdateSelection {
+    channel: UpdateChannel,
+    confirmed: bool,
+}
+
+const UPDATE_USAGE: &str = "\
+Update the installed Aigent Hive package and its authenticated user projections.
+
+USAGE:
+    hive update [--channel stable|test] [--user-root <absolute-dir>] [--confirm]
+
+The default channel is stable. The test channel requires explicit --channel test.
+--confirm accepts the displayed exact update without an interactive terminal.
+";
+
 #[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
 struct PackageVersion {
     product: SemVersion,
@@ -214,6 +242,7 @@ struct RegistryMetadata {
 #[derive(Deserialize)]
 struct DistTags {
     latest: String,
+    test: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -247,15 +276,29 @@ struct NpmManifest {
     aigent_hive: ProductBinding,
 }
 
-pub(crate) fn run() -> ExitCode {
+pub(crate) fn run(arguments: &[String]) -> ExitCode {
+    if arguments == ["--help"] {
+        print!("{UPDATE_USAGE}");
+        return ExitCode::SUCCESS;
+    }
+    let arguments = match parse_arguments(arguments) {
+        Ok(arguments) => arguments,
+        Err(message) => {
+            eprintln!("error: {message}");
+            return ExitCode::from(2);
+        }
+    };
     let interactive = io::stdin().is_terminal() && io::stderr().is_terminal();
-    if !interactive {
+    if !interactive && !arguments.confirm {
         eprintln!(
-            "update blocked: bare `hive update` requires an interactive terminal; no update was installed"
+            "update blocked: `hive update` requires an interactive terminal or explicit --confirm; no update was installed"
         );
         return ExitCode::from(3);
     }
-    let user_root = match crate::user_install::resolve_user_root_path() {
+    let user_root = match arguments
+        .user_root
+        .map_or_else(crate::user_install::resolve_user_root_path, Ok)
+    {
         Ok(root) => root,
         Err(message) => {
             eprintln!("error: {message}");
@@ -276,26 +319,96 @@ pub(crate) fn run() -> ExitCode {
             return ExitCode::from(2);
         }
     };
-    let mut input = io::stdin().lock();
     let mut output = io::stderr().lock();
-    match update_flow_with_projection(
-        &UpdateFlowContext {
-            executable: &executable,
-            user_root: &user_root,
-            language,
-        },
-        &LiveRegistry,
-        &LiveInstaller,
-        &LiveProjectionRefresher,
-        &mut input,
-        &mut output,
-    ) {
+    let outcome = if arguments.confirm {
+        let mut input = io::Cursor::new(b"y\n".as_slice());
+        update_flow_with_projection_channel(
+            &UpdateFlowContext {
+                executable: &executable,
+                user_root: &user_root,
+                language,
+            },
+            &LiveRegistry,
+            &LiveInstaller,
+            &LiveProjectionRefresher,
+            UpdateSelection {
+                channel: arguments.channel,
+                confirmed: true,
+            },
+            &mut input,
+            &mut output,
+        )
+    } else {
+        let mut input = io::stdin().lock();
+        update_flow_with_projection_channel(
+            &UpdateFlowContext {
+                executable: &executable,
+                user_root: &user_root,
+                language,
+            },
+            &LiveRegistry,
+            &LiveInstaller,
+            &LiveProjectionRefresher,
+            UpdateSelection {
+                channel: arguments.channel,
+                confirmed: false,
+            },
+            &mut input,
+            &mut output,
+        )
+    };
+    match outcome {
         Ok(_) => ExitCode::SUCCESS,
         Err(message) => {
             eprintln!("error: {message}");
             ExitCode::from(2)
         }
     }
+}
+
+fn parse_arguments(arguments: &[String]) -> Result<UpdateArguments, String> {
+    let mut channel = UpdateChannel::Stable;
+    let mut channel_seen = false;
+    let mut confirm = false;
+    let mut user_root = None;
+    let mut index = 0;
+    while index < arguments.len() {
+        match arguments[index].as_str() {
+            "--channel" if !channel_seen => {
+                let value = arguments
+                    .get(index + 1)
+                    .ok_or_else(|| "missing value for --channel".to_owned())?;
+                channel = match value.as_str() {
+                    "stable" => UpdateChannel::Stable,
+                    "test" => UpdateChannel::Test,
+                    _ => return Err("--channel must be stable or test".to_owned()),
+                };
+                channel_seen = true;
+                index += 2;
+            }
+            "--confirm" if !confirm => {
+                confirm = true;
+                index += 1;
+            }
+            "--user-root" if user_root.is_none() => {
+                let value = arguments
+                    .get(index + 1)
+                    .ok_or_else(|| "missing value for --user-root".to_owned())?;
+                let path = PathBuf::from(value);
+                if !path.is_absolute() {
+                    return Err("--user-root must be an absolute directory".to_owned());
+                }
+                user_root = Some(path);
+                index += 2;
+            }
+            option => return Err(format!("unknown or duplicate update option: {option}")),
+        }
+    }
+    Ok(UpdateArguments {
+        channel,
+        confirm,
+        user_root,
+    })
 }
 
 fn selected_language(user_root: &Path) -> Result<Language, String> {
@@ -332,6 +445,7 @@ fn update_flow(
     )
 }
 
+#[cfg(test)]
 fn update_flow_with_projection(
     context: &UpdateFlowContext<'_>,
     registry: &impl RegistrySource,
@@ -340,12 +454,35 @@ fn update_flow_with_projection(
     input: &mut impl BufRead,
     output: &mut impl Write,
 ) -> Result<FlowOutcome, String> {
+    update_flow_with_projection_channel(
+        context,
+        registry,
+        installer,
+        refresher,
+        UpdateSelection {
+            channel: UpdateChannel::Stable,
+            confirmed: false,
+        },
+        input,
+        output,
+    )
+}
+
+fn update_flow_with_projection_channel(
+    context: &UpdateFlowContext<'_>,
+    registry: &impl RegistrySource,
+    installer: &impl Installer,
+    refresher: &impl ProjectionRefresher,
+    selection: UpdateSelection,
+    input: &mut impl BufRead,
+    output: &mut impl Write,
+) -> Result<FlowOutcome, String> {
     let current_product: SemVersion = env!("CARGO_PKG_VERSION")
         .parse()
         .map_err(|error| format!("compiled Hive version is invalid: {error}"))?;
     let owner = discover_owner(context.executable, current_product)?;
     let metadata = registry.fetch()?;
-    let target = target_package(&metadata)?;
+    let target = target_package(&metadata, selection.channel)?;
     if target.product.major != current_product.major {
         return Err(format!(
             "the npm distribution targets product {} and requires explicit major-version authority",
@@ -358,13 +495,15 @@ fn update_flow_with_projection(
     }
     let hosts = refresher.authenticated_hosts(context.user_root)?;
     write_prompt(output, context.language, &owner, &target, &hosts)?;
-    let mut answer = String::new();
-    let read = input
-        .read_line(&mut answer)
-        .map_err(|error| format!("cannot read update confirmation: {error}"))?;
-    if read == 0 || !accepted(context.language, &answer) {
-        write_declined(output, context.language)?;
-        return Ok(FlowOutcome::Declined);
+    if !selection.confirmed {
+        let mut answer = String::new();
+        let read = input
+            .read_line(&mut answer)
+            .map_err(|error| format!("cannot read update confirmation: {error}"))?;
+        if read == 0 || !accepted(context.language, &answer) {
+            write_declined(output, context.language)?;
+            return Ok(FlowOutcome::Declined);
+        }
     }
     installer.install(&owner, &target)?;
     let activated_owner = discover_owner(context.executable, target.product)?;
@@ -384,10 +523,16 @@ fn update_flow_with_projection(
     Ok(FlowOutcome::Installed)
 }
 
-fn target_package(bytes: &[u8]) -> Result<PackageVersion, String> {
+fn target_package(bytes: &[u8], channel: UpdateChannel) -> Result<PackageVersion, String> {
     let metadata: RegistryMetadata = serde_json::from_slice(bytes)
         .map_err(|error| format!("registry response is malformed JSON: {error}"))?;
-    let target = parse_package_version(&metadata.dist_tags.latest)?;
+    let tagged = match channel {
+        UpdateChannel::Stable => &metadata.dist_tags.latest,
+        UpdateChannel::Test => metadata.dist_tags.test.as_deref().ok_or_else(|| {
+            "npm registry does not publish an aigent-hive test channel".to_owned()
+        })?,
+    };
+    let target = parse_package_version(tagged)?;
     let package = metadata.versions.get(&target.exact).ok_or_else(|| {
         "registry latest tag does not name a published package version".to_owned()
     })?;
@@ -897,13 +1042,26 @@ mod tests {
     }
 
     fn metadata(version: &str) -> FakeRegistry {
-        let product = version
-            .strip_suffix("-test")
-            .or_else(|| version.split_once("-test.").map(|(product, _)| product))
-            .unwrap_or(version);
+        metadata_with_channels(version, None)
+    }
+
+    fn metadata_with_channels(stable: &str, test: Option<&str>) -> FakeRegistry {
+        let versions = [Some(stable), test]
+            .into_iter()
+            .flatten()
+            .map(|version| {
+                let product = version
+                    .strip_suffix("-test")
+                    .or_else(|| version.split_once("-test.").map(|(product, _)| product))
+                    .unwrap_or(version);
+                format!(r#""{version}":{{"aigentHive":{{"productVersion":"{product}"}}}}"#)
+            })
+            .collect::<Vec<_>>()
+            .join(",");
+        let test_tag = test.map_or_else(String::new, |version| format!(r#","test":"{version}""#));
         FakeRegistry(
             format!(
-                r#"{{"dist-tags":{{"latest":"{version}"}},"versions":{{"{version}":{{"aigentHive":{{"productVersion":"{product}"}}}}}}}}"#
+                r#"{{"dist-tags":{{"latest":"{stable}"{test_tag}}},"versions":{{{versions}}}}}"#
             )
             .into_bytes(),
         )
@@ -1047,6 +1205,94 @@ mod tests {
         assert!(String::from_utf8(output)
             .expect("output")
             .contains("갱신 완료"));
+    }
+
+    #[test]
+    fn explicit_test_channel_selects_only_the_test_tag() {
+        let current = package(1);
+        let target = package(2);
+        let stable = stable_package();
+        let (root, binary) = fake_npm_install(&current);
+        let installer = FakeInstaller {
+            calls: RefCell::new(Vec::new()),
+            manifest: Some(root.path().join("package.json")),
+        };
+        let mut input = Cursor::new(b"y\n");
+        let mut output = Vec::new();
+
+        let outcome = update_flow_with_projection_channel(
+            &UpdateFlowContext {
+                executable: &binary,
+                user_root: Path::new(""),
+                language: Language::En,
+            },
+            &metadata_with_channels(&stable, Some(&target)),
+            &installer,
+            &NoopProjectionRefresher,
+            UpdateSelection {
+                channel: UpdateChannel::Test,
+                confirmed: false,
+            },
+            &mut input,
+            &mut output,
+        )
+        .expect("test update installed");
+
+        assert_eq!(outcome, FlowOutcome::Installed);
+        assert_eq!(installer.calls.borrow().as_slice(), [target]);
+        assert!(String::from_utf8(output)
+            .expect("output")
+            .contains("-> 0.9.5-test.2"));
+    }
+
+    #[test]
+    fn explicit_test_channel_requires_a_published_test_tag() {
+        let current = package(1);
+        let (_root, binary) = fake_npm_install(&current);
+        let installer = FakeInstaller::default();
+        let mut input = Cursor::new(Vec::<u8>::new());
+        let mut output = Vec::new();
+
+        let error = update_flow_with_projection_channel(
+            &UpdateFlowContext {
+                executable: &binary,
+                user_root: Path::new(""),
+                language: Language::En,
+            },
+            &metadata(&stable_package()),
+            &installer,
+            &NoopProjectionRefresher,
+            UpdateSelection {
+                channel: UpdateChannel::Test,
+                confirmed: false,
+            },
+            &mut input,
+            &mut output,
+        )
+        .expect_err("missing test channel");
+
+        assert_eq!(
+            error,
+            "npm registry does not publish an aigent-hive test channel"
+        );
+        assert!(installer.calls.borrow().is_empty());
+    }
+
+    #[test]
+    fn update_arguments_require_explicit_known_values() {
+        assert_eq!(
+            parse_arguments(&[
+                "--channel".to_owned(),
+                "test".to_owned(),
+                "--confirm".to_owned()
+            ])
+            .expect("test arguments")
+            .channel,
+            UpdateChannel::Test
+        );
+        assert!(parse_arguments(&["--channel".to_owned(), "preview".to_owned()]).is_err());
+        assert!(parse_arguments(&["--user-root".to_owned(), "relative".to_owned()]).is_err());
+        assert!(parse_arguments(&["--confirm".to_owned(), "--confirm".to_owned()]).is_err());
     }
 
     #[test]

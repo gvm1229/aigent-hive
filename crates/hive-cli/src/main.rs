@@ -56,7 +56,7 @@ USAGE:
     hive source-wiki lint --target <source-root> --output json
     hive source-wiki index --target <source-root> --output json
     hive source-wiki query --target <source-root> --language en|ko (--text <query>|--tag <tag>) [--limit <1..100>] --output json
-    hive update
+    hive update [--channel stable|test] [--user-root <absolute-dir>] [--confirm]
     hive update --check --user-root <absolute-dir> --output json
     hive knowledge add|authorize-confidential|collection|delete|export|import|ingest|lint|list|promote|query|read|refresh|remember|retrieve|scan|suppress --help
     hive discord inbound --host codex|claude|antigravity --output json
@@ -213,7 +213,17 @@ fn main() -> ExitCode {
         Some("orchestration") => orchestration::run(&arguments[1..]),
         Some("judge") => judge::run_judge(&arguments[1..]),
         Some("release") => update::run_release(&arguments[1..]),
-        Some("update") if arguments.len() == 1 => update_activation::run(),
+        Some("update")
+            if arguments.len() == 1
+                || arguments.get(1).is_some_and(|argument| {
+                    matches!(
+                        argument.as_str(),
+                        "--channel" | "--user-root" | "--confirm" | "--help"
+                    )
+                }) =>
+        {
+            update_activation::run(&arguments[1..])
+        }
         Some("update") if arguments.get(1).map(String::as_str) == Some("--check") => {
             update_discovery::run(&arguments[1..])
         }
