@@ -50,6 +50,7 @@
 - 현재 Windows: PortareFolium `0.9.2` 48개 ledger projection·9개 support file copy의 `scan`·`dry-run`·`apply`·`validate`, local marker·foreign sentinel 보존, tampered ledger no-mutation 성공. Codex 전용 시험 root의 public `0.9.5-test.3` setup·install·validate 성공
 - `0.9.5-test.4`: 위 product·acceptance 변경의 public artifact 수용. `test.4 → test.5`는 explicit test-channel user projection 갱신 수용
 - `0.9.5-test.5`: direct installer의 optional signer fallback을 unresolved marker로 오판해 user projection 전 중단. `b8e4c79` 수정 뒤 `test.6 → test.7` 수용 필요
+- `0.9.5-test.6`: npm 여섯 package·`test` tag·annotated tag 생성 뒤 GitHub Release API와 candidate artifact API가 HTTP 503. release asset 미완성, `REL95-003` 수용·stable promotion 금지
 
 ## PortareFolium `0.9.2` fixture 수용 계획
 
