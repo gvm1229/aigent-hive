@@ -840,8 +840,8 @@ fn install_direct(
         fs::set_permissions(installer.path(), fs::Permissions::from_mode(0o700))
             .map_err(|error| format!("cannot protect the staged direct installer: {error}"))?;
     }
-    let installer_path = installer
-        .path()
+    let installer_path_guard = installer.into_temp_path();
+    let installer_path = installer_path_guard
         .to_str()
         .ok_or_else(|| "direct installer path is not UTF-8".to_owned())?;
     let prefix = prefix

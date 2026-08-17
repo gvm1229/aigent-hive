@@ -249,7 +249,7 @@ usage_guard:
     )
     if completed.returncode != 0:
         raise RuntimeError(f"test-channel update failed: {completed.stderr}")
-    results.append({"command": "update", "stderr": completed.stderr})
+    results.append({"command": "update", "code": completed.returncode, "stderr": completed.stderr})
     for _ in range(60):
         validation = subprocess.run(
             commands[5], cwd=test_root, env=environment, check=False, text=True, capture_output=True
