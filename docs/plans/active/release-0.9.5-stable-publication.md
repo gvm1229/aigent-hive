@@ -49,6 +49,7 @@
 - `45a9af8`: PortareFolium Hive-owned subset과 Codex 전용 시험 root의 public-artifact acceptance 실행기 추가
 - 현재 Windows: PortareFolium `0.9.2` 48개 ledger projection·9개 support file copy의 `scan`·`dry-run`·`apply`·`validate`, local marker·foreign sentinel 보존, tampered ledger no-mutation 성공. Codex 전용 시험 root의 public `0.9.5-test.3` setup·install·validate 성공
 - `0.9.5-test.4`: 위 product·acceptance 변경의 public artifact 수용. `test.4 → test.5`는 explicit test-channel user projection 갱신 수용
+- `0.9.5-test.5`: direct installer의 optional signer fallback을 unresolved marker로 오판해 user projection 전 중단. `b8e4c79` 수정 뒤 `test.6 → test.7` 수용 필요
 
 ## PortareFolium `0.9.2` fixture 수용 계획
 
@@ -86,7 +87,7 @@ answers·capability resolution·harness만 필요. 기존 Codex marketplace owne
 2. migration table의 declared full-base source 집합과 `FULL_HISTORICAL_PROJECT_BASE_VERSIONS`를 단일 assertion으로 비교. hard-coded version list 금지
 3. golden fixture의 public-artifact-equivalent `scan`·`dry-run`·`apply`·`validate`, local shared-marker preservation, foreign sentinel preservation, tampered ledger no-mutation 회귀 추가
 4. 이 보강은 acceptance 변경. source change 뒤 `0.9.5-test.4` candidate·public test 발행과 `REL95-004` 수용. `0.9.4`에는 explicit test-channel update 명령이 없으므로 `REL95-003`의 package-owner activation 증거로 사용 불가
-5. `test.4`는 explicit `hive update --channel test`를 제공. 동일 product byte의 `0.9.5-test.5` 발행 뒤 `test.4 → test.5`로 `REL95-003` user projection refresh 수용
+5. `test.4`는 explicit `hive update --channel test`를 제공. `test.5` direct installer 검증 실패 뒤 `b8e4c79`를 포함한 `test.6` 발행, `test.6 → test.7`로 `REL95-003` user projection refresh 수용
 6. `REL95-003`과 `REL95-004` 모두 accepted 상태 뒤 `REL95-005` protected `main` integration 진행
 
 ## 수락 기준
