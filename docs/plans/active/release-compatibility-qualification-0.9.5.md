@@ -18,6 +18,12 @@ claim과 executable artifact capability 불일치.
 - directive rollback: Skill 전용 검사 적용
 - patch 범위: 기준본·full-base projection 인증·directive rollback 회귀
 
+`32bf5df` 검증:
+
+- historical `0.9.2` marker: `wiki_backend` 자리표시자 재현 누락 보정
+- local override: 과거 기준본에서 current 기준본으로의 첫 적용 뒤 validate 수렴
+- actual PortareFolium copy: 48개 ledger projection·9개 support file의 `scan`·`dry-run`·`apply`·`validate` 성공
+
 ## 운영 원칙
 
 - Compatibility range: 설명용 metadata 아닌 executable contract. declared source version마다 local matrix evidence 필수

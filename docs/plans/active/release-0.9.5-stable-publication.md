@@ -42,6 +42,14 @@
 - Windows isolated acceptance: public direct installer와 npm `0.9.4 → 0.9.5-test.3` upgrade의 version identity 성공
 - blocked: existing Codex marketplace ownership과 user installation manifest가 authenticated Hive release와 불일치. public test binary의 user projection validate·bare update 및 public `0.9.2` project setup은 mutation 없이 중단
 
+## `test.4` 준비 근거
+
+- `32bf5df`: `0.9.2` historical `AGENTS.md`의 `wiki_backend` 재현과 local override 한 번 적용 뒤 validate 수렴
+- `5f3bb93`: default stable 유지, explicit `hive update --channel test`·`--user-root`·`--confirm` 추가
+- `45a9af8`: PortareFolium Hive-owned subset과 Codex 전용 시험 root의 public-artifact acceptance 실행기 추가
+- 현재 Windows: PortareFolium `0.9.2` 48개 ledger projection·9개 support file copy의 `scan`·`dry-run`·`apply`·`validate`, local marker·foreign sentinel 보존, tampered ledger no-mutation 성공. Codex 전용 시험 root의 public `0.9.5-test.3` setup·install·validate 성공
+- `0.9.5-test.4`: 위 product·acceptance 변경의 public artifact 수용. `test.4 → test.5`는 explicit test-channel user projection 갱신 수용
+
 ## PortareFolium `0.9.2` fixture 수용 계획
 
 대상: 실제 PortareFolium consumer의 `harness_version`·`project-base.json` `0.9.2` 확인. 원본 project와
@@ -61,24 +69,25 @@ answers·capability resolution·harness만 필요. 기존 Codex marketplace owne
 
 ## `REL95-003` clean Codex profile 수용 계획
 
-대상: 기존 marketplace·manifest가 없는 disposable Windows Codex profile. 기존 maintainer profile의
-marketplace·plugin·user-root 변경 금지. 여기서 marketplace는 Codex plugin marketplace이며 project upgrade
-fixture와 다른 전역 host configuration.
+대상: Windows 11 Home과 M2 MacBook Air의 전용 시험 루트. 기존 maintainer profile의 marketplace·plugin·user-root
+변경 금지. 여기서 marketplace는 Codex plugin marketplace이며 project upgrade fixture와 다른 전역 host configuration.
 
-1. public `0.9.4` baseline의 user setup·Codex user install `--apply`·`--validate`로 authenticated user setup과 host manifest 생성
-2. Codex configuration의 foreign marketplace·plugin entry와 user-root foreign sentinel 추가, Hive ownership 밖 byte snapshot 기록
-3. `hive update --check` 조회 전용·mutation `0건` 확인. package-owner activation이 exact `0.9.5-test.3` target·owner·saved host refresh scope를 표시하는지 확인
-4. 동의한 bare `hive update` 실행. owner install 뒤 새 executable만 `install --scope user --hosts <authenticated saved hosts> --apply`와 `--validate` 실행 여부 확인
-5. exact public test version·Codex manifest·Hive-owned projection digest·foreign marketplace/plugin/sentinel byte 보존 확인. selected host에 없는 Claude activation `0건` 확인
-6. test channel을 package-owner activation이 exact target으로 발견하지 못하면 manual npm replacement 금지·`REL95-003` 실패 처리. discovery/activation repair 뒤 다음 numbered public test 필요
+1. 시험 실행기: 고유 `tests/work` 루트 안의 Hive user root·Codex configuration root만 자식 프로세스에 주입. 외부 root 참조는 실행 전 실패
+2. public `0.9.4` baseline의 user setup·Codex user install `--apply`·`--validate`로 authenticated user setup과 host manifest 생성
+3. Codex configuration의 foreign marketplace·plugin entry와 user-root foreign sentinel 추가, Hive ownership 밖 byte snapshot 기록
+4. `hive update --check` 조회 전용·mutation `0건` 확인. explicit `hive update --channel test`가 exact test target·owner·saved host refresh scope를 표시하는지 확인
+5. 동의한 update 실행. owner install 뒤 새 executable만 `install --scope user --hosts <authenticated saved hosts> --apply`와 `--validate` 실행 여부 확인
+6. exact public test version·Codex manifest·Hive-owned projection digest·foreign marketplace/plugin/sentinel byte 보존 확인. selected host에 없는 Claude activation `0건` 확인
+7. Windows x64와 macOS arm64에서 같은 실행기 사용. macOS x86_64는 candidate CI archive evidence 유지
 
 ## 영구 회귀 보강과 후보 순서
 
 1. PortareFolium acceptance와 별도로 `0.9.2` tag-derived golden project fixture 추가. 현재 renderer로 fixture를 생성하지 않고 frozen setup input·support config·full ledger·projection byte 사용
 2. migration table의 declared full-base source 집합과 `FULL_HISTORICAL_PROJECT_BASE_VERSIONS`를 단일 assertion으로 비교. hard-coded version list 금지
 3. golden fixture의 public-artifact-equivalent `scan`·`dry-run`·`apply`·`validate`, local shared-marker preservation, foreign sentinel preservation, tampered ledger no-mutation 회귀 추가
-4. 이 보강은 acceptance 변경. source change 뒤 `0.9.5-test.4` candidate·public test 발행, `REL95-003–004` 재수용. `test.3` evidence 재사용 금지
-5. `REL95-003`과 `REL95-004` 모두 accepted 상태 뒤 `REL95-005` protected `main` integration 진행
+4. 이 보강은 acceptance 변경. source change 뒤 `0.9.5-test.4` candidate·public test 발행과 `REL95-004` 수용. `0.9.4`에는 explicit test-channel update 명령이 없으므로 `REL95-003`의 package-owner activation 증거로 사용 불가
+5. `test.4`는 explicit `hive update --channel test`를 제공. 동일 product byte의 `0.9.5-test.5` 발행 뒤 `test.4 → test.5`로 `REL95-003` user projection refresh 수용
+6. `REL95-003`과 `REL95-004` 모두 accepted 상태 뒤 `REL95-005` protected `main` integration 진행
 
 ## 수락 기준
 
