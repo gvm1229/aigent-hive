@@ -1499,6 +1499,10 @@ frozen_project_base_0_9_release!(
     ]
 );
 
+fn default_markdown_wiki_backend() -> String {
+    "markdown".to_owned()
+}
+
 #[allow(clippy::too_many_lines)]
 fn frozen_project_base_0_8_or_0_9(
     target_dir: &Dir,
@@ -1536,6 +1540,8 @@ fn frozen_project_base_0_8_or_0_9(
         preference_provenance: String,
         interface_language: String,
         wiki_enabled: bool,
+        #[serde(default = "default_markdown_wiki_backend")]
+        wiki_backend: String,
         wiki_language: String,
         persona_id: String,
         selected_project_skills: Vec<String>,
@@ -1608,6 +1614,7 @@ fn frozen_project_base_0_8_or_0_9(
         && matches!(harness.setup_mode.as_str(), "expedited" | "custom")
         && preference_provenance_matches
         && matches!(harness.interface_language.as_str(), "en" | "ko")
+        && harness.wiki_backend == "markdown"
         && matches!(harness.wiki_language.as_str(), "en" | "ko" | "both")
         && matches!(
             harness.persona_id.as_str(),
@@ -1756,6 +1763,7 @@ fn frozen_project_base_0_8_or_0_9(
             "{{ \"enabled\" if wiki_enabled else \"disabled\" }}",
             wiki_state,
         )
+        .replace("{{ wiki_backend }}", &harness.wiki_backend)
         .replace("{{ wiki_language }}", &harness.wiki_language)
         .replace("{{ persona_id }}", &harness.persona_id)
         .replace("{{ primary_host }}", &harness.primary_host)
@@ -8528,6 +8536,16 @@ mod tests {
                 .files
                 .iter()
                 .all(|entry| entry.content_digest == sha256_digest(&entry.content)));
+            if version == "0.9.2" {
+                let marker = historical
+                    .files
+                    .iter()
+                    .find(|entry| entry.path == "AGENTS.md")
+                    .expect("historical AGENTS marker");
+                let marker = String::from_utf8_lossy(&marker.content);
+                assert!(marker.contains("backend=`markdown`"));
+                assert!(!marker.contains("{{ wiki_backend }}"));
+            }
         }
     }
 

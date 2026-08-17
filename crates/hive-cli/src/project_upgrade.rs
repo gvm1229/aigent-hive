@@ -336,7 +336,11 @@ fn prepare(target: &Dir) -> Result<UpgradePlan, UpdateError> {
                     path: path.clone(),
                     base_digest: sha256_digest(incoming),
                     local_digest: sha256_digest(final_bytes),
-                    omitted_incoming_hunks: merged.omitted_incoming_hunks,
+                    omitted_incoming_hunks: if source_version == candidate.product_version {
+                        merged.omitted_incoming_hunks
+                    } else {
+                        0
+                    },
                 });
             }
         }

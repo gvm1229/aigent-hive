@@ -92,6 +92,16 @@ fn seed_historical_project(target: &Path, version: &str) {
     let capability = Dir::open_ambient_dir(target, ambient_authority()).expect("target capability");
     let historical = historical_project_upgrade_candidate_in(&capability, version)
         .expect("embedded historical project base");
+    if version == "0.9.2" {
+        let marker = historical
+            .files
+            .iter()
+            .find(|file| file.path == "AGENTS.md")
+            .expect("historical AGENTS marker");
+        let marker = String::from_utf8_lossy(&marker.content);
+        assert!(marker.contains("backend=`markdown`"));
+        assert!(!marker.contains("{{ wiki_backend }}"));
+    }
     for file in &historical.files {
         let path = target.join(&file.path);
         fs::create_dir_all(path.parent().expect("historical parent"))
@@ -231,4 +241,33 @@ fn compiled_cli_rejects_a_tampered_092_base_without_mutation() {
     ]);
     assert!(!output.status.success());
     assert_eq!(fs::read(&ledger).expect("ledger after failure"), before);
+}
+
+#[test]
+fn compiled_cli_converges_after_one_apply_with_a_conflicting_092_projection() {
+    let temporary = secure_tempdir();
+    let target = temporary.path().join("consumer");
+    fs::create_dir_all(&target).expect("consumer directory");
+    seed_historical_project(&target, "0.9.2");
+    let projection = target.join(".agents/directives/00-project-harness.md");
+    fs::write(&projection, b"local project harness precedence\n").expect("local projection");
+
+    for mode in ["--scan", "--dry-run", "--apply", "--validate"] {
+        require_success(
+            &run_hive(&[
+                "project",
+                "upgrade",
+                "--target",
+                target.to_str().expect("target UTF-8"),
+                mode,
+                "--output",
+                "json",
+            ]),
+            mode,
+        );
+    }
+    assert_eq!(
+        fs::read(&projection).expect("local projection after upgrade"),
+        b"local project harness precedence\n"
+    );
 }
