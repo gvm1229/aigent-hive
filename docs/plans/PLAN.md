@@ -1,6 +1,6 @@
 # Aigent Hive active plan index
 
-> Revision: 227
+> Revision: 228
 > 기준일: 2026-08-15
 > Product version: `0.9.4` stable 기준, 다음 target `0.9.5` compatible patch
 > 현재 milestone: historical project base 수용 범위·사용자 투영 자동 갱신·출시 호환성 수용 게이트의 로컬 완료

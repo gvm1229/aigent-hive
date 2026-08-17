@@ -11,6 +11,13 @@ historical project base: `0.7.0`·`0.8.0`·`0.9.0` 한정. Local regression과 p
 `0.9.2` consumer project의 `scan → dry-run → apply → validate` 부재. 결과: metadata compatibility
 claim과 executable artifact capability 불일치.
 
+`0fd5ea8` 검증:
+
+- 누락: compiled public-surface registry의 `0.9.4` 기준본, `0.9.5` inventory의 `judge-attestation.schema.json`
+- full project-base source release update: legacy Skill history 단독 조회 중단
+- directive rollback: Skill 전용 검사 적용
+- patch 범위: 기준본·full-base projection 인증·directive rollback 회귀
+
 ## 운영 원칙
 
 - Compatibility range: 설명용 metadata 아닌 executable contract. declared source version마다 local matrix evidence 필수
@@ -33,10 +40,10 @@ claim과 executable artifact capability 불일치.
 
 - [x] `RQC95-001` release qualification schema·generator 추가: `check-project-base-coverage.py`가 migration route,
   prior stable user projection, public representative를 한 coverage inventory와 digest로 도출
-- [x] `RQC95-002` compiled CLI black-box matrix 추가: local declared full-base source `0.9.1`·`0.9.2`·`0.9.3`에
-  `scan`·`dry-run`·`apply`·`validate`, artifact의 exact base authentication·final ledger 검증
+- [x] `RQC95-002` compiled CLI black-box matrix 추가: local declared full-base source `0.9.1`·`0.9.2`·`0.9.3`·`0.9.4`의
+  `scan`·`dry-run`·`apply`·`validate`와 signed release update dry-run·apply, artifact exact base authentication·final ledger 검증
 - [x] `RQC95-003` preservation/negative matrix 추가: local Hive edit three-way merge, user·foreign byte,
-  missing·tampered base no-mutation, failure injection recovery, unsupported range rejection
+  missing·tampered full-base projection no-mutation, new directive collision, directive rollback, failure injection recovery, unsupported range rejection
 - [x] `RQC95-004` release bundle·CI gate 연결: `release.yml` candidate가 migration-table route와 registry coverage
   matrix omission·stale report·compiled/package artifact digest mismatch의 candidate build 실패
 - [x] `RQC95-005` risk declaration 연결: product·installer·projection·migration 변경은 CI product risk 분류·Rust
