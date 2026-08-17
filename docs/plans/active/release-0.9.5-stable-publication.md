@@ -19,9 +19,9 @@
 
 ## Checklist
 
-- [ ] `REL95-001` 모든 `0.9.5` 구현·문서·정적·Rust·Python local gate 완료. exact `develop` source
+- [x] `REL95-001` 모든 `0.9.5` 구현·문서·정적·Rust·Python local gate 완료. exact `develop` source
   commit·release input·artifact digest 고정
-- [ ] `REL95-002` 고정 source에서 번호 public `0.9.5-test.N` prerelease 1회 게시. stable·`latest`
+- [x] `REL95-002` 고정 source에서 번호 public `0.9.5-test.N` prerelease 1회 게시. stable·`latest`
   mutation과 rebuild `0회`
 - [ ] `REL95-003` Windows x64 실제 host에서 exact public test artifact의 clean install·preserving
   upgrade·validate·bare update path 수용. `AUP95` installed acceptance 포함
@@ -31,6 +31,16 @@
   input의 product bytes·release note·artifact digest 동등성 확인
 - [ ] `REL95-006` `0.9.5` stable publication 뒤 stable-release-dependent test 전체 실행. current Windows x64에서
   exact public stable artifact 설치·`hive --version`·user projection `--validate`·public release/package 확인
+
+## `0.9.5-test.3` 공개 시험 증거
+
+- source: `develop@224170eb52a65b0259fa9bbef52dbfaf4c8701da`
+- candidate: [run `31980927136`](https://github.com/gvm1229/aigent-hive/actions/runs/31980927136), 다섯 native target·npm umbrella·direct installer 성공
+- publication: [run `31981450374`](https://github.com/gvm1229/aigent-hive/actions/runs/31981450374), exact candidate run ID 결속 성공
+- public: [GitHub prerelease `v0.9.5-test.3`](https://github.com/gvm1229/aigent-hive/releases/tag/v0.9.5-test.3), 25 assets, Windows zip SHA-256 `e60865181a8e2dc3850eb871676588aa285d50f70604b776a0af319e595f4288`
+- registry: umbrella와 다섯 platform package의 exact `0.9.5-test.3`, `test=0.9.5-test.3`, `latest=0.9.4`
+- Windows isolated acceptance: public direct installer와 npm `0.9.4 → 0.9.5-test.3` upgrade의 version identity 성공
+- blocked: existing Codex marketplace ownership과 user installation manifest가 authenticated Hive release와 불일치. public test binary의 user projection validate·bare update 및 public `0.9.2` project setup은 mutation 없이 중단
 
 ## 수락 기준
 

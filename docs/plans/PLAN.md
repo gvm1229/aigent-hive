@@ -1,6 +1,6 @@
 # Aigent Hive active plan index
 
-> Revision: 228
+> Revision: 229
 > 기준일: 2026-08-15
 > Product version: `0.9.4` stable 기준, 다음 target `0.9.5` compatible patch
 > 현재 milestone: historical project base 수용 범위·사용자 투영 자동 갱신·출시 호환성 수용 게이트의 로컬 완료
@@ -108,8 +108,8 @@
 | `0.9.5` macOS 외부 검증 | 1 | 0 | 100% |
 | `0.9.5` native sensor 복구 | 2 | 0 | 100% |
 | `0.9.5` 지식 번들 이식 안내 | 3 | 0 | 100% |
-| `0.9.5` 공개 시험·정식 출시 | 0 | 6 | 0% |
-| **Canonical total** | **640** | **28** | **95.8%** |
+| `0.9.5` 공개 시험·정식 출시 | 2 | 4 | 33.3% |
+| **Canonical total** | **642** | **26** | **96.1%** |
 
 External production boundary 항목도 미완료 합계에 포함. Protected authority 없이 완료 처리 금지.
 
@@ -219,8 +219,8 @@ observation, stable-release-dependent release lane 완료. `0.10.0` 후보 항�
 완료: 제품 harness·release에 포함하지 않는 source workspace 전용 `update-summary` Skill의 구독자 관점 필터 보강·구조 검증.
 완료: 안정판 GitHub Release 뒤 Discord 배너 전송 성공 후에만 `update-summary` 한국어 구독자 요약 전송·회귀 검증.
 완료: 다음 version 미정 지식 Skill 다섯 개 한국어 표시 이름의 영문 ID 제거, 설명 첫머리 ID 유지. `v0.9.4` release·tag·package 변경 없음.
-현재: `HBC95-001–005`·`AUP95-001–006`·`RQC95-*`의 로컬 구현·검증 완료. 유지보수자 명시 승인에
-따라 `MAC95-001` macOS qualification과 `REL95-001–006` numbered public test·protected `main`
-integration·stable publication 재개. `NUS-029–030` native-only account recovery와 `KBP95-*`
-platform-specific knowledge-bundle guidance·macOS acceptance 완료. Ralph graph는
-`v095-local-qualification` 뒤 `v095-stable-release` 순서.
+현재: `HBC95-001–005`·`AUP95-001–006`·`RQC95-*`의 로컬 구현·검증 완료. `REL95-001–002`는
+`develop@224170e`의 `0.9.5-test.3` 공개 시험으로 완료. `REL95-003–004`는 현재 Codex host
+marketplace ownership conflict로 안전 중단, `REL95-005–006`은 수용 뒤 순서 유지. `NUS-029–030`
+native-only account recovery와 `KBP95-*` platform-specific knowledge-bundle guidance·macOS acceptance 완료.
+Ralph graph는 `v095-local-qualification` 뒤 `v095-stable-release` 순서.

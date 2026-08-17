@@ -11,6 +11,7 @@ aliases: ["호환성 matrix gate"]
 sources:
   - "repo:.github/workflows/release.yml#sha256:53f1b3c4284326ae392594d1135ad600ddbd8035ec2caf16ed9ea0e52dc2efd4"
   - "repo:crates/hive-cli/tests/historical_project_upgrade.rs#sha256:c5dba7810327a88235025ea62ba2b77387a072c8e76b044b661ddb911aa26220"
+  - "repo:docs/plans/active/release-0.9.5-stable-publication.md#sha256:d9f9822da183e33fd431a33983504884a429cb4712442555c8dc5388c1da35c0"
   - "repo:docs/plans/active/release-compatibility-qualification-0.9.5.md#sha256:fde4ef5a0a738761093a40f84f93d0a6eb4e6a5e64449f606b71ef6619cb20da"
   - "repo:scripts/check-project-base-coverage.py#sha256:b7d0887ccd3e3a9019383c3cea283189361c17fa62d806f44096cd6825b67579"
 links: [historical-project-base-coverage, release-verification, test-lane-inventory]
@@ -20,6 +21,6 @@ status: active
 
 # 출시 호환성 수용
 
-- `0.9.5` 로컬 수용: 다이제스트 결합 프로젝트 기준본 수용 보고서와 이전 프로젝트 상태용 컴파일 명령줄 도구·signed release update 수용 행렬
-- 후보 작업 흐름: 수용 보고서를 산출물로 보관
-- 공개 시험·안정판 후보: 산출물·수용 보고서 다이제스트 일치 필수, 불일치 시 승격 중단
+- `0.9.5-test.3` candidate·공개 시험판: source `224170e`, exact npm 시험 package, Windows archive 다이제스트 결속
+- Windows 격리 경로: public direct installer와 npm `0.9.4` 업그레이드 성공
+- user projection·bare update·public `0.9.2` project upgrade: 인증 불가 기존 ownership으로 중단, stable promotion 우회 금지

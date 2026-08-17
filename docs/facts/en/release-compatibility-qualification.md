@@ -11,6 +11,7 @@ aliases: ["Compatibility matrix gate"]
 sources:
   - "repo:.github/workflows/release.yml#sha256:53f1b3c4284326ae392594d1135ad600ddbd8035ec2caf16ed9ea0e52dc2efd4"
   - "repo:crates/hive-cli/tests/historical_project_upgrade.rs#sha256:c5dba7810327a88235025ea62ba2b77387a072c8e76b044b661ddb911aa26220"
+  - "repo:docs/plans/active/release-0.9.5-stable-publication.md#sha256:d9f9822da183e33fd431a33983504884a429cb4712442555c8dc5388c1da35c0"
   - "repo:docs/plans/active/release-compatibility-qualification-0.9.5.md#sha256:fde4ef5a0a738761093a40f84f93d0a6eb4e6a5e64449f606b71ef6619cb20da"
   - "repo:scripts/check-project-base-coverage.py#sha256:b7d0887ccd3e3a9019383c3cea283189361c17fa62d806f44096cd6825b67579"
 links: [historical-project-base-coverage, release-verification, test-lane-inventory]
@@ -20,7 +21,7 @@ status: active
 
 # Release Compatibility Qualification
 
-The `0.9.5` local qualification adds a digest-bound project-base coverage report and a compiled
-CLI and signed release-update matrix for prior project states. The candidate workflow retains that report as an artifact.
-The public test and stable candidate must use matching artifact and coverage-report digests, or
-promotion stops.
+The `0.9.5-test.3` candidate and public release bind source `224170e`, exact npm test packages,
+and the Windows archive digest. The direct installer and npm `0.9.4` upgrade passed in an isolated
+Windows path. User-projection/bare-update and public `0.9.2` project-upgrade acceptance remain
+blocked by unauthenticated existing ownership; stable promotion must not bypass that boundary.
