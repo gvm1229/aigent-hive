@@ -13,7 +13,7 @@
 ## 계획
 
 - [ ] `DUP95-001` Windows 직접 설치 소유자 갱신의 실행 파일 잠금 회피 인계 구현과 단위 회귀
-- [ ] `DUP95-002` 다음 번호 public test의 Windows 전용 시험 루트에서 직접 설치 `test.8 → test.9` 갱신·user projection refresh·validate 수용
+- [ ] `DUP95-002` 다음 번호 public test의 Windows 전용 시험 루트에서 직접 설치 `test.10 → test.11` 갱신·user projection refresh·validate 수용
 
 ## 수락 기준
 
@@ -22,3 +22,8 @@
 - 호출자 반환 전 갱신 결과와 projection validation 확인 가능
 - 기존 Codex 설정·사용자 Hive root·foreign byte mutation `0건`
 
+## 재수용 근거
+
+- `test.8 → test.9` 보조 실행 파일의 직접 설치 실패: staged installer `NamedTempFile` handle 유지로 Windows installer read sharing 거부
+- `into_temp_path`로 handle 종료와 자동 삭제 ownership 유지
+- acceptance runner `update` 결과 코드 누락 보정
