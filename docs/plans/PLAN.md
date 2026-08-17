@@ -109,6 +109,7 @@
 | `0.9.5` native sensor 복구 | 2 | 0 | 100% |
 | `0.9.5` 지식 번들 이식 안내 | 3 | 0 | 100% |
 | `0.9.5` 공개 시험·정식 출시 | 2 | 4 | 33.3% |
+| Windows 직접 설치 갱신 인계 `0.9.5` | 0 | 2 | 0% |
 | **Canonical total** | **642** | **26** | **96.1%** |
 
 External production boundary 항목도 미완료 합계에 포함. Protected authority 없이 완료 처리 금지.
@@ -154,6 +155,7 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
 | [`active/macos-0.9.5-qualification.md`](active/macos-0.9.5-qualification.md) | `MAC95-*` | 현재 Windows에서 실행 불가한 macOS source qualification |
 | [`active/knowledge-bundle-portability-0.9.5.md`](active/knowledge-bundle-portability-0.9.5.md) | `KBP95-*` | cross-platform global knowledge-bundle guidance and macOS acceptance |
 | [`active/release-0.9.5-stable-publication.md`](active/release-0.9.5-stable-publication.md) | `REL95-*` | numbered public test, protected integration, and stable publication |
+| [`active/direct-update-windows-handoff-0.9.5.md`](active/direct-update-windows-handoff-0.9.5.md) | `DUP95-*` | Windows direct-install self-replacement handoff and public acceptance |
 | [`active/release-0.9.3-test-qualification.md`](active/release-0.9.3-test-qualification.md) | `REL93-*` | `0.9.3` numbered public test 수용과 정식 출시 |
 | [`active/projection-validation-consistency-0.9.3.md`](active/projection-validation-consistency-0.9.3.md) | `VAL93-*` | local-preserved validation·formatter 보호 |
 | [`active/release-engineering-optimization-0.9.3.md`](active/release-engineering-optimization-0.9.3.md) | `OPT93-*` | risk-tier CI·candidate reuse·single-owner release evidence |
@@ -224,6 +226,6 @@ observation, stable-release-dependent release lane 완료. `0.10.0` 후보 항�
 marketplace ownership conflict로 안전 중단. `REL95-004`: PortareFolium `0.9.2` consumer의 Hive-owned
 subset copy와 public test artifact 실행 계획 우선. `REL95-003`: clean Codex profile의 package-owner
 activation·projection refresh·validate 계획. 전용 시험 루트 실행기와 explicit `--channel test` 갱신,
-PortareFolium 기준 fixture 회귀 보강을 `0.9.5-test.4`로 수용. direct installer marker correction의 `test.6 → test.7` 자동 갱신 수용 뒤
+PortareFolium 기준 fixture 회귀 보강을 `0.9.5-test.4`로 수용. `test.6 → test.7` 직접 설치 갱신은 실행 중 `hive.exe` 잠금으로 installer 교체 거부. `DUP95-001–002`의 Windows 인계 보강과 `test.8 → test.9` 재수용 뒤
 `REL95-005–006` 순서 진행. `NUS-029–030` native-only account recovery와 `KBP95-*` platform-specific knowledge-bundle guidance·macOS acceptance 완료. Ralph graph는
 `v095-local-qualification` 뒤 `v095-stable-release` 순서.
