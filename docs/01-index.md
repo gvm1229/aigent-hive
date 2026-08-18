@@ -167,3 +167,5 @@ Fact별 catalog는 migration 완료 뒤 이 section과 [Fact 안내](facts/READM
 | [Hive-native 반복 실행](plans/active/native-iterative-execution.md) | Scheduler·receipt·cancel·team·multi-goal 계획 |
 | [Prompt refine 자동 routing](plans/active/prompt-refine-auto-routing.md) | Material ambiguity·승인 전 정지 계획 |
 | [`0.9.0` 정식 릴리스](plans/active/release-0.9.0.md) | GitHub·npm publication·public acceptance 계획 |
+| [`0.9.5` 로컬 수용 loop](plans/active/v0.9.5-release-loop.graph.md) | 로컬 수용 기준의 기록 graph |
+| [`0.9.5` 안정판 출시 loop](plans/active/v0.9.5-stable-release-loop.graph.md) | 공개 시험·Windows 수용·보호 통합·안정판 검증 순서 |

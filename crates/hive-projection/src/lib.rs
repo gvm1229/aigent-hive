@@ -1045,25 +1045,25 @@ fn localized_skill_text(
         "knowledge-capture" => (
             "Remember useful knowledge (knowledge-capture)",
             "(knowledge-capture) At the end of a Wiki-enabled turn, keep one useful fact, preference, or workflow that will help later work; never save secrets, raw conversations, or uncertain guesses.",
-            "유용한 지식 남기기 (knowledge-capture)",
+            "유용한 지식 남기기",
             "(knowledge-capture) 대화를 마칠 때 나중 작업에 도움이 될 만한 사실·선호·방식 하나를 골라 안전하게 남김. 비밀·대화 원문·확실하지 않은 추측 기록 금지.",
         ),
         "knowledge-recall" => (
             "Search knowledge (knowledge-recall)",
             "(knowledge-recall) Before a knowledge-dependent question or task, find only the Hive knowledge that can help with the work at hand. Unregistered folders safely use user-root and shared knowledge.",
-            "지식 찾아보기 (knowledge-recall)",
+            "지식 찾아보기",
             "(knowledge-recall) 지금 하는 질문이나 작업에 도움이 될 Hive 지식만 찾아봄. 미등록 폴더도 사용자 전역·공유 지식을 안전하게 사용.",
         ),
         "knowledge-promote" => (
             "Share knowledge (knowledge-promote)",
             "(knowledge-promote) Share a reviewed fact, preference, or workflow from one project when it can genuinely help the user's other work.",
-            "지식 공유하기 (knowledge-promote)",
+            "지식 공유하기",
             "(knowledge-promote) 한 프로젝트에서 확인한 사실·선호·방식이 다른 작업에도 도움이 될 때 전역 Hive 지식으로 공유.",
         ),
         "knowledge-maintain" => (
             "Maintain knowledge (knowledge-maintain)",
             "(knowledge-maintain) Keep Hive knowledge trustworthy by checking it, rebuilding its search index, or carrying out an explicitly requested cleanup.",
-            "지식 정비하기 (knowledge-maintain)",
+            "지식 정비하기",
             "(knowledge-maintain) Hive 지식을 믿을 수 있게 검사하고, 필요하면 검색 색인을 다시 만들거나 명시 요청된 정리를 수행.",
         ),
         "run-checkpoint" => (
@@ -1123,7 +1123,7 @@ fn localized_skill_text(
         "knowledge-import" => (
             "Scan repository knowledge (knowledge-import)",
             "(knowledge-import) Scan one repository or folder that the user explicitly selected, then import only the reviewed knowledge that is useful beyond that source.",
-            "저장소 지식 스캔 (knowledge-import)",
+            "저장소 지식 스캔",
             "(knowledge-import) 사용자가 고른 저장소나 폴더를 훑어보고, 그 밖의 작업에도 쓸 만한 검토 완료 지식만 가져오기.",
         ),
         "code-polish" => (
@@ -2696,13 +2696,13 @@ description: Inspect one local file without changing it.
 
         assert!(english_metadata.contains("Remember useful knowledge (knowledge-capture)"));
         assert!(english_metadata.contains("(knowledge-capture) At the end of a Wiki-enabled turn"));
-        assert!(korean_metadata.contains("유용한 지식 남기기 (knowledge-capture)"));
+        assert!(korean_metadata.contains("display_name: \"유용한 지식 남기기\""));
         assert!(korean_metadata.contains("(knowledge-capture) 대화를 마칠 때"));
         assert!(korean_metadata.contains("사실·선호·방식 하나를 골라"));
     }
 
     #[test]
-    fn korean_knowledge_skill_labels_keep_the_canonical_english_id_on_every_host() {
+    fn korean_knowledge_skill_labels_keep_ids_only_in_descriptions_on_every_host() {
         let selected = [
             "knowledge-capture".to_owned(),
             "knowledge-recall".to_owned(),
@@ -2711,14 +2711,11 @@ description: Inspect one local file without changing it.
             "knowledge-import".to_owned(),
         ];
         let labels = [
-            (
-                "knowledge-capture",
-                "유용한 지식 남기기 (knowledge-capture)",
-            ),
-            ("knowledge-recall", "지식 찾아보기 (knowledge-recall)"),
-            ("knowledge-promote", "지식 공유하기 (knowledge-promote)"),
-            ("knowledge-maintain", "지식 정비하기 (knowledge-maintain)"),
-            ("knowledge-import", "저장소 지식 스캔 (knowledge-import)"),
+            ("knowledge-capture", "유용한 지식 남기기"),
+            ("knowledge-recall", "지식 찾아보기"),
+            ("knowledge-promote", "지식 공유하기"),
+            ("knowledge-maintain", "지식 정비하기"),
+            ("knowledge-import", "저장소 지식 스캔"),
         ];
 
         for host in [Host::Codex, Host::Claude, Host::Antigravity] {
@@ -2734,7 +2731,7 @@ description: Inspect one local file without changing it.
                 )
                 .expect("UTF-8 Skill source");
                 assert!(skill.contains(&format!("name: {name}")));
-                assert!(skill.contains(&format!("({name})")));
+                assert!(skill.contains(&format!("description: ({name})")));
                 if matches!(host, Host::Codex | Host::Antigravity) {
                     let metadata = std::str::from_utf8(
                         projection
@@ -2743,8 +2740,9 @@ description: Inspect one local file without changing it.
                             .expect("localized Skill metadata"),
                     )
                     .expect("UTF-8 Skill metadata");
-                    assert!(metadata.contains(label));
-                    assert!(metadata.contains(&format!("({name})")));
+                    assert!(metadata.contains(&format!("display_name: \"{label}\"")));
+                    assert!(metadata.contains(&format!("short_description: \"({name})")));
+                    assert!(!metadata.contains(&format!("{label} ({name})")));
                 }
             }
         }

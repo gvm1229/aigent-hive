@@ -2,8 +2,8 @@ use super::{emit_action_result, ActionResult, Evidence};
 use crate::usage::{
     check_codexbar_provider_unique_with_runner, check_codexbar_provider_with_runner,
     qualify_and_dispatch_preferred_with_runners, qualify_and_dispatch_snapshot,
-    AutomaticDispatchError, NativeUsageRunner, SensorError, SystemCommandRunner,
-    UsageGuardEvidence, UsageHost, UsageObservation,
+    read_codex_native_with_account_recovery, AutomaticDispatchError, SensorError,
+    SystemCommandRunner, UsageGuardEvidence, UsageHost, UsageObservation,
 };
 use crate::usage_control::{
     native_then_consented_fallback, read_claude_capture_for_session, read_installed_config,
@@ -2219,9 +2219,11 @@ fn resume(arguments: &ResumeArguments) -> Result<ActionResult, AdapterError> {
             let sampled_at = SystemTime::now();
             let prequalified = match installed.primary_host {
                 Host::Codex if installed.codexbar_fallback_enabled => None,
-                Host::Codex => Some(
-                    SystemCommandRunner.read_codex_native(requested_account_digest, sampled_at),
-                ),
+                Host::Codex => Some(read_codex_native_with_account_recovery(
+                    &SystemCommandRunner,
+                    requested_account_digest,
+                    sampled_at,
+                )),
                 Host::Claude => {
                     let session_id = arguments
                         .session_id

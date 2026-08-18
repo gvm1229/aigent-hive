@@ -26,6 +26,9 @@ surface와 third-party fallback의 failure·ownership 경계 분리 필요.
 Host별 결정:
 
 - Codex: app-server JSON-RPC primary
+- Codex supplied account digest 불일치: app-server가 현재 authenticated account 하나를 완전한
+  native response로 반환할 때만 unbound native 재측정 1회. 새 digest는 측정 결과에서만 사용,
+  CodexBar 호출 없음. identity 누락·복수·malformed·stale·limited는 기존 fail-closed 유지
 - Claude Code: user가 Claude host의 `/statusline`으로 opt-in한 sanitized JSON capture
   primary; Hive의 `~/.claude/settings.json` mutation 없음
 - Antigravity: official structured surface qualification 전 `native=unsupported`

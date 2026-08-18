@@ -9,9 +9,11 @@ summary: "Qualified host-native usage sensors take priority over the optional Co
 tags: [sensor, usage]
 aliases: ["Native-first usage"]
 sources:
-  - "repo:crates/hive-cli/src/main.rs#sha256:bd0a33c9ac1debb73761ff7f492b8d83f384d0ea6c1a5bdd4a42a71f0931b631"
+  - "repo:crates/hive-cli/src/main.rs#sha256:0d4ace682bb4bc6cd31a5a3fa4675e1b0a1f2bdb93f55d9456177be7e629cd9d"
+  - "repo:crates/hive-cli/src/usage.rs#sha256:c60a6eecaa243ef0528c292303baca85f0bf4c4c4f654612bf97d15fa52ffe69"
+  - "repo:crates/hive-cli/src/usage_control.rs#sha256:6c5febe7ae1ac1a892f7ac412c40d1b8d9ae339fe73fa8153faf9bb22051e1c0"
   - "repo:crates/hive-cli/src/user_setup.rs#sha256:73d95136c28b6742d76d7aca0874144808500168a67fc97accdee9bc2b387481"
-  - "repo:docs/decisions/ADR-0010-native-first-usage-sensors.md#sha256:5602025a4eb182cc6e51cc816cab74983f10ee2bdd2f6324649de63fdbddef1f"
+  - "repo:docs/decisions/ADR-0010-native-first-usage-sensors.md#sha256:4e753ff25c9c2c604b59b60d27cace205a8e5f7cf377538db6dd6156835f0408"
   - "repo:harness/skills/user-setup/SKILL.md#sha256:1fcbb2b9b2db6d57bd40682f80db2a0a916ebbffb3434431038b609b6b743c11"
 links: [automatic-dispatch-guard, supported-hosts]
 reviewed_revision: "git:722c8e46dbde5710155b394ef33820ebccd3b85c"
@@ -23,6 +25,11 @@ status: active
 Each host uses a qualified native machine surface first. CodexBar is an optional,
 explicitly consented fallback for allowlisted unavailable or unsupported native
 results, never a bypass for a native limited decision.
+
+When a supplied Codex account digest is absent, Hive retries the native sensor once
+without that digest only when the sensor returns one complete authenticated account.
+Missing, duplicate, malformed, stale, or limited results still fail closed and do not
+invoke CodexBar.
 
 Expedited setup enables the guard at `20%` remaining. Normal setup names or asks
 about CodexBar only after a native-only probe returns an allowlisted failure.

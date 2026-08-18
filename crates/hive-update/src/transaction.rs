@@ -17,7 +17,9 @@ use hive_render::{
     RenderError, SetupChange, SetupMode, SetupOutcome, SetupRequest,
 };
 #[cfg(test)]
-use hive_render::{execute_setup, GlobalProjectPreferences};
+use hive_render::{
+    execute_setup, historical_project_upgrade_candidate_in, GlobalProjectPreferences,
+};
 use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
 use sha2::{Digest, Sha256};
@@ -2265,6 +2267,104 @@ mod tests {
             .expect("foreign orchestration");
     }
 
+    fn install_historical_consumer(target: &Path, version: &str) {
+        let target = target.canonicalize().expect("consumer target");
+        let preferences = GlobalProjectPreferences {
+            interface_language: "en".to_owned(),
+            wiki_enabled: true,
+            wiki_backend: "markdown".to_owned(),
+            wiki_language: "both".to_owned(),
+            persona_id: "balanced".to_owned(),
+            persona_custom_description: None,
+            selected_project_skills: Vec::new(),
+            usage_guard_enabled: false,
+            codexbar_fallback_enabled: false,
+            discord_guard_enabled: false,
+            discord_webhook_url_env: None,
+            discord_message_fields: vec![
+                "remaining-usage".to_owned(),
+                "project".to_owned(),
+                "request".to_owned(),
+                "progress".to_owned(),
+                "host".to_owned(),
+                "resume".to_owned(),
+            ],
+            usage_stop_remaining_percent: 20,
+        };
+        execute_setup(&SetupRequest {
+            target: &target,
+            answers: &phase1_fixture("answers-base.yml"),
+            capabilities: &phase1_fixture("capabilities-codex-omx.json"),
+            mode: SetupMode::Apply,
+            reconfigure_roles: BTreeSet::new(),
+            global_preferences: Some(preferences),
+        })
+        .expect("current setup before historical projection");
+
+        let harness_path = target.join(HARNESS_PATH);
+        let harness = fs::read_to_string(&harness_path)
+            .expect("harness")
+            .replace(
+                &format!("harness_version = \"{}\"", env!("CARGO_PKG_VERSION")),
+                &format!("harness_version = \"{version}\""),
+            )
+            .replace(
+                &format!("source_release_version = \"{}\"", env!("CARGO_PKG_VERSION")),
+                &format!("source_release_version = \"{version}\""),
+            );
+        fs::write(&harness_path, harness).expect("historical harness");
+
+        let capability =
+            Dir::open_ambient_dir(&target, ambient_authority()).expect("target capability");
+        let historical = historical_project_upgrade_candidate_in(&capability, version)
+            .expect("embedded historical project base");
+        for file in &historical.files {
+            let path = target.join(&file.path);
+            fs::create_dir_all(path.parent().expect("historical parent"))
+                .expect("historical directory");
+            fs::write(path, &file.content).expect("historical projection");
+        }
+        if !historical
+            .files
+            .iter()
+            .any(|file| file.path == ".agents/directives/03-session-coordination.md")
+        {
+            fs::remove_file(target.join(".agents/directives/03-session-coordination.md"))
+                .expect("remove post-historical directive projection");
+        }
+        let files = historical
+            .files
+            .iter()
+            .map(|file| {
+                serde_json::json!({
+                    "path": file.path,
+                    "kind": file.kind,
+                    "content_digest": file.content_digest,
+                    "content": String::from_utf8_lossy(&file.content),
+                })
+            })
+            .collect::<Vec<_>>();
+        let mut ledger = serde_json::json!({
+            "schema_version": 1,
+            "product_version": version,
+            "files": files,
+        });
+        let digest = sha256_digest(
+            &serde_json_canonicalizer::to_vec(&ledger).expect("canonical unsigned ledger"),
+        );
+        ledger
+            .as_object_mut()
+            .expect("ledger object")
+            .insert("ledger_digest".to_owned(), JsonValue::String(digest));
+        let mut bytes = serde_json_canonicalizer::to_vec(&ledger).expect("canonical ledger");
+        bytes.push(b'\n');
+        fs::write(target.join(".hive/config/project-base.json"), bytes).expect("project base");
+        fs::write(target.join("README.md"), b"foreign project bytes\n").expect("foreign readme");
+        fs::create_dir_all(target.join(".omx")).expect("omx");
+        fs::write(target.join(".omx/state.json"), b"{\"foreign\":true}\n")
+            .expect("foreign orchestration");
+    }
+
     fn install_historical_skill_projection(
         skill_root: &Path,
         active_path: &Path,
@@ -2585,9 +2685,9 @@ mod tests {
         let fixture = release_fixture();
         let marker = fs::read_to_string(fixture.join("TEST-ONLY.md")).expect("test-only marker");
         let marker_lowered = marker.to_ascii_lowercase();
-        assert!(marker.contains("Synthetic test fixture"));
-        assert!(marker.contains("must never be published"));
-        assert!(marker_lowered.contains("private signing material is intentionally absent"));
+        assert!(marker.contains("Test-only `0.9.5` release bundle fixture"));
+        assert!(marker.contains("Local updater and version-parity tests only"));
+        assert!(marker_lowered.contains("public release artifact"));
         let manifest = fs::read_to_string(fixture.join("bundle-manifest.json"))
             .expect("synthetic integrity manifest");
         assert!(manifest.contains(&format!(
@@ -3047,7 +3147,7 @@ mod tests {
         let target = parent.join("consumer");
         let displaced = parent.join("consumer-displaced");
         fs::create_dir(&target).expect("target");
-        install_legacy_consumer(&target, "0.6.0");
+        install_historical_consumer(&target, "0.9.1");
         let target_dir = open_target_capability(&target).expect("target capability");
         fs::rename(&target, &displaced).expect("displace target");
         fs::create_dir(&target).expect("replacement target");
@@ -3082,7 +3182,7 @@ mod tests {
             let temporary = tempfile::tempdir().expect("temporary");
             let target = temporary.path().join("consumer");
             fs::create_dir(&target).expect("target");
-            install_legacy_consumer(&target, "0.6.0");
+            install_historical_consumer(&target, "0.9.1");
             let target_dir = open_target_capability(&target).expect("target capability");
             let outside = temporary.path().join("outside");
             fs::create_dir(&outside).expect("outside");
@@ -3189,10 +3289,10 @@ mod tests {
     fn every_supported_same_major_generation_dry_runs_and_applies_without_foreign_drift() {
         let _environment = UPDATE_ENVIRONMENT.lock().expect("environment lock");
         let fixture = release_fixture();
-        for source_version in ["0.1.0", "0.2.0", "0.3.0", "0.4.0", "0.5.0", "0.6.0"] {
+        for source_version in ["0.9.1", "0.9.2", "0.9.3", "0.9.4"] {
             let target = tempfile::tempdir().expect("target");
             let consumer = target.path().canonicalize().expect("consumer");
-            install_legacy_consumer(&consumer, source_version);
+            install_historical_consumer(&consumer, source_version);
             let harness_path = consumer.join(HARNESS_PATH);
             let harness = fs::read_to_string(&harness_path).expect("harness").replace(
                 "usage_stop_remaining_percent = 20",
@@ -3233,14 +3333,14 @@ mod tests {
     fn signed_update_preserves_foreign_bytes_and_removes_legacy_project_index() {
         let target = tempfile::tempdir().expect("target");
         let consumer = target.path().canonicalize().expect("consumer");
-        install_legacy_consumer(&consumer, "0.6.0");
+        install_historical_consumer(&consumer, "0.9.1");
         let fixture = release_fixture();
         let before_readme = fs::read(consumer.join("README.md")).expect("readme");
         let before_omx = fs::read(consumer.join(".omx/state.json")).expect("omx");
 
         let dry_run = execute_update(&update_request(&consumer, &fixture, UpdateMode::DryRun))
             .expect("dry-run");
-        assert_eq!(dry_run.source_version, "0.6.0");
+        assert_eq!(dry_run.source_version, "0.9.1");
         assert_eq!(dry_run.target_version, env!("CARGO_PKG_VERSION"));
         assert_eq!(dry_run.migration_id, "same-major-render-v1");
         assert!(dry_run.backup_id.is_none());
@@ -3248,7 +3348,7 @@ mod tests {
         assert!(!consumer.join(JOURNAL_PATH).exists());
         assert!(fs::read_to_string(consumer.join(HARNESS_PATH))
             .expect("harness")
-            .contains("0.6.0"));
+            .contains("0.9.1"));
 
         let applied =
             execute_update(&update_request(&consumer, &fixture, UpdateMode::Apply)).expect("apply");
@@ -3259,21 +3359,8 @@ mod tests {
         assert!(!consumer.join(JOURNAL_PATH).exists());
         assert!(!consumer.join(".hive/index/hive.sqlite3").exists());
         assert!(consumer
-            .join(".agents/skills/project-setup/SKILL.md")
+            .join(".agents/directives/03-session-coordination.md")
             .is_file());
-        for retired in legacy_builtin_names("0.6.0") {
-            assert!(
-                !consumer
-                    .join(format!(".agents/skills/{retired}/SKILL.md"))
-                    .exists(),
-                "authenticated retired Skill path must be removed: {retired}"
-            );
-        }
-        for unselected in ["product-update", "project-transition"] {
-            assert!(!consumer
-                .join(format!(".agents/skills/{unselected}/SKILL.md"))
-                .exists());
-        }
         assert_eq!(
             fs::read(consumer.join("README.md")).expect("readme"),
             before_readme
@@ -3285,43 +3372,13 @@ mod tests {
     }
 
     #[test]
-    fn forged_legacy_skill_and_matching_writable_ledger_are_rejected() {
+    fn forged_historical_projection_is_rejected() {
         let target = tempfile::tempdir().expect("target");
         let consumer = target.path().canonicalize().expect("consumer");
-        install_legacy_consumer(&consumer, "0.6.0");
-        let skill_path = consumer.join(".agents/skills/hive-run-resume/SKILL.md");
-        let forged = b"---\nname: hive-run-resume\ndescription: attacker bytes\n---\n";
-        fs::write(&skill_path, forged).expect("forged projected Skill");
-
-        let active_path = consumer.join(".hive/config/active-skills.yml");
-        let mut active: serde_yaml::Value =
-            serde_yaml::from_slice(&fs::read(&active_path).expect("active skills"))
-                .expect("active skills");
-        let skills = active
-            .as_mapping_mut()
-            .and_then(|mapping| mapping.get_mut(serde_yaml::Value::from("skills")))
-            .and_then(serde_yaml::Value::as_sequence_mut)
-            .expect("skills");
-        let resume = skills
-            .iter_mut()
-            .find(|entry| {
-                entry
-                    .as_mapping()
-                    .and_then(|mapping| mapping.get(serde_yaml::Value::from("name")))
-                    .and_then(serde_yaml::Value::as_str)
-                    == Some("hive-run-resume")
-            })
-            .and_then(serde_yaml::Value::as_mapping_mut)
-            .expect("resume entry");
-        resume.insert(
-            serde_yaml::Value::from("content_digest"),
-            serde_yaml::Value::from(sha256_digest(forged)),
-        );
-        fs::write(
-            &active_path,
-            serde_yaml::to_string(&active).expect("active skills"),
-        )
-        .expect("forged active ledger");
+        install_historical_consumer(&consumer, "0.9.1");
+        let projection = consumer.join(".agents/directives/00-project-harness.md");
+        let forged = b"forged historical directive\n";
+        fs::write(&projection, forged).expect("forged historical projection");
 
         let fixture = release_fixture();
         assert!(matches!(
@@ -3331,10 +3388,10 @@ mod tests {
                 UpdateMode::DryRun,
             )),
             Err(UpdateError::Conflict(message))
-                if message.contains("authenticated release history")
+                if message.contains("projected historical bytes changed")
         ));
         assert_eq!(
-            fs::read(skill_path).expect("forged bytes preserved"),
+            fs::read(projection).expect("forged bytes preserved"),
             forged
         );
         assert!(!consumer.join(UPDATE_STATE_PATH).exists());
@@ -3342,11 +3399,11 @@ mod tests {
     }
 
     #[test]
-    fn signed_update_rejects_a_foreign_file_at_a_legacy_directive_path() {
+    fn signed_update_rejects_a_foreign_file_at_a_new_projection_path() {
         let target = tempfile::tempdir().expect("target");
         let consumer = target.path().canonicalize().expect("consumer");
-        install_legacy_consumer(&consumer, "0.6.0");
-        let directive = consumer.join(".agents/directives/00-project-harness.md");
+        install_historical_consumer(&consumer, "0.9.1");
+        let directive = consumer.join(".agents/directives/03-session-coordination.md");
         fs::create_dir_all(directive.parent().expect("directive parent"))
             .expect("directive parent");
         let foreign = b"foreign directive bytes\x00\xff\n";
@@ -3354,7 +3411,7 @@ mod tests {
         let fixture = release_fixture();
 
         let error = execute_update(&update_request(&consumer, &fixture, UpdateMode::DryRun))
-            .expect_err("legacy absence proof must not authorize an occupied directive path");
+            .expect_err("new projection must not overwrite a foreign file");
 
         assert!(matches!(error, UpdateError::Conflict(_)));
         assert!(error.to_string().contains("collides with a foreign file"));
@@ -3368,7 +3425,7 @@ mod tests {
         let _environment = UPDATE_ENVIRONMENT.lock().expect("environment lock");
         let target = tempfile::tempdir().expect("target");
         let consumer = target.path().canonicalize().expect("consumer");
-        install_legacy_consumer(&consumer, "0.6.0");
+        install_historical_consumer(&consumer, "0.9.1");
         let fixture = release_fixture();
         let before_readme = fs::read(consumer.join("README.md")).expect("readme");
         let activation_fault = format!("{:?}@1", std::thread::current().id());
@@ -3380,7 +3437,7 @@ mod tests {
         assert!(consumer.join(JOURNAL_PATH).is_file());
         assert!(fs::read_to_string(consumer.join(HARNESS_PATH))
             .expect("harness")
-            .contains("0.6.0"));
+            .contains("0.9.1"));
         assert_eq!(
             fs::read(consumer.join("README.md")).expect("readme"),
             before_readme
@@ -3389,7 +3446,7 @@ mod tests {
         assert!(!consumer.join(JOURNAL_PATH).exists());
         assert!(fs::read_to_string(consumer.join(HARNESS_PATH))
             .expect("harness")
-            .contains("0.6.0"));
+            .contains("0.9.1"));
         assert!(!consumer.join(UPDATE_STATE_PATH).exists());
     }
 }

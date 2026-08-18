@@ -1,4 +1,4 @@
-# CLAUDE.md
+# 00-editing-discipline.md
 
 Behavioral guidelines to reduce common LLM coding mistakes. Merge with project-specific instructions as needed.
 

@@ -8,9 +8,11 @@ use hive_core::{
     validate_hive_skill_projection_relative, validate_project_relative,
 };
 use hive_projection::historical_builtin_skills;
+#[cfg(test)]
+use hive_render::FULL_HISTORICAL_PROJECT_BASE_VERSIONS;
 use hive_render::{
-    historical_project_upgrade_candidate_in, project_upgrade_candidate_in, HistoricalProjectBase,
-    RenderError,
+    historical_project_upgrade_candidate_in, project_upgrade_candidate_in,
+    requires_full_historical_project_base, HistoricalProjectBase, RenderError,
 };
 use hive_update::{three_way_merge, three_way_merge_hive_directive, MergeDisposition, UpdateError};
 use serde::{Deserialize, Serialize};
@@ -334,7 +336,11 @@ fn prepare(target: &Dir) -> Result<UpgradePlan, UpdateError> {
                     path: path.clone(),
                     base_digest: sha256_digest(incoming),
                     local_digest: sha256_digest(final_bytes),
-                    omitted_incoming_hunks: merged.omitted_incoming_hunks,
+                    omitted_incoming_hunks: if source_version == candidate.product_version {
+                        merged.omitted_incoming_hunks
+                    } else {
+                        0
+                    },
                 });
             }
         }
@@ -532,7 +538,7 @@ fn expected_base_kind(path: &str) -> Result<&'static str, UpdateError> {
 }
 
 fn authenticate_historical_base(target: &Dir, ledger: &BaseLedger) -> Result<(), UpdateError> {
-    if matches!(ledger.product_version.as_str(), "0.7.0" | "0.8.0" | "0.9.0") {
+    if requires_full_historical_project_base(&ledger.product_version) {
         let expected = historical_project_upgrade_candidate_in(target, &ledger.product_version)
             .map_err(render_error)?;
         return authenticate_full_historical_base(ledger, &expected);
@@ -3541,6 +3547,15 @@ mod tests {
                 authenticate_historical_base(&target, &ledger).expect("historical inventory");
             }
         }
+    }
+
+    #[test]
+    fn full_historical_registry_uses_the_renderer_as_its_single_source_of_truth() {
+        for version in FULL_HISTORICAL_PROJECT_BASE_VERSIONS.iter().copied() {
+            assert!(requires_full_historical_project_base(version));
+        }
+        assert!(!requires_full_historical_project_base("0.6.0"));
+        assert!(!requires_full_historical_project_base("0.9.5"));
     }
 
     #[test]

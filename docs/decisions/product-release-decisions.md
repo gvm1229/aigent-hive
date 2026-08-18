@@ -48,7 +48,7 @@
 | 배포 정본 | `0.8.0` npm 시험 배포 이력 보존. `0.9.0` 정식 릴리스는 protected `main` exact final candidate·annotated tag·GitHub Release·npm·direct installer를 동일 native binary와 digest로 결합 |
 | npm 설치 | Public `aigent-hive` umbrella + exact `@aigent-hive/*` platform package. `0.8.0|latest`를 기본 설치로 제공하고 기존 `0.8.0-test.1|test`는 immutable 검증 이력으로 유지. 최초 등록만 임시 `NPM_TOKEN`, 이후 6개 Trusted Publisher·OIDC 전용 |
 | update 확인 | Global setup explicit opt-in, 성공 확인 24시간 throttle, offline 실패는 성공 시각 미기록·다음 host session 재시도, 확인만으로 install 금지 |
-| binary update | Bare `hive update`가 즉시 확인하고 새 version이 있으면 선택 언어로 질문. 명시적 수락 뒤 authenticated install owner의 exact adapter만 실행 |
+| binary update | Bare `hive update`가 즉시 확인하고 새 version이 있으면 선택 언어로 package owner·exact target·authenticated saved host scope의 post-update projection refresh를 함께 표시. 명시적 수락 뒤 authenticated install owner의 exact adapter 실행, target binary 재검증 뒤 새 executable로 saved scope만 `hive install --scope user --hosts <resolved-hosts> --apply --output json` 실행·validate. valid setup·authenticated host manifest 교집합 부재·invalid: default host 없이 binary-only 결과와 recovery command. `--check` 설치 금지 |
 | host projection | User `~/.agents/directives`·`~/.agents/skills` provider-neutral projection + selected host의 thin native adapter; project Codex·Antigravity `.agents/skills`, Claude `.claude/skills`; foreign byte 보존 |
 | role/run | shared role HANDOFF, PLAN-derived criterion, exact evidence locator, immutable owner pin, sensor-independent manual과 one-role usage-guarded automatic no-spawn resume |
 | 현재 버전 | 정식 릴리스 준비 target `0.9.0`; root Cargo workspace version과 `workspace.metadata.hive.release-date`가 정본 |
@@ -56,6 +56,8 @@
 | 호환성 | major `0`을 포함해 같은 major만 non-breaking upgrade 보장 |
 | cross-major | 사전 경고, 자동 migration, project/docs/preferences 보존, SQLite rebuild |
 | release workflow | `develop` 사전 후보 뒤 protected `main` final candidate를 한 번 build. 5개 target·6개 npm·3개 installer의 digest·attestation·byte identity 검증 뒤 rebuild 없이 annotated `v0.9.0`·GitHub Release·npm `latest` publication |
+| release compatibility qualification | Release metadata의 declared compatibility range: executable contract. Candidate build 전 compiled CLI·release bundle·npm/direct package matrix, exact historical base·preservation·negative recovery evidence와 digest-bound coverage report 필수. Public test: prior stable·oldest distinct full-ledger project·선택 host state의 representative acceptance. Stable promotion: accepted public test·coverage report·artifact digest 동일성 전제 |
+| `0.9.5` 현 작업 경계 | 유지보수자 명시 지시에 따라 local implementation·compiled/package qualification까지만 수행. `HBC95-006`·`AUP95-007`·`REL95-001–006` public test·protected `main` 통합·stable publication·stable 설치는 재승인 전 보류. macOS source qualification은 `MAC95-001`로 유지보수자 external evidence 대기 |
 | install ownership | Direct receipt binary만 Hive-owned. npm binary는 npm 소유이며 Hive의 직접 덮어쓰기 금지; bare update의 사용자 승인 뒤 exact npm command 위임만 허용. Homebrew·WinGet은 기존 owner 경계 유지 |
 | Antigravity plugin ownership | Hive는 `~/.hive/marketplaces/antigravity/` source package만 소유. `agy` staging·import manifest는 host 소유이며 Hive ledger에서 제외. Mutation 전 staging 전체를 authenticated prior와 exact 비교하고 foreign entry는 보존. 신규 rollback은 uninstall, refresh rollback은 prior source 재설치 |
 | Git | `develop` 일반 fast-forward direct push, `main` production PR·required checks. `staging`은 명시적 release 필요·승인 때만 생성하고 strict ruleset 적용 |

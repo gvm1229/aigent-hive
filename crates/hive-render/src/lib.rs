@@ -45,6 +45,19 @@ const FRESH_CAPABILITY_RESOLUTION_MAX_AGE: Duration = Duration::from_mins(1);
 const OPERATIONAL_USER_SETUP_VERSION: (u64, u64, u64) = (0, 8, 0);
 static ACTIVATION_TEMP_COUNTER: AtomicU64 = AtomicU64::new(0);
 
+/// Historical releases whose complete project-base ledger is embedded in the binary.
+/// Earlier releases retain the separately authenticated legacy Skill-only contract.
+pub const FULL_HISTORICAL_PROJECT_BASE_VERSIONS: &[&str] = &[
+    "0.7.0", "0.8.0", "0.9.0", "0.9.1", "0.9.2", "0.9.3", "0.9.4",
+];
+
+/// Report whether a historical release must authenticate against its complete
+/// embedded project-base ledger instead of the legacy Skill-only inventory.
+#[must_use]
+pub fn requires_full_historical_project_base(version: &str) -> bool {
+    FULL_HISTORICAL_PROJECT_BASE_VERSIONS.contains(&version)
+}
+
 /// Setup operation selected by the CLI.
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub enum SetupMode {
@@ -892,13 +905,20 @@ pub fn historical_project_upgrade_candidate_in(
     target_dir: &Dir,
     version: &str,
 ) -> Result<HistoricalProjectBase, RenderError> {
+    if !requires_full_historical_project_base(version) {
+        return Err(RenderError::Unsupported(format!(
+            "historical full project base is not embedded: {version}"
+        )));
+    }
     let files = match version {
         "0.7.0" => frozen_project_base_0_7(target_dir)?,
         "0.8.0" => frozen_project_base_0_8(target_dir)?,
         "0.9.0" => frozen_project_base_0_9(target_dir)?,
-        _ => Err(RenderError::Unsupported(format!(
-            "historical full project base is not embedded: {version}"
-        )))?,
+        "0.9.1" => frozen_project_base_0_9_1(target_dir)?,
+        "0.9.2" => frozen_project_base_0_9_2(target_dir)?,
+        "0.9.3" => frozen_project_base_0_9_3(target_dir)?,
+        "0.9.4" => frozen_project_base_0_9_4(target_dir)?,
+        _ => unreachable!("full historical project-base registry is exhaustive"),
     };
     let files = files
         .into_iter()
@@ -1303,6 +1323,186 @@ fn frozen_project_base_0_9(target_dir: &Dir) -> Result<BTreeMap<String, Vec<u8>>
     )
 }
 
+macro_rules! frozen_project_base_0_9_release {
+    ($function:ident, $version:literal, [$($directive:literal),+ $(,)?], [$($skill:literal),+ $(,)?]) => {
+        fn $function(target_dir: &Dir) -> Result<BTreeMap<String, Vec<u8>>, RenderError> {
+            const DIRECTIVES: &[(&str, &[u8])] = &[
+                $(($directive, include_bytes!(concat!(
+                    "../../../harness/project-bases/", $version, "/directives/", $directive
+                )).as_slice())),+
+            ];
+            const SKILLS: &[(&str, &[u8], &[u8])] = &[
+                $(($skill,
+                    include_bytes!(concat!(
+                        "../../../harness/project-bases/", $version, "/skills/", $skill, "/SKILL.md"
+                    )).as_slice(),
+                    include_bytes!(concat!(
+                        "../../../harness/project-bases/", $version, "/skills/", $skill, "/agents/openai.yaml"
+                    )).as_slice())),+
+            ];
+            frozen_project_base_0_8_or_0_9(
+                target_dir,
+                $version,
+                DIRECTIVES,
+                SKILLS,
+                include_str!(concat!(
+                    "../../../harness/project-bases/", $version, "/AGENTS.md.template"
+                )),
+            )
+        }
+    };
+}
+
+frozen_project_base_0_9_release!(
+    frozen_project_base_0_9_1,
+    "0.9.1",
+    [
+        "00-project-harness.md",
+        "01-project-knowledge.md",
+        "02-project-upgrade.md"
+    ],
+    [
+        "amend-directive",
+        "code-polish",
+        "knowledge-capture",
+        "knowledge-import",
+        "knowledge-maintain",
+        "knowledge-promote",
+        "knowledge-recall",
+        "package-review",
+        "product-update",
+        "project-refresh",
+        "project-setup",
+        "project-transition",
+        "prompt-refine",
+        "quick-answer",
+        "ralph-loop",
+        "research-best-practices",
+        "run-checkpoint",
+        "run-handoff",
+        "run-resume",
+        "ship",
+        "usage-guard",
+        "user-setup"
+    ]
+);
+
+frozen_project_base_0_9_release!(
+    frozen_project_base_0_9_2,
+    "0.9.2",
+    [
+        "00-project-harness.md",
+        "01-project-knowledge.md",
+        "02-project-upgrade.md"
+    ],
+    [
+        "amend-directive",
+        "code-polish",
+        "knowledge-capture",
+        "knowledge-import",
+        "knowledge-maintain",
+        "knowledge-promote",
+        "knowledge-recall",
+        "package-review",
+        "product-update",
+        "project-refresh",
+        "project-setup",
+        "project-transition",
+        "prompt-refine",
+        "quick-answer",
+        "ralph-loop",
+        "research-best-practices",
+        "run-checkpoint",
+        "run-handoff",
+        "run-resume",
+        "ship",
+        "usage-guard",
+        "user-setup"
+    ]
+);
+
+frozen_project_base_0_9_release!(
+    frozen_project_base_0_9_3,
+    "0.9.3",
+    [
+        "00-project-harness.md",
+        "01-project-knowledge.md",
+        "02-project-upgrade.md",
+        "03-session-coordination.md"
+    ],
+    [
+        "amend-directive",
+        "code-polish",
+        "custom-subagent-create",
+        "iterative-execution",
+        "knowledge-capture",
+        "knowledge-import",
+        "knowledge-maintain",
+        "knowledge-promote",
+        "knowledge-recall",
+        "multi-goal",
+        "package-review",
+        "product-update",
+        "project-refresh",
+        "project-setup",
+        "project-transition",
+        "prompt-refine",
+        "quick-answer",
+        "ralph-loop",
+        "research-best-practices",
+        "run-checkpoint",
+        "run-handoff",
+        "run-resume",
+        "ship",
+        "team-execution",
+        "usage-guard",
+        "user-setup"
+    ]
+);
+
+frozen_project_base_0_9_release!(
+    frozen_project_base_0_9_4,
+    "0.9.4",
+    [
+        "00-project-harness.md",
+        "01-project-knowledge.md",
+        "02-project-upgrade.md",
+        "03-session-coordination.md"
+    ],
+    [
+        "amend-directive",
+        "code-polish",
+        "custom-subagent-create",
+        "iterative-execution",
+        "knowledge-capture",
+        "knowledge-import",
+        "knowledge-maintain",
+        "knowledge-promote",
+        "knowledge-recall",
+        "multi-goal",
+        "package-review",
+        "product-update",
+        "project-refresh",
+        "project-setup",
+        "project-transition",
+        "prompt-refine",
+        "quick-answer",
+        "ralph-loop",
+        "research-best-practices",
+        "run-checkpoint",
+        "run-handoff",
+        "run-resume",
+        "ship",
+        "team-execution",
+        "usage-guard",
+        "user-setup"
+    ]
+);
+
+fn default_markdown_wiki_backend() -> String {
+    "markdown".to_owned()
+}
+
 #[allow(clippy::too_many_lines)]
 fn frozen_project_base_0_8_or_0_9(
     target_dir: &Dir,
@@ -1340,6 +1540,8 @@ fn frozen_project_base_0_8_or_0_9(
         preference_provenance: String,
         interface_language: String,
         wiki_enabled: bool,
+        #[serde(default = "default_markdown_wiki_backend")]
+        wiki_backend: String,
         wiki_language: String,
         persona_id: String,
         selected_project_skills: Vec<String>,
@@ -1412,6 +1614,7 @@ fn frozen_project_base_0_8_or_0_9(
         && matches!(harness.setup_mode.as_str(), "expedited" | "custom")
         && preference_provenance_matches
         && matches!(harness.interface_language.as_str(), "en" | "ko")
+        && harness.wiki_backend == "markdown"
         && matches!(harness.wiki_language.as_str(), "en" | "ko" | "both")
         && matches!(
             harness.persona_id.as_str(),
@@ -1560,6 +1763,7 @@ fn frozen_project_base_0_8_or_0_9(
             "{{ \"enabled\" if wiki_enabled else \"disabled\" }}",
             wiki_state,
         )
+        .replace("{{ wiki_backend }}", &harness.wiki_backend)
         .replace("{{ wiki_language }}", &harness.wiki_language)
         .replace("{{ persona_id }}", &harness.persona_id)
         .replace("{{ primary_host }}", &harness.primary_host)
@@ -1792,7 +1996,9 @@ fn execute_release_update_for_target_in(
         }
     });
     require_operational_update_preferences(target_version, replay_preferences.as_ref())?;
-    if authenticated_source_version != target_version {
+    if authenticated_source_version != target_version
+        && !requires_full_historical_project_base(authenticated_source_version)
+    {
         historical_builtin_skills(authenticated_source_version).map_err(|error| {
             RenderError::Verification(format!(
                 "authenticated release-update source is not covered by embedded history: {error}"
@@ -2020,6 +2226,8 @@ fn read_bytes(path: &Path, label: &str) -> Result<Vec<u8>, RenderError> {
 
 trait TargetRead {
     fn read_optional(&self, relative: &Path) -> Result<Option<Vec<u8>>, RenderError>;
+
+    fn open_target_dir(&self) -> Result<Dir, RenderError>;
 }
 
 impl TargetRead for Path {
@@ -2038,17 +2246,29 @@ impl TargetRead for Path {
             Err(error) => Err(io_internal(error)),
         }
     }
+
+    fn open_target_dir(&self) -> Result<Dir, RenderError> {
+        Dir::open_ambient_dir(self, ambient_authority()).map_err(io_internal)
+    }
 }
 
 impl TargetRead for PathBuf {
     fn read_optional(&self, relative: &Path) -> Result<Option<Vec<u8>>, RenderError> {
         self.as_path().read_optional(relative)
     }
+
+    fn open_target_dir(&self) -> Result<Dir, RenderError> {
+        self.as_path().open_target_dir()
+    }
 }
 
 impl TargetRead for Dir {
     fn read_optional(&self, relative: &Path) -> Result<Option<Vec<u8>>, RenderError> {
         read_capability_optional(self, relative)
+    }
+
+    fn open_target_dir(&self) -> Result<Dir, RenderError> {
+        self.try_clone().map_err(io_internal)
     }
 }
 
@@ -4207,6 +4427,9 @@ fn validate_release_projection_ownership<T: TargetRead + ?Sized>(
                 .to_owned(),
         ));
     }
+    if requires_full_historical_project_base(authenticated_source_version) {
+        return validate_full_historical_projection_ownership(target, authenticated_source_version);
+    }
     let authenticate_directives = authenticated_source_version == env!("CARGO_PKG_VERSION")
         || matches!(authenticated_source_version, "0.7.0" | "0.8.0" | "0.9.0");
     if !authenticate_directives {
@@ -4230,6 +4453,30 @@ fn validate_release_projection_ownership<T: TargetRead + ?Sized>(
             .map(|preferences| preferences.selected_project_skills.as_slice()),
         |relative, label| read_target_required(target, relative, label),
     )
+}
+
+fn validate_full_historical_projection_ownership<T: TargetRead + ?Sized>(
+    target: &T,
+    authenticated_source_version: &str,
+) -> Result<ValidatedProjectionOwnership, RenderError> {
+    let target_dir = target.open_target_dir()?;
+    let historical =
+        historical_project_upgrade_candidate_in(&target_dir, authenticated_source_version)?;
+    let mut files = BTreeMap::new();
+    for expected in historical.files {
+        let relative = PathBuf::from(&expected.path);
+        let installed = read_target_required(target, &relative, "projected historical file")?;
+        if installed != expected.content {
+            return Err(RenderError::Verification(format!(
+                "projected historical bytes changed: {}",
+                relative.display()
+            )));
+        }
+        if is_exact_projection_path(&relative) {
+            files.insert(relative, installed);
+        }
+    }
+    Ok(ValidatedProjectionOwnership { files })
 }
 
 fn reproduce_projection_ownership<T: TargetRead + ?Sized>(
@@ -6024,7 +6271,7 @@ fn stage_projection_recovery(
     relative: &Path,
     bytes: &[u8],
 ) -> Result<ProjectionRecovery, RenderError> {
-    validate_hive_skill_projection_relative(relative)
+    validate_exact_projection_relative(relative)
         .map_err(|error| RenderError::Rollback(error.to_string()))?;
     let mut created = Vec::new();
     let (parent, destination_name) = capability_parent(target, relative, false, &mut created)?
@@ -8245,7 +8492,6 @@ mod tests {
                 );
             }
             assert!(historical_project_upgrade_candidate_in(&target_dir, "0.8.1").is_err());
-            assert!(historical_project_upgrade_candidate_in(&target_dir, "0.9.1").is_err());
 
             let harness = fs::read_to_string(&harness_path).expect("0.8 harness config");
             fs::write(
@@ -8260,6 +8506,46 @@ mod tests {
                 historical_project_upgrade_candidate_in(&target_dir, "0.8.0"),
                 Err(RenderError::Verification(_))
             ));
+        }
+    }
+
+    fn assert_post_090_full_historical_candidates(
+        target_dir: &cap_std::fs::Dir,
+        harness_path: &Path,
+        historical_harness: &str,
+    ) {
+        for version in ["0.9.1", "0.9.2", "0.9.3", "0.9.4"] {
+            fs::write(
+                harness_path,
+                historical_harness
+                    .replace(
+                        "harness_version = \"0.9.0\"",
+                        &format!("harness_version = \"{version}\""),
+                    )
+                    .replace(
+                        "source_release_version = \"0.9.0\"",
+                        &format!("source_release_version = \"{version}\""),
+                    ),
+            )
+            .expect("pinned historical 0.9 harness config");
+            let historical = historical_project_upgrade_candidate_in(target_dir, version)
+                .expect("embedded post-0.9.0 full registry");
+            assert_eq!(historical.product_version, version);
+            assert!(!historical.files.is_empty());
+            assert!(historical
+                .files
+                .iter()
+                .all(|entry| entry.content_digest == sha256_digest(&entry.content)));
+            if version == "0.9.2" {
+                let marker = historical
+                    .files
+                    .iter()
+                    .find(|entry| entry.path == "AGENTS.md")
+                    .expect("historical AGENTS marker");
+                let marker = String::from_utf8_lossy(&marker.content);
+                assert!(marker.contains("backend=`markdown`"));
+                assert!(!marker.contains("{{ wiki_backend }}"));
+            }
         }
     }
 
@@ -8351,7 +8637,12 @@ mod tests {
                     String::from_utf8_lossy(&frozen["AGENTS.md"]).contains("hive usage enforce")
                 );
             }
-            assert!(historical_project_upgrade_candidate_in(&target_dir, "0.9.1").is_err());
+            let historical_harness = fs::read_to_string(&harness_path).expect("0.9 harness config");
+            assert_post_090_full_historical_candidates(
+                &target_dir,
+                &harness_path,
+                &historical_harness,
+            );
         }
     }
 

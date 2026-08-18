@@ -1,9 +1,9 @@
 # Aigent Hive active plan index
 
-> Revision: 219
-> 기준일: 2026-08-14
-> Product version: `0.9.4` patch 개발 기준
-> 현재 milestone: `0.9.4` GitHub Release 이중 언어 설명·공개 HTML·PDF 지식 기능 안내·Skill 표시 식별자·전역 설치 검증·완료한 source 지식 색인·응답 언어·프롬프트 영어 기본값·작업 폴더 수명주기
+> Revision: 239
+> 기준일: 2026-08-15
+> Product version: `0.9.4` stable 기준, 다음 target `0.9.5` compatible patch
+> 현재 milestone: historical project base 수용 범위·사용자 투영 자동 갱신·출시 호환성 수용 게이트의 로컬 완료
 > Entrypoint: `docs/plans/PLAN.md`
 
 ## Goal parameters
@@ -15,7 +15,12 @@
   `HGD94-*` 공개 한국어 HTML 지식 기능 비교표와 PDF section title pagination,
   `RNL94-*` GitHub Release English-first bilingual description과 language contract,
   `PML94-*` 응답 언어와 분리한 프롬프트 영어 기본값·명시 언어 우선 계약,
-  `REL94-*` local gate·번호 공개 시험판·Windows x64 설치/업그레이드 수용·protected `main`
+  `HBC95-*` declared project migration range와 exact historical full project-base registry·matrix 수용,
+  `AUP95-*` authenticated saved multi-host scope 기반 bare binary update 뒤 user projection 자동 갱신,
+  `RQC95-*` declared compatibility contract·compiled/package artifact·local qualification gate,
+  `MAC95-001` macOS source qualification external evidence, `NUS-029–030` Codex native account
+  recovery, `KBP95-*` cross-platform knowledge-bundle guidance and macOS acceptance,
+  `REL95-*` local gate·번호 공개 시험판·Windows x64 설치/업그레이드 수용·protected `main`
   통합·동일 artifact stable publication·게시 뒤 의존 검사
 - Success: 동일 reviewed scan 파일의 candidate·apply 보안 수용 결과 일치, credential 거부의
   claim-bound remediation, source workspace의 current-truth architecture·intent·decision·fact private collection,
@@ -23,7 +28,12 @@
   실제 Hive-managed projection이 일치하는 전역 설치의 validation 성공, 안전한 사용자 결정 기록 성공,
   지식 Skill별 목적·사용 시점·예시를 비교한 표와 제목 단독 PDF page `0건`, GitHub Release 영어
   설명 우선·한국어 설명 후속·두 언어 규칙 위반 `0건`, 선택 응답 언어와 무관한 default English
-  prompt·명시 prompt 언어 우선
+  prompt·명시 prompt 언어 우선, declared migration source release의 exact full base 인증·packaged
+  binary matrix parity, bare binary update 뒤 authenticated saved multi-host projection refresh와
+  safe binary-only fallback, declared compatibility contract의 compiled/package artifact matrix와
+  digest-bound local evidence, current Codex native account recovery without CodexBar,
+  platform-specific knowledge-bundle guidance and macOS acceptance, numbered public test and
+  same-byte stable publication
 - Stop boundary: protected `main` review, stable publication environment approval, exact `1.0.0`
   authority, 설치 product usage guard remaining threshold `5%`
 - Invariants: provider-neutral, backend별 canonical source 우선, SQLite 파생 상태,
@@ -76,6 +86,7 @@
 | `0.9.4` 시험·정식 출시 | 6 | 0 | 100% |
 | Source project-only `update-summary` Skill | 4 | 0 | 100% |
 | Stable release Discord 구독자 알림 | 5 | 0 | 100% |
+| 다음 version 지식 Skill 표시 이름 | 3 | 0 | 100% |
 | Native host activation `0.10.0` 후보 | 0 | 12 | 0% |
 | Prompt refine 자동 routing | 12 | 0 | 100% |
 | v0.9 test 기능 마감 | 18 | 0 | 100% |
@@ -91,7 +102,15 @@
 | Agent 자율 실행 지속 | 8 | 0 | 100% |
 | `0.9.2` 완료 기능·공개 문서 출시 | 12 | 0 | 100% |
 | Notion `v0.10` 후보 | 1 | 10 | 9.1% |
-| **Canonical total** | **613** | **22** | **96.5%** |
+| `0.9.5` 과거 project 기준본 수용 범위 | 5 | 0 | 100% |
+| `0.9.5` 사용자 투영 자동 갱신 | 6 | 0 | 100% |
+| `0.9.5` 출시 호환성 수용 게이트 | 7 | 0 | 100% |
+| `0.9.5` macOS 외부 검증 | 1 | 0 | 100% |
+| `0.9.5` native sensor 복구 | 2 | 0 | 100% |
+| `0.9.5` 지식 번들 이식 안내 | 3 | 0 | 100% |
+| `0.9.5` 공개 시험·정식 출시 | 2 | 4 | 33.3% |
+| Windows 직접 설치 갱신 인계 `0.9.5` | 1 | 1 | 50% |
+| **Canonical total** | **643** | **25** | **96.3%** |
 
 External production boundary 항목도 미완료 합계에 포함. Protected authority 없이 완료 처리 금지.
 
@@ -130,6 +149,13 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
 | [`active/knowledge-skill-naming-0.9.3.md`](active/knowledge-skill-naming-0.9.3.md) | `KNS93-*` | 지식 Skill 이름·한국어 표시·legacy migration |
 | [`active/consumer-harness-session-coordination.md`](active/consumer-harness-session-coordination.md) | `CHS93-*` | 소비자 세션 조정·기존 directive 최소 변경 갱신 |
 | [`active/projection-upgrade-purge-0.9.3.md`](active/projection-upgrade-purge-0.9.3.md) | `PUG93-*` | retired Skill purge·directive direct-conflict 갱신 |
+| [`active/historical-project-base-coverage.md`](active/historical-project-base-coverage.md) | `HBC95-*` | declared migration range·exact full historical project-base registry·matrix parity |
+| [`active/automatic-user-projection-refresh-0.9.5.md`](active/automatic-user-projection-refresh-0.9.5.md) | `AUP95-*` | authenticated saved multi-host scope·bare binary update 뒤 user projection refresh |
+| [`active/release-compatibility-qualification-0.9.5.md`](active/release-compatibility-qualification-0.9.5.md) | `RQC95-*` | declared compatibility contract·compiled/package artifact·public test evidence gate |
+| [`active/macos-0.9.5-qualification.md`](active/macos-0.9.5-qualification.md) | `MAC95-*` | 현재 Windows에서 실행 불가한 macOS source qualification |
+| [`active/knowledge-bundle-portability-0.9.5.md`](active/knowledge-bundle-portability-0.9.5.md) | `KBP95-*` | cross-platform global knowledge-bundle guidance and macOS acceptance |
+| [`active/release-0.9.5-stable-publication.md`](active/release-0.9.5-stable-publication.md) | `REL95-*` | numbered public test, protected integration, and stable publication |
+| [`active/direct-update-windows-handoff-0.9.5.md`](active/direct-update-windows-handoff-0.9.5.md) | `DUP95-*` | 직접 설치 갱신의 Windows 인계·macOS 공개 수용 |
 | [`active/release-0.9.3-test-qualification.md`](active/release-0.9.3-test-qualification.md) | `REL93-*` | `0.9.3` numbered public test 수용과 정식 출시 |
 | [`active/projection-validation-consistency-0.9.3.md`](active/projection-validation-consistency-0.9.3.md) | `VAL93-*` | local-preserved validation·formatter 보호 |
 | [`active/release-engineering-optimization-0.9.3.md`](active/release-engineering-optimization-0.9.3.md) | `OPT93-*` | risk-tier CI·candidate reuse·single-owner release evidence |
@@ -146,9 +172,11 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
 | [`active/release-0.9.4-stable-publication.md`](active/release-0.9.4-stable-publication.md) | `REL94-*` | 번호 공개 시험판 수용·protected `main` 통합·동일 artifact stable publication |
 | [`active/source-update-summary-skill.md`](active/source-update-summary-skill.md) | `SUS-*` | source workspace 전용 구독자 업데이트 요약 Skill |
 | [`active/stable-release-discord-notification.md`](active/stable-release-discord-notification.md) | `RDN-*` | 안정판 배너·구독자 업데이트 Discord 알림 |
+| [`active/knowledge-skill-display-names-next-release.md`](active/knowledge-skill-display-names-next-release.md) | `KDN-*` | 다음 version 지식 Skill 한국어 표시 이름·설명 정본 ID 분리 |
 | [`active/knowledge-access-optimization-0.9.3.md`](active/knowledge-access-optimization-0.9.3.md) | `KBA93-*` | explicit collection access·index-time automatic promotion |
 | [`active/v0.10.0-native-host-activation-candidate.md`](active/v0.10.0-native-host-activation-candidate.md) | `NHA10-*` | default-off native host activation·actual lifecycle evidence |
 | [`active/v0.9.3-release-loop.graph.md`](active/v0.9.3-release-loop.graph.md) | graph | `0.9.3` release loop checkpoint·recovery 계약 |
+| [`active/v0.9.5-stable-release-loop.graph.md`](active/v0.9.5-stable-release-loop.graph.md) | graph | `0.9.5` public test·Windows acceptance·protected integration·stable verification |
 | [`active/prompt-refine-auto-routing.md`](active/prompt-refine-auto-routing.md) | `PRF-*` | Material ambiguity 자동 refine·승인 전 정지 |
 | [`active/v0.9.0-test-finalization.md`](active/v0.9.0-test-finalization.md) | `TST9-*` | Markdown Wiki, Discord outbound, 문제 보고와 시험판 기능 마감 |
 | [`active/release-0.9.0.md`](active/release-0.9.0.md) | `REL9-001–017` | 시험 수용·main 통합 |
@@ -192,3 +220,11 @@ observation, stable-release-dependent release lane 완료. `0.10.0` 후보 항�
 `N10-002–011`·`NHA10-001–012`: `0.10.0-test` 후보 유지.
 완료: 제품 harness·release에 포함하지 않는 source workspace 전용 `update-summary` Skill의 구독자 관점 필터 보강·구조 검증.
 완료: 안정판 GitHub Release 뒤 Discord 배너 전송 성공 후에만 `update-summary` 한국어 구독자 요약 전송·회귀 검증.
+완료: 다음 version 미정 지식 Skill 다섯 개 한국어 표시 이름의 영문 ID 제거, 설명 첫머리 ID 유지. `v0.9.4` release·tag·package 변경 없음.
+현재: `HBC95-001–005`·`AUP95-001–006`·`RQC95-*`·`REL95-001–004` 완료. public `test.15`에서 Windows
+`test.12 → test.13`·M2 MacBook Air `test.14 → test.15` dedicated-root user acceptance와 PortareFolium
+`0.9.2` 57-file fixture project-upgrade matrix 수용. `develop` CI `32110526256`의 Linux full·Windows/macOS
+smoke·전체 적합성·protected gate 성공. 다음은 `REL95-005` protected `main` integration이며, `REL95-006`
+stable npm publication은 유지보수자 별도 go sign 전 금지. `NUS-029–030` native-only account recovery와
+`KBP95-*` platform-specific knowledge-bundle guidance·macOS acceptance 완료. Ralph graph는
+`v095-local-qualification` 뒤 `v095-stable-release` 순서.

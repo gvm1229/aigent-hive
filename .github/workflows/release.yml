@@ -63,6 +63,8 @@ jobs:
             platform_package: linux-arm64
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
       - name: Enforce exact channel-bound candidate source
         env:
           CANDIDATE_REF: ${{ github.ref }}
@@ -219,6 +221,8 @@ jobs:
       attestations: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
       - name: Enforce exact channel-bound candidate source
         shell: bash
         env:
@@ -355,6 +359,8 @@ jobs:
       attestations: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
       - name: Enforce exact channel-bound candidate source
         env:
           CANDIDATE_REF: ${{ github.ref }}
@@ -395,6 +401,13 @@ jobs:
           pattern: release-*
           path: dist
           merge-multiple: true
+      - name: Generate digest-bound project upgrade coverage report
+        run: |
+          table="harness/release/$PRODUCT_VERSION/migration-table.json"
+          test -f "$table"
+          python3 scripts/check-project-base-coverage.py \
+            --migration-table "$table" \
+            --output release-project-base-coverage.json
       - name: Render digest-pinned npm direct installers
         run: |
           python3 scripts/render-installers.py \
@@ -437,6 +450,7 @@ jobs:
           path: |
             aigent-hive-${{ env.PACKAGE_VERSION }}.tgz
             aigent-hive-${{ env.PACKAGE_VERSION }}-npm-umbrella.attestation.jsonl
+            release-project-base-coverage.json
             release-candidate.json
           if-no-files-found: error
 
@@ -457,6 +471,8 @@ jobs:
       id-token: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
       - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
         with:
           pattern: release-*

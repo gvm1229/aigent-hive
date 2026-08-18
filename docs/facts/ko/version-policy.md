@@ -9,9 +9,9 @@ summary: "Compatible feature의 minor, fix의 patch, exact user target 기반 ma
 tags: [release, semver, version]
 aliases: ["Version lifecycle"]
 sources:
-  - "repo:docs/decisions/ADR-0006-version-lifecycle.md#sha256:7a26e1637241be7935c14d13778f838c9b4959191749899510705af85f1810a8"
+  - "repo:docs/decisions/ADR-0006-version-lifecycle.md#sha256:b0f4b815c2842d969297db6783ecbc12330d624f4efb853c2da8cf662dc501f7"
 links: [release-verification, test-distribution]
-reviewed_revision: "git:d0747ee7e1851b9edfa2066214e948d75e895ebd"
+reviewed_revision: "git:9170c884c9c96d99abcea1f5ab96a4a3a62541be"
 status: active
 ---
 

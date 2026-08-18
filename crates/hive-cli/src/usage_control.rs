@@ -1190,7 +1190,7 @@ fn read_usage_snapshot(
                 sampled_at,
             ),
         },
-        "codex" => usage::NativeUsageRunner::read_codex_native(
+        "codex" => usage::read_codex_native_with_account_recovery(
             &usage::SystemCommandRunner,
             account_digest,
             sampled_at,

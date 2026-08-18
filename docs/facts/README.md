@@ -40,6 +40,7 @@
 | Global knowledge RAG | [en](en/global-knowledge-rag.md) | [ko](ko/global-knowledge-rag.md) |
 | Install-wide knowledge capture | [en](en/install-wide-knowledge-capture.md) | [ko](ko/install-wide-knowledge-capture.md) |
 | Knowledge portability·scan | [en](en/knowledge-portability-scan.md) | [ko](ko/knowledge-portability-scan.md) |
+| 전역 지식 번들 이전 | [en](en/global-knowledge-bundle-transfer.md) | [ko](ko/global-knowledge-bundle-transfer.md) |
 | 명시 프로젝트 간 지식 접근 | [en](en/knowledge-cross-project-access.md) | [ko](ko/knowledge-cross-project-access.md) |
 | 검토 지식 스캔 검증 정합성 | [en](en/source-knowledge-scan-validation.md) | [ko](ko/source-knowledge-scan-validation.md) |
 | 공유 색인 대상 경로 안전 | [en](en/shared-index-target-safety.md) | [ko](ko/shared-index-target-safety.md) |
@@ -47,6 +48,9 @@
 | Hive preserving uninstall | [en](en/hive-preserving-uninstall.md) | [ko](ko/hive-preserving-uninstall.md) |
 | 소비자 세션 조정 | [en](en/consumer-session-coordination.md) | [ko](ko/consumer-session-coordination.md) |
 | Projection 갱신 정리 | [en](en/projection-upgrade-purge.md) | [ko](ko/projection-upgrade-purge.md) |
+| 과거 프로젝트 기준본 수용 범위 | [en](en/historical-project-base-coverage.md) | [ko](ko/historical-project-base-coverage.md) |
+| 사용자 투영 자동 갱신 | [en](en/automatic-user-projection-refresh.md) | [ko](ko/automatic-user-projection-refresh.md) |
+| 출시 호환성 수용 | [en](en/release-compatibility-qualification.md) | [ko](ko/release-compatibility-qualification.md) |
 | 전역 사용자 맥락 | [en](en/global-user-contexts.md) | [ko](ko/global-user-contexts.md) |
 | Project onboarding | [en](en/project-onboarding.md) | [ko](ko/project-onboarding.md) |
 | Plugin update merge | [en](en/plugin-update-merge.md) | [ko](ko/plugin-update-merge.md) |
