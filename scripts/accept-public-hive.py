@@ -63,6 +63,23 @@ def run(command: list[str], environment: dict[str, str], cwd: Path) -> dict[str,
         raise RuntimeError(f"command did not return one JSON object: {' '.join(command)}") from error
 
 
+def hive_version(hive: Path, environment: dict[str, str], cwd: Path) -> str:
+    completed = subprocess.run(
+        [str(hive), "--version"],
+        cwd=cwd,
+        env=environment,
+        check=False,
+        text=True,
+        capture_output=True,
+    )
+    if completed.returncode != 0:
+        raise RuntimeError(f"Hive version probe failed: {completed.stderr}")
+    version = completed.stdout.strip()
+    if not version:
+        raise RuntimeError("Hive version probe returned no version text")
+    return version
+
+
 def fixture_manifest(root: Path, paths: list[str]) -> dict[str, str]:
     result: dict[str, str] = {}
     for relative in sorted(paths):
@@ -244,12 +261,20 @@ usage_guard:
             "mode": "user-prepare",
             "result_codes": [result["code"] for result in results],
         }
+    initial_version = hive_version(hive, environment, test_root)
     completed = subprocess.run(
         commands[4], cwd=test_root, env=environment, check=False, text=True, capture_output=True
     )
     if completed.returncode != 0:
         raise RuntimeError(f"test-channel update failed: {completed.stderr}")
     results.append({"command": "update", "code": completed.returncode, "stderr": completed.stderr})
+    for _ in range(60):
+        final_version = hive_version(hive, environment, test_root)
+        if final_version != initial_version:
+            break
+        time.sleep(0.5)
+    else:
+        raise RuntimeError("test-channel update handoff did not activate a new Hive version")
     for _ in range(60):
         validation = subprocess.run(
             commands[5], cwd=test_root, env=environment, check=False, text=True, capture_output=True
@@ -262,6 +287,8 @@ usage_guard:
         raise RuntimeError("test-channel update handoff did not complete its user projection validation")
     return {
         "mode": "user",
+        "initial_version": initial_version,
+        "final_version": final_version,
         "result_codes": [result["code"] for result in results],
     }
 
