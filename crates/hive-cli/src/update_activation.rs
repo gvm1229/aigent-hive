@@ -141,6 +141,7 @@ impl ProjectionRefresher for LiveProjectionRefresher {
         let hosts = hosts.join(",");
         let user_root = user_root.to_string_lossy();
         for mode in ["--apply", "--validate"] {
+            let expected_action = projection_refresh_action(mode);
             let output = SystemCommandRunner
                 .run(
                     &program,
@@ -166,11 +167,7 @@ impl ProjectionRefresher for LiveProjectionRefresher {
                 serde_json::from_slice(&output.stdout).map_err(|_| {
                     format!("activated Hive user projection {mode} command returned malformed JSON")
                 })?;
-            if !output.success
-                || result.status != "success"
-                || result.exit_code != 0
-                || result.action != "InstallHiveUser"
-            {
+            if !output.success || !projection_refresh_reported_success(expected_action, &result) {
                 return Err(format!(
                     "activated Hive user projection {mode} command did not report success"
                 ));
@@ -204,6 +201,18 @@ struct ChildActionResult {
     action: String,
     status: String,
     exit_code: u8,
+}
+
+fn projection_refresh_action(mode: &str) -> &'static str {
+    match mode {
+        "--apply" => "InstallHiveUser",
+        "--validate" => "ValidateHiveUser",
+        _ => unreachable!("unsupported user projection refresh mode"),
+    }
+}
+
+fn projection_refresh_reported_success(expected_action: &str, result: &ChildActionResult) -> bool {
+    result.status == "success" && result.exit_code == 0 && result.action == expected_action
 }
 
 trait RegistrySource {
@@ -302,8 +311,9 @@ pub(crate) fn run(arguments: &[String]) -> ExitCode {
     let user_root = match arguments
         .user_root
         .as_deref()
-        .map_or_else(crate::user_install::resolve_user_root_path, |path| Ok(path.to_path_buf()))
-    {
+        .map_or_else(crate::user_install::resolve_user_root_path, |path| {
+            Ok(path.to_path_buf())
+        }) {
         Ok(root) => root,
         Err(message) => {
             eprintln!("error: {message}");
@@ -329,11 +339,15 @@ pub(crate) fn run(arguments: &[String]) -> ExitCode {
         .as_deref()
         .unwrap_or(&current_executable);
     if cfg!(windows) && arguments.handoff_executable.is_none() && is_direct_owner(executable) {
-        if let Err(error) = spawn_windows_direct_handoff(&current_executable, &user_root, &arguments) {
+        if let Err(error) =
+            spawn_windows_direct_handoff(&current_executable, &user_root, &arguments)
+        {
             eprintln!("error: cannot start Windows direct update handoff: {error}");
             return ExitCode::from(2);
         }
-        eprintln!("Windows direct update handoff started; completion continues in the child process.");
+        eprintln!(
+            "Windows direct update handoff started; completion continues in the child process."
+        );
         return ExitCode::SUCCESS;
     }
     if arguments.handoff_executable.is_some() {
@@ -451,37 +465,77 @@ fn is_direct_owner(executable: &Path) -> bool {
     let Ok(expected) = env!("CARGO_PKG_VERSION").parse() else {
         return false;
     };
-    matches!(discover_owner(executable, expected), Ok(InstallOwner::Direct { .. }))
+    matches!(
+        discover_owner(executable, expected),
+        Ok(InstallOwner::Direct { .. })
+    )
 }
 
-fn spawn_windows_direct_handoff(executable: &Path, user_root: &Path, arguments: &UpdateArguments) -> Result<(), String> {
+fn spawn_windows_direct_handoff(
+    executable: &Path,
+    user_root: &Path,
+    arguments: &UpdateArguments,
+) -> Result<(), String> {
     if !cfg!(windows) {
         return Err("Windows direct update handoff is unavailable on this platform".to_owned());
     }
     let helper = user_root.join(DIRECT_HANDOFF_HELPER);
-    let parent = helper.parent().ok_or_else(|| "direct update helper has no parent directory".to_owned())?;
-    fs::create_dir_all(parent).map_err(|error| format!("cannot create direct update helper directory: {error}"))?;
+    let parent = helper
+        .parent()
+        .ok_or_else(|| "direct update helper has no parent directory".to_owned())?;
+    fs::create_dir_all(parent)
+        .map_err(|error| format!("cannot create direct update helper directory: {error}"))?;
     if helper.exists() {
-        fs::remove_file(&helper).map_err(|error| format!("cannot replace prior direct update helper: {error}"))?;
+        fs::remove_file(&helper)
+            .map_err(|error| format!("cannot replace prior direct update helper: {error}"))?;
     }
-    fs::copy(executable, &helper).map_err(|error| format!("cannot copy direct update helper: {error}"))?;
-    let channel = match arguments.channel { UpdateChannel::Stable => "stable", UpdateChannel::Test => "test" };
-    let user_root = user_root.to_str().ok_or_else(|| "Hive user root is not UTF-8".to_owned())?;
-    let executable = executable.to_str().ok_or_else(|| "Hive executable path is not UTF-8".to_owned())?;
+    fs::copy(executable, &helper)
+        .map_err(|error| format!("cannot copy direct update helper: {error}"))?;
+    let channel = match arguments.channel {
+        UpdateChannel::Stable => "stable",
+        UpdateChannel::Test => "test",
+    };
+    let user_root = user_root
+        .to_str()
+        .ok_or_else(|| "Hive user root is not UTF-8".to_owned())?;
+    let executable = executable
+        .to_str()
+        .ok_or_else(|| "Hive executable path is not UTF-8".to_owned())?;
     let mut command = Command::new(&helper);
-    command.args(["update", "--direct-handoff", executable, "--channel", channel, "--user-root", user_root]);
-    if arguments.confirm { command.arg("--confirm"); }
-    command.spawn().map_err(|error| format!("cannot launch direct update helper: {error}"))?;
+    command.args([
+        "update",
+        "--direct-handoff",
+        executable,
+        "--channel",
+        channel,
+        "--user-root",
+        user_root,
+    ]);
+    if arguments.confirm {
+        command.arg("--confirm");
+    }
+    command
+        .spawn()
+        .map_err(|error| format!("cannot launch direct update helper: {error}"))?;
     Ok(())
 }
 
 fn wait_for_windows_direct_unlock(executable: &Path) -> Result<(), String> {
-    if !cfg!(windows) { return Ok(()); }
+    if !cfg!(windows) {
+        return Ok(());
+    }
     let deadline = Instant::now() + Duration::from_secs(30);
     loop {
         match fs::OpenOptions::new().write(true).open(executable) {
-            Ok(file) => { drop(file); return Ok(()); }
-            Err(error) if error.kind() == io::ErrorKind::PermissionDenied && Instant::now() < deadline => thread::sleep(Duration::from_millis(50)),
+            Ok(file) => {
+                drop(file);
+                return Ok(());
+            }
+            Err(error)
+                if error.kind() == io::ErrorKind::PermissionDenied && Instant::now() < deadline =>
+            {
+                thread::sleep(Duration::from_millis(50));
+            }
             Err(error) => return Err(format!("direct update executable remained locked: {error}")),
         }
     }
@@ -1372,6 +1426,37 @@ mod tests {
         assert!(parse_arguments(&["--confirm".to_owned(), "--confirm".to_owned()]).is_err());
     }
 
+    #[test]
+    fn projection_refresh_requires_the_action_for_each_install_mode() {
+        assert_eq!(projection_refresh_action("--apply"), "InstallHiveUser");
+        assert_eq!(projection_refresh_action("--validate"), "ValidateHiveUser");
+        assert!(projection_refresh_reported_success(
+            projection_refresh_action("--apply"),
+            &ChildActionResult {
+                action: "InstallHiveUser".to_owned(),
+                status: "success".to_owned(),
+                exit_code: 0,
+            },
+        ));
+        assert!(projection_refresh_reported_success(
+            projection_refresh_action("--validate"),
+            &ChildActionResult {
+                action: "ValidateHiveUser".to_owned(),
+                status: "success".to_owned(),
+                exit_code: 0,
+            },
+        ));
+        assert!(!projection_refresh_reported_success(
+            projection_refresh_action("--validate"),
+            &ChildActionResult {
+                action: "InstallHiveUser".to_owned(),
+                status: "success".to_owned(),
+                exit_code: 0,
+            },
+        ));
+    }
+
+    #[cfg(windows)]
     #[test]
     fn direct_installer_allows_the_optional_signer_fallback_but_not_bound_markers() {
         let product = env!("CARGO_PKG_VERSION");
