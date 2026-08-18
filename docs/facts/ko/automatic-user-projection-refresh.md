@@ -14,11 +14,11 @@ sources:
   - "repo:crates/hive-cli/src/user_setup.rs#sha256:73d95136c28b6742d76d7aca0874144808500168a67fc97accdee9bc2b387481"
   - "repo:scripts/accept-public-hive.py#sha256:b951e079d0974d4bf2a80e37337f2acf95d03e2e42a4bc428dd9fbde89a538a3"
 links: [interactive-binary-update, multi-host-user-install, projection-upgrade-purge]
-reviewed_revision: "git:edcd380f617cd0879b42ec9e35737a8782c9e162"
+reviewed_revision: "git:c95242b313d9abeaee81bd3c89d69af927725c44"
 status: active
 ---
 
 # 사용자 투영 자동 갱신
 
 - 직접 설치 갱신 투영 재검증 action: `--apply`는 `InstallHiveUser`, `--validate`는 `ValidateHiveUser`
-- 공개 수용 실행기: 최초·최종 binary version 기록, Windows handoff activation 대기
+- M2 macOS 공개 `test.14 → test.15`: version 전이와 setup·install·validate·update-check·update·final validate 성공

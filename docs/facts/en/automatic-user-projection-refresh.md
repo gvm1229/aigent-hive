@@ -14,12 +14,12 @@ sources:
   - "repo:crates/hive-cli/src/user_setup.rs#sha256:73d95136c28b6742d76d7aca0874144808500168a67fc97accdee9bc2b387481"
   - "repo:scripts/accept-public-hive.py#sha256:b951e079d0974d4bf2a80e37337f2acf95d03e2e42a4bc428dd9fbde89a538a3"
 links: [interactive-binary-update, multi-host-user-install, projection-upgrade-purge]
-reviewed_revision: "git:edcd380f617cd0879b42ec9e35737a8782c9e162"
+reviewed_revision: "git:c95242b313d9abeaee81bd3c89d69af927725c44"
 status: active
 ---
 
 # Automatic User Projection Refresh
 
 The direct update refresher requires `InstallHiveUser` for `--apply` and `ValidateHiveUser` for
-`--validate`. The public acceptance runner records initial and final binary versions and waits for
-the Windows handoff to activate the update.
+`--validate`. Public `test.14 → test.15` on M2 macOS recorded the version transition and every
+user setup, installation, validation, update-check, update, and final validation result.
