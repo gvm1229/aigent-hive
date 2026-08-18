@@ -4,7 +4,7 @@
 - product version: `0.9.5`
 - 다음 release target: `0.9.5` compatible patch. `0.9.2` project base의 historical full-base 부재·declared migration range 불일치, bare binary update 뒤 user projection 미갱신, declared compatibility claim의 release qualification 부재 보강. `0.10.0` 후보 작업 시작 제외
 - plan revision: `236`
-- 현재 milestone: `HBC95-001`–`HBC95-005`, `AUP95-001`–`AUP95-006`, `RQC95-001`–`RQC95-007`, `NUS-029–030`, `KBP95-001–003`, `REL95-001–002`, `REL95-004` 완료. `DUP95-001`: Windows 직접 설치 staged installer handle 종료 보강. `DUP95-002`와 `REL95-003`: Windows 11 Home·M2 MacBook Air 전용 시험 루트의 `test.10 → test.11` explicit test-channel package-owner activation·user projection refresh·validate 수용. `REL95-005–006` 수용 뒤 순서 유지. `0.10.0` 후보 작업 제외 유지
+- 현재 milestone: `HBC95-001`–`HBC95-005`, `AUP95-001`–`AUP95-006`, `RQC95-001`–`RQC95-007`, `NUS-029–030`, `KBP95-001–003`, `REL95-001–002`, `REL95-004` 완료. `DUP95-001`·Windows `DUP95-002`: public `test.12 → test.13` 직접 설치 인계·Codex user projection refresh·validate 수용 완료. `REL95-003`: M2 MacBook Air 동일 수용 대기. `REL95-005–006` 수용 뒤 순서 유지. `0.10.0` 후보 작업 제외 유지
 - 기능 기준: `8b37323daa33b96918933ad629d7c709c3cb6679`; release discipline base `c777da1`
 - 제외: `NHA10-001–012`·`N10-002–011`의 `0.10.0-test`
 - 확인된 upgrade regression: `0.9.4` migration table은 `0.9.2`를 source range에 포함하지만 compiled binary의 exact full project base 부재. `0.9.2` ledger의 directive·shared marker·Skill 혼합으로 Skill-only fallback 불가. `scan`·`dry-run`은 apply 전 안전 중단. permanent fix 정본: `docs/plans/active/historical-project-base-coverage.md`

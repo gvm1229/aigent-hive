@@ -52,6 +52,7 @@
 - `0.9.5-test.5`: direct installer의 optional signer fallback을 unresolved marker로 오판해 user projection 전 중단. `b8e4c79` 수정 뒤 `test.6 → test.7` 수용 필요
 - `0.9.5-test.6`: npm 여섯 package·`test` tag·annotated tag 생성 뒤 GitHub Release API와 candidate artifact API가 HTTP 503. exact candidate 자산 회수 뒤 25-asset prerelease 복구 완료
 - `0.9.5-test.7`: Windows dedicated test root의 direct `test.6 → test.7` 호출에서 실행 중 `hive.exe` 잠금으로 installer 교체 거부. `DUP95-001` 수정 뒤 `test.8 → test.9`에서 staged installer handle 유지로 Windows read sharing 거부 확인. `test.10 → test.11` 재수용 필요
+- `0.9.5-test.13`: public `test.12` direct install의 Windows dedicated test root에서 explicit test-channel activation·Codex user projection refresh·validate 성공. M2 MacBook Air 동일 수용 전 stable promotion 금지
 
 ## PortareFolium `0.9.2` fixture 수용 계획
 
