@@ -6,9 +6,9 @@
 
 ## 출시 결정
 
-유지보수자 현재 승인: 번호 공개 시험판·`develop` 반영·protected `main` 통합·수용 검증은 자율 진행한다.
-`0.9.5` 안정판의 npm publication만 별도 go sign 전 금지한다. 이 문서는 `PLAN.md` active fragment·completion
-index의 release owner.
+유지보수자 현재 승인 범위: 번호 공개 시험판·`develop` 반영·protected `main` 통합·수용 검증의 자율 진행
+`0.9.5` 안정판 npm publication: 별도 go sign 전 금지
+release owner: `PLAN.md` active fragment·completion index
 
 ## 원칙
 
