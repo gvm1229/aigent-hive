@@ -1,10 +1,10 @@
 # 현재 상태
 
-- 기준 branch: `main` stable `8b37323`, `develop` public test `224170e`
+- 기준 branch: `main` stable `8b37323`, `develop` public test `0f56df0`
 - product version: `0.9.5`
 - 다음 release target: `0.9.5` compatible patch. `0.9.2` project base의 historical full-base 부재·declared migration range 불일치, bare binary update 뒤 user projection 미갱신, declared compatibility claim의 release qualification 부재 보강. `0.10.0` 후보 작업 시작 제외
-- plan revision: `238`
-- 현재 milestone: `HBC95-001`–`HBC95-005`, `AUP95-001`–`AUP95-006`, `RQC95-001`–`RQC95-007`, `NUS-029–030`, `KBP95-001–003`, `REL95-001–002`, `REL95-004` 완료. M2 MacBook Air 공개 `test.12 → test.13` 직접 설치는 새 binary activation 뒤 update 내부 `--validate` action 비교 오류로 실패. 원본 수정과 macOS `hive-cli` 408 unit·3 integration 통과. 다음 번호 공개 시험판의 Windows·macOS `DUP95-002`·`REL95-003` 재수용 필요. `REL95-005–006` 수용 뒤 순서 유지. `0.10.0` 후보 작업 제외 유지
+- plan revision: `239`
+- 현재 milestone: `HBC95-001`–`HBC95-005`, `AUP95-001`–`AUP95-006`, `RQC95-001`–`RQC95-007`, `NUS-029–030`, `KBP95-001–003`, `REL95-001–002`, `REL95-004` 완료. M2 MacBook Air 공개 `test.12 → test.13` 직접 설치는 새 binary activation 뒤 update 내부 `--validate` action 비교 오류로 실패. 수정 source의 `test.14` 게시 뒤 `test.13 → test.14`도 predecessor process의 이전 메모리 비교 규칙으로 반환 실패, 설치된 `test.14`의 `--hosts codex --validate` 성공 확인. `test.14 → test.15`의 macOS `DUP95-002`와 Windows `REL95-003` 재수용 필요. `REL95-005–006` 수용 뒤 순서 유지. 안정판 npm publication은 유지보수자 별도 go sign 전 금지. `0.10.0` 후보 작업 제외 유지
 - 기능 기준: `8b37323daa33b96918933ad629d7c709c3cb6679`; release discipline base `c777da1`
 - 제외: `NHA10-001–012`·`N10-002–011`의 `0.10.0-test`
 - 확인된 upgrade regression: `0.9.4` migration table은 `0.9.2`를 source range에 포함하지만 compiled binary의 exact full project base 부재. `0.9.2` ledger의 directive·shared marker·Skill 혼합으로 Skill-only fallback 불가. `scan`·`dry-run`은 apply 전 안전 중단. permanent fix 정본: `docs/plans/active/historical-project-base-coverage.md`
