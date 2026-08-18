@@ -88,6 +88,15 @@ class ReleaseQualificationOrderContract(unittest.TestCase):
         self.assertIn("fetch-depth: 0", publication)
         self.assertIn("candidate_run_id", publication)
 
+    def test_runtime_qualification_keeps_history_for_release_version_checks(self) -> None:
+        runtime = (ROOT / ".github/workflows/release-runtime.yml").read_text(
+            encoding="utf-8"
+        )
+        self.assertEqual(runtime.count("actions/checkout@"), 3)
+        self.assertEqual(runtime.count("fetch-depth: 0"), 3)
+        self.assertIn("scripts/check-release-version.sh \"$version\"", runtime)
+        self.assertIn("bash scripts/check-release-version.sh $version", runtime)
+
     def test_product_changes_remain_bound_to_the_full_risk_verification_path(self) -> None:
         text = (ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8")
         for required in (

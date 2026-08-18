@@ -6,8 +6,8 @@
 
 ## 출시 결정
 
-유지보수자 현재 승인 범위: 번호 공개 시험판·`develop` 반영·protected `main` 통합·수용 검증의 자율 진행
-`0.9.5` 안정판 npm publication: 별도 go sign 전 금지
+유지보수자 승인 범위: `0.9.5` 안정판 npm publication·게시 뒤 검증·출시 검증 워크플로 보정
+안정판 재게시 금지. 제품·패키지·설치기 byte 변경 없는 CI 정의 보정만 허용
 release owner: `PLAN.md` active fragment·completion index
 
 ## 원칙
@@ -31,8 +31,9 @@ release owner: `PLAN.md` active fragment·completion index
   matrix 수용. 57-file source manifest·fixture preservation·tampered ledger no-mutation 확인
 - [x] `REL95-005` accepted test product source를 protected `main` PR #36으로 통합(`eaf0126`). stable candidate
   `32112644643`의 다섯 native target·npm umbrella·direct installers·integrity bundle 성공
-- [ ] `REL95-006` `0.9.5` stable npm publication 뒤 stable-release-dependent test 전체 실행. current Windows x64에서
-  exact public stable artifact 설치·`hive --version`·user projection `--validate`·public release/package 확인. 별도 go sign 대기
+- [ ] `REL95-006` `0.9.5` stable npm publication 뒤 stable-release-dependent test 전체 실행. publication `32115507331`,
+  npm `latest=0.9.5`, GitHub Release `v0.9.5`, M2 MacBook Air public direct installer·격리 user setup·install·validate·stable update check 성공.
+  현재 Windows x64의 exact public stable artifact 설치·`hive --version`·user projection `--validate`와 전체 이력 checkout 보정 뒤 native runtime 다섯 대상 재실행 대기
 
 ## `0.9.5-test.3` 공개 시험 증거
 

@@ -1,10 +1,10 @@
 # 현재 상태
 
-- 기준 branch: `main` stable `8b37323`, `develop` public test `43124e5`
+- 기준 branch: `main` stable `c51f03a`, `develop` release closeout `a49b4c9`
 - product version: `0.9.5`
 - 다음 release target: `0.9.5` compatible patch. `0.9.2` project base의 historical full-base 부재·declared migration range 불일치, bare binary update 뒤 user projection 미갱신, declared compatibility claim의 release qualification 부재 보강. `0.10.0` 후보 작업 시작 제외
 - plan revision: `241`
-- 현재 milestone: `HBC95-001`–`HBC95-005`, `AUP95-001`–`AUP95-006`, `RQC95-001`–`RQC95-007`, `NUS-029–030`, `KBP95-001–003`, `REL95-001–005`, `DUP95-002` 완료. M2 MacBook Air public `test.14 → test.15` direct install은 dedicated root `public-hive-acceptance-51180335c8824f98a673cf764b38f4e6`에서 setup·install·validate·update-check·update·final validate와 최초·최종 version 기록 성공. Windows `test.12 → test.13` actual host acceptance와 PortareFolium `0.9.2 → test.15` public project-upgrade matrix도 성공. PR #36 `main` integration `eaf0126`, CI `32111976334`, stable candidate `32112644643` 다섯 native target·npm umbrella/direct installers·integrity bundle 성공. 다음 `REL95-006` stable npm publication·post-publication validation은 유지보수자 별도 go sign 전 금지. `0.10.0` 후보 작업 제외 유지
+- 현재 milestone: `HBC95-001`–`HBC95-005`, `AUP95-001`–`AUP95-006`, `RQC95-001`–`RQC95-007`, `NUS-029–030`, `KBP95-001–003`, `REL95-001–005`, `DUP95-002` 완료. `0.9.5` publication `32115507331`, npm `latest=0.9.5`, GitHub Release `v0.9.5` 확인. M2 MacBook Air public stable direct installer의 격리 user setup·install·validate·stable update check 성공, root `public-hive-acceptance-8ebaebc5b502473cb648b1bfd6fae74f`. `REL95-006`의 Windows x64 public stable artifact 수용과 full-history checkout 보정 뒤 native runtime 다섯 대상 재실행 대기. `0.10.0` 후보 작업 제외 유지
 - 기능 기준: `8b37323daa33b96918933ad629d7c709c3cb6679`; release discipline base `c777da1`
 - 제외: `NHA10-001–012`·`N10-002–011`의 `0.10.0-test`
 - 확인된 upgrade regression: `0.9.4` migration table은 `0.9.2`를 source range에 포함하지만 compiled binary의 exact full project base 부재. `0.9.2` ledger의 directive·shared marker·Skill 혼합으로 Skill-only fallback 불가. `scan`·`dry-run`은 apply 전 안전 중단. permanent fix 정본: `docs/plans/active/historical-project-base-coverage.md`

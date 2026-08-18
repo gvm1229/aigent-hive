@@ -26,6 +26,8 @@ jobs:
             architecture: x86_64
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
       - name: Bind source, event, and workflow identity
         run: |
           head_sha=$(git rev-parse HEAD)
@@ -139,6 +141,8 @@ jobs:
             file_architecture: ARM aarch64
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
       - name: Bind source, event, and workflow identity
         run: |
           head_sha=$(git rev-parse HEAD)
@@ -248,6 +252,8 @@ jobs:
       TARGET: x86_64-pc-windows-msvc
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
       - name: Bind source, event, and workflow identity
         shell: pwsh
         run: |
