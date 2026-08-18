@@ -886,6 +886,7 @@ fn install_direct(
         )
     }
     .map_err(|error| format!("direct update failed: {error}"))?;
+    drop(installer_path_guard);
     if !output.success {
         return Err("direct install owner rejected the exact update".to_owned());
     }
