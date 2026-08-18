@@ -226,5 +226,7 @@ observation, stable-release-dependent release lane 완료. `0.10.0` 후보 항�
 `0.9.2` 57-file fixture project-upgrade matrix 수용. `develop` CI `32110526256`의 Linux full·Windows/macOS
 smoke·전체 적합성·protected gate 성공. 다음은 `REL95-005` protected `main` integration이며, `REL95-006`
 stable npm publication은 유지보수자 별도 go sign 전 금지. `NUS-029–030` native-only account recovery와
-`KBP95-*` platform-specific knowledge-bundle guidance·macOS acceptance 완료. Ralph graph는
+`KBP95-*` platform-specific knowledge-bundle guidance·macOS acceptance 완료. `REL95-005` PR #36 `main`
+integration·stable candidate `32112644643` 성공. `REL95-006` stable npm publication과 그 뒤 검증은 별도 go
+sign 대기. Ralph graph는
 `v095-local-qualification` 뒤 `v095-stable-release` 순서.
