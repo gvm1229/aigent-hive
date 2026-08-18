@@ -3147,7 +3147,7 @@ mod tests {
         let target = parent.join("consumer");
         let displaced = parent.join("consumer-displaced");
         fs::create_dir(&target).expect("target");
-        install_legacy_consumer(&target, "0.6.0");
+        install_historical_consumer(&target, "0.9.1");
         let target_dir = open_target_capability(&target).expect("target capability");
         fs::rename(&target, &displaced).expect("displace target");
         fs::create_dir(&target).expect("replacement target");
@@ -3182,7 +3182,7 @@ mod tests {
             let temporary = tempfile::tempdir().expect("temporary");
             let target = temporary.path().join("consumer");
             fs::create_dir(&target).expect("target");
-            install_legacy_consumer(&target, "0.6.0");
+            install_historical_consumer(&target, "0.9.1");
             let target_dir = open_target_capability(&target).expect("target capability");
             let outside = temporary.path().join("outside");
             fs::create_dir(&outside).expect("outside");
