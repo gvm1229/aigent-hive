@@ -54,6 +54,7 @@
 - `0.9.5-test.7`: Windows dedicated test root의 direct `test.6 → test.7` 호출에서 실행 중 `hive.exe` 잠금으로 installer 교체 거부. `DUP95-001` 수정 뒤 `test.8 → test.9`에서 staged installer handle 유지로 Windows read sharing 거부 확인. `test.10 → test.11` 재수용 필요
 - `0.9.5-test.13`: public `test.12` direct install의 Windows dedicated test root에서 explicit test-channel activation·Codex user projection refresh·validate 성공. M2 MacBook Air 동일 수용 전 stable promotion 금지
 - `0.9.5-test.14`: source `develop@0f56df0`, candidate `32106919527`과 publication `32107618685` 성공, npm `test=0.9.5-test.14`·`latest=0.9.4`, GitHub prerelease `v0.9.5-test.14` 확인. macOS `test.13 → test.14`는 predecessor process의 이전 action 비교로 반환 실패. 수정 호출자 수용은 `test.14 → test.15` 필요
+- `0.9.5-test.15`: source `develop@43124e5`, candidate `32108117200`과 publication `32108930007` 성공, npm `test=0.9.5-test.15`·`latest=0.9.4`, GitHub prerelease `v0.9.5-test.15` 확인. M2 MacBook Air public direct `test.14 → test.15` runner 성공, dedicated root `public-hive-acceptance-51180335c8824f98a673cf764b38f4e6`. Windows x64 actual acceptance와 `REL95-004` evidence 전 stable promotion 금지
 
 ## PortareFolium `0.9.2` fixture 수용 계획
 

@@ -109,8 +109,8 @@
 | `0.9.5` native sensor 복구 | 2 | 0 | 100% |
 | `0.9.5` 지식 번들 이식 안내 | 3 | 0 | 100% |
 | `0.9.5` 공개 시험·정식 출시 | 2 | 4 | 33.3% |
-| Windows 직접 설치 갱신 인계 `0.9.5` | 0 | 2 | 0% |
-| **Canonical total** | **642** | **26** | **96.1%** |
+| Windows 직접 설치 갱신 인계 `0.9.5` | 1 | 1 | 50% |
+| **Canonical total** | **643** | **25** | **96.3%** |
 
 External production boundary 항목도 미완료 합계에 포함. Protected authority 없이 완료 처리 금지.
 

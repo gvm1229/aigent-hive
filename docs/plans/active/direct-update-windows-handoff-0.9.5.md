@@ -13,7 +13,7 @@
 ## 체크리스트
 
 - [x] `DUP95-001` Windows 직접 설치 소유자 갱신의 실행 파일 잠금 회피 인계와 단위 회귀. `test.12 → test.13` 전용 시험 루트의 공개 수용 성공
-- [ ] `DUP95-002` M2 MacBook Air의 공개 `test.14 → 다음 번호 시험판` 직접 설치·시험 채널 갱신·Codex 사용자 투영 최종 검증
+- [x] `DUP95-002` M2 MacBook Air의 공개 `test.14 → test.15` 직접 설치·시험 채널 갱신·Codex 사용자 투영 최종 검증. isolated root `public-hive-acceptance-51180335c8824f98a673cf764b38f4e6`, setup·install·validate·update-check·update·final validate 성공
 
 ## macOS 수용 절차
 
@@ -40,4 +40,5 @@
 - macOS 공개 `test.12 → test.13` 결과: binary `test.13` activation 성공 뒤 update 내부 `--validate` 결과의 action을 `InstallHiveUser`로 잘못 비교해 실패 보고
 - 원본 수정: update 내부 `--apply`는 `InstallHiveUser`, `--validate`는 `ValidateHiveUser` action 비교. macOS `hive-cli` 408 unit·3 integration 통과
 - macOS 공개 `test.13 → test.14` 결과: `test.13` 실행 프로세스가 이전 action 비교 규칙을 메모리에 유지해 update 반환 실패. 설치 뒤 `test.14` binary의 `--hosts codex --validate`는 `ValidateHiveUser` 성공 JSON 확인
-- 다음 공개 시험판 필요: 수정 규칙을 실행하는 `test.14 → test.15` 수용. `test.14` 설치본만으로 이전 실행 프로세스의 동작 변경 불가
+- macOS 공개 `test.14 → test.15` 결과: public direct installer·시험 채널 update·Codex 사용자 투영 apply/validate 성공. runner JSON의 `mode=user`, 최초·최종 version, 여섯 결과 코드와 dedicated `test_root` 확인
+- Windows 재수용: `test.14 → test.15` 실제 Windows x64 dedicated root 증거 대기. macOS 성공은 Windows 실행 파일 잠금·handoff의 대체 근거 아님
