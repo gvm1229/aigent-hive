@@ -6,8 +6,9 @@
 
 ## 출시 결정
 
-유지보수자 명시 승인: `0.9.5` 번호 공개 시험판·정식 출시·protected `main` 통합·현재 Windows
-안정판 설치 진행. 이 문서는 `PLAN.md` active fragment·completion index의 release owner.
+유지보수자 현재 승인: 번호 공개 시험판·`develop` 반영·protected `main` 통합·수용 검증은 자율 진행한다.
+`0.9.5` 안정판의 npm publication만 별도 go sign 전 금지한다. 이 문서는 `PLAN.md` active fragment·completion
+index의 release owner.
 
 ## 원칙
 
@@ -23,10 +24,11 @@
   commit·release input·artifact digest 고정
 - [x] `REL95-002` 고정 source에서 번호 public `0.9.5-test.N` prerelease 1회 게시. stable·`latest`
   mutation과 rebuild `0회`
-- [ ] `REL95-003` Windows x64 실제 host에서 exact public test artifact의 clean install·preserving
-  upgrade·validate·bare update path 수용. `AUP95` installed acceptance 포함
-- [ ] `REL95-004` exact public test artifact에서 `0.9.2 → 0.9.5-test.N` project upgrade와 `HBC95`
-  matrix 수용. artifact version·commit·digest·실행 결과 기록
+- [x] `REL95-003` Windows x64 실제 host와 M2 MacBook Air 전용 root에서 exact public test artifact의
+  clean install·preserving upgrade·validate·bare update path 수용. Windows `test.12 → test.13`, macOS
+  `test.14 → test.15`의 `AUP95` installed acceptance 포함
+- [x] `REL95-004` exact public `test.15` artifact에서 `0.9.2 → 0.9.5-test.15` project upgrade와 `HBC95`
+  matrix 수용. 57-file source manifest·fixture preservation·tampered ledger no-mutation 확인
 - [ ] `REL95-005` latest accepted test source만 protected `main` workflow로 통합. stable input과 test
   input의 product bytes·release note·artifact digest 동등성 확인
 - [ ] `REL95-006` `0.9.5` stable publication 뒤 stable-release-dependent test 전체 실행. current Windows x64에서
@@ -54,7 +56,7 @@
 - `0.9.5-test.7`: Windows dedicated test root의 direct `test.6 → test.7` 호출에서 실행 중 `hive.exe` 잠금으로 installer 교체 거부. `DUP95-001` 수정 뒤 `test.8 → test.9`에서 staged installer handle 유지로 Windows read sharing 거부 확인. `test.10 → test.11` 재수용 필요
 - `0.9.5-test.13`: public `test.12` direct install의 Windows dedicated test root에서 explicit test-channel activation·Codex user projection refresh·validate 성공. M2 MacBook Air 동일 수용 전 stable promotion 금지
 - `0.9.5-test.14`: source `develop@0f56df0`, candidate `32106919527`과 publication `32107618685` 성공, npm `test=0.9.5-test.14`·`latest=0.9.4`, GitHub prerelease `v0.9.5-test.14` 확인. macOS `test.13 → test.14`는 predecessor process의 이전 action 비교로 반환 실패. 수정 호출자 수용은 `test.14 → test.15` 필요
-- `0.9.5-test.15`: source `develop@43124e5`, candidate `32108117200`과 publication `32108930007` 성공, npm `test=0.9.5-test.15`·`latest=0.9.4`, GitHub prerelease `v0.9.5-test.15` 확인. M2 MacBook Air public direct `test.14 → test.15` runner 성공, dedicated root `public-hive-acceptance-51180335c8824f98a673cf764b38f4e6`. Windows x64 actual acceptance와 `REL95-004` evidence 전 stable promotion 금지
+- `0.9.5-test.15`: source `develop@43124e5`, candidate `32108117200`과 publication `32108930007` 성공, npm `test=0.9.5-test.15`·`latest=0.9.4`, GitHub prerelease `v0.9.5-test.15` 확인. M2 MacBook Air public direct `test.14 → test.15` runner 성공, dedicated root `public-hive-acceptance-51180335c8824f98a673cf764b38f4e6`. Windows x64 `test.12 → test.13` actual acceptance도 성공. PortareFolium `0.9.2`의 public `test.15` project runner는 57-file source manifest `9049512ecd12e63db866ec59ce8dfb4233cacdad91b3bb7383b0b33a570ec6ff`, fixture manifest `2566acc2d8ff41f10b2abecc96dbac39271ec5275195f17cb31a1888b2d3b1f0`, local fixture manifest `5fcc5828e53da297916cf26538dba79ca545e670f0eecec0c5602e1dc9df4b89`, tampered ledger exit `5`와 두 upgrade matrix 성공으로 수용. 다음 단계는 `REL95-005` protected `main` integration이며 안정 npm publication은 별도 go sign까지 금지
 
 ## PortareFolium `0.9.2` fixture 수용 계획
 

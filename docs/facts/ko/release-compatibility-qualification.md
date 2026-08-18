@@ -11,16 +11,18 @@ aliases: ["호환성 matrix gate"]
 sources:
   - "repo:.github/workflows/release.yml#sha256:53f1b3c4284326ae392594d1135ad600ddbd8035ec2caf16ed9ea0e52dc2efd4"
   - "repo:crates/hive-cli/tests/historical_project_upgrade.rs#sha256:5d1ded97d4dfa1fcc3bbac149ededed530ce4d384eb8b87b360c441fbbce8deb"
-  - "repo:docs/plans/active/release-0.9.5-stable-publication.md#sha256:8bdc5e8261b1e66e4ac3799e41884ade43c7f4b09047ffb2c865906120f1fab8"
+  - "repo:docs/plans/active/release-0.9.5-stable-publication.md#sha256:db586db5c7c4dfd62fdf87d7ee8dc83fbb67eb79c7f44923c363f2138021fcb0"
   - "repo:docs/plans/active/release-compatibility-qualification-0.9.5.md#sha256:722d961e65b3ed28b344ce2fc27edb1f08453f738cb5c33b11e920ae15c53429"
   - "repo:scripts/accept-public-hive.py#sha256:b951e079d0974d4bf2a80e37337f2acf95d03e2e42a4bc428dd9fbde89a538a3"
   - "repo:scripts/check-project-base-coverage.py#sha256:b7d0887ccd3e3a9019383c3cea283189361c17fa62d806f44096cd6825b67579"
 links: [historical-project-base-coverage, release-verification, test-lane-inventory]
-reviewed_revision: "git:c95242b313d9abeaee81bd3c89d69af927725c44"
+reviewed_revision: "git:2f1a18ebd6c3c95008f3b5bba9a7bc02504c0982"
 status: active
 ---
 
 # 출시 호환성 수용
 
-- 수정 updater의 공개 macOS 직접 설치 수용: `test.14 → test.15` 성공
-- 안정판 전 남은 증거: Windows actual host 수용, public project-upgrade 수용
+- 수정 updater의 공개 직접 설치 수용: Windows `test.12 → test.13`, macOS `test.14 → test.15` 성공
+- public `test.15`의 PortareFolium `0.9.2` upgrade matrix: source·foreign byte 보존과 tampered ledger
+  no-mutation 성공
+- 다음: protected `main` integration. 안정판 npm publication은 별도 go sign 전 금지
