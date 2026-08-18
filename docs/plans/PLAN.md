@@ -1,6 +1,6 @@
 # Aigent Hive active plan index
 
-> Revision: 235
+> Revision: 238
 > 기준일: 2026-08-15
 > Product version: `0.9.4` stable 기준, 다음 target `0.9.5` compatible patch
 > 현재 milestone: historical project base 수용 범위·사용자 투영 자동 갱신·출시 호환성 수용 게이트의 로컬 완료
@@ -155,7 +155,7 @@ External production boundary 항목도 미완료 합계에 포함. Protected aut
 | [`active/macos-0.9.5-qualification.md`](active/macos-0.9.5-qualification.md) | `MAC95-*` | 현재 Windows에서 실행 불가한 macOS source qualification |
 | [`active/knowledge-bundle-portability-0.9.5.md`](active/knowledge-bundle-portability-0.9.5.md) | `KBP95-*` | cross-platform global knowledge-bundle guidance and macOS acceptance |
 | [`active/release-0.9.5-stable-publication.md`](active/release-0.9.5-stable-publication.md) | `REL95-*` | numbered public test, protected integration, and stable publication |
-| [`active/direct-update-windows-handoff-0.9.5.md`](active/direct-update-windows-handoff-0.9.5.md) | `DUP95-*` | Windows direct-install self-replacement handoff and public acceptance |
+| [`active/direct-update-windows-handoff-0.9.5.md`](active/direct-update-windows-handoff-0.9.5.md) | `DUP95-*` | 직접 설치 갱신의 Windows 인계·macOS 공개 수용 |
 | [`active/release-0.9.3-test-qualification.md`](active/release-0.9.3-test-qualification.md) | `REL93-*` | `0.9.3` numbered public test 수용과 정식 출시 |
 | [`active/projection-validation-consistency-0.9.3.md`](active/projection-validation-consistency-0.9.3.md) | `VAL93-*` | local-preserved validation·formatter 보호 |
 | [`active/release-engineering-optimization-0.9.3.md`](active/release-engineering-optimization-0.9.3.md) | `OPT93-*` | risk-tier CI·candidate reuse·single-owner release evidence |

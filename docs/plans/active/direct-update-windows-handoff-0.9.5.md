@@ -1,19 +1,28 @@
-# Windows 직접 설치 갱신 인계 `0.9.5`
+# 직접 설치 갱신 수용 `0.9.5`
 
 > Checklist owner: `DUP95-*`
 > 대상: `0.9.5` 공개 시험판 직접 설치 갱신
 > 선행: `REL95-003` 전용 시험 루트 수용
 
-## 원인
+## Windows 원인·수정 근거
 
 - 직접 설치 소유자가 실행 중인 `hive.exe` 경로에 새 archive 설치 요청
 - Windows 실행 파일 잠금으로 현재 프로세스 생존 중 파일 교체 거부
 - `--confirm`의 Hive 내부 동의와 직접 설치자의 파일 교체 가능 시점 불일치
 
-## 계획
+## 체크리스트
 
-- [ ] `DUP95-001` Windows 직접 설치 소유자 갱신의 실행 파일 잠금 회피 인계 구현과 단위 회귀
-- [ ] `DUP95-002` public `test.12 → test.13` Windows 수용 완료, M2 MacBook Air 동일 수용 대기
+- [x] `DUP95-001` Windows 직접 설치 소유자 갱신의 실행 파일 잠금 회피 인계와 단위 회귀. `test.12 → test.13` 전용 시험 루트의 공개 수용 성공
+- [ ] `DUP95-002` M2 MacBook Air의 공개 `test.13 → 다음 번호 시험판` 직접 설치·시험 채널 갱신·Codex 사용자 투영 최종 검증
+
+## macOS 수용 절차
+
+1. 새 `tests/work/` 디렉터리에서 public `0.9.5-test.12` `install.sh`를 전용 prefix에 설치
+2. prefix `hive --version`의 최초 `0.9.5-test.12` 기록
+3. 제공 `accept-public-hive.py --mode user` 실행으로 고유 `test_root`의 설정·설치·검증·갱신 확인·시험 채널 갱신·최종 검증 확인
+4. prefix `hive --version`의 다음 번호 시험판 기록과 runner JSON의 `mode`, 결과 코드, `test_root` 확인
+5. 실패 시 local binary 대체 없이 격리 stderr·test root·직접 설치 영수증·설치기 단계 분류
+6. source defect 확인 때만 최소 수정·대상 회귀·새 번호 공개 시험판·Windows/macOS 재수용
 
 ## 수락 기준
 
@@ -28,3 +37,6 @@
 - `into_temp_path`로 handle 종료와 자동 삭제 ownership 유지
 - acceptance runner `update` 결과 코드 누락 보정
 - Windows evidence: public `test.12` direct install에서 `test.13` test-channel activation·Codex user projection refresh·validate 성공, isolated root `public-hive-acceptance-d53f0375007140859694e401e52b9d75`
+- macOS 공개 `test.12 → test.13` 결과: binary `test.13` activation 성공 뒤 update 내부 `--validate` 결과의 action을 `InstallHiveUser`로 잘못 비교해 실패 보고
+- 원본 수정: update 내부 `--apply`는 `InstallHiveUser`, `--validate`는 `ValidateHiveUser` action 비교. macOS `hive-cli` 408 unit·3 integration 통과
+- 다음 공개 시험판 필요: product byte 변경 뒤 `test.13` 수용 증거 재사용 금지. Windows와 macOS의 직접 설치 갱신 재수용 필요
