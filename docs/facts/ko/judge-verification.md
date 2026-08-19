@@ -12,9 +12,9 @@ sources:
   - "repo:docs/architecture/judge-trust-boundary.md#sha256:ba816f14dd830e1299ef1a41baaeddffead88cffb23e29ee0599423bd02f3fa1"
   - "repo:docs/archive/plans/foundations/model-routed-custom-subagents.md#sha256:9fe4b79c4f4e0be1706600e06b74ab93ee8bbce01e767a38790bbf8bdd21b251"
   - "repo:docs/decisions/ADR-0007-ed25519-judge-trust.md#sha256:5a17bcd8f6869437a9e37c025c4fa2da285ff03af16a7144552162bac5a09a1a"
-  - "repo:docs/decisions/ADR-0019-hive-native-iterative-execution.md#sha256:a15a00e40b63abb6aa312ed24ee3d80c491f0b79056fa628e165431858e51551"
+  - "repo:docs/decisions/ADR-0019-hive-native-iterative-execution.md#sha256:3bdc09d7cc02ced6cf4eb2a4dc4fa5e734653581144d8ab4e57914e21f4bb612"
 links: [model-routed-custom-subagents, orchestration-ownership, product-non-goals, release-verification]
-reviewed_revision: "git:8d377f6ad981702927c351e155b4f08a400a80ea"
+reviewed_revision: "git:a06262284f558a9ba955c44167bdcc8577102c77"
 status: active
 ---
 
