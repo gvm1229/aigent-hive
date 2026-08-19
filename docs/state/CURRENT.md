@@ -4,7 +4,7 @@
 - product version: `0.9.5`
 - 다음 target: `0.10.0-test`
 - 활성 계획: [`PLAN.md`](../plans/PLAN.md)
-- 현재 milestone: `GPH10-001–006` Graphify 격리 조사와 채택 판정
+- 현재 milestone: `HWD10-*` 작업 자동 분담 가능성 조사
 
 ## 최근 검증 근거
 
@@ -40,20 +40,21 @@
 - source·project·global 적용
 - private·confidential collection별 격리 opt-in
 - provider API·API key·query log·background watcher·Git hook·자동 MCP 등록 금지
-- 조사 하드 게이트 실패 시 제품 통합 중단과 `0.10.0` 범위 재검토
+- `0.9.47` 반복 전체 build·작은 query 성능 통과
+- 증분·전체 graph 동등성 실패, upstream global visibility 격리 미지원
+- 제품 통합 중단, 후보 backlog 이전, `0.10.0` 대체 범위 결정 필요
 
 ## 현재 장애 요인
 
 - Source Wiki index rebuild·lint 완료, error·warning `0건`
-- Graphify 출력 schema·dependency lock·세 운영체제 설치·50,000 chunk 비용 미검증
+- Graphify macOS·Linux·Markdown 의미 추출·50,000 chunk 비용 미검증
 - 현재 Windows에서 macOS·Linux 실제 설치 수용 실행 불가
 
 ## 다음 작업
 
-1. Graphify 격리 조사와 채택 판정
-2. 통과 시 조건부 제품 구현·upgrade 수용
-3. 작업 자동 분담 가능성 조사
-4. 번호 공개 시험판과 세 운영체제 수용
+1. 작업 자동 분담 가능성 조사
+2. Graphify 실패 뒤 `0.10.0` 대체 범위 결정
+3. 승인된 대체 범위의 번호 공개 시험판과 세 운영체제 수용
 
 ## 과거 기록
 

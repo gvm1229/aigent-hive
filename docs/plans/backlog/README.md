@@ -20,6 +20,7 @@ Backlog 항목의 release checklist·완료율 집계 금지. 활성 계획 승�
 | [Platform signing](platform-signing.md) | `blocked` | 무료·지속 가능한 publisher identity 확보 |
 | [Alternative indexes](alternative-indexes.md) | `idea` | 현재 FTS·Graphify의 측정된 품질 결손 |
 | [Obsidian integration](obsidian-integration.md) | `idea` | 실제 사용자 탐색 수요와 무손실 경계 확정 |
+| [Graphify 지식 graph](graphify-knowledge-graph.md) | `blocked` | 증분 동등성·visibility 격리·host-owned 의미 추출 확보 |
 
 현재 실행: [`../PLAN.md`](../PLAN.md)
 
