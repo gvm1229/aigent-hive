@@ -282,12 +282,6 @@
     "text_sha256": "67b3e5dd7ebdb2ab4a748917047a280145d6ea927421246fce2408f4ac525267"
   },
   {
-    "path": "docs/plans/stages/01a-setup-discovery-consent.md",
-    "line": 48,
-    "reason": "Exact fallback-hook consent prompt preserves approved user-facing UI bytes.",
-    "text_sha256": "64f376ad77a0744e6d2725ac086387c1c82208e41bda2b22bd73f84dda48c8e8"
-  },
-  {
     "path": "harness/template/AGENTS.md.jinja",
     "line": 36,
     "reason": "Template directive negative example required to teach the prohibited Korean style.",

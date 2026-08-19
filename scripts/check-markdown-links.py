@@ -24,6 +24,10 @@ EXPLICIT_ID = re.compile(r"""(?i)\b(?:id|name)\s*=\s*["']([^"']+)["']""")
 FENCE = re.compile(r"^[ \t]{0,3}(`{3,}|~{3,})")
 EXTERNAL = re.compile(r"^[a-z][a-z0-9+.-]*:", re.IGNORECASE)
 LINE_ANCHOR = re.compile(r"(?i)^L\d+(?:-L\d+)?$")
+ARCHIVE_NAVIGATION = {
+    "docs/archive/README.md",
+    "docs/archive/MANIFEST.md",
+}
 
 
 @dataclass(frozen=True)
@@ -48,7 +52,15 @@ def inventory(root: Path) -> list[Path]:
         for entry in completed.stdout.split(b"\0")
         if entry and entry.decode("utf-8").endswith(MARKDOWN_SUFFIXES)
     )
-    return sorted(path for path in candidates if path.is_file())
+    return sorted(
+        path
+        for path in candidates
+        if path.is_file()
+        and (
+            not path.relative_to(root).as_posix().startswith("docs/archive/")
+            or path.relative_to(root).as_posix() in ARCHIVE_NAVIGATION
+        )
+    )
 
 
 def visible_lines(text: str) -> list[tuple[int, str]]:

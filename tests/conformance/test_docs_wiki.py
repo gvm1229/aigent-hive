@@ -27,6 +27,12 @@ class DocsWikiConformance(unittest.TestCase):
                 continue
             self.assertTrue(current.is_file(), f"missing docs Wiki link target: {current}")
             reached.add(current)
+            relative = current.relative_to(DOCS.resolve()).as_posix()
+            if relative.startswith("archive/") and relative not in {
+                "archive/README.md",
+                "archive/MANIFEST.md",
+            }:
+                continue
             text = current.read_text(encoding="utf-8")
             for raw_target in MARKDOWN_LINK.findall(text):
                 target = raw_target.split("#", 1)[0]
@@ -36,7 +42,13 @@ class DocsWikiConformance(unittest.TestCase):
                 if resolved.is_relative_to(DOCS.resolve()) and resolved not in reached:
                     pending.append(resolved)
 
-        expected = {path.resolve() for path in DOCS.rglob("*.md")}
+        expected = {
+            path.resolve()
+            for path in DOCS.rglob("*.md")
+            if not path.relative_to(DOCS).as_posix().startswith("archive/")
+            or path.relative_to(DOCS).as_posix()
+            in {"archive/README.md", "archive/MANIFEST.md"}
+        }
         missing = sorted(
             path.relative_to(DOCS.resolve()).as_posix() for path in expected - reached
         )

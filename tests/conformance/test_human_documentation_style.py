@@ -20,6 +20,22 @@ SPEC.loader.exec_module(MODULE)
 
 
 class HumanDocumentationStyleTest(unittest.TestCase):
+    def test_archive_history_is_excluded_but_archive_navigation_is_checked(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "docs/archive/state").mkdir(parents=True)
+            (root / "docs/archive/README.md").write_text("# Archive\n", encoding="utf-8")
+            (root / "docs/archive/MANIFEST.md").write_text("# Manifest\n", encoding="utf-8")
+            (root / "docs/archive/state/old.md").write_text(
+                "기능을 사용합니다.\n", encoding="utf-8"
+            )
+
+            inventory = [path.relative_to(root).as_posix() for path in MODULE.inventory(root)]
+
+            self.assertIn("docs/archive/README.md", inventory)
+            self.assertIn("docs/archive/MANIFEST.md", inventory)
+            self.assertNotIn("docs/archive/state/old.md", inventory)
+
     def test_inventory_reads_hidden_ignored_and_generated_candidates(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

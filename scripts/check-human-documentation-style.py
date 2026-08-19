@@ -29,6 +29,10 @@ ALLOWLIST_PATH = Path(__file__).with_name("human-documentation-style-allowlist.j
 FINDING_REASON = "unapproved-korean-narrative-ending"
 ALLOWLIST_KEYS = {"path", "line", "reason", "text_sha256"}
 SHA256 = re.compile(r"[0-9a-f]{64}")
+ARCHIVE_NAVIGATION = {
+    "docs/archive/README.md",
+    "docs/archive/MANIFEST.md",
+}
 
 # A boundary can be an ordinary sentence mark, a quote, a Markdown table cell, or a
 # label-like colon. It intentionally also admits whitespace so an authored sentence
@@ -101,7 +105,11 @@ def inventory(root: Path) -> list[Path]:
         names[:] = sorted(name for name in names if name != ".git")
         for name in sorted(files):
             if is_candidate(name):
-                paths.append(Path(directory) / name)
+                path = Path(directory) / name
+                relative = path.relative_to(root).as_posix()
+                if relative.startswith("docs/archive/") and relative not in ARCHIVE_NAVIGATION:
+                    continue
+                paths.append(path)
     return sorted(paths, key=lambda path: path.relative_to(root).as_posix())
 
 

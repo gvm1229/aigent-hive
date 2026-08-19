@@ -18,6 +18,23 @@ SPEC.loader.exec_module(MODULE)
 
 
 class MarkdownLinkTest(unittest.TestCase):
+    def test_inventory_excludes_frozen_archive_but_keeps_navigation(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            subprocess.run(["git", "init", "-q"], cwd=root, check=True)
+            (root / "docs/archive/state").mkdir(parents=True)
+            (root / "docs/archive/README.md").write_text("# Archive\n", encoding="utf-8")
+            (root / "docs/archive/MANIFEST.md").write_text("# Manifest\n", encoding="utf-8")
+            (root / "docs/archive/state/old.md").write_text(
+                "[missing](gone.md)\n", encoding="utf-8"
+            )
+            subprocess.run(["git", "add", "."], cwd=root, check=True)
+
+            report = MODULE.scan(root)
+
+            self.assertEqual(report["checked_files"], 2)
+            self.assertEqual(report["failure_count"], 0)
+
     def make_repository(self) -> tuple[tempfile.TemporaryDirectory[str], Path]:
         temporary = tempfile.TemporaryDirectory()
         root = Path(temporary.name)
