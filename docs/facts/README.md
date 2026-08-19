@@ -38,6 +38,7 @@
 | Knowledge storage | [en](en/knowledge-storage.md) | [ko](ko/knowledge-storage.md) |
 | Shared index | [en](en/shared-index.md) | [ko](ko/shared-index.md) |
 | Global knowledge RAG | [en](en/global-knowledge-rag.md) | [ko](ko/global-knowledge-rag.md) |
+| Graphify 0.10 도입 판정 | [en](en/graphify-0-10-adoption.md) | [ko](ko/graphify-0-10-adoption.md) |
 | Install-wide knowledge capture | [en](en/install-wide-knowledge-capture.md) | [ko](ko/install-wide-knowledge-capture.md) |
 | Knowledge portability·scan | [en](en/knowledge-portability-scan.md) | [ko](ko/knowledge-portability-scan.md) |
 | 전역 지식 번들 이전 | [en](en/global-knowledge-bundle-transfer.md) | [ko](ko/global-knowledge-bundle-transfer.md) |
