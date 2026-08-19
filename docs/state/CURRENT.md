@@ -4,7 +4,7 @@
 - product version: `0.9.5`
 - 다음 target: `0.10.0-test`
 - 활성 계획: [`PLAN.md`](../plans/PLAN.md)
-- 현재 milestone: `HWD10-*` 작업 자동 분담 가능성 조사
+- 현재 milestone: `REL95-006` Windows 공개 안정판 수용 마감
 
 ## 최근 검증 근거
 
@@ -43,16 +43,19 @@
 - `0.9.47` 반복 전체 build·작은 query 성능 통과
 - 증분·전체 graph 동등성 실패, upstream global visibility 격리 미지원
 - 제품 통합 중단, 후보 backlog 이전, `0.10.0` 대체 범위 결정 필요
+- Codex·Claude·Antigravity 공식 하위 agent 기능 확인
+- exact runtime attestation 부재와 설치 host 증거 결손으로 자동 분담 활성화 보류
 
 ## 현재 장애 요인
 
 - Source Wiki index rebuild·lint 완료, error·warning `0건`
 - Graphify macOS·Linux·Markdown 의미 추출·50,000 chunk 비용 미검증
 - 현재 Windows에서 macOS·Linux 실제 설치 수용 실행 불가
+- Claude 설치본 미인증·필수 lifecycle 수정 이전 version, Antigravity CLI 미설치
 
 ## 다음 작업
 
-1. 작업 자동 분담 가능성 조사
+1. `0.9.5` Windows 공개 안정판 수용 마감
 2. Graphify 실패 뒤 `0.10.0` 대체 범위 결정
 3. 승인된 대체 범위의 번호 공개 시험판과 세 운영체제 수용
 
