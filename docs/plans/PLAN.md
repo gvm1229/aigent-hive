@@ -1,33 +1,29 @@
 # Aigent Hive 활성 계획
 
-> Revision: 242
+> Revision: 243
 > 기준일: 2026-08-20
 > Product version: `0.9.5` stable
 > 다음 target: `0.10.0-test`
-> 현재 milestone: 작업 자동 분담 가능성 조사
+> 현재 milestone: Graphify 실패 뒤 `0.10.0` 대체 범위 결정
 
 ## 목표
 
-- 현재 계획·상태 문서의 8KiB 이하 축소
-- 완료 기록 archive와 버전 비종속 backlog 분리
-- phase 중심 시험·fixture의 목적 중심 재편
-- Graphify 조사 판정과 실패 후보의 backlog 이전
-- 작업 자동 분담 기능의 공식·실제 가능성 조사
+- Graphify 실패를 대체할 `0.10.0` 제품 범위 확정
 - pre-`0.10.0` 지식·프로젝트 무손실 upgrade
+- 번호 공개 시험판과 같은 product bytes의 안정판 출시
 
 ## 완료 조건
 
-- 현재 계획·상태의 과거 연대기·완료 누적표 제거
-- 모든 Python 시험의 목적별 단일 lane 소유
-- 안정성 회귀의 근거 없는 삭제 `0건`
-- Markdown 정본·SQLite 직접 검색 유지
-- Graphify의 provider API·API key·query log·background 동작 `0건`
+- 대체 제품 범위와 수락 기준의 사용자 확인
+- Upgrade 전후 canonical Markdown·프로젝트 설정 byte 보존
+- 기존 SQLite 직접 검색 결과 저하 `0건`
+- Rust·Python·문서·보안·upgrade·rollback 전체 gate 통과
 - 공개 번호 시험판의 세 운영체제 수용 뒤 같은 product bytes의 안정판 게시
 
 ## 중지 경계
 
-- Graphify 하드 게이트 실패 뒤 `0.10.0` 대체 범위 결정
-- private·confidential graph의 collection별 명시적 동의
+- Graphify 하드 게이트 실패 뒤 대체 범위의 사용자 확인
+- 승인 범위 밖 제품·dependency 추가
 - protected `main` 통합과 stable publication 환경 승인
 
 ## Completion index
@@ -36,12 +32,8 @@
 
 | 범위 | 완료 | 미완료 | 진행률 |
 | --- | ---: | ---: | ---: |
-| 문서 구조 정리 | 8 | 0 | 100% |
-| 시험 구조 재편 | 9 | 0 | 100% |
-| Graphify 조사 | 6 | 0 | 100% |
-| 작업 자동 분담 조사 | 4 | 0 | 100% |
-| `0.10.0` 출시 | 0 | 6 | 0% |
-| **합계** | **27** | **6** | **81.8%** |
+| `0.10.0` 범위 확정·출시 | 0 | 7 | 0% |
+| **합계** | **0** | **7** | **0%** |
 
 ## Required load order
 
@@ -57,20 +49,13 @@ Archive·backlog·완료 history의 자동 선행 load 금지.
 
 | Fragment | Checklist | 범위 |
 | --- | --- | --- |
-| [`active/documentation-structure-0.10.0.md`](active/documentation-structure-0.10.0.md) | `DOC10-*` | Archive·Backlog·현재 정본 축소 |
-| [`active/test-organization-0.10.0.md`](active/test-organization-0.10.0.md) | `TST10-*` | 시험·fixture 목적별 재편 |
-| [`active/graphify-knowledge-graph-0.10.0.md`](active/graphify-knowledge-graph-0.10.0.md) | `GPH10-*` | Graphify 조사·조건부 제품 도입 |
-| [`active/host-work-delegation-research-0.10.0.md`](active/host-work-delegation-research-0.10.0.md) | `HWD10-*` | 작업 자동 분담 조사 |
-| [`active/release-0.10.0.md`](active/release-0.10.0.md) | `REL10-*` | 번호 시험판·안정판 출시 |
+| [`active/release-0.10.0.md`](active/release-0.10.0.md) | `SCP10-*`, `REL10-*` | 범위 확정·번호 시험판·안정판 출시 |
 
 ## 실행 순서
 
-1. `DOC10-*` 문서 archive·backlog·현재 정본 축소
-2. `TST10-*` 시험·fixture 재편과 전체 기준 복구
-3. `GPH10-001–006` Graphify 격리 조사와 채택 판정
-4. 실패 후보 backlog 이전과 `0.10.0` 대체 범위 결정
-5. `HWD10-*` 작업 자동 분담 조사
-6. 대체 범위 승인 뒤 `REL10-*` 공개 시험판·안정판 출시
+1. `SCP10-001` 대체 범위 사용자 확인
+2. 승인한 제품 범위 구현과 pre-`0.10.0` upgrade·rollback 검증
+3. `REL10-*` 공개 시험판·세 운영체제 수용·안정판 출시
 
 ## 비활성 자료
 

@@ -131,8 +131,8 @@ Fact별 catalog는 migration 완료 뒤 이 section과 [Fact 안내](facts/READM
 | [Backlog](plans/backlog/README.md) | 버전 비종속 후보 |
 | [References](plans/references.md) | Non-normative references |
 | [`0.9.5` 출시 마감](archive/plans/releases/0.9.5/release-0.9.5-stable-publication.md) | Windows 공개 안정판 수용 완료 기록 |
-| [문서 구조 정리](plans/active/documentation-structure-0.10.0.md) | Archive·Backlog·현재 정본 축소 |
-| [시험 구조 재편](plans/active/test-organization-0.10.0.md) | 목적별 시험·fixture |
-| [Graphify 지식 graph](plans/active/graphify-knowledge-graph-0.10.0.md) | 조사·조건부 제품 도입 |
-| [작업 자동 분담 조사](plans/active/host-work-delegation-research-0.10.0.md) | 공식·실제 가능성 조사 |
+| [문서 구조 정리](archive/plans/releases/0.10.0/documentation-structure-0.10.0.md) | Archive·Backlog·현재 정본 축소 완료 기록 |
+| [시험 구조 재편](archive/plans/releases/0.10.0/test-organization-0.10.0.md) | 목적별 시험·fixture 완료 기록 |
+| [Graphify 지식 graph](archive/plans/releases/0.10.0/graphify-knowledge-graph-0.10.0.md) | 조사·도입 중단 기록 |
+| [작업 자동 분담 조사](archive/plans/releases/0.10.0/host-work-delegation-research-0.10.0.md) | 공식·실제 가능성 조사 완료 기록 |
 | [`0.10.0` 출시](plans/active/release-0.10.0.md) | 번호 시험판·안정판 |

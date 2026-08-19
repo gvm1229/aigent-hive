@@ -3,7 +3,7 @@
 - 상태: `blocked`
 - 마지막 검토일: 2026-08-20
 - 관련 결정: [`ADR-0019`](../../decisions/ADR-0019-hive-native-iterative-execution.md)
-- 현재 조사: [`host-work-delegation-research-0.10.0.md`](../active/host-work-delegation-research-0.10.0.md)
+- 완료 조사 계획: [`host-work-delegation-research-0.10.0.md`](../../archive/plans/releases/0.10.0/host-work-delegation-research-0.10.0.md)
 - 조사 결과: [`host-work-delegation-2026-08-20.md`](../../research/host-work-delegation-2026-08-20.md)
 
 ## 문제

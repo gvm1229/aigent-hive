@@ -26,13 +26,19 @@
 - Windows x64 공개 npm 안정판의 격리 설치·`hive --version`·user projection validate 성공
 - `0.9.5` 출시 마감 완료
 
-## `0.10.0` 범위
+## `0.10.0` 완료 준비
 
 - 문서 archive·버전 비종속 backlog·현재 정본 축소
 - phase 중심 시험·fixture의 목적 중심 재편
-- Graphify `0.9.47` 격리 조사와 하드 게이트 통과 뒤 선택형 파생 graph 도입
-- Codex·Claude 작업 자동 분담의 공식·실제 가능성 조사만 수행
+- Graphify `0.9.47` 격리 조사·하드 게이트 실패·backlog 이전
+- Codex·Claude·Antigravity 작업 자동 분담 가능성 조사
 - Notion 실제 연결과 작업 자동 분담 활성화: backlog
+
+## `0.10.0` 남은 범위
+
+- Graphify 실패를 대체할 제품 범위와 수락 기준의 사용자 확인
+- pre-`0.10.0` canonical 지식·프로젝트 보존 upgrade·rollback
+- 번호 공개 시험판의 세 운영체제 수용과 안정판 출시
 
 ## Graphify 경계
 
