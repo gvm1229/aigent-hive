@@ -9,7 +9,7 @@ summary: "The Windows installer computes SHA-256 without module autoload so CMD-
 tags: [installation, powershell, security, windows]
 aliases: ["PSModulePath isolation"]
 sources:
-  - "repo:docs/plans/active/windows-shell-install.md#sha256:1a1f2b2e0657be2b2aa03bb5ea258cac5a8e9f8b81630b7105a7470d8b298654"
+  - "repo:docs/archive/plans/foundations/windows-shell-install.md#sha256:1a1f2b2e0657be2b2aa03bb5ea258cac5a8e9f8b81630b7105a7470d8b298654"
 links: [test-distribution]
 reviewed_revision: "git:cdde668bed5f3b35e08a35f64e7e25594ce9c3a2"
 status: active

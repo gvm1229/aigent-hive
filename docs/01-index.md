@@ -115,57 +115,24 @@ Fact별 catalog는 migration 완료 뒤 이 section과 [Fact 안내](facts/READM
 | [CURRENT](state/CURRENT.md) | Evidence-backed handoff·next action |
 | [Marketing deck record](state/artifacts/aigent-hive-marketing-deck.md) | External artifact locator·resume |
 
+## Archive
+
+| 문서 | 설명 |
+| --- | --- |
+| [Archive 안내](archive/README.md) | 완료·대체 계획과 과거 상태 |
+| [이전 명세](archive/MANIFEST.md) | 이전 경로·digest·대체 정본 |
+
 ## Plans
 
 | 문서 | 설명 |
 | --- | --- |
 | [Plan 안내](plans/README.md) | Plan structure |
 | [Active plan](plans/PLAN.md) | Sole active plan entrypoint |
+| [Backlog](plans/backlog/README.md) | 버전 비종속 후보 |
 | [References](plans/references.md) | Non-normative references |
-| [Phase 안내](plans/phases/README.md) | Phase MOC |
-| [Phase 0](plans/phases/00-source-bootstrap.md) | Source bootstrap |
-| [Phase 1](plans/phases/01-setup-renderer.md) | Setup renderer |
-| [Phase 2](plans/phases/02-knowledge-index.md) | Knowledge·index |
-| [Phase 3](plans/phases/03-skills-projection.md) | Skill·projection |
-| [Phase 4](plans/phases/04-role-run-interoperability.md) | Role·run |
-| [Phase 5](plans/phases/05-usage-judge.md) | Usage·judge |
-| [Phase 6](plans/phases/06-update-migration-release.md) | Update·migration·release |
-| [Phase 7](plans/phases/07-public-qualification.md) | Public qualification |
-| [Contract 안내](plans/contracts/README.md) | Product contract MOC |
-| [Product goal](plans/contracts/01-product-goals.md) | Goal·non-goal |
-| [Artifact source](plans/contracts/02-artifacts-source.md) | Artifact contract |
-| [Consumer harness](plans/contracts/04-consumer-harness.md) | Installed harness contract |
-| [Rust boundary](plans/contracts/05-rust-boundaries.md) | Crate responsibility |
-| [Native orchestration state](plans/contracts/06-native-orchestration-state.md) | Event·authority·receipt·cancel·scheduler |
-| [Native orchestration workflow](plans/contracts/07-native-orchestration-workflows.md) | Team·multi-goal·feasibility·migration |
-| [Stage 안내](plans/stages/README.md) | Workflow stage MOC |
-| [Stage 0](plans/stages/00-entry-routing.md) | Entry routing |
-| [Stage 1a](plans/stages/01a-setup-discovery-consent.md) | Discovery·consent |
-| [Stage 1b](plans/stages/01b-setup-rendering-contract.md) | Rendering contract |
-| [Stage 2](plans/stages/02-harness-ownership.md) | Harness ownership |
-| [Stage 3](plans/stages/03-simple-question-isolation.md) | Simple-question isolation |
-| [Stage 4](plans/stages/04-prompt-refine.md) | Prompt refinement |
-| [Stage 5](plans/stages/05-roles-orchestration.md) | Role·orchestration |
-| [Stage 6](plans/stages/06-durable-run-completion.md) | Durable run |
-| [Stage 7](plans/stages/07-usage-guard.md) | Usage guard |
-| [Stage 8](plans/stages/08-verification-judge.md) | Verification·judge |
-| [Stage 9](plans/stages/09-knowledge-memory.md) | Knowledge·memory |
-| [Stage 10](plans/stages/10-completion-resume.md) | Completion·resume |
-| [Stage 11](plans/stages/11-update-migration.md) | Update·migration |
-| [Plugin lifecycle](plans/active/plugin-project-lifecycle.md) | User plugin·project lifecycle |
-| [Native usage sensor](plans/active/native-usage-sensor.md) | Host-native sensor |
-| [User onboarding](plans/active/user-onboarding-shared-index.md) | Global setup·shared index |
-| [Source docs Wiki](plans/active/source-docs-wiki.md) | `docs/` graph·atomic fact contract |
-| [Windows install](plans/active/windows-shell-install.md) | PowerShell 5.1·CMD boundary |
-| [Documentation style](plans/active/documentation-style.md) | Human document style |
-| [Security review](plans/active/security-review.md) | Security finding gate |
-| [Docs Wiki migration](plans/active/docs-wiki-migration.md) | Knowledge preservation·path migration |
-| [`0.8.0` release](plans/active/release-0.8.0.md) | Test distribution execution |
-| [v0.9 loop·Wiki·Skill suite](plans/active/v0.9.0-loop-wiki-skills.md) | Host-native graph engineering 계획 |
-| [v0.9 전역 knowledge RAG](plans/active/v0.9.0-global-knowledge-rag.md) | Cross-project retrieval·mandatory memory 계획 |
-| [v0.9 knowledge 이식·scan](plans/active/v0.9.0-knowledge-portability-scan.md) | Canonical bundle·directory scan·automatic query 계획 |
-| [Hive-native 반복 실행](plans/active/native-iterative-execution.md) | Scheduler·receipt·cancel·team·multi-goal 계획 |
-| [Prompt refine 자동 routing](plans/active/prompt-refine-auto-routing.md) | Material ambiguity·승인 전 정지 계획 |
-| [`0.9.0` 정식 릴리스](plans/active/release-0.9.0.md) | GitHub·npm publication·public acceptance 계획 |
-| [`0.9.5` 로컬 수용 loop](plans/active/v0.9.5-release-loop.graph.md) | 로컬 수용 기준의 기록 graph |
-| [`0.9.5` 안정판 출시 loop](plans/active/v0.9.5-stable-release-loop.graph.md) | 공개 시험·Windows 수용·보호 통합·안정판 검증 순서 |
+| [`0.9.5` 출시 마감](plans/active/release-0.9.5-stable-publication.md) | Windows 공개 안정판 설치 마감 |
+| [문서 구조 정리](plans/active/documentation-structure-0.10.0.md) | Archive·Backlog·현재 정본 축소 |
+| [시험 구조 재편](plans/active/test-organization-0.10.0.md) | 목적별 시험·fixture |
+| [Graphify 지식 graph](plans/active/graphify-knowledge-graph-0.10.0.md) | 조사·조건부 제품 도입 |
+| [작업 자동 분담 조사](plans/active/host-work-delegation-research-0.10.0.md) | 공식·실제 가능성 조사 |
+| [`0.10.0` 출시](plans/active/release-0.10.0.md) | 번호 시험판·안정판 |

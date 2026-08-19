@@ -9,7 +9,7 @@ summary: "A fresh session resumes from canonical criteria, events, receipts, rol
 tags: [recovery, run]
 aliases: ["Fresh-session resume"]
 sources:
-  - "repo:docs/architecture/run-lifecycle.md#sha256:0f0c79a9eb97ec1901437b8f854d757445b262af045c7321dfca5cddf5a6c5a3"
+  - "repo:docs/architecture/run-lifecycle.md#sha256:0730945980e6cffc8ef7db26f575bc4204770e388b66d54e6fb29365b13b4710"
 links: [automatic-dispatch-guard, role-state]
 reviewed_revision: "git:a86bb5bc4aa01c9823fa670e83cb538b9f031cbf"
 status: active

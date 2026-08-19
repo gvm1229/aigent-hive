@@ -52,7 +52,7 @@
 - Trust boundary: Agent는 verdict만 생성, 외부 signer가 Ed25519 private key 소유.
   Hive는 assignment·role·exact model/effort·definition digest 결합 서명과 quorum만 검증
 - Canonical plan:
-  [`model-routed-custom-subagents.md`](../plans/active/model-routed-custom-subagents.md)
+  [`model-routed-custom-subagents.md`](../archive/plans/foundations/model-routed-custom-subagents.md)
 
 ## 선택지
 

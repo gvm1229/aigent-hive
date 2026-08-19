@@ -9,7 +9,7 @@ summary: "Each workspace crate owns one provider-neutral implementation boundary
 tags: [architecture, rust]
 aliases: ["Crate map"]
 sources:
-  - "repo:docs/plans/contracts/05-rust-boundaries.md#sha256:ad974c7d93341ff4e8cde0fbc0801b155e6530bdc690f86bcec5679d18acfae9"
+  - "repo:docs/archive/plans/foundations/contracts/05-rust-boundaries.md#sha256:ad974c7d93341ff4e8cde0fbc0801b155e6530bdc690f86bcec5679d18acfae9"
 links: [artifact-boundaries, source-development]
 reviewed_revision: "git:a86bb5bc4aa01c9823fa670e83cb538b9f031cbf"
 status: active

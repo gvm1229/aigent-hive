@@ -10,7 +10,7 @@ tags: [compatibility, migration, release, testing]
 aliases: ["Compatibility matrix gate"]
 sources:
   - "repo:.github/workflows/release-runtime.yml#sha256:06e8657e24d89fd2b28d87208fc15eb76d4b60357c1dd9d3c9c7c315b563d350"
-  - "repo:docs/plans/active/release-0.9.5-stable-publication.md#sha256:e00beda4bab8467a5fa667fdc1f2799403d216398e29597f67f937bf94d46e95"
+  - "repo:docs/plans/active/release-0.9.5-stable-publication.md#sha256:7681da81e7ae900184cbaaaffd51763f547e417d959b329f1e1e42f167867475"
 links: [historical-project-base-coverage, release-verification, test-lane-inventory]
 reviewed_revision: "git:a49b4c9520a9099f41da1a70ea543eaf445e1053"
 status: active

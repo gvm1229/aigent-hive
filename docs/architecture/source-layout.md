@@ -87,7 +87,7 @@ Hive-native event·scheduler·receipt·cancel·team·multi-goal control과 host 
 orchestration control과 독립이며 knowledge migration `0건`. 결정:
 [`ADR-0011`](../decisions/ADR-0011-source-wiki-independence.md)과
 [`ADR-0014`](../decisions/ADR-0014-docs-wiki-architecture.md). 구현 checklist:
-[`source-docs-wiki.md`](../plans/active/source-docs-wiki.md).
+[`source-docs-wiki.md`](../archive/plans/foundations/source-docs-wiki.md).
 세부 계약:
 
 - Role lifecycle: [`role-lifecycle.md`](role-lifecycle.md)

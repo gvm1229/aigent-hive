@@ -111,7 +111,7 @@ class ReleaseQualificationOrderContract(unittest.TestCase):
 
     def test_v092_plan_releases_completed_scope_and_defers_future_work(self) -> None:
         text = (
-            ROOT / "docs/plans/active/release-0.9.2-test-qualification.md"
+            ROOT / "docs/archive/plans/releases/0.9.2/release-0.9.2-test-qualification.md"
         ).read_text(encoding="utf-8")
         for required in (
             "`2cec0377748874748d126b6b55e59975a3f20a02`",

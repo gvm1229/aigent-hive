@@ -126,7 +126,7 @@ answers·capability resolution·harness만 필요. 기존 Codex marketplace owne
 
 ## Ralph loop
 
-- graph: [`v0.9.5-stable-release-loop.graph.md`](v0.9.5-stable-release-loop.graph.md)
+- graph: [`v0.9.5-stable-release-loop.graph.md`](../../archive/plans/releases/0.9.5/v0.9.5-stable-release-loop.graph.md)
 - run ID: `v095-stable-release`
 - retry: node별 최대 `3`회, 동일 failure 최대 `2`회
 - dispatch: active host 소유. `prepared_only=true`, `spawned=false` 외 Hive 실행 경로 없음

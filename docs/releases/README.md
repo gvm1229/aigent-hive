@@ -32,7 +32,7 @@ field·동등성·언어 계약 검사.
 
 - [제품 출시 결정](../decisions/product-release-decisions.md)
 - [`0.8.0` 배포 범위](../decisions/ADR-0013-0.8-release-scope.md)
-- [시험 배포 실행 계획](../plans/active/release-0.8.0.md)
+- [시험 배포 실행 계획](../archive/plans/releases/0.8.0/release-0.8.0.md)
 - [`0.9.0` 정식 릴리스 범위](../decisions/ADR-0017-0.9-full-release.md)
-- [`0.9.0` 정식 릴리스 계획](../plans/active/release-0.9.0.md)
+- [`0.9.0` 정식 릴리스 계획](../archive/plans/releases/0.9.0/release-0.9.0.md)
 - [Release·update 절차](../guides/release-update.md)

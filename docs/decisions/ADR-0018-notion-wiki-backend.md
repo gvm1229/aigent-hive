@@ -1,8 +1,8 @@
 # ADR-0018: Notion Wiki backend와 SQLite projection
 
-- 상태: accepted, `0.10.0-test` 공개 보류
+- 상태: accepted, 버전 비종속 backlog
 - 날짜: 2026-08-08
-- Target: 첫 `0.10.0-test`
+- Target: 미정
 - 부분 대체: ADR-0003·ADR-0016의 consumer knowledge 정본 규칙
 - 제외: Source `docs/` Wiki와 run·role·plan Markdown 정본
 
@@ -12,14 +12,14 @@
 
 - `0.9.0` test·stable의 user setup, CLI help, README, release note, bundled guide에서 Notion 노출 `0건`
 - `0.9.0`의 user-visible Wiki backend: local Markdown 정본과 user-root SQLite projection
-- Notion의 setup 선택·host 연결·freshness·write-through·사용자 문서 공개: 첫 `0.10.0-test`부터
-- 현재 typed backend·SQLite engine·receipt validator는 `0.10` 구현 후보. 실제 host 연결 또는 사용자 지원 완료 주장 금지
+- Notion의 setup 선택·host 연결·freshness·write-through·사용자 문서 공개: 별도 활성 계획 승격 뒤
+- 현재 typed backend·SQLite engine·receipt validator는 backlog 기반. 실제 host 연결 또는 사용자 지원 완료 주장 금지
 
 ### 상호 배타 backend
 
 - `markdown`: 기존 user-root·project Markdown 정본과 user-root SQLite projection
 - `notion`: 사용자 선택 Notion scope의 유일 정본과 user-root SQLite projection
-- `0.10` user-scope backend 1개, project별 혼합 mode 0건
+- 향후 user-scope backend 1개, project별 혼합 mode 0건
 - 기존 `0.8.x` install의 기본 backend: `markdown`
 - Mode 전환: explicit reconfigure·preview·검증·activation, product update와 결합 0건
 
@@ -33,7 +33,7 @@
 - Notion search: 초기 scope 선택·복구·누락 진단
 - 매 user turn: remote revision freshness 확인과 changed-only fetch
 - Webhook·양방향 Markdown sync·Notion AI 병렬 검색 0건
-- `0.10` global setup의 `markdown|notion` 명시적 선택과 expedited 기본 `markdown`
+- 향후 global setup의 `markdown|notion` 명시적 선택과 expedited 기본 `markdown`
 - Notion 선택 시 official host plugin/app → hosted MCP → consented REST 연결 탐지
 - Official host surface의 browser OAuth handoff와 완료 후 workspace·scope capability receipt 재검증
 - Hive 자체 OAuth callback server·token 저장·host-global config mutation 0건
@@ -89,7 +89,7 @@
 - 현재 Hive FTS5·ranking·citation·collection schema 재사용
 - Notion API search와 SQLite query의 이중 RAG 제거
 - Notion 편집 경험과 local fast retrieval의 결합
-- `0.10` 시험판·정식판 feature parity 유지
+- 승격된 시험판·정식판 기능 일치 유지
 
 ## 대안
 
@@ -108,6 +108,6 @@
 - Existing Markdown-mode portability·무네트워크 rebuild 보존
 - Source Wiki·run·role·plan의 tracked Markdown authority 불변
 - `0.9.0` 공개 범위: Markdown Wiki만
-- 세부 후보: [`v0.10.0-notion-candidate.md`](../plans/active/v0.10.0-notion-candidate.md)
-- Discord `0.9` 후속: [`discord-onboarding-v09.md`](../plans/active/discord-onboarding-v09.md)
+- 세부 후보: [`notion-wiki-backend.md`](../plans/backlog/notion-wiki-backend.md)
+- Discord 완료 기록: [`discord-onboarding-v09.md`](../archive/plans/releases/0.9.0/discord-onboarding-v09.md)
 - 근거: [`discord-notion-host-integrations.md`](../research/discord-notion-host-integrations.md)

@@ -9,8 +9,8 @@ summary: "Materially ambiguous work enters refine-only and stops for exact user 
 tags: [prompt, routing, skill]
 aliases: ["Prompt approval gate"]
 sources:
+  - "repo:docs/archive/plans/foundations/prompt-refine-auto-routing.md#sha256:a56c022be4e24ac6e7acf402e186d1ddbe4a1a39bc4d2c0eb16104e472b3108a"
   - "repo:docs/decisions/ADR-0009-user-plugin-project-knowledge-boundary.md#sha256:9091a6094f11be32f27108944ec98adbd0dc425afb6faa26ba8cf616f18d8896"
-  - "repo:docs/plans/active/prompt-refine-auto-routing.md#sha256:a56c022be4e24ac6e7acf402e186d1ddbe4a1a39bc4d2c0eb16104e472b3108a"
 links: [orchestration-ownership, skill-routing]
 reviewed_revision: "git:bf7c1d3e36cd94e8ee5f2a68d9f8ca5c4c9f9c87"
 status: active

@@ -1,11 +1,23 @@
-# Plan entrypoint
+# 계획 안내
 
-정본 entrypoint: [`PLAN.md`](PLAN.md)
+## 탐색
 
-기본 load: `PLAN.md`, `../state/CURRENT.md`, `PLAN.md`의 active fragment.
-완료 [`phases/`](phases/), unrelated [`stages/`](stages/), stable [`contracts/`](contracts/), reference fragment의 선행 load 금지.
+| 목적 | 위치 | 자동 선행 확인 |
+| --- | --- | --- |
+| 현재 실행 | [`PLAN.md`](PLAN.md) | 예 |
+| 버전 미지정 후보 | [`backlog/README.md`](backlog/README.md) | 아니요 |
+| 완료·대체 기록 | [`../archive/README.md`](../archive/README.md) | 아니요 |
+| 외부 참고 | [`references.md`](references.md) | 아니요 |
 
-Checklist 정본: `PLAN.md`의 `Active fragments`에 등록된 문서. 모든 actionable item의 unique ID 필수. `PLAN.md`에는 checklist 배치 금지.
-Plan revision: 계획 변경 횟수를 나타내는 단조 증가 정수. 과거 `1.99` 다음의 `2.00`은
-새 세대가 아닌 `100`번째 변경 표기였으므로, 이후 정본은 `185` 같은 단일 정수 사용.
-이전 revision 복구: Git history.
+기본 확인 순서: `PLAN.md` → `../state/CURRENT.md` → 현재 작업의 active fragment.
+
+## Active checklist
+
+- `PLAN.md`의 `Active fragments` 등록 문서만 집계
+- 모든 실행 항목의 고유 ID와 단일 소유자 필수
+- `PLAN.md` 내부 checkbox 금지
+- Backlog·Archive 항목의 완료율 집계 금지
+
+## Revision
+
+계획 변경 횟수의 단조 증가 정수. 이전 revision 복구: Git history와 Archive 명세.

@@ -11,8 +11,8 @@ aliases: ["복수 호스트 설치", "여러 호스트 설치"]
 sources:
   - "repo:crates/hive-cli/src/main.rs#sha256:0d4ace682bb4bc6cd31a5a3fa4675e1b0a1f2bdb93f55d9456177be7e629cd9d"
   - "repo:crates/hive-cli/src/user_install.rs#sha256:b8bb2ace9f509cf8f48cf703971069e7ca73ada3704a8c7dc18adfd03a27e9ef"
+  - "repo:docs/archive/plans/foundations/multi-host-user-install.md#sha256:048a38d199eb35e838d0772e8162537708f0a006de50614992cd88be49bbb820"
   - "repo:docs/hive-install-guide.ko.html#sha256:31a2c507fb0b2d266c012ca62cfd91a69b9e6847deaf8eaa1a3abe455ea83d85"
-  - "repo:docs/plans/active/multi-host-user-install.md#sha256:048a38d199eb35e838d0772e8162537708f0a006de50614992cd88be49bbb820"
 links: [global-onboarding, supported-hosts]
 reviewed_revision: "git:565b41f08d02db2308356f1cb5ed35d901337a4b"
 status: active

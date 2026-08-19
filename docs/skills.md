@@ -2,7 +2,7 @@
 
 설치 제품용 Skill의 이름·기능·사용 예시 정본. Aigent Hive source 개발도 같은 제품 Skill 사용.
 명시 유지보수자 요청의 비출하 source-project `update-summary`는 이 제품 목록과 분리.
-이름 이관 구현: [`SIL-008–015`](plans/active/skill-identity-localization.md). 호출 형식:
+이름 이관 구현: [`SIL-008–015`](archive/plans/foundations/skill-identity-localization.md). 호출 형식:
 `$aigent-hive:<Skill 이름>`.
 
 ## 이름 원칙
