@@ -4,13 +4,15 @@
 - product version: `0.9.5`
 - 다음 target: `0.10.0-test`
 - 활성 계획: [`PLAN.md`](../plans/PLAN.md)
-- 현재 milestone: `REL95-006` Windows 공개 안정판 수용 마감
+- 현재 milestone: Graphify 실패 뒤 `0.10.0` 대체 범위 결정
 
 ## 최근 검증 근거
 
 - npm `latest=0.9.5`, GitHub Release `v0.9.5`
 - stable publication run `32115507331` 성공
 - full-history checkout 보정 뒤 native runtime run `32118217691`의 다섯 target 성공
+- Windows x64 공개 npm `0.9.5` binary SHA-256 `67dcdb4a83a2be1256c846c0a18b94166fb7ad11d7edcdd1ed9b1a750066237b`
+- Windows 격리 Codex `0.148.0` user setup·install·validate와 stable update current 성공
 - `origin/develop`과 `origin/main` product tree 차이 `0건`
 - GitHub 열린 issue·PR `0건`
 - 목적별 Python lane: documentation 43, security 103, contract 362, integration 82, release 55 통과
@@ -19,10 +21,10 @@
 
 ## `0.9.5` 마감
 
-- `REL95-001–005` 완료
+- `REL95-001–006` 완료
 - macOS arm64 공개 안정판의 격리 direct install·user setup·validate·update check 성공
-- 남은 `REL95-006`: 현재 Windows x64의 공개 안정판 실제 설치·`hive --version`·user projection validate
-- Windows CI native runtime 성공은 실제 사용자 설치 수용의 대체 근거 아님
+- Windows x64 공개 npm 안정판의 격리 설치·`hive --version`·user projection validate 성공
+- `0.9.5` 출시 마감 완료
 
 ## `0.10.0` 범위
 
@@ -55,9 +57,8 @@
 
 ## 다음 작업
 
-1. `0.9.5` Windows 공개 안정판 수용 마감
-2. Graphify 실패 뒤 `0.10.0` 대체 범위 결정
-3. 승인된 대체 범위의 번호 공개 시험판과 세 운영체제 수용
+1. Graphify 실패 뒤 `0.10.0` 대체 범위 결정
+2. 승인된 대체 범위의 번호 공개 시험판과 세 운영체제 수용
 
 ## 과거 기록
 

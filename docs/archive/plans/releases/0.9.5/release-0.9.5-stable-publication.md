@@ -31,9 +31,11 @@ release owner: `PLAN.md` active fragment·completion index
   matrix 수용. 57-file source manifest·fixture preservation·tampered ledger no-mutation 확인
 - [x] `REL95-005` accepted test product source를 protected `main` PR #36으로 통합(`eaf0126`). stable candidate
   `32112644643`의 다섯 native target·npm umbrella·direct installers·integrity bundle 성공
-- [ ] `REL95-006` `0.9.5` stable npm publication 뒤 stable-release-dependent test 전체 실행. publication `32115507331`,
+- [x] `REL95-006` `0.9.5` stable npm publication 뒤 stable-release-dependent test 전체 실행. publication `32115507331`,
   npm `latest=0.9.5`, GitHub Release `v0.9.5`, M2 MacBook Air public direct installer·격리 user setup·install·validate·stable update check 성공.
-  현재 Windows x64의 exact public stable artifact 설치·`hive --version`·user projection `--validate`와 전체 이력 checkout 보정 뒤 native runtime 다섯 대상 재실행 대기
+  Windows x64 격리 npm 설치 binary SHA-256 `67dcdb4a83a2be1256c846c0a18b94166fb7ad11d7edcdd1ed9b1a750066237b`,
+  `AIgent Hive v0.9.5`, Codex `0.148.0` user setup·install·validate, stable update current 확인.
+  전체 이력 checkout 보정 뒤 native runtime run `32118217691`의 다섯 대상 성공
 
 ## `0.9.5-test.3` 공개 시험 증거
 
@@ -126,7 +128,7 @@ answers·capability resolution·harness만 필요. 기존 Codex marketplace owne
 
 ## Ralph loop
 
-- graph: [`v0.9.5-stable-release-loop.graph.md`](../../archive/plans/releases/0.9.5/v0.9.5-stable-release-loop.graph.md)
+- graph: [`v0.9.5-stable-release-loop.graph.md`](v0.9.5-stable-release-loop.graph.md)
 - run ID: `v095-stable-release`
 - retry: node별 최대 `3`회, 동일 failure 최대 `2`회
 - dispatch: active host 소유. `prepared_only=true`, `spawned=false` 외 Hive 실행 경로 없음
