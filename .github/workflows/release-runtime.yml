@@ -93,7 +93,7 @@ jobs:
           fake_bin="$RUNNER_TEMP/fake-bin"
           mkdir "$user_root"
           mkdir "$fake_bin"
-          cp tests/fixtures/agy-stub.py "$fake_bin/agy"
+          cp tests/fixtures/native-orchestration/agy-stub.py "$fake_bin/agy"
           chmod +x "$fake_bin/agy"
           export PATH="$fake_bin:$PATH"
           export HIVE_TEST_HOST_LOG="$RUNNER_TEMP/antigravity-host"
@@ -213,7 +213,7 @@ jobs:
           fake_bin="$RUNNER_TEMP/fake-bin"
           mkdir "$user_root"
           mkdir "$fake_bin"
-          cp tests/fixtures/agy-stub.py "$fake_bin/agy"
+          cp tests/fixtures/native-orchestration/agy-stub.py "$fake_bin/agy"
           chmod +x "$fake_bin/agy"
           export PATH="$fake_bin:$PATH"
           export HIVE_TEST_HOST_LOG="$RUNNER_TEMP/antigravity-host"
@@ -369,7 +369,7 @@ jobs:
           $fakeBin = "$env:RUNNER_TEMP\fake-bin"
           New-Item -ItemType Directory -Path $userRoot | Out-Null
           New-Item -ItemType Directory -Path $fakeBin | Out-Null
-          Copy-Item tests/fixtures/agy-stub.py "$fakeBin\agy.py"
+          Copy-Item tests/fixtures/native-orchestration/agy-stub.py "$fakeBin\agy.py"
           '@python "%~dp0agy.py" %*' |
             Set-Content "$fakeBin\agy.cmd" -Encoding ascii
           $env:PATH = "$fakeBin;$env:PATH"

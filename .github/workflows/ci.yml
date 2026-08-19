@@ -153,20 +153,20 @@ jobs:
         run: |
           for host in codex claude antigravity; do
             copier copy --trust --defaults \
-              --data-file tests/fixtures/copier-default-data.yml \
+              --data-file tests/fixtures/setup/copier-default-data.yml \
               --data "primary_host=${host}" \
               . "tests/work/copier-default-${host}"
           done
       - name: Render hostile-string and typed-answer fixture
         run: >-
           copier copy --trust --defaults
-          --data-file tests/fixtures/copier-hostile-data.yml
+          --data-file tests/fixtures/setup/copier-hostile-data.yml
           . tests/work/copier-hostile
       - name: Reject fallback hooks without a supported host-native event
         run: |
           for detection in absent incompatible unknown; do
             if copier copy --trust --defaults \
-              --data-file tests/fixtures/copier-hostile-data.yml \
+              --data-file tests/fixtures/setup/copier-hostile-data.yml \
               --data "capability_resolution={\"host\":\"claude\",\"detection\":\"${detection}\"}" \
               . "tests/work/copier-invalid-hooks-${detection}" \
               >"tests/work/copier-invalid-hooks-${detection}.log" 2>&1; then
@@ -181,15 +181,15 @@ jobs:
           for host in codex claude antigravity; do
             python tests/validate_scaffold.py \
               "tests/work/copier-default-${host}" \
-              tests/fixtures/copier-default-data.yml
+              tests/fixtures/setup/copier-default-data.yml
           done
           python tests/validate_scaffold.py \
             tests/work/copier-hostile \
-            tests/fixtures/copier-hostile-data.yml
+            tests/fixtures/setup/copier-hostile-data.yml
       - name: Enforce human documentation style contract
         run: |
-          python -m unittest tests.conformance.test_human_documentation_style -v
-          python -m unittest tests.conformance.test_markdown_links -v
+          python -m unittest tests.conformance.documentation.test_human_documentation_style -v
+          python -m unittest tests.conformance.documentation.test_markdown_links -v
           python scripts/check-human-documentation-style.py --all --output json
           python scripts/check-markdown-links.py --output json
 

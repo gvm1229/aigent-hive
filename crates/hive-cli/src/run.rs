@@ -2790,9 +2790,9 @@ mod tests {
     use tempfile::TempDir;
 
     const CAPABILITY: &[u8] =
-        include_bytes!("../../../tests/fixtures/phase1/capabilities-codex-omx.json");
+        include_bytes!("../../../tests/fixtures/setup/capabilities-codex-omx.json");
     const ABSENT_CAPABILITY: &[u8] =
-        include_bytes!("../../../tests/fixtures/phase1/capabilities-absent.json");
+        include_bytes!("../../../tests/fixtures/setup/capabilities-absent.json");
 
     fn canonical(path: &Path) -> PathBuf {
         path.canonicalize().expect("canonical path")

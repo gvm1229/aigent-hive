@@ -13,7 +13,7 @@ sources:
   - "repo:crates/hive-cli/src/session.rs#sha256:1a6fd68e66a00f5f3343b801479f564f4667a7123793b43f9d2d2c94648f0b9d"
   - "repo:harness/directives/03-session-coordination.md#sha256:06736ffa5a1619bc238a39ecad068ae85b2136a8e33ccb0829badf932d8c19f3"
   - "repo:harness/skills/project-setup/SKILL.md#sha256:5a4e0367ff8d52dd58221f15e16aa16a1ddee89fcc6cfef3fabe0c47f0e1babb"
-  - "repo:tests/conformance/test_project_lifecycle.py#sha256:6907af3716ce13652850f367a8effc5c92910c909ee34ae94341f2b5b50b5b52"
+  - "repo:tests/conformance/integration/test_project_lifecycle.py#sha256:c066a315884e9c93499da3db8dad0b0abf41279c89bbb467e1a6deb6b2a0842f"
 links: [knowledge-preservation, project-onboarding]
 reviewed_revision: "git:a52362971c8fa646b428449dd85681491eaeb184"
 status: active

@@ -2134,24 +2134,24 @@ mod tests {
 
     fn phase1_fixture(name: &str) -> PathBuf {
         Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("../../tests/fixtures/phase1")
+            .join("../../tests/fixtures/setup")
             .join(name)
     }
 
     fn historical_release_fixture() -> PathBuf {
         Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("../../tests/fixtures/phase6/releases/valid-0.7.0")
+            .join("../../tests/fixtures/release/versions/valid-0.7.0")
     }
 
     fn release_fixture() -> PathBuf {
         Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("../../tests/fixtures/phase6/releases")
+            .join("../../tests/fixtures/release/versions")
             .join(format!("valid-{}", env!("CARGO_PKG_VERSION")))
     }
 
     fn published_release_fixture() -> PathBuf {
         Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("../../tests/fixtures/phase6/releases/valid-0.9.0")
+            .join("../../tests/fixtures/release/versions/valid-0.9.0")
     }
 
     fn legacy_builtin_names(version: &str) -> &'static [&'static str] {
@@ -2379,10 +2379,10 @@ mod tests {
                 .expect("create historical Skill projection directory");
         }
         let historical_setup = include_bytes!(
-            "../../../tests/fixtures/phase6/migrations/0.4.0-0.6.0-setup-harness.SKILL.md"
+            "../../../tests/fixtures/release/migrations/0.4.0-0.6.0-setup-harness.SKILL.md"
         );
         let historical_query = include_bytes!(
-            "../../../tests/fixtures/phase6/migrations/0.4.0-0.6.0-hive-knowledge-query.SKILL.md"
+            "../../../tests/fixtures/release/migrations/0.4.0-0.6.0-hive-knowledge-query.SKILL.md"
         );
         let historical_capture = include_bytes!(
             "../../../harness/project-bases/0.7.0/skills/hive-knowledge-capture/SKILL.md"
@@ -2447,7 +2447,7 @@ mod tests {
         }
         if version == "0.5.0" {
             let historical = include_bytes!(
-                "../../../tests/fixtures/phase6/migrations/0.5.0-hive-run-resume.SKILL.md"
+                "../../../tests/fixtures/release/migrations/0.5.0-hive-run-resume.SKILL.md"
             );
             fs::write(skill_root.join("hive-run-resume/SKILL.md"), historical)
                 .expect("historical resume projection");

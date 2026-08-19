@@ -69,7 +69,7 @@ for package in lock["package"]:
             f"Cargo.lock package {package['name']} differs from {requested}"
         )
 
-fixture = root / f"tests/fixtures/phase6/releases/valid-{requested}"
+fixture = root / f"tests/fixtures/release/versions/valid-{requested}"
 manifest = json.loads(
     (fixture / "bundle-manifest.json").read_text(encoding="utf-8")
 )

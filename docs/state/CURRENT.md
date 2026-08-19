@@ -1,10 +1,10 @@
 # 현재 상태
 
 - 기준 branch: `develop@8151f51`, `origin/develop` 일치
-- 안정판: `0.9.5`
+- product version: `0.9.5`
 - 다음 target: `0.10.0-test`
 - 활성 계획: [`PLAN.md`](../plans/PLAN.md)
-- 현재 milestone: `TST10-*` 시험·fixture 목적별 재편
+- 현재 milestone: `GPH10-001–006` Graphify 격리 조사와 채택 판정
 
 ## 최근 검증 근거
 
@@ -13,6 +13,9 @@
 - full-history checkout 보정 뒤 native runtime run `32118217691`의 다섯 target 성공
 - `origin/develop`과 `origin/main` product tree 차이 `0건`
 - GitHub 열린 issue·PR `0건`
+- 목적별 Python lane: documentation 43, security 103, contract 362, integration 82, release 55 통과
+- Rust workspace: `394+3+1+104+34+61+54+113` unit·integration과 Wiki qualification 일반 시험 통과
+- Windows 미지원 symbolic link·FIFO·POSIX·macOS 동작: 예상 건너뜀, 해당 플랫폼 수용 근거 아님
 
 ## `0.9.5` 마감
 
@@ -47,12 +50,10 @@
 
 ## 다음 작업
 
-1. `TST10-*` 시험·fixture 목적별 재편
-2. 전체 Python·Rust 기준 복구
-3. Graphify 격리 조사와 채택 판정
-4. 통과 시 조건부 제품 구현·upgrade 수용
-5. 작업 자동 분담 가능성 조사
-6. 번호 공개 시험판과 세 운영체제 수용
+1. Graphify 격리 조사와 채택 판정
+2. 통과 시 조건부 제품 구현·upgrade 수용
+3. 작업 자동 분담 가능성 조사
+4. 번호 공개 시험판과 세 운영체제 수용
 
 ## 과거 기록
 

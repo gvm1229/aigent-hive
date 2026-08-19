@@ -66,7 +66,7 @@ python scripts/dev-check.py rust
 python scripts/dev-check.py python
 python scripts/dev-check.py pre-push
 python scripts/dev-check.py rust test -p hive-core
-python scripts/dev-check.py python tests.conformance.test_phase4_contracts -v
+python scripts/dev-check.py python tests.conformance.contracts.test_run_role_contracts -v
 ```
 
 `dev-check.py`: caller environment mutation 없는 wrapper. Rust toolchain은 `PATH`와

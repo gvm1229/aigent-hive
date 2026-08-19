@@ -7672,7 +7672,7 @@ mod tests {
 
     fn fixture(name: &str) -> PathBuf {
         Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("../../tests/fixtures/phase1")
+            .join("../../tests/fixtures/setup")
             .join(name)
     }
 
@@ -7722,7 +7722,7 @@ mod tests {
 
     fn phase3_fixture(name: &str) -> PathBuf {
         Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("../../tests/fixtures/phase3")
+            .join("../../tests/fixtures/skills")
             .join(name)
     }
 
@@ -9473,13 +9473,14 @@ mod tests {
         let rendered = encode_role(&profile, body).expect("role should materialize");
         assert_eq!(
             rendered,
-            include_bytes!("../../../tests/fixtures/expected/reviewer-role.md")
+            include_bytes!("../../../tests/fixtures/setup/scaffold-expected/reviewer-role.md")
         );
     }
 
     #[test]
     fn role_parser_accepts_crlf_and_preserves_body_line_endings() {
-        let bytes = include_bytes!("../../../tests/fixtures/expected/reviewer-role.md");
+        let bytes =
+            include_bytes!("../../../tests/fixtures/setup/scaffold-expected/reviewer-role.md");
         let crlf = String::from_utf8(bytes.to_vec())
             .expect("fixture should be UTF-8")
             .replace('\n', "\r\n");

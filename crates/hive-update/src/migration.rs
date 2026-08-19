@@ -447,7 +447,7 @@ mod tests {
             mutable_system_paths: BTreeSet<String>,
         }
         let fixture: Fixture = serde_json::from_str(include_str!(
-            "../../../tests/fixtures/phase6/migrations/cross-major-preservation.json"
+            "../../../tests/fixtures/release/migrations/cross-major-preservation.json"
         ))
         .expect("fixture");
         validate_cross_major_preservation(

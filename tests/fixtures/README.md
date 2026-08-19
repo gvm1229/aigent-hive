@@ -4,5 +4,11 @@
 
 Live setup/render test는 `tests/work/`의 disposable directory에서 실행.
 
-- `phase1/`: deterministic setup, ownership, role와 consent
-- `phase2/`: synthetic Raw revisions와 prepared Wiki drafts
+- `setup/`: deterministic setup, ownership, role과 consent
+- `knowledge/`: synthetic Raw revisions와 prepared Wiki drafts
+- `skills/`: Skill routing·prompt refinement·projection fixture
+- `run/`: role·run lifecycle fixture
+- `judge/`: Judge package·assignment·verdict fixture
+- `usage/`: native·fallback usage sensor fixture
+- `release/`: migration·platform signer·versioned release fixture
+- `native-orchestration/`: host capability fixture

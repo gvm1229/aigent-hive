@@ -9,8 +9,8 @@ summary: "debug·release 시험 빌드에서 실행 중 장애 주입을 이를 
 tags: [release, test, update]
 aliases: ["장애 주입 범위"]
 sources:
-  - "repo:crates/hive-render/src/lib.rs#sha256:644c0b46c68ceaeb9cb798f2c076f301ed12be889121cd4c086f23ecd50e69ae"
-  - "repo:crates/hive-update/src/transaction.rs#sha256:fbf4ac8714d35961a052bc466100fc83b871f8d3166c28a1c9072071a87165ca"
+  - "repo:crates/hive-render/src/lib.rs#sha256:69ebe3eb4fe0f9143725a38b5f9816ac894700102436a42e3a7ae996316b86ac"
+  - "repo:crates/hive-update/src/transaction.rs#sha256:f9ccf1d6ec988d00140708ad83a2912a09301c2bbab9ce97f8f5feac6d79ecd3"
 links: [test-distribution]
 reviewed_revision: "git:7f6fd5a10898fe4cc9ac59cb4f2035073996d20c"
 status: active
