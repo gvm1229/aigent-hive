@@ -95,6 +95,7 @@ current catalog.
 | [SQLite index](research/rusqlite-sqlite-index.md) | `rusqlite`·FTS5 evidence |
 | [Knowledge 이식·scan](research/knowledge-portability-ingestion-retrieval.md) | Portable bundle·collection·retrieval evidence |
 | [`AI_Learning` 적용 후보](research/ai-learning-hive-application-candidates-2026-08-21.md) | Graphify·Markdown 관계 graph·`0.9.5` 대비 권장 `0.10.0` 범위 |
+| [`0.10.0` 후보 검토](research/0.10-backlog-archive-candidate-review-2026-08-22.md) | Backlog 전체·Archive 미완료 checklist의 승격 가치 |
 | [v0.9 capability inventory](research/v0.9-omx-omc-capability-inventory.md) | OMX·OMC·Hive `adopt|merge|exclude` 근거표 |
 | [Discord·Notion host integration](research/discord-notion-host-integrations.md) | Host plugin·MCP·outbound 알림 경계 |
 
