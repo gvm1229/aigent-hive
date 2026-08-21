@@ -1,8 +1,8 @@
 # `AI_Learning` 지식의 Hive 적용 후보
 
-> 분석일: 2026-08-21
+> 분석일: 2026-08-21, 추가 scan: 2026-08-22
 > 외부 자료: Obsidian `AI_Learning` 프로젝트
-> 목적: Hive `0.9.x` 결함 후보와 `0.10.0` 제품 범위 검토
+> 목적: Hive `0.10.0` 결함·제품 범위 검토
 > 변경 경계: 외부 프로젝트 읽기 전용, 원문·비공개 지식의 source workspace 복사 `0건`
 
 ## 결론
@@ -14,6 +14,7 @@
 - 직접 사실·본문 검색: 기존 SQLite FTS 유지
 - 세 결과의 선택·결합: Hive query planner 소유
 - Graph 자료: 삭제·전체 재생성 가능한 파생 상태
+- 등록된 하위 폴더 scan 결함: `0.10.0` 필수 수정
 
 Graphify 전면 폐기 또는 전체 지식 graph 위임 모두 비권장. Graphify의 검증된 code 관계
 추출만 사용하고, 검증 실패 영역은 Hive의 결정론적 계약으로 대체하는 구성.
@@ -22,10 +23,11 @@ Graphify 전면 폐기 또는 전체 지식 graph 위임 모두 비권장. Graph
 
 ### 자료 규모
 
-- 전체 파일: `244개`, 약 `385KiB`
-- `Knowledge/`: 개념 노트 `15개`
+- 전체 파일: `339개`, 약 `527KiB`
+- 현재 분석 대상 Markdown: `59개`
+- `Knowledge/`: 개념 노트 `18개`
 - `Maps/`: 분류·통합 색인 `2개`
-- `Sources/`: 출처 기록 `2개`
+- `Sources/`: 출처 기록 `19개`
 - 북마크 통합 색인: 입력 `88개`, 고유 URL `87개`
 
 ### 근거 품질
@@ -40,11 +42,28 @@ Graphify 전면 폐기 또는 전체 지식 graph 위임 모두 비권장. Graph
 외부 도구 이름만으로 dependency 채택 금지. 반복 확인된 설계 패턴과 프로젝트 실제 검증을
 우선 적용 후보로 사용.
 
+### 2026-08-22 추가 지식
+
+- 벡터 데이터베이스와 파일·관계형·graph 기억의 역할 비교
+- 기억 구축·질의·유지 관리 비용의 분리
+- 중복·모순·만료·철회·대체·삭제를 포함한 기억 생명주기
+- Architecture Map과 실제 source의 drift 검사
+- Codebase Memory MCP·Deepsec·Qdrant·Codex Profile·Hook 등 도구 후보
+
+판정:
+
+- 벡터 검색: 관계 graph 대체물 아님, 의미 유사성 후보 검색용 후속 adapter
+- Qdrant·Codebase Memory MCP·Deepsec: 직접 dependency 채택 전 별도 source·license·보안 검증 필요
+- Architecture Map drift 검사: 현재 graph 권장안의 수락 기준으로 즉시 적용 가능
+- 비공식 Codex Profile·Hook 제안: 공식 기능 대조 전 제품 범위 제외
+
 ## 적용 후보
 
 ### 1. 등록된 하위 폴더의 지식 scan
 
-분류: `0.9.x` bugfix 후보.
+분류: `0.10.0` 필수 bugfix.
+
+Release 결정: `0.9.5`로 `0.9.x` 종료, `0.9.6` 미출시. 해당 수정의 `0.10.0` 편입.
 
 확인된 문제:
 
@@ -227,20 +246,82 @@ product
 기존 failure fingerprint와 결합. 반복 failure-domain의 자동 수정 금지, 회귀 시험 또는 backlog
 후보 전환.
 
+### 9. 벡터 검색의 측정형 검토
+
+분류: `0.10.0` 연구·확장 계약 후보, product dependency 제외.
+
+새 지식의 핵심:
+
+- 벡터 검색의 강점: 표현이 다른 의미 유사 문서의 후보 선별
+- 벡터 검색의 약점: 식별자·날짜·수치·부정·모순·여러 단계 관계
+- 적합한 구성: keyword·metadata·relation·vector의 혼합 검색
+
+`0.10.0` 적용 방법:
+
+- FTS·Markdown relation·Graphify code relation을 먼저 query planner lane으로 고정
+- 의미 유사성 질문 corpus와 현재 FTS·alias 기준선 작성
+- 기준선 결손이 측정된 경우에만 vector adapter backlog 승격
+- Qdrant·embedding runtime·model dependency 추가 `0건`
+- Hive의 직접 embedding model 실행 `0건`
+
+### 10. 기억 생명주기와 비용 receipt
+
+분류: `0.10.0` 지식 품질 후보.
+
+권장 상태:
+
+- `active`
+- `contradicted`
+- `superseded`
+- `expired`
+- `revoked`
+
+권장 측정:
+
+- canonical 입력 byte와 생성 graph node·edge 수
+- 전체·증분 build 시간
+- query p50·p95와 반환 byte
+- stale·expired·revoked 항목 수
+- 사람 검토·모순 해결 건수
+
+적용 경계:
+
+- 원시 transcript 전체 자동 기억 금지
+- 만료·철회 항목의 기본 retrieval 제외
+- audit 요청의 locator·상태·replacement 제한 반환
+- 자동 회고·Dreaming workflow: 실제 수요·host receipt 검증 전 backlog 유지
+
+### 11. Architecture Map drift gate
+
+분류: `0.10.0` graph 수락 기준.
+
+적용 방법:
+
+- Graph generation의 source commit·입력 digest·extractor version 기록
+- 현재 source와 generation digest 불일치 때 `stale`
+- stale graph의 현재 결과 승격 금지
+- JSON·HTML export와 canonical source의 drift 검사
+- 공개 시험판 CI의 rebuild → normalize → compare
+- 작은 저장소 통과만으로 대규모 source 품질 주장 금지
+
 ## 권장 `0.10.0` 제품 범위
 
-1. Hive-native Markdown relationship graph
-2. Optional Graphify code-only adapter
-3. FTS·Markdown 관계·code 관계 query planner
-4. Metadata-first retrieval
-5. JSON·HTML graph export
-6. Scope별 물리적 graph 격리
-7. Graphify full rebuild only
-8. pre-`0.10.0` canonical Markdown·SQLite 결과 무손실 upgrade
+1. Nested registered-project knowledge scan 수정
+2. Hive-native Markdown relationship graph
+3. Optional Graphify code-only adapter
+4. FTS·Markdown 관계·code 관계 query planner
+5. Metadata-first retrieval
+6. 기억 만료·철회·대체 상태와 비용 receipt
+7. JSON·HTML graph export와 drift gate
+8. Scope별 물리적 graph 격리
+9. Graphify full rebuild only
+10. Vector 검색 결손 기준선과 후속 adapter 경계
+11. pre-`0.10.0` canonical Markdown·SQLite 결과 무손실 upgrade
 
 ### 권장 이유
 
 - `0.9.5`의 안정적인 Markdown 정본·SQLite 검색 보존
+- `0.9.x` 종료 뒤 발견한 nested project scan 결함의 다음 minor 수정
 - 외부 프로젝트가 이미 가진 명시적 관계의 provider-free 활용
 - Graphify 실제 통과 범위인 code 관계 추출의 선택적 사용
 - Graphify 실패 범위인 증분 갱신·global visibility·Markdown LLM 추출의 제품 경계 제외
@@ -251,6 +332,7 @@ product
 
 | 사용자 경험 | `0.9.5` 현재 | 권장 `0.10.0` 적용 뒤 |
 | --- | --- | --- |
+| 상위 Git 저장소의 하위 Hive project scan | repository-root discovery 실패 가능 | 등록 project root 안에서 안전한 scan |
 | 지식 정본 | Markdown | Markdown 유지 |
 | 직접 사실·본문 검색 | SQLite FTS | SQLite FTS 유지 |
 | 문서 관계 질문 | 검색된 본문의 agent 해석 | 명시적 Markdown edge의 경로 조회 |
@@ -258,7 +340,9 @@ product
 | 영향 범위 확인 | 여러 파일 수동 탐색 | `CALLS`·`IMPORTS`·`TESTS` 경로 탐색 |
 | 근거 표시 | locator·digest·source | locator·digest·source·edge evidence |
 | 검색 문맥 사용량 | 본문 chunk 중심 | metadata 선별 뒤 선택 본문 조회 |
+| 오래된 기억 | superseded·contradiction 중심 | 만료·철회·대체와 기본 검색 제외 |
 | 시각화 | 정형 graph export 없음 | JSON·HTML 관계 graph export |
+| Graph 최신성 | 별도 관계 graph 없음 | source digest drift 때 stale 차단 |
 | 범위 격리 | collection visibility | collection별 별도 graph까지 확대 |
 | Graphify 필요성 | 없음 | code graph를 활성화한 scope만 필요 |
 | Graphify 장애 | 영향 없음 | native graph·FTS로 정상 대체 |
@@ -294,10 +378,16 @@ product
 - canonical Markdown·collection registry 변경 `0건`
 - 기존 SQLite 직접 사실 질문 결과 저하 `0건`
 - Graphify 미설치·손상·schema mismatch의 기존 기능 영향 `0건`
+- 상위 Git 저장소 sibling read·write `0건`
+- 등록 nested project scan의 전역 Git 설정 mutation `0건`
+- expired·revoked 지식의 기본 retrieval `0건`
+- graph source digest drift의 current 승격 `0건`
+- vector database·embedding runtime product dependency `0건`
 - provider API·API key·query log·watcher·Git hook·자동 MCP 등록 `0건`
 - Windows x64·macOS arm64·Linux musl 공개 시험 수용
 
 ## 범위 결정
 
-이 문서: 적용 후보와 권장안. `SCP10-001` 완료 또는 제품 구현 승인 증거 아님. 실제
-`0.10.0` 범위 승격: 유지보수자의 명시적 선택과 active plan 반영 필요.
+이 문서: 적용 후보와 권장안. Nested registered-project scan 수정의 `0.10.0` 편입과
+`0.9.6` 미출시는 유지보수자 확정. Graphify 제한 채택·Markdown 관계 graph·기억 생명주기의
+전체 `SCP10-001` 승인과 제품 구현은 별도 결정 필요.
