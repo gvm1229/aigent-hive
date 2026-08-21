@@ -37,6 +37,7 @@
 - registered nested-project knowledge scan 수정: `0.10.0` 범위 편입
 - Hive-native Markdown 관계 graph·optional Graphify full-rebuild code-only adapter 범위 승인
 - Backlog 6개·Archive 미완료 22개 검토 완료, 추가 자동 승격 `0건`
+- 유지보수자 최종 선택: 추가 후보 없음, [`ADR-0020`](../decisions/ADR-0020-0.10.0-product-scope.md) 범위 확정
 - Notion 실제 연결과 작업 자동 분담 활성화: backlog
 
 ## `0.10.0` 남은 범위
@@ -71,8 +72,8 @@
 
 ## 다음 작업
 
-1. 유지보수자: [후보 검토](../research/0.10-backlog-archive-candidate-review-2026-08-22.md)에서 추가 범위 선택 또는 `추가 없음` 확인
-2. Native 관계 graph·query planner와 nested project scan 구현
+1. Native 관계 graph·query planner와 nested project scan 구현
+2. Host-owned Skill 예약 구현·검증
 3. 승인된 범위의 번호 공개 시험판과 세 운영체제 수용
 
 ## 과거 기록

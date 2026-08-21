@@ -85,6 +85,9 @@ Notion canonical backend·SQLite projection·Discord outbound 경계:
 Hive-native iterative·team·multi-goal execution과 OMX·OMC 신규 dependency 제거:
 [`ADR-0019`](ADR-0019-hive-native-iterative-execution.md).
 
+`0.10.0` 관계·검색·nested scan·Skill 예약의 최종 포함·제외 범위:
+[`ADR-0020`](ADR-0020-0.10.0-product-scope.md).
+
 ## 미확정 항목
 
 - Antigravity의 official machine-readable structured quota surface

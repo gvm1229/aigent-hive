@@ -53,6 +53,7 @@ current catalog.
 | [ADR-0017](decisions/ADR-0017-0.9-full-release.md) | `0.9.0` 정식 릴리스 |
 | [ADR-0018](decisions/ADR-0018-notion-wiki-backend.md) | Notion Wiki backend |
 | [ADR-0019](decisions/ADR-0019-hive-native-iterative-execution.md) | Hive-native 반복 실행 소유권 |
+| [ADR-0020](decisions/ADR-0020-0.10.0-product-scope.md) | `0.10.0` 최종 제품 범위 |
 
 ## Guides
 

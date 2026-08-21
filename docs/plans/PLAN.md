@@ -1,10 +1,11 @@
 # Aigent Hive 활성 계획
 
-> Revision: 246
+> Revision: 247
 > 기준일: 2026-08-22
 > Product version: `0.9.5` stable
 > 다음 target: `0.10.0-test`
 > 현재 milestone: `0.10.0` 관계·검색·scan 구현
+> 확정 범위: [`ADR-0020`](../decisions/ADR-0020-0.10.0-product-scope.md)
 
 ## 목표
 
