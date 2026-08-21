@@ -1,14 +1,14 @@
 # Aigent Hive 활성 계획
 
-> Revision: 245
+> Revision: 246
 > 기준일: 2026-08-22
 > Product version: `0.9.5` stable
 > 다음 target: `0.10.0-test`
-> 현재 milestone: `0.10.0` 관계·검색 범위 결정
+> 현재 milestone: `0.10.0` 관계·검색·scan 구현
 
 ## 목표
 
-- Hive-native Markdown 관계 graph와 Graphify code-only 제한 채택 범위 확정
+- Hive-native Markdown 관계 graph와 Graphify code-only 제한 채택 구현
 - host-owned 프로젝트 Skill 경로 세션 예약 계약 정합화
 - 등록된 nested project의 안전한 knowledge scan 복구
 - pre-`0.10.0` 지식·프로젝트 무손실 upgrade
@@ -16,7 +16,7 @@
 
 ## 완료 조건
 
-- 대체 제품 범위와 수락 기준의 사용자 확인
+- 승인된 관계·검색 범위의 checklist·수락 기준 정합성
 - Upgrade 전후 canonical Markdown·프로젝트 설정 byte 보존
 - 기존 SQLite 직접 검색 결과 저하 `0건`
 - 등록 project root 밖 sibling read·write와 전역 Git 설정 mutation `0건`
@@ -25,7 +25,6 @@
 
 ## 중지 경계
 
-- Graphify 전면 지식 graph 실패 뒤 제한 채택 범위의 사용자 확인
 - 승인 범위 밖 제품·dependency 추가
 - protected `main` 통합과 stable publication 환경 승인
 
@@ -35,8 +34,11 @@
 
 | 범위 | 완료 | 미완료 | 진행률 |
 | --- | ---: | ---: | ---: |
-| `0.10.0` 범위 확정·출시 | 0 | 9 | 0% |
-| **합계** | **0** | **9** | **0%** |
+| 관계·검색 graph | 1 | 16 | 5.9% |
+| Host-owned Skill 예약 | 0 | 1 | 0% |
+| Nested project scan | 0 | 1 | 0% |
+| `0.10.0` 출시 | 0 | 6 | 0% |
+| **합계** | **1** | **24** | **4.0%** |
 
 ## Required load order
 
@@ -52,13 +54,16 @@ Archive·backlog·완료 history의 자동 선행 load 금지.
 
 | Fragment | Checklist | 범위 |
 | --- | --- | --- |
-| [`active/release-0.10.0.md`](active/release-0.10.0.md) | `SCP10-*`, `REL10-*` | 범위 확정·번호 시험판·안정판 출시 |
+| [`active/knowledge-relationship-graph-0.10.0.md`](active/knowledge-relationship-graph-0.10.0.md) | `SCP10-001`, `KRG10-*` | Markdown·Graphify 관계 검색 |
+| [`active/host-owned-skill-reservations-0.10.0.md`](active/host-owned-skill-reservations-0.10.0.md) | `SCP10-002` | Host-owned Skill 세션 예약 |
+| [`active/nested-project-knowledge-scan-0.10.0.md`](active/nested-project-knowledge-scan-0.10.0.md) | `SCP10-003` | Nested project scan |
+| [`active/release-0.10.0.md`](active/release-0.10.0.md) | `REL10-*` | 번호 시험판·안정판 출시 |
 
 ## 실행 순서
 
-1. `SCP10-001` 관계·검색 범위 사용자 확인
-2. `SCP10-002` host-owned Skill 경로 예약과 `SCP10-003` nested project scan 구현
-3. 승인한 Graphify·관계 검색 범위 구현과 pre-`0.10.0` upgrade·rollback 검증
+1. `KRG10-001–007` native 관계 graph·query planner·metadata 검색
+2. `SCP10-002–003` host-owned Skill 예약과 nested project scan
+3. `KRG10-008–016` Graphify adapter·drift·fallback·upgrade·수용
 4. `REL10-*` 공개 시험판·세 운영체제 수용·안정판 출시
 
 ## 비활성 자료
