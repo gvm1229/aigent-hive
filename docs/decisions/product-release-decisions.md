@@ -50,6 +50,7 @@
 | update 확인 | Global setup explicit opt-in, 성공 확인 24시간 throttle, offline 실패는 성공 시각 미기록·다음 host session 재시도, 확인만으로 install 금지 |
 | binary update | Bare `hive update`가 즉시 확인하고 새 version이 있으면 선택 언어로 package owner·exact target·authenticated saved host scope의 post-update projection refresh를 함께 표시. 명시적 수락 뒤 authenticated install owner의 exact adapter 실행, target binary 재검증 뒤 새 executable로 saved scope만 `hive install --scope user --hosts <resolved-hosts> --apply --output json` 실행·validate. valid setup·authenticated host manifest 교집합 부재·invalid: default host 없이 binary-only 결과와 recovery command. `--check` 설치 금지 |
 | host projection | User `~/.agents/directives`·`~/.agents/skills` provider-neutral projection + selected host의 thin native adapter; project Codex·Antigravity `.agents/skills`, Claude `.claude/skills`; foreign byte 보존 |
+| `0.10.0` host-owned Skill 세션 예약 | 구현 목표: 예약은 대상 경로 접근 아닌 `.hive/runtime` 충돌 조정 기록. Codex·Antigravity는 `.agents/skills/<safe-skill>/...`, Claude는 `.claude/skills/<safe-skill>/...`만 예약 허용. 다른 host 경로는 `hive.session-host-owned-namespace`, live·unverifiable reservation만 세션 해결 안내 |
 | role/run | shared role HANDOFF, PLAN-derived criterion, exact evidence locator, immutable owner pin, sensor-independent manual과 one-role usage-guarded automatic no-spawn resume |
 | 현재 버전 | 정식 릴리스 준비 target `0.9.0`; root Cargo workspace version과 `workspace.metadata.hive.release-date`가 정본 |
 | 버전 증가 | feature는 원칙적으로 `Y`, compatible quick bugfix는 `Z`; `X`는 exact target을 사용자가 명시하고 human confirmation한 경우에만 |

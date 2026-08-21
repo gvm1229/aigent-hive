@@ -4,7 +4,7 @@
 - product version: `0.9.5`
 - 다음 target: `0.10.0-test`
 - 활성 계획: [`PLAN.md`](../plans/PLAN.md)
-- 현재 milestone: Graphify 실패 뒤 `0.10.0` 대체 범위 결정
+- 현재 milestone: Graphify 실패 뒤 `0.10.0` 대체 범위와 host-owned Skill 예약 계약 확정
 
 ## 최근 검증 근거
 
@@ -32,11 +32,13 @@
 - phase 중심 시험·fixture의 목적 중심 재편
 - Graphify `0.9.47` 격리 조사·하드 게이트 실패·backlog 이전
 - Codex·Claude·Antigravity 작업 자동 분담 가능성 조사
+- host-owned 프로젝트 Skill 경로 세션 예약 계약: `0.10.0` 범위 편입
 - Notion 실제 연결과 작업 자동 분담 활성화: backlog
 
 ## `0.10.0` 남은 범위
 
 - Graphify 실패를 대체할 제품 범위와 수락 기준의 사용자 확인
+- Codex·Antigravity `.agents/skills/<skill>/...`, Claude `.claude/skills/<skill>/...`의 host-matched 세션 예약과 경로별 오류 계약 구현·검증
 - pre-`0.10.0` canonical 지식·프로젝트 보존 upgrade·rollback
 - 번호 공개 시험판의 세 운영체제 수용과 안정판 출시
 
@@ -63,7 +65,7 @@
 
 ## 다음 작업
 
-1. Graphify 실패 뒤 `0.10.0` 대체 범위 결정
+1. Graphify 실패 뒤 `0.10.0` 대체 범위 결정과 host-owned Skill 예약 계약 구현
 2. 승인된 대체 범위의 번호 공개 시험판과 세 운영체제 수용
 
 ## 과거 기록
