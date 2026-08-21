@@ -4,7 +4,7 @@
 - product version: `0.9.5`
 - 다음 target: `0.10.0-test`
 - 활성 계획: [`PLAN.md`](../plans/PLAN.md)
-- 현재 milestone: Graphify 실패 뒤 `0.10.0` 대체 범위와 host-owned Skill 예약 계약 확정
+- 현재 milestone: `0.10.0` 관계·검색 범위와 host-owned Skill 예약 계약 확정
 
 ## 최근 검증 근거
 
@@ -25,6 +25,7 @@
 - macOS arm64 공개 안정판의 격리 direct install·user setup·validate·update check 성공
 - Windows x64 공개 npm 안정판의 격리 설치·`hive --version`·user projection validate 성공
 - `0.9.5` 출시 마감 완료
+- `0.9.6` 미출시, `0.9.x` release line 종료
 
 ## `0.10.0` 완료 준비
 
@@ -33,12 +34,15 @@
 - Graphify `0.9.47` 격리 조사·하드 게이트 실패·backlog 이전
 - Codex·Claude·Antigravity 작업 자동 분담 가능성 조사
 - host-owned 프로젝트 Skill 경로 세션 예약 계약: `0.10.0` 범위 편입
+- registered nested-project knowledge scan 수정: `0.10.0` 범위 편입
 - Notion 실제 연결과 작업 자동 분담 활성화: backlog
 
 ## `0.10.0` 남은 범위
 
-- Graphify 실패를 대체할 제품 범위와 수락 기준의 사용자 확인
+- Hive-native Markdown 관계 graph와 Graphify code-only 제한 채택 범위의 사용자 확인
 - Codex·Antigravity `.agents/skills/<skill>/...`, Claude `.claude/skills/<skill>/...`의 host-matched 세션 예약과 경로별 오류 계약 구현·검증
+- 상위 Git repository 안의 registered project root knowledge scan 복구와 sibling 격리 검증
+- Hive-native Markdown 관계 graph·선택형 Graphify code-only adapter의 범위 승인
 - pre-`0.10.0` canonical 지식·프로젝트 보존 upgrade·rollback
 - 번호 공개 시험판의 세 운영체제 수용과 안정판 출시
 
@@ -53,6 +57,7 @@
 - `0.9.47` 반복 전체 build·작은 query 성능 통과
 - 증분·전체 graph 동등성 실패, upstream global visibility 격리 미지원
 - 제품 통합 중단, 후보 backlog 이전, `0.10.0` 대체 범위 결정 필요
+- 현재 권장안: Hive-native Markdown 관계 graph와 optional full-rebuild code-only adapter
 - Codex·Claude·Antigravity 공식 하위 agent 기능 확인
 - exact runtime attestation 부재와 설치 host 증거 결손으로 자동 분담 활성화 보류
 
@@ -65,7 +70,7 @@
 
 ## 다음 작업
 
-1. Graphify 실패 뒤 `0.10.0` 대체 범위 결정과 host-owned Skill 예약 계약 구현
+1. 관계·검색 제한 채택 범위 결정, host-owned Skill 예약과 nested project scan 구현
 2. 승인된 대체 범위의 번호 공개 시험판과 세 운영체제 수용
 
 ## 과거 기록
