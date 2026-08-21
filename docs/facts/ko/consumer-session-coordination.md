@@ -28,7 +28,7 @@ status: active
 Hive 통제 범위 밖. 프로젝트 갱신은 직접 모순되는 Hive-owned directive clause만 미리 보기·적용하며,
 사용자 작성·foreign·비충돌 local byte를 보존.
 
-`0.10.0` 범위: host-owned 프로젝트 Skill 예약 계약. Codex·Antigravity: 
+`0.10.0` 범위: host-owned 프로젝트 Skill 예약 계약. Codex·Antigravity:
 `.agents/skills/<safe-skill>/...`만 허용. Claude: `.claude/skills/<safe-skill>/...`만 허용.
 호스트 불일치: `hive.session-host-owned-namespace`의 명시 결과. 세션 해결 안내: live 또는
 unverifiable reservation 한정.
