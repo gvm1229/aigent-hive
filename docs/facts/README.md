@@ -41,6 +41,7 @@
 | Graphify 0.10 도입 판정 | [en](en/graphify-0-10-adoption.md) | [ko](ko/graphify-0-10-adoption.md) |
 | Install-wide knowledge capture | [en](en/install-wide-knowledge-capture.md) | [ko](ko/install-wide-knowledge-capture.md) |
 | Knowledge portability·scan | [en](en/knowledge-portability-scan.md) | [ko](ko/knowledge-portability-scan.md) |
+| Nested project scan `0.10.0` 범위 | [en](en/nested-project-scan-0-10.md) | [ko](ko/nested-project-scan-0-10.md) |
 | 전역 지식 번들 이전 | [en](en/global-knowledge-bundle-transfer.md) | [ko](ko/global-knowledge-bundle-transfer.md) |
 | 명시 프로젝트 간 지식 접근 | [en](en/knowledge-cross-project-access.md) | [ko](ko/knowledge-cross-project-access.md) |
 | 검토 지식 스캔 검증 정합성 | [en](en/source-knowledge-scan-validation.md) | [ko](ko/source-knowledge-scan-validation.md) |
