@@ -24,6 +24,71 @@ pub struct GraphEdge {
     pub source_digest: String,
 }
 
+/// One scope-isolated, disposable native Markdown graph generation.
+#[derive(Debug, Clone, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct GraphGeneration {
+    pub schema_version: u32,
+    pub scope: String,
+    pub engine: String,
+    pub generation_digest: String,
+    pub nodes: Vec<GraphNode>,
+    pub edges: Vec<GraphEdge>,
+}
+
+/// Canonical node metadata without Markdown body duplication.
+#[derive(Debug, Clone, Deserialize, Eq, Ord, PartialEq, PartialOrd, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct GraphNode {
+    pub id: String,
+    pub locator: String,
+    pub content_digest: String,
+    pub visibility: String,
+    pub lifecycle: String,
+}
+
+/// Build a deterministic native graph for exactly one already-authorized scope.
+pub fn build_native_generation(scope: &str, pages: &[WikiPage]) -> Result<GraphGeneration, String> {
+    if !matches!(
+        scope,
+        "source" | "project" | "user-root" | "shared" | "private" | "confidential"
+    ) {
+        return Err("knowledge graph scope is unsupported".to_owned());
+    }
+    let mut nodes = pages
+        .iter()
+        .map(|page| GraphNode {
+            id: page.frontmatter.id.clone(),
+            locator: page.relative_path.clone(),
+            content_digest: page.content_digest.clone(),
+            visibility: scope.to_owned(),
+            lifecycle: page.frontmatter.status.clone(),
+        })
+        .collect::<Vec<_>>();
+    nodes.sort();
+    nodes.dedup();
+    let edges = extract_markdown_edges(pages);
+    let payload = serde_json::json!({
+        "schema_version": 1,
+        "scope": scope,
+        "engine": "native-markdown",
+        "nodes": &nodes,
+        "edges": &edges,
+    });
+    let generation_digest = sha256_digest(
+        &serde_json_canonicalizer::to_vec(&payload)
+            .map_err(|error| format!("canonicalize knowledge graph: {error}"))?,
+    );
+    Ok(GraphGeneration {
+        schema_version: 1,
+        scope: scope.to_owned(),
+        engine: "native-markdown".to_owned(),
+        generation_digest,
+        nodes,
+        edges,
+    })
+}
+
 /// Extract direct links, source links, tags, and contradiction references in stable order.
 #[must_use]
 pub fn extract_markdown_edges(pages: &[WikiPage]) -> Vec<GraphEdge> {
@@ -65,7 +130,7 @@ fn edge(from: &str, to: &str, relation: &str, source_digest: &str) -> GraphEdge 
 
 #[cfg(test)]
 mod tests {
-    use super::{extract_markdown_edges, GraphEvidence};
+    use super::{build_native_generation, extract_markdown_edges, GraphEvidence};
     use crate::{Contradiction, WikiFrontmatter, WikiPage};
 
     fn page(id: &str) -> WikiPage {
@@ -103,5 +168,14 @@ mod tests {
         assert!(first
             .iter()
             .all(|edge| edge.evidence == GraphEvidence::Extracted));
+    }
+
+    #[test]
+    fn generation_is_deterministic_and_scope_isolated() {
+        let first = build_native_generation("project", &[page("first")]).expect("generation");
+        let second = build_native_generation("project", &[page("first")]).expect("generation");
+        assert_eq!(first, second);
+        assert!(first.nodes.iter().all(|node| node.visibility == "project"));
+        assert!(build_native_generation("outside", &[page("first")]).is_err());
     }
 }
