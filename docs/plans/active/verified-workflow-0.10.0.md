@@ -8,7 +8,7 @@
 ## Checklist
 
 - [x] [VWF10-001] Canonical Skill ID `verified-workflow`·한국어 표시 `검증형 작업 흐름`과 `iterative-execution` protocol 병합 유지보수자 승인
-- [ ] [VWF10-002] `ralph-loop` graph 계약과 `iterative-execution` receipt·dispatch-uncertain·budget·cancel·recovery 계약을 하나의 `verified-workflow` canonical Skill로 병합
+- [x] [VWF10-002] `ralph-loop` graph 계약과 `iterative-execution` receipt·dispatch-uncertain·budget·cancel·recovery 계약을 하나의 `verified-workflow` canonical Skill로 병합 — `cd3379a`; Codex·Claude·Antigravity projection parity, `hive-projection` 34·`hive-render` 61·`user_setup` 46 Rust tests, Skill contract 38 Python tests 통과
 - [ ] [VWF10-003] 자연어 continuation의 자동 routing: dependency·중간 evidence gate·bounded retry·독립 verifier·steering·recovery 중 2개 이상, reason code와 `simple|verified-workflow|required-but-unsupported` 결과
 - [ ] [VWF10-004] 작업 길이·bare `continue`만으로 자동 선택 금지, `간단한 continuation|검증형 workflow|retry 없음` 사용자 override
 - [ ] [VWF10-005] Host Goal·task를 outer owner로 유지하고 verified workflow graph를 nested execution contract로 결합, Hive의 model·subagent process spawn `0건`

@@ -21,8 +21,7 @@
 | `quick-answer` | 별도 조사 없는 독립 질문 응답 | `rehash` 명령 의미 설명 |
 | `project-setup` | 저장소 근거를 활용한 안내형·자동 프로젝트 설정 | 저장소 최소 질문 설정 |
 | `code-polish` | 동작·회귀 시험을 보존하는 생성 코드 정리 | 변경 파일의 중복 wrapper 정리 |
-| `ralph-loop` | 증거·재시도·완료 조건 기반 반복 실행 graph 설계 | 검증 가능한 Ralph loop 구성 |
-| `iterative-execution` | Host-native receipt와 독립 종료 검증을 적용한 제한된 기준 반복 실행 | 여러 구현 시도 뒤 기준별 Judge 검증 |
+| `verified-workflow` | 의존성·증거·재시도·독립 검증을 적용한 제한된 실행 graph | 복잡한 작업의 검증형 workflow 실행 |
 | `team-execution` | Mailbox·장벽·경로 lease·취소를 적용한 제한된 팀 조율 | 분리된 구현·검증 lane 실행 |
 | `multi-goal` | 집계 규칙·중첩 예산·종료 검증을 적용한 목표 graph 실행 | AND 기준을 가진 복수 목표 실행 |
 | `custom-subagent-create` | Codex·Claude custom subagent profile 추천·동의·생성 | 구현·검증 역할의 제한된 profile 생성 |
@@ -52,7 +51,7 @@
 | `source-answer` | `quick-answer` |
 | `source-project-setup` | `project-setup` |
 | `source-code-polish` | `code-polish` |
-| `source-ralph-loop` | `ralph-loop` |
+| `source-ralph-loop` | `verified-workflow` |
 | `source-knowledge-import` | `knowledge-import` |
 | `source-knowledge-maintain` | `knowledge-maintain` |
 | `source-knowledge-capture` | `knowledge-capture` |
@@ -94,6 +93,12 @@
 
 ## `hive-loop-engineering` 계보
 
-`hive-loop-engineering` → current `engineer-run` → product `ralph-loop`. 기능 삭제 없음.
-Host가 실제 task를 실행하고 Skill은 반복 graph·증거·재시도·완료
-조건만 소유하는 기존 경계 유지.
+`hive-loop-engineering` → current `engineer-run` → product `verified-workflow`. Host가 실제
+task를 실행하고 Skill은 graph·증거·재시도·receipt·독립 검증만 소유.
+
+## `0.10.0` 이름 이관
+
+- `ralph-loop`와 `iterative-execution` → `verified-workflow`
+- `package-review` → `judge-evidence`
+- Retired 이름: routing compatibility만 제공
+- Successful upgrade: authenticated retired Skill artifact·projection `0건`
