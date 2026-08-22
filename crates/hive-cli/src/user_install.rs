@@ -22,6 +22,8 @@ use std::path::{Component, Path, PathBuf};
 use std::process::ExitCode;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
+include!(concat!(env!("OUT_DIR"), "/historical_095.rs"));
+
 const USER_MARKER_START: &[u8] = b"<!-- AIGENT-HIVE:USER:START -->";
 const USER_MARKER_END: &[u8] = b"<!-- AIGENT-HIVE:USER:END -->";
 const MAX_USER_FILE_BYTES: u64 = 16 * 1024 * 1024;
@@ -9674,6 +9676,19 @@ mod tests {
                 .all(|path| path.contains("/skills/ralph-loop/")));
             assert!(paths.iter().all(|path| !path.contains("..")));
         }
+    }
+
+    #[test]
+    fn historical_095_plugin_base_is_compiled_as_exact_digest_table() {
+        assert_eq!(HISTORICAL_095_FILES.len(), 59);
+        assert!(HISTORICAL_095_FILES.iter().any(|(path, digest)| {
+            *path == "skills/ralph-loop/SKILL.md"
+                && *digest
+                    == "sha256:8b802691751194fa332f440ce17e1e59b6c20d69b6f999af829217b053ee1764"
+        }));
+        assert!(HISTORICAL_095_FILES
+            .iter()
+            .all(|(path, digest)| !path.contains("..") && valid_sha256(digest)));
     }
 
     #[test]

@@ -1,3 +1,4 @@
+use sha2::{Digest, Sha256};
 use std::env;
 use std::fs;
 use std::path::PathBuf;
@@ -46,6 +47,55 @@ fn main() {
     );
     println!("cargo:rerun-if-env-changed=AIGENT_HIVE_PACKAGE_RELEASE_DATE");
     println!("cargo:rustc-env=HIVE_PACKAGE_RELEASE_DATE={package_release_date}");
+    write_historical_095_table(&manifest_dir);
+}
+
+fn write_historical_095_table(manifest_dir: &PathBuf) {
+    let base = manifest_dir.join("../../harness/user-bases/0.9.5/plugins/aigent-hive");
+    println!("cargo:rerun-if-changed={}", base.to_string_lossy());
+    let mut files = Vec::new();
+    collect_files(&base, &base, &mut files);
+    files.sort_by(|left, right| left.0.cmp(&right.0));
+    let mut generated =
+        String::from("#[allow(dead_code)]\npub const HISTORICAL_095_FILES: &[(&str, &str)] = &[\n");
+    for (relative, digest) in files {
+        generated.push_str(&format!("    ({relative:?}, {digest:?}),\n"));
+    }
+    generated.push_str("];\n");
+    let output = PathBuf::from(env::var_os("OUT_DIR").expect("Cargo provides OUT_DIR"))
+        .join("historical_095.rs");
+    fs::write(output, generated).expect("write historical 0.9.5 table");
+}
+
+fn collect_files(root: &PathBuf, current: &PathBuf, files: &mut Vec<(String, String)>) {
+    let entries = fs::read_dir(current)
+        .expect("read historical 0.9.5 base")
+        .collect::<Result<Vec<_>, _>>()
+        .expect("read historical 0.9.5 entries");
+    for entry in entries {
+        let path = entry.path();
+        let metadata = fs::symlink_metadata(&path).expect("inspect historical 0.9.5 entry");
+        if metadata.is_dir() {
+            collect_files(root, &path, files);
+        } else if metadata.is_file() {
+            let relative = path
+                .strip_prefix(root)
+                .expect("base descendant")
+                .to_string_lossy()
+                .replace('\\', "/");
+            let digest_bytes = Sha256::digest(fs::read(&path).expect("read historical 0.9.5 file"));
+            let digest = format!(
+                "sha256:{}",
+                digest_bytes
+                    .iter()
+                    .map(|byte| format!("{byte:02x}"))
+                    .collect::<String>()
+            );
+            files.push((relative, digest));
+        } else {
+            panic!("historical 0.9.5 base contains a non-regular entry");
+        }
+    }
 }
 
 fn valid_release_date(value: &str) -> bool {
