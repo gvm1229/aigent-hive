@@ -9,7 +9,7 @@ summary: "FTS·vector·hybrid 검색 비교 뒤 품질·latency·보안·이식�
 tags: [knowledge, retrieval, v0-10, vector]
 aliases: ["Vector database gate"]
 sources:
-  - "repo:docs/decisions/ADR-0020-0.10.0-product-scope.md#sha256:a475f0b665f301e2398506e2f3a16d2678f83eb2ad8dc6a72f7d4c522673b409"
+  - "repo:docs/decisions/ADR-0020-0.10.0-product-scope.md#sha256:7d98098cff64b2ec197c3fa3f4f120399cf35dd9a578c3eb3aee05e224c43031"
   - "repo:docs/plans/active/hybrid-vector-search-0.10.0.md#sha256:c608753d9238fa9002e33f69b8558e1433aecc467db5cdf8c946a0dbfe3b9442"
   - "repo:docs/research/vector-memory-0.10-feasibility-2026-08-22.md#sha256:e8580fffed7ee2ea0e123f4171bc7a03e7ae5444faedfa5e9bf1fac5796475d7"
 links: [global-knowledge-rag, graphify-0-10-adoption, knowledge-storage, v0-10-product-scope]
