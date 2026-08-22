@@ -133,6 +133,9 @@ class Phase5JudgeStaticContracts(unittest.TestCase):
         cls.quorum_request_schema = read_json(
             SCHEMAS / "judge-quorum-request.schema.json"
         )
+        cls.adversarial_envelope_schema = read_json(
+            SCHEMAS / "adversarial-judge-envelope.schema.json"
+        )
         cls.package_validator = Draft202012Validator(
             cls.package_schema,
             format_checker=FormatChecker(),
@@ -162,6 +165,42 @@ class Phase5JudgeStaticContracts(unittest.TestCase):
             cls.quorum_request_schema,
             format_checker=FormatChecker(),
         )
+        cls.adversarial_envelope_validator = Draft202012Validator(
+            cls.adversarial_envelope_schema,
+            format_checker=FormatChecker(),
+        )
+
+    def test_adversarial_envelope_rejects_contaminated_context_or_hive_launch(self) -> None:
+        package = read_json(FIXTURES / "package-elevated.json")
+        envelope = {
+            "schema_version": 1,
+            "package": package,
+            "requester_id": "maintainer",
+            "task_agent_id": "task-agent",
+            "exclusions": [
+                "task-agent-reasoning",
+                "preferred-outcome",
+                "prior-judge-results",
+                "transcript",
+                "self-approval",
+            ],
+            "dispatch": {
+                "launch_owner": "host-owned",
+                "host": "codex",
+                "assignment_required": True,
+                "receipt_required": True,
+            },
+            "spawned": False,
+        }
+        self.adversarial_envelope_validator.validate(envelope)
+        contaminated = copy.deepcopy(envelope)
+        contaminated["exclusions"].remove("prior-judge-results")
+        with self.assertRaises(ValidationError):
+            self.adversarial_envelope_validator.validate(contaminated)
+        launched = copy.deepcopy(envelope)
+        launched["spawned"] = True
+        with self.assertRaises(ValidationError):
+            self.adversarial_envelope_validator.validate(launched)
 
     def test_package_request_fixtures_conform_to_request_schema(self) -> None:
         valid_requests = (
