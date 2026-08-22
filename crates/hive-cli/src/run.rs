@@ -1346,6 +1346,7 @@ fn closure(arguments: &ClosureArguments) -> Result<ActionResult, AdapterError> {
             "PLAN.md criteria differ from STATUS.md".to_owned(),
         ));
     }
+    let outer_owner = status.owner_binding().ok();
     let passed = as_set(&status.status().passed_criteria);
     let pending = plan
         .criteria()
@@ -1409,7 +1410,18 @@ fn closure(arguments: &ClosureArguments) -> Result<ActionResult, AdapterError> {
             },
         ],
         next_action: status.status().next_action.clone(),
-        data: Some(json!({"closure": payload})),
+        data: Some(json!({
+            "closure": payload,
+            "continuation": {
+                "schema_version": 1,
+                "run_id": arguments.run_id,
+                "run_revision": status.status().revision,
+                "outer_owner": outer_owner,
+                "next_action": status.status().next_action,
+                "task_launch": "host-owned",
+                "spawned": false,
+            }
+        })),
     })
 }
 

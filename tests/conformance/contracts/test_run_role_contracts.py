@@ -1207,6 +1207,10 @@ class Phase4Contracts(unittest.TestCase):
         self.assertEqual(closure["blocked"], [])
         self.assertEqual(closure["excluded"], [])
         self.assertRegex(closure["closure_digest"], r"^sha256:[0-9a-f]{64}$")
+        continuation = payload["data"]["continuation"]
+        self.assertEqual(continuation["task_launch"], "host-owned")
+        self.assertFalse(continuation["spawned"])
+        self.assertEqual(continuation["outer_owner"]["host"], "codex")
         self.assertEqual(snapshot_tree(self.target), before)
 
     def test_resume_executing_and_verifying_prepares_only_without_spawning_or_writes(self) -> None:
