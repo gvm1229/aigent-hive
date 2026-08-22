@@ -1272,10 +1272,10 @@ struct ClosureArguments {
     run_id: String,
 }
 
-struct ContinuationArguments {
-    target: PathBuf,
-    run_id: String,
-    session_id: String,
+pub(crate) struct ContinuationArguments {
+    pub(crate) target: PathBuf,
+    pub(crate) run_id: String,
+    pub(crate) session_id: String,
 }
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
@@ -1351,7 +1351,9 @@ fn parse_continuation_arguments(
     })
 }
 
-fn continuation(arguments: &ContinuationArguments) -> Result<ActionResult, AdapterError> {
+pub(crate) fn continuation(
+    arguments: &ContinuationArguments,
+) -> Result<ActionResult, AdapterError> {
     let closure_result = closure(&ClosureArguments {
         target: arguments.target.clone(),
         run_id: arguments.run_id.clone(),

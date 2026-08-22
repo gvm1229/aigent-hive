@@ -3071,6 +3071,7 @@ fn validate_hook_approvals(
             "checkpoint-reminder" if matches!(hook.event.as_str(), "PreCompact" | "Stop") => {
                 hook.event.as_str()
             }
+            "continue-active-run" => "Stop",
             _ => {
                 return Err(RenderError::Input(format!(
                     "fallback hook capability/event is not approved: {}/{}",
@@ -8290,7 +8291,8 @@ mod tests {
             "knowledge-promote",
             "product-update",
             "project-refresh",
-            "package-review",
+            "judge-evidence",
+            "adversarial-judge",
             "team-execution",
             "multi-goal",
             "custom-subagent-create",
@@ -9315,6 +9317,40 @@ mod tests {
         approval
     }
 
+    fn signed_continuation_hook() -> HookApproval {
+        let mut approval = HookApproval {
+            consent_version: 1,
+            capability: "continue-active-run".to_owned(),
+            event: "Stop".to_owned(),
+            path: ".hive/hooks/continue-active-run".to_owned(),
+            command: format!(
+                "hive hook --capability continue-active-run --event Stop \
+                 --capabilities {FRESH_CAPABILITY_RESOLUTION_PATH} --output json"
+            ),
+            content_digest: String::new(),
+            approved_at: "2026-07-23T00:00:00Z".to_owned(),
+            consent_digest: String::new(),
+        };
+        approval.content_digest = sha256_digest(
+            &hook_descriptor_bytes(&approval).expect("descriptor should canonicalize"),
+        );
+        approval.consent_digest =
+            calculate_consent_digest(&approval).expect("consent should canonicalize");
+        approval
+    }
+
+    #[test]
+    fn continuation_hook_requires_exact_stop_consent() {
+        let valid = signed_continuation_hook();
+        let resolution = supported_host_native_hook_resolution();
+        assert!(validate_hook_approvals(std::slice::from_ref(&valid), &resolution).is_ok());
+        let mut changed = valid;
+        changed.event = "PreCompact".to_owned();
+        changed.consent_digest =
+            calculate_consent_digest(&changed).expect("mutated consent should canonicalize");
+        assert!(validate_hook_approvals(&[changed], &resolution).is_err());
+    }
+
     #[test]
     fn every_skill_consent_field_and_order_constraint_is_bound() {
         let valid = signed_skill();
@@ -10239,7 +10275,7 @@ mod tests {
             .expect("old Claude projection ownership should verify");
         let deletions = &transition.deletions;
 
-        assert_eq!(deletions.len(), 24);
+        assert_eq!(deletions.len(), 25);
         assert!(deletions
             .iter()
             .all(|path| path.starts_with(".claude/skills")));

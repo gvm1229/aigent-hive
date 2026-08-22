@@ -157,6 +157,10 @@ struct HookInput {
     checkpoint_present: Option<bool>,
     #[serde(default)]
     status_path: Option<String>,
+    #[serde(default)]
+    run_id: Option<String>,
+    #[serde(default)]
+    session_id: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -1493,7 +1497,11 @@ fn emit_action_result(result: &ActionResult) -> ExitCode {
 
 fn run_hook(arguments: &[String]) -> ExitCode {
     let stop_requested = requested_event(arguments).as_deref() == Some("Stop");
-    if stop_requested {
+    if stop_requested
+        && !arguments
+            .iter()
+            .any(|argument| argument == "continue-active-run")
+    {
         println!("{}", neutral_stop_hook_payload());
         return ExitCode::SUCCESS;
     }
@@ -1608,10 +1616,54 @@ fn execute_hook_capability(
         "update-integrity-guard" => update_integrity_guard(input),
         "derived-state-invalidation" => derived_state_invalidation(target, input),
         "checkpoint-reminder" => checkpoint_reminder(target, input),
+        "continue-active-run" => continue_active_run(target, input),
         _ => Err(RenderError::Unsupported(format!(
             "fallback hook capability is unsupported: {capability}"
         ))),
     }
+}
+
+fn continue_active_run(target: &Path, input: &HookInput) -> Result<HookResult, RenderError> {
+    if input.event != "Stop" {
+        return Err(RenderError::Unsupported(
+            "continue-active-run requires Stop".to_owned(),
+        ));
+    }
+    let run_id = input
+        .run_id
+        .as_deref()
+        .ok_or_else(|| RenderError::Input("hook input is missing run_id".to_owned()))?;
+    let session_id = input
+        .session_id
+        .as_deref()
+        .ok_or_else(|| RenderError::Input("hook input is missing session_id".to_owned()))?;
+    let result = crate::run::continuation(&crate::run::ContinuationArguments {
+        target: target.to_path_buf(),
+        run_id: run_id.to_owned(),
+        session_id: session_id.to_owned(),
+    })
+    .map_err(|error| RenderError::Safety(error.message().to_owned()))?;
+    let decision = result
+        .data
+        .as_ref()
+        .and_then(|data| data.get("decision"))
+        .and_then(serde_json::Value::as_str)
+        .ok_or_else(|| RenderError::Safety("continuation decision is missing".to_owned()))?;
+    Ok(HookResult {
+        schema_version: 1,
+        decision: if decision == "nudge" {
+            "block"
+        } else {
+            "allow"
+        },
+        active: true,
+        code: if decision == "nudge" {
+            "hive.hook-continuation-nudge"
+        } else {
+            "hive.hook-continuation-allow"
+        },
+        message: "host-owned continuation decision completed without spawning".to_owned(),
+    })
 }
 
 fn protect_hive_owned_state(target: &Path, input: &HookInput) -> Result<HookResult, RenderError> {
@@ -2239,6 +2291,8 @@ mod tests {
             staging_validated: None,
             checkpoint_present: None,
             status_path: None,
+            run_id: None,
+            session_id: None,
         };
         let result =
             execute_hook_capability(Path::new("/consumer"), "protect-hive-owned-state", &input)
@@ -2262,6 +2316,8 @@ mod tests {
             staging_validated: None,
             checkpoint_present: None,
             status_path: None,
+            run_id: None,
+            session_id: None,
         };
         let result =
             execute_hook_capability(Path::new("/consumer"), "protect-hive-owned-state", &input)
@@ -2284,6 +2340,8 @@ mod tests {
             staging_validated: Some(true),
             checkpoint_present: None,
             status_path: None,
+            run_id: None,
+            session_id: None,
         };
         let result =
             execute_hook_capability(Path::new("/consumer"), "update-integrity-guard", &input)
@@ -2412,6 +2470,8 @@ mod tests {
             staging_validated: None,
             checkpoint_present: Some(false),
             status_path: Some(".hive/runs/run/STATUS.md".to_owned()),
+            run_id: None,
+            session_id: None,
         };
         let result = execute_hook_capability(Path::new("/consumer"), "checkpoint-reminder", &input)
             .expect("approved hook should execute");
