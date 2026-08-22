@@ -10,9 +10,9 @@ tags: [knowledge, release, scan, v0-10]
 aliases: ["Nested Vault scan"]
 sources:
   - "repo:crates/hive-cli/src/knowledge_scan.rs#sha256:61bf8cc01a6e0701b89e047ffd0f0118c676a84e8edc7b316cd9c424bbae4f48"
-  - "repo:docs/decisions/product-release-decisions.md#sha256:59e330c3bd0a5a8133e00c447c99db44e30274dbf92770b662d3cf4c14b50e0f"
+  - "repo:docs/decisions/product-release-decisions.md#sha256:a56419242874c459f08f7575ec0b2b6c2249ac696e0efffb053706dfeb6c9f00"
   - "repo:docs/plans/active/nested-project-knowledge-scan-0.10.0.md#sha256:09e75e39def220648906afa58722a15a1997ca9013eeeb02f579b8eb4b1aaf8f"
-  - "repo:docs/plans/active/release-0.10.0.md#sha256:75140d2b98c67cc1057bf6a747ebe4aaee093abb7574f978adfec390177e2e5c"
+  - "repo:docs/plans/active/release-0.10.0.md#sha256:5b5249c28d49e3094889ceb38f194ba41eaa0b2999f48981e0bd1562ef5db88e"
   - "repo:docs/research/ai-learning-hive-application-candidates-2026-08-21.md#sha256:14eb21209b147e7ca9947eae8afb09c059d53aedf353c1802620bf8bf4cc0038"
   - "repo:tests/conformance/integration/test_wiki_cli_e2e.py#sha256:f737ec5b335045a43839360e02c5ed9c2c52d0b9f59394123087fd2063727c12"
 links: [knowledge-portability-scan, version-policy]
