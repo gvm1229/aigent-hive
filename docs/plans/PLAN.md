@@ -1,6 +1,6 @@
 # Aigent Hive 활성 계획
 
-> Revision: 253
+> Revision: 254
 > 기준일: 2026-08-22
 > Product version: `0.9.5` stable
 > 다음 target: `0.10.0-test`
@@ -15,6 +15,7 @@
 - 등록된 nested project의 안전한 knowledge scan 복구
 - pre-`0.10.0` 지식·프로젝트 무손실 upgrade
 - Host-neutral 연속 실행 closure gate와 조건부 hook adapter
+- 자연어 routing 기반 `verified-workflow`와 명시적 `adversarial-judge`
 - 번호 공개 시험판과 같은 product bytes의 안정판 출시
 
 ## 완료 조건
@@ -35,7 +36,7 @@
 ## 현재 연속 실행 경계
 
 - 유지보수자 권한: `0.10.0`의 구현·시험·commit·`develop` push·CI 관찰
-- Ralph loop 대상: 모든 미완료 구현·검증·공개 시험 수용 항목
+- Verified workflow 대상: dependency·evidence·retry·독립 검증이 필요한 미완료 구현·검증 항목
 - 제외: `REL10-005–007` — protected `main` 안정판 후보, 안정판 게시·설치, 유지보수자 안정판 승인
 - 종료 조건: 제외 항목 외 Agent 소유 checklist `0건`과 해당 검증 증거
 
@@ -50,8 +51,10 @@
 | Host-owned Skill 예약 | 1 | 0 | 100% |
 | Nested project scan | 1 | 0 | 100% |
 | Host-neutral 연속 실행 | 1 | 7 | 12.5% |
+| Verified workflow | 1 | 5 | 16.7% |
+| Adversarial judge | 1 | 7 | 12.5% |
 | `0.10.0` 출시 | 0 | 7 | 0% |
-| **합계** | **4** | **42** | **8.7%** |
+| **합계** | **6** | **54** | **10.0%** |
 
 ## Required load order
 
@@ -72,14 +75,17 @@ Archive·backlog·완료 history의 자동 선행 load 금지.
 | [`active/host-owned-skill-reservations-0.10.0.md`](active/host-owned-skill-reservations-0.10.0.md) | `SCP10-002` | Host-owned Skill 세션 예약 |
 | [`active/nested-project-knowledge-scan-0.10.0.md`](active/nested-project-knowledge-scan-0.10.0.md) | `SCP10-003` | Nested project scan |
 | [`active/host-neutral-continuation-0.10.0.md`](active/host-neutral-continuation-0.10.0.md) | `CON10-*` | Goal·closure·선택형 hook |
+| [`active/verified-workflow-0.10.0.md`](active/verified-workflow-0.10.0.md) | `VWF10-*` | 자연어 routing·실행 graph |
+| [`active/adversarial-judge-0.10.0.md`](active/adversarial-judge-0.10.0.md) | `JDG10-*` | 명시적 독립 adversarial Judge |
 | [`active/release-0.10.0.md`](active/release-0.10.0.md) | `REL10-*` | 번호 시험판·안정판 출시 |
 
 ## 실행 순서
 
-1. `CON10-002–008` closure schema·CLI·bounded three-host adapter 구현·수용
-2. `KRG10-001–007`, `VEC10-001–007` native 관계·vector feasibility·adopt|defer
-3. `KRG10-008–013`, `KRG10-015–016`과 통과 시 `VEC10-008–012` 구현·수용
-4. `REL10-*` 공개 시험판·세 운영체제 수용·안정판 출시
+1. `CON10-002–008`, `VWF10-002–006` closure·natural routing·bounded three-host adapter 구현·수용
+2. `JDG10-002–008` explicit adversarial Judge envelope·host launch·quorum 결합
+3. `KRG10-001–007`, `VEC10-001–007` native 관계·vector feasibility·adopt|defer
+4. `KRG10-008–013`, `KRG10-015–016`과 통과 시 `VEC10-008–012` 구현·수용
+5. `REL10-*` 공개 시험판·세 운영체제 수용·안정판 출시
 
 ## 비활성 자료
 

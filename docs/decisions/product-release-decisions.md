@@ -53,6 +53,8 @@
 | `0.10.0` host-owned Skill 세션 예약 | 구현 목표: 예약은 대상 경로 접근 아닌 `.hive/runtime` 충돌 조정 기록. Codex·Antigravity는 `.agents/skills/<safe-skill>/...`, Claude는 `.claude/skills/<safe-skill>/...`만 예약 허용. 다른 host 경로는 `hive.session-host-owned-namespace`, live·unverifiable reservation만 세션 해결 안내 |
 | `0.10.0` nested project scan | 등록 project root가 상위 Git repository의 하위 폴더여도 해당 root 안에서 knowledge scan 허용. Sibling read·write, 전역 Git 설정 mutation, symlink·junction·reparse point 탈출 금지 |
 | `0.10.0` 관계·검색 | Markdown 명시 관계는 Hive-native derived graph, code 관계는 승인형 Graphify `0.9.47` full-rebuild `--code-only`, 직접 사실은 기존 SQLite FTS. Metadata-first retrieval·scope별 물리 격리·drift gate·JSON/HTML export 포함. Semantic vector는 Qdrant Edge·SQLite engine·local embedding hard gate 통과 뒤 optional hybrid adapter, 실패 시 dependency `0건` |
+| `0.10.0` verified workflow | `ralph-loop`를 `verified-workflow`로 rename. Natural continuation은 dependency·중간 evidence·bounded retry·독립 verifier·steering·recovery reason code 2개 이상에서 자동 route, task length·bare continue만으로 선택 금지 |
+| `0.10.0` adversarial Judge | `adversarial-judge` explicit Skill이 clean-context package와 host-native Judge dispatch envelope 준비. Hive direct spawn 없음, diagnostic finding과 authenticated quorum PASS authority 분리 |
 | role/run | shared role HANDOFF, PLAN-derived criterion, exact evidence locator, immutable owner pin, sensor-independent manual과 one-role usage-guarded automatic no-spawn resume |
 | 현재 버전 | 정식 릴리스 준비 target `0.9.0`; root Cargo workspace version과 `workspace.metadata.hive.release-date`가 정본 |
 | `0.9.x` release line | `0.9.5`가 마지막 `0.9.x` release. `0.9.6` 미출시. 이후 수정·기능은 `0.10.0` 범위에서 수용 |
