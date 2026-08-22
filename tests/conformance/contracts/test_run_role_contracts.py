@@ -431,6 +431,22 @@ class Phase4Contracts(unittest.TestCase):
             "json",
         )
 
+    def continuation(
+        self, target: Path, session_id: str
+    ) -> tuple[subprocess.CompletedProcess[str], dict[str, Any]]:
+        return self.run_cli(
+            "run",
+            "continuation",
+            "--target",
+            target,
+            "--run",
+            "demo",
+            "--session-id",
+            session_id,
+            "--output",
+            "json",
+        )
+
     def fake_codexbar_environment(
         self,
         case: str,
@@ -1256,7 +1272,7 @@ class Phase4Contracts(unittest.TestCase):
             self.target,
             self.checkpoint_request(
                 continuation={
-                    "session_binding_digest": "sha256:" + "1a" * 32,
+                    "session_binding_digest": digest_bytes(b"active-session"),
                     "max_retry_attempts": 3,
                     "attempts_used": 1,
                     "cancel_requested": False,
@@ -1276,6 +1292,17 @@ class Phase4Contracts(unittest.TestCase):
         self.assertEqual(continuation["retry_budget"]["remaining_attempts"], 2)
         self.assertTrue(continuation["retry_budget"]["retry_permitted"])
         self.assertEqual(continuation["cancel"]["state"], "not-cancelled")
+
+        process, payload = self.continuation(self.target, "active-session")
+        self.assert_success(process, payload)
+        self.assertEqual(payload["action"], "CheckRunContinuation")
+        self.assertEqual(payload["data"]["decision"], "nudge")
+        self.assertFalse(payload["data"]["spawned"])
+
+        process, payload = self.continuation(self.target, "foreign-session")
+        self.assert_success(process, payload)
+        self.assertEqual(payload["data"]["decision"], "allow")
+        self.assertEqual(payload["data"]["reason"], "session-binding-mismatch")
 
     def test_resume_executing_and_verifying_prepares_only_without_spawning_or_writes(self) -> None:
         for state in ("executing", "verifying"):

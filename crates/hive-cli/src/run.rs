@@ -58,6 +58,12 @@ Calculate whether one durable Hive run may finish without spawning or mutation.
 USAGE:
     hive run closure --target <dir> --run <run-id> --output json
 ";
+const CONTINUATION_USAGE: &str = "\
+Evaluate one host-owned continuation request without spawning or mutation.
+
+USAGE:
+    hive run continuation --target <dir> --run <run-id> --session-id <host-session-id> --output json
+";
 static TEMP_COUNTER: AtomicU64 = AtomicU64::new(0);
 
 #[derive(Debug)]
@@ -1266,6 +1272,12 @@ struct ClosureArguments {
     run_id: String,
 }
 
+struct ContinuationArguments {
+    target: PathBuf,
+    run_id: String,
+    session_id: String,
+}
+
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 enum DispatchIntent {
     Manual,
@@ -1294,6 +1306,10 @@ pub(crate) fn run_run(arguments: &[String]) -> ExitCode {
         print!("{CLOSURE_USAGE}");
         return ExitCode::SUCCESS;
     }
+    if arguments == ["continuation", "--help"] {
+        print!("{CONTINUATION_USAGE}");
+        return ExitCode::SUCCESS;
+    }
     let (action, result) = match arguments.first().map(String::as_str) {
         Some("checkpoint") => (
             "CheckpointRun",
@@ -1307,6 +1323,10 @@ pub(crate) fn run_run(arguments: &[String]) -> ExitCode {
             "CheckRunClosure",
             parse_closure_arguments(&arguments[1..]).and_then(|parsed| closure(&parsed)),
         ),
+        Some("continuation") => (
+            "CheckRunContinuation",
+            parse_continuation_arguments(&arguments[1..]).and_then(|parsed| continuation(&parsed)),
+        ),
         Some(other) => (
             "RunWork",
             Err(AdapterError::Input(format!("unknown run action: {other}"))),
@@ -1318,6 +1338,81 @@ pub(crate) fn run_run(arguments: &[String]) -> ExitCode {
     };
     let result = result.unwrap_or_else(|error| failure_result(action, &error));
     emit_action_result(&result)
+}
+
+fn parse_continuation_arguments(
+    arguments: &[String],
+) -> Result<ContinuationArguments, AdapterError> {
+    let options = parse_options(arguments, &["--target", "--run", "--session-id"])?;
+    Ok(ContinuationArguments {
+        target: PathBuf::from(required(&options, "--target")?),
+        run_id: required(&options, "--run")?.to_owned(),
+        session_id: required(&options, "--session-id")?.to_owned(),
+    })
+}
+
+fn continuation(arguments: &ContinuationArguments) -> Result<ActionResult, AdapterError> {
+    let closure_result = closure(&ClosureArguments {
+        target: arguments.target.clone(),
+        run_id: arguments.run_id.clone(),
+    })?;
+    let data = closure_result
+        .data
+        .as_ref()
+        .ok_or_else(|| AdapterError::Internal("closure result is missing data".to_owned()))?;
+    let closure = data
+        .get("closure")
+        .cloned()
+        .ok_or_else(|| AdapterError::Internal("closure result is missing closure".to_owned()))?;
+    let envelope = data.get("continuation").cloned().ok_or_else(|| {
+        AdapterError::Internal("closure result is missing continuation envelope".to_owned())
+    })?;
+    let session_digest = sha256_digest(arguments.session_id.as_bytes());
+    let expected_digest = envelope
+        .pointer("/session_binding/session_id_digest")
+        .and_then(Value::as_str);
+    let ready_for_final = closure
+        .get("ready_for_final")
+        .and_then(Value::as_bool)
+        .ok_or_else(|| AdapterError::Internal("closure ready_for_final is missing".to_owned()))?;
+    let agent_owned = closure
+        .get("agent_owned")
+        .and_then(Value::as_array)
+        .ok_or_else(|| AdapterError::Internal("closure agent_owned is missing".to_owned()))?;
+    let retry_permitted = envelope
+        .pointer("/retry_budget/retry_permitted")
+        .and_then(Value::as_bool)
+        .ok_or_else(|| {
+            AdapterError::Internal("continuation retry permission is missing".to_owned())
+        })?;
+    let (decision, reason) = if expected_digest != Some(session_digest.as_str()) {
+        ("allow", "session-binding-mismatch")
+    } else if ready_for_final || agent_owned.is_empty() {
+        ("allow", "closure-ready")
+    } else if !retry_permitted {
+        ("allow", "retry-not-permitted")
+    } else {
+        ("nudge", "host-owned-continuation")
+    };
+    Ok(ActionResult {
+        schema_version: 1,
+        action: "CheckRunContinuation",
+        status: "success",
+        exit_code: 0,
+        code: "hive.run-continuation-evaluated",
+        message: "host-owned continuation decision evaluated".to_owned(),
+        changed_paths: Vec::new(),
+        evidence: closure_result.evidence,
+        next_action: closure_result.next_action,
+        data: Some(json!({
+            "decision": decision,
+            "reason": reason,
+            "session_id_digest": session_digest,
+            "closure": closure,
+            "continuation": envelope,
+            "spawned": false,
+        })),
+    })
 }
 
 fn parse_closure_arguments(arguments: &[String]) -> Result<ClosureArguments, AdapterError> {

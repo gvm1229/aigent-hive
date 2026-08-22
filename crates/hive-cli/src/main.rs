@@ -83,6 +83,7 @@ USAGE:
     hive run checkpoint --target <dir> --request <request.json> --capabilities <fresh-json> --output json
     hive run resume --target <dir> --run <run-id> --capabilities <fresh-json> [--dispatch-intent manual|automatic] [--account-digest <sha256:...>] [--session-id <host-session-id>] [--role <role-id> [--threshold <1..99>]] --output json
     hive run closure --target <dir> --run <run-id> --output json
+    hive run continuation --target <dir> --run <run-id> --session-id <host-session-id> --output json
     hive loop initialize|validate|checkpoint|steer|prepare|recover --help
     hive orchestration status|plan|dispatch|receipt|cancel|recover|authority|migrate --help
     hive judge package --target <dir> --request <json> --output json
