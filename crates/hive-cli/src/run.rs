@@ -52,6 +52,12 @@ Read and validate one durable run without mutation or spawning.
 USAGE:
     hive run resume --target <dir> --run <run-id> --capabilities <fresh-json> [--dispatch-intent manual|automatic] [--account-digest <sha256:...>] [--session-id <host-session-id>] [--role <role-id> [--threshold <1..99>]] --output json
 ";
+const CLOSURE_USAGE: &str = "\
+Calculate whether one durable Hive run may finish without spawning or mutation.
+
+USAGE:
+    hive run closure --target <dir> --run <run-id> --output json
+";
 static TEMP_COUNTER: AtomicU64 = AtomicU64::new(0);
 
 #[derive(Debug)]
@@ -1253,6 +1259,11 @@ struct ResumeArguments {
     threshold: Option<u8>,
 }
 
+struct ClosureArguments {
+    target: PathBuf,
+    run_id: String,
+}
+
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 enum DispatchIntent {
     Manual,
@@ -1277,6 +1288,10 @@ pub(crate) fn run_run(arguments: &[String]) -> ExitCode {
         print!("{RESUME_USAGE}");
         return ExitCode::SUCCESS;
     }
+    if arguments == ["closure", "--help"] {
+        print!("{CLOSURE_USAGE}");
+        return ExitCode::SUCCESS;
+    }
     let (action, result) = match arguments.first().map(String::as_str) {
         Some("checkpoint") => (
             "CheckpointRun",
@@ -1285,6 +1300,10 @@ pub(crate) fn run_run(arguments: &[String]) -> ExitCode {
         Some("resume") => (
             "ResumeWork",
             parse_resume_arguments(&arguments[1..]).and_then(|parsed| resume(&parsed)),
+        ),
+        Some("closure") => (
+            "CheckRunClosure",
+            parse_closure_arguments(&arguments[1..]).and_then(|parsed| closure(&parsed)),
         ),
         Some(other) => (
             "RunWork",
@@ -1297,6 +1316,101 @@ pub(crate) fn run_run(arguments: &[String]) -> ExitCode {
     };
     let result = result.unwrap_or_else(|error| failure_result(action, &error));
     emit_action_result(&result)
+}
+
+fn parse_closure_arguments(arguments: &[String]) -> Result<ClosureArguments, AdapterError> {
+    let options = parse_options(arguments, &["--target", "--run"])?;
+    Ok(ClosureArguments {
+        target: PathBuf::from(required(&options, "--target")?),
+        run_id: required(&options, "--run")?.to_owned(),
+    })
+}
+
+fn closure(arguments: &ClosureArguments) -> Result<ActionResult, AdapterError> {
+    let target = PinnedTarget::open(&arguments.target)?;
+    let plan_path = run_path(&arguments.run_id, "PLAN.md")?;
+    let status_path = run_path(&arguments.run_id, "STATUS.md")?;
+    let plan_bytes = target.read_required(&plan_path, MAX_EXPLICIT_FILE_BYTES)?;
+    let status_bytes = target.read_required(&status_path, MAX_EXPLICIT_FILE_BYTES)?;
+    let plan = RunPlan::parse_markdown(&plan_bytes)
+        .map_err(|error| AdapterError::Verification(error.to_string()))?;
+    let status = RunStatusDocument::parse_markdown(&status_bytes)
+        .map_err(|error| AdapterError::Verification(error.to_string()))?;
+    if status.status().run_id != arguments.run_id {
+        return Err(AdapterError::Verification(
+            "STATUS.md run_id does not match requested run".to_owned(),
+        ));
+    }
+    if as_set(plan.criteria()) != as_set(&status.status().required_criteria) {
+        return Err(AdapterError::Verification(
+            "PLAN.md criteria differ from STATUS.md".to_owned(),
+        ));
+    }
+    let passed = as_set(&status.status().passed_criteria);
+    let pending = plan
+        .criteria()
+        .iter()
+        .filter(|criterion| !passed.contains(criterion.as_str()))
+        .cloned()
+        .collect::<Vec<_>>();
+    let (agent_owned, blocked) = match status.status().state {
+        RunState::Planned | RunState::Executing | RunState::Verifying | RunState::ResumeReady => {
+            (pending, Vec::new())
+        }
+        RunState::Blocked | RunState::UsageLimited => (
+            Vec::new(),
+            status.status().blocker.iter().cloned().collect::<Vec<_>>(),
+        ),
+        RunState::Succeeded | RunState::Cancelled => (Vec::new(), Vec::new()),
+    };
+    let ready_for_final = agent_owned.is_empty() && blocked.is_empty();
+    let mut payload = json!({
+        "schema_version": 1,
+        "run_id": arguments.run_id,
+        "run_revision": status.status().revision,
+        "run_state": status.status().state,
+        "ready_for_final": ready_for_final,
+        "agent_owned": agent_owned,
+        "awaiting_user_authority": [],
+        "awaiting_external_evidence": [],
+        "blocked": blocked,
+        "excluded": [],
+    });
+    let closure_digest = sha256_digest(
+        &serde_json_canonicalizer::to_vec(&payload)
+            .map_err(|error| AdapterError::Internal(format!("canonicalize closure: {error}")))?,
+    );
+    payload
+        .as_object_mut()
+        .expect("closure payload is an object")
+        .insert("closure_digest".to_owned(), Value::String(closure_digest));
+    Ok(ActionResult {
+        schema_version: 1,
+        action: "CheckRunClosure",
+        status: "success",
+        exit_code: 0,
+        code: "hive.run-closure-ready",
+        message: if ready_for_final {
+            "run closure permits final response".to_owned()
+        } else {
+            "run closure retains non-terminal work or blocker".to_owned()
+        },
+        changed_paths: Vec::new(),
+        evidence: vec![
+            Evidence {
+                kind: "file",
+                locator: plan_path.display().to_string(),
+                digest: plan.digest(),
+            },
+            Evidence {
+                kind: "run-status",
+                locator: status_path.display().to_string(),
+                digest: sha256_digest(&status_bytes),
+            },
+        ],
+        next_action: status.status().next_action.clone(),
+        data: Some(json!({"closure": payload})),
+    })
 }
 
 fn parse_checkpoint_arguments(arguments: &[String]) -> Result<CheckpointArguments, AdapterError> {

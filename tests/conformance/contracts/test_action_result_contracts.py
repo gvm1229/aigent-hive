@@ -44,6 +44,7 @@ EXPECTED_ACTIONS = {
     "VerifySkillProjection",
     "RunWork",
     "ResumeWork",
+    "CheckRunClosure",
     "VerifyWork",
     "IngestKnowledge",
     "AddKnowledge",

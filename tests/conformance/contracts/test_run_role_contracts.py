@@ -412,6 +412,20 @@ class Phase4Contracts(unittest.TestCase):
             extra_environment=extra_environment,
         )
 
+    def closure(
+        self, target: Path
+    ) -> tuple[subprocess.CompletedProcess[str], dict[str, Any]]:
+        return self.run_cli(
+            "run",
+            "closure",
+            "--target",
+            target,
+            "--run",
+            "demo",
+            "--output",
+            "json",
+        )
+
     def fake_codexbar_environment(
         self,
         case: str,
@@ -1164,6 +1178,36 @@ class Phase4Contracts(unittest.TestCase):
         self.assertEqual(resume_payload["changed_paths"], [])
         self.assertEqual(snapshot_tree(self.target), before_resume)
         self.assertEqual(status_path.read_bytes(), status_before)
+
+    def test_closure_reports_pending_criteria_without_mutation(self) -> None:
+        self.ensure_handoff(self.target)
+        build = self.make_evidence(self.target, "build.txt", b"build passed\n")
+        process, payload = self.checkpoint(
+            self.target,
+            self.checkpoint_request(
+                state="verifying",
+                passed=["build"],
+                next_action="verify tests",
+                latest_evidence=[build],
+                criterion_evidence={"build": [build]},
+            ),
+            CAPABILITIES["codex-omx"],
+            "closure-pending",
+        )
+        self.assert_success(process, payload)
+        before = snapshot_tree(self.target)
+
+        process, payload = self.closure(self.target)
+
+        self.assert_success(process, payload)
+        self.assertEqual(payload["changed_paths"], [])
+        closure = payload["data"]["closure"]
+        self.assertFalse(closure["ready_for_final"])
+        self.assertEqual(closure["agent_owned"], ["tests"])
+        self.assertEqual(closure["blocked"], [])
+        self.assertEqual(closure["excluded"], [])
+        self.assertRegex(closure["closure_digest"], r"^sha256:[0-9a-f]{64}$")
+        self.assertEqual(snapshot_tree(self.target), before)
 
     def test_resume_executing_and_verifying_prepares_only_without_spawning_or_writes(self) -> None:
         for state in ("executing", "verifying"):

@@ -43,6 +43,7 @@
         "VerifySkillProjection",
         "RunWork",
         "ResumeWork",
+        "CheckRunClosure",
         "VerifyWork",
         "IngestKnowledge",
         "AddKnowledge",
