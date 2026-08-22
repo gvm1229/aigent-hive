@@ -72,7 +72,7 @@ USAGE:
     hive knowledge export --user-root <dir> --scope global|shared|project:<id>|collection:<id>|all-portable --bundle <path>.hivekb [--replace-backup <file-name>] --output json
     hive knowledge import --user-root <dir> --bundle <path>.hivekb (--dry-run|--apply) --output json
     hive knowledge refresh (--target <legacy-project>|--user-root <dir>) --output json
-    hive knowledge graph preview|rebuild|query --target <dir> [--scope project|private|confidential] [--node-id <id>] --output json
+    hive knowledge graph preview|status|rebuild|query --target <dir> [--scope project|private|confidential] [--node-id <id>] --output json
     hive index rebuild (--target <legacy-project>|--user-root <dir>) --output json
 ";
 
@@ -203,11 +203,13 @@ pub(crate) fn run_knowledge(arguments: &[String]) -> ExitCode {
 
 fn run_graph(arguments: &[String]) -> Result<KnowledgeResult, WikiError> {
     let action = arguments.first().map(String::as_str).ok_or_else(|| {
-        WikiError::InvalidInput("knowledge graph requires preview, rebuild, or query".to_owned())
+        WikiError::InvalidInput(
+            "knowledge graph requires preview, status, rebuild, or query".to_owned(),
+        )
     })?;
-    if !matches!(action, "preview" | "rebuild" | "query") {
+    if !matches!(action, "preview" | "status" | "rebuild" | "query") {
         return Err(WikiError::InvalidInput(
-            "knowledge graph supports preview, rebuild, or query".to_owned(),
+            "knowledge graph supports preview, status, rebuild, or query".to_owned(),
         ));
     }
     let options = parse_options(&arguments[1..], &["--target", "--scope", "--node-id"])?;
@@ -230,6 +232,15 @@ fn run_graph(arguments: &[String]) -> Result<KnowledgeResult, WikiError> {
             "generation_digest": graph.generation_digest,
             "node_id": node_id,
             "matches": hive_wiki::query_generation(&graph, node_id, 50),
+            "writes": false,
+        })
+    } else if action == "status" {
+        json!({
+            "scope": graph.scope,
+            "engine": graph.engine,
+            "generation_digest": graph.generation_digest,
+            "generation_path": path,
+            "active": target.join(&path).is_file(),
             "writes": false,
         })
     } else {
@@ -259,11 +270,15 @@ fn run_graph(arguments: &[String]) -> Result<KnowledgeResult, WikiError> {
         },
         if action == "rebuild" {
             "hive.knowledge-graph-rebuilt"
+        } else if action == "status" {
+            "hive.knowledge-graph-status"
         } else {
             "hive.knowledge-graph-preview"
         },
         if action == "rebuild" {
             "native knowledge graph generation rebuilt"
+        } else if action == "status" {
+            "native knowledge graph status read without derived-state writes"
         } else {
             "native knowledge graph preview completed without derived-state writes"
         },
@@ -4271,6 +4286,16 @@ mod tests {
         assert_eq!(matches.len(), 2);
         assert!(matches.iter().all(|edge| edge.get("body").is_none()));
 
+        let status = run_graph(&vec![
+            "status".to_owned(),
+            "--target".to_owned(),
+            project.path().to_string_lossy().into_owned(),
+            "--output".to_owned(),
+            "json".to_owned(),
+        ])
+        .expect("graph status");
+        assert_eq!(status.data.expect("status data")["active"], false);
+
         let rebuilt = run_graph(&vec![
             "rebuild".to_owned(),
             "--target".to_owned(),
@@ -4286,6 +4311,16 @@ mod tests {
             .path()
             .join(rebuilt_data["generation_path"].as_str().expect("path"))
             .is_file());
+
+        let status = run_graph(&vec![
+            "status".to_owned(),
+            "--target".to_owned(),
+            project.path().to_string_lossy().into_owned(),
+            "--output".to_owned(),
+            "json".to_owned(),
+        ])
+        .expect("active graph status");
+        assert_eq!(status.data.expect("active status data")["active"], true);
 
         let Err(error) = run_graph(&vec![
             "preview".to_owned(),
