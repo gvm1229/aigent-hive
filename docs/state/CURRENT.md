@@ -1,6 +1,6 @@
 # 현재 상태
 
-- 기준 branch: `feature/0.10.0@49ab3d9`, `origin/feature/0.10.0`과 push 전 local 차이
+- 기준 branch: `feature/0.10.0@9fbe003`, `origin/feature/0.10.0` 동기화
 - product version: `0.9.5`
 - 다음 target: `0.10.0-test`
 - 활성 계획: [`PLAN.md`](../plans/PLAN.md)
@@ -53,6 +53,8 @@
 - continuation envelope의 canonical retry·cancel·session digest·remaining budget 구현 완료 (`8025085`)
 - Markdown graph schema·직접 edge 추출 구현 완료 (`0729670`, `c78c799`)
 - explicit Markdown relation field·generation·metadata query 구현 완료 (`49ab3d9`, `f795a1d`, `ce87490`)
+- project graph public command: `preview|status|rebuild|query|disable`, collection scope fail-closed·digest-addressed derived generation·lifecycle filter 구현 (`3ed6a7f`–`9fbe003`)
+- continuation Stop hook: exact consent·projection·session digest·revision별 1회 nudge·user interrupt allow 구현 (`3efe600`–`d0f8bde`)
 - 공개 stable 합집합 `0.8.0`, `0.9.0–0.9.5` 확인; historical built-in registry의 `0.9.1–0.9.5` 결손과 future stable publication append gate 범위 승인
 - Stable tag Skill transition 비교: `0.8→0.9.0` rename 필수, `0.9.0–0.9.4` digest epoch 변화, `0.9.4→0.9.5` exact no-change epoch 공유 가능
 - nested Git repository 아래 registered project scan 허용과 foreign sibling 격리 구현·회귀 검증 완료 (`7aab389`)

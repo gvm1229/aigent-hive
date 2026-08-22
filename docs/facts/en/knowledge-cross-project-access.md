@@ -9,7 +9,7 @@ summary: "Automatic retrieval stays isolated; explicit collection retrieval is d
 tags: [collection, knowledge, promotion, retrieval, v0-9-3]
 aliases: ["Automatic knowledge promotion", "Cross-project knowledge"]
 sources:
-  - "repo:crates/hive-cli/src/knowledge.rs#sha256:f3f69d5fcea2bd8fb6383b29ae97d490e79ff794345826c0f68c550fb5881db4"
+  - "repo:crates/hive-cli/src/knowledge.rs#sha256:eb9876cbd3af9428f4bd09216421b5d741e1e506dfc93ef478e5305c1c513193"
   - "repo:crates/hive-wiki/src/rag.rs#sha256:5fc5feca2ab250f5f91c8d3a678c315fabe4fdcf12763fb664a0a6b4bcbe0c81"
   - "repo:crates/hive-wiki/src/store.rs#sha256:39f62b339764e470446c61bfb392b2f8637908738261c8fe5bc9b711da0bb40d"
   - "repo:harness/skills/knowledge-import/SKILL.md#sha256:b73e6c82eb5ef9105781383f59211a982ed70b0f0ecf1690619f3b9b30f4730d"

@@ -10,7 +10,7 @@ tags: [communication, reporting, verification]
 aliases: ["건너뜀 보고", "검증 한정 조건"]
 sources:
   - "repo:.agents/directives/01-behavior.md#sha256:dd66d053a9edd60c2f04e96283f4f95e5429dbf24e6b2d98c025bbf89039d5df"
-  - "repo:crates/hive-cli/src/user_install.rs#sha256:b8bb2ace9f509cf8f48cf703971069e7ca73ada3704a8c7dc18adfd03a27e9ef"
+  - "repo:crates/hive-cli/src/user_install.rs#sha256:6ee84b034e6a23171889dc33e8be8f839594edd080168ad7601e8c5fd9e5c9cc"
   - "repo:docs/guidance-schema.md#sha256:eae385d284f448a27a5243d8e7846aa69d9568e0849d3457147fb814229416ad"
   - "repo:harness/template/AGENTS.md.jinja#sha256:33c0da7ba5156ea1aa0ccc08a8e4f88343cf5f6f896994a7d8b830ac0ad6bb74"
 links: [language-consistency, release-verification]

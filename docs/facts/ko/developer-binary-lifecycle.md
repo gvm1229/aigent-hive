@@ -11,7 +11,7 @@ aliases: ["Dev install", "Local developer build"]
 sources:
   - "repo:crates/hive-cli/build.rs#sha256:870578d55ee86e6414ff823c929b9eebe70b9ea4f829d4b6ce3d8d1f922c1991"
   - "repo:crates/hive-cli/src/main.rs#sha256:edc9e588f4303932f8323ec26f58f00481da7585ae7334c4b8d5048959aa7e20"
-  - "repo:crates/hive-cli/src/user_install.rs#sha256:b8bb2ace9f509cf8f48cf703971069e7ca73ada3704a8c7dc18adfd03a27e9ef"
+  - "repo:crates/hive-cli/src/user_install.rs#sha256:6ee84b034e6a23171889dc33e8be8f839594edd080168ad7601e8c5fd9e5c9cc"
   - "repo:scripts/dev-install.sh#sha256:675d29e359a127a994d3b7904d3c842b3dafd884b8e28659a0d2b21ef3fc2a79"
 links: [interactive-binary-update, source-development, version-policy]
 reviewed_revision: "git:1b6536e688f448bfa6d4ce7593f271fbd8e255da"
