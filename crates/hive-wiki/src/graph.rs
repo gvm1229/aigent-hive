@@ -3,6 +3,7 @@
 use crate::WikiPage;
 use hive_core::sha256_digest;
 use serde::{Deserialize, Serialize};
+use std::path::PathBuf;
 
 /// One relationship evidence class. Only extracted relations originate in Markdown parsing.
 #[derive(Debug, Clone, Copy, Deserialize, Eq, Ord, PartialEq, PartialOrd, Serialize)]
@@ -89,6 +90,29 @@ pub fn build_native_generation(scope: &str, pages: &[WikiPage]) -> Result<GraphG
     })
 }
 
+/// Return the Hive-owned derived path for one physical graph scope.
+pub fn generation_relative_path(scope: &str, scope_digest: &str) -> Result<PathBuf, String> {
+    let digest = scope_digest
+        .strip_prefix("sha256:")
+        .filter(|value| {
+            value.len() == 64
+                && value
+                    .bytes()
+                    .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
+        })
+        .ok_or_else(|| "graph scope digest is invalid".to_owned())?;
+    let root = match scope {
+        "source" => PathBuf::from(".agents/work/graph/source"),
+        "project" => PathBuf::from(".hive/index/graph/project"),
+        "user-root" => PathBuf::from(".hive/index/graph/user-root"),
+        "shared" => PathBuf::from(".hive/index/graph/shared"),
+        "private" => PathBuf::from(".hive/index/graph/private"),
+        "confidential" => PathBuf::from(".hive/index/graph/confidential"),
+        _ => return Err("knowledge graph scope is unsupported".to_owned()),
+    };
+    Ok(root.join(digest).join("generation.json"))
+}
+
 /// Return bounded direct relationships for one node without exposing page bodies.
 #[must_use]
 pub fn query_generation(
@@ -161,7 +185,10 @@ fn edge(from: &str, to: &str, relation: &str, source_digest: &str) -> GraphEdge 
 
 #[cfg(test)]
 mod tests {
-    use super::{build_native_generation, extract_markdown_edges, query_generation, GraphEvidence};
+    use super::{
+        build_native_generation, extract_markdown_edges, generation_relative_path,
+        query_generation, GraphEvidence,
+    };
     use crate::{Contradiction, WikiFrontmatter, WikiPage};
 
     fn page(id: &str) -> WikiPage {
@@ -222,5 +249,24 @@ mod tests {
         assert_eq!(hits.len(), 9);
         assert!(hits.iter().all(|edge| edge.from == "first"));
         assert!(query_generation(&generation, "missing", 10).is_empty());
+    }
+
+    #[test]
+    fn scope_paths_are_disjoint_and_hive_owned() {
+        let digest = format!("sha256:{}", "a1".repeat(32));
+        let paths = [
+            "source",
+            "project",
+            "user-root",
+            "shared",
+            "private",
+            "confidential",
+        ]
+        .into_iter()
+        .map(|scope| generation_relative_path(scope, &digest).expect("scope path"))
+        .collect::<std::collections::BTreeSet<_>>();
+        assert_eq!(paths.len(), 6);
+        assert!(paths.iter().all(|path| !path.is_absolute()));
+        assert!(generation_relative_path("outside", &digest).is_err());
     }
 }
