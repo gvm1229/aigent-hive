@@ -11,9 +11,9 @@ aliases: ["Adversarial review"]
 sources:
   - "repo:docs/decisions/ADR-0020-0.10.0-product-scope.md#sha256:c313a53d8ed114aaf9b6303263730d282b11c6d8d52a71c249999b62969214fe"
   - "repo:docs/decisions/product-release-decisions.md#sha256:a56419242874c459f08f7575ec0b2b6c2249ac696e0efffb053706dfeb6c9f00"
-  - "repo:docs/plans/active/adversarial-judge-0.10.0.md#sha256:ed57c7d40872de6bd6963ec2f3d3a77488b1d9ca849b9d8236b47b7ef3745db2"
+  - "repo:docs/plans/active/adversarial-judge-0.10.0.md#sha256:2334648e6f6ab90c67010884b7c18ad55fd2f7607383cb834f0a9205fae02bc9"
 links: [judge-verification, v0-10-product-scope, verified-workflow]
-reviewed_revision: "git:26e5fd299f961d79c6b8237c212b4b07e9e99770"
+reviewed_revision: "git:ac178d3c45a5b22903488042bab9ef3ed662fb12"
 status: active
 ---
 

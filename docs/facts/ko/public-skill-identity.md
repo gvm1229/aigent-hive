@@ -9,10 +9,10 @@ summary: "Aigent Hive의 product-only 26개 Skill과 지식 Skill의 한국어 �
 tags: [localization, migration, plugin, skill]
 aliases: ["Skill naming"]
 sources:
-  - "repo:crates/hive-projection/src/lib.rs#sha256:3a24dbdefc308cf9d6fdf01c731636a7eab9b01943253453cd2d5752eb0a3d63"
+  - "repo:crates/hive-projection/src/lib.rs#sha256:61b367ca8b539a30175419efd96ec61dc6449c80b0d82290e363a883ef24c93a"
   - "repo:docs/archive/plans/foundations/knowledge-skill-display-names-next-release.md#sha256:517f1f10a17537698d1e4e1a30b59bda9fd2488e3062576d01b4cf641dea0e76"
-  - "repo:docs/skills.md#sha256:b5de8baa9c4973127ad34b6351c5478f4343c143e1d6cbaeed69a61638940a87"
-  - "repo:harness/skills/catalog.yml#sha256:fc3facea5c95637482772e7a723fb98f17258b65eb8e6140c2cabe48afae7476"
+  - "repo:docs/skills.md#sha256:8a23320466da4da0f30e098c34f193a889a5207aead75134010bbc973e557a38"
+  - "repo:harness/skills/catalog.yml#sha256:d07890ccf090177ed03405d9eae01c278130cdd1fa9797ad3616106d1c67f6c8"
 links: [global-onboarding, skill-routing]
 reviewed_revision: "git:8fcf8b4794bb7d3d92065ad3f49a03acb33c4c13"
 status: active

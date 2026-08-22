@@ -1,6 +1,6 @@
 # Aigent Hive 활성 계획
 
-> Revision: 261
+> Revision: 262
 > 기준일: 2026-08-22
 > Product version: `0.9.5` stable
 > 다음 target: `0.10.0-test`
@@ -53,10 +53,10 @@
 | Nested project scan | 1 | 0 | 100% |
 | Host-neutral 연속 실행 | 3 | 5 | 37.5% |
 | Verified workflow | 5 | 1 | 83.3% |
-| Adversarial judge | 1 | 7 | 12.5% |
+| Adversarial judge | 4 | 4 | 50.0% |
 | Skill migration cleanup | 2 | 8 | 20.0% |
 | `0.10.0` 출시 | 0 | 7 | 0% |
-| **합계** | **14** | **56** | **20.0%** |
+| **합계** | **17** | **53** | **24.3%** |
 
 ## Required load order
 

@@ -17,7 +17,7 @@ sources:
   - "repo:docs/decisions/ADR-0018-notion-wiki-backend.md#sha256:dff20a5844cfaa8a4958ea1755392f0c598c77fc6679e72e275de7249deb3c87"
   - "repo:docs/research/discord-notion-host-integrations.md#sha256:5b26108090c75343964f5452c3b7fd20a1df6300feda8561847bad6feb1748b9"
   - "repo:harness/skills/user-setup/SKILL.md#sha256:1fcbb2b9b2db6d57bd40682f80db2a0a916ebbffb3434431038b609b6b743c11"
-  - "repo:schemas/user-setup.schema.json#sha256:2c71672d4828b6ccd230165757356b95a75fc5bbb982e28fb57fb0e1e7c12c56"
+  - "repo:schemas/user-setup.schema.json#sha256:d2985cbe53cc6aeb6a03442ca4af030e35dbfbda200c478b82b00f1c6b407cfa"
 links: [knowledge-storage, orchestration-ownership]
 reviewed_revision: "git:4c74e7b82263f85bee21a2272dc865eeb60eaa04"
 status: active

@@ -9,7 +9,7 @@ summary: "제품 ship Skill의 전체 변경 범위 처리와 독립 검토·되
 tags: [commit, git, skill, workflow]
 aliases: ["Atomic ship commits"]
 sources:
-  - "repo:docs/skills.md#sha256:b5de8baa9c4973127ad34b6351c5478f4343c143e1d6cbaeed69a61638940a87"
+  - "repo:docs/skills.md#sha256:8a23320466da4da0f30e098c34f193a889a5207aead75134010bbc973e557a38"
 links: [public-skill-identity, source-development]
 reviewed_revision: "git:23dafb9d646ea893ce06f6ec2cc9ea22b7eed673"
 status: active
