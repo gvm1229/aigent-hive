@@ -239,7 +239,8 @@
               "protect-hive-owned-state",
               "update-integrity-guard",
               "derived-state-invalidation",
-              "checkpoint-reminder"
+              "checkpoint-reminder",
+              "continue-active-run"
             ]
           },
           "event": {
@@ -251,7 +252,7 @@
           },
           "command": {
             "type": "string",
-            "pattern": "^hive hook --capability (protect-hive-owned-state|update-integrity-guard|derived-state-invalidation|checkpoint-reminder) --event (PreToolUse|PostToolUse|PreCompact|Stop) --capabilities \\.hive/runtime/current-capability-resolution\\.json --output json$"
+            "pattern": "^hive hook --capability (protect-hive-owned-state|update-integrity-guard|derived-state-invalidation|checkpoint-reminder|continue-active-run) --event (PreToolUse|PostToolUse|PreCompact|Stop) --capabilities \\.hive/runtime/current-capability-resolution\\.json --output json$"
           },
           "content_digest": {
             "type": "string",
@@ -357,6 +358,23 @@
                   }
                 }
               ]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "capability": { "const": "continue-active-run" }
+              },
+              "required": ["capability"]
+            },
+            "then": {
+              "properties": {
+                "event": { "const": "Stop" },
+                "path": { "const": ".hive/hooks/continue-active-run" },
+                "command": {
+                  "const": "hive hook --capability continue-active-run --event Stop --capabilities .hive/runtime/current-capability-resolution.json --output json"
+                }
+              }
             }
           }
         ]

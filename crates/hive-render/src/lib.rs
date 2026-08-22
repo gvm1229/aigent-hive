@@ -7066,6 +7066,7 @@ fn known_hook_descriptor_paths() -> impl Iterator<Item = PathBuf> {
         "update-integrity-guard",
         "derived-state-invalidation",
         "checkpoint-reminder",
+        "continue-active-run",
     ]
     .into_iter()
     .map(|capability| PathBuf::from(format!(".hive/hooks/{capability}")))
@@ -9349,6 +9350,34 @@ mod tests {
         changed.consent_digest =
             calculate_consent_digest(&changed).expect("mutated consent should canonicalize");
         assert!(validate_hook_approvals(&[changed], &resolution).is_err());
+    }
+
+    #[test]
+    fn continuation_hook_projects_only_from_exact_approved_consent() {
+        let temporary = tempfile::tempdir().expect("temporary directory");
+        let target = temporary.path().canonicalize().expect("canonical target");
+        let (mut answers, _) = load_answers(&fixture("answers-base.yml")).expect("answers");
+        let hook = signed_continuation_hook();
+        answers.approved_fallback_hooks = vec![hook.clone()];
+        let answers_path = target.join("answers.yml");
+        fs::write(
+            &answers_path,
+            serde_yaml::to_string(&answers).expect("serialize answers"),
+        )
+        .expect("answers file");
+        execute_setup(&SetupRequest {
+            target: &target,
+            answers: &answers_path,
+            capabilities: &fixture("capabilities-codex-host-native-hooks.json"),
+            mode: SetupMode::Apply,
+            reconfigure_roles: BTreeSet::new(),
+            global_preferences: None,
+        })
+        .expect("approved continuation hook must project");
+        assert_eq!(
+            fs::read(target.join(".hive/hooks/continue-active-run")).expect("descriptor"),
+            hook_descriptor_bytes(&hook).expect("descriptor bytes"),
+        );
     }
 
     #[test]
