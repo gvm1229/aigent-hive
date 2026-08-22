@@ -57,6 +57,7 @@
 | `0.10.0` adversarial Judge | `adversarial-judge` explicit Skill이 clean-context package와 host-native Judge dispatch envelope 준비. Hive direct spawn 없음, diagnostic finding과 authenticated quorum PASS authority 분리 |
 | `0.10.0` Skill consolidation | `ralph-loop|iterative-execution` → `verified-workflow`, `package-review` → `judge-evidence`. Alias는 logical routing 호환만 제공하며 physical retired artifact는 successful upgrade에서 `0건` |
 | `0.10.0` retired Skill cleanup | 모든 지원 public predecessor의 exact historical bytes·release inventory로 direct jump 인증. Exact Hive artifact 자동 제거, safe local merge 또는 foreign conflict, conflict 상태의 새 release activation 금지 |
+| Historical Skill stable coverage | 게시된 모든 stable의 exact built-in Skill snapshot 영구 보존. 현재 `0.9.0–0.9.5`; 새 stable publication 전 registry append·prior immutable·stable ledger parity 필수 |
 | role/run | shared role HANDOFF, PLAN-derived criterion, exact evidence locator, immutable owner pin, sensor-independent manual과 one-role usage-guarded automatic no-spawn resume |
 | 현재 버전 | 정식 릴리스 준비 target `0.9.0`; root Cargo workspace version과 `workspace.metadata.hive.release-date`가 정본 |
 | `0.9.x` release line | `0.9.5`가 마지막 `0.9.x` release. `0.9.6` 미출시. 이후 수정·기능은 `0.10.0` 범위에서 수용 |

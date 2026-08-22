@@ -1,6 +1,6 @@
 # Aigent Hive 활성 계획
 
-> Revision: 255
+> Revision: 256
 > 기준일: 2026-08-22
 > Product version: `0.9.5` stable
 > 다음 target: `0.10.0-test`
@@ -54,9 +54,9 @@
 | Host-neutral 연속 실행 | 1 | 7 | 12.5% |
 | Verified workflow | 1 | 5 | 16.7% |
 | Adversarial judge | 1 | 7 | 12.5% |
-| Skill migration cleanup | 1 | 8 | 11.1% |
+| Skill migration cleanup | 1 | 9 | 10.0% |
 | `0.10.0` 출시 | 0 | 7 | 0% |
-| **합계** | **7** | **62** | **10.1%** |
+| **합계** | **7** | **63** | **10.0%** |
 
 ## Required load order
 
@@ -85,7 +85,7 @@ Archive·backlog·완료 history의 자동 선행 load 금지.
 ## 실행 순서
 
 1. `CON10-002–008`, `VWF10-002–006` closure·natural routing·bounded three-host adapter 구현·수용
-2. `SKM10-002–009` 모든 predecessor의 Skill rename·폐기 cleanup과 direct jump upgrade
+2. `SKM10-002–010` 모든 stable registry·predecessor Skill cleanup과 direct jump upgrade
 3. `JDG10-002–008` explicit adversarial Judge·`judge-evidence`·host launch·quorum 결합
 4. `KRG10-001–007`, `VEC10-001–007` native 관계·vector feasibility·adopt|defer
 5. `KRG10-008–013`, `KRG10-015–016`과 통과 시 `VEC10-008–012` 구현·수용
