@@ -30,7 +30,7 @@ const RUN_CHECKPOINT: &[u8] = include_bytes!("../../../harness/skills/run-checkp
 const RUN_RESUME: &[u8] = include_bytes!("../../../harness/skills/run-resume/SKILL.md");
 const USAGE_GUARD: &[u8] = include_bytes!("../../../harness/skills/usage-guard/SKILL.md");
 const ROLE_HANDOFF: &[u8] = include_bytes!("../../../harness/skills/run-handoff/SKILL.md");
-const JUDGE_PACKAGE: &[u8] = include_bytes!("../../../harness/skills/package-review/SKILL.md");
+const JUDGE_PACKAGE: &[u8] = include_bytes!("../../../harness/skills/judge-evidence/SKILL.md");
 const ADVERSARIAL_JUDGE: &[u8] =
     include_bytes!("../../../harness/skills/adversarial-judge/SKILL.md");
 const UPDATE_HARNESS: &[u8] = include_bytes!("../../../harness/skills/product-update/SKILL.md");
@@ -1092,10 +1092,10 @@ fn localized_skill_text(
             "역할 인계",
             "역할 배정과 인계 기록을 정본 Markdown에 안전하게 갱신합니다.",
         ),
-        "package-review" => (
-            "Verify package",
+        "judge-evidence" => (
+            "Judge evidence",
             "Verify a work package and its signed attestations.",
-            "패키지 검증",
+            "Judge 증거 검증",
             "검증용 작업 패키지와 서명된 확인 정보를 검사합니다.",
         ),
         "adversarial-judge" => (
@@ -1228,8 +1228,8 @@ fn embedded_skill_metadata(name: &str) -> Option<&'static [u8]> {
         "run-handoff" => Some(include_bytes!(
             "../../../harness/skills/run-handoff/agents/openai.yaml"
         )),
-        "package-review" => Some(include_bytes!(
-            "../../../harness/skills/package-review/agents/openai.yaml"
+        "judge-evidence" => Some(include_bytes!(
+            "../../../harness/skills/judge-evidence/agents/openai.yaml"
         )),
         "adversarial-judge" => Some(include_bytes!(
             "../../../harness/skills/adversarial-judge/agents/openai.yaml"
@@ -1288,7 +1288,7 @@ fn embedded_skill_sources() -> [(&'static str, &'static [u8]); 26] {
         ("run-resume", RUN_RESUME),
         ("usage-guard", USAGE_GUARD),
         ("run-handoff", ROLE_HANDOFF),
-        ("package-review", JUDGE_PACKAGE),
+        ("judge-evidence", JUDGE_PACKAGE),
         ("adversarial-judge", ADVERSARIAL_JUDGE),
         ("product-update", UPDATE_HARNESS),
         ("project-transition", MIGRATE_HARNESS),
@@ -2684,7 +2684,7 @@ description: Inspect one local file without changing it.
                 "code-polish",
                 "project-setup",
                 "research-best-practices",
-                "package-review",
+                "judge-evidence",
                 "adversarial-judge",
                 "knowledge-import",
                 "verified-workflow",
@@ -3076,9 +3076,9 @@ description: Inspect one local file without changing it.
     fn data_skill_sources_templates_embeddings_and_digests_match() {
         let expected = [
             (
-                "package-review",
+                "judge-evidence",
                 JUDGE_PACKAGE,
-                include_bytes!("../../../harness/skills/package-review/SKILL.md").as_slice(),
+                include_bytes!("../../../harness/skills/judge-evidence/SKILL.md").as_slice(),
             ),
             (
                 "run-checkpoint",
@@ -3270,7 +3270,7 @@ description: Inspect one local file without changing it.
 
     #[test]
     fn simple_question_gate_precedes_automatic_data_candidates() {
-        for skill in ["run-resume", "package-review"] {
+        for skill in ["run-resume", "judge-evidence"] {
             let mut request = routing_request();
             request.explicit_action = None;
             request.simple_question = true;
@@ -3317,7 +3317,7 @@ description: Inspect one local file without changing it.
             (Host::Codex, ExternalProvider::Omx),
             (Host::Claude, ExternalProvider::Omc),
         ] {
-            for skill in ["knowledge-recall", "package-review"] {
+            for skill in ["knowledge-recall", "judge-evidence"] {
                 let mut request = routing_request();
                 request.host = host;
                 request.external_candidate = Some(ExternalCandidate {

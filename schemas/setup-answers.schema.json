@@ -440,7 +440,7 @@
         "run-resume",
         "usage-guard",
         "run-handoff",
-        "package-review",
+        "judge-evidence",
         "adversarial-judge",
         "product-update",
         "project-refresh",

@@ -146,7 +146,7 @@ CURRENT_CONSUMER_SKILLS = frozenset(
         "knowledge-maintain", "knowledge-capture", "prompt-refine", "research-best-practices",
         "knowledge-recall", "usage-guard", "ship", "amend-directive", "user-setup",
         "run-handoff", "project-transition", "run-resume", "run-checkpoint",
-        "knowledge-promote", "product-update", "project-refresh", "package-review",
+        "knowledge-promote", "product-update", "project-refresh", "judge-evidence",
         "adversarial-judge", "team-execution", "multi-goal", "custom-subagent-create",
     }
 )

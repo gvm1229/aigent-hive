@@ -31,7 +31,7 @@ CURRENT_REQUIRED = {
         "including a 0.8.x OMX/OMC owner",
         "host_capability_unsupported",
     ),
-    "harness/skills/package-review/SKILL.md": (
+    "harness/skills/judge-evidence/SKILL.md": (
         "host-native owner by default",
         "explicitly selected external compatibility owner",
         "legacy 0.8.x owner",

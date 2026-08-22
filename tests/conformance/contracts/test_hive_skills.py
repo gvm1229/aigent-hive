@@ -41,7 +41,7 @@ EXPECTED_SKILLS = frozenset(
         "multi-goal",
         "product-update",
         "project-refresh",
-        "package-review",
+        "judge-evidence",
         "adversarial-judge",
         "team-execution",
     }

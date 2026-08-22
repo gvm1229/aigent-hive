@@ -42,7 +42,7 @@
 | `knowledge-promote` | 다른 작업에도 도움 되는 검토된 사실·선호·방식의 전역 공유 | Deployment rule의 전역 knowledge 승격 |
 | `product-update` | 설치된 Aigent Hive 자체 갱신 | Aigent Hive 최신 stable update |
 | `project-refresh` | 사용자 수정을 보존하는 project Hive 파일 갱신 | Project의 current Hive format refresh |
-| `package-review` | package 출처·무결성·독립 검토 준비 확인 | Release candidate의 독립 review 준비 확인 |
+| `judge-evidence` | package 출처·무결성·독립 검토 준비 확인 | Release candidate의 독립 review 준비 확인 |
 | `adversarial-judge` | 제한된 clean-context 독립 Judge 요청 준비 | 명시적 반례·권한·복구 결손 검토 |
 
 ## Source Skill 폐기 경로

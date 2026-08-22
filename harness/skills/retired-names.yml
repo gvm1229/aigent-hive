@@ -9,7 +9,7 @@ retired_names:
   configure: user-setup
   engineer-run: verified-workflow
   handoff-role: run-handoff
-  hive-judge-package: package-review
+  hive-judge-package: judge-evidence
   hive-knowledge-capture: knowledge-capture
   hive-knowledge-maintenance: knowledge-maintain
   hive-knowledge-promote: knowledge-promote
@@ -45,4 +45,5 @@ retired_names:
   share-knowledge: knowledge-promote
   update-hive: product-update
   upgrade-project: project-refresh
-  verify-package: package-review
+  package-review: judge-evidence
+  verify-package: judge-evidence
