@@ -35,9 +35,8 @@ const UPDATE_HARNESS: &[u8] = include_bytes!("../../../harness/skills/product-up
 const MIGRATE_HARNESS: &[u8] =
     include_bytes!("../../../harness/skills/project-transition/SKILL.md");
 const PROJECT_UPGRADE: &[u8] = include_bytes!("../../../harness/skills/project-refresh/SKILL.md");
-const LOOP_ENGINEERING: &[u8] = include_bytes!("../../../harness/skills/ralph-loop/SKILL.md");
-const ITERATIVE_EXECUTION: &[u8] =
-    include_bytes!("../../../harness/skills/iterative-execution/SKILL.md");
+const VERIFIED_WORKFLOW: &[u8] =
+    include_bytes!("../../../harness/skills/verified-workflow/SKILL.md");
 const TEAM_EXECUTION: &[u8] = include_bytes!("../../../harness/skills/team-execution/SKILL.md");
 const MULTI_GOAL: &[u8] = include_bytes!("../../../harness/skills/multi-goal/SKILL.md");
 const CUSTOM_SUBAGENT_CREATE: &[u8] =
@@ -1114,11 +1113,11 @@ fn localized_skill_text(
             "프로젝트 이전",
             "지원되는 Hive 프로젝트 형식을 백업과 검증을 거쳐 이전합니다.",
         ),
-        "ralph-loop" => (
-            "Engineer run",
-            "Prepare a Hive work run with planning, verification, and handoff.",
-            "작업 실행 설계",
-            "계획·검증·인계를 연결한 Hive 작업 실행을 준비합니다.",
+        "verified-workflow" => (
+            "Verified workflow",
+            "Run a bounded evidence-gated workflow with independent verification.",
+            "검증형 작업 흐름",
+            "증거·재시도·독립 검증을 적용한 제한된 작업 흐름을 실행합니다.",
         ),
         "knowledge-import" => (
             "Scan repository knowledge (knowledge-import)",
@@ -1149,12 +1148,6 @@ fn localized_skill_text(
             "Change Hive behavior directives while preserving safety boundaries.",
             "지침 수정",
             "안전 경계를 유지하며 Hive 동작 지침을 수정합니다.",
-        ),
-        "iterative-execution" => (
-            "Run iterative work",
-            "Execute a bounded criterion loop with terminal independent verification.",
-            "반복 작업 실행",
-            "종료 전 독립 검증이 필요한 제한된 기준 반복을 실행합니다.",
         ),
         "team-execution" => (
             "Coordinate a Hive team",
@@ -1238,11 +1231,8 @@ fn embedded_skill_metadata(name: &str) -> Option<&'static [u8]> {
         "project-refresh" => Some(include_bytes!(
             "../../../harness/skills/project-refresh/agents/openai.yaml"
         )),
-        "ralph-loop" => Some(include_bytes!(
-            "../../../harness/skills/ralph-loop/agents/openai.yaml"
-        )),
-        "iterative-execution" => Some(include_bytes!(
-            "../../../harness/skills/iterative-execution/agents/openai.yaml"
+        "verified-workflow" => Some(include_bytes!(
+            "../../../harness/skills/verified-workflow/agents/openai.yaml"
         )),
         "team-execution" => Some(include_bytes!(
             "../../../harness/skills/team-execution/agents/openai.yaml"
@@ -1272,7 +1262,7 @@ fn embedded_skill_metadata(name: &str) -> Option<&'static [u8]> {
     }
 }
 
-fn embedded_skill_sources() -> [(&'static str, &'static [u8]); 26] {
+fn embedded_skill_sources() -> [(&'static str, &'static [u8]); 25] {
     [
         ("user-setup", SETUP_HIVE),
         ("project-setup", SETUP_HARNESS),
@@ -1290,8 +1280,7 @@ fn embedded_skill_sources() -> [(&'static str, &'static [u8]); 26] {
         ("product-update", UPDATE_HARNESS),
         ("project-transition", MIGRATE_HARNESS),
         ("project-refresh", PROJECT_UPGRADE),
-        ("ralph-loop", LOOP_ENGINEERING),
-        ("iterative-execution", ITERATIVE_EXECUTION),
+        ("verified-workflow", VERIFIED_WORKFLOW),
         ("team-execution", TEAM_EXECUTION),
         ("multi-goal", MULTI_GOAL),
         ("custom-subagent-create", CUSTOM_SUBAGENT_CREATE),
@@ -1825,7 +1814,7 @@ fn action_for_skill(skill: &str) -> Option<LogicalAction> {
         "knowledge-recall" => Some(LogicalAction::QueryKnowledge),
         "code-polish"
         | "research-best-practices"
-        | "ralph-loop"
+        | "verified-workflow"
         | "run-checkpoint"
         | "run-handoff"
         | "usage-guard"
@@ -2486,8 +2475,8 @@ description: Inspect one local file without changing it.
             let first = compile_projection(host, &[]).expect("projection");
             let second = compile_projection(host, &[]).expect("projection");
             assert_eq!(first, second);
-            assert_eq!(first.active_skills.skills.len(), 25);
-            let expected_file_count = if host == Host::Claude { 26 } else { 51 };
+            assert_eq!(first.active_skills.skills.len(), 24);
+            let expected_file_count = if host == Host::Claude { 25 } else { 49 };
             assert_eq!(first.files.len(), expected_file_count);
             for skill in [
                 "code-polish",
@@ -2495,7 +2484,7 @@ description: Inspect one local file without changing it.
                 "research-best-practices",
                 "package-review",
                 "knowledge-import",
-                "ralph-loop",
+                "verified-workflow",
                 "prompt-refine",
                 "run-checkpoint",
                 "run-resume",
@@ -2867,9 +2856,9 @@ description: Inspect one local file without changing it.
                 include_bytes!("../../../harness/skills/knowledge-import/SKILL.md").as_slice(),
             ),
             (
-                "ralph-loop",
-                LOOP_ENGINEERING,
-                include_bytes!("../../../harness/skills/ralph-loop/SKILL.md").as_slice(),
+                "verified-workflow",
+                VERIFIED_WORKFLOW,
+                include_bytes!("../../../harness/skills/verified-workflow/SKILL.md").as_slice(),
             ),
         ];
         assert_projected_builtin_sources(expected);

@@ -22,8 +22,7 @@ EXPECTED_SKILLS = frozenset(
         "project-setup",
         "code-polish",
         "custom-subagent-create",
-        "iterative-execution",
-        "ralph-loop",
+        "verified-workflow",
         "knowledge-import",
         "knowledge-maintain",
         "knowledge-capture",
@@ -139,16 +138,14 @@ class V09HiveSkillProjectionTests(unittest.TestCase):
         ):
             self.assertIn(expected, text)
 
-    def test_iterative_execution_keeps_role_parity_on_one_strict_judge_path(self) -> None:
-        text = (SKILL_ROOT / "iterative-execution" / "SKILL.md").read_text(
-            encoding="utf-8"
-        )
+    def test_verified_workflow_keeps_role_parity_on_one_strict_judge_path(self) -> None:
+        text = (SKILL_ROOT / "verified-workflow" / "SKILL.md").read_text(encoding="utf-8")
         for route in (
-            "planning after `$aigent-hive:ralph-loop`",
-            "independent review or\n  QA after `$aigent-hive:package-review`",
-            "evidence-backed research after\n  `$aigent-hive:research-best-practices`",
-            "performance validation with declared measurements",
-            "Terminal acceptance always requires the reserved independent Judge.",
+            "dependency edges",
+            "Lost\n   acknowledgement is `dispatch-uncertain`",
+            "A Judge node or\n   elevated risk uses `$aigent-hive:adversarial-judge`",
+            "repeated failure fingerprints",
+            "independent verifier",
         ):
             self.assertIn(route, text)
 

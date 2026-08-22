@@ -91,7 +91,7 @@
         "quick-answer",
         "project-setup",
         "code-polish",
-        "ralph-loop",
+        "verified-workflow",
         "knowledge-import",
         "knowledge-maintain",
         "knowledge-capture",
@@ -110,7 +110,6 @@
         "product-update",
         "project-refresh",
         "package-review",
-        "iterative-execution",
         "team-execution",
         "multi-goal",
         "custom-subagent-create"

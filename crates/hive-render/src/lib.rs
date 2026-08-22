@@ -8273,7 +8273,7 @@ mod tests {
             "quick-answer",
             "project-setup",
             "code-polish",
-            "ralph-loop",
+            "verified-workflow",
             "knowledge-import",
             "knowledge-maintain",
             "knowledge-capture",
@@ -8291,7 +8291,6 @@ mod tests {
             "product-update",
             "project-refresh",
             "package-review",
-            "iterative-execution",
             "team-execution",
             "multi-goal",
             "custom-subagent-create",
@@ -10240,7 +10239,7 @@ mod tests {
             .expect("old Claude projection ownership should verify");
         let deletions = &transition.deletions;
 
-        assert_eq!(deletions.len(), 25);
+        assert_eq!(deletions.len(), 24);
         assert!(deletions
             .iter()
             .all(|path| path.starts_with(".claude/skills")));

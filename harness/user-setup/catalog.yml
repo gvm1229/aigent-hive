@@ -59,7 +59,7 @@ skill_dependencies:
   - { skill: quick-answer, requires: [] }
   - { skill: project-setup, requires: [] }
   - { skill: code-polish, requires: [] }
-  - { skill: ralph-loop, requires: [package-review, run-handoff, run-checkpoint, run-resume, usage-guard] }
+  - { skill: verified-workflow, requires: [package-review, run-handoff, run-checkpoint, run-resume, usage-guard] }
   - { skill: knowledge-import, requires: [knowledge-promote] }
   - { skill: knowledge-maintain, requires: [knowledge-recall] }
   - { skill: knowledge-capture, requires: [knowledge-recall] }
@@ -78,9 +78,8 @@ skill_dependencies:
   - { skill: product-update, requires: [] }
   - { skill: project-refresh, requires: [product-update] }
   - { skill: package-review, requires: [] }
-  - { skill: iterative-execution, requires: [package-review, run-checkpoint, run-resume, usage-guard] }
-  - { skill: team-execution, requires: [iterative-execution] }
-  - { skill: multi-goal, requires: [iterative-execution, team-execution] }
+  - { skill: team-execution, requires: [verified-workflow] }
+  - { skill: multi-goal, requires: [verified-workflow, team-execution] }
   - { skill: custom-subagent-create, requires: [] }
 
 # Reserved for a future signed consent contract. This release supports built-in Skills only.

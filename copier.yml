@@ -233,7 +233,6 @@ selected_project_skills:
     - amend-directive
     - code-polish
     - custom-subagent-create
-    - iterative-execution
     - knowledge-capture
     - knowledge-import
     - knowledge-maintain
@@ -247,7 +246,7 @@ selected_project_skills:
     - project-transition
     - prompt-refine
     - quick-answer
-    - ralph-loop
+    - verified-workflow
     - research-best-practices
     - run-checkpoint
     - run-handoff

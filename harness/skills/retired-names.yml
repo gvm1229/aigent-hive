@@ -7,7 +7,7 @@ retired_names:
   best-practice-research: research-best-practices
   clean-ai-slop: code-polish
   configure: user-setup
-  engineer-run: ralph-loop
+  engineer-run: verified-workflow
   handoff-role: run-handoff
   hive-judge-package: package-review
   hive-knowledge-capture: knowledge-capture
@@ -15,7 +15,7 @@ retired_names:
   hive-knowledge-promote: knowledge-promote
   hive-knowledge-query: knowledge-recall
   hive-knowledge-scan: knowledge-import
-  hive-loop-engineering: ralph-loop
+  hive-loop-engineering: verified-workflow
   hive-migrate: project-transition
   hive-project-upgrade: project-refresh
   hive-prompt-refine: prompt-refine
@@ -27,6 +27,7 @@ retired_names:
   hive-usage-guard: usage-guard
   hive-wiki: knowledge-maintain
   import-repository-knowledge: knowledge-import
+  iterative-execution: verified-workflow
   maintain-knowledge: knowledge-maintain
   manage-usage: usage-guard
   manage-wiki: knowledge-maintain
@@ -34,6 +35,7 @@ retired_names:
   record-knowledge: knowledge-capture
   refine-prompt: prompt-refine
   research-practices: research-best-practices
+  ralph-loop: verified-workflow
   resume-work: run-resume
   save-progress: run-checkpoint
   search-knowledge: knowledge-recall

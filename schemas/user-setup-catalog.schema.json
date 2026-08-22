@@ -40,8 +40,8 @@
     "mandatory_skills": { "const": ["user-setup"] },
     "skill_dependencies": {
       "type": "array",
-      "minItems": 26,
-      "maxItems": 26,
+      "minItems": 25,
+      "maxItems": 25,
       "uniqueItems": true,
       "items": { "$ref": "#/$defs/skill_dependency" }
     },
@@ -117,7 +117,7 @@
         "quick-answer",
         "project-setup",
         "code-polish",
-        "ralph-loop",
+        "verified-workflow",
         "knowledge-import",
         "knowledge-maintain",
         "knowledge-capture",
@@ -136,7 +136,6 @@
         "product-update",
         "project-refresh",
         "package-review",
-        "iterative-execution",
         "team-execution",
         "multi-goal",
         "custom-subagent-create"
