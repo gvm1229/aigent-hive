@@ -24,7 +24,7 @@ CURRENT = {
     "knowledge-recall", "usage-guard", "ship", "amend-directive", "user-setup",
     "run-handoff", "project-transition", "run-resume", "run-checkpoint",
     "knowledge-promote", "product-update", "project-refresh", "package-review",
-    "team-execution", "multi-goal", "custom-subagent-create",
+    "adversarial-judge", "team-execution", "multi-goal", "custom-subagent-create",
 }
 
 

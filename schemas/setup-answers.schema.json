@@ -441,6 +441,7 @@
         "usage-guard",
         "run-handoff",
         "package-review",
+        "adversarial-judge",
         "product-update",
         "project-refresh",
         "project-transition"

@@ -31,6 +31,8 @@ const RUN_RESUME: &[u8] = include_bytes!("../../../harness/skills/run-resume/SKI
 const USAGE_GUARD: &[u8] = include_bytes!("../../../harness/skills/usage-guard/SKILL.md");
 const ROLE_HANDOFF: &[u8] = include_bytes!("../../../harness/skills/run-handoff/SKILL.md");
 const JUDGE_PACKAGE: &[u8] = include_bytes!("../../../harness/skills/package-review/SKILL.md");
+const ADVERSARIAL_JUDGE: &[u8] =
+    include_bytes!("../../../harness/skills/adversarial-judge/SKILL.md");
 const UPDATE_HARNESS: &[u8] = include_bytes!("../../../harness/skills/product-update/SKILL.md");
 const MIGRATE_HARNESS: &[u8] =
     include_bytes!("../../../harness/skills/project-transition/SKILL.md");
@@ -1096,6 +1098,12 @@ fn localized_skill_text(
             "패키지 검증",
             "검증용 작업 패키지와 서명된 확인 정보를 검사합니다.",
         ),
+        "adversarial-judge" => (
+            "Adversarial Judge",
+            "Prepare an explicit clean-context request for an independent host-owned Judge.",
+            "반대 검토 Judge",
+            "독립 Host Judge의 제한된 clean-context 검토 요청을 준비합니다.",
+        ),
         "product-update" => (
             "Update Hive",
             "Preview, verify, and safely apply a signed Hive update.",
@@ -1223,6 +1231,9 @@ fn embedded_skill_metadata(name: &str) -> Option<&'static [u8]> {
         "package-review" => Some(include_bytes!(
             "../../../harness/skills/package-review/agents/openai.yaml"
         )),
+        "adversarial-judge" => Some(include_bytes!(
+            "../../../harness/skills/adversarial-judge/agents/openai.yaml"
+        )),
         "product-update" => Some(include_bytes!(
             "../../../harness/skills/product-update/agents/openai.yaml"
         )),
@@ -1263,7 +1274,7 @@ fn embedded_skill_metadata(name: &str) -> Option<&'static [u8]> {
     }
 }
 
-fn embedded_skill_sources() -> [(&'static str, &'static [u8]); 25] {
+fn embedded_skill_sources() -> [(&'static str, &'static [u8]); 26] {
     [
         ("user-setup", SETUP_HIVE),
         ("project-setup", SETUP_HARNESS),
@@ -1278,6 +1289,7 @@ fn embedded_skill_sources() -> [(&'static str, &'static [u8]); 25] {
         ("usage-guard", USAGE_GUARD),
         ("run-handoff", ROLE_HANDOFF),
         ("package-review", JUDGE_PACKAGE),
+        ("adversarial-judge", ADVERSARIAL_JUDGE),
         ("product-update", UPDATE_HARNESS),
         ("project-transition", MIGRATE_HARNESS),
         ("project-refresh", PROJECT_UPGRADE),
@@ -2665,14 +2677,15 @@ description: Inspect one local file without changing it.
             let first = compile_projection(host, &[]).expect("projection");
             let second = compile_projection(host, &[]).expect("projection");
             assert_eq!(first, second);
-            assert_eq!(first.active_skills.skills.len(), 24);
-            let expected_file_count = if host == Host::Claude { 25 } else { 49 };
+            assert_eq!(first.active_skills.skills.len(), 25);
+            let expected_file_count = if host == Host::Claude { 26 } else { 51 };
             assert_eq!(first.files.len(), expected_file_count);
             for skill in [
                 "code-polish",
                 "project-setup",
                 "research-best-practices",
                 "package-review",
+                "adversarial-judge",
                 "knowledge-import",
                 "verified-workflow",
                 "prompt-refine",

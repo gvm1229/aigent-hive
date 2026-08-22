@@ -42,6 +42,7 @@ EXPECTED_SKILLS = frozenset(
         "product-update",
         "project-refresh",
         "package-review",
+        "adversarial-judge",
         "team-execution",
     }
 )

@@ -1,11 +1,11 @@
 schema_version: 1
 project_skill_suites:
   - id: web-developer
-    skills: [project-setup, code-polish, verified-workflow, team-execution, multi-goal, custom-subagent-create, knowledge-import, knowledge-maintain, knowledge-capture, prompt-refine, research-best-practices, knowledge-recall, usage-guard, ship, amend-directive, run-handoff, run-resume, run-checkpoint, knowledge-promote, product-update, project-refresh, package-review]
+    skills: [project-setup, code-polish, verified-workflow, team-execution, multi-goal, custom-subagent-create, knowledge-import, knowledge-maintain, knowledge-capture, prompt-refine, research-best-practices, knowledge-recall, usage-guard, ship, amend-directive, run-handoff, run-resume, run-checkpoint, knowledge-promote, product-update, project-refresh, package-review, adversarial-judge]
   - id: game-developer
-    skills: [project-setup, code-polish, verified-workflow, team-execution, multi-goal, custom-subagent-create, knowledge-import, knowledge-maintain, knowledge-capture, prompt-refine, research-best-practices, knowledge-recall, usage-guard, ship, amend-directive, run-handoff, project-transition, run-resume, run-checkpoint, knowledge-promote, product-update, project-refresh, package-review]
+    skills: [project-setup, code-polish, verified-workflow, team-execution, multi-goal, custom-subagent-create, knowledge-import, knowledge-maintain, knowledge-capture, prompt-refine, research-best-practices, knowledge-recall, usage-guard, ship, amend-directive, run-handoff, project-transition, run-resume, run-checkpoint, knowledge-promote, product-update, project-refresh, package-review, adversarial-judge]
   - id: non-developer
-    skills: [quick-answer, project-setup, custom-subagent-create, knowledge-import, knowledge-maintain, knowledge-capture, prompt-refine, research-best-practices, knowledge-recall, usage-guard, ship, amend-directive, product-update, package-review]
+    skills: [quick-answer, project-setup, custom-subagent-create, knowledge-import, knowledge-maintain, knowledge-capture, prompt-refine, research-best-practices, knowledge-recall, usage-guard, ship, amend-directive, product-update, package-review, adversarial-judge]
 mandatory_skills: []
 skill_dependencies:
   - { skill: quick-answer, requires: [] }
@@ -29,6 +29,7 @@ skill_dependencies:
   - { skill: product-update, requires: [] }
   - { skill: project-refresh, requires: [product-update] }
   - { skill: package-review, requires: [] }
+  - { skill: adversarial-judge, requires: [package-review] }
   - { skill: team-execution, requires: [verified-workflow] }
   - { skill: multi-goal, requires: [verified-workflow, team-execution] }
   - { skill: custom-subagent-create, requires: [] }

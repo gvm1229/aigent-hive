@@ -78,6 +78,7 @@ skill_dependencies:
   - { skill: product-update, requires: [] }
   - { skill: project-refresh, requires: [product-update] }
   - { skill: package-review, requires: [] }
+  - { skill: adversarial-judge, requires: [package-review] }
   - { skill: team-execution, requires: [verified-workflow] }
   - { skill: multi-goal, requires: [verified-workflow, team-execution] }
   - { skill: custom-subagent-create, requires: [] }
