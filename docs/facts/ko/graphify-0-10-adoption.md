@@ -9,7 +9,7 @@ summary: "0.10.0의 Hive-native Markdown 관계 graph·선택형 Graphify full-r
 tags: [graphify, knowledge, security, v0-10]
 aliases: ["Graphify 도입", "knowledge graph 판정"]
 sources:
-  - "repo:docs/plans/active/knowledge-relationship-graph-0.10.0.md#sha256:375535cd3b4e94ec68b9d61ebd11db8a4c5cc07e5480717a48f80f58424ea7d7"
+  - "repo:docs/plans/active/knowledge-relationship-graph-0.10.0.md#sha256:df61f4f21a1ced6f030ee7771f68799f67562ea1dc17399722197f27fa31c925"
   - "repo:docs/plans/backlog/graphify-knowledge-graph.md#sha256:6ab392f6613412116a8fc24ad447236f319ceea7dee257ace138a300fc3cf960"
   - "repo:docs/research/ai-learning-hive-application-candidates-2026-08-21.md#sha256:14eb21209b147e7ca9947eae8afb09c059d53aedf353c1802620bf8bf4cc0038"
   - "repo:docs/research/graphify-0.10-feasibility.md#sha256:6bc52a7a6fa89601c5b20d851cb721e6b0f5d0e59b51b6d18963baaa69b6930e"
