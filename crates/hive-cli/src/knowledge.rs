@@ -32,9 +32,10 @@ use hive_wiki::store::{
     SharedKnowledgeOperationLock, StoreCommit,
 };
 use hive_wiki::{
-    delete_page, delete_page_shared, ingest, ingest_shared, lint, list_pages, promote,
-    promote_shared, query_filtered, read_page, rebuild_index, suppress, suppress_shared, LintIssue,
-    LintSeverity, PromotionCategory, PromotionMode, SuppressionEntry, WikiError,
+    build_graph, delete_page, delete_page_shared, generation_relative_path, ingest, ingest_shared,
+    lint, list_pages, promote, promote_shared, query_filtered, read_page, rebuild_index, suppress,
+    suppress_shared, LintIssue, LintSeverity, PromotionCategory, PromotionMode, SuppressionEntry,
+    WikiError,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
@@ -71,6 +72,7 @@ USAGE:
     hive knowledge export --user-root <dir> --scope global|shared|project:<id>|collection:<id>|all-portable --bundle <path>.hivekb [--replace-backup <file-name>] --output json
     hive knowledge import --user-root <dir> --bundle <path>.hivekb (--dry-run|--apply) --output json
     hive knowledge refresh (--target <legacy-project>|--user-root <dir>) --output json
+    hive knowledge graph preview --target <dir> [--scope project|private|confidential] --output json
     hive index rebuild (--target <legacy-project>|--user-root <dir>) --output json
 ";
 
@@ -146,6 +148,9 @@ pub(crate) fn run_knowledge(arguments: &[String]) -> ExitCode {
             Some("query") => {
                 run_query(&arguments[1..]).unwrap_or_else(|error| failure("QueryKnowledge", &error))
             }
+            Some("graph") => {
+                run_graph(&arguments[1..]).unwrap_or_else(|error| failure("QueryKnowledge", &error))
+            }
             Some("list") => {
                 run_list(&arguments[1..]).unwrap_or_else(|error| failure("ListKnowledge", &error))
             }
@@ -194,6 +199,38 @@ pub(crate) fn run_knowledge(arguments: &[String]) -> ExitCode {
         };
     emit(&result);
     ExitCode::from(result.exit_code)
+}
+
+fn run_graph(arguments: &[String]) -> Result<KnowledgeResult, WikiError> {
+    if arguments.first().map(String::as_str) != Some("preview") {
+        return Err(WikiError::InvalidInput(
+            "knowledge graph currently supports preview only".to_owned(),
+        ));
+    }
+    let options = parse_options(&arguments[1..], &["--target", "--scope"])?;
+    let target = PathBuf::from(required(&options, "--target")?);
+    let scope = optional(&options, "--scope").unwrap_or("project");
+    let graph = build_graph(&target, scope)?;
+    let path = generation_relative_path(scope, &graph.generation_digest)
+        .map_err(WikiError::InvalidInput)?;
+    let locator = path.to_string_lossy().into_owned();
+    Ok(success(
+        "QueryKnowledge",
+        "hive.knowledge-graph-preview",
+        "native knowledge graph preview completed without derived-state writes",
+        Vec::new(),
+        &locator,
+        &graph.generation_digest,
+        json!({
+            "scope": graph.scope,
+            "engine": graph.engine,
+            "generation_digest": graph.generation_digest,
+            "node_count": graph.nodes.len(),
+            "edge_count": graph.edges.len(),
+            "generation_path": path,
+            "writes": false,
+        }),
+    ))
 }
 
 #[cfg(feature = "notion-preview")]
@@ -4141,6 +4178,42 @@ mod tests {
             .expect("store")
             .validate_current()
             .expect("RAG remains current");
+    }
+
+    #[test]
+    fn graph_preview_reads_canonical_pages_without_derived_write() {
+        let (user, project) = registered_roots(true);
+        let source = project.path().join("source.md");
+        let draft = project.path().join("draft.md");
+        fs::write(&source, "Graph preview source.").expect("source");
+        fs::write(
+            &draft,
+            wiki_draft("graph-preview", "concept", "Graph preview body."),
+        )
+        .expect("draft");
+        run_add(&add_arguments(
+            project.path(),
+            user.path(),
+            &source,
+            &draft,
+            true,
+        ))
+        .expect("add page");
+
+        let preview = run_graph(&vec![
+            "preview".to_owned(),
+            "--target".to_owned(),
+            project.path().to_string_lossy().into_owned(),
+            "--scope".to_owned(),
+            "project".to_owned(),
+            "--output".to_owned(),
+            "json".to_owned(),
+        ])
+        .expect("graph preview");
+        assert_eq!(preview.code, "hive.knowledge-graph-preview");
+        let data = preview.data.expect("preview data");
+        assert_eq!(data["node_count"], 1);
+        assert_eq!(data["writes"], false);
     }
 
     #[test]
