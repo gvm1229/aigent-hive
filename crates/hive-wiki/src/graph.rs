@@ -1,7 +1,7 @@
 //! Deterministic derived relations from canonical Markdown Wiki pages.
 
 use crate::WikiPage;
-use hive_core::sha256_digest;
+use hive_core::{ensure_no_symlink_ancestors, sha256_digest};
 use serde::{Deserialize, Serialize};
 use std::io::Write;
 use std::path::{Path, PathBuf};
@@ -118,6 +118,8 @@ pub fn generation_relative_path(scope: &str, scope_digest: &str) -> Result<PathB
 /// Persist one digest-addressed generation without overwriting a different derived graph.
 pub fn persist_generation(target: &Path, generation: &GraphGeneration) -> Result<PathBuf, String> {
     let relative = generation_relative_path(&generation.scope, &generation.generation_digest)?;
+    ensure_no_symlink_ancestors(target, &relative)
+        .map_err(|error| format!("graph generation path is unsafe: {error}"))?;
     let destination = target.join(&relative);
     let parent = destination
         .parent()
