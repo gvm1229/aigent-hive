@@ -12,7 +12,7 @@ sources:
   - "repo:crates/hive-cli/src/knowledge_scan.rs#sha256:61bf8cc01a6e0701b89e047ffd0f0118c676a84e8edc7b316cd9c424bbae4f48"
   - "repo:docs/decisions/product-release-decisions.md#sha256:3fbe246c3a5b7d2b8ec002d40f73874c056c48ae3a888dede3e40db12eddddac"
   - "repo:docs/plans/active/nested-project-knowledge-scan-0.10.0.md#sha256:09e75e39def220648906afa58722a15a1997ca9013eeeb02f579b8eb4b1aaf8f"
-  - "repo:docs/plans/active/release-0.10.0.md#sha256:9ad8cc57c6fc06818272c37bdeabdd00c03b10df953dace3e1da693487eca295"
+  - "repo:docs/plans/active/release-0.10.0.md#sha256:5b4bf1a8b5815856e7bfb549c90eb279eb39db25bfda4a385c72d04244babfc2"
   - "repo:docs/research/ai-learning-hive-application-candidates-2026-08-21.md#sha256:14eb21209b147e7ca9947eae8afb09c059d53aedf353c1802620bf8bf4cc0038"
   - "repo:tests/conformance/integration/test_wiki_cli_e2e.py#sha256:f737ec5b335045a43839360e02c5ed9c2c52d0b9f59394123087fd2063727c12"
 links: [knowledge-portability-scan, version-policy]

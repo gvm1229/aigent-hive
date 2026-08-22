@@ -9,7 +9,7 @@ summary: "영어 응답은 ASD-STE100, 한국어 응답은 불필요한 영어 �
 tags: [communication, documentation, harness, language]
 aliases: ["언어 일관성", "영어 통제 언어", "한국어 응답"]
 sources:
-  - "repo:.agents/directives/01-behavior.md#sha256:42bbd59e702cdce48ac6396d4c5a2f3a9b7574cd99272e22f3279c00b041cba4"
+  - "repo:.agents/directives/01-behavior.md#sha256:dd66d053a9edd60c2f04e96283f4f95e5429dbf24e6b2d98c025bbf89039d5df"
   - "repo:.agents/directives/08-human-documentation-style.md#sha256:f1c700565caf1c448cfa0a7d58db549d5c3d466b264737233fe255c67663acd6"
   - "repo:crates/hive-cli/src/user_setup.rs#sha256:73d95136c28b6742d76d7aca0874144808500168a67fc97accdee9bc2b387481"
   - "repo:harness/project-bases/0.9.0/AGENTS.md.template#sha256:1aefece59d56d610227b64cfcfff8c634e47202f8e224916b248a8e8ecd9de51"

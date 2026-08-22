@@ -9,7 +9,7 @@ summary: "일반 작업은 단일 기준 작업 폴더 우선, 임시 작업 폴
 tags: [git, workflow, worktree]
 aliases: ["temporary clone cleanup", "worktree cleanup"]
 sources:
-  - "repo:.agents/directives/03-workflow.md#sha256:8f532aa8323035dcdefc3c2c6b801940e81b54a7ca5514e9df0f0bc4756ab159"
+  - "repo:.agents/directives/03-workflow.md#sha256:3ed250c39a40765032e18cf624c72441741476cc33fa797c2765d24a222fe14f"
   - "repo:.agents/directives/06-session-coordination.md#sha256:a24536201b77619549620d88612c186b769e90a774043895370a064779d8d758"
 links: [source-development]
 reviewed_revision: "git:f6139fe4aabe5237bb1da5cb85364da7c978e698"
