@@ -17,7 +17,7 @@ use hive_core::role::RoleDocument;
 use hive_core::run::{
     prepare_dispatch_brief, validate_transition, verify_owner_continuity, CapabilityResolution,
     ContinuationState, DispatchBrief, DispatchContractError, Host, OwnerBinding, OwnerContinuity,
-    RunPlan, RunState, RunStatus, RunStatusDocument, SupportLevel,
+    ResolvedOwner, RunPlan, RunState, RunStatus, RunStatusDocument, SupportLevel,
 };
 use hive_core::usage_guard::{UsageSnapshot, UsageWindow, DEFAULT_QUOTA_POOL};
 use hive_core::{ensure_consumer_target, sha256_digest, validate_project_relative};
@@ -1394,6 +1394,7 @@ fn continuation(arguments: &ContinuationArguments) -> Result<ActionResult, Adapt
     } else {
         ("nudge", "host-owned-continuation")
     };
+    let adapter = continuation_adapter(envelope.get("outer_owner"));
     Ok(ActionResult {
         schema_version: 1,
         action: "CheckRunContinuation",
@@ -1410,8 +1411,32 @@ fn continuation(arguments: &ContinuationArguments) -> Result<ActionResult, Adapt
             "session_id_digest": session_digest,
             "closure": closure,
             "continuation": envelope,
+            "adapter": adapter,
             "spawned": false,
         })),
+    })
+}
+
+fn continuation_adapter(owner: Option<&Value>) -> Value {
+    let Some(owner) = owner else {
+        return json!({ "support": "unsupported", "reason": "owner-binding-missing" });
+    };
+    let Ok(binding) = serde_json::from_value::<OwnerBinding>(owner.clone()) else {
+        return json!({ "support": "unsupported", "reason": "owner-binding-invalid" });
+    };
+    if binding.resolved_owner != ResolvedOwner::HostNative {
+        return json!({ "support": "unsupported", "reason": "external-owner" });
+    }
+    let task_kind = match binding.host {
+        Host::Codex => "goal",
+        Host::Claude | Host::Antigravity => "task",
+    };
+    json!({
+        "support": "requires-host-capability",
+        "host": binding.host,
+        "task_kind": task_kind,
+        "stop_event": "Stop",
+        "mutation": false,
     })
 }
 

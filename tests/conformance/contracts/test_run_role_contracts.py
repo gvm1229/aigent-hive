@@ -1278,7 +1278,7 @@ class Phase4Contracts(unittest.TestCase):
                     "cancel_requested": False,
                 },
             ),
-            CAPABILITIES["codex-omx"],
+            CAPABILITIES["absent"],
             "closure-retry",
         )
         self.assert_success(process, payload)
@@ -1298,6 +1298,9 @@ class Phase4Contracts(unittest.TestCase):
         self.assertEqual(payload["action"], "CheckRunContinuation")
         self.assertEqual(payload["data"]["decision"], "nudge")
         self.assertFalse(payload["data"]["spawned"])
+        self.assertEqual(payload["data"]["adapter"]["host"], "codex")
+        self.assertEqual(payload["data"]["adapter"]["task_kind"], "goal")
+        self.assertFalse(payload["data"]["adapter"]["mutation"])
 
         process, payload = self.continuation(self.target, "foreign-session")
         self.assert_success(process, payload)
