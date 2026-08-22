@@ -2648,6 +2648,7 @@ mod tests {
                 subagent_support: Some(binding.subagent_support),
                 resume_note: None,
                 criterion_evidence: BTreeMap::new(),
+                continuation: None,
             },
             b"# Run status\n".to_vec(),
         )

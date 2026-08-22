@@ -31,9 +31,9 @@
       "additionalProperties": false,
       "required": ["binding_state", "host", "session_id_digest"],
       "properties": {
-        "binding_state": { "const": "awaiting-host-attestation" },
+        "binding_state": { "enum": ["awaiting-host-attestation", "recorded"] },
         "host": { "type": ["string", "null"], "enum": ["codex", "claude", "antigravity", null] },
-        "session_id_digest": { "type": "null" }
+        "session_id_digest": { "type": ["string", "null"], "pattern": "^sha256:[0-9a-f]{64}$" }
       }
     },
     "next_action": { "type": ["string", "null"] },
@@ -42,11 +42,11 @@
       "additionalProperties": false,
       "required": ["state", "maximum_attempts", "attempts_used", "remaining_attempts", "retry_permitted"],
       "properties": {
-        "state": { "const": "not-configured" },
-        "maximum_attempts": { "type": "null" },
-        "attempts_used": { "type": "null" },
-        "remaining_attempts": { "type": "null" },
-        "retry_permitted": { "const": false }
+        "state": { "enum": ["not-configured", "configured"] },
+        "maximum_attempts": { "type": ["integer", "null"], "minimum": 1, "maximum": 3 },
+        "attempts_used": { "type": ["integer", "null"], "minimum": 0, "maximum": 3 },
+        "remaining_attempts": { "type": ["integer", "null"], "minimum": 0, "maximum": 3 },
+        "retry_permitted": { "type": "boolean" }
       }
     },
     "cancel": {
@@ -54,7 +54,7 @@
       "additionalProperties": false,
       "required": ["state", "user_interrupt_permitted"],
       "properties": {
-        "state": { "enum": ["not-cancelled", "cancelled"] },
+        "state": { "enum": ["not-cancelled", "cancel-requested", "cancelled"] },
         "user_interrupt_permitted": { "const": true }
       }
     },

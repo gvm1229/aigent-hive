@@ -16,8 +16,8 @@ use cap_std::fs::{Dir, OpenOptions};
 use hive_core::role::RoleDocument;
 use hive_core::run::{
     prepare_dispatch_brief, validate_transition, verify_owner_continuity, CapabilityResolution,
-    DispatchBrief, DispatchContractError, Host, OwnerBinding, OwnerContinuity, RunPlan, RunState,
-    RunStatus, RunStatusDocument, SupportLevel,
+    ContinuationState, DispatchBrief, DispatchContractError, Host, OwnerBinding, OwnerContinuity,
+    RunPlan, RunState, RunStatus, RunStatusDocument, SupportLevel,
 };
 use hive_core::usage_guard::{UsageSnapshot, UsageWindow, DEFAULT_QUOTA_POOL};
 use hive_core::{ensure_consumer_target, sha256_digest, validate_project_relative};
@@ -1239,6 +1239,8 @@ struct CheckpointRequest {
     blocker: Option<String>,
     resume_note: Option<String>,
     criterion_evidence: BTreeMap<String, Vec<String>>,
+    #[serde(default)]
+    continuation: Option<ContinuationState>,
     updated_at: String,
 }
 
@@ -1422,27 +1424,38 @@ fn continuation_envelope(
     status: &RunStatusDocument,
     outer_owner: Option<&OwnerBinding>,
 ) -> Value {
+    let continuation = status.status().continuation.as_ref();
+    let retry_permitted = continuation.is_some_and(|value| {
+        !value.cancel_requested
+            && value.attempts_used < value.max_retry_attempts
+            && !matches!(
+                status.status().state,
+                RunState::Cancelled | RunState::Succeeded
+            )
+    });
     json!({
         "schema_version": 1,
         "run_id": run_id,
         "run_revision": status.status().revision,
         "outer_owner": outer_owner,
         "session_binding": {
-            "binding_state": "awaiting-host-attestation",
+            "binding_state": if continuation.is_some() { "recorded" } else { "awaiting-host-attestation" },
             "host": outer_owner.map(|binding| binding.host),
-            "session_id_digest": null,
+            "session_id_digest": continuation.map(|value| &value.session_binding_digest),
         },
         "next_action": status.status().next_action,
         "retry_budget": {
-            "state": "not-configured",
-            "maximum_attempts": null,
-            "attempts_used": null,
-            "remaining_attempts": null,
-            "retry_permitted": false,
+            "state": if continuation.is_some() { "configured" } else { "not-configured" },
+            "maximum_attempts": continuation.map(|value| value.max_retry_attempts),
+            "attempts_used": continuation.map(|value| value.attempts_used),
+            "remaining_attempts": continuation.map(|value| value.max_retry_attempts - value.attempts_used),
+            "retry_permitted": retry_permitted,
         },
         "cancel": {
             "state": if status.status().state == RunState::Cancelled {
                 "cancelled"
+            } else if continuation.is_some_and(|value| value.cancel_requested) {
+                "cancel-requested"
             } else {
                 "not-cancelled"
             },
@@ -1809,6 +1822,7 @@ fn checkpoint_document(
             subagent_support: Some(binding.subagent_support),
             resume_note: request.resume_note.clone(),
             criterion_evidence: request.criterion_evidence.clone(),
+            continuation: request.continuation.clone(),
         },
         body,
     )

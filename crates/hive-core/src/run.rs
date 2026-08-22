@@ -570,6 +570,16 @@ pub enum RunState {
     Cancelled,
 }
 
+/// Bounded host-neutral continuation settings recorded with a run checkpoint.
+#[derive(Debug, Clone, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct ContinuationState {
+    pub session_binding_digest: String,
+    pub max_retry_attempts: u8,
+    pub attempts_used: u8,
+    pub cancel_requested: bool,
+}
+
 impl RunState {
     const fn terminal(self) -> bool {
         matches!(self, Self::Succeeded | Self::Cancelled)
@@ -633,6 +643,9 @@ pub struct RunStatus {
     /// Safe evidence locators keyed by passed criterion.
     #[serde(default)]
     pub criterion_evidence: BTreeMap<String, Vec<String>>,
+    /// Optional bounded continuation settings. Absence preserves legacy runs.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub continuation: Option<ContinuationState>,
 }
 
 /// Parsed STATUS.md with exact body and legacy pin-presence information.
@@ -963,6 +976,15 @@ fn validate_status_diagnostic(status: &RunStatus) -> Result<(), RunContractError
     let complete = passed == required && failed.is_empty();
     if (status.state == RunState::Succeeded) != complete {
         return Err(RunContractError::InvalidSuccessState);
+    }
+    if let Some(continuation) = &status.continuation {
+        if !valid_digest(&continuation.session_binding_digest)
+            || continuation.max_retry_attempts == 0
+            || continuation.max_retry_attempts > 3
+            || continuation.attempts_used > continuation.max_retry_attempts
+        {
+            return Err(RunContractError::InconsistentStateFields);
+        }
     }
     Ok(())
 }
@@ -1922,6 +1944,7 @@ mod tests {
                 subagent_support: Some(binding.subagent_support),
                 resume_note: None,
                 criterion_evidence,
+                continuation: None,
             },
             b"# Status\n".to_vec(),
         )
@@ -2139,6 +2162,7 @@ mod tests {
             subagent_support: Some(binding.subagent_support),
             resume_note: None,
             criterion_evidence: BTreeMap::new(),
+            continuation: None,
         };
         assert!(matches!(
             RunStatusDocument::from_status(status, b"# Status\n".to_vec()),

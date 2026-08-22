@@ -117,9 +117,23 @@
           "$ref": "#/$defs/evidenceLocator"
         }
       }
+    },
+    "continuation": {
+      "$ref": "#/$defs/continuation"
     }
   },
   "$defs": {
+    "continuation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["session_binding_digest", "max_retry_attempts", "attempts_used", "cancel_requested"],
+      "properties": {
+        "session_binding_digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+        "max_retry_attempts": { "type": "integer", "minimum": 1, "maximum": 3 },
+        "attempts_used": { "type": "integer", "minimum": 0, "maximum": 3 },
+        "cancel_requested": { "type": "boolean" }
+      }
+    },
     "evidenceLocator": {
       "type": "string",
       "minLength": 1,

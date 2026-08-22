@@ -327,9 +327,10 @@ class Phase4Contracts(unittest.TestCase):
         blocker: str | None = None,
         resume_note: str | None = None,
         criterion_evidence: dict[str, list[str]] | None = None,
+        continuation: dict[str, Any] | None = None,
         updated_at: str = "2026-07-24T00:00:00Z",
     ) -> dict[str, Any]:
-        return {
+        request = {
             "schema_version": 1,
             "run_id": "demo",
             "expected_revision": expected_revision,
@@ -344,6 +345,9 @@ class Phase4Contracts(unittest.TestCase):
             "criterion_evidence": criterion_evidence or {},
             "updated_at": updated_at,
         }
+        if continuation is not None:
+            request["continuation"] = continuation
+        return request
 
     def checkpoint(
         self,
@@ -1245,6 +1249,33 @@ class Phase4Contracts(unittest.TestCase):
         self.assertTrue(continuation["cancel"]["user_interrupt_permitted"])
         self.assertFalse(continuation["retry_budget"]["retry_permitted"])
         self.assertEqual(snapshot_tree(self.target), before)
+
+    def test_closure_uses_recorded_bounded_retry_and_cancel_state(self) -> None:
+        self.ensure_handoff(self.target)
+        process, payload = self.checkpoint(
+            self.target,
+            self.checkpoint_request(
+                continuation={
+                    "session_binding_digest": "sha256:" + "1a" * 32,
+                    "max_retry_attempts": 3,
+                    "attempts_used": 1,
+                    "cancel_requested": False,
+                },
+            ),
+            CAPABILITIES["codex-omx"],
+            "closure-retry",
+        )
+        self.assert_success(process, payload)
+
+        process, payload = self.closure(self.target)
+
+        self.assert_success(process, payload)
+        continuation = payload["data"]["continuation"]
+        self.validators["continuation"].validate(continuation)
+        self.assertEqual(continuation["session_binding"]["binding_state"], "recorded")
+        self.assertEqual(continuation["retry_budget"]["remaining_attempts"], 2)
+        self.assertTrue(continuation["retry_budget"]["retry_permitted"])
+        self.assertEqual(continuation["cancel"]["state"], "not-cancelled")
 
     def test_resume_executing_and_verifying_prepares_only_without_spawning_or_writes(self) -> None:
         for state in ("executing", "verifying"):
