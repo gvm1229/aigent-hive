@@ -1,10 +1,10 @@
 # 현재 상태
 
-- 기준 branch: `feature/0.10.0@7e5cdf6`, `origin/feature/0.10.0` 일치
+- 기준 branch: `feature/0.10.0@aae15ee`, `origin/feature/0.10.0` 일치
 - product version: `0.9.5`
 - 다음 target: `0.10.0-test`
 - 활성 계획: [`PLAN.md`](../plans/PLAN.md)
-- 현재 milestone: `0.10.0` 관계·vector 검색 feasibility
+- 현재 milestone: Host-neutral 연속 실행 closure·hook gate
 
 ## 최근 검증 근거
 
@@ -81,10 +81,10 @@
 
 ## 다음 작업
 
-1. Native 관계 graph와 vector gold corpus·FTS baseline
-2. Qdrant Edge·SQLite engine 격리 prototype과 hard gate
-3. Host-owned Skill 예약 구현
-4. Adopt된 관계·검색 범위의 번호 공개 시험판과 세 운영체제 수용
+1. Closure schema와 `hive run closure` read-only CLI
+2. Revision당 1회 nudge·진행 없는 3회 cap·cancel 우선 계약
+3. Codex·Claude·Antigravity project-local Stop adapter fixture와 실제 host 검증
+4. Native 관계 graph·vector gold corpus·FTS baseline
 
 ## 과거 기록
 

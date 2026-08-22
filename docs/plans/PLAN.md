@@ -1,10 +1,10 @@
 # Aigent Hive 활성 계획
 
-> Revision: 252
+> Revision: 253
 > 기준일: 2026-08-22
 > Product version: `0.9.5` stable
 > 다음 target: `0.10.0-test`
-> 현재 milestone: `0.10.0` 관계·vector 검색 feasibility
+> 현재 milestone: Host-neutral 연속 실행 closure·hook gate
 > 확정 범위: [`ADR-0020`](../decisions/ADR-0020-0.10.0-product-scope.md)
 
 ## 목표
@@ -76,11 +76,10 @@ Archive·backlog·완료 history의 자동 선행 load 금지.
 
 ## 실행 순서
 
-1. `KRG10-001–007`, `VEC10-001–007` native 관계·vector feasibility·adopt|defer
-2. `SCP10-002–003` host-owned Skill 예약과 nested project scan
-3. `CON10-001–002` host capability·closure 계약 조사와 채택 결정
-4. `KRG10-008–013`, `KRG10-015–016`과 통과 시 `VEC10-008–012`, `CON10-003–008` 구현·수용
-5. `REL10-*` 공개 시험판·세 운영체제 수용·안정판 출시
+1. `CON10-002–008` closure schema·CLI·bounded three-host adapter 구현·수용
+2. `KRG10-001–007`, `VEC10-001–007` native 관계·vector feasibility·adopt|defer
+3. `KRG10-008–013`, `KRG10-015–016`과 통과 시 `VEC10-008–012` 구현·수용
+4. `REL10-*` 공개 시험판·세 운영체제 수용·안정판 출시
 
 ## 비활성 자료
 
