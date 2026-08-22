@@ -3062,9 +3062,10 @@ fn as_set(values: &[String]) -> BTreeSet<String> {
 #[cfg(test)]
 mod tests {
     use super::{
-        checkpoint, parse_resume_arguments, publish_parent_file, publish_parent_file_with_hook,
-        publish_parent_file_with_hooks, read_explicit_file_with_metadata_and_hooks, resume,
-        run_run, CheckpointArguments, DispatchIntent, FileSnapshot, ResumeArguments,
+        checkpoint, continuation_adapter, parse_resume_arguments, publish_parent_file,
+        publish_parent_file_with_hook, publish_parent_file_with_hooks,
+        read_explicit_file_with_metadata_and_hooks, resume, run_run, CheckpointArguments,
+        DispatchIntent, FileSnapshot, ResumeArguments,
     };
     #[cfg(unix)]
     use super::{read_explicit_file, PinnedTarget};
@@ -3081,6 +3082,43 @@ mod tests {
         include_bytes!("../../../tests/fixtures/setup/capabilities-codex-omx.json");
     const ABSENT_CAPABILITY: &[u8] =
         include_bytes!("../../../tests/fixtures/setup/capabilities-absent.json");
+
+    #[test]
+    fn continuation_adapter_maps_three_host_native_owners_without_mutation() {
+        for (host, task_kind) in [
+            ("codex", "goal"),
+            ("claude", "task"),
+            ("antigravity", "task"),
+        ] {
+            let owner = json!({
+                "host": host,
+                "host_version": "fixture",
+                "surface": "cli",
+                "external_runtime": null,
+                "resolved_owner": "host-native",
+                "resolution_evidence_digest": format!("sha256:{}", "0".repeat(64)),
+                "subagent_support": "supported",
+            });
+            let adapter = continuation_adapter(Some(&owner));
+            assert_eq!(adapter["support"], "requires-host-capability");
+            assert_eq!(adapter["task_kind"], task_kind);
+            assert_eq!(adapter["stop_event"], "Stop");
+            assert_eq!(adapter["mutation"], false);
+        }
+        let external = json!({
+            "host": "codex",
+            "host_version": "fixture",
+            "surface": "cli",
+            "external_runtime": "omx",
+            "resolved_owner": "omx",
+            "resolution_evidence_digest": format!("sha256:{}", "0".repeat(64)),
+            "subagent_support": "supported",
+        });
+        assert_eq!(
+            continuation_adapter(Some(&external))["reason"],
+            "external-owner"
+        );
+    }
 
     fn canonical(path: &Path) -> PathBuf {
         path.canonicalize().expect("canonical path")
