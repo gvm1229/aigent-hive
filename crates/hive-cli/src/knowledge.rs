@@ -213,6 +213,11 @@ fn run_graph(arguments: &[String]) -> Result<KnowledgeResult, WikiError> {
     let options = parse_options(&arguments[1..], &["--target", "--scope", "--node-id"])?;
     let target = PathBuf::from(required(&options, "--target")?);
     let scope = optional(&options, "--scope").unwrap_or("project");
+    if scope != "project" {
+        return Err(WikiError::InvalidInput(
+            "knowledge graph currently supports only the project scope".to_owned(),
+        ));
+    }
     let graph = build_graph(&target, scope)?;
     let path = generation_relative_path(scope, &graph.generation_digest)
         .map_err(WikiError::InvalidInput)?;
@@ -4281,6 +4286,19 @@ mod tests {
             .path()
             .join(rebuilt_data["generation_path"].as_str().expect("path"))
             .is_file());
+
+        let Err(error) = run_graph(&vec![
+            "preview".to_owned(),
+            "--target".to_owned(),
+            project.path().to_string_lossy().into_owned(),
+            "--scope".to_owned(),
+            "confidential".to_owned(),
+            "--output".to_owned(),
+            "json".to_owned(),
+        ]) else {
+            panic!("collection scope requires its separate authorization path");
+        };
+        assert!(error.to_string().contains("only the project scope"));
     }
 
     #[test]
