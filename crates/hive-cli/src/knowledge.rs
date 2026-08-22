@@ -33,9 +33,9 @@ use hive_wiki::store::{
 };
 use hive_wiki::{
     build_graph, delete_page, delete_page_shared, generation_relative_path, ingest, ingest_shared,
-    lint, list_pages, promote, promote_shared, query_filtered, read_page, rebuild_index, suppress,
-    suppress_shared, LintIssue, LintSeverity, PromotionCategory, PromotionMode, SuppressionEntry,
-    WikiError,
+    lint, list_pages, persist_generation, promote, promote_shared, query_filtered, read_page,
+    rebuild_index, suppress, suppress_shared, LintIssue, LintSeverity, PromotionCategory,
+    PromotionMode, SuppressionEntry, WikiError,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
@@ -72,7 +72,7 @@ USAGE:
     hive knowledge export --user-root <dir> --scope global|shared|project:<id>|collection:<id>|all-portable --bundle <path>.hivekb [--replace-backup <file-name>] --output json
     hive knowledge import --user-root <dir> --bundle <path>.hivekb (--dry-run|--apply) --output json
     hive knowledge refresh (--target <legacy-project>|--user-root <dir>) --output json
-    hive knowledge graph preview|query --target <dir> [--scope project|private|confidential] [--node-id <id>] --output json
+    hive knowledge graph preview|rebuild|query --target <dir> [--scope project|private|confidential] [--node-id <id>] --output json
     hive index rebuild (--target <legacy-project>|--user-root <dir>) --output json
 ";
 
@@ -203,11 +203,11 @@ pub(crate) fn run_knowledge(arguments: &[String]) -> ExitCode {
 
 fn run_graph(arguments: &[String]) -> Result<KnowledgeResult, WikiError> {
     let action = arguments.first().map(String::as_str).ok_or_else(|| {
-        WikiError::InvalidInput("knowledge graph requires preview or query".to_owned())
+        WikiError::InvalidInput("knowledge graph requires preview, rebuild, or query".to_owned())
     })?;
-    if !matches!(action, "preview" | "query") {
+    if !matches!(action, "preview" | "rebuild" | "query") {
         return Err(WikiError::InvalidInput(
-            "knowledge graph supports preview or query".to_owned(),
+            "knowledge graph supports preview, rebuild, or query".to_owned(),
         ));
     }
     let options = parse_options(&arguments[1..], &["--target", "--scope", "--node-id"])?;
@@ -235,14 +235,34 @@ fn run_graph(arguments: &[String]) -> Result<KnowledgeResult, WikiError> {
             "node_count": graph.nodes.len(),
             "edge_count": graph.edges.len(),
             "generation_path": path,
-            "writes": false,
+            "writes": action == "rebuild",
         })
     };
+    let changed_paths = if action == "rebuild" {
+        vec![persist_generation(&target, &graph)
+            .map_err(WikiError::Io)?
+            .to_string_lossy()
+            .into_owned()]
+    } else {
+        Vec::new()
+    };
     Ok(success(
-        "QueryKnowledge",
-        "hive.knowledge-graph-preview",
-        "native knowledge graph preview completed without derived-state writes",
-        Vec::new(),
+        if action == "rebuild" {
+            "RebuildKnowledgeIndex"
+        } else {
+            "QueryKnowledge"
+        },
+        if action == "rebuild" {
+            "hive.knowledge-graph-rebuilt"
+        } else {
+            "hive.knowledge-graph-preview"
+        },
+        if action == "rebuild" {
+            "native knowledge graph generation rebuilt"
+        } else {
+            "native knowledge graph preview completed without derived-state writes"
+        },
+        changed_paths,
         &locator,
         &graph.generation_digest,
         data,
@@ -4245,6 +4265,22 @@ mod tests {
         let matches = query_data["matches"].as_array().expect("metadata matches");
         assert_eq!(matches.len(), 2);
         assert!(matches.iter().all(|edge| edge.get("body").is_none()));
+
+        let rebuilt = run_graph(&vec![
+            "rebuild".to_owned(),
+            "--target".to_owned(),
+            project.path().to_string_lossy().into_owned(),
+            "--output".to_owned(),
+            "json".to_owned(),
+        ])
+        .expect("graph rebuild");
+        assert_eq!(rebuilt.action, "RebuildKnowledgeIndex");
+        let rebuilt_data = rebuilt.data.expect("rebuild data");
+        assert_eq!(rebuilt_data["writes"], true);
+        assert!(project
+            .path()
+            .join(rebuilt_data["generation_path"].as_str().expect("path"))
+            .is_file());
     }
 
     #[test]

@@ -34,7 +34,8 @@ use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use tempfile::NamedTempFile;
 
 pub use graph::{
-    build_native_generation, generation_relative_path, query_generation, GraphGeneration,
+    build_native_generation, generation_relative_path, persist_generation, query_generation,
+    GraphGeneration,
 };
 
 const INDEX_RELATIVE: &str = ".hive/index/hive.sqlite3";

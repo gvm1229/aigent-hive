@@ -3,7 +3,9 @@
 use crate::WikiPage;
 use hive_core::sha256_digest;
 use serde::{Deserialize, Serialize};
-use std::path::PathBuf;
+use std::io::Write;
+use std::path::{Path, PathBuf};
+use tempfile::NamedTempFile;
 
 /// One relationship evidence class. Only extracted relations originate in Markdown parsing.
 #[derive(Debug, Clone, Copy, Deserialize, Eq, Ord, PartialEq, PartialOrd, Serialize)]
@@ -113,6 +115,44 @@ pub fn generation_relative_path(scope: &str, scope_digest: &str) -> Result<PathB
     Ok(root.join(digest).join("generation.json"))
 }
 
+/// Persist one digest-addressed generation without overwriting a different derived graph.
+pub fn persist_generation(target: &Path, generation: &GraphGeneration) -> Result<PathBuf, String> {
+    let relative = generation_relative_path(&generation.scope, &generation.generation_digest)?;
+    let destination = target.join(&relative);
+    let parent = destination
+        .parent()
+        .ok_or_else(|| "graph generation has no parent".to_owned())?;
+    std::fs::create_dir_all(parent).map_err(|error| format!("create graph parent: {error}"))?;
+    let bytes = serde_json_canonicalizer::to_vec(generation)
+        .map_err(|error| format!("canonicalize graph generation: {error}"))?;
+    match std::fs::symlink_metadata(&destination) {
+        Ok(metadata) if !metadata.is_file() => {
+            return Err("graph generation destination is not a regular file".to_owned());
+        }
+        Ok(_) => {
+            let existing = std::fs::read(&destination)
+                .map_err(|error| format!("read graph generation: {error}"))?;
+            if existing != bytes {
+                return Err(
+                    "graph generation digest path is occupied by different bytes".to_owned(),
+                );
+            }
+            return Ok(relative);
+        }
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+        Err(error) => return Err(format!("inspect graph generation: {error}")),
+    }
+    let mut temporary = NamedTempFile::new_in(parent)
+        .map_err(|error| format!("create graph generation staging: {error}"))?;
+    temporary
+        .write_all(&bytes)
+        .map_err(|error| format!("write graph generation staging: {error}"))?;
+    temporary
+        .persist(&destination)
+        .map_err(|error| format!("activate graph generation: {error}"))?;
+    Ok(relative)
+}
+
 /// Return bounded direct relationships for one node without exposing page bodies.
 #[must_use]
 pub fn query_generation(
@@ -198,7 +238,7 @@ fn edge(from: &str, to: &str, relation: &str, source_digest: &str) -> GraphEdge 
 mod tests {
     use super::{
         build_native_generation, extract_markdown_edges, generation_relative_path,
-        query_generation, GraphEvidence,
+        persist_generation, query_generation, GraphEvidence,
     };
     use crate::{Contradiction, WikiFrontmatter, WikiPage};
 
@@ -289,5 +329,21 @@ mod tests {
         assert_eq!(paths.len(), 6);
         assert!(paths.iter().all(|path| !path.is_absolute()));
         assert!(generation_relative_path("outside", &digest).is_err());
+    }
+
+    #[test]
+    fn generation_persistence_is_digest_addressed_and_idempotent() {
+        let target = tempfile::tempdir().expect("temporary target");
+        let generation = build_native_generation("project", &[page("first")]).expect("generation");
+        let relative = persist_generation(target.path(), &generation).expect("persist");
+        let first = std::fs::read(target.path().join(&relative)).expect("generation bytes");
+        assert_eq!(
+            persist_generation(target.path(), &generation).expect("repeat"),
+            relative
+        );
+        assert_eq!(
+            std::fs::read(target.path().join(&relative)).expect("repeat bytes"),
+            first
+        );
     }
 }
