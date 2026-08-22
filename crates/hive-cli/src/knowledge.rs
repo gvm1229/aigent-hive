@@ -72,7 +72,7 @@ USAGE:
     hive knowledge export --user-root <dir> --scope global|shared|project:<id>|collection:<id>|all-portable --bundle <path>.hivekb [--replace-backup <file-name>] --output json
     hive knowledge import --user-root <dir> --bundle <path>.hivekb (--dry-run|--apply) --output json
     hive knowledge refresh (--target <legacy-project>|--user-root <dir>) --output json
-    hive knowledge graph preview --target <dir> [--scope project|private|confidential] --output json
+    hive knowledge graph preview|query --target <dir> [--scope project|private|confidential] [--node-id <id>] --output json
     hive index rebuild (--target <legacy-project>|--user-root <dir>) --output json
 ";
 
@@ -202,25 +202,32 @@ pub(crate) fn run_knowledge(arguments: &[String]) -> ExitCode {
 }
 
 fn run_graph(arguments: &[String]) -> Result<KnowledgeResult, WikiError> {
-    if arguments.first().map(String::as_str) != Some("preview") {
+    let action = arguments.first().map(String::as_str).ok_or_else(|| {
+        WikiError::InvalidInput("knowledge graph requires preview or query".to_owned())
+    })?;
+    if !matches!(action, "preview" | "query") {
         return Err(WikiError::InvalidInput(
-            "knowledge graph currently supports preview only".to_owned(),
+            "knowledge graph supports preview or query".to_owned(),
         ));
     }
-    let options = parse_options(&arguments[1..], &["--target", "--scope"])?;
+    let options = parse_options(&arguments[1..], &["--target", "--scope", "--node-id"])?;
     let target = PathBuf::from(required(&options, "--target")?);
     let scope = optional(&options, "--scope").unwrap_or("project");
     let graph = build_graph(&target, scope)?;
     let path = generation_relative_path(scope, &graph.generation_digest)
         .map_err(WikiError::InvalidInput)?;
     let locator = path.to_string_lossy().into_owned();
-    Ok(success(
-        "QueryKnowledge",
-        "hive.knowledge-graph-preview",
-        "native knowledge graph preview completed without derived-state writes",
-        Vec::new(),
-        &locator,
-        &graph.generation_digest,
+    let data = if action == "query" {
+        let node_id = required(&options, "--node-id")?;
+        json!({
+            "scope": graph.scope,
+            "engine": graph.engine,
+            "generation_digest": graph.generation_digest,
+            "node_id": node_id,
+            "matches": hive_wiki::query_generation(&graph, node_id, 50),
+            "writes": false,
+        })
+    } else {
         json!({
             "scope": graph.scope,
             "engine": graph.engine,
@@ -229,7 +236,16 @@ fn run_graph(arguments: &[String]) -> Result<KnowledgeResult, WikiError> {
             "edge_count": graph.edges.len(),
             "generation_path": path,
             "writes": false,
-        }),
+        })
+    };
+    Ok(success(
+        "QueryKnowledge",
+        "hive.knowledge-graph-preview",
+        "native knowledge graph preview completed without derived-state writes",
+        Vec::new(),
+        &locator,
+        &graph.generation_digest,
+        data,
     ))
 }
 
@@ -4214,6 +4230,21 @@ mod tests {
         let data = preview.data.expect("preview data");
         assert_eq!(data["node_count"], 1);
         assert_eq!(data["writes"], false);
+
+        let query = run_graph(&vec![
+            "query".to_owned(),
+            "--target".to_owned(),
+            project.path().to_string_lossy().into_owned(),
+            "--node-id".to_owned(),
+            "graph-preview".to_owned(),
+            "--output".to_owned(),
+            "json".to_owned(),
+        ])
+        .expect("graph query");
+        let query_data = query.data.expect("query data");
+        let matches = query_data["matches"].as_array().expect("metadata matches");
+        assert_eq!(matches.len(), 2);
+        assert!(matches.iter().all(|edge| edge.get("body").is_none()));
     }
 
     #[test]
