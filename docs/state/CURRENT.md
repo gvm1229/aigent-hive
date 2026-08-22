@@ -4,7 +4,7 @@
 - product version: `0.9.5`
 - 다음 target: `0.10.0-test`
 - 활성 계획: [`PLAN.md`](../plans/PLAN.md)
-- 현재 milestone: `0.10.0` 관계·검색·nested scan 구현
+- 현재 milestone: `0.10.0` 관계·vector 검색 feasibility
 
 ## 최근 검증 근거
 
@@ -38,6 +38,7 @@
 - Hive-native Markdown 관계 graph·optional Graphify full-rebuild code-only adapter 범위 승인
 - Backlog 6개·Archive 미완료 22개 검토 완료, 추가 자동 승격 `0건`
 - 유지보수자 최종 선택: 추가 후보 없음, [`ADR-0020`](../decisions/ADR-0020-0.10.0-product-scope.md) 범위 확정
+- Vector 검색: Qdrant Edge·SQLite engine hard gate와 통과 시 optional hybrid adapter 범위 추가
 - Notion 실제 연결과 작업 자동 분담 활성화: backlog
 
 ## `0.10.0` 남은 범위
@@ -45,6 +46,7 @@
 - Codex·Antigravity `.agents/skills/<skill>/...`, Claude `.claude/skills/<skill>/...`의 host-matched 세션 예약과 경로별 오류 계약 구현·검증
 - 상위 Git repository 안의 registered project root knowledge scan 복구와 sibling 격리 검증
 - Hive-native Markdown 관계 graph·선택형 Graphify code-only adapter 구현·검증
+- FTS·vector·graph 품질 기준선, local embedding boundary와 engine adopt|defer 판정
 - pre-`0.10.0` canonical 지식·프로젝트 보존 upgrade·rollback
 - 번호 공개 시험판의 세 운영체제 수용과 안정판 출시
 
@@ -72,9 +74,10 @@
 
 ## 다음 작업
 
-1. Native 관계 graph·query planner와 nested project scan 구현
-2. Host-owned Skill 예약 구현·검증
-3. 승인된 범위의 번호 공개 시험판과 세 운영체제 수용
+1. Native 관계 graph와 vector gold corpus·FTS baseline
+2. Qdrant Edge·SQLite engine 격리 prototype과 hard gate
+3. Nested project scan·Host-owned Skill 예약 구현
+4. Adopt된 관계·검색 범위의 번호 공개 시험판과 세 운영체제 수용
 
 ## 과거 기록
 

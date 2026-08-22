@@ -28,7 +28,6 @@
 - [ ] [KRG10-011] Graphify 미설치·손상·schema mismatch·build 실패의 native graph·FTS 정상 대체와 rollback
 - [ ] [KRG10-012] 관계 경로·scope·locator·digest·`EXTRACTED` evidence의 JSON·HTML export
 - [ ] [KRG10-013] provider API·API key·query log·watcher·Git hook·자동 MCP 등록·upstream `global|update` 호출 `0건`
-- [ ] [KRG10-014] 의미 유사성 질문 기준선과 FTS·alias 결손 측정, vector database·embedding runtime product dependency `0건`
 - [ ] [KRG10-015] pre-`0.10.0` canonical Markdown·collection registry·기존 FTS 결과 byte 보존 upgrade·disable·rollback
 - [ ] [KRG10-016] 30개 관계 질문·직접 사실 무회귀·성능·격리·Windows x64·macOS arm64·Linux musl 공개 시험 수용
 

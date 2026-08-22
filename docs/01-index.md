@@ -140,6 +140,7 @@ Fact별 catalog는 migration 완료 뒤 이 section과 [Fact 안내](facts/READM
 | [Graphify 지식 graph](archive/plans/releases/0.10.0/graphify-knowledge-graph-0.10.0.md) | 조사·도입 중단 기록 |
 | [작업 자동 분담 조사](archive/plans/releases/0.10.0/host-work-delegation-research-0.10.0.md) | 공식·실제 가능성 조사 완료 기록 |
 | [`0.10.0` 관계 graph](plans/active/knowledge-relationship-graph-0.10.0.md) | Markdown 관계·Graphify code-only adapter |
+| [`0.10.0` vector search](plans/active/hybrid-vector-search-0.10.0.md) | 조건부 hybrid vector 구현 gate |
 | [`0.10.0` Skill 예약](plans/active/host-owned-skill-reservations-0.10.0.md) | Host-owned Skill 세션 예약 |
 | [`0.10.0` nested scan](plans/active/nested-project-knowledge-scan-0.10.0.md) | 상위 Git 저장소 아래 등록 project scan |
 | [`0.10.0` 출시](plans/active/release-0.10.0.md) | 번호 시험판·안정판 |
