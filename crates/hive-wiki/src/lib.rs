@@ -33,6 +33,10 @@ use std::thread;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use tempfile::NamedTempFile;
 
+pub use graph::{
+    build_native_generation, generation_relative_path, query_generation, GraphGeneration,
+};
+
 const INDEX_RELATIVE: &str = ".hive/index/hive.sqlite3";
 const STALE_RELATIVE: &str = ".hive/index/.stale";
 const LOCK_RELATIVE: &str = ".hive/index/.knowledge.lock";
@@ -46,6 +50,14 @@ const MAX_WIKI_PAGE_BYTES: u64 = 2 * 1024 * 1024;
 const MAX_CANONICAL_CONTROL_BYTES: u64 = 1024 * 1024;
 const MAX_DERIVED_INDEX_BYTES: u64 = 128 * 1024 * 1024;
 static CAP_TEMP_COUNTER: AtomicU64 = AtomicU64::new(0);
+
+/// Build a disposable native graph from canonical Markdown pages in one scope.
+pub fn build_graph(target: &Path, scope: &str) -> Result<GraphGeneration, WikiError> {
+    ensure_consumer_target(target).map_err(|error| WikiError::Verification(error.to_string()))?;
+    let pages = scan_pages(target)?;
+    build_native_generation(scope, &pages.into_values().collect::<Vec<_>>())
+        .map_err(WikiError::InvalidInput)
+}
 
 /// Stable failure classes for CLI exit mapping.
 #[derive(Debug)]
