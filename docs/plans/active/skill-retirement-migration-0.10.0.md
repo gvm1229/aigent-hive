@@ -19,7 +19,7 @@ chain과 cycle 금지.
 
 - [x] [SKM10-001] 현재 cleanup 경로 조사: authenticated retired Skill exact-byte 제거·empty directory prune 보유, user projection historical registry는 `0.9.0`까지만 포함
 - [x] [SKM10-002] 게시 stable `0.8.0|0.9.0|0.9.1|0.9.2|0.9.3|0.9.4|0.9.5`가 exact Skill compatibility epoch로 모두 resolve되도록 name·digest·side-effect·capability와 stable-to-epoch mapping 영구 보존 — `354ea0a`; release tag의 `active-skills.yml` 기반 registry 7 stable 수용·`hive-projection` history regression 통과
-- [ ] [SKM10-003] Skill lifecycle ledger에 `introduced_in|renamed_in|deprecated_in|removed_in|replacement|transition_kind` 기록, 모든 과거 alias를 `verified-workflow|judge-evidence` 최종 canonical ID로 직접 수렴, chain·cycle·current-name collision `0건`
+- [x] [SKM10-003] Skill lifecycle ledger에 `introduced_in|renamed_in|deprecated_in|removed_in|replacement|transition_kind` 기록, 모든 과거 alias를 `verified-workflow|judge-evidence` 최종 canonical ID로 직접 수렴, chain·cycle·current-name collision `0건` — `1cc59d8`; 세 `0.10.0` transition의 version lifecycle·직접 canonical mapping·current-name collision fail-closed 검증
 - [ ] [SKM10-004] Codex·Claude·Antigravity의 user plugin·user projection·project projection·active-Skill ledger·ownership manifest 전체 retired path inventory
 - [ ] [SKM10-005] `hive update` direct jump dry-run에서 source version과 무관하게 authenticated retired file·directory·manifest entry의 exact 제거 계획 표시
 - [ ] [SKM10-006] Exact historical bytes는 자동 제거, authenticated base+local edit는 safe merge 또는 conflict, foreign·unknown bytes는 삭제 없이 conflict; conflict 상태의 `0.10.0` activation 금지

@@ -9,7 +9,7 @@ summary: "Aigent Hive has a 26-Skill product-only catalog; Korean knowledge Skil
 tags: [localization, migration, plugin, skill]
 aliases: ["Skill naming"]
 sources:
-  - "repo:crates/hive-projection/src/lib.rs#sha256:61b367ca8b539a30175419efd96ec61dc6449c80b0d82290e363a883ef24c93a"
+  - "repo:crates/hive-projection/src/lib.rs#sha256:72c05f8bc6c5a7c3f94a42c34d87828c3beea0d32345171dac598d83a153819b"
   - "repo:docs/archive/plans/foundations/knowledge-skill-display-names-next-release.md#sha256:517f1f10a17537698d1e4e1a30b59bda9fd2488e3062576d01b4cf641dea0e76"
   - "repo:docs/skills.md#sha256:8a23320466da4da0f30e098c34f193a889a5207aead75134010bbc973e557a38"
   - "repo:harness/skills/catalog.yml#sha256:d07890ccf090177ed03405d9eae01c278130cdd1fa9797ad3616106d1c67f6c8"
