@@ -1,7 +1,7 @@
 # `0.10.0` 시험·정식 출시
 
 > Checklist owner: `REL10-*`
-> 완료 선행: `SCP10-001–003`, `KRG10-001–016`
+> 완료 선행: `SCP10-001–003`, `CON10-*`, `VWF10-*`, `JDG10-*`, `SKM10-*`, `KRG10-001–016`
 
 ## Checklist
 
@@ -17,6 +17,7 @@
 
 - `SCP10-002–003`, `KRG10-001–016` 미완료
 - pre-`0.10.0` canonical 지식·프로젝트 보존 증거 부재
+- 지원 predecessor direct upgrade의 retired Skill·projection closure 증거 부재
 - public test 뒤 product·package·installer 변경
 - 유지보수자의 명시적 안정판 승인 부재 — 구현·시험은 승인되었으나 tag·publication은 금지
 

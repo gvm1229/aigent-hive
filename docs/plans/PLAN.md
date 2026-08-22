@@ -1,6 +1,6 @@
 # Aigent Hive 활성 계획
 
-> Revision: 254
+> Revision: 255
 > 기준일: 2026-08-22
 > Product version: `0.9.5` stable
 > 다음 target: `0.10.0-test`
@@ -16,6 +16,7 @@
 - pre-`0.10.0` 지식·프로젝트 무손실 upgrade
 - Host-neutral 연속 실행 closure gate와 조건부 hook adapter
 - 자연어 routing 기반 `verified-workflow`와 명시적 `adversarial-judge`
+- 모든 지원 predecessor의 Skill rename·폐기 artifact 완전 cleanup
 - 번호 공개 시험판과 같은 product bytes의 안정판 출시
 
 ## 완료 조건
@@ -53,8 +54,9 @@
 | Host-neutral 연속 실행 | 1 | 7 | 12.5% |
 | Verified workflow | 1 | 5 | 16.7% |
 | Adversarial judge | 1 | 7 | 12.5% |
+| Skill migration cleanup | 1 | 8 | 11.1% |
 | `0.10.0` 출시 | 0 | 7 | 0% |
-| **합계** | **6** | **54** | **10.0%** |
+| **합계** | **7** | **62** | **10.1%** |
 
 ## Required load order
 
@@ -77,15 +79,17 @@ Archive·backlog·완료 history의 자동 선행 load 금지.
 | [`active/host-neutral-continuation-0.10.0.md`](active/host-neutral-continuation-0.10.0.md) | `CON10-*` | Goal·closure·선택형 hook |
 | [`active/verified-workflow-0.10.0.md`](active/verified-workflow-0.10.0.md) | `VWF10-*` | 자연어 routing·실행 graph |
 | [`active/adversarial-judge-0.10.0.md`](active/adversarial-judge-0.10.0.md) | `JDG10-*` | 명시적 독립 adversarial Judge |
+| [`active/skill-retirement-migration-0.10.0.md`](active/skill-retirement-migration-0.10.0.md) | `SKM10-*` | Rename·폐기 artifact cleanup |
 | [`active/release-0.10.0.md`](active/release-0.10.0.md) | `REL10-*` | 번호 시험판·안정판 출시 |
 
 ## 실행 순서
 
 1. `CON10-002–008`, `VWF10-002–006` closure·natural routing·bounded three-host adapter 구현·수용
-2. `JDG10-002–008` explicit adversarial Judge envelope·host launch·quorum 결합
-3. `KRG10-001–007`, `VEC10-001–007` native 관계·vector feasibility·adopt|defer
-4. `KRG10-008–013`, `KRG10-015–016`과 통과 시 `VEC10-008–012` 구현·수용
-5. `REL10-*` 공개 시험판·세 운영체제 수용·안정판 출시
+2. `SKM10-002–009` 모든 predecessor의 Skill rename·폐기 cleanup과 direct jump upgrade
+3. `JDG10-002–008` explicit adversarial Judge·`judge-evidence`·host launch·quorum 결합
+4. `KRG10-001–007`, `VEC10-001–007` native 관계·vector feasibility·adopt|defer
+5. `KRG10-008–013`, `KRG10-015–016`과 통과 시 `VEC10-008–012` 구현·수용
+6. `REL10-*` 공개 시험판·세 운영체제 수용·안정판 출시
 
 ## 비활성 자료
 

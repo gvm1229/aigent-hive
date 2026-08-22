@@ -55,6 +55,8 @@
 | `0.10.0` 관계·검색 | Markdown 명시 관계는 Hive-native derived graph, code 관계는 승인형 Graphify `0.9.47` full-rebuild `--code-only`, 직접 사실은 기존 SQLite FTS. Metadata-first retrieval·scope별 물리 격리·drift gate·JSON/HTML export 포함. Semantic vector는 Qdrant Edge·SQLite engine·local embedding hard gate 통과 뒤 optional hybrid adapter, 실패 시 dependency `0건` |
 | `0.10.0` verified workflow | `ralph-loop`를 `verified-workflow`로 rename. Natural continuation은 dependency·중간 evidence·bounded retry·독립 verifier·steering·recovery reason code 2개 이상에서 자동 route, task length·bare continue만으로 선택 금지 |
 | `0.10.0` adversarial Judge | `adversarial-judge` explicit Skill이 clean-context package와 host-native Judge dispatch envelope 준비. Hive direct spawn 없음, diagnostic finding과 authenticated quorum PASS authority 분리 |
+| `0.10.0` Skill consolidation | `ralph-loop|iterative-execution` → `verified-workflow`, `package-review` → `judge-evidence`. Alias는 logical routing 호환만 제공하며 physical retired artifact는 successful upgrade에서 `0건` |
+| `0.10.0` retired Skill cleanup | 모든 지원 public predecessor의 exact historical bytes·release inventory로 direct jump 인증. Exact Hive artifact 자동 제거, safe local merge 또는 foreign conflict, conflict 상태의 새 release activation 금지 |
 | role/run | shared role HANDOFF, PLAN-derived criterion, exact evidence locator, immutable owner pin, sensor-independent manual과 one-role usage-guarded automatic no-spawn resume |
 | 현재 버전 | 정식 릴리스 준비 target `0.9.0`; root Cargo workspace version과 `workspace.metadata.hive.release-date`가 정본 |
 | `0.9.x` release line | `0.9.5`가 마지막 `0.9.x` release. `0.9.6` 미출시. 이후 수정·기능은 `0.10.0` 범위에서 수용 |

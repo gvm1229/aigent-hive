@@ -1,6 +1,6 @@
 # 현재 상태
 
-- 기준 branch: `feature/0.10.0@35620fc`, `origin/feature/0.10.0` 일치
+- 기준 branch: `feature/0.10.0@ac366b8`, `origin/feature/0.10.0` 일치
 - product version: `0.9.5`
 - 다음 target: `0.10.0-test`
 - 활성 계획: [`PLAN.md`](../plans/PLAN.md)
@@ -43,6 +43,7 @@
 - `oh-my-codex@3ad79a8`·Codex `0.148.0`·Claude·Antigravity 공식 hook 조사 완료: Goal/task 실행 주체 + bounded Stop nudge 권고
 - `ralph-loop` → `verified-workflow` rename·자연어 continuation 자동 routing 범위 승인
 - 명시적 `adversarial-judge` Skill: 기존 package/quorum을 재사용하는 host-native clean-context Judge 단계로 범위 승인
+- `package-review` → `judge-evidence`, `iterative-execution` → `verified-workflow` 병합과 모든 predecessor retired artifact cleanup 범위 승인
 - nested Git repository 아래 registered project scan 허용과 foreign sibling 격리 구현·회귀 검증 완료 (`7aab389`)
 - host-owned Skill 세션 예약 구현·three-host 경로 회귀 검증 완료 (`96f2b06`)
 - Notion 실제 연결과 작업 자동 분담 활성화: backlog
@@ -56,6 +57,7 @@
 - Codex·Claude·Antigravity 연속 실행 capability와 bounded Stop hook 채택 판정
 - `hive run closure` schema·CLI와 `continue-active-run` 선택형 capability 구현 여부 판정
 - `verified-workflow` rename·routing·legacy alias와 `adversarial-judge` envelope·three-host launch 검증
+- `0.7.0–0.9.5`·공개 test predecessor direct upgrade의 retired Skill·projection closure와 foreign-byte conflict 검증
 - 번호 공개 시험판의 세 운영체제 수용과 안정판 출시
 
 ## Graphify 경계
