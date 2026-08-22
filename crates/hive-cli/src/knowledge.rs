@@ -34,8 +34,8 @@ use hive_wiki::store::{
 use hive_wiki::{
     build_graph, delete_page, delete_page_shared, generation_relative_path, ingest, ingest_shared,
     lint, list_pages, persist_generation, promote, promote_shared, query_filtered, read_page,
-    rebuild_index, suppress, suppress_shared, LintIssue, LintSeverity, PromotionCategory,
-    PromotionMode, SuppressionEntry, WikiError,
+    rebuild_index, remove_generation, suppress, suppress_shared, LintIssue, LintSeverity,
+    PromotionCategory, PromotionMode, SuppressionEntry, WikiError,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
@@ -72,7 +72,7 @@ USAGE:
     hive knowledge export --user-root <dir> --scope global|shared|project:<id>|collection:<id>|all-portable --bundle <path>.hivekb [--replace-backup <file-name>] --output json
     hive knowledge import --user-root <dir> --bundle <path>.hivekb (--dry-run|--apply) --output json
     hive knowledge refresh (--target <legacy-project>|--user-root <dir>) --output json
-    hive knowledge graph preview|status|rebuild|query --target <dir> [--scope project|private|confidential] [--node-id <id>] --output json
+    hive knowledge graph preview|status|rebuild|disable|query --target <dir> [--scope project|private|confidential] [--node-id <id>] --output json
     hive index rebuild (--target <legacy-project>|--user-root <dir>) --output json
 ";
 
@@ -204,12 +204,15 @@ pub(crate) fn run_knowledge(arguments: &[String]) -> ExitCode {
 fn run_graph(arguments: &[String]) -> Result<KnowledgeResult, WikiError> {
     let action = arguments.first().map(String::as_str).ok_or_else(|| {
         WikiError::InvalidInput(
-            "knowledge graph requires preview, status, rebuild, or query".to_owned(),
+            "knowledge graph requires preview, status, rebuild, disable, or query".to_owned(),
         )
     })?;
-    if !matches!(action, "preview" | "status" | "rebuild" | "query") {
+    if !matches!(
+        action,
+        "preview" | "status" | "rebuild" | "disable" | "query"
+    ) {
         return Err(WikiError::InvalidInput(
-            "knowledge graph supports preview, status, rebuild, or query".to_owned(),
+            "knowledge graph supports preview, status, rebuild, disable, or query".to_owned(),
         ));
     }
     let options = parse_options(&arguments[1..], &["--target", "--scope", "--node-id"])?;
@@ -243,6 +246,14 @@ fn run_graph(arguments: &[String]) -> Result<KnowledgeResult, WikiError> {
             "active": target.join(&path).is_file(),
             "writes": false,
         })
+    } else if action == "disable" {
+        json!({
+            "scope": graph.scope,
+            "engine": graph.engine,
+            "generation_digest": graph.generation_digest,
+            "generation_path": path,
+            "writes": true,
+        })
     } else {
         json!({
             "scope": graph.scope,
@@ -259,17 +270,26 @@ fn run_graph(arguments: &[String]) -> Result<KnowledgeResult, WikiError> {
             .map_err(WikiError::Io)?
             .to_string_lossy()
             .into_owned()]
+    } else if action == "disable" {
+        remove_generation(&target, scope, &graph.generation_digest)
+            .map_err(WikiError::Io)?
+            .map(|path| vec![path.to_string_lossy().into_owned()])
+            .unwrap_or_default()
     } else {
         Vec::new()
     };
     Ok(success(
         if action == "rebuild" {
             "RebuildKnowledgeIndex"
+        } else if action == "disable" {
+            "DeleteKnowledge"
         } else {
             "QueryKnowledge"
         },
         if action == "rebuild" {
             "hive.knowledge-graph-rebuilt"
+        } else if action == "disable" {
+            "hive.knowledge-graph-disabled"
         } else if action == "status" {
             "hive.knowledge-graph-status"
         } else {
@@ -277,6 +297,8 @@ fn run_graph(arguments: &[String]) -> Result<KnowledgeResult, WikiError> {
         },
         if action == "rebuild" {
             "native knowledge graph generation rebuilt"
+        } else if action == "disable" {
+            "native knowledge graph generation disabled"
         } else if action == "status" {
             "native knowledge graph status read without derived-state writes"
         } else {
@@ -4321,6 +4343,17 @@ mod tests {
         ])
         .expect("active graph status");
         assert_eq!(status.data.expect("active status data")["active"], true);
+
+        let disabled = run_graph(&vec![
+            "disable".to_owned(),
+            "--target".to_owned(),
+            project.path().to_string_lossy().into_owned(),
+            "--output".to_owned(),
+            "json".to_owned(),
+        ])
+        .expect("graph disable");
+        assert_eq!(disabled.action, "DeleteKnowledge");
+        assert_eq!(disabled.changed_paths.len(), 1);
 
         let Err(error) = run_graph(&vec![
             "preview".to_owned(),
