@@ -3465,6 +3465,10 @@ fn historical_080_managed_files(host: UserHost) -> BTreeMap<PathBuf, PlannedFile
 }
 
 fn historical_080_skill_paths(host: UserHost, name: &str) -> Vec<String> {
+    retired_skill_artifact_paths(host, name)
+}
+
+fn retired_skill_artifact_paths(host: UserHost, name: &str) -> Vec<String> {
     match host {
         UserHost::Codex => vec![
             format!(".hive/marketplaces/codex/plugins/aigent-hive/skills/{name}/SKILL.md"),
@@ -9653,6 +9657,22 @@ mod tests {
                 &manifest.entries,
             )
             .is_none());
+        }
+    }
+
+    #[test]
+    fn retired_skill_inventory_covers_every_host_projection_surface() {
+        for (host, expected_count) in [
+            (UserHost::Codex, 2),
+            (UserHost::Claude, 1),
+            (UserHost::Antigravity, 4),
+        ] {
+            let paths = retired_skill_artifact_paths(host, "ralph-loop");
+            assert_eq!(paths.len(), expected_count);
+            assert!(paths
+                .iter()
+                .all(|path| path.contains("/skills/ralph-loop/")));
+            assert!(paths.iter().all(|path| !path.contains("..")));
         }
     }
 
