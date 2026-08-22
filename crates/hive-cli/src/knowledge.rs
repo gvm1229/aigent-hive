@@ -72,7 +72,7 @@ USAGE:
     hive knowledge export --user-root <dir> --scope global|shared|project:<id>|collection:<id>|all-portable --bundle <path>.hivekb [--replace-backup <file-name>] --output json
     hive knowledge import --user-root <dir> --bundle <path>.hivekb (--dry-run|--apply) --output json
     hive knowledge refresh (--target <legacy-project>|--user-root <dir>) --output json
-    hive knowledge graph preview|status|rebuild|disable|query --target <dir> [--scope project|private|confidential] [--node-id <id>] --output json
+    hive knowledge graph preview|status|rebuild|disable|query --target <dir> [--scope project] [--node-id <id>] --output json
     hive index rebuild (--target <legacy-project>|--user-root <dir>) --output json
 ";
 
