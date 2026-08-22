@@ -9,17 +9,18 @@ summary: "0.10.0 renames ralph-loop to verified-workflow and routes complex natu
 tags: [orchestration, skills, v0-10]
 aliases: ["ralph-loop"]
 sources:
-  - "repo:docs/decisions/ADR-0020-0.10.0-product-scope.md#sha256:1645eb2249265b75d27b0c65a709806f4999a0ec425e8e874336bcda084b702c"
-  - "repo:docs/decisions/product-release-decisions.md#sha256:25bd2880270b2dd21bf09d5efe576f4164b8d02fadd8366f8649d8d50d38bded"
-  - "repo:docs/plans/active/verified-workflow-0.10.0.md#sha256:db8825d8aa1d26905c55ba4a0c2892d8ef337551ff5a324ae69bb23d2ee56a93"
+  - "repo:docs/decisions/ADR-0020-0.10.0-product-scope.md#sha256:fe327177fca73ccbdb3267a1cfca7b579b984e8bd3a24e74457a7d062020f2ec"
+  - "repo:docs/decisions/product-release-decisions.md#sha256:59e330c3bd0a5a8133e00c447c99db44e30274dbf92770b662d3cf4c14b50e0f"
+  - "repo:docs/plans/active/verified-workflow-0.10.0.md#sha256:c9399a4ad9e99389eb84aa5da5dbbae38cf20d5bca2f6c239322f2c81ad48d71"
 links: [host-neutral-continuation, v0-10-product-scope]
-reviewed_revision: "git:a2518fa364c40efb4e676fe31b694562f73dd819"
+reviewed_revision: "git:26e5fd299f961d79c6b8237c212b4b07e9e99770"
 status: active
 ---
 
 # Verified Workflow Skill
 
-`verified-workflow` replaces the `ralph-loop` public identity. Natural continuation selects it only
+`verified-workflow` absorbs `ralph-loop` graph design and `iterative-execution` receipt and recovery
+contracts. Natural continuation selects it only
 when at least two declared signals require dependency edges, intermediate evidence, bounded retry,
 independent verification, steering, or exact recovery. Task length and a bare continue request do
 not select it. The active host owns every task launch.

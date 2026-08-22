@@ -9,8 +9,8 @@ summary: "관계 검색·조건부 hybrid vector gate·nested project scan·host
 tags: [knowledge, release, scan, v0-10]
 aliases: ["0.10.0 scope"]
 sources:
-  - "repo:docs/decisions/ADR-0020-0.10.0-product-scope.md#sha256:1645eb2249265b75d27b0c65a709806f4999a0ec425e8e874336bcda084b702c"
-  - "repo:docs/decisions/product-release-decisions.md#sha256:25bd2880270b2dd21bf09d5efe576f4164b8d02fadd8366f8649d8d50d38bded"
+  - "repo:docs/decisions/ADR-0020-0.10.0-product-scope.md#sha256:fe327177fca73ccbdb3267a1cfca7b579b984e8bd3a24e74457a7d062020f2ec"
+  - "repo:docs/decisions/product-release-decisions.md#sha256:59e330c3bd0a5a8133e00c447c99db44e30274dbf92770b662d3cf4c14b50e0f"
 links: [consumer-session-coordination, graphify-0-10-adoption, hybrid-vector-search-0-10, knowledge-storage, nested-project-scan-0-10]
 reviewed_revision: "git:a0f288b6b962cd5bede27065fa39f708764a621f"
 status: active
@@ -18,10 +18,8 @@ status: active
 
 # Aigent Hive `0.10.0` 제품 범위
 
-- 관계 검색: Hive-native Markdown graph, 선택형 Graphify full-rebuild code 추출, FTS routing
-- Semantic 검색: Hard gate 통과 시 optional local vector adapter, 실패 시 dependency `0건`
-- 지식 운영: Metadata-first 조회, 생명주기·비용·drift evidence, scope 격리
-- Project 안전: nested scan, host-owned Skill 예약, canonical byte 보존 upgrade
-- 출시: Windows·macOS·Linux 공개 시험과 유지보수자 명시 승인 뒤 same-byte stable
-- 추가 후보: 조건부 vector feasibility·implementation gate
-- 실행 workflow: 자연어 continuation의 `verified-workflow` 자동 routing과 명시적 `adversarial-judge`
+- 검색: Native Markdown graph, 선택형 Graphify code 추출, FTS, 조건부 vector gate
+- 실행: Host-neutral continuation, `verified-workflow`, 명시적 `adversarial-judge`
+- Upgrade: Authenticated retired Skill·projection `0건`; modified·foreign bytes는 activation conflict
+- 보존: Canonical Markdown·SQLite direct 검색·nested project byte
+- 출시: 세 OS 공개 시험과 유지보수자 명시 승인
