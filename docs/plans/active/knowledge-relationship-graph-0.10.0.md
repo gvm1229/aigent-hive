@@ -16,7 +16,7 @@
 
 - [x] [SCP10-001] 제품 범위 승인: Hive-native Markdown 관계 graph, optional Graphify full-rebuild code-only adapter, FTS·relation query planner, metadata-first retrieval, graph scope 격리·drift gate
 - [x] [KRG10-001] engine·node·edge·generation·query 결과 schema와 Markdown·SQLite·Graphify ownership 계약 — `0729670`; scope·engine·node·edge·lifecycle·evidence schema와 contract regression
-- [ ] [KRG10-002] `sources|source_links|links|related_concepts|duplicate_of|contradictions|topics|tags|replacement`의 결정론적 Markdown edge 추출 — 부분 구현 `c78c799`: `links|sources|tags|contradictions`의 `EXTRACTED` edge·canonical digest·정렬·중복 제거. `source_links|related_concepts|duplicate_of|topics|replacement` field 계약·추출 대기
+- [x] [KRG10-002] `sources|source_links|links|related_concepts|duplicate_of|contradictions|topics|tags|replacement`의 결정론적 Markdown edge 추출 — `c78c799`, `49ab3d9`; 모든 explicit field의 `EXTRACTED` edge·canonical digest·정렬·중복 제거, `hive-wiki` 116·knowledge schema 12 GNU tests 통과
 - [ ] [KRG10-003] source·project·user-root·shared·private·confidential collection별 물리적 graph generation 격리
 - [ ] [KRG10-004] Hive-native Markdown graph의 전체·digest 기반 증분 rebuild와 정규화 동등성
 - [ ] [KRG10-005] 사실·본문은 FTS, 문서 관계는 native graph, code 영향은 Graphify로 보내는 query planner와 결합 결과
