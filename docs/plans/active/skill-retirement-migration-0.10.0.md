@@ -18,7 +18,7 @@ chain과 cycle 금지.
 ## Checklist
 
 - [x] [SKM10-001] 현재 cleanup 경로 조사: authenticated retired Skill exact-byte 제거·empty directory prune 보유, user projection historical registry는 `0.9.0`까지만 포함
-- [ ] [SKM10-002] Historical built-in registry에 게시된 stable `0.9.0|0.9.1|0.9.2|0.9.3|0.9.4|0.9.5`의 exact Skill name·digest·side-effect·capability를 모두 영구 보존, stable release ledger·surface inventory와 집합 parity
+- [ ] [SKM10-002] Historical built-in registry에 게시된 stable `0.8.0|0.9.0|0.9.1|0.9.2|0.9.3|0.9.4|0.9.5`의 exact Skill name·digest·side-effect·capability를 모두 영구 보존, stable release ledger·surface inventory와 집합 parity
 - [ ] [SKM10-003] Retired-name ledger의 모든 과거 alias를 `verified-workflow|judge-evidence` 최종 canonical ID로 직접 수렴, chain·cycle·current-name collision `0건`
 - [ ] [SKM10-004] Codex·Claude·Antigravity의 user plugin·user projection·project projection·active-Skill ledger·ownership manifest 전체 retired path inventory
 - [ ] [SKM10-005] `hive update` direct jump dry-run에서 source version과 무관하게 authenticated retired file·directory·manifest entry의 exact 제거 계획 표시
@@ -51,8 +51,10 @@ chain과 cycle 금지.
 
 ## Stable registry invariant
 
-- 현재 공개 stable 집합: `0.9.0–0.9.5`
+- 현재 공개 stable 집합: npm `0.8.0`, npm·GitHub `0.9.0–0.9.5`
 - Historical registry stable 집합: 공개 stable 집합과 exact equality
 - 과거 stable entry 수정·삭제 금지
 - 새 stable publication: 게시 전 current Skill catalog snapshot append 필수
 - Test release: accepted predecessor upgrade fixture로 별도 관리, stable registry 대체 금지
+- Stable discovery: npm non-prerelease version과 GitHub non-prerelease Release의 append-only 합집합
+- Registry의 이후 unpublish·삭제: historical coverage 제거 권한 없음
