@@ -18,7 +18,7 @@ Backlog 항목의 release checklist·완료율 집계 금지. 활성 계획 승�
 | [Notion Wiki backend](notion-wiki-backend.md) | `idea` | host 연결·OAuth·scope receipt의 현재 계약 확정 |
 | [작업 자동 분담](host-work-delegation.md) | `researching` | 두 host의 역할·모델·결과 확인 가능성 입증 |
 | [Platform signing](platform-signing.md) | `blocked` | 무료·지속 가능한 publisher identity 확보 |
-| [Alternative indexes](alternative-indexes.md) | `idea` | 현재 FTS·Graphify의 측정된 품질 결손 |
+| [Alternative vector indexes](alternative-indexes.md) | `researching` | Active hard gate 실패 뒤 측정된 품질 결손과 안전한 engine 확보 |
 | [Obsidian integration](obsidian-integration.md) | `idea` | 실제 사용자 탐색 수요와 무손실 경계 확정 |
 | [Graphify 전면 지식 graph](graphify-knowledge-graph.md) | `blocked` | Active code-only 범위 밖의 증분 동등성·visibility 격리·host-owned 의미 추출 확보 |
 
