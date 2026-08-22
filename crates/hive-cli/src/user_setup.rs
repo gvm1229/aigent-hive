@@ -35,8 +35,9 @@ const EXPEDITED_DEFAULT_USAGE_THRESHOLD: u8 = 20;
 const LEGACY_080_USAGE_THRESHOLD: u8 = 20;
 const USER_PROJECTION_090_TEST3_SETUP_HIVE: &[u8] =
     include_bytes!("../../../harness/user-bases/0.9.0-test.3/skills/setup-hive/SKILL.md");
-const HISTORICAL_SKILL_RELEASES: [&str; 9] = [
-    "0.1.0", "0.2.0", "0.3.0", "0.4.0", "0.5.0", "0.6.0", "0.7.0", "0.8.0", "0.9.0",
+const HISTORICAL_SKILL_RELEASES: [&str; 14] = [
+    "0.1.0", "0.2.0", "0.3.0", "0.4.0", "0.5.0", "0.6.0", "0.7.0", "0.8.0", "0.9.0", "0.9.1",
+    "0.9.2", "0.9.3", "0.9.4", "0.9.5",
 ];
 
 const USER_SETUP_USAGE: &str = "\
