@@ -432,9 +432,9 @@ class Phase4Contracts(unittest.TestCase):
         )
 
     def continuation(
-        self, target: Path, session_id: str
+        self, target: Path, session_id: str, *, claim_nudge: bool = False
     ) -> tuple[subprocess.CompletedProcess[str], dict[str, Any]]:
-        return self.run_cli(
+        arguments: list[str | Path] = [
             "run",
             "continuation",
             "--target",
@@ -445,7 +445,10 @@ class Phase4Contracts(unittest.TestCase):
             session_id,
             "--output",
             "json",
-        )
+        ]
+        if claim_nudge:
+            arguments.extend(["--claim-nudge", "true"])
+        return self.run_cli(*arguments)
 
     def fake_codexbar_environment(
         self,
@@ -1301,6 +1304,21 @@ class Phase4Contracts(unittest.TestCase):
         self.assertEqual(payload["data"]["adapter"]["host"], "codex")
         self.assertEqual(payload["data"]["adapter"]["task_kind"], "goal")
         self.assertFalse(payload["data"]["adapter"]["mutation"])
+
+        process, payload = self.continuation(
+            self.target, "active-session", claim_nudge=True
+        )
+        self.assert_success(process, payload)
+        self.assertEqual(payload["data"]["decision"], "nudge")
+        self.assertTrue(payload["data"]["nudge_claimed"])
+
+        process, payload = self.continuation(
+            self.target, "active-session", claim_nudge=True
+        )
+        self.assert_success(process, payload)
+        self.assertEqual(payload["data"]["decision"], "allow")
+        self.assertEqual(payload["data"]["reason"], "revision-already-nudged")
+        self.assertFalse(payload["data"]["nudge_claimed"])
 
         process, payload = self.continuation(self.target, "foreign-session")
         self.assert_success(process, payload)

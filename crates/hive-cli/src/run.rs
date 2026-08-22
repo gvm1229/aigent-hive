@@ -1276,6 +1276,17 @@ pub(crate) struct ContinuationArguments {
     pub(crate) target: PathBuf,
     pub(crate) run_id: String,
     pub(crate) session_id: String,
+    pub(crate) claim_nudge: bool,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+struct ContinuationNudgeRecord {
+    schema_version: u32,
+    run_id: String,
+    run_revision: u64,
+    closure_digest: String,
+    session_id_digest: String,
 }
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
@@ -1343,11 +1354,15 @@ pub(crate) fn run_run(arguments: &[String]) -> ExitCode {
 fn parse_continuation_arguments(
     arguments: &[String],
 ) -> Result<ContinuationArguments, AdapterError> {
-    let options = parse_options(arguments, &["--target", "--run", "--session-id"])?;
+    let options = parse_options(
+        arguments,
+        &["--target", "--run", "--session-id", "--claim-nudge"],
+    )?;
     Ok(ContinuationArguments {
         target: PathBuf::from(required(&options, "--target")?),
         run_id: required(&options, "--run")?.to_owned(),
         session_id: required(&options, "--session-id")?.to_owned(),
+        claim_nudge: optional(&options, "--claim-nudge") == Some("true"),
     })
 }
 
@@ -1387,7 +1402,7 @@ pub(crate) fn continuation(
         .ok_or_else(|| {
             AdapterError::Internal("continuation retry permission is missing".to_owned())
         })?;
-    let (decision, reason) = if expected_digest != Some(session_digest.as_str()) {
+    let (mut decision, mut reason) = if expected_digest != Some(session_digest.as_str()) {
         ("allow", "session-binding-mismatch")
     } else if ready_for_final || agent_owned.is_empty() {
         ("allow", "closure-ready")
@@ -1396,6 +1411,28 @@ pub(crate) fn continuation(
     } else {
         ("nudge", "host-owned-continuation")
     };
+    let mut nudge_claimed = false;
+    if decision == "nudge" && arguments.claim_nudge {
+        let closure_digest = closure
+            .get("closure_digest")
+            .and_then(Value::as_str)
+            .ok_or_else(|| AdapterError::Internal("closure digest is missing".to_owned()))?;
+        let run_revision = closure
+            .get("run_revision")
+            .and_then(Value::as_u64)
+            .ok_or_else(|| AdapterError::Internal("closure revision is missing".to_owned()))?;
+        nudge_claimed = claim_continuation_nudge(
+            &arguments.target,
+            &arguments.run_id,
+            run_revision,
+            closure_digest,
+            &session_digest,
+        )?;
+        if !nudge_claimed {
+            decision = "allow";
+            reason = "revision-already-nudged";
+        }
+    }
     let adapter = continuation_adapter(envelope.get("outer_owner"));
     Ok(ActionResult {
         schema_version: 1,
@@ -1414,9 +1451,49 @@ pub(crate) fn continuation(
             "closure": closure,
             "continuation": envelope,
             "adapter": adapter,
+            "nudge_claimed": nudge_claimed,
             "spawned": false,
         })),
     })
+}
+
+fn claim_continuation_nudge(
+    target_path: &Path,
+    run_id: &str,
+    run_revision: u64,
+    closure_digest: &str,
+    session_id_digest: &str,
+) -> Result<bool, AdapterError> {
+    let target = PinnedTarget::open(target_path)?;
+    let path = Path::new(".hive/runtime/continuation-nudges").join(format!("{run_id}.json"));
+    let snapshot = target.snapshot_bounded(&path, MAX_RUNTIME_RECORD_BYTES)?;
+    if let Some(bytes) = snapshot.bytes() {
+        let prior: ContinuationNudgeRecord = serde_json::from_slice(bytes).map_err(|_| {
+            AdapterError::Safety("continuation nudge record is malformed".to_owned())
+        })?;
+        if prior.schema_version != 1
+            || prior.run_id != run_id
+            || !is_sha256_digest(&prior.closure_digest)
+        {
+            return Err(AdapterError::Safety(
+                "continuation nudge record is invalid".to_owned(),
+            ));
+        }
+        if prior.run_revision >= run_revision {
+            return Ok(false);
+        }
+    }
+    let record = ContinuationNudgeRecord {
+        schema_version: 1,
+        run_id: run_id.to_owned(),
+        run_revision,
+        closure_digest: closure_digest.to_owned(),
+        session_id_digest: session_id_digest.to_owned(),
+    };
+    let bytes = serde_json_canonicalizer::to_vec(&record).map_err(|error| {
+        AdapterError::Internal(format!("canonicalize continuation nudge: {error}"))
+    })?;
+    target.publish_runtime(&path, &snapshot, &bytes)
 }
 
 fn continuation_adapter(owner: Option<&Value>) -> Value {

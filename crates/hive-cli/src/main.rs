@@ -1641,6 +1641,7 @@ fn continue_active_run(target: &Path, input: &HookInput) -> Result<HookResult, R
         target: target.to_path_buf(),
         run_id: run_id.to_owned(),
         session_id: session_id.to_owned(),
+        claim_nudge: true,
     })
     .map_err(|error| RenderError::Safety(error.message().to_owned()))?;
     let decision = result
