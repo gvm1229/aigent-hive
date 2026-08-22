@@ -3,6 +3,7 @@
 pub mod bundle_io;
 pub mod bundle_store;
 pub mod collection;
+pub mod graph;
 pub mod notion;
 pub mod portable;
 pub mod rag;
