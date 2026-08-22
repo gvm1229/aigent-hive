@@ -1,6 +1,6 @@
 # 현재 상태
 
-- 기준 branch: `feature/0.10.0@c6efb5b`, `origin/feature/0.10.0` 일치
+- 기준 branch: `feature/0.10.0@81fca04`, `origin/feature/0.10.0` 일치
 - product version: `0.9.5`
 - 다음 target: `0.10.0-test`
 - 활성 계획: [`PLAN.md`](../plans/PLAN.md)
@@ -39,6 +39,8 @@
 - Backlog 6개·Archive 미완료 22개 검토 완료, 추가 자동 승격 `0건`
 - 유지보수자 최종 선택: 추가 후보 없음, [`ADR-0020`](../decisions/ADR-0020-0.10.0-product-scope.md) 범위 확정
 - Vector 검색: Qdrant Edge·SQLite engine hard gate와 통과 시 optional hybrid adapter 범위 추가
+- Host-neutral 연속 실행: Goal·read-only closure gate·선택형 Stop hook의 조건부 조사 범위 추가
+- `oh-my-codex@3ad79a8`·Codex `0.148.0`·Claude·Antigravity 공식 hook 조사 완료: Goal/task 실행 주체 + bounded Stop nudge 권고
 - nested Git repository 아래 registered project scan 허용과 foreign sibling 격리 구현·회귀 검증 완료 (`7aab389`)
 - host-owned Skill 세션 예약 구현·three-host 경로 회귀 검증 완료 (`96f2b06`)
 - Notion 실제 연결과 작업 자동 분담 활성화: backlog
@@ -49,6 +51,8 @@
 - Hive-native Markdown 관계 graph·선택형 Graphify code-only adapter 구현·검증
 - FTS·vector·graph 품질 기준선, local embedding boundary와 engine adopt|defer 판정
 - pre-`0.10.0` canonical 지식·프로젝트 보존 upgrade·rollback
+- Codex·Claude·Antigravity 연속 실행 capability와 bounded Stop hook 채택 판정
+- `hive run closure` schema·CLI와 `continue-active-run` 선택형 capability 구현 여부 판정
 - 번호 공개 시험판의 세 운영체제 수용과 안정판 출시
 
 ## Graphify 경계
