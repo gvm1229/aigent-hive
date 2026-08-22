@@ -12,7 +12,7 @@ sources:
   - "repo:crates/hive-cli/src/main.rs#sha256:e8c5111b347b0d46718b4f59ead2b7d9174999d7de32b469ed1467d09f4d9754"
   - "repo:crates/hive-cli/src/usage.rs#sha256:c60a6eecaa243ef0528c292303baca85f0bf4c4c4f654612bf97d15fa52ffe69"
   - "repo:crates/hive-cli/src/usage_control.rs#sha256:6c5febe7ae1ac1a892f7ac412c40d1b8d9ae339fe73fa8153faf9bb22051e1c0"
-  - "repo:crates/hive-cli/src/user_setup.rs#sha256:4051c30172386a0ce34b86451609e5504fea3dfda7436c5a16bd1680838c1585"
+  - "repo:crates/hive-cli/src/user_setup.rs#sha256:786da31401085e9445495aa37defe7cedf781bc8457211a6addd23016c0bf922"
   - "repo:docs/decisions/ADR-0010-native-first-usage-sensors.md#sha256:4e753ff25c9c2c604b59b60d27cace205a8e5f7cf377538db6dd6156835f0408"
   - "repo:harness/skills/user-setup/SKILL.md#sha256:1fcbb2b9b2db6d57bd40682f80db2a0a916ebbffb3434431038b609b6b743c11"
 links: [automatic-dispatch-guard, supported-hosts]

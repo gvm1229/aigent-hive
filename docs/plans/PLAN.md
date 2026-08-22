@@ -1,6 +1,6 @@
 # Aigent Hive 활성 계획
 
-> Revision: 260
+> Revision: 261
 > 기준일: 2026-08-22
 > Product version: `0.9.5` stable
 > 다음 target: `0.10.0-test`
@@ -54,9 +54,9 @@
 | Host-neutral 연속 실행 | 3 | 5 | 37.5% |
 | Verified workflow | 5 | 1 | 83.3% |
 | Adversarial judge | 1 | 7 | 12.5% |
-| Skill migration cleanup | 1 | 9 | 10.0% |
+| Skill migration cleanup | 2 | 8 | 20.0% |
 | `0.10.0` 출시 | 0 | 7 | 0% |
-| **합계** | **13** | **57** | **18.6%** |
+| **합계** | **14** | **56** | **20.0%** |
 
 ## Required load order
 

@@ -1,6 +1,6 @@
 # 현재 상태
 
-- 기준 branch: `feature/0.10.0@c37e8cb`, `origin/feature/0.10.0`과 push 전 local 차이
+- 기준 branch: `feature/0.10.0@354ea0a`, `origin/feature/0.10.0`과 push 전 local 차이
 - product version: `0.9.5`
 - 다음 target: `0.10.0-test`
 - 활성 계획: [`PLAN.md`](../plans/PLAN.md)
@@ -47,6 +47,7 @@
 - `ralph-loop|iterative-execution` canonical source·catalog·schema·three-host projection을 `verified-workflow`로 병합 완료 (`cd3379a`)
 - 자연어 verified workflow routing·사용자 override·inactive host fail-closed 구현 완료 (`c032030`)
 - `hive run closure` read-only gate·pending criterion·closure digest·host-owned continuation envelope 구현 완료 (`97490e6`, `c37e8cb`)
+- Stable Skill registry: `0.8.0`, `0.9.0–0.9.5` digest·side-effect·capability coverage 구현 완료 (`354ea0a`)
 - 공개 stable 합집합 `0.8.0`, `0.9.0–0.9.5` 확인; historical built-in registry의 `0.9.1–0.9.5` 결손과 future stable publication append gate 범위 승인
 - Stable tag Skill transition 비교: `0.8→0.9.0` rename 필수, `0.9.0–0.9.4` digest epoch 변화, `0.9.4→0.9.5` exact no-change epoch 공유 가능
 - nested Git repository 아래 registered project scan 허용과 foreign sibling 격리 구현·회귀 검증 완료 (`7aab389`)
