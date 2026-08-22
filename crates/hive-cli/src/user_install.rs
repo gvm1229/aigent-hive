@@ -3490,6 +3490,20 @@ fn retired_skill_artifact_paths(host: UserHost, name: &str) -> Vec<String> {
     }
 }
 
+#[allow(dead_code)]
+fn historical_095_artifact_digest(host: UserHost, path: &str) -> Option<&'static str> {
+    let relative = match host {
+        UserHost::Codex => path.strip_prefix(".hive/marketplaces/codex/plugins/aigent-hive/")?,
+        UserHost::Claude => path.strip_prefix(".hive/marketplaces/claude/plugins/aigent-hive/")?,
+        UserHost::Antigravity => path
+            .strip_prefix(&format!("{ANTIGRAVITY_SOURCE_RELATIVE}/"))
+            .or_else(|| path.strip_prefix(".gemini/config/"))?,
+    };
+    HISTORICAL_095_FILES
+        .iter()
+        .find_map(|(candidate, digest)| (*candidate == relative).then_some(*digest))
+}
+
 fn historical_080_required_paths(host: UserHost) -> Vec<String> {
     match host {
         UserHost::Codex | UserHost::Claude => {
@@ -9689,6 +9703,34 @@ mod tests {
         assert!(HISTORICAL_095_FILES
             .iter()
             .all(|(path, digest)| !path.contains("..") && valid_sha256(digest)));
+    }
+
+    #[test]
+    fn historical_095_artifact_matcher_maps_every_host_root() {
+        let expected = "sha256:8b802691751194fa332f440ce17e1e59b6c20d69b6f999af829217b053ee1764";
+        for (host, path) in [
+            (
+                UserHost::Codex,
+                ".hive/marketplaces/codex/plugins/aigent-hive/skills/ralph-loop/SKILL.md",
+            ),
+            (
+                UserHost::Claude,
+                ".hive/marketplaces/claude/plugins/aigent-hive/skills/ralph-loop/SKILL.md",
+            ),
+            (
+                UserHost::Antigravity,
+                ".hive/marketplaces/antigravity/plugins/aigent-hive/skills/ralph-loop/SKILL.md",
+            ),
+            (
+                UserHost::Antigravity,
+                ".gemini/config/skills/ralph-loop/SKILL.md",
+            ),
+        ] {
+            assert_eq!(historical_095_artifact_digest(host, path), Some(expected));
+        }
+        assert!(
+            historical_095_artifact_digest(UserHost::Codex, ".hive/foreign/SKILL.md").is_none()
+        );
     }
 
     #[test]
