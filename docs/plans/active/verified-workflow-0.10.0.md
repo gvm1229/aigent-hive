@@ -36,4 +36,3 @@ Strong signal:
 - `verified-workflow`: 복잡한 내부 graph·retry·evidence·verification
 - Host: Goal·task 실행과 native agent launch
 - Stop hook: bounded accidental-stop nudge
-
