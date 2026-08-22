@@ -2520,7 +2520,7 @@ fn validate_frontmatter(value: &WikiFrontmatter) -> Result<(), WikiError> {
     }
     if !matches!(
         value.status.as_str(),
-        "active" | "contradicted" | "open-question"
+        "active" | "contradicted" | "open-question" | "superseded" | "expired" | "revoked"
     ) {
         return Err(WikiError::InvalidInput(format!(
             "deprecated or unsupported Wiki status: {}",

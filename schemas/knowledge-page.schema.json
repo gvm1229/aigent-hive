@@ -96,7 +96,7 @@
       }
     },
     "status": {
-      "enum": ["active", "contradicted", "open-question"]
+      "enum": ["active", "contradicted", "open-question", "superseded", "expired", "revoked"]
     },
     "created_at": {
       "type": "string",

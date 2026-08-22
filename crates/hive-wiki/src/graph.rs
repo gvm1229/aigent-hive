@@ -120,10 +120,21 @@ pub fn query_generation(
     node_id: &str,
     limit: usize,
 ) -> Vec<GraphEdge> {
+    let active = generation
+        .nodes
+        .iter()
+        .filter(|node| node.lifecycle == "active")
+        .map(|node| node.id.as_str())
+        .collect::<std::collections::BTreeSet<_>>();
     generation
         .edges
         .iter()
-        .filter(|edge| edge.from == node_id || edge.to == node_id)
+        .filter(|edge| {
+            (edge.from == node_id || edge.to == node_id)
+                && active.contains(edge.from.as_str())
+                && (!generation.nodes.iter().any(|node| node.id == edge.to)
+                    || active.contains(edge.to.as_str()))
+        })
         .take(limit.min(50))
         .cloned()
         .collect()
@@ -249,6 +260,16 @@ mod tests {
         assert_eq!(hits.len(), 9);
         assert!(hits.iter().all(|edge| edge.from == "first"));
         assert!(query_generation(&generation, "missing", 10).is_empty());
+    }
+
+    #[test]
+    fn query_excludes_nonactive_nodes_by_default() {
+        let mut inactive = page("inactive");
+        inactive.frontmatter.status = "superseded".to_owned();
+        inactive.frontmatter.links = vec!["first".to_owned()];
+        let generation =
+            build_native_generation("project", &[page("first"), inactive]).expect("generation");
+        assert!(query_generation(&generation, "inactive", 50).is_empty());
     }
 
     #[test]
