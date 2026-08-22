@@ -539,6 +539,7 @@ dependencies = [
  "rusqlite",
  "serde",
  "serde_json",
+ "serde_json_canonicalizer",
  "tempfile",
  "yaml_serde",
  "zip",
