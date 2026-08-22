@@ -5,7 +5,7 @@
 
 ## Checklist
 
-- [ ] [SCP10-003] 상위 Git repository와 다른 registered project root의 knowledge scan 허용, 등록 root 밖 sibling read·write 차단, 전역 `safe.directory` mutation `0건`, symlink·junction·reparse point 탈출 거부, nested Vault 회귀 검증
+- [x] [SCP10-003] 상위 Git repository와 다른 registered project root의 knowledge scan 허용, 등록 root 밖 sibling read·write 차단, 전역 `safe.directory` mutation `0건`, symlink·junction·reparse point 탈출 거부, nested Vault 회귀 검증 — `7aab389`; nested target inventory와 foreign sibling sentinel 불변 회귀 시험, `cargo test -p hive-cli knowledge_scan::tests` 20건, `cargo test -p hive-cli` 393 unit·3 upgrade·1 version, `cargo clippy -p hive-cli -- -D warnings` 통과
 
 ## 수락 fixture
 

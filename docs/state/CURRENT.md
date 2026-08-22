@@ -1,6 +1,6 @@
 # 현재 상태
 
-- 기준 branch: `develop@8151f51`, `origin/develop` 일치
+- 기준 branch: `develop@7aab389`, `origin/develop`과 push 전 local 차이
 - product version: `0.9.5`
 - 다음 target: `0.10.0-test`
 - 활성 계획: [`PLAN.md`](../plans/PLAN.md)
@@ -39,6 +39,7 @@
 - Backlog 6개·Archive 미완료 22개 검토 완료, 추가 자동 승격 `0건`
 - 유지보수자 최종 선택: 추가 후보 없음, [`ADR-0020`](../decisions/ADR-0020-0.10.0-product-scope.md) 범위 확정
 - Vector 검색: Qdrant Edge·SQLite engine hard gate와 통과 시 optional hybrid adapter 범위 추가
+- nested Git repository 아래 registered project scan 허용과 foreign sibling 격리 구현·회귀 검증 완료 (`7aab389`)
 - Notion 실제 연결과 작업 자동 분담 활성화: backlog
 
 ## `0.10.0` 남은 범위
@@ -71,12 +72,13 @@
 - Graphify macOS·Linux·Markdown 의미 추출·50,000 chunk 비용 미검증
 - 현재 Windows에서 macOS·Linux 실제 설치 수용 실행 불가
 - Claude 설치본 미인증·필수 lifecycle 수정 이전 version, Antigravity CLI 미설치
+- `0.10.0` 안정판: 유지보수자의 명시적 승인 전 tag·publication 금지. 구현·로컬/CI 시험: 유지보수자 승인
 
 ## 다음 작업
 
 1. Native 관계 graph와 vector gold corpus·FTS baseline
 2. Qdrant Edge·SQLite engine 격리 prototype과 hard gate
-3. Nested project scan·Host-owned Skill 예약 구현
+3. Host-owned Skill 예약 구현
 4. Adopt된 관계·검색 범위의 번호 공개 시험판과 세 운영체제 수용
 
 ## 과거 기록

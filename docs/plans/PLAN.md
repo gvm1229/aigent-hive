@@ -1,6 +1,6 @@
 # Aigent Hive 활성 계획
 
-> Revision: 248
+> Revision: 249
 > 기준일: 2026-08-22
 > Product version: `0.9.5` stable
 > 다음 target: `0.10.0-test`
@@ -24,7 +24,7 @@
 - Vector hard gate 실패의 product dependency·release 차단 `0건`
 - 등록 project root 밖 sibling read·write와 전역 Git 설정 mutation `0건`
 - Rust·Python·문서·보안·upgrade·rollback 전체 gate 통과
-- 공개 번호 시험판의 세 운영체제 수용 뒤 같은 product bytes의 안정판 게시
+- 공개 번호 시험판의 세 운영체제 수용과 유지보수자의 명시적 승인 뒤 같은 product bytes의 안정판 게시
 
 ## 중지 경계
 
@@ -40,9 +40,9 @@
 | 관계·검색 graph | 1 | 15 | 6.3% |
 | Hybrid vector search | 0 | 13 | 0% |
 | Host-owned Skill 예약 | 0 | 1 | 0% |
-| Nested project scan | 0 | 1 | 0% |
-| `0.10.0` 출시 | 0 | 6 | 0% |
-| **합계** | **1** | **36** | **2.7%** |
+| Nested project scan | 1 | 0 | 100% |
+| `0.10.0` 출시 | 0 | 7 | 0% |
+| **합계** | **2** | **36** | **5.3%** |
 
 ## Required load order
 
