@@ -261,7 +261,7 @@ fn is_host_owned_skill_path(path: &str) -> bool {
     components.len() >= 3
         && matches!(
             (components[0], components[1]),
-            (".agents", "skills") | (".claude", "skills")
+            (".agents" | ".claude", "skills")
         )
         && components.iter().all(|component| {
             !component.is_empty()
