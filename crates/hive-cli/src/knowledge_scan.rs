@@ -574,10 +574,9 @@ fn discover_git_paths(
         .map_err(|_| WikiError::Verification("Git root output is not UTF-8".to_owned()))?
         .trim();
     let git_root = canonical_scan_target(Path::new(root_text))?;
-    if git_root != target {
-        return Err(WikiError::InvalidInput(
-            "Git scans must target the repository root to prevent out-of-scope discovery"
-                .to_owned(),
+    if !target.starts_with(&git_root) {
+        return Err(WikiError::Verification(
+            "Git repository root does not contain the scan target".to_owned(),
         ));
     }
 

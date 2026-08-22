@@ -277,6 +277,43 @@ This temporary page has no backlinks and can be deleted explicitly.
             linked = True
         return target, linked
 
+    def test_nested_git_project_scan_stays_within_registered_target(self) -> None:
+        """A nested project must not require an independent Git repository."""
+        parent = self.work_root / "parent-vault"
+        target = parent / "registered-project"
+        sibling = parent / "foreign-sibling"
+        target.mkdir(parents=True)
+        sibling.mkdir()
+        self.git(parent, "init", "-q")
+        (target / "Knowledge").mkdir()
+        (target / "README.md").write_text(
+            "Nested project knowledge is safe to scan.\n", encoding="utf-8"
+        )
+        (target / "Knowledge/note.md").write_text(
+            "Only the registered target belongs in this inventory.\n", encoding="utf-8"
+        )
+        sentinel = sibling / "FOREIGN-SENTINEL.md"
+        sentinel.write_text("foreign sibling bytes\n", encoding="utf-8")
+        self.git(parent, "add", "--", "registered-project", "foreign-sibling")
+        before = self.git(parent, "status", "--porcelain=v1", "-z").stdout
+
+        inventory = self.assert_success(
+            self.invoke_knowledge("scan", "--target", str(target), "--inventory")[1]
+        )
+        Draft202012Validator(SCAN_RESULT_SCHEMA).validate(inventory)
+        entries = {
+            entry["relative_path"]
+            for entry in inventory["scan"]["inventory"]["entries"]
+        }
+        self.assertIn("README.md", entries)
+        self.assertIn("Knowledge/note.md", entries)
+        self.assertFalse(any("foreign-sibling" in path or path.startswith("../") for path in entries))
+        self.assertEqual(sentinel.read_text(encoding="utf-8"), "foreign sibling bytes\n")
+        self.assertEqual(
+            self.git(parent, "status", "--porcelain=v1", "-z").stdout,
+            before,
+        )
+
     def test_hostile_scan_apply_and_cross_machine_bounded_retrieve(self) -> None:
         """Cover scan/export/import and both automatic and explicit retrieval bounds."""
         target, linked = self.build_hostile_scan_target()
