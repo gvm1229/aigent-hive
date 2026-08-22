@@ -89,6 +89,22 @@ pub fn build_native_generation(scope: &str, pages: &[WikiPage]) -> Result<GraphG
     })
 }
 
+/// Return bounded direct relationships for one node without exposing page bodies.
+#[must_use]
+pub fn query_generation(
+    generation: &GraphGeneration,
+    node_id: &str,
+    limit: usize,
+) -> Vec<GraphEdge> {
+    generation
+        .edges
+        .iter()
+        .filter(|edge| edge.from == node_id || edge.to == node_id)
+        .take(limit.min(50))
+        .cloned()
+        .collect()
+}
+
 /// Extract direct links, source links, tags, and contradiction references in stable order.
 #[must_use]
 pub fn extract_markdown_edges(pages: &[WikiPage]) -> Vec<GraphEdge> {
@@ -130,7 +146,7 @@ fn edge(from: &str, to: &str, relation: &str, source_digest: &str) -> GraphEdge 
 
 #[cfg(test)]
 mod tests {
-    use super::{build_native_generation, extract_markdown_edges, GraphEvidence};
+    use super::{build_native_generation, extract_markdown_edges, query_generation, GraphEvidence};
     use crate::{Contradiction, WikiFrontmatter, WikiPage};
 
     fn page(id: &str) -> WikiPage {
@@ -177,5 +193,14 @@ mod tests {
         assert_eq!(first, second);
         assert!(first.nodes.iter().all(|node| node.visibility == "project"));
         assert!(build_native_generation("outside", &[page("first")]).is_err());
+    }
+
+    #[test]
+    fn query_is_metadata_only_and_bounded() {
+        let generation = build_native_generation("project", &[page("first")]).expect("generation");
+        let hits = query_generation(&generation, "first", 100);
+        assert_eq!(hits.len(), 4);
+        assert!(hits.iter().all(|edge| edge.from == "first"));
+        assert!(query_generation(&generation, "missing", 10).is_empty());
     }
 }
