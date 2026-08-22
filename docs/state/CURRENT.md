@@ -1,6 +1,6 @@
 # 현재 상태
 
-- 기준 branch: `feature/0.10.0@81fca04`, `origin/feature/0.10.0` 일치
+- 기준 branch: `feature/0.10.0@7e5cdf6`, `origin/feature/0.10.0` 일치
 - product version: `0.9.5`
 - 다음 target: `0.10.0-test`
 - 활성 계획: [`PLAN.md`](../plans/PLAN.md)
@@ -75,7 +75,8 @@
 - Source Wiki index rebuild·lint 완료, error·warning `0건`
 - Graphify macOS·Linux·Markdown 의미 추출·50,000 chunk 비용 미검증
 - 현재 Windows에서 macOS·Linux 실제 설치 수용 실행 불가
-- Claude 설치본 미인증·필수 lifecycle 수정 이전 version, Antigravity CLI 미설치
+- Claude 설치본 미인증·필수 lifecycle 수정 이전 version
+- Antigravity CLI `1.1.18`: `/hooks` JSON inspection 성공, hook `0건`; 실제 Stop continuation 시험 미실행
 - `0.10.0` 안정판: 유지보수자의 명시적 승인 전 tag·publication 금지. 구현·로컬/CI 시험: 유지보수자 승인
 
 ## 다음 작업

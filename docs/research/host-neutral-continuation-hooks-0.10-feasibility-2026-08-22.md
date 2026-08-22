@@ -1,9 +1,10 @@
 # Host-neutral 연속 실행·hook 조사
 
 - 조사일: 2026-08-22
+- Antigravity local 재검증: 2026-08-23
 - 외부 사례: `oh-my-codex@3ad79a8a6fe6e95fdbb8c00e40716fffe4011ce2`
 - 외부 source 사용: 구조·계약 비교만 수행, 코드·prompt 복사 `0 bytes`
-- 로컬 host: Codex CLI `0.148.0`, Claude Code `2.1.163`, Antigravity CLI 미설치
+- 로컬 host: Codex CLI `0.148.0`, Claude Code `2.1.163`, Antigravity CLI `1.1.18`
 - 범위: Goal·task·Stop hook·closure gate·취소·복구
 
 ## 결론
@@ -52,7 +53,16 @@ Stop hook을 보조 안전장치로 결합**. Hook 단독 지속 실행과 무�
 | --- | --- | --- |
 | Codex | 로컬 `0.148.0`: `goals=stable`, `hooks=stable`, `plugin_hooks=removed`; `.codex/hooks.json` 형식과 `Stop` block 사례를 외부 repository에서 확인. 공식 OpenAI 공개 문서 검색에서는 hook schema 페이지 미발견 | Local-qualified, 공식 schema provenance 추가 확인 필요 |
 | Claude Code | 공식 문서: `Stop` hook이 종료 차단 가능, `stop_hook_active` 제공, 진행 없는 연속 block 8회 뒤 host override, user interrupt에는 `Stop` 미발생 | Hook 지원 |
-| Google Antigravity | 공식 문서: `.agents/hooks.json` 또는 user config, `Stop` 결과 `decision: continue`로 실행 loop 재진입 | Hook 지원, 로컬 실행 미검증 |
+| Google Antigravity | 공식 문서: `.agents/hooks.json` 또는 user config, `Stop` 결과 `decision: continue`로 실행 loop 재진입. 로컬 `agy 1.1.18`의 `/hooks` JSON surface 성공, 등록 hook `0건`, token 사용 `0건` | Hook surface 확인, 실제 Stop 차단 시험 필요 |
+
+Antigravity local evidence:
+
+- Executable: user PATH의 `agy.exe`
+- `agy --version`: `1.1.18`
+- `agy -p "/hooks" --output-format json`: `status=SUCCESS`, `hooks=[]`, `num_turns=0`, token `0`
+- Changelog: `1.1.17`의 단일 execution harness와 hook 일관성, `1.1.12`의 `/hooks` read-only print mode, `1.0.8`의 shared hook config 경로
+- 현재 증명 범위: CLI·hook inspection surface
+- 미증명 범위: 실제 `Stop decision=continue`, project-local config merge·disable·rollback
 
 Claude 근거:
 
