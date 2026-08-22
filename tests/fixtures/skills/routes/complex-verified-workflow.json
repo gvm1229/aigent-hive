@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "host": "codex",
+  "explicit_action": "RunWork",
+  "explicit_skill": null,
+  "plain_answer": false,
+  "simple_question": false,
+  "project_context_required": true,
+  "external_candidate": null,
+  "hive_candidate": null,
+  "active_hive_skills": [
+    {
+      "name": "verified-workflow",
+      "source_type": "built-in",
+      "content_digest": "sha256:e7477454aec42220fa2e1b7602161dc2b8ea167aacd4d276d550226a25d15b8b",
+      "side_effect_class": "project-write",
+      "capabilities": ["filesystem-read", "filesystem-write", "run-state", "shell", "subagents"],
+      "consent_digest": null,
+      "consent": null
+    }
+  ],
+  "refine_mode": null,
+  "explicit_run_intent": true,
+  "workflow_signals": ["dependency-graph", "independent-verifier"],
+  "workflow_override": null
+}

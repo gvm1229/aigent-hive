@@ -1346,6 +1346,36 @@ pub enum PromptQuality {
     MissingCoreDetails,
 }
 
+/// Normalized structural reason that requires a verified workflow rather than ordinary continuation.
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum WorkflowSignal {
+    DependencyGraph,
+    IntermediateEvidence,
+    BoundedRetry,
+    IndependentVerifier,
+    TopologySteering,
+    ExactRecovery,
+}
+
+/// Explicit user preference for ordinary or verified continuation.
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum WorkflowOverride {
+    SimpleContinuation,
+    VerifiedWorkflow,
+    NoRetry,
+}
+
+/// Outcome of the optional verified-workflow routing gate.
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum WorkflowRoute {
+    Simple,
+    VerifiedWorkflow,
+    RequiredButUnsupported,
+}
+
 /// Already-normalized facts supplied by a host. This is not raw prompt text.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(deny_unknown_fields)]
@@ -1366,6 +1396,10 @@ pub struct RoutingRequest {
     pub explicit_run_intent: bool,
     #[serde(default)]
     pub prompt_quality: PromptQuality,
+    #[serde(default)]
+    pub workflow_signals: Vec<WorkflowSignal>,
+    #[serde(default)]
+    pub workflow_override: Option<WorkflowOverride>,
 }
 
 /// Digest-bound proof that a Hive Skill is present in the active projection.
@@ -1417,6 +1451,12 @@ pub struct RoutingDecision {
     pub next_action: Option<LogicalAction>,
     #[serde(default, skip_serializing_if = "is_false")]
     pub refine_suggestion: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub workflow_route: Option<WorkflowRoute>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub workflow_reason_codes: Vec<WorkflowSignal>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub workflow_override: Option<WorkflowOverride>,
 }
 
 /// Resolves normalized routing facts without inspecting or classifying a prompt.
@@ -1435,7 +1475,7 @@ pub fn resolve_route(request: &RoutingRequest) -> Result<RoutingDecision, Projec
     let fallback_action = request.explicit_action.unwrap_or(LogicalAction::RunWork);
 
     // Explicit direct/plain intent is the highest-precedence no-workflow lane.
-    let resolved = if request.plain_quick_answer {
+    let mut resolved = if request.plain_quick_answer {
         decision(
             Route::Direct,
             LogicalAction::AnswerSimpleQuestion,
@@ -1455,6 +1495,10 @@ pub fn resolve_route(request: &RoutingRequest) -> Result<RoutingDecision, Projec
             Route::HiveSkill,
         );
     }
+    if request.workflow_override == Some(WorkflowOverride::SimpleContinuation) {
+        resolved.workflow_route = Some(WorkflowRoute::Simple);
+    }
+    resolved.workflow_override = request.workflow_override;
     Ok(resolved)
 }
 
@@ -1545,6 +1589,10 @@ fn resolve_non_plain_route(
         }
     }
 
+    if let Some(workflow) = resolve_verified_workflow_route(request)? {
+        return Ok(workflow);
+    }
+
     if let Some(skill) = request.hive_candidate.as_deref() {
         validate_skill_name(skill)?;
         let action = action_for_skill(skill).unwrap_or(fallback_action);
@@ -1572,6 +1620,60 @@ fn resolve_non_plain_route(
         refinement_mode(fallback_action, request),
         None,
     ))
+}
+
+fn resolve_verified_workflow_route(
+    request: &RoutingRequest,
+) -> Result<Option<RoutingDecision>, ProjectionError> {
+    if request.explicit_action != Some(LogicalAction::RunWork) && request.explicit_action.is_some()
+    {
+        return Ok(None);
+    }
+    if request.simple_question
+        || request.workflow_override == Some(WorkflowOverride::SimpleContinuation)
+    {
+        return Ok(None);
+    }
+    let explicit = request.workflow_override == Some(WorkflowOverride::VerifiedWorkflow);
+    let signals = normalized_workflow_signals(&request.workflow_signals)?;
+    if !explicit && signals.len() < 2 {
+        return Ok(None);
+    }
+    let mut result = resolve_hive_skill(
+        request,
+        "verified-workflow",
+        LogicalAction::RunWork,
+        Route::HiveSkill,
+    )?;
+    result.workflow_reason_codes = signals;
+    result.workflow_route = Some(if result.route == Route::HiveSkill {
+        WorkflowRoute::VerifiedWorkflow
+    } else {
+        WorkflowRoute::RequiredButUnsupported
+    });
+    Ok(Some(result))
+}
+
+fn normalized_workflow_signals(
+    signals: &[WorkflowSignal],
+) -> Result<Vec<WorkflowSignal>, ProjectionError> {
+    let mut values = signals.to_vec();
+    values.sort_by_key(|value| match value {
+        WorkflowSignal::DependencyGraph => 0,
+        WorkflowSignal::IntermediateEvidence => 1,
+        WorkflowSignal::BoundedRetry => 2,
+        WorkflowSignal::IndependentVerifier => 3,
+        WorkflowSignal::TopologySteering => 4,
+        WorkflowSignal::ExactRecovery => 5,
+    });
+    values.dedup();
+    if values.len() != signals.len() {
+        return Err(ProjectionError::new(
+            "hive.routing-invalid",
+            "workflow signals must be unique",
+        ));
+    }
+    Ok(values)
 }
 
 fn resolve_simple_question_route(
@@ -1793,6 +1895,9 @@ fn decision(
         load_skill_bodies,
         next_action,
         refine_suggestion: false,
+        workflow_route: None,
+        workflow_reason_codes: Vec::new(),
+        workflow_override: None,
     }
 }
 
@@ -2293,6 +2398,8 @@ mod tests {
             refine_mode: None,
             explicit_run_intent: false,
             prompt_quality: PromptQuality::Sufficient,
+            workflow_signals: Vec::new(),
+            workflow_override: None,
         }
     }
 
@@ -2311,6 +2418,88 @@ mod tests {
         assert_eq!(resolved.selected_skill.as_deref(), Some("prompt-refine"));
         assert_eq!(resolved.load_skill_bodies, ["prompt-refine"]);
         assert_eq!(resolved.mode, Some(RefineMode::RefineOnly));
+    }
+
+    #[test]
+    fn complex_work_automatically_selects_verified_workflow() {
+        let mut request = routing_request();
+        request.active_hive_skills = vec![builtin_proof("verified-workflow")];
+        request.workflow_signals = vec![
+            WorkflowSignal::DependencyGraph,
+            WorkflowSignal::IndependentVerifier,
+        ];
+
+        let resolved = resolve_route(&request).expect("routing succeeds");
+
+        assert_eq!(resolved.route, Route::HiveSkill);
+        assert_eq!(
+            resolved.selected_skill.as_deref(),
+            Some("verified-workflow")
+        );
+        assert_eq!(
+            resolved.workflow_route,
+            Some(WorkflowRoute::VerifiedWorkflow)
+        );
+        assert_eq!(
+            resolved.workflow_reason_codes,
+            [
+                WorkflowSignal::DependencyGraph,
+                WorkflowSignal::IndependentVerifier
+            ]
+        );
+    }
+
+    #[test]
+    fn simple_continuation_override_prevents_verified_workflow_routing() {
+        let mut request = routing_request();
+        request.active_hive_skills = vec![builtin_proof("verified-workflow")];
+        request.workflow_signals = vec![
+            WorkflowSignal::DependencyGraph,
+            WorkflowSignal::IndependentVerifier,
+        ];
+        request.workflow_override = Some(WorkflowOverride::SimpleContinuation);
+
+        let resolved = resolve_route(&request).expect("routing succeeds");
+
+        assert_eq!(resolved.route, Route::HostNative);
+        assert_eq!(resolved.workflow_route, Some(WorkflowRoute::Simple));
+        assert!(resolved.load_skill_bodies.is_empty());
+    }
+
+    #[test]
+    fn no_retry_override_is_preserved_for_verified_workflow() {
+        let mut request = routing_request();
+        request.active_hive_skills = vec![builtin_proof("verified-workflow")];
+        request.workflow_signals = vec![
+            WorkflowSignal::DependencyGraph,
+            WorkflowSignal::IndependentVerifier,
+        ];
+        request.workflow_override = Some(WorkflowOverride::NoRetry);
+
+        let resolved = resolve_route(&request).expect("routing succeeds");
+
+        assert_eq!(
+            resolved.selected_skill.as_deref(),
+            Some("verified-workflow")
+        );
+        assert_eq!(resolved.workflow_override, Some(WorkflowOverride::NoRetry));
+    }
+
+    #[test]
+    fn complex_work_without_active_verified_workflow_is_blocked() {
+        let mut request = routing_request();
+        request.workflow_signals = vec![
+            WorkflowSignal::DependencyGraph,
+            WorkflowSignal::IndependentVerifier,
+        ];
+
+        let resolved = resolve_route(&request).expect("routing succeeds");
+
+        assert_eq!(resolved.route, Route::Blocked);
+        assert_eq!(
+            resolved.workflow_route,
+            Some(WorkflowRoute::RequiredButUnsupported)
+        );
     }
 
     #[test]
