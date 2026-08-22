@@ -118,8 +118,23 @@ pub fn extract_markdown_edges(pages: &[WikiPage]) -> Vec<GraphEdge> {
         for source in &page.frontmatter.sources {
             edges.push(edge(&from, source, "sources", &digest));
         }
+        for source in &page.frontmatter.source_links {
+            edges.push(edge(&from, source, "source_links", &digest));
+        }
         for tag in &page.frontmatter.tags {
             edges.push(edge(&from, tag, "tags", &digest));
+        }
+        for related in &page.frontmatter.related_concepts {
+            edges.push(edge(&from, related, "related_concepts", &digest));
+        }
+        for topic in &page.frontmatter.topics {
+            edges.push(edge(&from, topic, "topics", &digest));
+        }
+        if let Some(duplicate) = &page.frontmatter.duplicate_of {
+            edges.push(edge(&from, duplicate, "duplicate_of", &digest));
+        }
+        if let Some(replacement) = &page.frontmatter.replacement {
+            edges.push(edge(&from, replacement, "replacement", &digest));
         }
         for contradiction in &page.frontmatter.contradictions {
             let target = format!(
@@ -159,7 +174,12 @@ mod tests {
                 tags: vec!["tag".to_owned()],
                 aliases: Vec::new(),
                 sources: vec!["source:one".to_owned()],
+                source_links: vec!["source:two".to_owned()],
                 links: vec!["other".to_owned()],
+                related_concepts: vec!["related".to_owned()],
+                duplicate_of: Some("duplicate".to_owned()),
+                topics: vec!["topic".to_owned()],
+                replacement: Some("replacement".to_owned()),
                 contradictions: vec![Contradiction {
                     source_a: "source:one".to_owned(),
                     source_b: "source:two".to_owned(),
@@ -180,7 +200,7 @@ mod tests {
         let first = extract_markdown_edges(&[page("first")]);
         let second = extract_markdown_edges(&[page("first")]);
         assert_eq!(first, second);
-        assert_eq!(first.len(), 4);
+        assert_eq!(first.len(), 9);
         assert!(first
             .iter()
             .all(|edge| edge.evidence == GraphEvidence::Extracted));
@@ -199,7 +219,7 @@ mod tests {
     fn query_is_metadata_only_and_bounded() {
         let generation = build_native_generation("project", &[page("first")]).expect("generation");
         let hits = query_generation(&generation, "first", 100);
-        assert_eq!(hits.len(), 4);
+        assert_eq!(hits.len(), 9);
         assert!(hits.iter().all(|edge| edge.from == "first"));
         assert!(query_generation(&generation, "missing", 10).is_empty());
     }

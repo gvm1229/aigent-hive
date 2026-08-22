@@ -144,9 +144,24 @@ pub struct WikiFrontmatter {
     /// Immutable Raw source locators.
     #[serde(default)]
     pub sources: Vec<String>,
+    /// Explicit source-to-source relationship locators.
+    #[serde(default)]
+    pub source_links: Vec<String>,
     /// Explicit page IDs referenced by this page.
     #[serde(default)]
     pub links: Vec<String>,
+    /// Explicit related canonical page IDs.
+    #[serde(default)]
+    pub related_concepts: Vec<String>,
+    /// Optional duplicate canonical page ID.
+    #[serde(default)]
+    pub duplicate_of: Option<String>,
+    /// Explicit semantic topics distinct from broad tags.
+    #[serde(default)]
+    pub topics: Vec<String>,
+    /// Optional replacement canonical page ID.
+    #[serde(default)]
+    pub replacement: Option<String>,
     /// Source-paired contradictions.
     #[serde(default)]
     pub contradictions: Vec<Contradiction>,
@@ -816,7 +831,12 @@ fn build_promotion_plan(
         tags,
         aliases: Vec::new(),
         sources: vec![raw_locator],
+        source_links: Vec::new(),
         links: Vec::new(),
+        related_concepts: Vec::new(),
+        duplicate_of: None,
+        topics: Vec::new(),
+        replacement: None,
         contradictions: Vec::new(),
         status: "active".to_owned(),
         created_at: source_page.frontmatter.created_at.clone(),
@@ -2501,7 +2521,10 @@ fn validate_frontmatter(value: &WikiFrontmatter) -> Result<(), WikiError> {
     validate_sorted_unique("tags", &value.tags)?;
     validate_sorted_unique("aliases", &value.aliases)?;
     validate_sorted_unique("sources", &value.sources)?;
+    validate_sorted_unique("source_links", &value.source_links)?;
     validate_sorted_unique("links", &value.links)?;
+    validate_sorted_unique("related_concepts", &value.related_concepts)?;
+    validate_sorted_unique("topics", &value.topics)?;
     for tag in &value.tags {
         if tag.starts_with('#') || !is_slug(tag) {
             return Err(WikiError::InvalidInput(format!(
@@ -2512,10 +2535,35 @@ fn validate_frontmatter(value: &WikiFrontmatter) -> Result<(), WikiError> {
     for link in &value.links {
         validate_id(link)?;
     }
+    for related in &value.related_concepts {
+        validate_id(related)?;
+    }
+    for topic in &value.topics {
+        if !is_slug(topic) {
+            return Err(WikiError::InvalidInput(format!(
+                "topic must be a lowercase slug: {topic}"
+            )));
+        }
+    }
+    for duplicate in value.duplicate_of.iter().chain(value.replacement.iter()) {
+        validate_id(duplicate)?;
+        if duplicate == &value.id {
+            return Err(WikiError::InvalidInput(
+                "Wiki relation cannot target itself".to_owned(),
+            ));
+        }
+    }
     for source in &value.sources {
         if source != "raw:self" && parse_raw_locator(source).is_none() {
             return Err(WikiError::InvalidInput(format!(
                 "source locator must identify an immutable Raw revision: {source}"
+            )));
+        }
+    }
+    for source in &value.source_links {
+        if source != "raw:self" && parse_raw_locator(source).is_none() {
+            return Err(WikiError::InvalidInput(format!(
+                "source link must identify an immutable Raw revision: {source}"
             )));
         }
     }

@@ -57,6 +57,11 @@
         "pattern": "^raw:\\.hive/knowledge/Raw/[a-z0-9](?:[a-z0-9-]*[a-z0-9])?/[0-9a-f]{64}\\.[A-Za-z0-9]+#sha256:[0-9a-f]{64}$"
       }
     },
+    "source_links": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 1 }
+    },
     "links": {
       "type": "array",
       "uniqueItems": true,
@@ -65,6 +70,18 @@
         "pattern": "^[a-z0-9](?:[a-z0-9-]{0,78}[a-z0-9])?$"
       }
     },
+    "related_concepts": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "type": "string", "pattern": "^[a-z0-9](?:[a-z0-9-]{0,78}[a-z0-9])?$" }
+    },
+    "duplicate_of": { "type": ["string", "null"], "pattern": "^[a-z0-9](?:[a-z0-9-]{0,78}[a-z0-9])?$" },
+    "topics": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "type": "string", "pattern": "^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$" }
+    },
+    "replacement": { "type": ["string", "null"], "pattern": "^[a-z0-9](?:[a-z0-9-]{0,78}[a-z0-9])?$" },
     "contradictions": {
       "type": "array",
       "items": {
