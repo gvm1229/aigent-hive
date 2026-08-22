@@ -105,6 +105,13 @@ This directive governs agent behavior while developing Aigent Hive.
   terminal instruction, continue while any in-scope action remains agent-owned. Agent-owned
   actions include inspection, diagnosis, source edits, tests, commits, permitted pushes, CI
   observation, release qualification, and authorized publication.
+- Treat an explicit authorization to implement or test followed by “continue”, “keep going”, or
+  equivalent wording as the same terminal instruction for the authorized scope. Do not end the
+  turn after an intermediate commit, test, push, CI result, or progress report while that scope
+  still has an agent-owned action.
+- When a user excludes a protected action from an otherwise terminal scope, continue every other
+  authorized item. Record the exact excluded checklist IDs and the required authority. Do not
+  use the excluded action as a reason to end before the remaining agent-owned work is complete.
 - A progress report that identifies a remaining agent-owned action must not end the task. Do the
   next bounded action instead. A failed test, stale reference, incomplete CI qualification, or
   unpublished authorized release is work to continue, not a user handoff.
@@ -118,6 +125,9 @@ This directive governs agent behavior while developing Aigent Hive.
   condition and recovery path.
 - Never use a successful intermediate command, candidate build, publication, or elapsed time as a
   task completion substitute. The task remains active until its scoped closure conditions hold.
+- A final response after a continuing authorization is permitted only when the requested scope has
+  no agent-owned action. It must not promise later continuation; start the next bounded action
+  instead.
 
 ## Evidence
 

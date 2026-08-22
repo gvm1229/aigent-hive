@@ -31,6 +31,13 @@
 - 승인 범위 밖 제품·dependency 추가
 - protected `main` 통합과 stable publication 환경 승인
 
+## 현재 연속 실행 경계
+
+- 유지보수자 권한: `0.10.0`의 구현·시험·commit·`develop` push·CI 관찰
+- Ralph loop 대상: 모든 미완료 구현·검증·공개 시험 수용 항목
+- 제외: `REL10-005–007` — protected `main` 안정판 후보, 안정판 게시·설치, 유지보수자 안정판 승인
+- 종료 조건: 제외 항목 외 Agent 소유 checklist `0건`과 해당 검증 증거
+
 ## Completion index
 
 측정 정본: 아래 `Active fragments`의 checklist. Backlog와 archive 제외.
