@@ -5,21 +5,22 @@ topic_slug: v0-10-product-scope
 language: ko
 counterpart: ../en/v0-10-product-scope.md
 title: "Aigent Hive 0.10.0 제품 범위"
-summary: "추가 Backlog 승격 없이 관계 검색·nested project scan·host-owned Skill 예약·무손실 upgrade·출시 수용을 결합한 최종 0.10.0 범위."
+summary: "관계 검색·조건부 hybrid vector gate·nested project scan·host-owned Skill 예약·무손실 upgrade·출시 수용을 결합한 0.10.0 범위."
 tags: [knowledge, release, scan, v0-10]
 aliases: ["0.10.0 scope"]
 sources:
-  - "repo:docs/decisions/ADR-0020-0.10.0-product-scope.md#sha256:9d595ccdbc341b4a532bf6266106ca890edc983ce96b69316c1e6731764987a7"
-  - "repo:docs/decisions/product-release-decisions.md#sha256:b83e0f586453e6aeb0356f5a4eee84591b2946ccb06ecbffde35131027878de6"
-links: [consumer-session-coordination, graphify-0-10-adoption, knowledge-storage, nested-project-scan-0-10]
-reviewed_revision: "git:8a99ccacb96a249692d01e6835efc872adb7fe95"
+  - "repo:docs/decisions/ADR-0020-0.10.0-product-scope.md#sha256:a475f0b665f301e2398506e2f3a16d2678f83eb2ad8dc6a72f7d4c522673b409"
+  - "repo:docs/decisions/product-release-decisions.md#sha256:3fbe246c3a5b7d2b8ec002d40f73874c056c48ae3a888dede3e40db12eddddac"
+links: [consumer-session-coordination, graphify-0-10-adoption, hybrid-vector-search-0-10, knowledge-storage, nested-project-scan-0-10]
+reviewed_revision: "git:a0f288b6b962cd5bede27065fa39f708764a621f"
 status: active
 ---
 
 # Aigent Hive `0.10.0` 제품 범위
 
 - 관계 검색: Hive-native Markdown graph, 선택형 Graphify full-rebuild code 추출, FTS routing
+- Semantic 검색: Hard gate 통과 시 optional local vector adapter, 실패 시 dependency `0건`
 - 지식 운영: Metadata-first 조회, 생명주기·비용·drift evidence, scope 격리
 - Project 안전: nested scan, host-owned Skill 예약, canonical byte 보존 upgrade
 - 출시: Windows·macOS·Linux 공개 시험과 same-byte stable
-- 추가 Backlog·Archive 승격: 없음
+- 추가 후보: 조건부 vector feasibility·implementation gate

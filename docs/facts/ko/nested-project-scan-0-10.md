@@ -9,11 +9,11 @@ summary: "0.9.5의 0.9 release line 마감과 상위 Git repository 아래 regis
 tags: [knowledge, release, scan, v0-10]
 aliases: ["Nested Vault scan"]
 sources:
-  - "repo:docs/decisions/product-release-decisions.md#sha256:b83e0f586453e6aeb0356f5a4eee84591b2946ccb06ecbffde35131027878de6"
+  - "repo:docs/decisions/product-release-decisions.md#sha256:3fbe246c3a5b7d2b8ec002d40f73874c056c48ae3a888dede3e40db12eddddac"
   - "repo:docs/plans/active/release-0.10.0.md#sha256:75ece4a12c890f3950d876c96ec605a2a80ebeecfc2ed7255ff3797cc2a33c2e"
   - "repo:docs/research/ai-learning-hive-application-candidates-2026-08-21.md#sha256:14eb21209b147e7ca9947eae8afb09c059d53aedf353c1802620bf8bf4cc0038"
 links: [knowledge-portability-scan, version-policy]
-reviewed_revision: "git:8a99ccacb96a249692d01e6835efc872adb7fe95"
+reviewed_revision: "git:a0f288b6b962cd5bede27065fa39f708764a621f"
 status: active
 ---
 

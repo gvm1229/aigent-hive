@@ -5,20 +5,20 @@ topic_slug: v0-10-product-scope
 language: en
 counterpart: ../ko/v0-10-product-scope.md
 title: "Aigent Hive 0.10.0 Product Scope"
-summary: "The final 0.10.0 scope combines relationship search, nested-project scanning, host-owned Skill reservations, safe upgrade, and release qualification without extra backlog promotion."
+summary: "The 0.10.0 scope combines relationship search, a conditional hybrid-vector gate, nested-project scanning, Skill reservations, safe upgrade, and release qualification."
 tags: [knowledge, release, scan, v0-10]
 aliases: ["0.10.0 scope"]
 sources:
-  - "repo:docs/decisions/ADR-0020-0.10.0-product-scope.md#sha256:9d595ccdbc341b4a532bf6266106ca890edc983ce96b69316c1e6731764987a7"
-  - "repo:docs/decisions/product-release-decisions.md#sha256:b83e0f586453e6aeb0356f5a4eee84591b2946ccb06ecbffde35131027878de6"
-links: [consumer-session-coordination, graphify-0-10-adoption, knowledge-storage, nested-project-scan-0-10]
-reviewed_revision: "git:8a99ccacb96a249692d01e6835efc872adb7fe95"
+  - "repo:docs/decisions/ADR-0020-0.10.0-product-scope.md#sha256:a475f0b665f301e2398506e2f3a16d2678f83eb2ad8dc6a72f7d4c522673b409"
+  - "repo:docs/decisions/product-release-decisions.md#sha256:3fbe246c3a5b7d2b8ec002d40f73874c056c48ae3a888dede3e40db12eddddac"
+links: [consumer-session-coordination, graphify-0-10-adoption, hybrid-vector-search-0-10, knowledge-storage, nested-project-scan-0-10]
+reviewed_revision: "git:a0f288b6b962cd5bede27065fa39f708764a621f"
 status: active
 ---
 
 # Aigent Hive 0.10.0 Product Scope
 
 The final scope includes Hive-native Markdown relationships, optional full-rebuild Graphify
-code extraction, FTS and relation routing, metadata-first retrieval, lifecycle and drift evidence,
-nested-project scanning, host-owned Skill reservations, safe upgrade, and three-OS release
-qualification. No extra backlog or archive candidate is promoted.
+code extraction, FTS and relation routing, a conditional hybrid-vector gate, metadata-first
+retrieval, lifecycle and drift evidence, nested-project scanning, host-owned Skill reservations,
+safe upgrade, and three-OS release qualification. A failed vector gate adds no dependency.
