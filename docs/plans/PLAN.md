@@ -1,6 +1,6 @@
 # Aigent Hive 활성 계획
 
-> Revision: 259
+> Revision: 260
 > 기준일: 2026-08-22
 > Product version: `0.9.5` stable
 > 다음 target: `0.10.0-test`
@@ -36,7 +36,7 @@
 
 ## 현재 연속 실행 경계
 
-- 유지보수자 권한: `0.10.0`의 구현·시험·commit·`develop` push·CI 관찰
+- 유지보수자 권한: `0.10.0`의 구현·시험·commit·`feature/0.10.0` push·CI 관찰·번호 공개 시험판
 - Verified workflow 대상: dependency·evidence·retry·독립 검증이 필요한 미완료 구현·검증 항목
 - 제외: `REL10-005–007` — protected `main` 안정판 후보, 안정판 게시·설치, 유지보수자 안정판 승인
 - 종료 조건: 제외 항목 외 Agent 소유 checklist `0건`과 해당 검증 증거
@@ -51,12 +51,12 @@
 | Hybrid vector search | 0 | 13 | 0% |
 | Host-owned Skill 예약 | 1 | 0 | 100% |
 | Nested project scan | 1 | 0 | 100% |
-| Host-neutral 연속 실행 | 1 | 7 | 12.5% |
-| Verified workflow | 2 | 4 | 33.3% |
+| Host-neutral 연속 실행 | 3 | 5 | 37.5% |
+| Verified workflow | 5 | 1 | 83.3% |
 | Adversarial judge | 1 | 7 | 12.5% |
 | Skill migration cleanup | 1 | 9 | 10.0% |
 | `0.10.0` 출시 | 0 | 7 | 0% |
-| **합계** | **8** | **62** | **11.4%** |
+| **합계** | **13** | **57** | **18.6%** |
 
 ## Required load order
 

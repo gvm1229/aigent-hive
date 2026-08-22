@@ -10,7 +10,7 @@ tags: [consumer-harness, preservation, session, upgrade]
 aliases: ["CHS93"]
 sources:
   - "repo:crates/hive-cli/src/project_upgrade.rs#sha256:af09aadf2ddfabc082dfac9ae6c8233c2fe48f964db8996063848838f04f68c5"
-  - "repo:crates/hive-cli/src/session.rs#sha256:174a8786fb00816745e2526eb91746a12558ddec4634151b314d1c305c009372"
+  - "repo:crates/hive-cli/src/session.rs#sha256:affa286cb1b1d23c2de042061af7092a89a137f1a1a5fa5762cc92bd5897e7af"
   - "repo:docs/decisions/product-release-decisions.md#sha256:a56419242874c459f08f7575ec0b2b6c2249ac696e0efffb053706dfeb6c9f00"
   - "repo:docs/plans/active/release-0.10.0.md#sha256:5b5249c28d49e3094889ceb38f194ba41eaa0b2999f48981e0bd1562ef5db88e"
   - "repo:harness/directives/03-session-coordination.md#sha256:06736ffa5a1619bc238a39ecad068ae85b2136a8e33ccb0829badf932d8c19f3"
