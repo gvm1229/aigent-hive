@@ -34,6 +34,8 @@
 | 사용자 인계 전 자동 처리 | [en](en/automated-user-handoff.md) | [ko](ko/automated-user-handoff.md) |
 | Agent 자율 실행 지속 | [en](en/agent-autonomous-continuation.md) | [ko](ko/agent-autonomous-continuation.md) |
 | Host-neutral 연속 실행 gate | [en](en/host-neutral-continuation.md) | [ko](ko/host-neutral-continuation.md) |
+| Verified workflow Skill | [en](en/verified-workflow.md) | [ko](ko/verified-workflow.md) |
+| Adversarial Judge Skill | [en](en/adversarial-judge.md) | [ko](ko/adversarial-judge.md) |
 | 계획 Markdown 정본 | [en](en/plan-persistence.md) | [ko](ko/plan-persistence.md) |
 | Knowledge preservation | [en](en/knowledge-preservation.md) | [ko](ko/knowledge-preservation.md) |
 | Knowledge storage | [en](en/knowledge-storage.md) | [ko](ko/knowledge-storage.md) |
