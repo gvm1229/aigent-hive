@@ -1,6 +1,6 @@
 # 현재 상태
 
-- 기준 branch: `develop@96f2b06`, `origin/develop`과 push 전 local 차이
+- 기준 branch: `feature/0.10.0@c6efb5b`, `origin/feature/0.10.0` 일치
 - product version: `0.9.5`
 - 다음 target: `0.10.0-test`
 - 활성 계획: [`PLAN.md`](../plans/PLAN.md)
