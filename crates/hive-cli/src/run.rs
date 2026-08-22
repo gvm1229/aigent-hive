@@ -1412,16 +1412,44 @@ fn closure(arguments: &ClosureArguments) -> Result<ActionResult, AdapterError> {
         next_action: status.status().next_action.clone(),
         data: Some(json!({
             "closure": payload,
-            "continuation": {
-                "schema_version": 1,
-                "run_id": arguments.run_id,
-                "run_revision": status.status().revision,
-                "outer_owner": outer_owner,
-                "next_action": status.status().next_action,
-                "task_launch": "host-owned",
-                "spawned": false,
-            }
+            "continuation": continuation_envelope(&arguments.run_id, &status, outer_owner.as_ref()),
         })),
+    })
+}
+
+fn continuation_envelope(
+    run_id: &str,
+    status: &RunStatusDocument,
+    outer_owner: Option<&OwnerBinding>,
+) -> Value {
+    json!({
+        "schema_version": 1,
+        "run_id": run_id,
+        "run_revision": status.status().revision,
+        "outer_owner": outer_owner,
+        "session_binding": {
+            "binding_state": "awaiting-host-attestation",
+            "host": outer_owner.map(|binding| binding.host),
+            "session_id_digest": null,
+        },
+        "next_action": status.status().next_action,
+        "retry_budget": {
+            "state": "not-configured",
+            "maximum_attempts": null,
+            "attempts_used": null,
+            "remaining_attempts": null,
+            "retry_permitted": false,
+        },
+        "cancel": {
+            "state": if status.status().state == RunState::Cancelled {
+                "cancelled"
+            } else {
+                "not-cancelled"
+            },
+            "user_interrupt_permitted": true,
+        },
+        "task_launch": "host-owned",
+        "spawned": false,
     })
 }
 

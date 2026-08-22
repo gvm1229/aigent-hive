@@ -40,6 +40,7 @@ SCHEMA_FILES = {
     "checkpoint_request": "run-checkpoint-request.schema.json",
     "status": "run-status.schema.json",
     "brief": "dispatch-brief.schema.json",
+    "continuation": "continuation-envelope.schema.json",
     "capability": "capability-matrix.schema.json",
 }
 OWNER_KEYS = (
@@ -1208,9 +1209,41 @@ class Phase4Contracts(unittest.TestCase):
         self.assertEqual(closure["excluded"], [])
         self.assertRegex(closure["closure_digest"], r"^sha256:[0-9a-f]{64}$")
         continuation = payload["data"]["continuation"]
+        self.validators["continuation"].validate(continuation)
         self.assertEqual(continuation["task_launch"], "host-owned")
         self.assertFalse(continuation["spawned"])
         self.assertEqual(continuation["outer_owner"]["host"], "codex")
+        self.assertEqual(
+            continuation["session_binding"]["binding_state"],
+            "awaiting-host-attestation",
+        )
+        self.assertFalse(continuation["retry_budget"]["retry_permitted"])
+        self.assertTrue(continuation["cancel"]["user_interrupt_permitted"])
+        self.assertEqual(snapshot_tree(self.target), before)
+
+    def test_closure_cancelled_run_permits_interrupt_without_retry(self) -> None:
+        self.ensure_handoff(self.target)
+        process, payload = self.checkpoint(
+            self.target,
+            self.checkpoint_request(
+                state="cancelled",
+                next_action=None,
+            ),
+            CAPABILITIES["codex-omx"],
+            "closure-cancelled",
+        )
+        self.assert_success(process, payload)
+        before = snapshot_tree(self.target)
+
+        process, payload = self.closure(self.target)
+
+        self.assert_success(process, payload)
+        self.assertTrue(payload["data"]["closure"]["ready_for_final"])
+        continuation = payload["data"]["continuation"]
+        self.validators["continuation"].validate(continuation)
+        self.assertEqual(continuation["cancel"]["state"], "cancelled")
+        self.assertTrue(continuation["cancel"]["user_interrupt_permitted"])
+        self.assertFalse(continuation["retry_budget"]["retry_permitted"])
         self.assertEqual(snapshot_tree(self.target), before)
 
     def test_resume_executing_and_verifying_prepares_only_without_spawning_or_writes(self) -> None:
