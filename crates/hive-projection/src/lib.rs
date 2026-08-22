@@ -190,6 +190,19 @@ pub struct SkillCatalog {
 struct RetiredSkillNameLedger {
     schema_version: u32,
     retired_names: BTreeMap<String, String>,
+    lifecycle: Vec<SkillLifecycleEvent>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct SkillLifecycleEvent {
+    retired_name: String,
+    introduced_in: String,
+    renamed_in: String,
+    deprecated_in: String,
+    removed_in: String,
+    replacement: String,
+    transition_kind: String,
 }
 
 /// Returns the canonical retired-ID ledger used by selection migration and
@@ -238,7 +251,48 @@ pub fn retired_builtin_skill_names() -> Result<BTreeMap<String, String>, Project
             ));
         }
     }
+    let mut lifecycle_names = BTreeSet::new();
+    for event in &ledger.lifecycle {
+        validate_skill_name(&event.retired_name)?;
+        validate_skill_name(&event.replacement)?;
+        if !lifecycle_names.insert(event.retired_name.as_str())
+            || ledger.retired_names.get(&event.retired_name) != Some(&event.replacement)
+            || !current.contains(event.replacement.as_str())
+            || !matches!(event.transition_kind.as_str(), "rename" | "merge")
+            || [
+                &event.introduced_in,
+                &event.renamed_in,
+                &event.deprecated_in,
+                &event.removed_in,
+            ]
+            .iter()
+            .any(|version| !valid_skill_version(version))
+        {
+            return Err(ProjectionError::new(
+                "hive.skill-name-ledger-invalid",
+                format!("retired Skill lifecycle is invalid: {}", event.retired_name),
+            ));
+        }
+    }
+    let required_lifecycle =
+        BTreeSet::from(["ralph-loop", "iterative-execution", "package-review"]);
+    if lifecycle_names != required_lifecycle {
+        return Err(ProjectionError::new(
+            "hive.skill-name-ledger-invalid",
+            "retired Skill lifecycle does not cover every 0.10.0 transition",
+        ));
+    }
     Ok(ledger.retired_names)
+}
+
+fn valid_skill_version(value: &str) -> bool {
+    let parts = value.split('.').collect::<Vec<_>>();
+    parts.len() == 3
+        && parts.iter().all(|part| {
+            !part.is_empty()
+                && part.bytes().all(|byte| byte.is_ascii_digit())
+                && (*part == "0" || !part.starts_with('0'))
+        })
 }
 
 /// Parses and semantically validates the catalog embedded at build time.

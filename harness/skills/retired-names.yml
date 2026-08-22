@@ -47,3 +47,7 @@ retired_names:
   upgrade-project: project-refresh
   package-review: judge-evidence
   verify-package: judge-evidence
+lifecycle:
+  - { retired_name: ralph-loop, introduced_in: 0.9.0, renamed_in: 0.10.0, deprecated_in: 0.10.0, removed_in: 0.10.0, replacement: verified-workflow, transition_kind: rename }
+  - { retired_name: iterative-execution, introduced_in: 0.9.3, renamed_in: 0.10.0, deprecated_in: 0.10.0, removed_in: 0.10.0, replacement: verified-workflow, transition_kind: merge }
+  - { retired_name: package-review, introduced_in: 0.9.0, renamed_in: 0.10.0, deprecated_in: 0.10.0, removed_in: 0.10.0, replacement: judge-evidence, transition_kind: rename }
