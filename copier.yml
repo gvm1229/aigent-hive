@@ -230,24 +230,23 @@ selected_project_skills:
   type: yaml
   when: false
   default:
+    - adversarial-judge
     - amend-directive
     - code-polish
     - custom-subagent-create
+    - judge-evidence
     - knowledge-capture
     - knowledge-import
     - knowledge-maintain
     - knowledge-promote
     - knowledge-recall
     - multi-goal
-    - judge-evidence
-    - adversarial-judge
     - product-update
     - project-refresh
     - project-setup
     - project-transition
     - prompt-refine
     - quick-answer
-    - verified-workflow
     - research-best-practices
     - run-checkpoint
     - run-handoff
@@ -255,3 +254,4 @@ selected_project_skills:
     - ship
     - team-execution
     - usage-guard
+    - verified-workflow

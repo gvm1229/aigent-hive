@@ -1,5 +1,14 @@
 schema_version: 1
 skills:
+- name: adversarial-judge
+  source_type: built-in
+  content_digest: sha256:4ce38fbe91253068c198c3f0a9372d9177287729f35cae2b163f7db13d8c21e7
+  side_effect_class: read-only
+  capabilities:
+  - filesystem-read
+  - run-state
+  - subagents
+  consent_digest: null
 - name: amend-directive
   source_type: built-in
   content_digest: sha256:349eaa90b1a84d5cb35d5b04e38320778df8594f34a3539f4b510770c1122095
@@ -29,16 +38,13 @@ skills:
   - shell
   - subagents
   consent_digest: null
-- name: iterative-execution
+- name: judge-evidence
   source_type: built-in
-  content_digest: sha256:7b681e57822b6bad23e645641b6ca8c513c79fcc53e18611f9b89446c2299188
-  side_effect_class: project-write
+  content_digest: sha256:aea2f4e5e325b847df263a3aa001023eb419763ec175ec8cd3bb0a1b1a6c3873
+  side_effect_class: read-only
   capabilities:
   - filesystem-read
-  - filesystem-write
   - run-state
-  - shell
-  - subagents
   consent_digest: null
 - name: knowledge-capture
   source_type: built-in
@@ -103,14 +109,6 @@ skills:
   - shell
   - subagents
   consent_digest: null
-- name: package-review
-  source_type: built-in
-  content_digest: sha256:1dfb661480cee016739db3bc2801b0bec7f0895e82a902e7d8c13101c112b3fe
-  side_effect_class: read-only
-  capabilities:
-  - filesystem-read
-  - run-state
-  consent_digest: null
 - name: product-update
   source_type: built-in
   content_digest: sha256:f0657c2d5416ab1151b49f3a6774aa57ba202d7a41f122dfc1d69b206ab60936
@@ -158,16 +156,6 @@ skills:
   content_digest: sha256:1634215b51e454807b4c12271d38d02f55443150f7d3ee233a65f8a7dbec3999
   side_effect_class: none
   capabilities: []
-  consent_digest: null
-- name: ralph-loop
-  source_type: built-in
-  content_digest: sha256:8b802691751194fa332f440ce17e1e59b6c20d69b6f999af829217b053ee1764
-  side_effect_class: project-write
-  capabilities:
-  - filesystem-read
-  - filesystem-write
-  - run-state
-  - shell
   consent_digest: null
 - name: research-best-practices
   source_type: built-in
@@ -233,4 +221,15 @@ skills:
   - filesystem-write
   - run-state
   - shell
+  consent_digest: null
+- name: verified-workflow
+  source_type: built-in
+  content_digest: sha256:e7477454aec42220fa2e1b7602161dc2b8ea167aacd4d276d550226a25d15b8b
+  side_effect_class: project-write
+  capabilities:
+  - filesystem-read
+  - filesystem-write
+  - run-state
+  - shell
+  - subagents
   consent_digest: null

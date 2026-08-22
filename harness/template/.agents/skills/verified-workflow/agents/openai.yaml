@@ -3,4 +3,4 @@ interface:
   short_description: "(verified-workflow) Run a bounded evidence-gated workflow with independent verification."
   default_prompt: "Use $aigent-hive:verified-workflow for this complex evidence-gated task."
 policy:
-  allow_implicit_invocation: true
+  allow_implicit_invocation: false
