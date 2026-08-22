@@ -4,7 +4,7 @@
 
 ## Checklist
 
-- [ ] [SCP10-002] Codex·Antigravity `.agents/skills/<skill>/...`, Claude `.claude/skills/<skill>/...`의 host-matched 세션 예약 허용, 다른 host 경로 `hive.session-host-owned-namespace`, live·unverifiable reservation 한정 해결 안내, forbidden path 불변, three-host 회귀·문서 계약 검증
+- [x] [SCP10-002] Codex·Antigravity `.agents/skills/<skill>/...`, Claude `.claude/skills/<skill>/...`의 host-matched 세션 예약 허용, 다른 host 경로 `hive.session-host-owned-namespace`, live·unverifiable reservation 한정 해결 안내, forbidden path 불변, three-host 회귀·문서 계약 검증 — `96f2b06`; Rust session unit 3건과 three-host consumer lifecycle 회귀 통과
 
 ## 경계
 

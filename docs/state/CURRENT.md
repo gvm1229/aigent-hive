@@ -1,6 +1,6 @@
 # 현재 상태
 
-- 기준 branch: `develop@7aab389`, `origin/develop`과 push 전 local 차이
+- 기준 branch: `develop@96f2b06`, `origin/develop`과 push 전 local 차이
 - product version: `0.9.5`
 - 다음 target: `0.10.0-test`
 - 활성 계획: [`PLAN.md`](../plans/PLAN.md)
@@ -40,11 +40,11 @@
 - 유지보수자 최종 선택: 추가 후보 없음, [`ADR-0020`](../decisions/ADR-0020-0.10.0-product-scope.md) 범위 확정
 - Vector 검색: Qdrant Edge·SQLite engine hard gate와 통과 시 optional hybrid adapter 범위 추가
 - nested Git repository 아래 registered project scan 허용과 foreign sibling 격리 구현·회귀 검증 완료 (`7aab389`)
+- host-owned Skill 세션 예약 구현·three-host 경로 회귀 검증 완료 (`96f2b06`)
 - Notion 실제 연결과 작업 자동 분담 활성화: backlog
 
 ## `0.10.0` 남은 범위
 
-- Codex·Antigravity `.agents/skills/<skill>/...`, Claude `.claude/skills/<skill>/...`의 host-matched 세션 예약과 경로별 오류 계약 구현·검증
 - 상위 Git repository 안의 registered project root knowledge scan 복구와 sibling 격리 검증
 - Hive-native Markdown 관계 graph·선택형 Graphify code-only adapter 구현·검증
 - FTS·vector·graph 품질 기준선, local embedding boundary와 engine adopt|defer 판정
