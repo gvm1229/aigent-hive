@@ -11,7 +11,7 @@ aliases: ["과거 기준본 정합성"]
 sources:
   - "repo:crates/hive-cli/src/project_upgrade.rs#sha256:af09aadf2ddfabc082dfac9ae6c8233c2fe48f964db8996063848838f04f68c5"
   - "repo:crates/hive-cli/tests/historical_project_upgrade.rs#sha256:f1b45ed3cfd4ae5feb40574c0825fbcc26efc67c95dc1032812656221a776f88"
-  - "repo:crates/hive-render/src/lib.rs#sha256:340b93226f69b5be1e4c9718e2e6459a5f90725e46355c9ba772d16aa1e5ee5a"
+  - "repo:crates/hive-render/src/lib.rs#sha256:15af58cdbd75bc3267cf168d680d2b8dc68299e42f35267f35a01977da40e73e"
   - "repo:scripts/accept-public-hive.py#sha256:b951e079d0974d4bf2a80e37337f2acf95d03e2e42a4bc428dd9fbde89a538a3"
   - "repo:scripts/check-project-base-coverage.py#sha256:b7d0887ccd3e3a9019383c3cea283189361c17fa62d806f44096cd6825b67579"
 links: [projection-upgrade-purge, update-transaction, version-policy]

@@ -14,7 +14,7 @@ sources:
   - "repo:.agents/directives/06-session-coordination.md#sha256:a24536201b77619549620d88612c186b769e90a774043895370a064779d8d758"
   - "repo:crates/hive-cli/src/user_install.rs#sha256:b8bb2ace9f509cf8f48cf703971069e7ca73ada3704a8c7dc18adfd03a27e9ef"
   - "repo:crates/hive-cli/src/user_setup.rs#sha256:786da31401085e9445495aa37defe7cedf781bc8457211a6addd23016c0bf922"
-  - "repo:crates/hive-render/src/lib.rs#sha256:340b93226f69b5be1e4c9718e2e6459a5f90725e46355c9ba772d16aa1e5ee5a"
+  - "repo:crates/hive-render/src/lib.rs#sha256:15af58cdbd75bc3267cf168d680d2b8dc68299e42f35267f35a01977da40e73e"
   - "repo:docs/archive/plans/foundations/agent-autonomous-continuation.md#sha256:83b8604202102dc5424c63648833d99978d2d415b974e22c7d70fc511f1c5883"
   - "repo:harness/directives/00-project-harness.md#sha256:fb6cb8107a38aa3fe70040d4e730e53190a66ed6047a8e40f55acf811425d87d"
   - "repo:harness/template/AGENTS.md.jinja#sha256:33c0da7ba5156ea1aa0ccc08a8e4f88343cf5f6f896994a7d8b830ac0ad6bb74"
