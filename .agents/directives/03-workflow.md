@@ -38,6 +38,9 @@ After bootstrap:
 - Integrate `develop` into `main` through a pull request.
 - Do not create named, purpose, feature, or snapshot branches under the default policy.
 - Create another branch only when the user explicitly authorizes that exception for a specific task.
+- An authorized non-default branch name must start with its work class: `feature/`, `fix/`,
+  `release/`, `docs/`, `test/`, `refactor/`, `build/`, or `chore/`. Do not prefix a branch with
+  an agent, model, assistant, or person name. Use the narrowest truthful work class.
 
 ## Temporary Worktree and Clone Lifecycle
 
