@@ -155,6 +155,28 @@ pub fn persist_generation(target: &Path, generation: &GraphGeneration) -> Result
     Ok(relative)
 }
 
+/// Remove exactly one digest-addressed derived generation without touching canonical knowledge.
+pub fn remove_generation(
+    target: &Path,
+    scope: &str,
+    generation_digest: &str,
+) -> Result<Option<PathBuf>, String> {
+    let relative = generation_relative_path(scope, generation_digest)?;
+    ensure_no_symlink_ancestors(target, &relative)
+        .map_err(|error| format!("graph generation path is unsafe: {error}"))?;
+    let destination = target.join(&relative);
+    match std::fs::symlink_metadata(&destination) {
+        Ok(metadata) if metadata.is_file() => {
+            std::fs::remove_file(&destination)
+                .map_err(|error| format!("remove graph generation: {error}"))?;
+            Ok(Some(relative))
+        }
+        Ok(_) => Err("graph generation destination is not a regular file".to_owned()),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(None),
+        Err(error) => Err(format!("inspect graph generation: {error}")),
+    }
+}
+
 /// Return bounded direct relationships for one node without exposing page bodies.
 #[must_use]
 pub fn query_generation(
@@ -240,7 +262,7 @@ fn edge(from: &str, to: &str, relation: &str, source_digest: &str) -> GraphEdge 
 mod tests {
     use super::{
         build_native_generation, extract_markdown_edges, generation_relative_path,
-        persist_generation, query_generation, GraphEvidence,
+        persist_generation, query_generation, remove_generation, GraphEvidence,
     };
     use crate::{Contradiction, WikiFrontmatter, WikiPage};
 
@@ -347,5 +369,11 @@ mod tests {
             std::fs::read(target.path().join(&relative)).expect("repeat bytes"),
             first
         );
+        assert_eq!(
+            remove_generation(target.path(), "project", &generation.generation_digest)
+                .expect("remove"),
+            Some(relative.clone())
+        );
+        assert!(!target.path().join(relative).exists());
     }
 }
