@@ -161,6 +161,8 @@ struct HookInput {
     run_id: Option<String>,
     #[serde(default)]
     session_id: Option<String>,
+    #[serde(default)]
+    interrupted: Option<bool>,
 }
 
 #[derive(Serialize)]
@@ -1629,6 +1631,15 @@ fn continue_active_run(target: &Path, input: &HookInput) -> Result<HookResult, R
             "continue-active-run requires Stop".to_owned(),
         ));
     }
+    if input.interrupted == Some(true) {
+        return Ok(HookResult {
+            schema_version: 1,
+            decision: "allow",
+            active: true,
+            code: "hive.hook-continuation-interrupted",
+            message: "user interrupt permits Stop without continuation".to_owned(),
+        });
+    }
     let run_id = input
         .run_id
         .as_deref()
@@ -2082,10 +2093,11 @@ fn check_target(target: &Path) -> Result<(), String> {
 #[cfg(test)]
 mod tests {
     use super::{
-        execute_hook_capability, failure_result_for, is_help_request, mark_derived_state_stale,
-        neutral_stop_hook_payload, normalize_hook_path, parse_hook, parse_setup, parse_usage,
-        probe_native_usage, reconcile_project_registry, run_human, version_output_for, wants_json,
-        ActionResult, HookInput, ParsedUsageArguments, SETUP_USAGE, USAGE,
+        continue_active_run, execute_hook_capability, failure_result_for, is_help_request,
+        mark_derived_state_stale, neutral_stop_hook_payload, normalize_hook_path, parse_hook,
+        parse_setup, parse_usage, probe_native_usage, reconcile_project_registry, run_human,
+        version_output_for, wants_json, ActionResult, HookInput, ParsedUsageArguments, SETUP_USAGE,
+        USAGE,
     };
     use hive_render::{RenderError, ResolvedProjectPreferences, SetupMode};
     use std::fs;
@@ -2294,6 +2306,7 @@ mod tests {
             status_path: None,
             run_id: None,
             session_id: None,
+            interrupted: None,
         };
         let result =
             execute_hook_capability(Path::new("/consumer"), "protect-hive-owned-state", &input)
@@ -2319,6 +2332,7 @@ mod tests {
             status_path: None,
             run_id: None,
             session_id: None,
+            interrupted: None,
         };
         let result =
             execute_hook_capability(Path::new("/consumer"), "protect-hive-owned-state", &input)
@@ -2343,6 +2357,7 @@ mod tests {
             status_path: None,
             run_id: None,
             session_id: None,
+            interrupted: None,
         };
         let result =
             execute_hook_capability(Path::new("/consumer"), "update-integrity-guard", &input)
@@ -2473,12 +2488,37 @@ mod tests {
             status_path: Some(".hive/runs/run/STATUS.md".to_owned()),
             run_id: None,
             session_id: None,
+            interrupted: None,
         };
         let result = execute_hook_capability(Path::new("/consumer"), "checkpoint-reminder", &input)
             .expect("approved hook should execute");
         assert!(result.active);
         assert_eq!(result.decision, "allow");
         assert_eq!(result.code, "hive.hook-checkpoint-missing");
+    }
+
+    #[test]
+    fn continuation_hook_allows_user_interrupt_without_run_read() {
+        let input = HookInput {
+            schema_version: 1,
+            event: "Stop".to_owned(),
+            tool: None,
+            operation: None,
+            path: None,
+            action: None,
+            dry_run: None,
+            backup_present: None,
+            staging_validated: None,
+            checkpoint_present: None,
+            status_path: None,
+            run_id: None,
+            session_id: None,
+            interrupted: Some(true),
+        };
+        let result = continue_active_run(Path::new("/missing-consumer"), &input)
+            .expect("interrupt must stay fail-open");
+        assert_eq!(result.decision, "allow");
+        assert_eq!(result.code, "hive.hook-continuation-interrupted");
     }
 
     #[test]
