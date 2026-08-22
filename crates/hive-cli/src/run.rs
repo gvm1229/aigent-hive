@@ -1358,11 +1358,20 @@ fn parse_continuation_arguments(
         arguments,
         &["--target", "--run", "--session-id", "--claim-nudge"],
     )?;
+    let claim_nudge = match optional(&options, "--claim-nudge") {
+        None | Some("false") => false,
+        Some("true") => true,
+        Some(value) => {
+            return Err(AdapterError::Input(format!(
+                "--claim-nudge must be true or false, got {value}"
+            )));
+        }
+    };
     Ok(ContinuationArguments {
         target: PathBuf::from(required(&options, "--target")?),
         run_id: required(&options, "--run")?.to_owned(),
         session_id: required(&options, "--session-id")?.to_owned(),
-        claim_nudge: optional(&options, "--claim-nudge") == Some("true"),
+        claim_nudge,
     })
 }
 
