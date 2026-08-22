@@ -919,6 +919,37 @@ else:
         )
         self.assertFalse(stale_manifest.exists())
 
+    def test_consumer_session_reserves_only_matching_host_owned_skill_paths(self) -> None:
+        target = self.setup_project("session-host-owned-skills")
+        process_id = str(os.getpid())
+        for host, path in (
+            ("codex", ".agents/skills/inspect/SKILL.md"),
+            ("antigravity", ".agents/skills/inspect/SKILL.md"),
+            ("claude", ".claude/skills/inspect/SKILL.md"),
+        ):
+            with self.subTest(host=host):
+                begun, result = self.invoke(
+                    "session", "begin", "--target", str(target), "--host", host,
+                    "--session-id", f"{host}-skill", "--process-id", process_id,
+                    "--path", path,
+                )
+                self.assertEqual(begun.returncode, 0, begun.stderr)
+                self.assertEqual(result["code"], "hive.session-begun")
+                closed, _ = self.invoke(
+                    "session", "close", "--target", str(target), "--host", host,
+                    "--session-id", f"{host}-skill",
+                )
+                self.assertEqual(closed.returncode, 0, closed.stderr)
+        before = snapshot_tree(target)
+        rejected, result = self.invoke(
+            "session", "begin", "--target", str(target), "--host", "claude",
+            "--session-id", "wrong-host", "--process-id", process_id,
+            "--path", ".agents/skills/inspect/SKILL.md",
+        )
+        self.assertEqual(rejected.returncode, 2, rejected.stderr)
+        self.assertEqual(result["code"], "hive.session-host-owned-namespace")
+        self.assertEqual(snapshot_tree(target), before)
+
     def test_upgrade_preserves_local_skill_and_recovers_injected_failure(self) -> None:
         target = self.setup_project("upgrade-consumer")
         skill = target / ".agents/skills/quick-answer/SKILL.md"

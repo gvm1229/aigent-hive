@@ -79,7 +79,14 @@ pub(crate) fn run(arguments: &[String]) -> ExitCode {
         Ok(arguments) => execute(&arguments).unwrap_or_else(|message| {
             failure(message, "hive.session-coordination-blocked", "conflict", 3)
         }),
-        Err(message) => failure(message, "hive.invalid-input", "error", 2),
+        Err(message) => {
+            let code = if message.starts_with("host-owned Skill namespace") {
+                "hive.session-host-owned-namespace"
+            } else {
+                "hive.invalid-input"
+            };
+            failure(message, code, "error", 2)
+        }
     };
     emit(&result);
     ExitCode::from(result.exit_code)
@@ -158,11 +165,16 @@ fn parse(arguments: &[String]) -> Result<Arguments, String> {
             }
         }
     }
-    let paths = paths
+    let paths: Vec<String> = paths
         .into_iter()
         .collect::<BTreeSet<_>>()
         .into_iter()
         .collect();
+    if let Some(host) = host.as_deref() {
+        for path in &paths {
+            validate_host_owned_skill_path(host, path.as_str())?;
+        }
+    }
     Ok(Arguments {
         action,
         target,
@@ -171,6 +183,25 @@ fn parse(arguments: &[String]) -> Result<Arguments, String> {
         process_id,
         paths,
     })
+}
+
+fn validate_host_owned_skill_path(host: &str, path: &str) -> Result<(), String> {
+    let owner = if path.starts_with(".agents/skills/") {
+        Some("codex|antigravity")
+    } else if path.starts_with(".claude/skills/") {
+        Some("claude")
+    } else {
+        None
+    };
+    match owner {
+        Some("codex|antigravity") if !matches!(host, "codex" | "antigravity") => Err(
+            "host-owned Skill namespace .agents/skills requires codex or antigravity".to_owned(),
+        ),
+        Some("claude") if host != "claude" => {
+            Err("host-owned Skill namespace .claude/skills requires claude".to_owned())
+        }
+        _ => Ok(()),
+    }
 }
 
 fn require_identity(
@@ -214,12 +245,30 @@ fn parse_session_id(value: &str) -> Result<String, String> {
 
 fn normalize_path(value: &str) -> Result<String, String> {
     let path = Path::new(value);
-    validate_project_relative(path).map_err(|error| error.to_string())?;
     let portable = value.replace('\\', "/");
+    if is_host_owned_skill_path(&portable) {
+        return Ok(portable);
+    }
+    validate_project_relative(path).map_err(|error| error.to_string())?;
     if portable == ".hive" || portable.starts_with(".hive/runtime/") {
         return Err("session paths must not reserve Hive runtime state".to_owned());
     }
     Ok(portable)
+}
+
+fn is_host_owned_skill_path(path: &str) -> bool {
+    let components = path.split('/').collect::<Vec<_>>();
+    components.len() >= 3
+        && matches!(
+            (components[0], components[1]),
+            (".agents", "skills") | (".claude", "skills")
+        )
+        && components.iter().all(|component| {
+            !component.is_empty()
+                && *component != "."
+                && *component != ".."
+                && !component.contains(':')
+        })
 }
 
 fn execute(arguments: &Arguments) -> Result<SessionResult, String> {
@@ -835,5 +884,16 @@ mod tests {
             parse_manifest(&rendered).expect("parse").paths,
             manifest.paths
         );
+    }
+
+    #[test]
+    fn host_owned_skill_paths_require_the_matching_host() {
+        assert!(validate_host_owned_skill_path("codex", ".agents/skills/inspect/SKILL.md").is_ok());
+        assert!(validate_host_owned_skill_path("antigravity", ".agents/skills/inspect").is_ok());
+        assert!(
+            validate_host_owned_skill_path("claude", ".claude/skills/inspect/SKILL.md").is_ok()
+        );
+        assert!(validate_host_owned_skill_path("claude", ".agents/skills/inspect").is_err());
+        assert!(validate_host_owned_skill_path("codex", ".claude/skills/inspect").is_err());
     }
 }
