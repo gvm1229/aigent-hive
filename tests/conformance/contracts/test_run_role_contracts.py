@@ -1325,6 +1325,28 @@ class Phase4Contracts(unittest.TestCase):
         self.assertEqual(payload["data"]["decision"], "allow")
         self.assertEqual(payload["data"]["reason"], "session-binding-mismatch")
 
+        process, payload = self.checkpoint(
+            self.target,
+            self.checkpoint_request(
+                expected_revision=1,
+                updated_at="2026-07-24T00:01:00Z",
+                continuation={
+                    "session_binding_digest": digest_bytes(b"active-session"),
+                    "max_retry_attempts": 3,
+                    "attempts_used": 1,
+                    "cancel_requested": True,
+                },
+            ),
+            CAPABILITIES["absent"],
+            "closure-cancel-requested",
+        )
+        self.assert_success(process, payload)
+        process, payload = self.continuation(self.target, "active-session")
+        self.assert_success(process, payload)
+        self.assertEqual(payload["data"]["decision"], "allow")
+        self.assertEqual(payload["data"]["reason"], "retry-not-permitted")
+        self.assertEqual(payload["data"]["continuation"]["cancel"]["state"], "cancel-requested")
+
     def test_resume_executing_and_verifying_prepares_only_without_spawning_or_writes(self) -> None:
         for state in ("executing", "verifying"):
             with self.subTest(state=state):
