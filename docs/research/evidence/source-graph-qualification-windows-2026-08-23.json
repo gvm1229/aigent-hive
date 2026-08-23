@@ -1,0 +1,22 @@
+{
+  "api_keys_read": 0,
+  "canonical_changed": false,
+  "canonical_tree_digest_after": "sha256:50b1fdc64e525dfae7b429a9864cd4b97457b309548c2f574c0118b1a1d69cbf",
+  "canonical_tree_digest_before": "sha256:50b1fdc64e525dfae7b429a9864cd4b97457b309548c2f574c0118b1a1d69cbf",
+  "cold_cli_p95_ms": 423.5135,
+  "edge_count": 700,
+  "engine": "native-markdown",
+  "exact_recall_at_10": 1.0,
+  "failed_exact": [],
+  "failed_relation": [],
+  "node_count": 79,
+  "provider_api_calls": 0,
+  "query_logs": 0,
+  "questions": {
+    "exact": 30,
+    "relation": 30
+  },
+  "relation_grounded_recall_at_10": 1.0,
+  "schema_version": 1,
+  "scope": "source"
+}
