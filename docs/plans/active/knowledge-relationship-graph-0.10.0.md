@@ -18,16 +18,16 @@
 - [x] [KRG10-001] engine·node·edge·generation·query 결과 schema와 Markdown·SQLite·Graphify ownership 계약 — `0729670`; scope·engine·node·edge·lifecycle·evidence schema와 contract regression
 - [x] [KRG10-002] `sources|source_links|links|related_concepts|duplicate_of|contradictions|topics|tags|replacement`의 결정론적 Markdown edge 추출 — `c78c799`, `49ab3d9`; 모든 explicit field의 `EXTRACTED` edge·canonical digest·정렬·중복 제거, `hive-wiki` 116·knowledge schema 12 GNU tests 통과
 - [ ] [KRG10-003] source·project·user-root·shared·private·confidential collection별 물리적 graph generation 격리
-- [ ] [KRG10-004] Hive-native Markdown graph의 전체·digest 기반 증분 rebuild와 정규화 동등성
-- [ ] [KRG10-005] 사실·본문은 FTS, 문서 관계는 native graph, code 영향은 Graphify로 보내는 query planner와 결합 결과
-- [ ] [KRG10-006] metadata 최대 10개 우선 반환과 선택 `item_id` 본문 조회, 전체 검색 최대 50개·본문 자동 확장 `0건`
-- [ ] [KRG10-007] `active|contradicted|superseded|expired|revoked` 생명주기, 기본 retrieval 제외, build·query·검토 비용 receipt
+- [x] [KRG10-004] Hive-native Markdown graph의 전체·digest 기반 증분 rebuild와 정규화 동등성 — `bfdfd57`; unchanged page edge 재사용과 change·delete full rebuild exact equality
+- [x] [KRG10-005] 사실·본문은 FTS, 문서 관계는 native graph, code 영향은 Graphify로 보내는 query planner와 결합 결과 — `4955581`; `matched_lanes`·FTS·Markdown/code graph 결합
+- [x] [KRG10-006] metadata 최대 10개 우선 반환과 선택 `item_id` 본문 조회, 전체 검색 최대 50개·본문 자동 확장 `0건` — `d488e66`; metadata·read command·body byte `0`
+- [x] [KRG10-007] `active|contradicted|superseded|expired|revoked` 생명주기, 기본 retrieval 제외, build·query·검토 비용 receipt — `0bbb308`; five-state graph filter와 scan cost receipt
 - [ ] [KRG10-008] `graphifyy==0.9.47`·Python·dependency exact digest preview와 사용자 승인형 격리 환경
-- [ ] [KRG10-009] Graphify `extract --force --code-only` full rebuild, project-relative locator와 Hive edge schema 정규화
-- [ ] [KRG10-010] source commit·입력 digest·extractor version drift 검출, staging 검증 뒤 atomic generation activation
-- [ ] [KRG10-011] Graphify 미설치·손상·schema mismatch·build 실패의 native graph·FTS 정상 대체와 rollback
-- [ ] [KRG10-012] 관계 경로·scope·locator·digest·`EXTRACTED` evidence의 JSON·HTML export
-- [ ] [KRG10-013] provider API·API key·query log·watcher·Git hook·자동 MCP 등록·upstream `global|update` 호출 `0건`
+- [x] [KRG10-009] Graphify `extract --force --code-only` full rebuild, project-relative locator와 Hive edge schema 정규화 — `a8cc02a`, `8abeb91`; ungrounded node 제거·hostile locator 거부
+- [x] [KRG10-010] source commit·입력 digest·extractor version drift 검출, staging 검증 뒤 atomic generation activation — `7e5be69`, `8abeb91`; source·receipt·generation pointer binding
+- [x] [KRG10-011] Graphify 미설치·손상·schema mismatch·build 실패의 native graph·FTS 정상 대체와 rollback — missing·disable·tamper native fallback 회귀
+- [x] [KRG10-012] 관계 경로·scope·locator·digest·`EXTRACTED` evidence의 JSON·HTML export — `d488e66`; digest-addressed body-free export
+- [x] [KRG10-013] provider API·API key·query log·watcher·Git hook·자동 MCP 등록·upstream `global|update` 호출 `0건` — `09bd0f9`, `e6528d1`; exact consent·code-only receipt와 금지 동작 zero gate
 - [ ] [KRG10-015] pre-`0.10.0` canonical Markdown·collection registry·기존 FTS 결과 byte 보존 upgrade·disable·rollback
 - [ ] [KRG10-016] 30개 관계 질문·직접 사실 무회귀·성능·격리·Windows x64·macOS arm64·Linux musl 공개 시험 수용
 

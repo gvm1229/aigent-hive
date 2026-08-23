@@ -25,6 +25,8 @@
 - `0.7.0–0.9.5`와 공개 시험 predecessor의 retired Skill direct-jump cleanup·rollback 수용 완료
 - Stable Skill compatibility ledger와 npm·GitHub 공개 stable parity 게시 gate 추가
 - `hive judge receipt`의 세 host launch·result·identity·verdict binding과 quorum 분리 수용 완료
+- Native graph 증분 동등성·FTS planner·metadata·lifecycle·비용 receipt·JSON/HTML export 완료
+- Graphify code-only receipt·정규화·atomic activation·native fallback·exact consent gate 완료
 
 ## 현재 검증 근거
 
@@ -41,7 +43,8 @@
 
 ## `0.10.0` 남은 범위
 
-- 관계 graph·Graphify code-only adapter의 남은 hard gate와 upgrade·rollback 검증
+- Collection별 graph 공개 격리와 Graphify 승인형 wheelhouse 설치 검증
+- pre-`0.10.0` graph upgrade·rollback과 세 운영체제 관계 질문 수용
 - FTS·vector·graph 품질 기준선과 vector engine adopt|defer 판정
 - 번호 공개 시험판과 Windows x64·macOS arm64·Linux musl 수용
 - `REL10-005–007`: 안정판 후보·게시·설치
@@ -57,9 +60,10 @@
 
 ## 다음 작업
 
-1. `KRG10` native 관계 graph·Graphify code-only adapter 마감
-2. `VEC10` vector gate와 조건부 구현 마감
-3. `REL10-001–004` 번호 공개 시험판 준비·수용
+1. `KRG10-003`, `KRG10-008` collection 격리·Graphify wheelhouse 설치 마감
+2. `KRG10-015–016` upgrade·관계 질문·세 운영체제 수용 준비
+3. `VEC10` vector gate와 조건부 구현 마감
+4. `REL10-001–004` 번호 공개 시험판 준비·수용
 
 ## 과거 기록
 
