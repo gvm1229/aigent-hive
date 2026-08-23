@@ -1,17 +1,17 @@
 # Aigent Hive 활성 계획
 
-> Revision: 282
+> Revision: 283
 > 기준일: 2026-08-24
 > Product version: `0.10.0`
 > Stable baseline: `0.9.5`
 > 다음 target: `0.10.0-test.2`
-> 현재 milestone: 한국어 언어 core 범위 재개방
+> 현재 milestone: 한국어 언어 core·vector 재검증 구현
 > 확정 범위: [`ADR-0020`](../decisions/ADR-0020-0.10.0-product-scope.md)
 
 ## 목표
 
 - Hive-native Markdown 관계 graph와 Graphify code-only 제한 채택 구현
-- FTS·vector·graph hybrid 검색의 hard gate와 조건부 구현
+- FTS·vector·graph hybrid 검색의 embedding pipeline 재검증과 조건부 구현
 - host-owned 프로젝트 Skill 경로 세션 예약 계약 정합화
 - 등록된 nested project의 안전한 knowledge scan 복구
 - pre-`0.10.0` 지식·프로젝트 무손실 upgrade
@@ -26,7 +26,8 @@
 - 승인된 관계·검색 범위의 checklist·수락 기준 정합성
 - Upgrade 전후 canonical Markdown·프로젝트 설정 byte 보존
 - 기존 SQLite 직접 검색 결과 저하 `0건`
-- Vector hard gate 실패의 product dependency·release 차단 `0건`
+- Vector 재검증 실패의 product dependency·release 차단 `0건`, 통과 시 한 조합만 선택형 채택
+- Repeated synthetic corpus와 50,000 unique corpus 분리, embedding full·incremental·resume·end-to-end 근거
 - 등록 project root 밖 sibling read·write와 전역 Git 설정 mutation `0건`
 - 한국어 윤문 전후 의미·수치·명령·list·link·인용 무회귀와 host별 적용 수준의 정직한 표시
 - Upstream update의 version·commit·digest·license 고정, staging·rollback, raw install·floating update `0건`
@@ -59,7 +60,7 @@
 | 범위 | 완료 | 미완료 | 진행률 |
 | --- | ---: | ---: | ---: |
 | 관계·검색 graph | 16 | 0 | 100% |
-| Hybrid vector search | 13 | 0 | 100% |
+| Hybrid vector search | 9 | 14 | 39.1% |
 | Host-owned Skill 예약 | 1 | 0 | 100% |
 | Nested project scan | 1 | 0 | 100% |
 | Agent 지침 경량화 | 7 | 0 | 100% |
@@ -69,7 +70,7 @@
 | Skill migration cleanup | 10 | 0 | 100% |
 | 한국어 언어 core | 1 | 11 | 8.3% |
 | `0.10.0` 출시 | 0 | 7 | 0% |
-| **합계** | **79** | **18** | **81.4%** |
+| **합계** | **75** | **32** | **70.1%** |
 
 ## Required load order
 
@@ -86,7 +87,7 @@ Archive·backlog·완료 history의 자동 선행 load 금지.
 | Fragment | Checklist | 범위 |
 | --- | --- | --- |
 | [`active/knowledge-relationship-graph-0.10.0.md`](active/knowledge-relationship-graph-0.10.0.md) | `SCP10-001`, `KRG10-*` | Markdown·Graphify 관계 검색 |
-| [`active/hybrid-vector-search-0.10.0.md`](active/hybrid-vector-search-0.10.0.md) | `KRG10-014`, `VEC10-*` | 조건부 semantic vector 검색 |
+| [`active/hybrid-vector-search-0.10.0.md`](active/hybrid-vector-search-0.10.0.md) | `KRG10-014`, `VEC10-*`, `VQR10-*` | Semantic vector 재검증·조건부 구현 |
 | [`active/host-owned-skill-reservations-0.10.0.md`](active/host-owned-skill-reservations-0.10.0.md) | `SCP10-002` | Host-owned Skill 세션 예약 |
 | [`active/nested-project-knowledge-scan-0.10.0.md`](active/nested-project-knowledge-scan-0.10.0.md) | `SCP10-003` | Nested project scan |
 | [`active/agent-directive-optimization-0.10.0.md`](active/agent-directive-optimization-0.10.0.md) | `DIR10-*` | Source·소비자 Agent 지침 경량화 |
@@ -105,9 +106,10 @@ Archive·backlog·완료 history의 자동 선행 load 금지.
 4. `JDG10-002–008` explicit adversarial Judge·`judge-evidence`·host launch·quorum 결합
 5. `KRG10-001–007`, `VEC10-001–007` native 관계·vector feasibility·adopt|defer
 6. `KRG10-008–013`, `KRG10-015–016`과 통과 시 `VEC10-008–012` 구현·수용
-7. `KOR10-002–011` 자동 한국어 core·`humanize-kor`·검증된 upstream language pack 구현
-8. `KOR10-012`, `REL10-001–004` 전체 회귀·`0.10.0-test.2` 이상·세 운영체제 수용
-9. 유지보수자의 명시 승인 뒤 `REL10-005–007` 안정판 출시
+7. `VQR10-002–010` embedding pipeline·engine·격리·rollback 재검증, 통과 시 `VEC10-008–012` 구현
+8. `KOR10-002–011` 자동 한국어 core·`humanize-kor`·검증된 upstream language pack 구현
+9. `KOR10-012`, `REL10-001–004` 전체 회귀·`0.10.0-test.2` 이상·세 운영체제 수용
+10. 유지보수자의 명시 승인 뒤 `REL10-005–007` 안정판 출시
 
 ## 비활성 자료
 

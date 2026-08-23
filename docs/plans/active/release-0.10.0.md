@@ -1,7 +1,7 @@
 # `0.10.0` 시험·정식 출시
 
 > Checklist owner: `REL10-*`
-> 완료 선행: `SCP10-001–003`, `CON10-*`, `VWF10-*`, `JDG10-*`, `SKM10-*`, `KRG10-001–016`, `KOR10-*`
+> 완료 선행: `SCP10-001–003`, `CON10-*`, `VWF10-*`, `JDG10-*`, `SKM10-*`, `KRG10-001–016`, `VEC10-*`, `VQR10-*`, `KOR10-*`
 
 ## Checklist
 
@@ -17,6 +17,7 @@
 
 - `SCP10-002–003`, `KRG10-001–016` 미완료
 - `KOR10-002–012` 미완료 또는 새 한국어 product bytes의 번호 시험판·세 host·세 운영체제 수용 부재
+- `VQR10-002–010` 미완료 또는 재검증 통과 뒤 `VEC10-008–012` 구현·세 운영체제 수용 부재
 - pre-`0.10.0` canonical 지식·프로젝트 보존 증거 부재
 - 지원 predecessor direct upgrade의 retired Skill·projection closure 증거 부재
 - 게시된 stable release 집합과 historical built-in Skill registry parity 증거 부재
