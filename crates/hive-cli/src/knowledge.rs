@@ -4978,6 +4978,11 @@ mod tests {
         assert!(error.to_string().contains("only project or source scope"));
     }
 
+    #[cfg(any(
+        all(target_os = "windows", target_arch = "x86_64"),
+        all(target_os = "linux", target_arch = "x86_64", target_env = "musl"),
+        all(target_os = "macos", target_arch = "aarch64")
+    ))]
     #[test]
     #[allow(clippy::too_many_lines)]
     fn graphify_code_rebuild_requires_exact_receipt_and_falls_back_to_native() {

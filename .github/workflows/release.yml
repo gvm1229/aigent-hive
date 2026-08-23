@@ -116,11 +116,18 @@ jobs:
             AIGENT_HIVE_PACKAGE_RELEASE_DATE="$PACKAGE_RELEASE_DATE" \
             cargo build --release --locked --target "$TARGET" --bin hive
       - name: Qualify exact and grounded source graph questions
-        run: >-
-          python3 scripts/qualify-source-graph.py
-          --hive "target/$TARGET/release/hive"
-          --target .
-          --output "source-graph-$TARGET.json"
+        run: |
+          extra=()
+          case "$TARGET" in
+            aarch64-apple-darwin|x86_64-unknown-linux-musl)
+              extra+=(--require-graphify-preview)
+              ;;
+          esac
+          python3 scripts/qualify-source-graph.py \
+            --hive "target/$TARGET/release/hive" \
+            --target . \
+            --output "source-graph-$TARGET.json" \
+            "${extra[@]}"
       - name: Apply and verify explicit macOS ad-hoc signature
         if: runner.os == 'macOS'
         run: |
@@ -284,6 +291,7 @@ jobs:
           --hive "target/$env:TARGET/release/hive.exe"
           --target .
           --output "source-graph-$env:TARGET.json"
+          --require-graphify-preview
       - name: Verify architecture and package native archive
         shell: pwsh
         run: |

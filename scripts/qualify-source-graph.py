@@ -63,6 +63,7 @@ def main() -> int:
     parser.add_argument("--target", type=Path, required=True)
     parser.add_argument("--corpus", type=Path, default=Path("tests/fixtures/knowledge/vector-gold-120.json"))
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--require-graphify-preview", action="store_true")
     args = parser.parse_args()
     target = args.target.resolve()
     binary = args.hive.resolve()
@@ -80,6 +81,32 @@ def main() -> int:
         ["source-wiki", "graph", "rebuild", "--target", str(target)],
         target,
     )
+    graphify_preview = False
+    if args.require_graphify_preview:
+        preview, _ = invoke(
+            binary,
+            [
+                "source-wiki",
+                "graph",
+                "preview",
+                "--target",
+                str(target),
+                "--engine",
+                "graphify-code",
+            ],
+            target,
+        )
+        preview_data = preview["data"]
+        assert isinstance(preview_data, dict)
+        graphify_preview = (
+            preview.get("status") == "success"
+            and preview_data.get("package_version") == "0.9.47"
+            and preview_data.get("provider_api_calls") == 0
+            and preview_data.get("api_keys_read") == 0
+            and preview_data.get("query_logs") == 0
+            and preview_data.get("network_requests") == 0
+            and str(preview_data.get("dependency_lock_digest", "")).startswith("sha256:")
+        )
     exact_passes = 0
     relation_passes = 0
     failed_exact = []
@@ -158,6 +185,7 @@ def main() -> int:
         "provider_api_calls": 0,
         "api_keys_read": 0,
         "query_logs": 0,
+        "graphify_preview": graphify_preview,
     }
     if (
         report["exact_recall_at_10"] < 1.0
@@ -166,6 +194,7 @@ def main() -> int:
         or report["canonical_changed"]
         or report["scope"] != "source"
         or report["engine"] != "native-markdown"
+        or (args.require_graphify_preview and not report["graphify_preview"])
     ):
         raise SystemExit("source graph qualification gate failed: " + json.dumps(report, sort_keys=True))
     args.output.parent.mkdir(parents=True, exist_ok=True)
