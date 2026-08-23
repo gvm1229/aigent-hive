@@ -423,6 +423,97 @@ pub fn query_generation(
         .collect()
 }
 
+/// Return at most ten metadata-only nodes for one relationship neighborhood.
+#[must_use]
+pub fn query_node_metadata(
+    generation: &GraphGeneration,
+    node_id: &str,
+    limit: usize,
+) -> Vec<GraphNode> {
+    let mut ids = std::collections::BTreeSet::from([node_id.to_owned()]);
+    for edge in query_generation(generation, node_id, 50) {
+        ids.insert(edge.from);
+        ids.insert(edge.to);
+    }
+    generation
+        .nodes
+        .iter()
+        .filter(|node| node.lifecycle == "active" && ids.contains(&node.id))
+        .take(limit.min(10))
+        .cloned()
+        .collect()
+}
+
+/// Write one digest-addressed JSON or self-contained HTML graph export.
+///
+/// # Errors
+///
+/// Returns an error for an unsupported format, unsafe path, serialization failure, or write
+/// failure. Canonical Markdown and active graph state remain unchanged.
+pub fn export_generation(
+    target: &Path,
+    generation: &GraphGeneration,
+    format: &str,
+) -> Result<PathBuf, String> {
+    if !matches!(format, "json" | "html") {
+        return Err("knowledge graph export format is unsupported".to_owned());
+    }
+    let digest = generation
+        .generation_digest
+        .strip_prefix("sha256:")
+        .and_then(|value| value.get(..16))
+        .ok_or_else(|| "knowledge graph generation digest is invalid".to_owned())?;
+    let relative = PathBuf::from(".hive/exports/knowledge-graph").join(format!(
+        "{}-{}-{}.{}",
+        generation.scope, generation.engine, digest, format
+    ));
+    ensure_no_symlink_ancestors(target, &relative)
+        .map_err(|error| format!("knowledge graph export path is unsafe: {error}"))?;
+    let destination = target.join(&relative);
+    let parent = destination
+        .parent()
+        .ok_or_else(|| "knowledge graph export has no parent".to_owned())?;
+    std::fs::create_dir_all(parent)
+        .map_err(|error| format!("create graph export parent: {error}"))?;
+    let json = serde_json::to_vec(generation)
+        .map_err(|error| format!("serialize knowledge graph export: {error}"))?;
+    let bytes = if format == "json" {
+        json
+    } else {
+        let escaped = String::from_utf8(json)
+            .map_err(|error| format!("encode knowledge graph HTML: {error}"))?
+            .replace('&', "&amp;")
+            .replace('<', "&lt;")
+            .replace('>', "&gt;");
+        format!(
+            "<!doctype html><meta charset=\"utf-8\"><title>Aigent Hive knowledge graph</title><pre id=\"graph\">{escaped}</pre>"
+        )
+        .into_bytes()
+    };
+    match std::fs::symlink_metadata(&destination) {
+        Ok(metadata) if metadata.is_file() => {
+            let existing = std::fs::read(&destination)
+                .map_err(|error| format!("read knowledge graph export: {error}"))?;
+            if existing == bytes {
+                return Ok(relative);
+            }
+            return Err("knowledge graph export digest path has different bytes".to_owned());
+        }
+        Ok(_) => return Err("knowledge graph export destination is not a regular file".to_owned()),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+        Err(error) => return Err(format!("inspect knowledge graph export: {error}")),
+    }
+    let mut temporary = NamedTempFile::new_in(parent)
+        .map_err(|error| format!("create knowledge graph export staging: {error}"))?;
+    temporary
+        .write_all(&bytes)
+        .map_err(|error| format!("write knowledge graph export staging: {error}"))?;
+    temporary
+        .persist(&destination)
+        .map_err(|error| format!("activate knowledge graph export: {error}"))?;
+    Ok(relative)
+}
+
 /// Extract direct links, source links, tags, and contradiction references in stable order.
 #[must_use]
 pub fn extract_markdown_edges(pages: &[WikiPage]) -> Vec<GraphEdge> {
@@ -481,9 +572,9 @@ fn edge(from: &str, to: &str, relation: &str, source_digest: &str) -> GraphEdge 
 mod tests {
     use super::{
         activate_generation, build_native_generation, build_native_generation_incremental,
-        extract_markdown_edges, generation_relative_path, load_active_generation,
-        persist_generation, query_generation, remove_active_generation, remove_generation,
-        GraphEvidence,
+        export_generation, extract_markdown_edges, generation_relative_path,
+        load_active_generation, persist_generation, query_generation, query_node_metadata,
+        remove_active_generation, remove_generation, GraphEvidence,
     };
     use crate::{Contradiction, WikiFrontmatter, WikiPage};
 
@@ -560,6 +651,9 @@ mod tests {
         assert_eq!(hits.len(), 9);
         assert!(hits.iter().all(|edge| edge.from == "first"));
         assert!(query_generation(&generation, "missing", 10).is_empty());
+        let metadata = query_node_metadata(&generation, "first", 100);
+        assert_eq!(metadata.len(), 1);
+        assert!(metadata.iter().all(|node| node.locator.contains("Wiki")));
     }
 
     #[test]
@@ -654,5 +748,18 @@ mod tests {
                 .expect("repeat")
                 .is_empty()
         );
+    }
+
+    #[test]
+    fn json_and_html_exports_are_digest_addressed_and_body_free() {
+        let target = tempfile::tempdir().expect("temporary target");
+        let generation = build_native_generation("project", &[page("first")]).expect("generation");
+        for format in ["json", "html"] {
+            let relative =
+                export_generation(target.path(), &generation, format).expect("export generation");
+            let bytes = std::fs::read(target.path().join(relative)).expect("export bytes");
+            assert!(!bytes.windows(4).any(|window| window == b"body"));
+        }
+        assert!(export_generation(target.path(), &generation, "svg").is_err());
     }
 }

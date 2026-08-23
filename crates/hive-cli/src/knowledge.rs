@@ -32,11 +32,12 @@ use hive_wiki::store::{
     SharedKnowledgeOperationLock, StoreCommit,
 };
 use hive_wiki::{
-    activate_generation, build_graph, delete_page, delete_page_shared, generation_relative_path,
-    ingest, ingest_shared, lint, list_pages, load_active_generation, normalize_graphify_code,
-    promote, promote_shared, query_filtered, query_generation, read_page, rebuild_index,
-    remove_active_generation, suppress, suppress_shared, LintIssue, LintSeverity,
-    PromotionCategory, PromotionMode, SuppressionEntry, WikiError,
+    activate_generation, build_graph, delete_page, delete_page_shared, export_generation,
+    generation_relative_path, ingest, ingest_shared, lint, list_pages, load_active_generation,
+    normalize_graphify_code, promote, promote_shared, query_filtered, query_generation,
+    query_node_metadata, read_page, rebuild_index, remove_active_generation, suppress,
+    suppress_shared, LintIssue, LintSeverity, PromotionCategory, PromotionMode, SuppressionEntry,
+    WikiError,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
@@ -73,7 +74,7 @@ USAGE:
     hive knowledge export --user-root <dir> --scope global|shared|project:<id>|collection:<id>|all-portable --bundle <path>.hivekb [--replace-backup <file-name>] --output json
     hive knowledge import --user-root <dir> --bundle <path>.hivekb (--dry-run|--apply) --output json
     hive knowledge refresh (--target <legacy-project>|--user-root <dir>) --output json
-    hive knowledge graph preview|status|rebuild|disable|query --target <dir> [--scope project] [--engine native-markdown|graphify-code] [--input <graph.json> --receipt <receipt.json>] [--node-id <id>] --output json
+    hive knowledge graph preview|status|rebuild|disable|query|export --target <dir> [--scope project] [--engine native-markdown|graphify-code] [--input <graph.json> --receipt <receipt.json>] [--node-id <id>] [--format json|html] --output json
     hive index rebuild (--target <legacy-project>|--user-root <dir>) --output json
 ";
 
@@ -231,15 +232,17 @@ pub(crate) fn run_knowledge(arguments: &[String]) -> ExitCode {
 fn run_graph(arguments: &[String]) -> Result<KnowledgeResult, WikiError> {
     let action = arguments.first().map(String::as_str).ok_or_else(|| {
         WikiError::InvalidInput(
-            "knowledge graph requires preview, status, rebuild, disable, or query".to_owned(),
+            "knowledge graph requires preview, status, rebuild, disable, query, or export"
+                .to_owned(),
         )
     })?;
     if !matches!(
         action,
-        "preview" | "status" | "rebuild" | "disable" | "query"
+        "preview" | "status" | "rebuild" | "disable" | "query" | "export"
     ) {
         return Err(WikiError::InvalidInput(
-            "knowledge graph supports preview, status, rebuild, disable, or query".to_owned(),
+            "knowledge graph supports preview, status, rebuild, disable, query, or export"
+                .to_owned(),
         ));
     }
     let options = parse_options(
@@ -251,6 +254,7 @@ fn run_graph(arguments: &[String]) -> Result<KnowledgeResult, WikiError> {
             "--engine",
             "--input",
             "--receipt",
+            "--format",
         ],
     )?;
     let target = PathBuf::from(required(&options, "--target")?);
@@ -350,6 +354,13 @@ fn run_graph(arguments: &[String]) -> Result<KnowledgeResult, WikiError> {
             .into_iter()
             .map(|path| path.to_string_lossy().into_owned())
             .collect()
+    } else if action == "export" {
+        vec![
+            export_generation(&target, &graph, required(&options, "--format")?)
+                .map_err(WikiError::Io)?
+                .to_string_lossy()
+                .into_owned(),
+        ]
     } else {
         Vec::new()
     };
@@ -363,6 +374,8 @@ fn run_graph(arguments: &[String]) -> Result<KnowledgeResult, WikiError> {
             "generation_digest": graph.generation_digest,
             "node_id": node_id,
             "matches": query_generation(&graph, node_id, 50),
+            "metadata": query_node_metadata(&graph, node_id, 10),
+            "read_command": format!("hive knowledge read --target <dir> --page-id {node_id} --output json"),
             "writes": false,
         })
     } else {
@@ -376,7 +389,7 @@ fn run_graph(arguments: &[String]) -> Result<KnowledgeResult, WikiError> {
             "edge_count": graph.edges.len(),
             "generation_path": locator,
             "active": active || action == "rebuild",
-            "writes": matches!(action, "rebuild" | "disable"),
+            "writes": matches!(action, "rebuild" | "disable" | "export"),
         })
     };
     Ok(success(
@@ -384,6 +397,8 @@ fn run_graph(arguments: &[String]) -> Result<KnowledgeResult, WikiError> {
             "RebuildKnowledgeIndex"
         } else if action == "disable" {
             "DeleteKnowledge"
+        } else if action == "export" {
+            "ExportKnowledge"
         } else {
             "QueryKnowledge"
         },
@@ -392,6 +407,7 @@ fn run_graph(arguments: &[String]) -> Result<KnowledgeResult, WikiError> {
             "disable" => "hive.knowledge-graph-disabled",
             "status" => "hive.knowledge-graph-status",
             "query" => "hive.knowledge-graph-query-complete",
+            "export" => "hive.knowledge-graph-exported",
             _ => "hive.knowledge-graph-preview",
         },
         "knowledge graph operation completed",
@@ -4450,6 +4466,13 @@ mod tests {
         let matches = query_data["matches"].as_array().expect("metadata matches");
         assert_eq!(matches.len(), 2);
         assert!(matches.iter().all(|edge| edge.get("body").is_none()));
+        assert_eq!(
+            query_data["metadata"]
+                .as_array()
+                .expect("node metadata")
+                .len(),
+            1
+        );
 
         let status = run_graph(&vec![
             "status".to_owned(),
@@ -4486,6 +4509,22 @@ mod tests {
         ])
         .expect("active graph status");
         assert_eq!(status.data.expect("active status data")["active"], true);
+
+        for format in ["json", "html"] {
+            let exported = run_graph(&[
+                "export".to_owned(),
+                "--target".to_owned(),
+                project.path().to_string_lossy().into_owned(),
+                "--format".to_owned(),
+                format.to_owned(),
+                "--output".to_owned(),
+                "json".to_owned(),
+            ])
+            .expect("graph export");
+            assert_eq!(exported.action, "ExportKnowledge");
+            assert_eq!(exported.changed_paths.len(), 1);
+            assert!(project.path().join(&exported.changed_paths[0]).is_file());
+        }
 
         let disabled = run_graph(&vec![
             "disable".to_owned(),

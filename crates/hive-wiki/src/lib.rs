@@ -36,8 +36,9 @@ use tempfile::NamedTempFile;
 
 pub use graph::{
     activate_generation, build_native_generation, build_native_generation_incremental,
-    generation_relative_path, load_active_generation, persist_generation, query_generation,
-    remove_active_generation, remove_generation, ActiveGraphPointer, GraphGeneration,
+    export_generation, generation_relative_path, load_active_generation, persist_generation,
+    query_generation, query_node_metadata, remove_active_generation, remove_generation,
+    ActiveGraphPointer, GraphGeneration,
 };
 pub use graphify::normalize_graphify_code;
 
