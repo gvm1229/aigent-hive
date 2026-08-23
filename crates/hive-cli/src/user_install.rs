@@ -22,7 +22,7 @@ use std::path::{Component, Path, PathBuf};
 use std::process::ExitCode;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
-include!(concat!(env!("OUT_DIR"), "/historical_095.rs"));
+include!(concat!(env!("OUT_DIR"), "/historical_user_plugins.rs"));
 
 const USER_MARKER_START: &[u8] = b"<!-- AIGENT-HIVE:USER:START -->";
 const USER_MARKER_END: &[u8] = b"<!-- AIGENT-HIVE:USER:END -->";
@@ -2974,6 +2974,9 @@ fn authenticated_user_inventory(
     if let Some(historical) = pre_scope_routing_test_inventory(host, request) {
         return Some(historical);
     }
+    if let Some(historical) = historical_09x_user_inventory(host, request) {
+        return Some(historical);
+    }
     if request.product_version == "0.8.0" {
         if let Some(historical) = historical_080_user_inventory(
             host,
@@ -3507,8 +3510,11 @@ fn retired_skill_artifact_paths(host: UserHost, name: &str) -> Vec<String> {
     }
 }
 
-#[allow(dead_code)]
-fn historical_095_artifact_digest(host: UserHost, path: &str) -> Option<&'static str> {
+fn historical_user_artifact_digest(
+    version: &str,
+    host: UserHost,
+    path: &str,
+) -> Option<&'static str> {
     let relative = match host {
         UserHost::Codex => path.strip_prefix(".hive/marketplaces/codex/plugins/aigent-hive/")?,
         UserHost::Claude => path.strip_prefix(".hive/marketplaces/claude/plugins/aigent-hive/")?,
@@ -3516,9 +3522,154 @@ fn historical_095_artifact_digest(host: UserHost, path: &str) -> Option<&'static
             .strip_prefix(&format!("{ANTIGRAVITY_SOURCE_RELATIVE}/"))
             .or_else(|| path.strip_prefix(".gemini/config/"))?,
     };
-    HISTORICAL_095_FILES
+    HISTORICAL_USER_PLUGIN_RELEASES
+        .iter()
+        .find(|(candidate, _)| *candidate == version)?
+        .1
         .iter()
         .find_map(|(candidate, digest)| (*candidate == relative).then_some(*digest))
+}
+
+fn historical_09x_user_inventory(
+    host: UserHost,
+    request: &InventoryAuthentication<'_>,
+) -> Option<AuthenticatedUserInventory> {
+    let files = HISTORICAL_USER_PLUGIN_RELEASES
+        .iter()
+        .find(|(version, _)| *version == request.product_version)?
+        .1;
+    let expected_range = match host {
+        UserHost::Codex => ">=0.145.0 <1.0.0",
+        UserHost::Claude => ">=2.1.0 <3.0.0",
+        UserHost::Antigravity => ">=1.1.7 <1.2.0",
+    };
+    if request.installed_host_version_range != expected_range
+        || portable(request.installed_guidance_path) != historical_guidance_path(host)
+        || request.installed_entries.is_empty()
+        || request.source_release_digest
+            != source_release_digest_from_entries(request.installed_entries)
+        || !request
+            .installed_entries
+            .windows(2)
+            .all(|pair| pair[0].path < pair[1].path)
+    {
+        return None;
+    }
+
+    for entry in request.installed_entries {
+        match entry.ownership.as_str() {
+            "immutable-plugin-package" | "host-skill-projection" => {
+                let expected =
+                    historical_user_artifact_digest(request.product_version, host, &entry.path)?;
+                let relative = historical_user_artifact_relative(host, &entry.path)?;
+                let executable = relative.starts_with("bin/");
+                if entry.digest != expected
+                    || entry.executable != executable
+                    || entry.unix_mode != installed_unix_mode(executable)
+                {
+                    return None;
+                }
+            }
+            "host-adapter-metadata" => {
+                let (path, digest) = match host {
+                    UserHost::Codex => (
+                        ".hive/marketplaces/codex/.agents/plugins/marketplace.json",
+                        USER_070_CODEX_MARKETPLACE_DIGEST,
+                    ),
+                    UserHost::Claude => (
+                        ".hive/marketplaces/claude/.claude-plugin/marketplace.json",
+                        USER_070_CLAUDE_MARKETPLACE_DIGEST,
+                    ),
+                    UserHost::Antigravity => return None,
+                };
+                if entry.path != path
+                    || entry.digest != digest
+                    || entry.executable
+                    || entry.unix_mode != installed_unix_mode(false)
+                {
+                    return None;
+                }
+            }
+            "shared-marker" => {
+                if entry.path != historical_guidance_path(host) || entry.executable {
+                    return None;
+                }
+            }
+            "canonical-data-protected" => {
+                if !historical_canonical_user_path(&entry.path) || entry.executable {
+                    return None;
+                }
+            }
+            _ => return None,
+        }
+    }
+
+    if !files.iter().all(|(relative, digest)| {
+        if !historical_user_artifact_required(host, relative) {
+            return true;
+        }
+        request.installed_entries.iter().any(|entry| {
+            historical_user_artifact_relative(host, &entry.path) == Some(*relative)
+                && entry.digest == *digest
+        })
+    }) {
+        return None;
+    }
+
+    Some(AuthenticatedUserInventory {
+        product_version: request.product_version.to_owned(),
+        host,
+        host_version_range: request.installed_host_version_range.to_owned(),
+        source_release_digest: request.source_release_digest.to_owned(),
+        guidance_path: portable(request.installed_guidance_path),
+        entries: request.installed_entries.to_vec(),
+    })
+}
+
+fn historical_user_artifact_required(host: UserHost, relative: &str) -> bool {
+    if relative.starts_with("skills/") {
+        return true;
+    }
+    match host {
+        UserHost::Codex | UserHost::Claude => matches!(
+            relative,
+            ".codex-plugin/plugin.json"
+                | ".claude-plugin/plugin.json"
+                | "bin/hive-claude-usage-capture"
+        ),
+        UserHost::Antigravity => relative == "plugin.json",
+    }
+}
+
+fn historical_user_artifact_relative(host: UserHost, path: &str) -> Option<&str> {
+    match host {
+        UserHost::Codex => path.strip_prefix(".hive/marketplaces/codex/plugins/aigent-hive/"),
+        UserHost::Claude => path.strip_prefix(".hive/marketplaces/claude/plugins/aigent-hive/"),
+        UserHost::Antigravity => path
+            .strip_prefix(&format!("{ANTIGRAVITY_SOURCE_RELATIVE}/"))
+            .or_else(|| path.strip_prefix(".gemini/config/")),
+    }
+}
+
+fn historical_guidance_path(host: UserHost) -> String {
+    match host {
+        UserHost::Codex => ".codex/AGENTS.md",
+        UserHost::Claude => ".claude/CLAUDE.md",
+        UserHost::Antigravity => ".gemini/GEMINI.md",
+    }
+    .to_owned()
+}
+
+fn historical_canonical_user_path(path: &str) -> bool {
+    matches!(
+        path,
+        ".hive/guides/discord-usage-notifications.html"
+            | ".hive/knowledge/Raw/README.md"
+            | ".hive/knowledge/Schema/schema.md"
+            | ".hive/knowledge/Wiki/index.md"
+            | ".hive/knowledge/Wiki/log.md"
+            | ".hive/knowledge/suppression.yml"
+    )
 }
 
 fn historical_080_required_paths(host: UserHost) -> Vec<String> {
@@ -9710,20 +9861,30 @@ mod tests {
     }
 
     #[test]
-    fn historical_095_plugin_base_is_compiled_as_exact_digest_table() {
-        assert_eq!(HISTORICAL_095_FILES.len(), 59);
-        assert!(HISTORICAL_095_FILES.iter().any(|(path, digest)| {
-            *path == "skills/ralph-loop/SKILL.md"
-                && *digest
-                    == "sha256:8b802691751194fa332f440ce17e1e59b6c20d69b6f999af829217b053ee1764"
+    fn historical_stable_plugin_bases_compile_as_exact_digest_tables() {
+        assert_eq!(
+            HISTORICAL_USER_PLUGIN_RELEASES
+                .iter()
+                .map(|(version, files)| (*version, files.len()))
+                .collect::<Vec<_>>(),
+            vec![
+                ("0.9.0", 50),
+                ("0.9.1", 51),
+                ("0.9.2", 51),
+                ("0.9.3", 59),
+                ("0.9.4", 59),
+                ("0.9.5", 59),
+            ]
+        );
+        assert!(HISTORICAL_USER_PLUGIN_RELEASES.iter().all(|(_, files)| {
+            files
+                .iter()
+                .all(|(path, digest)| !path.contains("..") && valid_sha256(digest))
         }));
-        assert!(HISTORICAL_095_FILES
-            .iter()
-            .all(|(path, digest)| !path.contains("..") && valid_sha256(digest)));
     }
 
     #[test]
-    fn historical_095_artifact_matcher_maps_every_host_root() {
+    fn historical_stable_artifact_matcher_maps_every_host_root() {
         let expected = "sha256:8b802691751194fa332f440ce17e1e59b6c20d69b6f999af829217b053ee1764";
         for (host, path) in [
             (
@@ -9743,11 +9904,237 @@ mod tests {
                 ".gemini/config/skills/ralph-loop/SKILL.md",
             ),
         ] {
-            assert_eq!(historical_095_artifact_digest(host, path), Some(expected));
+            assert_eq!(
+                historical_user_artifact_digest("0.9.5", host, path),
+                Some(expected)
+            );
         }
-        assert!(
-            historical_095_artifact_digest(UserHost::Codex, ".hive/foreign/SKILL.md").is_none()
+        assert!(historical_user_artifact_digest(
+            "0.9.5",
+            UserHost::Codex,
+            ".hive/foreign/SKILL.md"
+        )
+        .is_none());
+        assert!(historical_user_artifact_digest(
+            "0.9.6",
+            UserHost::Codex,
+            ".hive/marketplaces/codex/plugins/aigent-hive/skills/ralph-loop/SKILL.md"
+        )
+        .is_none());
+    }
+
+    #[test]
+    fn every_09_stable_user_inventory_authenticates_for_every_host() {
+        for &(version, files) in HISTORICAL_USER_PLUGIN_RELEASES {
+            for host in [UserHost::Codex, UserHost::Claude, UserHost::Antigravity] {
+                let prefix = match host {
+                    UserHost::Codex => ".hive/marketplaces/codex/plugins/aigent-hive/",
+                    UserHost::Claude => ".hive/marketplaces/claude/plugins/aigent-hive/",
+                    UserHost::Antigravity => ".hive/marketplaces/antigravity/plugins/aigent-hive/",
+                };
+                let mut entries = files
+                    .iter()
+                    .filter(|(relative, _)| historical_user_artifact_required(host, relative))
+                    .map(|(relative, digest)| {
+                        let executable = relative.starts_with("bin/");
+                        UserOwnershipEntry {
+                            path: format!("{prefix}{relative}"),
+                            digest: (*digest).to_owned(),
+                            executable,
+                            unix_mode: installed_unix_mode(executable),
+                            ownership: "immutable-plugin-package".to_owned(),
+                        }
+                    })
+                    .collect::<Vec<_>>();
+                if host != UserHost::Antigravity {
+                    let (path, digest) = match host {
+                        UserHost::Codex => (
+                            ".hive/marketplaces/codex/.agents/plugins/marketplace.json",
+                            USER_070_CODEX_MARKETPLACE_DIGEST,
+                        ),
+                        UserHost::Claude => (
+                            ".hive/marketplaces/claude/.claude-plugin/marketplace.json",
+                            USER_070_CLAUDE_MARKETPLACE_DIGEST,
+                        ),
+                        UserHost::Antigravity => unreachable!(),
+                    };
+                    entries.push(UserOwnershipEntry {
+                        path: path.to_owned(),
+                        digest: digest.to_owned(),
+                        executable: false,
+                        unix_mode: installed_unix_mode(false),
+                        ownership: "host-adapter-metadata".to_owned(),
+                    });
+                }
+                let guidance = historical_guidance_path(host);
+                entries.push(UserOwnershipEntry {
+                    path: guidance.clone(),
+                    digest: sha256_digest(b"historical guidance"),
+                    executable: false,
+                    unix_mode: installed_unix_mode(false),
+                    ownership: "shared-marker".to_owned(),
+                });
+                entries.push(UserOwnershipEntry {
+                    path: ".hive/knowledge/Raw/README.md".to_owned(),
+                    digest: sha256_digest(b"historical knowledge"),
+                    executable: false,
+                    unix_mode: installed_unix_mode(false),
+                    ownership: "canonical-data-protected".to_owned(),
+                });
+                entries.sort_by(|left, right| left.path.cmp(&right.path));
+                let source_release_digest = source_release_digest_from_entries(&entries);
+                let request = InventoryAuthentication {
+                    product_version: version,
+                    installed_host_version_range: match host {
+                        UserHost::Codex => ">=0.145.0 <1.0.0",
+                        UserHost::Claude => ">=2.1.0 <3.0.0",
+                        UserHost::Antigravity => ">=1.1.7 <1.2.0",
+                    },
+                    source_release_digest: &source_release_digest,
+                    installed_entries: &entries,
+                    installed_guidance_path: Path::new(&guidance),
+                    current_guidance_path: Path::new(&guidance),
+                    current_source_release_digest:
+                        "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+                    current_entries: &[],
+                    authenticated_prior: None,
+                };
+                let authenticated = authenticated_user_inventory(host, &request)
+                    .expect("stable user inventory must authenticate");
+                assert_user_entries_equal(&authenticated.entries, &entries);
+
+                let mut tampered = entries.clone();
+                let managed = tampered
+                    .iter_mut()
+                    .find(|entry| is_managed_ownership(&entry.ownership))
+                    .expect("managed entry");
+                managed.digest = format!("sha256:{}", "f".repeat(64));
+                let tampered_digest = source_release_digest_from_entries(&tampered);
+                let tampered_request = InventoryAuthentication {
+                    source_release_digest: &tampered_digest,
+                    installed_entries: &tampered,
+                    ..request
+                };
+                assert!(authenticated_user_inventory(host, &tampered_request).is_none());
+            }
+        }
+    }
+
+    #[test]
+    fn every_09_stable_plans_a_direct_jump_and_retired_skill_cleanup() {
+        for &(version, _) in HISTORICAL_USER_PLUGIN_RELEASES {
+            for host in [UserHost::Codex, UserHost::Claude, UserHost::Antigravity] {
+                let temporary = tempdir().expect("tempdir");
+                seed_historical_09x_user_install(temporary.path(), version, host);
+                let plan = build_plan(&args(temporary.path(), host, UserMode::DryRun))
+                    .expect("direct stable upgrade plan");
+                for retired in ["ralph-loop", "package-review"] {
+                    let existing = retired_skill_artifact_paths(host, retired)
+                        .iter()
+                        .filter(|path| temporary.path().join(path).is_file())
+                        .cloned()
+                        .collect::<Vec<_>>();
+                    assert!(!existing.is_empty());
+                    assert!(existing
+                        .iter()
+                        .all(|path| plan.retired_files.contains_key(Path::new(path))));
+                }
+                if matches!(version, "0.9.3" | "0.9.4" | "0.9.5") {
+                    let existing = retired_skill_artifact_paths(host, "iterative-execution")
+                        .iter()
+                        .filter(|path| temporary.path().join(path).is_file())
+                        .cloned()
+                        .collect::<Vec<_>>();
+                    assert!(!existing.is_empty());
+                    assert!(existing
+                        .iter()
+                        .all(|path| plan.retired_files.contains_key(Path::new(path))));
+                }
+            }
+        }
+    }
+
+    fn seed_historical_09x_user_install(root: &Path, version: &str, host: UserHost) {
+        let files = HISTORICAL_USER_PLUGIN_RELEASES
+            .iter()
+            .find(|(candidate, _)| *candidate == version)
+            .expect("historical release")
+            .1;
+        let prefix = match host {
+            UserHost::Codex => ".hive/marketplaces/codex/plugins/aigent-hive/",
+            UserHost::Claude => ".hive/marketplaces/claude/plugins/aigent-hive/",
+            UserHost::Antigravity => ".hive/marketplaces/antigravity/plugins/aigent-hive/",
+        };
+        let base = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join(format!(
+            "../../harness/user-bases/{version}/plugins/aigent-hive"
+        ));
+        let mut entries = Vec::new();
+        for (relative, digest) in files
+            .iter()
+            .filter(|(relative, _)| historical_user_artifact_required(host, relative))
+        {
+            let path = format!("{prefix}{relative}");
+            let target = root.join(&path);
+            fs::create_dir_all(target.parent().expect("historical plugin parent"))
+                .expect("historical plugin parent");
+            fs::write(
+                &target,
+                fs::read(base.join(relative)).expect("historical plugin byte"),
+            )
+            .expect("historical plugin write");
+            let executable = relative.starts_with("bin/");
+            entries.push(UserOwnershipEntry {
+                path,
+                digest: (*digest).to_owned(),
+                executable,
+                unix_mode: installed_unix_mode(executable),
+                ownership: "immutable-plugin-package".to_owned(),
+            });
+        }
+        let guidance_path = historical_guidance_path(host);
+        let guidance = b"historical foreign guidance\n";
+        let guidance_target = root.join(&guidance_path);
+        fs::create_dir_all(guidance_target.parent().expect("guidance parent"))
+            .expect("guidance parent");
+        fs::write(guidance_target, guidance).expect("guidance write");
+        entries.push(UserOwnershipEntry {
+            path: guidance_path.clone(),
+            digest: sha256_digest(guidance),
+            executable: false,
+            unix_mode: installed_unix_mode(false),
+            ownership: "shared-marker".to_owned(),
+        });
+        entries.sort_by(|left, right| left.path.cmp(&right.path));
+        let source_release_digest = source_release_digest_from_entries(&entries);
+        let mut manifest = UserOwnershipManifest {
+            schema_version: 1,
+            product_version: version.to_owned(),
+            host,
+            host_version_range: match host {
+                UserHost::Codex => ">=0.145.0 <1.0.0",
+                UserHost::Claude => ">=2.1.0 <3.0.0",
+                UserHost::Antigravity => ">=1.1.7 <1.2.0",
+            }
+            .to_owned(),
+            source_release_digest,
+            plan_digest: String::new(),
+            last_backup: None,
+            guidance_path,
+            entries,
+        };
+        manifest.plan_digest = inventory_digest(
+            host,
+            &manifest.product_version,
+            &manifest.host_version_range,
+            Path::new(&manifest.guidance_path),
+            &manifest.source_release_digest,
+            &manifest.entries,
         );
+        let manifest_path = root.join(format!(".hive/install/{}.json", host.as_str()));
+        fs::create_dir_all(manifest_path.parent().expect("manifest parent"))
+            .expect("manifest parent");
+        fs::write(manifest_path, json_line(&manifest).expect("manifest JSON"))
+            .expect("manifest write");
     }
 
     #[test]

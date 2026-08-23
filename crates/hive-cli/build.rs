@@ -1,7 +1,8 @@
 use sha2::{Digest, Sha256};
 use std::env;
+use std::fmt::Write as _;
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 fn main() {
     let manifest_dir = PathBuf::from(
@@ -47,31 +48,43 @@ fn main() {
     );
     println!("cargo:rerun-if-env-changed=AIGENT_HIVE_PACKAGE_RELEASE_DATE");
     println!("cargo:rustc-env=HIVE_PACKAGE_RELEASE_DATE={package_release_date}");
-    write_historical_095_table(&manifest_dir);
+    write_historical_user_plugin_tables(&manifest_dir);
 }
 
-fn write_historical_095_table(manifest_dir: &PathBuf) {
-    let base = manifest_dir.join("../../harness/user-bases/0.9.5/plugins/aigent-hive");
-    println!("cargo:rerun-if-changed={}", base.to_string_lossy());
-    let mut files = Vec::new();
-    collect_files(&base, &base, &mut files);
-    files.sort_by(|left, right| left.0.cmp(&right.0));
-    let mut generated =
-        String::from("#[allow(dead_code)]\npub const HISTORICAL_095_FILES: &[(&str, &str)] = &[\n");
-    for (relative, digest) in files {
-        generated.push_str(&format!("    ({relative:?}, {digest:?}),\n"));
+fn write_historical_user_plugin_tables(manifest_dir: &Path) {
+    let mut releases = Vec::new();
+    for version in ["0.9.0", "0.9.1", "0.9.2", "0.9.3", "0.9.4", "0.9.5"] {
+        let base = manifest_dir.join(format!(
+            "../../harness/user-bases/{version}/plugins/aigent-hive"
+        ));
+        println!("cargo:rerun-if-changed={}", base.to_string_lossy());
+        let mut files = Vec::new();
+        collect_files(&base, &base, &mut files);
+        files.sort_by(|left, right| left.0.cmp(&right.0));
+        releases.push((version, files));
+    }
+
+    let mut generated = String::from(
+        "pub const HISTORICAL_USER_PLUGIN_RELEASES: &[(&str, &[(&str, &str)])] = &[\n",
+    );
+    for (version, files) in releases {
+        writeln!(generated, "    ({version:?}, &[").expect("write release header");
+        for (relative, digest) in files {
+            writeln!(generated, "        ({relative:?}, {digest:?}),").expect("write release file");
+        }
+        generated.push_str("    ]),\n");
     }
     generated.push_str("];\n");
     let output = PathBuf::from(env::var_os("OUT_DIR").expect("Cargo provides OUT_DIR"))
-        .join("historical_095.rs");
-    fs::write(output, generated).expect("write historical 0.9.5 table");
+        .join("historical_user_plugins.rs");
+    fs::write(output, generated).expect("write historical user plugin tables");
 }
 
 fn collect_files(root: &PathBuf, current: &PathBuf, files: &mut Vec<(String, String)>) {
     let entries = fs::read_dir(current)
-        .expect("read historical 0.9.5 base")
+        .expect("read historical user plugin base")
         .collect::<Result<Vec<_>, _>>()
-        .expect("read historical 0.9.5 entries");
+        .expect("read historical user plugin entries");
     for entry in entries {
         let path = entry.path();
         let metadata = fs::symlink_metadata(&path).expect("inspect historical 0.9.5 entry");
@@ -84,16 +97,13 @@ fn collect_files(root: &PathBuf, current: &PathBuf, files: &mut Vec<(String, Str
                 .to_string_lossy()
                 .replace('\\', "/");
             let digest_bytes = Sha256::digest(fs::read(&path).expect("read historical 0.9.5 file"));
-            let digest = format!(
-                "sha256:{}",
-                digest_bytes
-                    .iter()
-                    .map(|byte| format!("{byte:02x}"))
-                    .collect::<String>()
-            );
+            let mut digest = String::from("sha256:");
+            for byte in digest_bytes {
+                write!(digest, "{byte:02x}").expect("write digest");
+            }
             files.push((relative, digest));
         } else {
-            panic!("historical 0.9.5 base contains a non-regular entry");
+            panic!("historical user plugin base contains a non-regular entry");
         }
     }
 }
