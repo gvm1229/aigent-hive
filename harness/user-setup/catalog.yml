@@ -59,6 +59,7 @@ skill_dependencies:
   - { skill: quick-answer, requires: [] }
   - { skill: project-setup, requires: [] }
   - { skill: code-polish, requires: [] }
+  - { skill: humanize-kor, requires: [] }
   - { skill: verified-workflow, requires: [judge-evidence, run-handoff, run-checkpoint, run-resume, usage-guard] }
   - { skill: knowledge-import, requires: [knowledge-promote] }
   - { skill: knowledge-maintain, requires: [knowledge-recall] }

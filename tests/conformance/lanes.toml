@@ -43,6 +43,7 @@ modules = [
   "tests.conformance.contracts.test_run_role_contracts",
   "tests.conformance.contracts.test_source_draft_devlog",
   "tests.conformance.contracts.test_judge_contracts",
+  "tests.conformance.contracts.test_korean_language_core",
   "tests.conformance.contracts.test_usage_control",
   "tests.conformance.contracts.test_vector_feasibility",
   "tests.conformance.contracts.test_vector_requalification",

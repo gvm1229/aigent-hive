@@ -50,6 +50,7 @@ CODEX_HIVE_PROJECTION_PATHS = {
     "directives/01-project-knowledge.md",
     "directives/02-project-upgrade.md",
     "directives/03-session-coordination.md",
+    "directives/04-korean-language.md",
     "skills",
     *{
         relative

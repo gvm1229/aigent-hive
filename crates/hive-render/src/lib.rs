@@ -3072,6 +3072,9 @@ fn validate_hook_approvals(
                 hook.event.as_str()
             }
             "continue-active-run" => "Stop",
+            "validate-korean-output" if matches!(hook.event.as_str(), "Stop" | "AfterAgent") => {
+                hook.event.as_str()
+            }
             _ => {
                 return Err(RenderError::Input(format!(
                     "fallback hook capability/event is not approved: {}/{}",
@@ -3479,6 +3482,10 @@ fn insert_static_files(files: &mut BTreeMap<PathBuf, Vec<u8>>) {
         (
             ".agents/directives/03-session-coordination.md",
             include_bytes!("../../../harness/directives/03-session-coordination.md"),
+        ),
+        (
+            ".agents/directives/04-korean-language.md",
+            include_bytes!("../../../harness/directives/04-korean-language.md"),
         ),
         (
             ".hive/knowledge/Raw/README.md",
@@ -4578,6 +4585,10 @@ fn authenticate_projected_directive_files(
                     Path::new(".agents/directives/03-session-coordination.md"),
                     include_bytes!("../../../harness/directives/03-session-coordination.md")
                         .as_slice(),
+                ),
+                (
+                    Path::new(".agents/directives/04-korean-language.md"),
+                    include_bytes!("../../../harness/directives/04-korean-language.md").as_slice(),
                 ),
             ]
         };
@@ -7013,6 +7024,7 @@ fn known_hook_descriptor_paths() -> impl Iterator<Item = PathBuf> {
         "derived-state-invalidation",
         "checkpoint-reminder",
         "continue-active-run",
+        "validate-korean-output",
     ]
     .into_iter()
     .map(|capability| PathBuf::from(format!(".hive/hooks/{capability}")))
@@ -8221,6 +8233,7 @@ mod tests {
             "quick-answer",
             "project-setup",
             "code-polish",
+            "humanize-kor",
             "verified-workflow",
             "knowledge-import",
             "knowledge-maintain",
@@ -8249,6 +8262,7 @@ mod tests {
             .map(|name| format!(".agents/skills/{name}/SKILL.md"))
             .collect::<Vec<_>>();
         expected.push(".agents/directives/03-session-coordination.md".to_owned());
+        expected.push(".agents/directives/04-korean-language.md".to_owned());
         expected.push(".prettierignore".to_owned());
         expected.extend(
             new_body_skills
@@ -10248,7 +10262,7 @@ mod tests {
             .expect("old Claude projection ownership should verify");
         let deletions = &transition.deletions;
 
-        assert_eq!(deletions.len(), 25);
+        assert_eq!(deletions.len(), 26);
         assert!(deletions
             .iter()
             .all(|path| path.starts_with(".claude/skills")));

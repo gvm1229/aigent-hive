@@ -49,6 +49,7 @@ const BEST_PRACTICE_RESEARCH: &[u8] =
 const KNOWLEDGE_SCAN: &[u8] = include_bytes!("../../../harness/skills/knowledge-import/SKILL.md");
 const SHIP: &[u8] = include_bytes!("../../../harness/skills/ship/SKILL.md");
 const AMEND_DIRECTIVE: &[u8] = include_bytes!("../../../harness/skills/amend-directive/SKILL.md");
+const HUMANIZE_KOR: &[u8] = include_bytes!("../../../harness/skills/humanize-kor/SKILL.md");
 
 /// A stable validation or compilation failure.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -1230,6 +1231,12 @@ fn localized_skill_text(
             "사용자 정의 에이전트 생성",
             "동의한 사용자 정의 에이전트 profile을 추천·생성합니다.",
         ),
+        "humanize-kor" => (
+            "Humanize Korean",
+            "Rewrite selected Korean text with deterministic preservation gates.",
+            "한국어 윤문",
+            "선택한 한국어 text를 결정적 보존 gate와 함께 윤문합니다.",
+        ),
         _ => return None,
     };
     Some(match language {
@@ -1324,11 +1331,14 @@ fn embedded_skill_metadata(name: &str) -> Option<&'static [u8]> {
         "amend-directive" => Some(include_bytes!(
             "../../../harness/skills/amend-directive/agents/openai.yaml"
         )),
+        "humanize-kor" => Some(include_bytes!(
+            "../../../harness/skills/humanize-kor/agents/openai.yaml"
+        )),
         _ => None,
     }
 }
 
-fn embedded_skill_sources() -> [(&'static str, &'static [u8]); 26] {
+fn embedded_skill_sources() -> [(&'static str, &'static [u8]); 27] {
     [
         ("user-setup", SETUP_HIVE),
         ("project-setup", SETUP_HARNESS),
@@ -1356,6 +1366,7 @@ fn embedded_skill_sources() -> [(&'static str, &'static [u8]); 26] {
         ("knowledge-import", KNOWLEDGE_SCAN),
         ("ship", SHIP),
         ("amend-directive", AMEND_DIRECTIVE),
+        ("humanize-kor", HUMANIZE_KOR),
     ]
 }
 
@@ -1985,6 +1996,7 @@ fn action_for_skill(skill: &str) -> Option<LogicalAction> {
         }
         "knowledge-recall" => Some(LogicalAction::QueryKnowledge),
         "code-polish"
+        | "humanize-kor"
         | "research-best-practices"
         | "verified-workflow"
         | "run-checkpoint"
@@ -2731,8 +2743,8 @@ description: Inspect one local file without changing it.
             let first = compile_projection(host, &[]).expect("projection");
             let second = compile_projection(host, &[]).expect("projection");
             assert_eq!(first, second);
-            assert_eq!(first.active_skills.skills.len(), 25);
-            let expected_file_count = if host == Host::Claude { 26 } else { 51 };
+            assert_eq!(first.active_skills.skills.len(), 26);
+            let expected_file_count = if host == Host::Claude { 27 } else { 53 };
             assert_eq!(first.files.len(), expected_file_count);
             for skill in [
                 "code-polish",
@@ -2742,6 +2754,7 @@ description: Inspect one local file without changing it.
                 "adversarial-judge",
                 "knowledge-import",
                 "verified-workflow",
+                "humanize-kor",
                 "prompt-refine",
                 "run-checkpoint",
                 "run-resume",
@@ -3121,6 +3134,11 @@ description: Inspect one local file without changing it.
                 "verified-workflow",
                 VERIFIED_WORKFLOW,
                 include_bytes!("../../../harness/skills/verified-workflow/SKILL.md").as_slice(),
+            ),
+            (
+                "humanize-kor",
+                HUMANIZE_KOR,
+                include_bytes!("../../../harness/skills/humanize-kor/SKILL.md").as_slice(),
             ),
         ];
         assert_projected_builtin_sources(expected);

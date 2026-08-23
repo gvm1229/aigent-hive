@@ -758,6 +758,7 @@ else:
                     "01-project-knowledge.md",
                     "02-project-upgrade.md",
                     "03-session-coordination.md",
+                    "04-korean-language.md",
                 ):
                     self.assertTrue(
                         (target / ".agents/directives" / directive).is_file()

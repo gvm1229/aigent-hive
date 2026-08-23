@@ -101,6 +101,7 @@
         "usage-guard",
         "ship",
         "amend-directive",
+        "humanize-kor",
         "user-setup",
         "run-handoff",
         "project-transition",

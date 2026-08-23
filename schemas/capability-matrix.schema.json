@@ -86,7 +86,8 @@
         "PreToolUse": { "$ref": "#/$defs/supportClaim" },
         "PostToolUse": { "$ref": "#/$defs/supportClaim" },
         "PreCompact": { "$ref": "#/$defs/supportClaim" },
-        "Stop": { "$ref": "#/$defs/supportClaim" }
+        "Stop": { "$ref": "#/$defs/supportClaim" },
+        "AfterAgent": { "$ref": "#/$defs/supportClaim" }
       }
     },
     "evidence_digest": {

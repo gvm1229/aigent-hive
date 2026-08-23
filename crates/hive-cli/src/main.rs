@@ -26,6 +26,7 @@ mod discord;
 mod judge;
 mod knowledge;
 mod knowledge_scan;
+mod korean;
 mod loop_engineering;
 mod orchestration;
 mod project_upgrade;
@@ -91,6 +92,7 @@ USAGE:
     hive judge package --target <dir> --request <json> --output json
     hive judge receipt --target <dir> --request <json> --package <json> --assignment <json> --output json
     hive judge quorum --target <dir> --request <json> --output json
+    hive korean inspect|verify|sanitize|pack --help
     hive release verify --bundle <release-dir> --output json
     hive update --help
 ";
@@ -166,6 +168,14 @@ struct HookInput {
     session_id: Option<String>,
     #[serde(default)]
     interrupted: Option<bool>,
+    #[serde(default)]
+    last_assistant_message: Option<String>,
+    #[serde(default)]
+    agent_response: Option<String>,
+    #[serde(default)]
+    korean_profile: Option<String>,
+    #[serde(default)]
+    korean_retry_count: Option<u8>,
 }
 
 #[derive(Serialize)]
@@ -223,6 +233,7 @@ fn main() -> ExitCode {
         Some("loop") => loop_engineering::run_loop(&arguments[1..]),
         Some("orchestration") => orchestration::run(&arguments[1..]),
         Some("judge") => judge::run_judge(&arguments[1..]),
+        Some("korean") => korean::run(&arguments[1..]),
         Some("release") => update::run_release(&arguments[1..]),
         Some("update")
             if arguments.len() == 1
@@ -1503,9 +1514,12 @@ fn emit_action_result(result: &ActionResult) -> ExitCode {
 fn run_hook(arguments: &[String]) -> ExitCode {
     let stop_requested = requested_event(arguments).as_deref() == Some("Stop");
     if stop_requested
-        && !arguments
-            .iter()
-            .any(|argument| argument == "continue-active-run")
+        && !arguments.iter().any(|argument| {
+            matches!(
+                argument.as_str(),
+                "continue-active-run" | "validate-korean-output"
+            )
+        })
     {
         println!("{}", neutral_stop_hook_payload());
         return ExitCode::SUCCESS;
@@ -1622,10 +1636,68 @@ fn execute_hook_capability(
         "derived-state-invalidation" => derived_state_invalidation(target, input),
         "checkpoint-reminder" => checkpoint_reminder(target, input),
         "continue-active-run" => continue_active_run(target, input),
+        "validate-korean-output" => validate_korean_output(input),
         _ => Err(RenderError::Unsupported(format!(
             "fallback hook capability is unsupported: {capability}"
         ))),
     }
+}
+
+fn validate_korean_output(input: &HookInput) -> Result<HookResult, RenderError> {
+    if !matches!(input.event.as_str(), "Stop" | "AfterAgent") {
+        return Err(RenderError::Unsupported(
+            "validate-korean-output requires Stop or AfterAgent".to_owned(),
+        ));
+    }
+    let message = input
+        .last_assistant_message
+        .as_deref()
+        .or(input.agent_response.as_deref())
+        .ok_or_else(|| RenderError::Input("Korean output hook has no final message".to_owned()))?;
+    if u64::try_from(message.len()).unwrap_or(u64::MAX) > MAX_CONTRACT_BYTES {
+        return Err(RenderError::Input(
+            "Korean output hook message exceeds 1 MiB".to_owned(),
+        ));
+    }
+    let profile = hive_core::korean::KoreanProfile::parse(
+        input.korean_profile.as_deref().unwrap_or("response"),
+    )
+    .map_err(RenderError::Input)?;
+    let inspection = hive_core::korean::inspect(profile, message).map_err(RenderError::Internal)?;
+    if inspection.korean_character_count < 10 || inspection.findings.is_empty() {
+        return Ok(HookResult {
+            schema_version: 1,
+            decision: "allow",
+            active: true,
+            code: "hive.hook-korean-output-passed",
+            message: "Korean final-output inspection passed".to_owned(),
+        });
+    }
+    if input.korean_retry_count.unwrap_or(0) >= 1 {
+        return Ok(HookResult {
+            schema_version: 1,
+            decision: "allow",
+            active: true,
+            code: "hive.hook-korean-output-retry-exhausted",
+            message: "bounded Korean retry is exhausted; use the exact pre-rewrite draft"
+                .to_owned(),
+        });
+    }
+    let rule_ids = inspection
+        .findings
+        .iter()
+        .map(|finding| finding.rule_id.as_str())
+        .collect::<Vec<_>>()
+        .join(",");
+    Ok(HookResult {
+        schema_version: 1,
+        decision: "block",
+        active: true,
+        code: "hive.hook-korean-output-retry",
+        message: format!(
+            "apply one local Korean rewrite for rule ids {rule_ids}, preserve protected spans, then verify or use the exact draft"
+        ),
+    })
 }
 
 fn continue_active_run(target: &Path, input: &HookInput) -> Result<HookResult, RenderError> {
@@ -2099,8 +2171,8 @@ mod tests {
         continue_active_run, execute_hook_capability, failure_result_for, is_help_request,
         mark_derived_state_stale, neutral_stop_hook_payload, normalize_hook_path, parse_hook,
         parse_setup, parse_usage, probe_native_usage, reconcile_project_registry, run_human,
-        version_output_for, wants_json, ActionResult, HookInput, ParsedUsageArguments, SETUP_USAGE,
-        USAGE,
+        validate_korean_output, version_output_for, wants_json, ActionResult, HookInput,
+        ParsedUsageArguments, SETUP_USAGE, USAGE,
     };
     use hive_render::{RenderError, ResolvedProjectPreferences, SetupMode};
     use std::fs;
@@ -2310,6 +2382,10 @@ mod tests {
             run_id: None,
             session_id: None,
             interrupted: None,
+            last_assistant_message: None,
+            agent_response: None,
+            korean_profile: None,
+            korean_retry_count: None,
         };
         let result =
             execute_hook_capability(Path::new("/consumer"), "protect-hive-owned-state", &input)
@@ -2336,6 +2412,10 @@ mod tests {
             run_id: None,
             session_id: None,
             interrupted: None,
+            last_assistant_message: None,
+            agent_response: None,
+            korean_profile: None,
+            korean_retry_count: None,
         };
         let result =
             execute_hook_capability(Path::new("/consumer"), "protect-hive-owned-state", &input)
@@ -2361,6 +2441,10 @@ mod tests {
             run_id: None,
             session_id: None,
             interrupted: None,
+            last_assistant_message: None,
+            agent_response: None,
+            korean_profile: None,
+            korean_retry_count: None,
         };
         let result =
             execute_hook_capability(Path::new("/consumer"), "update-integrity-guard", &input)
@@ -2492,6 +2576,10 @@ mod tests {
             run_id: None,
             session_id: None,
             interrupted: None,
+            last_assistant_message: None,
+            agent_response: None,
+            korean_profile: None,
+            korean_retry_count: None,
         };
         let result = execute_hook_capability(Path::new("/consumer"), "checkpoint-reminder", &input)
             .expect("approved hook should execute");
@@ -2517,11 +2605,53 @@ mod tests {
             run_id: None,
             session_id: None,
             interrupted: Some(true),
+            last_assistant_message: None,
+            agent_response: None,
+            korean_profile: None,
+            korean_retry_count: None,
         };
         let result = continue_active_run(Path::new("/missing-consumer"), &input)
             .expect("interrupt must stay fail-open");
         assert_eq!(result.decision, "allow");
         assert_eq!(result.code, "hive.hook-continuation-interrupted");
+    }
+
+    #[test]
+    fn korean_output_hook_requests_only_one_bounded_retry() {
+        let input = HookInput {
+            schema_version: 1,
+            event: "Stop".to_owned(),
+            tool: None,
+            operation: None,
+            path: None,
+            action: None,
+            dry_run: None,
+            backup_present: None,
+            staging_validated: None,
+            checkpoint_present: None,
+            status_path: None,
+            run_id: None,
+            session_id: None,
+            interrupted: None,
+            last_assistant_message: Some(
+                "분석을 통해 확인했다. 결과를 통해 비교했다. 자료를 통해 검증했다. 보여진 결과다."
+                    .to_owned(),
+            ),
+            agent_response: None,
+            korean_profile: Some("response".to_owned()),
+            korean_retry_count: Some(0),
+        };
+        let retry = validate_korean_output(&input).expect("first inspection");
+        assert_eq!(retry.decision, "block");
+        assert_eq!(retry.code, "hive.hook-korean-output-retry");
+
+        let exhausted = validate_korean_output(&HookInput {
+            korean_retry_count: Some(1),
+            ..input
+        })
+        .expect("bounded retry");
+        assert_eq!(exhausted.decision, "allow");
+        assert_eq!(exhausted.code, "hive.hook-korean-output-retry-exhausted");
     }
 
     #[test]

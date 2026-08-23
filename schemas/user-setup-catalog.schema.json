@@ -40,8 +40,8 @@
     "mandatory_skills": { "const": ["user-setup"] },
     "skill_dependencies": {
       "type": "array",
-      "minItems": 26,
-      "maxItems": 26,
+      "minItems": 27,
+      "maxItems": 27,
       "uniqueItems": true,
       "items": { "$ref": "#/$defs/skill_dependency" }
     },
@@ -127,6 +127,7 @@
         "usage-guard",
         "ship",
         "amend-directive",
+        "humanize-kor",
         "user-setup",
         "run-handoff",
         "project-transition",

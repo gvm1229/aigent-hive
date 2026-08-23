@@ -21,6 +21,7 @@ EXPECTED_SKILLS = frozenset(
         "quick-answer",
         "project-setup",
         "code-polish",
+        "humanize-kor",
         "custom-subagent-create",
         "verified-workflow",
         "knowledge-import",

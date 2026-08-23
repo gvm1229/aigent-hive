@@ -483,7 +483,7 @@ class Phase3FallbackHookExclusions(Phase3ProjectionTestCase):
         )
         self.assertEqual(process.returncode, 0, process.stderr)
 
-        allowed = {"PreToolUse", "PostToolUse", "PreCompact", "Stop"}
+        allowed = {"PreToolUse", "PostToolUse", "PreCompact", "Stop", "AfterAgent"}
         for path in sorted((target / ".hive/hooks").iterdir()):
             with self.subTest(path=path):
                 descriptor = json.loads(path.read_text(encoding="utf-8"))

@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "cases": [
+    {
+      "id": "natural-response",
+      "profile": "response",
+      "text": "결과를 확인했습니다. 필요한 부분만 고치고 다시 시험하겠습니다.",
+      "expected_rule_ids": []
+    },
+    {
+      "id": "frequency-through",
+      "profile": "documentation",
+      "text": "설정을 통해 확인합니다. 시험을 통해 검증합니다. 기록을 통해 비교합니다.",
+      "expected_rule_ids": ["A-2"]
+    },
+    {
+      "id": "double-passive",
+      "profile": "technical",
+      "text": "보여진 결과를 사용합니다.",
+      "expected_rule_ids": ["A-8"]
+    },
+    {
+      "id": "antithesis-frequency",
+      "profile": "release-note",
+      "text": "속도가 아니라 정확성입니다. 교체가 아니라 보완입니다.",
+      "expected_rule_ids": ["C-8"]
+    },
+    {
+      "id": "protected-technical",
+      "profile": "technical",
+      "text": "`hive update --check` 결과는 12.5%입니다. [근거](https://example.com)를 유지합니다.",
+      "expected_rule_ids": []
+    },
+    {
+      "id": "verbatim-quotation",
+      "profile": "verbatim",
+      "text": "“원문은 그대로 유지해야 한다.”",
+      "expected_rule_ids": []
+    }
+  ],
+  "verification_cases": [
+    {
+      "id": "safe-local-edit",
+      "profile": "response",
+      "before": "`hive test`는 12.5%를 기록했다. [근거](https://example.com)는 “유지해야 한다”라고 썼다.",
+      "after": "`hive test` 결과는 12.5%였다. [근거](https://example.com)는 “유지해야 한다”라고 썼다.",
+      "accepted": true
+    },
+    {
+      "id": "number-link-modality-drift",
+      "profile": "response",
+      "before": "`hive test`는 12.5%를 기록했다. [근거](https://example.com)는 “유지해야 한다”라고 썼다.",
+      "after": "`hive test` 결과는 13%였다. [근거](https://example.net)는 “유지한다”라고 썼다.",
+      "accepted": false
+    }
+  ]
+}
