@@ -1,7 +1,7 @@
 # 현재 상태
 
 - 기준 branch: `feature/0.10.0@50c7333`
-- 원격 기준: `origin/feature/0.10.0@50c7333` 동기화
+- 원격 기준: `origin/feature/0.10.0` 동기화
 - product version: `0.9.5`
 - 다음 target: `0.10.0-test`
 - 활성 계획: [`PLAN.md`](../plans/PLAN.md)
