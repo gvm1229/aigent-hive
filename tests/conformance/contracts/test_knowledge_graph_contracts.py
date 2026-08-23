@@ -15,6 +15,29 @@ DIGEST = "sha256:" + "a1" * 32
 
 
 class KnowledgeGraphContractTests(unittest.TestCase):
+    def test_graphify_three_platform_wheel_locks_are_complete_and_digest_bound(self) -> None:
+        root = ROOT / "harness/dependencies/graphify/0.9.47"
+        for platform in ("windows-x64", "macos-arm64", "linux-musl-x64"):
+            with self.subTest(platform=platform):
+                lock = json.loads((root / f"{platform}.json").read_text(encoding="utf-8"))
+                self.assertEqual(lock["schema_version"], 1)
+                self.assertEqual(lock["package"], "graphifyy==0.9.47")
+                self.assertEqual(lock["platform"], platform)
+                self.assertEqual(lock["python"], "3.12")
+                self.assertEqual(len(lock["files"]), 30)
+                self.assertEqual(
+                    len({entry["filename"] for entry in lock["files"]}),
+                    30,
+                )
+                self.assertTrue(
+                    all(
+                        len(entry["sha256"]) == 64
+                        and entry["size"] > 0
+                        and entry["filename"].endswith(".whl")
+                        for entry in lock["files"]
+                    )
+                )
+
     def test_native_markdown_generation_is_scope_and_evidence_bound(self) -> None:
         validator = Draft202012Validator(SCHEMA)
         generation = {

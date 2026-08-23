@@ -97,6 +97,21 @@ const LEGACY_DERIVED_RELATIVES: [&str; 4] = [
 const GRAPHIFY_VERSION: &str = "0.9.47";
 const GRAPHIFY_WHEEL_DIGEST: &str =
     "sha256:2a8b13ccd53d507d16dcc12aebe488517c369afa547938464474fd3e772938ab";
+#[cfg(all(target_os = "windows", target_arch = "x86_64"))]
+const GRAPHIFY_DEPENDENCY_LOCK: &[u8] =
+    include_bytes!("../../../harness/dependencies/graphify/0.9.47/windows-x64.json");
+#[cfg(all(target_os = "linux", target_arch = "x86_64", target_env = "musl"))]
+const GRAPHIFY_DEPENDENCY_LOCK: &[u8] =
+    include_bytes!("../../../harness/dependencies/graphify/0.9.47/linux-musl-x64.json");
+#[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+const GRAPHIFY_DEPENDENCY_LOCK: &[u8] =
+    include_bytes!("../../../harness/dependencies/graphify/0.9.47/macos-arm64.json");
+#[cfg(not(any(
+    all(target_os = "windows", target_arch = "x86_64"),
+    all(target_os = "linux", target_arch = "x86_64", target_env = "musl"),
+    all(target_os = "macos", target_arch = "aarch64")
+)))]
+const GRAPHIFY_DEPENDENCY_LOCK: &[u8] = b"";
 
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -128,6 +143,7 @@ struct GraphifyConsent {
     scope: String,
     package_version: String,
     wheel_digest: String,
+    dependency_lock_digest: String,
     command: Vec<String>,
     consent_digest: String,
 }
@@ -334,6 +350,7 @@ fn run_graph(arguments: &[String]) -> Result<KnowledgeResult, WikiError> {
                 "engine": engine,
                 "package_version": GRAPHIFY_VERSION,
                 "wheel_digest": GRAPHIFY_WHEEL_DIGEST,
+                "dependency_lock_digest": graphify_dependency_lock_digest()?,
                 "command": ["extract", "--force", "--code-only", "--no-cluster"],
                 "provider_api_calls": 0,
                 "api_keys_read": 0,
@@ -565,7 +582,7 @@ fn validate_graphify_receipt(
         || receipt.package_version != GRAPHIFY_VERSION
         || receipt.wheel_digest != GRAPHIFY_WHEEL_DIGEST
         || !digest(&receipt.executable_digest)
-        || !digest(&receipt.dependency_lock_digest)
+        || receipt.dependency_lock_digest != graphify_dependency_lock_digest()?
         || !digest(&receipt.python_identity_digest)
         || receipt.consent_digest != consent_digest
         || !digest(&receipt.source_tree_digest)
@@ -591,7 +608,28 @@ fn validate_graphify_receipt(
     Ok(())
 }
 
+fn graphify_dependency_lock_digest() -> Result<String, WikiError> {
+    if GRAPHIFY_DEPENDENCY_LOCK.is_empty() {
+        return Err(WikiError::InvalidInput(
+            "Graphify code sidecar is unsupported on this platform".to_owned(),
+        ));
+    }
+    let value: Value = serde_json::from_slice(GRAPHIFY_DEPENDENCY_LOCK)
+        .map_err(|error| WikiError::Verification(format!("invalid Graphify lock: {error}")))?;
+    if value["schema_version"] != 1
+        || value["package"] != "graphifyy==0.9.47"
+        || value["python"] != "3.12"
+        || value["files"].as_array().map(Vec::len) != Some(30)
+    {
+        return Err(WikiError::Verification(
+            "Graphify dependency lock contract mismatch".to_owned(),
+        ));
+    }
+    Ok(sha256_digest(GRAPHIFY_DEPENDENCY_LOCK))
+}
+
 fn graphify_consent(scope: &str) -> Result<GraphifyConsent, WikiError> {
+    let dependency_lock_digest = graphify_dependency_lock_digest()?;
     let command = vec![
         "extract".to_owned(),
         "--force".to_owned(),
@@ -603,6 +641,7 @@ fn graphify_consent(scope: &str) -> Result<GraphifyConsent, WikiError> {
         "scope": scope,
         "package_version": GRAPHIFY_VERSION,
         "wheel_digest": GRAPHIFY_WHEEL_DIGEST,
+        "dependency_lock_digest": dependency_lock_digest,
         "command": command,
         "automatic_install": false,
         "provider_api_calls": 0,
@@ -622,6 +661,7 @@ fn graphify_consent(scope: &str) -> Result<GraphifyConsent, WikiError> {
         scope: scope.to_owned(),
         package_version: GRAPHIFY_VERSION.to_owned(),
         wheel_digest: GRAPHIFY_WHEEL_DIGEST.to_owned(),
+        dependency_lock_digest,
         command,
         consent_digest,
     })
@@ -688,6 +728,7 @@ fn load_graphify_consent(target: &Path, scope: &str) -> Result<GraphifyConsent, 
         || consent.scope != expected.scope
         || consent.package_version != expected.package_version
         || consent.wheel_digest != expected.wheel_digest
+        || consent.dependency_lock_digest != expected.dependency_lock_digest
         || consent.command != expected.command
         || consent.consent_digest != expected.consent_digest
     {
@@ -4844,7 +4885,7 @@ mod tests {
                 "schema_version": 1,
                 "package_version": GRAPHIFY_VERSION,
                 "wheel_digest": GRAPHIFY_WHEEL_DIGEST,
-                "dependency_lock_digest": format!("sha256:{}", "d4".repeat(32)),
+                "dependency_lock_digest": graphify_dependency_lock_digest().expect("lock digest"),
                 "executable_digest": format!("sha256:{}", "a1".repeat(32)),
                 "python_identity_digest": format!("sha256:{}", "b2".repeat(32)),
                 "consent_digest": consent.consent_digest.clone(),
