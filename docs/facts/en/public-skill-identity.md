@@ -5,24 +5,22 @@ topic_slug: public-skill-identity
 language: en
 counterpart: ../ko/public-skill-identity.md
 title: "Skill Identity"
-summary: "Aigent Hive has a 26-Skill product-only catalog; Korean knowledge Skill display names show only the human function, and descriptions start with the canonical English ID."
+summary: "Aigent Hive has a 27-Skill product-only catalog with stable English IDs, including humanize-kor for explicit Korean rewriting."
 tags: [localization, migration, plugin, skill]
 aliases: ["Skill naming"]
 sources:
-  - "repo:crates/hive-projection/src/lib.rs#sha256:72c05f8bc6c5a7c3f94a42c34d87828c3beea0d32345171dac598d83a153819b"
+  - "repo:crates/hive-projection/src/lib.rs#sha256:b79d42a472aedc3cc05ce9d5439aebd5c99171798cf9e26faca1c17ac0f3558a"
   - "repo:docs/archive/plans/foundations/knowledge-skill-display-names-next-release.md#sha256:517f1f10a17537698d1e4e1a30b59bda9fd2488e3062576d01b4cf641dea0e76"
-  - "repo:docs/skills.md#sha256:9d445726c92856de8c47781743cfc972aeeebbd1e74cc1660b860dd0ebac573a"
-  - "repo:harness/skills/catalog.yml#sha256:d07890ccf090177ed03405d9eae01c278130cdd1fa9797ad3616106d1c67f6c8"
+  - "repo:docs/skills.md#sha256:76e70020fd1492cf59530fc27e1c537dca4c59ddb57bb241f9710e7b667cf535"
+  - "repo:harness/skills/catalog.yml#sha256:76ed4b4d220db932da8e0e63aee700875f460b72922715a56b83bae1b9065273"
 links: [global-onboarding, skill-routing]
-reviewed_revision: "git:8fcf8b4794bb7d3d92065ad3f49a03acb33c4c13"
+reviewed_revision: "git:eaed3203ce3fea062acab325a9ce0892348aff02"
 status: active
 ---
 
 # Skill Identity
 
-Aigent Hive has one product-only catalog of 26 Skills. Existing English IDs remain stable for
-execution and setup compatibility. Korean knowledge display names show only the human function.
-Each description starts with `(knowledge-...)`. `knowledge-capture` keeps one safe useful claim
-after a turn; recall searches current work, import scans a chosen repository, promote shares
-reviewed knowledge, and maintain checks or explicitly cleans it. This change is for a future
-version. It does not change the `v0.9.4` release, tag, or package.
+Aigent Hive has one product-only catalog of 27 Skills. Existing English IDs remain stable for
+execution and setup compatibility. `humanize-kor` adds explicit Korean rewriting with deterministic
+preservation gates. Korean knowledge display names show only the human function, while every
+description starts with its canonical ID. Historical release inventories remain immutable.

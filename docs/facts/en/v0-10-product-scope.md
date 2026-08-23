@@ -9,18 +9,18 @@ summary: "The 0.10.0 scope adds a Korean language core and reopens vector qualif
 tags: [knowledge, language, release, scan, v0-10]
 aliases: ["0.10.0 scope"]
 sources:
-  - "repo:docs/decisions/ADR-0020-0.10.0-product-scope.md#sha256:b88eaf08d187d6f83cfac8b9e3a186791f08b71d0d5287f5dafe4d2e7aaa8151"
+  - "repo:docs/decisions/ADR-0020-0.10.0-product-scope.md#sha256:9870204c4032c4c43504b73d20689b2104eba5d8ff826b607016866fd22155b5"
   - "repo:docs/decisions/product-release-decisions.md#sha256:e89ac8584204a7e52ed157e9b29d523f870b8ac387fc1e4a044f7f7333d17af5"
-  - "repo:docs/plans/active/korean-language-core-0.10.0.md#sha256:12c7ebd3b248e881f8bf9b9cf6da969ef8db2998b096c8668fcc1995c1be39bf"
+  - "repo:docs/plans/active/korean-language-core-0.10.0.md#sha256:f16868ede5c864200843617ed250006fa7150fa4d43e6236ecc51f3267c00905"
 links: [consumer-session-coordination, graphify-0-10-adoption, hybrid-vector-search-0-10, knowledge-storage, nested-project-scan-0-10]
-reviewed_revision: "git:e8bbe0529513df56e73f84cf5797bb334f4184ec"
+reviewed_revision: "git:eaed3203ce3fea062acab325a9ce0892348aff02"
 status: active
 ---
 
 # Aigent Hive 0.10.0 Product Scope
 
-The scope includes relation search, safe upgrade, host-neutral workflows, an automatic Korean
-language core, and reopened vector qualification. Vector work separates duplicate synthetic data
-from unique chunks and requires resumable embedding, end-to-end latency, scope isolation, atomic
-generation, rollback, and three-platform evidence. No engine is preselected. The Korean core and
-any gate-passing optional hybrid adapter require `0.10.0-test.2` or later before stable approval.
+The scope includes relation search, safe upgrade, host-neutral workflows, and the automatic Korean
+language core. Vector requalification ended in `defer` because the unique 50,000-chunk build failed
+the ten-minute gate; no product dependency exists. The Korean core, `humanize-kor`, pinned pack,
+bounded host adapters, and rollback are implemented. They require `0.10.0-test.2` or later and
+three-platform acceptance before stable approval.

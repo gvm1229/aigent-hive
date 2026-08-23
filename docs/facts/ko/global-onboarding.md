@@ -18,8 +18,8 @@ sources:
   - "repo:docs/decisions/ADR-0012-global-onboarding-shared-index.md#sha256:dea6123b7b193eb760a37b198566f9318d868fd7035491ac10756de0d4315530"
   - "repo:docs/decisions/product-release-decisions.md#sha256:e89ac8584204a7e52ed157e9b29d523f870b8ac387fc1e4a044f7f7333d17af5"
   - "repo:harness/skills/user-setup/SKILL.md#sha256:1fcbb2b9b2db6d57bd40682f80db2a0a916ebbffb3434431038b609b6b743c11"
-  - "repo:harness/user-setup/catalog.yml#sha256:167c45faf3724479bd83b48e6bc48074761c45ddf9160b7894742b291fbc503e"
-  - "repo:schemas/user-setup.schema.json#sha256:d2985cbe53cc6aeb6a03442ca4af030e35dbfbda200c478b82b00f1c6b407cfa"
+  - "repo:harness/user-setup/catalog.yml#sha256:eaeebd5ebb3dc7ea7bd1be287d916991ddbf8820264e744e331af44be3903ec2"
+  - "repo:schemas/user-setup.schema.json#sha256:06ed2a954a7c98817a1288a29f779c1db45cfafa2ea21d8227695a1d988b5fb6"
 links: [project-onboarding, test-distribution, usage-guard-thresholds]
 reviewed_revision: "git:1b755a995d91739d758830210d93cdc012e9e61b"
 status: active

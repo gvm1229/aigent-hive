@@ -9,18 +9,17 @@ summary: "자동 한국어 언어 core와 안전한 embedding·격리·rollback�
 tags: [knowledge, language, release, scan, v0-10]
 aliases: ["0.10.0 scope"]
 sources:
-  - "repo:docs/decisions/ADR-0020-0.10.0-product-scope.md#sha256:b88eaf08d187d6f83cfac8b9e3a186791f08b71d0d5287f5dafe4d2e7aaa8151"
+  - "repo:docs/decisions/ADR-0020-0.10.0-product-scope.md#sha256:9870204c4032c4c43504b73d20689b2104eba5d8ff826b607016866fd22155b5"
   - "repo:docs/decisions/product-release-decisions.md#sha256:e89ac8584204a7e52ed157e9b29d523f870b8ac387fc1e4a044f7f7333d17af5"
-  - "repo:docs/plans/active/korean-language-core-0.10.0.md#sha256:12c7ebd3b248e881f8bf9b9cf6da969ef8db2998b096c8668fcc1995c1be39bf"
+  - "repo:docs/plans/active/korean-language-core-0.10.0.md#sha256:f16868ede5c864200843617ed250006fa7150fa4d43e6236ecc51f3267c00905"
 links: [consumer-session-coordination, graphify-0-10-adoption, hybrid-vector-search-0-10, knowledge-storage, nested-project-scan-0-10]
-reviewed_revision: "git:e8bbe0529513df56e73f84cf5797bb334f4184ec"
+reviewed_revision: "git:eaed3203ce3fea062acab325a9ce0892348aff02"
 status: active
 ---
 
 # Aigent Hive `0.10.0` 제품 범위
 
-관계 검색·무손실 upgrade·host-neutral workflow·자동 한국어 core에 vector 재검증을 추가합니다.
-Vector는 반복 합성 자료와 unique chunk를 분리하고 재개 가능한 embedding·end-to-end 속도·scope
-격리·원자 generation·rollback·세 운영체제 근거를 요구합니다. Engine 선결정은 없으며 모든 gate를
-통과한 한 조합만 선택형으로 채택합니다. 새 한국어 core와 조건부 vector adapter는 안정판 전
-`0.10.0-test.2` 이상에서 다시 수용해야 합니다.
+범위: 관계 검색·무손실 upgrade·host-neutral workflow·자동 한국어 core. Vector 재검증 판정:
+고유 50,000개 10분 gate 실패 기반 `defer`, product dependency `0건`. 한국어 core·`humanize-kor`·
+고정 pack·bounded host adapter·rollback 구현 완료. 안정판 승인 전 `0.10.0-test.2` 이상과 세
+운영체제 수용 필요.

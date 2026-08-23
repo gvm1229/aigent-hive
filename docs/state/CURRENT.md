@@ -47,6 +47,7 @@
 - Source-only `draft-devlog` Skill·no-echo token helper·일반화·MDX·발행 권한 gate 구현, 제품 projection `0건`
 - `draft-devlog` production 수용: 대상 글의 실제 `published=true` 상태 확인, 유지보수자 공개 글 수정 승인 뒤 내부 ID 일반화, 공개 상태 유지, metadata·본문 digest 일치, 정책 위반 `0건`
 - Vector 재검증 `defer`: 반복 50,000건은 30 digest·5.75초, 고유 50,000건은 1,000 probe 기준 약 2,711초 환산으로 600초 gate 실패, 제품 dependency `0건`
+- 한국어 언어 core·`humanize-kor`·provenance pack·update preview·staging·rollback·세 host conditional adapter 구현 — `eaed3203`
 
 ## 현재 검증 근거
 
@@ -55,6 +56,7 @@
 - Draft-devlog mock MCP 17개·focused contract 60개·documentation lane 통과
 - Draft-devlog production read-back: slug `why-vector-database-cannot-replace-fts`, content digest `sha256:4b7805e85b4f5365e55a0da279f0032c5124c7bc9443eeda24a4dd3bcd1825b1`, `published=true`, mismatch·정책 finding `0건`
 - Vector research pipeline: content digest cache·checkpoint·resume·atomic pointer, 100개 변경 7.20초, query embedding warm p95 37.31ms·cold 643.45ms, resume/one-shot digest 일치
+- Korean focused gate: core 3·CLI hook/pack 4·projection 38·renderer 63·user setup 46·user install 91·project lifecycle 10·Python 39 통과, GNU Clippy `-D warnings` 통과
 - Python lane: documentation 45, security 103, contract 380, integration 84, release 58 통과
 - Rust `hive-render` 63, `hive-cli` user setup 46·user install 89, historical upgrade 3 통과
 - Rust workspace `--all-targets --all-features` 전 범위와 Clippy `-D warnings` 통과
@@ -70,7 +72,7 @@
 
 ## `0.10.0` 남은 범위
 
-- `KOR10-002–012`: 자동 한국어 core·profile·결정적 gate·세 host adapter·`humanize-kor`·upstream pack update·rollback·수용
+- `KOR10-012`: 한국어 gold blind 평가·세 host·세 운영체제·direct upgrade·rollback 공개 시험 수용
 - `REL10-001–004`: 새 product metadata·전체 gate·`0.10.0-test.2` 이상·세 운영체제 수용
 - `REL10-005–007`: 안정판 후보·게시·설치·명시 승인
 
@@ -81,9 +83,8 @@
 
 ## 다음 작업
 
-1. `KOR10-002–011` 한국어 core·`humanize-kor`·upstream update 구현
-2. `KOR10-012`, `REL10-001–004` 전체 gate와 `0.10.0-test.2` 이상 공개 수용
-3. 명시적 `0.10.0` 안정판 승인 전 `REL10-005–007` 시작 금지
+1. `KOR10-012`, `REL10-001–004` 전체 gate와 `0.10.0-test.2` 이상 공개 수용
+2. 명시적 `0.10.0` 안정판 승인 전 `REL10-005–007` 시작 금지
 
 ## 과거 기록
 

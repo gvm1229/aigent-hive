@@ -55,16 +55,16 @@
 ## Checklist
 
 - [x] [KOR10-001] 자동 한국어 core·명시적 `humanize-kor`·지속 가능한 upstream update를 `0.10.0` 제품 범위로 유지보수자 승인
-- [ ] [KOR10-002] `im-not-ai 2.3.2@0ac1e84`의 MIT license·source inventory·symlink·host version drift·retired reference·runtime 경계를 provenance manifest로 고정
-- [ ] [KOR10-003] `response|release-note|documentation|technical|verbatim` profile과 보호 span·예시 sublist·쉬운 설명 계약 정의
-- [ ] [KOR10-004] 번역투·반복·대구·피동·명사화·상투구·리듬 검사와 change rate·touch rate·서법·수치·인용·링크 보존을 Hive 결정적 core로 구현
-- [ ] [KOR10-005] 한국어 응답·문서 생성의 자동 draft→inspect→국소 rewrite→verify 경로와 정확한 원본 fallback 구현
-- [ ] [KOR10-006] Codex instruction/self-review, Claude Stop validate-retry, Antigravity AfterAgent validate-retry의 capability·consent·bounded loop adapter 구현
-- [ ] [KOR10-007] Hive-owned CLI 문자열·guide·Wiki·Discord subscriber payload의 profile별 정적 gate와 diff receipt 구현
-- [ ] [KOR10-008] 기존 한국어 text·file을 명시적으로 윤문하는 `humanize-kor` Skill과 light·standard·heavy·redo·원본 보존·preview 계약 구현
-- [ ] [KOR10-009] Watermark 우회·detector 최적화·출처 삭제·거짓 저자 표시 금지와 text hygiene 허용 경계를 schema·Skill·projection·회귀 시험에 적용
-- [ ] [KOR10-010] Upstream version·commit·digest·license·변환 version을 기록하고 `rules-data|engine-code|host-surface`를 분류하는 update check·preview manifest 구현
-- [ ] [KOR10-011] 검증된 language pack의 staging·원자 활성화·history·rollback과 raw upstream install·floating update 차단 구현
+- [x] [KOR10-002] `im-not-ai 2.3.2@0ac1e84` MIT license·111-file tree·symlink `0건`·host version drift·retired agent·runtime 경계를 provenance manifest로 고정 — `eaed3203`
+- [x] [KOR10-003] `response|release-note|documentation|technical|verbatim` profile·보호 span·예시 sublist·쉬운 설명 계약 정의
+- [x] [KOR10-004] 번역투·반복·대구·피동·명사화·상투구·리듬 검사와 bigram change rate·touch rate·서법·수치·인용·링크 보존 Rust core 구현
+- [x] [KOR10-005] 자동 draft→inspect→host-owned 국소 rewrite→verify와 exact draft fallback directive·CLI 구현
+- [x] [KOR10-006] Codex self-review, Claude `Stop`, Antigravity `AfterAgent`의 fresh capability·exact consent·retry 1회 adapter 구현, 미검증 event instruction-only
+- [x] [KOR10-007] Hive-owned text용 profile 정적 gate·digest receipt와 한국어 gold corpus 구현
+- [x] [KOR10-008] `humanize-kor` Skill·light/standard/heavy/redo·원본 보존·preview·projection parity 구현
+- [x] [KOR10-009] Watermark·detector·출처·거짓 저자 금지와 zero-width·bidi·Hangul NFD hygiene 경계를 schema·Skill·회귀 시험에 적용
+- [x] [KOR10-010] Upstream version check와 commit·tree·license·선별 source·변환 version·세 class preview manifest 구현 — live check current/latest `2.3.2`
+- [x] [KOR10-011] 세 파일 한정 staging·generation·atomic pointer·history rollback, raw install·floating ref·자동 update 차단 구현
 - [ ] [KOR10-012] 한국어 gold corpus·blind 평가·의미·수치·명령·list·link·인용 무회귀·세 host·세 운영체제·direct upgrade·rollback 수용
 
 ## 출시 경계

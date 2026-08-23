@@ -21,6 +21,7 @@ current catalog.
 | --- | --- |
 | [Architecture 안내](architecture/README.md) | Architecture MOC |
 | [Source layout](architecture/source-layout.md) | Source·release·consumer tree와 crate |
+| [한국어 언어 core](architecture/korean-language-core.md) | 자동 한국어 검사·윤문·pack lifecycle |
 | [Agent 지침 ownership](architecture/agent-directive-ownership.md) | Source·소비자 directive 단일 정본·크기 기준 |
 | [Role lifecycle](architecture/role-lifecycle.md) | Persistent role·handoff |
 | [Run lifecycle](architecture/run-lifecycle.md) | Checkpoint·event·scheduler·receipt·cancel·resume |
