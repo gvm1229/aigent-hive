@@ -625,7 +625,9 @@ fn graphify_dependency_lock_digest() -> Result<String, WikiError> {
             "Graphify dependency lock contract mismatch".to_owned(),
         ));
     }
-    Ok(sha256_digest(GRAPHIFY_DEPENDENCY_LOCK))
+    let canonical = serde_json_canonicalizer::to_vec(&value)
+        .map_err(|error| WikiError::Verification(format!("canonicalize Graphify lock: {error}")))?;
+    Ok(sha256_digest(&canonical))
 }
 
 fn graphify_consent(scope: &str) -> Result<GraphifyConsent, WikiError> {
