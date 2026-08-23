@@ -17,7 +17,8 @@ Resolution evidence: `{{ capability_resolution.evidence_digest }}`
 - Read canonical configuration from `.hive/config/harness.toml`.
 - Use the selected interface language for questions and responses unless the user explicitly
   requests another language for the current response. Prompt language is a separate current-request
-  choice.
+  choice. A message written in another language does not by itself change this preference.
+- Unless the user explicitly requests another language for the current prompt, write that prompt in English.
 - Preserve user and third-party bytes outside the exact Hive marker and ownership manifest.
 - Never call a model-provider API, request provider credentials, or launch a model/subagent process
   on Hive's behalf. The active host owns execution.

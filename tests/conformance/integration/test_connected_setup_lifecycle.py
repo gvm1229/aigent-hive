@@ -447,7 +447,8 @@ else:
             ],
         )
         agents = (target / "AGENTS.md").read_text(encoding="utf-8")
-        self.assertIn("selected interface language `ko`", agents)
+        behavior = (target / ".agents/directives/00-project-harness.md").read_text(encoding="utf-8")
+        self.assertIn("Interface language: `ko`", agents)
         self.assertIn(
             "A message written in another language does not by itself change this preference.",
             agents,
@@ -456,15 +457,15 @@ else:
             "Unless the user explicitly requests another language for the current prompt, write that prompt in English.",
             agents,
         )
-        self.assertIn("ASD-STE100 Simplified Technical English", agents)
-        self.assertIn("Translate meaning rather than English word order.", agents)
+        self.assertIn("ASD-STE100 Simplified Technical English", behavior)
+        self.assertIn("Translate meaning rather than English word order.", behavior)
         self.assertIn(
             "benign한 source claim ID",
-            agents,
+            behavior,
         )
         self.assertIn(
             "원본 지식 항목 식별자",
-            agents,
+            behavior,
         )
         self.assert_shared_user_store(target)
 
@@ -497,7 +498,8 @@ else:
         self.assertEqual(harness["usage_stop_remaining_percent"], 20)
         self.assertEqual(harness["selected_project_skills"], ["project-setup"])
         agents = (target / "AGENTS.md").read_text(encoding="utf-8")
-        self.assertIn("selected interface language `en`", agents)
+        behavior = (target / ".agents/directives/00-project-harness.md").read_text(encoding="utf-8")
+        self.assertIn("Interface language: `en`", agents)
         self.assertIn(
             "A message written in another language does not by itself change this preference.",
             agents,
@@ -506,15 +508,15 @@ else:
             "Unless the user explicitly requests another language for the current prompt, write that prompt in English.",
             agents,
         )
-        self.assertIn("ASD-STE100 Simplified Technical English", agents)
-        self.assertIn("Translate meaning rather than English word order.", agents)
+        self.assertIn("ASD-STE100 Simplified Technical English", behavior)
+        self.assertIn("Translate meaning rather than English word order.", behavior)
         self.assertIn(
             "benign한 source claim ID",
-            agents,
+            behavior,
         )
         self.assertIn(
             "원본 지식 항목 식별자",
-            agents,
+            behavior,
         )
         self.assert_shared_user_store(target)
 

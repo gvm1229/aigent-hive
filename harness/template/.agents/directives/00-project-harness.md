@@ -5,6 +5,8 @@ Knowledge, upgrade, and concurrent-edit procedures belong to the numbered siblin
 
 ## Work and planning
 
+- English responses use ASD-STE100 Simplified Technical English. In Korean, Translate meaning rather than English word order.
+- In Korean, do not write `benign한 source claim ID`; use `원본 지식 항목 식별자` and avoid replaceable mixed-language compounds.
 - Treat the repository as an independent consumer project and `.hive/config/` plus canonical
   Markdown as authority.
 - Write a material plan to project Markdown before execution unless the user opts out. Do not copy
