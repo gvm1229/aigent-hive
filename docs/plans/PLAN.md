@@ -1,10 +1,10 @@
 # Aigent Hive 활성 계획
 
-> Revision: 272
+> Revision: 273
 > 기준일: 2026-08-23
 > Product version: `0.9.5` stable
 > 다음 target: `0.10.0-test`
-> 현재 milestone: Host-neutral 연속 실행·Skill migration 수용
+> 현재 milestone: Adversarial Judge 세 host 수용
 > 확정 범위: [`ADR-0020`](../decisions/ADR-0020-0.10.0-product-scope.md)
 
 ## 목표
@@ -60,11 +60,11 @@
 | Nested project scan | 1 | 0 | 100% |
 | Agent 지침 경량화 | 7 | 0 | 100% |
 | Host-neutral 연속 실행 | 10 | 0 | 100% |
-| Verified workflow | 5 | 1 | 83.3% |
+| Verified workflow | 6 | 0 | 100% |
 | Adversarial judge | 4 | 4 | 50.0% |
-| Skill migration cleanup | 3 | 7 | 30.0% |
+| Skill migration cleanup | 10 | 0 | 100% |
 | `0.10.0` 출시 | 0 | 7 | 0% |
-| **합계** | **34** | **45** | **43.0%** |
+| **합계** | **42** | **37** | **53.2%** |
 
 ## Required load order
 
