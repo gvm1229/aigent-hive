@@ -47,6 +47,7 @@ modules = [
   "tests.conformance.contracts.test_hive_skills",
   "tests.conformance.contracts.test_host_capabilities",
   "tests.conformance.contracts.test_knowledge_schemas",
+  "tests.conformance.contracts.test_knowledge_graph_contracts",
   "tests.conformance.contracts.test_native_orchestration_feasibility",
   "tests.conformance.contracts.test_skill_inventory",
 ]
