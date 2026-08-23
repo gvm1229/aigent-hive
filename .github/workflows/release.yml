@@ -115,6 +115,12 @@ jobs:
           AIGENT_HIVE_PACKAGE_VERSION="$PACKAGE_VERSION" \
             AIGENT_HIVE_PACKAGE_RELEASE_DATE="$PACKAGE_RELEASE_DATE" \
             cargo build --release --locked --target "$TARGET" --bin hive
+      - name: Qualify exact and grounded source graph questions
+        run: >-
+          python3 scripts/qualify-source-graph.py
+          --hive "target/$TARGET/release/hive"
+          --target .
+          --output "source-graph-$TARGET.json"
       - name: Apply and verify explicit macOS ad-hoc signature
         if: runner.os == 'macOS'
         run: |
@@ -204,6 +210,7 @@ jobs:
             aigent-hive-${{ env.PRODUCT_VERSION }}-${{ matrix.target }}.tar.gz.sha256
             aigent-hive-${{ matrix.platform_package }}-${{ env.PACKAGE_VERSION }}.tgz
             aigent-hive-${{ env.PRODUCT_VERSION }}-${{ matrix.target }}.attestation.jsonl
+            source-graph-${{ matrix.target }}.json
           if-no-files-found: error
 
   windows:
@@ -270,6 +277,13 @@ jobs:
           AIGENT_HIVE_PACKAGE_VERSION="$PACKAGE_VERSION" \
             AIGENT_HIVE_PACKAGE_RELEASE_DATE="$PACKAGE_RELEASE_DATE" \
             cargo build --release --locked --target "$TARGET" --bin hive
+      - name: Qualify exact and grounded source graph questions
+        shell: pwsh
+        run: >-
+          python scripts/qualify-source-graph.py
+          --hive "target/$env:TARGET/release/hive.exe"
+          --target .
+          --output "source-graph-$env:TARGET.json"
       - name: Verify architecture and package native archive
         shell: pwsh
         run: |
@@ -341,6 +355,7 @@ jobs:
             aigent-hive-${{ env.PRODUCT_VERSION }}-x86_64-pc-windows-msvc.zip.sha256
             aigent-hive-win32-x64-${{ env.PACKAGE_VERSION }}.tgz
             aigent-hive-${{ env.PRODUCT_VERSION }}-x86_64-pc-windows-msvc.attestation.jsonl
+            source-graph-x86_64-pc-windows-msvc.json
           if-no-files-found: error
 
   npm-umbrella:

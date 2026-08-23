@@ -32,12 +32,12 @@ use hive_wiki::store::{
     SharedKnowledgeOperationLock, StoreCommit,
 };
 use hive_wiki::{
-    activate_generation, build_graph, delete_page, delete_page_shared, export_generation,
-    generation_relative_path, ingest, ingest_shared, lint, list_pages, load_active_generation,
-    normalize_graphify_code, promote, promote_shared, query_filtered, query_generation,
-    query_node_metadata, read_page, rebuild_index, remove_active_generation, suppress,
-    suppress_shared, LintIssue, LintSeverity, PromotionCategory, PromotionMode, SuppressionEntry,
-    WikiError,
+    activate_generation, build_graph as build_consumer_graph, delete_page, delete_page_shared,
+    ensure_graph_owned_path, export_generation, generation_relative_path, ingest, ingest_shared,
+    lint, list_pages, load_active_generation, normalize_graphify_code, promote, promote_shared,
+    query_filtered, query_generation, query_node_metadata, read_page, rebuild_index,
+    remove_active_generation, suppress, suppress_shared, LintIssue, LintSeverity,
+    PromotionCategory, PromotionMode, SuppressionEntry, WikiError,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
@@ -148,7 +148,8 @@ struct GraphifyConsent {
     consent_digest: String,
 }
 
-const GRAPHIFY_CONSENT_RELATIVE: &str = ".hive/config/graphify-code-consent.json";
+const PROJECT_GRAPHIFY_CONSENT_RELATIVE: &str = ".hive/config/graphify-code-consent.json";
+const SOURCE_GRAPHIFY_CONSENT_RELATIVE: &str = ".agents/work/graphify/graphify-code-consent.json";
 
 #[cfg(feature = "notion-preview")]
 type NotionSyncInputs<'a> = (
@@ -294,9 +295,9 @@ fn run_graph(arguments: &[String]) -> Result<KnowledgeResult, WikiError> {
     )?;
     let target = PathBuf::from(required(&options, "--target")?);
     let scope = optional(&options, "--scope").unwrap_or("project");
-    if scope != "project" {
+    if !matches!(scope, "project" | "source") {
         return Err(WikiError::InvalidInput(
-            "knowledge graph currently supports only the project scope".to_owned(),
+            "knowledge graph command supports only project or source scope".to_owned(),
         ));
     }
     let engine = optional(&options, "--engine").unwrap_or("native-markdown");
@@ -317,13 +318,14 @@ fn run_graph(arguments: &[String]) -> Result<KnowledgeResult, WikiError> {
                 "Graphify enable requires the exact preview consent digest".to_owned(),
             ));
         }
-        let changed = persist_graphify_consent(&target, &consent)?;
+        let changed = persist_graphify_consent(&target, scope, &consent)?;
+        let consent_relative = graphify_consent_relative(scope)?;
         return Ok(success(
             "UpdateHarness",
             "hive.knowledge-graph-enabled",
             "Graphify code-only consent enabled without package installation",
             changed,
-            GRAPHIFY_CONSENT_RELATIVE,
+            consent_relative,
             &consent.consent_digest,
             json!({
                 "scope": scope,
@@ -336,7 +338,7 @@ fn run_graph(arguments: &[String]) -> Result<KnowledgeResult, WikiError> {
         ));
     }
     if engine == "graphify-code" && action == "preview" {
-        let graph = build_graph(&target, scope)?;
+        let graph = build_graph_for_scope(&target, scope)?;
         let consent = graphify_consent(scope)?;
         return Ok(success(
             "QueryKnowledge",
@@ -394,15 +396,15 @@ fn run_graph(arguments: &[String]) -> Result<KnowledgeResult, WikiError> {
                     false,
                     true,
                 ),
-                Err(_) if matches!(action, "query" | "status") => {
-                    let graph = build_graph(&target, scope)?;
+                Err(_) if matches!(action, "query" | "status" | "disable") => {
+                    let graph = build_graph_for_scope(&target, scope)?;
                     let source_digest = graph.generation_digest.clone();
                     (graph, source_digest, None, true, false)
                 }
                 Err(error) => return Err(WikiError::Verification(error)),
             }
         } else {
-            let graph = build_graph(&target, scope)?;
+            let graph = build_graph_for_scope(&target, scope)?;
             let source_digest = graph.generation_digest.clone();
             let active = load_active_generation(&target, scope, engine)
                 .is_ok_and(|(pointer, _)| pointer.source_digest == source_digest);
@@ -411,34 +413,33 @@ fn run_graph(arguments: &[String]) -> Result<KnowledgeResult, WikiError> {
     let locator = generation_relative_path(scope, &graph.generation_digest)
         .map_err(WikiError::InvalidInput)?
         .to_string_lossy()
-        .into_owned();
+        .replace('\\', "/");
     let mut changed_paths = if action == "rebuild" {
         activate_generation(&target, &graph, &source_digest, receipt_digest.as_deref())
             .map_err(WikiError::Io)?
             .into_iter()
-            .map(|path| path.to_string_lossy().into_owned())
+            .map(|path| path.to_string_lossy().replace('\\', "/"))
             .collect()
     } else if action == "disable" {
         remove_active_generation(&target, scope, engine)
             .map_err(WikiError::Io)?
             .into_iter()
-            .map(|path| path.to_string_lossy().into_owned())
+            .map(|path| path.to_string_lossy().replace('\\', "/"))
             .collect()
     } else if action == "export" {
         vec![
             export_generation(&target, &graph, required(&options, "--format")?)
                 .map_err(WikiError::Io)?
                 .to_string_lossy()
-                .into_owned(),
+                .replace('\\', "/"),
         ]
     } else {
         Vec::new()
     };
-    if action == "disable" && engine == "graphify-code" {
-        if remove_graphify_consent(&target)? {
-            changed_paths.push(GRAPHIFY_CONSENT_RELATIVE.to_owned());
-            changed_paths.sort();
-        }
+    if action == "disable" && engine == "graphify-code" && remove_graphify_consent(&target, scope)?
+    {
+        changed_paths.push(graphify_consent_relative(scope)?.to_owned());
+        changed_paths.sort();
     }
     let data = if action == "query" {
         let node_id = optional(&options, "--node-id");
@@ -448,35 +449,55 @@ fn run_graph(arguments: &[String]) -> Result<KnowledgeResult, WikiError> {
                 "knowledge graph query requires --node-id or --text".to_owned(),
             ));
         }
-        let graph_matches = node_id
+        let mut graph_matches = node_id
             .map(|id| query_generation(&graph, id, 50))
             .unwrap_or_default();
-        let metadata = node_id
+        let mut metadata = node_id
             .map(|id| query_node_metadata(&graph, id, 10))
             .unwrap_or_default();
         let fts = if let Some(query) = text {
-            let mut query_arguments = vec![
-                "--target".to_owned(),
-                target.to_string_lossy().into_owned(),
-                "--text".to_owned(),
-                query.to_owned(),
-                "--limit".to_owned(),
-                "10".to_owned(),
-                "--output".to_owned(),
-                "json".to_owned(),
-            ];
-            if let Some(user_root) = optional(&options, "--user-root") {
-                query_arguments.extend(["--user-root".to_owned(), user_root.to_owned()]);
+            if scope == "source" {
+                let planned = relation_question_subject(query).unwrap_or(query);
+                let hits = hive_wiki::source::query(&target, "en", Some(planned), None, 10)?;
+                Some(json!({"count": hits.len(), "hits": hits, "language": "en"}))
+            } else {
+                let mut query_arguments = vec![
+                    "--target".to_owned(),
+                    target.to_string_lossy().into_owned(),
+                    "--text".to_owned(),
+                    query.to_owned(),
+                    "--limit".to_owned(),
+                    "10".to_owned(),
+                    "--output".to_owned(),
+                    "json".to_owned(),
+                ];
+                if let Some(user_root) = optional(&options, "--user-root") {
+                    query_arguments.extend(["--user-root".to_owned(), user_root.to_owned()]);
+                }
+                run_query(&query_arguments)?.data
             }
-            run_query(&query_arguments)?.data
         } else {
             None
         };
+        if node_id.is_none() {
+            if let Some(value) = &fts {
+                for id in fts_hit_ids(value) {
+                    graph_matches.extend(query_generation(&graph, &id, 50));
+                    metadata.extend(query_node_metadata(&graph, &id, 10));
+                }
+                graph_matches.sort();
+                graph_matches.dedup();
+                graph_matches.truncate(50);
+                metadata.sort();
+                metadata.dedup();
+                metadata.truncate(10);
+            }
+        }
         let mut matched_lanes = Vec::new();
         if text.is_some() {
             matched_lanes.push("fts");
         }
-        if node_id.is_some() {
+        if node_id.is_some() || !graph_matches.is_empty() {
             matched_lanes.push(if graph.engine == "graphify-code" {
                 "code-graph"
             } else {
@@ -548,6 +569,56 @@ fn run_graph(arguments: &[String]) -> Result<KnowledgeResult, WikiError> {
         &graph.generation_digest,
         data,
     ))
+}
+
+fn build_graph_for_scope(
+    target: &Path,
+    scope: &str,
+) -> Result<hive_wiki::GraphGeneration, WikiError> {
+    if scope == "source" {
+        hive_wiki::source::build_graph(target)
+    } else {
+        build_consumer_graph(target, scope)
+    }
+}
+
+fn fts_hit_ids(value: &Value) -> Vec<String> {
+    value
+        .get("hits")
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+        .filter_map(|hit| {
+            hit.get("id")
+                .or_else(|| hit.get("pair_id"))
+                .and_then(Value::as_str)
+                .map(str::to_owned)
+        })
+        .collect()
+}
+
+fn relation_question_subject(value: &str) -> Option<&str> {
+    value
+        .strip_prefix("How does ")
+        .and_then(|rest| rest.split_once(" relate to "))
+        .map(|(subject, _)| subject.trim())
+        .filter(|subject| !subject.is_empty())
+}
+
+pub(crate) fn run_source_graph(arguments: &[String]) -> ExitCode {
+    if arguments.iter().any(|argument| argument == "--scope") {
+        let result = failure(
+            "QueryKnowledge",
+            &WikiError::InvalidInput("source-wiki graph owns the source scope".to_owned()),
+        );
+        emit(&result);
+        return ExitCode::from(result.exit_code);
+    }
+    let mut scoped = arguments.to_vec();
+    scoped.extend(["--scope".to_owned(), "source".to_owned()]);
+    let result = run_graph(&scoped).unwrap_or_else(|error| failure("QueryKnowledge", &error));
+    emit(&result);
+    ExitCode::from(result.exit_code)
 }
 
 fn read_bytes_bounded(path: &Path, label: &str, maximum: u64) -> Result<Vec<u8>, WikiError> {
@@ -671,12 +742,11 @@ fn graphify_consent(scope: &str) -> Result<GraphifyConsent, WikiError> {
 
 fn persist_graphify_consent(
     target: &Path,
+    scope: &str,
     consent: &GraphifyConsent,
 ) -> Result<Vec<String>, WikiError> {
-    let relative = Path::new(GRAPHIFY_CONSENT_RELATIVE);
-    ensure_no_symlink_ancestors(target, relative).map_err(|error| {
-        WikiError::Conflict(format!("Graphify consent path is unsafe: {error}"))
-    })?;
+    let relative = Path::new(graphify_consent_relative(scope)?);
+    ensure_graphify_consent_path(target, relative, scope)?;
     let destination = target.join(relative);
     let bytes = serde_json_canonicalizer::to_vec(consent)
         .map_err(|error| WikiError::Io(format!("canonicalize Graphify consent: {error}")))?;
@@ -714,12 +784,12 @@ fn persist_graphify_consent(
     temporary
         .persist(&destination)
         .map_err(|error| WikiError::Io(format!("activate Graphify consent: {error}")))?;
-    Ok(vec![GRAPHIFY_CONSENT_RELATIVE.to_owned()])
+    Ok(vec![relative.to_string_lossy().into_owned()])
 }
 
 fn load_graphify_consent(target: &Path, scope: &str) -> Result<GraphifyConsent, WikiError> {
     let bytes = read_bytes_bounded(
-        &target.join(GRAPHIFY_CONSENT_RELATIVE),
+        &target.join(graphify_consent_relative(scope)?),
         "Graphify consent",
         64 * 1024,
     )?;
@@ -741,11 +811,9 @@ fn load_graphify_consent(target: &Path, scope: &str) -> Result<GraphifyConsent, 
     Ok(consent)
 }
 
-fn remove_graphify_consent(target: &Path) -> Result<bool, WikiError> {
-    let relative = Path::new(GRAPHIFY_CONSENT_RELATIVE);
-    ensure_no_symlink_ancestors(target, relative).map_err(|error| {
-        WikiError::Conflict(format!("Graphify consent path is unsafe: {error}"))
-    })?;
+fn remove_graphify_consent(target: &Path, scope: &str) -> Result<bool, WikiError> {
+    let relative = Path::new(graphify_consent_relative(scope)?);
+    ensure_graphify_consent_path(target, relative, scope)?;
     let destination = target.join(relative);
     match fs::symlink_metadata(&destination) {
         Ok(metadata) if metadata.is_file() => {
@@ -758,6 +826,32 @@ fn remove_graphify_consent(target: &Path) -> Result<bool, WikiError> {
         )),
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(false),
         Err(error) => Err(WikiError::Io(format!("inspect Graphify consent: {error}"))),
+    }
+}
+
+fn graphify_consent_relative(scope: &str) -> Result<&'static str, WikiError> {
+    match scope {
+        "project" => Ok(PROJECT_GRAPHIFY_CONSENT_RELATIVE),
+        "source" => Ok(SOURCE_GRAPHIFY_CONSENT_RELATIVE),
+        _ => Err(WikiError::InvalidInput(
+            "Graphify consent scope is unsupported".to_owned(),
+        )),
+    }
+}
+
+fn ensure_graphify_consent_path(
+    target: &Path,
+    relative: &Path,
+    scope: &str,
+) -> Result<(), WikiError> {
+    if scope == "source" {
+        ensure_graph_owned_path(target, relative, scope).map_err(|error| {
+            WikiError::Conflict(format!("Graphify consent path is unsafe: {error}"))
+        })
+    } else {
+        ensure_no_symlink_ancestors(target, relative).map_err(|error| {
+            WikiError::Conflict(format!("Graphify consent path is unsafe: {error}"))
+        })
     }
 }
 
@@ -4709,6 +4803,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::too_many_lines, clippy::useless_vec)]
     fn graph_preview_reads_canonical_pages_without_derived_write() {
         let (user, project) = registered_roots(true);
         let source = project.path().join("source.md");
@@ -4880,10 +4975,11 @@ mod tests {
         ]) else {
             panic!("collection scope requires its separate authorization path");
         };
-        assert!(error.to_string().contains("only the project scope"));
+        assert!(error.to_string().contains("only project or source scope"));
     }
 
     #[test]
+    #[allow(clippy::too_many_lines)]
     fn graphify_code_rebuild_requires_exact_receipt_and_falls_back_to_native() {
         let (user, project) = registered_roots(true);
         let source = project.path().join("source.md");
@@ -4946,7 +5042,7 @@ mod tests {
         ])
         .expect("Graphify enable");
         assert_eq!(enabled.code, "hive.knowledge-graph-enabled");
-        assert_eq!(enabled.changed_paths, [GRAPHIFY_CONSENT_RELATIVE]);
+        assert_eq!(enabled.changed_paths, [PROJECT_GRAPHIFY_CONSENT_RELATIVE]);
         let rebuilt = run_graph(&[
             "rebuild".to_owned(),
             "--target".to_owned(),

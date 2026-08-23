@@ -36,9 +36,9 @@ use tempfile::NamedTempFile;
 
 pub use graph::{
     activate_generation, build_native_generation, build_native_generation_incremental,
-    export_generation, generation_relative_path, load_active_generation, persist_generation,
-    query_generation, query_node_metadata, remove_active_generation, remove_generation,
-    ActiveGraphPointer, GraphGeneration,
+    ensure_graph_owned_path, export_generation, generation_relative_path, load_active_generation,
+    persist_generation, query_generation, query_node_metadata, remove_active_generation,
+    remove_generation, ActiveGraphPointer, GraphGeneration,
 };
 pub use graphify::normalize_graphify_code;
 
@@ -57,6 +57,11 @@ const MAX_DERIVED_INDEX_BYTES: u64 = 128 * 1024 * 1024;
 static CAP_TEMP_COUNTER: AtomicU64 = AtomicU64::new(0);
 
 /// Build a disposable native graph from canonical Markdown pages in one scope.
+///
+/// # Errors
+///
+/// Returns an error when the target is not a consumer workspace, canonical pages are invalid,
+/// or graph generation fails.
 pub fn build_graph(target: &Path, scope: &str) -> Result<GraphGeneration, WikiError> {
     ensure_consumer_target(target).map_err(|error| WikiError::Verification(error.to_string()))?;
     let pages = scan_pages(target)?;

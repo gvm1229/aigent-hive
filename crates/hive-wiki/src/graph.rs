@@ -64,6 +64,10 @@ pub struct ActiveGraphPointer {
 }
 
 /// Build a deterministic native graph for exactly one already-authorized scope.
+///
+/// # Errors
+///
+/// Returns an error when the scope is unsupported or the generation cannot be canonicalized.
 pub fn build_native_generation(scope: &str, pages: &[WikiPage]) -> Result<GraphGeneration, String> {
     if !matches!(
         scope,
@@ -154,7 +158,7 @@ fn graph_lifecycle(value: &str) -> bool {
     )
 }
 
-fn finalize_generation(
+pub(crate) fn finalize_generation(
     scope: &str,
     engine: &str,
     nodes: Vec<GraphNode>,
@@ -182,6 +186,10 @@ fn finalize_generation(
 }
 
 /// Return the Hive-owned derived path for one physical graph scope.
+///
+/// # Errors
+///
+/// Returns an error when the scope or digest is invalid.
 pub fn generation_relative_path(scope: &str, scope_digest: &str) -> Result<PathBuf, String> {
     let digest = scope_digest
         .strip_prefix("sha256:")
@@ -205,6 +213,10 @@ pub fn generation_relative_path(scope: &str, scope_digest: &str) -> Result<PathB
 }
 
 /// Persist one digest-addressed generation without overwriting a different derived graph.
+///
+/// # Errors
+///
+/// Returns an error when the path is unsafe, occupied by different bytes, or cannot be written.
 pub fn persist_generation(target: &Path, generation: &GraphGeneration) -> Result<PathBuf, String> {
     let relative = generation_relative_path(&generation.scope, &generation.generation_digest)?;
     ensure_graph_path(target, &relative, &generation.scope)?;
@@ -404,6 +416,15 @@ fn ensure_graph_path(target: &Path, relative: &Path, scope: &str) -> Result<(), 
     Ok(())
 }
 
+/// Verify that one derived graph path stays inside the approved scope without following links.
+///
+/// # Errors
+///
+/// Returns an error when the scope, source marker, path shape, or an existing ancestor is unsafe.
+pub fn ensure_graph_owned_path(target: &Path, relative: &Path, scope: &str) -> Result<(), String> {
+    ensure_graph_path(target, relative, scope)
+}
+
 fn validate_digest(value: &str, label: &str) -> Result<(), String> {
     let valid = value.strip_prefix("sha256:").is_some_and(|digest| {
         digest.len() == 64
@@ -419,6 +440,10 @@ fn validate_digest(value: &str, label: &str) -> Result<(), String> {
 }
 
 /// Remove exactly one digest-addressed derived generation without touching canonical knowledge.
+///
+/// # Errors
+///
+/// Returns an error when the scope or digest is invalid, the path is unsafe, or removal fails.
 pub fn remove_generation(
     target: &Path,
     scope: &str,

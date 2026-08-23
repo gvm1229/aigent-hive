@@ -3,6 +3,9 @@
 from __future__ import annotations
 
 import json
+import os
+import subprocess
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -15,6 +18,38 @@ DIGEST = "sha256:" + "a1" * 32
 
 
 class KnowledgeGraphContractTests(unittest.TestCase):
+    def test_source_graph_qualifies_thirty_exact_and_relation_questions(self) -> None:
+        configured = os.environ.get("HIVE_BIN")
+        binary = (
+            Path(configured).resolve()
+            if configured
+            else (ROOT / "target/debug/hive").resolve()
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / "qualification.json"
+            subprocess.run(
+                [
+                    "python",
+                    str(ROOT / "scripts/qualify-source-graph.py"),
+                    "--hive",
+                    str(binary),
+                    "--target",
+                    str(ROOT),
+                    "--output",
+                    str(output),
+                ],
+                cwd=ROOT,
+                check=True,
+                timeout=60,
+                capture_output=True,
+                text=True,
+            )
+            report = json.loads(output.read_text(encoding="utf-8"))
+        self.assertEqual(report["exact_recall_at_10"], 1.0)
+        self.assertEqual(report["relation_grounded_recall_at_10"], 1.0)
+        self.assertFalse(report["canonical_changed"])
+        self.assertEqual(report["scope"], "source")
+
     def test_graphify_three_platform_wheel_locks_are_complete_and_digest_bound(self) -> None:
         root = ROOT / "harness/dependencies/graphify/0.9.47"
         for platform in ("windows-x64", "macos-arm64", "linux-musl-x64"):

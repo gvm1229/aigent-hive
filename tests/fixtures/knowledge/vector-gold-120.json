@@ -352,7 +352,7 @@
       "id": "exact-26-hybrid-vector-search-0-10",
       "kind": "exact",
       "subtype": "negative",
-      "query": "Failure adds no product dependency",
+      "query": "no vector engine embedding runtime model or schema product dependency",
       "expected": [
         "hybrid-vector-search-0-10"
       ]

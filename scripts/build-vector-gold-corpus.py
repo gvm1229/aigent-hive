@@ -73,7 +73,7 @@ EXACT_QUERIES = [
     ("developer-binary-lifecycle", "negative", "never the public"),
     ("global-knowledge-bundle-transfer", "negative", "no SQLite index"),
     ("host-neutral-continuation", "negative", "must not mutate host goals"),
-    ("hybrid-vector-search-0-10", "negative", "Failure adds no product dependency"),
+    ("hybrid-vector-search-0-10", "negative", "no vector engine embedding runtime model or schema product dependency"),
     ("install-wide-knowledge-capture", "negative", "no raw-prompt recorder"),
     ("judge-verification", "negative", "never owns private keys"),
     ("knowledge-cross-project-access", "negative", "Retrieval never causes promotion"),

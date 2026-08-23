@@ -3,6 +3,7 @@
 use super::{
     fts_expression, reject_likely_credentials, sqlite_error, LintIssue, LintSeverity, WikiError,
 };
+use crate::graph::{finalize_generation, GraphEdge, GraphEvidence, GraphGeneration, GraphNode};
 use cap_fs_ext::{DirExt, FollowSymlinks, MetadataExt as CapMetadataExt, OpenOptionsFollowExt};
 use cap_std::ambient_authority;
 use cap_std::fs::{Dir, OpenOptions as CapOpenOptions};
@@ -304,7 +305,7 @@ pub fn rebuild_index(root: &Path) -> Result<SourceIndexOutcome, WikiError> {
                PRIMARY KEY(language, topic_slug)
              );
              CREATE VIRTUAL TABLE pages_fts USING fts5(
-               language UNINDEXED, topic_slug UNINDEXED, title, summary, body, aliases, tags
+               language UNINDEXED, topic_slug, pair_id, title, summary, body, aliases, tags
              );
              CREATE TABLE tags(
                language TEXT NOT NULL,
@@ -355,10 +356,11 @@ pub fn rebuild_index(root: &Path) -> Result<SourceIndexOutcome, WikiError> {
             .map_err(sqlite_error)?;
         transaction
             .execute(
-                "INSERT INTO pages_fts VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+                "INSERT INTO pages_fts VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
                 params![
                     meta.language,
                     meta.topic_slug,
+                    meta.pair_id,
                     meta.title,
                     meta.summary,
                     page.body,
@@ -491,6 +493,68 @@ pub fn query(
         )?
     };
     Ok(rows)
+}
+
+/// Build a disposable source graph from the English half of each validated bilingual fact pair.
+///
+/// # Errors
+///
+/// Returns an error when source identity, canonical facts, pairing, links, or graph
+/// canonicalization fails.
+pub fn build_graph(root: &Path) -> Result<GraphGeneration, WikiError> {
+    let root = SourceRoot::open(root)?;
+    let pages = scan_valid_pages(&root)?;
+    let english = pages
+        .values()
+        .filter(|page| page.frontmatter.language == "en")
+        .collect::<Vec<_>>();
+    let mut nodes = english
+        .iter()
+        .map(|page| GraphNode {
+            id: page.frontmatter.pair_id.clone(),
+            locator: page.relative_path.clone(),
+            content_digest: page.content_digest.clone(),
+            visibility: "source".to_owned(),
+            lifecycle: page.frontmatter.status.clone(),
+        })
+        .collect::<Vec<_>>();
+    let mut edges = Vec::new();
+    for page in english {
+        let from = page.frontmatter.pair_id.clone();
+        let source_digest = page.content_digest.clone();
+        for target in &page.frontmatter.links {
+            edges.push(GraphEdge {
+                from: from.clone(),
+                to: target.clone(),
+                relation: "links".to_owned(),
+                evidence: GraphEvidence::Extracted,
+                source_digest: source_digest.clone(),
+            });
+        }
+        for target in &page.frontmatter.sources {
+            edges.push(GraphEdge {
+                from: from.clone(),
+                to: target.clone(),
+                relation: "sources".to_owned(),
+                evidence: GraphEvidence::Extracted,
+                source_digest: source_digest.clone(),
+            });
+        }
+        for target in &page.frontmatter.tags {
+            edges.push(GraphEdge {
+                from: from.clone(),
+                to: target.clone(),
+                relation: "tags".to_owned(),
+                evidence: GraphEvidence::Extracted,
+                source_digest: source_digest.clone(),
+            });
+        }
+    }
+    nodes.sort();
+    nodes.dedup();
+    edges.sort();
+    edges.dedup();
+    finalize_generation("source", "native-markdown", nodes, edges).map_err(WikiError::InvalidInput)
 }
 
 struct LintScan {
