@@ -71,7 +71,7 @@
     },
     {
       "id": "graphify-0-10-adoption",
-      "text": "graphify-0-10-adoption\nGraphify 0.10 Adoption Decision\n# Graphify 0.10 Adoption Decision\n\nGraphify `0.9.47` passed repeated full code-graph builds and small Windows query performance.\nIncremental updates diverged from full regeneration, and the upstream global graph lacks Hive\ncollection isolation. The full knowledge-graph scope remains excluded. The approved `0.10.0`\nscope uses Hive-native Markdown relationships plus an optional full-rebuild Graphify code-only\nadapter. Native graph schema and direct Markdown edge extraction are implemented; qualification remains pending."
+      "text": "graphify-0-10-adoption\nGraphify 0.10 Adoption Decision\n# Graphify 0.10 Adoption Decision\n\nGraphify `0.9.47` passed repeated full code-graph builds and small Windows query performance.\nIncremental updates diverged from full regeneration, and the upstream global graph lacks Hive\ncollection isolation. The full knowledge-graph scope remains excluded. The approved `0.10.0`\nscope uses Hive-native Markdown relationships plus an optional full-rebuild Graphify code-only\nadapter. The adapter now requires exact consent, platform wheel lock, code-only receipt, grounded\nlocators, atomic generation activation, and native fallback. Cross-platform public acceptance\nremains pending."
     },
     {
       "id": "historical-project-base-coverage",
@@ -91,7 +91,7 @@
     },
     {
       "id": "hybrid-vector-search-0-10",
-      "text": "hybrid-vector-search-0-10\nHybrid Vector Search Gate for 0.10.0\n# Hybrid Vector Search Gate for 0.10.0\n\n`KRG10-014` and `VEC10-001–012` compare FTS, Qdrant Edge, and SQLite vector engines on a\n120-query gold corpus and 50,000 chunks. Adoption requires semantic Recall@10 improvement, exact\nfact non-regression, bounded latency and storage, offline scope isolation, and a pinned local\nnon-generative embedding indexer. Failure adds no product dependency and preserves FTS and graphs."
+      "text": "hybrid-vector-search-0-10\nHybrid Vector Search Gate for 0.10.0\n# Hybrid Vector Search Gate for 0.10.0\n\nThe 120-query corpus showed a 15-point semantic Recall@10 gain with a local multilingual model.\nQdrant Edge, sqlite-vec, and SQLite-Vector passed the 50,000-vector lookup and storage budgets.\nThe offline embedding build exceeded the ten-minute Windows x64 gate, and SQLite-Vector also has\nan incompatible closed-commercial-use license boundary. The `0.10.0` decision is `defer`, with no\nvector engine, embedding runtime, model, or schema product dependency. FTS and graphs remain active."
     },
     {
       "id": "install-wide-knowledge-capture",
