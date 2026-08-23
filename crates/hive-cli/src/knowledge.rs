@@ -74,7 +74,7 @@ USAGE:
     hive knowledge export --user-root <dir> --scope global|shared|project:<id>|collection:<id>|all-portable --bundle <path>.hivekb [--replace-backup <file-name>] --output json
     hive knowledge import --user-root <dir> --bundle <path>.hivekb (--dry-run|--apply) --output json
     hive knowledge refresh (--target <legacy-project>|--user-root <dir>) --output json
-    hive knowledge graph preview|status|rebuild|disable|query|export --target <dir> [--scope project] [--engine native-markdown|graphify-code] [--input <graph.json> --receipt <receipt.json>] [--node-id <id>] [--format json|html] --output json
+    hive knowledge graph preview|status|rebuild|disable|query|export --target <dir> [--scope project] [--engine native-markdown|graphify-code] [--input <graph.json> --receipt <receipt.json>] [--node-id <id>] [--text <query>] [--user-root <dir>] [--format json|html] --output json
     hive index rebuild (--target <legacy-project>|--user-root <dir>) --output json
 ";
 
@@ -255,6 +255,8 @@ fn run_graph(arguments: &[String]) -> Result<KnowledgeResult, WikiError> {
             "--input",
             "--receipt",
             "--format",
+            "--text",
+            "--user-root",
         ],
     )?;
     let target = PathBuf::from(required(&options, "--target")?);
@@ -365,7 +367,48 @@ fn run_graph(arguments: &[String]) -> Result<KnowledgeResult, WikiError> {
         Vec::new()
     };
     let data = if action == "query" {
-        let node_id = required(&options, "--node-id")?;
+        let node_id = optional(&options, "--node-id");
+        let text = optional(&options, "--text");
+        if node_id.is_none() && text.is_none() {
+            return Err(WikiError::InvalidInput(
+                "knowledge graph query requires --node-id or --text".to_owned(),
+            ));
+        }
+        let graph_matches = node_id
+            .map(|id| query_generation(&graph, id, 50))
+            .unwrap_or_default();
+        let metadata = node_id
+            .map(|id| query_node_metadata(&graph, id, 10))
+            .unwrap_or_default();
+        let fts = if let Some(query) = text {
+            let mut query_arguments = vec![
+                "--target".to_owned(),
+                target.to_string_lossy().into_owned(),
+                "--text".to_owned(),
+                query.to_owned(),
+                "--limit".to_owned(),
+                "10".to_owned(),
+                "--output".to_owned(),
+                "json".to_owned(),
+            ];
+            if let Some(user_root) = optional(&options, "--user-root") {
+                query_arguments.extend(["--user-root".to_owned(), user_root.to_owned()]);
+            }
+            run_query(&query_arguments)?.data
+        } else {
+            None
+        };
+        let mut matched_lanes = Vec::new();
+        if text.is_some() {
+            matched_lanes.push("fts");
+        }
+        if node_id.is_some() {
+            matched_lanes.push(if graph.engine == "graphify-code" {
+                "code-graph"
+            } else {
+                "markdown-graph"
+            });
+        }
         json!({
             "scope": graph.scope,
             "engine": graph.engine,
@@ -373,9 +416,12 @@ fn run_graph(arguments: &[String]) -> Result<KnowledgeResult, WikiError> {
             "fallback": fallback,
             "generation_digest": graph.generation_digest,
             "node_id": node_id,
-            "matches": query_generation(&graph, node_id, 50),
-            "metadata": query_node_metadata(&graph, node_id, 10),
-            "read_command": format!("hive knowledge read --target <dir> --page-id {node_id} --output json"),
+            "text": text,
+            "matched_lanes": matched_lanes,
+            "fts": fts,
+            "matches": graph_matches,
+            "metadata": metadata,
+            "read_command": node_id.map(|id| format!("hive knowledge read --target <dir> --page-id {id} --output json")),
             "cost_receipt": {
                 "nodes_scanned": graph.nodes.len(),
                 "edges_scanned": graph.edges.len(),
@@ -4470,6 +4516,10 @@ mod tests {
             project.path().to_string_lossy().into_owned(),
             "--node-id".to_owned(),
             "graph-preview".to_owned(),
+            "--text".to_owned(),
+            "Graph preview".to_owned(),
+            "--user-root".to_owned(),
+            user.path().to_string_lossy().into_owned(),
             "--output".to_owned(),
             "json".to_owned(),
         ])
@@ -4478,6 +4528,17 @@ mod tests {
         let matches = query_data["matches"].as_array().expect("metadata matches");
         assert_eq!(matches.len(), 2);
         assert!(matches.iter().all(|edge| edge.get("body").is_none()));
+        assert_eq!(
+            query_data["matched_lanes"],
+            json!(["fts", "markdown-graph"])
+        );
+        assert_eq!(
+            query_data["fts"]["hits"]
+                .as_array()
+                .expect("FTS hits")
+                .len(),
+            1
+        );
         assert_eq!(
             query_data["metadata"]
                 .as_array()
