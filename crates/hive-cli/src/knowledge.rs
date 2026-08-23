@@ -48,6 +48,7 @@ use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 use std::str::FromStr;
 use std::time::{SystemTime, UNIX_EPOCH};
+use tempfile::NamedTempFile;
 
 const KNOWLEDGE_USAGE: &str = "\
 Canonical Markdown knowledge and disposable SQLite index.
@@ -74,7 +75,7 @@ USAGE:
     hive knowledge export --user-root <dir> --scope global|shared|project:<id>|collection:<id>|all-portable --bundle <path>.hivekb [--replace-backup <file-name>] --output json
     hive knowledge import --user-root <dir> --bundle <path>.hivekb (--dry-run|--apply) --output json
     hive knowledge refresh (--target <legacy-project>|--user-root <dir>) --output json
-    hive knowledge graph preview|status|rebuild|disable|query|export --target <dir> [--scope project] [--engine native-markdown|graphify-code] [--input <graph.json> --receipt <receipt.json>] [--node-id <id>] [--text <query>] [--user-root <dir>] [--format json|html] --output json
+    hive knowledge graph preview|enable|status|rebuild|disable|query|export --target <dir> [--scope project] [--engine native-markdown|graphify-code] [--consent-digest <sha256:...>] [--input <graph.json> --receipt <receipt.json>] [--node-id <id>] [--text <query>] [--user-root <dir>] [--format json|html] --output json
     hive index rebuild (--target <legacy-project>|--user-root <dir>) --output json
 ";
 
@@ -105,6 +106,7 @@ struct GraphifyCodeReceipt {
     wheel_digest: String,
     executable_digest: String,
     python_identity_digest: String,
+    consent_digest: String,
     source_commit: String,
     source_tree_digest: String,
     graph_input_digest: String,
@@ -117,6 +119,19 @@ struct GraphifyCodeReceipt {
     mcp_registration: bool,
     network_requests: u32,
 }
+
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+struct GraphifyConsent {
+    schema_version: u32,
+    scope: String,
+    package_version: String,
+    wheel_digest: String,
+    command: Vec<String>,
+    consent_digest: String,
+}
+
+const GRAPHIFY_CONSENT_RELATIVE: &str = ".hive/config/graphify-code-consent.json";
 
 #[cfg(feature = "notion-preview")]
 type NotionSyncInputs<'a> = (
@@ -232,16 +247,16 @@ pub(crate) fn run_knowledge(arguments: &[String]) -> ExitCode {
 fn run_graph(arguments: &[String]) -> Result<KnowledgeResult, WikiError> {
     let action = arguments.first().map(String::as_str).ok_or_else(|| {
         WikiError::InvalidInput(
-            "knowledge graph requires preview, status, rebuild, disable, query, or export"
+            "knowledge graph requires preview, enable, status, rebuild, disable, query, or export"
                 .to_owned(),
         )
     })?;
     if !matches!(
         action,
-        "preview" | "status" | "rebuild" | "disable" | "query" | "export"
+        "preview" | "enable" | "status" | "rebuild" | "disable" | "query" | "export"
     ) {
         return Err(WikiError::InvalidInput(
-            "knowledge graph supports preview, status, rebuild, disable, query, or export"
+            "knowledge graph supports preview, enable, status, rebuild, disable, query, or export"
                 .to_owned(),
         ));
     }
@@ -257,6 +272,7 @@ fn run_graph(arguments: &[String]) -> Result<KnowledgeResult, WikiError> {
             "--format",
             "--text",
             "--user-root",
+            "--consent-digest",
         ],
     )?;
     let target = PathBuf::from(required(&options, "--target")?);
@@ -272,8 +288,39 @@ fn run_graph(arguments: &[String]) -> Result<KnowledgeResult, WikiError> {
             "knowledge graph engine is unsupported".to_owned(),
         ));
     }
+    if action == "enable" {
+        if engine != "graphify-code" {
+            return Err(WikiError::InvalidInput(
+                "knowledge graph enable is only for graphify-code".to_owned(),
+            ));
+        }
+        let consent = graphify_consent(scope)?;
+        if required(&options, "--consent-digest")? != consent.consent_digest {
+            return Err(WikiError::Conflict(
+                "Graphify enable requires the exact preview consent digest".to_owned(),
+            ));
+        }
+        let changed = persist_graphify_consent(&target, &consent)?;
+        return Ok(success(
+            "UpdateHarness",
+            "hive.knowledge-graph-enabled",
+            "Graphify code-only consent enabled without package installation",
+            changed,
+            GRAPHIFY_CONSENT_RELATIVE,
+            &consent.consent_digest,
+            json!({
+                "scope": scope,
+                "engine": engine,
+                "consent_digest": consent.consent_digest.clone(),
+                "package_installed": false,
+                "automatic_install": false,
+                "writes": true
+            }),
+        ));
+    }
     if engine == "graphify-code" && action == "preview" {
         let graph = build_graph(&target, scope)?;
+        let consent = graphify_consent(scope)?;
         return Ok(success(
             "QueryKnowledge",
             "hive.knowledge-graph-preview",
@@ -294,6 +341,8 @@ fn run_graph(arguments: &[String]) -> Result<KnowledgeResult, WikiError> {
                 "git_hooks": false,
                 "mcp_registration": false,
                 "network_requests": 0,
+                "consent_digest": consent.consent_digest,
+                "automatic_install": false,
                 "writes": false,
             }),
         ));
@@ -309,7 +358,8 @@ fn run_graph(arguments: &[String]) -> Result<KnowledgeResult, WikiError> {
                 serde_json::from_slice(&receipt_bytes).map_err(|error| {
                     WikiError::InvalidInput(format!("invalid Graphify receipt: {error}"))
                 })?;
-            validate_graphify_receipt(&receipt, &input)?;
+            let consent = load_graphify_consent(&target, scope)?;
+            validate_graphify_receipt(&receipt, &input, &consent.consent_digest)?;
             (
                 normalize_graphify_code(scope, &input).map_err(WikiError::Verification)?,
                 receipt.source_tree_digest,
@@ -344,7 +394,7 @@ fn run_graph(arguments: &[String]) -> Result<KnowledgeResult, WikiError> {
         .map_err(WikiError::InvalidInput)?
         .to_string_lossy()
         .into_owned();
-    let changed_paths = if action == "rebuild" {
+    let mut changed_paths = if action == "rebuild" {
         activate_generation(&target, &graph, &source_digest, receipt_digest.as_deref())
             .map_err(WikiError::Io)?
             .into_iter()
@@ -366,6 +416,12 @@ fn run_graph(arguments: &[String]) -> Result<KnowledgeResult, WikiError> {
     } else {
         Vec::new()
     };
+    if action == "disable" && engine == "graphify-code" {
+        if remove_graphify_consent(&target)? {
+            changed_paths.push(GRAPHIFY_CONSENT_RELATIVE.to_owned());
+            changed_paths.sort();
+        }
+    }
     let data = if action == "query" {
         let node_id = optional(&options, "--node-id");
         let text = optional(&options, "--text");
@@ -491,7 +547,11 @@ fn read_bytes_bounded(path: &Path, label: &str, maximum: u64) -> Result<Vec<u8>,
     fs::read(path).map_err(|error| WikiError::Io(format!("cannot read {label}: {error}")))
 }
 
-fn validate_graphify_receipt(receipt: &GraphifyCodeReceipt, input: &[u8]) -> Result<(), WikiError> {
+fn validate_graphify_receipt(
+    receipt: &GraphifyCodeReceipt,
+    input: &[u8],
+    consent_digest: &str,
+) -> Result<(), WikiError> {
     let digest = |value: &str| {
         value.strip_prefix("sha256:").is_some_and(|value| {
             value.len() == 64
@@ -505,6 +565,7 @@ fn validate_graphify_receipt(receipt: &GraphifyCodeReceipt, input: &[u8]) -> Res
         || receipt.wheel_digest != GRAPHIFY_WHEEL_DIGEST
         || !digest(&receipt.executable_digest)
         || !digest(&receipt.python_identity_digest)
+        || receipt.consent_digest != consent_digest
         || !digest(&receipt.source_tree_digest)
         || receipt.source_commit.len() != 40
         || !receipt
@@ -526,6 +587,133 @@ fn validate_graphify_receipt(receipt: &GraphifyCodeReceipt, input: &[u8]) -> Res
         ));
     }
     Ok(())
+}
+
+fn graphify_consent(scope: &str) -> Result<GraphifyConsent, WikiError> {
+    let command = vec![
+        "extract".to_owned(),
+        "--force".to_owned(),
+        "--code-only".to_owned(),
+        "--no-cluster".to_owned(),
+    ];
+    let payload = json!({
+        "schema_version": 1,
+        "scope": scope,
+        "package_version": GRAPHIFY_VERSION,
+        "wheel_digest": GRAPHIFY_WHEEL_DIGEST,
+        "command": command,
+        "automatic_install": false,
+        "provider_api_calls": 0,
+        "api_keys_read": 0,
+        "query_logs": 0,
+        "watcher": false,
+        "git_hooks": false,
+        "mcp_registration": false,
+        "network_requests": 0
+    });
+    let consent_digest = sha256_digest(
+        &serde_json_canonicalizer::to_vec(&payload)
+            .map_err(|error| WikiError::Io(format!("canonicalize Graphify consent: {error}")))?,
+    );
+    Ok(GraphifyConsent {
+        schema_version: 1,
+        scope: scope.to_owned(),
+        package_version: GRAPHIFY_VERSION.to_owned(),
+        wheel_digest: GRAPHIFY_WHEEL_DIGEST.to_owned(),
+        command,
+        consent_digest,
+    })
+}
+
+fn persist_graphify_consent(
+    target: &Path,
+    consent: &GraphifyConsent,
+) -> Result<Vec<String>, WikiError> {
+    let relative = Path::new(GRAPHIFY_CONSENT_RELATIVE);
+    ensure_no_symlink_ancestors(target, relative).map_err(|error| {
+        WikiError::Conflict(format!("Graphify consent path is unsafe: {error}"))
+    })?;
+    let destination = target.join(relative);
+    let bytes = serde_json_canonicalizer::to_vec(consent)
+        .map_err(|error| WikiError::Io(format!("canonicalize Graphify consent: {error}")))?;
+    match fs::symlink_metadata(&destination) {
+        Ok(metadata) if !metadata.is_file() => {
+            return Err(WikiError::Conflict(
+                "Graphify consent destination is not a regular file".to_owned(),
+            ));
+        }
+        Ok(_) => {
+            let existing = fs::read(&destination)
+                .map_err(|error| WikiError::Io(format!("read Graphify consent: {error}")))?;
+            if existing == bytes {
+                return Ok(Vec::new());
+            }
+            return Err(WikiError::Conflict(
+                "Graphify consent already contains different bytes".to_owned(),
+            ));
+        }
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+        Err(error) => {
+            return Err(WikiError::Io(format!("inspect Graphify consent: {error}")));
+        }
+    }
+    let parent = destination
+        .parent()
+        .ok_or_else(|| WikiError::Io("Graphify consent has no parent".to_owned()))?;
+    fs::create_dir_all(parent)
+        .map_err(|error| WikiError::Io(format!("create Graphify consent parent: {error}")))?;
+    let mut temporary = NamedTempFile::new_in(parent)
+        .map_err(|error| WikiError::Io(format!("create Graphify consent staging: {error}")))?;
+    temporary
+        .write_all(&bytes)
+        .map_err(|error| WikiError::Io(format!("write Graphify consent staging: {error}")))?;
+    temporary
+        .persist(&destination)
+        .map_err(|error| WikiError::Io(format!("activate Graphify consent: {error}")))?;
+    Ok(vec![GRAPHIFY_CONSENT_RELATIVE.to_owned()])
+}
+
+fn load_graphify_consent(target: &Path, scope: &str) -> Result<GraphifyConsent, WikiError> {
+    let bytes = read_bytes_bounded(
+        &target.join(GRAPHIFY_CONSENT_RELATIVE),
+        "Graphify consent",
+        64 * 1024,
+    )?;
+    let consent: GraphifyConsent = serde_json::from_slice(&bytes)
+        .map_err(|error| WikiError::Verification(format!("invalid Graphify consent: {error}")))?;
+    let expected = graphify_consent(scope)?;
+    if consent.schema_version != 1
+        || consent.scope != expected.scope
+        || consent.package_version != expected.package_version
+        || consent.wheel_digest != expected.wheel_digest
+        || consent.command != expected.command
+        || consent.consent_digest != expected.consent_digest
+    {
+        return Err(WikiError::Verification(
+            "Graphify consent binding mismatch".to_owned(),
+        ));
+    }
+    Ok(consent)
+}
+
+fn remove_graphify_consent(target: &Path) -> Result<bool, WikiError> {
+    let relative = Path::new(GRAPHIFY_CONSENT_RELATIVE);
+    ensure_no_symlink_ancestors(target, relative).map_err(|error| {
+        WikiError::Conflict(format!("Graphify consent path is unsafe: {error}"))
+    })?;
+    let destination = target.join(relative);
+    match fs::symlink_metadata(&destination) {
+        Ok(metadata) if metadata.is_file() => {
+            fs::remove_file(destination)
+                .map_err(|error| WikiError::Io(format!("remove Graphify consent: {error}")))?;
+            Ok(true)
+        }
+        Ok(_) => Err(WikiError::Conflict(
+            "Graphify consent destination is not a regular file".to_owned(),
+        )),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(false),
+        Err(error) => Err(WikiError::Io(format!("inspect Graphify consent: {error}"))),
+    }
 }
 
 #[cfg(feature = "notion-preview")]
@@ -4646,6 +4834,7 @@ mod tests {
         let input = br#"{"nodes":[{"id":"main","source_file":"src/main.rs","source_location":"L1"},{"id":"store","source_file":"src/store.rs","source_location":"L2"}],"edges":[{"source":"main","target":"store","relation":"calls","confidence":"EXTRACTED"}],"hyperedges":[],"input_tokens":0,"output_tokens":0}"#;
         let input_path = project.path().join("graphify-input.json");
         fs::write(&input_path, input).expect("Graphify input");
+        let consent = graphify_consent("project").expect("Graphify consent");
         let receipt_path = project.path().join("graphify-receipt.json");
         fs::write(
             &receipt_path,
@@ -4655,6 +4844,7 @@ mod tests {
                 "wheel_digest": GRAPHIFY_WHEEL_DIGEST,
                 "executable_digest": format!("sha256:{}", "a1".repeat(32)),
                 "python_identity_digest": format!("sha256:{}", "b2".repeat(32)),
+                "consent_digest": consent.consent_digest.clone(),
                 "source_commit": "0".repeat(40),
                 "source_tree_digest": format!("sha256:{}", "c3".repeat(32)),
                 "graph_input_digest": sha256_digest(input),
@@ -4671,6 +4861,20 @@ mod tests {
         )
         .expect("receipt");
         let target = project.path().to_string_lossy().into_owned();
+        let enabled = run_graph(&[
+            "enable".to_owned(),
+            "--target".to_owned(),
+            target.clone(),
+            "--engine".to_owned(),
+            "graphify-code".to_owned(),
+            "--consent-digest".to_owned(),
+            consent.consent_digest.clone(),
+            "--output".to_owned(),
+            "json".to_owned(),
+        ])
+        .expect("Graphify enable");
+        assert_eq!(enabled.code, "hive.knowledge-graph-enabled");
+        assert_eq!(enabled.changed_paths, [GRAPHIFY_CONSENT_RELATIVE]);
         let rebuilt = run_graph(&[
             "rebuild".to_owned(),
             "--target".to_owned(),
@@ -4717,7 +4921,7 @@ mod tests {
         let fallback = run_graph(&[
             "query".to_owned(),
             "--target".to_owned(),
-            target,
+            target.clone(),
             "--engine".to_owned(),
             "graphify-code".to_owned(),
             "--node-id".to_owned(),
@@ -4727,6 +4931,19 @@ mod tests {
         ])
         .expect("native fallback");
         assert_eq!(fallback.data.expect("fallback data")["fallback"], true);
+
+        run_graph(&[
+            "enable".to_owned(),
+            "--target".to_owned(),
+            target,
+            "--engine".to_owned(),
+            "graphify-code".to_owned(),
+            "--consent-digest".to_owned(),
+            consent.consent_digest,
+            "--output".to_owned(),
+            "json".to_owned(),
+        ])
+        .expect("Graphify re-enable");
 
         let mut tampered = fs::read(&receipt_path).expect("receipt bytes");
         tampered.extend_from_slice(b" ");
