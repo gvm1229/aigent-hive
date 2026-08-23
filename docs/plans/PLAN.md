@@ -1,10 +1,10 @@
 # Aigent Hive 활성 계획
 
-> Revision: 269
+> Revision: 270
 > 기준일: 2026-08-22
 > Product version: `0.9.5` stable
 > 다음 target: `0.10.0-test`
-> 현재 milestone: Host-neutral 연속 실행 closure·hook gate
+> 현재 milestone: Agent 지침 단일 정본·경량화
 > 확정 범위: [`ADR-0020`](../decisions/ADR-0020-0.10.0-product-scope.md)
 
 ## 목표
@@ -58,12 +58,13 @@
 | Hybrid vector search | 0 | 13 | 0% |
 | Host-owned Skill 예약 | 1 | 0 | 100% |
 | Nested project scan | 1 | 0 | 100% |
+| Agent 지침 경량화 | 0 | 7 | 0% |
 | Host-neutral 연속 실행 | 6 | 4 | 60.0% |
 | Verified workflow | 5 | 1 | 83.3% |
 | Adversarial judge | 4 | 4 | 50.0% |
 | Skill migration cleanup | 3 | 7 | 30.0% |
 | `0.10.0` 출시 | 0 | 7 | 0% |
-| **합계** | **23** | **49** | **31.9%** |
+| **합계** | **23** | **56** | **29.1%** |
 
 ## Required load order
 
@@ -83,6 +84,7 @@ Archive·backlog·완료 history의 자동 선행 load 금지.
 | [`active/hybrid-vector-search-0.10.0.md`](active/hybrid-vector-search-0.10.0.md) | `KRG10-014`, `VEC10-*` | 조건부 semantic vector 검색 |
 | [`active/host-owned-skill-reservations-0.10.0.md`](active/host-owned-skill-reservations-0.10.0.md) | `SCP10-002` | Host-owned Skill 세션 예약 |
 | [`active/nested-project-knowledge-scan-0.10.0.md`](active/nested-project-knowledge-scan-0.10.0.md) | `SCP10-003` | Nested project scan |
+| [`active/agent-directive-optimization-0.10.0.md`](active/agent-directive-optimization-0.10.0.md) | `DIR10-*` | Source·소비자 Agent 지침 경량화 |
 | [`active/host-neutral-continuation-0.10.0.md`](active/host-neutral-continuation-0.10.0.md) | `CON10-*` | Goal·closure·선택형 hook |
 | [`active/verified-workflow-0.10.0.md`](active/verified-workflow-0.10.0.md) | `VWF10-*` | 자연어 routing·실행 graph |
 | [`active/adversarial-judge-0.10.0.md`](active/adversarial-judge-0.10.0.md) | `JDG10-*` | 명시적 독립 adversarial Judge |
@@ -91,12 +93,13 @@ Archive·backlog·완료 history의 자동 선행 load 금지.
 
 ## 실행 순서
 
-1. `CON10-002–010`, `VWF10-002–006` closure·natural routing·bounded three-host adapter 구현·수용
-2. `SKM10-002–010` 모든 stable registry·predecessor Skill cleanup과 direct jump upgrade
-3. `JDG10-002–008` explicit adversarial Judge·`judge-evidence`·host launch·quorum 결합
-4. `KRG10-001–007`, `VEC10-001–007` native 관계·vector feasibility·adopt|defer
-5. `KRG10-008–013`, `KRG10-015–016`과 통과 시 `VEC10-008–012` 구현·수용
-6. `REL10-*` 공개 시험판·세 운영체제 수용·안정판 출시
+1. `DIR10-001–007` source·소비자 지침 단일 정본·경량화·upgrade 수용
+2. `CON10-002–010`, `VWF10-002–006` closure·natural routing·bounded three-host adapter 구현·수용
+3. `SKM10-002–010` 모든 stable registry·predecessor Skill cleanup과 direct jump upgrade
+4. `JDG10-002–008` explicit adversarial Judge·`judge-evidence`·host launch·quorum 결합
+5. `KRG10-001–007`, `VEC10-001–007` native 관계·vector feasibility·adopt|defer
+6. `KRG10-008–013`, `KRG10-015–016`과 통과 시 `VEC10-008–012` 구현·수용
+7. `REL10-*` 공개 시험판·세 운영체제 수용·안정판 출시
 
 ## 비활성 자료
 

@@ -1,10 +1,10 @@
 # 현재 상태
 
-- 기준 branch: `feature/0.10.0@da44795`, `origin/feature/0.10.0` 동기화
+- 기준 branch: `feature/0.10.0@a686354`, `origin/feature/0.10.0` 동기화
 - product version: `0.9.5`
 - 다음 target: `0.10.0-test`
 - 활성 계획: [`PLAN.md`](../plans/PLAN.md)
-- 현재 milestone: Host-neutral 연속 실행 closure·hook gate
+- 현재 milestone: Agent 지침 단일 정본·경량화
 
 ## 최근 검증 근거
 
@@ -36,8 +36,6 @@
 - host-owned 프로젝트 Skill 경로 세션 예약 계약: `0.10.0` 범위 편입
 - registered nested-project knowledge scan 수정: `0.10.0` 범위 편입
 - Hive-native Markdown 관계 graph·optional Graphify full-rebuild code-only adapter 범위 승인
-- Backlog 6개·Archive 미완료 22개 검토 완료, 추가 자동 승격 `0건`
-- 유지보수자 최종 선택: 추가 후보 없음, [`ADR-0020`](../decisions/ADR-0020-0.10.0-product-scope.md) 범위 확정
 - Vector 검색: Qdrant Edge·SQLite engine hard gate와 통과 시 optional hybrid adapter 범위 추가
 - Host-neutral 연속 실행: Goal·read-only closure gate·선택형 Stop hook의 조건부 조사 범위 추가
 - `oh-my-codex@3ad79a8`·Codex `0.148.0`·Claude·Antigravity 공식 hook 조사 완료: Goal/task 실행 주체 + bounded Stop nudge 권고
@@ -47,11 +45,9 @@
 - `ralph-loop|iterative-execution` canonical source·catalog·schema·three-host projection을 `verified-workflow`로 병합 완료 (`cd3379a`)
 - 자연어 verified workflow routing·사용자 override·inactive host fail-closed 구현 완료 (`c032030`)
 - `hive run closure` read-only gate·pending criterion·closure digest·host-owned continuation envelope 구현 완료 (`97490e6`, `c37e8cb`)
-- Stable Skill registry: `0.8.0`, `0.9.0–0.9.5` digest·side-effect·capability coverage 구현 완료 (`354ea0a`)
 - `adversarial-judge` Skill·clean-context dispatch envelope·`judge-evidence` rename·Copier three-host parity 구현 완료 (`83e9722`, `b60f5e1`, `ac178d3`, `af51885`, `bb6887c`)
 - Skill lifecycle ledger의 `0.10.0` transition version·direct canonical mapping·collision fail-closed 구현 완료 (`1cc59d8`)
 - continuation envelope의 canonical retry·cancel·session digest·remaining budget 구현 완료 (`8025085`)
-- Markdown graph schema·직접 edge 추출 구현 완료 (`0729670`, `c78c799`)
 - explicit Markdown relation field·generation·metadata query 구현 완료 (`49ab3d9`, `f795a1d`, `ce87490`)
 - project graph public command: `preview|status|rebuild|query|disable`, collection scope fail-closed·digest-addressed derived generation·lifecycle filter 구현 (`3ed6a7f`–`9fbe003`)
 - continuation Stop hook: exact consent·projection·session digest·revision별 1회 nudge·user interrupt allow 구현 (`3efe600`–`d0f8bde`)
@@ -64,6 +60,7 @@
 
 ## `0.10.0` 남은 범위
 
+- Source `AGENTS.md` router·directive 단일 ownership·소비자 projection 경량화
 - 상위 Git repository 안의 registered project root knowledge scan 복구와 sibling 격리 검증
 - Hive-native Markdown 관계 graph·선택형 Graphify code-only adapter 구현·검증
 - FTS·vector·graph 품질 기준선, local embedding boundary와 engine adopt|defer 판정
@@ -102,11 +99,11 @@
 
 ## 다음 작업
 
-1. 전체 `blocked` 전 `agent-owned` closure 강제·부분 장애 분리·revision당 1회 nudge·진행 없는 3회 cap·cancel 우선 continuation envelope
-2. Codex·Claude·Antigravity project-local Stop adapter fixture와 실제 host 검증
-3. 모든 stable predecessor의 Skill lifecycle registry·rename cleanup·direct jump upgrade
-4. 명시적 adversarial judge·`judge-evidence` migration·host-owned launch receipt
-5. Native 관계 graph·vector gold corpus·FTS baseline
+1. Directive ownership 대장·size·중복 baseline
+2. Source `AGENTS.md` router와 `01–08` 단일 ownership
+3. 소비자 router·renderer·user guidance 단일 정본
+4. Historical direct upgrade·Source Wiki digest 정합화
+5. 세 host continuation·Skill migration·Judge·관계 검색
 
 ## 과거 기록
 
