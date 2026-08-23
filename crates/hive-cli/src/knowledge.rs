@@ -104,6 +104,7 @@ struct GraphifyCodeReceipt {
     schema_version: u32,
     package_version: String,
     wheel_digest: String,
+    dependency_lock_digest: String,
     executable_digest: String,
     python_identity_digest: String,
     consent_digest: String,
@@ -564,6 +565,7 @@ fn validate_graphify_receipt(
         || receipt.package_version != GRAPHIFY_VERSION
         || receipt.wheel_digest != GRAPHIFY_WHEEL_DIGEST
         || !digest(&receipt.executable_digest)
+        || !digest(&receipt.dependency_lock_digest)
         || !digest(&receipt.python_identity_digest)
         || receipt.consent_digest != consent_digest
         || !digest(&receipt.source_tree_digest)
@@ -4842,6 +4844,7 @@ mod tests {
                 "schema_version": 1,
                 "package_version": GRAPHIFY_VERSION,
                 "wheel_digest": GRAPHIFY_WHEEL_DIGEST,
+                "dependency_lock_digest": format!("sha256:{}", "d4".repeat(32)),
                 "executable_digest": format!("sha256:{}", "a1".repeat(32)),
                 "python_identity_digest": format!("sha256:{}", "b2".repeat(32)),
                 "consent_digest": consent.consent_digest.clone(),

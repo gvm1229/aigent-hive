@@ -4,11 +4,12 @@
   "title": "Aigent Hive Graphify code-only extraction receipt",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema_version", "package_version", "wheel_digest", "executable_digest", "python_identity_digest", "consent_digest", "source_commit", "source_tree_digest", "graph_input_digest", "command", "provider_api_calls", "api_keys_read", "query_logs", "watcher", "git_hooks", "mcp_registration", "network_requests"],
+  "required": ["schema_version", "package_version", "wheel_digest", "dependency_lock_digest", "executable_digest", "python_identity_digest", "consent_digest", "source_commit", "source_tree_digest", "graph_input_digest", "command", "provider_api_calls", "api_keys_read", "query_logs", "watcher", "git_hooks", "mcp_registration", "network_requests"],
   "properties": {
     "schema_version": { "const": 1 },
     "package_version": { "const": "0.9.47" },
     "wheel_digest": { "const": "sha256:2a8b13ccd53d507d16dcc12aebe488517c369afa547938464474fd3e772938ab" },
+    "dependency_lock_digest": { "$ref": "#/$defs/digest" },
     "executable_digest": { "$ref": "#/$defs/digest" },
     "python_identity_digest": { "$ref": "#/$defs/digest" },
     "consent_digest": { "$ref": "#/$defs/digest" },
