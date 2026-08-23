@@ -2324,13 +2324,14 @@ mod tests {
                 .expect("historical directory");
             fs::write(path, &file.content).expect("historical projection");
         }
-        if !historical
-            .files
-            .iter()
-            .any(|file| file.path == ".agents/directives/03-session-coordination.md")
-        {
-            fs::remove_file(target.join(".agents/directives/03-session-coordination.md"))
-                .expect("remove post-historical directive projection");
+        for directive in [
+            ".agents/directives/03-session-coordination.md",
+            ".agents/directives/04-korean-language.md",
+        ] {
+            if !historical.files.iter().any(|file| file.path == directive) {
+                fs::remove_file(target.join(directive))
+                    .expect("remove post-historical directive projection");
+            }
         }
         let files = historical
             .files
