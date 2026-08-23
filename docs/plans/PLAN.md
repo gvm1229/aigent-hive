@@ -1,11 +1,11 @@
 # Aigent Hive 활성 계획
 
-> Revision: 278
+> Revision: 279
 > 기준일: 2026-08-23
 > Product version: `0.10.0`
 > Stable baseline: `0.9.5`
 > 다음 target: `0.10.0-test.1`
-> 현재 milestone: 관계 graph·Graphify adapter 마감
+> 현재 milestone: `0.10.0-test.1` 공개 후보
 > 확정 범위: [`ADR-0020`](../decisions/ADR-0020-0.10.0-product-scope.md)
 
 ## 목표
@@ -64,8 +64,8 @@
 | Verified workflow | 6 | 0 | 100% |
 | Adversarial judge | 8 | 0 | 100% |
 | Skill migration cleanup | 10 | 0 | 100% |
-| `0.10.0` 출시 | 0 | 7 | 0% |
-| **합계** | **71** | **8** | **89.9%** |
+| `0.10.0` 출시 | 2 | 5 | 28.6% |
+| **합계** | **73** | **6** | **92.4%** |
 
 ## Required load order
 

@@ -5,8 +5,8 @@
 
 ## Checklist
 
-- [ ] [REL10-001] exact version·build date·release note·package·plugin metadata 정합화
-- [ ] [REL10-002] Rust·Python·문서·보안·upgrade·rollback 전체 local gate 통과
+- [x] [REL10-001] exact version·build date·release note·package·plugin metadata 정합화 — `1b755a9`, `0ba5dfb`; `0.10.0` source와 `0.10.0-test.1` package metadata
+- [x] [REL10-002] Rust·Python·문서·보안·upgrade·rollback 전체 local gate 통과 — Rust workspace·Clippy·fmt 통과, Python documentation 45·security 103·contract 380·integration 84·release 58 통과
 - [ ] [REL10-003] 번호 공개 `0.10.0-test.N` candidate·publication과 `latest` 불변 확인
 - [ ] [REL10-004] Windows x64·macOS arm64·Linux musl의 승인 제품 범위 공개 시험 수용
 - [ ] [REL10-005] accepted test exact source의 protected `main` 통합과 stable candidate

@@ -1,12 +1,12 @@
 # 현재 상태
 
-- 기준 branch: `feature/0.10.0@50c7333`
+- 기준 branch: `feature/0.10.0@16b45a5`
 - 원격 기준: `origin/feature/0.10.0` 동기화
 - product version: `0.10.0`
 - stable baseline: `0.9.5`
 - 다음 target: `0.10.0-test.1`
 - 활성 계획: [`PLAN.md`](../plans/PLAN.md)
-- 현재 milestone: 관계 graph·Graphify adapter 마감
+- 현재 milestone: `0.10.0-test.1` 공개 후보
 
 ## 최근 완료
 
@@ -30,16 +30,19 @@
 - Graphify code-only receipt·정규화·atomic activation·native fallback·exact consent gate 완료
 - 여섯 graph scope 물리 격리와 graph 전후 canonical Markdown·FTS 무회귀 검증 완료
 - Graphify `0.9.47` Windows x64·macOS arm64·Linux musl x64 30-wheel lock과 platform digest binding 완료
+- `hive source-wiki graph` 공개 명령과 source 전용 파생 경로·FTS→관계 edge 결합 완료
+- Windows source graph 직접 사실 30/30·근거 관계 30/30·cold CLI p95 `429.8227ms`·canonical 변경 0건
 - Vector quality +15.0 points·세 engine 50k lookup 통과, 50k embedding build 10분 초과로 `defer`
 - Vector engine·embedding runtime product dependency 추가 `0건`
+- `REL10-001–002` version·release metadata와 전체 local gate 마감
 
 ## 현재 검증 근거
 
 - Directive gate: failure `0건`
 - Source Wiki: 156 page, error·warning `0건`
-- Python lane: documentation 45, security 103, contract 372, integration 84, release 55 통과
+- Python lane: documentation 45, security 103, contract 380, integration 84, release 58 통과
 - Rust `hive-render` 63, `hive-cli` user setup 46·user install 89, historical upgrade 3 통과
-- Rust workspace 전 범위 통과; `hive-update` Windows 파일 잠금 1건은 동일 시험 격리 재실행 통과
+- Rust workspace `--all-targets --all-features` 전 범위와 Clippy `-D warnings` 통과
 - Human documentation style 19 통과·Windows 전용 1건 건너뜀
 - Markdown link 5 통과
 - GitHub Actions: feature branch push trigger 없음, CI run 생성 `0건`
@@ -48,23 +51,21 @@
 
 ## `0.10.0` 남은 범위
 
-- 세 운영체제 30개 관계 질문·성능 공개 수용
+- macOS arm64·Linux musl의 30개 관계 질문·성능 공개 수용
 - 번호 공개 시험판과 Windows x64·macOS arm64·Linux musl 수용
 - `REL10-005–007`: 안정판 후보·게시·설치
 
 ## 현재 장애 요인
 
 - Agent 소유 구현을 막는 수동 blocker 없음
-- Graphify macOS·Linux·Markdown 의미 추출·50,000 chunk 비용 미검증
+- Graphify macOS·Linux 실제 code-only 수용 미검증
 - 현재 Windows에서 macOS·Linux 실제 설치 수용 불가
-- Claude 설치본 미인증·필수 lifecycle 수정 이전 version
-- Antigravity CLI `1.1.18`: `/hooks` 검사 성공, 실제 Stop continuation 시험 미완료
 - 안정판 `0.10.0`: 유지보수자의 버전명 포함 명시 승인 전 tag·protected `main` 통합·게시·설치 금지
 
 ## 다음 작업
 
-1. `KRG10-016` 30개 관계 질문·세 운영체제 수용 준비
-2. `REL10-001–004` 번호 공개 시험판 준비·수용
+1. Exact candidate를 `develop`에 통합하고 Linux·macOS·Windows CI 수용
+2. `REL10-003–004` 번호 공개 시험판 게시·설치 수용
 
 ## 과거 기록
 

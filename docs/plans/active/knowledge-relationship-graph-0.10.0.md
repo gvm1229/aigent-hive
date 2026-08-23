@@ -40,7 +40,7 @@
 - provider backend·credential
 - 소비자 project의 `graphify-out/`
 
-## 공개 명령 후보
+## 공개 명령
 
 ```text
 hive knowledge graph preview|enable|status|rebuild|query|export|disable
