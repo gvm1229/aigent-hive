@@ -50,6 +50,19 @@ pub struct GraphNode {
     pub lifecycle: String,
 }
 
+/// One verified pointer to an active disposable graph generation.
+#[derive(Debug, Clone, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct ActiveGraphPointer {
+    pub schema_version: u32,
+    pub scope: String,
+    pub engine: String,
+    pub generation_digest: String,
+    pub generation_path: String,
+    pub source_digest: String,
+    pub extractor_receipt_digest: Option<String>,
+}
+
 /// Build a deterministic native graph for exactly one already-authorized scope.
 pub fn build_native_generation(scope: &str, pages: &[WikiPage]) -> Result<GraphGeneration, String> {
     if !matches!(
@@ -153,6 +166,122 @@ pub fn persist_generation(target: &Path, generation: &GraphGeneration) -> Result
         .persist(&destination)
         .map_err(|error| format!("activate graph generation: {error}"))?;
     Ok(relative)
+}
+
+/// Persist and atomically activate one verified graph generation.
+///
+/// # Errors
+///
+/// Returns an error when the generation, source digest, receipt digest, path, or active pointer
+/// violates the graph contract or cannot be written safely.
+pub fn activate_generation(
+    target: &Path,
+    generation: &GraphGeneration,
+    source_digest: &str,
+    extractor_receipt_digest: Option<&str>,
+) -> Result<Vec<PathBuf>, String> {
+    validate_digest(source_digest, "graph source")?;
+    if let Some(digest) = extractor_receipt_digest {
+        validate_digest(digest, "graph extractor receipt")?;
+    }
+    let generation_path = persist_generation(target, generation)?;
+    let pointer_path = active_pointer_relative_path(&generation.scope, &generation.engine)?;
+    ensure_no_symlink_ancestors(target, &pointer_path)
+        .map_err(|error| format!("graph active pointer path is unsafe: {error}"))?;
+    let destination = target.join(&pointer_path);
+    let parent = destination
+        .parent()
+        .ok_or_else(|| "graph active pointer has no parent".to_owned())?;
+    std::fs::create_dir_all(parent)
+        .map_err(|error| format!("create graph pointer parent: {error}"))?;
+    let pointer = ActiveGraphPointer {
+        schema_version: 1,
+        scope: generation.scope.clone(),
+        engine: generation.engine.clone(),
+        generation_digest: generation.generation_digest.clone(),
+        generation_path: generation_path.to_string_lossy().replace('\\', "/"),
+        source_digest: source_digest.to_owned(),
+        extractor_receipt_digest: extractor_receipt_digest.map(str::to_owned),
+    };
+    let bytes = serde_json_canonicalizer::to_vec(&pointer)
+        .map_err(|error| format!("canonicalize graph active pointer: {error}"))?;
+    let mut temporary = NamedTempFile::new_in(parent)
+        .map_err(|error| format!("create graph pointer staging: {error}"))?;
+    temporary
+        .write_all(&bytes)
+        .map_err(|error| format!("write graph pointer staging: {error}"))?;
+    temporary
+        .persist(&destination)
+        .map_err(|error| format!("activate graph pointer: {error}"))?;
+    Ok(vec![generation_path, pointer_path])
+}
+
+/// Load the active generation only after pointer, path, scope, engine, and digest verification.
+///
+/// # Errors
+///
+/// Returns an error for missing, malformed, unsafe, stale, or mismatched active derived state.
+pub fn load_active_generation(
+    target: &Path,
+    scope: &str,
+    engine: &str,
+) -> Result<(ActiveGraphPointer, GraphGeneration), String> {
+    let pointer_path = active_pointer_relative_path(scope, engine)?;
+    ensure_no_symlink_ancestors(target, &pointer_path)
+        .map_err(|error| format!("graph active pointer path is unsafe: {error}"))?;
+    let bytes = std::fs::read(target.join(&pointer_path))
+        .map_err(|error| format!("read graph active pointer: {error}"))?;
+    if bytes.len() > 64 * 1024 {
+        return Err("graph active pointer is oversized".to_owned());
+    }
+    let pointer: ActiveGraphPointer = serde_json::from_slice(&bytes)
+        .map_err(|error| format!("graph active pointer is malformed: {error}"))?;
+    if pointer.schema_version != 1 || pointer.scope != scope || pointer.engine != engine {
+        return Err("graph active pointer binding mismatch".to_owned());
+    }
+    let expected = generation_relative_path(scope, &pointer.generation_digest)?;
+    if pointer.generation_path != expected.to_string_lossy().replace('\\', "/") {
+        return Err("graph active generation path mismatch".to_owned());
+    }
+    ensure_no_symlink_ancestors(target, &expected)
+        .map_err(|error| format!("graph generation path is unsafe: {error}"))?;
+    let generation_bytes = std::fs::read(target.join(&expected))
+        .map_err(|error| format!("read active graph generation: {error}"))?;
+    let generation: GraphGeneration = serde_json::from_slice(&generation_bytes)
+        .map_err(|error| format!("active graph generation is malformed: {error}"))?;
+    if generation.scope != scope
+        || generation.engine != engine
+        || generation.generation_digest != pointer.generation_digest
+    {
+        return Err("active graph generation binding mismatch".to_owned());
+    }
+    Ok((pointer, generation))
+}
+
+fn active_pointer_relative_path(scope: &str, engine: &str) -> Result<PathBuf, String> {
+    if !matches!(engine, "native-markdown" | "graphify-code") {
+        return Err("knowledge graph engine is unsupported".to_owned());
+    }
+    let generation = generation_relative_path(scope, &format!("sha256:{}", "0".repeat(64)))?;
+    Ok(generation
+        .parent()
+        .and_then(Path::parent)
+        .ok_or_else(|| "knowledge graph scope root is invalid".to_owned())?
+        .join(format!("active-{engine}.json")))
+}
+
+fn validate_digest(value: &str, label: &str) -> Result<(), String> {
+    let valid = value.strip_prefix("sha256:").is_some_and(|digest| {
+        digest.len() == 64
+            && digest
+                .bytes()
+                .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
+    });
+    if valid {
+        Ok(())
+    } else {
+        Err(format!("{label} digest is invalid"))
+    }
 }
 
 /// Remove exactly one digest-addressed derived generation without touching canonical knowledge.
@@ -261,8 +390,9 @@ fn edge(from: &str, to: &str, relation: &str, source_digest: &str) -> GraphEdge 
 #[cfg(test)]
 mod tests {
     use super::{
-        build_native_generation, extract_markdown_edges, generation_relative_path,
-        persist_generation, query_generation, remove_generation, GraphEvidence,
+        activate_generation, build_native_generation, extract_markdown_edges,
+        generation_relative_path, load_active_generation, persist_generation, query_generation,
+        remove_generation, GraphEvidence,
     };
     use crate::{Contradiction, WikiFrontmatter, WikiPage};
 
@@ -375,5 +505,24 @@ mod tests {
             Some(relative.clone())
         );
         assert!(!target.path().join(relative).exists());
+    }
+
+    #[test]
+    fn active_pointer_binds_exact_generation_and_detects_tamper() {
+        let target = tempfile::tempdir().expect("temporary target");
+        let generation = build_native_generation("project", &[page("first")]).expect("generation");
+        let changed = activate_generation(
+            target.path(),
+            &generation,
+            &format!("sha256:{}", "b2".repeat(32)),
+            None,
+        )
+        .expect("activate");
+        assert_eq!(changed.len(), 2);
+        let (_, loaded) =
+            load_active_generation(target.path(), "project", "native-markdown").expect("load");
+        assert_eq!(loaded, generation);
+        std::fs::write(target.path().join(&changed[0]), b"{}\n").expect("tamper");
+        assert!(load_active_generation(target.path(), "project", "native-markdown").is_err());
     }
 }

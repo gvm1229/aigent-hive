@@ -35,8 +35,8 @@ use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use tempfile::NamedTempFile;
 
 pub use graph::{
-    build_native_generation, generation_relative_path, persist_generation, query_generation,
-    remove_generation, GraphGeneration,
+    activate_generation, build_native_generation, generation_relative_path, load_active_generation,
+    persist_generation, query_generation, remove_generation, ActiveGraphPointer, GraphGeneration,
 };
 pub use graphify::normalize_graphify_code;
 
