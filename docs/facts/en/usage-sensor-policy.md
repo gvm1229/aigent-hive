@@ -9,14 +9,14 @@ summary: "Qualified host-native usage sensors take priority over the optional Co
 tags: [sensor, usage]
 aliases: ["Native-first usage"]
 sources:
-  - "repo:crates/hive-cli/src/main.rs#sha256:a76209fd83892c171590fc2c84d9bbe294eafc0158083e0da635e381ecf6c65e"
+  - "repo:crates/hive-cli/src/main.rs#sha256:9bfc3b6cfb6cdc6e9afb96430bff73a36904fc83c00ab600307a3b8eee813e06"
   - "repo:crates/hive-cli/src/usage.rs#sha256:c60a6eecaa243ef0528c292303baca85f0bf4c4c4f654612bf97d15fa52ffe69"
   - "repo:crates/hive-cli/src/usage_control.rs#sha256:6c5febe7ae1ac1a892f7ac412c40d1b8d9ae339fe73fa8153faf9bb22051e1c0"
   - "repo:crates/hive-cli/src/user_setup.rs#sha256:64e7ee1eb9aaafd399fe971ca35e5df6aee68285029a9b84fa6b928a3324ffdc"
   - "repo:docs/decisions/ADR-0010-native-first-usage-sensors.md#sha256:4e753ff25c9c2c604b59b60d27cace205a8e5f7cf377538db6dd6156835f0408"
   - "repo:harness/skills/user-setup/SKILL.md#sha256:1fcbb2b9b2db6d57bd40682f80db2a0a916ebbffb3434431038b609b6b743c11"
 links: [automatic-dispatch-guard, supported-hosts]
-reviewed_revision: "git:47d4663f1e1f263276f9ce54b7c69a3ff95d2170"
+reviewed_revision: "git:f91816a46d44d57929cb0b580ca32ff4caa95053"
 status: active
 ---
 

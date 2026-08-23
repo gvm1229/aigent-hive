@@ -9,18 +9,21 @@ summary: "Clean-context host-native Judge 요청을 준비하고 기존 authenti
 tags: [judge, skills, v0-10]
 aliases: ["Adversarial review"]
 sources:
+  - "repo:crates/hive-cli/src/judge.rs#sha256:20dcfd35707b7571014ddc463601074179b42558e531c728d1c04bc634744ed0"
   - "repo:docs/decisions/ADR-0020-0.10.0-product-scope.md#sha256:c313a53d8ed114aaf9b6303263730d282b11c6d8d52a71c249999b62969214fe"
   - "repo:docs/decisions/product-release-decisions.md#sha256:a56419242874c459f08f7575ec0b2b6c2249ac696e0efffb053706dfeb6c9f00"
-  - "repo:docs/plans/active/adversarial-judge-0.10.0.md#sha256:2334648e6f6ab90c67010884b7c18ad55fd2f7607383cb834f0a9205fae02bc9"
+  - "repo:docs/plans/active/adversarial-judge-0.10.0.md#sha256:952b369d86a293d96c61f200379fac63590d70e66600bb6d43aea65bf4a130b8"
+  - "repo:harness/skills/adversarial-judge/SKILL.md#sha256:9b8641f4c858698cb8959ed311cc2bcefb7764e1465b6109ec4343c2dc27f215"
+  - "repo:schemas/adversarial-judge-host-receipt.schema.json#sha256:b6da86e2319a7df2b6921aa12eecf33c47beb6918a24cf322216f3e7d5d5946e"
 links: [judge-verification, v0-10-product-scope, verified-workflow]
-reviewed_revision: "git:ac178d3c45a5b22903488042bab9ef3ed662fb12"
+reviewed_revision: "git:f91816a46d44d57929cb0b580ca32ff4caa95053"
 status: active
 ---
 
 # Adversarial Judge Skill
 
-- 기존 기능: `judge-evidence` package·quorum 검증 보유, 명시적 Judge launch 단계 부재
 - 새 역할: Clean-context request·provider-neutral dispatch envelope 준비
 - 실제 launch: Active host 소유
+- `hive judge receipt`: Package·assignment·slot·Judge identity·model·effort·verdict digest read-only binding
 - 판정: Finding은 diagnostic, 기존 authenticated quorum 통과 뒤에만 acceptance authority
 - 금지: Provider 호출·credential·Hive direct process spawn
