@@ -207,8 +207,7 @@ pub fn generation_relative_path(scope: &str, scope_digest: &str) -> Result<PathB
 /// Persist one digest-addressed generation without overwriting a different derived graph.
 pub fn persist_generation(target: &Path, generation: &GraphGeneration) -> Result<PathBuf, String> {
     let relative = generation_relative_path(&generation.scope, &generation.generation_digest)?;
-    ensure_no_symlink_ancestors(target, &relative)
-        .map_err(|error| format!("graph generation path is unsafe: {error}"))?;
+    ensure_graph_path(target, &relative, &generation.scope)?;
     let destination = target.join(&relative);
     let parent = destination
         .parent()
@@ -262,8 +261,7 @@ pub fn activate_generation(
     }
     let generation_path = persist_generation(target, generation)?;
     let pointer_path = active_pointer_relative_path(&generation.scope, &generation.engine)?;
-    ensure_no_symlink_ancestors(target, &pointer_path)
-        .map_err(|error| format!("graph active pointer path is unsafe: {error}"))?;
+    ensure_graph_path(target, &pointer_path, &generation.scope)?;
     let destination = target.join(&pointer_path);
     let parent = destination
         .parent()
@@ -303,8 +301,7 @@ pub fn load_active_generation(
     engine: &str,
 ) -> Result<(ActiveGraphPointer, GraphGeneration), String> {
     let pointer_path = active_pointer_relative_path(scope, engine)?;
-    ensure_no_symlink_ancestors(target, &pointer_path)
-        .map_err(|error| format!("graph active pointer path is unsafe: {error}"))?;
+    ensure_graph_path(target, &pointer_path, scope)?;
     let bytes = std::fs::read(target.join(&pointer_path))
         .map_err(|error| format!("read graph active pointer: {error}"))?;
     if bytes.len() > 64 * 1024 {
@@ -319,8 +316,7 @@ pub fn load_active_generation(
     if pointer.generation_path != expected.to_string_lossy().replace('\\', "/") {
         return Err("graph active generation path mismatch".to_owned());
     }
-    ensure_no_symlink_ancestors(target, &expected)
-        .map_err(|error| format!("graph generation path is unsafe: {error}"))?;
+    ensure_graph_path(target, &expected, scope)?;
     let generation_bytes = std::fs::read(target.join(&expected))
         .map_err(|error| format!("read active graph generation: {error}"))?;
     let generation: GraphGeneration = serde_json::from_slice(&generation_bytes)
@@ -376,6 +372,38 @@ fn active_pointer_relative_path(scope: &str, engine: &str) -> Result<PathBuf, St
         .join(format!("active-{engine}.json")))
 }
 
+fn ensure_graph_path(target: &Path, relative: &Path, scope: &str) -> Result<(), String> {
+    if scope != "source" {
+        return ensure_no_symlink_ancestors(target, relative)
+            .map_err(|error| format!("graph path is unsafe: {error}"));
+    }
+    let marker = target.join("hive-source.json");
+    let marker_metadata = std::fs::symlink_metadata(&marker)
+        .map_err(|error| format!("source graph requires hive-source.json: {error}"))?;
+    if marker_metadata.file_type().is_symlink() || !marker_metadata.is_file() {
+        return Err("source graph marker is not a regular file".to_owned());
+    }
+    let mut current = target.to_path_buf();
+    for component in relative.components() {
+        let std::path::Component::Normal(component) = component else {
+            return Err("source graph path is not normalized".to_owned());
+        };
+        current.push(component);
+        match std::fs::symlink_metadata(&current) {
+            Ok(metadata) if metadata.file_type().is_symlink() => {
+                return Err("source graph path contains a symlink".to_owned());
+            }
+            Ok(metadata) if current != target.join(relative) && !metadata.is_dir() => {
+                return Err("source graph path ancestor is not a directory".to_owned());
+            }
+            Ok(_) => {}
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+            Err(error) => return Err(format!("inspect source graph path: {error}")),
+        }
+    }
+    Ok(())
+}
+
 fn validate_digest(value: &str, label: &str) -> Result<(), String> {
     let valid = value.strip_prefix("sha256:").is_some_and(|digest| {
         digest.len() == 64
@@ -397,8 +425,7 @@ pub fn remove_generation(
     generation_digest: &str,
 ) -> Result<Option<PathBuf>, String> {
     let relative = generation_relative_path(scope, generation_digest)?;
-    ensure_no_symlink_ancestors(target, &relative)
-        .map_err(|error| format!("graph generation path is unsafe: {error}"))?;
+    ensure_graph_path(target, &relative, scope)?;
     let destination = target.join(&relative);
     match std::fs::symlink_metadata(&destination) {
         Ok(metadata) if metadata.is_file() => {
@@ -479,12 +506,16 @@ pub fn export_generation(
         .strip_prefix("sha256:")
         .and_then(|value| value.get(..16))
         .ok_or_else(|| "knowledge graph generation digest is invalid".to_owned())?;
-    let relative = PathBuf::from(".hive/exports/knowledge-graph").join(format!(
+    let export_root = if generation.scope == "source" {
+        PathBuf::from(".agents/work/graph/exports")
+    } else {
+        PathBuf::from(".hive/exports/knowledge-graph")
+    };
+    let relative = export_root.join(format!(
         "{}-{}-{}.{}",
         generation.scope, generation.engine, digest, format
     ));
-    ensure_no_symlink_ancestors(target, &relative)
-        .map_err(|error| format!("knowledge graph export path is unsafe: {error}"))?;
+    ensure_graph_path(target, &relative, &generation.scope)?;
     let destination = target.join(&relative);
     let parent = destination
         .parent()
@@ -703,6 +734,35 @@ mod tests {
         assert_eq!(paths.len(), 6);
         assert!(paths.iter().all(|path| !path.is_absolute()));
         assert!(generation_relative_path("outside", &digest).is_err());
+    }
+
+    #[test]
+    fn every_scope_activates_in_a_physically_disjoint_generation() {
+        let target = tempfile::tempdir().expect("temporary target");
+        std::fs::write(target.path().join("hive-source.json"), b"{}\n").expect("source marker");
+        let mut paths = std::collections::BTreeSet::new();
+        for scope in [
+            "source",
+            "project",
+            "user-root",
+            "shared",
+            "private",
+            "confidential",
+        ] {
+            let generation = build_native_generation(scope, &[page(scope)]).expect("generation");
+            assert!(generation.nodes.iter().all(|node| node.visibility == scope));
+            let changed = activate_generation(
+                target.path(),
+                &generation,
+                &format!("sha256:{}", "e5".repeat(32)),
+                None,
+            )
+            .expect("activate scope");
+            for path in changed {
+                assert!(paths.insert(path));
+            }
+        }
+        assert_eq!(paths.len(), 12);
     }
 
     #[test]
