@@ -1,7 +1,7 @@
 # Graphify `0.9.47` 도입 가능성
 
 > 조사일: 2026-08-20
-> 판정: 제품 도입 중단, 버전 비종속 backlog 이전
+> 판정: 전면 지식 graph 도입 중단, `0.10.0` code-only receipt adapter 채택
 > 실행 환경: Windows 11 x64, Python `3.12.0`, 격리 `tests/work/graphify-research/`
 
 ## 대상
@@ -36,6 +36,21 @@
 - Graphify와 기본 runtime dependency: audit finding `0건`
 
 기본 pip 취약점은 안전한 installer의 pip `>=26.1.2` 고정으로 회피 가능. 현재 upstream 설치 안내만으로 Hive sidecar 하드 게이트 충족 불가.
+
+### `0.10.0` wheel lock 보강
+
+- 대상: Python `3.12`, Windows x64·macOS arm64·Linux musl x64
+- 각 target: `graphifyy==0.9.47` 포함 wheel `30개`
+- Lock: filename·size·SHA-256 canonical manifest
+- Linux·macOS cross-resolution: `cp312`과 `abi3` tag 함께 사용
+- Product activation: exact preview consent와 platform lock digest가 포함된 external staged environment receipt 필수
+- 자동 `pip`·`uv` 설치: `0건`
+- 실제 설치 실행: Windows x64 격리 venv만 완료, macOS arm64·Linux musl x64는 공개 시험 수용 대기
+
+공식 package file 근거:
+
+- [Graphify `0.9.47` PyPI metadata](https://pypi.org/pypi/graphifyy/0.9.47/json)
+- [tree-sitter-swift `0.7.3` platform wheel metadata](https://pypi.org/pypi/tree-sitter-swift/0.7.3/json)
 
 ## 구조 graph 반복성
 
@@ -138,7 +153,7 @@ Upstream `global` 동작:
 
 질문 목록 작성 완료. 제품 adapter 부재와 격리 실패로 source·project·global 전체 수용 실행 중단.
 
-## 최종 판정
+## 현재 판정
 
 - 전체 구조 build: 가능
 - 작은 code graph query: 가능
@@ -146,5 +161,9 @@ Upstream `global` 동작:
 - global visibility 격리: 미지원
 - Markdown host-owned 의미 추출: 미검증
 - macOS·Linux·50,000 chunk 수용: 미검증
-- `0.10.0` 제품 도입: 중단
-- 다음 경로: [`graphify-knowledge-graph.md`](../plans/backlog/graphify-knowledge-graph.md)
+- `0.10.0` 전면 Markdown·global graph: 도입 중단
+- `0.10.0` code-only adapter: 채택
+- 채택 경계: Full rebuild·grounded locator·exact receipt·사용자 consent·native fallback
+- Shipping Graphify dependency: `0건`
+- macOS arm64·Linux musl 실제 설치·30개 관계 질문: 공개 시험 수용 대기
+- 전면 범위 다음 경로: [`graphify-knowledge-graph.md`](../plans/backlog/graphify-knowledge-graph.md)

@@ -12,19 +12,19 @@ SQLite FTS의 exact 검색을 유지하면서 표현이 다른 의미·다국어
 
 ## Checklist
 
-- [ ] [KRG10-014] FTS·vector·hybrid 품질·속도·비용 비교와 exact engine·embedding 계약의 adopt|defer 결정
-- [ ] [VEC10-001] 120개 gold query corpus: exact ID·날짜·수치·부정 30개, 한국어·영어 paraphrase 40개, cross-language 20개, relation·영향 30개
-- [ ] [VEC10-002] 현재 SQLite FTS·alias·tag의 Recall@10·MRR·warm/cold p95·returned byte 기준선
-- [ ] [VEC10-003] Local embedding 경계 결정: non-generative indexer, provider API·API key·prompt·text generation `0건`, model license·version·dimension·SHA-256 고정
-- [ ] [VEC10-004] Qdrant Edge·sqlite-vec·SQLite-Vector의 exact version·license·Rust·세 운영체제·memory safety·storage·ANN maturity 조사
-- [ ] [VEC10-005] `tests/work/vector-research/` 격리 prototype: 같은 canonical chunk·embedding의 세 engine build·query·delete·rebuild
-- [ ] [VEC10-006] 50,000 chunk·100 collection benchmark와 semantic Recall@10·exact-fact 무회귀·scope filter·disk·RAM·build 비용 비교
-- [ ] [VEC10-007] Hard gate 판정과 exact engine·embedding 선택 또는 `defer`; 통과 실패의 product dependency 추가 `0건`
-- [ ] [VEC10-008] 통과 시 derived vector generation schema, model·engine receipt, chunk digest mapping과 scope별 물리 격리
-- [ ] [VEC10-009] 승인형 local embedding sidecar preview·install·staging build·atomic activation·update·disable 계약
-- [ ] [VEC10-010] FTS·dense vector·native relation·Graphify code 결과의 rank fusion·citation·matched-lane 표시
-- [ ] [VEC10-011] Canonical 변경의 incremental vector 갱신·full rebuild 동등성, stale model·dimension mismatch·손상 index fallback·rollback
-- [ ] [VEC10-012] `.hivekb` vector·model 제외, destination rebuild, Windows x64·macOS arm64·Linux musl 공개 시험 수용
+- [x] [KRG10-014] FTS·vector·hybrid 품질·속도·비용 비교와 exact engine·embedding 계약의 adopt|defer 결정 — 50,000 embedding build 10분 초과로 `defer`
+- [x] [VEC10-001] 120개 gold query corpus: exact ID·날짜·수치·부정 30개, 한국어·영어 paraphrase 40개, cross-language 20개, relation·영향 30개 — `vector-gold-120.json`, deterministic generation 회귀
+- [x] [VEC10-002] 현재 SQLite FTS·alias·tag의 Recall@10·MRR·warm/cold p95·returned byte 기준선 — semantic Recall@10 78.3%, warm p95 0.08ms
+- [x] [VEC10-003] Local embedding 경계 결정: non-generative indexer, provider API·API key·prompt·text generation `0건`, model license·version·dimension·SHA-256 고정 — FastEmbed `0.8.0`, multilingual MiniLM, Apache-2.0, 384 dimension, model tree digest 고정
+- [x] [VEC10-004] Qdrant Edge·sqlite-vec·SQLite-Vector의 exact version·license·Rust·세 운영체제·memory safety·storage·ANN maturity 조사 — Qdrant `0.8.0` beta, sqlite-vec `0.1.9` pre-1.0, SQLite-Vector `1.0.0` license 부적합
+- [x] [VEC10-005] `tests/work/vector-research/` 격리 prototype: 같은 canonical chunk·embedding의 세 engine build·query·delete·rebuild — Dense quality와 동일 384-dimension storage engine 격리 실행
+- [x] [VEC10-006] 50,000 chunk·100 collection benchmark와 semantic Recall@10·exact-fact 무회귀·scope filter·disk·RAM·build 비용 비교 — Dense semantic +15.0 points·exact 무회귀, engine p95 통과, full embedding build 실패
+- [x] [VEC10-007] Hard gate 판정과 exact engine·embedding 선택 또는 `defer`; 통과 실패의 product dependency 추가 `0건` — `defer`, dependency `0건`
+- [x] [VEC10-008] 통과 시 derived vector generation schema, model·engine receipt, chunk digest mapping과 scope별 물리 격리 — `not-applicable-by-gate`, 제품 schema 추가 `0건`
+- [x] [VEC10-009] 승인형 local embedding sidecar preview·install·staging build·atomic activation·update·disable 계약 — `not-applicable-by-gate`, sidecar 추가 `0건`
+- [x] [VEC10-010] FTS·dense vector·native relation·Graphify code 결과의 rank fusion·citation·matched-lane 표시 — `not-applicable-by-gate`, 기존 FTS·graph planner 유지
+- [x] [VEC10-011] Canonical 변경의 incremental vector 갱신·full rebuild 동등성, stale model·dimension mismatch·손상 index fallback·rollback — `not-applicable-by-gate`, vector derived state `0건`
+- [x] [VEC10-012] `.hivekb` vector·model 제외, destination rebuild, Windows x64·macOS arm64·Linux musl 공개 시험 수용 — `not-applicable-by-gate`, bundle·세 운영체제 제품 범위 추가 `0건`
 
 ## Hard gate
 

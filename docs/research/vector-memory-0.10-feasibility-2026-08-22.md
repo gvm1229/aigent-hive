@@ -2,7 +2,7 @@
 
 > 조사일: 2026-08-22
 > 대상: Hive `0.9.5`, Anthropic memory tool·Managed Agents memory, Qdrant·SQLite vector 후보
-> 판정: Vector DB의 즉시 확정 대신 품질·속도 hard gate 통과 뒤 조건부 `0.10.0` 구현
+> 판정: 품질 gate 통과, 50,000 chunk build gate 실패로 `0.10.0` 제품 도입 defer
 
 ## Hive 현재 상태
 
@@ -85,3 +85,57 @@ embedding model 필요. 조건부 해법: 사용자 승인형 non-generative loc
 5. Hard gate `adopt|defer`
 6. 통과 조합만 optional hybrid adapter 구현
 7. Upgrade·rollback·세 운영체제 공개 시험
+
+## `0.10.0` 실행 결과
+
+근거: [`vector-hard-gate-windows-2026-08-23.json`](evidence/vector-hard-gate-windows-2026-08-23.json)
+
+### 검색 품질
+
+| 항목 | FTS | Dense |
+| --- | ---: | ---: |
+| Exact Recall@10 | 100% | 83.3% |
+| Paraphrase Recall@10 | 77.5% | 90.0% |
+| Korean→English Recall@10 | 80.0% | 100% |
+| Paraphrase·cross-language 합계 | 78.3% | 93.3% |
+
+Dense semantic 향상: `+15.0 percentage points`. Hybrid는 exact 질문에서 FTS 우선으로 100% 유지.
+
+Model 후보:
+
+- `sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2`
+- FastEmbed `0.8.0`, ONNX, 384 dimension
+- License: Apache-2.0
+- 격리 model tree SHA-256: `b2df81f719a2b94e400fe77d70b418ab516968ece2e8cf0b631464014b2b38fe`
+
+### Engine 50,000×384
+
+| Engine | 상태·license | Build | Query p95 | Disk |
+| --- | --- | ---: | ---: | ---: |
+| Qdrant Edge `0.8.0` | beta·Apache-2.0 | 0.46s | 4.50ms | 270.6MB |
+| sqlite-vec `0.1.9` | pre-1.0·MIT | 1.12s | 46.61ms | 78.3MB |
+| SQLite-Vector `1.0.0` | stable·Elastic-2.0 modified | 0.70s | 17.68ms | 122.3MB |
+
+SQLite-Vector 제외: 비공개 상용 소비자에 별도 상용 license 필요.
+
+Qdrant Edge: 가장 빠른 query, beta API와 isolated build의 transitive crate `455개`.
+
+sqlite-vec: 최소 disk·permissive license, pre-1.0과 p95 기준 여유 `3.39ms`.
+
+공식 근거:
+
+- [Qdrant Edge beta](https://qdrant.tech/documentation/edge/)
+- [sqlite-vec `0.1.9`](https://github.com/asg017/sqlite-vec)
+- [SQLite-Vector `1.0.0` license](https://github.com/sqliteai/sqlite-vector/blob/1.0.0/LICENSE.md)
+- [FastEmbed 지원 model](https://qdrant.github.io/fastembed/examples/Supported_Models/)
+
+### 실패 gate와 결정
+
+- Windows x64 50,000 document offline embedding build: 10분 초과
+- 필수 기준: 10분 이하
+- 100 changed chunk incremental: Full build gate 실패 뒤 미실행
+- macOS arm64·Linux musl: 제품 후보 부재로 미실행
+- 최종 결정: `defer`
+- Qdrant·sqlite-vec·SQLite-Vector·FastEmbed product dependency 추가: `0건`
+- FTS·native graph·Graphify code adapter 일정 영향: `0건`
+- 다음 검토: Model batching 또는 더 작은 multilingual embedding이 50,000 build gate를 통과한 경우

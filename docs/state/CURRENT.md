@@ -27,6 +27,10 @@
 - `hive judge receipt`의 세 host launch·result·identity·verdict binding과 quorum 분리 수용 완료
 - Native graph 증분 동등성·FTS planner·metadata·lifecycle·비용 receipt·JSON/HTML export 완료
 - Graphify code-only receipt·정규화·atomic activation·native fallback·exact consent gate 완료
+- 여섯 graph scope 물리 격리와 graph 전후 canonical Markdown·FTS 무회귀 검증 완료
+- Graphify `0.9.47` Windows x64·macOS arm64·Linux musl x64 30-wheel lock과 platform digest binding 완료
+- Vector quality +15.0 points·세 engine 50k lookup 통과, 50k embedding build 10분 초과로 `defer`
+- Vector engine·embedding runtime product dependency 추가 `0건`
 
 ## 현재 검증 근거
 
@@ -43,9 +47,7 @@
 
 ## `0.10.0` 남은 범위
 
-- Collection별 graph 공개 격리와 Graphify 승인형 wheelhouse 설치 검증
-- pre-`0.10.0` graph upgrade·rollback과 세 운영체제 관계 질문 수용
-- FTS·vector·graph 품질 기준선과 vector engine adopt|defer 판정
+- 세 운영체제 30개 관계 질문·성능 공개 수용
 - 번호 공개 시험판과 Windows x64·macOS arm64·Linux musl 수용
 - `REL10-005–007`: 안정판 후보·게시·설치
 
@@ -60,10 +62,8 @@
 
 ## 다음 작업
 
-1. `KRG10-003`, `KRG10-008` collection 격리·Graphify wheelhouse 설치 마감
-2. `KRG10-015–016` upgrade·관계 질문·세 운영체제 수용 준비
-3. `VEC10` vector gate와 조건부 구현 마감
-4. `REL10-001–004` 번호 공개 시험판 준비·수용
+1. `KRG10-016` 30개 관계 질문·세 운영체제 수용 준비
+2. `REL10-001–004` 번호 공개 시험판 준비·수용
 
 ## 과거 기록
 
