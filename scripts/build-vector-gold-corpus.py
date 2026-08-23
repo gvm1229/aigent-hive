@@ -56,6 +56,30 @@ ALTERNATE_PARAPHRASES = {
     "dev-check-platform-path": "What keeps a development command from permanently rewriting PATH?",
 }
 
+EXACT_QUERIES = [
+    *( (pair_id, "id", pair_id) for pair_id in list(PARAPHRASES)[:10] ),
+    ("adversarial-judge", "number", "adversarial judge 0.10.0"),
+    ("automatic-user-projection-refresh", "number", "user projection refresh 0.9.5"),
+    ("consumer-session-coordination", "number", "0.10.0"),
+    ("global-knowledge-rag", "number", "0.9.0-test.16"),
+    ("graphify-0-10-adoption", "number", "0.9.47"),
+    ("historical-project-base-coverage", "number", "0.9.2"),
+    ("hive-preserving-uninstall", "number", "44-leaf 0.9.1"),
+    ("interactive-binary-update", "number", "0.9.0-test.N"),
+    ("knowledge-portability-scan", "date-number", "2026-08-13 50,000 100"),
+    ("hybrid-vector-search-0-10", "number", "0.10.0"),
+    ("artifact-boundaries", "negative", "Source-development directives never ship"),
+    ("automatic-dispatch-guard", "negative", "Exit success does not authorize dispatch"),
+    ("developer-binary-lifecycle", "negative", "never the public"),
+    ("global-knowledge-bundle-transfer", "negative", "no SQLite index"),
+    ("host-neutral-continuation", "negative", "must not mutate host goals"),
+    ("hybrid-vector-search-0-10", "negative", "Failure adds no product dependency"),
+    ("install-wide-knowledge-capture", "negative", "no raw-prompt recorder"),
+    ("judge-verification", "negative", "never owns private keys"),
+    ("knowledge-cross-project-access", "negative", "Retrieval never causes promotion"),
+    ("global-user-contexts", "negative", "never translate Skill"),
+]
+
 
 def read_fact(path: Path) -> tuple[dict[str, object], str]:
     text = path.read_text(encoding="utf-8")
@@ -88,8 +112,8 @@ def main() -> int:
         for pair_id, english, _, body in pairs
     ]
     queries = []
-    for pair_id, _, _, _ in pairs:
-        queries.append({"id": f"exact-{pair_id}", "kind": "exact", "query": pair_id, "expected": [pair_id]})
+    for index, (pair_id, subtype, query) in enumerate(EXACT_QUERIES, 1):
+        queries.append({"id": f"exact-{index:02d}-{pair_id}", "kind": "exact", "subtype": subtype, "query": query, "expected": [pair_id]})
     for pair_id, _, _, _ in pairs:
         queries.append({"id": f"paraphrase-primary-{pair_id}", "kind": "paraphrase", "query": PARAPHRASES[pair_id], "expected": [pair_id]})
     for pair_id, _, _, _ in pairs[:10]:

@@ -124,243 +124,273 @@
   ],
   "queries": [
     {
-      "id": "exact-adversarial-judge",
+      "id": "exact-01-adversarial-judge",
       "kind": "exact",
+      "subtype": "id",
       "query": "adversarial-judge",
       "expected": [
         "adversarial-judge"
       ]
     },
     {
-      "id": "exact-agent-autonomous-continuation",
+      "id": "exact-02-agent-autonomous-continuation",
       "kind": "exact",
+      "subtype": "id",
       "query": "agent-autonomous-continuation",
       "expected": [
         "agent-autonomous-continuation"
       ]
     },
     {
-      "id": "exact-agent-directive-ownership",
+      "id": "exact-03-agent-directive-ownership",
       "kind": "exact",
+      "subtype": "id",
       "query": "agent-directive-ownership",
       "expected": [
         "agent-directive-ownership"
       ]
     },
     {
-      "id": "exact-artifact-boundaries",
+      "id": "exact-04-artifact-boundaries",
       "kind": "exact",
+      "subtype": "id",
       "query": "artifact-boundaries",
       "expected": [
         "artifact-boundaries"
       ]
     },
     {
-      "id": "exact-automated-user-handoff",
+      "id": "exact-05-automated-user-handoff",
       "kind": "exact",
+      "subtype": "id",
       "query": "automated-user-handoff",
       "expected": [
         "automated-user-handoff"
       ]
     },
     {
-      "id": "exact-automatic-dispatch-guard",
+      "id": "exact-06-automatic-dispatch-guard",
       "kind": "exact",
+      "subtype": "id",
       "query": "automatic-dispatch-guard",
       "expected": [
         "automatic-dispatch-guard"
       ]
     },
     {
-      "id": "exact-automatic-user-projection-refresh",
+      "id": "exact-07-automatic-user-projection-refresh",
       "kind": "exact",
+      "subtype": "id",
       "query": "automatic-user-projection-refresh",
       "expected": [
         "automatic-user-projection-refresh"
       ]
     },
     {
-      "id": "exact-consumer-session-coordination",
+      "id": "exact-08-consumer-session-coordination",
       "kind": "exact",
+      "subtype": "id",
       "query": "consumer-session-coordination",
       "expected": [
         "consumer-session-coordination"
       ]
     },
     {
-      "id": "exact-crate-ownership",
+      "id": "exact-09-crate-ownership",
       "kind": "exact",
+      "subtype": "id",
       "query": "crate-ownership",
       "expected": [
         "crate-ownership"
       ]
     },
     {
-      "id": "exact-dev-check-platform-path",
+      "id": "exact-10-dev-check-platform-path",
       "kind": "exact",
+      "subtype": "id",
       "query": "dev-check-platform-path",
       "expected": [
         "dev-check-platform-path"
       ]
     },
     {
-      "id": "exact-developer-binary-lifecycle",
+      "id": "exact-11-adversarial-judge",
       "kind": "exact",
-      "query": "developer-binary-lifecycle",
+      "subtype": "number",
+      "query": "adversarial judge 0.10.0",
       "expected": [
-        "developer-binary-lifecycle"
+        "adversarial-judge"
       ]
     },
     {
-      "id": "exact-docs-wiki-architecture",
+      "id": "exact-12-automatic-user-projection-refresh",
       "kind": "exact",
-      "query": "docs-wiki-architecture",
+      "subtype": "number",
+      "query": "user projection refresh 0.9.5",
       "expected": [
-        "docs-wiki-architecture"
+        "automatic-user-projection-refresh"
       ]
     },
     {
-      "id": "exact-git-worktree-lifecycle",
+      "id": "exact-13-consumer-session-coordination",
       "kind": "exact",
-      "query": "git-worktree-lifecycle",
+      "subtype": "number",
+      "query": "0.10.0",
       "expected": [
-        "git-worktree-lifecycle"
+        "consumer-session-coordination"
       ]
     },
     {
-      "id": "exact-global-knowledge-bundle-transfer",
+      "id": "exact-14-global-knowledge-rag",
       "kind": "exact",
-      "query": "global-knowledge-bundle-transfer",
-      "expected": [
-        "global-knowledge-bundle-transfer"
-      ]
-    },
-    {
-      "id": "exact-global-knowledge-rag",
-      "kind": "exact",
-      "query": "global-knowledge-rag",
+      "subtype": "number",
+      "query": "0.9.0-test.16",
       "expected": [
         "global-knowledge-rag"
       ]
     },
     {
-      "id": "exact-global-onboarding",
+      "id": "exact-15-graphify-0-10-adoption",
       "kind": "exact",
-      "query": "global-onboarding",
-      "expected": [
-        "global-onboarding"
-      ]
-    },
-    {
-      "id": "exact-global-user-contexts",
-      "kind": "exact",
-      "query": "global-user-contexts",
-      "expected": [
-        "global-user-contexts"
-      ]
-    },
-    {
-      "id": "exact-graphify-0-10-adoption",
-      "kind": "exact",
-      "query": "graphify-0-10-adoption",
+      "subtype": "number",
+      "query": "0.9.47",
       "expected": [
         "graphify-0-10-adoption"
       ]
     },
     {
-      "id": "exact-historical-project-base-coverage",
+      "id": "exact-16-historical-project-base-coverage",
       "kind": "exact",
-      "query": "historical-project-base-coverage",
+      "subtype": "number",
+      "query": "0.9.2",
       "expected": [
         "historical-project-base-coverage"
       ]
     },
     {
-      "id": "exact-hive-preserving-uninstall",
+      "id": "exact-17-hive-preserving-uninstall",
       "kind": "exact",
-      "query": "hive-preserving-uninstall",
+      "subtype": "number",
+      "query": "44-leaf 0.9.1",
       "expected": [
         "hive-preserving-uninstall"
       ]
     },
     {
-      "id": "exact-host-external-integrations",
+      "id": "exact-18-interactive-binary-update",
       "kind": "exact",
-      "query": "host-external-integrations",
-      "expected": [
-        "host-external-integrations"
-      ]
-    },
-    {
-      "id": "exact-host-neutral-continuation",
-      "kind": "exact",
-      "query": "host-neutral-continuation",
-      "expected": [
-        "host-neutral-continuation"
-      ]
-    },
-    {
-      "id": "exact-hybrid-vector-search-0-10",
-      "kind": "exact",
-      "query": "hybrid-vector-search-0-10",
-      "expected": [
-        "hybrid-vector-search-0-10"
-      ]
-    },
-    {
-      "id": "exact-install-wide-knowledge-capture",
-      "kind": "exact",
-      "query": "install-wide-knowledge-capture",
-      "expected": [
-        "install-wide-knowledge-capture"
-      ]
-    },
-    {
-      "id": "exact-installed-usage-guard",
-      "kind": "exact",
-      "query": "installed-usage-guard",
-      "expected": [
-        "installed-usage-guard"
-      ]
-    },
-    {
-      "id": "exact-interactive-binary-update",
-      "kind": "exact",
-      "query": "interactive-binary-update",
+      "subtype": "number",
+      "query": "0.9.0-test.N",
       "expected": [
         "interactive-binary-update"
       ]
     },
     {
-      "id": "exact-judge-verification",
+      "id": "exact-19-knowledge-portability-scan",
       "kind": "exact",
-      "query": "judge-verification",
-      "expected": [
-        "judge-verification"
-      ]
-    },
-    {
-      "id": "exact-knowledge-cross-project-access",
-      "kind": "exact",
-      "query": "knowledge-cross-project-access",
-      "expected": [
-        "knowledge-cross-project-access"
-      ]
-    },
-    {
-      "id": "exact-knowledge-portability-scan",
-      "kind": "exact",
-      "query": "knowledge-portability-scan",
+      "subtype": "date-number",
+      "query": "2026-08-13 50,000 100",
       "expected": [
         "knowledge-portability-scan"
       ]
     },
     {
-      "id": "exact-knowledge-preservation",
+      "id": "exact-20-hybrid-vector-search-0-10",
       "kind": "exact",
-      "query": "knowledge-preservation",
+      "subtype": "number",
+      "query": "0.10.0",
       "expected": [
-        "knowledge-preservation"
+        "hybrid-vector-search-0-10"
+      ]
+    },
+    {
+      "id": "exact-21-artifact-boundaries",
+      "kind": "exact",
+      "subtype": "negative",
+      "query": "Source-development directives never ship",
+      "expected": [
+        "artifact-boundaries"
+      ]
+    },
+    {
+      "id": "exact-22-automatic-dispatch-guard",
+      "kind": "exact",
+      "subtype": "negative",
+      "query": "Exit success does not authorize dispatch",
+      "expected": [
+        "automatic-dispatch-guard"
+      ]
+    },
+    {
+      "id": "exact-23-developer-binary-lifecycle",
+      "kind": "exact",
+      "subtype": "negative",
+      "query": "never the public",
+      "expected": [
+        "developer-binary-lifecycle"
+      ]
+    },
+    {
+      "id": "exact-24-global-knowledge-bundle-transfer",
+      "kind": "exact",
+      "subtype": "negative",
+      "query": "no SQLite index",
+      "expected": [
+        "global-knowledge-bundle-transfer"
+      ]
+    },
+    {
+      "id": "exact-25-host-neutral-continuation",
+      "kind": "exact",
+      "subtype": "negative",
+      "query": "must not mutate host goals",
+      "expected": [
+        "host-neutral-continuation"
+      ]
+    },
+    {
+      "id": "exact-26-hybrid-vector-search-0-10",
+      "kind": "exact",
+      "subtype": "negative",
+      "query": "Failure adds no product dependency",
+      "expected": [
+        "hybrid-vector-search-0-10"
+      ]
+    },
+    {
+      "id": "exact-27-install-wide-knowledge-capture",
+      "kind": "exact",
+      "subtype": "negative",
+      "query": "no raw-prompt recorder",
+      "expected": [
+        "install-wide-knowledge-capture"
+      ]
+    },
+    {
+      "id": "exact-28-judge-verification",
+      "kind": "exact",
+      "subtype": "negative",
+      "query": "never owns private keys",
+      "expected": [
+        "judge-verification"
+      ]
+    },
+    {
+      "id": "exact-29-knowledge-cross-project-access",
+      "kind": "exact",
+      "subtype": "negative",
+      "query": "Retrieval never causes promotion",
+      "expected": [
+        "knowledge-cross-project-access"
+      ]
+    },
+    {
+      "id": "exact-30-global-user-contexts",
+      "kind": "exact",
+      "subtype": "negative",
+      "query": "never translate Skill",
+      "expected": [
+        "global-user-contexts"
       ]
     },
     {
