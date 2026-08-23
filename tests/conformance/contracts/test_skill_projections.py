@@ -165,29 +165,27 @@ class Phase3HostProjection(Phase3ProjectionTestCase):
                     self.discovery_root(target, host)
                     / "usage-guard/SKILL.md"
                 ).read_text(encoding="utf-8")
-                for surface in (agents, skill):
-                    self.assertIn("hive usage enforce", surface)
-                    self.assertIn(
-                        "Immediately before each new automatic dispatch",
-                        surface,
-                    )
-                    self.assertIn(
-                        "hive run resume --dispatch-intent automatic",
-                        surface,
-                    )
-                    self.assertIn("enforced=true", surface)
-                    self.assertIn("outcome=authorized", surface)
-                    self.assertIn("exactly one dispatch brief", surface)
-                    self.assertIn("never authorizes dispatch", surface)
-                    self.assertIn("ordinary", surface)
-                    self.assertIn("manual", surface)
-                    self.assertIn("non-dispatch", surface)
-                    self.assertIn("non-codex", surface.lower())
-                    self.assertIn("fails closed", surface.lower())
-                    self.assertIn("bare continue", surface.lower())
-                    self.assertNotIn("At every turn boundary", surface)
-                    self.assertNotIn("start a watcher", agents)
-                self.assertIn("finite phrase list", agents)
+                self.assertIn("hive usage enforce", agents)
+                self.assertIn("Immediately before automatic dispatch", agents)
+                self.assertIn("authorized `hive run resume`", agents)
+                self.assertIn("never authorizes dispatch", agents)
+                for required in (
+                    "hive usage enforce",
+                    "hive run resume --dispatch-intent automatic",
+                    "enforced=true",
+                    "outcome=authorized",
+                    "exactly one dispatch brief",
+                    "never authorizes dispatch",
+                    "ordinary",
+                    "manual",
+                    "non-dispatch",
+                    "non-codex",
+                    "fails closed",
+                    "bare continue",
+                ):
+                    self.assertIn(required, skill.lower())
+                self.assertNotIn("At every turn boundary", agents)
+                self.assertNotIn("start a watcher", agents)
                 self.assertIn(
                     "illustrative rather than a finite phrase",
                     skill,

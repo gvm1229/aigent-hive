@@ -224,7 +224,7 @@ skills:
   consent_digest: null
 - name: verified-workflow
   source_type: built-in
-  content_digest: sha256:e7477454aec42220fa2e1b7602161dc2b8ea167aacd4d276d550226a25d15b8b
+  content_digest: sha256:70f8fa54d04084174f2d014398916e2f4b2f2fb53e8fa057e8b178f92fd413fd
   side_effect_class: project-write
   capabilities:
   - filesystem-read
