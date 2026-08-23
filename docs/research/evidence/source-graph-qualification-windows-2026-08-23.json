@@ -1,9 +1,9 @@
 {
   "api_keys_read": 0,
   "canonical_changed": false,
-  "canonical_tree_digest_after": "sha256:50b1fdc64e525dfae7b429a9864cd4b97457b309548c2f574c0118b1a1d69cbf",
-  "canonical_tree_digest_before": "sha256:50b1fdc64e525dfae7b429a9864cd4b97457b309548c2f574c0118b1a1d69cbf",
-  "cold_cli_p95_ms": 423.5135,
+  "canonical_tree_digest_after": "sha256:0174e2242cc61e0943908e8438e0d8cbdc8da76535c358ba8a6b0e5149a9288a",
+  "canonical_tree_digest_before": "sha256:0174e2242cc61e0943908e8438e0d8cbdc8da76535c358ba8a6b0e5149a9288a",
+  "cold_cli_p95_ms": 429.8227,
   "edge_count": 700,
   "engine": "native-markdown",
   "exact_recall_at_10": 1.0,
