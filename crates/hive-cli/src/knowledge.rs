@@ -32,9 +32,10 @@ use hive_wiki::store::{
     SharedKnowledgeOperationLock, StoreCommit,
 };
 use hive_wiki::{
-    build_graph, delete_page, delete_page_shared, generation_relative_path, ingest, ingest_shared,
-    lint, list_pages, persist_generation, promote, promote_shared, query_filtered, read_page,
-    rebuild_index, remove_generation, suppress, suppress_shared, LintIssue, LintSeverity,
+    activate_generation, build_graph, delete_page, delete_page_shared, generation_relative_path,
+    ingest, ingest_shared, lint, list_pages, load_active_generation, normalize_graphify_code,
+    promote, promote_shared, query_filtered, query_generation, read_page, rebuild_index,
+    remove_active_generation, suppress, suppress_shared, LintIssue, LintSeverity,
     PromotionCategory, PromotionMode, SuppressionEntry, WikiError,
 };
 use serde::{Deserialize, Serialize};
@@ -72,7 +73,7 @@ USAGE:
     hive knowledge export --user-root <dir> --scope global|shared|project:<id>|collection:<id>|all-portable --bundle <path>.hivekb [--replace-backup <file-name>] --output json
     hive knowledge import --user-root <dir> --bundle <path>.hivekb (--dry-run|--apply) --output json
     hive knowledge refresh (--target <legacy-project>|--user-root <dir>) --output json
-    hive knowledge graph preview|status|rebuild|disable|query --target <dir> [--scope project] [--node-id <id>] --output json
+    hive knowledge graph preview|status|rebuild|disable|query --target <dir> [--scope project] [--engine native-markdown|graphify-code] [--input <graph.json> --receipt <receipt.json>] [--node-id <id>] --output json
     hive index rebuild (--target <legacy-project>|--user-root <dir>) --output json
 ";
 
@@ -90,6 +91,31 @@ const LEGACY_DERIVED_RELATIVES: [&str; 4] = [
     ".hive/index/hive.sqlite3-shm",
     ".hive/index/.stale",
 ];
+
+const GRAPHIFY_VERSION: &str = "0.9.47";
+const GRAPHIFY_WHEEL_DIGEST: &str =
+    "sha256:2a8b13ccd53d507d16dcc12aebe488517c369afa547938464474fd3e772938ab";
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct GraphifyCodeReceipt {
+    schema_version: u32,
+    package_version: String,
+    wheel_digest: String,
+    executable_digest: String,
+    python_identity_digest: String,
+    source_commit: String,
+    source_tree_digest: String,
+    graph_input_digest: String,
+    command: Vec<String>,
+    provider_api_calls: u32,
+    api_keys_read: u32,
+    query_logs: u32,
+    watcher: bool,
+    git_hooks: bool,
+    mcp_registration: bool,
+    network_requests: u32,
+}
 
 #[cfg(feature = "notion-preview")]
 type NotionSyncInputs<'a> = (
@@ -201,6 +227,7 @@ pub(crate) fn run_knowledge(arguments: &[String]) -> ExitCode {
     ExitCode::from(result.exit_code)
 }
 
+#[allow(clippy::too_many_lines)]
 fn run_graph(arguments: &[String]) -> Result<KnowledgeResult, WikiError> {
     let action = arguments.first().map(String::as_str).ok_or_else(|| {
         WikiError::InvalidInput(
@@ -215,7 +242,17 @@ fn run_graph(arguments: &[String]) -> Result<KnowledgeResult, WikiError> {
             "knowledge graph supports preview, status, rebuild, disable, or query".to_owned(),
         ));
     }
-    let options = parse_options(&arguments[1..], &["--target", "--scope", "--node-id"])?;
+    let options = parse_options(
+        &arguments[1..],
+        &[
+            "--target",
+            "--scope",
+            "--node-id",
+            "--engine",
+            "--input",
+            "--receipt",
+        ],
+    )?;
     let target = PathBuf::from(required(&options, "--target")?);
     let scope = optional(&options, "--scope").unwrap_or("project");
     if scope != "project" {
@@ -223,60 +260,124 @@ fn run_graph(arguments: &[String]) -> Result<KnowledgeResult, WikiError> {
             "knowledge graph currently supports only the project scope".to_owned(),
         ));
     }
-    let graph = build_graph(&target, scope)?;
-    let path = generation_relative_path(scope, &graph.generation_digest)
-        .map_err(WikiError::InvalidInput)?;
-    let locator = path.to_string_lossy().into_owned();
+    let engine = optional(&options, "--engine").unwrap_or("native-markdown");
+    if !matches!(engine, "native-markdown" | "graphify-code") {
+        return Err(WikiError::InvalidInput(
+            "knowledge graph engine is unsupported".to_owned(),
+        ));
+    }
+    if engine == "graphify-code" && action == "preview" {
+        let graph = build_graph(&target, scope)?;
+        return Ok(success(
+            "QueryKnowledge",
+            "hive.knowledge-graph-preview",
+            "Graphify code-only full rebuild preview completed without writes",
+            Vec::new(),
+            "graphify-code-preview",
+            &graph.generation_digest,
+            json!({
+                "scope": scope,
+                "engine": engine,
+                "package_version": GRAPHIFY_VERSION,
+                "wheel_digest": GRAPHIFY_WHEEL_DIGEST,
+                "command": ["extract", "--force", "--code-only", "--no-cluster"],
+                "provider_api_calls": 0,
+                "api_keys_read": 0,
+                "query_logs": 0,
+                "watcher": false,
+                "git_hooks": false,
+                "mcp_registration": false,
+                "network_requests": 0,
+                "writes": false,
+            }),
+        ));
+    }
+
+    let (graph, source_digest, receipt_digest, fallback, active) =
+        if engine == "graphify-code" && action == "rebuild" {
+            let input_path = PathBuf::from(required(&options, "--input")?);
+            let receipt_path = PathBuf::from(required(&options, "--receipt")?);
+            let input = read_bytes_bounded(&input_path, "Graphify graph input", 128 * 1024 * 1024)?;
+            let receipt_bytes = read_bytes_bounded(&receipt_path, "Graphify receipt", 1024 * 1024)?;
+            let receipt: GraphifyCodeReceipt =
+                serde_json::from_slice(&receipt_bytes).map_err(|error| {
+                    WikiError::InvalidInput(format!("invalid Graphify receipt: {error}"))
+                })?;
+            validate_graphify_receipt(&receipt, &input)?;
+            (
+                normalize_graphify_code(scope, &input).map_err(WikiError::Verification)?,
+                receipt.source_tree_digest,
+                Some(sha256_digest(&receipt_bytes)),
+                false,
+                true,
+            )
+        } else if engine == "graphify-code" {
+            match load_active_generation(&target, scope, engine) {
+                Ok((pointer, graph)) => (
+                    graph,
+                    pointer.source_digest,
+                    pointer.extractor_receipt_digest,
+                    false,
+                    true,
+                ),
+                Err(_) if matches!(action, "query" | "status") => {
+                    let graph = build_graph(&target, scope)?;
+                    let source_digest = graph.generation_digest.clone();
+                    (graph, source_digest, None, true, false)
+                }
+                Err(error) => return Err(WikiError::Verification(error)),
+            }
+        } else {
+            let graph = build_graph(&target, scope)?;
+            let source_digest = graph.generation_digest.clone();
+            let active = load_active_generation(&target, scope, engine)
+                .is_ok_and(|(pointer, _)| pointer.source_digest == source_digest);
+            (graph, source_digest, None, false, active)
+        };
+    let locator = generation_relative_path(scope, &graph.generation_digest)
+        .map_err(WikiError::InvalidInput)?
+        .to_string_lossy()
+        .into_owned();
+    let changed_paths = if action == "rebuild" {
+        activate_generation(&target, &graph, &source_digest, receipt_digest.as_deref())
+            .map_err(WikiError::Io)?
+            .into_iter()
+            .map(|path| path.to_string_lossy().into_owned())
+            .collect()
+    } else if action == "disable" {
+        remove_active_generation(&target, scope, engine)
+            .map_err(WikiError::Io)?
+            .into_iter()
+            .map(|path| path.to_string_lossy().into_owned())
+            .collect()
+    } else {
+        Vec::new()
+    };
     let data = if action == "query" {
         let node_id = required(&options, "--node-id")?;
         json!({
             "scope": graph.scope,
             "engine": graph.engine,
+            "requested_engine": engine,
+            "fallback": fallback,
             "generation_digest": graph.generation_digest,
             "node_id": node_id,
-            "matches": hive_wiki::query_generation(&graph, node_id, 50),
+            "matches": query_generation(&graph, node_id, 50),
             "writes": false,
-        })
-    } else if action == "status" {
-        json!({
-            "scope": graph.scope,
-            "engine": graph.engine,
-            "generation_digest": graph.generation_digest,
-            "generation_path": path,
-            "active": target.join(&path).is_file(),
-            "writes": false,
-        })
-    } else if action == "disable" {
-        json!({
-            "scope": graph.scope,
-            "engine": graph.engine,
-            "generation_digest": graph.generation_digest,
-            "generation_path": path,
-            "writes": true,
         })
     } else {
         json!({
             "scope": graph.scope,
             "engine": graph.engine,
+            "requested_engine": engine,
+            "fallback": fallback,
             "generation_digest": graph.generation_digest,
             "node_count": graph.nodes.len(),
             "edge_count": graph.edges.len(),
-            "generation_path": path,
-            "writes": action == "rebuild",
+            "generation_path": locator,
+            "active": active || action == "rebuild",
+            "writes": matches!(action, "rebuild" | "disable"),
         })
-    };
-    let changed_paths = if action == "rebuild" {
-        vec![persist_generation(&target, &graph)
-            .map_err(WikiError::Io)?
-            .to_string_lossy()
-            .into_owned()]
-    } else if action == "disable" {
-        remove_generation(&target, scope, &graph.generation_digest)
-            .map_err(WikiError::Io)?
-            .map(|path| vec![path.to_string_lossy().into_owned()])
-            .unwrap_or_default()
-    } else {
-        Vec::new()
     };
     Ok(success(
         if action == "rebuild" {
@@ -286,29 +387,71 @@ fn run_graph(arguments: &[String]) -> Result<KnowledgeResult, WikiError> {
         } else {
             "QueryKnowledge"
         },
-        if action == "rebuild" {
-            "hive.knowledge-graph-rebuilt"
-        } else if action == "disable" {
-            "hive.knowledge-graph-disabled"
-        } else if action == "status" {
-            "hive.knowledge-graph-status"
-        } else {
-            "hive.knowledge-graph-preview"
+        match action {
+            "rebuild" => "hive.knowledge-graph-rebuilt",
+            "disable" => "hive.knowledge-graph-disabled",
+            "status" => "hive.knowledge-graph-status",
+            "query" => "hive.knowledge-graph-query-complete",
+            _ => "hive.knowledge-graph-preview",
         },
-        if action == "rebuild" {
-            "native knowledge graph generation rebuilt"
-        } else if action == "disable" {
-            "native knowledge graph generation disabled"
-        } else if action == "status" {
-            "native knowledge graph status read without derived-state writes"
-        } else {
-            "native knowledge graph preview completed without derived-state writes"
-        },
+        "knowledge graph operation completed",
         changed_paths,
         &locator,
         &graph.generation_digest,
         data,
     ))
+}
+
+fn read_bytes_bounded(path: &Path, label: &str, maximum: u64) -> Result<Vec<u8>, WikiError> {
+    let metadata = fs::symlink_metadata(path)
+        .map_err(|error| WikiError::Io(format!("cannot inspect {label}: {error}")))?;
+    if metadata.file_type().is_symlink()
+        || !metadata.is_file()
+        || metadata.len() == 0
+        || metadata.len() > maximum
+    {
+        return Err(WikiError::InvalidInput(format!(
+            "{label} must be a nonempty bounded regular file"
+        )));
+    }
+    fs::read(path).map_err(|error| WikiError::Io(format!("cannot read {label}: {error}")))
+}
+
+fn validate_graphify_receipt(receipt: &GraphifyCodeReceipt, input: &[u8]) -> Result<(), WikiError> {
+    let digest = |value: &str| {
+        value.strip_prefix("sha256:").is_some_and(|value| {
+            value.len() == 64
+                && value
+                    .bytes()
+                    .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
+        })
+    };
+    if receipt.schema_version != 1
+        || receipt.package_version != GRAPHIFY_VERSION
+        || receipt.wheel_digest != GRAPHIFY_WHEEL_DIGEST
+        || !digest(&receipt.executable_digest)
+        || !digest(&receipt.python_identity_digest)
+        || !digest(&receipt.source_tree_digest)
+        || receipt.source_commit.len() != 40
+        || !receipt
+            .source_commit
+            .bytes()
+            .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
+        || receipt.graph_input_digest != sha256_digest(input)
+        || receipt.command != ["extract", "--force", "--code-only", "--no-cluster"]
+        || receipt.provider_api_calls != 0
+        || receipt.api_keys_read != 0
+        || receipt.query_logs != 0
+        || receipt.watcher
+        || receipt.git_hooks
+        || receipt.mcp_registration
+        || receipt.network_requests != 0
+    {
+        return Err(WikiError::Verification(
+            "Graphify receipt violates the approved code-only boundary".to_owned(),
+        ));
+    }
+    Ok(())
 }
 
 #[cfg(feature = "notion-preview")]
@@ -4353,7 +4496,7 @@ mod tests {
         ])
         .expect("graph disable");
         assert_eq!(disabled.action, "DeleteKnowledge");
-        assert_eq!(disabled.changed_paths.len(), 1);
+        assert_eq!(disabled.changed_paths.len(), 2);
 
         let Err(error) = run_graph(&vec![
             "preview".to_owned(),
@@ -4367,6 +4510,132 @@ mod tests {
             panic!("collection scope requires its separate authorization path");
         };
         assert!(error.to_string().contains("only the project scope"));
+    }
+
+    #[test]
+    fn graphify_code_rebuild_requires_exact_receipt_and_falls_back_to_native() {
+        let (user, project) = registered_roots(true);
+        let source = project.path().join("source.md");
+        let draft = project.path().join("draft.md");
+        fs::write(&source, "Graphify fallback source.").expect("source");
+        fs::write(
+            &draft,
+            wiki_draft("graphify-fallback", "concept", "Graphify fallback body."),
+        )
+        .expect("draft");
+        run_add(&add_arguments(
+            project.path(),
+            user.path(),
+            &source,
+            &draft,
+            true,
+        ))
+        .expect("add page");
+        let input = br#"{"nodes":[{"id":"main","source_file":"src/main.rs","source_location":"L1"},{"id":"store","source_file":"src/store.rs","source_location":"L2"}],"edges":[{"source":"main","target":"store","relation":"calls","confidence":"EXTRACTED"}],"hyperedges":[],"input_tokens":0,"output_tokens":0}"#;
+        let input_path = project.path().join("graphify-input.json");
+        fs::write(&input_path, input).expect("Graphify input");
+        let receipt_path = project.path().join("graphify-receipt.json");
+        fs::write(
+            &receipt_path,
+            serde_json::to_vec(&json!({
+                "schema_version": 1,
+                "package_version": GRAPHIFY_VERSION,
+                "wheel_digest": GRAPHIFY_WHEEL_DIGEST,
+                "executable_digest": format!("sha256:{}", "a1".repeat(32)),
+                "python_identity_digest": format!("sha256:{}", "b2".repeat(32)),
+                "source_commit": "0".repeat(40),
+                "source_tree_digest": format!("sha256:{}", "c3".repeat(32)),
+                "graph_input_digest": sha256_digest(input),
+                "command": ["extract", "--force", "--code-only", "--no-cluster"],
+                "provider_api_calls": 0,
+                "api_keys_read": 0,
+                "query_logs": 0,
+                "watcher": false,
+                "git_hooks": false,
+                "mcp_registration": false,
+                "network_requests": 0
+            }))
+            .expect("receipt JSON"),
+        )
+        .expect("receipt");
+        let target = project.path().to_string_lossy().into_owned();
+        let rebuilt = run_graph(&[
+            "rebuild".to_owned(),
+            "--target".to_owned(),
+            target.clone(),
+            "--engine".to_owned(),
+            "graphify-code".to_owned(),
+            "--input".to_owned(),
+            input_path.to_string_lossy().into_owned(),
+            "--receipt".to_owned(),
+            receipt_path.to_string_lossy().into_owned(),
+            "--output".to_owned(),
+            "json".to_owned(),
+        ])
+        .expect("Graphify rebuild");
+        assert_eq!(rebuilt.changed_paths.len(), 2);
+        assert_eq!(rebuilt.data.expect("data")["engine"], "graphify-code");
+
+        let queried = run_graph(&[
+            "query".to_owned(),
+            "--target".to_owned(),
+            target.clone(),
+            "--engine".to_owned(),
+            "graphify-code".to_owned(),
+            "--node-id".to_owned(),
+            "main".to_owned(),
+            "--output".to_owned(),
+            "json".to_owned(),
+        ])
+        .expect("Graphify query");
+        let data = queried.data.expect("query data");
+        assert_eq!(data["matches"].as_array().expect("matches").len(), 1);
+        assert_eq!(data["fallback"], false);
+
+        run_graph(&[
+            "disable".to_owned(),
+            "--target".to_owned(),
+            target.clone(),
+            "--engine".to_owned(),
+            "graphify-code".to_owned(),
+            "--output".to_owned(),
+            "json".to_owned(),
+        ])
+        .expect("Graphify disable");
+        let fallback = run_graph(&[
+            "query".to_owned(),
+            "--target".to_owned(),
+            target,
+            "--engine".to_owned(),
+            "graphify-code".to_owned(),
+            "--node-id".to_owned(),
+            "graphify-fallback".to_owned(),
+            "--output".to_owned(),
+            "json".to_owned(),
+        ])
+        .expect("native fallback");
+        assert_eq!(fallback.data.expect("fallback data")["fallback"], true);
+
+        let mut tampered = fs::read(&receipt_path).expect("receipt bytes");
+        tampered.extend_from_slice(b" ");
+        fs::write(&receipt_path, tampered).expect("tamper receipt bytes");
+        fs::write(&input_path, b"{}\n").expect("tamper input");
+        let Err(error) = run_graph(&[
+            "rebuild".to_owned(),
+            "--target".to_owned(),
+            project.path().to_string_lossy().into_owned(),
+            "--engine".to_owned(),
+            "graphify-code".to_owned(),
+            "--input".to_owned(),
+            input_path.to_string_lossy().into_owned(),
+            "--receipt".to_owned(),
+            receipt_path.to_string_lossy().into_owned(),
+            "--output".to_owned(),
+            "json".to_owned(),
+        ]) else {
+            panic!("tampered input must fail");
+        };
+        assert!(matches!(error, WikiError::Verification(_)));
     }
 
     #[test]

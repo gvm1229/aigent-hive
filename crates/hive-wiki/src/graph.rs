@@ -258,6 +258,36 @@ pub fn load_active_generation(
     Ok((pointer, generation))
 }
 
+/// Remove one active engine pointer and its exact derived generation.
+///
+/// # Errors
+///
+/// Returns an error when active state is malformed, unsafe, or cannot be removed.
+pub fn remove_active_generation(
+    target: &Path,
+    scope: &str,
+    engine: &str,
+) -> Result<Vec<PathBuf>, String> {
+    let pointer_path = active_pointer_relative_path(scope, engine)?;
+    match std::fs::symlink_metadata(target.join(&pointer_path)) {
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(Vec::new()),
+        Err(error) => return Err(format!("inspect graph active pointer: {error}")),
+        Ok(metadata) if !metadata.is_file() => {
+            return Err("graph active pointer is not a regular file".to_owned());
+        }
+        Ok(_) => {}
+    }
+    let (pointer, _) = load_active_generation(target, scope, engine)?;
+    let mut changed = Vec::new();
+    if let Some(generation) = remove_generation(target, scope, &pointer.generation_digest)? {
+        changed.push(generation);
+    }
+    std::fs::remove_file(target.join(&pointer_path))
+        .map_err(|error| format!("remove graph active pointer: {error}"))?;
+    changed.push(pointer_path);
+    Ok(changed)
+}
+
 fn active_pointer_relative_path(scope: &str, engine: &str) -> Result<PathBuf, String> {
     if !matches!(engine, "native-markdown" | "graphify-code") {
         return Err("knowledge graph engine is unsupported".to_owned());
@@ -392,7 +422,7 @@ mod tests {
     use super::{
         activate_generation, build_native_generation, extract_markdown_edges,
         generation_relative_path, load_active_generation, persist_generation, query_generation,
-        remove_generation, GraphEvidence,
+        remove_active_generation, remove_generation, GraphEvidence,
     };
     use crate::{Contradiction, WikiFrontmatter, WikiPage};
 
@@ -524,5 +554,29 @@ mod tests {
         assert_eq!(loaded, generation);
         std::fs::write(target.path().join(&changed[0]), b"{}\n").expect("tamper");
         assert!(load_active_generation(target.path(), "project", "native-markdown").is_err());
+    }
+
+    #[test]
+    fn active_generation_removal_is_exact_and_idempotent() {
+        let target = tempfile::tempdir().expect("temporary target");
+        let generation = build_native_generation("project", &[page("first")]).expect("generation");
+        activate_generation(
+            target.path(),
+            &generation,
+            &format!("sha256:{}", "b2".repeat(32)),
+            None,
+        )
+        .expect("activate");
+        assert_eq!(
+            remove_active_generation(target.path(), "project", "native-markdown")
+                .expect("remove")
+                .len(),
+            2
+        );
+        assert!(
+            remove_active_generation(target.path(), "project", "native-markdown")
+                .expect("repeat")
+                .is_empty()
+        );
     }
 }
