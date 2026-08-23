@@ -1,12 +1,12 @@
 # 현재 상태
 
-- 기준 branch: `feature/0.10.0@16b45a5`
+- 기준 branch: `feature/0.10.0@496718f`
 - 원격 기준: `origin/feature/0.10.0` 동기화
 - product version: `0.10.0`
 - stable baseline: `0.9.5`
 - 다음 target: `0.10.0-test.1`
 - 활성 계획: [`PLAN.md`](../plans/PLAN.md)
-- 현재 milestone: `0.10.0-test.1` 공개 후보
+- 현재 milestone: `0.10.0-test.1` 공개 수용 완료
 
 ## 최근 완료
 
@@ -35,6 +35,10 @@
 - Vector quality +15.0 points·세 engine 50k lookup 통과, 50k embedding build 10분 초과로 `defer`
 - Vector engine·embedding runtime product dependency 추가 `0건`
 - `REL10-001–002` version·release metadata와 전체 local gate 마감
+- CI `32633357924`: Linux 전체·다섯 Python lane·Windows·macOS protected gate 통과
+- Candidate `32633724977`: 다섯 target package·attestation·graph 자격·0.9.1–0.9.5 project coverage 통과
+- Publication `32634206001`: `0.10.0-test.1` 게시, npm `latest=0.9.5` 불변
+- 현재 Windows: CLI `0.10.0-test.1` 설치와 Codex 사용자 projection `0.10.0` validate 통과
 
 ## 현재 검증 근거
 
@@ -51,21 +55,17 @@
 
 ## `0.10.0` 남은 범위
 
-- macOS arm64·Linux musl의 30개 관계 질문·성능 공개 수용
-- 번호 공개 시험판과 Windows x64·macOS arm64·Linux musl 수용
-- `REL10-005–007`: 안정판 후보·게시·설치
+- `REL10-005–007`: 안정판 후보·게시·설치·명시 승인
 
 ## 현재 장애 요인
 
-- Agent 소유 구현을 막는 수동 blocker 없음
-- Graphify macOS·Linux 실제 code-only 수용 미검증
-- 현재 Windows에서 macOS·Linux 실제 설치 수용 불가
+- 안정판 제외 범위의 Agent 소유 작업 없음
 - 안정판 `0.10.0`: 유지보수자의 버전명 포함 명시 승인 전 tag·protected `main` 통합·게시·설치 금지
 
 ## 다음 작업
 
-1. Exact candidate를 `develop`에 통합하고 Linux·macOS·Windows CI 수용
-2. `REL10-003–004` 번호 공개 시험판 게시·설치 수용
+1. 유지보수자가 공개 시험판 결과 검토
+2. 명시적 `0.10.0` 안정판 승인 전 `REL10-005–007` 시작 금지
 
 ## 과거 기록
 

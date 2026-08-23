@@ -165,5 +165,5 @@ Upstream `global` 동작:
 - `0.10.0` code-only adapter: 채택
 - 채택 경계: Full rebuild·grounded locator·exact receipt·사용자 consent·native fallback
 - Shipping Graphify dependency: `0건`
-- macOS arm64·Linux musl 실제 설치·30개 관계 질문: 공개 시험 수용 대기
+- Code-only 지원 target 공개 수용: `0.10.0-test.1` candidate `32633724977`의 Windows x64·macOS arm64·Linux musl x64에서 직접 사실 30/30·근거 관계 30/30·Graphify preview 통과
 - 전면 범위 다음 경로: [`graphify-knowledge-graph.md`](../plans/backlog/graphify-knowledge-graph.md)

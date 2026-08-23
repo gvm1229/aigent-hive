@@ -1,11 +1,11 @@
 # Aigent Hive 활성 계획
 
-> Revision: 279
+> Revision: 280
 > 기준일: 2026-08-23
 > Product version: `0.10.0`
 > Stable baseline: `0.9.5`
 > 다음 target: `0.10.0-test.1`
-> 현재 milestone: `0.10.0-test.1` 공개 후보
+> 현재 milestone: `0.10.0-test.1` 공개 수용 완료
 > 확정 범위: [`ADR-0020`](../decisions/ADR-0020-0.10.0-product-scope.md)
 
 ## 목표
@@ -55,7 +55,7 @@
 
 | 범위 | 완료 | 미완료 | 진행률 |
 | --- | ---: | ---: | ---: |
-| 관계·검색 graph | 15 | 1 | 93.8% |
+| 관계·검색 graph | 16 | 0 | 100% |
 | Hybrid vector search | 13 | 0 | 100% |
 | Host-owned Skill 예약 | 1 | 0 | 100% |
 | Nested project scan | 1 | 0 | 100% |
@@ -64,8 +64,8 @@
 | Verified workflow | 6 | 0 | 100% |
 | Adversarial judge | 8 | 0 | 100% |
 | Skill migration cleanup | 10 | 0 | 100% |
-| `0.10.0` 출시 | 2 | 5 | 28.6% |
-| **합계** | **73** | **6** | **92.4%** |
+| `0.10.0` 출시 | 4 | 3 | 57.1% |
+| **합계** | **76** | **3** | **96.2%** |
 
 ## Required load order
 

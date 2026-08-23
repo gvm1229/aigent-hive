@@ -29,7 +29,7 @@
 - [x] [KRG10-012] 관계 경로·scope·locator·digest·`EXTRACTED` evidence의 JSON·HTML export — `d488e66`; digest-addressed body-free export
 - [x] [KRG10-013] provider API·API key·query log·watcher·Git hook·자동 MCP 등록·upstream `global|update` 호출 `0건` — `09bd0f9`, `e6528d1`; exact consent·code-only receipt와 금지 동작 zero gate
 - [x] [KRG10-015] pre-`0.10.0` canonical Markdown·collection registry·기존 FTS 결과 byte 보존 upgrade·disable·rollback — `caf10de`; graph rebuild·export·disable 전후 canonical page byte와 FTS hit 동등성, historical upgrade 회귀 통과
-- [ ] [KRG10-016] 30개 관계 질문·직접 사실 무회귀·성능·격리·Windows x64·macOS arm64·Linux musl 공개 시험 수용
+- [x] [KRG10-016] 30개 관계 질문·직접 사실 무회귀·성능·격리·Windows x64·macOS arm64·Linux musl 공개 시험 수용 — candidate `32633724977`; 세 target 직접 사실 30/30·근거 관계 30/30·Graphify preview·canonical 무변경 통과
 
 ## Graphify 금지 경로
 

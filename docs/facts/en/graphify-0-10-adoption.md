@@ -9,10 +9,10 @@ summary: "0.10.0 approves Hive-native Markdown relationships and an optional ful
 tags: [graphify, knowledge, security, v0-10]
 aliases: ["Graphify adoption", "knowledge graph decision"]
 sources:
-  - "repo:docs/plans/active/knowledge-relationship-graph-0.10.0.md#sha256:8e83828583a15dd15d76df05a2f041e4dc77b4db29f4228f4dd76e74edcde670"
+  - "repo:docs/plans/active/knowledge-relationship-graph-0.10.0.md#sha256:f6efdd74ccfa6e9bbe2b675dde40b3c70b7dfa1b3f36cb0833c5bc65f0c52b90"
   - "repo:docs/plans/backlog/graphify-knowledge-graph.md#sha256:6ab392f6613412116a8fc24ad447236f319ceea7dee257ace138a300fc3cf960"
   - "repo:docs/research/ai-learning-hive-application-candidates-2026-08-21.md#sha256:14eb21209b147e7ca9947eae8afb09c059d53aedf353c1802620bf8bf4cc0038"
-  - "repo:docs/research/graphify-0.10-feasibility.md#sha256:a86ab9852f0fbd1a1737c97fcd236cf140fdc194e1f00d0e213e213a6f2fe600"
+  - "repo:docs/research/graphify-0.10-feasibility.md#sha256:9812c704b47db91f150291c1cf0c9ea9857c1ecd4153e19814f7385491e76898"
 links: [global-knowledge-rag, knowledge-storage, shared-index]
 reviewed_revision: "git:e5c2c599562121ed3dc43143c16a0b1f063cefa2"
 status: active
