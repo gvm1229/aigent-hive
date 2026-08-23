@@ -193,9 +193,8 @@ class Phase6StaticContracts(unittest.TestCase):
         )
         jobs = workflow["jobs"]
         classify = jobs["changes"]["steps"][1]
-        self.assertEqual(classify["env"]["PUSH_BEFORE"], "${{ github.event.before }}")
-        self.assertIn('base="$PUSH_BEFORE"', classify["run"])
-        self.assertIn('git fetch --no-tags --depth=1 origin "$base"', classify["run"])
+        self.assertIn('if [[ "$GITHUB_EVENT_NAME" == "push" ]]', classify["run"])
+        self.assertIn('echo "scope=product"', classify["run"])
         self.assertEqual(jobs["documentation"]["if"], "needs.changes.outputs.scope == 'documentation'")
         self.assertEqual(jobs["rust"]["runs-on"], "ubuntu-latest")
         self.assertEqual(jobs["conformance"]["runs-on"], "ubuntu-latest")

@@ -10084,6 +10084,15 @@ mod tests {
             )
             .expect("historical plugin write");
             let executable = relative.starts_with("bin/");
+            #[cfg(unix)]
+            {
+                use std::os::unix::fs::PermissionsExt;
+                fs::set_permissions(
+                    &target,
+                    fs::Permissions::from_mode(if executable { 0o755 } else { 0o644 }),
+                )
+                .expect("historical plugin mode");
+            }
             entries.push(UserOwnershipEntry {
                 path,
                 digest: (*digest).to_owned(),
