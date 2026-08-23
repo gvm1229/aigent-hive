@@ -91,7 +91,7 @@
     },
     {
       "id": "hybrid-vector-search-0-10",
-      "text": "hybrid-vector-search-0-10\nHybrid Vector Search Gate for 0.10.0\n# Hybrid Vector Search Gate for 0.10.0\n\nThe 120-query corpus showed a 15-point semantic Recall@10 gain with a local multilingual model.\nQdrant Edge, sqlite-vec, and SQLite-Vector passed the 50,000-vector lookup and storage budgets.\nThe offline embedding build exceeded the ten-minute Windows x64 gate, and SQLite-Vector also has\nan incompatible closed-commercial-use license boundary. The `0.10.0` decision is `defer`, with no\nvector engine, embedding runtime, model, or schema product dependency. FTS and graphs remain active."
+      "text": "hybrid-vector-search-0-10\nHybrid Vector Search Gate for 0.10.0\n# Hybrid Vector Search Gate for 0.10.0\n\nThe first gate found a 15-point semantic Recall@10 gain and fast vector engines, but a naive\n50,000-item embedding build exceeded ten minutes. Requalification now separates repeated synthetic\ndata from 50,000 unique chunks and adds digest reuse, resumable and incremental builds, query\nembedding latency, physical scope isolation, atomic generations, rollback, and three-platform\nevidence. No engine is preselected. One optional hybrid adapter may ship only if every gate passes;\notherwise FTS and graphs remain active with no vector product dependency."
     },
     {
       "id": "install-wide-knowledge-capture",

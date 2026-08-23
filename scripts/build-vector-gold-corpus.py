@@ -129,7 +129,8 @@ def main() -> int:
         raise SystemExit(f"invalid vector corpus counts: {counts}")
     payload = {"schema_version": 1, "documents": documents, "queries": queries}
     args.output.parent.mkdir(parents=True, exist_ok=True)
-    args.output.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    with args.output.open("w", encoding="utf-8", newline="\n") as output:
+        output.write(json.dumps(payload, ensure_ascii=False, indent=2) + "\n")
     return 0
 
 
