@@ -5,22 +5,23 @@ topic_slug: host-neutral-continuation
 language: en
 counterpart: ../ko/host-neutral-continuation.md
 title: "Host-Neutral Continuation Gate"
-summary: "Hive plans a host-neutral closure gate with host-owned goals or tasks and bounded optional Stop hooks."
+summary: "Host-owned goals or tasks use a bounded closure gate; a whole block requires coverage of every unpassed criterion."
 tags: [hooks, orchestration, v0-10]
 aliases: ["Continuation closure gate"]
 sources:
-  - "repo:docs/decisions/ADR-0020-0.10.0-product-scope.md#sha256:c313a53d8ed114aaf9b6303263730d282b11c6d8d52a71c249999b62969214fe"
-  - "repo:docs/plans/active/host-neutral-continuation-0.10.0.md#sha256:e20f89db8c8f9d41757c77b8700e158afb0de7472f210494ce7054dada6e9e1a"
-  - "repo:docs/research/host-neutral-continuation-hooks-0.10-feasibility-2026-08-22.md#sha256:73f86588991a14134009c0bd30503c1215d073a5961c221293036401b2b418e7"
+  - "repo:crates/hive-core/src/run.rs#sha256:f9f45d8c48283ce08dbe900387493e268143f6f3b1280dcab7c8e3c358b80103"
+  - "repo:crates/hive-cli/src/run.rs#sha256:7d06c4ec078b4cc6df2004f923e9720b4d5f0406b6badd246aad8220853628d1"
+  - "repo:harness/skills/verified-workflow/SKILL.md#sha256:05d534b80205aea1af27424dc34f42ef5e3f7fb57228f84a0493e210e235f22e"
+  - "repo:tests/conformance/contracts/test_run_role_contracts.py#sha256:c77febdf50b689937897ea1848ae0f38468d14843dbeda5486678eb523447902"
 links: [agent-autonomous-continuation, consumer-session-coordination, v0-10-product-scope]
-reviewed_revision: "git:8025085afdc50774e309906e4754741348c31c84"
+reviewed_revision: "git:5257f45"
 status: active
 ---
 
 # Host-Neutral Continuation Gate
 
 Hive keeps run and closure decisions in provider-neutral Markdown. Read-only `hive run closure`
-reports matching plan and status criteria with a closure digest. An optional checkpoint records a
-session digest, up to three retries, used attempts, and cancellation; legacy runs stay fail-open.
-The host owns task execution. Hooks must not mutate the host goal or canonical run state.
-Antigravity CLI `1.1.18` exposes read-only `/hooks`; actual Stop blocking remains unverified.
+reports matching plan and status criteria with a closure digest. A `blocked` or `usage-limited`
+checkpoint must list every still-unpassed criterion as `blocked_criteria`; a partial list is
+rejected without a write. The host owns task execution. Hooks may provide one bounded nudge and
+must not mutate host goals, tasks, or canonical run state.

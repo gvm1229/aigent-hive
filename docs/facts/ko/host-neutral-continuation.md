@@ -5,15 +5,16 @@ topic_slug: host-neutral-continuation
 language: ko
 counterpart: ../en/host-neutral-continuation.md
 title: "Host-neutral 연속 실행 gate"
-summary: "Host 소유 Goal·task와 bounded optional Stop hook을 결합하는 Hive의 provider-neutral closure gate 계획"
+summary: "Host 소유 Goal·task의 전체 차단 전 모든 미통과 criterion 범위 확인 closure gate"
 tags: [hooks, orchestration, v0-10]
 aliases: ["Continuation closure gate"]
 sources:
-  - "repo:docs/decisions/ADR-0020-0.10.0-product-scope.md#sha256:c313a53d8ed114aaf9b6303263730d282b11c6d8d52a71c249999b62969214fe"
-  - "repo:docs/plans/active/host-neutral-continuation-0.10.0.md#sha256:e20f89db8c8f9d41757c77b8700e158afb0de7472f210494ce7054dada6e9e1a"
-  - "repo:docs/research/host-neutral-continuation-hooks-0.10-feasibility-2026-08-22.md#sha256:73f86588991a14134009c0bd30503c1215d073a5961c221293036401b2b418e7"
+  - "repo:crates/hive-core/src/run.rs#sha256:f9f45d8c48283ce08dbe900387493e268143f6f3b1280dcab7c8e3c358b80103"
+  - "repo:crates/hive-cli/src/run.rs#sha256:7d06c4ec078b4cc6df2004f923e9720b4d5f0406b6badd246aad8220853628d1"
+  - "repo:harness/skills/verified-workflow/SKILL.md#sha256:05d534b80205aea1af27424dc34f42ef5e3f7fb57228f84a0493e210e235f22e"
+  - "repo:tests/conformance/contracts/test_run_role_contracts.py#sha256:c77febdf50b689937897ea1848ae0f38468d14843dbeda5486678eb523447902"
 links: [agent-autonomous-continuation, consumer-session-coordination, v0-10-product-scope]
-reviewed_revision: "git:8025085afdc50774e309906e4754741348c31c84"
+reviewed_revision: "git:5257f45"
 status: active
 ---
 
@@ -22,8 +23,7 @@ status: active
 - 실행 주체: Host 소유 Goal 또는 task
 - 정본: Provider-neutral Markdown run·closure 판정
 - `hive run closure`: plan·status criterion 일치 확인·pending·blocked·closure digest 반환
+- `blocked|usage-limited`: 모든 미통과 criterion의 `blocked_criteria` 범위 일치 필수, partial 범위 거부·write `0건`
 - continuation checkpoint: session digest·최대 3회 retry·used attempt·cancel 상태
 - Stop adapter: 새 run revision에서 Agent 소유 작업이 남은 경우 1회 nudge
-- 종료 허용: 사용자 cancel, `blocked_on_user`, terminal, stale·malformed state, foreign session, 진행 없는 반복 Stop
-- Hook mutation: Host Goal·canonical run state 변경 `0건`
-- Antigravity local: CLI `1.1.18`의 `/hooks` JSON surface 확인, 설치 hook `0건`, 실제 Stop 차단 미검증
+- Hook mutation: Host Goal·task·canonical run state 변경 `0건`

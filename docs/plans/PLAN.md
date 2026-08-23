@@ -58,12 +58,12 @@
 | Hybrid vector search | 0 | 13 | 0% |
 | Host-owned Skill 예약 | 1 | 0 | 100% |
 | Nested project scan | 1 | 0 | 100% |
-| Host-neutral 연속 실행 | 4 | 5 | 44.4% |
+| Host-neutral 연속 실행 | 5 | 4 | 55.6% |
 | Verified workflow | 5 | 1 | 83.3% |
 | Adversarial judge | 4 | 4 | 50.0% |
 | Skill migration cleanup | 3 | 7 | 30.0% |
 | `0.10.0` 출시 | 0 | 7 | 0% |
-| **합계** | **21** | **50** | **29.6%** |
+| **합계** | **22** | **49** | **31.0%** |
 
 ## Required load order
 

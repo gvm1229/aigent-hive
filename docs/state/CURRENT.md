@@ -55,6 +55,7 @@
 - explicit Markdown relation field·generation·metadata query 구현 완료 (`49ab3d9`, `f795a1d`, `ce87490`)
 - project graph public command: `preview|status|rebuild|query|disable`, collection scope fail-closed·digest-addressed derived generation·lifecycle filter 구현 (`3ed6a7f`–`9fbe003`)
 - continuation Stop hook: exact consent·projection·session digest·revision별 1회 nudge·user interrupt allow 구현 (`3efe600`–`d0f8bde`)
+- 전체 `blocked` closure guard: 모든 미통과 criterion의 `blocked_criteria` 범위 일치·partial block 거부·host Goal/task mutation `0건`·stable 기본 금지 지침 구현 (`5257f45`)
 - 공개 stable 합집합 `0.8.0`, `0.9.0–0.9.5` 확인; historical built-in registry의 `0.9.1–0.9.5` 결손과 future stable publication append gate 범위 승인
 - Stable tag Skill transition 비교: `0.8→0.9.0` rename 필수, `0.9.0–0.9.4` digest epoch 변화, `0.9.4→0.9.5` exact no-change epoch 공유 가능
 - nested Git repository 아래 registered project scan 허용과 foreign sibling 격리 구현·회귀 검증 완료 (`7aab389`)
@@ -91,7 +92,7 @@
 
 ## 현재 장애 요인
 
-- Source Wiki index rebuild·lint 완료, error·warning `0건`
+- Source Wiki lint: error `0건`, warning `74건`; 최근 source 변경 뒤 기존 fact source digest 재정합화 대기
 - Graphify macOS·Linux·Markdown 의미 추출·50,000 chunk 비용 미검증
 - 현재 Windows에서 macOS·Linux 실제 설치 수용 실행 불가
 - Claude 설치본 미인증·필수 lifecycle 수정 이전 version

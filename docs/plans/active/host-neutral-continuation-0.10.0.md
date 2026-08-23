@@ -23,7 +23,7 @@
 - [ ] [CON10-006] 선택형 hook preview·exact digest 승인·non-clobber merge·disable·uninstall·rollback 계약
 - [ ] [CON10-007] 과도한 지속 방지: 사용자 interrupt·cancel 즉시 허용, `blocked_on_user`·terminal·stale·malformed·foreign session fail-open, revision당 nudge 1회, bounded consecutive block cap
 - [ ] [CON10-008] three-host fixture와 중간 종료·정상 완료·취소·stale state·hook 손상·host 미지원 회귀 검증, 채택 또는 defer 결정
-- [ ] [CON10-009] 전체 Goal·task의 `blocked` 전 closure 강제: 남은 독립 `agent-owned` 항목이 있으면 항목별 `awaiting-external-evidence` 기록 뒤 다음 작업 지속, host hook·Hive가 Goal·task 상태를 직접 변경하지 않는 회귀 검증
+- [x] [CON10-009] 전체 Goal·task의 `blocked` 전 closure 강제: 남은 독립 `agent-owned` 항목이 있으면 항목별 `awaiting-external-evidence` 기록 뒤 다음 작업 지속, host hook·Hive가 Goal·task 상태를 직접 변경하지 않는 회귀 검증 — `5257f45`; `blocked_criteria`의 모든 미통과 criterion 범위 일치, partial block 거부, run-wide block·세 host 지침·stable 기본 금지 회귀
 
 ## Hook 최소 계약
 
