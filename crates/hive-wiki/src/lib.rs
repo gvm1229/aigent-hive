@@ -4,6 +4,7 @@ pub mod bundle_io;
 pub mod bundle_store;
 pub mod collection;
 pub mod graph;
+pub mod graphify;
 pub mod notion;
 pub mod portable;
 pub mod rag;
@@ -37,6 +38,7 @@ pub use graph::{
     build_native_generation, generation_relative_path, persist_generation, query_generation,
     remove_generation, GraphGeneration,
 };
+pub use graphify::normalize_graphify_code;
 
 const INDEX_RELATIVE: &str = ".hive/index/hive.sqlite3";
 const STALE_RELATIVE: &str = ".hive/index/.stale";
