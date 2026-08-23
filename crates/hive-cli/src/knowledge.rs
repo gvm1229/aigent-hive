@@ -4727,6 +4727,8 @@ mod tests {
             true,
         ))
         .expect("add page");
+        let canonical_path = project.path().join(".hive/knowledge/Wiki/graph-preview.md");
+        let canonical_before = fs::read(&canonical_path).expect("canonical page");
 
         let preview = run_graph(&vec![
             "preview".to_owned(),
@@ -4842,6 +4844,30 @@ mod tests {
         .expect("graph disable");
         assert_eq!(disabled.action, "DeleteKnowledge");
         assert_eq!(disabled.changed_paths.len(), 2);
+        assert_eq!(
+            fs::read(&canonical_path).expect("canonical page after graph disable"),
+            canonical_before
+        );
+        let after = run_query(&[
+            "--target".to_owned(),
+            project.path().to_string_lossy().into_owned(),
+            "--user-root".to_owned(),
+            user.path().to_string_lossy().into_owned(),
+            "--text".to_owned(),
+            "Graph preview".to_owned(),
+            "--limit".to_owned(),
+            "10".to_owned(),
+            "--output".to_owned(),
+            "json".to_owned(),
+        ])
+        .expect("FTS after graph disable");
+        assert_eq!(
+            after.data.expect("FTS data")["hits"]
+                .as_array()
+                .expect("FTS hits")
+                .len(),
+            1
+        );
 
         let Err(error) = run_graph(&vec![
             "preview".to_owned(),
