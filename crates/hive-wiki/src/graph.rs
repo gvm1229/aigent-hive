@@ -84,10 +84,70 @@ pub fn build_native_generation(scope: &str, pages: &[WikiPage]) -> Result<GraphG
     nodes.sort();
     nodes.dedup();
     let edges = extract_markdown_edges(pages);
+    finalize_generation(scope, "native-markdown", nodes, edges)
+}
+
+/// Rebuild a native graph by reusing only edges whose canonical page digest is unchanged.
+///
+/// # Errors
+///
+/// Returns an error when the prior generation has a different scope or engine, or when the
+/// resulting generation cannot be canonicalized.
+pub fn build_native_generation_incremental(
+    scope: &str,
+    prior: &GraphGeneration,
+    pages: &[WikiPage],
+) -> Result<GraphGeneration, String> {
+    if prior.scope != scope || prior.engine != "native-markdown" {
+        return Err("prior native graph generation binding mismatch".to_owned());
+    }
+    let prior_nodes = prior
+        .nodes
+        .iter()
+        .map(|node| (node.id.as_str(), node))
+        .collect::<std::collections::BTreeMap<_, _>>();
+    let mut nodes = Vec::new();
+    let mut edges = Vec::new();
+    for page in pages {
+        let unchanged = prior_nodes
+            .get(page.frontmatter.id.as_str())
+            .is_some_and(|node| node.content_digest == page.content_digest);
+        nodes.push(GraphNode {
+            id: page.frontmatter.id.clone(),
+            locator: page.relative_path.clone(),
+            content_digest: page.content_digest.clone(),
+            visibility: scope.to_owned(),
+            lifecycle: page.frontmatter.status.clone(),
+        });
+        if unchanged {
+            edges.extend(
+                prior
+                    .edges
+                    .iter()
+                    .filter(|edge| edge.from == page.frontmatter.id)
+                    .cloned(),
+            );
+        } else {
+            edges.extend(extract_markdown_edges(std::slice::from_ref(page)));
+        }
+    }
+    nodes.sort();
+    nodes.dedup();
+    edges.sort();
+    edges.dedup();
+    finalize_generation(scope, "native-markdown", nodes, edges)
+}
+
+fn finalize_generation(
+    scope: &str,
+    engine: &str,
+    nodes: Vec<GraphNode>,
+    edges: Vec<GraphEdge>,
+) -> Result<GraphGeneration, String> {
     let payload = serde_json::json!({
         "schema_version": 1,
         "scope": scope,
-        "engine": "native-markdown",
+        "engine": engine,
         "nodes": &nodes,
         "edges": &edges,
     });
@@ -98,7 +158,7 @@ pub fn build_native_generation(scope: &str, pages: &[WikiPage]) -> Result<GraphG
     Ok(GraphGeneration {
         schema_version: 1,
         scope: scope.to_owned(),
-        engine: "native-markdown".to_owned(),
+        engine: engine.to_owned(),
         generation_digest,
         nodes,
         edges,
@@ -420,9 +480,10 @@ fn edge(from: &str, to: &str, relation: &str, source_digest: &str) -> GraphEdge 
 #[cfg(test)]
 mod tests {
     use super::{
-        activate_generation, build_native_generation, extract_markdown_edges,
-        generation_relative_path, load_active_generation, persist_generation, query_generation,
-        remove_active_generation, remove_generation, GraphEvidence,
+        activate_generation, build_native_generation, build_native_generation_incremental,
+        extract_markdown_edges, generation_relative_path, load_active_generation,
+        persist_generation, query_generation, remove_active_generation, remove_generation,
+        GraphEvidence,
     };
     use crate::{Contradiction, WikiFrontmatter, WikiPage};
 
@@ -475,6 +536,21 @@ mod tests {
         assert_eq!(first, second);
         assert!(first.nodes.iter().all(|node| node.visibility == "project"));
         assert!(build_native_generation("outside", &[page("first")]).is_err());
+    }
+
+    #[test]
+    fn incremental_and_full_rebuilds_are_equivalent_for_change_and_delete() {
+        let mut second = page("second");
+        second.frontmatter.links = vec!["first".to_owned()];
+        let prior = build_native_generation("project", &[page("first"), second.clone()])
+            .expect("prior generation");
+        second.frontmatter.links = vec!["third".to_owned()];
+        second.content_digest = format!("sha256:{}", "b2".repeat(32));
+        let current = vec![second];
+        let incremental = build_native_generation_incremental("project", &prior, &current)
+            .expect("incremental generation");
+        let full = build_native_generation("project", &current).expect("full generation");
+        assert_eq!(incremental, full);
     }
 
     #[test]
