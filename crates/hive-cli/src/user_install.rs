@@ -2568,6 +2568,7 @@ fn permissions_match_managed_mode(_permissions: FilePermissions, _executable: bo
     true
 }
 
+#[allow(clippy::too_many_lines)]
 fn render_user_guidance(
     host: UserHost,
     setup: Option<&crate::user_setup::UserSetupConfig>,
