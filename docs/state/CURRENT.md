@@ -5,7 +5,7 @@
 - product version: `0.9.5`
 - 다음 target: `0.10.0-test`
 - 활성 계획: [`PLAN.md`](../plans/PLAN.md)
-- 현재 milestone: Adversarial Judge 세 host 수용
+- 현재 milestone: 관계 graph·Graphify adapter 마감
 
 ## 최근 완료
 
@@ -24,6 +24,7 @@
 - Codex·Claude·Antigravity continuation adapter·승인형 Stop hook·취소·bounded nudge 수용 완료
 - `0.7.0–0.9.5`와 공개 시험 predecessor의 retired Skill direct-jump cleanup·rollback 수용 완료
 - Stable Skill compatibility ledger와 npm·GitHub 공개 stable parity 게시 gate 추가
+- `hive judge receipt`의 세 host launch·result·identity·verdict binding과 quorum 분리 수용 완료
 
 ## 현재 검증 근거
 
@@ -40,7 +41,6 @@
 
 ## `0.10.0` 남은 범위
 
-- Adversarial Judge의 three-host launch·quorum 수용
 - 관계 graph·Graphify code-only adapter의 남은 hard gate와 upgrade·rollback 검증
 - FTS·vector·graph 품질 기준선과 vector engine adopt|defer 판정
 - 번호 공개 시험판과 Windows x64·macOS arm64·Linux musl 수용
@@ -57,8 +57,8 @@
 
 ## 다음 작업
 
-1. `JDG10` adversarial Judge three-host 수용 마감
-2. `KRG10`, `VEC10` 관계·vector gate와 조건부 구현 마감
+1. `KRG10` native 관계 graph·Graphify code-only adapter 마감
+2. `VEC10` vector gate와 조건부 구현 마감
 3. `REL10-001–004` 번호 공개 시험판 준비·수용
 
 ## 과거 기록
