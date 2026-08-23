@@ -6,6 +6,7 @@ import base64
 import json
 import re
 import struct
+import subprocess
 import unittest
 from pathlib import Path
 
@@ -125,14 +126,15 @@ class Phase3SkillSourceContract(unittest.TestCase):
         coordination = (ROOT / ".agents/directives/06-session-coordination.md").read_text(
             encoding="utf-8"
         )
-        for text in (workflow, coordination):
-            normalized = " ".join(text.split())
-            self.assertIn("one primary worktree", normalized)
-            self.assertIn("convenience", normalized)
-            self.assertIn("parallel independent changes", normalized)
-            self.assertIn("immediately after", normalized)
-            self.assertIn("uncommitted", normalized)
-            self.assertIn("unpushed", normalized)
+        normalized = " ".join(workflow.split())
+        self.assertIn("one primary worktree", normalized)
+        self.assertIn("convenience", normalized)
+        self.assertIn("parallel independent changes", normalized)
+        self.assertIn("immediately after", normalized)
+        self.assertIn("uncommitted", normalized)
+        self.assertIn("unpushed", normalized)
+        self.assertIn("worktree lifecycle rules belong to `03-workflow.md`", coordination)
+        self.assertIn("## Temporary Worktrees", coordination)
 
     def test_source_and_consumer_language_contracts_keep_the_same_rules(self) -> None:
         source_behavior = (ROOT / ".agents/directives/01-behavior.md").read_text(
@@ -141,14 +143,11 @@ class Phase3SkillSourceContract(unittest.TestCase):
         source_style = (ROOT / ".agents/directives/08-human-documentation-style.md").read_text(
             encoding="utf-8"
         )
-        consumer_template = (ROOT / "harness/template/AGENTS.md.jinja").read_text(
-            encoding="utf-8"
-        )
         project_base = (
             ROOT / "harness/project-bases/0.9.0/AGENTS.md.template"
         ).read_text(encoding="utf-8")
 
-        for text in (source_behavior, source_style, consumer_template, project_base):
+        for text in (source_style, project_base):
             normalized = " ".join(text.split())
             self.assertIn("ASD-STE100 Simplified Technical English", text)
             self.assertIn(
@@ -164,13 +163,10 @@ class Phase3SkillSourceContract(unittest.TestCase):
                 text,
             )
 
-        for text in (source_behavior, consumer_template):
-            self.assertIn(
-                "Unless the maintainer explicitly requests another\n  language for the current prompt"
-                if text is source_behavior
-                else "Unless the user explicitly requests another language for the current prompt",
-                text,
-            )
+        normalized_behavior = " ".join(source_behavior.split())
+        self.assertIn("authored or refined prompt defaults to English", normalized_behavior)
+        consumer_template = (ROOT / "harness/template/AGENTS.md.jinja").read_text(encoding="utf-8")
+        self.assertIn("Prompt language is a separate current-request choice", " ".join(consumer_template.split()))
 
         prompt_refine = (ROOT / "harness/skills/prompt-refine/SKILL.md").read_text(
             encoding="utf-8"
@@ -223,22 +219,19 @@ class Phase3SkillSourceContract(unittest.TestCase):
             {"update-summary/SKILL.md"},
         )
         agents = (ROOT / "AGENTS.md").read_text(encoding="utf-8")
-        architecture = (ROOT / ".agents/directives/02-architecture.md").read_text(encoding="utf-8")
-        self.assertIn("no separate tracked Skill inventory", agents)
-        self.assertIn("source-project-only exception", architecture)
-        self.assertIn(
-            "Source-root, usage-gate, and mutation boundaries otherwise belong in repository directives",
-            architecture,
-        )
+        ownership = (ROOT / "docs/architecture/agent-directive-ownership.md").read_text(encoding="utf-8")
+        self.assertIn("no separate tracked Skill inventory", " ".join(agents.split()))
+        self.assertIn("source-project-only", (ROOT / ".agents/directives/02-architecture.md").read_text(encoding="utf-8"))
+        self.assertIn("Source 규칙", ownership)
 
     def test_source_routes_prompt_and_wiki_work_to_current_product_contracts(self) -> None:
         behavior = (ROOT / ".agents/directives/01-behavior.md").read_text(encoding="utf-8")
         agents = (ROOT / "AGENTS.md").read_text(encoding="utf-8")
-        self.assertIn("automatically load `aigent-hive:prompt-refine`", behavior)
-        self.assertIn("hive source-wiki query --target <source-root>", behavior)
-        self.assertIn("installed product `hive usage`", agents)
-        self.assertIn("sole usage-policy authority", agents)
-        self.assertIn("Never start a source watcher", agents)
+        self.assertIn("automatically load installed `aigent-hive:prompt-refine`", behavior.lower())
+        self.assertIn("Source Wiki lookup", behavior)
+        self.assertIn("hive source-wiki query --target", agents)
+        self.assertIn("session-bound `hive usage enforce`", agents)
+        self.assertIn("07-installed-usage-guard.md", agents)
 
     def test_source_directives_continue_agent_owned_work_until_closure(self) -> None:
         behavior = (ROOT / ".agents/directives/01-behavior.md").read_text(encoding="utf-8")
@@ -254,7 +247,6 @@ class Phase3SkillSourceContract(unittest.TestCase):
             "all todos",
             "until completion",
             "A progress report that identifies a remaining agent-owned action must not end the task.",
-            "unpublished authorized release is work to continue",
             "awaiting-user-authority",
             "awaiting-external-evidence",
         ):
@@ -262,11 +254,11 @@ class Phase3SkillSourceContract(unittest.TestCase):
         self.assertIn("Final Response Closure Gate", state)
         self.assertIn("Continue execution when any `agent-owned` item remains", state)
         self.assertIn("Remaining Agent-Owned Actions", session)
-        self.assertIn("An `active` manifest prohibits a final completion claim", session)
+        self.assertIn("active manifest", session)
         self.assertIn("Before marking a whole Goal or task `blocked`", behavior)
-        self.assertIn("Abort a continued task only when an exact blocker requires a user manual action", behavior)
+        self.assertIn("Abort continued work only when an exact blocker requires user manual action", behavior)
         self.assertIn("Codex must be\n  restarted", behavior)
-        self.assertIn("Treat every release request as implementation, verification, or a numbered public test by", behavior)
+        self.assertIn("Stable release authority", " ".join(behavior.split()))
         self.assertIn("Stable `tag`, protected `main` integration", agents)
         self.assertEqual(fixture["terminal_instruction"], "Proceed until all todos are complete.")
         self.assertEqual(fixture["expected_state_before_actions"], "active")
@@ -281,32 +273,30 @@ class Phase3SkillSourceContract(unittest.TestCase):
         harness = (ROOT / "harness/directives/00-project-harness.md").read_text(
             encoding="utf-8"
         )
-        renderer = (ROOT / "crates/hive-render/src/lib.rs").read_text(encoding="utf-8")
+        common = (ROOT / "crates/hive-cli/src/user_directives.rs").read_text(encoding="utf-8")
         user_install = (ROOT / "crates/hive-cli/src/user_install.rs").read_text(
             encoding="utf-8"
         )
         user_setup = (ROOT / "crates/hive-cli/src/user_setup.rs").read_text(encoding="utf-8")
-        for text in (template, harness, renderer):
-            for required in (
-                "all todos",
-                "until completion",
-                "A progress report naming such work must not end the task.",
-                "awaiting-user-authority",
-                "awaiting-external-evidence",
-                "Before marking a whole Goal or task `blocked`",
-                "Treat every release request as implementation, verification, or a numbered public test by default.",
-                "Abort a continued task only for an exact user-owned manual blocker, a required Codex restart, or completed task criteria.",
-            ):
-                self.assertIn(required, text)
-        for required in (
-            "Before a final response, classify every remaining item",
-            "`all todos`, `until completion`, `do not stop` 또는 같은 완료 요청",
-            "`agent-owned` 작업 `0건`일 때만 완료 표기",
-            "전체 Goal·task의 `blocked` 표기 전 독립 `agent-owned` criterion `0건` closure 확인",
-            "모든 출시 요청의 기본값: 구현·검증·번호 공개 시험판",
-        ):
-            self.assertIn(required, user_install)
-            self.assertIn(required, user_setup)
+        self.assertIn("00-project-harness.md", template)
+        for required in ("all todos", "awaiting-user-authority", "required Codex restart", "Stable tag"):
+            self.assertIn(required, harness)
+        for required in ("UserDirectiveLanguage::En", "UserDirectiveLanguage::Ko", "Codex restart", "Stable tag"):
+            self.assertIn(required, common)
+        self.assertIn("work_completion_block", user_install)
+        self.assertIn("work_completion_block", user_setup)
+
+    def test_agent_directive_ownership_and_size_gate(self) -> None:
+        process = subprocess.run(
+            ["python", "scripts/check-agent-directives.py", "--output", "json"],
+            cwd=ROOT,
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        result = json.loads(process.stdout)
+        self.assertEqual(process.returncode, 0, result)
+        self.assertEqual(result["failure_count"], 0, result)
 
     def test_global_setup_contract_uses_describe_progress_and_conditional_integrations(self) -> None:
         skill = (SKILLS / "user-setup/SKILL.md").read_text(encoding="utf-8")

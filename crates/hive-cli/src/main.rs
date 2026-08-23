@@ -40,6 +40,7 @@ mod update_discovery;
 mod usage;
 mod usage_control;
 mod usage_install;
+mod user_directives;
 mod user_install;
 mod user_setup;
 

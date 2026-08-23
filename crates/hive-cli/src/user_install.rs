@@ -2633,22 +2633,35 @@ fn render_user_guidance(
             }
         },
     );
-    let body = body.replacen(
-        "- Before presenting pending actions, finish every safe, in-scope, automatable task. Present only the remaining user-owned steps as a concise ordered guide with the exact action, expected result, and reason user authority is required. Separate failures or impossible tasks with their causes and recovery paths.\n",
-        "- Before presenting pending actions, finish every safe, in-scope, automatable task. Present only the remaining user-owned steps as a concise ordered guide with the exact action, expected result, and reason user authority is required. Separate failures or impossible tasks with their causes and recovery paths.\n\\
-- For `all todos`, `until completion`, `do not stop`, or an equivalent terminal request, continue while any in-scope agent-owned inspection, fix, verification, commit, permitted push, CI observation, or authorized publication remains. A progress report naming such work must not end the task. Before a final response, classify every remaining item as `agent-owned`, `awaiting-user-authority`, `awaiting-external-evidence`, or `blocked`; only no `agent-owned` work permits completion.\n\\
-- Before marking a whole Goal or task `blocked`, obtain a closure that reports no independent `agent-owned` criterion. Record a partial host, fixture, or external-evidence failure against its criterion and continue every independent criterion. Hive hooks may return one bounded nudge but never mutate host Goal or task state.\n\\
-- Treat every release request as implementation, verification, or a numbered public test by default. Stable tag, protected-branch integration, publication, and installation require the user's explicit authorization of the named stable version in the current request. Never infer stable authority from `release`, `ship`, `continue`, or `all todos`.\n",
-        1,
-    );
-    let body = body.replacen(
-        "- 남은 작업 제시 전 범위 안에서 안전하게 자동 처리 가능한 작업을 모두 완료. 사용자 권한이 필요한 단계만 정확한 행동·예상 결과·권한 필요 이유를 포함한 간결한 순서 안내로 제시. 실패·불가능 작업은 원인과 해결 경로를 분리해 제시.\n",
-        "- 남은 작업 제시 전 범위 안에서 안전하게 자동 처리 가능한 작업을 모두 완료. 사용자 권한이 필요한 단계만 정확한 행동·예상 결과·권한 필요 이유를 포함한 간결한 순서 안내로 제시. 실패·불가능 작업은 원인과 해결 경로를 분리해 제시.\n\\
-- `all todos`, `until completion`, `do not stop` 또는 같은 완료 요청: 범위 안 Agent 소유 조사·수정·검증·commit·허용된 push·CI 관찰·승인된 게시 작업이 남은 동안 계속 진행. 해당 작업이 남았다는 진행 보고로 task 종료 금지. 최종 응답 전 남은 항목을 `agent-owned`, `awaiting-user-authority`, `awaiting-external-evidence`, `blocked`로 분류. `agent-owned` 작업 `0건`일 때만 완료 표기.\n\\
-- 전체 Goal·task의 `blocked` 표기 전 독립 `agent-owned` criterion `0건` closure 확인. 일부 host·fixture·외부 증거 결손은 해당 criterion 기록 뒤 독립 criterion 지속. Hive hook의 revision당 1회 nudge 외 Goal·task 상태 변경 금지.\n\\
-- 모든 출시 요청의 기본값: 구현·검증·번호 공개 시험판. Stable tag·protected branch 통합·게시·설치: 현재 요청 안 버전명 포함 사용자 명시 승인 전 금지. `release`, `ship`, `continue`, `all todos`만으로 stable 권한 추론 금지.\n",
-        1,
-    );
+    let body = match setup.map(|config| config.interface_language) {
+        Some(crate::user_setup::InterfaceLanguage::En) => {
+            let anchor = "- Before presenting pending actions, finish every safe, in-scope, automatable task. Present only the remaining user-owned steps as a concise ordered guide with the exact action, expected result, and reason user authority is required. Separate failures or impossible tasks with their causes and recovery paths.\n";
+            body.replacen(
+                anchor,
+                &format!(
+                    "{anchor}{}",
+                    crate::user_directives::work_completion_block(
+                        crate::user_directives::UserDirectiveLanguage::En,
+                    )
+                ),
+                1,
+            )
+        }
+        Some(crate::user_setup::InterfaceLanguage::Ko) => {
+            let anchor = "- 남은 작업 제시 전 범위 안에서 안전하게 자동 처리 가능한 작업을 모두 완료. 사용자 권한이 필요한 단계만 정확한 행동·예상 결과·권한 필요 이유를 포함한 간결한 순서 안내로 제시. 실패·불가능 작업은 원인과 해결 경로를 분리해 제시.\n";
+            body.replacen(
+                anchor,
+                &format!(
+                    "{anchor}{}",
+                    crate::user_directives::work_completion_block(
+                        crate::user_directives::UserDirectiveLanguage::Ko,
+                    )
+                ),
+                1,
+            )
+        }
+        None => body,
+    };
     let explanation_style = setup.map_or(
         "- Explain in simple terms by default. Use concrete examples when they materially improve understanding, but do not force irrelevant examples or weaken technical precision. / 기본 설명은 쉬운 말로 작성. 이해에 도움이 될 때 구체적 예시 사용. 관련 없는 예시 강제 또는 기술적 정확성 약화 금지.\n",
         |config| match config.interface_language {

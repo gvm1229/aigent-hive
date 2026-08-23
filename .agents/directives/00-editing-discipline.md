@@ -36,13 +36,8 @@ When editing existing code:
 - Match existing style, even if you'd do it differently.
 - If you notice unrelated dead code, mention it - don't delete it.
 
-When simplifying documentation or knowledge surfaces:
-- Inventory the durable claims that would disappear before shortening or removing content.
-- Move still-valid knowledge to the smallest fitting canonical topic document or atomic fact note
-  before removing it from the original surface.
-- Do not treat a shorter README, guide, overview, or Wiki page as authority to delete knowledge.
-- Delete active knowledge only when it is deprecated, incorrect, or superseded. Identify the
-  reason, replacement when one exists, and ordinary Git-history recoverability.
+For documentation simplification, apply the current-truth preservation procedure in
+`04-documentation-state.md`. This editing discipline grants no knowledge deletion authority.
 
 When your changes create orphans:
 - Remove imports/variables/functions that YOUR changes made unused.

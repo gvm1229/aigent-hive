@@ -954,11 +954,8 @@ class SourceWikiConformance(unittest.TestCase):
         decision = (
             ROOT / "docs/decisions/ADR-0011-source-wiki-independence.md"
         ).read_text(encoding="utf-8")
-        for surface in (
-            source_manifest,
-            documentation_directive,
-            decision,
-        ):
+        self.assertIn("04-documentation-state.md", source_manifest)
+        for surface in (documentation_directive, decision):
             self.assertIn("agent-reviewed", surface.lower())
             self.assertIn("task fact", surface.lower().replace("-", " "))
             self.assertIn("raw transcript", surface.lower())

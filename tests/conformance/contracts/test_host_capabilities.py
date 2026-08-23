@@ -16,14 +16,13 @@ CURRENT_REQUIRED = {
         "dispatch-uncertain",
     ),
     "harness/directives/00-project-harness.md": (
-        "host-native capabilities by default for new v0.9 runs",
-        "only after explicit user selection",
+        "verified host-native capabilities",
+        "after explicit user selection",
         "including a 0.8.x external owner",
     ),
     "harness/template/AGENTS.md.jinja": (
-        "Start every new v0.9 run with verified host-native capabilities",
-        "only when the user explicitly selects that external compatibility layer",
-        "including a 0.8.x OMX/OMC owner",
+        ".agents/directives/00-project-harness.md",
+        "no silent runtime switch",
     ),
     "harness/skills/project-setup/SKILL.md": (
         "Default a new run to the active host's verified native capabilities",
@@ -72,7 +71,7 @@ FROZEN_080 = {
 class V09HostNativeContractTests(unittest.TestCase):
     def test_current_contracts_default_host_native_and_bound_external_selection(self) -> None:
         for relative, required in CURRENT_REQUIRED.items():
-            text = (REPOSITORY_ROOT / relative).read_text(encoding="utf-8")
+            text = " ".join((REPOSITORY_ROOT / relative).read_text(encoding="utf-8").split())
             with self.subTest(path=relative):
                 for phrase in required:
                     self.assertIn(phrase, text)
@@ -91,9 +90,9 @@ class V09HostNativeContractTests(unittest.TestCase):
         self.assertEqual(findings, [], "\n".join(findings))
 
     def test_source_contract_allows_native_orchestration_without_provider_runtime(self) -> None:
-        text = (REPOSITORY_ROOT / ".agents/directives/02-architecture.md").read_text(
+        text = " ".join((REPOSITORY_ROOT / ".agents/directives/02-architecture.md").read_text(
             encoding="utf-8"
-        )
+        ).split())
         for required in (
             "logical scheduling",
             "team coordination",

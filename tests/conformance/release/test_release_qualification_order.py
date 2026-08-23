@@ -39,7 +39,7 @@ class ReleaseQualificationOrderContract(unittest.TestCase):
             "stable publication blocked while any active in-scope checklist item is incomplete",
             "uniquely numbered public test version",
             "A post-test change resets the affected acceptance item",
-            "stable channel supplied the first or only evidence",
+            "stable channel that supplied the first or only evidence",
         ):
             with self.subTest(required=required):
                 self.assertIn(required, text)

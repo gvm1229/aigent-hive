@@ -1,23 +1,16 @@
 # 06. Session Coordination Directive
 
-This directive governs concurrent agent edits.
+Owns active-session manifests, edit-path reservations, and concurrent-agent conflict checks. Git,
+commit, and worktree lifecycle rules belong to `03-workflow.md`.
 
 ## Manifest
 
-Before editing tracked files, create:
-
-```text
-.agents/work/active-sessions/<session-id>.md
-```
-
-The manifest is local scratch state and must never be committed.
-
-Required fields:
+Before editing tracked files, create or resume `.agents/work/active-sessions/<session-id>.md` with:
 
 ```markdown
 # Active Session: <session-id>
 
-- Agent: <agent or host>
+- Agent: <host or agent>
 - Branch: <branch>
 - Status: active | awaiting-user-authority | awaiting-external-evidence | blocked | complete
 - Task: <summary>
@@ -25,74 +18,46 @@ Required fields:
 - Last updated: <ISO-8601>
 
 ## Remaining Agent-Owned Actions
-
 - <action or none>
 
 ## Closure Evidence
-
-- <required evidence, external owner, or none>
+- <evidence, owner, or none>
 
 ## Intended Edit Paths
-
-- path/from/repository/root
+- <project-relative path>
 
 ## Currently Edited Paths
-
-- path/from/repository/root
+- <project-relative path or none>
 
 ## Temporary Worktrees
-
-- /absolute/path | branch-or-ref | purpose | removal boundary | status: active | removed | retained (reason)
-
-Use one primary worktree unless the workload needs genuinely parallel independent changes that
-cannot safely run in sequence. Do not create another worktree for convenience, visual separation,
-or routine concern splitting. Remove every completed temporary worktree immediately after its
-commits are reachable from the intended remote or primary ref, its verification passes, and no
-uncommitted or unpushed required work remains.
+- <absolute path | ref | purpose | removal boundary | status>
 
 ## Notes / Blockers
-
-- <optional note>
+- <note or none>
 
 ## Commit Concerns
-
-- <concern-id>: <intent> | paths: <exact paths or bounded families> | status: pending | editing | verified | committed | verification: <nearest check>
+- <id>: <intent> | paths: <exact paths> | status: <state> | verification: <check>
 ```
 
-## Conflict Check
+The manifest is ignored runtime coordination state, never canonical project memory or a commit.
 
-1. Read all active manifests.
-2. Ignore only manifests explicitly marked `done`.
-3. Compare exact paths and parent/child directory scopes.
-4. Stop before editing when another active session overlaps.
-5. Update the manifest when scope changes.
-6. Mark it `done` or delete it after completion.
+## Conflict check
 
-## Commit Coordination
+1. Read every manifest not marked `done` or `complete`.
+2. Compare exact paths and ancestor/descendant scopes.
+3. Stop before an overlapping automated write from another live session.
+4. Update this session's reservation before adding a path.
+5. Assign each edited path to exactly one commit concern.
+6. Serialize a shared foundational file; do not let agents edit it concurrently.
 
-1. Assign every edited tracked path to exactly one commit concern before mutation.
-2. Keep each delegated editing scope inside one concern. Record the concern ID, owned paths, and
-   nearest verification in the primary session manifest.
-3. Integrate, verify, and commit a completed concern before opening or delegating the next
-   independent concern.
-4. When agents must touch a shared foundational file, serialize that file under one concern and
-   commit the foundation before dependent concerns.
-5. Do not use concurrent editing, a shared milestone, or a final full-suite gate as a reason to
-   accumulate independently revertible work in one uncommitted worktree.
-6. Before the final response, resolve every active-session `Temporary Worktrees` entry. Verify
-   owned cleanup with `git worktree list --porcelain`; record an exact retained path and reason
-   when cleanup cannot safely proceed.
+Use one primary worktree. Additional worktree authority, lifecycle, cleanup, and commit sequencing
+come only from `03-workflow.md`; record any authorized temporary worktree here.
 
-## Task Closure
+## Closure record
 
-1. Keep the manifest `active` while an in-scope agent-owned action remains. A progress update is
-   not a transition out of `active`.
-2. Before a final task response, update `Remaining Agent-Owned Actions` and `Closure Evidence`.
-   An `active` manifest prohibits a final completion claim.
-3. Use `awaiting-user-authority` only for a protected action requiring the maintainer. Use
-   `awaiting-external-evidence` only when the named external actor must provide evidence. Both
-   states require exact action, expected evidence, and owner in the manifest.
-4. Use `blocked` only for a repeated condition with a recovery path. Use `complete` only after
-   every scoped action and evidence condition is satisfied.
-
-This is advisory coordination. Serialize overlapping edits under the default two-branch policy. Use another branch or worktree only when the user explicitly authorizes that exception.
+- Keep status `active` while `01-behavior.md` classifies any scoped action as agent-owned.
+- Before a final response, refresh remaining actions and closure evidence. An active manifest
+  prohibits a completion claim.
+- `awaiting-user-authority` and `awaiting-external-evidence` require exact owner and expected proof.
+- `blocked` requires the run-wide repeated condition and recovery path defined by `01-behavior.md`.
+- Resolve every temporary-worktree entry as removed or retained with an exact reason before closure.
