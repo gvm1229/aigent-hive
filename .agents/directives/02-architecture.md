@@ -50,8 +50,9 @@ Skill source; host-specific files remain thin projections.
 - Use narrow descriptions and host-native discovery; do not add a duplicate prompt-classifier hook.
 - Keep Hive execution Skills declarative. They may validate state and prepare envelopes, but never
   call a provider or launch a process.
-- Keep reusable product Skills under `harness/skills/<name>/`. The source-project-only exception is
-  `.agents/skills/update-summary/`; it is nonshipping and there is no second source Skill inventory.
+- Keep reusable product Skills under `harness/skills/<name>/`. The explicit source-project-only
+  exceptions are `.agents/skills/update-summary/` and `.agents/skills/draft-devlog/`; both are
+  nonshipping and do not create a general source Skill inventory.
 - Reuse a consumer workflow in source only after scope, consent, safety, and conformance review.
   Never copy installed project state or weaken source-root, usage, or mutation boundaries.
 - Apply a Skill rename through the complete current inventory and transitive rename ledger in one

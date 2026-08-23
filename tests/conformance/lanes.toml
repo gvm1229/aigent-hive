@@ -41,6 +41,7 @@ modules = [
   "tests.conformance.contracts.test_skill_routing",
   "tests.conformance.contracts.test_static_contracts",
   "tests.conformance.contracts.test_run_role_contracts",
+  "tests.conformance.contracts.test_source_draft_devlog",
   "tests.conformance.contracts.test_judge_contracts",
   "tests.conformance.contracts.test_usage_control",
   "tests.conformance.contracts.test_vector_feasibility",

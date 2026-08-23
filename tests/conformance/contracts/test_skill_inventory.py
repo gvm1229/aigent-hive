@@ -139,7 +139,7 @@ OMC_MERGE = frozenset(
     }
 )
 
-CURRENT_SOURCE_SKILLS = frozenset({"update-summary"})
+CURRENT_SOURCE_SKILLS = frozenset({"draft-devlog", "update-summary"})
 CURRENT_CONSUMER_SKILLS = frozenset(
     {
         "quick-answer", "project-setup", "code-polish", "verified-workflow", "knowledge-import",
@@ -469,7 +469,7 @@ class V09SkillInventoryDocumentContract(unittest.TestCase):
         )
         self.assertEqual(actual_source, CURRENT_SOURCE_SKILLS)
         self.assertEqual(actual_consumer, CURRENT_CONSUMER_SKILLS)
-        self.assertEqual(len(CURRENT_SOURCE_SKILLS), 1)
+        self.assertEqual(len(CURRENT_SOURCE_SKILLS), 2)
         self.assertEqual(len(CURRENT_CONSUMER_SKILLS), 26)
         self.assertEqual(len(CURRENT_SHARED_SKILLS), 0)
 
@@ -481,7 +481,10 @@ class V09SkillInventoryDocumentContract(unittest.TestCase):
         )
         self.assertEqual(len(consumer_values), len(CURRENT_CONSUMER_SKILLS))
         self.assertEqual(set(consumer_values), CURRENT_CONSUMER_SKILLS)
-        self.assertIn("Source 전용 Skill: 비출하 `update-summary` 1건", catalog_text)
+        self.assertIn(
+            "Source 전용 Skill: 비출하 `update-summary|draft-devlog` 2건",
+            catalog_text,
+        )
 
     def test_source_provenance_and_license_states_are_digest_bound(self) -> None:
         required = (

@@ -216,7 +216,7 @@ class Phase3SkillSourceContract(unittest.TestCase):
                 path.relative_to(source_skills).as_posix()
                 for path in source_skills.rglob("SKILL.md")
             },
-            {"update-summary/SKILL.md"},
+            {"draft-devlog/SKILL.md", "update-summary/SKILL.md"},
         )
         agents = (ROOT / "AGENTS.md").read_text(encoding="utf-8")
         ownership = (ROOT / "docs/architecture/agent-directive-ownership.md").read_text(encoding="utf-8")

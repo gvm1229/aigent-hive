@@ -1,0 +1,6 @@
+interface:
+  display_name: "개발 일지 초안"
+  short_description: "포트폴리오 기술 블로그 초안 작성·명시 발행"
+  default_prompt: "Use $draft-devlog to create an unpublished Korean technical blog draft from verified evidence."
+policy:
+  allow_implicit_invocation: true

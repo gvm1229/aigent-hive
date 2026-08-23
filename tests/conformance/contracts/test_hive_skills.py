@@ -53,17 +53,23 @@ def skill_names(root: Path) -> set[str]:
 
 
 class V09HiveSkillProjectionTests(unittest.TestCase):
-    def test_current_product_inventory_is_exact_with_one_source_only_exception(self) -> None:
+    def test_current_product_inventory_is_exact_with_source_only_exceptions(self) -> None:
         self.assertEqual(skill_names(SKILL_ROOT), EXPECTED_SKILLS)
         self.assertEqual(skill_names(PLUGIN_ROOT), EXPECTED_SKILLS)
         self.assertEqual(skill_names(TEMPLATE_ROOT), EXPECTED_SKILLS)
         self.assertEqual(skill_names(CLAUDE_TEMPLATE_ROOT), EXPECTED_SKILLS)
-        self.assertEqual(skill_names(SOURCE_SKILL_ROOT), {"update-summary"})
-        source_summary = (SOURCE_SKILL_ROOT / "update-summary" / "SKILL.md").read_text(
-            encoding="utf-8"
+        self.assertEqual(
+            skill_names(SOURCE_SKILL_ROOT), {"draft-devlog", "update-summary"}
         )
-        self.assertIn("source-project-only", source_summary)
-        self.assertIn("Do not add it to `harness/`", source_summary)
+        for name in ("draft-devlog", "update-summary"):
+            source_skill = (SOURCE_SKILL_ROOT / name / "SKILL.md").read_text(
+                encoding="utf-8"
+            )
+            self.assertIn("source-project-only", source_skill)
+            self.assertTrue(
+                "never enters `harness/`" in source_skill
+                or "Do not add it to `harness/`" in source_skill
+            )
 
     def test_each_current_product_skill_is_byte_identical_in_all_projections(self) -> None:
         for name in EXPECTED_SKILLS:

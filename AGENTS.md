@@ -66,6 +66,6 @@ Source Wiki lookup is target-specific. For this root, use `hive source-wiki quer
 | `docs/`, `tests/fixtures/` | Source documentation and synthetic evidence | Never |
 
 Use disposable consumer targets only under `tests/work/`. Do not create consumer `.hive/` or
-consumer host projections in the source root. The only tracked source-project Skill is the
-maintainer-authorized, nonshipping `.agents/skills/update-summary/`; there is no separate tracked
-Skill inventory.
+consumer host projections in the source root. The explicit maintainer-authorized nonshipping
+source-project Skills are `.agents/skills/update-summary/` and `.agents/skills/draft-devlog/`;
+there is no separate tracked Skill inventory beyond these explicit exceptions.
