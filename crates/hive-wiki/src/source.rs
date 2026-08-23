@@ -28,6 +28,7 @@ const INDEX_RELATIVE: &str = ".agents/work/source-wiki/index.sqlite3";
 const LOCK_RELATIVE: &str = ".agents/work/source-wiki/.index.lock";
 const LOCK_TIMEOUT: Duration = Duration::from_secs(5);
 const INDEX_MAX_BYTES: usize = 64 * 1024 * 1024;
+const INDEX_SCHEMA_VERSION: &str = "2";
 const FACT_BODY_MAX_BYTES: usize = 800;
 const LOCK_MARKER_V1: &[u8] = b"schema_version=1\n";
 const LOCK_MARKER_V2: &[u8] = b"schema_version=2\n";
@@ -331,7 +332,7 @@ pub fn rebuild_index(root: &Path) -> Result<SourceIndexOutcome, WikiError> {
     transaction
         .execute(
             "INSERT INTO meta(key, value) VALUES
-             ('schema_version', '1'), ('logical_digest', ?1), ('page_count', ?2)",
+             ('schema_version', '2'), ('logical_digest', ?1), ('page_count', ?2)",
             params![logical_digest, pages.len().to_string()],
         )
         .map_err(sqlite_error)?;
@@ -1165,6 +1166,13 @@ fn load_current_index(
 }
 
 fn verify_index(connection: &Connection, digest: &str, page_count: usize) -> Result<(), WikiError> {
+    let schema_version: String = connection
+        .query_row(
+            "SELECT value FROM meta WHERE key = 'schema_version'",
+            [],
+            |row| row.get(0),
+        )
+        .map_err(sqlite_error)?;
     let actual: String = connection
         .query_row(
             "SELECT value FROM meta WHERE key = 'logical_digest'",
@@ -1181,7 +1189,8 @@ fn verify_index(connection: &Connection, digest: &str, page_count: usize) -> Res
     let integrity: String = connection
         .query_row("PRAGMA quick_check", [], |row| row.get(0))
         .map_err(sqlite_error)?;
-    if actual != digest
+    if schema_version != INDEX_SCHEMA_VERSION
+        || actual != digest
         || usize::try_from(count).ok() != Some(page_count)
         || usize::try_from(fts_count).ok() != Some(page_count)
         || integrity != "ok"
