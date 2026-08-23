@@ -264,6 +264,8 @@ class Phase3SkillSourceContract(unittest.TestCase):
         self.assertIn("Remaining Agent-Owned Actions", session)
         self.assertIn("An `active` manifest prohibits a final completion claim", session)
         self.assertIn("Before marking a whole Goal or task `blocked`", behavior)
+        self.assertIn("Abort a continued task only when an exact blocker requires a user manual action", behavior)
+        self.assertIn("Codex must be\n  restarted", behavior)
         self.assertIn("Treat every release request as implementation, verification, or a numbered public test by", behavior)
         self.assertIn("Stable `tag`, protected `main` integration", agents)
         self.assertEqual(fixture["terminal_instruction"], "Proceed until all todos are complete.")
@@ -293,6 +295,7 @@ class Phase3SkillSourceContract(unittest.TestCase):
                 "awaiting-external-evidence",
                 "Before marking a whole Goal or task `blocked`",
                 "Treat every release request as implementation, verification, or a numbered public test by default.",
+                "Abort a continued task only for an exact user-owned manual blocker, a required Codex restart, or completed task criteria.",
             ):
                 self.assertIn(required, text)
         for required in (

@@ -116,6 +116,10 @@ This directive governs agent behavior while developing Aigent Hive.
   `agent-owned` criterion. Record a partial host, fixture, or external-evidence failure against
   its criterion and continue every independent criterion. Hive hooks may return one bounded nudge
   but never mutate host Goal or task state.
+- Abort a continued task only when an exact blocker requires a user manual action, Codex must be
+  restarted, or every scoped criterion is complete. Treat every other failure, unavailable host,
+  failed test, stale reference, incomplete CI result, or partial evidence gap as agent-owned work
+  and continue with the next safe bounded action.
 - Treat every release request as implementation, verification, or a numbered public test by default. Stable `tag`, protected-branch integration, publication, and installation require the
   maintainer's explicit authorization of the named stable version in the current request. Never
   infer stable authority from `release`, `ship`, `continue`, `all todos`, a successful test, or a
