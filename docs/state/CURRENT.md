@@ -5,7 +5,7 @@
 - product version: `0.9.5`
 - 다음 target: `0.10.0-test`
 - 활성 계획: [`PLAN.md`](../plans/PLAN.md)
-- 현재 milestone: Host-neutral 연속 실행·Skill migration 수용
+- 현재 milestone: Historical Skill migration 수용
 
 ## 최근 완료
 
@@ -21,6 +21,7 @@
 - Hive-native Markdown 관계 graph의 public command·격리·derived generation 구현
 - `verified-workflow` rename·자연어 routing과 `adversarial-judge` 기본 구현 완료
 - Continuation closure·bounded Stop hook·중단 3조건 경계 구현 완료
+- Codex·Claude·Antigravity continuation adapter·승인형 Stop hook·취소·bounded nudge 수용 완료
 
 ## 현재 검증 근거
 
@@ -37,7 +38,6 @@
 
 ## `0.10.0` 남은 범위
 
-- Host-neutral continuation의 세 host 수용과 남은 capability 판정
 - 모든 stable predecessor의 retired Skill·projection cleanup과 direct jump upgrade
 - Adversarial Judge의 three-host launch·quorum 수용
 - 관계 graph·Graphify code-only adapter의 남은 hard gate와 upgrade·rollback 검증
@@ -56,8 +56,8 @@
 
 ## 다음 작업
 
-1. `CON10`, `VWF10`의 세 host continuation 수용 마감
-2. `SKM10` historical Skill registry·direct jump cleanup 마감
+1. `SKM10` historical Skill registry·direct jump cleanup 마감
+2. `VWF10-006` retired workflow migration과 three-host routing 검증
 3. `JDG10` adversarial Judge three-host 수용 마감
 4. `KRG10`, `VEC10` 관계·vector gate와 조건부 구현 마감
 5. `REL10-001–004` 번호 공개 시험판 준비·수용

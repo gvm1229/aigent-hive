@@ -19,10 +19,10 @@
 - [x] [CON10-002] `agent-owned|awaiting-user-authority|awaiting-external-evidence|blocked|excluded` closure schema와 `ready_for_final` 판정 계약 — `97490e6`; pending criterion·blocked reason·excluded ID 배열·closure digest 제공
 - [x] [CON10-003] `hive run closure --target <root> --run <id> --output json` read-only CLI와 exact checklist·evidence·제외 ID 검증 — `97490e6`; canonical `PLAN.md`·`STATUS.md` run ID·criteria 일치 확인과 무변경 회귀 검증
 - [x] [CON10-004] Host-neutral continuation envelope: run ID·revision·session binding·next action·retry budget·closure digest·cancel state — `8025085`; legacy fail-open·recorded session digest·최대 3회 retry·cancel-requested·remaining budget closure 회귀
-- [ ] [CON10-005] Codex·Claude·Antigravity adapter별 Goal·task 지속과 Stop hook capability mapping, unsupported의 mutation `0건`
-- [ ] [CON10-006] 선택형 hook preview·exact digest 승인·non-clobber merge·disable·uninstall·rollback 계약
-- [ ] [CON10-007] 과도한 지속 방지: 사용자 interrupt·cancel 즉시 허용, `blocked_on_user`·terminal·stale·malformed·foreign session fail-open, revision당 nudge 1회, bounded consecutive block cap
-- [ ] [CON10-008] three-host fixture와 중간 종료·정상 완료·취소·stale state·hook 손상·host 미지원 회귀 검증, 채택 또는 defer 결정
+- [x] [CON10-005] Codex·Claude·Antigravity adapter별 Goal·task 지속과 Stop hook capability mapping, unsupported의 mutation `0건` — `3014e85`, `b9a4186`, `58faa44`; three-host owner mapping과 host-owned·spawn `false` 회귀
+- [x] [CON10-006] 선택형 hook preview·exact digest 승인·non-clobber merge·disable·uninstall·rollback 계약 — `3efe600`, `e69ae5c`; exact Stop consent와 projection·revocation 회귀
+- [x] [CON10-007] 과도한 지속 방지: 사용자 interrupt·cancel 즉시 허용, `blocked_on_user`·terminal·stale·malformed·foreign session fail-open, revision당 nudge 1회, bounded consecutive block cap — `6568374`, `91ad940`, `6d9266d`, `d0f8bde`; retry 최대 3회와 revision별 1회 claim
+- [x] [CON10-008] three-host fixture와 중간 종료·정상 완료·취소·stale state·hook 손상·host 미지원 회귀 검증, 채택 또는 defer 결정 — 선택형 adapter 채택; `hive-cli` 3·`hive-render` 2·Python continuation/security 90 통과
 - [x] [CON10-009] 전체 Goal·task의 `blocked` 전 closure 강제: 남은 독립 `agent-owned` 항목이 있으면 항목별 `awaiting-external-evidence` 기록 뒤 다음 작업 지속, host hook·Hive가 Goal·task 상태를 직접 변경하지 않는 회귀 검증 — `5257f45`; `blocked_criteria`의 모든 미통과 criterion 범위 일치, partial block 거부, run-wide block·세 host 지침·stable 기본 금지 회귀
 - [x] [CON10-010] continuation 중단 허용 사유 3개 강제: 사용자 수동 해결 blocker, Codex restart, 모든 criterion 완료. 그 밖의 실패·host 결손·시험 실패·stale reference·부분 증거 결손: 다음 안전 작업 지속 — `static contracts`; source·consumer·verified-workflow projection의 exact abort boundary 회귀
 

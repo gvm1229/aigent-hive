@@ -1,6 +1,6 @@
 # Aigent Hive 활성 계획
 
-> Revision: 271
+> Revision: 272
 > 기준일: 2026-08-23
 > Product version: `0.9.5` stable
 > 다음 target: `0.10.0-test`
@@ -59,12 +59,12 @@
 | Host-owned Skill 예약 | 1 | 0 | 100% |
 | Nested project scan | 1 | 0 | 100% |
 | Agent 지침 경량화 | 7 | 0 | 100% |
-| Host-neutral 연속 실행 | 6 | 4 | 60.0% |
+| Host-neutral 연속 실행 | 10 | 0 | 100% |
 | Verified workflow | 5 | 1 | 83.3% |
 | Adversarial judge | 4 | 4 | 50.0% |
 | Skill migration cleanup | 3 | 7 | 30.0% |
 | `0.10.0` 출시 | 0 | 7 | 0% |
-| **합계** | **30** | **49** | **38.0%** |
+| **합계** | **34** | **45** | **43.0%** |
 
 ## Required load order
 
