@@ -2,7 +2,7 @@ schema_version: 1
 skills:
 - name: adversarial-judge
   source_type: built-in
-  content_digest: sha256:4ce38fbe91253068c198c3f0a9372d9177287729f35cae2b163f7db13d8c21e7
+  content_digest: sha256:9b8641f4c858698cb8959ed311cc2bcefb7764e1465b6109ec4343c2dc27f215
   side_effect_class: read-only
   capabilities:
   - filesystem-read

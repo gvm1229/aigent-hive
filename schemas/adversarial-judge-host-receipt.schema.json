@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/gvm1229/aigent-hive/schemas/adversarial-judge-host-receipt.schema.json",
+  "title": "Aigent Hive host-owned adversarial Judge receipt",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "host", "package_digest", "assignment_digest", "slot_id", "requester_id", "task_agent_id", "judge_instance_id", "launch", "result", "completion_authority"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "host": { "enum": ["codex", "claude", "antigravity"] },
+    "package_digest": { "$ref": "#/$defs/digest" },
+    "assignment_digest": { "$ref": "#/$defs/digest" },
+    "slot_id": { "type": "string", "minLength": 1, "maxLength": 128 },
+    "requester_id": { "type": "string", "minLength": 1, "maxLength": 128 },
+    "task_agent_id": { "type": "string", "minLength": 1, "maxLength": 128 },
+    "judge_instance_id": { "type": "string", "minLength": 1, "maxLength": 128 },
+    "launch": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["owner", "host_task_id_digest", "model_id", "reasoning_effort", "clean_context", "occurred_at"],
+      "properties": {
+        "owner": { "const": "host" },
+        "host_task_id_digest": { "$ref": "#/$defs/digest" },
+        "model_id": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "reasoning_effort": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "clean_context": { "const": true },
+        "occurred_at": { "type": "string", "format": "date-time" }
+      }
+    },
+    "result": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "host_task_id_digest", "verdict_locator", "verdict_digest", "findings", "occurred_at"],
+      "properties": {
+        "status": { "enum": ["completed", "cancelled", "unsupported", "unavailable", "rejected"] },
+        "host_task_id_digest": { "$ref": "#/$defs/digest" },
+        "verdict_locator": { "type": ["string", "null"], "minLength": 1, "maxLength": 512, "pattern": "^judge/[A-Za-z0-9._/-]+\\.json$" },
+        "verdict_digest": { "anyOf": [{ "$ref": "#/$defs/digest" }, { "type": "null" }] },
+        "findings": {
+          "type": "array",
+          "maxItems": 128,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["severity", "evidence_locator", "message_digest"],
+            "properties": {
+              "severity": { "enum": ["critical", "high", "medium", "low", "info"] },
+              "evidence_locator": { "type": "string", "minLength": 1, "maxLength": 512 },
+              "message_digest": { "$ref": "#/$defs/digest" }
+            }
+          }
+        },
+        "occurred_at": { "type": "string", "format": "date-time" }
+      },
+      "allOf": [{
+        "if": { "properties": { "status": { "const": "completed" } } },
+        "then": { "properties": { "verdict_locator": { "type": "string" }, "verdict_digest": { "$ref": "#/$defs/digest" } } },
+        "else": { "properties": { "verdict_locator": { "type": "null" }, "verdict_digest": { "type": "null" }, "findings": { "maxItems": 0 } } }
+      }]
+    },
+    "completion_authority": { "const": false }
+  },
+  "$defs": { "digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" } }
+}

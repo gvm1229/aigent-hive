@@ -136,6 +136,9 @@ class Phase5JudgeStaticContracts(unittest.TestCase):
         cls.adversarial_envelope_schema = read_json(
             SCHEMAS / "adversarial-judge-envelope.schema.json"
         )
+        cls.host_receipt_schema = read_json(
+            SCHEMAS / "adversarial-judge-host-receipt.schema.json"
+        )
         cls.package_validator = Draft202012Validator(
             cls.package_schema,
             format_checker=FormatChecker(),
@@ -167,6 +170,10 @@ class Phase5JudgeStaticContracts(unittest.TestCase):
         )
         cls.adversarial_envelope_validator = Draft202012Validator(
             cls.adversarial_envelope_schema,
+            format_checker=FormatChecker(),
+        )
+        cls.host_receipt_validator = Draft202012Validator(
+            cls.host_receipt_schema,
             format_checker=FormatChecker(),
         )
 
@@ -212,6 +219,36 @@ class Phase5JudgeStaticContracts(unittest.TestCase):
         for name in valid_requests:
             with self.subTest(name=name):
                 self.package_request_validator.validate(read_json(FIXTURES / name))
+
+    def test_three_host_receipts_are_typed_and_clean_context_bound(self) -> None:
+        assignment = read_json(FIXTURES / "assignment-elevated.json")
+        expected = {slot["slot_id"]: slot for slot in assignment["slots"]}
+        for host in ("codex", "claude", "antigravity"):
+            with self.subTest(host=host):
+                receipt = read_json(FIXTURES / f"host-receipt-{host}.json")
+                self.host_receipt_validator.validate(receipt)
+                slot = expected[receipt["slot_id"]]
+                self.assertEqual(receipt["host"], host)
+                self.assertEqual(receipt["package_digest"], assignment["package_digest"])
+                self.assertEqual(receipt["assignment_digest"], assignment["assignment_digest"])
+                self.assertEqual(receipt["judge_instance_id"], slot["judge_instance_id"])
+                self.assertNotEqual(receipt["judge_instance_id"], receipt["task_agent_id"])
+                self.assertEqual(
+                    receipt["launch"]["host_task_id_digest"],
+                    receipt["result"]["host_task_id_digest"],
+                )
+                self.assertFalse(receipt["completion_authority"])
+
+    def test_host_receipt_schema_rejects_contamination_and_hidden_authority(self) -> None:
+        receipt = read_json(FIXTURES / "host-receipt-codex.json")
+        contaminated = copy.deepcopy(receipt)
+        contaminated["prior_judge_results"] = ["PASS"]
+        with self.assertRaises(ValidationError):
+            self.host_receipt_validator.validate(contaminated)
+        authoritative = copy.deepcopy(receipt)
+        authoritative["completion_authority"] = True
+        with self.assertRaises(ValidationError):
+            self.host_receipt_validator.validate(authoritative)
 
     def test_unknown_clean_context_fields_are_invalid_request_shape(self) -> None:
         hostile = read_json(FIXTURES / "package-request-hostile.json")
@@ -446,6 +483,8 @@ class Phase5JudgeCliContracts(unittest.TestCase):
         operation: str,
         request: Path,
         trust_root: Path | None = None,
+        package: str | None = None,
+        assignment: str | None = None,
     ) -> tuple[subprocess.CompletedProcess[str], dict[str, Any]]:
         command = [
             str(self.binary),
@@ -462,6 +501,10 @@ class Phase5JudgeCliContracts(unittest.TestCase):
         ]
         if trust_root is not None:
             command.extend(("--trust-root", str(trust_root)))
+        if package is not None:
+            command.extend(("--package", package))
+        if assignment is not None:
+            command.extend(("--assignment", assignment))
         command.extend(("--output", "json"))
         process = subprocess.run(
             command,
@@ -504,6 +547,58 @@ class Phase5JudgeCliContracts(unittest.TestCase):
         self.package_validator.validate(package)
         self.assertEqual(package, read_json(FIXTURES / "package-elevated.json"))
         self.assertEqual(package["package_digest"], package_digest(package))
+
+    def test_three_host_receipts_bind_launch_result_and_verdict(self) -> None:
+        for host in ("codex", "claude", "antigravity"):
+            with self.subTest(host=host):
+                process, payload = self.run_judge(
+                    "receipt",
+                    FIXTURES / f"host-receipt-{host}.json",
+                    package="judge/package-elevated.json",
+                    assignment="judge/assignment-elevated.json",
+                )
+                self.assertEqual(process.returncode, 0, payload)
+                self.assertEqual(payload["code"], "hive.judge-host-receipt-verified")
+                self.assertFalse(payload["data"]["completion_authority"])
+                self.assertTrue(payload["data"]["quorum_required"])
+                self.assertFalse(payload["data"]["spawned"])
+
+    def test_self_judge_assignment_drift_and_unsupported_result_fail_closed(self) -> None:
+        for name, mutate in (
+            (
+                "self-judge",
+                lambda value: value.update(
+                    judge_instance_id=value["task_agent_id"]
+                ),
+            ),
+            (
+                "assignment-drift",
+                lambda value: value.update(
+                    assignment_digest="sha256:" + ("f" * 64)
+                ),
+            ),
+            (
+                "unsupported",
+                lambda value: value["result"].update(
+                    status="unsupported",
+                    verdict_locator=None,
+                    verdict_digest=None,
+                    findings=[],
+                ),
+            ),
+        ):
+            with self.subTest(name=name):
+                receipt = read_json(FIXTURES / "host-receipt-codex.json")
+                mutate(receipt)
+                request = self.write_judge_json(f"host-receipt-{name}.json", receipt)
+                process, payload = self.run_judge(
+                    "receipt",
+                    request,
+                    package="judge/package-elevated.json",
+                    assignment="judge/assignment-elevated.json",
+                )
+                self.assertNotEqual(process.returncode, 0, payload)
+                self.assertNotEqual(payload["status"], "success")
 
     def test_package_rejects_forbidden_context_without_writing(self) -> None:
         process, payload = self.run_judge(

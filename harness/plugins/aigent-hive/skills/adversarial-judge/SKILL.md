@@ -15,6 +15,12 @@ Prepare the smallest clean-context Judge request for an explicitly selected subj
 4. Run `hive judge package` to validate the clean-context package. Do not recreate package validation in prose.
 5. Require the active host to launch a separate Judge only after a schema-valid assignment and capability receipt exist. Unsupported hosts return `unsupported`; do not substitute a process, provider API, watcher, or another agent.
 6. Treat findings as diagnostic. Completion authority remains with the existing authenticated quorum contract.
+7. Validate the host response against `adversarial-judge-host-receipt.schema.json`. Require exact
+   package, assignment, slot, Judge identity, and host-task digest binding. The Judge identity must
+   differ from the requester and task agent. The launch and result must name the same host task.
+8. Send only a completed, digest-bound verdict to `hive judge quorum`. A cancelled, unsupported,
+   unavailable, rejected, assignment-drifted, self-Judge, or contaminated result ends this Judge
+   step without retry or fallback. Diagnostic findings never grant completion authority.
 
 ## Boundaries
 
