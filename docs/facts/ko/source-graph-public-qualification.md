@@ -5,7 +5,7 @@ topic_slug: source-graph-public-qualification
 language: ko
 counterpart: ../en/source-graph-public-qualification.md
 title: "Source graph 공개 자격 검증"
-summary: "0.10.0 source graph가 Source Wiki FTS와 근거 있는 Markdown edge를 결합하고 출시 후보마다 직접 사실 30개·관계 질문 30개를 검증함."
+summary: "0.10.0 source graph의 Source Wiki FTS·근거 있는 Markdown edge 결합과 출시 후보별 직접 사실 30개·관계 질문 30개 검증."
 tags: [graph, knowledge, qualification, v0-10]
 aliases: ["source graph 수용", "source 관계 자격 검증"]
 sources:
