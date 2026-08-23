@@ -18,7 +18,7 @@ sources:
   - "repo:harness/template/AGENTS.md.jinja#sha256:c256f2dfdf227d99a56138d6099b0eaf99c12a8d4e49e831e45b553b5db142a9"
   - "repo:tests/conformance/contracts/test_static_contracts.py#sha256:ecbe2bbaa6391edc69f3490ca00dd14b9fc202e9ea03e7880939f6146ad97cbd"
 links: [automated-user-handoff, source-development]
-reviewed_revision: "git:5257f45"
+reviewed_revision: "git:5257f450b35d0eea039d2b2a27cff4e811ecb83c"
 status: active
 ---
 
