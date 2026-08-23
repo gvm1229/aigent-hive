@@ -33,6 +33,7 @@
 | 검증 결과 명확성 | [en](en/verification-result-clarity.md) | [ko](ko/verification-result-clarity.md) |
 | 사용자 인계 전 자동 처리 | [en](en/automated-user-handoff.md) | [ko](ko/automated-user-handoff.md) |
 | Agent 자율 실행 지속 | [en](en/agent-autonomous-continuation.md) | [ko](ko/agent-autonomous-continuation.md) |
+| Agent 지침 단일 소유권 | [en](en/agent-directive-ownership.md) | [ko](ko/agent-directive-ownership.md) |
 | Host-neutral 연속 실행 gate | [en](en/host-neutral-continuation.md) | [ko](ko/host-neutral-continuation.md) |
 | Verified workflow Skill | [en](en/verified-workflow.md) | [ko](ko/verified-workflow.md) |
 | Adversarial Judge Skill | [en](en/adversarial-judge.md) | [ko](ko/adversarial-judge.md) |
