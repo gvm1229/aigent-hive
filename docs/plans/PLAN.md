@@ -2,8 +2,9 @@
 
 > Revision: 278
 > 기준일: 2026-08-23
-> Product version: `0.9.5` stable
-> 다음 target: `0.10.0-test`
+> Product version: `0.10.0`
+> Stable baseline: `0.9.5`
+> 다음 target: `0.10.0-test.1`
 > 현재 milestone: 관계 graph·Graphify adapter 마감
 > 확정 범위: [`ADR-0020`](../decisions/ADR-0020-0.10.0-product-scope.md)
 

@@ -2,8 +2,9 @@
 
 - 기준 branch: `feature/0.10.0@50c7333`
 - 원격 기준: `origin/feature/0.10.0` 동기화
-- product version: `0.9.5`
-- 다음 target: `0.10.0-test`
+- product version: `0.10.0`
+- stable baseline: `0.9.5`
+- 다음 target: `0.10.0-test.1`
 - 활성 계획: [`PLAN.md`](../plans/PLAN.md)
 - 현재 milestone: 관계 graph·Graphify adapter 마감
 

@@ -19,6 +19,7 @@ field·동등성·언어 계약 검사.
 
 | 제품 버전 | 상태 | 문서 |
 | --- | --- | --- |
+| `0.10.0` | 관계 graph·검증형 workflow·historical Skill cleanup 공개 시험 준비 | [`Release`](0.10.0.md) |
 | `0.9.5` | 네이티브 사용량 복구·지식 이전 안내·갱신 수용 patch | [`Release`](0.9.5.md) · [`구독자 요약`](0.9.5.subscriber.ko.md) |
 | `0.9.4` | Skill 식별자·전역 검증·지식 기록·공개 안내 patch | [`Release`](0.9.4.md) · [`구독자 요약`](0.9.4.subscriber.ko.md) |
 | `0.9.2` | usage guard 정본 전환과 공개 문서 동기화 patch | [`0.9.2`](0.9.2.md) |
