@@ -9,13 +9,13 @@ summary: "Automatic retrieval stays isolated; explicit collection retrieval is d
 tags: [collection, knowledge, promotion, retrieval, v0-9-3]
 aliases: ["Automatic knowledge promotion", "Cross-project knowledge"]
 sources:
-  - "repo:crates/hive-cli/src/knowledge.rs#sha256:eb9876cbd3af9428f4bd09216421b5d741e1e506dfc93ef478e5305c1c513193"
+  - "repo:crates/hive-cli/src/knowledge.rs#sha256:72af50e7f2498159a60ea4a90f7e77fd96fd712506922ec683eeecbcae4f889a"
   - "repo:crates/hive-wiki/src/rag.rs#sha256:5fc5feca2ab250f5f91c8d3a678c315fabe4fdcf12763fb664a0a6b4bcbe0c81"
   - "repo:crates/hive-wiki/src/store.rs#sha256:39f62b339764e470446c61bfb392b2f8637908738261c8fe5bc9b711da0bb40d"
   - "repo:harness/skills/knowledge-import/SKILL.md#sha256:b73e6c82eb5ef9105781383f59211a982ed70b0f0ecf1690619f3b9b30f4730d"
   - "repo:harness/skills/knowledge-recall/SKILL.md#sha256:531437bfcb9786cd5221de32eb5ad536bfd07973db159ca0b15a5df858ffa923"
 links: [global-knowledge-rag, knowledge-portability-scan, shared-index]
-reviewed_revision: "git:6d5798e1a4ed03a79f0d97ed596d3229121af5e8"
+reviewed_revision: "git:838842805e453e0508d054e4aa67d7a59b3aa53f"
 status: active
 ---
 

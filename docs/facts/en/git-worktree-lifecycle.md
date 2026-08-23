@@ -10,9 +10,9 @@ tags: [git, workflow, worktree]
 aliases: ["temporary clone cleanup", "worktree cleanup"]
 sources:
   - "repo:.agents/directives/03-workflow.md#sha256:3ed250c39a40765032e18cf624c72441741476cc33fa797c2765d24a222fe14f"
-  - "repo:.agents/directives/06-session-coordination.md#sha256:a24536201b77619549620d88612c186b769e90a774043895370a064779d8d758"
+  - "repo:.agents/directives/06-session-coordination.md#sha256:13a6dc2c19bfeef0de3feef6bdf78ebcba5226753a0a663520c63e8cfdf42913"
 links: [source-development]
-reviewed_revision: "git:f6139fe4aabe5237bb1da5cb85364da7c978e698"
+reviewed_revision: "git:838842805e453e0508d054e4aa67d7a59b3aa53f"
 status: active
 ---
 
