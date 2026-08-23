@@ -306,6 +306,21 @@ jobs:
             --summary "docs/releases/$PRODUCT_VERSION.subscriber.ko.md" \
             --banner "docs/assets/branding/hive-readme-banner-ko.png" \
             --validate-only
+      - name: Verify stable Skill history before publication
+        if: ${{ inputs.channel == 'stable' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          npm view aigent-hive versions --json >"$RUNNER_TEMP/npm-stable-versions.json"
+          gh release list --limit 100 --json tagName,isPrerelease \
+            >"$RUNNER_TEMP/github-stable-releases.json"
+          python3 scripts/check-stable-skill-ledger.py \
+            --ledger harness/release/stable-skill-ledger.yml \
+            --historical harness/skills/historical-builtins.yml \
+            --target-version "$PRODUCT_VERSION" \
+            --npm-versions "$RUNNER_TEMP/npm-stable-versions.json" \
+            --github-releases "$RUNNER_TEMP/github-stable-releases.json" \
+            --output "$RUNNER_TEMP/stable-skill-ledger-receipt.json"
       - name: Refuse existing npm versions
         run: |
           packages=(
