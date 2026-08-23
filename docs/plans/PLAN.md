@@ -1,6 +1,6 @@
 # Aigent Hive 활성 계획
 
-> Revision: 280
+> Revision: 281
 > 기준일: 2026-08-23
 > Product version: `0.10.0`
 > Stable baseline: `0.9.5`
@@ -61,11 +61,11 @@
 | Nested project scan | 1 | 0 | 100% |
 | Agent 지침 경량화 | 7 | 0 | 100% |
 | Host-neutral 연속 실행 | 10 | 0 | 100% |
-| Verified workflow | 6 | 0 | 100% |
+| Verified workflow | 12 | 0 | 100% |
 | Adversarial judge | 8 | 0 | 100% |
 | Skill migration cleanup | 10 | 0 | 100% |
 | `0.10.0` 출시 | 4 | 3 | 57.1% |
-| **합계** | **76** | **3** | **96.2%** |
+| **합계** | **82** | **3** | **96.5%** |
 
 ## Required load order
 
@@ -87,7 +87,7 @@ Archive·backlog·완료 history의 자동 선행 load 금지.
 | [`active/nested-project-knowledge-scan-0.10.0.md`](active/nested-project-knowledge-scan-0.10.0.md) | `SCP10-003` | Nested project scan |
 | [`active/agent-directive-optimization-0.10.0.md`](active/agent-directive-optimization-0.10.0.md) | `DIR10-*` | Source·소비자 Agent 지침 경량화 |
 | [`active/host-neutral-continuation-0.10.0.md`](active/host-neutral-continuation-0.10.0.md) | `CON10-*` | Goal·closure·선택형 hook |
-| [`active/verified-workflow-0.10.0.md`](active/verified-workflow-0.10.0.md) | `VWF10-*` | 자연어 routing·실행 graph |
+| [`active/verified-workflow-0.10.0.md`](active/verified-workflow-0.10.0.md) | `VWF10-*`, `VWA10-*` | 자연어 routing·실행 graph·격리 통합 수용 |
 | [`active/adversarial-judge-0.10.0.md`](active/adversarial-judge-0.10.0.md) | `JDG10-*` | 명시적 독립 adversarial Judge |
 | [`active/skill-retirement-migration-0.10.0.md`](active/skill-retirement-migration-0.10.0.md) | `SKM10-*` | Rename·폐기 artifact cleanup |
 | [`active/release-0.10.0.md`](active/release-0.10.0.md) | `REL10-*` | 번호 시험판·안정판 출시 |

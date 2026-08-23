@@ -1,6 +1,6 @@
 # 현재 상태
 
-- 기준 branch: `feature/0.10.0@496718f`
+- 기준 branch: `feature/0.10.0@f050bb6`
 - 원격 기준: `origin/feature/0.10.0` 동기화
 - product version: `0.10.0`
 - stable baseline: `0.9.5`
@@ -39,16 +39,21 @@
 - Candidate `32633724977`: 다섯 target package·attestation·graph 자격·0.9.1–0.9.5 project coverage 통과
 - Publication `32634206001`: `0.10.0-test.1` 게시, npm `latest=0.9.5` 불변
 - 현재 Windows: CLI `0.10.0-test.1` 설치와 Codex 사용자 projection `0.10.0` validate 통과
+- Disposable verified workflow 수용: `f050bb65`; 자연어 routing·run 생성·의도적 실패/재시도·독립 Judge receipt·새 process/session 복구·사용자 취소 6단계 통과
 
 ## 현재 검증 근거
 
 - Directive gate: failure `0건`
-- Source Wiki: 156 page, error·warning `0건`
+- Source Wiki: 158 page, error·warning `0건`
 - Python lane: documentation 45, security 103, contract 380, integration 84, release 58 통과
 - Rust `hive-render` 63, `hive-cli` user setup 46·user install 89, historical upgrade 3 통과
 - Rust workspace `--all-targets --all-features` 전 범위와 Clippy `-D warnings` 통과
 - Human documentation style 19 통과·Windows 전용 1건 건너뜀
 - Markdown link 5 통과
+- Verified workflow 단일 수용 영수증 `sha256:a2fefa0da9027582bcfbcdc44da5dae33d22491bcb6c323cee78bcc0b0e81169`, provider process·stable release 실행 `0건`
+- Routing·세 host Judge receipt·취소 closure Python 집중 회귀 3건 통과
+- Rust retry policy와 canonical loop recovery 집중 회귀는 Windows GNU target에서 각 1건 통과
+- 현재 shell에는 MSVC `link.exe`가 없어 fresh MSVC 재빌드는 실행하지 못함. 기존 Windows CLI 공개 수용과 GNU 집중 회귀를 대체 근거로 사용했으며, 이번 실행이 새 MSVC build를 증명하지는 않음
 - GitHub Actions: feature branch push trigger 없음, CI run 생성 `0건`
 - Release lane의 macOS·POSIX 전용 8건과 integration의 Windows 권한 필요 symbolic link 12건 건너뜀
 - 위 건너뜀은 현재 Windows host의 제한이며 해당 운영체제 수용 근거 아님
