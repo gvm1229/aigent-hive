@@ -16,6 +16,7 @@
 - [`AI_Learning` 지식의 Hive 적용 후보](ai-learning-hive-application-candidates-2026-08-21.md)
 - [`0.10.0` Backlog·Archive 후보 검토](0.10-backlog-archive-candidate-review-2026-08-22.md)
 - [Vector search·Anthropic file memory 검토](vector-memory-0.10-feasibility-2026-08-22.md)
+- [`0.10.0` vector 재검증 결과](vector-requalification-0.10-2026-08-24.md)
 - [v0.9 OMX·OMC·Hive capability inventory](v0.9-omx-omc-capability-inventory.md)
 - [Discord·Notion host integration 조사](discord-notion-host-integrations.md)
 - [Native host·custom subagent feasibility](native-host-feasibility-2026-08-12.md)

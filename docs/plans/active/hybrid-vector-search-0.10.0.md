@@ -20,24 +20,24 @@ SQLite FTS의 exact 검색을 유지하면서 표현이 다른 의미·다국어
 - [x] [VEC10-005] `tests/work/vector-research/` 격리 prototype: 같은 canonical chunk·embedding의 세 engine build·query·delete·rebuild — Dense quality와 동일 384-dimension storage engine 격리 실행
 - [x] [VEC10-006] 50,000 chunk·100 collection benchmark와 semantic Recall@10·exact-fact 무회귀·scope filter·disk·RAM·build 비용 비교 — Dense semantic +15.0 points·exact 무회귀, engine p95 통과, full embedding build 실패
 - [x] [VEC10-007] Hard gate 판정과 exact engine·embedding 선택 또는 `defer`; 통과 실패의 product dependency 추가 `0건` — `defer`, dependency `0건`
-- [ ] [VEC10-008] 재검증 통과 시 derived vector generation schema, model·engine receipt, chunk digest mapping과 scope별 물리 격리 구현 — 첫 gate의 `not-applicable` closure는 과거 기록으로 보존
-- [ ] [VEC10-009] 승인형 local embedding helper preview·install·staging build·atomic activation·update·disable 계약 구현
-- [ ] [VEC10-010] FTS·dense vector·native relation·Graphify code 결과의 rank fusion·citation·matched-lane 표시 구현
-- [ ] [VEC10-011] Canonical 변경의 incremental vector 갱신·full rebuild 동등성, stale model·dimension mismatch·손상 index fallback·rollback 구현
-- [ ] [VEC10-012] `.hivekb` vector·model 제외, destination rebuild, Windows x64·macOS arm64·Linux musl 공개 시험 수용
+- [x] [VEC10-008] 재검증 통과 시 derived vector generation schema, model·engine receipt, chunk digest mapping과 scope별 물리 격리 구현 — full-build gate 실패로 `not-applicable`, 제품 schema `0건`
+- [x] [VEC10-009] 승인형 local embedding helper preview·install·staging build·atomic activation·update·disable 계약 구현 — gate 실패로 `not-applicable`, 설치 경로 `0건`
+- [x] [VEC10-010] FTS·dense vector·native relation·Graphify code 결과의 rank fusion·citation·matched-lane 표시 구현 — gate 실패로 `not-applicable`, 기존 FTS·graph 유지
+- [x] [VEC10-011] Canonical 변경의 incremental vector 갱신·full rebuild 동등성, stale model·dimension mismatch·손상 index fallback·rollback 구현 — 연구 pipeline만 검증, 제품 index `0건`
+- [x] [VEC10-012] `.hivekb` vector·model 제외, destination rebuild, Windows x64·macOS arm64·Linux musl 공개 시험 수용 — 제품 byte 부재로 bundle·release 수용 `not-applicable`
 
 ## 재검증 checklist
 
 - [x] [VQR10-001] 특정 engine을 미리 채택하지 않고 embedding pipeline 최적화와 vector 재검증을 `0.10.0` 범위로 유지보수자 승인
-- [ ] [VQR10-002] 기존 30문서 반복 50,000 corpus의 content digest 중복 제거 결과와 50,000 unique realistic chunk corpus를 분리 측정
-- [ ] [VQR10-003] Batch 크기·ONNX thread·CPU·model별 full build throughput, model 크기·license·dimension·한국어·다국어 품질 비교
-- [ ] [VQR10-004] 완료 batch checkpoint·중단 재개·digest cache·새 항목·변경·삭제 incremental pipeline과 100개 30초 gate 검증
-- [ ] [VQR10-005] Query embedding을 포함한 warm·cold end-to-end p95와 FTS·vector·graph routing별 반환 byte 측정
-- [ ] [VQR10-006] 같은 실제 embedding으로 Qdrant Edge·sqlite-vec를 50,000 unique chunk에서 build·filter·query·delete·rebuild 재비교, SQLite-Vector license 제외 유지
-- [ ] [VQR10-007] Source·project·user-root·shared·private·confidential별 물리 index 격리와 cross-scope ANN·metadata·count 누출 `0건` 검증
-- [ ] [VQR10-008] Immutable generation·staging·atomic pointer·stale corpus/model/dimension 검출·손상 fallback·rollback·FTS 정상 동작 검증
-- [ ] [VQR10-009] Windows x64·macOS arm64·Linux musl의 helper·model·engine package, offline rebuild, memory·disk·upgrade·disable 수용
-- [ ] [VQR10-010] 모든 hard gate 통과 조합 하나만 optional hybrid adapter로 채택하고 실패 시 product dependency `0건` 유지
+- [x] [VQR10-002] 반복 50,000 corpus의 30 digest·5.75초와 고유 50,000 corpus의 50,000 digest·1,000 probe 분리 측정
+- [x] [VQR10-003] MiniLM batch·4 ONNX thread 실제 측정과 FastEmbed 다국어 세 model의 크기·license·dimension 비교 — 가장 작은 model full build 실패
+- [x] [VQR10-004] Digest cache·batch checkpoint·중단 재개·원자 pointer 구현, 100개 변경 7.20초·10개 추가/삭제 1.42초
+- [x] [VQR10-005] Query embedding 포함 warm p95 37.31ms·cold 643.45ms, 기존 FTS·graph 반환 근거 유지
+- [x] [VQR10-006] 50,000 실제 embedding prerequisite 실패로 Qdrant Edge·sqlite-vec 재비교 중단, 이전 engine 수치는 참고값만 유지
+- [x] [VQR10-007] 여섯 scope의 physical research root 분리·제품 ANN 없음 확인, 실제 50,000 cross-scope ANN은 prerequisite 실패로 미실행
+- [x] [VQR10-008] Research generation staging·checkpoint·atomic pointer·resume/one-shot digest 동등성, 미완료 generation 활성화 `0건`, FTS 변경 `0건`
+- [x] [VQR10-009] Windows helper 수용 뒤 reference hard gate 실패로 macOS·Linux 후속 수용 중단, 제품 package `0건`
+- [x] [VQR10-010] Hard gate 판정 `defer`: full build·세 platform 실패, optional adapter·product dependency `0건`
 
 ## 이전 gate 판정
 

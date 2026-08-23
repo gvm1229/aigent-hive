@@ -1,6 +1,6 @@
 # Aigent Hive 활성 계획
 
-> Revision: 285
+> Revision: 286
 > 기준일: 2026-08-24
 > Product version: `0.10.0`
 > Stable baseline: `0.9.5`
@@ -61,7 +61,7 @@
 | 범위 | 완료 | 미완료 | 진행률 |
 | --- | ---: | ---: | ---: |
 | 관계·검색 graph | 16 | 0 | 100% |
-| Hybrid vector search | 9 | 14 | 39.1% |
+| Hybrid vector search | 23 | 0 | 100% |
 | Host-owned Skill 예약 | 1 | 0 | 100% |
 | Nested project scan | 1 | 0 | 100% |
 | Agent 지침 경량화 | 7 | 0 | 100% |
@@ -72,7 +72,7 @@
 | 한국어 언어 core | 1 | 11 | 8.3% |
 | Source `draft-devlog` | 6 | 0 | 100% |
 | `0.10.0` 출시 | 0 | 7 | 0% |
-| **합계** | **81** | **32** | **71.7%** |
+| **합계** | **95** | **18** | **84.1%** |
 
 ## Required load order
 
