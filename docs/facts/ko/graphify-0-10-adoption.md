@@ -9,12 +9,12 @@ summary: "0.10.0의 Hive-native Markdown 관계 graph·선택형 Graphify full-r
 tags: [graphify, knowledge, security, v0-10]
 aliases: ["Graphify 도입", "knowledge graph 판정"]
 sources:
-  - "repo:docs/plans/active/knowledge-relationship-graph-0.10.0.md#sha256:bb96ac59c3c7bab86a7c56a9191da463ad9ff2c9029b48febc6617b3569d0eb5"
+  - "repo:docs/plans/active/knowledge-relationship-graph-0.10.0.md#sha256:cb76dcf1ca263a1fb5f0f7e0c030decd04c4dd65207980cb0698f1451848109c"
   - "repo:docs/plans/backlog/graphify-knowledge-graph.md#sha256:6ab392f6613412116a8fc24ad447236f319ceea7dee257ace138a300fc3cf960"
   - "repo:docs/research/ai-learning-hive-application-candidates-2026-08-21.md#sha256:14eb21209b147e7ca9947eae8afb09c059d53aedf353c1802620bf8bf4cc0038"
-  - "repo:docs/research/graphify-0.10-feasibility.md#sha256:6bc52a7a6fa89601c5b20d851cb721e6b0f5d0e59b51b6d18963baaa69b6930e"
+  - "repo:docs/research/graphify-0.10-feasibility.md#sha256:a86ab9852f0fbd1a1737c97fcd236cf140fdc194e1f00d0e213e213a6f2fe600"
 links: [global-knowledge-rag, knowledge-storage, shared-index]
-reviewed_revision: "git:c78c7993807302d4e66246aacc7732c4848eb4b0"
+reviewed_revision: "git:e5c2c599562121ed3dc43143c16a0b1f063cefa2"
 status: active
 ---
 
@@ -25,4 +25,5 @@ status: active
   global graph의 collection 공개 범위 격리 부재
 - 전면 지식 graph: `0.10.0` 범위 제외
 - 승인 범위: Hive-native Markdown 관계 graph와 Graphify full-rebuild code-only adapter
-- 현재 상태: native graph schema·직접 Markdown edge 추출 구현, 수용 대기
+- 구현: Exact consent·세 target wheel lock·code-only receipt·grounded locator·atomic activation·native fallback
+- 남은 범위: 세 운영체제 공개 시험 수용

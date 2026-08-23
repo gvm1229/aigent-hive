@@ -5,21 +5,25 @@ topic_slug: hybrid-vector-search-0-10
 language: ko
 counterpart: ../en/hybrid-vector-search-0-10.md
 title: "0.10.0 Hybrid vector search gate"
-summary: "FTS·vector·hybrid 검색 비교 뒤 품질·latency·보안·이식성 gate 통과 조합만 optional local vector adapter로 구현하는 0.10.0 계약."
+summary: "50,000 document offline embedding build의 10분 초과로 optional vector adapter를 defer한 0.10.0 판정"
 tags: [knowledge, retrieval, v0-10, vector]
 aliases: ["Vector database gate"]
 sources:
   - "repo:docs/decisions/ADR-0020-0.10.0-product-scope.md#sha256:c313a53d8ed114aaf9b6303263730d282b11c6d8d52a71c249999b62969214fe"
-  - "repo:docs/plans/active/hybrid-vector-search-0.10.0.md#sha256:c608753d9238fa9002e33f69b8558e1433aecc467db5cdf8c946a0dbfe3b9442"
-  - "repo:docs/research/vector-memory-0.10-feasibility-2026-08-22.md#sha256:e8580fffed7ee2ea0e123f4171bc7a03e7ae5444faedfa5e9bf1fac5796475d7"
+  - "repo:docs/plans/active/hybrid-vector-search-0.10.0.md#sha256:0c1da49e94d8865101bfe30c2f95919c8f562ec6aa301118f02b1ed5bc79ffdd"
+  - "repo:docs/research/evidence/vector-hard-gate-windows-2026-08-23.json#sha256:41517d801330c1c299178b5b1ae75ed27fb5106c8af6ce4e2083b66cec30f09a"
+  - "repo:docs/research/vector-memory-0.10-feasibility-2026-08-22.md#sha256:03dca07c4f6b5928268f4bc7c5337d1604371eadcd5b8a7b85b88ec3f65f215c"
 links: [global-knowledge-rag, graphify-0-10-adoption, knowledge-storage, v0-10-product-scope]
-reviewed_revision: "git:a0f288b6b962cd5bede27065fa39f708764a621f"
+reviewed_revision: "git:e5c2c599562121ed3dc43143c16a0b1f063cefa2"
 status: active
 ---
 
 # `0.10.0` hybrid vector search gate
 
-- 비교: FTS·Qdrant Edge·SQLite vector engine, gold query `120개`, chunk `50,000개`
-- 채택: semantic Recall@10 향상, exact fact 무회귀, latency·storage·scope gate 통과
-- Embedding: pinned local non-generative indexer, provider API·API key `0건`
-- 실패: vector product dependency `0건`, 기존 FTS·graph 일정 유지
+- 품질: Semantic Recall@10 `+15.0 points`, hybrid exact 질문 `100%`
+- Engine: Qdrant Edge·sqlite-vec·SQLite-Vector 50,000 lookup·storage 기준 통과
+- 실패: Windows x64 offline embedding full build 10분 초과
+- 추가 제외: SQLite-Vector의 비공개 상용 소비자 license 부적합
+- 판정: `defer`
+- Product dependency: Vector engine·embedding runtime·model·schema `0건`
+- 기존 기능: FTS·native graph·Graphify code adapter 유지

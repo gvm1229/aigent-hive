@@ -13,9 +13,9 @@ sources:
   - "repo:scripts/test-lanes.py#sha256:08d6ee2113e301f836a217733539f9e01b96f4c6569f4f71c4e02635fab0bfa8"
   - "repo:tests/conformance/contracts/test_run_role_contracts.py#sha256:c77febdf50b689937897ea1848ae0f38468d14843dbeda5486678eb523447902"
   - "repo:tests/conformance/integration/test_connected_setup_lifecycle.py#sha256:f74ae9ecf4d442e4171b4f0b28bb4d2a7ad75167858d8cba436e9710021e12ab"
-  - "repo:tests/conformance/lanes.toml#sha256:bb7f8713a1b1c63428cdde197f68028868126cd8436fa9cde0afc1b155fa192e"
+  - "repo:tests/conformance/lanes.toml#sha256:e3e69a745f7959bb959d32fd06ef3ea8e72ce9d7ed152d2f90041e1724a28a5d"
 links: [release-verification, test-fault-isolation]
-reviewed_revision: "git:15128a22d61452bb22fd8d9e9168acd9d26340f8"
+reviewed_revision: "git:e5c2c599562121ed3dc43143c16a0b1f063cefa2"
 status: active
 ---
 
