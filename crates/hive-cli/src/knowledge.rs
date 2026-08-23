@@ -376,6 +376,13 @@ fn run_graph(arguments: &[String]) -> Result<KnowledgeResult, WikiError> {
             "matches": query_generation(&graph, node_id, 50),
             "metadata": query_node_metadata(&graph, node_id, 10),
             "read_command": format!("hive knowledge read --target <dir> --page-id {node_id} --output json"),
+            "cost_receipt": {
+                "nodes_scanned": graph.nodes.len(),
+                "edges_scanned": graph.edges.len(),
+                "maximum_results": 50,
+                "metadata_limit": 10,
+                "body_bytes": 0
+            },
             "writes": false,
         })
     } else {
@@ -390,6 +397,11 @@ fn run_graph(arguments: &[String]) -> Result<KnowledgeResult, WikiError> {
             "generation_path": locator,
             "active": active || action == "rebuild",
             "writes": matches!(action, "rebuild" | "disable" | "export"),
+            "cost_receipt": {
+                "nodes": graph.nodes.len(),
+                "edges": graph.edges.len(),
+                "body_bytes": 0
+            },
         })
     };
     Ok(success(

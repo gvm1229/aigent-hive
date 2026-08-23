@@ -73,6 +73,7 @@ pub fn build_native_generation(scope: &str, pages: &[WikiPage]) -> Result<GraphG
     }
     let mut nodes = pages
         .iter()
+        .filter(|page| graph_lifecycle(&page.frontmatter.status))
         .map(|page| GraphNode {
             id: page.frontmatter.id.clone(),
             locator: page.relative_path.clone(),
@@ -83,7 +84,12 @@ pub fn build_native_generation(scope: &str, pages: &[WikiPage]) -> Result<GraphG
         .collect::<Vec<_>>();
     nodes.sort();
     nodes.dedup();
-    let edges = extract_markdown_edges(pages);
+    let eligible = pages
+        .iter()
+        .filter(|page| graph_lifecycle(&page.frontmatter.status))
+        .cloned()
+        .collect::<Vec<_>>();
+    let edges = extract_markdown_edges(&eligible);
     finalize_generation(scope, "native-markdown", nodes, edges)
 }
 
@@ -109,6 +115,9 @@ pub fn build_native_generation_incremental(
     let mut nodes = Vec::new();
     let mut edges = Vec::new();
     for page in pages {
+        if !graph_lifecycle(&page.frontmatter.status) {
+            continue;
+        }
         let unchanged = prior_nodes
             .get(page.frontmatter.id.as_str())
             .is_some_and(|node| node.content_digest == page.content_digest);
@@ -136,6 +145,13 @@ pub fn build_native_generation_incremental(
     edges.sort();
     edges.dedup();
     finalize_generation(scope, "native-markdown", nodes, edges)
+}
+
+fn graph_lifecycle(value: &str) -> bool {
+    matches!(
+        value,
+        "active" | "contradicted" | "superseded" | "expired" | "revoked"
+    )
 }
 
 fn finalize_generation(
@@ -664,6 +680,10 @@ mod tests {
         let generation =
             build_native_generation("project", &[page("first"), inactive]).expect("generation");
         assert!(query_generation(&generation, "inactive", 50).is_empty());
+        let mut open = page("open");
+        open.frontmatter.status = "open-question".to_owned();
+        let generation = build_native_generation("project", &[open]).expect("generation");
+        assert!(generation.nodes.is_empty());
     }
 
     #[test]
