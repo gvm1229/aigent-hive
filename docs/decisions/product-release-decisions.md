@@ -22,7 +22,7 @@
 | runtime 관찰 | active host capability metadata, side-effect-free public `--version`, pinned-qualified usage sensor의 fixed-argv·JSON-RPC read만 허용; foreign state·provider credential read 금지 |
 | runtime 경계 | Hive-native plan·Ralph급 loop·team·multi-goal 구현 허용. Provider session engine·model runtime·direct process launcher 금지 |
 | Skill | `0.8.0` target은 setup/reconfigure core + recommended suite 또는 개별 selected built-in; optional third-party는 이름·source·revision·content digest·권한의 개별 수동 승인 |
-| Skill 정본 | Product-only built-in Skill은 `harness/skills/` 정본. Source 개발은 설치 product Skill·tracked repository directive와 명시 유지보수자 요청의 비출하 `update-summary` source-project Skill 1건 사용 |
+| Skill 정본 | Product-only built-in Skill은 `harness/skills/` 정본. Source 개발은 설치 product Skill·tracked repository directive와 명시 유지보수자 요청의 비출하 `update-summary|draft-devlog` source-project Skill 사용 |
 | Source docs Wiki | `docs/` human graph와 tracked `docs/facts/en/`·`ko/` atomic pair 정본, `omx_wiki/`·`.omx/wiki/`·consumer `.hive/knowledge/` 금지, SQLite는 ignored source projection, OMX/OMC retirement 시 knowledge migration 0건 |
 | Wiki autocapture | Wiki enabled 상태의 material task 종료 전 agent-reviewed task fact 기록. Outcome·tool/project·criteria·originating request summary만 bounded capture, exact request는 explicit retention intent 필요, raw transcript·hook·tool output·runtime ingestion 금지 |
 | prompt refine | `prompt-refine`; 명시적 작성·정제 intent와 materially ambiguous ordinary work에서 자동 선택, `refine-only` 기본. Refined prompt 제시 뒤 exact 사용자 승인까지 정지. Same-request 실행은 explicit `--run`만 허용, simple/editless question·clear work·hidden rewrite·prompt-classifier hook 제외 |

@@ -43,6 +43,7 @@
 - 유지보수자 결정: `im-not-ai` 논리를 Skill 선택에 의존하지 않는 자동 한국어 core로 적용하고, 기존 글 윤문에는 명시적 `humanize-kor`를 제공하며, 검증된 upstream update를 `0.10.0` 범위에 포함
 - 범위 변경 판정: `0.10.0-test.1`은 이전 범위의 유효한 기록이지만 새 안정판 수용 근거가 아니며 `0.10.0-test.2` 이상 필요
 - 유지보수자 승인: digest 중복 제거·unique corpus·resumable incremental build·end-to-end query·격리·rollback·세 운영체제를 포함한 vector 재검증, 특정 engine 선결정 금지
+- 유지보수자 승인: Source-only `draft-devlog`, 비공개 초안 기본값, 현재 요청의 명시 발행, 사용자 제공 임시 token, Hive 내부 정보 없는 일반 기술 글
 
 ## 현재 검증 근거
 
@@ -66,6 +67,7 @@
 - `KOR10-002–012`: 자동 한국어 core·profile·결정적 gate·세 host adapter·`humanize-kor`·upstream pack update·rollback·수용
 - `VQR10-002–010`: embedding pipeline·engine·end-to-end·scope·lifecycle·세 운영체제 재검증
 - `VEC10-008–012`: 재검증 통과 시 optional hybrid adapter·fusion·incremental·bundle·공개 시험 구현
+- `SDB10-002–006`: Source Skill·MCP helper·inventory·mock 회귀·기존 비공개 글 live 수용
 - `REL10-001–004`: 새 product metadata·전체 gate·`0.10.0-test.2` 이상·세 운영체제 수용
 - `REL10-005–007`: 안정판 후보·게시·설치·명시 승인
 
@@ -79,7 +81,8 @@
 1. `VQR10-002–010` vector 재검증과 통과 시 `VEC10-008–012` 구현
 2. `KOR10-002–011` 한국어 core·`humanize-kor`·upstream update 구현
 3. `KOR10-012`, `REL10-001–004` 전체 gate와 `0.10.0-test.2` 이상 공개 수용
-4. 명시적 `0.10.0` 안정판 승인 전 `REL10-005–007` 시작 금지
+4. `SDB10-002–006` source-only Skill 구현·검증·비공개 글 정리
+5. 명시적 `0.10.0` 안정판 승인 전 `REL10-005–007` 시작 금지
 
 ## 과거 기록
 

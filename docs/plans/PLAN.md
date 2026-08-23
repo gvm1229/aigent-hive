@@ -1,6 +1,6 @@
 # Aigent Hive 활성 계획
 
-> Revision: 283
+> Revision: 284
 > 기준일: 2026-08-24
 > Product version: `0.10.0`
 > Stable baseline: `0.9.5`
@@ -18,6 +18,7 @@
 - Host-neutral 연속 실행 closure gate와 조건부 hook adapter
 - 자연어 routing 기반 `verified-workflow`와 명시적 `adversarial-judge`
 - 모든 한국어 응답·문서의 자동 언어 core, 명시적 `humanize-kor`, 검증된 `im-not-ai` upstream update
+- Source 전용 `draft-devlog`의 임시 token·비공개 초안·명시 발행·일반화된 기술 글 계약
 - 모든 지원 predecessor의 Skill rename·폐기 artifact 완전 cleanup
 - 번호 공개 시험판과 같은 product bytes의 안정판 출시
 
@@ -69,8 +70,9 @@
 | Adversarial judge | 8 | 0 | 100% |
 | Skill migration cleanup | 10 | 0 | 100% |
 | 한국어 언어 core | 1 | 11 | 8.3% |
+| Source `draft-devlog` | 1 | 5 | 16.7% |
 | `0.10.0` 출시 | 0 | 7 | 0% |
-| **합계** | **75** | **32** | **70.1%** |
+| **합계** | **76** | **37** | **67.3%** |
 
 ## Required load order
 
@@ -96,6 +98,7 @@ Archive·backlog·완료 history의 자동 선행 load 금지.
 | [`active/adversarial-judge-0.10.0.md`](active/adversarial-judge-0.10.0.md) | `JDG10-*` | 명시적 독립 adversarial Judge |
 | [`active/skill-retirement-migration-0.10.0.md`](active/skill-retirement-migration-0.10.0.md) | `SKM10-*` | Rename·폐기 artifact cleanup |
 | [`active/korean-language-core-0.10.0.md`](active/korean-language-core-0.10.0.md) | `KOR10-*` | 자동 한국어 core·`humanize-kor`·upstream update |
+| [`active/source-draft-devlog.md`](active/source-draft-devlog.md) | `SDB10-*` | Source-only PortareFolium 기술 블로그 workflow |
 | [`active/release-0.10.0.md`](active/release-0.10.0.md) | `REL10-*` | 번호 시험판·안정판 출시 |
 
 ## 실행 순서
@@ -109,7 +112,8 @@ Archive·backlog·완료 history의 자동 선행 load 금지.
 7. `VQR10-002–010` embedding pipeline·engine·격리·rollback 재검증, 통과 시 `VEC10-008–012` 구현
 8. `KOR10-002–011` 자동 한국어 core·`humanize-kor`·검증된 upstream language pack 구현
 9. `KOR10-012`, `REL10-001–004` 전체 회귀·`0.10.0-test.2` 이상·세 운영체제 수용
-10. 유지보수자의 명시 승인 뒤 `REL10-005–007` 안정판 출시
+10. `SDB10-002–006` source-only Skill·mock·live draft 수용. Product bytes·release acceptance 불변
+11. 유지보수자의 명시 승인 뒤 `REL10-005–007` 안정판 출시
 
 ## 비활성 자료
 
