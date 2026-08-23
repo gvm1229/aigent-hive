@@ -11,9 +11,9 @@ aliases: ["ralph-loop"]
 sources:
   - "repo:docs/decisions/ADR-0020-0.10.0-product-scope.md#sha256:c313a53d8ed114aaf9b6303263730d282b11c6d8d52a71c249999b62969214fe"
   - "repo:docs/decisions/product-release-decisions.md#sha256:a56419242874c459f08f7575ec0b2b6c2249ac696e0efffb053706dfeb6c9f00"
-  - "repo:docs/plans/active/verified-workflow-0.10.0.md#sha256:8352dd2d8a619664a51c5b3552b7c7d24cec5590fb2153360993bea507fd273a"
+  - "repo:docs/plans/active/verified-workflow-0.10.0.md#sha256:bbe8cfa89ca1ff9f94c0820d77acce54beead1f572f888b762f07f866c8a00a4"
 links: [host-neutral-continuation, v0-10-product-scope]
-reviewed_revision: "git:c37e8cbb4918ef2b6274e4d0cf814c9157b324ad"
+reviewed_revision: "git:15128a22d61452bb22fd8d9e9168acd9d26340f8"
 status: active
 ---
 
