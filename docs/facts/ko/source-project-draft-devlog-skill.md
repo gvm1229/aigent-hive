@@ -24,3 +24,5 @@ status: active
 명시 권한 필요. 작업별 사용자 제공 임시 token만 사용하며 파일·receipt·fact·log 기록 금지.
 검증된 방법·수치는 유지하고 Hive version·branch·commit·plan·checklist ID·경로·credential 등
 source 내부 문맥 제거. 제품 projection `0건`.
+Production 수용: 공개 글 수정 권한 gate 확인, 유지보수자 승인 기반 식별자 일반화, 재조회
+metadata·본문 digest 일치, 정책 위반 `0건`.

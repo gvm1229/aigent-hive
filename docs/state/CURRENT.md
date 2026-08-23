@@ -1,6 +1,6 @@
 # 현재 상태
 
-- 기준 branch: `feature/0.10.0@f1c89f0`
+- 기준 branch: `feature/0.10.0@05ac5254`
 - 원격 기준: `origin/feature/0.10.0` 동기화
 - product version: `0.10.0`
 - stable baseline: `0.9.5`
@@ -45,12 +45,14 @@
 - 유지보수자 승인: digest 중복 제거·unique corpus·resumable incremental build·end-to-end query·격리·rollback·세 운영체제를 포함한 vector 재검증, 특정 engine 선결정 금지
 - 유지보수자 승인: Source-only `draft-devlog`, 비공개 초안 기본값, 현재 요청의 명시 발행, 사용자 제공 임시 token, Hive 내부 정보 없는 일반 기술 글
 - Source-only `draft-devlog` Skill·no-echo token helper·일반화·MDX·발행 권한 gate 구현, 제품 projection `0건`
+- `draft-devlog` production 수용: 대상 글의 실제 `published=true` 상태 확인, 유지보수자 공개 글 수정 승인 뒤 내부 ID 일반화, 공개 상태 유지, metadata·본문 digest 일치, 정책 위반 `0건`
 
 ## 현재 검증 근거
 
 - Directive gate: failure `0건`
 - Source Wiki: 160 page, error·warning `0건`
 - Draft-devlog mock MCP 17개·focused contract 60개·documentation lane 통과
+- Draft-devlog production read-back: slug `why-vector-database-cannot-replace-fts`, content digest `sha256:4b7805e85b4f5365e55a0da279f0032c5124c7bc9443eeda24a4dd3bcd1825b1`, `published=true`, mismatch·정책 finding `0건`
 - Python lane: documentation 45, security 103, contract 380, integration 84, release 58 통과
 - Rust `hive-render` 63, `hive-cli` user setup 46·user install 89, historical upgrade 3 통과
 - Rust workspace `--all-targets --all-features` 전 범위와 Clippy `-D warnings` 통과
@@ -69,7 +71,6 @@
 - `KOR10-002–012`: 자동 한국어 core·profile·결정적 gate·세 host adapter·`humanize-kor`·upstream pack update·rollback·수용
 - `VQR10-002–010`: embedding pipeline·engine·end-to-end·scope·lifecycle·세 운영체제 재검증
 - `VEC10-008–012`: 재검증 통과 시 optional hybrid adapter·fusion·incremental·bundle·공개 시험 구현
-- `SDB10-006`: 사용자 제공 유효 token 기반 기존 비공개 글 내부 ID 제거·재조회 수용
 - `REL10-001–004`: 새 product metadata·전체 gate·`0.10.0-test.2` 이상·세 운영체제 수용
 - `REL10-005–007`: 안정판 후보·게시·설치·명시 승인
 
@@ -83,8 +84,7 @@
 1. `VQR10-002–010` vector 재검증과 통과 시 `VEC10-008–012` 구현
 2. `KOR10-002–011` 한국어 core·`humanize-kor`·upstream update 구현
 3. `KOR10-012`, `REL10-001–004` 전체 gate와 `0.10.0-test.2` 이상 공개 수용
-4. `SDB10-006` source-only Skill의 기존 비공개 글 live 수용
-5. 명시적 `0.10.0` 안정판 승인 전 `REL10-005–007` 시작 금지
+4. 명시적 `0.10.0` 안정판 승인 전 `REL10-005–007` 시작 금지
 
 ## 과거 기록
 

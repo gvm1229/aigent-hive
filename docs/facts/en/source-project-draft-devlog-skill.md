@@ -25,3 +25,5 @@ and requires same-request authority for publication or public-post edits. The us
 temporary token for each task; the token never enters files, receipts, facts, or logs. Blog content
 keeps verified methods and measurements while removing Hive versions, branches, commits, plans,
 checklist ids, paths, credentials, and other source-only context. No product projection exists.
+Production acceptance verified public-post authority, an authorized identifier-only update,
+matching metadata and content digest, and zero read-back policy findings.
