@@ -91,7 +91,7 @@
     },
     {
       "id": "hybrid-vector-search-0-10",
-      "text": "hybrid-vector-search-0-10\nHybrid Vector Search Gate for 0.10.0\n# Hybrid Vector Search Gate for 0.10.0\n\nThe first gate found a 15-point semantic Recall@10 gain and fast vector engines, but a naive\n50,000-item embedding build exceeded ten minutes. Requalification now separates repeated synthetic\ndata from 50,000 unique chunks and adds digest reuse, resumable and incremental builds, query\nembedding latency, physical scope isolation, atomic generations, rollback, and three-platform\nevidence. No engine is preselected. One optional hybrid adapter may ship only if every gate passes;\notherwise FTS and graphs remain active with no vector product dependency."
+      "text": "hybrid-vector-search-0-10\nHybrid Vector Search Gate for 0.10.0\n# Hybrid Vector Search Gate for 0.10.0\n\nRequalification kept the 15-point semantic Recall@10 gain, 100% hybrid exact recall, and fast query\nembedding. Digest reuse built 50,000 repeated rows from 30 embeddings in 5.75 seconds. A 1,000-row\nprobe projected about 2,711 seconds for 50,000 unique chunks, above the 600-second gate. Resumable\nand incremental research paths passed, but the optional adapter stays deferred. FTS and graphs stay\nactive. No vector product dependency exists."
     },
     {
       "id": "install-wide-knowledge-capture",
@@ -352,7 +352,7 @@
       "id": "exact-26-hybrid-vector-search-0-10",
       "kind": "exact",
       "subtype": "negative",
-      "query": "no vector engine embedding runtime model or schema product dependency",
+      "query": "No vector product dependency exists",
       "expected": [
         "hybrid-vector-search-0-10"
       ]
