@@ -2685,7 +2685,10 @@ mod tests {
         let fixture = release_fixture();
         let marker = fs::read_to_string(fixture.join("TEST-ONLY.md")).expect("test-only marker");
         let marker_lowered = marker.to_ascii_lowercase();
-        assert!(marker.contains("Test-only `0.9.5` release bundle fixture"));
+        assert!(marker.contains(&format!(
+            "Test-only `{}` release bundle fixture",
+            env!("CARGO_PKG_VERSION")
+        )));
         assert!(marker.contains("Local updater and version-parity tests only"));
         assert!(marker_lowered.contains("public release artifact"));
         let manifest = fs::read_to_string(fixture.join("bundle-manifest.json"))
