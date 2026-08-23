@@ -38,6 +38,15 @@ skills:
   - shell
   - subagents
   consent_digest: null
+- name: humanize-kor
+  source_type: built-in
+  content_digest: sha256:8805da50d3370fa953a1325a0a6c5294247ab037cb173ab09266c67d09aa659a
+  side_effect_class: project-write
+  capabilities:
+  - filesystem-read
+  - filesystem-write
+  - shell
+  consent_digest: null
 - name: judge-evidence
   source_type: built-in
   content_digest: sha256:aea2f4e5e325b847df263a3aa001023eb419763ec175ec8cd3bb0a1b1a6c3873
@@ -129,7 +138,7 @@ skills:
   consent_digest: null
 - name: project-setup
   source_type: built-in
-  content_digest: sha256:5a4e0367ff8d52dd58221f15e16aa16a1ddee89fcc6cfef3fabe0c47f0e1babb
+  content_digest: sha256:f17a658f423c8df0f5ca2b1960c3ea53fec57cb2859459bfe77a049510e9adf2
   side_effect_class: project-write
   capabilities:
   - filesystem-read

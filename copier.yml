@@ -17,6 +17,7 @@ _exclude:
   - "{% if capability_resolution.detection != 'available' or capability_resolution.resolved_owner != 'host-native' or approved_fallback_hooks | selectattr('capability', 'equalto', 'update-integrity-guard') | selectattr('event', 'equalto', 'PreToolUse') | list | length == 0 %}.hive/hooks/update-integrity-guard{% endif %}"
   - "{% if capability_resolution.detection != 'available' or capability_resolution.resolved_owner != 'host-native' or approved_fallback_hooks | selectattr('capability', 'equalto', 'derived-state-invalidation') | selectattr('event', 'equalto', 'PostToolUse') | list | length == 0 %}.hive/hooks/derived-state-invalidation{% endif %}"
   - "{% if capability_resolution.detection != 'available' or capability_resolution.resolved_owner != 'host-native' or (approved_fallback_hooks | selectattr('capability', 'equalto', 'checkpoint-reminder') | selectattr('event', 'equalto', 'PreCompact') | list | length == 0 and approved_fallback_hooks | selectattr('capability', 'equalto', 'checkpoint-reminder') | selectattr('event', 'equalto', 'Stop') | list | length == 0) %}.hive/hooks/checkpoint-reminder{% endif %}"
+  - "{% if capability_resolution.detection != 'available' or capability_resolution.resolved_owner != 'host-native' or (approved_fallback_hooks | selectattr('capability', 'equalto', 'validate-korean-output') | selectattr('event', 'equalto', 'Stop') | list | length == 0 and approved_fallback_hooks | selectattr('capability', 'equalto', 'validate-korean-output') | selectattr('event', 'equalto', 'AfterAgent') | list | length == 0) %}.hive/hooks/validate-korean-output{% endif %}"
 
 project_name:
   type: str
@@ -148,7 +149,7 @@ approved_optional_skills:
     {%- for hook in approved_fallback_hooks | default([]) -%}
     {%- set capability = hook.capability | default('') -%}
     {%- set event = hook.event | default('') -%}
-    {%- set pair_supported = (capability in ['protect-hive-owned-state', 'update-integrity-guard'] and event == 'PreToolUse') or (capability == 'derived-state-invalidation' and event == 'PostToolUse') or (capability == 'checkpoint-reminder' and event in ['PreCompact', 'Stop']) -%}
+    {%- set pair_supported = (capability in ['protect-hive-owned-state', 'update-integrity-guard'] and event == 'PreToolUse') or (capability == 'derived-state-invalidation' and event == 'PostToolUse') or (capability == 'checkpoint-reminder' and event in ['PreCompact', 'Stop']) or (capability == 'validate-korean-output' and event in ['Stop', 'AfterAgent']) -%}
     {%- if not pair_supported or hook_events.get(event, {}).get('support') != 'supported' -%}
     {%- set hook_validation.invalid = true -%}
     {%- endif -%}
@@ -234,6 +235,7 @@ selected_project_skills:
     - amend-directive
     - code-polish
     - custom-subagent-create
+    - humanize-kor
     - judge-evidence
     - knowledge-capture
     - knowledge-import
