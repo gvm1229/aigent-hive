@@ -15,7 +15,7 @@ sources:
   - "repo:scripts/accept-public-hive.py#sha256:b951e079d0974d4bf2a80e37337f2acf95d03e2e42a4bc428dd9fbde89a538a3"
   - "repo:scripts/check-project-base-coverage.py#sha256:b7d0887ccd3e3a9019383c3cea283189361c17fa62d806f44096cd6825b67579"
 links: [projection-upgrade-purge, update-transaction, version-policy]
-reviewed_revision: "git:838842805e453e0508d054e4aa67d7a59b3aa53f"
+reviewed_revision: "git:47d4663f1e1f263276f9ce54b7c69a3ff95d2170"
 status: active
 ---
 

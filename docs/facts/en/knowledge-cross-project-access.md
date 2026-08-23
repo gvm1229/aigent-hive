@@ -15,7 +15,7 @@ sources:
   - "repo:harness/skills/knowledge-import/SKILL.md#sha256:b73e6c82eb5ef9105781383f59211a982ed70b0f0ecf1690619f3b9b30f4730d"
   - "repo:harness/skills/knowledge-recall/SKILL.md#sha256:531437bfcb9786cd5221de32eb5ad536bfd07973db159ca0b15a5df858ffa923"
 links: [global-knowledge-rag, knowledge-portability-scan, shared-index]
-reviewed_revision: "git:838842805e453e0508d054e4aa67d7a59b3aa53f"
+reviewed_revision: "git:47d4663f1e1f263276f9ce54b7c69a3ff95d2170"
 status: active
 ---
 

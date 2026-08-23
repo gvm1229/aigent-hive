@@ -15,7 +15,7 @@ sources:
   - "repo:harness/user-setup/catalog.yml#sha256:167c45faf3724479bd83b48e6bc48074761c45ddf9160b7894742b291fbc503e"
   - "repo:schemas/user-setup.schema.json#sha256:d2985cbe53cc6aeb6a03442ca4af030e35dbfbda200c478b82b00f1c6b407cfa"
 links: [global-onboarding, language-consistency]
-reviewed_revision: "git:838842805e453e0508d054e4aa67d7a59b3aa53f"
+reviewed_revision: "git:47d4663f1e1f263276f9ce54b7c69a3ff95d2170"
 status: active
 ---
 

@@ -12,7 +12,7 @@ sources:
   - "repo:crates/hive-cli/src/knowledge.rs#sha256:72af50e7f2498159a60ea4a90f7e77fd96fd712506922ec683eeecbcae4f889a"
   - "repo:crates/hive-wiki/src/store.rs#sha256:39f62b339764e470446c61bfb392b2f8637908738261c8fe5bc9b711da0bb40d"
 links: [knowledge-cross-project-access, knowledge-portability-scan, source-development]
-reviewed_revision: "git:838842805e453e0508d054e4aa67d7a59b3aa53f"
+reviewed_revision: "git:47d4663f1e1f263276f9ce54b7c69a3ff95d2170"
 status: active
 ---
 

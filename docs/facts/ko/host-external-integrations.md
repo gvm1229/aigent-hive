@@ -19,7 +19,7 @@ sources:
   - "repo:harness/skills/user-setup/SKILL.md#sha256:1fcbb2b9b2db6d57bd40682f80db2a0a916ebbffb3434431038b609b6b743c11"
   - "repo:schemas/user-setup.schema.json#sha256:d2985cbe53cc6aeb6a03442ca4af030e35dbfbda200c478b82b00f1c6b407cfa"
 links: [knowledge-storage, orchestration-ownership]
-reviewed_revision: "git:838842805e453e0508d054e4aa67d7a59b3aa53f"
+reviewed_revision: "git:47d4663f1e1f263276f9ce54b7c69a3ff95d2170"
 status: active
 ---
 

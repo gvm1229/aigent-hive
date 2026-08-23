@@ -11,7 +11,7 @@ aliases: ["legacy stale marker", "shared knowledge target guard"]
 sources:
   - "repo:crates/hive-cli/src/knowledge.rs#sha256:72af50e7f2498159a60ea4a90f7e77fd96fd712506922ec683eeecbcae4f889a"
 links: [knowledge-storage, shared-index]
-reviewed_revision: "git:838842805e453e0508d054e4aa67d7a59b3aa53f"
+reviewed_revision: "git:47d4663f1e1f263276f9ce54b7c69a3ff95d2170"
 status: active
 ---
 

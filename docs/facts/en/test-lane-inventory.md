@@ -15,7 +15,7 @@ sources:
   - "repo:tests/conformance/integration/test_connected_setup_lifecycle.py#sha256:316c4057978fb4b928618c41fb37fb596f9d8b8d9e6e4f08fe85cdfa8756ada0"
   - "repo:tests/conformance/lanes.toml#sha256:ff0c85d39fc4bcb8493583d918f45eda26773e9e002d544824626b2f2314a66e"
 links: [release-verification, test-fault-isolation]
-reviewed_revision: "git:838842805e453e0508d054e4aa67d7a59b3aa53f"
+reviewed_revision: "git:47d4663f1e1f263276f9ce54b7c69a3ff95d2170"
 status: active
 ---
 

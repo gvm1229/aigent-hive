@@ -12,7 +12,7 @@ sources:
   - "repo:crates/hive-render/src/lib.rs#sha256:0649bdd034cd1904a2775ccda92b04ba04a6d2fa1dfb246b093794e4f5debc7b"
   - "repo:crates/hive-update/src/transaction.rs#sha256:f9ccf1d6ec988d00140708ad83a2912a09301c2bbab9ce97f8f5feac6d79ecd3"
 links: [test-distribution]
-reviewed_revision: "git:838842805e453e0508d054e4aa67d7a59b3aa53f"
+reviewed_revision: "git:47d4663f1e1f263276f9ce54b7c69a3ff95d2170"
 status: active
 ---
 

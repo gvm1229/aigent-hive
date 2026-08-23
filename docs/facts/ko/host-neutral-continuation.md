@@ -14,7 +14,7 @@ sources:
   - "repo:harness/skills/verified-workflow/SKILL.md#sha256:70f8fa54d04084174f2d014398916e2f4b2f2fb53e8fa057e8b178f92fd413fd"
   - "repo:tests/conformance/contracts/test_run_role_contracts.py#sha256:c77febdf50b689937897ea1848ae0f38468d14843dbeda5486678eb523447902"
 links: [agent-autonomous-continuation, consumer-session-coordination, v0-10-product-scope]
-reviewed_revision: "git:838842805e453e0508d054e4aa67d7a59b3aa53f"
+reviewed_revision: "git:47d4663f1e1f263276f9ce54b7c69a3ff95d2170"
 status: active
 ---
 
