@@ -244,6 +244,7 @@ class Phase3SkillSourceContract(unittest.TestCase):
         behavior = (ROOT / ".agents/directives/01-behavior.md").read_text(encoding="utf-8")
         state = (ROOT / ".agents/directives/04-documentation-state.md").read_text(encoding="utf-8")
         session = (ROOT / ".agents/directives/06-session-coordination.md").read_text(encoding="utf-8")
+        agents = (ROOT / "AGENTS.md").read_text(encoding="utf-8")
         fixture = json.loads(
             (ROOT / "tests/fixtures/run/agent-autonomous-continuation.json").read_text(
                 encoding="utf-8"
@@ -262,6 +263,9 @@ class Phase3SkillSourceContract(unittest.TestCase):
         self.assertIn("Continue execution when any `agent-owned` item remains", state)
         self.assertIn("Remaining Agent-Owned Actions", session)
         self.assertIn("An `active` manifest prohibits a final completion claim", session)
+        self.assertIn("Before marking a whole Goal or task `blocked`", behavior)
+        self.assertIn("Treat every release request as implementation, verification, or a numbered public test by", behavior)
+        self.assertIn("Stable `tag`, protected `main` integration", agents)
         self.assertEqual(fixture["terminal_instruction"], "Proceed until all todos are complete.")
         self.assertEqual(fixture["expected_state_before_actions"], "active")
         self.assertEqual(
@@ -287,12 +291,16 @@ class Phase3SkillSourceContract(unittest.TestCase):
                 "A progress report naming such work must not end the task.",
                 "awaiting-user-authority",
                 "awaiting-external-evidence",
+                "Before marking a whole Goal or task `blocked`",
+                "Treat every release request as implementation, verification, or a numbered public test by default.",
             ):
                 self.assertIn(required, text)
         for required in (
             "Before a final response, classify every remaining item",
             "`all todos`, `until completion`, `do not stop` 또는 같은 완료 요청",
             "`agent-owned` 작업 `0건`일 때만 완료 표기",
+            "전체 Goal·task의 `blocked` 표기 전 독립 `agent-owned` criterion `0건` closure 확인",
+            "모든 출시 요청의 기본값: 구현·검증·번호 공개 시험판",
         ):
             self.assertIn(required, user_install)
             self.assertIn(required, user_setup)

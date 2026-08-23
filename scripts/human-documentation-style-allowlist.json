@@ -283,31 +283,31 @@
   },
   {
     "path": "harness/template/AGENTS.md.jinja",
-    "line": 36,
+    "line": 38,
     "reason": "Template directive negative example required to teach the prohibited Korean style.",
     "text_sha256": "852b68fa9714876863a3de5c85007bd0a3ecd5a6b2b559a2b1ccbbdc4889f292"
   },
   {
     "path": "harness/template/AGENTS.md.jinja",
-    "line": 37,
+    "line": 39,
     "reason": "Template directive negative example required to teach the prohibited Korean style.",
     "text_sha256": "76ae48da3eafdde3f9f144ebde74cd5c2be705d086a16e45ff7d0866ce435dbe"
   },
   {
     "path": "harness/template/AGENTS.md.jinja",
-    "line": 38,
+    "line": 40,
     "reason": "Template directive negative example required to teach the prohibited Korean style.",
     "text_sha256": "b4fa698cf99467dd74432d464d0eb9e71e27ffa5eea3d6f518c679bce10688c2"
   },
   {
     "path": "harness/template/AGENTS.md.jinja",
-    "line": 39,
+    "line": 41,
     "reason": "Template directive negative example required to teach the prohibited Korean style.",
     "text_sha256": "748d55956ffabf313a6c4235e2964eff7f770a29344e6feeab15f58e2fca73e1"
   },
   {
     "path": "harness/template/AGENTS.md.jinja",
-    "line": 40,
+    "line": 42,
     "reason": "Template directive negative example required to teach the prohibited Korean style.",
     "text_sha256": "251095d746fcd08aa58f2b9a70fbd18a6bd007bc2854c121208c9b720aeca4a9"
   }

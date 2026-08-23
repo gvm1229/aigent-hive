@@ -2634,6 +2634,7 @@ mod tests {
                 required_criteria: vec![CRITERION.to_owned(), SECOND_CRITERION.to_owned()],
                 passed_criteria: Vec::new(),
                 failed_criteria: Vec::new(),
+                blocked_criteria: Vec::new(),
                 active_roles: vec!["exec-a".to_owned(), "exec-b".to_owned()],
                 next_action: Some("prepare node A".to_owned()),
                 latest_evidence: Vec::new(),

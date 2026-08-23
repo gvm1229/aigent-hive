@@ -143,6 +143,7 @@ def validate_contract_examples() -> None:
         "required_criteria": ["C1"],
         "passed_criteria": [],
         "failed_criteria": [],
+        "blocked_criteria": [],
         "active_roles": ["reviewer"],
         "next_action": "verify C1",
         "latest_evidence": [],

@@ -11,6 +11,7 @@
     "state",
     "passed_criteria",
     "failed_criteria",
+    "blocked_criteria",
     "active_roles",
     "next_action",
     "latest_evidence",
@@ -46,6 +47,9 @@
       "$ref": "#/$defs/criteria"
     },
     "failed_criteria": {
+      "$ref": "#/$defs/criteria"
+    },
+    "blocked_criteria": {
       "$ref": "#/$defs/criteria"
     },
     "active_roles": {

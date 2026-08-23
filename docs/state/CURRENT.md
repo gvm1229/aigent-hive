@@ -1,6 +1,6 @@
 # 현재 상태
 
-- 기준 branch: `feature/0.10.0@9fbe003`, `origin/feature/0.10.0` 동기화
+- 기준 branch: `feature/0.10.0@da44795`, `origin/feature/0.10.0` 동기화
 - product version: `0.9.5`
 - 다음 target: `0.10.0-test`
 - 활성 계획: [`PLAN.md`](../plans/PLAN.md)
@@ -97,10 +97,11 @@
 - Claude 설치본 미인증·필수 lifecycle 수정 이전 version
 - Antigravity CLI `1.1.18`: `/hooks` JSON inspection 성공, hook `0건`; 실제 Stop continuation 시험 미실행
 - `0.10.0` 안정판: 유지보수자의 명시적 승인 전 tag·publication 금지. 구현·로컬/CI 시험: 유지보수자 승인
+- 기본 출시 권한: 모든 요청의 구현·검증·번호 공개 시험판 범위. 안정판 `tag`·protected `main` 통합·게시·설치: 버전명을 포함한 현재 요청의 명시 승인 전 금지
 
 ## 다음 작업
 
-1. Revision당 1회 nudge·진행 없는 3회 cap·cancel 우선 continuation envelope
+1. 전체 `blocked` 전 `agent-owned` closure 강제·부분 장애 분리·revision당 1회 nudge·진행 없는 3회 cap·cancel 우선 continuation envelope
 2. Codex·Claude·Antigravity project-local Stop adapter fixture와 실제 host 검증
 3. 모든 stable predecessor의 Skill lifecycle registry·rename cleanup·direct jump upgrade
 4. 명시적 adversarial judge·`judge-evidence` migration·host-owned launch receipt

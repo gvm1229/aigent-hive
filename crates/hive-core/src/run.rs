@@ -604,6 +604,9 @@ pub struct RunStatus {
     pub passed_criteria: Vec<String>,
     /// Failed criterion ids.
     pub failed_criteria: Vec<String>,
+    /// Every still-unpassed criterion covered by the current run-wide blocker.
+    #[serde(default)]
+    pub blocked_criteria: Vec<String>,
     /// Stable role ids bound to the run.
     pub active_roles: Vec<String>,
     /// Next bounded host-owned action.
@@ -967,10 +970,11 @@ fn validate_status_diagnostic(status: &RunStatus) -> Result<(), RunContractError
     let required = as_set(&status.required_criteria);
     let passed = as_set(&status.passed_criteria);
     let failed = as_set(&status.failed_criteria);
+    let blocked = as_set(&status.blocked_criteria);
     if !passed.is_subset(&required) || !failed.is_subset(&required) {
         return Err(RunContractError::CriterionNotRequired);
     }
-    if !passed.is_disjoint(&failed) {
+    if !passed.is_disjoint(&failed) || !passed.is_disjoint(&blocked) {
         return Err(RunContractError::CriterionSetsOverlap);
     }
     let complete = passed == required && failed.is_empty();
@@ -1012,6 +1016,11 @@ fn validate_status_checkpoint(status: &RunStatus) -> Result<(), RunContractError
     validate_unique_ids(
         "failed_criteria",
         &status.failed_criteria,
+        valid_criterion_id,
+    )?;
+    validate_unique_ids(
+        "blocked_criteria",
+        &status.blocked_criteria,
         valid_criterion_id,
     )?;
     validate_unique_ids("active_roles", &status.active_roles, valid_role_id)?;
@@ -1063,7 +1072,17 @@ fn validate_state_fields(status: &RunStatus) -> Result<(), RunContractError> {
             }
         }
         RunState::Blocked | RunState::UsageLimited => {
-            if !next_present || !blocker_present || status.resume_note.is_some() {
+            let required = as_set(&status.required_criteria);
+            let passed = as_set(&status.passed_criteria);
+            let expected = required
+                .difference(&passed)
+                .cloned()
+                .collect::<BTreeSet<_>>();
+            if !next_present
+                || !blocker_present
+                || status.resume_note.is_some()
+                || as_set(&status.blocked_criteria) != expected
+            {
                 return Err(RunContractError::InconsistentStateFields);
             }
         }
@@ -1072,12 +1091,20 @@ fn validate_state_fields(status: &RunStatus) -> Result<(), RunContractError> {
                 .resume_note
                 .as_deref()
                 .is_some_and(|value| !value.trim().is_empty());
-            if !next_present || status.blocker.is_some() || !resume_present {
+            if !next_present
+                || status.blocker.is_some()
+                || !status.blocked_criteria.is_empty()
+                || !resume_present
+            {
                 return Err(RunContractError::InconsistentStateFields);
             }
         }
         RunState::Planned | RunState::Executing | RunState::Verifying => {
-            if !next_present || status.blocker.is_some() || status.resume_note.is_some() {
+            if !next_present
+                || status.blocker.is_some()
+                || !status.blocked_criteria.is_empty()
+                || status.resume_note.is_some()
+            {
                 return Err(RunContractError::InconsistentStateFields);
             }
         }
@@ -1930,6 +1957,7 @@ mod tests {
                 required_criteria: required,
                 passed_criteria,
                 failed_criteria: Vec::new(),
+                blocked_criteria: Vec::new(),
                 active_roles: vec!["reviewer".to_owned()],
                 next_action: (!complete).then(|| "continue verification".to_owned()),
                 latest_evidence: Vec::new(),
@@ -2148,6 +2176,7 @@ mod tests {
             required_criteria: vec!["build".to_owned(), "tests".to_owned()],
             passed_criteria: vec!["build".to_owned()],
             failed_criteria: Vec::new(),
+            blocked_criteria: Vec::new(),
             active_roles: vec!["reviewer".to_owned()],
             next_action: None,
             latest_evidence: Vec::new(),
@@ -2206,6 +2235,7 @@ mod tests {
         blocked_status.revision = 2;
         blocked_status.state = RunState::Blocked;
         blocked_status.blocker = Some("external runtime failed".to_owned());
+        blocked_status.blocked_criteria = vec!["build".to_owned(), "tests".to_owned()];
         blocked_status.next_action = Some("resolve external runtime".to_owned());
         let blocked = RunStatusDocument::from_status(blocked_status, b"# Blocked\n".to_vec())
             .expect("blocked status");
@@ -2218,6 +2248,7 @@ mod tests {
         direct_status.revision = 3;
         direct_status.state = RunState::Executing;
         direct_status.blocker = None;
+        direct_status.blocked_criteria.clear();
         direct_status.next_action = Some("continue".to_owned());
         let direct = RunStatusDocument::from_status(direct_status, b"# Executing\n".to_vec())
             .expect("semantically valid executing status");
@@ -2230,6 +2261,7 @@ mod tests {
         resume_status.revision = 3;
         resume_status.state = RunState::ResumeReady;
         resume_status.blocker = None;
+        resume_status.blocked_criteria.clear();
         resume_status.resume_note = Some("load PLAN, STATUS, and evidence".to_owned());
         let resume_ready =
             RunStatusDocument::from_status(resume_status, b"# Resume ready\n".to_vec())
@@ -2348,6 +2380,7 @@ mod tests {
         blocked_status.revision = 2;
         blocked_status.state = RunState::Blocked;
         blocked_status.blocker = Some("manual approval required".to_owned());
+        blocked_status.blocked_criteria = vec!["build".to_owned(), "tests".to_owned()];
         let blocked = RunStatusDocument::from_status(blocked_status, b"# Blocked\n".to_vec())
             .expect("blocked status");
         assert!(matches!(

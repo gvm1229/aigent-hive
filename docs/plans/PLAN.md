@@ -1,6 +1,6 @@
 # Aigent Hive 활성 계획
 
-> Revision: 267
+> Revision: 268
 > 기준일: 2026-08-22
 > Product version: `0.9.5` stable
 > 다음 target: `0.10.0-test`
@@ -41,6 +41,13 @@
 - 제외: `REL10-005–007` — protected `main` 안정판 후보, 안정판 게시·설치, 유지보수자 안정판 승인
 - 종료 조건: 제외 항목 외 Agent 소유 checklist `0건`과 해당 검증 증거
 
+## 기본 출시 권한
+
+- 모든 요청의 기본값: 구현·검증·번호 공개 시험판 범위
+- 안정판 `tag`·protected `main` 통합·게시·설치: 유지보수자의 현재 요청 안 버전명 포함 명시 승인 전 금지
+- `release`, `ship`, `continue`, `all todos`만으로 안정판 승인 추론 금지
+- 번호 공개 시험판 수용 보고 뒤 안정판 여부: 유지보수자 별도 결정
+
 ## Completion index
 
 측정 정본: 아래 `Active fragments`의 checklist. Backlog와 archive 제외.
@@ -51,12 +58,12 @@
 | Hybrid vector search | 0 | 13 | 0% |
 | Host-owned Skill 예약 | 1 | 0 | 100% |
 | Nested project scan | 1 | 0 | 100% |
-| Host-neutral 연속 실행 | 4 | 4 | 50.0% |
+| Host-neutral 연속 실행 | 4 | 5 | 44.4% |
 | Verified workflow | 5 | 1 | 83.3% |
 | Adversarial judge | 4 | 4 | 50.0% |
 | Skill migration cleanup | 3 | 7 | 30.0% |
 | `0.10.0` 출시 | 0 | 7 | 0% |
-| **합계** | **21** | **49** | **30.0%** |
+| **합계** | **21** | **50** | **29.6%** |
 
 ## Required load order
 
@@ -84,7 +91,7 @@ Archive·backlog·완료 history의 자동 선행 load 금지.
 
 ## 실행 순서
 
-1. `CON10-002–008`, `VWF10-002–006` closure·natural routing·bounded three-host adapter 구현·수용
+1. `CON10-002–009`, `VWF10-002–006` closure·natural routing·bounded three-host adapter 구현·수용
 2. `SKM10-002–010` 모든 stable registry·predecessor Skill cleanup과 direct jump upgrade
 3. `JDG10-002–008` explicit adversarial Judge·`judge-evidence`·host launch·quorum 결합
 4. `KRG10-001–007`, `VEC10-001–007` native 관계·vector feasibility·adopt|defer

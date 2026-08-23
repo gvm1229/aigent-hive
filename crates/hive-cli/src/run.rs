@@ -1238,6 +1238,7 @@ struct CheckpointRequest {
     state: RunState,
     passed_criteria: Vec<String>,
     failed_criteria: Vec<String>,
+    blocked_criteria: Vec<String>,
     active_roles: Vec<String>,
     next_action: Option<String>,
     #[serde(default)]
@@ -1568,13 +1569,13 @@ fn closure(arguments: &ClosureArguments) -> Result<ActionResult, AdapterError> {
         RunState::Planned | RunState::Executing | RunState::Verifying | RunState::ResumeReady => {
             (pending, Vec::new())
         }
-        RunState::Blocked | RunState::UsageLimited => (
-            Vec::new(),
-            status.status().blocker.iter().cloned().collect::<Vec<_>>(),
-        ),
+        RunState::Blocked | RunState::UsageLimited => {
+            (Vec::new(), status.status().blocked_criteria.clone())
+        }
         RunState::Succeeded | RunState::Cancelled => (Vec::new(), Vec::new()),
     };
     let ready_for_final = agent_owned.is_empty() && blocked.is_empty();
+    let global_block_permitted = agent_owned.is_empty() && !blocked.is_empty();
     let mut payload = json!({
         "schema_version": 1,
         "run_id": arguments.run_id,
@@ -1586,6 +1587,7 @@ fn closure(arguments: &ClosureArguments) -> Result<ActionResult, AdapterError> {
         "awaiting_external_evidence": [],
         "blocked": blocked,
         "excluded": [],
+        "global_block_permitted": global_block_permitted,
     });
     let closure_digest = sha256_digest(
         &serde_json_canonicalizer::to_vec(&payload)
@@ -2016,6 +2018,7 @@ fn checkpoint_document(
             required_criteria: criteria.to_vec(),
             passed_criteria: request.passed_criteria.clone(),
             failed_criteria: request.failed_criteria.clone(),
+            blocked_criteria: request.blocked_criteria.clone(),
             active_roles: request.active_roles.clone(),
             next_action: request.next_action.clone(),
             latest_evidence: request.latest_evidence.clone(),
@@ -3294,6 +3297,7 @@ mod tests {
             "state": "executing",
             "passed_criteria": passed,
             "failed_criteria": [],
+            "blocked_criteria": [],
             "active_roles": ["reviewer"],
             "next_action": "continue",
             "latest_evidence": latest_evidence,
@@ -3327,6 +3331,7 @@ mod tests {
             "state": state,
             "passed_criteria": [],
             "failed_criteria": [],
+            "blocked_criteria": ["build", "tests"],
             "active_roles": ["reviewer"],
             "next_action": "continue",
             "latest_evidence": [],

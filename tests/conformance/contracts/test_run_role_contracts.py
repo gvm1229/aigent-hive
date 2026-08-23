@@ -321,6 +321,7 @@ class Phase4Contracts(unittest.TestCase):
         expected_revision: int = 0,
         passed: list[str] | None = None,
         failed: list[str] | None = None,
+        blocked_criteria: list[str] | None = None,
         active_roles: list[str] | None = None,
         next_action: str | None = "run build",
         latest_evidence: list[str] | None = None,
@@ -337,6 +338,7 @@ class Phase4Contracts(unittest.TestCase):
             "state": state,
             "passed_criteria": passed or [],
             "failed_criteria": failed or [],
+            "blocked_criteria": blocked_criteria or [],
             "active_roles": active_roles or ["reviewer"],
             "next_action": next_action,
             "latest_evidence": latest_evidence or [],
@@ -1268,6 +1270,49 @@ class Phase4Contracts(unittest.TestCase):
         self.assertTrue(continuation["cancel"]["user_interrupt_permitted"])
         self.assertFalse(continuation["retry_budget"]["retry_permitted"])
         self.assertEqual(snapshot_tree(self.target), before)
+
+    def test_partial_blocked_criteria_cannot_terminally_block_a_run(self) -> None:
+        self.ensure_handoff(self.target)
+        before = snapshot_tree(self.target)
+        process, payload = self.checkpoint(
+            self.target,
+            self.checkpoint_request(
+                state="blocked",
+                next_action="record missing host evidence",
+                blocker="one host fixture unavailable",
+                blocked_criteria=["build"],
+            ),
+            CAPABILITIES["codex-omx"],
+            "partial-block",
+        )
+
+        self.assertEqual(process.returncode, 5, payload)
+        self.assertEqual(payload["code"], "hive.run-verification-failed")
+        self.assertEqual(payload["changed_paths"], [])
+        self.assertEqual(snapshot_tree(self.target), before)
+
+    def test_run_wide_block_reports_all_unpassed_criteria(self) -> None:
+        self.ensure_handoff(self.target)
+        process, payload = self.checkpoint(
+            self.target,
+            self.checkpoint_request(
+                state="blocked",
+                next_action="await explicit recovery",
+                blocker="host unavailable",
+                blocked_criteria=["build", "tests"],
+            ),
+            CAPABILITIES["codex-omx"],
+            "run-wide-block",
+        )
+        self.assert_success(process, payload)
+
+        process, payload = self.closure(self.target)
+
+        self.assert_success(process, payload)
+        closure = payload["data"]["closure"]
+        self.assertEqual(closure["agent_owned"], [])
+        self.assertEqual(closure["blocked"], ["build", "tests"])
+        self.assertTrue(closure["global_block_permitted"])
 
     def test_closure_uses_recorded_bounded_retry_and_cancel_state(self) -> None:
         self.ensure_handoff(self.target)
@@ -2505,6 +2550,7 @@ class Phase4Contracts(unittest.TestCase):
                         state=state,
                         next_action="wait for explicit recovery",
                         blocker=f"{state} condition",
+                        blocked_criteria=["build", "tests"],
                     ),
                     CAPABILITIES["codex-omx"],
                     f"blocked-{state}",

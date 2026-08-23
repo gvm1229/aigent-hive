@@ -38,7 +38,11 @@ Judge launch. Hive owns only canonical state, prepared envelopes, receipts, and 
    implementation agent never accepts its own result.
 7. Retry only inside the node's declared budget. Stop on repeated failure fingerprints, exhausted
    budget, cancellation, quarantine, or missing attestation.
-8. Record topology changes only through `hive loop steer` with the reason, affected edges, user
+8. Before a whole Goal or task becomes `blocked`, run closure against the current criterion set.
+   A partial host, fixture, or external-evidence failure remains attached to that criterion while
+   every independent agent-owned criterion continues. A hook may return one bounded nudge and
+   never mutates the host Goal or task.
+9. Record topology changes only through `hive loop steer` with the reason, affected edges, user
    boundary, and new immutable revision. Recover a new session only through `hive loop recover` or
    `hive orchestration recover`.
 

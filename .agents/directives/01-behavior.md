@@ -112,6 +112,14 @@ This directive governs agent behavior while developing Aigent Hive.
 - When a user excludes a protected action from an otherwise terminal scope, continue every other
   authorized item. Record the exact excluded checklist IDs and the required authority. Do not
   use the excluded action as a reason to end before the remaining agent-owned work is complete.
+- Before marking a whole Goal or task `blocked`, obtain a closure that reports no independent
+  `agent-owned` criterion. Record a partial host, fixture, or external-evidence failure against
+  its criterion and continue every independent criterion. Hive hooks may return one bounded nudge
+  but never mutate host Goal or task state.
+- Treat every release request as implementation, verification, or a numbered public test by default. Stable `tag`, protected-branch integration, publication, and installation require the
+  maintainer's explicit authorization of the named stable version in the current request. Never
+  infer stable authority from `release`, `ship`, `continue`, `all todos`, a successful test, or a
+  ready-to-release report.
 - A progress report that identifies a remaining agent-owned action must not end the task. Do the
   next bounded action instead. A failed test, stale reference, incomplete CI qualification, or
   unpublished authorized release is work to continue, not a user handoff.

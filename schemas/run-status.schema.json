@@ -51,6 +51,11 @@
       "uniqueItems": true,
       "items": { "type": "string", "minLength": 1 }
     },
+    "blocked_criteria": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 1 }
+    },
     "active_roles": {
       "type": "array",
       "uniqueItems": true,

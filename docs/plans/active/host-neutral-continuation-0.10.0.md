@@ -23,6 +23,7 @@
 - [ ] [CON10-006] 선택형 hook preview·exact digest 승인·non-clobber merge·disable·uninstall·rollback 계약
 - [ ] [CON10-007] 과도한 지속 방지: 사용자 interrupt·cancel 즉시 허용, `blocked_on_user`·terminal·stale·malformed·foreign session fail-open, revision당 nudge 1회, bounded consecutive block cap
 - [ ] [CON10-008] three-host fixture와 중간 종료·정상 완료·취소·stale state·hook 손상·host 미지원 회귀 검증, 채택 또는 defer 결정
+- [ ] [CON10-009] 전체 Goal·task의 `blocked` 전 closure 강제: 남은 독립 `agent-owned` 항목이 있으면 항목별 `awaiting-external-evidence` 기록 뒤 다음 작업 지속, host hook·Hive가 Goal·task 상태를 직접 변경하지 않는 회귀 검증
 
 ## Hook 최소 계약
 
@@ -38,6 +39,13 @@ AND no user cancel or interrupt
 ```
 
 그 밖의 상태: 종료 허용. Hook에서 goal·canonical run state mutation 금지.
+
+## 전체 중단 경계
+
+- `blocked`: 같은 회복 불가 조건이 전체 run의 남은 criterion을 막고, `agent-owned` 항목 `0건`인 경우만 허용
+- 부분 검증·한 host·한 fixture의 결손: 해당 항목의 `awaiting-external-evidence` 또는 `blocked` 기록과 독립 `agent-owned` 항목 지속
+- Host Goal·task 상태: host 소유. Hive hook은 read-only closure와 revision당 1회 nudge만 반환
+- 사용자 cancel·interrupt: 즉시 종료 허용
 
 ## 단계
 
