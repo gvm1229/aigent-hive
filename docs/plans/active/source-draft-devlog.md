@@ -7,10 +7,10 @@
 ## Checklist
 
 - [x] [SDB10-001] `draft-devlog` 이름, 비공개 초안 기본값, 현재 요청의 명시 발행, 사용자 제공 임시 Bearer, Hive 내부 정보 금지 범위 유지보수자 승인
-- [ ] [SDB10-002] Source-only Skill·UI metadata·MCP·콘텐츠 정책 reference와 token 없는 runtime state 계약 구현
-- [ ] [SDB10-003] `tools/list`·`get_schema`·reference 조회·validate·create/update·read-back을 수행하는 표준 라이브러리 helper와 typed auth·rate-limit·uncertain 결과 구현
-- [ ] [SDB10-004] `update-summary|draft-devlog` source inventory·지침·source layout·Skill 문서·제품 결정·bilingual fact 정합화, 제품 projection `0건`
-- [ ] [SDB10-005] Mock MCP 기반 token·publication·slug·job field·JSON escaping·MDX·Hive 정보·timeout·read-back 회귀와 Skill quick validation 통과
+- [x] [SDB10-002] Source-only Skill·UI metadata·MCP·콘텐츠 정책 reference와 token 없는 runtime state 계약 구현 — `f1c89f09`; quick validation 통과
+- [x] [SDB10-003] `tools/list`·`get_schema`·reference 조회·validate·create/update·read-back을 수행하는 표준 라이브러리 helper와 typed auth·rate-limit·uncertain 결과 구현 — mock MCP 17개 회귀 통과
+- [x] [SDB10-004] `update-summary|draft-devlog` source inventory·지침·source layout·Skill 문서·제품 결정·bilingual fact 정합화, 제품 projection `0건` — product Skill 26개 byte parity 유지
+- [x] [SDB10-005] Mock MCP 기반 token·publication·slug·job field·JSON escaping·MDX·Hive 정보·timeout·read-back 회귀와 Skill quick validation 통과 — focused contract 60개·documentation lane 통과
 - [ ] [SDB10-006] 사용자 제공 유효 token으로 기존 비공개 vector 글의 내부 ID 제거, metadata·`published=false`·본문 digest 재조회 수용
 
 ## PortareFolium 현재 계약

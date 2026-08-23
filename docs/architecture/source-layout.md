@@ -53,8 +53,8 @@ aigent-hive/
 ## Source `.agents`와 출하물
 
 루트 `.agents/`: Hive 자체 개발 directive와 ignored runtime state 전용. 명시 유지보수자 요청의
-비출하 source-project Skill `update-summary` 1건만 `.agents/skills/`에 유지. 제품 Skill·consumer
-projection은 `0건`.
+비출하 source-project Skill `update-summary|draft-devlog` 2건만 `.agents/skills/`에 유지. 제품
+Skill·consumer projection은 `0건`.
 
 Source 개발의 pre-task gate: 설치된 `hive usage enforce` 1회. Source 전용 Python
 guard·watcher·threshold state 없음. Product Skill은 `harness/skills/<name>/` 정본을 설치 product namespace로 사용. current product ID와

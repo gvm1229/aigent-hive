@@ -1,14 +1,14 @@
 # 스킬 모음
 
 설치 제품용 Skill의 이름·기능·사용 예시 정본. Aigent Hive source 개발도 같은 제품 Skill 사용.
-명시 유지보수자 요청의 비출하 source-project `update-summary`는 이 제품 목록과 분리.
+명시 유지보수자 요청의 비출하 source-project `update-summary|draft-devlog`는 이 제품 목록과 분리.
 이름 이관 구현: [`SIL-008–015`](archive/plans/foundations/skill-identity-localization.md). 호출 형식:
 `$aigent-hive:<Skill 이름>`.
 
 ## 이름 원칙
 
 - Active Skill: 설치 제품의 단일 목록만 유지
-- Source 전용 Skill: 비출하 `update-summary` 1건. 경로: `.agents/skills/update-summary/`; 제품 catalog·release bundle·consumer projection 제외
+- Source 전용 Skill: 비출하 `update-summary|draft-devlog` 2건. 경로: `.agents/skills/<name>/`; 제품 catalog·release bundle·consumer projection 제외
 - 제품 이름: 사용자가 인식할 기능 중심
 - 모든 Hive Skill: 선택 언어·host와 무관하게 설명 첫머리에 `(정본 영문 ID)` 표기
 - 폐기 ID: scope가 지정된 one-to-one·merge·split 이관 입력으로만 허용

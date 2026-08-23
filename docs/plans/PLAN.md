@@ -70,9 +70,9 @@
 | Adversarial judge | 8 | 0 | 100% |
 | Skill migration cleanup | 10 | 0 | 100% |
 | 한국어 언어 core | 1 | 11 | 8.3% |
-| Source `draft-devlog` | 1 | 5 | 16.7% |
+| Source `draft-devlog` | 5 | 1 | 83.3% |
 | `0.10.0` 출시 | 0 | 7 | 0% |
-| **합계** | **76** | **37** | **67.3%** |
+| **합계** | **80** | **33** | **70.8%** |
 
 ## Required load order
 

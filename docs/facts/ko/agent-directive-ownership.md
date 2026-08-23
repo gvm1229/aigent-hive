@@ -10,7 +10,7 @@ tags: [directives, routing, v0-10]
 aliases: ["Directive 최적화"]
 sources:
   - "repo:.agents/directives/01-behavior.md#sha256:20905d49494df815461b4e9ffe6df89ee33ccb774510da2cfa10c98f0508b077"
-  - "repo:AGENTS.md#sha256:24ab31ad8304747818fb45fe3b80255a54d5f615195181f3bb7dd6f4188b0702"
+  - "repo:AGENTS.md#sha256:d8fe84d5fe9bf291465651087a79135880c9b6f17e284e65a4eeb0891d851f2f"
   - "repo:docs/architecture/agent-directive-ownership.md#sha256:53476c7ca8f772d1d2bd956616d3b3f8235282a4c0643784e1a41895333cd2a9"
   - "repo:harness/template/AGENTS.md.jinja#sha256:f1170037b949896332fdb95f058fde810a00b0474b423e054899a74a5da3b200"
   - "repo:scripts/check-agent-directives.py#sha256:4c9fe2ff89d0429b76c1e7a36fa2a3c5e9a953f29c592fde8b8199d793ab2332"

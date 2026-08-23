@@ -12,7 +12,7 @@ sources:
   - "repo:.github/workflows/release-publish.yml#sha256:32d5b627460ec9f4881bb142e60559540a78fcbd7b7f461fc6f9f84808af3b05"
   - "repo:crates/hive-cli/src/user_install.rs#sha256:85b13d22add18756fa11e29fcc1ebcf84b18d143385991143a8453c29e3d0328"
   - "repo:docs/decisions/ADR-0020-0.10.0-product-scope.md#sha256:b88eaf08d187d6f83cfac8b9e3a186791f08b71d0d5287f5dafe4d2e7aaa8151"
-  - "repo:docs/decisions/product-release-decisions.md#sha256:a56419242874c459f08f7575ec0b2b6c2249ac696e0efffb053706dfeb6c9f00"
+  - "repo:docs/decisions/product-release-decisions.md#sha256:e89ac8584204a7e52ed157e9b29d523f870b8ac387fc1e4a044f7f7333d17af5"
   - "repo:docs/plans/active/skill-retirement-migration-0.10.0.md#sha256:cf02204eafa02d03f95a147ae364548b1635e4c445192f3c0e67a38ed5104b8f"
   - "repo:harness/release/stable-skill-ledger.yml#sha256:8b2ca917aeb92cff8185221b07d93b450588ae668b7f506e844bc279d47f12b5"
   - "repo:scripts/check-stable-skill-ledger.py#sha256:b19da205df0303dc56e9e8ceeed1ac84f26db8abc337b7e75c0dc06e5a35ed24"
