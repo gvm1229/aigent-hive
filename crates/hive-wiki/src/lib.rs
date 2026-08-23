@@ -4599,7 +4599,7 @@ impl CapabilityKnowledgeLock {
                     }
                     return Ok(Self { index, name });
                 }
-                Err(error) if error.kind() == io::ErrorKind::AlreadyExists => {
+                Err(error) if retryable_lock_contention(error.kind()) => {
                     if started.elapsed() >= LOCK_TIMEOUT {
                         return Err(WikiError::Conflict(
                             "timed out waiting for canonical knowledge integration lock".to_owned(),
@@ -4649,7 +4649,7 @@ impl KnowledgeLock {
                         remove_parent_on_drop,
                     });
                 }
-                Err(error) if error.kind() == io::ErrorKind::AlreadyExists => {
+                Err(error) if retryable_lock_contention(error.kind()) => {
                     if started.elapsed() >= LOCK_TIMEOUT {
                         return Err(WikiError::Conflict(
                             "timed out waiting for canonical knowledge integration lock".to_owned(),
@@ -4667,6 +4667,11 @@ impl KnowledgeLock {
     }
 }
 
+fn retryable_lock_contention(kind: io::ErrorKind) -> bool {
+    kind == io::ErrorKind::AlreadyExists
+        || (cfg!(windows) && kind == io::ErrorKind::PermissionDenied)
+}
+
 impl Drop for KnowledgeLock {
     fn drop(&mut self) {
         let _ = fs::remove_file(&self.path);
@@ -4681,6 +4686,16 @@ impl Drop for KnowledgeLock {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn lock_contention_is_bounded_to_existing_and_windows_sharing_errors() {
+        assert!(retryable_lock_contention(io::ErrorKind::AlreadyExists));
+        assert_eq!(
+            retryable_lock_contention(io::ErrorKind::PermissionDenied),
+            cfg!(windows)
+        );
+        assert!(!retryable_lock_contention(io::ErrorKind::NotFound));
+    }
 
     fn write_seed(root: &Path) {
         fs::create_dir_all(root.join(WIKI_RELATIVE)).unwrap();
