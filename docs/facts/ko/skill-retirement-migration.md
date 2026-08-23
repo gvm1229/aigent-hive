@@ -10,7 +10,7 @@ tags: [migration, skills, upgrade, v0-10]
 aliases: ["Retired Skill cleanup"]
 sources:
   - "repo:.github/workflows/release-publish.yml#sha256:32d5b627460ec9f4881bb142e60559540a78fcbd7b7f461fc6f9f84808af3b05"
-  - "repo:crates/hive-cli/src/user_install.rs#sha256:41d48a98143f0c240479045745286e0ba1523300be23793709dc374de8952844"
+  - "repo:crates/hive-cli/src/user_install.rs#sha256:92700072141579de36f5c9e9405aec31bcac07047bd2a492e25362a6a709dce3"
   - "repo:docs/decisions/ADR-0020-0.10.0-product-scope.md#sha256:c313a53d8ed114aaf9b6303263730d282b11c6d8d52a71c249999b62969214fe"
   - "repo:docs/decisions/product-release-decisions.md#sha256:a56419242874c459f08f7575ec0b2b6c2249ac696e0efffb053706dfeb6c9f00"
   - "repo:docs/plans/active/skill-retirement-migration-0.10.0.md#sha256:cf02204eafa02d03f95a147ae364548b1635e4c445192f3c0e67a38ed5104b8f"

@@ -9,8 +9,8 @@ summary: "Hive user install and update accept CSV or repeated host selections wi
 tags: [installation, multi-host, user-setup]
 aliases: ["multi-host Hive install", "repeatable host flag"]
 sources:
-  - "repo:crates/hive-cli/src/main.rs#sha256:9bfc3b6cfb6cdc6e9afb96430bff73a36904fc83c00ab600307a3b8eee813e06"
-  - "repo:crates/hive-cli/src/user_install.rs#sha256:41d48a98143f0c240479045745286e0ba1523300be23793709dc374de8952844"
+  - "repo:crates/hive-cli/src/main.rs#sha256:b64c483f483d936acf3e539e25f260c8ce6bd23ecde8c19ba90c6936d69d90c1"
+  - "repo:crates/hive-cli/src/user_install.rs#sha256:92700072141579de36f5c9e9405aec31bcac07047bd2a492e25362a6a709dce3"
   - "repo:docs/archive/plans/foundations/multi-host-user-install.md#sha256:048a38d199eb35e838d0772e8162537708f0a006de50614992cd88be49bbb820"
   - "repo:docs/hive-install-guide.ko.html#sha256:31a2c507fb0b2d266c012ca62cfd91a69b9e6847deaf8eaa1a3abe455ea83d85"
 links: [global-onboarding, supported-hosts]

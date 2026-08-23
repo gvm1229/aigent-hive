@@ -9,7 +9,7 @@ summary: "Hive custom-agent activation requires exact runtime attestation indepe
 tags: [antigravity, claude, codex, model-routing, subagent, v0-10, v0-9]
 aliases: ["Sol Advisor parity", "Task-appropriate model routing"]
 sources:
-  - "repo:crates/hive-cli/src/custom_agent_cli.rs#sha256:5726ce3e28f3198b267fc017cba94d53c4a8703efa74544e5499be7c9488d9dd"
+  - "repo:crates/hive-cli/src/custom_agent_cli.rs#sha256:41e7e1bded6372419575a428f2ab1bdda9f163a294eb2f2b6c275f118781207c"
   - "repo:crates/hive-cli/src/user_setup.rs#sha256:64e7ee1eb9aaafd399fe971ca35e5df6aee68285029a9b84fa6b928a3324ffdc"
   - "repo:crates/hive-core/src/native_workflow.rs#sha256:246f845d21fe73c070abdfa4ffa78d28e829d84b3da498dcc1530355a54a0900"
   - "repo:docs/archive/plans/foundations/model-routed-custom-subagents.md#sha256:9fe4b79c4f4e0be1706600e06b74ab93ee8bbce01e767a38790bbf8bdd21b251"

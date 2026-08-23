@@ -9,7 +9,7 @@ summary: "Qualified host-native sensor 우선과 optional CodexBar fallback."
 tags: [sensor, usage]
 aliases: ["Native-first usage"]
 sources:
-  - "repo:crates/hive-cli/src/main.rs#sha256:9bfc3b6cfb6cdc6e9afb96430bff73a36904fc83c00ab600307a3b8eee813e06"
+  - "repo:crates/hive-cli/src/main.rs#sha256:b64c483f483d936acf3e539e25f260c8ce6bd23ecde8c19ba90c6936d69d90c1"
   - "repo:crates/hive-cli/src/usage.rs#sha256:c60a6eecaa243ef0528c292303baca85f0bf4c4c4f654612bf97d15fa52ffe69"
   - "repo:crates/hive-cli/src/usage_control.rs#sha256:6c5febe7ae1ac1a892f7ac412c40d1b8d9ae339fe73fa8153faf9bb22051e1c0"
   - "repo:crates/hive-cli/src/user_setup.rs#sha256:64e7ee1eb9aaafd399fe971ca35e5df6aee68285029a9b84fa6b928a3324ffdc"

@@ -44,6 +44,7 @@
 | Shared index | [en](en/shared-index.md) | [ko](ko/shared-index.md) |
 | Global knowledge RAG | [en](en/global-knowledge-rag.md) | [ko](ko/global-knowledge-rag.md) |
 | Graphify 0.10 도입 판정 | [en](en/graphify-0-10-adoption.md) | [ko](ko/graphify-0-10-adoption.md) |
+| Source graph 공개 자격 검증 | [en](en/source-graph-public-qualification.md) | [ko](ko/source-graph-public-qualification.md) |
 | Install-wide knowledge capture | [en](en/install-wide-knowledge-capture.md) | [ko](ko/install-wide-knowledge-capture.md) |
 | Knowledge portability·scan | [en](en/knowledge-portability-scan.md) | [ko](ko/knowledge-portability-scan.md) |
 | Nested project scan `0.10.0` 범위 | [en](en/nested-project-scan-0-10.md) | [ko](ko/nested-project-scan-0-10.md) |
