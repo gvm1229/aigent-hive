@@ -1,11 +1,11 @@
 # Aigent Hive 활성 계획
 
-> Revision: 281
-> 기준일: 2026-08-23
+> Revision: 282
+> 기준일: 2026-08-24
 > Product version: `0.10.0`
 > Stable baseline: `0.9.5`
-> 다음 target: `0.10.0-test.1`
-> 현재 milestone: `0.10.0-test.1` 공개 수용 완료
+> 다음 target: `0.10.0-test.2`
+> 현재 milestone: 한국어 언어 core 범위 재개방
 > 확정 범위: [`ADR-0020`](../decisions/ADR-0020-0.10.0-product-scope.md)
 
 ## 목표
@@ -17,6 +17,7 @@
 - pre-`0.10.0` 지식·프로젝트 무손실 upgrade
 - Host-neutral 연속 실행 closure gate와 조건부 hook adapter
 - 자연어 routing 기반 `verified-workflow`와 명시적 `adversarial-judge`
+- 모든 한국어 응답·문서의 자동 언어 core, 명시적 `humanize-kor`, 검증된 `im-not-ai` upstream update
 - 모든 지원 predecessor의 Skill rename·폐기 artifact 완전 cleanup
 - 번호 공개 시험판과 같은 product bytes의 안정판 출시
 
@@ -27,6 +28,8 @@
 - 기존 SQLite 직접 검색 결과 저하 `0건`
 - Vector hard gate 실패의 product dependency·release 차단 `0건`
 - 등록 project root 밖 sibling read·write와 전역 Git 설정 mutation `0건`
+- 한국어 윤문 전후 의미·수치·명령·list·link·인용 무회귀와 host별 적용 수준의 정직한 표시
+- Upstream update의 version·commit·digest·license 고정, staging·rollback, raw install·floating update `0건`
 - Rust·Python·문서·보안·upgrade·rollback 전체 gate 통과
 - 공개 번호 시험판의 세 운영체제 수용과 유지보수자의 명시적 승인 뒤 같은 product bytes의 안정판 게시
 
@@ -64,8 +67,9 @@
 | Verified workflow | 12 | 0 | 100% |
 | Adversarial judge | 8 | 0 | 100% |
 | Skill migration cleanup | 10 | 0 | 100% |
-| `0.10.0` 출시 | 4 | 3 | 57.1% |
-| **합계** | **82** | **3** | **96.5%** |
+| 한국어 언어 core | 1 | 11 | 8.3% |
+| `0.10.0` 출시 | 0 | 7 | 0% |
+| **합계** | **79** | **18** | **81.4%** |
 
 ## Required load order
 
@@ -90,6 +94,7 @@ Archive·backlog·완료 history의 자동 선행 load 금지.
 | [`active/verified-workflow-0.10.0.md`](active/verified-workflow-0.10.0.md) | `VWF10-*`, `VWA10-*` | 자연어 routing·실행 graph·격리 통합 수용 |
 | [`active/adversarial-judge-0.10.0.md`](active/adversarial-judge-0.10.0.md) | `JDG10-*` | 명시적 독립 adversarial Judge |
 | [`active/skill-retirement-migration-0.10.0.md`](active/skill-retirement-migration-0.10.0.md) | `SKM10-*` | Rename·폐기 artifact cleanup |
+| [`active/korean-language-core-0.10.0.md`](active/korean-language-core-0.10.0.md) | `KOR10-*` | 자동 한국어 core·`humanize-kor`·upstream update |
 | [`active/release-0.10.0.md`](active/release-0.10.0.md) | `REL10-*` | 번호 시험판·안정판 출시 |
 
 ## 실행 순서
@@ -100,7 +105,9 @@ Archive·backlog·완료 history의 자동 선행 load 금지.
 4. `JDG10-002–008` explicit adversarial Judge·`judge-evidence`·host launch·quorum 결합
 5. `KRG10-001–007`, `VEC10-001–007` native 관계·vector feasibility·adopt|defer
 6. `KRG10-008–013`, `KRG10-015–016`과 통과 시 `VEC10-008–012` 구현·수용
-7. `REL10-*` 공개 시험판·세 운영체제 수용·안정판 출시
+7. `KOR10-002–011` 자동 한국어 core·`humanize-kor`·검증된 upstream language pack 구현
+8. `KOR10-012`, `REL10-001–004` 전체 회귀·`0.10.0-test.2` 이상·세 운영체제 수용
+9. 유지보수자의 명시 승인 뒤 `REL10-005–007` 안정판 출시
 
 ## 비활성 자료
 

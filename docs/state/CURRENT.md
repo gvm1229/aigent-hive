@@ -1,12 +1,12 @@
 # 현재 상태
 
-- 기준 branch: `feature/0.10.0@f050bb6`
+- 기준 branch: `feature/0.10.0@18b6037`
 - 원격 기준: `origin/feature/0.10.0` 동기화
 - product version: `0.10.0`
 - stable baseline: `0.9.5`
-- 다음 target: `0.10.0-test.1`
+- 다음 target: `0.10.0-test.2`
 - 활성 계획: [`PLAN.md`](../plans/PLAN.md)
-- 현재 milestone: `0.10.0-test.1` 공개 수용 완료
+- 현재 milestone: 한국어 언어 core·`humanize-kor`·upstream update 구현
 
 ## 최근 완료
 
@@ -40,6 +40,8 @@
 - Publication `32634206001`: `0.10.0-test.1` 게시, npm `latest=0.9.5` 불변
 - 현재 Windows: CLI `0.10.0-test.1` 설치와 Codex 사용자 projection `0.10.0` validate 통과
 - Disposable verified workflow 수용: `f050bb65`; 자연어 routing·run 생성·의도적 실패/재시도·독립 Judge receipt·새 process/session 복구·사용자 취소 6단계 통과
+- 유지보수자 결정: `im-not-ai` 논리를 Skill 선택에 의존하지 않는 자동 한국어 core로 적용하고, 기존 글 윤문에는 명시적 `humanize-kor`를 제공하며, 검증된 upstream update를 `0.10.0` 범위에 포함
+- 범위 변경 판정: `0.10.0-test.1`은 이전 범위의 유효한 기록이지만 새 안정판 수용 근거가 아니며 `0.10.0-test.2` 이상 필요
 
 ## 현재 검증 근거
 
@@ -60,17 +62,20 @@
 
 ## `0.10.0` 남은 범위
 
+- `KOR10-002–012`: 자동 한국어 core·profile·결정적 gate·세 host adapter·`humanize-kor`·upstream pack update·rollback·수용
+- `REL10-001–004`: 새 product metadata·전체 gate·`0.10.0-test.2` 이상·세 운영체제 수용
 - `REL10-005–007`: 안정판 후보·게시·설치·명시 승인
 
 ## 현재 장애 요인
 
-- 안정판 제외 범위의 Agent 소유 작업 없음
+- 안정판 제외 범위에 한국어 core 구현·시험·번호 공개 시험판 Agent 소유 작업이 존재
 - 안정판 `0.10.0`: 유지보수자의 버전명 포함 명시 승인 전 tag·protected `main` 통합·게시·설치 금지
 
 ## 다음 작업
 
-1. 유지보수자가 공개 시험판 결과 검토
-2. 명시적 `0.10.0` 안정판 승인 전 `REL10-005–007` 시작 금지
+1. `KOR10-002–011` 한국어 core·`humanize-kor`·upstream update 구현
+2. `KOR10-012`, `REL10-001–004` 전체 gate와 `0.10.0-test.2` 이상 공개 수용
+3. 명시적 `0.10.0` 안정판 승인 전 `REL10-005–007` 시작 금지
 
 ## 과거 기록
 
