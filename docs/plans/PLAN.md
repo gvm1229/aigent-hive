@@ -1,11 +1,11 @@
 # Aigent Hive 활성 계획
 
-> Revision: 287
+> Revision: 288
 > 기준일: 2026-08-24
 > Product version: `0.10.0`
 > Stable baseline: `0.9.5`
 > 다음 target: `0.10.0-test.2`
-> 현재 milestone: 한국어 언어 core·vector 재검증 구현
+> 현재 milestone: `0.10.0-test.2` 공개 시험판 수용
 > 확정 범위: [`ADR-0020`](../decisions/ADR-0020-0.10.0-product-scope.md)
 
 ## 목표
@@ -71,8 +71,8 @@
 | Skill migration cleanup | 10 | 0 | 100% |
 | 한국어 언어 core | 11 | 1 | 91.7% |
 | Source `draft-devlog` | 6 | 0 | 100% |
-| `0.10.0` 출시 | 0 | 7 | 0% |
-| **합계** | **105** | **8** | **92.9%** |
+| `0.10.0` 출시 | 2 | 5 | 28.6% |
+| **합계** | **107** | **6** | **94.7%** |
 
 ## Required load order
 

@@ -12,7 +12,7 @@ sources:
   - "repo:crates/hive-cli/src/project_upgrade.rs#sha256:af09aadf2ddfabc082dfac9ae6c8233c2fe48f964db8996063848838f04f68c5"
   - "repo:crates/hive-cli/src/session.rs#sha256:affa286cb1b1d23c2de042061af7092a89a137f1a1a5fa5762cc92bd5897e7af"
   - "repo:docs/decisions/product-release-decisions.md#sha256:e89ac8584204a7e52ed157e9b29d523f870b8ac387fc1e4a044f7f7333d17af5"
-  - "repo:docs/plans/active/release-0.10.0.md#sha256:fb376bd7a56180783983a8a3862ef816042bfa8f3c3a7c579d0f85f5311506f2"
+  - "repo:docs/plans/active/release-0.10.0.md#sha256:2055c8ca396d1ee2fdc23a4dc3d6c6fa732bdee542e125775264fbfbdb629120"
   - "repo:harness/directives/03-session-coordination.md#sha256:06736ffa5a1619bc238a39ecad068ae85b2136a8e33ccb0829badf932d8c19f3"
   - "repo:harness/skills/project-setup/SKILL.md#sha256:f17a658f423c8df0f5ca2b1960c3ea53fec57cb2859459bfe77a049510e9adf2"
   - "repo:tests/conformance/integration/test_project_lifecycle.py#sha256:8ca7d238f2ce211bf35499b2854c80bb0cc8178694991fb0c5381000e6c2070b"

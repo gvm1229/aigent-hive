@@ -1,12 +1,12 @@
 # 현재 상태
 
-- 기준 branch: `feature/0.10.0@05ac5254`
+- 기준 branch: `feature/0.10.0@30bcc747`
 - 원격 기준: `origin/feature/0.10.0` 동기화
 - product version: `0.10.0`
 - stable baseline: `0.9.5`
 - 다음 target: `0.10.0-test.2`
 - 활성 계획: [`PLAN.md`](../plans/PLAN.md)
-- 현재 milestone: 한국어 언어 core·vector 재검증 구현
+- 현재 milestone: `0.10.0-test.2` 공개 시험판 수용
 
 ## 최근 완료
 
@@ -52,12 +52,12 @@
 ## 현재 검증 근거
 
 - Directive gate: failure `0건`
-- Source Wiki: 160 page, error·warning `0건`
+- Source Wiki: 162 page, error·warning `0건`
 - Draft-devlog mock MCP 17개·focused contract 60개·documentation lane 통과
 - Draft-devlog production read-back: slug `why-vector-database-cannot-replace-fts`, content digest `sha256:4b7805e85b4f5365e55a0da279f0032c5124c7bc9443eeda24a4dd3bcd1825b1`, `published=true`, mismatch·정책 finding `0건`
 - Vector research pipeline: content digest cache·checkpoint·resume·atomic pointer, 100개 변경 7.20초, query embedding warm p95 37.31ms·cold 643.45ms, resume/one-shot digest 일치
 - Korean focused gate: core 3·CLI hook/pack 4·projection 38·renderer 63·user setup 46·user install 91·project lifecycle 10·Python 39 통과, GNU Clippy `-D warnings` 통과
-- Python lane: documentation 45, security 103, contract 380, integration 84, release 58 통과
+- 현재 source 전체 Python lane: documentation 45, security 103, contract 406, integration 84, release 58 통과
 - Rust `hive-render` 63, `hive-cli` user setup 46·user install 89, historical upgrade 3 통과
 - Rust workspace `--all-targets --all-features` 전 범위와 Clippy `-D warnings` 통과
 - Human documentation style 19 통과·Windows 전용 1건 건너뜀
@@ -66,24 +66,24 @@
 - Routing·세 host Judge receipt·취소 closure Python 집중 회귀 3건 통과
 - Rust retry policy와 canonical loop recovery 집중 회귀는 Windows GNU target에서 각 1건 통과
 - 현재 shell의 MSVC `link.exe` 부재로 fresh MSVC 재빌드 미실행. 기존 Windows CLI 공개 수용과 GNU 집중 회귀를 대체 근거로 사용. 이번 실행의 새 MSVC build 증명 제외
-- GitHub Actions: feature branch push trigger 없음, CI run 생성 `0건`
+- GitHub Actions `32673178227`: Rust·Python·Windows·macOS job은 통과했으나 새 문서 36개 문체 finding으로 실패. 정본 문서 수정 뒤 local finding `0건`
 - Release lane의 macOS·POSIX 전용 8건과 integration의 Windows 권한 필요 symbolic link 12건 건너뜀
 - 위 건너뜀은 현재 Windows host의 제한이며 해당 운영체제 수용 근거 아님
 
 ## `0.10.0` 남은 범위
 
 - `KOR10-012`: 한국어 gold blind 평가·세 host·세 운영체제·direct upgrade·rollback 공개 시험 수용
-- `REL10-001–004`: 새 product metadata·전체 gate·`0.10.0-test.2` 이상·세 운영체제 수용
+- `REL10-003–004`: `0.10.0-test.2` 공개 게시·세 운영체제 수용
 - `REL10-005–007`: 안정판 후보·게시·설치·명시 승인
 
 ## 현재 장애 요인
 
-- 안정판 제외 범위에 한국어 core 구현·시험·번호 공개 시험판 Agent 소유 작업이 존재
+- 안정판 제외 범위에 번호 공개 시험판 게시·세 운영체제 수용 Agent 소유 작업 존재
 - 안정판 `0.10.0`: 유지보수자의 버전명 포함 명시 승인 전 tag·protected `main` 통합·게시·설치 금지
 
 ## 다음 작업
 
-1. `KOR10-012`, `REL10-001–004` 전체 gate와 `0.10.0-test.2` 이상 공개 수용
+1. `KOR10-012`, `REL10-003–004`의 `0.10.0-test.2` 공개 게시·세 운영체제 수용
 2. 명시적 `0.10.0` 안정판 승인 전 `REL10-005–007` 시작 금지
 
 ## 과거 기록
