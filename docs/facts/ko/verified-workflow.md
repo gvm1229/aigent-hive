@@ -11,7 +11,7 @@ aliases: ["ralph-loop"]
 sources:
   - "repo:docs/decisions/ADR-0020-0.10.0-product-scope.md#sha256:9870204c4032c4c43504b73d20689b2104eba5d8ff826b607016866fd22155b5"
   - "repo:docs/decisions/product-release-decisions.md#sha256:e89ac8584204a7e52ed157e9b29d523f870b8ac387fc1e4a044f7f7333d17af5"
-  - "repo:docs/plans/active/verified-workflow-0.10.0.md#sha256:c2043678fc1e5ad2e8e2a9cb716e45ec44486b67f3a9af2349c8909e6f4b3a8b"
+  - "repo:docs/plans/active/verified-workflow-0.10.0.md#sha256:f88a14b8ddbe260320ddc58feba5c6b953b532e403bb6f7c3af7d0ebe035880f"
   - "repo:scripts/accept-verified-workflow.py#sha256:ad4bfb4f5c2b477a5900f0e28161ce1baee155af1b96cb73e93a0ec871a149a5"
 links: [host-neutral-continuation, v0-10-product-scope]
 reviewed_revision: "git:f050bb65eeed570541346af6dc22c52cdc6dbaf9"
@@ -20,9 +20,9 @@ status: active
 
 # Verified workflow Skill
 
-`verified-workflow`는 evidence graph·bounded retry·독립 검증·exact recovery를 결합합니다. 자연어
-continuation은 workflow signal 2개 이상일 때만 자동 선택하며 작업 길이와 bare `continue`는
-근거가 아닙니다. Disposable 수용은 정규화 route·canonical run 생성·의도적 실패 뒤 성공
-retry·별도 host-owned Judge receipt·새 process/session 복구·terminal 취소를 한 receipt로
-검증했습니다. 이는 CLI process 복구만 증명하며 Codex desktop 재시작이나 단일 Judge의
-인증 quorum 완료 권한은 증명하지 않습니다.
+`verified-workflow`: evidence graph·bounded retry·독립 검증·exact recovery 결합. 자연어
+continuation 자동 선택 조건: workflow signal 2개 이상. 작업 길이와 bare `continue`는 선택
+근거에서 제외. Disposable 수용 범위: 정규화 route·canonical run 생성·의도적 실패 뒤 성공
+retry·별도 host-owned Judge receipt·새 process/session 복구·terminal 취소의 단일 receipt
+검증. 증명 범위는 CLI process 복구이며 Codex desktop 재시작과 단일 Judge의 인증 quorum
+완료 권한은 제외.

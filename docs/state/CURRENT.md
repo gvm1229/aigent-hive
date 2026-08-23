@@ -65,7 +65,7 @@
 - Verified workflow 단일 수용 영수증 `sha256:a2fefa0da9027582bcfbcdc44da5dae33d22491bcb6c323cee78bcc0b0e81169`, provider process·stable release 실행 `0건`
 - Routing·세 host Judge receipt·취소 closure Python 집중 회귀 3건 통과
 - Rust retry policy와 canonical loop recovery 집중 회귀는 Windows GNU target에서 각 1건 통과
-- 현재 shell에는 MSVC `link.exe`가 없어 fresh MSVC 재빌드는 실행하지 못함. 기존 Windows CLI 공개 수용과 GNU 집중 회귀를 대체 근거로 사용했으며, 이번 실행이 새 MSVC build를 증명하지는 않음
+- 현재 shell의 MSVC `link.exe` 부재로 fresh MSVC 재빌드 미실행. 기존 Windows CLI 공개 수용과 GNU 집중 회귀를 대체 근거로 사용. 이번 실행의 새 MSVC build 증명 제외
 - GitHub Actions: feature branch push trigger 없음, CI run 생성 `0건`
 - Release lane의 macOS·POSIX 전용 8건과 integration의 Windows 권한 필요 symbolic link 12건 건너뜀
 - 위 건너뜀은 현재 Windows host의 제한이며 해당 운영체제 수용 근거 아님

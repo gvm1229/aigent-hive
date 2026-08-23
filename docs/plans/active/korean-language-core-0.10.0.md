@@ -7,12 +7,12 @@
 
 ## 제품 계약
 
-- 자동 한국어 core와 `humanize-kor` Skill은 같은 rule pack·profile·검사 engine을 사용함
-- 일반 한국어 생성에는 작고 안전한 생성 규칙을 항상 적용하고, 완성 초안에는 결정적 검사와 필요한 구간의 국소 재작성을 적용함
-- `humanize-kor`는 사용자가 붙여넣거나 지정한 기존 한국어 글을 빠르게 윤문하는 명시적 진입점이며, 일반 응답의 자동 적용을 대신하지 않음
-- 원문·직접 인용·코드·명령·경로·URL·수치·날짜·단위·version·고유명사를 보호함
-- 정확한 원본이 어색한 윤문본보다 우선하며, 검사 실패 때 부정확한 후보를 채택하지 않음
-- Hive는 provider API·credential·model process를 소유하지 않으며, 실제 진단·재작성은 활성 host가 수행함
+- 자동 한국어 core와 `humanize-kor` Skill: 동일한 rule pack·profile·검사 engine 사용
+- 일반 한국어 생성: 작고 안전한 생성 규칙의 상시 적용과 완성 초안의 결정적 검사·필요 구간 국소 재작성
+- `humanize-kor`: 사용자가 붙여넣거나 지정한 기존 한국어 글을 빠르게 윤문하는 명시적 진입점. 일반 응답 자동 적용의 대체 수단 아님
+- 보호 대상: 원문·직접 인용·코드·명령·경로·URL·수치·날짜·단위·version·고유명사
+- 우선순위: 정확한 원본이 어색한 윤문본보다 우선. 검사 실패 후보 채택 금지
+- 실행 경계: Hive의 provider API·credential·model process 소유 금지. 실제 진단·재작성은 활성 host 소유
 
 ## 적용 profile
 
@@ -26,31 +26,31 @@
 
 ## Host 적용 수준
 
-- Codex: 항상 적용되는 생성 정책과 final self-review. 공식 final-response replacement hook이 없으면 그 한계를 명시함
-- Claude: `Stop`에서 `last_assistant_message`를 검사하고, 실패 시 bounded rewrite를 요청함. Hook이 응답을 직접 바꾼다고 표현하지 않음
-- Antigravity·Gemini CLI: `AfterAgent` final 검사와 bounded retry를 사용함. Streaming `AfterModel` chunk 교체는 문서 전체 빈도 검사에 사용하지 않음
-- Hive-owned 문서·공지·CLI 문자열: host와 무관한 결정적 gate를 commit·게시 전에 적용함
+- Codex: 상시 생성 정책과 final self-review. 공식 final-response replacement hook 부재 시 한계 명시
+- Claude: `Stop`에서 `last_assistant_message` 검사, 실패 시 bounded rewrite 요청. Hook의 직접 응답 교체 표현 금지
+- Antigravity·Gemini CLI: `AfterAgent` final 검사와 bounded retry 사용. Streaming `AfterModel` chunk 교체의 문서 전체 빈도 검사 사용 금지
+- Hive-owned 문서·공지·CLI 문자열: host와 무관한 결정적 gate를 commit·게시 전에 적용
 
 ## Watermark·출처 계약
 
-- 자연스러운 한국어 작성과 검증 가능한 출처 은폐는 다른 목적임
-- 통계적 watermark나 탐지기 회피율을 측정·최적화·광고하지 않음
-- 숨은 문자 삽입·후보 단어 교란·반복 재작성으로 detector를 속이는 기능을 만들지 않음
-- 출처 표시·인용·저자·기관·링크·AI 사용 고지처럼 원문에 존재하는 provenance를 삭제하거나 거짓 인간 작성 주장을 추가하지 않음
-- 사용자가 detector 우회나 의무 고지 회피를 요청하면 그 목적은 수행하지 않고, 출처와 의미를 보존하는 일반 문체 개선만 제안함
-- `sanitize`의 zero-width·bidi·NFC 처리는 text hygiene이며 통계적 watermark 제거로 표현하지 않음
-- 정상적인 윤문이 부수적으로 탐지 점수를 바꿀 수 있음을 인정하되, 그 변화는 성공 기준이나 품질 지표가 아님
+- 자연스러운 한국어 작성과 검증 가능한 출처 은폐의 목적 분리
+- 통계적 watermark나 탐지기 회피율의 측정·최적화·광고 금지
+- 숨은 문자 삽입·후보 단어 교란·반복 재작성으로 detector를 속이는 기능 금지
+- 출처 표시·인용·저자·기관·링크·AI 사용 고지처럼 원문에 존재하는 provenance 삭제와 거짓 인간 작성 주장 추가 금지
+- 사용자의 detector 우회나 의무 고지 회피 요청: 해당 목적 수행 금지, 출처와 의미를 보존하는 일반 문체 개선만 제안
+- `sanitize`의 zero-width·bidi·NFC 처리: text hygiene. 통계적 watermark 제거 표현 금지
+- 정상적인 윤문에 따른 탐지 점수 변화: 부수 효과일 수 있으나 성공 기준·품질 지표에서 제외
 
 ## Upstream update 계약
 
-- Floating `main`, upstream `install.sh|update.sh`, symlink, cron, 자동 `git pull`을 제품에서 실행하지 않음
-- Upstream version·commit·tree digest·license digest·선별 파일 digest·Hive 변환 version을 manifest에 고정함
-- `rules-data`: taxonomy·quick rules·diagnosis rules·baseline·profile 자료. 격리 build와 corpus gate 통과 뒤 독립 language pack 후보로 승격 가능함
-- `engine-code`: metrics·sanitize·gate·chunking 코드. Rust·Python·보안·세 운영체제 검증과 번호 시험판이 필요함
-- `host-surface`: Skill·agent·hook·manifest 변경. 세 host capability·projection·upgrade 수용이 필요함
-- Upstream check는 update 가능성만 보고하고, staging·검증·preview·명시 승인 뒤 원자 활성화함
-- 활성 pack과 이전 pack을 함께 보존하고 실패·schema mismatch·품질 저하 때 즉시 rollback함
-- Upstream 삭제·force-push·license 변경은 기존 검증 pack의 사용 권한과 digest 기록을 제거하지 않음
+- 제품 실행 금지: floating `main`, upstream `install.sh|update.sh`, symlink, cron, 자동 `git pull`
+- Manifest 고정 항목: upstream version·commit·tree digest·license digest·선별 파일 digest·Hive 변환 version
+- `rules-data`: taxonomy·quick rules·diagnosis rules·baseline·profile 자료. 격리 build와 corpus gate 통과 뒤 독립 language pack 후보 승격 가능
+- `engine-code`: metrics·sanitize·gate·chunking 코드. Rust·Python·보안·세 운영체제 검증과 번호 시험판 필요
+- `host-surface`: Skill·agent·hook·manifest 변경. 세 host capability·projection·upgrade 수용 필요
+- Upstream check: update 가능성만 보고. staging·검증·preview·명시 승인 뒤 원자 활성화
+- 활성 pack과 이전 pack 동시 보존. 실패·schema mismatch·품질 저하 때 즉시 rollback
+- Upstream 삭제·force-push·license 변경 시에도 기존 검증 pack의 사용 권한과 digest 기록 유지
 
 ## Checklist
 
@@ -69,6 +69,6 @@
 
 ## 출시 경계
 
-- `0.10.0-test.1`은 이 기능을 포함하지 않으므로 안정판 수용 근거로 재사용하지 않음
-- 구현 뒤 `0.10.0-test.2` 이상을 새 product bytes로 게시·설치·세 운영체제 수용함
-- 안정판 `0.10.0`은 새 번호 시험판 수용과 유지보수자의 버전명 포함 명시 승인 전 계속 금지함
+- `0.10.0-test.1`: 이 기능 제외. 안정판 수용 근거로 재사용 불가
+- 구현 뒤 `0.10.0-test.2` 이상을 새 product bytes로 게시·설치·세 운영체제 수용
+- 안정판 `0.10.0`: 새 번호 시험판 수용과 유지보수자의 버전명 포함 명시 승인 전 계속 금지

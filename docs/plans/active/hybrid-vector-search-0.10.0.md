@@ -58,7 +58,7 @@ SQLite FTS의 exact 검색을 유지하면서 표현이 다른 의미·다국어
 - Shared·project-private·confidential 누출 `0건`
 - Offline rebuild와 provider API·API key·background server·network `0건`
 - Engine·model 부재·손상·mismatch의 FTS·graph 영향 `0건`
-- 합성 반복 corpus와 50,000 unique corpus 결과를 섞어 해석하지 않음
+- 합성 반복 corpus와 50,000 unique corpus 결과의 분리 해석
 - Full build는 중단 뒤 재개 가능하고 완료 generation만 활성화
 
 ## Engine 후보

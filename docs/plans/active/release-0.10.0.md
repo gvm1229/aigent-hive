@@ -31,5 +31,5 @@
 
 ## 이전 공개 시험 근거
 
-- Candidate `32633724977`, publication `32634206001`, `0.10.0-test.1`, Windows 실제 설치·세 운영체제 수용은 당시 승인 범위의 유효한 기록임
-- `0.10.0-test.1`에는 `KOR10-*`가 없으므로 stable `0.10.0`의 현재 product acceptance로 승격하지 않음
+- Candidate `32633724977`, publication `32634206001`, `0.10.0-test.1`, Windows 실제 설치·세 운영체제 수용: 당시 승인 범위의 유효 기록
+- `0.10.0-test.1`: `KOR10-*` 제외. stable `0.10.0`의 현재 product acceptance 승격 불가

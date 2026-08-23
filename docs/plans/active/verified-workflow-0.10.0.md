@@ -25,10 +25,10 @@
 
 수용 경계:
 
-- 제품·사용자 지식·전역 설정을 변경하지 않고 `tests/work/`만 실행 상태로 사용
-- provider process·model API·subagent process를 실행하지 않음
-- 실제 Codex 응용 프로그램 재시작 대신 새 CLI 프로세스와 새 session identity의 복구를 검증하며, 응용 프로그램 자체 재시작까지 증명했다고 표현하지 않음
-- `0.10.0` 안정판 tag·게시·설치 작업은 포함하지 않음
+- 제품·사용자 지식·전역 설정 변경 `0건`; `tests/work/`만 실행 상태로 사용
+- provider process·model API·subagent process 실행 `0건`
+- 실제 Codex 응용 프로그램 재시작 대신 새 CLI 프로세스와 새 session identity의 복구 검증. 응용 프로그램 자체 재시작까지 증명했다는 표현 금지
+- `0.10.0` 안정판 tag·게시·설치 작업 제외
 
 ## 자동 선택 기준
 
