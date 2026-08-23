@@ -1,7 +1,7 @@
 # 현재 상태
 
-- 기준 branch: `feature/0.10.0@e2c3dd6`
-- 원격 기준: `origin/feature/0.10.0` push 대기
+- 기준 branch: `feature/0.10.0@50c7333`
+- 원격 기준: `origin/feature/0.10.0@50c7333` 동기화
 - product version: `0.9.5`
 - 다음 target: `0.10.0-test`
 - 활성 계획: [`PLAN.md`](../plans/PLAN.md)
@@ -31,6 +31,7 @@
 - Rust workspace 전 범위 통과; `hive-update` Windows 파일 잠금 1건은 동일 시험 격리 재실행 통과
 - Human documentation style 19 통과·Windows 전용 1건 건너뜀
 - Markdown link 5 통과
+- GitHub Actions: feature branch push trigger 없음, CI run 생성 `0건`
 - Release lane의 macOS·POSIX 전용 8건과 integration의 Windows 권한 필요 symbolic link 12건 건너뜀
 - 위 건너뜀은 현재 Windows host의 제한이며 해당 운영체제 수용 근거 아님
 
