@@ -233,6 +233,23 @@ class Phase3SkillSourceContract(unittest.TestCase):
         self.assertIn("session-bound `hive usage enforce`", agents)
         self.assertIn("07-installed-usage-guard.md", agents)
 
+    def test_source_binds_unspecified_development_to_the_active_version(self) -> None:
+        behavior = (ROOT / ".agents/directives/01-behavior.md").read_text(encoding="utf-8")
+        agents = (ROOT / "AGENTS.md").read_text(encoding="utf-8")
+        ownership = (ROOT / "docs/architecture/agent-directive-ownership.md").read_text(
+            encoding="utf-8"
+        )
+        normalized = " ".join(behavior.split())
+        for required in (
+            "An exact version named by the maintainer in the current request overrides",
+            "product version and next numbered public test in `docs/plans/PLAN.md`",
+            "Do not move or suggest the work to a later version",
+            "post-test acceptance reset in `03-workflow.md`",
+        ):
+            self.assertIn(required, normalized)
+        self.assertIn("Never invent or suggest a later version as the default destination", agents)
+        self.assertIn("언어·활성 version·continuation", ownership)
+
     def test_source_directives_continue_agent_owned_work_until_closure(self) -> None:
         behavior = (ROOT / ".agents/directives/01-behavior.md").read_text(encoding="utf-8")
         state = (ROOT / ".agents/directives/04-documentation-state.md").read_text(encoding="utf-8")

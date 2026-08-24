@@ -21,6 +21,9 @@ Repository directives live under `.agents/`; shipping consumer sources live unde
 - Stable `tag`, protected `main` integration, publication, and installation require the
   maintainer's current, version-specific approval. `release`, `ship`, `continue`, and `all todos`
   authorize at most implementation, verification, and numbered public tests.
+- Resolve development work against the active `docs/plans/PLAN.md` product version and its next
+  numbered public test unless the maintainer names a different version in the current request.
+  Never invent or suggest a later version as the default destination.
 - Abort continued work only for an exact user-owned manual blocker, a required Codex restart, or
   completed criteria. Every other failure remains agent-owned work.
 - Preserve historical `harness/project-bases/` and `harness/user-bases/` bytes.

@@ -11,7 +11,7 @@
 
 | Rule ID | Canonical owner | Entry 요약 허용 |
 | --- | --- | --- |
-| `behavior` | `.agents/directives/01-behavior.md` | 언어·continuation 중단 3조건 |
+| `behavior` | `.agents/directives/01-behavior.md` | 언어·활성 version·continuation 중단 3조건 |
 | `architecture` | `.agents/directives/02-architecture.md` | Provider API·credential 금지 |
 | `git-release` | `.agents/directives/03-workflow.md` | 안정판 version별 명시 승인 |
 | `documentation-state` | `.agents/directives/04-documentation-state.md` | 계획·fact route |

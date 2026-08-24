@@ -23,6 +23,11 @@ Owns response behavior, work selection, prompt routing, continuation, and final 
 
 - Run one bounded Source Wiki lookup before knowledge-dependent source work. A source-root refusal
   from consumer retrieval is not a completed lookup.
+- Resolve a source-development version before planning or implementation. An exact version named
+  by the maintainer in the current request overrides the active plan. Otherwise bind the request
+  to the product version and next numbered public test in `docs/plans/PLAN.md`. Do not move or
+  suggest the work to a later version merely because a numbered test already exists; apply the
+  post-test acceptance reset in `03-workflow.md` when product bytes change.
 - Answer a simple question after that lookup without a plan, project edit, or unrelated Skill.
 - Automatically load installed `aigent-hive:prompt-refine` in `refine-only` mode for explicit
   prompt authoring or material ambiguity. Before digest-bound approval, do not execute the refined
