@@ -1,11 +1,11 @@
 # Aigent Hive 활성 계획
 
-> Revision: 289
+> Revision: 290
 > 기준일: 2026-08-24
 > Product version: `0.10.0`
 > Stable baseline: `0.9.5`
 > 다음 target: `0.10.0-test.2`
-> 현재 milestone: `0.10.0-test.2` 공개 시험판 수용
+> 현재 milestone: `0.10.0` 활성 범위 해석 정합화
 > 확정 범위: [`ADR-0020`](../decisions/ADR-0020-0.10.0-product-scope.md)
 
 ## 목표
@@ -64,7 +64,7 @@
 | Hybrid vector search | 23 | 0 | 100% |
 | Host-owned Skill 예약 | 1 | 0 | 100% |
 | Nested project scan | 1 | 0 | 100% |
-| Agent 지침 경량화 | 7 | 0 | 100% |
+| Agent 지침 경량화 | 7 | 1 | 87.5% |
 | Host-neutral 연속 실행 | 10 | 0 | 100% |
 | Verified workflow | 12 | 0 | 100% |
 | Adversarial judge | 8 | 0 | 100% |
@@ -72,7 +72,7 @@
 | 한국어 언어 core | 12 | 0 | 100% |
 | Source `draft-devlog` | 6 | 0 | 100% |
 | `0.10.0` 출시 | 4 | 3 | 57.1% |
-| **합계** | **110** | **3** | **97.3%** |
+| **합계** | **110** | **4** | **96.5%** |
 
 ## Required load order
 
@@ -103,7 +103,7 @@ Archive·backlog·완료 history의 자동 선행 load 금지.
 
 ## 실행 순서
 
-1. `DIR10-001–007` source·소비자 지침 단일 정본·경량화·upgrade 수용
+1. `DIR10-001–008` source·소비자 지침 단일 정본·경량화·활성 version 해석·upgrade 수용
 2. `CON10-002–010`, `VWF10-002–006` closure·natural routing·bounded three-host adapter 구현·수용
 3. `SKM10-002–010` 모든 stable registry·predecessor Skill cleanup과 direct jump upgrade
 4. `JDG10-002–008` explicit adversarial Judge·`judge-evidence`·host launch·quorum 결합
