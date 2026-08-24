@@ -15,7 +15,7 @@ sources:
   - "repo:docs/plans/active/korean-language-core-0.10.0.md#sha256:aaf1355c1b691a83f047164caed5923bcc5a9769ffb44aecfe8b4c3d247af46c"
   - "repo:harness/language-packs/im-not-ai/2.3.2/manifest.json#sha256:50e8bec5fb4c7a479f9e0800f262d49c3e01258ba3c7b9066aab65ba3f7ca34e"
   - "repo:harness/skills/humanize-kor/SKILL.md#sha256:8805da50d3370fa953a1325a0a6c5294247ab037cb173ab09266c67d09aa659a"
-  - "repo:scripts/qualify-korean-public-test.py#sha256:2540cb5d5f7e64a7d44ab842efab661e9f40c732b517b42300d20e4fcdb31384"
+  - "repo:scripts/qualify-korean-public-test.py#sha256:431b5b8594eeb6e08275fcc6d1aaeca2b541e7f13eb1d58663bf42357626af49"
 links: [language-consistency, public-skill-identity, v0-10-product-scope]
 reviewed_revision: "git:eaed3203ce3fea062acab325a9ce0892348aff02"
 status: active

@@ -99,16 +99,21 @@ def qualify(
         f"AIgent Hive v{product_version}-test #{package_match.group(1)} "
         f"· developer test build (released {release_date})"
     )
-    version = subprocess.run(
+    version_probe = subprocess.run(
         [str(hive), "--version"],
         cwd=work_root,
         check=True,
         capture_output=True,
-        text=True,
         timeout=30,
-    ).stdout.strip()
-    if version != expected_version:
-        raise RuntimeError(f"unexpected public binary version: {version}")
+    )
+    version_bytes = version_probe.stdout.rstrip(b"\r\n")
+    expected_version_bytes = expected_version.encode("utf-8")
+    if version_bytes != expected_version_bytes:
+        raise RuntimeError(
+            "unexpected public binary version bytes: "
+            f"actual={version_bytes.hex()} expected={expected_version_bytes.hex()}"
+        )
+    version = version_bytes.decode("utf-8")
 
     gold = json.loads(corpus.read_text(encoding="utf-8"))
     if gold.get("schema_version") != 1:
