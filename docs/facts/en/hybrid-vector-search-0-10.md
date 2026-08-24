@@ -9,7 +9,7 @@ summary: "0.10.0 vector requalification deferred the optional adapter because th
 tags: [knowledge, retrieval, v0-10, vector]
 aliases: ["Vector database gate"]
 sources:
-  - "repo:docs/decisions/ADR-0020-0.10.0-product-scope.md#sha256:9870204c4032c4c43504b73d20689b2104eba5d8ff826b607016866fd22155b5"
+  - "repo:docs/decisions/ADR-0020-0.10.0-product-scope.md#sha256:1acc607d5b8703117b2f8b3e9e31c0f9a5f1653c4262a477441b6c078cf24d81"
   - "repo:docs/plans/active/hybrid-vector-search-0.10.0.md#sha256:df7502f8bf610d13f4269d5cbd344857157325ab56d34154f154dbfb7b730364"
   - "repo:docs/research/evidence/vector-hard-gate-windows-2026-08-23.json#sha256:41517d801330c1c299178b5b1ae75ed27fb5106c8af6ce4e2083b66cec30f09a"
   - "repo:docs/research/evidence/vector-requalification-windows-2026-08-24.json#sha256:df1a2e0bf1001236cef266653309154bb99676837be86a2beba25e8dff16b178"
