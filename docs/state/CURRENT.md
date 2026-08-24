@@ -1,6 +1,6 @@
 # 현재 상태
 
-- 기준 branch: `feature/0.10.0@30bcc747`
+- 기준 branch: `feature/0.10.0@1e9590f2`
 - 원격 기준: `origin/feature/0.10.0` 동기화
 - product version: `0.10.0`
 - stable baseline: `0.9.5`
@@ -48,6 +48,10 @@
 - `draft-devlog` production 수용: 대상 글의 실제 `published=true` 상태 확인, 유지보수자 공개 글 수정 승인 뒤 내부 ID 일반화, 공개 상태 유지, metadata·본문 digest 일치, 정책 위반 `0건`
 - Vector 재검증 `defer`: 반복 50,000건은 30 digest·5.75초, 고유 50,000건은 1,000 probe 기준 약 2,711초 환산으로 600초 gate 실패, 제품 dependency `0건`
 - 한국어 언어 core·`humanize-kor`·provenance pack·update preview·staging·rollback·세 host conditional adapter 구현 — `eaed3203`
+- Candidate `32676134575`: 다섯 target package·attestation·source graph·installer 통과
+- Publication `32676726910`: `0.10.0-test.2` npm 6종·GitHub prerelease 게시, `latest=0.9.5` 불변
+- Public acceptance `32677477765`: Windows x64·macOS arm64·Linux musl x64 exact npm byte의 Korean gold·sanitize·pack update·rollback 통과
+- Clean-context blind A/B: 자연화 후보 10/10 선택, 의미 drift 2/2 거부, 잘못된 선택 `0건`
 
 ## 현재 검증 근거
 
@@ -66,24 +70,23 @@
 - Routing·세 host Judge receipt·취소 closure Python 집중 회귀 3건 통과
 - Rust retry policy와 canonical loop recovery 집중 회귀는 Windows GNU target에서 각 1건 통과
 - 현재 shell의 MSVC `link.exe` 부재로 fresh MSVC 재빌드 미실행. 기존 Windows CLI 공개 수용과 GNU 집중 회귀를 대체 근거로 사용. 이번 실행의 새 MSVC build 증명 제외
-- GitHub Actions `32673178227`: Rust·Python·Windows·macOS job은 통과했으나 새 문서 36개 문체 finding으로 실패. 정본 문서 수정 뒤 local finding `0건`
+- Product CI `32675564320`: Linux 전체 lane·Windows·macOS·문체 gate 통과
+- Public acceptance `32677477765`: 세 운영체제 receipt의 corpus·pack digest와 rollback 결과 일치
 - Release lane의 macOS·POSIX 전용 8건과 integration의 Windows 권한 필요 symbolic link 12건 건너뜀
 - 위 건너뜀은 현재 Windows host의 제한이며 해당 운영체제 수용 근거 아님
 
 ## `0.10.0` 남은 범위
 
-- `KOR10-012`: 한국어 gold blind 평가·세 host·세 운영체제·direct upgrade·rollback 공개 시험 수용
-- `REL10-003–004`: `0.10.0-test.2` 공개 게시·세 운영체제 수용
 - `REL10-005–007`: 안정판 후보·게시·설치·명시 승인
 
 ## 현재 장애 요인
 
-- 안정판 제외 범위에 번호 공개 시험판 게시·세 운영체제 수용 Agent 소유 작업 존재
+- 안정판 제외 범위의 Agent 소유 작업 `0건`
 - 안정판 `0.10.0`: 유지보수자의 버전명 포함 명시 승인 전 tag·protected `main` 통합·게시·설치 금지
 
 ## 다음 작업
 
-1. `KOR10-012`, `REL10-003–004`의 `0.10.0-test.2` 공개 게시·세 운영체제 수용
+1. 유지보수자 검토를 위해 `0.10.0-test.2` 수용 결과 보고
 2. 명시적 `0.10.0` 안정판 승인 전 `REL10-005–007` 시작 금지
 
 ## 과거 기록

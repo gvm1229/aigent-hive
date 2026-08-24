@@ -11,7 +11,7 @@ aliases: ["0.10.0 scope"]
 sources:
   - "repo:docs/decisions/ADR-0020-0.10.0-product-scope.md#sha256:9870204c4032c4c43504b73d20689b2104eba5d8ff826b607016866fd22155b5"
   - "repo:docs/decisions/product-release-decisions.md#sha256:e89ac8584204a7e52ed157e9b29d523f870b8ac387fc1e4a044f7f7333d17af5"
-  - "repo:docs/plans/active/korean-language-core-0.10.0.md#sha256:aaf1355c1b691a83f047164caed5923bcc5a9769ffb44aecfe8b4c3d247af46c"
+  - "repo:docs/plans/active/korean-language-core-0.10.0.md#sha256:12de0afadc6995dc5ae6a0151791c461f6f59e3ae38e0fe6f3ca3eb13004f1a3"
 links: [consumer-session-coordination, graphify-0-10-adoption, hybrid-vector-search-0-10, knowledge-storage, nested-project-scan-0-10]
 reviewed_revision: "git:eaed3203ce3fea062acab325a9ce0892348aff02"
 status: active

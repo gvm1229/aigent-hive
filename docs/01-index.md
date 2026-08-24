@@ -101,6 +101,7 @@ current catalog.
 | [`0.10.0` 후보 검토](research/0.10-backlog-archive-candidate-review-2026-08-22.md) | Backlog 전체·Archive 미완료 checklist의 승격 가치 |
 | [Vector·file memory 검토](research/vector-memory-0.10-feasibility-2026-08-22.md) | Anthropic file memory·Qdrant·SQLite hybrid search |
 | [Vector 재검증 결과](research/vector-requalification-0.10-2026-08-24.md) | 50,000개 고유 embedding·증분·재개 hard gate 판정 |
+| [한국어 언어 core 공개 시험 수용](research/korean-language-core-0.10-acceptance-2026-08-24.md) | 공개 npm 3개 운영체제·blind A/B·pack rollback 근거 |
 | [v0.9 capability inventory](research/v0.9-omx-omc-capability-inventory.md) | OMX·OMC·Hive `adopt|merge|exclude` 근거표 |
 | [Discord·Notion host integration](research/discord-notion-host-integrations.md) | Host plugin·MCP·outbound 알림 경계 |
 
