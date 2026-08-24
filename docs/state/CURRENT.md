@@ -1,6 +1,6 @@
 # 현재 상태
 
-- 기준 branch: `feature/0.10.0@1e9590f2`
+- 기준 branch: `feature/0.10.0@61089104`
 - 원격 기준: `origin/feature/0.10.0` 동기화
 - product version: `0.10.0`
 - stable baseline: `0.9.5`
@@ -71,6 +71,7 @@
 - Rust retry policy와 canonical loop recovery 집중 회귀는 Windows GNU target에서 각 1건 통과
 - 현재 shell의 MSVC `link.exe` 부재로 fresh MSVC 재빌드 미실행. 기존 Windows CLI 공개 수용과 GNU 집중 회귀를 대체 근거로 사용. 이번 실행의 새 MSVC build 증명 제외
 - Product CI `32675564320`: Linux 전체 lane·Windows·macOS·문체 gate 통과
+- Final CI `32678136787`: 공개 시험 수용 문서·runtime job inventory를 포함한 전체 protected gate 통과
 - Public acceptance `32677477765`: 세 운영체제 receipt의 corpus·pack digest와 rollback 결과 일치
 - Release lane의 macOS·POSIX 전용 8건과 integration의 Windows 권한 필요 symbolic link 12건 건너뜀
 - 위 건너뜀은 현재 Windows host의 제한이며 해당 운영체제 수용 근거 아님
