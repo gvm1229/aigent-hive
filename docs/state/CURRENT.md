@@ -6,7 +6,7 @@
 - stable baseline: `0.9.5`
 - 다음 target: `0.10.0-test.2`
 - 활성 계획: [`PLAN.md`](../plans/PLAN.md)
-- 현재 milestone: `0.10.0` 활성 범위 해석 정합화
+- 현재 milestone: `0.10.0` 활성 범위 유지
 
 ## 최근 완료
 
@@ -52,6 +52,7 @@
 - Publication `32676726910`: `0.10.0-test.2` npm 6종·GitHub prerelease 게시, `latest=0.9.5` 불변
 - Public acceptance `32677477765`: Windows x64·macOS arm64·Linux musl x64 exact npm byte의 Korean gold·sanitize·pack update·rollback 통과
 - Clean-context blind A/B: 자연화 후보 10/10 선택, 의미 drift 2/2 거부, 잘못된 선택 `0건`
+- 새 version 미지정 개발 요청의 활성 `0.10.0`·다음 번호 시험판 귀속 규칙과 회귀 검사 추가 — `f34c524d`
 
 ## 현재 검증 근거
 
@@ -78,19 +79,17 @@
 
 ## `0.10.0` 남은 범위
 
-- `DIR10-008`: 새 version 미지정 개발 요청의 활성 `0.10.0`·다음 번호 시험판 귀속
 - `REL10-005–007`: 안정판 후보·게시·설치·명시 승인
 
 ## 현재 장애 요인
 
-- 안정판 제외 범위의 Agent 소유 작업: `DIR10-008` 1건
+- 안정판 제외 범위의 Agent 소유 작업 `0건`
 - 안정판 `0.10.0`: 유지보수자의 버전명 포함 명시 승인 전 tag·protected `main` 통합·게시·설치 금지
 
 ## 다음 작업
 
-1. `DIR10-008` 지침·회귀 검사 구현
-2. 유지보수자 검토를 위해 `0.10.0-test.2` 수용 결과 보고
-3. 명시적 `0.10.0` 안정판 승인 전 `REL10-005–007` 시작 금지
+1. 유지보수자 검토를 위해 `0.10.0-test.2` 수용 결과 보고
+2. 명시적 `0.10.0` 안정판 승인 전 `REL10-005–007` 시작 금지
 
 ## 과거 기록
 

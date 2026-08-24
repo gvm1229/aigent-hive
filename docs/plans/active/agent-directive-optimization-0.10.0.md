@@ -12,7 +12,7 @@
 - [x] [DIR10-005] `user_setup`·`user_install` 공통 완료·중단·안정판 block의 단일 내부 renderer와 영어·한국어 parity
 - [x] [DIR10-006] 비허용 normalized 규범 중복 `0건`, size budget·router target·projection parity·중단 3조건 정적 gate
 - [x] [DIR10-007] `0.7.0–0.9.5` direct upgrade·foreign byte·rollback·historical digest 불변과 Source Wiki error·stale source digest warning `0건`
-- [ ] [DIR10-008] 새 version 명시가 없는 개발 요청을 활성 `PLAN.md` product version·다음 번호 시험판에 귀속하고 임의의 미래 version 제안 차단
+- [x] [DIR10-008] 새 version 명시가 없는 개발 요청을 활성 `PLAN.md` product version·다음 번호 시험판에 귀속하고 임의의 미래 version 제안 차단 — `f34c524d`
 
 ## 규칙 소유권
 
@@ -36,7 +36,7 @@
 
 ## 완료 근거
 
-- 구현: `8388428`, `47d4663`, `630c783`, `64125db`
+- 구현: `8388428`, `47d4663`, `630c783`, `64125db`, `f34c524d`
 - Fact 정합화: `a9d9bd6`, `a09ed6a`, `e2c3dd6`
 - 정적 예산: source `AGENTS.md` 4,442 byte, 활성 source directive 29.5% 축소, 소비자 router 80.0% 축소
 - 중복·경로·투영 gate: `scripts/check-agent-directives.py` failure `0건`

@@ -1,11 +1,11 @@
 # Aigent Hive 활성 계획
 
-> Revision: 290
+> Revision: 291
 > 기준일: 2026-08-24
 > Product version: `0.10.0`
 > Stable baseline: `0.9.5`
 > 다음 target: `0.10.0-test.2`
-> 현재 milestone: `0.10.0` 활성 범위 해석 정합화
+> 현재 milestone: `0.10.0` 활성 범위 유지
 > 확정 범위: [`ADR-0020`](../decisions/ADR-0020-0.10.0-product-scope.md)
 
 ## 목표
@@ -64,7 +64,7 @@
 | Hybrid vector search | 23 | 0 | 100% |
 | Host-owned Skill 예약 | 1 | 0 | 100% |
 | Nested project scan | 1 | 0 | 100% |
-| Agent 지침 경량화 | 7 | 1 | 87.5% |
+| Agent 지침 경량화 | 8 | 0 | 100% |
 | Host-neutral 연속 실행 | 10 | 0 | 100% |
 | Verified workflow | 12 | 0 | 100% |
 | Adversarial judge | 8 | 0 | 100% |
@@ -72,7 +72,7 @@
 | 한국어 언어 core | 12 | 0 | 100% |
 | Source `draft-devlog` | 6 | 0 | 100% |
 | `0.10.0` 출시 | 4 | 3 | 57.1% |
-| **합계** | **110** | **4** | **96.5%** |
+| **합계** | **111** | **3** | **97.4%** |
 
 ## Required load order
 
