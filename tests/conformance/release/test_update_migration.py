@@ -888,7 +888,14 @@ class Phase6StaticContracts(unittest.TestCase):
         self.assertNotIn("push", triggers)
         self.assertEqual(triggers["schedule"], [{"cron": "23 2 * * 1"}])
         self.assertEqual(workflow["permissions"], {"contents": "read"})
-        self.assertEqual(set(workflow["jobs"]), {"macos", "linux", "windows"})
+        self.assertEqual(
+            set(workflow["jobs"]),
+            {"macos", "linux", "windows", "public-test-korean"},
+        )
+        self.assertEqual(
+            workflow["jobs"]["public-test-korean"]["uses"],
+            "./.github/workflows/public-test-acceptance.yml",
+        )
         macos_matrix = workflow["jobs"]["macos"]["strategy"]["matrix"]["include"]
         self.assertEqual(
             {(entry["runner"], entry["target"]) for entry in macos_matrix},
