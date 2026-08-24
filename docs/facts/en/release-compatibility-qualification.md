@@ -9,7 +9,7 @@ summary: "The published 0.9.5 release keeps compatibility qualification reproduc
 tags: [compatibility, migration, release, testing]
 aliases: ["Compatibility matrix gate"]
 sources:
-  - "repo:.github/workflows/release-runtime.yml#sha256:7303b3dceb232554e1eacfb7a807db2711ded2c68aec6faef06b82ff7f92fd8f"
+  - "repo:.github/workflows/release-runtime.yml#sha256:77e6364e1a86fc768ca99fd8b6b36ac9c144a46f39e86819631ffd149985cc48"
   - "repo:docs/archive/plans/releases/0.9.5/release-0.9.5-stable-publication.md#sha256:70ed823701fa0ae8be728d97b8705846f0eaa50e6e8758425d439bfee4d1334c"
 links: [historical-project-base-coverage, release-verification, test-lane-inventory]
 reviewed_revision: "git:a520f8e5113c7fc02711eb5e5d8021605f7ee551"

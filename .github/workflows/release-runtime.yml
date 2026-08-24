@@ -33,6 +33,7 @@ jobs:
       contents: read
 
   macos:
+    if: ${{ github.event_name != 'workflow_dispatch' || inputs.public_test_package_version == '' }}
     name: macOS ${{ matrix.target }}
     runs-on: ${{ matrix.runner }}
     env:
@@ -148,6 +149,7 @@ jobs:
           } >>"$GITHUB_STEP_SUMMARY"
 
   linux:
+    if: ${{ github.event_name != 'workflow_dispatch' || inputs.public_test_package_version == '' }}
     name: Linux ${{ matrix.target }}
     runs-on: ${{ matrix.runner }}
     env:
@@ -269,6 +271,7 @@ jobs:
           } >>"$GITHUB_STEP_SUMMARY"
 
   windows:
+    if: ${{ github.event_name != 'workflow_dispatch' || inputs.public_test_package_version == '' }}
     name: Windows x86_64
     runs-on: windows-2025
     env:

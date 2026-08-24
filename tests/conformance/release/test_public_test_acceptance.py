@@ -42,6 +42,7 @@ class PublicTestAcceptanceContract(unittest.TestCase):
             "public_test_release_date",
             "uses: ./.github/workflows/public-test-acceptance.yml",
             "inputs.public_test_package_version != ''",
+            "inputs.public_test_package_version == ''",
         ):
             with self.subTest(required=required):
                 self.assertIn(required, text)
