@@ -37,13 +37,12 @@ def run_json(
         cwd=cwd,
         check=False,
         capture_output=True,
-        text=True,
         timeout=30,
     )
     if completed.returncode != expected_exit:
         raise RuntimeError(
             f"unexpected exit {completed.returncode}, expected {expected_exit}: "
-            f"{' '.join(arguments)}\n{completed.stderr}"
+            f"{' '.join(arguments)}\n{completed.stderr.decode('utf-8', errors='replace')}"
         )
     try:
         result = json.loads(completed.stdout)
