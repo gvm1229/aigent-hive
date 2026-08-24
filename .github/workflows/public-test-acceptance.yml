@@ -1,0 +1,94 @@
+name: Public test acceptance
+
+on:
+  workflow_dispatch:
+    inputs:
+      product_version:
+        description: Exact product version
+        required: true
+        type: string
+      package_version:
+        description: Exact numbered public test package version
+        required: true
+        type: string
+      release_date:
+        description: Exact package release date
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  korean-public-test:
+    name: Korean public test (${{ matrix.label }})
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: Windows x64
+            runner: windows-latest
+            platform_package: win32-x64
+            executable: hive.exe
+          - label: macOS arm64
+            runner: macos-15
+            platform_package: darwin-arm64
+            executable: hive
+          - label: Linux musl x64
+            runner: ubuntu-24.04
+            platform_package: linux-x64
+            executable: hive
+    env:
+      PRODUCT_VERSION: ${{ inputs.product_version }}
+      PACKAGE_VERSION: ${{ inputs.package_version }}
+      RELEASE_DATE: ${{ inputs.release_date }}
+      PLATFORM_PACKAGE: ${{ matrix.platform_package }}
+      EXECUTABLE: ${{ matrix.executable }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: v${{ inputs.package_version }}
+          fetch-depth: 0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "24"
+          registry-url: https://registry.npmjs.org
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+      - name: Bind numbered public test source and registry state
+        shell: bash
+        run: |
+          [[ "$PRODUCT_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          [[ "$PACKAGE_VERSION" =~ ^${PRODUCT_VERSION//./\.}-test\.[1-9][0-9]*$ ]]
+          [[ "$RELEASE_DATE" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]
+          test "$(git describe --tags --exact-match HEAD)" = "v$PACKAGE_VERSION"
+          test "$(npm view "aigent-hive@$PACKAGE_VERSION" version)" = "$PACKAGE_VERSION"
+          test "$(npm view aigent-hive 'dist-tags.test')" = "$PACKAGE_VERSION"
+          test "$(npm view aigent-hive 'dist-tags.latest')" = "0.9.5"
+      - name: Install the exact public npm package
+        shell: bash
+        run: |
+          install_root="$RUNNER_TEMP/public-hive"
+          npm install --prefix "$install_root" --ignore-scripts=false \
+            "aigent-hive@$PACKAGE_VERSION"
+          binary="$install_root/node_modules/@aigent-hive/$PLATFORM_PACKAGE/bin/$EXECUTABLE"
+          test -f "$binary"
+          printf 'HIVE_BIN=%s\n' "$binary" >>"$GITHUB_ENV"
+      - name: Qualify Korean core, preservation, update, and rollback
+        shell: bash
+        run: |
+          expected="AIgent Hive v$PRODUCT_VERSION-test #${PACKAGE_VERSION##*.} · developer test build (released $RELEASE_DATE)"
+          python scripts/qualify-korean-public-test.py \
+            --hive "$HIVE_BIN" \
+            --pack harness/language-packs/im-not-ai/2.3.2 \
+            --corpus tests/fixtures/korean/gold.json \
+            --work-root "$RUNNER_TEMP" \
+            --expected-version "$expected" \
+            --receipt "$RUNNER_TEMP/korean-public-test-$PLATFORM_PACKAGE.json"
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: korean-public-test-${{ matrix.platform_package }}
+          path: ${{ runner.temp }}/korean-public-test-${{ matrix.platform_package }}.json
+          if-no-files-found: error
