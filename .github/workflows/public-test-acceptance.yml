@@ -1,6 +1,17 @@
 name: Public test acceptance
 
 on:
+  workflow_call:
+    inputs:
+      product_version:
+        required: true
+        type: string
+      package_version:
+        required: true
+        type: string
+      release_date:
+        required: true
+        type: string
   workflow_dispatch:
     inputs:
       product_version:

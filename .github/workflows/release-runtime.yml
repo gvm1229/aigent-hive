@@ -4,11 +4,34 @@ on:
   schedule:
     - cron: "23 2 * * 1"
   workflow_dispatch:
+    inputs:
+      public_test_product_version:
+        description: Optional exact product version for public-test acceptance
+        required: false
+        type: string
+      public_test_package_version:
+        description: Optional exact numbered npm test version
+        required: false
+        type: string
+      public_test_release_date:
+        description: Optional exact public-test release date
+        required: false
+        type: string
 
 permissions:
   contents: read
 
 jobs:
+  public-test-korean:
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.public_test_package_version != '' }}
+    uses: ./.github/workflows/public-test-acceptance.yml
+    with:
+      product_version: ${{ inputs.public_test_product_version }}
+      package_version: ${{ inputs.public_test_package_version }}
+      release_date: ${{ inputs.public_test_release_date }}
+    permissions:
+      contents: read
+
   macos:
     name: macOS ${{ matrix.target }}
     runs-on: ${{ matrix.runner }}

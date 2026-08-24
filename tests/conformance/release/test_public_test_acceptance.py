@@ -10,6 +10,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
 WORKFLOW = ROOT / ".github/workflows/public-test-acceptance.yml"
+REGISTERED_WORKFLOW = ROOT / ".github/workflows/release-runtime.yml"
 SCRIPT = ROOT / "scripts/qualify-korean-public-test.py"
 
 
@@ -30,6 +31,19 @@ class PublicTestAcceptanceContract(unittest.TestCase):
             with self.subTest(required=required):
                 self.assertIn(required, text)
         self.assertNotIn("channel: stable", text)
+        self.assertIn("workflow_call:", text)
+
+    def test_registered_runtime_workflow_calls_the_public_test_gate(self) -> None:
+        text = REGISTERED_WORKFLOW.read_text(encoding="utf-8")
+        for required in (
+            "public_test_product_version",
+            "public_test_package_version",
+            "public_test_release_date",
+            "uses: ./.github/workflows/public-test-acceptance.yml",
+            "inputs.public_test_package_version != ''",
+        ):
+            with self.subTest(required=required):
+                self.assertIn(required, text)
 
     def test_qualifier_has_bounded_preservation_and_pack_rollback_checks(self) -> None:
         text = SCRIPT.read_text(encoding="utf-8")
