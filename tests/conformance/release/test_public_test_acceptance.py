@@ -21,12 +21,13 @@ class PublicTestAcceptanceContract(unittest.TestCase):
             "windows-latest",
             "macos-15",
             "ubuntu-24.04",
-            "ref: v${{ inputs.package_version }}",
+            'git diff --name-only "$tag_commit"..HEAD',
             'aigent-hive@$PACKAGE_VERSION',
             "dist-tags.test",
             "dist-tags.latest",
             'test "$(npm view aigent-hive \'dist-tags.latest\')" = "0.9.5"',
             "qualify-korean-public-test.py",
+            '--package-version "$PACKAGE_VERSION"',
         ):
             with self.subTest(required=required):
                 self.assertIn(required, text)

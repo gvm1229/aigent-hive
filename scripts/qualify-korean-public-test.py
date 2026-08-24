@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import re
 import shutil
 import subprocess
 import tempfile
@@ -79,13 +80,25 @@ def qualify(
     pack: Path,
     corpus: Path,
     work_root: Path,
-    expected_version: str,
+    product_version: str,
+    package_version: str,
+    release_date: str,
 ) -> dict[str, Any]:
     hive = require_regular(hive, "Hive binary")
     pack = pack.resolve()
     corpus = require_regular(corpus, "Korean gold corpus")
     if not pack.is_dir() or pack.is_symlink():
         raise ValueError("language pack must be a regular directory")
+    package_match = re.fullmatch(
+        re.escape(product_version) + r"-test\.([1-9][0-9]*)",
+        package_version,
+    )
+    if package_match is None or re.fullmatch(r"[0-9]{4}-[0-9]{2}-[0-9]{2}", release_date) is None:
+        raise ValueError("expected public version fields are invalid")
+    expected_version = (
+        f"AIgent Hive v{product_version}-test #{package_match.group(1)} "
+        f"· developer test build (released {release_date})"
+    )
     version = subprocess.run(
         [str(hive), "--version"],
         cwd=work_root,
@@ -227,7 +240,9 @@ def main() -> int:
     parser.add_argument("--pack", type=Path, required=True)
     parser.add_argument("--corpus", type=Path, required=True)
     parser.add_argument("--work-root", type=Path, required=True)
-    parser.add_argument("--expected-version", required=True)
+    parser.add_argument("--product-version", required=True)
+    parser.add_argument("--package-version", required=True)
+    parser.add_argument("--release-date", required=True)
     parser.add_argument("--receipt", type=Path, required=True)
     arguments = parser.parse_args()
     if not arguments.work_root.is_dir() or arguments.work_root.is_symlink():
@@ -237,7 +252,9 @@ def main() -> int:
         arguments.pack,
         arguments.corpus,
         arguments.work_root.resolve(),
-        arguments.expected_version,
+        arguments.product_version,
+        arguments.package_version,
+        arguments.release_date,
     )
     rendered = json.dumps(result, ensure_ascii=True, indent=2, sort_keys=True) + "\n"
     arguments.receipt.parent.mkdir(parents=True, exist_ok=True)
