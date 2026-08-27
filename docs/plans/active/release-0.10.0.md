@@ -5,10 +5,10 @@
 
 ## Checklist
 
-- [x] [REL10-001] 한국어 언어 core를 포함한 exact version·build date·release note·package·plugin metadata 정합화 — `0.10.0-test.2`, `2026-08-24`, 기존 `0.10.0-test.1` 근거는 과거 범위로 보존
-- [x] [REL10-002] 새 product bytes의 Rust·Python·문서·보안·upgrade·rollback 전체 local gate 통과 — Python 45·103·406·84·58, Rust workspace·Clippy 통과
-- [x] [REL10-003] 번호 공개 `0.10.0-test.2` 이상 candidate·publication과 npm `latest=0.9.5` 불변 확인 — candidate `32676134575`, publication `32676726910`
-- [x] [REL10-004] Windows x64·macOS arm64·Linux musl에서 한국어 core·`humanize-kor`·upstream pack update를 포함한 공개 시험 수용 — public acceptance `32677477765`
+- [ ] [REL10-001] 한국어 언어 core를 포함한 exact version·build date·release note·package·plugin metadata 정합화 — `0.10.0-test.2`, `2026-08-24`, 기존 `0.10.0-test.1` 근거는 과거 범위로 보존
+- [ ] [REL10-002] 새 product bytes의 Rust·Python·문서·보안·upgrade·rollback 전체 local gate 통과 — Python 45·103·406·84·58, Rust workspace·Clippy 통과
+- [ ] [REL10-003] 번호 공개 `0.10.0-test.2` 이상 candidate·publication과 npm `latest=0.9.5` 불변 확인 — candidate `32676134575`, publication `32676726910`
+- [ ] [REL10-004] Windows x64·macOS arm64·Linux musl에서 한국어 core·`humanize-kor`·upstream pack update를 포함한 공개 시험 수용 — public acceptance `32677477765`
 - [ ] [REL10-005] accepted test exact source의 protected `main` 통합과 stable candidate
 - [ ] [REL10-006] 같은 product bytes의 stable publication·설치·의존 검사
 - [ ] [REL10-007] 공개 시험·수용 증거가 갖춰진 뒤 유지보수자의 명시적 `0.10.0` 안정판 승인 수령
@@ -33,3 +33,9 @@
 
 - Candidate `32633724977`, publication `32634206001`, `0.10.0-test.1`, Windows 실제 설치·세 운영체제 수용: 당시 승인 범위의 유효 기록
 - `0.10.0-test.1`: `KOR10-*` 제외. stable `0.10.0`의 현재 product acceptance 승격 불가
+
+## 2026-08-28 재개방
+
+- 이전 시험 통과 기록은 당시 실행 근거로만 보존
+- 활성 팩 미반영·규칙 구조 검사 결손·부정 의미 반전 반례로 현재 완료 판정 취소
+- 수정된 소스·새 반례 시험·다음 번호 공개 시험의 근거로 재수용

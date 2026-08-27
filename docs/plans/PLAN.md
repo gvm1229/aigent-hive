@@ -1,11 +1,11 @@
 # Aigent Hive 활성 계획
 
-> Revision: 291
-> 기준일: 2026-08-24
+> Revision: 292
+> 기준일: 2026-08-28
 > Product version: `0.10.0`
 > Stable baseline: `0.9.5`
-> 다음 target: `0.10.0-test.2`
-> 현재 milestone: `0.10.0` 활성 범위 유지
+> 다음 target: `0.10.0-test.3`
+> 현재 milestone: 한국어 결함 수정 후 벡터 전용 branch 전환
 > 확정 범위: [`ADR-0020`](../decisions/ADR-0020-0.10.0-product-scope.md)
 
 ## 목표
@@ -42,6 +42,8 @@
 
 ## 현재 연속 실행 경계
 
+- 승인 순서: 한국어 결함 수정·비벡터 재검증 → `develop` 병합 → `feature/0.10.0-vector-search` 생성·벡터 구현
+- 병합 선행: 제품 기능 회귀 검사. `develop` 전용 공개 후보·설치 수용은 병합 뒤 별도 실행
 - 유지보수자 권한: `0.10.0`의 구현·시험·commit·`feature/0.10.0` push·CI 관찰·번호 공개 시험판
 - Verified workflow 대상: dependency·evidence·retry·독립 검증이 필요한 미완료 구현·검증 항목
 - 제외: `REL10-005–007` — protected `main` 안정판 후보, 안정판 게시·설치, 유지보수자 안정판 승인
@@ -69,10 +71,10 @@
 | Verified workflow | 12 | 0 | 100% |
 | Adversarial judge | 8 | 0 | 100% |
 | Skill migration cleanup | 10 | 0 | 100% |
-| 한국어 언어 core | 12 | 0 | 100% |
+| 한국어 언어 core | 7 | 5 | 58.3% |
 | Source `draft-devlog` | 6 | 0 | 100% |
-| `0.10.0` 출시 | 4 | 3 | 57.1% |
-| **합계** | **111** | **3** | **97.4%** |
+| `0.10.0` 출시 | 0 | 7 | 0% |
+| **합계** | **102** | **12** | **89.5%** |
 
 ## Required load order
 
