@@ -50,6 +50,7 @@ EXPECTED_ACTIONS = {
     "IngestKnowledge",
     "AddKnowledge",
     "QueryKnowledge",
+    "VectorKnowledge",
     "ListKnowledge",
     "ReadKnowledge",
     "RememberKnowledge",
