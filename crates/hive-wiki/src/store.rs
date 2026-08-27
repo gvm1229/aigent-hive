@@ -1294,6 +1294,18 @@ impl RagStore {
                     "semantic generation is stale".to_owned(),
                 ));
             }
+            let canonical = self
+                .load_canonical_snapshot(manifest.generation)
+                .map_err(|_| {
+                    RagError::RepairRequired(
+                        "canonical semantic authority is unavailable".to_owned(),
+                    )
+                })?;
+            if crate::rag::canonical_manifest_digest(&canonical)? != expected_manifest_digest {
+                return Err(RagError::RepairRequired(
+                    "canonical semantic citations changed".to_owned(),
+                ));
+            }
             crate::rag::semantic_matches_serialized(bytes, manifest, registry, request, matches)
         })
     }
@@ -4196,6 +4208,7 @@ mod tests {
             )
             .is_err());
         assert!(!published);
+        assert!(store.semantic_matches(&request, &manifest, &[]).is_err());
     }
 
     #[test]
