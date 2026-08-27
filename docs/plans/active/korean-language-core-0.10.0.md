@@ -65,7 +65,7 @@
 - [x] [KOR10-009] Watermark·detector·출처·거짓 저자 금지와 zero-width·bidi·Hangul NFD hygiene 경계를 schema·Skill·회귀 시험에 적용
 - [x] [KOR10-010] Upstream version check와 commit·tree·license·선별 source·변환 version·세 class preview manifest 구현 — 규칙 구조·안전 상한·manifest 결합 검증
 - [x] [KOR10-011] 세 파일 한정 staging·generation·atomic pointer·history rollback, raw install·floating ref·자동 update 차단 구현 — 손상된 현재 팩 복구·이전 팩 재검증·동시 쓰기 잠금
-- [ ] [KOR10-012] 한국어 gold corpus·blind 평가·의미·수치·명령·list·link·인용 무회귀·세 host·세 운영체제·direct upgrade·rollback 수용 — public run `32677477765`, blind 자연화 10/10·drift 거부 2/2
+- [x] [KOR10-012] 한국어 gold corpus·blind 평가·의미·수치·명령·list·link·인용 무회귀·세 host·세 운영체제·direct upgrade·rollback 수용 — 기존 blind 자연화 10/10·drift 거부 2/2, 결함 수정 뒤 전체 회귀와 test.4 수용 `33102491627` 통과
 
 ## 출시 경계
 

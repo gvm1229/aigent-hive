@@ -5,10 +5,10 @@
 
 ## Checklist
 
-- [x] [REL10-001] 한국어 언어 core를 포함한 exact version·build date·release note·package·plugin metadata 정합화 — `0.10.0-test.4`, `2026-08-28`
-- [x] [REL10-002] 새 product bytes의 Rust·Python·문서·보안·upgrade·rollback 전체 local gate 통과 — Windows Rust workspace·Clippy, Python 710개 목록 대조: 671 통과·39 운영체제별 건너뜀, 수정 실패 모듈 재실행 포함
-- [ ] [REL10-003] 번호 공개 `0.10.0-test.2` 이상 candidate·publication과 npm `latest=0.9.5` 불변 확인 — candidate `32676134575`, publication `32676726910`
-- [ ] [REL10-004] Windows x64·macOS arm64·Linux musl에서 한국어 core·`humanize-kor`·upstream pack update를 포함한 공개 시험 수용 — public acceptance `32677477765`
+- [ ] [REL10-001] 벡터 구현 포함 시험판의 버전·출시일·변경 기록·패키지·플러그인 메타데이터 정합화 — 다음 번호 `0.10.0-test.5`
+- [ ] [REL10-002] 벡터 구현 뒤 Rust·Python·문서·보안·갱신·복구 전체 검사
+- [ ] [REL10-003] 다음 번호 공개 시험판 게시와 npm `latest=0.9.5` 불변 확인
+- [ ] [REL10-004] Windows x64·macOS arm64·Linux musl의 벡터 포함 공개 시험 수용
 - [ ] [REL10-005] accepted test exact source의 protected `main` 통합과 stable candidate
 - [ ] [REL10-006] 같은 product bytes의 stable publication·설치·의존 검사
 - [ ] [REL10-007] 공개 시험·수용 증거가 갖춰진 뒤 유지보수자의 명시적 `0.10.0` 안정판 승인 수령
@@ -27,7 +27,14 @@
 ## 현재 실행 제외
 
 - `REL10-005–007`: 유지보수자 명시 제외. `0.10.0` 안정판 protected `main` 후보·게시·설치·승인 작업 시작 금지
-- `REL10-001–004`: 한국어 core 구현 뒤 새 번호 공개 시험과 세 운영체제 시험 수용 범위로 재개방
+- `REL10-001–004`: 비벡터 test.4 수용 뒤 벡터 제품 변경으로 재개방
+
+## 비벡터 수정 수용
+
+- `0.10.0-test.4`, 소스 `5cedbed4`: 후보 `33101040467`, 게시 `33102125677`, 공개 설치 수용 `33102491627` 통과
+- 실제 실행: Windows x64·macOS arm64·Linux musl x64. 수정 한국어 기능·팩·직접 갱신·복구 검사
+- npm 시험 채널 test.4, 안정 채널 `latest=0.9.5` 유지. 벡터 포함 제품의 수용 근거로 재사용 금지
+- Windows 전체 Rust·Clippy와 Python 710개 목록 대조: 671 통과·39 운영체제별 건너뜀. 단일 Python 전체 실행 성공이 아닌 수정 재실행 합산 근거
 
 ## 이전 공개 시험 근거
 

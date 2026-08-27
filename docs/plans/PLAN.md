@@ -1,11 +1,11 @@
 # Aigent Hive 활성 계획
 
-> Revision: 294
+> Revision: 295
 > 기준일: 2026-08-28
 > Product version: `0.10.0`
 > Stable baseline: `0.9.5`
-> 다음 target: `0.10.0-test.4`
-> 현재 milestone: 한국어 결함 수정 후 벡터 전용 branch 전환
+> 다음 공개 시험: `0.10.0-test.5`
+> 현재 단계: 비벡터 test.4 수용 완료, 전용 branch의 벡터 구현
 > 확정 범위: [`ADR-0020`](../decisions/ADR-0020-0.10.0-product-scope.md)
 
 ## 목표
@@ -71,10 +71,10 @@
 | Verified workflow | 12 | 0 | 100% |
 | Adversarial judge | 8 | 0 | 100% |
 | Skill migration cleanup | 10 | 0 | 100% |
-| 한국어 언어 core | 11 | 1 | 91.7% |
+| 한국어 언어 core | 12 | 0 | 100% |
 | Source `draft-devlog` | 6 | 0 | 100% |
-| `0.10.0` 출시 | 2 | 5 | 28.6% |
-| **합계** | **102** | **12** | **89.5%** |
+| `0.10.0` 출시 | 0 | 7 | 0% |
+| **합계** | **101** | **13** | **88.6%** |
 
 ## Required load order
 
