@@ -63,6 +63,31 @@ class VectorCli(unittest.TestCase):
         self.assertNotEqual(self.run_cli("status", "--user-root", str(self.root))["exit_code"], 0)
         self.assertFalse((self.root / ".hive").exists())
 
+    def test_semantic_mode_without_runtime_preserves_fts_results(self):
+        user = self.root / "user"
+        (user / ".hive/config").mkdir(parents=True)
+        preferences = {"schema_version":1,"interface_language":"en","wiki":{"enabled":True,"language":"both"},
+            "profile":{"id":"web-developer"},"persona":{"id":"balanced"},"selected_hosts":["codex"],
+            "skills":{"mode":"individual","selected":["setup-hive"]},
+            "usage_guard":{"enabled":False,"stop_remaining_percent":20,"codexbar_fallback_enabled":False}}
+        (user / ".hive/config/user-setup.yml").write_text(json.dumps(preferences),encoding="utf-8")
+        def knowledge(action,*options):
+            process = subprocess.run([self.binary,"knowledge",action,"--user-root",str(user),*options,"--output","json"],capture_output=True,text=True,encoding="utf-8",timeout=30)
+            result = json.loads(process.stdout)
+            self.assertEqual(process.returncode,0,result)
+            return result["data"]
+        knowledge("remember","--user-statement","Use concise explanations for technical guidance.","--claim-key","concise-guidance","--kind","preference")
+        arguments = ["--target",str(user),"--query","concise","--scope","global"]
+        lexical = knowledge("retrieve",*arguments)
+        semantic = knowledge("retrieve",*arguments,"--mode","semantic")
+        Draft202012Validator(json.loads((ROOT/"schemas/knowledge-retrieval-result.schema.json").read_text("utf-8"))).validate(semantic)
+        self.assertEqual(semantic.pop("search")["used"],["fts"])
+        for hit in semantic["hits"]:
+            self.assertEqual(hit.pop("matched_lanes"),["fts"])
+            hit.pop("fusion_rank")
+        self.assertEqual(semantic,lexical)
+        self.assertFalse((user/".hive/index/vector").exists())
+
 
 if __name__ == "__main__":
     unittest.main()

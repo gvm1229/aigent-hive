@@ -68,7 +68,7 @@ USAGE:
     hive knowledge delete --target <dir> --page-id <id> --reason <text> [--replacement <locator>] --timestamp <RFC3339> [--user-root <dir>] --output json
     hive knowledge suppress --target <dir> --fingerprint <sha256:...> --source-locator <locator> --reason <text> [--replacement <locator>] --timestamp <RFC3339> [--user-root <dir>] --output json
     hive knowledge remember --user-root <dir> (--request <request.json>|--user-statement <normalized-fact> --claim-key <stable-key> [--kind project-profile|decision|convention|preference|workflow]) --output json
-    hive knowledge retrieve --user-root <dir> --target <current-dir> (--request <request.json>|--query <text> [--scope <scope>] [--top-k <1..100>] [--byte-budget <bytes>]) [--authorization-id <id> --authorization-token <token> --capabilities <json> --usage <json>] --output json
+    hive knowledge retrieve --user-root <dir> --target <current-dir> (--request <request.json>|--query <text> [--scope <scope>] [--top-k <1..100>] [--byte-budget <bytes>]) [--mode fts|semantic] [--authorization-id <id> --authorization-token <token> --capabilities <json> --usage <json>] --output json
     hive knowledge authorize-confidential --user-root <dir> --target <current-dir> --collection <id-or-alias> --query <text> --capabilities <json> --usage <json> --expires-at <unix-seconds> --nonce <nonce> --confirm-current-action --output json
     hive knowledge authorize-collection --user-root <dir> --operation attach|map|detach --collection <id-or-alias> [--target <dir>] --expires-at <unix-seconds> --nonce <nonce> --confirm-current-action --output json
     hive knowledge collection attach|map --user-root <dir> --collection <id-or-alias> --target <dir> --authorization-id <id> --authorization-token <token> --output json
@@ -78,7 +78,7 @@ USAGE:
     hive knowledge import --user-root <dir> --bundle <path>.hivekb (--dry-run|--apply) --output json
     hive knowledge refresh (--target <legacy-project>|--user-root <dir>) --output json
     hive knowledge graph preview|enable|status|rebuild|disable|query|export --target <dir> [--scope project] [--engine native-markdown|graphify-code] [--consent-digest <sha256:...>] [--input <graph.json> --receipt <receipt.json>] [--node-id <id>] [--text <query>] [--user-root <dir>] [--format json|html] --output json
-    hive knowledge vector preview|enable|status|disable --help
+    hive knowledge vector --help
     hive index rebuild (--target <legacy-project>|--user-root <dir>) --output json
 ";
 
@@ -2000,12 +2000,19 @@ fn run_retrieve(arguments: &[String]) -> Result<KnowledgeResult, WikiError> {
             "--query",
             "--top-k",
             "--byte-budget",
+            "--mode",
             "--authorization-id",
             "--authorization-token",
             "--capabilities",
             "--usage",
         ],
     )?;
+    let mode = optional(&options, "--mode").unwrap_or("fts");
+    if !["fts", "semantic"].contains(&mode) {
+        return Err(WikiError::InvalidInput(
+            "--mode must be fts or semantic".to_owned(),
+        ));
+    }
     let user_root = PathBuf::from(required(&options, "--user-root")?);
     let target = PathBuf::from(required(&options, "--target")?);
     let mut request = parse_retrieval_request(&options, RetrievalScope::Auto)?;
@@ -2055,8 +2062,16 @@ fn run_retrieve(arguments: &[String]) -> Result<KnowledgeResult, WikiError> {
         request.confidential_collection_id = Some(consumption.collection_id);
         changed_paths.push(consumption.changed_path);
     }
-    let result = store.retrieve(&request)?;
-    let digest = result.manifest_digest.clone();
+    let result = if mode == "semantic" {
+        vector::retrieve(&user_root, &store, &request)?
+    } else {
+        serde_json::to_value(store.retrieve(&request)?)
+            .map_err(|error| WikiError::Io(error.to_string()))?
+    };
+    let digest = result["manifest_digest"]
+        .as_str()
+        .ok_or_else(|| WikiError::Verification("retrieval manifest is absent".to_owned()))?
+        .to_owned();
     Ok(success(
         "RetrieveKnowledge",
         "hive.knowledge-retrieved",
@@ -2064,7 +2079,7 @@ fn run_retrieve(arguments: &[String]) -> Result<KnowledgeResult, WikiError> {
         changed_paths,
         SHARED_INDEX_RELATIVE,
         &digest,
-        serde_json::to_value(result).map_err(|error| WikiError::Io(error.to_string()))?,
+        result,
     ))
 }
 

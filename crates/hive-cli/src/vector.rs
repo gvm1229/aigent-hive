@@ -15,13 +15,24 @@ use std::process::ExitCode;
 use std::time::Duration;
 #[path = "vector_index.rs"]
 mod index;
+#[path = "vector_query.rs"]
+mod query;
+
+pub(super) fn retrieve(
+    root: &Path,
+    store: &RagStore,
+    request: &hive_wiki::rag::RetrievalRequest,
+) -> Result<Value, WikiError> {
+    query::retrieve(root, store, request)
+}
 
 const BOOTSTRAP: &str = include_str!("vector_runtime.py");
 const WORKER: &str = include_str!("vector_helper.py");
 const LOCK: &str = include_str!("vector-runtime-lock.json");
 const USAGE: &str = "Optional local semantic search; FTS remains the default.\n\
     hive knowledge vector preview|enable|status|rebuild|rollback|disable --user-root <dir> --target <dir> --collection <id> --visibility shared|project-private [--python <absolute-executable>] [--consent-digest <sha256:...>] --output json\n\
-    hive source-wiki vector preview|enable|status|rebuild|rollback|disable --target <source-root> --language en|ko [--python <absolute-executable>] [--consent-digest <sha256:...>] --output json\n\
+    hive source-wiki vector preview|enable|status|rebuild|rollback|disable|query --target <source-root> --language en|ko [--python <absolute-executable>] [--consent-digest <sha256:...>] --output json\n\
+    source query options: --query <text> --top-k <1..100>\n\
     rebuild options: --max-seconds <1..60> --workers <1..8> --rebuild-mode resume|fresh\n";
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -74,7 +85,12 @@ struct Target {
 }
 
 pub(super) fn run(arguments: &[String], source: bool) -> ExitCode {
-    if super::is_help(arguments) {
+    if super::is_help(arguments)
+        || (arguments.len() == 2
+            && arguments
+                .last()
+                .is_some_and(|value| value == "--help" || value == "-h"))
+    {
         print!("{USAGE}");
         return ExitCode::SUCCESS;
     }
@@ -132,6 +148,8 @@ fn dispatch(arguments: &[String], source: bool) -> Result<Value, WikiError> {
             "--max-seconds",
             "--workers",
             "--rebuild-mode",
+            "--query",
+            "--top-k",
         ],
     )?;
     for (name, _) in &options {
@@ -139,6 +157,7 @@ fn dispatch(arguments: &[String], source: bool) -> Result<Value, WikiError> {
             "--python" => ["preview", "enable"].contains(&action.as_str()),
             "--consent-digest" => action == "enable",
             "--max-seconds" | "--workers" | "--rebuild-mode" => action == "rebuild",
+            "--query" | "--top-k" => action == "query" && source,
             _ => true,
         };
         if !allowed {
@@ -153,6 +172,7 @@ fn dispatch(arguments: &[String], source: bool) -> Result<Value, WikiError> {
         "disable" => disable(&target),
         "rebuild" => index::rebuild(&target, &options),
         "rollback" => index::rollback(&target),
+        "query" if source => query::source_query(&target, &options),
         _ => Err(invalid("unsupported vector action")),
     }
 }
@@ -522,9 +542,26 @@ fn invoke(
     let value: Value = serde_json::from_slice(&result.stdout)
         .map_err(|_| invalid("vector helper returned invalid JSON"))?;
     if !result.success || value["status"] != "success" {
-        return Err(invalid(
-            "vector helper validation failed; FTS remains available",
-        ));
+        let reason = value["error_type"]
+            .as_str()
+            .filter(|name| {
+                [
+                    "ValueError",
+                    "RuntimeError",
+                    "ImportError",
+                    "ModuleNotFoundError",
+                    "OperationalError",
+                    "FileNotFoundError",
+                    "PermissionError",
+                    "KeyError",
+                    "TypeError",
+                ]
+                .contains(name)
+            })
+            .unwrap_or("unknown");
+        return Err(invalid(&format!(
+            "vector helper validation failed ({reason}); FTS remains available"
+        )));
     }
     let mut value = value;
     value

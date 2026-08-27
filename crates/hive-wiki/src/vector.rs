@@ -122,11 +122,7 @@ impl VectorFiles {
     /// Rejects an invalid runtime ID.
     pub fn runtime_path(&self, runtime: &str) -> Result<PathBuf, WikiError> {
         validate_id(runtime)?;
-        Ok(self
-            .root_path()
-            .join(self.data_relative())
-            .join("runtimes")
-            .join(runtime))
+        self.worker_path(&self.data_relative().join("runtimes").join(runtime))
     }
 
     /// Resolve one generated database location.
@@ -172,7 +168,7 @@ impl VectorFiles {
                 _ => (),
             }
         }
-        Ok(self.root_path().join(relative))
+        self.worker_path(&relative)
     }
 
     fn control_path(&self, key: Option<&str>) -> Result<PathBuf, WikiError> {
@@ -322,7 +318,7 @@ impl VectorFiles {
         let relative = self.data_relative().join("runtimes").join(&id);
         let (parent, name) = self.parent(&relative, true)?;
         parent.create_dir(&name).map_err(io_error)?;
-        Ok((id, self.root_path().join(relative)))
+        Ok((id, self.worker_path(&relative)?))
     }
 
     /// Reserve a private per-operation directory for downloads and process temporary files.
@@ -333,7 +329,7 @@ impl VectorFiles {
         let relative = self.data_relative().join("work").join(fresh_id());
         let (parent, name) = self.parent(&relative, true)?;
         parent.create_dir(&name).map_err(io_error)?;
-        Ok(self.root_path().join(relative))
+        self.worker_path(&relative)
     }
 
     /// Allocate a publication attempt ID, separate from the trusted content digest.
@@ -349,7 +345,7 @@ impl VectorFiles {
     pub fn prepare_staging(&self, scope: &str) -> Result<PathBuf, WikiError> {
         let relative = self.database_relative(scope, DatabaseKind::Staging)?;
         self.parent(&relative, true)?;
-        Ok(self.root_path().join(relative))
+        self.worker_path(&relative)
     }
 
     /// Hash a closed, single-link database and reject all `SQLite` recovery sidecars.
@@ -485,6 +481,45 @@ impl VectorFiles {
             );
         }
         Ok(moved)
+    }
+
+    fn worker_path(&self, relative: &Path) -> Result<PathBuf, WikiError> {
+        // SQLite file URIs cannot interpret Windows verbatim device prefixes.
+        // Retain the pinned capability for file operations; normalize only subprocess names.
+        let path = normalize_platform_root(self.root_path());
+        #[cfg(windows)]
+        {
+            use std::path::{Component, Prefix};
+            let mut components = path.components();
+            if let Some(Component::Prefix(prefix)) = components.next() {
+                let normal = match prefix.kind() {
+                    Prefix::VerbatimDisk(drive) => {
+                        Some(PathBuf::from(format!("{}:\\", char::from(drive))))
+                    }
+                    Prefix::VerbatimUNC(server, share) => {
+                        Some(PathBuf::from("\\\\").join(server).join(share))
+                    }
+                    _ => None,
+                };
+                if let Some(mut normal) = normal {
+                    for component in components {
+                        if component != Component::RootDir {
+                            normal.push(component.as_os_str());
+                        }
+                    }
+                    let reopened = PinnedRoot::open(&normal)?;
+                    let expected = self.root.dir.dir_metadata().map_err(io_error)?;
+                    let actual = reopened.dir.dir_metadata().map_err(io_error)?;
+                    if (expected.dev(), expected.ino()) != (actual.dev(), actual.ino()) {
+                        return Err(WikiError::Conflict(
+                            "normalized vector root identifies a different directory".to_owned(),
+                        ));
+                    }
+                    return Ok(normal.join(relative));
+                }
+            }
+        }
+        Ok(path.join(relative))
     }
 
     fn parent(&self, relative: &Path, create: bool) -> Result<(Dir, OsString), WikiError> {
@@ -765,6 +800,14 @@ mod tests {
         let (next_id, next_path) = files.reserve_runtime().expect("next reservation");
         assert_ne!(id, next_id);
         assert_ne!(destination, next_path);
+        if cfg!(windows) {
+            assert!(!destination.to_string_lossy().starts_with("\\\\?\\"));
+            assert!(!files
+                .database_path(&id, DatabaseKind::Staging)
+                .expect("worker database path")
+                .to_string_lossy()
+                .starts_with("\\\\?\\"));
+        }
         assert!(files
             .read_control::<serde_json::Value>(None)
             .expect("inactive")
@@ -824,5 +867,22 @@ mod tests {
                 .file_name()
                 .to_string_lossy()
                 .starts_with(".vector-copy-")));
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn verbatim_root_alias_cannot_redirect_a_worker_to_another_directory() {
+        let root = temporary();
+        let base = root.path().canonicalize().expect("verbatim root");
+        let exact = base.join("different ");
+        let alias = base.join("different");
+        fs::create_dir(&exact).expect("verbatim directory");
+        fs::create_dir(&alias).expect("normal alias");
+        let files = VectorFiles::open(&exact, false).expect("pin exact root");
+        assert!(files.runtime_path(&"a".repeat(64)).is_err());
+        assert!(!alias.join(".hive").exists());
+        drop(files);
+        fs::remove_dir(&exact).expect("remove exact empty fixture");
+        fs::remove_dir(&alias).expect("remove alias empty fixture");
     }
 }

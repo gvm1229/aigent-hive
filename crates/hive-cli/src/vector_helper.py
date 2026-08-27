@@ -364,8 +364,14 @@ def build(request: dict) -> dict:
 
 
 def query(request: dict) -> dict:
+    return query_many({"runtime": request["runtime"], "contract_digest": request["contract_digest"],
+        "query": request["query"], "limit": request["limit"], "databases": [{
+            "database": request["database"], "manifest_digest": request["manifest_digest"],
+            "expected_database_digest": request["expected_database_digest"]}]})
+
+
+def query_many(request: dict) -> dict:
     validate_digest(request["contract_digest"])
-    validate_digest(request["manifest_digest"])
     root = load_runtime(request["runtime"])
     text = request["query"]
     limit = request["limit"]
@@ -373,22 +379,37 @@ def query(request: dict) -> dict:
         raise ValueError("invalid semantic query")
     if type(limit) is not int or not 1 <= limit <= 1000:
         raise ValueError("invalid semantic query limit")
-    path = database_path(root, request["database"], writable=False)
-    identity = authenticate_database(path, request["expected_database_digest"], create=False)
-    connection = open_database(path, readonly=True)
-    try:
-        check_database_identity(path, identity)
-        meta = dict(connection.execute("SELECT key,value FROM meta"))
-        if meta.get("schema_version") != str(SCHEMA) or meta.get("phase") != "ready" or meta.get("contract_digest") != request["contract_digest"] or meta.get("manifest_digest") != request["manifest_digest"]:
-            raise ValueError("stale or mismatched vector generation")
-        initialize_encoder(request["runtime"])
-        vector = encode_batch([{"title": "", "text": text}])[0]
-        rows = connection.execute("SELECT d.chunk_id,d.digest,v.distance FROM vectors v JOIN documents d ON d.id=v.rowid WHERE v.embedding MATCH ? AND k=? ORDER BY v.distance,d.chunk_id", (vector,limit)).fetchall()
-        if any(not math.isfinite(row[2]) for row in rows):
-            raise ValueError("non-finite vector result")
-        return {"matches": [{"chunk_id": row[0], "digest": row[1], "score": 1.0-float(row[2])**2/2.0} for row in rows]}
-    finally:
-        connection.close()
+    databases = request["databases"]
+    if not isinstance(databases, list) or not 1 <= len(databases) <= 256:
+        raise ValueError("invalid vector partition count")
+    initialize_encoder(request["runtime"])
+    vector = encode_batch([{"title": "", "text": text}])[0]
+    matches, seen_paths, seen_ids = [], set(), set()
+    for item in databases:
+        if not isinstance(item, dict) or set(item) != {"database", "manifest_digest", "expected_database_digest"}:
+            raise ValueError("invalid vector partition contract")
+        validate_digest(item["manifest_digest"])
+        path = database_path(root, item["database"], writable=False)
+        if path in seen_paths:
+            raise ValueError("duplicate vector partition")
+        seen_paths.add(path)
+        identity = authenticate_database(path, item["expected_database_digest"], create=False)
+        connection = open_database(path, readonly=True)
+        try:
+            check_database_identity(path, identity)
+            meta = dict(connection.execute("SELECT key,value FROM meta"))
+            if meta.get("schema_version") != str(SCHEMA) or meta.get("phase") != "ready" or meta.get("contract_digest") != request["contract_digest"] or meta.get("manifest_digest") != item["manifest_digest"]:
+                raise ValueError("stale or mismatched vector generation")
+            rows = connection.execute("SELECT d.chunk_id,d.digest,v.distance FROM vectors v JOIN documents d ON d.id=v.rowid WHERE v.embedding MATCH ? AND k=? ORDER BY v.distance,d.chunk_id", (vector,limit)).fetchall()
+            for row in rows:
+                if not math.isfinite(row[2]) or row[0] in seen_ids:
+                    raise ValueError("invalid or duplicate vector identity")
+                seen_ids.add(row[0])
+                matches.append({"chunk_id": row[0], "digest": row[1], "score": 1.0-float(row[2])**2/2.0})
+        finally:
+            connection.close()
+    matches.sort(key=lambda row: (-row["score"],row["chunk_id"]))
+    return {"matches": matches[:limit]}
 
 
 def self_test(request: dict) -> dict:
@@ -429,6 +450,7 @@ def main() -> int:
         fields = {
             "build": {"database", "chunks", "contract_digest", "workers", "max_seconds", "manifest_digest", "expected_database_digest"},
             "query": {"database", "query", "limit", "contract_digest", "manifest_digest", "expected_database_digest"},
+            "query-many": {"databases", "query", "limit", "contract_digest"},
             "self-test": set(),
         }
         action = request.get("action")
@@ -438,6 +460,8 @@ def main() -> int:
             result = build(request)
         elif request.get("action") == "query":
             result = query(request)
+        elif request.get("action") == "query-many":
+            result = query_many(request)
         elif request.get("action") == "self-test":
             result = self_test(request)
         else:

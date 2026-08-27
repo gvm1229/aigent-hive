@@ -249,6 +249,43 @@ class VectorRuntimeContract(unittest.TestCase):
         finally:
             connection.close()
 
+    def test_multi_partition_query_embeds_once_and_rejects_corrupt_or_duplicate_inputs(self):
+        base = self.root / ".hive/index/vector"
+        runtime = base / "runtimes" / ("a"*64)
+        contract = "sha256:" + "d"*64
+        manifest = "sha256:" + "e"*64
+        databases = []
+        for name in ("b", "c"):
+            path = base / "scopes" / (name*64) / "generations" / ("f"*64) / "index.sqlite3"
+            path.parent.mkdir(parents=True)
+            path.write_bytes(b"synthetic immutable database")
+            databases.append({"database":str(path),"manifest_digest":manifest,"expected_database_digest":WORKER.database_digest(path)})
+        class Rows:
+            def __init__(self, rows): self.rows = rows
+            def __iter__(self): return iter(self.rows)
+            def fetchall(self): return self.rows
+        class QueryConnection:
+            def __init__(self, path): self.name = path.parts[-4][0]
+            def execute(self, sql, _parameters=()):
+                if sql.startswith("SELECT key,value"):
+                    return Rows({"schema_version":"1","phase":"ready","contract_digest":contract,"manifest_digest":manifest}.items())
+                return Rows([(self.name,"sha256:"+"1"*64,1.0 if self.name=="b" else .1)])
+            def close(self): pass
+        def connect(path, readonly=False):
+            self.assertTrue(readonly)
+            return QueryConnection(path)
+        request = {"runtime":str(runtime),"query":"meaning search","limit":1,"contract_digest":contract,"databases":databases}
+        with patch.object(WORKER,"load_runtime",return_value=runtime), patch.object(WORKER,"initialize_encoder") as initialize, patch.object(WORKER,"encode_batch",return_value=[b"vector"]) as encode, patch.object(WORKER,"open_database",side_effect=connect):
+            result = WORKER.query_many(request)
+            self.assertEqual([hit["chunk_id"] for hit in result["matches"]],["c"])
+            initialize.assert_called_once()
+            encode.assert_called_once()
+            with self.assertRaises(ValueError):
+                WORKER.query_many({**request,"databases":[databases[0],databases[0]]})
+            Path(databases[1]["database"]).write_bytes(b"untrusted replacement")
+            with self.assertRaises(ValueError):
+                WORKER.query_many(request)
+
 
 if __name__ == "__main__":
     unittest.main()
