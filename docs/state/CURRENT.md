@@ -2,7 +2,8 @@
 
 - 기준 branch: `feature/0.10.0@7f34552a`
 - 원격 상태: 검증 후 push 예정
-- 제품: `0.10.0`; 안정판 기준: `0.9.5`; 다음 공개 시험: `0.10.0-test.3`
+- product version: `0.10.0`
+- 안정판 기준: `0.9.5`; 다음 공개 시험: `0.10.0-test.3`
 - 활성 계획: [`PLAN.md`](../plans/PLAN.md)
 - 현재 단계: 한국어 결함 수정 후 비벡터 전체 회귀 검사
 
@@ -23,8 +24,10 @@
 - 공개 test.2 파일과 동결본 byte 일치, 실제 구 CLI→새 CLI의 격리 프로젝트·사용자 갱신 통과
 - 세 host 프로젝트 갱신·외부 파일 보존 검사 통과. 실제 macOS·Linux 실행 근거로 사용 금지
 - 독립 검토: 수정 후 차단 결함 0건
-- Copier 비교 4건 통과. 전체 Python은 해시 불일치 수정 뒤 재실행 중
-- 원본 로그: `tests/work/scope-audit-20260828/`의 `rust-final.log`, `copier-repair.log`, `python-fixed.log`
+- Copier 비교 4건 통과. Python 전체 710개 목록 대조: 671 통과·39 건너뜀·누락 0건
+- Windows 미지원 POSIX·macOS·심볼릭 링크 권한 등의 39개 시험은 해당 운영체제의 수용 근거 아님
+- 실패 모듈 수정·재실행과 나머지 검사를 합친 근거. 단일 `--all` 실행 성공으로 표현 금지
+- 원본 로그와 목록 대조: `tests/work/scope-audit-20260828/reconciled-tests.json`
 
 ## 기존 공개 시험과 한계
 

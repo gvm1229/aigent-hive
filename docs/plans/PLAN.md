@@ -1,6 +1,6 @@
 # Aigent Hive 활성 계획
 
-> Revision: 292
+> Revision: 293
 > 기준일: 2026-08-28
 > Product version: `0.10.0`
 > Stable baseline: `0.9.5`
@@ -71,10 +71,10 @@
 | Verified workflow | 12 | 0 | 100% |
 | Adversarial judge | 8 | 0 | 100% |
 | Skill migration cleanup | 10 | 0 | 100% |
-| 한국어 언어 core | 7 | 5 | 58.3% |
+| 한국어 언어 core | 11 | 1 | 91.7% |
 | Source `draft-devlog` | 6 | 0 | 100% |
-| `0.10.0` 출시 | 0 | 7 | 0% |
-| **합계** | **102** | **12** | **89.5%** |
+| `0.10.0` 출시 | 2 | 5 | 28.6% |
+| **합계** | **108** | **6** | **94.7%** |
 
 ## Required load order
 

@@ -57,14 +57,14 @@
 - [x] [KOR10-001] 자동 한국어 core·명시적 `humanize-kor`·지속 가능한 upstream update를 `0.10.0` 제품 범위로 유지보수자 승인
 - [x] [KOR10-002] `im-not-ai 2.3.2@0ac1e84` MIT license·111-file tree·symlink `0건`·host version drift·retired agent·runtime 경계를 provenance manifest로 고정 — `eaed3203`
 - [x] [KOR10-003] `response|release-note|documentation|technical|verbatim` profile·보호 span·예시 sublist·쉬운 설명 계약 정의
-- [ ] [KOR10-004] 번역투·반복·대구·피동·명사화·상투구·리듬 검사와 bigram change rate·touch rate·서법·수치·인용·링크 보존 Rust core 구현
-- [ ] [KOR10-005] 자동 draft→inspect→host-owned 국소 rewrite→verify와 exact draft fallback directive·CLI 구현
+- [x] [KOR10-004] 번역투·반복·대구·피동·명사화·상투구·리듬 검사와 bigram change rate·touch rate·서법·수치·인용·링크 보존 Rust core 구현 — `720c8603`, 부정문 반례 포함
+- [x] [KOR10-005] 자동 draft→inspect→host-owned 국소 rewrite→verify와 exact draft fallback directive·CLI 구현 — 활성 팩 실제 적용, host 의미 비교 필수
 - [x] [KOR10-006] Codex self-review, Claude `Stop`, Antigravity `AfterAgent`의 fresh capability·exact consent·retry 1회 adapter 구현, 미검증 event instruction-only
 - [x] [KOR10-007] Hive-owned text용 profile 정적 gate·digest receipt와 한국어 gold corpus 구현
 - [x] [KOR10-008] `humanize-kor` Skill·light/standard/heavy/redo·원본 보존·preview·projection parity 구현
 - [x] [KOR10-009] Watermark·detector·출처·거짓 저자 금지와 zero-width·bidi·Hangul NFD hygiene 경계를 schema·Skill·회귀 시험에 적용
-- [ ] [KOR10-010] Upstream version check와 commit·tree·license·선별 source·변환 version·세 class preview manifest 구현 — live check current/latest `2.3.2`
-- [ ] [KOR10-011] 세 파일 한정 staging·generation·atomic pointer·history rollback, raw install·floating ref·자동 update 차단 구현
+- [x] [KOR10-010] Upstream version check와 commit·tree·license·선별 source·변환 version·세 class preview manifest 구현 — 규칙 구조·안전 상한·manifest 결합 검증
+- [x] [KOR10-011] 세 파일 한정 staging·generation·atomic pointer·history rollback, raw install·floating ref·자동 update 차단 구현 — 손상된 현재 팩 복구·이전 팩 재검증·동시 쓰기 잠금
 - [ ] [KOR10-012] 한국어 gold corpus·blind 평가·의미·수치·명령·list·link·인용 무회귀·세 host·세 운영체제·direct upgrade·rollback 수용 — public run `32677477765`, blind 자연화 10/10·drift 거부 2/2
 
 ## 출시 경계
