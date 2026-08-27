@@ -4,7 +4,7 @@
 > 기준일: 2026-08-28
 > Product version: `0.10.0`
 > Stable baseline: `0.9.5`
-> 다음 target: `0.10.0-test.3`
+> 다음 target: `0.10.0-test.4`
 > 현재 milestone: 한국어 결함 수정 후 벡터 전용 branch 전환
 > 확정 범위: [`ADR-0020`](../decisions/ADR-0020-0.10.0-product-scope.md)
 

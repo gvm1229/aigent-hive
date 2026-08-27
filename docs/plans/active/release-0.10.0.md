@@ -5,7 +5,7 @@
 
 ## Checklist
 
-- [x] [REL10-001] 한국어 언어 core를 포함한 exact version·build date·release note·package·plugin metadata 정합화 — `0.10.0-test.3`, `2026-08-28`
+- [x] [REL10-001] 한국어 언어 core를 포함한 exact version·build date·release note·package·plugin metadata 정합화 — `0.10.0-test.4`, `2026-08-28`
 - [x] [REL10-002] 새 product bytes의 Rust·Python·문서·보안·upgrade·rollback 전체 local gate 통과 — Windows Rust workspace·Clippy, Python 710개 목록 대조: 671 통과·39 운영체제별 건너뜀, 수정 실패 모듈 재실행 포함
 - [ ] [REL10-003] 번호 공개 `0.10.0-test.2` 이상 candidate·publication과 npm `latest=0.9.5` 불변 확인 — candidate `32676134575`, publication `32676726910`
 - [ ] [REL10-004] Windows x64·macOS arm64·Linux musl에서 한국어 core·`humanize-kor`·upstream pack update를 포함한 공개 시험 수용 — public acceptance `32677477765`
