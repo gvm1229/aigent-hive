@@ -9,7 +9,7 @@ summary: "The 0.10.0 scope adds a Korean language core and reopens vector qualif
 tags: [knowledge, language, release, scan, v0-10]
 aliases: ["0.10.0 scope"]
 sources:
-  - "repo:docs/decisions/ADR-0020-0.10.0-product-scope.md#sha256:921f2847dacea259c29b9f6c8cbb2c4f7c090429e04771ec240d49eb1ccfbb72"
+  - "repo:docs/decisions/ADR-0020-0.10.0-product-scope.md#sha256:ccd2c8abeb632eab34d3b6772994e72be4960a1cf019538b57f53c706e9a51b4"
   - "repo:docs/decisions/product-release-decisions.md#sha256:e89ac8584204a7e52ed157e9b29d523f870b8ac387fc1e4a044f7f7333d17af5"
   - "repo:docs/plans/active/korean-language-core-0.10.0.md#sha256:f36fbb577136b992e70d1105b3f2eb4f6f9e8d4330e4ae0cb47ba67fe94f02ba"
 links: [consumer-session-coordination, graphify-0-10-adoption, hybrid-vector-search-0-10, knowledge-storage, nested-project-scan-0-10]

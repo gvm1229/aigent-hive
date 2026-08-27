@@ -6,6 +6,7 @@
 | --- | --- |
 | [Source layout](source-layout.md) | Source·release·consumer tree와 crate ownership |
 | [한국어 언어 core](korean-language-core.md) | 자동 한국어 검사·윤문·pack lifecycle |
+| [선택형 벡터 검색](vector-search.md) | 동의·권한·파생 색인·중단 재개 계약 |
 | [Role lifecycle](role-lifecycle.md) | Persistent role identity·handoff |
 | [Run lifecycle](run-lifecycle.md) | Criterion·checkpoint·event·scheduler·receipt·cancel·resume |
 | [Skill consent](skill-consent.md) | Optional Skill approval·activation |

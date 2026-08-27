@@ -1,7 +1,8 @@
 # Hybrid vector search `0.10.0`
 
 > Checklist owner: `KRG10-014`, `VEC10-*`, `VQR10-*`
-> 채택 방식: 측정 gate 통과 뒤 조건부 구현
+> 작업 branch: `feature/0.10.0-vector-search`
+> 채택 방식: 구현·격리 검증 후 측정 gate 통과한 조합만 공개 기능에 포함
 > 실패 영향: FTS·native graph·Graphify code graph 일정 유지
 > 연구 근거: [`vector-memory-0.10-feasibility-2026-08-22.md`](../../research/vector-memory-0.10-feasibility-2026-08-22.md)
 
@@ -19,12 +20,12 @@ SQLite FTS의 exact 검색을 유지하면서 표현이 다른 의미·다국어
 - [x] [VEC10-004] Qdrant Edge·sqlite-vec·SQLite-Vector의 exact version·license·Rust·세 운영체제·memory safety·storage·ANN maturity 조사 — Qdrant `0.8.0` beta, sqlite-vec `0.1.9` pre-1.0, SQLite-Vector `1.0.0` license 부적합
 - [x] [VEC10-005] `tests/work/vector-research/` 격리 prototype: 같은 canonical chunk·embedding의 세 engine build·query·delete·rebuild — Dense quality와 동일 384-dimension storage engine 격리 실행
 - [x] [VEC10-006] 50,000 chunk·100 collection benchmark와 semantic Recall@10·exact-fact 무회귀·scope filter·disk·RAM·build 비용 비교 — Dense semantic +15.0 points·exact 무회귀, engine p95 통과, full embedding build 실패
-- [x] [VEC10-007] Hard gate 판정과 exact engine·embedding 선택 또는 `defer`; 통과 실패의 product dependency 추가 `0건` — `defer`, dependency `0건`
-- [x] [VEC10-008] 재검증 통과 시 derived vector generation schema, model·engine receipt, chunk digest mapping과 scope별 물리 격리 구현 — full-build gate 실패로 `not-applicable`, 제품 schema `0건`
-- [x] [VEC10-009] 승인형 local embedding helper preview·install·staging build·atomic activation·update·disable 계약 구현 — gate 실패로 `not-applicable`, 설치 경로 `0건`
-- [x] [VEC10-010] FTS·dense vector·native relation·Graphify code 결과의 rank fusion·citation·matched-lane 표시 구현 — gate 실패로 `not-applicable`, 기존 FTS·graph 유지
-- [x] [VEC10-011] Canonical 변경의 incremental vector 갱신·full rebuild 동등성, stale model·dimension mismatch·손상 index fallback·rollback 구현 — 연구 pipeline만 검증, 제품 index `0건`
-- [x] [VEC10-012] `.hivekb` vector·model 제외, destination rebuild, Windows x64·macOS arm64·Linux musl 공개 시험 수용 — 제품 byte 부재로 bundle·release 수용 `not-applicable`
+- [ ] [VEC10-007] 기존 기준을 유지한 engine·embedding 채택 판정. 병렬 변환과 정적 임베딩 비교, 미통과 조합 공개 활성화 금지
+- [ ] [VEC10-008] 파생 색인 세대·모델/engine 영수증·청크 digest·collection와 공개 범위별 물리 격리 구현
+- [ ] [VEC10-009] 승인형 보조 환경 preview·설치·시간 제한 배치·원자 활성화·갱신·비활성화 구현
+- [ ] [VEC10-010] FTS 보존, 의미 검색의 순위 결합·인용·검색 경로 표시. 벡터 점수만으로 사실 확정 금지
+- [ ] [VEC10-011] 증분 갱신·중단 재개·전체 재생성 동등성, 오래된/손상된 색인의 FTS 복귀·rollback 구현
+- [ ] [VEC10-012] Bundle 제외·다른 기기 재생성·세 운영체제 설치와 번호 공개 시험 수용
 
 ## 재검증 checklist
 
@@ -40,6 +41,10 @@ SQLite FTS의 exact 검색을 유지하면서 표현이 다른 의미·다국어
 - [x] [VQR10-010] Hard gate 판정 `defer`: full build·세 platform 실패, optional adapter·product dependency `0건`
 
 ## 이전 gate 판정
+
+- 2026-08-28 승인: 비벡터 수정 통합 뒤 전용 branch에서 벡터 구현 재개. 과거 `not-applicable` 완료 표시 취소
+- 검색 품질·초기 생성 시간 기준의 임의 완화 금지. 통과 전 조사용 조합과 출하 조합 구분
+- 실행·보안 계약: [벡터 구현 계약](../../architecture/vector-search.md)
 
 - `0.10.0-test.1` 전 조사: Dense semantic Recall@10 `+15.0 points`, hybrid exact `100%`, 세 engine lookup 기준 통과
 - 실패 지점: Windows x64의 naive 50,000 offline embedding build `600초` 초과

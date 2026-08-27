@@ -19,6 +19,8 @@ Skill source; host-specific files remain thin projections.
 
 - Hive runs on an authenticated subscription host. It must not call a model-provider API, request
   provider credentials, or launch a model/subagent process.
+- The active vector plan permits a separately consented, non-generative local embedding indexer.
+  This narrow indexing exception does not authorize prompts, text generation, or agent execution.
 - The host owns model calls and processes. Hive owns deterministic setup, canonical state,
   projection, indexing, validation, migration, scheduling, leases, receipts, cancellation,
   recovery, Judge contracts, and rollback.
@@ -65,5 +67,7 @@ Skill source; host-specific files remain thin projections.
 - Tracked typed YAML/TOML owns setup, approval, and suppression authority.
 - SQLite is disposable and rebuildable without model or network access; no fact may exist only in
   SQLite.
+  This invariant applies to canonical FTS. An optional derived vector index may use the approved
+  local embedding indexer; its absence must not affect FTS or canonical knowledge.
 - Source facts live as exact bilingual pairs under `docs/facts/en/` and `docs/facts/ko/`.
 - Never use OMX Wiki or consumer `.hive/knowledge/` as source knowledge.

@@ -5,12 +5,12 @@ topic_slug: hybrid-vector-search-0-10
 language: en
 counterpart: ../ko/hybrid-vector-search-0-10.md
 title: "Hybrid Vector Search Gate for 0.10.0"
-summary: "0.10.0 vector requalification deferred the optional adapter because the unique 50,000-chunk embedding build failed the ten-minute gate."
+summary: "0.10.0 vector implementation reopened on its own branch while the original quality, performance, and safety gates remain required."
 tags: [knowledge, retrieval, v0-10, vector]
 aliases: ["Vector database gate"]
 sources:
-  - "repo:docs/decisions/ADR-0020-0.10.0-product-scope.md#sha256:921f2847dacea259c29b9f6c8cbb2c4f7c090429e04771ec240d49eb1ccfbb72"
-  - "repo:docs/plans/active/hybrid-vector-search-0.10.0.md#sha256:df7502f8bf610d13f4269d5cbd344857157325ab56d34154f154dbfb7b730364"
+  - "repo:docs/decisions/ADR-0020-0.10.0-product-scope.md#sha256:ccd2c8abeb632eab34d3b6772994e72be4960a1cf019538b57f53c706e9a51b4"
+  - "repo:docs/plans/active/hybrid-vector-search-0.10.0.md#sha256:f27203245c9c9020c77c8f29733d60f8783f3246b698635ceb01643c2ffa881d"
   - "repo:docs/research/evidence/vector-hard-gate-windows-2026-08-23.json#sha256:41517d801330c1c299178b5b1ae75ed27fb5106c8af6ce4e2083b66cec30f09a"
   - "repo:docs/research/evidence/vector-requalification-windows-2026-08-24.json#sha256:df1a2e0bf1001236cef266653309154bb99676837be86a2beba25e8dff16b178"
   - "repo:docs/research/vector-memory-0.10-feasibility-2026-08-22.md#sha256:03dca07c4f6b5928268f4bc7c5337d1604371eadcd5b8a7b85b88ec3f65f215c"
@@ -22,8 +22,10 @@ status: active
 
 # Hybrid Vector Search Gate for 0.10.0
 
-Requalification kept the 15-point semantic Recall@10 gain, 100% hybrid exact recall, and fast query
-embedding. Digest reuse built 50,000 repeated rows from 30 embeddings in 5.75 seconds. A 1,000-row
-probe projected about 2,711 seconds for 50,000 unique chunks, above the 600-second gate. Resumable
-and incremental research paths passed, but the optional adapter stays deferred. FTS and graphs stay
-active. No vector product dependency exists.
+The maintainer authorized vector implementation on `feature/0.10.0-vector-search` after non-vector
+repairs merged into `develop`. The earlier 1,000-row probe projected 2,711 seconds for 50,000 unique
+chunks and failed the 600-second gate. That result remains historical evidence, not implementation
+closure. New selection compares embedding quality and actual full builds without weakening gates.
+FTS remains available. A consented local non-generative indexer is permitted; provider APIs and
+generative model processes remain prohibited. Confidential search and index creation need separate
+action authority. No vector product dependency exists yet.

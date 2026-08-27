@@ -1,11 +1,11 @@
 # 현재 상태
 
-- 기준 branch: `feature/0.10.0@7f34552a`
-- 원격 상태: 검증 후 push 예정
+- 기준 branch: `feature/0.10.0-vector-search@5cedbed4`
+- 원격 기준: `origin/develop@5cedbed4`, 벡터 branch는 로컬 생성
 - product version: `0.10.0`
 - 안정판 기준: `0.9.5`; 다음 공개 시험: `0.10.0-test.4`
 - 활성 계획: [`PLAN.md`](../plans/PLAN.md)
-- 현재 단계: `develop` 통합 뒤 macOS 경로 수정·교차 운영체제 재검증
+- 현재 단계: 비벡터 교차 운영체제 수용과 전용 branch의 벡터 구현
 
 ## 이번 수정
 
@@ -34,6 +34,7 @@
 - `4467d212`: `feature/0.10.0`을 `develop`에 fast-forward 병합·양쪽 원격 반영
 - CI `33100616646`의 macOS `/var` 경로 거부 확인. 기본 임시 경로만 정규화하는 후속 수정
 - test.3 후보 `33100640263`: 게시 전 취소. 미게시 후보이며 공개 시험 수용 근거 없음
+- macOS 경로 수정 `0b4aa53e`, 새 CI `33101026027`, test.4 후보 `33101040467` 진행 중
 
 - 공개 `0.10.0-test.2`: candidate `32676134575`, publication `32676726910`, 세 운영체제 수용 `32677477765`
 - 한국어 반례 세 건 확인으로 이전 전체 완료 판정 취소. 위 기록은 수정된 제품의 수용 근거 아님
@@ -43,8 +44,8 @@
 
 ## 다음 작업과 권한
 
-1. 비벡터 전체 회귀 검사 완료 후 `develop` 병합·push
-2. 수정 제품의 번호 공개 시험과 Windows x64·macOS arm64·Linux musl x64 수용
+1. 수정 제품의 번호 공개 시험과 Windows x64·macOS arm64·Linux musl x64 수용
+2. 벡터 engine·임베딩 채택 기준 판정과 안전 계약 구현
 3. `feature/0.10.0-vector-search`에서 의미 검색 전용 구현·검증
 4. 안정판 `REL10-005–007`: 명시 제외. 버전명 포함 사용자 승인 전 protected `main` 통합·tag·게시·설치 금지
 
