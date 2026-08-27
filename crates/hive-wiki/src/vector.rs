@@ -378,6 +378,47 @@ impl VectorFiles {
         Ok(finish_digest(hasher))
     }
 
+    /// Retire a former control record's immutable copy while holding the scope writer lease.
+    ///
+    /// # Errors
+    /// Rejects unexpected bytes, links, recovery sidecars, or failed removal.
+    pub fn retire_database(
+        &self,
+        scope: &str,
+        kind: DatabaseKind<'_>,
+        expected: &str,
+    ) -> Result<(), WikiError> {
+        if matches!(kind, DatabaseKind::Staging) {
+            return Err(WikiError::InvalidInput(
+                "mutable state is not an obsolete snapshot".to_owned(),
+            ));
+        }
+        let relative = self.database_relative(scope, kind)?;
+        let Some((parent, name)) = capability_parent(&self.root.dir, &relative, false)? else {
+            return Ok(());
+        };
+        match parent.symlink_metadata(&name) {
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(()),
+            Err(error) => return Err(io_error(error)),
+            Ok(_) => (),
+        }
+        if self.database_digest(scope, kind)? != expected {
+            return Err(WikiError::Conflict(
+                "obsolete vector snapshot changed; retained".to_owned(),
+            ));
+        }
+        // The scope writer lease protects Hive writers. This removes only an owned cache name,
+        // never a symlink target or bytes addressed through another hardlink outside this scope.
+        // It does not promise inode-conditional unlink against an uncooperative same-UID writer.
+        parent.remove_file(&name).map_err(io_error)?;
+        if let Some(directory) = relative.parent() {
+            if let Some((ancestor, leaf)) = capability_parent(&self.root.dir, directory, false)? {
+                let _ = ancestor.remove_dir(leaf); // Empty generated directory only; never recurse.
+            }
+        }
+        Ok(())
+    }
+
     /// Copy an authenticated snapshot without aliasing its inode or replacing an existing destination.
     ///
     /// # Errors
@@ -750,6 +791,49 @@ mod tests {
                 .expect("generation unchanged"),
             digest
         );
+    }
+
+    #[test]
+    fn obsolete_snapshot_cleanup_preserves_external_bytes_and_retries() {
+        let root = temporary();
+        let files = VectorFiles::open(root.path(), false).expect("files");
+        let scope = "a".repeat(64);
+        let id = "b".repeat(64);
+        let kind = DatabaseKind::Checkpoint(&id);
+        let stage = files.prepare_staging(&scope).expect("stage");
+        fs::write(&stage, b"owned checkpoint").expect("stage bytes");
+        let digest = sha256_digest(b"owned checkpoint");
+        files
+            .copy_database(&scope, DatabaseKind::Staging, kind, &digest)
+            .expect("copy");
+        let path = files.database_path(&scope, kind).expect("path");
+        let note = path.with_file_name("user-note.txt");
+        fs::write(&note, b"unexpected addition").expect("note");
+        assert!(files
+            .retire_database(&scope, kind, &sha256_digest(b"other"))
+            .is_err());
+        assert!(path.exists());
+        files
+            .retire_database(&scope, kind, &digest)
+            .expect("remove exact copy");
+        files
+            .retire_database(&scope, kind, &digest)
+            .expect("resume after unlink");
+        assert_eq!(
+            fs::read(&note).expect("addition retained"),
+            b"unexpected addition"
+        );
+        let external = root.path().join("external.sqlite3");
+        fs::write(&external, b"external data").expect("external");
+        fs::hard_link(&external, &path).expect("unexpected link");
+        assert!(files.retire_database(&scope, kind, &digest).is_err());
+        assert_eq!(
+            fs::read(&external).expect("external retained"),
+            b"external data"
+        );
+        assert!(files
+            .retire_database(&scope, DatabaseKind::Staging, &digest)
+            .is_err());
     }
 
     #[test]

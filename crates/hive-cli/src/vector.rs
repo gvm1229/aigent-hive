@@ -81,6 +81,8 @@ struct ScopeControl {
     active: Option<index::Snapshot>,
     #[serde(default)]
     previous: Option<index::Snapshot>,
+    #[serde(default)]
+    retired: Vec<index::RetiredSnapshot>,
 }
 
 struct Target {
@@ -425,6 +427,7 @@ fn enable(target: &Target, options: &[(&str, &str)]) -> Result<Value, WikiError>
         checkpoint: None,
         active: None,
         previous: None,
+        retired: Vec::new(),
     });
     control.enabled = true;
     control.revision = control

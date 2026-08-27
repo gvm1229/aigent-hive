@@ -294,6 +294,7 @@ mod tests {
             checkpoint: None,
             active: None,
             previous: None,
+            retired: Vec::new(),
         };
         files
             .write_control(Some(&scope_id), None, &control)

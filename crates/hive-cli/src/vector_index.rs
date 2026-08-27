@@ -28,6 +28,88 @@ struct Corpus {
     request: Option<RetrievalRequest>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(super) struct RetiredSnapshot {
+    checkpoint: bool,
+    snapshot: Snapshot,
+}
+
+fn record_retired(before: &ScopeControl, after: &mut ScopeControl) {
+    for (checkpoint, snapshot) in before.checkpoint.iter().map(|item| (true, item)).chain(
+        before
+            .active
+            .iter()
+            .chain(before.previous.iter())
+            .map(|item| (false, item)),
+    ) {
+        let live = if checkpoint {
+            after.checkpoint.iter().any(|item| item.id == snapshot.id)
+        } else {
+            after
+                .active
+                .iter()
+                .chain(after.previous.iter())
+                .any(|item| item.id == snapshot.id)
+        };
+        if !live
+            && !after
+                .retired
+                .iter()
+                .any(|item| item.checkpoint == checkpoint && item.snapshot.id == snapshot.id)
+        {
+            after.retired.push(RetiredSnapshot {
+                checkpoint,
+                snapshot: snapshot.clone(),
+            });
+        }
+    }
+}
+
+fn clean_retired(target: &Target, control: &ScopeControl) -> bool {
+    let Ok(expected) = value_digest(control) else {
+        return true;
+    };
+    if !target
+        .files
+        .read_control::<ScopeControl>(Some(&target.scope_id))
+        .is_ok_and(|(_, actual)| actual.as_deref() == Some(&expected))
+    {
+        return true;
+    }
+    let mut after = control.clone();
+    after.retired.retain(|item| {
+        let snapshot = &item.snapshot;
+        if control
+            .active
+            .iter()
+            .chain(control.previous.iter())
+            .chain(control.checkpoint.iter())
+            .any(|live| live.id == snapshot.id)
+        {
+            return true;
+        }
+        let kind = if item.checkpoint {
+            DatabaseKind::Checkpoint(&snapshot.id)
+        } else {
+            DatabaseKind::Generation(&snapshot.id)
+        };
+        target
+            .files
+            .retire_database(&target.scope_id, kind, &snapshot.database_digest)
+            .is_err()
+    });
+    if after.retired.len() != control.retired.len()
+        && target
+            .files
+            .write_control(Some(&target.scope_id), Some(&expected), &after)
+            .is_err()
+    {
+        return true;
+    }
+    !after.retired.is_empty()
+}
+
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
 struct BuildResult {
@@ -247,6 +329,7 @@ pub(super) fn rebuild(target: &Target, options: &[(&str, &str)]) -> Result<Value
     } else {
         after.checkpoint = Some(snapshot.clone());
     }
+    record_retired(&before, &mut after);
     publish(
         target,
         &corpus,
@@ -256,8 +339,10 @@ pub(super) fn rebuild(target: &Target, options: &[(&str, &str)]) -> Result<Value
             .ok_or_else(|| invalid("scope control digest is absent"))?,
         &after,
     )?;
+    let cleanup_pending = clean_retired(target, &after);
     Ok(
         json!({"complete":result.complete,"phase":result.phase,"embedded":result.embedded,"remaining":result.remaining,
+        "cleanup_pending":cleanup_pending,
         "chunks":result.chunks,"snapshot_id":snapshot.id,"database_digest":snapshot.database_digest,
         "manifest_digest":snapshot.manifest_digest,"worker_seconds":result.elapsed_seconds,
         "requires_new_authorization":auth::confidential(target) && !result.complete,
@@ -346,6 +431,7 @@ pub(super) fn rollback(target: &Target, options: &[(&str, &str)]) -> Result<Valu
     after.active = after.previous.take();
     after.previous.clone_from(&before.active);
     after.checkpoint = None;
+    record_retired(&before, &mut after);
     publish(
         target,
         &corpus,
@@ -355,8 +441,9 @@ pub(super) fn rollback(target: &Target, options: &[(&str, &str)]) -> Result<Valu
             .ok_or_else(|| invalid("scope control digest is absent"))?,
         &after,
     )?;
+    let cleanup_pending = clean_retired(target, &after);
     Ok(
-        json!({"rolled_back":true,"enabled":after.enabled,"fts_unchanged":true,"changed_paths":changed_paths(target,false)}),
+        json!({"rolled_back":true,"enabled":after.enabled,"fts_unchanged":true,"cleanup_pending":cleanup_pending,"changed_paths":changed_paths(target,true)}),
     )
 }
 
@@ -444,6 +531,7 @@ mod tests {
             checkpoint: Some(snapshot.clone()),
             active: None,
             previous: None,
+            retired: Vec::new(),
         };
         fs::write(&stage, b"killed worker bytes").expect("interruption");
         fs::write(
@@ -474,5 +562,44 @@ mod tests {
             None
         );
         assert!(!stage.exists());
+        assert_retirement_retry(&target, &control, &snapshot);
+    }
+
+    fn assert_retirement_retry(target: &Target, control: &ScopeControl, snapshot: &Snapshot) {
+        let mut after = control.clone();
+        after.checkpoint = None;
+        record_retired(control, &mut after);
+        assert_eq!(after.retired.len(), 1);
+        target
+            .files
+            .write_control(Some(&target.scope_id), None, &after)
+            .expect("control");
+        assert!(clean_retired(target, &after));
+        assert_eq!(
+            target
+                .files
+                .read_control::<ScopeControl>(Some(&target.scope_id))
+                .expect("retained queue")
+                .0
+                .expect("control")
+                .retired
+                .len(),
+            1
+        );
+        let path = target
+            .files
+            .database_path(&target.scope_id, DatabaseKind::Checkpoint(&snapshot.id))
+            .expect("checkpoint path");
+        fs::write(&path, b"verified checkpoint").expect("restored owned copy");
+        assert!(!clean_retired(target, &after));
+        assert!(!path.exists());
+        assert!(target
+            .files
+            .read_control::<ScopeControl>(Some(&target.scope_id))
+            .expect("cleared queue")
+            .0
+            .expect("control")
+            .retired
+            .is_empty());
     }
 }
