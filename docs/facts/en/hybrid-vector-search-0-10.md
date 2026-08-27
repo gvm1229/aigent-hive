@@ -28,4 +28,5 @@ chunks and failed the 600-second gate. That result remains historical evidence, 
 closure. New selection compares embedding quality and actual full builds without weakening gates.
 FTS remains available. A consented local non-generative indexer is permitted; provider APIs and
 generative model processes remain prohibited. Confidential search and index creation need separate
-action authority. No vector product dependency exists yet.
+action authority. Scoped RAG revalidation and a pinned file-only worker are implemented; CLI
+integration and full product qualification remain incomplete.
