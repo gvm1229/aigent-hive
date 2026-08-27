@@ -1,0 +1,454 @@
+"""Non-generative offline embedding and sqlite-vec worker, invoked only by Hive.
+
+The caller authenticates the runtime and owns scope, consent, locks, and publication.
+This process never reads canonical knowledge, credentials, or host configuration.
+"""
+
+from __future__ import annotations
+
+import concurrent.futures
+import hashlib
+import json
+import math
+import multiprocessing
+import os
+from pathlib import Path
+import socket
+import sqlite3
+import struct
+import sys
+import time
+
+DIMENSION = 384
+SCHEMA = 1
+MAX_REQUEST = 256 * 1024 * 1024
+MAX_CHUNKS = 50_000
+MODEL_FILE = "model_optimized.onnx"
+TOKENIZER_FILE = "tokenizer.json"
+TOKEN_LIMIT = 128
+
+
+def deny_network(*_args, **_kwargs):
+    raise RuntimeError("network is not part of the vector worker contract")
+
+
+def offline_environment() -> None:
+    # This blocks Python socket APIs, not arbitrary native OS syscalls.
+    socket.create_connection = deny_network
+    socket.socket.connect = deny_network
+    socket.socket.connect_ex = deny_network
+    os.environ["HF_HUB_OFFLINE"] = "1"
+    os.environ["HF_HUB_DISABLE_TELEMETRY"] = "1"
+    os.environ["TOKENIZERS_PARALLELISM"] = "false"
+    sys.dont_write_bytecode = True
+
+
+def regular_path(value: str, directory: bool = False) -> Path:
+    path = Path(os.path.abspath(value))
+    for ancestor in [path, *path.parents]:
+        if ancestor.is_symlink() or (hasattr(ancestor, "is_junction") and ancestor.is_junction()):
+            raise ValueError("vector worker paths cannot contain links")
+    if directory and not path.is_dir():
+        raise ValueError("vector worker directory is absent")
+    if not directory and path.exists() and not path.is_file():
+        raise ValueError("vector worker file is not regular")
+    return path
+
+
+def load_runtime(runtime: str) -> Path:
+    root = regular_path(runtime, directory=True)
+    site = regular_path(str(root / "site"), directory=True)
+    # -I -S and this explicit path prevent user-site and .pth activation.
+    sys.path.insert(0, str(site))
+    offline_environment()
+    return root
+
+
+def database_path(runtime: Path, value: str, writable: bool) -> Path:
+    path = regular_path(value)
+    base = runtime.parent.parent
+    if runtime.parent.name != "runtimes" or base.name != "vector":
+        raise ValueError("vector database requires an activated runtime")
+    if tuple(base.parts[-3:]) not in ((".hive", "index", "vector"), (".agents", "work", "vector")):
+        raise ValueError("vector database root is not Hive-owned")
+    parts = path.relative_to(base).parts
+    expected_length = 3 if writable else 5
+    if len(parts) != expected_length or parts[0] != "scopes" or len(parts[1]) != 64 or any(c not in "0123456789abcdef" for c in parts[1]):
+        raise ValueError("invalid vector scope path")
+    if writable and parts[2] != "staging.sqlite3":
+        raise ValueError("vector writes are restricted to staging")
+    if not writable and (parts[2] != "generations" or len(parts[3]) != 64 or any(c not in "0123456789abcdef" for c in parts[3]) or parts[4] != "index.sqlite3"):
+        raise ValueError("vector queries require a published generation")
+    if path.exists():
+        metadata = path.stat()
+        if metadata.st_nlink != 1:
+            raise ValueError("hardlinked vector databases are forbidden")
+        if metadata.st_size > 512 * 1024 * 1024:
+            raise ValueError("vector database exceeds limits")
+    return path
+
+
+def validate_digest(value: object) -> str:
+    if not isinstance(value, str) or len(value) != 71 or not value.startswith("sha256:") or any(c not in "0123456789abcdef" for c in value[7:]):
+        raise ValueError("invalid vector digest")
+    return value
+
+
+def database_digest(path: Path) -> str:
+    with path.open("rb") as stream:
+        return "sha256:" + hashlib.file_digest(stream, "sha256").hexdigest()
+
+
+def authenticate_database(path: Path, expected: object, create: bool) -> tuple[int, int]:
+    reject_database_sidecars(path)
+    if path.exists():
+        validate_digest(expected)
+        before = path.stat()
+        if before.st_nlink != 1 or database_digest(path) != expected:
+            raise ValueError("vector database differs from the trusted checkpoint")
+        after = path.stat()
+        if (before.st_dev, before.st_ino, before.st_size, before.st_mtime_ns) != (after.st_dev, after.st_ino, after.st_size, after.st_mtime_ns):
+            raise ValueError("vector database identity changed")
+        return after.st_dev, after.st_ino
+    if not create or expected is not None:
+        raise ValueError("trusted vector database is absent")
+    descriptor = os.open(path, os.O_RDWR | os.O_CREAT | os.O_EXCL | getattr(os, "O_NOFOLLOW", 0), 0o600)
+    try:
+        metadata = os.fstat(descriptor)
+        return metadata.st_dev, metadata.st_ino
+    finally:
+        os.close(descriptor)
+
+
+def check_database_identity(path: Path, identity: tuple[int, int]) -> None:
+    metadata = path.lstat()
+    if path.is_symlink() or metadata.st_nlink != 1 or (metadata.st_dev, metadata.st_ino) != identity:
+        raise ValueError("vector database changed before use")
+
+
+def reject_database_sidecars(path: Path) -> None:
+    for suffix in ("-journal", "-wal", "-shm"):
+        sibling = Path(str(path) + suffix)
+        if sibling.exists() or sibling.is_symlink():
+            raise ValueError("vector database has an untrusted SQLite sidecar")
+
+
+def initialize_encoder(runtime: str) -> None:
+    global _session, _tokenizer, _numpy, _pad_id, _cls_id, _sep_id
+    root = load_runtime(runtime)
+    import numpy as np
+    import onnxruntime as ort
+    from tokenizers import AddedToken, Tokenizer
+
+    _numpy = np
+    ort.disable_telemetry_events()
+    options = ort.SessionOptions()
+    options.intra_op_num_threads = 1
+    options.inter_op_num_threads = 1
+    options.log_severity_level = 3
+    _session = ort.InferenceSession(
+        str(regular_path(str(root / "model" / MODEL_FILE))),
+        options,
+        providers=["CPUExecutionProvider"],
+    )
+    _tokenizer = Tokenizer.from_file(str(regular_path(str(root / "model" / TOKENIZER_FILE))))
+    config = json.loads(regular_path(str(root / "model/config.json")).read_text("utf-8"))
+    tokenizer_config = json.loads(regular_path(str(root / "model/tokenizer_config.json")).read_text("utf-8"))
+    if min(tokenizer_config["model_max_length"], tokenizer_config["max_length"]) != TOKEN_LIMIT:
+        raise ValueError("unsupported tokenizer context")
+    if not _tokenizer.padding:
+        _tokenizer.enable_padding(pad_id=config["pad_token_id"], pad_token=tokenizer_config["pad_token"])
+    _pad_id = _tokenizer.padding["pad_id"]
+    _tokenizer.no_truncation()
+    _tokenizer.no_padding()
+    special = json.loads(regular_path(str(root / "model/special_tokens_map.json")).read_text("utf-8"))
+    for token in special.values():
+        _tokenizer.add_special_tokens([AddedToken(**token) if isinstance(token, dict) else token])
+    _cls_id = _tokenizer.token_to_id(tokenizer_config["cls_token"])
+    _sep_id = _tokenizer.token_to_id(tokenizer_config["sep_token"])
+    if _cls_id is None or _sep_id is None:
+        raise ValueError("missing model boundary tokens")
+
+
+def encode_batch(records: list[dict[str, str]]) -> list[bytes]:
+    # Do not rely on truncation overflow metadata: explicitly partition all body
+    # token IDs and repeat the authenticated title context for each window.
+    bodies = _tokenizer.encode_batch([record["text"] for record in records], add_special_tokens=False)
+    prefixes = [_tokenizer.encode(record["title"], add_special_tokens=False).ids[:32] for record in records]
+    windows, owners, weights = [], [], []
+    for index, body in enumerate(bodies):
+        prefix = prefixes[index]
+        width = TOKEN_LIMIT-2-len(prefix)
+        for offset in range(0, max(1, len(body.ids)), width):
+            content = prefix+body.ids[offset:offset+width]
+            windows.append([_cls_id, *content, _sep_id])
+            owners.append(index)
+            weights.append(max(1, len(content)))
+    pooled = _numpy.zeros((len(records), DIMENSION), dtype=_numpy.float64)
+    totals = _numpy.zeros((len(records), 1), dtype=_numpy.float64)
+    for offset in range(0, len(windows), 64):
+        batch = windows[offset:offset+64]
+        width = max(len(item) for item in batch)
+        values = {
+            "input_ids": _numpy.asarray([item+[_pad_id]*(width-len(item)) for item in batch], dtype=_numpy.int64),
+            "attention_mask": _numpy.asarray([[1]*len(item)+[0]*(width-len(item)) for item in batch], dtype=_numpy.int64),
+            "token_type_ids": _numpy.zeros((len(batch), width), dtype=_numpy.int64),
+        }
+        output = _session.run(None, {item.name: values[item.name] for item in _session.get_inputs()})[0]
+        mask = values["attention_mask"][..., None]
+        means = (output*mask).sum(axis=1)/_numpy.maximum(mask.sum(axis=1), 1)
+        for index, mean in enumerate(means, offset):
+            pooled[owners[index]] += mean*weights[index]
+            totals[owners[index]] += weights[index]
+    pooled /= _numpy.maximum(totals, 1)
+    pooled /= _numpy.maximum(_numpy.linalg.norm(pooled, axis=1, keepdims=True), 1e-12)
+    if pooled.shape != (len(records), DIMENSION) or not _numpy.isfinite(pooled).all():
+        raise ValueError("invalid embedding output")
+    return [row.astype("<f4").tobytes() for row in pooled]
+
+
+def open_database(path: Path, readonly: bool = False) -> sqlite3.Connection:
+    import sqlite_vec
+
+    connection = sqlite3.connect(path.as_uri() + "?mode=ro&immutable=1", uri=True) if readonly else sqlite3.connect(path)
+    try:
+        connection.enable_load_extension(True)
+        sqlite_vec.load(connection)
+    finally:
+        connection.enable_load_extension(False)
+    if connection.execute("SELECT vec_version()").fetchone()[0] != "v0.1.9":
+        connection.close()
+        raise ValueError("unsupported vector engine")
+    connection.execute("PRAGMA mmap_size=268435456")
+    connection.execute("PRAGMA cache_size=-100000")
+    connection.execute("PRAGMA trusted_schema=OFF")
+    if readonly:
+        connection.execute("PRAGMA query_only=ON")
+    return connection
+
+
+def text_digest(text: str) -> str:
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
+def record_digest(row: dict[str, str]) -> str:
+    return text_digest(json.dumps([row["title"], row["text"]], ensure_ascii=False, separators=(",", ":")))
+
+
+def validate_chunks(chunks: object) -> list[dict[str, str]]:
+    if not isinstance(chunks, list) or len(chunks) > MAX_CHUNKS:
+        raise ValueError("invalid vector corpus size")
+    seen = set()
+    for item in chunks:
+        if not isinstance(item, dict) or set(item) != {"chunk_id", "digest", "title", "text"}:
+            raise ValueError("invalid vector corpus row")
+        if not all(isinstance(value, str) and value.strip() for value in item.values()):
+            raise ValueError("invalid vector corpus field")
+        if len(item["chunk_id"]) > 256 or len(item["title"].encode("utf-8")) > 4096 or len(item["text"].encode("utf-8")) > 128 * 1024:
+            raise ValueError("vector corpus row exceeds limits")
+        if item["chunk_id"] in seen:
+            raise ValueError("duplicate vector corpus identity")
+        seen.add(item["chunk_id"])
+        digest = item["digest"]
+        if len(digest) != 71 or not digest.startswith("sha256:") or any(c not in "0123456789abcdef" for c in digest[7:]):
+            raise ValueError("invalid canonical digest")
+    return chunks
+
+
+def finalize(connection: sqlite3.Connection, request: dict, chunks: list[dict], deadline: float) -> bool:
+    contract = request["contract_digest"]
+    binding = hashlib.sha256(json.dumps(
+        [contract, request["manifest_digest"], [(row["chunk_id"], row["digest"], record_digest(row)) for row in chunks]],
+        separators=(",", ":"), ensure_ascii=False,
+    ).encode("utf-8")).hexdigest()
+    meta = dict(connection.execute("SELECT key,value FROM meta"))
+    if meta.get("finalize_binding") != binding:
+        connection.execute("DROP TABLE IF EXISTS vectors")
+        connection.execute("DROP TABLE IF EXISTS documents")
+        connection.execute(f"CREATE VIRTUAL TABLE vectors USING vec0(embedding float[{DIMENSION}])")
+        connection.execute("CREATE TABLE documents(id INTEGER PRIMARY KEY, chunk_id TEXT UNIQUE NOT NULL, digest TEXT NOT NULL, text_digest TEXT NOT NULL)")
+        connection.execute("CREATE INDEX documents_text_digest ON documents(text_digest)")
+        for key, value in {"finalize_binding": binding, "finalize_cursor": "0", "phase": "finalizing"}.items():
+            connection.execute("INSERT OR REPLACE INTO meta VALUES (?,?)", (key, value))
+        connection.commit()
+        cursor = 0
+    else:
+        cursor = int(meta["finalize_cursor"])
+        if not 0 <= cursor <= len(chunks) or connection.execute("SELECT count(*) FROM documents").fetchone()[0] != cursor:
+            raise ValueError("invalid finalization checkpoint")
+    for offset in range(cursor, len(chunks), 512):
+        if time.monotonic() >= deadline:
+            return False
+        batch = chunks[offset:offset+512]
+        for index, row in enumerate(batch, offset+1):
+            digest = record_digest(row)
+            vector, checksum = connection.execute("SELECT vector,checksum FROM cache WHERE contract=? AND digest=?", (contract, digest)).fetchone()
+            if len(vector) != DIMENSION * 4 or hashlib.sha256(vector).hexdigest() != checksum:
+                raise ValueError("cached embedding integrity mismatch")
+            values = struct.unpack(f"<{DIMENSION}f", vector)
+            if not all(math.isfinite(value) for value in values) or not 0.999 <= sum(value*value for value in values) <= 1.001:
+                raise ValueError("cached embedding is not normalized and finite")
+            connection.execute("INSERT INTO vectors(rowid,embedding) VALUES (?,?)", (index, vector))
+            connection.execute("INSERT INTO documents VALUES (?,?,?,?)", (index, row["chunk_id"], row["digest"], digest))
+        connection.execute("INSERT OR REPLACE INTO meta VALUES ('finalize_cursor',?)", (str(offset+len(batch)),))
+        connection.commit()
+    connection.set_progress_handler(lambda: int(time.monotonic() >= deadline), 1000)
+    try:
+        connection.execute("DELETE FROM cache WHERE contract<>? OR digest NOT IN (SELECT text_digest FROM documents)", (contract,))
+        for key, value in {"schema_version": str(SCHEMA), "contract_digest": contract, "manifest_digest": request["manifest_digest"], "phase": "ready"}.items():
+            connection.execute("INSERT OR REPLACE INTO meta VALUES (?,?)", (key, value))
+        connection.commit()
+    except sqlite3.OperationalError:
+        connection.rollback()
+        if time.monotonic() >= deadline:
+            return False
+        raise
+    finally:
+        connection.set_progress_handler(None, 0)
+    return True
+
+
+def build(request: dict) -> dict:
+    contract = validate_digest(request["contract_digest"])
+    validate_digest(request["manifest_digest"])
+    chunks = sorted(validate_chunks(request["chunks"]), key=lambda row: row["chunk_id"])
+    workers = request["workers"]
+    seconds = request["max_seconds"]
+    if type(workers) is not int or not 1 <= workers <= 8 or type(seconds) is not int or not 1 <= seconds <= 60:
+        raise ValueError("invalid vector execution budget")
+    root = load_runtime(request["runtime"])
+    path = database_path(root, request["database"], writable=True)
+    identity = authenticate_database(path, request["expected_database_digest"], create=True)
+    started = time.monotonic()
+    connection = open_database(path)
+    try:
+        check_database_identity(path, identity)
+        connection.execute("PRAGMA journal_mode=DELETE")
+        connection.execute("CREATE TABLE IF NOT EXISTS cache(contract TEXT, digest TEXT, vector BLOB NOT NULL, checksum TEXT NOT NULL, PRIMARY KEY(contract,digest))")
+        connection.execute("CREATE TABLE IF NOT EXISTS meta(key TEXT PRIMARY KEY, value TEXT NOT NULL)")
+        unique = {record_digest(row): {"title": row["title"], "text": row["text"]} for row in chunks}
+        cached = {row[0] for row in connection.execute("SELECT digest FROM cache WHERE contract=?", (contract,))}
+        missing = [(digest, text) for digest, text in sorted(unique.items()) if digest not in cached]
+        embedded = 0
+        # The caller imposes a hard process-tree deadline. A forced termination has
+        # no trusted receipt: restore the last authenticated checkpoint, never
+        # authenticate a killed worker's mutable cache from its self-reported checksum.
+        if missing:
+            parallelism = min(workers, (len(missing)+63)//64)
+            with concurrent.futures.ProcessPoolExecutor(max_workers=parallelism, mp_context=multiprocessing.get_context("spawn"), initializer=initialize_encoder, initargs=(str(root),)) as pool:
+                window_size = 64 * parallelism
+                for offset in range(0, len(missing), window_size):
+                    if time.monotonic() - started >= seconds:
+                        break
+                    window = missing[offset:offset + window_size]
+                    batches = [window[index:index + 64] for index in range(0, len(window), 64)]
+                    for batch, vectors in zip(batches, pool.map(encode_batch, [[text for _, text in batch] for batch in batches]), strict=True):
+                        check_database_identity(path, identity)
+                        for (digest, _), vector in zip(batch, vectors, strict=True):
+                            connection.execute("INSERT OR REPLACE INTO cache VALUES (?,?,?,?)", (contract, digest, vector, hashlib.sha256(vector).hexdigest()))
+                        connection.commit()
+                        embedded += len(batch)
+        embeddings_complete = embedded == len(missing)
+        complete = finalize(connection, request, chunks, time.monotonic()+30.0) if embeddings_complete else False
+        result = {
+            "complete": complete, "phase": "ready" if complete else ("finalizing" if embeddings_complete else "embedding"),
+            "embedded": embedded, "remaining": len(missing)-embedded, "chunks": len(chunks),
+            "elapsed_seconds": time.monotonic()-started,
+        }
+    finally:
+        connection.close()
+    check_database_identity(path, identity)
+    reject_database_sidecars(path)
+    result["database_digest"] = database_digest(path)
+    return result
+
+
+def query(request: dict) -> dict:
+    validate_digest(request["contract_digest"])
+    validate_digest(request["manifest_digest"])
+    root = load_runtime(request["runtime"])
+    text = request["query"]
+    limit = request["limit"]
+    if not isinstance(text, str) or not text.strip() or len(text.encode("utf-8")) > 8192:
+        raise ValueError("invalid semantic query")
+    if type(limit) is not int or not 1 <= limit <= 1000:
+        raise ValueError("invalid semantic query limit")
+    path = database_path(root, request["database"], writable=False)
+    identity = authenticate_database(path, request["expected_database_digest"], create=False)
+    connection = open_database(path, readonly=True)
+    try:
+        check_database_identity(path, identity)
+        meta = dict(connection.execute("SELECT key,value FROM meta"))
+        if meta.get("schema_version") != str(SCHEMA) or meta.get("phase") != "ready" or meta.get("contract_digest") != request["contract_digest"] or meta.get("manifest_digest") != request["manifest_digest"]:
+            raise ValueError("stale or mismatched vector generation")
+        initialize_encoder(request["runtime"])
+        vector = encode_batch([{"title": "", "text": text}])[0]
+        rows = connection.execute("SELECT d.chunk_id,d.digest,v.distance FROM vectors v JOIN documents d ON d.id=v.rowid WHERE v.embedding MATCH ? AND k=? ORDER BY v.distance,d.chunk_id", (vector,limit)).fetchall()
+        if any(not math.isfinite(row[2]) for row in rows):
+            raise ValueError("non-finite vector result")
+        return {"matches": [{"chunk_id": row[0], "digest": row[1], "score": 1.0-float(row[2])**2/2.0} for row in rows]}
+    finally:
+        connection.close()
+
+
+def self_test(request: dict) -> dict:
+    initialize_encoder(request["runtime"])
+    vector = encode_batch([{"title": "", "text": "A local knowledge retrieval check. 로컬 지식 검색 검사."}])[0]
+    prefix = "Common reference context for this document. " * 60
+    tails = encode_batch([{"title": "", "text": prefix+"Recover deleted knowledge from backups."}, {"title": "", "text": prefix+"Install a different software release."}])
+    if tails[0] == tails[1]:
+        raise ValueError("long document tails were discarded")
+    import sqlite_vec
+    connection = sqlite3.connect(":memory:")
+    try:
+        connection.enable_load_extension(True)
+        sqlite_vec.load(connection)
+        connection.enable_load_extension(False)
+        version = connection.execute("SELECT vec_version()").fetchone()[0]
+        if version != "v0.1.9":
+            raise ValueError("unsupported vector engine")
+        connection.execute(f"CREATE VIRTUAL TABLE v USING vec0(embedding float[{DIMENSION}])")
+        connection.execute("INSERT INTO v(rowid,embedding) VALUES (1,?)", (vector,))
+        found = connection.execute("SELECT rowid FROM v WHERE embedding MATCH ? AND k=1", (vector,)).fetchone()
+        if found != (1,):
+            raise ValueError("vector engine self-test failed")
+        return {"dimension": DIMENSION, "engine": version, "offline_file_profile": True, "long_tail_included": True}
+    finally:
+        connection.close()
+
+
+def main() -> int:
+    offline_environment()
+    try:
+        raw = sys.stdin.buffer.read(MAX_REQUEST + 1)
+        if len(raw) > MAX_REQUEST:
+            raise ValueError("vector request exceeds limits")
+        request = json.loads(raw)
+        if not isinstance(request, dict) or type(request.get("schema_version")) is not int or request.get("schema_version") != SCHEMA:
+            raise ValueError("unsupported vector worker schema")
+        fields = {
+            "build": {"database", "chunks", "contract_digest", "workers", "max_seconds", "manifest_digest", "expected_database_digest"},
+            "query": {"database", "query", "limit", "contract_digest", "manifest_digest", "expected_database_digest"},
+            "self-test": set(),
+        }
+        action = request.get("action")
+        if action not in fields or set(request) != {"schema_version", "action", "runtime"} | fields[action]:
+            raise ValueError("invalid vector worker fields")
+        if request.get("action") == "build":
+            result = build(request)
+        elif request.get("action") == "query":
+            result = query(request)
+        elif request.get("action") == "self-test":
+            result = self_test(request)
+        else:
+            raise ValueError("unsupported vector worker action")
+        print(json.dumps({"schema_version": SCHEMA, "status": "success", **result}, allow_nan=False))
+        return 0
+    except Exception as error:
+        # Never echo source text, query text, arbitrary paths, or dependency diagnostics.
+        print(json.dumps({"schema_version": SCHEMA, "status": "error", "error_type": type(error).__name__}))
+        return 10
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

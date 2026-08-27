@@ -47,6 +47,7 @@ modules = [
   "tests.conformance.contracts.test_usage_control",
   "tests.conformance.contracts.test_vector_feasibility",
   "tests.conformance.contracts.test_vector_requalification",
+  "tests.conformance.contracts.test_vector_runtime",
   "tests.conformance.contracts.test_action_result_contracts",
   "tests.conformance.contracts.test_hive_skills",
   "tests.conformance.contracts.test_host_capabilities",

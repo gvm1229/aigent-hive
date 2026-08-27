@@ -1,0 +1,267 @@
+{
+  "packages": {
+    "1515727990b49e79bcaf75fdee2ffc7d461f8b66905013231251f1c8938e7786": {
+      "filename": "sqlite_vec-0.1.9-py3-none-manylinux_2_17_x86_64.manylinux2014_x86_64.manylinux1_x86_64.whl",
+      "name": "sqlite-vec",
+      "sha256": "1515727990b49e79bcaf75fdee2ffc7d461f8b66905013231251f1c8938e7786",
+      "url": "https://files.pythonhosted.org/packages/6f/ad/6afd073b0f817b3e03f9e37ad626ae341805891f23c74b5292818f49ac63/sqlite_vec-0.1.9-py3-none-manylinux_2_17_x86_64.manylinux2014_x86_64.manylinux1_x86_64.whl",
+      "version": "0.1.9"
+    },
+    "1781cc1de61249b750848029bca452c0a8b7e990080316b9bbc2518b2117b488": {
+      "filename": "protobuf-7.36.0-cp310-abi3-win_amd64.whl",
+      "name": "protobuf",
+      "sha256": "1781cc1de61249b750848029bca452c0a8b7e990080316b9bbc2518b2117b488",
+      "url": "https://files.pythonhosted.org/packages/0e/4e/12cb93270967a2affff5b3f720694700d4d87712a67afd05c8cb3f6fa52c/protobuf-7.36.0-cp310-abi3-win_amd64.whl",
+      "version": "7.36.0"
+    },
+    "1d52e30513bae4cc9778ddbf6145610434081be4c3afe57cd877893bad9f6b6c": {
+      "filename": "sqlite_vec-0.1.9-py3-none-macosx_11_0_arm64.whl",
+      "name": "sqlite-vec",
+      "sha256": "1d52e30513bae4cc9778ddbf6145610434081be4c3afe57cd877893bad9f6b6c",
+      "url": "https://files.pythonhosted.org/packages/a4/3d/3677e0cd2f92e5ebc43cd29fbf565b75582bff1ccfa0b8327c7508e1084f/sqlite_vec-0.1.9-py3-none-macosx_11_0_arm64.whl",
+      "version": "0.1.9"
+    },
+    "28ac63476ec7651484215ee7fa15a1f78b57c14621f01e392afe17b9a1390ce4": {
+      "filename": "numpy-2.5.2-cp312-cp312-win_amd64.whl",
+      "name": "numpy",
+      "sha256": "28ac63476ec7651484215ee7fa15a1f78b57c14621f01e392afe17b9a1390ce4",
+      "url": "https://files.pythonhosted.org/packages/7f/b9/87fea2769fe1c47c1b5b01d8310772c9d1a85d485de7cf386ef7a3332b02/numpy-2.5.2-cp312-cp312-win_amd64.whl",
+      "version": "2.5.2"
+    },
+    "2945e1f82f81f27e88decea88c7861f45baea23818950d467bf3909aa303119e": {
+      "filename": "onnxruntime-1.29.0-cp313-cp313-win_amd64.whl",
+      "name": "onnxruntime",
+      "sha256": "2945e1f82f81f27e88decea88c7861f45baea23818950d467bf3909aa303119e",
+      "url": "https://files.pythonhosted.org/packages/e1/3b/66b424c63fa92dfaa48d1719efaae66fc8c256b9426a832eda51d8dfe1e9/onnxruntime-1.29.0-cp313-cp313-win_amd64.whl",
+      "version": "1.29.0"
+    },
+    "29b86ff8a6cc556b47ec6b64b194815cc80e6bf5eedcc6cddfd65318cb0b4eee": {
+      "filename": "numpy-2.5.2-cp313-cp313-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl",
+      "name": "numpy",
+      "sha256": "29b86ff8a6cc556b47ec6b64b194815cc80e6bf5eedcc6cddfd65318cb0b4eee",
+      "url": "https://files.pythonhosted.org/packages/7b/44/59a1eb68e773c4098d107ef34a0dbdeca501d72ffcfbff9a7707343921ce/numpy-2.5.2-cp313-cp313-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl",
+      "version": "2.5.2"
+    },
+    "29d81e97f668489cba8ebfd796b9bdd453525d35dd9e162e2daec94bf3fc7740": {
+      "filename": "numpy-2.5.2-cp313-cp313-macosx_14_0_arm64.whl",
+      "name": "numpy",
+      "sha256": "29d81e97f668489cba8ebfd796b9bdd453525d35dd9e162e2daec94bf3fc7740",
+      "url": "https://files.pythonhosted.org/packages/3c/79/81e0bf24f4d020a2b1d5cd297a9f60c3f24eeb116f9bba5870443f7b6a4a/numpy-2.5.2-cp313-cp313-macosx_14_0_arm64.whl",
+      "version": "2.5.2"
+    },
+    "2b80d8c7ec2cc7438e4da3760b88c24568cba72c9ace96d668800a6c79419acb": {
+      "filename": "onnxruntime-1.29.0-cp312-cp312-manylinux_2_28_x86_64.whl",
+      "name": "onnxruntime",
+      "sha256": "2b80d8c7ec2cc7438e4da3760b88c24568cba72c9ace96d668800a6c79419acb",
+      "url": "https://files.pythonhosted.org/packages/96/eb/e6968f5e41aac3125f2ff5708855f09cb0b70d85ed3115b625b0b58305ba/onnxruntime-1.29.0-cp312-cp312-manylinux_2_28_x86_64.whl",
+      "version": "1.29.0"
+    },
+    "3a3814c041251d6a77fdf513fb282056538ee826d2f1178a0df3c549d3fff6ba": {
+      "filename": "onnxruntime-1.29.0-cp312-cp312-macosx_14_0_arm64.whl",
+      "name": "onnxruntime",
+      "sha256": "3a3814c041251d6a77fdf513fb282056538ee826d2f1178a0df3c549d3fff6ba",
+      "url": "https://files.pythonhosted.org/packages/d4/80/381c1e9efed9cc32d00aa7cab0547dc84116cec906c3ffe3613686d6963a/onnxruntime-1.29.0-cp312-cp312-macosx_14_0_arm64.whl",
+      "version": "1.29.0"
+    },
+    "3cdec01fa790a186d430433fdd4d4ffb70eed6f0eeb4bf05c8dbe2dce0a9bcb8": {
+      "filename": "numpy-2.5.2-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl",
+      "name": "numpy",
+      "sha256": "3cdec01fa790a186d430433fdd4d4ffb70eed6f0eeb4bf05c8dbe2dce0a9bcb8",
+      "url": "https://files.pythonhosted.org/packages/3a/5f/62d28cf019460c7f1394105b4d49d9911a9c444cb77ab0bd95a204c5a6de/numpy-2.5.2-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl",
+      "version": "2.5.2"
+    },
+    "4a28dc12fa4b53d7b1dced22da2488fade444e96b5d16fd2d698cd670675cf32": {
+      "filename": "sqlite_vec-0.1.9-py3-none-win_amd64.whl",
+      "name": "sqlite-vec",
+      "sha256": "4a28dc12fa4b53d7b1dced22da2488fade444e96b5d16fd2d698cd670675cf32",
+      "url": "https://files.pythonhosted.org/packages/42/89/81b2907cda14e566b9bf215e2ad82fc9b349edf07d2010756ffdb902f328/sqlite_vec-0.1.9-py3-none-win_amd64.whl",
+      "version": "0.1.9"
+    },
+    "4acf2b4948b7ede87221ca6332344b8facdc8059d6ac751a7d367d04532b02dd": {
+      "filename": "onnxruntime-1.29.0-cp312-cp312-win_amd64.whl",
+      "name": "onnxruntime",
+      "sha256": "4acf2b4948b7ede87221ca6332344b8facdc8059d6ac751a7d367d04532b02dd",
+      "url": "https://files.pythonhosted.org/packages/b4/80/5b28f1f1111210fc4a336ddbc6950f468ebf9a6a265420568f4f43fa33ce/onnxruntime-1.29.0-cp312-cp312-win_amd64.whl",
+      "version": "1.29.0"
+    },
+    "5075b405006415ea148a992d093699c66eb01952bf59f4d5727089a98bda45a4": {
+      "filename": "tokenizers-0.23.1-cp310-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl",
+      "name": "tokenizers",
+      "sha256": "5075b405006415ea148a992d093699c66eb01952bf59f4d5727089a98bda45a4",
+      "url": "https://files.pythonhosted.org/packages/0d/d5/1353e5f677ec27c2494fb6a6725e82d56c985f53e90ec511369e7e4f02c6/tokenizers-0.23.1-cp310-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl",
+      "version": "0.23.1"
+    },
+    "6e8172ddfcf5cf74b811d372b570b83c60bd2de87a6fbfbebdadb4a9bd9c6cbb": {
+      "filename": "numpy-2.5.2-cp312-cp312-macosx_14_0_arm64.whl",
+      "name": "numpy",
+      "sha256": "6e8172ddfcf5cf74b811d372b570b83c60bd2de87a6fbfbebdadb4a9bd9c6cbb",
+      "url": "https://files.pythonhosted.org/packages/f3/f4/29e78102a80601cf034d4e9767022cffeca2c3b4c926e1754572ca95593d/numpy-2.5.2-cp312-cp312-macosx_14_0_arm64.whl",
+      "version": "2.5.2"
+    },
+    "70f5ec8eb0da81a44360c0dc0beac99a0d78071d21956a7076bae8bd2051841b": {
+      "filename": "protobuf-7.36.0-cp310-abi3-manylinux2014_x86_64.whl",
+      "name": "protobuf",
+      "sha256": "70f5ec8eb0da81a44360c0dc0beac99a0d78071d21956a7076bae8bd2051841b",
+      "url": "https://files.pythonhosted.org/packages/c7/f8/bd5804695ba400e423c33fd4d9f58c28d86633d5ba1945c36ff3967d98cb/protobuf-7.36.0-cp310-abi3-manylinux2014_x86_64.whl",
+      "version": "7.36.0"
+    },
+    "7634f50c427838bb021c2d66a3d1168e9d199b0607e6329399f04846d42e20b4": {
+      "filename": "flatbuffers-25.12.19-py2.py3-none-any.whl",
+      "name": "flatbuffers",
+      "sha256": "7634f50c427838bb021c2d66a3d1168e9d199b0607e6329399f04846d42e20b4",
+      "url": "https://files.pythonhosted.org/packages/e8/2d/d2a548598be01649e2d46231d151a6c56d10b964d94043a335ae56ea2d92/flatbuffers-25.12.19-py2.py3-none-any.whl",
+      "version": "25.12.19"
+    },
+    "85aaccb24182c25df891ad0ec333585967e115269d5f1b17f2c9ae005bc96657": {
+      "filename": "numpy-2.5.2-cp313-cp313-win_amd64.whl",
+      "name": "numpy",
+      "sha256": "85aaccb24182c25df891ad0ec333585967e115269d5f1b17f2c9ae005bc96657",
+      "url": "https://files.pythonhosted.org/packages/15/20/f3489f86d81ea460b2bcdceaed094142ca6579f6be0ec527b781d39afe68/numpy-2.5.2-cp313-cp313-win_amd64.whl",
+      "version": "2.5.2"
+    },
+    "9103532dffd80c6fab7e50c65a31007680a06eb57537d437bb1b35812c138a37": {
+      "filename": "protobuf-7.36.0-cp310-abi3-macosx_10_9_universal2.whl",
+      "name": "protobuf",
+      "sha256": "9103532dffd80c6fab7e50c65a31007680a06eb57537d437bb1b35812c138a37",
+      "url": "https://files.pythonhosted.org/packages/8f/ae/58e3ca96cb2e118cc546b677359b3c6659f79a140935c08dec94c7998585/protobuf-7.36.0-cp310-abi3-macosx_10_9_universal2.whl",
+      "version": "7.36.0"
+    },
+    "be0f8ed688cfb1d4d5765a137193b7bfab0c8ea214eed99260b380bb525a3a7f": {
+      "filename": "onnxruntime-1.29.0-cp313-cp313-macosx_14_0_arm64.whl",
+      "name": "onnxruntime",
+      "sha256": "be0f8ed688cfb1d4d5765a137193b7bfab0c8ea214eed99260b380bb525a3a7f",
+      "url": "https://files.pythonhosted.org/packages/41/f8/d375facf60edaf41f5732f9f689c98a800fcc52df5cf6ddfb406703eb5a1/onnxruntime-1.29.0-cp313-cp313-macosx_14_0_arm64.whl",
+      "version": "1.29.0"
+    },
+    "d7193f7c8e4e93f444fde0262bf90af30e16fa0ad0ad44cb553c87339b23cd1c": {
+      "filename": "packaging-26.3-py3-none-any.whl",
+      "name": "packaging",
+      "sha256": "d7193f7c8e4e93f444fde0262bf90af30e16fa0ad0ad44cb553c87339b23cd1c",
+      "url": "https://files.pythonhosted.org/packages/63/34/ba1c580383c9eada3711951fef0795c80b829a078d72188184bcab9dd527/packaging-26.3-py3-none-any.whl",
+      "version": "26.3"
+    },
+    "e0948bbb1ac1d7cdfc9fb6d62c596e3b7550036ad60ecd654a66ad273326324e": {
+      "filename": "tokenizers-0.23.1-cp310-abi3-macosx_11_0_arm64.whl",
+      "name": "tokenizers",
+      "sha256": "e0948bbb1ac1d7cdfc9fb6d62c596e3b7550036ad60ecd654a66ad273326324e",
+      "url": "https://files.pythonhosted.org/packages/e2/6a/068ed9f6e444c9d7e9d55ce134181325700f3d7f30410721bdc8f848d727/tokenizers-0.23.1-cp310-abi3-macosx_11_0_arm64.whl",
+      "version": "0.23.1"
+    },
+    "e2128f31f449e922c62dbe5d8b6b7b079f0bcaf2d56a102fa203cb6e5bb5ab19": {
+      "filename": "onnxruntime-1.29.0-cp313-cp313-manylinux_2_28_x86_64.whl",
+      "name": "onnxruntime",
+      "sha256": "e2128f31f449e922c62dbe5d8b6b7b079f0bcaf2d56a102fa203cb6e5bb5ab19",
+      "url": "https://files.pythonhosted.org/packages/83/2c/d8eb945d2a372149df9705a8d5c8d7c6c46c987c5446dbcea9e1ea7f6556/onnxruntime-1.29.0-cp313-cp313-manylinux_2_28_x86_64.whl",
+      "version": "1.29.0"
+    },
+    "e7bfaf995c1bdbbd21d13539decb6650967013759318627d85daeb7881af16b7": {
+      "filename": "tokenizers-0.23.1-cp310-abi3-win_amd64.whl",
+      "name": "tokenizers",
+      "sha256": "e7bfaf995c1bdbbd21d13539decb6650967013759318627d85daeb7881af16b7",
+      "url": "https://files.pythonhosted.org/packages/97/c9/2553f72aaf65a2797d4229e37fa7fbe38ffbf3e32912d31bdd78b3323e59/tokenizers-0.23.1-cp310-abi3-win_amd64.whl",
+      "version": "0.23.1"
+    }
+  },
+  "platforms": {
+    "linux-x64-cp312": [
+      "1515727990b49e79bcaf75fdee2ffc7d461f8b66905013231251f1c8938e7786",
+      "2b80d8c7ec2cc7438e4da3760b88c24568cba72c9ace96d668800a6c79419acb",
+      "3cdec01fa790a186d430433fdd4d4ffb70eed6f0eeb4bf05c8dbe2dce0a9bcb8",
+      "5075b405006415ea148a992d093699c66eb01952bf59f4d5727089a98bda45a4",
+      "70f5ec8eb0da81a44360c0dc0beac99a0d78071d21956a7076bae8bd2051841b",
+      "7634f50c427838bb021c2d66a3d1168e9d199b0607e6329399f04846d42e20b4",
+      "d7193f7c8e4e93f444fde0262bf90af30e16fa0ad0ad44cb553c87339b23cd1c"
+    ],
+    "linux-x64-cp313": [
+      "1515727990b49e79bcaf75fdee2ffc7d461f8b66905013231251f1c8938e7786",
+      "29b86ff8a6cc556b47ec6b64b194815cc80e6bf5eedcc6cddfd65318cb0b4eee",
+      "5075b405006415ea148a992d093699c66eb01952bf59f4d5727089a98bda45a4",
+      "70f5ec8eb0da81a44360c0dc0beac99a0d78071d21956a7076bae8bd2051841b",
+      "7634f50c427838bb021c2d66a3d1168e9d199b0607e6329399f04846d42e20b4",
+      "d7193f7c8e4e93f444fde0262bf90af30e16fa0ad0ad44cb553c87339b23cd1c",
+      "e2128f31f449e922c62dbe5d8b6b7b079f0bcaf2d56a102fa203cb6e5bb5ab19"
+    ],
+    "macos-arm64-cp312": [
+      "1d52e30513bae4cc9778ddbf6145610434081be4c3afe57cd877893bad9f6b6c",
+      "3a3814c041251d6a77fdf513fb282056538ee826d2f1178a0df3c549d3fff6ba",
+      "6e8172ddfcf5cf74b811d372b570b83c60bd2de87a6fbfbebdadb4a9bd9c6cbb",
+      "7634f50c427838bb021c2d66a3d1168e9d199b0607e6329399f04846d42e20b4",
+      "9103532dffd80c6fab7e50c65a31007680a06eb57537d437bb1b35812c138a37",
+      "d7193f7c8e4e93f444fde0262bf90af30e16fa0ad0ad44cb553c87339b23cd1c",
+      "e0948bbb1ac1d7cdfc9fb6d62c596e3b7550036ad60ecd654a66ad273326324e"
+    ],
+    "macos-arm64-cp313": [
+      "1d52e30513bae4cc9778ddbf6145610434081be4c3afe57cd877893bad9f6b6c",
+      "29d81e97f668489cba8ebfd796b9bdd453525d35dd9e162e2daec94bf3fc7740",
+      "7634f50c427838bb021c2d66a3d1168e9d199b0607e6329399f04846d42e20b4",
+      "9103532dffd80c6fab7e50c65a31007680a06eb57537d437bb1b35812c138a37",
+      "be0f8ed688cfb1d4d5765a137193b7bfab0c8ea214eed99260b380bb525a3a7f",
+      "d7193f7c8e4e93f444fde0262bf90af30e16fa0ad0ad44cb553c87339b23cd1c",
+      "e0948bbb1ac1d7cdfc9fb6d62c596e3b7550036ad60ecd654a66ad273326324e"
+    ],
+    "windows-x64-cp312": [
+      "1781cc1de61249b750848029bca452c0a8b7e990080316b9bbc2518b2117b488",
+      "28ac63476ec7651484215ee7fa15a1f78b57c14621f01e392afe17b9a1390ce4",
+      "4a28dc12fa4b53d7b1dced22da2488fade444e96b5d16fd2d698cd670675cf32",
+      "4acf2b4948b7ede87221ca6332344b8facdc8059d6ac751a7d367d04532b02dd",
+      "7634f50c427838bb021c2d66a3d1168e9d199b0607e6329399f04846d42e20b4",
+      "d7193f7c8e4e93f444fde0262bf90af30e16fa0ad0ad44cb553c87339b23cd1c",
+      "e7bfaf995c1bdbbd21d13539decb6650967013759318627d85daeb7881af16b7"
+    ],
+    "windows-x64-cp313": [
+      "1781cc1de61249b750848029bca452c0a8b7e990080316b9bbc2518b2117b488",
+      "2945e1f82f81f27e88decea88c7861f45baea23818950d467bf3909aa303119e",
+      "4a28dc12fa4b53d7b1dced22da2488fade444e96b5d16fd2d698cd670675cf32",
+      "7634f50c427838bb021c2d66a3d1168e9d199b0607e6329399f04846d42e20b4",
+      "85aaccb24182c25df891ad0ec333585967e115269d5f1b17f2c9ae005bc96657",
+      "d7193f7c8e4e93f444fde0262bf90af30e16fa0ad0ad44cb553c87339b23cd1c",
+      "e7bfaf995c1bdbbd21d13539decb6650967013759318627d85daeb7881af16b7"
+    ]
+  },
+  "schema_version": 1,
+  "execution_profile": "file-only-offline-embedding",
+  "omitted_declared_dependencies": [
+    {
+      "distribution": "tokenizers",
+      "requirement": "huggingface-hub>=0.16.4,<2.0",
+      "reason": "Dedicated file-only Tokenizer.from_file profile; not a complete pip environment. from_pretrained and provider SDK features are unsupported."
+    }
+  ],
+  "model": {
+    "id": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+    "repository": "qdrant/paraphrase-multilingual-MiniLM-L12-v2-onnx-Q",
+    "revision": "faf4aa4225822f3bc6376869cb1164e8e3feedd0",
+    "license": "Apache-2.0",
+    "dimension": 384,
+    "token_limit": 128,
+    "pooling": "title-context-window-mean",
+    "normalization": "l2",
+    "files": [
+      {
+        "filename": "model_optimized.onnx",
+        "size": 235052644,
+        "sha256": "634d0f66c29dc934c8fa72b8a4fe91dd4d420a22f1d82a241058d4316e659a99"
+      },
+      {
+        "filename": "tokenizer.json",
+        "size": 17083009,
+        "sha256": "fa685fc160bbdbab64058d4fc91b60e62d207e8dc60b9af5c002c5ab946ded00"
+      },
+      {
+        "filename": "config.json",
+        "size": 673,
+        "sha256": "c8ec081fdad2df991bf5abbf18418fec7a5cdaa421f60ffb060a30040b8c376f"
+      },
+      {
+        "filename": "special_tokens_map.json",
+        "size": 964,
+        "sha256": "8c785abebea9ae3257b61681b4e6fd8365ceafde980c21970d001e834cf10835"
+      },
+      {
+        "filename": "tokenizer_config.json",
+        "size": 1416,
+        "sha256": "0666eebf692422757e1dddf3c9fb1ded73ba3dc726c5828671fc89e45bf3609f"
+      }
+    ]
+  }
+}
