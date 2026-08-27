@@ -68,6 +68,7 @@ modules = [
   "tests.conformance.integration.test_root_knowledge_promotion",
   "tests.conformance.integration.test_shared_knowledge_index",
   "tests.conformance.integration.test_source_wiki",
+  "tests.conformance.integration.test_vector_cli",
   "tests.conformance.integration.test_wiki_cli_e2e",
 ]
 

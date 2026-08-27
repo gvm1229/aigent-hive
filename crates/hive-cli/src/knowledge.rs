@@ -1,4 +1,6 @@
 use crate::knowledge_scan::scan_directory;
+#[path = "vector.rs"]
+mod vector;
 use cap_fs_ext::{FollowSymlinks, MetadataExt as CapMetadataExt, OpenOptionsFollowExt};
 use cap_std::ambient_authority;
 use cap_std::fs::{Dir, OpenOptions as CapOpenOptions};
@@ -76,6 +78,7 @@ USAGE:
     hive knowledge import --user-root <dir> --bundle <path>.hivekb (--dry-run|--apply) --output json
     hive knowledge refresh (--target <legacy-project>|--user-root <dir>) --output json
     hive knowledge graph preview|enable|status|rebuild|disable|query|export --target <dir> [--scope project] [--engine native-markdown|graphify-code] [--consent-digest <sha256:...>] [--input <graph.json> --receipt <receipt.json>] [--node-id <id>] [--text <query>] [--user-root <dir>] [--format json|html] --output json
+    hive knowledge vector preview|enable|status|disable --help
     hive index rebuild (--target <legacy-project>|--user-root <dir>) --output json
 ";
 
@@ -192,6 +195,9 @@ struct KnowledgeEvidence {
 }
 
 pub(crate) fn run_knowledge(arguments: &[String]) -> ExitCode {
+    if arguments.first().map(String::as_str) == Some("vector") {
+        return vector::run(&arguments[1..], false);
+    }
     if is_help(arguments) {
         print!("{KNOWLEDGE_USAGE}");
         #[cfg(feature = "notion-preview")]
@@ -259,6 +265,10 @@ pub(crate) fn run_knowledge(arguments: &[String]) -> ExitCode {
         };
     emit(&result);
     ExitCode::from(result.exit_code)
+}
+
+pub(crate) fn run_source_vector(arguments: &[String]) -> ExitCode {
+    vector::run(arguments, true)
 }
 
 #[allow(clippy::too_many_lines)]

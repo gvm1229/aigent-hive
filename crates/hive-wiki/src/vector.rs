@@ -91,7 +91,8 @@ impl VectorFiles {
         })
     }
 
-    fn control_relative(&self) -> &Path {
+    #[must_use]
+    pub fn control_relative(&self) -> &Path {
         Path::new(if self.source {
             ".agents/work/vector-control"
         } else {
@@ -242,6 +243,48 @@ impl VectorFiles {
         })
     }
 
+    /// Commit runtime and scope approval together using the rollback-safe publisher.
+    ///
+    /// # Errors
+    /// Rejects stale authority or failed installation without retaining a partial control change.
+    pub fn write_control_pair<T: Serialize, U: Serialize>(
+        &self,
+        runtime: (Option<&str>, &T),
+        scope: (&str, Option<&str>, &U),
+    ) -> Result<(), WikiError> {
+        let paths = [self.control_path(None)?, self.control_path(Some(scope.0))?];
+        let mut snapshots = [
+            CapabilityFileSnapshot::capture(&self.root.dir, &paths[0])?,
+            CapabilityFileSnapshot::capture(&self.root.dir, &paths[1])?,
+        ];
+        for (snapshot, expected) in snapshots.iter().zip([runtime.0, scope.1]) {
+            let digest = match &snapshot.current {
+                CapabilityFileState::Missing => None,
+                CapabilityFileState::File { bytes, .. } => Some(sha256_digest(bytes)),
+            };
+            if digest.as_deref() != expected {
+                return Err(WikiError::Conflict(
+                    "vector control pair changed".to_owned(),
+                ));
+            }
+        }
+        let bytes = [
+            serde_json_canonicalizer::to_vec(runtime.1).map_err(json_error)?,
+            serde_json_canonicalizer::to_vec(scope.2).map_err(json_error)?,
+        ];
+        if bytes.iter().any(|value| value.len() > 1024 * 1024) {
+            return Err(WikiError::InvalidInput(
+                "vector control exceeds limits".to_owned(),
+            ));
+        }
+        crate::transactional_capability(&self.root.dir, &mut snapshots, |snapshots| {
+            for (snapshot, bytes) in snapshots.iter_mut().zip(&bytes) {
+                snapshot.install_staged(&self.root.dir, bytes)?;
+            }
+            Ok(())
+        })
+    }
+
     /// Acquire an immediate writer lease; busy scopes remain readable through their prior generation.
     ///
     /// # Errors
@@ -280,6 +323,17 @@ impl VectorFiles {
         let (parent, name) = self.parent(&relative, true)?;
         parent.create_dir(&name).map_err(io_error)?;
         Ok((id, self.root_path().join(relative)))
+    }
+
+    /// Reserve a private per-operation directory for downloads and process temporary files.
+    ///
+    /// # Errors
+    /// Rejects linked ancestors and collisions without replacing existing files.
+    pub fn reserve_work(&self) -> Result<PathBuf, WikiError> {
+        let relative = self.data_relative().join("work").join(fresh_id());
+        let (parent, name) = self.parent(&relative, true)?;
+        parent.create_dir(&name).map_err(io_error)?;
+        Ok(self.root_path().join(relative))
     }
 
     /// Allocate a publication attempt ID, separate from the trusted content digest.
@@ -532,6 +586,51 @@ mod tests {
             .prefix("vector-files-")
             .tempdir_in(root)
             .expect("temporary vector root")
+    }
+
+    #[test]
+    fn paired_control_rejects_stale_scope_before_changing_runtime() {
+        let root = temporary();
+        let files = VectorFiles::open(root.path(), false).expect("files");
+        let scope = "e".repeat(64);
+        files
+            .write_control(None, None, &json!({"runtime":"old"}))
+            .expect("old runtime");
+        files
+            .write_control(Some(&scope), None, &json!({"scope":"old"}))
+            .expect("old scope");
+        let (_, runtime_digest) = files
+            .read_control::<serde_json::Value>(None)
+            .expect("runtime");
+        assert!(files
+            .write_control_pair(
+                (runtime_digest.as_deref(), &json!({"runtime":"new"})),
+                (&scope, None, &json!({"scope":"new"}))
+            )
+            .is_err());
+        assert_eq!(
+            files
+                .read_control::<serde_json::Value>(None)
+                .expect("preserved")
+                .0,
+            Some(json!({"runtime":"old"}))
+        );
+        let (_, scope_digest) = files
+            .read_control::<serde_json::Value>(Some(&scope))
+            .expect("scope");
+        files
+            .write_control_pair(
+                (runtime_digest.as_deref(), &json!({"runtime":"new"})),
+                (&scope, scope_digest.as_deref(), &json!({"scope":"new"})),
+            )
+            .expect("paired update");
+        assert_eq!(
+            files
+                .read_control::<serde_json::Value>(None)
+                .expect("updated")
+                .0,
+            Some(json!({"runtime":"new"}))
+        );
     }
 
     #[test]

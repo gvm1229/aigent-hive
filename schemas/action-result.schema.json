@@ -49,6 +49,7 @@
         "IngestKnowledge",
         "AddKnowledge",
         "QueryKnowledge",
+        "VectorKnowledge",
         "ListKnowledge",
         "ReadKnowledge",
         "RememberKnowledge",

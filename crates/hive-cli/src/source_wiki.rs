@@ -13,6 +13,7 @@ USAGE:
     hive source-wiki index --target <source-root> --output json
     hive source-wiki query --target <source-root> --language en|ko (--text <query>|--tag <tag>) [--limit <1..100>] --output json
     hive source-wiki graph preview|enable|status|rebuild|disable|query|export --target <source-root> [--engine native-markdown|graphify-code] [--consent-digest <sha256:...>] [--input <graph.json> --receipt <receipt.json>] [--node-id <id>] [--text <query>] [--format json|html] --output json
+    hive source-wiki vector preview|enable|status|disable --help
 ";
 
 const INDEX_RELATIVE: &str = ".agents/work/source-wiki/index.sqlite3";
@@ -38,6 +39,9 @@ pub(crate) fn run(arguments: &[String]) -> ExitCode {
     }
     if arguments.first().map(String::as_str) == Some("graph") {
         return super::knowledge::run_source_graph(&arguments[1..]);
+    }
+    if arguments.first().map(String::as_str) == Some("vector") {
+        return super::knowledge::run_source_vector(&arguments[1..]);
     }
     let result = match arguments.first().map(String::as_str) {
         Some("lint") => parse_common(&arguments[1..])

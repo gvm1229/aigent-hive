@@ -68,6 +68,8 @@ def validate_lock(lock: dict) -> list[dict]:
     if len(packages) != 7 or {item["name"] for item in packages} != PACKAGES:
         raise ValueError("invalid file-only distribution set")
     for item in packages:
+        if type(item.get("size")) is not int or not 1 <= item["size"] <= MAX_DOWNLOAD:
+            raise ValueError("invalid wheel size")
         parsed = urllib.parse.urlparse(item["url"])
         if parsed.scheme != "https" or parsed.hostname != "files.pythonhosted.org" or parsed.username or parsed.password or parsed.port:
             raise ValueError("unapproved wheel URL")
@@ -102,6 +104,7 @@ def describe(lock: dict) -> dict:
         "complete_pip_environment": False,
         "omitted_declared_dependencies": lock["omitted_declared_dependencies"],
         "model": lock["model"]["id"],
+        "download_bytes": sum(item["size"] for item in packages) + sum(item["size"] for item in lock["model"]["files"]),
     }
 
 
@@ -210,7 +213,7 @@ def install(request: dict) -> dict:
         raise ValueError("runtime staging root must be empty")
     cache.mkdir(parents=True, exist_ok=True, mode=0o700)
     site, wheels, model = (root / name for name in ("site", "wheels", "model"))
-    for directory in (site, wheels, model):
+    for directory in (site, wheels, model, root / "tmp"):
         directory.mkdir(mode=0o700)
     for item in validate_lock(lock):
         artifact = fetch(item["url"], item["sha256"], cache)
@@ -254,7 +257,7 @@ def verify(request: dict) -> dict:
     expected_files = {}
     for item in validate_lock(request["lock"]):
         wheel = safe_path(str(root / "wheels" / (item["sha256"] + ".whl")))
-        if digest_file(wheel) != "sha256:" + item["sha256"]:
+        if wheel.stat().st_size != item["size"] or digest_file(wheel) != "sha256:" + item["sha256"]:
             raise ValueError("vector wheel changed")
         with zipfile.ZipFile(wheel) as archive:
             for relative, (_, expected) in wheel_files(archive).items():
