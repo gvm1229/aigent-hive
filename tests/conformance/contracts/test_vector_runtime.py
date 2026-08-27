@@ -221,9 +221,18 @@ class VectorRuntimeContract(unittest.TestCase):
             self.assertTrue(second["complete"])
             self.assertEqual(second["embedded"], 65)
             request["expected_database_digest"] = second["database_digest"]
+            unchanged = WORKER.build(request)
+            self.assertEqual(unchanged["embedded"], 0)
+            self.assertEqual(unchanged["database_digest"], second["database_digest"])
+            request["chunks"][0] = {**chunks[0], "text":"updated synthetic text", "digest":"sha256:"+"f"*64}
+            updated = WORKER.build(request)
+            self.assertTrue(updated["complete"])
+            self.assertEqual(updated["embedded"], 1)
+            request["expected_database_digest"] = updated["database_digest"]
             with sqlite3.connect(database) as connection:
                 self.assertEqual(connection.execute("SELECT count(*) FROM documents").fetchone()[0], 129)
-                connection.execute("UPDATE cache SET vector=? WHERE rowid=1", (b"\x00" * (384 * 4),))
+                self.assertEqual(connection.execute("SELECT count(*) FROM cache").fetchone()[0], 0)
+                connection.execute("UPDATE vectors SET embedding=? WHERE rowid=1", (b"\x00" * (384 * 4),))
             connection.close()
             with patch.object(WORKER.time, "monotonic", return_value=0.0), self.assertRaises(ValueError):
                 WORKER.build(request)
@@ -232,6 +241,7 @@ class VectorRuntimeContract(unittest.TestCase):
         database = self.root / "finalize.sqlite3"
         connection = sqlite3.connect(database, factory=SimulatedVectorConnection)
         try:
+            connection.execute("PRAGMA auto_vacuum=INCREMENTAL")
             connection.execute("CREATE TABLE cache(contract TEXT,digest TEXT,vector BLOB,checksum TEXT,PRIMARY KEY(contract,digest))")
             connection.execute("CREATE TABLE meta(key TEXT PRIMARY KEY,value TEXT)")
             chunks = [{"chunk_id": f"chunk-{index:04d}", "digest": "sha256:" + "a" * 64, "title": "Example", "text": f"row {index}"} for index in range(600)]
@@ -246,6 +256,26 @@ class VectorRuntimeContract(unittest.TestCase):
                 self.assertTrue(WORKER.finalize(connection, request, chunks, 30.0))
             self.assertEqual(connection.execute("SELECT count(*) FROM documents").fetchone()[0], 600)
             self.assertEqual(connection.execute("SELECT value FROM meta WHERE key='phase'").fetchone()[0], "ready")
+            self.assertEqual(connection.execute("SELECT count(*) FROM cache").fetchone()[0], 0)
+            with patch.object(WORKER.time, "monotonic", side_effect=[0.0, 31.0]):
+                self.assertFalse(WORKER.restore_embedding_cache(connection, contract, 30.0))
+            self.assertEqual(connection.execute("SELECT count(*) FROM cache").fetchone()[0], 512)
+            with patch.object(WORKER.time, "monotonic", return_value=0.0):
+                self.assertTrue(WORKER.restore_embedding_cache(connection, contract, 30.0))
+            self.assertEqual(connection.execute("SELECT count(*) FROM cache").fetchone()[0], 600)
+            with patch.object(WORKER.time, "monotonic", return_value=0.0):
+                self.assertTrue(WORKER.finalize(connection, request, chunks, 30.0))
+            connection.execute("CREATE TABLE garbage(data BLOB)")
+            connection.executemany("INSERT INTO garbage VALUES (?)", [(b"x"*4096,)]*300)
+            connection.execute("DROP TABLE garbage")
+            connection.execute("UPDATE meta SET value='compacting' WHERE key='phase'")
+            connection.commit()
+            with patch.object(WORKER.time, "monotonic", return_value=31.0):
+                self.assertFalse(WORKER.compact_generation(connection, 30.0))
+            self.assertEqual(connection.execute("SELECT value FROM meta WHERE key='phase'").fetchone()[0], "compacting")
+            with patch.object(WORKER.time, "monotonic", return_value=0.0):
+                self.assertTrue(WORKER.compact_generation(connection, 30.0))
+            self.assertEqual(connection.execute("SELECT count(*) FROM documents").fetchone()[0], 600)
         finally:
             connection.close()
 

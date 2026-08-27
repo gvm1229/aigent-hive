@@ -382,7 +382,14 @@ fn validate_build_result(
             || result.chunks != chunks
             || !result.elapsed_seconds.is_finite()
             || result.complete != (result.phase == "ready")
-            || !["ready", "embedding", "finalizing"].contains(&result.phase.as_str())
+            || ![
+                "ready",
+                "embedding",
+                "restoring",
+                "finalizing",
+                "compacting",
+            ]
+            .contains(&result.phase.as_str())
             || target
                 .files
                 .database_digest(&target.scope_id, DatabaseKind::Staging)?

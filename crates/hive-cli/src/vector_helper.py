@@ -255,12 +255,56 @@ def validate_chunks(chunks: object) -> list[dict[str, str]]:
     return chunks
 
 
-def finalize(connection: sqlite3.Connection, request: dict, chunks: list[dict], deadline: float) -> bool:
-    contract = request["contract_digest"]
-    binding = hashlib.sha256(json.dumps(
-        [contract, request["manifest_digest"], [(row["chunk_id"], row["digest"], record_digest(row)) for row in chunks]],
+def input_binding(request: dict, chunks: list[dict]) -> str:
+    return hashlib.sha256(json.dumps(
+        [request["contract_digest"], request["manifest_digest"], [(row["chunk_id"], row["digest"], record_digest(row)) for row in chunks]],
         separators=(",", ":"), ensure_ascii=False,
     ).encode("utf-8")).hexdigest()
+
+
+def compact_generation(connection: sqlite3.Connection, deadline: float) -> bool:
+    if connection.execute("PRAGMA auto_vacuum").fetchone()[0] != 2:
+        raise ValueError("unsupported vector compaction policy; rebuild fresh")
+    while (before := connection.execute("PRAGMA freelist_count").fetchone()[0]) > 0:
+        if time.monotonic() >= deadline:
+            return False
+        connection.execute("PRAGMA incremental_vacuum(256)").fetchall()
+        connection.commit()
+        if connection.execute("PRAGMA freelist_count").fetchone()[0] >= before:
+            raise ValueError("vector compaction cannot advance")
+    connection.execute("INSERT OR REPLACE INTO meta VALUES ('phase','ready')")
+    connection.commit()
+    return True
+
+
+def restore_embedding_cache(connection: sqlite3.Connection, contract: str, deadline: float) -> bool:
+    # Completed generations retain a single copy in vec0. Reconstruct only a mutable
+    # working cache from this externally authenticated generation before changing it.
+    meta = dict(connection.execute("SELECT key,value FROM meta"))
+    cursor = int(meta.get("restore_cursor", "0")) if meta.get("phase") == "restoring" else 0
+    if not 0 <= cursor <= MAX_CHUNKS:
+        raise ValueError("invalid vector restore cursor")
+    connection.execute("INSERT OR REPLACE INTO meta VALUES ('restore_cursor',?)", (str(cursor),))
+    connection.execute("INSERT OR REPLACE INTO meta VALUES ('phase','restoring')")
+    connection.commit()
+    while True:
+        if time.monotonic() >= deadline:
+            return False
+        rows = connection.execute("SELECT d.id,d.text_digest,v.embedding FROM documents d JOIN vectors v ON v.rowid=d.id WHERE d.id>? ORDER BY d.id LIMIT 512", (cursor,)).fetchall()
+        if not rows:
+            break
+        for cursor, digest, vector in rows:
+            connection.execute("INSERT OR IGNORE INTO cache VALUES (?,?,?,?)", (contract, digest, vector, hashlib.sha256(vector).hexdigest()))
+        connection.execute("INSERT OR REPLACE INTO meta VALUES ('restore_cursor',?)", (str(cursor),))
+        connection.commit()
+    connection.execute("INSERT OR REPLACE INTO meta VALUES ('phase','embedding')")
+    connection.commit()
+    return True
+
+
+def finalize(connection: sqlite3.Connection, request: dict, chunks: list[dict], deadline: float) -> bool:
+    contract = request["contract_digest"]
+    binding = input_binding(request, chunks)
     meta = dict(connection.execute("SELECT key,value FROM meta"))
     if meta.get("finalize_binding") != binding:
         connection.execute("DROP TABLE IF EXISTS vectors")
@@ -294,8 +338,8 @@ def finalize(connection: sqlite3.Connection, request: dict, chunks: list[dict], 
         connection.commit()
     connection.set_progress_handler(lambda: int(time.monotonic() >= deadline), 1000)
     try:
-        connection.execute("DELETE FROM cache WHERE contract<>? OR digest NOT IN (SELECT text_digest FROM documents)", (contract,))
-        for key, value in {"schema_version": str(SCHEMA), "contract_digest": contract, "manifest_digest": request["manifest_digest"], "phase": "ready"}.items():
+        connection.execute("DELETE FROM cache")
+        for key, value in {"schema_version": str(SCHEMA), "contract_digest": contract, "manifest_digest": request["manifest_digest"], "phase": "compacting"}.items():
             connection.execute("INSERT OR REPLACE INTO meta VALUES (?,?)", (key, value))
         connection.commit()
     except sqlite3.OperationalError:
@@ -305,7 +349,7 @@ def finalize(connection: sqlite3.Connection, request: dict, chunks: list[dict], 
         raise
     finally:
         connection.set_progress_handler(None, 0)
-    return True
+    return compact_generation(connection, deadline)
 
 
 def build(request: dict) -> dict:
@@ -324,34 +368,47 @@ def build(request: dict) -> dict:
     try:
         check_database_identity(path, identity)
         connection.execute("PRAGMA journal_mode=DELETE")
+        if connection.execute("PRAGMA auto_vacuum").fetchone()[0] != 2:
+            if connection.execute("SELECT 1 FROM sqlite_schema LIMIT 1").fetchone():
+                raise ValueError("unsupported vector compaction policy; rebuild fresh")
+            connection.execute("PRAGMA auto_vacuum=INCREMENTAL")
         connection.execute("CREATE TABLE IF NOT EXISTS cache(contract TEXT, digest TEXT, vector BLOB NOT NULL, checksum TEXT NOT NULL, PRIMARY KEY(contract,digest))")
         connection.execute("CREATE TABLE IF NOT EXISTS meta(key TEXT PRIMARY KEY, value TEXT NOT NULL)")
-        unique = {record_digest(row): {"title": row["title"], "text": row["text"]} for row in chunks}
-        cached = {row[0] for row in connection.execute("SELECT digest FROM cache WHERE contract=?", (contract,))}
-        missing = [(digest, text) for digest, text in sorted(unique.items()) if digest not in cached]
-        embedded = 0
-        # The caller imposes a hard process-tree deadline. A forced termination has
-        # no trusted receipt: restore the last authenticated checkpoint, never
-        # authenticate a killed worker's mutable cache from its self-reported checksum.
-        if missing:
-            parallelism = min(workers, (len(missing)+63)//64)
-            with concurrent.futures.ProcessPoolExecutor(max_workers=parallelism, mp_context=multiprocessing.get_context("spawn"), initializer=initialize_encoder, initargs=(str(root),)) as pool:
-                window_size = 64 * parallelism
-                for offset in range(0, len(missing), window_size):
-                    if time.monotonic() - started >= seconds:
-                        break
-                    window = missing[offset:offset + window_size]
-                    batches = [window[index:index + 64] for index in range(0, len(window), 64)]
-                    for batch, vectors in zip(batches, pool.map(encode_batch, [[text for _, text in batch] for batch in batches]), strict=True):
-                        check_database_identity(path, identity)
-                        for (digest, _), vector in zip(batch, vectors, strict=True):
-                            connection.execute("INSERT OR REPLACE INTO cache VALUES (?,?,?,?)", (contract, digest, vector, hashlib.sha256(vector).hexdigest()))
-                        connection.commit()
-                        embedded += len(batch)
-        embeddings_complete = embedded == len(missing)
-        complete = finalize(connection, request, chunks, time.monotonic()+30.0) if embeddings_complete else False
+        meta = dict(connection.execute("SELECT key,value FROM meta"))
+        same_input = meta.get("finalize_binding") == input_binding(request, chunks)
+        if same_input and meta.get("phase") in ("ready", "compacting"):
+            embedded, missing, embeddings_complete = 0, [], True
+            complete = meta["phase"] == "ready" or compact_generation(connection, time.monotonic()+30.0)
+        else:
+            restored = True
+            if meta.get("phase") in ("ready", "compacting", "restoring"):
+                restored = restore_embedding_cache(connection, meta["contract_digest"], started+seconds)
+            unique = {record_digest(row): {"title": row["title"], "text": row["text"]} for row in chunks}
+            cached = {row[0] for row in connection.execute("SELECT digest FROM cache WHERE contract=?", (contract,))}
+            missing = [(digest, text) for digest, text in sorted(unique.items()) if digest not in cached]
+            embedded = 0
+            # The caller imposes a hard process-tree deadline. A forced termination has
+            # no trusted receipt: restore the last authenticated checkpoint, never
+            # authenticate a killed worker's mutable cache from its self-reported checksum.
+            if restored and missing:
+                parallelism = min(workers, (len(missing)+63)//64)
+                with concurrent.futures.ProcessPoolExecutor(max_workers=parallelism, mp_context=multiprocessing.get_context("spawn"), initializer=initialize_encoder, initargs=(str(root),)) as pool:
+                    window_size = 64 * parallelism
+                    for offset in range(0, len(missing), window_size):
+                        if time.monotonic() - started >= seconds:
+                            break
+                        window = missing[offset:offset + window_size]
+                        batches = [window[index:index + 64] for index in range(0, len(window), 64)]
+                        for batch, vectors in zip(batches, pool.map(encode_batch, [[text for _, text in batch] for batch in batches]), strict=True):
+                            check_database_identity(path, identity)
+                            for (digest, _), vector in zip(batch, vectors, strict=True):
+                                connection.execute("INSERT OR REPLACE INTO cache VALUES (?,?,?,?)", (contract, digest, vector, hashlib.sha256(vector).hexdigest()))
+                            connection.commit()
+                            embedded += len(batch)
+            embeddings_complete = restored and embedded == len(missing)
+            complete = finalize(connection, request, chunks, time.monotonic()+30.0) if embeddings_complete else False
         result = {
-            "complete": complete, "phase": "ready" if complete else ("finalizing" if embeddings_complete else "embedding"),
+            "complete": complete, "phase": "ready" if complete else dict(connection.execute("SELECT key,value FROM meta")).get("phase", "embedding"),
             "embedded": embedded, "remaining": len(missing)-embedded, "chunks": len(chunks),
             "elapsed_seconds": time.monotonic()-started,
         }
