@@ -9,7 +9,7 @@ summary: "One user-root SQLite index projects enabled global and project Markdow
 tags: [index, knowledge]
 aliases: ["Shared knowledge index"]
 sources:
-  - "repo:crates/hive-cli/src/knowledge.rs#sha256:f8920322c1f918b16e9b2df7c1b3a29867cbd4c6cc95b82caa33016d63faab47"
+  - "repo:crates/hive-cli/src/knowledge.rs#sha256:88e9456a85123bffb76f1574385b556b9e6b6d9d008862f1c0700daba343ec49"
   - "repo:crates/hive-wiki/src/lib.rs#sha256:3267b6cc3e81bf9af57c5ae267fba3f55cfc21facac25534d8c65c31920c9082"
   - "repo:crates/hive-wiki/src/store.rs#sha256:c8ed85d8dfdbe8d2215cc61f31643d1877f18b035f956146f9ae789de25b200a"
   - "repo:docs/decisions/ADR-0012-global-onboarding-shared-index.md#sha256:dea6123b7b193eb760a37b198566f9318d868fd7035491ac10756de0d4315530"

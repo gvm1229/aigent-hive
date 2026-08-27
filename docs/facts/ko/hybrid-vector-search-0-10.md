@@ -10,7 +10,7 @@ tags: [knowledge, retrieval, v0-10, vector]
 aliases: ["Vector database gate"]
 sources:
   - "repo:docs/decisions/ADR-0020-0.10.0-product-scope.md#sha256:d63afd36e3ebcd3145f77c24a6dd719be2216e458db791dbffe583dd5781c9c6"
-  - "repo:docs/plans/active/hybrid-vector-search-0.10.0.md#sha256:f27203245c9c9020c77c8f29733d60f8783f3246b698635ceb01643c2ffa881d"
+  - "repo:docs/plans/active/hybrid-vector-search-0.10.0.md#sha256:0ccec01138a19ca08894e908a4e7d4f671397b430515fc60461a1fc3f8d992ce"
   - "repo:docs/research/evidence/vector-hard-gate-windows-2026-08-23.json#sha256:41517d801330c1c299178b5b1ae75ed27fb5106c8af6ce4e2083b66cec30f09a"
   - "repo:docs/research/evidence/vector-requalification-windows-2026-08-24.json#sha256:df1a2e0bf1001236cef266653309154bb99676837be86a2beba25e8dff16b178"
   - "repo:docs/research/vector-memory-0.10-feasibility-2026-08-22.md#sha256:03dca07c4f6b5928268f4bc7c5337d1604371eadcd5b8a7b85b88ec3f65f215c"
