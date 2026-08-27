@@ -86,6 +86,139 @@ pub struct SourceQueryHit {
     pub sources: Vec<String>,
 }
 
+/// One validated source page for a language-isolated semantic index.
+#[derive(Debug, Clone, Serialize)]
+pub struct SourceSemanticPage {
+    pub hit: SourceQueryHit,
+    pub body: String,
+}
+
+/// Source-native corpus; never opens or initializes a consumer knowledge store.
+#[derive(Debug, Clone, Serialize)]
+pub struct SourceSemanticCorpus {
+    pub manifest_digest: String,
+    pub pages: Vec<SourceSemanticPage>,
+}
+
+/// Read a complete language partition with the same canonical and index checks as source queries.
+///
+/// # Errors
+/// Rejects invalid source identity, language, canonical facts, or stale derived state.
+pub fn semantic_corpus(root: &Path, language: &str) -> Result<SourceSemanticCorpus, WikiError> {
+    let root = SourceRoot::open(root)?;
+    validate_language(language)?;
+    let pages = scan_valid_pages(&root)?;
+    let expected = logical_digest(&pages)?;
+    let _loaded = load_current_index(&root, &pages, &expected)?;
+    let selected = pages
+        .values()
+        .filter(|page| page.frontmatter.language == language)
+        .map(|page| SourceSemanticPage {
+            hit: source_page_hit(page),
+            body: page.body.clone(),
+        })
+        .collect();
+    Ok(SourceSemanticCorpus {
+        manifest_digest: expected,
+        pages: selected,
+    })
+}
+
+fn source_page_hit(page: &SourcePage) -> SourceQueryHit {
+    let meta = &page.frontmatter;
+    SourceQueryHit {
+        language: meta.language.clone(),
+        pair_id: meta.pair_id.clone(),
+        topic_slug: meta.topic_slug.clone(),
+        counterpart: meta.counterpart.clone(),
+        title: meta.title.clone(),
+        summary: meta.summary.clone(),
+        path: page.relative_path.clone(),
+        content_digest: page.content_digest.clone(),
+        reviewed_revision: meta.reviewed_revision.clone(),
+        tags: meta.tags.clone(),
+        aliases: meta.aliases.clone(),
+        sources: meta.sources.clone(),
+    }
+}
+
+/// Revalidate untrusted nearest-neighbor references against current source facts.
+///
+/// # Errors
+/// Rejects stale generations, unknown/wrong-language citations, duplicates, and malformed scores.
+pub fn semantic_matches(
+    root: &Path,
+    language: &str,
+    expected: &str,
+    matches: &[crate::rag::SemanticMatch],
+) -> Result<Vec<SourceQueryHit>, WikiError> {
+    if matches.len() > 100 {
+        return Err(WikiError::InvalidInput(
+            "too many source semantic matches".to_owned(),
+        ));
+    }
+    let corpus = semantic_corpus(root, language)?;
+    if corpus.manifest_digest != expected {
+        return Err(WikiError::Verification(
+            "source vector generation is stale".to_owned(),
+        ));
+    }
+    let by_id = corpus
+        .pages
+        .into_iter()
+        .map(|page| (page.hit.path.clone(), page.hit))
+        .collect::<BTreeMap<_, _>>();
+    let mut seen = BTreeSet::new();
+    matches
+        .iter()
+        .map(|item| {
+            if !item.score.is_finite() || !seen.insert(&item.chunk_id) {
+                return Err(WikiError::Verification(
+                    "invalid source semantic candidate".to_owned(),
+                ));
+            }
+            let hit = by_id.get(&item.chunk_id).ok_or_else(|| {
+                WikiError::Verification("source semantic citation is absent".to_owned())
+            })?;
+            if hit.content_digest != item.digest {
+                return Err(WikiError::Verification(
+                    "source semantic citation changed".to_owned(),
+                ));
+            }
+            Ok(hit.clone())
+        })
+        .collect()
+}
+
+/// Check the canonical source generation while holding its existing index read lease.
+///
+/// # Errors
+/// Rejects stale source generations and propagates the derived publication failure.
+pub fn with_semantic_snapshot<T>(
+    root: &Path,
+    expected: &str,
+    publish: impl FnOnce() -> Result<T, WikiError>,
+    rollback: impl FnOnce() -> Result<(), WikiError>,
+) -> Result<T, WikiError> {
+    let root = SourceRoot::open(root)?;
+    let pages = scan_valid_pages(&root)?;
+    if logical_digest(&pages)? != expected {
+        return Err(WikiError::Verification(
+            "source vector publication is stale".to_owned(),
+        ));
+    }
+    let _loaded = load_current_index(&root, &pages, expected)?;
+    let result = publish()?;
+    let current = scan_valid_pages(&root).and_then(|pages| logical_digest(&pages));
+    if !current.is_ok_and(|digest| digest == expected) {
+        rollback()?;
+        return Err(WikiError::Verification(
+            "source facts changed during vector publication".to_owned(),
+        ));
+    }
+    Ok(result)
+}
+
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct SourceMarker {
@@ -1885,6 +2018,80 @@ mod tests {
             page("ko", slug, links, &source, "한국어 소스 지식."),
         )
         .expect("ko page");
+    }
+
+    #[test]
+    fn semantic_source_citations_are_language_isolated_and_revalidated() {
+        let temp = fixture();
+        write_pair(temp.path(), "architecture", &[]);
+        rebuild_index(temp.path()).expect("index");
+        let corpus = semantic_corpus(temp.path(), "ko").expect("Korean corpus");
+        assert_eq!(corpus.pages.len(), 1);
+        assert!(corpus.pages[0].body.contains("한국어"));
+        let hit = &corpus.pages[0].hit;
+        let candidate = crate::rag::SemanticMatch {
+            chunk_id: hit.path.clone(),
+            digest: hit.content_digest.clone(),
+            score: 0.8,
+        };
+        assert_eq!(
+            semantic_matches(
+                temp.path(),
+                "ko",
+                &corpus.manifest_digest,
+                std::slice::from_ref(&candidate)
+            )
+            .expect("citation"),
+            vec![hit.clone()]
+        );
+        assert!(semantic_matches(
+            temp.path(),
+            "en",
+            &corpus.manifest_digest,
+            std::slice::from_ref(&candidate)
+        )
+        .is_err());
+        assert!(semantic_matches(
+            temp.path(),
+            "ko",
+            &corpus.manifest_digest,
+            &[candidate.clone(), candidate]
+        )
+        .is_err());
+        assert!(with_semantic_snapshot(
+            temp.path(),
+            &sha256_digest(b"stale"),
+            || Ok(()),
+            || Ok(())
+        )
+        .is_err());
+        assert!(
+            with_semantic_snapshot(temp.path(), &corpus.manifest_digest, || Ok(()), || Ok(()))
+                .is_ok()
+        );
+        let fact = temp.path().join("docs/facts/ko/architecture.md");
+        let text = fs::read_to_string(&fact).expect("fact");
+        let mut rolled_back = false;
+        assert!(with_semantic_snapshot(
+            temp.path(),
+            &corpus.manifest_digest,
+            || {
+                fs::write(
+                    &fact,
+                    text.replace("한국어 소스 지식.", "수정한 한국어 소스 지식."),
+                )
+                .expect("canonical edit during publication");
+                Ok(())
+            },
+            || {
+                rolled_back = true;
+                Ok(())
+            }
+        )
+        .is_err());
+        assert!(rolled_back);
+        assert!(semantic_corpus(temp.path(), "ko").is_err());
+        assert!(!temp.path().join(".hive").exists());
     }
 
     #[test]

@@ -662,6 +662,149 @@ pub struct SemanticCorpus {
     pub chunks: Vec<RetrievalHit>,
 }
 
+/// One physically isolated, authorized semantic search partition.
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
+#[serde(deny_unknown_fields)]
+pub struct SemanticPartition {
+    pub collection_id: String,
+    pub visibility: RagVisibility,
+}
+
+/// Enumerate only partitions visible to the current request, without exposing other scopes.
+///
+/// # Errors
+/// Rejects stale indexes, invalid scope, and unverified collection authority.
+pub fn semantic_partitions_serialized(
+    bytes: &[u8],
+    manifest: &GenerationManifest,
+    registry: &CollectionRegistry,
+    request: &RetrievalRequest,
+) -> Result<Vec<SemanticPartition>, RagError> {
+    validate_retrieval_request(request)?;
+    validate_serialized_index(bytes, manifest)?;
+    let connection = deserialize_connection(bytes)?;
+    let registry = verify_retrieval_snapshot(&connection, manifest, registry)?;
+    let scope = resolve_scope(&registry, request)?;
+    let by_id = registry.by_id();
+    let mut statement = connection.prepare(
+        "SELECT DISTINCT collection_id,visibility FROM chunks ORDER BY collection_id,visibility"
+    ).map_err(sqlite_error)?;
+    let rows = statement
+        .query_map([], |row| {
+            Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
+        })
+        .map_err(sqlite_error)?;
+    let mut partitions = Vec::new();
+    for row in rows {
+        let (id, visibility) = row.map_err(sqlite_error)?;
+        let visibility = RagVisibility::parse(&visibility)?;
+        let collection = by_id
+            .get(id.as_str())
+            .ok_or_else(|| RagError::RepairRequired("semantic collection is absent".to_owned()))?;
+        if partition_is_visible(&id, visibility, collection, &scope, request) {
+            partitions.push(SemanticPartition {
+                collection_id: id,
+                visibility,
+            });
+        }
+    }
+    Ok(partitions)
+}
+
+/// Fuse independently ranked, already revalidated candidates using reciprocal ranks (constant 60).
+///
+/// # Errors
+/// Rejects mixed generations, duplicate identities, and contradictory canonical citations.
+pub fn fuse_semantic_results(
+    request: &RetrievalRequest,
+    lexical: RetrievalResult,
+    semantic: &RetrievalResult,
+) -> Result<RetrievalResult, RagError> {
+    validate_retrieval_request(request)?;
+    if lexical.generation != semantic.generation
+        || lexical.manifest_digest != semantic.manifest_digest
+    {
+        return Err(RagError::RepairRequired(
+            "search generations changed during fusion".to_owned(),
+        ));
+    }
+    let mut candidates: BTreeMap<String, (RetrievalHit, f64, u8)> = BTreeMap::new();
+    for (mask, hits) in [(1_u8, &lexical.hits), (2_u8, &semantic.hits)] {
+        let mut seen = BTreeSet::new();
+        for (rank, hit) in hits.iter().enumerate() {
+            if !seen.insert(&hit.chunk_id) || !hit.score.is_finite() {
+                return Err(RagError::InvalidInput(
+                    "invalid fusion candidate".to_owned(),
+                ));
+            }
+            let rank = u32::try_from(rank)
+                .map_err(|_| RagError::InvalidInput("too many fusion candidates".to_owned()))?;
+            let entry = candidates
+                .entry(hit.chunk_id.clone())
+                .or_insert_with(|| (hit.clone(), 0.0, 0));
+            let mut identity = hit.clone();
+            identity.score = entry.0.score;
+            identity.matched_field.clone_from(&entry.0.matched_field);
+            identity.text.clone_from(&entry.0.text);
+            if identity != entry.0
+                || !hit.untrusted_content
+                || !(entry.0.text.starts_with(&hit.text) || hit.text.starts_with(&entry.0.text))
+            {
+                return Err(RagError::RepairRequired(
+                    "fusion citation changed".to_owned(),
+                ));
+            }
+            // Prefer the complete canonical text over a budget-truncated copy of the same item.
+            if hit.text.len() > entry.0.text.len() {
+                entry.0.text.clone_from(&hit.text);
+            }
+            entry.1 += 1.0 / (61.0 + f64::from(rank));
+            entry.2 |= mask;
+        }
+    }
+    let mut ordered = candidates.into_values().collect::<Vec<_>>();
+    ordered.sort_by(|left, right| {
+        right
+            .1
+            .total_cmp(&left.1)
+            .then_with(|| left.0.chunk_id.cmp(&right.0.chunk_id))
+    });
+    let mut result = RetrievalResult {
+        generation: lexical.generation,
+        manifest_digest: lexical.manifest_digest,
+        hits: Vec::new(),
+        returned_bytes: 0,
+        insufficient_budget: false,
+    };
+    for (mut hit, score, mask) in ordered {
+        if result.hits.len() == request.top_k {
+            result.insufficient_budget = true;
+            break;
+        }
+        let (text, truncated) = truncate_utf8(
+            &hit.text,
+            request.byte_budget.saturating_sub(result.returned_bytes),
+        );
+        if text.is_empty() {
+            result.insufficient_budget = true;
+            break;
+        }
+        result.returned_bytes += text.len();
+        hit.text = text;
+        hit.score = score;
+        if mask == 3 {
+            "hybrid".clone_into(&mut hit.matched_field);
+        }
+        result.hits.push(hit);
+        if truncated {
+            result.insufficient_budget = true;
+            break;
+        }
+    }
+    result.insufficient_budget |= lexical.insufficient_budget || semantic.insufficient_budget;
+    Ok(result)
+}
+
 /// Explicit request for an idempotent remember operation.
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
 #[serde(deny_unknown_fields)]
@@ -2328,6 +2471,11 @@ fn canonicalize_snapshot(snapshot: &RagSnapshot) -> Result<RagSnapshot, RagError
     Ok(canonical)
 }
 
+/// Compute the canonical logical fingerprint without rebuilding `SQLite`.
+pub(crate) fn canonical_manifest_digest(snapshot: &RagSnapshot) -> Result<String, RagError> {
+    Ok(generation_manifest(&canonicalize_snapshot(snapshot)?)?.logical_digest)
+}
+
 fn generation_manifest(snapshot: &RagSnapshot) -> Result<GenerationManifest, RagError> {
     let entries = manifest_entries(snapshot);
     let collections = snapshot
@@ -3373,23 +3521,39 @@ fn is_visible(
     scope: &ResolvedScope,
     request: &RetrievalRequest,
 ) -> bool {
-    if !scope.explicit_target && candidate.collection_id == USER_ROOT_COLLECTION_ID {
-        return candidate.visibility != RagVisibility::Confidential
+    partition_is_visible(
+        &candidate.collection_id,
+        candidate.visibility,
+        collection,
+        scope,
+        request,
+    )
+}
+
+fn partition_is_visible(
+    collection_id: &str,
+    visibility: RagVisibility,
+    collection: &CollectionRecord,
+    scope: &ResolvedScope,
+    request: &RetrievalRequest,
+) -> bool {
+    if !scope.explicit_target && collection_id == USER_ROOT_COLLECTION_ID {
+        return visibility != RagVisibility::Confidential
             || request.confidential_collection_id.as_deref() == Some(USER_ROOT_COLLECTION_ID);
     }
-    if !scope.explicit_target && candidate.visibility == RagVisibility::Shared {
+    if !scope.explicit_target && visibility == RagVisibility::Shared {
         return true;
     }
     let Some(target) = &scope.target_collection_id else {
         return false;
     };
-    if candidate.collection_id != *target {
+    if collection_id != target {
         return false;
     }
     if collection.state == CollectionState::Detached && !scope.explicit_target {
         return false;
     }
-    match candidate.visibility {
+    match visibility {
         RagVisibility::Shared | RagVisibility::ProjectPrivate => true,
         RagVisibility::Confidential => {
             request.confidential_collection_id.as_deref() == Some(target.as_str())
@@ -4365,6 +4529,36 @@ mod tests {
         assert_eq!(result.hits[0].collection_id, USER_ROOT_COLLECTION_ID);
         assert_eq!(result.hits[0].sources, public[0].sources);
         assert!(result.hits[0].untrusted_content);
+        let partitions = semantic_partitions_serialized(
+            &artifact.sqlite_bytes,
+            &artifact.manifest,
+            &registry,
+            &request,
+        )
+        .expect("visible partitions");
+        assert_eq!(
+            partitions,
+            vec![SemanticPartition {
+                collection_id: USER_ROOT_COLLECTION_ID.to_owned(),
+                visibility: RagVisibility::Shared
+            }]
+        );
+        let fused = fuse_semantic_results(&request, result.clone(), &result).expect("fused");
+        assert_eq!(fused.hits[0].matched_field, "hybrid");
+        assert_eq!(fused.hits[0].text, result.hits[0].text);
+        assert!((fused.hits[0].score - 2.0 / 61.0).abs() < 0.000_001);
+        let mut stale = result.clone();
+        stale.generation += 1;
+        assert!(fuse_semantic_results(&request, result.clone(), &stale).is_err());
+        let mut forged = result.clone();
+        forged.hits[0].digest = sha256_digest(b"forged");
+        assert!(fuse_semantic_results(&request, result.clone(), &forged).is_err());
+        forged = result.clone();
+        forged.hits[0].sources.push("forged source".to_owned());
+        assert!(fuse_semantic_results(&request, result.clone(), &forged).is_err());
+        forged = result.clone();
+        "contradictory replacement text".clone_into(&mut forged.hits[0].text);
+        assert!(fuse_semantic_results(&request, result.clone(), &forged).is_err());
         request.byte_budget = 7;
         let bounded = hydrate(&request, &matches).expect("bounded matches");
         assert!(bounded.returned_bytes <= 7);

@@ -1298,6 +1298,62 @@ impl RagStore {
         })
     }
 
+    /// Enumerate authorized vector partitions from the validated retrieval snapshot.
+    ///
+    /// # Errors
+    /// Rejects stale or invalid canonical authority.
+    pub fn semantic_partitions(
+        &self,
+        request: &RetrievalRequest,
+    ) -> Result<Vec<crate::rag::SemanticPartition>, WikiError> {
+        self.with_retrieval_snapshot(|bytes, manifest, registry| {
+            crate::rag::semantic_partitions_serialized(bytes, manifest, registry, request)
+        })
+    }
+
+    /// Publish derived state only while the expected canonical snapshot is still current.
+    ///
+    /// # Errors
+    /// Rejects a changed manifest or authority and propagates the publication failure.
+    pub fn with_semantic_snapshot<T>(
+        &self,
+        request: &RetrievalRequest,
+        expected: &str,
+        publish: impl FnOnce() -> Result<T, WikiError>,
+        rollback: impl FnOnce() -> Result<(), WikiError>,
+    ) -> Result<T, WikiError> {
+        self.with_retrieval_snapshot(|bytes, manifest, registry| {
+            if manifest.logical_digest != expected {
+                return Err(RagError::RepairRequired(
+                    "semantic publication is stale".to_owned(),
+                ));
+            }
+            crate::rag::semantic_partitions_serialized(bytes, manifest, registry, request)?;
+            Ok((|| {
+                let canonical = self.load_canonical_snapshot(manifest.generation)?;
+                if crate::rag::canonical_manifest_digest(&canonical).map_err(rag_error)? != expected
+                {
+                    return Err(WikiError::Verification(
+                        "canonical knowledge changed before vector publication".to_owned(),
+                    ));
+                }
+                let result = publish()?;
+                let current =
+                    self.load_canonical_snapshot(manifest.generation)
+                        .and_then(|snapshot| {
+                            crate::rag::canonical_manifest_digest(&snapshot).map_err(rag_error)
+                        });
+                if !current.is_ok_and(|digest| digest == expected) {
+                    rollback()?;
+                    return Err(WikiError::Verification(
+                        "canonical knowledge changed during vector publication".to_owned(),
+                    ));
+                }
+                Ok(result)
+            })())
+        })?
+    }
+
     fn with_retrieval_snapshot<T>(
         &self,
         operation: impl FnOnce(&[u8], &GenerationManifest, &CollectionRegistry) -> Result<T, RagError>,
@@ -4102,6 +4158,44 @@ mod tests {
             })
             .expect("lock released after rollback");
         assert_eq!(recovered.registry.projects.len(), 2);
+    }
+
+    #[test]
+    fn semantic_publication_rechecks_canonical_bytes_not_only_the_index() {
+        let (temporary, store) = store();
+        let initial = store.load_manifest_required().expect("manifest");
+        let plan = remember_plan(USER_ROOT_COLLECTION_ID, "concise", initial.generation + 1);
+        store.apply_remember_plan(&plan).expect("remember");
+        let request = RetrievalRequest {
+            scope: RetrievalScope::Global,
+            current_collection_id: None,
+            query: "concise".to_owned(),
+            query_expansions: Vec::new(),
+            top_k: 5,
+            byte_budget: 4096,
+            confidential_collection_id: None,
+        };
+        let manifest = store.retrieve(&request).expect("retrieval").manifest_digest;
+        assert!(store
+            .with_semantic_snapshot(&request, &manifest, || Ok(()), || Ok(()))
+            .is_ok());
+        let path = temporary
+            .path()
+            .join(&plan.new_claim.as_ref().expect("claim").locator);
+        std::fs::write(path, b"not canonical Markdown").expect("external edit");
+        let mut published = false;
+        assert!(store
+            .with_semantic_snapshot(
+                &request,
+                &manifest,
+                || {
+                    published = true;
+                    Ok(())
+                },
+                || Ok(())
+            )
+            .is_err());
+        assert!(!published);
     }
 
     #[test]

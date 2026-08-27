@@ -196,7 +196,7 @@
         "assertion_status": { "$ref": "#/$defs/assertion_status" },
         "scan_metadata": { "$ref": "#/$defs/scan_metadata" },
         "score": { "type": "number" },
-        "matched_field": { "enum": ["alias", "tag", "title", "text"] },
+        "matched_field": { "enum": ["alias", "tag", "title", "text", "vector", "hybrid"] },
         "sources": {
           "type": "array",
           "maxItems": 256,
