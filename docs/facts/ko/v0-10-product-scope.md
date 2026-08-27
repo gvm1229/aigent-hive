@@ -9,9 +9,9 @@ summary: "자동 한국어 언어 core와 안전한 embedding·격리·rollback�
 tags: [knowledge, language, release, scan, v0-10]
 aliases: ["0.10.0 scope"]
 sources:
-  - "repo:docs/decisions/ADR-0020-0.10.0-product-scope.md#sha256:1acc607d5b8703117b2f8b3e9e31c0f9a5f1653c4262a477441b6c078cf24d81"
+  - "repo:docs/decisions/ADR-0020-0.10.0-product-scope.md#sha256:921f2847dacea259c29b9f6c8cbb2c4f7c090429e04771ec240d49eb1ccfbb72"
   - "repo:docs/decisions/product-release-decisions.md#sha256:e89ac8584204a7e52ed157e9b29d523f870b8ac387fc1e4a044f7f7333d17af5"
-  - "repo:docs/plans/active/korean-language-core-0.10.0.md#sha256:12de0afadc6995dc5ae6a0151791c461f6f59e3ae38e0fe6f3ca3eb13004f1a3"
+  - "repo:docs/plans/active/korean-language-core-0.10.0.md#sha256:f93dba421edc980e3a9ca8b5a8ce2ee978806094ae360203371948a27bcadaec"
 links: [consumer-session-coordination, graphify-0-10-adoption, hybrid-vector-search-0-10, knowledge-storage, nested-project-scan-0-10]
 reviewed_revision: "git:eaed3203ce3fea062acab325a9ce0892348aff02"
 status: active
