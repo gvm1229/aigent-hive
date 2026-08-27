@@ -141,6 +141,7 @@ class ActionResultActionTests(unittest.TestCase):
 
     def test_v09_source_actions_are_exactly_represented(self) -> None:
         knowledge = KNOWLEDGE_SOURCE.read_text(encoding="utf-8")
+        knowledge += KNOWLEDGE_SOURCE.with_name("vector.rs").read_text(encoding="utf-8")
         loop = LOOP_SOURCE.read_text(encoding="utf-8")
         knowledge_actions = set(
             re.findall(r'"([A-Z][A-Za-z]*Knowledge[A-Za-z]*)"', knowledge)
