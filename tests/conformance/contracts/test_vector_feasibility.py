@@ -12,18 +12,34 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
 CORPUS = ROOT / "tests/fixtures/knowledge/vector-gold-120.json"
+# Keep published measurements reproducible when current source facts change.
+CORPUS_FACTS_REVISION = "622f2b7b5411d054abd94c5443ce2b620231b240"
 
 
 class VectorFeasibilityContract(unittest.TestCase):
     def test_corpus_is_reproducible_and_has_exact_category_counts(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             output = Path(directory) / "corpus.json"
+            facts = Path(directory) / "facts"
+            paths = subprocess.check_output(
+                ["git", "ls-tree", "-r", "--name-only", CORPUS_FACTS_REVISION, "docs/facts/en"],
+                cwd=ROOT, text=True,
+            ).splitlines()[:30]
+            self.assertEqual(len(paths), 30)
+            for source in paths:
+                for language in ("en", "ko"):
+                    relative = source.replace("/en/", f"/{language}/")
+                    destination = facts / language / Path(source).name
+                    destination.parent.mkdir(parents=True, exist_ok=True)
+                    destination.write_bytes(subprocess.check_output(
+                        ["git", "show", f"{CORPUS_FACTS_REVISION}:{relative}"], cwd=ROOT,
+                    ))
             subprocess.run(
                 [
                     sys.executable,
                     str(ROOT / "scripts/build-vector-gold-corpus.py"),
                     "--facts",
-                    str(ROOT / "docs/facts"),
+                    str(facts),
                     "--output",
                     str(output),
                 ],
