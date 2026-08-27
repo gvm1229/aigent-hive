@@ -40,7 +40,7 @@ skills:
   consent_digest: null
 - name: humanize-kor
   source_type: built-in
-  content_digest: sha256:8805da50d3370fa953a1325a0a6c5294247ab037cb173ab09266c67d09aa659a
+  content_digest: sha256:b356691df025bb30def279528450be5c5c9085adf11457efcda87834ef452f67
   side_effect_class: project-write
   capabilities:
   - filesystem-read
