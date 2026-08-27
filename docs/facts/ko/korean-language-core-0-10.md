@@ -10,12 +10,12 @@ tags: [korean, language, skill, v0-10]
 aliases: ["Korean output gate", "humanize-kor"]
 sources:
   - "repo:.github/workflows/public-test-acceptance.yml#sha256:31283b71f7c1a61e23658d2de67d119c5fb5886990ed3b788489a0a80ea14d12"
-  - "repo:crates/hive-core/src/korean.rs#sha256:16037a43c32e9fd1c777c6f7aabb7fa7bcf0fb265086fe84fc0bc35a93f07bda"
+  - "repo:crates/hive-core/src/korean.rs#sha256:bb575d5e73f1567755656c7e6be98cca871416a052e83e920d95b91e77186188"
   - "repo:docs/architecture/korean-language-core.md#sha256:2ae475f2f4c701f42fe28bff62cb37e60ef516526b2f147d1ec1544e2b32bfa4"
   - "repo:docs/plans/active/korean-language-core-0.10.0.md#sha256:f93dba421edc980e3a9ca8b5a8ce2ee978806094ae360203371948a27bcadaec"
   - "repo:harness/language-packs/im-not-ai/2.3.2/manifest.json#sha256:50e8bec5fb4c7a479f9e0800f262d49c3e01258ba3c7b9066aab65ba3f7ca34e"
-  - "repo:harness/skills/humanize-kor/SKILL.md#sha256:8805da50d3370fa953a1325a0a6c5294247ab037cb173ab09266c67d09aa659a"
-  - "repo:scripts/qualify-korean-public-test.py#sha256:96fda477a4c490aa15ad704f2a5117cfa1d63c00252c282408134de6219f498d"
+  - "repo:harness/skills/humanize-kor/SKILL.md#sha256:b356691df025bb30def279528450be5c5c9085adf11457efcda87834ef452f67"
+  - "repo:scripts/qualify-korean-public-test.py#sha256:f65f27b409d902b3d44beb1fd7f30f843eacbcb7f3acf5c9288bc04bef659a0c"
 links: [language-consistency, public-skill-identity, v0-10-product-scope]
 reviewed_revision: "git:eaed3203ce3fea062acab325a9ce0892348aff02"
 status: active
@@ -23,9 +23,8 @@ status: active
 
 # `0.10.0` 한국어 언어 core
 
-완성 한국어 text의 다섯 profile 검사와 활성 host의 국소 rewrite 최대 1회. 결정적 검증 기반
-서법·수치·인용·링크·code·명령·경로·출처 보존, 실패 시 정확한 draft 선택. `humanize-kor`:
-사용자 선택 text에 같은 계약 적용. 고정 `im-not-ai 2.3.2` 변환 pack의 preview·exact consent·
-staging activation·rollback 지원, raw·floating upstream 설치 금지.
-번호 공개 시험은 Windows x64·macOS arm64·Linux musl x64에 exact npm byte 설치. Gold corpus·
-보존 거부·sanitize·update preview·rollback 재실행.
+- 다섯 검사 유형과 `humanize-kor`: 대상의 검증된 활성 언어 팩 공통 사용
+- 규칙 구조·보호 구간·변경률·부정 문맥 검사, 전체 의미 동등성은 호스트의 별도 검토 대상
+- 호스트 소유 윤문·자동 재시도 최대 1회·실패 시 정확한 원문 보존
+- 고정 `im-not-ai 2.3.2`: 승인형 단계별 활성화·복원 대상 해시 검사·현재 팩 손상 복구
+- Windows·macOS·Linux 공개 수용: 기록된 자료의 동작 근거이며 모든 미래 문장의 품질 보장 아님
