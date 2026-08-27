@@ -3,7 +3,7 @@ use super::{
     contract_digest, invalid, io_error, lock, optional, required, scope_control, verify_runtime,
     worker, InstalledRuntime, Selector, Target,
 };
-use hive_wiki::rag::{fuse_semantic_results, RetrievalRequest, SemanticMatch};
+use hive_wiki::rag::{RetrievalRequest, SemanticMatch};
 use hive_wiki::store::RagStore;
 use hive_wiki::vector::{DatabaseKind, VectorFiles};
 use hive_wiki::{source, WikiError};
@@ -46,7 +46,7 @@ pub(super) fn retrieve(
         // Preserve the existing FTS validation and original query budgets; do not return a
         // cached pre-error result, partial vector output, or diagnostics from private partitions.
         Err(_) => annotate(
-            serde_json::to_value(store.retrieve(request)?).map_err(io_error)?,
+            serde_json::to_value(store.checked_retrieve(request)?).map_err(io_error)?,
             false,
             false,
         ),
@@ -59,17 +59,15 @@ fn hybrid(
     request: &RetrievalRequest,
 ) -> Result<(Value, bool), WikiError> {
     let files = VectorFiles::open(root, false)?;
-    let mut expanded = request.clone();
-    expanded.top_k = 100;
-    expanded.byte_budget = 1024 * 1024;
-    let lexical = store.retrieve(&expanded)?;
-    let partitions = store.semantic_partitions(request)?;
+    let plan = store.semantic_search_plan(request)?;
     let mut databases = Vec::new();
     let mut controls = Vec::new();
     let mut runtime: Option<InstalledRuntime> = None;
     let mut partial = false;
-    for partition in partitions {
-        let selector = Selector::Collection { partition };
+    for state in plan.partitions {
+        let selector = Selector::Collection {
+            partition: state.partition,
+        };
         let scope_id = files.scope_id(&selector)?;
         let target = Target {
             files: VectorFiles::open(root, false)?,
@@ -83,7 +81,7 @@ fn hybrid(
         };
         let Some(active) = control.active.filter(|active| {
             control.enabled
-                && active.manifest_digest == lexical.manifest_digest
+                && active.manifest_digest == state.digest
                 && active.runtime_id == control.runtime.id
                 && active.contract_digest == control.runtime.contract_digest
         }) else {
@@ -123,9 +121,7 @@ fn hybrid(
             return Err(invalid("semantic authority changed during query"));
         }
     }
-    let semantic = store.semantic_matches(&expanded, &lexical.manifest_digest, &matches)?;
-    let result =
-        fuse_semantic_results(request, lexical, &semantic).map_err(super::super::map_rag_error)?;
+    let result = store.hybrid_retrieve(request, &plan.manifest_digest, &matches)?;
     Ok((serde_json::to_value(result).map_err(io_error)?, partial))
 }
 

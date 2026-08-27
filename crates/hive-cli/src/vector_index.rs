@@ -23,6 +23,7 @@ pub(super) struct Snapshot {
 
 struct Corpus {
     manifest_digest: String,
+    authority_digest: Option<String>,
     chunks: Vec<Value>,
     request: Option<RetrievalRequest>,
 }
@@ -47,7 +48,7 @@ fn corpus(
     match &target.selector {
         Selector::Source { language } => {
             let corpus = source::semantic_corpus(target.files.root_path(), language)?;
-            Ok(Corpus { manifest_digest: corpus.manifest_digest, request: None,
+            Ok(Corpus { manifest_digest: corpus.manifest_digest, authority_digest: None, request: None,
                 chunks: corpus.pages.into_iter().map(|page| json!({"chunk_id":page.hit.path,"digest":page.hit.content_digest,"title":page.hit.title,"text":page.body})).collect() })
         }
         Selector::Collection { partition } => {
@@ -72,7 +73,7 @@ fn corpus(
             } else {
                 store.semantic_corpus(&request, partition.visibility)?
             };
-            Ok(Corpus { manifest_digest: corpus.manifest_digest, request: Some(request),
+            Ok(Corpus { manifest_digest: corpus.partition_digest, authority_digest: Some(corpus.authority_digest), request: Some(request),
                 chunks: corpus.chunks.into_iter().map(|hit| json!({"chunk_id":hit.chunk_id,"digest":hit.digest,"title":hit.title,"text":hit.text})).collect() })
         }
     }
@@ -154,13 +155,18 @@ fn publish(
             install,
             rollback,
         ),
-        Selector::Collection { .. } => RagStore::open(target.files.root_path())?
+        Selector::Collection { partition } => RagStore::open(target.files.root_path())?
             .with_semantic_snapshot(
                 corpus
                     .request
                     .as_ref()
                     .ok_or_else(|| invalid("vector request authority is absent"))?,
+                partition.visibility,
                 &corpus.manifest_digest,
+                corpus
+                    .authority_digest
+                    .as_deref()
+                    .ok_or_else(|| invalid("vector operation authority is absent"))?,
                 install,
                 rollback,
             ),

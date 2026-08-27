@@ -659,6 +659,8 @@ pub struct SemanticMatch {
 pub struct SemanticCorpus {
     pub generation: u64,
     pub manifest_digest: String,
+    pub partition_digest: String,
+    pub authority_digest: String,
     pub chunks: Vec<RetrievalHit>,
 }
 
@@ -668,6 +670,99 @@ pub struct SemanticCorpus {
 pub struct SemanticPartition {
     pub collection_id: String,
     pub visibility: RagVisibility,
+}
+
+/// Content fingerprint for one authorized partition, independent of other collections.
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
+#[serde(deny_unknown_fields)]
+pub struct SemanticPartitionState {
+    pub partition: SemanticPartition,
+    pub digest: String,
+}
+
+/// Optimistic query frame. It contains no canonical text or unauthorized scope metadata.
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
+#[serde(deny_unknown_fields)]
+pub struct SemanticSearchPlan {
+    pub manifest_digest: String,
+    pub partitions: Vec<SemanticPartitionState>,
+}
+
+fn semantic_row_digest(
+    id: &str,
+    digest: &str,
+    title: &str,
+    text: &str,
+) -> Result<String, RagError> {
+    serde_json::to_vec(&(id, digest, title, text))
+        .map(|bytes| sha256_digest(&bytes))
+        .map_err(|_| RagError::InvalidInput("cannot fingerprint semantic input".to_owned()))
+}
+
+fn finish_partition_digest(
+    registry: &CollectionRegistry,
+    id: &str,
+    visibility: RagVisibility,
+    rows: &[String],
+) -> Result<String, RagError> {
+    let by_id = registry.by_id();
+    let collection = by_id
+        .get(id)
+        .ok_or_else(|| RagError::RepairRequired("semantic collection is absent".to_owned()))?;
+    serde_json::to_vec(&("hive-vector-partition-v1", collection, visibility, rows))
+        .map(|bytes| sha256_digest(&bytes))
+        .map_err(|_| RagError::InvalidInput("cannot fingerprint semantic partition".to_owned()))
+}
+
+pub(crate) fn semantic_corpus_digest(
+    registry: &CollectionRegistry,
+    id: &str,
+    visibility: RagVisibility,
+    hits: &[RetrievalHit],
+) -> Result<String, RagError> {
+    let mut hits = hits.iter().collect::<Vec<_>>();
+    hits.sort_by(|left, right| left.chunk_id.cmp(&right.chunk_id));
+    let rows = hits
+        .iter()
+        .map(|hit| semantic_row_digest(&hit.chunk_id, &hit.digest, &hit.title, &hit.text))
+        .collect::<Result<Vec<_>, _>>()?;
+    finish_partition_digest(registry, id, visibility, &rows)
+}
+
+pub(crate) fn canonical_partition_digest(
+    snapshot: &RagSnapshot,
+    id: &str,
+    visibility: RagVisibility,
+) -> Result<String, RagError> {
+    let collection_ids = snapshot
+        .registry
+        .collections
+        .iter()
+        .map(|item| item.collection_id.as_str())
+        .collect::<BTreeSet<_>>();
+    let mut chunks = Vec::new();
+    for document in snapshot
+        .documents
+        .iter()
+        .filter(|item| item.collection_id == id && item.visibility == visibility)
+    {
+        validate_document(document, &collection_ids)?;
+        chunks.extend(document_chunks(document));
+    }
+    for claim in snapshot.claims.iter().filter(|item| {
+        item.collection_id == id
+            && item.visibility == visibility
+            && item.status != AssertionStatus::Superseded
+    }) {
+        validate_claim(claim)?;
+        chunks.extend(claim_chunks(claim));
+    }
+    chunks.sort_by(|left, right| left.chunk_id.cmp(&right.chunk_id));
+    let rows = chunks
+        .iter()
+        .map(|chunk| semantic_row_digest(&chunk.chunk_id, &chunk.digest, &chunk.title, &chunk.text))
+        .collect::<Result<Vec<_>, _>>()?;
+    finish_partition_digest(&snapshot.registry, id, visibility, &rows)
 }
 
 /// Enumerate only partitions visible to the current request, without exposing other scopes.
@@ -684,7 +779,15 @@ pub fn semantic_partitions_serialized(
     validate_serialized_index(bytes, manifest)?;
     let connection = deserialize_connection(bytes)?;
     let registry = verify_retrieval_snapshot(&connection, manifest, registry)?;
-    let scope = resolve_scope(&registry, request)?;
+    semantic_partitions_from_connection(&connection, &registry, request)
+}
+
+fn semantic_partitions_from_connection(
+    connection: &Connection,
+    registry: &CollectionRegistry,
+    request: &RetrievalRequest,
+) -> Result<Vec<SemanticPartition>, RagError> {
+    let scope = resolve_scope(registry, request)?;
     let by_id = registry.by_id();
     let mut statement = connection.prepare(
         "SELECT DISTINCT collection_id,visibility FROM chunks ORDER BY collection_id,visibility"
@@ -709,6 +812,53 @@ pub fn semantic_partitions_serialized(
         }
     }
     Ok(partitions)
+}
+
+/// Read authorized input fingerprints without depending on another collection's generation.
+///
+/// # Errors
+/// Rejects invalid requests, index corruption, and unauthorized or malformed scope metadata.
+pub fn semantic_partition_states_serialized(
+    bytes: &[u8],
+    manifest: &GenerationManifest,
+    registry: &CollectionRegistry,
+    request: &RetrievalRequest,
+) -> Result<Vec<SemanticPartitionState>, RagError> {
+    validate_retrieval_request(request)?;
+    validate_serialized_index(bytes, manifest)?;
+    let connection = deserialize_connection(bytes)?;
+    let registry = verify_retrieval_snapshot(&connection, manifest, registry)?;
+    let partitions = semantic_partitions_from_connection(&connection, &registry, request)?;
+    let mut statement=connection.prepare("SELECT chunk_id,digest,title,text FROM chunks WHERE collection_id=?1 AND visibility=?2 ORDER BY chunk_id").map_err(sqlite_error)?;
+    let mut result = Vec::new();
+    for partition in partitions {
+        let rows = statement
+            .query_map(
+                params![partition.collection_id, partition.visibility.as_str()],
+                |row| {
+                    Ok((
+                        row.get::<_, String>(0)?,
+                        row.get::<_, String>(1)?,
+                        row.get::<_, String>(2)?,
+                        row.get::<_, String>(3)?,
+                    ))
+                },
+            )
+            .map_err(sqlite_error)?;
+        let mut digests = Vec::new();
+        for row in rows {
+            let (id, digest, title, text) = row.map_err(sqlite_error)?;
+            digests.push(semantic_row_digest(&id, &digest, &title, &text)?);
+        }
+        let digest = finish_partition_digest(
+            &registry,
+            &partition.collection_id,
+            partition.visibility,
+            &digests,
+        )?;
+        result.push(SemanticPartitionState { partition, digest });
+    }
+    Ok(result)
 }
 
 /// Fuse independently ranked, already revalidated candidates using reciprocal ranks (constant 60).
@@ -2471,11 +2621,6 @@ fn canonicalize_snapshot(snapshot: &RagSnapshot) -> Result<RagSnapshot, RagError
     Ok(canonical)
 }
 
-/// Compute the canonical logical fingerprint without rebuilding `SQLite`.
-pub(crate) fn canonical_manifest_digest(snapshot: &RagSnapshot) -> Result<String, RagError> {
-    Ok(generation_manifest(&canonicalize_snapshot(snapshot)?)?.logical_digest)
-}
-
 fn generation_manifest(snapshot: &RagSnapshot) -> Result<GenerationManifest, RagError> {
     let entries = manifest_entries(snapshot);
     let collections = snapshot
@@ -2628,6 +2773,8 @@ fn initialize_schema(connection: &Connection) -> Result<(), RagError> {
              );
              CREATE INDEX chunks_integrity
                  ON chunks(item_kind, item_id, collection_id, visibility, claim_kind, assertion_status);
+             CREATE INDEX chunks_partition
+                 ON chunks(collection_id, visibility, chunk_id);
              CREATE INDEX chunks_invalid_kind
                  ON chunks(item_kind) WHERE item_kind NOT IN ('document', 'claim');
              CREATE VIRTUAL TABLE chunks_fts USING fts5(
@@ -3450,6 +3597,21 @@ fn deserialize_connection(sqlite_bytes: &[u8]) -> Result<Connection, RagError> {
         )
         .map_err(sqlite_error)?;
     Ok(connection)
+}
+
+pub(crate) fn semantic_target_collection(
+    registry: &CollectionRegistry,
+    request: &RetrievalRequest,
+) -> Result<String, RagError> {
+    let scope = resolve_scope(registry, request)?;
+    if !scope.explicit_target {
+        return Err(RagError::InvalidInput(
+            "semantic build requires an explicit collection".to_owned(),
+        ));
+    }
+    scope
+        .target_collection_id
+        .ok_or_else(|| RagError::InvalidInput("semantic collection is absent".to_owned()))
 }
 
 fn resolve_scope(
