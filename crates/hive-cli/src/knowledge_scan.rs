@@ -13,7 +13,7 @@ use std::collections::BTreeMap;
 use std::env;
 use std::ffi::{OsStr, OsString};
 use std::fs;
-use std::io::Read;
+use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use std::process::{Command, ExitStatus, Stdio};
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -56,10 +56,10 @@ pub(crate) struct DirectoryScanOutcome {
 }
 
 #[derive(Debug)]
-struct GitOutput {
-    success: bool,
-    stdout: Vec<u8>,
-    stderr: Vec<u8>,
+pub(crate) struct GitOutput {
+    pub(crate) success: bool,
+    pub(crate) stdout: Vec<u8>,
+    pub(crate) stderr: Vec<u8>,
 }
 
 trait GitRunner {
@@ -276,18 +276,68 @@ fn run_bounded_process(
     timeout: Duration,
     output_limit: usize,
 ) -> Result<GitOutput, WikiError> {
+    run_bounded_process_with_input(
+        executable,
+        arguments,
+        environment,
+        timeout,
+        output_limit,
+        None,
+        "Git inventory",
+    )
+}
+
+/// Run an authenticated deterministic helper with bounded private stdin and process-tree cleanup.
+#[allow(clippy::too_many_lines)]
+pub(crate) fn run_bounded_process_with_input(
+    executable: &Path,
+    arguments: &[OsString],
+    environment: &[(OsString, OsString)],
+    timeout: Duration,
+    output_limit: usize,
+    input: Option<Vec<u8>>,
+    label: &str,
+) -> Result<GitOutput, WikiError> {
+    if input
+        .as_ref()
+        .is_some_and(|bytes| bytes.len() > 256 * 1024 * 1024)
+    {
+        return Err(WikiError::InvalidInput(
+            "helper input exceeds its bound".to_owned(),
+        ));
+    }
     let mut command = Command::new(executable);
     command
         .args(arguments)
         .env_clear()
         .envs(environment.iter().map(|(key, value)| (key, value)))
-        .stdin(Stdio::null())
+        .stdin(if input.is_some() {
+            Stdio::piped()
+        } else {
+            Stdio::null()
+        })
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        command.creation_flags(0x0800_0000);
+    }
     let mut command = contained_command(command);
     let mut child = command
         .spawn()
-        .map_err(|error| WikiError::Io(format!("cannot run Git inventory command: {error}")))?;
+        .map_err(|error| WikiError::Io(format!("cannot run {label} command: {error}")))?;
+    let input_writer = input.map(|bytes| {
+        let input = child.stdin().take();
+        let (sender, receiver) = mpsc::sync_channel(1);
+        thread::spawn(move || {
+            let result = input
+                .ok_or_else(|| std::io::Error::other("helper stdin is unavailable"))
+                .and_then(|mut stream| stream.write_all(&bytes));
+            let _ = sender.send(result);
+        });
+        receiver
+    });
     let stdout = child
         .stdout()
         .take()
@@ -318,22 +368,31 @@ fn run_bounded_process(
         terminate_process_tree(child.as_mut());
     }
     let reader_deadline = Instant::now() + GIT_READER_DRAIN_TIMEOUT;
-    let mut stdout = collect_bounded_reader(&stdout_reader, "stdout", reader_deadline);
-    let mut stderr = collect_bounded_reader(&stderr_reader, "stderr", reader_deadline);
+    let mut stdout = collect_bounded_reader(&stdout_reader, "stdout", reader_deadline, label);
+    let mut stderr = collect_bounded_reader(&stderr_reader, "stderr", reader_deadline, label);
     if matches!(stop, ProcessStop::Completed(_)) && (stdout.is_err() || stderr.is_err()) {
         terminate_process_tree(child.as_mut());
         let retry_deadline = Instant::now() + GIT_READER_DRAIN_TIMEOUT;
         if stdout.is_err() {
-            stdout = collect_bounded_reader(&stdout_reader, "stdout", retry_deadline);
+            stdout = collect_bounded_reader(&stdout_reader, "stdout", retry_deadline, label);
         }
         if stderr.is_err() {
-            stderr = collect_bounded_reader(&stderr_reader, "stderr", retry_deadline);
+            stderr = collect_bounded_reader(&stderr_reader, "stderr", retry_deadline, label);
         }
     }
     if output_exceeded.load(Ordering::Acquire) {
-        return Err(WikiError::InvalidInput(
-            "Git inventory output exceeds the bounded command budget".to_owned(),
-        ));
+        return Err(WikiError::InvalidInput(format!(
+            "{label} output exceeds the bounded command budget"
+        )));
+    }
+    if let Some(writer) = input_writer {
+        let written = writer.recv_timeout(GIT_READER_DRAIN_TIMEOUT);
+        if matches!(stop, ProcessStop::Completed(_)) && !matches!(written, Ok(Ok(()))) {
+            terminate_process_tree(child.as_mut());
+            return Err(WikiError::Io(format!(
+                "{label} did not consume its bounded input"
+            )));
+        }
     }
     match stop {
         ProcessStop::Completed(status) => Ok(GitOutput {
@@ -341,14 +400,14 @@ fn run_bounded_process(
             stdout: stdout?,
             stderr: stderr?,
         }),
-        ProcessStop::TimedOut => Err(WikiError::Io(
-            "Git inventory command exceeded its timeout and was terminated".to_owned(),
-        )),
-        ProcessStop::OutputExceeded => Err(WikiError::InvalidInput(
-            "Git inventory output exceeds the bounded command budget".to_owned(),
-        )),
+        ProcessStop::TimedOut => Err(WikiError::Io(format!(
+            "{label} command exceeded its timeout and was terminated"
+        ))),
+        ProcessStop::OutputExceeded => Err(WikiError::InvalidInput(format!(
+            "{label} output exceeds the bounded command budget"
+        ))),
         ProcessStop::WaitFailed(error) => Err(WikiError::Io(format!(
-            "cannot wait for Git inventory command: {error}"
+            "cannot wait for {label} command: {error}"
         ))),
     }
 }
@@ -429,18 +488,19 @@ fn collect_bounded_reader(
     reader: &Receiver<std::io::Result<Vec<u8>>>,
     stream_name: &str,
     deadline: Instant,
+    label: &str,
 ) -> Result<Vec<u8>, WikiError> {
     reader
         .recv_timeout(deadline.saturating_duration_since(Instant::now()))
         .map_err(|error| match error {
             RecvTimeoutError::Timeout => WikiError::Io(format!(
-                "Git {stream_name} reader exceeded its bounded cleanup deadline"
+                "{label} {stream_name} reader exceeded its bounded cleanup deadline"
             )),
-            RecvTimeoutError::Disconnected => {
-                WikiError::Io(format!("Git {stream_name} reader terminated unexpectedly"))
-            }
+            RecvTimeoutError::Disconnected => WikiError::Io(format!(
+                "{label} {stream_name} reader terminated unexpectedly"
+            )),
         })?
-        .map_err(|error| WikiError::Io(format!("cannot read Git {stream_name}: {error}")))
+        .map_err(|error| WikiError::Io(format!("cannot read {label} {stream_name}: {error}")))
 }
 
 pub(crate) fn scan_directory(
@@ -1721,9 +1781,75 @@ mod tests {
     }
 
     #[test]
+    fn bounded_helper_consumes_private_stdin_without_argument_projection() {
+        let executable = env::current_exe().expect("test executable");
+        let arguments = [
+            OsString::from("--exact"),
+            OsString::from("knowledge_scan::tests::git_process_helper"),
+            OsString::from("--nocapture"),
+        ];
+        let mut environment = fixed_git_environment();
+        environment.push((
+            OsString::from("HIVE_TEST_GIT_HELPER_MODE"),
+            OsString::from("input"),
+        ));
+        let input = "bounded 입력".repeat(1024).into_bytes();
+        let digest = sha256_digest(&input);
+        let output = run_bounded_process_with_input(
+            &executable,
+            &arguments,
+            &environment,
+            Duration::from_secs(5),
+            4096,
+            Some(input),
+            "vector worker",
+        )
+        .expect("bounded input");
+        assert!(output.success);
+        assert!(String::from_utf8(output.stdout)
+            .expect("UTF-8")
+            .contains(&digest));
+    }
+
+    #[test]
+    fn bounded_helper_timeout_does_not_wait_for_a_blocked_input_writer() {
+        let executable = env::current_exe().expect("test executable");
+        let arguments = [
+            OsString::from("--exact"),
+            OsString::from("knowledge_scan::tests::git_process_helper"),
+            OsString::from("--nocapture"),
+        ];
+        let mut environment = fixed_git_environment();
+        environment.push((
+            OsString::from("HIVE_TEST_GIT_HELPER_MODE"),
+            OsString::from("timeout"),
+        ));
+        let started = Instant::now();
+        let error = run_bounded_process_with_input(
+            &executable,
+            &arguments,
+            &environment,
+            Duration::from_millis(100),
+            4096,
+            Some(vec![b'x'; 2 * 1024 * 1024]),
+            "vector worker",
+        )
+        .expect_err("timeout");
+        assert!(error.to_string().contains("timeout"));
+        assert!(started.elapsed() < Duration::from_secs(3));
+    }
+
+    #[test]
     #[allow(clippy::zombie_processes)]
     fn git_process_helper() {
         match env::var("HIVE_TEST_GIT_HELPER_MODE").as_deref() {
+            Ok("input") => {
+                let mut bytes = Vec::new();
+                std::io::stdin()
+                    .read_to_end(&mut bytes)
+                    .expect("private input");
+                println!("{}", sha256_digest(&bytes));
+            }
             Ok("timeout") => thread::sleep(Duration::from_secs(5)),
             Ok("oversized") => {
                 std::io::stdout()
