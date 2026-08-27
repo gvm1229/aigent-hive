@@ -644,6 +644,24 @@ pub struct RetrievalResult {
     pub insufficient_budget: bool,
 }
 
+/// Untrusted nearest-neighbor identity; canonical text and authority are resolved locally.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(deny_unknown_fields)]
+pub struct SemanticMatch {
+    pub chunk_id: String,
+    pub digest: String,
+    pub score: f64,
+}
+
+/// Complete, bounded authorized build input from one verified RAG generation.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(deny_unknown_fields)]
+pub struct SemanticCorpus {
+    pub generation: u64,
+    pub manifest_digest: String,
+    pub chunks: Vec<RetrievalHit>,
+}
+
 /// Explicit request for an idempotent remember operation.
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
 #[serde(deny_unknown_fields)]
@@ -1290,6 +1308,195 @@ pub fn retrieve_serialized(
     let connection = deserialize_connection(sqlite_bytes)?;
     let canonical_registry = verify_retrieval_snapshot(&connection, expected_manifest, registry)?;
     retrieve_from_connection(&connection, expected_manifest, &canonical_registry, request)
+}
+
+const SEMANTIC_COLUMNS: &str = "c.chunk_id, c.item_kind, c.item_id, c.collection_id,
+    c.title, c.text, c.locator, c.digest, c.visibility, c.language, c.tags, c.aliases,
+    c.claim_kind, c.assertion_status, c.scan_metadata_json, c.replacement, 0.0";
+
+/// Export one explicitly selected visibility partition for an approved local index build.
+///
+/// # Errors
+/// Rejects invalid snapshots, implicit collection selection, absent confidential authority,
+/// and corpora above the bounded build limit. No query or source bytes are persisted here.
+pub fn semantic_corpus_serialized(
+    sqlite_bytes: &[u8],
+    expected_manifest: &GenerationManifest,
+    registry: &CollectionRegistry,
+    request: &RetrievalRequest,
+    visibility: RagVisibility,
+) -> Result<Vec<RetrievalHit>, RagError> {
+    validate_retrieval_request(request)?;
+    validate_serialized_index(sqlite_bytes, expected_manifest)?;
+    let connection = deserialize_connection(sqlite_bytes)?;
+    let registry = verify_retrieval_snapshot(&connection, expected_manifest, registry)?;
+    let scope = resolve_scope(&registry, request)?;
+    let target = scope
+        .target_collection_id
+        .as_deref()
+        .filter(|_| scope.explicit_target)
+        .ok_or_else(|| {
+            RagError::InvalidInput("semantic build requires an explicit collection".to_owned())
+        })?;
+    if visibility == RagVisibility::Confidential
+        && request.confidential_collection_id.as_deref() != Some(target)
+    {
+        return Err(RagError::InvalidInput(
+            "confidential build requires current action authority".to_owned(),
+        ));
+    }
+    let mut statement = connection.prepare(&format!(
+        "SELECT {SEMANTIC_COLUMNS} FROM chunks c WHERE c.collection_id=?1 AND c.visibility=?2 ORDER BY c.chunk_id LIMIT 50001"
+    )).map_err(sqlite_error)?;
+    let rows = statement
+        .query_map(params![target, visibility.as_str()], candidate_from_row)
+        .map_err(sqlite_error)?;
+    let by_id = registry.by_id();
+    let mut hits = Vec::new();
+    let mut bytes = 0_usize;
+    for row in rows {
+        let candidate = row.map_err(sqlite_error)?;
+        let collection = by_id
+            .get(candidate.collection_id.as_str())
+            .ok_or_else(|| RagError::RepairRequired("semantic collection is absent".to_owned()))?;
+        if !is_visible(&candidate, collection, &scope, request) {
+            return Err(RagError::InvalidInput(
+                "semantic corpus exceeds authorized scope".to_owned(),
+            ));
+        }
+        bytes = bytes.saturating_add(candidate.text.len());
+        if hits.len() >= 50_000 || bytes > 256 * 1024 * 1024 {
+            return Err(RagError::InvalidInput(
+                "semantic corpus exceeds build limits".to_owned(),
+            ));
+        }
+        hits.push(semantic_hit(&connection, candidate, 0.0)?);
+    }
+    Ok(hits)
+}
+
+/// Rehydrate untrusted vector matches from the current authorized canonical projection.
+///
+/// # Errors
+/// Rejects stale snapshots, malformed or duplicate matches, and stale returned identities.
+/// Unauthorized identities are dropped before their text, sources, or metadata are returned.
+#[allow(clippy::too_many_lines)]
+pub fn semantic_matches_serialized(
+    sqlite_bytes: &[u8],
+    expected_manifest: &GenerationManifest,
+    registry: &CollectionRegistry,
+    request: &RetrievalRequest,
+    matches: &[SemanticMatch],
+) -> Result<RetrievalResult, RagError> {
+    validate_retrieval_request(request)?;
+    if matches.len() > 1000 {
+        return Err(RagError::InvalidInput(
+            "too many semantic matches".to_owned(),
+        ));
+    }
+    let mut seen = BTreeSet::new();
+    for item in matches {
+        validate_bounded_text("semantic chunk_id", &item.chunk_id, 256)?;
+        validate_sha256("semantic digest", &item.digest)?;
+        if !item.score.is_finite() || !seen.insert(&item.chunk_id) {
+            return Err(RagError::InvalidInput(
+                "invalid semantic score or duplicate identity".to_owned(),
+            ));
+        }
+    }
+    validate_serialized_index(sqlite_bytes, expected_manifest)?;
+    let connection = deserialize_connection(sqlite_bytes)?;
+    let registry = verify_retrieval_snapshot(&connection, expected_manifest, registry)?;
+    let scope = resolve_scope(&registry, request)?;
+    let by_id = registry.by_id();
+    let mut statement = connection
+        .prepare(&format!(
+            "SELECT {SEMANTIC_COLUMNS} FROM chunks c WHERE c.chunk_id=?1"
+        ))
+        .map_err(sqlite_error)?;
+    let mut candidates = Vec::new();
+    for item in matches {
+        let mut rows = statement
+            .query_map([&item.chunk_id], candidate_from_row)
+            .map_err(sqlite_error)?;
+        let Some(candidate) = rows.next().transpose().map_err(sqlite_error)? else {
+            return Err(RagError::RepairRequired(
+                "semantic chunk no longer exists".to_owned(),
+            ));
+        };
+        let collection = by_id
+            .get(candidate.collection_id.as_str())
+            .ok_or_else(|| RagError::RepairRequired("semantic collection is absent".to_owned()))?;
+        if !is_visible(&candidate, collection, &scope, request) {
+            continue;
+        }
+        if candidate.digest != item.digest {
+            return Err(RagError::RepairRequired(
+                "semantic match is stale".to_owned(),
+            ));
+        }
+        candidates.push((candidate, item.score));
+    }
+    let mut hits = Vec::new();
+    let mut returned_bytes = 0_usize;
+    let mut insufficient_budget = false;
+    for (candidate, score) in candidates {
+        if hits.len() == request.top_k || returned_bytes == request.byte_budget {
+            insufficient_budget = true;
+            break;
+        }
+        let mut hit = semantic_hit(&connection, candidate, score)?;
+        let (text, truncated) = truncate_utf8(
+            &hit.text,
+            request.byte_budget.saturating_sub(returned_bytes),
+        );
+        if text.is_empty() {
+            insufficient_budget = true;
+            break;
+        }
+        returned_bytes += text.len();
+        hit.text = text;
+        hits.push(hit);
+        if truncated {
+            insufficient_budget = true;
+            break;
+        }
+    }
+    Ok(RetrievalResult {
+        generation: expected_manifest.generation,
+        manifest_digest: expected_manifest.logical_digest.clone(),
+        hits,
+        returned_bytes,
+        insufficient_budget,
+    })
+}
+
+fn semantic_hit(
+    connection: &Connection,
+    candidate: Candidate,
+    score: f64,
+) -> Result<RetrievalHit, RagError> {
+    let sources = load_sources(connection, &candidate.item_kind, &candidate.item_id)?;
+    Ok(RetrievalHit {
+        chunk_id: candidate.chunk_id,
+        collection_id: candidate.collection_id,
+        item_id: candidate.item_id,
+        item_kind: candidate.item_kind,
+        locator: candidate.locator,
+        title: candidate.title,
+        text: candidate.text,
+        digest: candidate.digest,
+        visibility: candidate.visibility,
+        language: candidate.language,
+        claim_kind: candidate.claim_kind,
+        assertion_status: candidate.assertion_status,
+        scan_metadata: candidate.scan_metadata,
+        score,
+        matched_field: "vector".to_owned(),
+        sources,
+        replacement: candidate.replacement,
+        untrusted_content: true,
+    })
 }
 
 /// Recover the exact document records retained in a verified disposable index.
@@ -4050,6 +4257,134 @@ mod tests {
         secret.normalized_fact = "Safe fact".to_owned();
         secret.provenance.summary = "raw\nmultiline\noutput".to_owned();
         assert!(plan_remember(&[], &secret, 1).is_err());
+    }
+
+    #[test]
+    #[allow(clippy::too_many_lines)]
+    fn semantic_partition_export_and_rehydration_preserve_authority() {
+        let registry = registry();
+        let collection_id = |alias: &str| {
+            registry
+                .collections
+                .iter()
+                .find(|item| item.aliases.contains(&alias.to_owned()))
+                .expect("collection")
+                .collection_id
+                .clone()
+        };
+        let alpha = collection_id("alpha");
+        let secret = collection_id("secret");
+        let snapshot = RagSnapshot {
+            schema_version: RAG_SCHEMA_VERSION,
+            generation: 1,
+            registry: registry.clone(),
+            documents: vec![
+                document(
+                    USER_ROOT_COLLECTION_ID,
+                    "public",
+                    "복구 절차와 내보내기",
+                    RagVisibility::Shared,
+                ),
+                document(
+                    &alpha,
+                    "private",
+                    "다른 프로젝트의 비공개 자료",
+                    RagVisibility::ProjectPrivate,
+                ),
+                document(
+                    &secret,
+                    "secret",
+                    "승인 필요한 기밀 자료",
+                    RagVisibility::Confidential,
+                ),
+            ],
+            claims: Vec::new(),
+        };
+        let artifact = build_rag_index(&snapshot).expect("index");
+        let mut request = RetrievalRequest {
+            scope: RetrievalScope::Collection(USER_ROOT_COLLECTION_ID.to_owned()),
+            current_collection_id: None,
+            query: "zzzxqwv".to_owned(),
+            query_expansions: Vec::new(),
+            top_k: 10,
+            byte_budget: 4096,
+            confidential_collection_id: None,
+        };
+        let corpus = |request: &RetrievalRequest, visibility| {
+            semantic_corpus_serialized(
+                &artifact.sqlite_bytes,
+                &artifact.manifest,
+                &registry,
+                request,
+                visibility,
+            )
+        };
+        let public = corpus(&request, RagVisibility::Shared).expect("public corpus");
+        assert_eq!(public.len(), 1);
+        request.scope = RetrievalScope::Collection(alpha);
+        let private =
+            corpus(&request, RagVisibility::ProjectPrivate).expect("explicit private corpus");
+        request.scope = RetrievalScope::Collection(secret.clone());
+        assert!(corpus(&request, RagVisibility::Confidential).is_err());
+        request.confidential_collection_id = Some(secret);
+        let confidential =
+            corpus(&request, RagVisibility::Confidential).expect("authorized secret corpus");
+        let matches: Vec<_> = public
+            .iter()
+            .chain(&private)
+            .chain(&confidential)
+            .map(|hit| SemanticMatch {
+                chunk_id: hit.chunk_id.clone(),
+                digest: hit.digest.clone(),
+                score: 0.5,
+            })
+            .collect();
+        request.scope = RetrievalScope::Global;
+        request.confidential_collection_id = None;
+        assert!(corpus(&request, RagVisibility::Shared).is_err());
+        assert!(retrieve_serialized(
+            &artifact.sqlite_bytes,
+            &artifact.manifest,
+            &registry,
+            &request
+        )
+        .expect("FTS")
+        .hits
+        .is_empty());
+        let hydrate = |request: &RetrievalRequest, matches: &[SemanticMatch]| {
+            semantic_matches_serialized(
+                &artifact.sqlite_bytes,
+                &artifact.manifest,
+                &registry,
+                request,
+                matches,
+            )
+        };
+        let result = hydrate(&request, &matches).expect("semantic matches");
+        assert_eq!(result.hits.len(), 1);
+        assert_eq!(result.hits[0].collection_id, USER_ROOT_COLLECTION_ID);
+        assert_eq!(result.hits[0].sources, public[0].sources);
+        assert!(result.hits[0].untrusted_content);
+        request.byte_budget = 7;
+        let bounded = hydrate(&request, &matches).expect("bounded matches");
+        assert!(bounded.returned_bytes <= 7);
+        assert!(bounded.insufficient_budget);
+        request.byte_budget = 1;
+        let too_small = hydrate(&request, &matches).expect("UTF-8 budget");
+        assert!(too_small.hits.is_empty());
+        assert!(too_small.insufficient_budget);
+        let mut invalid = matches[..1].to_vec();
+        invalid[0].digest = format!("sha256:{}", "0".repeat(64));
+        assert!(hydrate(&request, &invalid).is_err());
+        invalid = vec![matches[0].clone(), matches[0].clone()];
+        assert!(hydrate(&request, &invalid).is_err());
+        invalid[1].chunk_id = "missing-chunk".to_owned();
+        assert!(hydrate(&request, &invalid).is_err());
+        invalid[1].score = f64::NAN;
+        assert!(hydrate(&request, &invalid).is_err());
+        invalid = matches[..1].to_vec();
+        invalid[0].score = f64::NAN;
+        assert!(hydrate(&request, &invalid).is_err());
     }
 
     #[test]

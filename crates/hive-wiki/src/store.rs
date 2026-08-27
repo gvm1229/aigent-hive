@@ -1253,6 +1253,55 @@ impl RagStore {
     /// Returns an error when derived state is missing, dirty, stale, corrupt, or the
     /// request violates scope, visibility, query, top-k, or byte-budget constraints.
     pub fn retrieve(&self, request: &RetrievalRequest) -> Result<RetrievalResult, WikiError> {
+        self.with_retrieval_snapshot(|bytes, manifest, registry| {
+            retrieve_serialized(bytes, manifest, registry, request)
+        })
+    }
+
+    /// Export a complete bounded partition for a separately authorized semantic build.
+    ///
+    /// # Errors
+    /// Rejects unsafe, dirty, stale, unauthorized, or oversized input before export.
+    pub fn semantic_corpus(
+        &self,
+        request: &RetrievalRequest,
+        visibility: RagVisibility,
+    ) -> Result<crate::rag::SemanticCorpus, WikiError> {
+        self.with_retrieval_snapshot(|bytes, manifest, registry| {
+            Ok(crate::rag::SemanticCorpus {
+                generation: manifest.generation,
+                manifest_digest: manifest.logical_digest.clone(),
+                chunks: crate::rag::semantic_corpus_serialized(
+                    bytes, manifest, registry, request, visibility,
+                )?,
+            })
+        })
+    }
+
+    /// Resolve vector identities only against the same current authorized RAG snapshot.
+    ///
+    /// # Errors
+    /// Rejects changed generations, stale identities, invalid scores, or invalid authority.
+    pub fn semantic_matches(
+        &self,
+        request: &RetrievalRequest,
+        expected_manifest_digest: &str,
+        matches: &[crate::rag::SemanticMatch],
+    ) -> Result<RetrievalResult, WikiError> {
+        self.with_retrieval_snapshot(|bytes, manifest, registry| {
+            if manifest.logical_digest != expected_manifest_digest {
+                return Err(RagError::RepairRequired(
+                    "semantic generation is stale".to_owned(),
+                ));
+            }
+            crate::rag::semantic_matches_serialized(bytes, manifest, registry, request, matches)
+        })
+    }
+
+    fn with_retrieval_snapshot<T>(
+        &self,
+        operation: impl FnOnce(&[u8], &GenerationManifest, &CollectionRegistry) -> Result<T, RagError>,
+    ) -> Result<T, WikiError> {
         self.preflight_initialized_snapshot()?;
         let _lock = crate::CapabilityKnowledgeLock::acquire(&self.root)?;
         if read_bounded_optional(
@@ -1275,7 +1324,7 @@ impl RagStore {
             MAX_SERIALIZED_INDEX_BYTES,
             "RAG SQLite index",
         )?;
-        retrieve_serialized(&sqlite_bytes, &manifest, &registry, request).map_err(rag_error)
+        operation(&sqlite_bytes, &manifest, &registry).map_err(rag_error)
     }
 
     /// Load one external-canonical ledger and its complete disposable projection.
