@@ -9,9 +9,9 @@ summary: "자동 조회 격리, 명시 collection 직접 조회, 검토된 일�
 tags: [collection, knowledge, promotion, retrieval, v0-9-3]
 aliases: ["자동 지식 승격", "프로젝트 간 지식"]
 sources:
-  - "repo:crates/hive-cli/src/knowledge.rs#sha256:88e9456a85123bffb76f1574385b556b9e6b6d9d008862f1c0700daba343ec49"
-  - "repo:crates/hive-wiki/src/rag.rs#sha256:4377de0992d700e357561a75def2a6d1795b67fa5821262ca454b2a7137351c1"
-  - "repo:crates/hive-wiki/src/store.rs#sha256:c8ed85d8dfdbe8d2215cc61f31643d1877f18b035f956146f9ae789de25b200a"
+  - "repo:crates/hive-cli/src/knowledge.rs#sha256:1229cfa84e1fb0357c943fd0ef2910f3cdb5dd7e70f67879f0832db0ea26c800"
+  - "repo:crates/hive-wiki/src/rag.rs#sha256:43679e840cd86cfd0aec3eb535d15fcfed3694632713ef617ac2fa4b19aababa"
+  - "repo:crates/hive-wiki/src/store.rs#sha256:3ef5691d123243e2026c1e0b3660ded59d05b62544aa84816914d6630124d82c"
   - "repo:harness/skills/knowledge-import/SKILL.md#sha256:b73e6c82eb5ef9105781383f59211a982ed70b0f0ecf1690619f3b9b30f4730d"
   - "repo:harness/skills/knowledge-recall/SKILL.md#sha256:531437bfcb9786cd5221de32eb5ad536bfd07973db159ca0b15a5df858ffa923"
 links: [global-knowledge-rag, knowledge-portability-scan, shared-index]

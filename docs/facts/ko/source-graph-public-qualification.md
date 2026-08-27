@@ -10,7 +10,7 @@ tags: [graph, knowledge, qualification, v0-10]
 aliases: ["source graph 수용", "source 관계 자격 검증"]
 sources:
   - "repo:.github/workflows/release.yml#sha256:88394c81a55cb27a5fea46cc1adddd6877e0a3006c24567a1865e34b2bef26bb"
-  - "repo:crates/hive-cli/src/knowledge.rs#sha256:88e9456a85123bffb76f1574385b556b9e6b6d9d008862f1c0700daba343ec49"
+  - "repo:crates/hive-cli/src/knowledge.rs#sha256:1229cfa84e1fb0357c943fd0ef2910f3cdb5dd7e70f67879f0832db0ea26c800"
   - "repo:crates/hive-wiki/src/source.rs#sha256:334881a8ed13d2e960d95d924c71391f029be131b67f8315c54a7385f1205a0f"
   - "repo:scripts/qualify-source-graph.py#sha256:10896324388562ef86b75c443f463c734d1323327a3631957c0aa86e88649a79"
 links: [graphify-0-10-adoption, hybrid-vector-search-0-10]
