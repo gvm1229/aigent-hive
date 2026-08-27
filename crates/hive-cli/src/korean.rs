@@ -676,9 +676,12 @@ fn selected_pack(options: &Options<'_>) -> Result<KoreanRulesPack, String> {
 }
 
 pub(crate) fn rules_for_target(target: &Path) -> Result<KoreanRulesPack, String> {
+    let target = hive_core::normalize_platform_root(
+        &std::path::absolute(target).map_err(|error| error.to_string())?,
+    );
     if !target.join("hive-source.json").exists() {
-        if let Some(pointer) = load_pointer(target)? {
-            return load_generation(target, &PackPointerSnapshot::from(&pointer));
+        if let Some(pointer) = load_pointer(&target)? {
+            return load_generation(&target, &PackPointerSnapshot::from(&pointer));
         }
     }
     KoreanRulesPack::parse(embedded_rules_bytes())
@@ -708,7 +711,9 @@ fn pack_lock(target: &Path) -> Result<fs::File, String> {
 }
 
 fn consumer_target(value: &str) -> Result<PathBuf, String> {
-    let target = PathBuf::from(value);
+    let target = hive_core::normalize_platform_root(
+        &std::path::absolute(value).map_err(|error| error.to_string())?,
+    );
     ensure_consumer_target(&target).map_err(|error| error.to_string())?;
     fs::canonicalize(target).map_err(|error| error.to_string())
 }
