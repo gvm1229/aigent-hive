@@ -31,6 +31,7 @@ class KoreanLanguageCoreContract(unittest.TestCase):
             cwd=ROOT,
             capture_output=True,
             text=True,
+            encoding="utf-8",
             check=False,
             timeout=20,
         )
@@ -39,6 +40,171 @@ class KoreanLanguageCoreContract(unittest.TestCase):
         except json.JSONDecodeError as error:
             self.fail(f"invalid CLI JSON: {error}\nstdout={process.stdout!r}\nstderr={process.stderr!r}")
         return process, result
+
+    def candidate(self, root: Path, change) -> Path:
+        candidate = root / "candidate"
+        shutil.copytree(PACK, candidate)
+        rules = json.loads((candidate / "rules.json").read_text("utf-8"))
+        rules["pack_version"] = "2.3.3"
+        rules = change(rules)
+        payload = json.dumps(rules, ensure_ascii=False).encode("utf-8")
+        (candidate / "rules.json").write_bytes(payload)
+        manifest = json.loads((candidate / "manifest.json").read_text("utf-8"))
+        manifest["pack_version"] = "2.3.3"
+        manifest["rules_digest"] = digest(payload)
+        (candidate / "manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
+        return candidate
+
+    def activate(self, target: Path, candidate: Path) -> None:
+        process, preview = self.invoke("pack", "preview", "--target", str(target), "--candidate", str(candidate))
+        self.assertEqual(process.returncode, 0, process.stderr)
+        process, _ = self.invoke("pack", "activate", "--target", str(target), "--candidate", str(candidate),
+                                 "--consent-digest", preview["data"]["consent_digest"], "--confirm-pack")
+        self.assertEqual(process.returncode, 0, process.stderr)
+
+    def test_activated_pack_changes_inspect_and_verify_and_tamper_fails_closed(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            target = root / "consumer"
+            target.mkdir()
+            def tighten(rules):
+                rules["rules"][0]["threshold"] = 1
+                rules["profiles"]["response"]["max_change_rate"] = 0.0
+                return rules
+            candidate = self.candidate(root, tighten)
+            self.activate(target, candidate)
+            source = target / "source.md"
+            after = target / "after.md"
+            source.write_text("분석을 통해 결과를 확인했습니다.", encoding="utf-8")
+            after.write_text("분석으로 결과를 확인했습니다.", encoding="utf-8")
+            process, result = self.invoke("inspect", "--target", str(target), "--profile", "response", "--input", str(source))
+            self.assertEqual(process.returncode, 0, process.stderr)
+            self.assertEqual(result["data"]["pack_version"], "2.3.3")
+            self.assertIn("A-2", {item["rule_id"] for item in result["data"]["findings"]})
+            process, result = self.invoke("verify", "--target", str(target), "--profile", "response", "--before", str(source), "--after", str(after))
+            self.assertEqual(process.returncode, 5, process.stderr)
+            self.assertIn("change-rate-exceeded", result["data"]["failures"])
+            pointer = json.loads((target / ".hive/language-packs/current.json").read_text("utf-8"))
+            (target / pointer["relative"] / "rules.json").write_text("{}", encoding="utf-8")
+            process, _ = self.invoke("inspect", "--target", str(target), "--profile", "response", "--input", str(source))
+            self.assertNotEqual(process.returncode, 0)
+            process, _ = self.invoke("pack", "status", "--target", str(target))
+            self.assertNotEqual(process.returncode, 0)
+
+    def test_rules_structure_is_checked_before_preview_or_mutation(self) -> None:
+        mutations = {
+            "empty": lambda r: {},
+            "unknown-field": lambda r: {**r, "execute": "untrusted"},
+            "wrong-version": lambda r: {**r, "schema_version": 99},
+            "missing-profile": lambda r: {**r, "profiles": {}},
+            "unknown-kind": lambda r: {**r, "rules": [{**r["rules"][0], "kind": "execute"}]},
+            "zero-threshold": lambda r: {**r, "rules": [{**r["rules"][0], "threshold": 0}]},
+            "weakened-integrity": lambda r: {**r, "protected_spans": []},
+            "bad-identity": lambda r: {**r, "pack_version": "2.3.4"},
+        }
+        for name, change in mutations.items():
+            with self.subTest(name=name), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                target = root / "consumer"
+                target.mkdir()
+                candidate = self.candidate(root, change)
+                process, _ = self.invoke("pack", "preview", "--target", str(target), "--candidate", str(candidate))
+                self.assertNotEqual(process.returncode, 0, name)
+                self.assertEqual(list(target.iterdir()), [])
+
+    def test_negation_and_its_subject_cannot_change_during_rewrite(self) -> None:
+        pairs = (
+            ("원본 v1.2는 삭제하지 않습니다.", "사본 v1.2는 삭제하지 않습니다."),
+            ("이 설정은 자동 삭제가 아닐 것입니다.", "이 설정은 자동 삭제가 맞을 것입니다."),
+            ("이 설정은 파일을 삭제 못합니다.", "이 설정은 파일을 삭제합니다."),
+            ("이 설정은 파일을 삭제하지 않습니다.", "이 설정은 파일을 삭제합니다."),
+            ("파일을 안 지웁니다.", "파일을 지웁니다."),
+            ("원본은 삭제하지 않습니다. 사본은 삭제합니다.", "원본은 삭제합니다. 사본은 삭제하지 않습니다."),
+        )
+        prefix = "검토 결과와 저장 위치를 확인했습니다. 나머지 설정과 실행 순서는 그대로 유지합니다. "
+        for before_text, after_text in pairs:
+            with self.subTest(before=before_text), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                before, after = root / "before.md", root / "after.md"
+                before.write_text(prefix + before_text, encoding="utf-8")
+                after.write_text(prefix + after_text, encoding="utf-8")
+                process, result = self.invoke("verify", "--profile", "response", "--before", str(before), "--after", str(after))
+                self.assertEqual(process.returncode, 5)
+                self.assertFalse(result["data"]["accepted"])
+                self.assertIn("negation-context-changed", result["data"]["failures"])
+
+    def test_rollback_rehashes_prior_generation_before_pointer_change(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            target = root / "consumer"
+            target.mkdir()
+            self.activate(target, PACK)
+            candidate = self.candidate(root, lambda rules: rules)
+            self.activate(target, candidate)
+            pointer_path = target / ".hive/language-packs/current.json"
+            before = pointer_path.read_bytes()
+            pointer = json.loads(before)
+            (target / pointer["previous"]["relative"] / "rules.json").write_bytes(b"{}")
+            process, _ = self.invoke("pack", "rollback", "--target", str(target))
+            self.assertNotEqual(process.returncode, 0)
+            self.assertEqual(pointer_path.read_bytes(), before)
+
+    def test_corrupt_current_pack_can_restore_valid_prior_or_embedded_rules(self) -> None:
+        for has_prior in (False, True):
+            with self.subTest(prior=has_prior), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                target = root / "consumer"
+                target.mkdir()
+                if has_prior:
+                    self.activate(target, PACK)
+                candidate = self.candidate(root, lambda rules: rules)
+                self.activate(target, candidate)
+                pointer_path = target / ".hive/language-packs/current.json"
+                pointer = json.loads(pointer_path.read_bytes())
+                (target / pointer["relative"] / "rules.json").write_bytes(b"{}")
+                process, restored = self.invoke("pack", "rollback", "--target", str(target))
+                self.assertEqual(process.returncode, 0, process.stderr)
+                self.assertEqual(restored["data"]["pack_version"], "2.3.2")
+                process, status = self.invoke("pack", "status", "--target", str(target))
+                self.assertEqual(process.returncode, 0, process.stderr)
+                self.assertEqual(status["data"]["pack_version"], "2.3.2")
+
+    def test_cwd_selection_and_repeat_activation_preserve_embedded_rollback(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            target = root / "consumer"
+            target.mkdir()
+            candidate = self.candidate(root, lambda rules: rules)
+            self.activate(target, candidate)
+            self.activate(target, candidate)
+            text = target / "input.md"
+            text.write_text("검사할 한국어 문장입니다.", encoding="utf-8")
+            process = subprocess.run([str(HIVE.resolve()), "korean", "inspect", "--profile", "response", "--input", str(text), "--output", "json"],
+                                     cwd=target, capture_output=True, timeout=20)
+            self.assertEqual(process.returncode, 0)
+            self.assertEqual(json.loads(process.stdout)["data"]["pack_version"], "2.3.3")
+            process, restored = self.invoke("pack", "rollback", "--target", str(target))
+            self.assertEqual(process.returncode, 0, process.stderr)
+            self.assertEqual(restored["data"]["pack_version"], "2.3.2")
+
+    def test_pointer_path_escape_is_rejected_without_external_mutation(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            target = root / "consumer"
+            target.mkdir()
+            outside = root / "outside.txt"
+            outside.write_bytes(b"external sentinel")
+            self.activate(target, PACK)
+            pointer_path = target / ".hive/language-packs/current.json"
+            original = json.loads(pointer_path.read_bytes())
+            for relative in ("../../outside.txt", str(outside), ".hive/language-packs/packs/unknown"):
+                pointer_path.write_text(json.dumps({**original, "relative": relative}), encoding="utf-8")
+                before = pointer_path.read_bytes()
+                for action in ("status", "rollback"):
+                    process, _ = self.invoke("pack", action, "--target", str(target))
+                    self.assertNotEqual(process.returncode, 0)
+                    self.assertEqual(pointer_path.read_bytes(), before)
+                    self.assertEqual(outside.read_bytes(), b"external sentinel")
 
     def test_pinned_manifest_matches_schema_rules_license_and_upstream_boundary(self) -> None:
         manifest = json.loads((PACK / "manifest.json").read_text("utf-8"))

@@ -19,7 +19,7 @@ output policy.
 3. Select `response|release-note|documentation|technical|verbatim`. Run:
 
    ```text
-   hive korean inspect --profile <profile> --input <source> --output json
+   hive korean inspect --target <project-root> --profile <profile> --input <source> --output json
    ```
 
 4. Rewrite only spans tied to reported rule IDs. The active host owns the rewrite. Hive never calls
@@ -27,13 +27,20 @@ output policy.
 5. Save the candidate separately. Verify it:
 
    ```text
-   hive korean verify --profile <profile> --before <source> --after <candidate> --output json
+   hive korean verify --target <project-root> --profile <profile> --before <source> --after <candidate> --output json
    ```
 
-6. Accept only `hive.korean-verification-passed`. On any failure, keep the exact source and retry
+6. A deterministic pass is necessary, not proof of semantic equivalence. Independently compare
+   each changed claim, subject, negation, name, and attribution against the source. Accept only
+   `hive.korean-verification-passed` plus that semantic review. If uncertain, preserve the source.
+   On any failure, keep the exact source and retry
    once with a smaller local edit. If that fails, return the exact source.
 7. Report the profile, intensity, changed-span summary, change rate, preservation result, and source
-   fallback status. A preview never overwrites the source file.
+fallback status. A preview never overwrites the source file.
+
+Omit `--target` only for the embedded source-workspace rules or when already in the intended
+consumer root. An explicit target selects its validated active pack; a corrupt pack is an error,
+not permission to silently inspect with older rules. Profile safety ceilings also limit intensity.
 
 ## Preservation
 

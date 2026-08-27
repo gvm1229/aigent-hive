@@ -59,6 +59,7 @@ def write_pack_version(source: Path, destination: Path, version: str) -> None:
     rules = json.loads(rules_path.read_text(encoding="utf-8"))
     rules["pack_version"] = version
     rules["transform_version"] = int(rules["transform_version"]) + 1
+    rules["rules"][0]["threshold"] = 1
     rules_path.write_text(
         json.dumps(rules, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
         encoding="utf-8",
@@ -212,6 +213,14 @@ def qualify(
             ],
             cwd=root,
         )
+        active_input = target / "active-rules.md"
+        active_input.write_text("분석을 통해 결과를 확인했습니다.", encoding="utf-8")
+        inspection = run_json(hive, ["korean", "inspect", "--target", str(target),
+            "--profile", "response", "--input", str(active_input)], cwd=root)
+        if inspection["data"]["pack_version"] != "2.3.3" or "A-2" not in {
+            item["rule_id"] for item in inspection["data"]["findings"]
+        }:
+            raise RuntimeError("activated Korean rules were not consumed by inspection")
         rollback = run_json(
             hive,
             ["korean", "pack", "rollback", "--target", str(target)],
@@ -219,6 +228,20 @@ def qualify(
         )
         if rollback["data"]["pack_version"] != "2.3.2":
             raise RuntimeError("Korean pack rollback did not restore 2.3.2")
+        restored = run_json(hive, ["korean", "inspect", "--target", str(target),
+            "--profile", "response", "--input", str(active_input)], cwd=root)
+        if restored["data"]["pack_version"] != "2.3.2" or any(
+            item["rule_id"] == "A-2" for item in restored["data"]["findings"]
+        ):
+            raise RuntimeError("Korean rollback did not restore actual inspection behavior")
+        invalid = root / "invalid-pack"
+        shutil.copytree(second, invalid)
+        (invalid / "rules.json").write_bytes(b"{}")
+        invalid_manifest = json.loads((invalid / "manifest.json").read_text("utf-8"))
+        invalid_manifest["rules_digest"] = sha256(invalid / "rules.json")
+        (invalid / "manifest.json").write_text(json.dumps(invalid_manifest), encoding="utf-8")
+        run_json(hive, ["korean", "pack", "preview", "--target", str(target),
+            "--candidate", str(invalid)], cwd=root, expected_exit=2)
 
         return {
             "schema_version": 1,
@@ -233,6 +256,9 @@ def qualify(
             "pack_check_latest_version": check["data"]["latest_version"],
             "initial_activation": bool(activated["data"]["activated"]),
             "rollback_version": rollback["data"]["pack_version"],
+            "active_rules_consumed": True,
+            "rollback_behavior_restored": True,
+            "invalid_rules_rejected": True,
             "provider_api_calls": 0,
             "api_keys_read": 0,
         }

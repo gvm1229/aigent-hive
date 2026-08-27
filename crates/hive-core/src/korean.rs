@@ -54,7 +54,9 @@ impl KoreanProfile {
 }
 
 #[derive(Clone, Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
 struct RulesPack {
+    schema_version: u32,
     pack_id: String,
     pack_version: String,
     transform_version: u32,
@@ -66,6 +68,7 @@ struct RulesPack {
 }
 
 #[derive(Clone, Copy, Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
 struct ProfileContract {
     max_change_rate: f64,
     max_touch_rate: f64,
@@ -73,6 +76,7 @@ struct ProfileContract {
 }
 
 #[derive(Clone, Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
 struct Rule {
     id: String,
     category: String,
@@ -80,6 +84,136 @@ struct Rule {
     kind: String,
     terms: Vec<String>,
     threshold: usize,
+}
+
+/// Parsed rules whose shape, limits and non-overridable safety contract are valid.
+#[derive(Clone, Debug)]
+pub struct KoreanRulesPack(RulesPack);
+
+impl KoreanRulesPack {
+    /// Parse one bounded language pack without executing any supplied code.
+    ///
+    /// # Errors
+    /// Returns an error for invalid fields, unsupported rules, or weakened safety limits.
+    pub fn parse(bytes: &[u8]) -> Result<Self, String> {
+        parse_rules(bytes).map(Self)
+    }
+
+    /// Return identity fields for binding to a separately verified manifest.
+    #[must_use]
+    pub fn identity(&self) -> (&str, &str, u32) {
+        (
+            &self.0.pack_id,
+            &self.0.pack_version,
+            self.0.transform_version,
+        )
+    }
+
+    /// Inspect text with these validated rules.
+    ///
+    /// # Errors
+    /// Returns an error for an invalid profile.
+    pub fn inspect(&self, profile: KoreanProfile, text: &str) -> Result<KoreanInspection, String> {
+        inspect_pack(&self.0, profile, text)
+    }
+
+    /// Apply deterministic checks; this is not a proof of complete semantic equivalence.
+    ///
+    /// # Errors
+    /// Returns an error for an invalid profile.
+    pub fn verify(
+        &self,
+        profile: KoreanProfile,
+        before: &str,
+        after: &str,
+    ) -> Result<KoreanVerification, String> {
+        verify_pack(&self.0, profile, before, after)
+    }
+}
+
+fn parse_rules(bytes: &[u8]) -> Result<RulesPack, String> {
+    if bytes.len() > 2 * 1024 * 1024 {
+        return Err("Korean rules exceed the size limit".to_owned());
+    }
+    let pack: RulesPack =
+        serde_json::from_slice(bytes).map_err(|error| format!("invalid Korean rules: {error}"))?;
+    let version =
+        Regex::new(r"^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$").expect("version regex");
+    if pack.schema_version != 1
+        || pack.pack_id != "im-not-ai-korean-core"
+        || pack.pack_version.len() > 64
+        || !version.is_match(&pack.pack_version)
+        || pack.transform_version == 0
+        || pack.profiles.len() != 5
+        || pack.rules.is_empty()
+        || pack.rules.len() > 64
+    {
+        return Err("invalid Korean rule-pack identity or inventory".to_owned());
+    }
+    for (name, change_limit, touch_limit) in [
+        ("response", 0.30, 0.50),
+        ("release-note", 0.25, 0.40),
+        ("documentation", 0.25, 0.40),
+        ("technical", 0.20, 0.30),
+        ("verbatim", 0.0, 0.0),
+    ] {
+        let contract = pack
+            .profiles
+            .get(name)
+            .ok_or_else(|| format!("missing Korean profile: {name}"))?;
+        if !(0.0..=change_limit).contains(&contract.max_change_rate)
+            || !(0.0..=touch_limit).contains(&contract.max_touch_rate)
+            || (name == "verbatim" && contract.rewrite)
+        {
+            return Err(format!("Korean profile weakens its safety limits: {name}"));
+        }
+    }
+    let mut ids = BTreeSet::new();
+    for rule in &pack.rules {
+        let term_based = matches!(
+            rule.kind.as_str(),
+            "absolute"
+                | "document-frequency"
+                | "paragraph-frequency"
+                | "suffix-density"
+                | "ending-scope"
+        );
+        if rule.id.is_empty()
+            || rule.id.len() > 64
+            || !rule
+                .id
+                .bytes()
+                .all(|byte| byte.is_ascii_alphanumeric() || byte == b'-')
+            || !ids.insert(&rule.id)
+            || rule.category.is_empty()
+            || rule.category.len() > 64
+            || !matches!(rule.severity.as_str(), "S1" | "S2")
+            || (!term_based
+                && !matches!(rule.kind.as_str(), "ending-monotony" | "sentence-opening"))
+            || !(1..=10_000).contains(&rule.threshold)
+            || rule.terms.len() > 16
+            || (term_based && rule.terms.is_empty())
+            || rule.terms.iter().any(|term| {
+                term.is_empty() || term.len() > 256 || term.chars().any(char::is_control)
+            })
+        {
+            return Err(format!("invalid or unsupported Korean rule: {}", rule.id));
+        }
+    }
+    let baseline: RulesPack =
+        serde_json::from_slice(RULES_BYTES).map_err(|error| error.to_string())?;
+    for (actual, expected) in [
+        (&pack.protected_spans, &baseline.protected_spans),
+        (&pack.prohibited_intents, &baseline.prohibited_intents),
+        (&pack.allowed_hygiene, &baseline.allowed_hygiene),
+    ] {
+        if actual.len() != expected.len()
+            || actual.iter().collect::<BTreeSet<_>>() != expected.iter().collect::<BTreeSet<_>>()
+        {
+            return Err("Korean pack cannot replace the compiled integrity contract".to_owned());
+        }
+    }
+    Ok(pack)
 }
 
 /// One deterministic style finding.
@@ -159,7 +293,7 @@ pub const fn embedded_license_bytes() -> &'static [u8] {
 fn rules() -> Result<&'static RulesPack, String> {
     static RULES: OnceLock<Result<RulesPack, String>> = OnceLock::new();
     RULES
-        .get_or_init(|| serde_json::from_slice(RULES_BYTES).map_err(|error| error.to_string()))
+        .get_or_init(|| parse_rules(RULES_BYTES))
         .as_ref()
         .map_err(Clone::clone)
 }
@@ -230,6 +364,14 @@ fn compose_modern_hangul(input: &[char]) -> String {
 /// Returns an error when the embedded rules pack or selected profile is invalid.
 pub fn inspect(profile: KoreanProfile, text: &str) -> Result<KoreanInspection, String> {
     let pack = rules()?;
+    inspect_pack(pack, profile, text)
+}
+
+fn inspect_pack(
+    pack: &RulesPack,
+    profile: KoreanProfile,
+    text: &str,
+) -> Result<KoreanInspection, String> {
     let contract = profile_contract(pack, profile)?;
     let paragraphs = paragraphs(text);
     let sentences = sentences(text);
@@ -288,11 +430,21 @@ pub fn verify(
     candidate: &str,
 ) -> Result<KoreanVerification, String> {
     let pack = rules()?;
+    verify_pack(pack, profile, original, candidate)
+}
+
+fn verify_pack(
+    pack: &RulesPack,
+    profile: KoreanProfile,
+    original: &str,
+    candidate: &str,
+) -> Result<KoreanVerification, String> {
     let contract = profile_contract(pack, profile)?;
     let change_rate = bigram_change_rate(original, candidate);
     let touch_rate = line_touch_rate(original, candidate);
     let protected_spans_preserved = protected_spans(original) == protected_spans(candidate);
     let modality_preserved = modality(original) == modality(candidate);
+    let negation_preserved = negation_contexts(original) == negation_contexts(candidate);
     let mut failures = Vec::new();
     if !contract.rewrite && original != candidate {
         failures.push("verbatim-profile-changed".to_owned());
@@ -308,6 +460,9 @@ pub fn verify(
     }
     if !modality_preserved {
         failures.push("modality-changed".to_owned());
+    }
+    if !negation_preserved {
+        failures.push("negation-context-changed".to_owned());
     }
     let accepted = failures.is_empty();
     Ok(KoreanVerification {
@@ -346,9 +501,14 @@ fn paragraphs(text: &str) -> Vec<&str> {
 fn sentences(text: &str) -> Vec<String> {
     let mut values = Vec::new();
     let mut current = String::new();
-    for character in text.chars() {
+    for (index, character) in text.char_indices() {
         current.push(character);
-        if matches!(character, '.' | '!' | '?' | '。') {
+        let boundary = character != '.'
+            || text[index + character.len_utf8()..]
+                .chars()
+                .next()
+                .is_none_or(char::is_whitespace);
+        if matches!(character, '.' | '!' | '?' | '。') && boundary {
             let value = current.trim();
             if !value.is_empty() {
                 values.push(value.to_owned());
@@ -492,6 +652,24 @@ fn modality(text: &str) -> BTreeMap<&'static str, usize> {
         .collect()
 }
 
+// Preserve negative clauses conservatively, including their subject. Counting negation words
+// alone would accept swapping a prohibition between two subjects. Host review is still required
+// for semantic changes outside these explicit forms.
+fn negation_contexts(text: &str) -> Vec<String> {
+    static NEGATION: OnceLock<Regex> = OnceLock::new();
+    let pattern = NEGATION.get_or_init(|| {
+        Regex::new(
+            r"않|지\s*(?:못|말|마)|(?:^|\s)안\s|(?:^|\s)못(?:\s|하|해|했|할|한|합)|없|아니|아닙|아닌|아닐|아님|불가|금지",
+        )
+        .expect("negation regex")
+    });
+    sentences(text)
+        .into_iter()
+        .filter(|sentence| pattern.is_match(sentence))
+        .map(|sentence| sentence.split_whitespace().collect::<Vec<_>>().join(" "))
+        .collect()
+}
+
 fn bigram_counts(text: &str) -> BTreeMap<(char, char), usize> {
     let characters = text.chars().collect::<Vec<_>>();
     let mut counts = BTreeMap::new();
@@ -541,7 +719,74 @@ fn ratio(numerator: usize, denominator: usize) -> f64 {
 
 #[cfg(test)]
 mod tests {
-    use super::{inspect, sanitize_text, verify, KoreanProfile};
+    use super::{inspect, sanitize_text, verify, KoreanProfile, KoreanRulesPack};
+
+    #[test]
+    fn rules_reject_invalid_shape_limits_and_weakened_integrity() {
+        let source: serde_json::Value =
+            serde_json::from_slice(super::RULES_BYTES).expect("embedded rules");
+        for (pointer, value) in [
+            ("/schema_version", serde_json::json!(9)),
+            ("/rules/0/threshold", serde_json::json!(0)),
+            ("/rules/0/kind", serde_json::json!("unknown")),
+            ("/profiles/response/max_change_rate", serde_json::json!(1.0)),
+            ("/profiles/verbatim/rewrite", serde_json::json!(true)),
+            ("/protected_spans", serde_json::json!([])),
+        ] {
+            let mut candidate = source.clone();
+            *candidate.pointer_mut(pointer).expect("field") = value;
+            assert!(
+                KoreanRulesPack::parse(&serde_json::to_vec(&candidate).expect("bytes")).is_err(),
+                "{pointer}"
+            );
+        }
+        assert!(KoreanRulesPack::parse(b"{}").is_err());
+        assert!(KoreanRulesPack::parse(super::RULES_BYTES).is_ok());
+    }
+
+    #[test]
+    fn negation_context_preserves_polarity_and_subject_without_claiming_full_semantics() {
+        let prefix =
+            "검토 결과와 저장 위치를 확인했습니다. 나머지 설정과 실행 순서는 그대로 유지합니다. ";
+        for (before, after) in [
+            (
+                "원본 v1.2는 삭제하지 않습니다.",
+                "사본 v1.2는 삭제하지 않습니다.",
+            ),
+            (
+                "이 설정은 자동 삭제가 아닐 것입니다.",
+                "이 설정은 자동 삭제가 맞을 것입니다.",
+            ),
+            (
+                "이 설정은 파일을 삭제 못합니다.",
+                "이 설정은 파일을 삭제합니다.",
+            ),
+            ("파일을 삭제하지 않습니다.", "파일을 삭제합니다."),
+            ("파일을 안 지웁니다.", "파일을 지웁니다."),
+            (
+                "원본은 삭제하지 않습니다. 사본은 삭제합니다.",
+                "원본은 삭제합니다. 사본은 삭제하지 않습니다.",
+            ),
+        ] {
+            let result = verify(
+                KoreanProfile::Response,
+                &format!("{prefix}{before}"),
+                &format!("{prefix}{after}"),
+            )
+            .expect("verification");
+            assert!(!result.accepted);
+            assert!(result
+                .failures
+                .iter()
+                .any(|failure| failure == "negation-context-changed"));
+        }
+        let text = "안내 문서에서 단어의 뜻을 확인했습니다.";
+        assert!(
+            verify(KoreanProfile::Response, text, text)
+                .expect("unchanged")
+                .accepted
+        );
+    }
 
     #[test]
     fn detects_frequency_and_absolute_patterns() {

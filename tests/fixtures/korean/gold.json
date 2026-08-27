@@ -40,6 +40,20 @@
   ],
   "verification_cases": [
     {
+      "id": "negation-removal",
+      "profile": "response",
+      "before": "검토 결과와 저장 위치를 확인했습니다. 이 설정은 파일을 삭제하지 않습니다. 나머지 설정과 실행 순서는 그대로 유지합니다.",
+      "after": "검토 결과와 저장 위치를 확인했습니다. 이 설정은 파일을 삭제합니다. 나머지 설정과 실행 순서는 그대로 유지합니다.",
+      "accepted": false
+    },
+    {
+      "id": "negation-subject-swap",
+      "profile": "response",
+      "before": "검토 결과와 저장 위치를 확인했습니다. 원본은 삭제하지 않습니다. 사본은 삭제합니다.",
+      "after": "검토 결과와 저장 위치를 확인했습니다. 원본은 삭제합니다. 사본은 삭제하지 않습니다.",
+      "accepted": false
+    },
+    {
       "id": "safe-local-edit",
       "profile": "response",
       "before": "`hive test`는 12.5%를 기록했다. [근거](https://example.com)는 “유지해야 한다”라고 썼다.",

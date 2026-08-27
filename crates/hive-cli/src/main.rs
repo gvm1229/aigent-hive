@@ -1636,14 +1636,14 @@ fn execute_hook_capability(
         "derived-state-invalidation" => derived_state_invalidation(target, input),
         "checkpoint-reminder" => checkpoint_reminder(target, input),
         "continue-active-run" => continue_active_run(target, input),
-        "validate-korean-output" => validate_korean_output(input),
+        "validate-korean-output" => validate_korean_output(target, input),
         _ => Err(RenderError::Unsupported(format!(
             "fallback hook capability is unsupported: {capability}"
         ))),
     }
 }
 
-fn validate_korean_output(input: &HookInput) -> Result<HookResult, RenderError> {
+fn validate_korean_output(target: &Path, input: &HookInput) -> Result<HookResult, RenderError> {
     if !matches!(input.event.as_str(), "Stop" | "AfterAgent") {
         return Err(RenderError::Unsupported(
             "validate-korean-output requires Stop or AfterAgent".to_owned(),
@@ -1663,7 +1663,9 @@ fn validate_korean_output(input: &HookInput) -> Result<HookResult, RenderError> 
         input.korean_profile.as_deref().unwrap_or("response"),
     )
     .map_err(RenderError::Input)?;
-    let inspection = hive_core::korean::inspect(profile, message).map_err(RenderError::Internal)?;
+    let inspection = korean::rules_for_target(target)
+        .and_then(|pack| pack.inspect(profile, message))
+        .map_err(RenderError::Internal)?;
     if inspection.korean_character_count < 10 || inspection.findings.is_empty() {
         return Ok(HookResult {
             schema_version: 1,
@@ -2618,6 +2620,7 @@ mod tests {
 
     #[test]
     fn korean_output_hook_requests_only_one_bounded_retry() {
+        let target = tempfile::tempdir().expect("hook target");
         let input = HookInput {
             schema_version: 1,
             event: "Stop".to_owned(),
@@ -2641,14 +2644,17 @@ mod tests {
             korean_profile: Some("response".to_owned()),
             korean_retry_count: Some(0),
         };
-        let retry = validate_korean_output(&input).expect("first inspection");
+        let retry = validate_korean_output(target.path(), &input).expect("first inspection");
         assert_eq!(retry.decision, "block");
         assert_eq!(retry.code, "hive.hook-korean-output-retry");
 
-        let exhausted = validate_korean_output(&HookInput {
-            korean_retry_count: Some(1),
-            ..input
-        })
+        let exhausted = validate_korean_output(
+            target.path(),
+            &HookInput {
+                korean_retry_count: Some(1),
+                ..input
+            },
+        )
         .expect("bounded retry");
         assert_eq!(exhausted.decision, "allow");
         assert_eq!(exhausted.code, "hive.hook-korean-output-retry-exhausted");

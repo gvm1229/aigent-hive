@@ -13,6 +13,9 @@ or explicit Korean rewriting task.
    frequency-conditional tendencies as banned expressions.
 4. Inspect the finished text against the active Korean profile. Rewrite only reported local spans,
    then verify against the exact draft.
+   Bind `hive korean inspect|verify` to the intended consumer with `--target`; from the source
+   workspace omit it to use embedded rules. Check changed claims and names independently: a
+   deterministic pass alone does not establish semantic equivalence.
 5. Use the exact draft when deterministic verification fails. Limit automatic rewrite to one
    retry. A host hook may request that retry but never claims direct final-response replacement.
 

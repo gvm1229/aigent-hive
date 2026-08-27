@@ -2,12 +2,13 @@
 
 use super::{emit_action_result, update_discovery::fetch_https, ActionResult, Evidence};
 use hive_core::korean::{
-    embedded_manifest_bytes, embedded_rules_bytes, inspect, sanitize_text, verify, KoreanProfile,
+    embedded_manifest_bytes, embedded_rules_bytes, sanitize_text, KoreanProfile, KoreanRulesPack,
 };
 use hive_core::{ensure_consumer_target, ensure_no_symlink_ancestors, sha256_digest};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::fs;
+use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
@@ -19,8 +20,8 @@ const USAGE: &str = "\
 Inspect and verify Korean text without calling a model provider.
 
 USAGE:
-    hive korean inspect --profile response|release-note|documentation|technical|verbatim --input <file> --output json
-    hive korean verify --profile response|release-note|documentation|technical|verbatim --before <file> --after <file> --output json
+    hive korean inspect --profile response|release-note|documentation|technical|verbatim --input <file> [--target <consumer>] --output json
+    hive korean verify --profile response|release-note|documentation|technical|verbatim --before <file> --after <file> [--target <consumer>] --output json
     hive korean sanitize --input <file> --output-file <file> --output json
     hive korean pack check --output json
     hive korean pack status --target <consumer> --output json
@@ -105,13 +106,13 @@ pub(crate) fn run(arguments: &[String]) -> ExitCode {
 }
 
 fn run_inspect(arguments: &[String]) -> Result<ActionResult, String> {
-    let options = parse_options(arguments, &["--profile", "--input", "--output"])?;
+    let options = parse_options(arguments, &["--profile", "--input", "--target", "--output"])?;
     require_json(&options)?;
     let profile = KoreanProfile::parse(required(&options, "--profile")?)?;
     let path = PathBuf::from(required(&options, "--input")?);
     let bytes = read_regular_bounded(&path, MAX_TEXT_BYTES, "Korean input")?;
     let text = std::str::from_utf8(&bytes).map_err(|_| "Korean input must be UTF-8".to_owned())?;
-    let result = inspect(profile, text)?;
+    let result = selected_pack(&options)?.inspect(profile, text)?;
     Ok(success(
         "InspectKorean",
         "hive.korean-inspection-complete",
@@ -126,7 +127,10 @@ fn run_inspect(arguments: &[String]) -> Result<ActionResult, String> {
 }
 
 fn run_verify(arguments: &[String]) -> Result<ActionResult, String> {
-    let options = parse_options(arguments, &["--profile", "--before", "--after", "--output"])?;
+    let options = parse_options(
+        arguments,
+        &["--profile", "--before", "--after", "--target", "--output"],
+    )?;
     require_json(&options)?;
     let profile = KoreanProfile::parse(required(&options, "--profile")?)?;
     let before_path = PathBuf::from(required(&options, "--before")?);
@@ -137,7 +141,7 @@ fn run_verify(arguments: &[String]) -> Result<ActionResult, String> {
         std::str::from_utf8(&before).map_err(|_| "Korean source must be UTF-8".to_owned())?;
     let candidate =
         std::str::from_utf8(&after).map_err(|_| "Korean candidate must be UTF-8".to_owned())?;
-    let result = verify(profile, source, candidate)?;
+    let result = selected_pack(&options)?.verify(profile, source, candidate)?;
     let accepted = result.accepted;
     Ok(ActionResult {
         schema_version: 1,
@@ -154,7 +158,8 @@ fn run_verify(arguments: &[String]) -> Result<ActionResult, String> {
             "hive.korean-verification-failed"
         },
         message: if accepted {
-            "Korean candidate preserved every deterministic invariant".to_owned()
+            "Korean candidate passed deterministic checks; host semantic review is still required"
+                .to_owned()
         } else {
             "Korean candidate requires exact-source fallback".to_owned()
         },
@@ -186,6 +191,12 @@ fn run_sanitize(arguments: &[String]) -> Result<ActionResult, String> {
         return Err("sanitize output must differ from its input".to_owned());
     }
     let bytes = read_regular_bounded(&input, MAX_TEXT_BYTES, "Korean input")?;
+    if output.exists()
+        && fs::canonicalize(&input).map_err(|error| error.to_string())?
+            == fs::canonicalize(&output).map_err(|error| error.to_string())?
+    {
+        return Err("sanitize output must differ from its input".to_owned());
+    }
     let text = std::str::from_utf8(&bytes).map_err(|_| "Korean input must be UTF-8".to_owned())?;
     let sanitized = sanitize_text(text);
     atomic_write(&output, sanitized.as_bytes())?;
@@ -325,6 +336,8 @@ fn pack_activate(arguments: &[String]) -> Result<ActionResult, String> {
     if required(&options, "--consent-digest")? != expected {
         return Err("Korean pack consent digest does not match the exact preview".to_owned());
     }
+    let _lock = pack_lock(&target)?;
+    let prior = load_pointer(&target)?;
     let manifest_digest = sha256_digest(&manifest_bytes);
     let suffix = &manifest_digest[7..19];
     let relative = format!(
@@ -335,13 +348,9 @@ fn pack_activate(arguments: &[String]) -> Result<ActionResult, String> {
         .map_err(|error| error.to_string())?;
     let destination = target.join(&relative);
     if !destination.exists() {
-        let staging = target
-            .join(".hive/language-packs/staging")
-            .join(format!("{}-{suffix}", manifest.pack_version));
-        if staging.exists() {
-            return Err("Korean pack staging path already exists".to_owned());
-        }
-        fs::create_dir_all(&staging).map_err(|error| error.to_string())?;
+        let staging_dir = tempfile::tempdir_in(target.join(".hive/language-packs"))
+            .map_err(|error| error.to_string())?;
+        let staging = staging_dir.path();
         fs::write(staging.join("manifest.json"), &manifest_bytes)
             .map_err(|error| error.to_string())?;
         fs::write(staging.join("rules.json"), &rules_bytes).map_err(|error| error.to_string())?;
@@ -352,17 +361,29 @@ fn pack_activate(arguments: &[String]) -> Result<ActionResult, String> {
         )?;
         fs::write(staging.join("UPSTREAM-LICENSE.txt"), license)
             .map_err(|error| error.to_string())?;
+        validate_candidate(staging)?;
         fs::create_dir_all(
             destination
                 .parent()
                 .ok_or_else(|| "invalid pack destination".to_owned())?,
         )
         .map_err(|error| error.to_string())?;
-        fs::rename(&staging, &destination).map_err(|error| error.to_string())?;
+        fs::rename(staging, &destination).map_err(|error| error.to_string())?;
     }
-    let previous = load_pointer(&target)?
-        .as_ref()
-        .map(PackPointerSnapshot::from);
+    let (stored, stored_manifest, stored_rules) = validate_candidate(&destination)?;
+    if stored.pack_version != manifest.pack_version
+        || sha256_digest(&stored_manifest) != manifest_digest
+        || sha256_digest(&stored_rules) != sha256_digest(&rules_bytes)
+    {
+        return Err(
+            "existing Korean pack generation differs from the approved candidate".to_owned(),
+        );
+    }
+    let previous = match &prior {
+        Some(value) if value.manifest_digest == manifest_digest => value.previous.clone(),
+        Some(value) => Some(Box::new(PackPointerSnapshot::from(value))),
+        None => None,
+    };
     let pointer = PackPointer {
         schema_version: 1,
         pack_id: manifest.pack_id,
@@ -370,7 +391,7 @@ fn pack_activate(arguments: &[String]) -> Result<ActionResult, String> {
         manifest_digest: manifest_digest.clone(),
         rules_digest: sha256_digest(&rules_bytes),
         relative: relative.clone(),
-        previous: previous.map(Box::new),
+        previous,
     };
     let pointer_path = target.join(".hive/language-packs/current.json");
     atomic_json(&pointer_path, &pointer)?;
@@ -400,16 +421,25 @@ fn pack_rollback(arguments: &[String]) -> Result<ActionResult, String> {
     let options = parse_options(arguments, &["--target", "--output"])?;
     require_json(&options)?;
     let target = consumer_target(required(&options, "--target")?)?;
+    let _lock = pack_lock(&target)?;
     let current =
-        load_pointer(&target)?.ok_or_else(|| "no activated Korean pack exists".to_owned())?;
-    let previous = current
-        .previous
-        .clone()
-        .ok_or_else(|| "no prior Korean pack exists for rollback".to_owned())?;
-    let destination = target.join(&previous.relative);
-    if !destination.join("manifest.json").is_file() || !destination.join("rules.json").is_file() {
-        return Err("prior Korean pack is incomplete".to_owned());
-    }
+        read_pointer(&target)?.ok_or_else(|| "no activated Korean pack exists".to_owned())?;
+    let Some(previous) = current.previous.clone() else {
+        fs::remove_file(target.join(".hive/language-packs/current.json"))
+            .map_err(|error| error.to_string())?;
+        let mut result = success(
+            "RollbackKoreanPack",
+            "hive.korean-pack-rolled-back",
+            "embedded Korean pack restored",
+            json!({"pack_version": embedded_manifest()?.pack_version, "rolled_back": true}),
+            Vec::new(),
+        );
+        result
+            .changed_paths
+            .push(".hive/language-packs/current.json".to_owned());
+        return Ok(result);
+    };
+    load_generation(&target, &previous)?;
     let pointer = PackPointer {
         schema_version: 1,
         pack_id: previous.pack_id,
@@ -417,7 +447,9 @@ fn pack_rollback(arguments: &[String]) -> Result<ActionResult, String> {
         manifest_digest: previous.manifest_digest,
         rules_digest: previous.rules_digest,
         relative: previous.relative,
-        previous: Some(Box::new(PackPointerSnapshot::from(&current))),
+        previous: load_generation(&target, &PackPointerSnapshot::from(&current))
+            .ok()
+            .map(|_| Box::new(PackPointerSnapshot::from(&current))),
     };
     atomic_json(&target.join(".hive/language-packs/current.json"), &pointer)?;
     Ok(ActionResult {
@@ -487,6 +519,25 @@ fn validate_manifest(
     rules: &[u8],
     manifest_bytes: &[u8],
 ) -> Result<(), String> {
+    let schema: Value = serde_json::from_str(include_str!(
+        "../../../schemas/korean-language-pack.schema.json"
+    ))
+    .map_err(|error| error.to_string())?;
+    let value: Value = serde_json::from_slice(manifest_bytes).map_err(|error| error.to_string())?;
+    jsonschema::validator_for(&schema)
+        .map_err(|error| error.to_string())?
+        .validate(&value)
+        .map_err(|error| format!("invalid Korean pack manifest: {error}"))?;
+    let rules_pack = KoreanRulesPack::parse(rules)?;
+    if rules_pack.identity()
+        != (
+            manifest.pack_id.as_str(),
+            manifest.pack_version.as_str(),
+            manifest.transform_version,
+        )
+    {
+        return Err("Korean manifest and rules identities differ".to_owned());
+    }
     if manifest.schema_version != 1
         || manifest.pack_id != "im-not-ai-korean-core"
         || manifest.transform_version == 0
@@ -538,17 +589,122 @@ fn consent_digest(target: &Path, manifest: &[u8], rules: &[u8]) -> Result<String
 }
 
 fn load_pointer(target: &Path) -> Result<Option<PackPointer>, String> {
+    let pointer = read_pointer(target)?;
+    if let Some(value) = &pointer {
+        load_generation(target, &PackPointerSnapshot::from(value))?;
+    }
+    Ok(pointer)
+}
+
+fn read_pointer(target: &Path) -> Result<Option<PackPointer>, String> {
+    ensure_no_symlink_ancestors(target, Path::new(".hive/language-packs/current.json"))
+        .map_err(|error| error.to_string())?;
     let path = target.join(".hive/language-packs/current.json");
     match fs::symlink_metadata(&path) {
         Ok(metadata) if metadata.is_file() && !metadata.file_type().is_symlink() => {
             let bytes = read_regular_bounded(&path, MAX_PACK_BYTES, "Korean pack pointer")?;
-            serde_json::from_slice(&bytes)
-                .map(Some)
-                .map_err(|error| format!("Korean pack pointer is invalid: {error}"))
+            let pointer: PackPointer = serde_json::from_slice(&bytes)
+                .map_err(|error| format!("Korean pack pointer is invalid: {error}"))?;
+            if pointer.schema_version != 1 {
+                return Err("invalid Korean pack pointer version".to_owned());
+            }
+            validate_snapshot(&PackPointerSnapshot::from(&pointer))?;
+            if let Some(previous) = &pointer.previous {
+                validate_snapshot(previous)?;
+            }
+            Ok(Some(pointer))
         }
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(None),
         _ => Err("Korean pack pointer is not a regular file".to_owned()),
     }
+}
+
+fn validate_snapshot(pointer: &PackPointerSnapshot) -> Result<(), String> {
+    let valid_digest = |value: &str| {
+        value.len() == 71
+            && value.starts_with("sha256:")
+            && value[7..]
+                .bytes()
+                .all(|byte| byte.is_ascii_hexdigit() && !byte.is_ascii_uppercase())
+    };
+    if pointer.pack_id != "im-not-ai-korean-core"
+        || !valid_digest(&pointer.manifest_digest)
+        || !valid_digest(&pointer.rules_digest)
+        || pointer.pack_version.len() > 64
+        || pointer.pack_version.split('.').count() != 3
+        || pointer
+            .pack_version
+            .split('.')
+            .any(|part| part.is_empty() || !part.bytes().all(|byte| byte.is_ascii_digit()))
+        || pointer.relative
+            != format!(
+                ".hive/language-packs/packs/{}-{}",
+                pointer.pack_version,
+                &pointer.manifest_digest[7..19]
+            )
+    {
+        return Err("invalid Korean generation pointer binding".to_owned());
+    }
+    Ok(())
+}
+
+fn load_generation(
+    target: &Path,
+    pointer: &PackPointerSnapshot,
+) -> Result<KoreanRulesPack, String> {
+    validate_snapshot(pointer)?;
+    ensure_no_symlink_ancestors(target, Path::new(&pointer.relative))
+        .map_err(|error| error.to_string())?;
+    let (manifest, bytes, rules) = validate_candidate(&target.join(&pointer.relative))?;
+    if sha256_digest(&bytes) != pointer.manifest_digest
+        || sha256_digest(&rules) != pointer.rules_digest
+        || manifest.pack_id != pointer.pack_id
+        || manifest.pack_version != pointer.pack_version
+    {
+        return Err("activated Korean generation failed digest verification".to_owned());
+    }
+    KoreanRulesPack::parse(&rules)
+}
+
+fn selected_pack(options: &Options<'_>) -> Result<KoreanRulesPack, String> {
+    let target = if let Some(value) = optional(options, "--target") {
+        consumer_target(value)?
+    } else {
+        std::env::current_dir().map_err(|error| error.to_string())?
+    };
+    rules_for_target(&target)
+}
+
+pub(crate) fn rules_for_target(target: &Path) -> Result<KoreanRulesPack, String> {
+    if !target.join("hive-source.json").exists() {
+        if let Some(pointer) = load_pointer(target)? {
+            return load_generation(target, &PackPointerSnapshot::from(&pointer));
+        }
+    }
+    KoreanRulesPack::parse(embedded_rules_bytes())
+}
+
+fn pack_lock(target: &Path) -> Result<fs::File, String> {
+    let relative = Path::new(".hive/language-packs/.lock");
+    ensure_no_symlink_ancestors(target, relative).map_err(|error| error.to_string())?;
+    fs::create_dir_all(target.join(".hive/language-packs")).map_err(|error| error.to_string())?;
+    let file = fs::OpenOptions::new()
+        .read(true)
+        .write(true)
+        .create(true)
+        .truncate(false)
+        .open(target.join(relative))
+        .map_err(|error| error.to_string())?;
+    for _ in 0..20 {
+        match file.try_lock() {
+            Ok(()) => return Ok(file),
+            Err(std::fs::TryLockError::WouldBlock) => {
+                std::thread::sleep(std::time::Duration::from_millis(50));
+            }
+            Err(error) => return Err(format!("cannot lock Korean pack: {error}")),
+        }
+    }
+    Err("Korean pack is busy; retry after the current operation completes".to_owned())
 }
 
 fn consumer_target(value: &str) -> Result<PathBuf, String> {
@@ -558,6 +714,7 @@ fn consumer_target(value: &str) -> Result<PathBuf, String> {
 }
 
 fn read_regular_bounded(path: &Path, maximum: u64, label: &str) -> Result<Vec<u8>, String> {
+    reject_symlink_ancestors(path)?;
     let metadata =
         fs::symlink_metadata(path).map_err(|error| format!("cannot inspect {label}: {error}"))?;
     if !metadata.is_file() || metadata.file_type().is_symlink() || metadata.len() > maximum {
@@ -567,13 +724,41 @@ fn read_regular_bounded(path: &Path, maximum: u64, label: &str) -> Result<Vec<u8
 }
 
 fn atomic_write(path: &Path, bytes: &[u8]) -> Result<(), String> {
+    reject_symlink_ancestors(path)?;
     let parent = path
         .parent()
         .ok_or_else(|| "output has no parent".to_owned())?;
     fs::create_dir_all(parent).map_err(|error| error.to_string())?;
-    let temporary = path.with_extension("tmp");
-    fs::write(&temporary, bytes).map_err(|error| error.to_string())?;
-    fs::rename(temporary, path).map_err(|error| error.to_string())
+    let mut temporary =
+        tempfile::NamedTempFile::new_in(parent).map_err(|error| error.to_string())?;
+    temporary
+        .write_all(bytes)
+        .map_err(|error| error.to_string())?;
+    temporary
+        .as_file()
+        .sync_all()
+        .map_err(|error| error.to_string())?;
+    temporary
+        .persist(path)
+        .map(|_| ())
+        .map_err(|error| error.to_string())
+}
+
+fn reject_symlink_ancestors(path: &Path) -> Result<(), String> {
+    let absolute = hive_core::normalize_platform_root(
+        &std::path::absolute(path).map_err(|error| error.to_string())?,
+    );
+    for ancestor in absolute.ancestors() {
+        match fs::symlink_metadata(ancestor) {
+            Ok(metadata) if metadata.file_type().is_symlink() => {
+                return Err("Korean path has a symbolic link ancestor".to_owned())
+            }
+            Ok(_) => (),
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => (),
+            Err(error) => return Err(error.to_string()),
+        }
+    }
+    Ok(())
 }
 
 fn atomic_json<T: Serialize>(path: &Path, value: &T) -> Result<(), String> {
@@ -664,6 +849,64 @@ mod tests {
     use super::{consent_digest, embedded_manifest, validate_candidate};
     use std::fs;
     use tempfile::TempDir;
+
+    #[test]
+    fn activated_pack_drives_host_hook_inspection() {
+        let root = TempDir::new().expect("root");
+        let target = root.path().join("consumer");
+        let candidate = root.path().join("candidate");
+        fs::create_dir(&target).expect("consumer");
+        fs::create_dir(&candidate).expect("candidate");
+        let mut rules: serde_json::Value =
+            serde_json::from_slice(hive_core::korean::embedded_rules_bytes()).expect("rules");
+        rules["pack_version"] = "2.3.3".into();
+        rules["rules"][0]["threshold"] = 1.into();
+        let bytes = serde_json::to_vec(&rules).expect("rule bytes");
+        let mut manifest: serde_json::Value =
+            serde_json::from_slice(hive_core::korean::embedded_manifest_bytes()).expect("manifest");
+        manifest["pack_version"] = "2.3.3".into();
+        manifest["rules_digest"] = hive_core::sha256_digest(&bytes).into();
+        fs::write(candidate.join("rules.json"), &bytes).expect("rules");
+        fs::write(
+            candidate.join("manifest.json"),
+            serde_json::to_vec(&manifest).expect("manifest bytes"),
+        )
+        .expect("manifest");
+        fs::write(
+            candidate.join("UPSTREAM-LICENSE.txt"),
+            hive_core::korean::embedded_license_bytes(),
+        )
+        .expect("license");
+        let options = [
+            "--target",
+            target.to_str().expect("target"),
+            "--candidate",
+            candidate.to_str().expect("candidate"),
+            "--output",
+            "json",
+        ]
+        .map(str::to_owned);
+        let preview = super::pack_preview(&options).expect("preview");
+        let consent = preview.data.expect("preview data")["consent_digest"]
+            .as_str()
+            .expect("consent")
+            .to_owned();
+        let mut activate = options.to_vec();
+        activate.extend([
+            "--consent-digest".to_owned(),
+            consent,
+            "--confirm-pack".to_owned(),
+        ]);
+        super::pack_activate(&activate).expect("activate");
+        let input = serde_json::from_value(serde_json::json!({
+            "schema_version": 1, "event": "Stop", "korean_profile": "response",
+            "last_assistant_message": "분석을 통해 결과를 확인했습니다."
+        }))
+        .expect("hook input");
+        let result = super::super::validate_korean_output(&target, &input).expect("hook");
+        assert_eq!(result.decision, "block");
+        assert!(result.message.contains("A-2"));
+    }
 
     #[test]
     fn embedded_pack_is_pinned_and_raw_install_is_disabled() {

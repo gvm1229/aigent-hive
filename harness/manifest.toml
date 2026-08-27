@@ -114,6 +114,11 @@ pattern = ".hive/runtime/**"
 ownership = "ephemeral-runtime"
 
 [[paths]]
+pattern = ".hive/language-packs/**"
+ownership = "user-consent-protected"
+source = "approved-korean-pack"
+
+[[paths]]
 pattern = "AGENTS.md"
 ownership = "shared-marker"
 marker_start = "<!-- AIGENT-HIVE:START -->"
