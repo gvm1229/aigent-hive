@@ -1278,6 +1278,42 @@ impl RagStore {
         })
     }
 
+    /// Consume one caller-owned approval while the canonical authorization lock is held,
+    /// then export its exact confidential partition from the same validated generation.
+    /// The callback must not reacquire this store's knowledge lock.
+    ///
+    /// # Errors
+    /// Rejects invalid snapshots, failed authorization, and invalid corpus visibility.
+    pub fn authorized_semantic_corpus(
+        &self,
+        request: &RetrievalRequest,
+        visibility: RagVisibility,
+        authorize: impl FnOnce(&str) -> Result<(), WikiError>,
+    ) -> Result<crate::rag::SemanticCorpus, WikiError> {
+        self.with_retrieval_snapshot(|bytes, manifest, registry| {
+            crate::rag::semantic_partitions_serialized(bytes, manifest, registry, request)?;
+            Ok((|| {
+                let current = self.load_canonical_snapshot(manifest.generation)
+                    .and_then(|canonical| crate::rag::canonical_manifest_digest(&canonical).map_err(rag_error));
+                if !current.is_ok_and(|digest| digest == manifest.logical_digest) {
+                    return Err(WikiError::Verification(
+                        "canonical confidential input is unavailable or changed before authorization".to_owned(),
+                    ));
+                }
+                authorize(&manifest.logical_digest)?;
+                let chunks = crate::rag::semantic_corpus_serialized(
+                    bytes, manifest, registry, request, visibility,
+                )
+                .map_err(rag_error)?;
+                Ok(crate::rag::SemanticCorpus {
+                    generation: manifest.generation,
+                    manifest_digest: manifest.logical_digest.clone(),
+                    chunks,
+                })
+            })())
+        })?
+    }
+
     /// Resolve vector identities only against the same current authorized RAG snapshot.
     ///
     /// # Errors
@@ -4170,6 +4206,56 @@ mod tests {
             })
             .expect("lock released after rollback");
         assert_eq!(recovered.registry.projects.len(), 2);
+    }
+
+    #[test]
+    fn confidential_corpus_callback_must_authorize_before_export() {
+        let (temporary, store) = store();
+        let mut plan = remember_plan(USER_ROOT_COLLECTION_ID, "confidential-vector", 2);
+        plan.new_claim.as_mut().expect("claim").visibility = RagVisibility::Confidential;
+        let claim = plan.new_claim.as_mut().expect("claim");
+        claim.digest = claim_digest(claim);
+        store.apply_remember_plan(&plan).expect("claim");
+        let request = RetrievalRequest {
+            scope: RetrievalScope::Collection(USER_ROOT_COLLECTION_ID.to_owned()),
+            current_collection_id: Some(USER_ROOT_COLLECTION_ID.to_owned()),
+            query: "vector build".to_owned(),
+            query_expansions: Vec::new(),
+            top_k: 100,
+            byte_budget: 4096,
+            confidential_collection_id: Some(USER_ROOT_COLLECTION_ID.to_owned()),
+        };
+        assert!(store
+            .authorized_semantic_corpus(&request, RagVisibility::Confidential, |_| Err(
+                WikiError::Conflict("not authorized".to_owned())
+            ))
+            .is_err());
+        let mut called = 0;
+        let corpus = store
+            .authorized_semantic_corpus(&request, RagVisibility::Confidential, |digest| {
+                assert!(digest.starts_with("sha256:"));
+                called += 1;
+                Ok(())
+            })
+            .expect("authorized corpus");
+        assert_eq!(called, 1);
+        assert_eq!(corpus.chunks.len(), 1);
+        assert_eq!(corpus.chunks[0].visibility, RagVisibility::Confidential);
+        std::fs::write(
+            temporary
+                .path()
+                .join(&plan.new_claim.as_ref().expect("claim").locator),
+            b"external unindexed change",
+        )
+        .expect("external change");
+        let mut consumed = false;
+        assert!(store
+            .authorized_semantic_corpus(&request, RagVisibility::Confidential, |_| {
+                consumed = true;
+                Ok(())
+            })
+            .is_err());
+        assert!(!consumed);
     }
 
     #[test]

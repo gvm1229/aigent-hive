@@ -1,7 +1,7 @@
 //! Bounded generation construction. Only verified immutable copies enter scope control.
 use super::{
-    contract_digest, invalid, io_error, optional, scope_control, value_digest, verify_runtime,
-    worker, ScopeControl, Selector, Target,
+    auth, contract_digest, invalid, io_error, optional, scope_control, value_digest,
+    verify_runtime, worker, ScopeControl, Selector, Target,
 };
 use hive_wiki::rag::{RetrievalRequest, RetrievalScope};
 use hive_wiki::store::RagStore;
@@ -40,7 +40,10 @@ struct BuildResult {
     database_digest: String,
 }
 
-fn corpus(target: &Target) -> Result<Corpus, WikiError> {
+fn corpus(
+    target: &Target,
+    authorization: Option<(&[(&str, &str)], &str)>,
+) -> Result<Corpus, WikiError> {
     match &target.selector {
         Selector::Source { language } => {
             let corpus = source::semantic_corpus(target.files.root_path(), language)?;
@@ -55,10 +58,20 @@ fn corpus(target: &Target) -> Result<Corpus, WikiError> {
                 query_expansions: Vec::new(),
                 top_k: 100,
                 byte_budget: 1024 * 1024,
-                confidential_collection_id: None,
+                confidential_collection_id: auth::confidential(target)
+                    .then(|| partition.collection_id.clone()),
             };
-            let corpus = RagStore::open(target.files.root_path())?
-                .semantic_corpus(&request, partition.visibility)?;
+            let store = RagStore::open(target.files.root_path())?;
+            let corpus = if auth::confidential(target) {
+                let (options, operation) = authorization.ok_or_else(|| {
+                    invalid("confidential corpus requires current build authorization")
+                })?;
+                store.authorized_semantic_corpus(&request, partition.visibility, |manifest| {
+                    auth::consume_locked(target, options, operation, manifest)
+                })?
+            } else {
+                store.semantic_corpus(&request, partition.visibility)?
+            };
             Ok(Corpus { manifest_digest: corpus.manifest_digest, request: Some(request),
                 chunks: corpus.chunks.into_iter().map(|hit| json!({"chunk_id":hit.chunk_id,"digest":hit.digest,"title":hit.title,"text":hit.text})).collect() })
         }
@@ -155,6 +168,7 @@ fn publish(
 }
 
 pub(super) fn rebuild(target: &Target, options: &[(&str, &str)]) -> Result<Value, WikiError> {
+    auth::validate_fields(target, options)?;
     let seconds = super::super::parse_bounded_usize(
         optional(options, "--max-seconds"),
         30,
@@ -170,7 +184,7 @@ pub(super) fn rebuild(target: &Target, options: &[(&str, &str)]) -> Result<Value
         .filter(|value| value.enabled)
         .ok_or_else(|| invalid("vector scope is disabled; preview and enable first"))?;
     verify_runtime(&target.files, &before.runtime)?;
-    let corpus = corpus(target)?;
+    let corpus = corpus(target, Some((options, "rebuild")))?;
     let expected = match optional(options, "--rebuild-mode").unwrap_or("resume") {
         "resume" => restore_staging(target, &before)?,
         "fresh" => {
@@ -195,22 +209,7 @@ pub(super) fn rebuild(target: &Target, options: &[(&str, &str)]) -> Result<Value
             return Err(error);
         }
     };
-    let result: BuildResult = serde_json::from_value(result).map_err(io_error)?;
-    if result.schema_version != 1
-        || result.chunks != corpus.chunks.len()
-        || !result.elapsed_seconds.is_finite()
-        || result.complete != (result.phase == "ready")
-        || !["ready", "embedding", "finalizing"].contains(&result.phase.as_str())
-        || target
-            .files
-            .database_digest(&target.scope_id, DatabaseKind::Staging)?
-            != result.database_digest
-    {
-        target.files.quarantine_staging(&target.scope_id)?;
-        return Err(invalid(
-            "vector worker output differs from its closed database",
-        ));
-    }
+    let result = validate_build_result(target, corpus.chunks.len(), result)?;
     let snapshot = Snapshot {
         id: VectorFiles::fresh_snapshot_id(),
         database_digest: result.database_digest,
@@ -231,6 +230,10 @@ pub(super) fn rebuild(target: &Target, options: &[(&str, &str)]) -> Result<Value
         &snapshot.database_digest,
     )?;
     let mut after = before.clone();
+    after.revision = before
+        .revision
+        .checked_add(1)
+        .ok_or_else(|| invalid("vector control revision is exhausted"))?;
     if result.complete {
         after.previous = after.active.take();
         after.active = Some(snapshot.clone());
@@ -251,11 +254,15 @@ pub(super) fn rebuild(target: &Target, options: &[(&str, &str)]) -> Result<Value
         json!({"complete":result.complete,"phase":result.phase,"embedded":result.embedded,"remaining":result.remaining,
         "chunks":result.chunks,"snapshot_id":snapshot.id,"database_digest":snapshot.database_digest,
         "manifest_digest":snapshot.manifest_digest,"worker_seconds":result.elapsed_seconds,
-        "fts_unchanged":true,"changed_paths":[target.files.data_relative(),target.files.control_relative()]}),
+        "requires_new_authorization":auth::confidential(target) && !result.complete,
+        "fts_unchanged":true,"changed_paths":changed_paths(target,true)}),
     )
 }
 
 pub(super) fn status(target: &Target, control: &ScopeControl) -> Value {
+    if auth::confidential(target) {
+        return json!({"index_ready":null,"requires_current_action":true});
+    }
     let Some(active) = control
         .active
         .as_ref()
@@ -268,22 +275,52 @@ pub(super) fn status(target: &Target, control: &ScopeControl) -> Value {
         .database_digest(&target.scope_id, DatabaseKind::Generation(&active.id))
         .is_ok_and(|digest| digest == active.database_digest);
     let current =
-        corpus(target).is_ok_and(|corpus| corpus.manifest_digest == active.manifest_digest);
+        corpus(target, None).is_ok_and(|corpus| corpus.manifest_digest == active.manifest_digest);
     json!({"index_ready":verified && current,"snapshot_verified":verified,"canonical_current":current,
         "checkpoint_available":control.checkpoint.is_some()})
 }
 
-pub(super) fn rollback(target: &Target) -> Result<Value, WikiError> {
+fn validate_build_result(
+    target: &Target,
+    chunks: usize,
+    value: Value,
+) -> Result<BuildResult, WikiError> {
+    let result = (|| {
+        let result: BuildResult = serde_json::from_value(value).map_err(io_error)?;
+        if result.schema_version != 1
+            || result.chunks != chunks
+            || !result.elapsed_seconds.is_finite()
+            || result.complete != (result.phase == "ready")
+            || !["ready", "embedding", "finalizing"].contains(&result.phase.as_str())
+            || target
+                .files
+                .database_digest(&target.scope_id, DatabaseKind::Staging)?
+                != result.database_digest
+        {
+            return Err(invalid(
+                "vector worker output differs from its closed database",
+            ));
+        }
+        Ok(result)
+    })();
+    if result.is_err() {
+        target.files.quarantine_staging(&target.scope_id)?;
+    }
+    result
+}
+
+pub(super) fn rollback(target: &Target, options: &[(&str, &str)]) -> Result<Value, WikiError> {
+    auth::validate_fields(target, options)?;
     let _lease = target.files.writer(Some(&target.scope_id))?;
     let (control, digest) = scope_control(target)?;
     let before = control.ok_or_else(|| invalid("vector scope has no rollback state"))?;
+    verify_runtime(&target.files, &before.runtime)?;
+    let corpus = corpus(target, Some((options, "rollback")))?;
     let previous = before
         .previous
         .as_ref()
         .filter(|snapshot| compatible(snapshot, &before))
         .ok_or_else(|| invalid("no compatible prior vector generation"))?;
-    verify_runtime(&target.files, &before.runtime)?;
-    let corpus = corpus(target)?;
     if previous.manifest_digest != corpus.manifest_digest
         || previous.contract_digest != contract_digest()?
         || target
@@ -296,6 +333,10 @@ pub(super) fn rollback(target: &Target) -> Result<Value, WikiError> {
         ));
     }
     let mut after = before.clone();
+    after.revision = before
+        .revision
+        .checked_add(1)
+        .ok_or_else(|| invalid("vector control revision is exhausted"))?;
     after.active = after.previous.take();
     after.previous.clone_from(&before.active);
     after.checkpoint = None;
@@ -309,8 +350,21 @@ pub(super) fn rollback(target: &Target) -> Result<Value, WikiError> {
         &after,
     )?;
     Ok(
-        json!({"rolled_back":true,"enabled":after.enabled,"fts_unchanged":true,"changed_paths":[target.files.control_relative()]}),
+        json!({"rolled_back":true,"enabled":after.enabled,"fts_unchanged":true,"changed_paths":changed_paths(target,false)}),
     )
+}
+
+fn changed_paths(target: &Target, data: bool) -> Vec<&std::path::Path> {
+    let mut paths = vec![target.files.control_relative()];
+    if data {
+        paths.push(target.files.data_relative());
+    }
+    if auth::confidential(target) {
+        paths.push(std::path::Path::new(
+            super::super::KNOWLEDGE_AUTHORIZATION_RELATIVE,
+        ));
+    }
+    paths
 }
 
 #[cfg(test)]
@@ -369,6 +423,7 @@ mod tests {
         };
         let control = ScopeControl {
             schema_version: 1,
+            revision: 1,
             selector: target.selector.clone(),
             enabled: true,
             consent_digest: sha256_digest(b"consent"),

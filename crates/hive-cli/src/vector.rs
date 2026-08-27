@@ -13,6 +13,8 @@ use std::ffi::OsString;
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 use std::time::Duration;
+#[path = "vector_auth.rs"]
+mod auth;
 #[path = "vector_index.rs"]
 mod index;
 #[path = "vector_query.rs"]
@@ -30,10 +32,12 @@ const BOOTSTRAP: &str = include_str!("vector_runtime.py");
 const WORKER: &str = include_str!("vector_helper.py");
 const LOCK: &str = include_str!("vector-runtime-lock.json");
 const USAGE: &str = "Optional local semantic search; FTS remains the default.\n\
-    hive knowledge vector preview|enable|status|rebuild|rollback|disable --user-root <dir> --target <dir> --collection <id> --visibility shared|project-private [--python <absolute-executable>] [--consent-digest <sha256:...>] --output json\n\
+    hive knowledge vector preview|enable|status|rebuild|rollback|disable --user-root <dir> --target <dir> --collection <id> --visibility shared|project-private|confidential [--python <absolute-executable>] [--consent-digest <sha256:...>] --output json\n\
+    hive knowledge vector authorize-build --user-root <dir> --target <dir> --collection <id> --visibility confidential --capabilities <json> --usage <json> --expires-at <unix-seconds> --nonce <nonce> --confirm-current-action [--operation rebuild|rollback] --output json\n\
     hive source-wiki vector preview|enable|status|rebuild|rollback|disable|query --target <source-root> --language en|ko [--python <absolute-executable>] [--consent-digest <sha256:...>] --output json\n\
     source query options: --query <text> --top-k <1..100>\n\
-    rebuild options: --max-seconds <1..60> --workers <1..8> --rebuild-mode resume|fresh\n";
+    rebuild options: --max-seconds <1..60> --workers <1..8> --rebuild-mode resume|fresh\n\
+    confidential rebuild/rollback: --authorization-id <id> --authorization-token <token> --capabilities <json> --usage <json>\n";
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(tag = "kind", rename_all = "kebab-case", deny_unknown_fields)]
@@ -65,6 +69,8 @@ struct RuntimeControl {
 #[serde(deny_unknown_fields)]
 struct ScopeControl {
     schema_version: u32,
+    #[serde(default)]
+    revision: u64,
     selector: Selector,
     enabled: bool,
     consent_digest: String,
@@ -109,6 +115,7 @@ pub(super) fn run(arguments: &[String], source: bool) -> ExitCode {
                 })
                 .unwrap_or_default();
             let incomplete = data.get("complete").and_then(Value::as_bool) == Some(false);
+            let new_approval = data.get("requires_new_authorization").and_then(Value::as_bool) == Some(true);
             let mut result = super::success(
                 "VectorKnowledge",
                 "hive.vector-completed",
@@ -119,10 +126,11 @@ pub(super) fn run(arguments: &[String], source: bool) -> ExitCode {
                 data,
             );
             if incomplete {
-                result.next_action = Some(
+                result.next_action = Some(if new_approval {
+                    "issue a new authorize-build current-action approval, then repeat rebuild with its new one-time token"
+                } else {
                     "repeat vector rebuild with the same scope to resume its verified checkpoint"
-                        .to_owned(),
-                );
+                }.to_owned());
             }
             Ok(result)
         })
@@ -135,8 +143,20 @@ fn dispatch(arguments: &[String], source: bool) -> Result<Value, WikiError> {
     let action = arguments
         .first()
         .ok_or_else(|| invalid("vector action is required"))?;
+    let confirmations = arguments
+        .iter()
+        .filter(|arg| arg.as_str() == "--confirm-current-action")
+        .count();
+    if confirmations != usize::from(action == "authorize-build") {
+        return Err(invalid("authorize-build requires exactly one current-action confirmation; other actions reject it"));
+    }
+    let filtered = arguments[1..]
+        .iter()
+        .filter(|arg| arg.as_str() != "--confirm-current-action")
+        .cloned()
+        .collect::<Vec<_>>();
     let options = parse_options(
-        &arguments[1..],
+        &filtered,
         &[
             "--target",
             "--user-root",
@@ -150,14 +170,30 @@ fn dispatch(arguments: &[String], source: bool) -> Result<Value, WikiError> {
             "--rebuild-mode",
             "--query",
             "--top-k",
+            "--authorization-id",
+            "--authorization-token",
+            "--capabilities",
+            "--usage",
+            "--expires-at",
+            "--nonce",
+            "--operation",
         ],
     )?;
     for (name, _) in &options {
         let allowed = match *name {
             "--python" => ["preview", "enable"].contains(&action.as_str()),
             "--consent-digest" => action == "enable",
-            "--max-seconds" | "--workers" | "--rebuild-mode" => action == "rebuild",
+            "--max-seconds" | "--workers" | "--rebuild-mode" => {
+                action == "rebuild" || action == "authorize-build"
+            }
             "--query" | "--top-k" => action == "query" && source,
+            "--capabilities" | "--usage" => {
+                !source && ["authorize-build", "rebuild", "rollback"].contains(&action.as_str())
+            }
+            "--authorization-id" | "--authorization-token" => {
+                !source && ["rebuild", "rollback"].contains(&action.as_str())
+            }
+            "--expires-at" | "--nonce" | "--operation" => !source && action == "authorize-build",
             _ => true,
         };
         if !allowed {
@@ -171,7 +207,8 @@ fn dispatch(arguments: &[String], source: bool) -> Result<Value, WikiError> {
         "status" => status(&target),
         "disable" => disable(&target),
         "rebuild" => index::rebuild(&target, &options),
-        "rollback" => index::rollback(&target),
+        "rollback" => index::rollback(&target, &options),
+        "authorize-build" if !source => auth::issue(&target, &options),
         "query" if source => query::source_query(&target, &options),
         _ => Err(invalid("unsupported vector action")),
     }
@@ -215,10 +252,10 @@ fn parse_target(options: &[(&str, &str)], source: bool) -> Result<Target, WikiEr
         let visibility = match required(options, "--visibility")? {
             "shared" => RagVisibility::Shared,
             "project-private" => RagVisibility::ProjectPrivate,
-            // Confidential indexing is wired only with the separate current-action build gate.
+            "confidential" => RagVisibility::Confidential,
             _ => {
                 return Err(invalid(
-                    "vector visibility requires shared or project-private",
+                    "vector visibility requires shared, project-private or confidential",
                 ))
             }
         };
@@ -380,6 +417,7 @@ fn enable(target: &Target, options: &[(&str, &str)]) -> Result<Value, WikiError>
     };
     let mut control = prior_scope.unwrap_or(ScopeControl {
         schema_version: 1,
+        revision: 0,
         selector: target.selector.clone(),
         enabled: false,
         consent_digest: expected.to_owned(),
@@ -389,6 +427,10 @@ fn enable(target: &Target, options: &[(&str, &str)]) -> Result<Value, WikiError>
         previous: None,
     });
     control.enabled = true;
+    control.revision = control
+        .revision
+        .checked_add(1)
+        .ok_or_else(|| invalid("vector control revision is exhausted"))?;
     control.runtime = installed.clone();
     expected.clone_into(&mut control.consent_digest);
     if reusable.is_some() {
@@ -432,6 +474,10 @@ fn disable(target: &Target) -> Result<Value, WikiError> {
     let (control, digest) = scope_control(target)?;
     if let Some(mut control) = control {
         control.enabled = false;
+        control.revision = control
+            .revision
+            .checked_add(1)
+            .ok_or_else(|| invalid("vector control revision is exhausted"))?;
         target
             .files
             .write_control(Some(&target.scope_id), digest.as_deref(), &control)?;

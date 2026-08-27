@@ -1593,6 +1593,11 @@ enum AuthorizationAction {
         current_collection_id: String,
         request_binding_digest: String,
     },
+    ConfidentialVectorBuild {
+        collection_id: String,
+        current_collection_id: String,
+        request_binding_digest: String,
+    },
     CollectionMapping {
         operation: String,
         collection_id: String,
