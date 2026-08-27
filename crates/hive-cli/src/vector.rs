@@ -13,13 +13,16 @@ use std::ffi::OsString;
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 use std::time::Duration;
+#[path = "vector_index.rs"]
+mod index;
 
 const BOOTSTRAP: &str = include_str!("vector_runtime.py");
 const WORKER: &str = include_str!("vector_helper.py");
 const LOCK: &str = include_str!("vector-runtime-lock.json");
 const USAGE: &str = "Optional local semantic search; FTS remains the default.\n\
-    hive knowledge vector preview|enable|status|disable --user-root <dir> --target <dir> --collection <id> --visibility shared|project-private [--python <absolute-executable>] [--consent-digest <sha256:...>] --output json\n\
-    hive source-wiki vector preview|enable|status|disable --target <source-root> --language en|ko [--python <absolute-executable>] [--consent-digest <sha256:...>] --output json\n";
+    hive knowledge vector preview|enable|status|rebuild|rollback|disable --user-root <dir> --target <dir> --collection <id> --visibility shared|project-private [--python <absolute-executable>] [--consent-digest <sha256:...>] --output json\n\
+    hive source-wiki vector preview|enable|status|rebuild|rollback|disable --target <source-root> --language en|ko [--python <absolute-executable>] [--consent-digest <sha256:...>] --output json\n\
+    rebuild options: --max-seconds <1..60> --workers <1..8> --rebuild-mode resume|fresh\n";
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(tag = "kind", rename_all = "kebab-case", deny_unknown_fields)]
@@ -55,12 +58,19 @@ struct ScopeControl {
     enabled: bool,
     consent_digest: String,
     runtime: InstalledRuntime,
+    #[serde(default)]
+    checkpoint: Option<index::Snapshot>,
+    #[serde(default)]
+    active: Option<index::Snapshot>,
+    #[serde(default)]
+    previous: Option<index::Snapshot>,
 }
 
 struct Target {
     files: VectorFiles,
     selector: Selector,
     scope_id: String,
+    current_collection_id: Option<String>,
 }
 
 pub(super) fn run(arguments: &[String], source: bool) -> ExitCode {
@@ -82,7 +92,8 @@ pub(super) fn run(arguments: &[String], source: bool) -> ExitCode {
                         .collect()
                 })
                 .unwrap_or_default();
-            Ok(super::success(
+            let incomplete = data.get("complete").and_then(Value::as_bool) == Some(false);
+            let mut result = super::success(
                 "VectorKnowledge",
                 "hive.vector-completed",
                 "optional vector operation completed",
@@ -90,7 +101,14 @@ pub(super) fn run(arguments: &[String], source: bool) -> ExitCode {
                 "vector",
                 &digest,
                 data,
-            ))
+            );
+            if incomplete {
+                result.next_action = Some(
+                    "repeat vector rebuild with the same scope to resume its verified checkpoint"
+                        .to_owned(),
+                );
+            }
+            Ok(result)
         })
         .unwrap_or_else(|error| super::failure("VectorKnowledge", &error));
     super::emit(&result);
@@ -111,20 +129,37 @@ fn dispatch(arguments: &[String], source: bool) -> Result<Value, WikiError> {
             "--language",
             "--python",
             "--consent-digest",
+            "--max-seconds",
+            "--workers",
+            "--rebuild-mode",
         ],
     )?;
+    for (name, _) in &options {
+        let allowed = match *name {
+            "--python" => ["preview", "enable"].contains(&action.as_str()),
+            "--consent-digest" => action == "enable",
+            "--max-seconds" | "--workers" | "--rebuild-mode" => action == "rebuild",
+            _ => true,
+        };
+        if !allowed {
+            return Err(invalid("vector option does not apply to this action"));
+        }
+    }
     let target = parse_target(&options, source)?;
     match action.as_str() {
         "preview" => preview(&target, &options),
         "enable" => enable(&target, &options),
         "status" => status(&target),
         "disable" => disable(&target),
+        "rebuild" => index::rebuild(&target, &options),
+        "rollback" => index::rollback(&target),
         _ => Err(invalid("unsupported vector action")),
     }
 }
 
 fn parse_target(options: &[(&str, &str)], source: bool) -> Result<Target, WikiError> {
     let target = Path::new(required(options, "--target")?);
+    let mut current_collection_id = None;
     let (files, selector) = if source {
         if optional(options, "--user-root").is_some()
             || optional(options, "--collection").is_some()
@@ -150,7 +185,8 @@ fn parse_target(options: &[(&str, &str)], source: bool) -> Result<Target, WikiEr
         super::require_shared_wiki_enabled(root)?;
         let store = RagStore::open(root)?;
         let registry = store.load_registry()?;
-        super::derive_optional_current_collection_authority(&registry, target)?;
+        current_collection_id =
+            super::derive_optional_current_collection_authority(&registry, target)?.1;
         let id = super::resolve_collection_reference(
             &registry,
             required(options, "--collection")?,
@@ -181,6 +217,7 @@ fn parse_target(options: &[(&str, &str)], source: bool) -> Result<Target, WikiEr
         files,
         selector,
         scope_id,
+        current_collection_id,
     })
 }
 
@@ -327,6 +364,9 @@ fn enable(target: &Target, options: &[(&str, &str)]) -> Result<Value, WikiError>
         enabled: false,
         consent_digest: expected.to_owned(),
         runtime: installed.clone(),
+        checkpoint: None,
+        active: None,
+        previous: None,
     });
     control.enabled = true;
     control.runtime = installed.clone();
@@ -360,9 +400,11 @@ fn status(target: &Target) -> Result<Value, WikiError> {
         return Ok(json!({"enabled":false,"fts_unchanged":true}));
     };
     verify_runtime(&target.files, &scope.runtime)?;
-    Ok(
-        json!({"enabled":scope.enabled,"scope_id":target.scope_id,"runtime_verified":true,"index_ready":false,"fts_unchanged":true}),
-    )
+    let mut result = index::status(target, &scope);
+    result["enabled"] = json!(true);
+    result["runtime_verified"] = json!(true);
+    result["fts_unchanged"] = json!(true);
+    Ok(result)
 }
 
 fn disable(target: &Target) -> Result<Value, WikiError> {
