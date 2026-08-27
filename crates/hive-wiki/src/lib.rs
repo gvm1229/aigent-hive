@@ -12,6 +12,7 @@ pub mod scan;
 pub mod shared;
 pub mod source;
 pub mod store;
+pub mod vector;
 
 use cap_fs_ext::{DirExt, FollowSymlinks, MetadataExt as CapMetadataExt, OpenOptionsFollowExt};
 use cap_std::ambient_authority;

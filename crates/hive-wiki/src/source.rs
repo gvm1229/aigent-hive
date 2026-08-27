@@ -242,6 +242,14 @@ impl SourceRoot {
     }
 }
 
+/// Validate source identity without rebuilding or reading the derived index.
+///
+/// # Errors
+/// Returns an error when the source identity or required canonical directories are invalid.
+pub fn validate_root(root: &Path) -> Result<(), WikiError> {
+    SourceRoot::open(root).map(|_| ())
+}
+
 /// Lint source identity, bilingual page pairs, links, citations, and index freshness.
 ///
 /// # Errors
