@@ -42,6 +42,15 @@ def source_paths(version: str) -> dict[str, Path]:
 
 
 class HistoricalProjectBaseContract(unittest.TestCase):
+    def test_test2_deltas_match_the_exact_published_source(self) -> None:
+        for source, destination in (
+            ("harness/template/.agents/directives/04-korean-language.md", "directives/04-korean-language.md"),
+            ("harness/template/.agents/skills/humanize-kor/SKILL.md", "skills/humanize-kor/SKILL.md"),
+        ):
+            actual = (ROOT / "harness/project-bases/0.10.0-test.2" / destination).read_bytes()
+            expected = subprocess.check_output(["git", "show", f"4b9275ae90c08f31dce82085b9cda939a623a975:{source}"], cwd=ROOT)
+            self.assertEqual(actual, expected, source)
+
     def test_full_historical_project_bases_match_their_release_templates_byte_for_byte(self) -> None:
         for version in VERSIONS:
             mapped = source_paths(version)

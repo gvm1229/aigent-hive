@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import hashlib
 import os
 import stat
 import subprocess
@@ -27,6 +28,32 @@ PRODUCT_VERSION = tomllib.loads(
 
 
 class ProjectLifecycleConformance(Phase1CliTestCase):
+    def test_published_test2_project_upgrades_without_a_same_version_lockout(self) -> None:
+        for host in ("codex", "claude", "antigravity"):
+            with self.subTest(host=host):
+                target = self.setup_project(f"test2-{host}", host=host)
+                ledger_path = target / ".hive/config/project-base.json"
+                ledger = json.loads(ledger_path.read_bytes())
+                for entry in ledger["files"]:
+                    if entry["path"] == ".agents/directives/04-korean-language.md":
+                        source = "directives/04-korean-language.md"
+                    elif entry["path"] in (".agents/skills/humanize-kor/SKILL.md", ".claude/skills/humanize-kor/SKILL.md"):
+                        source = "skills/humanize-kor/SKILL.md"
+                    else:
+                        continue
+                    content = (REPOSITORY_ROOT / "harness/project-bases/0.10.0-test.2" / source).read_bytes()
+                    (target / entry["path"]).write_bytes(content)
+                    entry["content"] = content.decode("utf-8")
+                    entry["content_digest"] = "sha256:" + hashlib.sha256(content).hexdigest()
+                del ledger["ledger_digest"]
+                unsigned = json.dumps(ledger, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
+                ledger["ledger_digest"] = "sha256:" + hashlib.sha256(unsigned).hexdigest()
+                ledger_path.write_bytes(json.dumps(ledger, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8") + b"\n")
+                for mode in ("--scan", "--dry-run", "--apply", "--validate"):
+                    process, result = self.invoke("project", "upgrade", "--target", str(target), mode)
+                    self.assertEqual(process.returncode, 0, result)
+                self.assertIn("OMX bytes must survive exactly.", (target / "AGENTS.md").read_text("utf-8"))
+
     def setUp(self) -> None:
         super().setUp()
         self.fake_bin = self.work_root / "fake-bin"

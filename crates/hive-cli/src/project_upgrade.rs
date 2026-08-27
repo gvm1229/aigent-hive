@@ -504,6 +504,43 @@ fn authenticate_current_base(
     ledger: &BaseLedger,
     incoming: &BTreeMap<String, Vec<u8>>,
 ) -> Result<(), UpdateError> {
+    let current = authenticate_base_bytes(ledger, incoming);
+    if current.is_ok() || env!("CARGO_PKG_VERSION") != "0.10.0" {
+        return current;
+    }
+    // Package test.2 shares the product version with this release. Authenticate its full
+    // inventory against the current projection plus the exact published, frozen deltas.
+    // Never authorize arbitrary ledger contents merely from their self-reported digest.
+    let mut prior = incoming.clone();
+    for (path, bytes) in &mut prior {
+        if let Some(frozen) = test2_projection_bytes(path) {
+            *bytes = frozen.to_vec();
+        }
+    }
+    if authenticate_base_bytes(ledger, &prior).is_ok() {
+        return Ok(());
+    }
+    current
+}
+
+fn test2_projection_bytes(path: &str) -> Option<&'static [u8]> {
+    match path {
+        ".agents/directives/04-korean-language.md" => Some(include_bytes!(
+            "../../../harness/project-bases/0.10.0-test.2/directives/04-korean-language.md"
+        )),
+        ".agents/skills/humanize-kor/SKILL.md" | ".claude/skills/humanize-kor/SKILL.md" => {
+            Some(include_bytes!(
+                "../../../harness/project-bases/0.10.0-test.2/skills/humanize-kor/SKILL.md"
+            ))
+        }
+        _ => None,
+    }
+}
+
+fn authenticate_base_bytes(
+    ledger: &BaseLedger,
+    incoming: &BTreeMap<String, Vec<u8>>,
+) -> Result<(), UpdateError> {
     if ledger.files.len() != incoming.len() {
         return Err(UpdateError::Verification(
             "current-version project base inventory differs from the authenticated binary"
@@ -3502,6 +3539,40 @@ mod tests {
             authenticate_current_base(&ledger, &incoming),
             Err(UpdateError::Verification(_))
         ));
+    }
+
+    #[test]
+    fn same_product_test2_requires_one_exact_generation_not_mixed_or_forged_bytes() {
+        let paths = [
+            ".agents/directives/04-korean-language.md",
+            ".agents/skills/humanize-kor/SKILL.md",
+        ];
+        let incoming = BTreeMap::from([
+            (paths[0].to_owned(), b"new directive".to_vec()),
+            (paths[1].to_owned(), b"new skill".to_vec()),
+        ]);
+        let mut ledger = BaseLedger {
+            schema_version: 1,
+            product_version: "0.10.0".to_owned(),
+            ledger_digest: digest('a'),
+            files: paths
+                .iter()
+                .map(|path| {
+                    let bytes = test2_projection_bytes(path).expect("frozen delta");
+                    BaseFile {
+                        path: (*path).to_owned(),
+                        kind: expected_base_kind(path).expect("kind").to_owned(),
+                        content: String::from_utf8(bytes.to_vec()).expect("UTF-8"),
+                        content_digest: sha256_digest(bytes),
+                    }
+                })
+                .collect(),
+        };
+        assert!(authenticate_current_base(&ledger, &incoming).is_ok());
+        ledger.files[0].content = "new directive".to_owned();
+        assert!(authenticate_current_base(&ledger, &incoming).is_err());
+        ledger.files[0].content = "forged directive".to_owned();
+        assert!(authenticate_current_base(&ledger, &incoming).is_err());
     }
 
     #[test]
