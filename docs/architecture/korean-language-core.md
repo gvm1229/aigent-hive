@@ -28,8 +28,8 @@ Hive: model 호출·재작성 주체 아님. 활성 host: 초안과 필요한 �
 ## CLI
 
 ```text
-hive korean inspect --profile <profile> --input <file> --output json
-hive korean verify --profile <profile> --before <file> --after <file> --output json
+hive korean inspect --target <consumer> --profile <profile> --input <file> --output json
+hive korean verify --target <consumer> --profile <profile> --before <file> --after <file> --output json
 hive korean sanitize --input <file> --output-file <file> --output json
 
 hive korean pack check --output json
@@ -41,6 +41,11 @@ hive korean pack rollback --target <consumer> --output json
 ```
 
 `verify` 실패 결과: `fallback_required=true`. Gate 자체의 text repair 금지.
+
+`--target` 생략 시 현재 폴더 기준. 소비자 프로젝트의 활성 팩을 검사·비교·hook이 함께 사용하며,
+source workspace는 내장 팩 사용. 활성 팩 손상 시 오류 반환, 내장 팩으로 조용히 대체 금지.
+결정적 검사는 의미 보존의 충분조건 아님. 부정문 변경은 보수적으로 거부하고, 통과 후보도
+host가 주체·주장·수치·출처를 원문과 비교. 불확실한 경우 원문 유지.
 
 ## Host 적용
 
@@ -61,9 +66,10 @@ version 1. 정본 경로: `harness/language-packs/im-not-ai/2.3.2/`.
 - `rules-data|engine-code|host-surface` 분류
 - Symlink·raw install script·floating ref·자동 activation 금지
 - `check`: 고정 HTTPS metadata의 version 확인만 수행
-- `preview`: candidate byte·target digest 기반 consent digest
-- `activate`: 세 허용 파일만 staging 뒤 pack generation·pointer 활성화
-- `rollback`: 보존된 이전 generation pointer 복구
+- `preview`: 규칙 구조·지원 검사 종류·안전 상한·manifest 일치를 확인한 뒤 동의 digest 발급
+- `activate`: 경로 잠금과 격리 staging 검증 뒤 원자 활성화. 기존 generation 재사용 전 byte 재확인
+- `rollback`: 이전 generation 재검증 뒤 복구. 최초 활성화라면 내장 팩 복구. 손상된 현재 팩도 복구 가능
+- 같은 팩 재활성화: 이전 복구 지점 유지
 
 ## 무결성
 
@@ -72,4 +78,3 @@ version 1. 정본 경로: `harness/language-packs/im-not-ai/2.3.2/`.
 
 금지 목적: watermark 우회, detector 점수 최적화, 의무 고지 제거, 출처 은폐, 거짓 인간 저자
 표시. 허용 text hygiene: zero-width·bidi control 제거와 modern Hangul NFD→NFC.
-
