@@ -20,6 +20,7 @@ import struct
 import subprocess
 import sys
 import tempfile
+import threading
 import unittest
 from unittest.mock import patch
 import zipfile
@@ -399,6 +400,89 @@ class VectorRuntimeContract(unittest.TestCase):
         with patch.object(WORKER, "MAX_CHUNKS", 1), self.assertRaises(ValueError):
             WORKER.execute_request(original)
         self.assertFalse(any(Path(item["database"]).exists() for item in original["databases"]))
+
+    def test_parallel_window_initializes_once_and_keeps_sqlite_on_its_owner_thread(self):
+        runtime, request = self.build_window()
+        request["workers"] = 4
+        threads, widths, opened = set(), [], []
+        barrier = threading.Barrier(2)
+        lock = threading.Lock()
+        original_build = WORKER.build
+        vector = struct.pack("<384f",1.0,*([0.0]*383))
+        def build(item, **kwargs):
+            with lock:
+                threads.add(threading.get_ident())
+                widths.append(item["workers"])
+            barrier.wait(timeout=5)
+            return original_build(item, **kwargs)
+        def connect(path):
+            connection = sqlite3.connect(path, factory=SimulatedVectorConnection)
+            with lock: opened.append((path,threading.get_ident(),connection))
+            return connection
+        with patch.object(WORKER,"load_runtime",return_value=runtime), \
+             patch.object(WORKER,"initialize_encoder") as initialize, \
+             patch.object(WORKER,"build",side_effect=build), \
+             patch.object(WORKER,"open_database",side_effect=connect), \
+             patch.object(WORKER,"encode_batch",side_effect=lambda batch:[vector]*len(batch)):
+            result = WORKER.execute_request(request)
+            self.assertEqual(initialize.call_count,1)
+            self.assertEqual(len(threads),2)
+            self.assertEqual(sum(widths),4)
+            self.assertEqual([row["index"] for row in result["results"]],[0,1])
+            self.assertTrue(all(row["result"]["complete"] for row in result["results"]))
+            self.assertEqual(len({path for path,_,_ in opened}),2)
+            self.assertTrue(all(owner in threads for _,owner,_ in opened))
+            for item, row in zip(request["databases"],result["results"],strict=True):
+                item["expected_database_digest"] = row["result"]["database_digest"]
+            before = [Path(item["database"]).read_bytes() for item in request["databases"]]
+            initialize.reset_mock()
+            noop = WORKER.execute_request(request)
+            self.assertEqual([row["result"]["embedded"] for row in noop["results"]],[0,0])
+            initialize.assert_not_called()
+            self.assertEqual(before,[Path(item["database"]).read_bytes() for item in request["databases"]])
+
+    def test_parallel_window_initialization_failure_is_sticky_and_waits_for_all_tasks(self):
+        runtime, request = self.build_window()
+        request["workers"] = 2
+        barrier, finished = threading.Barrier(2), []
+        def build(item, *, encoder, **_kwargs):
+            barrier.wait(timeout=5)
+            try:
+                encoder(item["runtime"])
+            finally:
+                finished.append(item["database"])
+        with patch.object(WORKER,"load_runtime",return_value=runtime), \
+             patch.object(WORKER,"initialize_encoder",side_effect=ValueError("broken model")) as initialize, \
+             patch.object(WORKER,"build",side_effect=build):
+            with self.assertRaises(ValueError):
+                WORKER.execute_request(request)
+        self.assertEqual(initialize.call_count,1)
+        self.assertEqual(len(finished),2)
+
+    def test_parallel_window_deadline_preserves_admitted_prefix_and_global_budget(self):
+        runtime, request = self.build_window()
+        original = request["databases"]
+        request["databases"] = []
+        for number in range(7):
+            scope = Path(original[0]["database"]).parent.parent / (str(number)*64)
+            scope.mkdir()
+            item = {**original[0],"database":str(scope / "staging.sqlite3")}
+            request["databases"].append(item)
+        request.update(workers=16,max_seconds=2)
+        barrier, widths, deadlines = threading.Barrier(4), [], []
+        def build(item, **kwargs):
+            widths.append(item["workers"])
+            deadlines.append((kwargs["soft_deadline"],kwargs["final_deadline"]))
+            barrier.wait(timeout=5)
+            return {"complete":False}
+        with patch.object(WORKER,"load_runtime",return_value=runtime), \
+             patch.object(WORKER.time,"monotonic",side_effect=[10,10,12]), \
+             patch.object(WORKER,"build",side_effect=build):
+            result = WORKER.execute_request(request)
+        self.assertEqual([row["index"] for row in result["results"]],[0,1,2,3])
+        self.assertEqual(result["not_started"],[4,5,6])
+        self.assertEqual(sum(widths),16)
+        self.assertEqual(deadlines,[(12,42)]*4)
 
     def test_worker_parallelism_is_bounded_before_runtime_access(self):
         request = {"contract_digest":"sha256:"+"a"*64,"manifest_digest":"sha256:"+"b"*64,"chunks":[],"max_seconds":30}

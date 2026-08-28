@@ -16,6 +16,7 @@ import socket
 import sqlite3
 import struct
 import sys
+import threading
 import time
 
 DIMENSION = 384
@@ -445,7 +446,7 @@ def finalize(connection: sqlite3.Connection, request: dict, chunks: list[dict], 
     return compact_generation(connection, deadline)
 
 
-def build(request: dict, *, encoder=None, final_deadline=None) -> dict:
+def build(request: dict, *, encoder=None, final_deadline=None, soft_deadline=None) -> dict:
     contract = validate_digest(request["contract_digest"])
     validate_digest(request["manifest_digest"])
     chunks = sorted(validate_chunks(request["chunks"]), key=lambda row: row["chunk_id"])
@@ -457,6 +458,7 @@ def build(request: dict, *, encoder=None, final_deadline=None) -> dict:
     path = database_path(root, request["database"], writable=True)
     identity = authenticate_database(path, request["expected_database_digest"], create=True)
     started = time.monotonic()
+    deadline = min(started+seconds, soft_deadline or math.inf)
     connection = open_database(path)
     try:
         check_database_identity(path, identity)
@@ -475,7 +477,7 @@ def build(request: dict, *, encoder=None, final_deadline=None) -> dict:
         else:
             restored = True
             if meta.get("phase") in ("ready", "compacting", "restoring"):
-                restored = restore_embedding_cache(connection, meta["contract_digest"], started+seconds)
+                restored = restore_embedding_cache(connection, meta["contract_digest"], deadline)
             unique = {record_digest(row): {"title": row["title"], "text": row["text"]} for row in chunks}
             cached = {row[0] for row in connection.execute("SELECT digest FROM cache WHERE contract=?", (contract,))}
             missing = [(digest, text) for digest, text in sorted(unique.items()) if digest not in cached]
@@ -491,7 +493,7 @@ def build(request: dict, *, encoder=None, final_deadline=None) -> dict:
                     for offset in range(0, len(missing), window_size):
                         # Preserve one bounded progress window even when model startup uses
                         # the soft budget. The parent's hard deadline still bounds this process.
-                        if time.monotonic() - started >= seconds and offset > 0:
+                        if time.monotonic() >= deadline and offset > 0:
                             break
                         window = missing[offset:offset + window_size]
                         batches = [window[index:index + 64] for index in range(0, len(window), 64)]
@@ -543,22 +545,45 @@ def build_many(request: dict) -> dict:
     started = time.monotonic()
     deadline = started + seconds
     initialized = False
+    initialization_failed = False
+    initialization_lock = threading.Lock()
 
     def encoder(runtime):
-        nonlocal initialized
-        if not initialized:
-            initialize_encoder(runtime)
-            initialized = True
+        nonlocal initialized, initialization_failed
+        with initialization_lock:
+            if initialization_failed:
+                raise ValueError("shared vector encoder initialization failed")
+            if not initialized:
+                try:
+                    initialize_encoder(runtime)
+                except BaseException:
+                    initialization_failed = True
+                    raise
+                initialized = True
 
     results = []
-    for index, item in enumerate(databases):
+    while len(results) < len(databases):
         remaining = deadline - time.monotonic()
         if remaining <= 0:
             break
-        result = build({**item, "runtime": request["runtime"], "contract_digest": request["contract_digest"],
-                        "workers": workers, "max_seconds": min(seconds, max(1, math.ceil(remaining)))},
-                       encoder=encoder, final_deadline=deadline+30.0)
-        results.append({"index": index, "result": {"schema_version": SCHEMA, **result}})
+        width = min(4, workers, len(databases)-len(results))
+        indices = range(len(results), len(results)+width)
+
+        def run(index):
+            result = build({**databases[index], "runtime": request["runtime"], "contract_digest": request["contract_digest"],
+                            "workers": workers//width, "max_seconds": min(seconds, max(1, math.ceil(remaining)))},
+                           encoder=encoder, soft_deadline=deadline, final_deadline=deadline+30.0)
+            return {"index": index, "result": {"schema_version": SCHEMA, **result}}
+
+        if width == 1:
+            results.append(run(indices.start))
+        else:
+            # Each coordinator owns its SQLite connection. Await every admitted task,
+            # including on a submit/result error, before the caller can quarantine.
+            with concurrent.futures.ThreadPoolExecutor(max_workers=width) as pool:
+                futures = [pool.submit(run, index) for index in indices]
+                completed = [future.result() for future in futures]
+            results.extend(completed)
     return {"results": results, "not_started": list(range(len(results), len(databases)))}
 
 
