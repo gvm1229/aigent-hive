@@ -123,6 +123,48 @@ pub struct SharedSemanticPublication<'a> {
     pub authority_digest: &'a str,
 }
 
+/// One query's authenticated immutable connection, never a cross-request cache.
+/// The originating store and complete request are private and fixed until consumption.
+pub struct SemanticQueryFrame<'a> {
+    store: &'a RagStore,
+    request: RetrievalRequest,
+    prepared: crate::rag::PreparedRagIndex,
+    manifest: GenerationManifest,
+    registry: CollectionRegistry,
+    plan: crate::rag::SemanticSearchPlan,
+}
+
+impl SemanticQueryFrame<'_> {
+    /// Authorized partition metadata, without exposing the resident connection or text.
+    #[must_use]
+    pub fn plan(&self) -> &crate::rag::SemanticSearchPlan {
+        &self.plan
+    }
+
+    /// Consume this frame once after new disk, authority, and canonical validation.
+    ///
+    /// # Errors
+    /// Rejects any changed snapshot or invalid candidate; callers must use fresh FTS fallback.
+    pub fn finish(
+        self,
+        matches: &[crate::rag::SemanticMatch],
+    ) -> Result<RetrievalResult, WikiError> {
+        self.store
+            .with_retrieval_snapshot(|bytes, manifest, registry| {
+                if manifest != &self.manifest
+                    || registry != &self.registry
+                    || sha256_digest(bytes) != self.manifest.sqlite_digest
+                {
+                    return Err(RagError::RepairRequired(
+                        "semantic query snapshot changed before final retrieval".to_owned(),
+                    ));
+                }
+                self.store
+                    .fuse_prepared_semantic(&self.prepared, registry, &self.request, matches)
+            })
+    }
+}
+
 /// Collection registration plus rebuilt-index evidence.
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
 #[serde(deny_unknown_fields)]
@@ -1585,6 +1627,33 @@ impl RagStore {
         })
     }
 
+    /// Begin a single-use semantic query; release the canonical lock before model execution.
+    ///
+    /// # Errors
+    /// Rejects invalid requests and stale or corrupt index authority.
+    pub fn begin_semantic_query(
+        &self,
+        request: &RetrievalRequest,
+    ) -> Result<SemanticQueryFrame<'_>, WikiError> {
+        self.with_retrieval_snapshot(|bytes, manifest, registry| {
+            crate::rag::validate_retrieval_request(request)?;
+            let prepared =
+                crate::rag::PreparedRagIndex::from_serialized(bytes, manifest, registry)?;
+            let plan = crate::rag::SemanticSearchPlan {
+                manifest_digest: manifest.logical_digest.clone(),
+                partitions: prepared.semantic_partition_states(request)?,
+            };
+            Ok(SemanticQueryFrame {
+                store: self,
+                request: request.clone(),
+                prepared,
+                manifest: manifest.clone(),
+                registry: registry.clone(),
+                plan,
+            })
+        })
+    }
+
     /// FTS fallback with actual canonical verification of only the returned citations.
     ///
     /// # Errors
@@ -1621,22 +1690,32 @@ impl RagStore {
                     "retrieval generation changed during semantic search".to_owned(),
                 ));
             }
-            let mut expanded = request.clone();
-            expanded.top_k = 100;
-            expanded.byte_budget = 1024 * 1024;
             let prepared =
                 crate::rag::PreparedRagIndex::from_serialized(bytes, manifest, registry)?;
-            let lexical = prepared.retrieve(&expanded)?;
-            let semantic = prepared.semantic_matches(&expanded, matches)?;
-            let result = crate::rag::fuse_semantic_results(request, lexical, &semantic)?;
-            self.validate_semantic_hits(registry, &result.hits)
-                .map_err(|_| {
-                    RagError::RepairRequired(
-                        "canonical hybrid citations changed or are unavailable".to_owned(),
-                    )
-                })?;
-            Ok(result)
+            self.fuse_prepared_semantic(&prepared, registry, request, matches)
         })
+    }
+
+    fn fuse_prepared_semantic(
+        &self,
+        prepared: &crate::rag::PreparedRagIndex,
+        registry: &CollectionRegistry,
+        request: &RetrievalRequest,
+        matches: &[crate::rag::SemanticMatch],
+    ) -> Result<RetrievalResult, RagError> {
+        let mut expanded = request.clone();
+        expanded.top_k = 100;
+        expanded.byte_budget = 1024 * 1024;
+        let lexical = prepared.retrieve(&expanded)?;
+        let semantic = prepared.semantic_matches(&expanded, matches)?;
+        let result = crate::rag::fuse_semantic_results(request, lexical, &semantic)?;
+        self.validate_semantic_hits(registry, &result.hits)
+            .map_err(|_| {
+                RagError::RepairRequired(
+                    "canonical hybrid citations changed or are unavailable".to_owned(),
+                )
+            })?;
+        Ok(result)
     }
 
     /// Publish only while this partition remains current; other collections do not invalidate it.
@@ -4980,6 +5059,98 @@ mod tests {
         let mut count = 0;
         let mut bytes = 256 * 1024 * 1024;
         assert!(add_shared_corpus_budget(&corpus.chunks, &mut count, &mut bytes).is_err());
+    }
+
+    #[test]
+    fn semantic_query_frame_is_bound_to_its_original_request_and_matches_fresh_retrieval() {
+        let (_temporary, store, requests, _) = shared_vector_window();
+        let mut request = requests[2].clone();
+        let corpus = store
+            .semantic_corpus(&request, RagVisibility::Shared)
+            .expect("corpus");
+        let matches = corpus
+            .chunks
+            .iter()
+            .map(|hit| crate::rag::SemanticMatch {
+                chunk_id: hit.chunk_id.clone(),
+                digest: hit.digest.clone(),
+                score: 0.9,
+            })
+            .collect::<Vec<_>>();
+        let frame = store.begin_semantic_query(&request).expect("frame");
+        let plan = store.semantic_search_plan(&request).expect("legacy plan");
+        assert_eq!(frame.plan(), &plan);
+        let expected = store
+            .hybrid_retrieve(&request, &plan.manifest_digest, &matches)
+            .expect("fresh retrieval");
+        request.scope = RetrievalScope::Collection(USER_ROOT_COLLECTION_ID.to_owned());
+        request.query = "different query".to_owned();
+        request.top_k = 1;
+        assert_eq!(
+            frame.finish(&matches).expect("same bound request"),
+            expected
+        );
+    }
+
+    #[test]
+    fn semantic_query_frame_rechecks_current_bytes_authority_and_returned_canonical_data() {
+        for changed in [
+            "canonical",
+            "registry",
+            "sqlite",
+            "dirty",
+            "trust",
+            "manifest",
+        ] {
+            let (temporary, store, requests, canonical) = shared_vector_window();
+            let corpus = store
+                .semantic_corpus(&requests[2], RagVisibility::Shared)
+                .expect("corpus");
+            let matches = corpus
+                .chunks
+                .iter()
+                .map(|hit| crate::rag::SemanticMatch {
+                    chunk_id: hit.chunk_id.clone(),
+                    digest: hit.digest.clone(),
+                    score: 0.9,
+                })
+                .collect::<Vec<_>>();
+            let frame = store.begin_semantic_query(&requests[2]).expect("frame");
+            if changed == "registry" {
+                let mut registry = store.load_registry().expect("registry");
+                registry.collections[0]
+                    .aliases
+                    .push("new-unsynchronized-alias".to_owned());
+                std::fs::write(
+                    temporary.path().join(COLLECTION_REGISTRY_RELATIVE),
+                    registry_bytes(&registry).expect("registry bytes"),
+                )
+                .expect("change registry");
+            } else {
+                let path = match changed {
+                    "canonical" => canonical,
+                    "sqlite" => temporary.path().join(SHARED_INDEX_RELATIVE),
+                    "dirty" => temporary.path().join(RAG_DIRTY_RELATIVE),
+                    "manifest" => temporary.path().join(RAG_MANIFEST_RELATIVE),
+                    _ => temporary.path().join(RAG_TRUST_RELATIVE),
+                };
+                std::fs::write(path, b"external change").expect("mutation");
+            }
+            assert!(frame.finish(&matches).is_err(), "{changed}");
+        }
+    }
+
+    #[test]
+    fn semantic_query_frame_rejects_a_new_generation_and_does_not_hold_the_writer_lock() {
+        let (_temporary, store, requests, _) = shared_vector_window();
+        let frame = store.begin_semantic_query(&requests[0]).expect("frame");
+        let generation = store.load_manifest_required().expect("manifest").generation + 1;
+        let plan = remember_plan(USER_ROOT_COLLECTION_ID, "frame-new-entry", generation);
+        store
+            .apply_remember_plan(&plan)
+            .expect("writer is not blocked during model execution");
+        assert!(frame.finish(&[]).is_err());
+        assert!(store.checked_retrieve(&requests[0]).is_ok());
     }
 
     #[test]

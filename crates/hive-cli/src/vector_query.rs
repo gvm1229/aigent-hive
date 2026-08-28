@@ -69,14 +69,14 @@ fn hybrid(
     request: &RetrievalRequest,
 ) -> Result<(Value, bool), WikiError> {
     let files = VectorFiles::open(root, false)?;
-    let plan = store.semantic_search_plan(request)?;
+    let frame = store.begin_semantic_query(request)?;
     let mut databases = Vec::new();
     let mut controls = Vec::new();
     let mut runtimes: Vec<InstalledRuntime> = Vec::new();
     let mut partial = false;
-    for state in plan.partitions {
+    for state in &frame.plan().partitions {
         let selector = Selector::Collection {
-            partition: state.partition,
+            partition: state.partition.clone(),
         };
         let scope_id = files.scope_id(&selector)?;
         let target = Target {
@@ -141,7 +141,7 @@ fn hybrid(
             return Err(invalid("semantic authority changed during query"));
         }
     }
-    let result = store.hybrid_retrieve(request, &plan.manifest_digest, &matches)?;
+    let result = frame.finish(&matches)?;
     Ok((serde_json::to_value(result).map_err(io_error)?, partial))
 }
 
