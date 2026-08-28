@@ -443,8 +443,9 @@ fn publish_verified(
             .iter()
             .map(|item| value_digest(&item.after))
             .collect::<Result<Vec<_>, _>>()?;
-        store.with_shared_semantic_snapshots(
+        store.with_shared_semantic_snapshots_bounded(
             &bindings,
+            workers,
             |index| {
                 targets[index].files.write_control(
                     Some(&targets[index].scope_id),

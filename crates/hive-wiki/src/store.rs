@@ -1459,9 +1459,30 @@ impl RagStore {
     pub fn with_shared_semantic_snapshots(
         &self,
         items: &[SharedSemanticPublication<'_>],
+        publish: impl FnMut(usize) -> Result<(), WikiError>,
+        rollback: impl FnMut(usize) -> Result<(), WikiError>,
+    ) -> Result<(), WikiError> {
+        self.with_shared_semantic_snapshots_bounded(items, 1, publish, rollback)
+    }
+
+    /// Publish with at most four concurrent canonical readers under the same store lock.
+    /// `SQLite` and publication callbacks stay on the calling thread. All readers join
+    /// before publication or rollback; one worker retains the serial path.
+    ///
+    /// # Errors
+    /// Rejects invalid worker budgets or changed inputs, and rolls back on any reader failure.
+    pub fn with_shared_semantic_snapshots_bounded(
+        &self,
+        items: &[SharedSemanticPublication<'_>],
+        workers: usize,
         mut publish: impl FnMut(usize) -> Result<(), WikiError>,
         mut rollback: impl FnMut(usize) -> Result<(), WikiError>,
     ) -> Result<(), WikiError> {
+        if !(1..=16).contains(&workers) {
+            return Err(WikiError::InvalidInput(
+                "invalid shared reader budget".to_owned(),
+            ));
+        }
         self.with_retrieval_snapshot(|bytes, manifest, registry| {
             let collections =
                 shared_batch_collections(registry, items.iter().map(|item| item.request))?;
@@ -1486,16 +1507,16 @@ impl RagStore {
             }
             Ok((|| {
                 let check_partitions = || {
-                    for (item, collection) in items.iter().zip(&collections) {
+                    check_shared_partitions(items.len(), workers, |index| {
+                        let item = &items[index];
                         self.require_semantic_authority(item.request, item.authority_digest)?;
                         self.require_current_partition(
                             manifest.generation,
-                            collection,
+                            &collections[index],
                             RagVisibility::Shared,
                             item.partition_digest,
-                        )?;
-                    }
-                    Ok::<_, WikiError>(())
+                        )
+                    })
                 };
                 check_partitions()?;
                 let mut published = 0;
@@ -4346,6 +4367,55 @@ fn add_shared_corpus_budget(
     Ok(())
 }
 
+fn check_shared_partitions(
+    count: usize,
+    workers: usize,
+    check: impl Fn(usize) -> Result<(), WikiError> + Sync,
+) -> Result<(), WikiError> {
+    if workers == 1 {
+        for index in 0..count {
+            check(index)?;
+        }
+        return Ok(());
+    }
+    let width = workers.min(4);
+    #[cfg(test)]
+    let failure = FAIL_SHARED_CHECK.with(std::cell::Cell::take);
+    for start in (0..count).step_by(width) {
+        let results = std::thread::scope(|scope| {
+            let mut handles = Vec::new();
+            for index in start..(start + width).min(count) {
+                #[cfg(test)]
+                if failure == Some((index, false)) {
+                    handles.push(Err(std::io::Error::other("injected reader spawn failure")));
+                    continue;
+                }
+                let check = &check;
+                handles.push(std::thread::Builder::new().spawn_scoped(scope, move || {
+                    #[cfg(test)]
+                    assert_ne!(failure, Some((index, true)), "injected reader panic");
+                    check(index)
+                }));
+            }
+            // Collect first, then propagate in input order. Early `?` here would leave
+            // an unjoined panic to unwind the scope past the publication rollback.
+            handles
+                .into_iter()
+                .map(|handle| match handle {
+                    Ok(handle) => handle.join().unwrap_or_else(|_| {
+                        Err(WikiError::Verification("shared reader failed".to_owned()))
+                    }),
+                    Err(_) => Err(WikiError::Io("shared reader could not start".to_owned())),
+                })
+                .collect::<Vec<_>>()
+        });
+        for result in results {
+            result?;
+        }
+    }
+    Ok(())
+}
+
 fn shared_batch_collections<'a>(
     registry: &CollectionRegistry,
     requests: impl Iterator<Item = &'a RetrievalRequest>,
@@ -4415,6 +4485,7 @@ fn rag_error(error: RagError) -> WikiError {
 #[cfg(test)]
 thread_local! {
     static FAIL_AFTER_CANONICAL_WRITES: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+    static FAIL_SHARED_CHECK: std::cell::Cell<Option<(usize, bool)>> = const { std::cell::Cell::new(None) };
 }
 
 #[cfg(test)]
@@ -5062,6 +5133,108 @@ mod tests {
     }
 
     #[test]
+    fn shared_parallel_readers_are_bounded_joined_and_preserve_error_order() {
+        use std::sync::atomic::AtomicUsize;
+        let active = AtomicUsize::new(0);
+        let peak = AtomicUsize::new(0);
+        let finished = AtomicUsize::new(0);
+        let barrier = std::sync::Barrier::new(4);
+        check_shared_partitions(8, 16, |_| {
+            let current = active.fetch_add(1, AtomicOrdering::SeqCst) + 1;
+            peak.fetch_max(current, AtomicOrdering::SeqCst);
+            barrier.wait();
+            active.fetch_sub(1, AtomicOrdering::SeqCst);
+            finished.fetch_add(1, AtomicOrdering::SeqCst);
+            Ok(())
+        })
+        .expect("bounded readers");
+        assert_eq!(peak.load(AtomicOrdering::SeqCst), 4);
+        assert_eq!(finished.load(AtomicOrdering::SeqCst), 8);
+        assert_eq!(active.load(AtomicOrdering::SeqCst), 0);
+        for workers in [1, 2, 4, 16] {
+            let error = check_shared_partitions(3, workers, |index| {
+                if index == 1 {
+                    Err(WikiError::Conflict("first failure".to_owned()))
+                } else if index == 2 {
+                    Err(WikiError::Verification("later failure".to_owned()))
+                } else {
+                    Ok(())
+                }
+            })
+            .expect_err("input-order failure");
+            assert!(error.to_string().contains("first failure"));
+        }
+    }
+
+    #[test]
+    fn shared_parallel_reader_panics_and_spawn_failures_join_before_returning() {
+        for panic in [false, true] {
+            let finished = std::sync::atomic::AtomicUsize::new(0);
+            FAIL_SHARED_CHECK.with(|failure| failure.set(Some((0, panic))));
+            assert!(check_shared_partitions(4, 4, |_| {
+                finished.fetch_add(1, AtomicOrdering::SeqCst);
+                Ok(())
+            })
+            .is_err());
+            assert_eq!(finished.load(AtomicOrdering::SeqCst), 3);
+        }
+    }
+
+    #[test]
+    fn shared_parallel_postpublication_reader_failure_rolls_back_in_reverse_order() {
+        for panic in [false, true] {
+            let (_temporary, store, requests, _) = shared_vector_window();
+            let corpora = store.shared_semantic_corpora(&requests).expect("window");
+            let items = requests
+                .iter()
+                .zip(&corpora)
+                .map(|(request, corpus)| SharedSemanticPublication {
+                    request,
+                    partition_digest: &corpus.partition_digest,
+                    authority_digest: &corpus.authority_digest,
+                })
+                .collect::<Vec<_>>();
+            let events = std::cell::RefCell::new(Vec::new());
+            assert!(store
+                .with_shared_semantic_snapshots_bounded(
+                    &items,
+                    4,
+                    |index| {
+                        events.borrow_mut().push(index);
+                        if index == 2 {
+                            FAIL_SHARED_CHECK.with(|failure| failure.set(Some((1, panic))));
+                        }
+                        Ok(())
+                    },
+                    |index| {
+                        events.borrow_mut().push(10 + index);
+                        Ok(())
+                    }
+                )
+                .is_err());
+            assert_eq!(*events.borrow(), [0, 1, 2, 12, 11, 10]);
+            store
+                .with_shared_semantic_snapshots_bounded(
+                    &items,
+                    4,
+                    |_| Ok(()),
+                    |_| panic!("no rollback"),
+                )
+                .expect("lock and normal reads recovered");
+            for workers in [0, 17] {
+                assert!(store
+                    .with_shared_semantic_snapshots_bounded(
+                        &items,
+                        workers,
+                        |_| panic!("no publication"),
+                        |_| panic!("no rollback")
+                    )
+                    .is_err());
+            }
+        }
+    }
+
+    #[test]
     fn semantic_query_frame_is_bound_to_its_original_request_and_matches_fresh_retrieval() {
         let (_temporary, store, requests, _) = shared_vector_window();
         let mut request = requests[2].clone();
@@ -5155,7 +5328,11 @@ mod tests {
 
     #[test]
     fn shared_semantic_window_rolls_back_every_control_on_external_publication_drift() {
-        for changed in ["canonical", "registry", "sqlite", "dirty", "trust"] {
+        for (workers, changed) in [1, 4].into_iter().flat_map(|workers| {
+            ["canonical", "registry", "sqlite", "dirty", "trust"]
+                .into_iter()
+                .map(move |changed| (workers, changed))
+        }) {
             let (temporary, store, requests, canonical) = shared_vector_window();
             let corpora = store.shared_semantic_corpora(&requests).expect("window");
             let items = requests
@@ -5177,8 +5354,9 @@ mod tests {
             let events = std::cell::RefCell::new(Vec::new());
             assert!(
                 store
-                    .with_shared_semantic_snapshots(
+                    .with_shared_semantic_snapshots_bounded(
                         &items,
+                        workers,
                         |index| {
                             events.borrow_mut().push(format!("publish-{index}"));
                             if index == 2 {
