@@ -262,6 +262,11 @@ E5: 검색어와 문서의 역할을 구분해 학습한 비생성형 임베딩 
 - 증분 준비 오류 보존: 시험 도구의 SQLite 연결 미종료로 FTS 잠금 실패, 이어서 내용 기반 ID 변경을 반영하지 못한 대조 오류. 제품 오류와 구분
 - 연결 종료·ID 대조 수정 뒤 본문 재수정 없이 복구. 성공한 FTS 18.742초와 벡터 95.943초 별도, 실패 FTS 포함 133.568초
 - 첫 변경부터 진단·복구 대기 포함 약 540.003–540.005초. 첫 절대 시각 부재에 따른 범위 값이며 정밀 단일 측정값으로 보고 금지
+- 최종 조합 `ddb91859`·문서 `6e7c4a3c`: Windows 전체 Rust 877개 통과·수동 4개 제외. Python 단일 전체 실행 783개 중 743개 통과·OS/호스트 조건 40개 제외, 누락·실패 0개
+- Python 구간 시간: 문서 1.968초·보안 67.813초·계약 442.500초·통합 252.062초·출시 45.407초. 같은 시간에 기능 수용도 실행해 성능 비교 자료로 사용 금지
+- 원본: `tests/work/scope-audit-20260828/vector-parallel-workspace-tests.log`, `vector-parallel-python-all.log`, `vector-parallel-all-timing.json`, `vector-parallel-reconciled-tests.json`
+- 새 바이너리 SHA `2707deaea7c2dc215f99dee8ec56a6bb9ef86e58a6adfed2d9a2d160b3106ac9`: Windows 실제 전체 61호출·기밀 승인/공유 격리·손상 뒤 FTS 복귀 통과. `tests/work/vector-native-lblw2nrc/receipt.json`, `tests/work/vector-privacy-current-cqikgvng/receipt.json`
+- 위 실제 시험은 합성 자료·해당 Windows 호스트 범위. 5만 성능·다른 운영체제·실제 사용자 기밀 지식 검증 대체 금지
 
 ### Windows 수용 관측 방식 보강
 
