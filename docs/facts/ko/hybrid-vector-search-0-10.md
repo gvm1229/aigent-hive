@@ -16,7 +16,7 @@ sources:
   - "repo:docs/research/evidence/vector-hard-gate-windows-2026-08-23.json#sha256:41517d801330c1c299178b5b1ae75ed27fb5106c8af6ce4e2083b66cec30f09a"
   - "repo:docs/research/evidence/vector-requalification-windows-2026-08-24.json#sha256:df1a2e0bf1001236cef266653309154bb99676837be86a2beba25e8dff16b178"
   - "repo:docs/research/vector-memory-0.10-feasibility-2026-08-22.md#sha256:03dca07c4f6b5928268f4bc7c5337d1604371eadcd5b8a7b85b88ec3f65f215c"
-  - "repo:docs/research/vector-product-integration-2026-08-28.md#sha256:eddc409fdca700912386f11bcf1d58137b6057ade6b234c5071f4ddc712e27e1"
+  - "repo:docs/research/vector-product-integration-2026-08-28.md#sha256:5a7feb09d93de460c036ed35e2b90a5620168c51b60ec58747510dec4f00bd48"
   - "repo:docs/research/vector-requalification-0.10-2026-08-24.md#sha256:8e7a9a70df255694b10bc88b9dadb40619ad36f74d20902b06dea1db556f595e"
 links: [global-knowledge-rag, graphify-0-10-adoption, knowledge-storage, v0-10-product-scope]
 reviewed_revision: "git:c264d0e315249dc2f95a58b2c4ab02375b0acad4"
