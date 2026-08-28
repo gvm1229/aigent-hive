@@ -4759,7 +4759,10 @@ mod tests {
         semantic.hits[1].score = 1.0;
         let weighted = fuse_semantic_results(&request, lexical, &semantic).expect("score fusion");
         assert_eq!(weighted.hits[0].chunk_id, second_hit.chunk_id);
-        assert_eq!(weighted.hits[0].score, SEMANTIC_FUSION_WEIGHT);
+        assert_eq!(
+            weighted.hits[0].score.to_bits(),
+            SEMANTIC_FUSION_WEIGHT.to_bits()
+        );
         let mut stale = result.clone();
         stale.generation += 1;
         assert!(fuse_semantic_results(&request, result.clone(), &stale).is_err());

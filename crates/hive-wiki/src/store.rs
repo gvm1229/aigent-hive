@@ -4673,6 +4673,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::too_many_lines)] // One transaction exercises authority drift before and after publication.
     fn semantic_publication_preserves_target_and_current_collection_authority() {
         let (temporary, store) = store();
         let work = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/work");
