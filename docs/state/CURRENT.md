@@ -38,12 +38,12 @@
 - 건너뜀: Windows의 symlink 권한·POSIX 전용 동작·macOS 설치 시험·호스트별 기본 설정 조건. 다른 운영체제 통과로 간주 금지
 - 목록 대조: `tests/work/scope-audit-20260828/vector-export-reconciled-tests.json`
 - 고정 관계 질문은 같은 시점의 사실로 검사. 직접 사실 30/30·관계 30/30, 현재/고정 사실 보존·오류/경고 0건
-- Windows 실제 긴 경로·8문서 묶음 이동·3공유 모음·소스 81개 재개·강제 취소/복구 통과: `tests/work/vector-native-lblw2nrc/receipt.json`
-- 새 병렬 처리 바이너리 SHA `2707deaea7c2dc215f99dee8ec56a6bb9ef86e58a6adfed2d9a2d160b3106ac9`, 깨끗한 소스 `6e7c4a3c`. 대규모 속도는 별도
-- 묶음/검색 재사용: Wiki 157+1+7+8·CLI 21·Clippy 통과. Skill 투영/과거 갱신 35개 통과·OS 전용 2개 제외
+- 최신 실제 긴 경로·묶음 이동·3공유 모음·소스 81개 재개·취소/복구: 아래 세 운영체제 원격 수용 근거 참조
+- 현재 바이너리 SHA `5fc08c6e9dd5afdc6931537a69f898b33a1be5ccddb9af83baad8f356f82265c`, 제품 `4e971a78`. 대규모 속도는 별도
+- Windows 최신 기밀 승인 분리·일회성 소비·공유 격리·실행기 손상 시 FTS 복귀 통과: `tests/work/vector-privacy-export-znq7xf8j/receipt.json`
 - 실제 18모음·76문서: 묶음 생성·무변경·증분 2개·74개 벡터 보존 통과. 컴파일 경합의 시간은 성능 근거 제외
 - 기존 기밀 승인·공유 검색 누출 0건·51,200개 기밀 조각의 승인 전 오류 노출 방지 근거는 재검증 문서 참조
-- 원격 `33160056855`, 소스 `41db2ddf`: 새 병렬 처리의 세 운영체제 실제 벡터 수용 통과. 공개 test.5 수용과 구분
+- 원격 `33174134490`, 소스 `6deb8676`: Windows·macOS·Linux 실제 벡터 수용 통과. 공개 test.5 수용과 구분
 - 이전 macOS 설치 실패: 기본 Python의 SQLite 확장 미지원 확인, CI 호환 Python 선택으로 복구. 다음 소스 생성 실패 1건은 재현 원인 미확정으로 보존
 - 순위 보호 후 CLI 441개·Wiki 179개 통과·수동 4개 제외, 형식 검사 13개·Python CLI 6개 통과. 전체 후속 검사는 별도
 
