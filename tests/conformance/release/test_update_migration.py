@@ -890,7 +890,7 @@ class Phase6StaticContracts(unittest.TestCase):
         self.assertEqual(workflow["permissions"], {"contents": "read"})
         self.assertEqual(
             set(workflow["jobs"]),
-            {"macos", "linux", "windows", "public-test-korean"},
+            {"macos", "linux", "windows", "public-test-korean", "vector"},
         )
         self.assertEqual(
             workflow["jobs"]["public-test-korean"]["uses"],
@@ -957,14 +957,13 @@ class Phase6StaticContracts(unittest.TestCase):
                 "actions/setup-python@"
                 "5fda3b95a4ea91299a34e894583c3862153e4b97"
             ),
-            3,
+            4,
         )
         self.assertEqual(text.count("--host antigravity"), 9)
         self.assertEqual(text.count("--dry-run --output json"), 3)
         self.assertEqual(text.count("--apply --output json"), 3)
         self.assertEqual(text.count("--validate --output json"), 3)
         for forbidden in (
-            "actions/upload-artifact",
             "actions/attest",
             "id-token: write",
             "release-signing",
@@ -975,6 +974,19 @@ class Phase6StaticContracts(unittest.TestCase):
             "gh release",
         ):
             self.assertNotIn(forbidden, text)
+
+        uploads = [
+            (name, step)
+            for name, job in workflow["jobs"].items()
+            for step in job.get("steps", [])
+            if step.get("uses", "").startswith("actions/upload-artifact@")
+        ]
+        self.assertEqual(len(uploads), 1)
+        name, upload = uploads[0]
+        self.assertEqual(name, "vector")
+        self.assertEqual(upload["uses"], "actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f")
+        self.assertEqual(upload["if"], "always()")
+        self.assertEqual(upload["with"]["path"], "tests/work/vector-native-*/receipt.json")
 
         agy_fixture = (ROOT / "tests/fixtures/native-orchestration/agy-stub.py").read_text(
             encoding="utf-8"
@@ -2130,7 +2142,7 @@ try {
             readme,
         )
         self.assertIn(
-            f"- product version: `{source_version}`",
+            f"- 제품 버전: `{source_version}`",
             (ROOT / "docs/state/CURRENT.md").read_text(encoding="utf-8"),
         )
         lock = tomllib.loads((ROOT / "Cargo.lock").read_text(encoding="utf-8"))
