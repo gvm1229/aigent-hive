@@ -21,13 +21,15 @@ SQLite FTS의 exact 검색을 유지하면서 표현이 다른 의미·다국어
 - [x] [VEC10-005] `tests/work/vector-research/` 격리 prototype: 같은 canonical chunk·embedding의 세 engine build·query·delete·rebuild — Dense quality와 동일 384-dimension storage engine 격리 실행
 - [x] [VEC10-006] 50,000 chunk·100 collection benchmark와 semantic Recall@10·exact-fact 무회귀·scope filter·disk·RAM·build 비용 비교 — Dense semantic +15.0 points·exact 무회귀, engine p95 통과, full embedding build 실패
 - [ ] [VEC10-007] 기존 기준을 유지한 engine·embedding 채택 판정. 병렬 변환과 정적 임베딩 비교, 미통과 조합 공개 활성화 금지
-- [ ] [VEC10-008] 파생 색인 세대·모델/engine 영수증·청크 digest·collection와 공개 범위별 물리 격리 구현
-- [ ] [VEC10-009] 승인형 보조 환경 preview·설치·시간 제한 배치·원자 활성화·갱신·비활성화 구현
-- [ ] [VEC10-010] FTS 보존, 의미 검색의 순위 결합·인용·검색 경로 표시. 벡터 점수만으로 사실 확정 금지
-- [ ] [VEC10-011] 증분 갱신·중단 재개·전체 재생성 동등성, 오래된/손상된 색인의 FTS 복귀·rollback 구현
+- [x] [VEC10-008] 파생 색인 세대·모델/engine 영수증·청크 digest·collection와 공개 범위별 물리 격리 구현
+- [x] [VEC10-009] 승인형 보조 환경 preview·설치·시간 제한 배치·원자 활성화·갱신·비활성화 구현
+- [x] [VEC10-010] FTS 보존, 의미 검색의 순위 결합·인용·검색 경로 표시. 벡터 점수만으로 사실 확정 금지
+- [x] [VEC10-011] 증분 갱신·중단 재개·전체 재생성 동등성, 오래된/손상된 색인의 FTS 복귀·rollback 구현
 - [ ] [VEC10-012] Bundle 제외·다른 기기 재생성·세 운영체제 설치와 번호 공개 시험 수용
 
 ## 재검증 checklist
+
+기능 근거: [최신 검증](../../research/vector-product-integration-2026-08-28.md). 성능 채택 `007`·공개 수용 `012`는 별도 미완료.
 
 - [x] [VQR10-001] 특정 engine을 미리 채택하지 않고 embedding pipeline 최적화와 vector 재검증을 `0.10.0` 범위로 유지보수자 승인
 - [x] [VQR10-002] 반복 50,000 corpus의 30 digest·5.75초와 고유 50,000 corpus의 50,000 digest·1,000 probe 분리 측정
@@ -58,7 +60,7 @@ SQLite FTS의 exact 검색을 유지하면서 표현이 다른 의미·다국어
 - `0.10.0-test.1` 전 조사: Dense semantic Recall@10 `+15.0 points`, hybrid exact `100%`, 세 engine lookup 기준 통과
 - 실패 지점: Windows x64의 naive 50,000 offline embedding build `600초` 초과
 - Benchmark 한계: 30개 문서를 반복한 합성 scale에서 digest 중복 제거·resumable checkpoint·incremental build·query embedding 포함 p95 미검증
-- 당시 `defer`와 product dependency `0건`은 유효한 과거 결정이며, 새 재검증 결과가 통과할 때까지 현재 제품 상태로 유지
+- 당시 `defer`·product dependency `0건`은 과거 기록으로 보존. 현재 branch 구현과 구분하며, 미통과 조합의 공개 포함 금지
 
 ## Hard gate
 

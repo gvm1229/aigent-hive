@@ -33,6 +33,21 @@
 - 새 숫자 문구만 공백·개행 정규화. 기존 scalar·별칭·명시 인용 유지. `release alpha-beta`는 원래 검색 토큰 세 개로 보호되던 동작을 그대로 보존
 - 수정 전 실제 120회 p95: 전역 FTS 0.538085초·한 모음 FTS 0.334935초·전역 의미 3.039111초·한 모음 의미 2.262637초. 의미 모드는 실제 벡터 사용 각 30회, 인용 실패 27/11건
 - 원본: `final-acceptance/query120/measurement/summary.json`, SHA `b958c81e…93ca823`. 질문·실패 응답·시간 보존, 모델 유지 warm 500ms와 engine 50ms는 별도 미측정
+- 수정 뒤 원본 120개·독립 60개 실제 조회 통과. 원본 의미 48/60 → 58/60, 독립 28/60 → 58/60. 정확 30/30·평균 역순위 0.975 유지·순위 손실 0개
+- 바이너리 `830479a3…efb0ac0`, 같은 `76aab2d3…f707fc`·모델·가중치·원본 자료. 30문서의 새 CLI 의미 p95는 원본 1.795839초·독립 1.820307초, 대규모·모델 유지 warm 근거와 구분
+- 원본: `tests/work/scope-audit-20260828/numbered-vector-queries-original-isolated.json`, `numbered-vector-queries-holdout-isolated.json`, `vector-numbered-gold.log`
+- 대규모 같은 120회 재검증: 네 구간 모두 기대 인용 30/30, 기존 FTS 1위 대비 순위 하락 0개. 의미 모드 보호 표시·실제 벡터 사용 각각 30/30, 원래 인용 실패 38건 보존
+- 최신 p95: 전역 FTS 0.546428초·한 모음 FTS 0.352726초·전역 의미 3.067394초·한 모음 의미 2.275776초. 기능 수정 통과와 별개로 의미 모드 2초 미달 유지
+- 전체 183.442초·전후 보존 오류 0개. 원본 `final-acceptance/query120-rank-recheck/measurement/summary.json`, SHA `da69712d…6fd9cdbb`
+
+### 100개 SQLite 벡터 저장소 단독 조회
+
+- 같은 현재 100DB·5만 행, 고정 저장 벡터 30개. 준비 조회 100회 뒤 실제 제품과 같은 `k=100`·JOIN SQL 3,000회 순차 실행
+- 열린 100개 연결의 합산 조회 p95 98.876ms로 50ms 미달. SQL 실행·행 수집 합계 p95 98.693ms, 후보 변환·정렬 p95 8.752ms, 전체 후보 처리 p95 107.212ms
+- 연결 0.012초·DLL 적재 0.003초·메타데이터 0.007초·물리 검증 3.826초는 별도. 측정 반복 3.396초, 전체 48.331초
+- 30개 모두 10,000후보·원래 모음의 0에 가까운 거리·유효 ID/점수 확인. 전후 상태 바이트 동일, 모델·Hive CLI 실행·새 설치·DB 쓰기 0건
+- 이번 Windows의 허용된 P 코어 제한으로 실행 후 원래 마스크 복원. 다른 하드웨어 성능·원문 질문 품질·전체 CLI·모델 유지 warm 500ms 통과 근거 아님
+- 원본 `final-acceptance/engine-sql-warm/measurement/summary.json`, SHA `6e342438…a268735f`. 모든 경로는 위 `tests/work/scope-audit-20260828/vector-scale-100/optimized-100/shared-list-next/wave4-next/` 기준
 
 ### 최신 100개 변경 갱신
 

@@ -1,11 +1,11 @@
 # Aigent Hive 활성 계획
 
-> Revision: 296
-> 기준일: 2026-08-28
+> Revision: 297
+> 기준일: 2026-08-29
 > Product version: `0.10.0`
 > Stable baseline: `0.9.5`
 > 다음 공개 시험: `0.10.0-test.5`
-> 현재 단계: 비벡터 test.4 수용 완료, 전용 branch의 벡터 구현
+> 현재 단계: 비벡터 test.4·벡터 기능 구현 완료, 성능 설계 결정 대기
 > 확정 범위: [`ADR-0020`](../decisions/ADR-0020-0.10.0-product-scope.md)
 
 ## 목표
@@ -63,7 +63,7 @@
 | 범위 | 완료 | 미완료 | 진행률 |
 | --- | ---: | ---: | ---: |
 | 관계·검색 graph | 16 | 0 | 100% |
-| Hybrid vector search | 17 | 6 | 73.9% |
+| Hybrid vector search | 21 | 2 | 91.3% |
 | Host-owned Skill 예약 | 1 | 0 | 100% |
 | Nested project scan | 1 | 0 | 100% |
 | Agent 지침 경량화 | 8 | 0 | 100% |
@@ -74,7 +74,7 @@
 | 한국어 언어 core | 12 | 0 | 100% |
 | Source `draft-devlog` | 6 | 0 | 100% |
 | `0.10.0` 출시 | 0 | 7 | 0% |
-| **합계** | **101** | **13** | **88.6%** |
+| **합계** | **105** | **9** | **92.1%** |
 
 ## Required load order
 
@@ -110,8 +110,8 @@ Archive·backlog·완료 history의 자동 선행 load 금지.
 3. `SKM10-002–010` 모든 stable registry·predecessor Skill cleanup과 direct jump upgrade
 4. `JDG10-002–008` explicit adversarial Judge·`judge-evidence`·host launch·quorum 결합
 5. `KRG10-001–007`, `VEC10-001–007` native 관계·vector feasibility·adopt|defer
-6. `KRG10-008–013`, `KRG10-015–016`과 통과 시 `VEC10-008–012` 구현·수용
-7. `VQR10-002–010` embedding pipeline·engine·격리·rollback 재검증, 통과 시 `VEC10-008–012` 구현
+6. `KRG10-008–013`, `KRG10-015–016`, 승인된 전용 branch의 `VEC10-008–011` 기능 구현·격리 검증
+7. `VQR10-002–010` 재검증과 `VEC10-007` 채택 판정. 통과 뒤에만 공개 포함·`VEC10-012` 수용
 8. `KOR10-002–011` 자동 한국어 core·`humanize-kor`·검증된 upstream language pack 구현
 9. `KOR10-012`, `REL10-001–004` 전체 회귀·`0.10.0-test.2` 이상·세 운영체제 수용
 10. `SDB10-002–006` source-only Skill·mock·live draft 수용. Product bytes·release acceptance 불변
