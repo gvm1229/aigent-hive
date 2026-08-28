@@ -3,7 +3,9 @@ use super::{
     contract_digest, invalid, io_error, lock, optional, required, scope_control, verify_runtime,
     worker, InstalledRuntime, Selector, Target,
 };
-use hive_wiki::rag::{RetrievalRequest, SemanticMatch};
+use hive_wiki::rag::{
+    normalize_fusion_scores, RetrievalRequest, SemanticMatch, SEMANTIC_FUSION_WEIGHT,
+};
 use hive_wiki::store::RagStore;
 use hive_wiki::vector::{DatabaseKind, VectorFiles};
 use hive_wiki::{source, WikiError};
@@ -17,7 +19,8 @@ fn search_metadata(used: bool, partial: bool) -> Result<Value, WikiError> {
         json!({"requested":"semantic","used":if used {vec!["fts","vector"]} else {vec!["fts"]},
         "fallback":if !used {"unavailable"} else if partial {"partial"} else {"none"},
         "model":{"id":lock["model"]["id"],"revision":lock["model"]["revision"]},
-        "engine":{"name":"sqlite-vec","version":"0.1.9"},"rrf_constant":60,"contract_digest":contract_digest()?}),
+        "engine":{"name":"sqlite-vec","version":"0.1.9"},
+        "fusion":{"method":"min-max-score","semantic_weight":SEMANTIC_FUSION_WEIGHT,"fts_weight":1.0-SEMANTIC_FUSION_WEIGHT},"contract_digest":contract_digest()?}),
     )
 }
 
@@ -163,7 +166,8 @@ fn source_hybrid(
     if corpus.manifest_digest != active.manifest_digest {
         return Err(invalid("source vectors stale"));
     }
-    let lexical = source::query(target.files.root_path(), language, Some(text), None, 100)?;
+    let lexical =
+        source::query_with_scores(target.files.root_path(), language, Some(text), None, 100)?;
     let response = worker(
         &target.files,
         &control.runtime,
@@ -180,22 +184,18 @@ fn source_hybrid(
         &corpus.manifest_digest,
         &matches,
     )?;
-    let mut ranked: BTreeMap<String, (source::SourceQueryHit, f64, u8)> = BTreeMap::new();
-    for (mask, hits) in [(1, &lexical), (2, &semantic)] {
-        for (index, hit) in hits.iter().enumerate() {
-            let entry = ranked
-                .entry(hit.path.clone())
-                .or_insert_with(|| (hit.clone(), 0.0, 0));
-            if entry.0 != *hit {
-                return Err(invalid("source citation changed during fusion"));
-            }
-            entry.1 += 1.0 / (61.0 + f64::from(u32::try_from(index).map_err(io_error)?));
-            entry.2 |= mask;
-        }
-    }
-    let mut ranked = ranked.into_values().collect::<Vec<_>>();
-    ranked.sort_by(|a, b| b.1.total_cmp(&a.1).then_with(|| a.0.path.cmp(&b.0.path)));
-    ranked.truncate(limit);
+    let semantic = semantic
+        .into_iter()
+        .map(|hit| {
+            let score = matches
+                .iter()
+                .find(|candidate| candidate.chunk_id == hit.path)
+                .ok_or_else(|| invalid("source semantic score is absent"))?
+                .score;
+            Ok((hit, score))
+        })
+        .collect::<Result<Vec<_>, WikiError>>()?;
+    let ranked = fuse_source_hits(&lexical, &semantic, limit)?;
     if scope_control(target)?.1 != scope_digest {
         return Err(invalid("source scope changed during query"));
     }
@@ -231,6 +231,38 @@ fn source_hybrid(
     Ok(
         json!({"manifest_digest":corpus.manifest_digest,"hits":hits,"search":search_metadata(true,false)?}),
     )
+}
+
+fn fuse_source_hits(
+    lexical: &[(source::SourceQueryHit, f64)],
+    semantic: &[(source::SourceQueryHit, f64)],
+    limit: usize,
+) -> Result<Vec<(source::SourceQueryHit, f64, u8)>, WikiError> {
+    let mut ranked: BTreeMap<String, (source::SourceQueryHit, f64, u8)> = BTreeMap::new();
+    for (mask, hits) in [(1, lexical), (2, semantic)] {
+        let scores =
+            normalize_fusion_scores(&hits.iter().map(|(_, score)| *score).collect::<Vec<_>>())
+                .map_err(io_error)?;
+        let weight = if mask == 2 {
+            SEMANTIC_FUSION_WEIGHT
+        } else {
+            1.0 - SEMANTIC_FUSION_WEIGHT
+        };
+        for ((hit, _), score) in hits.iter().zip(scores) {
+            let entry = ranked
+                .entry(hit.path.clone())
+                .or_insert_with(|| (hit.clone(), 0.0, 0));
+            if entry.0 != *hit {
+                return Err(invalid("source citation changed during fusion"));
+            }
+            entry.1 += weight * score;
+            entry.2 |= mask;
+        }
+    }
+    let mut ranked = ranked.into_values().collect::<Vec<_>>();
+    ranked.sort_by(|a, b| b.1.total_cmp(&a.1).then_with(|| a.0.path.cmp(&b.0.path)));
+    ranked.truncate(limit);
+    Ok(ranked)
 }
 
 #[cfg(test)]

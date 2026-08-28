@@ -33,7 +33,7 @@
     "search": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["requested", "used", "fallback", "model", "engine", "rrf_constant", "contract_digest"],
+      "required": ["requested", "used", "fallback", "model", "engine", "fusion", "contract_digest"],
       "properties": {
         "requested": { "const": "semantic" },
         "contract_digest": { "$ref": "#/$defs/sha256" },
@@ -47,7 +47,11 @@
           "type": "object", "additionalProperties": false, "required": ["name", "version"],
           "properties": { "name": { "const": "sqlite-vec" }, "version": { "type": "string" } }
         },
-        "rrf_constant": { "const": 60 }
+        "fusion": {
+          "type": "object", "additionalProperties": false,
+          "required": ["method", "semantic_weight", "fts_weight"],
+          "properties": { "method": { "const": "min-max-score" }, "semantic_weight": { "const": 0.75 }, "fts_weight": { "const": 0.25 } }
+        }
       }
     }
   },

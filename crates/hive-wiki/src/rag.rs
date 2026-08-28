@@ -861,7 +861,41 @@ pub fn semantic_partition_states_serialized(
     Ok(result)
 }
 
-/// Fuse independently ranked, already revalidated candidates using reciprocal ranks (constant 60).
+/// Fixed semantic share selected on the unchanged original fixture and independent holdout.
+pub const SEMANTIC_FUSION_WEIGHT: f64 = 0.75;
+
+/// Normalize one authorized candidate lane within its current query, never across queries.
+///
+/// # Errors
+/// Rejects nonfinite scores or an overflowing score range.
+pub fn normalize_fusion_scores(scores: &[f64]) -> Result<Vec<f64>, RagError> {
+    if scores.iter().any(|score| !score.is_finite()) {
+        return Err(RagError::InvalidInput("invalid fusion score".to_owned()));
+    }
+    if scores.is_empty() {
+        return Ok(Vec::new());
+    }
+    let minimum = scores.iter().copied().fold(f64::INFINITY, f64::min);
+    let maximum = scores.iter().copied().fold(f64::NEG_INFINITY, f64::max);
+    let range = maximum - minimum;
+    if !range.is_finite() {
+        return Err(RagError::InvalidInput(
+            "fusion score range overflows".to_owned(),
+        ));
+    }
+    Ok(scores
+        .iter()
+        .map(|score| {
+            if range > 0.0 {
+                (score - minimum) / range
+            } else {
+                1.0
+            }
+        })
+        .collect())
+}
+
+/// Fuse already revalidated candidates with query-local normalized lexical and semantic scores.
 ///
 /// # Errors
 /// Rejects mixed generations, duplicate identities, and contradictory canonical citations.
@@ -880,15 +914,20 @@ pub fn fuse_semantic_results(
     }
     let mut candidates: BTreeMap<String, (RetrievalHit, f64, u8)> = BTreeMap::new();
     for (mask, hits) in [(1_u8, &lexical.hits), (2_u8, &semantic.hits)] {
+        let scores =
+            normalize_fusion_scores(&hits.iter().map(|hit| hit.score).collect::<Vec<_>>())?;
+        let weight = if mask == 2 {
+            SEMANTIC_FUSION_WEIGHT
+        } else {
+            1.0 - SEMANTIC_FUSION_WEIGHT
+        };
         let mut seen = BTreeSet::new();
-        for (rank, hit) in hits.iter().enumerate() {
+        for (score, hit) in scores.into_iter().zip(hits) {
             if !seen.insert(&hit.chunk_id) || !hit.score.is_finite() {
                 return Err(RagError::InvalidInput(
                     "invalid fusion candidate".to_owned(),
                 ));
             }
-            let rank = u32::try_from(rank)
-                .map_err(|_| RagError::InvalidInput("too many fusion candidates".to_owned()))?;
             let entry = candidates
                 .entry(hit.chunk_id.clone())
                 .or_insert_with(|| (hit.clone(), 0.0, 0));
@@ -908,7 +947,7 @@ pub fn fuse_semantic_results(
             if hit.text.len() > entry.0.text.len() {
                 entry.0.text.clone_from(&hit.text);
             }
-            entry.1 += 1.0 / (61.0 + f64::from(rank));
+            entry.1 += weight * score;
             entry.2 |= mask;
         }
     }
@@ -4708,7 +4747,19 @@ mod tests {
         let fused = fuse_semantic_results(&request, result.clone(), &result).expect("fused");
         assert_eq!(fused.hits[0].matched_field, "hybrid");
         assert_eq!(fused.hits[0].text, result.hits[0].text);
-        assert!((fused.hits[0].score - 2.0 / 61.0).abs() < 0.000_001);
+        assert!((fused.hits[0].score - 1.0).abs() < 0.000_001);
+        let mut lexical = result.clone();
+        let mut second_hit = lexical.hits[0].clone();
+        second_hit.chunk_id = format!("chunk-{}", sha256_digest(b"second chunk"));
+        second_hit.score = 0.0;
+        lexical.hits[0].score = 10.0;
+        lexical.hits.push(second_hit.clone());
+        let mut semantic = lexical.clone();
+        semantic.hits[0].score = 0.0;
+        semantic.hits[1].score = 1.0;
+        let weighted = fuse_semantic_results(&request, lexical, &semantic).expect("score fusion");
+        assert_eq!(weighted.hits[0].chunk_id, second_hit.chunk_id);
+        assert_eq!(weighted.hits[0].score, SEMANTIC_FUSION_WEIGHT);
         let mut stale = result.clone();
         stale.generation += 1;
         assert!(fuse_semantic_results(&request, result.clone(), &stale).is_err());
@@ -4741,6 +4792,24 @@ mod tests {
         invalid = matches[..1].to_vec();
         invalid[0].score = f64::NAN;
         assert!(hydrate(&request, &invalid).is_err());
+    }
+
+    #[test]
+    fn fusion_normalization_is_query_local_and_rejects_invalid_ranges() {
+        assert_eq!(
+            normalize_fusion_scores(&[]).expect("empty"),
+            Vec::<f64>::new()
+        );
+        assert_eq!(
+            normalize_fusion_scores(&[1.0, 3.0, 2.0]).expect("range"),
+            vec![0.0, 1.0, 0.5]
+        );
+        assert_eq!(
+            normalize_fusion_scores(&[-2.0, -2.0]).expect("ties"),
+            vec![1.0, 1.0]
+        );
+        assert!(normalize_fusion_scores(&[f64::NAN]).is_err());
+        assert!(normalize_fusion_scores(&[-f64::MAX, f64::MAX]).is_err());
     }
 
     #[test]

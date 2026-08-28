@@ -575,6 +575,21 @@ pub fn query(
     tag: Option<&str>,
     limit: usize,
 ) -> Result<Vec<SourceQueryHit>, WikiError> {
+    query_with_scores(root, language, text, tag, limit)
+        .map(|rows| rows.into_iter().map(|(hit, _)| hit).collect())
+}
+
+/// Return query-local lexical scores without changing the ordinary citation-only query contract.
+///
+/// # Errors
+/// Rejects the same invalid requests and stale or unsafe source state as [`query`].
+pub fn query_with_scores(
+    root: &Path,
+    language: &str,
+    text: Option<&str>,
+    tag: Option<&str>,
+    limit: usize,
+) -> Result<Vec<(SourceQueryHit, f64)>, WikiError> {
     let root = SourceRoot::open(root)?;
     validate_language(language)?;
     if text.is_none() && tag.is_none() {
@@ -598,7 +613,7 @@ pub fn query(
         let mut statement = connection
             .prepare(
                 "SELECT p.language, p.pair_id, p.topic_slug, p.counterpart, p.title, p.summary,
-                        p.path, p.content_hash, p.reviewed_revision
+                        p.path, p.content_hash, p.reviewed_revision, -bm25(pages_fts)
                  FROM pages_fts f
                  JOIN pages p ON p.language = f.language AND p.topic_slug = f.topic_slug
                  WHERE pages_fts MATCH ?1
@@ -621,7 +636,7 @@ pub fn query(
         let mut statement = connection
             .prepare(
                 "SELECT p.language, p.pair_id, p.topic_slug, p.counterpart, p.title, p.summary,
-                        p.path, p.content_hash, p.reviewed_revision
+                        p.path, p.content_hash, p.reviewed_revision, 1.0
                  FROM pages p
                  JOIN tags t ON t.language = p.language AND t.topic_slug = p.topic_slug
                  WHERE p.language = ?1 AND t.tag = ?2
@@ -1346,13 +1361,13 @@ fn verify_index(connection: &Connection, digest: &str, page_count: usize) -> Res
 fn collect_hits(
     connection: &Connection,
     rows: Result<rusqlite::Rows<'_>, rusqlite::Error>,
-) -> Result<Vec<SourceQueryHit>, WikiError> {
+) -> Result<Vec<(SourceQueryHit, f64)>, WikiError> {
     let mut rows = rows.map_err(sqlite_error)?;
     let mut hits = Vec::new();
     while let Some(row) = rows.next().map_err(sqlite_error)? {
         let language: String = row.get(0).map_err(sqlite_error)?;
         let topic_slug: String = row.get(2).map_err(sqlite_error)?;
-        hits.push(SourceQueryHit {
+        hits.push((SourceQueryHit {
             language: language.clone(),
             pair_id: row.get(1).map_err(sqlite_error)?,
             topic_slug: topic_slug.clone(),
@@ -1380,7 +1395,7 @@ fn collect_hits(
                 &language,
                 &topic_slug,
             )?,
-        });
+        }, row.get(9).map_err(sqlite_error)?));
     }
     Ok(hits)
 }
@@ -2110,6 +2125,13 @@ mod tests {
         let linted = lint(temp.path()).expect("lint");
         assert!(linted.issues.is_empty());
         let hits = query(temp.path(), "en", Some("boundaries"), None, 10).expect("query");
+        let scored = query_with_scores(temp.path(), "en", Some("boundaries"), None, 10)
+            .expect("scored query");
+        assert!(scored.iter().all(|(_, score)| score.is_finite()));
+        assert_eq!(
+            scored.into_iter().map(|(hit, _)| hit).collect::<Vec<_>>(),
+            hits
+        );
         assert_eq!(hits.len(), 1);
         assert_eq!(hits[0].topic_slug, "architecture");
         assert_eq!(hits[0].pair_id, "architecture");
