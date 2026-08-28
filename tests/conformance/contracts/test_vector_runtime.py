@@ -12,7 +12,7 @@ import importlib.util
 import io
 import json
 import os
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 import sqlite3
 import stat
 import struct
@@ -62,6 +62,28 @@ class SimulatedVectorConnection(sqlite3.Connection):
 
 
 class VectorRuntimeContract(unittest.TestCase):
+    def test_native_loader_path_keeps_long_drive_and_unc_names_without_changing_posix(self):
+        with patch.object(WORKER.sys, "platform", "win32"):
+            for normal, expected in (
+                (r"C:\긴 경로\site", r"\\?\C:\긴 경로\site"),
+                (r"\\server\share\site", r"\\?\UNC\server\share\site"),
+                (r"\\?\C:\site", r"\\?\C:\site"),
+                (r"\\?\UNC\server\share\site", r"\\?\UNC\server\share\site"),
+            ):
+                self.assertEqual(WORKER.native_loader_path(PureWindowsPath(normal)), expected)
+        with patch.object(WORKER.sys, "platform", "linux"):
+            self.assertEqual(WORKER.native_loader_path(Path("/tmp/site")), str(Path("/tmp/site")))
+
+    def test_runtime_uses_native_loader_spelling_only_for_the_import_path(self):
+        runtime = self.root / "runtime"
+        site = runtime / "site"
+        site.mkdir(parents=True)
+        with patch.object(WORKER, "native_loader_path", return_value="native-site") as native, \
+             patch.object(WORKER, "offline_environment"), patch.object(WORKER.sys, "path", []):
+            self.assertEqual(WORKER.load_runtime(str(runtime)), runtime)
+            native.assert_called_once_with(site)
+            self.assertEqual(WORKER.sys.path, ["native-site"])
+
     def setUp(self):
         work = ROOT / "tests/work"
         work.mkdir(exist_ok=True)

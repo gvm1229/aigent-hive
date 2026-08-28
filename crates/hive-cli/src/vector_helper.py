@@ -54,11 +54,21 @@ def regular_path(value: str, directory: bool = False) -> Path:
     return path
 
 
+def native_loader_path(path: Path) -> str:
+    """Preserve long Windows DLL/model paths without changing SQLite URI names."""
+    value = str(path)
+    if sys.platform != "win32" or value.startswith("\\\\?\\"):
+        return value
+    if value.startswith("\\\\"):
+        return "\\\\?\\UNC\\" + value[2:]
+    return "\\\\?\\" + value
+
+
 def load_runtime(runtime: str) -> Path:
     root = regular_path(runtime, directory=True)
     site = regular_path(str(root / "site"), directory=True)
     # -I -S and this explicit path prevent user-site and .pth activation.
-    sys.path.insert(0, str(site))
+    sys.path.insert(0, native_loader_path(site))
     offline_environment()
     return root
 
@@ -146,11 +156,11 @@ def initialize_encoder(runtime: str) -> None:
     options.inter_op_num_threads = 1
     options.log_severity_level = 3
     _session = ort.InferenceSession(
-        str(regular_path(str(root / "model" / MODEL_FILE))),
+        native_loader_path(regular_path(str(root / "model" / MODEL_FILE))),
         options,
         providers=["CPUExecutionProvider"],
     )
-    _tokenizer = Tokenizer.from_file(str(regular_path(str(root / "model" / TOKENIZER_FILE))))
+    _tokenizer = Tokenizer.from_file(native_loader_path(regular_path(str(root / "model" / TOKENIZER_FILE))))
     config = json.loads(regular_path(str(root / "model/config.json")).read_text("utf-8"))
     tokenizer_config = json.loads(regular_path(str(root / "model/tokenizer_config.json")).read_text("utf-8"))
     if min(tokenizer_config["model_max_length"], tokenizer_config["max_length"]) != TOKEN_LIMIT:
