@@ -19,6 +19,19 @@
 - 최신 세 운영체제 기능 수용: `33174134490`, 소스 `6deb8676`, Windows 61호출·macOS/Linux 각 60호출 통과. 공개 test.5 수용과 구분
 - 원본: `tests/work/scope-audit-20260828/vector-scale-100/optimized-100/shared-list-next/wave4-next/final-acceptance/fresh50k-measurement/summary.json`, 현재 제어 기준 `after-control-baseline.json`
 
+## 최신 증분과 후속 제안
+
+### 최신 100개 변경 갱신
+
+- 같은 `5fc08c6e…6f82265c`·`76aab2d3…f707fc`, fresh 완료 뒤 각 모음에 새 문단 1개씩 정확히 100개 적용. 기존 문단의 재적용 없음
+- 벡터 1호출·7구간·100모음 게시·100개 새 계산·49,900개 이전 벡터 바이트 보존, 보존 오류 0개
+- 벡터 51.989초로 30초 기준 미달. FTS 1회 18.430초, 합계 70.419초, 최초 쓰기부터 전체 71.743초
+- 제품 구간 합계: 실행기 27.263초·정본 준비 4.873초·사전 준비 4.251초·작업 파일 1.165초·게시 13.551초. 실행기에는 시작·전송·결과 처리가 포함되며 모델 계산만의 시간이 아님
+- DB별 실행 시간 합계 94.813초는 서로 겹치는 값. 전체 CLI 시간에서 빼서 추가 비용으로 해석 금지
+- 저장량 442,751,701B로 512MiB 통과. 앞선 fresh 638.597초 실패·기존 실패 자료·실행 환경 보존
+- 새 독립 참조 `reference-after-incremental.json`, SHA `d42d2f99…bac68`. 실제 현재 DB와 제어 기록 200개 일반 복사, 186,202,784B
+- 원본: `tests/work/scope-audit-20260828/vector-scale-100/optimized-100/shared-list-next/wave4-next/final-acceptance/incremental-next/incremental100-measurement/summary.json`, `phase-observations.json`
+
 ## 초기 제품 경로
 
 - `84618f95`: 승인형 실행 환경·범위별 색인·중단 재개·의미 검색 연결
