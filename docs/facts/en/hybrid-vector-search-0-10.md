@@ -15,7 +15,7 @@ sources:
   - "repo:docs/plans/active/hybrid-vector-search-0.10.0.md#sha256:0133d82395c24813489c56365577cb141e5974d4dc9b33b7af555bbfb8b13981"
   - "repo:docs/research/evidence/vector-hard-gate-windows-2026-08-23.json#sha256:41517d801330c1c299178b5b1ae75ed27fb5106c8af6ce4e2083b66cec30f09a"
   - "repo:docs/research/evidence/vector-requalification-windows-2026-08-24.json#sha256:df1a2e0bf1001236cef266653309154bb99676837be86a2beba25e8dff16b178"
-  - "repo:docs/research/vector-acceptance-2026-08-29.md#sha256:3738689349427030eb5baa80417b4f17d29a26182348b45cd3220e5bdc4efc21"
+  - "repo:docs/research/vector-acceptance-2026-08-29.md#sha256:ae22c31066420d6e2a22e04febe336b661ca5021228e7c979badda3190199388"
   - "repo:docs/research/vector-memory-0.10-feasibility-2026-08-22.md#sha256:03dca07c4f6b5928268f4bc7c5337d1604371eadcd5b8a7b85b88ec3f65f215c"
   - "repo:docs/research/vector-product-integration-2026-08-28.md#sha256:44bacc8fad38a290054a8749d68c83f59d794a53df2739228acd27805bd12e11"
   - "repo:docs/research/vector-requalification-0.10-2026-08-24.md#sha256:8e7a9a70df255694b10bc88b9dadb40619ad36f74d20902b06dea1db556f595e"
