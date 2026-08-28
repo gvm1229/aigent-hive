@@ -21,6 +21,16 @@ spec.loader.exec_module(guard)
 
 
 class VectorParentLifetime(unittest.TestCase):
+    def setUp(self):
+        (ROOT / "tests/work").mkdir(parents=True, exist_ok=True)
+
+    def test_fresh_checkout_creates_its_own_temporary_work_parent(self):
+        with tempfile.TemporaryDirectory(dir=ROOT / "tests/work") as directory:
+            fresh = Path(directory) / "fresh-source"
+            with patch.dict(globals(), {"ROOT": fresh}):
+                self.setUp()
+            self.assertTrue((fresh / "tests/work").is_dir())
+
     def test_guarded_bootstrap_runs_with_bounded_command_line_and_no_download(self):
         source = (ROOT / "crates/hive-cli/src/vector_runtime.py").read_text("utf-8")
         wrapped = (SOURCE.read_text("utf-8") + "\n_hive_bind_parent(" + str(os.getpid()) +
