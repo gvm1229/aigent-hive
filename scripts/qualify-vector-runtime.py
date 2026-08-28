@@ -117,6 +117,42 @@ def consumer_fixture(target: Path) -> list[Path]:
     return protected
 
 
+def shared_batch_fixture(work: Path) -> tuple[Path, list[str], list[Path]]:
+    """Three small canonical roots; no reused installation or private collection."""
+    user = work / "batch-user"
+    protected = consumer_fixture(user)
+    entries = [{"collection_id":"user-root", "kind":"user-root", "state":"attached",
+                "aliases":[], "local_locator":str(user), "default_visibility":"shared"}]
+    for number in range(2):
+        target = work / f"batch-collection-{number}"
+        protected.extend(consumer_fixture(target))
+        identity = "collection-" + hashlib.sha256(f"native-vector-batch-{number}".encode()).hexdigest()
+        entries.append({"collection_id":identity, "kind":"directory", "state":"attached",
+                        "aliases":[f"batch-{number}"], "local_locator":str(target), "default_visibility":"shared"})
+    registry = user / ".hive/config/collections.yml"
+    write_json(registry, {"schema_version":1, "collections":sorted(entries, key=lambda row: row["collection_id"])})
+    return user, [row["collection_id"] for row in entries], [*protected, registry]
+
+
+def validate_shared_window(data: dict, scopes: dict[str, str], embedded: dict[str, int]) -> dict[str, dict]:
+    rows = data["scopes"]
+    if not data["complete"] or data["failed"] or len(rows) != len(scopes):
+        raise ValueError("shared window did not complete the exact requested inventory")
+    found = {}
+    for row in rows:
+        selector = row["selector"]
+        identity = selector.get("partition", {}).get("collection_id")
+        if identity not in scopes or identity in found or row["scope_id"] != scopes[identity]:
+            raise ValueError("shared window returned a duplicate or unrequested identity")
+        if selector != {"kind":"collection", "partition":{"collection_id":identity, "visibility":"shared"}}:
+            raise ValueError("shared window changed a selector")
+        result = row["result"]
+        if row["state"] != "complete" or not result["complete"] or result["chunks"] != 8 or result["embedded"] != embedded[identity]:
+            raise ValueError("shared window returned an incomplete or incorrect partition")
+        found[identity] = result
+    return found
+
+
 class Qualification:
     def __init__(self, binary: Path, work: Path):
         self.binary = binary
@@ -236,13 +272,14 @@ class Qualification:
         assert self.call(*query) == plain
         assert snapshot(protected) == before
         self.portability(target)
+        self.shared_vectors()
         self.source_vectors()
         assert digest(self.binary) == self.report["binary_sha256"]
         self.report.update(status="passed", protected_bytes_preserved=True, chunks=8,
                            runtime_id=control["runtime"]["id"],
                            proven=["missing fallback", "exact consent", "native embedding and sqlite-vec", "semantic citations",
                                    "unchanged reuse", "rollback", "corruption fallback", "disable", "FTS preservation",
-                                   "bundle excludes vector artifacts", "fresh-root import and vector rebuild", "source vector lifecycle"],
+                                   "bundle excludes vector artifacts", "fresh-root import and vector rebuild", "shared vector windows", "source vector lifecycle"],
                            not_proven=["50k performance", "private/confidential isolation", "parent cancellation", "public package identity"])
         self.save()
 
@@ -288,6 +325,57 @@ class Qualification:
         self.report["portability"] = {"imported_wiki_byte_equal": True, "vector_artifacts_imported": 0, "fresh_embedded": 8,
                                       "scope": "fresh local root, not another physical computer"}
 
+    def shared_vectors(self) -> None:
+        user, identities, protected = shared_batch_fixture(self.work)
+        self.call("knowledge", "refresh", "--user-root", str(user))
+        protected.append(user / ".hive/index/hive.sqlite3")
+        before = snapshot(protected)
+        common = ["--user-root", str(user), "--target", str(user), "--visibility", "shared"]
+        python = str(Path(sys.executable).resolve())
+        runtimes, scopes = [], {}
+        for identity in identities:
+            scope = [*common, "--collection", identity]
+            preview = self.call("knowledge", "vector", "preview", *scope, "--python", python)
+            enabled = self.call("knowledge", "vector", "enable", *scope, "--python", python, "--consent-digest", preview["consent_digest"])
+            runtimes.append(enabled["runtime"])
+            scopes[identity] = preview["scope_id"]
+        assert len(set(runtimes)) == 1
+        listing = ["knowledge", "vector", "rebuild", *common, "--collections", json.dumps(identities), "--max-seconds", "60", "--workers", "2"]
+        first = self.call(*listing)
+        initial = validate_shared_window(first, scopes, {identity:8 for identity in identities})
+        unchanged = self.call(*listing)
+        repeated = validate_shared_window(unchanged, scopes, {identity:0 for identity in identities})
+        assert all(initial[identity]["database_digest"] == repeated[identity]["database_digest"] for identity in identities)
+        assert snapshot(protected) == before
+        page = user / ".hive/knowledge/Wiki/vector-example-0.md"
+        page.write_bytes(page.read_bytes() + b"\nOne intentional synthetic incremental update.\n")
+        changed = snapshot(protected)
+        assert [path for path in before if before[path] != changed[path]] == [str(page)]
+        self.call("knowledge", "refresh", "--user-root", str(user))
+        expected = snapshot(protected)
+        assert all(expected[path] == changed[path] for path in changed if path != str(user / ".hive/index/hive.sqlite3"))
+        incremental = self.call(*listing)
+        validate_shared_window(incremental, scopes, {identity:int(identity == "user-root") for identity in identities})
+        assert snapshot(protected) == expected
+        query = self.call("knowledge", "retrieve", "--user-root", str(user), "--target", str(user),
+                          "--scope", "global", "--query", "original Markdown search index", "--mode", "semantic")
+        assert query["search"]["used"] == ["fts", "vector"] and query["hits"]
+        assert snapshot(protected) == expected
+        self.report["shared_vectors"] = {"collections":3, "chunks":24, "incremental_embedded":1, "canonical_and_fts_preserved":True}
+
+    def source_rebuild(self, scope: list[str], *, fresh: bool = False) -> tuple[dict, bool]:
+        observed = False
+        for attempt in range(8):
+            options = ["--max-seconds", "1" if attempt == 0 else "10", "--workers", "1" if attempt == 0 else "2"]
+            if fresh and attempt == 0:
+                options += ["--rebuild-mode", "fresh"]
+            built = self.call("source-wiki", "vector", "rebuild", *scope, *options)
+            if built["complete"]:
+                return built, observed
+            observed = True
+            assert self.call("source-wiki", "vector", "status", *scope)["checkpoint_available"]
+        raise RuntimeError("source fixture exceeded eight bounded rebuild attempts")
+
     def source_vectors(self) -> None:
         path = ROOT / "scripts/qualify-source-graph.py"
         graph = {"__name__": "source_graph_fixture", "__file__": str(path)}
@@ -305,22 +393,27 @@ class Qualification:
         python = str(Path(sys.executable).resolve())
         preview = self.call("source-wiki", "vector", "preview", *scope, "--python", python)
         self.call("source-wiki", "vector", "enable", *scope, "--python", python, "--consent-digest", preview["consent_digest"])
-        for _ in range(8):
-            built = self.call("source-wiki", "vector", "rebuild", *scope, "--max-seconds", "10", "--workers", "2")
-            if built["complete"]:
-                break
+        built, resumed = self.source_rebuild(scope)
         assert built["complete"] and built["chunks"] == 81
         assert self.call("source-wiki", "vector", "status", *scope)["index_ready"]
         found = self.call(*query)
         assert found["search"]["used"] == ["fts", "vector"] and found["hits"]
         assert all(hit["path"].startswith("docs/facts/en/") for hit in found["hits"])
+        repetitions = []
+        for _ in range(2):
+            rebuilt, observed = self.source_rebuild(scope, fresh=True)
+            assert rebuilt["complete"] and rebuilt["chunks"] == 81
+            assert self.call(*query)["search"]["used"] == ["fts", "vector"]
+            repetitions.append({"complete":True, "resume_observed":observed})
         self.call("source-wiki", "vector", "disable", *scope)
         assert self.call(*query) == missing
         assert snapshot(protected) == before and not (source / ".hive").exists()
         initial = {str(path.relative_to(source)) for path in protected}
         created = [name for name, value in tree_snapshot(source).items() if value != "directory" and name not in initial]
         assert all(name.replace("\\", "/").startswith((".agents/work/vector/", ".agents/work/vector-control/")) for name in created)
-        self.report["source_vectors"] = {"chunks": 81, "facts_revision": graph["CORPUS_FACTS_REVISION"], "canonical_and_fts_preserved": True}
+        self.report["source_vectors"] = {"chunks": 81, "facts_revision": graph["CORPUS_FACTS_REVISION"], "canonical_and_fts_preserved": True,
+                                         "initial_resume_observed":resumed, "fresh_repetitions":repetitions,
+                                         "limit":"observed bounded resume only; not forced process death or proof that the earlier macOS failure cannot recur"}
 
 
 def main() -> int:

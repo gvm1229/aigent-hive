@@ -19,6 +19,71 @@ spec.loader.exec_module(runner)
 
 
 class VectorRuntimeAcceptance(unittest.TestCase):
+    def test_shared_window_results_cannot_repeat_one_scope_or_misattribute_a_change(self):
+        scopes = {"user-root":"a", "other":"b"}
+        data = {"complete":True, "failed":False, "scopes":[{
+            "scope_id":scope, "selector":{"kind":"collection", "partition":{"collection_id":identity,"visibility":"shared"}},
+            "state":"complete", "result":{"complete":True,"chunks":8,"embedded":int(identity == "user-root")},
+        } for identity, scope in scopes.items()]}
+        expected = {"user-root":1,"other":0}
+        runner.validate_shared_window(data, scopes, expected)
+        for mutation in ("duplicate", "scope", "visibility", "incomplete", "misattributed"):
+            changed = json.loads(json.dumps(data))
+            if mutation == "duplicate": changed["scopes"][1] = changed["scopes"][0]
+            elif mutation == "scope": changed["scopes"][1]["scope_id"] = "a"
+            elif mutation == "visibility": changed["scopes"][1]["selector"]["partition"]["visibility"] = "confidential"
+            elif mutation == "incomplete": changed["scopes"][1]["state"] = "checkpoint"
+            else:
+                changed["scopes"][0]["result"]["embedded"] = 0
+                changed["scopes"][1]["result"]["embedded"] = 1
+            with self.subTest(mutation=mutation), self.assertRaises(ValueError):
+                runner.validate_shared_window(changed, scopes, expected)
+
+    def test_shared_window_fixture_has_three_separate_shared_roots(self):
+        with tempfile.TemporaryDirectory(dir=ROOT / "tests/work") as directory:
+            work = Path(directory)
+            user, identities, protected = runner.shared_batch_fixture(work)
+            registry = json.loads((user / ".hive/config/collections.yml").read_bytes())
+            self.assertEqual(len(identities), 3)
+            self.assertEqual(len(set(identities)), 3)
+            roots = [Path(row["local_locator"]) for row in registry["collections"]]
+            self.assertEqual(len(set(roots)), 3)
+            self.assertTrue(all(root.parent == work for root in roots))
+            self.assertTrue(all(row["default_visibility"] == "shared" for row in registry["collections"]))
+            self.assertEqual(sum(len(list(root.glob(".hive/knowledge/Wiki/*.md"))) for root in roots), 24)
+            self.assertEqual(len(protected), 28)
+
+    def test_source_resume_uses_fresh_only_on_the_first_bounded_slice(self):
+        with tempfile.TemporaryDirectory(dir=ROOT / "tests/work") as directory:
+            qualification = runner.Qualification(Path(sys.executable), Path(directory))
+            complete = {"complete":True, "chunks":81}
+            with patch.object(qualification, "call", side_effect=[{"complete":False}, {"checkpoint_available":True}, complete]) as call:
+                result, observed = qualification.source_rebuild(["--target", "synthetic-source"], fresh=True)
+            self.assertEqual(result, complete)
+            self.assertTrue(observed)
+            first, status, last = [entry.args for entry in call.call_args_list]
+            self.assertIn("fresh", first)
+            self.assertEqual(first[first.index("--max-seconds")+1], "1")
+            self.assertEqual(status[2], "status")
+            self.assertNotIn("--rebuild-mode", last)
+            self.assertEqual(last[last.index("--max-seconds")+1], "10")
+
+    def test_source_resume_reports_no_observation_and_never_retries_a_failed_mutation(self):
+        with tempfile.TemporaryDirectory(dir=ROOT / "tests/work") as directory:
+            qualification = runner.Qualification(Path(sys.executable), Path(directory))
+            with patch.object(qualification, "call", return_value={"complete":True}) as call:
+                _, observed = qualification.source_rebuild([])
+                self.assertFalse(observed)
+                call.assert_called_once()
+            with patch.object(qualification, "call", side_effect=RuntimeError("failed rebuild")) as call:
+                with self.assertRaisesRegex(RuntimeError, "failed rebuild"):
+                    qualification.source_rebuild([])
+                call.assert_called_once()
+            with patch.object(qualification, "call", side_effect=lambda *args: {"complete":False} if args[2] == "rebuild" else {"checkpoint_available":True}) as call:
+                with self.assertRaisesRegex(RuntimeError, "eight bounded"):
+                    qualification.source_rebuild([])
+                self.assertEqual(sum(entry.args[2] == "rebuild" for entry in call.call_args_list), 8)
+
     def test_source_fixture_loading_never_creates_bytecode_without_B(self):
         with tempfile.TemporaryDirectory(dir=ROOT / "tests/work") as directory:
             work = Path(directory)
