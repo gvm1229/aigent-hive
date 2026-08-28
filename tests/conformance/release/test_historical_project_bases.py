@@ -42,6 +42,14 @@ def source_paths(version: str) -> dict[str, Path]:
 
 
 class HistoricalProjectBaseContract(unittest.TestCase):
+    def test_test4_vector_skill_deltas_match_the_exact_published_source(self) -> None:
+        for name in ("knowledge-recall", "knowledge-maintain"):
+            actual = (ROOT / "harness/project-bases/0.10.0-test.4/skills" / name / "SKILL.md").read_bytes()
+            expected = subprocess.check_output(
+                ["git", "show", f"5cedbed4b27f2d6a224d1ea841d1670c7599a452:harness/skills/{name}/SKILL.md"], cwd=ROOT
+            )
+            self.assertEqual(actual, expected, name)
+
     def test_test2_deltas_match_the_exact_published_source(self) -> None:
         for source, destination in (
             ("harness/template/.agents/directives/04-korean-language.md", "directives/04-korean-language.md"),

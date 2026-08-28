@@ -52,26 +52,7 @@ use the user root as both `--target` and `--user-root`.
   hive knowledge suppress --target <project-root> --user-root <user-root> --fingerprint <sha256:digest> --source-locator <locator> --reason <reason> [--replacement <locator>] --timestamp <RFC3339> --output json
   ```
 
-## Optional vector maintenance
-
-- After canonical knowledge changes, refresh the ordinary FTS index first. Vector freshness is
-  checked per collection and visibility; report stale scopes instead of silently reinstalling.
-- For an explicitly requested vector setup, use `hive knowledge vector preview` with the exact
-  user root, target, collection, visibility and Python executable. Only the user's approval of
-  that exact preview permits `enable --consent-digest <digest>`. Never auto-install Python or pip.
-- For an already approved scope, use `status` then bounded `rebuild --max-seconds <1..60>
-  --workers <1..16> --rebuild-mode resume`; continue verified checkpoints until ready or cancelled.
-  A failed or unfinished generation must not replace the active one. Use `rollback` for the
-  previous verified generation or `disable` to return to FTS-only operation; preserve canonical
-  Markdown, registry and project settings.
-- Confidential construction needs its own current-action `authorize-build` grant for the exact
-  operation and execution budget. Never reuse query consent, broaden visibility, or build another
-  private collection. Follow CLI help for the current approval envelope rather than inventing it.
-- A source workspace uses `hive source-wiki vector` with an explicit language, never consumer
-  storage. Bundles contain canonical knowledge only; regenerate vector state on the destination
-  after separate optional setup approval.
-
-## Safety boundaries
+## Safety
 
 - Require explicit deletion or suppression intent; lint or rebuild intent does not authorize canonical deletion.
 - Preserve non-Hive files and all user-authored bytes outside declared Hive ownership.

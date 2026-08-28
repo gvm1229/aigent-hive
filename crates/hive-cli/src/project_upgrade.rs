@@ -508,10 +508,19 @@ fn authenticate_current_base(
     if current.is_ok() || env!("CARGO_PKG_VERSION") != "0.10.0" {
         return current;
     }
-    // Package test.2 shares the product version with this release. Authenticate its full
-    // inventory against the current projection plus the exact published, frozen deltas.
+    // Numbered tests share the product version. Authenticate each complete published
+    // generation against the current projection plus its exact frozen deltas.
     // Never authorize arbitrary ledger contents merely from their self-reported digest.
     let mut prior = incoming.clone();
+    for (path, bytes) in &mut prior {
+        if let Some(frozen) = test4_projection_bytes(path) {
+            *bytes = frozen.to_vec();
+        }
+    }
+    if authenticate_base_bytes(ledger, &prior).is_ok() {
+        return Ok(());
+    }
+    // test.2 predates the Korean repair as well as the vector Skill routing.
     for (path, bytes) in &mut prior {
         if let Some(frozen) = test2_projection_bytes(path) {
             *bytes = frozen.to_vec();
@@ -521,6 +530,21 @@ fn authenticate_current_base(
         return Ok(());
     }
     current
+}
+
+fn test4_projection_bytes(path: &str) -> Option<&'static [u8]> {
+    match path {
+        ".agents/skills/knowledge-recall/SKILL.md" | ".claude/skills/knowledge-recall/SKILL.md" => {
+            Some(include_bytes!(
+                "../../../harness/project-bases/0.10.0-test.4/skills/knowledge-recall/SKILL.md"
+            ))
+        }
+        ".agents/skills/knowledge-maintain/SKILL.md"
+        | ".claude/skills/knowledge-maintain/SKILL.md" => Some(include_bytes!(
+            "../../../harness/project-bases/0.10.0-test.4/skills/knowledge-maintain/SKILL.md"
+        )),
+        _ => None,
+    }
 }
 
 fn test2_projection_bytes(path: &str) -> Option<&'static [u8]> {
@@ -3573,6 +3597,68 @@ mod tests {
         assert!(authenticate_current_base(&ledger, &incoming).is_err());
         ledger.files[0].content = "forged directive".to_owned();
         assert!(authenticate_current_base(&ledger, &incoming).is_err());
+    }
+
+    #[test]
+    fn same_product_vector_skill_upgrade_accepts_only_complete_test_generations() {
+        for root in [".agents/skills", ".claude/skills"] {
+            let incoming = BTreeMap::from([
+                (
+                    format!("{root}/knowledge-recall/SKILL.md"),
+                    b"new recall".to_vec(),
+                ),
+                (
+                    format!("{root}/knowledge-maintain/SKILL.md"),
+                    b"new maintain".to_vec(),
+                ),
+                (
+                    format!("{root}/humanize-kor/SKILL.md"),
+                    b"current Korean".to_vec(),
+                ),
+            ]);
+            for test2 in [false, true] {
+                let mut ledger = BaseLedger {
+                    schema_version: 1,
+                    product_version: "0.10.0".to_owned(),
+                    ledger_digest: digest('a'),
+                    files: incoming
+                        .iter()
+                        .map(|(path, current)| {
+                            let bytes = if test2 {
+                                test2_projection_bytes(path)
+                                    .or_else(|| test4_projection_bytes(path))
+                            } else {
+                                test4_projection_bytes(path)
+                            }
+                            .unwrap_or(current);
+                            BaseFile {
+                                path: path.clone(),
+                                kind: "skill".to_owned(),
+                                content_digest: sha256_digest(bytes),
+                                content: String::from_utf8(bytes.to_vec()).expect("UTF-8"),
+                            }
+                        })
+                        .collect(),
+                };
+                assert!(authenticate_current_base(&ledger, &incoming).is_ok());
+                let recall = ledger
+                    .files
+                    .iter_mut()
+                    .find(|file| file.path.contains("knowledge-recall/"))
+                    .unwrap();
+                recall.content = "new recall".to_owned();
+                recall.content_digest = sha256_digest(recall.content.as_bytes());
+                assert!(authenticate_current_base(&ledger, &incoming).is_err());
+                let recall = ledger
+                    .files
+                    .iter_mut()
+                    .find(|file| file.path.contains("knowledge-recall/"))
+                    .unwrap();
+                recall.content = "forged recall".to_owned();
+                recall.content_digest = sha256_digest(recall.content.as_bytes());
+                assert!(authenticate_current_base(&ledger, &incoming).is_err());
+            }
+        }
     }
 
     #[test]

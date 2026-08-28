@@ -29,19 +29,29 @@ PRODUCT_VERSION = tomllib.loads(
 
 class ProjectLifecycleConformance(Phase1CliTestCase):
     def test_published_test2_project_upgrades_without_a_same_version_lockout(self) -> None:
+        self._check_same_product_test_upgrade("0.10.0-test.2")
+
+    def test_published_test4_project_upgrades_without_a_same_version_lockout(self) -> None:
+        self._check_same_product_test_upgrade("0.10.0-test.4")
+
+    def _check_same_product_test_upgrade(self, version: str) -> None:
         for host in ("codex", "claude", "antigravity"):
             with self.subTest(host=host):
                 target = self.setup_project(f"test2-{host}", host=host)
                 ledger_path = target / ".hive/config/project-base.json"
                 ledger = json.loads(ledger_path.read_bytes())
                 for entry in ledger["files"]:
-                    if entry["path"] == ".agents/directives/04-korean-language.md":
+                    base = "0.10.0-test.2"
+                    if version == "0.10.0-test.2" and entry["path"] == ".agents/directives/04-korean-language.md":
                         source = "directives/04-korean-language.md"
-                    elif entry["path"] in (".agents/skills/humanize-kor/SKILL.md", ".claude/skills/humanize-kor/SKILL.md"):
+                    elif version == "0.10.0-test.2" and entry["path"] in (".agents/skills/humanize-kor/SKILL.md", ".claude/skills/humanize-kor/SKILL.md"):
                         source = "skills/humanize-kor/SKILL.md"
+                    elif entry["path"].endswith(("/knowledge-recall/SKILL.md", "/knowledge-maintain/SKILL.md")):
+                        base = "0.10.0-test.4"
+                        source = "skills/" + "/".join(entry["path"].split("/")[-2:])
                     else:
                         continue
-                    content = (REPOSITORY_ROOT / "harness/project-bases/0.10.0-test.2" / source).read_bytes()
+                    content = (REPOSITORY_ROOT / "harness/project-bases" / base / source).read_bytes()
                     (target / entry["path"]).write_bytes(content)
                     entry["content"] = content.decode("utf-8")
                     entry["content_digest"] = "sha256:" + hashlib.sha256(content).hexdigest()
