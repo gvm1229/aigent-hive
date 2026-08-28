@@ -5037,6 +5037,8 @@ mod tests {
     #[ignore = "scale qualification: constructs more than 50,000 confidential chunks"]
     fn confidential_oversized_corpus_does_not_disclose_limits_before_authorization() {
         let work = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/work");
+        std::fs::create_dir_all(&work).expect("work directory");
+        let work = work.canonicalize().expect("canonical work directory");
         let temporary = tempfile::tempdir_in(work).expect("root");
         let store = RagStore::open(temporary.path()).expect("store");
         store.ensure_registry().expect("registry");
@@ -5741,6 +5743,8 @@ mod tests {
     fn semantic_publication_preserves_target_and_current_collection_authority() {
         let (temporary, store) = store();
         let work = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/work");
+        std::fs::create_dir_all(&work).expect("work directory");
+        let work = work.canonicalize().expect("canonical work directory");
         let project = tempfile::tempdir_in(&work).expect("project");
         let registered = store
             .register_collection(registration(
@@ -5850,6 +5854,8 @@ mod tests {
     fn semantic_partition_freshness_and_citations_ignore_unrelated_collections() {
         let (_user, store) = store();
         let work = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/work");
+        std::fs::create_dir_all(&work).expect("work directory");
+        let work = work.canonicalize().expect("canonical work directory");
         let first = tempfile::tempdir_in(&work).expect("first");
         let other = tempfile::tempdir_in(&work).expect("other");
         for root in [first.path(), other.path()] {

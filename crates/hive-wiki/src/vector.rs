@@ -708,10 +708,22 @@ mod tests {
     fn temporary() -> tempfile::TempDir {
         let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/work");
         fs::create_dir_all(&root).expect("work directory");
+        let root = root.canonicalize().expect("canonical work directory");
         tempfile::Builder::new()
             .prefix("vector-files-")
             .tempdir_in(root)
             .expect("temporary vector root")
+    }
+
+    #[test]
+    fn temporary_roots_are_absolute_without_parent_components() {
+        let root = temporary();
+        assert!(root.path().is_absolute());
+        assert!(!root.path().components().any(|part| matches!(
+            part,
+            std::path::Component::ParentDir | std::path::Component::CurDir
+        )));
+        VectorFiles::open(root.path(), false).expect("safe test root");
     }
 
     #[test]
