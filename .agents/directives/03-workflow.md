@@ -146,6 +146,17 @@ Match verification cost to the current boundary:
 4. **Release** — run clean-clone CI, every supported OS/architecture, hostile and security
    suites, installer/update recovery, signing, provenance, and publication qualification.
 
+## Test Artifact Lifecycle
+
+- Before a local or CI test that produces source `tests/work/` or `target/debug/` output, use
+  `python scripts/test-artifacts.py run --purpose <Korean-summary> --path <owned-path> --command <test-command>`.
+- Keep the resulting `tests/results/runs/*.md` record. A passing test is not a cleanup authority
+  until its result record is reviewed and committed.
+- Use `python scripts/test-artifacts.py check` at a task closure. Resolve every eligible or expired
+  item through an explicit review, then use `cleanup --apply` only for the exact reviewed paths.
+- A path with a live process, a concrete 72-hour reuse reservation, a failed reproduction, or
+  incomplete evidence remains retained. Never use a glob, parent-directory deletion, or age alone.
+
 ## Risk-Tier CI and Candidate Economy
 
 - Classify every pushed concern from its tracked diff before choosing CI. A Markdown-only diff uses

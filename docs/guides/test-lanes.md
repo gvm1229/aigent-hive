@@ -42,6 +42,13 @@ critical path: 356.39초, 순차 실행 대비 48.0% 단축 모델. checkout·de
 - host·filesystem hostile Rust unit fixture: OS temporary directory 유지, repository tree 생성 0건
 - Run lifecycle: tracked test 인접 임시 디렉터리 생성 금지
 
+## 결과와 정리
+
+- 실행 기록: [`../../tests/results/README.md`](../../tests/results/README.md)
+- 일반 실행: `python scripts/test-artifacts.py run --purpose "시험 목적" --path target/debug --command python scripts/test-lanes.py --lane <name>`
+- 결과 기록의 Git 보존·명시 검토 뒤에만 `python scripts/test-artifacts.py cleanup --path <exact-path> --apply` 사용
+- 진행 중·72시간 안의 구체적 재사용·실패 재현·원본 근거는 보존. 기간 만료만으로 자동 삭제 없음
+
 ## CI
 
 - `rust`: format·Clippy·workspace Rust unit

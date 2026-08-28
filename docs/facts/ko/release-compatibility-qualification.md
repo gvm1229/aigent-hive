@@ -9,7 +9,7 @@ summary: "게시된 0.9.5의 전체 이력 native runtime 검증과 호환성 �
 tags: [compatibility, migration, release, testing]
 aliases: ["호환성 matrix gate"]
 sources:
-  - "repo:.github/workflows/release-runtime.yml#sha256:7d5d5ee421065473da2fe8ad2b6c42d4317887e4014c971d6a8140786ef9b932"
+  - "repo:.github/workflows/release-runtime.yml#sha256:398fa5b776385221e2e98762895c46ff92d1a5b17b8cd8f414347b40e9c5303f"
   - "repo:docs/archive/plans/releases/0.9.5/release-0.9.5-stable-publication.md#sha256:70ed823701fa0ae8be728d97b8705846f0eaa50e6e8758425d439bfee4d1334c"
 links: [historical-project-base-coverage, release-verification, test-lane-inventory]
 reviewed_revision: "git:a520f8e5113c7fc02711eb5e5d8021605f7ee551"
