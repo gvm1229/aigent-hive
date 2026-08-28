@@ -273,6 +273,7 @@ class ArtifactTests(unittest.TestCase):
         self.assertNotIn("another-secret", result)
         self.assertNotIn(str(self.root).replace("\\", "\\\\"), result)
         self.assertEqual(["--authorization-token", "<redacted>"], a.scrub(["--authorization-token", "never-keep"]))
+        self.assertNotIn("header-secret", a.clean_text("Authorization: Bearer header-secret"))
 
     def test_lock_excludes_another_process(self):
         with self.manager.lock():

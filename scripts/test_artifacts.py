@@ -92,8 +92,8 @@ def clean_text(value, root=ROOT):
     value = value.replace(str(Path.home()), "<user>").replace(str(Path.home()).replace("\\", "/"), "<user>")
     value = re.sub(r"(?i)[A-Z]:[\\/]+(?:Users|Documents and Settings)[\\/]+[^\s\"'<>]+", "<private-path>", value)
     value = re.sub(r"/(?:Users|home)/[^\s\"<>]+", "<private-path>", value)
-    value = re.sub(r'''(?i)((?:token|password|secret|authorization|api[-_]key)["']?\s*[=:]\s*["']?)[^\s,;"']+''', r"\1<redacted>", value)
     value = re.sub(r'''(?i)(Bearer\s+)[^\s"']+''', r"\1<redacted>", value)
+    value = re.sub(r'''(?i)((?:token|password|secret|authorization|api[-_]key)["']?\s*[=:]\s*["']?)[^\s,;"']+''', r"\1<redacted>", value)
     value = re.sub(r"(?:gh[pousr]_[A-Za-z0-9_]{20,}|github_pat_[A-Za-z0-9_]+|sk-[A-Za-z0-9_-]{20,})", "<redacted>", value)
     return value
 
