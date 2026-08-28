@@ -1457,10 +1457,10 @@ impl RagStore {
             let mut expanded = request.clone();
             expanded.top_k = 100;
             expanded.byte_budget = 1024 * 1024;
-            let lexical = retrieve_serialized(bytes, manifest, registry, &expanded)?;
-            let semantic = crate::rag::semantic_matches_serialized(
-                bytes, manifest, registry, &expanded, matches,
-            )?;
+            let prepared =
+                crate::rag::PreparedRagIndex::from_serialized(bytes, manifest, registry)?;
+            let lexical = prepared.retrieve(&expanded)?;
+            let semantic = prepared.semantic_matches(&expanded, matches)?;
             let result = crate::rag::fuse_semantic_results(request, lexical, &semantic)?;
             self.validate_semantic_hits(registry, &result.hits)
                 .map_err(|_| {

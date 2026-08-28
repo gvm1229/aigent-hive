@@ -1617,6 +1617,26 @@ impl PreparedRagIndex {
         validate_retrieval_request(request)?;
         retrieve_from_connection(&self.connection, &self.manifest, &self.registry, request)
     }
+
+    /// Rehydrate candidates in this same authenticated generation with fresh request authority.
+    ///
+    /// # Errors
+    /// Rejects invalid, duplicate, stale, or unauthorized candidates and enforces query budgets.
+    /// The store caller remains responsible for final live canonical validation.
+    pub fn semantic_matches(
+        &self,
+        request: &RetrievalRequest,
+        matches: &[SemanticMatch],
+    ) -> Result<RetrievalResult, RagError> {
+        validate_semantic_candidates(request, matches)?;
+        semantic_matches_from_connection(
+            &self.connection,
+            &self.manifest,
+            &self.registry,
+            request,
+            matches,
+        )
+    }
 }
 
 /// Retrieve ranked chunks from serialized disposable index bytes.
@@ -1712,7 +1732,6 @@ pub fn semantic_corpus_serialized(
 /// # Errors
 /// Rejects stale snapshots, malformed or duplicate matches, and stale returned identities.
 /// Unauthorized identities are dropped before their text, sources, or metadata are returned.
-#[allow(clippy::too_many_lines)]
 pub fn semantic_matches_serialized(
     sqlite_bytes: &[u8],
     expected_manifest: &GenerationManifest,
@@ -1720,6 +1739,21 @@ pub fn semantic_matches_serialized(
     request: &RetrievalRequest,
     matches: &[SemanticMatch],
 ) -> Result<RetrievalResult, RagError> {
+    validate_semantic_candidates(request, matches)?;
+    let prepared = PreparedRagIndex::from_serialized(sqlite_bytes, expected_manifest, registry)?;
+    semantic_matches_from_connection(
+        &prepared.connection,
+        &prepared.manifest,
+        &prepared.registry,
+        request,
+        matches,
+    )
+}
+
+fn validate_semantic_candidates(
+    request: &RetrievalRequest,
+    matches: &[SemanticMatch],
+) -> Result<(), RagError> {
     validate_retrieval_request(request)?;
     if matches.len() > 1000 {
         return Err(RagError::InvalidInput(
@@ -1736,10 +1770,17 @@ pub fn semantic_matches_serialized(
             ));
         }
     }
-    validate_serialized_index(sqlite_bytes, expected_manifest)?;
-    let connection = deserialize_connection(sqlite_bytes)?;
-    let registry = verify_retrieval_snapshot(&connection, expected_manifest, registry)?;
-    let scope = resolve_scope(&registry, request)?;
+    Ok(())
+}
+
+fn semantic_matches_from_connection(
+    connection: &Connection,
+    expected_manifest: &GenerationManifest,
+    registry: &CollectionRegistry,
+    request: &RetrievalRequest,
+    matches: &[SemanticMatch],
+) -> Result<RetrievalResult, RagError> {
+    let scope = resolve_scope(registry, request)?;
     let by_id = registry.by_id();
     let mut statement = connection
         .prepare(&format!(
@@ -1777,7 +1818,7 @@ pub fn semantic_matches_serialized(
             insufficient_budget = true;
             break;
         }
-        let mut hit = semantic_hit(&connection, candidate, score)?;
+        let mut hit = semantic_hit(connection, candidate, score)?;
         let (text, truncated) = truncate_utf8(
             &hit.text,
             request.byte_budget.saturating_sub(returned_bytes),
@@ -4716,14 +4757,30 @@ mod tests {
         .expect("FTS")
         .hits
         .is_empty());
+        let prepared = PreparedRagIndex::from_serialized(
+            &artifact.sqlite_bytes,
+            &artifact.manifest,
+            &registry,
+        )
+        .expect("prepared");
         let hydrate = |request: &RetrievalRequest, matches: &[SemanticMatch]| {
-            semantic_matches_serialized(
+            let direct = semantic_matches_serialized(
                 &artifact.sqlite_bytes,
                 &artifact.manifest,
                 &registry,
                 request,
                 matches,
-            )
+            );
+            let resident = prepared.semantic_matches(request, matches);
+            match (&direct, &resident) {
+                (Ok(left), Ok(right)) => assert_eq!(
+                    serde_json::to_value(left).unwrap(),
+                    serde_json::to_value(right).unwrap()
+                ),
+                (Err(left), Err(right)) => assert_eq!(left.to_string(), right.to_string()),
+                _ => panic!("resident and serialized semantic outcomes differ"),
+            }
+            direct
         };
         let result = hydrate(&request, &matches).expect("semantic matches");
         assert_eq!(result.hits.len(), 1);
@@ -4795,6 +4852,15 @@ mod tests {
         invalid = matches[..1].to_vec();
         invalid[0].score = f64::NAN;
         assert!(hydrate(&request, &invalid).is_err());
+        request.scope = RetrievalScope::Collection(confidential[0].collection_id.clone());
+        request.confidential_collection_id = Some(confidential[0].collection_id.clone());
+        request.byte_budget = 4096;
+        assert_eq!(
+            hydrate(&request, &matches).expect("authorized").hits.len(),
+            1
+        );
+        request.confidential_collection_id = None;
+        assert!(hydrate(&request, &matches).is_ok_and(|result| result.hits.is_empty()));
     }
 
     #[test]
