@@ -29,6 +29,7 @@ mod tests {
         use hive_wiki::vector::VectorFiles;
         let work = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/work");
         std::fs::create_dir_all(&work).expect("work directory");
+        let work = work.canonicalize().expect("canonical work directory");
         let temporary = tempfile::tempdir_in(work).expect("root");
         let mut rows = Vec::new();
         for name in ["first", "second"] {

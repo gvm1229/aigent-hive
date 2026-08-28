@@ -13,6 +13,8 @@ from unittest.mock import Mock, patch
 
 ROOT = Path(__file__).resolve().parents[3]
 SCRIPT = ROOT / "scripts/qualify-vector-runtime.py"
+# This is a test stand-in for the binary, not permission to follow release evidence links.
+TEST_EXECUTABLE = Path(sys.executable).resolve(strict=True)
 spec = importlib.util.spec_from_file_location("vector_qualification", SCRIPT)
 runner = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(runner)
@@ -29,6 +31,20 @@ class VectorRuntimeAcceptance(unittest.TestCase):
             with patch.dict(globals(), ROOT=fresh):
                 self.setUpClass()
             self.assertTrue((fresh / "tests/work").is_dir())
+
+    def test_evidence_digest_still_rejects_a_linked_binary(self):
+        with tempfile.TemporaryDirectory(dir=ROOT / "tests/work") as temporary:
+            binary = Path(temporary) / "binary"
+            binary.write_bytes(b"synthetic binary")
+            alias = Path(temporary) / "alias"
+            try:
+                alias.symlink_to(binary)
+            except OSError as error:
+                if sys.platform == "win32" and error.winerror == 1314:
+                    self.skipTest("Windows symlink privilege unavailable")
+                raise
+            with self.assertRaisesRegex(ValueError, "linked or non-regular"):
+                runner.digest(alias)
 
     def test_unverified_native_handles_are_only_closed_never_terminated(self):
         for mode in ("inspection-error","wrong-image","low-memory","missing-stage","changed-parent","exited-parent","exited-child","valid"):
@@ -139,7 +155,7 @@ class VectorRuntimeAcceptance(unittest.TestCase):
             for path in (control, helper):
                 path.parent.mkdir(parents=True,exist_ok=True)
                 path.write_bytes(b"synthetic")
-            qualification = runner.Qualification(Path(sys.executable),work)
+            qualification = runner.Qualification(TEST_EXECUTABLE,work)
             parent = Mock(pid=42)
             parent.poll.return_value = None
             with patch.object(runner.os,"name","nt"), patch.object(runner,"WindowsChildObserver",return_value=Mock()), \
@@ -153,7 +169,7 @@ class VectorRuntimeAcceptance(unittest.TestCase):
 
     def test_windows_native_cancellation_never_launches_on_other_operating_systems(self):
         with tempfile.TemporaryDirectory(dir=ROOT / "tests/work") as directory:
-            qualification = runner.Qualification(Path(sys.executable), Path(directory))
+            qualification = runner.Qualification(TEST_EXECUTABLE, Path(directory))
             with patch.object(runner.os, "name", "posix"), patch.object(runner.subprocess, "Popen") as execute:
                 qualification.source_cancel_windows(Path(directory), [], {}, {}, {})
                 execute.assert_not_called()
@@ -194,7 +210,7 @@ class VectorRuntimeAcceptance(unittest.TestCase):
 
     def test_source_resume_uses_fresh_only_on_the_first_bounded_slice(self):
         with tempfile.TemporaryDirectory(dir=ROOT / "tests/work") as directory:
-            qualification = runner.Qualification(Path(sys.executable), Path(directory))
+            qualification = runner.Qualification(TEST_EXECUTABLE, Path(directory))
             complete = {"complete":True, "chunks":81}
             with patch.object(qualification, "call", side_effect=[{"complete":False}, {"checkpoint_available":True}, complete]) as call:
                 result, observed = qualification.source_rebuild(["--target", "synthetic-source"], fresh=True)
@@ -209,7 +225,7 @@ class VectorRuntimeAcceptance(unittest.TestCase):
 
     def test_source_resume_reports_no_observation_and_never_retries_a_failed_mutation(self):
         with tempfile.TemporaryDirectory(dir=ROOT / "tests/work") as directory:
-            qualification = runner.Qualification(Path(sys.executable), Path(directory))
+            qualification = runner.Qualification(TEST_EXECUTABLE, Path(directory))
             with patch.object(qualification, "call", return_value={"complete":True}) as call:
                 _, observed = qualification.source_rebuild([])
                 self.assertFalse(observed)
@@ -229,7 +245,7 @@ class VectorRuntimeAcceptance(unittest.TestCase):
             source = work / "scripts/qualify-source-graph.py"
             source.parent.mkdir()
             source.write_text("def frozen_source(repository, target): pass\n", encoding="utf-8")
-            qualification = runner.Qualification(Path(sys.executable), work)
+            qualification = runner.Qualification(TEST_EXECUTABLE, work)
             with patch.object(runner, "ROOT", work), patch.object(sys, "dont_write_bytecode", False), \
                  patch.object(qualification, "call", side_effect=RuntimeError("stop before CLI")):
                 with self.assertRaisesRegex(RuntimeError, "stop before CLI"):
@@ -238,7 +254,7 @@ class VectorRuntimeAcceptance(unittest.TestCase):
 
     def test_consumer_and_source_install_share_the_download_timeout(self):
         with tempfile.TemporaryDirectory(dir=ROOT / "tests/work") as directory:
-            qualification = runner.Qualification(Path(sys.executable), Path(directory))
+            qualification = runner.Qualification(TEST_EXECUTABLE, Path(directory))
             for prefix in ("knowledge", "source-wiki"):
                 process = Mock(returncode=0)
                 process.communicate.return_value = ('{"data":{}}', "")
@@ -309,7 +325,7 @@ class VectorRuntimeAcceptance(unittest.TestCase):
 
     def test_failed_command_retains_exact_result_and_elapsed_time(self):
         with tempfile.TemporaryDirectory(dir=ROOT / "tests/work") as work:
-            qualification = runner.Qualification(Path(sys.executable), Path(work))
+            qualification = runner.Qualification(TEST_EXECUTABLE, Path(work))
             process = Mock(returncode=1)
             process.communicate.return_value = ('{"status":"error","message":"failure"}', "")
             with patch.object(runner.subprocess, "Popen", return_value=process):
@@ -322,7 +338,7 @@ class VectorRuntimeAcceptance(unittest.TestCase):
 
     def test_timeout_does_not_retry_a_mutation_or_claim_success(self):
         with tempfile.TemporaryDirectory(dir=ROOT / "tests/work") as work:
-            qualification = runner.Qualification(Path(sys.executable), Path(work))
+            qualification = runner.Qualification(TEST_EXECUTABLE, Path(work))
             process = Mock()
             process.communicate.side_effect = [subprocess.TimeoutExpired("hive", 1000), ("", "")]
             with patch.object(runner.subprocess, "Popen", return_value=process) as execute, \

@@ -602,6 +602,7 @@ mod tests {
     fn killed_mutable_cache_restores_only_an_externally_authenticated_copy() {
         let base = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/work");
         fs::create_dir_all(&base).expect("work directory");
+        let base = base.canonicalize().expect("canonical work directory");
         let root = tempfile::tempdir_in(base).expect("root");
         let files = VectorFiles::open(root.path(), false).expect("files");
         let selector = Selector::Collection {
