@@ -101,6 +101,10 @@ hive knowledge vector rebuild --user-root <user-root> --target <project-root> --
 | `not-started` | 해당 구간의 작업 미시작 |
 | `failed-or-unpublished` | 실패 기록·`status` 확인 후 재시도 필요 |
 
+`--rebuild-mode fresh`는 기존 벡터 대신 새 계산을 요청하는 모드.
+시간 제한 뒤에도 미시작 모음은 `fresh` 유지, 이번 새 계산의 검증된 `checkpoint`만 `resume` 사용.
+미시작 모음까지 일괄 `resume`하면 호환되는 기존 벡터 재사용 가능. 전체 재계산의 완료 증거와 구분.
+
 ## Hive 소스 지식
 
 소스 저장소에서는 소비자 경로 대신 다음 명령 사용:
