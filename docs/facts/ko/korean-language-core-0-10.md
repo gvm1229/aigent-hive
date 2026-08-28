@@ -9,7 +9,7 @@ summary: "고정 im-not-ai 파생 rule pack·결정적 보존 gate·host-owned �
 tags: [korean, language, skill, v0-10]
 aliases: ["Korean output gate", "humanize-kor"]
 sources:
-  - "repo:.github/workflows/public-test-acceptance.yml#sha256:9540dab998497bc7a30ad62f62af00a11f1def6483493ac69e894d171d8db11a"
+  - "repo:.github/workflows/public-test-acceptance.yml#sha256:e2ef705c5f702492ad0410ebe68509fafd1b1818b8da561f9e96ee1f132980ca"
   - "repo:crates/hive-core/src/korean.rs#sha256:bb575d5e73f1567755656c7e6be98cca871416a052e83e920d95b91e77186188"
   - "repo:docs/architecture/korean-language-core.md#sha256:3b97a9ba4e09ea2c68e2094ff57b383e255ecd7e50d85facf50b9f3ea3c56fa3"
   - "repo:docs/plans/active/korean-language-core-0.10.0.md#sha256:d84549268a83748e23da88c1e9c1d51163776e9511b258feb2b79c3318239e09"

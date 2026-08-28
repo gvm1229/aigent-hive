@@ -18,7 +18,8 @@
 
 ## 처음 활성화
 
-설치된 CPython 3.12 또는 3.13 필요. Hive가 Python을 설치하지 않음.
+필수 환경: CPython 3.12 또는 3.13과 SQLite 확장 불러오기 지원. Hive의 Python 설치·교체 없음.
+일부 macOS Python 배포본은 확장 미지원. 이 경우 지원되는 별도 Python 실행 파일을 `--python`으로 지정.
 미지원 환경에서도 기존 FTS 사용 가능. 제공자 API·API key·상시 서버 사용 없음.
 대상은 Windows x64·macOS arm64·Linux x64의 glibc Python. Linux musl CLI도 이 Python과
 함께 사용할 수 있지만 Alpine의 musl Python은 현재 대상이 아님. 운영체제별 실제 수용은 별도 확인.
