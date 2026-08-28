@@ -73,6 +73,19 @@ jobs:
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.13"
+      - name: Select SQLite-capable Python for vector acceptance
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          probe='import sqlite3,sys; print(sys.version.split()[0], sqlite3.sqlite_version); c=sqlite3.connect(":memory:"); c.enable_load_extension(True); c.enable_load_extension(False); c.close()'
+          if python -I -S -c "$probe"; then
+            exit 0
+          fi
+          # CI toolchain setup only; Hive never installs Python on a consumer machine.
+          brew install python@3.13
+          vector_python="$(brew --prefix python@3.13)/bin/python3.13"
+          "$vector_python" -I -S -c "$probe"
+          printf 'VECTOR_PYTHON=%s\n' "$vector_python" >>"$GITHUB_ENV"
       - name: Install musl linker on the glibc qualification host
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install --yes --no-install-recommends musl-tools
@@ -80,9 +93,9 @@ jobs:
         shell: bash
         run: |
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
-          python -B -m unittest tests.conformance.contracts.test_vector_parent
+          "${VECTOR_PYTHON:-python}" -B -m unittest tests.conformance.contracts.test_vector_parent
           cargo build --release --locked --target '${{ matrix.target }}' --bin hive
-          python -B scripts/qualify-vector-runtime.py \
+          "${VECTOR_PYTHON:-python}" -B scripts/qualify-vector-runtime.py \
             --hive 'target/${{ matrix.target }}/release/${{ matrix.executable }}' --authorize-install
       - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         if: always()

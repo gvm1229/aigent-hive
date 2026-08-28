@@ -147,9 +147,19 @@ class VectorRuntimeAcceptance(unittest.TestCase):
         self.assertEqual({item["target"] for item in job["strategy"]["matrix"]["include"]},
                          {"x86_64-pc-windows-msvc", "aarch64-apple-darwin", "x86_64-unknown-linux-musl"})
         public = yaml.safe_load((ROOT / ".github/workflows/public-test-acceptance.yml").read_text("utf-8"))
+        selectors = []
         for steps in (job["steps"], public["jobs"]["korean-public-test"]["steps"]):
             commands = [step["run"] for step in steps if "run" in step]
             self.assertTrue(any("qualify-vector-runtime.py" in command and "--authorize-install" in command for command in commands))
+            selection = [step for step in steps if step.get("name") == "Select SQLite-capable Python for vector acceptance"]
+            self.assertEqual(len(selection), 1)
+            self.assertEqual(selection[0]["if"], "runner.os == 'macOS'")
+            self.assertIn('if python -I -S -c "$probe"', selection[0]["run"])
+            self.assertIn("enable_load_extension(True)", selection[0]["run"])
+            self.assertIn("brew install python@3.13", selection[0]["run"])
+            self.assertTrue(any("VECTOR_PYTHON:-python" in command and "qualify-vector-runtime.py" in command for command in commands))
+            selectors.append(selection[0]["run"])
+        self.assertEqual(selectors[0], selectors[1])
 
 
 if __name__ == "__main__":

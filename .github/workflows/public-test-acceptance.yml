@@ -104,9 +104,22 @@ jobs:
             --package-version "$PACKAGE_VERSION" \
             --release-date "$RELEASE_DATE" \
             --receipt "$RUNNER_TEMP/korean-public-test-$PLATFORM_PACKAGE.json"
+      - name: Select SQLite-capable Python for vector acceptance
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          probe='import sqlite3,sys; print(sys.version.split()[0], sqlite3.sqlite_version); c=sqlite3.connect(":memory:"); c.enable_load_extension(True); c.enable_load_extension(False); c.close()'
+          if python -I -S -c "$probe"; then
+            exit 0
+          fi
+          # CI toolchain setup only; Hive never installs Python on a consumer machine.
+          brew install python@3.13
+          vector_python="$(brew --prefix python@3.13)/bin/python3.13"
+          "$vector_python" -I -S -c "$probe"
+          printf 'VECTOR_PYTHON=%s\n' "$vector_python" >>"$GITHUB_ENV"
       - name: Qualify optional vector using the exact public binary
         shell: bash
-        run: python -B scripts/qualify-vector-runtime.py --hive "$HIVE_BIN" --authorize-install
+        run: '"${VECTOR_PYTHON:-python}" -B scripts/qualify-vector-runtime.py --hive "$HIVE_BIN" --authorize-install'
       - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         if: always()
         with:
