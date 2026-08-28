@@ -10,8 +10,8 @@ tags: [collection, knowledge, promotion, retrieval, v0-9-3]
 aliases: ["자동 지식 승격", "프로젝트 간 지식"]
 sources:
   - "repo:crates/hive-cli/src/knowledge.rs#sha256:1229cfa84e1fb0357c943fd0ef2910f3cdb5dd7e70f67879f0832db0ea26c800"
-  - "repo:crates/hive-wiki/src/rag.rs#sha256:3c8553ae33ef2b26ee9a97cb28bba9859f0706def788335e690818d22fb3efb5"
-  - "repo:crates/hive-wiki/src/store.rs#sha256:d49438b3d49f9ca1ac5eb574f94309846c2b9a46225704f4753dcef737881653"
+  - "repo:crates/hive-wiki/src/rag.rs#sha256:79b6b9c42a4f7f4395a1669cc8154bdf8a0300a94ad046c50278829ef48fe741"
+  - "repo:crates/hive-wiki/src/store.rs#sha256:0c6c01bf2646225bd9a68aa7cdf34b892e26cc550b3d3e47444294bd4553ab73"
   - "repo:harness/skills/knowledge-import/SKILL.md#sha256:b73e6c82eb5ef9105781383f59211a982ed70b0f0ecf1690619f3b9b30f4730d"
   - "repo:harness/skills/knowledge-recall/SKILL.md#sha256:9e169f3daff2b4fbe6cff4d9a93d7e45cca6e9a6e78d1784b83458b50d3aa267"
 links: [global-knowledge-rag, knowledge-portability-scan, shared-index]
