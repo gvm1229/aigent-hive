@@ -14,7 +14,7 @@ sources:
   - "repo:crates/hive-wiki/src/source.rs#sha256:f9d3cae67f645e63b1483e83303fd0ecce41d50a9f66d3cd9540fc6e6f824f52"
   - "repo:scripts/qualify-source-graph.py#sha256:62e74cb2994404d7607f33a38da73b1973592609fc1b6af3686a7920c2086710"
 links: [graphify-0-10-adoption, hybrid-vector-search-0-10]
-reviewed_revision: "git:56db5d7f6b1fd49f4ed817617d2bc635fd0bbf63"
+reviewed_revision: "git:5b0c964f1ee65f4c21f301d51f85ce81e07b84e4"
 status: active
 ---
 

@@ -1,6 +1,6 @@
 # Aigent Hive 활성 계획
 
-> Revision: 295
+> Revision: 296
 > 기준일: 2026-08-28
 > Product version: `0.10.0`
 > Stable baseline: `0.9.5`
@@ -44,7 +44,7 @@
 
 - 승인 순서: 한국어 결함 수정·비벡터 재검증 → `develop` 병합 → `feature/0.10.0-vector-search` 생성·벡터 구현
 - 병합 선행: 제품 기능 회귀 검사. `develop` 전용 공개 후보·설치 수용은 병합 뒤 별도 실행
-- 유지보수자 권한: `0.10.0`의 구현·시험·commit·`feature/0.10.0` push·CI 관찰·번호 공개 시험판
+- 유지보수자 권한: `0.10.0` 구현·시험·commit·`feature/0.10.0-vector-search` push·CI 관찰·번호 공개 시험판
 - Verified workflow 대상: dependency·evidence·retry·독립 검증이 필요한 미완료 구현·검증 항목
 - 제외: `REL10-005–007` — protected `main` 안정판 후보, 안정판 게시·설치, 유지보수자 안정판 승인
 - 종료 조건: 제외 항목 외 Agent 소유 checklist `0건`과 해당 검증 증거

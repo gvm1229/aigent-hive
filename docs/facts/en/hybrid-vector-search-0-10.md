@@ -9,27 +9,27 @@ summary: "0.10.0 vector implementation reopened on its own branch while the orig
 tags: [knowledge, retrieval, v0-10, vector]
 aliases: ["Vector database gate"]
 sources:
-  - "repo:docs/architecture/vector-search.md#sha256:3157076e03cec7b909a48ae38c706c2f02a3d2847367171ee7860d20ce37300b"
+  - "repo:docs/architecture/vector-search.md#sha256:e9c2e0b44da39028c1984d58802f343a91cc8486b3aca17f2212e302440db3f2"
   - "repo:docs/decisions/ADR-0020-0.10.0-product-scope.md#sha256:d63afd36e3ebcd3145f77c24a6dd719be2216e458db791dbffe583dd5781c9c6"
   - "repo:docs/guides/vector-search.md#sha256:db65d98cfd04ba619d38200c604d641cfed74a228e97365a6c6579b2877d9095"
   - "repo:docs/plans/active/hybrid-vector-search-0.10.0.md#sha256:2b2e773f3b2686f9e49ac84392aff14e7c613adc19a198d7b7562affe512124a"
   - "repo:docs/research/evidence/vector-hard-gate-windows-2026-08-23.json#sha256:41517d801330c1c299178b5b1ae75ed27fb5106c8af6ce4e2083b66cec30f09a"
   - "repo:docs/research/evidence/vector-requalification-windows-2026-08-24.json#sha256:df1a2e0bf1001236cef266653309154bb99676837be86a2beba25e8dff16b178"
   - "repo:docs/research/vector-memory-0.10-feasibility-2026-08-22.md#sha256:03dca07c4f6b5928268f4bc7c5337d1604371eadcd5b8a7b85b88ec3f65f215c"
-  - "repo:docs/research/vector-product-integration-2026-08-28.md#sha256:5f2208eac816b89bbb68a60010ca27dd8802abd3cca435e3e7d8ca65abb65d9a"
+  - "repo:docs/research/vector-product-integration-2026-08-28.md#sha256:b83bcdfe1ee4e1ee492f5548cd765c00726b73f0240c2ad832168a528f66ab3f"
   - "repo:docs/research/vector-requalification-0.10-2026-08-24.md#sha256:8e7a9a70df255694b10bc88b9dadb40619ad36f74d20902b06dea1db556f595e"
 links: [global-knowledge-rag, graphify-0-10-adoption, knowledge-storage, v0-10-product-scope]
-reviewed_revision: "git:82f7197fc3977a4561f4b5d248d5dd5ff4615f3a"
+reviewed_revision: "git:ce2169b55073e5564dcbe8c78a9660f2b7efc816"
 status: active
 ---
 
 # Hybrid Vector Search Gate for 0.10.0
 
-The authorized vector branch follows the non-vector repairs merged into `develop`.
-Markdown remains canonical and FTS remains available. Only consented local non-generative
-embedding is allowed; confidential query and build use separate one-time approval.
-Scoped retrieval, recovery and obsolete-copy cleanup are implemented. Score fusion passes the
-frozen question gates; the shared CPU helper builds 50,000 chunks within ten minutes.
-The full 100-collection CLI still fails time, storage and numeric equivalence gates.
-Report the frozen 120-question and independent 60-question results separately. An independent
-success cannot erase an original gate failure. Stable release still requires explicit approval.
+The vector branch follows the non-vector repairs merged into `develop`. Markdown remains
+canonical and FTS available. Local non-generative embedding needs consent; confidential query
+and build use separate one-time approval. Windows native recovery, long paths, canonical-only
+import and source queries pass. MiniLM score fusion passes the fixed question gates; the shared
+CPU helper builds 50,000 chunks within ten minutes. The full 100-collection CLI baseline still
+fails time, storage and numeric equivalence gates. Report the original 120 and independent 60
+questions separately; no success erases a failed gate. Embedding-only timing does not prove full
+query latency. Stable release requires explicit approval.

@@ -8,6 +8,7 @@
 
 | 이전 경로 | Archive 경로 | SHA-256 | 대체 정본 |
 | --- | --- | --- | --- |
+| `docs/state/CURRENT.md` — 개선된 대규모 벡터 검증 전 누적 기록 보존·현재 상태 축소 | [보존본](state/0.10.0-vector-before-optimized-scale.md) | `sha256:b83e8e4725a07cb7a33972360517f3fb39b520bee2134cc9dec3eba3d858f291` | [현재 상태](../state/CURRENT.md) |
 | `docs/state/CURRENT.md` — 한국어 재검증으로 대체된 누적 기록 | [보존본](state/0.10.0-test.2-reopened.md) | `sha256:dbd3736b6a0c8ea68119d52c478ec0145d15fb8e12116c9fb4a94430e4ced8a8` | [현재 상태](../state/CURRENT.md) |
 | `docs/plans/active/agent-autonomous-continuation.md` | [보존본](plans/foundations/agent-autonomous-continuation.md) | `sha256:83b8604202102dc5424c63648833d99978d2d415b974e22c7d70fc511f1c5883` | [현재 탐색](../01-index.md) |
 | `docs/plans/active/automatic-user-projection-refresh-0.9.5.md` | [보존본](plans/releases/0.9.5/automatic-user-projection-refresh-0.9.5.md) | `sha256:d11ba652f2f3f19db6276cf9a660bf3e66d52a37cfada1ca14b9a50f80ca5206` | [현재 탐색](../01-index.md) |
