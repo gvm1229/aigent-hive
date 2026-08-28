@@ -1,11 +1,11 @@
 # Aigent Hive 활성 계획
 
-> Revision: 299
+> Revision: 300
 > 기준일: 2026-08-29
 > Product version: `0.10.0`
 > Stable baseline: `0.9.5`
-> 다음 공개 시험: `0.10.0-test.5`
-> 현재 단계: 벡터 성능 수용·채택 완료, test.5 준비
+> 다음 공개 시험: `0.10.0-test.6`
+> 현재 단계: 벡터 성능 수용·채택 완료, 새 환경 검사 수정 후 test.6 준비
 > 확정 범위: [`ADR-0020`](../decisions/ADR-0020-0.10.0-product-scope.md)
 
 ## 목표
