@@ -362,7 +362,7 @@ fn run_window(
             .collect::<Result<Vec<_>, _>>()?;
         let store = RagStore::open(targets[0].files.root_path())?;
         let corpora = store
-            .shared_semantic_corpora(&requests)?
+            .shared_semantic_corpora_bounded(&requests, workers)?
             .into_iter()
             .zip(requests)
             .map(|(corpus, request)| collection_corpus(corpus, request))

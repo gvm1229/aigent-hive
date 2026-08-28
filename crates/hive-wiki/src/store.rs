@@ -1409,6 +1409,26 @@ impl RagStore {
         &self,
         requests: &[RetrievalRequest],
     ) -> Result<Vec<crate::rag::SemanticCorpus>, WikiError> {
+        self.shared_semantic_corpora_bounded(requests, 1)
+    }
+
+    /// Export a shared-only window with at most four concurrent canonical checks.
+    /// `SQLite` and corpus assembly stay on the caller. One worker preserves serial
+    /// error order; parallel mode validates corpus budgets before canonical files.
+    /// No corpus is returned until every canonical check succeeds.
+    ///
+    /// # Errors
+    /// Rejects invalid budgets, implicit authority, stale inputs, or reader failure.
+    pub fn shared_semantic_corpora_bounded(
+        &self,
+        requests: &[RetrievalRequest],
+        workers: usize,
+    ) -> Result<Vec<crate::rag::SemanticCorpus>, WikiError> {
+        if !(1..=16).contains(&workers) {
+            return Err(WikiError::InvalidInput(
+                "invalid shared reader budget".to_owned(),
+            ));
+        }
         self.with_retrieval_snapshot(|bytes, manifest, registry| {
             let collections = shared_batch_collections(registry, requests.iter())?;
             let prepared =
@@ -1417,30 +1437,32 @@ impl RagStore {
                 let mut result = Vec::new();
                 let mut chunk_count = 0;
                 let mut byte_count = 0;
-                for (request, collection) in requests.iter().zip(collections) {
+                for (request, collection) in requests.iter().zip(&collections) {
                     let states = prepared
                         .semantic_partition_states(request)
                         .map_err(rag_error)?;
                     let digest = match states.into_iter().find(|state| {
-                        state.partition.collection_id == collection
+                        state.partition.collection_id == *collection
                             && state.partition.visibility == RagVisibility::Shared
                     }) {
                         Some(state) => state.digest,
                         None => crate::rag::semantic_corpus_digest(
                             registry,
-                            &collection,
+                            collection,
                             RagVisibility::Shared,
                             &[],
                         )
                         .map_err(rag_error)?,
                     };
                     let authority_digest = semantic_authority_digest(registry, request)?;
-                    self.require_current_partition(
-                        manifest.generation,
-                        &collection,
-                        RagVisibility::Shared,
-                        &digest,
-                    )?;
+                    if workers == 1 {
+                        self.require_current_partition(
+                            manifest.generation,
+                            collection,
+                            RagVisibility::Shared,
+                            &digest,
+                        )?;
+                    }
                     let chunks = prepared
                         .semantic_corpus(request, RagVisibility::Shared)
                         .map_err(rag_error)?;
@@ -1453,6 +1475,16 @@ impl RagStore {
                         authority_digest,
                         chunks,
                     });
+                }
+                if workers > 1 {
+                    check_shared_partitions(result.len(), workers, |index| {
+                        self.require_current_partition(
+                            manifest.generation,
+                            &collections[index],
+                            RagVisibility::Shared,
+                            &result[index].partition_digest,
+                        )
+                    })?;
                 }
                 Ok(result)
             })())
@@ -5247,6 +5279,65 @@ mod tests {
             )
             .expect("publish");
         assert_eq!(published, [0, 1, 2]);
+    }
+
+    #[test]
+    fn shared_parallel_export_preserves_corpora_and_checks_reader_budgets() {
+        let (_temporary, store, requests, _) = shared_vector_window();
+        let expected = store.shared_semantic_corpora(&requests).expect("serial");
+        for workers in [1, 2, 4, 16] {
+            assert_eq!(
+                store
+                    .shared_semantic_corpora_bounded(&requests, workers)
+                    .expect("parallel"),
+                expected
+            );
+        }
+        for workers in [0, 17, usize::MAX] {
+            assert!(matches!(
+                store.shared_semantic_corpora_bounded(&requests, workers),
+                Err(WikiError::InvalidInput(_))
+            ));
+        }
+        assert!(store.shared_semantic_corpora_bounded(&[], 4).is_err());
+        let mut invalid = requests[0].clone();
+        invalid.confidential_collection_id = Some(USER_ROOT_COLLECTION_ID.to_owned());
+        assert!(store
+            .shared_semantic_corpora_bounded(&[invalid], 4)
+            .is_err());
+    }
+
+    #[test]
+    fn shared_parallel_export_never_returns_stale_or_unauthorized_corpora() {
+        for changed in ["canonical", "registry"] {
+            let (temporary, store, requests, canonical) = shared_vector_window();
+            if changed == "canonical" {
+                std::fs::write(canonical, b"invalid canonical page").expect("tamper");
+            } else {
+                let mut registry = store.load_registry().expect("registry");
+                registry.collections[0].default_visibility = CollectionVisibility::Confidential;
+                std::fs::write(
+                    temporary.path().join(COLLECTION_REGISTRY_RELATIVE),
+                    registry_bytes(&registry).expect("bytes"),
+                )
+                .expect("change visibility without index authentication");
+            }
+            for workers in [1, 4] {
+                assert!(store
+                    .shared_semantic_corpora_bounded(&requests, workers)
+                    .is_err());
+            }
+        }
+    }
+
+    #[test]
+    fn shared_parallel_export_propagates_joined_reader_failures_without_corpus() {
+        let (_temporary, store, requests, _) = shared_vector_window();
+        for panic in [false, true] {
+            super::FAIL_SHARED_CHECK.with(|failure| failure.set(Some((1, panic))));
+            assert!(store.shared_semantic_corpora_bounded(&requests, 4).is_err());
+            assert!(store.shared_semantic_corpora_bounded(&requests, 4).is_ok());
+        }
     }
 
     #[test]
