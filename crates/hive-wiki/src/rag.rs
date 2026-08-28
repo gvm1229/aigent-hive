@@ -1008,9 +1008,22 @@ pub fn literal_query_matches(query: &str, exact_lookup: bool, fields: &[&str]) -
     let scalar = !query.chars().any(char::is_whitespace)
         && (query.chars().all(char::is_numeric)
             || query.chars().any(|c| c == '_' || structured_separator(c)));
-    if scalar {
+    let numbered_phrase = quoted.is_none()
+        && query.split_whitespace().count() > 1
+        && query.split_whitespace().any(numbered_literal_token);
+    if scalar || numbered_phrase {
+        let query = if numbered_phrase {
+            query.split_whitespace().collect::<Vec<_>>().join(" ")
+        } else {
+            query
+        };
         return fields.iter().any(|field| {
             let field = folded_alias(field);
+            let field = if numbered_phrase {
+                field.split_whitespace().collect::<Vec<_>>().join(" ")
+            } else {
+                field
+            };
             field.match_indices(&query).any(|(start, _)| {
                 !literal_continues(field[..start].chars().rev(), true)
                     && !literal_continues(field[start + query.len()..].chars(), false)
@@ -1023,6 +1036,15 @@ pub fn literal_query_matches(query: &str, exact_lookup: bool, fields: &[&str]) -
                 .windows(tokens.len())
                 .any(|part| part == tokens.as_slice())
         })
+}
+
+fn numbered_literal_token(token: &str) -> bool {
+    token.chars().all(char::is_numeric)
+        || (token.chars().any(char::is_numeric)
+            && token.chars().any(|c| c == '_' || structured_separator(c))
+            && token
+                .chars()
+                .all(|c| c.is_alphanumeric() || c == '_' || structured_separator(c)))
 }
 
 fn structured_separator(c: char) -> bool {
@@ -4806,6 +4828,68 @@ mod tests {
             true,
             &["no literal in this body"]
         ));
+    }
+
+    #[test]
+    fn numbered_phrase_lookup_preserves_full_values_and_normalized_spacing() {
+        for (query, text, expected) in [
+            ("자료 00500", "자료 00500. 설명", true),
+            ("자료  00500", "자료\n00500. 설명", true),
+            ("00500 자료", "00500 자료.", true),
+            ("항목 00500 설명", "항목 00500 설명.", true),
+            ("release v2.4", "Release v2.4.", true),
+            ("자료 doc-00500", "자료 doc-00500.", true),
+            ("자료 00500", "자료 005000.", false),
+            ("자료 00500", "자료 +00500.", false),
+            ("자료 00500", "자료 -00500.", false),
+            ("자료 00500", "자료 00500%", false),
+            ("자료 00500", "자료 00500/10", false),
+            ("자료 00500", "자료 00500.1", false),
+            ("항목 00500 설명", "항목 -00500 설명", false),
+            ("release v2.4", "release v2.40", false),
+            ("자료 3개", "자료 3개", false),
+            ("자료 b12", "자료 b12", false),
+            ("semantic search", "semantic search", false),
+            // The unchanged phrase rule sees three search tokens here.
+            ("release alpha-beta", "release alpha-beta", true),
+        ] {
+            assert_eq!(
+                literal_query_matches(query, false, &[text]),
+                expected,
+                "{query} / {text}"
+            );
+        }
+        assert!(!numbered_literal_token("alpha-beta"));
+        assert!(!numbered_literal_token("3개"));
+        assert!(!numbered_literal_token("b12"));
+    }
+
+    #[test]
+    fn numbered_phrase_fusion_keeps_the_fts_hit_ahead_of_semantic_distractors() {
+        let (mut request, mut lexical, mut semantic) = literal_fusion_fixture();
+        request.query = "자료 00500".to_owned();
+        lexical.hits[0].text = "자료 00500. Exact numbered record.".to_owned();
+        semantic.hits[1].text = lexical.hits[0].text.clone();
+        lexical.returned_bytes = lexical.hits.iter().map(|hit| hit.text.len()).sum();
+        semantic.returned_bytes = semantic.hits.iter().map(|hit| hit.text.len()).sum();
+        let expected = lexical
+            .hits
+            .iter()
+            .map(|hit| hit.chunk_id.clone())
+            .collect::<Vec<_>>();
+        let fused =
+            fuse_semantic_results_with_policy(&request, lexical, &semantic).expect("fusion");
+        assert!(fused.fts_order_preserved);
+        assert_eq!(
+            fused
+                .result
+                .hits
+                .iter()
+                .take(expected.len())
+                .map(|hit| hit.chunk_id.clone())
+                .collect::<Vec<_>>(),
+            expected
+        );
     }
 
     #[test]
