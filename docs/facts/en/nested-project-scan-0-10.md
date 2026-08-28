@@ -9,7 +9,7 @@ summary: "0.9.5 closes the 0.9 release line; safe knowledge scanning for registe
 tags: [knowledge, release, scan, v0-10]
 aliases: ["Nested Vault scan"]
 sources:
-  - "repo:crates/hive-cli/src/knowledge_scan.rs#sha256:ef09a7eb9bda33bd704f15d7c8fd44880a05d8027af3836c8d80490d333bbf33"
+  - "repo:crates/hive-cli/src/knowledge_scan.rs#sha256:8502081a51a31982649e9b945277dcceae0db3d058fcadba3a38be5e81ae9f29"
   - "repo:docs/decisions/product-release-decisions.md#sha256:e89ac8584204a7e52ed157e9b29d523f870b8ac387fc1e4a044f7f7333d17af5"
   - "repo:docs/plans/active/nested-project-knowledge-scan-0.10.0.md#sha256:09e75e39def220648906afa58722a15a1997ca9013eeeb02f579b8eb4b1aaf8f"
   - "repo:docs/plans/active/release-0.10.0.md#sha256:39572003469107a9a9c5f0148574bad3995be96abb83df26d54ce00ab56d199c"
