@@ -63,7 +63,7 @@ jobs:
           cache: pip
           cache-dependency-path: requirements-conformance.txt
       - run: python -m pip install --disable-pip-version-check -r requirements-conformance.txt
-      - run: python scripts/test-lanes.py --lane documentation
+      - run: python scripts/test-artifacts.py run --purpose 'CI 문서 lane' --path target/debug --command python scripts/test-lanes.py --lane documentation
 
   rust:
     name: Rust (Linux full)
@@ -87,7 +87,7 @@ jobs:
           components: clippy,rustfmt
       - run: cargo fmt --all --check
       - run: cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
-      - run: cargo test --workspace --all-targets --all-features --locked
+      - run: python scripts/test-artifacts.py run --purpose 'CI Rust 전체 단위 시험' --path target/debug --command cargo test --workspace --all-targets --all-features --locked
 
   conformance:
     name: Conformance (Linux · ${{ matrix.lane }})
@@ -131,7 +131,13 @@ jobs:
       - name: Select Linux CLI path
         run: echo "HIVE_BIN=$GITHUB_WORKSPACE/target/debug/hive" >> "$GITHUB_ENV"
       - name: Run complete named conformance inventory
-        run: python scripts/test-lanes.py --lane ${{ matrix.lane }}
+        run: python scripts/test-artifacts.py run --purpose "CI conformance ${{ matrix.lane }} lane" --path target/debug --command python scripts/test-lanes.py --lane ${{ matrix.lane }}
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        if: always()
+        with:
+          name: test-results-${{ matrix.lane }}
+          path: tests/results/runs/*.md
+          if-no-files-found: warn
 
   copier:
     name: Contract and Copier conformance
@@ -216,7 +222,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@2c7215f132e9ebf062739d9130488b56d53c060c # master 2026-07-16
         with:
           toolchain: stable
-      - run: cargo test -p hive-cli --locked
+      - run: python scripts/test-artifacts.py run --purpose '플랫폼 Hive CLI 단위 시험' --path target/debug --command cargo test -p hive-cli --locked
 
   protected-merge-gate:
     name: Protected merge gate

@@ -986,7 +986,10 @@ class Phase6StaticContracts(unittest.TestCase):
         self.assertEqual(name, "vector")
         self.assertEqual(upload["uses"], "actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f")
         self.assertEqual(upload["if"], "always()")
-        self.assertEqual(upload["with"]["path"], "tests/work/vector-native-*/receipt.json")
+        self.assertEqual(
+            upload["with"]["path"],
+            "tests/work/vector-native-*/receipt.json\ntests/results/runs/*.md\n",
+        )
 
         agy_fixture = (ROOT / "tests/fixtures/native-orchestration/agy-stub.py").read_text(
             encoding="utf-8"

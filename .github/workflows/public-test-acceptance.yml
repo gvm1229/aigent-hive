@@ -119,7 +119,7 @@ jobs:
           printf 'VECTOR_PYTHON=%s\n' "$vector_python" >>"$GITHUB_ENV"
       - name: Qualify optional vector using the exact public binary
         shell: bash
-        run: '"${VECTOR_PYTHON:-python}" -B scripts/qualify-vector-runtime.py --hive "$HIVE_BIN" --authorize-install'
+        run: 'python scripts/test-artifacts.py run --purpose "공개 vector qualification ${{ matrix.platform_package }}" --command "${VECTOR_PYTHON:-python}" -B scripts/qualify-vector-runtime.py --hive "$HIVE_BIN" --authorize-install'
       - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         if: always()
         with:
@@ -127,4 +127,5 @@ jobs:
           path: |
             ${{ runner.temp }}/korean-public-test-${{ matrix.platform_package }}.json
             tests/work/vector-native-*/receipt.json
+            tests/results/runs/*.md
           if-no-files-found: error

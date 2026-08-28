@@ -95,13 +95,15 @@ jobs:
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
           "${VECTOR_PYTHON:-python}" -B -m unittest tests.conformance.contracts.test_vector_parent
           cargo build --release --locked --target '${{ matrix.target }}' --bin hive
-          "${VECTOR_PYTHON:-python}" -B scripts/qualify-vector-runtime.py \
+          python scripts/test-artifacts.py run --purpose 'native vector qualification ${{ matrix.target }}' --command "${VECTOR_PYTHON:-python}" -B scripts/qualify-vector-runtime.py \
             --hive 'target/${{ matrix.target }}/release/${{ matrix.executable }}' --authorize-install
       - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         if: always()
         with:
           name: vector-native-${{ matrix.target }}
-          path: tests/work/vector-native-*/receipt.json
+          path: |
+            tests/work/vector-native-*/receipt.json
+            tests/results/runs/*.md
           if-no-files-found: warn
 
   macos:
