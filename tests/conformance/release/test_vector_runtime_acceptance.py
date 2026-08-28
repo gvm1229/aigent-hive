@@ -19,6 +19,41 @@ spec.loader.exec_module(runner)
 
 
 class VectorRuntimeAcceptance(unittest.TestCase):
+    def test_source_fixture_loading_never_creates_bytecode_without_B(self):
+        with tempfile.TemporaryDirectory(dir=ROOT / "tests/work") as directory:
+            work = Path(directory)
+            source = work / "scripts/qualify-source-graph.py"
+            source.parent.mkdir()
+            source.write_text("def frozen_source(repository, target): pass\n", encoding="utf-8")
+            qualification = runner.Qualification(Path(sys.executable), work)
+            with patch.object(runner, "ROOT", work), patch.object(sys, "dont_write_bytecode", False), \
+                 patch.object(qualification, "call", side_effect=RuntimeError("stop before CLI")):
+                with self.assertRaisesRegex(RuntimeError, "stop before CLI"):
+                    qualification.source_vectors()
+            self.assertEqual(list(source.parent.iterdir()), [source])
+
+    def test_consumer_and_source_install_share_the_download_timeout(self):
+        with tempfile.TemporaryDirectory(dir=ROOT / "tests/work") as directory:
+            qualification = runner.Qualification(Path(sys.executable), Path(directory))
+            for prefix in ("knowledge", "source-wiki"):
+                process = Mock(returncode=0)
+                process.communicate.return_value = ('{"data":{}}', "")
+                with self.subTest(prefix=prefix), patch.object(runner.subprocess, "Popen", return_value=process):
+                    qualification.call(prefix, "vector", "enable")
+                process.communicate.assert_called_once_with(timeout=1000)
+
+    def test_portable_fixture_inventory_rejects_any_derived_or_duplicate_entry(self):
+        names = ["manifest.json", "manifest-sha256.txt", "data/.hive/portable/collections.json",
+                 "data/.hive/portable/collections/user-root/suppression.yml",
+                 *(f"data/.hive/portable/collections/user-root/Wiki/vector-example-{number}.md" for number in range(8))]
+        runner.validate_fixture_bundle_entries(names)
+        for extra in ("data/.hive/index/vector/index.sqlite3", "data/.hive/config/vector-state/receipt.json",
+                      "data/.agents/work/vector/model.onnx", "unrelated.txt", names[0]):
+            with self.subTest(extra=extra), self.assertRaises(ValueError):
+                runner.validate_fixture_bundle_entries([*names, extra])
+        with self.assertRaises(ValueError):
+            runner.validate_fixture_bundle_entries(names[:-1])
+
     def test_external_timeout_cleanup_closes_real_parent_and_descendant_pipes(self):
         with tempfile.TemporaryDirectory(dir=ROOT / "tests/work") as work:
             ready = Path(work) / "child.json"
