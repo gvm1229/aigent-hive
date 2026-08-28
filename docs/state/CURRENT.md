@@ -1,6 +1,6 @@
 # 현재 상태
 
-- 작업 branch: `feature/0.10.0-vector-search`, 소스 확인 기준 `4e971a78`
+- 작업 branch: `feature/0.10.0-vector-search`, 소스 확인 기준 `c6f16630`
 - 원격 통합 기준: `origin/develop@5cedbed4`. 벡터 변경은 전용 branch에서 검증 중이며 `develop` 미통합
 - 제품 버전: `0.10.0`, 안정판 기준 `0.9.5`
 - 마지막 공개 시험: `0.10.0-test.4`, 다음 번호: `0.10.0-test.5`
@@ -32,11 +32,11 @@
 
 ## 최근 검증
 
-- Windows 전체 Rust 887개 통과·수동 4개 제외. 관련 Clippy 통과, 원본 외부 라이브러리 unused 경고 6건 유지
-- Python 현재 목록 785개: 745 통과·40 조건부 건너뜀·실패/누락 0개. 깨끗한 소스 `f1f1c04c`에서 단일 전체 실행 완료
-- 다섯 구간 시간: 문서 2.02초·보안 67.27초·계약 443.91초·통합 250.52초·출시 48.17초
+- Windows 전체 Rust 890개 통과·수동 4개 제외. 관련 Clippy 통과, 원본 외부 라이브러리 unused 경고 6건 유지
+- Python 현재 목록 785개: 745 통과·40 조건부 건너뜀·실패/누락 0개. 깨끗한 소스 `c6f16630`에서 단일 전체 실행 완료
+- 다섯 구간 시간: 문서 2.00초·보안 67.91초·계약 440.44초·통합 250.80초·출시 34.08초
 - 건너뜀: Windows의 symlink 권한·POSIX 전용 동작·macOS 설치 시험·호스트별 기본 설정 조건. 다른 운영체제 통과로 간주 금지
-- 목록 대조: `tests/work/scope-audit-20260828/vector-buffer-reconciled-tests.json`
+- 목록 대조: `tests/work/scope-audit-20260828/vector-export-reconciled-tests.json`
 - 고정 관계 질문은 같은 시점의 사실로 검사. 직접 사실 30/30·관계 30/30, 현재/고정 사실 보존·오류/경고 0건
 - Windows 실제 긴 경로·8문서 묶음 이동·3공유 모음·소스 81개 재개·강제 취소/복구 통과: `tests/work/vector-native-lblw2nrc/receipt.json`
 - 새 병렬 처리 바이너리 SHA `2707deaea7c2dc215f99dee8ec56a6bb9ef86e58a6adfed2d9a2d160b3106ac9`, 깨끗한 소스 `6e7c4a3c`. 대규모 속도는 별도
