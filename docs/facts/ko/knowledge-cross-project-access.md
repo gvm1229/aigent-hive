@@ -11,7 +11,7 @@ aliases: ["자동 지식 승격", "프로젝트 간 지식"]
 sources:
   - "repo:crates/hive-cli/src/knowledge.rs#sha256:1229cfa84e1fb0357c943fd0ef2910f3cdb5dd7e70f67879f0832db0ea26c800"
   - "repo:crates/hive-wiki/src/rag.rs#sha256:709c170e8c0340a0f5912bb7a1ce56a636849cc62bafb0a28ef2bfab27d4b74c"
-  - "repo:crates/hive-wiki/src/store.rs#sha256:ad261e5bcc409ef9fc42ad82257769e9bd5c3487c1ad4ed2ac3811a97fe44746"
+  - "repo:crates/hive-wiki/src/store.rs#sha256:350921616304811f9941b2ad5486c727009996f0ed6ee93f21f9453cc6ed5be8"
   - "repo:harness/skills/knowledge-import/SKILL.md#sha256:b73e6c82eb5ef9105781383f59211a982ed70b0f0ecf1690619f3b9b30f4730d"
   - "repo:harness/skills/knowledge-recall/SKILL.md#sha256:9e169f3daff2b4fbe6cff4d9a93d7e45cca6e9a6e78d1784b83458b50d3aa267"
 links: [global-knowledge-rag, knowledge-portability-scan, shared-index]
