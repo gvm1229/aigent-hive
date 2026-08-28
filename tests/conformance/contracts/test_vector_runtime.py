@@ -162,6 +162,47 @@ class VectorRuntimeContract(unittest.TestCase):
             with self.assertRaises(ValueError):
                 RUNTIME.fetch("https://files.pythonhosted.org/example.whl", digest, self.root)
 
+    def test_verifier_checks_every_root_and_nested_file_after_path_reuse(self):
+        site = self.root / "site"
+        payloads = {"root.py": b"root bytes", "nested/한글 space/module.py": b"nested bytes", "p.dist-info/METADATA": b"metadata"}
+        records = []
+        for relative, content in payloads.items():
+            encoded = base64.urlsafe_b64encode(hashlib.sha256(content).digest()).decode().rstrip("=")
+            records.append(f"{relative},sha256={encoded},{len(content)}")
+        payloads["p.dist-info/RECORD"] = ("\n".join([*records, "p.dist-info/RECORD,,"]) + "\n").encode()
+        stream = io.BytesIO()
+        with zipfile.ZipFile(stream, "w") as archive:
+            for relative, content in payloads.items():
+                archive.writestr(relative, content)
+                path = site / relative
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_bytes(content)
+        wheels = self.root / "wheels"
+        wheels.mkdir()
+        wheel_digest = hashlib.sha256(stream.getvalue()).hexdigest()
+        (wheels / (wheel_digest + ".whl")).write_bytes(stream.getvalue())
+        helper = b"pass\n"
+        helper_digest = RUNTIME.digest_bytes(helper)
+        (self.root / "vector_helper.py").write_bytes(helper)
+        (self.root / "receipt.json").write_text(json.dumps({"helper_digest": helper_digest}), encoding="utf-8")
+        request = {"root": str(self.root), "helper_digest": helper_digest, "lock": {"model": {"files": []}}}
+        with patch.object(RUNTIME, "describe", return_value={}), patch.object(RUNTIME, "validate_lock", return_value=[{"size": len(stream.getvalue()), "sha256": wheel_digest}]):
+            self.assertTrue(RUNTIME.verify(request)["verified"])
+            for relative in ("root.py", "nested/한글 space/module.py", "p.dist-info/RECORD"):
+                path = site / relative
+                path.write_bytes(b"changed")
+                with self.subTest(relative=relative), self.assertRaises(ValueError):
+                    RUNTIME.verify(request)
+                path.write_bytes(payloads[relative])
+            extra = site / "nested/한글 space/extra.py"
+            extra.write_bytes(b"unknown")
+            with self.assertRaises(ValueError):
+                RUNTIME.verify(request)
+            extra.unlink()
+            (site / "root.py").unlink()
+            with self.assertRaises(ValueError):
+                RUNTIME.verify(request)
+
     def test_successful_runtime_cleanup_removes_only_exact_pinned_downloads(self):
         artifacts = []
         for content in (b"wheel", b"model"):

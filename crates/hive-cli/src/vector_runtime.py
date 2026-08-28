@@ -295,18 +295,21 @@ def verify(request: dict) -> dict:
     actual_files = set()
     site = safe_path(str(root / "site"))
     for directory, folders, files in os.walk(site):
+        directory_path = Path(directory)
+        relative_directory = directory_path.relative_to(site).as_posix()
+        prefix = "" if relative_directory == "." else relative_directory + "/"
         # Walk top-down and reject reparse points before descending; do not re-stat
         # every already checked ancestor for every distribution file.
         for name in folders:
-            node = Path(directory) / name
+            node = directory_path / name
             if node.is_symlink() or (hasattr(node, "is_junction") and node.is_junction()):
                 raise ValueError("linked runtime directory")
         for name in files:
-            path = Path(directory) / name
+            path = directory_path / name
             metadata = path.lstat()
             if not stat.S_ISREG(metadata.st_mode) or getattr(metadata, "st_file_attributes", 0) & getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0):
                 raise ValueError("non-regular runtime file")
-            relative = path.relative_to(site).as_posix()
+            relative = prefix + name
             if expected_files.get(relative) != digest_file(path)[7:]:
                 raise ValueError("vector runtime file changed")
             actual_files.add(relative)
