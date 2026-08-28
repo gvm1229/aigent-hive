@@ -445,7 +445,7 @@ def finalize(connection: sqlite3.Connection, request: dict, chunks: list[dict], 
     return compact_generation(connection, deadline)
 
 
-def build(request: dict) -> dict:
+def build(request: dict, *, encoder=None, final_deadline=None) -> dict:
     contract = validate_digest(request["contract_digest"])
     validate_digest(request["manifest_digest"])
     chunks = sorted(validate_chunks(request["chunks"]), key=lambda row: row["chunk_id"])
@@ -471,7 +471,7 @@ def build(request: dict) -> dict:
         same_input = meta.get("finalize_binding") == input_binding(request, chunks)
         if same_input and meta.get("phase") in ("ready", "compacting"):
             embedded, missing, embeddings_complete = 0, [], True
-            complete = meta["phase"] == "ready" or compact_generation(connection, time.monotonic()+30.0)
+            complete = meta["phase"] == "ready" or compact_generation(connection, min(time.monotonic()+30.0, final_deadline or math.inf))
         else:
             restored = True
             if meta.get("phase") in ("ready", "compacting", "restoring"):
@@ -485,7 +485,7 @@ def build(request: dict) -> dict:
             # authenticate a killed worker's mutable cache from its self-reported checksum.
             if restored and missing:
                 parallelism = min(workers, (len(missing)+63)//64)
-                initialize_encoder(str(root))
+                (encoder or initialize_encoder)(str(root))
                 with concurrent.futures.ThreadPoolExecutor(max_workers=parallelism) as pool:
                     window_size = 64 * parallelism
                     for offset in range(0, len(missing), window_size):
@@ -502,7 +502,7 @@ def build(request: dict) -> dict:
                             connection.commit()
                             embedded += len(batch)
             embeddings_complete = restored and embedded == len(missing)
-            complete = finalize(connection, request, chunks, time.monotonic()+30.0) if embeddings_complete else False
+            complete = finalize(connection, request, chunks, min(time.monotonic()+30.0, final_deadline or math.inf)) if embeddings_complete else False
         result = {
             "complete": complete, "phase": "ready" if complete else dict(connection.execute("SELECT key,value FROM meta")).get("phase", "embedding"),
             "embedded": embedded, "remaining": len(missing)-embedded, "chunks": len(chunks),
@@ -514,6 +514,52 @@ def build(request: dict) -> dict:
     reject_database_sidecars(path)
     result["database_digest"] = database_digest(path)
     return result
+
+
+def build_many(request: dict) -> dict:
+    """Share only the encoder across a bounded window; each database stays independent."""
+    validate_digest(request["contract_digest"])
+    workers, seconds, databases = request["workers"], request["max_seconds"], request["databases"]
+    if type(workers) is not int or not 1 <= workers <= 16 or type(seconds) is not int or not 1 <= seconds <= 60:
+        raise ValueError("invalid vector execution budget")
+    if not isinstance(databases, list) or not 1 <= len(databases) <= 16:
+        raise ValueError("invalid vector build window")
+    count = size = 0
+    for item in databases:
+        if not isinstance(item, dict) or set(item) != {"database", "chunks", "manifest_digest", "expected_database_digest"}:
+            raise ValueError("invalid vector build partition")
+        validate_digest(item["manifest_digest"])
+        if item["expected_database_digest"] is not None:
+            validate_digest(item["expected_database_digest"])
+        chunks = validate_chunks(item["chunks"])
+        count += len(chunks)
+        size += sum(len(row["title"].encode("utf-8")) + len(row["text"].encode("utf-8")) for row in chunks)
+    if count > MAX_CHUNKS or size > MAX_REQUEST:
+        raise ValueError("vector build window exceeds limits")
+    root = load_runtime(request["runtime"])
+    paths = [database_path(root, item["database"], writable=True) for item in databases]
+    if len(set(paths)) != len(paths):
+        raise ValueError("duplicate vector build partition")
+    started = time.monotonic()
+    deadline = started + seconds
+    initialized = False
+
+    def encoder(runtime):
+        nonlocal initialized
+        if not initialized:
+            initialize_encoder(runtime)
+            initialized = True
+
+    results = []
+    for index, item in enumerate(databases):
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            break
+        result = build({**item, "runtime": request["runtime"], "contract_digest": request["contract_digest"],
+                        "workers": workers, "max_seconds": min(seconds, max(1, math.ceil(remaining)))},
+                       encoder=encoder, final_deadline=deadline+30.0)
+        results.append({"index": index, "result": {"schema_version": SCHEMA, **result}})
+    return {"results": results, "not_started": list(range(len(results), len(databases)))}
 
 
 def query(request: dict) -> dict:
@@ -597,6 +643,7 @@ def execute_request(request: dict) -> dict:
         raise ValueError("unsupported vector worker schema")
     fields = {
         "build": {"database", "chunks", "contract_digest", "workers", "max_seconds", "manifest_digest", "expected_database_digest"},
+        "build-many": {"databases", "contract_digest", "workers", "max_seconds"},
         "query": {"database", "query", "limit", "contract_digest", "manifest_digest", "expected_database_digest"},
         "query-many": {"databases", "query", "limit", "contract_digest"},
         "self-test": set(),
@@ -606,6 +653,8 @@ def execute_request(request: dict) -> dict:
         raise ValueError("invalid vector worker fields")
     if request.get("action") == "build":
         result = build(request)
+    elif request.get("action") == "build-many":
+        result = build_many(request)
     elif request.get("action") == "query":
         result = query(request)
     elif request.get("action") == "query-many":

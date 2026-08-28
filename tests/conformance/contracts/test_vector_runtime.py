@@ -7,6 +7,7 @@ Real package/model execution belongs to the separately consented qualification l
 from __future__ import annotations
 
 import base64
+from contextlib import closing
 import hashlib
 import importlib.util
 import io
@@ -335,6 +336,69 @@ class VectorRuntimeContract(unittest.TestCase):
         with patch.object(WORKER, "load_runtime", side_effect=AssertionError("must not read runtime")):
             with self.assertRaises(ValueError):
                 WORKER.build({"contract_digest": "sha256:" + "a" * 64, "manifest_digest": "not-a-digest"})
+
+    def build_window(self):
+        base = self.root / ".hive/index/vector"
+        runtime = base / "runtimes" / ("a" * 64)
+        (runtime / "site").mkdir(parents=True)
+        databases = []
+        for number, letter in enumerate(("b", "c")):
+            scope = base / "scopes" / (letter * 64)
+            scope.mkdir(parents=True)
+            databases.append({"database":str(scope / "staging.sqlite3"),"chunks":[{
+                "chunk_id":f"scope-{number}","digest":"sha256:"+"d"*64,"title":"Example","text":f"scope {number}"}],
+                "manifest_digest":"sha256:"+letter*64,"expected_database_digest":None})
+        return runtime, {"schema_version":1,"action":"build-many","runtime":str(runtime),
+                         "contract_digest":"sha256:"+"e"*64,"workers":1,"max_seconds":30,"databases":databases}
+
+    def test_build_window_shares_encoder_but_keeps_each_database_and_noop_separate(self):
+        runtime, request = self.build_window()
+        connect = lambda path: sqlite3.connect(path, factory=SimulatedVectorConnection)
+        with patch.object(WORKER, "load_runtime", return_value=runtime), patch.object(WORKER, "initialize_encoder") as initialize, \
+             patch.object(WORKER, "open_database", side_effect=connect), patch.object(WORKER.concurrent.futures, "ThreadPoolExecutor", InlinePool):
+            result = WORKER.execute_request(request)
+            self.assertEqual(initialize.call_count, 1)
+            self.assertEqual(result["not_started"], [])
+            for number, item in enumerate(result["results"]):
+                self.assertEqual(item["index"], number)
+                self.assertEqual(item["result"]["embedded"], 1)
+                self.assertTrue(item["result"]["complete"])
+                database = request["databases"][number]
+                database["expected_database_digest"] = item["result"]["database_digest"]
+                with closing(sqlite3.connect(database["database"])) as connection:
+                    self.assertEqual(connection.execute("SELECT chunk_id FROM documents").fetchall(), [(f"scope-{number}",)])
+            before = [Path(item["database"]).read_bytes() for item in request["databases"]]
+            initialize.reset_mock()
+            noop = WORKER.execute_request(request)
+            self.assertEqual([item["result"]["embedded"] for item in noop["results"]], [0, 0])
+            initialize.assert_not_called()
+            self.assertEqual(before, [Path(item["database"]).read_bytes() for item in request["databases"]])
+
+    def test_build_window_budget_is_shared_and_unstarted_databases_are_untouched(self):
+        runtime, request = self.build_window()
+        request["max_seconds"] = 2
+        with patch.object(WORKER, "load_runtime", return_value=runtime), \
+             patch.object(WORKER.time, "monotonic", side_effect=[10, 10, 12]), \
+             patch.object(WORKER, "build", return_value={"complete":False}) as build:
+            result = WORKER.execute_request(request)
+        self.assertEqual(result["not_started"], [1])
+        build.assert_called_once()
+        self.assertEqual(build.call_args.kwargs["final_deadline"], 42)
+        self.assertFalse(any(Path(item["database"]).exists() for item in request["databases"]))
+
+    def test_build_window_rejects_duplicate_or_invalid_later_partition_before_writes(self):
+        runtime, request = self.build_window()
+        original = json.loads(json.dumps(request))
+        request["databases"][1] = request["databases"][0]
+        with patch.object(WORKER, "load_runtime", return_value=runtime), self.assertRaises(ValueError):
+            WORKER.execute_request(request)
+        request = json.loads(json.dumps(original))
+        request["databases"][1]["chunks"][0]["digest"] = "invalid"
+        with patch.object(WORKER, "load_runtime", side_effect=AssertionError("no runtime read")), self.assertRaises(ValueError):
+            WORKER.execute_request(request)
+        with patch.object(WORKER, "MAX_CHUNKS", 1), self.assertRaises(ValueError):
+            WORKER.execute_request(original)
+        self.assertFalse(any(Path(item["database"]).exists() for item in original["databases"]))
 
     def test_worker_parallelism_is_bounded_before_runtime_access(self):
         request = {"contract_digest":"sha256:"+"a"*64,"manifest_digest":"sha256:"+"b"*64,"chunks":[],"max_seconds":30}
