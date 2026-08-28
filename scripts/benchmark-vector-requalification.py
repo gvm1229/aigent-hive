@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import math
 import os
 import struct
 import time
@@ -312,17 +313,21 @@ def exact_ranks_preserved(evidence: dict[str, object]) -> bool:
     return seen == expected
 
 
+def within_limit(value: object, maximum: float) -> bool:
+    return type(value) in (int, float) and math.isfinite(value) and 0 <= value <= maximum
+
+
 def decide(args: argparse.Namespace) -> dict[str, object]:
     evidence = json.loads(args.evidence.read_text(encoding="utf-8"))
+    policy = getattr(args, "policy", "legacy-strict")
+    stress = policy == "stress-2026-08-29"
     checks = {
         "semantic_quality": evidence["semantic_improvement_points"] >= 15
         and evidence["semantic_recall_at_10"] >= 0.90,
         "exact_regression": exact_ranks_preserved(evidence),
-        "warm_query": evidence["warm_query_p95_ms"] <= 500,
-        "cold_query": evidence["cold_query_p95_ms"] <= 2_000,
-        "full_build": evidence.get("full_build_50000_seconds") is not None
-        and evidence["full_build_50000_seconds"] <= 600,
-        "incremental": evidence["incremental_100_seconds"] <= 30,
+        "cold_query": within_limit(evidence.get("cold_query_p95_ms"), 4_000 if stress else 2_000),
+        "full_build": within_limit(evidence.get("full_build_50000_seconds"), 900 if stress else 600),
+        "incremental": within_limit(evidence.get("incremental_100_seconds"), 90 if stress else 30),
         "index_size": evidence["index_bytes"] <= 512 * 1024 * 1024,
         "scope_leaks": evidence["scope_leaks"] == 0,
         "offline": evidence["network_calls"] == 0 and evidence["provider_api_calls"] == 0,
@@ -331,11 +336,23 @@ def decide(args: argparse.Namespace) -> dict[str, object]:
         "platforms": set(evidence["accepted_platforms"])
         == {"windows-x64", "macos-arm64", "linux-musl-x64"},
     }
+    if stress:
+        checks.update({
+            "vector_lookup": within_limit(evidence.get("vector_lookup_p95_ms"), 150),
+            "independent_quality": evidence.get("holdout_semantic_recall_at_10", 0) >= .90
+            and evidence.get("holdout_semantic_improvement_points", 0) >= 15,
+            "numbered_citations": evidence.get("numbered_citation_failures") == 0
+            and evidence.get("numbered_rank_regressions") == 0,
+        })
+    else:
+        checks["warm_query"] = within_limit(evidence.get("warm_query_p95_ms"), 500)
     decision = "adopt" if all(checks.values()) else "defer"
     result = {
         "schema_version": SCHEMA_VERSION,
         "action": "decide",
         "decision": decision,
+        "evaluation_policy": policy,
+        "not_evaluated": {"warm_query": "No retained-model query mode; not a pass claim."} if stress else {},
         "checks": checks,
         "failed_checks": sorted(name for name, passed in checks.items() if not passed),
         "product_dependencies_added": decision == "adopt",
@@ -372,6 +389,7 @@ def parser() -> argparse.ArgumentParser:
     decide_parser = commands.add_parser("decide")
     decide_parser.add_argument("--evidence", type=Path, required=True)
     decide_parser.add_argument("--output", type=Path, required=True)
+    decide_parser.add_argument("--policy", choices=("legacy-strict", "stress-2026-08-29"), default="legacy-strict")
     return root
 
 

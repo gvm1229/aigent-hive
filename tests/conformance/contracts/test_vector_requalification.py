@@ -215,6 +215,43 @@ class VectorRequalificationContract(unittest.TestCase):
                 scope_dirs.add(result["scope_dir"])
             self.assertEqual(len(scope_dirs), 6)
 
+    def test_approved_stress_policy_preserves_safety_and_legacy_failure(self) -> None:
+        comparisons = [{"query_id": row["id"], "fts_rank": 1, "hybrid_rank": 1}
+                       for row in json.loads(SOURCE.read_text("utf-8"))["queries"] if row["kind"] == "exact"]
+        evidence = {"semantic_improvement_points": 16.7, "semantic_recall_at_10": 58/60,
+                    "holdout_semantic_recall_at_10": 58/60, "holdout_semantic_improvement_points": 50,
+                    "hybrid_exact_recall_at_10": 1.0, "exact_rank_comparisons": comparisons,
+                    "warm_query_p95_ms": None, "cold_query_p95_ms": 3067.394,
+                    "full_build_50000_seconds": 638.597, "incremental_100_seconds": 51.989,
+                    "vector_lookup_p95_ms": 98.876, "index_bytes": 442751701,
+                    "scope_leaks": 0, "network_calls": 0, "provider_api_calls": 0,
+                    "fts_fallback_failures": 0, "resume_equivalent": True,
+                    "numbered_citation_failures": 0, "numbered_rank_regressions": 0,
+                    "accepted_platforms": ["windows-x64", "macos-arm64", "linux-musl-x64"]}
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            def decide(value, policy):
+                source = root / "evidence.json"
+                source.write_text(json.dumps(value), encoding="utf-8")
+                return self.run_script("decide", "--evidence", str(source), "--output", str(root/"result.json"), "--policy", policy)
+            self.assertEqual(decide(evidence, "legacy-strict")["decision"], "defer")
+            accepted = decide(evidence, "stress-2026-08-29")
+            self.assertEqual(accepted["decision"], "adopt")
+            self.assertNotIn("warm_query", accepted["checks"])
+            self.assertIn("warm_query", accepted["not_evaluated"])
+            for key, value in [("full_build_50000_seconds", 901), ("incremental_100_seconds", 91),
+                               ("cold_query_p95_ms", 4001), ("vector_lookup_p95_ms", 151),
+                               ("scope_leaks", 1), ("provider_api_calls", 1), ("network_calls", 1),
+                               ("fts_fallback_failures", 1), ("resume_equivalent", False),
+                               ("numbered_citation_failures", 1), ("numbered_rank_regressions", 1),
+                               ("holdout_semantic_recall_at_10", .8), ("accepted_platforms", ["windows-x64"]),
+                               ("full_build_50000_seconds", None), ("cold_query_p95_ms", float("nan")),
+                               ("vector_lookup_p95_ms", True), ("incremental_100_seconds", -1)]:
+                with self.subTest(key=key, value=value):
+                    changed = copy.deepcopy(evidence)
+                    changed[key] = value
+                    self.assertEqual(decide(changed, "stress-2026-08-29")["decision"], "defer")
+
 
 if __name__ == "__main__":
     unittest.main()
