@@ -9,7 +9,7 @@ summary: "복잡한 자연어 continuation을 verified-workflow로 routing하고
 tags: [orchestration, skills, v0-10]
 aliases: ["ralph-loop"]
 sources:
-  - "repo:docs/decisions/ADR-0020-0.10.0-product-scope.md#sha256:08b5950d158c3e374752b625ba93a715d44c990d32c2ef39490bef2a1b9b084d"
+  - "repo:docs/decisions/ADR-0020-0.10.0-product-scope.md#sha256:a00c93539ccde3105ec332ac6fcb40fdf9d43e580b702e1f7035cfc6cb36d088"
   - "repo:docs/decisions/product-release-decisions.md#sha256:e89ac8584204a7e52ed157e9b29d523f870b8ac387fc1e4a044f7f7333d17af5"
   - "repo:docs/plans/active/verified-workflow-0.10.0.md#sha256:f88a14b8ddbe260320ddc58feba5c6b953b532e403bb6f7c3af7d0ebe035880f"
   - "repo:scripts/accept-verified-workflow.py#sha256:ad4bfb4f5c2b477a5900f0e28161ce1baee155af1b96cb73e93a0ec871a149a5"

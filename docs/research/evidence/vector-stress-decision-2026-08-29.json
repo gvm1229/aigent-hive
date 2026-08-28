@@ -1,0 +1,30 @@
+{
+  "action": "decide",
+  "checks": {
+    "cold_query": true,
+    "exact_regression": true,
+    "fallback": true,
+    "full_build": true,
+    "incremental": true,
+    "independent_quality": true,
+    "index_size": true,
+    "numbered_citations": true,
+    "offline": true,
+    "platforms": true,
+    "resume": true,
+    "scope_leaks": true,
+    "semantic_quality": true,
+    "vector_lookup": true
+  },
+  "decision": "adopt",
+  "evaluation_policy": "stress-2026-08-29",
+  "failed_checks": [],
+  "not_evaluated": {
+    "warm_query": "No retained-model query mode; not a pass claim."
+  },
+  "product_dependencies_added": true,
+  "schema_version": 1,
+  "note": "Decision evaluator only: product_dependencies_added is the legacy adoption-eligibility field, not an installation side effect.",
+  "authority": "docs/research/vector-acceptance-2026-08-29.md",
+  "evidence": "docs/research/evidence/vector-stress-acceptance-2026-08-29.json"
+}

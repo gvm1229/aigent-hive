@@ -1,11 +1,11 @@
 # Aigent Hive 활성 계획
 
-> Revision: 297
+> Revision: 298
 > 기준일: 2026-08-29
 > Product version: `0.10.0`
 > Stable baseline: `0.9.5`
 > 다음 공개 시험: `0.10.0-test.5`
-> 현재 단계: 비벡터 test.4·벡터 기능 구현 완료, 성능 설계 결정 대기
+> 현재 단계: 벡터 성능 수용·채택 완료, test.5 준비
 > 확정 범위: [`ADR-0020`](../decisions/ADR-0020-0.10.0-product-scope.md)
 
 ## 목표
@@ -63,7 +63,7 @@
 | 범위 | 완료 | 미완료 | 진행률 |
 | --- | ---: | ---: | ---: |
 | 관계·검색 graph | 16 | 0 | 100% |
-| Hybrid vector search | 21 | 2 | 91.3% |
+| Hybrid vector search | 22 | 1 | 95.7% |
 | Host-owned Skill 예약 | 1 | 0 | 100% |
 | Nested project scan | 1 | 0 | 100% |
 | Agent 지침 경량화 | 8 | 0 | 100% |
@@ -74,7 +74,7 @@
 | 한국어 언어 core | 12 | 0 | 100% |
 | Source `draft-devlog` | 6 | 0 | 100% |
 | `0.10.0` 출시 | 0 | 7 | 0% |
-| **합계** | **105** | **9** | **92.1%** |
+| **합계** | **106** | **8** | **93.0%** |
 
 ## Required load order
 

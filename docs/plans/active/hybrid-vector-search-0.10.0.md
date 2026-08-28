@@ -2,8 +2,7 @@
 
 > Checklist owner: `KRG10-014`, `VEC10-*`, `VQR10-*`
 > 작업 branch: `feature/0.10.0-vector-search`
-> 채택 방식: 구현·격리 검증 후 측정 gate 통과한 조합만 공개 기능에 포함
-> 실패 영향: FTS·native graph·Graphify code graph 일정 유지
+> 채택: 2026-08-29 유지보수자의 현재 스트레스 성능 수용 승인
 > 연구 근거: [`vector-memory-0.10-feasibility-2026-08-22.md`](../../research/vector-memory-0.10-feasibility-2026-08-22.md)
 
 ## 목표
@@ -20,7 +19,7 @@ SQLite FTS의 exact 검색을 유지하면서 표현이 다른 의미·다국어
 - [x] [VEC10-004] Qdrant Edge·sqlite-vec·SQLite-Vector의 exact version·license·Rust·세 운영체제·memory safety·storage·ANN maturity 조사 — Qdrant `0.8.0` beta, sqlite-vec `0.1.9` pre-1.0, SQLite-Vector `1.0.0` license 부적합
 - [x] [VEC10-005] `tests/work/vector-research/` 격리 prototype: 같은 canonical chunk·embedding의 세 engine build·query·delete·rebuild — Dense quality와 동일 384-dimension storage engine 격리 실행
 - [x] [VEC10-006] 50,000 chunk·100 collection benchmark와 semantic Recall@10·exact-fact 무회귀·scope filter·disk·RAM·build 비용 비교 — Dense semantic +15.0 points·exact 무회귀, engine p95 통과, full embedding build 실패
-- [ ] [VEC10-007] 기존 기준을 유지한 engine·embedding 채택 판정. 병렬 변환과 정적 임베딩 비교, 미통과 조합 공개 활성화 금지
+- [x] [VEC10-007] 승인된 스트레스 정책으로 sqlite-vec·MiniLM 채택. 과거 판정·측정값 보존, 품질·안전 기준 유지
 - [x] [VEC10-008] 파생 색인 세대·모델/engine 영수증·청크 digest·collection와 공개 범위별 물리 격리 구현
 - [x] [VEC10-009] 승인형 보조 환경 preview·설치·시간 제한 배치·원자 활성화·갱신·비활성화 구현
 - [x] [VEC10-010] FTS 보존, 의미 검색의 순위 결합·인용·검색 경로 표시. 벡터 점수만으로 사실 확정 금지
@@ -29,7 +28,7 @@ SQLite FTS의 exact 검색을 유지하면서 표현이 다른 의미·다국어
 
 ## 재검증 checklist
 
-기능 근거: [최신 검증](../../research/vector-product-integration-2026-08-28.md). 성능 채택 `007`·공개 수용 `012`는 별도 미완료.
+근거: [실측](../../research/vector-product-integration-2026-08-28.md)·[수용 정책](../../research/vector-acceptance-2026-08-29.md). 공개 수용 `012` 미완료.
 
 - [x] [VQR10-001] 특정 engine을 미리 채택하지 않고 embedding pipeline 최적화와 vector 재검증을 `0.10.0` 범위로 유지보수자 승인
 - [x] [VQR10-002] 반복 50,000 corpus의 30 digest·5.75초와 고유 50,000 corpus의 50,000 digest·1,000 probe 분리 측정
@@ -62,14 +61,14 @@ SQLite FTS의 exact 검색을 유지하면서 표현이 다른 의미·다국어
 - Benchmark 한계: 30개 문서를 반복한 합성 scale에서 digest 중복 제거·resumable checkpoint·incremental build·query embedding 포함 p95 미검증
 - 당시 `defer`·product dependency `0건`은 과거 기록으로 보존. 현재 branch 구현과 구분하며, 미통과 조합의 공개 포함 금지
 
-## Hard gate
+## 수용 기준
 
 - Paraphrase·cross-language Recall@10: FTS 대비 `15 percentage points` 이상 향상과 `90%` 이상
 - Exact ID·날짜·수치·부정 질문: 정답 포함률과 각 질문의 순위에서 FTS 대비 저하 `0건`
-- Vector lookup p95: 50,000 chunk warm `50ms` 이하
-- End-to-end query p95: warm `500ms`, cold `2s` 이하
-- Reference Windows x64 CPU full build: `10분` 이하
-- 100개 changed chunk incremental build: `30초` 이하
+- Vector lookup p95: 50,000 chunk·100DB `150ms` 이하
+- End-to-end query p95: 새 CLI `4s` 이하. 모델 유지 warm은 이번 범위 제외
+- Reference Windows x64 CPU full build: `15분` 이하
+- 100개 changed chunk incremental build: `90초` 이하
 - Index·metadata: 50,000 chunk 기준 `512MiB` 이하, embedding model 별도 기록
 - Shared·project-private·confidential 누출 `0건`
 - Offline rebuild와 provider API·API key·background server·network `0건`
