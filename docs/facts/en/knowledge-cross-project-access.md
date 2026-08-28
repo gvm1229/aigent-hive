@@ -11,7 +11,7 @@ aliases: ["Automatic knowledge promotion", "Cross-project knowledge"]
 sources:
   - "repo:crates/hive-cli/src/knowledge.rs#sha256:1229cfa84e1fb0357c943fd0ef2910f3cdb5dd7e70f67879f0832db0ea26c800"
   - "repo:crates/hive-wiki/src/rag.rs#sha256:1f1d62c4fcb370f6792024d6a1caccc5c1a4dc16849c17df1df69aaed7effa98"
-  - "repo:crates/hive-wiki/src/store.rs#sha256:3e5d923652d17161f441bfa026cfbaef43efa72a656e509686ada499c4d76a8c"
+  - "repo:crates/hive-wiki/src/store.rs#sha256:1c31e8e950647b535fdd7118b2477b603cd2b2764ab37adb7d1c6e6917899989"
   - "repo:harness/skills/knowledge-import/SKILL.md#sha256:b73e6c82eb5ef9105781383f59211a982ed70b0f0ecf1690619f3b9b30f4730d"
   - "repo:harness/skills/knowledge-recall/SKILL.md#sha256:9e169f3daff2b4fbe6cff4d9a93d7e45cca6e9a6e78d1784b83458b50d3aa267"
 links: [global-knowledge-rag, knowledge-portability-scan, shared-index]
