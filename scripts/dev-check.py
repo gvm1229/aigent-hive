@@ -15,6 +15,11 @@ from typing import Sequence
 ROOT = Path(__file__).resolve().parents[1]
 REQUIREMENTS = ROOT / "requirements-conformance.txt"
 TEST_LANES = ROOT / "scripts" / "test-lanes.py"
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+from scripts.test_artifacts import ArtifactError, Run
+
+
 class DevCheckError(RuntimeError):
     """An actionable local verification setup error."""
 
@@ -64,9 +69,17 @@ def tool_environment(*tools: Path) -> dict[str, str]:
 
 def run(command: Sequence[str], *, environment: dict[str, str]) -> None:
     print("+", " ".join(command), flush=True)
+    owned_paths = ("target/debug",) if Path(command[0]).name.startswith("cargo") else ()
+    record = Run("개발 검증: " + Path(command[0]).name, command, paths=owned_paths)
+    code = 1
     try:
-        subprocess.run(command, cwd=ROOT, env=environment, check=True)
-    except subprocess.CalledProcessError as error:
+        code = record.execute(command, env=environment)
+    except (OSError, ArtifactError) as error:
+        raise DevCheckError(f"cannot record verification result: {error}") from error
+    finally:
+        record.finish(code)
+    if code:
+        error = subprocess.CalledProcessError(code, command)
         raise DevCheckError(
             f"Verification command failed with exit code {error.returncode}: "
             f"{' '.join(command)}"

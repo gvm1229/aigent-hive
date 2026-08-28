@@ -4,6 +4,7 @@ import importlib.util
 import sys
 import unittest
 from pathlib import Path
+from unittest import mock
 
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -49,6 +50,20 @@ class TestLaneInventoryTests(unittest.TestCase):
             modules,
         )
         self.assertNotIn("tests.conformance.test_test_lanes", modules)
+
+    def test_lane_execution_records_a_durable_result(self) -> None:
+        lane = {"documentation": MODULE.load_manifest()["documentation"]}
+        record = mock.Mock()
+        record.data = {}
+        with (
+            mock.patch.object(MODULE, "load_manifest", return_value=lane),
+            mock.patch.object(MODULE, "validate_manifest"),
+            mock.patch.object(MODULE, "Run", return_value=record),
+            mock.patch.object(MODULE, "run_lane", return_value={"name": "documentation"}),
+        ):
+            self.assertEqual(MODULE.main(["--lane", "documentation"]), 0)
+        record.finish.assert_called_once_with(0, status=None)
+        self.assertEqual(record.data["lanes"], [{"name": "documentation"}])
 
 
 if __name__ == "__main__":

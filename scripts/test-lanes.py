@@ -16,6 +16,9 @@ from typing import Any, Sequence
 ROOT = Path(__file__).resolve().parents[1]
 MANIFEST = ROOT / "tests" / "conformance" / "lanes.toml"
 TEST_ROOT = ROOT / "tests" / "conformance"
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+from scripts.test_artifacts import ArtifactError, Run
 
 
 class LaneError(RuntimeError):
@@ -158,6 +161,9 @@ def main(arguments: Sequence[str] | None = None) -> int:
     command = parser()
     command._option_string_actions["--lane"].choices = tuple(lanes)
     parsed = command.parse_args(arguments)
+    report_run: Run | None = None
+    reports: list[dict[str, Any]] = []
+    exit_code = 2
     try:
         validate_manifest(lanes)
         if parsed.list:
@@ -172,6 +178,11 @@ def main(arguments: Sequence[str] | None = None) -> int:
             print("+ changed_lanes=" + ",".join(names))
         elif not parsed.all:
             names = [parsed.lane]
+        report_run = Run(
+            "Python conformance: " + ", ".join(names),
+            [sys.executable, str(Path(__file__).resolve()), *(arguments or sys.argv[1:])],
+            paths=("target/debug",),
+        )
         reports = [
             run_lane(name, lanes[name], module_timings=parsed.timing_json is not None)
             for name in names
@@ -182,10 +193,23 @@ def main(arguments: Sequence[str] | None = None) -> int:
             ) + "\n"
             parsed.timing_json.parent.mkdir(parents=True, exist_ok=True)
             parsed.timing_json.write_text(rendered, encoding="utf-8")
-    except LaneError as error:
+            if parsed.timing_json.resolve().is_relative_to(ROOT):
+                report_run.archive_json(parsed.timing_json, name="lane-timings.json")
+            else:
+                report_run.data["timing_record_limit"] = "external timing file remains outside source evidence"
+        exit_code = 0
+    except (ArtifactError, LaneError) as error:
         print(f"test-lanes: {error}", file=sys.stderr)
-        return 2
-    return 0
+    except KeyboardInterrupt:
+        exit_code = 130
+    finally:
+        if report_run is not None:
+            report_run.data["lanes"] = reports
+            report_run.finish(
+                exit_code,
+                status="cancelled" if exit_code == 130 else None,
+            )
+    return exit_code
 
 
 if __name__ == "__main__":

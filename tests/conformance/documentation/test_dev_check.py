@@ -210,6 +210,14 @@ class DevCheckTest(unittest.TestCase):
             ):
                 MODULE.resolve_tool("uv")
 
+    def test_run_records_the_command_result(self) -> None:
+        record = mock.Mock()
+        record.execute.return_value = 0
+        with mock.patch.object(MODULE, "Run", return_value=record) as run:
+            MODULE.run(["cargo", "--version"], environment={})
+        self.assertEqual(run.call_args.kwargs["paths"], ("target/debug",))
+        record.finish.assert_called_once_with(0)
+
 
 if __name__ == "__main__":
     unittest.main()
