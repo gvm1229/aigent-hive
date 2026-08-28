@@ -149,6 +149,17 @@ impl SemanticQueryFrame<'_> {
         self,
         matches: &[crate::rag::SemanticMatch],
     ) -> Result<RetrievalResult, WikiError> {
+        self.finish_with_policy(matches).map(|fusion| fusion.result)
+    }
+
+    /// Consume this frame with the same fresh checks and explain the chosen ranking policy.
+    ///
+    /// # Errors
+    /// Rejects changed snapshots, invalid candidates and stale returned citations.
+    pub fn finish_with_policy(
+        self,
+        matches: &[crate::rag::SemanticMatch],
+    ) -> Result<crate::rag::SemanticFusionResult, WikiError> {
         self.store
             .with_retrieval_snapshot(|bytes, manifest, registry| {
                 if manifest != &self.manifest
@@ -1714,6 +1725,7 @@ impl RagStore {
             let prepared =
                 crate::rag::PreparedRagIndex::from_serialized(bytes, manifest, registry)?;
             self.fuse_prepared_semantic(&prepared, registry, request, matches)
+                .map(|fusion| fusion.result)
         })
     }
 
@@ -1723,14 +1735,14 @@ impl RagStore {
         registry: &CollectionRegistry,
         request: &RetrievalRequest,
         matches: &[crate::rag::SemanticMatch],
-    ) -> Result<RetrievalResult, RagError> {
+    ) -> Result<crate::rag::SemanticFusionResult, RagError> {
         let mut expanded = request.clone();
         expanded.top_k = 100;
         expanded.byte_budget = 1024 * 1024;
         let lexical = prepared.retrieve(&expanded)?;
         let semantic = prepared.semantic_matches(&expanded, matches)?;
-        let result = crate::rag::fuse_semantic_results(request, lexical, &semantic)?;
-        self.validate_semantic_hits(registry, &result.hits)
+        let result = crate::rag::fuse_semantic_results_with_policy(request, lexical, &semantic)?;
+        self.validate_semantic_hits(registry, &result.result.hits)
             .map_err(|_| {
                 RagError::RepairRequired(
                     "canonical hybrid citations changed or are unavailable".to_owned(),

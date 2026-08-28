@@ -109,7 +109,10 @@ class VectorCli(unittest.TestCase):
         lexical = knowledge("retrieve",*arguments)
         semantic = knowledge("retrieve",*arguments,"--mode","semantic")
         Draft202012Validator(json.loads((ROOT/"schemas/knowledge-retrieval-result.schema.json").read_text("utf-8"))).validate(semantic)
-        self.assertEqual(semantic.pop("search")["used"],["fts"])
+        search = semantic.pop("search")
+        self.assertEqual(search["used"],["fts"])
+        self.assertEqual(search["fusion"]["ranking_policy"], "literal-fts-order-v1")
+        self.assertFalse(search["fusion"]["fts_order_preserved"])
         for hit in semantic["hits"]:
             self.assertEqual(hit.pop("matched_lanes"),["fts"])
             hit.pop("fusion_rank")

@@ -4,7 +4,8 @@ use super::{
     InstalledRuntime, Selector, Target,
 };
 use hive_wiki::rag::{
-    normalize_fusion_scores, RetrievalRequest, SemanticMatch, SEMANTIC_FUSION_WEIGHT,
+    literal_query_matches, normalize_fusion_scores, RetrievalRequest, SemanticMatch,
+    SEMANTIC_FUSION_WEIGHT, SEMANTIC_RANKING_POLICY,
 };
 use hive_wiki::store::RagStore;
 use hive_wiki::vector::{DatabaseKind, VectorFiles};
@@ -13,19 +14,29 @@ use serde_json::{json, Value};
 use std::collections::BTreeMap;
 use std::path::Path;
 
-fn search_metadata(used: bool, partial: bool) -> Result<Value, WikiError> {
+fn search_metadata(
+    used: bool,
+    partial: bool,
+    fts_order_preserved: bool,
+) -> Result<Value, WikiError> {
     let lock = lock()?;
     Ok(
         json!({"requested":"semantic","used":if used {vec!["fts","vector"]} else {vec!["fts"]},
         "fallback":if !used {"unavailable"} else if partial {"partial"} else {"none"},
         "model":{"id":lock["model"]["id"],"revision":lock["model"]["revision"]},
         "engine":{"name":"sqlite-vec","version":"0.1.9"},
-        "fusion":{"method":"min-max-score","semantic_weight":SEMANTIC_FUSION_WEIGHT,"fts_weight":1.0-SEMANTIC_FUSION_WEIGHT},"contract_digest":contract_digest()?}),
+        "fusion":{"method":"min-max-score","semantic_weight":SEMANTIC_FUSION_WEIGHT,"fts_weight":1.0-SEMANTIC_FUSION_WEIGHT,
+            "ranking_policy":SEMANTIC_RANKING_POLICY,"fts_order_preserved":fts_order_preserved},"contract_digest":contract_digest()?}),
     )
 }
 
-fn annotate(mut result: Value, used: bool, partial: bool) -> Result<Value, WikiError> {
-    result["search"] = search_metadata(used, partial)?;
+fn annotate(
+    mut result: Value,
+    used: bool,
+    partial: bool,
+    fts_order_preserved: bool,
+) -> Result<Value, WikiError> {
+    result["search"] = search_metadata(used, partial, fts_order_preserved)?;
     if let Some(hits) = result["hits"].as_array_mut() {
         for (index, hit) in hits.iter_mut().enumerate() {
             hit["matched_lanes"] = match hit["matched_field"].as_str() {
@@ -45,11 +56,12 @@ pub(super) fn retrieve(
     request: &RetrievalRequest,
 ) -> Result<Value, WikiError> {
     match hybrid(root, store, request) {
-        Ok((result, partial)) => annotate(result, true, partial),
+        Ok((result, partial, protected)) => annotate(result, true, partial, protected),
         // Preserve the existing FTS validation and original query budgets; do not return a
         // cached pre-error result, partial vector output, or diagnostics from private partitions.
         Err(_) => annotate(
             serde_json::to_value(store.checked_retrieve(request)?).map_err(io_error)?,
+            false,
             false,
             false,
         ),
@@ -67,7 +79,7 @@ fn hybrid(
     root: &Path,
     store: &RagStore,
     request: &RetrievalRequest,
-) -> Result<(Value, bool), WikiError> {
+) -> Result<(Value, bool, bool), WikiError> {
     let files = VectorFiles::open(root, false)?;
     let frame = store.begin_semantic_query(request)?;
     let mut databases = Vec::new();
@@ -141,8 +153,12 @@ fn hybrid(
             return Err(invalid("semantic authority changed during query"));
         }
     }
-    let result = frame.finish(&matches)?;
-    Ok((serde_json::to_value(result).map_err(io_error)?, partial))
+    let fusion = frame.finish_with_policy(&matches)?;
+    Ok((
+        serde_json::to_value(fusion.result).map_err(io_error)?,
+        partial,
+        fusion.fts_order_preserved,
+    ))
 }
 
 pub(super) fn source_query(target: &Target, options: &[(&str, &str)]) -> Result<Value, WikiError> {
@@ -155,7 +171,7 @@ pub(super) fn source_query(target: &Target, options: &[(&str, &str)]) -> Result<
     match source_hybrid(target, language, text, limit) {
         Ok(result) => Ok(result),
         Err(_) => Ok(
-            json!({"hits":source::query(target.files.root_path(),language,Some(text),None,limit)?,"search":search_metadata(false,false)?}),
+            json!({"hits":source::query(target.files.root_path(),language,Some(text),None,limit)?,"search":search_metadata(false,false,false)?}),
         ),
     }
 }
@@ -211,7 +227,10 @@ fn source_hybrid(
             Ok((hit, score))
         })
         .collect::<Result<Vec<_>, WikiError>>()?;
-    let ranked = fuse_source_hits(&lexical, &semantic, limit)?;
+    let SourceFusion {
+        hits: ranked,
+        fts_order_preserved: protected,
+    } = fuse_source_hits(text, &corpus, &lexical, &semantic, limit)?;
     if scope_control(target)?.1 != scope_digest {
         return Err(invalid("source scope changed during query"));
     }
@@ -245,17 +264,26 @@ fn source_hybrid(
         })
         .collect::<Result<Vec<_>, WikiError>>()?;
     Ok(
-        json!({"manifest_digest":corpus.manifest_digest,"hits":hits,"search":search_metadata(true,false)?}),
+        json!({"manifest_digest":corpus.manifest_digest,"hits":hits,"search":search_metadata(true,false,protected)?}),
     )
 }
 
+#[derive(Debug)]
+struct SourceFusion {
+    hits: Vec<(source::SourceQueryHit, f64, u8)>,
+    fts_order_preserved: bool,
+}
+
 fn fuse_source_hits(
+    query: &str,
+    corpus: &source::SourceSemanticCorpus,
     lexical: &[(source::SourceQueryHit, f64)],
     semantic: &[(source::SourceQueryHit, f64)],
     limit: usize,
-) -> Result<Vec<(source::SourceQueryHit, f64, u8)>, WikiError> {
+) -> Result<SourceFusion, WikiError> {
     let mut ranked: BTreeMap<String, (source::SourceQueryHit, f64, u8)> = BTreeMap::new();
     for (mask, hits) in [(1, lexical), (2, semantic)] {
+        let mut seen = std::collections::BTreeSet::new();
         let scores =
             normalize_fusion_scores(&hits.iter().map(|(_, score)| *score).collect::<Vec<_>>())
                 .map_err(io_error)?;
@@ -265,6 +293,9 @@ fn fuse_source_hits(
             1.0 - SEMANTIC_FUSION_WEIGHT
         };
         for ((hit, _), score) in hits.iter().zip(scores) {
+            if !seen.insert(&hit.path) {
+                return Err(invalid("duplicate source fusion candidate"));
+            }
             let entry = ranked
                 .entry(hit.path.clone())
                 .or_insert_with(|| (hit.clone(), 0.0, 0));
@@ -275,15 +306,152 @@ fn fuse_source_hits(
             entry.2 |= mask;
         }
     }
+    let pages = corpus
+        .pages
+        .iter()
+        .map(|page| (page.hit.path.as_str(), page))
+        .collect::<BTreeMap<_, _>>();
+    let lookup = hive_wiki::collection::folded_alias(query);
+    let mut protected = false;
+    for (hit, _) in lexical {
+        let page = pages
+            .get(hit.path.as_str())
+            .filter(|page| page.hit == *hit)
+            .ok_or_else(|| invalid("source literal citation changed"))?;
+        protected |= literal_query_matches(
+            query,
+            hive_wiki::collection::folded_alias(&hit.pair_id) == lookup
+                || hit
+                    .aliases
+                    .iter()
+                    .any(|alias| hive_wiki::collection::folded_alias(alias) == lookup),
+            &[&hit.pair_id, &hit.title, &hit.summary, &page.body],
+        );
+    }
+    let lexical_order = if protected {
+        lexical
+            .iter()
+            .enumerate()
+            .map(|(index, (hit, _))| (hit.path.as_str(), index))
+            .collect::<BTreeMap<_, _>>()
+    } else {
+        BTreeMap::new()
+    };
     let mut ranked = ranked.into_values().collect::<Vec<_>>();
-    ranked.sort_by(|a, b| b.1.total_cmp(&a.1).then_with(|| a.0.path.cmp(&b.0.path)));
+    ranked.sort_by(|a, b| {
+        match (
+            lexical_order.get(a.0.path.as_str()),
+            lexical_order.get(b.0.path.as_str()),
+        ) {
+            (Some(a), Some(b)) => return a.cmp(b),
+            (Some(_), None) => return std::cmp::Ordering::Less,
+            (None, Some(_)) => return std::cmp::Ordering::Greater,
+            (None, None) => {}
+        }
+        b.1.total_cmp(&a.1).then_with(|| a.0.path.cmp(&b.0.path))
+    });
     ranked.truncate(limit);
-    Ok(ranked)
+    Ok(SourceFusion {
+        hits: ranked,
+        fts_order_preserved: protected,
+    })
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    type ScoredSourceHits = Vec<(source::SourceQueryHit, f64)>;
+
+    fn literal_source_fixture() -> (
+        source::SourceSemanticCorpus,
+        ScoredSourceHits,
+        ScoredSourceHits,
+    ) {
+        let page = |id: &str, body: &str| source::SourceSemanticPage {
+            hit: source::SourceQueryHit {
+                language: "en".to_owned(),
+                pair_id: id.to_owned(),
+                topic_slug: id.to_owned(),
+                counterpart: format!("../ko/{id}.md"),
+                title: id.to_owned(),
+                summary: "Test source page".to_owned(),
+                path: format!("docs/facts/en/{id}.md"),
+                content_digest: hive_core::sha256_digest(id.as_bytes()),
+                reviewed_revision: format!("git:{}", "a".repeat(40)),
+                tags: Vec::new(),
+                aliases: Vec::new(),
+                sources: Vec::new(),
+            },
+            body: body.to_owned(),
+        };
+        let pages = vec![
+            page("first", "Original leading result"),
+            page("second", "never write secrets"),
+            page("extra", "Related safety guidance"),
+        ];
+        let lexical = vec![(pages[0].hit.clone(), 10.0), (pages[1].hit.clone(), 1.0)];
+        let semantic = vec![(pages[2].hit.clone(), 1.0), (pages[0].hit.clone(), 0.0)];
+        (
+            source::SourceSemanticCorpus {
+                manifest_digest: "test".to_owned(),
+                pages,
+            },
+            lexical,
+            semantic,
+        )
+    }
+
+    #[test]
+    fn source_literal_order_matches_knowledge_policy_and_preserves_the_nonliteral_leader() {
+        let (mut corpus, mut lexical, mut semantic) = literal_source_fixture();
+        let result = fuse_source_hits("never write secrets", &corpus, &lexical, &semantic, 3)
+            .expect("literal fusion");
+        assert!(result.fts_order_preserved);
+        assert_eq!(
+            result
+                .hits
+                .iter()
+                .map(|(hit, _, _)| hit.pair_id.as_str())
+                .collect::<Vec<_>>(),
+            ["first", "second", "extra"]
+        );
+        assert!(result.hits[0].1 < result.hits[2].1);
+        let broad = fuse_source_hits("related safety", &corpus, &lexical, &semantic, 3)
+            .expect("weighted fusion");
+        assert!(!broad.fts_order_preserved);
+        assert_eq!(broad.hits[0].0.pair_id, "extra");
+        corpus.pages[0].hit.aliases.push("shortcut".to_owned());
+        lexical[0].0.clone_from(&corpus.pages[0].hit);
+        semantic[1].0.clone_from(&corpus.pages[0].hit);
+        let alias = fuse_source_hits("shortcut", &corpus, &lexical, &semantic, 1)
+            .expect("alias-only lookup");
+        assert!(alias.fts_order_preserved);
+        assert_eq!(alias.hits[0].0.pair_id, "first");
+    }
+
+    #[test]
+    fn source_literal_policy_never_accepts_duplicate_or_changed_citations() {
+        let (mut corpus, mut lexical, semantic) = literal_source_fixture();
+        lexical.push(lexical[0].clone());
+        assert!(fuse_source_hits("never write secrets", &corpus, &lexical, &semantic, 3).is_err());
+        lexical.pop();
+        corpus.pages[1].hit.content_digest = hive_core::sha256_digest(b"changed");
+        assert!(fuse_source_hits("never write secrets", &corpus, &lexical, &semantic, 3).is_err());
+    }
+
+    #[test]
+    fn annotation_explains_protected_order_without_inflating_weighted_scores() {
+        let result = annotate(json!({"hits":[{"matched_field":"hybrid","score":0.25},{"matched_field":"vector","score":0.75}]}), true, false, true).expect("annotate");
+        assert_eq!(result["search"]["fusion"]["fts_order_preserved"], true);
+        assert_eq!(
+            result["search"]["fusion"]["ranking_policy"],
+            SEMANTIC_RANKING_POLICY
+        );
+        assert_eq!(result["hits"][0]["score"], 0.25);
+        assert_eq!(result["hits"][0]["fusion_rank"], 1);
+        assert_eq!(result["hits"][1]["score"], 0.75);
+    }
 
     #[test]
     fn shared_runtime_id_keeps_distinct_approval_candidates() {

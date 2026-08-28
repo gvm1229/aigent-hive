@@ -547,6 +547,30 @@ class KnowledgeSchemaConformanceTests(unittest.TestCase):
         no_source["hits"][0]["sources"] = []
         self.assert_valid(name, no_source)
 
+    def test_retrieval_ranking_metadata_is_paired_typed_and_legacy_compatible(self) -> None:
+        name = "knowledge-retrieval-result.schema.json"
+        instance = retrieval_result()
+        instance["search"] = {
+            "requested":"semantic", "used":["fts","vector"], "fallback":"none",
+            "contract_digest":digest(), "model":{"id":"fixed-model","revision":"a"*40},
+            "engine":{"name":"sqlite-vec","version":"0.1.9"},
+            "fusion":{"method":"min-max-score","semantic_weight":0.75,"fts_weight":0.25},
+        }
+        self.assert_valid(name, instance)
+        instance["search"]["fusion"].update(ranking_policy="literal-fts-order-v1", fts_order_preserved=True)
+        self.assert_valid(name, instance)
+        for field, value in (("ranking_policy","unknown"),("fts_order_preserved","true")):
+            invalid = copy.deepcopy(instance)
+            invalid["search"]["fusion"][field] = value
+            self.assert_invalid(name, invalid)
+            incomplete = copy.deepcopy(instance)
+            del incomplete["search"]["fusion"][field]
+            self.assert_invalid(name, incomplete)
+        instance["search"]["used"] = ["fts"]
+        instance["search"]["fallback"] = "unavailable"
+        instance["search"]["fusion"]["fts_order_preserved"] = False
+        self.assert_valid(name, instance)
+
     def test_bundle_manifest_allows_only_bounded_portable_payloads(self) -> None:
         name = "knowledge-bundle-manifest.schema.json"
         instance = bundle_manifest()

@@ -972,6 +972,79 @@ fn semantic_partition_states_from_connection(
 /// Fixed semantic share selected on the unchanged original fixture and independent holdout.
 pub const SEMANTIC_FUSION_WEIGHT: f64 = 0.75;
 
+/// Ordering can preserve literal FTS results without changing the weighted scores.
+pub const SEMANTIC_RANKING_POLICY: &str = "literal-fts-order-v1";
+
+/// One fusion result and the ordering policy actually used for this query.
+#[derive(Debug, Clone, PartialEq)]
+pub struct SemanticFusionResult {
+    /// Ranked, budgeted results with their original canonical citations.
+    pub result: RetrievalResult,
+    /// True only when literal lookup evidence selected FTS order preservation.
+    pub fts_order_preserved: bool,
+}
+
+/// Recognize explicit lookup evidence only in authorized, validated lexical candidates.
+/// A literal occurrence is not proof that its surrounding statement is true.
+#[must_use]
+pub fn literal_query_matches(query: &str, exact_lookup: bool, fields: &[&str]) -> bool {
+    let original = query.trim();
+    let quoted = original
+        .strip_prefix('"')
+        .and_then(|s| s.strip_suffix('"'))
+        .or_else(|| {
+            original
+                .strip_prefix('\'')
+                .and_then(|s| s.strip_suffix('\''))
+        });
+    let query = folded_alias(quoted.unwrap_or(original));
+    let tokens = search_tokens(&query);
+    if tokens.is_empty() {
+        return false;
+    }
+    if exact_lookup {
+        return true;
+    }
+    let scalar = !query.chars().any(char::is_whitespace)
+        && (query.chars().all(char::is_numeric)
+            || query.chars().any(|c| c == '_' || structured_separator(c)));
+    if scalar {
+        return fields.iter().any(|field| {
+            let field = folded_alias(field);
+            field.match_indices(&query).any(|(start, _)| {
+                !literal_continues(field[..start].chars().rev(), true)
+                    && !literal_continues(field[start + query.len()..].chars(), false)
+            })
+        });
+    }
+    (quoted.is_some() || tokens.len() >= 3)
+        && fields.iter().any(|field| {
+            search_tokens(field)
+                .windows(tokens.len())
+                .any(|part| part == tokens.as_slice())
+        })
+}
+
+fn structured_separator(c: char) -> bool {
+    matches!(
+        c,
+        '.' | '-' | '+' | '/' | '\\' | ':' | '@' | '#' | '%' | '−'
+    )
+}
+
+fn literal_continues(mut neighbor: impl Iterator<Item = char>, before: bool) -> bool {
+    let word = |c: char| c.is_alphanumeric() || c == '_';
+    neighbor.next().is_some_and(|c| {
+        word(c)
+            || (structured_separator(c)
+                && (c != '.'
+                    || before
+                    || neighbor
+                        .next()
+                        .is_some_and(|next| word(next) || structured_separator(next))))
+    })
+}
+
 /// Normalize one authorized candidate lane within its current query, never across queries.
 ///
 /// # Errors
@@ -1012,6 +1085,18 @@ pub fn fuse_semantic_results(
     lexical: RetrievalResult,
     semantic: &RetrievalResult,
 ) -> Result<RetrievalResult, RagError> {
+    fuse_semantic_results_with_policy(request, lexical, semantic).map(|fusion| fusion.result)
+}
+
+/// Fuse revalidated candidates and report whether literal FTS order was preserved.
+///
+/// # Errors
+/// Rejects invalid requests, duplicate identities and contradictory citations before routing.
+pub fn fuse_semantic_results_with_policy(
+    request: &RetrievalRequest,
+    lexical: RetrievalResult,
+    semantic: &RetrievalResult,
+) -> Result<SemanticFusionResult, RagError> {
     validate_retrieval_request(request)?;
     if lexical.generation != semantic.generation
         || lexical.manifest_digest != semantic.manifest_digest
@@ -1059,13 +1144,8 @@ pub fn fuse_semantic_results(
             entry.2 |= mask;
         }
     }
-    let mut ordered = candidates.into_values().collect::<Vec<_>>();
-    ordered.sort_by(|left, right| {
-        right
-            .1
-            .total_cmp(&left.1)
-            .then_with(|| left.0.chunk_id.cmp(&right.0.chunk_id))
-    });
+    let (ordered, fts_order_preserved) =
+        order_fusion_candidates(&request.query, &lexical.hits, candidates);
     let mut result = RetrievalResult {
         generation: lexical.generation,
         manifest_digest: lexical.manifest_digest,
@@ -1099,7 +1179,61 @@ pub fn fuse_semantic_results(
         }
     }
     result.insufficient_budget |= lexical.insufficient_budget || semantic.insufficient_budget;
-    Ok(result)
+    Ok(SemanticFusionResult {
+        result,
+        fts_order_preserved,
+    })
+}
+
+type FusionCandidate = (RetrievalHit, f64, u8);
+
+fn order_fusion_candidates(
+    query: &str,
+    lexical: &[RetrievalHit],
+    candidates: BTreeMap<String, FusionCandidate>,
+) -> (Vec<FusionCandidate>, bool) {
+    let fts_order_preserved = lexical.iter().any(|hit| {
+        let complete = &candidates[&hit.chunk_id].0;
+        literal_query_matches(
+            query,
+            hit.matched_field == "alias" || folded_alias(&hit.item_id) == folded_alias(query),
+            &[&hit.item_id, &hit.title, &complete.text],
+        )
+    });
+    let lexical_order = if fts_order_preserved {
+        lexical
+            .iter()
+            .enumerate()
+            .map(|(index, hit)| (hit.chunk_id.clone(), index))
+            .collect::<BTreeMap<_, _>>()
+    } else {
+        BTreeMap::new()
+    };
+    let mut ordered = candidates.into_values().collect::<Vec<_>>();
+    if fts_order_preserved {
+        for (hit, _, _) in &mut ordered {
+            if let Some(&index) = lexical_order.get(&hit.chunk_id) {
+                // A longer semantic copy must not consume another protected FTS hit's budget.
+                hit.text.clone_from(&lexical[index].text);
+            }
+        }
+    }
+    ordered.sort_by(|left, right| {
+        match (
+            lexical_order.get(&left.0.chunk_id),
+            lexical_order.get(&right.0.chunk_id),
+        ) {
+            (Some(a), Some(b)) => return a.cmp(b),
+            (Some(_), None) => return Ordering::Less,
+            (None, Some(_)) => return Ordering::Greater,
+            (None, None) => {}
+        }
+        right
+            .1
+            .total_cmp(&left.1)
+            .then_with(|| left.0.chunk_id.cmp(&right.0.chunk_id))
+    });
+    (ordered, fts_order_preserved)
 }
 
 /// Explicit request for an idempotent remember operation.
@@ -4577,6 +4711,160 @@ mod tests {
 
     fn digest(value: &str) -> String {
         sha256_digest(value.as_bytes())
+    }
+
+    fn literal_fusion_fixture() -> (RetrievalRequest, RetrievalResult, RetrievalResult) {
+        let request = RetrievalRequest {
+            scope: RetrievalScope::Global,
+            current_collection_id: None,
+            query: "never write secrets".to_owned(),
+            query_expansions: Vec::new(),
+            top_k: 3,
+            byte_budget: 4096,
+            confidential_collection_id: None,
+        };
+        let hit = |name: &str, text: &str, score| RetrievalHit {
+            chunk_id: name.to_owned(),
+            collection_id: USER_ROOT_COLLECTION_ID.to_owned(),
+            item_id: name.to_owned(),
+            item_kind: "document".to_owned(),
+            locator: format!("{name}.md"),
+            title: name.to_owned(),
+            text: text.to_owned(),
+            digest: digest(name),
+            visibility: RagVisibility::Shared,
+            language: RagLanguage::En,
+            claim_kind: None,
+            assertion_status: None,
+            scan_metadata: None,
+            score,
+            matched_field: "text".to_owned(),
+            sources: vec!["reviewed-test".to_owned()],
+            replacement: None,
+            untrusted_content: true,
+        };
+        let first = hit("first", "Preserve the original leading result.", 10.0);
+        let second = hit("second", "The claim says: never write secrets.", 1.0);
+        let extra = hit("extra", "Related private storage guidance.", 1.0);
+        let lexical = RetrievalResult {
+            generation: 1,
+            manifest_digest: digest("generation"),
+            returned_bytes: first.text.len() + second.text.len(),
+            insufficient_budget: false,
+            hits: vec![first.clone(), second],
+        };
+        let mut low = first;
+        low.score = 0.0;
+        let semantic = RetrievalResult {
+            generation: 1,
+            manifest_digest: lexical.manifest_digest.clone(),
+            returned_bytes: extra.text.len() + low.text.len(),
+            insufficient_budget: false,
+            hits: vec![extra, low],
+        };
+        (request, lexical, semantic)
+    }
+
+    #[test]
+    fn literal_lookup_boundaries_do_not_promote_generic_concepts_or_identifier_prefixes() {
+        for (query, text, expected) in [
+            ("2.4.8-beta.3", "Version 2.4.8-beta.3.", true),
+            ("2.4.8-beta.3", "Version 2.4.8-beta.30", false),
+            ("2.4.8", "Version 2.4.8-beta.3", false),
+            ("42", "value 420", false),
+            ("42", "-42", false),
+            ("42", "+42", false),
+            ("42", "−42", false),
+            ("42", ".42", false),
+            ("42", "42/100", false),
+            ("42", "42%", false),
+            ("-42", "value -42.", true),
+            ("path/to", "path/to/deeper", false),
+            ("path/to", "/path/to", false),
+            ("path/to", "(path/to)", true),
+            ("42", "value 42.", true),
+            ("semantic search", "semantic search", false),
+            ("memory", "memory", false),
+            ("\"semantic search\"", "semantic search", true),
+            (
+                "never write secrets",
+                "We do not agree: never write secrets.",
+                true,
+            ),
+            ("never write secrets", "never write secretstuff", false),
+            ("원문을 그대로 보존", "원문을 그대로\n보존", true),
+            ("", "anything", false),
+        ] {
+            assert_eq!(
+                literal_query_matches(query, false, &[text]),
+                expected,
+                "{query} / {text}"
+            );
+        }
+        assert!(literal_query_matches(
+            "shortcut",
+            true,
+            &["no literal in this body"]
+        ));
+    }
+
+    #[test]
+    fn literal_fusion_preserves_all_fts_order_not_only_the_literal_hit() {
+        let (request, lexical, semantic) = literal_fusion_fixture();
+        let fused = fuse_semantic_results_with_policy(&request, lexical.clone(), &semantic)
+            .expect("fusion");
+        assert!(fused.fts_order_preserved);
+        assert_eq!(
+            fused
+                .result
+                .hits
+                .iter()
+                .map(|hit| hit.chunk_id.as_str())
+                .collect::<Vec<_>>(),
+            ["first", "second", "extra"]
+        );
+        assert!(fused.result.hits[0].score < fused.result.hits[2].score);
+        assert!(fused.result.hits.iter().all(|hit| hit.untrusted_content));
+        assert_eq!(fused.result.hits[0].sources, lexical.hits[0].sources);
+        assert_eq!(fused.result.hits[1].text, lexical.hits[1].text);
+        let mut broad = request;
+        broad.query = "related guidance".to_owned();
+        let regular =
+            fuse_semantic_results_with_policy(&broad, lexical, &semantic).expect("weighted");
+        assert!(!regular.fts_order_preserved);
+        assert_eq!(regular.result.hits[0].chunk_id, "extra");
+    }
+
+    #[test]
+    fn literal_fusion_keeps_fts_budget_and_rejects_invalid_candidates_before_protection() {
+        let (mut request, mut lexical, mut semantic) = literal_fusion_fixture();
+        request.query = "shortcut".to_owned();
+        lexical.hits[0].matched_field = "alias".to_owned();
+        semantic.hits[1]
+            .text
+            .push_str(" A longer semantic copy must not displace the next FTS result.");
+        request.byte_budget = lexical.returned_bytes;
+        let fused = fuse_semantic_results_with_policy(&request, lexical.clone(), &semantic)
+            .expect("bounded");
+        assert!(fused.fts_order_preserved);
+        assert_eq!(fused.result.hits.len(), 2);
+        assert_eq!(fused.result.returned_bytes, lexical.returned_bytes);
+        assert_eq!(fused.result.hits[0].text, lexical.hits[0].text);
+        assert_eq!(fused.result.hits[1].chunk_id, "second");
+        request.top_k = 1;
+        assert_eq!(
+            fuse_semantic_results_with_policy(&request, lexical.clone(), &semantic)
+                .expect("one")
+                .result
+                .hits[0]
+                .chunk_id,
+            "first"
+        );
+        let mut duplicate = semantic.clone();
+        duplicate.hits.push(duplicate.hits[0].clone());
+        assert!(fuse_semantic_results_with_policy(&request, lexical.clone(), &duplicate).is_err());
+        semantic.hits[1].digest = digest("different canonical item");
+        assert!(fuse_semantic_results_with_policy(&request, lexical, &semantic).is_err());
     }
 
     fn raw_test_digest(value: &str) -> String {

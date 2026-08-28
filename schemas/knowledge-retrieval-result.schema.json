@@ -50,7 +50,17 @@
         "fusion": {
           "type": "object", "additionalProperties": false,
           "required": ["method", "semantic_weight", "fts_weight"],
-          "properties": { "method": { "const": "min-max-score" }, "semantic_weight": { "const": 0.75 }, "fts_weight": { "const": 0.25 } }
+          "properties": {
+            "method": { "const": "min-max-score" },
+            "semantic_weight": { "const": 0.75 },
+            "fts_weight": { "const": 0.25 },
+            "ranking_policy": { "const": "literal-fts-order-v1" },
+            "fts_order_preserved": { "type": "boolean" }
+          },
+          "dependentRequired": {
+            "ranking_policy": ["fts_order_preserved"],
+            "fts_order_preserved": ["ranking_policy"]
+          }
         }
       }
     }
