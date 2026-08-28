@@ -23,6 +23,7 @@ current catalog.
 | [Source layout](architecture/source-layout.md) | Source·release·consumer tree와 crate |
 | [한국어 언어 core](architecture/korean-language-core.md) | 자동 한국어 검사·윤문·pack lifecycle |
 | [선택형 벡터 검색](architecture/vector-search.md) | 동의·권한·파생 색인·중단 재개 계약 |
+| [벡터 성능 수용 결정](research/vector-acceptance-2026-08-29.md) | 스트레스 기준 조정·안내·시각 문서 계획 |
 | [Agent 지침 ownership](architecture/agent-directive-ownership.md) | Source·소비자 directive 단일 정본·크기 기준 |
 | [Role lifecycle](architecture/role-lifecycle.md) | Persistent role·handoff |
 | [Run lifecycle](architecture/run-lifecycle.md) | Checkpoint·event·scheduler·receipt·cancel·resume |
