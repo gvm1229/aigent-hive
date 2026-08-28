@@ -1,7 +1,7 @@
 //! Optional semantic candidates never replace FTS authority or canonical citations.
 use super::{
-    contract_digest, invalid, io_error, lock, optional, required, scope_control, verify_runtime,
-    worker, InstalledRuntime, Selector, Target,
+    contract_digest, invalid, io_error, lock, optional, required, scope_control, verified_query,
+    InstalledRuntime, Selector, Target,
 };
 use hive_wiki::rag::{
     normalize_fusion_scores, RetrievalRequest, SemanticMatch, SEMANTIC_FUSION_WEIGHT,
@@ -56,6 +56,13 @@ pub(super) fn retrieve(
     }
 }
 
+fn retain_runtime_candidate(runtimes: &mut Vec<InstalledRuntime>, candidate: InstalledRuntime) {
+    // A shared directory ID does not authenticate another scope's receipt or Python identity.
+    if !runtimes.contains(&candidate) {
+        runtimes.push(candidate);
+    }
+}
+
 fn hybrid(
     root: &Path,
     store: &RagStore,
@@ -65,7 +72,7 @@ fn hybrid(
     let plan = store.semantic_search_plan(request)?;
     let mut databases = Vec::new();
     let mut controls = Vec::new();
-    let mut runtime: Option<InstalledRuntime> = None;
+    let mut runtimes: Vec<InstalledRuntime> = Vec::new();
     let mut partial = false;
     for state in plan.partitions {
         let selector = Selector::Collection {
@@ -95,28 +102,38 @@ fn hybrid(
             partial = true;
             continue;
         }
-        if runtime.is_none() {
-            if verify_runtime(&files, &control.runtime).is_err() {
-                partial = true;
-                continue;
-            }
-            runtime = Some(control.runtime.clone());
-        }
+        retain_runtime_candidate(&mut runtimes, control.runtime.clone());
         databases.push(json!({"database":files.database_path(&scope_id,DatabaseKind::Generation(&active.id))?,
             "manifest_digest":active.manifest_digest,"expected_database_digest":active.database_digest}));
         controls.push((target, digest));
     }
-    let runtime = runtime.ok_or_else(|| invalid("no active semantic scope"))?;
     if databases.len() > 256 {
         return Err(invalid("semantic scope count exceeds query bound"));
     }
-    let result = worker(
-        &files,
-        &runtime,
-        json!({"schema_version":1,"action":"query-many","runtime":files.runtime_path(&runtime.id)?,
-        "databases":databases,"query":request.query,"limit":100,"contract_digest":runtime.contract_digest}),
-        10,
-    )?;
+    let mut answer = None;
+    let started = std::time::Instant::now();
+    for runtime in runtimes {
+        let remaining = std::time::Duration::from_secs(10)
+            .saturating_sub(started.elapsed())
+            .as_secs();
+        if remaining == 0 {
+            break;
+        }
+        match verified_query(
+            &files,
+            &runtime,
+            &json!({"schema_version":1,"action":"query-many","runtime":files.runtime_path(&runtime.id)?,
+                "databases":databases,"query":request.query,"limit":100,"contract_digest":runtime.contract_digest}),
+            remaining,
+        ) {
+            Ok(result) => {
+                answer = Some(result);
+                break;
+            }
+            Err(_) => partial = true,
+        }
+    }
+    let result = answer.ok_or_else(|| invalid("no verified semantic runtime available"))?;
     let matches: Vec<SemanticMatch> =
         serde_json::from_value(result["matches"].clone()).map_err(io_error)?;
     for (target, expected) in controls {
@@ -161,17 +178,16 @@ fn source_hybrid(
                 && active.contract_digest == control.runtime.contract_digest
         })
         .ok_or_else(|| invalid("source vector generation unavailable"))?;
-    verify_runtime(&target.files, &control.runtime)?;
     let corpus = source::semantic_corpus(target.files.root_path(), language)?;
     if corpus.manifest_digest != active.manifest_digest {
         return Err(invalid("source vectors stale"));
     }
     let lexical =
         source::query_with_scores(target.files.root_path(), language, Some(text), None, 100)?;
-    let response = worker(
+    let response = verified_query(
         &target.files,
         &control.runtime,
-        json!({"schema_version":1,"action":"query","runtime":target.files.runtime_path(&control.runtime.id)?,
+        &json!({"schema_version":1,"action":"query","runtime":target.files.runtime_path(&control.runtime.id)?,
         "database":target.files.database_path(&target.scope_id,DatabaseKind::Generation(&active.id))?,"query":text,"limit":100,
         "contract_digest":active.contract_digest,"manifest_digest":active.manifest_digest,"expected_database_digest":active.database_digest}),
         10,
@@ -268,6 +284,26 @@ fn fuse_source_hits(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn shared_runtime_id_keeps_distinct_approval_candidates() {
+        let good = InstalledRuntime {
+            id: "a".repeat(64),
+            python: "python".into(),
+            identity: json!({"platform":"approved"}),
+            contract_digest: "contract".to_owned(),
+            receipt_digest: "approved".to_owned(),
+            consent_digest: "consent".to_owned(),
+        };
+        let mut bad = good.clone();
+        bad.receipt_digest = "corrupt".to_owned();
+        let mut candidates = Vec::new();
+        retain_runtime_candidate(&mut candidates, bad);
+        retain_runtime_candidate(&mut candidates, good.clone());
+        retain_runtime_candidate(&mut candidates, good.clone());
+        assert_eq!(candidates.len(), 2);
+        assert_eq!(candidates[1], good);
+    }
 
     #[test]
     #[ignore = "manual qualification: requires a consented runtime and synthetic source under tests/work"]

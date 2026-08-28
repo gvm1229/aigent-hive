@@ -497,6 +497,32 @@ def self_test(request: dict) -> dict:
         connection.close()
 
 
+def execute_request(request: dict) -> dict:
+    offline_environment()
+    if not isinstance(request, dict) or type(request.get("schema_version")) is not int or request.get("schema_version") != SCHEMA:
+        raise ValueError("unsupported vector worker schema")
+    fields = {
+        "build": {"database", "chunks", "contract_digest", "workers", "max_seconds", "manifest_digest", "expected_database_digest"},
+        "query": {"database", "query", "limit", "contract_digest", "manifest_digest", "expected_database_digest"},
+        "query-many": {"databases", "query", "limit", "contract_digest"},
+        "self-test": set(),
+    }
+    action = request.get("action")
+    if action not in fields or set(request) != {"schema_version", "action", "runtime"} | fields[action]:
+        raise ValueError("invalid vector worker fields")
+    if request.get("action") == "build":
+        result = build(request)
+    elif request.get("action") == "query":
+        result = query(request)
+    elif request.get("action") == "query-many":
+        result = query_many(request)
+    elif request.get("action") == "self-test":
+        result = self_test(request)
+    else:
+        raise ValueError("unsupported vector worker action")
+    return result
+
+
 def main() -> int:
     offline_environment()
     try:
@@ -504,27 +530,7 @@ def main() -> int:
         if len(raw) > MAX_REQUEST:
             raise ValueError("vector request exceeds limits")
         request = json.loads(raw)
-        if not isinstance(request, dict) or type(request.get("schema_version")) is not int or request.get("schema_version") != SCHEMA:
-            raise ValueError("unsupported vector worker schema")
-        fields = {
-            "build": {"database", "chunks", "contract_digest", "workers", "max_seconds", "manifest_digest", "expected_database_digest"},
-            "query": {"database", "query", "limit", "contract_digest", "manifest_digest", "expected_database_digest"},
-            "query-many": {"databases", "query", "limit", "contract_digest"},
-            "self-test": set(),
-        }
-        action = request.get("action")
-        if action not in fields or set(request) != {"schema_version", "action", "runtime"} | fields[action]:
-            raise ValueError("invalid vector worker fields")
-        if request.get("action") == "build":
-            result = build(request)
-        elif request.get("action") == "query":
-            result = query(request)
-        elif request.get("action") == "query-many":
-            result = query_many(request)
-        elif request.get("action") == "self-test":
-            result = self_test(request)
-        else:
-            raise ValueError("unsupported vector worker action")
+        result = execute_request(request)
         print(json.dumps({"schema_version": SCHEMA, "status": "success", **result}, allow_nan=False))
         return 0
     except Exception as error:

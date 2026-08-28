@@ -60,7 +60,7 @@ enum Selector {
     Collection { partition: SemanticPartition },
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(deny_unknown_fields)]
 struct InstalledRuntime {
     id: String,
@@ -544,6 +544,28 @@ fn bootstrap(
         ],
         request,
         work,
+        timeout,
+    )
+}
+
+fn verified_query(
+    files: &VectorFiles,
+    runtime: &InstalledRuntime,
+    request: &Value,
+    timeout: u64,
+) -> Result<Value, WikiError> {
+    authenticate_python(runtime)?;
+    if runtime.contract_digest != contract_digest()? {
+        return Err(invalid(
+            "vector runtime contract changed; preview and approve again",
+        ));
+    }
+    bootstrap(
+        &runtime.python,
+        json!({"action":"run-query","root":files.runtime_path(&runtime.id)?,
+        "lock":lock()?,"helper_digest":sha256_digest(WORKER.as_bytes()),"receipt_digest":runtime.receipt_digest,
+        "identity":runtime.identity,"request":request}),
+        None,
         timeout,
     )
 }

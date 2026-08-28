@@ -165,6 +165,30 @@ class VectorRuntimeContract(unittest.TestCase):
                 with self.subTest(workers=workers), self.assertRaises(ValueError):
                     WORKER.build({**request,"workers":workers})
 
+    def test_combined_query_requires_receipt_code_and_query_only_authority(self):
+        (self.root / "tmp").mkdir()
+        code = b"SCHEMA=1\ndef execute_request(request):\n    return {'matches': []}\n"
+        helper = self.root / "vector_helper.py"
+        helper.write_bytes(code)
+        approved = {"receipt_digest":"sha256:"+"a"*64,"identity":{"platform":"synthetic"},"verified":True}
+        request = {"root":str(self.root),"lock":{},"helper_digest":RUNTIME.digest_bytes(code),
+            "receipt_digest":approved["receipt_digest"],"identity":approved["identity"],
+            "request":{"schema_version":1,"action":"query","runtime":str(self.root)}}
+        with patch.object(RUNTIME,"verify",return_value=approved), patch.dict(os.environ,{}):
+            self.assertEqual(RUNTIME.run_verified_query(request),{"schema_version":1,"matches":[]})
+            for changed in (
+                {**request,"receipt_digest":"sha256:"+"b"*64},
+                {**request,"identity":{"platform":"different"}},
+                {**request,"helper_digest":"sha256:"+"c"*64},
+                {**request,"request":{**request["request"],"action":"build"}},
+                {**request,"request":{**request["request"],"runtime":str(self.root/"other")}},
+            ):
+                with self.subTest(changed=changed), self.assertRaises(ValueError):
+                    RUNTIME.run_verified_query(changed)
+            helper.write_bytes(b"raise RuntimeError('must never execute changed code')")
+            with self.assertRaises(ValueError):
+                RUNTIME.run_verified_query(request)
+
     def test_trusted_main_file_does_not_authorize_sqlite_sidecars(self):
         database = self.root / "staging.sqlite3"
         database.write_bytes(b"trusted main database")

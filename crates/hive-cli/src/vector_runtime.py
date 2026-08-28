@@ -291,6 +291,28 @@ def verify(request: dict) -> dict:
     return {"receipt_digest": digest_bytes(canonical(receipt)), "identity": identity, "verified": True}
 
 
+def run_verified_query(request: dict) -> dict:
+    verified = verify(request)
+    if verified["receipt_digest"] != request["receipt_digest"] or verified["identity"] != request["identity"]:
+        raise ValueError("runtime differs from its approved receipt")
+    root = safe_path(request["root"])
+    inner = request["request"]
+    if not isinstance(inner, dict) or inner.get("action") not in ("query", "query-many") or safe_path(inner.get("runtime", "")) != root:
+        raise ValueError("combined execution only permits an approved runtime query")
+    path = safe_path(str(root / "vector_helper.py"))
+    code = path.read_bytes()
+    if digest_bytes(code) != request["helper_digest"]:
+        raise ValueError("verified helper changed before execution")
+    temporary = safe_path(str(root / "tmp"))
+    if not temporary.is_dir():
+        raise ValueError("private runtime scratch directory is absent")
+    for key in ("TEMP", "TMP", "TMPDIR"):
+        os.environ[key] = str(temporary)
+    namespace = {"__name__":"hive_verified_vector_worker", "__file__":str(path)}
+    exec(compile(code, str(path), "exec"), namespace)
+    return {"schema_version":namespace["SCHEMA"], **namespace["execute_request"](inner)}
+
+
 def main() -> int:
     try:
         raw = sys.stdin.buffer.read(1024 * 1024 + 1)
@@ -304,6 +326,8 @@ def main() -> int:
             result = install(request)
         elif action == "verify":
             result = verify(request)
+        elif action == "run-query":
+            result = run_verified_query(request)
         else:
             raise ValueError("unsupported bootstrap action")
         print(json.dumps({"status": "success", **result}, allow_nan=False))
