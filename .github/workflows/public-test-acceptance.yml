@@ -104,8 +104,14 @@ jobs:
             --package-version "$PACKAGE_VERSION" \
             --release-date "$RELEASE_DATE" \
             --receipt "$RUNNER_TEMP/korean-public-test-$PLATFORM_PACKAGE.json"
+      - name: Qualify optional vector using the exact public binary
+        shell: bash
+        run: python -B scripts/qualify-vector-runtime.py --hive "$HIVE_BIN" --authorize-install
       - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        if: always()
         with:
           name: korean-public-test-${{ matrix.platform_package }}
-          path: ${{ runner.temp }}/korean-public-test-${{ matrix.platform_package }}.json
+          path: |
+            ${{ runner.temp }}/korean-public-test-${{ matrix.platform_package }}.json
+            tests/work/vector-native-*/receipt.json
           if-no-files-found: error

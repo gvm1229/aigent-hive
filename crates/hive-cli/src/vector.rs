@@ -30,6 +30,8 @@ pub(super) fn retrieve(
 
 const BOOTSTRAP: &str = include_str!("vector_runtime.py");
 const WORKER: &str = include_str!("vector_helper.py");
+const PARENT_GUARD: &str = include_str!("vector_parent.py");
+const WORKER_LAUNCHER: &str = "import sys\n_hive_run_verified_file(sys.argv[1], sys.argv[2])";
 const LOCK: &str = include_str!("vector-runtime-lock.json");
 const MAX_WORKERS: usize = 16;
 
@@ -302,7 +304,7 @@ fn value_digest(value: &impl Serialize) -> Result<String, WikiError> {
 
 fn contract_digest() -> Result<String, WikiError> {
     value_digest(
-        &json!({"schema_version":1,"lock":lock()?,"worker":sha256_digest(WORKER.as_bytes()),"bootstrap":sha256_digest(BOOTSTRAP.as_bytes())}),
+        &json!({"schema_version":1,"lock":lock()?,"worker":sha256_digest(WORKER.as_bytes()),"bootstrap":sha256_digest(BOOTSTRAP.as_bytes()),"parent_guard":sha256_digest(PARENT_GUARD.as_bytes())}),
     )
 }
 
@@ -535,13 +537,7 @@ fn bootstrap(
 ) -> Result<Value, WikiError> {
     invoke(
         python,
-        &[
-            "-I".into(),
-            "-S".into(),
-            "-B".into(),
-            "-c".into(),
-            BOOTSTRAP.into(),
-        ],
+        &guarded_python_arguments(BOOTSTRAP)?,
         request,
         work,
         timeout,
@@ -578,19 +574,33 @@ fn worker(
 ) -> Result<Value, WikiError> {
     authenticate_python(runtime)?;
     let root = files.runtime_path(&runtime.id)?;
-    let helper = root.join("vector_helper.py");
+    let mut arguments = guarded_python_arguments(WORKER_LAUNCHER)?;
+    arguments.push(root.join("vector_helper.py").into_os_string());
+    arguments.push(sha256_digest(WORKER.as_bytes())[7..].into());
     invoke(
         &runtime.python,
-        &[
-            "-I".into(),
-            "-S".into(),
-            "-B".into(),
-            helper.into_os_string(),
-        ],
+        &arguments,
         request,
         Some(&root.join("tmp")),
         timeout,
     )
+}
+
+fn guarded_python_arguments(code: &str) -> Result<Vec<OsString>, WikiError> {
+    // Compile separately so the canonical code keeps its leading __future__ import.
+    // Only embedded source is serialized here; requests remain bounded JSON on stdin.
+    let code = serde_json::to_string(code).map_err(io_error)?;
+    let wrapped = format!(
+        "{PARENT_GUARD}\n_hive_bind_parent({});\nexec(compile({code}, '<hive-vector>', 'exec'))",
+        std::process::id()
+    );
+    Ok(vec![
+        "-I".into(),
+        "-S".into(),
+        "-B".into(),
+        "-c".into(),
+        wrapped.into(),
+    ])
 }
 
 fn invoke(
@@ -744,6 +754,22 @@ mod tests {
         assert_eq!(dispatch(&args, true).expect("status")["enabled"], false);
         assert!(!root.path().join(".hive").exists());
         assert!(!root.path().join(".agents").exists());
+    }
+
+    #[test]
+    fn every_python_surface_binds_the_owning_cli_and_keeps_request_data_off_argv() {
+        for code in [BOOTSTRAP, WORKER_LAUNCHER] {
+            let arguments = guarded_python_arguments(code).expect("guarded Python");
+            assert_eq!(arguments.len(), 5);
+            assert_eq!(arguments[0], "-I");
+            assert_eq!(arguments[1], "-S");
+            assert_eq!(arguments[2], "-B");
+            assert_eq!(arguments[3], "-c");
+            let wrapped = arguments[4].to_str().expect("UTF-8");
+            assert!(wrapped.starts_with(PARENT_GUARD));
+            assert!(wrapped.contains(&format!("_hive_bind_parent({})", std::process::id())));
+            assert!(wrapped.contains(&serde_json::to_string(code).expect("source literal")));
+        }
     }
 
     #[test]
