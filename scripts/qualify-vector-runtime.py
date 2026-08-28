@@ -153,6 +153,48 @@ def validate_shared_window(data: dict, scopes: dict[str, str], embedded: dict[st
     return found
 
 
+def retain_verified_windows_child(api, ctypes, wintypes, child):
+    expected = int(child["CreationFileTime"])
+    candidate = api.OpenProcess(0x00101001, False, int(child["ProcessId"]))
+    if not candidate:
+        raise RuntimeError("cannot retain observed native child handle")
+    try:
+        times = [wintypes.FILETIME() for _ in range(4)]
+        created = times[0]
+        valid = api.GetProcessTimes(candidate, *(ctypes.byref(value) for value in times))
+        # CIM provides microseconds. Never retain a handle to a recycled PID.
+        if not valid or ((created.dwHighDateTime << 32) | created.dwLowDateTime)//10 != expected//10:
+            raise RuntimeError("observed native child identity changed before handle capture")
+    except BaseException:
+        api.CloseHandle(candidate)  # Unverified handles are never termination authority.
+        raise
+    return candidate
+
+
+def require_live_windows_child(api, handle):
+    if api.WaitForSingleObject(handle, 0) != 258:  # WAIT_TIMEOUT: still running.
+        raise RuntimeError("native child already exited; cancellation is inconclusive")
+
+
+def cleanup_windows_cancellation(parent, handle, api, record, save):
+    try:
+        if parent.poll() is None:
+            stop_cli_tree(parent)
+            parent.communicate(timeout=10)
+    finally:
+        try:
+            if handle:
+                try:
+                    if api.WaitForSingleObject(handle, 0) != 0:
+                        record["cleanup_required"] = True
+                        if not api.TerminateProcess(handle, 130) or api.WaitForSingleObject(handle, 5000) != 0:
+                            raise RuntimeError("verified native child cleanup failed")
+                finally:
+                    api.CloseHandle(handle)
+        finally:
+            save()
+
+
 class Qualification:
     def __init__(self, binary: Path, work: Path):
         self.binary = binary
@@ -281,6 +323,10 @@ class Qualification:
                                    "unchanged reuse", "rollback", "corruption fallback", "disable", "FTS preservation",
                                    "bundle excludes vector artifacts", "fresh-root import and vector rebuild", "shared vector windows", "source vector lifecycle"],
                            not_proven=["50k performance", "private/confidential isolation", "parent cancellation", "public package identity"])
+        if self.report.get("windows_native_cancellation", {}).get("status") == "passed":
+            self.report["proven"].append("assigned Windows native worker cancellation and trusted recovery")
+            self.report["not_proven"].remove("parent cancellation")
+            self.report["not_proven"] += ["Unix native-model parent cancellation", "atomic process creation and Job assignment"]
         self.save()
 
     def portability(self, source: Path) -> None:
@@ -376,6 +422,68 @@ class Qualification:
             assert self.call("source-wiki", "vector", "status", *scope)["checkpoint_available"]
         raise RuntimeError("source fixture exceeded eight bounded rebuild attempts")
 
+    def source_cancel_windows(self, source: Path, scope: list[str], preview: dict, enabled: dict, initial: dict) -> None:
+        if os.name != "nt":
+            return
+        import ctypes as c
+        from ctypes import wintypes as w
+        api = c.WinDLL("kernel32", use_last_error=True)
+        api.OpenProcess.argtypes, api.OpenProcess.restype = [w.DWORD,w.BOOL,w.DWORD], w.HANDLE
+        api.WaitForSingleObject.argtypes, api.WaitForSingleObject.restype = [w.HANDLE,w.DWORD], w.DWORD
+        api.TerminateProcess.argtypes = [w.HANDLE,w.UINT]
+        api.CloseHandle.argtypes = [w.HANDLE]
+        api.GetProcessTimes.argtypes = [w.HANDLE, *([c.POINTER(w.FILETIME)]*4)]
+        api.GetProcessTimes.restype = w.BOOL
+        control = source / ".agents/work/vector-control" / ("scope-"+preview["scope_id"]+".json")
+        before = control.read_bytes()
+        helper = source / ".agents/work/vector/runtimes" / enabled["runtime"] / "vector_helper.py"
+        helper_digest = digest(helper)
+        handle = None
+        record = {"status":"running"}
+        self.report["windows_native_cancellation"] = record
+        parent = subprocess.Popen([str(self.binary),"source-wiki","vector","rebuild",*scope,
+                                   "--max-seconds","60","--workers","1","--rebuild-mode","fresh","--output","json"],
+                                  stdout=subprocess.PIPE,stderr=subprocess.PIPE)
+        try:
+            record["parent_pid"] = parent.pid
+            self.save()
+            deadline = time.monotonic()+30
+            while parent.poll() is None and time.monotonic() < deadline:
+                command = f"@(Get-CimInstance Win32_Process -Filter 'ParentProcessId = {parent.pid}' | Where-Object {{ $_.CommandLine -and $_.CommandLine.EndsWith('{helper_digest}') }} | Select-Object ProcessId,WorkingSetSize,@{{Name='CreationFileTime';Expression={{$_.CreationDate.ToFileTimeUtc()}}}}) | ConvertTo-Json -Compress"
+                observed = subprocess.run(["powershell","-NoProfile","-Command",command],capture_output=True,text=True,
+                                          timeout=10,check=True,creationflags=subprocess.CREATE_NO_WINDOW)
+                rows = json.loads(observed.stdout) if observed.stdout.strip() else []
+                if isinstance(rows, dict): rows = [rows]
+                candidates = [row for row in rows if int(row["WorkingSetSize"]) > 128*1024*1024]
+                if candidates and parent.poll() is None:
+                    child = candidates[0]
+                    handle = retain_verified_windows_child(api, c, w, child)
+                    record.update(child_pid=int(child["ProcessId"]), child_rss=int(child["WorkingSetSize"]))
+                    self.save()
+                    break
+            if not handle:
+                raise RuntimeError("no live native worker observed; cancellation remains unverified")
+            assert control.read_bytes() == before, "publication already finished; cancellation is inconclusive"
+            require_live_windows_child(api, handle)
+            parent.kill()  # Only the owner; the product Job must terminate its assigned child.
+            parent.wait(timeout=5)
+            record.update(parent_exit=parent.returncode, child_terminated=api.WaitForSingleObject(handle,5000) == 0)
+            self.save()
+            assert record["child_terminated"], "native worker survived owning CLI death"
+            parent.communicate(timeout=10)
+            record["output_pipes_closed"] = True
+            assert control.read_bytes() == before
+            recovered, _ = self.source_rebuild(scope)
+            assert recovered["complete"] and recovered["embedded"] == 0
+            assert recovered["database_digest"] == initial["database_digest"]
+            record.update(status="passed", active_preserved=True, recovered_embedded=0,
+                          limit="assigned live Windows worker only; no spawn-to-assignment or inference-phase guarantee")
+        except Exception:
+            record["status"] = "failed"
+            raise
+        finally:
+            cleanup_windows_cancellation(parent, handle, api, record, self.save)
+
     def source_vectors(self) -> None:
         path = ROOT / "scripts/qualify-source-graph.py"
         graph = {"__name__": "source_graph_fixture", "__file__": str(path)}
@@ -392,13 +500,14 @@ class Qualification:
         assert missing["search"]["used"] == ["fts"]
         python = str(Path(sys.executable).resolve())
         preview = self.call("source-wiki", "vector", "preview", *scope, "--python", python)
-        self.call("source-wiki", "vector", "enable", *scope, "--python", python, "--consent-digest", preview["consent_digest"])
+        enabled = self.call("source-wiki", "vector", "enable", *scope, "--python", python, "--consent-digest", preview["consent_digest"])
         built, resumed = self.source_rebuild(scope)
         assert built["complete"] and built["chunks"] == 81
         assert self.call("source-wiki", "vector", "status", *scope)["index_ready"]
         found = self.call(*query)
         assert found["search"]["used"] == ["fts", "vector"] and found["hits"]
         assert all(hit["path"].startswith("docs/facts/en/") for hit in found["hits"])
+        self.source_cancel_windows(source, scope, preview, enabled, built)
         repetitions = []
         for _ in range(2):
             rebuilt, observed = self.source_rebuild(scope, fresh=True)

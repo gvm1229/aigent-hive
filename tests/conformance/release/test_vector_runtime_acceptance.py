@@ -19,6 +19,92 @@ spec.loader.exec_module(runner)
 
 
 class VectorRuntimeAcceptance(unittest.TestCase):
+    def test_unverified_native_handles_are_only_closed_never_terminated(self):
+        import ctypes as c
+        from ctypes import wintypes as w
+        for mode in ("invalid-time", "query-error", "mismatch", "query-failed", "valid"):
+            api = Mock()
+            api.OpenProcess.return_value = 71
+            child = {"ProcessId":42,"CreationFileTime":None if mode == "invalid-time" else 200}
+            def times(_handle, created, *_rest):
+                if mode == "query-error": raise OSError("query failed")
+                created._obj.dwLowDateTime = 300 if mode == "mismatch" else 200
+                return mode != "query-failed"
+            api.GetProcessTimes.side_effect = times
+            with self.subTest(mode=mode):
+                if mode == "valid":
+                    self.assertEqual(runner.retain_verified_windows_child(api,c,w,child),71)
+                    api.CloseHandle.assert_not_called()
+                else:
+                    with self.assertRaises((TypeError, OSError, RuntimeError)):
+                        runner.retain_verified_windows_child(api,c,w,child)
+                    if mode == "invalid-time":
+                        api.OpenProcess.assert_not_called()
+                    else:
+                        api.CloseHandle.assert_called_once_with(71)
+                api.TerminateProcess.assert_not_called()
+
+    def test_native_cancellation_requires_a_still_running_child(self):
+        api = Mock()
+        for result in (0, 0xFFFFFFFF):
+            api.WaitForSingleObject.return_value = result
+            with self.assertRaisesRegex(RuntimeError,"inconclusive"):
+                runner.require_live_windows_child(api,71)
+        api.WaitForSingleObject.return_value = 258
+        runner.require_live_windows_child(api,71)
+
+    def test_native_child_cleanup_and_receipt_survive_parent_cleanup_failure(self):
+        parent, api, save = Mock(), Mock(), Mock()
+        parent.poll.return_value = None
+        api.WaitForSingleObject.side_effect = [258,0]
+        api.TerminateProcess.return_value = True
+        record = {}
+        with patch.object(runner,"stop_cli_tree",side_effect=OSError("parent cleanup")):
+            with self.assertRaisesRegex(OSError,"parent cleanup"):
+                runner.cleanup_windows_cancellation(parent,71,api,record,save)
+        api.TerminateProcess.assert_called_once_with(71,130)
+        api.CloseHandle.assert_called_once_with(71)
+        save.assert_called_once()
+        self.assertTrue(record["cleanup_required"])
+        api.reset_mock()
+        api.WaitForSingleObject.side_effect = None
+        api.WaitForSingleObject.return_value = 258
+        api.TerminateProcess.return_value = False
+        parent.poll.return_value = 1
+        with self.assertRaisesRegex(RuntimeError,"child cleanup failed"):
+            runner.cleanup_windows_cancellation(parent,71,api,record,save)
+        api.CloseHandle.assert_called_once_with(71)
+        self.assertEqual(save.call_count,2)
+
+    def test_first_native_cancellation_receipt_failure_still_cleans_the_parent(self):
+        import ctypes as c
+        with tempfile.TemporaryDirectory(dir=ROOT / "tests/work") as directory:
+            work = Path(directory)
+            source = work / "source"
+            control = source / ".agents/work/vector-control/scope-example.json"
+            helper = source / ".agents/work/vector/runtimes/runtime/vector_helper.py"
+            for path in (control, helper):
+                path.parent.mkdir(parents=True,exist_ok=True)
+                path.write_bytes(b"synthetic")
+            qualification = runner.Qualification(Path(sys.executable),work)
+            parent = Mock(pid=42)
+            parent.poll.return_value = None
+            with patch.object(runner.os,"name","nt"), patch.object(c,"WinDLL",return_value=Mock(),create=True), \
+                 patch.object(runner.subprocess,"Popen",return_value=parent), \
+                 patch.object(qualification,"save",side_effect=[OSError("receipt"),None]) as save, \
+                 patch.object(runner,"stop_cli_tree") as cleanup:
+                with self.assertRaisesRegex(OSError,"receipt"):
+                    qualification.source_cancel_windows(source,[],{"scope_id":"example"},{"runtime":"runtime"},{})
+                cleanup.assert_called_once_with(parent)
+                self.assertEqual(save.call_count,2)
+
+    def test_windows_native_cancellation_never_launches_on_other_operating_systems(self):
+        with tempfile.TemporaryDirectory(dir=ROOT / "tests/work") as directory:
+            qualification = runner.Qualification(Path(sys.executable), Path(directory))
+            with patch.object(runner.os, "name", "posix"), patch.object(runner.subprocess, "Popen") as execute:
+                qualification.source_cancel_windows(Path(directory), [], {}, {}, {})
+                execute.assert_not_called()
+
     def test_shared_window_results_cannot_repeat_one_scope_or_misattribute_a_change(self):
         scopes = {"user-root":"a", "other":"b"}
         data = {"complete":True, "failed":False, "scopes":[{
