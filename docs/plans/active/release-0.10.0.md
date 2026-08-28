@@ -6,9 +6,9 @@
 ## Checklist
 
 - [x] [REL10-001] 벡터 포함 `0.10.0-test.6`·2026-08-29 입력과 변경 기록 정합화, 제품 버전 검사 통과
-- [ ] [REL10-002] 벡터 구현 뒤 Rust·Python·문서·보안·갱신·복구 전체 검사
-- [ ] [REL10-003] 다음 번호 공개 시험판 게시와 npm `latest=0.9.5` 불변 확인
-- [ ] [REL10-004] Windows x64·macOS arm64·Linux musl의 벡터 포함 공개 시험 수용
+- [x] [REL10-002] 벡터 구현 뒤 Rust·Python·문서·보안·갱신·복구 전체 검사 — CI `33190877319`
+- [x] [REL10-003] 공개 test.6 게시와 npm `latest=0.9.5` 불변 확인 — 게시 `33193036233`
+- [x] [REL10-004] Windows x64·macOS arm64·Linux musl의 벡터 포함 공개 시험 수용 — `33193323751`
 - [ ] [REL10-005] accepted test exact source의 protected `main` 통합과 stable candidate
 - [ ] [REL10-006] 같은 product bytes의 stable publication·설치·의존 검사
 - [ ] [REL10-007] 공개 시험·수용 증거가 갖춰진 뒤 유지보수자의 명시적 `0.10.0` 안정판 승인 수령
@@ -27,7 +27,7 @@
 ## 현재 실행 제외
 
 - `REL10-005–007`: 유지보수자 명시 제외. `0.10.0` 안정판 protected `main` 후보·게시·설치·승인 작업 시작 금지
-- `REL10-001–004`: 비벡터 test.4 수용 뒤 벡터 제품 변경으로 재개방
+- `REL10-001–004`: 벡터 포함 test.6으로 재수용 완료. [정확한 근거와 한계](../../research/vector-public-test6-2026-08-29.md)
 
 ## 비벡터 수정 수용
 

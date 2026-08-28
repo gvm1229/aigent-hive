@@ -1,7 +1,7 @@
 # Hybrid vector search `0.10.0`
 
 > Checklist owner: `KRG10-014`, `VEC10-*`, `VQR10-*`
-> 작업 branch: `feature/0.10.0-vector-search`
+> 구현 branch: `feature/0.10.0-vector-search`, `develop` 통합·test.6 공개 수용 완료
 > 채택: 2026-08-29 유지보수자의 현재 스트레스 성능 수용 승인
 > 연구 근거: [`vector-memory-0.10-feasibility-2026-08-22.md`](../../research/vector-memory-0.10-feasibility-2026-08-22.md)
 
@@ -11,6 +11,8 @@ SQLite FTS의 exact 검색을 유지하면서 표현이 다른 의미·다국어
 후보 검색 계층, graph: 명시적 관계 계층, Markdown: 유일한 정본.
 
 ## Checklist
+
+초기 조사 수치는 당시 결과. 현재 채택·제품 수용 정본은 `VEC10-007–012`와 [test.6 근거](../../research/vector-public-test6-2026-08-29.md).
 
 - [x] [KRG10-014] FTS·vector·hybrid 품질·속도·비용 비교와 exact engine·embedding 계약의 adopt|defer 결정 — 50,000 embedding build 10분 초과로 `defer`
 - [x] [VEC10-001] 120개 gold query corpus: exact ID·날짜·수치·부정 30개, 한국어·영어 paraphrase 40개, cross-language 20개, relation·영향 30개 — `vector-gold-120.json`, deterministic generation 회귀
@@ -24,11 +26,11 @@ SQLite FTS의 exact 검색을 유지하면서 표현이 다른 의미·다국어
 - [x] [VEC10-009] 승인형 보조 환경 preview·설치·시간 제한 배치·원자 활성화·갱신·비활성화 구현
 - [x] [VEC10-010] FTS 보존, 의미 검색의 순위 결합·인용·검색 경로 표시. 벡터 점수만으로 사실 확정 금지
 - [x] [VEC10-011] 증분 갱신·중단 재개·전체 재생성 동등성, 오래된/손상된 색인의 FTS 복귀·rollback 구현
-- [ ] [VEC10-012] Bundle 제외·다른 기기 재생성·세 운영체제 설치와 번호 공개 시험 수용
+- [x] [VEC10-012] Bundle 제외·새 루트의 원문 복원/벡터 재생성·세 운영체제 공개 test.6 수용. 물리 기기 사이 전송 실험과 구분
 
 ## 재검증 checklist
 
-근거: [실측](../../research/vector-product-integration-2026-08-28.md)·[수용 정책](../../research/vector-acceptance-2026-08-29.md). 공개 수용 `012` 미완료.
+초기 기록. 현재 판정: `VEC10-007–012`.
 
 - [x] [VQR10-001] 특정 engine을 미리 채택하지 않고 embedding pipeline 최적화와 vector 재검증을 `0.10.0` 범위로 유지보수자 승인
 - [x] [VQR10-002] 반복 50,000 corpus의 30 digest·5.75초와 고유 50,000 corpus의 50,000 digest·1,000 probe 분리 측정
