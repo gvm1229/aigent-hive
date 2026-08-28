@@ -64,7 +64,7 @@ class VectorCli(unittest.TestCase):
         self.assertNotEqual(self.run_cli("status", "--user-root", str(self.root))["exit_code"], 0)
         self.assertFalse((self.root / ".hive").exists())
 
-    def test_semantic_mode_without_runtime_preserves_fts_results(self):
+    def consumer(self):
         user = self.root / "user"
         (user / ".hive/config").mkdir(parents=True)
         preferences = {"schema_version":1,"interface_language":"en","wiki":{"enabled":True,"language":"both"},
@@ -72,6 +72,33 @@ class VectorCli(unittest.TestCase):
             "skills":{"mode":"individual","selected":["setup-hive"]},
             "usage_guard":{"enabled":False,"stop_remaining_percent":20,"codexbar_fallback_enabled":False}}
         (user / ".hive/config/user-setup.yml").write_text(json.dumps(preferences),encoding="utf-8")
+        return user
+
+    def test_shared_list_rejects_invalid_scopes_without_installing_or_changing_canonical_files(self):
+        user = self.consumer()
+        refresh = subprocess.run([self.binary,"knowledge","refresh","--user-root",str(user),"--output","json"],capture_output=True,text=True,encoding="utf-8",timeout=30)
+        self.assertEqual(refresh.returncode, 0, refresh.stdout)
+        before = {str(path.relative_to(user)):path.read_bytes() for path in user.rglob("*") if path.is_file()}
+        cases = [("[]", []), ('["user-root","user-root"]', []), ('["user-root"]', ["--collection","user-root"]),
+                 ('["user-root"]', ["--authorization-id","unused"]), ('["unknown"]', []),
+                 ('["user-root"]', []), ('{"collection":"user-root"}', []), (json.dumps(["user-root"]*101), [])]
+        for raw, extra in cases:
+            with self.subTest(raw=raw[:70], extra=extra):
+                result = subprocess.run([self.binary,"knowledge","vector","rebuild","--user-root",str(user),"--target",str(user),
+                    "--visibility","shared","--collections",raw,*extra,"--output","json"],capture_output=True,text=True,encoding="utf-8",timeout=30)
+                self.assertNotEqual(result.returncode, 0)
+                value = json.loads(result.stdout)
+                Draft202012Validator(json.loads((ROOT/"schemas/action-result.schema.json").read_text("utf-8"))).validate(value)
+        for visibility in ("project-private", "confidential"):
+            result = subprocess.run([self.binary,"knowledge","vector","rebuild","--user-root",str(user),"--target",str(user),
+                "--visibility",visibility,"--collections",'["user-root"]',"--output","json"],capture_output=True,text=True,encoding="utf-8",timeout=30)
+            self.assertNotEqual(result.returncode, 0)
+        self.assertNotEqual(self.run_cli("rebuild", "--collections", '["user-root"]')["exit_code"], 0)
+        self.assertEqual(before, {str(path.relative_to(user)):path.read_bytes() for path in user.rglob("*") if path.is_file()})
+        self.assertFalse((user/".hive/index/vector").exists())
+
+    def test_semantic_mode_without_runtime_preserves_fts_results(self):
+        user = self.consumer()
         def knowledge(action,*options):
             process = subprocess.run([self.binary,"knowledge",action,"--user-root",str(user),*options,"--output","json"],capture_output=True,text=True,encoding="utf-8",timeout=30)
             result = json.loads(process.stdout)

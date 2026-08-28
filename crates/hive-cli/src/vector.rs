@@ -53,6 +53,7 @@ const USAGE: &str = "Optional local semantic search; FTS remains the default.\n\
     hive source-wiki vector preview|enable|status|rebuild|rollback|disable|query --target <source-root> --language en|ko [--python <absolute-executable>] [--consent-digest <sha256:...>] --output json\n\
     source query options: --query <text> --top-k <1..100>\n\
     rebuild options: --max-seconds <1..60> --workers <1..16> --rebuild-mode resume|fresh\n\
+    shared rebuild window: replace --collection with --collections <JSON-array-of-1..100-explicit-ids>\n\
     confidential rebuild/rollback: --authorization-id <id> --authorization-token <token> --capabilities <json> --usage <json>\n";
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -134,6 +135,8 @@ pub(super) fn run(arguments: &[String], source: bool) -> ExitCode {
                 .unwrap_or_default();
             let incomplete = data.get("complete").and_then(Value::as_bool) == Some(false);
             let new_approval = data.get("requires_new_authorization").and_then(Value::as_bool) == Some(true);
+            let batch_failed = data.get("failed").and_then(Value::as_bool) == Some(true);
+            let batch = data.get("scopes").is_some();
             let mut result = super::success(
                 "VectorKnowledge",
                 "hive.vector-completed",
@@ -144,11 +147,19 @@ pub(super) fn run(arguments: &[String], source: bool) -> ExitCode {
                 data,
             );
             if incomplete {
-                result.next_action = Some(if new_approval {
+                result.next_action = Some(if batch {
+                    "inspect scope states; retry only unfinished collections, increasing --max-seconds if no calculation could start"
+                } else if new_approval {
                     "issue a new authorize-build current-action approval, then repeat rebuild with its new one-time token"
                 } else {
                     "repeat vector rebuild with the same scope to resume its verified checkpoint"
                 }.to_owned());
+            }
+            if batch_failed {
+                result.status = "verification-failed";
+                result.exit_code = 5;
+                result.code = "hive.vector-window-failed";
+                "vector window failed; inspect per-scope results before retrying".clone_into(&mut result.message);
             }
             Ok(result)
         })
@@ -179,6 +190,7 @@ fn dispatch(arguments: &[String], source: bool) -> Result<Value, WikiError> {
             "--target",
             "--user-root",
             "--collection",
+            "--collections",
             "--visibility",
             "--language",
             "--python",
@@ -212,11 +224,16 @@ fn dispatch(arguments: &[String], source: bool) -> Result<Value, WikiError> {
                 !source && ["rebuild", "rollback"].contains(&action.as_str())
             }
             "--expires-at" | "--nonce" | "--operation" => !source && action == "authorize-build",
+            "--collections" => !source && action == "rebuild",
             _ => true,
         };
         if !allowed {
             return Err(invalid("vector option does not apply to this action"));
         }
+    }
+    if let Some(raw) = optional(&options, "--collections") {
+        let targets = parse_shared_targets(&options, raw)?;
+        return index::rebuild_many(&targets, &options);
     }
     let target = parse_target(&options, source)?;
     match action.as_str() {
@@ -230,6 +247,50 @@ fn dispatch(arguments: &[String], source: bool) -> Result<Value, WikiError> {
         "query" if source => query::source_query(&target, &options),
         _ => Err(invalid("unsupported vector action")),
     }
+}
+
+fn parse_shared_targets(options: &[(&str, &str)], raw: &str) -> Result<Vec<Target>, WikiError> {
+    if raw.len() > 64 * 1024
+        || optional(options, "--collection").is_some()
+        || optional(options, "--visibility") != Some("shared")
+        || options.iter().any(|(name, _)| {
+            [
+                "--authorization-id",
+                "--authorization-token",
+                "--capabilities",
+                "--usage",
+            ]
+            .contains(name)
+        })
+    {
+        return Err(invalid("shared vector list requires explicit shared visibility and no single/confidential scope"));
+    }
+    let ids: Vec<String> = serde_json::from_str(raw)
+        .map_err(|_| invalid("--collections must be a JSON string array"))?;
+    if ids.is_empty() || ids.len() > 100 || ids.iter().any(|id| id.is_empty() || id.len() > 256) {
+        return Err(invalid(
+            "--collections requires 1..100 bounded collection references",
+        ));
+    }
+    let base = options
+        .iter()
+        .copied()
+        .filter(|(name, _)| *name != "--collections")
+        .collect::<Vec<_>>();
+    let mut targets = Vec::new();
+    for id in &ids {
+        let mut scoped = base.clone();
+        scoped.push(("--collection", id));
+        targets.push(parse_target(&scoped, false)?);
+    }
+    targets.sort_by(|left, right| left.scope_id.cmp(&right.scope_id));
+    if targets
+        .windows(2)
+        .any(|pair| pair[0].scope_id == pair[1].scope_id)
+    {
+        return Err(invalid("duplicate resolved vector collection"));
+    }
+    Ok(targets)
 }
 
 fn parse_target(options: &[(&str, &str)], source: bool) -> Result<Target, WikiError> {

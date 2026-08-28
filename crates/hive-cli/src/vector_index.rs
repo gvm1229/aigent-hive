@@ -10,6 +10,16 @@ use hive_wiki::{source, WikiError};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 
+#[path = "vector_batch.rs"]
+mod batch;
+
+pub(super) fn rebuild_many(
+    targets: &[Target],
+    options: &[(&str, &str)],
+) -> Result<Value, WikiError> {
+    batch::rebuild_many(targets, options)
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub(super) struct Snapshot {
@@ -26,6 +36,27 @@ struct Corpus {
     authority_digest: Option<String>,
     chunks: Vec<Value>,
     request: Option<RetrievalRequest>,
+}
+
+fn collection_request(target: &Target) -> Result<RetrievalRequest, WikiError> {
+    let Selector::Collection { partition } = &target.selector else {
+        return Err(invalid("collection request requires a consumer scope"));
+    };
+    Ok(RetrievalRequest {
+        scope: RetrievalScope::Collection(partition.collection_id.clone()),
+        current_collection_id: target.current_collection_id.clone(),
+        query: "vector build".to_owned(),
+        query_expansions: Vec::new(),
+        top_k: 100,
+        byte_budget: 1024 * 1024,
+        confidential_collection_id: auth::confidential(target)
+            .then(|| partition.collection_id.clone()),
+    })
+}
+
+fn collection_corpus(value: hive_wiki::rag::SemanticCorpus, request: RetrievalRequest) -> Corpus {
+    Corpus { manifest_digest: value.partition_digest, authority_digest: Some(value.authority_digest), request: Some(request),
+        chunks: value.chunks.into_iter().map(|hit| json!({"chunk_id":hit.chunk_id,"digest":hit.digest,"title":hit.title,"text":hit.text})).collect() }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -134,16 +165,7 @@ fn corpus(
                 chunks: corpus.pages.into_iter().map(|page| json!({"chunk_id":page.hit.path,"digest":page.hit.content_digest,"title":page.hit.title,"text":page.body})).collect() })
         }
         Selector::Collection { partition } => {
-            let request = RetrievalRequest {
-                scope: RetrievalScope::Collection(partition.collection_id.clone()),
-                current_collection_id: target.current_collection_id.clone(),
-                query: "vector build".to_owned(),
-                query_expansions: Vec::new(),
-                top_k: 100,
-                byte_budget: 1024 * 1024,
-                confidential_collection_id: auth::confidential(target)
-                    .then(|| partition.collection_id.clone()),
-            };
+            let request = collection_request(target)?;
             let store = RagStore::open(target.files.root_path())?;
             let corpus = if auth::confidential(target) {
                 let (options, operation) = authorization.ok_or_else(|| {
@@ -155,8 +177,7 @@ fn corpus(
             } else {
                 store.semantic_corpus(&request, partition.visibility)?
             };
-            Ok(Corpus { manifest_digest: corpus.partition_digest, authority_digest: Some(corpus.authority_digest), request: Some(request),
-                chunks: corpus.chunks.into_iter().map(|hit| json!({"chunk_id":hit.chunk_id,"digest":hit.digest,"title":hit.title,"text":hit.text})).collect() })
+            Ok(collection_corpus(corpus, request))
         }
     }
 }
@@ -358,9 +379,34 @@ pub(super) fn rebuild(target: &Target, options: &[(&str, &str)]) -> Result<Value
         }
     };
     let result = validate_build_result(target, corpus.chunks.len(), result)?;
+    let pending = retain_build(target, &before, &corpus, result)?;
+    publish(
+        target,
+        &corpus,
+        &before,
+        digest
+            .as_deref()
+            .ok_or_else(|| invalid("scope control digest is absent"))?,
+        &pending.after,
+    )?;
+    Ok(finish_build(target, &pending, workers))
+}
+
+struct PendingBuild {
+    snapshot: Snapshot,
+    after: ScopeControl,
+    result: BuildResult,
+}
+
+fn retain_build(
+    target: &Target,
+    before: &ScopeControl,
+    corpus: &Corpus,
+    result: BuildResult,
+) -> Result<PendingBuild, WikiError> {
     let snapshot = Snapshot {
         id: VectorFiles::fresh_snapshot_id(),
-        database_digest: result.database_digest,
+        database_digest: result.database_digest.clone(),
         manifest_digest: corpus.manifest_digest.clone(),
         contract_digest: before.runtime.contract_digest.clone(),
         runtime_id: before.runtime.id.clone(),
@@ -389,32 +435,39 @@ pub(super) fn rebuild(target: &Target, options: &[(&str, &str)]) -> Result<Value
     } else {
         after.checkpoint = Some(snapshot.clone());
     }
-    record_retired(&before, &mut after);
-    publish(
-        target,
-        &corpus,
-        &before,
-        digest
-            .as_deref()
-            .ok_or_else(|| invalid("scope control digest is absent"))?,
-        &after,
-    )?;
-    let cleanup_pending = clean_retired(target, &after);
+    record_retired(before, &mut after);
+    Ok(PendingBuild {
+        snapshot,
+        after,
+        result,
+    })
+}
+
+fn finish_build(target: &Target, pending: &PendingBuild, workers: usize) -> Value {
+    let PendingBuild {
+        snapshot,
+        after,
+        result,
+    } = pending;
+    let kind = if result.complete {
+        DatabaseKind::Generation(&snapshot.id)
+    } else {
+        DatabaseKind::Checkpoint(&snapshot.id)
+    };
+    let cleanup_pending = clean_retired(target, after);
     // If removal fails, the published active/checkpoint receipt remains the durable retry
     // authority. The next rebuild either reuses these exact bytes or retains their corruption.
     let staging_cleanup_pending = target
         .files
         .discard_staging_copy(&target.scope_id, kind, &snapshot.database_digest)
         .is_err();
-    Ok(
-        json!({"complete":result.complete,"phase":result.phase,"embedded":result.embedded,"remaining":result.remaining,
+    json!({"complete":result.complete,"phase":result.phase,"embedded":result.embedded,"remaining":result.remaining,
         "cleanup_pending":cleanup_pending || staging_cleanup_pending,
         "workers":workers,
         "chunks":result.chunks,"snapshot_id":snapshot.id,"database_digest":snapshot.database_digest,
         "manifest_digest":snapshot.manifest_digest,"worker_seconds":result.elapsed_seconds,
         "requires_new_authorization":auth::confidential(target) && !result.complete,
-        "fts_unchanged":true,"changed_paths":changed_paths(target,true)}),
-    )
+        "fts_unchanged":true,"changed_paths":changed_paths(target,true)})
 }
 
 pub(super) fn status(target: &Target, control: &ScopeControl) -> Value {
