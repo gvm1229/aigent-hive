@@ -1,8 +1,9 @@
 # 현재 상태
 
-- 작업 branch: `feature/0.10.0-vector-search`, 소스 확인 기준 `d9cb7733`
-- 원격 통합 기준: `origin/develop@5cedbed4`. 벡터 변경은 전용 branch에서 검증 중이며 `develop` 미통합
-- 제품 버전: `0.10.0`, 안정판 기준 `0.9.5`
+- 작업 branch: `develop`, 벡터 통합 기준 `29279b21`
+- 원격 통합: `origin/develop@29279b21`. 벡터 전용 branch의 검증된 변경을 병합·반영 완료
+- product version: `0.10.0`
+- 안정판 기준: `0.9.5`
 - 마지막 공개 시험: `0.10.0-test.4`, 다음 번호: `0.10.0-test.5`
 - 활성 계획: [PLAN.md](../plans/PLAN.md), [벡터 구현](../plans/active/hybrid-vector-search-0.10.0.md)
 - 구현·수치 정본: [벡터 구현 계약](../architecture/vector-search.md), [제품 연결 재검증](../research/vector-product-integration-2026-08-28.md)

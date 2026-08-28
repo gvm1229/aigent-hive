@@ -1,6 +1,6 @@
 # Aigent Hive 활성 계획
 
-> Revision: 298
+> Revision: 299
 > 기준일: 2026-08-29
 > Product version: `0.10.0`
 > Stable baseline: `0.9.5`
@@ -73,8 +73,8 @@
 | Skill migration cleanup | 10 | 0 | 100% |
 | 한국어 언어 core | 12 | 0 | 100% |
 | Source `draft-devlog` | 6 | 0 | 100% |
-| `0.10.0` 출시 | 0 | 7 | 0% |
-| **합계** | **106** | **8** | **93.0%** |
+| `0.10.0` 출시 | 1 | 6 | 14.3% |
+| **합계** | **107** | **7** | **93.9%** |
 
 ## Required load order
 
