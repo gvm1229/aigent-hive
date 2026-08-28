@@ -2,7 +2,7 @@
 
 - 작업 branch: `develop`, 벡터 통합 기준 `29279b21`
 - 원격 통합: `origin/develop@29279b21`. 벡터 전용 branch의 검증된 변경을 병합·반영 완료
-- product version: `0.10.0`
+- 제품 버전: `0.10.0`
 - 안정판 기준: `0.9.5`
 - 마지막 공개 시험: `0.10.0-test.4`, 다음 번호: `0.10.0-test.6`
 - 활성 계획: [PLAN.md](../plans/PLAN.md), [벡터 구현](../plans/active/hybrid-vector-search-0.10.0.md)
