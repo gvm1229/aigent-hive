@@ -9,7 +9,7 @@ summary: "Linux x86_64 and arm64 musl native runtime qualification passed."
 tags: [linux, release, test]
 aliases: ["P7-043"]
 sources:
-  - "repo:.github/workflows/release-runtime.yml#sha256:77e6364e1a86fc768ca99fd8b6b36ac9c144a46f39e86819631ffd149985cc48"
+  - "repo:.github/workflows/release-runtime.yml#sha256:0b752edf707f676d71f5bee91da1fb61e5bdfe0de8321f71ade6011229d431a6"
   - "repo:docs/archive/plans/foundations/phases/07-public-qualification.md#sha256:4340322bc0dfdc4029e7d5366ad40bfd0c4bd53f33b9b8ebc1e82f1a524cbf06"
 links: [test-distribution]
 reviewed_revision: "git:e37de7ff99fb235f673a4d3273deb54d6284999e"

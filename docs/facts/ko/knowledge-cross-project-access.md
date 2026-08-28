@@ -13,7 +13,7 @@ sources:
   - "repo:crates/hive-wiki/src/rag.rs#sha256:3c8553ae33ef2b26ee9a97cb28bba9859f0706def788335e690818d22fb3efb5"
   - "repo:crates/hive-wiki/src/store.rs#sha256:d49438b3d49f9ca1ac5eb574f94309846c2b9a46225704f4753dcef737881653"
   - "repo:harness/skills/knowledge-import/SKILL.md#sha256:b73e6c82eb5ef9105781383f59211a982ed70b0f0ecf1690619f3b9b30f4730d"
-  - "repo:harness/skills/knowledge-recall/SKILL.md#sha256:531437bfcb9786cd5221de32eb5ad536bfd07973db159ca0b15a5df858ffa923"
+  - "repo:harness/skills/knowledge-recall/SKILL.md#sha256:9e169f3daff2b4fbe6cff4d9a93d7e45cca6e9a6e78d1784b83458b50d3aa267"
 links: [global-knowledge-rag, knowledge-portability-scan, shared-index]
 reviewed_revision: "git:e5c2c599562121ed3dc43143c16a0b1f063cefa2"
 status: active
