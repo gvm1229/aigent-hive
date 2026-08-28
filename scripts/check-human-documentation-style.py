@@ -74,6 +74,7 @@ NOMINALIZATION_NOUN_COLLISION_SUFFIXES = (
     "다짐",
     "도움",
     "마음",
+    "묶음",
     "베트남",
     "여름",
     "얼음",
@@ -178,6 +179,9 @@ def _is_terminal_token(token: str, line: str, start: int) -> bool:
 
 
 def _is_narrative_token(token: str, line: str, start: int) -> bool:
+    # Distributive postposition before a following phrase, not a sentence ending.
+    if token.endswith("마다") and not _is_terminal_token(token, line, start):
+        return False
     if token == "보다":
         return True
     if _is_mechanical_nominalization(token, line, start):

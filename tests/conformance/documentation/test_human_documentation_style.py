@@ -109,6 +109,9 @@ API key 없음
 범위 포함
 구성 개요
 사용자 마음
+공유 묶음 갱신
+파일은 매 시도마다 새 식별자로 생성
+질문을 처리할 때마다 새 모델 사용
 첫걸음
 얼음
 처음
@@ -123,6 +126,9 @@ API key 없음
 짐
 """
         self.assertEqual(MODULE.prose_findings("README.md", text), [])
+        self.assertEqual(len(MODULE.prose_findings(
+            "README.md", "각 질문마다 모델을 읽음.\n묶음 작업은 완료됐다."
+        )), 2)
 
     def test_code_identifiers_and_structural_literals_do_not_create_findings(self) -> None:
         text = """`README.md`
