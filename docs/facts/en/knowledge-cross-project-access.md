@@ -10,7 +10,7 @@ tags: [collection, knowledge, promotion, retrieval, v0-9-3]
 aliases: ["Automatic knowledge promotion", "Cross-project knowledge"]
 sources:
   - "repo:crates/hive-cli/src/knowledge.rs#sha256:1229cfa84e1fb0357c943fd0ef2910f3cdb5dd7e70f67879f0832db0ea26c800"
-  - "repo:crates/hive-wiki/src/rag.rs#sha256:709c170e8c0340a0f5912bb7a1ce56a636849cc62bafb0a28ef2bfab27d4b74c"
+  - "repo:crates/hive-wiki/src/rag.rs#sha256:2bb27720c34a60bfd3b0003e27348288f3f17062ab1e270f3c2d624487e1eff4"
   - "repo:crates/hive-wiki/src/store.rs#sha256:350921616304811f9941b2ad5486c727009996f0ed6ee93f21f9453cc6ed5be8"
   - "repo:harness/skills/knowledge-import/SKILL.md#sha256:b73e6c82eb5ef9105781383f59211a982ed70b0f0ecf1690619f3b9b30f4730d"
   - "repo:harness/skills/knowledge-recall/SKILL.md#sha256:9e169f3daff2b4fbe6cff4d9a93d7e45cca6e9a6e78d1784b83458b50d3aa267"
