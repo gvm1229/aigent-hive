@@ -1301,9 +1301,10 @@ impl RagStore {
     ) -> Result<crate::rag::SemanticCorpus, WikiError> {
         self.with_retrieval_snapshot(|bytes, manifest, registry| {
             let collection = crate::rag::semantic_target_collection(registry, request)?;
-            let states = crate::rag::semantic_partition_states_serialized(
-                bytes, manifest, registry, request,
-            )?;
+            crate::rag::validate_retrieval_request(request)?;
+            let prepared =
+                crate::rag::PreparedRagIndex::from_serialized(bytes, manifest, registry)?;
+            let states = prepared.semantic_partition_states(request)?;
             let digest = match states.into_iter().find(|state| {
                 state.partition.collection_id == collection
                     && state.partition.visibility == visibility
@@ -1322,10 +1323,9 @@ impl RagStore {
                     &digest,
                 )?;
                 authorize(&manifest.logical_digest)?;
-                let chunks = crate::rag::semantic_corpus_serialized(
-                    bytes, manifest, registry, request, visibility,
-                )
-                .map_err(rag_error)?;
+                let chunks = prepared
+                    .semantic_corpus(request, visibility)
+                    .map_err(rag_error)?;
                 Ok(crate::rag::SemanticCorpus {
                     generation: manifest.generation,
                     manifest_digest: manifest.logical_digest.clone(),
@@ -4607,6 +4607,54 @@ mod tests {
             })
             .is_err());
         assert!(!consumed);
+    }
+
+    #[test]
+    fn semantic_publication_rereads_sqlite_after_prepared_corpus() {
+        let (temporary, store) = store();
+        let request = RetrievalRequest {
+            scope: RetrievalScope::Collection(USER_ROOT_COLLECTION_ID.to_owned()),
+            current_collection_id: None,
+            query: "vector build".to_owned(),
+            query_expansions: Vec::new(),
+            top_k: 5,
+            byte_budget: 4096,
+            confidential_collection_id: None,
+        };
+        let corpus = store
+            .semantic_corpus(&request, RagVisibility::Shared)
+            .expect("corpus");
+        std::fs::write(
+            temporary.path().join(SHARED_INDEX_RELATIVE),
+            b"changed after corpus",
+        )
+        .expect("external cache corruption");
+        let mut invalid = request.clone();
+        invalid.top_k = 0;
+        let mut authorized = false;
+        let error = store
+            .authorized_semantic_corpus(&invalid, RagVisibility::Shared, |_| {
+                authorized = true;
+                Ok(())
+            })
+            .expect_err("invalid request precedes corrupt SQLite");
+        assert!(matches!(error, WikiError::InvalidInput(_)));
+        assert!(!authorized);
+        let mut published = false;
+        assert!(store
+            .with_semantic_snapshot(
+                &request,
+                RagVisibility::Shared,
+                &corpus.partition_digest,
+                &corpus.authority_digest,
+                || {
+                    published = true;
+                    Ok(())
+                },
+                || Ok(())
+            )
+            .is_err());
+        assert!(!published);
     }
 
     #[test]

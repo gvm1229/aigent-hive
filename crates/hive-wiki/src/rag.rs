@@ -903,13 +903,18 @@ pub fn semantic_partition_states_serialized(
     request: &RetrievalRequest,
 ) -> Result<Vec<SemanticPartitionState>, RagError> {
     validate_retrieval_request(request)?;
-    validate_serialized_index(bytes, manifest)?;
-    let connection = deserialize_connection(bytes)?;
-    let registry = verify_retrieval_snapshot(&connection, manifest, registry)?;
-    let partitions = semantic_partitions_from_connection(&connection, &registry, request)?;
+    PreparedRagIndex::from_serialized(bytes, manifest, registry)?.semantic_partition_states(request)
+}
+
+fn semantic_partition_states_from_connection(
+    connection: &Connection,
+    registry: &CollectionRegistry,
+    request: &RetrievalRequest,
+) -> Result<Vec<SemanticPartitionState>, RagError> {
+    let partitions = semantic_partitions_from_connection(connection, registry, request)?;
     // The complete SQLite bytes were authenticated above. Scope authority still comes
     // from the existing chunks/registry resolver, never from this optional derived cache.
-    if has_partition_digest_cache(&connection)? {
+    if has_partition_digest_cache(connection)? {
         let mut cached = Vec::new();
         let mut same_authority = true;
         for partition in &partitions {
@@ -920,7 +925,7 @@ pub fn semantic_partition_states_serialized(
             validate_sha256("cached semantic partition digest", &digest)?;
             validate_sha256("cached semantic authority digest", &authority)?;
             same_authority &=
-                authority == partition_authority_digest(&registry, &partition.collection_id)?;
+                authority == partition_authority_digest(registry, &partition.collection_id)?;
             cached.push(SemanticPartitionState {
                 partition: partition.clone(),
                 digest,
@@ -954,7 +959,7 @@ pub fn semantic_partition_states_serialized(
             digests.push(semantic_row_digest(&id, &digest, &title, &text)?);
         }
         let digest = finish_partition_digest(
-            &registry,
+            registry,
             &partition.collection_id,
             partition.visibility,
             &digests,
@@ -1723,6 +1728,32 @@ impl PreparedRagIndex {
         retrieve_from_connection(&self.connection, &self.manifest, &self.registry, request)
     }
 
+    /// Read authorized partition metadata from this already authenticated generation.
+    ///
+    /// # Errors
+    /// Rejects invalid requests, unauthorized scope metadata, and malformed cached digests.
+    pub fn semantic_partition_states(
+        &self,
+        request: &RetrievalRequest,
+    ) -> Result<Vec<SemanticPartitionState>, RagError> {
+        validate_retrieval_request(request)?;
+        semantic_partition_states_from_connection(&self.connection, &self.registry, request)
+    }
+
+    /// Extract one bounded corpus with this request's explicit scope authority.
+    ///
+    /// # Errors
+    /// Rejects invalid or unauthorized requests and oversized corpora. The store must
+    /// check live canonical freshness and consume build approval before calling this method.
+    pub fn semantic_corpus(
+        &self,
+        request: &RetrievalRequest,
+        visibility: RagVisibility,
+    ) -> Result<Vec<RetrievalHit>, RagError> {
+        validate_retrieval_request(request)?;
+        semantic_corpus_from_connection(&self.connection, &self.registry, request, visibility)
+    }
+
     /// Rehydrate candidates in this same authenticated generation with fresh request authority.
     ///
     /// # Errors
@@ -1784,10 +1815,17 @@ pub fn semantic_corpus_serialized(
     visibility: RagVisibility,
 ) -> Result<Vec<RetrievalHit>, RagError> {
     validate_retrieval_request(request)?;
-    validate_serialized_index(sqlite_bytes, expected_manifest)?;
-    let connection = deserialize_connection(sqlite_bytes)?;
-    let registry = verify_retrieval_snapshot(&connection, expected_manifest, registry)?;
-    let scope = resolve_scope(&registry, request)?;
+    PreparedRagIndex::from_serialized(sqlite_bytes, expected_manifest, registry)?
+        .semantic_corpus(request, visibility)
+}
+
+fn semantic_corpus_from_connection(
+    connection: &Connection,
+    registry: &CollectionRegistry,
+    request: &RetrievalRequest,
+    visibility: RagVisibility,
+) -> Result<Vec<RetrievalHit>, RagError> {
+    let scope = resolve_scope(registry, request)?;
     let target = scope
         .target_collection_id
         .as_deref()
@@ -1827,7 +1865,7 @@ pub fn semantic_corpus_serialized(
                 "semantic corpus exceeds build limits".to_owned(),
             ));
         }
-        hits.push(semantic_hit(&connection, candidate, 0.0)?);
+        hits.push(semantic_hit(connection, candidate, 0.0)?);
     }
     Ok(hits)
 }
@@ -4361,7 +4399,7 @@ fn validate_provenance(provenance: &ClaimProvenance) -> Result<(), RagError> {
     validate_sha256("provenance digest", &provenance.digest)
 }
 
-fn validate_retrieval_request(request: &RetrievalRequest) -> Result<(), RagError> {
+pub(crate) fn validate_retrieval_request(request: &RetrievalRequest) -> Result<(), RagError> {
     validate_bounded_text("query", &request.query, MAX_QUERY_BYTES)?;
     if request.query_expansions.len() > MAX_EXPANSIONS {
         return Err(RagError::InvalidInput(format!(
@@ -4821,14 +4859,30 @@ mod tests {
             byte_budget: 4096,
             confidential_collection_id: None,
         };
+        let prepared = PreparedRagIndex::from_serialized(
+            &artifact.sqlite_bytes,
+            &artifact.manifest,
+            &registry,
+        )
+        .expect("prepared");
         let corpus = |request: &RetrievalRequest, visibility| {
-            semantic_corpus_serialized(
+            let direct = semantic_corpus_serialized(
                 &artifact.sqlite_bytes,
                 &artifact.manifest,
                 &registry,
                 request,
                 visibility,
-            )
+            );
+            let resident = prepared.semantic_corpus(request, visibility);
+            match (&direct, &resident) {
+                (Ok(left), Ok(right)) => assert_eq!(
+                    serde_json::to_value(left).unwrap(),
+                    serde_json::to_value(right).unwrap()
+                ),
+                (Err(left), Err(right)) => assert_eq!(left.to_string(), right.to_string()),
+                _ => panic!("resident and serialized corpus outcomes differ"),
+            }
+            direct
         };
         let public = corpus(&request, RagVisibility::Shared).expect("public corpus");
         assert_eq!(public.len(), 1);
@@ -4840,6 +4894,8 @@ mod tests {
         request.confidential_collection_id = Some(secret);
         let confidential =
             corpus(&request, RagVisibility::Confidential).expect("authorized secret corpus");
+        request.confidential_collection_id = None;
+        assert!(corpus(&request, RagVisibility::Confidential).is_err());
         let matches: Vec<_> = public
             .iter()
             .chain(&private)
@@ -4862,12 +4918,6 @@ mod tests {
         .expect("FTS")
         .hits
         .is_empty());
-        let prepared = PreparedRagIndex::from_serialized(
-            &artifact.sqlite_bytes,
-            &artifact.manifest,
-            &registry,
-        )
-        .expect("prepared");
         let hydrate = |request: &RetrievalRequest, matches: &[SemanticMatch]| {
             let direct = semantic_matches_serialized(
                 &artifact.sqlite_bytes,
@@ -5054,6 +5104,12 @@ mod tests {
         assert!(
             semantic_partition_states_serialized(&bytes, &manifest, &registry, &request).is_err()
         );
+        assert!(
+            PreparedRagIndex::from_serialized(&bytes, &manifest, &registry)
+                .expect("valid index with missing cache row")
+                .semantic_partition_states(&request)
+                .is_err()
+        );
     }
 
     fn assert_cached_partition_parity(
@@ -5068,6 +5124,29 @@ mod tests {
             request,
         )
         .expect("cached");
+        let prepared =
+            PreparedRagIndex::from_serialized(&artifact.sqlite_bytes, &artifact.manifest, registry)
+                .expect("prepared cached");
+        assert_eq!(
+            current,
+            prepared.semantic_partition_states(request).unwrap()
+        );
+        let mut invalid = request.clone();
+        invalid.top_k = 0;
+        assert_eq!(
+            prepared
+                .semantic_partition_states(&invalid)
+                .unwrap_err()
+                .to_string(),
+            semantic_partition_states_serialized(
+                &artifact.sqlite_bytes,
+                &artifact.manifest,
+                registry,
+                &invalid,
+            )
+            .unwrap_err()
+            .to_string()
+        );
         let connection = deserialize_connection(&artifact.sqlite_bytes).expect("legacy copy");
         connection
             .execute("DROP TABLE semantic_partition_digests_v1", [])
@@ -5079,6 +5158,13 @@ mod tests {
             current,
             semantic_partition_states_serialized(&legacy, &manifest, registry, request)
                 .expect("legacy calculation")
+        );
+        assert_eq!(
+            current,
+            PreparedRagIndex::from_serialized(&legacy, &manifest, registry)
+                .expect("prepared legacy")
+                .semantic_partition_states(request)
+                .expect("legacy prepared calculation")
         );
         let lexical = retrieve_serialized(
             &artifact.sqlite_bytes,
