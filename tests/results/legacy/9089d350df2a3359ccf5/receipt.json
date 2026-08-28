@@ -1,0 +1,17 @@
+{
+  "binary_sha256": "5fac9c18bd87b731a7afa2a09634af9e7c07d81fcfec7bd4dda80bbe10687793",
+  "platform": "windows-x64",
+  "status": "passed",
+  "scope": "fresh synthetic frozen source; real parent/worker processes",
+  "observed_worker_pid": 50436,
+  "observed_worker_rss": 418926592,
+  "parent_pid": 53832,
+  "parent_exit": 1,
+  "child_terminated_by_parent_job": true,
+  "output_pipes_closed": true,
+  "active_control_unchanged_after_kill": true,
+  "trusted_active_reused": true,
+  "recovered_embedded": 0,
+  "canonical_and_fts_preserved": true,
+  "limit": "observed live native worker memory and parent death; no inference-phase instrumentation or Unix claim"
+}

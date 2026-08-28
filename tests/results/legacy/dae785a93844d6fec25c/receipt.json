@@ -1,0 +1,20 @@
+{
+  "binary_sha256": "2707deaea7c2dc215f99dee8ec56a6bb9ef86e58a6adfed2d9a2d160b3106ac9",
+  "platform": "win32",
+  "scope": "fresh synthetic fixture only",
+  "status": "passed",
+  "checks": [
+    "confidential build without current approval refused",
+    "fresh query frame preserves separate one-time build and query authority",
+    "public scope excludes private and confidential content; explicit private scope works",
+    "changed helper is refused and fresh FTS fallback remains functional"
+  ],
+  "canonical_registry_fts_unchanged": true,
+  "query_log_written": false,
+  "not_proven": [
+    "forced parent cancellation",
+    "50k performance",
+    "all operating systems",
+    "real confidential user data"
+  ]
+}

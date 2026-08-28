@@ -1,0 +1,9 @@
+{
+  "binary_sha256": "c0510318d44bae50bedf380da113856e6ac1316fade255e3592e381d52264b74",
+  "platform": "windows-x64",
+  "status": "failed",
+  "scope": "fresh synthetic frozen source; real parent/worker processes",
+  "error_type": "TimeoutExpired",
+  "reason": "Command '['<repository>\\\\target\\\\release\\\\hive.exe', 'source-wiki', 'vector', 'rebuild', '--target', '<repository>\\\\tests\\\\work\\\\vector-cancel-current-657d14iq\\\\source', '--language', 'en', '--max-seconds', '60', '--workers', '1', '--rebuild-mode', 'fresh', '--output', 'json']' timed out after 10 seconds",
+  "owned_worker_cleanup_required": true
+}

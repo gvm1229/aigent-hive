@@ -1,0 +1,38 @@
+{
+  "acceptance": "verified-workflow-disposable",
+  "failure": "the bounded retry did not succeed",
+  "finished_at": "2026-08-23T17:42:58.782792+00:00",
+  "hive_binary": "<repository>\\target\\debug\\hive.exe",
+  "limitations": [
+    "The host converts natural language into normalized routing facts; hive route does not ingest raw prompts.",
+    "Fresh-process canonical recovery is tested; the Codex desktop application itself is not restarted.",
+    "A host-owned Judge verdict receipt is verified, while authenticated quorum completion authority remains a separate protected-trust-root boundary."
+  ],
+  "provider_processes_started": 0,
+  "schema_version": 1,
+  "stable_release_attempted": false,
+  "started_at": "2026-08-23T17:42:58.394254+00:00",
+  "status": "failed",
+  "steps": [
+    {
+      "name": "natural-language-routing",
+      "normalized_signals": [
+        "dependency-graph",
+        "independent-verifier"
+      ],
+      "process_id": 54808,
+      "request_digest": "sha256:106272595bf1e7bc5eac28cf5c2c816f724a2a01718716e1d5de6d94e397db64",
+      "selected_skill": "verified-workflow",
+      "status": "passed"
+    },
+    {
+      "graph_digest": "sha256:0597baef2c88d1d3add59e27ab74540138e6760fa89a7d0f3bee7d8d4c52f587",
+      "initialize_process_id": 3312,
+      "name": "run-initialize-validate",
+      "run_id": "disposable-run",
+      "status": "passed",
+      "validate_process_id": 12788
+    }
+  ],
+  "work_directory": "<repository>\\tests\\work\\verified-workflow-acceptance-8dkzi35p"
+}
