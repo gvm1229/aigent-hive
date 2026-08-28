@@ -714,6 +714,84 @@ fn finish_partition_digest(
         .map_err(|_| RagError::InvalidInput("cannot fingerprint semantic partition".to_owned()))
 }
 
+fn has_partition_digest_cache(connection: &Connection) -> Result<bool, RagError> {
+    connection.query_row(
+        "SELECT EXISTS(SELECT 1 FROM sqlite_schema WHERE type='table' AND name='semantic_partition_digests_v1')",
+        [], |row| row.get(0),
+    ).map_err(sqlite_error)
+}
+
+fn partition_authority_digest(registry: &CollectionRegistry, id: &str) -> Result<String, RagError> {
+    let record = registry
+        .collections
+        .iter()
+        .find(|record| record.collection_id == id)
+        .ok_or_else(|| RagError::RepairRequired("semantic collection is absent".to_owned()))?;
+    serde_json::to_vec(record)
+        .map(|bytes| sha256_digest(&bytes))
+        .map_err(|_| RagError::InvalidInput("cannot fingerprint collection authority".to_owned()))
+}
+
+fn rebuild_partition_digest_cache(
+    connection: &Connection,
+    registry: &CollectionRegistry,
+) -> Result<(), RagError> {
+    connection
+        .execute_batch(
+            "CREATE TABLE IF NOT EXISTS semantic_partition_digests_v1(
+            collection_id TEXT NOT NULL, visibility TEXT NOT NULL, digest TEXT NOT NULL, authority_digest TEXT NOT NULL,
+            PRIMARY KEY(collection_id,visibility));
+         DELETE FROM semantic_partition_digests_v1;",
+        )
+        .map_err(sqlite_error)?;
+    let mut statement = connection
+        .prepare(
+            "SELECT collection_id,visibility,chunk_id,digest,title,text FROM chunks
+         ORDER BY collection_id,visibility,chunk_id",
+        )
+        .map_err(sqlite_error)?;
+    let rows = statement
+        .query_map([], |row| {
+            Ok((
+                row.get::<_, String>(0)?,
+                row.get::<_, String>(1)?,
+                row.get::<_, String>(2)?,
+                row.get::<_, String>(3)?,
+                row.get::<_, String>(4)?,
+                row.get::<_, String>(5)?,
+            ))
+        })
+        .map_err(sqlite_error)?;
+    let mut groups: BTreeMap<(String, String), Vec<String>> = BTreeMap::new();
+    for row in rows {
+        let (collection, visibility, id, digest, title, text) = row.map_err(sqlite_error)?;
+        groups
+            .entry((collection, visibility))
+            .or_default()
+            .push(semantic_row_digest(&id, &digest, &title, &text)?);
+    }
+    for ((collection, visibility), rows) in groups {
+        let digest = finish_partition_digest(
+            registry,
+            &collection,
+            RagVisibility::parse(&visibility)?,
+            &rows,
+        )?;
+        connection
+            .execute(
+                "INSERT INTO semantic_partition_digests_v1 VALUES (?1,?2,?3,?4)",
+                params![
+                    collection,
+                    visibility,
+                    digest,
+                    partition_authority_digest(registry, &collection)?
+                ],
+            )
+            .map_err(sqlite_error)?;
+    }
+    Ok(())
+}
+
 pub(crate) fn semantic_corpus_digest(
     registry: &CollectionRegistry,
     id: &str,
@@ -829,6 +907,31 @@ pub fn semantic_partition_states_serialized(
     let connection = deserialize_connection(bytes)?;
     let registry = verify_retrieval_snapshot(&connection, manifest, registry)?;
     let partitions = semantic_partitions_from_connection(&connection, &registry, request)?;
+    // The complete SQLite bytes were authenticated above. Scope authority still comes
+    // from the existing chunks/registry resolver, never from this optional derived cache.
+    if has_partition_digest_cache(&connection)? {
+        let mut cached = Vec::new();
+        let mut same_authority = true;
+        for partition in &partitions {
+            let (digest, authority): (String, String) = connection.query_row(
+                "SELECT digest,authority_digest FROM semantic_partition_digests_v1 WHERE collection_id=?1 AND visibility=?2",
+                params![partition.collection_id, partition.visibility.as_str()], |row| Ok((row.get(0)?,row.get(1)?)),
+            ).map_err(sqlite_error)?;
+            validate_sha256("cached semantic partition digest", &digest)?;
+            validate_sha256("cached semantic authority digest", &authority)?;
+            same_authority &=
+                authority == partition_authority_digest(&registry, &partition.collection_id)?;
+            cached.push(SemanticPartitionState {
+                partition: partition.clone(),
+                digest,
+            });
+        }
+        if same_authority {
+            return Ok(cached);
+        }
+        // Registry projection verification does not bind every location field. Recompute
+        // with the current full record after relocation; never return stale authority.
+    }
     let mut statement=connection.prepare("SELECT chunk_id,digest,title,text FROM chunks WHERE collection_id=?1 AND visibility=?2 ORDER BY chunk_id").map_err(sqlite_error)?;
     let mut result = Vec::new();
     for partition in partitions {
@@ -1404,6 +1507,7 @@ pub fn build_rag_index(snapshot: &RagSnapshot) -> Result<RagIndexArtifact, RagEr
             )
             .map_err(sqlite_error)?;
     }
+    rebuild_partition_digest_cache(&transaction, &canonical.registry)?;
     transaction.commit().map_err(sqlite_error)?;
     verify_projection(&connection, &manifest, &canonical.registry, chunks.len())?;
     let sqlite_bytes = connection
@@ -1547,6 +1651,7 @@ pub fn build_incremental_remote_rag_index(
             ],
         )
         .map_err(sqlite_error)?;
+    rebuild_partition_digest_cache(&transaction, &canonical.registry)?;
     transaction.commit().map_err(sqlite_error)?;
     let chunk_count = canonical
         .documents
@@ -4861,6 +4966,134 @@ mod tests {
         );
         request.confidential_collection_id = None;
         assert!(hydrate(&request, &matches).is_ok_and(|result| result.hits.is_empty()));
+    }
+
+    #[test]
+    fn partition_digest_cache_matches_legacy_and_incremental_generations() {
+        let registry = registry();
+        let alpha = collection_id(&registry, "alpha");
+        let mut snapshot = RagSnapshot {
+            schema_version: RAG_SCHEMA_VERSION,
+            generation: 1,
+            registry: registry.clone(),
+            documents: vec![
+                document(
+                    USER_ROOT_COLLECTION_ID,
+                    "public",
+                    "recover original notes",
+                    RagVisibility::Shared,
+                ),
+                document(
+                    &alpha,
+                    "private",
+                    "private notes",
+                    RagVisibility::ProjectPrivate,
+                ),
+            ],
+            claims: Vec::new(),
+        };
+        let request = RetrievalRequest {
+            scope: RetrievalScope::Global,
+            current_collection_id: None,
+            query: "notes".to_owned(),
+            query_expansions: Vec::new(),
+            top_k: 5,
+            byte_budget: 4096,
+            confidential_collection_id: None,
+        };
+        let initial = build_rag_index(&snapshot).expect("initial");
+        let before = assert_cached_partition_parity(&initial, &registry, &request);
+        assert_eq!(before.len(), 1);
+        let mut relocated = registry.clone();
+        relocated
+            .collections
+            .iter_mut()
+            .find(|record| record.collection_id == USER_ROOT_COLLECTION_ID)
+            .unwrap()
+            .local_locator = Some(
+            std::env::temp_dir()
+                .join("relocated-user-root")
+                .display()
+                .to_string(),
+        );
+        let moved = assert_cached_partition_parity(&initial, &relocated, &request);
+        assert_ne!(before, moved);
+        snapshot.generation = 2;
+        snapshot.documents[0] = document(
+            USER_ROOT_COLLECTION_ID,
+            "public",
+            "changed recovery notes",
+            RagVisibility::Shared,
+        );
+        snapshot.documents[0].revision = 2;
+        snapshot.documents[0].digest = document_digest(&snapshot.documents[0]);
+        let incremental = build_incremental_remote_rag_index(
+            &initial,
+            &snapshot,
+            &BTreeSet::from([snapshot.documents[0].document_id.clone()]),
+            &BTreeSet::new(),
+        )
+        .expect("incremental");
+        let full = build_rag_index(&snapshot).expect("full");
+        let after = assert_cached_partition_parity(&incremental, &registry, &request);
+        assert_ne!(before, after);
+        assert_eq!(
+            after,
+            assert_cached_partition_parity(&full, &registry, &request)
+        );
+        let connection = deserialize_connection(&full.sqlite_bytes).expect("read");
+        connection
+            .execute(
+                "DELETE FROM semantic_partition_digests_v1 WHERE visibility='shared'",
+                [],
+            )
+            .unwrap();
+        let bytes = connection.serialize(MAIN_DB).unwrap().to_vec();
+        let mut manifest = full.manifest.clone();
+        manifest.sqlite_digest = sha256_digest(&bytes);
+        assert!(
+            semantic_partition_states_serialized(&bytes, &manifest, &registry, &request).is_err()
+        );
+    }
+
+    fn assert_cached_partition_parity(
+        artifact: &RagIndexArtifact,
+        registry: &CollectionRegistry,
+        request: &RetrievalRequest,
+    ) -> Vec<SemanticPartitionState> {
+        let current = semantic_partition_states_serialized(
+            &artifact.sqlite_bytes,
+            &artifact.manifest,
+            registry,
+            request,
+        )
+        .expect("cached");
+        let connection = deserialize_connection(&artifact.sqlite_bytes).expect("legacy copy");
+        connection
+            .execute("DROP TABLE semantic_partition_digests_v1", [])
+            .unwrap();
+        let legacy = connection.serialize(MAIN_DB).unwrap().to_vec();
+        let mut manifest = artifact.manifest.clone();
+        manifest.sqlite_digest = sha256_digest(&legacy);
+        assert_eq!(
+            current,
+            semantic_partition_states_serialized(&legacy, &manifest, registry, request)
+                .expect("legacy calculation")
+        );
+        let lexical = retrieve_serialized(
+            &artifact.sqlite_bytes,
+            &artifact.manifest,
+            registry,
+            request,
+        )
+        .expect("new FTS");
+        let old_lexical =
+            retrieve_serialized(&legacy, &manifest, registry, request).expect("old FTS");
+        assert_eq!(
+            serde_json::to_value(lexical).unwrap(),
+            serde_json::to_value(old_lexical).unwrap()
+        );
+        current
     }
 
     #[test]
