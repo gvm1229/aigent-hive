@@ -50,6 +50,7 @@ class KnowledgeGraphContractTests(unittest.TestCase):
         self.assertEqual(report["relation_grounded_recall_at_10"], 1.0)
         self.assertFalse(report["canonical_changed"])
         self.assertFalse(report["current_canonical_changed"])
+        self.assertFalse(report["question_corpus_changed"])
         self.assertEqual(report["facts_revision"], "622f2b7b5411d054abd94c5443ce2b620231b240")
         self.assertEqual(report["question_corpus_digest"], "sha256:" + hashlib.sha256(
             (ROOT / "tests/fixtures/knowledge/vector-gold-120.json").read_bytes()

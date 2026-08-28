@@ -105,7 +105,9 @@ def main() -> int:
     repository = args.target.resolve()
     binary = args.hive.resolve()
     corpus_path = (repository / args.corpus).resolve() if not args.corpus.is_absolute() else args.corpus
-    corpus = json.loads(corpus_path.read_text(encoding="utf-8"))
+    corpus_bytes = corpus_path.read_bytes()
+    corpus_digest = "sha256:" + hashlib.sha256(corpus_bytes).hexdigest()
+    corpus = json.loads(corpus_bytes)
     exact = [item for item in corpus["queries"] if item["kind"] == "exact"]
     relation = [item for item in corpus["queries"] if item["kind"] == "relation"]
     if len(exact) != 30 or len(relation) != 30:
@@ -122,11 +124,11 @@ def main() -> int:
     with tempfile.TemporaryDirectory(prefix="source-graph-gold-", dir=work) as directory:
         target = Path(directory).resolve()
         frozen_source(repository, target)
-        return qualify(args, binary, target, repository, corpus_path, exact, relation,
+        return qualify(args, binary, target, repository, corpus_path, corpus_digest, exact, relation,
                        current_before, current_lint)
 
 
-def qualify(args, binary, target, repository, corpus_path, exact, relation,
+def qualify(args, binary, target, repository, corpus_path, corpus_digest, exact, relation,
             current_before, current_lint) -> int:
 
     before = tree_digest(target)
@@ -226,7 +228,8 @@ def qualify(args, binary, target, repository, corpus_path, exact, relation,
     report = {
         "schema_version": 1,
         "facts_revision": CORPUS_FACTS_REVISION,
-        "question_corpus_digest": "sha256:" + hashlib.sha256(corpus_path.read_bytes()).hexdigest(),
+        "question_corpus_digest": corpus_digest,
+        "question_corpus_changed": "sha256:" + hashlib.sha256(corpus_path.read_bytes()).hexdigest() != corpus_digest,
         "current_source_lint": current_lint,
         "frozen_source_lint": frozen_lint,
         "current_canonical_changed": tree_digest(repository) != current_before,
@@ -254,6 +257,7 @@ def qualify(args, binary, target, repository, corpus_path, exact, relation,
         or report["cold_cli_p95_ms"] > 2000
         or report["canonical_changed"]
         or report["current_canonical_changed"]
+        or report["question_corpus_changed"]
         or current_lint["data"]["error_count"] != 0
         or current_lint["data"]["warning_count"] != 0
         or frozen_lint["data"]["error_count"] != 0
