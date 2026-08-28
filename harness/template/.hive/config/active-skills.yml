@@ -78,7 +78,7 @@ skills:
   consent_digest: null
 - name: knowledge-maintain
   source_type: built-in
-  content_digest: sha256:b256ce39fd89ba9e1e472ea6eb2fae2e507fbe905e62802f9387fb542d94a7b8
+  content_digest: sha256:64ed85e443785e97560031f6d64930836f3e349dd5b1b873e22376f76d6b0fd8
   side_effect_class: project-write
   capabilities:
   - filesystem-read

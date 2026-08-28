@@ -64,6 +64,11 @@ use the user root as both `--target` and `--user-root`.
   A failed or unfinished generation must not replace the active one. Use `rollback` for the
   previous verified generation or `disable` to return to FTS-only operation; preserve canonical
   Markdown, registry and project settings.
+- For several explicitly selected, already enabled shared scopes on the same runtime, replace
+  `--collection` with `--collections <JSON-array>`. Keep `--visibility shared`; never include
+  private/confidential or source scopes. Inspect each returned scope state and retry only
+  unfinished scopes. `prepared-not-started` may have restored working files but no new calculation.
+  Increase the bounded time budget if preparation prevented progress; a failed window is not success.
 - Confidential construction needs its own current-action `authorize-build` grant for the exact
   operation and execution budget. Never reuse query consent, broaden visibility, or build another
   private collection. Follow CLI help for the current approval envelope rather than inventing it.
