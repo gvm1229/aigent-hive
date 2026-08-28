@@ -419,6 +419,54 @@ impl VectorFiles {
         Ok(())
     }
 
+    /// Remove a redundant mutable copy only while an exact immutable recovery copy still exists.
+    /// The caller holds the scope writer lease. Missing staging is already clean.
+    ///
+    /// # Errors
+    /// Rejects links, sidecars, drift, absent recovery bytes, and failed removal.
+    pub fn discard_staging_copy(
+        &self,
+        scope: &str,
+        recovery: DatabaseKind<'_>,
+        expected: &str,
+    ) -> Result<(), WikiError> {
+        if matches!(recovery, DatabaseKind::Staging) {
+            return Err(WikiError::InvalidInput(
+                "staging cannot authenticate itself".to_owned(),
+            ));
+        }
+        let relative = self.database_relative(scope, DatabaseKind::Staging)?;
+        let Some((parent, name)) = capability_parent(&self.root.dir, &relative, false)? else {
+            return Ok(());
+        };
+        for suffix in ["-journal", "-wal", "-shm"] {
+            match parent
+                .symlink_metadata(OsStr::new(&format!("{}{suffix}", name.to_string_lossy())))
+            {
+                Err(error) if error.kind() == std::io::ErrorKind::NotFound => (),
+                Err(error) => return Err(io_error(error)),
+                Ok(_) => {
+                    return Err(WikiError::Verification(
+                        "staging recovery sidecar must be retained".to_owned(),
+                    ))
+                }
+            }
+        }
+        match parent.symlink_metadata(&name) {
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(()),
+            Err(error) => return Err(io_error(error)),
+            Ok(_) => (),
+        }
+        if self.database_digest(scope, recovery)? != expected
+            || self.database_digest(scope, DatabaseKind::Staging)? != expected
+        {
+            return Err(WikiError::Conflict(
+                "staging is not an exact redundant recovery copy".to_owned(),
+            ));
+        }
+        parent.remove_file(&name).map_err(io_error)
+    }
+
     /// Copy an authenticated snapshot without aliasing its inode or replacing an existing destination.
     ///
     /// # Errors
@@ -834,6 +882,79 @@ mod tests {
         assert!(files
             .retire_database(&scope, DatabaseKind::Staging, &digest)
             .is_err());
+    }
+
+    #[test]
+    fn staging_cleanup_requires_a_verified_immutable_recovery_copy() {
+        let root = temporary();
+        let files = VectorFiles::open(root.path(), false).expect("files");
+        let scope = "a".repeat(64);
+        let stage = files.prepare_staging(&scope).expect("stage");
+        let digest = sha256_digest(b"recoverable bytes");
+        fs::write(&stage, b"recoverable bytes").expect("stage bytes");
+        let id = VectorFiles::fresh_snapshot_id();
+        let kind = DatabaseKind::Generation(&id);
+        assert!(files.discard_staging_copy(&scope, kind, &digest).is_err());
+        files
+            .copy_database(&scope, DatabaseKind::Staging, kind, &digest)
+            .expect("recovery copy");
+        let recovery = files.database_path(&scope, kind).expect("path");
+        let note = stage.with_file_name("user-note.txt");
+        fs::write(&note, b"preserve").expect("note");
+        #[cfg(windows)]
+        {
+            use std::os::windows::fs::OpenOptionsExt;
+            let held = fs::OpenOptions::new()
+                .read(true)
+                .share_mode(3)
+                .open(&stage)
+                .unwrap();
+            assert!(files.discard_staging_copy(&scope, kind, &digest).is_err());
+            assert!(stage.exists() && recovery.exists());
+            drop(held);
+        }
+        files
+            .discard_staging_copy(&scope, kind, &digest)
+            .expect("cleanup");
+        assert!(!stage.exists());
+        assert_eq!(fs::read(&recovery).unwrap(), b"recoverable bytes");
+        assert_eq!(fs::read(&note).unwrap(), b"preserve");
+        files
+            .discard_staging_copy(&scope, kind, &digest)
+            .expect("idempotent retry");
+        fs::write(&stage, b"changed staging").unwrap();
+        assert!(files.discard_staging_copy(&scope, kind, &digest).is_err());
+        assert_eq!(fs::read(&stage).unwrap(), b"changed staging");
+        fs::remove_file(&stage).unwrap();
+        fs::hard_link(&recovery, &stage).unwrap();
+        assert!(files.discard_staging_copy(&scope, kind, &digest).is_err());
+        assert!(stage.exists());
+    }
+
+    #[test]
+    fn staging_cleanup_retains_orphan_journals_for_quarantine() {
+        let root = temporary();
+        let files = VectorFiles::open(root.path(), false).expect("files");
+        let scope = "a".repeat(64);
+        let stage = files.prepare_staging(&scope).expect("stage");
+        let journal = stage.with_file_name("staging.sqlite3-journal");
+        fs::write(&journal, b"interrupted").unwrap();
+        let id = VectorFiles::fresh_snapshot_id();
+        assert!(files
+            .discard_staging_copy(
+                &scope,
+                DatabaseKind::Generation(&id),
+                &sha256_digest(b"none")
+            )
+            .is_err());
+        assert_eq!(fs::read(&journal).unwrap(), b"interrupted");
+        assert_eq!(
+            files
+                .quarantine_staging(&scope)
+                .expect("retain journal")
+                .len(),
+            1
+        );
     }
 
     #[test]

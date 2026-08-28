@@ -172,6 +172,7 @@ class Qualification:
         assert tree_snapshot(target) == before_consent
         self.call("knowledge", "vector", "enable", *scope, "--python", python,
                   "--consent-digest", preview["consent_digest"])
+        assert not any(path.is_file() for path in (target / ".hive/index/vector/work").rglob("*"))
         for _ in range(10):
             built = self.call("knowledge", "vector", "rebuild", *scope,
                               "--max-seconds", "10", "--workers", "2")
@@ -180,6 +181,8 @@ class Qualification:
         else:
             raise RuntimeError("bounded fixture did not complete within ten rebuild calls")
         assert built["chunks"] == 8
+        assert not built["cleanup_pending"]
+        assert not list((target / ".hive/index/vector/scopes").rglob("staging.sqlite3"))
         ready = self.call("knowledge", "vector", "status", *scope)
         assert ready["runtime_verified"] and ready["index_ready"]
         found = self.call(*query, "--mode", "semantic")
@@ -199,6 +202,10 @@ class Qualification:
         assert after_rollback["active"] == before_rollback["previous"]
         assert after_rollback["previous"] == before_rollback["active"]
         assert self.call(*query, "--mode", "semantic")["search"]["used"] == ["fts", "vector"]
+        fresh = self.call("knowledge", "vector", "rebuild", *scope, "--rebuild-mode", "fresh", "--max-seconds", "10", "--workers", "2")
+        assert fresh["complete"] and fresh["embedded"] == 8 and not fresh["cleanup_pending"]
+        assert not list((target / ".hive/index/vector/scopes").rglob("staging.sqlite3"))
+        assert not list((target / ".hive/index/vector/scopes").rglob("quarantine-*"))
         control = json.loads(controls[0].read_bytes())
         runtimes = target / ".hive/index/vector/runtimes"
         # Discover the worker only inside the exact approved runtime, never in another scope.

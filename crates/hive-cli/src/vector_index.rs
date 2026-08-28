@@ -199,7 +199,7 @@ fn restore_staging(target: &Target, control: &ScopeControl) -> Result<Option<Str
         {
             return Ok(Some(snapshot.database_digest.clone()));
         }
-        target.files.quarantine_staging(&target.scope_id)?;
+        clear_or_quarantine_staging(target, control)?;
         target.files.copy_database(
             &target.scope_id,
             kind,
@@ -208,8 +208,37 @@ fn restore_staging(target: &Target, control: &ScopeControl) -> Result<Option<Str
         )?;
         return Ok(Some(snapshot.database_digest.clone()));
     }
-    target.files.quarantine_staging(&target.scope_id)?;
+    clear_or_quarantine_staging(target, control)?;
     Ok(None)
+}
+
+fn clear_or_quarantine_staging(target: &Target, control: &ScopeControl) -> Result<(), WikiError> {
+    for (snapshot, kind) in control
+        .checkpoint
+        .iter()
+        .map(|item| (item, DatabaseKind::Checkpoint(item.id.as_str())))
+        .chain(
+            control
+                .active
+                .iter()
+                .chain(control.previous.iter())
+                .map(|item| (item, DatabaseKind::Generation(item.id.as_str()))),
+        )
+    {
+        if target
+            .files
+            .discard_staging_copy(&target.scope_id, kind, &snapshot.database_digest)
+            .is_ok()
+        {
+            return Ok(());
+        }
+    }
+    // Corrupt or unrecognized working bytes remain recoverable. Never infer deletion
+    // authority from an untrusted file's own embedded checksum or SQLite metadata.
+    target
+        .files
+        .quarantine_staging(&target.scope_id)
+        .map(|_| ())
 }
 
 fn publish(
@@ -307,7 +336,7 @@ pub(super) fn rebuild(target: &Target, options: &[(&str, &str)]) -> Result<Value
     let expected = match optional(options, "--rebuild-mode").unwrap_or("resume") {
         "resume" => restore_staging(target, &before)?,
         "fresh" => {
-            target.files.quarantine_staging(&target.scope_id)?;
+            clear_or_quarantine_staging(target, &before)?;
             None
         }
         _ => return Err(invalid("--rebuild-mode must be resume or fresh")),
@@ -371,9 +400,15 @@ pub(super) fn rebuild(target: &Target, options: &[(&str, &str)]) -> Result<Value
         &after,
     )?;
     let cleanup_pending = clean_retired(target, &after);
+    // If removal fails, the published active/checkpoint receipt remains the durable retry
+    // authority. The next rebuild either reuses these exact bytes or retains their corruption.
+    let staging_cleanup_pending = target
+        .files
+        .discard_staging_copy(&target.scope_id, kind, &snapshot.database_digest)
+        .is_err();
     Ok(
         json!({"complete":result.complete,"phase":result.phase,"embedded":result.embedded,"remaining":result.remaining,
-        "cleanup_pending":cleanup_pending,
+        "cleanup_pending":cleanup_pending || staging_cleanup_pending,
         "workers":workers,
         "chunks":result.chunks,"snapshot_id":snapshot.id,"database_digest":snapshot.database_digest,
         "manifest_digest":snapshot.manifest_digest,"worker_seconds":result.elapsed_seconds,
@@ -510,6 +545,7 @@ mod tests {
     };
 
     #[test]
+    #[allow(clippy::too_many_lines)] // Keep the interruption, cleanup, and authenticated retry in one lifecycle.
     fn killed_mutable_cache_restores_only_an_externally_authenticated_copy() {
         let base = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/work");
         let root = tempfile::tempdir_in(base).expect("root");
@@ -594,6 +630,17 @@ mod tests {
             .files
             .database_path(&target.scope_id, DatabaseKind::Checkpoint(&snapshot.id))
             .expect("path");
+        let retained_before = fs::read_dir(stage.parent().unwrap()).unwrap().count();
+        clear_or_quarantine_staging(&target, &control).expect("discard redundant stage");
+        assert!(!stage.exists());
+        assert_eq!(
+            fs::read_dir(stage.parent().unwrap()).unwrap().count(),
+            retained_before - 1
+        );
+        assert_eq!(
+            restore_staging(&target, &control).expect("restore without mutable cache"),
+            Some(digest)
+        );
         fs::write(checkpoint, b"forged cache with matching internal checksums")
             .expect("corruption");
         assert_eq!(
