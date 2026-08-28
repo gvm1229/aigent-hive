@@ -8,7 +8,7 @@ use super::{
 use hive_wiki::store::{RagStore, SharedSemanticPublication};
 use hive_wiki::WikiError;
 use serde::Deserialize;
-use serde_json::{json, Value};
+use serde_json::{json, Map, Value};
 use std::time::{Duration, Instant};
 
 #[cfg(test)]
@@ -94,6 +94,7 @@ mod tests {
             .write_control(Some(&targets[1].scope_id), Some(&controls[1].1), &altered)
             .expect("external update");
         drop(lease);
+        let mut phases = serde_json::Map::new();
         let error = super::run_window(
             &targets,
             &controls,
@@ -101,9 +102,14 @@ mod tests {
             1,
             std::time::Instant::now(),
             Duration::from_mins(1),
+            &mut phases,
         )
         .expect_err("stale preflight");
         assert!(error.to_string().contains("changed after list validation"));
+        assert_eq!(
+            phases.keys().map(String::as_str).collect::<Vec<_>>(),
+            ["preparation"]
+        );
         for target in &targets {
             assert!(!target
                 .files
@@ -138,6 +144,29 @@ mod tests {
         assert_eq!(remaining_seconds(Duration::from_nanos(999_999_999)), 1);
         assert_eq!(remaining_seconds(Duration::from_secs(1)), 1);
         assert_eq!(remaining_seconds(Duration::from_nanos(1_000_000_001)), 2);
+    }
+
+    #[test]
+    fn phase_timing_preserves_success_and_error_without_recording_payloads() {
+        let mut phases = serde_json::Map::new();
+        let value = super::measure_phase(&mut phases, "first", || Ok(42)).expect("success");
+        assert_eq!(value, 42);
+        let result = super::measure_phase(&mut phases, "second", || {
+            Err::<(), _>(hive_wiki::WikiError::Verification(
+                "private-payload".to_owned(),
+            ))
+        });
+        assert!(result
+            .expect_err("same failure")
+            .to_string()
+            .contains("private-payload"));
+        assert_eq!(phases.len(), 2);
+        assert!(phases.values().all(|value| value
+            .as_f64()
+            .is_some_and(|seconds| seconds.is_finite() && seconds >= 0.0)));
+        assert!(!serde_json::to_string(&phases)
+            .expect("timings")
+            .contains("private-payload"));
     }
 
     #[test]
@@ -186,6 +215,17 @@ fn remaining_seconds(left: Duration) -> usize {
     usize::try_from(left.as_secs() + u64::from(left.subsec_nanos() != 0)).unwrap_or(0)
 }
 
+fn measure_phase<T>(
+    phases: &mut Map<String, Value>,
+    name: &str,
+    operation: impl FnOnce() -> Result<T, WikiError>,
+) -> Result<T, WikiError> {
+    let started = Instant::now();
+    let result = operation();
+    phases.insert(name.to_owned(), json!(started.elapsed().as_secs_f64()));
+    result
+}
+
 pub(super) fn rebuild_many(
     targets: &[Target],
     options: &[(&str, &str)],
@@ -225,6 +265,8 @@ pub(super) fn rebuild_many(
     {
         return Err(invalid("shared scopes require the same approved runtime"));
     }
+    let preflight_seconds = started.elapsed().as_secs_f64();
+    let mut windows = Vec::new();
     let mut results = Vec::new();
     let mut failure = None;
     let mut touched = false;
@@ -239,14 +281,19 @@ pub(super) fn rebuild_many(
             break;
         }
         touched = true;
-        match run_window(
+        let window_started = Instant::now();
+        let mut phases = Map::new();
+        let result = run_window(
             window,
             &controls[offset..offset + window.len()],
             fresh,
             workers,
             started,
             budget,
-        ) {
+            &mut phases,
+        );
+        windows.push(json!({"offset":offset,"elapsed_seconds":window_started.elapsed().as_secs_f64(),"phase_seconds":phases}));
+        match result {
             Ok(rows) => results.extend(rows),
             Err(error) => {
                 failure = Some(
@@ -270,6 +317,7 @@ pub(super) fn rebuild_many(
     Ok(
         json!({"complete":complete,"failed":failure.is_some(),"failure":failure,"scopes":results,
         "workers":workers,"max_seconds":seconds,"window_size":16,"elapsed_seconds":started.elapsed().as_secs_f64(),
+        "timing":{"preflight_seconds":preflight_seconds,"windows":windows},
         "fts_unchanged":true,"changed_paths":if touched {changed_paths(&targets[0],true)} else {Vec::new()}}),
     )
 }
@@ -281,6 +329,7 @@ fn run_window(
     workers: usize,
     started: Instant,
     budget: Duration,
+    phases: &mut Map<String, Value>,
 ) -> Result<Vec<Value>, WikiError> {
     // parse_shared_targets sorts IDs; retain that order across every writer lease.
     if targets
@@ -289,31 +338,37 @@ fn run_window(
     {
         return Err(invalid("shared writer scopes must be unique and sorted"));
     }
-    let _leases = targets
-        .iter()
-        .map(|target| target.files.writer(Some(&target.scope_id)))
-        .collect::<Result<Vec<_>, _>>()?;
-    for (target, (_, expected_digest)) in targets.iter().zip(expected) {
-        let (control, digest) = scope_control(target)?;
-        if digest.as_deref() != Some(expected_digest.as_str())
-            || !control.is_some_and(|control| control.enabled)
-        {
-            return Err(invalid("shared scope changed after list validation"));
-        }
-    }
     let runtime = &expected[0].0.runtime;
-    verify_runtime(&targets[0].files, runtime)?;
-    let requests = targets
-        .iter()
-        .map(collection_request)
-        .collect::<Result<Vec<_>, _>>()?;
-    let store = RagStore::open(targets[0].files.root_path())?;
-    let corpora = store
-        .shared_semantic_corpora(&requests)?
-        .into_iter()
-        .zip(requests)
-        .map(|(corpus, request)| collection_corpus(corpus, request))
-        .collect::<Vec<_>>();
+    let _leases = measure_phase(phases, "preparation", || {
+        let leases = targets
+            .iter()
+            .map(|target| target.files.writer(Some(&target.scope_id)))
+            .collect::<Result<Vec<_>, _>>()?;
+        for (target, (_, expected_digest)) in targets.iter().zip(expected) {
+            let (control, digest) = scope_control(target)?;
+            if digest.as_deref() != Some(expected_digest.as_str())
+                || !control.is_some_and(|control| control.enabled)
+            {
+                return Err(invalid("shared scope changed after list validation"));
+            }
+        }
+        verify_runtime(&targets[0].files, runtime)?;
+        Ok(leases)
+    })?;
+    let (store, corpora) = measure_phase(phases, "corpus", || {
+        let requests = targets
+            .iter()
+            .map(collection_request)
+            .collect::<Result<Vec<_>, _>>()?;
+        let store = RagStore::open(targets[0].files.root_path())?;
+        let corpora = store
+            .shared_semantic_corpora(&requests)?
+            .into_iter()
+            .zip(requests)
+            .map(|(corpus, request)| collection_corpus(corpus, request))
+            .collect::<Vec<_>>();
+        Ok((store, corpora))
+    })?;
     if remaining(started, budget) == 0 {
         return Ok(targets
             .iter()
@@ -321,17 +376,20 @@ fn run_window(
             .collect());
     }
     let work = (|| {
-        let mut databases = Vec::new();
-        for ((target, (before, _)), corpus) in targets.iter().zip(expected).zip(&corpora) {
-            let digest = if fresh {
-                clear_or_quarantine_staging(target, before)?;
-                None
-            } else {
-                restore_staging(target, before)?
-            };
-            let database = target.files.prepare_staging(&target.scope_id)?;
-            databases.push(json!({"database":database,"chunks":corpus.chunks,"manifest_digest":corpus.manifest_digest,"expected_database_digest":digest}));
-        }
+        let databases = measure_phase(phases, "staging", || {
+            let mut databases = Vec::new();
+            for ((target, (before, _)), corpus) in targets.iter().zip(expected).zip(&corpora) {
+                let digest = if fresh {
+                    clear_or_quarantine_staging(target, before)?;
+                    None
+                } else {
+                    restore_staging(target, before)?
+                };
+                let database = target.files.prepare_staging(&target.scope_id)?;
+                databases.push(json!({"database":database,"chunks":corpus.chunks,"manifest_digest":corpus.manifest_digest,"expected_database_digest":digest}));
+            }
+            Ok(databases)
+        })?;
         let seconds = remaining(started, budget);
         if seconds == 0 {
             return Ok(targets
@@ -339,26 +397,35 @@ fn run_window(
                 .map(|target| state(target, "prepared-not-started"))
                 .collect());
         }
-        let request = json!({"schema_version":1,"action":"build-many","runtime":targets[0].files.runtime_path(&runtime.id)?,
+        let output = measure_phase(phases, "worker", || {
+            let request = json!({"schema_version":1,"action":"build-many","runtime":targets[0].files.runtime_path(&runtime.id)?,
             "contract_digest":runtime.contract_digest,"workers":workers,"max_seconds":seconds,"databases":databases});
-        if serde_json::to_vec(&request).map_err(io_error)?.len() > 256 * 1024 * 1024 {
-            return Err(invalid("serialized vector window exceeds input limit"));
-        }
-        let value = worker(
-            &targets[0].files,
-            runtime,
-            request,
-            u64::try_from(seconds).map_err(io_error)? + 35,
-        )?;
-        let output: WindowResult = serde_json::from_value(value).map_err(io_error)?;
-        publish_window(targets, expected, &corpora, output, workers, &store)
+            if serde_json::to_vec(&request).map_err(io_error)?.len() > 256 * 1024 * 1024 {
+                return Err(invalid("serialized vector window exceeds input limit"));
+            }
+            let value = worker(
+                &targets[0].files,
+                runtime,
+                request,
+                u64::try_from(seconds).map_err(io_error)? + 35,
+            )?;
+            serde_json::from_value::<WindowResult>(value).map_err(io_error)
+        })?;
+        measure_phase(phases, "publication", || {
+            publish_window(targets, expected, &corpora, output, workers, &store)
+        })
     })();
     if work.is_err() {
         // A failed worker response authenticates none of this window's working files.
         // Keep every file recoverable and attempt all quarantines while leases are held.
+        let recovery_started = Instant::now();
         for target in targets {
             let _ = target.files.quarantine_staging(&target.scope_id);
         }
+        phases.insert(
+            "recovery".to_owned(),
+            json!(recovery_started.elapsed().as_secs_f64()),
+        );
     }
     work
 }
