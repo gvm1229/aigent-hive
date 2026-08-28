@@ -286,12 +286,38 @@ def build(args: argparse.Namespace) -> dict[str, object]:
     return result
 
 
+def exact_ranks_preserved(evidence: dict[str, object]) -> bool:
+    """Require every frozen exact query; mean recall cannot conceal a lower rank."""
+    source = Path(__file__).resolve().parents[1] / "tests/fixtures/knowledge/vector-gold-120.json"
+    payload = source.read_bytes()
+    if hashlib.sha256(payload).hexdigest() != "ee6e1f364fb4bba428c3cef81f3e7c6e3f687812ef0b42bc5ec63805a580fd97":
+        return False
+    expected = {row["id"] for row in json.loads(payload)["queries"] if row["kind"] == "exact"}
+    rows = evidence.get("exact_rank_comparisons")
+    recall = evidence.get("hybrid_exact_recall_at_10")
+    if type(recall) not in (int, float) or recall != 1.0 or not isinstance(rows, list) or len(rows) != len(expected):
+        return False
+    seen = set()
+    for row in rows:
+        if not isinstance(row, dict) or set(row) != {"query_id", "fts_rank", "hybrid_rank"}:
+            return False
+        identity, baseline, hybrid = row["query_id"], row["fts_rank"], row["hybrid_rank"]
+        if not isinstance(identity, str) or identity not in expected or identity in seen:
+            return False
+        if type(hybrid) is not int or not 1 <= hybrid <= 10:
+            return False
+        if baseline is not None and (type(baseline) is not int or not 1 <= baseline <= 10 or hybrid > baseline):
+            return False
+        seen.add(identity)
+    return seen == expected
+
+
 def decide(args: argparse.Namespace) -> dict[str, object]:
     evidence = json.loads(args.evidence.read_text(encoding="utf-8"))
     checks = {
         "semantic_quality": evidence["semantic_improvement_points"] >= 15
         and evidence["semantic_recall_at_10"] >= 0.90,
-        "exact_regression": evidence["hybrid_exact_recall_at_10"] == 1.0,
+        "exact_regression": exact_ranks_preserved(evidence),
         "warm_query": evidence["warm_query_p95_ms"] <= 500,
         "cold_query": evidence["cold_query_p95_ms"] <= 2_000,
         "full_build": evidence.get("full_build_50000_seconds") is not None

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import copy
 import json
 import subprocess
 import sys
@@ -150,6 +151,38 @@ class VectorRequalificationContract(unittest.TestCase):
         self.assertFalse(result["product_dependencies_added"])
         self.assertIn("full_build", result["failed_checks"])
         self.assertIn("platforms", result["failed_checks"])
+
+    def test_exact_gate_cannot_hide_per_question_rank_loss_or_missing_evidence(self) -> None:
+        comparisons = [{"query_id":row["id"],"fts_rank":1,"hybrid_rank":1}
+                       for row in json.loads(SOURCE.read_text("utf-8"))["queries"] if row["kind"] == "exact"]
+        comparisons[0].update(fts_rank=4, hybrid_rank=1)
+        valid = {"semantic_improvement_points":16.7,"semantic_recall_at_10":0.967,
+                 "hybrid_exact_recall_at_10":1.0,"exact_rank_comparisons":comparisons,
+                 "warm_query_p95_ms":400,"cold_query_p95_ms":1800,"full_build_50000_seconds":500,
+                 "incremental_100_seconds":20,"index_bytes":200000000,"scope_leaks":0,
+                 "network_calls":0,"provider_api_calls":0,"fts_fallback_failures":0,
+                 "resume_equivalent":True,"accepted_platforms":["windows-x64","macos-arm64","linux-musl-x64"]}
+        cases = [("valid",valid,True)]
+        for name in ("lower-rank","missing-row","duplicate","wrong-id","boolean-rank","zero-rank","missing-all"):
+            evidence = copy.deepcopy(valid)
+            rows = evidence["exact_rank_comparisons"]
+            if name == "lower-rank": rows[1]["hybrid_rank"] = 2
+            elif name == "missing-row": rows.pop()
+            elif name == "duplicate": rows[-1] = rows[0].copy()
+            elif name == "wrong-id": rows[-1]["query_id"] = "not-the-frozen-query"
+            elif name == "boolean-rank": rows[0]["hybrid_rank"] = True
+            elif name == "zero-rank": rows[0]["hybrid_rank"] = 0
+            else: del evidence["exact_rank_comparisons"]
+            cases.append((name,evidence,False))
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for name, evidence, passed in cases:
+                with self.subTest(name=name):
+                    path = root / (name+".json")
+                    path.write_text(json.dumps(evidence),encoding="utf-8")
+                    result = self.run_script("decide","--evidence",str(path),"--output",str(root/(name+"-decision.json")))
+                    self.assertEqual(result["checks"]["exact_regression"],passed)
+                    self.assertEqual(result["decision"],"adopt" if passed else "defer")
 
     def test_scope_indexes_use_distinct_physical_roots(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
