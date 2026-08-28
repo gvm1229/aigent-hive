@@ -19,7 +19,7 @@ sources:
   - "repo:docs/research/vector-product-integration-2026-08-28.md#sha256:ed0e299d465593ea0030e796b015a37c5a243914d9028ca1551769e70b9ae498"
   - "repo:docs/research/vector-requalification-0.10-2026-08-24.md#sha256:8e7a9a70df255694b10bc88b9dadb40619ad36f74d20902b06dea1db556f595e"
 links: [global-knowledge-rag, graphify-0-10-adoption, knowledge-storage, v0-10-product-scope]
-reviewed_revision: "git:74ede391133d6c92511774e8ee2957768ce70f05"
+reviewed_revision: "git:f1f1c04c2fde76c5426a1e7a91c22b68c8e87753"
 status: active
 ---
 
@@ -28,8 +28,8 @@ status: active
 The vector branch preserves canonical Markdown and FTS. Local embedding needs consent;
 confidential query and build approvals remain separate. MiniLM passes original and independent
 semantic recall gates. Windows parallel builds of 50,000 chunks in 100 collections pass at 577.810
-seconds with exact vectors and 442.8 MB. The earlier serial 100-change test fails at 95.943
+seconds with exact vectors and 442.8 MB. The parallel 100-change test fails at 56.313
 seconds. One CPU class, shared models and parallel publication checks are implemented.
-New incremental and query measurements remain required. Component timing does not prove query latency.
+Bounded read buffers preserve EOF checks. Final query and rebuild measurements remain required.
 Fresh authority, canonical and byte checks remain. Stable release needs explicit approval.
 Literal FTS order protection removes all six exact-rank losses; exact MRR stays at 0.975.

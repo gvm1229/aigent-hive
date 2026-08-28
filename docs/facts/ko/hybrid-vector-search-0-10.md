@@ -19,7 +19,7 @@ sources:
   - "repo:docs/research/vector-product-integration-2026-08-28.md#sha256:ed0e299d465593ea0030e796b015a37c5a243914d9028ca1551769e70b9ae498"
   - "repo:docs/research/vector-requalification-0.10-2026-08-24.md#sha256:8e7a9a70df255694b10bc88b9dadb40619ad36f74d20902b06dea1db556f595e"
 links: [global-knowledge-rag, graphify-0-10-adoption, knowledge-storage, v0-10-product-scope]
-reviewed_revision: "git:74ede391133d6c92511774e8ee2957768ce70f05"
+reviewed_revision: "git:f1f1c04c2fde76c5426a1e7a91c22b68c8e87753"
 status: active
 ---
 
@@ -28,8 +28,9 @@ status: active
 전용 벡터 브랜치에서도 Markdown 정본·FTS 유지. 로컬 임베딩은 별도 동의,
 기밀 조회·생성 승인은 분리.
 MiniLM의 원본·독립 의미 질문 정답 포함률 기준 통과. Windows 병렬 생성은 5만 청크·100개 모음
-577.810초, 벡터 바이트 일치·누적 442.8MB로 통과. 이전 순차 증분 95.943초는 미달.
-동일 CPU 종류 사용·모델 공유·게시 검사 병렬화 구현. 새 증분·전체 검색 실측 필요.
+577.810초, 벡터 바이트 일치·누적 442.8MB로 통과. 병렬 증분 56.313초는 미달.
+같은 CPU 종류·모델 공유·게시 병렬 검사·EOF 보존 버퍼 적용.
+최종 재생성·증분·검색 실측 필요.
 계산 구간만의 시간으로 전체 검색 속도 증명 금지. 새 권한·정본·바이트 검사 유지.
 정확 조회의 FTS 순서 보호 뒤 원본 30개 순위 손실 0개·평균 역순위 0.975 유지.
 안정판은 별도 명시 승인 전 금지.
