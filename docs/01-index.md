@@ -65,6 +65,7 @@ current catalog.
 | [Guide 안내](guides/README.md) | Guide MOC |
 | [Development](guides/development.md) | Dependency·build·test |
 | [Test lanes](guides/test-lanes.md) | Python 대장·실행 lane·fixture 경계 |
+| [선택형 의미 검색](guides/vector-search.md) | 질문별 검색 선택과 승인형 설치·복구 |
 | [Branching](guides/branching-rules.md) | `develop`·`main` integration |
 | [Commit](guides/commit-rules.md) | Task별 independent commit |
 | [Installed usage guard](guides/installed-usage-guard.md) | 설치본 단일 정책의 source 적용 |
