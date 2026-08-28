@@ -20,29 +20,72 @@ spec.loader.exec_module(runner)
 
 class VectorRuntimeAcceptance(unittest.TestCase):
     def test_unverified_native_handles_are_only_closed_never_terminated(self):
-        import ctypes as c
-        from ctypes import wintypes as w
-        for mode in ("invalid-time", "query-error", "mismatch", "query-failed", "valid"):
-            api = Mock()
-            api.OpenProcess.return_value = 71
-            child = {"ProcessId":42,"CreationFileTime":None if mode == "invalid-time" else 200}
-            def times(_handle, created, *_rest):
-                if mode == "query-error": raise OSError("query failed")
-                created._obj.dwLowDateTime = 300 if mode == "mismatch" else 200
-                return mode != "query-failed"
-            api.GetProcessTimes.side_effect = times
-            with self.subTest(mode=mode):
-                if mode == "valid":
-                    self.assertEqual(runner.retain_verified_windows_child(api,c,w,child),71)
-                    api.CloseHandle.assert_not_called()
+        for mode in ("inspection-error","wrong-image","low-memory","missing-stage","changed-parent","exited-parent","exited-child","valid"):
+            observer = runner.WindowsChildObserver.__new__(runner.WindowsChildObserver)
+            observer.api = Mock()
+            observer.api.OpenProcess.return_value = 71
+            observer.children = Mock(side_effect=[{42}, set() if mode == "changed-parent" else {42}])
+            observer.live = Mock(side_effect=[True, False] if mode == "exited-child" else None, return_value=True)
+            observer.image = Mock(return_value="approved-python")
+            if mode == "inspection-error": observer.image.side_effect = OSError("image lookup")
+            observer.memory = Mock(return_value=1 if mode == "low-memory" else 256*1024*1024)
+            parent = Mock(pid=12)
+            parent.poll.side_effect = [None,1] if mode == "exited-parent" else None
+            parent.poll.return_value = None
+            staging = Mock()
+            staging.is_file.return_value = mode != "missing-stage"
+            staging.is_symlink.return_value = False
+            with self.subTest(mode=mode), patch.object(runner.os.path,"samefile",return_value=mode != "wrong-image"):
+                if mode == "inspection-error":
+                    with self.assertRaises(OSError):
+                        observer.capture(parent,"approved-python",staging)
                 else:
-                    with self.assertRaises((TypeError, OSError, RuntimeError)):
-                        runner.retain_verified_windows_child(api,c,w,child)
-                    if mode == "invalid-time":
-                        api.OpenProcess.assert_not_called()
+                    result = observer.capture(parent,"approved-python",staging)
+                    if mode == "valid":
+                        self.assertEqual(result[0],71)
+                        self.assertTrue(result[1]["fresh_staging_observed"])
                     else:
-                        api.CloseHandle.assert_called_once_with(71)
-                api.TerminateProcess.assert_not_called()
+                        self.assertIsNone(result)
+                if mode == "valid": observer.api.CloseHandle.assert_not_called()
+                else: observer.api.CloseHandle.assert_called_once_with(71)
+                observer.api.TerminateProcess.assert_not_called()
+
+    def test_native_parent_inventory_closes_snapshot_and_reports_api_errors(self):
+        from types import SimpleNamespace
+        observer = runner.WindowsChildObserver.__new__(runner.WindowsChildObserver)
+        observer.c = SimpleNamespace(c_void_p=lambda _:SimpleNamespace(value=-1),sizeof=lambda _:568,
+                                     byref=lambda value:value,get_last_error=lambda:18)
+        observer.Entry = lambda:SimpleNamespace(size=0,parent=0,pid=0)
+        observer.api = Mock()
+        observer.api.CreateToolhelp32Snapshot.return_value = 19
+        def first(_snapshot, row):
+            row.parent, row.pid = 12, 42
+            return True
+        observer.api.Process32FirstW.side_effect = first
+        observer.api.Process32NextW.return_value = False
+        self.assertEqual(observer.children(12),{42})
+        observer.api.CloseHandle.assert_called_once_with(19)
+        observer.api.CloseHandle.reset_mock()
+        observer.c.get_last_error = lambda:5
+        with self.assertRaisesRegex(OSError,"enumeration failed"):
+            observer.children(12)
+        observer.api.CloseHandle.assert_called_once_with(19)
+
+    @unittest.skipUnless(sys.platform == "win32", "native Windows process metadata")
+    def test_native_observer_reads_its_own_process_without_spawning_a_shell(self):
+        import os
+        observer = runner.WindowsChildObserver()
+        self.assertEqual(observer.c.sizeof(observer.Entry),568)
+        self.assertEqual(observer.c.sizeof(observer.Memory),72)
+        self.assertIn(os.getpid(),observer.children(os.getppid()))
+        handle = observer.api.OpenProcess(0x00101000,False,os.getpid())
+        self.assertTrue(handle)
+        try:
+            self.assertTrue(os.path.samefile(observer.image(handle),sys.executable))
+            self.assertGreater(observer.memory(handle),0)
+            self.assertTrue(observer.live(handle))
+        finally:
+            observer.api.CloseHandle(handle)
 
     def test_native_cancellation_requires_a_still_running_child(self):
         api = Mock()
@@ -77,7 +120,6 @@ class VectorRuntimeAcceptance(unittest.TestCase):
         self.assertEqual(save.call_count,2)
 
     def test_first_native_cancellation_receipt_failure_still_cleans_the_parent(self):
-        import ctypes as c
         with tempfile.TemporaryDirectory(dir=ROOT / "tests/work") as directory:
             work = Path(directory)
             source = work / "source"
@@ -89,7 +131,7 @@ class VectorRuntimeAcceptance(unittest.TestCase):
             qualification = runner.Qualification(Path(sys.executable),work)
             parent = Mock(pid=42)
             parent.poll.return_value = None
-            with patch.object(runner.os,"name","nt"), patch.object(c,"WinDLL",return_value=Mock(),create=True), \
+            with patch.object(runner.os,"name","nt"), patch.object(runner,"WindowsChildObserver",return_value=Mock()), \
                  patch.object(runner.subprocess,"Popen",return_value=parent), \
                  patch.object(qualification,"save",side_effect=[OSError("receipt"),None]) as save, \
                  patch.object(runner,"stop_cli_tree") as cleanup:

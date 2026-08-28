@@ -153,22 +153,106 @@ def validate_shared_window(data: dict, scopes: dict[str, str], embedded: dict[st
     return found
 
 
-def retain_verified_windows_child(api, ctypes, wintypes, child):
-    expected = int(child["CreationFileTime"])
-    candidate = api.OpenProcess(0x00101001, False, int(child["ProcessId"]))
-    if not candidate:
-        raise RuntimeError("cannot retain observed native child handle")
-    try:
-        times = [wintypes.FILETIME() for _ in range(4)]
-        created = times[0]
-        valid = api.GetProcessTimes(candidate, *(ctypes.byref(value) for value in times))
-        # CIM provides microseconds. Never retain a handle to a recycled PID.
-        if not valid or ((created.dwHighDateTime << 32) | created.dwLowDateTime)//10 != expected//10:
-            raise RuntimeError("observed native child identity changed before handle capture")
-    except BaseException:
-        api.CloseHandle(candidate)  # Unverified handles are never termination authority.
-        raise
-    return candidate
+class WindowsChildObserver:
+    """Native ownership observation without WMI or collecting process command lines."""
+    def __init__(self):
+        import ctypes as c
+        from ctypes import wintypes as w
+        self.c, self.w = c, w
+        class Entry(c.Structure):
+            _fields_ = [("size",w.DWORD),("usage",w.DWORD),("pid",w.DWORD),("heap",c.c_size_t),
+                        ("module",w.DWORD),("threads",w.DWORD),("parent",w.DWORD),("priority",w.LONG),
+                        ("flags",w.DWORD),("name",w.WCHAR*260)]
+        class Memory(c.Structure):
+            _fields_ = [("size",w.DWORD),("faults",w.DWORD), *[(name,c.c_size_t) for name in
+                        ("peak_working","working","peak_paged","paged","peak_nonpaged","nonpaged","pagefile","peak_pagefile")]]
+        self.Entry, self.Memory = Entry, Memory
+        self.api = api = c.WinDLL("kernel32", use_last_error=True)
+        signatures = {
+            "CreateToolhelp32Snapshot":([w.DWORD,w.DWORD],w.HANDLE),
+            "Process32FirstW":([w.HANDLE,c.POINTER(Entry)],w.BOOL),
+            "Process32NextW":([w.HANDLE,c.POINTER(Entry)],w.BOOL),
+            "OpenProcess":([w.DWORD,w.BOOL,w.DWORD],w.HANDLE),
+            "QueryFullProcessImageNameW":([w.HANDLE,w.DWORD,w.LPWSTR,c.POINTER(w.DWORD)],w.BOOL),
+            "K32GetProcessMemoryInfo":([w.HANDLE,c.POINTER(Memory),w.DWORD],w.BOOL),
+            "WaitForSingleObject":([w.HANDLE,w.DWORD],w.DWORD),
+            "TerminateProcess":([w.HANDLE,w.UINT],w.BOOL),
+            "CloseHandle":([w.HANDLE],w.BOOL),
+        }
+        for name, (arguments, result) in signatures.items():
+            function = getattr(api,name)
+            function.argtypes, function.restype = arguments, result
+
+    def children(self, parent_pid):
+        snapshot = self.api.CreateToolhelp32Snapshot(2,0)
+        if not snapshot or snapshot == self.c.c_void_p(-1).value:
+            raise OSError("cannot enumerate native processes")
+        try:
+            entry = self.Entry()
+            entry.size = self.c.sizeof(entry)
+            found = set()
+            ready = self.api.Process32FirstW(snapshot,self.c.byref(entry))
+            while ready:
+                if entry.parent == parent_pid:
+                    found.add(int(entry.pid))
+                ready = self.api.Process32NextW(snapshot,self.c.byref(entry))
+            if self.c.get_last_error() != 18:
+                raise OSError("native process enumeration failed")
+            return found
+        finally:
+            self.api.CloseHandle(snapshot)
+
+    def live(self, handle):
+        result = self.api.WaitForSingleObject(handle,0)
+        if result not in (0,258):
+            raise OSError("cannot inspect native child lifetime")
+        return result == 258
+
+    def image(self, handle):
+        value, length = self.c.create_unicode_buffer(32768), self.w.DWORD(32768)
+        if not self.api.QueryFullProcessImageNameW(handle,0,value,self.c.byref(length)):
+            raise OSError("cannot inspect native child image")
+        return value.value
+
+    def memory(self, handle):
+        value = self.Memory()
+        value.size = self.c.sizeof(value)
+        if not self.api.K32GetProcessMemoryInfo(handle,self.c.byref(value),value.size):
+            raise OSError("cannot inspect native child memory")
+        return int(value.working)
+
+    def capture(self, parent, python, staging):
+        if parent.poll() is not None:
+            return None
+        for pid in self.children(parent.pid):
+            candidate = self.api.OpenProcess(0x00101001,False,pid)
+            if not candidate:
+                if self.c.get_last_error() == 87:
+                    continue  # The enumerated child exited before it could be opened.
+                raise OSError("cannot open observed native child")
+            transferred = False
+            try:
+                if not self.live(candidate):
+                    continue
+                image, memory = self.image(candidate), self.memory(candidate)
+                if not os.path.samefile(image,python) or memory <= 128*1024*1024:
+                    continue
+                if not staging.is_file() or staging.is_symlink():
+                    continue
+                # A live held handle and a second parent inventory prevent PID reuse.
+                if pid not in self.children(parent.pid) or parent.poll() is not None or not self.live(candidate):
+                    continue
+                result = candidate, {"child_pid":pid,"child_rss":memory,"fresh_staging_observed":True,"approved_python_image":True}
+                transferred = True
+                return result
+            except OSError:
+                if not self.live(candidate):
+                    continue
+                raise
+            finally:
+                if not transferred:
+                    self.api.CloseHandle(candidate)
+        return None
 
 
 def require_live_windows_child(api, handle):
@@ -425,19 +509,12 @@ class Qualification:
     def source_cancel_windows(self, source: Path, scope: list[str], preview: dict, enabled: dict, initial: dict) -> None:
         if os.name != "nt":
             return
-        import ctypes as c
-        from ctypes import wintypes as w
-        api = c.WinDLL("kernel32", use_last_error=True)
-        api.OpenProcess.argtypes, api.OpenProcess.restype = [w.DWORD,w.BOOL,w.DWORD], w.HANDLE
-        api.WaitForSingleObject.argtypes, api.WaitForSingleObject.restype = [w.HANDLE,w.DWORD], w.DWORD
-        api.TerminateProcess.argtypes = [w.HANDLE,w.UINT]
-        api.CloseHandle.argtypes = [w.HANDLE]
-        api.GetProcessTimes.argtypes = [w.HANDLE, *([c.POINTER(w.FILETIME)]*4)]
-        api.GetProcessTimes.restype = w.BOOL
+        observer = WindowsChildObserver()
+        api = observer.api
         control = source / ".agents/work/vector-control" / ("scope-"+preview["scope_id"]+".json")
         before = control.read_bytes()
-        helper = source / ".agents/work/vector/runtimes" / enabled["runtime"] / "vector_helper.py"
-        helper_digest = digest(helper)
+        staging = source / ".agents/work/vector/scopes" / preview["scope_id"] / "staging.sqlite3"
+        assert not staging.exists() and not staging.is_symlink(), "cancellation requires clean initial staging"
         handle = None
         record = {"status":"running"}
         self.report["windows_native_cancellation"] = record
@@ -449,23 +526,18 @@ class Qualification:
             self.save()
             deadline = time.monotonic()+30
             while parent.poll() is None and time.monotonic() < deadline:
-                command = f"@(Get-CimInstance Win32_Process -Filter 'ParentProcessId = {parent.pid}' | Where-Object {{ $_.CommandLine -and $_.CommandLine.EndsWith('{helper_digest}') }} | Select-Object ProcessId,WorkingSetSize,@{{Name='CreationFileTime';Expression={{$_.CreationDate.ToFileTimeUtc()}}}}) | ConvertTo-Json -Compress"
-                observed = subprocess.run(["powershell","-NoProfile","-Command",command],capture_output=True,text=True,
-                                          timeout=10,check=True,creationflags=subprocess.CREATE_NO_WINDOW)
-                rows = json.loads(observed.stdout) if observed.stdout.strip() else []
-                if isinstance(rows, dict): rows = [rows]
-                candidates = [row for row in rows if int(row["WorkingSetSize"]) > 128*1024*1024]
-                if candidates and parent.poll() is None:
-                    child = candidates[0]
-                    handle = retain_verified_windows_child(api, c, w, child)
-                    record.update(child_pid=int(child["ProcessId"]), child_rss=int(child["WorkingSetSize"]))
+                observed = observer.capture(parent,Path(sys.executable).resolve(),staging)
+                if observed is not None:
+                    handle, details = observed
+                    record.update(details)
                     self.save()
                     break
+                time.sleep(.05)
             if not handle:
                 raise RuntimeError("no live native worker observed; cancellation remains unverified")
             assert control.read_bytes() == before, "publication already finished; cancellation is inconclusive"
             require_live_windows_child(api, handle)
-            parent.kill()  # Only the owner; the product Job must terminate its assigned child.
+            parent.kill()
             parent.wait(timeout=5)
             record.update(parent_exit=parent.returncode, child_terminated=api.WaitForSingleObject(handle,5000) == 0)
             self.save()
@@ -477,7 +549,7 @@ class Qualification:
             assert recovered["complete"] and recovered["embedded"] == 0
             assert recovered["database_digest"] == initial["database_digest"]
             record.update(status="passed", active_preserved=True, recovered_embedded=0,
-                          limit="assigned live Windows worker only; no spawn-to-assignment or inference-phase guarantee")
+                          limit="assigned live Windows Python child and new staging; no command-line helper SHA, spawn-to-assignment or inference-phase observation")
         except Exception:
             record["status"] = "failed"
             raise
