@@ -9,7 +9,9 @@ import signal
 import subprocess
 import sys
 import tempfile
+import tarfile
 import time
+import tomllib
 import unittest
 from unittest.mock import patch
 
@@ -23,6 +25,43 @@ spec.loader.exec_module(guard)
 class VectorParentLifetime(unittest.TestCase):
     def setUp(self):
         (ROOT / "tests/work").mkdir(parents=True, exist_ok=True)
+
+    def test_windows_job_patch_preserves_the_exact_original_package_except_one_flag(self):
+        provenance = json.loads((ROOT / "vendor/process-wrap-provenance.json").read_bytes())
+        archive = ROOT / provenance["archive_path"]
+        self.assertEqual(hashlib.sha256(archive.read_bytes()).hexdigest(), "2e842efad9119158434d193c6682e2ebee4b44d6ad801d7b349623b3f57cdf55")
+        vendor = ROOT / provenance["root"]
+        originals = {}
+        with tarfile.open(archive, "r:gz") as package:
+            for member in package.getmembers():
+                self.assertTrue(member.isfile())
+                self.assertTrue(member.name.startswith("process-wrap-9.1.0/"))
+                relative = member.name.removeprefix("process-wrap-9.1.0/")
+                self.assertNotIn("..", Path(relative).parts)
+                originals[relative] = package.extractfile(member).read()
+        self.assertEqual(len(originals), 84)
+        self.assertEqual({name:hashlib.sha256(content).hexdigest() for name,content in originals.items()}, provenance["original_files"])
+        self.assertEqual({path.relative_to(vendor).as_posix() for path in vendor.rglob("*") if path.is_file()}, set(originals))
+        for name, original in originals.items():
+            expected = original
+            if name == provenance["patch"]["path"]:
+                before, after = (provenance["patch"][key].encode() for key in ("before", "after"))
+                self.assertEqual(original.count(before), 1)
+                expected = original.replace(before, after)
+                self.assertEqual(hashlib.sha256(expected).hexdigest(), provenance["patch"]["patched_sha256"])
+            with self.subTest(path=name):
+                self.assertEqual((vendor / name).read_bytes(), expected)
+        for name in ("LICENSE-MIT", "LICENSE-APACHE", "COPYRIGHT"):
+            self.assertIn(name, originals)
+
+    def test_cargo_uses_the_pinned_job_patch_without_adding_it_to_workspace_members(self):
+        manifest = tomllib.loads((ROOT / "Cargo.toml").read_text("utf-8"))
+        self.assertEqual(manifest["patch"]["crates-io"]["process-wrap"], {"path":"vendor/process-wrap-9.1.0"})
+        self.assertIn("vendor/process-wrap-9.1.0", manifest["workspace"]["exclude"])
+        self.assertEqual(manifest["workspace"]["dependencies"]["process-wrap"]["version"], "=9.1.0")
+        package = next(item for item in tomllib.loads((ROOT / "Cargo.lock").read_text("utf-8"))["package"] if item["name"] == "process-wrap")
+        self.assertEqual(package["version"], "9.1.0")
+        self.assertNotIn("source", package)
 
     def test_fresh_checkout_creates_its_own_temporary_work_parent(self):
         with tempfile.TemporaryDirectory(dir=ROOT / "tests/work") as directory:

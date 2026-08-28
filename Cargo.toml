@@ -7,7 +7,11 @@ members = [
   "crates/hive-update",
   "crates/hive-wiki",
 ]
+exclude = ["vendor/process-wrap-9.1.0"]
 resolver = "2"
+
+[patch.crates-io]
+process-wrap = { path = "vendor/process-wrap-9.1.0" }
 
 [workspace.package]
 version = "0.10.0"

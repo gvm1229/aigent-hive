@@ -1548,6 +1548,48 @@ mod tests {
         assert!(matches!(error, WikiError::Io(message) if message.contains("timeout")));
     }
 
+    #[cfg(windows)]
+    #[test]
+    fn killing_the_owning_cli_terminates_its_assigned_job_children() {
+        let temporary = tempfile::tempdir().expect("temporary directory");
+        let started = temporary.path().join("child-started");
+        let survivor = temporary.path().join("child-survived");
+        let mut owner = Command::new(env::current_exe().expect("test executable"))
+            .args([
+                "--exact",
+                "knowledge_scan::tests::git_process_helper",
+                "--nocapture",
+            ])
+            .env_clear()
+            .envs(fixed_git_environment())
+            .env("HIVE_TEST_GIT_HELPER_MODE", "job-owner")
+            .env("HIVE_TEST_DESCENDANT_STARTED", &started)
+            .env("HIVE_TEST_DESCENDANT_SURVIVOR", &survivor)
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .spawn()
+            .expect("unwrapped owning process");
+        let deadline = Instant::now() + Duration::from_secs(5);
+        while !started.exists() && Instant::now() < deadline {
+            thread::sleep(GIT_WAIT_POLL_INTERVAL);
+        }
+        let ready = started.exists();
+        owner.kill().expect("terminate only the owner");
+        owner.wait().expect("reap owner");
+        // The pre-fix child writes its witness after 1.5 s and self-terminates after
+        // another 5 s. Wait out that bounded fixture even on an expected red test.
+        thread::sleep(Duration::from_secs(7));
+        assert!(
+            ready,
+            "assigned child must have started before the owning CLI dies"
+        );
+        assert!(
+            !survivor.exists(),
+            "the assigned child survived its owning CLI's death"
+        );
+    }
+
     #[test]
     fn bounded_git_timeout_kills_descendants_that_hold_output_pipes() {
         let temporary = tempfile::tempdir().expect("temporary directory");
@@ -1843,6 +1885,25 @@ mod tests {
     #[allow(clippy::zombie_processes)]
     fn git_process_helper() {
         match env::var("HIVE_TEST_GIT_HELPER_MODE").as_deref() {
+            Ok("job-owner") => {
+                let environment = [
+                    "HIVE_TEST_DESCENDANT_STARTED",
+                    "HIVE_TEST_DESCENDANT_SURVIVOR",
+                ]
+                .map(|name| {
+                    (
+                        OsString::from(name),
+                        env::var_os(name).expect("fixture path"),
+                    )
+                });
+                run_git_process_helper_with_environment(
+                    "descendant-pipe-child",
+                    Duration::from_secs(20),
+                    4096,
+                    &environment,
+                )
+                .expect("contained child");
+            }
             Ok("input") => {
                 let mut bytes = Vec::new();
                 std::io::stdin()
