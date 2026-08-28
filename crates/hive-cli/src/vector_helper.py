@@ -64,6 +64,89 @@ def native_loader_path(path: Path) -> str:
     return "\\\\?\\" + value
 
 
+def windows_performance_mask(raw: bytes, process_mask: int, selected_ids=None) -> int:
+    """Use one CPU class without expanding the caller's affinity/CPU Set authority."""
+    rows, offset = [], 0
+    while offset < len(raw):
+        if len(raw) - offset < 8:
+            raise ValueError("truncated CPU Set information")
+        size, kind = struct.unpack_from("<II", raw, offset)
+        if size < 8 or size > len(raw) - offset:
+            raise ValueError("invalid CPU Set information size")
+        if kind == 0:
+            if size < 32:
+                raise ValueError("truncated CPU Set record")
+            identity, group = struct.unpack_from("<IH", raw, offset + 8)
+            rows.append((identity, group, raw[offset + 14], raw[offset + 18], raw[offset + 19]))
+        offset += size
+    if not rows:
+        raise ValueError("CPU Set information is unavailable")
+    classes = {row[3] for row in rows}
+    if len(classes) == 1:
+        return process_mask  # Homogeneous processors need no scheduling change.
+    if any(row[1] != 0 or row[2] >= 64 for row in rows):
+        raise ValueError("heterogeneous multi-group CPU profile is unsupported")
+    highest = max(classes)
+    selected = 0
+    for identity, _group, logical, efficiency, flags in rows:
+        if efficiency != highest or flags & 2 and not flags & 4:
+            continue
+        if selected_ids is not None and identity not in selected_ids:
+            continue
+        selected |= (1 << logical) & process_mask
+    if not selected:
+        raise ValueError("no permitted performance CPU is available")
+    return selected
+
+
+def stabilize_cpu_profile():
+    """Constrain this short-lived Windows worker only; never alter another process."""
+    if sys.platform != "win32":
+        return None
+    import ctypes as c
+    from ctypes import wintypes as w
+    api = c.WinDLL("kernel32", use_last_error=True)
+    api.GetCurrentProcess.restype = w.HANDLE
+    api.GetSystemCpuSetInformation.argtypes = [c.c_void_p, w.ULONG, c.POINTER(w.ULONG), w.HANDLE, w.ULONG]
+    api.GetSystemCpuSetInformation.restype = w.BOOL
+    api.GetProcessDefaultCpuSets.argtypes = [w.HANDLE, c.POINTER(w.ULONG), w.ULONG, c.POINTER(w.ULONG)]
+    api.GetProcessDefaultCpuSets.restype = w.BOOL
+    api.GetProcessAffinityMask.argtypes = [w.HANDLE, c.POINTER(c.c_size_t), c.POINTER(c.c_size_t)]
+    api.GetProcessAffinityMask.restype = w.BOOL
+    api.SetProcessAffinityMask.argtypes = [w.HANDLE, c.c_size_t]
+    api.SetProcessAffinityMask.restype = w.BOOL
+    handle, length = api.GetCurrentProcess(), w.ULONG()
+    if not api.GetSystemCpuSetInformation(None, 0, c.byref(length), handle, 0) and c.get_last_error() != 122:
+        raise OSError("cannot inspect CPU Sets")
+    if not 1 <= length.value <= 1024 * 1024:
+        raise ValueError("invalid CPU Set inventory size")
+    buffer = c.create_string_buffer(length.value)
+    if not api.GetSystemCpuSetInformation(buffer, length.value, c.byref(length), handle, 0):
+        raise OSError("CPU Set inventory changed")
+    count = w.ULONG()
+    if not api.GetProcessDefaultCpuSets(handle, None, 0, c.byref(count)) and c.get_last_error() != 122:
+        raise OSError("cannot inspect process CPU Sets")
+    if count.value > 65536:
+        raise ValueError("invalid process CPU Set count")
+    selected_ids = None
+    if count.value:
+        ids = (w.ULONG * count.value)()
+        if not api.GetProcessDefaultCpuSets(handle, ids, count.value, c.byref(count)):
+            raise OSError("process CPU Sets changed")
+        selected_ids = set(ids[:count.value])
+    original, system = c.c_size_t(), c.c_size_t()
+    if not api.GetProcessAffinityMask(handle, c.byref(original), c.byref(system)):
+        raise OSError("cannot inspect worker affinity")
+    selected = windows_performance_mask(buffer.raw[:length.value], original.value, selected_ids)
+    if selected != original.value:
+        if not api.SetProcessAffinityMask(handle, selected):
+            raise OSError("cannot bind worker CPU profile")
+        applied = c.c_size_t()
+        if not api.GetProcessAffinityMask(handle, c.byref(applied), c.byref(system)) or applied.value != selected:
+            raise OSError("worker CPU profile changed")
+    return selected
+
+
 def load_runtime(runtime: str) -> Path:
     root = regular_path(runtime, directory=True)
     site = regular_path(str(root / "site"), directory=True)
@@ -144,6 +227,7 @@ def reject_database_sidecars(path: Path) -> None:
 
 def initialize_encoder(runtime: str) -> None:
     global _session, _tokenizer, _numpy, _pad_id, _cls_id, _sep_id
+    stabilize_cpu_profile()
     root = load_runtime(runtime)
     import numpy as np
     import onnxruntime as ort

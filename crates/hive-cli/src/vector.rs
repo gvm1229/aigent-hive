@@ -371,6 +371,7 @@ fn preview(target: &Target, options: &[(&str, &str)]) -> Result<Value, WikiError
         "operation_directories":["runtimes/<attempt-id>","work/<attempt-id>"],
         "control_files":["runtime.json","runtime.lock","scope-<scope-id>.json","scope-<scope-id>.lock"],
         "provider_api":false,"query_log":false,"python_install":false,
+        "cpu_policy":if cfg!(windows) {"highest-efficiency-class-within-existing-affinity-and-default-cpu-sets"} else {"host-default"},
         "complete_pip_environment":false,"fts_unchanged":true});
     data["consent_digest"] = json!(value_digest(&data)?);
     Ok(data)

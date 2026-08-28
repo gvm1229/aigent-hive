@@ -54,6 +54,7 @@ class VectorCli(unittest.TestCase):
         self.assertTrue(data["consent_digest"].startswith("sha256:"))
         self.assertFalse(data["provider_api"])
         self.assertFalse(data["python_install"])
+        self.assertEqual(data["cpu_policy"], "highest-efficiency-class-within-existing-affinity-and-default-cpu-sets" if os.name == "nt" else "host-default")
         self.assertEqual(data["writes_under"], [".agents/work/vector", ".agents/work/vector-control"])
         self.assertGreater(data["identity"]["download_bytes"], 250_000_000)
         self.assertNotEqual(self.run_cli("enable", "--python", str(Path(sys.executable).resolve()), "--consent-digest", "sha256:" + "0"*64)["exit_code"], 0)

@@ -62,6 +62,68 @@ class SimulatedVectorConnection(sqlite3.Connection):
 
 
 class VectorRuntimeContract(unittest.TestCase):
+    @staticmethod
+    def cpu_record(identity, logical, efficiency, group=0, flags=0):
+        raw = bytearray(32)
+        struct.pack_into("<IIIH", raw, 0, 32, 0, identity, group)
+        raw[14], raw[18], raw[19] = logical, efficiency, flags
+        return bytes(raw)
+
+    def test_cpu_profile_selects_one_class_without_expanding_affinity_or_default_sets(self):
+        raw = self.cpu_record(10, 0, 1) + self.cpu_record(11, 1, 1) + self.cpu_record(12, 2, 0)
+        self.assertEqual(WORKER.windows_performance_mask(raw, 7), 3)
+        self.assertEqual(WORKER.windows_performance_mask(raw, 6), 2)
+        self.assertEqual(WORKER.windows_performance_mask(raw, 7, {11}), 2)
+        for mask, selected in ((4, None), (7, {12}), (7, set())):
+            with self.subTest(mask=mask, selected=selected), self.assertRaises(ValueError):
+                WORKER.windows_performance_mask(raw, mask, selected)
+        reserved = self.cpu_record(10, 0, 1, flags=2) + self.cpu_record(11, 1, 1, flags=6) + self.cpu_record(12, 2, 0)
+        self.assertEqual(WORKER.windows_performance_mask(reserved, 7), 2)
+
+    def test_cpu_profile_keeps_homogeneous_hosts_and_rejects_malformed_hybrid_topology(self):
+        self.assertEqual(WORKER.windows_performance_mask(self.cpu_record(1, 0, 0, group=1), 5), 5)
+        unknown = struct.pack("<II", 8, 99)
+        self.assertEqual(WORKER.windows_performance_mask(unknown + self.cpu_record(1, 0, 0), 1), 1)
+        for raw in (b"x", struct.pack("<II", 0, 0), struct.pack("<II", 500, 0), struct.pack("<II", 8, 0), unknown,
+                    self.cpu_record(1, 0, 1, group=1) + self.cpu_record(2, 1, 0)):
+            with self.subTest(raw=raw), self.assertRaises(ValueError):
+                WORKER.windows_performance_mask(raw, 3)
+        with patch.object(WORKER.sys, "platform", "linux"):
+            self.assertIsNone(WORKER.stabilize_cpu_profile())
+
+    def test_cpu_profile_is_applied_before_loading_a_model(self):
+        with patch.object(WORKER, "stabilize_cpu_profile", side_effect=ValueError("unsupported CPU")), \
+             patch.object(WORKER, "load_runtime") as load:
+            with self.assertRaisesRegex(ValueError, "unsupported CPU"):
+                WORKER.initialize_encoder("not-a-runtime")
+            load.assert_not_called()
+
+    @unittest.skipUnless(sys.platform == "win32", "actual Windows worker affinity; other hosts retain their policy")
+    def test_windows_cpu_profile_changes_only_its_child_process(self):
+        import ctypes as c
+        from ctypes import wintypes as w
+        api = c.WinDLL("kernel32", use_last_error=True)
+        api.GetCurrentProcess.restype = w.HANDLE
+        api.GetProcessAffinityMask.argtypes = [w.HANDLE, c.POINTER(c.c_size_t), c.POINTER(c.c_size_t)]
+        def mask():
+            value, system = c.c_size_t(), c.c_size_t()
+            self.assertTrue(api.GetProcessAffinityMask(api.GetCurrentProcess(), c.byref(value), c.byref(system)))
+            return value.value
+        before = mask()
+        code = ("import runpy,sys,json,ctypes as c\nfrom ctypes import wintypes as w\n"
+                "api=c.WinDLL('kernel32',use_last_error=True)\napi.GetCurrentProcess.restype=w.HANDLE\n"
+                "api.GetProcessAffinityMask.argtypes=[w.HANDLE,c.POINTER(c.c_size_t),c.POINTER(c.c_size_t)]\n"
+                "a,s=c.c_size_t(),c.c_size_t()\nassert api.GetProcessAffinityMask(api.GetCurrentProcess(),c.byref(a),c.byref(s))\n"
+                "before=a.value\nselected=runpy.run_path(sys.argv[1])['stabilize_cpu_profile']()\n"
+                "assert api.GetProcessAffinityMask(api.GetCurrentProcess(),c.byref(a),c.byref(s))\n"
+                "print(json.dumps({'before':before,'selected':selected,'after':a.value}))")
+        result = subprocess.run([sys.executable, "-I", "-S", "-B", "-c", code, str(SOURCE / "vector_helper.py")],
+                                capture_output=True, text=True, timeout=10, check=True)
+        observed = json.loads(result.stdout)
+        self.assertEqual(observed["selected"], observed["after"])
+        self.assertEqual(observed["after"] & observed["before"], observed["after"])
+        self.assertEqual(mask(), before)
+
     def test_native_loader_path_keeps_long_drive_and_unc_names_without_changing_posix(self):
         with patch.object(WORKER.sys, "platform", "win32"):
             for normal, expected in (
