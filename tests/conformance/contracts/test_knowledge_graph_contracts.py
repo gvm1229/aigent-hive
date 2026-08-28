@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import subprocess
@@ -48,6 +49,15 @@ class KnowledgeGraphContractTests(unittest.TestCase):
         self.assertEqual(report["exact_recall_at_10"], 1.0)
         self.assertEqual(report["relation_grounded_recall_at_10"], 1.0)
         self.assertFalse(report["canonical_changed"])
+        self.assertFalse(report["current_canonical_changed"])
+        self.assertEqual(report["facts_revision"], "622f2b7b5411d054abd94c5443ce2b620231b240")
+        self.assertEqual(report["question_corpus_digest"], "sha256:" + hashlib.sha256(
+            (ROOT / "tests/fixtures/knowledge/vector-gold-120.json").read_bytes()
+        ).hexdigest())
+        self.assertEqual(report["canonical_tree_digest_before"], report["canonical_tree_digest_after"])
+        for field in ("current_source_lint", "frozen_source_lint"):
+            self.assertEqual(report[field]["data"]["error_count"], 0)
+            self.assertEqual(report[field]["data"]["warning_count"], 0)
         self.assertEqual(report["scope"], "source")
 
     def test_graphify_three_platform_wheel_locks_are_complete_and_digest_bound(self) -> None:

@@ -5,10 +5,47 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import io
 import json
-from pathlib import Path
+from pathlib import Path, PurePosixPath
+import re
 import subprocess
+import tempfile
 import time
+import zipfile
+
+
+CORPUS_FACTS_REVISION = "622f2b7b5411d054abd94c5443ce2b620231b240"
+
+
+def frozen_source(repository: Path, target: Path) -> None:
+    """Copy fixed facts and their cited bytes, never execute historical code."""
+    payload = subprocess.check_output(
+        ["git", "archive", "--format=zip", CORPUS_FACTS_REVISION],
+        cwd=repository, timeout=30,
+    )
+    with zipfile.ZipFile(io.BytesIO(payload)) as archive:
+        facts = [name for name in archive.namelist()
+                 if re.fullmatch(r"docs/facts/(en|ko)/[^/]+\.md", name)]
+        if not facts:
+            raise ValueError("frozen source facts are missing")
+        selected = {"hive-source.json", *facts}
+        for name in facts:
+            selected.update(match.decode("utf-8") for match in re.findall(
+                rb'^\s+- "repo:([^"#]+)#sha256:[0-9a-f]{64}"\s*$',
+                archive.read(name), re.MULTILINE,
+            ))
+        for name in sorted(selected):
+            path = PurePosixPath(name)
+            info = archive.getinfo(name)
+            if (path.is_absolute() or any(part in (".", "..") for part in path.parts)
+                    or "\\" in name or ":" in name or info.is_dir()
+                    or (info.external_attr >> 16) & 0o170000 == 0o120000):
+                raise ValueError("frozen source contains an unsafe file")
+            destination = target.joinpath(*path.parts)
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            with destination.open("xb") as output:
+                output.write(archive.read(name))
 
 
 def tree_digest(root: Path) -> str:
@@ -65,17 +102,36 @@ def main() -> int:
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--require-graphify-preview", action="store_true")
     args = parser.parse_args()
-    target = args.target.resolve()
+    repository = args.target.resolve()
     binary = args.hive.resolve()
-    corpus_path = (target / args.corpus).resolve() if not args.corpus.is_absolute() else args.corpus
+    corpus_path = (repository / args.corpus).resolve() if not args.corpus.is_absolute() else args.corpus
     corpus = json.loads(corpus_path.read_text(encoding="utf-8"))
     exact = [item for item in corpus["queries"] if item["kind"] == "exact"]
     relation = [item for item in corpus["queries"] if item["kind"] == "relation"]
     if len(exact) != 30 or len(relation) != 30:
         raise SystemExit("source graph qualification requires exactly 30 exact and 30 relation questions")
 
+    # Current truth is still validated. Historical questions are not silently
+    # rewritten to fit changing facts, nor are facts reverted to pass a benchmark.
+    current_before = tree_digest(repository)
+    invoke(binary, ["source-wiki", "index", "--target", str(repository)], repository)
+    current_lint, _ = invoke(binary, ["source-wiki", "lint", "--target", str(repository)], repository)
+    invoke(binary, ["source-wiki", "graph", "rebuild", "--target", str(repository)], repository)
+    work = repository / "tests/work"
+    work.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(prefix="source-graph-gold-", dir=work) as directory:
+        target = Path(directory).resolve()
+        frozen_source(repository, target)
+        return qualify(args, binary, target, repository, corpus_path, exact, relation,
+                       current_before, current_lint)
+
+
+def qualify(args, binary, target, repository, corpus_path, exact, relation,
+            current_before, current_lint) -> int:
+
     before = tree_digest(target)
     invoke(binary, ["source-wiki", "index", "--target", str(target)], target)
+    frozen_lint, _ = invoke(binary, ["source-wiki", "lint", "--target", str(target)], target)
     rebuild, _ = invoke(
         binary,
         ["source-wiki", "graph", "rebuild", "--target", str(target)],
@@ -90,11 +146,11 @@ def main() -> int:
                 "graph",
                 "preview",
                 "--target",
-                str(target),
+                str(repository),
                 "--engine",
                 "graphify-code",
             ],
-            target,
+            repository,
         )
         preview_data = preview["data"]
         assert isinstance(preview_data, dict)
@@ -169,6 +225,11 @@ def main() -> int:
     assert isinstance(data, dict)
     report = {
         "schema_version": 1,
+        "facts_revision": CORPUS_FACTS_REVISION,
+        "question_corpus_digest": "sha256:" + hashlib.sha256(corpus_path.read_bytes()).hexdigest(),
+        "current_source_lint": current_lint,
+        "frozen_source_lint": frozen_lint,
+        "current_canonical_changed": tree_digest(repository) != current_before,
         "questions": {"exact": 30, "relation": 30},
         "exact_recall_at_10": exact_passes / 30,
         "relation_grounded_recall_at_10": relation_passes / 30,
@@ -192,6 +253,11 @@ def main() -> int:
         or report["relation_grounded_recall_at_10"] < 0.9
         or report["cold_cli_p95_ms"] > 2000
         or report["canonical_changed"]
+        or report["current_canonical_changed"]
+        or current_lint["data"]["error_count"] != 0
+        or current_lint["data"]["warning_count"] != 0
+        or frozen_lint["data"]["error_count"] != 0
+        or frozen_lint["data"]["warning_count"] != 0
         or report["scope"] != "source"
         or report["engine"] != "native-markdown"
         or (args.require_graphify_preview and not report["graphify_preview"])
