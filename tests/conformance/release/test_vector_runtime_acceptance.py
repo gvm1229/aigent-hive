@@ -19,6 +19,17 @@ spec.loader.exec_module(runner)
 
 
 class VectorRuntimeAcceptance(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        (ROOT / "tests/work").mkdir(parents=True, exist_ok=True)
+
+    def test_clean_checkout_prepares_its_own_disposable_parent(self):
+        with tempfile.TemporaryDirectory(dir=ROOT / "tests/work") as temporary:
+            fresh = Path(temporary) / "fresh-checkout"
+            with patch.dict(globals(), ROOT=fresh):
+                self.setUpClass()
+            self.assertTrue((fresh / "tests/work").is_dir())
+
     def test_unverified_native_handles_are_only_closed_never_terminated(self):
         for mode in ("inspection-error","wrong-image","low-memory","missing-stage","changed-parent","exited-parent","exited-child","valid"):
             observer = runner.WindowsChildObserver.__new__(runner.WindowsChildObserver)

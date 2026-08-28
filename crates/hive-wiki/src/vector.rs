@@ -572,6 +572,8 @@ impl VectorFiles {
         Ok(moved)
     }
 
+    // Windows must reopen and compare the normalized root; keep one fallible API on all hosts.
+    #[cfg_attr(not(windows), allow(clippy::unnecessary_wraps))]
     fn worker_path(&self, relative: &Path) -> Result<PathBuf, WikiError> {
         // SQLite file URIs cannot interpret Windows verbatim device prefixes.
         // Retain the pinned capability for file operations; normalize only subprocess names.

@@ -27,10 +27,9 @@ mod tests {
         };
         use hive_wiki::rag::{RagVisibility, SemanticPartition};
         use hive_wiki::vector::VectorFiles;
-        let temporary = tempfile::tempdir_in(
-            std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/work"),
-        )
-        .expect("root");
+        let work = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/work");
+        std::fs::create_dir_all(&work).expect("work directory");
+        let temporary = tempfile::tempdir_in(work).expect("root");
         let mut rows = Vec::new();
         for name in ["first", "second"] {
             let files = VectorFiles::open(temporary.path(), false).expect("files");

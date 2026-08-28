@@ -239,6 +239,7 @@ mod tests {
 
     fn fixture() -> (tempfile::TempDir, Target, RagStore, Arguments) {
         let work = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/work");
+        fs::create_dir_all(&work).expect("work directory");
         let temporary = tempfile::tempdir_in(work).expect("temporary root");
         let root = temporary.path().canonicalize().expect("canonical root");
         let store = RagStore::open(&root).expect("store");

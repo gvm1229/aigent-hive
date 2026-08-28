@@ -889,6 +889,7 @@ mod tests {
     #[test]
     fn corrupt_fts_does_not_block_disabling_vectors() {
         let base = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/work");
+        fs::create_dir_all(&base).expect("work directory");
         let root = tempfile::tempdir_in(base).expect("root");
         fs::create_dir_all(root.path().join(".hive/config")).expect("config");
         fs::write(root.path().join(".hive/config/user-setup.yml"), serde_json::to_vec(&json!({
@@ -937,6 +938,7 @@ mod tests {
     #[test]
     fn changed_python_is_rejected_before_running_it() {
         let base = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/work");
+        fs::create_dir_all(&base).expect("work directory");
         let root = tempfile::tempdir_in(base).expect("root");
         let executable = root.path().join("python.exe");
         fs::write(&executable, b"approved synthetic executable").expect("fixture");
