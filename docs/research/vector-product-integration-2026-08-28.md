@@ -32,6 +32,15 @@
 - 새 독립 참조 `reference-after-incremental.json`, SHA `d42d2f99…bac68`. 실제 현재 DB와 제어 기록 200개 일반 복사, 186,202,784B
 - 원본: `tests/work/scope-audit-20260828/vector-scale-100/optimized-100/shared-list-next/wave4-next/final-acceptance/incremental-next/incremental100-measurement/summary.json`, `phase-observations.json`
 
+### 작업 단위 모델 유지 제안 — 미승인
+
+- 현재 구현의 전체 검색·갱신 시간 기준 미달에 대한 후속 설계 후보. 현재 제품·실행 계약 변경 없음
+- 후보: 유한한 한 작업의 여러 조회·갱신 중에만 모델 유지, 완료·취소·기한 종료 시 보조 프로세스 종료
+- 금지 유지: 백그라운드 서버·자동 시작·질의 기록·제공자 API·사용자 전역 설정 변경
+- 각 요청의 새 권한·정본·등록부·SQLite 무결성 검사 유지. FTS 준비 상태의 요청 간 재사용 승인으로 해석 금지
+- 메모리 점유 시간과 호출 방식 변경에 대한 유지보수자 명시 동의 대기. 현재 조합의 최종 검색 측정은 독립적으로 지속
+- DB 동시 수 4→16 후보도 미채택. 균등한 소량 변경의 유휴 예산 감소 가능성과 큰 모음 하나를 포함한 혼합 부하의 작업 수 감소를 함께 비교해야 하는 조건
+
 ## 초기 제품 경로
 
 - `84618f95`: 승인형 실행 환경·범위별 색인·중단 재개·의미 검색 연결
