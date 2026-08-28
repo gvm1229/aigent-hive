@@ -221,6 +221,17 @@
 - 기본 사실 검색은 기존 FTS, 명시적 의미 검색만 결합이라는 현재 제품 계약 유지. 강제 의미 모드의 순위 손실과 기본 경로 보존은 별도 판정
 - 원본: `tests/work/scope-audit-20260828/parallel-vector-queries-original-isolated.json`, `parallel-vector-queries-holdout-isolated.json`, 이전 `score-vector-queries-original-isolated.json`
 
+#### 순위 보호 뒤의 재검증
+
+- 제품 `64ef6082`, 바이너리 SHA `e863be946792e3321c5fd012de90c08e0a1056b962ae09944580ccee2a487aae`. 보조 실행 계약 `76aab2d3…f707fc`·모델·원본 질문·가중치 불변
+- Windows 원본 120개·독립 60개 실제 조회 완료. 의미 정답 포함률 96.7% 양쪽 유지, 정확 30개 정답 포함률 100%·평균 역순위 0.975·질문별 순위 손실 0개
+- 순서 보호 관측: 원본 26개, 독립 질문 0개. 이전 6개 손실을 원본 수정이나 기본 FTS 평가로 대체하지 않고 강제 의미 모드에서 재검증
+- 30문서 환경 새 CLI p95: 원본 의미 1.961756초·독립 1.810315초. 파일 캐시 비움 없음, 대규모·모델 유지 warm 기준과 구분
+- 경계·원문 예산·중복·인용·응답 형식 반례와 독립 검토 통과. 해당 crate 검사: CLI 441개·Wiki 179개 통과, 수동 4개 제외. 형식 검사 13개·Python CLI 6개 통과, Clippy 자체 경고 0개
+- `74ede391`: 채택 판정에 고정 30개 질문의 완전한 `exact_rank_comparisons` 추가. 누락·중복·부분집합·잘못된 순위와 평균값으로 가린 개별 하락 차단, 모의 5개 검사 통과
+- 과거 근거 파일 변경 없음. 보강된 검사에서 순위 자료 부재는 미통과이며 정답 포함률만으로 채택 금지
+- 원본: `literal-vector-queries-original-isolated.json`, `literal-vector-queries-holdout-isolated.json`, `vector-literal-gold.log` — 모두 `tests/work/scope-audit-20260828/` 아래
+
 ### 저장량 보강 실행 결과
 
 - `385bc131`: 이전 제어 기록에 있는 오래된 복사본만 정리, 삭제 실패는 지속 목록으로 재시도

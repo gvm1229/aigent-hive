@@ -63,7 +63,7 @@ SQLite FTS의 exact 검색을 유지하면서 표현이 다른 의미·다국어
 ## Hard gate
 
 - Paraphrase·cross-language Recall@10: FTS 대비 `15 percentage points` 이상 향상과 `90%` 이상
-- Exact ID·날짜·수치·부정 질문: FTS 결과 저하 `0건`
+- Exact ID·날짜·수치·부정 질문: 정답 포함률과 각 질문의 순위에서 FTS 대비 저하 `0건`
 - Vector lookup p95: 50,000 chunk warm `50ms` 이하
 - End-to-end query p95: warm `500ms`, cold `2s` 이하
 - Reference Windows x64 CPU full build: `10분` 이하
