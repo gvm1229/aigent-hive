@@ -637,23 +637,7 @@ fn invoke(
     let value: Value = serde_json::from_slice(&result.stdout)
         .map_err(|_| invalid("vector helper returned invalid JSON"))?;
     if !result.success || value["status"] != "success" {
-        let reason = value["error_type"]
-            .as_str()
-            .filter(|name| {
-                [
-                    "ValueError",
-                    "RuntimeError",
-                    "ImportError",
-                    "ModuleNotFoundError",
-                    "OperationalError",
-                    "FileNotFoundError",
-                    "PermissionError",
-                    "KeyError",
-                    "TypeError",
-                ]
-                .contains(name)
-            })
-            .unwrap_or("unknown");
+        let reason = worker_error_type(&value);
         return Err(invalid(&format!(
             "vector helper validation failed ({reason}); FTS remains available"
         )));
@@ -664,6 +648,39 @@ fn invoke(
         .ok_or_else(|| invalid("vector helper returned a non-object"))?
         .remove("status");
     Ok(value)
+}
+
+fn worker_error_type(value: &Value) -> &str {
+    // Only fixed class names, never dependency messages, paths, or query/source bytes.
+    value["error_type"]
+        .as_str()
+        .filter(|name| {
+            [
+                "ValueError",
+                "RuntimeError",
+                "ImportError",
+                "ModuleNotFoundError",
+                "OperationalError",
+                "FileNotFoundError",
+                "PermissionError",
+                "KeyError",
+                "TypeError",
+                "AttributeError",
+                "IndexError",
+                "OSError",
+                "DatabaseError",
+                "IntegrityError",
+                "OverflowError",
+                "Fail",
+                "InvalidArgument",
+                "NoSuchFile",
+                "RuntimeException",
+                "InvalidProtobuf",
+                "NotImplemented",
+            ]
+            .contains(name)
+        })
+        .unwrap_or("unknown")
 }
 
 fn authenticate_python(runtime: &InstalledRuntime) -> Result<(), WikiError> {
@@ -754,6 +771,29 @@ mod tests {
         assert_eq!(dispatch(&args, true).expect("status")["enabled"], false);
         assert!(!root.path().join(".hive").exists());
         assert!(!root.path().join(".agents").exists());
+    }
+
+    #[test]
+    fn worker_errors_expose_only_fixed_class_names() {
+        for name in [
+            "AttributeError",
+            "DatabaseError",
+            "RuntimeException",
+            "IndexError",
+            "ValueError",
+        ] {
+            assert_eq!(
+                worker_error_type(&json!({"error_type":name,"message":"private text"})),
+                name
+            );
+        }
+        for value in [
+            json!({"error_type":"private query text"}),
+            json!({"error_type":{"secret":"text"}}),
+            json!({}),
+        ] {
+            assert_eq!(worker_error_type(&value), "unknown");
+        }
     }
 
     #[test]
