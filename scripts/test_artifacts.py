@@ -292,6 +292,10 @@ class Manager:
                     raise ArtifactError("invalid review state")
                 if not item.get("owner") or not item.get("reason"):
                     raise ArtifactError("owner and reviewed reason required")
+                for excluded in item.get("excluded_paths", []):
+                    self.target(excluded)
+                    if item["state"] != "retained" or not excluded.startswith(path + "/"):
+                        raise ArtifactError("exclusion must be an exact descendant of a retained scope")
                 if item["state"] not in ("completed", "released"):
                     due = datetime.fromisoformat(item["review_at"])
                     if not now() < due <= now() + MAX_REUSE:
@@ -380,7 +384,9 @@ class Manager:
                 target = self.target(path, reservation=path == "tests/work")
                 if not target.exists():
                     continue
-                owners = [r for r in records if "path" in r and r.get("state") not in ("superseded", "released") and overlap(r["path"], path)]
+                owners = [r for r in records if "path" in r and r.get("state") not in ("superseded", "released")
+                          and overlap(r["path"], path)
+                          and not any(path == e or path.startswith(e + "/") for e in r.get("excluded_paths", []))]
                 blockers = [r for r in owners if r.get("state") != "completed"]
                 if blockers:
                     owner = blockers[0]
@@ -639,7 +645,7 @@ def cli(arguments=None):
         if args.action == "check":
             return int(any(r["status"] in ("eligible", "cleanup-failed") or (r["status"] == "review" and (not r.get("review_at") or datetime.fromisoformat(r["review_at"]) <= now())) for r in rows))
         return int(any(r["status"] == "cleanup-failed" for r in rows))
-    except (ArtifactError, OSError, ValueError, subprocess.SubprocessError) as error:
+    except (ArtifactError, OSError, ValueError, KeyError, TypeError, subprocess.SubprocessError) as error:
         print("test-artifacts: " + str(error), file=sys.stderr)
         return 2
 

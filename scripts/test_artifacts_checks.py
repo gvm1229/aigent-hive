@@ -114,6 +114,16 @@ class ArtifactTests(unittest.TestCase):
         self.review()
         self.assertEqual("eligible", self.scan()["status"])
 
+    def test_exact_hold_exception_keeps_siblings_and_requires_completion(self):
+        (self.root / "tests/work/other").mkdir()
+        self.review(path="tests/work", state="retained", task="acceptance", review_at=(a.now() + timedelta(hours=2)).isoformat(), excluded_paths=["tests/work/old"])
+        self.assertEqual("review", self.scan()["status"])
+        self.review()
+        self.assertEqual("eligible", self.scan()["status"])
+        self.assertEqual("retained", self.manager.scan(selected=["tests/work/other"])[0]["status"])
+        with self.assertRaises(a.ArtifactError):
+            self.review(path="tests/work", state="retained", task="acceptance", review_at=(a.now() + timedelta(hours=2)).isoformat(), excluded_paths=["target/debug"])
+
     def test_paths_outside_owned_roots_and_root_deletion_refused(self):
         for path in ("tests/work", "tests/work/../fixtures", "target", "target/release", "C:/tmp", "/tmp", "tests/work//old"):
             with self.subTest(path=path), self.assertRaises(a.ArtifactError):
