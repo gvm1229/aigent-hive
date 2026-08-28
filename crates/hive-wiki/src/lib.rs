@@ -54,7 +54,8 @@ const LOCK_TIMEOUT: Duration = Duration::from_secs(5);
 const MAX_RAW_BYTES: usize = 5 * 1024 * 1024;
 const MAX_WIKI_PAGE_BYTES: u64 = 2 * 1024 * 1024;
 const MAX_CANONICAL_CONTROL_BYTES: u64 = 1024 * 1024;
-const MAX_DERIVED_INDEX_BYTES: u64 = 128 * 1024 * 1024;
+// The common publisher must accept every bounded artifact supported by the RAG builder.
+const MAX_DERIVED_INDEX_BYTES: u64 = 256 * 1024 * 1024;
 static CAP_TEMP_COUNTER: AtomicU64 = AtomicU64::new(0);
 
 /// Build a disposable native graph from canonical Markdown pages in one scope.
@@ -4028,7 +4029,18 @@ impl CapabilityFileSnapshot {
             .parent()
             .unwrap_or_else(|| Path::new(""))
             .join(&temporary_name);
-        let installed = capability_file_state_bounded(root, &temporary_relative, self.maximum)?;
+        let installed = match capability_file_state_bounded(root, &temporary_relative, self.maximum)
+        {
+            Ok(state) => state,
+            Err(error) => {
+                parent.remove_file(&temporary_name).map_err(|cleanup| {
+                    WikiError::Io(format!(
+                        "{error}; cannot remove owned temporary file: {cleanup}"
+                    ))
+                })?;
+                return Err(error);
+            }
+        };
         if !matches!(self.current, CapabilityFileState::Missing) {
             if let Err(error) = self.claim_current(root) {
                 let _ = parent.remove_file(&temporary_name);
@@ -4870,6 +4882,35 @@ mod tests {
             reject_likely_credentials(b"claim_key: ghp_abcdefghijklmnopqrstuvwxyz012345\n")
                 .is_err()
         );
+    }
+
+    #[test]
+    fn common_index_publication_limit_matches_the_rag_contract() {
+        assert_eq!(
+            MAX_DERIVED_INDEX_BYTES,
+            u64::try_from(crate::rag::MAX_SERIALIZED_INDEX_BYTES).unwrap()
+        );
+    }
+
+    #[test]
+    fn rejected_staged_index_removes_only_its_own_temporary_file() {
+        let work = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/work");
+        fs::create_dir_all(&work).unwrap();
+        let temporary = tempfile::tempdir_in(work).unwrap();
+        let directory = temporary.path().join(".hive/index");
+        fs::create_dir_all(&directory).unwrap();
+        let index = temporary.path().join(INDEX_RELATIVE);
+        fs::write(&index, b"prior").unwrap();
+        let unrelated = directory.join("user-note.txt");
+        fs::write(&unrelated, b"preserve").unwrap();
+        let root = Dir::open_ambient_dir(temporary.path(), ambient_authority()).unwrap();
+        let mut snapshot =
+            CapabilityFileSnapshot::capture(&root, Path::new(INDEX_RELATIVE)).unwrap();
+        snapshot.maximum = 16;
+        assert!(snapshot.install_staged(&root, &[0_u8; 17]).is_err());
+        assert_eq!(fs::read(&index).unwrap(), b"prior");
+        assert_eq!(fs::read(&unrelated).unwrap(), b"preserve");
+        assert_eq!(fs::read_dir(directory).unwrap().count(), 2);
     }
 
     #[test]
