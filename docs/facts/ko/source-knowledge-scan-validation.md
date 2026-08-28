@@ -10,7 +10,7 @@ tags: [knowledge, scan, source, v0-9-4, validation]
 aliases: ["검토 source 가져오기", "스캔 검증 정합성"]
 sources:
   - "repo:crates/hive-cli/src/knowledge.rs#sha256:1229cfa84e1fb0357c943fd0ef2910f3cdb5dd7e70f67879f0832db0ea26c800"
-  - "repo:crates/hive-wiki/src/store.rs#sha256:350921616304811f9941b2ad5486c727009996f0ed6ee93f21f9453cc6ed5be8"
+  - "repo:crates/hive-wiki/src/store.rs#sha256:6d6a377a6cd0c0c38ca48a85e89e871210ef4e87bbe05cf80c17713a566ae9a0"
 links: [knowledge-cross-project-access, knowledge-portability-scan, source-development]
 reviewed_revision: "git:e5c2c599562121ed3dc43143c16a0b1f063cefa2"
 status: active
