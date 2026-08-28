@@ -140,6 +140,59 @@ class VectorRuntimeContract(unittest.TestCase):
             with self.assertRaises(ValueError):
                 RUNTIME.fetch("https://files.pythonhosted.org/example.whl", digest, self.root)
 
+    def test_successful_runtime_cleanup_removes_only_exact_pinned_downloads(self):
+        artifacts = []
+        for content in (b"wheel", b"model"):
+            digest = hashlib.sha256(content).hexdigest()
+            (self.root / digest).write_bytes(content)
+            artifacts.append({"sha256": digest, "size": len(content)})
+        note = self.root / "user-note.txt"
+        note.write_bytes(b"preserve")
+        partial = self.root / "unfinished.partial"
+        partial.write_bytes(b"retain failure evidence")
+        RUNTIME.cleanup_verified_downloads(self.root, artifacts)
+        self.assertEqual({path.name for path in self.root.iterdir()}, {note.name, partial.name})
+        self.assertEqual(note.read_bytes(), b"preserve")
+        self.assertEqual(partial.read_bytes(), b"retain failure evidence")
+
+    def test_corrupt_or_hardlinked_download_prevents_cleanup_of_the_entire_set(self):
+        good = b"good"
+        digest = hashlib.sha256(good).hexdigest()
+        path = self.root / digest
+        path.write_bytes(good)
+        bad_digest = hashlib.sha256(b"expected").hexdigest()
+        (self.root / bad_digest).write_bytes(b"modified")
+        with self.assertRaises(ValueError):
+            RUNTIME.cleanup_verified_downloads(self.root, [{"sha256": digest, "size": 4}, {"sha256": bad_digest, "size": 8}])
+        self.assertEqual(path.read_bytes(), good)
+        link = self.root / "other-owned-reference"
+        os.link(path, link)
+        with self.assertRaises(ValueError):
+            RUNTIME.cleanup_verified_downloads(self.root, [{"sha256": digest, "size": 4}])
+        self.assertEqual(path.read_bytes(), good)
+
+    def test_install_verifies_before_cleanup_and_failure_retains_downloads(self):
+        for fails in (False, True):
+            runtime = self.root / str(fails)
+            runtime.mkdir()
+            events = []
+            def verify(_request):
+                events.append("verify")
+                if fails:
+                    raise ValueError("deliberate verification failure")
+                return {"verified": True}
+            request = {"root": str(runtime), "cache": str(self.root / "cache"), "helper": "pass", "lock": {"model": {"files": []}}}
+            with patch.object(RUNTIME, "describe", return_value={}), patch.object(RUNTIME, "validate_lock", return_value=[]), \
+                 patch.object(RUNTIME, "verify", side_effect=verify), \
+                 patch.object(RUNTIME, "cleanup_verified_downloads", side_effect=lambda *_: events.append("cleanup")):
+                if fails:
+                    with self.assertRaises(ValueError):
+                        RUNTIME.install(request)
+                    self.assertEqual(events, ["verify"])
+                else:
+                    self.assertEqual(RUNTIME.install(request), {"verified": True})
+                    self.assertEqual(events, ["verify", "cleanup"])
+
     def test_worker_rejects_unknown_fields_without_echoing_text(self):
         sentinel = "private-query-never-echo"
         request = {"schema_version": 1, "action": "execute", "code": sentinel}

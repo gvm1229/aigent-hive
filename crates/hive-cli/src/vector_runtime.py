@@ -204,6 +204,32 @@ def copy_exclusive(source: Path, destination: Path) -> None:
         shutil.copyfileobj(input_file, output, 1024 * 1024)
 
 
+def cleanup_verified_downloads(cache: Path, artifacts: list[dict]) -> None:
+    """Remove only exact pinned downloads after the installed runtime has verified."""
+    def identity(metadata):
+        # Reading may advance atime; it does not change the file identity or content.
+        return (metadata.st_dev, metadata.st_ino, metadata.st_mode, metadata.st_nlink,
+                metadata.st_size, metadata.st_mtime_ns, metadata.st_ctime_ns)
+    candidates = {}
+    for item in artifacts:
+        digest = item["sha256"]
+        if len(digest) != 64 or any(c not in "0123456789abcdef" for c in digest):
+            raise ValueError("invalid cleanup artifact identity")
+        path = safe_path(str(cache / digest))
+        before = path.stat()
+        if not stat.S_ISREG(before.st_mode) or before.st_nlink != 1 or before.st_size != item["size"]:
+            raise ValueError("download cache changed before cleanup")
+        if digest_file(path) != "sha256:" + digest or identity(path.stat()) != identity(before):
+            raise ValueError("download cache digest or identity changed")
+        candidates[path] = before
+    # Authenticate the complete expected set before the first unlink. Unknown files,
+    # failed partial downloads and directories are not candidates, and are never removed.
+    for path, before in candidates.items():
+        if identity(safe_path(str(path)).stat()) != identity(before):
+            raise ValueError("download cache changed during cleanup")
+        path.unlink()
+
+
 def install(request: dict) -> dict:
     lock = request["lock"]
     identity = describe(lock)
@@ -243,7 +269,9 @@ def install(request: dict) -> dict:
     receipt = {"schema_version": 1, **identity, "helper_digest": digest_bytes(helper)}
     with (root / "receipt.json").open("xb") as output:
         output.write(canonical(receipt))
-    return verify({**request, "helper_digest": digest_bytes(helper)})
+    verified = verify({**request, "helper_digest": digest_bytes(helper)})
+    cleanup_verified_downloads(cache, [*validate_lock(lock), *model_lock["files"]])
+    return verified
 
 
 def verify(request: dict) -> dict:
