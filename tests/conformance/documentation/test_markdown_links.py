@@ -18,6 +18,25 @@ SPEC.loader.exec_module(MODULE)
 
 
 class MarkdownLinkTest(unittest.TestCase):
+    def test_upstream_link_exception_requires_exact_source_path_bytes_and_target(self) -> None:
+        temporary, root = self.make_repository()
+        with temporary:
+            relative = "vendor/process-wrap-9.1.0/CHANGELOG.md"
+            source = root / relative
+            source.parent.mkdir(parents=True)
+            original = (ROOT / relative).read_bytes()
+            source.write_bytes(original)
+            report = MODULE.scan(root)
+            self.assertEqual(report["failure_count"], 0)
+            self.assertEqual(len(report["preserved_upstream_links"]), 1)
+            source.write_bytes(original + b"\nchanged\n")
+            self.assertEqual(MODULE.scan(root)["failure_count"], 1)
+            source.write_bytes(original.replace(b"doc.rust-lang.org/", b"different.invalid/"))
+            self.assertEqual(MODULE.scan(root)["failure_count"], 1)
+            source.unlink()
+            (root / "README.md").write_bytes(original)
+            self.assertEqual(MODULE.scan(root)["failure_count"], 1)
+
     def test_inventory_excludes_frozen_archive_but_keeps_navigation(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
