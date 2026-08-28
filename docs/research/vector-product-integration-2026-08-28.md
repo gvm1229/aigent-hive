@@ -155,7 +155,46 @@
 - `3e9ba0e1`: 한 corpus의 동일 SQLite 검증/역직렬화 3→2회로 축소. 파일 읽기 2회·정본 검사 3회·승인 순서 유지, Wiki 149+1+7+8·Clippy·독립 검토 통과
 - 다음 사전 고정 비교: 실제 16개 물리 코어·24개 논리 CPU·32GiB 환경에서 4개 CLI×4작업. 새 바이너리와 이전 100개 활성 세대를 고정하고 기존 품질·시간·용량·수치 기준 유지
 
-### 최종 입력 방식의 생성 비용
+### 혼합 CPU 수치 차이와 고정 실행
+
+- Windows i7-13700KF: P 코어의 논리 CPU 0–15, E 코어 16–23. `EfficiencyClass` 1/0과 CPUID 종류 0x40/0x20 확인
+- 같은 고정 모델·문서 16개로 초기화 CPU와 실행 CPU를 교차한 네 경우 비교. 초기화 위치와 무관하게 실행 P/E에 따라 이전 두 벡터 결과를 각각 정확히 재현
+- 최대 성분 차이 0.00018461793661117554. 내부 수학 연산·명령어 선택 원인까지 확인한 증거는 아님
+- 일반 4×4 전체 재생성: 532.6696798초·색인/관리정보 372,159,088B 통과, 6,500개 수치 차이로 동등성 미달
+- P 코어 제한 4×4: 532.6559451초·동일 저장량, 5만 개 모두 과거 두 세대 중 하나와 정확히 일치. 두 세대 모두 일치 43,500개·첫 세대만 4,000개·둘째만 2,500개
+- 위 P 코어 실험은 연구 실행기의 제한이며 제품 자동 제한 수용과 구분. 기존 실패 결과·원본 벡터·세대 감사 복사본 보존
+- 제품 수정 `a4a2e46a`: 현재 보조 프로세스만 최고 성능 등급으로 제한, 기존 affinity·기본 CPU Set 교집합 준수. 부모·사용자 전역 설정 변경 없음
+- 권한 안 최고 성능 코어 부재·혼합 다중 processor group은 실행 거부. 다른 운영체제의 결정성까지 보장하는 수정은 아님
+- Python 실행 환경 27개·부모 8개·CLI 5개 중 39개 통과·Unix 실제 부모 종료 1개 제외. Rust 벡터 17개·Clippy 통과. 실모델 최종 수용은 별도
+- 정책 근거: [Microsoft CPU Set 구조](https://learn.microsoft.com/en-us/windows/win32/api/winnt/ns-winnt-system_cpu_set_information), [프로세스 기본 CPU Set](https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-getprocessdefaultcpusets)
+- 원본: `optimized-100/cpu-affinity/four-cell-summary.json`, `four-cell-final-audit.json`, `p-only/summary.json`
+
+### 100개 모음 증분의 잠금 충돌
+
+- 각 모음 본문 1개씩 총 100개 수정, FTS 갱신 21.0736873초 뒤 별도 벡터 측정. 원문 외 다른 자료 수정 없음
+- 12개 CLI×1작업·P 코어 제한: 벡터 67.4740934초로 30초 기준 미달. 성공 55개·실패 45개
+- 실패 45개 모두 정본 통합 잠금의 5초 대기 한도 초과. 19개 모음의 미게시 파일 38개도 실제 보존량에 포함
+- 변경 없는 49,900개 벡터 바이트 일치 중 27,445개만 성공한 55개 모음의 실제 재사용. 실패 모음의 이전 벡터 22,455개를 재사용 성공으로 합산 금지
+- 실패 45개만 4×1로 복구, 성공한 55개·본문·FTS 재실행 금지. 복구는 정합성 확인이며 최초 성능 실패 대체 불가
+- 원본: `optimized-100/cpu-affinity/p-only/incremental/first-attempt-audit.json`, `failure-analysis.json`
+
+### 같은 모델의 Rust 실행 구간 비교
+
+- 제품과 분리된 `tests/work/vector-native-query-probe/`: `ort 2.0.0-rc.13`·`tokenizers 0.23.1`, 기존 고정 DLL·모델만 사용
+- 세 질문×10회 새 프로세스의 30쌍, 운영체제 파일 캐시 초기화 없음. 수정한 동일 `ORT_ENABLE_ALL` 설정에서 모든 결과 오차 1e-6 이내
+- Python p95 1.6082731초·Rust p95 0.9595525초. Rust의 파일 검사는 실제 적재 모델·DLL, Python은 전체 실행 환경으로 검사 범위 차이 명시
+- Rust 최초 세부 비용: 검증 약 180ms·모델 약 203ms·토크나이저 약 366ms·계산 약 41ms. FTS·범위 권한·정본·인용 반환 비용 제외
+- 제품 의존성 추가 없음. 전체 500ms 기준 충족 주장 금지. 최초 잘못된 `Level3` 설정 결과도 별도 보존
+- 원본: `tests/work/vector-native-query-probe/measurements/1787895076468581800/summary.json`
+
+### 실제 운영체제 수용 후속
+
+- `33145811302`, 소스 `9ed2b124`: Windows x64·macOS arm64·Linux musl CLI의 실제 전체 벡터 수용 통과
+- macOS의 기본 Python SQLite 확장 부재는 CI 전용 호환 Python 선택으로 해결. 소비자 Python 자동 설치 없음
+- 직전 `33143621297`의 macOS 소스 첫 생성 실패는 다음 실행 성공만으로 원인 해결 처리 금지. 오류 종류 분류 보강 뒤 강제 분할·재개 재검증 대상
+- 이 결과는 CPU 후속 제품 수정·공개 test.5 설치·성능·기밀 수용의 대체 근거 아님
+
+### 초기 보조 실행기 기준선
 
 - Windows x64, i7-13700KF, 메모리 약 32GiB, 고유 본문 50,000개, 8개 프로세스, 60초 단위 재개
 - 실제 보조 실행기 전체 생성 614.38초. 600초 기준 미달. CLI의 정본 검사와 100개 물리 모음 운영 비용은 포함하지 않아 그 범위의 통과 증거 아님

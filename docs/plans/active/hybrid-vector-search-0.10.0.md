@@ -33,7 +33,7 @@ SQLite FTS의 exact 검색을 유지하면서 표현이 다른 의미·다국어
 - [x] [VQR10-002] 반복 50,000 corpus의 30 digest·5.75초와 고유 50,000 corpus의 50,000 digest·1,000 probe 분리 측정
 - [x] [VQR10-003] MiniLM batch·4 ONNX thread 실제 측정과 FastEmbed 다국어 세 model의 크기·license·dimension 비교 — 가장 작은 model full build 실패
 - [x] [VQR10-004] Digest cache·batch checkpoint·중단 재개·원자 pointer 구현, 100개 변경 7.20초·10개 추가/삭제 1.42초
-- [x] [VQR10-005] Query embedding 포함 warm p95 37.31ms·cold 643.45ms, 기존 FTS·graph 반환 근거 유지
+- [x] [VQR10-005] 과거 임베딩 구간 측정: 같은 프로세스 p95 37.31ms·모델 생성/첫 변환 1회 643.45ms. 전체 검색·cold p95 통과 증거 제외
 - [x] [VQR10-006] 50,000 실제 embedding prerequisite 실패로 Qdrant Edge·sqlite-vec 재비교 중단, 이전 engine 수치는 참고값만 유지
 - [x] [VQR10-007] 여섯 scope의 physical research root 분리·제품 ANN 없음 확인, 실제 50,000 cross-scope ANN은 prerequisite 실패로 미실행
 - [x] [VQR10-008] Research generation staging·checkpoint·atomic pointer·resume/one-shot digest 동등성, 미완료 generation 활성화 `0건`, FTS 변경 `0건`
