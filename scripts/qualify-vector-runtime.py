@@ -253,6 +253,9 @@ def main() -> int:
     qualification.report["source_commit"] = subprocess.check_output(
         ["git", "rev-parse", "HEAD"], cwd=ROOT, text=True
     ).strip()
+    qualification.report["source_worktree_dirty"] = bool(subprocess.check_output(
+        ["git", "status", "--porcelain"], cwd=ROOT, text=True
+    ).strip())
     try:
         qualification.run()
     except Exception as error:
