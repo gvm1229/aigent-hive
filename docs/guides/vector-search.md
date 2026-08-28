@@ -21,6 +21,8 @@
 필수 환경: CPython 3.12 또는 3.13과 SQLite 확장 불러오기 지원. Hive의 Python 설치·교체 없음.
 일부 macOS Python 배포본은 확장 미지원. 이 경우 지원되는 별도 Python 실행 파일을 `--python`으로 지정.
 미지원 환경에서도 기존 FTS 사용 가능. 제공자 API·API key·상시 서버 사용 없음.
+Windows 혼합 CPU에서는 보조 계산만 같은 성능 등급의 코어로 제한. 부모·전역 설정은 불변이며,
+사용자가 허용한 코어에 해당 등급이 없거나 혼합 다중 processor group이면 벡터 실행 거부·FTS 유지.
 대상은 Windows x64·macOS arm64·Linux x64의 glibc Python. Linux musl CLI도 이 Python과
 함께 사용할 수 있지만 Alpine의 musl Python은 현재 대상이 아님. 운영체제별 실제 수용은 별도 확인.
 
@@ -71,6 +73,28 @@ hive knowledge vector disable --user-root <user-root> --target <project-root> --
 `disable`은 벡터 사용 중지이며 원본 지식 삭제가 아님. `rollback`은 현재 정본과 호환되는
 이전 정상 벡터 세대로 복구. 원본 자체가 달라졌다면 오래된 색인을 억지로 되살리지 않고 재생성.
 새 모델·실행 환경으로 갱신할 때는 새 미리보기와 별도 동의 필요.
+
+## 여러 공유 모음 갱신
+
+같은 실행 환경을 이미 승인한 공유 모음만 명시적으로 묶어서 갱신 가능.
+예시는 `user-root`와 `shared-notes`라는 기존 모음 두 개를 선택한 경우:
+
+```text
+hive knowledge vector rebuild --user-root <user-root> --target <project-root> --visibility shared --collections '["user-root","shared-notes"]' --max-seconds 60 --workers 12 --output json
+```
+
+- 최대 100개를 지정하고 16개씩 처리. 모델·색인 읽기는 구간 안에서 공유, 모음별 저장소·권한은 분리
+- `--collection`과 혼용 금지. 소스·비공개·기밀 모음의 묶음 처리 없음
+- `scopes`의 완료 모음은 다음 요청에서 제외. 묶음 중 실패가 발생하면 종료 코드도 실패로 반환
+- 준비 비용 때문에 계산을 시작하지 못했다면 시간 예산을 늘려 재시도. 원본·FTS 자동 수정 없음
+
+| 모음별 상태 | 의미 |
+| --- | --- |
+| `complete` | 새 색인 준비 완료 |
+| `checkpoint` | 검증된 중간 결과에서 재개 가능 |
+| `prepared-not-started` | 작업 파일 준비 가능, 새 계산은 미시작 |
+| `not-started` | 해당 구간의 작업 미시작 |
+| `failed-or-unpublished` | 실패 기록·`status` 확인 후 재시도 필요 |
 
 ## Hive 소스 지식
 

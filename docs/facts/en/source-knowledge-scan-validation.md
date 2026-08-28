@@ -10,7 +10,7 @@ tags: [knowledge, scan, source, v0-9-4, validation]
 aliases: ["Reviewed source import", "Scan validation parity"]
 sources:
   - "repo:crates/hive-cli/src/knowledge.rs#sha256:1229cfa84e1fb0357c943fd0ef2910f3cdb5dd7e70f67879f0832db0ea26c800"
-  - "repo:crates/hive-wiki/src/store.rs#sha256:b816c52401e404ec9ea6d049f8f160d98c7baa770256cd630b9d60312bd2dfb4"
+  - "repo:crates/hive-wiki/src/store.rs#sha256:3e5d923652d17161f441bfa026cfbaef43efa72a656e509686ada499c4d76a8c"
 links: [knowledge-cross-project-access, knowledge-portability-scan, source-development]
 reviewed_revision: "git:e5c2c599562121ed3dc43143c16a0b1f063cefa2"
 status: active
