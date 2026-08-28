@@ -255,8 +255,22 @@ fn publish(
     }
 }
 
-pub(super) fn rebuild(target: &Target, options: &[(&str, &str)]) -> Result<Value, WikiError> {
-    auth::validate_fields(target, options)?;
+pub(super) fn execution_options(
+    options: &[(&str, &str)],
+    seconds: usize,
+    workers: usize,
+) -> Vec<(String, String)> {
+    let mut result = options
+        .iter()
+        .filter(|(key, _)| !["--max-seconds", "--workers"].contains(key))
+        .map(|(key, value)| ((*key).to_owned(), (*value).to_owned()))
+        .collect::<Vec<_>>();
+    result.push(("--max-seconds".to_owned(), seconds.to_string()));
+    result.push(("--workers".to_owned(), workers.to_string()));
+    result
+}
+
+pub(super) fn execution_budget(options: &[(&str, &str)]) -> Result<(usize, usize), WikiError> {
     let seconds = super::super::parse_bounded_usize(
         optional(options, "--max-seconds"),
         30,
@@ -264,15 +278,32 @@ pub(super) fn rebuild(target: &Target, options: &[(&str, &str)]) -> Result<Value
         60,
         "--max-seconds",
     )?;
-    let workers =
-        super::super::parse_bounded_usize(optional(options, "--workers"), 8, 1, 8, "--workers")?;
+    let workers = super::super::parse_bounded_usize(
+        optional(options, "--workers"),
+        super::default_workers(),
+        1,
+        super::MAX_WORKERS,
+        "--workers",
+    )?;
+    Ok((seconds, workers))
+}
+
+pub(super) fn rebuild(target: &Target, options: &[(&str, &str)]) -> Result<Value, WikiError> {
+    auth::validate_fields(target, options)?;
+    let (seconds, workers) = execution_budget(options)?;
     let _lease = target.files.writer(Some(&target.scope_id))?;
     let (control, digest) = scope_control(target)?;
     let before = control
         .filter(|value| value.enabled)
         .ok_or_else(|| invalid("vector scope is disabled; preview and enable first"))?;
     verify_runtime(&target.files, &before.runtime)?;
-    let corpus = corpus(target, Some((options, "rebuild")))?;
+    // Bind the exact frozen execution budget, not a second CPU-capacity observation.
+    let execution = execution_options(options, seconds, workers);
+    let execution = execution
+        .iter()
+        .map(|(key, value)| (key.as_str(), value.as_str()))
+        .collect::<Vec<_>>();
+    let corpus = corpus(target, Some((&execution, "rebuild")))?;
     let expected = match optional(options, "--rebuild-mode").unwrap_or("resume") {
         "resume" => restore_staging(target, &before)?,
         "fresh" => {
@@ -343,6 +374,7 @@ pub(super) fn rebuild(target: &Target, options: &[(&str, &str)]) -> Result<Value
     Ok(
         json!({"complete":result.complete,"phase":result.phase,"embedded":result.embedded,"remaining":result.remaining,
         "cleanup_pending":cleanup_pending,
+        "workers":workers,
         "chunks":result.chunks,"snapshot_id":snapshot.id,"database_digest":snapshot.database_digest,
         "manifest_digest":snapshot.manifest_digest,"worker_seconds":result.elapsed_seconds,
         "requires_new_authorization":auth::confidential(target) && !result.complete,

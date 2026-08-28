@@ -68,15 +68,7 @@ fn binding(
     let control = control
         .filter(|control| control.enabled)
         .ok_or_else(|| invalid("enable the confidential scope before authorizing its build"))?;
-    let seconds = knowledge::parse_bounded_usize(
-        optional(options, "--max-seconds"),
-        30,
-        1,
-        60,
-        "--max-seconds",
-    )?;
-    let workers =
-        knowledge::parse_bounded_usize(optional(options, "--workers"), 8, 1, 8, "--workers")?;
+    let (seconds, workers) = super::index::execution_budget(options)?;
     let mode = optional(options, "--rebuild-mode").unwrap_or("resume");
     if !["resume", "fresh"].contains(&mode) {
         return Err(invalid("invalid rebuild mode"));
@@ -363,6 +355,33 @@ mod tests {
     }
 
     #[test]
+    fn cpu_capacity_drift_cannot_change_the_authorized_execution_budget() {
+        let (_root, target, store, args) = fixture();
+        super::super::TEST_DEFAULT_WORKERS.with(|value| value.set(Some(4)));
+        let grant = issue(&target, &borrowed(&args)).expect("four workers approved");
+        let consuming = with_token(&args, &grant);
+        super::super::TEST_DEFAULT_WORKERS.with(|value| value.set(Some(8)));
+        let frozen = super::super::index::execution_options(
+            &borrowed(&consuming),
+            30,
+            super::super::default_workers(),
+        );
+        super::super::TEST_DEFAULT_WORKERS.with(|value| value.set(Some(4)));
+        let rejected = export(&target, &store, &frozen, "rebuild");
+        // The rejected eight-worker attempt must leave the original four-worker grant usable.
+        let accepted = export(&target, &store, &consuming, "rebuild");
+        super::super::TEST_DEFAULT_WORKERS.with(|value| value.set(None));
+        assert!(rejected.is_err());
+        assert_eq!(
+            accepted
+                .expect("original budget remains approved")
+                .chunks
+                .len(),
+            1
+        );
+    }
+
+    #[test]
     fn build_grant_is_consumed_once_and_cannot_authorize_rollback() {
         let (_root, target, store, args) = fixture();
         let grant = issue(&target, &borrowed(&args)).expect("issue");
@@ -436,7 +455,15 @@ mod tests {
         let grant = issue(&target, &borrowed(&args)).expect("issue");
         let consuming = with_token(&args, &grant);
         let mut changed = consuming.clone();
-        changed.push(("--workers".to_owned(), "1".to_owned()));
+        changed.push((
+            "--workers".to_owned(),
+            if super::super::default_workers() == 1 {
+                "2"
+            } else {
+                "1"
+            }
+            .to_owned(),
+        ));
         assert!(export(&target, &store, &changed, "rebuild").is_err());
         let (control, digest) = scope_control(&target).expect("control");
         let mut control = control.expect("scope");

@@ -31,12 +31,26 @@ pub(super) fn retrieve(
 const BOOTSTRAP: &str = include_str!("vector_runtime.py");
 const WORKER: &str = include_str!("vector_helper.py");
 const LOCK: &str = include_str!("vector-runtime-lock.json");
+const MAX_WORKERS: usize = 16;
+
+#[cfg(test)]
+thread_local! {
+    static TEST_DEFAULT_WORKERS: std::cell::Cell<Option<usize>> = const { std::cell::Cell::new(None) };
+}
+
+fn default_workers() -> usize {
+    #[cfg(test)]
+    if let Some(count) = TEST_DEFAULT_WORKERS.with(std::cell::Cell::get) {
+        return count;
+    }
+    std::thread::available_parallelism().map_or(1, |count| count.get().min(12))
+}
 const USAGE: &str = "Optional local semantic search; FTS remains the default.\n\
     hive knowledge vector preview|enable|status|rebuild|rollback|disable --user-root <dir> --target <dir> --collection <id> --visibility shared|project-private|confidential [--python <absolute-executable>] [--consent-digest <sha256:...>] --output json\n\
     hive knowledge vector authorize-build --user-root <dir> --target <dir> --collection <id> --visibility confidential --capabilities <json> --usage <json> --expires-at <unix-seconds> --nonce <nonce> --confirm-current-action [--operation rebuild|rollback] --output json\n\
     hive source-wiki vector preview|enable|status|rebuild|rollback|disable|query --target <source-root> --language en|ko [--python <absolute-executable>] [--consent-digest <sha256:...>] --output json\n\
     source query options: --query <text> --top-k <1..100>\n\
-    rebuild options: --max-seconds <1..60> --workers <1..8> --rebuild-mode resume|fresh\n\
+    rebuild options: --max-seconds <1..60> --workers <1..16> --rebuild-mode resume|fresh\n\
     confidential rebuild/rollback: --authorization-id <id> --authorization-token <token> --capabilities <json> --usage <json>\n";
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -678,6 +692,14 @@ fn io_error(error: impl std::fmt::Display) -> WikiError {
 mod tests {
     use super::*;
     use std::fs;
+
+    #[test]
+    fn default_parallelism_is_bounded_by_host_capacity() {
+        let count = default_workers();
+        assert!((1..=12).contains(&count));
+        assert!(count <= std::thread::available_parallelism().map_or(1, std::num::NonZero::get));
+        assert_eq!(MAX_WORKERS, 16);
+    }
 
     #[test]
     fn source_status_does_not_install_or_create_consumer_state() {

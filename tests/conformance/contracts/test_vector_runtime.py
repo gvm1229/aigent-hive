@@ -158,6 +158,13 @@ class VectorRuntimeContract(unittest.TestCase):
             with self.assertRaises(ValueError):
                 WORKER.build({"contract_digest": "sha256:" + "a" * 64, "manifest_digest": "not-a-digest"})
 
+    def test_worker_parallelism_is_bounded_before_runtime_access(self):
+        request = {"contract_digest":"sha256:"+"a"*64,"manifest_digest":"sha256:"+"b"*64,"chunks":[],"max_seconds":30}
+        with patch.object(WORKER, "load_runtime", side_effect=AssertionError("must not read runtime")):
+            for workers in (True,0,17):
+                with self.subTest(workers=workers), self.assertRaises(ValueError):
+                    WORKER.build({**request,"workers":workers})
+
     def test_trusted_main_file_does_not_authorize_sqlite_sidecars(self):
         database = self.root / "staging.sqlite3"
         database.write_bytes(b"trusted main database")
@@ -210,19 +217,22 @@ class VectorRuntimeContract(unittest.TestCase):
         chunks = [{"chunk_id": f"chunk-{index}", "digest": "sha256:" + "c" * 64, "title": "Example", "text": f"synthetic text {index}"} for index in range(129)]
         request = {"runtime": str(runtime), "database": str(database), "chunks": chunks, "contract_digest": "sha256:" + "d" * 64, "manifest_digest": "sha256:" + "e" * 64, "workers": 1, "max_seconds": 1, "expected_database_digest": None}
         connect = lambda path: sqlite3.connect(path, factory=SimulatedVectorConnection)
-        with patch.object(WORKER, "load_runtime", return_value=runtime), patch.object(WORKER, "open_database", side_effect=connect), patch.object(WORKER.concurrent.futures, "ProcessPoolExecutor", InlinePool):
+        with patch.object(WORKER, "load_runtime", return_value=runtime), patch.object(WORKER, "initialize_encoder") as initialize, patch.object(WORKER, "open_database", side_effect=connect), patch.object(WORKER.concurrent.futures, "ThreadPoolExecutor", InlinePool):
             with patch.object(WORKER.time, "monotonic", side_effect=[0.0, 0.0, 2.0, 2.0]):
                 first = WORKER.build(request)
             self.assertFalse(first["complete"])
             self.assertEqual(first["embedded"], 64)
+            self.assertEqual(initialize.call_count, 1)
             request["expected_database_digest"] = first["database_digest"]
             with patch.object(WORKER.time, "monotonic", return_value=0.0):
                 second = WORKER.build(request)
             self.assertTrue(second["complete"])
             self.assertEqual(second["embedded"], 65)
+            self.assertEqual(initialize.call_count, 2)
             request["expected_database_digest"] = second["database_digest"]
             unchanged = WORKER.build(request)
             self.assertEqual(unchanged["embedded"], 0)
+            self.assertEqual(initialize.call_count, 2)
             self.assertEqual(unchanged["database_digest"], second["database_digest"])
             request["chunks"][0] = {**chunks[0], "text":"updated synthetic text", "digest":"sha256:"+"f"*64}
             updated = WORKER.build(request)

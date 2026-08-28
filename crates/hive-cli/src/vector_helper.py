@@ -10,7 +10,6 @@ import concurrent.futures
 import hashlib
 import json
 import math
-import multiprocessing
 import os
 from pathlib import Path
 import socket
@@ -358,7 +357,7 @@ def build(request: dict) -> dict:
     chunks = sorted(validate_chunks(request["chunks"]), key=lambda row: row["chunk_id"])
     workers = request["workers"]
     seconds = request["max_seconds"]
-    if type(workers) is not int or not 1 <= workers <= 8 or type(seconds) is not int or not 1 <= seconds <= 60:
+    if type(workers) is not int or not 1 <= workers <= 16 or type(seconds) is not int or not 1 <= seconds <= 60:
         raise ValueError("invalid vector execution budget")
     root = load_runtime(request["runtime"])
     path = database_path(root, request["database"], writable=True)
@@ -392,10 +391,13 @@ def build(request: dict) -> dict:
             # authenticate a killed worker's mutable cache from its self-reported checksum.
             if restored and missing:
                 parallelism = min(workers, (len(missing)+63)//64)
-                with concurrent.futures.ProcessPoolExecutor(max_workers=parallelism, mp_context=multiprocessing.get_context("spawn"), initializer=initialize_encoder, initargs=(str(root),)) as pool:
+                initialize_encoder(str(root))
+                with concurrent.futures.ThreadPoolExecutor(max_workers=parallelism) as pool:
                     window_size = 64 * parallelism
                     for offset in range(0, len(missing), window_size):
-                        if time.monotonic() - started >= seconds:
+                        # Preserve one bounded progress window even when model startup uses
+                        # the soft budget. The parent's hard deadline still bounds this process.
+                        if time.monotonic() - started >= seconds and offset > 0:
                             break
                         window = missing[offset:offset + window_size]
                         batches = [window[index:index + 64] for index in range(0, len(window), 64)]
