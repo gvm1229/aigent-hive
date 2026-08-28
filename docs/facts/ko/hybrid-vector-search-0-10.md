@@ -16,7 +16,7 @@ sources:
   - "repo:docs/research/evidence/vector-hard-gate-windows-2026-08-23.json#sha256:41517d801330c1c299178b5b1ae75ed27fb5106c8af6ce4e2083b66cec30f09a"
   - "repo:docs/research/evidence/vector-requalification-windows-2026-08-24.json#sha256:df1a2e0bf1001236cef266653309154bb99676837be86a2beba25e8dff16b178"
   - "repo:docs/research/vector-memory-0.10-feasibility-2026-08-22.md#sha256:03dca07c4f6b5928268f4bc7c5337d1604371eadcd5b8a7b85b88ec3f65f215c"
-  - "repo:docs/research/vector-product-integration-2026-08-28.md#sha256:a014ced35c5a1d072fe5e8b3866b5531241b1a70c2d8bb0b454c92ddee8c214b"
+  - "repo:docs/research/vector-product-integration-2026-08-28.md#sha256:34bfef8e11622cb76dd731c547effc1273f07660473615146051b65c886e9815"
   - "repo:docs/research/vector-requalification-0.10-2026-08-24.md#sha256:8e7a9a70df255694b10bc88b9dadb40619ad36f74d20902b06dea1db556f595e"
 links: [global-knowledge-rag, graphify-0-10-adoption, knowledge-storage, v0-10-product-scope]
 reviewed_revision: "git:ddb91859aae17ee52c79ca2b14fdaebb5f2876dd"
@@ -27,8 +27,8 @@ status: active
 
 전용 벡터 브랜치에서도 Markdown 정본·FTS 유지. 로컬 임베딩은 별도 동의,
 기밀 조회·생성 승인은 분리.
-MiniLM의 원본·독립 질문 품질 통과. Windows 5만 청크·100개 모음의
-순차 생성 932.943초·증분 95.943초로 시간 미달, 벡터 보존·누적 442.8MB 통과.
-동일 CPU 종류 사용·모델 공유 병렬 처리·게시 검사 병렬화 구현, 최종 실측 필요.
+MiniLM의 원본·독립 질문 품질 통과. Windows 병렬 생성은 5만 청크·100개 모음
+577.810초, 벡터 바이트 일치·누적 442.8MB로 통과. 이전 순차 증분 95.943초는 미달.
+동일 CPU 종류 사용·모델 공유·게시 검사 병렬화 구현. 새 증분·전체 검색 실측 필요.
 계산 구간만의 시간으로 전체 검색 속도 증명 금지. 새 권한·정본·바이트 검사 유지.
 안정판은 별도 명시 승인 전 금지.
