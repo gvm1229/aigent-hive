@@ -4121,8 +4121,32 @@ fn read_named_file(
             "{label} is not a bounded regular file"
         )));
     }
+    read_bounded_with_size_hint(file, metadata.len(), max_bytes, label)
+}
+
+fn read_bounded_with_size_hint(
+    reader: impl Read,
+    known_length: u64,
+    max_bytes: usize,
+    label: &str,
+) -> Result<Vec<u8>, WikiError> {
+    let invalid_bound =
+        || WikiError::Verification(format!("invalid bounded read size for {label}"));
+    let limit = max_bytes.checked_add(1).ok_or_else(invalid_bound)?;
+    let capacity = usize::try_from(known_length)
+        .ok()
+        .filter(|&length| length <= max_bytes)
+        .and_then(|length| length.checked_add(1))
+        .ok_or_else(invalid_bound)?;
+    let limit = u64::try_from(limit).map_err(|_| invalid_bound())?;
     let mut bytes = Vec::new();
-    file.take(u64::try_from(max_bytes + 1).expect("byte bound fits u64"))
+    // The opened length is only a capacity hint. Keep the independent read limit
+    // and EOF check so concurrent growth or shrink cannot authenticate a prefix.
+    bytes
+        .try_reserve_exact(capacity)
+        .map_err(|_| WikiError::Io(format!("cannot reserve bounded {label} read buffer")))?;
+    reader
+        .take(limit)
         .read_to_end(&mut bytes)
         .map_err(|error| WikiError::Io(format!("cannot read {label}: {error}")))?;
     if bytes.len() > max_bytes {
@@ -4539,6 +4563,103 @@ mod tests {
 
     fn raw_digest(value: &str) -> String {
         raw_sha256(&digest(value)).to_owned()
+    }
+
+    struct CountedBoundedReader {
+        data: std::io::Cursor<Vec<u8>>,
+        calls: usize,
+        max_chunk: usize,
+        fail_after: Option<usize>,
+    }
+
+    impl CountedBoundedReader {
+        fn new(data: Vec<u8>) -> Self {
+            Self {
+                data: std::io::Cursor::new(data),
+                calls: 0,
+                max_chunk: usize::MAX,
+                fail_after: None,
+            }
+        }
+    }
+
+    impl Read for CountedBoundedReader {
+        fn read(&mut self, bytes: &mut [u8]) -> io::Result<usize> {
+            self.calls += 1;
+            if self.fail_after.is_some_and(|limit| self.calls > limit) {
+                return Err(io::Error::other("bounded-reader-sentinel"));
+            }
+            let count = bytes.len().min(self.max_chunk);
+            self.data.read(&mut bytes[..count])
+        }
+    }
+
+    #[test]
+    fn bounded_read_hint_keeps_bytes_and_reduces_representative_small_reads() {
+        let data = vec![b'x'; 1000];
+        let mut baseline = CountedBoundedReader::new(data.clone());
+        let mut original = Vec::new();
+        (&mut baseline)
+            .take(4097)
+            .read_to_end(&mut original)
+            .expect("old read");
+        let mut candidate = CountedBoundedReader::new(data.clone());
+        let actual =
+            read_bounded_with_size_hint(&mut candidate, 1000, 4096, "test").expect("bounded read");
+        assert_eq!(actual, data);
+        assert_eq!(actual, original);
+        assert!(candidate.calls <= 2);
+        assert!(baseline.calls > candidate.calls);
+        println!(
+            "representative Read calls: baseline={}, hinted={}",
+            baseline.calls, candidate.calls
+        );
+    }
+
+    #[test]
+    fn bounded_read_hint_is_not_a_length_contract_and_preserves_eof_and_growth_limit() {
+        for (size, hint, limit) in [
+            (0, 10, 100),
+            (3, 100, 100),
+            (100, 1, 100),
+            (100, 100, 100),
+            (101, 1, 100),
+            (1000, 100, 100),
+        ] {
+            let data = vec![b'z'; size];
+            let mut reader = CountedBoundedReader::new(data.clone());
+            reader.max_chunk = 7;
+            let result = read_bounded_with_size_hint(&mut reader, hint, limit, "test");
+            if size <= limit {
+                assert_eq!(result.expect("read to actual EOF"), data);
+            } else {
+                assert!(matches!(result, Err(WikiError::Verification(_))));
+                assert_eq!(reader.data.position(), u64::try_from(limit + 1).unwrap());
+            }
+        }
+    }
+
+    #[test]
+    fn bounded_read_hint_rejects_invalid_sizes_and_keeps_io_errors() {
+        let mut reader = CountedBoundedReader::new(vec![b'a'; 10]);
+        assert!(read_bounded_with_size_hint(&mut reader, 11, 10, "test").is_err());
+        assert!(read_bounded_with_size_hint(&mut reader, 0, usize::MAX, "test").is_err());
+        assert_eq!(reader.calls, 0);
+        // A byte Vec cannot reserve more than isize::MAX: capacity failure, not a large allocation.
+        let length = u64::try_from(usize::MAX - 1).unwrap();
+        assert!(matches!(
+            read_bounded_with_size_hint(&mut reader, length, usize::MAX - 1, "test"),
+            Err(WikiError::Io(_))
+        ));
+        assert_eq!(reader.calls, 0);
+        for fail_after in [0, 1] {
+            let mut reader = CountedBoundedReader::new(vec![b'b'; 10]);
+            reader.max_chunk = 3;
+            reader.fail_after = Some(fail_after);
+            let error =
+                read_bounded_with_size_hint(&mut reader, 10, 100, "test").expect_err("I/O failure");
+            assert!(error.to_string().contains("bounded-reader-sentinel"));
+        }
     }
 
     fn store() -> (TempDir, RagStore) {
