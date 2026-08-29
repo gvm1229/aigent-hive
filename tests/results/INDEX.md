@@ -43,3 +43,8 @@
 | [passed](runs/20260829T160452-6d1df123f53f.md) | 문체 검사 생성 산출물 제외 회귀 | 3257081f53ef05e8609f7ea6d0399faff7a06ba1 | Windows-11-10.0.26200-SP0 |
 | [failed](runs/20260829T160558-a1e269f649df.md) | 문체 검사 결과 증거 경계 회귀 | 3257081f53ef05e8609f7ea6d0399faff7a06ba1 | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260829T160610-b3427a5c16f1.md) | 문체 검사 생성 결과 재검증 | 3257081f53ef05e8609f7ea6d0399faff7a06ba1 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260829T160741-8657bab1bcba.md) | 안정판 공개 문서 develop 푸시 Rust 전체 검사 | 74c718cdacc09fb0e997d764a11727e316206de9 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260829T160949-ac356fed5949.md) | 안정판 공개 문서 develop 푸시 Python 전체 검사 | 74c718cdacc09fb0e997d764a11727e316206de9 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260829T160950-2f53bca93539.md) | Python conformance: documentation, security, contract, integration, release | 74c718cdacc09fb0e997d764a11727e316206de9 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260829T161033-5049fbb18b96.md) | 안정판 공개 문서 documentation lane 재수용 | 74c718cdacc09fb0e997d764a11727e316206de9 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260829T161034-e9bc3aca449f.md) | Python conformance: documentation | 74c718cdacc09fb0e997d764a11727e316206de9 | Windows-11-10.0.26200-SP0 |
