@@ -16,7 +16,7 @@
 
 ## 계약
 
-- 시험판은 npm `test`·GitHub prerelease에 보존하되 일반 사용자 설치 안내에 노출하지 않음
+- 시험판: npm `test`·GitHub prerelease 보존. 일반 사용자 설치 안내 노출 제외
 - test channel: 공개 문서는 현재 stable 대장 유지, registry `latest`와 대장 일치
 - stable channel: stable candidate source의 대장·날짜·coverage가 요청 stable과 일치
 - stable publication 뒤 registry `latest`와 대장 일치

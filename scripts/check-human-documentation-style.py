@@ -103,6 +103,10 @@ def is_candidate(name: str) -> bool:
 def inventory(root: Path) -> list[Path]:
     paths: list[Path] = []
     for directory, names, files in os.walk(root, followlinks=False):
+        relative_directory = Path(directory).relative_to(root).as_posix()
+        if relative_directory in {".agents/work", ".omx", "target", "tests/work"}:
+            names[:] = []
+            continue
         names[:] = sorted(name for name in names if name != ".git")
         for name in sorted(files):
             if is_candidate(name):
@@ -262,6 +266,8 @@ def language(text: str) -> str:
 
 def owner(relative: str) -> str:
     if relative.startswith((".agents/work/", ".omx/", "tests/work/", "target/")):
+        return "runtime-generated"
+    if relative.startswith(("tests/results/runs/", "tests/results/legacy/", "tests/results/cleanup/")):
         return "runtime-generated"
     if relative.startswith("tests/fixtures/"):
         return "test-fixture"

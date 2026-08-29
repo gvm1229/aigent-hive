@@ -40,3 +40,6 @@
 | [passed](runs/20260829T155436-a383d2a3488c.md) | 안정판 공개 문서 출시 gate 재기록 | 55a5d7ca2f5e3d3a7a077290b199c41d0a568030 | Windows-11-10.0.26200-SP0 |
 | [failed](runs/20260829T155550-a8fd8aa63c8c.md) | 안정판 공개 문서 static 계약 검사 | 355f812832d49fa20e0e514be9b51404166f9f62 | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260829T155719-4cf27a40e152.md) | 안정판 공개 문서 출시 계약 재검증 | 355f812832d49fa20e0e514be9b51404166f9f62 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260829T160452-6d1df123f53f.md) | 문체 검사 생성 산출물 제외 회귀 | 3257081f53ef05e8609f7ea6d0399faff7a06ba1 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260829T160558-a1e269f649df.md) | 문체 검사 결과 증거 경계 회귀 | 3257081f53ef05e8609f7ea6d0399faff7a06ba1 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260829T160610-b3427a5c16f1.md) | 문체 검사 생성 결과 재검증 | 3257081f53ef05e8609f7ea6d0399faff7a06ba1 | Windows-11-10.0.26200-SP0 |

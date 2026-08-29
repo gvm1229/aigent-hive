@@ -36,16 +36,21 @@ class HumanDocumentationStyleTest(unittest.TestCase):
             self.assertIn("docs/archive/MANIFEST.md", inventory)
             self.assertNotIn("docs/archive/state/old.md", inventory)
 
-    def test_inventory_reads_hidden_ignored_and_generated_candidates(self) -> None:
+    def test_inventory_reads_hidden_candidates_but_skips_runtime_generated_trees(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            for relative in ("README.md", ".hidden/NOTE.txt", "tests/work/out.md"):
+            for relative in (
+                "README.md",
+                ".hidden/NOTE.txt",
+                "tests/work/out.md",
+                "tests/results/runs/out.md",
+            ):
                 path = root / relative
                 path.parent.mkdir(parents=True, exist_ok=True)
                 path.write_text("간결한 설명\n", encoding="utf-8")
             self.assertEqual(
                 [path.relative_to(root).as_posix() for path in MODULE.inventory(root)],
-                [".hidden/NOTE.txt", "README.md", "tests/work/out.md"],
+                [".hidden/NOTE.txt", "README.md", "tests/results/runs/out.md"],
             )
 
     def test_literal_looking_korean_prose_is_not_blanket_exempted(self) -> None:
