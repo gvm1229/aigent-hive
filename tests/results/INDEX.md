@@ -38,3 +38,5 @@
 | [passed](runs/20260829T155349-2b9b6bc08787.md) | Python conformance: documentation | 55a5d7ca2f5e3d3a7a077290b199c41d0a568030 | Windows-11-10.0.26200-SP0 |
 | [failed](runs/20260829T155415-af93d6e3fec6.md) | 안정판 공개 문서 출시 gate 검사 | 55a5d7ca2f5e3d3a7a077290b199c41d0a568030 | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260829T155436-a383d2a3488c.md) | 안정판 공개 문서 출시 gate 재기록 | 55a5d7ca2f5e3d3a7a077290b199c41d0a568030 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260829T155550-a8fd8aa63c8c.md) | 안정판 공개 문서 static 계약 검사 | 355f812832d49fa20e0e514be9b51404166f9f62 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260829T155719-4cf27a40e152.md) | 안정판 공개 문서 출시 계약 재검증 | 355f812832d49fa20e0e514be9b51404166f9f62 | Windows-11-10.0.26200-SP0 |

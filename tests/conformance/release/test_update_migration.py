@@ -371,7 +371,7 @@ class Phase6StaticContracts(unittest.TestCase):
         publication_workflow = yaml.safe_load(publication)
         self.assertEqual(
             set(candidate_workflow["jobs"]),
-            {"unix", "windows", "npm-umbrella", "integrity-bundle"},
+            {"public-stable-docs", "unix", "windows", "npm-umbrella", "integrity-bundle"},
         )
         self.assertEqual(set(publication_workflow["jobs"]), {"publish"})
         publication_triggers = publication_workflow.get(
