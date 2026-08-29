@@ -82,7 +82,7 @@ current catalog.
 | [`0.9.0`](releases/0.9.0.md) | `0.8.0` 대비 변경점·정식 출시 gate |
 | [`0.9.3`](releases/0.9.3.md) | 프로젝트 간 지식 접근·자동 공유 정식 출시 |
 | [`0.9.4`](releases/0.9.4.md) | Skill 표시·전역 검증·지식 안내·프롬프트 기본값 정식 출시 |
-| [`0.9.5`](releases/0.9.5.md) | native account 복구·전역 지식 묶음 이전·인증된 user projection 갱신 |
+| [`0.9.5`](releases/0.9.5.md) | native account 복구·전역 지식 보관 파일 이전·인증된 user projection 갱신 기능 |
 
 ## Research
 
