@@ -11,8 +11,8 @@
 - [x] [PUBDOC-003] 일반 사용자 공개 문서의 번호 시험판·test 설치 경로 제거
 - [x] [PUBDOC-004] 공개 안정판 문서 검사기와 단위·패키지 README 회귀 추가
 - [x] [PUBDOC-005] test·stable 후보/게시 workflow의 channel별 gate 추가
-- [ ] [PUBDOC-006] 현재 검증된 정리 커밋과 함께 `develop` 반영·CI 확인
-- [ ] [PUBDOC-007] `origin/main` 기준 docs-only PR로 `0.9.5` 공개 문서 교정
+- [x] [PUBDOC-006] 현재 검증된 정리 커밋과 함께 `develop` 반영·CI 확인 (`4091b6e2`, CI `33264260664`)
+- [x] [PUBDOC-007] `origin/main` 기준 docs-only PR로 `0.9.5` 공개 문서 교정 (PR `#39`, merge `d25a0454`)
 
 ## 계약
 

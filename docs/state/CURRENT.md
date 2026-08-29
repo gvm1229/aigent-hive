@@ -5,7 +5,7 @@
 - 공개 시험판: `0.10.0-test.6`, 배포일 2026-08-29
 - 제품 수용 소스: `d331dc879cf51eab078c5e189b2fe7b8d729e541`
 - 안정판 기준·npm `latest`: `0.9.5`. 안정판 작업은 계속 명시 제외
-- 안정판 공개 문서: `0.9.5` 교정과 test 비노출 gate 구현·로컬 검증 완료. `develop` 반영 CI와 docs-only main PR 대기
+- 안정판 공개 문서: `0.9.5` 교정과 test 비노출 gate 구현 완료. `develop` CI `33264260664`와 docs-only main PR `#39`가 통과·병합됐고, npm `latest=0.9.5` 재확인
 - 계획: [PLAN.md](../plans/PLAN.md), [벡터 계획](../plans/active/hybrid-vector-search-0.10.0.md)
 - 설명: [벡터 검색 시각 문서](../hive-vector-search.ko.html), [사용 안내](../guides/vector-search.md)
 
