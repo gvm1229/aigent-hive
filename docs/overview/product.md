@@ -1,5 +1,7 @@
 # 제품 개요
 
+<!-- AIGENT-HIVE:PUBLIC-STABLE version=0.9.5 release-date=2026-08-16 -->
+
 ## 목적
 
 Aigent Hive: subscription-authenticated Codex, Claude Code, Gemini Antigravity 위의
@@ -62,7 +64,7 @@ provider-neutral 로컬 agent harness.
 | Usage guard | Native-first sensor, configured Hive target only, automatic dispatch fail-closed | [Installed policy](../guides/installed-usage-guard.md) |
 | Judge quorum | Clean-context package와 detached Ed25519 verification | [Judge boundary](../architecture/judge-trust-boundary.md) |
 | Release·update | Attestation·local integrity, version gate, backup·journal·recovery | [Release boundary](../architecture/release-update-trust-boundary.md) |
-| Direct install | npm과 digest-pinned curl·PowerShell·CMD channel | [`0.9.4` release](../releases/0.9.4.md) |
+| Direct install | npm과 digest-pinned curl·PowerShell·CMD channel | [`0.9.5` release](../releases/0.9.5.md) |
 
 ## Artifact 흐름
 
@@ -80,10 +82,8 @@ flowchart LR
 
 ## Version·release 상태
 
-- Current source version: `0.9.4` 완료 기능 안정판
-- Latest published version: `0.9.0`
-- `0.9.0`: npm `latest=0.9.0`, normal GitHub Release, annotated Git tag 게시 완료
-- `0.9.1`: 미등록 project Wiki lint의 user-root 폴백과 전체 `v0.9` 수용 재검증 뒤 게시
+- Current public stable version: `0.9.5` (released 2026-08-16)
+- `0.9.5`: verified native account recovery, portable global knowledge bundles, authenticated user projection refresh, and same-major project upgrade verification
 - `0.9.4`: 교차 프로젝트 명시 지식 조회, index-time 일반 지식 자동 승격과 harness 개선
 - Major: exact 사용자 지시 전 자동 준비·추론 금지
 

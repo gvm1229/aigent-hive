@@ -6,22 +6,24 @@
 
 > A provider-neutral local harness for Codex, Claude Code, and Gemini Antigravity.
 
-[![Version](https://img.shields.io/badge/version-0.10.0-4C1)](Cargo.toml)
+[![Version](https://img.shields.io/badge/version-0.9.5-4C1)](Cargo.toml)
 [![Rust](https://img.shields.io/badge/Rust-stable-000000?logo=rust)](rust-toolchain.toml)
 [![License](https://img.shields.io/badge/license-Apache--2.0-green)](LICENSE)
 
 [English](./README.md) · [한국어](./docs/readme/README.ko.md)
+
+<!-- AIGENT-HIVE:PUBLIC-STABLE version=0.9.5 release-date=2026-08-16 -->
 
 Hive gives subscription-authenticated agent hosts one consistent setup, Skill routing,
 project knowledge, durable role/run state, usage safeguards, and safe update contracts.
 It never asks for model-provider API keys, calls model-provider APIs, or replaces the
 host's own model runtime.
 
-Stable `0.9.4` is the current release for this source.
+Stable `0.9.5` is the current public release.
 
 ## Install the current stable release
 
-`0.9.4` is published on npm as `latest`, with a normal GitHub Release and annotated Git tag.
+`0.9.5` is published on npm as `latest`, with a normal GitHub Release and annotated Git tag.
 
 ```console
 npm install -g aigent-hive
@@ -30,7 +32,7 @@ npm install -g aigent-hive
 Or pin the exact version:
 
 ```console
-npm install -g aigent-hive@0.9.4
+npm install -g aigent-hive@0.9.5
 ```
 
 The npm installer requires Node.js and npm. The installed `hive` runtime is a native
@@ -39,26 +41,26 @@ Rust binary and does not require Node.js.
 Expected stable version label:
 
 ```text
-AIgent Hive v0.9.4 (released 2026-08-14)
+AIgent Hive v0.9.5 (released 2026-08-16)
 ```
 
 ### macOS and Linux with curl
 
 ```sh
 curl --proto '=https' --tlsv1.2 -LsSf \
-  https://unpkg.com/aigent-hive@0.9.4/install.sh | sh
+  https://unpkg.com/aigent-hive@0.9.5/install.sh | sh
 ```
 
 ### Windows PowerShell 5.1+
 
 ```powershell
-irm https://unpkg.com/aigent-hive@0.9.4/install.ps1 | iex
+irm https://unpkg.com/aigent-hive@0.9.5/install.ps1 | iex
 ```
 
 ### Windows Command Prompt
 
 ```bat
-curl.exe -fLo install-aigent-hive.cmd https://unpkg.com/aigent-hive@0.9.4/install.cmd && install-aigent-hive.cmd
+curl.exe -fLo install-aigent-hive.cmd https://unpkg.com/aigent-hive@0.9.5/install.cmd && install-aigent-hive.cmd
 ```
 
 The direct installers fetch the same native package bytes from npm, verify the
@@ -75,7 +77,7 @@ setup steps below. It is optional: the four-step setup remains the predictable m
 I want the optional one-prompt Aigent Hive setup. Work only at user scope; do not inspect,
 initialize, or change any project, repository, folder, or current working directory.
 
-Install the current stable release 0.9.4. The stable install guidance is
+Install the current stable release 0.9.5. The stable install guidance is
 https://github.com/gvm1229/aigent-hive#install-the-current-stable-release.
 Detect my operating system and active host (Codex, Claude Code, or Gemini Antigravity), asking
 me if either is unclear. Check whether Node.js and npm are available. If they are missing,
@@ -93,21 +95,27 @@ an optional third-party Skill.
 
 This option installs only the current stable release.
 
-Project maintainers can consult the [release verification notes](docs/guides/release-verification-builds.md).
+## What changed in 0.9.5
+
+- Native account recovery uses one verified account without CodexBar.
+- Global knowledge bundles use separate macOS/Linux and Windows transfer commands.
+- An authenticated update refreshes valid selected user projections.
+- Project upgrades verify the declared same-major source and preserve compatible local overrides.
+- Markdown remains canonical knowledge and SQLite remains a rebuildable index.
 
 ## Supported targets
 
-| Platform | Native target | 0.9.4 gate |
+| Platform | Native target | 0.9.5 evidence |
 | --- | --- | --- |
-| macOS Apple Silicon | `aarch64-apple-darwin` | Candidate runtime qualified |
+| macOS Apple Silicon | `aarch64-apple-darwin` | Public stable install acceptance |
 | macOS Intel | `x86_64-apple-darwin` | Candidate runtime qualified |
-| Linux x86_64 | `x86_64-unknown-linux-musl` | Release qualification in progress |
-| Linux arm64 | `aarch64-unknown-linux-musl` | Release qualification in progress |
-| Windows x86_64 | `x86_64-pc-windows-msvc` | Candidate runtime qualified |
+| Linux x86_64 | `x86_64-unknown-linux-musl` | Native candidate qualification |
+| Linux arm64 | `aarch64-unknown-linux-musl` | Native candidate qualification |
+| Windows x86_64 | `x86_64-pc-windows-msvc` | Public stable install acceptance |
 
 Codex and Antigravity have real-host qualification evidence. Claude Code packaging and
 projection are covered by fixtures, but a real subscription-backed session remains
-unverified. Stable `0.9.4` uses explicit macOS ad-hoc signing and publishes Windows as
+unverified. Stable `0.9.5` uses explicit macOS ad-hoc signing and publishes Windows as
 unsigned unless free SignPath Foundation signing is approved. See the
 [code signing policy](./docs/guides/code-signing-policy.md) for the exact trust boundary.
 
@@ -186,8 +194,8 @@ hive update
 This performs an immediate version check. If a newer version exists, Hive explains the
 exact update and asks before invoking the authenticated install owner. Declining,
 closing stdin, or running non-interactively causes no installation.
-An existing `0.9.0-test.N`, `0.9.0`, or `0.9.1` installation keeps its owner evidence and may
-update to exact stable `0.9.4` through the same confirmation flow.
+An existing installation keeps its owner evidence and may update to exact stable `0.9.5`
+through the same confirmation flow.
 
 When daily checks are enabled, a successful check is throttled for 24 hours. An offline
 or failed check is not recorded as successful, so the next Codex, Claude Code, or
