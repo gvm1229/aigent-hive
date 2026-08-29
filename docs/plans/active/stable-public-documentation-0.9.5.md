@@ -6,11 +6,11 @@
 
 ## Checklist
 
-- [ ] [PUBDOC-001] 공개 안정판 대장과 Scope·Compatibility coverage 계약 추가
-- [ ] [PUBDOC-002] README·한국어 README·설치 HTML·제품 개요·문서 색인을 `0.9.5`로 교정
-- [ ] [PUBDOC-003] 일반 사용자 공개 문서의 번호 시험판·test 설치 경로 제거
-- [ ] [PUBDOC-004] 공개 안정판 문서 검사기와 단위·패키지 README 회귀 추가
-- [ ] [PUBDOC-005] test·stable 후보/게시 workflow의 channel별 gate 추가
+- [x] [PUBDOC-001] 공개 안정판 대장과 Scope·Compatibility coverage 계약 추가
+- [x] [PUBDOC-002] README·한국어 README·설치 HTML·제품 개요·문서 색인을 `0.9.5`로 교정
+- [x] [PUBDOC-003] 일반 사용자 공개 문서의 번호 시험판·test 설치 경로 제거
+- [x] [PUBDOC-004] 공개 안정판 문서 검사기와 단위·패키지 README 회귀 추가
+- [x] [PUBDOC-005] test·stable 후보/게시 workflow의 channel별 gate 추가
 - [ ] [PUBDOC-006] 현재 검증된 정리 커밋과 함께 `develop` 반영·CI 확인
 - [ ] [PUBDOC-007] `origin/main` 기준 docs-only PR로 `0.9.5` 공개 문서 교정
 

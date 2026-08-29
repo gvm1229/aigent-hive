@@ -9,7 +9,7 @@ summary: "A successful direct 0.10.0 upgrade removes authenticated retired Skill
 tags: [migration, skills, upgrade, v0-10]
 aliases: ["Retired Skill cleanup"]
 sources:
-  - "repo:.github/workflows/release-publish.yml#sha256:32d5b627460ec9f4881bb142e60559540a78fcbd7b7f461fc6f9f84808af3b05"
+  - "repo:.github/workflows/release-publish.yml#sha256:0dc743d960d0bb4a17281e6da58c293f8ec16fb319500ecd0b79235e9b27364c"
   - "repo:crates/hive-cli/src/user_install.rs#sha256:85b13d22add18756fa11e29fcc1ebcf84b18d143385991143a8453c29e3d0328"
   - "repo:docs/decisions/ADR-0020-0.10.0-product-scope.md#sha256:592d39a3e71369cad9be4a789e7657509193b473893d2ab413d8218634022e1b"
   - "repo:docs/decisions/product-release-decisions.md#sha256:e89ac8584204a7e52ed157e9b29d523f870b8ac387fc1e4a044f7f7333d17af5"
