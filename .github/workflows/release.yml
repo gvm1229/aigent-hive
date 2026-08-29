@@ -27,9 +27,29 @@ permissions:
   contents: read
 
 jobs:
+  public-stable-docs:
+    name: Public stable documentation contract
+    runs-on: ubuntu-24.04
+    env:
+      PRODUCT_VERSION: ${{ inputs.product_version }}
+      CHANNEL: ${{ inputs.channel }}
+      PACKAGE_RELEASE_DATE: ${{ inputs.release_date }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - name: Enforce stable-only end-user documentation
+        run: |
+          python3 scripts/check-public-stable-docs.py \
+            --channel "$CHANNEL" \
+            --product-version "$PRODUCT_VERSION" \
+            --release-date "$PACKAGE_RELEASE_DATE" \
+            --output json
+
   unix:
     name: ${{ matrix.label }}
     runs-on: ${{ matrix.runner }}
+    needs: public-stable-docs
     env:
       PRODUCT_VERSION: ${{ inputs.product_version }}
       PACKAGE_VERSION: ${{ inputs.package_version }}
@@ -223,6 +243,7 @@ jobs:
   windows:
     name: Windows x86_64
     runs-on: windows-2025
+    needs: public-stable-docs
     env:
       PRODUCT_VERSION: ${{ inputs.product_version }}
       PACKAGE_VERSION: ${{ inputs.package_version }}

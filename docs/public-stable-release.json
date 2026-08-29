@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "stable_version": "0.9.5",
+  "release_date": "2026-08-16",
+  "release_notes": "docs/releases/0.9.5.md",
+  "public_surfaces": [
+    "README.md",
+    "docs/readme/README.ko.md",
+    "docs/hive-install-guide.ko.html",
+    "docs/overview/product.md",
+    "docs/01-index.md"
+  ],
+  "coverage": {
+    "NUS95-01": {"status": "documented", "path": "README.md", "anchor": "what-changed-in-095"},
+    "KBP95-01": {"status": "documented", "path": "README.md", "anchor": "what-changed-in-095"},
+    "AUP95-01": {"status": "documented", "path": "README.md", "anchor": "what-changed-in-095"},
+    "AUP95-02": {"status": "maintainer-only", "reason": "Prerelease update selection is not an end-user stable-install path."},
+    "AUP95-03": {"status": "documented", "path": "README.md", "anchor": "what-changed-in-095"},
+    "HBC95-01": {"status": "documented", "path": "README.md", "anchor": "what-changed-in-095"},
+    "HBC95-02": {"status": "documented", "path": "README.md", "anchor": "what-changed-in-095"},
+    "COMPAT-01": {"status": "documented", "path": "docs/overview/product.md", "anchor": "핵심-원칙"},
+    "COMPAT-02": {"status": "documented", "path": "docs/overview/product.md", "anchor": "핵심-원칙"}
+  }
+}

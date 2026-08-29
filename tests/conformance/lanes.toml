@@ -11,6 +11,7 @@ modules = [
   "tests.conformance.documentation.test_docs_wiki",
   "tests.conformance.documentation.test_human_documentation_style",
   "tests.conformance.documentation.test_markdown_links",
+  "tests.conformance.documentation.test_public_stable_docs",
   "tests.conformance.documentation.test_test_lanes",
   "tests.conformance.documentation.test_test_artifacts",
 ]

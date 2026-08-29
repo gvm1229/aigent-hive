@@ -135,6 +135,28 @@ class NpmPackagingContract(unittest.TestCase):
                     f"rendered aigent-hive 0.8.0 {name}\n",
                 )
 
+    def test_prerelease_package_keeps_stable_only_readme(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            work = Path(temporary)
+            output = work / "packages"
+            run(
+                "node",
+                str(PACKAGER),
+                "umbrella",
+                "--product-version",
+                "0.10.0",
+                "--package-version",
+                "0.10.0-test.9",
+                "--installer-dir",
+                str(self.write_installers(work)),
+                "--output",
+                str(output),
+            )
+            readme = (output / "aigent-hive/README.md").read_text("utf-8")
+            self.assertIn("Stable `0.9.5` is the current public release.", readme)
+            self.assertNotIn("0.10.0-test.9", readme)
+            self.assertNotIn("aigent-hive@test", readme)
+
     def test_bare_and_numbered_test_versions_preserve_product_identity(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             work = Path(temporary)

@@ -198,6 +198,7 @@ jobs:
           python -m unittest tests.conformance.documentation.test_markdown_links -v
           python scripts/check-human-documentation-style.py --all --output json
           python scripts/check-markdown-links.py --output json
+          python scripts/check-public-stable-docs.py --output json
 
   platform-smoke:
     name: Platform smoke (${{ matrix.os }})

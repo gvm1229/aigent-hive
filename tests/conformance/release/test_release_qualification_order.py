@@ -66,6 +66,24 @@ class ReleaseQualificationOrderContract(unittest.TestCase):
             with self.subTest(required=required):
                 self.assertIn(required, text)
 
+    def test_release_workflows_enforce_stable_only_end_user_docs(self) -> None:
+        candidate = (ROOT / ".github/workflows/release.yml").read_text(encoding="utf-8")
+        publication = (ROOT / ".github/workflows/release-publish.yml").read_text(encoding="utf-8")
+        for required in (
+            "Public stable documentation contract",
+            "scripts/check-public-stable-docs.py",
+            "--channel \"$CHANNEL\"",
+        ):
+            with self.subTest(required=required):
+                self.assertIn(required, candidate)
+        for required in (
+            "--registry-latest-file \"$RUNNER_TEMP/latest-before.tsv\"",
+            "latest-after.tsv",
+            "scripts/check-public-stable-docs.py",
+        ):
+            with self.subTest(required=required):
+                self.assertIn(required, publication)
+
     def test_public_test_requires_separate_publication_and_full_tag_history(self) -> None:
         directive = re.sub(
             r"\s+",

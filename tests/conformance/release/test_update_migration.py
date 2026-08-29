@@ -2139,11 +2139,6 @@ try {
             f'source_release_version = "{source_version}"',
             harness,
         )
-        readme = (ROOT / "README.md").read_text(encoding="utf-8")
-        self.assertIn(
-            f"version-{source_version}-",
-            readme,
-        )
         self.assertIn(
             f"- 제품 버전: `{source_version}`",
             (ROOT / "docs/state/CURRENT.md").read_text(encoding="utf-8"),

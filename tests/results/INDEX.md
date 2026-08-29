@@ -29,3 +29,12 @@
 | [passed](runs/20260828T164945-c4500520c2d5.md) | 산출물 관리 커밋 전 격리 검증 | d331dc879cf51eab078c5e189b2fe7b8d729e541 | Windows-11-10.0.26200-SP0 |
 | [failed](runs/20260828T165041-beb04031dce8.md) | 산출물 관리 최종 독립 회귀 34개 | d331dc879cf51eab078c5e189b2fe7b8d729e541 | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260828T165116-c504f850bcb5.md) | 산출물 관리 회귀: 생성 상태를 소스 지문에서 제외 | d331dc879cf51eab078c5e189b2fe7b8d729e541 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260828T173326-f1d5f96f0e60.md) | Python conformance: documentation | bb646448e4a0ebe10524dd0985d6e8607bc39c53 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260828T173559-6be1f29d1124.md) | Python conformance: documentation | bb646448e4a0ebe10524dd0985d6e8607bc39c53 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260829T155028-e85e88bad9b3.md) | 공개 안정판 문서 계약 검사 | 0d8cb0daaf29c3f264c9e37cbe350e4d4a7b9869 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260829T155129-eab957c270a9.md) | 안정판 공개 문서 gate 회귀 | 134aed2e273320cd6fe093799b2bdb4eae716842 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260829T155300-89c343a32a31.md) | 공개 안정판 문서 정합성 재검증 | 134aed2e273320cd6fe093799b2bdb4eae716842 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260829T155348-e962b2764de7.md) | 안정판 공개 문서 documentation lane | 55a5d7ca2f5e3d3a7a077290b199c41d0a568030 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260829T155349-2b9b6bc08787.md) | Python conformance: documentation | 55a5d7ca2f5e3d3a7a077290b199c41d0a568030 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260829T155415-af93d6e3fec6.md) | 안정판 공개 문서 출시 gate 검사 | 55a5d7ca2f5e3d3a7a077290b199c41d0a568030 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260829T155436-a383d2a3488c.md) | 안정판 공개 문서 출시 gate 재기록 | 55a5d7ca2f5e3d3a7a077290b199c41d0a568030 | Windows-11-10.0.26200-SP0 |
