@@ -74,7 +74,8 @@
 | 한국어 언어 core | 12 | 0 | 100% |
 | Source `draft-devlog` | 6 | 0 | 100% |
 | `0.10.0` 출시 | 4 | 3 | 57.1% |
-| **합계** | **111** | **3** | **97.4%** |
+| 안정판 공개 문서 | 0 | 7 | 0% |
+| **합계** | **111** | **10** | **91.7%** |
 
 ## Required load order
 
@@ -102,6 +103,7 @@ Archive·backlog·완료 history의 자동 선행 load 금지.
 | [`active/korean-language-core-0.10.0.md`](active/korean-language-core-0.10.0.md) | `KOR10-*` | 자동 한국어 core·`humanize-kor`·upstream update |
 | [`active/source-draft-devlog.md`](active/source-draft-devlog.md) | `SDB10-*` | Source-only PortareFolium 기술 블로그 workflow |
 | [`active/release-0.10.0.md`](active/release-0.10.0.md) | `REL10-*` | 번호 시험판·안정판 출시 |
+| [`active/stable-public-documentation-0.9.5.md`](active/stable-public-documentation-0.9.5.md) | `PUBDOC-*` | 안정판 공개 문서·시험판 비노출 gate |
 
 ## 실행 순서
 
