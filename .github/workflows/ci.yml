@@ -43,7 +43,7 @@ jobs:
             exit 0
           fi
           for path in "${changed[@]}"; do
-            if [[ "$path" != *.md ]]; then
+            if [[ "$path" != *.md && "$path" != docs/*.html && "$path" != .github/workflows/ci.yml ]]; then
               echo "scope=product" >>"$GITHUB_OUTPUT"
               exit 0
             fi
