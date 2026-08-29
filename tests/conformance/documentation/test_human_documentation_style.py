@@ -277,7 +277,7 @@ API key를 요청하거나 저장하지 않음.
             list(range(1, 14)),
         )
 
-    def test_symlink_and_safely_inferred_generated_orphan_are_failures(self) -> None:
+    def test_symlink_is_a_failure_and_runtime_output_is_not_source_orphan(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             target = root / "target.md"
@@ -294,17 +294,8 @@ API key를 요청하거나 저장하지 않음.
             report = MODULE.scan(root, allowlist)
             reasons = [item["reason"] for item in report["failures"]]
             self.assertIn("symlink", reasons)
-            self.assertIn("orphan-generated-output", reasons)
-            producer = root / "harness/template/AGENTS.md.jinja"
-            producer.parent.mkdir(parents=True)
-            producer.write_text("template\n", encoding="utf-8")
-            report = MODULE.scan(root, allowlist)
-            reasons = [item["reason"] for item in report["failures"]]
             self.assertNotIn("orphan-generated-output", reasons)
-            generated = next(item for item in report["files"] if item["path"].endswith("AGENTS.md"))
-            self.assertEqual(generated["source_relation"], "canonical-template-generated")
-            self.assertEqual(generated["source_path"], "harness/template/AGENTS.md.jinja")
-            self.assertTrue(generated["source_exists"])
+            self.assertFalse(any(item["path"].endswith("AGENTS.md") for item in report["files"]))
 
     def test_inventory_digest_ignores_content_edits_but_detects_path_drift(self) -> None:
         records = [{"path": "README.md", "sha256": "a" * 64}]

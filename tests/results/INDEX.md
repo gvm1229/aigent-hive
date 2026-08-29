@@ -50,3 +50,5 @@
 | [passed](runs/20260829T161034-e9bc3aca449f.md) | Python conformance: documentation | 74c718cdacc09fb0e997d764a11727e316206de9 | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260829T161335-743dc9232c77.md) | 안정판 공개 문서 develop 푸시 Python 전체 재검증 | a5fe88a97dad59f11caf62b0e5442e98aa7d579f | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260829T161337-1f684d5e90de.md) | Python conformance: documentation, security, contract, integration, release | a5fe88a97dad59f11caf62b0e5442e98aa7d579f | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260829T164512-f7a39d62d850.md) | CI Windows UTF-8 산출물 기록과 문서 검사 회귀 | e0146b70fde4005921ef771c753bcdb4a9228bf0 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260829T164544-47f5c5bd949d.md) | CI Windows UTF-8 산출물 기록과 문서 검사 재검증 | e0146b70fde4005921ef771c753bcdb4a9228bf0 | Windows-11-10.0.26200-SP0 |

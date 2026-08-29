@@ -224,6 +224,20 @@ class ArtifactTests(unittest.TestCase):
             self.assertIn("skipped=1", text)
             self.assertNotIn(str(self.root), text)
 
+    def test_windows_process_snapshot_uses_utf8_with_replacement(self):
+        result = subprocess.CompletedProcess(
+            args=["pwsh"],
+            returncode=0,
+            stdout='[{"ProcessId":7,"ParentProcessId":1,"Name":"hive","CreationDate":"now","CommandLine":"한글","ExecutablePath":""}]',
+            stderr="",
+        )
+        self.process_patch.stop()
+        self.addCleanup(self.process_patch.start)
+        with patch.object(a.os, "name", "nt"), patch.object(a.subprocess, "run", return_value=result) as invoke:
+            self.assertEqual(a.processes()[0]["command"], "한글")
+        self.assertEqual(invoke.call_args.kwargs["encoding"], "utf-8")
+        self.assertEqual(invoke.call_args.kwargs["errors"], "replace")
+
     def test_attachment_shape_preserved_and_private_values_redacted(self):
         run = a.Run("fixture", ["synthetic"], root=self.root)
         source = self.root / "tests/work/old/receipt.json"

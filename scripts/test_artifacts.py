@@ -164,7 +164,15 @@ def processes():
     if os.name == "nt":
         command = ["pwsh", "-NoProfile", "-NonInteractive", "-Command",
                    "@(Get-CimInstance Win32_Process | Select-Object ProcessId,ParentProcessId,Name,CreationDate,CommandLine,ExecutablePath) | ConvertTo-Json -Compress"]
-        result = subprocess.run(command, capture_output=True, text=True, check=True, timeout=20)
+        result = subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            check=True,
+            timeout=20,
+        )
         entries = json.loads(result.stdout)
         return [{"pid": p["ProcessId"], "parent": p["ParentProcessId"], "name": p["Name"],
                  "start": str(p["CreationDate"]), "command": p.get("CommandLine") or "",
