@@ -98,8 +98,8 @@ an optional third-party Skill.
 ## 0.9.5 주요 변경
 
 - 검증된 native account 기반 계정 복구와 CodexBar 비사용 경로
-- macOS/Linux·Windows 분리 전역 지식 묶음 이전
-- 인증된 갱신 뒤 유효한 선택 사용자 투영 갱신
+- macOS/Linux·Windows 분리 전역 지식 보관 파일 이전
+- 인증된 갱신 뒤 유효한 선택 사용자 투영 갱신 기능
 - same-major 원본 대조와 local override 보존 project 갱신
 - Markdown 정본·재생성 SQLite index 유지
 
