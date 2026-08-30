@@ -4559,6 +4559,23 @@ usage_guard:
     }
 
     #[test]
+    fn vector_onboarding_guidance_is_localized_and_one_time() {
+        let mut config = valid_config();
+        let english = String::from_utf8(render_user_directive(&config, &["user-setup".to_owned()]))
+            .expect("English guidance");
+        assert!(english.contains("hive setup feature claim --id vector-search"));
+        assert!(english.contains("Never treat no answer or cancellation as no"));
+        assert!(vector_setup_prompt(InterfaceLanguage::En)
+            .contains("registered shared collections only"));
+
+        config.interface_language = InterfaceLanguage::Ko;
+        let korean = String::from_utf8(render_user_directive(&config, &["user-setup".to_owned()]))
+            .expect("Korean guidance");
+        assert!(korean.contains("무응답·취소를 아니요로 기록 금지"));
+        assert!(vector_setup_prompt(InterfaceLanguage::Ko).contains("현재 등록된 공유 모음"));
+    }
+
+    #[test]
     fn user_directive_gates_task_fact_autocapture_on_wiki_enablement() {
         let mut config = valid_config();
         let enabled = String::from_utf8(render_user_directive(
