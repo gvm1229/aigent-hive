@@ -5,7 +5,7 @@
 
 ## Checklist
 
-- [ ] [KTX10-001] `knowledge-transfer` 도입과 `knowledge-import → knowledge-scan` 이력 전환
+- [x] [KTX10-001] `knowledge-transfer` 도입과 `knowledge-import → knowledge-scan` 이력 전환 — `421da3e7`; 현재 사실·공개 안내 정합화와 Rust `hive-projection` 38개 통과
 - [ ] [KTX10-002] 내보내기 미리보기·운영체제별 경로·범위·제외·파일 지문 계약
 - [ ] [KTX10-003] 가져오기 미리보기 지문·예상 SHA-256·충돌 항목 제외·재시도 계약
 - [ ] [KTX10-004] 논리 프로젝트 연결·분리 모음·원문·권한·억제 기록 보존

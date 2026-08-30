@@ -6,8 +6,8 @@
 - 제품 수용 소스: `d331dc879cf51eab078c5e189b2fe7b8d729e541`
 - 안정판 기준·npm `latest`: `0.9.5`. 안정판 작업은 계속 명시 제외
 - 안정판 공개 문서: `0.9.5` 교정과 test 비노출 gate 구현 완료. `develop` CI `33264260664`와 docs-only main PR `#39`가 통과·병합됐고, npm `latest=0.9.5` 재확인
-- 현재 우선 작업 완료: `VCF10-001–003` 연속 실행 지침 교정·검증. 지식 이전은 사용자 우선순위 변경에 따라 보류
-- 미완료 구현: 벡터 사용 안내 `VON10-*`, 컴퓨터 간 지식 이전 `KTX10-*`. 기존 공개 시험 수용과 구분
+- 현재 구현: `feature/0.10.0-knowledge-transfer`에서 컴퓨터 간 이식·FTS·선택형 벡터 재생성 진행
+- 완료: `KTX10-001` Skill 이름 전환·현재 사실 정합화. 미완료: `KTX10-002–007`, 벡터 사용 안내 `VON10-*`
 - 계획: [PLAN.md](../plans/PLAN.md), [벡터 계획](../plans/active/hybrid-vector-search-0.10.0.md)
 - 설명: [벡터 검색 시각 문서](../hive-vector-search.ko.html), [사용 안내](../guides/vector-search.md)
 

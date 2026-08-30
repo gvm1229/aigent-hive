@@ -23,6 +23,6 @@ status: active
 The repository provides standalone Korean core-features and stable-install pages. They reuse the
 canonical logo, a 960 px layout, and beehive gold `#F5A623`; each embeds the exact PNG once and has
 no network or file-relative resource. The core-features page names `(knowledge-capture)` record,
-`(knowledge-recall)` search, `(knowledge-import)` repository scan, `(knowledge-promote)` share, and
+`(knowledge-recall)` search, `(knowledge-scan)` repository scan, `(knowledge-promote)` share, and
 `(knowledge-maintain)` maintenance. Installation covers single, CSV, and repeated `--host`, whole
 request preflight, and partial-failure JSON.

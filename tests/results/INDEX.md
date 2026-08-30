@@ -65,3 +65,4 @@
 | [passed](runs/20260830T172210-82ba11f842d2.md) | 연속 실행 격리 수용 재검증 | 5ea719a64f4403d1261feaff28d3f718d257638a | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260830T172215-b6bd976c6a62.md) | 수정 지침의 제품 투영 검증 | 5ea719a64f4403d1261feaff28d3f718d257638a | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260830T172235-5b21fa654768.md) | 실행 수명주기 전체 계약 회귀 | 5ea719a64f4403d1261feaff28d3f718d257638a | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260830T173239-2656147d16a1.md) | 지식 이전 Skill 전환 투영 검증 | b4f2c7f26710ac8069aa428d11d2ba5cf593679f | Windows-11-10.0.26200-SP0 |
