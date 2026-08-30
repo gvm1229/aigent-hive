@@ -5,10 +5,10 @@
 
 ## Checklist
 
-- [x] [REL10-001] 벡터 포함 `0.10.0-test.6`·2026-08-29 입력과 변경 기록 정합화, 제품 버전 검사 통과
-- [x] [REL10-002] 벡터 구현 뒤 Rust·Python·문서·보안·갱신·복구 전체 검사 — CI `33190877319`
-- [x] [REL10-003] 공개 test.6 게시와 npm `latest=0.9.5` 불변 확인 — 게시 `33193036233`
-- [x] [REL10-004] Windows x64·macOS arm64·Linux musl의 벡터 포함 공개 시험 수용 — `33193323751`
+- [ ] [REL10-001] 벡터 사용 안내 포함 다음 공개 시험 입력·변경 기록 정합화
+- [ ] [REL10-002] 사용자 답변·설정 안내 구현 뒤 Rust·Python·문서·보안·갱신·복구 전체 검사
+- [ ] [REL10-003] 다음 공개 시험 게시와 npm `latest=0.9.5` 불변 확인
+- [ ] [REL10-004] Windows x64·macOS arm64·Linux musl의 답변·새 세션 설정 공개 시험 수용
 - [ ] [REL10-005] accepted test exact source의 protected `main` 통합과 stable candidate
 - [ ] [REL10-006] 같은 product bytes의 stable publication·설치·의존 검사
 - [ ] [REL10-007] 공개 시험·수용 증거가 갖춰진 뒤 유지보수자의 명시적 `0.10.0` 안정판 승인 수령
@@ -22,6 +22,7 @@
 - 지원 predecessor direct upgrade의 retired Skill·projection closure 증거 부재
 - 게시된 stable release 집합과 historical built-in Skill registry parity 증거 부재
 - accepted public test 뒤 product·package·installer 변경. `0.10.0-test.1` 뒤 승인된 한국어 core 범위 추가로 새 번호 시험판 필요
+- `VON10-*` 제품 변경 뒤 `test.6` 수용 재사용 금지. 다음 번호 공개 시험과 세 운영체제 수용 필요
 - 유지보수자의 명시적 안정판 승인 부재 — 구현·시험은 승인되었으나 tag·publication은 금지
 
 ## 현재 실행 제외
