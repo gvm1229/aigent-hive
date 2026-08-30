@@ -10,7 +10,7 @@ tags: [bootstrap, communication, onboarding]
 aliases: ["User contexts", "User profile"]
 sources:
   - "repo:README.md#sha256:27679c3c338ef2f82b352800ccb882c2536bcc2c7dbfd18b93df52e3349554b0"
-  - "repo:crates/hive-cli/src/user_setup.rs#sha256:ab2aaa4dd8d3ec7e90c366a65cf131b6eb2401f1b0b2c95c87d4a6448c7b3bd9"
+  - "repo:crates/hive-cli/src/user_setup.rs#sha256:a50a29d628ce2e15e20b21fd74964ae96c493b259ffeabe0eade38cde54991aa"
   - "repo:harness/skills/user-setup/SKILL.md#sha256:a6aea1ed5b977bc818bace5c9d712d2da01328f59753e9b93136c17b1a8f24d3"
   - "repo:harness/user-setup/catalog.yml#sha256:eaeebd5ebb3dc7ea7bd1be287d916991ddbf8820264e744e331af44be3903ec2"
   - "repo:schemas/user-setup.schema.json#sha256:06ed2a954a7c98817a1288a29f779c1db45cfafa2ea21d8227695a1d988b5fb6"
