@@ -138,6 +138,12 @@ Configure user-scope Hive preferences without modifying a project harness or pro
    - `hive.usage-native-failed-closed` is an integrity or safety failure. Do not offer or invoke a
      fallback for that result.
 
+15. Ask the vector-search question last for both expedited and custom setup.
+   - Run `hive setup feature claim --id vector-search --user-root <user-root> --output json` first.
+   - Ask only when `question_required` is true. Explain that exact search remains available, first preparation can take time, and the measured Windows runtime is about 376MB.
+   - For yes, save the answer with `hive setup feature answer --id vector-search --answer yes --user-root <user-root> --output json`, then return `hive setup feature prompt --id vector-search --user-root <user-root> --output json` as a new-session prompt.
+   - For no, save `--answer no` and never ask again unless the user explicitly requests vector-search setup. Do not save a no answer after silence, cancellation, or an interrupted setup.
+
 ## Question Order
 
 For initial setup, ask interface language first and immediately switch to it. Then ask update-check
