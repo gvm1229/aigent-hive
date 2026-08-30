@@ -1,9 +1,9 @@
 ---
-name: knowledge-import
-description: (knowledge-import) Scan one repository or folder that the user explicitly selected, then import only the reviewed knowledge that is useful beyond that source.
+name: knowledge-scan
+description: (knowledge-scan) Scan one repository or folder that the user explicitly selected, then record only reviewed knowledge useful beyond that source.
 ---
 
-# Scan Repository Knowledge (`knowledge-import`)
+# Scan Repository Knowledge (`knowledge-scan`)
 
 Run three digest-bound phases for the repository the user selected. The final apply records the
 reviewed collection and automatically promotes only reviewed safe-general knowledge.

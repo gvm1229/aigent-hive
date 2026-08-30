@@ -14,7 +14,8 @@ retired_names:
   hive-knowledge-maintenance: knowledge-maintain
   hive-knowledge-promote: knowledge-promote
   hive-knowledge-query: knowledge-recall
-  hive-knowledge-scan: knowledge-import
+  hive-knowledge-scan: knowledge-scan
+  knowledge-import: knowledge-scan
   hive-loop-engineering: verified-workflow
   hive-migrate: project-transition
   hive-project-upgrade: project-refresh
@@ -26,7 +27,7 @@ retired_names:
   hive-update: product-update
   hive-usage-guard: usage-guard
   hive-wiki: knowledge-maintain
-  import-repository-knowledge: knowledge-import
+  import-repository-knowledge: knowledge-scan
   iterative-execution: verified-workflow
   maintain-knowledge: knowledge-maintain
   manage-usage: usage-guard
@@ -51,3 +52,4 @@ lifecycle:
   - { retired_name: ralph-loop, introduced_in: 0.9.0, renamed_in: 0.10.0, deprecated_in: 0.10.0, removed_in: 0.10.0, replacement: verified-workflow, transition_kind: rename }
   - { retired_name: iterative-execution, introduced_in: 0.9.3, renamed_in: 0.10.0, deprecated_in: 0.10.0, removed_in: 0.10.0, replacement: verified-workflow, transition_kind: merge }
   - { retired_name: package-review, introduced_in: 0.9.0, renamed_in: 0.10.0, deprecated_in: 0.10.0, removed_in: 0.10.0, replacement: judge-evidence, transition_kind: rename }
+  - { retired_name: knowledge-import, introduced_in: 0.9.3, renamed_in: 0.10.0, deprecated_in: 0.10.0, removed_in: 0.10.0, replacement: knowledge-scan, transition_kind: rename }
