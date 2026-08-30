@@ -30,6 +30,15 @@ Knowledge, upgrade, and concurrent-edit procedures belong to the numbered siblin
   completed criteria. User cancel or interrupt takes priority and permits immediate stop.
 - Hive hooks may return only their bounded approved result. They never mutate the host Goal, task,
   or canonical run state.
+- For a bound run, call `hive run closure --target <project-root> --run <run-id> --output json`
+  before a completion claim. Inspect `data.closure.ready_for_final` and remaining criteria, not
+  merely exit zero or the command code. Match the run, revision, and current evidence to the whole
+  requested task; a successful subtask or disposable test cannot close its parent. Cancellation
+  permits a stop, not a success claim. Reconcile blocked results with the policy above.
+- Without a bound run, reconcile the project plan and remaining actions directly; do not claim
+  verified execution. A pending required CI check calls for bounded waiting or independent work,
+  not a final progress-only handoff. Reading these rules does not install a hook or prove that
+  the host intercepts final responses.
 
 ## Release authority
 

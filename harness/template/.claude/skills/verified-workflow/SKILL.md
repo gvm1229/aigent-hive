@@ -9,11 +9,21 @@ Use only when the active run needs dependency edges, intermediate evidence, boun
 independent verification, steering, or exact recovery. The active host owns every model, task, and
 Judge launch. Hive owns only canonical state, prepared envelopes, receipts, and verification.
 
+## Scope and policy
+
+In an installed consumer project, load `.agents/directives/00-project-harness.md` for continuation
+and closure. In a Hive source workspace identified by `hive-source.json`, load
+`.agents/directives/01-behavior.md` and `.agents/directives/04-documentation-state.md` instead.
+Follow their reviewed runner-binding procedure; do not initialize consumer state at the source
+root. If no supported binding exists, report the workflow as not active and continue authorized
+source work under the source plan. Do not infer host support or installation consent.
+
 ## Workflow
 
 1. Require an exact target, run ID, finite criteria, retry and usage budgets, verifier roles, and
    fresh host capability evidence. If a required capability is `unsupported` or `unverified`,
-   return `host_capability_unsupported` without a dispatch request or fallback.
+   return `host_capability_unsupported` for the affected dispatch without a fallback. Preserve the
+   outer task and apply its policy to independent work and safe recovery.
 2. Define the dependency graph with criterion ownership, evidence predicates, retry policy, and
    independent verifier for every node. Initialize and validate it:
 
@@ -22,8 +32,11 @@ Judge launch. Hive owns only canonical state, prepared envelopes, receipts, and 
    hive loop validate --target <project-root> --run <run-id> --output json
    ```
 
-   Stop on a cycle, self-edge, unreachable node, orphan criterion, missing evidence predicate, or
-   invalid terminal transition.
+   Reject graph execution on a cycle, self-edge, unreachable node, orphan criterion, missing
+   evidence predicate, or invalid terminal transition. Repair and revalidate before dispatch.
+   Only after both commands succeed may the workflow be reported as active. Record the exact
+   target, run ID, graph revision/digest, receipts, and mapping to the user's criteria. Selecting
+   or reading this Skill, or passing an unrelated acceptance test, is not activation evidence.
 3. Before every automatic dispatch, run `$aigent-hive:usage-guard`. A limited or unknown result
    leaves the node pending and never authorizes success.
 4. Commit `reserved` then `prepared` through `hive orchestration plan`, or prepare one validated
@@ -36,10 +49,12 @@ Judge launch. Hive owns only canonical state, prepared envelopes, receipts, and 
 6. Verify each criterion independently. Use a deterministic verifier by default. A Judge node or
    elevated risk uses `$aigent-hive:adversarial-judge` and the authenticated quorum contract; an
    implementation agent never accepts its own result.
-7. Retry only inside the node's declared budget. Stop on repeated failure fingerprints, exhausted
-   budget, cancellation, quarantine, or missing attestation.
-8. Apply the project continuation and closure contract from
-   `.agents/directives/00-project-harness.md`; do not restate or weaken it in this Skill.
+7. Retry only inside the node's declared budget. Repeated failure fingerprints, exhausted budget,
+   quarantine, or missing attestation stop that node's automatic attempts, not the outer task.
+   Preserve evidence and limits; inspect authorized recovery and independent work under the loaded
+   policy. Never create a replacement run to reset a budget. User cancellation takes priority.
+8. Apply the closure procedure from the policy selected above, using this task's actual bound run
+   and current evidence. Do not substitute a progress report for that procedure.
 9. Record topology changes only through `hive loop steer` with the reason, affected edges, user
    boundary, and new immutable revision. Recover a new session only through `hive loop recover` or
    `hive orchestration recover`.

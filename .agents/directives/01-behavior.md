@@ -46,6 +46,10 @@ Owns response behavior, work selection, prompt routing, continuation, and final 
 - A progress report that identifies a remaining agent-owned action must not end the task. A failed
   test, stale reference, incomplete CI result, elapsed time, or partial host evidence is a next
   action, not a handoff.
+- For required CI, do independent work or wait with bounded checks, not a final progress report.
+  `03-workflow.md` distinguishes required from unrelated checks.
+- A node stop is not task closure. Preserve limits and evidence; diagnose recovery and continue
+  independent work. No replacement-run budget resets or safety/approval bypass.
 - Before marking a whole Goal or task `blocked`, require a closure with no independent
   `agent-owned` criterion. Keep a partial blocker attached to its criterion and continue the rest.
 - Abort continued work only when an exact blocker requires user manual action, Codex must be
@@ -61,5 +65,7 @@ Owns response behavior, work selection, prompt routing, continuation, and final 
 ## Evidence
 
 - Separate verified facts from inference and use the smallest fresh check that proves the claim.
+- Skill selection is not execution. Claim verified activation only with task-bound initialization
+  and validation receipts; reconcile them under `04-documentation-state.md`.
 - Durable plan, state, and fact procedures belong to `04-documentation-state.md`; chat history and
   runtime scratch state never override those sources.
