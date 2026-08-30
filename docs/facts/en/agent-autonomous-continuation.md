@@ -12,7 +12,7 @@ sources:
   - "repo:.agents/directives/01-behavior.md#sha256:7d8300e65cd3136b350aa96000437faff764cb11af33ed42dedf4c88579448ea"
   - "repo:AGENTS.md#sha256:d1a4541174db15faf38f3c90432fbea8cb4b4da6448bfccce2a7e069982031b6"
   - "repo:crates/hive-cli/src/user_install.rs#sha256:85b13d22add18756fa11e29fcc1ebcf84b18d143385991143a8453c29e3d0328"
-  - "repo:crates/hive-cli/src/user_setup.rs#sha256:64e7ee1eb9aaafd399fe971ca35e5df6aee68285029a9b84fa6b928a3324ffdc"
+  - "repo:crates/hive-cli/src/user_setup.rs#sha256:a50a29d628ce2e15e20b21fd74964ae96c493b259ffeabe0eade38cde54991aa"
   - "repo:crates/hive-render/src/lib.rs#sha256:54c93f6fdf51beda50d73eba8e3ea0a06e2441f69f93a8b40440a9d2fc37d767"
   - "repo:harness/directives/00-project-harness.md#sha256:82dd650f61c25f8a2cba930718728052936e10390bd0bbb68e4fed71f14fa520"
   - "repo:harness/template/AGENTS.md.jinja#sha256:7fdcd351b7d0624baa68d11bf9e850692c9eeaae13abb003295c8727f621543a"

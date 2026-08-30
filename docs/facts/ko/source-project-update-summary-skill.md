@@ -9,7 +9,7 @@ summary: "Aigent Hive source workspace의 비출하 프로젝트 전용 Skill `u
 tags: [development, release-notes, skill]
 aliases: ["update-summary"]
 sources:
-  - "repo:.agents/skills/update-summary/SKILL.md#sha256:457244a4c97b85e196053ecf36f42c033c24579dc7697d2fe64940f86f71aedf"
+  - "repo:.agents/skills/update-summary/SKILL.md#sha256:80944d0655ca4f0c2e2ed8f0264ce1cf2d11447302dfb26ed866fe8076afa470"
   - "repo:docs/archive/plans/foundations/source-update-summary-skill.md#sha256:4c2eb48e174ddacef78f3b1d576db2f703f4807632feac925458128da4dd9039"
 links: [public-skill-identity, source-development, v0-9-full-release]
 reviewed_revision: "git:f1c89f0998447f3bc53fbe0560521874efc65323"

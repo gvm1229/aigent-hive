@@ -210,6 +210,9 @@ fn main() -> ExitCode {
             print!("{SETUP_USAGE}");
             ExitCode::SUCCESS
         }
+        Some("setup") if arguments.get(1).map(String::as_str) == Some("feature") => {
+            user_setup::run(&arguments[1..])
+        }
         Some("setup") if arguments.iter().any(|argument| argument == "--scope") => {
             user_setup::run(&arguments[1..])
         }

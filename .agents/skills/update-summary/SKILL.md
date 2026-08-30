@@ -12,9 +12,10 @@ Create subscriber-facing Korean release summaries for this source workspace only
 1. Identify the current public stable release and the preceding stable release from canonical release notes, facts, plans, and release metadata.
 2. Extract only verified improvements that an end user can notice, use, avoid, or understand differently. Exclude future candidates, internal investigation notes, unshipped changes, and developer- or contributor-only work.
 3. Write a Korean Markdown title in this form: `# Aigent Hive v<current> 업데이트 내역:`.
-4. Write one concise Korean bullet per improvement. State the observable improvement first. Retain exact identifiers only when they help subscribers act or distinguish a feature.
+4. Write one concise Korean bullet per improvement. State the observable improvement first. Retain exact identifiers only when they help subscribers act or distinguish a feature. Put one or two practical examples or limits in a nested list below the change when they make the benefit easier to understand.
 5. Compare only the two stable versions requested. Do not claim a future release, rebuild an artifact, publish a release, or change product harness files.
 6. When preparing a stable release, save the exact Korean title and bullets to `docs/releases/<current>.subscriber.ko.md`. This is the canonical Discord message payload for that stable release.
+7. Before stable approval, a clearly marked review draft may use the same path for the active product version. It must say that it is not published or sent, and it must not describe unverified work as released.
 
 ## End-user relevance
 
