@@ -59,3 +59,5 @@
 | [failed](runs/20260830T151443-5f2a331adeee.md) | Python conformance: documentation, security, contract, integration, release | e1fbc9bae54fe76b1125441df726b8425ed7c13f | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260830T151554-2d6800708c9f.md) | 벡터 안내 문서 정합성 재검증 | e1fbc9bae54fe76b1125441df726b8425ed7c13f | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260830T151556-9284b5414096.md) | Python conformance: documentation | e1fbc9bae54fe76b1125441df726b8425ed7c13f | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260830T151643-be780a7c6d45.md) | 벡터 사용자 답변 전체 Python conformance 재검증 | 6f4f6dd82e06955ef304f4f021901b86fed17731 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260830T151644-e0bfd84e0ffd.md) | Python conformance: documentation, security, contract, integration, release | 6f4f6dd82e06955ef304f4f021901b86fed17731 | Windows-11-10.0.26200-SP0 |
