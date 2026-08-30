@@ -208,6 +208,7 @@ def import_result(disposition: str = "planned") -> dict[str, Any]:
         "entry_count": 1,
         "added_count": 1,
         "unchanged_count": 0,
+        "conflict_paths": [],
         "detached_collection_ids": [collection_id()],
         "changed_paths": [],
         "canonical_mutation": False,

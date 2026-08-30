@@ -141,6 +141,8 @@ pub enum BundleImportMode {
     DryRun,
     /// Atomically activate the validated canonical merge and rebuild the index.
     Apply,
+    /// Atomically apply only entries that did not conflict during the reviewed preview.
+    ApplyExcludingConflicts,
 }
 
 /// Import disposition matching the public JSON contract.
@@ -202,6 +204,8 @@ pub struct BundleImportResult {
     pub added_count: usize,
     /// Entries already present identically.
     pub unchanged_count: usize,
+    /// Canonical logical paths excluded because destination bytes or claim identity conflicted.
+    pub conflict_paths: Vec<String>,
     /// Imported collections still awaiting an explicit local attachment.
     pub detached_collection_ids: Vec<String>,
     /// Final logical paths changed by a successful apply.
@@ -294,6 +298,7 @@ struct ImportPlan {
     entry_count: usize,
     added_count: usize,
     unchanged_count: usize,
+    conflict_paths: Vec<String>,
     detached_collection_ids: Vec<String>,
 }
 
@@ -477,7 +482,7 @@ pub fn import_bundle(
     let incoming = validate_incoming(&validated)?;
     let root_path = crate::shared::canonical_root(user_root)?;
     let root = pin_absolute_directory(&root_path, "user root")?;
-    let _lock = if mode == BundleImportMode::Apply {
+    let _lock = if mode != BundleImportMode::DryRun {
         Some(crate::CapabilityKnowledgeLock::acquire(&root)?)
     } else {
         None
@@ -503,6 +508,7 @@ pub fn import_bundle(
             entry_count: plan.entry_count,
             added_count: 0,
             unchanged_count: plan.unchanged_count,
+            conflict_paths: plan.conflict_paths,
             detached_collection_ids: plan.detached_collection_ids,
             changed_paths: Vec::new(),
             canonical_mutation: false,
@@ -522,6 +528,7 @@ pub fn import_bundle(
             entry_count: plan.entry_count,
             added_count: plan.added_count,
             unchanged_count: plan.unchanged_count,
+            conflict_paths: plan.conflict_paths,
             detached_collection_ids: plan.detached_collection_ids,
             changed_paths: Vec::new(),
             canonical_mutation: false,
@@ -529,6 +536,12 @@ pub fn import_bundle(
             rollback: BundleRollbackResult::none(),
             collection_tables,
         });
+    }
+    if !plan.conflict_paths.is_empty() && mode == BundleImportMode::Apply {
+        return Err(WikiError::Conflict(
+            "bundle import has conflicting canonical entries; review them and use the explicit exclude-conflicts transfer option or cancel"
+                .to_owned(),
+        ));
     }
 
     let changed_paths = activate_import(&root_path, &mut plan, rebuild_index)?;
@@ -542,6 +555,7 @@ pub fn import_bundle(
         entry_count: plan.entry_count,
         added_count: plan.added_count,
         unchanged_count: plan.unchanged_count,
+        conflict_paths: plan.conflict_paths,
         detached_collection_ids: plan.detached_collection_ids,
         changed_paths,
         canonical_mutation: true,
@@ -1318,6 +1332,7 @@ fn build_import_plan(
     let mut writes = Vec::new();
     let mut added_count = usize::from(registry_changed);
     let mut unchanged_count = usize::from(!registry_changed);
+    let mut conflict_paths = Vec::new();
     if registry_changed {
         writes.push(PlannedWrite {
             root_index: 0,
@@ -1347,9 +1362,8 @@ fn build_import_plan(
                     let expected =
                         format!("{CLAIMS_RELATIVE}/{}/{}", payload.collection_id, file_name);
                     if existing != &expected {
-                        return Err(WikiError::Conflict(format!(
-                            "claim ID `{claim_id}` already exists at `{existing}`"
-                        )));
+                        conflict_paths.push(existing.clone());
+                        continue;
                     }
                 }
                 let relative = PathBuf::from(CLAIMS_RELATIVE)
@@ -1379,10 +1393,7 @@ fn build_import_plan(
         if existing.as_deref() == Some(desired.as_slice()) {
             unchanged_count += 1;
         } else if existing.is_some() && !matches!(payload.kind, IncomingKind::Suppression) {
-            return Err(WikiError::Conflict(format!(
-                "same logical bundle path has divergent canonical bytes: {}",
-                payload.relative_path
-            )));
+            conflict_paths.push(logical_locator);
         } else {
             added_count += 1;
             writes.push(PlannedWrite {
@@ -1405,8 +1416,10 @@ fn build_import_plan(
         ));
     }
     validate_planned_suppressions(&roots, &writes)?;
+    conflict_paths.sort();
+    conflict_paths.dedup();
     let entry_count = incoming.payloads.len() + 1;
-    if added_count + unchanged_count != entry_count {
+    if added_count + unchanged_count + conflict_paths.len() != entry_count {
         return Err(WikiError::Io(
             "bundle import accounting lost a payload entry".to_owned(),
         ));
@@ -1417,6 +1430,7 @@ fn build_import_plan(
         entry_count,
         added_count,
         unchanged_count,
+        conflict_paths,
         detached_collection_ids: detached,
     })
 }

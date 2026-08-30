@@ -81,3 +81,11 @@
 | [passed](runs/20260830T174222-6307fd35ae77.md) | 지식 이전 결과 스키마 재검증 | 213b97a8e0e38b24e6c2ca7a9f0a47188e9deb3a | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260830T174244-f03713ba1f0e.md) | 지식 이전 벡터 질문 적용 수정 빌드 | 213b97a8e0e38b24e6c2ca7a9f0a47188e9deb3a | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260830T174254-9a2ae2d920da.md) | 지식 이전 벡터 재생성 질문 재검증 | 213b97a8e0e38b24e6c2ca7a9f0a47188e9deb3a | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260830T175233-2fa3644b1f28.md) | 지식 이전 충돌 제외 경로 빌드 | f008dcac174e2d974cd648205eb870f2205013cd | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260830T175235-6471106fc902.md) | 지식 이전 기존 통합 회귀 | f008dcac174e2d974cd648205eb870f2205013cd | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260830T175247-78eff99acca2.md) | 지식 이전 충돌 결과 스키마 회귀 | f008dcac174e2d974cd648205eb870f2205013cd | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260830T175323-908e4ee2b9a2.md) | 지식 이전 충돌 제외 통합 검증 | f008dcac174e2d974cd648205eb870f2205013cd | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260830T175326-12d09d3c7e37.md) | 지식 이전 충돌 제외 CLI 회귀 | f008dcac174e2d974cd648205eb870f2205013cd | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260830T175414-0cf6a2f3f18c.md) | 지식 이전 충돌 제외 CLI 재검증 | f008dcac174e2d974cd648205eb870f2205013cd | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260830T175447-d69e9832cf0d.md) | 지식 이전 충돌 제외 CLI 최종 재검증 | f008dcac174e2d974cd648205eb870f2205013cd | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260830T175533-d1f9cf5aed20.md) | 지식 이전 기본 통합 회귀 복구 | f008dcac174e2d974cd648205eb870f2205013cd | Windows-11-10.0.26200-SP0 |

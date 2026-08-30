@@ -77,7 +77,7 @@ USAGE:
     hive knowledge export --user-root <dir> --scope global|shared|project:<id>|collection:<id>|all-portable --bundle <path>.hivekb [--replace-backup <file-name>] --output json
     hive knowledge import --user-root <dir> --bundle <path>.hivekb (--dry-run|--apply) --output json
     hive knowledge transfer export --preview|--apply --user-root <dir> --scope global|shared|project:<id>|collection:<id>|all-portable --bundle <path>.hivekb [--replace-backup <file-name>] --output json
-    hive knowledge transfer import --preview|--apply --preview-digest <sha256:...> --user-root <dir> --bundle <path>.hivekb --output json
+    hive knowledge transfer import --preview|--apply [--exclude-conflicts] --preview-digest <sha256:...> --user-root <dir> --bundle <path>.hivekb --output json
     hive knowledge refresh (--target <legacy-project>|--user-root <dir>) --output json
     hive knowledge graph preview|enable|status|rebuild|disable|query|export --target <dir> [--scope project] [--engine native-markdown|graphify-code] [--consent-digest <sha256:...>] [--input <graph.json> --receipt <receipt.json>] [--node-id <id>] [--text <query>] [--user-root <dir>] [--format json|html] --output json
     hive knowledge vector --help
@@ -342,6 +342,10 @@ fn run_transfer_import(arguments: &[String]) -> Result<KnowledgeResult, WikiErro
         .iter()
         .filter(|argument| *argument == "--apply")
         .count();
+    let exclude_count = arguments
+        .iter()
+        .filter(|argument| *argument == "--exclude-conflicts")
+        .count();
     let preview_digest = arguments
         .iter()
         .position(|argument| argument == "--preview-digest")
@@ -351,7 +355,7 @@ fn run_transfer_import(arguments: &[String]) -> Result<KnowledgeResult, WikiErro
             })
         })
         .transpose()?;
-    if preview_count + apply_count != 1 {
+    if preview_count + apply_count != 1 || exclude_count > 1 {
         return Err(WikiError::InvalidInput(
             "knowledge transfer import requires exactly one of --preview or --apply".to_owned(),
         ));
@@ -362,6 +366,7 @@ fn run_transfer_import(arguments: &[String]) -> Result<KnowledgeResult, WikiErro
             .enumerate()
             .filter_map(|(index, argument)| {
                 if argument == "--preview"
+                    || argument == "--exclude-conflicts"
                     || argument == "--preview-digest"
                     || index > 0 && arguments[index - 1] == "--preview-digest"
                     || also_apply && argument == "--apply"
@@ -374,7 +379,7 @@ fn run_transfer_import(arguments: &[String]) -> Result<KnowledgeResult, WikiErro
             .collect::<Vec<_>>()
     };
     if preview_count == 1 {
-        if preview_digest.is_some() {
+        if preview_digest.is_some() || exclude_count != 0 {
             return Err(WikiError::InvalidInput(
                 "transfer import preview does not accept --preview-digest".to_owned(),
             ));
@@ -403,7 +408,6 @@ fn run_transfer_import(arguments: &[String]) -> Result<KnowledgeResult, WikiErro
         ));
     }
     let forwarded = strip(false);
-    let mut applied = run_import(&forwarded)?;
     let options = forwarded
         .iter()
         .filter(|argument| argument.as_str() != "--apply")
@@ -413,6 +417,18 @@ fn run_transfer_import(arguments: &[String]) -> Result<KnowledgeResult, WikiErro
         &parse_options(&options, &["--user-root", "--bundle"])?,
         "--user-root",
     )?);
+    let mut applied = if exclude_count == 1 {
+        run_import_mode(
+            &user_root,
+            &PathBuf::from(required(
+                &parse_options(&options, &["--user-root", "--bundle"])?,
+                "--bundle",
+            )?),
+            BundleImportMode::ApplyExcludingConflicts,
+        )?
+    } else {
+        run_import(&forwarded)?
+    };
     if applied
         .data
         .as_ref()
@@ -1452,7 +1468,7 @@ fn run_import(arguments: &[String]) -> Result<KnowledgeResult, WikiError> {
     let options = parse_options(&filtered, &["--user-root", "--bundle"])?;
     let user_root = PathBuf::from(required(&options, "--user-root")?);
     let bundle = PathBuf::from(required(&options, "--bundle")?);
-    let imported = import_bundle(
+    run_import_mode(
         &user_root,
         &bundle,
         if apply == 1 {
@@ -1460,8 +1476,15 @@ fn run_import(arguments: &[String]) -> Result<KnowledgeResult, WikiError> {
         } else {
             BundleImportMode::DryRun
         },
-        BundleLimits::default(),
-    )?;
+    )
+}
+
+fn run_import_mode(
+    user_root: &Path,
+    bundle: &Path,
+    mode: BundleImportMode,
+) -> Result<KnowledgeResult, WikiError> {
+    let imported = import_bundle(user_root, bundle, mode, BundleLimits::default())?;
     let digest = imported.manifest_sha256.clone();
     Ok(success(
         "ImportKnowledge",
