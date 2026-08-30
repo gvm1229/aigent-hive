@@ -1669,7 +1669,7 @@ fn legacy_recommended_skill_set(suite: &str) -> Option<&'static [&'static str]> 
             "knowledge-capture",
             "knowledge-recall",
             "knowledge-maintain",
-            "knowledge-import",
+            "knowledge-scan",
             "run-checkpoint",
             "run-resume",
             "usage-guard",
@@ -1688,7 +1688,7 @@ fn legacy_recommended_skill_set(suite: &str) -> Option<&'static [&'static str]> 
             "knowledge-capture",
             "knowledge-recall",
             "knowledge-maintain",
-            "knowledge-import",
+            "knowledge-scan",
             "run-checkpoint",
             "run-resume",
             "run-handoff",
@@ -1708,7 +1708,7 @@ fn legacy_recommended_skill_set(suite: &str) -> Option<&'static [&'static str]> 
             "knowledge-capture",
             "knowledge-recall",
             "knowledge-maintain",
-            "knowledge-import",
+            "knowledge-scan",
             "usage-guard",
             "product-update",
         ]),
@@ -2201,7 +2201,7 @@ fn resolve_skills(
                     | "knowledge-recall"
                     | "knowledge-promote"
                     | "knowledge-maintain"
-                    | "knowledge-import"
+                    | "knowledge-scan"
             )
         });
     }
