@@ -61,3 +61,7 @@
 | [passed](runs/20260830T151556-9284b5414096.md) | Python conformance: documentation | e1fbc9bae54fe76b1125441df726b8425ed7c13f | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260830T151643-be780a7c6d45.md) | 벡터 사용자 답변 전체 Python conformance 재검증 | 6f4f6dd82e06955ef304f4f021901b86fed17731 | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260830T151644-e0bfd84e0ffd.md) | Python conformance: documentation, security, contract, integration, release | 6f4f6dd82e06955ef304f4f021901b86fed17731 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260830T172156-da10235a5f43.md) | 연속 실행 종료 회귀 6개 | 5ea719a64f4403d1261feaff28d3f718d257638a | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260830T172210-82ba11f842d2.md) | 연속 실행 격리 수용 재검증 | 5ea719a64f4403d1261feaff28d3f718d257638a | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260830T172215-b6bd976c6a62.md) | 수정 지침의 제품 투영 검증 | 5ea719a64f4403d1261feaff28d3f718d257638a | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260830T172235-5b21fa654768.md) | 실행 수명주기 전체 계약 회귀 | 5ea719a64f4403d1261feaff28d3f718d257638a | Windows-11-10.0.26200-SP0 |
