@@ -40,8 +40,8 @@
     "mandatory_skills": { "const": ["user-setup"] },
     "skill_dependencies": {
       "type": "array",
-      "minItems": 27,
-      "maxItems": 27,
+      "minItems": 28,
+      "maxItems": 28,
       "uniqueItems": true,
       "items": { "$ref": "#/$defs/skill_dependency" }
     },
@@ -118,7 +118,8 @@
         "project-setup",
         "code-polish",
         "verified-workflow",
-        "knowledge-import",
+        "knowledge-scan",
+        "knowledge-transfer",
         "knowledge-maintain",
         "knowledge-capture",
         "prompt-refine",
