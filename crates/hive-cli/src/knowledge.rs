@@ -76,6 +76,7 @@ USAGE:
     hive knowledge scan --target <dir> (--inventory|--candidates <review.json>|--apply <review.json>) [--include-untracked] [--prior-inventory <json>] [--user-root <dir>] --output json
     hive knowledge export --user-root <dir> --scope global|shared|project:<id>|collection:<id>|all-portable --bundle <path>.hivekb [--replace-backup <file-name>] --output json
     hive knowledge import --user-root <dir> --bundle <path>.hivekb (--dry-run|--apply) --output json
+    hive knowledge transfer export|import <existing export-or-import-options> --output json
     hive knowledge refresh (--target <legacy-project>|--user-root <dir>) --output json
     hive knowledge graph preview|enable|status|rebuild|disable|query|export --target <dir> [--scope project] [--engine native-markdown|graphify-code] [--consent-digest <sha256:...>] [--input <graph.json> --receipt <receipt.json>] [--node-id <id>] [--text <query>] [--user-root <dir>] [--format json|html] --output json
     hive knowledge vector --help
@@ -254,6 +255,8 @@ pub(crate) fn run_knowledge(arguments: &[String]) -> ExitCode {
                 .unwrap_or_else(|error| failure("ExportKnowledge", &error)),
             Some("import") => run_import(&arguments[1..])
                 .unwrap_or_else(|error| failure("ImportKnowledge", &error)),
+            Some("transfer") => run_transfer(&arguments[1..])
+                .unwrap_or_else(|error| failure("TransferKnowledge", &error)),
             Some(action) => failure(
                 "IngestKnowledge",
                 &WikiError::InvalidInput(format!("unknown knowledge action: {action}")),
@@ -265,6 +268,16 @@ pub(crate) fn run_knowledge(arguments: &[String]) -> ExitCode {
         };
     emit(&result);
     ExitCode::from(result.exit_code)
+}
+
+fn run_transfer(arguments: &[String]) -> Result<KnowledgeResult, WikiError> {
+    match arguments.first().map(String::as_str) {
+        Some("export") => run_export(&arguments[1..]),
+        Some("import") => run_import(&arguments[1..]),
+        _ => Err(WikiError::InvalidInput(
+            "knowledge transfer requires export or import".to_owned(),
+        )),
+    }
 }
 
 pub(crate) fn run_source_vector(arguments: &[String]) -> ExitCode {
