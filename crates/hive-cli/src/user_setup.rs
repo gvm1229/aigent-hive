@@ -538,7 +538,7 @@ struct FeatureArguments {
 
 fn run_feature(arguments: &[String]) -> ExitCode {
     let result = parse_feature(arguments)
-        .and_then(execute_feature)
+        .and_then(|arguments| execute_feature(&arguments))
         .unwrap_or_else(|error| failure(&error));
     emit_action_result(&result)
 }
@@ -629,11 +629,10 @@ fn load_feature_answers(root: &Dir) -> Result<(Option<Vec<u8>>, UserFeatureAnswe
     Ok((existing, answers))
 }
 
-fn execute_feature(arguments: FeatureArguments) -> Result<ActionResult, SetupError> {
+fn execute_feature(arguments: &FeatureArguments) -> Result<ActionResult, SetupError> {
     let (existing, mut answers) = load_feature_answers(&arguments.root_cap)?;
     let language = load_operational_config(&arguments.root_cap)?
-        .map(|config| config.interface_language)
-        .unwrap_or(InterfaceLanguage::En);
+        .map_or(InterfaceLanguage::En, |config| config.interface_language);
     let prior = answers.vector_search;
     let (code, message, changed_paths, prompt) = match arguments.action {
         FeatureAction::Status => (
