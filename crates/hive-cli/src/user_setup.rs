@@ -20,6 +20,7 @@ use std::process::ExitCode;
 
 const USER_SETUP_RELATIVE: &str = ".hive/config/user-setup.yml";
 const USER_SETUP_PROGRESS_RELATIVE: &str = ".hive/config/user-setup-progress.yml";
+const USER_FEATURE_ANSWERS_RELATIVE: &str = ".hive/config/user-feature-answers.yml";
 const USER_PROJECTION_MANIFEST_RELATIVE: &str = ".hive/install/user-projection.json";
 const LEGACY_USER_SETUP_REVIEW_RELATIVE: &str = ".hive/config/user-setup-review.yml";
 const LEGACY_USER_SETUP_REVIEW: &[u8] = b"schema_version: 1\nsource_version: 0.7.0\nsetup_required: true\nwiki_markdown_preserved: true\nlegacy_skill_projection: all-built-ins\n";
@@ -46,6 +47,8 @@ Configure or validate Aigent Hive user preferences.
 USAGE:
     hive setup --scope user --describe --output json
     hive setup --scope user (--answers|--quick-answers) <yml> (--dry-run|--apply|--validate) [--user-root <dir>] --output json
+    hive setup feature status|claim|prompt --id vector-search [--user-root <dir>] --output json
+    hive setup feature answer --id vector-search --answer yes|no [--user-root <dir>] --output json
     hive setup --progress save --scope user --step <step> (--answers|--quick-answers) <yml> [--user-root <dir>] --output json
     hive setup --progress status|clear --scope user [--user-root <dir>] --output json
 
@@ -349,6 +352,23 @@ pub(crate) struct UserSetupConfig {
     pub(crate) usage_guard: UsageGuardPreferences,
 }
 
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "lowercase")]
+enum VectorFeatureAnswer {
+    Yes,
+    No,
+}
+
+#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
+struct UserFeatureAnswers {
+    schema_version: u32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    vector_search: Option<VectorFeatureAnswer>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    introduced_in: Option<String>,
+}
+
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 struct UserSetupProgress {
@@ -493,10 +513,200 @@ pub(crate) fn run(arguments: &[String]) -> ExitCode {
     if arguments.first().map(String::as_str) == Some("--progress") {
         return run_progress(&arguments[1..]);
     }
+    if arguments.first().map(String::as_str) == Some("feature") {
+        return run_feature(&arguments[1..]);
+    }
     let result = parse(arguments)
         .and_then(|arguments| execute(&arguments))
         .unwrap_or_else(|error| failure(&error));
     emit_action_result(&result)
+}
+
+#[derive(Debug)]
+enum FeatureAction {
+    Status,
+    Claim,
+    Answer(VectorFeatureAnswer),
+    Prompt,
+}
+
+#[derive(Debug)]
+struct FeatureArguments {
+    action: FeatureAction,
+    root_cap: Dir,
+}
+
+fn run_feature(arguments: &[String]) -> ExitCode {
+    let result = parse_feature(arguments)
+        .and_then(execute_feature)
+        .unwrap_or_else(|error| failure(&error));
+    emit_action_result(&result)
+}
+
+fn parse_feature(arguments: &[String]) -> Result<FeatureArguments, SetupError> {
+    let action = arguments.first().ok_or_else(|| {
+        SetupError::Input("setup feature requires status, claim, answer, or prompt".to_owned())
+    })?;
+    let mut id = None;
+    let mut answer = None;
+    let mut output = None;
+    let mut user_root = None;
+    let mut index = 1;
+    while index < arguments.len() {
+        let option = arguments[index].as_str();
+        let value = arguments
+            .get(index + 1)
+            .filter(|value| !value.starts_with("--"))
+            .ok_or_else(|| SetupError::Input(format!("missing value for {option}")))?;
+        let slot = match option {
+            "--id" => &mut id,
+            "--answer" => &mut answer,
+            "--output" => &mut output,
+            "--user-root" => &mut user_root,
+            _ => {
+                return Err(SetupError::Input(format!(
+                    "unknown setup feature option: {option}"
+                )))
+            }
+        };
+        if slot.replace(value.clone()).is_some() {
+            return Err(SetupError::Input(format!("duplicate option: {option}")));
+        }
+        index += 2;
+    }
+    if id.as_deref() != Some("vector-search") || output.as_deref() != Some("json") {
+        return Err(SetupError::Input(
+            "setup feature requires --id vector-search and --output json".to_owned(),
+        ));
+    }
+    let action = match action.as_str() {
+        "status" if answer.is_none() => FeatureAction::Status,
+        "claim" if answer.is_none() => FeatureAction::Claim,
+        "prompt" if answer.is_none() => FeatureAction::Prompt,
+        "answer" => match answer.as_deref() {
+            Some("yes") => FeatureAction::Answer(VectorFeatureAnswer::Yes),
+            Some("no") => FeatureAction::Answer(VectorFeatureAnswer::No),
+            _ => {
+                return Err(SetupError::Input(
+                    "vector-search answer requires yes or no".to_owned(),
+                ))
+            }
+        },
+        _ => {
+            return Err(SetupError::Input(
+                "invalid setup feature action or answer".to_owned(),
+            ))
+        }
+    };
+    let user_root = user_root.map_or_else(resolve_user_root, |value| Ok(PathBuf::from(value)))?;
+    let root_cap =
+        super::user_install::open_user_root_for_setup(&user_root).map_err(SetupError::Conflict)?;
+    Ok(FeatureArguments { action, root_cap })
+}
+
+fn load_feature_answers(root: &Dir) -> Result<(Option<Vec<u8>>, UserFeatureAnswers), SetupError> {
+    let existing = super::user_install::read_user_setup_file(
+        root,
+        Path::new(USER_FEATURE_ANSWERS_RELATIVE),
+        MAX_USER_SETUP_BYTES,
+    )
+    .map_err(SetupError::Conflict)?;
+    let answers = match existing.as_deref() {
+        Some(bytes) => serde_yaml::from_slice(bytes).map_err(|error| {
+            SetupError::Verification(format!("invalid user feature answers: {error}"))
+        })?,
+        None => UserFeatureAnswers {
+            schema_version: 1,
+            vector_search: None,
+            introduced_in: None,
+        },
+    };
+    if answers.schema_version != 1 {
+        return Err(SetupError::Verification(
+            "unsupported user feature answers schema".to_owned(),
+        ));
+    }
+    Ok((existing, answers))
+}
+
+fn execute_feature(arguments: FeatureArguments) -> Result<ActionResult, SetupError> {
+    let (existing, mut answers) = load_feature_answers(&arguments.root_cap)?;
+    let prior = answers.vector_search;
+    let (code, message, changed_paths, prompt) = match arguments.action {
+        FeatureAction::Status => (
+            "hive.user-feature-status",
+            "vector-search feature status inspected".to_owned(),
+            Vec::new(),
+            None,
+        ),
+        FeatureAction::Claim => (
+            if prior.is_some() {
+                "hive.user-feature-already-answered"
+            } else {
+                "hive.user-feature-question-claimed"
+            },
+            "vector-search onboarding question evaluated".to_owned(),
+            Vec::new(),
+            None,
+        ),
+        FeatureAction::Answer(answer) => {
+            answers.vector_search = Some(answer);
+            answers.introduced_in = Some(env!("CARGO_PKG_VERSION").to_owned());
+            let desired = serde_yaml::to_string(&answers)
+                .map_err(|error| {
+                    SetupError::Internal(format!("cannot serialize user feature answers: {error}"))
+                })?
+                .into_bytes();
+            super::user_install::replace_user_setup_file(
+                &arguments.root_cap,
+                Path::new(USER_FEATURE_ANSWERS_RELATIVE),
+                existing.as_deref(),
+                Some(&desired),
+            )
+            .map_err(SetupError::Conflict)?;
+            (
+                "hive.user-feature-answer-saved",
+                "vector-search feature answer saved".to_owned(),
+                vec![USER_FEATURE_ANSWERS_RELATIVE.to_owned()],
+                None,
+            )
+        }
+        FeatureAction::Prompt => {
+            if prior != Some(VectorFeatureAnswer::Yes) {
+                return Err(SetupError::Conflict(
+                    "vector-search setup prompt requires a saved yes answer".to_owned(),
+                ));
+            }
+            (
+                "hive.user-feature-prompt-ready",
+                "vector-search setup prompt prepared".to_owned(),
+                Vec::new(),
+                Some("Set up Aigent Hive semantic search for my user-root knowledge and currently registered shared collections only. Do not inspect or include project-private, confidential, or newly discovered collections. First run the Hive vector preview, show its exact downloads, storage paths, Python requirement, and consent digest. If a supported existing Python is unavailable, explain the manual prerequisite and stop without changing my answer. If the preview is valid, use its exact consent digest to enable vector search, refresh existing knowledge, rebuild only the approved collections with resumable time limits, then verify semantic search, canonical citations, and FTS fallback. Do not install Python, use provider APIs or credentials, create a background service, or change canonical Markdown.".to_owned()),
+            )
+        }
+    };
+    let answer = answers.vector_search.map(|value| match value {
+        VectorFeatureAnswer::Yes => "yes",
+        VectorFeatureAnswer::No => "no",
+    });
+    Ok(ActionResult {
+        schema_version: 1,
+        action: "ManageHiveUserFeature",
+        status: "success",
+        exit_code: 0,
+        code,
+        message,
+        changed_paths,
+        evidence: Vec::new(),
+        next_action: None,
+        data: Some(json!({
+            "id":"vector-search",
+            "answer":answer,
+            "question_required":answer.is_none(),
+            "prompt":prompt,
+            "actual_runtime_or_index_state":"separate; inspect with hive knowledge vector status",
+        })),
+    })
 }
 
 fn run_describe(arguments: &[String]) -> ExitCode {
@@ -2709,6 +2919,10 @@ fn render_user_directive(config: &UserSetupConfig, resolved_skills: &[String]) -
         InterfaceLanguage::En => crate::user_directives::UserDirectiveLanguage::En,
         InterfaceLanguage::Ko => crate::user_directives::UserDirectiveLanguage::Ko,
     };
+    rendered.push_str(match config.interface_language {
+        InterfaceLanguage::En => "- Before the first ordinary Hive task after this instruction is installed, run `hive setup feature claim --id vector-search --user-root <user-root> --output json`. When `question_required` is true, ask once whether the user wants semantic search. Explain that exact search remains available, initial setup can take time, and Windows measured runtime needs about 376MB. For yes, save `--answer yes`, then run `hive setup feature prompt --id vector-search --user-root <user-root> --output json` and provide its prompt for a new session. For no, save `--answer no` and do not ask again unless vector setup is explicitly requested. Never treat no answer or cancellation as no.\n",
+        InterfaceLanguage::Ko => "- 이 지침 설치 뒤 첫 일반 Hive 작업 전 `hive setup feature claim --id vector-search --user-root <user-root> --output json` 실행. `question_required`가 true이면 의미 검색 사용 의사를 한 번 질문. 기존 정확 검색은 유지되고 처음 준비에는 시간이 걸릴 수 있으며 Windows 실측 실행 환경은 약 376MB라고 설명. 예면 `hive setup feature answer --id vector-search --answer yes --user-root <user-root> --output json` 뒤 `hive setup feature prompt --id vector-search --user-root <user-root> --output json`의 새 세션 안내문 제공. 아니요면 `--answer no`로 저장하고 사용자가 벡터 설정을 명시 요청하기 전 재질문 금지. 무응답·취소를 아니요로 기록 금지.\n",
+    });
     rendered.push_str(crate::user_directives::work_completion_block(
         directive_language,
     ));
