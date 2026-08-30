@@ -631,6 +631,9 @@ fn load_feature_answers(root: &Dir) -> Result<(Option<Vec<u8>>, UserFeatureAnswe
 
 fn execute_feature(arguments: FeatureArguments) -> Result<ActionResult, SetupError> {
     let (existing, mut answers) = load_feature_answers(&arguments.root_cap)?;
+    let language = load_operational_config(&arguments.root_cap)?
+        .map(|config| config.interface_language)
+        .unwrap_or(InterfaceLanguage::En);
     let prior = answers.vector_search;
     let (code, message, changed_paths, prompt) = match arguments.action {
         FeatureAction::Status => (
@@ -681,7 +684,7 @@ fn execute_feature(arguments: FeatureArguments) -> Result<ActionResult, SetupErr
                 "hive.user-feature-prompt-ready",
                 "vector-search setup prompt prepared".to_owned(),
                 Vec::new(),
-                Some("Set up Aigent Hive semantic search for my user-root knowledge and currently registered shared collections only. Do not inspect or include project-private, confidential, or newly discovered collections. First run the Hive vector preview, show its exact downloads, storage paths, Python requirement, and consent digest. If a supported existing Python is unavailable, explain the manual prerequisite and stop without changing my answer. If the preview is valid, use its exact consent digest to enable vector search, refresh existing knowledge, rebuild only the approved collections with resumable time limits, then verify semantic search, canonical citations, and FTS fallback. Do not install Python, use provider APIs or credentials, create a background service, or change canonical Markdown.".to_owned()),
+                Some(vector_setup_prompt(language).to_owned()),
             )
         }
     };
@@ -707,6 +710,13 @@ fn execute_feature(arguments: FeatureArguments) -> Result<ActionResult, SetupErr
             "actual_runtime_or_index_state":"separate; inspect with hive knowledge vector status",
         })),
     })
+}
+
+fn vector_setup_prompt(language: InterfaceLanguage) -> &'static str {
+    match language {
+        InterfaceLanguage::En => "Set up Aigent Hive semantic search for my user-root knowledge and currently registered shared collections only. Do not inspect or include project-private, confidential, or newly discovered collections. First run the Hive vector preview, show its exact downloads, storage paths, Python requirement, and consent digest. If a supported existing Python is unavailable, explain the manual prerequisite and stop without changing my answer. If the preview is valid, use its exact consent digest to enable vector search, refresh existing knowledge, rebuild only the approved collections with resumable time limits, then verify semantic search, canonical citations, and FTS fallback. Do not install Python, use provider APIs or credentials, create a background service, or change canonical Markdown.",
+        InterfaceLanguage::Ko => "내 사용자 전역 지식과 현재 등록된 공유 모음에만 Aigent Hive 의미 검색을 설정해줘. 프로젝트 비공개·기밀·새로 발견한 모음은 읽거나 포함하지 마. 먼저 Hive 벡터 미리보기를 실행해 정확한 다운로드, 저장 경로, Python 조건, 동의 지문을 보여줘. 지원되는 기존 Python이 없으면 수동 준비 방법을 설명하고 내 답변은 바꾸지 말고 멈춰줘. 미리보기가 유효하면 정확한 동의 지문으로 벡터 검색을 활성화하고, 기존 지식을 갱신한 뒤 승인된 모음만 시간 제한을 두고 재개 가능하게 생성해줘. 마지막으로 의미 검색, 정본 인용, FTS 대체 경로를 확인해줘. Python 자동 설치, 제공자 API·자격 증명 사용, 상시 서비스 생성, 정본 Markdown 변경은 하지 마.",
+    }
 }
 
 fn run_describe(arguments: &[String]) -> ExitCode {
