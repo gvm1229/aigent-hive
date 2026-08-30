@@ -54,3 +54,4 @@
 | [passed](runs/20260829T164544-47f5c5bd949d.md) | CI Windows UTF-8 산출물 기록과 문서 검사 재검증 | e0146b70fde4005921ef771c753bcdb4a9228bf0 | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260829T165440-0c54e6bcdcb7.md) | CI 문서 lane 사실 지문 재검증 | b64816185c063e83c69f46bfef06eb5ddf98aced | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260829T165441-3e3eb2300719.md) | Python conformance: documentation | b64816185c063e83c69f46bfef06eb5ddf98aced | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260830T151401-0b88ab2c1f18.md) | 벡터 사용자 답변 CLI와 설정 안내 Rust 검증 | 342cb78f52f3f3a6e122fabaff035b837d4b2d2c | Windows-11-10.0.26200-SP0 |
