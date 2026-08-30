@@ -544,6 +544,10 @@ This temporary page has no backlinks and can be deleted explicitly.
 
         destination = self.work_root / "fresh-user-root"
         write_operational_user_setup(destination)
+        (destination / ".hive/config/user-feature-answers.yml").write_text(
+            "schema_version: 1\nvector_search: \"yes\"\nintroduced_in: \"0.10.0\"\n",
+            encoding="utf-8",
+        )
         before_dry_run = snapshot_tree(destination)
         dry_run = self.assert_success(
             self.invoke_knowledge(
@@ -589,6 +593,8 @@ This temporary page has no backlinks and can be deleted explicitly.
         Draft202012Validator(IMPORT_RESULT_SCHEMA).validate(imported)
         self.assertEqual(imported["mode"], "apply")
         self.assertIn(collection_id, imported["detached_collection_ids"])
+        self.assertEqual(imported["vector_rebuild"]["state"], "question-required")
+        self.assertEqual(imported["vector_rebuild"]["scope"], "imported portable collections only")
 
         restored_project = self.work_root / "restored-consumer"
         restored_project.mkdir()

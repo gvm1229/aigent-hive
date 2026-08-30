@@ -53,6 +53,16 @@
       "description": "Exact dry-run result digest required by hive knowledge transfer import --apply.",
       "$ref": "#/$defs/sha256"
     },
+    "vector_rebuild": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["state", "reason", "scope"],
+      "properties": {
+        "state": { "const": "question-required" },
+        "reason": { "type": "string", "minLength": 1, "maxLength": 240 },
+        "scope": { "const": "imported portable collections only" }
+      }
+    },
     "rollback": { "$ref": "#/$defs/rollback" },
     "collection_tables": { "$ref": "#/$defs/collection_tables" }
   },
@@ -67,6 +77,7 @@
           "canonical_mutation": { "const": false },
           "index_rebuilt": { "const": false },
           "transfer_preview_digest": { "$ref": "#/$defs/sha256" },
+          "vector_rebuild": false,
           "rollback": { "$ref": "#/$defs/no_rollback" }
         }
       }
@@ -80,6 +91,7 @@
           "canonical_mutation": { "const": false },
           "index_rebuilt": { "const": false },
           "transfer_preview_digest": { "$ref": "#/$defs/sha256" },
+          "vector_rebuild": false,
           "rollback": { "$ref": "#/$defs/no_rollback" }
         }
       }

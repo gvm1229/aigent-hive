@@ -76,3 +76,8 @@
 | [passed](runs/20260830T173853-2a91eb3c1070.md) | 지식 이전 지문 스키마 검증 | 6d87a0d68e5bca5820b6c212a67bbb280a990139 | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260830T173920-e648c6384160.md) | 지식 이전 지문 불일치 거부 재검증 | 6d87a0d68e5bca5820b6c212a67bbb280a990139 | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260830T173930-cafd5d9df9da.md) | 지식 이전 지문 스키마 계약 | 6d87a0d68e5bca5820b6c212a67bbb280a990139 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260830T174202-23878085e650.md) | 지식 이전 벡터 재생성 질문 빌드 | 213b97a8e0e38b24e6c2ca7a9f0a47188e9deb3a | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260830T174211-131537f2e95f.md) | 지식 이전 벡터 재생성 질문 회귀 | 213b97a8e0e38b24e6c2ca7a9f0a47188e9deb3a | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260830T174222-6307fd35ae77.md) | 지식 이전 결과 스키마 재검증 | 213b97a8e0e38b24e6c2ca7a9f0a47188e9deb3a | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260830T174244-f03713ba1f0e.md) | 지식 이전 벡터 질문 적용 수정 빌드 | 213b97a8e0e38b24e6c2ca7a9f0a47188e9deb3a | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260830T174254-9a2ae2d920da.md) | 지식 이전 벡터 재생성 질문 재검증 | 213b97a8e0e38b24e6c2ca7a9f0a47188e9deb3a | Windows-11-10.0.26200-SP0 |

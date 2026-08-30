@@ -403,7 +403,39 @@ fn run_transfer_import(arguments: &[String]) -> Result<KnowledgeResult, WikiErro
         ));
     }
     let forwarded = strip(false);
-    run_import(&forwarded)
+    let mut applied = run_import(&forwarded)?;
+    let options = forwarded
+        .iter()
+        .filter(|argument| argument.as_str() != "--apply")
+        .cloned()
+        .collect::<Vec<_>>();
+    let user_root = PathBuf::from(required(
+        &parse_options(&options, &["--user-root", "--bundle"])?,
+        "--user-root",
+    )?);
+    if applied
+        .data
+        .as_ref()
+        .and_then(|data| data.get("index_rebuilt"))
+        .and_then(Value::as_bool)
+        == Some(true)
+        && crate::user_setup::vector_search_enabled(&user_root).map_err(WikiError::Verification)?
+    {
+        applied
+            .data
+            .as_mut()
+            .and_then(Value::as_object_mut)
+            .ok_or_else(|| WikiError::Verification("bundle import result is not an object".to_owned()))?
+            .insert(
+                "vector_rebuild".to_owned(),
+                json!({
+                    "state": "question-required",
+                    "reason": "FTS is ready; vector preference remains enabled until the user chooses rebuild now or defer",
+                    "scope": "imported portable collections only"
+                }),
+            );
+    }
+    Ok(applied)
 }
 
 fn transfer_preview_digest(result: &KnowledgeResult) -> Result<String, WikiError> {

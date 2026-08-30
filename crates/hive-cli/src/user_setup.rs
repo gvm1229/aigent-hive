@@ -359,6 +359,13 @@ enum VectorFeatureAnswer {
     No,
 }
 
+/// Read the saved vector-search preference without changing setup or feature-answer state.
+pub(crate) fn vector_search_enabled(user_root: &Path) -> Result<bool, String> {
+    let root = super::user_install::open_user_root_for_setup(user_root)?;
+    let (_, answers) = load_feature_answers(&root).map_err(|error| format!("{error:?}"))?;
+    Ok(answers.vector_search == Some(VectorFeatureAnswer::Yes))
+}
+
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(deny_unknown_fields)]
 struct UserFeatureAnswers {
