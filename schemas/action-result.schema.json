@@ -64,6 +64,7 @@
         "ScanKnowledge",
         "ExportKnowledge",
         "ImportKnowledge",
+        "TransferKnowledge",
         "PromoteKnowledge",
         "ScanProjectUpgrade",
         "UpdateProjectHarness",

@@ -66,3 +66,13 @@
 | [passed](runs/20260830T172215-b6bd976c6a62.md) | 수정 지침의 제품 투영 검증 | 5ea719a64f4403d1261feaff28d3f718d257638a | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260830T172235-5b21fa654768.md) | 실행 수명주기 전체 계약 회귀 | 5ea719a64f4403d1261feaff28d3f718d257638a | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260830T173239-2656147d16a1.md) | 지식 이전 Skill 전환 투영 검증 | b4f2c7f26710ac8069aa428d11d2ba5cf593679f | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260830T173637-35d3aa3081b1.md) | 지식 이전 미리보기 지문 계약 검증 | 6d87a0d68e5bca5820b6c212a67bbb280a990139 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260830T173700-9c9a9b30c46f.md) | 지식 이전 CLI 미리보기 적용 회귀 | 6d87a0d68e5bca5820b6c212a67bbb280a990139 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260830T173723-0facffd87531.md) | 지식 이전 미리보기 형식 수정 빌드 | 6d87a0d68e5bca5820b6c212a67bbb280a990139 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260830T173737-067adec07ebc.md) | 지식 이전 미리보기 적용 회귀 재실행 | 6d87a0d68e5bca5820b6c212a67bbb280a990139 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260830T173802-1977ef72f6d9.md) | 지식 이전 지문 스키마 수정 빌드 | 6d87a0d68e5bca5820b6c212a67bbb280a990139 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260830T173811-7a6bddbd21a6.md) | 지식 이전 지문 적용 회귀 재검증 | 6d87a0d68e5bca5820b6c212a67bbb280a990139 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260830T173843-b63b75987ebf.md) | 지식 이전 잘못된 미리보기 지문 거부 검증 | 6d87a0d68e5bca5820b6c212a67bbb280a990139 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260830T173853-2a91eb3c1070.md) | 지식 이전 지문 스키마 검증 | 6d87a0d68e5bca5820b6c212a67bbb280a990139 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260830T173920-e648c6384160.md) | 지식 이전 지문 불일치 거부 재검증 | 6d87a0d68e5bca5820b6c212a67bbb280a990139 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260830T173930-cafd5d9df9da.md) | 지식 이전 지문 스키마 계약 | 6d87a0d68e5bca5820b6c212a67bbb280a990139 | Windows-11-10.0.26200-SP0 |

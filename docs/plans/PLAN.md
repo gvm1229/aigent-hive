@@ -65,7 +65,7 @@
 | 관계·검색 graph | 16 | 0 | 100% |
 | Hybrid vector search | 23 | 0 | 100% |
 | Vector onboarding | 0 | 8 | 0% |
-| Knowledge transfer | 1 | 6 | 14.3% |
+| Knowledge transfer | 2 | 5 | 28.6% |
 | Host-owned Skill 예약 | 1 | 0 | 100% |
 | Nested project scan | 1 | 0 | 100% |
 | Agent 지침 경량화 | 8 | 0 | 100% |
@@ -78,7 +78,7 @@
 | Source `draft-devlog` | 6 | 0 | 100% |
 | `0.10.0` 출시 | 0 | 7 | 0% |
 | 안정판 공개 문서 | 7 | 0 | 100% |
-| **합계** | **118** | **21** | **84.9%** |
+| **합계** | **119** | **20** | **85.6%** |
 
 ## Required load order
 

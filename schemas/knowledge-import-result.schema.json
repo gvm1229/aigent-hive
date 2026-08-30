@@ -49,6 +49,10 @@
     },
     "canonical_mutation": { "type": "boolean" },
     "index_rebuilt": { "type": "boolean" },
+    "transfer_preview_digest": {
+      "description": "Exact dry-run result digest required by hive knowledge transfer import --apply.",
+      "$ref": "#/$defs/sha256"
+    },
     "rollback": { "$ref": "#/$defs/rollback" },
     "collection_tables": { "$ref": "#/$defs/collection_tables" }
   },
@@ -62,6 +66,7 @@
           "changed_paths": { "maxItems": 0 },
           "canonical_mutation": { "const": false },
           "index_rebuilt": { "const": false },
+          "transfer_preview_digest": { "$ref": "#/$defs/sha256" },
           "rollback": { "$ref": "#/$defs/no_rollback" }
         }
       }
@@ -74,6 +79,7 @@
           "changed_paths": { "maxItems": 0 },
           "canonical_mutation": { "const": false },
           "index_rebuilt": { "const": false },
+          "transfer_preview_digest": { "$ref": "#/$defs/sha256" },
           "rollback": { "$ref": "#/$defs/no_rollback" }
         }
       }
@@ -98,6 +104,7 @@
           "added_count": { "minimum": 1 },
           "changed_paths": { "minItems": 1 },
           "canonical_mutation": { "const": true },
+          "transfer_preview_digest": false,
           "rollback": { "$ref": "#/$defs/no_rollback" }
         }
       }

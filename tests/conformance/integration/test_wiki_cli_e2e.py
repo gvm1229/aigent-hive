@@ -514,9 +514,25 @@ This temporary page has no backlinks and can be deleted explicitly.
         )
 
         bundle = self.work_root / "scanned-collection.hivekb"
+        export_preview = self.assert_success(
+            self.invoke_knowledge(
+                "transfer",
+                "export",
+                "--preview",
+                "--scope",
+                f"collection:{collection_id}",
+                "--bundle",
+                str(bundle),
+            )[1]
+        )
+        self.assertFalse(bundle.exists())
+        self.assertRegex(export_preview["archive_sha256"], r"^sha256:[0-9a-f]{64}$")
+
         exported = self.assert_success(
             self.invoke_knowledge(
+                "transfer",
                 "export",
+                "--apply",
                 "--scope",
                 f"collection:{collection_id}",
                 "--bundle",
@@ -524,27 +540,46 @@ This temporary page has no backlinks and can be deleted explicitly.
             )[1]
         )
         self.assertTrue(bundle.is_file())
-        self.assertRegex(exported["archive_sha256"], r"^sha256:[0-9a-f]{64}$")
+        self.assertEqual(exported["archive_sha256"], export_preview["archive_sha256"])
 
         destination = self.work_root / "fresh-user-root"
         write_operational_user_setup(destination)
         before_dry_run = snapshot_tree(destination)
         dry_run = self.assert_success(
             self.invoke_knowledge(
+                "transfer",
                 "import",
+                "--preview",
                 "--bundle",
                 str(bundle),
-                "--dry-run",
                 user_root=destination,
             )[1]
         )
         Draft202012Validator(IMPORT_RESULT_SCHEMA).validate(dry_run)
         self.assertEqual(dry_run["mode"], "dry-run")
+        self.assertRegex(dry_run["transfer_preview_digest"], r"^sha256:[0-9a-f]{64}$")
+        self.assertEqual(snapshot_tree(destination), before_dry_run)
+
+        rejected_process, rejected = self.invoke_knowledge(
+            "transfer",
+            "import",
+            "--preview-digest",
+            "sha256:" + "0" * 64,
+            "--bundle",
+            str(bundle),
+            "--apply",
+            user_root=destination,
+        )
+        self.assertEqual(rejected_process.returncode, 3, rejected)
+        self.assertEqual(rejected["status"], "conflict", rejected)
         self.assertEqual(snapshot_tree(destination), before_dry_run)
 
         imported = self.assert_success(
             self.invoke_knowledge(
+                "transfer",
                 "import",
+                "--preview-digest",
+                dry_run["transfer_preview_digest"],
                 "--bundle",
                 str(bundle),
                 "--apply",

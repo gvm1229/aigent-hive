@@ -14,8 +14,8 @@ use crate::collection::{
     CollectionState, CollectionVisibility, COLLECTION_SCHEMA_VERSION, USER_ROOT_COLLECTION_ID,
 };
 use crate::portable::{
-    BundleEntryInput, BundleLimits, BundleRequest, BundleScope, BundleSourceIdentity,
-    BundleSourceKind, PortableEntryClassification, ValidatedBundlePlan,
+    encode_bundle, BundleEntryInput, BundleLimits, BundleRequest, BundleScope,
+    BundleSourceIdentity, BundleSourceKind, PortableEntryClassification, ValidatedBundlePlan,
 };
 use crate::rag::{
     build_rag_index, parse_claim_markdown, GenerationManifest, RagVisibility,
@@ -109,6 +109,28 @@ pub struct BundleExportResult {
     /// Retained prior bundle when replacement was requested.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub backup_path: Option<PathBuf>,
+}
+
+/// Read-only receipt for an exact prospective portable bundle.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct BundleExportPreview {
+    /// Logical source identity committed into the prospective manifest.
+    pub source: BundleSourceIdentity,
+    /// Exact export scope.
+    pub scope: BundleScope,
+    /// Number of portable payload entries in the archive.
+    pub entry_count: usize,
+    /// Canonical entries excluded because they appeared to contain credentials.
+    pub credential_excluded_count: usize,
+    /// Entries excluded because they carried machine-bound absolute locators.
+    pub absolute_path_excluded_count: usize,
+    /// Entries excluded by the confidential boundary.
+    pub confidential_excluded_count: usize,
+    /// Digest of the exact archive that a subsequent export would publish.
+    pub archive_sha256: String,
+    /// Exact prospective archive byte length.
+    pub byte_length: u64,
 }
 
 /// Explicit import execution mode.
@@ -299,6 +321,66 @@ pub fn export_bundle(
     publish_mode: &BundlePublishMode,
     limits: BundleLimits,
 ) -> Result<BundleExportResult, WikiError> {
+    let prepared = prepare_export_bundle(user_root, scope, limits)?;
+    let receipt = encode_and_publish_bundle(&prepared.request, limits, destination, publish_mode)
+        .map_err(bundle_io_error)?;
+    let disposition = match receipt.outcome() {
+        BundlePublishOutcome::Created => BundleExportDisposition::Created,
+        BundlePublishOutcome::Unchanged => BundleExportDisposition::Unchanged,
+        BundlePublishOutcome::Replaced => BundleExportDisposition::Replaced,
+    };
+    Ok(BundleExportResult {
+        source: prepared.source,
+        scope: prepared.scope,
+        entry_count: prepared.entry_count,
+        credential_excluded_count: prepared.exclusions.credential,
+        absolute_path_excluded_count: prepared.exclusions.absolute_path,
+        confidential_excluded_count: prepared.exclusions.confidential,
+        disposition,
+        archive_sha256: receipt.archive_sha256().to_owned(),
+        byte_length: receipt.byte_length(),
+        backup_path: receipt.backup_path().map(Path::to_path_buf),
+    })
+}
+
+/// Build the exact portable archive in memory without writing a bundle file.
+///
+/// The returned digest and length describe the same deterministic bytes that `export_bundle`
+/// would publish while the canonical source remains unchanged.
+pub fn preview_export_bundle(
+    user_root: &Path,
+    scope: BundleScope,
+    limits: BundleLimits,
+) -> Result<BundleExportPreview, WikiError> {
+    let prepared = prepare_export_bundle(user_root, scope, limits)?;
+    let encoded = encode_bundle(&prepared.request, limits)
+        .map_err(|error| WikiError::Verification(error.to_string()))?;
+    Ok(BundleExportPreview {
+        source: prepared.source,
+        scope: prepared.scope,
+        entry_count: prepared.entry_count,
+        credential_excluded_count: prepared.exclusions.credential,
+        absolute_path_excluded_count: prepared.exclusions.absolute_path,
+        confidential_excluded_count: prepared.exclusions.confidential,
+        archive_sha256: encoded.plan().archive_sha256().to_owned(),
+        byte_length: u64::try_from(encoded.archive().len())
+            .map_err(|_| WikiError::Io("bundle preview length does not fit u64".to_owned()))?,
+    })
+}
+
+struct ExportPreparation {
+    request: BundleRequest,
+    source: BundleSourceIdentity,
+    scope: BundleScope,
+    entry_count: usize,
+    exclusions: ExportExclusions,
+}
+
+fn prepare_export_bundle(
+    user_root: &Path,
+    scope: BundleScope,
+    _limits: BundleLimits,
+) -> Result<ExportPreparation, WikiError> {
     let root_path = crate::shared::canonical_root(user_root)?;
     let root = pin_absolute_directory(&root_path, "user root")?;
     let _lock = crate::CapabilityKnowledgeLock::acquire(&root)?;
@@ -361,24 +443,12 @@ pub fn export_bundle(
         scope: scope.clone(),
         entries,
     };
-    let receipt = encode_and_publish_bundle(&request, limits, destination, publish_mode)
-        .map_err(bundle_io_error)?;
-    let disposition = match receipt.outcome() {
-        BundlePublishOutcome::Created => BundleExportDisposition::Created,
-        BundlePublishOutcome::Unchanged => BundleExportDisposition::Unchanged,
-        BundlePublishOutcome::Replaced => BundleExportDisposition::Replaced,
-    };
-    Ok(BundleExportResult {
+    Ok(ExportPreparation {
+        request,
         source,
         scope,
         entry_count: portable_entry_count,
-        credential_excluded_count: exclusions.credential,
-        absolute_path_excluded_count: exclusions.absolute_path,
-        confidential_excluded_count: exclusions.confidential,
-        disposition,
-        archive_sha256: receipt.archive_sha256().to_owned(),
-        byte_length: receipt.byte_length(),
-        backup_path: receipt.backup_path().map(Path::to_path_buf),
+        exclusions,
     })
 }
 
