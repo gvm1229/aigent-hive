@@ -47,7 +47,8 @@ const AI_SLOP_CLEANER: &[u8] = include_bytes!("../../../harness/skills/code-poli
 const BEST_PRACTICE_RESEARCH: &[u8] =
     include_bytes!("../../../harness/skills/research-best-practices/SKILL.md");
 const KNOWLEDGE_SCAN: &[u8] = include_bytes!("../../../harness/skills/knowledge-scan/SKILL.md");
-const KNOWLEDGE_TRANSFER: &[u8] = include_bytes!("../../../harness/skills/knowledge-transfer/SKILL.md");
+const KNOWLEDGE_TRANSFER: &[u8] =
+    include_bytes!("../../../harness/skills/knowledge-transfer/SKILL.md");
 const SHIP: &[u8] = include_bytes!("../../../harness/skills/ship/SKILL.md");
 const AMEND_DIRECTIVE: &[u8] = include_bytes!("../../../harness/skills/amend-directive/SKILL.md");
 const HUMANIZE_KOR: &[u8] = include_bytes!("../../../harness/skills/humanize-kor/SKILL.md");
@@ -2006,9 +2007,8 @@ fn action_for_skill(skill: &str) -> Option<LogicalAction> {
     match skill {
         "quick-answer" => Some(LogicalAction::AnswerSimpleQuestion),
         "prompt-refine" => Some(LogicalAction::RefinePrompt),
-        "knowledge-capture" | "knowledge-maintain" | "knowledge-promote" | "knowledge-scan" | "knowledge-transfer" => {
-            Some(LogicalAction::IngestKnowledge)
-        }
+        "knowledge-capture" | "knowledge-maintain" | "knowledge-promote" | "knowledge-scan"
+        | "knowledge-transfer" => Some(LogicalAction::IngestKnowledge),
         "knowledge-recall" => Some(LogicalAction::QueryKnowledge),
         "code-polish"
         | "humanize-kor"
