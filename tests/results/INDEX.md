@@ -89,3 +89,8 @@
 | [failed](runs/20260830T175414-0cf6a2f3f18c.md) | 지식 이전 충돌 제외 CLI 재검증 | f008dcac174e2d974cd648205eb870f2205013cd | Windows-11-10.0.26200-SP0 |
 | [failed](runs/20260830T175447-d69e9832cf0d.md) | 지식 이전 충돌 제외 CLI 최종 재검증 | f008dcac174e2d974cd648205eb870f2205013cd | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260830T175533-d1f9cf5aed20.md) | 지식 이전 기본 통합 회귀 복구 | f008dcac174e2d974cd648205eb870f2205013cd | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260830T180552-61c4bae1e8ad.md) | 지식 이전 논리 프로젝트 연결 회귀 | 0be839133ddcb293452a0dcc0f9200ae12b214e1 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260830T180614-41b614ce959a.md) | 지식 이전 분리 모음과 권한 보존 회귀 | 0be839133ddcb293452a0dcc0f9200ae12b214e1 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260830T180618-10fa3b30ee7f.md) | 지식 이전 논리 프로젝트 연결 회귀 | 0be839133ddcb293452a0dcc0f9200ae12b214e1 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260830T180647-f98518dbe99e.md) | 지식 이전 충돌 기본 거부 회귀 | 0be839133ddcb293452a0dcc0f9200ae12b214e1 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260830T180656-edcd7005b8ba.md) | 지식 이전 논리 프로젝트 연결 재검증 | 0be839133ddcb293452a0dcc0f9200ae12b214e1 | Windows-11-10.0.26200-SP0 |

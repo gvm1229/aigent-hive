@@ -497,6 +497,12 @@ pub fn import_bundle(
     let manifest_sha256 = validated.manifest_sha256().to_owned();
     let collection_tables = COLLECTION_TABLES.iter().map(ToString::to_string).collect();
 
+    if !plan.conflict_paths.is_empty() && mode == BundleImportMode::Apply {
+        return Err(WikiError::Conflict(
+            "bundle import has conflicting canonical entries; review them and use the explicit exclude-conflicts transfer option or cancel"
+                .to_owned(),
+        ));
+    }
     if plan.added_count == 0 {
         return Ok(BundleImportResult {
             mode,
@@ -536,12 +542,6 @@ pub fn import_bundle(
             rollback: BundleRollbackResult::none(),
             collection_tables,
         });
-    }
-    if !plan.conflict_paths.is_empty() && mode == BundleImportMode::Apply {
-        return Err(WikiError::Conflict(
-            "bundle import has conflicting canonical entries; review them and use the explicit exclude-conflicts transfer option or cancel"
-                .to_owned(),
-        ));
     }
 
     let changed_paths = activate_import(&root_path, &mut plan, rebuild_index)?;
