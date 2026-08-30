@@ -1,17 +1,22 @@
 # 현재 상태
 
-- 작업 브랜치: `develop`
+- 작업 브랜치: `feature/0.10.0-knowledge-transfer`
 - 제품 버전: `0.10.0`
 - 공개 시험판: `0.10.0-test.6`, 배포일 2026-08-29
 - 제품 수용 소스: `d331dc879cf51eab078c5e189b2fe7b8d729e541`
 - 안정판 기준·npm `latest`: `0.9.5`. 안정판 작업은 계속 명시 제외
 - 안정판 공개 문서: `0.9.5` 교정과 test 비노출 gate 구현 완료. `develop` CI `33264260664`와 docs-only main PR `#39`가 통과·병합됐고, npm `latest=0.9.5` 재확인
-- 현재 구현: `feature/0.10.0-vector-onboarding`에서 전역 벡터 사용 답변·새 세션 설정 안내·다음 공개 시험 수용 진행
-- 현재 구현: `feature/0.10.0-knowledge-transfer`에서 컴퓨터 간 이식·FTS·선택형 벡터 재생성 진행
+- 현재 우선 작업 완료: `VCF10-001–003` 연속 실행 지침 교정·검증. 지식 이전은 사용자 우선순위 변경에 따라 보류
+- 미완료 구현: 벡터 사용 안내 `VON10-*`, 컴퓨터 간 지식 이전 `KTX10-*`. 기존 공개 시험 수용과 구분
 - 계획: [PLAN.md](../plans/PLAN.md), [벡터 계획](../plans/active/hybrid-vector-search-0.10.0.md)
 - 설명: [벡터 검색 시각 문서](../hive-vector-search.ko.html), [사용 안내](../guides/vector-search.md)
 
 ## 이번 완료
+
+- 연속 실행 지침: 실제 실행 근거·시도 중단과 전체 종료 구분·소스 경로·종료 결과 대조. [검증 결과와 한계](../../tests/results/continuation-directive-repair.md)
+- Windows 실행 계약 40개 통과·POSIX 전용 3개 제외, 제품 투영 38개 통과. 실제 호스트 종료 차단·응용 프로그램 재시작 검증 제외
+- 기존 지식 이전 변경의 Wiki 옛 Skill 경로 오류·문체 오류 잔존. 이번 지침 변경과 구분, 전체 문서 통과 주장 제외
+- 출시 집계: 현재 체크리스트의 재개방된 `REL10-001–004` 반영. 과거 `test.6` 수용을 새 변경 완료로 집계 금지
 
 - 벡터 전용 브랜치 구현을 `develop`에 통합
 - 유지보수자의 현재 스트레스 성능 수용에 따라 sqlite-vec·MiniLM 채택. 기존 실패 기록·품질·안전 기준 유지

@@ -37,6 +37,7 @@
 | Agent 지침 단일 소유권 | [en](en/agent-directive-ownership.md) | [ko](ko/agent-directive-ownership.md) |
 | Host-neutral 연속 실행 gate | [en](en/host-neutral-continuation.md) | [ko](ko/host-neutral-continuation.md) |
 | Verified workflow Skill | [en](en/verified-workflow.md) | [ko](ko/verified-workflow.md) |
+| 검증형 실행 적용·종료 근거 | [en](en/verified-execution-evidence.md) | [ko](ko/verified-execution-evidence.md) |
 | Adversarial Judge Skill | [en](en/adversarial-judge.md) | [ko](ko/adversarial-judge.md) |
 | Skill 폐기 migration | [en](en/skill-retirement-migration.md) | [ko](ko/skill-retirement-migration.md) |
 | 계획 Markdown 정본 | [en](en/plan-persistence.md) | [ko](ko/plan-persistence.md) |

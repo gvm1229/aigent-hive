@@ -1,6 +1,6 @@
 # Aigent Hive 활성 계획
 
-> Revision: 301
+> Revision: 302
 > 기준일: 2026-08-29
 > Product version: `0.10.0`
 > Stable baseline: `0.9.5`
@@ -44,10 +44,8 @@
 
 ## 현재 연속 실행 경계
 
-- 승인 순서: 한국어 결함 수정·비벡터 재검증 → `develop` 병합 → `feature/0.10.0-vector-search` 생성·벡터 구현
-- 병합 선행: 제품 기능 회귀 검사. `develop` 전용 공개 후보·설치 수용은 병합 뒤 별도 실행
-- 유지보수자 권한: `0.10.0` 구현·시험·commit·`feature/0.10.0-vector-search` push·CI 관찰·번호 공개 시험판
-- Verified workflow 대상: dependency·evidence·retry·독립 검증이 필요한 미완료 구현·검증 항목
+- 현재 우선 요청: `VCF10-*` 지침 교정·검증·로컬 커밋. 지식 이전의 후속 구현·병합은 별도 보류
+- 검증형 실행 적용 주장: 실제 작업에 연결된 실행 생성·검증 근거 필수
 - 제외: `REL10-005–007` — protected `main` 안정판 후보, 안정판 게시·설치, 유지보수자 안정판 승인
 - 종료 조건: 제외 항목 외 Agent 소유 checklist `0건`과 해당 검증 증거
 
@@ -73,13 +71,14 @@
 | Agent 지침 경량화 | 8 | 0 | 100% |
 | Host-neutral 연속 실행 | 10 | 0 | 100% |
 | Verified workflow | 12 | 0 | 100% |
+| 연속 실행 지침 교정 | 3 | 0 | 100% |
 | Adversarial judge | 8 | 0 | 100% |
 | Skill migration cleanup | 10 | 0 | 100% |
 | 한국어 언어 core | 12 | 0 | 100% |
 | Source `draft-devlog` | 6 | 0 | 100% |
-| `0.10.0` 출시 | 4 | 3 | 57.1% |
+| `0.10.0` 출시 | 0 | 7 | 0% |
 | 안정판 공개 문서 | 7 | 0 | 100% |
-| **합계** | **118** | **18** | **86.8%** |
+| **합계** | **117** | **22** | **84.2%** |
 
 ## Required load order
 
@@ -103,7 +102,7 @@ Archive·backlog·완료 history의 자동 선행 load 금지.
 | [`active/nested-project-knowledge-scan-0.10.0.md`](active/nested-project-knowledge-scan-0.10.0.md) | `SCP10-003` | Nested project scan |
 | [`active/agent-directive-optimization-0.10.0.md`](active/agent-directive-optimization-0.10.0.md) | `DIR10-*` | Source·소비자 Agent 지침 경량화 |
 | [`active/host-neutral-continuation-0.10.0.md`](active/host-neutral-continuation-0.10.0.md) | `CON10-*` | Goal·closure·선택형 hook |
-| [`active/verified-workflow-0.10.0.md`](active/verified-workflow-0.10.0.md) | `VWF10-*`, `VWA10-*` | 자연어 routing·실행 graph·격리 통합 수용 |
+| [`active/verified-workflow-0.10.0.md`](active/verified-workflow-0.10.0.md) | `VWF10-*`, `VWA10-*`, `VCF10-*` | 자연어 routing·실행 graph·격리 수용·종료 지침 교정 |
 | [`active/adversarial-judge-0.10.0.md`](active/adversarial-judge-0.10.0.md) | `JDG10-*` | 명시적 독립 adversarial Judge |
 | [`active/skill-retirement-migration-0.10.0.md`](active/skill-retirement-migration-0.10.0.md) | `SKM10-*` | Rename·폐기 artifact cleanup |
 | [`active/korean-language-core-0.10.0.md`](active/korean-language-core-0.10.0.md) | `KOR10-*` | 자동 한국어 core·`humanize-kor`·upstream update |
