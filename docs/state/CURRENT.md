@@ -7,6 +7,7 @@
 - 안정판 기준·npm `latest`: `0.9.5`. 안정판 작업은 계속 명시 제외
 - 안정판 공개 문서: `0.9.5` 교정과 test 비노출 gate 구현 완료. `develop` CI `33264260664`와 docs-only main PR `#39`가 통과·병합됐고, npm `latest=0.9.5` 재확인
 - 현재 구현: `feature/0.10.0-vector-onboarding`에서 전역 벡터 사용 답변·새 세션 설정 안내·다음 공개 시험 수용 진행
+- 현재 구현: `feature/0.10.0-knowledge-transfer`에서 컴퓨터 간 이식·FTS·선택형 벡터 재생성 진행
 - 계획: [PLAN.md](../plans/PLAN.md), [벡터 계획](../plans/active/hybrid-vector-search-0.10.0.md)
 - 설명: [벡터 검색 시각 문서](../hive-vector-search.ko.html), [사용 안내](../guides/vector-search.md)
 

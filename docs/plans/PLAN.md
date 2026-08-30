@@ -21,6 +21,7 @@
 - Source 전용 `draft-devlog`의 임시 token·비공개 초안·명시 발행·일반화된 기술 글 계약
 - 모든 지원 predecessor의 Skill rename·폐기 artifact 완전 cleanup
 - 선택형 벡터 검색의 한 번 묻는 사용자 답변과 새 세션 설정 안내
+- 컴퓨터 간 전체 이식 가능한 지식 이전과 FTS 준비
 - 번호 공개 시험판과 같은 product bytes의 안정판 출시
 
 ## 완료 조건
@@ -66,6 +67,7 @@
 | 관계·검색 graph | 16 | 0 | 100% |
 | Hybrid vector search | 23 | 0 | 100% |
 | Vector onboarding | 0 | 8 | 0% |
+| Knowledge transfer | 0 | 7 | 0% |
 | Host-owned Skill 예약 | 1 | 0 | 100% |
 | Nested project scan | 1 | 0 | 100% |
 | Agent 지침 경량화 | 8 | 0 | 100% |
@@ -77,7 +79,7 @@
 | Source `draft-devlog` | 6 | 0 | 100% |
 | `0.10.0` 출시 | 4 | 3 | 57.1% |
 | 안정판 공개 문서 | 7 | 0 | 100% |
-| **합계** | **118** | **11** | **91.5%** |
+| **합계** | **118** | **18** | **86.8%** |
 
 ## Required load order
 
@@ -96,6 +98,7 @@ Archive·backlog·완료 history의 자동 선행 load 금지.
 | [`active/knowledge-relationship-graph-0.10.0.md`](active/knowledge-relationship-graph-0.10.0.md) | `SCP10-001`, `KRG10-*` | Markdown·Graphify 관계 검색 |
 | [`active/hybrid-vector-search-0.10.0.md`](active/hybrid-vector-search-0.10.0.md) | `KRG10-014`, `VEC10-*`, `VQR10-*` | Semantic vector 재검증·조건부 구현 |
 | [`active/vector-onboarding-0.10.0.md`](active/vector-onboarding-0.10.0.md) | `VON10-*` | 벡터 사용 답변·새 세션 설정 안내 |
+| [`active/knowledge-transfer-0.10.0.md`](active/knowledge-transfer-0.10.0.md) | `KTX10-*` | 컴퓨터 간 지식 이전·FTS·벡터 재생성 |
 | [`active/host-owned-skill-reservations-0.10.0.md`](active/host-owned-skill-reservations-0.10.0.md) | `SCP10-002` | Host-owned Skill 세션 예약 |
 | [`active/nested-project-knowledge-scan-0.10.0.md`](active/nested-project-knowledge-scan-0.10.0.md) | `SCP10-003` | Nested project scan |
 | [`active/agent-directive-optimization-0.10.0.md`](active/agent-directive-optimization-0.10.0.md) | `DIR10-*` | Source·소비자 Agent 지침 경량화 |
