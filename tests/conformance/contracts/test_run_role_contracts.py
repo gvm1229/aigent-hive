@@ -1246,6 +1246,41 @@ class Phase4Contracts(unittest.TestCase):
         self.assertTrue(continuation["cancel"]["user_interrupt_permitted"])
         self.assertEqual(snapshot_tree(self.target), before)
 
+    def test_exhausted_retry_budget_does_not_complete_pending_work(self) -> None:
+        self.ensure_handoff(self.target)
+        process, payload = self.checkpoint(
+            self.target,
+            self.checkpoint_request(
+                continuation={
+                    "session_binding_digest": digest_bytes(b"active-session"),
+                    "max_retry_attempts": 3,
+                    "attempts_used": 3,
+                    "cancel_requested": False,
+                },
+            ),
+            CAPABILITIES["absent"],
+            "closure-exhausted-budget",
+        )
+        self.assert_success(process, payload)
+        before = snapshot_tree(self.target)
+
+        process, payload = self.closure(self.target)
+
+        self.assert_success(process, payload)
+        self.assertFalse(payload["data"]["closure"]["ready_for_final"])
+        self.assertEqual(payload["data"]["closure"]["agent_owned"], ["build", "tests"])
+        budget = payload["data"]["continuation"]["retry_budget"]
+        self.assertEqual(budget["remaining_attempts"], 0)
+        self.assertFalse(budget["retry_permitted"])
+        self.assertEqual(snapshot_tree(self.target), before)
+
+        process, payload = self.continuation(self.target, "active-session")
+        self.assert_success(process, payload)
+        self.assertEqual(payload["data"]["decision"], "allow")
+        self.assertEqual(payload["data"]["reason"], "retry-not-permitted")
+        self.assertFalse(payload["data"]["spawned"])
+        self.assertEqual(snapshot_tree(self.target), before)
+
     def test_closure_cancelled_run_permits_interrupt_without_retry(self) -> None:
         self.ensure_handoff(self.target)
         process, payload = self.checkpoint(
