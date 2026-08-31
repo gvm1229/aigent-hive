@@ -2,12 +2,12 @@
 
 - 작업 브랜치: `develop`
 - 제품 버전: `0.10.0`
-- 공개 시험판: `0.10.0-test.7`, 배포일 2026-08-31
-- 제품 수용 소스: `75a803a7a85c0e136119dc4eff06143e09b9e832`
+- 공개 시험판: `0.10.0-test.8`, 배포일 2026-08-31
+- 제품 수용 소스: `6d33557c0dec41b5df8f0ae82c2db0f97f58f312`
 - 안정판 기준·npm `latest`: `0.9.5`. 안정판 작업은 계속 명시 제외
 - 안정판 공개 문서: `0.9.5` 교정과 test 비노출 gate 구현 완료. `develop` CI `33264260664`와 docs-only main PR `#39`가 통과·병합됐고, npm `latest=0.9.5` 재확인
 - 지식 이전: PR #41로 `develop@e1890c87` 병합. 기능 브랜치 원격·로컬 삭제, main·develop만 유지
-- `KTX10-001–012` 완료. A·B 등 여러 `.hivekb`의 자동 통합·원문 보존·Windows 100·1,000·5,000파일 측정 완료. `KTX10-013` 원격 교차 운영체제 수용과 `KTX10-014` test.8 공개 수용 대기
+- `KTX10-001–014` 완료. A·B 등 여러 `.hivekb`의 자동 통합·원문 보존·Windows 100·1,000·5,000파일 측정·세 방향 교차 운영체제·test.8 공개 설치 수용 완료
 - 검증형 작업: 사용자 승인한 저장소의 수정된 Skill과 소스 종료 정책 적용. 전역 설치 변경·host 실행 graph 활성화 주장 없음
 - 계획: [PLAN.md](../plans/PLAN.md), [벡터 계획](../plans/active/hybrid-vector-search-0.10.0.md)
 - 설명: [벡터 검색 시각 문서](../hive-vector-search.ko.html), [사용 안내](../guides/vector-search.md)

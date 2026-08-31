@@ -17,8 +17,8 @@
 - [x] [KTX10-010] 의미 후보·수정본·억제 충돌의 검토 요청·재개 계약 — `separate|equivalent|choose` 검토 지문과 SHA-256 수정본 선택, 비선택 원본 보존
 - [x] [KTX10-011] 검토 지문을 묶은 단일 원자 적용·FTS·벡터 선택 연결 — 기존 import rollback·FTS 한 번 생성·transfer vector 선택 재사용
 - [x] [KTX10-012] `knowledge-transfer` 안내·투영·결과 schema 정합화 — Codex·Claude·Antigravity 투영 38개, review schema·안내 검사 통과
-- [ ] [KTX10-013] 실패·재실행·100·1,000·5,000파일·교차 운영체제 검증 — [Windows 측정](../../../tests/results/knowledge-transfer-merge-2026-08-31.md) 완료, 원격 세 방향 수용 대기
-- [ ] [KTX10-014] 사용자 안내·구독자 검토 초안·다음 공개 시험 수용
+- [x] [KTX10-013] 실패·재실행·100·1,000·5,000파일·교차 운영체제 검증 — [Windows 측정](../../../tests/results/knowledge-transfer-merge-2026-08-31.md), test.8의 Windows↔macOS·Linux 실제 수용 통과
+- [x] [KTX10-014] 사용자 안내·구독자 검토 초안·다음 공개 시험 수용 — [test.8 수용](../../../tests/results/knowledge-transfer-merge-public-test8-2026-08-31.md) 통과, 안정판 제외
 
 ## 결정
 

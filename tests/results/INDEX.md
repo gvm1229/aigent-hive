@@ -217,3 +217,5 @@
 | [passed](runs/20260831T095424-6246fde2018e.md) | 여러 지식 묶음 Copier Rust 투영 계약 재검사 | 3e67b58ba573968afe1e88f1b3de7aad99002fbb | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260831T095516-4ca4b97498a9.md) | 여러 지식 묶음 수정 후 전체 Python conformance | 3e67b58ba573968afe1e88f1b3de7aad99002fbb | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260831T095517-b187ab02ee1d.md) | Python conformance: documentation, security, contract, integration, release | 3e67b58ba573968afe1e88f1b3de7aad99002fbb | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260831T104647-76d417431c7d.md) | 여러 지식 묶음 test.8 수용 문서 검사 | 6d33557c0dec41b5df8f0ae82c2db0f97f58f312 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260831T104648-ecfbea32b827.md) | Python conformance: documentation | 6d33557c0dec41b5df8f0ae82c2db0f97f58f312 | Windows-11-10.0.26200-SP0 |
