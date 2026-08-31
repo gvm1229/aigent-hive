@@ -219,3 +219,16 @@
 | [passed](runs/20260831T095517-b187ab02ee1d.md) | Python conformance: documentation, security, contract, integration, release | 3e67b58ba573968afe1e88f1b3de7aad99002fbb | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260831T104647-76d417431c7d.md) | 여러 지식 묶음 test.8 수용 문서 검사 | 6d33557c0dec41b5df8f0ae82c2db0f97f58f312 | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260831T104648-ecfbea32b827.md) | Python conformance: documentation | 6d33557c0dec41b5df8f0ae82c2db0f97f58f312 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260831T133831-47d8b59c3b80.md) | 벡터 최초 설정 핵심 단위 시험 | 85fdfe12ab70be970d42dd3152f0a8a7a8c2971f | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260831T133853-9be1806e01ca.md) | 벡터 최초 설정 핵심 단위 시험 | 85fdfe12ab70be970d42dd3152f0a8a7a8c2971f | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260831T133906-d845d43af30f.md) | 벡터 최초 설정 핵심 단위 시험 | 85fdfe12ab70be970d42dd3152f0a8a7a8c2971f | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260831T134044-cb465c98c5d5.md) | 벡터 최초 설정 CLI 계약 시험 | 85fdfe12ab70be970d42dd3152f0a8a7a8c2971f | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260831T134110-bf943d305af9.md) | 벡터 최초 설정 CLI 계약 재시험 | 85fdfe12ab70be970d42dd3152f0a8a7a8c2971f | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260831T134144-07cae5ccff24.md) | 벡터 최초 설정 CLI 계약 재시험 | 85fdfe12ab70be970d42dd3152f0a8a7a8c2971f | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260831T134318-c9b9a02016ea.md) | 벡터 최초 설정 핵심·투영 계약 시험 | 85fdfe12ab70be970d42dd3152f0a8a7a8c2971f | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260831T134337-ad815609bb05.md) | 벡터 최초 설정 CLI·Skill 투영 계약 시험 | 85fdfe12ab70be970d42dd3152f0a8a7a8c2971f | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260831T134435-ea465f45d4eb.md) | 벡터 최초 설정 CLI·결과 형식 계약 시험 | 85fdfe12ab70be970d42dd3152f0a8a7a8c2971f | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260831T134450-e0739c5e30b1.md) | 벡터 최초 설정 세 host Skill 투영 시험 | 85fdfe12ab70be970d42dd3152f0a8a7a8c2971f | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260831T134553-3a3fbd753eee.md) | 벡터 최초 설정 세 host 경로·CLI 계약 재시험 | 85fdfe12ab70be970d42dd3152f0a8a7a8c2971f | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260831T134606-b904606d7d3d.md) | 벡터 최초 설정 세 host 경로·CLI 계약 최종 시험 | 85fdfe12ab70be970d42dd3152f0a8a7a8c2971f | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260831T134718-ccde5bd7c334.md) | 벡터 답변 보존형 재설치 회귀 시험 | 85fdfe12ab70be970d42dd3152f0a8a7a8c2971f | Windows-11-10.0.26200-SP0 |
