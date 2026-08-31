@@ -144,6 +144,172 @@ This temporary page has no backlinks and can be deleted explicitly.
         )
         self.assertTrue(data["quick"])
 
+    def test_multi_bundle_transfer_merges_exact_overlap_once_and_rebuilds_fts_once(self) -> None:
+        """A later export from another computer may contain an earlier bundle's exact page."""
+        self.add_fixture_page("alpha", quick=True)
+        first = self.work_root / "computer-a.hivekb"
+        first_export = self.assert_success(
+            self.invoke_knowledge(
+                "transfer", "export", "--apply", "--scope", "all-portable", "--bundle", str(first)
+            )[1]
+        )
+        self.add_fixture_page("beta")
+        second = self.work_root / "computer-b.hivekb"
+        second_export = self.assert_success(
+            self.invoke_knowledge(
+                "transfer", "export", "--apply", "--scope", "all-portable", "--bundle", str(second)
+            )[1]
+        )
+        self.assertNotEqual(first_export["archive_sha256"], second_export["archive_sha256"])
+
+        destination = self.work_root / "computer-c"
+        write_operational_user_setup(destination)
+        before = snapshot_tree(destination)
+        preview = self.assert_success(
+            self.invoke_knowledge(
+                "transfer",
+                "merge",
+                "preview",
+                "--bundle",
+                str(second),
+                "--bundle",
+                str(first),
+                user_root=destination,
+            )[1]
+        )
+        self.assertEqual(snapshot_tree(destination), before)
+        self.assertGreater(preview["merge"]["exact_duplicate_count"], 0)
+        self.assertEqual(preview["merge"]["conflict_paths"], [])
+        self.assertEqual(preview["merge"]["semantic_candidates"], [])
+        self.assertRegex(preview["merge_preview_digest"], r"^sha256:[0-9a-f]{64}$")
+
+        applied = self.assert_success(
+            self.invoke_knowledge(
+                "transfer",
+                "merge",
+                "apply",
+                "--bundle",
+                str(first),
+                "--bundle",
+                str(second),
+                "--preview-digest",
+                preview["merge_preview_digest"],
+                user_root=destination,
+            )[1]
+        )
+        self.assertTrue(applied["import"]["canonical_mutation"])
+        self.assertTrue(applied["import"]["index_rebuilt"])
+        self.assertEqual(applied["merge"]["exact_duplicate_count"], preview["merge"]["exact_duplicate_count"])
+
+    def test_multi_bundle_transfer_applies_reviewed_equivalent_page_with_original_provenance(self) -> None:
+        """A host-reviewed equivalent page leaves one active page and a portable original."""
+        self.add_fixture_page("alpha", quick=True)
+        first = self.work_root / "semantic-a.hivekb"
+        self.assert_success(
+            self.invoke_knowledge(
+                "transfer", "export", "--apply", "--scope", "all-portable", "--bundle", str(first)
+            )[1]
+        )
+        raw = self.work_root / "semantic-source.md"
+        raw.write_text("Equivalent source material.\n", encoding="utf-8")
+        draft = self.work_root / "equivalent.md"
+        draft.write_text(
+            """---
+schema_version: 1
+id: equivalent-alpha
+kind: concept
+summary: Deterministic local knowledge search
+tags: [index, knowledge]
+aliases: [equivalent-search]
+sources: [raw:self]
+links: [beta]
+contradictions: []
+status: active
+created_at: 2026-07-24T00:00:00Z
+updated_at: 2026-07-24T00:00:00Z
+---
+
+# Alpha
+
+The local index is rebuilt from canonical Markdown. See [[beta]].
+""",
+            encoding="utf-8",
+        )
+        self.assert_success(
+            self.invoke_knowledge(
+                "add", "--target", str(self.project), "--source", str(raw), "--wiki", str(draft), "--quick"
+            )[1]
+        )
+        second = self.work_root / "semantic-b.hivekb"
+        self.assert_success(
+            self.invoke_knowledge(
+                "transfer", "export", "--apply", "--scope", "all-portable", "--bundle", str(second)
+            )[1]
+        )
+        destination = self.work_root / "semantic-c"
+        write_operational_user_setup(destination)
+        preview = self.assert_success(
+            self.invoke_knowledge(
+                "transfer", "merge", "preview", "--bundle", str(first), "--bundle", str(second), user_root=destination
+            )[1]
+        )
+        candidates = preview["merge"]["semantic_candidates"]
+        self.assertEqual(len(candidates), 1)
+        candidate = candidates[0]
+        review_path = self.work_root / "merge-review.json"
+        review_path.write_text(
+            json.dumps(
+                {
+                    "schema_version": 1,
+                    "merge_preview_digest": preview["merge_input_digest"],
+                    "decisions": [
+                        {
+                            "action": "equivalent",
+                            "candidate_id": candidate["candidate_id"],
+                            "primary_path": candidate["paths"][0],
+                        }
+                    ],
+                }
+            ),
+            encoding="utf-8",
+        )
+        reviewed = self.assert_success(
+            self.invoke_knowledge(
+                "transfer",
+                "merge",
+                "review",
+                "--bundle",
+                str(first),
+                "--bundle",
+                str(second),
+                "--preview-digest",
+                preview["merge_input_digest"],
+                "--review",
+                str(review_path),
+                user_root=destination,
+            )[1]
+        )
+        applied = self.assert_success(
+            self.invoke_knowledge(
+                "transfer",
+                "merge",
+                "apply",
+                "--bundle",
+                str(second),
+                "--bundle",
+                str(first),
+                "--preview-digest",
+                preview["merge_input_digest"],
+                "--review",
+                str(review_path),
+                "--review-digest",
+                reviewed["review_digest"],
+                user_root=destination,
+            )[1]
+        )
+        self.assertTrue(applied["import"]["canonical_mutation"])
+        self.assertTrue(any("/Merge/" in path for path in applied["import"]["changed_paths"]))
+
     def test_public_wiki_page_verbs_follow_one_canonical_lifecycle(self) -> None:
         """Smoke add/query/lint/list/read/delete/refresh without bypassing the CLI."""
         self.add_fixture_page("alpha", quick=True)

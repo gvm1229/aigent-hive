@@ -9,8 +9,9 @@ use cap_std::fs::{Dir, OpenOptions as CapOpenOptions};
 use hive_core::{ensure_consumer_target, ensure_no_symlink_ancestors, sha256_digest};
 use hive_wiki::bundle_io::BundlePublishMode;
 use hive_wiki::bundle_store::{
-    export_bundle, import_bundle, import_bundle_reviewed, preview_export_bundle,
-    BundleExportDisposition, BundleImportApproval, BundleImportMode, BundleImportResult,
+    apply_bundle_merge_review, export_bundle, import_bundle, import_bundle_reviewed,
+    preview_bundle_merge, preview_export_bundle, BundleExportDisposition, BundleImportApproval,
+    BundleImportMode, BundleImportResult, BundleMergeDecision,
 };
 use hive_wiki::collection::{
     CollectionKind, CollectionResolution, CollectionState, CollectionVisibility,
@@ -22,7 +23,7 @@ use hive_wiki::notion::{
     validate_write_receipt, NotionCapabilityReceipt, NotionPersistedOutcome, NotionSyncRequest,
     NotionWriteReceipt, NOTION_LEDGER_RELATIVE,
 };
-use hive_wiki::portable::{BundleLimits, BundleScope};
+use hive_wiki::portable::{encode_bundle, BundleLimits, BundleScope};
 use hive_wiki::rag::{
     plan_remember, AssertionStatus, CanonicalClaim, ClaimKind, ClaimProvenance, RagError,
     RagVisibility, RememberRequest, RememberSourceKind, RetrievalRequest, RetrievalScope,
@@ -81,6 +82,8 @@ USAGE:
     hive knowledge import --user-root <dir> --bundle <path>.hivekb (--dry-run|--apply) --output json
     hive knowledge transfer export --preview|--apply --user-root <dir> --scope global|shared|project:<id>|collection:<id>|all-portable --bundle <path>.hivekb [--replace-backup <file-name>] --output json
     hive knowledge transfer import --preview|--apply [--exclude-conflicts] [--preview-digest <sha256:...> --expected-sha256 <sha256:...>] --user-root <dir> --bundle <path>.hivekb --output json
+    hive knowledge transfer merge preview --bundle <path>.hivekb --bundle <path>.hivekb [--user-root <dir>] --output json
+    hive knowledge transfer merge review|apply --bundle <path>.hivekb --bundle <path>.hivekb --preview-digest <sha256:...> --review <review.json> [--review-digest <sha256:...>] [--user-root <dir>] --output json
     hive knowledge transfer status --id <transfer-id> [--user-root <dir>] --output json
     hive knowledge transfer vector --id <transfer-id> --receipt-digest <sha256:...> --answer yes|no|cancel [--user-root <dir>] --output json
     hive knowledge refresh (--target <legacy-project>|--user-root <dir>) --output json
@@ -280,11 +283,213 @@ fn run_transfer(arguments: &[String]) -> Result<KnowledgeResult, WikiError> {
     match arguments.first().map(String::as_str) {
         Some("export") => run_transfer_export(&arguments[1..]),
         Some("import") => run_transfer_import(&arguments[1..]),
+        Some("merge") => run_transfer_merge(&arguments[1..]),
         Some("status" | "vector") => transfer::run(arguments),
         _ => Err(WikiError::InvalidInput(
-            "knowledge transfer requires export or import".to_owned(),
+            "knowledge transfer requires export, import, or merge".to_owned(),
         )),
     }
+}
+
+fn run_transfer_merge(arguments: &[String]) -> Result<KnowledgeResult, WikiError> {
+    let action = arguments.first().map(String::as_str).ok_or_else(|| {
+        WikiError::InvalidInput(
+            "knowledge transfer merge requires preview, review, or apply".to_owned(),
+        )
+    })?;
+    if !matches!(action, "preview" | "review" | "apply") {
+        return Err(WikiError::InvalidInput(
+            "knowledge transfer merge requires preview, review, or apply".to_owned(),
+        ));
+    }
+    let mut bundles = Vec::new();
+    let mut root = None;
+    let mut expected_preview = None;
+    let mut review_path = None;
+    let mut expected_review = None;
+    let mut output = false;
+    let mut index = 1;
+    while index < arguments.len() {
+        let option = arguments[index].as_str();
+        let value = arguments.get(index + 1).ok_or_else(|| {
+            WikiError::InvalidInput(format!("missing value for merge option {option}"))
+        })?;
+        match option {
+            "--bundle" => bundles.push(PathBuf::from(value)),
+            "--user-root" if root.is_none() => root = Some(value.clone()),
+            "--preview-digest" if expected_preview.is_none() => {
+                expected_preview = Some(value.clone())
+            }
+            "--review" if review_path.is_none() => review_path = Some(PathBuf::from(value)),
+            "--review-digest" if expected_review.is_none() => expected_review = Some(value.clone()),
+            "--output" if !output && value == "json" => output = true,
+            "--user-root" | "--preview-digest" | "--review" | "--review-digest" | "--output" => {
+                return Err(WikiError::InvalidInput(format!(
+                    "duplicate merge option: {option}"
+                )))
+            }
+            _ => {
+                return Err(WikiError::InvalidInput(format!(
+                    "unknown merge option: {option}"
+                )))
+            }
+        }
+        index += 2;
+    }
+    if !output || bundles.len() < 2 {
+        return Err(WikiError::InvalidInput(
+            "merge requires JSON output and at least two --bundle values".to_owned(),
+        ));
+    }
+    let root_options = root
+        .as_deref()
+        .map(|value| vec![("--user-root", value)])
+        .unwrap_or_default();
+    let user_root = resolve_transfer_root(&root_options)?;
+    let merge = preview_bundle_merge(&bundles, BundleLimits::default())?;
+    let merge_digest = merge.merge_digest();
+    let merge_data = json!({
+        "archive_sha256s": merge.archive_sha256s,
+        "input_entry_count": merge.input_entry_count,
+        "exact_duplicate_count": merge.exact_duplicate_count,
+        "conflict_paths": merge.conflict_paths,
+        "semantic_candidates": merge.semantic_candidates,
+        "merge_digest": merge_digest,
+    });
+    let base_data = json!({"merge": merge_data.clone()});
+    let base_digest = sha256_digest(
+        &serde_json::to_vec(&base_data).map_err(|error| WikiError::Io(error.to_string()))?,
+    );
+    let (request, review_digest) = if action == "preview" {
+        if expected_preview.is_some() || review_path.is_some() || expected_review.is_some() {
+            return Err(WikiError::InvalidInput(
+                "merge preview does not accept review or approval options".to_owned(),
+            ));
+        }
+        (merge.request().clone(), None)
+    } else if action == "apply" && merge.semantic_candidates.is_empty() {
+        if review_path.is_some() || expected_review.is_some() {
+            return Err(WikiError::InvalidInput(
+                "merge apply without semantic candidates does not accept review options".to_owned(),
+            ));
+        }
+        (merge.request().clone(), None)
+    } else {
+        if expected_preview.as_deref() != Some(base_digest.as_str()) {
+            return Err(WikiError::Conflict(
+                "merge inputs or candidate set changed; preview again".to_owned(),
+            ));
+        }
+        let path = review_path.ok_or_else(|| {
+            WikiError::InvalidInput("merge review requires --review <review.json>".to_owned())
+        })?;
+        let bytes = fs::read(&path)
+            .map_err(|error| WikiError::Io(format!("cannot read merge review: {error}")))?;
+        let review: MergeReview = serde_json::from_slice(&bytes)
+            .map_err(|error| WikiError::InvalidInput(format!("invalid merge review: {error}")))?;
+        if review.schema_version != 1 || review.merge_preview_digest != base_digest {
+            return Err(WikiError::Conflict(
+                "merge review is not bound to the current preview".to_owned(),
+            ));
+        }
+        let digest = sha256_digest(&bytes);
+        if action == "apply" && expected_review.as_deref() != Some(digest.as_str()) {
+            return Err(WikiError::Conflict(
+                "merge review changed; inspect review again".to_owned(),
+            ));
+        }
+        (
+            apply_bundle_merge_review(&merge, &review.decisions)?,
+            Some(digest),
+        )
+    };
+    if !merge_data["conflict_paths"]
+        .as_array()
+        .is_some_and(Vec::is_empty)
+    {
+        return Err(WikiError::Conflict(
+            "merge has unresolved canonical conflicts; resolve them before applying".to_owned(),
+        ));
+    }
+    let encoded = encode_bundle(&request, BundleLimits::default())
+        .map_err(|error| WikiError::InvalidInput(error.to_string()))?;
+    let mut temporary = tempfile::Builder::new()
+        .suffix(".hivekb")
+        .tempfile()
+        .map_err(|error| WikiError::Io(format!("cannot stage merged bundle: {error}")))?;
+    temporary
+        .write_all(encoded.archive())
+        .and_then(|()| temporary.as_file().sync_all())
+        .map_err(|error| WikiError::Io(format!("cannot stage merged bundle: {error}")))?;
+    let temporary_path = temporary.into_temp_path();
+    let bundle_path = temporary_path.as_ref();
+    let preview = run_import_mode(&user_root, bundle_path, BundleImportMode::DryRun)?;
+    let mut data = json!({
+        "merge": merge_data,
+        "merge_input_digest": base_digest,
+        "review_digest": review_digest,
+        "combined_archive_sha256": encoded.plan().archive_sha256(),
+        "import": preview.data,
+    });
+    let digest = sha256_digest(
+        &serde_json::to_vec(&data).map_err(|error| WikiError::Io(error.to_string()))?,
+    );
+    data["merge_preview_digest"] = json!(digest.clone());
+    if action == "preview" || action == "review" {
+        return Ok(success(
+            "TransferKnowledge",
+            if action == "preview" {
+                "hive.knowledge-transfer-merge-previewed"
+            } else {
+                "hive.knowledge-transfer-merge-review-required"
+            },
+            if action == "preview" {
+                "multi-bundle merge preview completed without canonical mutation"
+            } else {
+                "host review was validated without canonical mutation"
+            },
+            Vec::new(),
+            "knowledge-transfer-merge",
+            &digest,
+            data,
+        ));
+    }
+    let merge_data = data["merge"].clone();
+    if review_digest.is_none() && expected_preview.as_deref() != Some(digest.as_str()) {
+        return Err(WikiError::Conflict(
+            "merge inputs or destination bytes changed; preview again".to_owned(),
+        ));
+    }
+    let imported = import_bundle_reviewed(
+        &user_root,
+        bundle_path,
+        BundleImportMode::Apply,
+        BundleLimits::default(),
+        BundleImportApproval {
+            archive_sha256: encoded.plan().archive_sha256(),
+            preview_digest: transfer_preview_digest(&preview)?.as_str(),
+        },
+    )?;
+    let mut applied = import_report(bundle_path, imported)?;
+    transfer::finish_import(&user_root, &mut applied);
+    let applied_data = json!({"merge": merge_data, "import": applied.data});
+    Ok(success(
+        "TransferKnowledge",
+        "hive.knowledge-transfer-merge-applied",
+        "multi-bundle canonical merge and FTS preparation completed",
+        applied.changed_paths,
+        "knowledge-transfer-merge",
+        &digest,
+        applied_data,
+    ))
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct MergeReview {
+    schema_version: u32,
+    merge_preview_digest: String,
+    decisions: Vec<BundleMergeDecision>,
 }
 
 fn run_transfer_export(arguments: &[String]) -> Result<KnowledgeResult, WikiError> {

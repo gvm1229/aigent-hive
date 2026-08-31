@@ -172,3 +172,20 @@
 | [failed](runs/20260831T085349-dda2e13fe849.md) | Python conformance: documentation | 536556f446460a649d4de65936019a6b6007e0ce | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260831T085438-76dfe070c64d.md) | 여러 지식 묶음 통합 계획 지문 재검사 | 536556f446460a649d4de65936019a6b6007e0ce | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260831T085439-053510701ab7.md) | Python conformance: documentation | 536556f446460a649d4de65936019a6b6007e0ce | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260831T090014-75efd1bc2b05.md) | 여러 지식 묶음 통합 core 컴파일 검사 | 07d93560140dd9b17c61e73f5da09250c8aae892 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260831T090231-8f2d003f0b28.md) | 여러 지식 묶음 통합 CLI 컴파일 검사 | 07d93560140dd9b17c61e73f5da09250c8aae892 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260831T090335-634e7cfa68f7.md) | 여러 지식 묶음 통합 단위 회귀 | 07d93560140dd9b17c61e73f5da09250c8aae892 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260831T090908-c6890659045c.md) | 검토형 여러 지식 묶음 통합 컴파일 검사 | 07d93560140dd9b17c61e73f5da09250c8aae892 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260831T090926-192a3ee88ba5.md) | 검토형 여러 지식 묶음 통합 컴파일 재검사 | 07d93560140dd9b17c61e73f5da09250c8aae892 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260831T091034-7377fc50cbd4.md) | 원문 보존 여러 묶음 통합 회귀 | 07d93560140dd9b17c61e73f5da09250c8aae892 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260831T091106-b0571ba37e41.md) | 원문 보존 여러 묶음 통합 회귀 재검사 | 07d93560140dd9b17c61e73f5da09250c8aae892 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260831T091142-f7fa7360f8f9.md) | 검토형 여러 지식 묶음 통합 CLI 회귀 재검사 | 07d93560140dd9b17c61e73f5da09250c8aae892 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260831T091245-9f6c90c4d2d0.md) | 여러 지식 묶음 CLI 통합 회귀 | 07d93560140dd9b17c61e73f5da09250c8aae892 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260831T091313-4b4796a37d09.md) | 여러 지식 묶음 CLI 통합 회귀 재검사 | 07d93560140dd9b17c61e73f5da09250c8aae892 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260831T091348-108d2f0868a7.md) | 여러 지식 묶음 CLI 통합 지문 재검사 | 07d93560140dd9b17c61e73f5da09250c8aae892 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260831T091421-8ecbde311cf0.md) | 여러 지식 묶음 CLI action schema 재검사 | 07d93560140dd9b17c61e73f5da09250c8aae892 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260831T091456-310c454121b1.md) | 여러 지식 묶음 CLI apply 지문 재검사 | 07d93560140dd9b17c61e73f5da09250c8aae892 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260831T091528-4ee036fd300c.md) | 여러 지식 묶음 FTS 통합 회귀 재검사 | 07d93560140dd9b17c61e73f5da09250c8aae892 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260831T091558-47c6d0aa9cf0.md) | 여러 지식 묶음 FTS 생성 통합 회귀 재검사 | 07d93560140dd9b17c61e73f5da09250c8aae892 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260831T091616-378f800ea758.md) | 여러 지식 묶음 단일 FTS 통합 회귀 재검사 | 07d93560140dd9b17c61e73f5da09250c8aae892 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260831T091710-90a295f01983.md) | 검토형 의미 중복 여러 묶음 통합 회귀 | 07d93560140dd9b17c61e73f5da09250c8aae892 | Windows-11-10.0.26200-SP0 |
