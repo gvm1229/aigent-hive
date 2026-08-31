@@ -48,13 +48,21 @@ def approval_digest(path: Path, summary_path: Path) -> str:
     return digest
 
 
-def read_summary(path: Path, product_version: str, approval_path: Path) -> str:
+def read_summary(
+    path: Path,
+    product_version: str,
+    approval_path: Path,
+    external_approval_digest: str,
+) -> str:
     try:
         raw_contents = path.read_bytes()
     except OSError as error:
         fail(f"cannot read subscriber summary: {error.filename or path.name}")
+    approved_digest = approval_digest(approval_path, path)
+    if external_approval_digest != approved_digest:
+        fail("subscriber summary differs from its externally approved digest")
     actual_digest = "sha256:" + hashlib.sha256(raw_contents).hexdigest()
-    if actual_digest != approval_digest(approval_path, path):
+    if actual_digest != approved_digest:
         fail("subscriber summary differs from its approved digest")
     try:
         contents = raw_contents.decode("utf-8").replace("\r\n", "\n").replace("\r", "\n").strip()
@@ -143,11 +151,21 @@ def banner_payload(path: Path) -> tuple[bytes, str]:
 
 
 def prepare_delivery(
-    *, product_version: str, summary_path: Path, summary_approval_path: Path, banner_path: Path
+    *,
+    product_version: str,
+    summary_path: Path,
+    summary_approval_path: Path,
+    external_approval_digest: str,
+    banner_path: Path,
 ) -> tuple[str, bytes, str]:
     if STABLE_VERSION.fullmatch(product_version) is None:
         fail("Discord subscriber updates are allowed only for stable X.Y.Z versions")
-    summary = read_summary(summary_path, product_version, summary_approval_path)
+    summary = read_summary(
+        summary_path,
+        product_version,
+        summary_approval_path,
+        external_approval_digest,
+    )
     banner, banner_content_type = banner_payload(banner_path)
     return summary, banner, banner_content_type
 
@@ -167,6 +185,10 @@ def main() -> int:
     parser.add_argument("--product-version", required=True)
     parser.add_argument("--summary", required=True, type=Path)
     parser.add_argument("--summary-approval", required=True, type=Path)
+    parser.add_argument(
+        "--approval-digest-env",
+        default="AIGENT_HIVE_SUBSCRIBER_SUMMARY_DIGEST",
+    )
     parser.add_argument("--banner", required=True, type=Path)
     parser.add_argument(
         "--webhook-url-env",
@@ -180,6 +202,7 @@ def main() -> int:
             product_version=arguments.product_version,
             summary_path=arguments.summary,
             summary_approval_path=arguments.summary_approval,
+            external_approval_digest=os.environ.get(arguments.approval_digest_env, ""),
             banner_path=arguments.banner,
         )
         webhook_url = validate_webhook_url(

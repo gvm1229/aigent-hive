@@ -53,6 +53,7 @@ class StableReleaseDiscordNotification(unittest.TestCase):
         version: str = "0.9.5",
         summary_text: str | None = None,
         approval_text: str | None = None,
+        external_approval_digest: str | None = None,
         validate_only: bool = False,
     ) -> subprocess.CompletedProcess[str]:
         with tempfile.TemporaryDirectory() as temporary:
@@ -69,12 +70,16 @@ class StableReleaseDiscordNotification(unittest.TestCase):
                 or f"sha256:{hashlib.sha256(summary.read_bytes()).hexdigest()}  summary.md\n",
                 encoding="utf-8",
             )
+            approved_digest = approval.read_text(encoding="utf-8").split("  ", 1)[0]
             banner = root / "hive-readme-banner-ko.png"
             banner.write_bytes(b"\x89PNG\r\n\x1a\nfixture")
             environment = os.environ | {
                 "AIGENT_HIVE_RELEASE_DISCORD_WEBHOOK_URL": (
                     f"http://127.0.0.1:{self.server.server_port}/api/webhooks/test/token"
-                )
+                ),
+                "AIGENT_HIVE_SUBSCRIBER_SUMMARY_DIGEST": (
+                    approved_digest if external_approval_digest is None else external_approval_digest
+                ),
             }
             command = [
                 sys.executable,
@@ -132,6 +137,14 @@ class StableReleaseDiscordNotification(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("approved digest", result.stderr)
         self.assertEqual(self.server.requests, [])
+
+    def test_missing_or_changed_external_approval_blocks_before_the_banner(self) -> None:
+        for external in ("", "sha256:" + "0" * 64):
+            with self.subTest(external=external):
+                result = self.run_notifier(external_approval_digest=external)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn("externally approved digest", result.stderr)
+                self.assertEqual(self.server.requests, [])
 
     def test_approval_must_bind_the_selected_summary_filename(self) -> None:
         result = self.run_notifier(
@@ -212,7 +225,7 @@ class StableReleaseDiscordNotification(unittest.TestCase):
         self.assertEqual(approval.read_text(encoding="utf-8"), expected)
         namespace = __import__("runpy").run_path(str(NOTIFIER))
         self.assertEqual(
-            namespace["read_summary"](summary, "0.10.0", approval),
+            namespace["read_summary"](summary, "0.10.0", approval, expected.split("  ", 1)[0]),
             summary.read_text(encoding="utf-8").strip(),
         )
 
@@ -222,6 +235,7 @@ class StableReleaseDiscordNotification(unittest.TestCase):
         self.assertIn("if: ${{ inputs.channel == 'stable' }}", workflow)
         self.assertIn("--validate-only", workflow)
         self.assertIn("--summary-approval", workflow)
+        self.assertIn("AIGENT_HIVE_SUBSCRIBER_SUMMARY_DIGEST", workflow)
         self.assertIn("scripts/publish-stable-discord-update.py", workflow)
         self.assertLess(workflow.index("--validate-only"), workflow.index("npm publish"))
         self.assertLess(workflow.index("gh release create"), workflow.index("Send stable Discord"))
