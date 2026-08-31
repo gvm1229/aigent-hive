@@ -106,3 +106,34 @@
 | [passed](runs/20260831T055248-236bcf0b02ed.md) | 이전 기능 코드 정적 검사 재실행 | b2ec4a70c9c6ea3f9c96211c933af3d0b6786d49 | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260831T055308-cb2c55c3fff1.md) | 재생성 재사용과 선택 기록 최종 빌드 | b2ec4a70c9c6ea3f9c96211c933af3d0b6786d49 | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260831T055326-2199c671388f.md) | 최종 이전 선택 기록 재실행 보존 검증 | b2ec4a70c9c6ea3f9c96211c933af3d0b6786d49 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260831T055501-658e8204156a.md) | 실제 모델을 사용한 이전 후 재생성 수용 | 855888df036c18734c991d43f281f5b94e236b92 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260831T055612-84664552fc54.md) | 한글 공백 경로 100파일 동일 묶음 생성 | 855888df036c18734c991d43f281f5b94e236b92 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260831T055626-1269d0974c02.md) | 한글 공백 경로 100파일 묶음 생성 재검증 | 855888df036c18734c991d43f281f5b94e236b92 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260831T055639-591773e507a0.md) | 한글 공백 경로 100파일 묶음 복원 | 855888df036c18734c991d43f281f5b94e236b92 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260831T055814-602b57201c9e.md) | 현재 Skill 전환 대장 계약 점검 | 74d381fe0f33152e2f2d33f768a9b3a9ad30d5d9 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260831T055947-ccb53e5a83a7.md) | 기본 사용자 루트와 지식 이전 대상 검사 | 74d381fe0f33152e2f2d33f768a9b3a9ad30d5d9 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260831T060005-a7326a6eb371.md) | 작은 지식 파일 1000개 생성 측정 | 74d381fe0f33152e2f2d33f768a9b3a9ad30d5d9 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260831T060021-e0d7383b9ba2.md) | 작은 지식 파일 1000개 복원 측정 | 74d381fe0f33152e2f2d33f768a9b3a9ad30d5d9 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260831T060116-be62aed8463f.md) | 작은 지식 파일 5000개 생성 측정 | 74d381fe0f33152e2f2d33f768a9b3a9ad30d5d9 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260831T060208-406a77c30924.md) | 작은 지식 파일 5000개 복원과 FTS 조회 측정 | 74d381fe0f33152e2f2d33f768a9b3a9ad30d5d9 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260831T060424-1dd1750d0138.md) | 같은 조건 비교용 develop 배포 빌드 | 74d381fe0f33152e2f2d33f768a9b3a9ad30d5d9 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260831T060553-55aaef439062.md) | 지식 이전 변경 전체 Rust 회귀 | 74d381fe0f33152e2f2d33f768a9b3a9ad30d5d9 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260831T060630-5d566d16c97a.md) | 같은 도구와 배포 설정의 변경 후 비교 빌드 | 74d381fe0f33152e2f2d33f768a9b3a9ad30d5d9 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260831T060657-e38041dbc513.md) | 소스별 캐시를 분리한 변경 후 배포 빌드 | 74d381fe0f33152e2f2d33f768a9b3a9ad30d5d9 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260831T060723-00f5433aeacb.md) | 프로젝트 사용자 지정 Skill 전환 결함 재현 | 74d381fe0f33152e2f2d33f768a9b3a9ad30d5d9 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260831T060756-e58a114583bb.md) | 사용자 지정 설정과 이전 Skill 프로젝트 투영 회귀 | 74d381fe0f33152e2f2d33f768a9b3a9ad30d5d9 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260831T060833-2a0b1b225882.md) | 설정 대장과 기본 이전 루트 반영 빌드 | 74d381fe0f33152e2f2d33f768a9b3a9ad30d5d9 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260831T060852-2e9fd4946389.md) | 설정 자동 해석과 이전 벡터 선택 최종 회귀 | 74d381fe0f33152e2f2d33f768a9b3a9ad30d5d9 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260831T060944-8dc7cdafc6ae.md) | 배포 빌드 baseline 100파일 내보내기 측정 | 523892f0009d7ee04af9381981cb41ba01c4045d | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260831T060957-6663bc10c25b.md) | 배포 빌드 baseline 100파일 내보내기 측정 | 523892f0009d7ee04af9381981cb41ba01c4045d | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260831T061001-3c8f2491abfe.md) | 배포 빌드 baseline 100파일 가져오기 측정 | 523892f0009d7ee04af9381981cb41ba01c4045d | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260831T061004-eeb40e1bd4ea.md) | 배포 빌드 current 100파일 내보내기 측정 | 523892f0009d7ee04af9381981cb41ba01c4045d | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260831T061007-d7cb20e5b195.md) | 배포 빌드 current 100파일 가져오기 측정 | 523892f0009d7ee04af9381981cb41ba01c4045d | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260831T061030-9d04233b3bb6.md) | 배포 빌드 baseline 1000 파일 내보내기 측정 | 523892f0009d7ee04af9381981cb41ba01c4045d | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260831T061037-769d2ed728e4.md) | 배포 빌드 baseline 1000 파일 가져오기 측정 | 523892f0009d7ee04af9381981cb41ba01c4045d | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260831T061049-c24288bb02f4.md) | 배포 빌드 current 1000 파일 내보내기 측정 | 523892f0009d7ee04af9381981cb41ba01c4045d | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260831T061055-a1db7ed1d8dc.md) | 배포 빌드 current 1000 파일 가져오기 측정 | 523892f0009d7ee04af9381981cb41ba01c4045d | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260831T061105-296a4393f7d7.md) | 배포 빌드 baseline 5000 파일 내보내기 측정 | 523892f0009d7ee04af9381981cb41ba01c4045d | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260831T061134-c013094690c9.md) | 배포 빌드 baseline 5000 파일 가져오기 측정 | 523892f0009d7ee04af9381981cb41ba01c4045d | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260831T061230-4a9603dfd3d7.md) | 배포 빌드 current 5000 파일 내보내기 측정 | 523892f0009d7ee04af9381981cb41ba01c4045d | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260831T061300-f44c0a472f55.md) | 배포 빌드 current 5000 파일 가져오기 측정 | 523892f0009d7ee04af9381981cb41ba01c4045d | Windows-11-10.0.26200-SP0 |
