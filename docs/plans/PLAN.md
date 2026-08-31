@@ -1,11 +1,11 @@
 # Aigent Hive 활성 계획
 
-> Revision: 309
+> Revision: 310
 > 기준일: 2026-08-31
 > Product version: `0.10.0`
 > Stable baseline: `0.9.5`
-> 수용된 공개 시험: `0.10.0-test.8`
-> 현재 단계: 벡터 최초 설정 구현·로컬 검증 완료, 다음 공개 시험 대기
+> 수용된 공개 시험: `0.10.0-test.10`
+> 현재 단계: 안정판 명시 승인 대기
 > 확정 범위: [`ADR-0020`](../decisions/ADR-0020-0.10.0-product-scope.md)
 
 ## 목표
@@ -64,7 +64,7 @@
 | --- | ---: | ---: | ---: |
 | 관계·검색 graph | 16 | 0 | 100% |
 | Hybrid vector search | 23 | 0 | 100% |
-| Vector onboarding | 7 | 1 | 87.5% |
+| Vector onboarding | 8 | 0 | 100% |
 | Knowledge transfer | 14 | 0 | 100% |
 | Host-owned Skill 예약 | 1 | 0 | 100% |
 | Nested project scan | 1 | 0 | 100% |
@@ -76,9 +76,9 @@
 | Skill migration cleanup | 10 | 0 | 100% |
 | 한국어 언어 core | 12 | 0 | 100% |
 | Source `draft-devlog` | 6 | 0 | 100% |
-| `0.10.0` 출시 | 0 | 7 | 0% |
+| `0.10.0` 출시 | 4 | 3 | 57.1% |
 | 안정판 공개 문서 | 7 | 0 | 100% |
-| **합계** | **138** | **8** | **94.5%** |
+| **합계** | **143** | **3** | **97.9%** |
 
 ## Required load order
 

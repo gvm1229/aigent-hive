@@ -11,7 +11,7 @@
 - [x] [VON10-004] yes·no·미응답·동시 세션·재설치·직접 갱신 보존
 - [x] [VON10-005] 전역·기존 공유 모음 고정, 비공개·기밀·새 모음 제외 안내문
 - [x] [VON10-006] 미리보기 동의·지원 Python·설치·갱신·재개·FTS 복귀 연결
-- [ ] [VON10-007] 구조·보안·upgrade·projection·실행 회귀와 다음 공개 시험 수용
+- [x] [VON10-007] 구조·보안·upgrade·projection·실행 회귀와 다음 공개 시험 수용
 - [x] [VON10-008] 사용자용 `0.10.0` 업데이트 내역 검토 초안과 release-note 문체 검증
 
 ## 결정
@@ -30,3 +30,4 @@
 - `prompt`: user-root·연결된 shared 모음의 고정 목록과 `setup_request_digest`; private·confidential·새 모음 제외
 - 재설치·복구의 명시 보존 목록에 사용자 기능 답변 추가, 기존 `user-setup.yml` 바이트 불변
 - Windows local Rust 5개·Python CLI/결과 형식/세 host source 투영 8개 통과. 전체 세 host 설치 투영·운영체제 공개 수용: `VON10-007`에서 재확인
+- `0.10.0-test.10`: 후보 `33408454546`, 게시 `33409550563`, 공개 설치 수용 `33409940218` 통과. Windows x64·macOS arm64·Linux musl x64의 설치된 npm binary에서 yes·no·고정 범위 새 세션 안내문 확인

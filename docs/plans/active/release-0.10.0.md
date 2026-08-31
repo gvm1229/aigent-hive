@@ -5,10 +5,10 @@
 
 ## Checklist
 
-- [ ] [REL10-001] 벡터 사용 안내 포함 다음 공개 시험 입력·변경 기록 정합화
-- [ ] [REL10-002] 사용자 답변·설정 안내 구현 뒤 Rust·Python·문서·보안·갱신·복구 전체 검사
-- [ ] [REL10-003] 다음 공개 시험 게시와 npm `latest=0.9.5` 불변 확인
-- [ ] [REL10-004] Windows x64·macOS arm64·Linux musl의 답변·새 세션 설정 공개 시험 수용
+- [x] [REL10-001] 벡터 사용 안내 포함 다음 공개 시험 입력·변경 기록 정합화
+- [x] [REL10-002] 사용자 답변·설정 안내 구현 뒤 Rust·Python·문서·보안·갱신·복구 전체 검사
+- [x] [REL10-003] 다음 공개 시험 게시와 npm `latest=0.9.5` 불변 확인
+- [x] [REL10-004] Windows x64·macOS arm64·Linux musl의 답변·새 세션 설정 공개 시험 수용
 - [ ] [REL10-005] accepted test exact source의 protected `main` 통합과 stable candidate
 - [ ] [REL10-006] 같은 product bytes의 stable publication·설치·의존 검사
 - [ ] [REL10-007] 공개 시험·수용 증거가 갖춰진 뒤 유지보수자의 명시적 `0.10.0` 안정판 승인 수령
@@ -23,6 +23,13 @@
 - `REL10-005–007`: 유지보수자 명시 제외. `0.10.0` 안정판 protected `main` 후보·게시·설치·승인 작업 시작 금지
 - `REL10-001–004`: 벡터 최초 설정 안내의 현재 미완료 항목. 과거 공개 시험 근거는 당시 product bytes 한정
 - `KTX10-*`: `0.10.0-test.8` 수용 완료. 벡터 최초 설정 안내의 전체 완료 근거로 대체 금지
+
+## 현재 공개 시험 근거
+
+- `0.10.0-test.10`, 소스 `a0cc0a1c0b45a22e70bb93ba92fee744da40c26c`
+- 후보 `33408454546`·게시 `33409550563`·공개 설치 수용 `33409940218` 성공
+- npm `test=0.10.0-test.10`, `latest=0.9.5` 유지, GitHub prerelease `v0.10.0-test.10`
+- Windows x64·macOS arm64·Linux musl x64: 정확한 공개 npm binary의 한국어 core·벡터 실행 환경·벡터 최초 설정 yes·no·고정 범위 안내문 수용
 
 ## 비벡터 수정 수용
 
