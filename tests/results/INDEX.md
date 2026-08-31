@@ -209,3 +209,5 @@
 | [passed](runs/20260831T093921-9baa01006691.md) | Python conformance: documentation | 9f59659af980c1d6f6c8f2c47a92636cf768a8cc | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260831T094150-d21a5c2855aa.md) | 여러 지식 묶음 CI 계약 회귀 | a1513be2ed7a10d5e7b67951146bbe4f96d5bbca | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260831T094156-382746b74e52.md) | 여러 지식 묶음 실행기 문법 검사 | a1513be2ed7a10d5e7b67951146bbe4f96d5bbca | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260831T094326-1ffad164596e.md) | 여러 지식 묶음 진행 상태 문서 검사 | bf2be8a33691ff0c9b69291dccf3abfe8a37ef00 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260831T094327-3e8356fde77c.md) | Python conformance: documentation | bf2be8a33691ff0c9b69291dccf3abfe8a37ef00 | Windows-11-10.0.26200-SP0 |

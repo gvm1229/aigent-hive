@@ -12,12 +12,12 @@
 - [x] [KTX10-005] FTS 준비 완료와 벡터 재생성 예·아니요·취소 분리 — `2e1f2ab8`, `3916bf27`: 이전 기록·지연 선택 보존과 실제 모델 재생성·완성 색인 재사용 통과
 - [x] [KTX10-006] Windows↔macOS·Linux 실제 이전, 실패·성능·직접 갱신 검증 — [세 방향 CI 수용](../../../tests/results/knowledge-transfer-cross-os-2026-08-31.md), 기존 버전 갱신 회귀와 100·1,000·5,000파일 실측
 - [x] [KTX10-007] 사용자 안내·구독자 업데이트 검토 초안·다음 공개 시험 수용 — [test.7 세 운영체제 공개 설치](../../../tests/results/knowledge-transfer-public-test7-2026-08-31.md) 통과. 초안 미전송, 안정판 제외
-- [ ] [KTX10-008] 여러 `.hivekb` 일괄 preview·입력·대상 지문·용량 계약
-- [ ] [KTX10-009] 동일 원문 자동 중복 제거와 범위별 출처 보존
-- [ ] [KTX10-010] 의미 후보·수정본·억제 충돌의 검토 요청·재개 계약
-- [ ] [KTX10-011] 검토 지문을 묶은 단일 원자 적용·FTS·벡터 선택 연결
-- [ ] [KTX10-012] `knowledge-transfer` 안내·투영·결과 schema 정합화
-- [ ] [KTX10-013] 실패·재실행·100·1,000·5,000파일·교차 운영체제 검증
+- [x] [KTX10-008] 여러 `.hivekb` 일괄 preview·입력·대상 지문·용량 계약 — `merge preview`, 입력 순서·중복 지정 결정성 회귀
+- [x] [KTX10-009] 동일 원문 자동 중복 제거와 범위별 출처 보존 — 같은 바이트 한 번 처리, 통합·미선택 Wiki 원본 merge provenance 보존
+- [x] [KTX10-010] 의미 후보·수정본·억제 충돌의 검토 요청·재개 계약 — `separate|equivalent|choose` 검토 지문과 SHA-256 수정본 선택, 비선택 원본 보존
+- [x] [KTX10-011] 검토 지문을 묶은 단일 원자 적용·FTS·벡터 선택 연결 — 기존 import rollback·FTS 한 번 생성·transfer vector 선택 재사용
+- [x] [KTX10-012] `knowledge-transfer` 안내·투영·결과 schema 정합화 — Codex·Claude·Antigravity 투영 38개, review schema·안내 검사 통과
+- [ ] [KTX10-013] 실패·재실행·100·1,000·5,000파일·교차 운영체제 검증 — [Windows 측정](../../../tests/results/knowledge-transfer-merge-2026-08-31.md) 완료, 원격 세 방향 수용 대기
 - [ ] [KTX10-014] 사용자 안내·구독자 검토 초안·다음 공개 시험 수용
 
 ## 결정
