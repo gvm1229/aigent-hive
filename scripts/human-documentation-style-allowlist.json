@@ -280,5 +280,101 @@
     "line": 147,
     "reason": "Consumer guidance negative example required for source and projection parity.",
     "text_sha256": "67b3e5dd7ebdb2ab4a748917047a280145d6ea927421246fce2408f4ac525267"
+  },
+  {
+    "path": "docs/releases/0.10.0.subscriber.ko.md",
+    "line": 4,
+    "reason": "Maintainer-approved 2026-09-01 subscriber copy; preserve this exact prime example, not internal documentation prose.",
+    "text_sha256": "2c48c9177ad95ea5e539f61244c95dbec5a74656275dec708162824e48349dec"
+  },
+  {
+    "path": "docs/releases/0.10.0.subscriber.ko.md",
+    "line": 5,
+    "reason": "Maintainer-approved 2026-09-01 subscriber copy; preserve this exact prime example, not internal documentation prose.",
+    "text_sha256": "a64c99f8b4f6df0ddb5c5e5189489c4fbf82530d755a7787c1a50da0a4a53ccb"
+  },
+  {
+    "path": "docs/releases/0.10.0.subscriber.ko.md",
+    "line": 6,
+    "reason": "Maintainer-approved 2026-09-01 subscriber copy; preserve this exact prime example, not internal documentation prose.",
+    "text_sha256": "16130e63786b986d7c51be042c41e1d86f3e6ddf4473b8b6b30f20c14ff62afb"
+  },
+  {
+    "path": "docs/releases/0.10.0.subscriber.ko.md",
+    "line": 7,
+    "reason": "Maintainer-approved 2026-09-01 subscriber copy; preserve this exact prime example, not internal documentation prose.",
+    "text_sha256": "7916a1b6284bf203a1ca769a45df68831ed58496cd9ca90fcd9de57660f0c084"
+  },
+  {
+    "path": "docs/releases/0.10.0.subscriber.ko.md",
+    "line": 10,
+    "reason": "Maintainer-approved 2026-09-01 subscriber copy; preserve this exact prime example, not internal documentation prose.",
+    "text_sha256": "6719073da21fa8a540d9c45b954150ce6e456f80772a9a8ee0424969b2c223c5"
+  },
+  {
+    "path": "docs/releases/0.10.0.subscriber.ko.md",
+    "line": 13,
+    "reason": "Maintainer-approved 2026-09-01 subscriber copy; preserve this exact prime example, not internal documentation prose.",
+    "text_sha256": "0ac0f48c9616b7cffb4d67d5f7a4c0a2b5916ab1689f5abb1a93356b64932112"
+  },
+  {
+    "path": "docs/releases/0.10.0.subscriber.ko.md",
+    "line": 14,
+    "reason": "Maintainer-approved 2026-09-01 subscriber copy; preserve this exact prime example, not internal documentation prose.",
+    "text_sha256": "150417e5a7c9aa8b5bc02395470bb5db945e2a707529cfad608d13dfe674e5f5"
+  },
+  {
+    "path": "docs/releases/0.10.0.subscriber.ko.md",
+    "line": 17,
+    "reason": "Maintainer-approved 2026-09-01 subscriber copy; preserve this exact prime example, not internal documentation prose.",
+    "text_sha256": "d4effec65ae3a3f3e78e81f2e62d114f402cce01fbf0988022b7fe20c311c810"
+  },
+  {
+    "path": "docs/releases/0.10.0.subscriber.ko.md",
+    "line": 18,
+    "reason": "Maintainer-approved 2026-09-01 subscriber copy; preserve this exact prime example, not internal documentation prose.",
+    "text_sha256": "7e86748083c5d821337ed70a8f805e1f928a1e6e72922bf49e320b99415cc094"
+  },
+  {
+    "path": "docs/releases/0.10.0.subscriber.ko.md",
+    "line": 21,
+    "reason": "Maintainer-approved 2026-09-01 subscriber copy; preserve this exact prime example, not internal documentation prose.",
+    "text_sha256": "3e86e1677c42667af78760be4ffd4aaeb38f6586f0689c7c86878171c9106ff9"
+  },
+  {
+    "path": "docs/releases/0.10.0.subscriber.ko.md",
+    "line": 22,
+    "reason": "Maintainer-approved 2026-09-01 subscriber copy; preserve this exact prime example, not internal documentation prose.",
+    "text_sha256": "08e8ff2631c5e05c8e4bbc2e2bed55a0ba4263335282dbf2c67a28faf73d5a84"
+  },
+  {
+    "path": "docs/releases/0.10.0.subscriber.ko.md",
+    "line": 25,
+    "reason": "Maintainer-approved 2026-09-01 subscriber copy; preserve this exact prime example, not internal documentation prose.",
+    "text_sha256": "0f1081eeda1c4186b2ed30e842de636c44ad661b6bb968334f5d20c8a7303b1b"
+  },
+  {
+    "path": "docs/releases/0.10.0.subscriber.ko.md",
+    "line": 28,
+    "reason": "Maintainer-approved 2026-09-01 subscriber copy; preserve this exact prime example, not internal documentation prose.",
+    "text_sha256": "12762313aba6239d7688ff8fbaa5fe047470703a44d3a333639e1882606709e1"
+  },
+  {
+    "path": "docs/releases/0.10.0.subscriber.ko.md",
+    "line": 29,
+    "reason": "Maintainer-approved 2026-09-01 subscriber copy; preserve this exact prime example, not internal documentation prose.",
+    "text_sha256": "c0150da39bf9e29bdf02e8bfb069f5600668a2665fec4e276825d6b2a7314d37"
+  },
+  {
+    "path": "docs/releases/0.10.0.subscriber.ko.md",
+    "line": 32,
+    "reason": "Maintainer-approved 2026-09-01 subscriber copy; preserve this exact prime example, not internal documentation prose.",
+    "text_sha256": "f8c547e185c9500aa41c782e597ab66b432e51034db91251e60ee97b19eb21f8"
+  },
+  {
+    "path": "docs/releases/0.10.0.subscriber.ko.md",
+    "line": 33,
+    "reason": "Maintainer-approved 2026-09-01 subscriber copy; preserve this exact prime example, not internal documentation prose.",
+    "text_sha256": "20b5800d6d1329ed140cdc5f94c498e275df33a9bca258b61c8544630746d731"
   }
 ]

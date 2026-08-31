@@ -12,9 +12,9 @@ sources:
   - "repo:.github/workflows/release-publish.yml#sha256:0dc743d960d0bb4a17281e6da58c293f8ec16fb319500ecd0b79235e9b27364c"
   - "repo:docs/archive/plans/foundations/stable-release-discord-notification.md#sha256:a502d4265210ff29e64b25364381c6ad17aecf1ce4bf90f35e08ac240efb6f63"
   - "repo:docs/releases/0.9.4.subscriber.ko.md#sha256:6c8e438046a01dd5882040fbd9216cb8ebce68ba83bedb1c28b70cb58b559be8"
-  - "repo:scripts/publish-stable-discord-update.py#sha256:9b1fe57e0141e59523edae80e910ad537ade2a0b105678b608ad0101b47c9da9"
+  - "repo:scripts/publish-stable-discord-update.py#sha256:f3ed92f2980af90beef5484dfdece6457f8a5f0188b4522720261150acf0f947"
 links: [source-development, v0-9-full-release]
-reviewed_revision: "git:15128a22d61452bb22fd8d9e9168acd9d26340f8"
+reviewed_revision: "git:82340e16196d945e81ae4c340dc37d51f0a198df"
 status: active
 ---
 
@@ -24,3 +24,4 @@ status: active
 Release 성공 뒤 배너 먼저 전송. 이 요청 성공 뒤에만 한국어 구독자 요약 전송. 시험판 Discord 요청 없음.
 알림 도구의 webhook URL 출력 없음. 보호된 환경의 `0.9.3`·`0.9.4` 실제 전달 시험 성공,
 안정판·npm 게시 없음. 유지보수자 실제 Discord 화면에서 각 배너 아래 해당 한국어 요약 표시 수용.
+주 목록과 두 칸 들여쓴 하위 목록 원문 보존, 메시지 2,000자 제한 유지.

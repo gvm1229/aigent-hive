@@ -17,7 +17,17 @@ claim in verified evidence; persuasion never permits invented capabilities, hidd
 4. Write one concise Korean main bullet per change, with practical examples and relevant limits in a nested list. Lead with the feature addition or improvement and its benefit; place setup choices and costs below it.
 5. Compare only the baseline and target identified above. Do not describe a review draft as a released stable version, rebuild an artifact, publish a release, or change product harness files.
 6. When preparing a stable release, save the exact Korean title and bullets to `docs/releases/<current>.subscriber.ko.md`. This is the canonical Discord message payload for that stable release.
-7. Before stable approval, a clearly marked review draft may use the same path for the active product version. It must say that it is not published or sent, and it must not describe unverified work as released.
+7. Before stable approval, that path may hold review or wording-approved copy. State its unissued status in the accompanying response or project state, outside the sendable payload. Wording approval never authorizes release or delivery; do not describe unverified work as released.
+
+## Approved reference (required)
+
+Before drafting any update note, read the [maintainer-approved 0.10.0 example](../../../docs/releases/0.10.0.subscriber.ko.md).
+The maintainer approved this exact wording on 2026-09-01 as the primary editorial reference.
+Use its feature-led headlines, core technical names, natural Korean, and nested examples/limits.
+Apply the feature-positioning and output rules below as the final review checklist; revise any
+draft that makes a new capability sound pre-existing or hides it behind setup guidance.
+Transfer the approach, not its versions, features, figures, or fixed bullet count. Reverify every
+new release claim. Preserve this approved example unless the maintainer explicitly revises it.
 
 ## Feature positioning
 
