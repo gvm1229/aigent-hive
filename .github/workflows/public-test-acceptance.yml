@@ -104,6 +104,17 @@ jobs:
             --package-version "$PACKAGE_VERSION" \
             --release-date "$RELEASE_DATE" \
             --receipt "$RUNNER_TEMP/korean-public-test-$PLATFORM_PACKAGE.json"
+      - name: Qualify vector onboarding using the exact public binary
+        shell: bash
+        run: |
+          python scripts/test-artifacts.py run --purpose "공개 vector onboarding $PLATFORM_PACKAGE" \
+            --command python -B scripts/qualify-vector-onboarding-public-test.py \
+            --hive "$HIVE_BIN" \
+            --work-root "$RUNNER_TEMP" \
+            --product-version "$PRODUCT_VERSION" \
+            --package-version "$PACKAGE_VERSION" \
+            --release-date "$RELEASE_DATE" \
+            --receipt "$RUNNER_TEMP/vector-onboarding-public-test-$PLATFORM_PACKAGE.json"
       - name: Select SQLite-capable Python for vector acceptance
         if: runner.os == 'macOS'
         shell: bash
@@ -126,6 +137,7 @@ jobs:
           name: korean-public-test-${{ matrix.platform_package }}
           path: |
             ${{ runner.temp }}/korean-public-test-${{ matrix.platform_package }}.json
+            ${{ runner.temp }}/vector-onboarding-public-test-${{ matrix.platform_package }}.json
             tests/work/vector-native-*/receipt.json
             tests/results/runs/*.md
           if-no-files-found: error

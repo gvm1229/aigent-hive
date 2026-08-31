@@ -12,6 +12,7 @@ ROOT = Path(__file__).resolve().parents[3]
 WORKFLOW = ROOT / ".github/workflows/public-test-acceptance.yml"
 REGISTERED_WORKFLOW = ROOT / ".github/workflows/release-runtime.yml"
 SCRIPT = ROOT / "scripts/qualify-korean-public-test.py"
+VECTOR_ONBOARDING_SCRIPT = ROOT / "scripts/qualify-vector-onboarding-public-test.py"
 
 
 class PublicTestAcceptanceContract(unittest.TestCase):
@@ -27,6 +28,7 @@ class PublicTestAcceptanceContract(unittest.TestCase):
             "dist-tags.latest",
             'test "$(npm view aigent-hive \'dist-tags.latest\')" = "0.9.5"',
             "qualify-korean-public-test.py",
+            "qualify-vector-onboarding-public-test.py",
             '--package-version "$PACKAGE_VERSION"',
         ):
             with self.subTest(required=required):
@@ -65,6 +67,27 @@ class PublicTestAcceptanceContract(unittest.TestCase):
 
     def test_qualifier_imports_without_third_party_dependencies(self) -> None:
         spec = importlib.util.spec_from_file_location("korean_public", SCRIPT)
+        self.assertIsNotNone(spec)
+        self.assertIsNotNone(spec.loader)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        self.assertTrue(callable(module.qualify))
+
+    def test_vector_onboarding_qualifier_keeps_one_question_and_a_fixed_scope(self) -> None:
+        text = VECTOR_ONBOARDING_SCRIPT.read_text(encoding="utf-8")
+        for required in (
+            '"setup", "feature"',
+            '"claim"',
+            '"answer", "--answer", "yes"',
+            '"answer", "--answer", "no"',
+            '"project-private"',
+            '"confidential"',
+            '"setup_request_digest"',
+            '"session"',
+        ):
+            with self.subTest(required=required):
+                self.assertIn(required, text)
+        spec = importlib.util.spec_from_file_location("vector_onboarding_public", VECTOR_ONBOARDING_SCRIPT)
         self.assertIsNotNone(spec)
         self.assertIsNotNone(spec.loader)
         module = importlib.util.module_from_spec(spec)
