@@ -9,7 +9,7 @@ summary: "자동 조회 격리, 명시 collection 직접 조회, 검토된 일�
 tags: [collection, knowledge, promotion, retrieval, v0-9-3]
 aliases: ["자동 지식 승격", "프로젝트 간 지식"]
 sources:
-  - "repo:crates/hive-cli/src/knowledge.rs#sha256:f0e47ded9439c9d2fcb2c1be6eb93d11609e942d5320f452fd45feecc7bf7d8a"
+  - "repo:crates/hive-cli/src/knowledge.rs#sha256:676c827ebe9ed1c4e51d73cf35289b8dfa9149f52287bcfad1a33d0b872b3be2"
   - "repo:crates/hive-wiki/src/rag.rs#sha256:2bb27720c34a60bfd3b0003e27348288f3f17062ab1e270f3c2d624487e1eff4"
   - "repo:crates/hive-wiki/src/store.rs#sha256:6d6a377a6cd0c0c38ca48a85e89e871210ef4e87bbe05cf80c17713a566ae9a0"
   - "repo:harness/skills/knowledge-recall/SKILL.md#sha256:9e169f3daff2b4fbe6cff4d9a93d7e45cca6e9a6e78d1784b83458b50d3aa267"

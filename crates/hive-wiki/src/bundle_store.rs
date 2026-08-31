@@ -310,6 +310,10 @@ impl BundleMergePreview {
     }
 
     /// Digest binding all input archives and the resulting canonical request.
+    ///
+    /// # Panics
+    ///
+    /// Panics only if the fixed serializable merge preview cannot serialize.
     #[must_use]
     pub fn merge_digest(&self) -> String {
         let entries = self
@@ -337,6 +341,15 @@ impl BundleMergePreview {
 /// Every candidate needs exactly one decision. An `equivalent` decision is accepted only for
 /// exactly equal kind, summary, and body text; metadata is merged and each removed original is
 /// carried as portable merge provenance outside the active Wiki search surface.
+///
+/// # Errors
+///
+/// Returns an error for incomplete, stale, malformed, or unsupported review decisions.
+///
+/// # Panics
+///
+/// Panics only when an already validated primary candidate disappears from its private request.
+#[allow(clippy::too_many_lines)]
 pub fn apply_bundle_merge_review(
     preview: &BundleMergePreview,
     decisions: &[BundleMergeDecision],
@@ -1042,6 +1055,7 @@ pub fn import_preview_digest(result: &BundleImportResult) -> Result<String, Wiki
 /// Returns an error for fewer than two inputs, unsafe or malformed bundles, an unsupported mixed
 /// scope, or a resource limit violation. Content conflicts are returned in the preview so callers
 /// can present every conflict together.
+#[allow(clippy::too_many_lines)]
 pub fn preview_bundle_merge(
     bundles: &[PathBuf],
     limits: BundleLimits,
@@ -1103,8 +1117,9 @@ pub fn preview_bundle_merge(
             input_entry_count += 1;
             let classification = match payload.kind {
                 IncomingKind::Wiki { .. } => PortableEntryClassification::CanonicalMarkdown,
-                IncomingKind::Claim { .. } => PortableEntryClassification::Provenance,
-                IncomingKind::Merge { .. } => PortableEntryClassification::Provenance,
+                IncomingKind::Claim { .. } | IncomingKind::Merge { .. } => {
+                    PortableEntryClassification::Provenance
+                }
                 IncomingKind::Suppression => PortableEntryClassification::Suppression,
             };
             if let IncomingKind::Claim { claim_id, .. } = &payload.kind {
@@ -1203,8 +1218,7 @@ pub fn preview_bundle_merge(
     conflicts.sort();
     conflicts.dedup();
     for variants in conflicting_entries.values_mut() {
-        variants
-            .sort_by(|left, right| sha256_digest(&left.bytes).cmp(&sha256_digest(&right.bytes)));
+        variants.sort_by_key(|left| sha256_digest(&left.bytes));
     }
     let conflicts_detail = conflicting_entries
         .iter()

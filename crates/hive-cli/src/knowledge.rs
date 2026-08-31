@@ -291,6 +291,7 @@ fn run_transfer(arguments: &[String]) -> Result<KnowledgeResult, WikiError> {
     }
 }
 
+#[allow(clippy::too_many_lines)]
 fn run_transfer_merge(arguments: &[String]) -> Result<KnowledgeResult, WikiError> {
     let action = arguments.first().map(String::as_str).ok_or_else(|| {
         WikiError::InvalidInput(
@@ -306,7 +307,7 @@ fn run_transfer_merge(arguments: &[String]) -> Result<KnowledgeResult, WikiError
     let mut root = None;
     let mut expected_preview = None;
     let mut review_path = None;
-    let mut expected_review = None;
+    let mut approved_review_digest = None;
     let mut output = false;
     let mut index = 1;
     while index < arguments.len() {
@@ -318,10 +319,12 @@ fn run_transfer_merge(arguments: &[String]) -> Result<KnowledgeResult, WikiError
             "--bundle" => bundles.push(PathBuf::from(value)),
             "--user-root" if root.is_none() => root = Some(value.clone()),
             "--preview-digest" if expected_preview.is_none() => {
-                expected_preview = Some(value.clone())
+                expected_preview = Some(value.clone());
             }
             "--review" if review_path.is_none() => review_path = Some(PathBuf::from(value)),
-            "--review-digest" if expected_review.is_none() => expected_review = Some(value.clone()),
+            "--review-digest" if approved_review_digest.is_none() => {
+                approved_review_digest = Some(value.clone());
+            }
             "--output" if !output && value == "json" => output = true,
             "--user-root" | "--preview-digest" | "--review" | "--review-digest" | "--output" => {
                 return Err(WikiError::InvalidInput(format!(
@@ -362,14 +365,14 @@ fn run_transfer_merge(arguments: &[String]) -> Result<KnowledgeResult, WikiError
         &serde_json::to_vec(&base_data).map_err(|error| WikiError::Io(error.to_string()))?,
     );
     let (request, review_digest) = if action == "preview" {
-        if expected_preview.is_some() || review_path.is_some() || expected_review.is_some() {
+        if expected_preview.is_some() || review_path.is_some() || approved_review_digest.is_some() {
             return Err(WikiError::InvalidInput(
                 "merge preview does not accept review or approval options".to_owned(),
             ));
         }
         (merge.request().clone(), None)
     } else if action == "apply" && merge.semantic_candidates.is_empty() {
-        if review_path.is_some() || expected_review.is_some() {
+        if review_path.is_some() || approved_review_digest.is_some() {
             return Err(WikiError::InvalidInput(
                 "merge apply without semantic candidates does not accept review options".to_owned(),
             ));
@@ -394,7 +397,7 @@ fn run_transfer_merge(arguments: &[String]) -> Result<KnowledgeResult, WikiError
             ));
         }
         let digest = sha256_digest(&bytes);
-        if action == "apply" && expected_review.as_deref() != Some(digest.as_str()) {
+        if action == "apply" && approved_review_digest.as_deref() != Some(digest.as_str()) {
             return Err(WikiError::Conflict(
                 "merge review changed; inspect review again".to_owned(),
             ));
