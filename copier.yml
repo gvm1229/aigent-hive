@@ -9,6 +9,8 @@ _exclude:
   # Global setup is installed into the user's host directory, never a project.
   - ".agents/skills/user-setup"
   - ".claude/skills/user-setup"
+  # Claude project projection carries Skill bodies only, matching the Rust renderer.
+  - ".claude/skills/*/agents"
   # The Discord onboarding guide belongs to the user-level installation.
   - ".hive/guides"
   - "{% if capability_resolution.detection != 'available' or capability_resolution.resolved_owner != 'host-native' or approved_fallback_hooks | length == 0 %}.hive/config/approved-hooks.yml{% endif %}"
@@ -238,10 +240,11 @@ selected_project_skills:
     - humanize-kor
     - judge-evidence
     - knowledge-capture
-    - knowledge-import
     - knowledge-maintain
     - knowledge-promote
     - knowledge-recall
+    - knowledge-scan
+    - knowledge-transfer
     - multi-goal
     - product-update
     - project-refresh

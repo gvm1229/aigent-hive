@@ -1190,14 +1190,14 @@ fn localized_skill_text(
             "증거·재시도·독립 검증을 적용한 제한된 작업 흐름을 실행합니다.",
         ),
         "knowledge-scan" => (
-            "Scan repository knowledge (knowledge-scan)",
-            "(knowledge-scan) Scan one repository or folder that the user explicitly selected, then record only reviewed knowledge useful beyond that source.",
+            "Scan repository knowledge",
+            "(knowledge-scan) Scan one repository or folder and prepare reviewed facts.",
             "저장소 지식 스캔",
             "(knowledge-scan) 사용자가 고른 저장소나 폴더를 훑어보고, 그 밖의 작업에도 쓸 만한 검토 완료 지식만 기록합니다.",
         ),
         "knowledge-transfer" => (
             "Transfer Hive knowledge",
-            "(knowledge-transfer) Move existing portable Hive knowledge safely between computers.",
+            "(knowledge-transfer) Move Hive knowledge between computers.",
             "Hive 지식 이전",
             "(knowledge-transfer) 기존 이식 가능 Hive 지식을 컴퓨터 사이에서 안전하게 옮깁니다.",
         ),
