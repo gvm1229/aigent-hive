@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "lanes": [
+    {
+      "name": "release",
+      "owner": "release-engineering",
+      "release_gate": true,
+      "elapsed_seconds": 30.156,
+      "modules": [
+        {
+          "module": "tests.conformance.release.test_historical_project_bases",
+          "elapsed_seconds": 5.453
+        },
+        {
+          "module": "tests.conformance.release.test_project_base_coverage",
+          "elapsed_seconds": 5.625
+        },
+        {
+          "module": "tests.conformance.release.test_npm_packaging",
+          "elapsed_seconds": 7.203
+        },
+        {
+          "module": "tests.conformance.release.test_update_migration",
+          "elapsed_seconds": 5.657
+        },
+        {
+          "module": "tests.conformance.release.test_release_notes",
+          "elapsed_seconds": 0.312
+        },
+        {
+          "module": "tests.conformance.release.test_public_test_acceptance",
+          "elapsed_seconds": 0.078
+        },
+        {
+          "module": "tests.conformance.release.test_vector_runtime_acceptance",
+          "elapsed_seconds": 0.688
+        },
+        {
+          "module": "tests.conformance.release.test_release_qualification_order",
+          "elapsed_seconds": 0.078
+        },
+        {
+          "module": "tests.conformance.release.test_stable_release_discord_notification",
+          "elapsed_seconds": 4.625
+        },
+        {
+          "module": "tests.conformance.release.test_stable_skill_ledger",
+          "elapsed_seconds": 0.203
+        },
+        {
+          "module": "tests.conformance.release.test_update_discovery",
+          "elapsed_seconds": 0.234
+        }
+      ]
+    }
+  ]
+}

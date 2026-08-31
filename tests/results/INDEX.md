@@ -3,24 +3,37 @@
 | 결과 | 목적·원본 | 소스 | 실행 환경 |
 | --- | --- | --- | --- |
 | [passed](legacy/057c730f3a63a1d9e861.md) | tests/work/vector-native-lblw2nrc/receipt.json | 6e7c4a3c93e4be6ebc3447b02635615122fd65d4 | 원본 JSON 참조 |
+| [passed](legacy/08fa608298d6df2957fb.md) | tests/work/knowledge-benchmark-baseline-1000-consume/receipt.json | not specified in original | 원본 JSON 참조 |
 | [passed](legacy/0ea576afb254691f59f2.md) | tests/work/vector-native-89j9057r/receipt.json | c264d0e315249dc2f95a58b2c4ab02375b0acad4 | 원본 JSON 참조 |
 | [passed](legacy/216987327d9437b8f8f6.md) | tests/work/vector-native-qtujpkxl/receipt.json | c138378a1a573658fdc655419b21de89f34e79aa | 원본 JSON 참조 |
 | [failed](legacy/22dcd2a030ce315c6eeb.md) | tests/work/verified-workflow-acceptance-8dkzi35p/acceptance-receipt.json | not specified in original | 원본 JSON 참조 |
+| [passed](legacy/33f2199d81acd5b98001.md) | tests/work/knowledge-benchmark-baseline-1000-produce/receipt.json | not specified in original | 원본 JSON 참조 |
 | [failed](legacy/34c83b95dac8bea30d43.md) | tests/work/vector-privacy-current-m8_ohepk/receipt.json | not specified in original | 원본 JSON 참조 |
+| [passed](legacy/39c2f5ac340558ce6239.md) | tests/work/knowledge-benchmark-current-5000-produce/receipt.json | not specified in original | 원본 JSON 참조 |
+| [passed](legacy/3a0b65a55a0117fccd49.md) | tests/work/knowledge-benchmark-current-1000-consume/receipt.json | not specified in original | 원본 JSON 참조 |
+| [passed](legacy/49d49ddd6b882205916f.md) | tests/work/knowledge-benchmark-current-100-produce/receipt.json | not specified in original | 원본 JSON 참조 |
 | [passed](legacy/50e9074da9c1645eea9c.md) | tests/work/vector-native-tq2_sv_v/receipt.json | 6dd42f6abc8c9879f2879ad433484c78335f3110 | 원본 JSON 참조 |
 | [passed](legacy/52e2ec0f933aba8e7d54.md) | tests/work/verified-workflow-acceptance-0jyfpp95/acceptance-receipt.json | not specified in original | 원본 JSON 참조 |
 | [passed](legacy/55c3cbf8bf47b5d38606.md) | tests/work/vector-source-x9i5dsz5/receipt.json | not specified in original | 원본 JSON 참조 |
 | [passed](legacy/6ccb1ca0d6ff6f512e0a.md) | tests/work/vector-native-f6f5t3n2/receipt.json | ddbd5908d45882dbddf88580e3587a8a290d91f4 | 원본 JSON 참조 |
 | [passed](legacy/6f7264b6522b91f073ce.md) | tests/work/vector-portability-wzmxb7qt/receipt.json | 01cba41784b2d63fca513edf62201a1966d0910f | 원본 JSON 참조 |
 | [passed](legacy/74e031330853c9c6189b.md) | tests/work/vector-native-2ib1eray/receipt.json | c59c860aaa78eeb39e78f441e3c3850b5d46b112 | 원본 JSON 참조 |
+| [passed](legacy/75dd1d088d27bc6427ff.md) | tests/work/knowledge-benchmark-current-1000-produce/receipt.json | not specified in original | 원본 JSON 참조 |
 | [passed](legacy/762b6d8b3718f1a5defd.md) | tests/work/vector-privacy-export-znq7xf8j/receipt.json | not specified in original | 원본 JSON 참조 |
 | [passed](legacy/7a363e9284817b1b54a7.md) | tests/work/vector-native-i1kfz91b/receipt.json | 1cf563ee25e2f13267a3bd6cb4e50b65c1580930 | 원본 JSON 참조 |
 | [passed](legacy/9089d350df2a3359ccf5.md) | tests/work/vector-cancel-current-4lbmwxvy/receipt.json | not specified in original | 원본 JSON 참조 |
 | [interrupted](legacy/916533e5e68cefac3ce5.md) | tests/work/vector-native-qi9p03le/receipt.json | 4fdf6c274188c26e3701a727617cdc1770c51fd8 | 원본 JSON 참조 |
+| [passed](legacy/9f0277101aa83fd13c50.md) | tests/work/knowledge-benchmark-baseline-100-consume/receipt.json | not specified in original | 원본 JSON 참조 |
 | [failed](legacy/a6f68b84af5b9ecef590.md) | tests/work/vector-cancel-current-657d14iq/receipt.json | not specified in original | 원본 JSON 참조 |
 | [failed](legacy/a7e8a73bd8325035a62b.md) | tests/work/verified-workflow-acceptance-fgea1nsk/acceptance-receipt.json | not specified in original | 원본 JSON 참조 |
+| [passed](legacy/aa4091affe6ad8b5066f.md) | tests/work/knowledge-benchmark-current-100-consume/receipt.json | not specified in original | 원본 JSON 참조 |
+| [passed](legacy/ae4a49f7898bdf789322.md) | tests/work/knowledge-benchmark-baseline-100-produce/receipt.json | not specified in original | 원본 JSON 참조 |
 | [failed](legacy/ba4d710b9d66c9272da0.md) | tests/work/vector-privacy-current-94wtgsk1/receipt.json | not specified in original | 원본 JSON 참조 |
+| [passed](legacy/d61774a5d427663a3673.md) | tests/work/knowledge-transfer-native/receipt.json | not specified in original | 원본 JSON 참조 |
 | [passed](legacy/dae785a93844d6fec25c.md) | tests/work/vector-privacy-current-cqikgvng/receipt.json | not specified in original | 원본 JSON 참조 |
+| [passed](legacy/e08157b1c8e5ba7fd862.md) | tests/work/knowledge-benchmark-current-5000-consume/receipt.json | not specified in original | 원본 JSON 참조 |
+| [passed](legacy/e4363ffa666df5321eb7.md) | tests/work/knowledge-benchmark-baseline-5000-produce/receipt.json | not specified in original | 원본 JSON 참조 |
+| [passed](legacy/ec7bc52f8272dc6c5dac.md) | tests/work/knowledge-benchmark-baseline-5000-consume/receipt.json | not specified in original | 원본 JSON 참조 |
 | [passed](legacy/edaed6e229a3ad05398c.md) | tests/work/vector-native-3xsczgt3/receipt.json | a4a2e46a0da5e837de281c0b0e9619507aec4405 | 원본 JSON 참조 |
 | [passed](legacy/f276b8547ce7bd55f215.md) | tests/work/vector-privacy-current-4g28310y/receipt.json | not specified in original | 원본 JSON 참조 |
 | [passed](legacy/ffb74a75735a053453a7.md) | tests/work/verified-workflow-acceptance-bso8rk8t/acceptance-receipt.json | not specified in original | 원본 JSON 참조 |
@@ -138,5 +151,19 @@
 | [passed](runs/20260831T061230-4a9603dfd3d7.md) | 배포 빌드 current 5000 파일 내보내기 측정 | 523892f0009d7ee04af9381981cb41ba01c4045d | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260831T061300-f44c0a472f55.md) | 배포 빌드 current 5000 파일 가져오기 측정 | 523892f0009d7ee04af9381981cb41ba01c4045d | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260831T061618-f31d8ae5165d.md) | 설정 이관 수정 후 전체 Rust 회귀 재검증 | faca6d7a7e476e4f3bed0d9c5ac65b5977f35f60 | Windows-11-10.0.26200-SP0 |
-| [running](runs/20260831T061633-043607f5bfbe.md) | 지식 이전 전체 Python 회귀 | faca6d7a7e476e4f3bed0d9c5ac65b5977f35f60 | Windows-11-10.0.26200-SP0 |
-| [running](runs/20260831T061637-6b13dede659b.md) | Python conformance: documentation, security, contract, integration, release | faca6d7a7e476e4f3bed0d9c5ac65b5977f35f60 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260831T061633-043607f5bfbe.md) | 지식 이전 전체 Python 회귀 | faca6d7a7e476e4f3bed0d9c5ac65b5977f35f60 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260831T061637-6b13dede659b.md) | Python conformance: documentation, security, contract, integration, release | faca6d7a7e476e4f3bed0d9c5ac65b5977f35f60 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260831T062321-1a94a0010f5d.md) | Copier와 Rust 이전 Skill 투영 차이 재현 | 79c5f674d90f5bf401ec441e578ab6f87c4614ad | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260831T062544-0e459cce7b3f.md) | Copier 및 Rust 투영 단일 정본 빌드 | 79c5f674d90f5bf401ec441e578ab6f87c4614ad | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260831T062618-3843152cbe4a.md) | 세 호스트 Copier Rust 동일 설치 투영 재검증 | 79c5f674d90f5bf401ec441e578ab6f87c4614ad | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260831T062734-3bc393adf71a.md) | 전체 시험 종료 후 Copier 일치 바이너리 빌드 | 79c5f674d90f5bf401ec441e578ab6f87c4614ad | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260831T062916-94ebb95ea80a.md) | Copier 경로와 실행 action 및 source graph 결손 재검증 | 79c5f674d90f5bf401ec441e578ab6f87c4614ad | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260831T063210-785548a36e2b.md) | 고정된 이전 구현 전체 Rust 최종 회귀 | f6e4cc73235e2261b33245b23b5d9e578c28eb9f | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260831T063436-a9c8cbdae092.md) | 고정된 이전 구현 전체 Python 최종 회귀 | f6e4cc73235e2261b33245b23b5d9e578c28eb9f | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260831T063437-94a23b8ee93f.md) | Python conformance: documentation, security, contract, integration, release | f6e4cc73235e2261b33245b23b5d9e578c28eb9f | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260831T065210-5d91edc0e0f2.md) | 이전 source 경계와 설정 오류 비밀 제거 회귀 | f6e4cc73235e2261b33245b23b5d9e578c28eb9f | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260831T065458-7e8dee8d6c97.md) | 이전 경계 보강 최종 바이너리 빌드 | f6e4cc73235e2261b33245b23b5d9e578c28eb9f | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260831T065538-7c872967f1fc.md) | 출시 및 갱신 lane 결손 수정 후 전체 검증 | f6e4cc73235e2261b33245b23b5d9e578c28eb9f | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260831T065539-af2de52fc984.md) | Python conformance: release | f6e4cc73235e2261b33245b23b5d9e578c28eb9f | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260831T065846-267508d4f033.md) | 원격 반영 전 최종 이전 경계 전체 Rust 검증 | f6e4cc73235e2261b33245b23b5d9e578c28eb9f | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260831T070033-ce1f627944cb.md) | 최종 바이너리 이전 기본 경로 확인 | 1c9202eeb65612c74f179632f4977df729fb58f9 | Windows-11-10.0.26200-SP0 |
