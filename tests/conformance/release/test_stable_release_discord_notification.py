@@ -114,6 +114,43 @@ class StableReleaseDiscordNotification(unittest.TestCase):
         self.assertNotIn("/api/webhooks/", result.stderr)
         self.assertEqual(len(self.server.requests), 1)
 
+    def test_nested_examples_reach_the_local_receiver_without_reformatting(self) -> None:
+        summary = (
+            "# Aigent Hive v0.10.0 업데이트 내역:\n\n"
+            "- **새 기능 추가**\n"
+            "  - 사용 예시와 선택 사항 안내\n"
+            "  - 원문·출처 보존\n\n"
+            "- **기존 기능 개선**\n"
+            "  - 운영체제별 사용 예시\n"
+        )
+        result = self.run_notifier("0.10.0", summary)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(len(self.server.requests), 2)
+        self.assertEqual(json.loads(self.server.requests[1][1])["content"], summary.strip())
+
+    def test_malformed_lists_are_rejected_before_any_request(self) -> None:
+        for body in (
+            "  - parent missing\n",
+            "- main\n - wrong indent\n",
+            "- main\n    - deeper nesting\n",
+            "- main\n  - \n",
+            "- main\nparagraph outside list\n",
+        ):
+            with self.subTest(body=body):
+                result = self.run_notifier(summary_text="# Aigent Hive v0.9.5 업데이트 내역:\n\n" + body)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertEqual(self.server.requests, [])
+
+    def test_nested_lists_keep_the_discord_length_limit(self) -> None:
+        prefix = "# Aigent Hive v0.9.5 업데이트 내역:\n\n- main\n  - "
+        summary = prefix + "가" * (2_000 - len(prefix))
+        accepted = self.run_notifier(summary_text=summary, validate_only=True)
+        self.assertEqual(accepted.returncode, 0, accepted.stderr)
+        rejected = self.run_notifier(summary_text=summary + "가", validate_only=True)
+        self.assertNotEqual(rejected.returncode, 0)
+        self.assertIn("Discord message limit", rejected.stderr)
+        self.assertEqual(self.server.requests, [])
+
     def test_rejects_nonstable_versions_before_sending(self) -> None:
         result = self.run_notifier("0.9.5-test.1")
         self.assertNotEqual(result.returncode, 0)

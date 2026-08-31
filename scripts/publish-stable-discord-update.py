@@ -39,8 +39,12 @@ def read_summary(path: Path, product_version: str) -> str:
     if not lines or lines[0] != expected_title:
         fail("subscriber summary title does not match the stable product version")
     bullets = [line for line in lines[1:] if line.strip()]
-    if not bullets or any(not line.startswith("- ") for line in bullets):
-        fail("subscriber summary must contain one or more Markdown bullets")
+    if (
+        not bullets
+        or not bullets[0].startswith("- ")
+        or any(re.fullmatch(r"(?:- |  - )\S.*", line) is None for line in bullets)
+    ):
+        fail("subscriber summary requires main Markdown bullets with optional two-space child bullets")
     if len(contents) > 2_000:
         fail("subscriber summary exceeds the Discord message limit")
     return contents
