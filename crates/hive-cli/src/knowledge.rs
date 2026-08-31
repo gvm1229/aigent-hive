@@ -350,9 +350,21 @@ fn run_transfer_export(arguments: &[String]) -> Result<KnowledgeResult, WikiErro
 
 fn resolve_transfer_root(options: &[(&str, &str)]) -> Result<PathBuf, WikiError> {
     if let Some(root) = optional(options, "--user-root") {
-        return Ok(PathBuf::from(root));
+        let root = PathBuf::from(root);
+        if root
+            .file_name()
+            .is_some_and(|name| name.to_string_lossy().eq_ignore_ascii_case(".hive"))
+        {
+            return Err(WikiError::InvalidInput(
+                "user-root must be the parent of .hive, not the .hive directory itself".to_owned(),
+            ));
+        }
+        ensure_consumer_target(&root)
+            .map_err(|error| WikiError::InvalidInput(error.to_string()))?;
+        return Ok(root);
     }
     let root = crate::user_install::resolve_user_root_path().map_err(WikiError::InvalidInput)?;
+    ensure_consumer_target(&root).map_err(|error| WikiError::InvalidInput(error.to_string()))?;
     require_shared_wiki_enabled(&root)?;
     Ok(root)
 }
@@ -4538,6 +4550,30 @@ mod tests {
     };
     use std::fs;
     use tempfile::TempDir;
+
+    #[test]
+    fn transfer_rejects_source_roots_before_receipt_or_knowledge_access() {
+        let root = tempfile::tempdir().expect("source fixture");
+        fs::write(root.path().join("hive-source.json"), b"{}").expect("source marker");
+        let target = root.path().to_str().expect("UTF-8 fixture");
+        assert!(resolve_transfer_root(&[("--user-root", target)]).is_err());
+        assert!(!root.path().join(".hive").exists());
+        assert_eq!(
+            fs::read(root.path().join("hive-source.json")).unwrap(),
+            b"{}"
+        );
+    }
+
+    #[test]
+    fn transfer_rejects_hive_directory_as_user_root() {
+        let root = tempfile::tempdir().expect("root fixture");
+        let hive = root.path().join(".hive");
+        fs::create_dir(&hive).expect("existing Hive directory");
+        let error = resolve_transfer_root(&[("--user-root", hive.to_str().unwrap())])
+            .expect_err("wrong root");
+        assert!(error.to_string().contains("parent of .hive"));
+        assert!(!hive.join(".hive").exists());
+    }
 
     fn temp_root() -> TempDir {
         TempDir::new_in(std::env::current_dir().expect("current directory"))
