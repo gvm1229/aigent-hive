@@ -1,0 +1,55 @@
+{
+  "platform": "Windows-11-10.0.26200-SP0",
+  "machine": "AMD64",
+  "binary_sha256": "sha256:b46a2f24397f68c9e4dade9620f0553e0ec6226f22be7a4143995b6e5400589a",
+  "steps": [
+    {
+      "command": [
+        "knowledge",
+        "refresh",
+        "--user-root",
+        "<repository>\\tests\\work\\knowledge-benchmark-current-5000-produce\\사용자 지식 with spaces"
+      ],
+      "seconds": 25.20702679999522,
+      "exit_code": 0,
+      "peak_working_set_bytes": 65159168
+    },
+    {
+      "command": [
+        "knowledge",
+        "transfer",
+        "export",
+        "--apply",
+        "--user-root",
+        "<repository>\\tests\\work\\knowledge-benchmark-current-5000-produce\\사용자 지식 with spaces",
+        "--scope",
+        "all-portable",
+        "--bundle",
+        "<repository>\\tests\\work\\knowledge-benchmark-current-5000-produce\\portable.hivekb"
+      ],
+      "seconds": 0.6666431999910856,
+      "exit_code": 0,
+      "peak_working_set_bytes": 28545024
+    }
+  ],
+  "status": "passed",
+  "export": {
+    "absolute_path_excluded_count": 0,
+    "archive_sha256": "sha256:59108555813ee31edb2a6d77eecf5c4fbee250d0690cef26633c4e6b743e32f4",
+    "byte_length": 3618831,
+    "confidential_excluded_count": 0,
+    "credential_excluded_count": 0,
+    "disposition": "created",
+    "entry_count": 5001,
+    "scope": {
+      "kind": "all-portable"
+    },
+    "source": {
+      "id": "user-root",
+      "kind": "user-root",
+      "logical_digest": "sha256:9218be458b1431dec73b6eeb94161c366d6370dc9e6433e143ab02533fcf2b63"
+    }
+  },
+  "legacy_cli": false,
+  "peak_working_set_bytes": 65159168
+}

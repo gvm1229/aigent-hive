@@ -137,3 +137,6 @@
 | [passed](runs/20260831T061134-c013094690c9.md) | 배포 빌드 baseline 5000 파일 가져오기 측정 | 523892f0009d7ee04af9381981cb41ba01c4045d | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260831T061230-4a9603dfd3d7.md) | 배포 빌드 current 5000 파일 내보내기 측정 | 523892f0009d7ee04af9381981cb41ba01c4045d | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260831T061300-f44c0a472f55.md) | 배포 빌드 current 5000 파일 가져오기 측정 | 523892f0009d7ee04af9381981cb41ba01c4045d | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260831T061618-f31d8ae5165d.md) | 설정 이관 수정 후 전체 Rust 회귀 재검증 | faca6d7a7e476e4f3bed0d9c5ac65b5977f35f60 | Windows-11-10.0.26200-SP0 |
+| [running](runs/20260831T061633-043607f5bfbe.md) | 지식 이전 전체 Python 회귀 | faca6d7a7e476e4f3bed0d9c5ac65b5977f35f60 | Windows-11-10.0.26200-SP0 |
+| [running](runs/20260831T061637-6b13dede659b.md) | Python conformance: documentation, security, contract, integration, release | faca6d7a7e476e4f3bed0d9c5ac65b5977f35f60 | Windows-11-10.0.26200-SP0 |
