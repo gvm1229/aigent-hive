@@ -94,3 +94,8 @@
 | [passed](runs/20260830T180618-10fa3b30ee7f.md) | 지식 이전 논리 프로젝트 연결 회귀 | 0be839133ddcb293452a0dcc0f9200ae12b214e1 | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260830T180647-f98518dbe99e.md) | 지식 이전 충돌 기본 거부 회귀 | 0be839133ddcb293452a0dcc0f9200ae12b214e1 | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260830T180656-edcd7005b8ba.md) | 지식 이전 논리 프로젝트 연결 재검증 | 0be839133ddcb293452a0dcc0f9200ae12b214e1 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260831T054526-b9516cda63b0.md) | 지식 이전 승인 지문과 유효 충돌 원문 회귀 | 52edcf2fab0bf775949ea635c45a3f82575ce0a3 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260831T054551-980456523f32.md) | 이전 승인 원자 대조 CLI 빌드 | 52edcf2fab0bf775949ea635c45a3f82575ce0a3 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260831T054638-9c5101b569c2.md) | 이전 원자 승인 CLI와 결과 스키마 검증 | 52edcf2fab0bf775949ea635c45a3f82575ce0a3 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260831T054659-c7f96439eb67.md) | 잘못된 승인 거부의 디렉터리 무변경 빌드 | 52edcf2fab0bf775949ea635c45a3f82575ce0a3 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260831T054716-ac826a4b7cec.md) | 승인 불일치 무변경과 이전 전체 경로 재검증 | 52edcf2fab0bf775949ea635c45a3f82575ce0a3 | Windows-11-10.0.26200-SP0 |
