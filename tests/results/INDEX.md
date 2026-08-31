@@ -99,3 +99,10 @@
 | [failed](runs/20260831T054638-9c5101b569c2.md) | 이전 원자 승인 CLI와 결과 스키마 검증 | 52edcf2fab0bf775949ea635c45a3f82575ce0a3 | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260831T054659-c7f96439eb67.md) | 잘못된 승인 거부의 디렉터리 무변경 빌드 | 52edcf2fab0bf775949ea635c45a3f82575ce0a3 | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260831T054716-ac826a4b7cec.md) | 승인 불일치 무변경과 이전 전체 경로 재검증 | 52edcf2fab0bf775949ea635c45a3f82575ce0a3 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260831T054955-3636e69928da.md) | 이전 작업별 벡터 선택과 재생성 연결 빌드 | b2ec4a70c9c6ea3f9c96211c933af3d0b6786d49 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260831T055035-e30fb9f377dd.md) | 이전 완료와 벡터 취소 지연 재실행 경계 | b2ec4a70c9c6ea3f9c96211c933af3d0b6786d49 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260831T055119-076886fcaaae.md) | 지식 이전 코드 정적 검토 | b2ec4a70c9c6ea3f9c96211c933af3d0b6786d49 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260831T055219-6009d09ec018.md) | 이전 선택 기록과 원자 승인 단위 회귀 | b2ec4a70c9c6ea3f9c96211c933af3d0b6786d49 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260831T055248-236bcf0b02ed.md) | 이전 기능 코드 정적 검사 재실행 | b2ec4a70c9c6ea3f9c96211c933af3d0b6786d49 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260831T055308-cb2c55c3fff1.md) | 재생성 재사용과 선택 기록 최종 빌드 | b2ec4a70c9c6ea3f9c96211c933af3d0b6786d49 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260831T055326-2199c671388f.md) | 최종 이전 선택 기록 재실행 보존 검증 | b2ec4a70c9c6ea3f9c96211c933af3d0b6786d49 | Windows-11-10.0.26200-SP0 |
