@@ -1,13 +1,13 @@
 # 현재 상태
 
-- 작업 브랜치: `feature/0.10.0-knowledge-transfer`
+- 작업 브랜치: `develop`
 - 제품 버전: `0.10.0`
 - 공개 시험판: `0.10.0-test.6`, 배포일 2026-08-29
 - 제품 수용 소스: `d331dc879cf51eab078c5e189b2fe7b8d729e541`
 - 안정판 기준·npm `latest`: `0.9.5`. 안정판 작업은 계속 명시 제외
 - 안정판 공개 문서: `0.9.5` 교정과 test 비노출 gate 구현 완료. `develop` CI `33264260664`와 docs-only main PR `#39`가 통과·병합됐고, npm `latest=0.9.5` 재확인
-- 현재 구현: `feature/0.10.0-knowledge-transfer`에서 컴퓨터 간 이식·FTS·선택형 벡터 재생성 진행
-- 지식 이전: `KTX10-001–005` 구현·주요 회귀 완료, `KTX10-006–007` 전체·교차 운영체제 검증과 통합 진행
+- 지식 이전: PR #41로 `develop@e1890c87` 병합. 기능 브랜치 원격·로컬 삭제, main·develop만 유지
+- `KTX10-001–006` 완료, `KTX10-007` 번호 시험판 공개 설치 수용 진행
 - 검증형 작업: 사용자 승인한 저장소의 수정된 Skill과 소스 종료 정책 적용. 전역 설치 변경·host 실행 graph 활성화 주장 없음
 - 계획: [PLAN.md](../plans/PLAN.md), [벡터 계획](../plans/active/hybrid-vector-search-0.10.0.md)
 - 설명: [벡터 검색 시각 문서](../hive-vector-search.ko.html), [사용 안내](../guides/vector-search.md)
@@ -18,7 +18,7 @@
 - 이전별 벡터 예·아니요·취소와 전역 설정 보존, 실제 모델 8개 원문 재생성과 완성 색인 재사용 통과
 - 프로젝트 사용자 지정 설정의 옛 Skill 대장 수정, `hive-render` 63개 통과. 과거 안정판 기준 파일 불변
 - Windows 100·1,000·5,000개 작은 Markdown의 원문·FTS 복원 확인. 같은 배포 빌드 조건의 변경 전후 측정 진행
-- 동일 묶음을 Windows→macOS/Linux, macOS→Windows로 전달하는 CI 연결. 원격 수용은 아직 미실행
+- [동일 묶음의 Windows→macOS/Linux, macOS→Windows 수용](../../tests/results/knowledge-transfer-cross-os-2026-08-31.md) 통과. CI `33366642438` 전체 성공
 
 - 연속 실행 지침: 실제 실행 근거·시도 중단과 전체 종료 구분·소스 경로·종료 결과 대조. [검증 결과와 한계](../../tests/results/continuation-directive-repair.md)
 - Windows 실행 계약 40개 통과·POSIX 전용 3개 제외, 제품 투영 38개 통과. 실제 호스트 종료 차단·응용 프로그램 재시작 검증 제외

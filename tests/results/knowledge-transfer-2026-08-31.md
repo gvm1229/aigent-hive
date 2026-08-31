@@ -37,9 +37,10 @@
 | 1,000 | [기록](legacy/33f2199d81acd5b98001.md) | [기록](legacy/08fa608298d6df2957fb.md) | [기록](legacy/75dd1d088d27bc6427ff.md) | [기록](legacy/3a0b65a55a0117fccd49.md) |
 | 5,000 | [기록](legacy/e4363ffa666df5321eb7.md) | [기록](legacy/ec7bc52f8272dc6c5dac.md) | [기록](legacy/39c2f5ac340558ce6239.md) | [기록](legacy/e08157b1c8e5ba7fd862.md) |
 
-## 미완료 경계
+## 통합과 남은 수용
 
-- 최종 전체 Rust·Python 회귀와 교차 운영체제 CI 완료 대기
-- `develop` 통합·새 번호 시험판 공개 수용은 검증 통과 뒤 진행
+- Windows Rust 900개 통과·별도 실행 전용 4개 제외. Python 다섯 lane 범위와 후속 수정 재검증 완료
+- [원격 CI와 세 방향 교차 운영체제 수용](knowledge-transfer-cross-os-2026-08-31.md) 통과, PR #41의 `develop` 병합 완료
+- 새 번호 시험판 공개 설치 수용 진행
 - 안정판 통합·태그·게시·설치: 명시 승인 전 제외
 - 모든 실패 기록 보존. 예전 형식 오류 fixture는 실제 유효 충돌 시험으로 대체, 실패 이력 삭제 없음
