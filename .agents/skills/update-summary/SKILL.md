@@ -18,7 +18,7 @@ claim in verified evidence; persuasion never permits invented capabilities, hidd
 5. Compare only the baseline and target identified above. Do not describe a review draft as a released stable version, rebuild an artifact, publish a release, or change product harness files.
 6. When preparing a stable release, save the exact Korean title and bullets to `docs/releases/<current>.subscriber.ko.md`. This is the canonical Discord message payload for that stable release.
 7. Before stable approval, that path may hold review or wording-approved copy. State its unissued status in the accompanying response or project state, outside the sendable payload. Wording approval never authorizes release or delivery; do not describe unverified work as released.
-8. After the maintainer explicitly approves stable subscriber wording, create or update the sibling approval file `docs/releases/<current>.subscriber.ko.sha256` with exactly `sha256:<digest>  <current>.subscriber.ko.md`. A later text change requires a new explicit wording approval and a new sidecar digest; never refresh the sidecar just to make a changed draft deliverable.
+8. After the maintainer explicitly approves stable subscriber wording, create or update the sibling approval file `docs/releases/<current>.subscriber.ko.sha256` with exactly `sha256:<digest>  <current>.subscriber.ko.md`. The protected release environment must hold the same digest in `AIGENT_HIVE_SUBSCRIBER_SUMMARY_DIGEST`. A later text change requires a new explicit wording approval and both digest updates; never refresh either value just to make a changed draft deliverable.
 
 ## Approved reference (required)
 

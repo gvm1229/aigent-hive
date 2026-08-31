@@ -17,7 +17,7 @@
 
 - `VON10-007`, `REL10-001–004`: 벡터 최초 설정 product bytes의 전체 검사·다음 번호 공개 시험·세 운영체제 공개 수용
 - `REL10-005–007`: 유지보수자의 현재 요청 안 `0.10.0` 안정판 명시 승인 전 protected `main`·tag·게시·설치 금지
-- 안정판 구독자 안내: `docs/releases/<version>.subscriber.ko.sha256`의 승인 지문이 원문과 일치해야 함. 불일치면 배너·Discord 요약 전송 전 차단
+- 안정판 구독자 안내: `docs/releases/<version>.subscriber.ko.sha256`의 승인 지문과 보호 환경 `AIGENT_HIVE_SUBSCRIBER_SUMMARY_DIGEST` 모두 원문과 일치해야 함. 불일치면 배너·Discord 요약 전송 전 차단
 
 ## 현재 실행 제외
 

@@ -9,9 +9,9 @@ summary: "모든 지원 predecessor의 authenticated retired Skill artifact를 d
 tags: [migration, skills, upgrade, v0-10]
 aliases: ["Retired Skill cleanup"]
 sources:
-  - "repo:.github/workflows/release-publish.yml#sha256:35420bffac94da9392c605c6512edffa879458e177e892e407d9a979feffc693"
+  - "repo:.github/workflows/release-publish.yml#sha256:6d9b351dfbe99fef461d642285a5bc37730ef6ba29d3c62d38c800bdd8e6220f"
   - "repo:crates/hive-cli/src/user_install.rs#sha256:1518c1b9ac4f68d114a59603a490491221b0459e36137fb380d2c247f9e1ab1a"
-  - "repo:docs/decisions/ADR-0020-0.10.0-product-scope.md#sha256:c26b7d76e56bc0d7be20cb62642026cd44211d39daeb47c8a6b94b8ed40004d9"
+  - "repo:docs/decisions/ADR-0020-0.10.0-product-scope.md#sha256:7d48651ed01e4a694f8a699b43d589ab4d85342d1eb37e59c3ead322d8599868"
   - "repo:docs/decisions/product-release-decisions.md#sha256:e89ac8584204a7e52ed157e9b29d523f870b8ac387fc1e4a044f7f7333d17af5"
   - "repo:docs/plans/active/skill-retirement-migration-0.10.0.md#sha256:cf02204eafa02d03f95a147ae364548b1635e4c445192f3c0e67a38ed5104b8f"
   - "repo:harness/release/stable-skill-ledger.yml#sha256:8b2ca917aeb92cff8185221b07d93b450588ae668b7f506e844bc279d47f12b5"
