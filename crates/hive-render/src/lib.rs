@@ -2567,7 +2567,8 @@ fn resolve_effective_project_preferences(
                         | "knowledge-recall"
                         | "knowledge-promote"
                         | "knowledge-maintain"
-                        | "knowledge-import"
+                        | "knowledge-scan"
+                        | "knowledge-transfer"
                 );
                 Ok((!is_knowledge_skill).then_some(name))
             })
@@ -8235,7 +8236,8 @@ mod tests {
             "code-polish",
             "humanize-kor",
             "verified-workflow",
-            "knowledge-import",
+            "knowledge-scan",
+            "knowledge-transfer",
             "knowledge-maintain",
             "knowledge-capture",
             "prompt-refine",
@@ -10262,7 +10264,7 @@ mod tests {
             .expect("old Claude projection ownership should verify");
         let deletions = &transition.deletions;
 
-        assert_eq!(deletions.len(), 26);
+        assert_eq!(deletions.len(), 27);
         assert!(deletions
             .iter()
             .all(|path| path.starts_with(".claude/skills")));
