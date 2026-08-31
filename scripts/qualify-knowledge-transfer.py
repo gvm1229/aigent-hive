@@ -7,6 +7,7 @@ import hashlib
 import json
 from pathlib import Path
 import platform
+import sys
 import subprocess
 import time
 
@@ -24,6 +25,8 @@ def main() -> int:
     parser.add_argument("--work", required=True, type=Path)
     parser.add_argument("--input", type=Path)
     parser.add_argument("--files", type=int, choices=(100, 1000, 5000), default=100)
+    parser.add_argument("--legacy-cli", action="store_true", help="measure the pre-transfer export/import surface")
+    parser.add_argument("--require-cross-os", action="store_true", help="refuse same-OS evidence in a cross-platform CI acceptance")
     args = parser.parse_args()
     work = args.work.resolve()
     if not work.is_relative_to(ROOT / "tests/work") or work == ROOT / "tests/work":
@@ -35,12 +38,32 @@ def main() -> int:
 
     def call(*argv: str) -> dict:
         start = time.perf_counter()
-        result = subprocess.run([str(binary), *argv, "--output", "json"],
-                                capture_output=True, encoding="utf-8", timeout=600, check=False)
-        value = json.loads(result.stdout)
+        process = subprocess.Popen([str(binary), *argv, "--output", "json"], stdout=subprocess.PIPE,
+                                   stderr=subprocess.PIPE, encoding="utf-8")
+        try:
+            stdout, _stderr = process.communicate(timeout=600)
+        except (subprocess.TimeoutExpired, KeyboardInterrupt):
+            process.kill()
+            process.communicate(timeout=10)
+            raise
+        value = json.loads(stdout)
+        peak = None
+        if sys.platform == "win32":
+            import ctypes
+            from ctypes import wintypes
+            class Counters(ctypes.Structure):
+                _fields_ = [("cb", wintypes.DWORD), ("faults", wintypes.DWORD)] + [(name, ctypes.c_size_t) for name in
+                    ("peak_working", "working", "peak_paged", "paged", "peak_nonpaged", "nonpaged", "pagefile", "peak_pagefile")]
+            counters = Counters(); counters.cb = ctypes.sizeof(counters)
+            api = ctypes.WinDLL("kernel32", use_last_error=True)
+            peak = counters.peak_working if api.K32GetProcessMemoryInfo(wintypes.HANDLE(process._handle), ctypes.byref(counters), counters.cb) else None
+        else:
+            import resource
+            usage = resource.getrusage(resource.RUSAGE_CHILDREN).ru_maxrss
+            peak = int(usage if sys.platform == "darwin" else usage * 1024)
         report["steps"].append({"command": list(argv), "seconds": time.perf_counter() - start,
-                                "exit_code": result.returncode})
-        if result.returncode:
+                                "exit_code": process.returncode, "peak_working_set_bytes": peak})
+        if process.returncode:
             raise RuntimeError(f"{argv[:3]}: {value.get('message')}")
         return value["data"]
 
@@ -71,8 +94,8 @@ def main() -> int:
                 (wiki / f"{page_id}.md").write_text(text, encoding="utf-8", newline="\n")
             call("knowledge", "refresh", "--user-root", str(user))
             archive = work / "portable.hivekb"
-            exported = call("knowledge", "transfer", "export", "--apply", "--user-root", str(user),
-                            "--scope", "all-portable", "--bundle", str(archive))
+            command = ("knowledge", "export") if args.legacy_cli else ("knowledge", "transfer", "export", "--apply")
+            exported = call(*command, "--user-root", str(user), "--scope", "all-portable", "--bundle", str(archive))
             inventory = {p.name: digest(p.read_bytes()) for p in sorted(wiki.glob("*.md"))}
             expected = {"producer_os": platform.system(), "files": inventory,
                         "archive_sha256": exported["archive_sha256"]}
@@ -82,15 +105,21 @@ def main() -> int:
             if not args.input:
                 parser.error("consume requires --input containing portable.hivekb and expected.json")
             expected = json.loads((args.input / "expected.json").read_text(encoding="utf-8"))
+            if args.require_cross_os and expected["producer_os"] == platform.system():
+                raise RuntimeError("cross-OS acceptance cannot use a same-OS producer")
             archive = (args.input / "portable.hivekb").resolve(strict=True)
             if digest(archive.read_bytes()) != expected["archive_sha256"]:
                 raise RuntimeError("archive changed during machine-to-machine handoff")
-            preview = call("knowledge", "transfer", "import", "--preview", "--user-root", str(user), "--bundle", str(archive),
-                           "--expected-sha256", expected["archive_sha256"])
-            imported = call("knowledge", "transfer", "import", "--apply", "--user-root", str(user), "--bundle", str(archive),
-                            "--expected-sha256", expected["archive_sha256"], "--preview-digest", preview["transfer_preview_digest"])
-            if not imported["transfer"]["complete"]:
-                raise RuntimeError("FTS not ready after import")
+            if args.legacy_cli:
+                call("knowledge", "import", "--dry-run", "--user-root", str(user), "--bundle", str(archive))
+                imported = call("knowledge", "import", "--apply", "--user-root", str(user), "--bundle", str(archive))
+            else:
+                preview = call("knowledge", "transfer", "import", "--preview", "--user-root", str(user), "--bundle", str(archive),
+                               "--expected-sha256", expected["archive_sha256"])
+                imported = call("knowledge", "transfer", "import", "--apply", "--user-root", str(user), "--bundle", str(archive),
+                                "--expected-sha256", expected["archive_sha256"], "--preview-digest", preview["transfer_preview_digest"])
+                if not imported["transfer"]["complete"]:
+                    raise RuntimeError("FTS not ready after import")
             inventory = {p.name: digest(p.read_bytes()) for p in sorted(wiki.glob("*.md"))}
             if inventory != expected["files"]:
                 raise RuntimeError("canonical Markdown changed or disappeared during transfer")
@@ -100,6 +129,8 @@ def main() -> int:
             report.update(producer_os=expected["producer_os"], consumer_os=platform.system(),
                           cross_os=expected["producer_os"] != platform.system(), imported=imported,
                           restored_files=len(inventory), canonical_bytes_equal=True, fts_query_verified=True)
+        report["legacy_cli"] = args.legacy_cli
+        report["peak_working_set_bytes"] = max((step["peak_working_set_bytes"] or 0) for step in report["steps"])
         report["status"] = "passed"
     except Exception as error:
         report.update(status="failed", error=str(error))
