@@ -5,13 +5,15 @@ topic_slug: knowledge-transfer-workflow
 language: ko
 counterpart: ../en/knowledge-transfer-workflow.md
 title: "컴퓨터 간 지식 이전 흐름"
-summary: "묶음·대상 원문 지문에 연결된 가져오기와 사용자 설정을 보존하는 벡터 지연 선택"
+summary: "단일·여러 묶음의 입력·대상·검토 지문과 벡터 지연 선택을 보존하는 지식 이전"
 tags: [knowledge, portability]
 aliases: []
 sources:
+  - "repo:crates/hive-cli/src/knowledge.rs#sha256:f0e47ded9439c9d2fcb2c1be6eb93d11609e942d5320f452fd45feecc7bf7d8a"
   - "repo:crates/hive-cli/src/knowledge_transfer.rs#sha256:d1a6df6babfbed54b46bb505889921a30fe86fd14fbd4cc0230d51bf7a99de92"
-  - "repo:crates/hive-wiki/src/bundle_store.rs#sha256:46f4d198668dc35e687d07331e7eaaed304d6d99d23582e85ba110331141ed34"
-  - "repo:docs/guides/knowledge-transfer.md#sha256:20f057772eec3f009864ab41e104bb265ad5171f3344d826cb2892551a0882b9"
+  - "repo:crates/hive-wiki/src/bundle_store.rs#sha256:ef8382c6270681076f45da459af68ad0d058b5236a239b7c76b53de056daba1e"
+  - "repo:docs/guides/knowledge-transfer.md#sha256:18fcddede882c3dbcfa642b5b6c2b6be6e4bac898532e03c3f178da56c8633af"
+  - "repo:harness/skills/knowledge-transfer/SKILL.md#sha256:7b4bbe52c0e4af139f61ded9ba5c75562d21c8e0011530af6512563bbaea7188"
 links: [global-knowledge-bundle-transfer, knowledge-storage]
 reviewed_revision: "git:523892f0009d7ee04af9381981cb41ba01c4045d"
 status: active
@@ -19,4 +21,4 @@ status: active
 
 # 컴퓨터 간 지식 이전 흐름
 
-기존 Markdown 이전은 `knowledge-transfer`, 새 지식 추출은 `knowledge-scan` 소유. 적용 시 전달받은 SHA-256과 검토한 대상 원문 지문을 쓰기 잠금 안에서 대조. 충돌 제외는 명시 선택, 기존 파일 보존. 비공개 모음은 승인 연결 전 분리 보관. FTS 준비와 벡터 작업의 완료 상태 분리. 이전 기록에 예·아니요·취소 의미 보존, 전역 벡터 사용 설정 변경 없음. 재생성 범위는 가져온 모음의 기존 승인 범위만 포함. 미설치·미승인 상태의 자동 설치 금지.
+기존 Markdown 이전은 `knowledge-transfer`, 새 지식 추출은 `knowledge-scan` 소유. 여러 묶음 미리 보기: 같은 바이트 자동 중복 정리, 입력 지문·의미 후보·같은 경로 수정본 반환. 활성 host 검토의 `separate`·`equivalent`·`choose` 결정은 한 번의 정본 적용에 연결. 통합·미선택 Wiki 원본은 활성 검색 밖의 이식 가능한 merge provenance 보존. 비공개 모음은 승인 연결 전 분리 보관. FTS와 선택형 벡터 결정은 정본 이전과 분리.

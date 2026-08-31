@@ -62,6 +62,56 @@ hive knowledge transfer vector --id <이전_ID> --receipt-digest sha256:<현재_
 - 새 모델 설치·모음 활성화·프로젝트 연결: 기존 별도 승인 절차 적용
 - 기밀 자료 자동 포함·Python 자동 설치·제공자 API 호출 없음
 
+## 여러 묶음 통합
+
+컴퓨터 A·B 등의 `.hivekb`를 C의 한 사용자 루트에 합칠 때는 `import` 반복 대신
+`merge` 사용. 입력 묶음 원본 변경 없음.
+
+```text
+hive knowledge transfer merge preview --bundle ./computer-a.hivekb --bundle ./computer-b.hivekb --user-root <C의_사용자_루트> --output json
+```
+
+- `exact_duplicate_count`: 같은 바이트 지식의 자동 중복 제거 수
+- `conflict_paths`: 같은 위치·식별자의 서로 다른 내용. 전체 적용 전 해결 대상
+- `semantic_candidates`: 내용은 같아 보이나 검토가 필요한 지식 묶음
+- `conflicts`: 같은 경로의 서로 다른 수정본과 선택 가능한 SHA-256 목록
+- `merge_input_digest`: 검토 파일과 적용 요청의 입력 지문
+- `merge_preview_digest`: 현재 대상 상태까지 포함한 미리 보기 지문
+
+의미 후보는 활성 host가 조건·수치·날짜·부정 표현·출처를 검토. 확정 동등 후보만
+`equivalent`, 나머지는 `separate` 선택. `equivalent` 원본은 활성 검색에서 제외하되
+이식 가능한 merge provenance로 보존.
+
+```json
+{
+  "schema_version": 1,
+  "merge_preview_digest": "sha256:<merge_input_digest>",
+  "decisions": [
+    {
+      "action": "equivalent",
+      "candidate_id": "sha256:<candidate>",
+      "primary_path": ".hive/portable/collections/user-root/Wiki/<page>.md"
+    },
+    {
+      "action": "choose",
+      "path": ".hive/portable/collections/user-root/Wiki/<page>.md",
+      "selected_sha256": "sha256:<선택한_수정본>"
+    }
+  ]
+}
+```
+
+```text
+hive knowledge transfer merge review --bundle ./computer-a.hivekb --bundle ./computer-b.hivekb --preview-digest sha256:<merge_input_digest> --review ./merge-review.json --user-root <C의_사용자_루트> --output json
+hive knowledge transfer merge apply --bundle ./computer-a.hivekb --bundle ./computer-b.hivekb --preview-digest sha256:<merge_input_digest> --review ./merge-review.json --review-digest sha256:<review_digest> --user-root <C의_사용자_루트> --output json
+```
+
+- `review`: 검토 지문·결정 범위 확인. 원문·FTS 변경 없음
+- `apply`: 모든 입력·대상·검토 지문 재대조 뒤 한 번 적용. FTS 한 번 생성
+- 입력·대상·검토 파일 변경: 적용 거부와 새 미리 보기
+- 해결 불가 모순: 사용자에게 충돌 목록을 한 번에 제시. 부분 적용 금지
+- 접근 범위가 다른 모음·기밀 자료·새 모델 설치·새 모음 활성화: 자동 통합 범위 제외
+
 ## 검증 경계
 
 - 로컬 Windows의 원문·FTS·질문·지연·취소·실제 모델 재생성 검증과 다른 운영체제 수용을 구분

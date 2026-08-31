@@ -197,3 +197,13 @@
 | [passed](runs/20260831T092653-03cf786a4d67.md) | 여러 지식 묶음 문서·schema 계약 검사 | 68cded926880a1bfaed5601a41dc57954bf3b13a | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260831T092734-e64165fe5c9d.md) | 세 묶음 수정본 선택 회귀 | 68cded926880a1bfaed5601a41dc57954bf3b13a | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260831T092845-c3824f188b52.md) | 여러 묶음 모음 대장 통합 컴파일 검사 | 68cded926880a1bfaed5601a41dc57954bf3b13a | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260831T093001-706030cf97d3.md) | 여러 지식 묶음 전체 Rust 회귀 | 9f59659af980c1d6f6c8f2c47a92636cf768a8cc | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260831T093013-25362e3edd76.md) | 여러 지식 묶음 CLI 통합 회귀 묶음 | 9f59659af980c1d6f6c8f2c47a92636cf768a8cc | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260831T093546-29bacc5b6ab3.md) | 여러 지식 묶음 이전 실행기 로컬 수용 | 9f59659af980c1d6f6c8f2c47a92636cf768a8cc | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260831T093555-9451a33bd43d.md) | 여러 지식 묶음 이전 실행기 로컬 통합 | 9f59659af980c1d6f6c8f2c47a92636cf768a8cc | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260831T093608-29bd77bdd2c5.md) | 1천파일 여러 지식 묶음 생성 측정 | 9f59659af980c1d6f6c8f2c47a92636cf768a8cc | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260831T093625-ea41ef50b071.md) | 1천파일 여러 지식 묶음 통합 측정 | 9f59659af980c1d6f6c8f2c47a92636cf768a8cc | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260831T093647-fce32555f1a3.md) | 5천파일 여러 지식 묶음 생성 측정 | 9f59659af980c1d6f6c8f2c47a92636cf768a8cc | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260831T093728-9a78d3be1fba.md) | 5천파일 여러 지식 묶음 통합 측정 | 9f59659af980c1d6f6c8f2c47a92636cf768a8cc | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260831T093920-231a8d4be44f.md) | 여러 지식 묶음 안내·사실 문서 검사 | 9f59659af980c1d6f6c8f2c47a92636cf768a8cc | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260831T093921-9baa01006691.md) | Python conformance: documentation | 9f59659af980c1d6f6c8f2c47a92636cf768a8cc | Windows-11-10.0.26200-SP0 |
