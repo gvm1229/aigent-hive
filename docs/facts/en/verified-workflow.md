@@ -9,7 +9,7 @@ summary: "0.10.0 routes complex natural-language continuation through verified-w
 tags: [orchestration, skills, v0-10]
 aliases: ["ralph-loop"]
 sources:
-  - "repo:docs/decisions/ADR-0020-0.10.0-product-scope.md#sha256:c2750df31d792e5545634d507a6b13ded3e829cd675ee09865d2826f59cc0a87"
+  - "repo:docs/decisions/ADR-0020-0.10.0-product-scope.md#sha256:3e669b1c196d9176fdc908766d00700be7b30e43e8f53a5f72c1f2d178d44016"
   - "repo:docs/decisions/product-release-decisions.md#sha256:e89ac8584204a7e52ed157e9b29d523f870b8ac387fc1e4a044f7f7333d17af5"
   - "repo:docs/plans/active/verified-workflow-0.10.0.md#sha256:6b2ee66b721493ad6c69f2f22d56ed16a6b47886e7609a4be42bff9aea768c57"
   - "repo:scripts/accept-verified-workflow.py#sha256:ad4bfb4f5c2b477a5900f0e28161ce1baee155af1b96cb73e93a0ec871a149a5"

@@ -1,11 +1,11 @@
 # Aigent Hive 활성 계획
 
-> Revision: 305
+> Revision: 306
 > 기준일: 2026-08-31
 > Product version: `0.10.0`
 > Stable baseline: `0.9.5`
 > 수용된 공개 시험: `0.10.0-test.7`
-> 현재 단계: 지식 이전 통합·공개 시험 수용 완료, 안정판 제외
+> 현재 단계: 여러 지식 묶음 통합 구현·공개 시험 수용, 안정판 제외
 > 확정 범위: [`ADR-0020`](../decisions/ADR-0020-0.10.0-product-scope.md)
 
 ## 목표
@@ -21,7 +21,7 @@
 - Source 전용 `draft-devlog`의 임시 token·비공개 초안·명시 발행·일반화된 기술 글 계약
 - 모든 지원 predecessor의 Skill rename·폐기 artifact 완전 cleanup
 - 선택형 벡터 검색의 한 번 묻는 사용자 답변과 새 세션 설정 안내
-- 컴퓨터 간 전체 이식 가능한 지식 이전과 FTS 준비
+- 컴퓨터 간 전체 이식 가능한 지식 이전·여러 묶음 통합·FTS 준비
 - 번호 공개 시험판과 같은 product bytes의 안정판 출시
 
 ## 완료 조건
@@ -65,7 +65,7 @@
 | 관계·검색 graph | 16 | 0 | 100% |
 | Hybrid vector search | 23 | 0 | 100% |
 | Vector onboarding | 0 | 8 | 0% |
-| Knowledge transfer | 7 | 0 | 100% |
+| Knowledge transfer | 7 | 7 | 50.0% |
 | Host-owned Skill 예약 | 1 | 0 | 100% |
 | Nested project scan | 1 | 0 | 100% |
 | Agent 지침 경량화 | 8 | 0 | 100% |
@@ -78,7 +78,7 @@
 | Source `draft-devlog` | 6 | 0 | 100% |
 | `0.10.0` 출시 | 0 | 7 | 0% |
 | 안정판 공개 문서 | 7 | 0 | 100% |
-| **합계** | **124** | **15** | **89.2%** |
+| **합계** | **124** | **22** | **84.9%** |
 
 ## Required load order
 

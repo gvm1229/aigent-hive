@@ -167,3 +167,8 @@
 | [passed](runs/20260831T065539-af2de52fc984.md) | Python conformance: release | f6e4cc73235e2261b33245b23b5d9e578c28eb9f | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260831T065846-267508d4f033.md) | 원격 반영 전 최종 이전 경계 전체 Rust 검증 | f6e4cc73235e2261b33245b23b5d9e578c28eb9f | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260831T070033-ce1f627944cb.md) | 최종 바이너리 이전 기본 경로 확인 | 1c9202eeb65612c74f179632f4977df729fb58f9 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260831T074007-2df5e40c1119.md) | Python conformance: documentation | 75a803a7a85c0e136119dc4eff06143e09b9e832 | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260831T085348-d08c60642dd4.md) | 여러 지식 묶음 통합 계획 문서 검사 | 536556f446460a649d4de65936019a6b6007e0ce | Windows-11-10.0.26200-SP0 |
+| [failed](runs/20260831T085349-dda2e13fe849.md) | Python conformance: documentation | 536556f446460a649d4de65936019a6b6007e0ce | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260831T085438-76dfe070c64d.md) | 여러 지식 묶음 통합 계획 지문 재검사 | 536556f446460a649d4de65936019a6b6007e0ce | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260831T085439-053510701ab7.md) | Python conformance: documentation | 536556f446460a649d4de65936019a6b6007e0ce | Windows-11-10.0.26200-SP0 |
