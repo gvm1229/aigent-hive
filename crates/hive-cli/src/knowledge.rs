@@ -7,7 +7,8 @@ use cap_std::fs::{Dir, OpenOptions as CapOpenOptions};
 use hive_core::{ensure_consumer_target, ensure_no_symlink_ancestors, sha256_digest};
 use hive_wiki::bundle_io::BundlePublishMode;
 use hive_wiki::bundle_store::{
-    export_bundle, import_bundle, preview_export_bundle, BundleExportDisposition, BundleImportMode,
+    export_bundle, import_bundle, import_bundle_reviewed, preview_export_bundle,
+    BundleExportDisposition, BundleImportApproval, BundleImportMode, BundleImportResult,
 };
 use hive_wiki::collection::{
     CollectionKind, CollectionResolution, CollectionState, CollectionVisibility,
@@ -77,7 +78,7 @@ USAGE:
     hive knowledge export --user-root <dir> --scope global|shared|project:<id>|collection:<id>|all-portable --bundle <path>.hivekb [--replace-backup <file-name>] --output json
     hive knowledge import --user-root <dir> --bundle <path>.hivekb (--dry-run|--apply) --output json
     hive knowledge transfer export --preview|--apply --user-root <dir> --scope global|shared|project:<id>|collection:<id>|all-portable --bundle <path>.hivekb [--replace-backup <file-name>] --output json
-    hive knowledge transfer import --preview|--apply [--exclude-conflicts] --preview-digest <sha256:...> --user-root <dir> --bundle <path>.hivekb --output json
+    hive knowledge transfer import --preview|--apply [--exclude-conflicts] [--preview-digest <sha256:...> --expected-sha256 <sha256:...>] --user-root <dir> --bundle <path>.hivekb --output json
     hive knowledge refresh (--target <legacy-project>|--user-root <dir>) --output json
     hive knowledge graph preview|enable|status|rebuild|disable|query|export --target <dir> [--scope project] [--engine native-markdown|graphify-code] [--consent-digest <sha256:...>] [--input <graph.json> --receipt <receipt.json>] [--node-id <id>] [--text <query>] [--user-root <dir>] [--format json|html] --output json
     hive knowledge vector --help
@@ -346,47 +347,49 @@ fn run_transfer_import(arguments: &[String]) -> Result<KnowledgeResult, WikiErro
         .iter()
         .filter(|argument| *argument == "--exclude-conflicts")
         .count();
-    let preview_digest = arguments
-        .iter()
-        .position(|argument| argument == "--preview-digest")
-        .map(|index| {
-            arguments.get(index + 1).cloned().ok_or_else(|| {
-                WikiError::InvalidInput("missing value for --preview-digest".to_owned())
-            })
-        })
-        .transpose()?;
     if preview_count + apply_count != 1 || exclude_count > 1 {
         return Err(WikiError::InvalidInput(
             "knowledge transfer import requires exactly one of --preview or --apply".to_owned(),
         ));
     }
-    let strip = |also_apply: bool| {
-        arguments
-            .iter()
-            .enumerate()
-            .filter_map(|(index, argument)| {
-                if argument == "--preview"
-                    || argument == "--exclude-conflicts"
-                    || argument == "--preview-digest"
-                    || index > 0 && arguments[index - 1] == "--preview-digest"
-                    || also_apply && argument == "--apply"
-                {
-                    None
-                } else {
-                    Some(argument.clone())
-                }
-            })
-            .collect::<Vec<_>>()
-    };
+    let filtered = arguments
+        .iter()
+        .filter(|arg| !["--preview", "--apply", "--exclude-conflicts"].contains(&arg.as_str()))
+        .cloned()
+        .collect::<Vec<_>>();
+    let options = parse_options(
+        &filtered,
+        &[
+            "--user-root",
+            "--bundle",
+            "--preview-digest",
+            "--expected-sha256",
+        ],
+    )?;
+    let user_root = PathBuf::from(required(&options, "--user-root")?);
+    let bundle = PathBuf::from(required(&options, "--bundle")?);
+    let preview_digest = optional(&options, "--preview-digest");
+    let expected_archive = optional(&options, "--expected-sha256");
     if preview_count == 1 {
         if preview_digest.is_some() || exclude_count != 0 {
             return Err(WikiError::InvalidInput(
                 "transfer import preview does not accept --preview-digest".to_owned(),
             ));
         }
-        let mut forwarded = strip(false);
-        forwarded.push("--dry-run".to_owned());
-        let mut result = run_import(&forwarded)?;
+        let mut result = run_import_mode(&user_root, &bundle, BundleImportMode::DryRun)?;
+        if let Some(expected) = expected_archive {
+            if result
+                .data
+                .as_ref()
+                .and_then(|data| data.get("archive_sha256"))
+                .and_then(Value::as_str)
+                != Some(expected)
+            {
+                return Err(WikiError::Conflict(
+                    "bundle SHA-256 differs from the sending computer".to_owned(),
+                ));
+            }
+        }
         let digest = transfer_preview_digest(&result)?;
         insert_transfer_preview_digest(&mut result, &digest)?;
         return Ok(result);
@@ -394,48 +397,37 @@ fn run_transfer_import(arguments: &[String]) -> Result<KnowledgeResult, WikiErro
     let expected = preview_digest.ok_or_else(|| {
         WikiError::InvalidInput("transfer import apply requires --preview-digest".to_owned())
     })?;
-    if !valid_sha256_digest(&expected) {
+    let expected_archive = expected_archive.ok_or_else(|| {
+        WikiError::InvalidInput("transfer import apply requires --expected-sha256".to_owned())
+    })?;
+    if !valid_sha256_digest(expected) || !valid_sha256_digest(expected_archive) {
         return Err(WikiError::InvalidInput(
             "transfer import preview digest must be sha256".to_owned(),
         ));
     }
-    let mut dry_run = strip(true);
-    dry_run.push("--dry-run".to_owned());
-    let inspected = run_import(&dry_run)?;
-    if transfer_preview_digest(&inspected)? != expected {
-        return Err(WikiError::Conflict(
-            "bundle or destination state changed after the transfer preview".to_owned(),
-        ));
-    }
-    let forwarded = strip(false);
-    let options = forwarded
-        .iter()
-        .filter(|argument| argument.as_str() != "--apply")
-        .cloned()
-        .collect::<Vec<_>>();
-    let user_root = PathBuf::from(required(
-        &parse_options(&options, &["--user-root", "--bundle"])?,
-        "--user-root",
-    )?);
-    let mut applied = if exclude_count == 1 {
-        run_import_mode(
-            &user_root,
-            &PathBuf::from(required(
-                &parse_options(&options, &["--user-root", "--bundle"])?,
-                "--bundle",
-            )?),
-            BundleImportMode::ApplyExcludingConflicts,
-        )?
-    } else {
-        run_import(&forwarded)?
-    };
+    let vector_enabled = crate::user_setup::vector_search_enabled(&user_root);
+    let imported = import_bundle_reviewed(
+        &user_root,
+        &bundle,
+        if exclude_count == 1 {
+            BundleImportMode::ApplyExcludingConflicts
+        } else {
+            BundleImportMode::Apply
+        },
+        BundleLimits::default(),
+        BundleImportApproval {
+            archive_sha256: expected_archive,
+            preview_digest: expected,
+        },
+    )?;
+    let mut applied = import_report(&bundle, imported)?;
     if applied
         .data
         .as_ref()
         .and_then(|data| data.get("index_rebuilt"))
         .and_then(Value::as_bool)
         == Some(true)
-        && crate::user_setup::vector_search_enabled(&user_root).map_err(WikiError::Verification)?
+        && vector_enabled.as_ref().is_ok_and(|enabled| *enabled)
     {
         applied
             .data
@@ -1485,6 +1477,13 @@ fn run_import_mode(
     mode: BundleImportMode,
 ) -> Result<KnowledgeResult, WikiError> {
     let imported = import_bundle(user_root, bundle, mode, BundleLimits::default())?;
+    import_report(bundle, imported)
+}
+
+fn import_report(
+    bundle: &Path,
+    imported: BundleImportResult,
+) -> Result<KnowledgeResult, WikiError> {
     let digest = imported.manifest_sha256.clone();
     Ok(success(
         "ImportKnowledge",

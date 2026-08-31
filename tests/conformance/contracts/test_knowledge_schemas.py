@@ -203,6 +203,7 @@ def import_result(disposition: str = "planned") -> dict[str, Any]:
         "disposition": disposition,
         "archive_sha256": digest("5"),
         "manifest_sha256": digest("6"),
+        "target_state_digest": digest("7"),
         "source": bundle_source(),
         "scope": bundle_scope(),
         "entry_count": 1,
