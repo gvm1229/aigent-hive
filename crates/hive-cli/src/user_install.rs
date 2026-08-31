@@ -735,7 +735,12 @@ fn execute_uninstall(
         ),
         data: Some(json!({
             "removed_hosts": removed_hosts,
-            "preserved": [".hive/knowledge", ".hive/config/user-setup.yml", ".hive/config/user-preferences.json"],
+            "preserved": [
+                ".hive/knowledge",
+                ".hive/config/user-setup.yml",
+                ".hive/config/user-feature-answers.yml",
+                ".hive/config/user-preferences.json"
+            ],
         })),
     })
 }
@@ -1830,7 +1835,12 @@ fn preserving_reinstall_dry_run(
             "host": arguments.host.as_str(),
             "scope": "user",
             "recovery": "preserving-reinstall",
-            "preserved": [".hive/knowledge", ".hive/config/user-setup.yml", ".hive/config/user-preferences.json"],
+            "preserved": [
+                ".hive/knowledge",
+                ".hive/config/user-setup.yml",
+                ".hive/config/user-feature-answers.yml",
+                ".hive/config/user-preferences.json"
+            ],
         })),
     }
 }
@@ -8756,6 +8766,11 @@ mod tests {
             );
         fs::write(&setup, all_skills_setup).expect("all-Skill operational setup");
         let saved_setup = fs::read(&setup).expect("saved setup");
+        let feature_answers = temporary
+            .path()
+            .join(".hive/config/user-feature-answers.yml");
+        let saved_feature_answers = b"schema_version: 1\nvector_search: \"no\"\nintroduced_in: \"0.10.0\"\nanswered_at_unix: 1\n";
+        fs::write(&feature_answers, saved_feature_answers).expect("feature answers");
         let runner = StatefulHostRunner::new(temporary.path(), HostSabotage::None);
         let install = args(temporary.path(), UserHost::Codex, UserMode::Apply);
         execute(UserOperation::Install, &install, &runner).expect("install");
@@ -8773,6 +8788,10 @@ mod tests {
 
         assert_eq!(removed.code, "hive.user-uninstall-complete");
         assert_eq!(fs::read(&setup).expect("saved setup retained"), saved_setup);
+        assert_eq!(
+            fs::read(&feature_answers).expect("saved feature answers retained"),
+            saved_feature_answers
+        );
         assert!(knowledge.is_file());
         assert!(!temporary.path().join(".hive/install/codex.json").exists());
         assert!(!temporary.path().join(".hive/marketplaces/codex").exists());
@@ -8786,6 +8805,10 @@ mod tests {
         assert_eq!(
             fs::read(&setup).expect("saved setup unchanged"),
             saved_setup
+        );
+        assert_eq!(
+            fs::read(&feature_answers).expect("saved feature answers unchanged"),
+            saved_feature_answers
         );
         assert!(temporary.path().join(".hive/install/codex.json").is_file());
         assert!(temporary

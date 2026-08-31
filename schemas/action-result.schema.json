@@ -22,6 +22,7 @@
         "SetupHarness",
         "SetupHiveUser",
         "DescribeHiveUserSetup",
+        "ManageHiveUserFeature",
         "InstallHiveUser",
         "UninstallHiveUser",
         "UpdateHiveUser",

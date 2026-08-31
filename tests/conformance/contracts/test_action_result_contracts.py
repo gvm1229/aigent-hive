@@ -23,6 +23,7 @@ EXPECTED_ACTIONS = {
     "SetupHarness",
     "SetupHiveUser",
     "DescribeHiveUserSetup",
+    "ManageHiveUserFeature",
     "InstallHiveUser",
     "UninstallHiveUser",
     "UpdateHiveUser",

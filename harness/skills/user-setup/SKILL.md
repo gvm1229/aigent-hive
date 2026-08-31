@@ -141,7 +141,8 @@ Configure user-scope Hive preferences without modifying a project harness or pro
 15. Ask the vector-search question last for both expedited and custom setup.
    - Run `hive setup feature claim --id vector-search --user-root <user-root> --output json` first.
    - Ask only when `question_required` is true. Explain that exact search remains available, first preparation can take time, and the measured Windows runtime is about 376MB.
-   - For yes, save the answer with `hive setup feature answer --id vector-search --answer yes --user-root <user-root> --output json`, then return `hive setup feature prompt --id vector-search --user-root <user-root> --output json` as a new-session prompt.
+   - When another session already holds an unanswered claim, do not ask a duplicate question. A later session may claim again after the short local claim expires; never store a host session identifier.
+   - For yes, save the answer with `hive setup feature answer --id vector-search --answer yes --user-root <user-root> --output json`, then return the `prompt` field from `hive setup feature prompt --id vector-search --user-root <user-root> --output json` as a new-session prompt. Preserve its fixed collection list and `setup_request_digest`; changed collections require a new preview rather than a quiet scope expansion.
    - For no, save `--answer no` and never ask again unless the user explicitly requests vector-search setup. Do not save a no answer after silence, cancellation, or an interrupted setup.
 
 ## Question Order
