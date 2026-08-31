@@ -9,9 +9,9 @@ summary: "A successful direct 0.10.0 upgrade removes authenticated retired Skill
 tags: [migration, skills, upgrade, v0-10]
 aliases: ["Retired Skill cleanup"]
 sources:
-  - "repo:.github/workflows/release-publish.yml#sha256:0dc743d960d0bb4a17281e6da58c293f8ec16fb319500ecd0b79235e9b27364c"
+  - "repo:.github/workflows/release-publish.yml#sha256:35420bffac94da9392c605c6512edffa879458e177e892e407d9a979feffc693"
   - "repo:crates/hive-cli/src/user_install.rs#sha256:1518c1b9ac4f68d114a59603a490491221b0459e36137fb380d2c247f9e1ab1a"
-  - "repo:docs/decisions/ADR-0020-0.10.0-product-scope.md#sha256:2dfce7ec9ad595d35bc2da971a2f1578083b5679adaf58facf1295152777f66a"
+  - "repo:docs/decisions/ADR-0020-0.10.0-product-scope.md#sha256:c26b7d76e56bc0d7be20cb62642026cd44211d39daeb47c8a6b94b8ed40004d9"
   - "repo:docs/decisions/product-release-decisions.md#sha256:e89ac8584204a7e52ed157e9b29d523f870b8ac387fc1e4a044f7f7333d17af5"
   - "repo:docs/plans/active/skill-retirement-migration-0.10.0.md#sha256:cf02204eafa02d03f95a147ae364548b1635e4c445192f3c0e67a38ed5104b8f"
   - "repo:harness/release/stable-skill-ledger.yml#sha256:8b2ca917aeb92cff8185221b07d93b450588ae668b7f506e844bc279d47f12b5"

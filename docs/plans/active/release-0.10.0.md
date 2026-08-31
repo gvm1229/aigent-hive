@@ -9,7 +9,7 @@
 - [x] [REL10-002] 사용자 답변·설정 안내 구현 뒤 Rust·Python·문서·보안·갱신·복구 전체 검사
 - [x] [REL10-003] 다음 공개 시험 게시와 npm `latest=0.9.5` 불변 확인
 - [x] [REL10-004] Windows x64·macOS arm64·Linux musl의 답변·새 세션 설정 공개 시험 수용
-- [ ] [REL10-005] accepted test exact source의 protected `main` 통합과 stable candidate
+- [ ] [REL10-005] accepted test exact source의 protected `main` 통합과 stable candidate, 승인 구독자 안내문·버전별 SHA-256 sidecar 대조
 - [ ] [REL10-006] 같은 product bytes의 stable publication·설치·의존 검사
 - [ ] [REL10-007] 공개 시험·수용 증거가 갖춰진 뒤 유지보수자의 명시적 `0.10.0` 안정판 승인 수령
 
@@ -17,6 +17,7 @@
 
 - `VON10-007`, `REL10-001–004`: 벡터 최초 설정 product bytes의 전체 검사·다음 번호 공개 시험·세 운영체제 공개 수용
 - `REL10-005–007`: 유지보수자의 현재 요청 안 `0.10.0` 안정판 명시 승인 전 protected `main`·tag·게시·설치 금지
+- 안정판 구독자 안내: `docs/releases/<version>.subscriber.ko.sha256`의 승인 지문이 원문과 일치해야 함. 불일치면 배너·Discord 요약 전송 전 차단
 
 ## 현재 실행 제외
 

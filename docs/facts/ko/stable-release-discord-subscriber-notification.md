@@ -9,12 +9,12 @@ summary: "Aigent Hive 안정판 GitHub Release 성공 뒤 보호된 출시 환�
 tags: [discord, release, subscriber]
 aliases: [stable-release-discord]
 sources:
-  - "repo:.github/workflows/release-publish.yml#sha256:0dc743d960d0bb4a17281e6da58c293f8ec16fb319500ecd0b79235e9b27364c"
+  - "repo:.github/workflows/release-publish.yml#sha256:35420bffac94da9392c605c6512edffa879458e177e892e407d9a979feffc693"
   - "repo:docs/archive/plans/foundations/stable-release-discord-notification.md#sha256:a502d4265210ff29e64b25364381c6ad17aecf1ce4bf90f35e08ac240efb6f63"
   - "repo:docs/releases/0.9.4.subscriber.ko.md#sha256:6c8e438046a01dd5882040fbd9216cb8ebce68ba83bedb1c28b70cb58b559be8"
-  - "repo:scripts/publish-stable-discord-update.py#sha256:f3ed92f2980af90beef5484dfdece6457f8a5f0188b4522720261150acf0f947"
+  - "repo:scripts/publish-stable-discord-update.py#sha256:70d18c327fbd4886f11e54d01b3ca7c5f8d9582e471fa2954feabe1d5e140c99"
 links: [source-development, v0-9-full-release]
-reviewed_revision: "git:82340e16196d945e81ae4c340dc37d51f0a198df"
+reviewed_revision: "git:349d2468d79f81708a3586a5fdde49d78aec2736"
 status: active
 ---
 
@@ -24,4 +24,4 @@ status: active
 Release 성공 뒤 배너 먼저 전송. 이 요청 성공 뒤에만 한국어 구독자 요약 전송. 시험판 Discord 요청 없음.
 알림 도구의 webhook URL 출력 없음. 보호된 환경의 `0.9.3`·`0.9.4` 실제 전달 시험 성공,
 안정판·npm 게시 없음. 유지보수자 실제 Discord 화면에서 각 배너 아래 해당 한국어 요약 표시 수용.
-주 목록과 두 칸 들여쓴 하위 목록 원문 보존, 메시지 2,000자 제한 유지.
+버전별 승인 지문 불일치: 배너 전 차단. 주 목록·두 칸 하위 목록 원문과 메시지 2,000자 제한 보존.

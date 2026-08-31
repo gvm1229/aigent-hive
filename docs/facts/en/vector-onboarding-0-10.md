@@ -9,7 +9,7 @@ summary: "One saved vector-search answer, a short local claim, and a fixed-scope
 tags: [knowledge, onboarding, v0-10, vector]
 aliases: ["Vector onboarding"]
 sources:
-  - "repo:docs/decisions/ADR-0020-0.10.0-product-scope.md#sha256:2dfce7ec9ad595d35bc2da971a2f1578083b5679adaf58facf1295152777f66a"
+  - "repo:docs/decisions/ADR-0020-0.10.0-product-scope.md#sha256:c26b7d76e56bc0d7be20cb62642026cd44211d39daeb47c8a6b94b8ed40004d9"
   - "repo:docs/guides/vector-search.md#sha256:ec476f82aa26bba2e8a1605af7620974b4620ee33d1f855c0d7669fa10d5df18"
   - "repo:docs/plans/active/vector-onboarding-0.10.0.md#sha256:96f2f93129dc8ac8d7a70789e940b57d217d360ae112ea1c91521097abf2b086"
 links: [hive-preserving-uninstall, hybrid-vector-search-0-10, v0-10-product-scope]
