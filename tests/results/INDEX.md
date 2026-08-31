@@ -242,3 +242,6 @@
 | [passed](runs/20260831T141229-4424708a51a2.md) | 벡터 최초 설정 최종 Rust 전체 회귀 시험 | 248cdb813297e2680afcbead6756f72024a7972c | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260831T141341-f5087ef5efa4.md) | 벡터 최초 설정 최종 Python 전체 conformance | 248cdb813297e2680afcbead6756f72024a7972c | Windows-11-10.0.26200-SP0 |
 | [passed](runs/20260831T141342-6fb487fac217.md) | Python conformance: documentation, security, contract, integration, release | 248cdb813297e2680afcbead6756f72024a7972c | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260831T145953-396a5baf44be.md) | 공개 벡터 최초 설정 수용 검사 정적 계약 | 421a335a860551f0de557f17bfdc2e4a1ac8bdcc | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260831T150145-be82f1636d33.md) | 공개 벡터 최초 설정 release lane 회귀 | df6a94f25752090e29d44194c90d489356274540 | Windows-11-10.0.26200-SP0 |
+| [passed](runs/20260831T150146-64a2f3506803.md) | Python conformance: release | df6a94f25752090e29d44194c90d489356274540 | Windows-11-10.0.26200-SP0 |
